@@ -42,6 +42,7 @@
 #include "EventContext.h"
 #include "FocusSetActive.h"
 #include "FocusSetFocused.h"
+#include "FunctorInputIterator.h"
 #include "Frame.h"
 #include "HandleKeyPress.h"
 #include "HandleMouseMove.h"
@@ -572,7 +573,7 @@ void InspectorReplayAgent::getRecording(ErrorString* errorString, int uid, RefPt
     }
 
     ActionCollector collector;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = it->value->forEachInputInQueue(EventLoopInputQueue, collector);
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = it->value->createFunctorIterator()->forEachInputInQueue(EventLoopInputQueue, collector);
 
     recordingObject = TypeBuilder::Replay::ReplayRecording::create()
                         .setUid(it->value->uid())

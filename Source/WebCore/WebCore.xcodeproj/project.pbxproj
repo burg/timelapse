@@ -6006,6 +6006,7 @@
 		C481093E1705313100AB4BAA /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */; };
 		C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA712171776FA001A8BB4 /* EventLoopInput.h */; };
+		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
 		C49905E81714BC83000AEC13 /* JSONInputSerializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */; };
 		C49905E91714BC83000AEC13 /* JSONInputSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905E71714BC83000AEC13 /* JSONInputSerializer.h */; };
 		C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905EA17163821000AEC13 /* ReplayUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -13688,6 +13689,7 @@
 		C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InterpretedKeyCommands.h; sourceTree = "<group>"; };
 		C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventLoopInput.cpp; sourceTree = "<group>"; };
 		C48EA712171776FA001A8BB4 /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventLoopInput.h; sourceTree = "<group>"; };
+		C48EA71517178087001A8BB4 /* FunctorInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctorInputIterator.h; path = replay/FunctorInputIterator.h; sourceTree = "<group>"; };
 		C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONInputSerializer.cpp; sourceTree = "<group>"; };
 		C49905E71714BC83000AEC13 /* JSONInputSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONInputSerializer.h; sourceTree = "<group>"; };
 		C49905EA17163821000AEC13 /* ReplayUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayUtilities.h; path = replay/ReplayUtilities.h; sourceTree = "<group>"; };
@@ -21845,6 +21847,7 @@
 				C481087B17052FF100AB4BAA /* CacheController.h */,
 				C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */,
 				C41D35541712064800E40FB7 /* CaptureInputIterator.h */,
+				C48EA71517178087001A8BB4 /* FunctorInputIterator.h */,
 				C4B991FC17122B750029CA63 /* InputStorage.cpp */,
 				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
 				C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */,
@@ -26944,6 +26947,7 @@
 				C49905E91714BC83000AEC13 /* JSONInputSerializer.h in Headers */,
 				C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */,
 				C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */,
+				C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

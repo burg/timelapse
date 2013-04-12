@@ -36,6 +36,7 @@
 #include "ReplayRecording.h"
 
 #include "CaptureInputIterator.h"
+#include "FunctorInputIterator.h"
 #include "InputStorage.h"
 #include "ReplayInputIterator.h"
 #include <wtf/CurrentTime.h>
@@ -53,6 +54,9 @@ ReplayRecording::ReplayRecording(int uid)
 , m_canCapture(true)
 , m_timestamp(WTF::currentTimeMS()) { }
 
+ReplayRecording::~ReplayRecording()
+{}
+
 PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page* page)
 {
     ASSERT(m_canCapture);
@@ -63,6 +67,11 @@ PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page* pa
 PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page*)
 {
     return ReplayInputIterator::create(m_inputStorage.get());
+}
+
+PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()
+{
+    return FunctorInputIterator::create(m_inputStorage.get());
 }
     
 }; // namespace WebCore

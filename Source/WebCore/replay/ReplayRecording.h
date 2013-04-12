@@ -35,8 +35,6 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "InputStorage.h"
-
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -45,6 +43,7 @@
 namespace WebCore {
 
 class CaptureInputIterator;
+class FunctorInputIterator;
 class InputStorage;
 class Page;
 class ReplayInputIterator;
@@ -52,16 +51,15 @@ class ReplayInputIterator;
 class ReplayRecording : public RefCounted<ReplayRecording> {
 public:
     static PassRefPtr<ReplayRecording> create(int);
-    ~ReplayRecording() {}
+    ~ReplayRecording();
 
     int uid() const { return m_uid; }
     double creationTimestamp() const { return m_timestamp; }
     
     PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page*);
     PassOwnPtr<ReplayInputIterator> createReplayIterator(Page*);
-    
-    template<typename Functor> typename Functor::ReturnType forEachInputInQueue(ReplayInputQueueType, Functor&);
-    
+    PassOwnPtr<FunctorInputIterator> createFunctorIterator();
+
 private:
     ReplayRecording(int);
     OwnPtr<InputStorage> m_inputStorage;
@@ -69,18 +67,6 @@ private:
     bool m_canCapture;
     double m_timestamp;
 };
-
-template<typename Functor> inline typename Functor::ReturnType ReplayRecording::forEachInputInQueue(ReplayInputQueueType queue, Functor& functor)
-{
-    ASSERT(!m_canCapture && m_inputStorage->isReadOnly());
-    ASSERT(queue < ReplayInputQueueTypeLength);
-    
-    for (size_t i = 0; i < m_inputStorage->m_queues[queue]->size(); i++) {
-        functor(i, m_inputStorage->m_queues[queue]->at(i).get());
-    }
-    
-    return functor.returnValue();
-}
 
 } // namespace WebCore
 

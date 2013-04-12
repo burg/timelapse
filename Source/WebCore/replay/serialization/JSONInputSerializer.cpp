@@ -35,6 +35,7 @@
 
 #include "JSONInputSerializer.h"
 
+#include "FunctorInputIterator.h"
 #include "InspectorValues.h"
 #include "Logging.h"
 #include "ReplayRecording.h"
@@ -307,7 +308,7 @@ size_t JSONInputSerializer::memorySize()
     
     for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
         ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
-        m_recording->forEachInputInQueue(queueType, counter);
+        m_recording->createFunctorIterator()->forEachInputInQueue(queueType, counter);
     }
 
     return counter.returnValue();
@@ -355,7 +356,7 @@ bool JSONInputSerializer::serializeToFile(FILE* fh)
         putString("name", WTF::queueTypeToString(queueType));
         pushArray(); // array of action objects
 
-        m_recording->forEachInputInQueue(queueType, collector);
+        m_recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
         
         popArrayAsProperty("actions");
         popObjectAsElement();

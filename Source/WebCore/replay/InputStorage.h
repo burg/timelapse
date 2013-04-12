@@ -44,7 +44,7 @@ namespace WebCore {
 
 class InputStorage {
     WTF_MAKE_NONCOPYABLE(InputStorage);
-    friend class ReplayRecording;
+    friend class FunctorInputIterator;
 public:
     static PassOwnPtr<InputStorage> create();
     ~InputStorage();

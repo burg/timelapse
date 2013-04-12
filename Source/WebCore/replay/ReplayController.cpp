@@ -351,8 +351,11 @@ void ReplayController::cancelPlayback()
 
 void ReplayController::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const PositionMark&)
 {
+    if (!window)
+        return;
+    
     InputIterator* it = getInputIteratorForDocument(window->document());
-    bool shouldIgnore = !window || !it || (!it->isCapturing() && !it->isReplaying());
+    bool shouldIgnore =  !it || (!it->isCapturing() && !it->isReplaying());
 
     m_domEventDispatchDepth++;
 #if !LOG_DISABLED
