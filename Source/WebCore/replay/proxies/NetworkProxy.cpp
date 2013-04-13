@@ -85,7 +85,10 @@ ReplayController* NetworkProxy::controller() const
 
 int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 {
+    InputIterator* it = controller()->activeIterator();
+
     if (mode() == ReplayProxy::Capturing) {
+        ASSERT(it && it->isCapturing());
         int freshId = m_nextId++;
         controller()->activeIterator()->storeInput(adoptPtr(new ResourceLoaderCreated(freshId, request)));
 
@@ -93,8 +96,7 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
     }
 
     if (mode() == ReplayProxy::Replaying) {
-        InputIterator* it = controller()->activeIterator();
-
+        ASSERT(it && it->isReplaying());
         int loaderId;
         ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(WTF::LoaderMemoizedDataQueue, ReplayInputTypes::ResourceLoaderCreated));
         if (memoizedData)
@@ -145,7 +147,7 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
 #else
     UNUSED_PARAM(loaderId);
 #endif // ENABLE(TIMELAPSE)
-    
+
     return ResourceHandle::create(context, request, client, defersLoading, shouldContentSniff);
 }
 

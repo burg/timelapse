@@ -671,13 +671,15 @@ void MainResourceLoader::load(const ResourceRequest& initialRequest, const Subst
     ResourceRequest request(initialRequest);
 
 #if ENABLE(TIMELAPSE)
-    Frame* frame = m_documentLoader->frame();
-    InputIterator* it = getInputIteratorForDocument(frame->tree()->top()->document());
-    if (it && (it->isCapturing() || it->isReplaying() ||
-               frame->page()->networkProxy()->expectsPageLoad())) {
-        frame->page()->networkProxy()->setExpectsPageLoad(false);
-        frame->page()->networkProxy()->setInitiatingPageLoad(true);
-        m_loaderId = frame->page()->networkProxy()->nextLoaderId(request);
+    NetworkProxy* proxy = documentLoader()->frame()->page()->networkProxy();
+    InputIterator* it = getInputIteratorForDocument(documentLoader()->frame()->tree()->top()->document());
+    bool capturingOrReplaying = it && (it->isCapturing() || it->isReplaying());
+    // if the page's main resource hasn't loaded yet, we set NetworkProxy::expectsPageLoad()
+    // indicating that the next MainResourceLoader of the page should get an id.
+    if (capturingOrReplaying || proxy->expectsPageLoad()) {
+        proxy->setExpectsPageLoad(false);
+        proxy->setInitiatingPageLoad(true);
+        m_loaderId = proxy->nextLoaderId(request);
     }
 #endif // ENABLE(TIMELAPSE)
 
