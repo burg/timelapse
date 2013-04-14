@@ -578,7 +578,6 @@ void InspectorReplayAgent::getRecording(ErrorString* errorString, int uid, RefPt
     recordingObject = TypeBuilder::Replay::ReplayRecording::create()
                         .setUid(it->value->uid())
                         .setDateCreated(it->value->creationTimestamp())
-                        .setName("Dummy replay name")
                         .setActions(actions);
 }
 

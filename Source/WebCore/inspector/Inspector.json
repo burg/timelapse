@@ -2633,7 +2633,6 @@
                 "properties": [
                     { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
                     { "name": "dateCreated", "type": "number", "description": "Creation time of recording, in milliseconds since the epoch." },
-                    { "name": "name", "type": "string", "description": "Name for the recording" },
                     { "name": "actions", "type": "array", "items": { "$ref": "ReplayAction" }, "description": "User-visible actions for this recording." }
                 ],
                 "description": "A replay recording that consists of metadata and a list of actions."
