@@ -42,7 +42,8 @@
 
 namespace WebCore {
 
-void InitializeFocus::dispatch(ReplayController* controller)
+void InitializeFocus::dispatch(ReplayController* controller,
+                               EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
     
@@ -53,7 +54,7 @@ void InitializeFocus::dispatch(ReplayController* controller)
     controller->page()->userInputProxy()->focusSetActive(m_active, true);
     controller->page()->userInputProxy()->focusSetFocused(m_focus, true);
     controller->page()->focusController()->setFocusedFrame(framePtr);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String InitializeFocus::toString() const

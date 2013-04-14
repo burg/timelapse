@@ -128,13 +128,14 @@ String HandleWheelEvent::toString() const
     return sb.toString();
 }
 
-void HandleWheelEvent::dispatch(ReplayController* controller)
+void HandleWheelEvent::dispatch(ReplayController* controller,
+                                EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
 
     controller->page()->userInputProxy()->handleWheelEvent(const_cast<PlatformWheelEvent&>(platformEvent()), true);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 size_t HandleWheelEvent::memorySize() const

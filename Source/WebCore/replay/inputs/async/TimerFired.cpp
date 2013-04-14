@@ -61,7 +61,8 @@ void TimerFired::serialize(InputSerializer* serializer) const
     serializer->putInt("frameIndex", m_frameIndex);
 }
 
-void TimerFired::dispatch(ReplayController* controller)
+void TimerFired::dispatch(ReplayController* controller,
+                          EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
@@ -75,7 +76,7 @@ void TimerFired::dispatch(ReplayController* controller)
                   "[ReplayController]", m_frameIndex, m_timerId);
     }
     
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 } // namespace WebCore

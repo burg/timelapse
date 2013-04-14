@@ -53,14 +53,15 @@ ResourceWasBlocked::ResourceWasBlocked(int id)
     , m_id(id) {}
 
 //EventLoopInput API
-void ResourceWasBlocked::dispatch(ReplayController* controller)
+void ResourceWasBlocked::dispatch(ReplayController* controller,
+                                  EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
     
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceWasBlocked::toString() const

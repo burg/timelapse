@@ -53,14 +53,15 @@ ResourceCannotShowURL::ResourceCannotShowURL(int id)
     , m_id(id) {}
 
 //EventLoopInput API
-void ResourceCannotShowURL::dispatch(ReplayController* controller)
+void ResourceCannotShowURL::dispatch(ReplayController* controller,
+                                     EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
     
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceCannotShowURL::toString() const

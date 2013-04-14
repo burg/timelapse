@@ -52,7 +52,8 @@ SendResizeEvent::SendResizeEvent(const Frame* frame)
     , m_height(frame->document()->domWindow()->outerHeight())
     , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) {}
 
-void SendResizeEvent::dispatch(ReplayController* controller)
+void SendResizeEvent::dispatch(ReplayController* controller,
+                               EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
 
@@ -66,7 +67,7 @@ void SendResizeEvent::dispatch(ReplayController* controller)
     // find another strategy, such as adding synthetic callback events or routing a callback
     // somehow.
     document->eventQueue()->flush();
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String SendResizeEvent::toString() const

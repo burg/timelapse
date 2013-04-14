@@ -55,7 +55,7 @@ namespace WebCore {
         ResourceResponse* response() const { return m_response.get(); }
 
         // EventLoopInput API
-        virtual void dispatch(ReplayController*) OVERRIDE;
+        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;

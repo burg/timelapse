@@ -49,10 +49,10 @@ public:
     virtual ~BeginSentinel() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController* controller) OVERRIDE
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE
     {
         ASSERT(sealed());
-        controller->didDispatch(this);
+        dispatcher->didDispatch(this);
     }
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
@@ -70,10 +70,10 @@ public:
     virtual ~EndSentinel() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController* controller) OVERRIDE
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE
     {
         ASSERT(sealed());
-        controller->didDispatch(this);
+        dispatcher->didDispatch(this);
     }
     virtual bool isUserVisible() const OVERRIDE { return false; }
 

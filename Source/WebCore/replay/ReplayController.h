@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011-2013, Brian Burg.
+ *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,15 +34,13 @@
 
 #if ENABLE(TIMELAPSE)
 
-
-#include "EventLoopInput.h"
+#include "EventLoopInputDispatcher.h"
 #include "ReplayProxy.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/Noncopyable.h>
 
 namespace WTF {
-    class AtomicString;
     class InputIterator;
 }
 
@@ -53,11 +51,9 @@ namespace WebCore {
     class DOMWindow;
     class Element;
     class Event;
+    class EventLoopInput;
     class Node;
     class Page;
-    class PlatformKeyboardEvent;
-    class PlatformMouseEvent;
-    class PlatformWheelEvent;
     class ReplayRecording;
     
     enum ReplayStatus {
@@ -70,18 +66,13 @@ namespace WebCore {
         PlaybackPaused,
         PlaybackFinished
     };
-
-    enum ReplayMode {
-        FullSpeed,
-        Realtime,
-    };
-  
-    enum ErrorMode {
+ 
+    enum ErrorStrategy {
         PauseOnError,
         ContinueOnError,
     };
-  
-    class ReplayController {
+     
+    class ReplayController : public EventLoopInputDispatcherClient {
         WTF_MAKE_NONCOPYABLE(ReplayController);
     public:
         ReplayController(Page*);
@@ -100,19 +91,18 @@ namespace WebCore {
         void didDispatchEvent();
         void frameNavigated(DocumentLoader*);
         void willFireTimer(int, Document*);
-        // callsites of this method are locations where replay errors are detected.
-        // a true return value indicates playback has aborted or paused;
-        // a false return value indicates that playback will continue unimpeded.
-        bool playbackError(bool isFatal, const String& errorMessage);
 
-        // Action post-dispatch callback
-        void didDispatch(EventLoopInput*);
+        // EventLoopInputDispatcherClient API
+        virtual void playbackError(bool isFatal, const String& errorMessage) OVERRIDE;
+        virtual void willDispatchInput(EventLoopInput*) OVERRIDE;
+        virtual void didDispatchInput(EventLoopInput*) OVERRIDE;
+        virtual void didDispatchFinalInput() OVERRIDE;
         
         // Accessors and queries
         WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
         
-        ErrorMode errorStrategy() const { return m_errorStrategy; }
-        void setErrorStrategy(ErrorMode mode) { m_errorStrategy = mode; }
+        ErrorStrategy errorStrategy() const { return m_errorStrategy; }
+        void setErrorStrategy(ErrorStrategy mode) { m_errorStrategy = mode; }
 
         Page* page() const { return m_page; }
         PassRefPtr<CacheController> cacheController() const;
@@ -121,59 +111,33 @@ namespace WebCore {
         bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
         bool unloadRecording(bool suppressNotifications = false);
 
-    private:
-        void maybeDispatchInput();
-        void asyncDispatchInput();
-        void syncDispatchInput();
-        void timerFired(Timer<ReplayController>*);
-        
+    private:       
         void resetReplayState();
-        void pauseReplay(PositionMarkIndex);
+        void pauseReplay();
         void finishReplay();
 
+        // TODO: remove
         void serialize();
 
         void changeProxyMode(ReplayProxy::ProxyMode);
         
         // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying
+        // TODO: remove
         bool capturing() const;
         bool replaying() const;
+
+        EventLoopInputDispatcher* dispatcher() const;
 
         Page* m_page;
 
         int m_nextRecordingId;
         RefPtr<ReplayRecording> m_loadedRecording;
         OwnPtr<WTF::InputIterator> m_activeIterator;
-        Timer<ReplayController> m_timer;
+        OwnPtr<EventLoopInputDispatcher> m_dispatcher;
         RefPtr<CacheController> m_cacheController;
-
-        // this pointer contains the next input to dispatch. The input could either be
-        // waiting on a specific number of dom event dispatches, or on another input executing.
-        EventLoopInput* m_waitingInput;
-        // this pointer is set immediately before an input dispatch() method was called,
-        // up until the corresponding didDispatch() callback to signal input completion.
-        EventLoopInput* m_runningInput;
-        bool m_dispatching;
-        //for debugging purposes
-        int m_domEventDispatchDepth;
-        
-        // number of events that have started dispatching, according to the tests inside
-        // of willDispatchEvent(). It is incremented before the DOM event actually fires, but
-        // before any such DOM event is captured into an input.
-        int m_domEventDispatchCount;
-        // used during replay to check for DOM event dispatch count consistency.
-        int m_domEventRemainingQuota;
-
-        ReplayStatus m_status;
-        ReplayMode m_replayMode;
-        ErrorMode m_errorStrategy;
-        PositionMark m_currentMark;
-        // in ReplayUpToMark mode, the mark which is being replayed up to (but not through)
         PositionMarkIndex m_stopBeforeMarkIndex;
-        // the time at which the last input dispatch() method was called.
-        double m_previousDispatchStartTime;
-        // the time specified by the last dispatched input's mark.
-        double m_previousMarkTime;
+        ReplayStatus m_status;
+        ErrorStrategy m_errorStrategy;
     };
 
 } // namespace WebCore

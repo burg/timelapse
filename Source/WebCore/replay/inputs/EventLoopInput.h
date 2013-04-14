@@ -44,6 +44,7 @@ namespace WebCore {
     class ReplayController;
     class DocumentLoader;
     class Event;
+    class EventLoopInputDispatcher;
     class EventTarget;
     class Node;
     class ResourceResponse;
@@ -103,7 +104,7 @@ public:
     virtual size_t memorySize() const =0;
     virtual void serialize(InputSerializer*) const =0;
     
-    virtual void dispatch(ReplayController*) =0;
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) =0;
     
     virtual ReplayInputQueueType queue() const { return WTF::EventLoopInputQueue; }
     virtual bool isUserVisible() const { return true; }

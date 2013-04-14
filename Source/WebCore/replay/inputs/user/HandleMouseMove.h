@@ -49,7 +49,7 @@ public:
     virtual ~HandleMouseMove() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     
     // NondeterministicInput API
     virtual size_t memorySize() const OVERRIDE

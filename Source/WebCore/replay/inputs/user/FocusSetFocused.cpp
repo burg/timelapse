@@ -57,13 +57,14 @@ void FocusSetFocused::serialize(InputSerializer* serializer) const
     serializer->putBoolean("toState", m_toState);
 }
 
-void FocusSetFocused::dispatch(ReplayController* controller)
+void FocusSetFocused::dispatch(ReplayController* controller,
+                               EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
     
     controller->page()->userInputProxy()->focusSetFocused(m_toState, true);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
     
 } // namespace WebCore

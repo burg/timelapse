@@ -59,14 +59,15 @@ ResourceDidReceiveCachedMetadata::ResourceDidReceiveCachedMetadata(int id, const
 ResourceDidReceiveCachedMetadata::~ResourceDidReceiveCachedMetadata() {}
 
 //EventLoopInput API
-void ResourceDidReceiveCachedMetadata::dispatch(ReplayController* controller)
+void ResourceDidReceiveCachedMetadata::dispatch(ReplayController* controller,
+                                                EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(id());
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     client->didReceiveCachedMetadata(handle.get(), data(), length());
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceDidReceiveCachedMetadata::toString() const

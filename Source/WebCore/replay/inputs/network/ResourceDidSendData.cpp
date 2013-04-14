@@ -56,14 +56,15 @@ ResourceDidSendData::ResourceDidSendData(int id, unsigned long long bytesSent, u
     , m_totalBytesToBeSent(totalBytesToBeSent) {}
 
 //EventLoopInput API
-void ResourceDidSendData::dispatch(ReplayController* controller)
+void ResourceDidSendData::dispatch(ReplayController* controller,
+                                   EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     client->didSendData(handle.get(), m_bytesSent, m_totalBytesToBeSent);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceDidSendData::toString() const

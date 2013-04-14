@@ -47,12 +47,13 @@ public:
     virtual ~EnableCache() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController* controller) OVERRIDE
+    virtual void dispatch(ReplayController* controller,
+                          EventLoopInputDispatcher* dispatcher) OVERRIDE
     {
         ASSERT(sealed());
     
         controller->cacheController()->enableCache();
-        controller->didDispatch(this);
+        dispatcher->didDispatch(this);
     }
     virtual bool isUserVisible() const OVERRIDE { return false; }
 

@@ -61,7 +61,8 @@ void RanPendingScripts::serialize(InputSerializer* serializer) const
     serializer->putInt("frameIndex", m_frameIndex);
 }
 
-void RanPendingScripts::dispatch(ReplayController* controller)
+void RanPendingScripts::dispatch(ReplayController* controller,
+                                 EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
@@ -71,7 +72,7 @@ void RanPendingScripts::dispatch(ReplayController* controller)
     ASSERT(scriptRunner->hasPendingScripts());
     scriptRunner->timerFired(&scriptRunner->m_timer);
 
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 } // namespace WebCore

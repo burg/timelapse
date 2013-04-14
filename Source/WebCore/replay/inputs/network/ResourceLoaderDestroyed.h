@@ -53,7 +53,7 @@ namespace WebCore {
         int id() const { return m_id; }
         
         // EventLoopInput API
-        virtual void dispatch(ReplayController*) OVERRIDE;
+        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         virtual bool isUserVisible() const OVERRIDE { return false; }
         
         // NondeterministicInput API

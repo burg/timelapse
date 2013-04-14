@@ -51,7 +51,7 @@ public:
     virtual ~PlaybackError() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
     
     // NondeterministicInput API

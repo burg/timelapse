@@ -51,7 +51,7 @@ namespace WebCore {
         virtual ~ResourceCannotShowURL() {}
         
         // EventLoopInput API
-        virtual void dispatch(ReplayController*) OVERRIDE;
+        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         virtual bool isUserVisible() const OVERRIDE { return false; }
         
         // NondeterministicInput API

@@ -114,7 +114,6 @@ public:
 
     virtual PassRefPtr<Event> event(Page*) =0;
     virtual EventTarget* target(Page*) =0;
-    virtual bool syncDomDispatch(ReplayController*);
 
     static bool domDispatch(PassRefPtr<Event>, PassRefPtr<EventTarget>);
 };

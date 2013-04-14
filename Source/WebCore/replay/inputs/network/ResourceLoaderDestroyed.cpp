@@ -50,10 +50,11 @@ ResourceLoaderDestroyed::ResourceLoaderDestroyed(int id)
 , m_id(id) {}
 
 //EventLoopInput API
-void ResourceLoaderDestroyed::dispatch(ReplayController* controller)
+void ResourceLoaderDestroyed::dispatch(ReplayController* controller,
+                                       EventLoopInputDispatcher* dispatcher)
 {
     controller->page()->networkProxy()->removeHandleById(m_id);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceLoaderDestroyed::toString() const

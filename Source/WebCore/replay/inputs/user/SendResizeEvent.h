@@ -51,7 +51,7 @@ public:
     int height() const { return m_height; }
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;

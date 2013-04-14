@@ -43,6 +43,7 @@
 namespace WebCore {
 
 class CaptureInputIterator;
+class EventLoopInputDispatcherClient;
 class FunctorInputIterator;
 class InputStorage;
 class Page;
@@ -57,7 +58,7 @@ public:
     double creationTimestamp() const { return m_timestamp; }
     
     PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page*);
-    PassOwnPtr<ReplayInputIterator> createReplayIterator(Page*);
+    PassOwnPtr<ReplayInputIterator> createReplayIterator(Page*, EventLoopInputDispatcherClient*);
     PassOwnPtr<FunctorInputIterator> createFunctorIterator();
 
 private:

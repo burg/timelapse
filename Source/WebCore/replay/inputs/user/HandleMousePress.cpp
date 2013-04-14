@@ -42,13 +42,14 @@
 
 namespace WebCore {
 
-void HandleMousePress::dispatch(ReplayController* controller)
+void HandleMousePress::dispatch(ReplayController* controller,
+                                EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
 
     controller->page()->userInputProxy()->handleMousePressEvent(platformEvent(), true);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 void HandleMousePress::serialize(InputSerializer* serializer) const

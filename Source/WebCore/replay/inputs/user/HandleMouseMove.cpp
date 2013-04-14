@@ -42,7 +42,8 @@
 
 namespace WebCore {
 
-void HandleMouseMove::dispatch(ReplayController* controller)
+void HandleMouseMove::dispatch(ReplayController* controller,
+                               EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
@@ -52,7 +53,7 @@ void HandleMouseMove::dispatch(ReplayController* controller)
         controller->page()->userInputProxy()->handleMouseMoveOnScrollbarEvent(platformEvent(), true);
     else
         controller->page()->userInputProxy()->handleMouseMoveEvent(platformEvent(), true);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 void HandleMouseMove::serialize(InputSerializer* serializer) const

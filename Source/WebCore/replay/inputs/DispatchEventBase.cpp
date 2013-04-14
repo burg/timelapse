@@ -163,18 +163,6 @@ PassRefPtr<Event> SerializedGenericEvent::deserialize(Page*)
                          m_cancelable);
 }
 
-bool DispatchEventBase::syncDomDispatch(ReplayController* controller)
-{
-    EventTarget* eventTarget = target(controller->page());
-    ASSERT(eventTarget);
-    RefPtr<Event> ev = event(controller->page());
-
-    ev->setTarget(eventTarget);
-    bool ret = AsyncEventProxy::dispatchEvent(ev, eventTarget);
-    controller->didDispatch(this);
-    return ret;
-}
-
 SerializedEventName serializeEventName(const AtomicString& type)
 {
 #define TEST_EVENT_TYPE(name)                                                  \

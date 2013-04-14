@@ -64,9 +64,9 @@ PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page* pa
     return CaptureInputIterator::create(m_inputStorage.get(), page);
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page*)
+PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page* page, EventLoopInputDispatcherClient* client)
 {
-    return ReplayInputIterator::create(m_inputStorage.get());
+    return ReplayInputIterator::create(m_inputStorage.get(), page, client);
 }
 
 PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()

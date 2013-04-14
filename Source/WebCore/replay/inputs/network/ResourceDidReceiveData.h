@@ -57,7 +57,7 @@ namespace WebCore {
         int encodedLength() const { return m_encodedLength; }
 
         // EventLoopInput API
-        virtual void dispatch(ReplayController*) OVERRIDE;
+        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;

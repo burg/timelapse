@@ -109,7 +109,8 @@ void ScrollPage::serialize(InputSerializer* serializer) const
     serializer->putInt("granularity", m_granularity);
 }
 
-void ScrollPage::dispatch(ReplayController* controller)
+void ScrollPage::dispatch(ReplayController* controller,
+                          EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
@@ -119,7 +120,7 @@ void ScrollPage::dispatch(ReplayController* controller)
     else
         controller->page()->userInputProxy()->scrollRecursively(scrollDirection(), scrollGranularity(), true);
 
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 } // namespace WebCore

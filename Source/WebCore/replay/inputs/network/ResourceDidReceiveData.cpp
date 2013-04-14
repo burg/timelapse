@@ -60,14 +60,15 @@ ResourceDidReceiveData::ResourceDidReceiveData(int id, const char* data, int len
 ResourceDidReceiveData::~ResourceDidReceiveData() {}
 
 //EventLoopInput API
-void ResourceDidReceiveData::dispatch(ReplayController* controller)
+void ResourceDidReceiveData::dispatch(ReplayController* controller,
+                                      EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(id());
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     client->didReceiveData(handle.get(), data(), length(), encodedLength());
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceDidReceiveData::toString() const

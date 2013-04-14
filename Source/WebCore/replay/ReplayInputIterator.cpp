@@ -33,6 +33,7 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "EventLoopInputDispatcher.h"
 #include "InputStorage.h"
 #include "ReplayInputIterator.h"
 
@@ -53,9 +54,11 @@ static const char* queueTypeToString(ReplayInputQueueType queue) {
 
 namespace WebCore {
 
-ReplayInputIterator::ReplayInputIterator(InputStorage* storage)
+ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page,
+                                         EventLoopInputDispatcherClient* client)
 : m_storage(storage)
 , m_isActive(true)
+, m_dispatcher(EventLoopInputDispatcher::create(page, this, client))
 , m_positions(Vector<size_t>()) {
     ASSERT(m_storage->isReadOnly());
 
@@ -69,9 +72,10 @@ ReplayInputIterator::~ReplayInputIterator()
 {
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayInputIterator::create(InputStorage* storage)
+PassOwnPtr<ReplayInputIterator> ReplayInputIterator::create(InputStorage* storage, Page* page,
+                                                            EventLoopInputDispatcherClient* client)
 {
-    return adoptPtr(new ReplayInputIterator(storage));
+    return adoptPtr(new ReplayInputIterator(storage, page, client));
 }
 
 void ReplayInputIterator::storeInput(PassOwnPtr<NondeterministicInput>)

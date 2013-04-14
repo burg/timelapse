@@ -55,7 +55,7 @@ namespace WebCore {
         unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }
 
         // EventLoopInput API
-        virtual void dispatch(ReplayController*) OVERRIDE;
+        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         virtual bool isUserVisible() const OVERRIDE { return false; }
         
         // NondeterministicInput API

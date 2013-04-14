@@ -51,7 +51,7 @@ public:
     virtual ~TimerFired() {}
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*);
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*);
 
     // NondeterministicInput API
     virtual String toString() const;

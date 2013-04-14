@@ -53,7 +53,7 @@ namespace WebCore {
         double finishTime() const { return m_finishTime; }
 
         // EventLoopInput API
-        virtual void dispatch(ReplayController*) OVERRIDE;
+        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;

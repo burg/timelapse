@@ -42,12 +42,13 @@
 
 namespace WebCore {
 
-void InitializeWindow::dispatch(ReplayController* controller)
+void InitializeWindow::dispatch(ReplayController* controller,
+                                EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
     
     controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String InitializeWindow::toString() const

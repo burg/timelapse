@@ -53,14 +53,15 @@ ResourceDidFinishLoading::ResourceDidFinishLoading(int id, double finishTime)
     , m_finishTime(finishTime) {}
 
 //EventLoopInput API
-void ResourceDidFinishLoading::dispatch(ReplayController* controller)
+void ResourceDidFinishLoading::dispatch(ReplayController* controller,
+                                        EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     client->didFinishLoading(handle.get(), m_finishTime);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 String ResourceDidFinishLoading::toString() const

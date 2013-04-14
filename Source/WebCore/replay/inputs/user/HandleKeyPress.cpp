@@ -112,13 +112,14 @@ void HandleKeyPress::serialize(InputSerializer* serializer) const
     serializer->putBoolean("systemKey", m_platformEvent.isSystemKey());
 }
 
-void HandleKeyPress::dispatch(ReplayController* controller)
+void HandleKeyPress::dispatch(ReplayController* controller,
+                              EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
 
     controller->page()->userInputProxy()->handleKeyPressEvent(platformEvent(), true);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 } // namespace WebCore

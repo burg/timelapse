@@ -51,7 +51,7 @@ public:
     virtual ~RanPendingScripts() {}
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*);
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*);
     virtual bool isUserVisible() const OVERRIDE { return false; }
     
     // NondeterministicInput API

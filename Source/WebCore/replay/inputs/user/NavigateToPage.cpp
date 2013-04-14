@@ -65,7 +65,8 @@ PassRefPtr<SecurityOrigin> NavigateToPage::securityOrigin() const
 
 // EventLoopInput API
 
-void NavigateToPage::dispatch(ReplayController* controller)
+void NavigateToPage::dispatch(ReplayController* controller,
+                              EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
 
@@ -73,7 +74,7 @@ void NavigateToPage::dispatch(ReplayController* controller)
 
     //schedule async page load (it uses delay 0)
     controller->page()->mainFrame()->navigationScheduler()->scheduleLocationChange(m_securityOrigin.get(), m_url, m_referrer, true, true);
-    controller->didDispatch(this);
+    dispatcher->didDispatch(this);
 }
 
 // NondeterministicInput API

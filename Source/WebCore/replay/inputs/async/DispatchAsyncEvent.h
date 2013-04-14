@@ -55,7 +55,7 @@ public:
     // EventLoopInput API
     virtual EventTarget* target(Page*) OVERRIDE;
     virtual PassRefPtr<Event> event(Page*) OVERRIDE;
-    virtual void dispatch(ReplayController*) OVERRIDE;
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;

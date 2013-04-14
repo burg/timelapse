@@ -43,6 +43,8 @@
 
 namespace WebCore {
 
+class EventLoopInputDispatcher;
+class EventLoopInputDispatcherClient;
 class InputStorage;
 class Page;
 
@@ -61,7 +63,8 @@ struct ReplayErrorData {
 class ReplayInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(ReplayInputIterator);
 public:
-    static PassOwnPtr<ReplayInputIterator> create(InputStorage*);
+    static PassOwnPtr<ReplayInputIterator> create(InputStorage*, Page*,
+                                                  EventLoopInputDispatcherClient*);
     virtual ~ReplayInputIterator();
 
     // InputIterator API
@@ -69,11 +72,13 @@ public:
     virtual bool isReplaying() const { return m_isActive; }
 
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
-    virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType);
+    virtual NondeterministicInput* loadInput(ReplayInputQueueType,
+                                             NondeterministicInput::ReplayInputType);
     virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType);
    
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
+    EventLoopInputDispatcher* dispatcher() const { return m_dispatcher.get(); }
 
     //error handling
     bool hasError() const { return m_errorData.error != NoReplayError; }
@@ -82,11 +87,12 @@ public:
     void clearError() { m_errorData.error = NoReplayError; }
 
 private:
-    ReplayInputIterator(InputStorage*);
+    ReplayInputIterator(InputStorage*, Page*, EventLoopInputDispatcherClient*);
 
     InputStorage* m_storage;
 
     bool m_isActive;
+    OwnPtr<EventLoopInputDispatcher> m_dispatcher;
     ReplayErrorData m_errorData;
     Vector<size_t> m_positions;
 };
