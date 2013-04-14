@@ -1556,7 +1556,7 @@ WebInspector.FileSystemListTreeElement.prototype = {
     _handleContextMenuEvent: function(event)
     {
         var contextMenu = new WebInspector.ContextMenu(event);
-        contextMenu.appendItem(WebInspector.UIString("Refresh FileSystem List"), this._refreshFileSystem.bind(this));
+        contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Refresh FileSystem list" : "Refresh FileSystem List"), this._refreshFileSystem.bind(this));
         contextMenu.show();
     },
 
@@ -1727,6 +1727,27 @@ WebInspector.IDBObjectStoreTreeElement.prototype = {
     get itemURL()
     {
         return "indexedDB://" + this._databaseId.securityOrigin + "/" + this._databaseId.name + "/" + this._objectStore.name;
+    },
+
+    onattach: function()
+    {
+        WebInspector.BaseStorageTreeElement.prototype.onattach.call(this);
+        this.listItemElement.addEventListener("contextmenu", this._handleContextMenuEvent.bind(this), true);
+    },
+
+    _handleContextMenuEvent: function(event)
+    {
+        var contextMenu = new WebInspector.ContextMenu(event);
+        contextMenu.appendItem(WebInspector.UIString("Clear"), this._clearObjectStore.bind(this));
+        contextMenu.show();
+    },
+
+    _clearObjectStore: function()
+    {
+        function callback(result) {
+            this.update(this._objectStore);
+        }
+        this._model.clearObjectStore(this._databaseId, this._objectStore.name, callback.bind(this));
     },
 
    /**

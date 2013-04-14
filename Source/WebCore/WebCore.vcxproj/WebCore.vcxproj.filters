@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="DerivedSources">
@@ -2272,9 +2272,6 @@
       <Filter>loader</Filter>
     </ClCompile>
     <ClCompile Include="..\loader\LoaderStrategy.cpp">
-      <Filter>loader</Filter>
-    </ClCompile>
-    <ClCompile Include="..\loader\MainResourceLoader.cpp">
       <Filter>loader</Filter>
     </ClCompile>
     <ClCompile Include="..\loader\MixedContentChecker.cpp">
@@ -6696,6 +6693,9 @@
     <ClCompile Include="..\page\Page.cpp">
       <Filter>page</Filter>
     </ClCompile>
+    <ClCompile Include="..\page\PageConsole.cpp">
+      <Filter>page</Filter>
+    </ClCompile>
     <ClCompile Include="..\page\PageGroup.cpp">
       <Filter>page</Filter>
     </ClCompile>
@@ -6840,6 +6840,27 @@
     </ClCompile>
     <ClCompile Include="..\rendering\HitTestLocation.cpp">
       <Filter>rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\parser\HTMLIdentifier.cpp">
+      <Filter>html\parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\quota\NavigatorStorageQuota.cpp">
+      <Filter>Modules\quota</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\quota\StorageQuota.cpp">
+      <Filter>Modules\quota</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\quota\StorageErrorCallback.cpp">
+      <Filter>Modules\quota</Filter>
+    </ClCompile>
+    <ClCompile Include="..\workers\SharedWorkerRepository.cpp">
+      <Filter>workers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\PlatformCAFiltersWin.cpp">
+      <Filter>platform\graphics\ca\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\image-decoders\ImageDecoder.cpp">
+      <Filter>platform\image-decoders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -9043,9 +9064,6 @@
       <Filter>loader</Filter>
     </ClInclude>
     <ClInclude Include="..\loader\LoaderStrategy.h">
-      <Filter>loader</Filter>
-    </ClInclude>
-    <ClInclude Include="..\loader\MainResourceLoader.h">
       <Filter>loader</Filter>
     </ClInclude>
     <ClInclude Include="..\loader\MixedContentChecker.h">
@@ -14375,6 +14393,9 @@
     <ClInclude Include="..\rendering\HitTestLocation.h">
       <Filter>rendering</Filter>
     </ClInclude>
+    <ClInclude Include="..\platform\image-decoders\ImageDecoder.h">
+      <Filter>platform\image-decoders</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\css\CSSGrammar.y.in">
@@ -14734,6 +14755,9 @@
     <None Include="..\inspector\front-end\cm\htmlmixed.js">
       <Filter>inspector\front-end</Filter>
     </None>
+    <None Include="..\inspector\front-end\cm\closebrackets.js">
+      <Filter>inspector\front-end</Filter>
+    </None>
     <None Include="..\inspector\front-end\cm\matchbrackets.js">
       <Filter>inspector\front-end</Filter>
     </None>
@@ -14864,6 +14888,9 @@
       <Filter>inspector\front-end</Filter>
     </None>
     <None Include="..\inspector\front-end\OverridesView.js">
+      <Filter>inspector\front-end</Filter>
+    </None>
+    <None Include="..\inspector\front-end\OverviewGrid.js">
       <Filter>inspector\front-end</Filter>
     </None>
     <None Include="..\inspector\front-end\Panel.js">
@@ -15283,12 +15310,6 @@
     </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\curl\ResourceResponse.h">
       <Filter>platform\network\curl</Filter>
-    </CustomBuildStep>
-    <CustomBuildStep Include="..\platform\image-decoders\ImageDecoder.cpp">
-      <Filter>platform\image-decoders</Filter>
-    </CustomBuildStep>
-    <CustomBuildStep Include="..\platform\image-decoders\ImageDecoder.h">
-      <Filter>platform\image-decoders</Filter>
     </CustomBuildStep>
     <CustomBuildStep Include="..\platform\image-decoders\gif\GIFImageDecoder.h">
       <Filter>platform\image-decoders\gif</Filter>

@@ -24,7 +24,7 @@ crbug.com/24182 [ Debug ] fast/frames/valid.html [ Pass Slow ]
 webkit.org/b/77184 [ Debug ] fast/js/dfg-double-vote-fuzz.html [ Pass Slow ]
 webkit.org/b/92948 [ Debug ] fast/js/dfg-osr-entry-hoisted-clobbered-structure-check.html [ Pass Timeout ]
 crbug.com/24182 fast/js/regexp-overflow.html [ Pass Slow ]
-crbug.com/24182 [ SnowLeopard Debug ] fast/js/repeat-cached-vm-reentry.html [ Pass Timeout ]
+crbug.com/24182 [ SnowLeopard Lion Debug ] fast/js/repeat-cached-vm-reentry.html [ Pass Timeout ]
 crbug.com/24182 [ Debug ] fast/js/toString-and-valueOf-override.html [ Failure Timeout ]
 crbug.com/24182 [ SnowLeopard Debug ] fast/loader/javascript-url-iframe-crash.html [ Pass Slow ]
 crbug.com/24182 [ Android ] fast/parser/nested-fragment-parser-crash.html [ Pass Slow ]
@@ -253,7 +253,6 @@ webkit.org/b/98212 fast/dom/Geolocation/coordinates-interface-attributes.html [ 
 
 # These tests are for -apple- and -khtml- prefixes, which we don't support
 inspector/styles/vendor-prefixes.html [ WontFix ]
-fast/css/apple-prefix.html [ WontFix ]
 
 # This test is specific to JSC; the V8 equivalent is
 # platform/chromium/fast/storage/serialized-script-value.html
@@ -1644,7 +1643,9 @@ webkit.org/b/98647 [ Android ] platform/chromium/compositing/child-layer-3d-sort
 webkit.org/b/98647 [ Android ] platform/chromium/compositing/3d-corners.html [ ImageOnlyFailure ]
 webkit.org/b/98647 [ Android ] fast/repaint/block-selection-gap-in-composited-layer.html [ ImageOnlyFailure ]
 webkit.org/b/98647 [ Android ] fast/css/transform-default-parameter.html [ ImageOnlyFailure ]
-webkit.org/b/98647 [ Android ] fast/canvas/canvas-toDataURL-webp.html [ ImageOnlyFailure ]
+# webkit.org/b/98647 [ Android ] fast/canvas/canvas-toDataURL-webp.html [ ImageOnlyFailure ]
+# After libwebp 0.3.0 lands in chrome this test expectation needs to be updated.
+webkit.org/b/93310 fast/canvas/canvas-toDataURL-webp.html [ ImageOnlyFailure Pass ]
 webkit.org/b/98647 [ Android ] compositing/backface-visibility/backface-visibility-3d.html [ ImageOnlyFailure ]
 webkit.org/b/98647 [ Android ] compositing/backface-visibility/backface-visibility-image.html [ ImageOnlyFailure ]
 webkit.org/b/98647 [ Android ] compositing/backface-visibility/backface-visibility-non3d.html [ ImageOnlyFailure ]
@@ -3586,9 +3587,6 @@ webkit.org/b/89936 [ XP ] fast/css/text-rendering.html [ Failure ]
 # Started timeout between r121233:r121239.
 webkit.org/b/90003 [ Win Debug ] fast/js/repeat-cached-vm-reentry.html [ Pass Timeout ]
 
-# Flaky
-webkit.org/b/90430 inspector/timeline/timeline-receive-response-event.html [ Pass Failure Timeout ]
-
 crbug.com/135709 platform/chromium/compositing/scrollbars/custom-composited-different-track-parts.html [ ImageOnlyFailure Pass ]
 
 # webkitIsFullScreen does not have the correct value after an iframe exits fullscreen
@@ -3913,9 +3911,6 @@ webkit.org/b/96550 http/tests/media/media-source/seek-to-end-after-duration-chan
 crbug.com/63921 platform/chromium/virtual/gpu/fast/canvas/canvas-fillPath-shadow.html [ Failure ]
 webkit.org/b/77550 platform/chromium/virtual/gpu/canvas/philip/tests/2d.gradient.interpolate.colouralpha.html [ Failure ]
 
-webkit.org/b/97816 [ Linux ] platform/chromium/compositing/filters/background-filter-blur-off-axis.html [ Pass ImageOnlyFailure ]
-webkit.org/b/97816 [ Linux ] platform/chromium/compositing/filters/background-filter-blur-outsets.html [ Pass ImageOnlyFailure ]
-webkit.org/b/97816 [ Linux ] platform/chromium/compositing/filters/background-filter-blur.html [ Pass ImageOnlyFailure ]
 webkit.org/b/97816 [ Linux ] platform/chromium/compositing/plugins/webplugin-alpha.html [ Pass ImageOnlyFailure ]
 webkit.org/b/97816 [ Linux ] platform/chromium/compositing/plugins/webplugin-no-alpha.html [ Pass ImageOnlyFailure ]
 webkit.org/b/97816 [ Linux ] platform/chromium/compositing/plugins/webplugin-reflection.html [ Pass ImageOnlyFailure ]
@@ -4135,8 +4130,6 @@ webkit.org/b/106518 [ Lion MountainLion ] platform/chromium/virtual/softwarecomp
 
 webkit.org/b/101539 [ Linux Win ] editing/execCommand/switch-list-type-with-orphaned-li.html [ Failure ]
 
-webkit.org/b/101618 http/tests/inspector/indexeddb/database-data.html [ Pass Crash Slow ]
-
 webkit.org/b/90022 fast/canvas/canvas-resize-reset-pixelRatio.html [ WontFix ]
 webkit.org/b/90022 platform/chromium/virtual/gpu/fast/canvas/canvas-resize-reset-pixelRatio.html [ WontFix ]
 webkit.org/b/90022 fast/canvas/canvas-as-image-hidpi.html [ WontFix ]
@@ -4337,7 +4330,7 @@ crbug.com/175926 [ Linux Win ] compositing/rtl/rtl-iframe-fixed-overflow-scrolle
 crbug.com/175926 [ Linux Win ] compositing/rtl/rtl-iframe-fixed-overflow.html [ Failure ImageOnlyFailure ]
 crbug.com/175926 [ Linux ] platform/chromium/virtual/softwarecompositing/rtl/rtl-iframe-absolute-overflow-scrolled.html [ Failure ImageOnlyFailure ]
 crbug.com/175926 [ Linux ] platform/chromium/virtual/softwarecompositing/rtl/rtl-iframe-absolute-overflow.html [ Failure ImageOnlyFailure ]
-crbug.com/175926 [ Linux ] platform/chromium/virtual/softwarecompositing/rtl/rtl-iframe-fixed-overflow-scrolled.html [ Failure ImageOnlyFailure ]
+crbug.com/175926 [ Linux Win ] platform/chromium/virtual/softwarecompositing/rtl/rtl-iframe-fixed-overflow-scrolled.html [ Failure ImageOnlyFailure ]
 crbug.com/175926 [ Linux ] platform/chromium/virtual/softwarecompositing/rtl/rtl-iframe-fixed-overflow.html [ Failure ImageOnlyFailure ]
 
 # Need rebaseline
@@ -4416,8 +4409,24 @@ webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]
 # Flaky assertion failures on debug bots
 webkit.org/b/112369 [ Debug ] inspector/debugger/pause-in-inline-script.html [ Pass Crash Timeout ]
 
-webkit.org/b/112384 [ Win ] fast/forms/basic-textareas-quirks.html [ ImageOnlyFailure Pass ]
-webkit.org/b/112384 [ Win ] fast/forms/basic-textareas.html [ ImageOnlyFailure Pass ]
-webkit.org/b/112384 [ Win ] fast/overflow/overflow-x-y.html [ ImageOnlyFailure Pass ]
-webkit.org/b/112384 [ Win ] fast/parser/open-comment-in-textarea.html [ ImageOnlyFailure Pass ]
-webkit.org/b/112384 [ Win ] fast/replaced/width100percent-textarea.html [ ImageOnlyFailure Pass ]
+# Need rebaseline
+webkit.org/b/110837 [ Mac ] fast/forms/color/input-appearance-color.html [ Failure ]
+
+
+# Flaky tests
+webkit.org/b/112598 [ Win Mac Linux ] http/tests/security/mixedContent/insecure-audio-video-in-main-frame.html [ Failure Pass ]
+webkit.org/b/112601 http/tests/security/cross-frame-access-port-explicit-domain.html [ Failure Pass ]
+webkit.org/b/112603 fast/innerHTML/innerHTML-iframe.html [ Failure Pass ]
+webkit.org/b/112621 [ Win Linux ] fast/forms/datalist/update-range-with-datalist.html [ ImageOnlyFailure Pass ]
+webkit.org/b/112629 http/tests/xmlhttprequest/send-array-buffer.html [ Failure Pass ]
+webkit.org/b/112643 http/tests/history/redirect-js-location-0-seconds.html [ Failure Pass ]
+
+webkit.org/b/112610 [ Win ] fast/text/word-space-with-kerning-3.html [ ImageOnlyFailure ]
+
+# Application cache blocking is not supported in Chromium
+webkit.org/b/112288 http/tests/security/cross-origin-appcache.html [ Failure ]
+webkit.org/b/112288 http/tests/security/cross-origin-appcache-allowed.html [ Failure ]
+webkit.org/b/112288 http/tests/security/same-origin-appcache-blocked.html [ Failure ]
+
+# Snapshotted plugins not enabled
+webkit.org/b/98696 plugins/snapshotting [ Skip ]

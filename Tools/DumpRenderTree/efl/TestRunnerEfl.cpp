@@ -679,11 +679,6 @@ void TestRunner::setDeveloperExtrasEnabled(bool enabled)
     ewk_view_setting_enable_developer_extras_set(browser->mainView(), enabled);
 }
 
-void TestRunner::setAsynchronousSpellCheckingEnabled(bool)
-{
-    notImplemented();
-}
-
 void TestRunner::showWebInspector()
 {
     ewk_view_inspector_show(browser->mainView());
@@ -842,4 +837,10 @@ void TestRunner::setStorageDatabaseIdleInterval(double)
 void TestRunner::closeIdleLocalStorageDatabases()
 {
     notImplemented();
+}
+
+JSRetainPtr<JSStringRef> TestRunner::platformName() const
+{
+    JSRetainPtr<JSStringRef> platformName(Adopt, JSStringCreateWithUTF8CString("efl"));
+    return platformName;
 }

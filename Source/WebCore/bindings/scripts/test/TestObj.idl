@@ -81,6 +81,7 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     void methodWithSequenceArg(in sequence<ScriptProfile> sequenceArg);
     sequence<ScriptProfile> methodReturningSequence(in long longArg);
 
+    void methodWithEnumArg(in TestEnumType enumArg);
     TestObj methodThatRequiresAllArgsAndThrows(in DOMString strArg, in TestObj objArg)
         raises(DOMException);
 
@@ -148,6 +149,19 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     // static methods with 'Callback' extended attribute
     static void    staticMethodWithCallbackAndOptionalArg(in [Callback, Optional] TestCallback callback);
     static void    staticMethodWithCallbackArg(in [Callback] TestCallback callback);
+#endif
+
+#if defined(TESTING_V8)
+    // 'EnforceRange' extended attribute
+    void    methodWithEnforceRangeInt32(in [EnforceRange] long value);
+    void    methodWithEnforceRangeUInt32(in [EnforceRange] unsigned long value);
+    void    methodWithEnforceRangeInt64(in [EnforceRange] long long value);
+    void    methodWithEnforceRangeUInt64(in [EnforceRange] unsigned long long value);
+
+    attribute [EnforceRange] long enforcedRangeLongAttr;
+    attribute [EnforceRange] unsigned long enforcedRangeUnsignedLongAttr;
+    attribute [EnforceRange] long long enforcedRangeLongLongAttr;
+    attribute [EnforceRange] unsigned long long enforcedRangeUnsignedLongLongAttr;
 #endif
 
     // 'Conditional' extended attribute
@@ -271,4 +285,15 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     void variadicStringMethod(in DOMString head, in DOMString... tail);
     void variadicDoubleMethod(in double head, in double... tail);
     void variadicNodeMethod(in Node head, in Node... tail);
+
+    // Nullable attributes.
+    readonly attribute double? nullableDoubleAttribute;
+    readonly attribute long? nullableLongAttribute;
+    readonly attribute boolean? nullableBooleanAttribute;
+    readonly attribute DOMString? nullableStringAttribute;
+
+    attribute long? nullableLongSettableAttribute;
+
+    attribute long? nullableStringValue
+        getter raises(DOMException);
 };

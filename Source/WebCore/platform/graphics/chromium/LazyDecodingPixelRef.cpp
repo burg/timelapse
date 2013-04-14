@@ -29,6 +29,8 @@
 #include "ImageDecoder.h"
 #include "ImageDecodingStore.h"
 #include "ImageFrameGenerator.h"
+#include "SkData.h"
+#include "TraceEvent.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -55,8 +57,22 @@ bool LazyDecodingPixelRef::isClipped() const
     return m_scaledSize.width() != m_scaledSubset.width() || m_scaledSize.height() != m_scaledSubset.height();
 }
 
+SkData* LazyDecodingPixelRef::onRefEncodedData()
+{
+    RefPtr<SharedBuffer> buffer = 0;
+    bool allDataReceived = false;
+    m_frameGenerator->copyData(&buffer, &allDataReceived);
+    if (buffer && allDataReceived) {
+        SkData* skdata = SkData::NewWithCopy((void*)buffer->data(), buffer->size());
+        return skdata;
+    }
+    return 0;
+}
+
 void* LazyDecodingPixelRef::onLockPixels(SkColorTable**)
 {
+    TRACE_EVENT_ASYNC_BEGIN0("webkit", "LazyDecodingPixelRef::lockPixels", this);
+
     m_mutex.lock();
     ASSERT(!m_lockedCachedImage);
 
@@ -83,6 +99,8 @@ void LazyDecodingPixelRef::onUnlockPixels()
         m_lockedCachedImage = 0;
     }
     m_mutex.unlock();
+
+    TRACE_EVENT_ASYNC_END0("webkit", "LazyDecodingPixelRef::lockPixels", this);
 }
 
 bool LazyDecodingPixelRef::onLockPixelsAreWritable() const
@@ -92,6 +110,8 @@ bool LazyDecodingPixelRef::onLockPixelsAreWritable() const
 
 bool LazyDecodingPixelRef::PrepareToDecode(const LazyPixelRef::PrepareParams& params)
 {
+    TRACE_EVENT0("webkit", "LazyDecodingPixelRef::PrepareToDecode");
+
     // TODO: check if only a particular rect is available in image cache.
     UNUSED_PARAM(params);
     const ScaledImageFragment* cachedImage = 0;

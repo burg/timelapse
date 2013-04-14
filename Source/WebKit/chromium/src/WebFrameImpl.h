@@ -36,6 +36,7 @@
 #include "Frame.h"
 #include "FrameDestructionObserver.h"
 #include "FrameLoaderClientImpl.h"
+#include <public/WebFileSystemType.h>
 #include <wtf/Compiler.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
@@ -127,17 +128,17 @@ public:
         int argc,
         v8::Handle<v8::Value> argv[]);
     virtual v8::Local<v8::Context> mainWorldScriptContext() const;
-    virtual v8::Handle<v8::Value> createFileSystem(WebFileSystem::Type,
-                                                   const WebString& name,
-                                                   const WebString& path);
-    virtual v8::Handle<v8::Value> createSerializableFileSystem(WebFileSystem::Type,
-                                                               const WebString& name,
-                                                               const WebString& path);
-    virtual v8::Handle<v8::Value> createFileEntry(WebFileSystem::Type,
-                                                  const WebString& fileSystemName,
-                                                  const WebString& fileSystemPath,
-                                                  const WebString& filePath,
-                                                  bool isDirectory);
+    virtual v8::Handle<v8::Value> createFileSystem(WebFileSystemType,
+        const WebString& name,
+        const WebString& path);
+    virtual v8::Handle<v8::Value> createSerializableFileSystem(WebFileSystemType,
+        const WebString& name,
+        const WebString& path);
+    virtual v8::Handle<v8::Value> createFileEntry(WebFileSystemType,
+        const WebString& fileSystemName,
+        const WebString& fileSystemPath,
+        const WebString& filePath,
+        bool isDirectory);
     virtual void reload(bool ignoreCache);
     virtual void reloadWithOverrideURL(const WebURL& overrideUrl, bool ignoreCache);
     virtual void loadRequest(const WebURLRequest&);

@@ -188,6 +188,7 @@ fast/sub-pixel
 fast/events/pagehide-timeout.html
 fast/events/pageshow-pagehide-on-back-cached-with-frames.html
 fast/events/pageshow-pagehide-on-back-cached.html
+fast/events/pageshow-pagehide.html
 
 # [WK2] http/tests/navigation/https-in-page-cache.html times out on mac-wk2
 # https://bugs.webkit.org/show_bug.cgi?id=81622
@@ -271,8 +272,8 @@ webkit.org/b/98960 fast/parser/document-open-in-unload.html [ Skip ]
 webkit.org/b/76359 editing/shadow [ Skip ]
 webkit.org/b/76359 fast/dom/shadow [ Skip ]
 
-# fast/events/controlclick-no-onclick.html fails on Mac WK2
-webkit.org/b/105948 fast/events/controlclick-no-onclick.html [ Failure ]
+# fast/events/controlclick-no-onclick.html fails or times out on Mac WK2
+webkit.org/b/105948 fast/events/controlclick-no-onclick.html [ Skip ]
 
 webkit.org/b/105954 http/tests/navigation/reload-subframe-object.html [ Failure ]
 
@@ -291,10 +292,6 @@ webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky.html [ 
 webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/sticky-both-sides.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/93552 inspector/device-orientation-success.html [ Failure ]
-
-webkit.org/b/107935 compositing/overflow/do-not-paint-outline-into-composited-scrolling-contents.html [ Missing ]
-webkit.org/b/107935 compositing/overflow/paint-neg-z-order-descendants-into-scrolling-contents-layer.html [ Missing ]
-webkit.org/b/107935 compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Failure ]
 
 webkit.org/b/106405 http/tests/loading/authentication-after-redirect-stores-wrong-credentials/authentication-after-redirect-stores-wrong-credentials.html [ Failure ]
 webkit.org/b/106405 http/tests/loading/basic-auth-resend-wrong-credentials.html [ Failure ]
@@ -316,6 +313,16 @@ webkit.org/b/108507 printing/standards-percentage-heights.html [ Skip ]
 webkit.org/b/107356 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
 
 webkit.org/b/109890 [ Debug ] platform/mac-wk2/plugins/destroy-during-async-npp-new.html [ Crash ]
+
+webkit.org/b/97124 [ Debug ] fast/loader/stateobjects/document-destroyed-navigate-back.html [ Pass Crash ]
+webkit.org/b/97124 [ Debug ] fast/loader/document-with-fragment-url-3.html [ Pass Crash ]
+webkit.org/b/97124 [ Debug ] fast/loader/document-with-fragment-url-4.html [ Pass Crash ]
+webkit.org/b/97124 [ Debug ] fast/loader/dynamic-iframe-extra-back-forward-item.html [ Pass Crash ]
+webkit.org/b/97124 [ Debug ] fast/events/pageshow-pagehide-on-back-uncached.html [ Pass Crash ]
+webkit.org/b/97124 [ Debug ] svg/animations/mozilla/animateMotion-by-1.svg [ Pass Crash ]
+
+webkit.org/b/112642 [ Debug ] editing/deleting/paste-with-transparent-background-color.html [ Crash Pass ]
+webkit.org/b/112642 [ Debug ] editing/pasteboard/5780697-1.html [ Crash Pass ]
 
 ### END OF (1) Classified failures with bug reports
 ########################################
@@ -419,6 +426,10 @@ sputnik/Unicode/Unicode_218/S7.6_A5.2_T1.html
 
 ########################################
 ### START OF (5) Features that are not supported in WebKit1, so skipped in mac/TestExpectations then re-enabled here
+
+# Snapshotted plugins not enabled on WK1 but are on WK2
+# Temporarily disabled while working out compositing failures
+plugins/snapshotting [ Skip ]
 
 ### END OF (5) Features that are not supported in WebKit1, so skipped in mac/TestExpectations then re-enabled here
 ########################################

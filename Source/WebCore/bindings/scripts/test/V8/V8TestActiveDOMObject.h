@@ -35,6 +35,7 @@ class V8TestActiveDOMObject {
 public:
     static const bool hasDependentLifetime = false;
     static bool HasInstance(v8::Handle<v8::Value>, v8::Isolate*, WrapperWorldType);
+    static bool HasInstanceInAnyWorld(v8::Handle<v8::Value>, v8::Isolate*);
     static v8::Persistent<v8::FunctionTemplate> GetTemplate(v8::Isolate*, WrapperWorldType);
     static TestActiveDOMObject* toNative(v8::Handle<v8::Object> object)
     {
@@ -48,6 +49,12 @@ public:
 private:
     friend v8::Handle<v8::Object> wrap(TestActiveDOMObject*, v8::Handle<v8::Object> creationContext, v8::Isolate*);
     static v8::Handle<v8::Object> createWrapper(PassRefPtr<TestActiveDOMObject>, v8::Handle<v8::Object> creationContext, v8::Isolate*);
+};
+
+template<>
+class WrapperTypeTraits<TestActiveDOMObject > {
+public:
+    static WrapperTypeInfo* info() { return &V8TestActiveDOMObject::info; }
 };
 
 
@@ -68,6 +75,17 @@ inline v8::Handle<v8::Value> toV8(TestActiveDOMObject* impl, v8::Handle<v8::Obje
     return wrap(impl, creationContext, isolate);
 }
 
+inline v8::Handle<v8::Value> toV8ForMainWorld(TestActiveDOMObject* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
+{
+    ASSERT(worldType(isolate) == MainWorld);
+    if (UNLIKELY(!impl))
+        return v8NullWithCheck(isolate);
+    v8::Handle<v8::Value> wrapper = DOMDataStore::getWrapperForMainWorld(impl);
+    if (!wrapper.IsEmpty())
+        return wrapper;
+    return wrap(impl, creationContext, isolate);
+}
+
 template<class HolderContainer, class Wrappable>
 inline v8::Handle<v8::Value> toV8Fast(TestActiveDOMObject* impl, const HolderContainer& container, Wrappable* wrappable)
 {
@@ -78,6 +96,25 @@ inline v8::Handle<v8::Value> toV8Fast(TestActiveDOMObject* impl, const HolderCon
         return wrapper;
     return wrap(impl, container.Holder(), container.GetIsolate());
 }
+
+template<class HolderContainer, class Wrappable>
+inline v8::Handle<v8::Value> toV8FastForMainWorld(TestActiveDOMObject* impl, const HolderContainer& container, Wrappable* wrappable)
+{
+    ASSERT(worldType(container.GetIsolate()) == MainWorld);
+    if (UNLIKELY(!impl))
+        return v8Null(container.GetIsolate());
+    v8::Handle<v8::Object> wrapper = DOMDataStore::getWrapperForMainWorld(impl);
+    if (!wrapper.IsEmpty())
+        return wrapper;
+    return wrap(impl, container.Holder(), container.GetIsolate());
+}
+
+template<class HolderContainer, class Wrappable>
+inline v8::Handle<v8::Value> toV8FastForMainWorld(PassRefPtr< TestActiveDOMObject > impl, const HolderContainer& container, Wrappable* wrappable)
+{
+    return toV8FastForMainWorld(impl.get(), container, wrappable);
+}
+
 
 template<class HolderContainer, class Wrappable>
 inline v8::Handle<v8::Value> toV8Fast(PassRefPtr< TestActiveDOMObject > impl, const HolderContainer& container, Wrappable* wrappable)

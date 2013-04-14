@@ -409,7 +409,7 @@ public:
 
     LayoutUnit shrinkLogicalWidthToAvoidFloats(LayoutUnit childMarginStart, LayoutUnit childMarginEnd, const RenderBlock* cb, RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
 
-    LayoutUnit computeLogicalWidthInRegionUsing(SizeType, LayoutUnit availableLogicalWidth, const RenderBlock* containingBlock, RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
+    LayoutUnit computeLogicalWidthInRegionUsing(SizeType, Length, LayoutUnit availableLogicalWidth, const RenderBlock* containingBlock, RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
     LayoutUnit computeLogicalHeightUsing(SizeType, const Length& height) const;
     LayoutUnit computeContentLogicalHeight(SizeType, const Length& height) const;
     LayoutUnit computeContentAndScrollbarLogicalHeightUsing(SizeType, const Length& height) const;
@@ -593,7 +593,7 @@ protected:
 
     LayoutRect backgroundPaintedExtent() const;
     bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect) const;
-    virtual bool backgroundIsKnownToBeObscured() const;
+    virtual bool computeBackgroundIsKnownToBeObscured() OVERRIDE;
     void paintBackground(const PaintInfo&, const LayoutRect&, BackgroundBleedAvoidance = BackgroundBleedNone);
     
     void paintFillLayer(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, BackgroundBleedAvoidance, CompositeOperator, RenderObject* backgroundObject);

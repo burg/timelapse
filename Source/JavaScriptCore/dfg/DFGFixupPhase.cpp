@@ -148,6 +148,30 @@ private:
                 fixDoubleEdge<NumberUse>(node->child2());
                 break;
             }
+            
+            // FIXME: Optimize for the case where one of the operands is the
+            // empty string. Also consider optimizing for the case where we don't
+            // believe either side is the emtpy string. Both of these things should
+            // be easy.
+            
+            if (node->child1()->shouldSpeculateString()
+                && attemptToMakeFastStringAdd<StringUse>(node, node->child1(), node->child2()))
+                break;
+            if (node->child2()->shouldSpeculateString()
+                && attemptToMakeFastStringAdd<StringUse>(node, node->child2(), node->child1()))
+                break;
+            if (node->child1()->shouldSpeculateStringObject()
+                && attemptToMakeFastStringAdd<StringObjectUse>(node, node->child1(), node->child2()))
+                break;
+            if (node->child2()->shouldSpeculateStringObject()
+                && attemptToMakeFastStringAdd<StringObjectUse>(node, node->child2(), node->child1()))
+                break;
+            if (node->child1()->shouldSpeculateStringOrStringObject()
+                && attemptToMakeFastStringAdd<StringOrStringObjectUse>(node, node->child1(), node->child2()))
+                break;
+            if (node->child2()->shouldSpeculateStringOrStringObject()
+                && attemptToMakeFastStringAdd<StringOrStringObjectUse>(node, node->child2(), node->child1()))
+                break;
             break;
         }
             
@@ -526,10 +550,66 @@ private:
         }
             
         case ToPrimitive: {
-            if (node->child1()->shouldSpeculateInteger())
+            if (node->child1()->shouldSpeculateInteger()) {
                 setUseKindAndUnboxIfProfitable<Int32Use>(node->child1());
+                node->convertToIdentity();
+                break;
+            }
+            
+            if (node->child1()->shouldSpeculateString()) {
+                setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
+                node->convertToIdentity();
+                break;
+            }
+            
+            if (node->child1()->shouldSpeculateStringObject()
+                && canOptimizeStringObjectAccess(node->codeOrigin)) {
+                setUseKindAndUnboxIfProfitable<StringObjectUse>(node->child1());
+                node->convertToToString();
+                break;
+            }
+            
+            if (node->child1()->shouldSpeculateStringOrStringObject()
+                && canOptimizeStringObjectAccess(node->codeOrigin)) {
+                setUseKindAndUnboxIfProfitable<StringOrStringObjectUse>(node->child1());
+                node->convertToToString();
+                break;
+            }
+            
             // FIXME: Add string speculation here.
             // https://bugs.webkit.org/show_bug.cgi?id=110175
+            break;
+        }
+            
+        case ToString: {
+            if (node->child1()->shouldSpeculateString()) {
+                setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
+                node->convertToIdentity();
+                break;
+            }
+            
+            if (node->child1()->shouldSpeculateStringObject()
+                && canOptimizeStringObjectAccess(node->codeOrigin)) {
+                setUseKindAndUnboxIfProfitable<StringObjectUse>(node->child1());
+                break;
+            }
+            
+            if (node->child1()->shouldSpeculateStringOrStringObject()
+                && canOptimizeStringObjectAccess(node->codeOrigin)) {
+                setUseKindAndUnboxIfProfitable<StringOrStringObjectUse>(node->child1());
+                break;
+            }
+            
+            if (node->child1()->shouldSpeculateCell()) {
+                setUseKindAndUnboxIfProfitable<CellUse>(node->child1());
+                break;
+            }
+            
+            break;
+        }
+            
+        case NewStringObject: {
+            setUseKindAndUnboxIfProfitable<KnownStringUse>(node->child1());
             break;
         }
             
@@ -645,6 +725,17 @@ private:
                 }
             } else
                 arrayMode = arrayMode.refine(node->child1()->prediction(), node->prediction());
+            
+            if (arrayMode.type() == Array::Generic) {
+                // Check if the input is something that we can't get array length for, but for which we
+                // could insert some conversions in order to transform it into something that we can do it
+                // for.
+                if (node->child1()->shouldSpeculateStringObject())
+                    attemptToForceStringArrayModeByToStringConversion<StringObjectUse>(arrayMode, node);
+                else if (node->child1()->shouldSpeculateStringOrStringObject())
+                    attemptToForceStringArrayModeByToStringConversion<StringOrStringObjectUse>(arrayMode, node);
+            }
+            
             if (!arrayMode.supportsLength())
                 break;
             node->setOp(GetArrayLength);
@@ -804,6 +895,144 @@ private:
         }
         dataLogF("\n");
 #endif
+    }
+    
+    template<UseKind useKind>
+    Node* createToString(Node* node, Edge edge)
+    {
+        return m_insertionSet.insertNode(
+            m_indexInBlock, SpecString, ToString, node->codeOrigin,
+            Edge(edge.node(), useKind));
+    }
+    
+    template<UseKind useKind>
+    void attemptToForceStringArrayModeByToStringConversion(ArrayMode& arrayMode, Node* node)
+    {
+        ASSERT(arrayMode == ArrayMode(Array::Generic));
+        
+        if (!canOptimizeStringObjectAccess(node->codeOrigin))
+            return;
+        
+        node->child1().setNode(createToString<useKind>(node, node->child1()));
+        arrayMode = ArrayMode(Array::String);
+    }
+    
+    template<UseKind useKind>
+    bool isStringObjectUse()
+    {
+        switch (useKind) {
+        case StringObjectUse:
+        case StringOrStringObjectUse:
+            return true;
+        default:
+            return false;
+        }
+    }
+    
+    template<UseKind useKind>
+    void convertStringAddUse(Node* node, Edge& edge)
+    {
+        if (useKind == StringUse) {
+            // This preserves the binaryUseKind() invariant ot ValueAdd: ValueAdd's
+            // two edges will always have identical use kinds, which makes the
+            // decision process much easier.
+            observeUseKindOnNode<StringUse>(edge.node());
+            m_insertionSet.insertNode(
+                m_indexInBlock, SpecNone, Phantom, node->codeOrigin,
+                Edge(edge.node(), StringUse));
+            edge.setUseKind(KnownStringUse);
+            return;
+        }
+        
+        // FIXME: We ought to be able to have a ToPrimitiveToString node.
+        
+        observeUseKindOnNode<useKind>(edge.node());
+        edge = Edge(createToString<useKind>(node, edge), KnownStringUse);
+    }
+    
+    template<UseKind leftUseKind>
+    bool attemptToMakeFastStringAdd(Node* node, Edge& left, Edge& right)
+    {
+        ASSERT(leftUseKind == StringUse || leftUseKind == StringObjectUse || leftUseKind == StringOrStringObjectUse);
+        
+        if (isStringObjectUse<leftUseKind>() && !canOptimizeStringObjectAccess(node->codeOrigin))
+            return false;
+        
+        if (right->shouldSpeculateString()) {
+            convertStringAddUse<leftUseKind>(node, left);
+            convertStringAddUse<StringUse>(node, right);
+            return true;
+        }
+        
+        if (right->shouldSpeculateStringObject()
+            && canOptimizeStringObjectAccess(node->codeOrigin)) {
+            convertStringAddUse<leftUseKind>(node, left);
+            convertStringAddUse<StringObjectUse>(node, right);
+            return true;
+        }
+        
+        if (right->shouldSpeculateStringOrStringObject()
+            && canOptimizeStringObjectAccess(node->codeOrigin)) {
+            convertStringAddUse<leftUseKind>(node, left);
+            convertStringAddUse<StringOrStringObjectUse>(node, right);
+            return true;
+        }
+        
+        // FIXME: We ought to be able to convert the right case to do
+        // ToPrimitiveToString.
+        return false; // Let the slow path worry about it.
+    }
+    
+    bool isStringPrototypeMethodSane(Structure* stringPrototypeStructure, const Identifier& ident)
+    {
+        unsigned attributesUnused;
+        JSCell* specificValue;
+        PropertyOffset offset = stringPrototypeStructure->get(
+            globalData(), ident, attributesUnused, specificValue);
+        if (!isValidOffset(offset))
+            return false;
+        
+        if (!specificValue)
+            return false;
+        
+        if (!specificValue->inherits(&JSFunction::s_info))
+            return false;
+        
+        JSFunction* function = jsCast<JSFunction*>(specificValue);
+        if (function->executable()->intrinsicFor(CodeForCall) != StringPrototypeValueOfIntrinsic)
+            return false;
+        
+        return true;
+    }
+    
+    bool canOptimizeStringObjectAccess(const CodeOrigin& codeOrigin)
+    {
+        if (m_graph.hasExitSite(codeOrigin, NotStringObject))
+            return false;
+        
+        Structure* stringObjectStructure = m_graph.globalObjectFor(codeOrigin)->stringObjectStructure();
+        ASSERT(stringObjectStructure->storedPrototype().isObject());
+        ASSERT(stringObjectStructure->storedPrototype().asCell()->classInfo() == &StringPrototype::s_info);
+        
+        JSObject* stringPrototypeObject = asObject(stringObjectStructure->storedPrototype());
+        Structure* stringPrototypeStructure = stringPrototypeObject->structure();
+        if (stringPrototypeStructure->transitionWatchpointSetHasBeenInvalidated())
+            return false;
+        
+        if (stringPrototypeStructure->isDictionary())
+            return false;
+        
+        // We're being conservative here. We want DFG's ToString on StringObject to be
+        // used in both numeric contexts (that would call valueOf()) and string contexts
+        // (that would call toString()). We don't want the DFG to have to distinguish
+        // between the two, just because that seems like it would get confusing. So we
+        // just require both methods to be sane.
+        if (!isStringPrototypeMethodSane(stringPrototypeStructure, globalData().propertyNames->valueOf))
+            return false;
+        if (!isStringPrototypeMethodSane(stringPrototypeStructure, globalData().propertyNames->toString))
+            return false;
+        
+        return true;
     }
     
     void fixupSetLocalsInBlock(BasicBlock* block)
@@ -974,6 +1203,9 @@ private:
         case CellUse:
         case ObjectUse:
         case StringUse:
+        case KnownStringUse:
+        case StringObjectUse:
+        case StringOrStringObjectUse:
             if (alwaysUnboxSimplePrimitives()
                 || isCellSpeculation(variable->prediction()))
                 m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
@@ -1008,12 +1240,6 @@ private:
         }
         
         ASSERT(newEdge->shouldSpeculateInteger());
-        
-        // Completely kill the ValueToInt32. We wouldn't have to do crazy things like this
-        // if it weren't for https://bugs.webkit.org/show_bug.cgi?id=111238.
-        node->setOpAndDefaultFlags(Nop);
-        node->child1() = Edge();
-        
         edge = newEdge;
     }
     

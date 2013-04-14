@@ -98,6 +98,7 @@ public:
     bool shouldDumpUserGestureInFrameLoadCallbacks() const;
     bool stopProvisionalFrameLoads() const;
     bool shouldDumpTitleChanges() const;
+    bool shouldDumpIconChanges() const;
     bool shouldDumpCreateView() const;
     bool canOpenWindows() const;
     bool shouldDumpResourceLoadCallbacks() const;
@@ -302,11 +303,6 @@ private:
     // Enable or disable plugins.
     void setPluginsEnabled(const CppArgumentList&, CppVariant*);
 
-    // Changes asynchronous spellchecking flag on the settings.
-    void setAsynchronousSpellCheckingEnabled(const CppArgumentList&, CppVariant*);
-
-    void setTouchDragDropEnabled(const CppArgumentList&, CppVariant*);
-
     ///////////////////////////////////////////////////////////////////////////
     // Methods that modify the state of TestRunner
 
@@ -328,6 +324,10 @@ private:
     // dump all frames as plain text if the dumpAsText flag is set.
     // It takes no arguments, and ignores any that may be present.
     void dumpChildFramesAsText(const CppArgumentList&, CppVariant*);
+
+    // This function sets a flag that tells the test_shell to print out the
+    // information about icon changes notifications from WebKit.
+    void dumpIconChanges(const CppArgumentList&, CppVariant*);
 
     // Deals with Web Audio WAV file data.
     void setAudioData(const CppArgumentList&, CppVariant*);
@@ -586,6 +586,9 @@ private:
     // If true, the test_shell will print out the child frame scroll offsets as
     // well.
     bool m_dumpChildFrameScrollPositions;
+
+    // If true, the test_shell will print out the icon change notifications.
+    bool m_dumpIconChanges;
 
     // If true, the test_shell will output a base64 encoded WAVE file.
     bool m_dumpAsAudio;

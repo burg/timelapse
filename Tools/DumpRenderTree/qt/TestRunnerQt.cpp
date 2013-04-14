@@ -58,14 +58,7 @@ void TestRunnerQt::reset()
     m_hasDumped = false;
     m_loadFinished = false;
     m_audioDump = false;
-    m_dumpChildrenAsText = false;
-    m_dumpChildFrameScrollPositions = false;
-    m_canOpenWindows = false;
     m_waitForDone = false;
-    m_dumpTitleChanges = false;
-    m_dumpDatabaseCallbacks = false;
-    m_dumpApplicationCacheDelegateCallbacks = false;
-    m_dumpStatusCallbacks = false;
     m_timeoutTimer.stop();
     m_topLoadingFrame = 0;
     m_waitForPolicy = false;
@@ -75,7 +68,6 @@ void TestRunnerQt::reset()
     m_userStyleSheetEnabled = false;
     m_ignoreDesktopNotification = false;
     m_isGeolocationPermissionSet = false;
-    m_isPrinting = false;
     m_geolocationPermission = false;
     m_audioData.clear();
 
@@ -427,11 +419,6 @@ void TestRunnerQt::closeWebInspector()
 void TestRunnerQt::setDeveloperExtrasEnabled(bool enabled)
 {
     m_drt->webPage()->settings()->setAttribute(QWebSettings::DeveloperExtrasEnabled, enabled);
-}
-
-void TestRunnerQt::setAsynchronousSpellCheckingEnabled(bool)
-{
-    // FIXME: Implement this.
 }
 
 void TestRunnerQt::showWebInspector()
@@ -1173,10 +1160,6 @@ void TestRunner::abortModal()
 }
 
 void TestRunner::setStorageDatabaseIdleInterval(double)
-{
-}
-
-void TestRunner::setAsynchronousSpellCheckingEnabled(bool)
 {
 }
 

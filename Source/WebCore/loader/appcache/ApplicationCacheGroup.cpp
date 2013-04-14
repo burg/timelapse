@@ -40,7 +40,6 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
-#include "MainResourceLoader.h"
 #include "ManifestParser.h"
 #include "Page.h"
 #include "ResourceBuffer.h"
@@ -142,6 +141,9 @@ void ApplicationCacheGroup::selectCache(Frame* frame, const KURL& passedManifest
     
     if (!frame->settings() || !frame->settings()->offlineWebApplicationCacheEnabled())
         return;
+
+    if (!frame->document()->securityOrigin()->canAccessApplicationCache(frame->tree()->top()->document()->securityOrigin()))
+        return;
     
     DocumentLoader* documentLoader = frame->loader()->documentLoader();
     ASSERT(!documentLoader->applicationCacheHost()->applicationCache());
@@ -214,6 +216,9 @@ void ApplicationCacheGroup::selectCache(Frame* frame, const KURL& passedManifest
 void ApplicationCacheGroup::selectCacheWithoutManifestURL(Frame* frame)
 {
     if (!frame->settings() || !frame->settings()->offlineWebApplicationCacheEnabled())
+        return;
+
+    if (!frame->document()->securityOrigin()->canAccessApplicationCache(frame->tree()->top()->document()->securityOrigin()))
         return;
 
     DocumentLoader* documentLoader = frame->loader()->documentLoader();

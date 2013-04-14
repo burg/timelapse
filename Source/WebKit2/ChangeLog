@@ -1,3 +1,790 @@
+2013-03-19  Kenneth Rohde Christiansen  <kenneth@webkit.org> and Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        [EFL][WK2] Separate WebView further from EwkView
+        https://bugs.webkit.org/show_bug.cgi?id=111591
+
+        Reviewed by Caio Marcelo de Oliveira Filho.
+
+        Main points are:
+        - WKView API has no dependency on EFL types
+        - WebView class does not store the Evas_Object
+
+        * UIProcess/API/C/efl/WKView.cpp:
+        (WKViewCreate):
+
+            WKView creation does not require any EFL objects to be passed.
+
+        * UIProcess/API/C/efl/WKView.h:
+        * UIProcess/API/efl/EwkView.cpp:
+        (EwkView::EwkView):
+        (EwkView::create):
+
+            WKViewRef is passed to EwkView constructor from outside rather than
+            created inside.
+
+        (EwkView::webView):
+        * UIProcess/API/efl/EwkView.h:
+        (EwkView):
+        (EwkView::wkView):
+        (EwkView::page):
+
+            EwkView keeps WKViewRef rather than pointer to WebView class.
+
+        * UIProcess/API/efl/ewk_view_private.h: Added.
+        (EWKViewCreate):
+        (EWKViewGetWKView):
+
+            Added private API to create ewk view evas object and return its WKViewRef.
+
+        * UIProcess/API/efl/ewk_view.cpp:
+        (ewkCreateEvasObject):
+        (ewk_view_smart_add):
+        (ewk_view_add):
+        (ewk_view_add_with_context):
+        * UIProcess/efl/WebInspectorProxyEfl.cpp:
+        (WebKit::WebInspectorProxy::platformCreateInspectorPage):
+
+            Updated accordingly to the new APIs.
+
+        * UIProcess/efl/WebView.cpp:
+        (WebKit::WebView::WebView):
+        (WebKit::WebView::create):
+        (WebKit):
+        (WebKit::WebView::setEwkView):
+        (WebKit::WebView::isViewFocused):
+        (WebKit::WebView::isViewVisible):
+        * UIProcess/efl/WebView.h:
+        (WebView):
+
+            Implementation of updated WKView API.
+
+2013-03-19  Dean Jackson  <dino@apple.com>
+
+        Allow PlugIn Snapshotting to be tested
+        https://bugs.webkit.org/show_bug.cgi?id=98696
+
+        Reviewed by Tim Horton.
+
+        Use the new maximumPlugInSnapshotAttempts setting rather than a hardcoded
+        value. At the same time, if this value is 0, then snapshot immediately
+        (don't wait to get a snapshot and test it).
+
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::PluginView::didInitializePlugin): Snapshot immediately if maximum attempts are 0.
+        (WebKit::PluginView::pluginSnapshotTimerFired): Use setting rather than file local variable.
+
+2013-03-19  Dean Jackson  <dino@apple.com>
+
+        Restarting a snapshotted plugin should restart all plugins from the same domain on the page
+        https://bugs.webkit.org/show_bug.cgi?id=112725
+
+        Reviewed by Tim Horton.
+
+        When we add a plugin domain hash to the list of sites that autostart, we
+        send a message to our owning process. That message might not return before
+        another plugin queries if it is in the list. So, before we send the message,
+        add the current hash to the list with a very small timeout. That way the
+        response will be to either extend the timeout, or not add the hash (in which
+        case it will expire soon).
+
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::addPlugInAutoStartOrigin):
+
+2013-03-19  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Fix WebKit2 builds after r146193
+        https://bugs.webkit.org/show_bug.cgi?id=112700
+
+        Reviewed by Martin Robinson.
+
+        Apply changes to the LayerTreeHostGtk class that are analogous to changes made in r146193
+        to the LayerTreeHostMac class, namely introducing a PageOverlayLayersMap and using that as
+        the source of GraphicsLayer objects that should be operated on, making it possible to
+        support multiple page overlays.
+
+        * WebProcess/WebPage/gtk/LayerTreeHostGtk.cpp:
+        (WebKit::LayerTreeHostGtk::initialize):
+        (WebKit::LayerTreeHostGtk::invalidate):
+        (WebKit::LayerTreeHostGtk::setNonCompositedContentsNeedDisplay):
+        (WebKit::LayerTreeHostGtk::setNonCompositedContentsNeedDisplayInRect):
+        (WebKit::LayerTreeHostGtk::sizeDidChange):
+        (WebKit::LayerTreeHostGtk::didInstallPageOverlay):
+        (WebKit::LayerTreeHostGtk::didUninstallPageOverlay):
+        (WebKit::LayerTreeHostGtk::setPageOverlayNeedsDisplay):
+        (WebKit::LayerTreeHostGtk::paintContents):
+        (WebKit::LayerTreeHostGtk::flushPendingLayerChanges):
+        (WebKit::LayerTreeHostGtk::createPageOverlayLayer):
+        (WebKit::LayerTreeHostGtk::destroyPageOverlayLayer):
+        * WebProcess/WebPage/gtk/LayerTreeHostGtk.h:
+        (LayerTreeHostGtk):
+
+2013-03-19  Tim Horton  <timothy_horton@apple.com>
+
+        [wk2] Should support multiple page overlays, like the API suggests
+        https://bugs.webkit.org/show_bug.cgi?id=112505
+        <rdar://problem/13424796>
+
+        Reviewed by Simon Fraser.
+
+        * WebProcess/WebPage/DrawingAreaImpl.h:
+        * WebProcess/WebPage/LayerTreeHost.h:
+        * WebProcess/WebPage/DrawingArea.h:
+        (WebKit::DrawingArea::didInstallPageOverlay):
+        (WebKit::DrawingArea::didUninstallPageOverlay):
+        (WebKit::DrawingArea::setPageOverlayNeedsDisplay):
+        (WebKit::DrawingArea::setPageOverlayOpacity):
+        Add PageOverlay argument.
+
+        * WebProcess/WebPage/DrawingAreaImpl.cpp:
+        (WebKit::DrawingAreaImpl::didInstallPageOverlay):
+        (WebKit::DrawingAreaImpl::didUninstallPageOverlay):
+        (WebKit::DrawingAreaImpl::setPageOverlayNeedsDisplay):
+        (WebKit::DrawingAreaImpl::setPageOverlayOpacity):
+        Add PageOverlay argument, forward it to LayerTreeHost.
+        (WebKit::DrawingAreaImpl::display):
+        Paint all of the PageOverlays that WebPage knows about.
+
+        * WebProcess/WebPage/PageOverlay.cpp:
+        (WebKit::PageOverlay::setNeedsDisplay):
+        (WebKit::PageOverlay::fadeAnimationTimerFired):
+        Pass the relevant PageOverlay into the DrawingArea methods that now take it.
+
+        * WebProcess/WebPage/WebPage.cpp:
+        (WebKit::WebPage::drawPageOverlay):
+        Take the PageOverlay to draw as an argument.
+        (WebKit::WebPage::installPageOverlay):
+        (WebKit::WebPage::uninstallPageOverlay):
+        Allow (un)installation of multiple PageOverlays.
+        (WebKit::WebPage::mouseEvent):
+        (WebKit::WebPage::mouseEventSyncForTesting):
+        Hit-test PageOverlays in reverse order of installation (most recently installed should be topmost).
+
+        * WebProcess/WebPage/WebPage.h:
+        (WebKit::WebPage::drawPageOverlay): Take the PageOverlay to draw as an argument.
+        (WebKit::WebPage::hasPageOverlay): Return true if we have any number of overlays.
+        (WebKit::WebPage::pageOverlays): Return the whole vector of overlays.
+
+        * WebProcess/WebPage/mac/LayerTreeHostMac.h:
+        Add PageOverlay argument to a few methods.
+        Add storage for a map of PageOverlay->GraphicsLayers.
+
+        * WebProcess/WebPage/mac/LayerTreeHostMac.mm:
+        (WebKit::LayerTreeHostMac::setNonCompositedContentsNeedDisplay):
+        (WebKit::LayerTreeHostMac::setNonCompositedContentsNeedDisplayInRect):
+        (WebKit::LayerTreeHostMac::sizeDidChange):
+        (WebKit::LayerTreeHostMac::flushPendingLayerChanges):
+        Operate on all installed PageOverlays, not just the most recently installed one.
+
+        (WebKit::LayerTreeHostMac::didInstallPageOverlay):
+        (WebKit::LayerTreeHostMac::didUninstallPageOverlay):
+        Forward the passed-in PageOverlay on to createPageOverlayLayer/destroyPageOverlayLayer.
+
+        (WebKit::LayerTreeHostMac::setPageOverlayNeedsDisplay):
+        Look up the GraphicsLayer for the PageOverlay we need to dirty, and dirty it.
+
+        (WebKit::LayerTreeHostMac::paintContents):
+        Find the PageOverlay corresponding to the GraphicsLayer that we're painting, and ask WebPage to paint it.
+        While not ideal (crawling the map), the vast majority of the time there will only be one entry.
+
+        (WebKit::LayerTreeHostMac::initialize):
+        Create layers for all of WebPage's active PageOverlays.
+        
+        (WebKit::LayerTreeHostMac::createPageOverlayLayer):
+        Stick the newly-created GraphicsLayer into the m_pageOverlays map.
+        Also, drive-by add support for accelerated overlays and debug borders/repaint counters in overlays.
+
+        (WebKit::LayerTreeHostMac::destroyPageOverlayLayer):
+        Remove the relevant overlay from the m_pageOverlays map and tear it down.
+
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.h:
+        (TiledCoreAnimationDrawingArea):
+        Add PageOverlay argument to a few methods.
+        Add storage for a map of PageOverlay->GraphicsLayers.
+        Add storage for a map of GraphicsLayer->CALayers.
+
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm:
+        (WebKit::TiledCoreAnimationDrawingArea::didInstallPageOverlay):
+        Pass PageOverlay argument on to createPageOverlayLayer.
+        
+        (WebKit::TiledCoreAnimationDrawingArea::didUninstallPageOverlay):
+        Pass PageOverlay argument on to destroyPageOverlayLayer.
+        Refrain from re-enabling threaded scrolling if there are still more overlays installed.
+        
+        (WebKit::TiledCoreAnimationDrawingArea::setPageOverlayNeedsDisplay):
+        Look up the GraphicsLayer for the PageOverlay we need to dirty, and dirty it.
+
+        (WebKit::TiledCoreAnimationDrawingArea::paintContents):
+        Find the PageOverlay corresponding to the GraphicsLayer that we're painting, and ask WebPage to paint it.
+        While not ideal (crawling the map), the vast majority of the time there will only be one entry.
+
+        (WebKit::TiledCoreAnimationDrawingArea::updatePreferences):
+        (WebKit::TiledCoreAnimationDrawingArea::flushLayers):
+        (WebKit::TiledCoreAnimationDrawingArea::setExposedRect):
+        (WebKit::TiledCoreAnimationDrawingArea::mainFrameScrollabilityChanged):
+        (WebKit::TiledCoreAnimationDrawingArea::updateGeometry):
+        (WebKit::TiledCoreAnimationDrawingArea::setRootCompositingLayer):
+        Operate on all installed PageOverlays, not just the most recently installed one.
+
+        (WebKit::TiledCoreAnimationDrawingArea::createPageOverlayLayer):
+        Stick the newly-created GraphicsLayer into the m_pageOverlays map.
+        Also, add its platformLayer to our m_pageOverlayPlatformLayers map.
+
+        (WebKit::TiledCoreAnimationDrawingArea::destroyPageOverlayLayer):
+        Remove the relevant overlay from the m_pageOverlays and m_pageOverlayPlatformLayers maps and tear it down.
+
+        (WebKit::TiledCoreAnimationDrawingArea::didCommitChangesForLayer):
+        When we commit changes for the layer, if the GraphicsLayer's backing platform CALayer
+        has changed out from under us (we have a reference to the previous one in the m_pageOverlayPlatformLayers map),
+        the GraphicsLayer has probably switched to/from a tiled layer, and we need to swap out the
+        layer we have inserted into the root layer. We need to keep the layer ordering consistent with
+        installation order, as well.
+
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp:
+        (WebKit::CoordinatedLayerTreeHost::didInstallPageOverlay):
+        Assert if we try to install more than one page overlay into a CoordinatedLayerTreeHost,
+        as this patch does not implement multiple overlay support for Coordinated Graphics.
+        Keep track of the current PageOverlay so that paintContents can hand WebPage the right one.
+        (WebKit::CoordinatedLayerTreeHost::didUninstallPageOverlay): Remove our reference to the PageOverlay.
+        (WebKit::CoordinatedLayerTreeHost::setPageOverlayNeedsDisplay): Add unused PageOverlay argument.
+        (WebKit::CoordinatedLayerTreeHost::setPageOverlayOpacity): Add unused PageOverlay argument.
+        (WebKit::CoordinatedLayerTreeHost::paintContents): Hand WebPage the PageOverlay we're currently displaying.
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.h:
+        (CoordinatedLayerTreeHost): Add PageOverlay* argument to relevant functions, and storage for m_pageOverlay.
+
+2013-03-19  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r146183.
+        http://trac.webkit.org/changeset/146183
+        https://bugs.webkit.org/show_bug.cgi?id=112673
+
+        Caused a few dozens of editing tests to fail on Mac WK2
+        (Requested by rniwa on #webkit).
+
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp:
+        (WebKit::CoordinatedLayerTreeHost::didInstallPageOverlay):
+        (WebKit::CoordinatedLayerTreeHost::didUninstallPageOverlay):
+        (WebKit::CoordinatedLayerTreeHost::setPageOverlayNeedsDisplay):
+        (WebKit::CoordinatedLayerTreeHost::setPageOverlayOpacity):
+        (WebKit::CoordinatedLayerTreeHost::paintContents):
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.h:
+        (CoordinatedLayerTreeHost):
+        * WebProcess/WebPage/DrawingArea.h:
+        (WebKit):
+        (WebKit::DrawingArea::didInstallPageOverlay):
+        (WebKit::DrawingArea::didUninstallPageOverlay):
+        (WebKit::DrawingArea::setPageOverlayNeedsDisplay):
+        (WebKit::DrawingArea::setPageOverlayOpacity):
+        * WebProcess/WebPage/DrawingAreaImpl.cpp:
+        (WebKit::DrawingAreaImpl::didInstallPageOverlay):
+        (WebKit::DrawingAreaImpl::didUninstallPageOverlay):
+        (WebKit::DrawingAreaImpl::setPageOverlayNeedsDisplay):
+        (WebKit::DrawingAreaImpl::setPageOverlayOpacity):
+        (WebKit::DrawingAreaImpl::display):
+        * WebProcess/WebPage/DrawingAreaImpl.h:
+        (DrawingAreaImpl):
+        * WebProcess/WebPage/LayerTreeHost.h:
+        (LayerTreeHost):
+        (WebKit::LayerTreeHost::setPageOverlayOpacity):
+        * WebProcess/WebPage/PageOverlay.cpp:
+        (WebKit::PageOverlay::setNeedsDisplay):
+        (WebKit::PageOverlay::fadeAnimationTimerFired):
+        * WebProcess/WebPage/WebPage.cpp:
+        (WebKit::WebPage::drawPageOverlay):
+        (WebKit::WebPage::installPageOverlay):
+        (WebKit::WebPage::uninstallPageOverlay):
+        (WebKit::WebPage::mouseEvent):
+        (WebKit::WebPage::mouseEventSyncForTesting):
+        * WebProcess/WebPage/WebPage.h:
+        (WebKit):
+        (WebPage):
+        (WebKit::WebPage::hasPageOverlay):
+        * WebProcess/WebPage/mac/LayerTreeHostMac.h:
+        (WebKit):
+        (LayerTreeHostMac):
+        * WebProcess/WebPage/mac/LayerTreeHostMac.mm:
+        (WebKit::LayerTreeHostMac::setNonCompositedContentsNeedDisplay):
+        (WebKit::LayerTreeHostMac::setNonCompositedContentsNeedDisplayInRect):
+        (WebKit::LayerTreeHostMac::sizeDidChange):
+        (WebKit::LayerTreeHostMac::didInstallPageOverlay):
+        (WebKit::LayerTreeHostMac::didUninstallPageOverlay):
+        (WebKit::LayerTreeHostMac::setPageOverlayNeedsDisplay):
+        (WebKit::LayerTreeHostMac::paintContents):
+        (WebKit::LayerTreeHostMac::initialize):
+        (WebKit::LayerTreeHostMac::flushPendingLayerChanges):
+        (WebKit::LayerTreeHostMac::createPageOverlayLayer):
+        (WebKit::LayerTreeHostMac::destroyPageOverlayLayer):
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.h:
+        (TiledCoreAnimationDrawingArea):
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm:
+        (WebKit::TiledCoreAnimationDrawingArea::didInstallPageOverlay):
+        (WebKit::TiledCoreAnimationDrawingArea::didUninstallPageOverlay):
+        (WebKit::TiledCoreAnimationDrawingArea::setPageOverlayNeedsDisplay):
+        (WebKit::TiledCoreAnimationDrawingArea::updatePreferences):
+        (WebKit::TiledCoreAnimationDrawingArea::paintContents):
+        (WebKit::TiledCoreAnimationDrawingArea::flushLayers):
+        (WebKit::TiledCoreAnimationDrawingArea::setExposedRect):
+        (WebKit::TiledCoreAnimationDrawingArea::mainFrameScrollabilityChanged):
+        (WebKit::TiledCoreAnimationDrawingArea::updateGeometry):
+        (WebKit::TiledCoreAnimationDrawingArea::setRootCompositingLayer):
+        (WebKit::TiledCoreAnimationDrawingArea::createPageOverlayLayer):
+        (WebKit::TiledCoreAnimationDrawingArea::destroyPageOverlayLayer):
+        (WebKit::TiledCoreAnimationDrawingArea::didCommitChangesForLayer):
+
+2013-03-18  Tim Horton  <timothy_horton@apple.com>
+
+        [wk2] Should support multiple page overlays, like the API suggests
+        https://bugs.webkit.org/show_bug.cgi?id=112505
+        <rdar://problem/13424796>
+
+        Reviewed by Simon Fraser.
+
+        * WebProcess/WebPage/DrawingAreaImpl.h:
+        * WebProcess/WebPage/LayerTreeHost.h:
+        * WebProcess/WebPage/DrawingArea.h:
+        (WebKit::DrawingArea::didInstallPageOverlay):
+        (WebKit::DrawingArea::didUninstallPageOverlay):
+        (WebKit::DrawingArea::setPageOverlayNeedsDisplay):
+        (WebKit::DrawingArea::setPageOverlayOpacity):
+        Add PageOverlay argument.
+
+        * WebProcess/WebPage/DrawingAreaImpl.cpp:
+        (WebKit::DrawingAreaImpl::didInstallPageOverlay):
+        (WebKit::DrawingAreaImpl::didUninstallPageOverlay):
+        (WebKit::DrawingAreaImpl::setPageOverlayNeedsDisplay):
+        (WebKit::DrawingAreaImpl::setPageOverlayOpacity):
+        Add PageOverlay argument, forward it to LayerTreeHost.
+        (WebKit::DrawingAreaImpl::display):
+        Paint all of the PageOverlays that WebPage knows about.
+
+        * WebProcess/WebPage/PageOverlay.cpp:
+        (WebKit::PageOverlay::setNeedsDisplay):
+        (WebKit::PageOverlay::fadeAnimationTimerFired):
+        Pass the relevant PageOverlay into the DrawingArea methods that now take it.
+
+        * WebProcess/WebPage/WebPage.cpp:
+        (WebKit::WebPage::drawPageOverlay):
+        Take the PageOverlay to draw as an argument.
+        (WebKit::WebPage::installPageOverlay):
+        (WebKit::WebPage::uninstallPageOverlay):
+        Allow (un)installation of multiple PageOverlays.
+        (WebKit::WebPage::mouseEvent):
+        (WebKit::WebPage::mouseEventSyncForTesting):
+        Hit-test PageOverlays in reverse order of installation (most recently installed should be topmost).
+
+        * WebProcess/WebPage/WebPage.h:
+        (WebKit::WebPage::drawPageOverlay): Take the PageOverlay to draw as an argument.
+        (WebKit::WebPage::hasPageOverlay): Return true if we have any number of overlays.
+        (WebKit::WebPage::pageOverlays): Return the whole vector of overlays.
+
+        * WebProcess/WebPage/mac/LayerTreeHostMac.h:
+        Add PageOverlay argument to a few methods.
+        Add storage for a map of PageOverlay->GraphicsLayers.
+
+        * WebProcess/WebPage/mac/LayerTreeHostMac.mm:
+        (WebKit::LayerTreeHostMac::setNonCompositedContentsNeedDisplay):
+        (WebKit::LayerTreeHostMac::setNonCompositedContentsNeedDisplayInRect):
+        (WebKit::LayerTreeHostMac::sizeDidChange):
+        (WebKit::LayerTreeHostMac::flushPendingLayerChanges):
+        Operate on all installed PageOverlays, not just the most recently installed one.
+
+        (WebKit::LayerTreeHostMac::didInstallPageOverlay):
+        (WebKit::LayerTreeHostMac::didUninstallPageOverlay):
+        Forward the passed-in PageOverlay on to createPageOverlayLayer/destroyPageOverlayLayer.
+
+        (WebKit::LayerTreeHostMac::setPageOverlayNeedsDisplay):
+        Look up the GraphicsLayer for the PageOverlay we need to dirty, and dirty it.
+
+        (WebKit::LayerTreeHostMac::paintContents):
+        Find the PageOverlay corresponding to the GraphicsLayer that we're painting, and ask WebPage to paint it.
+        While not ideal (crawling the map), the vast majority of the time there will only be one entry.
+
+        (WebKit::LayerTreeHostMac::initialize):
+        Create layers for all of WebPage's active PageOverlays.
+        
+        (WebKit::LayerTreeHostMac::createPageOverlayLayer):
+        Stick the newly-created GraphicsLayer into the m_pageOverlayLayers map.
+        Also, drive-by add support for accelerated overlays and debug borders/repaint counters in overlays.
+
+        (WebKit::LayerTreeHostMac::destroyPageOverlayLayer):
+        Remove the relevant overlay from the m_pageOverlayLayers map and tear it down.
+
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.h:
+        (TiledCoreAnimationDrawingArea):
+        Add PageOverlay argument to a few methods.
+        Add storage for a map of PageOverlay->GraphicsLayers.
+        Add storage for a map of GraphicsLayer->CALayers.
+
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm:
+        (WebKit::TiledCoreAnimationDrawingArea::didInstallPageOverlay):
+        Pass PageOverlay argument on to createPageOverlayLayer.
+        
+        (WebKit::TiledCoreAnimationDrawingArea::didUninstallPageOverlay):
+        Pass PageOverlay argument on to destroyPageOverlayLayer.
+        Refrain from re-enabling threaded scrolling if there are still more overlays installed.
+        
+        (WebKit::TiledCoreAnimationDrawingArea::setPageOverlayNeedsDisplay):
+        Look up the GraphicsLayer for the PageOverlay we need to dirty, and dirty it.
+
+        (WebKit::TiledCoreAnimationDrawingArea::paintContents):
+        Find the PageOverlay corresponding to the GraphicsLayer that we're painting, and ask WebPage to paint it.
+        While not ideal (crawling the map), the vast majority of the time there will only be one entry.
+
+        (WebKit::TiledCoreAnimationDrawingArea::updatePreferences):
+        (WebKit::TiledCoreAnimationDrawingArea::flushLayers):
+        (WebKit::TiledCoreAnimationDrawingArea::setExposedRect):
+        (WebKit::TiledCoreAnimationDrawingArea::mainFrameScrollabilityChanged):
+        (WebKit::TiledCoreAnimationDrawingArea::updateGeometry):
+        (WebKit::TiledCoreAnimationDrawingArea::setRootCompositingLayer):
+        Operate on all installed PageOverlays, not just the most recently installed one.
+
+        (WebKit::TiledCoreAnimationDrawingArea::createPageOverlayLayer):
+        Stick the newly-created GraphicsLayer into the m_pageOverlayLayers map.
+        Also, add its platformLayer to our m_pageOverlayPlatformLayers map.
+
+        (WebKit::TiledCoreAnimationDrawingArea::destroyPageOverlayLayer):
+        Remove the relevant overlay from the m_pageOverlayLayers and m_pageOverlayPlatformLayers maps and tear it down.
+
+        (WebKit::TiledCoreAnimationDrawingArea::didCommitChangesForLayer):
+        When we commit changes for the layer, if the GraphicsLayer's backing platform CALayer
+        has changed out from under us (we have a reference to the previous one in the m_pageOverlayPlatformLayers map),
+        the GraphicsLayer has probably switched to/from a tiled layer, and we need to swap out the
+        layer we have inserted into the root layer. We need to keep the layer ordering consistent with
+        installation order, as well.
+
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp:
+        (WebKit::CoordinatedLayerTreeHost::didInstallPageOverlay):
+        Assert if we try to install more than one page overlay into a CoordinatedLayerTreeHost,
+        as this patch does not implement multiple overlay support for Coordinated Graphics.
+        Keep track of the current PageOverlay so that paintContents can hand WebPage the right one.
+        (WebKit::CoordinatedLayerTreeHost::didUninstallPageOverlay): Remove our reference to the PageOverlay.
+        (WebKit::CoordinatedLayerTreeHost::setPageOverlayNeedsDisplay): Add unused PageOverlay argument.
+        (WebKit::CoordinatedLayerTreeHost::setPageOverlayOpacity): Add unused PageOverlay argument.
+        (WebKit::CoordinatedLayerTreeHost::paintContents): Hand WebPage the PageOverlay we're currently displaying.
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.h:
+        (CoordinatedLayerTreeHost): Add PageOverlay* argument to relevant functions, and storage for m_pageOverlay.
+
+2013-03-18  Sam Weinig  <sam@webkit.org>
+
+        Need a bundle SPI to generate a snapshot of a specific DOM node (like [DOMNode renderedImage])
+        <rdar://problem/13148631>
+        https://bugs.webkit.org/show_bug.cgi?id=110034
+
+        Reviewed by Tim Horton.
+
+        * WebProcess/InjectedBundle/API/c/WKBundleNodeHandle.cpp:
+        (WKBundleNodeHandleCopySnapshotWithOptions):
+        * WebProcess/InjectedBundle/API/c/WKBundleNodeHandlePrivate.h:
+        Add WKBundleNodeHandleCopySnapshotWithOptions function.
+
+        * WebProcess/InjectedBundle/API/mac/WKDOMNode.mm:
+        * WebProcess/InjectedBundle/API/mac/WKDOMNodePrivate.h:
+        Fix conversion method between WKDOMNode and WKBundleNodeHandleRef to have the same
+        name in the header and implementation.
+
+        * WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp:
+        (WebKit::imageForRect):
+        (WebKit):
+        (WebKit::InjectedBundleNodeHandle::renderedImage):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.h:
+        Add implementation of WKBundleNodeHandleCopySnapshotWithOptions.
+
+        * Shared/ImageOptions.h:
+        (WebKit::snapshotOptionsToImageOptions):
+        * WebProcess/WebPage/WebPage.cpp:
+        Move snapshotOptionsToImageOptions conversion function to a location where
+        it can be shared.
+
+2013-03-18  Andreas Kling  <akling@apple.com>
+
+        [WK2][Mac] Don't consider empty window frames cacheable.
+        <http://webkit.org/b/112631>
+        <rdar://problem/13384894>
+
+        Reviewed by Anders Carlsson.
+
+        If the UI client overrides getWindowFrame() and returns an empty rect, send that over
+        to the web process and mark it as uncached. This forces the next ChromeClient::windowRect()
+        call to synchronously retrieve the window frame from the other side.
+
+        Fixes an issue with the Mac Web Inspector which uses empty rects to signify that there is
+        no known window frame yet. In this case, we should not be falling back to the native frame.
+
+        * UIProcess/mac/WebPageProxyMac.mm:
+        (WebKit::WebPageProxy::windowAndViewFramesChanged):
+        * WebProcess/WebPage/WebPage.cpp:
+        (WebKit::WebPage::windowAndViewFramesChanged):
+
+2013-03-18  Brady Eidson  <beidson@apple.com>
+
+        Mac build fix after http://trac.webkit.org/changeset/146088
+
+        * NetworkProcess/mac/NetworkResourceLoaderMac.mm:
+        (WebKit::NetworkResourceLoader::platformDidReceiveResponse):
+
+2013-03-18  Brady Eidson  <beidson@apple.com>
+
+        NetworkProcess should send vm_copied, mmap'ed memory to WebProcesses when a 
+        resource is already in the disk cache.
+        <rdar://problem/13414153> and https://bugs.webkit.org/show_bug.cgi?id=112387
+
+        Reviewed by Geoff Garen.
+
+        * NetworkProcess/NetworkResourceLoader.cpp:
+        (WebKit::NetworkResourceLoader::sendAbortingOnFailure):
+        (WebKit::NetworkResourceLoader::didReceiveResponse): After notifying about the response,
+          call platformDidReceiveResponse.
+        * NetworkProcess/NetworkResourceLoader.h:
+
+        * NetworkProcess/mac/NetworkResourceLoaderMac.mm: Added.
+        (WebKit::NetworkResourceLoader::platformDidReceiveResponse): Attempt to pull a filesystem
+          mmap'ed buffer from the CFNetwork cache and - if it exists - abort the traditional load
+          and send that to the WebProcess instead.
+        (WebKit::NetworkResourceLoader:: fileBackedResourceMinimumSize): For now, use the VM page size.
+
+        * NetworkProcess/mac/NetworkProcessMac.mm:
+        (WebKit::NetworkProcess::platformInitializeNetworkProcess): Set the threshold for what
+          should be backed by a file on disk instead of stored in the database.
+
+        Change SharedMemory to do a vm_copy if a previously existing buffer is being passed in:
+        * Platform/SharedMemory.h:
+        * Platform/mac/SharedMemoryMac.cpp:
+        (WebKit::SharedMemory::create):
+        (WebKit::SharedMemory::createWithVMCopy):
+
+        * WebProcess/Network/WebResourceLoader.cpp:
+        (WebKit::shareableResourceDeallocate):
+        (WebKit::createShareableResourceDeallocator):
+        (WebKit::WebResourceLoader::didReceiveResource): Create a special CFDataRef whose buffer is
+          backed by a ShareableResource to send to the ResourceLoader in one chunk.
+
+        * Shared/ShareableResource.h: Fix some comments.
+
+        * WebKit2.xcodeproj/project.pbxproj:
+
+2013-03-18  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        [WK2][EFL] Fix code wrapping WKPageGroupRef
+        https://bugs.webkit.org/show_bug.cgi?id=112364
+
+        Reviewed by Alexey Proskuryakov.
+
+        The patch fixes following problems in EWK2 WKPageGroupRef wrapping
+        code: firstly it makes sure that there is only one EwkPageGroup
+        instance per WKPageGroup instance, secondly it allows web page to
+        to use the default page group (which is implicitly created inside
+        web context).
+
+        * UIProcess/API/C/efl/WKView.cpp:
+        (createWKView):
+
+            Now may pass '0' page group as a WebView creation argument so
+            that the default page group is used.
+
+        * UIProcess/API/efl/EwkView.cpp:
+        (EwkView::EwkView):
+        (EwkView::createEvasObject):
+        * UIProcess/API/efl/EwkView.h:
+        (EwkView):
+
+            Web view should be created before page group, so they are rearranged
+            inside class declaration.
+
+        * UIProcess/API/efl/ewk_page_group.cpp:
+        (pageGroupMap):
+
+            A map to track corresponding EwkPageGroup and WKPageGroup
+            instances.
+
+        (EwkPageGroup::findOrCreateWrapper):
+
+            Returns the same EwkPageGroup instance for the same WKPageGroup
+            instance.
+
+        (EwkPageGroup::create):
+        (EwkPageGroup::EwkPageGroup):
+
+            Now there is only one constructor accepting WKPageGroupRef.
+
+        (EwkPageGroup::~EwkPageGroup):
+        * UIProcess/API/efl/ewk_page_group_private.h:
+        (EwkPageGroup):
+        * UIProcess/efl/WebInspectorProxyEfl.cpp:
+        (WebKit::WebInspectorProxy::platformCreateInspectorPage):
+
+2013-03-17  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Invalid charset encoding using when substituting a misspelled word in WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=112517
+
+        Reviewed by Alexey Proskuryakov.
+
+        The problem is that we are creating the WebContextMenuItemData
+        with the GtkAction label as UTF-8.
+
+        * UIProcess/gtk/WebContextMenuProxyGtk.cpp:
+        (WebKit::contextMenuItemActivatedCallback): Use String::fromUTF8()
+        to convert the GtkAction label to UTF-16.
+
+2013-03-16  Pratik Solanki  <psolanki@apple.com>
+
+        Disable High DPI Canvas on iOS
+        https://bugs.webkit.org/show_bug.cgi?id=112511
+
+        Reviewed by Joseph Pecoraro.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-15  Timothy Hatcher  <timothy@apple.com>
+
+        Disable suppressesIncrementalRendering for the Web Inspector.
+
+        This ends up causing the Inspector to show blank for a couple seconds before
+        it does its first paint. During that time the bare window chrome is showing
+        when the Inspector's background and other simple elements count be painting.
+        This causes the Inspector to look like it is loading slower than reality.
+
+        https://bugs.webkit.org/show_bug.cgi?id=112300
+        rdar://problem/13412219
+
+        Reviewed by Geoff Garen.
+
+        * UIProcess/WebInspectorProxy.cpp:
+        (WebKit::createInspectorPageGroup): Disable suppressesIncrementalRendering.
+
+2013-03-13  Timothy Hatcher  <timothy@apple.com>
+
+        Delay creating the Inspector window so we don't cause a CoreIPC deadlock.
+
+        Other changes include:
+        * Create the Inspector WKView at the correct size so it does not need to
+          resize later when added to the window.
+        * Update the minimum and initial window sizes to better match the new UI.
+        * Store the Inspector window frame in WebKit preferences so each page group
+          can have different saved window frames. Handy for inspecting the Inspector.
+
+        https://bugs.webkit.org/show_bug.cgi?id=112300
+        rdar://problem/13412219
+
+        Reviewed by Geoff Garen.
+
+        * Shared/WebPreferencesStore.cpp:
+        (WebKit::defaultValueForKey):
+        Added FOR_EACH_WEBKIT_STRING_PREFERENCE_NOT_IN_WEBCORE.
+
+        * Shared/WebPreferencesStore.h:
+        (FOR_EACH_WEBKIT_STRING_PREFERENCE_NOT_IN_WEBCORE):
+        Added. Needed to keep WebPage::updatePreferences for trying to set WebCore::Settings.
+
+        * UIProcess/WebInspectorProxy.cpp:
+        (WebKit::WebInspectorProxy::minimumWindowWidth):
+        (WebKit::WebInspectorProxy::initialWindowWidth):
+        Bumped the values to work better with the new UI.
+
+        * UIProcess/WebInspectorProxy.h:
+        (WebKit::WebInspectorProxy::windowFrameDidChange):
+        Added.
+
+        * UIProcess/mac/WebInspectorProxyMac.mm:
+        (-[WKWebInspectorProxyObjCAdapter windowDidMove:]):
+        (-[WKWebInspectorProxyObjCAdapter windowDidResize:]):
+        Call WebInspectorProxy::windowFrameDidChange.
+
+        (WebKit::WebInspectorProxy::createInspectorWindow):
+        Use the preferences for the page group to get the window frame.
+
+        (WebKit::WebInspectorProxy::platformCreateInspectorPage):
+        Stop calling platformAttach or createInspectorWindow, do it in platformOpen.
+
+        (WebKit::WebInspectorProxy::platformOpen):
+        Call platformAttach or createInspectorWindow here instead.
+
+        (WebKit::WebInspectorProxy::windowFrameDidChange):
+        Added. Store the frame in the page group's preferences.
+
+        (WebKit::WebInspectorProxy::platformAttach):
+        (WebKit::WebInspectorProxy::platformDetach):
+        Remove code that called setHidden:. We don't need to do that anymore.
+
+2013-03-15  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Enforce the C++11 standard when compiling WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=112169
+
+        Reviewed by Gustavo Noronha Silva.
+
+        With a limited set of supported compilers the WebKit2 source code can now
+        be built with the C++11 language standard enforced.
+
+        * GNUmakefile.am:
+        * UIProcess/API/gtk/WebKitWebContext.cpp:
+        (injectedBundleDirectory): Adjust the string literals concatenation, moving away from empty strings
+        (which C++11 refuses to handle as concatenation operators) and using whitespace instead.
+        * UIProcess/InspectorServer/gtk/WebInspectorServerGtk.cpp:
+        (WebKit::WebInspectorServer::platformResourceForPath): Ditto.
+        * UIProcess/gtk/WebInspectorProxyGtk.cpp:
+        (WebKit::inspectorFilesBasePath): Ditto.
+
+2013-03-15  Nate Chapin  <japhet@chromium.org>
+
+        Hide MainResourceLoader from the outside world
+        https://bugs.webkit.org/show_bug.cgi?id=109971
+
+        Reviewed by Adam Barth.
+
+        * WebProcess/WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebKit::WebFrameLoaderClient::convertMainResourceLoadToDownload):
+        * WebProcess/WebCoreSupport/WebFrameLoaderClient.h:
+        (WebFrameLoaderClient):
+        * WebProcess/WebPage/WebFrame.cpp:
+        (WebKit::WebFrame::convertMainResourceLoadToDownload):
+        * WebProcess/WebPage/WebFrame.h:
+        (WebFrame):
+
+2013-03-15  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112401
+
+        Reviewed by Stephen Chenney.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * Shared/WebRenderObject.cpp:
+        (WebKit::WebRenderObject::WebRenderObject):
+
+2013-03-15  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        [WK2][EFL] Get rid of WebPageProxy::viewWidget() method
+        https://bugs.webkit.org/show_bug.cgi?id=112289
+
+        Reviewed by Alexey Proskuryakov.
+
+        Web page should not be aware of platform-specific view.
+
+        * UIProcess/API/efl/EwkView.cpp:
+        (wkPageToEvasObjectMap):
+        (EwkView::EwkView):
+        (EwkView::~EwkView):
+        (EwkView::toEvasObject):
+
+            EwkView::toEvasObject() relies on static map rather than on
+            removed WebPageProxy::viewWidget() method.
+
+        * UIProcess/API/efl/EwkView.h:
+        * UIProcess/API/efl/ewk_text_checker.cpp:
+        (uniqueSpellDocumentTag):
+        * UIProcess/cairo/BackingStoreCairo.cpp:
+        (WebKit::BackingStore::incorporateUpdate):
+
+            Now uses EwkView::toEvasObject().
+
+        * UIProcess/WebPageProxy.h:
+        (WebPageProxy):
+        * UIProcess/efl/WebPageProxyEfl.cpp:
+
+            Removed WebPageProxy::viewWidget() method.
+
 2013-03-14  Andreas Kling  <akling@apple.com>
 
         REGRESSION(r145169): [Mac][WK2] http/tests/security/cross-frame-access-put.html fails.

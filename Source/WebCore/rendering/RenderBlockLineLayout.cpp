@@ -829,8 +829,9 @@ static inline void setLogicalWidthForTextRun(RootInlineBox* lineBox, BidiRun* ru
 
             lastEndOffset = wordMeasurement.endOffset;
             if (kerningIsEnabled && lastEndOffset == run->m_stop) {
-                measuredWidth += renderer->width(wordMeasurement.startOffset, lastEndOffset - wordMeasurement.startOffset, xPos, lineInfo.isFirstLine());
-                if (i > 0)
+                int wordLength = lastEndOffset - wordMeasurement.startOffset;
+                measuredWidth += renderer->width(wordMeasurement.startOffset, wordLength, xPos, lineInfo.isFirstLine());
+                if (i > 0 && wordLength == 1 && renderer->characterAt(wordMeasurement.startOffset) == ' ')
                     measuredWidth += renderer->style()->wordSpacing();
             } else
                 measuredWidth += wordMeasurement.width;
@@ -1494,7 +1495,7 @@ void RenderBlock::layoutRunsAndFloats(LineLayoutState& layoutState, bool hasInli
         }
     }
 
-    if (m_floatingObjects && !m_floatingObjects->set().isEmpty())
+    if (containsFloats())
         layoutState.setLastFloat(m_floatingObjects->set().last());
 
     // We also find the first clean line and extract these lines.  We will add them back
@@ -1595,7 +1596,7 @@ void RenderBlock::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, Inlin
 
         const InlineIterator oldEnd = end;
         bool isNewUBAParagraph = layoutState.lineInfo().previousLineBrokeCleanly();
-        FloatingObject* lastFloatFromPreviousLine = (m_floatingObjects && !m_floatingObjects->set().isEmpty()) ? m_floatingObjects->set().last() : 0;
+        FloatingObject* lastFloatFromPreviousLine = (containsFloats()) ? m_floatingObjects->set().last() : 0;
 #if ENABLE(CSS_EXCLUSIONS)
         // FIXME: Bug 95361: It is possible for a line to grow beyond lineHeight, in which
         // case these segments may be incorrect.
@@ -2577,11 +2578,15 @@ InlineIterator RenderBlock::LineBreaker::nextLineBreak(InlineBidiResolver& resol
     const SegmentList& segments = exclusionShapeInsideInfo->segments();
     SegmentRangeList& segmentRanges = exclusionShapeInsideInfo->segmentRanges();
 
-    for (unsigned i = 0; i < segments.size(); i++) {
+    for (unsigned i = 0; i < segments.size() && !end.atEnd(); i++) {
         InlineIterator segmentStart = resolver.position();
         end = nextSegmentBreak(resolver, lineInfo, renderTextInfo, lastFloatFromPreviousLine, consecutiveHyphenatedLines, wordMeasurements);
 
         ASSERT(segmentRanges.size() == i);
+        if (resolver.position().atEnd()) {
+            segmentRanges.append(LineSegmentRange(segmentStart, end));
+            break;
+        }
         if (resolver.position() == end) {
             // Nothing fit this segment
             segmentRanges.append(LineSegmentRange(segmentStart, segmentStart));

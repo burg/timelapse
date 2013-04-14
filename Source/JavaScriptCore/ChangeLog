@@ -1,3 +1,563 @@
+2013-03-19  Michael Saboff  <msaboff@apple.com>
+
+        Crash when loading http://www.jqchart.com/jquery/gauges/RadialGauge/LiveData
+        https://bugs.webkit.org/show_bug.cgi?id=112694
+
+        Reviewed by Filip Pizlo.
+
+        We were trying to convert an NewArray to a Phantom, but convertToPhantom doesn't handle
+        nodes with variable arguments.  Added code to insert a Phantom node in front of all the
+        live children of a var args node.  Added ASSERT not var args for convertToPhantom to
+        catch any other similar cases.  Added a new convertToPhantomUnchecked() for converting 
+        var arg nodes.
+
+        * dfg/DFGDCEPhase.cpp:
+        (JSC::DFG::DCEPhase::run):
+        * dfg/DFGNode.h:
+        (Node):
+        (JSC::DFG::Node::setOpAndDefaultNonExitFlags): Added ASSERT(!(m_flags & NodeHasVarArgs))
+        (JSC::DFG::Node::setOpAndDefaultNonExitFlagsUnchecked):
+        (JSC::DFG::Node::convertToPhantomUnchecked):
+
+2013-03-19  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Crash in SpeculativeJIT::fillSpeculateIntInternal<false> on http://bellard.org/jslinux
+        https://bugs.webkit.org/show_bug.cgi?id=112738
+
+        Reviewed by Filip Pizlo.
+
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixIntEdge): We shouldn't be killing this node because it could be
+        referenced by other people.
+
+2013-03-19  Oliver Hunt  <oliver@apple.com>
+
+        RELEASE_ASSERT fires in exception handler lookup
+
+        RS=Geoff Garen.
+
+        Temporarily switch this RELEASE_ASSERT into a regular ASSERT 
+        as currently this is producing fairly bad crashiness.
+
+        * bytecode/CodeBlock.cpp:
+        (JSC::CodeBlock::handlerForBytecodeOffset):
+
+2013-03-18  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG should optimize StringObject.length and StringOrStringObject.length
+        https://bugs.webkit.org/show_bug.cgi?id=112658
+
+        Reviewed by Mark Hahnenberg.
+        
+        Implemented by injecting a ToString(StringObject:@a) or ToString(StringOrStringObject:@a) prior
+        to GetArrayLength with ArrayMode(Array::String) if @a is predicted StringObject or
+        StringOrStringObject.
+
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        (JSC::DFG::FixupPhase::createToString):
+        (FixupPhase):
+        (JSC::DFG::FixupPhase::attemptToForceStringArrayModeByToStringConversion):
+        (JSC::DFG::FixupPhase::convertStringAddUse):
+
+2013-03-19  Gabor Rapcsanyi  <rgabor@webkit.org>
+
+        Implement and32 on ARMv7 and ARM traditional platforms
+        https://bugs.webkit.org/show_bug.cgi?id=112663
+
+        Reviewed by Zoltan Herczeg.
+
+        * assembler/MacroAssemblerARM.h:
+        (JSC::MacroAssemblerARM::and32): Add missing method.
+        (MacroAssemblerARM):
+        * assembler/MacroAssemblerARMv7.h:
+        (JSC::MacroAssemblerARMv7::and32): Add missing method.
+        (MacroAssemblerARMv7):
+
+2013-03-18  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG ToString generic cases should work correctly
+        https://bugs.webkit.org/show_bug.cgi?id=112654
+        <rdar://problem/13447250>
+
+        Reviewed by Geoffrey Garen.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileToStringOnCell):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2013-03-18  Michael Saboff  <msaboff@apple.com>
+
+        Unreviewed build fix for 32 bit builds.
+
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2013-03-18  Michael Saboff  <msaboff@apple.com>
+
+        EFL: Unsafe branch detected in compilePutByValForFloatTypedArray()
+        https://bugs.webkit.org/show_bug.cgi?id=112609
+
+        Reviewed by Geoffrey Garen.
+
+        Created local valueFPR and scratchFPR and filled them with valueOp.fpr() and scratch.fpr()
+        respectively so that if valueOp.fpr() causes a spill during allocation, it occurs before the
+        branch and also to follow convention.  Added register allocation checks to FPRTemporary.
+        Cleaned up a couple of other places to follow the "AllocatVirtualRegType foo, get machine
+        reg from foo" pattern.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compilePutByValForFloatTypedArray):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::fprAllocate):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::convertToDouble):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2013-03-18  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG should inline binary string concatenations (i.e. ValueAdd with string children)
+        https://bugs.webkit.org/show_bug.cgi?id=112599
+
+        Reviewed by Oliver Hunt.
+        
+        This does as advertised: if you do x + y where x and y are strings, you'll get
+        a fast inlined JSRopeString allocation (along with whatever checks are necessary).
+        It also does good things if either x or y (or both) are StringObjects, or some
+        other thing like StringOrStringObject. It also lays the groundwork for making this
+        fast if either x or y are numbers, or some other reasonably-cheap-to-convert
+        value.
+
+        * dfg/DFGAbstractState.cpp:
+        (JSC::DFG::AbstractState::executeEffects):
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        (FixupPhase):
+        (JSC::DFG::FixupPhase::isStringObjectUse):
+        (JSC::DFG::FixupPhase::convertStringAddUse):
+        (JSC::DFG::FixupPhase::attemptToMakeFastStringAdd):
+        * dfg/DFGOperations.cpp:
+        * dfg/DFGOperations.h:
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileAdd):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::callOperation):
+        (SpeculativeJIT):
+        (JSC::DFG::SpeculativeJIT::emitAllocateJSCell):
+        (JSC::DFG::SpeculativeJIT::emitAllocateJSObject):
+        * runtime/JSString.h:
+        (JSC::JSString::offsetOfFlags):
+        (JSString):
+        (JSRopeString):
+        (JSC::JSRopeString::offsetOfFibers):
+
+2013-03-18  Filip Pizlo  <fpizlo@apple.com>
+
+        JSC_NATIVE_FUNCTION() takes an identifier for the name and then uses #name, which is unsafe if name was already #define'd to something else
+        https://bugs.webkit.org/show_bug.cgi?id=112639
+
+        Reviewed by Michael Saboff.
+        
+        Change it to take a string instead.
+
+        * runtime/JSObject.h:
+        (JSC):
+        * runtime/ObjectPrototype.cpp:
+        (JSC::ObjectPrototype::finishCreation):
+        * runtime/StringPrototype.cpp:
+        (JSC::StringPrototype::finishCreation):
+
+2013-03-18  Brent Fulgham  <bfulgham@webkit.org>
+
+        [WinCairo] Get build working under VS2010.
+        https://bugs.webkit.org/show_bug.cgi?id=112604
+
+        Reviewed by Tim Horton.
+
+        * JavaScriptCore.vcxproj/testapi/testapi.vcxproj: Use CFLite-specific
+        build target (standard version links against CoreFoundation.lib
+        instead of CFLite.lib).
+        * JavaScriptCore.vcxproj/testapi/testapiCommonCFLite.props: Added.
+        * JavaScriptCore.vcxproj/testapi/testapiDebugCFLite.props: Added.
+        * JavaScriptCore.vcxproj/testapi/testapiReleaseCFLite.props: Added.
+
+2013-03-18  Roger Fong  <roger_fong@apple.com>
+
+        AppleWin VS2010 Debug configuration build fix..
+
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj:
+
+2013-03-18  Brent Fulgham  <bfulgham@webkit.org>
+
+        [WinCairo] Get build working under VS2010.
+        https://bugs.webkit.org/show_bug.cgi?id=112604
+
+        Reviewed by Tim Horton.
+
+        * JavaScriptCore.vcxproj/JavaScriptCore.vcxproj: Add build targets for
+        Debug_WinCairo and Release_WinCairo using CFLite.
+        * JavaScriptCore.vcxproj/JavaScriptCoreCFLite.props: Added.
+        * JavaScriptCore.vcxproj/JavaScriptCoreDebugCFLite.props: Added.
+        * JavaScriptCore.vcxproj/JavaScriptCoreExportGenerator/JavaScriptCoreExportGenerator.vcxproj:
+        Add Debug_WinCairo and Release_WinCairo build targets to
+        make sure headers are copied to proper build folder.
+        * JavaScriptCore.vcxproj/JavaScriptCoreGenerated.vcxproj: Ditto.
+        * JavaScriptCore.vcxproj/JavaScriptCoreReleaseCFLite.props: Added.
+        * JavaScriptCore.vcxproj/LLInt/LLIntAssembly/LLIntAssembly.vcxproj:
+        Add Debug_WinCairo and Release_WinCairo build targets to
+        make sure headers are copied to proper build folder.
+        * JavaScriptCore.vcxproj/LLInt/LLIntDesiredOffsets/LLIntDesiredOffsets.vcxproj:
+        Ditto.
+        * JavaScriptCore.vcxproj/LLInt/LLIntOffsetsExtractor/LLIntOffsetsExtractor.vcxproj:
+        Ditto.
+        * JavaScriptCore.vcxproj/jsc/jsc.vcxproj: Ditto.
+        * JavaScriptCore.vcxproj/testRegExp/testRegExp.vcxproj: Ditto.
+        * JavaScriptCore.vcxproj/testapi/testapi.vcxproj: Ditto.
+
+2013-03-18  Michael Saboff  <msaboff@apple.com>
+
+        Potentially unsafe register allocations in DFG code generation
+        https://bugs.webkit.org/show_bug.cgi?id=112477
+
+        Reviewed by Geoffrey Garen.
+
+        Moved allocation of temporary GPRs to be before any generated branches in the functions below.
+
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compileObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compilePeepHoleObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compileObjectOrOtherLogicalNot):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compileObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compilePeepHoleObjectToObjectOrOtherEquality):
+        (JSC::DFG::SpeculativeJIT::compileObjectOrOtherLogicalNot):
+
+2013-03-15  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG string conversions and allocations should be inlined
+        https://bugs.webkit.org/show_bug.cgi?id=112376
+
+        Reviewed by Geoffrey Garen.
+        
+        This turns new String(), String(), String.prototype.valueOf(), and
+        String.prototype.toString() into intrinsics. It gives the DFG the ability to handle
+        conversions from StringObject to JSString and vice-versa, and also gives it the
+        ability to handle cases where a variable may be either a StringObject or a JSString.
+        To do this, I added StringObject to value profiling (and removed the stale
+        distinction between Myarguments and Foreignarguments). I also cleaned up ToPrimitive
+        handling, using some of the new functionality but also taking advantage of the
+        existence of Identity(String:@a).
+        
+        This is a 2% SunSpider speed-up. Also there are some speed-ups on V8v7 and Kraken.
+        On microbenchmarks that stress new String() this is a 14x speed-up.
+
+        * CMakeLists.txt:
+        * DerivedSources.make:
+        * DerivedSources.pri:
+        * GNUmakefile.list.am:
+        * bytecode/CodeBlock.h:
+        (CodeBlock):
+        (JSC::CodeBlock::hasExitSite):
+        (JSC):
+        * bytecode/DFGExitProfile.cpp:
+        (JSC::DFG::ExitProfile::hasExitSite):
+        (DFG):
+        * bytecode/DFGExitProfile.h:
+        (ExitProfile):
+        (JSC::DFG::ExitProfile::hasExitSite):
+        * bytecode/ExitKind.cpp:
+        (JSC::exitKindToString):
+        * bytecode/ExitKind.h:
+        * bytecode/SpeculatedType.cpp:
+        (JSC::dumpSpeculation):
+        (JSC::speculationToAbbreviatedString):
+        (JSC::speculationFromClassInfo):
+        * bytecode/SpeculatedType.h:
+        (JSC):
+        (JSC::isStringObjectSpeculation):
+        (JSC::isStringOrStringObjectSpeculation):
+        * create_hash_table:
+        * dfg/DFGAbstractState.cpp:
+        (JSC::DFG::AbstractState::executeEffects):
+        * dfg/DFGAbstractState.h:
+        (JSC::DFG::AbstractState::filterEdgeByUse):
+        * dfg/DFGByteCodeParser.cpp:
+        (ByteCodeParser):
+        (JSC::DFG::ByteCodeParser::handleCall):
+        (JSC::DFG::ByteCodeParser::emitArgumentPhantoms):
+        (DFG):
+        (JSC::DFG::ByteCodeParser::handleConstantInternalFunction):
+        * dfg/DFGCSEPhase.cpp:
+        (JSC::DFG::CSEPhase::putStructureStoreElimination):
+        * dfg/DFGEdge.h:
+        (JSC::DFG::Edge::shift):
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        (JSC::DFG::FixupPhase::isStringPrototypeMethodSane):
+        (FixupPhase):
+        (JSC::DFG::FixupPhase::canOptimizeStringObjectAccess):
+        (JSC::DFG::FixupPhase::observeUseKindOnNode):
+        * dfg/DFGGraph.h:
+        (JSC::DFG::Graph::hasGlobalExitSite):
+        (Graph):
+        (JSC::DFG::Graph::hasExitSite):
+        (JSC::DFG::Graph::clobbersWorld):
+        * dfg/DFGNode.h:
+        (JSC::DFG::Node::convertToToString):
+        (Node):
+        (JSC::DFG::Node::hasStructure):
+        (JSC::DFG::Node::shouldSpeculateStringObject):
+        (JSC::DFG::Node::shouldSpeculateStringOrStringObject):
+        * dfg/DFGNodeType.h:
+        (DFG):
+        * dfg/DFGOperations.cpp:
+        * dfg/DFGOperations.h:
+        * dfg/DFGPredictionPropagationPhase.cpp:
+        (JSC::DFG::PredictionPropagationPhase::propagate):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileToStringOnCell):
+        (DFG):
+        (JSC::DFG::SpeculativeJIT::compileNewStringObject):
+        (JSC::DFG::SpeculativeJIT::speculateObject):
+        (JSC::DFG::SpeculativeJIT::speculateObjectOrOther):
+        (JSC::DFG::SpeculativeJIT::speculateString):
+        (JSC::DFG::SpeculativeJIT::speculateStringObject):
+        (JSC::DFG::SpeculativeJIT::speculateStringOrStringObject):
+        (JSC::DFG::SpeculativeJIT::speculate):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::callOperation):
+        (SpeculativeJIT):
+        (JSC::DFG::SpeculateCellOperand::SpeculateCellOperand):
+        (DFG):
+        (JSC::DFG::SpeculativeJIT::speculateStringObjectForStructure):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::fillSpeculateCell):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::fillSpeculateCell):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGUseKind.cpp:
+        (WTF::printInternal):
+        * dfg/DFGUseKind.h:
+        (JSC::DFG::typeFilterFor):
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::regExpPrototypeTable):
+        * runtime/CommonIdentifiers.h:
+        * runtime/Intrinsic.h:
+        * runtime/JSDestructibleObject.h:
+        (JSDestructibleObject):
+        (JSC::JSDestructibleObject::classInfoOffset):
+        * runtime/JSGlobalData.cpp:
+        (JSC):
+        (JSC::JSGlobalData::JSGlobalData):
+        (JSC::JSGlobalData::~JSGlobalData):
+        * runtime/JSGlobalData.h:
+        (JSGlobalData):
+        * runtime/JSObject.cpp:
+        * runtime/JSObject.h:
+        (JSC):
+        * runtime/JSWrapperObject.h:
+        (JSC::JSWrapperObject::allocationSize):
+        (JSWrapperObject):
+        (JSC::JSWrapperObject::internalValueOffset):
+        (JSC::JSWrapperObject::internalValueCellOffset):
+        * runtime/StringPrototype.cpp:
+        (JSC):
+        (JSC::StringPrototype::finishCreation):
+        (JSC::StringPrototype::create):
+        * runtime/StringPrototype.h:
+        (StringPrototype):
+
+2013-03-18  Filip Pizlo  <fpizlo@apple.com>
+
+        ObjectPrototype properties should be eagerly created rather than lazily via static tables
+        https://bugs.webkit.org/show_bug.cgi?id=112539
+
+        Reviewed by Oliver Hunt.
+        
+        This is the first part of https://bugs.webkit.org/show_bug.cgi?id=112233. Rolling this
+        in first since it's the less-likely-to-be-broken part.
+
+        * CMakeLists.txt:
+        * DerivedSources.make:
+        * DerivedSources.pri:
+        * GNUmakefile.list.am:
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::objectConstructorTable):
+        * runtime/CommonIdentifiers.h:
+        * runtime/JSGlobalData.cpp:
+        (JSC):
+        (JSC::JSGlobalData::JSGlobalData):
+        (JSC::JSGlobalData::~JSGlobalData):
+        * runtime/JSGlobalData.h:
+        (JSGlobalData):
+        * runtime/JSObject.cpp:
+        (JSC::JSObject::putDirectNativeFunction):
+        (JSC):
+        * runtime/JSObject.h:
+        (JSObject):
+        (JSC):
+        * runtime/Lookup.cpp:
+        (JSC::setUpStaticFunctionSlot):
+        * runtime/ObjectPrototype.cpp:
+        (JSC):
+        (JSC::ObjectPrototype::finishCreation):
+        (JSC::ObjectPrototype::create):
+        * runtime/ObjectPrototype.h:
+        (ObjectPrototype):
+
+2013-03-16  Pratik Solanki  <psolanki@apple.com>
+
+        Disable High DPI Canvas on iOS
+        https://bugs.webkit.org/show_bug.cgi?id=112511
+
+        Reviewed by Joseph Pecoraro.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-15  Andreas Kling  <akling@apple.com>
+
+        Don't also clone StructureRareData when cloning Structure.
+        <http://webkit.org/b/111672>
+
+        Reviewed by Mark Hahnenberg.
+
+        We were cloning a lot of StructureRareData with only the previousID pointer set since
+        the enumerationCache is not shared between clones.
+
+        Let the Structure copy constructor decide whether it wants to clone the rare data.
+        The decision is made by StructureRareData::needsCloning() and will currently always
+        return false, since StructureRareData only holds on to caches at present.
+        This may change in the future as more members are added to StructureRareData.
+
+        * runtime/Structure.cpp:
+        (JSC::Structure::Structure):
+        (JSC::Structure::cloneRareDataFrom):
+        * runtime/StructureInlines.h:
+        (JSC::Structure::create):
+
+2013-03-15  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Roll out r145838
+        https://bugs.webkit.org/show_bug.cgi?id=112458
+
+        Unreviewed. Requested by Filip Pizlo.
+
+        * CMakeLists.txt:
+        * DerivedSources.make:
+        * DerivedSources.pri:
+        * GNUmakefile.list.am:
+        * dfg/DFGOperations.cpp:
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::objectPrototypeTable):
+        * jit/JITStubs.cpp:
+        (JSC::getByVal):
+        * llint/LLIntSlowPaths.cpp:
+        (JSC::LLInt::getByVal):
+        * runtime/CommonIdentifiers.h:
+        * runtime/JSCell.cpp:
+        (JSC):
+        * runtime/JSCell.h:
+        (JSCell):
+        * runtime/JSCellInlines.h:
+        (JSC):
+        (JSC::JSCell::fastGetOwnProperty):
+        * runtime/JSGlobalData.cpp:
+        (JSC):
+        (JSC::JSGlobalData::JSGlobalData):
+        (JSC::JSGlobalData::~JSGlobalData):
+        * runtime/JSGlobalData.h:
+        (JSGlobalData):
+        * runtime/JSObject.cpp:
+        (JSC):
+        * runtime/JSObject.h:
+        (JSObject):
+        (JSC):
+        * runtime/Lookup.cpp:
+        (JSC::setUpStaticFunctionSlot):
+        * runtime/ObjectPrototype.cpp:
+        (JSC):
+        (JSC::ObjectPrototype::finishCreation):
+        (JSC::ObjectPrototype::getOwnPropertySlot):
+        (JSC::ObjectPrototype::getOwnPropertyDescriptor):
+        * runtime/ObjectPrototype.h:
+        (JSC::ObjectPrototype::create):
+        (ObjectPrototype):
+        * runtime/PropertyMapHashTable.h:
+        (JSC::PropertyTable::findWithString):
+        * runtime/Structure.h:
+        (Structure):
+        * runtime/StructureInlines.h:
+        (JSC::Structure::get):
+
+2013-03-15  Michael Saboff  <msaboff@apple.com>
+
+        Cleanup of DFG and Baseline JIT debugging code
+        https://bugs.webkit.org/show_bug.cgi?id=111871
+
+        Reviewed by Geoffrey Garen.
+
+        Fixed various debug related issue in baseline and DFG JITs. See below.
+
+        * dfg/DFGRepatch.cpp:
+        (JSC::DFG::dfgLinkClosureCall): Used pointerDump() to handle when calleeCodeBlock is NULL.
+        * dfg/DFGScratchRegisterAllocator.h: Now use ScratchBuffer::activeLengthPtr() to get
+        pointer to scratch register length.
+        (JSC::DFG::ScratchRegisterAllocator::preserveUsedRegistersToScratchBuffer):
+        (JSC::DFG::ScratchRegisterAllocator::restoreUsedRegistersFromScratchBuffer):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::checkConsistency): Added missing case labels for DataFormatOSRMarker,
+        DataFormatDead, and DataFormatArguments and made them RELEASE_ASSERT_NOT_REACHED();
+        * jit/JITCall.cpp:
+        (JSC::JIT::privateCompileClosureCall): Used pointerDump() to handle when calleeCodeBlock is NULL.
+        * jit/JITCall32_64.cpp:
+        (JSC::JIT::privateCompileClosureCall): Used pointerDump() to handle when calleeCodeBlock is NULL.
+        * runtime/JSGlobalData.h:
+        (JSC::ScratchBuffer::ScratchBuffer): Fixed buffer allocation alignment to
+        be on a double boundary.
+        (JSC::ScratchBuffer::setActiveLength):
+        (JSC::ScratchBuffer::activeLength):
+        (JSC::ScratchBuffer::activeLengthPtr):
+
+2013-03-15  Michael Saboff  <msaboff@apple.com>
+
+        Add runtime check for improper register allocations in DFG
+        https://bugs.webkit.org/show_bug.cgi?id=112380
+
+        Reviewed by Geoffrey Garen.
+
+        Added framework to check for register allocation within a branch source - target range.  All register allocations
+        are saved using the offset in the code stream where the allocation occurred.  Later when a jump is linked, the
+        currently saved register allocations are checked to make sure that they didn't occur in the range of code that was
+        jumped over.  This protects against the case where an allocation could have spilled register contents to free up 
+        a register and that spill only occurs on one path of a many through the code.  A subsequent fill of the spilled
+        register may load garbage.  See https://bugs.webkit.org/show_bug.cgi?id=111777 for one such bug.
+        This code is protected by the compile time check of #if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION).
+        The check is only done during the processing of SpeculativeJIT::compile(Node* node) and its callees.
+ 
+        * assembler/AbstractMacroAssembler.h:
+        (JSC::AbstractMacroAssembler::Jump::link): Invoke register allocation checks using source and target of link.
+        (JSC::AbstractMacroAssembler::Jump::linkTo): Invoke register allocation checks using source and target of link.
+        (AbstractMacroAssembler):
+        (RegisterAllocationOffset): New helper class to store the instruction stream offset and compare against a 
+        jump range.
+        (JSC::AbstractMacroAssembler::RegisterAllocationOffset::RegisterAllocationOffset):
+        (JSC::AbstractMacroAssembler::RegisterAllocationOffset::check):
+        (JSC::AbstractMacroAssembler::addRegisterAllocationAtOffset):
+        (JSC::AbstractMacroAssembler::clearRegisterAllocationOffsets): 
+        (JSC::AbstractMacroAssembler::checkRegisterAllocationAgainstBranchRange):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::allocate):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
 2013-03-14  Oliver Hunt  <oliver@apple.com>
 
         REGRESSION(r145000): Crash loading arstechnica.com when Safari Web Inspector is open

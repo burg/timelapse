@@ -422,13 +422,14 @@ void TextureMapperLayer::paintRecursive(const TextureMapperPaintOptions& options
     if (!isVisible())
         return;
 
+    TextureMapperPaintOptions paintOptions(options);
+    paintOptions.opacity = options.opacity * m_currentOpacity;
+
     if (!shouldBlend()) {
-        paintSelfAndChildrenWithReplica(options);
+        paintSelfAndChildrenWithReplica(paintOptions);
         return;
     }
 
-    TextureMapperPaintOptions paintOptions(options);
-    paintOptions.opacity = options.opacity * m_currentOpacity;
     paintUsingOverlapRegions(paintOptions);
 }
 
@@ -698,13 +699,7 @@ bool TextureMapperLayer::scrollableLayerHitTestCondition(TextureMapperLayer* lay
         return false;
 
     TextureMapperLayer* parentLayer = layer->m_parent->m_parent;
-
-    FloatRect rect;
-    if (parentLayer->m_backingStore)
-        rect = parentLayer->layerRect();
-    else if (parentLayer->m_contentsLayer)
-        rect = parentLayer->m_state.contentsRect;
-
+    FloatRect rect = parentLayer->layerRect();
     return parentLayer->m_currentTransform.combined().mapQuad(rect).containsPoint(point);
 }
 

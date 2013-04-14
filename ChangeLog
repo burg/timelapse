@@ -1,3 +1,49 @@
+2013-03-19  David Rosca  <nowrep@gmail.com>
+
+        [Qt] QStyle: Set State_Enabled by default when painting style widgets.
+        https://bugs.webkit.org/show_bug.cgi?id=112688
+
+        Reviewed by Jocelyn Turcotte.
+
+        All Qt style widgets were painted with a disabled state, even when
+        they actually were enabled.
+        This change fixes it by setting State_Enabled as a default state,
+        which is then correctly removed when element is disabled.
+
+        * Source/WebCore/platform/qt/RenderThemeQStyle.cpp:
+
+2013-03-17  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Exports leveldb symbols
+        https://bugs.webkit.org/show_bug.cgi?id=112526
+
+        Reviewed by Carlos Garcia Campos.
+
+        * Source/autotools/symbols.filter: make leveldb symbols local.
+
+2013-03-15  Jae Hyun Park  <jae.park@company100.net>
+
+        [GTK] acceleration_backend_description does not concatenate "(gles2"
+        https://bugs.webkit.org/show_bug.cgi?id=112405
+
+        Reviewed by Martin Robinson.
+
+        In FindDependencies.m4, acceleration_backend_description string does not
+        concatenate if there is a space between the operator and the operand.
+
+        * Source/autotools/FindDependencies.m4:
+
+2013-03-15  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Build error with building with Qt 5.1
+        https://bugs.webkit.org/show_bug.cgi?id=112435
+
+        Reviewed by Noam Rosenthal.
+
+        QAccessibleWidget has moved to private.
+
+        * Source/widgetsapi.pri:
+
 2013-03-14  Tobias Mueller  <tobiasmue@gnome.org>
 
         Build: Remove XSLT option and depend hard on XSLT.

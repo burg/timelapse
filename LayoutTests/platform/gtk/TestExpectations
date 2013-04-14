@@ -80,7 +80,6 @@ webkit.org/b/71851 http/tests/security/contentTypeOptions [ Skip ]
 
 # These test -apple- and -khtml- prefixed CSS properties, which we don't support.
 inspector/styles/vendor-prefixes.html [ WontFix Failure ]
-fast/css/apple-prefix.html [ WontFix Failure ]
 
 # This port doesn't support detecting slow unload handlers.
 fast/dom/Window/slow-unload-handler.html [ WontFix Timeout Failure ]
@@ -430,6 +429,9 @@ webkit.org/b/107825 media/media-controls-clone.html [ Failure ]
 # Require ENABLE(CUSTOM_ELEMENTS) support
 webkit.org/b/110735 fast/dom/custom [ Failure ]
 
+# Snapshotted plugins not enabled
+webkit.org/b/98696 plugins/snapshotting [ Skip ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Expected failures
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -469,8 +471,9 @@ webkit.org/b/107257 [ Debug ] fast/js/toString-stack-overflow.html [ Crash ]
 
 webkit.org/b/107261 [ Debug ] dom/xhtml/level2/html/HTMLInputElement20.xhtml [ Crash Pass ]
 
-webkit.org/b/107376 [ Release ] storage/indexeddb/cursor-advance.html [ Crash Pass ]
-webkit.org/b/107377 storage/indexeddb/cursor-advance-workers.html [ Crash Pass ]
+webkit.org/b/107376 webkit.org/b/112468 storage/indexeddb/cursor-advance.html [ Crash Failure ]
+webkit.org/b/107377 webkit.org/b/112468 storage/indexeddb/cursor-advance-workers.html [ Crash Failure ]
+webkit.org/b/112468 storage/indexeddb/intversion-bad-parameters.html [ Crash Failure ]
 webkit.org/b/107377 storage/indexeddb/index-get-key-argument-required.html [ Crash Pass ]
 webkit.org/b/107377 storage/indexeddb/keypath-basics.html [ Crash Pass ]
 webkit.org/b/107377 storage/indexeddb/mozilla/remove-index.html [ Crash Pass ]
@@ -698,6 +701,12 @@ Bug(GTK) http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-simple.
 Bug(GTK) http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-synconworker.html [ Pass Slow ] 
 Bug(GTK) http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-twice.html [ Pass Slow ] 
 
+webkit.org/b/73003 editing/spelling/spellcheck-async.html [ Failure Slow ]
+webkit.org/b/73003 editing/spelling/spellcheck-async-mutation.html [ Failure Slow ]
+webkit.org/b/73003 editing/spelling/spellcheck-paste.html [ Pass Slow ]
+webkit.org/b/73003 editing/spelling/spellcheck-sequencenum.html [ Failure Slow ]
+webkit.org/b/50740 editing/spelling/spellcheck-queue.html [ Failure Slow ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of slow tests
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -723,10 +732,6 @@ webkit.org/b/98350 accessibility/aria-invalid.html [ Timeout ]
 
 # Missing DRT AccessibilityController::addNotificationListener implementation
 webkit.org/b/70606 accessibility/aria-checkbox-sends-notification.html [ Timeout ]
-
-webkit.org/b/73003 [ Release ] editing/spelling/spellcheck-async.html [ Timeout ]
-webkit.org/b/73003 [ Release ] editing/spelling/spellcheck-paste.html [ Timeout ]
-webkit.org/b/50740 [ Release ] editing/spelling/spellcheck-queue.html [ Timeout ]
 
 Bug(GTK) media/progress-events-generated-correctly.html [ Failure Timeout ]
 
@@ -1398,6 +1403,9 @@ webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-circle.html [ Imag
 webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-circle-padding.html [ ImageOnlyFailure ]
 webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-ellipse.html [ ImageOnlyFailure ]
 webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-ellipse-padding.html [ ImageOnlyFailure ]
+webkit.org/b/110089 fast/exclusions/shape-outside-floats/shape-outside-floats-simple-circle.html [ ImageOnlyFailure ]
+webkit.org/b/110089 fast/exclusions/shape-outside-floats/shape-outside-floats-simple-ellipse.html [ ImageOnlyFailure ]
+webkit.org/b/110089 fast/exclusions/shape-outside-floats/shape-outside-floats-simple-rounded-rectangle.html [ ImageOnlyFailure ]
 
 webkit.org/b/110090 fast/events/clientXY-in-zoom-and-scroll.html [ Failure ]
 
@@ -1415,14 +1423,13 @@ webkit.org/b/110694 html5lib/generated/run-plain-text-unsafe-data.html [ Failure
 # Need support for ResourceHandle::didChangePriority and DRT support
 webkit.org/b/111016 http/tests/loading/promote-img-preload-priority.html [ Failure ]
 
-webkit.org/b/111058 plugins/plugin-clip-subframe.html [ Failure ]
-
 # CURSOR_VISIBILITY is not enabled in gtk
 webkit.org/b/107601 fullscreen/video-cursor-auto-hide.html [ Failure ]
 
 webkit.org/b/111606 fast/borders/border-fit.html [ Failure ]
 webkit.org/b/111606 fast/borders/border-fit-2.html [ Failure ]
 webkit.org/b/111606 fast/repaint/border-fit-lines.html [ Failure ]
+
 
 webkit.org/b/112109 fast/box-shadow/box-shadow-with-zero-radius.html [ ImageOnlyFailure ]
 
@@ -1431,6 +1438,8 @@ webkit.org/b/112110 media/track/track-cue-container-rendering-position.html [ Fa
 webkit.org/b/112228 svg/custom/resources-css-scaled.html [ ImageOnlyFailure ]
 
 webkit.org/b/99893 svg/animations/mozilla/animateMotion-mpath-targetChange-1.svg [ ImageOnlyFailure Pass ]
+
+webkit.org/b/112705 fast/dom/icon-url-property.html [ Failure ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests failing

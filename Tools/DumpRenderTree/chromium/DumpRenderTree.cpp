@@ -60,11 +60,9 @@ static const char optionEnableThreadedCompositing[] = "--enable-threaded-composi
 static const char optionForceCompositingMode[] = "--force-compositing-mode";
 static const char optionEnableAccelerated2DCanvas[] = "--enable-accelerated-2d-canvas";
 static const char optionEnableDeferred2DCanvas[] = "--enable-deferred-2d-canvas";
-static const char optionEnableAcceleratedPainting[] = "--enable-accelerated-painting";
 static const char optionEnableAcceleratedCompositingForVideo[] = "--enable-accelerated-video";
 static const char optionEnableAcceleratedFixedPosition[] = "--enable-accelerated-fixed-position";
 static const char optionEnableAcceleratedOverflowScroll[] = "--enable-accelerated-overflow-scroll";
-static const char optionUseGraphicsContext3DImplementation[] = "--use-graphics-context-3d-implementation=";
 static const char optionEnablePerTilePainting[] = "--enable-per-tile-painting";
 static const char optionEnableDeferredImageDecoding[] = "--enable-deferred-image-decoding";
 static const char optionDisableThreadedHTMLParser[] = "--disable-threaded-html-parser";
@@ -141,7 +139,6 @@ int main(int argc, char* argv[])
     bool threadedHTMLParser = true;
     bool accelerated2DCanvasEnabled = false;
     bool deferred2DCanvasEnabled = false;
-    bool acceleratedPaintingEnabled = false;
     bool perTilePaintingEnabled = false;
     bool deferredImageDecodingEnabled = false;
     bool stressOpt = false;
@@ -150,7 +147,6 @@ int main(int argc, char* argv[])
     string javaScriptFlags;
     bool encodeBinary = false;
     bool noTimeout = false;
-    bool acceleratedAnimationEnabled = false;
     for (int i = 1; i < argc; ++i) {
         string argument(argv[i]);
         if (argument == "-")
@@ -189,17 +185,7 @@ int main(int argc, char* argv[])
             accelerated2DCanvasEnabled = true;
         else if (argument == optionEnableDeferred2DCanvas)
             deferred2DCanvasEnabled = true;
-        else if (argument == optionEnableAcceleratedPainting)
-            acceleratedPaintingEnabled = true;
-        else if (!argument.find(optionUseGraphicsContext3DImplementation)) {
-            string implementation = argument.substr(strlen(optionUseGraphicsContext3DImplementation));
-            if (!implementation.compare("IN_PROCESS")) 
-              webkit_support::SetGraphicsContext3DImplementation(webkit_support::IN_PROCESS);
-            else if (!implementation.compare("IN_PROCESS_COMMAND_BUFFER")) 
-              webkit_support::SetGraphicsContext3DImplementation(webkit_support::IN_PROCESS_COMMAND_BUFFER);
-            else 
-              fprintf(stderr, "Unknown GraphicContext3D implementation %s\n", implementation.c_str());
-        } else if (argument == optionEnablePerTilePainting)
+        else if (argument == optionEnablePerTilePainting)
             perTilePaintingEnabled = true;
         else if (argument == optionEnableDeferredImageDecoding)
             deferredImageDecodingEnabled = true;
@@ -243,8 +229,6 @@ int main(int argc, char* argv[])
         shell.setThreadedHTMLParser(threadedHTMLParser);
         shell.setAccelerated2dCanvasEnabled(accelerated2DCanvasEnabled);
         shell.setDeferred2dCanvasEnabled(deferred2DCanvasEnabled);
-        shell.setAcceleratedPaintingEnabled(acceleratedPaintingEnabled);
-        shell.setAcceleratedAnimationEnabled(acceleratedAnimationEnabled);
         shell.setPerTilePaintingEnabled(perTilePaintingEnabled);
         shell.setDeferredImageDecodingEnabled(deferredImageDecodingEnabled);
         shell.setJavaScriptFlags(javaScriptFlags);

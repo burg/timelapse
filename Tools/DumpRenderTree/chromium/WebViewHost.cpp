@@ -478,6 +478,10 @@ void WebViewHost::didReceiveTitle(WebFrame* frame, const WebString& title, WebTe
     setPageTitle(title);
 }
 
+void WebViewHost::didChangeIcon(WebFrame* , WebIconURL::Type)
+{
+}
+
 void WebViewHost::didNavigateWithinPage(WebFrame* frame, bool isNewNavigation)
 {
     frame->dataSource()->setExtraData(m_pendingExtraData.leakPtr());
@@ -493,12 +497,12 @@ void WebViewHost::willSendRequest(WebFrame* frame, unsigned, WebURLRequest& requ
     request.setExtraData(webkit_support::CreateWebURLRequestExtraData(frame->document().referrerPolicy()));
 }
 
-void WebViewHost::openFileSystem(WebFrame* frame, WebFileSystem::Type type, long long size, bool create, WebFileSystemCallbacks* callbacks)
+void WebViewHost::openFileSystem(WebFrame* frame, WebFileSystemType type, long long size, bool create, WebFileSystemCallbacks* callbacks)
 {
     webkit_support::OpenFileSystem(frame, type, size, create, callbacks);
 }
 
-void WebViewHost::deleteFileSystem(WebKit::WebFrame* frame, WebKit::WebFileSystem::Type type, WebKit::WebFileSystemCallbacks* callbacks)
+void WebViewHost::deleteFileSystem(WebKit::WebFrame* frame, WebKit::WebFileSystemType type, WebKit::WebFileSystemCallbacks* callbacks)
 {
     webkit_support::DeleteFileSystem(frame, type, callbacks);
 }

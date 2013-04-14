@@ -98,28 +98,20 @@ typedef struct _Evas_GL_Surface Evas_GL_Surface;
 typedef struct Ewk_View_Smart_Data Ewk_View_Smart_Data;
 typedef struct Ewk_View_Smart_Class Ewk_View_Smart_Class;
 
-// EwkView object is owned by the evas object, obtained from EwkView::createEvasObject().
 class EwkView {
 public:
-
-    enum ViewBehavior {
-        LegacyBehavior,
-        DefaultBehavior
-    };
-
-    static Evas_Object* createEvasObject(Evas* canvas, Evas_Smart* smart, PassRefPtr<EwkContext> context,  PassRefPtr<EwkPageGroup> pageGroup = 0, ViewBehavior behavior = EwkView::DefaultBehavior);
-    static Evas_Object* createEvasObject(Evas* canvas, PassRefPtr<EwkContext> context, PassRefPtr<EwkPageGroup> pageGroup = 0, ViewBehavior behavior = EwkView::DefaultBehavior);
+    static EwkView* create(WKViewRef, Evas* canvas, Evas_Smart* smart = 0);
 
     static bool initSmartClassInterface(Ewk_View_Smart_Class&);
 
-    static const Evas_Object* toEvasObject(WKPageRef);
+    static Evas_Object* toEvasObject(WKPageRef);
 
     Evas_Object* evasObject() { return m_evasObject; }
 
-    WKViewRef wkView() const { return toAPI(m_webView.get()); }
+    WKViewRef wkView() const { return m_webView.get(); }
     WKPageRef wkPage() const;
 
-    WebKit::WebPageProxy* page() { return m_webView->page(); }
+    WebKit::WebPageProxy* page() { return webView()->page(); }
     EwkContext* ewkContext() { return m_context.get(); }
     EwkPageGroup* ewkPageGroup() { return m_pageGroup.get(); }
     EwkSettings* settings() { return m_settings.get(); }
@@ -200,7 +192,7 @@ public:
     unsigned long long informDatabaseQuotaReached(const String& databaseName, const String& displayName, unsigned long long currentQuota, unsigned long long currentOriginUsage, unsigned long long currentDatabaseUsage, unsigned long long expectedUsage);
 
     // FIXME: Remove when possible.
-    WebKit::WebView* webView() { return m_webView.get(); }
+    WebKit::WebView* webView();
 
     void setPageScaleFactor(float scaleFactor) { m_pageScaleFactor = scaleFactor; }
     float pageScaleFactor() const { return m_pageScaleFactor; }
@@ -214,7 +206,7 @@ public:
     PassRefPtr<cairo_surface_t> takeSnapshot();
 
 private:
-    EwkView(Evas_Object* evasObject, PassRefPtr<EwkContext> context, PassRefPtr<EwkPageGroup> pageGroup, ViewBehavior);
+    EwkView(WKViewRef, Evas_Object*);
     ~EwkView();
 
     void setDeviceSize(const WebCore::IntSize&);
@@ -252,6 +244,7 @@ private:
 
 private:
     // Note, initialization order matters.
+    WKRetainPtr<WKViewRef> m_webView;
     Evas_Object* m_evasObject;
     RefPtr<EwkContext> m_context;
     RefPtr<EwkPageGroup> m_pageGroup;
@@ -261,7 +254,6 @@ private:
     WebCore::IntSize m_deviceSize;
     WebCore::TransformationMatrix m_userViewportTransform;
     bool m_pendingSurfaceResize;
-    RefPtr<WebKit::WebView> m_webView;
     OwnPtr<WebKit::PageLoadClientEfl> m_pageLoadClient;
     OwnPtr<WebKit::PagePolicyClientEfl> m_pagePolicyClient;
     OwnPtr<WebKit::PageUIClientEfl> m_pageUIClient;

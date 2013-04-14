@@ -1,3 +1,348 @@
+2013-03-19  Andrew Lo  <anlo@rim.com>
+
+        [BlackBerry] Selection overlay is sometimes in wrong position.
+        https://bugs.webkit.org/show_bug.cgi?id=112748
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Arvid Nilsson.
+
+        Internal PR 305384.
+        Translate by parent's offset when drawing selection overlay.
+
+        * WebKitSupport/SelectionOverlay.cpp:
+        (BlackBerry::WebKit::SelectionOverlay::paintContents):
+
+2013-03-19  Iris Wu  <shuwu@blackberry.com>
+
+        [BlackBerry] Hook up scroll position to proximity detector
+        https://bugs.webkit.org/show_bug.cgi?id=112743
+
+        Reviewed by Rob Buis.
+
+        PR 243385
+        Reviewed Internally By Genevieve Mak.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::~WebPagePrivate):
+        (BlackBerry::WebKit::WebPage::adjustDocumentScrollPosition):
+        (WebKit):
+        * Api/WebPage.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+
+2013-03-19  Chris Hutten-Czapski  <chutten@blackberry.com>
+
+        [BlackBerry] Don't handle keyboard scrolling shortcuts in webkit
+        https://bugs.webkit.org/show_bug.cgi?id=112716
+
+        Informally Reviewed by Mike Fenton (mifenton@rim.com)
+        Reviewed by Rob Buis.
+
+        The comment is right, this isn't the correct place to handle keyboard
+        scrolling shortcuts. That's what we have clients for.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::keyEvent):
+
+2013-03-19  Andy Chen  <andchen@blackberry.com>
+
+        [BlackBerry] When selecting an object, assign focus to new node instead of clearing previous focused node
+        https://bugs.webkit.org/show_bug.cgi?id=112707
+
+        Reviewed by Rob Buis.
+
+        In SelectionHandler, when selecting a new object, we should set focus
+        to the anchor node of selection instead of removing it from the old input.
+        In InputHandler, when focusedNodeChanged is called, if the new node is
+        not an Element node, we need to set focus to its Element parent node,
+        instead of removing focus from the old node.
+        PR 304631
+        Internally reviewed by Mike Fenton.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::focusedNodeChanged):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::selectObject):
+
+2013-03-18  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] Prevent text selection inside Colour and Date/Time input fields
+        https://bugs.webkit.org/show_bug.cgi?id=111733
+
+        Reviewed by Rob Buis.
+
+        Fix missing brace.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::selectionPositionChanged):
+
+2013-03-18  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] Add Proximity Detector.
+        https://bugs.webkit.org/show_bug.cgi?id=112278
+
+        Reviewed by Rob Buis.
+
+        Fix variable names so they actually match the function
+        declarations.
+
+        Fix call to rectForPoint(), which was moved from HitTestResult to
+        HitTestLocation in r117091 and r126859.
+
+        * WebKitSupport/ProximityDetector.cpp:
+        (BlackBerry::WebKit::ProximityDetector::findBestPoint):
+
+2013-03-18  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] EditorClientBlackBerry: fix access to WebPage attribute
+        https://bugs.webkit.org/show_bug.cgi?id=112556
+
+        Reviewed by Rob Buis.
+
+        This changed in r145849 and broke the BlackBerry build.
+
+        * WebCoreSupport/EditorClientBlackBerry.cpp:
+        (WebCore::EditorClientBlackBerry::smartInsertDeleteEnabled):
+        (WebCore::EditorClientBlackBerry::isSelectTrailingWhitespaceEnabled):
+
+2013-03-18  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] Detach overlays from page when compositor is detached
+        https://bugs.webkit.org/show_bug.cgi?id=112424
+
+        Reviewed by Rob Buis.
+
+        PR 309160
+
+        If not detached properly, the overlays would have a dangling pointer to
+        the page.
+
+        * Api/WebOverlay.cpp:
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::WebOverlayLayerCompositingThreadClient):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::uploadTexturesIfNeeded):
+        (BlackBerry::WebKit::WebOverlayPrivateCompositingThread::WebOverlayPrivateCompositingThread):
+        (BlackBerry::WebKit::WebOverlayPrivateCompositingThread::~WebOverlayPrivateCompositingThread):
+        * Api/WebOverlay_p.h:
+        (BlackBerry::WebKit::WebOverlayPrivate::setClient):
+        (WebOverlayLayerCompositingThreadClient):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::overlay):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::overlayDestroyed):
+        (WebOverlayPrivateCompositingThread):
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::detach):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::setPage):
+        (WebKit):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::attachOverlays):
+        * Api/WebPageCompositor_p.h:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::attachOverlays):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::detachOverlays):
+        (WebPageCompositorPrivate):
+
+2013-03-18  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] BackingStoreClient: remove unnecessary call to toElement()
+        https://bugs.webkit.org/show_bug.cgi?id=112547
+
+        Reviewed by Carlos Garcia Campos.
+
+        * WebKitSupport/BackingStoreClient.cpp:
+        (BlackBerry::WebKit::BackingStoreClient::absoluteRect):
+
+2013-03-15  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] BlackBerry::Platform::Graphics::GraphicsContext integration related changes in Source/WebKit/blackberry
+        https://bugs.webkit.org/show_bug.cgi?id=112467
+
+        Reviewed by Rob Buis.
+
+        PR 293208
+
+        This patch contains contributions from many members of the BlackBerry
+        WebKit team:
+
+        Mike Lattanzio
+        Arvid Nilsson
+        Jakob Petsovits
+        Konrad Piascik
+        Jeff Rogers
+        Filip Spacek
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStorePrivate::render):
+        (BlackBerry::WebKit::BackingStorePrivate::blitVisibleContents):
+        (BlackBerry::WebKit::BackingStorePrivate::compositeContents):
+        (BlackBerry::WebKit::BackingStorePrivate::tileSize):
+        * Api/WebOverlay.cpp:
+        (BlackBerry::WebKit::WebOverlayPrivate::drawContents):
+        (BlackBerry::WebKit::WebOverlayPrivateWebKitThread::paintContents):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::WebOverlayLayerCompositingThreadClient):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::setContentsToImage):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::clearUploadedContents):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::setContentsToColor):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::uploadTexturesIfNeeded):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::drawTextures):
+        (BlackBerry::WebKit::WebOverlayPrivateCompositingThread::WebOverlayPrivateCompositingThread):
+        (BlackBerry::WebKit::WebOverlayPrivateCompositingThread::removeFromParent):
+        (BlackBerry::WebKit::WebOverlayPrivateCompositingThread::setContentsToImage):
+        * Api/WebOverlay.h:
+        * Api/WebOverlayClient.h:
+        * Api/WebOverlay_p.h:
+        (WebOverlayPrivate):
+        (BlackBerry::WebKit::WebOverlayPrivateWebKitThread::showDebugBorders):
+        (BlackBerry::WebKit::WebOverlayPrivateWebKitThread::showRepaintCounter):
+        (WebOverlayLayerCompositingThreadClient):
+        (BlackBerry::WebKit::WebOverlayLayerCompositingThreadClient::image):
+        (WebOverlayPrivateCompositingThread):
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::WebPageCompositorPrivate):
+        * WebKitSupport/BackingStoreTile.cpp:
+        (BlackBerry::WebKit::TileBuffer::~TileBuffer):
+        (BlackBerry::WebKit::TileBuffer::nativeBuffer):
+        (BlackBerry::WebKit::TileBuffer::paintBackground):
+        * WebKitSupport/DefaultTapHighlight.cpp:
+        (BlackBerry::WebKit::DefaultTapHighlight::paintContents):
+        (BlackBerry::WebKit::DefaultTapHighlight::showDebugBorders):
+        (WebKit):
+        (BlackBerry::WebKit::DefaultTapHighlight::showRepaintCounter):
+        * WebKitSupport/DefaultTapHighlight.h:
+        (DefaultTapHighlight):
+        * WebKitSupport/InspectorOverlayBlackBerry.cpp:
+        (BlackBerry::WebKit::InspectorOverlay::showDebugBorders):
+        (WebKit):
+        (BlackBerry::WebKit::InspectorOverlay::showRepaintCounter):
+        * WebKitSupport/InspectorOverlayBlackBerry.h:
+        (InspectorOverlay):
+        * WebKitSupport/SelectionOverlay.cpp:
+        (BlackBerry::WebKit::SelectionOverlay::draw):
+        (BlackBerry::WebKit::SelectionOverlay::hide):
+        (BlackBerry::WebKit::SelectionOverlay::paintContents):
+        (BlackBerry::WebKit::SelectionOverlay::showDebugBorders):
+        (WebKit):
+        (BlackBerry::WebKit::SelectionOverlay::showRepaintCounter):
+        * WebKitSupport/SelectionOverlay.h:
+        (SelectionOverlay):
+        * WebKitSupport/SurfacePool.cpp:
+        (BlackBerry::WebKit::SurfacePool::createPlatformGraphicsContext):
+        (BlackBerry::WebKit::SurfacePool::destroyPlatformGraphicsContext):
+        (BlackBerry::WebKit::SurfacePool::waitForBuffer):
+        (BlackBerry::WebKit::SurfacePool::notifyBuffersComposited):
+        (BlackBerry::WebKit::SurfacePool::destroyPlatformSync):
+        * WebKitSupport/SurfacePool.h:
+
+2013-03-15  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] Expose the compositing thread layer's draw rectangle to aid hit testing
+        https://bugs.webkit.org/show_bug.cgi?id=112255
+
+        Reviewed by Rob Buis.
+
+        PR 308284.
+        Reviewed internally by Yongxin Dai.
+
+        The cached draw rectangle is useful for hit testing. Add a getter for
+        this compositing thread layer property to the public WebOverlay API.
+        We name this getter using terminology familiar from the
+        ViewportAccessor interface, to clarify which coordinate system the
+        getter uses (pixel coordinates relative to the viewport).
+
+        Note that WebKit-thread flavor of WebOverlay is not currently used by
+        any API client and is marked obsolete. It is used internally in WebKit,
+        but for that case using GraphicsLayer directly works well. This will
+        allow the complexity of WebOverlay to be significantly reduced in the
+        future, by removing the WebKit-thread flavor entirely.
+
+        * Api/WebOverlay.cpp:
+        (BlackBerry::WebKit::WebOverlay::pixelViewportRect):
+        (WebKit):
+        (BlackBerry::WebKit::WebOverlayPrivateWebKitThread::pixelViewportRect):
+        (BlackBerry::WebKit::WebOverlayPrivateCompositingThread::pixelViewportRect):
+        * Api/WebOverlay.h:
+        (WebKit):
+        * Api/WebOverlay_p.h:
+        (WebOverlayPrivate):
+        (WebOverlayPrivateWebKitThread):
+        (WebOverlayPrivateCompositingThread):
+
+2013-03-15  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] Allow an embedder to position child windows using window coordinates
+        https://bugs.webkit.org/show_bug.cgi?id=112236
+
+        Reviewed by Rob Buis.
+
+        PR 232752
+
+        Child windows used to always be positioned in document coordinates,
+        which requires the
+        BlackBerry::Platform::Graphics::Window::virtualRect() of the parent
+        window to be kept in sync with the document visible content rect.
+        This is easy if there's a one-to-one correspondence between windows
+        and scrollable frames.
+
+        However, for an embedder that can display an entire scene graph (where
+        the web page is just one of the nodes) in one window, several
+        scrollable nodes may be present in that window, and it's difficult to
+        know which scrollable node to sync the virtualRect with. It could also
+        lead to conflicts, if two scrollable nodes have child windows.
+
+        For the latter scenario, it makes more sense to use window coordinates
+        to place child windows.
+
+        The internal default is to use document coordinates, for legacy
+        reasons.
+
+        When an external WebPageCompositor is attached, we switch to using
+        window coordinates instead of document coordinates by default. The
+        behavior is still configurable using the new public
+        setChildWindowPlacement method.
+
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::WebPageCompositorPrivate):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::setContext):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::prepareFrame):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::render):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::drawLayers):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::shouldClearSurfaceBeforeCompositing):
+        (WebKit):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::shouldChildWindowsUseDocumentCoordinates):
+        (BlackBerry::WebKit::WebPageCompositor::WebPageCompositor):
+        (BlackBerry::WebKit::WebPageCompositor::setChildWindowPlacement):
+        * Api/WebPageCompositor.h:
+        * Api/WebPageCompositor_p.h:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::setChildWindowPlacement):
+        (WebPageCompositorPrivate):
+
+2013-03-15  Nate Chapin  <japhet@chromium.org>
+
+        Hide MainResourceLoader from the outside world
+        https://bugs.webkit.org/show_bug.cgi?id=109971
+
+        Reviewed by Adam Barth.
+
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::convertMainResourceLoadToDownload):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.h:
+        (FrameLoaderClientBlackBerry):
+
+2013-03-15  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112401
+
+        Reviewed by Stephen Chenney.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::frameForNode):
+        (BlackBerry::WebKit::needsLayoutRecursive):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::redirectDataToPlugin):
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::ensureFocusPluginElementVisible):
+
 2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
 
         Add selectTrailingWhitespaceEnabled setting to WebCore::Page

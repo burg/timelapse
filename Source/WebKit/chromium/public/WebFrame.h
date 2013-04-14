@@ -33,6 +33,7 @@
 
 #include "../../../Platform/chromium/public/WebCanvas.h"
 #include "../../../Platform/chromium/public/WebFileSystem.h"
+#include "../../../Platform/chromium/public/WebFileSystemType.h"
 #include "../../../Platform/chromium/public/WebMessagePortChannel.h"
 #include "../../../Platform/chromium/public/WebReferrerPolicy.h"
 #include "../../../Platform/chromium/public/WebURL.h"
@@ -291,22 +292,21 @@ public:
     virtual v8::Local<v8::Context> mainWorldScriptContext() const = 0;
 
     // Creates an instance of file system object.
-    virtual v8::Handle<v8::Value> createFileSystem(WebFileSystem::Type,
-                                                   const WebString& name,
-                                                   const WebString& rootURL) = 0;
+    virtual v8::Handle<v8::Value> createFileSystem(WebFileSystemType,
+        const WebString& name,
+        const WebString& rootURL) = 0;
     // Creates an instance of serializable file system object.
     // FIXME: Remove this API after we have a better way of creating serialized
     // file system object.
-    virtual v8::Handle<v8::Value> createSerializableFileSystem(WebFileSystem::Type,
-                                                               const WebString& name,
-                                                               const WebString& rootURL) = 0;
+    virtual v8::Handle<v8::Value> createSerializableFileSystem(WebFileSystemType,
+        const WebString& name,
+        const WebString& rootURL) = 0;
     // Creates an instance of file or directory entry object.
-    virtual v8::Handle<v8::Value> createFileEntry(WebFileSystem::Type,
-                                                  const WebString& fileSystemName,
-                                                  const WebString& fileSystemRootURL,
-                                                  const WebString& filePath,
-                                                  bool isDirectory) = 0;
-
+    virtual v8::Handle<v8::Value> createFileEntry(WebFileSystemType,
+        const WebString& fileSystemName,
+        const WebString& fileSystemRootURL,
+        const WebString& filePath,
+        bool isDirectory) = 0;
 
     // Navigation ----------------------------------------------------------
 

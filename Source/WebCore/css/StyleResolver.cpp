@@ -990,15 +990,12 @@ PassRefPtr<RenderStyle> StyleResolver::styleForElement(Element* element, RenderS
             return sharedStyle;
     }
 
-    RefPtr<RenderStyle> cloneForParent;
-
     if (state.parentStyle()) {
         state.setStyle(RenderStyle::create());
         state.style()->inheritFrom(state.parentStyle(), isAtShadowBoundary(element) ? RenderStyle::AtShadowBoundary : RenderStyle::NotAtShadowBoundary);
     } else {
         state.setStyle(defaultStyleForElement());
-        cloneForParent = RenderStyle::clone(state.style());
-        state.setParentStyle(cloneForParent.get());
+        state.setParentStyle(RenderStyle::clone(state.style()));
     }
     // contenteditable attribute (implemented by -webkit-user-modify) should
     // be propagated from shadow host to distributed node.
@@ -1176,8 +1173,14 @@ PassRefPtr<RenderStyle> StyleResolver::pseudoStyleForElement(Element* e, const P
     initElement(e);
 
     state.initForStyleResolve(document(), e, parentStyle);
-    state.setStyle(RenderStyle::create());
-    state.style()->inheritFrom(m_state.parentStyle());
+
+    if (m_state.parentStyle()) {
+        state.setStyle(RenderStyle::create());
+        state.style()->inheritFrom(m_state.parentStyle());
+    } else {
+        state.setStyle(defaultStyleForElement());
+        state.setParentStyle(RenderStyle::clone(state.style()));
+    }
 
     // Since we don't use pseudo-elements in any of our quirk/print user agent rules, don't waste time walking
     // those rules.
@@ -2089,8 +2092,12 @@ static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, const Styl
     return true;
 }
 
-static bool createGridTrackMinMax(CSSPrimitiveValue* primitiveValue, const StyleResolver::State& state, GridTrackSize& trackSize)
+static bool createGridTrackSize(CSSValue* value, GridTrackSize& trackSize, const StyleResolver::State& state)
 {
+    if (!value->isPrimitiveValue())
+        return false;
+
+    CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
     Pair* minMaxTrackBreadth = primitiveValue->getPairValue();
     if (!minMaxTrackBreadth) {
         Length workingLength;
@@ -2110,25 +2117,6 @@ static bool createGridTrackMinMax(CSSPrimitiveValue* primitiveValue, const Style
     return true;
 }
 
-static bool createGridTrackGroup(CSSValue* value, const StyleResolver::State& state, Vector<GridTrackSize>& trackSizes)
-{
-    if (!value->isValueList())
-        return false;
-
-    for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
-        CSSValue* currValue = i.value();
-        if (!currValue->isPrimitiveValue())
-            return false;
-
-        GridTrackSize trackSize;
-        if (!createGridTrackMinMax(static_cast<CSSPrimitiveValue*>(currValue), state, trackSize))
-            return false;
-
-        trackSizes.append(trackSize);
-    }
-    return true;
-}
-
 static bool createGridTrackList(CSSValue* value, Vector<GridTrackSize>& trackSizes, const StyleResolver::State& state)
 {
     // Handle 'none'.
@@ -2137,7 +2125,18 @@ static bool createGridTrackList(CSSValue* value, Vector<GridTrackSize>& trackSiz
         return primitiveValue->getIdent() == CSSValueNone;
     }
 
-    return createGridTrackGroup(value, state, trackSizes);
+    if (!value->isValueList())
+        return false;
+
+    for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
+        CSSValue* currValue = i.value();
+        GridTrackSize trackSize;
+        if (!createGridTrackSize(currValue, trackSize, state))
+            return false;
+
+        trackSizes.append(trackSize);
+    }
+    return true;
 }
 
 
@@ -2391,109 +2390,6 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                 state.style()->setQuotes(QuotesData::create());
         }
         return;
-    case CSSPropertyFontFamily: {
-        // list of strings and ids
-        if (isInherit) {
-            FontDescription parentFontDescription = state.parentStyle()->fontDescription();
-            FontDescription fontDescription = state.style()->fontDescription();
-            fontDescription.setGenericFamily(parentFontDescription.genericFamily());
-            fontDescription.setFamily(parentFontDescription.firstFamily());
-            fontDescription.setIsSpecifiedFont(parentFontDescription.isSpecifiedFont());
-            setFontDescription(fontDescription);
-            return;
-        }
-
-        if (isInitial) {
-            FontDescription initialDesc = FontDescription();
-            FontDescription fontDescription = state.style()->fontDescription();
-            // We need to adjust the size to account for the generic family change from monospace
-            // to non-monospace.
-            if (fontDescription.keywordSize() && fontDescription.useFixedDefaultSize())
-                setFontSize(fontDescription, fontSizeForKeyword(document(), CSSValueXxSmall + fontDescription.keywordSize() - 1, false));
-            fontDescription.setGenericFamily(initialDesc.genericFamily());
-            if (!initialDesc.firstFamily().familyIsEmpty())
-                fontDescription.setFamily(initialDesc.firstFamily());
-            setFontDescription(fontDescription);
-            return;
-        }
-
-        if (!value->isValueList())
-            return;
-        FontDescription fontDescription = state.style()->fontDescription();
-        FontFamily& firstFamily = fontDescription.firstFamily();
-        FontFamily* currFamily = 0;
-
-        // Before mapping in a new font-family property, we should reset the generic family.
-        bool oldFamilyUsedFixedDefaultSize = fontDescription.useFixedDefaultSize();
-        fontDescription.setGenericFamily(FontDescription::NoFamily);
-
-        for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
-            CSSValue* item = i.value();
-            if (!item->isPrimitiveValue())
-                continue;
-            CSSPrimitiveValue* contentValue = static_cast<CSSPrimitiveValue*>(item);
-            AtomicString face;
-            Settings* settings = documentSettings();
-            if (contentValue->isString())
-                face = contentValue->getStringValue();
-            else if (settings) {
-                switch (contentValue->getIdent()) {
-                case CSSValueWebkitBody:
-                    face = settings->standardFontFamily();
-                    break;
-                case CSSValueSerif:
-                    face = serifFamily;
-                    fontDescription.setGenericFamily(FontDescription::SerifFamily);
-                    break;
-                case CSSValueSansSerif:
-                    face = sansSerifFamily;
-                    fontDescription.setGenericFamily(FontDescription::SansSerifFamily);
-                    break;
-                case CSSValueCursive:
-                    face = cursiveFamily;
-                    fontDescription.setGenericFamily(FontDescription::CursiveFamily);
-                    break;
-                case CSSValueFantasy:
-                    face = fantasyFamily;
-                    fontDescription.setGenericFamily(FontDescription::FantasyFamily);
-                    break;
-                case CSSValueMonospace:
-                    face = monospaceFamily;
-                    fontDescription.setGenericFamily(FontDescription::MonospaceFamily);
-                    break;
-                case CSSValueWebkitPictograph:
-                    face = pictographFamily;
-                    fontDescription.setGenericFamily(FontDescription::PictographFamily);
-                    break;
-                }
-            }
-
-            if (!face.isEmpty()) {
-                if (!currFamily) {
-                    // Filling in the first family.
-                    firstFamily.setFamily(face);
-                    firstFamily.appendFamily(0); // Remove any inherited family-fallback list.
-                    currFamily = &firstFamily;
-                    fontDescription.setIsSpecifiedFont(fontDescription.genericFamily() == FontDescription::NoFamily);
-                } else {
-                    RefPtr<SharedFontFamily> newFamily = SharedFontFamily::create();
-                    newFamily->setFamily(face);
-                    currFamily->appendFamily(newFamily);
-                    currFamily = newFamily.get();
-                }
-            }
-        }
-
-        // We can't call useFixedDefaultSize() until all new font families have been added
-        // If currFamily is non-zero then we set at least one family on this description.
-        if (currFamily) {
-            if (fontDescription.keywordSize() && fontDescription.useFixedDefaultSize() != oldFamilyUsedFixedDefaultSize)
-                setFontSize(fontDescription, fontSizeForKeyword(document(), CSSValueXxSmall + fontDescription.keywordSize() - 1, !oldFamilyUsedFixedDefaultSize));
-
-            setFontDescription(fontDescription);
-        }
-        return;
-    }
     // Shorthand properties.
     case CSSPropertyFont:
         if (isInherit) {
@@ -2988,6 +2884,20 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         return;
     }
 #endif
+    case CSSPropertyWebkitGridAutoColumns: {
+        GridTrackSize trackSize;
+        if (!createGridTrackSize(value, trackSize, state))
+            return;
+        state.style()->setGridAutoColumns(trackSize);
+        return;
+    }
+    case CSSPropertyWebkitGridAutoRows: {
+        GridTrackSize trackSize;
+        if (!createGridTrackSize(value, trackSize, state))
+            return;
+        state.style()->setGridAutoRows(trackSize);
+        return;
+    }
     case CSSPropertyWebkitGridColumns: {
         Vector<GridTrackSize> trackSizes;
         if (!createGridTrackList(value, trackSizes, state))

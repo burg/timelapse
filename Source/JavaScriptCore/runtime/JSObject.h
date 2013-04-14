@@ -702,7 +702,7 @@ protected:
         ASSERT(structure()->isObject());
         ASSERT(classInfo());
     }
-    
+
     static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
     {
         return Structure::create(globalData, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
@@ -911,7 +911,6 @@ private:
     // Nobody should ever ask any of these questions on something already known to be a JSObject.
     using JSCell::isAPIValueWrapper;
     using JSCell::isGetterSetter;
-
     void getObject();
     void getString(ExecState* exec);
     void isObject();
@@ -1455,10 +1454,16 @@ COMPILE_ASSERT(!(sizeof(JSObject) % sizeof(WriteBarrierBase<Unknown>)), JSObject
 // Helper for defining native functions, if you're not using a static hash table.
 // Use this macro from within finishCreation() methods in prototypes. This assumes
 // you've defined variables called exec, globalObject, and globalData, and they
-// have the expected meanings. This also assumes that the function you're defining
-// doesn't have an intrinsic.
+// have the expected meanings.
+#define JSC_NATIVE_INTRINSIC_FUNCTION(jsName, cppName, attributes, length, intrinsic) \
+    putDirectNativeFunction(\
+        exec, globalObject, Identifier(exec, (jsName)), (length), cppName, \
+        (intrinsic), (attributes))
+
+// As above, but this assumes that the function you're defining doesn't have an
+// intrinsic.
 #define JSC_NATIVE_FUNCTION(jsName, cppName, attributes, length) \
-    putDirectNativeFunction(exec, globalObject, globalData.propertyNames->jsName, (length), cppName, NoIntrinsic, (attributes))
+    JSC_NATIVE_INTRINSIC_FUNCTION(jsName, cppName, (attributes), (length), NoIntrinsic)
 
 } // namespace JSC
 

@@ -1388,6 +1388,8 @@ void RenderBlock::layout()
     // If we have a lightweight clip, there can never be any overflow from children.
     if (hasControlClip() && m_overflow)
         clearLayoutOverflow();
+
+    invalidateBackgroundObscurationStatus();
 }
 
 #if ENABLE(CSS_EXCLUSIONS)
@@ -3957,7 +3959,7 @@ void RenderBlock::removeFloatingObject(RenderBox* o)
 
 void RenderBlock::removeFloatingObjectsBelow(FloatingObject* lastFloat, int logicalOffset)
 {
-    if (!m_floatingObjects)
+    if (!containsFloats())
         return;
     
     const FloatingObjectSet& floatingObjectSet = m_floatingObjects->set();

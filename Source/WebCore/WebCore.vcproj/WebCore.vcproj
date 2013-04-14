@@ -27590,6 +27590,14 @@
 				RelativePath="..\page\Page.cpp"
 				>
 			</File>
+                        <File
+				RelativePath="..\page\PageConsole.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\page\PageConsole.h"
+				>
+			</File>
 			<File
 				RelativePath="..\page\PageGroup.cpp"
 				>
@@ -28064,14 +28072,6 @@
 			</File>
 			<File
 				RelativePath="..\loader\LoaderStrategy.h"
-				>
-			</File>
-			<File
-				RelativePath="..\loader\MainResourceLoader.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\loader\MainResourceLoader.h"
 				>
 			</File>
 			<File
@@ -77210,6 +77210,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\ContentProviderBasedProjectDelegate.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\ContentProviders.js"
 					>
 				</File>
@@ -77506,6 +77510,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\cm\closebrackets.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\cm\matchbrackets.js"
 					>
 				</File>
@@ -77695,6 +77703,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\OverridesView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\OverviewGrid.js"
 					>
 				</File>
 				<File

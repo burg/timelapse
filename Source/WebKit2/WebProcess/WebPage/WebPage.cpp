@@ -1108,13 +1108,13 @@ void WebPage::drawRect(GraphicsContext& graphicsContext, const IntRect& rect)
     m_mainFrame->coreFrame()->view()->paint(&graphicsContext, rect);
 }
 
-void WebPage::drawPageOverlay(GraphicsContext& graphicsContext, const IntRect& rect)
+void WebPage::drawPageOverlay(PageOverlay* pageOverlay, GraphicsContext& graphicsContext, const IntRect& rect)
 {
-    ASSERT(m_pageOverlay);
+    ASSERT(pageOverlay);
 
     GraphicsContextStateSaver stateSaver(graphicsContext);
     graphicsContext.clip(rect);
-    m_pageOverlay->drawRect(graphicsContext, rect);
+    pageOverlay->drawRect(graphicsContext, rect);
 }
 
 double WebPage::textZoomFactor() const
@@ -1356,50 +1356,36 @@ void WebPage::postInjectedBundleMessage(const String& messageName, CoreIPC::Mess
 
 void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay, bool shouldFadeIn)
 {
-    if (m_pageOverlay) {
-        m_pageOverlay->setPage(0);
+    RefPtr<PageOverlay> overlay = pageOverlay;
+    
+    if (m_pageOverlays.contains(overlay.get()))
+        return;
 
-        if (pageOverlay) {
-            // We're installing a page overlay when a page overlay is already active.
-            // In this case we don't want to fade in the new overlay.
-            shouldFadeIn = false;
-        }
-    }
-
-    m_pageOverlay = pageOverlay;
-    m_pageOverlay->setPage(this);
+    m_pageOverlays.append(overlay);
+    overlay->setPage(this);
 
     if (shouldFadeIn)
-        m_pageOverlay->startFadeInAnimation();
+        overlay->startFadeInAnimation();
 
-    m_drawingArea->didInstallPageOverlay();
-    m_pageOverlay->setNeedsDisplay();
+    m_drawingArea->didInstallPageOverlay(overlay.get());
+    overlay->setNeedsDisplay();
 }
 
 void WebPage::uninstallPageOverlay(PageOverlay* pageOverlay, bool shouldFadeOut)
 {
-    if (pageOverlay != m_pageOverlay)
+    size_t existingOverlayIndex = m_pageOverlays.find(pageOverlay);
+    if (existingOverlayIndex == notFound)
         return;
 
     if (shouldFadeOut) {
-        m_pageOverlay->startFadeOutAnimation();
+        pageOverlay->startFadeOutAnimation();
         return;
     }
 
-    m_pageOverlay->setPage(0);
-    m_pageOverlay = nullptr;
+    pageOverlay->setPage(0);
+    m_pageOverlays.remove(existingOverlayIndex);
 
-    m_drawingArea->didUninstallPageOverlay();
-}
-
-static ImageOptions snapshotOptionsToImageOptions(SnapshotOptions snapshotOptions)
-{
-    unsigned imageOptions = 0;
-
-    if (snapshotOptions & SnapshotOptionsShareable)
-        imageOptions |= ImageOptionsShareable;
-
-    return static_cast<ImageOptions>(imageOptions);
+    m_drawingArea->didUninstallPageOverlay(pageOverlay);
 }
 
 PassRefPtr<WebImage> WebPage::scaledSnapshotWithOptions(const IntRect& rect, double scaleFactor, SnapshotOptions options)
@@ -1570,9 +1556,12 @@ void WebPage::mouseEvent(const WebMouseEvent& mouseEvent)
     }
 #endif
     bool handled = false;
-    if (m_pageOverlay) {
+    if (m_pageOverlays.size()) {
         // Let the page overlay handle the event.
-        handled = m_pageOverlay->mouseEvent(mouseEvent);
+        PageOverlayList::reverse_iterator end = m_pageOverlays.rend();
+        for (PageOverlayList::reverse_iterator it = m_pageOverlays.rbegin(); it != end; ++it)
+            if ((handled = (*it)->mouseEvent(mouseEvent)))
+                break;
     }
 
     if (!handled && canHandleUserEvents()) {
@@ -1592,7 +1581,14 @@ void WebPage::mouseEvent(const WebMouseEvent& mouseEvent)
 
 void WebPage::mouseEventSyncForTesting(const WebMouseEvent& mouseEvent, bool& handled)
 {
-    handled = m_pageOverlay && m_pageOverlay->mouseEvent(mouseEvent);
+    handled = false;
+
+    if (m_pageOverlays.size()) {
+        PageOverlayList::reverse_iterator end = m_pageOverlays.rend();
+        for (PageOverlayList::reverse_iterator it = m_pageOverlays.rbegin(); it != end; ++it)
+            if ((handled = (*it)->mouseEvent(mouseEvent)))
+                break;
+    }
 
     if (!handled) {
         CurrentEvent currentEvent(mouseEvent);
@@ -2942,7 +2938,7 @@ void WebPage::windowAndViewFramesChanged(const FloatRect& windowFrameInScreenCoo
     for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it)
         (*it)->windowAndViewFramesChanged(enclosingIntRect(windowFrameInScreenCoordinates), enclosingIntRect(viewFrameInWindowCoordinates));
 
-    m_hasCachedWindowFrame = true;
+    m_hasCachedWindowFrame = !m_windowFrameInScreenCoordinates.isEmpty();
 }
 #endif
 

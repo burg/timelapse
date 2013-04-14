@@ -1,3 +1,95 @@
+2013-03-19  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Another Mac build fix attempt after r146239.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+        (WebFrameNetworkingContext):
+
+2013-03-19  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Mac build fix attempt after r146239.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+
+2013-03-19  Sergey Ryazanov  <serya@chromium.org>
+
+        Web Inspector: split Console into two entities, a web-facing bound object and page console.
+        https://bugs.webkit.org/show_bug.cgi?id=111578
+
+        Reviewed by Vsevolod Vlasov.
+
+        Otherwise, a lot of logging in WebCore needs to go through the DOMWindow which is unnecessary.
+
+        * Misc/WebCoreStatistics.mm:
+        (+[WebCoreStatistics shouldPrintExceptions]):
+        (+[WebCoreStatistics setShouldPrintExceptions:]):
+
+2013-03-17  Adam Barth  <abarth@webkit.org>
+
+        Legacy CSS vendor prefixes should only work for Dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=111890
+
+        Reviewed by Eric Seidel.
+
+        Enable legacy CSS vendor prefixes when we've been asked to turn on
+        Dashboard compatibility mode.
+
+        * WebView/WebView.mm:
+        (-[WebView _setDashboardBehavior:to:]):
+
+2013-03-16  Pratik Solanki  <psolanki@apple.com>
+
+        Disable High DPI Canvas on iOS
+        https://bugs.webkit.org/show_bug.cgi?id=112511
+
+        Reviewed by Joseph Pecoraro.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-15  Timothy Hatcher  <timothy@apple.com>
+
+        Disable suppressesIncrementalRendering for the Web Inspector.
+
+        This ends up causing the Inspector to show blank for a couple seconds before
+        it does its first paint. During that time the bare window chrome is showing
+        when the Inspector's background and other simple elements count be painting.
+        This causes the Inspector to look like it is loading slower than reality.
+
+        https://bugs.webkit.org/show_bug.cgi?id=112300
+        rdar://problem/13412219
+ 
+        Reviewed by Geoff Garen.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (-[WebInspectorWindowController init]): Disable suppressesIncrementalRendering.
+
+2013-03-15  Nate Chapin  <japhet@chromium.org>
+
+        Hide MainResourceLoader from the outside world
+        https://bugs.webkit.org/show_bug.cgi?id=109971
+
+        Reviewed by Adam Barth.
+
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        (WebFrameLoaderClient):
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::convertMainResourceLoadToDownload):
+
+2013-03-15  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112401
+
+        Reviewed by Stephen Chenney.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * WebView/WebRenderNode.mm:
+        (copyRenderNode):
+        * WebView/WebView.mm:
+        (-[WebView _addScrollerDashboardRegionsForFrameView:dashboardRegions:]):
+
 2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
 
         Add selectTrailingWhitespaceEnabled setting to WebCore::Page

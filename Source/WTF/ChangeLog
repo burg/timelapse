@@ -1,3 +1,85 @@
+2013-03-19  Martin Robinson  <mrobinson@igalia.com>
+
+        Fix the WTF gyp build for GTK+.
+
+        * WTF.gyp/WTFGTK.gyp: Skip files with CF in the name.
+
+2013-03-19  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] Enable USE_SYSTEM_MALLOC by default
+        https://bugs.webkit.org/show_bug.cgi?id=112365
+
+        Reviewed by Benjamin Poulain.
+
+        Enable USE_SYSTEM_MALLOC by default via FeatureList.pm instead of
+        harcoding it in wtf/Platform.h
+
+        * wtf/Platform.h:
+
+2013-03-18  Benjamin Poulain  <benjamin@webkit.org>
+
+        [iOS] Make a UChar string equal() based on the LChar version
+        https://bugs.webkit.org/show_bug.cgi?id=112495
+
+        Reviewed by David Kilzer.
+
+        * wtf/text/StringImpl.h:
+        (WTF::equal):
+        Create a equal() function for UChar based on the work done for LChar.
+
+        On A6, this is a speed up of about 40% for any string of 2 or more characters.
+        It is slower by 8% on a single UChar comparison.
+
+2013-03-18  Brent Fulgham  <bfulgham@webkit.org>
+
+        [WinCairo] Get build working under VS2010.
+        https://bugs.webkit.org/show_bug.cgi?id=112604
+
+        Reviewed by Tim Horton.
+
+        * WTF.vcxproj/WTF.vcxproj: Add Debug_WinCairo and Release_WinCairo
+        targets so headers get copied to appropriate build folder.
+        * WTF.vcxproj/WTFGenerated.vcxproj: Ditto.
+
+2013-03-15  Benjamin Poulain  <bpoulain@apple.com>
+
+        [iOS] Update StringImpl's equal to have a single version on all supported Apple CPUs
+        https://bugs.webkit.org/show_bug.cgi?id=112400
+
+        Reviewed by Michael Saboff.
+
+        * wtf/text/StringImpl.h:
+        (WTF::equal):
+        Tweak the code to make it work on older Apple CPUs:
+        -Use external "ouput" variable instead of the registers R9 and R12. This gets rid
+         of some register pressure previously imposed on the compiler. (Clang nicely
+         choose R9 and R12 when needed, following iOS ABI).
+        -Instead of using "R3" for storing the length / 4, update the length by -4 on
+         each iteration and work in the negative space for the tail. This frees one register
+         which is then used for isEqual.
+        -Get rid of the unconditional branch from the loop. By using subs and working in the
+         negative space, we can test for the Carry flag to jump back to the next LDR.
+
+2013-03-15  Benjamin Poulain  <bpoulain@apple.com>
+
+        [iOS] Fix the length pass to memcmp in the fallback versions of String's equal
+        https://bugs.webkit.org/show_bug.cgi?id=112463
+
+        Reviewed by Ryosuke Niwa.
+
+        * wtf/text/StringImpl.h:
+        (WTF::equal): It might be a good idea to compare the full UChar strings...
+
+2013-03-15  Michael Saboff  <msaboff@apple.com>
+
+        Add runtime check for improper register allocations in DFG
+        https://bugs.webkit.org/show_bug.cgi?id=112380
+
+        Reviewed by Geoffrey Garen.
+
+        * wtf/Platform.h: Added new ENABLE_DFG_REGISTER_ALLOCATION_VALIDATION compilation flag to
+        enable generation of register allocation checking.  This is on for debug builds.
+
 2013-03-13  Jessie Berlin  <jberlin@apple.com>
 
         Remove svn:executable from a file that isn't supposed to be executable.

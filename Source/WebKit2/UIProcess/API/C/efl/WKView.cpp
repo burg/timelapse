@@ -29,25 +29,10 @@
 
 using namespace WebKit;
 
-static inline WKViewRef createWKView(Evas* canvas, WKContextRef contextRef, WKPageGroupRef pageGroupRef, EwkView::ViewBehavior behavior)
+WKViewRef WKViewCreate(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
 {
-    RefPtr<EwkContext> context = contextRef ? EwkContext::findOrCreateWrapper(contextRef) : EwkContext::defaultContext();
-    RefPtr<EwkPageGroup> pageGroup = EwkPageGroup::create(pageGroupRef);
-    Evas_Object* evasObject = EwkView::createEvasObject(canvas, context, pageGroup, behavior);
-    if (!evasObject)
-        return 0;
-
-    return static_cast<WKViewRef>(WKRetain(toEwkView(evasObject)->wkView()));
-}
-
-WKViewRef WKViewCreate(Evas* canvas, WKContextRef contextRef, WKPageGroupRef pageGroupRef)
-{
-    return createWKView(canvas, contextRef, pageGroupRef, EwkView::LegacyBehavior);
-}
-
-WKViewRef WKViewCreateWithFixedLayout(Evas* canvas, WKContextRef contextRef, WKPageGroupRef pageGroupRef)
-{
-    return createWKView(canvas, contextRef, pageGroupRef, EwkView::DefaultBehavior);
+    RefPtr<WebView> webView = WebView::create(toImpl(contextRef), toImpl(pageGroupRef));
+    return toAPI(webView.release().leakRef());
 }
 
 void WKViewInitialize(WKViewRef viewRef)
@@ -138,11 +123,6 @@ void WKViewExitFullScreen(WKViewRef viewRef)
 #else
     UNUSED_PARAM(viewRef);
 #endif
-}
-
-Evas_Object* WKViewGetEvasObject(WKViewRef viewRef)
-{
-    return toImpl(viewRef)->evasObject();
 }
 
 WKImageRef WKViewCreateSnapshot(WKViewRef viewRef)

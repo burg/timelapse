@@ -1,3 +1,135 @@
+2013-03-19  Kenneth Russell  <kbr@google.com>
+
+        Unreviewed, rolling out r146277.
+        http://trac.webkit.org/changeset/146277
+        https://bugs.webkit.org/show_bug.cgi?id=111695
+
+        Broke Chromium Android build
+
+        * Platform.gypi:
+        * chromium/public/Platform.h:
+        (WebKit):
+        * chromium/public/WebSpeechSynthesisUtterance.h: Removed.
+        * chromium/public/WebSpeechSynthesisVoice.h: Removed.
+        * chromium/public/WebSpeechSynthesizer.h: Removed.
+        * chromium/public/WebSpeechSynthesizerClient.h: Removed.
+
+2013-03-19  Dominic Mazzoni  <dmazzoni@google.com>
+
+        Implement Web Speech Synthesis for Chromium
+        https://bugs.webkit.org/show_bug.cgi?id=111695
+
+        Reviewed by Adam Barth.
+
+        Exposes a platform API that the embedder can implement to
+        provide speech synthesis for the Chromium port.
+
+        * Platform.gypi:
+        * chromium/public/Platform.h:
+        (WebKit):
+        (Platform):
+        (WebKit::Platform::speechSynthesizer):
+        * chromium/public/WebSpeechSynthesisUtterance.h: Added.
+        (WebKit):
+        (WebSpeechSynthesisUtterance):
+        (WebKit::WebSpeechSynthesisUtterance::WebSpeechSynthesisUtterance):
+        (WebKit::WebSpeechSynthesisUtterance::~WebSpeechSynthesisUtterance):
+        (WebKit::WebSpeechSynthesisUtterance::operator=):
+        (WebKit::WebSpeechSynthesisUtterance::isNull):
+        * chromium/public/WebSpeechSynthesisVoice.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebSpeechSynthesisVoice):
+        (WebKit::WebSpeechSynthesisVoice::WebSpeechSynthesisVoice):
+        (WebKit::WebSpeechSynthesisVoice::~WebSpeechSynthesisVoice):
+        (WebKit::WebSpeechSynthesisVoice::operator=):
+        * chromium/public/WebSpeechSynthesizer.h: Added.
+        (WebKit):
+        (WebSpeechSynthesizer):
+        (WebKit::WebSpeechSynthesizer::~WebSpeechSynthesizer):
+        * chromium/public/WebSpeechSynthesizerClient.h: Added.
+        (WebKit):
+        (WebSpeechSynthesizerClient):
+        (WebKit::WebSpeechSynthesizerClient::~WebSpeechSynthesizerClient):
+
+2013-03-19  Mark Pilgrim  <pilgrim@chromium.org>
+
+        [Chromium] Flip WEBKIT_USE_NEW_WEBFILESYSTEMTYPE
+        https://bugs.webkit.org/show_bug.cgi?id=112726
+
+        Reviewed by Adam Barth.
+
+        Now that all embedders respect this ifdef, we can safely define it
+        to get everything to use the new top-level WebFileSystemType enum.
+
+        * chromium/public/WebFileSystemType.h:
+
+2013-03-19  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove deprecated/unused bits of WebLayerTreeView
+        https://bugs.webkit.org/show_bug.cgi?id=112714
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+
+2013-03-18  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove unused type WebTransformationMatrix
+        https://bugs.webkit.org/show_bug.cgi?id=112634
+
+        Reviewed by Adam Barth.
+
+        * Platform.gypi:
+        * chromium/public/WebTransformationMatrix.h: Removed.
+
+2013-03-18  W. James MacLean  <wjmaclean@chromium.org>
+
+        [chromium] Remove code that relies on boundsContainsPageScale().
+        https://bugs.webkit.org/show_bug.cgi?id=112465
+
+        The boundsContainsPageScale() API is going away, remove code that
+        depends on it.
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebContentLayer.h:
+        (WebContentLayer):
+
+2013-03-18  Mark Pilgrim  <pilgrim@chromium.org>
+
+        [Chromium] Create WebFileSystemType enum to allow easier filesystem refactoring
+        https://bugs.webkit.org/show_bug.cgi?id=112571
+
+        Reviewed by Adam Barth.
+
+        New top-level enum (not tied to WebFileSystem class) will allow
+        easier refactoring of filesystem methods within the Platform/
+        directory. (All changes are behind an #ifdef so we can sync
+        required changes in embedders.)
+
+        * chromium/public/WebFileSystemType.h: new file
+        (WebKit):
+
+        * Platform.gypi:
+        * chromium/public/WebFileSystem.h:
+        * chromium/public/WebFileSystemType.h: Copied from Source/WebKit/chromium/public/WebCommonWorkerClient.h.
+        (WebKit):
+
+2013-03-17  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Remove the zoom filter operation ifdef
+        https://bugs.webkit.org/show_bug.cgi?id=112390
+
+        Reviewed by Darin Fisher.
+
+        This ifdef is not needed once the change that introduced it is
+        rolled into chromium, and the chromium side guards on the ifdef
+        are removed. Then it just does nothing and should be deleted.
+
+        * chromium/public/WebFilterOperation.h:
+
 2013-03-14  Dana Jansens  <danakj@chromium.org>
 
         [chromium] Make zoom filter independent of the layer size.

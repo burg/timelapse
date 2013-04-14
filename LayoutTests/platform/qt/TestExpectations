@@ -183,6 +183,7 @@ compositing/visible-rect [ Skip ]
 
 # ENABLE(SHADOW_DOM) is disabled.
 editing/shadow
+editing/text-iterator/basic-iteration-shadowdom.html
 fast/dom/shadow
 fast/frames/detached-shadow-frame.html
 inspector/elements/update-shadowdom.html
@@ -361,6 +362,9 @@ touchadjustment/touch-links-two-finger-tap.html
 
 # CURSOR_VISIBILITY is not enabled in qt
 webkit.org/b/107601 fullscreen/video-cursor-auto-hide.html [ Failure ]
+
+# Snapshotted plugins not enabled
+webkit.org/b/98696 plugins/snapshotting [ Skip ]
 
 # =========================================================================== #
 #       Feature not yet supported.                                            #
@@ -1356,6 +1360,7 @@ svg/css/stars-with-shadow.html
 svg/custom/use-on-symbol-inside-pattern.svg
 svg/batik/text/longTextOnPath.svg
 svg/carto.net/tabgroup.svg
+webkit.org/b/112680 jquery/manipulation.html [ Skip ]
 
 # [Qt] New inspector/console/console-filter-test.html fails on 32bit since r141269.
 # https://bugs.webkit.org/show_bug.cgi?id=108481
@@ -1817,6 +1822,8 @@ fast/text/emphasis-avoid-ruby.html
 # https://bugs.webkit.org/show_bug.cgi?id=80293
 fast/text/international/spaces-combined-in-vertical-text.html
 
+webkit.org/b/112668 fast/text/word-space-with-kerning-3.html [ Skip ]
+
 fast/writing-mode/border-styles-vertical-lr.html
 fast/writing-mode/border-styles-vertical-rl.html
 
@@ -2159,7 +2166,6 @@ fast/loader/reload-zero-byte-plugin.html
 
 # These test -apple- and -khtml- prefixed CSS properties, which we don't support.
 inspector/styles/vendor-prefixes.html
-fast/css/apple-prefix.html
 
 # [Qt] fast/dom/HTMLDocument/hasFocus.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=66076
@@ -2282,6 +2288,9 @@ webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-circle.html [ Skip
 webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-circle-padding.html [ Skip ]
 webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-ellipse.html [ Skip ]
 webkit.org/b/110089 fast/exclusions/shape-inside/shape-inside-ellipse-padding.html [ Skip ]
+webkit.org/b/110089 fast/exclusions/shape-outside-floats/shape-outside-floats-simple-circle.html [ Skip ]
+webkit.org/b/110089 fast/exclusions/shape-outside-floats/shape-outside-floats-simple-ellipse.html [ Skip ]
+webkit.org/b/110089 fast/exclusions/shape-outside-floats/shape-outside-floats-simple-rounded-rectangle.html [ Skip ]
 webkit.org/b/110447 fast/regions/shape-inside-on-regions.html [ Skip ]
 
 # Failing fast/css/sticky/ tests with minor pixel differences
@@ -2677,6 +2686,7 @@ webkit.org/b/110654 css3/flexbox/button.html [ Failure ]
 
 # Need support for ResourceHandle::didChangePriority and DRT support
 webkit.org/b/111016 http/tests/loading/promote-img-preload-priority.html [ Failure ]
+
 
 # Border-fit should happen at layout time rather than paint time
 webkit.org/b/111606 fast/borders/border-fit-2.html [ Skip ]

@@ -65,6 +65,9 @@ public:
 
     void setData(PassRefPtr<SharedBuffer>, bool allDataReceived);
 
+    // Creates a new SharedBuffer containing the data received so far.
+    void copyData(RefPtr<SharedBuffer>*, bool* allDataReceived);
+
     void setImageDecoderFactoryForTesting(PassOwnPtr<ImageDecoderFactory> factory) { m_imageDecoderFactory = factory; }
 
     bool hasAlpha();
@@ -83,6 +86,7 @@ private:
     ThreadSafeDataTransport m_data;
     bool m_decodeFailedAndEmpty;
     bool m_hasAlpha;
+    int m_decodeCount;
     DiscardablePixelRefAllocator m_allocator;
 
     OwnPtr<ImageDecoderFactory> m_imageDecoderFactory;

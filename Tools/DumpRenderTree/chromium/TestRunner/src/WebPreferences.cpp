@@ -120,18 +120,15 @@ void WebPreferences::reset()
     acceleratedCompositingEnabled = false;
     accelerated2dCanvasEnabled = false;
     deferred2dCanvasEnabled = false;
-    acceleratedPaintingEnabled = false;
     forceCompositingMode = false;
     threadedHTMLParser = true;
     perTilePaintingEnabled = false;
-    acceleratedAnimationEnabled = false;
     deferredImageDecodingEnabled = false;
     mediaPlaybackRequiresUserGesture = false;
     mockScrollbarsEnabled = false;
     cssCustomFilterEnabled = false;
     shouldRespectImageOrientation = false;
     asynchronousSpellCheckingEnabled = false;
-    touchDragDropEnabled = false;
 }
 
 void WebPreferences::applyTo(WebView* webView)
@@ -193,17 +190,15 @@ void WebPreferences::applyTo(WebView* webView)
     settings->setThreadedHTMLParser(threadedHTMLParser);
     settings->setAccelerated2dCanvasEnabled(accelerated2dCanvasEnabled);
     settings->setDeferred2dCanvasEnabled(deferred2dCanvasEnabled);
-    settings->setAcceleratedPaintingEnabled(acceleratedPaintingEnabled);
     settings->setPerTilePaintingEnabled(perTilePaintingEnabled);
-    settings->setAcceleratedAnimationEnabled(acceleratedAnimationEnabled);
     settings->setDeferredImageDecodingEnabled(deferredImageDecodingEnabled);
     settings->setMediaPlaybackRequiresUserGesture(mediaPlaybackRequiresUserGesture);
     settings->setMockScrollbarsEnabled(mockScrollbarsEnabled);
     settings->setShouldRespectImageOrientation(shouldRespectImageOrientation);
     settings->setAsynchronousSpellCheckingEnabled(asynchronousSpellCheckingEnabled);
-    settings->setTouchDragDropEnabled(touchDragDropEnabled);
 
     // Fixed values.
+    settings->setTouchDragDropEnabled(false);
     settings->setTextDirectionSubmenuInclusionBehaviorNeverIncluded();
     settings->setDownloadableBinaryFontsEnabled(true);
     settings->setAllowScriptsToCloseWindows(false);

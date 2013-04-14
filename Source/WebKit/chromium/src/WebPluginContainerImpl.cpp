@@ -363,7 +363,7 @@ void WebPluginContainerImpl::scrollRect(int dx, int dy, const WebRect& rect)
 {
     Widget* parentWidget = parent();
     if (parentWidget->isFrameView()) {
-        FrameView* parentFrameView = static_cast<FrameView*>(parentWidget);
+        FrameView* parentFrameView = toFrameView(parentWidget);
         if (!parentFrameView->isOverlapped()) {
             IntRect damageRect = convertToContainingWindow(static_cast<IntRect>(rect));
             IntSize scrollDelta(dx, dy);
@@ -494,7 +494,7 @@ void WebPluginContainerImpl::setWantsWheelEvents(bool wantsWheelEvents)
     if (Page* page = m_element->document()->page()) {
         if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator()) {
             if (parent() && parent()->isFrameView())
-                scrollingCoordinator->frameViewLayoutUpdated(static_cast<FrameView*>(parent()));
+                scrollingCoordinator->frameViewLayoutUpdated(toFrameView(parent()));
         }
     }
 }
@@ -645,19 +645,14 @@ void WebPluginContainerImpl::handleMouseEvent(MouseEvent* event)
 
     // We cache the parent FrameView here as the plugin widget could be deleted
     // in the call to HandleEvent. See http://b/issue?id=1362948
-    FrameView* parentView = static_cast<FrameView*>(parent());
+    FrameView* parentView = toFrameView(parent());
 
     WebMouseEventBuilder webEvent(this, m_element->renderer(), *event);
     if (webEvent.type == WebInputEvent::Undefined)
         return;
 
-    if (event->type() == eventNames().mousedownEvent) {
-        Frame* containingFrame = parentView->frame();
-        if (Page* currentPage = containingFrame->page())
-            currentPage->focusController()->setFocusedNode(m_element, containingFrame);
-        else
-            containingFrame->document()->setFocusedNode(m_element);
-    }
+    if (event->type() == eventNames().mousedownEvent)
+        focusPlugin();
 
     if (m_scrollbarGroup) {
         // This needs to be set before the other callbacks in this scope, since
@@ -770,6 +765,10 @@ void WebPluginContainerImpl::handleTouchEvent(TouchEvent* event)
         WebTouchEventBuilder webEvent(this, m_element->renderer(), *event);
         if (webEvent.type == WebInputEvent::Undefined)
             return;
+
+        if (event->type() == eventNames().touchstartEvent)
+            focusPlugin();
+
         WebCursorInfo cursorInfo;
         if (m_webPlugin->handleInputEvent(webEvent, cursorInfo))
             event->setDefaultHandled();
@@ -821,6 +820,15 @@ void WebPluginContainerImpl::synthesizeMouseEventIfPossible(TouchEvent* event)
     WebCursorInfo cursorInfo;
     if (m_webPlugin->handleInputEvent(webEvent, cursorInfo))
         event->setDefaultHandled();
+}
+
+void WebPluginContainerImpl::focusPlugin()
+{
+    Frame* containingFrame = static_cast<FrameView*>(parent())->frame();
+    if (Page* currentPage = containingFrame->page())
+        currentPage->focusController()->setFocusedNode(m_element, containingFrame);
+    else
+        containingFrame->document()->setFocusedNode(m_element);
 }
 
 void WebPluginContainerImpl::calculateGeometry(const IntRect& frameRect,

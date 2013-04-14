@@ -33,6 +33,7 @@
 
 #include "../../../Platform/chromium/public/WebCommon.h"
 #include "../../../Platform/chromium/public/WebFileSystem.h"
+#include "../../../Platform/chromium/public/WebFileSystemType.h"
 #include "../../../Platform/chromium/public/WebURLError.h"
 #include "../../../Platform/chromium/public/WebURLRequest.h"
 #include "WebDOMMessageEvent.h"
@@ -360,7 +361,7 @@ public:
     // called otherwise. The create bool is for indicating whether or not to
     // create root path for file systems if it do not exist.
     virtual void openFileSystem(
-        WebFrame*, WebFileSystem::Type, long long size,
+        WebFrame*, WebFileSystemType, long long size,
         bool create, WebFileSystemCallbacks*) { }
 
     // Deletes FileSystem.
@@ -370,7 +371,7 @@ public:
     // All in-flight operations and following operations may fail after the
     // FileSystem is deleted.
     virtual void deleteFileSystem(
-        WebFrame*, WebFileSystem::Type, WebFileSystemCallbacks*) { }
+        WebFrame*, WebFileSystemType, WebFileSystemCallbacks*) { }
 
     // Quota ---------------------------------------------------------
 

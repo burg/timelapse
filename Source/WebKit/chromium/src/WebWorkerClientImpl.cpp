@@ -122,8 +122,8 @@ bool WebWorkerClientImpl::allowFileSystem()
     return !webView->permissionClient() || webView->permissionClient()->allowFileSystem(m_webFrame);
 }
 
-void WebWorkerClientImpl::openFileSystem(WebFileSystem::Type type, long long size, bool create,
-                                         WebFileSystemCallbacks* callbacks)
+void WebWorkerClientImpl::openFileSystem(WebFileSystemType type, long long size, bool create,
+    WebFileSystemCallbacks* callbacks)
 {
     if (askedToTerminate()) {
         callbacks->didFail(WebFileErrorAbort);

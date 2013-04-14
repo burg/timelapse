@@ -34,6 +34,10 @@ svg/custom/use-referencing-style-crash.svg
 # This test requires media controls has a volume slider.
 media/video-volume-slider.html
 
+webkit.org/b/108223 fast/forms/range/slider-delete-while-dragging-thumb.html [ Crash Pass ]
+
+webkit.org/b/112659 media/video-playing-and-pause.html [ Failure Pass ]
+
 # This test requires generation of progress events during loading
 # https://bugs.webkit.org/show_bug.cgi?id=100984
 media/progress-events-generated-correctly.html
@@ -304,6 +308,11 @@ http/tests/inspector/compiler-source-mapping-debug.html
 http/tests/inspector/network/network-xhr-replay.html
 
 webkit.org/b/109546 inspector/script-execution-state-change-notification.html [ Skip ]
+webkit.org/b/112502 inspector/elements/highlight-node-scaled.html [ Pass Failure ]
+
+# Flakey notification test.
+webkit.org/b/112499 http/tests/notifications/window-show-on-click.html [ Pass Failure ]
+webkit.org/b/112499 http/tests/notifications/legacy/window-show-on-click.html [ Pass Failure ]
 
 # Safari doesn't allow to customize outermost scrollbars.
 # https://bugs.webkit.org/show_bug.cgi?id=43960
@@ -450,6 +459,7 @@ fast/dom/shadow
 editing/shadow
 inspector/elements/update-shadowdom.html
 accessibility/corresponding-control-deleted-crash.html
+editing/text-iterator/basic-iteration-shadowdom.html
 
 # ENABLE(TEMPLATE_ELEMENT) is disabled.
 fast/dom/HTMLTemplateElement
@@ -730,6 +740,8 @@ canvas/philip/tests/2d.text.draw.align.center.html
 # https://bugs.webkit.org/show_bug.cgi?id=82980
 http/tests/navigation/back-twice-without-commit.html
 
+webkit.org/b/112617 [ Debug ] http/tests/navigation/navigation-redirect-schedule-crash.html [ Crash Pass ]
+
 # https://bugs.webkit.org/show_bug.cgi?id=82981
 http/tests/misc/favicon-loads-with-icon-loading-override.html
 
@@ -755,12 +767,6 @@ fast/sub-pixel/zoomed-image-tiles.html [ ImageOnlyFailure ]
 
 # Needs rebaseline
 fast/sub-pixel/inline-block-with-padding.html [ Failure ]
-
-# Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=107618
-# https://bugs.webkit.org/show_bug.cgi?id=107952
-compositing/overflow/paint-neg-z-order-descendants-into-scrolling-contents-layer.html [ Missing ]
-compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Missing ]
-compositing/overflow/do-not-paint-outline-into-composited-scrolling-contents.html [ Failure ]
 
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
@@ -943,6 +949,8 @@ http/tests/security/MessagePort/event-listener-context.html
 # REGRESSION(r125251): It made svg/custom/use-instanceRoot-as-event-target.xhtml assert and flakey
 # ASSERTION FAILED: m_wrapper || !m_jsFunction
 svg/custom/use-instanceRoot-as-event-target.xhtml
+
+webkit.org/b/112620 [ Debug ] svg/custom/image-with-attr-change-after-delete-crash.html [ Crash Pass ]
 
 # Assorted failures that need investigation
 
@@ -1162,11 +1170,22 @@ webkit.org/b/57688 fast/text/international/thai-line-breaks.html [ Failure Pass 
 # Fails on WK1, but passes on WK2.  (No syntax available for this situation.)
 webkit.org/b/58192 plugins/npp-set-window-called-during-destruction.html [ Failure Pass ]
 
+webkit.org/b/112646 plugins/private-browsing-mode.html [ Failure Pass ]
+webkit.org/b/112616 plugins/plugin-clip-subframe.html [ Failure Pass ]
+
+# Occasional assertion in JSNPObject::invalidate()
+webkit.org/b/112518 [ Debug ] plugins/object-onfocus-mutation-crash.html [ Crash Pass ]
+webkit.org/b/112518 [ Debug ] plugins/npruntime/evaluate.html [ Crash Pass ]
+
 # https://bugs.webkit.org/show_bug.cgi?id=104054
 webkit.org/b/104054 svg/custom/use-href-update-crash.svg [ Failure Pass ]
 
 # Flakey plugin tests
 webkit.org/b/82752 plugins/netscape-dom-access-and-reload.html [ Failure Pass ]
+
+# Asserts sometimes
+webkit.org/b/111902 [ Debug ] fast/frames/sandboxed-iframe-navigation-allowed.html [ Crash Pass ]
+webkit.org/b/111902 [ Debug ] fast/frames/sandboxed-iframe-plugins.html [ Crash Pass ]
 
 # Flaky tests when run multi-process
 webkit.org/b/58192 fast/dom/frame-loading-via-document-write.html [ Failure Pass ]
@@ -1174,8 +1193,15 @@ webkit.org/b/58192 http/tests/appcache/fail-on-update-2.html [ Failure Pass ]
 webkit.org/b/58192 http/tests/appcache/fail-on-update.html [ Failure Pass ]
 webkit.org/b/58192 http/tests/inspector/console-websocket-error.html [ Failure Pass ]
 webkit.org/b/58192 fast/canvas/webgl/gl-teximage.html [ Failure Pass ]
-webkit.org/b/58192 fast/frames/flattening/iframe-flattening-offscreen.html [ Failure Pass ]
 webkit.org/b/58192 svg/dom/SVGScriptElement/script-set-href.svg [ Failure Pass ]
+
+# Flakey frame flattening tests
+webkit.org/b/112532 fast/frames/flattening/iframe-flattening-offscreen.html [ Failure Pass ]
+webkit.org/b/112532 fast/frames/flattening/iframe-flattening-out-of-view.html [ Failure Pass ]
+webkit.org/b/112532 fast/frames/flattening/frameset-flattening-advanced.html [ Failure Pass ]
+webkit.org/b/112532 fast/frames/flattening/frameset-flattening-subframesets.html [ Failure Pass ]
+webkit.org/b/106185 fast/frames/flattening/iframe-flattening-fixed-height.html [ Failure Pass ]
+webkit.org/b/106185 fast/frames/flattening/frameset-flattening-grid.html [ Failure Pass ]
 
 # Flakey cookies tests
 webkit.org/b/73694 http/tests/cookies/simple-cookies-expired.html [ Failure Pass ]
@@ -1207,6 +1233,7 @@ webkit.org/b/60731 ietestcenter/css3/grid/grid-items-003.htm [ ImageOnlyFailure 
 webkit.org/b/85404 fast/loader/javascript-url-in-embed.html [ Failure Pass ]
 
 webkit.org/b/85408 svg/batik/text/longTextOnPath.svg [ Failure Pass ]
+webkit.org/b/85408 svg/batik/paints/gradientLimit.svg [ Failure Pass ]
 
 webkit.org/b/99893 svg/animations/mozilla/animateMotion-mpath-targetChange-1.svg [ ImageOnlyFailure ]
 
@@ -1343,6 +1370,10 @@ webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band.
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-cues-added-once.html
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-style.html
 
+# These two tests sometimes timeout
+webkit.org/b/112492 media/track/track-language-preference.html [ Failure Pass ]
+webkit.org/b/112492 media/track/track-prefer-captions.html [ Failure Pass ]
+
 webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Failure ]
 
 webkit.org/b/104949 fast/spatial-navigation/snav-unit-overflow-and-scroll-in-direction.html [ Failure ]
@@ -1351,27 +1382,16 @@ webkit.org/b/104954 http/tests/canvas/canvas-slow-font-loading.html [ ImageOnlyF
 
 webkit.org/b/104962 platform/mac/fast/loader/file-url-mimetypes-2.html [ Failure ]
 
-webkit.org/b/104848 fast/frames/sandboxed-iframe-parsing-space-characters.html [ Failure Pass ]
-
 webkit.org/b/105601 svg/zoom/page/zoom-replaced-intrinsic-ratio-001.htm [ Crash Pass ]
 
 webkit.org/b/105603 http/tests/cookies/single-quoted-value.html [ Failure Pass ]
 
 webkit.org/b/105777 platform/mac/editing/spelling/autocorrection-in-textarea.html [ Failure Pass ]
 
-webkit.org/b/105986 [ Debug ] transitions/hang-with-bad-transition-list.html [ Pass Crash ]
-webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-in-attr.html [ Pass Crash ]
-webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-radius-attr.html [ Pass Crash ]
-webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-operator-attr.html [ Pass Crash ]
-webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMergeNodeElement-dom-in-attr.html [ Pass Crash ]
-webkit.org/b/105986 [ Debug ] transitions/interrupt-transform-transition.html [ Pass Crash ]
-
 webkit.org/b/105999 [ Lion ] fast/canvas/canvas-composite-canvas.html [ Failure ]
 webkit.org/b/105999 [ Lion ] fast/canvas/canvas-composite-image.html [ Failure ]
 
 webkit.org/b/106151 [ Lion ] http/tests/misc/link-rel-icon-beforeload.html [ Pass Failure ]
-
-webkit.org/b/106185 fast/frames/flattening/iframe-flattening-fixed-height.html [ Pass Failure ]
 
 webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
 
@@ -1450,11 +1470,19 @@ webkit.org/b/111521 editing/selection/selection-in-iframe-removed-crash.html [ C
 
 webkit.org/b/111613 platform/mac/fast/speechsynthesis/speech-synthesis-cancel.html [ Crash Pass ]
 
-webkit.org/b/110546 [ DEBUG ] fast/parser/document-write-fighting-eof.html [ Skip ]
-webkit.org/b/110546 [ DEBUG ] fast/parser/document-write-partial-entity-before-load.html [ Skip ]
+webkit.org/b/110546 [ Debug ] fast/parser/document-write-fighting-eof.html [ Skip ]
+webkit.org/b/110546 [ Debug ] fast/parser/document-write-partial-entity-before-load.html [ Skip ]
 
-webkit.org/b/111647 sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A1.1_T2.html [ Skip ]
-webkit.org/b/111647 sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A2.1_T2.html [ Skip ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A1.1_T2.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A1.4_T2.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A2.1_T2.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A2.4_T2.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/10_Execution_Contexts/10.1_Definitions/10.1.8_Arguments_Object/S10.1.8_A3_T2.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/07_Lexical_Conventions/7.4_Comments/S7.4_A5.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/07_Lexical_Conventions/7.4_Comments/S7.4_A6.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/12_Statement/12.6_Iteration_Statements/12.6.2_The_while_statement/S12.6.2_A6_T2.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Conformance/13_Function_Definition/S13_A4_T4.html [ Slow ]
+webkit.org/b/111647 [ Debug ] sputnik/Unicode/Unicode_218/S7.6_A5.3_T2.html [ Slow ]
 
 webkit.org/b/111650 http/tests/cookies/third-party-cookie-relaxing.html [ Failure Pass ]
 webkit.org/b/111650 http/tests/plugins/third-party-cookie-accept-policy.html [ Failure Pass ]
@@ -1464,6 +1492,10 @@ webkit.org/b/111754 inspector/debugger/debugger-expand-scope.html [ Crash Pass ]
 webkit.org/b/111606 fast/borders/border-fit-2.html [ Failure Pass ]
 webkit.org/b/111606 fast/borders/border-fit.html [ Failure Pass ]
 webkit.org/b/111606 fast/repaint/border-fit-lines.html [ Failure Pass ]
+
+
+# Flakey
+webkit.org/b/112533 media/auto-play-in-sandbox-with-allow-scripts.html [ Pass Failure ]
 
 # The following tests only fail on Mac EWS bots. Unfortunately, we haven't been able to figure out the cause of these failures.
 webkit.org/b/112176 canvas/philip/tests/2d.path.arc.scale.2.html [ Failure Pass ]
@@ -1481,5 +1513,10 @@ webkit.org/b/112176 fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyF
 # webkit.org/b/105998 [ Lion Release ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure ]
 # webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure Pass ]
 
+webkit.org/b/76364 fast/css/lang-mapped-to-webkit-locale-dynamic.xhtml [ Pass Failure ]
+
 # Feature not implemented
 webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]
+
+# Snapshotted plugins not enabled on WK1
+plugins/snapshotting [ Skip ]

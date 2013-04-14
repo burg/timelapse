@@ -2214,7 +2214,8 @@ void RenderLayer::scrollTo(int x, int y)
         renderer()->node()->document()->eventQueue()->enqueueOrDispatchScrollEvent(renderer()->node(), DocumentEventQueue::ScrollEventElementTarget);
 
     InspectorInstrumentation::didScrollLayer(frame);
-    frame->loader()->client()->didChangeScrollOffset();
+    if (scrollsOverflow())
+        frame->loader()->client()->didChangeScrollOffset(); 
 }
 
 static inline bool frameElementAndViewPermitScroll(HTMLFrameElement* frameElement, FrameView* frameView) 
@@ -3736,7 +3737,8 @@ void RenderLayer::paintLayerContents(GraphicsContext* context, const LayerPainti
                     rootRelativeBounds = calculateLayerBounds(paintingInfo.rootLayer, &offsetFromRoot, 0);
                     rootRelativeBoundsComputed = true;
                 }
-            
+
+                // FIXME: This should use a safer cast such as toRenderSVGResourceContainer().
                 static_cast<RenderSVGResourceClipper*>(element->renderer())->applyClippingToContext(renderer(), rootRelativeBounds, paintingInfo.paintDirtyRect, context);
             }
         }
@@ -5985,6 +5987,20 @@ void RenderLayer::updateOutOfFlowPositioned(const RenderStyle* oldStyle)
     }
 }
 
+#if USE(ACCELERATED_COMPOSITING)
+inline bool RenderLayer::needsCompositingLayersRebuiltForClip(const RenderStyle* oldStyle, const RenderStyle* newStyle) const
+{
+    ASSERT(newStyle);
+    return oldStyle && (oldStyle->clip() != newStyle->clip() || oldStyle->hasClip() != newStyle->hasClip());
+}
+
+inline bool RenderLayer::needsCompositingLayersRebuiltForOverflow(const RenderStyle* oldStyle, const RenderStyle* newStyle) const
+{
+    ASSERT(newStyle);
+    return !isComposited() && oldStyle && (oldStyle->overflowX() != newStyle->overflowX()) && stackingContainer()->hasCompositingDescendant();
+}
+#endif // USE(ACCELERATED_COMPOSITING)
+
 void RenderLayer::styleChanged(StyleDifference, const RenderStyle* oldStyle)
 {
     bool isNormalFlowOnly = shouldBeNormalFlowOnly();
@@ -6042,16 +6058,14 @@ void RenderLayer::styleChanged(StyleDifference, const RenderStyle* oldStyle)
 
 #if USE(ACCELERATED_COMPOSITING)
     updateNeedsCompositedScrolling();
-    if (compositor()->updateLayerCompositingState(this))
+
+    const RenderStyle* newStyle = renderer()->style();
+    if (compositor()->updateLayerCompositingState(this)
+        || needsCompositingLayersRebuiltForClip(oldStyle, newStyle)
+        || needsCompositingLayersRebuiltForOverflow(oldStyle, newStyle))
         compositor()->setCompositingLayersNeedRebuild();
-    else if (oldStyle && (oldStyle->clip() != renderer()->style()->clip() || oldStyle->hasClip() != renderer()->style()->hasClip()))
-        compositor()->setCompositingLayersNeedRebuild();
-    else if (m_backing)
-        m_backing->updateGraphicsLayerGeometry();
-    else if (oldStyle && oldStyle->overflowX() != renderer()->style()->overflowX()) {
-        if (stackingContainer()->hasCompositingDescendant())
-            compositor()->setCompositingLayersNeedRebuild();
-    }
+    else if (isComposited())
+        backing()->updateGraphicsLayerGeometry();
 #endif
 
 #if ENABLE(CSS_FILTERS)

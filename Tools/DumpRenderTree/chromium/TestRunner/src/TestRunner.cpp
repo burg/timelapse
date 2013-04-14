@@ -225,14 +225,13 @@ TestRunner::TestRunner(TestInterfaces* interfaces)
     bindMethod("setAllowFileAccessFromFileURLs", &TestRunner::setAllowFileAccessFromFileURLs);
     bindMethod("overridePreference", &TestRunner::overridePreference);
     bindMethod("setPluginsEnabled", &TestRunner::setPluginsEnabled);
-    bindMethod("setAsynchronousSpellCheckingEnabled", &TestRunner::setAsynchronousSpellCheckingEnabled);
-    bindMethod("setTouchDragDropEnabled", &TestRunner::setTouchDragDropEnabled);
 
     // The following modify the state of the TestRunner.
     bindMethod("dumpEditingCallbacks", &TestRunner::dumpEditingCallbacks);
     bindMethod("dumpAsText", &TestRunner::dumpAsText);
     bindMethod("dumpChildFramesAsText", &TestRunner::dumpChildFramesAsText);
     bindMethod("dumpChildFrameScrollPositions", &TestRunner::dumpChildFrameScrollPositions);
+    bindMethod("dumpIconChanges", &TestRunner::dumpIconChanges);
     bindMethod("setAudioData", &TestRunner::setAudioData);
     bindMethod("dumpFrameLoadCallbacks", &TestRunner::dumpFrameLoadCallbacks);
     bindMethod("dumpUserGestureInFrameLoadCallbacks", &TestRunner::dumpUserGestureInFrameLoadCallbacks);
@@ -386,6 +385,7 @@ void TestRunner::reset()
     m_generatePixelResults = true;
     m_dumpChildFrameScrollPositions = false;
     m_dumpChildFramesAsText = false;
+    m_dumpIconChanges = false;
     m_dumpAsAudio = false;
     m_dumpFrameLoadCallbacks = false;
     m_dumpUserGestureInFrameLoadCallbacks = false;
@@ -525,6 +525,11 @@ bool TestRunner::stopProvisionalFrameLoads() const
 bool TestRunner::shouldDumpTitleChanges() const
 {
     return m_dumpTitleChanges;
+}
+
+bool TestRunner::shouldDumpIconChanges() const
+{
+    return m_dumpIconChanges;
 }
 
 bool TestRunner::shouldDumpCreateView() const
@@ -1654,24 +1659,6 @@ void TestRunner::setPluginsEnabled(const CppArgumentList& arguments, CppVariant*
     result->setNull();
 }
 
-void TestRunner::setAsynchronousSpellCheckingEnabled(const CppArgumentList& arguments, CppVariant* result)
-{
-    if (arguments.size() > 0 && arguments[0].isBool()) {
-        m_delegate->preferences()->asynchronousSpellCheckingEnabled = cppVariantToBool(arguments[0]);
-        m_delegate->applyPreferences();
-    }
-    result->setNull();
-}
-
-void TestRunner::setTouchDragDropEnabled(const CppArgumentList& arguments, CppVariant* result)
-{
-    if (arguments.size() > 0 && arguments[0].isBool()) {
-        m_delegate->preferences()->touchDragDropEnabled = arguments[0].toBoolean();
-        m_delegate->applyPreferences();
-    }
-    result->setNull();
-}
-
 void TestRunner::showWebInspector(const CppArgumentList&, CppVariant* result)
 {
     showDevTools();
@@ -1892,6 +1879,12 @@ void TestRunner::dumpChildFrameScrollPositions(const CppArgumentList&, CppVarian
 void TestRunner::dumpChildFramesAsText(const CppArgumentList&, CppVariant* result)
 {
     m_dumpChildFramesAsText = true;
+    result->setNull();
+}
+
+void TestRunner::dumpIconChanges(const CppArgumentList&, CppVariant* result)
+{
+    m_dumpIconChanges = true;
     result->setNull();
 }
 

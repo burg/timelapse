@@ -2488,6 +2488,8 @@ fast/xmlhttprequest/xmlhttprequest-recursive-sync-event.html
 fast/css3-text/css3-text-align-last/getComputedStyle/getComputedStyle-text-align-last-inherited.html
 fast/css3-text/css3-text-align-last/getComputedStyle/getComputedStyle-text-align-last.html
 fast/css3-text/css3-text-decoration/getComputedStyle/getComputedStyle-text-decoration-line.html
+fast/css3-text/css3-text-decoration/getComputedStyle/getComputedStyle-text-decoration-color.html
+fast/css3-text/css3-text-decoration/getComputedStyle/getComputedStyle-text-underline-position.html
 
 # ACCELERATED_OVERFLOW_SCROLLING is disabled on Windows
 compositing/overflow/scrolling-without-painting.html
@@ -2634,6 +2636,10 @@ webkit.org/b/108370 editing/spelling/spelling-subword-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-punctuation-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spellcheck-async-mutation.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spellcheck-async.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spellcheck-sequencenum.html [ Skip ]
+webkit.org/b/108370 editing/style/iframe-onload-crash-mac.html [ Skip ]
 
 # Need rebaseline for https://bugs.webkit.org/show_bug.cgi?id=109994
 webkit.org/b/109994 css2.1/20110323/replaced-elements-001.htm [ Failure ]
@@ -2688,3 +2694,9 @@ media/track/regions-webvtt
 # https://bugs.webkit.org/show_bug.cgi?id=111606
 fast/borders/border-fit.html
 fast/repaint/border-fit-lines.html
+
+# Snapshotted plugins not enabled
+webkit.org/b/98696 plugins/snapshotting [ Skip ]
+
+webkit.org/b/112764 fast/frames/xss-auditor-handles-file-urls.html [ Failure ]
+webkit.org/b/112766 media/media-higher-prio-audio-stream.html [ Failure ]

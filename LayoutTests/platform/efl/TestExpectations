@@ -849,10 +849,6 @@ webkit.org/b/85877 fast/forms/select-style.html [ Pass ]
 # EFL port needs Pasteboard implementation, needs baselines.
 webkit.org/b/84338 fast/forms/plaintext-mode-2.html [ Pass ]
 
-# Cancel mark in search field is not working.
-webkit.org/b/94880 fast/forms/search-cancel-button-style-sharing.html [ Pass ]
-webkit.org/b/94880 fast/forms/search-rtl.html [ Pass ]
-
 # Controls are not zoomed.
 webkit.org/b/102367 fast/forms/zoomed-controls.html [ Pass ]
 
@@ -1067,7 +1063,6 @@ webkit.org/b/84338 editing/pasteboard/5601583-1.html [ Missing ]
 webkit.org/b/84338 editing/pasteboard/copy-standalone-image.html [ Missing ]
 webkit.org/b/84338 editing/pasteboard/cut-text-001.html [ Missing ]
 webkit.org/b/84338 editing/pasteboard/input-field-1.html [ Missing ]
-webkit.org/b/84338 editing/pasteboard/paste-4035648-fix.html [ Missing ]
 webkit.org/b/84338 editing/pasteboard/paste-4038267-fix.html [ Missing ]
 webkit.org/b/84338 editing/pasteboard/paste-line-endings-001.html [ Missing ]
 webkit.org/b/84338 editing/pasteboard/paste-line-endings-002.html [ Missing ]
@@ -1274,9 +1269,6 @@ webkit.org/b/73544 http/tests/notifications [ Skip ]
 
 # The test is too slow on Debug bot and randomly fails
 webkit.org/b/61932 [ Debug ] jquery/manipulation.html [ Failure Pass Timeout ]
-
-# These test -apple- prefixed CSS properties, which we don't support.
-fast/css/apple-prefix.html [ WontFix ]
 
 webkit.org/b/75747 fast/css/color-correction-on-background-image.html [ Missing Failure ]
 webkit.org/b/75747 fast/css/color-correction-on-backgrounds.html [ Missing Failure ]
@@ -1841,9 +1833,6 @@ webkit.org/b/110316 svg/as-background-image/tiled-background-image.html [ ImageO
 
 webkit.org/b/110338 fast/events/touch/emulate-touch-events.html [ Failure ]
 
-# REGRESSION(r143470): editing/spelling/spelling-changed-text.html fails on Qt, GTK, EFL 
-webkit.org/b/110447 editing/spelling/spelling-changed-text.html [ Failure ]
-
 webkit.org/b/110446 svg/as-background-image/svg-transformed-background.html [ ImageOnlyFailure ]
 
 webkit.org/b/110694 html5lib/generated/run-domjs-unsafe-data.html [ Failure ]
@@ -1862,6 +1851,7 @@ webkit.org/b/111016 http/tests/loading/promote-img-preload-priority.html [ Failu
 
 webkit.org/b/111058 plugins/plugin-clip-subframe.html [ Failure ]
 
+
 # Newly added tests in r144190 are failing.
 webkit.org/b/111172 compositing/overlap-blending/children-opacity-huge.html [ ImageOnlyFailure ]
 webkit.org/b/111172 compositing/overlap-blending/children-opacity-no-overlap.html [ ImageOnlyFailure ]
@@ -1877,3 +1867,6 @@ webkit.org/b/111606 fast/repaint/border-fit-lines.html [ Failure ]
 
 # Started failing on EFL afrer r145025.
 webkit.org/b/111860 fast/forms/number/number-validation-message.html [ Failure ]
+
+# Snapshotted plugins not enabled
+webkit.org/b/98696 plugins/snapshotting [ Skip ]
