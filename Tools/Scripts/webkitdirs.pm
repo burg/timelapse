@@ -1260,8 +1260,8 @@ sub determineIsChromiumNinja()
         }
 
         my $statVisualStudio = 0;
-        if (-e 'Source/WebKit/chromium/All.sln') {
-          $statVisualStudio = stat('Source/WebKit/chromium/All.sln')->mtime;
+        if (-e 'Source/WebKit/chromium/webkit.vcxproj') {
+          $statVisualStudio = stat('Source/WebKit/chromium/webkit.vcxproj')->mtime;
         }
 
         $hasUpToDateNinjabuild = $statNinja > $statXcode && $statNinja > $statMake && $statNinja > $statVisualStudio;
@@ -2047,7 +2047,7 @@ sub runAutogenForAutotoolsProjectIfNecessary($@)
         }
 
         # Run autogen.sh again if either the features overrided by build-webkit or build arguments have changed.
-        if (!mustReRunAutogen($sourceDir, "feature-defines-overriding.txt", $joinedOverridableFeatures)
+        if (!mustReRunAutogen($sourceDir, "WebKitFeatureOverrides.txt", $joinedOverridableFeatures)
             && !mustReRunAutogen($sourceDir, "previous-autogen-arguments.txt", $joinedBuildArgs)) {
             return;
         }
@@ -2059,7 +2059,7 @@ sub runAutogenForAutotoolsProjectIfNecessary($@)
     # Only for WebKit, write the autogen.sh arguments to a file so that we can detect
     # when they change and automatically re-run it.
     if ($project eq 'WebKit') {
-        open(OVERRIDABLE_FEATURES, ">feature-defines-overriding.txt");
+        open(OVERRIDABLE_FEATURES, ">WebKitFeatureOverrides.txt");
         print OVERRIDABLE_FEATURES $joinedOverridableFeatures;
         close(OVERRIDABLE_FEATURES);
 

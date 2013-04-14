@@ -33,6 +33,7 @@
 
 #include "Event.h"
 #include "EventDispatcher.h"
+#include "EventRetargeter.h"
 #include "Node.h"
 
 namespace WebCore {
@@ -49,7 +50,8 @@ EventDispatchMediator::EventDispatchMediator(PassRefPtr<Event> event)
 
 bool EventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) const
 {
-    return dispatcher->dispatchEvent(m_event.get());
+    ASSERT(m_event.get() == dispatcher->event());
+    return dispatcher->dispatch();
 }
 
 } // namespace WebCore

@@ -100,11 +100,15 @@ TiledCoreAnimationDrawingArea::~TiledCoreAnimationDrawingArea()
     m_layerFlushScheduler.invalidate();
 }
 
-void TiledCoreAnimationDrawingArea::setNeedsDisplay(const IntRect& rect)
+void TiledCoreAnimationDrawingArea::setNeedsDisplay()
 {
 }
 
-void TiledCoreAnimationDrawingArea::scroll(const IntRect& scrollRect, const IntSize& scrollOffset)
+void TiledCoreAnimationDrawingArea::setNeedsDisplayInRect(const IntRect& rect)
+{
+}
+
+void TiledCoreAnimationDrawingArea::scroll(const IntRect& scrollRect, const IntSize& scrollDelta)
 {
 }
 
@@ -335,7 +339,7 @@ void TiledCoreAnimationDrawingArea::resumePainting()
         m_webPage->corePage()->resumeScriptedAnimations();
 }
 
-void TiledCoreAnimationDrawingArea::setExposedRect(const IntRect& exposedRect)
+void TiledCoreAnimationDrawingArea::setExposedRect(const FloatRect& exposedRect)
 {
     // FIXME: This should be mapped through the scroll offset, but we need to keep it up to date.
     m_exposedRect = exposedRect;
@@ -376,7 +380,7 @@ void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize)
     }
 
     if (m_pageOverlayLayer)
-        m_pageOverlayLayer->setSize(size);
+        m_pageOverlayLayer->setSize(viewSize);
 
     if (!m_layerTreeStateIsFrozen)
         flushLayers();
@@ -384,7 +388,7 @@ void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize)
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
 
-    m_rootLayer.get().frame = CGRectMake(0, 0, size.width(), size.height());
+    m_rootLayer.get().frame = CGRectMake(0, 0, viewSize.width(), viewSize.height());
 
     [CATransaction commit];
     
@@ -493,7 +497,7 @@ void TiledCoreAnimationDrawingArea::createPageOverlayLayer()
 
     m_pageOverlayLayer->setAcceleratesDrawing(true);
     m_pageOverlayLayer->setDrawsContent(true);
-    m_pageOverlayLayer->setSize(m_webPage->size());
+    m_pageOverlayLayer->setSize(expandedIntSize(FloatSize(m_rootLayer.get().frame.size)));
 
     m_pageOverlayPlatformLayer = m_pageOverlayLayer->platformLayer();
 

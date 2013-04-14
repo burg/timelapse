@@ -57,6 +57,7 @@
 #include "SelectionHandler.h"
 #include "SpellChecker.h"
 #include "SpellingHandler.h"
+#include "SuggestionBoxHandler.h"
 #include "TextCheckerClient.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
@@ -597,14 +598,14 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
 {
     m_request = textCheckingRequest;
 
-    InputLog(Platform::LogLevelInfo, "InputHandler::requestCheckingOfString '%s'", m_request->text().latin1().data());
+    InputLog(Platform::LogLevelInfo, "InputHandler::requestCheckingOfString '%s'", m_request->data().text().latin1().data());
 
     if (!m_request) {
         SpellingLog(Platform::LogLevelWarn, "InputHandler::requestCheckingOfString did not receive a valid request.");
         return;
     }
 
-    unsigned requestLength = m_request->text().length();
+    unsigned requestLength = m_request->data().text().length();
 
     // Check if the field should be spellchecked.
     if (!isActiveTextEdit() || !shouldSpellCheckElement(m_currentFocusElement.get()) || requestLength < 2) {
@@ -612,17 +613,20 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
         return;
     }
 
-    if (requestLength > MaxSpellCheckingStringLength) {
+    if (requestLength >= MaxSpellCheckingStringLength) {
         // Batch requests which are generally created by us on focus, should not exceed this limit. Check that this is in fact of Incremental type.
         ASSERT(textCheckingRequest->processType() == TextCheckingProcessIncremental);
 
         // Cancel this request and send it off in newly created chunks.
         m_request->didCancel();
         if (m_currentFocusElement->document() && m_currentFocusElement->document()->frame() && m_currentFocusElement->document()->frame()->selection()) {
-            // Convert from position back to selection so we can expand the range to include the previous line. This should handle cases when the user hits
-            // enter to finish composing a word and create a new line.
             VisiblePosition caretPosition = m_currentFocusElement->document()->frame()->selection()->start();
-            VisibleSelection visibleSelection = VisibleSelection(previousLinePosition(caretPosition, caretPosition.lineDirectionPointForBlockDirectionNavigation()), caretPosition);
+            // Convert from position back to selection so we can expand the range to include the previous line. This should handle cases when the user hits
+            // enter to finish composing a word and create a new line. Account for word wrapping by jumping to the start of the previous line, then moving
+            // to the start of any word which might be there.
+            VisibleSelection visibleSelection = VisibleSelection(
+                startOfWord(startOfLine(previousLinePosition(caretPosition, caretPosition.lineDirectionPointForBlockDirectionNavigation()))),
+                endOfWord(endOfLine(caretPosition)));
             m_spellingHandler->spellCheckTextBlock(visibleSelection, TextCheckingProcessIncremental);
         }
         return;
@@ -636,7 +640,7 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
     }
 
     int paragraphLength = 0;
-    if (!convertStringToWchar(m_request->text(), checkingString, requestLength + 1, &paragraphLength)) {
+    if (!convertStringToWchar(m_request->data().text(), checkingString, requestLength + 1, &paragraphLength)) {
         Platform::logAlways(Platform::LogLevelCritical, "InputHandler::requestCheckingOfString Failed to convert String to wchar type.");
         free(checkingString);
         m_request->didCancel();
@@ -795,7 +799,7 @@ void InputHandler::requestSpellingCheckingOptions(imf_sp_text_t& spellCheckingOp
     if (!shouldMoveDialog && spellCheckingOptionRequest.startTextPosition == spellCheckingOptionRequest.endTextPosition)
         return;
 
-    if (screenOffset.isEmpty()) {
+    if (screenOffset.width() == -1 && screenOffset.height() == -1) {
         screenOffset.setWidth(m_screenOffset.width());
         screenOffset.setHeight(m_screenOffset.height());
     } else {
@@ -867,6 +871,9 @@ void InputHandler::setElementUnfocused(bool refocusOccuring)
         }
 
         m_webPage->m_client->inputFocusLost();
+
+        // Hide the suggestion box if it is visible.
+        hideTextInputTypeSuggestionBox();
 
         // Repaint the element absent of the caret.
         if (m_currentFocusElement->renderer())
@@ -958,6 +965,7 @@ void InputHandler::updateFormState()
     if (!m_nextFocusableTextElement && !m_previousFocusableTextElement) {
         m_hasSubmitButton = false;
         InputLog(Platform::LogLevelInfo, "InputHandler::updateFormState no valid elements found, clearing state.");
+    }
 }
 
 void InputHandler::focusNextField()
@@ -988,8 +996,13 @@ void InputHandler::submitForm()
     InputLog(Platform::LogLevelInfo, "InputHandler::submitForm triggered");
     if (elementType(m_currentFocusElement.get()) == InputTypeTextArea)
         formElement->submit();
-    else
+    else {
         handleKeyboardInput(Platform::KeyboardEvent(KEYCODE_RETURN, Platform::KeyboardEvent::KeyChar, 0), false /* changeIsPartOfComposition */);
+
+        // Confirm that implicit submission was accepted.
+        if (isActiveTextEdit())
+            formElement->submit();
+    }
 }
 
 static void addInputStyleMaskForKeyboardType(int64_t& inputMask, VirtualKeyboardType keyboardType)
@@ -1080,6 +1093,9 @@ void InputHandler::setElementFocused(Element* element)
 
     handleInputLocaleChanged(m_webPage->m_webSettings->isWritingDirectionRTL());
 
+    // update the suggestion box
+    showTextInputTypeSuggestionBox();
+
     if (!m_delayKeyboardVisibilityChange)
         notifyClientOfKeyboardVisibilityChange(true, true /* triggeredByFocusChange */);
 
@@ -1092,8 +1108,8 @@ void InputHandler::setElementFocused(Element* element)
         return;
 
     // Spellcheck the field in its entirety.
-    VisibleSelection focusedBlock = DOMSupport::visibleSelectionForInputElement(element);
-    m_spellingHandler->spellCheckTextBlock(focusedBlock, TextCheckingProcessBatch);
+    const VisibleSelection visibleSelection = DOMSupport::visibleSelectionForFocusedBlock(element);
+    m_spellingHandler->spellCheckTextBlock(visibleSelection, TextCheckingProcessBatch);
 
 #ifdef ENABLE_SPELLING_LOG
     SpellingLog(Platform::LogLevelInfo, "InputHandler::setElementFocused Spellchecking the field increased the total time to focus to %f seconds.", timer.elapsed());
@@ -1215,11 +1231,17 @@ WebCore::IntRect InputHandler::boundingBoxForInputField()
         return WebCore::IntRect();
 
     // type="search" can have a 'X', so take the inner block bounding box to not include it.
-    if (HTMLInputElement* element = m_currentFocusElement->toInputElement())
+    if (HTMLInputElement* element = m_currentFocusElement->toInputElement()) {
         if (element->isSearchField())
             return element->innerBlockElement()->renderer()->absoluteBoundingBoxRect();
+        return m_currentFocusElement->renderer()->absoluteBoundingBoxRect();
+    }
 
-    return m_currentFocusElement->renderer()->absoluteBoundingBoxRect();
+    if (m_currentFocusElement->hasTagName(HTMLNames::textareaTag))
+        return m_currentFocusElement->renderer()->absoluteBoundingBoxRect();
+
+    // Content Editable can't rely on the bounding box since it isn't fixed.
+    return WebCore::IntRect();
 }
 
 void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
@@ -1360,22 +1382,13 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
         }
     }
 
-    if (destinationScrollLocation != mainFrameView->scrollPosition() || zoomScaleRequired != m_webPage->currentScale()) {
-        InputLog(Platform::LogLevelInfo,
-            "InputHandler::ensureFocusTextElementVisible zooming in to %f from %f and scrolling to point %s from %s",
-            zoomScaleRequired, m_webPage->currentScale(),
-            Platform::IntPoint(destinationScrollLocation).toString().c_str(),
-            Platform::IntPoint(mainFrameView->scrollPosition()).toString().c_str());
+    InputLog(Platform::LogLevelInfo,
+        "InputHandler::ensureFocusTextElementVisible zooming in to %f from %f and scrolling to point %s from %s",
+        zoomScaleRequired, m_webPage->currentScale(),
+        Platform::IntPoint(destinationScrollLocation).toString().c_str(),
+        Platform::IntPoint(mainFrameView->scrollPosition()).toString().c_str());
 
-        // Animate to given scroll position & zoom level
-        m_webPage->m_finalBlockPoint = WebCore::FloatPoint(destinationScrollLocation);
-        m_webPage->m_blockZoomFinalScale = zoomScaleRequired;
-        m_webPage->m_shouldReflowBlock = false;
-        m_webPage->m_userPerformedManualZoom = true;
-        m_webPage->m_userPerformedManualScroll = true;
-        m_webPage->m_shouldConstrainScrollingToContentEdge = shouldConstrainScrollingToContentEdge;
-        m_webPage->client()->animateBlockZoom(zoomScaleRequired, m_webPage->m_finalBlockPoint);
-    }
+    m_webPage->animateToScaleAndDocumentScrollPosition(zoomScaleRequired, WebCore::FloatPoint(destinationScrollLocation), shouldConstrainScrollingToContentEdge);
 }
 
 void InputHandler::ensureFocusPluginElementVisible()
@@ -1653,6 +1666,14 @@ void InputHandler::cancelSelection()
     setCursorPosition(selectionStartPosition);
 }
 
+bool InputHandler::isNavigationKey(unsigned character) const
+{
+    return character == KEYCODE_UP
+        || character == KEYCODE_DOWN
+        || character == KEYCODE_LEFT
+        || character == KEYCODE_RIGHT;
+}
+
 bool InputHandler::handleKeyboardInput(const Platform::KeyboardEvent& keyboardEvent, bool changeIsPartOfComposition)
 {
     InputLog(Platform::LogLevelInfo,
@@ -1682,8 +1703,12 @@ bool InputHandler::handleKeyboardInput(const Platform::KeyboardEvent& keyboardEv
     // If we aren't specifically part of a composition, fail, IMF should never send key input
     // while composing text. If IMF has failed, we should have already finished the
     // composition manually. There is a caveat for KeyUp which is explained above.
-    if (!changeIsPartOfComposition && compositionActive())
-        return false;
+    if (!changeIsPartOfComposition && compositionActive()) {
+        if (type == Platform::KeyboardEvent::KeyDown && isNavigationKey(keyboardEvent.character()))
+            removeAttributedTextMarker();
+        else
+            return false;
+    }
 
     ProcessingChangeGuard guard(this);
 
@@ -1705,20 +1730,24 @@ bool InputHandler::handleKeyboardInput(const Platform::KeyboardEvent& keyboardEv
             m_shouldNotifyWebView = shouldNotifyWebView(keyboardEvent);
         }
 
-        Platform::KeyboardEvent adjustedKeyboardEvent(keyboardEvent.character(), type, adjustedModifiers);
+        Platform::KeyboardEvent adjustedKeyboardEvent(keyboardEvent.character(), type, adjustedModifiers, keyboardEvent.keycode(), keyboardEvent.alternateCharacter(), keyboardEvent.sourceDevice());
         keyboardEventHandled = focusedFrame->eventHandler()->keyEvent(PlatformKeyboardEvent(adjustedKeyboardEvent));
 
         m_shouldNotifyWebView = true;
 
         if (isKeyChar) {
             type = Platform::KeyboardEvent::KeyUp;
-            adjustedKeyboardEvent = Platform::KeyboardEvent(keyboardEvent.character(), type, adjustedModifiers);
+            adjustedKeyboardEvent = Platform::KeyboardEvent(keyboardEvent.character(), type, adjustedModifiers, keyboardEvent.keycode(), keyboardEvent.alternateCharacter(), keyboardEvent.sourceDevice());
             keyboardEventHandled = focusedFrame->eventHandler()->keyEvent(PlatformKeyboardEvent(adjustedKeyboardEvent)) || keyboardEventHandled;
         }
 
         if (!changeIsPartOfComposition && type == Platform::KeyboardEvent::KeyUp)
             ensureFocusTextElementVisible(EdgeIfNeeded);
     }
+
+    if (m_currentFocusElement && keyboardEventHandled)
+        showTextInputTypeSuggestionBox();
+
     return keyboardEventHandled;
 }
 
@@ -2531,6 +2560,39 @@ void InputHandler::restoreViewState()
 {
     setInputModeEnabled();
     focusedNodeChanged();
+}
+
+void InputHandler::showTextInputTypeSuggestionBox(bool allowEmptyPrefix)
+{
+    HTMLInputElement* focusedInputElement = static_cast<HTMLInputElement*>(m_currentFocusElement->toInputElement());
+    if (!focusedInputElement || !focusedInputElement->isTextField())
+        return;
+
+    if (!focusedInputElement)
+        return;
+
+    if (!m_suggestionDropdownBoxHandler)
+        m_suggestionDropdownBoxHandler = SuggestionBoxHandler::create(focusedInputElement);
+
+    // If the focused input element isn't the same as the one inside the handler, reset and display.
+    // If the focused element is the same, display the suggestions.
+    if ((m_suggestionDropdownBoxHandler->focusedElement()) && m_suggestionDropdownBoxHandler->focusedElement() != focusedInputElement)
+        m_suggestionDropdownBoxHandler->setInputElementAndUpdateDisplay(focusedInputElement);
+    else
+        m_suggestionDropdownBoxHandler->showDropdownBox(allowEmptyPrefix);
+}
+
+void InputHandler::hideTextInputTypeSuggestionBox()
+{
+    if (m_suggestionDropdownBoxHandler)
+        m_suggestionDropdownBoxHandler->hideDropdownBox();
+}
+
+void InputHandler::elementTouched(WebCore::Element* nonShadowElementUnderFatFinger)
+{
+    // Attempt to show all suggestions when the input field is empty and a tap is registered when the element is focused.
+    if (isActiveTextEdit() && nonShadowElementUnderFatFinger == m_currentFocusElement)
+        showTextInputTypeSuggestionBox(true /* allowEmptyPrefix */);
 }
 
 }

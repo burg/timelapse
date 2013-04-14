@@ -138,6 +138,11 @@ String.prototype.trimURL = function(baseURLDomain)
     return result;
 }
 
+String.prototype.toTitleCase = function()
+{
+    return this.substring(0, 1).toUpperCase() + this.substring(1);
+}
+
 /**
  * @param {string} other
  * @return {number}
@@ -482,6 +487,18 @@ Object.defineProperty(Array.prototype, "select",
     }
 });
 
+Object.defineProperty(Array.prototype, "peekLast",
+{
+    /**
+     * @this {Array.<*>}
+     * @return {*}
+     */
+    value: function()
+    {
+        return this[this.length - 1];
+    }
+});
+
 /**
  * @param {*} anObject
  * @param {Array.<*>} aList
@@ -746,6 +763,90 @@ function numberToStringWithSpacesPadding(value, symbolsCount)
 }
 
 /**
+  * @return {string}
+  */
+var createObjectIdentifier = function()
+{
+    // It has to be string for better performance.
+    return '_' + ++createObjectIdentifier._last;
+}
+
+createObjectIdentifier._last = 0;
+
+/**
+ * @constructor
+ */
+var Set = function()
+{
+    /** @type !Object.<string, Object> */
+    this._set = {};
+    this._size = 0;
+}
+
+Set.prototype = {
+    /**
+     * @param {!Object} item
+     */
+    add: function(item)
+    {
+        var objectIdentifier = item.__identifier;
+        if (!objectIdentifier) {
+            objectIdentifier = createObjectIdentifier();
+            item.__identifier = objectIdentifier;
+        }
+        if (!this._set[objectIdentifier])
+            ++this._size;
+        this._set[objectIdentifier] = item;
+    },
+    
+    /**
+     * @param {!Object} item
+     */
+    remove: function(item)
+    {
+        if (this._set[item.__identifier]) {
+            --this._size;
+            delete this._set[item.__identifier];
+        }
+    },
+
+    /**
+     * @return {!Array.<Object>}
+     */
+    items: function()
+    {
+        var result = new Array(this._size);
+        var i = 0;
+        for (var objectIdentifier in this._set)
+            result[i++] = this._set[objectIdentifier];
+        return result;
+    },
+
+    /**
+     * @param {!Object} item
+     * @return {?Object}
+     */
+    hasItem: function(item)
+    {
+        return this._set[item.__identifier];
+    },
+
+    /**
+     * @return {number}
+     */
+    size: function()
+    {
+        return this._size;
+    },
+
+    clear: function()
+    {
+        this._set = {};
+        this._size = 0;
+    }
+}
+
+/**
  * @constructor
  */
 var Map = function()
@@ -753,8 +854,6 @@ var Map = function()
     this._map = {};
     this._size = 0;
 }
-
-Map._lastObjectIdentifier = 0;
 
 Map.prototype = {
     /**
@@ -765,7 +864,7 @@ Map.prototype = {
     {
         var objectIdentifier = key.__identifier;
         if (!objectIdentifier) {
-            objectIdentifier = ++Map._lastObjectIdentifier;
+            objectIdentifier = createObjectIdentifier();
             key.__identifier = objectIdentifier;
         }
         if (!this._map[objectIdentifier])
@@ -924,6 +1023,12 @@ StringPool.prototype = {
 var _importedScripts = {};
 
 /**
+ * This function behavior depends on the "debug_devtools" flag value.
+ * - In debug mode it loads scripts synchronously via xhr request.
+ * - In release mode every occurrence of "importScript" gets replaced with
+ * the script source code on the compilation phase.
+ *
+ * To load scripts lazily in release mode call "loasScript" function.
  * @param {string} scriptName
  */
 function importScript(scriptName)
@@ -937,3 +1042,5 @@ function importScript(scriptName)
     var sourceURL = WebInspector.ParsedURL.completeURL(window.location.href, scriptName); 
     window.eval(xhr.responseText + "\n//@ sourceURL=" + sourceURL);
 }
+
+var loadScript = importScript;

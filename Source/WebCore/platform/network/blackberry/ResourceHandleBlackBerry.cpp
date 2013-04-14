@@ -113,7 +113,7 @@ bool ResourceHandle::start()
         return false;
 
     // FIXME: clean up use of Frame now that we have NetworkingContext (see RIM Bug #1515)
-    Frame* frame = static_cast<FrameNetworkingContextBlackBerry*>(context)->frame();
+    Frame* frame = static_cast<FrameNetworkingContextBlackBerry*>(d->m_context.get())->frame();
     if (!frame || !frame->loader() || !frame->loader()->client() || !client())
         return false;
     int playerId = static_cast<FrameLoaderClientBlackBerry*>(frame->loader()->client())->playerId();
@@ -132,7 +132,7 @@ void ResourceHandle::cancel()
     setClient(0);
 }
 
-void ResourceHandle::loadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
     if (!context || !context->isValid()) {
         ASSERT(false && "loadResourceSynchronously called with invalid networking context");

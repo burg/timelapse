@@ -103,6 +103,7 @@
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/HistoryItem.h>
 #include <WebCore/KeyboardEvent.h>
+#include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MouseEvent.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformKeyboardEvent.h>
@@ -238,7 +239,6 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 #if PLATFORM(MAC)
     , m_pdfPluginEnabled(false)
     , m_windowIsVisible(false)
-    , m_isSmartInsertDeleteEnabled(parameters.isSmartInsertDeleteEnabled)
     , m_layerHostingMode(parameters.layerHostingMode)
     , m_keyboardEventBeingInterpreted(0)
 #elif PLATFORM(GTK)
@@ -503,8 +503,10 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
     String pluginPath;
     uint32_t pluginLoadPolicy;
 
-    String documentURLString = pluginElement->document()->url().string();
-    if (!sendSync(Messages::WebPageProxy::GetPluginPath(parameters.mimeType, parameters.url.string(), documentURLString), Messages::WebPageProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy))) {
+    String frameURLString = frame->coreFrame()->loader()->documentLoader()->responseURL().string();
+    String pageURLString = m_page->mainFrame()->loader()->documentLoader()->responseURL().string();
+
+    if (!sendSync(Messages::WebPageProxy::GetPluginPath(parameters.mimeType, parameters.url.string(), frameURLString, pageURLString), Messages::WebPageProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy))) {
         return 0;
     }
 
@@ -516,7 +518,7 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
         if (pluginElement->renderer()->isEmbeddedObject())
             toRenderEmbeddedObject(pluginElement->renderer())->setPluginUnavailabilityReason(RenderEmbeddedObject::InsecurePluginVersion);
 
-        send(Messages::WebPageProxy::DidBlockInsecurePluginVersion(parameters.mimeType, parameters.url.string()));
+        send(Messages::WebPageProxy::DidBlockInsecurePluginVersion(parameters.mimeType, parameters.url.string(), frameURLString, pageURLString));
         return 0;
 
     case PluginModuleInactive:
@@ -980,20 +982,19 @@ void WebPage::setSize(const WebCore::IntSize& viewSize)
 {
     FrameView* view = m_page->mainFrame()->view();
 
-#if USE(TILED_BACKING_STORE)
-    // If we are resizing to content ignore external attempts.
-    if (view->useFixedLayout())
-        return;
-#endif
-
     if (m_viewSize == viewSize)
         return;
 
     view->resize(viewSize);
     view->setNeedsLayout();
-    m_drawingArea->setNeedsDisplay(IntRect(IntPoint(0, 0), viewSize));
+    m_drawingArea->setNeedsDisplay();
     
     m_viewSize = viewSize;
+
+#if USE(TILED_BACKING_STORE)
+    if (view->useFixedLayout())
+        sendViewportAttributesChanged();
+#endif
 }
 
 #if USE(TILED_BACKING_STORE)
@@ -1004,43 +1005,24 @@ void WebPage::setFixedVisibleContentRect(const IntRect& rect)
     m_page->mainFrame()->view()->setFixedVisibleContentRect(rect);
 }
 
-void WebPage::resizeToContentsIfNeeded()
-{
-    ASSERT(m_useFixedLayout);
-
-    FrameView* view = m_page->mainFrame()->view();
-
-    if (!view->useFixedLayout())
-        return;
-
-    IntSize newSize = view->contentsSize().expandedTo(view->fixedLayoutSize());
-
-    if (newSize == m_viewSize)
-        return;
-
-    m_viewSize = newSize;
-    view->resize(newSize);
-    view->setNeedsLayout();
-}
-
 void WebPage::sendViewportAttributesChanged()
 {
     ASSERT(m_useFixedLayout);
 
     // Viewport properties have no impact on zero sized fixed viewports.
-    if (m_viewportSize.isEmpty())
+    if (m_viewSize.isEmpty())
         return;
 
     // Recalculate the recommended layout size, when the available size (device pixel) changes.
     Settings* settings = m_page->settings();
 
-    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), m_viewportSize.width());
+    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), m_viewSize.width());
 
     // If unset  we use the viewport dimensions. This fits with the behavior of desktop browsers.
-    int deviceWidth = (settings->deviceWidth() > 0) ? settings->deviceWidth() : m_viewportSize.width();
-    int deviceHeight = (settings->deviceHeight() > 0) ? settings->deviceHeight() : m_viewportSize.height();
+    int deviceWidth = (settings->deviceWidth() > 0) ? settings->deviceWidth() : m_viewSize.width();
+    int deviceHeight = (settings->deviceHeight() > 0) ? settings->deviceHeight() : m_viewSize.height();
 
-    ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, deviceWidth, deviceHeight, 1, m_viewportSize);
+    ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, deviceWidth, deviceHeight, 1, m_viewSize);
 
     FrameView* view = m_page->mainFrame()->view();
 
@@ -1049,7 +1031,7 @@ void WebPage::sendViewportAttributesChanged()
 
     // Put the width and height to the viewport width and height. In css units however.
     // Use FloatSize to avoid truncated values during scale.
-    FloatSize contentFixedSize = m_viewportSize;
+    FloatSize contentFixedSize = m_viewSize;
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     // CSS viewport descriptors might be applied to already affected viewport size
@@ -1067,19 +1049,6 @@ void WebPage::sendViewportAttributesChanged()
 
     send(Messages::WebPageProxy::DidChangeViewportProperties(attr));
 }
-
-void WebPage::setViewportSize(const IntSize& size)
-{
-    ASSERT(m_useFixedLayout);
-
-    if (m_viewportSize == size)
-        return;
-
-    m_viewportSize = size;
-
-    sendViewportAttributesChanged();
-}
-
 #endif
 
 void WebPage::scrollMainFrameIfNotAtMaxScrollPosition(const IntSize& scrollOffset)
@@ -1313,6 +1282,16 @@ void WebPage::setSuppressScrollbarAnimations(bool suppressAnimations)
     m_page->setShouldSuppressScrollbarAnimations(suppressAnimations);
 }
 
+void WebPage::setRubberBandsAtBottom(bool rubberBandsAtBottom)
+{
+    m_page->setRubberBandsAtBottom(rubberBandsAtBottom);
+}
+
+void WebPage::setRubberBandsAtTop(bool rubberBandsAtTop)
+{
+    m_page->setRubberBandsAtTop(rubberBandsAtTop);
+}
+
 void WebPage::setPaginationMode(uint32_t mode)
 {
     Pagination pagination = m_page->pagination();
@@ -1510,7 +1489,7 @@ static bool isContextClick(const PlatformMouseEvent& event)
 static bool handleContextMenuEvent(const PlatformMouseEvent& platformMouseEvent, WebPage* page)
 {
     IntPoint point = page->corePage()->mainFrame()->view()->windowToContents(platformMouseEvent.position());
-    HitTestResult result = page->corePage()->mainFrame()->eventHandler()->hitTestResultAtPoint(point, false);
+    HitTestResult result = page->corePage()->mainFrame()->eventHandler()->hitTestResultAtPoint(point);
 
     Frame* frame = page->corePage()->mainFrame();
     if (result.innerNonSharedNode())
@@ -1763,7 +1742,7 @@ void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize&
             return;
 
 #else
-        HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), /*allowShadowContent*/ false, /*ignoreClipping*/ true);
+        HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
         adjustedNode = result.innerNode();
 #endif
         // Find the node to highlight. This is not the same as the node responding the tap gesture, because many
@@ -1869,7 +1848,7 @@ void WebPage::setDrawsBackground(bool drawsBackground)
     }
 
     m_drawingArea->pageBackgroundTransparencyChanged();
-    m_drawingArea->setNeedsDisplay(IntRect(IntPoint(0, 0), m_viewSize));
+    m_drawingArea->setNeedsDisplay();
 }
 
 void WebPage::setDrawsTransparentBackground(bool drawsTransparentBackground)
@@ -1886,7 +1865,7 @@ void WebPage::setDrawsTransparentBackground(bool drawsTransparentBackground)
     }
 
     m_drawingArea->pageBackgroundTransparencyChanged();
-    m_drawingArea->setNeedsDisplay(IntRect(IntPoint(0, 0), m_viewSize));
+    m_drawingArea->setNeedsDisplay();
 }
 
 void WebPage::viewWillStartLiveResize()
@@ -1972,7 +1951,7 @@ void WebPage::setIsInWindow(bool isInWindow)
         m_page->setCanStartMedia(false);
         m_page->willMoveOffscreen();
     } else {
-        // Defer the call to Page::setCanStartMedia() since it ends up sending a syncrhonous messages to the UI process
+        // Defer the call to Page::setCanStartMedia() since it ends up sending a synchronous message to the UI process
         // in order to get plug-in connections, and the UI process will be waiting for the Web process to update the backing
         // store after moving the view into a window, until it times out and paints white. See <rdar://problem/9242771>.
         if (m_mayStartMediaWhenInWindow)
@@ -1980,6 +1959,8 @@ void WebPage::setIsInWindow(bool isInWindow)
 
         m_page->didMoveOnscreen();
     }
+
+    m_page->setIsInWindow(isInWindow);
 }
 
 void WebPage::didReceivePolicyDecision(uint64_t frameID, uint64_t listenerID, uint32_t policyAction, uint64_t downloadID)
@@ -2026,7 +2007,7 @@ void WebPage::resumeActiveDOMObjectsAndAnimations()
     m_page->resumeActiveDOMObjectsAndAnimations();
 
     // We need to repaint on resume to kickstart animated painting again.
-    m_drawingArea->setNeedsDisplay(IntRect(IntPoint(0, 0), m_viewSize));
+    m_drawingArea->setNeedsDisplay();
 }
 
 IntPoint WebPage::screenToWindow(const IntPoint& point)
@@ -2409,6 +2390,8 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 #endif
 
     settings->setLogsPageMessagesToSystemConsoleEnabled(store.getBoolValueForKey(WebPreferencesKey::logsPageMessagesToSystemConsoleEnabledKey()));
+
+    settings->setSmartInsertDeleteEnabled(store.getBoolValueForKey(WebPreferencesKey::smartInsertDeleteEnabledKey()));
 
     platformPreferencesDidChange(store);
 
@@ -2932,7 +2915,7 @@ void WebPage::windowAndViewFramesChanged(const IntRect& windowFrameInScreenCoord
 }
 #endif
 
-void WebPage::viewExposedRectChanged(const IntRect& exposedRect)
+void WebPage::viewExposedRectChanged(const FloatRect& exposedRect)
 {
     m_drawingArea->setExposedRect(exposedRect);
 }
@@ -3015,10 +2998,11 @@ void WebPage::findZoomableAreaForPoint(const WebCore::IntPoint& point, const Web
     Node* node = 0;
     IntRect zoomableArea;
     bool foundAreaForTouchPoint = m_mainFrame->coreFrame()->eventHandler()->bestZoomableAreaForTouchPoint(point, IntSize(area.width() / 2, area.height() / 2), zoomableArea, node);
-    ASSERT(node);
 
     if (!foundAreaForTouchPoint)
         return;
+
+    ASSERT(node);
 
     if (node->document() && node->document()->view())
         zoomableArea = node->document()->view()->contentsToWindow(zoomableArea);
@@ -3031,7 +3015,7 @@ void WebPage::findZoomableAreaForPoint(const WebCore::IntPoint& point, const Web
 {
     UNUSED_PARAM(area);
     Frame* mainframe = m_mainFrame->coreFrame();
-    HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), /*allowShadowContent*/ false, /*ignoreClipping*/ true);
+    HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
 
     Node* node = result.innerNode();
 
@@ -3480,6 +3464,12 @@ bool WebPage::canHandleRequest(const WebCore::ResourceRequest& request)
 {
     if (SchemeRegistry::shouldLoadURLSchemeAsEmptyDocument(request.url().protocol()))
         return true;
+
+#if ENABLE(BLOB)
+    if (request.url().protocolIs("blob"))
+        return true;
+#endif
+
     return platformCanHandleRequest(request);
 }
 
@@ -3672,7 +3662,7 @@ bool WebPage::canPluginHandleResponse(const ResourceResponse& response)
     String pluginPath;
     uint32_t pluginLoadPolicy;
     
-    if (!sendSync(Messages::WebPageProxy::GetPluginPath(response.mimeType(), response.url().string(), response.url().string()), Messages::WebPageProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy)))
+    if (!sendSync(Messages::WebPageProxy::GetPluginPath(response.mimeType(), response.url().string(), response.url().string(), response.url().string()), Messages::WebPageProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy)))
         return false;
 
     return pluginLoadPolicy != PluginModuleBlocked && !pluginPath.isEmpty();
@@ -3792,6 +3782,29 @@ void WebPage::setMinimumLayoutWidth(double minimumLayoutWidth)
         corePage()->mainFrame()->view()->enableAutoSizeMode(true, IntSize(minimumLayoutWidth, 1), IntSize(maximumSize, maximumSize));
     else
         corePage()->mainFrame()->view()->enableAutoSizeMode(false, IntSize(), IntSize());
+}
+
+bool WebPage::isSmartInsertDeleteEnabled()
+{
+    return m_page->settings()->smartInsertDeleteEnabled();
+}
+
+void WebPage::setSmartInsertDeleteEnabled(bool enabled)
+{
+    m_page->settings()->setSmartInsertDeleteEnabled(enabled);
+}
+
+bool WebPage::canShowMIMEType(const String& MIMEType) const
+{
+    if (MIMETypeRegistry::canShowMIMEType(MIMEType))
+        return true;
+
+    if (PluginData* pluginData = m_page->pluginData()) {
+        if (pluginData->supportsMimeType(MIMEType) && m_page->settings()->arePluginsEnabled())
+            return true;
+    }
+
+    return false;
 }
 
 } // namespace WebKit

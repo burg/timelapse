@@ -77,7 +77,8 @@
                     { "name": "reportGraph", "type": "boolean", "optional": true, "description": "Whether native memory graph should be reported in addition to aggregated statistics." }
                 ],
                 "returns": [
-                    { "name": "distribution", "$ref": "MemoryBlock", "description": "An object describing all memory allocated by the process"}
+                    { "name": "distribution", "$ref": "MemoryBlock", "description": "An object describing all memory allocated by the process"},
+                    { "name": "graphMetaInformation", "type": "object", "optional": true, "description": "An object describing structures of nodes and edges in the graph."}
                 ]
             }
         ],
@@ -110,7 +111,7 @@
                     { "name": "loaderId", "$ref": "Network.LoaderId", "description": "Identifier of the loader associated with this frame." },
                     { "name": "name", "type": "string", "optional": true, "description": "Frame's name as specified in the tag." },
                     { "name": "url", "type": "string", "description": "Frame document's URL." },
-                    { "name": "securityOrigin", "type": "string", "optional": true, "description": "Frame document's security origin." },
+                    { "name": "securityOrigin", "type": "string", "description": "Frame document's security origin." },
                     { "name": "mimeType", "type": "string", "description": "Frame document's mimeType as determined by the browser." }
                 ],
                 "hidden": true
@@ -612,6 +613,7 @@
                     { "name": "name", "type": "string", "description": "Property name." },
 	                { "name": "type", "type": "string", "enum": ["object", "function", "undefined", "string", "number", "boolean"], "description": "Object type." },
 	                { "name": "value", "type": "string", "optional": true, "description": "User-friendly property value string." },
+	                { "name": "valuePreview", "$ref": "ObjectPreview", "optional": true, "description": "Nested value preview." },
 	                { "name": "subtype", "type": "string", "optional": true, "enum": ["array", "null", "node", "regexp", "date"], "description": "Object subtype hint. Specified for <code>object</code> type values only." }
                 ]
             },
@@ -769,7 +771,7 @@
                     { "name": "source", "type": "string", "enum": ["html", "wml", "xml", "javascript", "network", "console-api", "other"], "description": "Message source." },
                     { "name": "level", "type": "string", "enum": ["tip", "log", "warning", "error", "debug"], "description": "Message severity." },
                     { "name": "text", "type": "string", "description": "Message text." },
-                    { "name": "type", "type": "string", "optional": true, "enum": ["log", "dir", "dirxml", "trace", "clear", "startGroup", "startGroupCollapsed", "endGroup", "assert", "timing"], "description": "Console message type." },
+                    { "name": "type", "type": "string", "optional": true, "enum": ["log", "dir", "dirxml", "table", "trace", "clear", "startGroup", "startGroupCollapsed", "endGroup", "assert", "timing", "profile", "profileEnd"], "description": "Console message type." },
                     { "name": "url", "type": "string", "optional": true, "description": "URL of the message origin." },
                     { "name": "line", "type": "integer", "optional": true, "description": "Line number in the resource that generated this message." },
                     { "name": "repeatCount", "type": "integer", "optional": true, "description": "Repeat count for repeated messages." },
@@ -1281,15 +1283,6 @@
         "hidden": true,
         "types": [
             {
-                "id": "SecurityOriginWithDatabaseNames",
-                "type": "object",
-                "description": "Security origin with database names.",
-                "properties": [
-                    { "name": "securityOrigin", "type": "string", "description": "Security origin." },
-                    { "name": "databaseNames", "type": "array", "items": { "type": "string" }, "description": "Database names for this origin." }
-                ]
-            },
-            {
                 "id": "DatabaseWithObjectStores",
                 "type": "object",
                 "description": "Database with an array of object stores.",
@@ -1376,21 +1369,21 @@
                 "description": "Disables events from backend."
             },
             {
-                "name": "requestDatabaseNamesForFrame",
+                "name": "requestDatabaseNames",
                 "async": true,
                 "parameters": [
-                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Frame id." }
+                    { "name": "securityOrigin", "type": "string", "description": "Security origin." }
                 ],
                 "returns": [
-                    { "name": "securityOriginWithDatabaseNames", "$ref": "SecurityOriginWithDatabaseNames", "description": "Frame with database names." }
+                    { "name": "databaseNames", "type": "array", "items": { "type": "string" }, "description": "Database names for origin." }
                 ],
-                "description": "Requests database names for given frame's security origin."
+                "description": "Requests database names for given security origin."
             },
             {
                 "name": "requestDatabase",
                 "async": true,
                 "parameters": [
-                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Frame id." },
+                    { "name": "securityOrigin", "type": "string", "description": "Security origin." },
                     { "name": "databaseName", "type": "string", "description": "Database name." }
                 ],
                 "returns": [
@@ -1402,7 +1395,7 @@
                 "name": "requestData",
                 "async": true,
                 "parameters": [
-                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Frame id." },
+                    { "name": "securityOrigin", "type": "string", "description": "Security origin." },
                     { "name": "databaseName", "type": "string", "description": "Database name." },
                     { "name": "objectStoreName", "type": "string", "description": "Object store name." },
                     { "name": "indexName", "type": "string", "description": "Index name, empty string for object store data requests." },
@@ -1421,22 +1414,16 @@
     {
         "domain": "DOMStorage",
         "hidden": true,
+        "description": "Query and modify DOM storage.",
         "types": [
             {
                 "id": "StorageId",
-                "type": "string",
-                "description": "Unique identifier of DOM storage entry.",
-                "hidden": true
-            },
-            {
-                "id": "Entry",
                 "type": "object",
-                "description": "DOM Storage entry.",
+                "description": "DOM Storage identifier.",
                 "hidden": true,
                 "properties": [
-                    { "name": "origin", "type": "string", "description": "Document origin." },
-                    { "name": "isLocalStorage", "type": "boolean", "description": "True for local storage." },
-                    { "name": "id", "$ref": "StorageId", "description": "Entry id for further reference." }
+                    { "name": "securityOrigin", "type": "string", "description": "Security origin for the storage." },
+                    { "name": "isLocalStorage", "type": "boolean", "description": "Whether the storage is local storage (not session storage)." }
                 ]
             },
             {
@@ -1457,7 +1444,7 @@
                 "description": "Disables storage tracking, prevents storage events from being sent to the client."
             },
             {
-                "name": "getDOMStorageEntries",
+                "name": "getDOMStorageItems",
                 "parameters": [
                     { "name": "storageId", "$ref": "StorageId" }
                 ],
@@ -1471,9 +1458,6 @@
                     { "name": "storageId", "$ref": "StorageId" },
                     { "name": "key", "type": "string" },
                     { "name": "value", "type": "string" }
-                ],
-                "returns": [
-                    { "name": "success", "type": "boolean" }
                 ]
             },
             {
@@ -1481,19 +1465,10 @@
                 "parameters": [
                     { "name": "storageId", "$ref": "StorageId" },
                     { "name": "key", "type": "string" }
-                ],
-                "returns": [
-                    { "name": "success", "type": "boolean" }
                 ]
             }
         ],
         "events": [
-            {
-                "name": "addDOMStorage",
-                "parameters": [
-                    { "name": "storage", "$ref": "Entry" }
-                ]
-            },
             {
                 "name": "domStorageItemsCleared",
                 "parameters": [
@@ -2061,9 +2036,18 @@
             {
                 "name": "focus",
                 "parameters": [
-                    { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Id of the node to focus." }
+                    { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to focus." }
                 ],
                 "description": "Focuses the given element.",
+                "hidden": true
+            },
+            {
+                "name": "setFileInputFiles",
+                "parameters": [
+                    { "name": "nodeId", "$ref": "NodeId", "description": "Id of the file input node to set files for." },
+                    { "name": "files", "type": "array", "items": { "type": "string" }, "description": "Array of file paths to set." }
+                ],
+                "description": "Sets files for the given file input element.",
                 "hidden": true
             }
         ],
@@ -2331,7 +2315,7 @@
                     { "name": "implicit", "type": "boolean", "optional": true, "description": "Whether the property is implicit (implies <code>false</code> if absent)." },
                     { "name": "text", "type": "string", "optional": true, "description": "The full property text as specified in the style." },
                     { "name": "parsedOk", "type": "boolean", "optional": true, "description": "Whether the property is understood by the browser (implies <code>true</code> if absent)." },
-                    { "name": "status", "type": "string", "enum": ["active", "inactive", "disabled", "style"], "optional": true, "description": "The property status: \"active\" (implied if absent) if the property is effective in the style, \"inactive\" if the property is overridden by a same-named property in this style later on, \"disabled\" if the property is disabled by the user, \"style\" if the property is reported by the browser rather than by the CSS source parser." },
+                    { "name": "status", "type": "string", "enum": ["active", "inactive", "disabled", "style"], "optional": true, "description": "The property status: \"active\" if the property is effective in the style, \"inactive\" if the property is overridden by a same-named property in this style later on, \"disabled\" if the property is disabled by the user, \"style\" (implied if absent) if the property is reported by the browser rather than by the CSS source parser." },
                     { "name": "range", "$ref": "SourceRange", "optional": true, "description": "The entire property range in the enclosing style declaration (if available)." }
                 ],
                 "description": "CSS style effective visual dimensions and source offsets."
@@ -2829,6 +2813,7 @@
                 "type": "object",
                 "properties": [
                     { "name": "type", "type": "string", "description": "Event type." },
+                    { "name": "thread", "type": "string", "optional": true, "description": "If present, identifies the thread that produced the event." },
                     { "name": "data", "type": "object", "description": "Event data." },
                     { "name": "children", "type": "array", "optional": true, "items": { "$ref": "TimelineEvent" }, "description": "Nested records." }
                 ],
@@ -2848,12 +2833,20 @@
                 "description": "Stops capturing instrumentation events."
             },
             {
-                "name": "setIncludeMemoryDetails",
+                "name": "setIncludeDomCounters",
                 "parameters": [
-                    { "name": "enabled", "type": "boolean", "description": "True to start collecting DOM counters." }
+                    { "name": "enabled", "type": "boolean", "description": "Whether DOM counters data should be included into timeline events." }
                 ],
                 "hidden": true,
-                "description": "Starts calculating various DOM statistics and sending them as part of timeline events."
+                "description": "Controls if DOM counters should be send as part of timeline events."
+            },
+            {
+                "name": "setIncludeNativeMemoryStatistics",
+                "parameters": [
+                    { "name": "enabled", "type": "boolean", "description": "Whether native memory usage statistics should be reported as part of timeline events." }
+                ],
+                "hidden": true,
+                "description": "Controls whether statistics on native memory usage is sent with timeline events."
             },
             {
                 "name": "supportsFrameInstrumentation",
@@ -3168,11 +3161,11 @@
             {
                 "name": "setVariableValue",
                 "parameters": [
-                    { "name": "callFrameId", "$ref": "CallFrameId", "optional": true, "description": "Id of callframe that holds variable." },
-                    { "name": "functionObjectId", "$ref": "Runtime.RemoteObjectId", "optional": true, "description": "Object id of closure (function) that holds variable." },
                     { "name": "scopeNumber", "type": "integer", "description": "0-based number of scope as was listed in scope chain. Only 'local', 'closure' and 'catch' scope types are allowed. Other scopes could be manipulated manually." },
                     { "name": "variableName", "type": "string", "description": "Variable name." },
-                    { "name": "newValue", "$ref": "Runtime.CallArgument", "description": "New variable value." }
+                    { "name": "newValue", "$ref": "Runtime.CallArgument", "description": "New variable value." },
+                    { "name": "callFrameId", "$ref": "CallFrameId", "optional": true, "description": "Id of callframe that holds variable." },
+                    { "name": "functionObjectId", "$ref": "Runtime.RemoteObjectId", "optional": true, "description": "Object id of closure (function) that holds variable." }
                 ],
                 "hidden": true,
                 "description": "Changes value of variable in a callframe or a closure. Either callframe or function must be specified. Object-based scopes are not supported and must be mutated manually."
@@ -3697,6 +3690,7 @@
                     { "name": "arguments", "type": "array", "items": { "$ref": "CallArgument" }, "optional": true },
                     { "name": "result", "$ref": "CallArgument", "optional": true },
                     { "name": "isDrawingCall", "type": "boolean", "optional": true },
+                    { "name": "isFrameEndCall", "type": "boolean", "optional": true },
                     { "name": "property", "type": "string", "optional": true },
                     { "name": "value", "$ref": "CallArgument", "optional": true },
                     { "name": "sourceURL", "type": "string", "optional": true },

@@ -33,13 +33,14 @@
 #include "IDBKeyPath.h"
 #include "IDBTracing.h"
 #include "SerializedScriptValue.h"
+#include "SharedBuffer.h"
 #include "V8Binding.h"
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-static v8::Handle<v8::Value> idbKeyToV8Value(IDBKey* key, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
+static v8::Handle<v8::Value> idbKeyToV8Value(IDBKey* key, v8::Isolate* isolate)
 {
     if (!key) {
         // This should be undefined, not null.
@@ -62,7 +63,7 @@ static v8::Handle<v8::Value> idbKeyToV8Value(IDBKey* key, v8::Handle<v8::Object>
         {
             v8::Local<v8::Array> array = v8::Array::New(key->array().size());
             for (size_t i = 0; i < key->array().size(); ++i)
-                array->Set(i, idbKeyToV8Value(key->array()[i].get(), creationContext, isolate));
+                array->Set(i, idbKeyToV8Value(key->array()[i].get(), isolate));
             return array;
         }
     }
@@ -75,11 +76,11 @@ static const size_t maximumDepth = 2000;
 
 static PassRefPtr<IDBKey> createIDBKeyFromValue(v8::Handle<v8::Value> value, Vector<v8::Handle<v8::Array> >& stack)
 {
-    if (value->IsNumber() && !isnan(value->NumberValue()))
+    if (value->IsNumber() && !std::isnan(value->NumberValue()))
         return IDBKey::createNumber(value->NumberValue());
     if (value->IsString())
         return IDBKey::createString(toWebCoreString(value));
-    if (value->IsDate() && !isnan(value->NumberValue()))
+    if (value->IsDate() && !std::isnan(value->NumberValue()))
         return IDBKey::createDate(value->NumberValue());
     if (value->IsArray()) {
         v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(value);
@@ -254,6 +255,21 @@ ScriptValue deserializeIDBValue(DOMRequestState*, PassRefPtr<SerializedScriptVal
     return ScriptValue(v8::Null());
 }
 
+ScriptValue deserializeIDBValueBuffer(DOMRequestState*, PassRefPtr<SharedBuffer> prpBuffer)
+{
+    ASSERT(v8::Context::InContext());
+    v8::HandleScope handleScope;
+    RefPtr<SharedBuffer> buffer = prpBuffer;
+    if (buffer) {
+        // FIXME: The extra copy here can be eliminated by allowing SerializedScriptValue to take a raw const char* or const uint8_t*.
+        Vector<uint8_t> value;
+        value.append(buffer->data(), buffer->size());
+        RefPtr<SerializedScriptValue> serializedValue = SerializedScriptValue::createFromWireBytes(value);
+        return ScriptValue(serializedValue->deserialize());
+    }
+    return ScriptValue(v8::Null());
+}
+
 bool injectIDBKeyIntoScriptValue(DOMRequestState* state, PassRefPtr<IDBKey> key, ScriptValue& value, const IDBKeyPath& keyPath)
 {
     IDB_TRACE("injectIDBKeyIntoScriptValue");
@@ -275,7 +291,7 @@ bool injectIDBKeyIntoScriptValue(DOMRequestState* state, PassRefPtr<IDBKey> key,
     if (parent.IsEmpty())
         return false;
 
-    if (!set(parent, keyPathElements.last(), idbKeyToV8Value(key.get(), v8::Handle<v8::Object>(), isolate), isolate))
+    if (!set(parent, keyPathElements.last(), idbKeyToV8Value(key.get(), isolate), isolate))
         return false;
 
     return true;
@@ -301,7 +317,7 @@ ScriptValue idbKeyToScriptValue(DOMRequestState* state, PassRefPtr<IDBKey> key)
 {
     ASSERT(v8::Context::InContext());
     v8::HandleScope handleScope;
-    v8::Handle<v8::Value> v8Value(idbKeyToV8Value(key.get(), v8::Handle<v8::Object>(), state->context()->GetIsolate()));
+    v8::Handle<v8::Value> v8Value(idbKeyToV8Value(key.get(), state->context()->GetIsolate()));
     return ScriptValue(v8Value);
 }
 

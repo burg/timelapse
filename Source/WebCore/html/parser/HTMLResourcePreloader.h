@@ -37,23 +37,25 @@ public:
     {
         return adoptPtr(new PreloadRequest(initiator, resourceURL, baseURL, resourceType));
     }
+
     bool isSafeToSendToAnotherThread() const;
 
     CachedResourceRequest resourceRequest(Document*);
 
     const String& charset() const { return m_charset; }
-    void setCharset(const String& charset) { m_charset = charset; }
+    void setCharset(const String& charset) { m_charset = charset.isolatedCopy(); }
     void setCrossOriginModeAllowsCookies(bool allowsCookies) { m_crossOriginModeAllowsCookies = allowsCookies; }
     CachedResource::Type resourceType() const { return m_resourceType; }
 
 private:
     PreloadRequest(const String& initiator, const String& resourceURL, const KURL& baseURL, CachedResource::Type resourceType)
         : m_initiator(initiator)
-        , m_resourceURL(resourceURL)
-        , m_baseURL(baseURL)
+        , m_resourceURL(resourceURL.isolatedCopy())
+        , m_baseURL(baseURL.copy())
         , m_resourceType(resourceType)
         , m_crossOriginModeAllowsCookies(false)
-    { }
+    {
+    }
 
     KURL completeURL(Document*);
 
@@ -65,14 +67,18 @@ private:
     bool m_crossOriginModeAllowsCookies;
 };
 
+typedef Vector<OwnPtr<PreloadRequest> > PreloadRequestStream;
+
 class HTMLResourcePreloader {
     WTF_MAKE_NONCOPYABLE(HTMLResourcePreloader); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit HTMLResourcePreloader(Document* document)
         : m_document(document)
         , m_weakFactory(this)
-    { }
+    {
+    }
 
+    void takeAndPreload(PreloadRequestStream&);
     void preload(PassOwnPtr<PreloadRequest>);
 
     WeakPtr<HTMLResourcePreloader> createWeakPtr() { return m_weakFactory.createWeakPtr(); }

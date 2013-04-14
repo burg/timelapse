@@ -84,7 +84,8 @@ modules = [
             "HAREntry.js",
             "IndexedDBModel.js",
             "InspectorBackend.js",
-            "IsolatedFileSystemModel.js",
+            "IsolatedFileSystemManager.js",
+            "IsolatedFileSystem.js",
             "Linkifier.js",
             "NetworkLog.js",
             "NetworkUISourceCodeProvider.js",
@@ -126,6 +127,7 @@ modules = [
             "DataGrid.js",
             "DefaultTextEditor.js",
             "Dialog.js",
+            "DockController.js",
             "Drawer.js",
             "EmptyView.js",
             "GoToLineDialog.js",
@@ -277,6 +279,7 @@ modules = [
         "name": "timeline",
         "dependencies": ["components"],
         "sources": [
+            "DOMCountersGraph.js",
             "MemoryStatistics.js",
             "NativeMemoryGraph.js",
             "TimelineModel.js",
@@ -292,6 +295,7 @@ modules = [
         "dependencies": ["components"],
         "sources": [
             "AuditCategories.js",
+            "AuditController.js",
             "AuditFormatters.js",
             "AuditLauncherView.js",
             "AuditResultView.js",
@@ -328,7 +332,7 @@ modules = [
     },
     {
         "name": "profiler",
-        "dependencies": ["components"],
+        "dependencies": ["components", "workers"],
         "sources": [
             "BottomUpProfileDataGridTree.js",
             "CPUProfileView.js",
@@ -346,6 +350,7 @@ modules = [
             "NativeMemorySnapshotView.js",
             "ProfileDataGridTree.js",
             "ProfilesPanel.js",
+            "ProfilesPanelDescriptor.js",
             "ProfileLauncherView.js",
             "TopDownProfileDataGridTree.js",
             "CanvasProfileView.js",
@@ -353,19 +358,12 @@ modules = [
     },
     {
         "name": "host_stub",
-        "dependencies": ["ui"],
+        "dependencies": ["components", "profiler", "timeline"],
         "sources": [
             "InspectorFrontendAPI.js",
             "InspectorFrontendHostStub.js",
         ]
-    },
-    {
-        "name": "inspector",
-        "dependencies": ["components"],
-        "sources": [
-            "DockController.js",
-        ]
-    },
+    }
 ]
 
 modules_by_name = {}

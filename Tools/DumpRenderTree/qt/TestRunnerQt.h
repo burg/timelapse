@@ -53,12 +53,12 @@ namespace WebCore {
 class DumpRenderTree;
 }
 
-class TestRunner : public QObject {
+class TestRunnerQt : public QObject {
     Q_OBJECT
     Q_PROPERTY(int webHistoryItemCount READ webHistoryItemCount)
     Q_PROPERTY(bool globalFlag READ globalFlag WRITE setGlobalFlag)
 public:
-    TestRunner(WebCore::DumpRenderTree*);
+    TestRunnerQt(WebCore::DumpRenderTree*);
 
     bool shouldDisallowIncreaseForApplicationCacheQuota() const { return m_disallowIncreaseForApplicationCacheQuota; }
     bool shouldDumpAsText() const { return m_textDump; }
@@ -162,7 +162,6 @@ public Q_SLOTS:
     void setAllowUniversalAccessFromFileURLs(bool enable);
     void setAllowFileAccessFromFileURLs(bool enable);
     void setAppCacheMaximumSize(unsigned long long quota);
-    void setAutofilled(const QWebElement&, bool enable);
     void setValueForUser(const QWebElement&, const QString& value);
     void setFixedContentsSize(int width, int height);
     void setPrivateBrowsingEnabled(bool);

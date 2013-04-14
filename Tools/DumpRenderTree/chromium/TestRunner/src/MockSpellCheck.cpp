@@ -122,6 +122,11 @@ bool MockSpellCheck::spellCheckWord(const WebString& text, int* misspelledOffset
     return false;
 }
 
+bool MockSpellCheck::hasInCache(const WebString& word)
+{
+    return word == WebString::fromUTF8("Spell wellcome. Is it broken?") || word == WebString::fromUTF8("Spell wellcome.\x007F");
+}
+
 void MockSpellCheck::fillSuggestionList(const WebString& word, WebVector<WebString>* suggestions)
 {
     if (word == WebString::fromUTF8("wellcome"))

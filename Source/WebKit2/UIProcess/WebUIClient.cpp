@@ -175,18 +175,20 @@ void WebUIClient::mouseDidMoveOverElement(WebPageProxy* page, const WebHitTestRe
     m_client.mouseDidMoveOverElement(toAPI(page), toAPI(webHitTestResult.get()), toAPI(modifiers), toAPI(userData), m_client.clientInfo);
 }
 
-void WebUIClient::unavailablePluginButtonClicked(WebPageProxy* page, WKPluginUnavailabilityReason pluginUnavailabilityReason, const String& mimeType, const String& url, const String& pluginsPageURL)
+void WebUIClient::unavailablePluginButtonClicked(WebPageProxy* page, WKPluginUnavailabilityReason pluginUnavailabilityReason, const String& mimeType, const String& pluginBundleIdentifier, const String& pluginBundleVersion, const String& displayName, const String& pluginURLString, const String& pluginspageAttributeURLString, const String& frameURLString, const String& pageURLString)
 {
     if (pluginUnavailabilityReason == kWKPluginUnavailabilityReasonPluginMissing) {
         if (m_client.missingPluginButtonClicked_deprecatedForUseWithV0)
-            m_client.missingPluginButtonClicked_deprecatedForUseWithV0(toAPI(page), toAPI(mimeType.impl()), toAPI(url.impl()), toAPI(pluginsPageURL.impl()), m_client.clientInfo);
+            m_client.missingPluginButtonClicked_deprecatedForUseWithV0(toAPI(page), toAPI(mimeType.impl()), toAPI(pluginURLString.impl()), toAPI(pluginspageAttributeURLString.impl()), m_client.clientInfo);
     }
 
-    if (!m_client.unavailablePluginButtonClicked)
-        return;
+    if (m_client.unavailablePluginButtonClicked_deprecatedForUseWithV1)
+        m_client.unavailablePluginButtonClicked_deprecatedForUseWithV1(toAPI(page), pluginUnavailabilityReason, toAPI(mimeType.impl()), toAPI(pluginURLString.impl()), toAPI(pluginspageAttributeURLString.impl()), m_client.clientInfo);
 
-    m_client.unavailablePluginButtonClicked(toAPI(page), pluginUnavailabilityReason, toAPI(mimeType.impl()), toAPI(url.impl()), toAPI(pluginsPageURL.impl()), m_client.clientInfo);
-
+    if (m_client.unavailablePluginButtonClicked) {
+        RefPtr<ImmutableDictionary> pluginInformation = WebPageProxy::pluginInformationDictionary(pluginBundleIdentifier, pluginBundleVersion, displayName, frameURLString, mimeType, pageURLString, pluginspageAttributeURLString, pluginURLString);
+        m_client.unavailablePluginButtonClicked(toAPI(page), pluginUnavailabilityReason, toAPI(pluginInformation.get()), m_client.clientInfo);
+    }
 }
 
 bool WebUIClient::implementsDidNotHandleKeyEvent() const
@@ -437,43 +439,5 @@ bool WebUIClient::hideColorPicker(WebPageProxy* page)
     return true;
 }
 #endif
-
-static inline WKPluginLoadPolicy toWKPluginLoadPolicy(PluginModuleLoadPolicy pluginModuleLoadPolicy)
-{
-    switch (pluginModuleLoadPolicy) {
-    case PluginModuleLoadNormally:
-        return kWKPluginLoadPolicyLoadNormally;
-    case PluginModuleBlocked:
-        return kWKPluginLoadPolicyBlocked;
-    case PluginModuleInactive:
-        return kWKPluginLoadPolicyInactive;
-    }
-
-    ASSERT_NOT_REACHED();
-    return kWKPluginLoadPolicyBlocked;
-}
-
-static inline PluginModuleLoadPolicy toPluginModuleLoadPolicy(WKPluginLoadPolicy pluginLoadPolicy)
-{
-    switch (pluginLoadPolicy) {
-    case kWKPluginLoadPolicyLoadNormally:
-        return PluginModuleLoadNormally;
-    case kWKPluginLoadPolicyBlocked:
-        return PluginModuleBlocked;
-    case kWKPluginLoadPolicyInactive:
-        return PluginModuleInactive;
-    }
-
-    ASSERT_NOT_REACHED();
-    return PluginModuleBlocked;
-}
-
-PluginModuleLoadPolicy WebUIClient::pluginLoadPolicy(WebPageProxy* page, const String& identifier, const String& displayName, const String& documentURLString, PluginModuleLoadPolicy currentPluginLoadPolicy)
-{
-    if (!m_client.pluginLoadPolicy)
-        return currentPluginLoadPolicy;
-
-    return toPluginModuleLoadPolicy(m_client.pluginLoadPolicy(toAPI(page), toAPI(identifier.impl()), toAPI(displayName.impl()), toURLRef(documentURLString.impl()), toWKPluginLoadPolicy(currentPluginLoadPolicy), m_client.clientInfo));
-}
 
 } // namespace WebKit

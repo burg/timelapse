@@ -548,25 +548,12 @@
 #define WTF_USE_PLUGIN_HOST_PROCESS 1
 #endif
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-#define ENABLE_GESTURE_EVENTS 1
-#define ENABLE_RUBBER_BANDING 1
 #define WTF_USE_SCROLLBAR_PAINTER 1
 #define HAVE_XPC 1
-#endif
-#if !defined(ENABLE_DASHBOARD_SUPPORT)
-#define ENABLE_DASHBOARD_SUPPORT 1
 #endif
 #define WTF_USE_CF 1
 #define HAVE_READLINE 1
 #define HAVE_RUNLOOP_TIMER 1
-#define ENABLE_FULLSCREEN_API 1
-#define ENABLE_SMOOTH_SCROLLING 1
-#define ENABLE_WEB_ARCHIVE 1
-#define ENABLE_WEB_AUDIO 1
-#define ENABLE_DELETION_UI 1
-#if defined(ENABLE_VIDEO)
-#define ENABLE_VIDEO_TRACK 1
-#endif
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 #define HAVE_LAYER_HOSTING_IN_WINDOW_SERVER 1
 #endif
@@ -604,18 +591,6 @@
 #endif
 
 #if PLATFORM(IOS)
-#define ENABLE_CONTEXT_MENUS 0
-#define ENABLE_DASHBOARD_SUPPORT 0
-#define ENABLE_DELETION_UI 0
-#define ENABLE_DRAG_SUPPORT 0
-#define ENABLE_GEOLOCATION 1
-#define ENABLE_ICONDATABASE 0
-#define ENABLE_INSPECTOR 1
-#define ENABLE_NETSCAPE_PLUGIN_API 0
-#define ENABLE_ORIENTATION_EVENTS 1
-#define ENABLE_REPAINT_THROTTLING 1
-#define ENABLE_WEB_ARCHIVE 1
-#define ENABLE_WEBGL 1
 #define HAVE_READLINE 1
 #define WTF_USE_APPKIT 0
 #define WTF_USE_CF 1
@@ -637,14 +612,6 @@
 #define WTF_USE_CFURLCACHE 1
 #endif
 
-#if PLATFORM(WIN) && !OS(WINCE)
-#define ENABLE_WEB_ARCHIVE 1
-#endif
-
-#if PLATFORM(WIN) && !OS(WINCE) && !PLATFORM(WIN_CAIRO)
-#define ENABLE_FULLSCREEN_API 1
-#endif
-
 #if PLATFORM(WX)
 #if !CPU(PPC)
 #if !defined(ENABLE_ASSEMBLER)
@@ -656,7 +623,6 @@
 #define ENABLE_LLINT 0
 #if OS(DARWIN)
 #define WTF_USE_CF 1
-#define ENABLE_WEB_ARCHIVE 1
 #endif
 #endif
 
@@ -697,9 +663,7 @@
 #endif
 #endif
 
-#if !OS(WINDOWS) && !OS(SOLARIS) \
-    && !OS(RVCT) \
-    && !OS(ANDROID)
+#if !OS(WINDOWS) && !OS(SOLARIS) && !OS(ANDROID)
 #define HAVE_TM_GMTOFF 1
 #define HAVE_TM_ZONE 1
 #define HAVE_TIMEGM 1
@@ -744,6 +708,11 @@
 
 /* ENABLE macro defaults */
 
+/* FIXME: move out all ENABLE() defines from here to FeatureDefines.h */
+
+/* Include feature macros */
+#include <wtf/FeatureDefines.h>
+
 #if PLATFORM(QT)
 /* We must not customize the global operator new and delete for the Qt port. */
 #define ENABLE_GLOBAL_FASTMALLOC_NEW 0
@@ -752,68 +721,8 @@
 #endif
 #endif
 
-#if !defined(ENABLE_ICONDATABASE)
-#define ENABLE_ICONDATABASE 1
-#endif
-
-#if !defined(ENABLE_SQL_DATABASE)
-#define ENABLE_SQL_DATABASE 1
-#endif
-
-#if !defined(ENABLE_JAVASCRIPT_DEBUGGER)
-#define ENABLE_JAVASCRIPT_DEBUGGER 1
-#endif
-
-#if !defined(ENABLE_FTPDIR)
-#define ENABLE_FTPDIR 1
-#endif
-
-#if !defined(ENABLE_CONTEXT_MENUS)
-#define ENABLE_CONTEXT_MENUS 1
-#endif
-
-#if !defined(ENABLE_DRAG_SUPPORT)
-#define ENABLE_DRAG_SUPPORT 1
-#endif
-
-#if !defined(ENABLE_INSPECTOR)
-#define ENABLE_INSPECTOR 1
-#endif
-
-#if !defined(ENABLE_DELETION_UI)
-#define ENABLE_DELETION_UI 0
-#endif
-
-#if !defined(ENABLE_NETSCAPE_PLUGIN_API)
-#define ENABLE_NETSCAPE_PLUGIN_API 1
-#endif
-
 #if !defined(ENABLE_GLOBAL_FASTMALLOC_NEW)
 #define ENABLE_GLOBAL_FASTMALLOC_NEW 1
-#endif
-
-#if !defined(ENABLE_PARSED_STYLE_SHEET_CACHING)
-#define ENABLE_PARSED_STYLE_SHEET_CACHING 1
-#endif
-
-#if !defined(ENABLE_SUBPIXEL_LAYOUT)
-#if PLATFORM(CHROMIUM) || PLATFORM(EFL)
-#define ENABLE_SUBPIXEL_LAYOUT 1
-#else
-#define ENABLE_SUBPIXEL_LAYOUT 0
-#endif
-#endif
-
-#if !defined(ENABLE_SATURATED_LAYOUT_ARITHMETIC)
-#define ENABLE_SATURATED_LAYOUT_ARITHMETIC 0
-#endif
-
-#if ENABLE(ENABLE_SATURATED_LAYOUT_ARITHMETIC) && !ENABLE(ENABLE_SUBPIXEL_LAYOUT)
-#error "ENABLE_SATURATED_LAYOUT_ARITHMETIC requires ENABLE_SUBPIXEL_LAYOUT"
-#endif
-
-#if ENABLE(INPUT_TYPE_DATE) || ENABLE(INPUT_TYPE_DATETIME) || ENABLE(INPUT_TYPE_DATETIMELOCAL) || ENABLE(INPUT_TYPE_MONTH) || ENABLE(INPUT_TYPE_TIME) || ENABLE(INPUT_TYPE_WEEK)
-#define ENABLE_DATE_AND_TIME_INPUT_TYPES 1
 #endif
 
 #define ENABLE_DEBUG_WITH_BREAKPOINT 0
@@ -827,10 +736,6 @@
 #endif
 #if ENABLE(OPCODE_SAMPLING) || ENABLE(SAMPLING_FLAGS) || ENABLE(SAMPLING_REGIONS)
 #define ENABLE_SAMPLING_THREAD 1
-#endif
-
-#if !defined(ENABLE_TEXT_CARET) && !PLATFORM(IOS)
-#define ENABLE_TEXT_CARET 1
 #endif
 
 #if !defined(ENABLE_TIMELAPSE)
@@ -853,12 +758,6 @@
 /* Disable the JIT on versions of GCC prior to 4.1 */
 #if !defined(ENABLE_JIT) && COMPILER(GCC) && !GCC_VERSION_AT_LEAST(4, 1, 0)
 #define ENABLE_JIT 0
-#endif
-
-/* JIT is not implemented for Windows 64-bit */
-#if !defined(ENABLE_JIT) && OS(WINDOWS) && CPU(X86_64)
-#define ENABLE_JIT 0
-#define ENABLE_YARR_JIT 0
 #endif
 
 #if !defined(ENABLE_JIT) && CPU(SH4) && PLATFORM(QT)
@@ -917,6 +816,10 @@
 #if CPU(ARM_TRADITIONAL)
 #define ENABLE_DFG_JIT 1
 #endif
+/* Enable the DFG JIT on MIPS. */
+#if CPU(MIPS)
+#define ENABLE_DFG_JIT 1
+#endif
 #endif
 
 /* If the jit is not available, enable the LLInt C Loop: */
@@ -967,7 +870,7 @@
 #endif
 
 /* Configure the interpreter */
-#if COMPILER(GCC) || (RVCT_VERSION_AT_LEAST(4, 0, 0, 0) && defined(__GNUC__))
+#if COMPILER(GCC) || (COMPILER(RVCT) && defined(__GNUC__))
 #define HAVE_COMPUTED_GOTO 1
 #endif
 
@@ -1001,20 +904,11 @@
 /* Pick which allocator to use; we only need an executable allocator if the assembler is compiled in.
    On x86-64 we use a single fixed mmap, on other platforms we mmap on demand. */
 #if ENABLE(ASSEMBLER)
-#if CPU(X86_64) || PLATFORM(IOS)
+#if CPU(X86_64) && !OS(WINDOWS) || PLATFORM(IOS)
 #define ENABLE_EXECUTABLE_ALLOCATOR_FIXED 1
 #else
 #define ENABLE_EXECUTABLE_ALLOCATOR_DEMAND 1
 #endif
-#endif
-
-#if !defined(ENABLE_PAN_SCROLLING) && OS(WINDOWS)
-#define ENABLE_PAN_SCROLLING 1
-#endif
-
-/*Add other platforms as they update their platfrom specific code to handle TextRun's with 8 bit data. */
-#if PLATFORM(MAC)
-#define ENABLE_8BIT_TEXTRUN 1
 #endif
 
 /* Use the QXmlStreamReader implementation for XMLDocumentParser */
@@ -1029,10 +923,6 @@
 /* Accelerated compositing */
 #if PLATFORM(MAC) || PLATFORM(IOS) || PLATFORM(QT) || (PLATFORM(WIN) && !OS(WINCE) && !PLATFORM(WIN_CAIRO))
 #define WTF_USE_ACCELERATED_COMPOSITING 1
-#endif
-
-#if PLATFORM(MAC) || PLATFORM(IOS)
-#define ENABLE_CSS_IMAGE_SET 1
 #endif
 
 #if ENABLE(WEBGL) && !defined(WTF_USE_3D_GRAPHICS)
@@ -1055,14 +945,6 @@
 
 #if PLATFORM(MAC) || PLATFORM(IOS)
 #define WTF_USE_PROTECTION_SPACE_AUTH_CALLBACK 1
-#endif
-
-#if !ENABLE(NETSCAPE_PLUGIN_API) || (ENABLE(NETSCAPE_PLUGIN_API) && ((OS(UNIX) && (PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(WX))) || PLATFORM(EFL)))
-#define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 1
-#endif
-
-#if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-#define ENABLE_THREADED_SCROLLING 1
 #endif
 
 /* Set up a define for a common error that is intended to cause a build error -- thus the space after Error. */
@@ -1140,7 +1022,6 @@
 
 #if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 #define HAVE_AVFOUNDATION_TEXT_TRACK_SUPPORT 1
-#define ENABLE_ENCRYPTED_MEDIA_V2 1
 #endif
 
 #if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || (PLATFORM(WIN) && !OS(WINCE) && !PLATFORM(WIN_CAIRO)) || PLATFORM(BLACKBERRY)
@@ -1166,10 +1047,6 @@
 /* Not using V8 implies using JSC and vice versa */
 #if !USE(V8)
 #define WTF_USE_JSC 1
-#endif
-
-#if ENABLE(NOTIFICATIONS) && PLATFORM(MAC)
-#define ENABLE_TEXT_NOTIFICATIONS_ONLY 1
 #endif
 
 #if !defined(WTF_USE_ZLIB) && !PLATFORM(QT)

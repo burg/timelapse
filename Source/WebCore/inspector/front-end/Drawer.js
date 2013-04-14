@@ -91,6 +91,7 @@ WebInspector.Drawer.prototype = {
         document.body.addStyleClass("drawer-visible");
         this._floatingStatusBarContainer.insertBefore(document.getElementById("panel-status-bar"), this._floatingStatusBarContainer.firstElementChild);
         this._bottomStatusBar.appendChild(this._viewStatusBar);
+        this._view.detach();
         this._view.markAsRoot();
         this._view.show(this._drawerContentsElement);
 

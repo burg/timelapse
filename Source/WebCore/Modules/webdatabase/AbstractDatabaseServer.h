@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-class DatabaseBackend;
+class DatabaseBackendBase;
 class DatabaseBackendContext;
 class DatabaseManagerClient;
 class SecurityOrigin;
@@ -57,7 +57,9 @@ public:
         RetryOpenDatabase
     };
 
-    virtual PassRefPtr<DatabaseBackend> openDatabase(RefPtr<DatabaseBackendContext>&, DatabaseType, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage, OpenAttempt = FirstTryToOpenDatabase) = 0;
+    virtual PassRefPtr<DatabaseBackendBase> openDatabase(RefPtr<DatabaseBackendContext>&, DatabaseType,
+        const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize,
+        bool setVersionInNewDatabase, DatabaseError&, String& errorMessage, OpenAttempt = FirstTryToOpenDatabase) = 0;
 
 #if !PLATFORM(CHROMIUM)
     virtual bool hasEntryForOrigin(SecurityOrigin*) = 0;
@@ -74,17 +76,11 @@ public:
     virtual bool deleteOrigin(SecurityOrigin*) = 0;
     virtual bool deleteDatabase(SecurityOrigin*, const String& name) = 0;
 
-    // From a secondary thread, must be thread safe with its data
-    virtual void scheduleNotifyDatabaseChanged(SecurityOrigin*, const String& name) = 0;
-    virtual void databaseChanged(DatabaseBackend*) = 0;
-
 #else // PLATFORM(CHROMIUM)
     virtual void closeDatabasesImmediately(const String& originIdentifier, const String& name) = 0;
 #endif // PLATFORM(CHROMIUM)
 
     virtual void interruptAllDatabasesForContext(const DatabaseBackendContext*) = 0;
-
-    virtual unsigned long long getMaxSizeForDatabase(const DatabaseBackend*) = 0;
 
 protected:
     AbstractDatabaseServer() { }

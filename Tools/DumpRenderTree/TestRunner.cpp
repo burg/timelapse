@@ -866,7 +866,7 @@ static JSValueRef setAppCacheMaximumSizeCallback(JSContextRef context, JSObjectR
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
 
     double size = JSValueToNumber(context, arguments[0], NULL);
-    if (!isnan(size))
+    if (!std::isnan(size))
         controller->setAppCacheMaximumSize(static_cast<unsigned long long>(size));
         
     return JSValueMakeUndefined(context);
@@ -881,7 +881,7 @@ static JSValueRef setApplicationCacheOriginQuotaCallback(JSContextRef context, J
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
 
     double size = JSValueToNumber(context, arguments[0], NULL);
-    if (!isnan(size))
+    if (!std::isnan(size))
         controller->setApplicationCacheOriginQuota(static_cast<unsigned long long>(size));
 
     return JSValueMakeUndefined(context);
@@ -939,17 +939,6 @@ static JSValueRef setAuthorAndUserStylesEnabledCallback(JSContextRef context, JS
     return JSValueMakeUndefined(context);
 }
 
-static JSValueRef setAutofilledCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (argumentCount != 2 || !arguments[0])
-        return JSValueMakeUndefined(context);
-
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setAutofilled(context, arguments[0], JSValueToBoolean(context, arguments[1]));
-
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef setCacheModelCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     // Has Mac implementation.
@@ -990,7 +979,7 @@ static JSValueRef setDatabaseQuotaCallback(JSContextRef context, JSObjectRef fun
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
 
     double quota = JSValueToNumber(context, arguments[0], NULL);
-    if (!isnan(quota))
+    if (!std::isnan(quota))
         controller->setDatabaseQuota(static_cast<unsigned long long>(quota));
         
     return JSValueMakeUndefined(context);
@@ -2153,7 +2142,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setAuthenticationPassword", setAuthenticationPasswordCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAuthenticationUsername", setAuthenticationUsernameCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAuthorAndUserStylesEnabled", setAuthorAndUserStylesEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setAutofilled", setAutofilledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setCacheModel", setCacheModelCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setCallCloseOnWebViews", setCallCloseOnWebViewsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setCanOpenWindows", setCanOpenWindowsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },

@@ -46,6 +46,15 @@ extern "C" { extern void* _ZTVN7WebCore15TestEventTargetE[]; }
 namespace WebCore {
 
 #if ENABLE(BINDING_INTEGRITY)
+// This checks if a DOM object that is about to be wrapped is valid.
+// Specifically, it checks that a vtable of the DOM object is equal to
+// a vtable of an expected class.
+// Due to a dangling pointer, the DOM object you are wrapping might be
+// already freed or realloced. If freed, the check will fail because
+// a free list pointer should be stored at the head of the DOM object.
+// If realloced, the check will fail because the vtable of the DOM object
+// differs from the expected vtable (unless the same class of DOM object
+// is realloced on the slot).
 inline void checkTypeOrDieTrying(TestEventTarget* object)
 {
     void* actualVTablePointer = *(reinterpret_cast<void**>(object));
@@ -65,14 +74,14 @@ namespace TestEventTargetV8Internal {
 
 template <typename T> void V8_USE(T) { }
 
-static v8::Handle<v8::Value> itemCallback(const v8::Arguments& args)
+static v8::Handle<v8::Value> itemMethod(const v8::Arguments& args)
 {
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestEventTarget* imp = V8TestEventTarget::toNative(args.Holder());
     ExceptionCode ec = 0;
     {
-    V8TRYCATCH(int, index, toUInt32(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(int, index, toUInt32(args[0]));
     if (UNLIKELY(index < 0)) {
         ec = INDEX_SIZE_ERR;
         goto fail;
@@ -83,7 +92,12 @@ static v8::Handle<v8::Value> itemCallback(const v8::Arguments& args)
     return setDOMException(ec, args.GetIsolate());
 }
 
-static v8::Handle<v8::Value> addEventListenerCallback(const v8::Arguments& args)
+static v8::Handle<v8::Value> itemMethodCallback(const v8::Arguments& args)
+{
+    return TestEventTargetV8Internal::itemMethod(args);
+}
+
+static v8::Handle<v8::Value> addEventListenerMethod(const v8::Arguments& args)
 {
     RefPtr<EventListener> listener = V8EventListenerList::getEventListener(args[1], false, ListenerFindOrCreate);
     if (listener) {
@@ -94,7 +108,12 @@ static v8::Handle<v8::Value> addEventListenerCallback(const v8::Arguments& args)
     return v8Undefined();
 }
 
-static v8::Handle<v8::Value> removeEventListenerCallback(const v8::Arguments& args)
+static v8::Handle<v8::Value> addEventListenerMethodCallback(const v8::Arguments& args)
+{
+    return TestEventTargetV8Internal::addEventListenerMethod(args);
+}
+
+static v8::Handle<v8::Value> removeEventListenerMethod(const v8::Arguments& args)
 {
     RefPtr<EventListener> listener = V8EventListenerList::getEventListener(args[1], false, ListenerFindOnly);
     if (listener) {
@@ -105,14 +124,19 @@ static v8::Handle<v8::Value> removeEventListenerCallback(const v8::Arguments& ar
     return v8Undefined();
 }
 
-static v8::Handle<v8::Value> dispatchEventCallback(const v8::Arguments& args)
+static v8::Handle<v8::Value> removeEventListenerMethodCallback(const v8::Arguments& args)
+{
+    return TestEventTargetV8Internal::removeEventListenerMethod(args);
+}
+
+static v8::Handle<v8::Value> dispatchEventMethod(const v8::Arguments& args)
 {
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestEventTarget* imp = V8TestEventTarget::toNative(args.Holder());
     ExceptionCode ec = 0;
     {
-    V8TRYCATCH(Event*, evt, V8Event::HasInstance(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()) ? V8Event::toNative(v8::Handle<v8::Object>::Cast(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined))) : 0);
+    V8TRYCATCH(Event*, evt, V8Event::HasInstance(args[0], args.GetIsolate()) ? V8Event::toNative(v8::Handle<v8::Object>::Cast(args[0])) : 0);
     bool result = imp->dispatchEvent(evt, ec);
     if (UNLIKELY(ec))
         goto fail;
@@ -122,12 +146,17 @@ static v8::Handle<v8::Value> dispatchEventCallback(const v8::Arguments& args)
     return setDOMException(ec, args.GetIsolate());
 }
 
+static v8::Handle<v8::Value> dispatchEventMethodCallback(const v8::Arguments& args)
+{
+    return TestEventTargetV8Internal::dispatchEventMethod(args);
+}
+
 } // namespace TestEventTargetV8Internal
 
-static const V8DOMConfiguration::BatchedCallback V8TestEventTargetCallbacks[] = {
-    {"item", TestEventTargetV8Internal::itemCallback},
-    {"addEventListener", TestEventTargetV8Internal::addEventListenerCallback},
-    {"removeEventListener", TestEventTargetV8Internal::removeEventListenerCallback},
+static const V8DOMConfiguration::BatchedMethod V8TestEventTargetMethods[] = {
+    {"item", TestEventTargetV8Internal::itemMethodCallback},
+    {"addEventListener", TestEventTargetV8Internal::addEventListenerMethodCallback},
+    {"removeEventListener", TestEventTargetV8Internal::removeEventListenerMethodCallback},
 };
 
 static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
@@ -137,7 +166,7 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v
     v8::Local<v8::Signature> defaultSignature;
     defaultSignature = V8DOMConfiguration::configureTemplate(desc, "TestEventTarget", v8::Persistent<v8::FunctionTemplate>(), V8TestEventTarget::internalFieldCount,
         0, 0,
-        V8TestEventTargetCallbacks, WTF_ARRAY_LENGTH(V8TestEventTargetCallbacks), isolate);
+        V8TestEventTargetMethods, WTF_ARRAY_LENGTH(V8TestEventTargetMethods), isolate);
     UNUSED_PARAM(defaultSignature); // In some cases, it will not be used.
     v8::Local<v8::ObjectTemplate> instance = desc->InstanceTemplate();
     v8::Local<v8::ObjectTemplate> proto = desc->PrototypeTemplate();
@@ -152,7 +181,7 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v
     const int dispatchEventArgc = 1;
     v8::Handle<v8::FunctionTemplate> dispatchEventArgv[dispatchEventArgc] = { V8Event::GetRawTemplate(isolate) };
     v8::Handle<v8::Signature> dispatchEventSignature = v8::Signature::New(desc, dispatchEventArgc, dispatchEventArgv);
-    proto->Set(v8::String::NewSymbol("dispatchEvent"), v8::FunctionTemplate::New(TestEventTargetV8Internal::dispatchEventCallback, v8Undefined(), dispatchEventSignature));
+    proto->Set(v8::String::NewSymbol("dispatchEvent"), v8::FunctionTemplate::New(TestEventTargetV8Internal::dispatchEventMethodCallback, v8Undefined(), dispatchEventSignature));
 
     // Custom toString template
     desc->Set(v8::String::NewSymbol("toString"), V8PerIsolateData::current()->toStringTemplate());

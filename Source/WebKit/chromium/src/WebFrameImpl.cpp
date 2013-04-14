@@ -119,7 +119,7 @@
 #include "Page.h"
 #include "PageOverlay.h"
 #include "Performance.h"
-#include "PlatformMessagePortChannel.h"
+#include "PlatformMessagePortChannelChromium.h"
 #include "PluginDocument.h"
 #include "PrintContext.h"
 #include "RenderBox.h"
@@ -819,8 +819,8 @@ void WebFrameImpl::addMessageToConsole(const WebConsoleMessage& message)
 
     MessageLevel webCoreMessageLevel;
     switch (message.level) {
-    case WebConsoleMessage::LevelTip:
-        webCoreMessageLevel = TipMessageLevel;
+    case WebConsoleMessage::LevelDebug:
+        webCoreMessageLevel = DebugMessageLevel;
         break;
     case WebConsoleMessage::LevelLog:
         webCoreMessageLevel = LogMessageLevel;
@@ -830,9 +830,6 @@ void WebFrameImpl::addMessageToConsole(const WebConsoleMessage& message)
         break;
     case WebConsoleMessage::LevelError:
         webCoreMessageLevel = ErrorMessageLevel;
-        break;
-    case WebConsoleMessage::LevelDebug:
-        webCoreMessageLevel = DebugMessageLevel;
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -1181,7 +1178,7 @@ size_t WebFrameImpl::characterIndexForPoint(const WebPoint& webPoint) const
         return notFound;
 
     IntPoint point = frame()->view()->windowToContents(webPoint);
-    HitTestResult result = frame()->eventHandler()->hitTestResultAtPoint(point, false);
+    HitTestResult result = frame()->eventHandler()->hitTestResultAtPoint(point);
     RefPtr<Range> range = frame()->rangeForPoint(result.roundedPointInInnerNodeFrame());
     if (!range)
         return notFound;

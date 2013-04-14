@@ -141,9 +141,7 @@ WheelEvent* WheelEventDispatchMediator::event() const
 
 bool WheelEventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) const
 {
-    if (!event())
-        return true;
-
+    ASSERT(event());
     return EventDispatchMediator::dispatchEvent(dispatcher) && !event()->defaultHandled();
 }
 

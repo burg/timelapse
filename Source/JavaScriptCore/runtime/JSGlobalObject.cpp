@@ -49,7 +49,6 @@
 #include "Interpreter.h"
 #include "JSActivation.h"
 #include "JSBoundFunction.h"
-#include "JSCJSValueInlines.h"
 #include "JSCallbackConstructor.h"
 #include "JSCallbackFunction.h"
 #include "JSCallbackObject.h"
@@ -71,6 +70,8 @@
 #include "NumberPrototype.h"
 #include "ObjectConstructor.h"
 #include "ObjectPrototype.h"
+#include "Operations.h"
+#include "ParserError.h"
 #include "RegExpConstructor.h"
 #include "RegExpMatchesArray.h"
 #include "RegExpObject.h"
@@ -126,7 +127,6 @@ JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, c
 #endif
     , m_evalEnabled(true)
     , m_globalObjectMethodTable(globalObjectMethodTable ? globalObjectMethodTable : &s_globalObjectMethodTable)
-    , m_apiData(0)
 {
 }
 

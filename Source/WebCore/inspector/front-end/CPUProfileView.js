@@ -76,7 +76,7 @@ WebInspector.CPUProfileView = function(profile)
     this.resetButton.visible = false;
     this.resetButton.addEventListener("click", this._resetClicked, this);
 
-    this.profileHead = /** @type {?ProfilerAgent.CPUProfileNode} */ null;
+    this.profileHead = /** @type {?ProfilerAgent.CPUProfileNode} */ (null);
     this.profile = profile;
 
     this._linkifier = new WebInspector.Linkifier(new WebInspector.Linkifier.DefaultFormatter(30));
@@ -294,7 +294,7 @@ WebInspector.CPUProfileView.prototype = {
                     profileDataGridNode._searchMatchedCallsColumn = true;
             }
 
-            if (profileDataGridNode.functionName.match(matcher) || profileDataGridNode.url.match(matcher))
+            if (profileDataGridNode.functionName.match(matcher) || (profileDataGridNode.url && profileDataGridNode.url.match(matcher)))
                 profileDataGridNode._searchMatchedFunctionColumn = true;
 
             if (profileDataGridNode._searchMatchedSelfColumn ||

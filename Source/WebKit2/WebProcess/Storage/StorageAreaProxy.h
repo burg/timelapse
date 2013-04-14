@@ -26,13 +26,19 @@
 #ifndef StorageAreaProxy_h
 #define StorageAreaProxy_h
 
+#include "MessageReceiver.h"
 #include <WebCore/StorageArea.h>
+#include <wtf/HashMap.h>
+
+namespace WebCore {
+class StorageMap;
+}
 
 namespace WebKit {
 
 class StorageNamespaceProxy;
 
-class StorageAreaProxy : public WebCore::StorageArea {
+class StorageAreaProxy : public WebCore::StorageArea, private CoreIPC::MessageReceiver {
 public:
     static PassRefPtr<StorageAreaProxy> create(StorageNamespaceProxy*, PassRefPtr<WebCore::SecurityOrigin>);
     virtual ~StorageAreaProxy();
@@ -41,20 +47,32 @@ private:
     StorageAreaProxy(StorageNamespaceProxy*, PassRefPtr<WebCore::SecurityOrigin>);
 
     // WebCore::StorageArea.
-    virtual unsigned length(WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) const OVERRIDE;
-    virtual String key(unsigned index, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) const OVERRIDE;
-    virtual String getItem(const String& key, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) const OVERRIDE;
+    virtual unsigned length(WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
+    virtual String key(unsigned index, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
+    virtual String getItem(const String& key, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
     virtual void setItem(const String& key, const String& value, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
     virtual void removeItem(const String& key, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
     virtual void clear(WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
-    virtual bool contains(const String& key, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) const OVERRIDE;
-    virtual bool canAccessStorage(WebCore::Frame*) const OVERRIDE;
-    virtual size_t memoryBytesUsedByCache() const OVERRIDE;
+    virtual bool contains(const String& key, WebCore::ExceptionCode&, WebCore::Frame* sourceFrame) OVERRIDE;
+    virtual bool canAccessStorage(WebCore::Frame*) OVERRIDE;
+    virtual size_t memoryBytesUsedByCache() OVERRIDE;
     virtual void incrementAccessCount() OVERRIDE;
     virtual void decrementAccessCount() OVERRIDE;
     virtual void closeDatabaseIfIdle() OVERRIDE;
 
+    // CoreIPC::MessageReceiver
+    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+
+    void didSetItem(const String& key, bool quotaError);
+
+    bool disabledByPrivateBrowsingInFrame(const WebCore::Frame* sourceFrame) const;
+
+    void loadValuesIfNeeded();
+
+    WebCore::StorageType m_storageType;
+    unsigned m_quotaInBytes;
     uint64_t m_storageAreaID;
+    RefPtr<WebCore::StorageMap> m_storageMap;
 };
 
 } // namespace WebKit

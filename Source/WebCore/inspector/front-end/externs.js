@@ -129,6 +129,12 @@ Array.prototype.qselect = function(k, comparator) {}
  */
 Array.prototype.select = function(field) {}
 
+/**
+ * @this {Array.<*>}
+ * @return {*}
+ */
+Array.prototype.peekLast = function() {}
+
 DOMApplicationCache.prototype.UNCACHED = 0;
 DOMApplicationCache.prototype.IDLE = 1;
 DOMApplicationCache.prototype.CHECKING = 2;
@@ -322,9 +328,6 @@ difflib.SequenceMatcher.prototype.get_opcodes = function() { return []; }
 
 /** @constructor */
 WebInspector.CodeMirrorTextEditor = function(url, delegate) { }
-
-WebInspector.ProfileURLRegExp = "";
-
 
 /** @type {boolean} */
 window.dispatchStandaloneTestRunnerMessages;

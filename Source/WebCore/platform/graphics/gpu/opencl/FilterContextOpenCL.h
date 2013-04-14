@@ -51,6 +51,13 @@ public:
         , m_transformColorSpaceWasCompiled(false)
         , m_transformColorSpaceProgram(0)
         , m_transformColorSpaceKernel(0)
+        , m_fillWasCompiled(false)
+        , m_fillProgram(0)
+        , m_fill(0)
+        , m_mergeWasCompiled(false)
+        , m_mergeProgram(0)
+        , m_mergeCopyOperation(0)
+        , m_mergeOperation(0)
         , m_colorMatrixWasCompiled(false)
         , m_colorMatrixProgram(0)
         , m_matrixOperation(0)
@@ -79,12 +86,18 @@ public:
 
     OpenCLHandle createOpenCLImage(IntSize);
 
+    inline bool compileFill();
+    void fill(cl_mem, IntSize, Color);
+
     inline bool compileTransformColorSpaceProgram();
     void openCLTransformColorSpace(OpenCLHandle&, IntRect, ColorSpace, ColorSpace);
 
     inline bool compileFEColorMatrix();
     inline bool compileFETurbulence();
+    inline bool compileFEMerge();
 
+    inline void applyFEMergeCopy(OpenCLHandle, IntSize, OpenCLHandle, IntPoint&);
+    inline void applyFEMerge(OpenCLHandle, OpenCLHandle, OpenCLHandle, OpenCLHandle, IntSize, IntPoint&, IntPoint&);
     inline void applyFEColorMatrix(OpenCLHandle, IntSize, OpenCLHandle, IntPoint, float*, int);
     inline void applyFETurbulence(OpenCLHandle, IntSize, int, void*, void*, void*, void*, void*,
         int*, int, int, int, int, float, float, bool, int, int);
@@ -177,10 +190,19 @@ private:
     cl_program m_transformColorSpaceProgram;
     cl_kernel m_transformColorSpaceKernel;
 
+    bool m_fillWasCompiled;
+    cl_program m_fillProgram;
+    cl_kernel m_fill;
+
+    bool m_mergeWasCompiled;
+    cl_program m_mergeProgram;
+    cl_kernel m_mergeCopyOperation;
+    cl_kernel m_mergeOperation;
+
     bool m_colorMatrixWasCompiled;
     cl_program m_colorMatrixProgram;
     cl_kernel m_matrixOperation;
-    cl_kernel m_saturateAndHueRotateOperation; 
+    cl_kernel m_saturateAndHueRotateOperation;
     cl_kernel m_luminanceOperation;
 
     bool m_turbulenceWasCompiled;

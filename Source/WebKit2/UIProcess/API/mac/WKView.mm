@@ -208,6 +208,9 @@ struct WKViewInterpretKeyEventsParameters {
     NSRect _windowBottomCornerIntersectionRect;
     
     unsigned _frameSizeUpdatesDisabledCount;
+    unsigned _viewInWindowChangesDeferredCount;
+
+    BOOL _viewInWindowChangeWasDeferred;
 
     // Whether the containing window of the WKView has a valid backing store.
     // The window server invalidates the backing store whenever the window is resized or minimized.
@@ -382,7 +385,7 @@ struct WKViewInterpretKeyEventsParameters {
 
     if (![self frameSizeUpdatesDisabled]) {
         if (_data->_expandsToFitContentViaAutoLayout)
-            _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
+            _data->_page->viewExposedRectChanged([self visibleRect]);
         [self _setDrawingAreaSize:size];
     }
 }
@@ -398,7 +401,7 @@ struct WKViewInterpretKeyEventsParameters {
     
     _data->_page->windowAndViewFramesChanged(enclosingIntRect(windowFrameInScreenCoordinates), enclosingIntRect(viewFrameInWindowCoordinates), IntPoint(accessibilityPosition));
     if (_data->_expandsToFitContentViaAutoLayout)
-        _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
+        _data->_page->viewExposedRectChanged([self visibleRect]);
 }
 
 - (void)renewGState
@@ -1898,7 +1901,13 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
         _data->_windowHasValidBackingStore = NO;
         [self _updateWindowVisibility];
         _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
-        _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible | WebPageProxy::ViewIsInWindow);
+
+        if ([self isDeferringViewInWindowChanges]) {
+            _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
+            _data->_viewInWindowChangeWasDeferred = YES;
+        } else
+            _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible | WebPageProxy::ViewIsInWindow);
+
         [self _updateWindowAndViewFrames];
 
         if (!_data->_flagsChangedEventMonitor) {
@@ -1912,7 +1921,12 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     } else {
         [self _updateWindowVisibility];
         _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
-        _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive | WebPageProxy::ViewIsInWindow);
+
+        if ([self isDeferringViewInWindowChanges]) {
+            _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
+            _data->_viewInWindowChangeWasDeferred = YES;
+        } else
+            _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive | WebPageProxy::ViewIsInWindow);
 
         [NSEvent removeMonitor:_data->_flagsChangedEventMonitor];
         _data->_flagsChangedEventMonitor = nil;
@@ -2313,6 +2327,11 @@ static void windowBecameOccluded(uint32_t, void* data, uint32_t dataLength, void
 
 + (BOOL)_registerWindowOcclusionNotificationHandlers
 {
+    // Disable window occlusion notifications for App Store until <rdar://problem/13255270> is resolved.
+    static bool isAppStore = [[[NSBundle mainBundle] bundleIdentifier] isEqualToString:@"com.apple.appstore"];
+    if (isAppStore)
+        return NO;
+
     if (windowOcclusionNotificationsAreRegistered)
         return YES;
 
@@ -3202,7 +3221,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     
     if (!(--_data->_frameSizeUpdatesDisabledCount)) {
         if (_data->_expandsToFitContentViaAutoLayout)
-            _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
+            _data->_page->viewExposedRectChanged([self visibleRect]);
         [self _setDrawingAreaSize:[self frame].size];
     }
 }
@@ -3263,7 +3282,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_page->setMinimumLayoutWidth(minimumLayoutWidth);
 
     if (expandsToFit)
-        _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
+        _data->_page->viewExposedRectChanged([self visibleRect]);
 
     _data->_page->setMainFrameIsScrollable(!expandsToFit);
 }
@@ -3275,6 +3294,31 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
         return [_data->_fullScreenWindowController webViewPlaceholder];
 #endif
     return nil;
+}
+
+- (void)beginDeferringViewInWindowChanges
+{
+    _data->_viewInWindowChangesDeferredCount++;
+}
+
+- (void)endDeferringViewInWindowChanges
+{
+    if (!_data->_viewInWindowChangesDeferredCount) {
+        NSLog(@"endDeferringViewInWindowChanges was called without a matching beginDeferringViewInWindowChanges!");
+        return;
+    }
+
+    --_data->_viewInWindowChangesDeferredCount;
+
+    if (!_data->_viewInWindowChangesDeferredCount && _data->_viewInWindowChangeWasDeferred) {
+        _data->_page->viewStateDidChange(WebPageProxy::ViewIsInWindow);
+        _data->_viewInWindowChangeWasDeferred = NO;
+    }
+}
+
+- (BOOL)isDeferringViewInWindowChanges
+{
+    return _data->_viewInWindowChangesDeferredCount;
 }
 
 @end

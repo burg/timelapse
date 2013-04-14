@@ -154,7 +154,7 @@ VisibleSelection Editor::avoidIntersectionWithDeleteButtonController(const Visib
     if (updatedBase != selection.base())
         updatedSelection.setBase(updatedBase);
 
-    Position updatedExtent = selection.base();
+    Position updatedExtent = selection.extent();
     updatePositionForNodeRemoval(updatedExtent, element);
     if (updatedExtent != selection.extent())
         updatedSelection.setExtent(updatedExtent);
@@ -2135,7 +2135,7 @@ void Editor::markAndReplaceFor(PassRefPtr<SpellCheckRequest> request, const Vect
 {
     ASSERT(request);
 
-    TextCheckingTypeMask textCheckingOptions = request->mask();
+    TextCheckingTypeMask textCheckingOptions = request->data().mask();
     TextCheckingParagraph paragraph(request->checkingRange(), request->paragraphRange());
 
     bool shouldMarkSpelling = textCheckingOptions & TextCheckingTypeSpelling;

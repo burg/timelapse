@@ -38,41 +38,54 @@ namespace WebCore {
 class CDM;
 class CDMPrivateInterface;
 class CDMSession;
-class MediaKeyError;
-class MediaKeySession;
-class MediaKeys;
+class MediaPlayer;
 
 typedef PassOwnPtr<CDMPrivateInterface> (*CreateCDM)(CDM*);
 typedef bool (*CDMSupportsKeySystem)(const String&);
+
+class CDMClient {
+public:
+    virtual ~CDMClient() { }
+
+    virtual MediaPlayer* cdmMediaPlayer(const CDM*) const = 0;
+};
 
 class CDMSession {
 public:
     CDMSession() { }
     virtual ~CDMSession() { }
 
-    virtual const String& sessionId() = 0;
+    virtual const String& sessionId() const = 0;
     virtual PassRefPtr<Uint8Array> generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, unsigned long& systemCode) = 0;
     virtual void releaseKeys() = 0;
-    virtual bool addKey(Uint8Array*, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, unsigned long& systemCode) = 0;
+    virtual bool update(Uint8Array*, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, unsigned long& systemCode) = 0;
 };
 
 class CDM {
 public:
+
+    enum CDMErrorCode { UnknownError = 1, ClientError, ServiceError, OutputError, HardwareChangeError, DomainError };
     static bool supportsKeySystem(const String&);
     static PassOwnPtr<CDM> create(const String& keySystem);
     static void registerCDMFactory(CreateCDM, CDMSupportsKeySystem);
     ~CDM();
 
-    bool supportsMIMEType(const String&);
+    bool supportsMIMEType(const String&) const;
     PassOwnPtr<CDMSession> createSession();
 
     const String& keySystem() const { return m_keySystem; }
+
+    CDMClient* client() const { return m_client; }
+    void setClient(CDMClient* client) { m_client = client; }
+
+    MediaPlayer* mediaPlayer() const;
 
 private:
     CDM(const String& keySystem);
 
     String m_keySystem;
     OwnPtr<CDMPrivateInterface> m_private;
+    CDMClient* m_client;
 };
 
 }

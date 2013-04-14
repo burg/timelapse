@@ -50,6 +50,7 @@
 #include <WebCore/AXObjectCache.h>
 #include <WebCore/ColorChooser.h>
 #include <WebCore/DatabaseManager.h>
+#include <WebCore/DocumentLoader.h>
 #include <WebCore/FileChooser.h>
 #include <WebCore/FileIconLoader.h>
 #include <WebCore/Frame.h>
@@ -57,6 +58,7 @@
 #include <WebCore/FrameLoader.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/HTMLNames.h>
+#include <WebCore/HTMLParserIdioms.h>
 #include <WebCore/HTMLPlugInImageElement.h>
 #include <WebCore/Icon.h>
 #include <WebCore/NotImplemented.h>
@@ -119,11 +121,7 @@ FloatRect WebChromeClient::windowRect()
 
 FloatRect WebChromeClient::pageRect()
 {
-#if USE(TILED_BACKING_STORE)
-    return FloatRect(FloatPoint(), m_page->viewportSize());
-#else
     return FloatRect(FloatPoint(), m_page->size());
-#endif
 }
 
 void WebChromeClient::focus()
@@ -390,7 +388,7 @@ void WebChromeClient::invalidateContentsAndRootView(const IntRect& rect, bool)
             return;
     }
 
-    m_page->drawingArea()->setNeedsDisplay(rect);
+    m_page->drawingArea()->setNeedsDisplayInRect(rect);
 }
 
 void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect, bool)
@@ -401,13 +399,13 @@ void WebChromeClient::invalidateContentsForSlowScroll(const IntRect& rect, bool)
     }
 
     m_page->pageDidScroll();
-    m_page->drawingArea()->setNeedsDisplay(rect);
+    m_page->drawingArea()->setNeedsDisplayInRect(rect);
 }
 
-void WebChromeClient::scroll(const IntSize& scrollOffset, const IntRect& scrollRect, const IntRect& clipRect)
+void WebChromeClient::scroll(const IntSize& scrollDelta, const IntRect& scrollRect, const IntRect& clipRect)
 {
     m_page->pageDidScroll();
-    m_page->drawingArea()->scroll(intersection(scrollRect, clipRect), scrollOffset);
+    m_page->drawingArea()->scroll(intersection(scrollRect, clipRect), scrollDelta);
 }
 
 #if USE(TILED_BACKING_STORE)
@@ -446,14 +444,11 @@ void WebChromeClient::contentsSizeChanged(Frame* frame, const IntSize& size) con
     if (frame->page()->mainFrame() != frame)
         return;
 
-#if PLATFORM(QT) || PLATFORM(EFL)
-    if (m_page->useFixedLayout()) {
-        // The below method updates the size().
-        m_page->resizeToContentsIfNeeded();
-        m_page->drawingArea()->layerTreeHost()->sizeDidChange(m_page->size());
-    }
+#if USE(COORDINATED_GRAPHICS)
+    if (m_page->useFixedLayout())
+        m_page->drawingArea()->layerTreeHost()->sizeDidChange(size);
 
-    m_page->send(Messages::WebPageProxy::DidChangeContentsSize(m_page->size()));
+    m_page->send(Messages::WebPageProxy::DidChangeContentsSize(size));
 #endif
 
     m_page->drawingArea()->mainFrameContentSizeChanged(size);
@@ -504,7 +499,12 @@ void WebChromeClient::unavailablePluginButtonClicked(Element* element, RenderEmb
 
     HTMLPlugInImageElement* pluginElement = static_cast<HTMLPlugInImageElement*>(element);
 
-    m_page->send(Messages::WebPageProxy::UnavailablePluginButtonClicked(pluginUnavailabilityReason, pluginElement->serviceType(), pluginElement->url(), pluginElement->getAttribute(pluginspageAttr)));
+    String frameURLString = pluginElement->document()->frame()->loader()->documentLoader()->responseURL().string();
+    String pageURLString = m_page->mainFrame()->loader()->documentLoader()->responseURL().string();
+    KURL pluginspageAttributeURL = element->document()->completeURL(stripLeadingAndTrailingHTMLSpaces(pluginElement->getAttribute(pluginspageAttr)));
+    if (!pluginspageAttributeURL.protocolIsInHTTPFamily())
+        pluginspageAttributeURL = KURL();
+    m_page->send(Messages::WebPageProxy::UnavailablePluginButtonClicked(pluginUnavailabilityReason, pluginElement->serviceType(), pluginElement->url(), pluginspageAttributeURL.string(), frameURLString, pageURLString));
 }
 
 void WebChromeClient::scrollbarsModeDidChange() const

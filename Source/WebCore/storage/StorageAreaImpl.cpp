@@ -104,7 +104,7 @@ StorageAreaImpl::StorageAreaImpl(StorageAreaImpl* area)
     ASSERT(!m_isShutdown);
 }
 
-bool StorageAreaImpl::canAccessStorage(Frame* frame) const
+bool StorageAreaImpl::canAccessStorage(Frame* frame)
 {
     return frame && frame->page();
 }
@@ -118,7 +118,7 @@ bool StorageAreaImpl::disabledByPrivateBrowsingInFrame(const Frame* frame) const
     return !SchemeRegistry::allowsLocalStorageAccessInPrivateBrowsing(frame->document()->securityOrigin()->protocol());
 }
 
-unsigned StorageAreaImpl::length(ExceptionCode& ec, Frame* frame) const
+unsigned StorageAreaImpl::length(ExceptionCode& ec, Frame* frame)
 {
     ec = 0;
     if (!canAccessStorage(frame)) {
@@ -134,7 +134,7 @@ unsigned StorageAreaImpl::length(ExceptionCode& ec, Frame* frame) const
     return m_storageMap->length();
 }
 
-String StorageAreaImpl::key(unsigned index, ExceptionCode& ec, Frame* frame) const
+String StorageAreaImpl::key(unsigned index, ExceptionCode& ec, Frame* frame)
 {
     ec = 0;
     if (!canAccessStorage(frame)) {
@@ -150,7 +150,7 @@ String StorageAreaImpl::key(unsigned index, ExceptionCode& ec, Frame* frame) con
     return m_storageMap->key(index);
 }
 
-String StorageAreaImpl::getItem(const String& key, ExceptionCode& ec, Frame* frame) const
+String StorageAreaImpl::getItem(const String& key, ExceptionCode& ec, Frame* frame)
 {
     ec = 0;
     if (!canAccessStorage(frame)) {
@@ -254,7 +254,7 @@ void StorageAreaImpl::clear(ExceptionCode& ec, Frame* frame)
     StorageEventDispatcher::dispatch(String(), String(), String(), m_storageType, m_securityOrigin.get(), frame);
 }
 
-bool StorageAreaImpl::contains(const String& key, ExceptionCode& ec, Frame* frame) const
+bool StorageAreaImpl::contains(const String& key, ExceptionCode& ec, Frame* frame)
 {
     ec = 0;
     if (!canAccessStorage(frame)) {
@@ -270,10 +270,11 @@ bool StorageAreaImpl::contains(const String& key, ExceptionCode& ec, Frame* fram
     return m_storageMap->contains(key);
 }
 
-void StorageAreaImpl::importItem(const String& key, const String& value)
+void StorageAreaImpl::importItems(const HashMap<String, String>& items)
 {
     ASSERT(!m_isShutdown);
-    m_storageMap->importItem(key, value);
+
+    m_storageMap->importItems(items);
 }
 
 void StorageAreaImpl::close()
@@ -317,7 +318,7 @@ void StorageAreaImpl::blockUntilImportComplete() const
         m_storageAreaSync->blockUntilImportComplete();
 }
 
-size_t StorageAreaImpl::memoryBytesUsedByCache() const
+size_t StorageAreaImpl::memoryBytesUsedByCache()
 {
     return 0;
 }

@@ -739,6 +739,9 @@ void WebGLRenderingContext::markLayerComposited()
 
 void WebGLRenderingContext::paintRenderingResultsToCanvas()
 {
+    if (canvas()->document()->printing())
+        canvas()->clearPresentationCopy();
+
     // Until the canvas is written to by the application, the clear that
     // happened after it was composited should be ignored by the compositor.
     if (m_context->layerComposited() && !m_attributes.preserveDrawingBuffer) {
@@ -1250,13 +1253,13 @@ void WebGLRenderingContext::clearColor(GC3Dfloat r, GC3Dfloat g, GC3Dfloat b, GC
 {
     if (isContextLost())
         return;
-    if (isnan(r))
+    if (std::isnan(r))
         r = 0;
-    if (isnan(g))
+    if (std::isnan(g))
         g = 0;
-    if (isnan(b))
+    if (std::isnan(b))
         b = 0;
-    if (isnan(a))
+    if (std::isnan(a))
         a = 1;
     m_clearColor[0] = r;
     m_clearColor[1] = g;
@@ -3708,6 +3711,10 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
     Vector<uint8_t> data;
     if (!pixels)
         return;
+    if (!validateTexFuncFormatAndType("texImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texImage2D", format))
+        return;
     bool needConversion = true;
     // The data from ImageData is always of format RGBA8.
     // No conversion is needed if destination format is RGBA and type is USIGNED_BYTE and no Flip or Premultiply operation is required.
@@ -3756,6 +3763,10 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         ec = SECURITY_ERR;
         return;
     }
+    if (!validateTexFuncFormatAndType("texImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texImage2D", format))
+        return;
 
     WebGLTexture* texture = validateTextureBinding("texImage2D", target, true);
     // If possible, copy from the canvas element directly to the texture
@@ -3897,6 +3908,10 @@ void WebGLRenderingContext::texSubImage2DImpl(GC3Denum target, GC3Dint level, GC
     ec = 0;
     if (isContextLost())
         return;
+    if (!validateTexFuncFormatAndType("texSubImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texSubImage2D", format))
+        return;
     Vector<uint8_t> data;
     GraphicsContext3D::ImageExtractor imageExtractor(image, domSource, premultiplyAlpha, m_unpackColorspaceConversion == GraphicsContext3D::NONE);  
     if (!imageExtractor.extractSucceeded()) {
@@ -3958,6 +3973,10 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
         return;
     if (!pixels)
         return;
+    if (!validateTexFuncFormatAndType("texSubImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texSubImage2D", format))
+        return;
     Vector<uint8_t> data;
     bool needConversion = true;
     // The data from ImageData is always of format RGBA8.
@@ -4006,6 +4025,10 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
         ec = SECURITY_ERR;
         return;
     }
+    if (!validateTexFuncFormatAndType("texSubImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texSubImage2D", format))
+        return;
     RefPtr<ImageData> imageData = canvas->getImageData();
     if (imageData)
         texSubImage2D(target, level, xoffset, yoffset, format, type, imageData.get(), ec);

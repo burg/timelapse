@@ -315,6 +315,9 @@ public:
 
     void setSuppressScrollbarAnimations(bool);
 
+    void setRubberBandsAtBottom(bool);
+    void setRubberBandsAtTop(bool);
+
     void setPaginationMode(uint32_t /* WebCore::Pagination::Mode */);
     void setPaginationBehavesLikeColumns(bool);
     void setPageLength(double);
@@ -374,10 +377,7 @@ public:
 #if USE(TILED_BACKING_STORE)
     void pageDidRequestScroll(const WebCore::IntPoint&);
     void setFixedVisibleContentRect(const WebCore::IntRect&);
-    void resizeToContentsIfNeeded();
     void sendViewportAttributesChanged();
-    void setViewportSize(const WebCore::IntSize&);
-    WebCore::IntSize viewportSize() const { return m_viewportSize; }
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
@@ -480,8 +480,10 @@ public:
     void speak(const String&);
     void stopSpeaking();
 
-    bool isSmartInsertDeleteEnabled() const { return m_isSmartInsertDeleteEnabled; }
 #endif
+
+    bool isSmartInsertDeleteEnabled();
+    void setSmartInsertDeleteEnabled(bool);
 
     void replaceSelectionWithText(WebCore::Frame*, const String&);
     void clearSelection();
@@ -605,6 +607,8 @@ public:
     void setMinimumLayoutWidth(double);
     double minimumLayoutWidth() const { return m_minimumLayoutWidth; }
 
+    bool canShowMIMEType(const String& MIMEType) const;
+
 private:
     WebPage(uint64_t pageID, const WebPageCreationParameters&);
 
@@ -721,7 +725,7 @@ private:
     void drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, uint32_t first, uint32_t count);
 #endif
 
-    void viewExposedRectChanged(const WebCore::IntRect& exposedRect);
+    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect);
     void setMainFrameIsScrollable(bool);
 
     void unapplyEditCommand(uint64_t commandID);
@@ -766,10 +770,6 @@ private:
     void uppercaseWord();
     void lowercaseWord();
     void capitalizeWord();
-#endif
-
-#if PLATFORM(MAC)
-    void setSmartInsertDeleteEnabled(bool isSmartInsertDeleteEnabled) { m_isSmartInsertDeleteEnabled = isSmartInsertDeleteEnabled; }
 #endif
 
 #if ENABLE(CONTEXT_MENUS)
@@ -822,9 +822,6 @@ private:
     // Whether the containing window is visible or not.
     bool m_windowIsVisible;
 
-    // Whether smart insert/delete is enabled or not.
-    bool m_isSmartInsertDeleteEnabled;
-
     // The frame of the containing window in screen coordinates.
     WebCore::IntRect m_windowFrameInScreenCoordinates;
 
@@ -870,10 +867,6 @@ private:
     InjectedBundlePageFullScreenClient m_fullScreenClient;
 #endif
     InjectedBundlePageDiagnosticLoggingClient m_logDiagnosticMessageClient;
-
-#if USE(TILED_BACKING_STORE)
-    WebCore::IntSize m_viewportSize;
-#endif
 
     FindController m_findController;
 #if ENABLE(TOUCH_EVENTS) && PLATFORM(QT)

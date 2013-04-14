@@ -549,7 +549,10 @@ void PluginView::initializePlugin()
 void PluginView::didFailToInitializePlugin()
 {
     m_plugin = 0;
-    m_webPage->send(Messages::WebPageProxy::DidFailToInitializePlugin(m_parameters.mimeType));
+
+    String frameURLString = frame()->loader()->documentLoader()->responseURL().string();
+    String pageURLString = m_webPage->corePage()->mainFrame()->loader()->documentLoader()->responseURL().string();
+    m_webPage->send(Messages::WebPageProxy::DidFailToInitializePlugin(m_parameters.mimeType, frameURLString, pageURLString));
 }
 
 void PluginView::didInitializePlugin()
@@ -732,6 +735,11 @@ void PluginView::paint(GraphicsContext* context, const IntRect& /*dirtyRect*/)
 void PluginView::frameRectsChanged()
 {
     Widget::frameRectsChanged();
+    viewGeometryDidChange();
+}
+
+void PluginView::clipRectChanged()
+{
     viewGeometryDidChange();
 }
 
@@ -1606,8 +1614,7 @@ void PluginView::pluginSnapshotTimerFired(DeferrableOneShotTimer<PluginView>*)
     }
 #endif
 
-    destroyPluginAndReset();
-    m_plugin = 0;
+    m_pluginElement->setDisplayState(HTMLPlugInElement::DisplayingSnapshot);
 }
 
 bool PluginView::shouldAlwaysAutoStart() const

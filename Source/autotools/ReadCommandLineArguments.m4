@@ -57,19 +57,6 @@ AC_ARG_WITH(target,
     [with_target="x11"])
 AC_MSG_RESULT([$with_target])
 
-AC_MSG_CHECKING([which Unicode backend to use])
-AC_ARG_WITH(unicode_backend, 
-    AC_HELP_STRING([--with-unicode-backend=@<:@icu/glib@:>@],
-        [Select Unicode backend (WARNING: the glib-based backend is slow, and incomplete) [default=icu]]),
-    [
-        case "$with_unicodebackend" in
-            icu|glib) ;;
-            *) AC_MSG_ERROR([Invalid Unicode backend: must be icu or glib.]) ;;
-         esac
-    ],
-    [with_unicode_backend="icu"])
-AC_MSG_RESULT([$with_unicode_backend])
-
 AC_MSG_CHECKING([whether to enable spellcheck support])
 AC_ARG_ENABLE([spellcheck],
     [AS_HELP_STRING([--enable-spellcheck],[enable support for spellcheck])],
@@ -180,18 +167,6 @@ AC_ARG_ENABLE(debug_symbols,
          fi
     ])
 AC_MSG_RESULT([$enable_debug_symbols])
-
-AC_MSG_CHECKING([the GStreamer version to use])
-AC_ARG_WITH([gstreamer],
-    AS_HELP_STRING([--with-gstreamer=1.0|0.10|auto], [the GStreamer version to use (default: auto, tries 1.0 first, 0.10 is fallback)]),
-    [
-        case "$with_gstreamer" in
-            0.10|1.0|auto) ;;
-            *) AC_MSG_ERROR([invalid GStreamer version specified]) ;;
-        esac
-    ],
-    [with_gstreamer=auto])
-AC_MSG_RESULT([$with_gstreamer])
 
 AC_MSG_CHECKING([which GPU acceleration backend to use])
 AC_ARG_WITH(acceleration_backend,

@@ -42,7 +42,7 @@
 
 namespace WebCore {
 
-v8::Handle<v8::Value> V8MessageEvent::dataAccessorGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
+v8::Handle<v8::Value> V8MessageEvent::dataAttrGetterCustom(v8::Local<v8::String> name, const v8::AccessorInfo& info)
 {
     MessageEvent* event = V8MessageEvent::toNative(info.Holder());
 
@@ -86,7 +86,7 @@ v8::Handle<v8::Value> V8MessageEvent::dataAccessorGetter(v8::Local<v8::String> n
     return result;
 }
 
-v8::Handle<v8::Value> V8MessageEvent::portsAccessorGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
+v8::Handle<v8::Value> V8MessageEvent::portsAttrGetterCustom(v8::Local<v8::String> name, const v8::AccessorInfo& info)
 {
     MessageEvent* event = V8MessageEvent::toNative(info.Holder());
 
@@ -103,7 +103,7 @@ v8::Handle<v8::Value> V8MessageEvent::portsAccessorGetter(v8::Local<v8::String> 
     return portArray;
 }
 
-v8::Handle<v8::Value> V8MessageEvent::initMessageEventCallback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8MessageEvent::initMessageEventMethodCustom(const v8::Arguments& args)
 {
     MessageEvent* event = V8MessageEvent::toNative(args.Holder());
     String typeArg = toWebCoreString(args[0]);
@@ -131,9 +131,9 @@ v8::Handle<v8::Value> V8MessageEvent::initMessageEventCallback(const v8::Argumen
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> V8MessageEvent::webkitInitMessageEventCallback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8MessageEvent::webkitInitMessageEventMethodCustom(const v8::Arguments& args)
 {
-    return initMessageEventCallback(args);
+    return initMessageEventMethodCustom(args);
 }
 
 

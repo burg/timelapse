@@ -49,9 +49,9 @@ WebTestInterfaces::~WebTestInterfaces()
 {
 }
 
-void WebTestInterfaces::setWebView(WebView* webView)
+void WebTestInterfaces::setWebView(WebView* webView, WebTestProxyBase* proxy)
 {
-    m_interfaces->setWebView(webView);
+    m_interfaces->setWebView(webView, proxy);
 }
 
 void WebTestInterfaces::setDelegate(WebTestDelegate* delegate)
@@ -89,6 +89,7 @@ TestInterfaces* WebTestInterfaces::testInterfaces()
     return m_interfaces.get();
 }
 
+#if ENABLE_WEBRTC
 WebMediaStreamCenter* WebTestInterfaces::createMediaStreamCenter(WebMediaStreamCenterClient* client)
 {
     return new MockWebMediaStreamCenter(client);
@@ -98,5 +99,6 @@ WebRTCPeerConnectionHandler* WebTestInterfaces::createWebRTCPeerConnectionHandle
 {
     return new MockWebRTCPeerConnectionHandler(client, m_interfaces.get());
 }
+#endif // ENABLE_WEBRTC
 
 }

@@ -29,6 +29,7 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "PlatformSpeechSynthesisVoice.h"
+#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 
 #if PLATFORM(MAC)
@@ -44,6 +45,8 @@ class PlatformSpeechSynthesizerClient {
 public:
     virtual void didStartSpeaking(const PlatformSpeechSynthesisUtterance*) = 0;
     virtual void didFinishSpeaking(const PlatformSpeechSynthesisUtterance*) = 0;
+    virtual void didPauseSpeaking(const PlatformSpeechSynthesisUtterance*) = 0;
+    virtual void didResumeSpeaking(const PlatformSpeechSynthesisUtterance*) = 0;
     virtual void speakingErrorOccurred(const PlatformSpeechSynthesisUtterance*) = 0;
     
     virtual void voicesDidChange() = 0;
@@ -53,18 +56,25 @@ protected:
     
 class PlatformSpeechSynthesizer {
 public:
-    explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient*);
+    static PassOwnPtr<PlatformSpeechSynthesizer> create(PlatformSpeechSynthesizerClient*);
+
+    virtual ~PlatformSpeechSynthesizer() { }
     
     const Vector<RefPtr<PlatformSpeechSynthesisVoice> >& voiceList() const { return m_voiceList; }
-    void speak(const PlatformSpeechSynthesisUtterance&);
+    virtual void speak(const PlatformSpeechSynthesisUtterance&);
+    virtual void pause();
+    virtual void resume();
+    virtual void cancel();
     
     PlatformSpeechSynthesizerClient* client() const { return m_speechSynthesizerClient; }
     
-private:
-    PlatformSpeechSynthesizerClient* m_speechSynthesizerClient;
+protected:
+    explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient*);
     Vector<RefPtr<PlatformSpeechSynthesisVoice> > m_voiceList;
     
-    void initializeVoiceList();
+private:
+    PlatformSpeechSynthesizerClient* m_speechSynthesizerClient;
+    virtual void initializeVoiceList();
     
 #if PLATFORM(MAC)
     RetainPtr<WebSpeechSynthesisWrapper> m_platformSpeechWrapper;

@@ -234,10 +234,10 @@ WKPageRef TestController::createOtherPage(WKPageRef oldPage, WKURLRequestRef, WK
         createOtherPage,
         0, // mouseDidMoveOverElement
         0, // decidePolicyForNotificationPermissionRequest
-        0, // unavailablePluginButtonClicked
+        0, // unavailablePluginButtonClicked_deprecatedForUseWithV1
         0, // showColorPicker
         0, // hideColorPicker
-        0, // shouldInstantiatePlugin
+        0, // unavailablePluginButtonClicked
     };
     WKPageSetPageUIClient(newPage, &otherPageUIClient);
 
@@ -425,10 +425,10 @@ void TestController::createWebViewWithOptions(WKDictionaryRef options)
         createOtherPage,
         0, // mouseDidMoveOverElement
         decidePolicyForNotificationPermissionRequest, // decidePolicyForNotificationPermissionRequest
-        unavailablePluginButtonClicked,
+        0, // unavailablePluginButtonClicked_deprecatedForUseWithV1
         0, // showColorPicker
         0, // hideColorPicker
-        0, // shouldInstantiatePlugin
+        unavailablePluginButtonClicked,
     };
     WKPageSetPageUIClient(m_mainWebView->page(), &pageUIClient);
 
@@ -464,10 +464,12 @@ void TestController::createWebViewWithOptions(WKDictionaryRef options)
         0, // didNewFirstVisuallyNonEmptyLayout
         0, // willGoToBackForwardListItem
         0, // interactionOccurredWhileProcessUnresponsive
-        0, // pluginDidFail
+        0, // pluginDidFail_deprecatedForUseWithV1
         0, // didReceiveIntentForFrame
         0, // registerIntentServiceForFrame
         0, // didLayout
+        0, // pluginLoadPolicy
+        0, // pluginDidFail
     };
     WKPageSetPageLoaderClient(m_mainWebView->page(), &pageLoaderClient);
 
@@ -480,6 +482,10 @@ void TestController::createWebViewWithOptions(WKDictionaryRef options)
         0, // unableToImplementPolicy
     };
     WKPageSetPagePolicyClient(m_mainWebView->page(), &pagePolicyClient);
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    setVisibilityState(kWKPageVisibilityStateVisible, true);
+#endif
 }
 
 void TestController::ensureViewSupportsOptions(WKDictionaryRef options)
@@ -1181,7 +1187,7 @@ void TestController::decidePolicyForNotificationPermissionRequest(WKPageRef, WKS
     WKNotificationPermissionRequestAllow(request);
 }
 
-void TestController::unavailablePluginButtonClicked(WKPageRef, WKPluginUnavailabilityReason, WKStringRef, WKStringRef, WKStringRef, const void*)
+void TestController::unavailablePluginButtonClicked(WKPageRef, WKPluginUnavailabilityReason, WKDictionaryRef, const void*)
 {
     printf("MISSING PLUGIN BUTTON PRESSED\n");
 }

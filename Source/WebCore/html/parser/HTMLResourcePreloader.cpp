@@ -31,24 +31,12 @@
 
 namespace WebCore {
 
-static bool isStringSafeToSendToAnotherThread(const String& string)
-{
-    StringImpl* impl = string.impl();
-    if (!impl)
-        return true;
-    if (impl->hasOneRef())
-        return true;
-    if (string.isEmpty())
-        return true;
-    return false;
-}
-
 bool PreloadRequest::isSafeToSendToAnotherThread() const
 {
-    return isStringSafeToSendToAnotherThread(m_initiator)
-        && isStringSafeToSendToAnotherThread(m_charset)
-        && isStringSafeToSendToAnotherThread(m_resourceURL)
-        && isStringSafeToSendToAnotherThread(m_baseURL.string());
+    return m_initiator.isSafeToSendToAnotherThread()
+        && m_charset.isSafeToSendToAnotherThread()
+        && m_resourceURL.isSafeToSendToAnotherThread()
+        && m_baseURL.isSafeToSendToAnotherThread();
 }
 
 KURL PreloadRequest::completeURL(Document* document)
@@ -66,6 +54,15 @@ CachedResourceRequest PreloadRequest::resourceRequest(Document* document)
     if (m_resourceType == CachedResource::Script)
         request.mutableResourceRequest().setAllowCookies(m_crossOriginModeAllowsCookies);
     return request;
+}
+
+void HTMLResourcePreloader::takeAndPreload(PreloadRequestStream& r)
+{
+    PreloadRequestStream requests;
+    requests.swap(r);
+
+    for (PreloadRequestStream::iterator it = requests.begin(); it != requests.end(); ++it)
+        preload(it->release());
 }
 
 void HTMLResourcePreloader::preload(PassOwnPtr<PreloadRequest> preload)

@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-v8::Handle<v8::Value> V8DataView::constructorCallbackCustom(const v8::Arguments& args)
+v8::Handle<v8::Value> V8DataView::constructorCustom(const v8::Arguments& args)
 {
     if (!args.Length()) {
         // see constructWebGLArray -- we don't seem to be able to distingish between
@@ -54,7 +54,7 @@ v8::Handle<v8::Object> wrap(DataView* impl, v8::Handle<v8::Object> creationConte
     return V8DataView::createWrapper(impl, creationContext, isolate);
 }
 
-v8::Handle<v8::Value> V8DataView::getInt8Callback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8DataView::getInt8MethodCustom(const v8::Arguments& args)
 {
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
@@ -68,7 +68,7 @@ v8::Handle<v8::Value> V8DataView::getInt8Callback(const v8::Arguments& args)
     return v8Integer(result, args.GetIsolate());
 }
 
-v8::Handle<v8::Value> V8DataView::getUint8Callback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8DataView::getUint8MethodCustom(const v8::Arguments& args)
 {
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
@@ -82,7 +82,7 @@ v8::Handle<v8::Value> V8DataView::getUint8Callback(const v8::Arguments& args)
     return v8Integer(result, args.GetIsolate());
 }
 
-v8::Handle<v8::Value> V8DataView::setInt8Callback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8DataView::setInt8MethodCustom(const v8::Arguments& args)
 {
     if (args.Length() < 2)
         return throwNotEnoughArgumentsError(args.GetIsolate());
@@ -97,7 +97,7 @@ v8::Handle<v8::Value> V8DataView::setInt8Callback(const v8::Arguments& args)
     return v8Undefined();
 }
 
-v8::Handle<v8::Value> V8DataView::setUint8Callback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8DataView::setUint8MethodCustom(const v8::Arguments& args)
 {
     if (args.Length() < 2)
         return throwNotEnoughArgumentsError(args.GetIsolate());

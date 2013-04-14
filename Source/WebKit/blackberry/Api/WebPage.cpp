@@ -19,6 +19,7 @@
 #include "config.h"
 #include "WebPage.h"
 
+#include "APIShims.h"
 #include "ApplicationCacheStorage.h"
 #include "AuthenticationChallengeManager.h"
 #include "AutofillManager.h"
@@ -38,9 +39,7 @@
 #include "CredentialStorage.h"
 #include "CredentialTransformData.h"
 #include "DOMSupport.h"
-#include "Database.h"
 #include "DatabaseManager.h"
-#include "DatabaseSync.h"
 #include "DefaultTapHighlight.h"
 #include "DeviceMotionClientBlackBerry.h"
 #include "DeviceOrientationClientBlackBerry.h"
@@ -406,7 +405,7 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_minimumScale(-1.0)
     , m_maximumScale(-1.0)
     , m_forceRespectViewportArguments(false)
-    , m_blockZoomFinalScale(1.0)
+    , m_finalAnimationScale(1.0)
     , m_anchorInNodeRectRatio(-1, -1)
     , m_currentBlockZoomNode(0)
     , m_currentBlockZoomAdjustedNode(0)
@@ -705,10 +704,7 @@ void WebPagePrivate::load(const BlackBerry::Platform::String& url, const BlackBe
 
     request.setSuggestedSaveName(suggestedSaveName);
 
-    FrameLoadRequest frameRequest(m_mainFrame, request);
-    frameRequest.setFrameName("");
-    frameRequest.setShouldCheckNewWindowPolicy(true);
-    m_mainFrame->loader()->load(frameRequest);
+    m_mainFrame->loader()->load(FrameLoadRequest(m_mainFrame, request));
 }
 
 void WebPage::load(const BlackBerry::Platform::String& url, const BlackBerry::Platform::String& networkToken, bool isInitial)
@@ -761,7 +757,7 @@ void WebPage::loadString(const BlackBerry::Platform::String& string, const Black
     d->loadString(string, baseURL, mimeType, failingURL);
 }
 
-bool WebPagePrivate::executeJavaScript(const BlackBerry::Platform::String& scriptUTF8, JavaScriptDataType& returnType, WebString& returnValue)
+bool WebPagePrivate::executeJavaScript(const BlackBerry::Platform::String& scriptUTF8, JavaScriptDataType& returnType, BlackBerry::Platform::String& returnValue)
 {
     BLACKBERRY_ASSERT(scriptUTF8.isUtf8());
     String script = scriptUTF8;
@@ -891,7 +887,7 @@ void WebPage::executeJavaScriptFunction(const std::vector<BlackBerry::Platform::
     JSC::ExecState* exec = root->globalObject()->globalExec();
     JSGlobalContextRef ctx = toGlobalRef(exec);
 
-    JSC::JSLockHolder lock(exec);
+    JSC::APIEntryShim shim(exec);
     WTF::Vector<JSValueRef> argListRef(args.size());
     for (unsigned i = 0; i < args.size(); ++i)
         argListRef[i] = BlackBerryJavaScriptVariantToJSValueRef(ctx, args[i]);
@@ -2220,7 +2216,7 @@ void WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
 #if ENABLE(BLACKBERRY_CREDENTIAL_PERSIST)
     Credential credential(username, password, CredentialPersistencePermanent);
     if (m_webSettings->isCredentialAutofillEnabled() && !m_webSettings->isPrivateBrowsingEnabled() && isConfirmed)
-        credentialManager().saveCredentialIfConfirmed(this, CredentialTransformData(url, protectionSpace, credential));
+        credentialManager().saveCredentialIfConfirmed(this, CredentialTransformData(protectionSpace, credential));
 #else
     Credential credential(username, password, CredentialPersistenceNone);
 #endif
@@ -2283,7 +2279,7 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     if (Node* linkNode = node->enclosingLinkEventParentOrSelf()) {
         KURL href;
         if (linkNode->isLink() && linkNode->hasAttributes()) {
-            if (Attribute* attribute = static_cast<Element*>(linkNode)->getAttributeItem(HTMLNames::hrefAttr))
+            if (const Attribute* attribute = static_cast<Element*>(linkNode)->getAttributeItem(HTMLNames::hrefAttr))
                 href = linkNode->document()->completeURL(stripLeadingAndTrailingHTMLSpaces(attribute->value()));
         }
 
@@ -2595,7 +2591,7 @@ IntRect WebPagePrivate::getRecursiveVisibleWindowRect(ScrollView* view, bool noC
         return IntRect(IntPoint::zero(), view->contentsSize());
     }
 
-    IntRect visibleWindowRect(view->contentsToWindow(view->visibleContentRect(false)));
+    IntRect visibleWindowRect(view->contentsToWindow(view->visibleContentRect()));
     if (view->parent() && !(noClipOfMainFrame && view->parent() == m_mainFrame->view())) {
         // Intersect with parent visible rect.
         visibleWindowRect.intersect(getRecursiveVisibleWindowRect(view->parent(), noClipOfMainFrame));
@@ -2701,7 +2697,7 @@ PassRefPtr<Node> WebPagePrivate::contextNode(TargetDetectionStrategy strategy)
     else
         contentPos = mapFromViewportToContents(m_lastMouseEvent.position());
 
-    HitTestResult result = eventHandler->hitTestResultAtPoint(contentPos, false /*allowShadowContent*/);
+    HitTestResult result = eventHandler->hitTestResultAtPoint(contentPos);
     return result.innerNode();
 }
 
@@ -2772,7 +2768,7 @@ Node* WebPagePrivate::nodeForZoomUnderPoint(const IntPoint& documentPoint)
     if (!m_mainFrame)
         return 0;
 
-    HitTestResult result = m_mainFrame->eventHandler()->hitTestResultAtPoint(documentPoint, false);
+    HitTestResult result = m_mainFrame->eventHandler()->hitTestResultAtPoint(documentPoint);
 
     Node* node = result.innerNonSharedNode();
 
@@ -2985,7 +2981,7 @@ void WebPagePrivate::zoomBlock()
     if (!m_mainFrame)
         return;
 
-    IntPoint anchor(roundUntransformedPoint(m_finalBlockPoint));
+    IntPoint anchor(roundUntransformedPoint(m_finalAnimationDocumentScrollPosition));
     bool willUseTextReflow = false;
 
 #if ENABLE(VIEWPORT_REFLOW)
@@ -2995,7 +2991,7 @@ void WebPagePrivate::zoomBlock()
 #endif
 
     TransformationMatrix zoom;
-    zoom.scale(m_blockZoomFinalScale);
+    zoom.scale(m_finalAnimationScale);
     *m_transformationMatrix = zoom;
     // FIXME: Do we really need to suspend/resume both backingstore and screen here?
     m_backingStore->d->suspendBackingStoreUpdates();
@@ -3014,7 +3010,7 @@ void WebPagePrivate::zoomBlock()
     if (willUseTextReflow && m_shouldReflowBlock) {
         IntRect reflowedRect = rectForNode(m_currentBlockZoomAdjustedNode.get());
         reflowedRect = adjustRectOffsetForFrameOffset(reflowedRect, m_currentBlockZoomAdjustedNode.get());
-        reflowedRect.move(roundTransformedPoint(m_finalBlockPointReflowOffset).x(), roundTransformedPoint(m_finalBlockPointReflowOffset).y());
+        reflowedRect.move(roundTransformedPoint(m_finalAnimationDocumentScrollPositionReflowOffset).x(), roundTransformedPoint(m_finalAnimationDocumentScrollPositionReflowOffset).y());
         RenderObject* renderer = m_currentBlockZoomAdjustedNode->renderer();
         IntPoint topLeftPoint(reflowedRect.location());
         if (renderer && renderer->isText()) {
@@ -3051,7 +3047,7 @@ void WebPagePrivate::zoomBlock()
     } else if (willUseTextReflow) {
         IntRect finalRect = rectForNode(m_currentBlockZoomAdjustedNode.get());
         finalRect = adjustRectOffsetForFrameOffset(finalRect, m_currentBlockZoomAdjustedNode.get());
-        setScrollPosition(IntPoint(0, finalRect.y() + m_finalBlockPointReflowOffset.y()));
+        setScrollPosition(IntPoint(0, finalRect.y() + m_finalAnimationDocumentScrollPositionReflowOffset.y()));
         resetBlockZoom();
     }
 #endif
@@ -4009,7 +4005,7 @@ bool WebPagePrivate::handleMouseEvent(PlatformMouseEvent& mouseEvent)
     }
 
     if (!node) {
-        HitTestResult result = eventHandler->hitTestResultAtPoint(mapFromViewportToContents(mouseEvent.position()), false /*allowShadowContent*/);
+        HitTestResult result = eventHandler->hitTestResultAtPoint(mapFromViewportToContents(mouseEvent.position()));
         node = result.innerNode();
     }
 
@@ -4334,7 +4330,8 @@ bool WebPage::keyEvent(const Platform::KeyboardEvent& keyboardEvent)
 
     bool handled = d->m_inputHandler->handleKeyboardInput(keyboardEvent);
 
-    if (!handled && keyboardEvent.type() == Platform::KeyboardEvent::KeyDown && !d->m_inputHandler->isInputMode()) {
+    // This is hotkey handling and perhaps doesn't belong here.
+    if (!handled && keyboardEvent.type() == Platform::KeyboardEvent::KeyDown && !d->m_inputHandler->isInputMode() && !keyboardEvent.modifiers()) {
         IntPoint previousPos = d->scrollPosition();
         handleScrolling(keyboardEvent.character(), d);
         handled = previousPos != d->scrollPosition();
@@ -4501,6 +4498,11 @@ void WebPage::selectAll()
     if (d->m_page->defersLoading())
         return;
     d->m_inputHandler->selectAll();
+}
+
+bool WebPage::isInputMode() const
+{
+    return d->m_inputHandler->isInputMode();
 }
 
 void WebPage::setDocumentSelection(const Platform::IntPoint& documentStartPoint, const Platform::IntPoint& documentEndPoint)
@@ -4689,17 +4691,17 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
 
     if (newBlockHeight <= scaledViewportHeight) {
         // The block fits in the viewport so center it.
-        d->m_finalBlockPoint = FloatPoint(anchor.x() - dx, anchor.y() - dy);
+        d->m_finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - dy);
     } else {
         // The block is longer than the viewport so top align it and add 3 pixel margin.
-        d->m_finalBlockPoint = FloatPoint(anchor.x() - dx, anchor.y() - 3);
+        d->m_finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - 3);
     }
 
 #if ENABLE(VIEWPORT_REFLOW)
     // We don't know how long the reflowed block will be so we position it at the top of the screen with a small margin.
     if (settings()->textReflowMode() != WebSettings::TextReflowDisabled) {
-        d->m_finalBlockPoint = FloatPoint(anchor.x() - dx, anchor.y() - 3);
-        d->m_finalBlockPointReflowOffset = FloatPoint(-dx, -3);
+        d->m_finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - 3);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset = FloatPoint(-dx, -3);
     }
 #endif
 
@@ -4707,25 +4709,25 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     // not be the same as the original node rect, and it could force the original node rect off the screen.
     FloatRect br(anchor, FloatSize(scaledViewportWidth, scaledViewportHeight));
     if (!br.contains(IntPoint(documentTargetPoint))) {
-        d->m_finalBlockPointReflowOffset.move(0, (documentTargetPoint.y() - scaledViewportHeight / 2) - d->m_finalBlockPoint.y());
-        d->m_finalBlockPoint = FloatPoint(d->m_finalBlockPoint.x(), documentTargetPoint.y() - scaledViewportHeight / 2);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset.move(0, (documentTargetPoint.y() - scaledViewportHeight / 2) - d->m_finalAnimationDocumentScrollPosition.y());
+        d->m_finalAnimationDocumentScrollPosition = FloatPoint(d->m_finalAnimationDocumentScrollPosition.x(), documentTargetPoint.y() - scaledViewportHeight / 2);
     }
 
     // Clamp the finalBlockPoint to not cause any overflow scrolling.
-    if (d->m_finalBlockPoint.x() < 0) {
-        d->m_finalBlockPoint.setX(0);
-        d->m_finalBlockPointReflowOffset.setX(0);
-    } else if (d->m_finalBlockPoint.x() + scaledViewportWidth > d->contentsSize().width()) {
-        d->m_finalBlockPoint.setX(d->contentsSize().width() - scaledViewportWidth);
-        d->m_finalBlockPointReflowOffset.setX(0);
+    if (d->m_finalAnimationDocumentScrollPosition.x() < 0) {
+        d->m_finalAnimationDocumentScrollPosition.setX(0);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset.setX(0);
+    } else if (d->m_finalAnimationDocumentScrollPosition.x() + scaledViewportWidth > d->contentsSize().width()) {
+        d->m_finalAnimationDocumentScrollPosition.setX(d->contentsSize().width() - scaledViewportWidth);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset.setX(0);
     }
 
-    if (d->m_finalBlockPoint.y() < 0) {
-        d->m_finalBlockPoint.setY(0);
-        d->m_finalBlockPointReflowOffset.setY(0);
-    } else if (d->m_finalBlockPoint.y() + scaledViewportHeight > d->contentsSize().height()) {
-        d->m_finalBlockPoint.setY(d->contentsSize().height() - scaledViewportHeight);
-        d->m_finalBlockPointReflowOffset.setY(0);
+    if (d->m_finalAnimationDocumentScrollPosition.y() < 0) {
+        d->m_finalAnimationDocumentScrollPosition.setY(0);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset.setY(0);
+    } else if (d->m_finalAnimationDocumentScrollPosition.y() + scaledViewportHeight > d->contentsSize().height()) {
+        d->m_finalAnimationDocumentScrollPosition.setY(d->contentsSize().height() - scaledViewportHeight);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset.setY(0);
     }
 
     // Don't block zoom if the user is zooming and the new scale is only marginally different from the
@@ -4733,7 +4735,7 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     // that the zoom level is the minimumScale.
     if (!endOfBlockZoomMode && abs(newScale - oldScale) / oldScale < minimumExpandingRatio) {
         const double minimumDisplacement = minimumExpandingRatio * webkitThreadViewportAccessor()->documentViewportSize().width();
-        if (oldScale == d->minimumScale() || (distanceBetweenPoints(d->scrollPosition(), roundUntransformedPoint(d->m_finalBlockPoint)) < minimumDisplacement && abs(newScale - oldScale) / oldScale < 0.10)) {
+        if (oldScale == d->minimumScale() || (distanceBetweenPoints(d->scrollPosition(), roundUntransformedPoint(d->m_finalAnimationDocumentScrollPosition)) < minimumDisplacement && abs(newScale - oldScale) / oldScale < 0.10)) {
             if (isFirstZoom) {
                 d->resetBlockZoom();
                 return false;
@@ -4744,12 +4746,12 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
         }
     }
 
-    d->m_blockZoomFinalScale = newScale;
+    d->m_finalAnimationScale = newScale;
 
     // We set this here to make sure we don't try to re-render the page at a different zoom level during loading.
     d->m_userPerformedManualZoom = true;
     d->m_userPerformedManualScroll = true;
-    d->m_client->animateBlockZoom(d->m_blockZoomFinalScale, d->m_finalBlockPoint);
+    d->m_client->animateBlockZoom(d->m_finalAnimationScale, d->m_finalAnimationDocumentScrollPosition);
 
     return true;
 }
@@ -4985,7 +4987,7 @@ WebDOMDocument WebPage::document() const
 
 WebDOMNode WebPage::nodeAtDocumentPoint(const Platform::IntPoint& documentPoint)
 {
-    HitTestResult result = d->m_mainFrame->eventHandler()->hitTestResultAtPoint(WebCore::IntPoint(documentPoint), false);
+    HitTestResult result = d->m_mainFrame->eventHandler()->hitTestResultAtPoint(WebCore::IntPoint(documentPoint));
     Node* node = result.innerNonSharedNode();
     return WebDOMNode(node);
 }
@@ -5941,7 +5943,7 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     static bool dbinit = false;
     if (!dbinit && !webSettings->databasePath().empty()) {
         dbinit = true;
-        DatabaseManager::initialize(webSettings->databasePath());
+        DatabaseManager::manager().initialize(webSettings->databasePath());
     }
 
     // The directory of cacheStorage for one page group can only be initialized once.
@@ -5952,8 +5954,7 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     }
 
     coreSettings->setLocalStorageDatabasePath(webSettings->localStoragePath());
-    Database::setIsAvailable(webSettings->isDatabasesEnabled());
-    DatabaseSync::setIsAvailable(webSettings->isDatabasesEnabled());
+    DatabaseManager::manager().setIsAvailable(webSettings->isDatabasesEnabled());
 
     coreSettings->setLocalStorageEnabled(webSettings->isLocalStorageEnabled());
     coreSettings->setOfflineWebApplicationCacheEnabled(webSettings->isAppCacheEnabled());
@@ -6220,7 +6221,7 @@ void WebPagePrivate::postponeDocumentStyleRecalc()
         m_documentChildNeedsStyleRecalc = document->childNeedsStyleRecalc();
         document->clearChildNeedsStyleRecalc();
 
-        m_documentStyleRecalcPostponed = document->isPendingStyleRecalc();
+        m_documentStyleRecalcPostponed = document->hasPendingStyleRecalc();
         document->unscheduleStyleRecalc();
     }
 }
@@ -6243,7 +6244,7 @@ const HitTestResult& WebPagePrivate::hitTestResult(const IntPoint& contentPos)
 {
     if (m_cachedHitTestContentPos != contentPos) {
         m_cachedHitTestContentPos = contentPos;
-        m_cachedHitTestResult = m_mainFrame->eventHandler()->hitTestResultAtPoint(m_cachedHitTestContentPos, true /*allowShadowContent*/);
+        m_cachedHitTestResult = m_mainFrame->eventHandler()->hitTestResultAtPoint(m_cachedHitTestContentPos, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
     }
 
     return m_cachedHitTestResult;
@@ -6258,14 +6259,14 @@ void WebPagePrivate::willComposite()
 {
     if (!m_page->settings()->developerExtrasEnabled())
         return;
-    InspectorInstrumentation::willComposite(m_page);
+    m_page->inspectorController()->willComposite();
 }
 
 void WebPagePrivate::didComposite()
 {
     if (!m_page->settings()->developerExtrasEnabled())
         return;
-    InspectorInstrumentation::didComposite(m_page);
+    m_page->inspectorController()->didComposite();
 }
 
 void WebPage::updateNotificationPermission(const BlackBerry::Platform::String& requestId, bool allowed)
@@ -6312,6 +6313,25 @@ void WebPage::notificationShown(const BlackBerry::Platform::String& notification
 #else
     UNUSED_PARAM(notificationId);
 #endif
+}
+
+void WebPagePrivate::animateToScaleAndDocumentScrollPosition(double destinationZoomScale, const WebCore::FloatPoint& destinationScrollPosition, bool shouldConstrainScrollingToContentEdge)
+{
+    if (destinationScrollPosition == scrollPosition() && destinationZoomScale == currentScale())
+        return;
+
+    m_finalAnimationDocumentScrollPosition = destinationScrollPosition;
+    m_finalAnimationScale = destinationZoomScale;
+    m_shouldReflowBlock = false;
+    m_userPerformedManualZoom = true;
+    m_userPerformedManualScroll = true;
+    m_shouldConstrainScrollingToContentEdge = shouldConstrainScrollingToContentEdge;
+    client()->animateBlockZoom(destinationZoomScale, destinationScrollPosition);
+}
+
+void WebPage::animateToScaleAndDocumentScrollPosition(double destinationZoomScale, const BlackBerry::Platform::FloatPoint& destinationScrollPosition, bool shouldConstrainScrollingToContentEdge)
+{
+    d->animateToScaleAndDocumentScrollPosition(destinationZoomScale, destinationScrollPosition, shouldConstrainScrollingToContentEdge);
 }
 
 }

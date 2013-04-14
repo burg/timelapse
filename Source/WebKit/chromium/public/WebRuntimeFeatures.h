@@ -125,6 +125,9 @@ public:
     WEBKIT_EXPORT static void enableShadowDOM(bool);
     WEBKIT_EXPORT static bool isShadowDOMEnabled();
 
+    WEBKIT_EXPORT static void enableCustomDOMElements(bool);
+    WEBKIT_EXPORT static bool isCustomDOMElementsEnabled();
+
     WEBKIT_EXPORT static void enableStyleScoped(bool);
     WEBKIT_EXPORT static bool isStyleScopedEnabled();
 
@@ -149,6 +152,9 @@ public:
     WEBKIT_EXPORT static void enableDialogElement(bool);
     WEBKIT_EXPORT static bool isDialogElementEnabled();
 
+    WEBKIT_EXPORT static void enableCanvasPath(bool);
+    WEBKIT_EXPORT static bool isCanvasPathEnabled();
+    
     WEBKIT_EXPORT static void enableCSSExclusions(bool);
     WEBKIT_EXPORT static bool isCSSExclusionsEnabled();
 

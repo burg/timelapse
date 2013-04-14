@@ -264,18 +264,6 @@ bool DumpRenderTreeSupportQt::hasDocumentElement(QWebFrameAdapter *adapter)
     return adapter->frame->document()->documentElement();
 }
 
-void DumpRenderTreeSupportQt::setAutofilled(const QWebElement& element, bool isAutofilled)
-{
-    WebCore::Element* webElement = element.m_element;
-    if (!webElement)
-        return;
-    HTMLInputElement* inputElement = webElement->toInputElement();
-    if (!inputElement)
-        return;
-
-    inputElement->setAutofilled(isAutofilled);
-}
-
 void DumpRenderTreeSupportQt::setValueForUser(const QWebElement& element, const QString& value)
 {
     WebCore::Element* webElement = element.m_element;
@@ -991,4 +979,11 @@ void DumpRenderTreeSupportQt::clearNotificationPermissions()
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     WebCore::NotificationPresenterClientQt::notificationPresenter()->clearCachedPermissions();
 #endif
+}
+
+void DumpRenderTreeSupportQt::getJSWindowObject(QWebFrameAdapter* adapter, JSContextRef* context, JSObjectRef* object)
+{
+    JSDOMWindow* window = toJSDOMWindow(adapter->frame, mainThreadNormalWorld());
+    *object = toRef(window);
+    *context = toRef(window->globalExec());
 }

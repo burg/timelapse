@@ -27,11 +27,16 @@
 #include "StorageAreaProxy.h"
 
 #include "SecurityOriginData.h"
+#include "StorageAreaProxyMessages.h"
 #include "StorageManagerMessages.h"
 #include "StorageNamespaceProxy.h"
 #include "WebProcess.h"
+#include <WebCore/ExceptionCode.h>
 #include <WebCore/Frame.h>
+#include <WebCore/Page.h>
+#include <WebCore/SchemeRegistry.h>
 #include <WebCore/SecurityOrigin.h>
+#include <WebCore/StorageMap.h>
 
 using namespace WebCore;
 
@@ -49,41 +54,87 @@ PassRefPtr<StorageAreaProxy> StorageAreaProxy::create(StorageNamespaceProxy* sto
 }
 
 StorageAreaProxy::StorageAreaProxy(StorageNamespaceProxy* storageNamespaceProxy, PassRefPtr<SecurityOrigin> securityOrigin)
-    : m_storageAreaID(generateStorageAreaID())
+    : m_storageType(storageNamespaceProxy->storageType())
+    , m_quotaInBytes(storageNamespaceProxy->quotaInBytes())
+    , m_storageAreaID(generateStorageAreaID())
 {
     WebProcess::shared().connection()->send(Messages::StorageManager::CreateStorageArea(m_storageAreaID, storageNamespaceProxy->storageNamespaceID(), SecurityOriginData::fromSecurityOrigin(securityOrigin.get())), 0);
+    WebProcess::shared().addMessageReceiver(Messages::StorageAreaProxy::messageReceiverName(), m_storageAreaID, this);
 }
 
 StorageAreaProxy::~StorageAreaProxy()
 {
     WebProcess::shared().connection()->send(Messages::StorageManager::DestroyStorageArea(m_storageAreaID), 0);
+    WebProcess::shared().removeMessageReceiver(Messages::StorageAreaProxy::messageReceiverName(), m_storageAreaID);
 }
 
-unsigned StorageAreaProxy::length(ExceptionCode&, Frame* sourceFrame) const
+unsigned StorageAreaProxy::length(ExceptionCode& ec, Frame* sourceFrame)
 {
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
-    return 0;
+    ec = 0;
+    if (!canAccessStorage(sourceFrame)) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
+
+    if (disabledByPrivateBrowsingInFrame(sourceFrame))
+        return 0;
+
+    loadValuesIfNeeded();
+    return m_storageMap->length();
 }
 
-String StorageAreaProxy::key(unsigned index, ExceptionCode&, Frame* sourceFrame) const
+String StorageAreaProxy::key(unsigned index, ExceptionCode&, Frame* sourceFrame)
 {
     // FIXME: Implement this.
     ASSERT_NOT_REACHED();
     return String();
 }
 
-String StorageAreaProxy::getItem(const String& key, ExceptionCode&, Frame* sourceFrame) const
+String StorageAreaProxy::getItem(const String& key, ExceptionCode& ec, Frame* sourceFrame)
 {
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
-    return String();
+    ec = 0;
+    if (!canAccessStorage(sourceFrame)) {
+        ec = SECURITY_ERR;
+        return String();
+    }
+    if (disabledByPrivateBrowsingInFrame(sourceFrame))
+        return String();
+
+    loadValuesIfNeeded();
+    return m_storageMap->getItem(key);
 }
 
-void StorageAreaProxy::setItem(const String& key, const String& value, ExceptionCode&, Frame* sourceFrame)
+void StorageAreaProxy::setItem(const String& key, const String& value, ExceptionCode& ec, Frame* sourceFrame)
 {
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
+    ec = 0;
+    if (!canAccessStorage(sourceFrame)) {
+        ec = SECURITY_ERR;
+        return;
+    }
+
+    ASSERT(!value.isNull());
+
+    if (disabledByPrivateBrowsingInFrame(sourceFrame)) {
+        ec = QUOTA_EXCEEDED_ERR;
+        return;
+    }
+
+    loadValuesIfNeeded();
+
+    ASSERT(m_storageMap->hasOneRef());
+    String oldValue;
+    bool quotaException;
+    m_storageMap->setItem(key, value, oldValue, quotaException);
+
+    if (quotaException) {
+        ec = QUOTA_EXCEEDED_ERR;
+        return;
+    }
+
+    if (oldValue == value)
+        return;
+
+    WebProcess::shared().connection()->send(Messages::StorageManager::SetItem(m_storageAreaID, key, value), 0);
 }
 
 void StorageAreaProxy::removeItem(const String& key, ExceptionCode&, Frame* sourceFrame)
@@ -98,18 +149,18 @@ void StorageAreaProxy::clear(ExceptionCode&, Frame* sourceFrame)
     ASSERT_NOT_REACHED();
 }
 
-bool StorageAreaProxy::contains(const String& key, ExceptionCode&, Frame* sourceFrame) const
+bool StorageAreaProxy::contains(const String& key, ExceptionCode&, Frame* sourceFrame)
 {
     // FIXME: Implement this.
     return false;
 }
 
-bool StorageAreaProxy::canAccessStorage(Frame* frame) const
+bool StorageAreaProxy::canAccessStorage(Frame* frame)
 {
     return frame && frame->page();
 }
 
-size_t StorageAreaProxy::memoryBytesUsedByCache() const
+size_t StorageAreaProxy::memoryBytesUsedByCache()
 {
     // FIXME: Implement this.
     ASSERT_NOT_REACHED();
@@ -130,6 +181,37 @@ void StorageAreaProxy::closeDatabaseIfIdle()
 {
     // FIXME: Implement this.
     ASSERT_NOT_REACHED();
+}
+
+
+void StorageAreaProxy::didSetItem(const String& key, bool quotaError)
+{
+    // FIXME: Implement this.
+}
+
+bool StorageAreaProxy::disabledByPrivateBrowsingInFrame(const Frame* sourceFrame) const
+{
+    if (!sourceFrame->page()->settings()->privateBrowsingEnabled())
+        return false;
+
+    if (m_storageType != LocalStorage)
+        return true;
+
+    return !SchemeRegistry::allowsLocalStorageAccessInPrivateBrowsing(sourceFrame->document()->securityOrigin()->protocol());
+}
+
+void StorageAreaProxy::loadValuesIfNeeded()
+{
+    if (m_storageMap)
+        return;
+
+    HashMap<String, String> values;
+    // FIXME: This should use a special sendSync flag to indicate that we don't want to process incoming messages while waiting for a reply.
+    // (This flag does not yet exist).
+    WebProcess::shared().connection()->sendSync(Messages::StorageManager::GetValues(m_storageAreaID), Messages::StorageManager::GetValues::Reply(values), 0);
+
+    m_storageMap = StorageMap::create(m_quotaInBytes);
+    m_storageMap->importItems(values);
 }
 
 } // namespace WebKit

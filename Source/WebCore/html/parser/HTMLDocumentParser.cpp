@@ -94,6 +94,7 @@ HTMLDocumentParser::HTMLDocumentParser(HTMLDocument* document, bool reportErrors
     , m_weakFactory(this)
 #endif
     , m_preloader(adoptPtr(new HTMLResourcePreloader(document)))
+    , m_isPinnedToMainThread(false)
     , m_endWasDelayed(false)
     , m_haveBackgroundParser(false)
     , m_pumpSessionNestingLevel(0)
@@ -113,6 +114,7 @@ HTMLDocumentParser::HTMLDocumentParser(DocumentFragment* fragment, Element* cont
 #if ENABLE(THREADED_HTML_PARSER)
     , m_weakFactory(this)
 #endif
+    , m_isPinnedToMainThread(true)
     , m_endWasDelayed(false)
     , m_haveBackgroundParser(false)
     , m_pumpSessionNestingLevel(0)
@@ -130,6 +132,20 @@ HTMLDocumentParser::~HTMLDocumentParser()
     ASSERT(!m_insertionPreloadScanner);
     ASSERT(!m_haveBackgroundParser);
 }
+
+#if ENABLE(THREADED_HTML_PARSER)
+void HTMLDocumentParser::pinToMainThread()
+{
+    ASSERT(!m_haveBackgroundParser);
+    ASSERT(!m_isPinnedToMainThread);
+    m_isPinnedToMainThread = true;
+    if (!m_tokenizer) {
+        ASSERT(!m_token);
+        m_token = adoptPtr(new HTMLToken);
+        m_tokenizer = HTMLTokenizer::create(m_options);
+    }
+}
+#endif
 
 void HTMLDocumentParser::detach()
 {
@@ -162,7 +178,9 @@ void HTMLDocumentParser::stopParsing()
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-end.html#the-end
 void HTMLDocumentParser::prepareToStopParsing()
 {
-    ASSERT(!hasInsertionPoint());
+    // FIXME: It may not be correct to disable this for the background parser.
+    // That means hasInsertionPoint() may not be correct in some cases.
+    ASSERT(!hasInsertionPoint() || m_haveBackgroundParser);
 
     // pumpTokenizer can cause this parser to be detached from the Document,
     // but we need to ensure it isn't deleted yet.
@@ -228,11 +246,16 @@ bool HTMLDocumentParser::isScheduledForResume() const
 // Used by HTMLParserScheduler
 void HTMLDocumentParser::resumeParsingAfterYield()
 {
-    ASSERT(!m_haveBackgroundParser);
-
     // pumpTokenizer can cause this parser to be detached from the Document,
     // but we need to ensure it isn't deleted yet.
     RefPtr<HTMLDocumentParser> protect(this);
+
+#if ENABLE(THREADED_HTML_PARSER)
+    if (m_haveBackgroundParser) {
+        pumpPendingSpeculations();
+        return;
+    }
+#endif
 
     // We should never be here unless we can pump immediately.  Call pumpTokenizer()
     // directly so that ASSERTS will fire if we're wrong.
@@ -290,12 +313,24 @@ bool HTMLDocumentParser::canTakeNextToken(SynchronousMode mode, PumpSession& ses
 
 void HTMLDocumentParser::didReceiveParsedChunkFromBackgroundParser(PassOwnPtr<ParsedChunk> chunk)
 {
-    if (isWaitingForScripts()) {
+    if (isWaitingForScripts() || !m_speculations.isEmpty()) {
+        m_preloader->takeAndPreload(chunk->preloads);
         m_speculations.append(chunk);
         return;
     }
+
+    // processParsedChunkFromBackgroundParser can cause this parser to be detached from the Document,
+    // but we need to ensure it isn't deleted yet.
+    RefPtr<HTMLDocumentParser> protect(this);
+
+    // FIXME: Pass in current input length.
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), 0, lineNumber().zeroBasedInt());
+
     ASSERT(m_speculations.isEmpty());
+    chunk->preloads.clear(); // We don't need to preload because we're going to parse immediately.
     processParsedChunkFromBackgroundParser(chunk);
+
+    InspectorInstrumentation::didWriteHTML(cookie, lineNumber().zeroBasedInt());
 }
 
 void HTMLDocumentParser::checkForSpeculationFailure()
@@ -309,6 +344,9 @@ void HTMLDocumentParser::checkForSpeculationFailure()
 
 void HTMLDocumentParser::didFailSpeculation(PassOwnPtr<HTMLToken> token, PassOwnPtr<HTMLTokenizer> tokenizer)
 {
+    if (!m_currentChunk)
+        return;
+
     m_weakFactory.revokeAll();
     m_speculations.clear();
 
@@ -316,9 +354,11 @@ void HTMLDocumentParser::didFailSpeculation(PassOwnPtr<HTMLToken> token, PassOwn
     checkpoint->parser = m_weakFactory.createWeakPtr();
     checkpoint->token = token;
     checkpoint->tokenizer = tokenizer;
-    checkpoint->inputCheckpoint = m_currentChunk->checkpoint;
+    checkpoint->inputCheckpoint = m_currentChunk->inputCheckpoint;
+    checkpoint->preloadScannerCheckpoint = m_currentChunk->preloadScannerCheckpoint;
     checkpoint->unparsedInput = m_input.current().toString().isolatedCopy();
     m_input.current().clear();
+    m_currentChunk.clear();
 
     ASSERT(checkpoint->unparsedInput.isSafeToSendToAnotherThread());
     HTMLParserThread::shared()->postTask(bind(&BackgroundHTMLParser::resumeFrom, m_backgroundParser, checkpoint.release()));
@@ -326,19 +366,14 @@ void HTMLDocumentParser::didFailSpeculation(PassOwnPtr<HTMLToken> token, PassOwn
 
 void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<ParsedChunk> chunk)
 {
+    // ASSERT that this object is both attached to the Document and protected.
+    ASSERT(refCount() >= 2);
     ASSERT(shouldUseThreading());
-
-    // This method can cause this parser to be detached from the Document,
-    // but we need to ensure it isn't deleted yet.
-    RefPtr<HTMLDocumentParser> protect(this);
 
     ActiveParserSession session(contextForParsingSession());
 
     m_currentChunk = chunk;
     OwnPtr<CompactHTMLTokenStream> tokens = m_currentChunk->tokens.release();
-
-    // FIXME: Pass in current input length.
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), 0, lineNumber().zeroBasedInt());
 
     for (Vector<CompactHTMLToken>::const_iterator it = tokens->begin(); it != tokens->end(); ++it) {
         ASSERT(!isWaitingForScripts());
@@ -353,8 +388,14 @@ void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<Parse
             break;
 
         if (!isParsingFragment()
-            && document()->frame() && document()->frame()->navigationScheduler()->locationChangePending())
+            && document()->frame() && document()->frame()->navigationScheduler()->locationChangePending()) {
+
+            // To match main-thread parser behavior (which never checks locationChangePending on the EOF path)
+            // we peek to see if this chunk has an EOF and process it anyway.
+            if (tokens->last().type() == HTMLToken::EndOfFile)
+                prepareToStopParsing();
             break;
+        }
 
         if (isWaitingForScripts()) {
             ASSERT(it + 1 == tokens->end()); // The </script> is assumed to be the last token of this bunch.
@@ -370,6 +411,32 @@ void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<Parse
     }
 
     checkForSpeculationFailure();
+}
+
+void HTMLDocumentParser::pumpPendingSpeculations()
+{
+    // FIXME: Share this constant with the parser scheduler.
+    const double parserTimeLimit = 0.500;
+
+    // ASSERT that this object is both attached to the Document and protected.
+    ASSERT(refCount() >= 2);
+
+    // FIXME: Pass in current input length.
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willWriteHTML(document(), 0, lineNumber().zeroBasedInt());
+
+    double startTime = currentTime();
+
+    while (!m_speculations.isEmpty()) {
+        processParsedChunkFromBackgroundParser(m_speculations.takeFirst());
+
+        if (isWaitingForScripts() || isStopped())
+            break;
+
+        if (currentTime() - startTime > parserTimeLimit && !m_speculations.isEmpty()) {
+            m_parserScheduler->scheduleForResume();
+            break;
+        }
+    }
 
     InspectorInstrumentation::didWriteHTML(cookie, lineNumber().zeroBasedInt());
 }
@@ -560,11 +627,16 @@ void HTMLDocumentParser::startBackgroundParser()
     RefPtr<WeakReference<BackgroundHTMLParser> > reference = WeakReference<BackgroundHTMLParser>::createUnbound();
     m_backgroundParser = WeakPtr<BackgroundHTMLParser>(reference);
 
-    WeakPtr<HTMLDocumentParser> parser = m_weakFactory.createWeakPtr();
-    OwnPtr<XSSAuditor> xssAuditor = adoptPtr(new XSSAuditor);
-    xssAuditor->init(document());
-    ASSERT(xssAuditor->isSafeToSendToAnotherThread());
-    HTMLParserThread::shared()->postTask(bind(&BackgroundHTMLParser::create, reference.release(), m_options, parser, xssAuditor.release()));
+    OwnPtr<BackgroundHTMLParser::Configuration> config = adoptPtr(new BackgroundHTMLParser::Configuration);
+    config->options = m_options;
+    config->parser = m_weakFactory.createWeakPtr();
+    config->xssAuditor = adoptPtr(new XSSAuditor);
+    config->xssAuditor->init(document());
+    config->preloadScanner = adoptPtr(new TokenPreloadScanner(document()->url().copy()));
+
+    ASSERT(config->xssAuditor->isSafeToSendToAnotherThread());
+    ASSERT(config->preloadScanner->isSafeToSendToAnotherThread());
+    HTMLParserThread::shared()->postTask(bind(&BackgroundHTMLParser::create, reference.release(), config.release()));
 }
 
 void HTMLDocumentParser::stopBackgroundParser()
@@ -649,7 +721,9 @@ void HTMLDocumentParser::end()
 void HTMLDocumentParser::attemptToRunDeferredScriptsAndEnd()
 {
     ASSERT(isStopping());
-    ASSERT(!hasInsertionPoint());
+    // FIXME: It may not be correct to disable this for the background parser.
+    // That means hasInsertionPoint() may not be correct in some cases.
+    ASSERT(!hasInsertionPoint() || m_haveBackgroundParser);
     if (m_scriptRunner && !m_scriptRunner->executeScriptsWaitingForParsing())
         return;
     end();
@@ -697,8 +771,8 @@ void HTMLDocumentParser::finish()
         return;
     }
 
-    if (shouldUseThreading() && !wasCreatedByScript()) {
-        ASSERT(!m_tokenizer && !m_token);
+    if (!m_tokenizer) {
+        ASSERT(!m_token);
         // We're finishing before receiving any data. Rather than booting up
         // the background parser just to spin it down, we finish parsing
         // synchronously.
@@ -772,11 +846,10 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
     if (m_haveBackgroundParser) {
         checkForSpeculationFailure();
 
-        while (!m_speculations.isEmpty()) {
-            processParsedChunkFromBackgroundParser(m_speculations.takeFirst());
-            if (isWaitingForScripts() || isStopped())
-                return;
-        }
+        // processParsedChunkFromBackgroundParser can cause this parser to be detached from the Document,
+        // but we need to ensure it isn't deleted yet.
+        RefPtr<HTMLDocumentParser> protect(this);
+        pumpPendingSpeculations();
         return;
     }
 #endif

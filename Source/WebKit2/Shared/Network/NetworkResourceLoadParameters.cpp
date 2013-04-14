@@ -64,16 +64,16 @@ NetworkResourceLoadParameters::NetworkResourceLoadParameters(ResourceLoadIdentif
 
 void NetworkResourceLoadParameters::encode(CoreIPC::ArgumentEncoder& encoder) const
 {
-    encoder.encode(m_identifier);
-    encoder.encode(m_webPageID);
-    encoder.encode(m_webFrameID);
-    encoder.encode(m_request);
+    encoder << m_identifier;
+    encoder << m_webPageID;
+    encoder << m_webFrameID;
+    encoder << m_request;
 
-    encoder.encode(static_cast<bool>(m_request.httpBody()));
+    encoder << static_cast<bool>(m_request.httpBody());
     if (m_request.httpBody()) {
         EncoderAdapter httpBodyEncoderAdapter;
         m_request.httpBody()->encode(httpBodyEncoderAdapter);
-        encoder.encode(httpBodyEncoderAdapter.dataReference());
+        encoder << httpBodyEncoderAdapter.dataReference();
 
         const Vector<FormDataElement>& elements = m_request.httpBody()->elements();
         size_t fileCount = 0;
@@ -92,20 +92,20 @@ void NetworkResourceLoadParameters::encode(CoreIPC::ArgumentEncoder& encoder) co
                 SandboxExtension::createHandle(path, SandboxExtension::ReadOnly, requestBodySandboxExtensions[extensionIndex++]);
             }
         }
-        encoder.encode(requestBodySandboxExtensions);
+        encoder << requestBodySandboxExtensions;
     }
 
     if (m_request.url().isLocalFile()) {
         SandboxExtension::Handle requestSandboxExtension;
         SandboxExtension::createHandle(m_request.url().fileSystemPath(), SandboxExtension::ReadOnly, requestSandboxExtension);
-        encoder.encode(requestSandboxExtension);
+        encoder << requestSandboxExtension;
     }
 
     encoder.encodeEnum(m_priority);
     encoder.encodeEnum(m_contentSniffingPolicy);
     encoder.encodeEnum(m_allowStoredCredentials);
-    encoder.encode(m_inPrivateBrowsingMode);
-    encoder.encode(m_shouldClearReferrerOnHTTPSToHTTPRedirect);
+    encoder << m_inPrivateBrowsingMode;
+    encoder << m_shouldClearReferrerOnHTTPSToHTTPRedirect;
 }
 
 bool NetworkResourceLoadParameters::decode(CoreIPC::ArgumentDecoder& decoder, NetworkResourceLoadParameters& result)

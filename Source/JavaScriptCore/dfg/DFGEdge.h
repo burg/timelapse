@@ -31,6 +31,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGCommon.h"
+#include "DFGUseKind.h"
 
 namespace JSC { namespace DFG {
 
@@ -39,40 +40,78 @@ class AdjacencyList;
 class Edge {
 public:
     Edge()
+#if USE(JSVALUE64)
         : m_encodedWord(makeWord(0, UntypedUse))
+#else
+        : m_node(0)
+        , m_encodedWord(UntypedUse)
+#endif
     {
     }
     
     explicit Edge(Node* node)
+#if USE(JSVALUE64)
         : m_encodedWord(makeWord(node, UntypedUse))
+#else
+        : m_node(node)
+        , m_encodedWord(UntypedUse)
+#endif
     {
     }
     
     Edge(Node* node, UseKind useKind)
+#if USE(JSVALUE64)
         : m_encodedWord(makeWord(node, useKind))
+#else
+        : m_node(node)
+        , m_encodedWord(useKind)
+#endif
     {
     }
     
-    Node* node() const { return bitwise_cast<Node*>(m_encodedWord & ~((1 << shift()) - 1)); }
+#if USE(JSVALUE64)
+    Node* node() const { return bitwise_cast<Node*>(m_encodedWord >> shift()); }
+#else
+    Node* node() const { return m_node; }
+#endif
+
     Node& operator*() const { return *node(); }
     Node* operator->() const { return node(); }
     
     void setNode(Node* node)
     {
+#if USE(JSVALUE64)
         m_encodedWord = makeWord(node, useKind());
+#else
+        m_node = node;
+#endif
     }
     
+    UseKind useKindUnchecked() const
+    {
+#if USE(JSVALUE64)
+        unsigned masked = m_encodedWord & (((1 << shift()) - 1));
+        ASSERT(masked < LastUseKind);
+        UseKind result = static_cast<UseKind>(masked);
+#else
+        UseKind result = static_cast<UseKind>(m_encodedWord);
+#endif
+        ASSERT(node() || result == UntypedUse);
+        return result;
+    }
     UseKind useKind() const
     {
         ASSERT(node());
-        unsigned masked = m_encodedWord & (((1 << shift()) - 1));
-        ASSERT(masked < LastUseKind);
-        return static_cast<UseKind>(masked);
+        return useKindUnchecked();
     }
     void setUseKind(UseKind useKind)
     {
         ASSERT(node());
+#if USE(JSVALUE64)
         m_encodedWord = makeWord(node(), useKind);
+#else
+        m_encodedWord = useKind;
+#endif
     }
     
     bool isSet() const { return !!node(); }
@@ -84,11 +123,15 @@ public:
     
     bool operator==(Edge other) const
     {
+#if USE(JSVALUE64)
         return m_encodedWord == other.m_encodedWord;
+#else
+        return m_node == other.m_node && m_encodedWord == other.m_encodedWord;
+#endif
     }
     bool operator!=(Edge other) const
     {
-        return m_encodedWord != other.m_encodedWord;
+        return !(*this == other);
     }
     
     void dump(PrintStream&) const;
@@ -96,17 +139,25 @@ public:
 private:
     friend class AdjacencyList;
     
-    static uint32_t shift() { return 2; }
+#if USE(JSVALUE64)
+    static uint32_t shift() { return 4; }
     
     static uintptr_t makeWord(Node* node, UseKind useKind)
     {
-        uintptr_t value = bitwise_cast<uintptr_t>(node);
-        ASSERT(!(value & ((1 << shift()) - 1)));
+        ASSERT(sizeof(node) == 8);
+        uintptr_t shiftedValue = bitwise_cast<uintptr_t>(node) << shift();
+        ASSERT((shiftedValue >> shift()) == bitwise_cast<uintptr_t>(node));
         ASSERT(useKind >= 0 && useKind < LastUseKind);
         ASSERT(LastUseKind <= (1 << shift()));
-        return value | static_cast<uintptr_t>(useKind);
+        return shiftedValue | static_cast<uintptr_t>(useKind);
     }
     
+#else
+    Node* m_node;
+#endif
+    // On 64-bit this holds both the pointer and the use kind, while on 32-bit
+    // this just holds the use kind. In both cases this may be hijacked by
+    // AdjacencyList for storing firstChild and numChildren.
     uintptr_t m_encodedWord;
 };
 

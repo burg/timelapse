@@ -37,6 +37,9 @@ list(APPEND WebKit2_SOURCES
 
     UIProcess/API/C/cairo/WKIconDatabaseCairo.cpp
 
+    UIProcess/API/C/efl/WKPageEfl.cpp
+    UIProcess/API/C/efl/WKPopupItem.cpp
+    UIProcess/API/C/efl/WKPopupMenuListener.cpp
     UIProcess/API/C/efl/WKView.cpp
 
     UIProcess/API/cpp/efl/WKEinaSharedString.cpp
@@ -89,9 +92,6 @@ list(APPEND WebKit2_SOURCES
     UIProcess/efl/FormClientEfl.cpp
     UIProcess/efl/InputMethodContextEfl.cpp
     UIProcess/efl/NetworkInfoProvider.cpp
-    UIProcess/efl/PageClientBase.cpp
-    UIProcess/efl/PageClientLegacyImpl.cpp
-    UIProcess/efl/PageClientDefaultImpl.cpp
     UIProcess/efl/PageLoadClientEfl.cpp
     UIProcess/efl/PagePolicyClientEfl.cpp
     UIProcess/efl/PageUIClientEfl.cpp
@@ -99,15 +99,19 @@ list(APPEND WebKit2_SOURCES
     UIProcess/efl/RequestManagerClientEfl.cpp
     UIProcess/efl/TextCheckerEfl.cpp
     UIProcess/efl/VibrationClientEfl.cpp
+    UIProcess/efl/ViewClientEfl.cpp
     UIProcess/efl/WebContextEfl.cpp
     UIProcess/efl/WebContextMenuProxyEfl.cpp
     UIProcess/efl/WebFullScreenManagerProxyEfl.cpp
     UIProcess/efl/WebInspectorProxyEfl.cpp
     UIProcess/efl/WebPageProxyEfl.cpp
-    UIProcess/efl/WebPopupMenuProxyEfl.cpp
+    UIProcess/efl/WebPopupItemEfl.cpp
+    UIProcess/efl/WebPopupMenuListenerEfl.cpp
     UIProcess/efl/WebPreferencesEfl.cpp
     UIProcess/efl/WebProcessProxyEfl.cpp
+    UIProcess/efl/WebUIPopupMenuClient.cpp
     UIProcess/efl/WebView.cpp
+    UIProcess/efl/WebViewClient.cpp
 
     UIProcess/InspectorServer/efl/WebInspectorServerEfl.cpp
     UIProcess/InspectorServer/soup/WebSocketServerSoup.cpp

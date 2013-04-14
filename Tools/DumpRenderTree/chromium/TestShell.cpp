@@ -33,7 +33,7 @@
 
 #include "DRTDevToolsAgent.h"
 #include "DRTDevToolsClient.h"
-#include "MockWebKitPlatformSupport.h"
+#include "MockPlatform.h"
 #include "MockWebPrerenderingSupport.h"
 #include "WebArrayBufferView.h"
 #include "WebDataSource.h"
@@ -43,7 +43,6 @@
 #include "WebHistoryItem.h"
 #include "WebIDBFactory.h"
 #include "WebTestingSupport.h"
-#include "WebRuntimeFeatures.h"
 #include "WebSettings.h"
 #include "WebTestProxy.h"
 #include "WebTestRunner.h"
@@ -114,7 +113,7 @@ TestShell::TestShell()
     , m_softwareCompositingEnabled(false)
     , m_threadedCompositingEnabled(false)
     , m_forceCompositingMode(false)
-    , m_threadedHTMLParser(false)
+    , m_threadedHTMLParser(true)
     , m_accelerated2dCanvasEnabled(false)
     , m_deferred2dCanvasEnabled(false)
     , m_acceleratedPaintingEnabled(false)
@@ -126,31 +125,6 @@ TestShell::TestShell()
     , m_dumpWhenFinished(true)
     , m_isDisplayingModalDialog(false)
 {
-    WebRuntimeFeatures::enableDataTransferItems(true);
-    WebRuntimeFeatures::enableDeviceMotion(false);
-    WebRuntimeFeatures::enableGeolocation(true);
-    WebRuntimeFeatures::enableIndexedDatabase(true);
-    WebRuntimeFeatures::enableInputTypeDateTime(true);
-    WebRuntimeFeatures::enableInputTypeDateTimeLocal(true);
-    WebRuntimeFeatures::enableInputTypeMonth(true);
-    WebRuntimeFeatures::enableInputTypeTime(true);
-    WebRuntimeFeatures::enableInputTypeWeek(true);
-    WebRuntimeFeatures::enableFileSystem(true);
-    WebRuntimeFeatures::enableJavaScriptI18NAPI(true);
-    WebRuntimeFeatures::enableMediaSource(true);
-    WebRuntimeFeatures::enableEncryptedMedia(true);
-    WebRuntimeFeatures::enableMediaStream(true);
-    WebRuntimeFeatures::enablePeerConnection(true);
-    WebRuntimeFeatures::enableWebAudio(true);
-    WebRuntimeFeatures::enableVideoTrack(true);
-    WebRuntimeFeatures::enableGamepad(true);
-    WebRuntimeFeatures::enableShadowDOM(true);
-    WebRuntimeFeatures::enableStyleScoped(true);
-    WebRuntimeFeatures::enableScriptedSpeech(true);
-    WebRuntimeFeatures::enableRequestAutocomplete(true);
-    WebRuntimeFeatures::enableExperimentalContentSecurityPolicyFeatures(true);
-    WebRuntimeFeatures::enableSeamlessIFrames(true);
-
     // 30 second is the same as the value in Mac DRT.
     // If we use a value smaller than the timeout value of
     // (new-)run-webkit-tests, (new-)run-webkit-tests misunderstands that a
@@ -158,14 +132,11 @@ TestShell::TestShell()
     m_timeout = 30 * 1000;
 }
 
-void TestShell::initialize(MockWebKitPlatformSupport* platformSupport)
+void TestShell::initialize(MockPlatform* platformSupport)
 {
     m_testInterfaces = adoptPtr(new WebTestInterfaces());
     platformSupport->setInterfaces(m_testInterfaces.get());
     m_devToolsTestInterfaces = adoptPtr(new WebTestInterfaces());
-#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-    m_notificationPresenter = adoptPtr(new NotificationPresenter(this));
-#endif
 #if ENABLE(LINK_PRERENDER)
     m_prerenderingSupport = adoptPtr(new MockWebPrerenderingSupport());
 #endif
@@ -185,16 +156,16 @@ void TestShell::createMainWindow()
     m_webViewHost = adoptPtr(createNewWindow(WebURL(), m_drtDevToolsAgent.get(), m_testInterfaces.get()));
     m_webView = m_webViewHost->webView();
     m_testInterfaces->setDelegate(m_webViewHost.get());
-    m_testInterfaces->setWebView(m_webView);
+    m_testInterfaces->setWebView(m_webView, m_webViewHost->proxy());
     m_drtDevToolsAgent->setWebView(m_webView);
 }
 
 TestShell::~TestShell()
 {
     m_testInterfaces->setDelegate(0);
-    m_testInterfaces->setWebView(0);
+    m_testInterfaces->setWebView(0, 0);
     m_devToolsTestInterfaces->setDelegate(0);
-    m_devToolsTestInterfaces->setWebView(0);
+    m_devToolsTestInterfaces->setWebView(0, 0);
     m_drtDevToolsAgent->setWebView(0);
     if (m_webViewHost)
         m_webViewHost->shutdown();
@@ -217,7 +188,7 @@ void TestShell::showDevTools()
         m_devTools->webView()->settings()->setMemoryInfoEnabled(true);
         m_devTools->proxy()->setLogConsoleOutput(false);
         m_devToolsTestInterfaces->setDelegate(m_devTools);
-        m_devToolsTestInterfaces->setWebView(m_devTools->webView());
+        m_devToolsTestInterfaces->setWebView(m_devTools->webView(), m_devTools->proxy());
         ASSERT(m_devTools);
         createDRTDevToolsClient(m_drtDevToolsAgent.get());
     }
@@ -231,7 +202,7 @@ void TestShell::closeDevTools()
         m_drtDevToolsAgent->reset();
         m_drtDevToolsClient.clear();
         m_devToolsTestInterfaces->setDelegate(0);
-        m_devToolsTestInterfaces->setWebView(0);
+        m_devToolsTestInterfaces->setWebView(0, 0);
         closeWindow(m_devTools);
         m_devTools = 0;
     }
@@ -309,9 +280,6 @@ void TestShell::resetTestController()
     m_testInterfaces->resetAll();
     m_devToolsTestInterfaces->resetAll();
     m_webViewHost->reset();
-#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-    m_notificationPresenter->reset();
-#endif
 #if OS(ANDROID)
     webkit_support::ReleaseMediaResources();
 #endif
@@ -427,43 +395,7 @@ void TestShell::dump()
         // command line (for the dump pixels argument), and the MD5 sum to
         // stdout.
         dumpedAnything = true;
-        m_webView->layout();
-        if (m_testInterfaces->testRunner()->testRepaint()) {
-            WebSize viewSize = m_webView->size();
-            int width = viewSize.width;
-            int height = viewSize.height;
-            if (m_testInterfaces->testRunner()->sweepHorizontally()) {
-                for (WebRect column(0, 0, 1, height); column.x < width; column.x++)
-                    m_webViewHost->paintRect(column);
-            } else {
-                for (WebRect line(0, 0, width, 1); line.y < height; line.y++)
-                    m_webViewHost->paintRect(line);
-            }
-        } else if (m_testInterfaces->testRunner()->isPrinting())
-            m_webViewHost->paintPagesWithBoundaries();
-        else
-            m_webViewHost->paintInvalidatedRegion();
-
-        // See if we need to draw the selection bounds rect. Selection bounds
-        // rect is the rect enclosing the (possibly transformed) selection.
-        // The rect should be drawn after everything is laid out and painted.
-        if (m_testInterfaces->testRunner()->shouldDumpSelectionRect()) {
-            // If there is a selection rect - draw a red 1px border enclosing rect
-            WebRect wr = frame->selectionBoundsRect();
-            if (!wr.isEmpty()) {
-                // Render a red rectangle bounding selection rect
-                SkPaint paint;
-                paint.setColor(0xFFFF0000); // Fully opaque red
-                paint.setStyle(SkPaint::kStroke_Style);
-                paint.setFlags(SkPaint::kAntiAlias_Flag);
-                paint.setStrokeWidth(1.0f);
-                SkIRect rect; // Bounding rect
-                rect.set(wr.x, wr.y, wr.x + wr.width, wr.y + wr.height);
-                m_webViewHost->canvas()->drawIRect(rect, paint);
-            }
-        }
-
-        dumpImage(m_webViewHost->canvas());
+        dumpImage(m_webViewHost->proxy()->capturePixels());
     }
     m_printer.handleTestFooter(dumpedAnything);
     fflush(stdout);

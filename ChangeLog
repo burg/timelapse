@@ -1,3 +1,226 @@
+2013-02-27  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Disable MathML support in release builds
+        https://bugs.webkit.org/show_bug.cgi?id=110981
+
+        Reviewed by Martin Robinson.
+
+        * Source/autotools/SetupWebKitFeatures.m4: Disable the MathML support in release builds
+        as the code is not yet deemed production-ready.
+
+2013-02-27  Glenn Adams  <glenn@skynav.com>
+
+        Add ENABLE_CSS3_TEXT_LINE_BREAK flag.
+        https://bugs.webkit.org/show_bug.cgi?id=110944
+
+        Reviewed by Dean Jackson.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-02-24  Laszlo Gombos  <l.gombos@samsung.com>
+
+        [EFL] Rename ENABLE_REGIONS to ENABLE_CSS_REGIONS
+        https://bugs.webkit.org/show_bug.cgi?id=110699
+
+        Reviewed by Andreas Kling.
+
+        Fix a typo. ENABLE_REGIONS is called ENABLE_CSS_REGIONS
+        throughout the project.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2013-02-24  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Stop generating UserAgentGtk.h
+        https://bugs.webkit.org/show_bug.cgi?id=110582
+
+        Reviewed by Martin Robinson.
+
+        * configure.ac: Provide the USER_AGENT_GTK_(MAJOR|MINOR)_VERSION defines in the autotoolsconfig.h
+        header, containing the user agent versions that are to be used in the user agent string. The
+        WEBKIT_USER_AGENT_(MAJOR|MINOR)_VERSION name is avoided as the same defines are specified in the
+        webkitversion.h API header (but are not accessible from the WebCore layer). The UserAgentGtk.h
+        header is also not generated anymore from the input file.
+
+2013-02-21  Tony Chang  <tony@chromium.org>
+
+        Autogenerate Settings that call setNeedsRecalcStyleInAllFrames when set
+        https://bugs.webkit.org/show_bug.cgi?id=109989
+
+        Reviewed by Ryosuke Niwa.
+
+        Add setters to export symbols.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-21  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Move feature overriding to the configure phase
+        https://bugs.webkit.org/show_bug.cgi?id=110293
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Rework the feature overrides logic so all feature defines go into a
+        header rather than the command line. This has a few benefits. Most
+        notably, we can reuse the header in the gyp build. Another nice result
+        is that changes to the configuration automatically result in a full
+        rebuild and Debug and Release builds can have different configurations.
+
+        All feature define processing happens now during the configuration phase,
+        instead of when running autogen.sh. This means that we need to distribute
+        the feature processing script.
+
+        * GNUmakefile.am: Read feature defines from WebKitFeatures.txt when kicking
+        off a build. Also include generate-feature-defines-files in the distribution.
+        * Source/autotools/SetupAutoconfHeader.m4: Remove an extra ENABLE_3D_RENDERING
+        from the autoconf header, as it is already provided by the feature configuration.
+        * Source/autotools/SetupWebKitFeatures.m4: Added.
+        * Source/autotools/webkitfeature.m4: Removed. The functionality has been moved
+        to SetupWebKitFeatures.m4.
+        * autogen.sh: Remove the call to override-feature-defines.
+        * configure.ac: Now include SetupWebKitFeatures.
+
+2013-02-20  Dirk Schulze  <krit@webkit.org>
+
+        Enable CANVAS_PATH flag
+        https://bugs.webkit.org/show_bug.cgi?id=108508
+
+        Reviewed by Simon Fraser.
+
+        Enable CANVAS_PATH flag on trunk.
+
+        Existing tests cover the feature.
+
+        * Source/cmake/WebKitFeatures.cmake:
+
+2013-02-19  Claudio Saavedra  <csaavedra@igalia.com>
+
+        Unreviewed build fix.
+
+        * Source/autotools/FindDependencies.m4:
+        * Source/autotools/Versions.m4:
+        * Source/cmake/FindHarfBuzz.cmake:
+
+        Bump gtk and efl dependencies on harfbuzz
+        to 0.9.7. See bug 110145.
+
+2013-02-19  Changhun Kang  <temoochin@company100.net>
+
+        Only depend on xrender if x11 is being used
+        https://bugs.webkit.org/show_bug.cgi?id=84095
+
+        Reviewed by Martin Robinson.
+
+        * Source/autotools/FindDependencies.m4:
+
+2013-02-18  ChangSeok Oh  <shivamidow@gmail.com>
+
+        [GTK] Fix nits for configuration
+        https://bugs.webkit.org/show_bug.cgi?id=110083
+
+        Reviewed by Martin Robinson.
+
+        Remove unicode backend printing option. The only backend for unicode is icu
+        after changeset 142724.
+
+        * Source/autotools/PrintBuildConfiguration.m4:
+
+2013-02-15  Gustavo Noronha Silva  <gns@gnome.org>
+
+        Unreviewed build fix.
+
+        * Source/autotools/SetupLibtool.m4: Move AR_FLAGS definition so it comes before dolt
+        and libtool initialization, thus having an effect once again.
+
+2013-02-15  Keishi Hattori  <keishi@webkit.org>
+
+        Add setValue and closePopup methods to PagePopupController
+        https://bugs.webkit.org/show_bug.cgi?id=109897
+
+        Reviewed by Kent Tamura.
+
+        * ManualTests/forms/calendar-picker.html: Added mock setValue and closePopup implementation.
+        * ManualTests/forms/color-suggestion-picker.html: Ditto.
+
+2013-02-15  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Simplify hitTestResultAtPoint and nodesFromRect APIs
+        https://bugs.webkit.org/show_bug.cgi?id=95720
+
+        Reviewed by Julien Chaffraix.
+
+        Update exported symbols.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-08  Andrey Kosyakov  <caseq@chromium.org>
+
+        Web Inspector: expose did{Begin,Cancel}Frame() and {will,did}Composite() on WebDebToolsAgent
+        https://bugs.webkit.org/show_bug.cgi?id=109192
+
+        Reviewed by Pavel Feldman.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-13  Martin Robinson  <mrobinson@igalia.com>
+
+        Try once again to fix the build after r142756
+
+        * Source/autotools/PrintBuildConfiguration.m4: Do not try to print the GStreamer version
+        in the build output.
+        * Source/autotools/SetupAutoconfHeader.m4: Remove the last reference to have_gstreamer.
+
+2013-02-13  Martin Robinson  <mrobinson@igalia.com>
+
+        Try to fix the build after r142756
+
+        * Source/autotools/SetupAutomake.m4: Instead of using the (now gone) have_gstreamer
+        variable, activate GStreamer if either web audio or web video is enabled.
+
+2013-02-13  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        Heap-use-after-free in WebCore::ScrollingCoordinator::hasVisibleSlowRepaintViewportConstrainedObjects.
+        https://bugs.webkit.org/show_bug.cgi?id=108695
+
+        Add a manual test. Unable to write a normal layout test because
+        1) must waitUntilDone() to reproduce the crash but the redirected URL can't notifyDone();
+        2) Can't use a frame to contain the test because ScrollingCoordinator handles only the main frame.
+
+        Reviewed by Abhishek Arya.
+
+        * ManualTests/scrolling-coordinator-viewport-constrained-crash.html: Added.
+
+2013-02-13  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Remove support for compiling with GStreamer 0.10
+        https://bugs.webkit.org/show_bug.cgi?id=109593
+
+        Reviewed by Philippe Normand.
+
+        Remove support for building WebKitGTK+ with GStreamer 0.10. We
+        can simplify things greatly because we don't have to worry any
+        longer about selecting one GStreamer API set.
+
+        * Source/autotools/FindDependencies.m4:
+        * Source/autotools/ReadCommandLineArguments.m4:
+        * Source/autotools/SetupAutoconfHeader.m4:
+        * Source/autotools/Versions.m4:
+
+2013-02-12  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Remove the GLib unicode backend
+        https://bugs.webkit.org/show_bug.cgi?id=109627
+
+        Reviewed by Benjamin Poulain.
+
+        Remove references to the GLib unicode backend from configuration.
+
+        * Source/autotools/FindDependencies.m4:
+        * Source/autotools/ReadCommandLineArguments.m4:
+        * Source/autotools/SetupAutoconfHeader.m4:
+        * Source/autotools/SetupAutomake.m4:
+
 2013-02-12  Christophe Dumez  <ch.dumez@sisa.samsung.com>
 
         Remove remaining traces of Web Intents

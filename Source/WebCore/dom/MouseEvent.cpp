@@ -25,6 +25,7 @@
 
 #include "EventDispatcher.h"
 #include "EventNames.h"
+#include "EventRetargeter.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLIFrameElement.h"
@@ -261,8 +262,8 @@ MouseEvent* MouseEventDispatchMediator::event() const
 bool MouseEventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) const
 {
     if (isSyntheticMouseEvent()) {
-        dispatcher->adjustRelatedTarget(event(), event()->relatedTarget());
-        return dispatcher->dispatchEvent(event());
+        EventRetargeter::adjustForMouseEvent(dispatcher->node(), *event(),  dispatcher->eventPath());
+        return dispatcher->dispatch();
     }
 
     if (dispatcher->node()->disabled()) // Don't even send DOM events for disabled controls..
@@ -274,9 +275,9 @@ bool MouseEventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) cons
     ASSERT(!event()->target() || event()->target() != event()->relatedTarget());
 
     EventTarget* relatedTarget = event()->relatedTarget();
-    dispatcher->adjustRelatedTarget(event(), relatedTarget);
+    EventRetargeter::adjustForMouseEvent(dispatcher->node(), *event(),  dispatcher->eventPath());
 
-    dispatcher->dispatchEvent(event());
+    dispatcher->dispatch();
     bool swallowEvent = event()->defaultHandled() || event()->defaultPrevented();
 
     if (event()->type() != eventNames().clickEvent || event()->detail() != 2)

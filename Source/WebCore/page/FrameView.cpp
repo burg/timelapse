@@ -95,6 +95,10 @@
 #include "TextAutosizer.h"
 #endif
 
+#if PLATFORM(CHROMIUM)
+#include "TraceEvent.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -362,6 +366,11 @@ void FrameView::prepareForDetach()
     // When the view is no longer associated with a frame, it needs to be removed from the ax object cache
     // right now, otherwise it won't be able to reach the topDocument()'s axObject cache later.
     removeFromAXObjectCache();
+
+    if (m_frame && m_frame->page()) {
+        if (ScrollingCoordinator* scrollingCoordinator = m_frame->page()->scrollingCoordinator())
+            scrollingCoordinator->willDestroyScrollableArea(this);
+    }
 }
 
 void FrameView::detachCustomScrollbars()
@@ -445,6 +454,17 @@ void FrameView::setFrameRect(const IntRect& newRect)
     IntRect oldRect = frameRect();
     if (newRect == oldRect)
         return;
+
+#if ENABLE(TEXT_AUTOSIZING)
+    // Autosized font sizes depend on the width of the viewing area.
+    if (newRect.width() != oldRect.width()) {
+        Page* page = m_frame ? m_frame->page() : 0;
+        if (page && page->mainFrame() == m_frame && page->settings()->textAutosizingEnabled()) {
+            for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+                m_frame->document()->textAutosizer()->recalculateMultipliers();
+        }
+    }
+#endif
 
     ScrollView::setFrameRect(newRect);
 
@@ -690,7 +710,7 @@ void FrameView::calculateScrollbarModesForLayout(ScrollbarMode& hMode, Scrollbar
         hMode = ScrollbarAuto;
         // Seamless documents begin with heights of 0; we special case that here
         // to correctly render documents that don't need scrollbars.
-        IntSize fullVisibleSize = visibleContentRect(true /*includeScrollbars*/).size();
+        IntSize fullVisibleSize = visibleContentRect(IncludeScrollbars).size();
         bool isSeamlessDocument = frame() && frame()->document() && frame()->document()->shouldDisplaySeamlesslyWithParent();
         vMode = (isSeamlessDocument && !fullVisibleSize.height()) ? ScrollbarAlwaysOff : ScrollbarAuto;
     } else {
@@ -776,6 +796,14 @@ bool FrameView::usesCompositedScrolling() const
     if (m_frame->settings() && m_frame->settings()->compositedScrollingForFramesEnabled())
         return renderView->compositor()->inForcedCompositingMode();
     return false;
+}
+
+GraphicsLayer* FrameView::layerForScrolling() const
+{
+    RenderView* renderView = this->renderView();
+    if (!renderView)
+        return 0;
+    return renderView->compositor()->scrollLayer();
 }
 
 GraphicsLayer* FrameView::layerForHorizontalScrollbar() const
@@ -961,16 +989,18 @@ bool FrameView::isSoftwareRenderable() const
 
 void FrameView::didMoveOnscreen()
 {
-    if (RenderView* renderView = this->renderView())
-        renderView->didMoveOnscreen();
     contentAreaDidShow();
 }
 
 void FrameView::willMoveOffscreen()
 {
-    if (RenderView* renderView = this->renderView())
-        renderView->willMoveOffscreen();
     contentAreaDidHide();
+}
+
+void FrameView::setIsInWindow(bool isInWindow)
+{
+    if (RenderView* renderView = this->renderView())
+        renderView->setIsInWindow(isInWindow);
 }
 
 RenderObject* FrameView::layoutRoot(bool onlyDuringLayout) const
@@ -1028,6 +1058,10 @@ void FrameView::layout(bool allowSubtree)
 {
     if (m_inLayout)
         return;
+
+#if PLATFORM(CHROMIUM)
+    TRACE_EVENT0("webkit", "FrameView::layout");
+#endif
 
     // Protect the view from being deleted during layout (in recalcStyle)
     RefPtr<FrameView> protector(this);
@@ -1163,7 +1197,7 @@ void FrameView::layout(bool allowSubtree)
                     if (useFixedLayout() && !fixedLayoutSize().isEmpty() && delegatesScrolling())
                         m_lastViewportSize = fixedLayoutSize();
                     else
-                        m_lastViewportSize = visibleContentRect(true /*includeScrollbars*/).size();
+                        m_lastViewportSize = visibleContentRect(IncludeScrollbars).size();
                     m_lastZoomFactor = root->style()->zoom();
 
                     // Set the initial vMode to AlwaysOn if we're auto.
@@ -1503,6 +1537,18 @@ LayoutRect FrameView::viewportConstrainedVisibleContentRect() const
     return viewportRect;
 }
 
+IntSize FrameView::scrollOffsetForFixedPosition(const IntRect& visibleContentRect, const IntSize& contentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, float frameScaleFactor, bool fixedElementsLayoutRelativeToFrame)
+{
+    IntPoint constrainedPosition = ScrollableArea::constrainScrollPositionForOverhang(visibleContentRect, contentsSize, scrollPosition, scrollOrigin);
+
+    IntSize maxSize = contentsSize - visibleContentRect.size();
+
+    float dragFactorX = (fixedElementsLayoutRelativeToFrame || !maxSize.width()) ? 1 : (contentsSize.width() - visibleContentRect.width() * frameScaleFactor) / maxSize.width();
+    float dragFactorY = (fixedElementsLayoutRelativeToFrame || !maxSize.height()) ? 1 : (contentsSize.height() - visibleContentRect.height() * frameScaleFactor) / maxSize.height();
+
+    return IntSize(constrainedPosition.x() * dragFactorX / frameScaleFactor, constrainedPosition.y() * dragFactorY / frameScaleFactor);
+}
+
 IntSize FrameView::scrollOffsetForFixedPosition() const
 {
     IntRect visibleContentRect = this->visibleContentRect();
@@ -1510,7 +1556,7 @@ IntSize FrameView::scrollOffsetForFixedPosition() const
     IntPoint scrollPosition = this->scrollPosition();
     IntPoint scrollOrigin = this->scrollOrigin();
     float frameScaleFactor = m_frame ? m_frame->frameScaleFactor() : 1;
-    return WebCore::scrollOffsetForFixedPosition(visibleContentRect, contentsSize, scrollPosition, scrollOrigin, frameScaleFactor, fixedElementsLayoutRelativeToFrame());
+    return scrollOffsetForFixedPosition(visibleContentRect, contentsSize, scrollPosition, scrollOrigin, frameScaleFactor, fixedElementsLayoutRelativeToFrame());
 }
 
 bool FrameView::fixedElementsLayoutRelativeToFrame() const
@@ -2604,7 +2650,7 @@ void FrameView::performPostLayoutTasks()
         if (useFixedLayout() && !fixedLayoutSize().isEmpty() && delegatesScrolling())
             currentSize = fixedLayoutSize();
         else
-            currentSize = visibleContentRect(true /*includeScrollbars*/).size();
+            currentSize = visibleContentRect(IncludeScrollbars).size();
         float currentZoomFactor = renderView->style()->zoom();
         bool resized = !m_firstLayout && (currentSize != m_lastViewportSize || currentZoomFactor != m_lastZoomFactor);
         m_lastViewportSize = currentSize;
@@ -2790,7 +2836,7 @@ IntRect FrameView::windowClipRect(bool clipToContents) const
         return IntRect(IntPoint(), contentsSize());
 
     // Set our clip rect to be our contents.
-    IntRect clipRect = contentsToWindow(visibleContentRect(!clipToContents));
+    IntRect clipRect = contentsToWindow(visibleContentRect(clipToContents ? ExcludeScrollbars : IncludeScrollbars));
     if (!m_frame || !m_frame->ownerElement())
         return clipRect;
 
@@ -3058,7 +3104,7 @@ void FrameView::updateScrollCorner()
         Element* body = doc ? doc->body() : 0;
         if (body && body->renderer()) {
             renderer = body->renderer();
-            cornerStyle = renderer->getUncachedPseudoStyle(SCROLLBAR_CORNER, renderer->style());
+            cornerStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(SCROLLBAR_CORNER), renderer->style());
         }
         
         if (!cornerStyle) {
@@ -3066,14 +3112,14 @@ void FrameView::updateScrollCorner()
             Element* docElement = doc ? doc->documentElement() : 0;
             if (docElement && docElement->renderer()) {
                 renderer = docElement->renderer();
-                cornerStyle = renderer->getUncachedPseudoStyle(SCROLLBAR_CORNER, renderer->style());
+                cornerStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(SCROLLBAR_CORNER), renderer->style());
             }
         }
         
         if (!cornerStyle) {
             // If we have an owning iframe/frame element, then it can set the custom scrollbar also.
             if (RenderPart* renderer = m_frame->ownerRenderer())
-                cornerStyle = renderer->getUncachedPseudoStyle(SCROLLBAR_CORNER, renderer->style());
+                cornerStyle = renderer->getUncachedPseudoStyle(PseudoStyleRequest(SCROLLBAR_CORNER), renderer->style());
         }
     }
 

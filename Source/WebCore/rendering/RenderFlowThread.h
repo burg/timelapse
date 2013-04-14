@@ -84,7 +84,7 @@ public:
     bool hasRegionsWithStyling() const { return m_hasRegionsWithStyling; }
     void checkRegionsWithStyling();
 
-    void invalidateRegions() { m_regionsInvalidated = true; setNeedsLayout(true); }
+    void invalidateRegions();
     bool hasValidRegionInfo() const { return !m_regionsInvalidated && !m_regionList.isEmpty(); }
 
     static PassRefPtr<RenderStyle> createFlowThreadStyle(RenderStyle* parentStyle);
@@ -133,7 +133,7 @@ public:
 
     bool addForcedRegionBreak(LayoutUnit, RenderObject* breakChild, bool isBefore, LayoutUnit* offsetBreakAdjustment = 0);
 
-    bool pageLogicalHeightChanged() const { return m_pageLogicalHeightChanged; }
+    bool pageLogicalSizeChanged() const { return m_pageLogicalSizeChanged; }
 
     bool hasAutoLogicalHeightRegions() const { ASSERT(isAutoLogicalHeightRegionsCountConsistent()); return m_autoLogicalHeightRegionsCount; }
     void incrementAutoLogicalHeightRegions();
@@ -204,7 +204,7 @@ protected:
     bool m_overset : 1;
     bool m_hasRegionsWithStyling : 1;
     bool m_dispatchRegionLayoutUpdateEvent : 1;
-    bool m_pageLogicalHeightChanged : 1;
+    bool m_pageLogicalSizeChanged : 1;
 };
 
 inline RenderFlowThread* toRenderFlowThread(RenderObject* object)

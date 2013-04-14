@@ -65,12 +65,19 @@ WebInspector.Panel.prototype = {
 
     wasShown: function()
     {
+        var panelStatusBar = document.getElementById("panel-status-bar")
+        var drawerViewAnchor = document.getElementById("drawer-view-anchor");
         var statusBarItems = this.statusBarItems;
         if (statusBarItems) {
             this._statusBarItemContainer = document.createElement("div");
             for (var i = 0; i < statusBarItems.length; ++i)
                 this._statusBarItemContainer.appendChild(statusBarItems[i]);
-            document.getElementById("panel-status-bar").appendChild(this._statusBarItemContainer);
+            panelStatusBar.insertBefore(this._statusBarItemContainer, drawerViewAnchor);
+        }
+        var statusBarText = this.statusBarText();
+        if (statusBarText) {
+            this._statusBarTextElement = statusBarText;
+            panelStatusBar.appendChild(statusBarText);
         }
 
         this.focus();
@@ -84,6 +91,10 @@ WebInspector.Panel.prototype = {
             this._statusBarItemContainer.parentNode.removeChild(this._statusBarItemContainer);
         delete this._statusBarItemContainer;
         
+        if (this._statusBarTextElement && this._statusBarTextElement.parentNode)
+            this._statusBarTextElement.parentNode.removeChild(this._statusBarTextElement);
+        delete this._statusBarTextElement;
+
         this.dispatchEventToListeners(WebInspector.Panel.Events.PanelHidden, this);
     },
 
@@ -326,7 +337,7 @@ WebInspector.PanelDescriptor.prototype = {
         if (this._panel)
             return this._panel;
         if (this._scriptName)
-            importScript(this._scriptName);
+            loadScript(this._scriptName);
         this._panel = new WebInspector[this._className];
         return this._panel;
     },

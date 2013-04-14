@@ -28,20 +28,18 @@
 #include "config.h"
 #include "CSSPreloadScanner.h"
 
-#include "CachedCSSStyleSheet.h"
-#include "CachedResourceLoader.h"
-#include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiators.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLToken.h"
-#include <wtf/Functional.h>
-#include <wtf/MainThread.h>
 
 namespace WebCore {
 
 CSSPreloadScanner::CSSPreloadScanner()
     : m_state(Initial)
     , m_requests(0)
+{
+}
+
+CSSPreloadScanner::~CSSPreloadScanner()
 {
 }
 
@@ -52,13 +50,29 @@ void CSSPreloadScanner::reset()
     m_ruleValue.clear();
 }
 
-void CSSPreloadScanner::scan(const HTMLToken& token, Vector<OwnPtr<PreloadRequest> >& requests)
+template<typename Char>
+void CSSPreloadScanner::scanCommon(const Char* begin, const Char* end, PreloadRequestStream& requests)
 {
     m_requests = &requests;
-    const HTMLToken::DataVector& characters = token.characters();
-    for (HTMLToken::DataVector::const_iterator iter = characters.begin(); iter != characters.end() && m_state != DoneParsingImportRules; ++iter)
-        tokenize(*iter);
+    for (const Char* it = begin; it != end && m_state != DoneParsingImportRules; ++it)
+        tokenize(*it);
     m_requests = 0;
+}
+
+void CSSPreloadScanner::scan(const HTMLToken::DataVector& data, PreloadRequestStream& requests)
+{
+    scanCommon(data.data(), data.data() + data.size(), requests);
+}
+
+void CSSPreloadScanner::scan(const String& data, PreloadRequestStream& requests)
+{
+    if (data.is8Bit()) {
+        const LChar* begin = data.characters8();
+        scanCommon(begin, begin + data.length(), requests);
+        return;
+    }
+    const UChar* begin = data.characters16();
+    scanCommon(begin, begin + data.length(), requests);
 }
 
 inline void CSSPreloadScanner::tokenize(UChar c)
@@ -199,8 +213,7 @@ void CSSPreloadScanner::emitRule()
         String url = parseCSSStringOrURL(m_ruleValue.characters(), m_ruleValue.length());
         if (!url.isEmpty()) {
             KURL baseElementURL; // FIXME: This should be passed in from the HTMLPreloadScaner via scan()!
-            OwnPtr<PreloadRequest> request = PreloadRequest::create(
-                cachedResourceRequestInitiators().css, url, baseElementURL, CachedResource::CSSStyleSheet);
+            OwnPtr<PreloadRequest> request = PreloadRequest::create("css", url, baseElementURL, CachedResource::CSSStyleSheet);
             // FIXME: Should this be including the charset in the preload request?
             m_requests->append(request.release());
         }

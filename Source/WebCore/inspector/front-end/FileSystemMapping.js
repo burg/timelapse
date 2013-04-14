@@ -40,24 +40,10 @@ WebInspector.FileSystemMapping.prototype = {
     fileSystemPaths: function() { },
 
     /**
-     * @param {string} fileSystemPath
-     * @param {string} uri
+     * @param {string} prefix
      * @return {?string}
      */
-    fileForURI: function(fileSystemPath, uri) { },
-
-    /**
-     * @param {string} fileSystemPath
-     * @param {string} filePath
-     * @return {?string}
-     */
-    uriForFile: function(fileSystemPath, filePath) { },
-
-    /**
-     * @param {string} pathPrefix
-     * @return {?string}
-     */
-    uriPrefixForPathPrefix: function(pathPrefix) { },
+    fileSystemPathForPrefix: function(prefix) { }
 }
 
 /**
@@ -133,7 +119,7 @@ WebInspector.FileSystemMappingImpl.prototype = {
         this._fileSystemNames[id] = name;
         this._fileSystemPaths[id] = fileSystemPath;
         this._saveToSettings();
-        delete this._cachedURIPrefixes;
+        delete this._cachedFileSystemPaths;
         return id;
     },
 
@@ -149,7 +135,7 @@ WebInspector.FileSystemMappingImpl.prototype = {
         delete this._fileSystemNames[id];
         delete this._fileSystemPaths[id];
         this._saveToSettings();
-        delete this._cachedURIPrefixes;
+        delete this._cachedFileSystemPaths;
     },
 
     /**
@@ -161,53 +147,24 @@ WebInspector.FileSystemMappingImpl.prototype = {
     },
 
     /**
-     * @param {string} fileSystemPath
-     * @param {string} uri
+     * @param {string} prefix
      * @return {?string}
      */
-    fileForURI: function(fileSystemPath, uri)
+    fileSystemPathForPrefix: function(prefix)
     {
-        var indexOfSlash = uri.indexOf("/");
-        var uriId = uri.substr(0, indexOfSlash);
-        var id = this._fileSystemIds[fileSystemPath]
-        if (!uriId || uriId !== id)
-            return null;
-        var filePath = uri.substr(indexOfSlash);
-        return filePath;
-    },
-
-    /**
-     * @param {string} fileSystemPath
-     * @param {string} filePath
-     * @return {?string}
-     */
-    uriForFile: function(fileSystemPath, filePath)
-    {
-        var id = this._fileSystemIds[fileSystemPath];
-        if (!id)
-            return null;
-        return id + filePath;
-    },
-    
-    /**
-     * @param {string} pathPrefix
-     * @return {?string}
-     */
-    uriPrefixForPathPrefix: function(pathPrefix)
-    {
-        this._cachedURIPrefixes = this._cachedURIPrefixes || {};
-        if (this._cachedURIPrefixes.hasOwnProperty(pathPrefix))
-            return this._cachedURIPrefixes[pathPrefix];
-        var uriPrefix = null;
+        this._cachedFileSystemPaths = this._cachedFileSystemPaths || {};
+        if (this._cachedFileSystemPaths.hasOwnProperty(prefix))
+            return this._cachedFileSystemPaths[prefix];
+        var result = null;
         for (var id in this._fileSystemPaths) {
             var fileSystemPath = this._fileSystemPaths[id];
-            if (pathPrefix.startsWith(fileSystemPath + "/")) {
-                uriPrefix = id + pathPrefix.substr(fileSystemPath.length);
+            if (prefix.startsWith(fileSystemPath + "/")) {
+                result = fileSystemPath;
                 break;
             }
         }
-        this._cachedURIPrefixes[pathPrefix] = uriPrefix;
-        return uriPrefix;
+        this._cachedFileSystemPaths[prefix] = result;
+        return result;
     },
 
     __proto__: WebInspector.Object.prototype

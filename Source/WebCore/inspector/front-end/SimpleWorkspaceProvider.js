@@ -33,12 +33,19 @@
  * @implements {WebInspector.ProjectDelegate}
  * @extends {WebInspector.Object}
  */
-WebInspector.SimpleProjectDelegate = function(type)
+WebInspector.SimpleProjectDelegate = function(name, type)
 {
+    this._name = name;
     this._type = type;
     /** @type {Object.<string, WebInspector.ContentProvider>} */
     this._contentProviders = {};
     this._lastUniqueSuffix = 0;
+}
+
+WebInspector.SimpleProjectDelegate.projectId = function(name, type)
+{
+    var typePrefix = type !== WebInspector.projectTypes.Network ? (type + ":") : "";
+    return typePrefix + name;
 }
 
 WebInspector.SimpleProjectDelegate.prototype = {
@@ -47,7 +54,7 @@ WebInspector.SimpleProjectDelegate.prototype = {
      */
     id: function()
     {
-        return this._type;
+        return WebInspector.SimpleProjectDelegate.projectId(this._name, this._type);
     },
 
     /**
@@ -63,21 +70,32 @@ WebInspector.SimpleProjectDelegate.prototype = {
      */
     displayName: function()
     {
-        return "";
+        if (typeof this._displayName !== "undefined")
+            return this._displayName;
+        if (!this._name) {
+            this._displayName = "";
+            return this._displayName;
+        }
+        var parsedURL = new WebInspector.ParsedURL(this._name);
+        if (parsedURL.isValid)
+            this._displayName = parsedURL.host + (parsedURL.port ? (":" + parsedURL.port) : "");
+        else
+            this._displayName = this._name;
+        return this._displayName;
     },
 
     /**
-     * @param {string} path
+     * @param {Array.<string>} path
      * @param {function(?string,boolean,string)} callback
      */
     requestFileContent: function(path, callback)
     {
-        var contentProvider = this._contentProviders[path];
+        var contentProvider = this._contentProviders[path.join("/")];
         contentProvider.requestContent(callback);
     },
 
     /**
-     * @param {string} path
+     * @param {Array.<string>} path
      * @param {string} newContent
      * @param {function(?string)} callback
      */
@@ -87,6 +105,7 @@ WebInspector.SimpleProjectDelegate.prototype = {
     },
 
     /**
+     * @param {Array.<string>} path
      * @param {string} query
      * @param {boolean} caseSensitive
      * @param {boolean} isRegex
@@ -94,46 +113,48 @@ WebInspector.SimpleProjectDelegate.prototype = {
      */
     searchInFileContent: function(path, query, caseSensitive, isRegex, callback)
     {
-        var contentProvider = this._contentProviders[path];
+        var contentProvider = this._contentProviders[path.join("/")];
         contentProvider.searchInContent(query, caseSensitive, isRegex, callback);
     },
 
     /**
-     * @param {string} path
+     * @param {Array.<string>} path
      * @param {string} url
      * @param {WebInspector.ContentProvider} contentProvider
      * @param {boolean} isEditable
      * @param {boolean=} isContentScript
+     * @return {Array.<string>}
      */
     addFile: function(path, forceUniquePath, url, contentProvider, isEditable, isContentScript)
     {
         if (forceUniquePath)
-            path = this._uniquePath(path); 
-        console.assert(!this._contentProviders[path]);
+            this._ensureUniquePath(path);
         var fileDescriptor = new WebInspector.FileDescriptor(path, url, url, contentProvider.contentType(), isEditable, isContentScript);
-        this._contentProviders[path] = contentProvider;
+        this._contentProviders[path.join("/")] = contentProvider;
         this.dispatchEventToListeners(WebInspector.ProjectDelegate.Events.FileAdded, fileDescriptor);
         return path;
     },
 
     /**
-     * @param {string} path
-     * @return {string}
+     * @param {Array.<string>} path
      */
-    _uniquePath: function(path)
-    {
-        var uniquePath = path;
-        while (this._contentProviders[uniquePath])
-            uniquePath = path + " (" + (++this._lastUniqueSuffix) + ")";
-        return uniquePath;
+    _ensureUniquePath: function(path)
+     {
+        var uniquePath = path.join("/");
+        var suffix = "";
+        while (this._contentProviders[uniquePath]) {
+            suffix = " (" + (++this._lastUniqueSuffix) + ")";
+            uniquePath = path + suffix;
+        }
+        path[path.length - 1] += suffix;
     },
 
     /**
-     * @param {string} path
+     * @param {Array.<string>} path
      */
     removeFile: function(path)
     {
-        delete this._contentProviders[path];
+        delete this._contentProviders[path.join("/")];
         this.dispatchEventToListeners(WebInspector.ProjectDelegate.Events.FileRemoved, path);
     },
 
@@ -156,27 +177,72 @@ WebInspector.SimpleWorkspaceProvider = function(workspace, type)
 {
     this._workspace = workspace;
     this._type = type;
-    this._simpleProjectDelegate = new WebInspector.SimpleProjectDelegate(this._type);
-    this._workspace.addProject(this._simpleProjectDelegate);
+    this._simpleProjectDelegates = {};
 }
 
 /**
  * @param {string} url
- * @return {string}
+ * @return {Array.<string>}
  */
-WebInspector.SimpleWorkspaceProvider.uriForURL = function(url, type)
-{   
-    var uriTypePrefix = type !== WebInspector.projectTypes.Network ? (type + ":") : "";
-    var uri = uriTypePrefix + url;
-    return uri;
+WebInspector.SimpleWorkspaceProvider.splitURL = function(url)
+{
+    var parsedURL = new WebInspector.ParsedURL(url);
+    var origin;
+    var folderPath;
+    var name;
+    if (parsedURL.isValid) {
+        origin = parsedURL.scheme + "://" + parsedURL.host;
+        if (parsedURL.port)
+            origin += ":" + parsedURL.port;
+        folderPath = parsedURL.folderPathComponents;
+        name = parsedURL.lastPathComponent;
+        if (parsedURL.queryParams)
+            name += "?" + parsedURL.queryParams;
+    } else {
+        origin = "";
+        folderPath = "";
+        name = url;
+    }
+    var result = [origin];
+    var splittedPath = folderPath.split("/");
+    for (var i = 1; i < splittedPath.length; ++i)
+        result.push(splittedPath[i]);
+    result.push(name);
+    return result;
+}
+
+/**
+ * @param {Array.<string>} splittedURL
+ * @return {Array.<string>}
+ */
+WebInspector.SimpleWorkspaceProvider.pathForSplittedURL = function(splittedURL)
+{
+    var result = splittedURL.slice();
+    result.shift();
+    return result;
 }
 
 WebInspector.SimpleWorkspaceProvider.prototype = {
+    /**
+     * @param {string} projectName
+     * @return {WebInspector.ProjectDelegate}
+     */
+    _projectDelegate: function(projectName)
+    {
+        if (this._simpleProjectDelegates[projectName])
+            return this._simpleProjectDelegates[projectName];
+        var simpleProjectDelegate = new WebInspector.SimpleProjectDelegate(projectName, this._type);
+        this._simpleProjectDelegates[projectName] = simpleProjectDelegate;
+        this._workspace.addProject(simpleProjectDelegate);
+        return simpleProjectDelegate;
+    },
+ 
     /**
      * @param {string} url
      * @param {WebInspector.ContentProvider} contentProvider
      * @param {boolean} isEditable
      * @param {boolean=} isContentScript
+     * @return {WebInspector.UISourceCode}
      */
     addFileForURL: function(url, contentProvider, isEditable, isContentScript)
     {
@@ -188,6 +254,7 @@ WebInspector.SimpleWorkspaceProvider.prototype = {
      * @param {WebInspector.ContentProvider} contentProvider
      * @param {boolean} isEditable
      * @param {boolean=} isContentScript
+     * @return {WebInspector.UISourceCode}
      */
     addUniqueFileForURL: function(url, contentProvider, isEditable, isContentScript)
     {
@@ -198,27 +265,62 @@ WebInspector.SimpleWorkspaceProvider.prototype = {
      * @param {string} url
      * @param {WebInspector.ContentProvider} contentProvider
      * @param {boolean} isEditable
+     * @param {boolean} forceUnique
      * @param {boolean=} isContentScript
+     * @return {WebInspector.UISourceCode}
      */
     _innerAddFileForURL: function(url, contentProvider, isEditable, forceUnique, isContentScript)
     {
-        var path = WebInspector.SimpleWorkspaceProvider.uriForURL(url, this._type);
-        path = this._simpleProjectDelegate.addFile(path, forceUnique, url, contentProvider, isEditable, isContentScript);
-        return this._workspace.uiSourceCode(this._simpleProjectDelegate.id(), path);
+        var splittedURL = WebInspector.SimpleWorkspaceProvider.splitURL(url);
+        var projectName = splittedURL[0];
+        var path = WebInspector.SimpleWorkspaceProvider.pathForSplittedURL(splittedURL);
+        return this._innerAddFile(projectName, path, url, contentProvider, isEditable, forceUnique, isContentScript);
     },
 
     /**
-     * @param {string} url
+     * @param {string} projectName
+     * @param {string} name
+     * @param {WebInspector.ContentProvider} contentProvider
+     * @param {boolean} isEditable
+     * @param {boolean=} isContentScript
+     * @return {WebInspector.UISourceCode}
      */
-    removeFile: function(url)
+    addFileByName: function(projectName, name, contentProvider, isEditable, isContentScript)
     {
-        var path = WebInspector.SimpleWorkspaceProvider.uriForURL(url, this._type);
-        this._simpleProjectDelegate.removeFile(path);
+        return this._innerAddFile("", [name], name, contentProvider, isEditable, false, isContentScript);
+    },
+
+    /**
+     * @param {string} projectName
+     * @param {Array.<string>} path
+     * @param {WebInspector.ContentProvider} contentProvider
+     * @param {boolean} isEditable
+     * @param {boolean} forceUnique
+     * @param {boolean=} isContentScript
+     * @return {WebInspector.UISourceCode}
+     */
+    _innerAddFile: function(projectName, path, url, contentProvider, isEditable, forceUnique, isContentScript)
+    {
+        var projectDelegate = this._projectDelegate(projectName);
+        path = projectDelegate.addFile(path, forceUnique, url, contentProvider, isEditable, isContentScript);
+        return this._workspace.uiSourceCode(projectDelegate.id(), path);
+    },
+
+    /**
+     * @param {string} projectName
+     * @param {string} name
+     */
+    removeFileByName: function(projectName, name)
+    {
+        var projectDelegate = this._projectDelegate(projectName);
+        projectDelegate.removeFile([name]);
     },
 
     reset: function()
     {
-        this._simpleProjectDelegate.reset();
+        for (var projectName in this._simpleProjectDelegates)
+            this._simpleProjectDelegates[projectName].reset();
+        this._simpleProjectDelegates = {};
     },
     
     __proto__: WebInspector.Object.prototype

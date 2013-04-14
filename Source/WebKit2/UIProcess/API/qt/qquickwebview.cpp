@@ -65,6 +65,7 @@
 #include <QtQuick/QQuickView>
 #include <WKOpenPanelResultListener.h>
 #include <WKPageGroup.h>
+#include <WKPreferences.h>
 #include <WKSerializedScriptValue.h>
 #include <WKString.h>
 #include <WKStringQt.h>
@@ -357,13 +358,14 @@ void QQuickWebViewPrivate::initialize(WKContextRef contextRef, WKPageGroupRef pa
     QObject::connect(iconDatabase, SIGNAL(iconChangedForPageURL(QString)), q_ptr, SLOT(_q_onIconChangedForPageURL(QString)));
 
     // Any page setting should preferrable be set before creating the page.
-    webPageProxy->pageGroup()->preferences()->setAcceleratedCompositingEnabled(true);
-    webPageProxy->pageGroup()->preferences()->setForceCompositingMode(true);
+    WKPreferencesRef preferencesRef = WKPageGroupGetPreferences(pageGroup.get());
+    WKPreferencesSetAcceleratedCompositingEnabled(preferencesRef, true);
     bool showDebugVisuals = qgetenv("WEBKIT_SHOW_COMPOSITING_DEBUG_VISUALS") == "1";
-    webPageProxy->pageGroup()->preferences()->setCompositingBordersVisible(showDebugVisuals);
-    webPageProxy->pageGroup()->preferences()->setCompositingRepaintCountersVisible(showDebugVisuals);
-    webPageProxy->pageGroup()->preferences()->setFrameFlatteningEnabled(true);
-    webPageProxy->pageGroup()->preferences()->setWebGLEnabled(true);
+    WKPreferencesSetCompositingBordersVisible(preferencesRef, showDebugVisuals);
+    WKPreferencesSetCompositingRepaintCountersVisible(preferencesRef, showDebugVisuals);
+    WKPreferencesSetFrameFlatteningEnabled(preferencesRef, true);
+    WKPreferencesSetWebGLEnabled(preferencesRef, true);
+    webPageProxy->pageGroup()->preferences()->setForceCompositingMode(true);
 
     pageClient.initialize(q_ptr, pageViewPrivate->eventHandler.data(), &undoController);
     webPageProxy->initializeWebPage();
@@ -585,10 +587,13 @@ void QQuickWebViewPrivate::didRelaunchProcess()
 {
     qWarning("WARNING: The web process has been successfully restarted.");
 
-    webPageProxy->drawingArea()->setSize(viewSize(), IntSize());
+    if (DrawingAreaProxy *drawingArea = webPageProxy->drawingArea()) {
+        drawingArea->setSize(viewSize(), IntSize());
 
-    updateViewportSize();
-    updateUserScripts();
+        updateViewportSize();
+        updateUserScripts();
+        updateSchemeDelegates();
+    }
 }
 
 PassOwnPtr<DrawingAreaProxy> QQuickWebViewPrivate::createDrawingAreaProxy()
@@ -869,6 +874,17 @@ void QQuickWebViewPrivate::updateUserScripts()
     }
 }
 
+void QQuickWebViewPrivate::updateSchemeDelegates()
+{
+    webPageProxy->registerApplicationScheme(ASCIILiteral("qrc"));
+
+    QQmlListProperty<QQuickUrlSchemeDelegate> schemes = experimental->schemeDelegates();
+    for (int i = 0, numSchemes = experimental->schemeDelegates_Count(&schemes); i < numSchemes; ++i) {
+        QQuickUrlSchemeDelegate* scheme = experimental->schemeDelegates_At(&schemes, i);
+        webPageProxy->registerApplicationScheme(scheme->scheme());
+    }
+}
+
 QPointF QQuickWebViewPrivate::contentPos() const
 {
     Q_Q(const QQuickWebView);
@@ -926,13 +942,15 @@ void QQuickWebViewLegacyPrivate::updateViewportSize()
 
     pageView->setContentsSize(viewportSize);
 
-    // The fixed layout is handled by the FrameView and the drawing area doesn't behave differently
-    // whether its fixed or not. We still need to tell the drawing area which part of it
-    // has to be rendered on tiles, and in desktop mode it's all of it.
-    webPageProxy->drawingArea()->setSize(viewportSize.toSize(), IntSize());
-    // The backing store scale factor should already be set to the device pixel ratio
-    // of the underlying window, thus we set the effective scale to 1 here.
-    webPageProxy->drawingArea()->setVisibleContentsRect(FloatRect(FloatPoint(), FloatSize(viewportSize)), FloatPoint());
+    if (DrawingAreaProxy *drawingArea = webPageProxy->drawingArea()) {
+        // The fixed layout is handled by the FrameView and the drawing area doesn't behave differently
+        // whether its fixed or not. We still need to tell the drawing area which part of it
+        // has to be rendered on tiles, and in desktop mode it's all of it.
+        drawingArea->setSize(viewportSize.toSize(), IntSize());
+        // The backing store scale factor should already be set to the device pixel ratio
+        // of the underlying window, thus we set the effective scale to 1 here.
+        drawingArea->setVisibleContentsRect(FloatRect(FloatPoint(), FloatSize(viewportSize)), FloatPoint());
+    }
 }
 
 qreal QQuickWebViewLegacyPrivate::zoomFactor() const

@@ -5,6 +5,7 @@
     <file>ApplicationCacheItemsView.js</file>
     <file>ApplicationCacheModel.js</file>
     <file>AuditCategories.js</file>
+    <file>AuditController.js</file>
     <file>AuditFormatters.js</file>
     <file>AuditLauncherView.js</file>
     <file>AuditResultView.js</file>
@@ -54,6 +55,7 @@
     <file>DirectoryContentView.js</file>
     <file>DOMAgent.js</file>
     <file>DOMBreakpointsSidebarPane.js</file>
+    <file>DOMCountersGraph.js</file>
     <file>DOMExtension.js</file>
     <file>DOMPresentationUtils.js</file>
     <file>DOMStorage.js</file>
@@ -103,7 +105,8 @@
     <file>InspectorFrontendHostStub.js</file>
     <file>InspectorView.js</file>
     <file>JSHeapSnapshot.js</file>
-    <file>IsolatedFileSystemModel.js</file>
+    <file>IsolatedFileSystem.js</file>
+    <file>IsolatedFileSystemManager.js</file>
     <file>JavaScriptFormatter.js</file>
     <file>JavaScriptSourceFrame.js</file>
     <file>jsdifflib.js</file>
@@ -138,6 +141,7 @@
     <file>ProfileDataGridTree.js</file>
     <file>ProfileLauncherView.js</file>
     <file>ProfilesPanel.js</file>
+    <file>ProfilesPanelDescriptor.js</file>
     <file>Progress.js</file>
     <file>ProgressIndicator.js</file>
     <file>PropertiesSection.js</file>

@@ -44,6 +44,11 @@
                 # WebKit is checked out in src/chromium/third_party/WebKit
                 'chromium_src_dir': '<(tools_dir)/../../..',
             }],
+            ['OS=="linux"', {
+                'use_custom_freetype%': 1,
+            }, {
+                'use_custom_freetype%': 0,
+            }],
         ],
     },
     'includes': [
@@ -114,6 +119,7 @@
                             'dependencies': [
                                 '<(chromium_src_dir)/base/base.gyp:base',
                                 '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
+                                '<(chromium_src_dir)/skia/skia.gyp:skia',
                                 '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
                             ],
                             'direct_dependent_settings': {
@@ -382,6 +388,11 @@
                     'sources/': [
                         ['exclude', 'Android\\.cpp$'],
                     ],
+                }],
+                ['use_custom_freetype==1', {
+                   'dependencies': [
+                       '<(chromium_src_dir)/third_party/freetype2/freetype2.gyp:freetype2',
+                   ],
                 }],
                 ['inside_chromium_build==0', {
                     'dependencies': [

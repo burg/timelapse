@@ -28,6 +28,7 @@
 
 #if ENABLE(THREADED_SCROLLING)
 
+#include "FrameView.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingTree.h"
@@ -199,7 +200,7 @@ bool ScrollingTreeScrollingNodeMac::pinnedInDirection(const FloatSize& delta)
         }
     }
 
-    if ((delta.width() || delta.height()) && (limitDelta.width() < 1 && limitDelta.height() < 1))        
+    if ((delta.width() || delta.height()) && (limitDelta.width() < 1 && limitDelta.height() < 1))
         return true;
 
     return false;
@@ -304,7 +305,7 @@ void ScrollingTreeScrollingNodeMac::setScrollLayerPosition(const IntPoint& posit
     ASSERT(!shouldUpdateScrollLayerPositionOnMainThread());
     m_scrollLayer.get().position = CGPointMake(-position.x() + scrollOrigin().x(), -position.y() + scrollOrigin().y());
 
-    IntSize scrollOffsetForFixedChildren = WebCore::scrollOffsetForFixedPosition(viewportRect(), contentsSize(), position, scrollOrigin(), frameScaleFactor(), false);
+    IntSize scrollOffsetForFixedChildren = FrameView::scrollOffsetForFixedPosition(viewportRect(), contentsSize(), position, scrollOrigin(), frameScaleFactor(), false);
     if (m_counterScrollingLayer)
         m_counterScrollingLayer.get().position = FloatPoint(scrollOffsetForFixedChildren);
 
@@ -348,8 +349,10 @@ void ScrollingTreeScrollingNodeMac::updateMainFramePinState(const IntPoint& scro
 {
     bool pinnedToTheLeft = scrollPosition.x() <= minimumScrollPosition().x();
     bool pinnedToTheRight = scrollPosition.x() >= maximumScrollPosition().x();
+    bool pinnedToTheTop = scrollPosition.y() <= minimumScrollPosition().y();
+    bool pinnedToTheBottom = scrollPosition.y() >= maximumScrollPosition().y();
 
-    scrollingTree()->setMainFramePinState(pinnedToTheLeft, pinnedToTheRight);
+    scrollingTree()->setMainFramePinState(pinnedToTheLeft, pinnedToTheRight, pinnedToTheTop, pinnedToTheBottom);
 }
 
 void ScrollingTreeScrollingNodeMac::logExposedUnfilledArea()

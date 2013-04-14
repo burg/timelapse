@@ -32,6 +32,7 @@
 #include "webkitwebview.h"
 
 #include "AXObjectCache.h"
+#include "ArchiveResource.h"
 #include "BackForwardListImpl.h"
 #include "CairoUtilities.h"
 #include "Chrome.h"
@@ -105,6 +106,7 @@
 #include "webkitwebinspectorprivate.h"
 #include "webkitwebpolicydecision.h"
 #include "webkitwebresource.h"
+#include "webkitwebresourceprivate.h"
 #include "webkitwebsettingsprivate.h"
 #include "webkitwebplugindatabaseprivate.h"
 #include "webkitwebwindowfeatures.h"
@@ -5064,14 +5066,15 @@ void webkit_web_view_add_resource(WebKitWebView* webView, const char* identifier
     g_hash_table_insert(priv->subResources.get(), g_strdup(identifier), webResource);
 }
 
-void webkit_web_view_remove_resource(WebKitWebView* webView, const char* identifier)
+void webkitWebViewRemoveSubresource(WebKitWebView* webView, const char* identifier)
 {
-    WebKitWebViewPrivate* priv = webView->priv;
-    if (g_str_equal(identifier, priv->mainResourceIdentifier.data())) {
-        priv->mainResourceIdentifier = "";
-        priv->mainResource = 0;
-    } else
-      g_hash_table_remove(priv->subResources.get(), identifier);
+    ASSERT(identifier);
+
+    // Don't remove the main resource.
+    const CString& mainResource = webView->priv->mainResourceIdentifier;
+    if (!mainResource.isNull() && g_str_equal(identifier, mainResource.data()))
+        return;
+    g_hash_table_remove(webView->priv->subResources.get(), identifier);
 }
 
 WebKitWebResource* webkit_web_view_get_resource(WebKitWebView* webView, char* identifier)
@@ -5106,11 +5109,32 @@ void webkit_web_view_clear_resources(WebKitWebView* webView)
         g_hash_table_remove_all(priv->subResources.get());
 }
 
+static gboolean cleanupTemporarilyCachedSubresources(gpointer data)
+{
+    GList* subResources = static_cast<GList*>(data);
+    g_list_foreach(subResources, reinterpret_cast<GFunc>(g_object_unref), NULL);
+    g_list_free(subResources);
+    return FALSE;
+}
+
 GList* webkit_web_view_get_subresources(WebKitWebView* webView)
 {
-    WebKitWebViewPrivate* priv = webView->priv;
-    GList* subResources = g_hash_table_get_values(priv->subResources.get());
-    return g_list_remove(subResources, priv->mainResource.get());
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), NULL);
+    GList* subResources = 0;
+    Vector<PassRefPtr<ArchiveResource> > coreSubResources;
+
+    core(webView)->mainFrame()->loader()->documentLoader()->getSubresources(coreSubResources);
+
+    for (unsigned i = 0; i < coreSubResources.size(); i++) {
+        WebKitWebResource* webResource = WEBKIT_WEB_RESOURCE(g_object_new(WEBKIT_TYPE_WEB_RESOURCE, NULL));
+        webkit_web_resource_init_with_core_resource(webResource, coreSubResources[i]);
+        subResources = g_list_append(subResources, webResource);
+    }
+
+    if (subResources)
+        g_timeout_add(1, cleanupTemporarilyCachedSubresources, g_list_copy(subResources));
+
+    return subResources;
 }
 
 /* From EventHandler.cpp */

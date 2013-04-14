@@ -43,6 +43,15 @@ extern "C" { extern void* _ZTVN7WebCore26TestMediaQueryListListenerE[]; }
 namespace WebCore {
 
 #if ENABLE(BINDING_INTEGRITY)
+// This checks if a DOM object that is about to be wrapped is valid.
+// Specifically, it checks that a vtable of the DOM object is equal to
+// a vtable of an expected class.
+// Due to a dangling pointer, the DOM object you are wrapping might be
+// already freed or realloced. If freed, the check will fail because
+// a free list pointer should be stored at the head of the DOM object.
+// If realloced, the check will fail because the vtable of the DOM object
+// differs from the expected vtable (unless the same class of DOM object
+// is realloced on the slot).
 inline void checkTypeOrDieTrying(TestMediaQueryListListener* object)
 {
     void* actualVTablePointer = *(reinterpret_cast<void**>(object));
@@ -62,20 +71,25 @@ namespace TestMediaQueryListListenerV8Internal {
 
 template <typename T> void V8_USE(T) { }
 
-static v8::Handle<v8::Value> methodCallback(const v8::Arguments& args)
+static v8::Handle<v8::Value> methodMethod(const v8::Arguments& args)
 {
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestMediaQueryListListener* imp = V8TestMediaQueryListListener::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<MediaQueryListListener>, listener, MediaQueryListListener::create(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(RefPtr<MediaQueryListListener>, listener, MediaQueryListListener::create(args[0]));
     imp->method(listener);
     return v8Undefined();
 }
 
+static v8::Handle<v8::Value> methodMethodCallback(const v8::Arguments& args)
+{
+    return TestMediaQueryListListenerV8Internal::methodMethod(args);
+}
+
 } // namespace TestMediaQueryListListenerV8Internal
 
-static const V8DOMConfiguration::BatchedCallback V8TestMediaQueryListListenerCallbacks[] = {
-    {"method", TestMediaQueryListListenerV8Internal::methodCallback},
+static const V8DOMConfiguration::BatchedMethod V8TestMediaQueryListListenerMethods[] = {
+    {"method", TestMediaQueryListListenerV8Internal::methodMethodCallback},
 };
 
 static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestMediaQueryListListenerTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
@@ -85,7 +99,7 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestMediaQueryListListene
     v8::Local<v8::Signature> defaultSignature;
     defaultSignature = V8DOMConfiguration::configureTemplate(desc, "TestMediaQueryListListener", v8::Persistent<v8::FunctionTemplate>(), V8TestMediaQueryListListener::internalFieldCount,
         0, 0,
-        V8TestMediaQueryListListenerCallbacks, WTF_ARRAY_LENGTH(V8TestMediaQueryListListenerCallbacks), isolate);
+        V8TestMediaQueryListListenerMethods, WTF_ARRAY_LENGTH(V8TestMediaQueryListListenerMethods), isolate);
     UNUSED_PARAM(defaultSignature); // In some cases, it will not be used.
     v8::Local<v8::ObjectTemplate> instance = desc->InstanceTemplate();
     v8::Local<v8::ObjectTemplate> proto = desc->PrototypeTemplate();

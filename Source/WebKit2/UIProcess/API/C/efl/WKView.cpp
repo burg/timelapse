@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Samsung Electronics
+ * Copyright (C) 2013 Intel Corporation. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -52,6 +53,32 @@ void WKViewInitialize(WKViewRef viewRef)
     toImpl(viewRef)->initialize();
 }
 
+void WKViewSetViewClient(WKViewRef viewRef, const WKViewClient* client)
+{
+    toImpl(viewRef)->initializeClient(client);
+}
+
+void WKViewSetUserViewportTranslation(WKViewRef viewRef, double tx, double ty)
+{
+    toImpl(viewRef)->setUserViewportTranslation(tx, ty);
+}
+
+WKPoint WKViewUserViewportToContents(WKViewRef viewRef, WKPoint point)
+{
+    const WebCore::IntPoint& result = toImpl(viewRef)->userViewportToContents(toIntPoint(point));
+    return WKPointMake(result.x(), result.y());
+}
+
+void WKViewPaintToCurrentGLContext(WKViewRef viewRef)
+{
+    toImpl(viewRef)->paintToCurrentGLContext();
+}
+
+void WKViewPaintToCairoSurface(WKViewRef viewRef, cairo_surface_t* surface)
+{
+    toImpl(viewRef)->paintToCairoSurface(surface);
+}
+
 WKPageRef WKViewGetPage(WKViewRef viewRef)
 {
     return toImpl(viewRef)->pageRef();
@@ -90,6 +117,25 @@ void WKViewSuspendActiveDOMObjectsAndAnimations(WKViewRef viewRef)
 void WKViewResumeActiveDOMObjectsAndAnimations(WKViewRef viewRef)
 {
     toImpl(viewRef)->resumeActiveDOMObjectsAndAnimations();
+}
+
+void WKViewSetShowsAsSource(WKViewRef viewRef, bool flag)
+{
+    toImpl(viewRef)->setShowsAsSource(flag);
+}
+
+bool WKViewGetShowsAsSource(WKViewRef viewRef)
+{
+    return toImpl(viewRef)->showsAsSource();
+}
+
+void WKViewExitFullScreen(WKViewRef viewRef)
+{
+#if ENABLE(FULLSCREEN_API)
+    toImpl(viewRef)->exitFullScreen();
+#else
+    UNUSED_PARAM(viewRef);
+#endif
 }
 
 Evas_Object* WKViewGetEvasObject(WKViewRef viewRef)

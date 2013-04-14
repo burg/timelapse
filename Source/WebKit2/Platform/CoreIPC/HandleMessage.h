@@ -247,6 +247,12 @@ void callMemberFunction(Connection* connection, const Arguments4<P1, P2, P3, P4>
     (object->*function)(connection, args.argument1, args.argument2, args.argument3, args.argument4);
 }
 
+template<typename C, typename MF, typename P1, typename R1>
+void callMemberFunction(Connection* connection, const Arguments1<P1>& args, Arguments1<R1>& replyArgs, C* object, MF function)
+{
+    (object->*function)(connection, args.argument1, replyArgs.argument1);
+}
+
 // Variadic dispatch functions.
 
 template<typename C, typename MF>
@@ -341,7 +347,19 @@ void handleMessage(MessageDecoder& decoder, MessageEncoder& replyEncoder, C* obj
 }
 
 template<typename T, typename C, typename MF>
-void handleMessageOnConnectionQueue(Connection* connection, MessageDecoder& decoder, C* object, MF function)
+void handleMessage(Connection* connection, MessageDecoder& decoder, MessageEncoder& replyEncoder, C* object, MF function)
+{
+    typename T::DecodeType::ValueType arguments;
+    if (!decoder.decode(arguments))
+        return;
+
+    typename T::Reply::ValueType replyArguments;
+    callMemberFunction(connection, arguments, replyArguments, object, function);
+    replyEncoder << replyArguments;
+}
+
+template<typename T, typename C, typename MF>
+void handleMessage(Connection* connection, MessageDecoder& decoder, C* object, MF function)
 {
     typename T::DecodeType::ValueType arguments;
     if (!decoder.decode(arguments))

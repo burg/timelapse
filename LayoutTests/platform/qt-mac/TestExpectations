@@ -5695,7 +5695,6 @@ Bug(_qt_slow) [ Debug ] editing/selection/dump-as-markup.html [ Pass Slow ]
 Bug(_qt_slow) [ Debug ] fast/js/array-sort-modifying-tostring.html [ Pass Timeout ]
 Bug(_qt_slow) [ Debug ] fast/overflow/lots-of-sibling-inline-boxes.html [ Pass Slow ]
 Bug(_qt_slow) [ Debug ] fast/js/dfg-inline-function-dot-caller.html [ Pass Slow ]
-Bug(_qt_slow) [ Debug ] fast/js/dfg-poison-fuzz.html [ Pass Slow ]
 
 webkit.org/b/62662 [ Debug ] inspector/cookie-parser.html [ Crash Pass ]
 
@@ -5847,8 +5846,6 @@ webkit.org/b/80219 compositing/overflow/clip-descendents.html [ Failure ]
 webkit.org/b/93148 tables/mozilla_expected_failures/marvin/table_overflow_hidden_tbody.html [ Failure ]
 webkit.org/b/93148 tables/mozilla_expected_failures/marvin/table_overflow_hidden_tr.html [ Failure ]
 webkit.org/b/93148 fast/css/nested-layers-with-hover.html [ Failure ]
-
-webkit.org/b/93247 [ Debug ] fast/lists/list-marker-remove-crash.html [ Crash ]
 
 webkit.org/b/93654 [ Debug ] fast/events/keyevent-iframe-removed-crash.html [ Crash ]
 

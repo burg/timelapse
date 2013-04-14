@@ -231,10 +231,11 @@ WebInspector.NativeSnapshotNode.prototype = {
     __proto__: WebInspector.DataGridNode.prototype
 }
 
-
 /**
  * @constructor
  * @extends {WebInspector.HeapSnapshotView}
+ * @param {WebInspector.ProfilesPanel} parent
+ * @param {WebInspector.NativeSnapshotProfileHeader} profile
  */
 WebInspector.NativeHeapSnapshotView = function(parent, profile)
 {

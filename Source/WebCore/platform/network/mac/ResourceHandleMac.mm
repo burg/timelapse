@@ -143,22 +143,7 @@ ResourceHandle::~ResourceHandle()
     LOG(Network, "Handle %p destroyed", this);
 }
 
-static bool shouldRelaxThirdPartyCookiePolicy(NetworkingContext* context, const KURL& url)
-{
-    // If a URL already has cookies, then we'll relax the 3rd party cookie policy and accept new cookies.
-
-    RetainPtr<CFHTTPCookieStorageRef> cfCookieStorage = context->storageSession().cookieStorage();
-    NSHTTPCookieAcceptPolicy cookieAcceptPolicy = static_cast<NSHTTPCookieAcceptPolicy>(wkGetHTTPCookieAcceptPolicy(cfCookieStorage.get()));
-
-    if (cookieAcceptPolicy != NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain)
-        return false;
-
-    NSArray *cookies = wkHTTPCookiesForURL(cfCookieStorage.get(), url);
-
-    return [cookies count];
-}
-
-void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldRelaxThirdPartyCookiePolicy, bool shouldContentSniff)
+void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff)
 {
     // Credentials for ftp can only be passed in URL, the connection:didReceiveAuthenticationChallenge: delegate call won't be made.
     if ((!d->m_user.isEmpty() || !d->m_pass.isEmpty()) && !firstRequest().url().protocolIsInHTTPFamily()) {
@@ -167,9 +152,6 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
         urlWithCredentials.setPass(d->m_pass);
         firstRequest().setURL(urlWithCredentials);
     }
-
-    if (shouldRelaxThirdPartyCookiePolicy)
-        firstRequest().setFirstPartyForCookies(firstRequest().url());
 
     if (shouldUseCredentialStorage && firstRequest().url().protocolIsInHTTPFamily()) {
         if (d->m_user.isEmpty() && d->m_pass.isEmpty()) {
@@ -189,7 +171,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
         applyBasicAuthorizationHeader(firstRequest(), d->m_initialCredential);
     }
 
-    NSURLRequest *nsRequest = firstRequest().nsURLRequest();
+    NSURLRequest *nsRequest = firstRequest().nsURLRequest(UpdateHTTPBody);
     if (!shouldContentSniff) {
         NSMutableURLRequest *mutableRequest = [[nsRequest mutableCopy] autorelease];
         wkSetNSURLRequestShouldContentSniff(mutableRequest, NO);
@@ -243,7 +225,6 @@ bool ResourceHandle::start()
     createNSURLConnection(
         d->m_proxy.get(),
         shouldUseCredentialStorage,
-        shouldRelaxThirdPartyCookiePolicy(d->m_context.get(), firstRequest().url()),
         d->m_shouldContentSniff || d->m_context->localFileContentSniffingEnabled());
 
     bool scheduled = false;
@@ -270,7 +251,7 @@ bool ResourceHandle::start()
     else
         d->m_startWhenScheduled = true;
 
-    LOG(Network, "Handle %p starting connection %p for %@", this, connection(), firstRequest().nsURLRequest());
+    LOG(Network, "Handle %p starting connection %p for %@", this, connection(), firstRequest().nsURLRequest(DoNotUpdateHTTPBody));
     
     if (d->m_connection) {
         if (d->m_defersLoading)
@@ -362,15 +343,9 @@ CFStringRef ResourceHandle::synchronousLoadRunLoopMode()
     return CFSTR("WebCoreSynchronousLoaderRunLoopMode");
 }
 
-void ResourceHandle::loadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
-    LOG(Network, "ResourceHandle::loadResourceSynchronously:%@ allowStoredCredentials:%u", request.nsURLRequest(), storedCredentials);
-
-#if ENABLE(BLOB)
-    if (request.url().protocolIs("blob"))
-        if (blobRegistry().loadResourceSynchronously(request, error, response, data))
-            return;
-#endif
+    LOG(Network, "ResourceHandle::platformLoadResourceSynchronously:%@ allowStoredCredentials:%u", request.nsURLRequest(DoNotUpdateHTTPBody), storedCredentials);
 
     NSError *nsError = nil;
     NSURLResponse *nsURLResponse = nil;
@@ -393,7 +368,6 @@ void ResourceHandle::loadResourceSynchronously(NetworkingContext* context, const
     handle->createNSURLConnection(
         handle->delegate(), // A synchronous request cannot turn into a download, so there is no need to proxy the delegate.
         storedCredentials == AllowStoredCredentials,
-        shouldRelaxThirdPartyCookiePolicy(context, request.url()),
         handle->shouldContentSniff() || context->localFileContentSniffingEnabled());
 
     [handle->connection() scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:(NSString *)synchronousLoadRunLoopMode()];
@@ -673,7 +647,7 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
 
     m_handle->willSendRequest(request, redirectResponse);
 
-    return request.nsURLRequest();
+    return request.nsURLRequest(UpdateHTTPBody);
 }
 
 - (BOOL)connectionShouldUseCredentialStorage:(NSURLConnection *)connection
@@ -742,7 +716,7 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
     if (statusCode != 304)
         adjustMIMETypeIfNecessary([r _CFURLResponse]);
 
-    if ([m_handle->firstRequest().nsURLRequest() _propertyForKey:@"ForceHTMLMIMEType"])
+    if ([m_handle->firstRequest().nsURLRequest(DoNotUpdateHTTPBody) _propertyForKey:@"ForceHTMLMIMEType"])
         [r _setMIMEType:@"text/html"];
 
     m_handle->client()->didReceiveResponse(m_handle, r);

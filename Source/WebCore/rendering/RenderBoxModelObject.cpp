@@ -331,15 +331,6 @@ void RenderBoxModelObject::willBeDestroyed()
     // A continuation of this RenderObject should be destroyed at subclasses.
     ASSERT(!continuation());
 
-    if (isPositioned()) {
-        if (RenderView* view = this->view()) {
-            if (FrameView* frameView = view->frameView()) {
-                if (style()->hasViewportConstrainedPosition())
-                    frameView->removeViewportConstrainedObject(this);
-            }
-        }
-    }
-
     // If this is a first-letter object with a remaining text fragment then the
     // entry needs to be cleared from the map.
     if (firstLetterRemainingText())
@@ -377,6 +368,31 @@ static LayoutSize accumulateInFlowPositionOffsets(const RenderObject* child)
     return offset;
 }
 
+bool RenderBoxModelObject::hasAutoHeightOrContainingBlockWithAutoHeight() const
+{
+    Length logicalHeightLength = style()->logicalHeight();
+    if (logicalHeightLength.isAuto())
+        return true;
+
+    // For percentage heights: The percentage is calculated with respect to the height of the generated box's
+    // containing block. If the height of the containing block is not specified explicitly (i.e., it depends
+    // on content height), and this element is not absolutely positioned, the value computes to 'auto'.
+    if (!logicalHeightLength.isPercent() || isOutOfFlowPositioned() || document()->inQuirksMode())
+        return false;
+
+    RenderBlock* cb = containingBlock(); 
+    while (cb->isAnonymousBlock()) {
+        if (cb->isTableCell())
+            return true;
+        cb = cb->containingBlock();
+    }
+
+    if (!cb->style()->logicalHeight().isAuto() || (!cb->style()->logicalTop().isAuto() && !cb->style()->logicalBottom().isAuto()))
+        return false;
+
+    return true;
+}
+
 LayoutSize RenderBoxModelObject::relativePositionOffset() const
 {
     LayoutSize offset = accumulateInFlowPositionOffsets(this);
@@ -403,13 +419,13 @@ LayoutSize RenderBoxModelObject::relativePositionOffset() const
     // calculate the percent offset based on this height.
     // See <https://bugs.webkit.org/show_bug.cgi?id=26396>.
     if (!style()->top().isAuto()
-        && (!containingBlock->style()->height().isAuto()
+        && (!containingBlock->hasAutoHeightOrContainingBlockWithAutoHeight()
             || !style()->top().isPercent()
             || containingBlock->stretchesToViewport()))
         offset.expand(0, valueForLength(style()->top(), containingBlock->availableHeight(), view()));
 
     else if (!style()->bottom().isAuto()
-        && (!containingBlock->style()->height().isAuto()
+        && (!containingBlock->hasAutoHeightOrContainingBlockWithAutoHeight()
             || !style()->bottom().isPercent()
             || containingBlock->stretchesToViewport()))
         offset.expand(0, -valueForLength(style()->bottom(), containingBlock->availableHeight(), view()));
@@ -459,17 +475,17 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
     RenderBlock* containingBlock = this->containingBlock();
 
     LayoutRect containerContentRect = containingBlock->contentBoxRect();
+    LayoutUnit maxWidth = containingBlock->availableLogicalWidth();
 
     // Sticky positioned element ignore any override logical width on the containing block (as they don't call
     // containingBlockLogicalWidthForContent). It's unclear whether this is totally fine.
-    LayoutUnit minLeftMargin = minimumValueForLength(style()->marginLeft(), containingBlock->availableLogicalWidth(), view());
-    LayoutUnit minTopMargin = minimumValueForLength(style()->marginTop(), containingBlock->availableLogicalWidth(), view());
-    LayoutUnit minRightMargin = minimumValueForLength(style()->marginRight(), containingBlock->availableLogicalWidth(), view());
-    LayoutUnit minBottomMargin = minimumValueForLength(style()->marginBottom(), containingBlock->availableLogicalWidth(), view());
+    LayoutBoxExtent minMargin(minimumValueForLength(style()->marginTop(), maxWidth, view()),
+        minimumValueForLength(style()->marginRight(), maxWidth, view()),
+        minimumValueForLength(style()->marginBottom(), maxWidth, view()),
+        minimumValueForLength(style()->marginLeft(), maxWidth, view()));
 
     // Compute the container-relative area within which the sticky element is allowed to move.
-    containerContentRect.move(minLeftMargin, minTopMargin);
-    containerContentRect.contract(minLeftMargin + minRightMargin, minTopMargin + minBottomMargin);
+    containerContentRect.contract(minMargin);
     // Map to the view to avoid including page scale factor.
     constraints.setAbsoluteContainingBlockRect(containingBlock->localToContainerQuad(FloatRect(containerContentRect), view()).boundingBox());
 
@@ -724,7 +740,14 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
 
         if (hasRoundedBorder && bleedAvoidance != BackgroundBleedUseTransparencyLayer) {
             RoundedRect border = backgroundRoundedRectAdjustedForBleedAvoidance(context, rect, bleedAvoidance, box, boxSize, includeLeftEdge, includeRightEdge);
-            context->fillRoundedRect(border, bgColor, style()->colorSpace());
+            if (border.isRenderable())
+                context->fillRoundedRect(border, bgColor, style()->colorSpace());
+            else {
+                context->save();
+                clipRoundedInnerRect(context, rect, border);
+                context->fillRect(border.rect(), bgColor, style()->colorSpace());
+                context->restore();
+            }
         } else
             context->fillRect(pixelSnappedIntRect(rect), bgColor, style()->colorSpace());
         
@@ -891,7 +914,7 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
             RefPtr<Image> image = bgImage->image(clientForBackgroundImage, geometry.tileSize());
             bool useLowQualityScaling = shouldPaintAtLowQuality(context, image.get(), bgLayer, geometry.tileSize());
             context->drawTiledImage(image.get(), style()->colorSpace(), geometry.destRect(), geometry.relativePhase(), geometry.tileSize(), 
-                compositeOp, useLowQualityScaling);
+                compositeOp, useLowQualityScaling, bgLayer->blendMode());
         }
     }
 

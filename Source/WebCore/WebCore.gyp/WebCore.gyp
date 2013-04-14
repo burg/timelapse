@@ -81,6 +81,7 @@
       '../css',
       '../dom',
       '../dom/default',
+      '../dom/default/chromium',
       '../editing',
       '../fileapi',
       '../history',
@@ -1991,6 +1992,11 @@
         ['exclude', 'AllInOne\\.cpp$'],
       ],
       'conditions': [
+        # Shard this taret into parts to work around linker limitations.
+        # on link time code generation builds.
+        ['OS=="win" and buildtype=="Official"', {
+          'msvs_shard': 3,
+        }],
         ['use_default_render_theme==0', {
           'sources/': [
             ['exclude', 'rendering/RenderThemeChromiumDefault.*'],
@@ -2097,8 +2103,6 @@
         ['exclude', 'Modules/indexeddb/IDBFactoryBackendInterface\\.cpp$'],
         ['exclude', 'Modules/webdatabase/DatabaseManagerClient\\.h$'],
         ['exclude', 'Modules/webdatabase/DatabaseTracker\\.cpp$'],
-        ['exclude', 'Modules/webdatabase/OriginQuotaManager\\.(cpp|h)$'],
-        ['exclude', 'Modules/webdatabase/OriginUsageRecord\\.(cpp|h)$'],
         ['exclude', 'Modules/webdatabase/SQLTransactionClient\\.cpp$'],
         ['exclude', 'inspector/InspectorFrontendClientLocal\\.cpp$'],
         ['exclude', 'inspector/JavaScript[^/]*\\.cpp$'],
@@ -2132,10 +2136,10 @@
         ['include', 'loader/appcache/DOMApplicationCache\.(cpp|h)$'],
       ],
       'conditions': [
-        # Shard this taret into ten parts to work around linker limitations.
+        # Shard this taret into parts to work around linker limitations.
         # on link time code generation builds.
         ['OS=="win" and buildtype=="Official"', {
-          'msvs_shard': 10,
+          'msvs_shard': 15,
         }],
         ['os_posix == 1 and OS != "mac" and gcc_version == 42', {
           # Due to a bug in gcc 4.2.1 (the current version on hardy), we get
@@ -2163,17 +2167,6 @@
         }],
         ['OS!="mac"', {
           'sources/': [['exclude', 'Mac\\.(cpp|mm?)$']]
-        }],
-        ['clang==1', {
-          # FIXME: Remove once this warning has been tweaked in Clang.
-          'cflags': [
-            '-Wno-return-type-c-linkage',
-          ],
-          'xcode_settings': {
-            'WARNING_CFLAGS': [
-              '-Wno-return-type-c-linkage',
-            ],
-          }
         }],
       ],
       # Disable c4267 warnings until we fix size_t to int truncations.

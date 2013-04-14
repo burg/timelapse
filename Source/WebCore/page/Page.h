@@ -281,6 +281,11 @@ public:
     bool shouldSuppressScrollbarAnimations() const { return m_suppressScrollbarAnimations; }
     void setShouldSuppressScrollbarAnimations(bool suppressAnimations);
 
+    bool rubberBandsAtBottom();
+    void setRubberBandsAtBottom(bool);
+    bool rubberBandsAtTop();
+    void setRubberBandsAtTop(bool);
+
     // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
     // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
     // FrameViews in the page cache, but FrameView::pagination() only affects the current
@@ -294,6 +299,10 @@ public:
     void didMoveOnscreen();
     void willMoveOffscreen();
     bool isOnscreen() const { return m_isOnscreen; }
+
+    // Notification that this Page was moved into or out of a native window.
+    void setIsInWindow(bool);
+    bool isInWindow() const { return m_isInWindow; }
 
     void windowScreenDidChange(PlatformDisplayID);
 
@@ -483,6 +492,7 @@ private:
 
     bool m_isEditable;
     bool m_isOnscreen;
+    bool m_isInWindow;
 
 #if ENABLE(PAGE_VISIBILITY_API)
     PageVisibilityState m_visibilityState;

@@ -101,7 +101,6 @@ HEADERS += \
     Shared/SecurityOriginData.h \
     Shared/SessionState.h \
     Shared/StatisticsData.h \
-    Shared/StringPairVector.h \
     Shared/UpdateInfo.h \
     Shared/UserMessageCoders.h \
     Shared/VisitedLinkTable.h \
@@ -703,6 +702,8 @@ SOURCES += \
     WebProcess/Plugins/PluginProxy.cpp \
     WebProcess/Plugins/PluginProcessConnection.cpp \
     WebProcess/Plugins/PluginProcessConnectionManager.cpp \
+    WebProcess/Storage/StorageAreaProxy.cpp \
+    WebProcess/Storage/StorageNamespaceProxy.cpp \
     WebProcess/Storage/WebKeyValueStorageManager.cpp \
     WebProcess/WebCoreSupport/WebBatteryClient.cpp \
     WebProcess/WebCoreSupport/WebChromeClient.cpp \

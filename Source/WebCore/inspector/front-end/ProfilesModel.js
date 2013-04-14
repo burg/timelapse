@@ -61,7 +61,7 @@ WebInspector.ProfilesModel = function()
     }
     if (WebInspector.experimentsSettings.canvasInspection.isEnabled())
         this._registerProfileType(new WebInspector.CanvasProfileType());
-
+    
     InspectorBackend.registerProfilerDispatcher(new WebInspector.ProfilerDispatcher(this));
     InspectorBackend.registerHeapProfilerDispatcher(new WebInspector.HeapProfilerDispatcher(this));
     InspectorBackend.registerMemoryDispatcher(new WebInspector.MemoryDispatcher(this));

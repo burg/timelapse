@@ -30,92 +30,94 @@
 
 #if ENABLE(SQL_DATABASE)
 
+#include "AbstractSQLStatement.h"
+#include "AbstractSQLTransactionBackend.h"
 #include "DatabaseBasicTypes.h"
-#include "SQLStatement.h"
+#include "SQLTransactionStateMachine.h"
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
-#include <wtf/ThreadSafeRefCounted.h>
-#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class Database;
+class AbstractSQLTransaction;
+class DatabaseBackend;
 class SQLError;
 class SQLiteTransaction;
-class SQLStatementCallback;
-class SQLStatementErrorCallback;
-class SQLTransaction;
-class SQLTransactionCallback;
-class SQLTransactionErrorCallback;
+class SQLStatementBackend;
+class SQLTransactionBackend;
 class SQLValue;
-class VoidCallback;
 
 class SQLTransactionWrapper : public ThreadSafeRefCounted<SQLTransactionWrapper> {
 public:
     virtual ~SQLTransactionWrapper() { }
-    virtual bool performPreflight(SQLTransaction*) = 0;
-    virtual bool performPostflight(SQLTransaction*) = 0;
+    virtual bool performPreflight(SQLTransactionBackend*) = 0;
+    virtual bool performPostflight(SQLTransactionBackend*) = 0;
     virtual SQLError* sqlError() const = 0;
-    virtual void handleCommitFailedAfterPostflight(SQLTransaction*) = 0;
+    virtual void handleCommitFailedAfterPostflight(SQLTransactionBackend*) = 0;
 };
 
-class SQLTransactionBackend : public ThreadSafeRefCounted<SQLTransactionBackend> {
+class SQLTransactionBackend : public SQLTransactionStateMachine<SQLTransactionBackend>, public AbstractSQLTransactionBackend {
 public:
-    ~SQLTransactionBackend();
+    static PassRefPtr<SQLTransactionBackend> create(DatabaseBackend*,
+        PassRefPtr<AbstractSQLTransaction>, PassRefPtr<SQLTransactionWrapper>, bool readOnly);
 
-    void executeSQL(const String& sqlStatement, const Vector<SQLValue>& arguments,
-        PassRefPtr<SQLStatementCallback>, PassRefPtr<SQLStatementErrorCallback>, ExceptionCode&);
+    virtual ~SQLTransactionBackend();
 
     void lockAcquired();
-    bool performNextStep();
-    void performPendingCallback();
+    void performNextStep();
 
-    Database* database() { return m_database.get(); }
+    DatabaseBackend* database() { return m_database.get(); }
     bool isReadOnly() { return m_readOnly; }
     void notifyDatabaseThreadIsShuttingDown();
 
 private:
-    SQLTransactionBackend(Database*, PassRefPtr<SQLTransactionCallback>, PassRefPtr<SQLTransactionErrorCallback>,
-        PassRefPtr<VoidCallback>, PassRefPtr<SQLTransactionWrapper>, bool readOnly);
+    SQLTransactionBackend(DatabaseBackend*, PassRefPtr<AbstractSQLTransaction>,
+        PassRefPtr<SQLTransactionWrapper>, bool readOnly);
 
-    typedef void (SQLTransactionBackend::*TransactionStepMethod)();
-    TransactionStepMethod m_nextStep;
+    // APIs called from the frontend published via AbstractSQLTransactionBackend:
+    virtual void requestTransitToState(SQLTransactionState) OVERRIDE;
+    virtual PassRefPtr<SQLError> transactionError() OVERRIDE;
+    virtual AbstractSQLStatement* currentStatement() OVERRIDE;
+    virtual void setShouldRetryCurrentStatement(bool) OVERRIDE;
+    virtual void executeSQL(PassOwnPtr<AbstractSQLStatement>, const String& statement,
+        const Vector<SQLValue>& arguments, int permissions) OVERRIDE;
 
-    void enqueueStatement(PassRefPtr<SQLStatement>);
+    void doCleanup();
 
-    void checkAndHandleClosedOrInterruptedDatabase();
+    void enqueueStatementBackend(PassRefPtr<SQLStatementBackend>);
 
-    void acquireLock();
-    void openTransactionAndPreflight();
-    void deliverTransactionCallback();
-    void scheduleToRunStatements();
-    void runStatements();
+    // State Machine functions:
+    virtual StateFunction stateFunctionFor(SQLTransactionState) OVERRIDE;
+    void computeNextStateAndCleanupIfNeeded();
+
+    // State functions:
+    SQLTransactionState acquireLock();
+    SQLTransactionState openTransactionAndPreflight();
+    SQLTransactionState runStatements();
+    SQLTransactionState postflightAndCommit();
+    SQLTransactionState cleanupAndTerminate();
+    SQLTransactionState cleanupAfterTransactionErrorCallback();
+
+    SQLTransactionState unreachableState();
+    SQLTransactionState sendToFrontendState();
+
+    SQLTransactionState nextStateForCurrentStatementError();
+    SQLTransactionState nextStateForTransactionError();
+    SQLTransactionState runCurrentStatementAndGetNextState();
+
     void getNextStatement();
-    bool runCurrentStatement();
-    void handleCurrentStatementError();
-    void deliverStatementCallback();
-    void deliverQuotaIncreaseCallback();
-    void postflightAndCommit();
-    void deliverSuccessCallback();
-    void cleanupAfterSuccessCallback();
-    void handleTransactionError(bool inCallback);
-    void deliverTransactionErrorCallback();
-    void cleanupAfterTransactionErrorCallback();
 
-#if !LOG_DISABLED
-    static const char* debugStepName(TransactionStepMethod);
-#endif
+    RefPtr<AbstractSQLTransaction> m_frontend; // Has a reference cycle, and will break in doCleanup().
+    RefPtr<SQLStatementBackend> m_currentStatementBackend;
 
-    RefPtr<SQLStatement> m_currentStatement;
-
-    bool m_executeSqlAllowed;
-
-    RefPtr<Database> m_database;
+    RefPtr<DatabaseBackend> m_database;
     RefPtr<SQLTransactionWrapper> m_wrapper;
-    SQLCallbackWrapper<SQLTransactionCallback> m_callbackWrapper;
-    SQLCallbackWrapper<VoidCallback> m_successCallbackWrapper;
-    SQLCallbackWrapper<SQLTransactionErrorCallback> m_errorCallbackWrapper;
     RefPtr<SQLError> m_transactionError;
+
+    bool m_hasCallback;
+    bool m_hasSuccessCallback;
+    bool m_hasErrorCallback;
     bool m_shouldRetryCurrentStatement;
     bool m_modifiedDatabase;
     bool m_lockAcquired;
@@ -123,11 +125,9 @@ private:
     bool m_hasVersionMismatch;
 
     Mutex m_statementMutex;
-    Deque<RefPtr<SQLStatement> > m_statementQueue;
+    Deque<RefPtr<SQLStatementBackend> > m_statementQueue;
 
     OwnPtr<SQLiteTransaction> m_sqliteTransaction;
-
-    friend class SQLTransaction; // FIXME: Remove this once the front-end has been properly isolated.
 };
 
 } // namespace WebCore

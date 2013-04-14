@@ -251,7 +251,7 @@ void PageViewportController::didChangeViewportSize(const FloatSize& newSize)
 
     // Let the WebProcess know about the new viewport size, so that
     // it can resize the content accordingly.
-    m_webPageProxy->setViewportSize(roundedIntSize(newSize));
+    m_webPageProxy->drawingArea()->setSize(roundedIntSize(newSize), IntSize());
 }
 
 void PageViewportController::didChangeContentsVisibility(const FloatPoint& position, float scale, const FloatPoint& trajectoryVector)
@@ -316,8 +316,6 @@ void PageViewportController::suspendContent()
 
 void PageViewportController::resumeContent()
 {
-    m_client->didResumeContent();
-
     if (!m_hasSuspendedContent)
         return;
 

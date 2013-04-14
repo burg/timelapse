@@ -26,6 +26,8 @@
 #include "config.h"
 #include "RenderMultiColumnFlowThread.h"
 
+#include "RenderMultiColumnBlock.h"
+
 namespace WebCore {
 
 RenderMultiColumnFlowThread::RenderMultiColumnFlowThread(Document* document)

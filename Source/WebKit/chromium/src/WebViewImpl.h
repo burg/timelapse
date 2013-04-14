@@ -181,8 +181,6 @@ public:
     virtual void didNotAcquirePointerLock();
     virtual void didLosePointerLock();
     virtual void didChangeWindowResizerRect();
-    virtual void instrumentBeginFrame();
-    virtual void instrumentCancelFrame();
 
     // WebView methods:
     virtual void initializeMainFrame(WebFrameClient*);
@@ -222,6 +220,7 @@ public:
     virtual double setZoomLevel(bool textOnly, double zoomLevel);
     virtual void zoomLimitsChanged(double minimumZoomLevel,
                                    double maximumZoomLevel);
+    virtual void setInitialPageScaleOverride(float);
     virtual float pageScaleFactor() const;
     virtual bool isPageScaleFactorSet() const;
     virtual void setPageScaleFactorPreservingScrollOffset(float);
@@ -323,12 +322,7 @@ public:
     virtual WebCompositorOutputSurface* createOutputSurface() OVERRIDE;
     virtual void didRecreateOutputSurface(bool success) OVERRIDE;
     virtual WebInputHandler* createInputHandler() OVERRIDE;
-    virtual void willCommit();
-    virtual void didCommit();
-    virtual void didCommitAndDrawFrame();
-    virtual void didCompleteSwapBuffers();
     virtual void scheduleComposite();
-    virtual void createFontAtlas(SkBitmap&, WebRect[128], int&);
 
     // WebViewImpl
 
@@ -403,7 +397,7 @@ public:
     void mouseDoubleClick(const WebMouseEvent&);
 
     bool detectContentOnTouch(const WebPoint&);
-    void startPageScaleAnimation(const WebCore::IntPoint& targetPosition, bool useAnchor, float newScale, double durationInSeconds);
+    bool startPageScaleAnimation(const WebCore::IntPoint& targetPosition, bool useAnchor, float newScale, double durationInSeconds);
 
     void numberOfWheelEventHandlersChanged(unsigned);
     void hasTouchEventHandlers(bool);
@@ -548,6 +542,7 @@ public:
     NonCompositedContentHost* nonCompositedContentHost();
     void setBackgroundColor(const WebCore::Color&);
     WebCore::GraphicsLayerFactory* graphicsLayerFactory() const;
+    void registerForAnimations(WebLayer*);
 #endif
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     void scheduleAnimation();
@@ -577,13 +572,17 @@ public:
 
 #if ENABLE(GESTURE_EVENTS)
     void computeScaleAndScrollForHitRect(const WebRect& hitRect, AutoZoomType, float& scale, WebPoint& scroll, bool& isAnchor);
-    WebCore::Node* bestTouchLinkNode(const WebGestureEvent& touchEvent);
-    void enableTouchHighlight(const WebGestureEvent& touchEvent);
+    WebCore::Node* bestTapNode(const WebCore::PlatformGestureEvent& tapEvent);
+    void enableTapHighlight(const WebCore::PlatformGestureEvent& tapEvent);
     void computeScaleAndScrollForFocusedNode(WebCore::Node* focusedNode, float& scale, WebCore::IntPoint& scroll, bool& needAnimation);
 #endif
     void animateZoomAroundPoint(const WebCore::IntPoint&, AutoZoomType);
 
-    void shouldUseAnimateDoubleTapTimeZeroForTesting(bool);
+    void enableFakeDoubleTapAnimationForTesting(bool);
+    bool fakeDoubleTapAnimationPendingForTesting() const { return m_doubleTapZoomPending; }
+    WebCore::IntPoint fakeDoubleTapTargetPositionForTesting() const { return m_fakeDoubleTapTargetPosition; }
+    float fakeDoubleTapPageScaleFactorForTesting() const { return m_fakeDoubleTapPageScaleFactor; }
+    bool fakeDoubleTapUseAnchorForTesting() const { return m_fakeDoubleTapUseAnchor; }
 
     void enterFullScreenForElement(WebCore::Element*);
     void exitFullScreenForElement(WebCore::Element*);
@@ -755,6 +754,7 @@ private:
     float m_pageDefinedMaximumPageScaleFactor;
     float m_minimumPageScaleFactor;
     float m_maximumPageScaleFactor;
+    float m_initialPageScaleFactorOverride;
     float m_initialPageScaleFactor;
     bool m_ignoreViewportTagMaximumScale;
     bool m_pageScaleFactorIsSet;
@@ -763,11 +763,16 @@ private:
     float m_savedPageScaleFactor; // 0 means that no page scale factor is saved.
     WebCore::IntSize m_savedScrollOffset;
 
-    // Whether the current scale was achieved by zooming in with double tap.
-    bool m_doubleTapZoomInEffect;
+    // The scale moved to by the latest double tap zoom, if any.
+    float m_doubleTapZoomPageScaleFactor;
+    // Have we sent a double-tap zoom and not yet heard back the scale?
+    bool m_doubleTapZoomPending;
 
     // Used for testing purposes.
-    bool m_shouldUseDoubleTapTimeZero;
+    bool m_enableFakeDoubleTapAnimationForTesting;
+    WebCore::IntPoint m_fakeDoubleTapTargetPosition;
+    float m_fakeDoubleTapPageScaleFactor;
+    bool m_fakeDoubleTapUseAnchor;
 
     bool m_contextMenuAllowed;
 
@@ -853,6 +858,7 @@ private:
     WebLayerTreeView* m_layerTreeView;
     WebLayer* m_rootLayer;
     WebCore::GraphicsLayer* m_rootGraphicsLayer;
+    OwnPtr<WebCore::GraphicsLayerFactory> m_graphicsLayerFactory;
     bool m_isAcceleratedCompositingActive;
     bool m_layerTreeViewCommitsDeferred;
     bool m_compositorCreationFailed;
@@ -892,8 +898,6 @@ private:
     OwnPtr<LinkHighlight> m_linkHighlight;
 #endif
     OwnPtr<ValidationMessageClientImpl> m_validationMessage;
-
-    bool m_suppressInvalidations;
 
     bool m_showFPSCounter;
     bool m_showPaintRects;

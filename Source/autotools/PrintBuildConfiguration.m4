@@ -8,7 +8,6 @@ Build configuration:
  Compile with debug symbols (slow)                        : $enable_debug_symbols
  Enable GCC build optimization                            : $enable_optimizations
  Code coverage support                                    : $enable_coverage
- Unicode backend                                          : $with_unicode_backend
  Optimized memory allocator                               : $enable_fast_malloc
  Accelerated rendering backend                            : $acceleration_backend_description
 
@@ -34,12 +33,6 @@ Features:
 GTK+ configuration:
  GTK+ version                                             : $with_gtk
  GDK target                                               : $with_target
- GStreamer version                                        : $with_gstreamer
  Introspection support                                    : $enable_introspection
  Generate documentation                                   : $enable_gtk_doc
 "
-if test "$with_unicode_backend" = "glib"; then
-    echo "     >> WARNING: the glib-based unicode backend is slow and incomplete <<"
-    echo
-    echo
-fi

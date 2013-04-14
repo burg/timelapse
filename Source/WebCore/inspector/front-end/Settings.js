@@ -123,6 +123,7 @@ WebInspector.Settings = function()
     this.workerInspectorWidth = this.createSetting("workerInspectorWidth", 600);
     this.workerInspectorHeight = this.createSetting("workerInspectorHeight", 600);
     this.messageURLFilters = this.createSetting("messageURLFilters", {});
+    this.splitVerticallyWhenDockedToRight = this.createSetting("splitVerticallyWhenDockedToRight", true);
 }
 
 WebInspector.Settings.prototype = {
@@ -204,6 +205,7 @@ WebInspector.ExperimentsSettings = function()
     this.snippetsSupport = this._createExperiment("snippetsSupport", "Snippets support");
     this.nativeMemorySnapshots = this._createExperiment("nativeMemorySnapshots", "Native memory profiling");
     this.liveNativeMemoryChart = this._createExperiment("liveNativeMemoryChart", "Live native memory chart");
+    this.nativeMemoryTimeline = this._createExperiment("nativeMemoryTimeline", "Native memory timeline");
     this.fileSystemInspection = this._createExperiment("fileSystemInspection", "FileSystem inspection");
     this.canvasInspection = this._createExperiment("canvasInspection ", "Canvas inspection");
     this.sass = this._createExperiment("sass", "Support for Sass");
@@ -211,8 +213,9 @@ WebInspector.ExperimentsSettings = function()
     this.cssRegions = this._createExperiment("cssRegions", "CSS Regions Support");
     this.showOverridesInDrawer = this._createExperiment("showOverridesInDrawer", "Show Overrides in drawer");
     this.fileSystemProject = this._createExperiment("fileSystemProject", "File system folders in Sources Panel");
-    this.horizontalPanelSplit = this._createExperiment("horizontalPanelSplit", "Allow horizontal split in Elements and Sources panels");
     this.showWhitespaceInEditor = this._createExperiment("showWhitespaceInEditor", "Show whitespace characters in editor");
+    this.textEditorSmartBraces = this._createExperiment("textEditorSmartBraces", "Enable smart braces in text editor");
+    this.separateProfilers = this._createExperiment("separateProfilers", "Separate profiler tools");
 
     this._cleanUpSetting();
 }
@@ -381,17 +384,18 @@ WebInspector.VersionController.prototype = {
 
     _updateVersionFrom0To1: function()
     {
-        this._clearBreakpointsWhenTooMany(WebInspector.settings.breakpoints);
+        this._clearBreakpointsWhenTooMany(WebInspector.settings.breakpoints, 500000);
     },
 
     /**
      * @param {WebInspector.Setting} breakpointsSetting
+     * @param {number} maxBreakpointsCount
      */
-    _clearBreakpointsWhenTooMany: function(breakpointsSetting)
+    _clearBreakpointsWhenTooMany: function(breakpointsSetting, maxBreakpointsCount)
     {
         // If there are too many breakpoints in a storage, it is likely due to a recent bug that caused
         // periodical breakpoints duplication leading to inspector slowness.
-        if (breakpointsSetting.get().length > 500000)
+        if (breakpointsSetting.get().length > maxBreakpointsCount)
             breakpointsSetting.set([]);
     }
 }

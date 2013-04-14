@@ -1,3 +1,85 @@
+2013-02-24  Andreas Kling  <akling@apple.com>
+
+        StyledElement: Don't expose a mutable direct interface to the inline style.
+        <http://webkit.org/b/110711>
+
+        Reviewed by Antti Koivisto.
+
+        QWebElement::styleProperty() is a read-only method, so rewrite it to use StyledElement::inlineStyle().
+
+        * Api/qwebelement.cpp:
+        (QWebElement::styleProperty):
+
+2013-02-23  Jason Anderssen  <janderssen@gmail.com>
+
+        Move setAutofilled from TestRunner to WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=110521
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2013-02-21  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Replace QWebPageAdaptor::TouchAdjuster
+        https://bugs.webkit.org/show_bug.cgi?id=110226
+
+        Reviewed by Antonio Gomes.
+
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::adjustPointForClicking):
+        * WebCoreSupport/QWebPageAdapter.h:
+
+2013-02-15  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Simplify hitTestResultAtPoint and nodesFromRect APIs
+        https://bugs.webkit.org/show_bug.cgi?id=95720
+
+        Reviewed by Julien Chaffraix.
+
+        Update calls to new API.
+
+        * WebCoreSupport/FrameLoaderClientQt.cpp:
+        (WebCore::FrameLoaderClientQt::dispatchDecidePolicyForNavigationAction):
+        * WebCoreSupport/QWebFrameAdapter.cpp:
+        (QWebFrameAdapter::hitTestContent):
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::TouchAdjuster::findCandidatePointForTouch):
+        (QWebPageAdapter::handleSoftwareInputPanel):
+        (QWebPageAdapter::updatePositionDependentMenuActions):
+
+2013-02-15  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Port GCController to JSC C API
+        https://bugs.webkit.org/show_bug.cgi?id=109690
+
+        Reviewed by Benjamin Poulain.
+
+        Add hooks to retrieve JSContextRef and window object.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        (DumpRenderTreeSupportQt::getJSWindowObject):
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2013-02-13  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] window.open passes height and width parameters even if not defined in a page
+        https://bugs.webkit.org/show_bug.cgi?id=107705
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Test that minimum size is applied only when the requested size is too small,
+        not when default is requested.
+
+        * tests/qwebpage/tst_qwebpage.cpp:
+        (tst_QWebPage):
+        (TestPage):
+        (TestPage::TestPage):
+        (TestPage::createWindow):
+        (TestPage::slotGeometryChangeRequested):
+        (tst_QWebPage::openWindowDefaultSize):
+
 2013-02-12  Huang Dongsung  <luxtella@company100.net>
 
         [TexMap] Apply frames-per-second debug counter to WK1.

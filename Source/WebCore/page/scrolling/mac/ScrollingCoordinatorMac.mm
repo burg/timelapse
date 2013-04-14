@@ -93,6 +93,26 @@ bool ScrollingCoordinatorMac::isRubberBandInProgress() const
     return scrollingTree()->isRubberBandInProgress();
 }
 
+bool ScrollingCoordinatorMac::rubberBandsAtBottom() const
+{
+    return scrollingTree()->rubberBandsAtBottom();
+}
+
+void ScrollingCoordinatorMac::setRubberBandsAtBottom(bool rubberBandsAtBottom)
+{
+    scrollingTree()->setRubberBandsAtBottom(rubberBandsAtBottom);
+}
+
+bool ScrollingCoordinatorMac::rubberBandsAtTop() const
+{
+    return scrollingTree()->rubberBandsAtTop();
+}
+
+void ScrollingCoordinatorMac::setRubberBandsAtTop(bool rubberBandsAtTop)
+{
+    scrollingTree()->setRubberBandsAtTop(rubberBandsAtTop);
+}
+
 void ScrollingCoordinatorMac::commitTreeStateIfNeeded()
 {
     if (!m_scrollingStateTree->hasChangedProperties())
@@ -170,23 +190,12 @@ void ScrollingCoordinatorMac::frameViewRootLayerDidChange(FrameView* frameView)
     setCounterScrollingLayerForNode(counterScrollingLayerForFrameView(frameView), node);
 }
 
-void ScrollingCoordinatorMac::frameViewHorizontalScrollbarLayerDidChange(FrameView* frameView, GraphicsLayer*)
+void ScrollingCoordinatorMac::scrollableAreaScrollbarLayerDidChange(ScrollableArea* scrollableArea, ScrollbarOrientation)
 {
     ASSERT(isMainThread());
     ASSERT(m_page);
 
-    if (frameView->frame() != m_page->mainFrame())
-        return;
-
-    // FIXME: Implement.
-}
-
-void ScrollingCoordinatorMac::frameViewVerticalScrollbarLayerDidChange(FrameView* frameView, GraphicsLayer*)
-{
-    ASSERT(isMainThread());
-    ASSERT(m_page);
-    
-    if (frameView->frame() != m_page->mainFrame())
+    if (scrollableArea != static_cast<ScrollableArea*>(m_page->mainFrame()->view()))
         return;
 
     // FIXME: Implement.
@@ -294,6 +303,9 @@ void ScrollingCoordinatorMac::setWheelEventHandlerCountForNode(unsigned wheelEve
 
 void ScrollingCoordinatorMac::setShouldUpdateScrollLayerPositionOnMainThread(MainThreadScrollingReasons reasons)
 {
+    if (!m_scrollingStateTree->rootStateNode())
+        return;
+
     // The FrameView's GraphicsLayer is likely to be out-of-synch with the PlatformLayer
     // at this point. So we'll update it before we switch back to main thread scrolling
     // in order to avoid layer positioning bugs.
@@ -320,6 +332,9 @@ void ScrollingCoordinatorMac::updateMainFrameScrollLayerPosition()
 
 void ScrollingCoordinatorMac::syncChildPositions(const LayoutRect& viewportRect)
 {
+    if (!m_scrollingStateTree->rootStateNode())
+        return;
+
     Vector<OwnPtr<ScrollingStateNode> >* children = m_scrollingStateTree->rootStateNode()->children();
     if (!children)
         return;
@@ -348,17 +363,21 @@ void ScrollingCoordinatorMac::updateViewportConstrainedNode(ScrollingNodeID node
 {
     ASSERT(supportsFixedPositionLayers());
 
+    ScrollingStateNode* node = m_scrollingStateTree->stateNodeForID(nodeID);
+    if (!node)
+        return;
+
     switch (constraints.constraintType()) {
     case ViewportConstraints::FixedPositionConstaint: {
-        ScrollingStateFixedNode* node = toScrollingStateFixedNode(m_scrollingStateTree->stateNodeForID(nodeID));
-        setScrollLayerForNode(graphicsLayer, node);
-        node->updateConstraints((const FixedPositionViewportConstraints&)constraints);
+        ScrollingStateFixedNode* fixedNode = toScrollingStateFixedNode(node);
+        setScrollLayerForNode(graphicsLayer, fixedNode);
+        fixedNode->updateConstraints((const FixedPositionViewportConstraints&)constraints);
         break;
     }
     case ViewportConstraints::StickyPositionConstraint: {
-        ScrollingStateStickyNode* node = toScrollingStateStickyNode(m_scrollingStateTree->stateNodeForID(nodeID));
-        setScrollLayerForNode(graphicsLayer, node);
-        node->updateConstraints((const StickyPositionViewportConstraints&)constraints);
+        ScrollingStateStickyNode* stickyNode = toScrollingStateStickyNode(node);
+        setScrollLayerForNode(graphicsLayer, stickyNode);
+        stickyNode->updateConstraints((const StickyPositionViewportConstraints&)constraints);
         break;
     }
     }

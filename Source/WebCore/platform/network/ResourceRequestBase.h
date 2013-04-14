@@ -44,6 +44,11 @@ namespace WebCore {
         ReturnCacheDataDontLoad  // results of a post - allow stale data and only use cache
     };
 
+    enum HTTPBodyUpdatePolicy {
+        DoNotUpdateHTTPBody,
+        UpdateHTTPBody
+    };
+
     class ResourceRequest;
     struct CrossThreadResourceRequestData;
 
@@ -143,6 +148,8 @@ namespace WebCore {
         ResourceRequestBase()
             : m_resourceRequestUpdated(false)
             , m_platformRequestUpdated(true)
+            , m_resourceRequestBodyUpdated(false)
+            , m_platformRequestBodyUpdated(true)
             , m_reportUploadProgress(false)
             , m_reportLoadTiming(false)
             , m_reportRawHeaders(false)
@@ -158,6 +165,8 @@ namespace WebCore {
             , m_allowCookies(true)
             , m_resourceRequestUpdated(true)
             , m_platformRequestUpdated(false)
+            , m_resourceRequestBodyUpdated(true)
+            , m_platformRequestBodyUpdated(false)
             , m_reportUploadProgress(false)
             , m_reportLoadTiming(false)
             , m_reportRawHeaders(false)
@@ -165,8 +174,8 @@ namespace WebCore {
         {
         }
 
-        void updatePlatformRequest() const; 
-        void updateResourceRequest() const; 
+        void updatePlatformRequest(HTTPBodyUpdatePolicy = DoNotUpdateHTTPBody) const;
+        void updateResourceRequest(HTTPBodyUpdatePolicy = DoNotUpdateHTTPBody) const;
 
         void reportMemoryUsageBase(MemoryObjectInfo*) const;
 
@@ -185,6 +194,8 @@ namespace WebCore {
         bool m_allowCookies : 1;
         mutable bool m_resourceRequestUpdated : 1;
         mutable bool m_platformRequestUpdated : 1;
+        mutable bool m_resourceRequestBodyUpdated : 1;
+        mutable bool m_platformRequestBodyUpdated : 1;
         bool m_reportUploadProgress : 1;
         bool m_reportLoadTiming : 1;
         bool m_reportRawHeaders : 1;

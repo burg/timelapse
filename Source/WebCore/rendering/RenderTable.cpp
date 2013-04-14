@@ -391,7 +391,6 @@ void RenderTable::layout()
     LayoutStateMaintainer statePusher(view(), this, locationOffset(), style()->isFlippedBlocksWritingMode());
 
     setLogicalHeight(0);
-    m_overflow.clear();
 
     initMaxMarginValues();
     
@@ -693,9 +692,10 @@ void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& p
     LayoutRect rect(paintOffset, size());
     subtractCaptionRect(rect);
 
-    if (!boxShadowShouldBeAppliedToBackground(determineBackgroundBleedAvoidance(paintInfo.context)))
+    BackgroundBleedAvoidance bleedAvoidance = determineBackgroundBleedAvoidance(paintInfo.context);
+    if (!boxShadowShouldBeAppliedToBackground(bleedAvoidance))
         paintBoxShadow(paintInfo, rect, style(), Normal);
-    paintBackground(paintInfo, rect);
+    paintBackground(paintInfo, rect, bleedAvoidance);
     paintBoxShadow(paintInfo, rect, style(), Inset);
 
     if (style()->hasBorder() && !collapseBorders())
@@ -720,7 +720,13 @@ void RenderTable::computePreferredLogicalWidths()
     recalcSectionsIfNeeded();
     recalcBordersInRowDirection();
 
-    m_tableLayout->computePreferredLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
+    m_tableLayout->computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
+
+    int bordersPaddingAndSpacing = bordersPaddingAndSpacingInRowDirection();
+    m_minPreferredLogicalWidth += bordersPaddingAndSpacing;
+    m_maxPreferredLogicalWidth += bordersPaddingAndSpacing;
+
+    m_tableLayout->applyPreferredLogicalWidthQuirks(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
     for (unsigned i = 0; i < m_captions.size(); i++)
         m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, m_captions[i]->minPreferredLogicalWidth());

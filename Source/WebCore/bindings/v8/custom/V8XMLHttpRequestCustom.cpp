@@ -48,7 +48,7 @@
 
 namespace WebCore {
 
-v8::Handle<v8::Value> V8XMLHttpRequest::constructorCallbackCustom(const v8::Arguments& args)
+v8::Handle<v8::Value> V8XMLHttpRequest::constructorCustom(const v8::Arguments& args)
 {
     ScriptExecutionContext* context = getScriptExecutionContext();
 
@@ -65,7 +65,7 @@ v8::Handle<v8::Value> V8XMLHttpRequest::constructorCallbackCustom(const v8::Argu
     return wrapper;
 }
 
-v8::Handle<v8::Value> V8XMLHttpRequest::responseTextAccessorGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
+v8::Handle<v8::Value> V8XMLHttpRequest::responseTextAttrGetterCustom(v8::Local<v8::String> name, const v8::AccessorInfo& info)
 {
     XMLHttpRequest* xmlHttpRequest = V8XMLHttpRequest::toNative(info.Holder());
     ExceptionCode ec = 0;
@@ -75,14 +75,14 @@ v8::Handle<v8::Value> V8XMLHttpRequest::responseTextAccessorGetter(v8::Local<v8:
     return v8String(text, info.GetIsolate());
 }
 
-v8::Handle<v8::Value> V8XMLHttpRequest::responseAccessorGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
+v8::Handle<v8::Value> V8XMLHttpRequest::responseAttrGetterCustom(v8::Local<v8::String> name, const v8::AccessorInfo& info)
 {
     XMLHttpRequest* xmlHttpRequest = V8XMLHttpRequest::toNative(info.Holder());
 
     switch (xmlHttpRequest->responseTypeCode()) {
     case XMLHttpRequest::ResponseTypeDefault:
     case XMLHttpRequest::ResponseTypeText:
-        return responseTextAccessorGetter(name, info);
+        return responseTextAttrGetterCustom(name, info);
 
     case XMLHttpRequest::ResponseTypeDocument:
         {
@@ -115,7 +115,7 @@ v8::Handle<v8::Value> V8XMLHttpRequest::responseAccessorGetter(v8::Local<v8::Str
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> V8XMLHttpRequest::openCallback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8XMLHttpRequest::openMethodCustom(const v8::Arguments& args)
 {
     // Four cases:
     // open(method, url)
@@ -164,7 +164,7 @@ static bool isDocumentType(v8::Handle<v8::Value> value, v8::Isolate* isolate)
     return V8Document::HasInstance(value, isolate) || V8HTMLDocument::HasInstance(value, isolate);
 }
 
-v8::Handle<v8::Value> V8XMLHttpRequest::sendCallback(const v8::Arguments& args)
+v8::Handle<v8::Value> V8XMLHttpRequest::sendMethodCustom(const v8::Arguments& args)
 {
     XMLHttpRequest* xmlHttpRequest = V8XMLHttpRequest::toNative(args.Holder());
 

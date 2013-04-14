@@ -103,7 +103,7 @@
 #endif
 
 // Harden the pointers stored in the TCMalloc linked lists
-#if COMPILER(GCC)
+#if COMPILER(GCC) && !PLATFORM(QT)
 #define ENABLE_TCMALLOC_HARDENING 1
 #endif
 
@@ -512,19 +512,7 @@ namespace WTF {
 #define MESSAGE LOG_ERROR
 #define CHECK_CONDITION ASSERT
 
-#if ENABLE(TCMALLOC_HARDENING)
-/*
- * To make it harder to exploit use-after free style exploits
- * we mask the addresses we put into our linked lists with the
- * address of kLLHardeningMask.  Due to ASLR the address of
- * kLLHardeningMask should be sufficiently randomized to make direct
- * freelist manipulation much more difficult.
- */
 static const char kLLHardeningMask = 0;
-enum {
-    MaskKeyShift = 13
-};
-
 template <unsigned> struct EntropySource;
 template <> struct EntropySource<4> {
     static uint32_t value()
@@ -544,8 +532,21 @@ template <> struct EntropySource<8> {
     }
 };
 
-static ALWAYS_INLINE uintptr_t internalEntropyValue() {
-    static uintptr_t value = EntropySource<sizeof(uintptr_t)>::value();
+#if ENABLE(TCMALLOC_HARDENING)
+/*
+ * To make it harder to exploit use-after free style exploits
+ * we mask the addresses we put into our linked lists with the
+ * address of kLLHardeningMask.  Due to ASLR the address of
+ * kLLHardeningMask should be sufficiently randomized to make direct
+ * freelist manipulation much more difficult.
+ */
+enum {
+    MaskKeyShift = 13
+};
+
+static ALWAYS_INLINE uintptr_t internalEntropyValue() 
+{
+    static uintptr_t value = EntropySource<sizeof(uintptr_t)>::value() | 1;
     ASSERT(value);
     return value;
 }
@@ -554,11 +555,68 @@ static ALWAYS_INLINE uintptr_t internalEntropyValue() {
 #define ROTATE_VALUE(value, amount) (((value) >> (amount)) | ((value) << (sizeof(value) * 8 - (amount))))
 #define XOR_MASK_PTR_WITH_KEY(ptr, key, entropy) (reinterpret_cast<typeof(ptr)>(reinterpret_cast<uintptr_t>(ptr)^(ROTATE_VALUE(reinterpret_cast<uintptr_t>(key), MaskKeyShift)^entropy)))
 
-#else
-#define XOR_MASK_PTR_WITH_KEY(ptr, key, entropy) (((void)entropy), ((void)key), ptr)
-#define HARDENING_ENTROPY 0
-#endif
 
+static ALWAYS_INLINE uint32_t freedObjectStartPoison()
+{
+    static uint32_t value = EntropySource<sizeof(uint32_t)>::value() | 1;
+    ASSERT(value);
+    return value;
+}
+
+static ALWAYS_INLINE uint32_t freedObjectEndPoison()
+{
+    static uint32_t value = EntropySource<sizeof(uint32_t)>::value() | 1;
+    ASSERT(value);
+    return value;
+}
+
+#define PTR_TO_UINT32(ptr) static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ptr))
+#define END_POISON_INDEX(allocationSize) (((allocationSize) - sizeof(uint32_t)) / sizeof(uint32_t))
+#define POISON_ALLOCATION(allocation, allocationSize) do { \
+    ASSERT((allocationSize) >= 2 * sizeof(uint32_t)); \
+    reinterpret_cast<uint32_t*>(allocation)[0] = 0xbadbeef1; \
+    reinterpret_cast<uint32_t*>(allocation)[1] = 0xbadbeef3; \
+    if ((allocationSize) < 4 * sizeof(uint32_t)) \
+        break; \
+    reinterpret_cast<uint32_t*>(allocation)[2] = 0xbadbeef5; \
+    reinterpret_cast<uint32_t*>(allocation)[END_POISON_INDEX(allocationSize)] = 0xbadbeef7; \
+} while (false);
+
+#define POISON_DEALLOCATION_EXPLICIT(allocation, allocationSize, startPoison, endPoison) do { \
+    ASSERT((allocationSize) >= 2 * sizeof(uint32_t)); \
+    reinterpret_cast<uint32_t*>(allocation)[0] = 0xbadbeef9; \
+    reinterpret_cast<uint32_t*>(allocation)[1] = 0xbadbeefb; \
+    if ((allocationSize) < 4 * sizeof(uint32_t)) \
+        break; \
+    reinterpret_cast<uint32_t*>(allocation)[2] = (startPoison) ^ PTR_TO_UINT32(allocation); \
+    reinterpret_cast<uint32_t*>(allocation)[END_POISON_INDEX(allocationSize)] = (endPoison) ^ PTR_TO_UINT32(allocation); \
+} while (false)
+
+#define POISON_DEALLOCATION(allocation, allocationSize) \
+    POISON_DEALLOCATION_EXPLICIT(allocation, (allocationSize), freedObjectStartPoison(), freedObjectEndPoison())
+
+#define MAY_BE_POISONED(allocation, allocationSize) (((allocationSize) >= 4 * sizeof(uint32_t)) && ( \
+    (reinterpret_cast<uint32_t*>(allocation)[2] == (freedObjectStartPoison() ^ PTR_TO_UINT32(allocation))) || \
+    (reinterpret_cast<uint32_t*>(allocation)[END_POISON_INDEX(allocationSize)] == (freedObjectEndPoison() ^ PTR_TO_UINT32(allocation))) \
+))
+
+#define IS_DEFINITELY_POISONED(allocation, allocationSize) (((allocationSize) < 4 * sizeof(uint32_t)) || ( \
+    (reinterpret_cast<uint32_t*>(allocation)[2] == (freedObjectStartPoison() ^ PTR_TO_UINT32(allocation))) && \
+    (reinterpret_cast<uint32_t*>(allocation)[END_POISON_INDEX(allocationSize)] == (freedObjectEndPoison() ^ PTR_TO_UINT32(allocation))) \
+))
+
+#else
+
+#define POISON_ALLOCATION(allocation, allocationSize)
+#define POISON_DEALLOCATION(allocation, allocationSize)
+#define POISON_DEALLOCATION_EXPLICIT(allocation, allocationSize, startPoison, endPoison)
+#define MAY_BE_POISONED(allocation, allocationSize) (false)
+#define IS_DEFINITELY_POISONED(allocation, allocationSize) (true)
+#define XOR_MASK_PTR_WITH_KEY(ptr, key, entropy) (((void)entropy), ((void)key), ptr)
+
+#define HARDENING_ENTROPY 0
+
+#endif
 
 //-------------------------------------------------------------------
 // Configuration
@@ -1096,6 +1154,20 @@ static size_t AllocationSize(size_t bytes) {
   }
 }
 
+enum {
+    kSpanCookieBits = 10,
+    kSpanCookieMask = (1 << 10) - 1,
+    kSpanThisShift = 7
+};
+
+static uint32_t spanValidationCookie;
+static uint32_t spanInitializerCookie()
+{
+    static uint32_t value = EntropySource<sizeof(uint32_t)>::value() & kSpanCookieMask;
+    spanValidationCookie = value;
+    return value;
+}
+
 // Information kept for a span (a contiguous run of pages).
 struct Span {
   PageID        start;          // Starting page number
@@ -1118,6 +1190,17 @@ public:
   unsigned int  sizeclass : 8;  // Size-class for small objects (or 0)
   unsigned int  refcount : 11;  // Number of non-free objects
   bool decommitted : 1;
+  void initCookie()
+  {
+      m_cookie = ((reinterpret_cast<uintptr_t>(this) >> kSpanThisShift) & kSpanCookieMask) ^ spanInitializerCookie();
+  }
+  void clearCookie() { m_cookie = 0; }
+  bool isValid() const
+  {
+      return (((reinterpret_cast<uintptr_t>(this) >> kSpanThisShift) & kSpanCookieMask) ^ m_cookie) == spanValidationCookie;
+  }
+private:
+  uint32_t m_cookie : kSpanCookieBits;
 
 #undef SPAN_HISTORY
 #ifdef SPAN_HISTORY
@@ -1148,6 +1231,7 @@ static Span* NewSpan(PageID p, Length len) {
   memset(result, 0, sizeof(*result));
   result->start = p;
   result->length = len;
+  result->initCookie();
 #ifdef SPAN_HISTORY
   result->nexthistory = 0;
 #endif
@@ -1155,10 +1239,12 @@ static Span* NewSpan(PageID p, Length len) {
 }
 
 static inline void DeleteSpan(Span* span) {
+  RELEASE_ASSERT(span->isValid());
 #ifndef NDEBUG
   // In debug mode, trash the contents of deleted Spans
   memset(span, 0x3f, sizeof(*span));
 #endif
+  span->clearCookie();
   span_allocator.Delete(span);
 }
 
@@ -2530,6 +2616,19 @@ class TCMalloc_ThreadCache_FreeList {
     return SLL_Pop(&list_, entropy_).value();
   }
 
+    // Runs through the linked list to ensure that
+    // we can do that, and ensures that 'missing'
+    // is not present
+    NEVER_INLINE void Validate(HardenedSLL missing, size_t size) {
+        HardenedSLL node = list_;
+        UNUSED_PARAM(size);
+        while (node) {
+            RELEASE_ASSERT(node != missing);
+            RELEASE_ASSERT(IS_DEFINITELY_POISONED(node.value(), size));
+            node = SLL_Next(node, entropy_);
+        }
+    }
+
 #ifdef WTF_CHANGES
   template <class Finder, class Reader>
   void enumerateFreeObjects(Finder& finder, const Reader& reader)
@@ -3041,15 +3140,30 @@ ALWAYS_INLINE void TCMalloc_Central_FreeList::Populate() {
   const size_t size = ByteSizeForClass(size_class_);
   char* ptr = start + (npages << kPageShift) - ((npages << kPageShift) % size);
   int num = 0;
+#if ENABLE(TCMALLOC_HARDENING)
+  uint32_t startPoison = freedObjectStartPoison();
+  uint32_t endPoison = freedObjectEndPoison();
+#endif
+
   while (ptr > start) {
     ptr -= size;
     HardenedSLL node = HardenedSLL::create(ptr);
+    POISON_DEALLOCATION_EXPLICIT(ptr, size, startPoison, endPoison);
     SLL_SetNext(node, head, entropy_);
     head = node;
     num++;
   }
   ASSERT(ptr == start);
   ASSERT(ptr == head.value());
+#ifndef NDEBUG
+    {
+        HardenedSLL node = head;
+        while (node) {
+            ASSERT(IS_DEFINITELY_POISONED(node.value(), size));
+            node = SLL_Next(node, entropy_);
+        }
+    }
+#endif
   span->objects = head;
   ASSERT(span->objects.value() == head.value());
   span->refcount = 0; // No sub-object in use yet
@@ -3115,12 +3229,22 @@ ALWAYS_INLINE void* TCMalloc_ThreadCache::Allocate(size_t size) {
     if (list->empty()) return NULL;
   }
   size_ -= allocationSize;
-  return list->Pop();
+  void* result = list->Pop();
+  if (!result)
+      return 0;
+  RELEASE_ASSERT(IS_DEFINITELY_POISONED(result, allocationSize));
+  POISON_ALLOCATION(result, allocationSize);
+  return result;
 }
 
 inline void TCMalloc_ThreadCache::Deallocate(HardenedSLL ptr, size_t cl) {
-  size_ += ByteSizeForClass(cl);
+  size_t allocationSize = ByteSizeForClass(cl);
+  size_ += allocationSize;
   FreeList* list = &list_[cl];
+  if (MAY_BE_POISONED(ptr.value(), allocationSize))
+      list->Validate(ptr, allocationSize);
+
+  POISON_DEALLOCATION(ptr.value(), allocationSize);
   list->Push(ptr);
   // If enough data is free, put back into central cache
   if (list->length() > kMaxFreeListLength) {
@@ -3815,8 +3939,9 @@ static inline void* CheckedMallocResult(void *result)
 static inline void* SpanToMallocResult(Span *span) {
   ASSERT_SPAN_COMMITTED(span);
   pageheap->CacheSizeClass(span->start, 0);
-  return
-      CheckedMallocResult(reinterpret_cast<void*>(span->start << kPageShift));
+  void* result = reinterpret_cast<void*>(span->start << kPageShift);
+  POISON_ALLOCATION(result, span->length << kPageShift);
+  return CheckedMallocResult(result);
 }
 
 #ifdef WTF_CHANGES
@@ -3871,6 +3996,7 @@ static ALWAYS_INLINE void do_free(void* ptr) {
 
   if (cl == 0) {
     span = pageheap->GetDescriptor(p);
+    RELEASE_ASSERT(span->isValid());
     cl = span->sizeclass;
     pageheap->CacheSizeClass(p, cl);
   }
@@ -3883,6 +4009,7 @@ static ALWAYS_INLINE void do_free(void* ptr) {
       heap->Deallocate(HardenedSLL::create(ptr), cl);
     } else {
       // Delete directly into central cache
+      POISON_DEALLOCATION(ptr, ByteSizeForClass(cl));
       SLL_SetNext(HardenedSLL::create(ptr), HardenedSLL::null(), central_cache[cl].entropy());
       central_cache[cl].InsertRange(HardenedSLL::create(ptr), HardenedSLL::create(ptr), 1);
     }
@@ -3897,6 +4024,8 @@ static ALWAYS_INLINE void do_free(void* ptr) {
       span->objects = NULL;
     }
 #endif
+
+    POISON_DEALLOCATION(ptr, span->length << kPageShift);
     pageheap->Delete(span);
   }
 }

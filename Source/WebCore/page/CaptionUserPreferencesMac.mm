@@ -25,7 +25,7 @@
 
 #import "config.h"
 
-#if ENABLE(VIDEO_TRACK)
+#if ENABLE(VIDEO_TRACK) && !PLATFORM(IOS)
 
 #import "CaptionUserPreferencesMac.h"
 
@@ -37,6 +37,7 @@
 #import "Language.h"
 #import "LocalizedStrings.h"
 #import "Logging.h"
+#import "MediaControlElements.h"
 #import "PageGroup.h"
 #import "SoftLinking.h"
 #import "TextTrackCue.h"
@@ -128,34 +129,28 @@ bool CaptionUserPreferencesMac::userHasCaptionPreferences() const
 
 void CaptionUserPreferencesMac::registerForPreferencesChangedCallbacks(CaptionPreferencesChangedListener* listener)
 {
-    if (!MediaAccessibilityLibrary()) {
-        CaptionUserPreferences::registerForPreferencesChangedCallbacks(listener);
-        return;
-    }
+    CaptionUserPreferences::registerForPreferencesChangedCallbacks(listener);
 
-    ASSERT(!m_captionPreferenceChangeListeners.contains(listener));
+    if (!MediaAccessibilityLibrary())
+        return;
 
     if (!kMAXCaptionAppearanceSettingsChangedNotification)
         return;
 
     if (!m_listeningForPreferenceChanges) {
         m_listeningForPreferenceChanges = true;
-        CFNotificationCenterAddObserver (CFNotificationCenterGetLocalCenter(), this, userCaptionPreferencesChangedNotificationCallback, kMAXCaptionAppearanceSettingsChangedNotification, NULL, CFNotificationSuspensionBehaviorCoalesce);
+        CFNotificationCenterAddObserver(CFNotificationCenterGetLocalCenter(), this, userCaptionPreferencesChangedNotificationCallback, kMAXCaptionAppearanceSettingsChangedNotification, NULL, CFNotificationSuspensionBehaviorCoalesce);
     }
     
     updateCaptionStyleSheetOveride();
-    m_captionPreferenceChangeListeners.add(listener);
 }
 
-void CaptionUserPreferencesMac::unregisterForPreferencesChangedCallbacks(CaptionPreferencesChangedListener* listener)
+void CaptionUserPreferencesMac::captionPreferencesChanged()
 {
-    if (!MediaAccessibilityLibrary()) {
-        CaptionUserPreferences::unregisterForPreferencesChangedCallbacks(listener);
-        return;
-    }
+    if (havePreferenceChangeListeners())
+        updateCaptionStyleSheetOveride();
 
-    if (kMAXCaptionAppearanceSettingsChangedNotification)
-        m_captionPreferenceChangeListeners.remove(listener);
+    CaptionUserPreferences::captionPreferencesChanged();
 }
 
 String CaptionUserPreferencesMac::captionsWindowCSS() const
@@ -167,8 +162,11 @@ String CaptionUserPreferencesMac::captionsWindowCSS() const
     if (!windowColor.isValid())
         windowColor = Color::transparent;
 
+    bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
     CGFloat opacity = MACaptionAppearanceGetWindowOpacity(kMACaptionAppearanceDomainUser, &behavior);
-    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, Color(windowColor.red(), windowColor.green(), windowColor.blue(), static_cast<int>(opacity * 255)), behavior == kMACaptionAppearanceBehaviorUseValue);
+    if (!important)
+        important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    String windowStyle = colorPropertyCSS(CSSPropertyBackgroundColor, Color(windowColor.red(), windowColor.green(), windowColor.blue(), static_cast<int>(opacity * 255)), important);
 
     if (!opacity)
         return windowStyle;
@@ -194,8 +192,11 @@ String CaptionUserPreferencesMac::captionsBackgroundCSS() const
     if (!backgroundColor.isValid())
         backgroundColor = defaultBackgroundColor;
 
+    bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
     CGFloat opacity = MACaptionAppearanceGetBackgroundOpacity(kMACaptionAppearanceDomainUser, 0);
-    String backgroundStyle = colorPropertyCSS(CSSPropertyBackgroundColor, Color(backgroundColor.red(), backgroundColor.green(), backgroundColor.blue(), static_cast<int>(opacity * 255)), behavior == kMACaptionAppearanceBehaviorUseValue);
+    if (!important)
+        important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    String backgroundStyle = colorPropertyCSS(CSSPropertyBackgroundColor, Color(backgroundColor.red(), backgroundColor.green(), backgroundColor.blue(), static_cast<int>(opacity * 255)), important);
 
     if (!opacity)
         return backgroundStyle;
@@ -220,8 +221,10 @@ Color CaptionUserPreferencesMac::captionsTextColor(bool& important) const
         // This default value must be the same as the one specified in mediaControls.css for -webkit-media-text-track-container.
         textColor = Color::white;
     
-    CGFloat opacity = MACaptionAppearanceGetForegroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
     important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    CGFloat opacity = MACaptionAppearanceGetForegroundOpacity(kMACaptionAppearanceDomainUser, &behavior);
+    if (!important)
+        important = behavior == kMACaptionAppearanceBehaviorUseValue;
     return Color(textColor.red(), textColor.green(), textColor.blue(), static_cast<int>(opacity * 255));
 }
     
@@ -374,10 +377,7 @@ String CaptionUserPreferencesMac::captionsStyleSheetOverride() const
 
     String windowColor = captionsWindowCSS();
     String windowCornerRadius = windowRoundedCornerRadiusCSS();
-    String captionsColor = captionsTextColorCSS();
-    String edgeStyle = captionsTextEdgeCSS();
-    String fontName = captionsDefaultFontCSS();
-    if (!captionsColor.isEmpty() || !windowColor.isEmpty() || !windowCornerRadius.isEmpty() || !edgeStyle.isEmpty() || !fontName.isEmpty()) {
+    if (!windowColor.isEmpty() || !windowCornerRadius.isEmpty()) {
         captionsOverrideStyleSheet.append(" video::");
         captionsOverrideStyleSheet.append(TextTrackCueBox::textTrackCueBoxShadowPseudoId());
         captionsOverrideStyleSheet.append('{');
@@ -386,6 +386,18 @@ String CaptionUserPreferencesMac::captionsStyleSheetOverride() const
             captionsOverrideStyleSheet.append(windowColor);
         if (!windowCornerRadius.isEmpty())
             captionsOverrideStyleSheet.append(windowCornerRadius);
+
+        captionsOverrideStyleSheet.append('}');
+    }
+    
+    String captionsColor = captionsTextColorCSS();
+    String edgeStyle = captionsTextEdgeCSS();
+    String fontName = captionsDefaultFontCSS();
+    if (!captionsColor.isEmpty() || !edgeStyle.isEmpty() || !fontName.isEmpty()) {
+        captionsOverrideStyleSheet.append(" video::");
+        captionsOverrideStyleSheet.append(MediaControlTextTrackContainerElement::textTrackContainerElementShadowPseudoId());
+        captionsOverrideStyleSheet.append('{');
+
         if (!captionsColor.isEmpty())
             captionsOverrideStyleSheet.append(captionsColor);
         if (!edgeStyle.isEmpty())
@@ -395,7 +407,7 @@ String CaptionUserPreferencesMac::captionsStyleSheetOverride() const
 
         captionsOverrideStyleSheet.append('}');
     }
-
+    
     LOG(Media, "CaptionUserPreferencesMac::captionsStyleSheetOverrideSetting sytle to:\n%s", captionsOverrideStyleSheet.toString().utf8().data());
 
     return captionsOverrideStyleSheet.toString();
@@ -419,17 +431,6 @@ float CaptionUserPreferencesMac::captionFontSizeScale(bool& important) const
 #else
     return scaleAdjustment * characterScale;
 #endif
-}
-
-void CaptionUserPreferencesMac::captionPreferencesChanged()
-{
-    if (m_captionPreferenceChangeListeners.isEmpty())
-        return;
-
-    updateCaptionStyleSheetOveride();
-
-    for (HashSet<CaptionPreferencesChangedListener*>::iterator i = m_captionPreferenceChangeListeners.begin(); i != m_captionPreferenceChangeListeners.end(); ++i)
-        (*i)->captionPreferencesChanged();
 }
 
 void CaptionUserPreferencesMac::updateCaptionStyleSheetOveride()
@@ -526,4 +527,4 @@ String CaptionUserPreferencesMac::displayNameForTrack(TextTrack* track) const
 
 }
 
-#endif // ENABLE(VIDEO_TRACK)
+#endif // ENABLE(VIDEO_TRACK) && !PLATFORM(IOS)

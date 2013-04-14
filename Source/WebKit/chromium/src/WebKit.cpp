@@ -42,7 +42,6 @@
 #include "V8Binding.h"
 #include "V8RecursionScope.h"
 #include "WebSocket.h"
-#include "platform/WebKitPlatformSupport.h"
 #include "v8.h"
 #include <public/Platform.h>
 #include <public/WebPrerenderingSupport.h>
@@ -92,7 +91,7 @@ static WebThread::TaskObserver* s_endOfTaskRunner = 0;
 // Doing so may cause hard to reproduce crashes.
 static bool s_webKitInitialized = false;
 
-static WebKitPlatformSupport* s_webKitPlatformSupport = 0;
+static Platform* s_webKitPlatformSupport = 0;
 
 static bool generateEntropy(unsigned char* buffer, size_t length)
 {
@@ -110,7 +109,7 @@ static void assertV8RecursionScope()
 }
 #endif
 
-void initialize(WebKitPlatformSupport* webKitPlatformSupport)
+void initialize(Platform* webKitPlatformSupport)
 {
     initializeWithoutV8(webKitPlatformSupport);
 
@@ -129,7 +128,7 @@ void initialize(WebKitPlatformSupport* webKitPlatformSupport)
     }
 }
 
-void initializeWithoutV8(WebKitPlatformSupport* webKitPlatformSupport)
+void initializeWithoutV8(Platform* webKitPlatformSupport)
 {
     ASSERT(!s_webKitInitialized);
     s_webKitInitialized = true;
@@ -190,7 +189,7 @@ void shutdown()
     WebPrerenderingSupport::shutdown();
 }
 
-WebKitPlatformSupport* webKitPlatformSupport()
+Platform* webKitPlatformSupport()
 {
     return s_webKitPlatformSupport;
 }

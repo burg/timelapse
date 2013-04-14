@@ -55,7 +55,7 @@ public:
     enum AnimationType { Basic, Keyframe };
     enum AnimatedPropertyType { NoAnimatedPropertyType, Transform, Opacity, BackgroundColor };
     enum FillModeType { NoFillMode, Forwards, Backwards, Both };
-    enum ValueFunctionType { NoValueFunction, RotateX, RotateY, RotateZ, ScaleX, ScaleY, ScaleZ, Scale, TranslateX, TranslateY, TranslateZ, Translate };
+    enum ValueFunctionType { NoValueFunction, RotateX, RotateY, RotateZ, ScaleX, ScaleY, ScaleZ, Scale, TranslateX, TranslateY, TranslateZ, Translate, Matrix };
 
     static PassRefPtr<PlatformClutterAnimation> create(AnimationType, const String& keyPath);
     static PassRefPtr<PlatformClutterAnimation> create(PlatformClutterAnimation*);
@@ -63,6 +63,7 @@ public:
     ~PlatformClutterAnimation();
 
     static bool supportsValueFunction();
+    static bool supportsAdditiveValueFunction();
 
     AnimationType animationType() const { return m_type; }
 
@@ -138,7 +139,15 @@ private:
     ClutterTimeline* timeline() const;
     AnimatedPropertyType stringToAnimatedPropertyType(const String& keyPath) const;
 
+    void addClutterTransitionForProperty(const String& property, const float fromValue, const float toValue);
+    void addClutterTransitionForProperty(const String& property, const WebCore::TransformationMatrix&, const WebCore::TransformationMatrix&);
+    void addClutterTransitionForProperty(const String& property, const FloatPoint3D& fromValue, const FloatPoint3D& toValue);
+
+    void addClutterKeyframeTransitionForProperty(const String& property, const Vector<float>& values);
+    void addClutterKeyframeTransitionForProperty(const String& property, const Vector<FloatPoint3D>& values);
+
     void addOpacityTransition();
+    void addTransformTransition();
 
     AnimationType m_type;
     AnimatedPropertyType m_animatedPropertyType;
@@ -151,10 +160,22 @@ private:
     float m_fromValue;
     float m_toValue;
 
+    FloatPoint3D m_fromValue3D;
+    FloatPoint3D m_toValue3D;
+
+    WebCore::TransformationMatrix m_fromValueMatrix;
+    WebCore::TransformationMatrix m_toValueMatrix;
+
     float m_repeatCount;
 
     const TimingFunction* m_timingFunction;
     ValueFunctionType m_valueFunctionType;
+
+    Vector<float> m_keyTimes;
+    Vector<const TimingFunction*> m_timingFunctions;
+
+    Vector<float> m_values;
+    Vector<FloatPoint3D> m_values3D;
 };
 
 }

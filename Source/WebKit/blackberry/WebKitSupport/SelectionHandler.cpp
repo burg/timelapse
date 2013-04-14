@@ -87,8 +87,7 @@ void SelectionHandler::cancelSelection()
         m_webPage->m_selectionOverlay->hide();
     // Notify client with empty selection to ensure the handles are removed if
     // rendering happened prior to processing on webkit thread
-    m_webPage->m_client->notifySelectionDetailsChanged(WebCore::IntRect(DOMSupport::InvalidPoint, WebCore::IntSize()),
-        WebCore::IntRect(DOMSupport::InvalidPoint, WebCore::IntSize()), IntRectRegion());
+    m_webPage->m_client->notifySelectionDetailsChanged(SelectionDetails());
 
     SelectionLog(Platform::LogLevelInfo, "SelectionHandler::cancelSelection");
 
@@ -107,7 +106,7 @@ WebCore::IntRect SelectionHandler::clippingRectForVisibleContent() const
 {
     // Get the containing content rect for the frame.
     Frame* frame = m_webPage->focusedOrMainFrame();
-    WebCore::IntRect clipRect = WebCore::IntRect(WebCore::IntPoint(0, 0), m_webPage->contentsSize());
+    WebCore::IntRect clipRect = WebCore::IntRect(WebCore::IntPoint(0, 0), frame->view()->contentsSize());
     if (frame != m_webPage->mainFrame()) {
         clipRect = m_webPage->getRecursiveVisibleWindowRect(frame->view(), true /* no clip to main frame window */);
         clipRect = m_webPage->m_mainFrame->view()->windowToContents(clipRect);
@@ -167,7 +166,7 @@ static VisiblePosition visiblePositionForPointIgnoringClipping(const Frame& fram
     // outside the visible rect. To work around the bug, this is a copy of
     // visiblePositionAtPoint which which passes ignoreClipping=true.
     // See RIM Bug #4315.
-    HitTestResult result = frame.eventHandler()->hitTestResultAtPoint(framePoint, true /* allowShadowContent */, true /* ignoreClipping */);
+    HitTestResult result = frame.eventHandler()->hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent | HitTestRequest::IgnoreClipping);
 
     Node* node = result.innerNode();
     if (!node || node->document() != frame.document())
@@ -892,6 +891,12 @@ bool SelectionHandler::inputNodeOverridesTouch() const
     return DOMSupport::elementAttributeState(element, selectionTouchOverrideAttr) == DOMSupport::On;
 }
 
+RequestedHandlePosition SelectionHandler::requestedSelectionHandlePosition(const VisibleSelection& selection) const
+{
+    Element* element = DOMSupport::selectionContainerElement(selection);
+    return DOMSupport::elementHandlePositionAttribute(element);
+}
+
 // Note: This is the only function in SelectionHandler in which the coordinate
 // system is not entirely WebKit.
 void SelectionHandler::selectionPositionChanged(bool forceUpdateWithoutChange)
@@ -1013,7 +1018,13 @@ void SelectionHandler::selectionPositionChanged(bool forceUpdateWithoutChange)
     if (m_webPage->m_selectionOverlay)
         m_webPage->m_selectionOverlay->draw(visibleSelectionRegion);
 
-    m_webPage->m_client->notifySelectionDetailsChanged(startCaret, endCaret, visibleSelectionRegion, inputNodeOverridesTouch());
+
+    VisibleSelection currentSelection = frame->selection()->selection();
+    SelectionDetails details(startCaret, endCaret, visibleSelectionRegion, inputNodeOverridesTouch(),
+        m_lastSelection != currentSelection, requestedSelectionHandlePosition(frame->selection()->selection()));
+
+    m_webPage->m_client->notifySelectionDetailsChanged(details);
+    m_lastSelection = currentSelection;
     SelectionTimingLog(Platform::LogLevelInfo,
         "SelectionHandler::selectionPositionChanged completed at %f",
         m_timer.elapsed());

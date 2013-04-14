@@ -46,6 +46,7 @@
 #include "RenderBoxRegionInfo.h"
 #include "RenderCombineText.h"
 #include "RenderDeprecatedFlexibleBox.h"
+#include "RenderFlexibleBox.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
@@ -118,7 +119,7 @@ typedef WTF::HashSet<RenderBlock*> DelayedUpdateScrollInfoSet;
 static int gDelayUpdateScrollInfo = 0;
 static DelayedUpdateScrollInfoSet* gDelayedUpdateScrollInfoSet = 0;
 
-static bool gIsInColumnFlowSplit = false;
+static bool gColumnFlowSplitEnabled = true;
 
 bool RenderBlock::s_canPropagateFloatIntoSibling = false;
 
@@ -169,13 +170,14 @@ RenderBlock::MarginInfo::MarginInfo(RenderBlock* block, LayoutUnit beforeBorderP
     , m_marginBeforeQuirk(false)
     , m_marginAfterQuirk(false)
     , m_determinedMarginBeforeQuirk(false)
+    , m_discardMargin(false)
 {
     RenderStyle* blockStyle = block->style();
     ASSERT(block->isRenderView() || block->parent());
     m_canCollapseWithChildren = !block->isRenderView() && !block->isRoot() && !block->isOutOfFlowPositioned()
         && !block->isFloating() && !block->isTableCell() && !block->hasOverflowClip() && !block->isInlineBlockOrInlineTable()
-        && !block->isWritingModeRoot() && !block->parent()->isFlexibleBox() && blockStyle->hasAutoColumnCount() && blockStyle->hasAutoColumnWidth()
-        && !blockStyle->columnSpan();
+        && !block->isRenderFlowThread() && !block->isWritingModeRoot() && !block->parent()->isFlexibleBox()
+        && blockStyle->hasAutoColumnCount() && blockStyle->hasAutoColumnWidth() && !blockStyle->columnSpan();
 
     m_canCollapseMarginBeforeWithChildren = m_canCollapseWithChildren && !beforeBorderPadding && blockStyle->marginBeforeCollapse() != MSEPARATE;
 
@@ -186,20 +188,22 @@ RenderBlock::MarginInfo::MarginInfo(RenderBlock* block, LayoutUnit beforeBorderP
     m_canCollapseMarginAfterWithChildren = m_canCollapseWithChildren && (afterBorderPadding == 0) &&
         (blockStyle->logicalHeight().isAuto() && !blockStyle->logicalHeight().value()) && blockStyle->marginAfterCollapse() != MSEPARATE;
     
-    m_quirkContainer = block->isTableCell() || block->isBody() || blockStyle->marginBeforeCollapse() == MDISCARD
-        || blockStyle->marginAfterCollapse() == MDISCARD;
+    m_quirkContainer = block->isTableCell() || block->isBody();
 
-    m_positiveMargin = m_canCollapseMarginBeforeWithChildren ? block->maxPositiveMarginBefore() : LayoutUnit();
-    m_negativeMargin = m_canCollapseMarginBeforeWithChildren ? block->maxNegativeMarginBefore() : LayoutUnit();
+    m_discardMargin = m_canCollapseMarginBeforeWithChildren && block->mustDiscardMarginBefore();
+
+    m_positiveMargin = (m_canCollapseMarginBeforeWithChildren && !block->mustDiscardMarginBefore()) ? block->maxPositiveMarginBefore() : LayoutUnit();
+    m_negativeMargin = (m_canCollapseMarginBeforeWithChildren && !block->mustDiscardMarginBefore()) ? block->maxNegativeMarginBefore() : LayoutUnit();
 }
 
 // -------------------------------------------------------------------------------------------------------
 
 RenderBlock::RenderBlock(ContainerNode* node)
-      : RenderBox(node)
-      , m_lineHeight(-1)
-      , m_beingDestroyed(false)
-      , m_hasMarkupTruncation(false)
+    : RenderBox(node)
+    , m_lineHeight(-1)
+    , m_beingDestroyed(false)
+    , m_hasMarkupTruncation(false)
+    , m_hasBorderOrPaddingLogicalWidthChanged(false)
 {
     setChildrenInline(true);
     COMPILE_ASSERT(sizeof(RenderBlock::FloatingObject) == sizeof(SameSizeAsFloatingObject), FloatingObject_should_stay_small);
@@ -335,14 +339,30 @@ void RenderBlock::styleWillChange(StyleDifference diff, const RenderStyle* newSt
     RenderBox::styleWillChange(diff, newStyle);
 }
 
+static bool borderOrPaddingLogicalWidthChanged(const RenderStyle* oldStyle, const RenderStyle* newStyle)
+{
+    if (newStyle->isHorizontalWritingMode())
+        return oldStyle->borderLeftWidth() != newStyle->borderLeftWidth()
+            || oldStyle->borderRightWidth() != newStyle->borderRightWidth()
+            || oldStyle->paddingLeft() != newStyle->paddingLeft()
+            || oldStyle->paddingRight() != newStyle->paddingRight();
+
+    return oldStyle->borderTopWidth() != newStyle->borderTopWidth()
+        || oldStyle->borderBottomWidth() != newStyle->borderBottomWidth()
+        || oldStyle->paddingTop() != newStyle->paddingTop()
+        || oldStyle->paddingBottom() != newStyle->paddingBottom();
+}
+
 void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBox::styleDidChange(diff, oldStyle);
-
+    
+    RenderStyle* newStyle = style();
+    
 #if ENABLE(CSS_EXCLUSIONS)
     // FIXME: Bug 89993: Style changes should affect the ExclusionShapeInsideInfos for other render blocks that
     // share the same ExclusionShapeInsideInfo
-    updateExclusionShapeInsideInfoAfterStyleChange(style()->shapeInside(), oldStyle ? oldStyle->shapeInside() : 0);
+    updateExclusionShapeInsideInfoAfterStyleChange(newStyle->resolvedShapeInside(), oldStyle ? oldStyle->resolvedShapeInside() : 0);
 #endif
 
     if (!isAnonymousBlock()) {
@@ -350,7 +370,7 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
         for (RenderBlock* currCont = blockElementContinuation(); currCont; currCont = currCont->blockElementContinuation()) {
             RenderBoxModelObject* nextCont = currCont->continuation();
             currCont->setContinuation(0);
-            currCont->setStyle(style());
+            currCont->setStyle(newStyle);
             currCont->setContinuation(nextCont);
         }
     }
@@ -387,6 +407,10 @@ void RenderBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldSty
         parentBlock->markAllDescendantsWithFloatsForLayout();
         parentBlock->markSiblingsWithFloatsForLayout();
     }
+    
+    // It's possible for our border/padding to change, but for the overall logical width of the block to
+    // end up being the same. We keep track of this change so in layoutBlock, we can know to set relayoutChildren=true.
+    m_hasBorderOrPaddingLogicalWidthChanged = oldStyle && diff == StyleDifferenceLayout && needsLayout() && borderOrPaddingLogicalWidthChanged(oldStyle, newStyle);
 }
 
 RenderBlock* RenderBlock::continuationBefore(RenderObject* beforeChild)
@@ -836,10 +860,10 @@ void RenderBlock::addChildIgnoringAnonymousColumnBlocks(RenderObject* newChild, 
         beforeChild = beforeChild->nextSibling();
 
     // Check for a spanning element in columns.
-    if (!gIsInColumnFlowSplit) {
+    if (gColumnFlowSplitEnabled) {
         RenderBlock* columnsBlockAncestor = columnsBlockForSpanningElement(newChild);
         if (columnsBlockAncestor) {
-            TemporaryChange<bool> isInColumnFlowSplit(gIsInColumnFlowSplit, true);
+            TemporaryChange<bool> columnFlowSplitEnabled(gColumnFlowSplitEnabled, false);
             // We are placing a column-span element inside a block.
             RenderBlock* newBox = createAnonymousColumnSpanBlock();
         
@@ -1152,6 +1176,9 @@ void RenderBlock::removeChild(RenderObject* oldChild)
         return;
     }
 
+    // This protects against column split flows when anonymous blocks are getting merged.
+    TemporaryChange<bool> columnFlowSplitEnabled(gColumnFlowSplitEnabled, false);
+
     // If this child is a block, and if our previous and next siblings are
     // both anonymous blocks with inline content, then we can go ahead and
     // fold the inline content back together.
@@ -1368,7 +1395,7 @@ void RenderBlock::layout()
 #if ENABLE(CSS_EXCLUSIONS)
 ExclusionShapeInsideInfo* RenderBlock::exclusionShapeInsideInfo() const
 {
-    return style()->shapeInside() && ExclusionShapeInsideInfo::isEnabledFor(this) ? ExclusionShapeInsideInfo::info(this) : 0;
+    return style()->resolvedShapeInside() && ExclusionShapeInsideInfo::isEnabledFor(this) ? ExclusionShapeInsideInfo::info(this) : 0;
 }
 
 void RenderBlock::updateExclusionShapeInsideInfoAfterStyleChange(const ExclusionShapeValue* shapeInside, const ExclusionShapeValue* oldShapeInside)
@@ -1439,7 +1466,10 @@ bool RenderBlock::updateLogicalWidthAndColumnWidth()
     updateLogicalWidth();
     calcColumnWidth();
 
-    return oldWidth != logicalWidth() || oldColumnWidth != desiredColumnWidth();
+    bool hasBorderOrPaddingLogicalWidthChanged = m_hasBorderOrPaddingLogicalWidthChanged;
+    m_hasBorderOrPaddingLogicalWidthChanged = false;
+
+    return oldWidth != logicalWidth() || oldColumnWidth != desiredColumnWidth() || hasBorderOrPaddingLogicalWidthChanged;
 }
 
 void RenderBlock::checkForPaginationLogicalHeightChange(LayoutUnit& pageLogicalHeight, bool& pageLogicalHeightChanged, bool& hasSpecifiedPageLogicalHeight)
@@ -1468,7 +1498,7 @@ void RenderBlock::checkForPaginationLogicalHeightChange(LayoutUnit& pageLogicalH
         colInfo->setPaginationUnit(paginationUnit());
     } else if (isRenderFlowThread()) {
         pageLogicalHeight = 1; // This is just a hack to always make sure we have a page logical height.
-        pageLogicalHeightChanged = toRenderFlowThread(this)->pageLogicalHeightChanged();
+        pageLogicalHeightChanged = toRenderFlowThread(this)->pageLogicalSizeChanged();
     }
 }
 
@@ -1487,11 +1517,11 @@ void RenderBlock::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeigh
     if (updateLogicalWidthAndColumnWidth())
         relayoutChildren = true;
 
-    m_overflow.clear();
-
     clearFloats();
 
     LayoutUnit previousHeight = logicalHeight();
+    // FIXME: should this start out as borderAndPaddingLogicalHeight() + scrollbarLogicalHeight(),
+    // for consistency with other render classes?
     setLogicalHeight(0);
 
     bool pageLogicalHeightChanged = false;
@@ -1523,8 +1553,8 @@ void RenderBlock::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeigh
     if (!isCell) {
         initMaxMarginValues();
         
-        setMarginBeforeQuirk(styleToUse->marginBefore().quirk());
-        setMarginAfterQuirk(styleToUse->marginAfter().quirk());
+        setMarginBeforeQuirk(styleToUse->isMarginBeforeQuirk());
+        setMarginAfterQuirk(styleToUse->isMarginAfterQuirk());
         setPaginationStrut(0);
     }
 
@@ -1651,6 +1681,8 @@ void RenderBlock::addOverflowFromChildren()
 
 void RenderBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats)
 {
+    m_overflow.clear();
+
     // Add overflow from children.
     addOverflowFromChildren();
 
@@ -1675,6 +1707,14 @@ void RenderBlock::computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeF
             m_overflow->setLayoutClientAfterEdge(oldClientAfterEdge);
     }
         
+    // Allow our overflow to catch cases where the caret in an empty editable element with negative text indent needs to get painted.
+    LayoutUnit textIndent = textIndentOffset();
+    if (textIndent < 0) {
+        LayoutRect clientRect(clientBoxRect());
+        LayoutRect rectToApply = LayoutRect(clientRect.x() + min<LayoutUnit>(0, textIndent), clientRect.y(), clientRect.width() - min<LayoutUnit>(0, textIndent), clientRect.height());
+        addVisualOverflow(rectToApply);
+    }
+
     // Add visual overflow from box-shadow and border-image-outset.
     addVisualEffectOverflow();
 
@@ -1787,34 +1827,6 @@ void RenderBlock::adjustFloatingBlock(const MarginInfo& marginInfo)
     setLogicalHeight(logicalHeight() + marginOffset);
     positionNewFloats();
     setLogicalHeight(logicalHeight() - marginOffset);
-}
-
-bool RenderBlock::handleSpecialChild(RenderBox* child, const MarginInfo& marginInfo)
-{
-    // Handle in the given order
-    return handlePositionedChild(child, marginInfo)
-        || handleFloatingChild(child, marginInfo);
-}
-
-
-bool RenderBlock::handlePositionedChild(RenderBox* child, const MarginInfo& marginInfo)
-{
-    if (child->isOutOfFlowPositioned()) {
-        child->containingBlock()->insertPositionedObject(child);
-        adjustPositionedBlock(child, marginInfo);
-        return true;
-    }
-    return false;
-}
-
-bool RenderBlock::handleFloatingChild(RenderBox* child, const MarginInfo& marginInfo)
-{
-    if (child->isFloating()) {
-        insertFloatingObject(child);
-        adjustFloatingBlock(marginInfo);
-        return true;
-    }
-    return false;
 }
 
 static void destroyRunIn(RenderBoxModelObject* runIn)
@@ -1954,6 +1966,13 @@ void RenderBlock::moveRunInToOriginalPosition(RenderObject* runIn)
 
 LayoutUnit RenderBlock::collapseMargins(RenderBox* child, MarginInfo& marginInfo)
 {
+    bool childDiscardMarginBefore = mustDiscardMarginBeforeForChild(child);
+    bool childDiscardMarginAfter = mustDiscardMarginAfterForChild(child);
+    bool childIsSelfCollapsing = child->isSelfCollapsingBlock();
+
+    // The child discards the before margin when the the after margin has discard in the case of a self collapsing block.
+    childDiscardMarginBefore = childDiscardMarginBefore || (childDiscardMarginAfter && childIsSelfCollapsing);
+
     // Get the four margin values for the child and cache them.
     const MarginValues childMargins = marginValuesForChild(child);
 
@@ -1963,38 +1982,48 @@ LayoutUnit RenderBlock::collapseMargins(RenderBox* child, MarginInfo& marginInfo
 
     // For self-collapsing blocks, collapse our bottom margins into our
     // top to get new posTop and negTop values.
-    if (child->isSelfCollapsingBlock()) {
+    if (childIsSelfCollapsing) {
         posTop = max(posTop, childMargins.positiveMarginAfter());
         negTop = max(negTop, childMargins.negativeMarginAfter());
     }
     
     // See if the top margin is quirky. We only care if this child has
     // margins that will collapse with us.
-    bool topQuirk = child->isMarginBeforeQuirk() || style()->marginBeforeCollapse() == MDISCARD;
+    bool topQuirk = child->isMarginBeforeQuirk();
 
     if (marginInfo.canCollapseWithMarginBefore()) {
-        // This child is collapsing with the top of the
-        // block.  If it has larger margin values, then we need to update
-        // our own maximal values.
-        if (!document()->inQuirksMode() || !marginInfo.quirkContainer() || !topQuirk)
-            setMaxMarginBeforeValues(max(posTop, maxPositiveMarginBefore()), max(negTop, maxNegativeMarginBefore()));
+        if (!childDiscardMarginBefore && !marginInfo.discardMargin()) {
+            // This child is collapsing with the top of the
+            // block. If it has larger margin values, then we need to update
+            // our own maximal values.
+            if (!document()->inQuirksMode() || !marginInfo.quirkContainer() || !topQuirk)
+                setMaxMarginBeforeValues(max(posTop, maxPositiveMarginBefore()), max(negTop, maxNegativeMarginBefore()));
 
-        // The minute any of the margins involved isn't a quirk, don't
-        // collapse it away, even if the margin is smaller (www.webreference.com
-        // has an example of this, a <dt> with 0.8em author-specified inside
-        // a <dl> inside a <td>.
-        if (!marginInfo.determinedMarginBeforeQuirk() && !topQuirk && (posTop - negTop)) {
-            setMarginBeforeQuirk(false);
-            marginInfo.setDeterminedMarginBeforeQuirk(true);
-        }
+            // The minute any of the margins involved isn't a quirk, don't
+            // collapse it away, even if the margin is smaller (www.webreference.com
+            // has an example of this, a <dt> with 0.8em author-specified inside
+            // a <dl> inside a <td>.
+            if (!marginInfo.determinedMarginBeforeQuirk() && !topQuirk && (posTop - negTop)) {
+                setMarginBeforeQuirk(false);
+                marginInfo.setDeterminedMarginBeforeQuirk(true);
+            }
 
-        if (!marginInfo.determinedMarginBeforeQuirk() && topQuirk && !marginBefore())
-            // We have no top margin and our top child has a quirky margin.
-            // We will pick up this quirky margin and pass it through.
-            // This deals with the <td><div><p> case.
-            // Don't do this for a block that split two inlines though.  You do
-            // still apply margins in this case.
-            setMarginBeforeQuirk(true);
+            if (!marginInfo.determinedMarginBeforeQuirk() && topQuirk && !marginBefore())
+                // We have no top margin and our top child has a quirky margin.
+                // We will pick up this quirky margin and pass it through.
+                // This deals with the <td><div><p> case.
+                // Don't do this for a block that split two inlines though. You do
+                // still apply margins in this case.
+                setMarginBeforeQuirk(true);
+        } else
+            // The before margin of the container will also discard all the margins it is collapsing with.
+            setMustDiscardMarginBefore();
+    }
+
+    // Once we find a child with discardMarginBefore all the margins collapsing with us must also discard. 
+    if (childDiscardMarginBefore) {
+        marginInfo.setDiscardMargin(true);
+        marginInfo.clearMargin();
     }
 
     if (marginInfo.quirkContainer() && marginInfo.atBeforeSideOfBlock() && (posTop - negTop))
@@ -2002,45 +2031,57 @@ LayoutUnit RenderBlock::collapseMargins(RenderBox* child, MarginInfo& marginInfo
 
     LayoutUnit beforeCollapseLogicalTop = logicalHeight();
     LayoutUnit logicalTop = beforeCollapseLogicalTop;
-    if (child->isSelfCollapsingBlock()) {
-        // This child has no height.  We need to compute our
-        // position before we collapse the child's margins together,
-        // so that we can get an accurate position for the zero-height block.
-        LayoutUnit collapsedBeforePos = max(marginInfo.positiveMargin(), childMargins.positiveMarginBefore());
-        LayoutUnit collapsedBeforeNeg = max(marginInfo.negativeMargin(), childMargins.negativeMarginBefore());
-        marginInfo.setMargin(collapsedBeforePos, collapsedBeforeNeg);
-        
-        // Now collapse the child's margins together, which means examining our
-        // bottom margin values as well. 
-        marginInfo.setPositiveMarginIfLarger(childMargins.positiveMarginAfter());
-        marginInfo.setNegativeMarginIfLarger(childMargins.negativeMarginAfter());
+    if (childIsSelfCollapsing) {
+        // For a self collapsing block both the before and after margins get discarded. The block doesn't contribute anything to the height of the block.
+        // Also, the child's top position equals the logical height of the container.
+        if (!childDiscardMarginBefore && !marginInfo.discardMargin()) {
+            // This child has no height. We need to compute our
+            // position before we collapse the child's margins together,
+            // so that we can get an accurate position for the zero-height block.
+            LayoutUnit collapsedBeforePos = max(marginInfo.positiveMargin(), childMargins.positiveMarginBefore());
+            LayoutUnit collapsedBeforeNeg = max(marginInfo.negativeMargin(), childMargins.negativeMarginBefore());
+            marginInfo.setMargin(collapsedBeforePos, collapsedBeforeNeg);
+            
+            // Now collapse the child's margins together, which means examining our
+            // bottom margin values as well. 
+            marginInfo.setPositiveMarginIfLarger(childMargins.positiveMarginAfter());
+            marginInfo.setNegativeMarginIfLarger(childMargins.negativeMarginAfter());
 
-        if (!marginInfo.canCollapseWithMarginBefore())
-            // We need to make sure that the position of the self-collapsing block
-            // is correct, since it could have overflowing content
-            // that needs to be positioned correctly (e.g., a block that
-            // had a specified height of 0 but that actually had subcontent).
-            logicalTop = logicalHeight() + collapsedBeforePos - collapsedBeforeNeg;
-    }
-    else {
-        if (child->style()->marginBeforeCollapse() == MSEPARATE) {
-            setLogicalHeight(logicalHeight() + marginInfo.margin() + marginBeforeForChild(child));
-            logicalTop = logicalHeight();
+            if (!marginInfo.canCollapseWithMarginBefore())
+                // We need to make sure that the position of the self-collapsing block
+                // is correct, since it could have overflowing content
+                // that needs to be positioned correctly (e.g., a block that
+                // had a specified height of 0 but that actually had subcontent).
+                logicalTop = logicalHeight() + collapsedBeforePos - collapsedBeforeNeg;
         }
-        else if (!marginInfo.atBeforeSideOfBlock() ||
-            (!marginInfo.canCollapseMarginBeforeWithChildren()
-             && (!document()->inQuirksMode() || !marginInfo.quirkContainer() || !marginInfo.marginBeforeQuirk()))) {
+    } else {
+        if (mustSeparateMarginBeforeForChild(child)) {
+            ASSERT(!marginInfo.discardMargin() || (marginInfo.discardMargin() && !marginInfo.margin()));
+            // If we are at the before side of the block and we collapse, ignore the computed margin
+            // and just add the child margin to the container height. This will correctly position
+            // the child inside the container.
+            LayoutUnit separateMargin = !marginInfo.canCollapseWithMarginBefore() ? marginInfo.margin() : LayoutUnit(0);
+            setLogicalHeight(logicalHeight() + separateMargin + marginBeforeForChild(child));
+            logicalTop = logicalHeight();
+        } else if (!marginInfo.discardMargin() && (!marginInfo.atBeforeSideOfBlock()
+            || (!marginInfo.canCollapseMarginBeforeWithChildren()
+            && (!document()->inQuirksMode() || !marginInfo.quirkContainer() || !marginInfo.marginBeforeQuirk())))) {
             // We're collapsing with a previous sibling's margins and not
             // with the top of the block.
             setLogicalHeight(logicalHeight() + max(marginInfo.positiveMargin(), posTop) - max(marginInfo.negativeMargin(), negTop));
             logicalTop = logicalHeight();
         }
 
-        marginInfo.setPositiveMargin(childMargins.positiveMarginAfter());
-        marginInfo.setNegativeMargin(childMargins.negativeMarginAfter());
+        marginInfo.setDiscardMargin(childDiscardMarginAfter);
+        
+        if (!marginInfo.discardMargin()) {
+            marginInfo.setPositiveMargin(childMargins.positiveMarginAfter());
+            marginInfo.setNegativeMargin(childMargins.negativeMarginAfter());
+        } else
+            marginInfo.clearMargin();
 
         if (marginInfo.margin())
-            marginInfo.setMarginAfterQuirk(child->isMarginAfterQuirk() || style()->marginAfterCollapse() == MDISCARD);
+            marginInfo.setMarginAfterQuirk(child->isMarginAfterQuirk());
     }
     
     // If margins would pull us past the top of the next page, then we need to pull back and pretend like the margins
@@ -2076,12 +2117,19 @@ LayoutUnit RenderBlock::clearFloatsIfNeeded(RenderBox* child, MarginInfo& margin
         return yPos;
 
     if (child->isSelfCollapsingBlock()) {
+        bool childDiscardMargin = mustDiscardMarginBeforeForChild(child) || mustDiscardMarginAfterForChild(child);
+
         // For self-collapsing blocks that clear, they can still collapse their
         // margins with following siblings.  Reset the current margins to represent
         // the self-collapsing block's margins only.
-        MarginValues childMargins = marginValuesForChild(child);
-        marginInfo.setPositiveMargin(max(childMargins.positiveMarginBefore(), childMargins.positiveMarginAfter()));
-        marginInfo.setNegativeMargin(max(childMargins.negativeMarginBefore(), childMargins.negativeMarginAfter()));
+        // If DISCARD is specified for -webkit-margin-collapse, reset the margin values.
+        if (!childDiscardMargin) {
+            MarginValues childMargins = marginValuesForChild(child);
+            marginInfo.setPositiveMargin(max(childMargins.positiveMarginBefore(), childMargins.positiveMarginAfter()));
+            marginInfo.setNegativeMargin(max(childMargins.negativeMarginBefore(), childMargins.negativeMarginAfter()));
+        } else
+            marginInfo.clearMargin();
+        marginInfo.setDiscardMargin(childDiscardMargin);
 
         // CSS2.1 states:
         // "If the top and bottom margins of an element with clearance are adjoining, its margins collapse with 
@@ -2114,6 +2162,9 @@ LayoutUnit RenderBlock::clearFloatsIfNeeded(RenderBox* child, MarginInfo& margin
         // margins involved.
         setMaxMarginBeforeValues(oldTopPosMargin, oldTopNegMargin);
         marginInfo.setAtBeforeSideOfBlock(false);
+
+        // In case the child discarded the before margin of the block we need to reset the mustDiscardMarginBefore flag to the initial value.
+        setMustDiscardMarginBefore(style()->marginBeforeCollapse() == MDISCARD);
     }
 
     LayoutUnit logicalTop = yPos + heightIncrease;
@@ -2125,12 +2176,22 @@ LayoutUnit RenderBlock::clearFloatsIfNeeded(RenderBox* child, MarginInfo& margin
     return logicalTop;
 }
 
-void RenderBlock::marginBeforeEstimateForChild(RenderBox* child, LayoutUnit& positiveMarginBefore, LayoutUnit& negativeMarginBefore) const
+void RenderBlock::marginBeforeEstimateForChild(RenderBox* child, LayoutUnit& positiveMarginBefore, LayoutUnit& negativeMarginBefore, bool& discardMarginBefore) const
 {
-    // FIXME: We should deal with the margin-collapse-* style extensions that prevent collapsing and that discard margins.
     // Give up if in quirks mode and we're a body/table cell and the top margin of the child box is quirky.
-    if (document()->inQuirksMode() && child->isMarginBeforeQuirk() && (isTableCell() || isBody()))
+    // Give up if the child specified -webkit-margin-collapse: separate that prevents collapsing.
+    // FIXME: Use writing mode independent accessor for marginBeforeCollapse.
+    if ((document()->inQuirksMode() && child->isMarginBeforeQuirk() && (isTableCell() || isBody())) || child->style()->marginBeforeCollapse() == MSEPARATE)
         return;
+
+    // The margins are discarded by a child that specified -webkit-margin-collapse: discard.
+    // FIXME: Use writing mode independent accessor for marginBeforeCollapse.
+    if (child->style()->marginBeforeCollapse() == MDISCARD) {
+        positiveMarginBefore = 0;
+        negativeMarginBefore = 0;
+        discardMarginBefore = true;
+        return;
+    }
 
     LayoutUnit beforeChildMargin = marginBeforeForChild(child);
     positiveMarginBefore = max(positiveMarginBefore, beforeChildMargin);
@@ -2160,12 +2221,12 @@ void RenderBlock::marginBeforeEstimateForChild(RenderBox* child, LayoutUnit& pos
     // Make sure to update the block margins now for the grandchild box so that we're looking at current values.
     if (grandchildBox->needsLayout()) {
         grandchildBox->computeAndSetBlockDirectionMargins(this);
-        grandchildBox->setMarginBeforeQuirk(grandchildBox->style()->marginBefore().quirk());
-        grandchildBox->setMarginAfterQuirk(grandchildBox->style()->marginAfter().quirk());
+        grandchildBox->setMarginBeforeQuirk(grandchildBox->style()->isMarginBeforeQuirk());
+        grandchildBox->setMarginAfterQuirk(grandchildBox->style()->isMarginAfterQuirk());
     }
 
     // Collapse the margin of the grandchild box with our own to produce an estimate.
-    childBlock->marginBeforeEstimateForChild(grandchildBox, positiveMarginBefore, negativeMarginBefore);
+    childBlock->marginBeforeEstimateForChild(grandchildBox, positiveMarginBefore, negativeMarginBefore, discardMarginBefore);
 }
 
 LayoutUnit RenderBlock::estimateLogicalTopPosition(RenderBox* child, const MarginInfo& marginInfo, LayoutUnit& estimateWithoutPagination)
@@ -2176,19 +2237,22 @@ LayoutUnit RenderBlock::estimateLogicalTopPosition(RenderBox* child, const Margi
     if (!marginInfo.canCollapseWithMarginBefore()) {
         LayoutUnit positiveMarginBefore = 0;
         LayoutUnit negativeMarginBefore = 0;
+        bool discardMarginBefore = false;
         if (child->selfNeedsLayout()) {
             // Try to do a basic estimation of how the collapse is going to go.
-            marginBeforeEstimateForChild(child, positiveMarginBefore, negativeMarginBefore);
+            marginBeforeEstimateForChild(child, positiveMarginBefore, negativeMarginBefore, discardMarginBefore);
         } else {
             // Use the cached collapsed margin values from a previous layout. Most of the time they
             // will be right.
             MarginValues marginValues = marginValuesForChild(child);
             positiveMarginBefore = max(positiveMarginBefore, marginValues.positiveMarginBefore());
             negativeMarginBefore = max(negativeMarginBefore, marginValues.negativeMarginBefore());
+            discardMarginBefore = mustDiscardMarginBeforeForChild(child);
         }
 
         // Collapse the result with our current margins.
-        logicalTopEstimate += max(marginInfo.positiveMargin(), positiveMarginBefore) - max(marginInfo.negativeMargin(), negativeMarginBefore);
+        if (!discardMarginBefore)
+            logicalTopEstimate += max(marginInfo.positiveMargin(), positiveMarginBefore) - max(marginInfo.negativeMargin(), negativeMarginBefore);
     }
 
     // Adjust logicalTopEstimate down to the next page if the margins are so large that we don't fit on the current
@@ -2263,6 +2327,13 @@ void RenderBlock::determineLogicalLeftPositionForChild(RenderBox* child)
 void RenderBlock::setCollapsedBottomMargin(const MarginInfo& marginInfo)
 {
     if (marginInfo.canCollapseWithMarginAfter() && !marginInfo.canCollapseWithMarginBefore()) {
+        // Update the after side margin of the container to discard if the after margin of the last child also discards and we collapse with it.
+        // Don't update the max margin values because we won't need them anyway.
+        if (marginInfo.discardMargin()) {
+            setMustDiscardMarginAfter();
+            return;
+        }
+
         // Update our max pos/neg bottom margins, since we collapsed our bottom margins
         // with our children.
         setMaxMarginAfterValues(max(maxPositiveMarginAfter(), marginInfo.positiveMargin()), max(maxNegativeMarginAfter(), marginInfo.negativeMargin()));
@@ -2285,9 +2356,9 @@ void RenderBlock::handleAfterSideOfBlock(LayoutUnit beforeSide, LayoutUnit after
     // If we can't collapse with children then go ahead and add in the bottom margin.
     // Don't do this for ordinary anonymous blocks as only the enclosing box should add in
     // its margin.
-    if (!marginInfo.canCollapseWithMarginAfter() && !marginInfo.canCollapseWithMarginBefore()
+    if (!marginInfo.discardMargin() && (!marginInfo.canCollapseWithMarginAfter() && !marginInfo.canCollapseWithMarginBefore()
         && (!isAnonymousBlock() || isAnonymousColumnsBlock() || isAnonymousColumnSpanBlock())
-        && (!document()->inQuirksMode() || !marginInfo.quirkContainer() || !marginInfo.marginAfterQuirk()))
+        && (!document()->inQuirksMode() || !marginInfo.quirkContainer() || !marginInfo.marginAfterQuirk())))
         setLogicalHeight(logicalHeight() + marginInfo.margin());
         
     // Now add in our bottom border/padding.
@@ -2390,10 +2461,16 @@ void RenderBlock::layoutBlockChildren(bool relayoutChildren, LayoutUnit& maxFloa
 
         updateBlockChildDirtyBitsBeforeLayout(relayoutChildren, child);
 
-        // Handle the four types of special elements first.  These include positioned content, floating content, compacts and
-        // run-ins.  When we encounter these four types of objects, we don't actually lay them out as normal flow blocks.
-        if (handleSpecialChild(child, marginInfo))
+        if (child->isOutOfFlowPositioned()) {
+            child->containingBlock()->insertPositionedObject(child);
+            adjustPositionedBlock(child, marginInfo);
             continue;
+        }
+        if (child->isFloating()) {
+            insertFloatingObject(child);
+            adjustFloatingBlock(marginInfo);
+            continue;
+        }
 
         // Lay out the child.
         layoutBlockChild(child, marginInfo, previousFloatLogicalBottom, maxFloatLogicalBottom);
@@ -2411,13 +2488,6 @@ void RenderBlock::layoutBlockChild(RenderBox* child, MarginInfo& marginInfo, Lay
 
     // The child is a normal flow object.  Compute the margins we will use for collapsing now.
     child->computeAndSetBlockDirectionMargins(this);
-
-    // Do not allow a collapse if the margin-before-collapse style is set to SEPARATE.
-    RenderStyle* childStyle = child->style();
-    if (childStyle->marginBeforeCollapse() == MSEPARATE) {
-        marginInfo.setAtBeforeSideOfBlock(false);
-        marginInfo.clearMargin();
-    }
 
     // Try to guess our correct logical top position.  In most cases this guess will
     // be correct.  Only if we're wrong (when we compute the real logical top position)
@@ -2512,7 +2582,7 @@ void RenderBlock::layoutBlockChild(RenderBox* child, MarginInfo& marginInfo, Lay
 
     // Update our height now that the child has been placed in the correct position.
     setLogicalHeight(logicalHeight() + logicalHeightForChild(child));
-    if (childStyle->marginAfterCollapse() == MSEPARATE) {
+    if (mustSeparateMarginAfterForChild(child)) {
         setLogicalHeight(logicalHeight() + marginAfterForChild(child));
         marginInfo.clearMargin();
     }
@@ -2608,7 +2678,6 @@ bool RenderBlock::simplifiedLayout()
     // computeOverflow expects the bottom edge before we clamp our height. Since this information isn't available during
     // simplifiedLayout, we cache the value in m_overflow.
     LayoutUnit oldClientAfterEdge = hasRenderOverflow() ? m_overflow->layoutClientAfterEdge() : clientLogicalBottom();
-    m_overflow.clear();
     computeOverflow(oldClientAfterEdge, true);
 
     statePusher.pop();
@@ -2805,7 +2874,7 @@ void RenderBlock::paintColumnRules(PaintInfo& paintInfo, const LayoutPoint& pain
     EBorderStyle ruleStyle = style()->columnRuleStyle();
     LayoutUnit ruleThickness = style()->columnRuleWidth();
     LayoutUnit colGap = columnGap();
-    bool renderRule = ruleStyle > BHIDDEN && !ruleTransparent && ruleThickness <= colGap;
+    bool renderRule = ruleStyle > BHIDDEN && !ruleTransparent;
     if (!renderRule)
         return;
 
@@ -3787,7 +3856,7 @@ RenderBlock::FloatingObject* RenderBlock::insertFloatingObject(RenderBox* o)
 
     // Create the list of special objects if we don't aleady have one
     if (!m_floatingObjects)
-        m_floatingObjects = adoptPtr(new FloatingObjects(this, isHorizontalWritingMode()));
+        createFloatingObjects();
     else {
         // Don't insert the object again if it's already in the list
         const FloatingObjectSet& floatingObjectSet = m_floatingObjects->set();
@@ -3917,8 +3986,7 @@ LayoutPoint RenderBlock::computeLogicalLocationForFloat(const FloatingObject* fl
         LayoutUnit heightRemainingLeft = 1;
         LayoutUnit heightRemainingRight = 1;
         floatLogicalLeft = logicalLeftOffsetForLine(logicalTopOffset, logicalLeftOffset, false, &heightRemainingLeft);
-        // FIXME: LayoutUnit::epsilon is probably only necessary here due to lost precision elsewhere https://bugs.webkit.org/show_bug.cgi?id=94000
-        while (logicalRightOffsetForLine(logicalTopOffset, logicalRightOffset, false, &heightRemainingRight) - floatLogicalLeft + LayoutUnit::epsilon() < floatLogicalWidth) {
+        while (logicalRightOffsetForLine(logicalTopOffset, logicalRightOffset, false, &heightRemainingRight) - floatLogicalLeft < floatLogicalWidth) {
             logicalTopOffset += min(heightRemainingLeft, heightRemainingRight);
             floatLogicalLeft = logicalLeftOffsetForLine(logicalTopOffset, logicalLeftOffset, false, &heightRemainingLeft);
             if (inRenderFlowThread()) {
@@ -3933,8 +4001,7 @@ LayoutPoint RenderBlock::computeLogicalLocationForFloat(const FloatingObject* fl
         LayoutUnit heightRemainingLeft = 1;
         LayoutUnit heightRemainingRight = 1;
         floatLogicalLeft = logicalRightOffsetForLine(logicalTopOffset, logicalRightOffset, false, &heightRemainingRight);
-        // FIXME: LayoutUnit::epsilon is probably only necessary here due to lost precision elsewhere https://bugs.webkit.org/show_bug.cgi?id=94000
-        while (floatLogicalLeft - logicalLeftOffsetForLine(logicalTopOffset, logicalLeftOffset, false, &heightRemainingLeft) + LayoutUnit::epsilon() < floatLogicalWidth) {
+        while (floatLogicalLeft - logicalLeftOffsetForLine(logicalTopOffset, logicalLeftOffset, false, &heightRemainingLeft) < floatLogicalWidth) {
             logicalTopOffset += min(heightRemainingLeft, heightRemainingRight);
             floatLogicalLeft = logicalRightOffsetForLine(logicalTopOffset, logicalRightOffset, false, &heightRemainingRight);
             if (inRenderFlowThread()) {
@@ -4554,8 +4621,7 @@ LayoutUnit RenderBlock::addOverhangingFloats(RenderBlock* child, bool makeChildP
 
                 // We create the floating object list lazily.
                 if (!m_floatingObjects)
-                    m_floatingObjects = adoptPtr(new FloatingObjects(this, isHorizontalWritingMode()));
-
+                    createFloatingObjects();
                 m_floatingObjects->add(floatingObj);
             }
         } else {
@@ -4627,7 +4693,7 @@ void RenderBlock::addIntrudingFloats(RenderBlock* prev, LayoutUnit logicalLeftOf
                 
                 // We create the floating object list lazily.
                 if (!m_floatingObjects)
-                    m_floatingObjects = adoptPtr(new FloatingObjects(this, isHorizontalWritingMode()));
+                    createFloatingObjects();
                 m_floatingObjects->add(floatingObj);
             }
         }
@@ -5347,7 +5413,7 @@ LayoutRect RenderBlock::columnRectAt(ColumnInfo* colInfo, unsigned index) const
     LayoutUnit colLogicalHeight = colInfo->columnHeight();
     LayoutUnit colLogicalTop = borderBefore() + paddingBefore();
     LayoutUnit colLogicalLeft = logicalLeftOffsetForContent();
-    int colGap = columnGap();
+    LayoutUnit colGap = columnGap();
     if (colInfo->progressionAxis() == ColumnInfo::InlineAxis) {
         if (style()->isLeftToRightDirection() ^ colInfo->progressionIsReversed())
             colLogicalLeft += index * (colLogicalWidth + colGap);
@@ -5527,7 +5593,7 @@ void RenderBlock::adjustRectForColumns(LayoutRect& r) const
         return;
 
     LayoutUnit startOffset = max(isHorizontal ? r.y() : r.x(), beforeBorderPadding);
-    LayoutUnit endOffset = min<LayoutUnit>(isHorizontal ? r.maxY() : r.maxX(), beforeBorderPadding + colCount * colHeight);
+    LayoutUnit endOffset = max(min<LayoutUnit>(isHorizontal ? r.maxY() : r.maxX(), beforeBorderPadding + colCount * colHeight), beforeBorderPadding);
 
     // FIXME: Can overflow on fast/block/float/float-not-removed-from-next-sibling4.html, see https://bugs.webkit.org/show_bug.cgi?id=68744
     unsigned startColumn = (startOffset - beforeBorderPadding) / colHeight;
@@ -6380,7 +6446,7 @@ RenderBlock* RenderBlock::firstLineBlock() const
             break;
         RenderObject* parentBlock = firstLineBlock->parent();
         if (firstLineBlock->isReplaced() || firstLineBlock->isFloating() || 
-            !parentBlock || parentBlock->firstChild() != firstLineBlock || !parentBlock->isBlockFlow())
+            !parentBlock || parentBlock->firstChild() != firstLineBlock || !parentBlock->isBlockFlow() || parentBlock->isFlexibleBox())
             break;
         ASSERT_WITH_SECURITY_IMPLICATION(parentBlock->isRenderBlock());
         firstLineBlock = toRenderBlock(parentBlock);
@@ -6425,13 +6491,13 @@ static inline RenderObject* findFirstLetterBlock(RenderBlock* start)
     RenderObject* firstLetterBlock = start;
     while (true) {
         bool canHaveFirstLetterRenderer = firstLetterBlock->style()->hasPseudoStyle(FIRST_LETTER)
-            && firstLetterBlock->canHaveGeneratedChildren();
+            && firstLetterBlock->canHaveGeneratedChildren() && !firstLetterBlock->isFlexibleBox();
         if (canHaveFirstLetterRenderer)
             return firstLetterBlock;
 
         RenderObject* parentBlock = firstLetterBlock->parent();
         if (firstLetterBlock->isReplaced() || !parentBlock || parentBlock->firstChild() != firstLetterBlock || 
-            !parentBlock->isBlockFlow())
+            !parentBlock->isBlockFlow() || parentBlock->isFlexibleBox())
             return 0;
         firstLetterBlock = parentBlock;
     } 
@@ -6816,6 +6882,99 @@ void RenderBlock::setMaxMarginAfterValues(LayoutUnit pos, LayoutUnit neg)
     m_rareData->m_margins.setNegativeMarginAfter(neg);
 }
 
+void RenderBlock::setMustDiscardMarginBefore(bool value)
+{
+    if (style()->marginBeforeCollapse() == MDISCARD) {
+        ASSERT(value);
+        return;
+    }
+    
+    if (!m_rareData && !value)
+        return;
+
+    if (!m_rareData)
+        m_rareData = adoptPtr(new RenderBlockRareData(this));
+
+    m_rareData->m_discardMarginBefore = value;
+}
+
+void RenderBlock::setMustDiscardMarginAfter(bool value)
+{
+    if (style()->marginAfterCollapse() == MDISCARD) {
+        ASSERT(value);
+        return;
+    }
+
+    if (!m_rareData && !value)
+        return;
+
+    if (!m_rareData)
+        m_rareData = adoptPtr(new RenderBlockRareData(this));
+
+    m_rareData->m_discardMarginAfter = value;
+}
+
+bool RenderBlock::mustDiscardMarginBefore() const
+{
+    return style()->marginBeforeCollapse() == MDISCARD || (m_rareData && m_rareData->m_discardMarginBefore);
+}
+
+bool RenderBlock::mustDiscardMarginAfter() const
+{
+    return style()->marginAfterCollapse() == MDISCARD || (m_rareData && m_rareData->m_discardMarginAfter);
+}
+
+bool RenderBlock::mustDiscardMarginBeforeForChild(const RenderBox* child) const
+{
+    ASSERT(!child->selfNeedsLayout());
+    if (!child->isWritingModeRoot())
+        return child->isRenderBlock() ? toRenderBlock(child)->mustDiscardMarginBefore() : (child->style()->marginBeforeCollapse() == MDISCARD);
+    if (child->isHorizontalWritingMode() == isHorizontalWritingMode())
+        return child->isRenderBlock() ? toRenderBlock(child)->mustDiscardMarginAfter() : (child->style()->marginAfterCollapse() == MDISCARD);
+
+    // FIXME: We return false here because the implementation is not geometrically complete. We have values only for before/after, not start/end.
+    // In case the boxes are perpendicular we assume the property is not specified.
+    return false;
+}
+
+bool RenderBlock::mustDiscardMarginAfterForChild(const RenderBox* child) const
+{
+    ASSERT(!child->selfNeedsLayout());
+    if (!child->isWritingModeRoot())
+        return child->isRenderBlock() ? toRenderBlock(child)->mustDiscardMarginAfter() : (child->style()->marginAfterCollapse() == MDISCARD);
+    if (child->isHorizontalWritingMode() == isHorizontalWritingMode())
+        return child->isRenderBlock() ? toRenderBlock(child)->mustDiscardMarginBefore() : (child->style()->marginBeforeCollapse() == MDISCARD);
+
+    // FIXME: See |mustDiscardMarginBeforeForChild| above.
+    return false;
+}
+
+bool RenderBlock::mustSeparateMarginBeforeForChild(const RenderBox* child) const
+{
+    ASSERT(!child->selfNeedsLayout());
+    const RenderStyle* childStyle = child->style();
+    if (!child->isWritingModeRoot())
+        return childStyle->marginBeforeCollapse() == MSEPARATE;
+    if (child->isHorizontalWritingMode() == isHorizontalWritingMode())
+        return childStyle->marginAfterCollapse() == MSEPARATE;
+
+    // FIXME: See |mustDiscardMarginBeforeForChild| above.
+    return false;
+}
+
+bool RenderBlock::mustSeparateMarginAfterForChild(const RenderBox* child) const
+{
+    ASSERT(!child->selfNeedsLayout());
+    const RenderStyle* childStyle = child->style();
+    if (!child->isWritingModeRoot())
+        return childStyle->marginAfterCollapse() == MSEPARATE;
+    if (child->isHorizontalWritingMode() == isHorizontalWritingMode())
+        return childStyle->marginBeforeCollapse() == MSEPARATE;
+
+    // FIXME: See |mustDiscardMarginBeforeForChild| above.
+    return false;
+}
+
 void RenderBlock::setPaginationStrut(LayoutUnit strut)
 {
     if (!m_rareData) {
@@ -7089,11 +7248,14 @@ LayoutUnit RenderBlock::applyAfterBreak(RenderBox* child, LayoutUnit logicalOffs
     bool checkAfterAlways = (checkColumnBreaks && child->style()->columnBreakAfter() == PBALWAYS) || (checkPageBreaks && child->style()->pageBreakAfter() == PBALWAYS)
                             || (checkRegionBreaks && child->style()->regionBreakAfter() == PBALWAYS);
     if (checkAfterAlways && inNormalFlow(child) && hasNextPage(logicalOffset, IncludePageBoundary)) {
-        marginInfo.setMarginAfterQuirk(true); // Cause margins to be discarded for any following content.
+        LayoutUnit marginOffset = marginInfo.canCollapseWithMarginBefore() ? LayoutUnit() : marginInfo.margin();
+
+        // So our margin doesn't participate in the next collapsing steps.
+        marginInfo.clearMargin();
+
         if (checkColumnBreaks)
             view()->layoutState()->addForcedColumnBreak(child, logicalOffset);
         if (checkRegionBreaks) {
-            LayoutUnit marginOffset = marginInfo.canCollapseWithMarginBefore() ? LayoutUnit() : marginInfo.margin();
             LayoutUnit offsetBreakAdjustment = 0;
             if (enclosingRenderFlowThread()->addForcedRegionBreak(offsetFromLogicalTopOfFirstPage() + logicalOffset + marginOffset, child, false, &offsetBreakAdjustment))
                 return logicalOffset + offsetBreakAdjustment;
@@ -7423,8 +7585,10 @@ bool RenderBlock::logicalWidthChangedInRegions() const
 
 RenderRegion* RenderBlock::clampToStartAndEndRegions(RenderRegion* region) const
 {
-    ASSERT(region && inRenderFlowThread());
-    
+    ASSERT(isRenderView() || (region && inRenderFlowThread()));
+    if (isRenderView())
+        return region;
+
     // We need to clamp to the block, since we want any lines or blocks that overflow out of the
     // logical top or logical bottom of the block to size as though the border box in the first and
     // last regions extended infinitely. Otherwise the lines are going to size according to the regions
@@ -7562,6 +7726,20 @@ const char* RenderBlock::renderName() const
     if (isRunIn())
         return "RenderBlock (run-in)";
     return "RenderBlock";
+}
+
+inline RenderBlock::FloatingObjects::FloatingObjects(const RenderBlock* renderer, bool horizontalWritingMode)
+    : m_placedFloatsTree(UninitializedTree)
+    , m_leftObjectsCount(0)
+    , m_rightObjectsCount(0)
+    , m_horizontalWritingMode(horizontalWritingMode)
+    , m_renderer(renderer)
+{
+}
+
+void RenderBlock::createFloatingObjects()
+{
+    m_floatingObjects = adoptPtr(new FloatingObjects(this, isHorizontalWritingMode()));
 }
 
 inline void RenderBlock::FloatingObjects::clear()
@@ -7740,13 +7918,16 @@ TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, c
 
 RenderBlock* RenderBlock::createAnonymousWithParentRendererAndDisplay(const RenderObject* parent, EDisplay display)
 {
-    // FIXME: Do we need to cover the new flex box here ?
     // FIXME: Do we need to convert all our inline displays to block-type in the anonymous logic ?
     EDisplay newDisplay;
     RenderBlock* newBox = 0;
     if (display == BOX || display == INLINE_BOX) {
+        // FIXME: Remove this case once we have eliminated all internal users of old flexbox
         newBox = RenderDeprecatedFlexibleBox::createAnonymous(parent->document());
         newDisplay = BOX;
+    } else if (display == FLEX || display == INLINE_FLEX) {
+        newBox = RenderFlexibleBox::createAnonymous(parent->document());
+        newDisplay = FLEX;
     } else {
         newBox = RenderBlock::createAnonymous(parent->document());
         newDisplay = BLOCK;

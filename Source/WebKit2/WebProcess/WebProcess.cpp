@@ -27,9 +27,11 @@
 #include "WebProcess.h"
 
 #include "AuthenticationManager.h"
+#include "EventDispatcher.h"
 #include "InjectedBundle.h"
 #include "InjectedBundleUserMessageCoders.h"
 #include "Logging.h"
+#include "PluginProcessConnectionManager.h"
 #include "StatisticsData.h"
 #include "WebApplicationCacheManager.h"
 #include "WebConnectionToUIProcess.h"
@@ -136,7 +138,8 @@ WebProcess& WebProcess::shared()
 }
 
 WebProcess::WebProcess()
-    : m_inDidClose(false)
+    : m_eventDispatcher(EventDispatcher::create())
+    , m_inDidClose(false)
     , m_shouldTrackVisitedLinks(true)
     , m_hasSetCacheModel(false)
     , m_cacheModel(CacheModelDocumentViewer)
@@ -161,6 +164,9 @@ WebProcess::WebProcess()
 #if ENABLE(NETWORK_PROCESS)
     , m_usesNetworkProcess(false)
     , m_webResourceLoadScheduler(new WebResourceLoadScheduler)
+#endif
+#if ENABLE(PLUGIN_PROCESS)
+    , m_pluginProcessConnectionManager(PluginProcessConnectionManager::create())
 #endif
 #if USE(SOUP)
     , m_soupRequestManager(this)
@@ -206,10 +212,10 @@ void WebProcess::initializeConnection(CoreIPC::Connection* connection)
 
     connection->setShouldExitOnSyncMessageSendFailure(true);
 
-    m_eventDispatcher.initializeConnection(connection);
+    m_eventDispatcher->initializeConnection(connection);
 
 #if ENABLE(PLUGIN_PROCESS)
-    m_pluginProcessConnectionManager.initializeConnection(connection);
+    m_pluginProcessConnectionManager->initializeConnection(connection);
 #endif
 
 #if USE(SECURITY_FRAMEWORK)
@@ -446,7 +452,7 @@ DownloadManager& WebProcess::downloadManager()
 #if ENABLE(PLUGIN_PROCESS)
 PluginProcessConnectionManager& WebProcess::pluginProcessConnectionManager()
 {
-    return m_pluginProcessConnectionManager;
+    return *m_pluginProcessConnectionManager;
 }
 #endif
 

@@ -39,6 +39,10 @@ DefaultAudioDestinationNode::DefaultAudioDestinationNode(AudioContext* context)
     : AudioDestinationNode(context, AudioDestination::hardwareSampleRate())
     , m_numberOfInputChannels(0)
 {
+    // Node-specific default mixing rules.
+    m_channelCount = 2;
+    m_channelCountMode = Explicit;
+    m_channelInterpretation = AudioBus::Speakers;
 }
 
 DefaultAudioDestinationNode::~DefaultAudioDestinationNode()
@@ -52,7 +56,7 @@ void DefaultAudioDestinationNode::initialize()
     if (isInitialized())
         return;
 
-    createDestination();
+    createDestination(String());
     AudioNode::initialize();
 }
 
@@ -68,23 +72,24 @@ void DefaultAudioDestinationNode::uninitialize()
     AudioNode::uninitialize();
 }
 
-void DefaultAudioDestinationNode::createDestination()
+void DefaultAudioDestinationNode::createDestination(const String& inputDeviceId)
 {
     float hardwareSampleRate = AudioDestination::hardwareSampleRate();
     LOG(WebAudio, ">>>> hardwareSampleRate = %f\n", hardwareSampleRate);
     
-    m_destination = AudioDestination::create(*this, m_numberOfInputChannels, numberOfChannels(), hardwareSampleRate);
+    m_destination = AudioDestination::create(*this, inputDeviceId, m_numberOfInputChannels, numberOfChannels(), hardwareSampleRate);
 }
 
-void DefaultAudioDestinationNode::enableInput()
+void DefaultAudioDestinationNode::enableInput(const String& inputDeviceId)
 {
-    ASSERT(isMainThread()); 
+    ASSERT(isMainThread());
     if (m_numberOfInputChannels != EnabledInputChannels) {
         m_numberOfInputChannels = EnabledInputChannels;
 
         if (isInitialized()) {
+            // Re-create destination.
             m_destination->stop();
-            createDestination();
+            createDestination(inputDeviceId);
             m_destination->start();
         }
     }

@@ -29,6 +29,7 @@
 #include <QVector>
 
 typedef const struct OpaqueJSContext* JSContextRef;
+typedef struct OpaqueJSValue* JSObjectRef;
 
 namespace WebCore {
 class Text;
@@ -107,7 +108,6 @@ public:
 
     static void garbageCollectorCollect();
     static void garbageCollectorCollectOnAlternateThread(bool waitUntilDone);
-    static void setAutofilled(const QWebElement&, bool enabled);
     static void setValueForUser(const QWebElement&, const QString& value);
     static int javaScriptObjectsCount();
     static void clearScriptWorlds();
@@ -209,6 +209,8 @@ public:
 
     static QString frameRenderTreeDump(QWebFrameAdapter*);
     static void clearNotificationPermissions();
+
+    static void getJSWindowObject(QWebFrameAdapter*, JSContextRef*, JSObjectRef*);
 };
 
 #endif

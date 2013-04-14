@@ -263,4 +263,3 @@ WebInspector.CSSSelectorProfileView.prototype = {
 
     __proto__: WebInspector.View.prototype
 }
-

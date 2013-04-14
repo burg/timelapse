@@ -31,7 +31,6 @@
 #ifndef TestShell_h
 #define TestShell_h
 
-#include "NotificationPresenter.h"
 #include "TestEventPrinter.h"
 #include "WebPreferences.h"
 #include "WebTestInterfaces.h"
@@ -46,7 +45,6 @@
 namespace WebKit {
 class WebDevToolsAgentClient;
 class WebFrame;
-class WebNotificationPresenter;
 class WebThread;
 class WebView;
 class WebURL;
@@ -56,7 +54,7 @@ class DRTDevToolsAgent;
 class DRTDevToolsCallArgs;
 class DRTDevToolsClient;
 class MockWebPrerenderingSupport;
-class MockWebKitPlatformSupport;
+class MockPlatform;
 
 struct TestParams {
     bool dumpTree;
@@ -78,16 +76,13 @@ public:
     TestShell();
     ~TestShell();
 
-    void initialize(MockWebKitPlatformSupport*);
+    void initialize(MockPlatform*);
 
     // The main WebView.
     WebKit::WebView* webView() const { return m_webView; }
     // Returns the host for the main WebView.
     WebViewHost* webViewHost() const { return m_webViewHost.get(); }
     WebTestRunner::WebTestRunner* testRunner() const { return m_testInterfaces->testRunner(); }
-#if ENABLE(NOTIFICATIONS)
-    NotificationPresenter* notificationPresenter() const { return m_notificationPresenter.get(); }
-#endif
     const TestEventPrinter* printer() const { return &m_printer; }
 
     WebTestRunner::WebPreferences* preferences() { return &m_prefs; }
@@ -202,9 +197,6 @@ private:
     OwnPtr<DRTDevToolsClient> m_drtDevToolsClient;
     OwnPtr<WebTestRunner::WebTestInterfaces> m_testInterfaces;
     OwnPtr<WebTestRunner::WebTestInterfaces> m_devToolsTestInterfaces;
-#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-    OwnPtr<NotificationPresenter> m_notificationPresenter;
-#endif
     // It's important that this thread is destroyed after the WebViewHost.
     OwnPtr<WebKit::WebThread> m_webCompositorThread;
     OwnPtr<WebViewHost> m_webViewHost;

@@ -544,7 +544,7 @@ float SVGSVGElement::getCurrentTime() const
 
 void SVGSVGElement::setCurrentTime(float seconds)
 {
-    if (isnan(seconds))
+    if (std::isnan(seconds))
         return;
     seconds = max(seconds, 0.0f);
     m_timeContainer->setElapsed(seconds);
@@ -598,7 +598,7 @@ FloatSize SVGSVGElement::currentViewportSize() const
     }
 
     FloatRect viewportRect = toRenderSVGViewportContainer(renderer())->viewport();
-    return FloatSize(viewportRect.width() / renderer()->style()->effectiveZoom(), viewportRect.height() / renderer()->style()->effectiveZoom());
+    return FloatSize(viewportRect.width(), viewportRect.height());
 }
 
 bool SVGSVGElement::widthAttributeEstablishesViewport() const

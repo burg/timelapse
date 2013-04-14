@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,6 +51,19 @@ static BuiltinResourceHandleConstructorMap& builtinResourceHandleConstructorMap(
 void ResourceHandle::registerBuiltinConstructor(const AtomicString& protocol, ResourceHandle::BuiltinConstructor constructor)
 {
     builtinResourceHandleConstructorMap().add(protocol, constructor);
+}
+
+typedef HashMap<AtomicString, ResourceHandle::BuiltinSynchronousLoader> BuiltinResourceHandleSynchronousLoaderMap;
+static BuiltinResourceHandleSynchronousLoaderMap& builtinResourceHandleSynchronousLoaderMap()
+{
+    ASSERT(isMainThread());
+    DEFINE_STATIC_LOCAL(BuiltinResourceHandleSynchronousLoaderMap, map, ());
+    return map;
+}
+
+void ResourceHandle::registerBuiltinSynchronousLoader(const AtomicString& protocol, ResourceHandle::BuiltinSynchronousLoader loader)
+{
+    builtinResourceHandleSynchronousLoaderMap().add(protocol, loader);
 }
 
 ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
@@ -111,6 +124,18 @@ void ResourceHandle::fireFailure(Timer<ResourceHandle>*)
     }
 
     ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::loadResourceSynchronously(NetworkingContext* context, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+{
+    BuiltinResourceHandleSynchronousLoaderMap::iterator protocolMapItem = builtinResourceHandleSynchronousLoaderMap().find(request.url().protocol());
+
+    if (protocolMapItem != builtinResourceHandleSynchronousLoaderMap().end()) {
+        protocolMapItem->value(context, request, storedCredentials, error, response, data);
+        return;
+    }
+
+    platformLoadResourceSynchronously(context, request, storedCredentials, error, response, data);
 }
 
 ResourceHandleClient* ResourceHandle::client() const

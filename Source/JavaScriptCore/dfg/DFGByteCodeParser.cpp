@@ -35,7 +35,7 @@
 #include "DFGArrayMode.h"
 #include "DFGCapabilities.h"
 #include "GetByIdStatus.h"
-#include "JSCJSValueInlines.h"
+#include "Operations.h"
 #include "PreciseJumpTargets.h"
 #include "PutByIdStatus.h"
 #include "ResolveGlobalStatus.h"
@@ -182,7 +182,7 @@ private:
     Node* getScope(bool skipTop, unsigned skipCount);
     
     // Convert a set of ResolveOperations into graph nodes
-    bool parseResolveOperations(SpeculatedType, unsigned identifierNumber, unsigned operations, unsigned putToBaseOperation, Node** base, Node** value);
+    bool parseResolveOperations(SpeculatedType, unsigned identifierNumber, ResolveOperations*, PutToBaseOperation*, Node** base, Node** value);
 
     // Prepare to parse a block.
     void prepareToParseBlock();
@@ -198,10 +198,6 @@ private:
     };
     template<PhiStackType stackType>
     void processPhiStack();
-    
-    void fixVariableAccessPredictions();
-    // Add spill locations to nodes.
-    void allocateVirtualRegisters();
     
     VariableAccessData* newVariableAccessData(int operand, bool isCaptured)
     {
@@ -372,11 +368,16 @@ private:
         
         bool isCaptured = m_codeBlock->isCaptured(operand);
 
-        // Always flush arguments, except for 'this'.
-        if (argument && setMode == NormalSet)
-            flushDirect(operand);
-        
         VariableAccessData* variableAccessData = newVariableAccessData(operand, isCaptured);
+
+        // Always flush arguments, except for 'this'. If 'this' is created by us,
+        // then make sure that it's never unboxed.
+        if (argument) {
+            if (setMode == NormalSet)
+                flushDirect(operand);
+        } else if (m_codeBlock->specializationKind() == CodeForConstruct)
+            variableAccessData->mergeShouldNeverUnbox(true);
+        
         variableAccessData->mergeStructureCheckHoistingFailed(
             m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache));
         Node* node = addToGraph(SetLocal, OpInfo(variableAccessData), value);
@@ -656,7 +657,7 @@ private:
 
         // m_constantNaN must refer to an entry in the CodeBlock's constant pool that has the value nan.
         ASSERT(m_codeBlock->getConstant(FirstConstantRegisterIndex + m_constantNaN).isDouble());
-        ASSERT(isnan(m_codeBlock->getConstant(FirstConstantRegisterIndex + m_constantNaN).asDouble()));
+        ASSERT(std::isnan(m_codeBlock->getConstant(FirstConstantRegisterIndex + m_constantNaN).asDouble()));
         return getJSConstant(m_constantNaN);
     }
     
@@ -698,6 +699,18 @@ private:
     {
         Node* result = m_graph.addNode(
             DontRefChildren, DontRefNode, SpecNone,
+            op, currentCodeOrigin(), Edge(child1), Edge(child2), Edge(child3));
+        ASSERT(op != Phi);
+        m_currentBlock->append(result);
+
+        if (defaultFlags(op) & NodeMustGenerate)
+            m_graph.refChildren(result);
+        return result;
+    }
+    Node* addToGraph(NodeType op, Edge child1, Edge child2 = Edge(), Edge child3 = Edge())
+    {
+        Node* result = m_graph.addNode(
+            DontRefChildren, DontRefNode, SpecNone,
             op, currentCodeOrigin(), child1, child2, child3);
         ASSERT(op != Phi);
         m_currentBlock->append(result);
@@ -710,7 +723,7 @@ private:
     {
         Node* result = m_graph.addNode(
             DontRefChildren, DontRefNode, SpecNone,
-            op, currentCodeOrigin(), info, child1, child2, child3);
+            op, currentCodeOrigin(), info, Edge(child1), Edge(child2), Edge(child3));
         if (op == Phi)
             m_currentBlock->phis.append(result);
         else
@@ -724,7 +737,7 @@ private:
     {
         Node* result = m_graph.addNode(
             DontRefChildren, DontRefNode, SpecNone,
-            op, currentCodeOrigin(), info1, info2, child1, child2, child3);
+            op, currentCodeOrigin(), info1, info2, Edge(child1), Edge(child2), Edge(child3));
         ASSERT(op != Phi);
         m_currentBlock->append(result);
 
@@ -1063,8 +1076,6 @@ private:
         Vector<unsigned> m_identifierRemap;
         Vector<unsigned> m_constantRemap;
         Vector<unsigned> m_constantBufferRemap;
-        Vector<unsigned> m_resolveOperationRemap;
-        Vector<unsigned> m_putToBaseOperationRemap;
         
         // Blocks introduced by this code block, which need successor linking.
         // May include up to one basic block that includes the continuation after
@@ -1466,9 +1477,8 @@ bool ByteCodeParser::handleMinMax(bool usesResult, int resultOperand, NodeType o
     }
      
     if (argumentCountIncludingThis == 2) { // Math.min(x)
-        // FIXME: what we'd really like is a ValueToNumber, except we don't support that right now. Oh well.
         Node* result = get(registerOffset + argumentToOperand(1));
-        addToGraph(CheckNumber, result);
+        addToGraph(Phantom, Edge(result, NumberUse));
         setIntrinsicResult(usesResult, resultOperand, result);
         return true;
     }
@@ -1762,9 +1772,8 @@ Node* ByteCodeParser::getScope(bool skipTop, unsigned skipCount)
     return localBase;
 }
 
-bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned identifier, unsigned operations, unsigned putToBaseOperation, Node** base, Node** value)
+bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned identifier, ResolveOperations* resolveOperations, PutToBaseOperation* putToBaseOperation, Node** base, Node** value)
 {
-    ResolveOperations* resolveOperations = m_codeBlock->resolveOperations(operations);
     if (resolveOperations->isEmpty()) {
         addToGraph(ForceOSRExit);
         return false;
@@ -1865,8 +1874,8 @@ bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned 
         m_graph.m_resolveGlobalData.append(ResolveGlobalData());
         ResolveGlobalData& data = m_graph.m_resolveGlobalData.last();
         data.identifierNumber = identifier;
-        data.resolveOperationsIndex = operations;
-        data.putToBaseOperationIndex = putToBaseOperation;
+        data.resolveOperations = resolveOperations;
+        data.putToBaseOperation = putToBaseOperation;
         data.resolvePropertyIndex = resolveValueOperation - resolveOperations->data();
         *value = resolve;
         return true;
@@ -1943,6 +1952,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                 argumentToOperand(argument), m_codeBlock->isCaptured(argumentToOperand(argument)));
             variable->mergeStructureCheckHoistingFailed(
                 m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache));
+            
             Node* setArgument = addToGraph(SetArgument, OpInfo(variable));
             m_graph.m_arguments[argument] = setArgument;
             m_currentBlock->variablesAtTail.setArgumentFirstTime(argument, setArgument);
@@ -3082,7 +3092,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             SpeculatedType prediction = getPrediction();
             
             unsigned identifier = m_inlineStackTop->m_identifierRemap[currentInstruction[2].u.operand];
-            unsigned operations = m_inlineStackTop->m_resolveOperationRemap[currentInstruction[3].u.operand];
+            ResolveOperations* operations = currentInstruction[3].u.resolveOperations;
             Node* value = 0;
             if (parseResolveOperations(prediction, identifier, operations, 0, 0, &value)) {
                 set(currentInstruction[1].u.operand, value);
@@ -3093,7 +3103,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             m_graph.m_resolveOperationsData.append(ResolveOperationData());
             ResolveOperationData& data = m_graph.m_resolveOperationsData.last();
             data.identifierNumber = identifier;
-            data.resolveOperationsIndex = operations;
+            data.resolveOperations = operations;
 
             set(currentInstruction[1].u.operand, resolve);
 
@@ -3105,8 +3115,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             unsigned base = currentInstruction[1].u.operand;
             unsigned identifier = m_inlineStackTop->m_identifierRemap[currentInstruction[2].u.operand];
             unsigned value = currentInstruction[3].u.operand;
-            unsigned operation = m_inlineStackTop->m_putToBaseOperationRemap[currentInstruction[4].u.operand];
-            PutToBaseOperation* putToBase = m_codeBlock->putToBaseOperation(operation);
+            PutToBaseOperation* putToBase = currentInstruction[4].u.putToBaseOperation;
 
             if (putToBase->m_isDynamic) {
                 addToGraph(PutById, OpInfo(identifier), get(base), get(value));
@@ -3180,8 +3189,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             SpeculatedType prediction = getPrediction();
             
             unsigned identifier = m_inlineStackTop->m_identifierRemap[currentInstruction[2].u.operand];
-            unsigned operations = m_inlineStackTop->m_resolveOperationRemap[currentInstruction[4].u.operand];
-            unsigned putToBaseOperation = m_inlineStackTop->m_putToBaseOperationRemap[currentInstruction[5].u.operand];
+            ResolveOperations* operations = currentInstruction[4].u.resolveOperations;
+            PutToBaseOperation* putToBaseOperation = currentInstruction[5].u.putToBaseOperation;
 
             Node* base = 0;
             if (parseResolveOperations(prediction, identifier, operations, 0, &base, 0)) {
@@ -3193,8 +3202,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             m_graph.m_resolveOperationsData.append(ResolveOperationData());
             ResolveOperationData& data = m_graph.m_resolveOperationsData.last();
             data.identifierNumber = identifier;
-            data.resolveOperationsIndex = operations;
-            data.putToBaseOperationIndex = putToBaseOperation;
+            data.resolveOperations = operations;
+            data.putToBaseOperation = putToBaseOperation;
         
             set(currentInstruction[1].u.operand, resolve);
 
@@ -3205,8 +3214,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             unsigned baseDst = currentInstruction[1].u.operand;
             unsigned valueDst = currentInstruction[2].u.operand;
             unsigned identifier = m_inlineStackTop->m_identifierRemap[currentInstruction[3].u.operand];
-            unsigned operations = m_inlineStackTop->m_resolveOperationRemap[currentInstruction[4].u.operand];
-            unsigned putToBaseOperation = m_inlineStackTop->m_putToBaseOperationRemap[currentInstruction[5].u.operand];
+            ResolveOperations* operations = currentInstruction[4].u.resolveOperations;
+            PutToBaseOperation* putToBaseOperation = currentInstruction[5].u.putToBaseOperation;
 
             Node* base = 0;
             Node* value = 0;
@@ -3224,7 +3233,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             unsigned baseDst = currentInstruction[1].u.operand;
             unsigned valueDst = currentInstruction[2].u.operand;
             unsigned identifier = m_inlineStackTop->m_identifierRemap[currentInstruction[3].u.operand];
-            unsigned operations = m_inlineStackTop->m_resolveOperationRemap[currentInstruction[4].u.operand];
+            ResolveOperations* operations = currentInstruction[4].u.resolveOperations;
 
             Node* base = 0;
             Node* value = 0;
@@ -3332,16 +3341,6 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             RELEASE_ASSERT_NOT_REACHED();
             return false;
         }
-    }
-}
-
-void ByteCodeParser::fixVariableAccessPredictions()
-{
-    for (unsigned i = 0; i < m_graph.m_variableAccessData.size(); ++i) {
-        VariableAccessData* data = &m_graph.m_variableAccessData[i];
-        data->find()->predict(data->nonUnifiedPrediction());
-        data->find()->mergeIsCaptured(data->isCaptured());
-        data->find()->mergeStructureCheckHoistingFailed(data->structureCheckHoistingFailed());
     }
 }
 
@@ -3489,8 +3488,6 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
         m_identifierRemap.resize(codeBlock->numberOfIdentifiers());
         m_constantRemap.resize(codeBlock->numberOfConstantRegisters());
         m_constantBufferRemap.resize(codeBlock->numberOfConstantBuffers());
-        m_resolveOperationRemap.resize(codeBlock->numberOfResolveOperations());
-        m_putToBaseOperationRemap.resize(codeBlock->numberOfPutToBaseOperations());
 
         for (size_t i = 0; i < codeBlock->numberOfIdentifiers(); ++i) {
             StringImpl* rep = codeBlock->identifier(i).impl();
@@ -3517,11 +3514,6 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
             }
             m_constantRemap[i] = result.iterator->value;
         }
-        for (size_t i = 0; i < codeBlock->numberOfResolveOperations(); i++) {
-            uint32_t newResolve = byteCodeParser->m_codeBlock->addResolve();
-            m_resolveOperationRemap[i] = newResolve;
-            byteCodeParser->m_codeBlock->resolveOperations(newResolve)->append(*codeBlock->resolveOperations(i));
-        }
         for (unsigned i = 0; i < codeBlock->numberOfConstantBuffers(); ++i) {
             // If we inline the same code block multiple times, we don't want to needlessly
             // duplicate its constant buffers.
@@ -3536,12 +3528,6 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
             m_constantBufferRemap[i] = newIndex;
             byteCodeParser->m_constantBufferCache.add(ConstantBufferKey(codeBlock, i), newIndex);
         }
-        for (size_t i = 0; i < codeBlock->numberOfPutToBaseOperations(); i++) {
-            uint32_t putToBaseResolve = byteCodeParser->m_codeBlock->addPutToBase();
-            m_putToBaseOperationRemap[i] = putToBaseResolve;
-            *byteCodeParser->m_codeBlock->putToBaseOperation(putToBaseResolve) = *codeBlock->putToBaseOperation(i);
-        }
-        
         m_callsiteBlockHeadNeedsLinking = true;
     } else {
         // Machine code block case.
@@ -3556,20 +3542,12 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
         m_identifierRemap.resize(codeBlock->numberOfIdentifiers());
         m_constantRemap.resize(codeBlock->numberOfConstantRegisters());
         m_constantBufferRemap.resize(codeBlock->numberOfConstantBuffers());
-        m_resolveOperationRemap.resize(codeBlock->numberOfResolveOperations());
-        m_putToBaseOperationRemap.resize(codeBlock->numberOfPutToBaseOperations());
-
         for (size_t i = 0; i < codeBlock->numberOfIdentifiers(); ++i)
             m_identifierRemap[i] = i;
         for (size_t i = 0; i < codeBlock->numberOfConstantRegisters(); ++i)
             m_constantRemap[i] = i + FirstConstantRegisterIndex;
         for (size_t i = 0; i < codeBlock->numberOfConstantBuffers(); ++i)
             m_constantBufferRemap[i] = i;
-        for (size_t i = 0; i < codeBlock->numberOfResolveOperations(); ++i)
-            m_resolveOperationRemap[i] = i;
-        for (size_t i = 0; i < codeBlock->numberOfPutToBaseOperations(); ++i)
-            m_putToBaseOperationRemap[i] = i;
-
         m_callsiteBlockHeadNeedsLinking = false;
     }
     

@@ -121,7 +121,7 @@ public:
     void resumeScreenUpdates(BackingStore::ResumeUpdateOperation);
 
     // Update m_suspendScreenUpdates*Thread based on a number of conditions.
-    void updateSuspendScreenUpdateState();
+    void updateSuspendScreenUpdateState(bool* hasSyncedToUserInterfaceThread = 0);
 
     // The functions repaint(), slowScroll(), scroll(), scrollingStartedHelper() are
     // called from outside WebKit and within WebKit via ChromeClientBlackBerry.
@@ -283,7 +283,6 @@ public:
     WebCore::Color webPageBackgroundColorUserInterfaceThread() const; // use WebSettings::backgroundColor() for the WebKit thread
     void setWebPageBackgroundColor(const WebCore::Color&);
 
-    void invalidateWindow(const Platform::IntRect& dst);
     void clearWindow(const Platform::IntRect&, unsigned char red, unsigned char green, unsigned char blue, unsigned char alpha = 255);
 
     bool isScrollingOrZooming() const;

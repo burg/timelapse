@@ -113,6 +113,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGStructureCheckHoistingPhase.cpp
     dfg/DFGThunks.cpp
     dfg/DFGUnificationPhase.cpp
+    dfg/DFGUseKind.cpp
     dfg/DFGValueSource.cpp
     dfg/DFGVariableAccessDataDump.cpp
     dfg/DFGVariableEvent.cpp
@@ -182,6 +183,7 @@ set(JavaScriptCore_SOURCES
     parser/Nodes.cpp
     parser/Parser.cpp
     parser/ParserArena.cpp
+    parser/SourceProvider.cpp
     parser/SourceProviderCache.cpp
 
     profiler/ProfilerBytecode.cpp

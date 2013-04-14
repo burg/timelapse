@@ -37,6 +37,8 @@
 #include "TestRunner.h"
 #include "TextInputController.h"
 #include "WebCache.h"
+#include "WebKit.h"
+#include "WebRuntimeFeatures.h"
 #include <public/WebString.h>
 #include <public/WebURL.h>
 #include <string>
@@ -51,10 +53,40 @@ TestInterfaces::TestInterfaces()
     , m_eventSender(new EventSender())
     , m_gamepadController(new GamepadController())
     , m_textInputController(new TextInputController())
-    , m_testRunner(new TestRunner())
+    , m_testRunner(new TestRunner(this))
     , m_webView(0)
     , m_delegate(0)
 {
+    WebKit::setLayoutTestMode(true);
+
+    WebRuntimeFeatures::enableDataTransferItems(true);
+    WebRuntimeFeatures::enableDeviceMotion(false);
+    WebRuntimeFeatures::enableGeolocation(true);
+    WebRuntimeFeatures::enableIndexedDatabase(true);
+    WebRuntimeFeatures::enableInputTypeDateTime(true);
+    WebRuntimeFeatures::enableInputTypeDateTimeLocal(true);
+    WebRuntimeFeatures::enableInputTypeMonth(true);
+    WebRuntimeFeatures::enableInputTypeTime(true);
+    WebRuntimeFeatures::enableInputTypeWeek(true);
+    WebRuntimeFeatures::enableFileSystem(true);
+    WebRuntimeFeatures::enableJavaScriptI18NAPI(true);
+    WebRuntimeFeatures::enableMediaSource(true);
+    WebRuntimeFeatures::enableEncryptedMedia(true);
+    WebRuntimeFeatures::enableMediaStream(true);
+    WebRuntimeFeatures::enablePeerConnection(true);
+    WebRuntimeFeatures::enableWebAudio(true);
+    WebRuntimeFeatures::enableVideoTrack(true);
+    WebRuntimeFeatures::enableGamepad(true);
+    WebRuntimeFeatures::enableShadowDOM(true);
+    WebRuntimeFeatures::enableCustomDOMElements(true);
+    WebRuntimeFeatures::enableStyleScoped(true);
+    WebRuntimeFeatures::enableScriptedSpeech(true);
+    WebRuntimeFeatures::enableRequestAutocomplete(true);
+    WebRuntimeFeatures::enableExperimentalContentSecurityPolicyFeatures(true);
+    WebRuntimeFeatures::enableSeamlessIFrames(true);
+    WebRuntimeFeatures::enableCanvasPath(true);
+
+    resetAll();
 }
 
 TestInterfaces::~TestInterfaces()
@@ -63,7 +95,7 @@ TestInterfaces::~TestInterfaces()
     m_eventSender->setWebView(0);
     // m_gamepadController doesn't depend on WebView.
     m_textInputController->setWebView(0);
-    m_testRunner->setWebView(0);
+    m_testRunner->setWebView(0, 0);
 
     m_accessibilityController->setDelegate(0);
     m_eventSender->setDelegate(0);
@@ -72,14 +104,15 @@ TestInterfaces::~TestInterfaces()
     m_testRunner->setDelegate(0);
 }
 
-void TestInterfaces::setWebView(WebView* webView)
+void TestInterfaces::setWebView(WebView* webView, WebTestProxyBase* proxy)
 {
     m_webView = webView;
+    m_proxy = proxy;
     m_accessibilityController->setWebView(webView);
     m_eventSender->setWebView(webView);
     // m_gamepadController doesn't depend on WebView.
     m_textInputController->setWebView(webView);
-    m_testRunner->setWebView(webView);
+    m_testRunner->setWebView(webView, proxy);
 }
 
 void TestInterfaces::setDelegate(WebTestDelegate* delegate)
@@ -131,6 +164,21 @@ void TestInterfaces::configureForTestWithURL(const WebURL& testURL, bool generat
         m_testRunner->showDevTools();
 }
 
+void TestInterfaces::windowOpened(WebTestProxyBase* proxy)
+{
+    m_windowList.push_back(proxy);
+}
+
+void TestInterfaces::windowClosed(WebTestProxyBase* proxy)
+{
+    vector<WebTestProxyBase*>::iterator pos = find(m_windowList.begin(), m_windowList.end(), proxy);
+    if (pos == m_windowList.end()) {
+        WEBKIT_ASSERT_NOT_REACHED();
+        return;
+    }
+    m_windowList.erase(pos);
+}
+
 AccessibilityController* TestInterfaces::accessibilityController()
 {
     return m_accessibilityController.get();
@@ -154,6 +202,16 @@ WebView* TestInterfaces::webView()
 WebTestDelegate* TestInterfaces::delegate()
 {
     return m_delegate;
+}
+
+WebTestProxyBase* TestInterfaces::proxy()
+{
+    return m_proxy;
+}
+
+const vector<WebTestProxyBase*>& TestInterfaces::windowList()
+{
+    return m_windowList;
 }
 
 }

@@ -29,6 +29,8 @@
  */
 
 #include "config.h"
+
+#if ENABLE_WEBRTC
 #include "WebUserMediaClientMock.h"
 
 #include "MockConstraints.h"
@@ -39,6 +41,7 @@
 #include <public/WebMediaConstraints.h>
 #include <public/WebMediaStream.h>
 #include <public/WebMediaStreamSource.h>
+#include <public/WebMediaStreamTrack.h>
 #include <public/WebVector.h>
 
 using namespace WebKit;
@@ -102,17 +105,23 @@ void WebUserMediaClientMock::requestUserMedia(const WebUserMediaRequest& streamR
 
     const size_t zero = 0;
     const size_t one = 1;
-    WebVector<WebMediaStreamSource> audioSources(request.audio() ? one : zero);
-    WebVector<WebMediaStreamSource> videoSources(request.video() ? one : zero);
+    WebVector<WebMediaStreamTrack> audioTracks(request.audio() ? one : zero);
+    WebVector<WebMediaStreamTrack> videoTracks(request.video() ? one : zero);
 
-    if (request.audio())
-        audioSources[0].initialize("MockAudioDevice#1", WebMediaStreamSource::TypeAudio, "Mock audio device");
+    if (request.audio()) {
+        WebMediaStreamSource source;
+        source.initialize("MockAudioDevice#1", WebMediaStreamSource::TypeAudio, "Mock audio device");
+        audioTracks[0].initialize(source);
+    }
 
-    if (request.video())
-        videoSources[0].initialize("MockVideoDevice#1", WebMediaStreamSource::TypeVideo, "Mock video device");
+    if (request.video()) {
+        WebMediaStreamSource source;
+        source.initialize("MockVideoDevice#1", WebMediaStreamSource::TypeVideo, "Mock video device");
+        videoTracks[0].initialize(source);
+    }
 
     WebMediaStream stream;
-    stream.initialize("foobar", audioSources, videoSources);
+    stream.initialize("foobar", audioTracks, videoTracks);
 
     stream.setExtraData(new MockExtraData());
 
@@ -124,3 +133,5 @@ void WebUserMediaClientMock::cancelUserMediaRequest(const WebUserMediaRequest&)
 }
 
 }
+
+#endif // ENABLE_WEBRTC

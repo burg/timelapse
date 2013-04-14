@@ -1,3 +1,102 @@
+2013-02-23  Jason Anderssen  <janderssen@gmail.com>
+
+        Move setAutofilled from TestRunner to WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=110521
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-02-22  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [EFL] Use EINA_LOG instead of fprintf 
+        https://bugs.webkit.org/show_bug.cgi?id=110313
+
+        Reviewed by Laszlo Gombos.
+
+        Replace fprintf with EINA_LOG.
+
+        * ewk/ewk_frame.cpp:
+        (_ewk_frame_debug):
+
+2013-02-19  Tony Chang  <tony@chromium.org>
+
+        Convert 3 settings to use Settings.in
+        https://bugs.webkit.org/show_bug.cgi?id=109875
+
+        Reviewed by Ryosuke Niwa.
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new): Rename isDOMPasteAllowed to DOMPasteAllowed.
+
+2013-02-18  Simon Fraser  <simon.fraser@apple.com>
+
+        Clean up the boolean argument to visibleContentRect
+        https://bugs.webkit.org/show_bug.cgi?id=110167
+
+        Reviewed by Simon Fraser.
+
+        Replace the boolean argument to visibleContentRect() with
+        an enum.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_visible_content_geometry_get):
+
+2013-02-18  Michał Pakuła vel Rutka  <m.pakula@samsung.com>
+
+        [EFL] Fix build when CONTEXT_MENUS flag is turned off
+        https://bugs.webkit.org/show_bug.cgi?id=109924
+
+        Reviewed by Gyuyoung Kim.
+
+        * WebCoreSupport/ContextMenuClientEfl.cpp:
+        * WebCoreSupport/ContextMenuClientEfl.h:
+        * ewk/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_ewk_view_priv_new):
+        (_ewk_view_priv_del):
+        (ewk_view_context_menu_get):
+
+2013-02-18  Grzegorz Czajkowski  <g.czajkowski@samsung.com>
+
+        [WK2][EFL] Unified text checker implementation
+        https://bugs.webkit.org/show_bug.cgi?id=107682
+
+        Reviewed by Anders Carlsson.
+
+        Add an empty checkTextOfParagraph implementation for WK1-EFL
+        to do not break build when WTF_USE_UNIFIED_TEXT_CHECKING
+        is enabled.
+
+        * WebCoreSupport/EditorClientEfl.h:
+        (EditorClientEfl):
+        (WebCore::EditorClientEfl::checkTextOfParagraph):
+
+2013-02-15  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Simplify hitTestResultAtPoint and nodesFromRect APIs
+        https://bugs.webkit.org/show_bug.cgi?id=95720
+
+        Reviewed by Julien Chaffraix.
+
+        Update calls to new API.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_hit_test_new):
+
+2013-02-13  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] window.open passes height and width parameters even if not defined in a page
+        https://bugs.webkit.org/show_bug.cgi?id=107705
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Do not resize window when default size is requested.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::setWindowRect):
+
 2013-02-12  Huang Dongsung  <luxtella@company100.net>
 
         [TexMap] Apply frames-per-second debug counter to WK1.

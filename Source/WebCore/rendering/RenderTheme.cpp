@@ -491,7 +491,7 @@ bool RenderTheme::paintDecorations(RenderObject* o, const PaintInfo& paintInfo, 
 
 String RenderTheme::formatMediaControlsTime(float time) const
 {
-    if (!isfinite(time))
+    if (!std::isfinite(time))
         time = 0;
     int seconds = (int)fabsf(time);
     int hours = seconds / (60 * 60);
@@ -854,7 +854,7 @@ bool RenderTheme::isDefault(const RenderObject* o) const
         return false;
 
     Settings* settings = o->document()->settings();
-    if (!settings || !settings->inApplicationChromeMode())
+    if (!settings || !settings->applicationChromeMode())
         return false;
     
     return o->style()->appearance() == DefaultButtonPart;

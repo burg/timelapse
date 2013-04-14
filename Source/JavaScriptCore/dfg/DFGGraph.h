@@ -60,24 +60,24 @@ struct StorageAccessData {
 
 struct ResolveGlobalData {
     unsigned identifierNumber;
-    unsigned resolveOperationsIndex;
-    unsigned putToBaseOperationIndex;
+    ResolveOperations* resolveOperations;
+    PutToBaseOperation* putToBaseOperation;
     unsigned resolvePropertyIndex;
 };
 
 struct ResolveOperationData {
     unsigned identifierNumber;
-    unsigned resolveOperationsIndex;
-    unsigned putToBaseOperationIndex;
+    ResolveOperations* resolveOperations;
+    PutToBaseOperation* putToBaseOperation;
 };
 
 struct PutToBaseOperationData {
-    unsigned putToBaseOperationIndex;
+    PutToBaseOperation* putToBaseOperation;
 };
 
 enum AddSpeculationMode {
     DontSpeculateInteger,
-    SpeculateIntegerButAlwaysWatchOverflow,
+    SpeculateIntegerAndTruncateConstants,
     SpeculateInteger
 };
 
@@ -100,10 +100,14 @@ public:
             refChildren(node);
         return node;
     }
-    Edge ref(Edge nodeUse)
+    Edge ref(Edge edge)
     {
-        ref(nodeUse.node());
-        return nodeUse;
+        ref(edge.node());
+        return edge;
+    }
+    Edge ref(Node*, Edge edge)
+    {
+        return ref(edge);
     }
     
     void deref(Node* node)
@@ -115,9 +119,13 @@ public:
         if (node->postfixDeref() == 1)
             derefChildren(node);
     }
-    void deref(Edge nodeUse)
+    void deref(Edge edge)
     {
-        deref(nodeUse.node());
+        deref(edge.node());
+    }
+    void deref(Node*, Edge edge)
+    {
+        deref(edge);
     }
     
     // When a node's refCount goes from 0 to 1, it must (logically) recursively ref all of its children, and vice versa.
@@ -174,9 +182,9 @@ public:
             for (unsigned childIdx = node->firstChild(); childIdx < node->firstChild() + node->numChildren(); childIdx++)
                 performSubstitutionForEdge(m_varArgChildren[childIdx], shouldGenerate);
         } else {
-            performSubstitutionForEdge(node->children.child1(), shouldGenerate);
-            performSubstitutionForEdge(node->children.child2(), shouldGenerate);
-            performSubstitutionForEdge(node->children.child3(), shouldGenerate);
+            performSubstitutionForEdge(node->child1(), shouldGenerate);
+            performSubstitutionForEdge(node->child2(), shouldGenerate);
+            performSubstitutionForEdge(node->child3(), shouldGenerate);
         }
     }
     
@@ -506,15 +514,6 @@ public:
         return m_codeBlock->usesArguments();
     }
     
-    bool isCreatedThisArgument(int operand)
-    {
-        if (!operandIsArgument(operand))
-            return false;
-        if (operandToArgument(operand))
-            return false;
-        return m_codeBlock->specializationKind() == CodeForConstruct;
-    }
-    
     unsigned numSuccessors(BasicBlock* block)
     {
         return block->last()->numSuccessors();
@@ -530,9 +529,7 @@ public:
     
     bool isPredictedNumerical(Node* node)
     {
-        SpeculatedType left = node->child1()->prediction();
-        SpeculatedType right = node->child2()->prediction();
-        return isNumberSpeculation(left) && isNumberSpeculation(right);
+        return isNumerical(node->child1().useKind()) && isNumerical(node->child2().useKind());
     }
     
     // Note that a 'true' return does not actually mean that the ByVal access clobbers nothing.
@@ -781,7 +778,7 @@ private:
         if (doubleImmediate < -twoToThe48 || doubleImmediate > twoToThe48)
             return DontSpeculateInteger;
         
-        return nodeCanTruncateInteger(add->arithNodeFlags()) ? SpeculateIntegerButAlwaysWatchOverflow : DontSpeculateInteger;
+        return nodeCanTruncateInteger(add->arithNodeFlags()) ? SpeculateIntegerAndTruncateConstants : DontSpeculateInteger;
     }
     
     bool mulImmediateShouldSpeculateInteger(Node* mul, Node* variable, Node* immediate)
@@ -829,6 +826,36 @@ inline BlockIndex Graph::blockIndexForBytecodeOffset(Vector<BlockIndex>& linking
 {
     return *binarySearch<BlockIndex, unsigned>(linkingTargets, linkingTargets.size(), bytecodeBegin, GetBytecodeBeginForBlock(*this));
 }
+
+#define DFG_NODE_DO_TO_CHILDREN(graph, node, thingToDo) do {            \
+        Node* _node = (node);                                           \
+        if (_node->flags() & NodeHasVarArgs) {                          \
+            for (unsigned _childIdx = _node->firstChild();              \
+                _childIdx < _node->firstChild() + _node->numChildren(); \
+                _childIdx++) {                                          \
+                if (!!(graph).m_varArgChildren[_childIdx])              \
+                    thingToDo(_node, (graph).m_varArgChildren[_childIdx]); \
+            }                                                           \
+        } else {                                                        \
+            if (!_node->child1()) {                                     \
+                ASSERT(                                                 \
+                    !_node->child2()                                    \
+                    && !_node->child3());                               \
+                break;                                                  \
+            }                                                           \
+            thingToDo(_node, _node->child1());                          \
+                                                                        \
+            if (!_node->child2()) {                                     \
+                ASSERT(!_node->child3());                               \
+                break;                                                  \
+            }                                                           \
+            thingToDo(_node, _node->child2());                          \
+                                                                        \
+            if (!_node->child3())                                       \
+                break;                                                  \
+            thingToDo(_node, _node->child3());                          \
+        }                                                               \
+    } while (false)
 
 } } // namespace JSC::DFG
 

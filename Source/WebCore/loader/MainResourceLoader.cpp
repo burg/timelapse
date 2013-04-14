@@ -39,6 +39,7 @@
 #include "Document.h"
 #include "DocumentLoadTiming.h"
 #include "DocumentLoader.h"
+#include "FeatureObserver.h"
 #include "FormState.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -372,7 +373,7 @@ void MainResourceLoader::continueAfterContentPolicy(PolicyAction contentPolicy, 
     if (!m_documentLoader->isStopping() && m_substituteData.isValid()) {
         if (m_substituteData.content()->size())
             dataReceived(0, m_substituteData.content()->data(), m_substituteData.content()->size());
-        if (!m_documentLoader->isStopping())
+        if (m_documentLoader->isLoadingMainResource())
             didFinishLoading(0);
     }
 }
@@ -436,8 +437,10 @@ void MainResourceLoader::responseReceived(CachedResource* resource, const Resour
         m_resource->clear();
     }
     
-    if (r.isMultipart())
+    if (r.isMultipart()) {
+        FeatureObserver::observe(m_documentLoader->frame()->document(), FeatureObserver::MultipartMainResource);
         m_loadingMultipartContent = true;
+    }
         
     // The additional processing can do anything including possibly removing the last
     // reference to this object; one example of this is 3266216.
@@ -741,8 +744,8 @@ bool MainResourceLoader::defersLoading() const
 
 void MainResourceLoader::setDataBufferingPolicy(DataBufferingPolicy dataBufferingPolicy)
 {
-    ASSERT(m_resource);
-    m_resource->setDataBufferingPolicy(dataBufferingPolicy);
+    if (m_resource)
+        m_resource->setDataBufferingPolicy(dataBufferingPolicy);
 }
 
 ResourceLoader* MainResourceLoader::loader() const

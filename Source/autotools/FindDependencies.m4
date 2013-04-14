@@ -106,34 +106,28 @@ GLIB_COMPILE_RESOURCES=`$PKG_CONFIG --variable glib_compile_resources gio-2.0`
 AC_SUBST(GLIB_COMPILE_RESOURCES)
 GLIB_GSETTINGS
 
-if test "$with_unicode_backend" = "icu"; then
-    # TODO: use pkg-config (after CFLAGS in their .pc files are cleaned up).
-    case "$host" in
-        *-*-darwin*)
-            UNICODE_CFLAGS="-I$srcdir/Source/JavaScriptCore/icu -I$srcdir/Source/WebCore/icu"
-            UNICODE_LIBS="-licucore"
-            ;;
-        *-*-mingw*)
-            UNICODE_CFLAGS=""
-            UNICODE_LIBS="-licui18n -licuuc"
-            ;;
-        *)
-            AC_PATH_PROG(icu_config, icu-config, no)
-            if test "$icu_config" = "no"; then
-                AC_MSG_ERROR([Cannot find icu-config. The ICU library is needed.])
-            fi
+# TODO: use pkg-config (after CFLAGS in their .pc files are cleaned up).
+case "$host" in
+    *-*-darwin*)
+        UNICODE_CFLAGS="-I$srcdir/Source/JavaScriptCore/icu -I$srcdir/Source/WebCore/icu"
+        UNICODE_LIBS="-licucore"
+        ;;
+    *-*-mingw*)
+        UNICODE_CFLAGS=""
+        UNICODE_LIBS="-licui18n -licuuc"
+        ;;
+    *)
+        AC_PATH_PROG(icu_config, icu-config, no)
+        if test "$icu_config" = "no"; then
+            AC_MSG_ERROR([Cannot find icu-config. The ICU library is needed.])
+        fi
 
-            # We don't use --cflags as this gives us a lot of things that we don't necessarily want,
-            # like debugging and optimization flags. See man (1) icu-config for more info.
-            UNICODE_CFLAGS=`$icu_config --cppflags`
-            UNICODE_LIBS=`$icu_config --ldflags-libsonly`
-            ;;
-    esac
-fi
-
-if test "$with_unicode_backend" = "glib"; then
-    PKG_CHECK_MODULES([UNICODE], [glib-2.0 pango >= pango_required_version])
-fi
+        # We don't use --cflags as this gives us a lot of things that we don't necessarily want,
+        # like debugging and optimization flags. See man (1) icu-config for more info.
+        UNICODE_CFLAGS=`$icu_config --cppflags`
+        UNICODE_LIBS=`$icu_config --ldflags-libsonly`
+        ;;
+esac
 
 AC_SUBST([UNICODE_CFLAGS])
 AC_SUBST([UNICODE_LIBS])
@@ -319,34 +313,6 @@ if test "$enable_svg_fonts" = "yes" && test "$enable_svg" = "no"; then
     enable_svg=yes
 fi
 
-if test "$enable_video" = "yes" || test "$enable_web_audio" = "yes"; then
-    if test "$with_gstreamer" = "auto"; then
-        gstreamer_modules="gstreamer-1.0 >= gstreamer_1_0_required_version gstreamer-app-1.0 gstreamer-audio-1.0
-            gstreamer-fft-1.0 gstreamer-base-1.0 gstreamer-pbutils-1.0
-            gstreamer-plugins-base-1.0 >= gstreamer_1_0_plugins_base_required_version gstreamer-video-1.0";
-        PKG_CHECK_MODULES([GSTREAMER_1_0], [$gstreamer_modules], [with_gstreamer=1.0], [with_gstreamer=0.10])
-        AC_MSG_NOTICE([Selected GStreamer $with_gstreamer])
-    fi
-else
-    if test "$with_gstreamer" != "auto"; then
-        AC_MSG_WARN([You have specified GStreamer $with_gstreamer version but it will not be used
-            because neither HTML5 Video nor Web Audio are enabled])
-    fi
-fi
-
-case "$with_gstreamer" in
-    0.10) GSTREAMER_REQUIRED_VERSION=gstreamer_0_10_required_version
-        GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION=gstreamer_0_10_plugins_base_required_version
-        GST_API_VERSION=0.10
-        ;;
-    1.0) GSTREAMER_REQUIRED_VERSION=gstreamer_1_0_required_version
-        GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION=gstreamer_1_0_plugins_base_required_version
-        GST_API_VERSION=1.0
-        ;;
-esac
-
-AC_SUBST([GST_API_VERSION])
-
 if test "$enable_opcode_stats" = "yes"; then
     if test "$enable_jit" = "yes"; then
         AC_MSG_ERROR([JIT must be disabled for Opcode stats to work.])
@@ -400,10 +366,10 @@ AC_SUBST([LIBSECRET_LIBS])
 # Check if FreeType/FontConfig are available.
 if test "$with_target" = "directfb"; then
     PKG_CHECK_MODULES([FREETYPE],
-        [fontconfig >= fontconfig_required_version freetype2 >= freetype2_required_version harfbuzz])
+        [fontconfig >= fontconfig_required_version freetype2 >= freetype2_required_version harfbuzz >= harfbuzz_required_version])
 else
     PKG_CHECK_MODULES([FREETYPE],
-        [cairo-ft fontconfig >= fontconfig_required_version freetype2 >= freetype2_required_version harfbuzz])
+        [cairo-ft fontconfig >= fontconfig_required_version freetype2 >= freetype2_required_version harfbuzz >= harfbuzz_required_version])
 fi
 AC_SUBST([FREETYPE_CFLAGS])
 AC_SUBST([FREETYPE_LIBS])
@@ -438,22 +404,22 @@ fi
 
 # Check for XRender under Linux/Unix. Some linkers require explicit linkage (like GNU Gold),
 # so we cannot rely on GTK+ pulling XRender.
-if test "$os_win32" = "no"; then
+if test "$with_target" = "x11"; then
     PKG_CHECK_MODULES([XRENDER], [xrender])
     AC_SUBST([XRENDER_CFLAGS])
     AC_SUBST([XRENDER_LIBS])
 fi
 
-# Check if Gstreamer is available.
 if test "$enable_video" = "yes" || test "$enable_web_audio" = "yes"; then
-    gstreamer_modules="gstreamer-$GST_API_VERSION >= $GSTREAMER_REQUIRED_VERSION gstreamer-app-$GST_API_VERSION
-        gstreamer-audio-$GST_API_VERSION gstreamer-fft-$GST_API_VERSION gstreamer-base-$GST_API_VERSION
-        gstreamer-pbutils-$GST_API_VERSION gstreamer-plugins-base-$GST_API_VERSION >= $GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION
-        gstreamer-video-$GST_API_VERSION";
-    if test "$GST_API_VERSION" != "1.0"; then
-        gstreamer_modules="$gstreamer_modules gstreamer-interfaces-$GST_API_VERSION";
-    fi
-    PKG_CHECK_MODULES([GSTREAMER], [$gstreamer_modules], [have_gstreamer=yes])
+    PKG_CHECK_MODULES([GSTREAMER], [
+        gstreamer-1.0 >= gstreamer_required_version
+        gstreamer-plugins-base-1.0 >= gstreamer_plugins_base_required_version
+        gstreamer-app-1.0
+        gstreamer-audio-1.0,
+        gstreamer-fft-1.0,
+        gstreamer-base-1.0,
+        gstreamer-pbutils-1.0,
+        gstreamer-video-1.0])
     AC_SUBST([GSTREAMER_CFLAGS])
     AC_SUBST([GSTREAMER_LIBS])
 fi

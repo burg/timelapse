@@ -43,24 +43,28 @@
 
 namespace WebCore {
 
-HeapGraphSerializer::HeapGraphSerializer(InspectorFrontend::Memory* frontend)
-    : m_frontend(frontend)
+HeapGraphSerializer::HeapGraphSerializer(Client* client)
+    : m_client(client)
     , m_strings(Strings::create())
     , m_edges(Edges::create())
     , m_nodeEdgesCount(0)
     , m_nodes(Nodes::create())
     , m_baseToRealNodeIdMap(BaseToRealNodeIdMap::create())
+    , m_typeStrings(InspectorObject::create())
+    , m_leafCount(0)
 {
-    ASSERT(m_frontend);
+    ASSERT(m_client);
     m_strings->addItem(String()); // An empty string with 0 index.
 
     memset(m_edgeTypes, 0, sizeof(m_edgeTypes));
 
-    m_edgeTypes[WTF::PointerMember] = addString("weak");
-    m_edgeTypes[WTF::OwnPtrMember] = addString("ownRef");
-    m_edgeTypes[WTF::RefPtrMember] = addString("countRef");
+    m_edgeTypes[WTF::PointerMember] = registerTypeString("weak");
+    m_edgeTypes[WTF::OwnPtrMember] = m_edgeTypes[WTF::RefPtrMember] = registerTypeString("property");
 
-    m_unknownClassNameId = addString("unknown");
+    // FIXME: It is used as a magic constant for 'object' node type.
+    registerTypeString("object");
+
+    m_unknownClassNameId = registerString("unknown");
 }
 
 HeapGraphSerializer::~HeapGraphSerializer()
@@ -91,7 +95,7 @@ void HeapGraphSerializer::pushUpdate()
         .setEdges(m_edges.release())
         .setBaseToRealNodeId(m_baseToRealNodeIdMap.release());
 
-    m_frontend->addNativeSnapshotChunk(chunk);
+    m_client->addNativeSnapshotChunk(chunk.release());
 
     m_strings = Strings::create();
     m_edges = Edges::create();
@@ -101,6 +105,7 @@ void HeapGraphSerializer::pushUpdate()
 
 void HeapGraphSerializer::reportNode(const WTF::MemoryObjectInfo& info)
 {
+    ASSERT(info.reportedPointer());
     reportNodeImpl(info, m_nodeEdgesCount);
     m_nodeEdgesCount = 0;
     if (info.isRoot())
@@ -111,9 +116,9 @@ void HeapGraphSerializer::reportNode(const WTF::MemoryObjectInfo& info)
 int HeapGraphSerializer::reportNodeImpl(const WTF::MemoryObjectInfo& info, int edgesCount)
 {
     int nodeId = toNodeId(info.reportedPointer());
-
-    m_nodes->addItem(info.className().isEmpty() ? m_unknownClassNameId : addString(info.className()));
-    m_nodes->addItem(addString(info.name()));
+    int classNameId = info.classNameId();
+    m_nodes->addItem(classNameId ? classNameId : m_unknownClassNameId);
+    m_nodes->addItem(info.nameId());
     m_nodes->addItem(nodeId);
     m_nodes->addItem(info.objectSize());
     m_nodes->addItem(edgesCount);
@@ -134,7 +139,7 @@ void HeapGraphSerializer::reportEdgeImpl(const int toNodeId, const char* name, i
     ASSERT(memberType < WTF::LastMemberTypeEntry);
 
     m_edges->addItem(memberType);
-    m_edges->addItem(addString(name));
+    m_edges->addItem(registerString(name));
     m_edges->addItem(toNodeId);
 
     ++m_nodeEdgesCount;
@@ -153,37 +158,83 @@ void HeapGraphSerializer::reportBaseAddress(const void* base, const void* real)
     m_baseToRealNodeIdMap->addItem(toNodeId(real));
 }
 
-void HeapGraphSerializer::finish()
+PassRefPtr<InspectorObject> HeapGraphSerializer::finish()
 {
     addRootNode();
     pushUpdate();
+    String metaString =
+        "{"
+            "\"node_fields\":["
+                "\"type\","
+                "\"name\","
+                "\"id\","
+                "\"self_size\","
+                "\"edge_count\""
+            "],"
+            "\"node_types\":["
+                "[]," // FIXME: It is a fallback for Heap Snapshot parser. In case of Native Heap Snapshot it is a plain string id.
+                "\"string\","
+                "\"number\","
+                "\"number\","
+                "\"number\""
+            "],"
+            "\"edge_fields\":["
+                "\"type\","
+                "\"name_or_index\","
+                "\"to_node\""
+            "],"
+            "\"edge_types\":["
+                "[],"
+                "\"string_or_number\","
+                "\"node\""
+            "]"
+        "}";
+
+    RefPtr<InspectorValue> metaValue = InspectorValue::parseJSON(metaString);
+    RefPtr<InspectorObject> meta;
+    metaValue->asObject(&meta);
+    ASSERT(meta);
+    meta->setObject("type_strings", m_typeStrings);
+    return meta.release();
 }
 
 void HeapGraphSerializer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Inspector);
-    info.addMember(m_stringToIndex, "stringToIndex");
-    info.addMember(m_strings, "strings");
-    info.addMember(m_edges, "edges");
-    info.addMember(m_nodes, "nodes");
-    info.addMember(m_baseToRealNodeIdMap, "baseToRealNodeIdMap");
-    info.addMember(m_roots, "roots");
+    info.ignoreMember(m_stringToIndex);
+    info.ignoreMember(m_strings);
+    info.ignoreMember(m_edges);
+    info.ignoreMember(m_nodes);
+    info.ignoreMember(m_baseToRealNodeIdMap);
+    info.ignoreMember(m_roots);
 }
 
-int HeapGraphSerializer::addString(const String& string)
+int HeapGraphSerializer::registerString(const char* string)
 {
-    if (string.isEmpty())
+    if (!string)
         return 0;
-    StringMap::AddResult result = m_stringToIndex.add(string.left(256), m_stringToIndex.size() + 1);
+    int length = strlen(string);
+    if (length > 256)
+        length = 256;
+    StringMap::AddResult result = m_stringToIndex.add(String(string, length), m_stringToIndex.size() + 1);
     if (result.isNewEntry)
         m_strings->addItem(string);
     return result.iterator->value;
 }
 
+int HeapGraphSerializer::registerTypeString(const char* string)
+{
+    int stringId = registerString(string);
+    m_typeStrings->setNumber(string, stringId);
+    return stringId;
+}
+
 int HeapGraphSerializer::toNodeId(const void* to)
 {
-    ASSERT(to);
-    Address2NodeId::AddResult result = m_address2NodeIdMap.add(to, m_address2NodeIdMap.size());
+    if (!to)
+        return s_firstNodeId + m_address2NodeIdMap.size() + m_leafCount++;
+
+    Address2NodeId::AddResult result = m_address2NodeIdMap.add(to, s_firstNodeId + m_leafCount + m_address2NodeIdMap.size());
     return result.iterator->value;
 }
 
@@ -192,9 +243,9 @@ void HeapGraphSerializer::addRootNode()
     for (size_t i = 0; i < m_roots.size(); i++)
         reportEdgeImpl(toNodeId(m_roots[i]), 0, m_edgeTypes[WTF::PointerMember]);
 
-    m_nodes->addItem(addString("Root"));
+    m_nodes->addItem(registerString("Root"));
     m_nodes->addItem(0);
-    m_nodes->addItem(m_address2NodeIdMap.size());
+    m_nodes->addItem(s_firstNodeId + m_address2NodeIdMap.size() + m_leafCount);
     m_nodes->addItem(0);
     m_nodes->addItem(m_roots.size());
 }

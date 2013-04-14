@@ -28,7 +28,6 @@
 
 #if ENABLE(VIDEO) && USE(AVFOUNDATION)
 
-#include "CachedResourceClient.h"
 #include "MediaPlayerPrivateAVFoundation.h"
 #include <wtf/HashMap.h>
 
@@ -72,6 +71,14 @@ public:
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     bool shouldWaitForLoadingOfResource(AVAssetResourceLoadingRequest*);
     void didCancelLoadingRequest(AVAssetResourceLoadingRequest*);
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA_V2)
+    static bool extractKeyURIKeyIDAndCertificateFromInitData(Uint8Array* initData, String& keyURI, String& keyID, RefPtr<Uint8Array>& certificate);
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    static RetainPtr<AVAssetResourceLoadingRequest> takeRequestForPlayerAndKeyURI(MediaPlayer*, const String&);
 #endif
 
 private:

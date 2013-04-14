@@ -29,6 +29,7 @@
 #include "Connection.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/text/StringHash.h>
 
 class WorkQueue;
 
@@ -37,10 +38,14 @@ namespace WebKit {
 struct SecurityOriginData;
 class WebProcessProxy;
 
-class StorageManager : public ThreadSafeRefCounted<StorageManager>, private CoreIPC::Connection::QueueClient {
+class StorageManager : public CoreIPC::Connection::WorkQueueMessageReceiver {
 public:
     static PassRefPtr<StorageManager> create();
     ~StorageManager();
+
+    void createSessionStorageNamespace(uint64_t storageNamespaceID);
+    void destroySessionStorageNamespace(uint64_t storageNamespaceID);
+    void cloneSessionStorageNamespace(uint64_t storageNamespaceID, uint64_t newStorageNamespaceID);
 
     void processWillOpenConnection(WebProcessProxy*);
     void processWillCloseConnection(WebProcessProxy*);
@@ -48,19 +53,26 @@ public:
 private:
     StorageManager();
 
-    // CoreIPC::Connection::QueueClient
-    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, OwnPtr<CoreIPC::MessageDecoder>&) OVERRIDE;
-    virtual void didCloseOnConnectionWorkQueue(CoreIPC::Connection*) OVERRIDE;
-
-    void didReceiveStorageManagerMessageOnConnectionWorkQueue(CoreIPC::Connection*, OwnPtr<CoreIPC::MessageDecoder>&);
+    // CoreIPC::Connection::WorkQueueMessageReceiver.
+    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder) OVERRIDE;
 
     // Message handlers.
     void createStorageArea(CoreIPC::Connection*, uint64_t storageAreaID, uint64_t storageNamespaceID, const SecurityOriginData&);
     void destroyStorageArea(CoreIPC::Connection*, uint64_t storageAreaID);
+    void getValues(CoreIPC::Connection*, uint64_t storageAreaID, HashMap<String, String>& values);
+    void setItem(CoreIPC::Connection*, uint64_t storageAreaID, const String& key, const String& value);
 
-    void dispatchMessageOnStorageManagerQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder*);
+    void createSessionStorageNamespaceInternal(uint64_t storageNamespaceID);
+    void destroySessionStorageNamespaceInternal(uint64_t storageNamespaceID);
+    void cloneSessionStorageNamespaceInternal(uint64_t storageNamespaceID, uint64_t newStorageNamespaceID);
 
     RefPtr<WorkQueue> m_queue;
+
+    class SessionStorageNamespace;
+    HashMap<uint64_t, RefPtr<SessionStorageNamespace> > m_sessionStorageNamespaces;
+
+    class StorageArea;
 };
 
 } // namespace WebKit

@@ -88,6 +88,8 @@ public:
 
     virtual bool requiresLayer() const OVERRIDE { return isRoot() || isPositioned() || createsGroup() || hasClipPath() || hasTransform() || hasHiddenBackface() || hasReflection() || style()->specifiesColumns(); }
 
+    virtual bool isOpaqueInRect(const LayoutRect& localRect) const OVERRIDE { return foregroundIsOpaqueInRect(localRect) || backgroundIsOpaqueInRect(localRect); }
+
     // This will work on inlines to return the bounding box of all of the lines' border boxes.
     virtual IntRect borderBoundingBox() const = 0;
 
@@ -164,6 +166,8 @@ public:
 
     virtual void setSelectionState(SelectionState s);
 
+    bool canHaveBoxInfoInRegion() const { return !isFloating() && !isReplaced() && !isInline() && !hasColumns() && !isTableCell() && isBlockFlow(); }
+
 #if USE(ACCELERATED_COMPOSITING)
     void contentChanged(ContentChangeType);
     bool hasAcceleratedCompositing() const;
@@ -181,6 +185,9 @@ public:
 
 protected:
     virtual void willBeDestroyed();
+
+    virtual bool backgroundIsOpaqueInRect(const LayoutRect&) const { return false; }
+    virtual bool foregroundIsOpaqueInRect(const LayoutRect&) const { return false; }
 
     class BackgroundImageGeometry {
     public:
@@ -246,6 +253,8 @@ protected:
     static bool shouldAntialiasLines(GraphicsContext*);
 
     static void clipRoundedInnerRect(GraphicsContext*, const LayoutRect&, const RoundedRect& clipRect);
+
+    bool hasAutoHeightOrContainingBlockWithAutoHeight() const;
 
 public:
     // For RenderBlocks and RenderInlines with m_style->styleType() == FIRST_LETTER, this tracks their remaining text fragments

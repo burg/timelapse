@@ -33,6 +33,7 @@
 
 #include "Platform/chromium/public/WebRect.h"
 #include "Platform/chromium/public/WebURLError.h"
+#include "Platform/chromium/public/WebURLRequest.h"
 #include "WebKit/chromium/public/WebAccessibilityNotification.h"
 #include "WebKit/chromium/public/WebDOMMessageEvent.h"
 #include "WebKit/chromium/public/WebDragOperation.h"
@@ -51,17 +52,24 @@ namespace WebKit {
 class WebAccessibilityObject;
 class WebCachedURLRequest;
 class WebDataSource;
+class WebDeviceOrientationClient;
+class WebDeviceOrientationClientMock;
 class WebDragData;
 class WebFrame;
+class WebGeolocationClient;
+class WebGeolocationClientMock;
 class WebImage;
 class WebNode;
+class WebNotificationPresenter;
 class WebPlugin;
 class WebRange;
 class WebSerializedScriptValue;
+class WebSpeechInputController;
+class WebSpeechInputListener;
+class WebSpeechRecognizer;
 class WebSpellCheckClient;
 class WebString;
 class WebURL;
-class WebURLRequest;
 class WebURLResponse;
 class WebUserMediaClient;
 class WebView;
@@ -73,8 +81,12 @@ struct WebSize;
 struct WebWindowFeatures;
 }
 
+class SkCanvas;
+
 namespace WebTestRunner {
 
+class MockWebSpeechInputController;
+class MockWebSpeechRecognizer;
 class SpellCheckClient;
 class TestInterfaces;
 class WebTestDelegate;
@@ -91,12 +103,21 @@ public:
 
     WebKit::WebSpellCheckClient *spellCheckClient() const;
 
-    void setPaintRect(const WebKit::WebRect&);
-    WebKit::WebRect paintRect() const;
-
     std::string captureTree(bool debugRenderTree);
+    SkCanvas* capturePixels();
 
     void setLogConsoleOutput(bool enabled);
+
+#if WEBTESTRUNNER_IMPLEMENTATION
+    void display();
+    void displayInvalidatedRegion();
+    void discardBackingStore();
+
+    WebKit::WebDeviceOrientationClientMock* deviceOrientationClientMock();
+    WebKit::WebGeolocationClientMock* geolocationClientMock();
+    MockWebSpeechInputController* speechInputControllerMock();
+    MockWebSpeechRecognizer* speechRecognizerMock();
+#endif
 
 protected:
     WebTestProxyBase();
@@ -131,6 +152,14 @@ protected:
     void showContextMenu(WebKit::WebFrame*, const WebKit::WebContextMenuData&);
     WebKit::WebUserMediaClient* userMediaClient();
     void printPage(WebKit::WebFrame*);
+    WebKit::WebNotificationPresenter* notificationPresenter();
+    WebKit::WebGeolocationClient* geolocationClient();
+    WebKit::WebSpeechInputController* speechInputController(WebKit::WebSpeechInputListener*);
+    WebKit::WebSpeechRecognizer* speechRecognizer();
+    WebKit::WebDeviceOrientationClient* deviceOrientationClient();
+    bool requestPointerLock();
+    void requestPointerUnlock();
+    bool isPointerLocked();
 
     void willPerformClientRedirect(WebKit::WebFrame*, const WebKit::WebURL& from, const WebKit::WebURL& to, double interval, double fire_time);
     void didCancelClientRedirect(WebKit::WebFrame*);
@@ -154,6 +183,7 @@ protected:
     void didCreateDataSource(WebKit::WebFrame*, WebKit::WebDataSource*);
     void willSendRequest(WebKit::WebFrame*, unsigned identifier, WebKit::WebURLRequest&, const WebKit::WebURLResponse& redirectResponse);
     void didReceiveResponse(WebKit::WebFrame*, unsigned identifier, const WebKit::WebURLResponse&);
+    void didChangeResourcePriority(WebKit::WebFrame*, unsigned identifier, const WebKit::WebURLRequest::Priority&);
     void didFinishResourceLoad(WebKit::WebFrame*, unsigned identifier);
     void didFailResourceLoad(WebKit::WebFrame*, unsigned identifier, const WebKit::WebURLError&);
     void unableToImplementPolicyWithError(WebKit::WebFrame*, const WebKit::WebURLError&);
@@ -167,6 +197,11 @@ protected:
 
 private:
     void locationChangeDone(WebKit::WebFrame*);
+    void paintRect(const WebKit::WebRect&);
+    void paintInvalidatedRegion();
+    void paintPagesWithBoundaries();
+    SkCanvas* canvas();
+    void displayRepaintMask();
 
     TestInterfaces* m_testInterfaces;
     WebTestDelegate* m_delegate;
@@ -174,10 +209,23 @@ private:
     std::auto_ptr<SpellCheckClient> m_spellcheck;
     std::auto_ptr<WebUserMediaClientMock> m_userMediaClient;
 
+    // Painting.
+    std::auto_ptr<SkCanvas> m_canvas;
     WebKit::WebRect m_paintRect;
+    bool m_isPainting;
     std::map<unsigned, std::string> m_resourceIdentifierMap;
+    std::map<unsigned, WebKit::WebURLRequest> m_requestMap;
 
     bool m_logConsoleOutput;
+
+    std::auto_ptr<WebKit::WebGeolocationClientMock> m_geolocationClient;
+    std::auto_ptr<WebKit::WebDeviceOrientationClientMock> m_deviceOrientationClient;
+    std::auto_ptr<MockWebSpeechRecognizer> m_speechRecognizer;
+    std::auto_ptr<MockWebSpeechInputController> m_speechInputController;
+
+private:
+    WebTestProxyBase(WebTestProxyBase&);
+    WebTestProxyBase& operator=(const WebTestProxyBase&);
 };
 
 // Use this template to inject methods into your WebViewClient/WebFrameClient
@@ -337,6 +385,38 @@ public:
     {
         WebTestProxyBase::printPage(frame);
     }
+    virtual WebKit::WebNotificationPresenter* notificationPresenter()
+    {
+        return WebTestProxyBase::notificationPresenter();
+    }
+    virtual WebKit::WebGeolocationClient* geolocationClient()
+    {
+        return WebTestProxyBase::geolocationClient();
+    }
+    virtual WebKit::WebSpeechInputController* speechInputController(WebKit::WebSpeechInputListener* listener)
+    {
+        return WebTestProxyBase::speechInputController(listener);
+    }
+    virtual WebKit::WebSpeechRecognizer* speechRecognizer()
+    {
+        return WebTestProxyBase::speechRecognizer();
+    }
+    virtual WebKit::WebDeviceOrientationClient* deviceOrientationClient()
+    {
+        return WebTestProxyBase::deviceOrientationClient();
+    }
+    virtual bool requestPointerLock()
+    {
+        return WebTestProxyBase::requestPointerLock();
+    }
+    virtual void requestPointerUnlock()
+    {
+        WebTestProxyBase::requestPointerUnlock();
+    }
+    virtual bool isPointerLocked()
+    {
+        return WebTestProxyBase::isPointerLocked();
+    }
 
     // WebFrameClient implementation.
     virtual void willPerformClientRedirect(WebKit::WebFrame* frame, const WebKit::WebURL& from, const WebKit::WebURL& to, double interval, double fireTime)
@@ -448,6 +528,11 @@ public:
     {
         WebTestProxyBase::didReceiveResponse(frame, identifier, response);
         Base::didReceiveResponse(frame, identifier, response);
+    }
+    virtual void didChangeResourcePriority(WebKit::WebFrame* frame, unsigned identifier, const WebKit::WebURLRequest::Priority& priority)
+    {
+        WebTestProxyBase::didChangeResourcePriority(frame, identifier, priority);
+        Base::didChangeResourcePriority(frame, identifier, priority);
     }
     virtual void didFinishResourceLoad(WebKit::WebFrame* frame, unsigned identifier)
     {

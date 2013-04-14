@@ -302,6 +302,20 @@ void RenderLayerCompositor::setCompositingLayersNeedRebuild(bool needRebuild)
         m_compositingLayersNeedRebuild = needRebuild;
 }
 
+void RenderLayerCompositor::customPositionForVisibleRectComputation(const GraphicsLayer* graphicsLayer, FloatPoint& position) const
+{
+    if (graphicsLayer != m_scrollLayer.get())
+        return;
+
+    FrameView* frameView = m_renderView ? m_renderView->frameView() : 0;
+    if (!frameView)
+        return;
+
+    FloatPoint scrollPosition = -position;
+    scrollPosition = frameView->constrainScrollPositionForOverhang(roundedIntPoint(scrollPosition));
+    position = -scrollPosition;
+}
+
 void RenderLayerCompositor::scheduleLayerFlush()
 {
     if (Page* page = this->page())
@@ -564,7 +578,7 @@ void RenderLayerCompositor::logLayerInfo(const RenderLayer* layer, int depth)
 
     LOG(Compositing, "%*p %dx%d %.2fKB (%s) %s\n", 12 + depth * 2, layer, backing->compositedBounds().width(), backing->compositedBounds().height(),
         backing->backingStoreMemoryEstimate() / 1024,
-        reasonForCompositing(layer), layer->name().utf8().data());
+        logReasonsForCompositing(layer), layer->name().utf8().data());
 }
 #endif
 
@@ -1179,7 +1193,7 @@ void RenderLayerCompositor::frameViewDidChangeSize()
 {
     if (m_clipLayer) {
         FrameView* frameView = m_renderView->frameView();
-        m_clipLayer->setSize(frameView->unscaledVisibleContentSize(false /* exclude scrollbars */));
+        m_clipLayer->setSize(frameView->unscaledVisibleContentSize());
 
         frameViewDidScroll();
         updateOverflowControlsLayers();
@@ -1206,7 +1220,7 @@ void RenderLayerCompositor::frameViewDidScroll()
             return;
         if (Settings* settings = m_renderView->document()->settings())
             if (settings->compositedScrollingForFramesEnabled())
-                scrollingCoordinator->scrollableAreaScrollLayerDidChange(frameView, m_scrollLayer.get());
+                scrollingCoordinator->scrollableAreaScrollLayerDidChange(frameView);
     }
 
     m_scrollLayer->setPosition(FloatPoint(-scrollPosition.x(), -scrollPosition.y()));
@@ -1231,9 +1245,8 @@ void RenderLayerCompositor::rootFixedBackgroundsChanged()
 
 void RenderLayerCompositor::scrollingLayerDidChange(RenderLayer* layer)
 {
-    RenderLayerBacking* backing = layer->backing();
     if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-        scrollingCoordinator->scrollableAreaScrollLayerDidChange(layer, backing ? backing->scrollingContentsLayer() : 0);
+        scrollingCoordinator->scrollableAreaScrollLayerDidChange(layer);
 }
 
 void RenderLayerCompositor::fixedRootBackgroundLayerChanged()
@@ -1502,27 +1515,26 @@ TiledBacking* RenderLayerCompositor::pageTiledBacking() const
     return renderViewBacking ? renderViewBacking->tiledBacking() : 0;
 }
 
-void RenderLayerCompositor::didMoveOnscreen()
+void RenderLayerCompositor::setIsInWindow(bool isInWindow)
 {
     if (TiledBacking* tiledBacking = pageTiledBacking())
-        tiledBacking->setIsInWindow(true);
+        tiledBacking->setIsInWindow(isInWindow);
 
-    if (!inCompositingMode() || m_rootLayerAttachment != RootLayerUnattached)
+    if (!inCompositingMode())
         return;
 
-    RootLayerAttachment attachment = shouldPropagateCompositingToEnclosingFrame() ? RootLayerAttachedViaEnclosingFrame : RootLayerAttachedViaChromeClient;
-    attachRootLayer(attachment);
-}
+    if (isInWindow) {
+        if (m_rootLayerAttachment != RootLayerUnattached)
+            return;
 
-void RenderLayerCompositor::willMoveOffscreen()
-{
-    if (TiledBacking* tiledBacking = pageTiledBacking())
-        tiledBacking->setIsInWindow(false);
+        RootLayerAttachment attachment = shouldPropagateCompositingToEnclosingFrame() ? RootLayerAttachedViaEnclosingFrame : RootLayerAttachedViaChromeClient;
+        attachRootLayer(attachment);
+    } else {
+        if (m_rootLayerAttachment == RootLayerUnattached)
+            return;
 
-    if (!inCompositingMode() || m_rootLayerAttachment == RootLayerUnattached)
-        return;
-
-    detachRootLayer();
+        detachRootLayer();
+    }
 }
 
 void RenderLayerCompositor::clearBackingForLayerIncludingDescendants(RenderLayer* layer)
@@ -1553,7 +1565,7 @@ void RenderLayerCompositor::updateRootLayerPosition()
     }
     if (m_clipLayer) {
         FrameView* frameView = m_renderView->frameView();
-        m_clipLayer->setSize(frameView->unscaledVisibleContentSize(false /* exclude scrollbars */));
+        m_clipLayer->setSize(frameView->unscaledVisibleContentSize());
     }
 
 #if ENABLE(RUBBER_BANDING)
@@ -1700,9 +1712,13 @@ bool RenderLayerCompositor::requiresOwnBackingStore(const RenderLayer* layer, co
     return false;
 }
 
-#if !LOG_DISABLED
-const char* RenderLayerCompositor::reasonForCompositing(const RenderLayer* layer)
+CompositingReasons RenderLayerCompositor::reasonsForCompositing(const RenderLayer* layer) const
 {
+    CompositingReasons reasons = CompositingReasonNone;
+
+    if (!layer || !layer->isComposited())
+        return reasons;
+
     RenderObject* renderer = layer->renderer();
     if (layer->isReflection()) {
         renderer = renderer->parent();
@@ -1710,74 +1726,148 @@ const char* RenderLayerCompositor::reasonForCompositing(const RenderLayer* layer
     }
 
     if (requiresCompositingForTransform(renderer))
-        return "3D transform";
+        reasons |= CompositingReason3DTransform;
 
     if (requiresCompositingForVideo(renderer))
-        return "video";
+        reasons |= CompositingReasonVideo;
 
     if (requiresCompositingForCanvas(renderer))
-        return "canvas";
+        reasons |= CompositingReasonCanvas;
 
     if (requiresCompositingForPlugin(renderer))
-        return "plugin";
+        reasons |= CompositingReasonPlugin;
 
     if (requiresCompositingForFrame(renderer))
-        return "iframe";
+        reasons |= CompositingReasonIFrame;
     
     if ((canRender3DTransforms() && renderer->style()->backfaceVisibility() == BackfaceVisibilityHidden))
-        return "backface-visibility: hidden";
+        reasons |= CompositingReasonBackfaceVisibilityHidden;
 
     if (clipsCompositingDescendants(layer))
-        return "clips compositing descendants";
+        reasons |= CompositingReasonClipsCompositingDescendants;
 
     if (requiresCompositingForAnimation(renderer))
-        return "animation";
+        reasons |= CompositingReasonAnimation;
 
     if (requiresCompositingForFilters(renderer))
-        return "filters";
+        reasons |= CompositingReasonFilters;
 
     if (requiresCompositingForPosition(renderer, layer))
-        return renderer->style()->position() == FixedPosition ? "position: fixed" : "position: sticky";
+        reasons |= renderer->style()->position() == FixedPosition ? CompositingReasonPositionFixed : CompositingReasonPositionSticky;
 
     if (requiresCompositingForOverflowScrolling(layer))
-        return "-webkit-overflow-scrolling: touch";
+        reasons |= CompositingReasonOverflowScrollingTouch;
 
     if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForStacking)
-        return "stacking";
-
-    if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForOverlap)
-        return "overlap";
-
-    if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForBackgroundLayer)
-        return "negative z-index children";
-
-    if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForGraphicalEffect) {
+        reasons |= CompositingReasonStacking;
+    else if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForOverlap)
+        reasons |= CompositingReasonOverlap;
+    else if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForBackgroundLayer)
+        reasons |= CompositingReasonNegativeZIndexChildren;
+    else if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForGraphicalEffect) {
         if (layer->transform())
-            return "transform with composited descendants";
+            reasons |= CompositingReasonTransformWithCompositedDescendants;
 
         if (renderer->isTransparent())
-            return "opacity with composited descendants";
+            reasons |= CompositingReasonOpacityWithCompositedDescendants;
 
         if (renderer->hasMask())
-            return "mask with composited descendants";
+            reasons |= CompositingReasonMaskWithCompositedDescendants;
 
         if (renderer->hasReflection())
-            return "reflection with composited descendants";
+            reasons |= CompositingReasonReflectionWithCompositedDescendants;
 
         if (renderer->hasFilter())
-            return "filter with composited descendants";
+            reasons |= CompositingReasonFilterWithCompositedDescendants;
             
         if (renderer->hasBlendMode())
-            return "blending with composited descendants";
-    }
-
-    if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForPerspective)
-        return "perspective";
-
-    if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForPreserve3D)
-        return "preserve-3d";
+            reasons |= CompositingReasonBlendingWithCompositedDescendants;
+    } else if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForPerspective)
+        reasons |= CompositingReasonPerspective;
+    else if (layer->indirectCompositingReason() == RenderLayer::IndirectCompositingForPreserve3D)
+        reasons |= CompositingReasonPreserve3D;
 
     if (inCompositingMode() && layer->isRootLayer())
+        reasons |= CompositingReasonRoot;
+
+    return reasons;
+}
+
+#if !LOG_DISABLED
+const char* RenderLayerCompositor::logReasonsForCompositing(const RenderLayer* layer)
+{
+    CompositingReasons reasons = reasonsForCompositing(layer);
+
+    if (reasons & CompositingReason3DTransform)
+        return "3D transform";
+
+    if (reasons & CompositingReasonVideo)
+        return "video";
+
+    if (reasons & CompositingReasonCanvas)
+        return "canvas";
+
+    if (reasons & CompositingReasonPlugin)
+        return "plugin";
+
+    if (reasons & CompositingReasonIFrame)
+        return "iframe";
+    
+    if (reasons & CompositingReasonBackfaceVisibilityHidden)
+        return "backface-visibility: hidden";
+
+    if (reasons & CompositingReasonClipsCompositingDescendants)
+        return "clips compositing descendants";
+
+    if (reasons & CompositingReasonAnimation)
+        return "animation";
+
+    if (reasons & CompositingReasonFilters)
+        return "filters";
+
+    if (reasons & CompositingReasonPositionFixed)
+        return "position: fixed";
+
+    if (reasons & CompositingReasonPositionSticky)
+        return "position: sticky";
+
+    if (reasons & CompositingReasonOverflowScrollingTouch)
+        return "-webkit-overflow-scrolling: touch";
+
+    if (reasons & CompositingReasonStacking)
+        return "stacking";
+
+    if (reasons & CompositingReasonOverlap)
+        return "overlap";
+
+    if (reasons & CompositingReasonNegativeZIndexChildren)
+        return "negative z-index children";
+
+    if (reasons & CompositingReasonTransformWithCompositedDescendants)
+        return "transform with composited descendants";
+
+    if (reasons & CompositingReasonOpacityWithCompositedDescendants)
+        return "opacity with composited descendants";
+
+    if (reasons & CompositingReasonMaskWithCompositedDescendants)
+        return "mask with composited descendants";
+
+    if (reasons & CompositingReasonReflectionWithCompositedDescendants)
+        return "reflection with composited descendants";
+
+    if (reasons & CompositingReasonFilterWithCompositedDescendants)
+        return "filter with composited descendants";
+            
+    if (reasons & CompositingReasonBlendingWithCompositedDescendants)
+        return "blending with composited descendants";
+
+    if (reasons & CompositingReasonPerspective)
+        return "perspective";
+
+    if (reasons & CompositingReasonPreserve3D)
+        return "preserve-3d";
+
+    if (reasons & CompositingReasonRoot)
         return "root";
 
     return "";
@@ -2089,7 +2179,6 @@ bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* rendere
         LayoutRect viewBounds = frameView->viewportConstrainedVisibleContentRect();
         LayoutRect layerBounds = layer->calculateLayerBounds(rootRenderLayer(), 0, RenderLayer::DefaultCalculateLayerBoundsFlags
             | RenderLayer::ExcludeHiddenDescendants | RenderLayer::DontConstrainForMask | RenderLayer::IncludeCompositedDescendants);
-        layerBounds.scale(frameView->frame()->frameScaleFactor());
         if (!viewBounds.intersects(enclosingIntRect(layerBounds))) {
             if (viewportConstrainedNotCompositedReason)
                 *viewportConstrainedNotCompositedReason = RenderLayer::NotCompositedForBoundsOutOfView;
@@ -2320,6 +2409,9 @@ bool RenderLayerCompositor::requiresContentShadowLayer() const
         return false;
 
 #if PLATFORM(MAC)
+    if (viewHasTransparentBackground())
+        return false;
+
     // On Mac, we want a content shadow layer if we have a scrolling coordinator and can scroll.
     if (scrollingCoordinator() && !m_renderView->frameView()->prohibitsScrolling())
         return true;
@@ -2328,6 +2420,25 @@ bool RenderLayerCompositor::requiresContentShadowLayer() const
     return false;
 }
 #endif
+
+bool RenderLayerCompositor::viewHasTransparentBackground(Color* backgroundColor) const
+{
+    FrameView* frameView = m_renderView->frameView();
+    if (frameView->isTransparent()) {
+        if (backgroundColor)
+            *backgroundColor = Color(); // Return an invalid color.
+        return true;
+    }
+
+    Color documentBackgroundColor = frameView->documentBackgroundColor();
+    if (!documentBackgroundColor.isValid())
+        documentBackgroundColor = Color::white;
+
+    if (backgroundColor)
+        *backgroundColor = documentBackgroundColor;
+        
+    return documentBackgroundColor.hasAlpha();
+}
 
 void RenderLayerCompositor::updateOverflowControlsLayers()
 {
@@ -2383,14 +2494,14 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
             m_overflowControlsHostLayer->addChild(m_layerForHorizontalScrollbar.get());
 
             if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-                scrollingCoordinator->frameViewHorizontalScrollbarLayerDidChange(m_renderView->frameView(), m_layerForHorizontalScrollbar.get());
+                scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView->frameView(), HorizontalScrollbar);
         }
     } else if (m_layerForHorizontalScrollbar) {
         m_layerForHorizontalScrollbar->removeFromParent();
         m_layerForHorizontalScrollbar = nullptr;
 
         if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-            scrollingCoordinator->frameViewHorizontalScrollbarLayerDidChange(m_renderView->frameView(), 0);
+            scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView->frameView(), HorizontalScrollbar);
     }
 
     if (requiresVerticalScrollbarLayer()) {
@@ -2406,14 +2517,14 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
             m_overflowControlsHostLayer->addChild(m_layerForVerticalScrollbar.get());
 
             if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-                scrollingCoordinator->frameViewVerticalScrollbarLayerDidChange(m_renderView->frameView(), m_layerForVerticalScrollbar.get());
+                scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView->frameView(), VerticalScrollbar);
         }
     } else if (m_layerForVerticalScrollbar) {
         m_layerForVerticalScrollbar->removeFromParent();
         m_layerForVerticalScrollbar = nullptr;
 
         if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-            scrollingCoordinator->frameViewVerticalScrollbarLayerDidChange(m_renderView->frameView(), 0);
+            scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView->frameView(), VerticalScrollbar);
     }
 
     if (requiresScrollCornerLayer()) {

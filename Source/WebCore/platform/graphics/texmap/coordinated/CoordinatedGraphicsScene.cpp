@@ -143,11 +143,7 @@ void CoordinatedGraphicsScene::requestAnimationFrame()
 }
 #endif
 
-#if PLATFORM(QT)
-void CoordinatedGraphicsScene::paintToGraphicsContext(QPainter* painter)
-#elif USE(CAIRO)
-void CoordinatedGraphicsScene::paintToGraphicsContext(cairo_t* painter)
-#endif
+void CoordinatedGraphicsScene::paintToGraphicsContext(PlatformGraphicsContext* platformContext)
 {
     if (!m_textureMapper)
         m_textureMapper = TextureMapper::create();
@@ -158,7 +154,7 @@ void CoordinatedGraphicsScene::paintToGraphicsContext(cairo_t* painter)
     if (!layer)
         return;
 
-    GraphicsContext graphicsContext(painter);
+    GraphicsContext graphicsContext(platformContext);
     m_textureMapper->setGraphicsContext(&graphicsContext);
     m_textureMapper->beginPainting();
 
@@ -393,6 +389,7 @@ void CoordinatedGraphicsScene::prepareContentBackingStore(GraphicsLayer* graphic
     }
 
     createBackingStoreIfNeeded(graphicsLayer);
+    resetBackingStoreSizeToLayerSize(graphicsLayer);
 }
 
 void CoordinatedGraphicsScene::createBackingStoreIfNeeded(GraphicsLayer* graphicsLayer)
@@ -401,7 +398,6 @@ void CoordinatedGraphicsScene::createBackingStoreIfNeeded(GraphicsLayer* graphic
         return;
 
     RefPtr<CoordinatedBackingStore> backingStore(CoordinatedBackingStore::create());
-    backingStore->setSize(graphicsLayer->size());
     m_backingStores.add(graphicsLayer, backingStore);
     toGraphicsLayerTextureMapper(graphicsLayer)->setBackingStore(backingStore);
 }
@@ -420,6 +416,7 @@ void CoordinatedGraphicsScene::resetBackingStoreSizeToLayerSize(GraphicsLayer* g
     RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.get(graphicsLayer);
     ASSERT(backingStore);
     backingStore->setSize(graphicsLayer->size());
+    m_backingStoresWithPendingBuffers.add(backingStore);
 }
 
 void CoordinatedGraphicsScene::createTile(CoordinatedLayerID layerID, uint32_t tileID, float scale)
@@ -428,7 +425,6 @@ void CoordinatedGraphicsScene::createTile(CoordinatedLayerID layerID, uint32_t t
     RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.get(layer);
     ASSERT(backingStore);
     backingStore->createTile(tileID, scale);
-    resetBackingStoreSizeToLayerSize(layer);
 }
 
 void CoordinatedGraphicsScene::removeTile(CoordinatedLayerID layerID, uint32_t tileID)
@@ -439,7 +435,6 @@ void CoordinatedGraphicsScene::removeTile(CoordinatedLayerID layerID, uint32_t t
         return;
 
     backingStore->removeTile(tileID);
-    resetBackingStoreSizeToLayerSize(layer);
     m_backingStoresWithPendingBuffers.add(backingStore);
 }
 
@@ -453,7 +448,6 @@ void CoordinatedGraphicsScene::updateTile(CoordinatedLayerID layerID, uint32_t t
     ASSERT(it != m_surfaces.end());
 
     backingStore->updateTile(tileID, update.sourceRect, update.tileRect, it->value, update.offset);
-    resetBackingStoreSizeToLayerSize(layer);
     m_backingStoresWithPendingBuffers.add(backingStore);
 }
 

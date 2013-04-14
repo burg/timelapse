@@ -159,6 +159,7 @@ public:
     String suggestedValue(Element* inputElement, ExceptionCode&);
     void setSuggestedValue(Element* inputElement, const String&, ExceptionCode&);
     void setEditingValue(Element* inputElement, const String&, ExceptionCode&);
+    void setAutofilled(Element*, bool enabled, ExceptionCode&);
     void scrollElementToRect(Element*, long x, long y, long w, long h, ExceptionCode&);
 
     void paintControlTints(Document*, ExceptionCode&);
@@ -190,7 +191,7 @@ public:
 #endif
 
     PassRefPtr<NodeList> nodesFromRect(Document*, int x, int y, unsigned topPadding, unsigned rightPadding,
-        unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, ExceptionCode&) const;
+        unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, bool allowChildFrameContent, ExceptionCode&) const;
 
     void emitInspectorDidBeginFrame();
     void emitInspectorDidCancelFrame();
@@ -285,6 +286,10 @@ public:
     void initializeMockCDM();
 #endif
 
+#if ENABLE(SPEECH_SYNTHESIS)
+    void enableMockSpeechSynthesizer();
+#endif
+                    
 private:
     explicit Internals(Document*);
     Document* contextDocument() const;

@@ -159,8 +159,8 @@ public:
 
     virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&);
 
-    unsigned pageLogicalHeight() const { return m_pageLogicalHeight; }
-    void setPageLogicalHeight(unsigned height)
+    LayoutUnit pageLogicalHeight() const { return m_pageLogicalHeight; }
+    void setPageLogicalHeight(LayoutUnit height)
     {
         if (m_pageLogicalHeight != height) {
             m_pageLogicalHeight = height;
@@ -183,10 +183,8 @@ public:
     void setPrintRect(const IntRect& r) { m_legacyPrinting.m_printRect = r; }
     // End deprecated functions.
 
-    // Notifications that this view became visible in a window, or will be
-    // removed from the window.
-    void didMoveOnscreen();
-    void willMoveOffscreen();
+    // Notification that this view moved into or out of a native window.
+    void setIsInWindow(bool);
 
 #if USE(ACCELERATED_COMPOSITING)
     RenderLayerCompositor* compositor();
@@ -229,14 +227,18 @@ public:
     void addRenderCounter() { m_renderCounterCount++; }
     void removeRenderCounter() { ASSERT(m_renderCounterCount > 0); m_renderCounterCount--; }
     bool hasRenderCounters() { return m_renderCounterCount; }
+    
+    virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0) OVERRIDE;
 
 protected:
     virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
     virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const;
     virtual bool requiresColumns(int desiredColumnCount) const OVERRIDE;
-
+    
 private:
+    bool initializeLayoutState(LayoutState&);
+
     virtual void calcColumnWidth() OVERRIDE;
     virtual ColumnInfo::PaginationUnit paginationUnit() const OVERRIDE;
 
@@ -323,7 +325,7 @@ protected:
 private:
     bool shouldUsePrintingLayout() const;
 
-    unsigned m_pageLogicalHeight;
+    LayoutUnit m_pageLogicalHeight;
     bool m_pageLogicalHeightChanged;
     LayoutState* m_layoutState;
     unsigned m_layoutStateDisableCount;

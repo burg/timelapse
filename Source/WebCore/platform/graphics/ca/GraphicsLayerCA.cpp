@@ -917,7 +917,11 @@ FloatRect GraphicsLayerCA::computeVisibleRect(TransformState& state) const
     TransformState::TransformAccumulation accumulation = preserve3D ? TransformState::AccumulateTransform : TransformState::FlattenTransform;
 
     TransformationMatrix layerTransform;
-    layerTransform.translate(m_position.x(), m_position.y());
+    FloatPoint position = m_position;
+    if (m_client)
+        m_client->customPositionForVisibleRectComputation(this, position);
+
+    layerTransform.translate(position.x(), position.y());
 
     TransformationMatrix currentTransform;
     if (client() && client()->getCurrentTransform(this, currentTransform) && !currentTransform.isIdentity()) {
@@ -1617,7 +1621,7 @@ void GraphicsLayerCA::updateVisibleRect(const FloatRect& oldVisibleRect)
     if (m_layer->layerType() == PlatformCALayer::LayerTypeTileCacheLayer)
         tileArea = adjustTiledLayerVisibleRect(tiledBacking(), oldVisibleRect, m_sizeAtLastVisibleRectUpdate);
 
-    tiledBacking()->setVisibleRect(enclosingIntRect(tileArea));
+    tiledBacking()->setVisibleRect(tileArea);
 
     m_sizeAtLastVisibleRectUpdate = m_size;
 }

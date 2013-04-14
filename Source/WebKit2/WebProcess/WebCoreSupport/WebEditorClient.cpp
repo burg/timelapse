@@ -44,6 +44,7 @@
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
+#include <WebCore/StylePropertySet.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/UndoStep.h>
 #include <WebCore/UserTypingGestureIndicator.h>
@@ -81,12 +82,7 @@ bool WebEditorClient::shouldShowDeleteInterface(HTMLElement*)
 
 bool WebEditorClient::smartInsertDeleteEnabled()
 {
-    // FIXME: Why isn't this Mac specific like toggleSmartInsertDeleteEnabled?
-#if PLATFORM(MAC)
     return m_page->isSmartInsertDeleteEnabled();
-#else
-    return true;
-#endif
 }
  
 bool WebEditorClient::isSelectTrailingWhitespaceEnabled()

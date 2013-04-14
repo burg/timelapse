@@ -1,3 +1,701 @@
+2013-02-27  Balazs Kilvady  <kilvadyb@homejinni.com>
+
+        Bug in atomicIncrement implementation for MIPS GCC
+        https://bugs.webkit.org/show_bug.cgi?id=110969
+
+        Reviewed by Csaba Osztrogonác.
+
+        Fix of __sync_[add|sub]_and_fetch_8 for GCC patch.
+
+        * wtf/Atomics.cpp:
+
+2013-02-27  Simon Hausmann  <simon.hausmann@digia.com>
+
+        REGRESSION(r137994): It made JSC tests hang and layout tests fail on ARM Thumb2 / Linux
+        https://bugs.webkit.org/show_bug.cgi?id=108632
+
+        Reviewed by Csaba Osztrogonác.
+
+        It appears that mprotect() is very slow on ARM/Linux, so disable the
+        approach of unreserved mappings there and fall back to overcomitting
+        memory, based on Uli Schlachter's recommendation.
+
+        * wtf/OSAllocatorPosix.cpp:
+        (WTF::OSAllocator::reserveUncommitted):
+        (WTF::OSAllocator::decommit):
+
+2013-02-26  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Build fix for VS2010 solution, take 2.
+
+        * WTF.vcxproj/work-around-vs-dependency-tracking-bugs.py:
+
+2013-02-26  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Unreviewed build fix for VS2010 solution.
+
+        * WTF.vcxproj/work-around-vs-dependency-tracking-bugs.py:
+
+2013-02-26  Balazs Kilvady  <kilvadyb@homejinni.com>
+
+        Fix the atomicIncrement implementation for MIPS GCC
+        https://bugs.webkit.org/show_bug.cgi?id=106739
+
+        Reviewed by Oliver Hunt.
+
+        Implementation of missing __sync_[add|sub]_and_fetch_8 functions.
+
+        Some architectures, like MIPS32, don't have GCC implementation for
+        builtin __sync_* functions with 64 bits variable size. GCC answer
+        for the problem: If a target doesn't support atomic operations on
+        certain variable sizes, you are out of luck with atomicity in that
+        case (http://gcc.gnu.org/bugzilla/show_bug.cgi?id=56296). GCC >= 4.8
+        will support __atomic_* builtin functions for this purpose for all
+        the GCC targets, but for current compilers we have to include our
+        own implementation.
+
+        * GNUmakefile.list.am:
+        * WTF.pro:
+        * wtf/Atomics.cpp: Added.
+        (WTF):
+        (WTF::getSwapLock):
+        (WTF::atomicStep):
+        * wtf/CMakeLists.txt:
+
+2013-02-26  Oliver Hunt  <oliver@apple.com>
+
+        Appease the QT bots.
+
+        * wtf/FastMalloc.cpp:
+
+2013-02-26  Jocelyn Turcotte  <jocelyn.turcotte@digia.com>
+
+        Implement JIT on Windows 64 bits
+        https://bugs.webkit.org/show_bug.cgi?id=107965
+
+        Reviewed by Simon Hausmann.
+
+        * wtf/Platform.h:
+
+2013-02-26  Oliver Hunt  <oliver@apple.com>
+
+        Appease static analyzer warning about null string passed to strlen
+        https://bugs.webkit.org/show_bug.cgi?id=110658
+
+        Reviewed by Benjamin Poulain.
+
+        Add a null check before calling strlen
+
+        * wtf/Threading.cpp:
+        (WTF::createThread):
+
+2013-02-25  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fix attempt after r143996.
+
+        * wtf/FastMalloc.cpp:
+        (WTF):
+
+2013-02-25  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Fix script to use WEBKIT_SOURCE for VS2010 property sheets instead of WEBKIT_LIBRARIES.
+
+        * WTF.vcxproj/work-around-vs-dependency-tracking-bugs.py:
+
+2013-02-25  Oliver Hunt  <oliver@apple.com>
+
+        Add cookies to FastMalloc spans
+        https://bugs.webkit.org/show_bug.cgi?id=110827
+
+        Reviewed by Michael Saboff.
+
+        Add a cookie to spans, and move some of the hardening around so
+        that it's more useful.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::internalEntropyValue):
+        (WTF::spanInitializerCookie):
+        (WTF::Span::initCookie):
+        (WTF::Span::clearCookie):
+        (WTF::Span::isValid):
+        (Span):
+        (WTF::NewSpan):
+        (WTF::DeleteSpan):
+        (WTF::TCMalloc_ThreadCache_FreeList::Validate):
+        (WTF::TCMalloc_Central_FreeList::Populate):
+        (WTF::TCMalloc_ThreadCache::Deallocate):
+        (WTF::TCMalloc_ThreadCache::CreateCacheIfNecessary):
+
+2013-02-25  Jer Noble  <jer.noble@apple.com>
+
+        Normalize ENABLE_ENCRYPTED_MEDIA definitions across all FeatureDefines files.
+        https://bugs.webkit.org/show_bug.cgi?id=110806
+
+        Reviewed by Alexey Proskuryakov.
+
+        Ensure both ENCRYPTED_MEDIA and ENCRYPTED_MEDIA_V2 are enabled on macosx_1090.
+
+        * wtf/FeatureDefines.h:
+
+2013-02-23  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: replace String with const char* in MemoryObjectInfo
+        https://bugs.webkit.org/show_bug.cgi?id=110599
+
+        Reviewed by Yury Semikhatsky.
+
+        Due to potentially dynamic nature of names and classNames we need to make a copy of the strings
+        that were given us via MemoryInstrumentation calls.
+        So I extended client api with registerString method that pushes the strings
+        down to the serializer.
+
+        * wtf/MemoryInstrumentation.h:
+        (MemoryInstrumentationClient):
+        * wtf/MemoryObjectInfo.h:
+        (WTF::MemoryObjectInfo::MemoryObjectInfo):
+        (WTF::MemoryObjectInfo::setClassName):
+        (WTF::MemoryObjectInfo::classNameId):
+        (WTF::MemoryObjectInfo::setName):
+        (WTF::MemoryObjectInfo::nameId):
+        (MemoryObjectInfo):
+
+2013-02-21  Brady Eidson  <beidson@apple.com>
+
+        Move fastlog2() to WTF/MathExtras.h so it can be used from multiple projects.
+
+        Rubberstamped by Geoff Garen.
+
+        * wtf/MathExtras.h:
+        (WTF::fastLog2):
+
+2013-02-21  Andy Estes  <aestes@apple.com>
+
+        TriState.h should be a Project header
+        https://bugs.webkit.org/show_bug.cgi?id=110543
+
+        Rubber-stamped by Dan Bernstein.
+
+        WTF uses a script to copy headers to the build destination, so it isn't
+        necessary to mark headers as Private/Public (and doing so can be problematic).
+
+        * WTF.xcodeproj/project.pbxproj: Mark TriState.h as a Project header.
+
+2013-02-21  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Add executable property to cmd file.
+        Required for executable files to maintain their executable permissions over svn.
+
+        * WTF.vcxproj/copy-files.cmd: Added property svn:executable.
+
+2013-02-19  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Objective-C API: Need a way to use the Objective-C JavaScript API with WebKit
+        https://bugs.webkit.org/show_bug.cgi?id=106059
+
+        Reviewed by Geoffrey Garen.
+
+        * wtf/FeatureDefines.h: Added enable flag for JSC Objective-C API so it can be used in
+        export files.
+
+2013-02-21  Martin Robinson  <mrobinson@igalia.com>
+
+        A couple more 'make dist' fixes for WebKitGTK+.
+
+        * GNUmakefile.list.am: Add a missing file to the source list.
+
+2013-02-20  Roger Fong  <roger_fong@apple.com>
+
+        Get VS2010 Solution B&I ready.
+        <rdar://problem/1322988>
+
+        Rubberstamped by Timothy Horton.        
+        
+        Add Production configuration. 
+        Add a WTF submit solution with a DebugSuffix configuration. 
+        Modify WTF.make as necessary.
+        
+        * WTF.vcxproj: Added property svn:eol-style. Modified property svn:ignore.
+        * WTF.vcxproj/WTF.make: Added.
+        * WTF.vcxproj/WTF.submit.sln: Added.
+        * WTF.vcxproj/WTF.vcxproj:
+        * WTF.vcxproj/WTFCommon.props:
+        * WTF.vcxproj/WTFGenerated.vcxproj:
+        * WTF.vcxproj/WTFGeneratedProduction.props: Added.
+        * WTF.vcxproj/WTFGeneratedRelease.props:
+        * WTF.vcxproj/WTFProduction.props: Added.
+        * WTF.vcxproj/WTFRelease.props:
+        * WTF.vcxproj/copy-files.cmd:
+
+2013-02-20  Oliver Hunt  <oliver@apple.com>
+
+        Moar hardening
+        https://bugs.webkit.org/show_bug.cgi?id=110275
+
+        Reviewed by Mark Hahnenberg.
+
+        We now poison objects when they get freed, and verify that
+        any object that is being freed is not poisoned.  If the
+        object looks like it's poisoned we validate the freelist,
+        and ensure the object is not already present.  If it is
+        we crash.
+
+        On allocation, we ensure that the object being allocated
+        is poisoned, then clear the poisoning fields.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::internalEntropyValue):
+        (WTF):
+        (WTF::freedObjectStartPoison):
+        (WTF::freedObjectEndPoison):
+        (TCMalloc_ThreadCache_FreeList):
+        (WTF::TCMalloc_ThreadCache_FreeList::Validate):
+        (WTF::TCMalloc_Central_FreeList::Populate):
+        (WTF::TCMalloc_ThreadCache::Allocate):
+        (WTF::TCMalloc_ThreadCache::Deallocate):
+        (WTF::TCMalloc_ThreadCache::CreateCacheIfNecessary):
+
+2013-02-19  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r143400.
+        http://trac.webkit.org/changeset/143400
+        https://bugs.webkit.org/show_bug.cgi?id=110290
+
+        breaks everything (instacrash launching Safari) (Requested by
+        thorton on #webkit).
+
+        * wtf/FastMalloc.cpp:
+        (WTF::internalEntropyValue):
+        (WTF):
+        (WTF::TCMalloc_Central_FreeList::Populate):
+        (WTF::TCMalloc_ThreadCache::Allocate):
+        (WTF::TCMalloc_ThreadCache::Deallocate):
+
+2013-02-19  Oliver Hunt  <oliver@apple.com>
+
+        Moar hardening
+        https://bugs.webkit.org/show_bug.cgi?id=110275
+
+        Reviewed by Anders Carlsson.
+
+        We now poison objects when they get freed, and verify that
+        any object that is being freed is not poisoned.  If the
+        object looks like it's poisoned we validate the freelist,
+        and ensure the object is not already present.  If it is
+        we crash.
+
+        On allocation, we ensure that the object being allocated
+        is poisoned, then clear the poisoning fields.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::internalEntropyValue):
+        (WTF):
+        (WTF::freedObjectStartPoison):
+        (WTF::freedObjectEndPoison):
+        (TCMalloc_ThreadCache_FreeList):
+        (WTF::TCMalloc_ThreadCache_FreeList::Validate):
+        (WTF::TCMalloc_Central_FreeList::Populate):
+        (WTF::TCMalloc_ThreadCache::Allocate):
+        (WTF::TCMalloc_ThreadCache::Deallocate):
+
+2013-02-18  Darin Adler  <darin@apple.com>
+
+        Style tweaks to StringHasher.h
+        https://bugs.webkit.org/show_bug.cgi?id=110042
+
+        Reviewed by Alexey Proskuryakov.
+
+        I have a bug fix coming soon, but figured I'd separate out style tweaks and land them
+        first to make that patch easier to undrestand.
+
+        * wtf/StringHasher.h: Tweak and rearrange comments a bit.
+        (WTF::StringHasher::addCharacter): Use character instead of ch.
+        (WTF::StringHasher::addCharacters): Use remainder instead of rem. Also capitalize the U
+        that we use to make an unsigned 1 constant.
+        (WTF::StringHasher::computeHashAndMaskTop8Bits): Ditto.
+        (WTF::StringHasher::hashMemory): Change version that takes size as a template argument
+        to call the version that takes the size at runtime, since both generate the same code
+        anyway. Added a FIXME questioning why this function uses the "mask top 8 bits" version
+        of the hash. Fix incorrect compile assertion that required sizes that are multiples
+        of four. This function works on sizes that are multiples of two. Also fixed a spelling
+        error where we called it a "multible".
+        (WTF::StringHasher::defaultConverter): Use character instead of ch.
+        (WTF::StringHasher::addCharactersToHash): Eliminated unnecessary local variable.
+
+2013-02-18  Alexey Proskuryakov  <ap@apple.com>
+
+        Make HexNumber functions return 8-bit strings
+        https://bugs.webkit.org/show_bug.cgi?id=110152
+
+        Reviewed by Michael Saboff.
+
+        * wtf/HexNumber.h:
+        (Internal):
+        (WTF::Internal::hexDigitsForMode):
+        (WTF::appendByteAsHex):
+        (WTF::placeByteAsHexCompressIfPossible):
+        (WTF::placeByteAsHex):
+        (WTF::appendUnsignedAsHex):
+        (WTF::appendUnsignedAsHexFixedSize):
+        Use LChar everywhere.
+
+2013-02-18  Benjamin Poulain  <bpoulain@apple.com>
+
+        Remove Vector::dataSlot(), it has no implementation
+        https://bugs.webkit.org/show_bug.cgi?id=109999
+
+        Reviewed by Andreas Kling.
+
+        VectorBufferBase does not implement any function bufferSlot().
+        The file only compiles because that part of the template is never
+        instantiated.
+
+        * wtf/Vector.h:
+
+2013-02-18  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Move ENABLE macros for WebCore out from Platform.h
+        https://bugs.webkit.org/show_bug.cgi?id=105735
+
+        Unreviewed, build fix when NETSCAPE_PLUGIN_API is disabled.
+
+        Enable ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH even if
+        NETSCAPE_PLUGIN_API is disabled (Qt, Efl, GTK, WX ports).
+
+        * wtf/FeatureDefines.h:
+
+2013-02-18  Balazs Kilvady  <kilvadyb@homejinni.com>
+
+        MIPS DFG implementation.
+        https://bugs.webkit.org/show_bug.cgi?id=101328
+
+        Reviewed by Oliver Hunt.
+
+        DFG implementation for MIPS.
+
+        * wtf/Platform.h:
+
+2013-02-18  Zan Dobersek  <zdobersek@igalia.com>
+
+        Stop placing std::isfinite and std::signbit inside the global scope
+        https://bugs.webkit.org/show_bug.cgi?id=109817
+
+        Reviewed by Darin Adler.
+
+        Prefix calls to the isfinite and signbit methods with std:: as the two
+        methods are no longer being imported into the global scope.
+
+        On Solaris and OpenBSD platforms or when using Visual C++ the two methods
+        are now defined (as incompatibility workarounds) inside the std namespace.
+
+        * wtf/DateMath.cpp:
+        (WTF::timeClip):
+        * wtf/DecimalNumber.h:
+        (WTF::DecimalNumber::DecimalNumber):
+        * wtf/MathExtras.h:
+        (std):
+        (std::isfinite):
+        (std::signbit):
+        (lrint):
+        (wtf_pow):
+        (decomposeDouble):
+        * wtf/MediaTime.cpp:
+        (WTF::MediaTime::createWithFloat):
+        (WTF::MediaTime::createWithDouble):
+        * wtf/dtoa.cpp:
+        (WTF::dtoa):
+
+2013-02-18  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Move ENABLE macros for WebCore out from Platform.h
+        https://bugs.webkit.org/show_bug.cgi?id=105735
+
+        Reviewed by Darin Adler and Benjamin Poulain.
+
+        Introduce FeatureDefines.h by combining the existing rules from
+        Platform.h and adding new rules for all the ENABLE flags that are
+        listed in the FeatureFlags wiki.
+
+        The new rules are not used at the moment by any ports
+        as the port specific build systems already define these flags
+        so the !defined() guard will prevent redefinition of the macros.
+
+        * GNUmakefile.list.am: Add FeatureDefines.h.
+        * WTF.gypi: Ditto.
+        * WTF.pro: Ditto.
+        * WTF.vcproj/WTF.vcproj: Ditto.
+        * WTF.xcodeproj/project.pbxproj: Ditto.
+        * wtf/CMakeLists.txt: Ditto.
+        * wtf/FeatureDefines.h: Added.
+        * wtf/Platform.h: Move macro definitions to FeatureDefines.h.
+
+2013-02-16  Darin Adler  <darin@apple.com>
+
+        Remove redundant use of inline keyword in StringHasher.h
+        https://bugs.webkit.org/show_bug.cgi?id=110036
+
+        Reviewed by Geoffrey Garen.
+
+        I have some other improvements for StringHasher.h, but wanted to get the simplest ones
+        out of the way first.
+
+        * wtf/StringHasher.h: Remove inline keyword on functions inside the class definition,
+        since functions defined inside the class are automatically inline.
+
+2013-02-15  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Spread the gyp build files throughout the tree
+        https://bugs.webkit.org/show_bug.cgi?id=109960
+
+        Reviewed by Dirk Pranke.
+
+        * WTF.gyp/WTFGTK.gyp: Renamed from Source/WebKit/gtk/gyp/WTF.gyp.
+
+2013-02-15  Anders Carlsson  <andersca@apple.com>
+
+        Add HashMap::isValidKey and HashSet::isValidValue
+        https://bugs.webkit.org/show_bug.cgi?id=109977
+
+        Reviewed by Sam Weinig and Darin Adler.
+
+        Add helper functions for determining whether keys are valid, i.e. if
+        they are _not_ empty or deleted according to the hash traits.
+
+        * wtf/HashMap.h:
+        * wtf/HashSet.h:
+
+2013-02-15  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Remove support for RVCT version less than 4.0
+        https://bugs.webkit.org/show_bug.cgi?id=109390
+
+        The 4.0 version of the RVCT compiler was 
+        released in 2008. 
+        
+        Remove support for version older then 4.0 of RVCT, 
+        and keep the support for newer RVCT versions.
+
+        Reviewed by Zoltan Herczeg.
+
+        * WTF.gypi: Remove StringExtras.cpp.
+        * WTF.vcproj/WTF.vcproj: Remove StringExtras.cpp.
+        * WTF.vcxproj/WTF.vcxproj: Remove StringExtras.cpp.
+        * WTF.vcxproj/WTF.vcxproj.filters: Remove StringExtras.cpp.
+        * WTF.xcodeproj/project.pbxproj: Remove StringExtras.cpp.
+        * wtf/CMakeLists.txt: Remove StringExtras.cpp.
+        * wtf/Compiler.h: Remove tests for RVCT_VERSION_AT_LEAST(3, 0, 0, 0).
+        * wtf/Float32Array.h: Remove a quirk introduced for RVCT version <=2.2 .
+        * wtf/Float64Array.h: Ditto.
+        * wtf/Int16Array.h: Ditto.
+        * wtf/Int32Array.h: Ditto.
+        * wtf/Int8Array.h: Ditto.
+        * wtf/MathExtras.h: Remove a quirk needed for RVCT version  <= 3.0.
+        * wtf/Platform.h: Remove test for RVCT 4.0. Remove OS(RVCT).
+        * wtf/StringExtras.cpp: Removed.
+        * wtf/StringExtras.h: Remove a quirk introduced for RVCT version < 4.0.
+        * wtf/Uint16Array.h: Remove a quirk introduced for RVCT version <= 2.2.
+        * wtf/Uint32Array.h: Ditto.
+        * wtf/Uint8Array.h: Ditto.
+        * wtf/Uint8ClampedArray.h: Ditto.
+
+2013-02-15  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Add CString operators for comparison with const char*
+        https://bugs.webkit.org/show_bug.cgi?id=109947
+
+        Reviewed by Darin Adler.
+
+        Add operators to WTF::CString for equality/inequality comparison
+        with const char* strings. This avoids constructing a CString
+        from a const char* in such cases, which is can be expensive as
+        it would copy it and call strlen().
+
+        * wtf/text/CString.cpp:
+        (WTF::operator==): Use memcmp instead of strncmp to compare the
+        CString buffers as we know they are the same size and we don't
+        want to scan for terminating null byte.
+        (WTF):
+        * wtf/text/CString.h:
+        (WTF):
+        (WTF::operator!=):
+
+2013-02-15  Geoffrey Garen  <ggaren@apple.com>
+
+        Merged the global function cache into the source code cache
+        https://bugs.webkit.org/show_bug.cgi?id=108660
+
+        Reviewed by Sam Weinig.
+
+        Responding to review comments by Darin Adler.
+
+        * wtf/HashTraits.h: Added a using directive to simplify client code.
+
+2013-02-14  Dan Bernstein  <mitz@apple.com>
+
+        No easy way to use a RetainPtr as a key in a HashMap using object (rather than pointer) equality
+        https://bugs.webkit.org/show_bug.cgi?id=109864
+
+        Reviewed by Sam Weinig and Benjamin Poulain.
+
+        Added RetainPtrObjectHashTraits and RetainPtrObjectHash, which use CFEqual
+        and CFHash.
+
+        * wtf/RetainPtr.h:
+        (RetainPtrObjectHashTraits):
+        (WTF::RetainPtrObjectHashTraits::emptyValue):
+        (WTF::RetainPtrObjectHashTraits::constructDeletedValue):
+        (WTF::RetainPtrObjectHashTraits::isDeletedValue):
+        (WTF):
+        (WTF::RetainPtrObjectHash::hash):
+        (WTF::RetainPtrObjectHash::equal):
+        (RetainPtrObjectHash):
+
+2013-02-14  Tony Chang  <tony@chromium.org>
+
+        Unreviewed, set svn:eol-style native for .sln, .vcproj, and .vsprops files.
+        https://bugs.webkit.org/show_bug.cgi?id=96934
+
+        * WTF.vcproj/WTF.sln: Modified property svn:eol-style.
+
+2013-02-14  Tony Chang  <tony@chromium.org>
+
+        Unreviewed, set svn:eol-style CRLF for .sln files.
+
+        * WTF.vcproj/WTF.sln: Added property svn:eol-style.
+
+2013-02-14  David Kilzer  <ddkilzer@apple.com>
+
+        [Mac] Clean up WARNING_CFLAGS
+        <http://webkit.org/b/109747>
+        <rdar://problem/13208373>
+
+        Reviewed by Mark Rowe.
+
+        * Configurations/Base.xcconfig: Use
+        GCC_WARN_64_TO_32_BIT_CONVERSION to enable and disable
+        -Wshorten-64-to-32 rather than WARNING_CFLAGS.
+
+        * WTF.vcproj/WTF.sln: Added property svn:eol-style.
+
+2013-02-14  Eric Seidel  <eric@webkit.org>
+
+        String(Vector) behaves differently from String(vector.data(), vector.size()) for vectors with inline capacity in the size=0 case
+        https://bugs.webkit.org/show_bug.cgi?id=109784
+
+        Reviewed by Darin Adler.
+
+        This makes String(Vector) never return null strings.
+        Which matches behavior of String(UChar*, size_t)
+        for vectors with inlineCapacity, but differs from
+        String(UChar*, size_t) in the no-inlineCapacity case.
+
+        This incidentally will fix a behavioral regression
+        in the html threaded parser which came from converting
+        many String(UChar*, size_t) callsites to using String(Vector).
+
+        * wtf/text/WTFString.h:
+        (String):
+        (WTF::String::String):
+
+2013-02-14  Eric Seidel  <eric@webkit.org>
+
+        REGRESSION(r142712): attribute values show up as "(null)" instead of null with the threaded parser
+        https://bugs.webkit.org/show_bug.cgi?id=109784
+
+        Reviewed by Benjamin Poulain.
+
+        When I changed many callsites to use the (existing) String(Vector) constructor
+        I inadvertantly made those callsites convert empty vectors to null strings
+        instead of empty strings (like String(UChar,size_t) does).
+
+        This is due to an oddity/bug in our Vector implementation where data()
+        will be 0 if the Vector is empty, but only if it doesn't have inline capacity.
+        https://bugs.webkit.org/show_bug.cgi?id=109792
+
+        This changes String(Vector) to exactly match the behavior of String(vector.data(), vector.size()).
+
+        This regression was easily detectable with the threaded parser, because we use String
+        instead of AtomicString in our CompactToken (used to send the Token data
+        between threads). The main-thread parser path uses AtomicHTMLToken which
+        uses AtomicString(Vector) and does not have this bug.
+
+        * wtf/text/WTFString.h:
+        (String):
+        (WTF::String::String):
+
+2013-02-13  Zan Dobersek  <zdobersek@igalia.com>
+
+        The 'global isinf/isnan' compiler quirk required when using clang with libstdc++
+        https://bugs.webkit.org/show_bug.cgi?id=109325
+
+        Reviewed by Anders Carlsson.
+
+        Prefix calls to the isinf and isnan methods with std::, declaring we want to use the
+        two methods as they're provided by the C++ standard library being used.
+
+        * wtf/Compiler.h: Remove the global isinf/isnan compiler quirk definitions. They're not required anymore.
+        * wtf/DateMath.cpp: Move the workaround for isinf on Solaris into the std namespace. Ditto for isinf and isnan
+        when using MSVC. Stop bringing the isinf and isnan methods into the global scope when using other configurations.
+        (WTF::parseDateFromNullTerminatedCharacters):
+        * wtf/IntegralTypedArrayBase.h:
+        (WTF::IntegralTypedArrayBase::set):
+        * wtf/MathExtras.h:
+        (std):
+        (std::isinf):
+        (wtf_fmod):
+        (wtf_pow):
+        (doubleToInteger):
+        * wtf/MediaTime.cpp:
+        (WTF::MediaTime::createWithFloat):
+        (WTF::MediaTime::createWithDouble):
+        * wtf/Uint8ClampedArray.h:
+        (WTF::Uint8ClampedArray::set):
+
+2013-02-13  Eric Seidel  <eric@webkit.org>
+
+        Don't copy Vector<UChar> when passing to new String methods from bug 109617
+        https://bugs.webkit.org/show_bug.cgi?id=109708
+
+        Reviewed by Tony Gentilcore.
+
+        Thanks for the catch Darin.
+
+        * wtf/text/AtomicString.h:
+        (WTF::AtomicString::AtomicString):
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::create8BitIfPossible):
+
+2013-02-13  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Remove remaining dead code from the GLib unicode backend
+        https://bugs.webkit.org/show_bug.cgi?id=109707
+
+        Reviewed by Philippe Normand.
+
+        * wtf/unicode/Unicode.h:
+
+2013-02-13  Andrew Wilson  <atwilson@chromium.org>
+
+        Unreviewed Chromium gyp-file cleanup after glib backend removal.
+        https://bugs.webkit.org/show_bug.cgi?id=109672
+
+        Removed references to GLib unicode backend:
+
+        * WTF.gyp/WTF.gyp:
+        * WTF.gypi:
+
+2013-02-12  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Remove the GLib unicode backend
+        https://bugs.webkit.org/show_bug.cgi?id=109627
+
+        Reviewed by Benjamin Poulain.
+
+        Remove references to the GLib unicode backend from WTF.
+
+        * GNUmakefile.list.am: Remove GLib unicode files from the source list.
+        * wtf/unicode/glib/UnicodeGLib.cpp: Removed.
+        * wtf/unicode/glib/UnicodeGLib.h: Removed.
+
 2013-02-12  Takeshi Yoshino  <tyoshino@google.com>
 
         Remove unnecessary and confusing includes from StreamBuffer.h.

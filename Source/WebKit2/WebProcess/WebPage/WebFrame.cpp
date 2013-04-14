@@ -482,7 +482,7 @@ IntRect WebFrame::visibleContentBounds() const
     if (!view)
         return IntRect();
     
-    IntRect contentRect = view->visibleContentRect(true);
+    IntRect contentRect = view->visibleContentRect(ScrollableArea::IncludeScrollbars);
     return IntRect(0, 0, contentRect.width(), contentRect.height());
 }
 
@@ -495,7 +495,7 @@ IntRect WebFrame::visibleContentBoundsExcludingScrollbars() const
     if (!view)
         return IntRect();
     
-    IntRect contentRect = view->visibleContentRect(false);
+    IntRect contentRect = view->visibleContentRect();
     return IntRect(0, 0, contentRect.width(), contentRect.height());
 }
 
@@ -540,7 +540,7 @@ PassRefPtr<InjectedBundleHitTestResult> WebFrame::hitTest(const IntPoint point) 
     if (!m_coreFrame)
         return 0;
 
-    return InjectedBundleHitTestResult::create(m_coreFrame->eventHandler()->hitTestResultAtPoint(point, false, true));
+    return InjectedBundleHitTestResult::create(m_coreFrame->eventHandler()->hitTestResultAtPoint(point, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping));
 }
 
 bool WebFrame::getDocumentBackgroundColor(double* red, double* green, double* blue, double* alpha)

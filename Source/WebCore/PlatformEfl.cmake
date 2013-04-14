@@ -1,4 +1,5 @@
 list(APPEND WebCore_INCLUDE_DIRECTORIES
+    "${WEBCORE_DIR}/editing/atk"
     "${WEBCORE_DIR}/page/efl"
     "${WEBCORE_DIR}/platform/cairo"
     "${WEBCORE_DIR}/platform/efl"
@@ -33,6 +34,8 @@ list(APPEND WebCore_SOURCES
     accessibility/atk/WebKitAccessibleWrapperAtk.cpp
 
     editing/SmartReplaceICU.cpp
+
+    editing/atk/FrameSelectionAtk.cpp
 
     page/efl/DragControllerEfl.cpp
     page/efl/EventHandlerEfl.cpp
@@ -313,6 +316,7 @@ if (WTF_USE_3D_GRAPHICS)
         platform/graphics/opengl/GLPlatformContext.cpp
         platform/graphics/opengl/GLPlatformSurface.cpp
         platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
+        platform/graphics/surfaces/GLTransportSurface.cpp
         platform/graphics/surfaces/GraphicsSurface.cpp
         platform/graphics/surfaces/glx/X11Helper.cpp
         platform/graphics/texmap/TextureMapperGL.cpp

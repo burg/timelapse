@@ -74,8 +74,8 @@
                             in DOMString name,
                             in [Optional] DOMString options);
 
-    [Custom] DOMObject showModalDialog(in DOMString url,
-                                       in [Optional] DOMObject dialogArgs,
+    [Custom] any showModalDialog(in DOMString url,
+                                       in [Optional] any dialogArgs,
                                        in [Optional] DOMString featureArgs);
 
     [Nondeterministic] void alert(in [Optional=DefaultIsUndefined] DOMString message);
@@ -180,9 +180,7 @@
 
     // cross-document messaging
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-    [DoNotCheckSecurity, Custom] void postMessage(in SerializedScriptValue message, in DOMString targetOrigin)
-        raises(DOMException);
-    [DoNotCheckSecurity, Custom] void postMessage(in SerializedScriptValue message, in DOMString targetOrigin, in Array messagePorts)
+    [DoNotCheckSecurity, Custom] void postMessage(in SerializedScriptValue message, in DOMString targetOrigin, in [Optional] Array messagePorts)
         raises(DOMException);
 #else
     // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
@@ -218,6 +216,8 @@
         raises(DOMException);
     DOMString btoa(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString string)
         raises(DOMException);
+
+    attribute [Replaceable,Conditional=CSS3_CONDITIONAL_RULES] DOMWindowCSS CSS;
 
     // Events
     attribute EventListener onabort;
@@ -397,7 +397,7 @@
     attribute NotationConstructor Notation;
     attribute EntityConstructor Entity;
     attribute EntityReferenceConstructor EntityReference;
-    [Conditional=CANVAS_PATH] attribute DOMPathConstructor Path;
+    [Conditional=CANVAS_PATH, V8EnabledAtRuntime=canvasPath] attribute DOMPathConstructor Path;
     attribute ProcessingInstructionConstructor ProcessingInstruction;
     [Conditional=SHADOW_DOM, V8EnabledAtRuntime=shadowDOM] attribute ShadowRootConstructor WebKitShadowRoot;
     [Conditional=SHADOW_DOM, V8EnabledAtRuntime=shadowDOM] attribute HTMLContentElementConstructor HTMLContentElement;
@@ -485,10 +485,9 @@
     [JSCustomGetter, CustomConstructor] attribute HTMLImageElementConstructorConstructor Image; // Usable with new operator
     [JSCustomGetter] attribute HTMLOptionElementConstructorConstructor Option; // Usable with new operator
 
-    [Conditional=ENCRYPTED_MEDIA, V8EnabledAtRuntime=encryptedMedia] attribute MediaKeyErrorConstructor MediaKeyError;
     [Conditional=ENCRYPTED_MEDIA, V8EnabledAtRuntime=encryptedMedia] attribute MediaKeyEventConstructor MediaKeyEvent;
     attribute [Conditional=ENCRYPTED_MEDIA_V2, V8EnabledAtRuntime=encryptedMedia] MediaKeysConstructor MediaKeys;
-    attribute [Conditional=ENCRYPTED_MEDIA_V2, V8EnabledAtRuntime=encryptedMedia] MediaKeyErrorConstructor MediaKeyError;
+    attribute [Conditional=ENCRYPTED_MEDIA_V2|ENCRYPTED_MEDIA, V8EnabledAtRuntime=encryptedMedia] MediaKeyErrorConstructor MediaKeyError;
     attribute [Conditional=ENCRYPTED_MEDIA_V2, V8EnabledAtRuntime=encryptedMedia] MediaKeyMessageEventConstructor MediaKeyMessageEvent;
     attribute [Conditional=ENCRYPTED_MEDIA_V2, V8EnabledAtRuntime=encryptedMedia] MediaKeyNeededEventConstructor MediaKeyNeededEvent;
 
@@ -797,7 +796,8 @@
     [Conditional=BLOB] attribute DOMURLConstructor URL;
     [Conditional=BLOB] attribute DOMURLConstructor webkitURL; // FIXME: deprecate this.
 
-    attribute MutationObserverConstructor WebKitMutationObserver;
+    attribute MutationObserverConstructor WebKitMutationObserver; // FIXME: Add metrics to determine when we can remove this.
+    attribute MutationObserverConstructor MutationObserver;
 
     [Conditional=MEDIA_SOURCE, V8EnabledAtRuntime=mediaSource] attribute MediaSourceConstructor WebKitMediaSource;
     [Conditional=MEDIA_SOURCE, V8EnabledAtRuntime=mediaSource] attribute SourceBufferConstructor WebKitSourceBuffer;

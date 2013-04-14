@@ -161,8 +161,6 @@ public:
     static void didCreateIsolatedContext(Frame*, ScriptState*, SecurityOrigin*);
     static InspectorInstrumentationCookie willFireTimer(ScriptExecutionContext*, int timerId);
     static void didFireTimer(const InspectorInstrumentationCookie&);
-    static void didBeginFrame(Page*);
-    static void didCancelFrame(Page*);
     static void didInvalidateLayout(Frame*);
     static InspectorInstrumentationCookie willLayout(Frame*);
     static void didLayout(const InspectorInstrumentationCookie&, RenderObject*);
@@ -259,7 +257,6 @@ public:
     static void didOpenDatabase(ScriptExecutionContext*, PassRefPtr<Database>, const String& domain, const String& name, const String& version);
 #endif
 
-    static void didUseDOMStorage(Page*, StorageArea*, bool isLocalStorage, Frame*);
     static void didDispatchDOMStorageEvent(const String& key, const String& oldValue, const String& newValue, StorageType, SecurityOrigin*, Page*);
 
 #if ENABLE(WORKERS)
@@ -285,7 +282,7 @@ public:
 #endif
     
 #if ENABLE(WEB_SOCKETS)
-    static void didCreateWebSocket(Document*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL);
+    static void didCreateWebSocket(Document*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol);
     static void willSendWebSocketHandshakeRequest(Document*, unsigned long identifier, const WebSocketHandshakeRequest&);
     static void didReceiveWebSocketHandshakeResponse(Document*, unsigned long identifier, const WebSocketHandshakeResponse&);
     static void didCloseWebSocket(Document*, unsigned long identifier);
@@ -381,8 +378,6 @@ private:
     static void didCreateIsolatedContextImpl(InstrumentingAgents*, Frame*, ScriptState*, SecurityOrigin*);
     static InspectorInstrumentationCookie willFireTimerImpl(InstrumentingAgents*, int timerId, ScriptExecutionContext*);
     static void didFireTimerImpl(const InspectorInstrumentationCookie&);
-    static void didBeginFrameImpl(InstrumentingAgents*);
-    static void didCancelFrameImpl(InstrumentingAgents*);
     static void didInvalidateLayoutImpl(InstrumentingAgents*, Frame*);
     static InspectorInstrumentationCookie willLayoutImpl(InstrumentingAgents*, Frame*);
     static void didLayoutImpl(const InspectorInstrumentationCookie&, RenderObject*);
@@ -393,8 +388,6 @@ private:
     static void didScrollLayerImpl(InstrumentingAgents*);
     static InspectorInstrumentationCookie willPaintImpl(InstrumentingAgents*, Frame*);
     static void didPaintImpl(const InspectorInstrumentationCookie&, GraphicsContext*, const LayoutRect&);
-    static void willCompositeImpl(InstrumentingAgents*);
-    static void didCompositeImpl(InstrumentingAgents*);
     static InspectorInstrumentationCookie willRecalculateStyleImpl(InstrumentingAgents*, Frame*);
     static void didRecalculateStyleImpl(const InspectorInstrumentationCookie&);
     static void didScheduleStyleRecalculationImpl(InstrumentingAgents*, Document*);
@@ -478,7 +471,6 @@ private:
     static void didOpenDatabaseImpl(InstrumentingAgents*, PassRefPtr<Database>, const String& domain, const String& name, const String& version);
 #endif
 
-    static void didUseDOMStorageImpl(InstrumentingAgents*, StorageArea*, bool isLocalStorage, Frame*);
     static void didDispatchDOMStorageEventImpl(InstrumentingAgents*, const String& key, const String& oldValue, const String& newValue, StorageType, SecurityOrigin*, Page*);
 
 #if ENABLE(WORKERS)
@@ -488,10 +480,10 @@ private:
 #endif
 
 #if ENABLE(WEB_SOCKETS)
-    static void didCreateWebSocketImpl(InstrumentingAgents*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL);
-    static void willSendWebSocketHandshakeRequestImpl(InstrumentingAgents*, unsigned long identifier, const WebSocketHandshakeRequest&);
-    static void didReceiveWebSocketHandshakeResponseImpl(InstrumentingAgents*, unsigned long identifier, const WebSocketHandshakeResponse&);
-    static void didCloseWebSocketImpl(InstrumentingAgents*, unsigned long identifier);
+    static void didCreateWebSocketImpl(InstrumentingAgents*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol, Document*);
+    static void willSendWebSocketHandshakeRequestImpl(InstrumentingAgents*, unsigned long identifier, const WebSocketHandshakeRequest&, Document*);
+    static void didReceiveWebSocketHandshakeResponseImpl(InstrumentingAgents*, unsigned long identifier, const WebSocketHandshakeResponse&, Document*);
+    static void didCloseWebSocketImpl(InstrumentingAgents*, unsigned long identifier, Document*);
     static void didReceiveWebSocketFrameImpl(InstrumentingAgents*, unsigned long identifier, const WebSocketFrame&);
     static void didSendWebSocketFrameImpl(InstrumentingAgents*, unsigned long identifier, const WebSocketFrame&);
     static void didReceiveWebSocketFrameErrorImpl(InstrumentingAgents*, unsigned long identifier, const String&);
@@ -542,6 +534,19 @@ private:
 
     static int s_frontendCounter;
 #endif
+};
+
+namespace InstrumentationEvents {
+extern const char PaintLayer[];
+extern const char RasterTask[];
+extern const char Paint[];
+extern const char Layer[];
+extern const char BeginFrame[];
+};
+
+namespace InstrumentationEventArguments {
+extern const char LayerId[];
+extern const char PageId[];
 };
 
 inline void InspectorInstrumentation::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWorld* world)
@@ -1053,28 +1058,6 @@ inline void InspectorInstrumentation::didFireTimer(const InspectorInstrumentatio
 #endif
 }
 
-inline void InspectorInstrumentation::didBeginFrame(Page* page)
-{
-#if ENABLE(INSPECTOR)
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        didBeginFrameImpl(instrumentingAgents);
-#else
-    UNUSED_PARAM(page);
-#endif
-}
-
-inline void InspectorInstrumentation::didCancelFrame(Page* page)
-{
-#if ENABLE(INSPECTOR)
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        didCancelFrameImpl(instrumentingAgents);
-#else
-    UNUSED_PARAM(page);
-#endif
-}
-
 inline void InspectorInstrumentation::didInvalidateLayout(Frame* frame)
 {
 #if ENABLE(INSPECTOR)
@@ -1189,28 +1172,6 @@ inline void InspectorInstrumentation::didScrollLayer(Frame* frame)
         didScrollLayerImpl(instrumentingAgents);
 #else
     UNUSED_PARAM(frame);
-#endif
-}
-
-inline void InspectorInstrumentation::willComposite(Page* page)
-{
-#if ENABLE(INSPECTOR)
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        willCompositeImpl(instrumentingAgents);
-#else
-    UNUSED_PARAM(page);
-#endif
-}
-
-inline void InspectorInstrumentation::didComposite(Page* page)
-{
-#if ENABLE(INSPECTOR)
-    FAST_RETURN_IF_NO_FRONTENDS(void());
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        didCompositeImpl(instrumentingAgents);
-#else
-    UNUSED_PARAM(page);
 #endif
 }
 
@@ -1740,6 +1701,8 @@ inline void InspectorInstrumentation::frameStartedLoading(Frame* frame)
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
         frameStartedLoadingImpl(instrumentingAgents, frame);
+#else
+    UNUSED_PARAM(frame);
 #endif
 }
 
@@ -1748,6 +1711,8 @@ inline void InspectorInstrumentation::frameStoppedLoading(Frame* frame)
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
         frameStoppedLoadingImpl(instrumentingAgents, frame);
+#else
+    UNUSED_PARAM(frame);
 #endif
 }
 
@@ -1756,6 +1721,9 @@ inline void InspectorInstrumentation::frameScheduledNavigation(Frame* frame, dou
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
         frameScheduledNavigationImpl(instrumentingAgents, frame, delay);
+#else
+    UNUSED_PARAM(frame);
+    UNUSED_PARAM(delay);
 #endif
 }
 
@@ -1764,6 +1732,8 @@ inline void InspectorInstrumentation::frameClearedScheduledNavigation(Frame* fra
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
         frameClearedScheduledNavigationImpl(instrumentingAgents, frame);
+#else
+    UNUSED_PARAM(frame);
 #endif
 }
 
@@ -1827,19 +1797,6 @@ inline void InspectorInstrumentation::didWriteHTML(const InspectorInstrumentatio
 #endif
 }
 
-inline void InspectorInstrumentation::didUseDOMStorage(Page* page, StorageArea* storageArea, bool isLocalStorage, Frame* frame)
-{
-#if ENABLE(INSPECTOR)
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        didUseDOMStorageImpl(instrumentingAgents, storageArea, isLocalStorage, frame);
-#else
-    UNUSED_PARAM(page);
-    UNUSED_PARAM(storageArea);
-    UNUSED_PARAM(isLocalStorage);
-    UNUSED_PARAM(frame);
-#endif
-}
-
 inline void InspectorInstrumentation::didDispatchDOMStorageEvent(const String& key, const String& oldValue, const String& newValue, StorageType storageType, SecurityOrigin* securityOrigin, Page* page)
 {
 #if ENABLE(INSPECTOR)
@@ -1896,16 +1853,17 @@ inline void InspectorInstrumentation::workerContextTerminated(ScriptExecutionCon
 
 
 #if ENABLE(WEB_SOCKETS)
-inline void InspectorInstrumentation::didCreateWebSocket(Document* document, unsigned long identifier, const KURL& requestURL, const KURL& documentURL)
+inline void InspectorInstrumentation::didCreateWebSocket(Document* document, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        didCreateWebSocketImpl(instrumentingAgents, identifier, requestURL, documentURL);
+        didCreateWebSocketImpl(instrumentingAgents, identifier, requestURL, documentURL, protocol, document);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(identifier);
     UNUSED_PARAM(requestURL);
     UNUSED_PARAM(documentURL);
+    UNUSED_PARAM(protocol);
 #endif
 }
 
@@ -1913,7 +1871,7 @@ inline void InspectorInstrumentation::willSendWebSocketHandshakeRequest(Document
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        willSendWebSocketHandshakeRequestImpl(instrumentingAgents, identifier, request);
+        willSendWebSocketHandshakeRequestImpl(instrumentingAgents, identifier, request, document);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(identifier);
@@ -1925,7 +1883,7 @@ inline void InspectorInstrumentation::didReceiveWebSocketHandshakeResponse(Docum
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        didReceiveWebSocketHandshakeResponseImpl(instrumentingAgents, identifier, response);
+        didReceiveWebSocketHandshakeResponseImpl(instrumentingAgents, identifier, response, document);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(identifier);
@@ -1937,7 +1895,7 @@ inline void InspectorInstrumentation::didCloseWebSocket(Document* document, unsi
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        didCloseWebSocketImpl(instrumentingAgents, identifier);
+        didCloseWebSocketImpl(instrumentingAgents, identifier, document);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(identifier);

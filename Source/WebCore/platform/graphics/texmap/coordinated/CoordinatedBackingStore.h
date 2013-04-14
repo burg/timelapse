@@ -62,7 +62,7 @@ public:
     void commitTileOperations(TextureMapper*);
     PassRefPtr<BitmapTexture> texture() const;
     void setSize(const FloatSize&);
-    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix&, float, BitmapTexture*);
+    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix&, float);
     virtual void drawBorder(TextureMapper*, const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) OVERRIDE;
     virtual void drawRepaintCounter(TextureMapper*, int repaintCount, const Color&, const FloatRect&, const TransformationMatrix&) OVERRIDE;
 
@@ -70,13 +70,15 @@ private:
     CoordinatedBackingStore()
         : m_scale(1.)
     { }
-    void paintTilesToTextureMapper(Vector<TextureMapperTile*>&, TextureMapper*, const TransformationMatrix&, float, BitmapTexture*, const FloatRect&);
+    void paintTilesToTextureMapper(Vector<TextureMapperTile*>&, TextureMapper*, const TransformationMatrix&, float, const FloatRect&);
     TransformationMatrix adjustedTransformForRect(const FloatRect&);
     FloatRect rect() const { return FloatRect(FloatPoint::zero(), m_size); }
 
     typedef HashMap<uint32_t, CoordinatedBackingStoreTile> CoordinatedBackingStoreTileMap;
     CoordinatedBackingStoreTileMap m_tiles;
     HashSet<uint32_t> m_tilesToRemove;
+    // FIXME: m_pendingSize should be removed after the following bug is fixed: https://bugs.webkit.org/show_bug.cgi?id=108294
+    FloatSize m_pendingSize;
     FloatSize m_size;
     float m_scale;
 };

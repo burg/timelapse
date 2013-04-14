@@ -26,11 +26,72 @@
 #include "config.h"
 #include "StorageManager.h"
 
+#include "StorageAreaProxyMessages.h"
 #include "StorageManagerMessages.h"
 #include "WebProcessProxy.h"
 #include "WorkQueue.h"
+#include <WebCore/SecurityOriginHash.h>
+
+using namespace WebCore;
 
 namespace WebKit {
+
+class StorageManager::StorageArea : public ThreadSafeRefCounted<StorageManager::StorageArea> {
+public:
+    static PassRefPtr<StorageArea> create();
+    ~StorageArea();
+
+private:
+    StorageArea();
+};
+
+PassRefPtr<StorageManager::StorageArea> StorageManager::StorageArea::create()
+{
+    return adoptRef(new StorageArea());
+}
+
+StorageManager::StorageArea::StorageArea()
+{
+}
+
+StorageManager::StorageArea::~StorageArea()
+{
+}
+
+class StorageManager::SessionStorageNamespace : public ThreadSafeRefCounted<SessionStorageNamespace> {
+public:
+    static PassRefPtr<SessionStorageNamespace> create();
+    ~SessionStorageNamespace();
+
+    bool isEmpty() const { return m_storageAreaMap.isEmpty(); }
+
+    void cloneTo(SessionStorageNamespace& newSessionStorageNamespace);
+
+private:
+    SessionStorageNamespace();
+
+    HashMap<RefPtr<SecurityOrigin>, RefPtr<StorageArea> > m_storageAreaMap;
+};
+
+PassRefPtr<StorageManager::SessionStorageNamespace> StorageManager::SessionStorageNamespace::create()
+{
+    return adoptRef(new SessionStorageNamespace());
+}
+
+StorageManager::SessionStorageNamespace::SessionStorageNamespace()
+{
+}
+
+StorageManager::SessionStorageNamespace::~SessionStorageNamespace()
+{
+}
+
+void StorageManager::SessionStorageNamespace::cloneTo(SessionStorageNamespace& newSessionStorageNamespace)
+{
+    ASSERT(newSessionStorageNamespace.isEmpty());
+
+    // FIXME: Implement.
+}
 
 PassRefPtr<StorageManager> StorageManager::create()
 {
@@ -46,27 +107,29 @@ StorageManager::~StorageManager()
 {
 }
 
+void StorageManager::createSessionStorageNamespace(uint64_t storageNamespaceID)
+{
+    m_queue->dispatch(bind(&StorageManager::createSessionStorageNamespaceInternal, this, storageNamespaceID));
+}
+
+void StorageManager::destroySessionStorageNamespace(uint64_t storageNamespaceID)
+{
+    m_queue->dispatch(bind(&StorageManager::destroySessionStorageNamespaceInternal, this, storageNamespaceID));
+}
+
+void StorageManager::cloneSessionStorageNamespace(uint64_t storageNamespaceID, uint64_t newStorageNamespaceID)
+{
+    m_queue->dispatch(bind(&StorageManager::cloneSessionStorageNamespaceInternal, this, storageNamespaceID, newStorageNamespaceID));
+}
+
 void StorageManager::processWillOpenConnection(WebProcessProxy* webProcessProxy)
 {
-    webProcessProxy->connection()->addQueueClient(this);
+    webProcessProxy->connection()->addWorkQueueMessageReceiver(Messages::StorageManager::messageReceiverName(), m_queue.get(), this);
 }
 
 void StorageManager::processWillCloseConnection(WebProcessProxy* webProcessProxy)
 {
-    webProcessProxy->connection()->removeQueueClient(this);
-}
-
-void StorageManager::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, OwnPtr<CoreIPC::MessageDecoder>& decoder)
-{
-    if (decoder->messageReceiverName() == Messages::StorageManager::messageReceiverName()) {
-        // FIXME: We should come up with a better way to automatically dispatch messages on a given work queue.
-        m_queue->dispatch(bind(&StorageManager::dispatchMessageOnStorageManagerQueue, this, RefPtr<CoreIPC::Connection>(connection), decoder.leakPtr()));
-        return;
-    }
-}
-
-void StorageManager::didCloseOnConnectionWorkQueue(CoreIPC::Connection*)
-{
+    webProcessProxy->connection()->removeWorkQueueMessageReceiver(Messages::StorageManager::messageReceiverName());
 }
 
 void StorageManager::createStorageArea(CoreIPC::Connection*, uint64_t storageAreaID, uint64_t storageNamespaceID, const SecurityOriginData&)
@@ -79,14 +142,43 @@ void StorageManager::destroyStorageArea(CoreIPC::Connection*, uint64_t)
 {
 }
 
-void StorageManager::dispatchMessageOnStorageManagerQueue(CoreIPC::Connection* connection, CoreIPC::MessageDecoder* decoder)
+void StorageManager::getValues(CoreIPC::Connection*, uint64_t, HashMap<String, String>&)
 {
-    ASSERT(decoder->messageReceiverName() == Messages::StorageManager::messageReceiverName());
+    // FIXME: Implement this.
+}
 
-    OwnPtr<CoreIPC::MessageDecoder> decoderPtr = adoptPtr(decoder);
-    didReceiveStorageManagerMessageOnConnectionWorkQueue(connection, decoderPtr);
+void StorageManager::setItem(CoreIPC::Connection* connection, uint64_t storageAreaID, const String& key, const String& value)
+{
+    // FIXME: Find the right storage area and set the item.
+    // FIXME: Send out storage changed events.
 
-    ASSERT(!decoderPtr);
+    bool quotaError = false;
+    connection->send(Messages::StorageAreaProxy::DidSetItem(key, quotaError), storageAreaID);
+}
+
+void StorageManager::createSessionStorageNamespaceInternal(uint64_t storageNamespaceID)
+{
+    ASSERT(!m_sessionStorageNamespaces.contains(storageNamespaceID));
+
+    m_sessionStorageNamespaces.set(storageNamespaceID, SessionStorageNamespace::create());
+}
+
+void StorageManager::destroySessionStorageNamespaceInternal(uint64_t storageNamespaceID)
+{
+    ASSERT(m_sessionStorageNamespaces.contains(storageNamespaceID));
+
+    m_sessionStorageNamespaces.remove(storageNamespaceID);
+}
+
+void StorageManager::cloneSessionStorageNamespaceInternal(uint64_t storageNamespaceID, uint64_t newStorageNamespaceID)
+{
+    SessionStorageNamespace* sessionStorageNamespace = m_sessionStorageNamespaces.get(storageNamespaceID).get();
+    ASSERT(sessionStorageNamespace);
+
+    SessionStorageNamespace* newSessionStorageNamespace = m_sessionStorageNamespaces.get(newStorageNamespaceID).get();
+    ASSERT(newSessionStorageNamespace);
+
+    sessionStorageNamespace->cloneTo(*newSessionStorageNamespace);
 }
 
 } // namespace WebKit

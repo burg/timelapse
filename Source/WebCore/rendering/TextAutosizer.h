@@ -29,6 +29,7 @@
 #if ENABLE(TEXT_AUTOSIZING)
 
 #include "HTMLNames.h"
+#include "WritingMode.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -50,6 +51,7 @@ public:
     virtual ~TextAutosizer();
 
     bool processSubtree(RenderObject* layoutRoot);
+    void recalculateMultipliers();
 
     static float computeAutosizedFontSize(float specifiedSize, float multiplier);
 
@@ -61,7 +63,11 @@ private:
 
     explicit TextAutosizer(Document*);
 
+    float clusterMultiplier(WritingMode, const TextAutosizingWindowInfo&, float textWidth) const;
+
+    void processClusterInternal(TextAutosizingClusterInfo&, RenderBlock* container, RenderObject* subtreeRoot, const TextAutosizingWindowInfo&, float multiplier);
     void processCluster(TextAutosizingClusterInfo&, RenderBlock* container, RenderObject* subtreeRoot, const TextAutosizingWindowInfo&);
+    void processCompositeCluster(Vector<TextAutosizingClusterInfo>&, const TextAutosizingWindowInfo&);
     void processContainer(float multiplier, RenderBlock* container, TextAutosizingClusterInfo&, RenderObject* subtreeRoot, const TextAutosizingWindowInfo&);
 
     void setMultiplier(RenderObject*, float);
@@ -77,6 +83,7 @@ private:
     static bool containerIsRowOfLinks(const RenderObject* container);
     static bool contentHeightIsConstrained(const RenderBlock* container);
     static bool clusterShouldBeAutosized(TextAutosizingClusterInfo&, float blockWidth);
+    static bool compositeClusterShouldBeAutosized(Vector<TextAutosizingClusterInfo>&, float blockWidth);
     static void measureDescendantTextWidth(const RenderBlock* container, TextAutosizingClusterInfo&, float minTextWidth, float& textWidth);
 
     // Use to traverse the tree of descendants, excluding descendants of containers (but returning the containers themselves).
@@ -87,6 +94,11 @@ private:
     // Depending on the traversal direction specified, finds the first or the last leaf text node child that doesn't
     // belong to any cluster.
     static const RenderObject* findFirstTextLeafNotInCluster(const RenderObject*, size_t& depth, TraversalDirection);
+
+    // Returns groups of narrow descendants of a given autosizing cluster. The groups are combined
+    // by the difference between the width of the descendant and the width of the parent cluster's
+    // |blockContainingAllText|.
+    static void getNarrowDescendantsGroupedByWidth(const TextAutosizingClusterInfo& parentClusterInfo, Vector<Vector<TextAutosizingClusterInfo> >&);
 
     Document* m_document;
 };

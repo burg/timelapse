@@ -1,3 +1,161 @@
+2013-02-26  Martin Robinson  <mrobinson@igalia.com>
+
+        REGRESSION (r143619): Crashes in three layout tests
+        https://bugs.webkit.org/show_bug.cgi?id=110588
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Guard against null main resource identifiers. The main resource
+        identifier can be null at various times during the load. A null
+        identifier is never equal to the ones we are looking to remove.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::dispatchDidFinishLoading): Use the new webkitWebViewRemoveSubresource helper.
+        (WebKit::FrameLoaderClient::dispatchDidFailLoading): ditto.
+        * webkit/webkitwebview.cpp:
+        (webkitWebViewRemoveSubresource): Added this helper which removes a subresource, but
+        never touches the main resource. This is adapted from the old method, for which the
+        main resource branch was dead code.
+        * webkit/webkitwebviewprivate.h: Update the method list.
+
+2013-02-25  Andreas Kling  <akling@apple.com>
+
+        Reduce amount of code that includes StylePropertySet.h
+        <http://webkit.org/b/101149>
+
+        Reviewed by Antti Koivisto.
+
+        * WebCoreSupport/EditorClientGtk.cpp:
+
+2013-02-24  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] GTK+ 2 build broken since GTK_API_VERSION_2 moved to autoconfig.h
+        https://bugs.webkit.org/show_bug.cgi?id=110702
+
+        Reviewed by Martin Robinson.
+
+        * tests/testapplicationcache.c: include autotoolsconfig.h.
+        * tests/testatk.c: ditto.
+        * tests/testatkroles.c: ditto.
+        * tests/testcontextmenu.c: ditto.
+        * tests/testcopyandpaste.c: ditto.
+        * tests/testdomdocument.c: ditto.
+        * tests/testdomdomwindow.c: ditto.
+        * tests/testdomnode.c: ditto.
+        * tests/testdownload.c: ditto.
+        * tests/testfavicondatabase.c: ditto.
+        * tests/testglobals.c: ditto.
+        * tests/testhittestresult.c: ditto.
+        * tests/testhttpbackend.c: ditto.
+        * tests/testkeyevents.c: ditto.
+        * tests/testloading.c: ditto.
+        * tests/testmimehandling.c: ditto.
+        * tests/testnetworkrequest.c: ditto.
+        * tests/testnetworkresponse.c: ditto.
+        * tests/testwebbackforwardlist.c: ditto.
+        * tests/testwebdatasource.c: ditto.
+        * tests/testwebframe.c: ditto.
+        * tests/testwebhistoryitem.c: ditto.
+        * tests/testwebinspector.c: ditto.
+        * tests/testwebplugindatabase.c: ditto.
+        * tests/testwebresource.c: ditto.
+        * tests/testwebsettings.c: ditto.
+        * tests/testwebview.c: ditto.
+        * tests/testwindow.c: ditto.
+
+2013-02-23  Jason Anderssen  <janderssen@gmail.com>
+
+        Move setAutofilled from TestRunner to WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=110521
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportGtk.h:
+        (DumpRenderTreeSupportGtk):
+
+2013-02-22  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Expose all dependencies to the gyp build
+        https://bugs.webkit.org/show_bug.cgi?id=110498
+
+        Reviewed by Dirk Pranke.
+
+        * gyp/Configuration.gypi.in: Add the missing configuration cflags here.
+        * gyp/Dependencies.gyp: Add targets for all missing dependencies.
+
+2013-02-21  George McCollister  <george.mccollister@gmail.com>
+
+        [GTK] Remove subresource leaks from WebKit1 and WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=108960
+
+        Reviewed by Martin Robinson.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::dispatchDidFinishLoading): Remove resource
+        if it isn't the main resource to prevent leak.
+        (WebKit::FrameLoaderClient::dispatchDidFailLoading): Ditto
+        * webkit/webkitwebview.cpp:
+        (cleanupTemporarilyCachedSubresources): Added to cleanup subresources.
+        (webkit_web_view_get_subresources): Use getSubresources from the
+        documentLoader to provide subresources since resources will be removed
+        from webview after loading.
+
+2013-02-21  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix make distcheck.
+
+        * GNUmakefile.am: Add -DBUILDING_WEBKIT flags to introspection
+        scanner.
+
+2013-02-15  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Spread the gyp build files throughout the tree
+        https://bugs.webkit.org/show_bug.cgi?id=109960
+
+        Reviewed by Dirk Pranke.
+
+        * gyp/Configuration.gypi.in: Remove the 'Source', since now it cannot be shared.
+        * gyp/run-gyp: Update the path to the JavaScriptCore gypfile.
+
+2013-02-15  Martin Robinson  <mrobinson@igalia.com>
+
+        Unreviewed, rolling out parts of r142731.
+        http://trac.webkit.org/changeset/142731
+        https://bugs.webkit.org/show_bug.cgi?id=109672
+
+        This patch broke the GTK+ gyp build. Roll out the changes there,
+        since they were actually unnecessary.
+
+        * gyp/Configuration.gypi.in:
+        * gyp/Dependencies.gyp:
+        * gyp/JavaScriptCore.gyp:
+        * gyp/WTF.gyp:
+
+2013-02-13  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] window.open passes height and width parameters even if not defined in a page
+        https://bugs.webkit.org/show_bug.cgi?id=107705
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Do not resize window when default size is requested.
+
+        * WebCoreSupport/ChromeClientGtk.cpp:
+        (WebKit::ChromeClient::setWindowRect):
+
+2013-02-13  Andrew Wilson  <atwilson@chromium.org>
+
+        Unreviewed Chromium gyp-file cleanup after glib backend removal.
+        https://bugs.webkit.org/show_bug.cgi?id=109672
+
+        Removed references to GLib unicode backend:
+
+        * gyp/Configuration.gypi.in:
+        * gyp/Dependencies.gyp:
+        * gyp/JavaScriptCore.gyp:
+        * gyp/WTF.gyp:
+
 2013-02-12  Martin Robinson  <mrobinson@igalia.com>
 
         2013-02-10  Martin Robinson  <mrobinson@igalia.com>

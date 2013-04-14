@@ -276,6 +276,7 @@ WebInspector.GenericSettingsTab = function()
 
     p = this._appendSection(WebInspector.UIString("Appearance"));
     p.appendChild(this._createCheckboxSetting(WebInspector.UIString("Show toolbar icons"), WebInspector.settings.showToolbarIcons));
+    p.appendChild(this._createCheckboxSetting(WebInspector.UIString("Split panels vertically when docked to right"), WebInspector.settings.splitVerticallyWhenDockedToRight));
 
     p = this._appendSection(WebInspector.UIString("Elements"));
     p.appendChild(this._createRadioSetting(WebInspector.UIString("Color format"), [
@@ -475,7 +476,7 @@ WebInspector.WorkspaceSettingsTab.prototype = {
         addFileSystemButton.value = WebInspector.UIString("Add file system");
         addFileSystemButton.addEventListener("click", this._addFileSystemClicked.bind(this));
 
-        var fileSystemPaths = WebInspector.isolatedFileSystemModel.mapping().fileSystemPaths();
+        var fileSystemPaths = WebInspector.isolatedFileSystemManager.mapping().fileSystemPaths();
         for (var i = 0; i < fileSystemPaths.length; ++i)
             this._addFileSystemRow(fileSystemPaths[i]);
 
@@ -553,7 +554,7 @@ WebInspector.WorkspaceSettingsTab.prototype = {
         function removeFileSystemClicked()
         {
             removeFileSystemButton.disabled = true;
-            WebInspector.isolatedFileSystemModel.removeFileSystem(fileSystemPath, fileSystemRemoved.bind(this));
+            WebInspector.isolatedFileSystemManager.removeFileSystem(fileSystemPath, fileSystemRemoved.bind(this));
         }
         
         function fileSystemRemoved()
@@ -565,7 +566,7 @@ WebInspector.WorkspaceSettingsTab.prototype = {
 
     _addFileSystemClicked: function()
     {
-        WebInspector.isolatedFileSystemModel.addFileSystem(this._fileSystemAdded.bind(this));
+        WebInspector.isolatedFileSystemManager.addFileSystem(this._fileSystemAdded.bind(this));
     },
 
     /**

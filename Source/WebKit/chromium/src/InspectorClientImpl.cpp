@@ -228,6 +228,17 @@ bool InspectorClientImpl::handleJavaScriptDialog(bool accept)
     return false;
 }
 
+bool InspectorClientImpl::canSetFileInputFiles()
+{
+    return true;
+}
+
+void InspectorClientImpl::setTraceEventCallback(TraceEventCallback callback)
+{
+    if (WebDevToolsAgentImpl* agent = devToolsAgent())
+        agent->setTraceEventCallback(callback);
+}
+
 WebDevToolsAgentImpl* InspectorClientImpl::devToolsAgent()
 {
     return static_cast<WebDevToolsAgentImpl*>(m_inspectedWebView->devToolsAgent());

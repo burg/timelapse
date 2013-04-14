@@ -177,6 +177,7 @@ void RenderTextControlSingleLine::layout()
     if (RenderBox* placeholderBox = placeholderElement ? placeholderElement->renderBox() : 0) {
         placeholderBox->style()->setWidth(Length(innerTextRenderer->width() - placeholderBox->borderAndPaddingWidth(), Fixed));
         placeholderBox->style()->setHeight(Length(innerTextRenderer->height() - placeholderBox->borderAndPaddingHeight(), Fixed));
+        bool neededLayout = placeholderBox->needsLayout();
         bool placeholderBoxHadLayout = placeholderBox->everHadLayout();
         placeholderBox->layoutIfNeeded();
         LayoutPoint textOffset = innerTextRenderer->location();
@@ -191,6 +192,10 @@ void RenderTextControlSingleLine::layout()
             // logic should be shared with RenderBlock::layoutBlockChild.
             placeholderBox->repaint();
         }
+        // The placeholder gets layout last, after the parent text control and its other children,
+        // so in order to get the correct overflow from the placeholder we need to recompute it now.
+        if (neededLayout)
+            computeOverflow(clientLogicalBottom());
     }
 }
 

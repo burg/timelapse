@@ -43,6 +43,7 @@
 #include "IDBTransaction.h"
 #include "ScriptExecutionContext.h"
 #include "SerializedScriptValue.h"
+#include "SharedBuffer.h"
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
@@ -230,7 +231,11 @@ PassRefPtr<IDBRequest> IDBObjectStore::put(IDBDatabaseBackendInterface::PutMode 
 
     RefPtr<IDBRequest> request = IDBRequest::create(context, source, m_transaction.get());
     Vector<uint8_t> valueBytes = serializedValue->toWireBytes();
-    backendDB()->put(m_transaction->id(), id(), &valueBytes, key.release(), static_cast<IDBDatabaseBackendInterface::PutMode>(putMode), request, indexIds, indexKeys);
+    // This is a hack to account for disagreements about whether SerializedScriptValue should deal in Vector<uint8_t> or Vector<char>.
+    // See https://lists.webkit.org/pipermail/webkit-dev/2013-February/023682.html
+    Vector<char>* valueBytesSigned = reinterpret_cast<Vector<char>*>(&valueBytes);
+    RefPtr<SharedBuffer> valueBuffer = SharedBuffer::adoptVector(*valueBytesSigned);
+    backendDB()->put(m_transaction->id(), id(), valueBuffer, key.release(), static_cast<IDBDatabaseBackendInterface::PutMode>(putMode), request, indexIds, indexKeys);
     return request.release();
 }
 
@@ -464,6 +469,7 @@ PassRefPtr<IDBIndex> IDBObjectStore::index(const String& name, ExceptionCode& ec
 
 void IDBObjectStore::deleteIndex(const String& name, ExceptionCode& ec)
 {
+    IDB_TRACE("IDBObjectStore::deleteIndex");
     if (!m_transaction->isVersionChange() || m_deleted) {
         ec = IDBDatabaseException::InvalidStateError;
         return;
@@ -480,9 +486,9 @@ void IDBObjectStore::deleteIndex(const String& name, ExceptionCode& ec)
 
     backendDB()->deleteIndex(m_transaction->id(), id(), indexId);
 
+    m_metadata.indexes.remove(indexId);
     IDBIndexMap::iterator it = m_indexMap.find(name);
     if (it != m_indexMap.end()) {
-        m_metadata.indexes.remove(it->value->id());
         it->value->markDeleted();
         m_indexMap.remove(name);
     }

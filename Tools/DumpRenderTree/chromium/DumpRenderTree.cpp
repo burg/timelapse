@@ -31,7 +31,7 @@
 #include "config.h"
 #include "DumpRenderTree.h"
 
-#include "MockWebKitPlatformSupport.h"
+#include "MockPlatform.h"
 #include "TestShell.h"
 #include "webkit/support/webkit_support.h"
 #include <public/WebCompositorSupport.h>
@@ -67,7 +67,7 @@ static const char optionEnableAcceleratedOverflowScroll[] = "--enable-accelerate
 static const char optionUseGraphicsContext3DImplementation[] = "--use-graphics-context-3d-implementation=";
 static const char optionEnablePerTilePainting[] = "--enable-per-tile-painting";
 static const char optionEnableDeferredImageDecoding[] = "--enable-deferred-image-decoding";
-static const char optionEnableThreadedHTMLParser[] = "--enable-threaded-html-parser";
+static const char optionDisableThreadedHTMLParser[] = "--disable-threaded-html-parser";
 
 static const char optionStressOpt[] = "--stress-opt";
 static const char optionStressDeopt[] = "--stress-deopt";
@@ -80,7 +80,7 @@ class WebKitSupportTestEnvironment {
 public:
     WebKitSupportTestEnvironment()
     {
-        m_mockPlatform = MockWebKitPlatformSupport::create();
+        m_mockPlatform = MockPlatform::create();
         webkit_support::SetUpTestEnvironment(m_mockPlatform.get());
     }
     ~WebKitSupportTestEnvironment()
@@ -88,10 +88,10 @@ public:
         webkit_support::TearDownTestEnvironment();
     }
 
-    MockWebKitPlatformSupport* mockPlatform() { return m_mockPlatform.get(); }
+    MockPlatform* mockPlatform() { return m_mockPlatform.get(); }
 
 private:
-    OwnPtr<MockWebKitPlatformSupport> m_mockPlatform;
+    OwnPtr<MockPlatform> m_mockPlatform;
 };
 
 static void runTest(TestShell& shell, TestParams& params, const string& inputLine, const bool forceDumpPixels)
@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
     bool softwareCompositingEnabled = false;
     bool threadedCompositingEnabled = false;
     bool forceCompositingMode = false;
-    bool threadedHTMLParser = false;
+    bool threadedHTMLParser = true;
     bool accelerated2DCanvasEnabled = false;
     bool deferred2DCanvasEnabled = false;
     bool acceleratedPaintingEnabled = false;
@@ -183,8 +183,8 @@ int main(int argc, char* argv[])
             threadedCompositingEnabled = true;
         else if (argument == optionForceCompositingMode)
             forceCompositingMode = true;
-        else if (argument == optionEnableThreadedHTMLParser)
-            threadedHTMLParser = true;
+        else if (argument == optionDisableThreadedHTMLParser)
+            threadedHTMLParser = false;
         else if (argument == optionEnableAccelerated2DCanvas)
             accelerated2DCanvasEnabled = true;
         else if (argument == optionEnableDeferred2DCanvas)

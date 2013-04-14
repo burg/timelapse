@@ -968,7 +968,7 @@ void MediaControlTimelineElement::setPosition(float currentTime)
 
 void MediaControlTimelineElement::setDuration(float duration)
 {
-    setAttribute(maxAttr, String::number(isfinite(duration) ? duration : 0));
+    setAttribute(maxAttr, String::number(std::isfinite(duration) ? duration : 0));
 }
 
 
@@ -1200,10 +1200,15 @@ RenderObject* MediaControlTextTrackContainerElement::createRenderer(RenderArena*
     return new (arena) RenderTextTrackContainerElement(this);
 }
 
-const AtomicString& MediaControlTextTrackContainerElement::shadowPseudoId() const
+const AtomicString& MediaControlTextTrackContainerElement::textTrackContainerElementShadowPseudoId()
 {
     DEFINE_STATIC_LOCAL(AtomicString, id, ("-webkit-media-text-track-container", AtomicString::ConstructFromLiteral));
     return id;
+}
+    
+const AtomicString& MediaControlTextTrackContainerElement::shadowPseudoId() const
+{
+    return textTrackContainerElementShadowPseudoId();
 }
 
 void MediaControlTextTrackContainerElement::updateDisplay()

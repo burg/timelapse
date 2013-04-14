@@ -31,11 +31,13 @@
 #include "BackgroundHTMLInputStream.h"
 #include "CompactHTMLToken.h"
 #include "HTMLParserOptions.h"
+#include "HTMLPreloadScanner.h"
 #include "HTMLSourceTracker.h"
 #include "HTMLToken.h"
 #include "HTMLTokenizer.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -47,9 +49,16 @@ class XSSAuditor;
 class BackgroundHTMLParser {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static void create(PassRefPtr<WeakReference<BackgroundHTMLParser> > reference, const HTMLParserOptions& options, const WeakPtr<HTMLDocumentParser>& parser, PassOwnPtr<XSSAuditor> xssAuditor)
+    struct Configuration {
+        HTMLParserOptions options;
+        WeakPtr<HTMLDocumentParser> parser;
+        OwnPtr<XSSAuditor> xssAuditor;
+        OwnPtr<TokenPreloadScanner> preloadScanner;
+    };
+
+    static void create(PassRefPtr<WeakReference<BackgroundHTMLParser> > reference, PassOwnPtr<Configuration> config)
     {
-        new BackgroundHTMLParser(reference, options, parser, xssAuditor);
+        new BackgroundHTMLParser(reference, config);
         // Caller must free by calling stop().
     }
 
@@ -58,6 +67,7 @@ public:
         OwnPtr<HTMLToken> token;
         OwnPtr<HTMLTokenizer> tokenizer;
         HTMLInputCheckpoint inputCheckpoint;
+        TokenPreloadScannerCheckpoint preloadScannerCheckpoint;
         String unparsedInput;
     };
 
@@ -69,15 +79,22 @@ public:
     void forcePlaintextForTextDocument();
 
 private:
-    BackgroundHTMLParser(PassRefPtr<WeakReference<BackgroundHTMLParser> >, const HTMLParserOptions&, const WeakPtr<HTMLDocumentParser>&, PassOwnPtr<XSSAuditor>);
+    enum Namespace {
+        HTML,
+        SVG,
+        MathML
+    };
+
+    BackgroundHTMLParser(PassRefPtr<WeakReference<BackgroundHTMLParser> >, PassOwnPtr<Configuration>);
 
     void markEndOfFile();
     void pumpTokenizer();
     bool simulateTreeBuilder(const CompactHTMLToken&);
 
     void sendTokensToMainThread();
+    bool inForeignContent() const { return m_namespaceStack.last() != HTML; }
 
-    bool m_inForeignContent; // FIXME: We need a stack of foreign content markers.
+    Vector<Namespace, 1> m_namespaceStack;
     WeakPtrFactory<BackgroundHTMLParser> m_weakFactory;
     BackgroundHTMLInputStream m_input;
     HTMLSourceTracker m_sourceTracker;
@@ -85,8 +102,12 @@ private:
     OwnPtr<HTMLTokenizer> m_tokenizer;
     HTMLParserOptions m_options;
     WeakPtr<HTMLDocumentParser> m_parser;
+
     OwnPtr<CompactHTMLTokenStream> m_pendingTokens;
+    PreloadRequestStream m_pendingPreloads;
+
     OwnPtr<XSSAuditor> m_xssAuditor;
+    OwnPtr<TokenPreloadScanner> m_preloadScanner;
 };
 
 }

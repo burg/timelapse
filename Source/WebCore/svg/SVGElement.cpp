@@ -51,7 +51,7 @@ using namespace HTMLNames;
 SVGElement::SVGElement(const QualifiedName& tagName, Document* document, ConstructionType constructionType)
     : StyledElement(tagName, document, constructionType)
 {
-    setHasCustomCallbacks();
+    setHasCustomStyleCallbacks();
 }
 
 PassRefPtr<SVGElement> SVGElement::create(const QualifiedName& tagName, Document* document)
@@ -542,15 +542,15 @@ void SVGElement::attributeChanged(const QualifiedName& name, const AtomicString&
         svgAttributeChanged(name);
 }
 
-void SVGElement::updateAnimatedSVGAttribute(const QualifiedName& name) const
+void SVGElement::synchronizeAnimatedSVGAttribute(const QualifiedName& name) const
 {
-    if (!attributeData() || !attributeData()->m_animatedSVGAttributesAreDirty)
+    if (!elementData() || !elementData()->m_animatedSVGAttributesAreDirty)
         return;
 
     SVGElement* nonConstThis = const_cast<SVGElement*>(this);
     if (name == anyQName()) {
         nonConstThis->localAttributeToPropertyMap().synchronizeProperties(nonConstThis);
-        attributeData()->m_animatedSVGAttributesAreDirty = false;
+        elementData()->m_animatedSVGAttributesAreDirty = false;
     } else
         nonConstThis->localAttributeToPropertyMap().synchronizeProperty(nonConstThis, name);
 }

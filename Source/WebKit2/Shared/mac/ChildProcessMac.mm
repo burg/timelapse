@@ -41,6 +41,19 @@
 #define SANDBOX_NAMED_EXTERNAL 0x0003
 extern "C" int sandbox_init_with_parameters(const char *profile, uint64_t flags, const char *const parameters[], char **errorbuf);
 
+#ifdef __has_include
+#if __has_include(<CoreGraphics/CGSConnection.h>)
+#include <CoreGraphics/CGSConnection.h>
+#endif
+
+#if __has_include(<HIServices/ProcessesPriv.h>)
+#include <HIServices/ProcessesPriv.h>
+#endif
+#endif
+
+extern "C" CGError CGSShutdownServerConnections();
+extern "C" OSStatus SetApplicationIsDaemon(Boolean isDaemon);
+
 using namespace WebCore;
 
 namespace WebKit {
@@ -70,6 +83,12 @@ static void initializeTimerCoalescingPolicy()
 }
 #endif
 
+void ChildProcess::shutdownWindowServerConnection()
+{
+    CGSShutdownServerConnections();
+    SetApplicationIsDaemon(true);
+}
+
 void ChildProcess::platformInitialize()
 {
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
@@ -78,6 +97,10 @@ void ChildProcess::platformInitialize()
 #endif
     // Starting with process suppression disabled.  The proxy for this process will enable if appropriate from didFinishLaunching().
     setProcessSuppressionEnabled(false);
+
+    // <rdar://problem/13229217> Sudden Termination is causing WebContent XPC services to be killed in response to memory pressure
+    // Hence, disable it until we can identify if it is being enabled in error or not.
+    [[NSProcessInfo processInfo] disableSuddenTermination];
 
     [[NSFileManager defaultManager] changeCurrentDirectoryPath:[[NSBundle mainBundle] bundlePath]];
 }

@@ -276,16 +276,15 @@ String ResourceResponseBase::httpHeaderField(const char* name) const
     return m_httpHeaderFields.get(name); 
 }
 
-void ResourceResponseBase::setHTTPHeaderField(const AtomicString& name, const String& value)
+void ResourceResponseBase::updateHeaderParsedState(const AtomicString& name)
 {
-    lazyInit(CommonAndUncommonFields);
-
     DEFINE_STATIC_LOCAL(const AtomicString, ageHeader, ("age", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, cacheControlHeader, ("cache-control", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, dateHeader, ("date", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, expiresHeader, ("expires", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, lastModifiedHeader, ("last-modified", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, pragmaHeader, ("pragma", AtomicString::ConstructFromLiteral));
+
     if (equalIgnoringCase(name, ageHeader))
         m_haveParsedAgeHeader = false;
     else if (equalIgnoringCase(name, cacheControlHeader) || equalIgnoringCase(name, pragmaHeader))
@@ -296,8 +295,26 @@ void ResourceResponseBase::setHTTPHeaderField(const AtomicString& name, const St
         m_haveParsedExpiresHeader = false;
     else if (equalIgnoringCase(name, lastModifiedHeader))
         m_haveParsedLastModifiedHeader = false;
+}
+
+void ResourceResponseBase::setHTTPHeaderField(const AtomicString& name, const String& value)
+{
+    lazyInit(CommonAndUncommonFields);
+
+    updateHeaderParsedState(name);
 
     m_httpHeaderFields.set(name, value);
+}
+
+void ResourceResponseBase::addHTTPHeaderField(const AtomicString& name, const String& value)
+{
+    lazyInit(CommonAndUncommonFields);
+
+    updateHeaderParsedState(name);
+
+    HTTPHeaderMap::AddResult result = m_httpHeaderFields.add(name, value);
+    if (!result.isNewEntry)
+        result.iterator->value.append(", " + value);
 }
 
 const HTTPHeaderMap& ResourceResponseBase::httpHeaderFields() const
@@ -341,7 +358,7 @@ void ResourceResponseBase::parseCacheControlDirectives() const
             else if (equalIgnoringCase(directives[i].first, mustRevalidateDirective))
                 m_cacheControlContainsMustRevalidate = true;
             else if (equalIgnoringCase(directives[i].first, maxAgeDirective)) {
-                if (!isnan(m_cacheControlMaxAge)) {
+                if (!std::isnan(m_cacheControlMaxAge)) {
                     // First max-age directive wins if there are multiple ones.
                     continue;
                 }
@@ -411,7 +428,7 @@ static double parseDateValueInHeader(const HTTPHeaderMap& headers, const AtomicS
     // Sunday, 06-Nov-94 08:49:37 GMT ; RFC 850, obsoleted by RFC 1036
     // Sun Nov  6 08:49:37 1994       ; ANSI C's asctime() format
     double dateInMilliseconds = parseDate(headerValue);
-    if (!isfinite(dateInMilliseconds))
+    if (!std::isfinite(dateInMilliseconds))
         return std::numeric_limits<double>::quiet_NaN();
     return dateInMilliseconds / 1000;
 }

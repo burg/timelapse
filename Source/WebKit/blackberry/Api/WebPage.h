@@ -99,7 +99,7 @@ public:
 
     void loadString(const BlackBerry::Platform::String&, const BlackBerry::Platform::String& baseURL, const BlackBerry::Platform::String& contentType = "text/html", const BlackBerry::Platform::String& failingURL = BlackBerry::Platform::String::emptyString());
 
-    void convertMainResourceLoadToDownload(const Platform::NetworkRequest&);
+    void download(const Platform::NetworkRequest&);
 
     bool executeJavaScript(const BlackBerry::Platform::String& script, JavaScriptDataType& returnType, BlackBerry::Platform::String& returnValue);
 
@@ -257,6 +257,7 @@ public:
     void spellCheckingRequestProcessed(int32_t transactionId, spannable_string_t*);
     void spellCheckingRequestCancelled(int32_t transactionId);
 
+    bool isInputMode() const;
     void setDocumentSelection(const Platform::IntPoint& documentStartPoint, const Platform::IntPoint& documentEndPoint);
     void setDocumentCaretPosition(const Platform::IntPoint&);
     void selectAtDocumentPoint(const Platform::IntPoint&);
@@ -376,6 +377,8 @@ public:
     void notificationClosed(const BlackBerry::Platform::String& notificationId);
     void notificationError(const BlackBerry::Platform::String& notificationId);
     void notificationShown(const BlackBerry::Platform::String& notificationId);
+
+    void animateToScaleAndDocumentScrollPosition(double destinationZoomScale, const BlackBerry::Platform::FloatPoint& destinationScrollPosition, bool shouldConstrainScrollingToContentEdge = true);
 
 private:
     virtual ~WebPage();

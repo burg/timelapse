@@ -177,7 +177,16 @@ void CoordinatedLayerTreeHost::invalidate()
     m_isValid = false;
 }
 
-void CoordinatedLayerTreeHost::setNonCompositedContentsNeedDisplay(const WebCore::IntRect& rect)
+void CoordinatedLayerTreeHost::setNonCompositedContentsNeedDisplay()
+{
+    m_nonCompositedContentLayer->setNeedsDisplay();
+    if (m_pageOverlayLayer)
+        m_pageOverlayLayer->setNeedsDisplay();
+
+    scheduleLayerFlush();
+}
+
+void CoordinatedLayerTreeHost::setNonCompositedContentsNeedDisplayInRect(const WebCore::IntRect& rect)
 {
     m_nonCompositedContentLayer->setNeedsDisplayInRect(rect);
     if (m_pageOverlayLayer)
@@ -186,9 +195,9 @@ void CoordinatedLayerTreeHost::setNonCompositedContentsNeedDisplay(const WebCore
     scheduleLayerFlush();
 }
 
-void CoordinatedLayerTreeHost::scrollNonCompositedContents(const WebCore::IntRect& scrollRect, const WebCore::IntSize& /* scrollOffset */)
+void CoordinatedLayerTreeHost::scrollNonCompositedContents(const WebCore::IntRect&)
 {
-    setNonCompositedContentsNeedDisplay(scrollRect);
+    // Do nothing because we scroll using TiledBackingStore.
 }
 
 void CoordinatedLayerTreeHost::forceRepaint()

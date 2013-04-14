@@ -73,6 +73,11 @@ namespace WebCore {
     // A helper for throwing JavaScript TypeError for not enough arguments.
     v8::Handle<v8::Value> throwNotEnoughArgumentsError(v8::Isolate*);
 
+    inline v8::Handle<v8::Value> argumentOrNull(const v8::Arguments& args, int index)
+    {
+        return index >= args.Length() ? v8::Local<v8::Value>() : args[index];
+    }
+
     // A fast accessor for v8::Null(isolate). isolate must not be 0.
     // If isolate can be 0, use v8NullWithCheck().
     inline v8::Handle<v8::Value> v8Null(v8::Isolate* isolate)
@@ -418,7 +423,7 @@ namespace WebCore {
     inline v8::Handle<v8::Value> v8DateOrNull(double value, v8::Isolate* isolate)
     {
         ASSERT(isolate);
-        return isfinite(value) ? v8::Date::New(value) : v8NullWithCheck(isolate);
+        return std::isfinite(value) ? v8::Date::New(value) : v8NullWithCheck(isolate);
     }
 
     v8::Persistent<v8::FunctionTemplate> createRawTemplate(v8::Isolate*);
