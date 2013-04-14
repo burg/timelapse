@@ -6,13 +6,13 @@
 # are met:
 #
 # 1.  Redistributions of source code must retain the above copyright
-#     notice, this list of conditions and the following disclaimer. 
+#     notice, this list of conditions and the following disclaimer.
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution. 
+#     documentation and/or other materials provided with the distribution.
 # 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
-#     from this software without specific prior written permission. 
+#     from this software without specific prior written permission.
 #
 # THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -58,7 +58,7 @@ platform/mac/accessibility/iframe-with-title-correct-hierarchy.html
 # Some compositing tests flakey
 # <https://bugs.webkit.org/show_bug.cgi?id=48354>
 compositing/iframes/iframe-size-from-zero.html
-compositing/iframes/iframe-src-change.html 
+compositing/iframes/iframe-src-change.html
 
 # Flakey on Snow Leopard Intel WebKit2 Release Tests
 # <https://bugs.webkit.org/show_bug.cgi?id=57638>
@@ -78,7 +78,7 @@ http/tests/inspector/extensions-headers.html
 http/tests/inspector/extensions-network-redirect.html
 
 # Inspector only supports evaluation in content script world with v8, see https://bugs.webkit.org/show_bug.cgi?id=85709
-inspector/extensions/extensions-eval-content-script.html 
+inspector/extensions/extensions-eval-content-script.html
 inspector/extensions/extensions-audits-content-script.html
 
 # A bunch of inspector tests time out on Lion Intel Debug WebKit2 testers.
@@ -220,10 +220,6 @@ printing/setPrinting.html
 printing/single-line-must-not-be-split-into-two-pages.html
 printing/simultaneous-position-float-change.html
 printing/width-overflow.html
-
-# WebKitTestRunner needs layoutTestController.elementDoesAutoCompleteForElementWithId
-# <https://bugs.webkit.org/show_bug.cgi?id=42696>
-security/set-form-autocomplete-attribute.html
 
 # WebKitTestRunner needs layoutTestController.setWillSendRequestClearHeader
 # <https://bugs.webkit.org/show_bug.cgi?id=42699>
@@ -379,9 +375,6 @@ http/tests/xmlhttprequest/cross-origin-authorization-with-embedder.html
 # WebKitTestRunner needs layoutTestController.addDisallowedURL
 plugins/get-url-that-the-resource-load-delegate-will-disallow.html
 
-# WebKitTestRunner needs layoutTestController.setSelectTrailingWhitespaceEnabled
-editing/selection/doubleclick-inline-first-last-contenteditable.html
-
 # WebKitTestRunner needs layoutTestController.pageProperty
 printing/page-rule-selection.html
 
@@ -527,18 +520,6 @@ fast/box-shadow/shadow-buffer-partial.html
 fast/block/lineboxcontain/block-font.html
 fast/block/lineboxcontain/block-glyphs.html
 fast/block/lineboxcontain/font.html
-
-# [WK2] WTR needs an implementation of setAsynchronousSpellCheckingEnabled.
-# https://bugs.webkit.org/show_bug.cgi?id=81042
-editing/spelling/grammar-markers.html
-editing/spelling/grammar-paste.html
-editing/spelling/grammar-markers-hidpi.html
-editing/spelling/spellcheck-async-mutation.html
-editing/spelling/spellcheck-async-remove-frame.html
-editing/spelling/spellcheck-async.html
-editing/spelling/spellcheck-queue.html
-editing/spelling/spellcheck-sequencenum.html
-editing/spelling/spelling-marker-description.html
 
 # WTR needs an implementation of setAutomaticLinkDetectionEnabled.
 # https://bugs.webkit.org/show_bug.cgi?id=87162
@@ -881,8 +862,10 @@ http/tests/local/fileapi/file-last-modified.html
 http/tests/local/fileapi/send-dragged-file.html
 http/tests/local/formdata/form-data-with-unknown-file-extension.html
 http/tests/local/formdata/send-form-data-constructed-from-form.html
+http/tests/local/formdata/send-form-data-with-filename.html
 http/tests/local/formdata/send-form-data-with-sliced-file.html
 http/tests/local/formdata/send-form-data.html
+http/tests/local/formdata/send-form-data-with-empty-file-filename.html
 http/tests/local/formdata/upload-events.html
 http/tests/security/clipboard/clipboard-file-access.html
 media/video-src-blob.html

@@ -72,11 +72,8 @@ var WebInspector = {
             panelDescriptors.push(console);
             return panelDescriptors;
         }
-        var hiddenPanels = InspectorFrontendHost.hiddenPanels();
-        for (var i = 0; i < allDescriptors.length; ++i) {
-            if (hiddenPanels.indexOf(allDescriptors[i].name()) === -1)
-                panelDescriptors.push(allDescriptors[i]);
-        }
+        for (var i = 0; i < allDescriptors.length; ++i)
+            panelDescriptors.push(allDescriptors[i]);
         return panelDescriptors;
     },
 
@@ -387,6 +384,30 @@ WebInspector.Events = {
     }
 })();}
 
+WebInspector.suggestReload = function()
+{
+    if (window.confirm(WebInspector.UIString("It is recommended to restart inspector after making these changes. Would you like to restart it?")))
+        this.reload();
+}
+
+WebInspector.reload = function()
+{
+    var queryParams = window.location.search;
+    var url = window.location.href;
+    url = url.substring(0, url.length - queryParams.length);
+    var queryParamsObject = {};
+    for (var name in WebInspector.queryParamsObject)
+        queryParamsObject[name] = WebInspector.queryParamsObject[name];
+    if (this.dockController)
+        queryParamsObject["dockSide"] = this.dockController.dockSide();
+    var names = Object.keys(queryParamsObject);
+    for (var i = 0; i < names.length; ++i)
+        url += (i ? "&" : "?") + names[i] + "=" + queryParamsObject[names[i]];
+
+    InspectorBackend.disconnect();
+    document.location = url;
+}
+
 WebInspector.loaded = function()
 {
     InspectorBackend.loadFromJSONIfNeeded("../Inspector.json");
@@ -456,6 +477,7 @@ WebInspector.doLoadedDone = function()
     PageAgent.canContinuouslyPaint(WebInspector._initializeCapability.bind(WebInspector, "canContinuouslyPaint", null));
     PageAgent.canOverrideDeviceMetrics(WebInspector._initializeCapability.bind(WebInspector, "canOverrideDeviceMetrics", null));
     PageAgent.canOverrideGeolocation(WebInspector._initializeCapability.bind(WebInspector, "canOverrideGeolocation", null));
+    WorkerAgent.canInspectWorkers(WebInspector._initializeCapability.bind(WebInspector, "canInspectWorkers", null));
     PageAgent.canOverrideDeviceOrientation(WebInspector._initializeCapability.bind(WebInspector, "canOverrideDeviceOrientation", WebInspector._doLoadedDoneWithCapabilities.bind(WebInspector)));
 }
 
@@ -804,6 +826,10 @@ WebInspector.documentKeyDown = function(event)
             if (WebInspector.KeyboardShortcut.eventHasCtrlOrMeta(event)) {
                 PageAgent.reload(event.shiftKey);
                 event.consume(true);
+            }
+            if (window.DEBUG && event.altKey) {
+                WebInspector.reload();
+                return;
             }
             break;
         case "F5":

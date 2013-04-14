@@ -405,12 +405,10 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_minimumScale(-1.0)
     , m_maximumScale(-1.0)
     , m_forceRespectViewportArguments(false)
-    , m_finalAnimationScale(1.0)
     , m_anchorInNodeRectRatio(-1, -1)
     , m_currentBlockZoomNode(0)
     , m_currentBlockZoomAdjustedNode(0)
     , m_shouldReflowBlock(false)
-    , m_shouldConstrainScrollingToContentEdge(true)
     , m_lastUserEventTimestamp(0.0)
     , m_pluginMouseButtonPressed(false)
     , m_pluginMayOpenNewTab(false)
@@ -584,6 +582,7 @@ void WebPagePrivate::init(const BlackBerry::Platform::String& pageGroupName)
 
 #if USE(ACCELERATED_COMPOSITING)
     m_tapHighlight = DefaultTapHighlight::create(this);
+    m_selectionHighlight = DefaultTapHighlight::create(this);
     m_selectionOverlay = SelectionOverlay::create(this);
     m_page->settings()->setAcceleratedCompositingForFixedPositionEnabled(true);
 #endif
@@ -2194,6 +2193,7 @@ void WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
     AuthenticationChallengeManager* authmgr = AuthenticationChallengeManager::instance();
     BlackBerry::Platform::String username;
     BlackBerry::Platform::String password;
+    BlackBerry::Platform::String requestURL(url.string());
 
 #if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     if (m_dumpRenderTree) {
@@ -2211,7 +2211,7 @@ void WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
         credentialManager().autofillAuthenticationChallenge(protectionSpace, username, password);
 #endif
 
-    bool isConfirmed = m_client->authenticationChallenge(protectionSpace.realm().characters(), protectionSpace.realm().length(), username, password);
+    bool isConfirmed = m_client->authenticationChallenge(protectionSpace.realm().characters(), protectionSpace.realm().length(), username, password, requestURL, protectionSpace.isProxy());
 
 #if ENABLE(BLACKBERRY_CREDENTIAL_PERSIST)
     Credential credential(username, password, CredentialPersistencePermanent);
@@ -2279,7 +2279,7 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     if (Node* linkNode = node->enclosingLinkEventParentOrSelf()) {
         KURL href;
         if (linkNode->isLink() && linkNode->hasAttributes()) {
-            if (const Attribute* attribute = static_cast<Element*>(linkNode)->getAttributeItem(HTMLNames::hrefAttr))
+            if (const Attribute* attribute = toElement(linkNode)->getAttributeItem(HTMLNames::hrefAttr))
                 href = linkNode->document()->completeURL(stripLeadingAndTrailingHTMLSpaces(attribute->value()));
         }
 
@@ -2313,7 +2313,7 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
             context.setFlag(Platform::WebContext::IsImage);
             // FIXME: At the mean time, we only show "Save Image" when the image data is available.
             if (CachedResource* cachedResource = imageElement->cachedImage()) {
-                if (cachedResource->isLoaded() && cachedResource->data()) {
+                if (cachedResource->isLoaded() && cachedResource->resourceBuffer()) {
                     String url = stripLeadingAndTrailingHTMLSpaces(imageElement->getAttribute(HTMLNames::srcAttr).string());
                     context.setSrc(node->document()->completeURL(url).string());
                 }
@@ -2343,7 +2343,7 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     bool canStartSelection = node->canStartSelection();
 
     if (node->isElementNode()) {
-        Element* element = static_cast<Element*>(node->deprecatedShadowAncestorNode());
+        Element* element = toElement(node->deprecatedShadowAncestorNode());
 
         if (DOMSupport::isTextBasedContentEditableElement(element)) {
             if (!canStartSelection) {
@@ -2378,7 +2378,7 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     // Walk up the node tree looking for our custom webworks context attribute.
     while (node) {
         if (node->isElementNode()) {
-            Element* element = static_cast<Element*>(node->deprecatedShadowAncestorNode());
+            Element* element = toElement(node->deprecatedShadowAncestorNode());
             String webWorksContext(DOMSupport::webWorksContext(element));
             if (!webWorksContext.stripWhiteSpace().isEmpty()) {
                 context.setFlag(Platform::WebContext::IsWebWorksContext);
@@ -2976,12 +2976,12 @@ IntRect WebPagePrivate::blockZoomRectForNode(Node* node)
 
 // This function should not be called directly.
 // It is called after the animation ends (see above).
-void WebPagePrivate::zoomBlock()
+void WebPagePrivate::zoomAnimationFinished(double finalAnimationScale, const WebCore::FloatPoint& finalAnimationDocumentScrollPosition, bool shouldConstrainScrollingToContentEdge)
 {
     if (!m_mainFrame)
         return;
 
-    IntPoint anchor(roundUntransformedPoint(m_finalAnimationDocumentScrollPosition));
+    IntPoint anchor(roundUntransformedPoint(finalAnimationDocumentScrollPosition));
     bool willUseTextReflow = false;
 
 #if ENABLE(VIEWPORT_REFLOW)
@@ -2991,7 +2991,7 @@ void WebPagePrivate::zoomBlock()
 #endif
 
     TransformationMatrix zoom;
-    zoom.scale(m_finalAnimationScale);
+    zoom.scale(finalAnimationScale);
     *m_transformationMatrix = zoom;
     // FIXME: Do we really need to suspend/resume both backingstore and screen here?
     m_backingStore->d->suspendBackingStoreUpdates();
@@ -3002,7 +3002,7 @@ void WebPagePrivate::zoomBlock()
     bool constrainsScrollingToContentEdge = true;
     if (mainFrameView) {
         constrainsScrollingToContentEdge = mainFrameView->constrainsScrollingToContentEdge();
-        mainFrameView->setConstrainsScrollingToContentEdge(m_shouldConstrainScrollingToContentEdge);
+        mainFrameView->setConstrainsScrollingToContentEdge(shouldConstrainScrollingToContentEdge);
     }
 
 #if ENABLE(VIEWPORT_REFLOW)
@@ -3068,9 +3068,9 @@ void WebPagePrivate::zoomBlock()
     m_backingStore->d->resumeScreenUpdates(BackingStore::RenderAndBlit);
 }
 
-void WebPage::blockZoomAnimationFinished()
+void WebPage::zoomAnimationFinished(double finalScale, const Platform::FloatPoint& finalDocumentScrollPosition, bool shouldConstrainScrollingToContentEdge)
 {
-    d->zoomBlock();
+    d->zoomAnimationFinished(finalScale, finalDocumentScrollPosition, shouldConstrainScrollingToContentEdge);
 }
 
 void WebPage::resetBlockZoom()
@@ -3083,7 +3083,6 @@ void WebPagePrivate::resetBlockZoom()
     m_currentBlockZoomNode = 0;
     m_currentBlockZoomAdjustedNode = 0;
     m_shouldReflowBlock = false;
-    m_shouldConstrainScrollingToContentEdge = true;
 }
 
 void WebPage::destroyWebPageCompositor()
@@ -3109,7 +3108,6 @@ void WebPage::destroy()
 
     // Close the backforward list and release the cached pages.
     d->m_page->backForward()->close();
-    pageCache()->releaseAutoreleasedPagesNow();
 
     FrameLoader* loader = d->m_mainFrame->loader();
 
@@ -3311,6 +3309,11 @@ void WebPagePrivate::selectionChanged(Frame* frame)
     // To ensure the selection being changed has its frame 'focused', lets
     // set it as focused ourselves (PR #104724).
     m_page->focusController()->setFocusedFrame(frame);
+}
+
+void WebPagePrivate::updateSelectionScrollView(const Node* node)
+{
+    m_inRegionScroller->d->updateSelectionScrollView(node);
 }
 
 void WebPagePrivate::updateDelegatedOverlays(bool dispatched)
@@ -4025,7 +4028,7 @@ bool WebPagePrivate::handleMouseEvent(PlatformMouseEvent& mouseEvent)
             // element painted in its focus state on repaint.
             ASSERT_WITH_SECURITY_IMPLICATION(node->isElementNode());
             if (node->isElementNode()) {
-                Element* element = static_cast<Element*>(node);
+                Element* element = toElement(node);
                 element->focus();
             }
         } else
@@ -4522,12 +4525,36 @@ void WebPage::setDocumentCaretPosition(const Platform::IntPoint& documentCaretPo
     d->m_selectionHandler->setCaretPosition(documentCaretPosition);
 }
 
-void WebPage::selectAtDocumentPoint(const Platform::IntPoint& documentPoint)
+void WebPage::selectAtDocumentPoint(const Platform::IntPoint& documentPoint, SelectionExpansionType selectionExpansionType)
 {
     if (d->m_page->defersLoading())
         return;
+    d->m_selectionHandler->selectAtPoint(documentPoint, selectionExpansionType);
+}
 
-    d->m_selectionHandler->selectAtPoint(documentPoint);
+void WebPage::expandSelection(bool isScrollStarted)
+{
+    if (d->m_page->defersLoading())
+        return;
+    d->m_selectionHandler->expandSelection(isScrollStarted);
+}
+
+void WebPage::setOverlayExpansionPixelHeight(int dy)
+{
+    d->setOverlayExpansionPixelHeight(dy);
+}
+
+void WebPagePrivate::setOverlayExpansionPixelHeight(int dy)
+{
+    // Transform from pixel to document coordinates.
+    m_selectionHandler->setOverlayExpansionHeight(m_webkitThreadViewportAccessor->roundToDocumentFromPixelContents(Platform::IntPoint(0, dy)).y());
+}
+
+void WebPage::setParagraphExpansionPixelScrollMargin(const Platform::IntSize& scrollMargin)
+{
+    // Transform from pixel to document coordinates.
+    Platform::IntSize documentScrollMargin = d->m_webkitThreadViewportAccessor->roundToDocumentFromPixelContents(Platform::IntRect(Platform::IntPoint(), scrollMargin)).size();
+    d->m_selectionHandler->setParagraphExpansionScrollMargin(documentScrollMargin);
 }
 
 BackingStore* WebPage::backingStore() const
@@ -4689,18 +4716,20 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     } else
         anchor = renderer->style()->isLeftToRightDirection() ? topLeftPoint : FloatPoint(nodeRect.x() + nodeRect.width() - scaledViewportWidth, topLeftPoint.y());
 
+    WebCore::FloatPoint finalAnimationDocumentScrollPosition;
+
     if (newBlockHeight <= scaledViewportHeight) {
         // The block fits in the viewport so center it.
-        d->m_finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - dy);
+        finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - dy);
     } else {
         // The block is longer than the viewport so top align it and add 3 pixel margin.
-        d->m_finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - 3);
+        finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - 3);
     }
 
 #if ENABLE(VIEWPORT_REFLOW)
     // We don't know how long the reflowed block will be so we position it at the top of the screen with a small margin.
     if (settings()->textReflowMode() != WebSettings::TextReflowDisabled) {
-        d->m_finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - 3);
+        finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - 3);
         d->m_finalAnimationDocumentScrollPositionReflowOffset = FloatPoint(-dx, -3);
     }
 #endif
@@ -4709,24 +4738,24 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     // not be the same as the original node rect, and it could force the original node rect off the screen.
     FloatRect br(anchor, FloatSize(scaledViewportWidth, scaledViewportHeight));
     if (!br.contains(IntPoint(documentTargetPoint))) {
-        d->m_finalAnimationDocumentScrollPositionReflowOffset.move(0, (documentTargetPoint.y() - scaledViewportHeight / 2) - d->m_finalAnimationDocumentScrollPosition.y());
-        d->m_finalAnimationDocumentScrollPosition = FloatPoint(d->m_finalAnimationDocumentScrollPosition.x(), documentTargetPoint.y() - scaledViewportHeight / 2);
+        d->m_finalAnimationDocumentScrollPositionReflowOffset.move(0, (documentTargetPoint.y() - scaledViewportHeight / 2) - finalAnimationDocumentScrollPosition.y());
+        finalAnimationDocumentScrollPosition = FloatPoint(finalAnimationDocumentScrollPosition.x(), documentTargetPoint.y() - scaledViewportHeight / 2);
     }
 
     // Clamp the finalBlockPoint to not cause any overflow scrolling.
-    if (d->m_finalAnimationDocumentScrollPosition.x() < 0) {
-        d->m_finalAnimationDocumentScrollPosition.setX(0);
+    if (finalAnimationDocumentScrollPosition.x() < 0) {
+        finalAnimationDocumentScrollPosition.setX(0);
         d->m_finalAnimationDocumentScrollPositionReflowOffset.setX(0);
-    } else if (d->m_finalAnimationDocumentScrollPosition.x() + scaledViewportWidth > d->contentsSize().width()) {
-        d->m_finalAnimationDocumentScrollPosition.setX(d->contentsSize().width() - scaledViewportWidth);
+    } else if (finalAnimationDocumentScrollPosition.x() + scaledViewportWidth > d->contentsSize().width()) {
+        finalAnimationDocumentScrollPosition.setX(d->contentsSize().width() - scaledViewportWidth);
         d->m_finalAnimationDocumentScrollPositionReflowOffset.setX(0);
     }
 
-    if (d->m_finalAnimationDocumentScrollPosition.y() < 0) {
-        d->m_finalAnimationDocumentScrollPosition.setY(0);
+    if (finalAnimationDocumentScrollPosition.y() < 0) {
+        finalAnimationDocumentScrollPosition.setY(0);
         d->m_finalAnimationDocumentScrollPositionReflowOffset.setY(0);
-    } else if (d->m_finalAnimationDocumentScrollPosition.y() + scaledViewportHeight > d->contentsSize().height()) {
-        d->m_finalAnimationDocumentScrollPosition.setY(d->contentsSize().height() - scaledViewportHeight);
+    } else if (finalAnimationDocumentScrollPosition.y() + scaledViewportHeight > d->contentsSize().height()) {
+        finalAnimationDocumentScrollPosition.setY(d->contentsSize().height() - scaledViewportHeight);
         d->m_finalAnimationDocumentScrollPositionReflowOffset.setY(0);
     }
 
@@ -4735,7 +4764,7 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     // that the zoom level is the minimumScale.
     if (!endOfBlockZoomMode && abs(newScale - oldScale) / oldScale < minimumExpandingRatio) {
         const double minimumDisplacement = minimumExpandingRatio * webkitThreadViewportAccessor()->documentViewportSize().width();
-        if (oldScale == d->minimumScale() || (distanceBetweenPoints(d->scrollPosition(), roundUntransformedPoint(d->m_finalAnimationDocumentScrollPosition)) < minimumDisplacement && abs(newScale - oldScale) / oldScale < 0.10)) {
+        if (oldScale == d->minimumScale() || (distanceBetweenPoints(d->scrollPosition(), roundUntransformedPoint(finalAnimationDocumentScrollPosition)) < minimumDisplacement && abs(newScale - oldScale) / oldScale < 0.10)) {
             if (isFirstZoom) {
                 d->resetBlockZoom();
                 return false;
@@ -4746,12 +4775,10 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
         }
     }
 
-    d->m_finalAnimationScale = newScale;
-
     // We set this here to make sure we don't try to re-render the page at a different zoom level during loading.
     d->m_userPerformedManualZoom = true;
     d->m_userPerformedManualScroll = true;
-    d->m_client->animateBlockZoom(d->m_finalAnimationScale, d->m_finalAnimationDocumentScrollPosition);
+    d->m_client->animateToScaleAndDocumentScrollPosition(newScale, finalAnimationDocumentScrollPosition, true);
 
     return true;
 }
@@ -5014,7 +5041,7 @@ bool WebPage::setNodeFocus(const WebDOMNode& node, bool on)
             if (on) {
                 page->focusController()->setFocusedNode(nodeImpl, doc->frame());
                 if (nodeImpl->isElementNode())
-                    static_cast<Element*>(nodeImpl)->updateFocusAppearance(true);
+                    toElement(nodeImpl)->updateFocusAppearance(true);
                 d->m_inputHandler->didNodeOpenPopup(nodeImpl);
             } else if (doc->focusedNode() == nodeImpl) // && !on
                 page->focusController()->setFocusedNode(0, doc->frame());
@@ -5874,7 +5901,7 @@ void WebPagePrivate::adjustFullScreenElementDimensionsIfNeeded()
         return;
 
     ASSERT(m_fullscreenNode->isElementNode());
-    ASSERT(static_cast<Element*>(m_fullscreenNode.get())->isMediaElement());
+    ASSERT(toElement(m_fullscreenNode.get())->isMediaElement());
 
     Document* document = m_fullscreenNode->document();
     RenderStyle* fullScreenStyle = document->fullScreenRenderer()->style();
@@ -5907,7 +5934,6 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setLoadsImagesAutomatically(webSettings->loadsImagesAutomatically());
     coreSettings->setShouldDrawBorderWhileLoadingImages(webSettings->shouldDrawBorderWhileLoadingImages());
     coreSettings->setScriptEnabled(webSettings->isJavaScriptEnabled());
-    coreSettings->setPrivateBrowsingEnabled(webSettings->isPrivateBrowsingEnabled());
     coreSettings->setDeviceSupportsMouse(webSettings->deviceSupportsMouse());
     coreSettings->setDefaultFixedFontSize(webSettings->defaultFixedFontSize());
     coreSettings->setDefaultFontSize(webSettings->defaultFontSize());
@@ -5935,6 +5961,12 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setFirstScheduledLayoutDelay(webSettings->firstScheduledLayoutDelay());
     coreSettings->setUseCache(webSettings->useWebKitCache());
     coreSettings->setCookieEnabled(webSettings->areCookiesEnabled());
+
+    if (coreSettings->privateBrowsingEnabled() != webSettings->isPrivateBrowsingEnabled()) {
+        coreSettings->setPrivateBrowsingEnabled(webSettings->isPrivateBrowsingEnabled());
+        cookieManager().setPrivateMode(webSettings->isPrivateBrowsingEnabled());
+        CredentialStorage::setPrivateMode(webSettings->isPrivateBrowsingEnabled());
+    }
 
 #if ENABLE(SQL_DATABASE)
     // DatabaseManager can only be initialized for once, so it doesn't
@@ -5991,10 +6023,6 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setShouldUseCrossOriginProtocolCheck(!webSettings->allowCrossSiteRequests());
     coreSettings->setWebSecurityEnabled(!webSettings->allowCrossSiteRequests());
     coreSettings->setApplyPageScaleFactorInCompositor(webSettings->applyDeviceScaleFactorInCompositor());
-
-    cookieManager().setPrivateMode(webSettings->isPrivateBrowsingEnabled());
-
-    CredentialStorage::setPrivateMode(webSettings->isPrivateBrowsingEnabled());
 
     if (m_mainFrame && m_mainFrame->view()) {
         Color backgroundColor(webSettings->backgroundColor());
@@ -6076,6 +6104,11 @@ const BlackBerry::Platform::String& WebPagePrivate::defaultUserAgent()
 WebTapHighlight* WebPage::tapHighlight() const
 {
     return d->m_tapHighlight.get();
+}
+
+WebTapHighlight* WebPage::selectionHighlight() const
+{
+    return d->m_selectionHighlight.get();
 }
 
 void WebPage::addOverlay(WebOverlay* overlay)
@@ -6176,7 +6209,7 @@ void WebPagePrivate::setTextZoomFactor(float textZoomFactor)
     m_mainFrame->setTextZoomFactor(textZoomFactor);
 }
 
-void WebPagePrivate::restoreHistoryViewState(Platform::IntSize contentsSize, Platform::IntPoint scrollPosition, double scale, bool shouldReflowBlock)
+void WebPagePrivate::restoreHistoryViewState(const WebCore::IntPoint& scrollPosition, double scale, bool shouldReflowBlock)
 {
     if (!m_mainFrame) {
         // FIXME: Do we really need to suspend/resume both backingstore and screen here?
@@ -6185,13 +6218,20 @@ void WebPagePrivate::restoreHistoryViewState(Platform::IntSize contentsSize, Pla
         return;
     }
 
-    m_mainFrame->view()->setContentsSizeFromHistory(contentsSize);
+    // If we are about to overscroll, scroll back to the valid contents area.
+    WebCore::IntPoint adjustedScrollPosition = scrollPosition;
+    WebCore::IntSize validContentsSize = contentsSize();
+    WebCore::IntSize viewportSize = actualVisibleSize();
+    if (adjustedScrollPosition.x() + viewportSize.width() > validContentsSize.width())
+        adjustedScrollPosition.setX(validContentsSize.width() - viewportSize.width());
+    if (adjustedScrollPosition.y() + viewportSize.height() > validContentsSize.height())
+        adjustedScrollPosition.setY(validContentsSize.height() - viewportSize.height());
 
     // Here we need to set scroll position what we asked for.
     // So we use ScrollView::constrainsScrollingToContentEdge(false).
     bool oldConstrainsScrollingToContentEdge = m_mainFrame->view()->constrainsScrollingToContentEdge();
     m_mainFrame->view()->setConstrainsScrollingToContentEdge(false);
-    setScrollPosition(scrollPosition);
+    setScrollPosition(adjustedScrollPosition);
     m_mainFrame->view()->setConstrainsScrollingToContentEdge(oldConstrainsScrollingToContentEdge);
 
     m_shouldReflowBlock = shouldReflowBlock;
@@ -6320,13 +6360,10 @@ void WebPagePrivate::animateToScaleAndDocumentScrollPosition(double destinationZ
     if (destinationScrollPosition == scrollPosition() && destinationZoomScale == currentScale())
         return;
 
-    m_finalAnimationDocumentScrollPosition = destinationScrollPosition;
-    m_finalAnimationScale = destinationZoomScale;
     m_shouldReflowBlock = false;
     m_userPerformedManualZoom = true;
     m_userPerformedManualScroll = true;
-    m_shouldConstrainScrollingToContentEdge = shouldConstrainScrollingToContentEdge;
-    client()->animateBlockZoom(destinationZoomScale, destinationScrollPosition);
+    client()->animateToScaleAndDocumentScrollPosition(destinationZoomScale, destinationScrollPosition, shouldConstrainScrollingToContentEdge);
 }
 
 void WebPage::animateToScaleAndDocumentScrollPosition(double destinationZoomScale, const BlackBerry::Platform::FloatPoint& destinationScrollPosition, bool shouldConstrainScrollingToContentEdge)

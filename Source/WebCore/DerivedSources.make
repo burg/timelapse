@@ -118,10 +118,12 @@ BINDING_IDLS = \
     $(WebCore)/Modules/notifications/NotificationPermissionCallback.idl \
     $(WebCore)/Modules/notifications/WorkerContextNotifications.idl \
     $(WebCore)/Modules/quota/DOMWindowQuota.idl \
+    $(WebCore)/Modules/quota/NavigatorStorageQuota.idl \
     $(WebCore)/Modules/quota/StorageInfo.idl \
-    $(WebCore)/Modules/quota/StorageInfoErrorCallback.idl \
-    $(WebCore)/Modules/quota/StorageInfoQuotaCallback.idl \
-    $(WebCore)/Modules/quota/StorageInfoUsageCallback.idl \
+    $(WebCore)/Modules/quota/StorageErrorCallback.idl \
+    $(WebCore)/Modules/quota/StorageQuota.idl \
+    $(WebCore)/Modules/quota/StorageQuotaCallback.idl \
+    $(WebCore)/Modules/quota/StorageUsageCallback.idl \
     $(WebCore)/Modules/speech/DOMWindowSpeechSynthesis.idl \
     $(WebCore)/Modules/speech/SpeechSynthesis.idl \
     $(WebCore)/Modules/speech/SpeechSynthesisEvent.idl \
@@ -177,6 +179,7 @@ BINDING_IDLS = \
     $(WebCore)/Modules/websockets/WebSocket.idl \
     $(WebCore)/Modules/websockets/WorkerContextWebSocket.idl \
     $(WebCore)/css/CSSCharsetRule.idl \
+    $(WebCore)/css/CSSFontFaceLoadEvent.idl \
     $(WebCore)/css/CSSFontFaceRule.idl \
     $(WebCore)/css/CSSHostRule.idl \
     $(WebCore)/css/CSSImportRule.idl \
@@ -194,6 +197,7 @@ BINDING_IDLS = \
     $(WebCore)/css/CSSValueList.idl \
     $(WebCore)/css/Counter.idl \
     $(WebCore)/css/DOMWindowCSS.idl \
+    $(WebCore)/css/FontLoader.idl \
     $(WebCore)/css/MediaList.idl \
     $(WebCore)/css/MediaQueryList.idl \
     $(WebCore)/css/MediaQueryListListener.idl \
@@ -390,6 +394,7 @@ BINDING_IDLS = \
     $(WebCore)/html/canvas/CanvasRenderingContext2D.idl \
     $(WebCore)/html/canvas/DataView.idl \
     $(WebCore)/html/canvas/DOMPath.idl \
+    $(WebCore)/html/canvas/EXTDrawBuffers.idl \
     $(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
     $(WebCore)/html/canvas/Float32Array.idl \
     $(WebCore)/html/canvas/Float64Array.idl \
@@ -399,6 +404,7 @@ BINDING_IDLS = \
     $(WebCore)/html/canvas/OESElementIndexUint.idl \
     $(WebCore)/html/canvas/OESStandardDerivatives.idl \
     $(WebCore)/html/canvas/OESTextureFloat.idl \
+    $(WebCore)/html/canvas/OESTextureHalfFloat.idl \
     $(WebCore)/html/canvas/OESVertexArrayObject.idl \
     $(WebCore)/html/canvas/Uint16Array.idl \
     $(WebCore)/html/canvas/Uint32Array.idl \
@@ -406,6 +412,7 @@ BINDING_IDLS = \
     $(WebCore)/html/canvas/Uint8ClampedArray.idl \
     $(WebCore)/html/canvas/WebGLActiveInfo.idl \
     $(WebCore)/html/canvas/WebGLBuffer.idl \
+    $(WebCore)/html/canvas/WebGLCompressedTextureATC.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureS3TC.idl \
     $(WebCore)/html/canvas/WebGLContextAttributes.idl \
     $(WebCore)/html/canvas/WebGLContextEvent.idl \

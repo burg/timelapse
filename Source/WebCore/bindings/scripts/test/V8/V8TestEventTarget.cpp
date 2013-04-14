@@ -136,7 +136,7 @@ static v8::Handle<v8::Value> dispatchEventMethod(const v8::Arguments& args)
     TestEventTarget* imp = V8TestEventTarget::toNative(args.Holder());
     ExceptionCode ec = 0;
     {
-    V8TRYCATCH(Event*, evt, V8Event::HasInstance(args[0], args.GetIsolate()) ? V8Event::toNative(v8::Handle<v8::Object>::Cast(args[0])) : 0);
+    V8TRYCATCH(Event*, evt, V8Event::HasInstance(args[0], args.GetIsolate(), worldType(args.GetIsolate())) ? V8Event::toNative(v8::Handle<v8::Object>::Cast(args[0])) : 0);
     bool result = imp->dispatchEvent(evt, ec);
     if (UNLIKELY(ec))
         goto fail;
@@ -159,7 +159,7 @@ static const V8DOMConfiguration::BatchedMethod V8TestEventTargetMethods[] = {
     {"removeEventListener", TestEventTargetV8Internal::removeEventListenerMethodCallback},
 };
 
-static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
+static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate, WrapperWorldType worldType)
 {
     desc->ReadOnlyPrototype();
 
@@ -179,7 +179,7 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v
 
     // Custom Signature 'dispatchEvent'
     const int dispatchEventArgc = 1;
-    v8::Handle<v8::FunctionTemplate> dispatchEventArgv[dispatchEventArgc] = { V8Event::GetRawTemplate(isolate) };
+    v8::Handle<v8::FunctionTemplate> dispatchEventArgv[dispatchEventArgc] = { V8PerIsolateData::from(isolate)->rawTemplate(&V8Event::info, worldType) };
     v8::Handle<v8::Signature> dispatchEventSignature = v8::Signature::New(desc, dispatchEventArgc, dispatchEventArgv);
     proto->Set(v8::String::NewSymbol("dispatchEvent"), v8::FunctionTemplate::New(TestEventTargetV8Internal::dispatchEventMethodCallback, v8Undefined(), dispatchEventSignature));
 
@@ -188,36 +188,23 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetRawTemplate(v8::Isolate* isolate)
+v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetTemplate(v8::Isolate* isolate, WrapperWorldType worldType)
 {
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
-    if (result != data->rawTemplateMap().end())
-        return result->value;
-
-    v8::HandleScope handleScope;
-    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate(isolate);
-    data->rawTemplateMap().add(&info, templ);
-    return templ;
-}
-
-v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetTemplate(v8::Isolate* isolate)
-{
-    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
-    if (result != data->templateMap().end())
+    V8PerIsolateData::TemplateMap::iterator result = data->templateMap(worldType).find(&info);
+    if (result != data->templateMap(worldType).end())
         return result->value;
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        ConfigureV8TestEventTargetTemplate(GetRawTemplate(isolate), isolate);
-    data->templateMap().add(&info, templ);
+        ConfigureV8TestEventTargetTemplate(data->rawTemplate(&info, worldType), isolate, worldType);
+    data->templateMap(worldType).add(&info, templ);
     return templ;
 }
 
-bool V8TestEventTarget::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate)
+bool V8TestEventTarget::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate, WrapperWorldType worldType)
 {
-    return GetRawTemplate(isolate)->HasInstance(value);
+    return V8PerIsolateData::from(isolate)->hasInstance(&info, value, worldType);
 }
 
 EventTarget* V8TestEventTarget::toEventTarget(v8::Handle<v8::Object> object)

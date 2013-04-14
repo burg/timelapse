@@ -215,20 +215,20 @@ void WebSocket::connect(const String& url, const Vector<String>& protocols, Exce
     m_url = KURL(KURL(), url);
 
     if (!m_url.isValid()) {
-        scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Invalid url for WebSocket " + m_url.string());
+        scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Invalid url for WebSocket " + m_url.elidedString());
         m_state = CLOSED;
         ec = SYNTAX_ERR;
         return;
     }
 
     if (!m_url.protocolIs("ws") && !m_url.protocolIs("wss")) {
-        scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Wrong url scheme for WebSocket " + m_url.string());
+        scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Wrong url scheme for WebSocket " + m_url.elidedString());
         m_state = CLOSED;
         ec = SYNTAX_ERR;
         return;
     }
     if (m_url.hasFragmentIdentifier()) {
-        scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "URL has fragment component " + m_url.string());
+        scriptExecutionContext()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "URL has fragment component " + m_url.elidedString());
         m_state = CLOSED;
         ec = SYNTAX_ERR;
         return;
@@ -243,7 +243,7 @@ void WebSocket::connect(const String& url, const Vector<String>& protocols, Exce
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
     bool shouldBypassMainWorldContentSecurityPolicy = false;
     if (scriptExecutionContext()->isDocument()) {
-        Document* document = static_cast<Document*>(scriptExecutionContext());
+        Document* document = toDocument(scriptExecutionContext());
         shouldBypassMainWorldContentSecurityPolicy = document->frame()->script()->shouldBypassMainWorldContentSecurityPolicy();
     }
     if (!shouldBypassMainWorldContentSecurityPolicy && !scriptExecutionContext()->contentSecurityPolicy()->allowConnectToSource(m_url)) {
@@ -353,7 +353,7 @@ bool WebSocket::send(ArrayBufferView* arrayBufferView, ExceptionCode& ec)
 
 bool WebSocket::send(Blob* binaryData, ExceptionCode& ec)
 {
-    LOG(Network, "WebSocket %p send blob %s", this, binaryData->url().string().utf8().data());
+    LOG(Network, "WebSocket %p send blob %s", this, binaryData->url().elidedString().utf8().data());
     ASSERT(binaryData);
     if (m_state == CONNECTING) {
         ec = INVALID_STATE_ERR;

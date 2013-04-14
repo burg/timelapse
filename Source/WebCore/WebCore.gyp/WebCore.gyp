@@ -2103,6 +2103,7 @@
         ['exclude', 'Modules/indexeddb/IDBFactoryBackendInterface\\.cpp$'],
         ['exclude', 'Modules/webdatabase/DatabaseManagerClient\\.h$'],
         ['exclude', 'Modules/webdatabase/DatabaseTracker\\.cpp$'],
+        ['exclude', 'Modules/webdatabase/OriginLock\\.cpp$'],
         ['exclude', 'Modules/webdatabase/SQLTransactionClient\\.cpp$'],
         ['exclude', 'inspector/InspectorFrontendClientLocal\\.cpp$'],
         ['exclude', 'inspector/JavaScript[^/]*\\.cpp$'],
@@ -2130,6 +2131,7 @@
         ['exclude', 'storage/StorageThread\\.(cpp|h)$'],
         ['exclude', 'storage/StorageTracker\\.(cpp|h)$'],
         ['exclude', 'storage/StorageTrackerClient\\.h$'],
+        ['exclude', 'workers/SharedWorkerRepository\\.cpp$'],
         ['exclude', 'workers/DefaultSharedWorkerRepository\\.(cpp|h)$'],
 
         ['include', 'loader/appcache/ApplicationCacheHost\.h$'],

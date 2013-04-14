@@ -255,16 +255,14 @@ bool MockWebRTCPeerConnectionHandler::addICECandidate(const WebRTCICECandidate& 
 
 bool MockWebRTCPeerConnectionHandler::addStream(const WebMediaStream& stream, const WebMediaConstraints&)
 {
-    m_streamCount += 1;
-    m_client->didAddRemoteStream(stream);
+    ++m_streamCount;
     m_client->negotiationNeeded();
     return true;
 }
 
 void MockWebRTCPeerConnectionHandler::removeStream(const WebMediaStream& stream)
 {
-    m_streamCount -= 1;
-    m_client->didRemoveRemoteStream(stream);
+    --m_streamCount;
     m_client->negotiationNeeded();
 }
 
@@ -275,19 +273,14 @@ void MockWebRTCPeerConnectionHandler::getStats(const WebRTCStatsRequest& request
     if (request.hasSelector()) {
         WebMediaStream stream = request.stream();
         // FIXME: There is no check that the fetched values are valid.
-        size_t reportIndex = response.addReport();
-        response.addElement(reportIndex, true, currentDate);
-        response.addStatistic(reportIndex, true, "type", "video");
+        size_t reportIndex = response.addReport("Mock video", "ssrc", currentDate);
+        response.addStatistic(reportIndex, "type", "video");
     } else {
         for (int i = 0; i < m_streamCount; ++i) {
-            size_t reportIndex = response.addReport();
-            response.addElement(reportIndex, true, currentDate);
-            response.addStatistic(reportIndex, true, "type", "audio");
-            reportIndex = response.addReport();
-            response.addElement(reportIndex, true, currentDate);
-            response.addStatistic(reportIndex, true, "type", "video");
-            // We add an empty remote report element.
-            response.addElement(reportIndex, false, currentDate);
+            size_t reportIndex = response.addReport("Mock audio", "ssrc", currentDate);
+            response.addStatistic(reportIndex, "type", "audio");
+            reportIndex = response.addReport("Mock video", "ssrc", currentDate);
+            response.addStatistic(reportIndex, "type", "video");
         }
     }
     m_interfaces->delegate()->postTask(new RTCStatsRequestSucceededTask(this, request, response));

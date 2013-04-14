@@ -25,7 +25,7 @@
 #include <wtf/RetainPtr.h>
 
 #if PLATFORM(MAC)
-#include "SchedulePair.h"
+#include <wtf/SchedulePair.h>
 #endif
 
 #if PLATFORM(CHROMIUM)
@@ -77,6 +77,7 @@ public:
     virtual bool localFileContentSniffingEnabled() const = 0; // FIXME: Reconcile with ResourceHandle::forceContentSniffing().
     virtual SchedulePairHashSet* scheduledRunLoopPairs() const { return 0; }
     virtual NSOperationQueue *scheduledOperationQueue() const { return 0; }
+    virtual RetainPtr<CFDataRef> sourceApplicationAuditData() const = 0;
     virtual ResourceError blockedError(const ResourceRequest&) const = 0;
 #endif
 

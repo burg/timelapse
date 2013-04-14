@@ -209,6 +209,7 @@ RenderLayerCompositor::RenderLayerCompositor(RenderView* renderView)
     , m_forceCompositingMode(false)
     , m_inPostLayoutUpdate(false)
     , m_isTrackingRepaints(false)
+    , m_layersWithTiledBackingCount(0)
     , m_rootLayerAttachment(RootLayerUnattached)
 #if !LOG_DISABLED
     , m_rootLayerUpdateCount(0)
@@ -388,6 +389,16 @@ void RenderLayerCompositor::notifyFlushBeforeDisplayRefresh(const GraphicsLayer*
 void RenderLayerCompositor::flushLayers(GraphicsLayerUpdater*)
 {
     flushPendingLayerChanges(true); // FIXME: deal with iframes
+}
+
+void RenderLayerCompositor::layerTiledBackingUsageChanged(const GraphicsLayer*, bool usingTiledBacking)
+{
+    if (usingTiledBacking)
+        ++m_layersWithTiledBackingCount;
+    else {
+        ASSERT(m_layersWithTiledBackingCount > 0);
+        --m_layersWithTiledBackingCount;
+    }
 }
 
 RenderLayerCompositor* RenderLayerCompositor::enclosingCompositorFlushingLayers() const
@@ -782,7 +793,9 @@ void RenderLayerCompositor::addToOverlapMap(OverlapMap& overlapMap, RenderLayer*
     }
 
     IntRect clipRect = pixelSnappedIntRect(layer->backgroundClipRect(RenderLayer::ClipRectsContext(rootRenderLayer(), 0, AbsoluteClipRects)).rect()); // FIXME: Incorrect for CSS regions.
-    clipRect.scale(pageScaleFactor());
+    if (Settings* settings = m_renderView->document()->settings())
+        if (!settings->applyPageScaleFactorInCompositor())
+            clipRect.scale(pageScaleFactor());
     clipRect.intersect(layerBounds);
     overlapMap.add(layer, clipRect);
 }
@@ -1218,9 +1231,10 @@ void RenderLayerCompositor::frameViewDidScroll()
     if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator()) {
         if (scrollingCoordinator->coordinatesScrollingForFrameView(frameView))
             return;
-        if (Settings* settings = m_renderView->document()->settings())
+        if (Settings* settings = m_renderView->document()->settings()) {
             if (settings->compositedScrollingForFramesEnabled())
                 scrollingCoordinator->scrollableAreaScrollLayerDidChange(frameView);
+        }
     }
 
     m_scrollLayer->setPosition(FloatPoint(-scrollPosition.x(), -scrollPosition.y()));
@@ -1233,13 +1247,13 @@ void RenderLayerCompositor::frameViewDidLayout()
 {
     RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
     if (renderViewBacking)
-        renderViewBacking->adjustTileCacheCoverage();
+        renderViewBacking->adjustTiledBackingCoverage();
 }
 
 void RenderLayerCompositor::rootFixedBackgroundsChanged()
 {
     RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
-    if (renderViewBacking && renderViewBacking->usingTileCache())
+    if (renderViewBacking && renderViewBacking->usingTiledBacking())
         setCompositingLayersNeedRebuild();
 }
 
@@ -1278,6 +1292,8 @@ String RenderLayerCompositor::layerTreeAsText(LayerTreeFlags flags)
         layerTreeBehavior |= LayerTreeAsTextIncludeTileCaches;
     if (flags & LayerTreeFlagsIncludeRepaintRects)
         layerTreeBehavior |= LayerTreeAsTextIncludeRepaintRects;
+    if (flags & LayerTreeFlagsIncludePaintingPhases)
+        layerTreeBehavior |= LayerTreeAsTextIncludePaintingPhases;
 
     // We skip dumping the scroll and clip layers to keep layerTreeAsText output
     // similar between platforms.
@@ -1299,7 +1315,7 @@ RenderLayerCompositor* RenderLayerCompositor::frameContentsCompositor(RenderPart
     if (!renderer->node()->isFrameOwnerElement())
         return 0;
         
-    HTMLFrameOwnerElement* element = static_cast<HTMLFrameOwnerElement*>(renderer->node());
+    HTMLFrameOwnerElement* element = toFrameOwnerElement(renderer->node());
     if (Document* contentDocument = element->contentDocument()) {
         if (RenderView* view = contentDocument->renderView())
             return view->compositor();
@@ -1578,6 +1594,9 @@ void RenderLayerCompositor::updateRootLayerPosition()
             ScrollbarTheme::theme()->setUpContentShadowLayer(m_contentShadowLayer.get());
         }
     }
+
+    updateLayerForTopOverhangArea(m_layerForTopOverhangArea);
+    updateLayerForBottomOverhangArea(m_layerForBottomOverhangArea);
 #endif
 }
 
@@ -1670,7 +1689,7 @@ bool RenderLayerCompositor::canBeComposited(const RenderLayer* layer) const
 {
     // FIXME: We disable accelerated compositing for elements in a RenderFlowThread as it doesn't work properly.
     // See http://webkit.org/b/84900 to re-enable it.
-    return m_hasAcceleratedCompositing && layer->isSelfPaintingLayer() && !layer->renderer()->inRenderFlowThread();
+    return m_hasAcceleratedCompositing && layer->isSelfPaintingLayer() && layer->renderer()->flowThreadState() == RenderObject::NotInsideFlowThread;
 }
 
 bool RenderLayerCompositor::requiresOwnBackingStore(const RenderLayer* layer, const RenderLayer* compositingAncestorLayer) const
@@ -1985,7 +2004,7 @@ bool RenderLayerCompositor::requiresCompositingForVideo(RenderObject* renderer) 
         if (!node || (!node->hasTagName(HTMLNames::videoTag) && !node->hasTagName(HTMLNames::audioTag)))
             return false;
 
-        HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(node);
+        HTMLMediaElement* mediaElement = toMediaElement(node);
         return mediaElement->player() ? mediaElement->player()->supportsAcceleratedRendering() : false;
     }
 #endif // ENABLE(PLUGIN_PROXY_FOR_VIDEO)
@@ -2146,9 +2165,10 @@ bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* rendere
         return false;
 
     // FIXME: acceleratedCompositingForFixedPositionEnabled should probably be renamed acceleratedCompositingForViewportConstrainedPositionEnabled().
-    if (Settings* settings = m_renderView->document()->settings())
+    if (Settings* settings = m_renderView->document()->settings()) {
         if (!settings->acceleratedCompositingForFixedPositionEnabled())
             return false;
+    }
 
     if (isSticky)
         return true;
@@ -2267,7 +2287,7 @@ void RenderLayerCompositor::paintContents(const GraphicsLayer* graphicsLayer, Gr
 bool RenderLayerCompositor::supportsFixedRootBackgroundCompositing() const
 {
     RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
-    return renderViewBacking && renderViewBacking->usingTileCache();
+    return renderViewBacking && renderViewBacking->usingTiledBacking();
 }
 
 bool RenderLayerCompositor::needsFixedRootBackgroundLayer(const RenderLayer* layer) const
@@ -2419,6 +2439,56 @@ bool RenderLayerCompositor::requiresContentShadowLayer() const
 
     return false;
 }
+
+GraphicsLayer* RenderLayerCompositor::updateLayerForTopOverhangArea(bool wantsLayer)
+{
+    if (m_renderView->document()->ownerElement())
+        return 0;
+
+    if (!wantsLayer) {
+        if (m_layerForTopOverhangArea) {
+            m_layerForTopOverhangArea->removeFromParent();
+            m_layerForTopOverhangArea = nullptr;
+        }
+        return 0;
+    }
+
+    if (!m_layerForTopOverhangArea) {
+        m_layerForTopOverhangArea = GraphicsLayer::create(graphicsLayerFactory(), this);
+#ifndef NDEBUG
+        m_layerForTopOverhangArea->setName("top overhang area");
+#endif
+        m_scrollLayer->addChildBelow(m_layerForTopOverhangArea.get(), m_rootContentLayer.get());
+    }
+
+    return m_layerForTopOverhangArea.get();
+}
+
+GraphicsLayer* RenderLayerCompositor::updateLayerForBottomOverhangArea(bool wantsLayer)
+{
+    if (m_renderView->document()->ownerElement())
+        return 0;
+
+    if (!wantsLayer) {
+        if (m_layerForBottomOverhangArea) {
+            m_layerForBottomOverhangArea->removeFromParent();
+            m_layerForBottomOverhangArea = nullptr;
+        }
+        return 0;
+    }
+
+    if (!m_layerForBottomOverhangArea) {
+        m_layerForBottomOverhangArea = GraphicsLayer::create(graphicsLayerFactory(), this);
+#ifndef NDEBUG
+        m_layerForBottomOverhangArea->setName("bottom overhang area");
+#endif
+        m_scrollLayer->addChildBelow(m_layerForBottomOverhangArea.get(), m_rootContentLayer.get());
+    }
+
+    m_layerForBottomOverhangArea->setPosition(FloatPoint(0, m_rootContentLayer->size().height()));
+    return m_layerForBottomOverhangArea.get();
+}
+
 #endif
 
 bool RenderLayerCompositor::viewHasTransparentBackground(Color* backgroundColor) const
@@ -2452,7 +2522,7 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
             m_layerForOverhangAreas->setDrawsContent(false);
             m_layerForOverhangAreas->setSize(m_renderView->frameView()->frameRect().size());
 
-            ScrollbarTheme::theme()->setUpOverhangAreasLayerContents(m_layerForOverhangAreas.get());
+            ScrollbarTheme::theme()->setUpOverhangAreasLayerContents(m_layerForOverhangAreas.get(), this->page()->chrome()->client()->underlayColor());
 
             // We want the overhang areas layer to be positioned below the frame contents,
             // so insert it below the clip layer.
@@ -2631,6 +2701,8 @@ void RenderLayerCompositor::destroyRootLayer()
     if (m_layerForHorizontalScrollbar) {
         m_layerForHorizontalScrollbar->removeFromParent();
         m_layerForHorizontalScrollbar = nullptr;
+        if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+            scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView->frameView(), HorizontalScrollbar);
         if (Scrollbar* horizontalScrollbar = m_renderView->frameView()->verticalScrollbar())
             m_renderView->frameView()->invalidateScrollbar(horizontalScrollbar, IntRect(IntPoint(0, 0), horizontalScrollbar->frameRect().size()));
     }
@@ -2638,6 +2710,8 @@ void RenderLayerCompositor::destroyRootLayer()
     if (m_layerForVerticalScrollbar) {
         m_layerForVerticalScrollbar->removeFromParent();
         m_layerForVerticalScrollbar = nullptr;
+        if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+            scrollingCoordinator->scrollableAreaScrollbarLayerDidChange(m_renderView->frameView(), VerticalScrollbar);
         if (Scrollbar* verticalScrollbar = m_renderView->frameView()->verticalScrollbar())
             m_renderView->frameView()->invalidateScrollbar(verticalScrollbar, IntRect(IntPoint(0, 0), verticalScrollbar->frameRect().size()));
     }
@@ -2866,7 +2940,7 @@ FixedPositionViewportConstraints RenderLayerCompositor::computeFixedViewportCons
     FrameView* frameView = m_renderView->frameView();
     LayoutRect viewportRect = frameView->viewportConstrainedVisibleContentRect();
 
-    FixedPositionViewportConstraints constraints = FixedPositionViewportConstraints();
+    FixedPositionViewportConstraints constraints;
 
     GraphicsLayer* graphicsLayer = layer->backing()->graphicsLayer();
 
@@ -2904,7 +2978,7 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
     FrameView* frameView = m_renderView->frameView();
     LayoutRect viewportRect = frameView->viewportConstrainedVisibleContentRect();
 
-    StickyPositionViewportConstraints constraints = StickyPositionViewportConstraints();
+    StickyPositionViewportConstraints constraints;
 
     RenderBoxModelObject* renderer = toRenderBoxModelObject(layer->renderer());
 
@@ -3024,6 +3098,8 @@ void RenderLayerCompositor::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo
 #if ENABLE(RUBBER_BANDING)
     info.addMember(m_layerForOverhangAreas, "layerForOverhangAreas");
     info.addMember(m_contentShadowLayer, "contentShadowLayer");
+    info.addMember(m_layerForTopOverhangArea, "layerForTopOverhangArea");
+    info.addMember(m_layerForBottomOverhangArea, "layerForBottomOverhangArea");
 #endif
     info.addMember(m_layerUpdater, "layerUpdater");
 }

@@ -325,6 +325,7 @@ typedef void (*WKBundlePageTextDidChangeInTextAreaCallback)(WKBundlePageRef page
 typedef bool (*WKBundlePageShouldPerformActionInTextFieldCallback)(WKBundlePageRef page, WKBundleNodeHandleRef htmlInputElementHandle, WKInputFieldActionType actionType, WKBundleFrameRef frame, const void* clientInfo);
 typedef void (*WKBundlePageWillSubmitFormCallback)(WKBundlePageRef page, WKBundleNodeHandleRef htmlFormElementHandle, WKBundleFrameRef frame, WKBundleFrameRef sourceFrame, WKDictionaryRef values, WKTypeRef* userData, const void* clientInfo);
 typedef void (*WKBundlePageWillSendSubmitEventCallback)(WKBundlePageRef page, WKBundleNodeHandleRef htmlFormElementHandle, WKBundleFrameRef frame, WKBundleFrameRef sourceFrame, WKDictionaryRef values, const void* clientInfo);
+typedef void (*WKBundlePageDidFocusTextFieldCallback)(WKBundlePageRef page, WKBundleNodeHandleRef htmlInputElementHandle, WKBundleFrameRef frame, const void* clientInfo);
 
 struct WKBundlePageFormClient {
     int                                                                 version;
@@ -340,10 +341,13 @@ struct WKBundlePageFormClient {
     
     // Version 1.
     WKBundlePageWillSendSubmitEventCallback                             willSendSubmitEvent;
+
+    // version 2.
+    WKBundlePageDidFocusTextFieldCallback                               didFocusTextField;
 };
 typedef struct WKBundlePageFormClient WKBundlePageFormClient;
 
-enum { kWKBundlePageFormClientCurrentVersion = 1 };
+enum { kWKBundlePageFormClientCurrentVersion = 2 };
 
 // ContextMenu client
 typedef void (*WKBundlePageGetContextMenuFromDefaultContextMenuCallback)(WKBundlePageRef page, WKBundleHitTestResultRef hitTestResult, WKArrayRef defaultMenu, WKArrayRef* newMenu, WKTypeRef* userData, const void* clientInfo);
@@ -424,6 +428,9 @@ WK_EXPORT void WKBundlePageUninstallPageOverlay(WKBundlePageRef page, WKBundlePa
 
 WK_EXPORT void WKBundlePageInstallPageOverlayWithAnimation(WKBundlePageRef page, WKBundlePageOverlayRef pageOverlay);
 WK_EXPORT void WKBundlePageUninstallPageOverlayWithAnimation(WKBundlePageRef page, WKBundlePageOverlayRef pageOverlay);
+
+WK_EXPORT void WKBundlePageSetTopOverhangImage(WKBundlePageRef page, WKImageRef image);
+WK_EXPORT void WKBundlePageSetBottomOverhangImage(WKBundlePageRef page, WKImageRef image);
 
 WK_EXPORT bool WKBundlePageHasLocalDataForURL(WKBundlePageRef page, WKURLRef url);
 WK_EXPORT bool WKBundlePageCanHandleRequest(WKURLRequestRef request);

@@ -168,7 +168,7 @@ void RenderTableCell::computePreferredLogicalWidths()
     if (node() && style()->autoWrap()) {
         // See if nowrap was set.
         Length w = styleOrColLogicalWidth();
-        String nowrap = static_cast<Element*>(node())->getAttribute(nowrapAttr);
+        String nowrap = toElement(node())->getAttribute(nowrapAttr);
         if (!nowrap.isNull() && w.isFixed())
             // Nowrap is set, but we didn't actually use it because of the
             // fixed width set on the cell.  Even so, it is a WinIE/Moz trait
@@ -243,7 +243,21 @@ void RenderTableCell::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
     updateFirstLetter();
+
+    int oldCellBaseline = cellBaselinePosition();
     layoutBlock(cellWidthChanged());
+
+    // If we have replaced content, the intrinsic height of our content may have changed since the last time we laid out. If that's the case the intrinsic padding we used
+    // for layout (the padding required to push the contents of the cell down to the row's baseline) is included in our new height and baseline and makes both
+    // of them wrong. So if our content's intrinsic height has changed push the new content up into the intrinsic padding and relayout so that the rest of
+    // table and row layout can use the correct baseline and height for this cell.
+    if (isBaselineAligned() && section()->rowBaseline(rowIndex()) && cellBaselinePosition() > section()->rowBaseline(rowIndex())) {
+        int newIntrinsicPaddingBefore = max<LayoutUnit>(0, intrinsicPaddingBefore() - max<LayoutUnit>(0, cellBaselinePosition() - oldCellBaseline));
+        setIntrinsicPaddingBefore(newIntrinsicPaddingBefore);
+        setNeedsLayout(true, MarkOnlyThis);
+        layoutBlock(cellWidthChanged());
+    }
+
     setCellWidthChanged(false);
 }
 

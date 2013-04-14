@@ -36,6 +36,7 @@
 #include "ConsoleTypes.h"
 #include "Element.h"
 #include "EventContext.h"
+#include "FormData.h"
 #include "Frame.h"
 #include "HitTestResult.h"
 #include "Page.h"
@@ -55,6 +56,7 @@
 namespace WebCore {
 
 class CSSRule;
+class CachedResource;
 class CharacterData;
 class DOMWindow;
 class DOMWrapperWorld;
@@ -64,15 +66,18 @@ class Element;
 class EventContext;
 class EventLoopInput;
 class DocumentLoader;
+class DocumentStyleSheetCollection;
 class DeviceOrientationData;
 class GeolocationPosition;
 class GraphicsContext;
 class InspectorCSSAgent;
+class InspectorCSSOMWrappers;
 class InspectorInstrumentation;
 class InspectorTimelineAgent;
 class InstrumentingAgents;
 class KURL;
 class Node;
+class PseudoElement;
 class RenderLayer;
 class RenderObject;
 class ResourceRequest;
@@ -176,7 +181,7 @@ public:
     static InspectorInstrumentationCookie willRecalculateStyle(Document*);
     static void didRecalculateStyle(const InspectorInstrumentationCookie&);
     static void didScheduleStyleRecalculation(Document*);
-    static InspectorInstrumentationCookie willMatchRule(Document*, StyleRule*, StyleResolver*);
+    static InspectorInstrumentationCookie willMatchRule(Document*, StyleRule*, InspectorCSSOMWrappers&, DocumentStyleSheetCollection*);
     static void didMatchRule(const InspectorInstrumentationCookie&, bool matched);
     static InspectorInstrumentationCookie willProcessRule(Document*, StyleRule*, StyleResolver*);
     static void didProcessRule(const InspectorInstrumentationCookie&);
@@ -215,6 +220,7 @@ public:
     static void loadEventFired(Frame*);
     static void frameDetachedFromParent(Frame*);
     static void didCommitLoad(Frame*, DocumentLoader*);
+    static void frameDocumentUpdated(Frame*);
     static void loaderDetachedFromFrame(Frame*, DocumentLoader*);
     static void frameStartedLoading(Frame*);
     static void frameStoppedLoading(Frame*);
@@ -224,8 +230,8 @@ public:
     static void didRunJavaScriptDialog(const InspectorInstrumentationCookie&);
     static void willDestroyCachedResource(CachedResource*);
 
-    static InspectorInstrumentationCookie willWriteHTML(Document*, unsigned int length, unsigned int startLine);
-    static void didWriteHTML(const InspectorInstrumentationCookie&, unsigned int endLine);
+    static InspectorInstrumentationCookie willWriteHTML(Document*, unsigned startLine);
+    static void didWriteHTML(const InspectorInstrumentationCookie&, unsigned endLine);
 
     // FIXME: Remove once we no longer generate stacks outside of Inspector.
     static void addMessageToConsole(Page*, MessageSource, MessageType, MessageLevel, const String& message, PassRefPtr<ScriptCallStack>, unsigned long requestIdentifier = 0);
@@ -328,6 +334,7 @@ public:
 #if USE(ACCELERATED_COMPOSITING)
     static void layerTreeDidChange(Page*);
     static void renderLayerDestroyed(Page*, const RenderLayer*);
+    static void pseudoElementDestroyed(Page*, PseudoElement*);
 #endif
 
 private:
@@ -391,7 +398,7 @@ private:
     static InspectorInstrumentationCookie willRecalculateStyleImpl(InstrumentingAgents*, Frame*);
     static void didRecalculateStyleImpl(const InspectorInstrumentationCookie&);
     static void didScheduleStyleRecalculationImpl(InstrumentingAgents*, Document*);
-    static InspectorInstrumentationCookie willMatchRuleImpl(InstrumentingAgents*, StyleRule*, StyleResolver*);
+    static InspectorInstrumentationCookie willMatchRuleImpl(InstrumentingAgents*, StyleRule*, InspectorCSSOMWrappers&, DocumentStyleSheetCollection*);
     static void didMatchRuleImpl(const InspectorInstrumentationCookie&, bool matched);
     static InspectorInstrumentationCookie willProcessRuleImpl(InstrumentingAgents*, StyleRule*, StyleResolver*);
     static void didProcessRuleImpl(const InspectorInstrumentationCookie&);
@@ -432,6 +439,7 @@ private:
     static void loadEventFiredImpl(InstrumentingAgents*, Frame*);
     static void frameDetachedFromParentImpl(InstrumentingAgents*, Frame*);
     static void didCommitLoadImpl(InstrumentingAgents*, Page*, DocumentLoader*);
+    static void frameDocumentUpdatedImpl(InstrumentingAgents*, Frame*);
     static void loaderDetachedFromFrameImpl(InstrumentingAgents*, DocumentLoader*);
     static void frameStartedLoadingImpl(InstrumentingAgents*, Frame*);
     static void frameStoppedLoadingImpl(InstrumentingAgents*, Frame*);
@@ -441,8 +449,8 @@ private:
     static void didRunJavaScriptDialogImpl(const InspectorInstrumentationCookie&);
     static void willDestroyCachedResourceImpl(CachedResource*);
 
-    static InspectorInstrumentationCookie willWriteHTMLImpl(InstrumentingAgents*, unsigned int length, unsigned int startLine, Frame*);
-    static void didWriteHTMLImpl(const InspectorInstrumentationCookie&, unsigned int endLine);
+    static InspectorInstrumentationCookie willWriteHTMLImpl(InstrumentingAgents*, unsigned startLine, Frame*);
+    static void didWriteHTMLImpl(const InspectorInstrumentationCookie&, unsigned endLine);
 
     static void addMessageToConsoleImpl(InstrumentingAgents*, MessageSource, MessageType, MessageLevel, const String& message, ScriptState*, PassRefPtr<ScriptArguments>, unsigned long requestIdentifier);
     static void addMessageToConsoleImpl(InstrumentingAgents*, MessageSource, MessageType, MessageLevel, const String& message, const String& scriptId, unsigned lineNumber, ScriptState*, unsigned long requestIdentifier);
@@ -530,6 +538,7 @@ private:
 #if USE(ACCELERATED_COMPOSITING)
     static void layerTreeDidChangeImpl(InstrumentingAgents*);
     static void renderLayerDestroyedImpl(InstrumentingAgents*, const RenderLayer*);
+    static void pseudoElementDestroyedImpl(InstrumentingAgents*, PseudoElement*);
 #endif
 
     static int s_frontendCounter;
@@ -1209,16 +1218,17 @@ inline void InspectorInstrumentation::didScheduleStyleRecalculation(Document* do
 #endif
 }
 
-inline InspectorInstrumentationCookie InspectorInstrumentation::willMatchRule(Document* document, StyleRule* rule, StyleResolver* styleResolver)
+inline InspectorInstrumentationCookie InspectorInstrumentation::willMatchRule(Document* document, StyleRule* rule, InspectorCSSOMWrappers& inspectorCSSOMWrappers, DocumentStyleSheetCollection* styleSheetCollection)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(InspectorInstrumentationCookie());
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        return willMatchRuleImpl(instrumentingAgents, rule, styleResolver);
+        return willMatchRuleImpl(instrumentingAgents, rule, inspectorCSSOMWrappers, styleSheetCollection);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(rule);
-    UNUSED_PARAM(styleResolver);
+    UNUSED_PARAM(inspectorCSSOMWrappers);
+    UNUSED_PARAM(styleSheetCollection);
 #endif
     return InspectorInstrumentationCookie();
 }
@@ -1672,16 +1682,22 @@ inline void InspectorInstrumentation::frameDetachedFromParent(Frame* frame)
 inline void InspectorInstrumentation::didCommitLoad(Frame* frame, DocumentLoader* loader)
 {
 #if ENABLE(INSPECTOR)
-    if (!frame)
-        return;
-    Page* page = frame->page();
-    if (!page)
-        return;
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        didCommitLoadImpl(instrumentingAgents, page, loader);
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
+        didCommitLoadImpl(instrumentingAgents, frame->page(), loader);
 #else
     UNUSED_PARAM(frame);
     UNUSED_PARAM(loader);
+#endif
+}
+
+inline void InspectorInstrumentation::frameDocumentUpdated(Frame* frame)
+{
+#if ENABLE(INSPECTOR)
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
+        frameDocumentUpdatedImpl(instrumentingAgents, frame);
+#else
+    UNUSED_PARAM(frame);
 #endif
 }
 
@@ -1771,21 +1787,20 @@ inline void InspectorInstrumentation::willDestroyCachedResource(CachedResource* 
 #endif
 }
 
-inline InspectorInstrumentationCookie InspectorInstrumentation::willWriteHTML(Document* document, unsigned int length, unsigned int startLine)
+inline InspectorInstrumentationCookie InspectorInstrumentation::willWriteHTML(Document* document, unsigned startLine)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(InspectorInstrumentationCookie());
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        return willWriteHTMLImpl(instrumentingAgents, length, startLine, document->frame());
+        return willWriteHTMLImpl(instrumentingAgents, startLine, document->frame());
 #else
     UNUSED_PARAM(document);
-    UNUSED_PARAM(length);
     UNUSED_PARAM(startLine);
 #endif
     return InspectorInstrumentationCookie();
 }
 
-inline void InspectorInstrumentation::didWriteHTML(const InspectorInstrumentationCookie& cookie, unsigned int endLine)
+inline void InspectorInstrumentation::didWriteHTML(const InspectorInstrumentationCookie& cookie, unsigned endLine)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(void());
@@ -2148,6 +2163,17 @@ inline void InspectorInstrumentation::renderLayerDestroyed(Page* page, const Ren
     UNUSED_PARAM(renderLayer);
 #endif
 }
+
+inline void InspectorInstrumentation::pseudoElementDestroyed(Page* page, PseudoElement* pseudoElement)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        pseudoElementDestroyedImpl(instrumentingAgents, pseudoElement);
+#else
+    UNUSED_PARAM(page);
+    UNUSED_PARAM(pseudoElement);
+#endif
+}
 #endif
 
 #if ENABLE(INSPECTOR)
@@ -2164,7 +2190,7 @@ inline InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForCont
     if (!context)
         return 0;
     if (context->isDocument())
-        return instrumentingAgentsForPage(static_cast<Document*>(context)->page());
+        return instrumentingAgentsForPage(toDocument(context)->page());
 #if ENABLE(WORKERS)
     return instrumentingAgentsForNonDocumentContext(context);
 #else

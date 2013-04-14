@@ -28,6 +28,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "V8Binding.h"
 #include "V8DOMWrapper.h"
+#include "V8Document.h"
 #include <wtf/UnusedParam.h>
 
 #if ENABLE(BINDING_INTEGRITY)
@@ -74,8 +75,9 @@ template <typename T> void V8_USE(T) { }
 
 WrapperTypeInfo V8TestNamedConstructorConstructor::info = { V8TestNamedConstructorConstructor::GetTemplate, V8TestNamedConstructor::derefObject, V8TestNamedConstructor::toActiveDOMObject, 0, 0, V8TestNamedConstructor::installPerContextPrototypeProperties, 0, WrapperTypeObjectPrototype };
 
-static v8::Handle<v8::Value> namedConstructor(const v8::Arguments& args)
+static v8::Handle<v8::Value> V8TestNamedConstructorConstructorCallback(const v8::Arguments& args)
 {
+    
     if (!args.IsConstructCall())
         return throwTypeError("DOM object constructor cannot be called as a function.", args.GetIsolate());
 
@@ -107,30 +109,25 @@ static v8::Handle<v8::Value> namedConstructor(const v8::Arguments& args)
     return setDOMException(ec, args.GetIsolate());
 }
 
-static v8::Handle<v8::Value> namedConstructorCallback(const v8::Arguments& args)
-{
-    return namedConstructor(args);
-}
-
-v8::Persistent<v8::FunctionTemplate> V8TestNamedConstructorConstructor::GetTemplate(v8::Isolate* isolate)
+v8::Persistent<v8::FunctionTemplate> V8TestNamedConstructorConstructor::GetTemplate(v8::Isolate* isolate, WrapperWorldType worldType)
 {
     static v8::Persistent<v8::FunctionTemplate> cachedTemplate;
     if (!cachedTemplate.IsEmpty())
         return cachedTemplate;
 
     v8::HandleScope scope;
-    v8::Local<v8::FunctionTemplate> result = v8::FunctionTemplate::New(namedConstructorCallback);
+    v8::Local<v8::FunctionTemplate> result = v8::FunctionTemplate::New(V8TestNamedConstructorConstructorCallback);
 
     v8::Local<v8::ObjectTemplate> instance = result->InstanceTemplate();
     instance->SetInternalFieldCount(V8TestNamedConstructor::internalFieldCount);
     result->SetClassName(v8::String::NewSymbol("TestNamedConstructor"));
-    result->Inherit(V8TestNamedConstructor::GetTemplate(isolate));
+    result->Inherit(V8TestNamedConstructor::GetTemplate(isolate, worldType));
 
     cachedTemplate = v8::Persistent<v8::FunctionTemplate>::New(isolate, result);
     return cachedTemplate;
 }
 
-static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestNamedConstructorTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
+static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestNamedConstructorTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate, WrapperWorldType worldType)
 {
     desc->ReadOnlyPrototype();
 
@@ -146,36 +143,23 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestNamedConstructorTempl
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestNamedConstructor::GetRawTemplate(v8::Isolate* isolate)
+v8::Persistent<v8::FunctionTemplate> V8TestNamedConstructor::GetTemplate(v8::Isolate* isolate, WrapperWorldType worldType)
 {
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
-    if (result != data->rawTemplateMap().end())
-        return result->value;
-
-    v8::HandleScope handleScope;
-    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate(isolate);
-    data->rawTemplateMap().add(&info, templ);
-    return templ;
-}
-
-v8::Persistent<v8::FunctionTemplate> V8TestNamedConstructor::GetTemplate(v8::Isolate* isolate)
-{
-    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
-    if (result != data->templateMap().end())
+    V8PerIsolateData::TemplateMap::iterator result = data->templateMap(worldType).find(&info);
+    if (result != data->templateMap(worldType).end())
         return result->value;
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        ConfigureV8TestNamedConstructorTemplate(GetRawTemplate(isolate), isolate);
-    data->templateMap().add(&info, templ);
+        ConfigureV8TestNamedConstructorTemplate(data->rawTemplate(&info, worldType), isolate, worldType);
+    data->templateMap(worldType).add(&info, templ);
     return templ;
 }
 
-bool V8TestNamedConstructor::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate)
+bool V8TestNamedConstructor::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate, WrapperWorldType worldType)
 {
-    return GetRawTemplate(isolate)->HasInstance(value);
+    return V8PerIsolateData::from(isolate)->hasInstance(&info, value, worldType);
 }
 
 ActiveDOMObject* V8TestNamedConstructor::toActiveDOMObject(v8::Handle<v8::Object> object)

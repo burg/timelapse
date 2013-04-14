@@ -1,3 +1,504 @@
+2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Add selectTrailingWhitespaceEnabled setting to WebCore::Page
+        https://bugs.webkit.org/show_bug.cgi?id=109404
+
+        Reviewed by Tony Chang.
+
+        Use new settings for smartInsertDeleteEnabled and
+        selectTrailingWhitespaceEnabled.
+
+        * WebCoreSupport/WebEditorClient.mm:
+        (WebEditorClient::smartInsertDeleteEnabled):
+        (WebEditorClient::isSelectTrailingWhitespaceEnabled):
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]): Initialize
+        settings from NSUserDefaults.
+        (-[WebView setSelectTrailingWhitespaceEnabled:]):
+        (-[WebView isSelectTrailingWhitespaceEnabled]):
+        (-[WebView setSmartInsertDeleteEnabled:]):
+        (-[WebView smartInsertDeleteEnabled]):
+        * WebView/WebViewData.h:
+        * WebView/WebViewData.mm:
+        (-[WebViewPrivate init]):
+
+2013-03-14  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112296
+
+        Reviewed by Kentaro Hara.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (applyAppleDictionaryApplicationQuirkNonInlinePart):
+        * WebView/WebHTMLRepresentation.mm:
+        (searchForLabelsBeforeElement):
+
+2013-03-14  Alice Liu  <alice.liu@apple.com>
+
+        Add to HistoryItem a way to know if its underlying CachedPage has expired.
+        https://bugs.webkit.org/show_bug.cgi?id=110652
+
+        Reviewed by Brady Eidson.
+
+        * History/WebHistoryItem.mm:
+        (-[WebHistoryItem _isInPageCache]): Added. Just calls and returns core imple's function. 
+        (-[WebHistoryItem _hasCachedPageExpired]): Same thing. 
+        * History/WebHistoryItemPrivate.h:
+        * WebView/WebPreferences.mm:
+        (-[WebPreferences _backForwardCacheExpirationInterval]): Address fixme, now that WebCore::Settings
+        has getters and setters with default value.
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]): call setBackForwardCacheExpirationInterval similar to other settings.
+
+2013-03-13  Rik Cabanier  <cabanier@adobe.com>
+
+        create runtime flags for CSS Compositing
+        https://bugs.webkit.org/show_bug.cgi?id=111818
+
+        Reviewed by Ryosuke Niwa.
+
+        Added a preference to enable CSS compositing.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences cssCompositingEnabled]):
+        (-[WebPreferences setCSSCompositingEnabled:]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2013-03-13  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Threaded HTML Parser is missing feature define flags in all but Chromium port's build files
+        https://bugs.webkit.org/show_bug.cgi?id=112277
+
+        Reviewed by Adam Barth.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-13  Pavel Feldman  <pfeldman@chromium.org>
+
+        Web Inspector: get rid of hiddenPanels filter
+        https://bugs.webkit.org/show_bug.cgi?id=112252
+
+        Reviewed by Vsevolod Vlasov.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorFrontendClient):
+        * WebCoreSupport/WebInspectorClient.mm:
+        * WebKit.order:
+
+2013-03-12  Geoffrey Garen  <ggaren@apple.com>
+
+        Moved RunLoopTimer and SchedulePair to WTF
+        https://bugs.webkit.org/show_bug.cgi?id=112171
+
+        Reviewed by Oliver Hunt.
+
+        This will allow us to use timers in lower level primitives without
+        duplicating all the code.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+        (WebFrameNetworkingContext):
+
+2013-03-12  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112072
+
+        Reviewed by Philip Rogers.
+
+        to* functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * WebView/WebView.mm:
+        (-[WebView _enterFullscreenForNode:WebCore::]):
+
+2013-03-11  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r145462.
+        http://trac.webkit.org/changeset/145462
+        https://bugs.webkit.org/show_bug.cgi?id=112097
+
+        Compilation failure in PluginView.cpp (Requested by jamesr_ on
+        #webkit).
+
+        * WebView/WebView.mm:
+        (-[WebView _enterFullscreenForNode:WebCore::]):
+
+2013-03-11  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112072
+
+        Reviewed by Philip Rogers.
+
+        to* functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * WebView/WebView.mm:
+        (-[WebView _enterFullscreenForNode:WebCore::]):
+
+2013-03-11  Jochen Eisinger  <jochen@chromium.org>
+
+        Rename DefinitelyProcessingUserGesture to DefinitelyProcessingNewUserGesture
+        https://bugs.webkit.org/show_bug.cgi?id=111959
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::evaluate):
+        * Plugins/WebNetscapePluginView.mm:
+        (-[WebNetscapePluginView sendEvent:isDrawRect:]):
+
+2013-03-11  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_cast with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112045
+
+        Reviewed by Eric Seidel.
+
+        * WebView/WebRenderLayer.mm:
+        (+[WebRenderLayer nameForLayer:]):
+
+2013-03-11  Jer Noble  <jer.noble@apple.com>
+
+        Unreviewed build fix.  Remove stray brace which crept into r145409.
+
+        * WebView/WebFullScreenController.mm:
+        (-[WebFullScreenController performClose:]):
+
+2013-01-30  Jer Noble  <jer.noble@apple.com>
+
+        Mac: Cmd-w should close full screen window.
+        https://bugs.webkit.org/show_bug.cgi?id=108406
+
+        Reviewed by Darin Adler.
+
+        Allow the user to close the full screen window with Cmd-w by making the full screen window
+        closable, and by intercepting performClose:.
+
+        * WebView/WebFullScreenController.mm:
+        (-[WebFullScreenController init]): Create a closable full screen window.
+        (-[WebFullScreenController performClose:]): When we receive a close request in full screen mode,
+            animate out of full screen.
+
+2013-03-07  Anders Carlsson  <andersca@apple.com>
+
+        Add didFocusTextField:inFrame to WebFormDelegate
+        https://bugs.webkit.org/show_bug.cgi?id=111804
+
+        Reviewed by Dan Bernstein.
+
+        * WebCoreSupport/WebChromeClient.mm:
+        (WebChromeClient::focusedNodeChanged):
+        * WebView/WebFormDelegate.h:
+        * WebView/WebFormDelegate.m:
+        (-[WebFormDelegate didFocusTextField:inFrame:]):
+
+2013-03-04  Jer Noble  <jer.noble@apple.com>
+
+        Default mouse cursor behavior should be auto-hide for full screen video with custom controls
+        https://bugs.webkit.org/show_bug.cgi?id=107601
+
+        Reviewed by Beth Dakin.
+
+        Enable the CURSOR_VISIBILITY feature.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-05  Geoffrey Garen  <ggaren@apple.com>
+
+        Removed some dead code in the page cache
+        https://bugs.webkit.org/show_bug.cgi?id=111525
+
+        Reviewed by Alexey Proskuryakov.
+
+        Page cache autorelease doesn't exist anymore, so there's no need to keep
+        around these olds hacks.
+
+        This fixes <rdar://problem/4886761> Fix bizarre WebWindowWatcher policy in WebHistoryItem.
+
+        * History/WebHistoryItem.mm:
+        (+[WebHistoryItem _releaseAllPendingPageCaches]):
+        * History/WebHistoryItemInternal.h:
+        * Misc/WebCoreStatistics.mm:
+        (+[WebCoreStatistics autoreleasedPageCount]):
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+2013-03-06  Dmitry Zvorygin  <zvorygin@chromium.org>
+
+        Introduce new message sources for logging.
+        https://bugs.webkit.org/show_bug.cgi?id=110968
+
+        Reviewed by Pavel Feldman.
+
+        * WebCoreSupport/WebChromeClient.mm:
+        * WebView/WebUIDelegatePrivate.h:
+
+2013-03-05  Kent Tamura  <tkent@chromium.org>
+
+        Rename WebCore/editing/visible_units.* to VisibleUnits.*
+        https://bugs.webkit.org/show_bug.cgi?id=111426
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebView/WebFrame.mm:
+
+2013-03-05  James Robinson  <jamesr@chromium.org>
+
+        ContainerNode::setActive should not sleep for 100ms on platforms that do not implement synchronous repaint(true) semantics
+        https://bugs.webkit.org/show_bug.cgi?id=87054
+
+        Reviewed by Darin Adler.
+
+        The Mac WebKit1 port supports immediate invalidations.
+
+        * WebCoreSupport/WebChromeClient.h:
+        (WebChromeClient):
+        * WebCoreSupport/WebChromeClient.mm:
+        (WebChromeClient::supportsImmediateInvalidation):
+
+2013-03-05  David Kilzer  <ddkilzer@apple.com>
+
+        BUILD FIX (r144698): Only enable SPEECH_SYNTHESIS for Mac
+        <http://webkit.org/b/106742>
+
+        Fixes the following build failures:
+
+            Undefined symbols for architecture i386:
+              "__ZTVN7WebCore25PlatformSpeechSynthesizerE", referenced from:
+                  __ZN7WebCore25PlatformSpeechSynthesizerC2EPNS_31PlatformSpeechSynthesizerClientE in PlatformSpeechSynthesizer.o
+              NOTE: a missing vtable usually means the first non-inline virtual member function has no definition.
+              "__ZN7WebCore25PlatformSpeechSynthesizer19initializeVoiceListEv", referenced from:
+                  __ZN7WebCore25PlatformSpeechSynthesizerC2EPNS_31PlatformSpeechSynthesizerClientE in PlatformSpeechSynthesizer.o
+            ld: symbol(s) not found for architecture i386
+
+        * Configurations/FeatureDefines.xcconfig:
+        - Only set ENABLE_SPEECH_SYNTHESIS for the macosx platform.
+
+2013-03-04  David Kilzer  <ddkilzer@apple.com>
+
+        BUILD FIX (r144662): Import JSBase.h in WebFrameLoadDelegate.h
+        <http://webkit.org/b/111269>
+
+        Fixes the following build failure:
+
+            In file included from Source/WebKit/ios/DefaultDelegates/WebDefaultFrameLoadDelegate.m:11:
+            In file included from Source/WebKit/mac/WebView/WebFrameLoadDelegatePrivate.h:29:
+            Source/WebKit/mac/WebView/WebFrameLoadDelegate.h:41:5: error: 'JSC_OBJC_API_ENABLED' is not defined, evaluates to 0 [-Werror,-Wundef]
+            #if JSC_OBJC_API_ENABLED
+                ^
+            Source/WebKit/mac/WebView/WebFrameLoadDelegate.h:207:5: error: 'JSC_OBJC_API_ENABLED' is not defined, evaluates to 0 [-Werror,-Wundef]
+            #if JSC_OBJC_API_ENABLED
+                ^
+            2 errors generated.
+
+        * WebView/WebFrameLoadDelegate.h: Include JSBase.h.
+
+2013-03-04  Chris Fleizach  <cfleizach@apple.com>
+
+        Support WebSpeech - Speech Synthesis
+        https://bugs.webkit.org/show_bug.cgi?id=106742
+
+        Reviewed by Simon Fraser.
+
+        Enable speech synthesis for the Mac.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-04  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Remove contextInternalContext from JSContextInternal.h
+        https://bugs.webkit.org/show_bug.cgi?id=111356
+
+        Reviewed by Geoffrey Garen.
+
+        We don't need it any more since we have globalContextRef in JSContext.
+
+        * WebView/WebScriptWorld.mm:
+        (+[WebScriptWorld scriptWorldForJavaScriptContext:]):
+
+2013-03-04  Laszlo Gombos  <l.gombos@samsung.com>
+
+        JSC_OBJC_API_ENABLED should be removed from FeatureDefines.h
+        https://bugs.webkit.org/show_bug.cgi?id=111269
+
+        Reviewed by Mark Hahnenberg.
+
+        Include JavaScriptCore/JSBase.h for the definition of JSC_OBJC_API_ENABLED.
+
+        * WebView/WebDelegateImplementationCaching.h:
+
+2013-03-04  Kunihiko Sakamoto  <ksakamoto@chromium.org>
+
+        Add build flag for FontLoader
+        https://bugs.webkit.org/show_bug.cgi?id=111289
+
+        Reviewed by Benjamin Poulain.
+
+        Add ENABLE_FONT_LOAD_EVENTS build flag (disabled by default).
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-03  Benjamin Poulain  <benjamin@webkit.org>
+
+        [Mac] Get rid of a useless method from DOMHTMLInputElement
+        https://bugs.webkit.org/show_bug.cgi?id=111279
+
+        Reviewed by Sam Weinig.
+
+        * DOM/WebDOMOperations.mm:
+        * DOM/WebDOMOperationsPrivate.h:
+        setValueForUser: is already privately exposed by DOMHTMLInputElement,
+        no need to have it twice.
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed attempted build fix. Adds back some includes removed in
+        http://trac.webkit.org/changeset/144565.
+
+        * DOM/WebDOMOperations.mm:
+        * Misc/WebNSPasteboardExtras.mm:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        * WebView/WebRenderLayer.mm:
+        * WebView/WebRenderNode.mm:
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed rollout of http://trac.webkit.org/r144530
+        As described in https://bugs.webkit.org/show_bug.cgi?id=111167 and
+        https://bugs.webkit.org/show_bug.cgi?id=111035, this patch caused a
+        large number of ASSERTs in chromium-win.
+
+        * DOM/WebDOMOperations.mm:
+        * Misc/WebNSPasteboardExtras.mm:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        * WebView/WebRenderLayer.mm:
+        * WebView/WebRenderNode.mm:
+
+2013-02-18  Darin Adler  <darin@apple.com>
+
+        Cut down the number of source files that depend on Clipboard.h
+        https://bugs.webkit.org/show_bug.cgi?id=110030
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView/WebPDFView.mm: Add include of Clipboard.h since we use it
+        here and the world no longer includes it everywhere.
+
+2013-03-02  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move computedStyleIncludingVisitedInfo from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109772
+
+        Reviewed by Andreas Kling.
+
+        * WebView/WebView.mm:
+        * WebView/WebViewPrivate.h:
+
+2013-03-02  David Kilzer  <ddkilzer@apple.com>
+
+        BUILD FIX (r143637): Predeclare JSContext as an Objective-C class
+        <http://webkit.org/b/106059>
+
+        Fixes the following build failure:
+
+            In file included from Source/WebKit/ios/DefaultDelegates/WebDefaultFrameLoadDelegate.m:11:
+            In file included from Source/WebKit/mac/WebView/WebFrameLoadDelegatePrivate.h:29:
+            Source/WebKit/mac/WebView/WebFrameLoadDelegate.h:215:64: error: expected a type
+            - (void)webView:(WebView *)webView didCreateJavaScriptContext:(JSContext *)context forFrame:(WebFrame *)frame;
+                                                                           ^
+            1 error generated.
+
+        * WebView/WebFrameLoadDelegate.h: Add @class JSContext
+        declaration.
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * DOM/WebDOMOperations.mm:
+        * Misc/WebNSPasteboardExtras.mm:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        * WebView/WebRenderLayer.mm:
+        * WebView/WebRenderNode.mm:
+
+2013-03-01  Jason Anderssen  <janderssen@gmail.com>
+
+        Move markerTextForListItem from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=110939
+
+        Reviewed by Benjamin Poulain.
+
+        * DOM/WebDOMOperations.mm:
+        * DOM/WebDOMOperationsPrivate.h:
+
+2013-02-28  Sam Weinig  <sam@webkit.org>
+
+        Add SPI for marking a WebView as doing things on behalf of another process
+        https://bugs.webkit.org/show_bug.cgi?id=111125
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+        (WebFrameNetworkingContext):
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        (WebFrameNetworkingContext::sourceApplicationAuditData):
+        * WebView/WebView.mm:
+        (-[WebView _setSourceApplicationAuditData:]):
+        (-[WebView _sourceApplicationAuditData]):
+        * WebView/WebViewData.h:
+        * WebView/WebViewData.mm:
+        (-[WebViewPrivate dealloc]):
+        * WebView/WebViewPrivate.h:
+        Add SPI for setting a source application for a WebView.
+
+2013-03-01  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r144422 and r144424.
+        http://trac.webkit.org/changeset/144422
+        http://trac.webkit.org/changeset/144424
+        https://bugs.webkit.org/show_bug.cgi?id=111167
+
+        Caused over 20 tests to fail assertion on Chromium Win port as
+        ASSERTION FAILED: m_platformRequestUpdated (Requested by
+        toyoshim on #webkit).
+
+        * DOM/WebDOMOperations.mm:
+        * Misc/WebNSPasteboardExtras.mm:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        * WebView/WebRenderLayer.mm:
+        * WebView/WebRenderNode.mm:
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * DOM/WebDOMOperations.mm:
+        * Misc/WebNSPasteboardExtras.mm:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        * WebView/WebRenderLayer.mm:
+        * WebView/WebRenderNode.mm:
+
 2013-02-27  John Bauman  <jbauman@chromium.org>
 
         Plugin in iframe may not display

@@ -40,6 +40,7 @@
 #include "DatabaseThread.h"
 #include "FileSystem.h"
 #include "Logging.h"
+#include "OriginLock.h"
 #include "Page.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginHash.h"
@@ -138,6 +139,7 @@ void DatabaseTracker::openTrackerDatabase(TrackerCreationAction createAction)
 
 bool DatabaseTracker::hasAdequateQuotaForOrigin(SecurityOrigin* origin, unsigned long estimatedSize, DatabaseError& err)
 {
+    ASSERT(!m_databaseGuard.tryLock());
     unsigned long long usage = usageForOrigin(origin);
 
     // If the database will fit, allow its creation.
@@ -238,9 +240,19 @@ bool DatabaseTracker::retryCanEstablishDatabase(DatabaseBackendContext* context,
 bool DatabaseTracker::hasEntryForOriginNoLock(SecurityOrigin* origin)
 {
     ASSERT(!m_databaseGuard.tryLock());
-    populateOriginsIfNeeded();
-    ASSERT(m_quotaMap);
-    return m_quotaMap->contains(origin);
+    openTrackerDatabase(DontCreateIfDoesNotExist);
+    if (!m_database.isOpen())
+        return false;
+
+    SQLiteStatement statement(m_database, "SELECT origin FROM Origins where origin=?;");
+    if (statement.prepare() != SQLResultOk) {
+        LOG_ERROR("Failed to prepare statement.");
+        return false;
+    }
+
+    statement.bindText(1, origin->databaseIdentifier());
+
+    return statement.step() == SQLResultRow;
 }
 
 bool DatabaseTracker::hasEntryForOrigin(SecurityOrigin* origin)
@@ -281,6 +293,9 @@ unsigned long long DatabaseTracker::getMaxSizeForDatabase(const DatabaseBackendB
     unsigned long long diskUsage = usageForOrigin(origin);
     unsigned long long databaseFileSize = SQLiteFileSystem::getDatabaseFileSize(database->fileName());
     ASSERT(databaseFileSize <= diskUsage);
+
+    if (diskUsage > quota)
+        return databaseFileSize;
 
     // A previous error may have allowed the origin to exceed its quota, or may
     // have allowed this database to exceed our cached estimate of the origin
@@ -378,20 +393,15 @@ String DatabaseTracker::fullPathForDatabase(SecurityOrigin* origin, const String
     return fullPathForDatabaseNoLock(origin, name, createIfNotExists).isolatedCopy();
 }
 
-void DatabaseTracker::populateOriginsIfNeeded()
+void DatabaseTracker::origins(Vector<RefPtr<SecurityOrigin> >& originsResult)
 {
-    ASSERT(!m_databaseGuard.tryLock());
-    if (m_quotaMap)
-        return;
-
-    m_quotaMap = adoptPtr(new QuotaMap);
+    MutexLocker lockDatabase(m_databaseGuard);
 
     openTrackerDatabase(DontCreateIfDoesNotExist);
     if (!m_database.isOpen())
         return;
 
-    SQLiteStatement statement(m_database, "SELECT origin, quota FROM Origins");
-
+    SQLiteStatement statement(m_database, "SELECT origin FROM Origins");
     if (statement.prepare() != SQLResultOk) {
         LOG_ERROR("Failed to prepare statement.");
         return;
@@ -400,19 +410,12 @@ void DatabaseTracker::populateOriginsIfNeeded()
     int result;
     while ((result = statement.step()) == SQLResultRow) {
         RefPtr<SecurityOrigin> origin = SecurityOrigin::createFromDatabaseIdentifier(statement.getColumnText(0));
-        m_quotaMap->set(origin.get()->isolatedCopy(), statement.getColumnInt64(1));
+        originsResult.append(origin->isolatedCopy());
     }
+    originsResult.shrinkToFit();
 
     if (result != SQLResultDone)
         LOG_ERROR("Failed to read in all origins from the database.");
-}
-
-void DatabaseTracker::origins(Vector<RefPtr<SecurityOrigin> >& result)
-{
-    MutexLocker lockDatabase(m_databaseGuard);
-    populateOriginsIfNeeded();
-    ASSERT(m_quotaMap);
-    copyKeysToVector(*m_quotaMap, result);
 }
 
 bool DatabaseTracker::databaseNamesForOriginNoLock(SecurityOrigin* origin, Vector<String>& resultVector)
@@ -648,6 +651,53 @@ void DatabaseTracker::getOpenDatabases(SecurityOrigin* origin, const String& nam
         databases->add(*it);
 }
 
+PassRefPtr<OriginLock> DatabaseTracker::originLockFor(SecurityOrigin* origin)
+{
+    MutexLocker lockDatabase(m_databaseGuard);
+    String databaseIdentifier = origin->databaseIdentifier();
+
+    // The originLockMap is accessed from multiple DatabaseThreads since
+    // different script contexts can be writing to different databases from
+    // the same origin. Hence, the databaseIdentifier key needs to be an
+    // isolated copy. An isolated copy gives us a value whose refCounting is
+    // thread-safe, since our copy is guarded by the m_databaseGuard mutex.
+    databaseIdentifier = databaseIdentifier.isolatedCopy();
+
+    OriginLockMap::AddResult addResult =
+        m_originLockMap.add(databaseIdentifier, RefPtr<OriginLock>());
+    if (!addResult.isNewEntry)
+        return addResult.iterator->value;
+
+    String path = originPath(origin);
+    RefPtr<OriginLock> lock = adoptRef(new OriginLock(path));
+    ASSERT(lock);
+    addResult.iterator->value = lock;
+
+    return lock.release();
+}
+
+void DatabaseTracker::deleteOriginLockFor(SecurityOrigin* origin)
+{
+    ASSERT(!m_databaseGuard.tryLock());
+
+    // There is not always an instance of an OriginLock associated with an origin.
+    // For example, if the OriginLock lock file was created by a previous run of
+    // the browser which has now terminated, and the current browser process
+    // has not executed any database transactions from this origin that would
+    // have created the OriginLock instance in memory. In this case, we will have
+    // a lock file but not an OriginLock instance in memory.
+
+    // This function is only called if we are already deleting all the database
+    // files in this origin. We'll give the OriginLock one chance to do an
+    // orderly clean up first when we remove its ref from the m_originLockMap.
+    // This may or may not be possible depending on whether other threads are
+    // also using the OriginLock at the same time. After that, we will go ahead
+    // and delete the lock file.
+
+    m_originLockMap.remove(origin->databaseIdentifier());
+    OriginLock::deleteLockFile(originPath(origin));
+}
+
 unsigned long long DatabaseTracker::usageForOrigin(SecurityOrigin* origin)
 {
     String originPath = this->originPath(origin);
@@ -666,9 +716,23 @@ unsigned long long DatabaseTracker::usageForOrigin(SecurityOrigin* origin)
 unsigned long long DatabaseTracker::quotaForOriginNoLock(SecurityOrigin* origin)
 {
     ASSERT(!m_databaseGuard.tryLock());
-    populateOriginsIfNeeded();
-    ASSERT(m_quotaMap);
-    return m_quotaMap->get(origin);
+    unsigned long long quota = 0;
+
+    openTrackerDatabase(DontCreateIfDoesNotExist);
+    if (!m_database.isOpen())
+        return quota;
+
+    SQLiteStatement statement(m_database, "SELECT quota FROM Origins where origin=?;");
+    if (statement.prepare() != SQLResultOk) {
+        LOG_ERROR("Failed to prepare statement.");
+        return quota;
+    }
+    statement.bindText(1, origin->databaseIdentifier());
+
+    if (statement.step() == SQLResultRow)
+        quota = statement.getColumnInt64(0);
+
+    return quota;
 }
 
 unsigned long long DatabaseTracker::quotaForOrigin(SecurityOrigin* origin)
@@ -688,7 +752,8 @@ void DatabaseTracker::setQuota(SecurityOrigin* origin, unsigned long long quota)
     if (!m_database.isOpen())
         return;
 
-    if (!m_quotaMap->contains(origin)) {
+    bool originEntryExists = hasEntryForOriginNoLock(origin);
+    if (!originEntryExists) {
         SQLiteStatement statement(m_database, "INSERT INTO Origins VALUES (?, ?)");
         if (statement.prepare() != SQLResultOk) {
             LOG_ERROR("Unable to establish origin %s in the tracker", origin->databaseIdentifier().ascii().data());
@@ -717,9 +782,6 @@ void DatabaseTracker::setQuota(SecurityOrigin* origin, unsigned long long quota)
 #endif
     }
 
-    // FIXME: Is it really OK to update the quota in memory if we failed to update it on disk?
-    m_quotaMap->set(origin->isolatedCopy(), quota);
-
     if (m_client)
         m_client->dispatchDidModifyOrigin(origin);
 }
@@ -730,8 +792,6 @@ bool DatabaseTracker::addDatabase(SecurityOrigin* origin, const String& name, co
     openTrackerDatabase(CreateIfDoesNotExist);
     if (!m_database.isOpen())
         return false;
-    populateOriginsIfNeeded();
-    ASSERT(m_quotaMap);
 
     // New database should never be added until the origin has been established
     ASSERT(hasEntryForOriginNoLock(origin));
@@ -798,6 +858,7 @@ bool DatabaseTracker::deleteOrigin(SecurityOrigin* origin)
 
     {
         MutexLocker lockDatabase(m_databaseGuard);
+        deleteOriginLockFor(origin);
         doneDeletingOrigin(origin);
 
         SQLiteStatement statement(m_database, "DELETE FROM Databases WHERE origin=?");
@@ -828,12 +889,20 @@ bool DatabaseTracker::deleteOrigin(SecurityOrigin* origin)
 
         SQLiteFileSystem::deleteEmptyDatabaseDirectory(originPath(origin));
 
-        populateOriginsIfNeeded();
         RefPtr<SecurityOrigin> originPossiblyLastReference = origin;
-        m_quotaMap->remove(origin);
+        bool isEmpty = true;
+
+        openTrackerDatabase(DontCreateIfDoesNotExist);
+        if (m_database.isOpen()) {
+            SQLiteStatement statement(m_database, "SELECT origin FROM Origins");
+            if (statement.prepare() != SQLResultOk)
+                LOG_ERROR("Failed to prepare statement.");
+            else if (statement.step() == SQLResultRow)
+                isEmpty = false;
+        }
 
         // If we removed the last origin, do some additional deletion.
-        if (m_quotaMap->isEmpty()) {
+        if (isEmpty) {
             if (m_database.isOpen())
                 m_database.close();
            SQLiteFileSystem::deleteDatabaseFile(trackerDatabasePath());

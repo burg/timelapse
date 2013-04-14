@@ -41,12 +41,14 @@
 #endif
 
 #include "DumpRenderTreeSupportQt.h"
+#include "TestRunner.h"
 #include <qgraphicsview.h>
 #include <qgraphicswebview.h>
 #include <qwebframe.h>
 #include <qwebinspector.h>
 #include <qwebpage.h>
 #include <qwebview.h>
+#include <wtf/RefPtr.h>
 
 QT_BEGIN_NAMESPACE
 class QUrl;
@@ -62,8 +64,6 @@ class EventSender;
 class TextInputController;
 class GCController;
 
-namespace WebCore {
-
 class WebPage;
 class NetworkAccessManager;
 
@@ -73,6 +73,8 @@ Q_OBJECT
 public:
     DumpRenderTree();
     virtual ~DumpRenderTree();
+
+    static DumpRenderTree* instance();
 
     // Initialize in single-file mode.
     void open(const QUrl& url);
@@ -144,6 +146,7 @@ private:
     QString dumpBackForwardList(QWebPage* page);
     QString dumpFrameScrollPosition(QWebFrame* frame);
     TestRunnerQt *m_controller;
+    RefPtr<TestRunner> m_jscController;
 
     bool m_dumpPixelsForCurrentTest;
     bool m_dumpPixelsForAllTests;
@@ -234,7 +237,5 @@ public:
 private:
     QGraphicsWebView* m_item;
 };
-
-}
 
 #endif

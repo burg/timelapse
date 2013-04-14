@@ -241,6 +241,8 @@ public:
     virtual float pageScaleFactor() const OVERRIDE;
     virtual void didCommitChangesForLayer(const GraphicsLayer*) const OVERRIDE;
     virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) OVERRIDE;
+
+    void layerTiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/);
     
     bool keepLayersPixelAligned() const;
     bool acceleratedDrawingEnabled() const { return m_acceleratedDrawingEnabled; }
@@ -254,6 +256,9 @@ public:
     GraphicsLayer* layerForScrollCorner() const { return m_layerForScrollCorner.get(); }
 #if ENABLE(RUBBER_BANDING)
     GraphicsLayer* layerForOverhangAreas() const { return m_layerForOverhangAreas.get(); }
+
+    GraphicsLayer* updateLayerForTopOverhangArea(bool wantsLayer);
+    GraphicsLayer* updateLayerForBottomOverhangArea(bool wantsLayer);
 #endif
 
     void updateViewportConstraintStatus(RenderLayer*);
@@ -337,6 +342,8 @@ private:
     
     Page* page() const;
     TiledBacking* pageTiledBacking() const;
+    
+    bool haveNonMainLayersWithTiledBacking() const { return m_layersWithTiledBackingCount; }
 
     GraphicsLayerFactory* graphicsLayerFactory() const;
     ScrollingCoordinator* scrollingCoordinator() const;
@@ -402,6 +409,8 @@ private:
     bool m_inPostLayoutUpdate; // true when it's OK to trust layout information (e.g. layer sizes and positions)
 
     bool m_isTrackingRepaints; // Used for testing.
+    
+    unsigned m_layersWithTiledBackingCount;
 
     RootLayerAttachment m_rootLayerAttachment;
 
@@ -422,6 +431,8 @@ private:
 #if ENABLE(RUBBER_BANDING)
     OwnPtr<GraphicsLayer> m_layerForOverhangAreas;
     OwnPtr<GraphicsLayer> m_contentShadowLayer;
+    OwnPtr<GraphicsLayer> m_layerForTopOverhangArea;
+    OwnPtr<GraphicsLayer> m_layerForBottomOverhangArea;
 #endif
 
     OwnPtr<GraphicsLayerUpdater> m_layerUpdater; // Updates tiled layer visible area periodically while animations are running.

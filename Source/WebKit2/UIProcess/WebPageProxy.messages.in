@@ -212,7 +212,7 @@ messages -> WebPageProxy {
     DidReceiveAuthenticationChallenge(uint64_t frameID, WebCore::AuthenticationChallenge challenge, uint64_t challengeID)
 
     # Database messages
-    ExceededDatabaseQuota(uint64_t frameID, WTF::String originIdentifier, WTF::String databaseName, WTF::String databaseDisplayName, uint64_t currentQuota, uint64_t currentOriginUsage, uint64_t currentDatabaseUsage, uint64_t expectedUsage) -> (uint64_t newQuota)
+    ExceededDatabaseQuota(uint64_t frameID, WTF::String originIdentifier, WTF::String databaseName, WTF::String databaseDisplayName, uint64_t currentQuota, uint64_t currentOriginUsage, uint64_t currentDatabaseUsage, uint64_t expectedUsage) -> (uint64_t newQuota) Delayed
 
     # Geolocation messages
     RequestGeolocationPermissionForFrame(uint64_t geolocationID, uint64_t frameID, WTF::String originIdentifier)
@@ -233,6 +233,7 @@ messages -> WebPageProxy {
     GetGuessesForWord(WTF::String word, WTF::String context) -> (Vector<WTF::String> guesses)
     LearnWord(WTF::String word);
     IgnoreWord(WTF::String word);
+    RequestCheckingOfString(uint64_t requestID, WebCore::TextCheckingRequestData request)
 
     # Drag and drop messages
 #if ENABLE(DRAG_SUPPORT)
@@ -270,6 +271,8 @@ messages -> WebPageProxy {
 
     # Spotlight
     SearchWithSpotlight(WTF::String string)
+
+    SearchTheWeb(WTF::String string)
 #endif
 
 #if PLATFORM(MAC)

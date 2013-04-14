@@ -32,7 +32,7 @@
 #include "PlatformSpeechSynthesisVoice.h"
 #include "SpeechSynthesisEvent.h"
 #include "SpeechSynthesisUtterance.h"
-#include <WTF/CurrentTime.h>
+#include <wtf/CurrentTime.h>
 
 namespace WebCore {
     
@@ -149,6 +149,23 @@ void SpeechSynthesis::handleSpeakingCompleted(SpeechSynthesisUtterance* utteranc
         // Start the next job if there is one pending.
         if (!m_utteranceQueue.isEmpty())
             startSpeakingImmediately(m_utteranceQueue.first().get());
+    }
+}
+    
+void SpeechSynthesis::boundaryEventOccurred(const PlatformSpeechSynthesisUtterance* utterance, SpeechBoundary boundary, unsigned charIndex)
+{
+    DEFINE_STATIC_LOCAL(const String, wordBoundaryString, (ASCIILiteral("word")));
+    DEFINE_STATIC_LOCAL(const String, sentenceBoundaryString, (ASCIILiteral("sentence")));
+
+    switch (boundary) {
+    case SpeechWordBoundary:
+        fireEvent(eventNames().boundaryEvent, static_cast<SpeechSynthesisUtterance*>(utterance->client()), charIndex, wordBoundaryString);
+        break;
+    case SpeechSentenceBoundary:
+        fireEvent(eventNames().boundaryEvent, static_cast<SpeechSynthesisUtterance*>(utterance->client()), charIndex, sentenceBoundaryString);
+        break;
+    default:
+        ASSERT_NOT_REACHED();
     }
 }
 

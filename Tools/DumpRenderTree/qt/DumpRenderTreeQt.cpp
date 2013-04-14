@@ -38,7 +38,9 @@
 #include "GCController.h"
 #include "InitWebCoreQt.h"
 #include "InitWebKitQt.h"
+#include "JSStringRefQt.h"
 #include "QtTestSupport.h"
+#include "TestRunner.h"
 #include "TestRunnerQt.h"
 #include "TextInputControllerQt.h"
 #include "testplugin.h"
@@ -72,7 +74,7 @@
 #include <unistd.h>
 #endif
 
-namespace WebCore {
+using namespace WebCore;
 
 const int databaseDefaultQuota = 5 * 1024 * 1024;
 
@@ -192,8 +194,6 @@ void WebPage::resetSettings()
 
     m_drt->testRunner()->setCaretBrowsingEnabled(false);
     m_drt->testRunner()->setAuthorAndUserStylesEnabled(true);
-    m_drt->testRunner()->setSmartInsertDeleteEnabled(true);
-    m_drt->testRunner()->setSelectTrailingWhitespaceEnabled(false);
     m_drt->testRunner()->setDefersLoading(false);
 
     // globalSettings must be reset explicitly.
@@ -383,6 +383,8 @@ WebViewGraphicsBased::WebViewGraphicsBased(QWidget* parent)
     scene()->addItem(m_item);
 }
 
+static DumpRenderTree *s_instance = 0;
+
 DumpRenderTree::DumpRenderTree()
     : m_dumpPixelsForAllTests(false)
     , m_stdin(0)
@@ -391,6 +393,9 @@ DumpRenderTree::DumpRenderTree()
     , m_graphicsBased(false)
     , m_persistentStoragePath(QString(getenv("DUMPRENDERTREE_TEMP")))
 {
+    ASSERT(!s_instance);
+    s_instance = this;
+
     QByteArray viewMode = getenv("QT_DRT_WEBVIEW_MODE");
     if (viewMode == "graphics")
         setGraphicsBased(true);
@@ -483,6 +488,12 @@ DumpRenderTree::~DumpRenderTree()
         fclose(stderr);
     delete m_mainView;
     delete m_stdin;
+    s_instance = 0;
+}
+
+DumpRenderTree* DumpRenderTree::instance()
+{
+    return s_instance;
 }
 
 static void clearHistory(QWebPage* page)
@@ -523,6 +534,8 @@ void DumpRenderTree::resetToConsistentStateBeforeTesting(const QUrl& url)
     // circumstance dump (stop the waitUntilDone timer) during the reset
     // of the DRT.
     m_controller->reset();
+
+    m_jscController = TestRunner::create(url.toString().toStdString(), m_expectedHash.toStdString());
 
     // reset mouse clicks counter
     m_eventSender->resetClickCount();
@@ -605,7 +618,7 @@ void DumpRenderTree::open(const QUrl& url)
         testRunner()->showWebInspector();
 
     if (isDumpAsTextTest(url))
-        testRunner()->dumpAsText();
+        m_jscController->setDumpAsText(true);
 
     if (isGlobalHistoryTest(url))
         testRunner()->dumpHistoryCallbacks();
@@ -746,6 +759,40 @@ void DumpRenderTree::initJSObjects()
     frame->addToJavaScriptWindowObject(QLatin1String("textInputController"), m_textInputController);
     m_gcController->makeWindowObject(context, window, 0);
 
+    if (m_jscController) {
+        JSObjectRef dummyWindow = JSObjectMake(context, 0, 0);
+        m_jscController->makeWindowObject(context, dummyWindow, 0);
+        JSRetainPtr<JSStringRef> testRunnerName(Adopt, JSStringCreateWithUTF8CString("testRunner"));
+        JSValueRef wrappedTestRunner = JSObjectGetProperty(context, dummyWindow, testRunnerName.get(), 0);
+        JSRetainPtr<JSStringRef> helperScript(Adopt, JSStringCreateWithUTF8CString("(function() {\n"
+                                                                                   "    function bind(fun, thisArg) {\n"
+                                                                                   "        return function() {\n"
+                                                                                   "            return fun.apply(thisArg, Array.prototype.slice.call(arguments));\n"
+                                                                                   "        }\n"
+                                                                                   "    }\n"
+                                                                                   "for (var prop in this.jscBasedTestRunner) {\n"
+                                                                                   "    var pd = Object.getOwnPropertyDescriptor(this.qtBasedTestRunner, prop);\n"
+                                                                                   "    if (pd !== undefined) continue;\n"
+                                                                                   "    pd = Object.getOwnPropertyDescriptor(this.jscBasedTestRunner, prop);\n"
+                                                                                   "    this.qtBasedTestRunner[prop] = bind(this.jscBasedTestRunner[prop], this.jscBasedTestRunner);\n"
+                                                                                   "}\n"
+                                                                                   "}).apply(this)\n"));
+
+        JSRetainPtr<JSStringRef> qtBasedTestRunnerName(Adopt, JSStringCreateWithUTF8CString("qtBasedTestRunner"));
+        JSRetainPtr<JSStringRef> jscBasedTestRunnerName(Adopt, JSStringCreateWithUTF8CString("jscBasedTestRunner"));
+
+        JSObjectRef args = JSObjectMake(context, 0, 0);
+        JSObjectSetProperty(context, args, qtBasedTestRunnerName.get(), JSObjectGetProperty(context, window, testRunnerName.get(), 0), 0, 0);
+        JSObjectSetProperty(context, args, jscBasedTestRunnerName.get(), wrappedTestRunner, 0, 0);
+
+        JSValueRef ex = 0;
+        JSEvaluateScript(context, helperScript.get(), args, 0, 0, &ex);
+        if (ex) {
+            JSRetainPtr<JSStringRef> msg(Adopt, JSValueToStringCopy(context, ex, 0));
+            fprintf(stderr, "Error evaluating TestRunner setup-script: %s\n", qPrintable(JSStringCopyQString(msg.get())));
+        }
+    }
+
     DumpRenderTreeSupportQt::injectInternalsObject(frame->handle());
 }
 
@@ -885,10 +932,10 @@ QString DumpRenderTree::dumpBackForwardList(QWebPage* page)
     return result;
 }
 
-static const char *methodNameStringForFailedTest(TestRunnerQt *controller)
+static const char *methodNameStringForFailedTest(TestRunner *controller)
 {
     const char *errorMessage;
-    if (controller->shouldDumpAsText())
+    if (controller->dumpAsText())
         errorMessage = "[documentElement innerText]";
     // FIXME: Add when we have support
     //else if (controller->dumpDOMAsWebArchive())
@@ -916,7 +963,7 @@ void DumpRenderTree::dump()
 
     QString mimeType = DumpRenderTreeSupportQt::responseMimeType(mainFrame->handle());
     if (mimeType == "text/plain")
-        m_controller->dumpAsText();
+        m_jscController->setDumpAsText(true);
 
     // Dump render text...
     QString resultString;
@@ -925,7 +972,7 @@ void DumpRenderTree::dump()
     if (m_controller->shouldDumpAsAudio()) {
         resultContentType = "audio/wav";
         resultData = m_controller->audioData();
-    } else if (m_controller->shouldDumpAsText())
+    } else if (m_jscController->dumpAsText())
         resultString = dumpFramesAsText(mainFrame);
     else {
         resultString = DumpRenderTreeSupportQt::frameRenderTreeDump(mainFrame->handle());
@@ -935,7 +982,7 @@ void DumpRenderTree::dump()
         fprintf(stdout, "Content-Type: %s\n", resultContentType.toUtf8().constData());
         fprintf(stdout, "%s", resultString.toUtf8().constData());
 
-        if (m_controller->shouldDumpBackForwardList()) {
+        if (m_jscController->dumpBackForwardList()) {
             fprintf(stdout, "%s", dumpBackForwardList(webPage()).toUtf8().constData());
             foreach (QObject* widget, windows) {
                 QWebPage* page = qobject_cast<QWebPage*>(widget->findChild<QWebPage*>());
@@ -947,13 +994,13 @@ void DumpRenderTree::dump()
         fprintf(stdout, "Content-Transfer-Encoding: base64\n");
         fprintf(stdout, "%s", resultData.toBase64().constData());
     } else
-        printf("ERROR: nil result from %s", methodNameStringForFailedTest(m_controller));
+        printf("ERROR: nil result from %s", methodNameStringForFailedTest(m_jscController.get()));
 
     // signal end of text block
     fputs("#EOF\n", stdout);
     fputs("#EOF\n", stderr);
 
-    if (m_dumpPixelsForCurrentTest && m_controller->shouldDumpPixels()) {
+    if (m_dumpPixelsForCurrentTest && m_jscController->generatePixelResults()) {
         QImage image;
         if (!m_controller->isPrinting()) {
             image = QImage(m_page->viewportSize(), QImage::Format_ARGB32);
@@ -1076,7 +1123,7 @@ void DumpRenderTree::dumpApplicationCacheQuota(QWebSecurityOrigin* origin, quint
                );
     }
 
-    if (m_controller->shouldDisallowIncreaseForApplicationCacheQuota())
+    if (m_jscController->disallowIncreaseForApplicationCacheQuota())
         return;
 
     origin->setApplicationCacheQuota(defaultOriginQuota);
@@ -1178,6 +1225,4 @@ void DumpRenderTree::setTimeout(int timeout)
 void DumpRenderTree::setShouldTimeout(bool flag)
 {
     m_controller->setShouldTimeout(flag);
-}
-
 }

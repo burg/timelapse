@@ -113,6 +113,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSCrypto.h \
 	DerivedSources/WebCore/JSCSSCharsetRule.cpp \
 	DerivedSources/WebCore/JSCSSCharsetRule.h \
+	DerivedSources/WebCore/JSCSSFontFaceLoadEvent.cpp \
+	DerivedSources/WebCore/JSCSSFontFaceLoadEvent.h \
 	DerivedSources/WebCore/JSCSSFontFaceRule.cpp \
 	DerivedSources/WebCore/JSCSSFontFaceRule.h \
 	DerivedSources/WebCore/JSCSSHostRule.cpp \
@@ -248,6 +250,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSErrorCallback.h \
 	DerivedSources/WebCore/JSErrorEvent.cpp \
 	DerivedSources/WebCore/JSErrorEvent.h \
+	DerivedSources/WebCore/JSEXTDrawBuffers.cpp \
+	DerivedSources/WebCore/JSEXTDrawBuffers.h \
 	DerivedSources/WebCore/JSEXTTextureFilterAnisotropic.cpp \
 	DerivedSources/WebCore/JSEXTTextureFilterAnisotropic.h \
 	DerivedSources/WebCore/JSEvent.cpp \
@@ -290,6 +294,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSFloat64Array.h \
 	DerivedSources/WebCore/JSFocusEvent.cpp \
 	DerivedSources/WebCore/JSFocusEvent.h \
+	DerivedSources/WebCore/JSFontLoader.cpp \
+	DerivedSources/WebCore/JSFontLoader.h \
 	DerivedSources/WebCore/JSGamepad.cpp \
 	DerivedSources/WebCore/JSGamepad.h \
 	DerivedSources/WebCore/JSGamepadList.cpp \
@@ -577,6 +583,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSOESStandardDerivatives.h \
 	DerivedSources/WebCore/JSOESTextureFloat.cpp \
 	DerivedSources/WebCore/JSOESTextureFloat.h \
+	DerivedSources/WebCore/JSOESTextureHalfFloat.cpp \
+	DerivedSources/WebCore/JSOESTextureHalfFloat.h \
 	DerivedSources/WebCore/JSOESVertexArrayObject.cpp \
 	DerivedSources/WebCore/JSOESVertexArrayObject.h \
 	DerivedSources/WebCore/JSOESElementIndexUint.cpp \
@@ -657,8 +665,6 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSRTCSessionDescriptionCallback.h \
 	DerivedSources/WebCore/JSRTCStatsCallback.cpp \
 	DerivedSources/WebCore/JSRTCStatsCallback.h \
-	DerivedSources/WebCore/JSRTCStatsElement.cpp \
-	DerivedSources/WebCore/JSRTCStatsElement.h \
 	DerivedSources/WebCore/JSRTCStatsReport.cpp \
 	DerivedSources/WebCore/JSRTCStatsReport.h \
 	DerivedSources/WebCore/JSRTCStatsResponse.cpp \
@@ -713,12 +719,14 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSStorageEvent.h \
 	DerivedSources/WebCore/JSStorageInfo.cpp \
 	DerivedSources/WebCore/JSStorageInfo.h \
-	DerivedSources/WebCore/JSStorageInfoErrorCallback.cpp \
-	DerivedSources/WebCore/JSStorageInfoErrorCallback.h \
-	DerivedSources/WebCore/JSStorageInfoQuotaCallback.cpp \
-	DerivedSources/WebCore/JSStorageInfoQuotaCallback.h \
-	DerivedSources/WebCore/JSStorageInfoUsageCallback.cpp \
-	DerivedSources/WebCore/JSStorageInfoUsageCallback.h \
+	DerivedSources/WebCore/JSStorageErrorCallback.cpp \
+	DerivedSources/WebCore/JSStorageErrorCallback.h \
+	DerivedSources/WebCore/JSStorageQuota.cpp \
+	DerivedSources/WebCore/JSStorageQuota.h \
+	DerivedSources/WebCore/JSStorageQuotaCallback.cpp \
+	DerivedSources/WebCore/JSStorageQuotaCallback.h \
+	DerivedSources/WebCore/JSStorageUsageCallback.cpp \
+	DerivedSources/WebCore/JSStorageUsageCallback.h \
 	DerivedSources/WebCore/JSStringCallback.cpp \
 	DerivedSources/WebCore/JSStringCallback.h \
 	DerivedSources/WebCore/JSStyleMedia.cpp \
@@ -777,6 +785,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSWebGLActiveInfo.h \
 	DerivedSources/WebCore/JSWebGLBuffer.cpp \
 	DerivedSources/WebCore/JSWebGLBuffer.h \
+	DerivedSources/WebCore/JSWebGLCompressedTextureATC.cpp \
+	DerivedSources/WebCore/JSWebGLCompressedTextureATC.h \
 	DerivedSources/WebCore/JSWebGLCompressedTextureS3TC.cpp \
 	DerivedSources/WebCore/JSWebGLCompressedTextureS3TC.h \
 	DerivedSources/WebCore/JSWebGLContextAttributes.cpp \
@@ -1261,7 +1271,6 @@ dom_binding_idls += \
 	$(WebCore)/Modules/mediastream/RTCSessionDescription.idl \
 	$(WebCore)/Modules/mediastream/RTCSessionDescriptionCallback.idl \
 	$(WebCore)/Modules/mediastream/RTCStatsCallback.idl \
-	$(WebCore)/Modules/mediastream/RTCStatsElement.idl \
 	$(WebCore)/Modules/mediastream/RTCStatsReport.idl \
 	$(WebCore)/Modules/mediastream/RTCStatsResponse.idl \
 	$(WebCore)/Modules/navigatorcontentutils/NavigatorContentUtils.idl \
@@ -1272,10 +1281,12 @@ dom_binding_idls += \
 	$(WebCore)/Modules/notifications/WorkerContextNotifications.idl \
 	$(WebCore)/Modules/proximity/DeviceProximityEvent.idl \
 	$(WebCore)/Modules/quota/DOMWindowQuota.idl \
+	$(WebCore)/Modules/quota/NavigatorStorageQuota.idl \
 	$(WebCore)/Modules/quota/StorageInfo.idl \
-	$(WebCore)/Modules/quota/StorageInfoErrorCallback.idl \
-	$(WebCore)/Modules/quota/StorageInfoQuotaCallback.idl \
-	$(WebCore)/Modules/quota/StorageInfoUsageCallback.idl \
+	$(WebCore)/Modules/quota/StorageErrorCallback.idl \
+	$(WebCore)/Modules/quota/StorageQuota.idl \
+	$(WebCore)/Modules/quota/StorageQuotaCallback.idl \
+	$(WebCore)/Modules/quota/StorageUsageCallback.idl \
 	$(WebCore)/Modules/webaudio/AudioBuffer.idl \
 	$(WebCore)/Modules/webaudio/AudioBufferCallback.idl \
 	$(WebCore)/Modules/webaudio/AudioBufferSourceNode.idl \
@@ -1326,6 +1337,7 @@ dom_binding_idls += \
 	$(WebCore)/Modules/websockets/WebSocket.idl \
 	$(WebCore)/Modules/websockets/WorkerContextWebSocket.idl \
 	$(WebCore)/css/CSSCharsetRule.idl \
+	$(WebCore)/css/CSSFontFaceLoadEvent.idl \
 	$(WebCore)/css/CSSFontFaceRule.idl \
 	$(WebCore)/css/CSSHostRule.idl \
 	$(WebCore)/css/CSSImportRule.idl \
@@ -1342,6 +1354,7 @@ dom_binding_idls += \
 	$(WebCore)/css/CSSValueList.idl \
 	$(WebCore)/css/Counter.idl \
 	$(WebCore)/css/DOMWindowCSS.idl \
+	$(WebCore)/css/FontLoader.idl \
 	$(WebCore)/css/MediaList.idl \
 	$(WebCore)/css/MediaQueryList.idl \
 	$(WebCore)/css/RGBColor.idl \
@@ -1533,6 +1546,7 @@ dom_binding_idls += \
 	$(WebCore)/html/canvas/CanvasRenderingContext2D.idl \
 	$(WebCore)/html/canvas/DataView.idl \
 	$(WebCore)/html/canvas/DOMPath.idl \
+	$(WebCore)/html/canvas/EXTDrawBuffers.idl \
 	$(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
 	$(WebCore)/html/canvas/Float32Array.idl \
 	$(WebCore)/html/canvas/Float64Array.idl \
@@ -1541,6 +1555,7 @@ dom_binding_idls += \
 	$(WebCore)/html/canvas/Int8Array.idl \
 	$(WebCore)/html/canvas/OESStandardDerivatives.idl \
 	$(WebCore)/html/canvas/OESTextureFloat.idl \
+	$(WebCore)/html/canvas/OESTextureHalfFloat.idl \
 	$(WebCore)/html/canvas/OESVertexArrayObject.idl \
 	$(WebCore)/html/canvas/OESElementIndexUint.idl \
 	$(WebCore)/html/canvas/Uint16Array.idl \
@@ -1549,6 +1564,7 @@ dom_binding_idls += \
 	$(WebCore)/html/canvas/Uint8ClampedArray.idl \
 	$(WebCore)/html/canvas/WebGLActiveInfo.idl \
 	$(WebCore)/html/canvas/WebGLBuffer.idl \
+	$(WebCore)/html/canvas/WebGLCompressedTextureATC.idl \
 	$(WebCore)/html/canvas/WebGLCompressedTextureS3TC.idl \
 	$(WebCore)/html/canvas/WebGLContextAttributes.idl \
 	$(WebCore)/html/canvas/WebGLContextEvent.idl \
@@ -1917,6 +1933,7 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBTransaction.h \
 	Source/WebCore/Modules/indexeddb/IDBVersionChangeEvent.cpp \
 	Source/WebCore/Modules/indexeddb/IDBVersionChangeEvent.h \
+	Source/WebCore/Modules/indexeddb/IndexedDB.h \
 	Source/WebCore/Modules/indexeddb/PageGroupIndexedDatabase.cpp \
 	Source/WebCore/Modules/indexeddb/PageGroupIndexedDatabase.h \
 	Source/WebCore/Modules/indexeddb/WorkerContextIndexedDatabase.cpp \
@@ -1969,8 +1986,6 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/mediastream/RTCSessionDescriptionRequestImpl.cpp \
 	Source/WebCore/Modules/mediastream/RTCSessionDescriptionRequestImpl.h \
 	Source/WebCore/Modules/mediastream/RTCStatsCallback.h \
-	Source/WebCore/Modules/mediastream/RTCStatsElement.cpp \
-	Source/WebCore/Modules/mediastream/RTCStatsElement.h \
 	Source/WebCore/Modules/mediastream/RTCStatsReport.cpp \
 	Source/WebCore/Modules/mediastream/RTCStatsReport.h \
 	Source/WebCore/Modules/mediastream/RTCStatsRequestImpl.cpp \
@@ -2006,11 +2021,16 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/proximity/DeviceProximityEvent.h \
 	Source/WebCore/Modules/quota/DOMWindowQuota.cpp \
 	Source/WebCore/Modules/quota/DOMWindowQuota.h \
+	Source/WebCore/Modules/quota/NavigatorStorageQuota.cpp \
+	Source/WebCore/Modules/quota/NavigatorStorageQuota.h \
 	Source/WebCore/Modules/quota/StorageInfo.cpp \
 	Source/WebCore/Modules/quota/StorageInfo.h \
-	Source/WebCore/Modules/quota/StorageInfoErrorCallback.h \
-	Source/WebCore/Modules/quota/StorageInfoQuotaCallback.h \
-	Source/WebCore/Modules/quota/StorageInfoUsageCallback.h \
+	Source/WebCore/Modules/quota/StorageErrorCallback.cpp \
+	Source/WebCore/Modules/quota/StorageErrorCallback.h \
+	Source/WebCore/Modules/quota/StorageQuota.cpp \
+	Source/WebCore/Modules/quota/StorageQuota.h \
+	Source/WebCore/Modules/quota/StorageQuotaCallback.h \
+	Source/WebCore/Modules/quota/StorageUsageCallback.h \
 	Source/WebCore/Modules/webaudio/AsyncAudioDecoder.cpp \
 	Source/WebCore/Modules/webaudio/AsyncAudioDecoder.h \
 	Source/WebCore/Modules/webaudio/AudioBasicInspectorNode.cpp \
@@ -2141,6 +2161,8 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/webdatabase/DatabaseThread.h \
 	Source/WebCore/Modules/webdatabase/DatabaseTracker.cpp \
 	Source/WebCore/Modules/webdatabase/DatabaseTracker.h \
+	Source/WebCore/Modules/webdatabase/OriginLock.cpp \
+	Source/WebCore/Modules/webdatabase/OriginLock.h \
 	Source/WebCore/Modules/webdatabase/SQLCallbackWrapper.h \
 	Source/WebCore/Modules/webdatabase/SQLError.h \
 	Source/WebCore/Modules/webdatabase/SQLException.cpp \
@@ -2560,6 +2582,8 @@ webcore_sources += \
 	Source/WebCore/css/CSSDefaultStyleSheets.h \
 	Source/WebCore/css/CSSFontFace.cpp \
 	Source/WebCore/css/CSSFontFace.h \
+	Source/WebCore/css/CSSFontFaceLoadEvent.cpp \
+	Source/WebCore/css/CSSFontFaceLoadEvent.h \
 	Source/WebCore/css/CSSFontFaceRule.cpp \
 	Source/WebCore/css/CSSFontFaceRule.h \
 	Source/WebCore/css/CSSFontFaceSource.cpp \
@@ -2648,8 +2672,12 @@ webcore_sources += \
 	Source/WebCore/css/DashboardRegion.h \
 	Source/WebCore/css/DocumentRuleSets.cpp \
 	Source/WebCore/css/DocumentRuleSets.h \
+	Source/WebCore/css/ElementRuleCollector.cpp \
+	Source/WebCore/css/ElementRuleCollector.h \
 	Source/WebCore/css/FontFeatureValue.cpp \
 	Source/WebCore/css/FontFeatureValue.h \
+	Source/WebCore/css/FontLoader.cpp \
+	Source/WebCore/css/FontLoader.h \
 	Source/WebCore/css/FontValue.cpp \
 	Source/WebCore/css/FontValue.h \
 	Source/WebCore/css/InspectorCSSOMWrappers.cpp \
@@ -2672,6 +2700,8 @@ webcore_sources += \
 	Source/WebCore/css/MediaQueryListListener.h \
 	Source/WebCore/css/MediaQueryMatcher.cpp \
 	Source/WebCore/css/MediaQueryMatcher.h \
+	Source/WebCore/css/PageRuleCollector.cpp \
+	Source/WebCore/css/PageRuleCollector.h \
 	Source/WebCore/css/Pair.h \
 	Source/WebCore/css/PropertySetCSSStyleDeclaration.cpp \
 	Source/WebCore/css/PropertySetCSSStyleDeclaration.h \
@@ -3190,8 +3220,8 @@ webcore_sources += \
 	Source/WebCore/editing/VisiblePosition.h \
 	Source/WebCore/editing/VisibleSelection.cpp \
 	Source/WebCore/editing/VisibleSelection.h \
-	Source/WebCore/editing/visible_units.cpp \
-	Source/WebCore/editing/visible_units.h \
+	Source/WebCore/editing/VisibleUnits.cpp \
+	Source/WebCore/editing/VisibleUnits.h \
 	Source/WebCore/editing/WrapContentsInDummySpanCommand.cpp \
 	Source/WebCore/editing/WrapContentsInDummySpanCommand.h \
 	Source/WebCore/editing/WritingDirection.h \
@@ -3273,12 +3303,16 @@ webcore_sources += \
 	Source/WebCore/html/canvas/DataView.cpp \
 	Source/WebCore/html/canvas/DataView.h \
 	Source/WebCore/html/canvas/DOMPath.h \
+	Source/WebCore/html/canvas/EXTDrawBuffers.cpp \
+	Source/WebCore/html/canvas/EXTDrawBuffers.h \
 	Source/WebCore/html/canvas/EXTTextureFilterAnisotropic.cpp \
 	Source/WebCore/html/canvas/EXTTextureFilterAnisotropic.h \
 	Source/WebCore/html/canvas/OESStandardDerivatives.cpp \
 	Source/WebCore/html/canvas/OESStandardDerivatives.h \
 	Source/WebCore/html/canvas/OESTextureFloat.cpp \
 	Source/WebCore/html/canvas/OESTextureFloat.h \
+	Source/WebCore/html/canvas/OESTextureHalfFloat.cpp \
+	Source/WebCore/html/canvas/OESTextureHalfFloat.h \
 	Source/WebCore/html/canvas/OESVertexArrayObject.cpp \
 	Source/WebCore/html/canvas/OESVertexArrayObject.h \
 	Source/WebCore/html/canvas/OESElementIndexUint.cpp \
@@ -3286,6 +3320,8 @@ webcore_sources += \
 	Source/WebCore/html/canvas/WebGLActiveInfo.h \
 	Source/WebCore/html/canvas/WebGLBuffer.cpp \
 	Source/WebCore/html/canvas/WebGLBuffer.h \
+	Source/WebCore/html/canvas/WebGLCompressedTextureATC.cpp \
+	Source/WebCore/html/canvas/WebGLCompressedTextureATC.h \
 	Source/WebCore/html/canvas/WebGLCompressedTextureS3TC.cpp \
 	Source/WebCore/html/canvas/WebGLCompressedTextureS3TC.h \
 	Source/WebCore/html/canvas/WebGLContextAttributes.cpp \
@@ -3603,6 +3639,8 @@ webcore_sources += \
 	Source/WebCore/html/parser/HTMLEntityTable.h \
 	Source/WebCore/html/parser/HTMLFormattingElementList.cpp \
 	Source/WebCore/html/parser/HTMLFormattingElementList.h \
+	Source/WebCore/html/parser/HTMLIdentifier.cpp \
+	Source/WebCore/html/parser/HTMLIdentifier.h \
 	Source/WebCore/html/parser/HTMLInputStream.h \
 	Source/WebCore/html/parser/HTMLMetaCharsetParser.cpp \
 	Source/WebCore/html/parser/HTMLMetaCharsetParser.h \
@@ -3629,6 +3667,8 @@ webcore_sources += \
 	Source/WebCore/html/parser/HTMLTokenizer.h \
 	Source/WebCore/html/parser/HTMLTreeBuilder.cpp \
 	Source/WebCore/html/parser/HTMLTreeBuilder.h \
+	Source/WebCore/html/parser/HTMLTreeBuilderSimulator.cpp \
+	Source/WebCore/html/parser/HTMLTreeBuilderSimulator.h \
 	Source/WebCore/html/parser/HTMLViewSourceParser.cpp \
 	Source/WebCore/html/parser/HTMLViewSourceParser.h \
 	Source/WebCore/html/parser/InputStreamPreprocessor.h \
@@ -3643,6 +3683,8 @@ webcore_sources += \
 	Source/WebCore/html/parser/XSSAuditorDelegate.h \
 	Source/WebCore/html/shadow/PickerIndicatorElement.cpp \
 	Source/WebCore/html/shadow/PickerIndicatorElement.h \
+	Source/WebCore/html/shadow/ClearButtonElement.cpp \
+	Source/WebCore/html/shadow/ClearButtonElement.h \
 	Source/WebCore/html/shadow/ContentDistributor.cpp \
 	Source/WebCore/html/shadow/ContentDistributor.h \
 	Source/WebCore/html/shadow/ContentSelectorQuery.cpp \
@@ -4062,6 +4104,7 @@ webcore_sources += \
 	Source/WebCore/loader/ResourceLoader.cpp \
 	Source/WebCore/loader/ResourceLoader.h \
 	Source/WebCore/loader/ResourceLoaderOptions.h \
+	Source/WebCore/loader/ResourceLoaderTypes.h \
 	Source/WebCore/loader/ResourceLoadNotifier.cpp \
 	Source/WebCore/loader/ResourceLoadNotifier.h \
 	Source/WebCore/loader/ResourceLoadScheduler.cpp \
@@ -4358,6 +4401,8 @@ webcore_sources += \
 	Source/WebCore/rendering/HitTestRequest.h \
 	Source/WebCore/rendering/HitTestingTransformState.cpp \
 	Source/WebCore/rendering/HitTestingTransformState.h \
+	Source/WebCore/rendering/HitTestLocation.cpp \
+	Source/WebCore/rendering/HitTestLocation.h \
 	Source/WebCore/rendering/HitTestResult.cpp \
 	Source/WebCore/rendering/HitTestResult.h \
 	Source/WebCore/rendering/InlineBox.cpp \
@@ -4699,6 +4744,7 @@ webcore_sources += \
 	Source/WebCore/workers/SharedWorkerContext.h \
 	Source/WebCore/workers/SharedWorker.cpp \
 	Source/WebCore/workers/SharedWorker.h \
+	Source/WebCore/workers/SharedWorkerRepository.cpp \
 	Source/WebCore/workers/SharedWorkerRepository.h \
 	Source/WebCore/workers/SharedWorkerStrategy.h \
 	Source/WebCore/workers/SharedWorkerThread.cpp \
@@ -5569,6 +5615,8 @@ webcore_platform_sources += \
 	Source/WebCore/platform/graphics/FloatPoint3D.h \
 	Source/WebCore/platform/graphics/FloatPoint.cpp \
 	Source/WebCore/platform/graphics/FloatPoint.h \
+	Source/WebCore/platform/graphics/FloatPolygon.cpp \
+	Source/WebCore/platform/graphics/FloatPolygon.h \
 	Source/WebCore/platform/graphics/FloatQuad.cpp \
 	Source/WebCore/platform/graphics/FloatQuad.h \
 	Source/WebCore/platform/graphics/FloatRect.cpp \
@@ -5767,6 +5815,7 @@ webcore_platform_sources += \
 	Source/WebCore/platform/LocalizedStrings.h \
 	Source/WebCore/platform/Logging.cpp \
 	Source/WebCore/platform/Logging.h \
+	Source/WebCore/platform/MainThreadTask.h \
 	Source/WebCore/platform/MIMETypeRegistry.cpp \
 	Source/WebCore/platform/MIMETypeRegistry.h \
 	Source/WebCore/platform/MemoryPressureHandler.cpp \
@@ -5835,6 +5884,7 @@ webcore_platform_sources += \
 	Source/WebCore/platform/network/BlobData.cpp \
 	Source/WebCore/platform/network/BlobData.h \
 	Source/WebCore/platform/network/BlobRegistry.h \
+	Source/WebCore/platform/network/BlobRegistry.cpp \
 	Source/WebCore/platform/network/BlobRegistryImpl.cpp \
 	Source/WebCore/platform/network/BlobRegistryImpl.h \
 	Source/WebCore/platform/network/BlobResourceHandle.cpp \
@@ -6185,8 +6235,6 @@ webcoregtk_sources += \
 	Source/WebCore/platform/gtk/GtkPluginWidget.h \
 	Source/WebCore/platform/gtk/GtkPopupMenu.cpp \
 	Source/WebCore/platform/gtk/GtkPopupMenu.h \
-	Source/WebCore/platform/gtk/GtkVersioning.c \
-	Source/WebCore/platform/gtk/GtkVersioning.h \
 	Source/WebCore/platform/gtk/KeyBindingTranslator.cpp \
 	Source/WebCore/platform/gtk/KeyBindingTranslator.h \
 	Source/WebCore/platform/gtk/LocalizedStringsGtk.cpp \

@@ -224,7 +224,7 @@ bool EventTarget::fireEventListeners(Event* event)
     if (!prefixedTypeName.isEmpty()) {
         ScriptExecutionContext* context = scriptExecutionContext();
         if (context && context->isDocument()) {
-            Document* document = static_cast<Document*>(context);
+            Document* document = toDocument(context);
             if (document->domWindow()) {
                 if (listenerPrefixedVector)
                     if (listenerUnprefixedVector)
@@ -249,6 +249,7 @@ void EventTarget::fireEventListeners(Event* event, EventTargetData* d, EventList
     // dispatch. Conveniently, all new event listeners will be added after 'end',
     // so iterating to 'end' naturally excludes new event listeners.
 
+    bool userEventWasHandled = false;
     size_t i = 0;
     size_t end = entry.size();
     if (!d->firingEventIterators)
@@ -271,9 +272,18 @@ void EventTarget::fireEventListeners(Event* event, EventTargetData* d, EventList
         // To match Mozilla, the AT_TARGET phase fires both capturing and bubbling
         // event listeners, even though that violates some versions of the DOM spec.
         registeredListener.listener->handleEvent(context, event);
+        if (!userEventWasHandled && ScriptController::processingUserGesture())
+            userEventWasHandled = true;
         InspectorInstrumentation::didHandleEvent(cookie);
     }
     d->firingEventIterators->removeLast();
+    if (userEventWasHandled) {
+        ScriptExecutionContext* context = scriptExecutionContext();
+        if (context && context->isDocument()) {
+            Document* document = toDocument(context);
+            document->resetLastHandledUserGestureTimestamp();
+        }
+    }
 }
 
 const EventListenerVector& EventTarget::getEventListeners(const AtomicString& eventType)

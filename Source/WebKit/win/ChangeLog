@@ -1,3 +1,165 @@
+2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Add selectTrailingWhitespaceEnabled setting to WebCore::Page
+        https://bugs.webkit.org/show_bug.cgi?id=109404
+
+        Reviewed by Tony Chang.
+
+        Use new settings for smartInsertDeleteEnabled and
+        selectTrailingWhitespaceEnabled.
+
+        * WebCoreSupport/WebEditorClient.cpp:
+        (WebEditorClient::smartInsertDeleteEnabled):
+        (WebEditorClient::isSelectTrailingWhitespaceEnabled):
+        * WebView.cpp:
+        (WebView::WebView):
+        (WebView::setSmartInsertDeleteEnabled):
+        (WebView::smartInsertDeleteEnabled):
+        (WebView::setSelectTrailingWhitespaceEnabled):
+        (WebView::isSelectTrailingWhitespaceEnabled):
+        * WebView.h:
+        (WebView):
+
+2013-03-14  Jesus Sanchez-Palencia  <jesus.palencia@openbossa.org>
+
+        Move platform-specific typedefs to PlatformMenuDescription.h
+        https://bugs.webkit.org/show_bug.cgi?id=111876
+
+        Reviewed by Caio Marcelo de Oliveira Filho.
+
+        Rename NativeMenuItem to PlatformContextMenuItem and the getter
+        function call.
+
+        * WebCoreSupport/WebContextMenuClient.cpp:
+        (WebContextMenuClient::customizeMenu):
+        (WebContextMenuClient::contextMenuItemSelected):
+        * WebView.cpp:
+        (WebView::handleContextMenuEvent):
+
+2013-03-14  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112296
+
+        Reviewed by Kentaro Hara.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * WebView.cpp:
+        (WebView::enterFullscreenForNode):
+
+2013-03-13  Nate Chapin  <japhet@chromium.org>
+
+        Expose symbols for internals
+        https://bugs.webkit.org/show_bug.cgi?id=112194
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-03-13  Pavel Feldman  <pfeldman@chromium.org>
+
+        Web Inspector: get rid of hiddenPanels filter
+        https://bugs.webkit.org/show_bug.cgi?id=112252
+
+        Reviewed by Vsevolod Vlasov.
+
+        * WebCoreSupport/WebInspectorClient.cpp:
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorFrontendClient):
+
+2013-03-12  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112164
+
+        Reviewed by Philip Rogers.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * DOMHTMLClasses.cpp:
+        (DOMHTMLElement::idName):
+        (DOMHTMLElement::innerText):
+        (DOMHTMLElement::setInnerText):
+
+2013-03-11  Jochen Eisinger  <jochen@chromium.org>
+
+        Rename DefinitelyProcessingUserGesture to DefinitelyProcessingNewUserGesture
+        https://bugs.webkit.org/show_bug.cgi?id=111959
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/WebContextMenuClient.cpp:
+        (WebContextMenuClient::searchWithGoogle):
+
+2013-03-03  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Windows build fix attempt after r144547.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-03-03  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r144567.
+        http://trac.webkit.org/changeset/144567
+        https://bugs.webkit.org/show_bug.cgi?id=111266
+
+        Does not compile on apple-win (Requested by abarth on
+        #webkit).
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-03-03  Ryosuke Niwa  <rniwa@webkit.org>
+
+        That was a wrong fix. Revert r144569.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-03-03  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Windows build fix attempt after r144567.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-03-02  Benjamin Poulain  <benjamin@webkit.org>
+
+        Export a missing symbol after r144547.
+
+        Unreviewed.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-03-02  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Redo r144538 (after r144530).
+
+        * WebCoreSupport/WebFrameNetworkingContext.cpp:
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+
+2013-03-02  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Yet another build fix attempt after r144530.
+
+        * WebCoreSupport/WebFrameNetworkingContext.cpp:
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+
+2013-03-02  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Another build fix attempt after r144530.
+
+        * WebCoreSupport/WebFrameNetworkingContext.cpp:
+
+2013-03-01  Benjamin Poulain  <bpoulain@apple.com>
+
+        Add a missing symbol after r144524.
+
+        Unreviewed.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
 2013-02-26  Alexey Proskuryakov  <ap@apple.com>
 
         Don't add a body to platform request until necessary

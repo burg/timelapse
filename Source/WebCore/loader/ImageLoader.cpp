@@ -37,6 +37,7 @@
 #include "RenderImage.h"
 #include "ScriptCallStack.h"
 #include "SecurityOrigin.h"
+#include "WebCoreMemoryInstrumentation.h"
 
 #if ENABLE(SVG)
 #include "RenderSVGImage.h"
@@ -92,6 +93,7 @@ static inline bool pageIsBeingDismissed(Document* document)
 ImageLoader::ImageLoader(Element* element)
     : m_element(element)
     , m_image(0)
+    , m_derefElementTimer(this, &ImageLoader::timerFired)
     , m_hasPendingBeforeLoadEvent(false)
     , m_hasPendingLoadEvent(false)
     , m_hasPendingErrorEvent(false)
@@ -170,7 +172,7 @@ void ImageLoader::updateFromElement()
     if (!document->renderer())
         return;
 
-    AtomicString attr = m_element->getAttribute(m_element->imageSourceAttributeName());
+    AtomicString attr = m_element->imageSourceURL();
 
     if (attr == m_failedLoadURL)
         return;
@@ -294,7 +296,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         errorEventSender().dispatchEventSoon(this);
 
         DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Cross-origin image load denied by Cross-Origin Resource Sharing policy.")));
-        m_element->document()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, consoleMessage);
+        m_element->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, consoleMessage);
 
         ASSERT(!m_hasPendingLoadEvent);
 
@@ -366,10 +368,20 @@ void ImageLoader::updatedHasPendingEvent()
     if (wasProtected == m_elementIsProtected)
         return;
 
-    if (m_elementIsProtected)
-        m_element->ref();
-    else
-        m_element->deref();
+    if (m_elementIsProtected) {
+        if (m_derefElementTimer.isActive())
+            m_derefElementTimer.stop();
+        else
+            m_element->ref();
+    } else {
+        ASSERT(!m_derefElementTimer.isActive());
+        m_derefElementTimer.startOneShot(0);
+    }   
+}
+
+void ImageLoader::timerFired(Timer<ImageLoader>*)
+{
+    m_element->deref();
 }
 
 void ImageLoader::dispatchPendingEvent(ImageEventSender* eventSender)
@@ -465,6 +477,15 @@ void ImageLoader::elementDidMoveToNewDocument()
 inline void ImageLoader::clearFailedLoadURL()
 {
     m_failedLoadURL = AtomicString();
+}
+
+void ImageLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Image);
+    info.addMember(m_element, "element");
+    info.addMember(m_image.get(), "image", WTF::RetainingPointer);
+    info.addMember(m_derefElementTimer, "derefElementTimer");
+    info.addMember(m_failedLoadURL, "failedLoadURL");
 }
 
 }

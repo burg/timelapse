@@ -27,14 +27,18 @@
 #define SchedulableLoader_h
 
 #include "HostRecord.h"
-#include "NetworkConnectionToWebProcess.h"
-#include "NetworkResourceLoadParameters.h"
+#include <WebCore/ResourceLoaderOptions.h>
+#include <WebCore/ResourceRequest.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefCounted.h>
 
 #if ENABLE(NETWORK_PROCESS)
 
 namespace WebKit {
+
+class NetworkConnectionToWebProcess;
+class NetworkResourceLoadParameters;
+class SandboxExtension;
 
 class SchedulableLoader : public RefCounted<SchedulableLoader> {
 public:
@@ -50,7 +54,7 @@ public:
     bool inPrivateBrowsingMode() const { return m_inPrivateBrowsingMode; }
 
     NetworkConnectionToWebProcess* connectionToWebProcess() const { return m_connection.get(); }
-    void connectionToWebProcessDidClose();
+    virtual void connectionToWebProcessDidClose() = 0;
 
     virtual void start() = 0;
     
@@ -78,7 +82,7 @@ private:
     bool m_inPrivateBrowsingMode;
 
     Vector<RefPtr<SandboxExtension> > m_requestBodySandboxExtensions;
-    RefPtr<SandboxExtension> m_resourceSandboxExtension;
+    Vector<RefPtr<SandboxExtension> > m_resourceSandboxExtensions;
 
     RefPtr<NetworkConnectionToWebProcess> m_connection;
     

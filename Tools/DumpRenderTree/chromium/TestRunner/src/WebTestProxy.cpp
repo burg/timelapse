@@ -59,6 +59,7 @@
 #include "WebTestDelegate.h"
 #include "WebTestInterfaces.h"
 #include "WebTestRunner.h"
+#include "WebUserGestureIndicator.h"
 #include "WebUserMediaClientMock.h"
 #include "WebView.h"
 // FIXME: Including platform_canvas.h here is a layering violation.
@@ -156,7 +157,7 @@ void printFrameDescription(WebTestDelegate* delegate, WebFrame* frame)
 
 void printFrameUserGestureStatus(WebTestDelegate* delegate, WebFrame* frame, const char* msg)
 {
-    bool isUserGesture = frame->isProcessingUserGesture();
+    bool isUserGesture = WebUserGestureIndicator::isProcessingUserGesture();
     delegate->printMessage(string("Frame with user gesture \"") + (isUserGesture ? "true" : "false") + "\"" + msg);
 }
 
@@ -978,16 +979,6 @@ void WebTestProxyBase::didStopLoading()
         m_delegate->printMessage("postProgressFinishedNotification\n");
 }
 
-bool WebTestProxyBase::isSmartInsertDeleteEnabled()
-{
-    return m_testInterfaces->testRunner()->isSmartInsertDeleteEnabled();
-}
-
-bool WebTestProxyBase::isSelectTrailingWhitespaceEnabled()
-{
-    return m_testInterfaces->testRunner()->isSelectTrailingWhitespaceEnabled();
-}
-
 void WebTestProxyBase::showContextMenu(WebFrame*, const WebContextMenuData& contextMenuData)
 {
     m_testInterfaces->eventSender()->setContextMenuData(contextMenuData);
@@ -1064,6 +1055,16 @@ void WebTestProxyBase::requestPointerUnlock()
 bool WebTestProxyBase::isPointerLocked()
 {
     return m_testInterfaces->testRunner()->isPointerLocked();
+}
+
+void WebTestProxyBase::didFocus()
+{
+    m_delegate->setFocus(this, true);
+}
+
+void WebTestProxyBase::didBlur()
+{
+    m_delegate->setFocus(this, false);
 }
 
 void WebTestProxyBase::willPerformClientRedirect(WebFrame* frame, const WebURL&, const WebURL& to, double, double)

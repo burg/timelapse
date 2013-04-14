@@ -29,6 +29,7 @@
 #import "DOMInternal.h" // import first to make the private/public trick work
 #import "DOM.h"
 
+#import "CachedImage.h"
 #import "DOMElementInternal.h"
 #import "DOMHTMLCanvasElement.h"
 #import "DOMHTMLTableCellElementInternal.h"
@@ -294,7 +295,7 @@ Class kitClass(WebCore::Node* impl)
     switch (impl->nodeType()) {
         case WebCore::Node::ELEMENT_NODE:
             if (impl->isHTMLElement())
-                return WebCore::elementClass(static_cast<WebCore::HTMLElement*>(impl)->tagQName(), [DOMHTMLElement class]);
+                return WebCore::elementClass(toHTMLElement(impl)->tagQName(), [DOMHTMLElement class]);
 #if ENABLE(SVG_DOM_OBJC_BINDINGS)
             if (impl->isSVGElement())
                 return WebCore::elementClass(static_cast<WebCore::SVGElement*>(impl)->tagQName(), [DOMSVGElement class]);

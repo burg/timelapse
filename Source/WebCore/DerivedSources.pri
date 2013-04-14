@@ -133,10 +133,12 @@ IDL_BINDINGS += \
     $$PWD/Modules/notifications/NotificationPermissionCallback.idl \
     $$PWD/Modules/notifications/WorkerContextNotifications.idl \
     $$PWD/Modules/quota/DOMWindowQuota.idl \
+    $$PWD/Modules/quota/NavigatorStorageQuota.idl \
     $$PWD/Modules/quota/StorageInfo.idl \
-    $$PWD/Modules/quota/StorageInfoErrorCallback.idl \
-    $$PWD/Modules/quota/StorageInfoQuotaCallback.idl \
-    $$PWD/Modules/quota/StorageInfoUsageCallback.idl \
+    $$PWD/Modules/quota/StorageErrorCallback.idl \
+    $$PWD/Modules/quota/StorageQuota.idl \
+    $$PWD/Modules/quota/StorageQuotaCallback.idl \
+    $$PWD/Modules/quota/StorageUsageCallback.idl \
     $$PWD/Modules/webaudio/AudioBuffer.idl \
     $$PWD/Modules/webaudio/AudioBufferCallback.idl \
     $$PWD/Modules/webaudio/AudioBufferSourceNode.idl \
@@ -188,6 +190,7 @@ IDL_BINDINGS += \
     $$PWD/Modules/websockets/WorkerContextWebSocket.idl \
     $$PWD/css/Counter.idl \
     $$PWD/css/CSSCharsetRule.idl \
+    $$PWD/css/CSSFontFaceLoadEvent.idl \
     $$PWD/css/CSSFontFaceRule.idl \
     $$PWD/css/CSSHostRule.idl \
     $$PWD/css/CSSImportRule.idl \
@@ -203,6 +206,7 @@ IDL_BINDINGS += \
     $$PWD/css/CSSValue.idl \
     $$PWD/css/CSSValueList.idl \
     $$PWD/css/DOMWindowCSS.idl \
+    $$PWD/css/FontLoader.idl \
     $$PWD/css/MediaList.idl \
     $$PWD/css/MediaQueryList.idl \
     $$PWD/css/Rect.idl \
@@ -309,13 +313,16 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/CanvasRenderingContext.idl \
     $$PWD/html/canvas/CanvasRenderingContext2D.idl \
     $$PWD/html/canvas/DOMPath.idl \
+    $$PWD/html/canvas/EXTDrawBuffers.idl \
     $$PWD/html/canvas/EXTTextureFilterAnisotropic.idl \
     $$PWD/html/canvas/OESStandardDerivatives.idl \
     $$PWD/html/canvas/OESTextureFloat.idl \
+    $$PWD/html/canvas/OESTextureHalfFloat.idl \
     $$PWD/html/canvas/OESVertexArrayObject.idl \
     $$PWD/html/canvas/OESElementIndexUint.idl \
     $$PWD/html/canvas/WebGLActiveInfo.idl \
     $$PWD/html/canvas/WebGLBuffer.idl \
+    $$PWD/html/canvas/WebGLCompressedTextureATC.idl \
     $$PWD/html/canvas/WebGLCompressedTextureS3TC.idl \
     $$PWD/html/canvas/WebGLContextAttributes.idl \
     $$PWD/html/canvas/WebGLContextEvent.idl \

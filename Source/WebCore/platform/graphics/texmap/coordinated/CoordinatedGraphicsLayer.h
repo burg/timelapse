@@ -21,8 +21,8 @@
 #ifndef CoordinatedGraphicsLayer_h
 #define CoordinatedGraphicsLayer_h
 
+#include "CoordinatedGraphicsState.h"
 #include "CoordinatedImageBacking.h"
-#include "CoordinatedLayerInfo.h"
 #include "CoordinatedTile.h"
 #include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
@@ -44,35 +44,17 @@
 namespace WebCore {
 class CoordinatedGraphicsLayer;
 class GraphicsLayerAnimations;
+class ScrollableArea;
 
 class CoordinatedGraphicsLayerClient {
 public:
     virtual bool isFlushingLayerChanges() const = 0;
-
-    // CoordinatedTileClient
-    virtual void createTile(CoordinatedLayerID, uint32_t tileID, const SurfaceUpdateInfo&, const IntRect&) = 0;
-    virtual void updateTile(CoordinatedLayerID, uint32_t tileID, const SurfaceUpdateInfo&, const IntRect&) = 0;
-    virtual void removeTile(CoordinatedLayerID, uint32_t tileID) = 0;
-
     virtual FloatRect visibleContentsRect() const = 0;
     virtual PassRefPtr<CoordinatedImageBacking> createImageBackingIfNeeded(Image*) = 0;
-    virtual void syncLayerState(CoordinatedLayerID, const CoordinatedLayerInfo&) = 0;
-    virtual void syncLayerChildren(CoordinatedLayerID, const Vector<CoordinatedLayerID>&) = 0;
-#if ENABLE(CSS_FILTERS)
-    virtual void syncLayerFilters(CoordinatedLayerID, const FilterOperations&) = 0;
-#endif
-#if USE(GRAPHICS_SURFACE)
-    virtual void createCanvas(CoordinatedLayerID, PlatformLayer*) = 0;
-    virtual void syncCanvas(CoordinatedLayerID, PlatformLayer*) = 0;
-    virtual void destroyCanvas(CoordinatedLayerID) = 0;
-#endif
-
-    virtual void setLayerRepaintCount(CoordinatedLayerID, int) = 0;
-
-    virtual void setLayerAnimations(CoordinatedLayerID, const GraphicsLayerAnimations&) = 0;
-
     virtual void detachLayer(CoordinatedGraphicsLayer*) = 0;
     virtual PassOwnPtr<GraphicsContext> beginContentUpdate(const IntSize&, CoordinatedSurface::Flags, uint32_t& atlasID, IntPoint&) = 0;
+
+    virtual void syncLayerState(CoordinatedLayerID, CoordinatedGraphicsLayerState&) = 0;
 };
 
 class CoordinatedGraphicsLayer : public GraphicsLayer
@@ -132,7 +114,9 @@ public:
 
     void setVisibleContentRectTrajectoryVector(const FloatPoint&);
 
-    void setRootLayer(bool);
+    void setScrollableArea(ScrollableArea*);
+    bool isScrollable() const { return !!m_scrollableArea; }
+    void commitScrollOffset(const IntSize&);
 
     CoordinatedLayerID id() const;
 
@@ -190,6 +174,7 @@ private:
 #endif
     void didChangeImageBacking();
 
+    void resetLayerState();
     void syncLayerState();
     void syncAnimations();
     void syncChildren();
@@ -216,7 +201,7 @@ private:
     void animationStartedTimerFired(Timer<CoordinatedGraphicsLayer>*);
 
     CoordinatedLayerID m_id;
-    CoordinatedLayerInfo m_layerInfo;
+    CoordinatedGraphicsLayerState m_layerState;
     GraphicsLayerTransform m_layerTransform;
     TransformationMatrix m_cachedInverseTransform;
     FloatSize m_pixelAlignmentOffset;
@@ -258,6 +243,8 @@ private:
     Timer<CoordinatedGraphicsLayer> m_animationStartedTimer;
     GraphicsLayerAnimations m_animations;
     double m_lastAnimationStartTime;
+
+    ScrollableArea* m_scrollableArea;
 };
 
 CoordinatedGraphicsLayer* toCoordinatedGraphicsLayer(GraphicsLayer*);

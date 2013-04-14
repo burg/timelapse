@@ -77,6 +77,7 @@ my (
     $downloadAttributeSupport,
     $fileSystemSupport,
     $filtersSupport,
+    $fontLoadEventsSupport,
     $ftpDirSupport,
     $fullscreenAPISupport,
     $gamepadSupport,
@@ -136,6 +137,7 @@ my (
     $templateElementSupport,
     $textAutosizingSupport,
     $tiledBackingStoreSupport,
+    $threadedHTMLParserSupport,
     $timelapseSupport,
     $touchEventsSupport,
     $touchSliderSupport,
@@ -259,6 +261,9 @@ my @features = (
     { option => "filters", desc => "Toggle Filters support",
       define => "ENABLE_FILTERS", default => (isAppleWebKit() || isGtk() || isQt() || isEfl() || isBlackBerry()), value => \$filtersSupport },
 
+    { option => "font-load-events", desc => "Toggle Font Load Events support",
+      define => "ENABLE_FONT_LOAD_EVENTS", default => 0, value => \$fontLoadEventsSupport },
+
     { option => "ftpdir", desc => "Toggle FTP Directory support",
       define => "ENABLE_FTPDIR", default => !isWinCE(), value => \$ftpDirSupport },
 
@@ -329,7 +334,7 @@ my @features = (
       define => "ENABLE_LINK_PRERENDER", default => 0, value => \$linkPrerenderSupport },
 
     { option => "mathml", desc => "Toggle MathML support",
-      define => "ENABLE_MATHML", default => 1, value => \$mathmlSupport },
+      define => "ENABLE_MATHML", default => !isBlackBerry(), value => \$mathmlSupport },
 
     { option => "media-capture", desc => "Toggle Media Capture support",
       define => "ENABLE_MEDIA_CAPTURE", default => isEfl(), value => \$mediaCaptureSupport },
@@ -436,6 +441,9 @@ my @features = (
     { option => "tiled-backing-store", desc => "Toggle Tiled Backing Store support",
       define => "WTF_USE_TILED_BACKING_STORE", default => (isQt() || isEfl()), value => \$tiledBackingStoreSupport },
 
+    { option => "threaded-html-parser", desc => "Toggle threaded HTML parser support",
+      define => "ENABLE_THREADED_HTML_PARSER", default => isChromium(), value => \$threadedHTMLParserSupport },
+
     { option => "timelapse", desc => "Toggle Timelapse support",
       define => "ENABLE_TIMELAPSE", default => 0, value => \$timelapseSupport },
 
@@ -464,7 +472,7 @@ my @features = (
       define => "ENABLE_WEBGL", default => (isAppleMacWebKit() || isGtk() || isEfl()), value => \$webglSupport },
 
     { option => "web-audio", desc => "Toggle Web Audio support",
-      define => "ENABLE_WEB_AUDIO", default => (isEfl()), value => \$webAudioSupport },
+      define => "ENABLE_WEB_AUDIO", default => (isEfl() || isGtk()), value => \$webAudioSupport },
 
     { option => "web-sockets", desc => "Toggle Web Sockets support",
       define => "ENABLE_WEB_SOCKETS", default => 1, value => \$webSocketsSupport },

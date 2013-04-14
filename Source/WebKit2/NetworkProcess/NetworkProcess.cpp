@@ -35,8 +35,10 @@
 #include "Logging.h"
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcessCreationParameters.h"
+#include "NetworkProcessPlatformStrategies.h"
 #include "NetworkProcessProxyMessages.h"
 #include "RemoteNetworkingContext.h"
+#include "SchedulableLoader.h"
 #include "StatisticsData.h"
 #include "WebContextMessages.h"
 #include "WebCookieManager.h"
@@ -63,6 +65,8 @@ NetworkProcess::NetworkProcess()
     : m_hasSetCacheModel(false)
     , m_cacheModel(CacheModelDocumentViewer)
 {
+    NetworkProcessPlatformStrategies::initialize();
+
     addSupplement<AuthenticationManager>();
     addSupplement<WebCookieManager>();
     addSupplement<CustomProtocolManager>();

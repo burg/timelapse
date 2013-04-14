@@ -24,7 +24,6 @@ javascriptcore_built_nosources += \
 	DerivedSources/JavaScriptCore/NumberConstructor.lut.h \
 	DerivedSources/JavaScriptCore/NumberPrototype.lut.h \
 	DerivedSources/JavaScriptCore/ObjectConstructor.lut.h \
-	DerivedSources/JavaScriptCore/ObjectPrototype.lut.h \
 	DerivedSources/JavaScriptCore/RegExpConstructor.lut.h \
 	DerivedSources/JavaScriptCore/RegExpObject.lut.h \
 	DerivedSources/JavaScriptCore/RegExpPrototype.lut.h \
@@ -36,6 +35,8 @@ javascriptcore_built_nosources += \
 javascriptcore_sources += \
 	Source/JavaScriptCore/API/APICast.h \
 	Source/JavaScriptCore/API/APIShims.h \
+    Source/JavaScriptCore/API/JSAPIWrapperObject.cpp \
+    Source/JavaScriptCore/API/JSAPIWrapperObject.h \
 	Source/JavaScriptCore/API/JSBase.cpp \
 	Source/JavaScriptCore/API/JSBasePrivate.h \
 	Source/JavaScriptCore/API/JSCallbackConstructor.cpp \
@@ -57,6 +58,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/API/JSStringRef.cpp \
 	Source/JavaScriptCore/API/JSValueRef.cpp \
 	Source/JavaScriptCore/API/JSWeakObjectMapRefInternal.h \
+    Source/JavaScriptCore/API/ObjCCallbackFunction.h \
 	Source/JavaScriptCore/API/OpaqueJSString.cpp \
 	Source/JavaScriptCore/API/OpaqueJSString.h \
 	Source/JavaScriptCore/assembler/AbstractMacroAssembler.h \
@@ -182,6 +184,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGArrayifySlowPathGenerator.h \
 	Source/JavaScriptCore/dfg/DFGAssemblyHelpers.cpp \
 	Source/JavaScriptCore/dfg/DFGAssemblyHelpers.h \
+	Source/JavaScriptCore/dfg/DFGBackwardsPropagationPhase.cpp \
+	Source/JavaScriptCore/dfg/DFGBackwardsPropagationPhase.h \
 	Source/JavaScriptCore/dfg/DFGBasicBlock.h \
 	Source/JavaScriptCore/dfg/DFGBasicBlockInlines.h \
 	Source/JavaScriptCore/dfg/DFGBranchDirection.h \
@@ -203,6 +207,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGConstantFoldingPhase.h \
 	Source/JavaScriptCore/dfg/DFGCSEPhase.cpp \
 	Source/JavaScriptCore/dfg/DFGCSEPhase.h \
+	Source/JavaScriptCore/dfg/DFGDCEPhase.cpp \
+	Source/JavaScriptCore/dfg/DFGDCEPhase.h \
 	Source/JavaScriptCore/dfg/DFGDisassembler.cpp \
 	Source/JavaScriptCore/dfg/DFGDisassembler.h \
 	Source/JavaScriptCore/dfg/DFGDominators.cpp \
@@ -722,6 +728,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/runtime/PropertyOffset.h \
 	Source/JavaScriptCore/runtime/PropertySlot.cpp \
 	Source/JavaScriptCore/runtime/PropertySlot.h \
+	Source/JavaScriptCore/runtime/PropertyTable.cpp \
 	Source/JavaScriptCore/runtime/PrototypeMap.cpp \
 	Source/JavaScriptCore/runtime/PrototypeMap.h \
 	Source/JavaScriptCore/runtime/PropertyStorage.h \
@@ -805,7 +812,7 @@ llint_nosources += \
 	Source/JavaScriptCore/llint/LowLevelInterpreter.asm
 
 offlineasm_nosources += \
-	Source/JavaScriptCore/offlineasm/armv7.rb \
+	Source/JavaScriptCore/offlineasm/arm.rb \
 	Source/JavaScriptCore/offlineasm/asm.rb \
 	Source/JavaScriptCore/offlineasm/ast.rb \
 	Source/JavaScriptCore/offlineasm/backends.rb \

@@ -57,7 +57,7 @@ loader.request = function(url, success, error, opt_isBinaryData)
     xhr.send();
 }
 
-loader.Loader = function()
+loader.Loader = function(opt_onLoadingComplete)
 {
     this._loadingSteps = [
         this._loadBuildersList,
@@ -67,7 +67,28 @@ loader.Loader = function()
 
     this._buildersThatFailedToLoad = [];
     this._staleBuilders = [];
-    this._loadingComplete = false;
+    this._errors = new ui.Errors();
+    this._onLoadingComplete = opt_onLoadingComplete || function() {};
+}
+
+// TODO(aboxhall): figure out whether this is a performance bottleneck and
+// change calling code to understand the trie structure instead if necessary.
+loader.Loader._flattenTrie = function(trie, prefix)
+{
+    var result = {};
+    for (var name in trie) {
+        var fullName = prefix ? prefix + "/" + name : name;
+        var data = trie[name];
+        if ("results" in data)
+            result[fullName] = data;
+        else {
+            var partialResult = loader.Loader._flattenTrie(data, fullName);
+            for (var key in partialResult) {
+                result[key] = partialResult[key];
+            }
+        }
+    }
+    return result;
 }
 
 loader.Loader.prototype = {
@@ -75,19 +96,16 @@ loader.Loader.prototype = {
     {
         this._loadNext();
     },
-    isLoadingComplete: function()
+    showErrors: function() 
     {
-        return this._loadingComplete;
+        this._errors.show();
     },
     _loadNext: function()
     {
         var loadingStep = this._loadingSteps.shift();
         if (!loadingStep) {
-            this._loadingComplete = true;
-            // FIXME(jparent): Loader should not know about global
-            // functions, should use a callback or dispatch load
-            // event instead.
-            resourceLoadingComplete(this._getLoadingErrorMessages());
+            this._addErrors();
+            this._onLoadingComplete();
             return;
         }
         loadingStep.apply(this);
@@ -99,8 +117,6 @@ loader.Loader.prototype = {
     },
     _loadResultsFiles: function()
     {
-        parseParameters();
-
         for (var builderName in currentBuilders())
             this._loadResultsFileForBuilder(builderName);
     },
@@ -165,7 +181,7 @@ loader.Loader.prototype = {
                 this._staleBuilders.push(builderName);
 
             if (json_version >= 4)
-                builds[builderName][TESTS_KEY] = flattenTrie(builds[builderName][TESTS_KEY]);
+                builds[builderName][TESTS_KEY] = loader.Loader._flattenTrie(builds[builderName][TESTS_KEY]);
             g_resultsByBuilder[builderName] = builds[builderName];
         }
     },
@@ -229,16 +245,13 @@ loader.Loader.prototype = {
                         console.error('Could not load expectations file for ' + platformName);
                     }, platformWithExpectations));
     },
-    _getLoadingErrorMessages: function()
+    _addErrors: function()
     {
-        var errorMsgs = '';
         if (this._buildersThatFailedToLoad.length)
-            errorMsgs += 'ERROR: Failed to get data from ' + this._buildersThatFailedToLoad.toString() + '.<br>';
+            this._errors.addError('ERROR: Failed to get data from ' + this._buildersThatFailedToLoad.toString() +'.');
 
         if (this._staleBuilders.length)
-            errorMsgs +='ERROR: Data from ' + this._staleBuilders.toString() + ' is more than 1 day stale.<br>';
-
-        return errorMsgs;
+            this._errors.addError('ERROR: Data from ' + this._staleBuilders.toString() + ' is more than 1 day stale.');
     }
 }
 

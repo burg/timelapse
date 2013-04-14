@@ -69,7 +69,6 @@ unsigned WebArrayBuffer::byteLength() const
     return 0;
 }
 
-#if WEBKIT_USING_V8
 v8::Handle<v8::Value> WebArrayBuffer::toV8Value()
 {
     if (!m_private.get())
@@ -79,12 +78,11 @@ v8::Handle<v8::Value> WebArrayBuffer::toV8Value()
 
 WebArrayBuffer* WebArrayBuffer::createFromV8Value(v8::Handle<v8::Value> value)
 {
-    if (!V8ArrayBuffer::HasInstance(value, v8::Isolate::GetCurrent()))
+    if (!V8ArrayBuffer::HasInstance(value, v8::Isolate::GetCurrent(), WebCore::MainWorld) && !V8ArrayBuffer::HasInstance(value, v8::Isolate::GetCurrent(), WebCore::IsolatedWorld) && !V8ArrayBuffer::HasInstance(value, v8::Isolate::GetCurrent(), WebCore::WorkerWorld))
         return 0;
     WTF::ArrayBuffer* buffer = V8ArrayBuffer::toNative(value->ToObject());
     return new WebArrayBuffer(buffer);
 }
-#endif
 
 WebArrayBuffer::WebArrayBuffer(const WTF::PassRefPtr<WTF::ArrayBuffer>& blob)
     : m_private(blob)

@@ -70,7 +70,7 @@ v8::Handle<v8::Value> V8Document::evaluateMethodCustom(const v8::Arguments& args
     ExceptionCode ec = 0;
     String expression = toWebCoreString(args[0]);
     RefPtr<Node> contextNode;
-    if (V8Node::HasInstance(args[1], args.GetIsolate()))
+    if (V8Node::HasInstance(args[1], args.GetIsolate(), worldType(args.GetIsolate())))
         contextNode = V8Node::toNative(v8::Handle<v8::Object>::Cast(args[1]));
 
     RefPtr<XPathNSResolver> resolver = toXPathNSResolver(args[2], args.GetIsolate());
@@ -79,7 +79,7 @@ v8::Handle<v8::Value> V8Document::evaluateMethodCustom(const v8::Arguments& args
 
     int type = toInt32(args[3]);
     RefPtr<XPathResult> inResult;
-    if (V8XPathResult::HasInstance(args[4], args.GetIsolate()))
+    if (V8XPathResult::HasInstance(args[4], args.GetIsolate(), worldType(args.GetIsolate())))
         inResult = V8XPathResult::toNative(v8::Handle<v8::Object>::Cast(args[4]));
 
     V8TRYCATCH(RefPtr<XPathResult>, result, document->evaluate(expression, contextNode.get(), resolver.get(), type, inResult.get(), ec));
@@ -93,15 +93,15 @@ v8::Handle<v8::Object> wrap(Document* impl, v8::Handle<v8::Object> creationConte
 {
     ASSERT(impl);
     if (impl->isHTMLDocument())
-        return wrap(static_cast<HTMLDocument*>(impl), creationContext, isolate);
+        return wrap(toHTMLDocument(impl), creationContext, isolate);
 #if ENABLE(SVG)
     if (impl->isSVGDocument())
-        return wrap(static_cast<SVGDocument*>(impl), creationContext, isolate);
+        return wrap(toSVGDocument(impl), creationContext, isolate);
 #endif
     v8::Handle<v8::Object> wrapper = V8Document::createWrapper(impl, creationContext, isolate);
     if (wrapper.IsEmpty())
         return wrapper;
-    if (!worldForEnteredContext()) {
+    if (!isolatedWorldForEnteredContext()) {
         if (Frame* frame = impl->frame())
             frame->script()->windowShell(mainThreadNormalWorld())->updateDocumentWrapper(wrapper);
     }

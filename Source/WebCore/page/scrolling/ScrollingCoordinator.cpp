@@ -210,7 +210,7 @@ static void accumulateDocumentEventTargetRects(Vector<IntRect>& rects, const Doc
         }
 
         if (touchTarget->isDocumentNode() && touchTarget != document) {
-            accumulateDocumentEventTargetRects(rects, static_cast<const Document*>(touchTarget));
+            accumulateDocumentEventTargetRects(rects, toDocument(touchTarget));
             continue;
         }
 
@@ -272,6 +272,7 @@ void ScrollingCoordinator::frameViewFixedObjectsDidChange(FrameView* frameView)
     updateShouldUpdateScrollLayerPositionOnMainThread();
 }
 
+#if USE(ACCELERATED_COMPOSITING)
 GraphicsLayer* ScrollingCoordinator::scrollLayerForScrollableArea(ScrollableArea* scrollableArea)
 {
     return scrollableArea->layerForScrolling();
@@ -286,6 +287,7 @@ GraphicsLayer* ScrollingCoordinator::verticalScrollbarLayerForScrollableArea(Scr
 {
     return scrollableArea->layerForVerticalScrollbar();
 }
+#endif
 
 GraphicsLayer* ScrollingCoordinator::scrollLayerForFrameView(FrameView* frameView)
 {

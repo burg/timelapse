@@ -160,7 +160,7 @@ bool InspectorClient::sendMessageToFrontend(const String& message)
 const char* InspectorClient::inspectorFilesPath()
 {
     if (m_inspectorFilesPath)
-        m_inspectorFilesPath.get();
+        return m_inspectorFilesPath.get();
 
     const char* environmentPath = getenv("WEBKIT_INSPECTOR_PATH");
     if (environmentPath && g_file_test(environmentPath, G_FILE_TEST_IS_DIR))
@@ -225,12 +225,6 @@ String InspectorFrontendClient::localizedStringsURL()
 
     // FIXME: support l10n of localizedStrings.js
     return String::fromUTF8(stringsURI.get());
-}
-
-String InspectorFrontendClient::hiddenPanels()
-{
-    notImplemented();
-    return String();
 }
 
 void InspectorFrontendClient::bringToFront()

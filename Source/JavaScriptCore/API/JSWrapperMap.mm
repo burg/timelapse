@@ -29,6 +29,9 @@
 #if JSC_OBJC_API_ENABLED
 
 #import "APICast.h"
+#import "APIShims.h"
+#import "JSAPIWrapperObject.h"
+#import "JSCallbackObject.h"
 #import "JSContextInternal.h"
 #import "JSWrapperMap.h"
 #import "ObjCCallbackFunction.h"
@@ -48,7 +51,8 @@
 
 static void wrapperFinalize(JSObjectRef object)
 {
-    [(id)JSObjectGetPrivate(object) release];
+    JSC::JSAPIWrapperObject* wrapperObject = JSC::jsCast<JSC::JSAPIWrapperObject*>(toJS(object));
+    [(id)wrapperObject->wrappedObject() release];
 }
 
 // All wrapper objects and constructor objects derive from this type, so we can detect & unwrap Objective-C instances/Classes.
@@ -114,17 +118,31 @@ done:
     return result;
 }
 
+static JSObjectRef makeWrapper(JSContextRef ctx, JSClassRef jsClass, id wrappedObject)
+{
+    JSC::ExecState* exec = toJS(ctx);
+    JSC::APIEntryShim entryShim(exec);
+
+    ASSERT(jsClass);
+    JSC::JSCallbackObject<JSC::JSAPIWrapperObject>* object = JSC::JSCallbackObject<JSC::JSAPIWrapperObject>::create(exec, exec->lexicalGlobalObject(), exec->lexicalGlobalObject()->objcWrapperObjectStructure(), jsClass, 0);
+    object->setWrappedObject(wrappedObject);
+    if (JSC::JSObject* prototype = jsClass->prototype(exec))
+        object->setPrototype(exec->globalData(), prototype);
+
+    return toRef(object);
+}
+
 // Make an object that is in all ways a completely vanilla JavaScript object,
 // other than that it has a native brand set that will be displayed by the default
 // Object.prototype.toString conversion.
-static JSValue *createObjectWithCustomBrand(JSContext *context, NSString *brand, JSClassRef parentClass = 0, void* privateData = 0)
+static JSValue *createObjectWithCustomBrand(JSContext *context, NSString *brand, JSClassRef parentClass = 0, Class cls = 0)
 {
     JSClassDefinition definition;
     definition = kJSClassDefinitionEmpty;
     definition.className = [brand UTF8String];
     definition.parentClass = parentClass;
     JSClassRef classRef = JSClassCreate(&definition);
-    JSObjectRef result = JSObjectMake(contextInternalContext(context), classRef, privateData);
+    JSObjectRef result = makeWrapper([context globalContextRef], classRef, cls);
     JSClassRelease(classRef);
     return [[JSValue alloc] initWithValue:result inContext:context];
 }
@@ -343,7 +361,7 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
     ASSERT(!m_constructor || !m_prototype);
     ASSERT((m_class == [NSObject class]) == !superClassInfo);
     if (!superClassInfo) {
-        JSContextRef cContext = contextInternalContext(m_context);
+        JSContextRef cContext = [m_context globalContextRef];
         JSValue *constructor = m_context[@"Object"];
         if (!m_constructor)
             m_constructor = toJS(JSValueToObject(cContext, valueInternalValue(constructor), 0));
@@ -368,7 +386,7 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
         else
             constructor = createObjectWithCustomBrand(m_context, [NSString stringWithFormat:@"%sConstructor", className], wrapperClass(), [m_class retain]);
 
-        JSContextRef cContext = contextInternalContext(m_context);
+        JSContextRef cContext = [m_context globalContextRef];
         m_prototype = toJS(JSValueToObject(cContext, valueInternalValue(prototype), 0));
         m_constructor = toJS(JSValueToObject(cContext, valueInternalValue(constructor), 0));
 
@@ -382,7 +400,7 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
         });
 
         // Set [Prototype].
-        JSObjectSetPrototype(contextInternalContext(m_context), toRef(m_prototype.get()), toRef(superClassInfo->m_prototype.get()));
+        JSObjectSetPrototype([m_context globalContextRef], toRef(m_prototype.get()), toRef(superClassInfo->m_prototype.get()));
 
         [constructor release];
         [prototype release];
@@ -407,8 +425,8 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
         [self reallocateConstructorAndOrPrototype];
     ASSERT(!!m_prototype);
 
-    JSObjectRef wrapper = JSObjectMake(contextInternalContext(m_context), m_classRef, [object retain]);
-    JSObjectSetPrototype(contextInternalContext(m_context), wrapper, toRef(m_prototype.get()));
+    JSObjectRef wrapper = makeWrapper([m_context globalContextRef], m_classRef, [object retain]);
+    JSObjectSetPrototype([m_context globalContextRef], wrapper, toRef(m_prototype.get()));
     return [JSValue valueWithValue:wrapper inContext:m_context];
 }
 
@@ -485,7 +503,7 @@ static void copyPrototypeProperties(JSContext *context, Class objcClass, Protoco
     // (1) For immortal objects JSValues will effectively leak and this results in error output being logged - we should avoid adding associated objects to immortal objects.
     // (2) A long lived object may rack up many JSValues. When the contexts are released these will unprotect the associated JavaScript objects,
     //     but still, would probably nicer if we made it so that only one associated object was required, broadcasting object dealloc.
-    JSC::ExecState* exec = toJS(contextInternalContext(m_context));
+    JSC::ExecState* exec = toJS([m_context globalContextRef]);
     jsWrapper = toJS(exec, valueInternalValue(wrapper)).toObject(exec);
     m_cachedJSWrappers.set(object, jsWrapper);
     return wrapper;
@@ -511,8 +529,8 @@ id tryUnwrapObjcObject(JSGlobalContextRef context, JSValueRef value)
     JSObjectRef object = JSValueToObject(context, value, &exception);
     ASSERT(!exception);
     if (JSValueIsObjectOfClass(context, object, wrapperClass()))
-        return (id)JSObjectGetPrivate(object);
-    if (id target = tryUnwrapBlock(context, object))
+        return (id)JSC::jsCast<JSC::JSAPIWrapperObject*>(toJS(object))->wrappedObject();
+    if (id target = tryUnwrapBlock(object))
         return target;
     return nil;
 }

@@ -226,7 +226,6 @@ set(WebCore_IDL_FILES
     Modules/mediastream/RTCSessionDescription.idl
     Modules/mediastream/RTCSessionDescriptionCallback.idl
     Modules/mediastream/RTCStatsCallback.idl
-    Modules/mediastream/RTCStatsElement.idl
     Modules/mediastream/RTCStatsReport.idl
     Modules/mediastream/RTCStatsResponse.idl
 
@@ -242,12 +241,6 @@ set(WebCore_IDL_FILES
     Modules/notifications/WorkerContextNotifications.idl
 
     Modules/proximity/DeviceProximityEvent.idl
-
-    Modules/quota/DOMWindowQuota.idl
-    Modules/quota/StorageInfo.idl
-    Modules/quota/StorageInfoErrorCallback.idl
-    Modules/quota/StorageInfoQuotaCallback.idl
-    Modules/quota/StorageInfoUsageCallback.idl
 
     Modules/vibration/NavigatorVibration.idl
 
@@ -304,6 +297,7 @@ set(WebCore_IDL_FILES
 
     css/Counter.idl
     css/CSSCharsetRule.idl
+    css/CSSFontFaceLoadEvent.idl
     css/CSSFontFaceRule.idl
     css/CSSHostRule.idl
     css/CSSImportRule.idl
@@ -319,6 +313,7 @@ set(WebCore_IDL_FILES
     css/CSSValue.idl
     css/CSSValueList.idl
     css/DOMWindowCSS.idl
+    css/FontLoader.idl
     css/MediaList.idl
     css/MediaQueryList.idl
     css/RGBColor.idl
@@ -513,6 +508,7 @@ set(WebCore_IDL_FILES
     html/canvas/CanvasRenderingContext.idl
     html/canvas/DataView.idl
     html/canvas/DOMPath.idl
+    html/canvas/EXTDrawBuffers.idl
     html/canvas/EXTTextureFilterAnisotropic.idl
     html/canvas/Float32Array.idl
     html/canvas/Float64Array.idl
@@ -521,6 +517,7 @@ set(WebCore_IDL_FILES
     html/canvas/Int8Array.idl
     html/canvas/OESStandardDerivatives.idl
     html/canvas/OESTextureFloat.idl
+    html/canvas/OESTextureHalfFloat.idl
     html/canvas/OESVertexArrayObject.idl
     html/canvas/OESElementIndexUint.idl
     html/canvas/Uint16Array.idl
@@ -529,6 +526,7 @@ set(WebCore_IDL_FILES
     html/canvas/Uint8ClampedArray.idl
     html/canvas/WebGLActiveInfo.idl
     html/canvas/WebGLBuffer.idl
+    html/canvas/WebGLCompressedTextureATC.idl
     html/canvas/WebGLCompressedTextureS3TC.idl
     html/canvas/WebGLContextAttributes.idl
     html/canvas/WebGLContextEvent.idl
@@ -862,7 +860,6 @@ set(WebCore_SOURCES
     Modules/mediastream/RTCPeerConnection.cpp
     Modules/mediastream/RTCSessionDescription.cpp
     Modules/mediastream/RTCSessionDescriptionRequestImpl.cpp
-    Modules/mediastream/RTCStatsElement.cpp
     Modules/mediastream/RTCStatsReport.cpp
     Modules/mediastream/RTCStatsRequestImpl.cpp
     Modules/mediastream/RTCStatsResponse.cpp
@@ -885,9 +882,6 @@ set(WebCore_SOURCES
 
     Modules/proximity/DeviceProximityController.cpp
     Modules/proximity/DeviceProximityEvent.cpp
-
-    Modules/quota/DOMWindowQuota.cpp
-    Modules/quota/StorageInfo.cpp
 
     Modules/vibration/NavigatorVibration.cpp
     Modules/vibration/Vibration.cpp
@@ -951,6 +945,7 @@ set(WebCore_SOURCES
     Modules/webdatabase/DatabaseTask.cpp
     Modules/webdatabase/DatabaseThread.cpp
     Modules/webdatabase/DatabaseTracker.cpp
+    Modules/webdatabase/OriginLock.cpp
     Modules/webdatabase/SQLException.cpp
     Modules/webdatabase/SQLResultSet.cpp
     Modules/webdatabase/SQLResultSetRowList.cpp
@@ -1026,6 +1021,7 @@ set(WebCore_SOURCES
     css/CSSCursorImageValue.cpp
     css/CSSDefaultStyleSheets.cpp
     css/CSSFontFace.cpp
+    css/CSSFontFaceLoadEvent.cpp
     css/CSSFontFaceRule.cpp
     css/CSSFontFaceSource.cpp
     css/CSSFontFaceSrcValue.cpp
@@ -1066,7 +1062,9 @@ set(WebCore_SOURCES
     css/CSSValuePool.cpp
     css/DOMWindowCSS.cpp
     css/DocumentRuleSets.cpp
+    css/ElementRuleCollector.cpp
     css/FontFeatureValue.cpp
+    css/FontLoader.cpp
     css/FontValue.cpp
     css/InspectorCSSOMWrappers.cpp
     css/LengthFunctions.cpp
@@ -1078,6 +1076,7 @@ set(WebCore_SOURCES
     css/MediaQueryList.cpp
     css/MediaQueryListListener.cpp
     css/MediaQueryMatcher.cpp
+    css/PageRuleCollector.cpp
     css/PropertySetCSSStyleDeclaration.cpp
     css/RGBColor.cpp
     css/RuleFeature.h
@@ -1322,10 +1321,10 @@ set(WebCore_SOURCES
     editing/UnlinkCommand.cpp
     editing/VisiblePosition.cpp
     editing/VisibleSelection.cpp
+    editing/VisibleUnits.cpp
     editing/WrapContentsInDummySpanCommand.cpp
     editing/htmlediting.cpp
     editing/markup.cpp
-    editing/visible_units.cpp
 
     fileapi/AsyncFileStream.cpp
     fileapi/Blob.cpp
@@ -1506,12 +1505,15 @@ set(WebCore_SOURCES
     html/canvas/CanvasRenderingContext2D.cpp
     html/canvas/CanvasStyle.cpp
     html/canvas/DataView.cpp
+    html/canvas/EXTDrawBuffers.cpp
     html/canvas/EXTTextureFilterAnisotropic.cpp
     html/canvas/OESStandardDerivatives.cpp
     html/canvas/OESTextureFloat.cpp
+    html/canvas/OESTextureHalfFloat.cpp
     html/canvas/OESVertexArrayObject.cpp
     html/canvas/OESElementIndexUint.cpp
     html/canvas/WebGLBuffer.cpp
+    html/canvas/WebGLCompressedTextureATC.cpp
     html/canvas/WebGLCompressedTextureS3TC.cpp
     html/canvas/WebGLContextAttributes.cpp
     html/canvas/WebGLContextEvent.cpp
@@ -1549,6 +1551,7 @@ set(WebCore_SOURCES
     html/parser/HTMLParserScheduler.cpp
     html/parser/HTMLParserThread.cpp
     html/parser/HTMLFormattingElementList.cpp
+    html/parser/HTMLIdentifier.cpp
     html/parser/HTMLMetaCharsetParser.cpp
     html/parser/HTMLPreloadScanner.cpp
     html/parser/HTMLResourcePreloader.cpp
@@ -1556,12 +1559,14 @@ set(WebCore_SOURCES
     html/parser/HTMLSourceTracker.cpp
     html/parser/HTMLTokenizer.cpp
     html/parser/HTMLTreeBuilder.cpp
+    html/parser/HTMLTreeBuilderSimulator.cpp
     html/parser/HTMLViewSourceParser.cpp
     html/parser/TextDocumentParser.cpp
     html/parser/TextViewSourceParser.cpp
     html/parser/XSSAuditor.cpp
     html/parser/XSSAuditorDelegate.cpp
 
+    html/shadow/ClearButtonElement.cpp
     html/shadow/ContentDistributor.cpp
     html/shadow/ContentSelectorQuery.cpp
     html/shadow/DateTimeEditElement.cpp
@@ -1912,6 +1917,7 @@ set(WebCore_SOURCES
     platform/graphics/CrossfadeGeneratedImage.cpp
     platform/graphics/FloatPoint.cpp
     platform/graphics/FloatPoint3D.cpp
+    platform/graphics/FloatPolygon.cpp
     platform/graphics/FloatQuad.cpp
     platform/graphics/FloatRect.cpp
     platform/graphics/FloatSize.cpp
@@ -2053,6 +2059,7 @@ set(WebCore_SOURCES
 
     platform/network/AuthenticationChallengeBase.cpp
     platform/network/BlobData.cpp
+    platform/network/BlobRegistry.cpp
     platform/network/BlobRegistryImpl.cpp
     platform/network/BlobResourceHandle.cpp
     platform/network/Credential.cpp
@@ -2130,6 +2137,7 @@ set(WebCore_SOURCES
     rendering/FixedTableLayout.cpp
     rendering/FlowThreadController.cpp
     rendering/HitTestingTransformState.cpp
+    rendering/HitTestLocation.cpp
     rendering/HitTestResult.cpp
     rendering/InlineBox.cpp
     rendering/InlineFlowBox.cpp
@@ -2512,6 +2520,7 @@ set(WebCore_SOURCES
     workers/DefaultSharedWorkerRepository.cpp
     workers/SharedWorker.cpp
     workers/SharedWorkerContext.cpp
+    workers/SharedWorkerRepository.cpp
     workers/SharedWorkerThread.cpp
     workers/Worker.cpp
     workers/WorkerContext.cpp
@@ -2622,9 +2631,11 @@ if (ENABLE_WEBGL)
     list(APPEND WebCore_SOURCES
         html/canvas/OESStandardDerivatives.cpp
         html/canvas/OESTextureFloat.cpp
+        html/canvas/OESTextureHalfFloat.cpp
         html/canvas/OESVertexArrayObject.cpp
         html/canvas/OESElementIndexUint.cpp
         html/canvas/WebGLBuffer.cpp
+        html/canvas/WebGLCompressedTextureATC.cpp
         html/canvas/WebGLCompressedTextureS3TC.cpp
         html/canvas/WebGLContextAttributes.cpp
         html/canvas/WebGLContextEvent.cpp
@@ -2647,20 +2658,25 @@ if (ENABLE_WEBGL)
         html/canvas/WebGLUniformLocation.cpp
         html/canvas/WebGLVertexArrayObjectOES.cpp
         html/canvas/WebGLExtension.cpp
+        html/canvas/EXTDrawBuffers.cpp
         html/canvas/EXTTextureFilterAnisotropic.cpp
         html/canvas/OESStandardDerivatives.cpp
         html/canvas/OESTextureFloat.cpp
+        html/canvas/OESTextureHalfFloat.cpp
         html/canvas/OESVertexArrayObject.cpp
         html/canvas/OESElementIndexUint.cpp
     )
     list(APPEND WebCore_IDL_FILES
+        html/canvas/EXTDrawBuffers.idl
         html/canvas/EXTTextureFilterAnisotropic.idl
         html/canvas/OESStandardDerivatives.idl
         html/canvas/OESTextureFloat.idl
+        html/canvas/OESTextureHalfFloat.idl
         html/canvas/OESVertexArrayObject.idl
         html/canvas/OESElementIndexUint.idl
         html/canvas/WebGLActiveInfo.idl
         html/canvas/WebGLBuffer.idl
+        html/canvas/WebGLCompressedTextureATC.idl
         html/canvas/WebGLCompressedTextureS3TC.idl
         html/canvas/WebGLContextAttributes.idl
         html/canvas/WebGLContextEvent.idl
@@ -2685,6 +2701,27 @@ if (ENABLE_VIDEO_TRACK)
         platform/graphics/TextTrackRepresentation.cpp
     )
 endif ()
+
+if (ENABLE_QUOTA)
+    list(APPEND WebCore_SOURCES
+        Modules/quota/DOMWindowQuota.cpp
+        Modules/quota/NavigatorStorageQuota.cpp
+        Modules/quota/StorageErrorCallback.cpp
+        Modules/quota/StorageInfo.cpp
+        Modules/quota/StorageQuota.cpp
+    )
+
+    list(APPEND WebCore_IDL_FILES
+        Modules/quota/DOMWindowQuota.idl
+        Modules/quota/NavigatorStorageQuota.idl
+        Modules/quota/StorageErrorCallback.idl
+        Modules/quota/StorageInfo.idl
+        Modules/quota/StorageQuota.idl
+        Modules/quota/StorageQuotaCallback.idl
+        Modules/quota/StorageUsageCallback.idl
+    )
+endif ()
+
 
 if (WTF_USE_LEVELDB)
     list(APPEND WebCore_INCLUDE_DIRECTORIES

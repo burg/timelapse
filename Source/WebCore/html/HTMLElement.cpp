@@ -37,6 +37,7 @@
 #include "EventNames.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "HTMLBRElement.h"
 #include "HTMLCollection.h"
 #include "HTMLDocument.h"
@@ -561,8 +562,8 @@ Element* HTMLElement::insertAdjacentElement(const String& where, Element* newChi
     }
 
     Node* returnValue = insertAdjacent(where, newChild, ec);
-    ASSERT(!returnValue || returnValue->isElementNode());
-    return static_cast<Element*>(returnValue); 
+    ASSERT_WITH_SECURITY_IMPLICATION(!returnValue || returnValue->isElementNode());
+    return toElement(returnValue); 
 }
 
 // Step 3 of http://www.whatwg.org/specs/web-apps/current-work/multipage/apis-in-html-documents.html#insertadjacenthtml()
@@ -574,8 +575,8 @@ static Element* contextElementForInsertion(const String& where, Element* element
             ec = NO_MODIFICATION_ALLOWED_ERR;
             return 0;
         }
-        ASSERT(!parent || parent->isElementNode());
-        return static_cast<Element*>(parent);
+        ASSERT_WITH_SECURITY_IMPLICATION(!parent || parent->isElementNode());
+        return toElement(parent);
     }
     if (equalIgnoringCase(where, "afterBegin") || equalIgnoringCase(where, "beforeEnd"))
         return element;

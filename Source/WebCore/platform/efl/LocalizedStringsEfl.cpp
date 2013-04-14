@@ -454,14 +454,14 @@ String validationMessagePatternMismatchText()
     return String::fromUTF8("pattern mismatch");
 }
 
-String validationMessageRangeOverflowText(const String&)
+String validationMessageRangeOverflowText(const String& maximum)
 {
-    return String::fromUTF8("range overflow");
+    return ASCIILiteral("Value must be less than or equal to ") + maximum;
 }
 
-String validationMessageRangeUnderflowText(const String&)
+String validationMessageRangeUnderflowText(const String& minimum)
 {
-    return String::fromUTF8("range underflow");
+    return ASCIILiteral("Value must be greater than or equal to ") + minimum;
 }
 
 String validationMessageStepMismatchText(const String&, const String&)
@@ -481,17 +481,17 @@ String validationMessageTypeMismatchText()
 
 String validationMessageTypeMismatchForEmailText()
 {
-    return String::fromUTF8("type mismatch");
+    return ASCIILiteral("Please enter an email address");
 }
 
 String validationMessageTypeMismatchForMultipleEmailText()
 {
-    return String::fromUTF8("type mismatch");
+    return ASCIILiteral("Please enter an email address");
 }
 
 String validationMessageTypeMismatchForURLText()
 {
-    return String::fromUTF8("type mismatch");
+    return ASCIILiteral("Please enter a URL");
 }
 
 String validationMessageValueMissingText()

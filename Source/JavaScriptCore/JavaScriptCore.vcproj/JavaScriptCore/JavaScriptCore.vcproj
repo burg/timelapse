@@ -1174,6 +1174,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\runtime\PropertyTable.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\..\runtime\PrototypeMap.cpp"
 				>
 			</File>
@@ -1414,6 +1418,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\API\JSAPIWrapperObject.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\API\JSAPIWrapperObject.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\API\JSBase.cpp"
 				>
 			</File>
@@ -1535,6 +1547,10 @@
 			</File>
 			<File
 				RelativePath="..\..\API\JSWeakObjectMapRefPrivate.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\API\ObjCCallbackFunction.h"
 				>
 			</File>
 			<File

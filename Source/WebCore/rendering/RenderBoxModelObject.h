@@ -88,8 +88,6 @@ public:
 
     virtual bool requiresLayer() const OVERRIDE { return isRoot() || isPositioned() || createsGroup() || hasClipPath() || hasTransform() || hasHiddenBackface() || hasReflection() || style()->specifiesColumns(); }
 
-    virtual bool isOpaqueInRect(const LayoutRect& localRect) const OVERRIDE { return foregroundIsOpaqueInRect(localRect) || backgroundIsOpaqueInRect(localRect); }
-
     // This will work on inlines to return the bounding box of all of the lines' border boxes.
     virtual IntRect borderBoundingBox() const = 0;
 
@@ -133,6 +131,9 @@ public:
     LayoutUnit borderLogicalLeft() const { return style()->isHorizontalWritingMode() ? borderLeft() : borderTop(); }
     LayoutUnit borderLogicalRight() const { return style()->isHorizontalWritingMode() ? borderRight() : borderBottom(); }
 
+    LayoutUnit paddingLogicalLeft() const { return style()->isHorizontalWritingMode() ? paddingLeft() : paddingTop(); }
+    LayoutUnit paddingLogicalRight() const { return style()->isHorizontalWritingMode() ? paddingRight() : paddingBottom(); }
+    
     virtual LayoutUnit marginTop() const = 0;
     virtual LayoutUnit marginBottom() const = 0;
     virtual LayoutUnit marginLeft() const = 0;
@@ -143,11 +144,15 @@ public:
     virtual LayoutUnit marginEnd(const RenderStyle* otherStyle = 0) const = 0;
     LayoutUnit marginHeight() const { return marginTop() + marginBottom(); }
     LayoutUnit marginWidth() const { return marginLeft() + marginRight(); }
+    LayoutUnit marginLogicalHeight() const { return marginBefore() + marginAfter(); }
+    LayoutUnit marginLogicalWidth() const { return marginStart() + marginEnd(); }
 
     bool hasInlineDirectionBordersPaddingOrMargin() const { return hasInlineDirectionBordersOrPadding() || marginStart()|| marginEnd(); }
     bool hasInlineDirectionBordersOrPadding() const { return borderStart() || borderEnd() || paddingStart()|| paddingEnd(); }
 
     virtual LayoutUnit containingBlockLogicalWidthForContent() const;
+
+    virtual void childBecameNonInline(RenderObject* /*child*/) { }
 
     void paintBorder(const PaintInfo&, const LayoutRect&, const RenderStyle*, BackgroundBleedAvoidance = BackgroundBleedNone, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
     bool paintNinePieceImage(GraphicsContext*, const LayoutRect&, const RenderStyle*, const NinePieceImage&, CompositeOperator = CompositeSourceOver);
@@ -185,9 +190,6 @@ public:
 
 protected:
     virtual void willBeDestroyed();
-
-    virtual bool backgroundIsOpaqueInRect(const LayoutRect&) const { return false; }
-    virtual bool foregroundIsOpaqueInRect(const LayoutRect&) const { return false; }
 
     class BackgroundImageGeometry {
     public:
@@ -236,7 +238,7 @@ protected:
 
     LayoutPoint adjustedPositionRelativeToOffsetParent(const LayoutPoint&) const;
 
-    void calculateBackgroundImageGeometry(const FillLayer*, const LayoutRect& paintRect, BackgroundImageGeometry&);
+    void calculateBackgroundImageGeometry(const FillLayer*, const LayoutRect& paintRect, BackgroundImageGeometry&, RenderObject* = 0);
     void getBorderEdgeInfo(class BorderEdge[], const RenderStyle*, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true) const;
     bool borderObscuresBackgroundEdge(const FloatSize& contextScale) const;
     bool borderObscuresBackground() const;

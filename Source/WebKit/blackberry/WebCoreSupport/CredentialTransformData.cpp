@@ -37,12 +37,9 @@
 #include "config.h"
 #include "CredentialTransformData.h"
 
-#include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
-#include "HTMLNames.h"
 #include "KURL.h"
 #include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -194,7 +191,7 @@ bool CredentialTransformData::findPasswordFormFields(HTMLFormElement* form)
         if (!formElements[i]->isFormControlElement())
             continue;
         HTMLFormControlElement* formElement = static_cast<HTMLFormControlElement*>(formElements[i]);
-        if (!formElement->hasLocalName(HTMLNames::inputTag))
+        if (!formElement->hasTagName(HTMLNames::inputTag))
             continue;
 
         HTMLInputElement* inputElement = formElement->toInputElement();
@@ -216,7 +213,7 @@ bool CredentialTransformData::findPasswordFormFields(HTMLFormElement* form)
             if (!formElements[i]->isFormControlElement())
                 continue;
             HTMLFormControlElement* formElement = static_cast<HTMLFormControlElement*>(formElements[i]);
-            if (!formElement->hasLocalName(HTMLNames::inputTag))
+            if (!formElement->hasTagName(HTMLNames::inputTag))
                 continue;
 
             HTMLInputElement* inputElement = formElement->toInputElement();

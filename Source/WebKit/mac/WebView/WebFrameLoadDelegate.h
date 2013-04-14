@@ -27,12 +27,17 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import <JavaScriptCore/JSBase.h>
 #import <JavaScriptCore/WebKitAvailability.h>
 
 @class NSError;
 @class WebFrame;
 @class WebScriptObject;
 @class WebView;
+
+#if JSC_OBJC_API_ENABLED
+@class JSContext;
+#endif
 
 /*!
     @category WebFrameLoadDelegate

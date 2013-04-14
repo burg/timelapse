@@ -60,6 +60,14 @@ WebInspector.View.prototype = {
         this._isRoot = true;
     },
 
+    /**
+     * @return {?WebInspector.View}
+     */
+    parentView: function()
+    {
+        return this._parentView;
+    },
+
     isShowing: function()
     {
         return this._isShowing;
@@ -325,6 +333,8 @@ WebInspector.View.prototype = {
 
     registerRequiredCSS: function(cssFile)
     {
+        if (window.flattenImports)
+            cssFile = cssFile.split("/").reverse()[0];
         this._cssFiles.push(cssFile);
     },
 

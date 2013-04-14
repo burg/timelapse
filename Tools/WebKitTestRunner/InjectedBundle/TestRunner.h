@@ -115,13 +115,12 @@ public:
     void setSerializeHTTPLoads();
     void dispatchPendingLoadRequests();
     void setCacheModel(int);
+    void setAsynchronousSpellCheckingEnabled(bool);
 
     // Special DOM functions.
-    JSValueRef computedStyleIncludingVisitedInfo(JSValueRef element);
     void clearBackForwardList();
     void execCommand(JSStringRef name, JSStringRef argument);
     bool isCommandEnabled(JSStringRef name);
-    JSRetainPtr<JSStringRef> markerTextForListItem(JSValueRef element);
     unsigned windowCount();
 
     // Repaint testing.

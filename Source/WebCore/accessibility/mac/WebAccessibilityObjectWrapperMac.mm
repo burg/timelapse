@@ -67,11 +67,11 @@
 #import "TextCheckerClient.h"
 #import "TextCheckingHelper.h"
 #import "TextIterator.h"
+#import "VisibleUnits.h"
 #import "WebCoreFrameView.h"
 #import "WebCoreObjCExtras.h"
 #import "WebCoreSystemInterface.h"
 #import "htmlediting.h"
-#import "visible_units.h"
 
 using namespace WebCore;
 using namespace HTMLNames;
@@ -162,6 +162,14 @@ using namespace std;
 
 #ifndef NSAccessibilityARIABusyAttribute
 #define NSAccessibilityARIABusyAttribute @"AXARIABusy"
+#endif
+
+#ifndef NSAccessibilityARIAPosInSetAttribute
+#define NSAccessibilityARIAPosInSetAttribute @"AXARIAPosInSet"
+#endif
+
+#ifndef NSAccessibilityARIASetSizeAttribute
+#define NSAccessibilityARIASetSizeAttribute @"AXARIASetSize"
 #endif
 
 #ifndef NSAccessibilityLoadingProgressAttribute
@@ -919,7 +927,8 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
     static NSArray *defaultElementActions = [[NSArray alloc] initWithObjects:NSAccessibilityShowMenuAction, NSAccessibilityScrollToVisibleAction, nil];
 
     // Action elements allow Press.
-    static NSArray *actionElementActions = [[defaultElementActions arrayByAddingObject:NSAccessibilityPressAction] retain];
+    // The order is important to VoiceOver, which expects the 'default' action to be the first action. In this case the default action should be press.
+    static NSArray *actionElementActions = [[NSArray alloc] initWithObjects:NSAccessibilityPressAction, NSAccessibilityShowMenuAction, NSAccessibilityScrollToVisibleAction, nil];
 
     // Menu elements allow Press and Cancel.
     static NSArray *menuElementActions = [[actionElementActions arrayByAddingObject:NSAccessibilityCancelAction] retain];
@@ -970,6 +979,11 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
         [additional addObject:NSAccessibilityARIALiveAttribute];
         [additional addObject:NSAccessibilityARIARelevantAttribute];
     }
+    
+    if (m_object->supportsARIASetSize())
+        [additional addObject:NSAccessibilityARIASetSizeAttribute];
+    if (m_object->supportsARIAPosInSet())
+        [additional addObject:NSAccessibilityARIAPosInSetAttribute];
     
     if (m_object->sortDirection() != SortDirectionNone)
         [additional addObject:NSAccessibilitySortDirectionAttribute];
@@ -2381,12 +2395,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     
     if (m_object->isTableCell()) {
         if ([attributeName isEqualToString:NSAccessibilityRowIndexRangeAttribute]) {
-            pair<int, int> rowRange;
+            pair<unsigned, unsigned> rowRange;
             static_cast<AccessibilityTableCell*>(m_object)->rowIndexRange(rowRange);
             return [NSValue valueWithRange:NSMakeRange(rowRange.first, rowRange.second)];
         }
         if ([attributeName isEqualToString:NSAccessibilityColumnIndexRangeAttribute]) {
-            pair<int, int> columnRange;
+            pair<unsigned, unsigned> columnRange;
             static_cast<AccessibilityTableCell*>(m_object)->columnIndexRange(columnRange);
             return [NSValue valueWithRange:NSMakeRange(columnRange.first, columnRange.second)];
         }
@@ -2576,6 +2590,11 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         m_object->ariaOwnsElements(ariaOwns);
         return convertToNSArray(ariaOwns);
     }
+    
+    if ([attributeName isEqualToString:NSAccessibilityARIAPosInSetAttribute])
+        return [NSNumber numberWithInt:m_object->ariaPosInSet()];
+    if ([attributeName isEqualToString:NSAccessibilityARIASetSizeAttribute])
+        return [NSNumber numberWithInt:m_object->ariaSetSize()];
     
     if ([attributeName isEqualToString:NSAccessibilityGrabbedAttribute])
         return [NSNumber numberWithBool:m_object->isARIAGrabbed()];

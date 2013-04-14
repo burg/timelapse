@@ -302,6 +302,9 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyWebkitBorderVerticalSpacing:
     case CSSPropertyWebkitBoxDirection:
     case CSSPropertyWebkitColorCorrection:
+#if ENABLE(CURSOR_VISIBILITY)
+    case CSSPropertyWebkitCursorVisibility:
+#endif
     case CSSPropertyWebkitFontFeatureSettings:
     case CSSPropertyWebkitFontKerning:
     case CSSPropertyWebkitFontSmoothing:
@@ -329,6 +332,7 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
 #if ENABLE(CSS3_TEXT)
     case CSSPropertyWebkitTextDecorationLine:
     case CSSPropertyWebkitTextAlignLast:
+    case CSSPropertyWebkitTextUnderlinePosition:
 #endif // CSS3_TEXT
     case CSSPropertyWebkitTextDecorationsInEffect:
     case CSSPropertyWebkitTextEmphasis:
@@ -338,7 +342,6 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyWebkitTextFillColor:
     case CSSPropertyWebkitTextOrientation:
     case CSSPropertyWebkitTextSecurity:
-    case CSSPropertyWebkitTextSizeAdjust:
     case CSSPropertyWebkitTextStroke:
     case CSSPropertyWebkitTextStrokeColor:
     case CSSPropertyWebkitTextStrokeWidth:
@@ -489,6 +492,11 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyTextUnderlineStyle:
     case CSSPropertyTextUnderlineWidth:
     case CSSPropertyTop:
+    case CSSPropertyTransition:
+    case CSSPropertyTransitionDelay:
+    case CSSPropertyTransitionDuration:
+    case CSSPropertyTransitionProperty:
+    case CSSPropertyTransitionTimingFunction:
     case CSSPropertyUnicodeBidi:
     case CSSPropertyUnicodeRange:
     case CSSPropertyVerticalAlign:
@@ -578,6 +586,10 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyWebkitGridAutoFlow:
     case CSSPropertyWebkitGridColumns:
     case CSSPropertyWebkitGridRows:
+    case CSSPropertyWebkitGridStart:
+    case CSSPropertyWebkitGridEnd:
+    case CSSPropertyWebkitGridBefore:
+    case CSSPropertyWebkitGridAfter:
     case CSSPropertyWebkitGridColumn:
     case CSSPropertyWebkitGridRow:
     case CSSPropertyWebkitLineClamp:
@@ -630,6 +642,7 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyWebkitPerspectiveOriginY:
 #if ENABLE(CSS3_TEXT)
     case CSSPropertyWebkitTextDecorationStyle:
+    case CSSPropertyWebkitTextDecorationColor:
 #endif // CSS3_TEXT
     case CSSPropertyWebkitTransform:
     case CSSPropertyWebkitTransformOrigin:

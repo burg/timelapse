@@ -46,7 +46,7 @@
 #include "TextBoundaries.h"
 #include "TextBreakIterator.h"
 #include "VisiblePosition.h"
-#include "visible_units.h"
+#include "VisibleUnits.h"
 #include <wtf/text/CString.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -408,10 +408,10 @@ void TextIterator::advance()
                     m_handledNode = handleTextNode();
                 else if (renderer && (renderer->isImage() || renderer->isWidget() ||
                          (renderer->node() && renderer->node()->isElementNode() &&
-                          (static_cast<Element*>(renderer->node())->isFormControlElement()
-                          || static_cast<Element*>(renderer->node())->hasTagName(legendTag)
-                          || static_cast<Element*>(renderer->node())->hasTagName(meterTag)
-                          || static_cast<Element*>(renderer->node())->hasTagName(progressTag)))))
+                          (toElement(renderer->node())->isFormControlElement()
+                          || toElement(renderer->node())->hasTagName(legendTag)
+                          || toElement(renderer->node())->hasTagName(meterTag)
+                          || toElement(renderer->node())->hasTagName(progressTag)))))
                     m_handledNode = handleReplacedElement();
                 else
                     m_handledNode = handleNonTextNode();
@@ -2571,17 +2571,6 @@ String plainText(const Range* r, TextIteratorBehavior defaultBehavior, bool isDi
         r->ownerDocument()->displayStringModifiedByEncoding(result);
 
     return result;
-}
-
-static inline bool isAllCollapsibleWhitespace(const String& string)
-{
-    const UChar* characters = string.characters();
-    unsigned length = string.length();
-    for (unsigned i = 0; i < length; ++i) {
-        if (!isCollapsibleWhitespace(characters[i]))
-            return false;
-    }
-    return true;
 }
 
 static PassRefPtr<Range> collapsedToBoundary(const Range* range, bool forward)

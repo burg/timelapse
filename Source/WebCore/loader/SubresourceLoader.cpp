@@ -33,6 +33,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "ResourceBuffer.h"
@@ -131,7 +132,7 @@ void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const Resou
     RefPtr<SubresourceLoader> protect(this);
 
     ASSERT(!newRequest.isNull());
-    if (!previousURL.isNull() && previousURL != newRequest.url()) {
+    if (!redirectResponse.isNull()) {
         if (!m_documentLoader->cachedResourceLoader()->canRequest(m_resource->type(), newRequest.url())) {
             cancel();
             return;
@@ -212,7 +213,17 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
     checkForHTTPStatusCodeError();
 }
 
-void SubresourceLoader::didReceiveData(const char* data, int length, long long encodedDataLength, bool allAtOnce)
+void SubresourceLoader::didReceiveData(const char* data, int length, long long encodedDataLength, DataPayloadType dataPayloadType)
+{
+    didReceiveDataOrBuffer(data, length, 0, encodedDataLength, dataPayloadType);
+}
+
+void SubresourceLoader::didReceiveBuffer(PassRefPtr<SharedBuffer> buffer, long long encodedDataLength, DataPayloadType dataPayloadType)
+{
+    didReceiveDataOrBuffer(0, 0, buffer, encodedDataLength, dataPayloadType);
+}
+
+void SubresourceLoader::didReceiveDataOrBuffer(const char* data, int length, PassRefPtr<SharedBuffer> prpBuffer, long long encodedDataLength, DataPayloadType dataPayloadType)
 {
     if (m_resource->response().httpStatusCode() >= 400 && !m_resource->shouldIgnoreHTTPStatusCodeErrors())
         return;
@@ -222,11 +233,12 @@ void SubresourceLoader::didReceiveData(const char* data, int length, long long e
     // Reference the object in this method since the additional processing can do
     // anything including removing the last reference to this object; one example of this is 3266216.
     RefPtr<SubresourceLoader> protect(this);
-    addData(data, length, allAtOnce);
+    RefPtr<SharedBuffer> buffer = prpBuffer;
+    
+    ResourceLoader::didReceiveDataOrBuffer(data, length, buffer, encodedDataLength, dataPayloadType);
+
     if (!m_loadingMultipartContent)
-        sendDataToResource(data, length);
-    if (shouldSendResourceLoadCallbacks() && m_frame)
-        frameLoader()->notifier()->didReceiveData(this, data, length, static_cast<int>(encodedDataLength));
+        sendDataToResource(buffer ? buffer->data() : data, buffer ? buffer->size() : length);
 }
 
 bool SubresourceLoader::checkForHTTPStatusCodeError()

@@ -374,15 +374,15 @@ String InputType::validationMessage() const
     const String value = element()->value();
 
     // The order of the following checks is meaningful. e.g. We'd like to show the
-    // valueMissing message even if the control has other validation errors.
+    // badInput message even if the control has other validation errors.
+    if (hasBadInput())
+        return badInputText();
+
     if (valueMissing(value))
         return valueMissingText();
 
     if (typeMismatch())
         return typeMismatchText();
-
-    if (hasBadInput())
-        return badInputText();
 
     if (patternMismatch(value))
         return validationMessagePatternMismatchText();
@@ -464,6 +464,11 @@ PassRefPtr<HTMLFormElement> InputType::formForSubmission() const
 RenderObject* InputType::createRenderer(RenderArena*, RenderStyle* style) const
 {
     return RenderObject::createObject(element(), style);
+}
+
+PassRefPtr<RenderStyle> InputType::customStyleForRenderer(PassRefPtr<RenderStyle> originalStyle)
+{
+    return originalStyle;
 }
 
 void InputType::blur()
@@ -588,10 +593,6 @@ void InputType::altAttributeChanged()
 }
 
 void InputType::srcAttributeChanged()
-{
-}
-
-void InputType::willMoveToNewOwnerDocument()
 {
 }
 
@@ -733,11 +734,6 @@ Icon* InputType::icon() const
 {
     ASSERT_NOT_REACHED();
     return 0;
-}
-
-bool InputType::shouldApplyLocaleDirection() const
-{
-    return false;
 }
 
 bool InputType::shouldResetOnDocumentActivation()
@@ -912,6 +908,10 @@ void InputType::readonlyAttributeChanged()
 {
 }
 
+void InputType::requiredAttributeChanged()
+{
+}
+
 void InputType::subtreeHasChanged()
 {
     ASSERT_NOT_REACHED();
@@ -940,6 +940,10 @@ Decimal InputType::findClosestTickMarkValue(const Decimal&)
     return Decimal::nan();
 }
 #endif
+
+void InputType::updateClearButtonVisibility()
+{
+}
 
 bool InputType::supportsIndeterminateAppearance() const
 {

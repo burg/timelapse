@@ -32,14 +32,15 @@
 #define WebFileSystemCallbacksImpl_h
 
 #include "FileSystemType.h"
-#include "WebFileSystemCallbacks.h"
 #include <public/WebFileSystem.h>
+#include <public/WebFileSystemCallbacks.h>
 #include <public/WebVector.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 class AsyncFileSystemCallbacks;
+class BlobDataHandle;
 class ScriptExecutionContext;
 }
 
@@ -56,10 +57,16 @@ public:
     virtual ~WebFileSystemCallbacksImpl();
 
     virtual void didSucceed();
-    virtual void didReadMetadata(const WebFileInfo& info);
+    virtual void didReadMetadata(const WebFileInfo&);
+    virtual void didCreateSnapshotFile(const WebFileInfo&);
     virtual void didReadDirectory(const WebVector<WebFileSystemEntry>& entries, bool hasMore);
     virtual void didOpenFileSystem(const WebString& name, const WebURL& rootURL);
     virtual void didFail(WebFileError error);
+
+    // This internal overload is used by WorkerFileSystemCallbacksBridge to deliver a blob data handle
+    // created on the main thread to an AsyncFileSystemCallback on a background worker thread. The other
+    // virtual method is invoked by the embedder.
+    void didCreateSnapshotFile(const WebFileInfo&, PassRefPtr<WebCore::BlobDataHandle> snapshot);
 
 private:
     OwnPtr<WebCore::AsyncFileSystemCallbacks> m_callbacks;

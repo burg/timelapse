@@ -254,6 +254,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceLoadEvent.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceRule.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
@@ -656,6 +662,12 @@
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriterCallback.cpp" />
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriterSync.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFontLoader.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -1568,9 +1580,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfo.cpp" />
-    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoErrorCallback.cpp" />
-    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoQuotaCallback.cpp" />
-    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoUsageCallback.cpp" />
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageErrorCallback.cpp" />
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuota.cpp" />
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuotaCallback.cpp" />
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageUsageCallback.cpp" />
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStringCallback.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
@@ -2693,6 +2706,9 @@
     <ClCompile Include="..\html\canvas\CanvasPathMethods.cpp" />
     <ClCompile Include="..\html\track\TextTrackCueGeneric.cpp" />
     <ClCompile Include="..\html\track\WebVTTElement.cpp" />
+    <ClCompile Include="..\inspector\TimelineTraceEventProcessor.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\Modules\filesystem\DirectoryEntry.cpp" />
     <ClCompile Include="..\Modules\filesystem\DirectoryEntrySync.cpp" />
     <ClCompile Include="..\Modules\filesystem\DirectoryReader.cpp" />
@@ -2740,7 +2756,10 @@
     <ClCompile Include="..\Modules\proximity\DeviceProximityController.cpp" />
     <ClCompile Include="..\Modules\proximity\DeviceProximityEvent.cpp" />
     <ClCompile Include="..\Modules\quota\DOMWindowQuota.cpp" />
+    <ClCompile Include="..\Modules\quota\NavigatorStorageQuota.cpp" />
+    <ClCompile Include="..\Modules\quota\StorageErrorCallback.cpp" />
     <ClCompile Include="..\Modules\quota\StorageInfo.cpp" />
+    <ClCompile Include="..\Modules\quota\StorageQuota.cpp" />
     <ClCompile Include="..\Modules\mediasource\MediaSource.cpp" />
     <ClCompile Include="..\Modules\mediasource\MediaSourceRegistry.cpp" />
     <ClCompile Include="..\Modules\mediasource\SourceBuffer.cpp" />
@@ -2765,6 +2784,7 @@
     <ClCompile Include="..\Modules\webdatabase\DatabaseThread.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DatabaseTracker.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DOMWindowWebDatabase.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\OriginLock.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLException.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLResultSet.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLResultSetRowList.cpp" />
@@ -3220,6 +3240,9 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">ICUVersion.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="..\platform\win\WebCoreInstanceHandle.cpp" />
+    <ClCompile Include="..\rendering\HitTestLocation.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\storage\StorageStrategy.cpp" />
     <ClCompile Include="..\svg\graphics\SVGImageForContainer.cpp" />
     <ClCompile Include="..\WebCorePrefix.cpp">
@@ -3239,7 +3262,6 @@
     <ClCompile Include="..\platform\cf\BinaryPropertyList.cpp" />
     <ClCompile Include="..\platform\cf\FileSystemCF.cpp" />
     <ClCompile Include="..\platform\cf\KURLCFNet.cpp" />
-    <ClCompile Include="..\platform\cf\SchedulePair.cpp" />
     <ClCompile Include="..\platform\cf\SharedBufferCF.cpp" />
     <ClCompile Include="..\platform\cf\win\CertificateCFWin.cpp" />
     <ClCompile Include="..\platform\graphics\BitmapImage.cpp" />
@@ -3538,7 +3560,6 @@
     <ClCompile Include="..\platform\graphics\avfoundation\cf\MediaPlayerPrivateAVFoundationCF.cpp" />
     <ClCompile Include="..\platform\network\AuthenticationChallengeBase.cpp" />
     <ClCompile Include="..\platform\network\BlobData.cpp" />
-    <ClCompile Include="..\platform\network\BlobRegistryImpl.cpp" />
     <ClCompile Include="..\platform\network\BlobResourceHandle.cpp" />
     <ClCompile Include="..\platform\network\Credential.cpp" />
     <ClCompile Include="..\platform\network\CredentialStorage.cpp" />
@@ -3854,6 +3875,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\css\CSSFontFaceLoadEvent.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\css\CSSFontFaceRule.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
@@ -4062,6 +4089,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\css\FontFeatureValue.cpp" />
+    <ClCompile Include="..\css\FontLoader.cpp" />
     <ClCompile Include="..\css\FontValue.cpp" />
     <ClCompile Include="..\css\LengthFunctions.cpp" />
     <ClCompile Include="..\css\MediaAllInOne.cpp">
@@ -6338,12 +6366,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\editing\visible_units.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\editing\VisiblePosition.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
@@ -6351,6 +6373,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\editing\VisibleSelection.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\editing\VisibleUnits.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -6917,6 +6945,7 @@
     <ClCompile Include="..\html\parser\HTMLEntityParser.cpp" />
     <ClCompile Include="..\html\parser\HTMLEntitySearch.cpp" />
     <ClCompile Include="..\html\parser\HTMLFormattingElementList.cpp" />
+    <ClCompile Include="..\html\parser\HTMLIdenitifier.cpp" />
     <ClCompile Include="..\html\parser\HTMLMetaCharsetParser.cpp" />
     <ClCompile Include="..\html\parser\HTMLParserIdioms.cpp" />
     <ClCompile Include="..\html\parser\HTMLParserOptions.cpp" />
@@ -6933,6 +6962,7 @@
     <ClCompile Include="..\html\parser\TextViewSourceParser.cpp" />
     <ClCompile Include="..\html\parser\XSSAuditor.cpp" />
     <ClCompile Include="..\html\parser\XSSAuditorDelegate.cpp" />
+    <ClCompile Include="..\html\shadow\ClearButtonElement.cpp" />
     <ClCompile Include="..\html\shadow\ContentDistributor.cpp" />
     <ClCompile Include="..\html\shadow\ContentSelectorQuery.cpp" />
     <ClCompile Include="..\html\shadow\DateTimeEditElement.cpp" />
@@ -7148,12 +7178,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDedicatedWorkerContextCustom.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\JSDesktopNotificationsCustom.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -8235,6 +8259,7 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCounter.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCrypto.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSCharsetRule.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceLoadEvent.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceRule.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSHostRule.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSImportRule.h" />
@@ -8312,6 +8337,7 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriter.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriterCallback.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriterSync.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFontLoader.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSGeolocation.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSGeoposition.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSHashChangeEvent.h" />
@@ -8468,9 +8494,10 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorage.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageEvent.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfo.h" />
-    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoErrorCallback.h" />
-    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoQuotaCallback.h" />
-    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoUsageCallback.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageErrorCallback.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuota.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuotaCallback.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageUsageCallback.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStringCallback.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStyleMedia.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStyleSheet.h" />
@@ -8716,6 +8743,7 @@
     <ClInclude Include="..\html\canvas\CanvasPathMethods.h" />
     <ClInclude Include="..\html\track\TextTrackCueGeneric.h" />
     <ClInclude Include="..\html\track\WebVTTElement.h" />
+    <ClInclude Include="..\inspector\TimelineTraceEventProcessor.h" />
     <ClInclude Include="..\Modules\filesystem\AsyncFileWriter.h" />
     <ClInclude Include="..\Modules\filesystem\AsyncFileWriterClient.h" />
     <ClInclude Include="..\Modules\filesystem\DirectoryEntry.h" />
@@ -8791,10 +8819,12 @@
     <ClInclude Include="..\Modules\proximity\DeviceProximityController.h" />
     <ClInclude Include="..\Modules\proximity\DeviceProximityEvent.h" />
     <ClInclude Include="..\Modules\quota\DOMWindowQuota.h" />
+    <ClInclude Include="..\Modules\quota\NavigatorStorageQuota.h" />
     <ClInclude Include="..\Modules\quota\StorageInfo.h" />
-    <ClInclude Include="..\Modules\quota\StorageInfoErrorCallback.h" />
-    <ClInclude Include="..\Modules\quota\StorageInfoQuotaCallback.h" />
-    <ClInclude Include="..\Modules\quota\StorageInfoUsageCallback.h" />
+    <ClInclude Include="..\Modules\quota\StorageErrorCallback.h" />
+    <ClInclude Include="..\Modules\quota\StorageQuota.h" />
+    <ClInclude Include="..\Modules\quota\StorageQuotaCallback.h" />
+    <ClInclude Include="..\Modules\quota\StorageUsageCallback.h" />
     <ClInclude Include="..\Modules\mediasource\MediaSource.h" />
     <ClInclude Include="..\Modules\mediasource\MediaSourceRegistry.h" />
     <ClInclude Include="..\Modules\mediasource\SourceBuffer.h" />
@@ -8827,6 +8857,7 @@
     <ClInclude Include="..\Modules\webdatabase\DatabaseThread.h" />
     <ClInclude Include="..\Modules\webdatabase\DatabaseTracker.h" />
     <ClInclude Include="..\Modules\webdatabase\DOMWindowWebDatabase.h" />
+    <ClInclude Include="..\Modules\webdatabase\OriginLock.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLCallbackWrapper.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLError.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLException.h" />
@@ -9077,7 +9108,6 @@
     <ClInclude Include="..\platform\Arena.h" />
     <ClInclude Include="..\platform\AsyncFileSystem.h" />
     <ClInclude Include="..\platform\AsyncFileSystemCallbacks.h" />
-    <ClInclude Include="..\platform\AutodrainedPool.h" />
     <ClInclude Include="..\platform\CalculationValue.h" />
     <ClInclude Include="..\platform\Clock.h" />
     <ClInclude Include="..\platform\ClockGeneric.h" />
@@ -9117,6 +9147,7 @@
     <ClInclude Include="..\platform\Logging.h" />
     <ClInclude Include="..\platform\MemoryPressureHandler.h" />
     <ClInclude Include="..\platform\MemoryUsageSupport.h" />
+    <ClInclude Include="..\platform\MainThreadTask.h" />
     <ClInclude Include="..\platform\MIMETypeRegistry.h" />
     <ClInclude Include="..\platform\NotImplemented.h" />
     <ClInclude Include="..\platform\Pasteboard.h" />
@@ -9191,6 +9222,7 @@
     <ClInclude Include="..\platform\graphics\TextRenderingMode.h" />
     <ClInclude Include="..\platform\win\WCDataObject.h" />
     <ClInclude Include="..\platform\win\WebCoreInstanceHandle.h" />
+    <ClInclude Include="..\rendering\HitTestLocation.h" />
     <ClInclude Include="..\storage\StorageStrategy.h" />
     <ClInclude Include="..\svg\graphics\SVGImageForContainer.h" />
     <ClInclude Include="..\WebCorePrefix.h" />
@@ -9199,7 +9231,6 @@
     <ClInclude Include="..\platform\win\WindowMessageListener.h" />
     <ClInclude Include="..\platform\win\WindowsTouch.h" />
     <ClInclude Include="..\platform\cf\BinaryPropertyList.h" />
-    <ClInclude Include="..\platform\cf\SchedulePair.h" />
     <ClInclude Include="..\platform\cf\win\CertificateCFWin.h" />
     <ClInclude Include="..\platform\graphics\BitmapImage.h" />
     <ClInclude Include="..\platform\graphics\Color.h" />
@@ -9609,6 +9640,7 @@
     <ClInclude Include="..\css\CSSCrossfadeValue.h" />
     <ClInclude Include="..\css\CSSCursorImageValue.h" />
     <ClInclude Include="..\css\CSSFontFace.h" />
+    <ClInclude Include="..\css\CSSFontFaceLoadEvent.h" />
     <ClInclude Include="..\css\CSSFontFaceRule.h" />
     <ClInclude Include="..\css\CSSFontFaceSource.h" />
     <ClInclude Include="..\css\CSSFontFaceSrcValue.h" />
@@ -9654,6 +9686,7 @@
     <ClInclude Include="..\css\CSSVariableValue.h" />
     <ClInclude Include="..\css\DashboardRegion.h" />
     <ClInclude Include="..\css\FontFeatureValue.h" />
+    <ClInclude Include="..\css\FontLoader.h" />
     <ClInclude Include="..\css\FontValue.h" />
     <ClInclude Include="..\css\LengthFunctions.h" />
     <ClInclude Include="..\css\MediaFeatureNames.h" />
@@ -10190,9 +10223,9 @@
     <ClInclude Include="..\editing\TypingCommand.h" />
     <ClInclude Include="..\editing\UndoStep.h" />
     <ClInclude Include="..\editing\UnlinkCommand.h" />
-    <ClInclude Include="..\editing\visible_units.h" />
     <ClInclude Include="..\editing\VisiblePosition.h" />
     <ClInclude Include="..\editing\VisibleSelection.h" />
+    <ClInclude Include="..\editing\VisibleUnits.h" />
     <ClInclude Include="..\editing\WrapContentsInDummySpanCommand.h" />
     <ClInclude Include="..\fileapi\AsyncFileStream.h" />
     <ClInclude Include="..\html\BaseButtonInputType.h" />
@@ -10373,6 +10406,7 @@
     <ClInclude Include="..\html\parser\HTMLEntityParser.h" />
     <ClInclude Include="..\html\parser\HTMLEntitySearch.h" />
     <ClInclude Include="..\html\parser\HTMLFormattingElementList.h" />
+    <ClInclude Include="..\html\parser\HTMLIdentifier.h" />
     <ClInclude Include="..\html\parser\HTMLInputStream.h" />
     <ClInclude Include="..\html\parser\HTMLMetaCharsetParser.h" />
     <ClInclude Include="..\html\parser\HTMLParserIdioms.h" />
@@ -10395,6 +10429,7 @@
     <ClInclude Include="..\html\parser\TextViewSourceParser.h" />
     <ClInclude Include="..\html\parser\XSSAuditor.h" />
     <ClInclude Include="..\html\parser\XSSAuditorDelegate.h" />
+    <ClInclude Include="..\html\shadow\ClearButtonElement.h" />
     <ClInclude Include="..\html\shadow\ContentDistributor.h" />
     <ClInclude Include="..\html\shadow\ContentSelectorQuery.h" />
     <ClInclude Include="..\html\shadow\DateTimeEditElement.h" />
@@ -10955,6 +10990,7 @@
     <None Include="..\inspector\front-end\FileUtils.js" />
     <None Include="..\inspector\front-end\filteredItemSelectionDialog.css" />
     <None Include="..\inspector\front-end\FilteredItemSelectionDialog.js" />
+    <None Include="..\inspector\front-end\FlameChart.js" />
     <None Include="..\inspector\front-end\FontView.js" />
     <None Include="..\inspector\front-end\GoToLineDialog.js" />
     <None Include="..\inspector\front-end\HandlerRegistry.js" />
@@ -10971,6 +11007,7 @@
     <None Include="..\inspector\front-end\helpScreen.css" />
     <None Include="..\inspector\front-end\HelpScreen.js" />
     <None Include="..\inspector\front-end\cm\htmlmixed.js" />
+    <None Include="..\inspector\front-end\cm\matchbrackets.js" />
     <None Include="..\inspector\front-end\ImageView.js" />
     <None Include="..\inspector\front-end\IndexedDBModel.js" />
     <None Include="..\inspector\front-end\indexedDBViews.css" />

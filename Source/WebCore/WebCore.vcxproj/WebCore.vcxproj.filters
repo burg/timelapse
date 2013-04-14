@@ -387,6 +387,9 @@
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSCharsetRule.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceLoadEvent.cpp">
+      <Filter>DerivedSources</Filter>
+    </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceRule.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
@@ -616,6 +619,9 @@
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriterSync.cpp">
+      <Filter>DerivedSources</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFontLoader.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSGeolocation.cpp">
@@ -1074,13 +1080,16 @@
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfo.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoErrorCallback.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageErrorCallback.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoQuotaCallback.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuota.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoUsageCallback.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuotaCallback.cpp">
+      <Filter>DerivedSources</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageUsageCallback.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStringCallback.cpp">
@@ -1873,6 +1882,9 @@
       <Filter>Modules\webdatabase</Filter>
     </ClCompile>
     <ClCompile Include="..\Modules\webdatabase\DOMWindowWebDatabase.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\OriginLock.cpp">
       <Filter>Modules\webdatabase</Filter>
     </ClCompile>
     <ClCompile Include="..\Modules\webdatabase\SQLException.cpp">
@@ -3237,9 +3249,6 @@
     <ClCompile Include="..\platform\network\BlobData.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\network\BlobRegistryImpl.cpp">
-      <Filter>platform\network</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\network\BlobResourceHandle.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
@@ -3579,6 +3588,9 @@
     <ClCompile Include="..\css\CSSFontFace.cpp">
       <Filter>css</Filter>
     </ClCompile>
+    <ClCompile Include="..\css\CSSFontFaceLoadEvent.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
     <ClCompile Include="..\css\CSSFontFaceRule.cpp">
       <Filter>css</Filter>
     </ClCompile>
@@ -3691,6 +3703,9 @@
       <Filter>css</Filter>
     </ClCompile>
     <ClCompile Include="..\css\FontFeatureValue.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
+    <ClCompile Include="..\css\FontLoader.cpp">
       <Filter>css</Filter>
     </ClCompile>
     <ClCompile Include="..\css\FontValue.cpp">
@@ -5136,13 +5151,13 @@
     <ClCompile Include="..\editing\UnlinkCommand.cpp">
       <Filter>editing</Filter>
     </ClCompile>
-    <ClCompile Include="..\editing\visible_units.cpp">
-      <Filter>editing</Filter>
-    </ClCompile>
     <ClCompile Include="..\editing\VisiblePosition.cpp">
       <Filter>editing</Filter>
     </ClCompile>
     <ClCompile Include="..\editing\VisibleSelection.cpp">
+      <Filter>editing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\editing\VisibleUnits.cpp">
       <Filter>editing</Filter>
     </ClCompile>
     <ClCompile Include="..\editing\WrapContentsInDummySpanCommand.cpp">
@@ -5700,6 +5715,9 @@
     <ClCompile Include="..\html\parser\XSSAuditorDelegate.cpp">
       <Filter>html\parser</Filter>
     </ClCompile>
+    <ClCompile Include="..\html\shadow\ClearButtonElement.cpp">
+      <Filter>html\shadow</Filter>
+    </ClCompile>
     <ClCompile Include="..\html\shadow\ContentDistributor.cpp">
       <Filter>html\shadow</Filter>
     </ClCompile>
@@ -5893,9 +5911,6 @@
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDedicatedWorkerContextCustom.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\JSDesktopNotificationsCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDeviceMotionEventCustom.cpp">
@@ -6627,9 +6642,6 @@
     <ClCompile Include="..\platform\cf\KURLCFNet.cpp">
       <Filter>platform\cf</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\cf\SchedulePair.cpp">
-      <Filter>platform\cf</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\cf\win\CertificateCFWin.cpp">
       <Filter>platform\cf\win</Filter>
     </ClCompile>
@@ -6823,6 +6835,12 @@
     <ClCompile Include="..\svg\graphics\SVGImageForContainer.cpp">
       <Filter>rendering\svg\graphics</Filter>
     </ClCompile>
+    <ClCompile Include="..\inspector\TimelineTraceEventProcessor.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\rendering\HitTestLocation.cpp">
+      <Filter>rendering</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\CSSGrammar.h">
@@ -6934,6 +6952,9 @@
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSCharsetRule.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceLoadEvent.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSCSSFontFaceRule.h">
@@ -7165,6 +7186,9 @@
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFileWriterSync.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSFontLoader.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSGeolocation.h">
@@ -7617,13 +7641,16 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfo.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoErrorCallback.h">
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageErrorCallback.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoQuotaCallback.h">
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuota.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageInfoUsageCallback.h">
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageQuotaCallback.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStorageUsageCallback.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSStringCallback.h">
@@ -8430,16 +8457,22 @@
     <ClInclude Include="..\Modules\quota\DOMWindowQuota.h">
       <Filter>Modules\quota</Filter>
     </ClInclude>
+    <ClInclude Include="..\Modules\quota\NavigatorStorageQuota.h">
+      <Filter>Modules\quota</Filter>
+    </ClInclude>
     <ClInclude Include="..\Modules\quota\StorageInfo.h">
       <Filter>Modules\quota</Filter>
     </ClInclude>
-    <ClInclude Include="..\Modules\quota\StorageInfoErrorCallback.h">
+    <ClInclude Include="..\Modules\quota\StorageErrorCallback.h">
       <Filter>Modules\quota</Filter>
     </ClInclude>
-    <ClInclude Include="..\Modules\quota\StorageInfoQuotaCallback.h">
+    <ClInclude Include="..\Modules\quota\StorageQuota.h">
       <Filter>Modules\quota</Filter>
     </ClInclude>
-    <ClInclude Include="..\Modules\quota\StorageInfoUsageCallback.h">
+    <ClInclude Include="..\Modules\quota\StorageQuotaCallback.h">
+      <Filter>Modules\quota</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\quota\StorageUsageCallback.h">
       <Filter>Modules\quota</Filter>
     </ClInclude>
     <ClInclude Include="..\Modules\mediasource\MediaSource.h">
@@ -8536,6 +8569,9 @@
       <Filter>Modules\webdatabase</Filter>
     </ClInclude>
     <ClInclude Include="..\Modules\webdatabase\DOMWindowWebDatabase.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\OriginLock.h">
       <Filter>Modules\webdatabase</Filter>
     </ClInclude>
     <ClInclude Include="..\Modules\webdatabase\SQLCallbackWrapper.h">
@@ -9213,9 +9249,6 @@
     <ClInclude Include="..\platform\AsyncFileSystemCallbacks.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\AutodrainedPool.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\CalculationValue.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -9331,6 +9364,9 @@
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\MemoryUsageSupport.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platform\MainThreadTask.h">
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\MIMETypeRegistry.h">
@@ -10311,6 +10347,9 @@
     <ClInclude Include="..\css\CSSFontFace.h">
       <Filter>css</Filter>
     </ClInclude>
+    <ClInclude Include="..\css\CSSFontFaceLoadEvent.h">
+      <Filter>css</Filter>
+    </ClInclude>
     <ClInclude Include="..\css\CSSFontFaceRule.h">
       <Filter>css</Filter>
     </ClInclude>
@@ -10444,6 +10483,9 @@
       <Filter>css</Filter>
     </ClInclude>
     <ClInclude Include="..\css\FontFeatureValue.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\css\FontLoader.h">
       <Filter>css</Filter>
     </ClInclude>
     <ClInclude Include="..\css\FontValue.h">
@@ -12042,13 +12084,13 @@
     <ClInclude Include="..\editing\UnlinkCommand.h">
       <Filter>editing</Filter>
     </ClInclude>
-    <ClInclude Include="..\editing\visible_units.h">
-      <Filter>editing</Filter>
-    </ClInclude>
     <ClInclude Include="..\editing\VisiblePosition.h">
       <Filter>editing</Filter>
     </ClInclude>
     <ClInclude Include="..\editing\VisibleSelection.h">
+      <Filter>editing</Filter>
+    </ClInclude>
+    <ClInclude Include="..\editing\VisibleUnits.h">
       <Filter>editing</Filter>
     </ClInclude>
     <ClInclude Include="..\editing\WrapContentsInDummySpanCommand.h">
@@ -12635,6 +12677,9 @@
     </ClInclude>
     <ClInclude Include="..\html\parser\XSSAuditorDelegate.h">
       <Filter>html\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\shadow\ClearButtonElement.h">
+      <Filter>html\shadow</Filter>
     </ClInclude>
     <ClInclude Include="..\html\shadow\ContentDistributor.h">
       <Filter>html\shadow</Filter>
@@ -14152,9 +14197,6 @@
     <ClInclude Include="..\platform\cf\BinaryPropertyList.h">
       <Filter>platform\cf</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\cf\SchedulePair.h">
-      <Filter>platform\cf</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\cf\win\CertificateCFWin.h">
       <Filter>platform\cf\win</Filter>
     </ClInclude>
@@ -14326,6 +14368,12 @@
     </ClInclude>
     <ClInclude Include="..\svg\graphics\SVGImageForContainer.h">
       <Filter>rendering\svg\graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inspector\TimelineTraceEventProcessor.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rendering\HitTestLocation.h">
+      <Filter>rendering</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -14635,6 +14683,9 @@
     <None Include="..\inspector\front-end\FilteredItemSelectionDialog.js">
       <Filter>inspector\front-end</Filter>
     </None>
+    <None Include="..\inspector\front-end\FlameChart.js">
+      <Filter>inspector\front-end</Filter>
+    </None>
     <None Include="..\inspector\front-end\FontView.js">
       <Filter>inspector\front-end</Filter>
     </None>
@@ -14681,6 +14732,9 @@
       <Filter>inspector\front-end</Filter>
     </None>
     <None Include="..\inspector\front-end\cm\htmlmixed.js">
+      <Filter>inspector\front-end</Filter>
+    </None>
+    <None Include="..\inspector\front-end\cm\matchbrackets.js">
       <Filter>inspector\front-end</Filter>
     </None>
     <None Include="..\inspector\front-end\ImageView.js">

@@ -55,14 +55,15 @@
             'msvs_guid': '7CEFE800-8403-418A-AD6A-2D52C6FC3EAD',
             'dependencies': [
                 'WebKit.gyp:webkit',
-                '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
-                '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
-                '<(chromium_src_dir)/testing/gtest.gyp:gtest',
-                '<(chromium_src_dir)/testing/gmock.gyp:gmock',
+                '../../../Tools/DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:DumpRenderTree_resources',
                 '<(chromium_src_dir)/base/base.gyp:base',
                 '<(chromium_src_dir)/base/base.gyp:base_i18n',
                 '<(chromium_src_dir)/base/base.gyp:test_support_base',
+                '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
+                '<(chromium_src_dir)/testing/gmock.gyp:gmock',
+                '<(chromium_src_dir)/testing/gtest.gyp:gtest',
                 '<(chromium_src_dir)/third_party/zlib/zlib.gyp:zlib',
+                '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
                 '<(chromium_src_dir)/webkit/support/webkit_support.gyp:webkit_support',
             ],
             'sources': [
@@ -143,14 +144,14 @@
                 'cflags_cc': ['-Wno-c++0x-compat'],
             },
         }],
-        ['OS=="android" and android_build_type==0 and gtest_target_type == "shared_library"', {
+        ['OS=="android" and android_webview_build==0 and gtest_target_type == "shared_library"', {
             # Wrap libwebkit_unit_tests.so into an android apk for execution.
             'targets': [{
                 'target_name': 'webkit_unit_tests_apk',
                 'type': 'none',
                 'dependencies': [
-                    '<(chromium_src_dir)/base/base.gyp:base',
-                    '<(chromium_src_dir)/net/net.gyp:net',
+                    '<(chromium_src_dir)/base/base.gyp:base_java',
+                    '<(chromium_src_dir)/net/net.gyp:net_java',
                     'webkit_unit_tests',
                 ],
                 'variables': {

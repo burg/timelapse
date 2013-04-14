@@ -46,6 +46,9 @@ WebInspector.SourceFrame = function(contentProvider)
     if (WebInspector.experimentsSettings.codemirror.isEnabled()) {
         loadScript("CodeMirrorTextEditor.js");
         this._textEditor = new WebInspector.CodeMirrorTextEditor(this._url, textEditorDelegate);
+    } else if (WebInspector.experimentsSettings.aceTextEditor.isEnabled()) {
+        loadScript("AceTextEditor.js");
+        this._textEditor = new WebInspector.AceTextEditor(this._url, textEditorDelegate);
     } else
         this._textEditor = new WebInspector.DefaultTextEditor(this._url, textEditorDelegate);
 
@@ -310,8 +313,11 @@ WebInspector.SourceFrame.prototype = {
     {
         this._textEditor.mimeType = mimeType;
 
-        this._loaded = true;
-        this._textEditor.setText(content || "");
+        if (!this._loaded) {
+            this._loaded = true;
+            this._textEditor.setText(content || "");
+        } else
+            this._textEditor.editRange(this._textEditor.range(), content || "");
 
         this._textEditor.beginUpdates();
 
@@ -510,14 +516,6 @@ WebInspector.SourceFrame.prototype = {
         if (lineNumber < 0)
             lineNumber = 0;
 
-        var messageBubbleElement = this._messageBubbles[lineNumber];
-        if (!messageBubbleElement || messageBubbleElement.nodeType !== Node.ELEMENT_NODE || !messageBubbleElement.hasStyleClass("webkit-html-message-bubble")) {
-            messageBubbleElement = document.createElement("div");
-            messageBubbleElement.className = "webkit-html-message-bubble";
-            this._messageBubbles[lineNumber] = messageBubbleElement;
-            this._textEditor.addDecoration(lineNumber, messageBubbleElement);
-        }
-
         var rowMessages = this._rowMessages[lineNumber];
         if (!rowMessages) {
             rowMessages = [];
@@ -534,6 +532,15 @@ WebInspector.SourceFrame.prototype = {
 
         var rowMessage = { consoleMessage: msg };
         rowMessages.push(rowMessage);
+
+        this._textEditor.beginUpdates();
+        var messageBubbleElement = this._messageBubbles[lineNumber];
+        if (!messageBubbleElement) {
+            messageBubbleElement = document.createElement("div");
+            messageBubbleElement.className = "webkit-html-message-bubble";
+            this._messageBubbles[lineNumber] = messageBubbleElement;
+            this._textEditor.addDecoration(lineNumber, messageBubbleElement);
+        }
 
         var imageURL;
         switch (msg.level) {
@@ -561,6 +568,7 @@ WebInspector.SourceFrame.prototype = {
         rowMessage.element = messageLineElement;
         rowMessage.repeatCount = msg.totalRepeatCount;
         this._updateMessageRepeatCount(rowMessage);
+        this._textEditor.endUpdates();
     },
 
     _updateMessageRepeatCount: function(rowMessage)

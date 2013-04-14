@@ -44,8 +44,11 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
-namespace WebCore {
+namespace WTF {
+class SchedulePair;
+}
 
+namespace WebCore {
     class ApplicationCacheHost;
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
     class Archive;
@@ -53,13 +56,13 @@ namespace WebCore {
     class ArchiveResource;
     class ArchiveResourceCollection;
     class CachedResourceLoader;
+    class ContentFilter;
     class Frame;
     class FrameLoader;
     class MainResourceLoader;
     class Page;
     class ResourceBuffer;
     class ResourceLoader;
-    class SchedulePair;
     class SharedBuffer;
     class SubstituteResource;
 
@@ -118,7 +121,7 @@ namespace WebCore {
         bool isLoading() const;
         void receivedData(const char*, int);
         void setupForReplace();
-        void finishedLoading();
+        void finishedLoading(double finishTime);
         const ResourceResponse& response() const { return m_response; }
         const ResourceError& mainDocumentError() const { return m_mainDocumentError; }
         void mainReceivedError(const ResourceError&);
@@ -132,8 +135,8 @@ namespace WebCore {
         const String& overrideEncoding() const { return m_overrideEncoding; }
 
 #if PLATFORM(MAC)
-        void schedule(SchedulePair*);
-        void unschedule(SchedulePair*);
+        void schedule(WTF::SchedulePair*);
+        void unschedule(WTF::SchedulePair*);
 #endif
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
@@ -240,6 +243,8 @@ namespace WebCore {
 
         DocumentLoadTiming* timing() { return &m_documentLoadTiming; }
         void resetTiming() { m_documentLoadTiming = DocumentLoadTiming(); }
+
+        void responseReceived(const ResourceResponse&);
 
         // The WebKit layer calls this function when it's ready for the data to
         // actually be added to the document.
@@ -351,12 +356,18 @@ namespace WebCore {
         bool m_didCreateGlobalHistoryEntry;
 
         DocumentLoadTiming m_documentLoadTiming;
+
+        double m_timeOfLastDataReceived;
     
         RefPtr<IconLoadDecisionCallback> m_iconLoadDecisionCallback;
         RefPtr<IconDataCallback> m_iconDataCallback;
 
         friend class ApplicationCacheHost;  // for substitute resource delivery
         OwnPtr<ApplicationCacheHost> m_applicationCacheHost;
+
+#if USE(CONTENT_FILTERING)
+        RefPtr<ContentFilter> m_contentFilter;
+#endif
     };
 
     inline void DocumentLoader::recordMemoryCacheLoadForFutureClientNotification(const ResourceRequest& request)

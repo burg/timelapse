@@ -28,6 +28,7 @@
 #include "DocumentLoader.h"
 #include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "HTMLEmbedElement.h"
@@ -96,7 +97,7 @@ void PluginDocumentParser::createDocumentStructure()
     if (loader)
         m_embedElement->setAttribute(typeAttr, loader->writer()->mimeType());
 
-    static_cast<PluginDocument*>(document())->setPluginNode(m_embedElement);
+    toPluginDocument(document())->setPluginNode(m_embedElement);
 
     body->appendChild(embedElement, IGNORE_EXCEPTION);
 }

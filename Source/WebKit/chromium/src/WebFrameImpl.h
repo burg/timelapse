@@ -50,6 +50,7 @@ class KURL;
 class Node;
 class Range;
 class SubstituteData;
+struct FrameLoadRequest;
 struct WindowFeatures;
 }
 
@@ -77,7 +78,7 @@ public:
     virtual WebString assignedName() const;
     virtual void setName(const WebString&);
     virtual long long identifier() const;
-    virtual WebVector<WebIconURL> iconURLs(int iconTypes) const;
+    virtual WebVector<WebIconURL> iconURLs(int iconTypesMask) const;
     virtual WebSize scrollOffset() const;
     virtual void setScrollOffset(const WebSize&);
     virtual WebSize minimumScrollOffset() const;
@@ -115,7 +116,6 @@ public:
     virtual void addMessageToConsole(const WebConsoleMessage&);
     virtual void collectGarbage();
     virtual bool checkIfRunInsecureContent(const WebURL&) const;
-#if WEBKIT_USING_V8
     virtual v8::Handle<v8::Value> executeScriptAndReturnValue(
         const WebScriptSource&);
     virtual void executeScriptInIsolatedWorld(
@@ -138,7 +138,6 @@ public:
                                                   const WebString& fileSystemPath,
                                                   const WebString& filePath,
                                                   bool isDirectory);
-#endif
     virtual void reload(bool ignoreCache);
     virtual void reloadWithOverrideURL(const WebURL& overrideUrl, bool ignoreCache);
     virtual void loadRequest(const WebURLRequest&);
@@ -162,8 +161,6 @@ public:
     virtual WebURLLoader* createAssociatedURLLoader(const WebURLLoaderOptions&);
     virtual void commitDocumentData(const char* data, size_t length);
     virtual unsigned unloadListenerCount() const;
-    virtual bool isProcessingUserGesture() const;
-    virtual bool consumeUserGesture() const;
     virtual bool willSuppressOpenerInNewFrame() const;
     virtual void replaceSelection(const WebString&);
     virtual void insertText(const WebString&);
@@ -222,11 +219,6 @@ public:
 
     virtual void sendOrientationChangeEvent(int orientation);
 
-    virtual void addEventListener(const WebString& eventType,
-                                  WebDOMEventListener*, bool useCapture);
-    virtual void removeEventListener(const WebString& eventType,
-                                     WebDOMEventListener*, bool useCapture);
-    virtual bool dispatchEvent(const WebDOMEvent&);
     virtual void dispatchMessageEventWithOriginCheck(
         const WebSecurityOrigin& intendedTargetOrigin,
         const WebDOMEvent&);

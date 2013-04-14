@@ -142,7 +142,7 @@ static HTMLFormElement* closestFormAncestor(Element* element)
         ContainerNode* parent = element->parentNode();
         if (!parent || !parent->isElementNode())
             return 0;
-        element = static_cast<Element*>(parent);
+        element = toElement(parent);
     }
     return 0;
 }
@@ -433,14 +433,14 @@ void HTMLTreeBuilder::processDoctypeToken(AtomicHTMLToken* token)
 void HTMLTreeBuilder::processFakeStartTag(const QualifiedName& tagName, const Vector<Attribute>& attributes)
 {
     // FIXME: We'll need a fancier conversion than just "localName" for SVG/MathML tags.
-    RefPtr<AtomicHTMLToken> fakeToken = AtomicHTMLToken::create(HTMLToken::StartTag, tagName.localName(), attributes);
-    processStartTag(fakeToken.get());
+    AtomicHTMLToken fakeToken(HTMLToken::StartTag, tagName.localName(), attributes);
+    processStartTag(&fakeToken);
 }
 
 void HTMLTreeBuilder::processFakeEndTag(const AtomicString& tagName)
 {
-    RefPtr<AtomicHTMLToken> fakeToken = AtomicHTMLToken::create(HTMLToken::EndTag, tagName);
-    processEndTag(fakeToken.get());
+    AtomicHTMLToken fakeToken(HTMLToken::EndTag, tagName);
+    processEndTag(&fakeToken);
 }
 
 void HTMLTreeBuilder::processFakeEndTag(const QualifiedName& tagName)
@@ -460,8 +460,8 @@ void HTMLTreeBuilder::processFakePEndTagIfPInButtonScope()
 {
     if (!m_tree.openElements()->inButtonScope(pTag.localName()))
         return;
-    RefPtr<AtomicHTMLToken> endP = AtomicHTMLToken::create(HTMLToken::EndTag, pTag.localName());
-    processEndTag(endP.get());
+    AtomicHTMLToken endP(HTMLToken::EndTag, pTag.localName());
+    processEndTag(&endP);
 }
 
 Vector<Attribute> HTMLTreeBuilder::attributesForIsindexInput(AtomicHTMLToken* token)
@@ -898,8 +898,8 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken* token)
     }
     if (token->name() == optgroupTag || token->name() == optionTag) {
         if (m_tree.currentStackItem()->hasTagName(optionTag)) {
-            RefPtr<AtomicHTMLToken> endOption = AtomicHTMLToken::create(HTMLToken::EndTag, optionTag.localName());
-            processEndTag(endOption.get());
+            AtomicHTMLToken endOption(HTMLToken::EndTag, optionTag.localName());
+            processEndTag(&endOption);
         }
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertHTMLElement(token);
@@ -956,11 +956,13 @@ void HTMLTreeBuilder::processTemplateStartTag(AtomicHTMLToken* token)
     setInsertionMode(TemplateContentsMode);
 }
 
-void HTMLTreeBuilder::processTemplateEndTag(AtomicHTMLToken* token)
+bool HTMLTreeBuilder::processTemplateEndTag(AtomicHTMLToken* token)
 {
-    if (!m_tree.openElements()->inScope(token->name())) {
+    ASSERT(token->name() == templateTag.localName());
+    if (!m_tree.openElements()->hasTemplateInHTMLScope()) {
+        ASSERT(m_templateInsertionModes.isEmpty() || (m_templateInsertionModes.size() == 1 && m_fragmentContext.contextElement()->hasTagName(templateTag)));
         parseError(token);
-        return;
+        return false;
     }
     m_tree.generateImpliedEndTags();
     if (!m_tree.currentStackItem()->hasLocalName(token->name()))
@@ -969,22 +971,16 @@ void HTMLTreeBuilder::processTemplateEndTag(AtomicHTMLToken* token)
     m_tree.activeFormattingElements()->clearToLastMarker();
     m_templateInsertionModes.removeLast();
     resetInsertionModeAppropriately();
+    return true;
 }
 
-bool HTMLTreeBuilder::popAllTemplatesForEndOfFile()
+bool HTMLTreeBuilder::processEndOfFileForInTemplateContents(AtomicHTMLToken* token)
 {
-    if (m_templateInsertionModes.isEmpty())
+    AtomicHTMLToken endTemplate(HTMLToken::EndTag, templateTag.localName());
+    if (!processTemplateEndTag(&endTemplate))
         return false;
 
-    while (!m_templateInsertionModes.isEmpty()) {
-        if (m_tree.currentIsRootNode())
-            return false;
-        if (m_tree.currentNode()->hasTagName(templateTag))
-            m_templateInsertionModes.removeLast();
-        m_tree.openElements()->pop();
-    }
-
-    resetInsertionModeAppropriately();
+    processEndOfFile(token);
     return true;
 }
 #endif
@@ -1367,8 +1363,8 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken* token)
             || token->name() == trTag
             || isTableCellContextTag(token->name())) {
             parseError(token);
-            RefPtr<AtomicHTMLToken> endSelect = AtomicHTMLToken::create(HTMLToken::EndTag, selectTag.localName());
-            processEndTag(endSelect.get());
+            AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+            processEndTag(&endSelect);
             processStartTag(token);
             return;
         }
@@ -1381,28 +1377,28 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken* token)
         }
         if (token->name() == optionTag) {
             if (m_tree.currentStackItem()->hasTagName(optionTag)) {
-                RefPtr<AtomicHTMLToken> endOption = AtomicHTMLToken::create(HTMLToken::EndTag, optionTag.localName());
-                processEndTag(endOption.get());
+                AtomicHTMLToken endOption(HTMLToken::EndTag, optionTag.localName());
+                processEndTag(&endOption);
             }
             m_tree.insertHTMLElement(token);
             return;
         }
         if (token->name() == optgroupTag) {
             if (m_tree.currentStackItem()->hasTagName(optionTag)) {
-                RefPtr<AtomicHTMLToken> endOption = AtomicHTMLToken::create(HTMLToken::EndTag, optionTag.localName());
-                processEndTag(endOption.get());
+                AtomicHTMLToken endOption(HTMLToken::EndTag, optionTag.localName());
+                processEndTag(&endOption);
             }
             if (m_tree.currentStackItem()->hasTagName(optgroupTag)) {
-                RefPtr<AtomicHTMLToken> endOptgroup = AtomicHTMLToken::create(HTMLToken::EndTag, optgroupTag.localName());
-                processEndTag(endOptgroup.get());
+                AtomicHTMLToken endOptgroup(HTMLToken::EndTag, optgroupTag.localName());
+                processEndTag(&endOptgroup);
             }
             m_tree.insertHTMLElement(token);
             return;
         }
         if (token->name() == selectTag) {
             parseError(token);
-            RefPtr<AtomicHTMLToken> endSelect = AtomicHTMLToken::create(HTMLToken::EndTag, selectTag.localName());
-            processEndTag(endSelect.get());
+            AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+            processEndTag(&endSelect);
             return;
         }
         if (token->name() == inputTag
@@ -1413,8 +1409,8 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken* token)
                 ASSERT(isParsingFragment());
                 return;
             }
-            RefPtr<AtomicHTMLToken> endSelect = AtomicHTMLToken::create(HTMLToken::EndTag, selectTag.localName());
-            processEndTag(endSelect.get());
+            AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+            processEndTag(&endSelect);
             processStartTag(token);
             return;
         }
@@ -1830,8 +1826,8 @@ void HTMLTreeBuilder::processEndTagForInBody(AtomicHTMLToken* token)
         return;
     }
     if (token->name() == htmlTag) {
-        RefPtr<AtomicHTMLToken> endBody = AtomicHTMLToken::create(HTMLToken::EndTag, bodyTag.localName());
-        if (processBodyEndTagForInBody(endBody.get()))
+        AtomicHTMLToken endBody(HTMLToken::EndTag, bodyTag.localName());
+        if (processBodyEndTagForInBody(&endBody))
             processEndTag(token);
         return;
     }
@@ -2247,8 +2243,8 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken* token)
             || isTableCellContextTag(token->name())) {
             parseError(token);
             if (m_tree.openElements()->inTableScope(token->name())) {
-                RefPtr<AtomicHTMLToken> endSelect = AtomicHTMLToken::create(HTMLToken::EndTag, selectTag.localName());
-                processEndTag(endSelect.get());
+                AtomicHTMLToken endSelect(HTMLToken::EndTag, selectTag.localName());
+                processEndTag(&endSelect);
                 processEndTag(token);
             }
             return;
@@ -2557,10 +2553,9 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken* token)
 #endif
         notImplemented(); // Emit parse error based on what elements are still open.
 #if ENABLE(TEMPLATE_ELEMENT)
-        if (popAllTemplatesForEndOfFile()) {
-            processEndOfFile(token);
-            return;
-        }
+        if (!m_templateInsertionModes.isEmpty())
+            if (processEndOfFileForInTemplateContents(token))
+                return;
 #endif
         break;
     case AfterBodyMode:
@@ -2598,10 +2593,9 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken* token)
             parseError(token);
 
 #if ENABLE(TEMPLATE_ELEMENT)
-        if (popAllTemplatesForEndOfFile()) {
-            processEndOfFile(token);
-            return;
-        }
+        if (!m_templateInsertionModes.isEmpty())
+            if (processEndOfFileForInTemplateContents(token))
+                return;
 #endif
         break;
     case InTableTextMode:
@@ -2619,11 +2613,8 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken* token)
         return;
     case TemplateContentsMode:
 #if ENABLE(TEMPLATE_ELEMENT)
-        parseError(token);
-        if (popAllTemplatesForEndOfFile()) {
-            processEndOfFile(token);
+        if (processEndOfFileForInTemplateContents(token))
             return;
-        }
         break;
 #else
         ASSERT_NOT_REACHED();
@@ -2643,33 +2634,33 @@ void HTMLTreeBuilder::defaultForInitial()
 
 void HTMLTreeBuilder::defaultForBeforeHTML()
 {
-    RefPtr<AtomicHTMLToken> startHTML = AtomicHTMLToken::create(HTMLToken::StartTag, htmlTag.localName());
-    m_tree.insertHTMLHtmlStartTagBeforeHTML(startHTML.get());
+    AtomicHTMLToken startHTML(HTMLToken::StartTag, htmlTag.localName());
+    m_tree.insertHTMLHtmlStartTagBeforeHTML(&startHTML);
     setInsertionMode(BeforeHeadMode);
 }
 
 void HTMLTreeBuilder::defaultForBeforeHead()
 {
-    RefPtr<AtomicHTMLToken> startHead = AtomicHTMLToken::create(HTMLToken::StartTag, headTag.localName());
-    processStartTag(startHead.get());
+    AtomicHTMLToken startHead(HTMLToken::StartTag, headTag.localName());
+    processStartTag(&startHead);
 }
 
 void HTMLTreeBuilder::defaultForInHead()
 {
-    RefPtr<AtomicHTMLToken> endHead = AtomicHTMLToken::create(HTMLToken::EndTag, headTag.localName());
-    processEndTag(endHead.get());
+    AtomicHTMLToken endHead(HTMLToken::EndTag, headTag.localName());
+    processEndTag(&endHead);
 }
 
 void HTMLTreeBuilder::defaultForInHeadNoscript()
 {
-    RefPtr<AtomicHTMLToken> endNoscript = AtomicHTMLToken::create(HTMLToken::EndTag, noscriptTag.localName());
-    processEndTag(endNoscript.get());
+    AtomicHTMLToken endNoscript(HTMLToken::EndTag, noscriptTag.localName());
+    processEndTag(&endNoscript);
 }
 
 void HTMLTreeBuilder::defaultForAfterHead()
 {
-    RefPtr<AtomicHTMLToken> startBody = AtomicHTMLToken::create(HTMLToken::StartTag, bodyTag.localName());
-    processStartTag(startBody.get());
+    AtomicHTMLToken startBody(HTMLToken::StartTag, bodyTag.localName());
+    processStartTag(&startBody);
     m_framesetOk = true;
 }
 

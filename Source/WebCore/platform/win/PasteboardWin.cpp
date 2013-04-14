@@ -27,6 +27,7 @@
 #include "Pasteboard.h"
 
 #include "BitmapInfo.h"
+#include "CachedImage.h"
 #include "ClipboardUtilitiesWin.h"
 #include "Document.h"
 #include "DocumentFragment.h"

@@ -33,6 +33,7 @@
 #include "DocumentType.h"
 #include "Element.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "HTMLDocument.h"
 #include "HTMLElementFactory.h"
@@ -538,11 +539,13 @@ PassRefPtr<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken* tok
 PassRefPtr<HTMLStackItem> HTMLConstructionSite::createElementFromSavedToken(HTMLStackItem* item)
 {
     RefPtr<Element> element;
+    // NOTE: Moving from item -> token -> item copies the Attribute vector twice!
+    AtomicHTMLToken fakeToken(HTMLToken::StartTag, item->localName(), item->attributes());
     if (item->namespaceURI() == HTMLNames::xhtmlNamespaceURI)
-        element = createHTMLElement(item->token());
+        element = createHTMLElement(&fakeToken);
     else
-        element = createElement(item->token(), item->namespaceURI());
-    return HTMLStackItem::create(element.release(), item->token(), item->namespaceURI());
+        element = createElement(&fakeToken, item->namespaceURI());
+    return HTMLStackItem::create(element.release(), &fakeToken, item->namespaceURI());
 }
 
 bool HTMLConstructionSite::indexOfFirstUnopenFormattingElement(unsigned& firstUnopenElementIndex) const

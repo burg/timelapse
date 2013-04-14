@@ -251,6 +251,7 @@ public:
         INT = 0x1404,
         UNSIGNED_INT = 0x1405,
         FLOAT = 0x1406,
+        HALF_FLOAT_OES = 0x8D61,
         FIXED = 0x140C,
         DEPTH_COMPONENT = 0x1902,
         ALPHA = 0x1906,
@@ -934,6 +935,8 @@ public:
         OwnArrayPtr<uint8_t> m_formalizedRGBA8Data;
 #elif PLATFORM(QT)
         QImage m_qtImage;
+#elif PLATFORM(BLACKBERRY)
+        Vector<unsigned> m_imageData;
 #endif
         Image* m_image;
         ImageHtmlDomSource m_imageHtmlDomSource;
@@ -1081,10 +1084,19 @@ private:
     bool m_layerComposited;
     GC3Duint m_internalColorFormat;
 
-    // For tracking which FBO/texture is bound
-    GC3Duint m_boundFBO;
-    GC3Denum m_activeTexture;
-    GC3Duint m_boundTexture0;
+    struct GraphicsContext3DState {
+        GraphicsContext3DState()
+            : boundFBO(0)
+            , activeTexture(GraphicsContext3D::TEXTURE0)
+            , boundTexture0(0)
+        { }
+
+        GC3Duint boundFBO;
+        GC3Denum activeTexture;
+        GC3Duint boundTexture0;
+    };
+
+    GraphicsContext3DState m_state;
 
     // For multisampling
     GC3Duint m_multisampleFBO;

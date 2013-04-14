@@ -39,8 +39,8 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
-#include "visible_units.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -300,7 +300,7 @@ Element* Position::element() const
     Node* n = anchorNode();
     while (n && !n->isElementNode())
         n = n->parentNode();
-    return static_cast<Element*>(n);
+    return toElement(n);
 }
 
 PassRefPtr<CSSComputedStyleDeclaration> Position::computedStyle() const

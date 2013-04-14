@@ -32,26 +32,21 @@
 
 #if ENABLE(CSS_EXCLUSIONS)
 
+#include "InlineIterator.h"
 #include "RenderBlock.h"
 
 namespace WebCore {
-bool ExclusionShapeInsideInfo::computeSegmentsForLine(LayoutUnit lineTop, LayoutUnit lineHeight)
-{
-    ASSERT(lineHeight >= 0);
-    m_shapeLineTop = lineTop - logicalTopOffset();
-    m_lineHeight = lineHeight;
-    m_segments.clear();
-    m_segmentRanges.clear();
 
-    if (lineOverlapsShapeBounds())
-        computedShape()->getIncludedIntervals(m_shapeLineTop, std::min(m_lineHeight, shapeLogicalBottom() - lineTop), m_segments);
-
-    LayoutUnit logicalLeftOffset = this->logicalLeftOffset();
-    for (size_t i = 0; i < m_segments.size(); i++) {
-        m_segments[i].logicalLeft += logicalLeftOffset;
-        m_segments[i].logicalRight += logicalLeftOffset;
+LineSegmentRange::LineSegmentRange(const InlineIterator& start, const InlineIterator& end)
+    : start(start.root(), start.object(), start.offset())
+    , end(end.root(), end.object(), end.offset())
+    {
     }
-    return m_segments.size();
+
+bool ExclusionShapeInsideInfo::isEnabledFor(const RenderBlock* renderer)
+{
+    ExclusionShapeValue* shapeValue = renderer->style()->resolvedShapeInside();
+    return (shapeValue && shapeValue->type() == ExclusionShapeValue::SHAPE) ? shapeValue->shape() : 0;
 }
 
 bool ExclusionShapeInsideInfo::adjustLogicalLineTop(float minSegmentWidth)

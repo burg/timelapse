@@ -91,7 +91,7 @@ static const V8DOMConfiguration::BatchedMethod V8TestCustomNamedGetterMethods[] 
     {"anotherFunction", TestCustomNamedGetterV8Internal::anotherFunctionMethodCallback},
 };
 
-static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestCustomNamedGetterTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
+static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestCustomNamedGetterTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate, WrapperWorldType worldType)
 {
     desc->ReadOnlyPrototype();
 
@@ -112,36 +112,23 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestCustomNamedGetterTemp
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestCustomNamedGetter::GetRawTemplate(v8::Isolate* isolate)
+v8::Persistent<v8::FunctionTemplate> V8TestCustomNamedGetter::GetTemplate(v8::Isolate* isolate, WrapperWorldType worldType)
 {
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
-    if (result != data->rawTemplateMap().end())
-        return result->value;
-
-    v8::HandleScope handleScope;
-    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate(isolate);
-    data->rawTemplateMap().add(&info, templ);
-    return templ;
-}
-
-v8::Persistent<v8::FunctionTemplate> V8TestCustomNamedGetter::GetTemplate(v8::Isolate* isolate)
-{
-    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
-    if (result != data->templateMap().end())
+    V8PerIsolateData::TemplateMap::iterator result = data->templateMap(worldType).find(&info);
+    if (result != data->templateMap(worldType).end())
         return result->value;
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        ConfigureV8TestCustomNamedGetterTemplate(GetRawTemplate(isolate), isolate);
-    data->templateMap().add(&info, templ);
+        ConfigureV8TestCustomNamedGetterTemplate(data->rawTemplate(&info, worldType), isolate, worldType);
+    data->templateMap(worldType).add(&info, templ);
     return templ;
 }
 
-bool V8TestCustomNamedGetter::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate)
+bool V8TestCustomNamedGetter::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate, WrapperWorldType worldType)
 {
-    return GetRawTemplate(isolate)->HasInstance(value);
+    return V8PerIsolateData::from(isolate)->hasInstance(&info, value, worldType);
 }
 
 

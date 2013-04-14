@@ -65,9 +65,9 @@ void ChildProcess::setProcessSuppressionEnabled(bool processSuppressionEnabled)
         return;
 
     if (processSuppressionEnabled)
-        m_processVisibleAssertion.clear();
+        m_processSuppressionAssertion.clear();
     else
-        m_processVisibleAssertion = WKNSProcessInfoProcessAssertionWithTypes(WKProcessAssertionTypeVisible);
+        m_processSuppressionAssertion = [[NSProcessInfo processInfo] beginSuspensionOfSystemBehaviors:WKProcessSuppressionSystemBehaviors reason:@"Process Suppression Disabled"];
 #else
     UNUSED_PARAM(processSuppressionEnabled);
 #endif
@@ -92,7 +92,6 @@ void ChildProcess::shutdownWindowServerConnection()
 void ChildProcess::platformInitialize()
 {
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    setpriority(PRIO_DARWIN_PROCESS, 0, 0);
     initializeTimerCoalescingPolicy();
 #endif
     // Starting with process suppression disabled.  The proxy for this process will enable if appropriate from didFinishLaunching().
@@ -115,6 +114,17 @@ void ChildProcess::initializeSandbox(const ChildProcessInitializationParameters&
         sandboxParameters.setSystemDirectorySuffix(defaultSystemDirectorySuffix);
     }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+    // Use private temporary and cache directories.
+    setenv("DIRHELPER_USER_DIR_SUFFIX", fileSystemRepresentation(sandboxParameters.systemDirectorySuffix()).data(), 0);
+    char temporaryDirectory[PATH_MAX];
+    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryDirectory, sizeof(temporaryDirectory))) {
+        WTFLogAlways("%s: couldn't retrieve private temporary directory path: %d\n", getprogname(), errno);
+        exit(EX_NOPERM);
+    }
+    setenv("TMPDIR", temporaryDirectory, 1);
+#endif
+
     sandboxParameters.addPathParameter("WEBKIT2_FRAMEWORK_DIR", [[webkit2Bundle bundlePath] stringByDeletingLastPathComponent]);
     sandboxParameters.addConfDirectoryParameter("DARWIN_USER_TEMP_DIR", _CS_DARWIN_USER_TEMP_DIR);
     sandboxParameters.addConfDirectoryParameter("DARWIN_USER_CACHE_DIR", _CS_DARWIN_USER_CACHE_DIR);
@@ -129,17 +139,6 @@ void ChildProcess::initializeSandbox(const ChildProcessInitializationParameters&
     }
 
     sandboxParameters.addPathParameter("HOME_DIR", pwd.pw_dir);
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-    // Use private temporary and cache directories.
-    setenv("DIRHELPER_USER_DIR_SUFFIX", fileSystemRepresentation(sandboxParameters.systemDirectorySuffix()).data(), 0);
-    char temporaryDirectory[PATH_MAX];
-    if (!confstr(_CS_DARWIN_USER_TEMP_DIR, temporaryDirectory, sizeof(temporaryDirectory))) {
-        WTFLogAlways("%s: couldn't retrieve private temporary directory path: %d\n", getprogname(), errno);
-        exit(EX_NOPERM);
-    }
-    setenv("TMPDIR", temporaryDirectory, 1);
-#endif
 
     switch (sandboxParameters.mode()) {
     case SandboxInitializationParameters::UseDefaultSandboxProfilePath:

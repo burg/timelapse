@@ -91,7 +91,7 @@ struct Node {
         : codeOrigin(codeOrigin)
         , children(children)
         , m_virtualRegister(InvalidVirtualRegister)
-        , m_refCount(0)
+        , m_refCount(1)
         , m_prediction(SpecNone)
     {
         setOpAndDefaultFlags(op);
@@ -102,7 +102,7 @@ struct Node {
         : codeOrigin(codeOrigin)
         , children(AdjacencyList::Fixed, child1, child2, child3)
         , m_virtualRegister(InvalidVirtualRegister)
-        , m_refCount(0)
+        , m_refCount(1)
         , m_prediction(SpecNone)
     {
         setOpAndDefaultFlags(op);
@@ -114,7 +114,7 @@ struct Node {
         : codeOrigin(codeOrigin)
         , children(AdjacencyList::Fixed, child1, child2, child3)
         , m_virtualRegister(InvalidVirtualRegister)
-        , m_refCount(0)
+        , m_refCount(1)
         , m_opInfo(imm.m_value)
         , m_prediction(SpecNone)
     {
@@ -127,7 +127,7 @@ struct Node {
         : codeOrigin(codeOrigin)
         , children(AdjacencyList::Fixed, child1, child2, child3)
         , m_virtualRegister(InvalidVirtualRegister)
-        , m_refCount(0)
+        , m_refCount(1)
         , m_opInfo(imm1.m_value)
         , m_opInfo2(safeCast<unsigned>(imm2.m_value))
         , m_prediction(SpecNone)
@@ -141,7 +141,7 @@ struct Node {
         : codeOrigin(codeOrigin)
         , children(AdjacencyList::Variable, firstChild, numChildren)
         , m_virtualRegister(InvalidVirtualRegister)
-        , m_refCount(0)
+        , m_refCount(1)
         , m_opInfo(imm1.m_value)
         , m_opInfo2(safeCast<unsigned>(imm2.m_value))
         , m_prediction(SpecNone)
@@ -195,6 +195,22 @@ struct Node {
     {
         m_op = op;
         m_flags = defaultFlags(op);
+    }
+    
+    void setOpAndDefaultNonExitFlags(NodeType op)
+    {
+        m_op = op;
+        m_flags = (defaultFlags(op) & ~NodeExitsForward) | (m_flags & NodeExitsForward);
+    }
+    
+    void convertToPhantom()
+    {
+        setOpAndDefaultNonExitFlags(Phantom);
+    }
+    
+    void convertToIdentity()
+    {
+        setOpAndDefaultNonExitFlags(Identity);
     }
 
     bool mustGenerate()
@@ -261,18 +277,22 @@ struct Node {
     void convertToConstant(unsigned constantNumber)
     {
         m_op = JSConstant;
-        if (m_flags & NodeMustGenerate)
-            m_refCount--;
         m_flags &= ~(NodeMustGenerate | NodeMightClobber | NodeClobbersWorld);
         m_opInfo = constantNumber;
+        children.reset();
+    }
+    
+    void convertToWeakConstant(JSCell* cell)
+    {
+        m_op = WeakJSConstant;
+        m_flags &= ~(NodeMustGenerate | NodeMightClobber | NodeClobbersWorld);
+        m_opInfo = bitwise_cast<uintptr_t>(cell);
         children.reset();
     }
     
     void convertToGetLocalUnlinked(VirtualRegister local)
     {
         m_op = GetLocalUnlinked;
-        if (m_flags & NodeMustGenerate)
-            m_refCount--;
         m_flags &= ~(NodeMustGenerate | NodeMightClobber | NodeClobbersWorld);
         m_opInfo = local;
         children.reset();
@@ -375,11 +395,27 @@ struct Node {
         return isConstant() && valueOfJSConstant(codeBlock).isBoolean();
     }
     
+    bool containsMovHint()
+    {
+        switch (op()) {
+        case SetLocal:
+        case MovHint:
+        case MovHintAndCheck:
+        case ZombieHint:
+            return true;
+        default:
+            return false;
+        }
+    }
+    
     bool hasVariableAccessData()
     {
         switch (op()) {
         case GetLocal:
         case SetLocal:
+        case MovHint:
+        case MovHintAndCheck:
+        case ZombieHint:
         case Phi:
         case SetArgument:
         case Flush:
@@ -941,6 +977,9 @@ struct Node {
     {
         switch (op()) {
         case SetLocal:
+        case MovHint:
+        case ZombieHint:
+        case MovHintAndCheck:
         case Int32ToDouble:
         case ForwardInt32ToDouble:
         case ValueToInt32:
@@ -962,12 +1001,6 @@ struct Node {
         return m_refCount;
     }
 
-    Node* ref()
-    {
-        m_refCount++;
-        return this;
-    }
-
     unsigned postfixRef()
     {
         return m_refCount++;
@@ -981,18 +1014,6 @@ struct Node {
     void setRefCount(unsigned refCount)
     {
         m_refCount = refCount;
-    }
-    
-    void deref()
-    {
-        ASSERT(m_refCount);
-        --m_refCount;
-    }
-    
-    unsigned postfixDeref()
-    {
-        ASSERT(m_refCount);
-        return m_refCount--;
     }
     
     Edge& child1()
@@ -1250,8 +1271,8 @@ struct Node {
     AdjacencyList children;
 
 private:
-    uint16_t m_op; // real type is NodeType
-    NodeFlags m_flags;
+    unsigned m_op : 10; // real type is NodeType
+    unsigned m_flags : 22;
     // The virtual register number (spill location) associated with this .
     VirtualRegister m_virtualRegister;
     // The number of uses of the result of this operation (+1 for 'must generate' nodes, which have side-effects).

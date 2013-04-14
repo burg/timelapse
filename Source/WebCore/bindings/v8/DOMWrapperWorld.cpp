@@ -33,18 +33,27 @@
 
 #include "DOMDataStore.h"
 #include "V8Binding.h"
+#include "V8DOMActivityLogger.h"
 #include "V8DOMWindow.h"
 #include "V8DOMWrapper.h"
+#include "WrapperTypeInfo.h"
+#include <wtf/HashTraits.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
 int DOMWrapperWorld::isolatedWorldCount = 0;
+static bool initializingWindow = false;
 
 PassRefPtr<DOMWrapperWorld>  DOMWrapperWorld::createUninitializedWorld()
 {
     return adoptRef(new DOMWrapperWorld(uninitializedWorldId, uninitializedExtensionGroup));
+}
+
+void DOMWrapperWorld::setInitializingWindow(bool initializing)
+{
+    initializingWindow = initializing;
 }
 
 PassRefPtr<DOMWrapperWorld> DOMWrapperWorld::createMainWorld()
@@ -57,7 +66,7 @@ DOMWrapperWorld::DOMWrapperWorld(int worldId, int extensionGroup)
     , m_extensionGroup(extensionGroup)
 {
     if (isIsolatedWorld())
-        m_domDataStore = adoptPtr(new DOMDataStore(DOMDataStore::IsolatedWorld));
+        m_domDataStore = adoptPtr(new DOMDataStore(IsolatedWorld));
 }
 
 DOMWrapperWorld* mainThreadNormalWorld()
@@ -67,10 +76,12 @@ DOMWrapperWorld* mainThreadNormalWorld()
     return cachedNormalWorld.get();
 }
 
-void DOMWrapperWorld::assertContextHasCorrectPrototype(v8::Handle<v8::Context> context)
+bool DOMWrapperWorld::contextHasCorrectPrototype(v8::Handle<v8::Context> context)
 {
     ASSERT(isMainThread());
-    ASSERT(V8DOMWrapper::isWrapperOfType(toInnerGlobalObject(context), &V8DOMWindow::info));
+    if (initializingWindow)
+        return true;
+    return V8DOMWrapper::isWrapperOfType(toInnerGlobalObject(context), &V8DOMWindow::info);
 }
 
 static void isolatedWorldWeakCallback(v8::Isolate* isolate, v8::Persistent<v8::Value> object, void* parameter)
@@ -83,7 +94,7 @@ static void isolatedWorldWeakCallback(v8::Isolate* isolate, v8::Persistent<v8::V
 void DOMWrapperWorld::makeContextWeak(v8::Handle<v8::Context> context)
 {
     ASSERT(isIsolatedWorld());
-    ASSERT(getWorld(context) == this);
+    ASSERT(isolatedWorld(context) == this);
     v8::Isolate* isolate = context->GetIsolate();
     v8::Persistent<v8::Context>::New(isolate, context).MakeWeak(isolate, this, isolatedWorldWeakCallback);
     // Matching deref is in weak callback.
@@ -219,5 +230,25 @@ void DOMWrapperWorld::clearIsolatedWorldContentSecurityPolicy(int worldID)
     ASSERT(DOMWrapperWorld::isIsolatedWorldId(worldID));
     isolatedWorldContentSecurityPolicies().remove(worldID);
 }
+
+typedef HashMap<int, OwnPtr<V8DOMActivityLogger>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > DOMActivityLoggerMap; 
+static DOMActivityLoggerMap& domActivityLoggers()
+{
+    ASSERT(isMainThread());
+    DEFINE_STATIC_LOCAL(DOMActivityLoggerMap, map, ());
+    return map;
+}
+
+void DOMWrapperWorld::setActivityLogger(int worldId, PassOwnPtr<V8DOMActivityLogger> logger)
+{
+    domActivityLoggers().set(worldId, logger);
+} 
+
+V8DOMActivityLogger* DOMWrapperWorld::activityLogger(int worldId)
+{
+    DOMActivityLoggerMap& loggers = domActivityLoggers();
+    DOMActivityLoggerMap::iterator it = loggers.find(worldId);   
+    return it == loggers.end() ? 0 : it->value.get();
+} 
 
 } // namespace WebCore

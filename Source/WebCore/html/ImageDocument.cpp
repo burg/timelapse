@@ -31,6 +31,7 @@
 #include "EventNames.h"
 #include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "HTMLHtmlElement.h"
@@ -83,7 +84,7 @@ public:
 
     ImageDocument* document() const
     {
-        return static_cast<ImageDocument*>(RawDataDocumentParser::document());
+        return toImageDocument(RawDataDocumentParser::document());
     }
     
 private:

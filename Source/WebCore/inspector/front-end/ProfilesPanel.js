@@ -28,8 +28,9 @@
  * @extends {WebInspector.Panel}
  * @implements {WebInspector.ContextMenu.Provider}
  * @param {string=} name
+ * @param {WebInspector.ProfileType=} type
  */
-WebInspector.ProfilesPanel = function(name)
+WebInspector.ProfilesPanel = function(name, type)
 {
     // If the name is not specified the ProfilesPanel works in multi-profile mode.
     var singleProfileMode = typeof name !== "undefined";
@@ -75,12 +76,6 @@ WebInspector.ProfilesPanel = function(name)
     this.clearResultsButton.addEventListener("click", this._model.clearProfiles.bind(this._model, true));
     this._statusBarButtons.push(this.clearResultsButton);
 
-    if (WebInspector.experimentsSettings.liveNativeMemoryChart.isEnabled()) {
-        this.garbageCollectButton = new WebInspector.StatusBarButton(WebInspector.UIString("Collect Garbage"), "garbage-collect-status-bar-item");
-        this.garbageCollectButton.addEventListener("click", this._garbageCollectButtonClicked, this);
-        this._statusBarButtons.push(this.garbageCollectButton);
-    }
-
     this._profileTypeStatusBarItemsContainer = document.createElement("div");
     this._profileTypeStatusBarItemsContainer.className = "status-bar-items";
 
@@ -89,8 +84,15 @@ WebInspector.ProfilesPanel = function(name)
 
     this.recordButton.toggled = false;
 
-    this._launcherView = new WebInspector.ProfileLauncherView(this, singleProfileMode);
-    this._launcherView.addEventListener(WebInspector.ProfileLauncherView.EventTypes.ProfileTypeSelected, this._onProfileTypeSelected, this);
+    if (singleProfileMode) {
+        this._launcherView = this._createLauncherView();
+        this._registerProfileType(/** @type {!WebInspector.ProfileType} */ (type));
+        this._selectedProfileType = type;
+        this._updateProfileTypeSpecificUI();
+    } else {
+        this._launcherView = new WebInspector.MultiProfileLauncherView(this);
+        this._launcherView.addEventListener(WebInspector.MultiProfileLauncherView.EventTypes.ProfileTypeSelected, this._onProfileTypeSelected, this);
+    }
 
     this._createFileSelectorElement();
     this.element.addEventListener("contextmenu", this._handleContextMenuEvent.bind(this), true);
@@ -126,6 +128,14 @@ WebInspector.ProfilesPanel.prototype = {
             this.element.removeChild(this._fileSelectorElement);
         this._fileSelectorElement = WebInspector.createFileSelectorElement(this._loadFromFile.bind(this));
         this.element.appendChild(this._fileSelectorElement);
+    },
+
+    /**
+     * @return {!WebInspector.ProfileLauncherView}
+     */
+    _createLauncherView: function()
+    {
+        return new WebInspector.ProfileLauncherView(this);
     },
 
     /**
@@ -845,11 +855,12 @@ WebInspector.ProfilesSidebarTreeElement.prototype = {
  */
 WebInspector.CPUProfilerPanel = function()
 {
-    WebInspector.ProfilesPanel.call(this, "cpu-profiler");
-    this._registerProfileType(new WebInspector.CPUProfileType());
+    WebInspector.ProfilesPanel.call(this, "cpu-profiler", new WebInspector.CPUProfileType());
 }
 
-WebInspector.CPUProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.prototype;
+WebInspector.CPUProfilerPanel.prototype = {
+    __proto__: WebInspector.ProfilesPanel.prototype
+}
 
 
 /**
@@ -858,11 +869,12 @@ WebInspector.CPUProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.p
  */
 WebInspector.CSSSelectorProfilerPanel = function()
 {
-    WebInspector.ProfilesPanel.call(this, "css-profiler");
-    this._registerProfileType(new WebInspector.CSSSelectorProfileType());
+    WebInspector.ProfilesPanel.call(this, "css-profiler", new WebInspector.CSSSelectorProfileType());
 }
 
-WebInspector.CSSSelectorProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.prototype;
+WebInspector.CSSSelectorProfilerPanel.prototype = {
+    __proto__: WebInspector.ProfilesPanel.prototype
+}
 
 
 /**
@@ -871,11 +883,12 @@ WebInspector.CSSSelectorProfilerPanel.prototype.__proto__ = WebInspector.Profile
  */
 WebInspector.HeapProfilerPanel = function()
 {
-    WebInspector.ProfilesPanel.call(this, "heap-profiler");
-    this._registerProfileType(new WebInspector.HeapSnapshotProfileType());
+    WebInspector.ProfilesPanel.call(this, "heap-profiler", new WebInspector.HeapSnapshotProfileType());
 }
 
-WebInspector.HeapProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.prototype;
+WebInspector.HeapProfilerPanel.prototype = {
+    __proto__: WebInspector.ProfilesPanel.prototype
+}
 
 
 /**
@@ -884,11 +897,12 @@ WebInspector.HeapProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.
  */
 WebInspector.CanvasProfilerPanel = function()
 {
-    WebInspector.ProfilesPanel.call(this, "canvas-profiler");
-    this._registerProfileType(new WebInspector.CanvasProfileType());
+    WebInspector.ProfilesPanel.call(this, "canvas-profiler", new WebInspector.CanvasProfileType());
 }
 
-WebInspector.CanvasProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.prototype;
+WebInspector.CanvasProfilerPanel.prototype = {
+    __proto__: WebInspector.ProfilesPanel.prototype
+}
 
 
 /**
@@ -897,11 +911,12 @@ WebInspector.CanvasProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPane
  */
 WebInspector.MemoryChartProfilerPanel = function()
 {
-    WebInspector.ProfilesPanel.call(this, "memory-chart-profiler");
-    this._registerProfileType(new WebInspector.NativeMemoryProfileType());
+    WebInspector.ProfilesPanel.call(this, "memory-chart-profiler", new WebInspector.NativeMemoryProfileType());
 }
 
-WebInspector.MemoryChartProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.prototype;
+WebInspector.MemoryChartProfilerPanel.prototype = {
+    __proto__: WebInspector.ProfilesPanel.prototype
+}
 
 
 /**
@@ -910,13 +925,17 @@ WebInspector.MemoryChartProfilerPanel.prototype.__proto__ = WebInspector.Profile
  */
 WebInspector.NativeMemoryProfilerPanel = function()
 {
-    WebInspector.ProfilesPanel.call(this, "memory-snapshot-profiler");
-    this._registerProfileType(new WebInspector.NativeSnapshotProfileType());
+    WebInspector.ProfilesPanel.call(this, "memory-snapshot-profiler", new WebInspector.NativeSnapshotProfileType());
 }
 
-WebInspector.NativeMemoryProfilerPanel.prototype.__proto__ = WebInspector.ProfilesPanel.prototype;
+WebInspector.NativeMemoryProfilerPanel.prototype = {
+    __proto__: WebInspector.ProfilesPanel.prototype
+}
 
 importScript("CPUProfileView.js");
+importScript("CSSSelectorProfileView.js");
+importScript("FlameChart.js");
+importScript("HeapSnapshot.js");
 importScript("HeapSnapshotDataGrids.js");
 importScript("HeapSnapshotGridNodes.js");
 importScript("HeapSnapshotView.js");

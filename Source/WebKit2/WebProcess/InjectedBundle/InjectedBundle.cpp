@@ -51,6 +51,7 @@
 #include <WebCore/ApplicationCache.h>
 #include <WebCore/ApplicationCacheStorage.h>
 #include <WebCore/Frame.h>
+#include <WebCore/FrameLoader.h>
 #include <WebCore/FrameView.h>
 #include <WebCore/GCController.h>
 #include <WebCore/GeolocationClient.h>
@@ -72,7 +73,7 @@
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/PassOwnArrayPtr.h>
 
-#if ENABLE(SHADOW_DOM) || ENABLE(CSS_REGIONS) || ENABLE(IFRAME_SEAMLESS)
+#if ENABLE(SHADOW_DOM) || ENABLE(CSS_REGIONS) || ENABLE(IFRAME_SEAMLESS) || ENABLE(CSS_COMPOSITING)
 #include <WebCore/RuntimeEnabledFeatures.h>
 #endif
 
@@ -194,6 +195,11 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
 #if ENABLE(CSS_REGIONS)
     if (preference == "WebKitCSSRegionsEnabled")
         RuntimeEnabledFeatures::setCSSRegionsEnabled(enabled);
+#endif
+
+#if ENABLE(CSS_COMPOSITING)
+    if (preference == "WebKitCSSCompositingEnabled")
+        RuntimeEnabledFeatures::setCSSCompositingEnabled(enabled);
 #endif
 
     // Map the names used in LayoutTests with the names used in WebCore::Settings and WebPreferencesStore.
@@ -344,6 +350,13 @@ void InjectedBundle::removeOriginAccessWhitelistEntry(const String& sourceOrigin
 void InjectedBundle::resetOriginAccessWhitelists()
 {
     SecurityPolicy::resetOriginAccessWhitelists();
+}
+
+void InjectedBundle::setAsynchronousSpellCheckingEnabled(WebPageGroupProxy* pageGroup, bool enabled)
+{
+    const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
+    for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
+        (*iter)->settings()->setAsynchronousSpellCheckingEnabled(enabled);
 }
 
 void InjectedBundle::clearAllDatabases()
@@ -650,6 +663,15 @@ void InjectedBundle::setCSSRegionsEnabled(bool enabled)
 {
 #if ENABLE(CSS_REGIONS)
     RuntimeEnabledFeatures::setCSSRegionsEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
+void InjectedBundle::setCSSCompositingEnabled(bool enabled)
+{
+#if ENABLE(CSS_COMPOSITING)
+    RuntimeEnabledFeatures::setCSSCompositingEnabled(enabled);
 #else
     UNUSED_PARAM(enabled);
 #endif

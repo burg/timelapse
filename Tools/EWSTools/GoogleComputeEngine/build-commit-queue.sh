@@ -53,6 +53,7 @@ gcutil --project=$PROJECT ssh $BOT_ID "
     sudo apt-get install subversion -y &&
     svn checkout http://svn.webkit.org/repository/webkit/trunk/Tools/EWSTools tools &&
     cd tools &&
+    bash configure-svn-config.sh &&
     bash configure-svn-auth.sh $SVN_USERNAME $SVN_PASSWORD &&
     bash build-vm.sh &&
     bash build-repo.sh $QUEUE_TYPE $BUGZILLA_USERNAME $BUGZILLA_PASSWORD &&

@@ -182,7 +182,6 @@ TestRunner::TestRunner(TestInterfaces* interfaces)
     bindMethod("setTabKeyCyclesThroughElements", &TestRunner::setTabKeyCyclesThroughElements);
     bindMethod("execCommand", &TestRunner::execCommand);
     bindMethod("isCommandEnabled", &TestRunner::isCommandEnabled);
-    bindMethod("elementDoesAutoCompleteForElementWithId", &TestRunner::elementDoesAutoCompleteForElementWithId);
     bindMethod("callShouldCloseOnWebView", &TestRunner::callShouldCloseOnWebView);
     bindMethod("setDomainRelaxationForbiddenForURLScheme", &TestRunner::setDomainRelaxationForbiddenForURLScheme);
     bindMethod("evaluateScriptInIsolatedWorldAndReturnValue", &TestRunner::evaluateScriptInIsolatedWorldAndReturnValue);
@@ -196,7 +195,6 @@ TestRunner::TestRunner(TestInterfaces* interfaces)
     bindMethod("addUserScript", &TestRunner::addUserScript);
     bindMethod("addUserStyleSheet", &TestRunner::addUserStyleSheet);
     bindMethod("startSpeechInput", &TestRunner::startSpeechInput);
-    bindMethod("markerTextForListItem", &TestRunner::markerTextForListItem);
     bindMethod("findString", &TestRunner::findString);
     bindMethod("setValueForUser", &TestRunner::setValueForUser);
     bindMethod("enableFixedLayoutMode", &TestRunner::enableFixedLayoutMode);
@@ -209,8 +207,6 @@ TestRunner::TestRunner(TestInterfaces* interfaces)
     bindMethod("textSurroundingNode", &TestRunner::textSurroundingNode);
     bindMethod("disableAutoResizeMode", &TestRunner::disableAutoResizeMode);
     bindMethod("enableAutoResizeMode", &TestRunner::enableAutoResizeMode);
-    bindMethod("setSmartInsertDeleteEnabled", &TestRunner::setSmartInsertDeleteEnabled);
-    bindMethod("setSelectTrailingWhitespaceEnabled", &TestRunner::setSelectTrailingWhitespaceEnabled);
     bindMethod("setMockDeviceOrientation", &TestRunner::setMockDeviceOrientation);
     bindMethod("didAcquirePointerLock", &TestRunner::didAcquirePointerLock);
     bindMethod("didLosePointerLock", &TestRunner::didLosePointerLock);
@@ -411,12 +407,6 @@ void TestRunner::reset()
     m_shouldStayOnPageAfterHandlingBeforeUnload = false;
     m_shouldBlockRedirects = false;
     m_willSendRequestShouldReturnNull = false;
-    m_smartInsertDeleteEnabled = true;
-#ifdef WIN32
-    m_selectTrailingWhitespaceEnabled = true;
-#else
-    m_selectTrailingWhitespaceEnabled = false;
-#endif
     m_shouldDumpResourcePriorities = false;
 
     m_httpHeadersToClear.clear();
@@ -636,6 +626,8 @@ void TestRunner::setTopLoadingFrame(WebFrame* frame, bool clear)
 {
     if (frame->top()->view() != m_webView)
         return;
+    if (!m_testIsRunning)
+        return;
     if (clear) {
         m_topLoadingFrame = 0;
         locationChangeDone();
@@ -673,16 +665,6 @@ bool TestRunner::policyDelegateShouldNotifyDone() const
 bool TestRunner::shouldInterceptPostMessage() const
 {
     return m_interceptPostMessage.isBool() && m_interceptPostMessage.toBoolean();
-}
-
-bool TestRunner::isSmartInsertDeleteEnabled() const
-{
-    return m_smartInsertDeleteEnabled;
-}
-
-bool TestRunner::isSelectTrailingWhitespaceEnabled() const
-{
-    return m_selectTrailingWhitespaceEnabled;
 }
 
 bool TestRunner::shouldDumpResourcePriorities() const
@@ -1144,30 +1126,6 @@ void TestRunner::isCommandEnabled(const CppArgumentList& arguments, CppVariant* 
     result->set(rv);
 }
 
-bool TestRunner::elementDoesAutoCompleteForElementWithId(const WebString& elementId)
-{
-    WebFrame* webFrame = m_webView->mainFrame();
-    if (!webFrame)
-        return false;
-
-    WebElement element = webFrame->document().getElementById(elementId);
-    if (element.isNull() || !element.hasTagName("input"))
-        return false;
-
-    WebInputElement inputElement = element.to<WebInputElement>();
-    return inputElement.autoComplete();
-}
-
-void TestRunner::elementDoesAutoCompleteForElementWithId(const CppArgumentList& arguments, CppVariant* result)
-{
-    if (arguments.size() != 1 || !arguments[0].isString()) {
-        result->set(false);
-        return;
-    }
-    WebString elementId = cppVariantToWebString(arguments[0]);
-    result->set(elementDoesAutoCompleteForElementWithId(elementId));
-}
-
 void TestRunner::callShouldCloseOnWebView(const CppArgumentList&, CppVariant* result)
 {
     result->set(m_webView->dispatchBeforeUnloadEvent());
@@ -1346,15 +1304,6 @@ void TestRunner::startSpeechInput(const CppArgumentList& arguments, CppVariant* 
     input->startSpeechInput();
 }
 
-void TestRunner::markerTextForListItem(const CppArgumentList& args, CppVariant* result)
-{
-    WebElement element;
-    if (!WebBindings::getElement(args[0].value.objectValue, &element))
-        result->setNull();
-    else
-        result->set(element.document().frame()->markerTextForListItem(element).utf8());
-}
-
 void TestRunner::findString(const CppArgumentList& arguments, CppVariant* result)
 {
     if (arguments.size() < 1 || !arguments[0].isString())
@@ -1498,20 +1447,6 @@ void TestRunner::textSurroundingNode(const CppArgumentList& arguments, CppVarian
         return;
 
     result->set(surroundingText.textContent().utf8());
-}
-
-void TestRunner::setSmartInsertDeleteEnabled(const CppArgumentList& arguments, CppVariant* result)
-{
-    if (arguments.size() > 0 && arguments[0].isBool())
-        m_smartInsertDeleteEnabled = arguments[0].value.boolValue;
-    result->setNull();
-}
-
-void TestRunner::setSelectTrailingWhitespaceEnabled(const CppArgumentList& arguments, CppVariant* result)
-{
-    if (arguments.size() > 0 && arguments[0].isBool())
-        m_selectTrailingWhitespaceEnabled = arguments[0].value.boolValue;
-    result->setNull();
 }
 
 void TestRunner::dumpResourceRequestPriorities(const CppArgumentList& arguments, CppVariant* result)
@@ -1780,7 +1715,7 @@ void TestRunner::setAlwaysAcceptCookies(const CppArgumentList& arguments, CppVar
 void TestRunner::setWindowIsKey(const CppArgumentList& arguments, CppVariant* result)
 {
     if (arguments.size() > 0 && arguments[0].isBool())
-        m_delegate->setFocus(arguments[0].value.boolValue);
+        m_delegate->setFocus(m_proxy, arguments[0].value.boolValue);
     result->setNull();
 }
 

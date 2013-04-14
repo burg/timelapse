@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2010, 2011 Research In Motion Limited. All rights reserved.
  *
@@ -163,6 +163,8 @@
 #endif
 
 /* CPU(ARM) - ARM, any version*/
+#define WTF_ARM_ARCH_AT_LEAST(N) (CPU(ARM) && defined(WTF_ARM_ARCH_VERSION) && WTF_ARM_ARCH_VERSION >= N)
+
 #if   defined(arm) \
     || defined(__arm__) \
     || defined(ARM) \
@@ -184,8 +186,6 @@
 #define WTF_CPU_MIDDLE_ENDIAN 1
 
 #endif
-
-#define WTF_ARM_ARCH_AT_LEAST(N) (CPU(ARM) && WTF_ARM_ARCH_VERSION >= N)
 
 /* Set WTF_ARM_ARCH_VERSION */
 #if   defined(__ARM_ARCH_4__) \
@@ -502,7 +502,6 @@
 #endif
 
 #if PLATFORM(BLACKBERRY)
-#define WTF_USE_MERSENNE_TWISTER_19937 1
 #define WTF_USE_SKIA 1
 #define WTF_USE_LOW_QUALITY_IMAGE_INTERPOLATION 1
 #define WTF_USE_LOW_QUALITY_IMAGE_NO_JPEG_DITHERING 1
@@ -512,11 +511,6 @@
 #if PLATFORM(GTK)
 #define WTF_USE_CAIRO 1
 #define ENABLE_GLOBAL_FASTMALLOC_NEW 0
-#endif
-
-
-#if OS(WINCE)
-#define WTF_USE_MERSENNE_TWISTER_19937 1
 #endif
 
 /* On Windows, use QueryPerformanceCounter by default */
@@ -805,7 +799,7 @@
 
 #if !defined(ENABLE_DFG_JIT) && ENABLE(JIT) && !COMPILER(MSVC)
 /* Enable the DFG JIT on X86 and X86_64.  Only tested on Mac and GNU/Linux. */
-#if (CPU(X86) || CPU(X86_64)) && (PLATFORM(MAC) || OS(LINUX))
+#if (CPU(X86) || CPU(X86_64)) && (OS(DARWIN) || OS(LINUX))
 #define ENABLE_DFG_JIT 1
 #endif
 /* Enable the DFG JIT on ARMv7.  Only tested on iOS and Qt Linux. */
@@ -1022,6 +1016,10 @@
 
 #if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 #define HAVE_AVFOUNDATION_TEXT_TRACK_SUPPORT 1
+#endif
+
+#if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
 #endif
 
 #if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || (PLATFORM(WIN) && !OS(WINCE) && !PLATFORM(WIN_CAIRO)) || PLATFORM(BLACKBERRY)

@@ -112,11 +112,6 @@ void TestRunner::keepWebHistory()
     DumpRenderTreeSupportEfl::setShouldTrackVisitedLinks(true);
 }
 
-JSValueRef TestRunner::computedStyleIncludingVisitedInfo(JSContextRef context, JSValueRef value)
-{
-    return DumpRenderTreeSupportEfl::computedStyleIncludingVisitedInfo(context, value);
-}
-
 size_t TestRunner::webHistoryItemCount()
 {
     const Ewk_History* history = ewk_view_history_get(browser->mainView());
@@ -277,11 +272,6 @@ void TestRunner::setWindowIsKey(bool)
     notImplemented();
 }
 
-void TestRunner::setSmartInsertDeleteEnabled(bool flag)
-{
-    DumpRenderTreeSupportEfl::setSmartInsertDeleteEnabled(browser->mainView(), flag);
-}
-
 static Eina_Bool waitToDumpWatchdogFired(void*)
 {
     waitToDumpWatchdog = 0;
@@ -426,11 +416,6 @@ void TestRunner::setIconDatabaseEnabled(bool enabled)
         ewk_settings_icon_database_path_set(databasePath.utf8().data());
 }
 
-void TestRunner::setSelectTrailingWhitespaceEnabled(bool flag)
-{
-    DumpRenderTreeSupportEfl::setSelectTrailingWhitespaceEnabled(browser->mainView(), flag);
-}
-
 void TestRunner::setPopupBlockingEnabled(bool flag)
 {
     ewk_view_setting_scripts_can_open_windows_set(browser->mainView(), !flag);
@@ -439,13 +424,6 @@ void TestRunner::setPopupBlockingEnabled(bool flag)
 void TestRunner::setPluginsEnabled(bool flag)
 {
     ewk_view_setting_enable_plugins_set(browser->mainView(), flag);
-}
-
-bool TestRunner::elementDoesAutoCompleteForElementWithId(JSStringRef id)
-{
-    const String elementId(id->string());
-    const Evas_Object* mainFrame = browser->mainFrame();
-    return DumpRenderTreeSupportEfl::elementDoesAutoCompleteForElementWithId(mainFrame, elementId);
 }
 
 void TestRunner::execCommand(JSStringRef name, JSStringRef value)
@@ -759,16 +737,6 @@ void TestRunner::apiTestGoToCurrentBackForwardItem()
 void TestRunner::setWebViewEditable(bool)
 {
     ewk_frame_editable_set(browser->mainFrame(), EINA_TRUE);
-}
-
-JSRetainPtr<JSStringRef> TestRunner::markerTextForListItem(JSContextRef context, JSValueRef nodeObject) const
-{
-    String markerTextChar = DumpRenderTreeSupportEfl::markerTextForListItem(context, nodeObject);
-    if (markerTextChar.isEmpty())
-        return 0;
-
-    JSRetainPtr<JSStringRef> markerText(Adopt, JSStringCreateWithUTF8CString(markerTextChar.utf8().data()));
-    return markerText;
 }
 
 void TestRunner::authenticateSession(JSStringRef, JSStringRef, JSStringRef)

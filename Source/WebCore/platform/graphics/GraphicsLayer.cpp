@@ -83,7 +83,7 @@ GraphicsLayer::GraphicsLayer(GraphicsLayerClient* client)
     , m_contentsOpaque(false)
     , m_preserves3D(false)
     , m_backfaceVisibility(true)
-    , m_usingTiledLayer(false)
+    , m_usingTiledBacking(false)
     , m_masksToBounds(false)
     , m_drawsContent(false)
     , m_contentsVisible(true)
@@ -332,7 +332,7 @@ String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
     // | is not a valid identifier character in CSS, so this can never conflict with a keyframe identifier.
     StringBuilder id;
     id.appendLiteral("-|transition");
-    id.append(static_cast<char>(property));
+    id.appendNumber(static_cast<int>(property));
     id.append('-');
     return id.toString();
 }
@@ -348,7 +348,7 @@ void GraphicsLayer::resumeAnimations()
 void GraphicsLayer::getDebugBorderInfo(Color& color, float& width) const
 {
     if (drawsContent()) {
-        if (m_usingTiledLayer) {
+        if (m_usingTiledBacking) {
             color = Color(255, 128, 0, 128); // tiled layer: orange
             width = 2;
             return;
@@ -605,9 +605,9 @@ void GraphicsLayer::dumpProperties(TextStream& ts, int indent, LayerTreeAsTextBe
         ts << "(opacity " << m_opacity << ")\n";
     }
     
-    if (m_usingTiledLayer) {
+    if (m_usingTiledBacking) {
         writeIndent(ts, indent + 1);
-        ts << "(usingTiledLayer " << m_usingTiledLayer << ")\n";
+        ts << "(usingTiledLayer " << m_usingTiledBacking << ")\n";
     }
 
     if (m_contentsOpaque) {
@@ -704,7 +704,34 @@ void GraphicsLayer::dumpProperties(TextStream& ts, int indent, LayerTreeAsTextBe
         writeIndent(ts, indent + 1);
         ts << ")\n";
     }
-    
+
+    if (behavior & LayerTreeAsTextIncludePaintingPhases && paintingPhase()) {
+        writeIndent(ts, indent + 1);
+        ts << "(paintingPhases\n";
+        if (paintingPhase() & GraphicsLayerPaintBackground) {
+            writeIndent(ts, indent + 2);
+            ts << "GraphicsLayerPaintBackground\n";
+        }
+        if (paintingPhase() & GraphicsLayerPaintForeground) {
+            writeIndent(ts, indent + 2);
+            ts << "GraphicsLayerPaintForeground\n";
+        }
+        if (paintingPhase() & GraphicsLayerPaintMask) {
+            writeIndent(ts, indent + 2);
+            ts << "GraphicsLayerPaintMask\n";
+        }
+        if (paintingPhase() & GraphicsLayerPaintOverflowContents) {
+            writeIndent(ts, indent + 2);
+            ts << "GraphicsLayerPaintOverflowContents\n";
+        }
+        if (paintingPhase() & GraphicsLayerPaintCompositedScroll) {
+            writeIndent(ts, indent + 2);
+            ts << "GraphicsLayerPaintCompositedScroll\n";
+        }
+        writeIndent(ts, indent + 1);
+        ts << ")\n";
+    }
+
     dumpAdditionalProperties(ts, indent, behavior);
     
     if (m_children.size()) {

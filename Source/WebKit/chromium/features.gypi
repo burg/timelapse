@@ -69,6 +69,7 @@
       'ENABLE_ENCRYPTED_MEDIA=1',
       'ENABLE_FILE_SYSTEM=1',
       'ENABLE_FILTERS=1',
+      'ENABLE_FONT_LOAD_EVENTS=1',
       'ENABLE_FULLSCREEN_API=1',
       'ENABLE_GAMEPAD=1',
       'ENABLE_GEOLOCATION=1',
@@ -131,6 +132,7 @@
       'ENABLE_VIDEO=1',
       'ENABLE_VIDEO_TRACK=1',
       'ENABLE_VIEWPORT=1',
+      'ENABLE_VIEW_MODE_CSS_MEDIA=1',
       'ENABLE_WEBGL=1',
       'ENABLE_WEB_SOCKETS=1',
       'ENABLE_WEB_TIMING=1',
@@ -205,8 +207,10 @@
           'ENABLE_WEB_AUDIO=1',
         ],
       }],
-      ['OS=="linux" or OS=="mac"', {
+      ['OS=="linux" or OS=="mac" or OS=="android"', {
         'feature_defines': [
+          # 8Bit text runs should be enabled for all platforms webkit.org/b/111348
+          'ENABLE_8BIT_TEXTRUN=1',
           'ENABLE_BINDING_INTEGRITY=1',
         ],
       }, { # OS!="linux"

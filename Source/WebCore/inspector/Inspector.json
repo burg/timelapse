@@ -768,8 +768,8 @@
                 "type": "object",
                 "description": "Console message.",
                 "properties": [
-                    { "name": "source", "type": "string", "enum": ["html", "wml", "xml", "javascript", "network", "console-api", "other"], "description": "Message source." },
-                    { "name": "level", "type": "string", "enum": ["tip", "log", "warning", "error", "debug"], "description": "Message severity." },
+                    { "name": "source", "type": "string", "enum": ["xml", "javascript", "network", "console-api", "storage", "appcache", "rendering", "css", "security", "other"], "description": "Message source." },
+                    { "name": "level", "type": "string", "enum": ["log", "warning", "error", "debug"], "description": "Message severity." },
                     { "name": "text", "type": "string", "description": "Message text." },
                     { "name": "type", "type": "string", "optional": true, "enum": ["log", "dir", "dirxml", "table", "trace", "clear", "startGroup", "startGroupCollapsed", "endGroup", "assert", "timing", "profile", "profileEnd"], "description": "Console message type." },
                     { "name": "url", "type": "string", "optional": true, "description": "URL of the message origin." },
@@ -2262,8 +2262,10 @@
                 "id": "SourceRange",
                 "type": "object",
                 "properties": [
-                    { "name": "start", "type": "integer", "description": "Start of range (inclusive)."},
-                    { "name": "end", "type": "integer", "description": "End of range (exclusive)."}
+                    { "name": "startLine", "type": "integer", "description": "Start line of range." },
+                    { "name": "startColumn", "type": "integer", "description": "Start column of range (inclusive)." },
+                    { "name": "endLine", "type": "integer", "description": "End line of range" },
+                    { "name": "endColumn", "type": "integer", "description": "End column of range (exclusive)." }
                 ],
                 "description": "Text range within a resource."
             },
@@ -3336,7 +3338,6 @@
                 "description": "Profile.",
                 "properties": [
                     { "name": "head", "$ref": "CPUProfileNode", "optional": true },
-                    { "name": "bottomUpHead", "$ref": "CPUProfileNode", "optional": true },
                     { "name": "idleTime", "type": "number", "optional": true }
                 ]
             },
@@ -3600,6 +3601,13 @@
                 "parameters": [
                     { "name": "workerId", "type": "integer" },
                     { "name": "message", "type": "object" }
+                ]
+            },
+            {
+                "name": "canInspectWorkers",
+                "description": "Tells whether browser supports workers inspection.",
+                "returns": [
+                    { "name": "result", "type": "boolean", "description": "True if browser has workers support." }
                 ]
             },
             {
@@ -3871,6 +3879,11 @@
                 "description": "Unique RenderLayer identifier."
             },
             {
+                "id": "PseudoElementId",
+                "type": "string",
+                "description": "Unique PseudoElement identifier."
+            },
+            {
                 "id": "IntRect",
                 "type": "object",
                 "description": "A rectangle.",
@@ -3887,12 +3900,47 @@
                 "description": "Information about a compositing layer.",
                 "properties": [
                     { "name": "layerId", "$ref": "LayerId", "description": "The unique id for this layer." },
-                    { "name": "bounds", "$ref": "IntRect", "description": "Bounds of the layer." },
-                    { "name": "isComposited", "type": "boolean", "description": "Indicates whether this layer is composited." },
-                    { "name": "paintCount", "type": "integer", "optional": true, "description": "Indicates how many time this layer has painted." },
-                    { "name": "memory", "type": "integer", "optional": true, "description": "Estimated memory used by this layer." },
-                    { "name": "compositedBounds", "$ref": "IntRect", "optional": true, "description": "The bounds of the composited layer." },
-                    { "name": "childLayers", "type": "array", "optional": true, "items": { "$ref": "Layer" }, "description": "Child layers." }
+                    { "name": "nodeId", "$ref": "DOM.NodeId", "description": "The id for the node associated with this layer." },
+                    { "name": "bounds", "$ref": "IntRect", "description": "Bounds of the layer in absolute page coordinates." },
+                    { "name": "paintCount", "type": "integer", "description": "Indicates how many time this layer has painted." },
+                    { "name": "memory", "type": "integer", "description": "Estimated memory used by this layer." },
+                    { "name": "compositedBounds", "$ref": "IntRect", "description": "The bounds of the composited layer." },
+                    { "name": "isInShadowTree", "type": "boolean", "optional": true, "description": "Indicates whether this layer is associated with an element hosted in a shadow tree." },
+                    { "name": "isReflection", "type": "boolean", "optional": true, "description": "Indicates whether this layer was used to provide a reflection for the element." },
+                    { "name": "isGeneratedContent", "type": "boolean", "optional": true, "description": "Indicates whether the layer is attached to a pseudo element that is CSS generated content." },
+                    { "name": "pseudoElementId", "$ref": "PseudoElementId", "optional": true, "description": "The id for the pseudo element associated with this layer." },
+                    { "name": "pseudoClass", "type": "string", "optional": true, "description": "The name of the CSS pseudo-class that prompted the layer's content to be generated." }
+                ]
+            },
+            {
+                "id": "CompositingReasons",
+                "type": "object",
+                "description": "An object containing the reasons why the layer was composited as properties.",
+                "properties": [
+                    { "name": "transform3D", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a CSS 3D transform." },
+                    { "name": "video", "type": "boolean", "optional": true, "description": "Composition due to association with a <video> element." },
+                    { "name": "canvas", "type": "boolean", "optional": true, "description": "Composition due to the element being a <canvas> element." },
+                    { "name": "plugin", "type": "boolean", "optional": true, "description": "Composition due to association with a plugin." },
+                    { "name": "iFrame", "type": "boolean", "optional": true, "description": "Composition due to association with an <iframe> element." },
+                    { "name": "backfaceVisibilityHidden", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"backface-visibility: hidden\" style." },
+                    { "name": "clipsCompositingDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with an element clipping compositing descendants." },
+                    { "name": "animation", "type": "boolean", "optional": true, "description": "Composition due to association with an animated element." },
+                    { "name": "filters", "type": "boolean", "optional": true, "description": "Composition due to association with an element with CSS filters applied." },
+                    { "name": "positionFixed", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"position: fixed\" style." },
+                    { "name": "positionSticky", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"position: sticky\" style." },
+                    { "name": "overflowScrollingTouch", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"overflow-scrolling: touch\" style." },
+                    { "name": "stacking", "type": "boolean", "optional": true, "description": "Composition due to association with an element establishing a stacking context." },
+                    { "name": "overlap", "type": "boolean", "optional": true, "description": "Composition due to association with an element overlapping other composited elements." },
+                    { "name": "negativeZIndexChildren", "type": "boolean", "optional": true, "description": "Composition due to association with an element with descendants that have a negative z-index." },
+                    { "name": "transformWithCompositedDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with an element with composited descendants." },
+                    { "name": "opacityWithCompositedDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with an element with opacity applied and composited descendants." },
+                    { "name": "maskWithCompositedDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with a masked element and composited descendants." },
+                    { "name": "reflectionWithCompositedDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a reflection and composited descendants." },
+                    { "name": "filterWithCompositedDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with an element with CSS filters applied and composited descendants." },
+                    { "name": "blendingWithCompositedDescendants", "type": "boolean", "optional": true, "description": "Composition due to association with an element with CSS blending applied and composited descendants." },
+                    { "name": "perspective", "type": "boolean", "optional": true, "description": "Composition due to association with an element with perspective applied." },
+                    { "name": "preserve3D", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"transform-style: preserve-3d\" style." },
+                    { "name": "root", "type": "boolean", "optional": true, "description": "Composition due to association with the root element." }
                 ]
             }
         ],
@@ -3906,20 +3954,22 @@
                 "description": "Disables compositing tree inspection."
             },
             {
-                "name": "getLayerTree",
+                "name": "layersForNode",
+                "parameters": [
+                    { "name": "nodeId", "$ref": "DOM.NodeId", "description": "Root of the subtree for which we want to gather layers." }                ],
                 "description": "Returns the layer tree structure of the current page.",
                 "returns": [
-                    { "name": "layerTree", "$ref": "Layer", "description": "Layer tree structure of the current page." }
+                    { "name": "layers", "type": "array", "items": { "$ref": "Layer" }, "description": "Child layers." }
                 ]
             },
             {
-                "name": "nodeIdForLayerId",
-                "description": "Returns the node id for a given layer id.",
+                "name": "reasonsForCompositingLayer",
                 "parameters": [
-                    { "name": "layerId", "$ref": "LayerId" }
+                    { "name": "layerId", "$ref": "LayerId", "description": "The id of the layer for which we want to get the reasons it was composited." }
                 ],
+                "description": "Provides the reasons why the given layer was composited.",
                 "returns": [
-                    { "name": "nodeId", "$ref": "DOM.NodeId", "description": "The node id for the given layer id." }
+                    { "name": "compositingReasons", "$ref": "CompositingReasons", "description": "An object containing the reasons why the layer was composited as properties." }
                 ]
             }
         ],

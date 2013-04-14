@@ -67,6 +67,19 @@ namespace TimelineRecordType {
 extern const char Rasterize[];
 };
 
+class TimelineTimeConverter {
+public:
+    TimelineTimeConverter()
+        : m_startOffset(0)
+    {
+    }
+    double fromMonotonicallyIncreasingTime(double time) const  { return (time - m_startOffset) * 1000.0; }
+    void reset();
+
+private:
+    double m_startOffset;
+};
+
 class InspectorTimelineAgent
     : public InspectorBaseAgent<InspectorTimelineAgent>,
       public ScriptGCEventListener,
@@ -125,10 +138,8 @@ public:
     void willComposite();
     void didComposite();
 
-    // FIXME: |length| should be passed in didWrite instead willWrite
-    // as the parser can not know how much it will process until it tries.
-    void willWriteHTML(unsigned int length, unsigned int startLine, Frame*);
-    void didWriteHTML(unsigned int endLine);
+    void willWriteHTML(unsigned startLine, Frame*);
+    void didWriteHTML(unsigned endLine);
 
     void didInstallTimer(int timerId, int timeout, bool singleShot, Frame*);
     void didRemoveTimer(int timerId, Frame*);
@@ -183,49 +194,48 @@ public:
     virtual void didResizeImage() OVERRIDE;
 
 private:
+    friend class TimelineRecordStack;
     friend class TimelineTraceEventProcessor;
 
     struct TimelineRecordEntry {
-        TimelineRecordEntry(PassRefPtr<InspectorObject> record, PassRefPtr<InspectorObject> data, PassRefPtr<InspectorArray> children, const String& type, const String& frameId, size_t usedHeapSizeAtStart)
-            : record(record), data(data), children(children), type(type), frameId(frameId), usedHeapSizeAtStart(usedHeapSizeAtStart)
+        TimelineRecordEntry(PassRefPtr<InspectorObject> record, PassRefPtr<InspectorObject> data, PassRefPtr<InspectorArray> children, const String& type, size_t usedHeapSizeAtStart)
+            : record(record), data(data), children(children), type(type), usedHeapSizeAtStart(usedHeapSizeAtStart)
         {
         }
         RefPtr<InspectorObject> record;
         RefPtr<InspectorObject> data;
         RefPtr<InspectorArray> children;
         String type;
-        String frameId;
         size_t usedHeapSizeAtStart;
     };
         
     InspectorTimelineAgent(InstrumentingAgents*, InspectorPageAgent*, InspectorMemoryAgent*, InspectorCompositeState*, InspectorType, InspectorClient*);
 
-    void appendBackgroundThreadRecord(PassRefPtr<InspectorObject> data, const String& type, double startTime, double endTime, const String& threadName);
+    void sendEvent(PassRefPtr<InspectorObject>);
     void appendRecord(PassRefPtr<InspectorObject> data, const String& type, bool captureCallStack, Frame*);
     void pushCurrentRecord(PassRefPtr<InspectorObject>, const String& type, bool captureCallStack, Frame*, bool hasLowLevelDetails = false);
+
     void setDOMCounters(InspectorObject* record);
     void setNativeHeapStatistics(InspectorObject* record);
+    void setFrameIdentifier(InspectorObject* record, Frame*);
+    void pushGCEventRecords();
 
     void didCompleteCurrentRecord(const String& type);
 
     void setHeapSizeStatistics(InspectorObject* record);
-    void pushGCEventRecords();
     void commitFrameRecord();
 
-    void addRecordToTimeline(PassRefPtr<InspectorObject>, const String& type, const String& frameId);
-    void innerAddRecordToTimeline(PassRefPtr<InspectorObject>, const String& type, const String& frameId);
+    void addRecordToTimeline(PassRefPtr<InspectorObject>, const String& type);
+    void innerAddRecordToTimeline(PassRefPtr<InspectorObject>, const String& type);
     void clearRecordStack();
 
-#if ENABLE(WEB_SOCKETS)
-    void addWebSocketRecord(unsigned long, Frame*, const String&);
-#endif
-
+    const TimelineTimeConverter& timeConverter() const { return m_timeConverter; }
     double timestamp();
-    double timestampFromMicroseconds(double microseconds);
     Page* page();
 
     InspectorPageAgent* m_pageAgent;
     InspectorMemoryAgent* m_memoryAgent;
+    TimelineTimeConverter m_timeConverter;
 
     InspectorFrontend::Timeline* m_frontend;
     double m_timestampOffset;

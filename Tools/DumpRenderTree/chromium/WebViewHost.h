@@ -58,6 +58,7 @@ struct WebWindowFeatures;
 }
 
 namespace webkit_support {
+class DRTLayerTreeViewClient;
 class MediaStreamUtil;
 class TestMediaStreamClient;
 }
@@ -105,7 +106,7 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     virtual void clearAllDatabases() OVERRIDE;
     virtual void setDatabaseQuota(int) OVERRIDE;
     virtual void setDeviceScaleFactor(float) OVERRIDE;
-    virtual void setFocus(bool) OVERRIDE;
+    virtual void setFocus(WebTestRunner::WebTestProxyBase*, bool) OVERRIDE;
     virtual void setAcceptAllCookies(bool) OVERRIDE;
     virtual std::string pathToLocalResource(const std::string& url) OVERRIDE;
     virtual void setLocale(const std::string&) OVERRIDE;
@@ -142,8 +143,6 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     virtual bool shouldChangeSelectedRange(const WebKit::WebRange& from, const WebKit::WebRange& to, WebKit::WebTextAffinity, bool stillSelecting);
     virtual bool shouldDeleteRange(const WebKit::WebRange&);
     virtual bool shouldApplyStyle(const WebKit::WebString& style, const WebKit::WebRange&);
-    virtual bool isSmartInsertDeleteEnabled();
-    virtual bool isSelectTrailingWhitespaceEnabled();
     virtual bool handleCurrentKeyboardEvent();
     virtual void runModalAlertDialog(WebKit::WebFrame*, const WebKit::WebString&);
     virtual bool runModalConfirmDialog(WebKit::WebFrame*, const WebKit::WebString&);
@@ -156,7 +155,7 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
 
     // WebKit::WebWidgetClient
     virtual void didAutoResize(const WebKit::WebSize& newSize);
-    virtual void initializeLayerTreeView(WebKit::WebLayerTreeViewClient*, const WebKit::WebLayer& rootLayer, const WebKit::WebLayerTreeView::Settings&);
+    virtual void initializeLayerTreeView();
     virtual WebKit::WebLayerTreeView* layerTreeView();
     virtual void scheduleAnimation();
     virtual void didFocus();
@@ -201,6 +200,9 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     // Pending task list, Note taht the method is referred from WebMethodTask class.
     WebTestRunner::WebTaskList* taskList() { return &m_taskList; }
 
+    // Exposed for WebTestProxy.
+    void scheduleComposite() { }
+
 private:
 
     class HostMethodTask : public WebTestRunner::WebMethodTask<WebViewHost> {
@@ -232,6 +234,8 @@ private:
     void printFrameDescription(WebKit::WebFrame*);
 
     bool hasWindow() const { return m_hasWindow; }
+
+    void updateViewportSize();
 
 #if ENABLE(MEDIA_STREAM)
     webkit_support::TestMediaStreamClient* testMediaStreamClient();
@@ -278,6 +282,7 @@ private:
     WebTestRunner::WebTaskList m_taskList;
     Vector<WebKit::WebWidget*> m_popupmenus;
 
+    OwnPtr<webkit_support::DRTLayerTreeViewClient> m_layerTreeViewClient;
     OwnPtr<WebKit::WebLayerTreeView> m_layerTreeView;
 };
 

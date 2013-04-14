@@ -657,7 +657,7 @@ bool QWebFrameAdapter::renderFromTiledBackingStore(QPainter* painter, const QReg
 
 void QWebFrameAdapter::_q_orientationChanged()
 {
-#if ENABLE(ORIENTATION_EVENTS)
+#if ENABLE(ORIENTATION_EVENTS) && HAVE(QTSENSORS)
     int orientation;
 
     switch (m_orientation.reading()->orientation()) {
@@ -918,7 +918,7 @@ QWebElement QWebHitTestResultPrivate::elementForInnerNode() const
 {
     if (!innerNonSharedNode || !innerNonSharedNode->isElementNode())
         return QWebElement();
-    return QWebElement(static_cast<Element*>(innerNonSharedNode));
+    return QWebElement(toElement(innerNonSharedNode));
 }
 
 // ======================================================

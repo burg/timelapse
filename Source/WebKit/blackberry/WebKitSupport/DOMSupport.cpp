@@ -35,9 +35,9 @@
 #include "TextIterator.h"
 #include "VisiblePosition.h"
 #include "VisibleSelection.h"
+#include "VisibleUnits.h"
 
 #include "htmlediting.h"
-#include "visible_units.h"
 
 #include <limits>
 
@@ -152,7 +152,7 @@ HTMLTextFormControlElement* toTextControlElement(Node* node)
     if (!(node && node->isElementNode()))
         return 0;
 
-    Element* element = static_cast<Element*>(node);
+    Element* element = toElement(node);
     if (!element->isFormControlElement())
         return 0;
 
@@ -618,7 +618,7 @@ Element* selectionContainerElement(const VisibleSelection& selection)
     if (startContainer->isInShadowTree())
         element = startContainer->shadowHost();
     else if (startContainer->isElementNode())
-        element = static_cast<Element*>(startContainer);
+        element = toElement(startContainer);
     else
         element = startContainer->parentElement();
 

@@ -81,7 +81,7 @@ void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicSt
 {
     if (name == nameAttr) {
         if (inDocument() && document()->isHTMLDocument() && !isInShadowTree()) {
-            HTMLDocument* document = static_cast<HTMLDocument*>(this->document());
+            HTMLDocument* document = toHTMLDocument(this->document());
             document->removeExtraNamedItem(m_name);
             document->addExtraNamedItem(value);
         }
@@ -90,7 +90,7 @@ void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicSt
         String invalidTokens;
         setSandboxFlags(value.isNull() ? SandboxNone : SecurityContext::parseSandboxPolicy(value, invalidTokens));
         if (!invalidTokens.isNull())
-            document()->addConsoleMessage(HTMLMessageSource, ErrorMessageLevel, "Error while parsing the 'sandbox' attribute: " + invalidTokens);
+            document()->addConsoleMessage(OtherMessageSource, ErrorMessageLevel, "Error while parsing the 'sandbox' attribute: " + invalidTokens);
     } else if (name == seamlessAttr) {
         // If we're adding or removing the seamless attribute, we need to force the content document to recalculate its StyleResolver.
         if (contentDocument())
@@ -113,7 +113,7 @@ Node::InsertionNotificationRequest HTMLIFrameElement::insertedInto(ContainerNode
 {
     InsertionNotificationRequest result = HTMLFrameElementBase::insertedInto(insertionPoint);
     if (insertionPoint->inDocument() && document()->isHTMLDocument() && !insertionPoint->isInShadowTree())
-        static_cast<HTMLDocument*>(document())->addExtraNamedItem(m_name);
+        toHTMLDocument(document())->addExtraNamedItem(m_name);
     return result;
 }
 
@@ -121,7 +121,7 @@ void HTMLIFrameElement::removedFrom(ContainerNode* insertionPoint)
 {
     HTMLFrameElementBase::removedFrom(insertionPoint);
     if (insertionPoint->inDocument() && document()->isHTMLDocument() && !insertionPoint->isInShadowTree())
-        static_cast<HTMLDocument*>(document())->removeExtraNamedItem(m_name);
+        toHTMLDocument(document())->removeExtraNamedItem(m_name);
 }
 
 bool HTMLIFrameElement::shouldDisplaySeamlessly() const

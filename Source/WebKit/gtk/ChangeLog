@@ -1,3 +1,271 @@
+2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Add selectTrailingWhitespaceEnabled setting to WebCore::Page
+        https://bugs.webkit.org/show_bug.cgi?id=109404
+
+        Reviewed by Tony Chang.
+
+        Use new settings for smartInsertDeleteEnabled and
+        selectTrailingWhitespaceEnabled.
+
+        Remove code related to DRT as it is not needed anymore.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportGtk.h:
+        (DumpRenderTreeSupportGtk):
+        * WebCoreSupport/EditorClientGtk.cpp:
+        (WebKit::EditorClient::smartInsertDeleteEnabled):
+        (WebKit::EditorClient::isSelectTrailingWhitespaceEnabled):
+        (WebKit::EditorClient::EditorClient):
+        * WebCoreSupport/EditorClientGtk.h:
+        (EditorClient):
+
+2013-03-14  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112296
+
+        Reviewed by Kentaro Hara.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_query_tooltip):
+
+2013-03-13  Tomas Popela  <tpopela@redhat.com>
+
+        [GTK][Introspection] Fix of gtk doc annotation warnings
+        https://bugs.webkit.org/show_bug.cgi?id=109182
+
+        Reviewed by Martin Robinson.
+
+        Fixed some gtk doc annotation warnings that appears during
+        compiling. Also some white characters were removed and some restyling
+        was done - all the g_signal_new in webkit directory have now the same
+        style. 
+
+
+        * webkit/webkitdownload.cpp:
+        (webkit_download_class_init):
+        * webkit/webkitfavicondatabase.cpp:
+        (webkit_favicon_database_class_init):
+        * webkit/webkitgeolocationpolicydecision.cpp:
+        * webkit/webkitglobals.cpp:
+        * webkit/webkithittestresult.h:
+        * webkit/webkiticondatabase.cpp:
+        (webkit_icon_database_class_init):
+        * webkit/webkitsecurityorigin.cpp:
+        * webkit/webkitsecurityorigin.h:
+        * webkit/webkitsoupauthdialog.cpp:
+        * webkit/webkitspellchecker.cpp:
+        * webkit/webkitviewportattributes.cpp:
+        (webkit_viewport_attributes_class_init):
+        * webkit/webkitwebdatabase.cpp:
+        * webkit/webkitwebframe.cpp:
+        (webkit_web_frame_class_init):
+        * webkit/webkitwebframe.h:
+        * webkit/webkitwebinspector.cpp:
+        (webkit_web_inspector_class_init):
+        * webkit/webkitwebnavigationaction.cpp:
+        (webkit_web_navigation_action_class_init):
+        * webkit/webkitwebplugindatabase.cpp:
+        * webkit/webkitwebpolicydecision.cpp:
+        * webkit/webkitwebresource.cpp:
+        (webkit_web_resource_class_init):
+        * webkit/webkitwebsettings.cpp:
+        (webkit_web_settings_class_init):
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_class_init):
+        (webkit_web_view_apply_zoom_level):
+        * webkit/webkitwebwindowfeatures.cpp:
+        (webkit_web_window_features_equal):
+
+2013-03-13  Pavel Feldman  <pfeldman@chromium.org>
+
+        Web Inspector: get rid of hiddenPanels filter
+        https://bugs.webkit.org/show_bug.cgi?id=112252
+
+        Reviewed by Vsevolod Vlasov.
+
+        * WebCoreSupport/InspectorClientGtk.cpp:
+        * WebCoreSupport/InspectorClientGtk.h:
+        (InspectorFrontendClient):
+
+2013-03-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Set up the libPlatformGtk.la library
+        https://bugs.webkit.org/show_bug.cgi?id=111738
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: Reference platformgtk_cppflags variable, libPlatformGtk.la along with webcoregtk_cppflags variable, libWebCoreGtk.la.
+        Adjust the path to GtkVersioning.c, the file has moved under Source/Platform.
+
+2013-03-07  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Limit the supported compilers to GCC >= 4.7 and Clang >= 3.0
+        https://bugs.webkit.org/show_bug.cgi?id=109932
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: Replace references to SYMBOL_VISIBILITY_INLINES and SYMBOL_VISIBILITY variables with the actual flags.
+        They are now available by default due to the limited set of supported compilers.
+
+2013-03-06  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Enable translations for WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=111398
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: no longer distribute po files from here, they've moved to
+        Sources/WebCore/platform/gtk.
+
+2013-03-07  Tomas Popela  <tpopela@redhat.com>
+
+        [GTK] Expose "ShouldRespectImageOrientation" setting into WebKitWebSettings
+        https://bugs.webkit.org/show_bug.cgi?id=111414
+
+        Reviewed by Carlos Garcia Campos.
+
+        We should expose ShouldRespectImageOrientation setting into
+        WebKitWebSettings. When it is enabled, the images are shown with right
+        orientation regarding to images EXIF data.
+
+        * webkit/webkitwebsettings.cpp:
+        (webkit_web_settings_class_init):
+        (webkit_web_settings_set_property):
+        (webkit_web_settings_get_property):
+        * webkit/webkitwebsettingsprivate.h:
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_update_settings):
+        (webkit_web_view_settings_notify):
+
+2013-03-06  Benjamin Poulain  <benjamin@webkit.org>
+
+        WebKitTestRunner needs layoutTestController.elementDoesAutoCompleteForElementWithId
+        https://bugs.webkit.org/show_bug.cgi?id=42696
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportGtk.h:
+        (DumpRenderTreeSupportGtk):
+
+2013-03-06  Sudarsana Nagineni  <sudarsana.nagineni@intel.com>
+
+        [GTK] Return m_inspectorFilesPath if it is not null
+        https://bugs.webkit.org/show_bug.cgi?id=111633
+
+        Reviewed by Martin Robinson.
+
+        Added missing return in InspectorClient::inspectorFilesPath().
+
+        * WebCoreSupport/InspectorClientGtk.cpp:
+        (WebKit::InspectorClient::inspectorFilesPath):
+
+2013-03-06  Dominique Leuenberger  <dimstar@opensuse.org>
+
+        Link the webkit_tests to XRENDER_LIBS.
+        This solves the linking failure when building against gtk2 like:
+        usr/lib/gcc/i586-suse-linux/4.7/../../../../i586-suse-linux/bin/ld:
+        Source/WebCore/platform/gtk/Programs_unittests_testcopyandpaste-GtkVersioning.o:
+        undefined reference to symbol 'XFree'
+        /usr/lib/gcc/i586-suse-linux/4.7/../../../../i586-suse-linux/bin/ld:
+        note: 'XFree' is defined in DSO /usr/lib/libX11.so.6 so try adding it
+        to the linker command line
+        /usr/lib/libX11.so.6: could not read symbols: Invalid operation
+
+        https://bugs.webkit.org/show_bug.cgi?id=111572
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * GNUmakefile.am:
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed rollout of http://trac.webkit.org/r144530
+        As described in https://bugs.webkit.org/show_bug.cgi?id=111167 and
+        https://bugs.webkit.org/show_bug.cgi?id=111035, this patch caused a
+        large number of ASSERTs in chromium-win.
+
+        * webkit/webkitwebpolicydecision.cpp:
+
+2013-03-02  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move computedStyleIncludingVisitedInfo from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109772
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportGtk.h:
+        (DumpRenderTreeSupportGtk):
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * webkit/webkitwebpolicydecision.cpp:
+
+2013-03-01  Jason Anderssen  <janderssen@gmail.com>
+
+        Move markerTextForListItem from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=110939
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportGtk.h:
+        (DumpRenderTreeSupportGtk):
+
+2013-03-01  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Expose more of the configuration step to the gyp build
+        https://bugs.webkit.org/show_bug.cgi?id=111213
+
+        Reviewed by Dirk Pranke.
+
+        Expose more of the configuration phase to the gyp build, including WebKit features
+        and binary paths.
+
+        * gyp/Configuration.gypi.in: Add templatized gyp variables for the new configuration bits.
+        * gyp/autogen.sh: Properly link up the WebKit features script. So we can access it
+        relatively as if we were at the top-level of the source directory.
+        * gyp/configure.ac: Export the WebKit features.
+
+2013-03-01  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r144422 and r144424.
+        http://trac.webkit.org/changeset/144422
+        http://trac.webkit.org/changeset/144424
+        https://bugs.webkit.org/show_bug.cgi?id=111167
+
+        Caused over 20 tests to fail assertion on Chromium Win port as
+        ASSERTION FAILED: m_platformRequestUpdated (Requested by
+        toyoshim on #webkit).
+
+        * webkit/webkitwebpolicydecision.cpp:
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * webkit/webkitwebpolicydecision.cpp:
+
 2013-02-26  Martin Robinson  <mrobinson@igalia.com>
 
         REGRESSION (r143619): Crashes in three layout tests

@@ -116,7 +116,6 @@ SOURCES += \
      bindings/js/JSDOMWindowWebSocketCustom.cpp \
      bindings/js/JSDOMWrapper.cpp \
      bindings/js/JSDataViewCustom.cpp \
-     bindings/js/JSDesktopNotificationsCustom.cpp \
      bindings/js/JSDeviceMotionEventCustom.cpp \
      bindings/js/JSDeviceOrientationEventCustom.cpp \
      bindings/js/JSDocumentCustom.cpp \
@@ -266,6 +265,7 @@ SOURCES += \
     css/CSSCursorImageValue.cpp \
     css/CSSFontFace.cpp \
     css/CSSDefaultStyleSheets.cpp \
+    css/CSSFontFaceLoadEvent.cpp \
     css/CSSFontFaceRule.cpp \
     css/CSSFontFaceSrcValue.cpp \
     css/CSSFontSelector.cpp \
@@ -306,7 +306,9 @@ SOURCES += \
     css/CSSValuePool.cpp \
     css/DOMWindowCSS.cpp \
     css/DocumentRuleSets.cpp \
+    css/ElementRuleCollector.cpp \
     css/FontFeatureValue.cpp \
+    css/FontLoader.cpp \
     css/FontValue.cpp \
     css/InspectorCSSOMWrappers.cpp \
     css/LengthFunctions.cpp \
@@ -318,6 +320,7 @@ SOURCES += \
     css/MediaQueryList.cpp \
     css/MediaQueryListListener.cpp \
     css/MediaQueryMatcher.cpp \
+    css/PageRuleCollector.cpp \
     css/PropertySetCSSStyleDeclaration.cpp \
     css/RGBColor.cpp \
     css/RuleFeature.cpp \
@@ -555,7 +558,7 @@ SOURCES += \
     editing/UnlinkCommand.cpp \
     editing/VisiblePosition.cpp \
     editing/VisibleSelection.cpp \
-    editing/visible_units.cpp \
+    editing/VisibleUnits.cpp \
     editing/WrapContentsInDummySpanCommand.cpp \
     fileapi/AsyncFileStream.cpp \
     fileapi/AsyncFileStream.cpp \
@@ -736,6 +739,7 @@ SOURCES += \
     html/parser/HTMLEntityParser.cpp \
     html/parser/HTMLEntitySearch.cpp \
     html/parser/HTMLFormattingElementList.cpp \
+    html/parser/HTMLIdentifier.cpp \
     html/parser/HTMLMetaCharsetParser.cpp \
     html/parser/HTMLParserIdioms.cpp \
     html/parser/HTMLParserOptions.cpp \
@@ -747,11 +751,13 @@ SOURCES += \
     html/parser/HTMLSourceTracker.cpp \
     html/parser/HTMLTokenizer.cpp \
     html/parser/HTMLTreeBuilder.cpp \
+    html/parser/HTMLTreeBuilderSimulator.cpp \
     html/parser/HTMLViewSourceParser.cpp \
     html/parser/TextDocumentParser.cpp \
     html/parser/TextViewSourceParser.cpp \
     html/parser/XSSAuditor.cpp \
     html/parser/XSSAuditorDelegate.cpp \
+    html/shadow/ClearButtonElement.cpp \
     html/shadow/ContentDistributor.cpp \
     html/shadow/ContentSelectorQuery.cpp \
     html/shadow/DateTimeEditElement.cpp \
@@ -1005,6 +1011,7 @@ SOURCES += \
     platform/graphics/CrossfadeGeneratedImage.cpp \
     platform/graphics/FloatPoint3D.cpp \
     platform/graphics/FloatPoint.cpp \
+    platform/graphics/FloatPolygon.cpp \
     platform/graphics/FloatQuad.cpp \
     platform/graphics/FloatRect.cpp \
     platform/graphics/FloatSize.cpp \
@@ -1085,6 +1092,7 @@ SOURCES += \
     platform/mock/ScrollbarThemeMock.cpp \
     platform/network/AuthenticationChallengeBase.cpp \
     platform/network/BlobData.cpp \
+    platform/network/BlobRegistry.cpp \
     platform/network/BlobRegistryImpl.cpp \
     platform/network/BlobResourceHandle.cpp \
     platform/network/Credential.cpp \
@@ -1173,6 +1181,7 @@ SOURCES += \
     rendering/FixedTableLayout.cpp \
     rendering/FlowThreadController.cpp \
     rendering/HitTestingTransformState.cpp \
+    rendering/HitTestLocation.cpp \
     rendering/HitTestResult.cpp \
     rendering/InlineBox.cpp \
     rendering/InlineFlowBox.cpp \
@@ -1478,6 +1487,7 @@ HEADERS += \
     Modules/webdatabase/DatabaseTask.h \
     Modules/webdatabase/DatabaseThread.h \
     Modules/webdatabase/DatabaseTracker.h \
+    Modules/webdatabase/OriginLock.h \
     Modules/webdatabase/SQLCallbackWrapper.h \
     Modules/webdatabase/SQLResultSet.h \
     Modules/webdatabase/SQLResultSetRowList.h \
@@ -1507,6 +1517,7 @@ HEADERS += \
     css/CSSCrossfadeValue.h \
     css/CSSCursorImageValue.h \
     css/CSSFontFace.h \
+    css/CSSFontFaceLoadEvent.h \
     css/CSSFontFaceRule.h \
     css/CSSFontFaceSource.h \
     css/CSSFontFaceSrcValue.h \
@@ -1548,6 +1559,7 @@ HEADERS += \
     css/CSSVariableValue.h \
     css/DOMWindowCSS.h \
     css/FontFeatureValue.h \
+    css/FontLoader.h \
     css/FontValue.h \
     css/LengthFunctions.h \
     css/MediaFeatureNames.h \
@@ -1777,7 +1789,7 @@ HEADERS += \
     editing/UnlinkCommand.h \
     editing/VisiblePosition.h \
     editing/VisibleSelection.h \
-    editing/visible_units.h \
+    editing/VisibleUnits.h \
     editing/WrapContentsInDummySpanCommand.h \
     fileapi/Blob.h \
     fileapi/BlobURL.h \
@@ -2079,6 +2091,7 @@ HEADERS += \
     loader/ProgressTracker.h \
     loader/ResourceBuffer.h \
     loader/ResourceLoader.h \
+    loader/ResourceLoaderTypes.h \
     loader/SubresourceLoader.h \
     loader/SubstituteData.h \
     loader/TextResourceDecoder.h \
@@ -2228,6 +2241,7 @@ HEADERS += \
     platform/graphics/filters/SourceGraphic.h \
     platform/graphics/FloatPoint3D.h \
     platform/graphics/FloatPoint.h \
+    platform/graphics/FloatPolygon.h \
     platform/graphics/FloatQuad.h \
     platform/graphics/FloatRect.h \
     platform/graphics/FloatSize.h \
@@ -2329,6 +2343,7 @@ HEADERS += \
     platform/Language.h \
     platform/MemoryPressureHandler.h \
     platform/MemoryUsageSupport.h \
+    platform/MainThreadTask.h \
     platform/MIMETypeRegistry.h \
     platform/network/AuthenticationChallengeBase.h \
     platform/network/AuthenticationClient.h \
@@ -2451,6 +2466,7 @@ HEADERS += \
     rendering/FilterEffectRenderer.h \
     rendering/FixedTableLayout.h \
     rendering/HitTestingTransformState.h \
+    rendering/HitTestLocation.h \
     rendering/HitTestResult.h \
     rendering/InlineBox.h \
     rendering/InlineFlowBox.h \
@@ -3068,6 +3084,7 @@ enable?(SQL_DATABASE) {
         Modules/webdatabase/DatabaseTask.cpp \
         Modules/webdatabase/DatabaseThread.cpp \
         Modules/webdatabase/DatabaseTracker.cpp \
+        Modules/webdatabase/OriginLock.cpp \
         Modules/webdatabase/SQLException.cpp \
         Modules/webdatabase/SQLResultSet.cpp \
         Modules/webdatabase/SQLResultSetRowList.cpp \
@@ -3106,8 +3123,8 @@ enable?(INDEXED_DATABASE) {
         Modules/indexeddb/IDBDatabaseException.h \
         Modules/indexeddb/IDBEventDispatcher.h \
         Modules/indexeddb/IDBFactory.h \
-        Modules/indexeddb/IDBFactoryBackendInterface.h \
         Modules/indexeddb/IDBFactoryBackendImpl.h \
+        Modules/indexeddb/IDBFactoryBackendInterface.h \
         Modules/indexeddb/IDBHistograms.h \
         Modules/indexeddb/IDBIndex.h \
         Modules/indexeddb/IDBKey.h \
@@ -3115,7 +3132,8 @@ enable?(INDEXED_DATABASE) {
         Modules/indexeddb/IDBObjectStore.h \
         Modules/indexeddb/IDBObjectStoreBackendImpl.h \
         Modules/indexeddb/IDBRequest.h \
-        Modules/indexeddb/IDBTransaction.h
+        Modules/indexeddb/IDBTransaction.h \
+        Modules/indexeddb/IndexedDB.h
 
     SOURCES += \
         bindings/js/IDBBindingUtilities.cpp \
@@ -3256,6 +3274,7 @@ enable?(SHARED_WORKERS) {
         workers/DefaultSharedWorkerRepository.cpp \
         workers/SharedWorker.cpp \
         workers/SharedWorkerContext.cpp \
+        workers/SharedWorkerRepository.cpp \
         workers/SharedWorkerThread.cpp
 }
 
@@ -3275,14 +3294,19 @@ enable?(SCRIPTED_SPEECH) {
 enable?(QUOTA) {
     HEADERS += \
         Modules/quota/DOMWindowQuota.idl \
+        Modules/quota/NavigatorStorageQuota.idl \
+        Modules/quota/StorageErrorCallback.h \
         Modules/quota/StorageInfo.h \
-        Modules/quota/StorageInfoErrorCallback.h \
-        Modules/quota/StorageInfoQuotaCallback.h \
-        Modules/quota/StorageInfoUsageCallback.h
+        Modules/quota/StorageQuota.h \
+        Modules/quota/StorageQuotaCallback.h \
+        Modules/quota/StorageUsageCallback.h
 
     SOURCES += \
-        Modules/quota/DOMWindowQuota.cpp
-        Modules/quota/StorageInfo.cpp
+        Modules/quota/DOMWindowQuota.cpp \
+        Modules/quota/NavigatorStorageQuota.cpp \
+        Modules/quota/StorageErrorCallback.cpp \
+        Modules/quota/StorageInfo.cpp \
+        Modules/quota/StorageQuota.cpp
 }
 
 enable?(GAMEPAD) {
@@ -3371,8 +3395,6 @@ enable?(VIDEO) {
         isEqual(QT_ARCH, "i386") {
             DEFINES+=NS_BUILD_32_LIKE_64
         }
-
-        QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
 
     } else: use?(GSTREAMER) {
         HEADERS += \
@@ -3697,7 +3719,7 @@ enable?(TEXT_AUTOSIZING) {
     SOURCES += # FIXME!
 }
 
-enable?(DEVICE_ORIENTATION) {
+have?(qtsensors):enable?(DEVICE_ORIENTATION) {
     HEADERS += \
         platform/qt/DeviceMotionClientQt.h \
         platform/qt/DeviceMotionProviderQt.h \
@@ -4019,6 +4041,7 @@ enable?(WEBGL) {
         html/canvas/WebGLObject.h \
         html/canvas/WebGLActiveInfo.h \
         html/canvas/WebGLBuffer.h \
+        html/canvas/WebGLCompressedTextureATC.h \
         html/canvas/WebGLCompressedTextureS3TC.h \
         html/canvas/WebGLContextAttributes.h \
         html/canvas/WebGLContextEvent.h \
@@ -4037,9 +4060,11 @@ enable?(WEBGL) {
         html/canvas/WebGLShader.h \
         html/canvas/WebGLShaderPrecisionFormat.h \
         html/canvas/WebGLSharedObject.h \
+        html/canvas/EXTDrawBuffers.h \
         html/canvas/EXTTextureFilterAnisotropic.h \
         html/canvas/OESStandardDerivatives.h \
         html/canvas/OESTextureFloat.h \
+        html/canvas/OESTextureHalfFloat.h \
         html/canvas/OESVertexArrayObject.h \
         html/canvas/OESElementIndexUint.h \
         html/canvas/WebGLTexture.h \
@@ -4053,6 +4078,7 @@ enable?(WEBGL) {
         html/canvas/CanvasContextAttributes.cpp \
         html/canvas/WebGLObject.cpp \
         html/canvas/WebGLBuffer.cpp \
+        html/canvas/WebGLCompressedTextureATC.cpp \
         html/canvas/WebGLCompressedTextureS3TC.cpp \
         html/canvas/WebGLContextAttributes.cpp \
         html/canvas/WebGLContextEvent.cpp \
@@ -4071,9 +4097,11 @@ enable?(WEBGL) {
         html/canvas/WebGLShader.cpp \
         html/canvas/WebGLShaderPrecisionFormat.cpp \
         html/canvas/WebGLSharedObject.cpp \
+        html/canvas/EXTDrawBuffers.cpp \
         html/canvas/EXTTextureFilterAnisotropic.cpp \
         html/canvas/OESStandardDerivatives.cpp \
         html/canvas/OESTextureFloat.cpp \
+        html/canvas/OESTextureHalfFloat.cpp \
         html/canvas/OESVertexArrayObject.cpp \
         html/canvas/OESElementIndexUint.cpp \
         html/canvas/WebGLTexture.cpp \
@@ -4108,8 +4136,8 @@ use?(3D_GRAPHICS) {
         platform/graphics/texmap/coordinated/CoordinatedCustomFilterProgram.h \
         platform/graphics/texmap/coordinated/CoordinatedGraphicsLayer.h \
         platform/graphics/texmap/coordinated/CoordinatedGraphicsScene.h \
+        platform/graphics/texmap/coordinated/CoordinatedGraphicsState.h \
         platform/graphics/texmap/coordinated/CoordinatedImageBacking.h \
-        platform/graphics/texmap/coordinated/CoordinatedLayerInfo.h \
         platform/graphics/texmap/coordinated/CoordinatedSurface.h \
         platform/graphics/texmap/coordinated/CoordinatedTile.h \
         platform/graphics/texmap/coordinated/SurfaceUpdateInfo.h \

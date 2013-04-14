@@ -32,27 +32,25 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "TimeRanges.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
+class SourceBufferPrivate;
+
 class MediaSourcePrivate {
-    WTF_MAKE_NONCOPYABLE(MediaSourcePrivate); WTF_MAKE_FAST_ALLOCATED;
 public:
+    typedef Vector<String, 0> CodecsArray;
+
     MediaSourcePrivate() { }
     virtual ~MediaSourcePrivate() { }
 
-    enum AddIdStatus { Ok, NotSupported, ReachedIdLimit };
-    virtual AddIdStatus addId(const String& id, const String& type, const Vector<String>& codecs) = 0;
-    virtual bool removeId(const String& id) = 0;
-    virtual PassRefPtr<TimeRanges> buffered(const String& id) = 0;
-    virtual bool append(const String& id, const unsigned char* data, unsigned length) = 0;
+    enum AddStatus { Ok, NotSupported, ReachedIdLimit };
+    virtual AddStatus addSourceBuffer(const String& type, const CodecsArray&, OwnPtr<SourceBufferPrivate>*) = 0;
     virtual double duration() = 0;
     virtual void setDuration(double) = 0;
-    virtual bool abort(const String& id) = 0;
     enum EndOfStreamStatus { EosNoError, EosNetworkError, EosDecodeError };
     virtual void endOfStream(EndOfStreamStatus) = 0;
-    virtual bool setTimestampOffset(const String& id, double offset) = 0;
 };
 
 }

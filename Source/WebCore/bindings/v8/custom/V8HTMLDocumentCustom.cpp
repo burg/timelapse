@@ -54,16 +54,20 @@ namespace WebCore {
 
 v8::Local<v8::Object> V8HTMLDocument::wrapInShadowObject(v8::Local<v8::Object> wrapper, Node* impl, v8::Isolate* isolate)
 {
-    DEFINE_STATIC_LOCAL(v8::Persistent<v8::FunctionTemplate>, shadowTemplate, ());
-    if (shadowTemplate.IsEmpty()) {
+    // This is only for getting a unique pointer which we can pass to privateTemplate.
+    static const char* shadowTemplateUniqueKey = "wrapInShadowObjectShadowTemplate";
+    WrapperWorldType currentWorldType = worldType(isolate);
+    v8::Persistent<v8::FunctionTemplate> shadowTemplate;
+    if (!V8PerIsolateData::from(isolate)->hasPrivateTemplate(currentWorldType, &shadowTemplateUniqueKey)) {
         shadowTemplate = v8::Persistent<v8::FunctionTemplate>::New(isolate, v8::FunctionTemplate::New());
         if (shadowTemplate.IsEmpty())
             return v8::Local<v8::Object>();
         shadowTemplate->SetClassName(v8::String::NewSymbol("HTMLDocument"));
-        shadowTemplate->Inherit(V8HTMLDocument::GetTemplate(isolate));
+        shadowTemplate->Inherit(V8HTMLDocument::GetTemplate(isolate, currentWorldType));
         shadowTemplate->InstanceTemplate()->SetInternalFieldCount(V8HTMLDocument::internalFieldCount);
+    } else {
+        shadowTemplate = V8PerIsolateData::from(isolate)->privateTemplate(currentWorldType, &shadowTemplateUniqueKey, 0, v8::Handle<v8::Value>(), v8::Handle<v8::Signature>());
     }
-
     v8::Local<v8::Function> shadowConstructor = shadowTemplate->GetFunction();
     if (shadowConstructor.IsEmpty())
         return v8::Local<v8::Object>();
@@ -78,27 +82,6 @@ v8::Local<v8::Object> V8HTMLDocument::wrapInShadowObject(v8::Local<v8::Object> w
     shadow->SetPrototype(wrapper);
     V8DOMWrapper::setNativeInfo(wrapper, &V8HTMLDocument::info, impl);
     return shadow;
-}
-
-v8::Handle<v8::Value> V8HTMLDocument::getNamedProperty(HTMLDocument* htmlDocument, const AtomicString& key, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
-{
-    if (!htmlDocument->hasNamedItem(key.impl()) && !htmlDocument->hasExtraNamedItem(key.impl()))
-        return v8Undefined();
-
-    RefPtr<HTMLCollection> items = htmlDocument->documentNamedItems(key);
-    if (items->isEmpty())
-        return v8Undefined();
-
-    if (items->hasExactlyOneItem()) {
-        Node* node = items->item(0);
-        Frame* frame = 0;
-        if (node->hasTagName(HTMLNames::iframeTag) && (frame = static_cast<HTMLIFrameElement*>(node)->contentFrame()))
-            return toV8(frame->document()->domWindow(), creationContext, isolate);
-
-        return toV8(node, creationContext, isolate);
-    }
-
-    return toV8(items.release(), creationContext, isolate);
 }
 
 // HTMLDocument ----------------------------------------------------------------
@@ -159,19 +142,13 @@ v8::Handle<v8::Value> V8HTMLDocument::openMethodCustom(const v8::Arguments& args
     return args.Holder();
 }
 
-void V8HTMLDocument::allAttrSetterCustom(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-{
-    // Just emulate a normal JS behaviour---install a property on this.
-    info.This()->ForceSet(name, value);
-}
-
 v8::Handle<v8::Object> wrap(HTMLDocument* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
 {
     ASSERT(impl);
     v8::Handle<v8::Object> wrapper = V8HTMLDocument::createWrapper(impl, creationContext, isolate);
     if (wrapper.IsEmpty())
         return wrapper;
-    if (!worldForEnteredContext()) {
+    if (!isolatedWorldForEnteredContext()) {
         if (Frame* frame = impl->frame())
             frame->script()->windowShell(mainThreadNormalWorld())->updateDocumentWrapper(wrapper);
     }

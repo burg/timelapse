@@ -260,17 +260,6 @@ void TestRunner::setXSSAuditorEnabled(bool flag)
     BlackBerry::WebKit::DumpRenderTree::currentInstance()->page()->settings()->setXSSAuditorEnabled(flag);
 }
 
-void TestRunner::setSelectTrailingWhitespaceEnabled(bool flag)
-{
-    BlackBerry::WebKit::DumpRenderTree::currentInstance()->setSelectTrailingWhitespaceEnabled(flag);
-}
-
-void TestRunner::setSmartInsertDeleteEnabled(bool flag)
-{
-    UNUSED_PARAM(flag);
-    notImplemented();
-}
-
 void TestRunner::setTabKeyCyclesThroughElements(bool cycles)
 {
     if (!mainFrame)
@@ -315,13 +304,6 @@ int TestRunner::windowCount()
 {
     notImplemented();
     return 0;
-}
-
-bool TestRunner::elementDoesAutoCompleteForElementWithId(JSStringRef id)
-{
-    UNUSED_PARAM(id);
-    notImplemented();
-    return false;
 }
 
 void TestRunner::setWaitToDump(bool waitToDump)
@@ -503,21 +485,6 @@ void TestRunner::apiTestGoToCurrentBackForwardItem()
 void TestRunner::setJavaScriptCanAccessClipboard(bool flag)
 {
     BlackBerry::WebKit::DumpRenderTree::currentInstance()->page()->setJavaScriptCanAccessClipboard(flag);
-}
-
-JSValueRef TestRunner::computedStyleIncludingVisitedInfo(JSContextRef context, JSValueRef value)
-{
-    return DumpRenderTreeSupport::computedStyleIncludingVisitedInfo(context, value);
-}
-
-JSRetainPtr<JSStringRef> TestRunner::markerTextForListItem(JSContextRef context, JSValueRef nodeObject) const
-{
-    WebCore::Element* element = toElement(toJS(toJS(context), nodeObject));
-    if (!element)
-        return 0;
-
-    JSRetainPtr<JSStringRef> markerText(Adopt, JSStringCreateWithUTF8CString(WebCore::markerTextForListItem(element).utf8().data()));
-    return markerText;
 }
 
 void TestRunner::setPluginsEnabled(bool flag)

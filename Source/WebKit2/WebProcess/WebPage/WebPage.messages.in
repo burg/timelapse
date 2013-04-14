@@ -29,6 +29,8 @@ messages -> WebPage LegacyReceiver {
     SetDrawsBackground(bool drawsBackground)
     SetDrawsTransparentBackground(bool drawsTransparentBackground)
 
+    SetUnderlayColor(WebCore::Color color)
+
     ViewWillStartLiveResize()
     ViewWillEndLiveResize()
 
@@ -193,11 +195,14 @@ messages -> WebPage LegacyReceiver {
     # Spelling and grammar.
     AdvanceToNextMisspelling(bool startBeforeSelection)
     ChangeSpellingToWord(WTF::String word)
+    DidFinishCheckingText(uint64_t requestID, WTF::Vector<WebCore::TextCheckingResult> result)
+    DidCancelCheckingText(uint64_t requestID)
 #if USE(APPKIT)
     UppercaseWord()
     LowercaseWord()
     CapitalizeWord()
-
+#endif
+#if PLATFORM(MAC)
     SetSmartInsertDeleteEnabled(bool isSmartInsertDeleteEnabled)
 #endif
 
@@ -255,7 +260,7 @@ messages -> WebPage LegacyReceiver {
     SendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdentifier, String textInput)
 
     SetWindowIsVisible(bool windowIsVisible)
-    WindowAndViewFramesChanged(WebCore::IntRect windowFrameInScreenCoordinates, WebCore::IntRect viewFrameInWindowCoordinates, WebCore::IntPoint accessibilityViewCoordinates)
+    WindowAndViewFramesChanged(WebCore::FloatRect windowFrameInScreenCoordinates, WebCore::FloatRect viewFrameInWindowCoordinates, WebCore::FloatPoint accessibilityViewCoordinates)
     ViewExposedRectChanged(WebCore::FloatRect exposedRect)
     SetMainFrameIsScrollable(bool isScrollable)
     RegisterUIProcessAccessibilityTokens(CoreIPC::DataReference elemenToken, CoreIPC::DataReference windowToken)
@@ -303,4 +308,5 @@ messages -> WebPage LegacyReceiver {
 #endif
 
     SetMainFrameInViewSourceMode(bool inViewSourceMode)
+    SetOverridePrivateBrowsingEnabled(bool overridePrivateBrowsingEnabled)
 }

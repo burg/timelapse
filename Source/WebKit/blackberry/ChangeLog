@@ -1,3 +1,637 @@
+2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Add selectTrailingWhitespaceEnabled setting to WebCore::Page
+        https://bugs.webkit.org/show_bug.cgi?id=109404
+
+        Reviewed by Tony Chang.
+
+        Use new settings for smartInsertDeleteEnabled and
+        selectTrailingWhitespaceEnabled.
+
+        Remove code related to DRT as it is not needed anymore.
+
+        * Api/DumpRenderTreeClient.h:
+        * WebCoreSupport/EditorClientBlackBerry.cpp:
+        (WebCore::EditorClientBlackBerry::smartInsertDeleteEnabled):
+        (WebCore::EditorClientBlackBerry::isSelectTrailingWhitespaceEnabled):
+
+2013-03-14  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112296
+
+        Reviewed by Kentaro Hara.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::webContext):
+        (BlackBerry::WebKit::WebPagePrivate::handleMouseEvent):
+        (BlackBerry::WebKit::WebPage::setNodeFocus):
+        (BlackBerry::WebKit::WebPagePrivate::adjustFullScreenElementDimensionsIfNeeded):
+        * WebCoreSupport/EditorClientBlackBerry.cpp:
+        (WebCore::EditorClientBlackBerry::shouldSpellCheckFocusedField):
+        (WebCore::EditorClientBlackBerry::shouldChangeSelectedRange):
+        * WebKitSupport/BackingStoreClient.cpp:
+        (BlackBerry::WebKit::BackingStoreClient::absoluteRect):
+        * WebKitSupport/DOMSupport.cpp:
+        (BlackBerry::WebKit::DOMSupport::toTextControlElement):
+        (BlackBerry::WebKit::DOMSupport::selectionContainerElement):
+        * WebKitSupport/FatFingers.cpp:
+        (BlackBerry::WebKit::FatFingers::getRelevantInfoFromCachedHitTest):
+        (BlackBerry::WebKit::FatFingers::setSuccessfulFatFingersResult):
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::focusedNodeChanged):
+        (BlackBerry::WebKit::InputHandler::willOpenPopupForNode):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::inputNodeOverridesTouch):
+        * WebKitSupport/TouchEventHandler.cpp:
+        (BlackBerry::WebKit::elementForTapHighlight):
+
+2013-03-14  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] InRegionScrollableArea: fix call to visibleContentRect()
+        https://bugs.webkit.org/show_bug.cgi?id=112244
+
+        Reviewed by Rob Buis.
+
+        Since r143295 visibleContentRect() receives an enum, not a boolean.
+
+        * WebKitSupport/InRegionScrollableArea.cpp:
+        (BlackBerry::WebKit::InRegionScrollableArea::InRegionScrollableArea):
+
+2013-03-13  Iris Wu  <shuwu@blackberry.com>
+
+        [BlackBerry] Do not do scroll position adjustment if selecting in a subframe
+        https://bugs.webkit.org/show_bug.cgi?id=112290
+
+        Reviewed by Rob Buis.
+
+        PR 267394
+
+        In SelectionHandler::ensureSelectedTextVisible(), scroll position
+        animation is based on main frame. If selecting in a subframe, don't
+        do animation.
+
+        Internally Reviewed By Genevieve Mak.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::ensureSelectedTextVisible):
+
+2013-03-13  Genevieve Mak  <gmak@rim.com>
+
+        [BlackBerry] Add Proximity Detector.
+        https://bugs.webkit.org/show_bug.cgi?id=112278
+
+        Reviewed by Rob Buis.
+
+        Internally Reviewed by Mike Lattanzio.
+        PR #243385
+
+        * WebKitSupport/ProximityDetector.cpp: Added.
+        (WebKit):
+        (BlackBerry::WebKit::getPriorityLevel):
+        (BlackBerry::WebKit::ProximityDetector::ProximityDetector):
+        (BlackBerry::WebKit::ProximityDetector::~ProximityDetector):
+        (BlackBerry::WebKit::ProximityDetector::findBestPoint):
+        * WebKitSupport/ProximityDetector.h: Added.
+        (WebCore):
+        (WebKit):
+        (ProximityDetector):
+
+2013-03-13  Iris Wu  <shuwu@blackberry.com>
+
+        [BlackBerry] Touch Hold selection does not scroll text area or other subframe until selection reaches bottom of the page.
+        https://bugs.webkit.org/show_bug.cgi?id=112259
+
+        Reviewed by Rob Buis.
+
+        PR 267394
+
+        While selecting in a subframe, check that the selection reaches
+        the bottom of the current subframe instead of the page.
+
+        Internally Reviewed by Genevieve Mak.
+
+        * Api/InRegionScroller.cpp:
+        (BlackBerry::WebKit::InRegionScrollerPrivate::updateSelectionScrollView):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::selectAtPoint):
+        (BlackBerry::WebKit::SelectionHandler::ensureSelectedTextVisible):
+        (BlackBerry::WebKit::SelectionHandler::selectionViewportRect):
+        (WebKit):
+        (BlackBerry::WebKit::SelectionHandler::expandSelectionToGranularity):
+        * WebKitSupport/SelectionHandler.h:
+        (BlackBerry::WebKit::SelectionHandler::setSelectionViewportRect):
+        (SelectionHandler):
+
+2013-03-12  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Prevent text selection inside Colour and Date/Time input fields
+        https://bugs.webkit.org/show_bug.cgi?id=111733
+
+        Reviewed by Rob Buis.
+
+        PR 305194.
+
+        Skip rendering of selection if it is in a popup driven
+        input field.  This covers situations where EditorClientBlackBerry::shouldChangeSelectedRange
+        is either not called or focus is not complete when called.
+
+        Informally reviewed by Gen Mak.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::selectionPositionChanged):
+        (WebKit):
+
+2013-03-12  Genevieve Mak  <gmak@rim.com>
+
+        [BlackBerry] Notify client if the selection is in a subframe when started.
+        https://bugs.webkit.org/show_bug.cgi?id=112065
+
+        Reviewed by Rob Buis.
+
+        PR #278490
+        Internally Reviewed by Mike Fenton.
+
+        * Api/InRegionScroller.cpp:
+        (BlackBerry::WebKit::InRegionScrollerPrivate::updateSelectionScrollView):
+        (WebKit):
+        * Api/InRegionScroller_p.h:
+        (InRegionScrollerPrivate):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::updateSelectionScrollView):
+        (WebKit):
+        * Api/WebPageClient.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::cancelSelection):
+        (BlackBerry::WebKit::SelectionHandler::setSelection):
+
+2013-03-12  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] SelectionHandler: fix truncated line
+        https://bugs.webkit.org/show_bug.cgi?id=112133
+
+        Reviewed by Carlos Garcia Campos.
+
+        One of the calls to fatFingersResult.nodeAsElementIfApplicable()
+        was somehow truncated when the selection start animation was
+        upstreamed in r144640.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::selectAtPoint):
+
+2013-03-12  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] Fix visible_units.h includes
+        https://bugs.webkit.org/show_bug.cgi?id=112131
+
+        Reviewed by Carlos Garcia Campos.
+
+        This file was renamed to VisibleUnits.h in r144911.
+
+        * WebKitSupport/DOMSupport.cpp:
+        * WebKitSupport/InputHandler.cpp:
+        * WebKitSupport/SelectionHandler.cpp:
+        * WebKitSupport/SpellingHandler.cpp:
+
+2013-03-11  Jochen Eisinger  <jochen@chromium.org>
+
+        Rename DefinitelyProcessingUserGesture to DefinitelyProcessingNewUserGesture
+        https://bugs.webkit.org/show_bug.cgi?id=111959
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebKitSupport/NotificationManager.cpp:
+        (BlackBerry::WebKit::NotificationManager::notificationClicked):
+
+2013-03-11  Genevieve Mak  <gmak@rim.com>
+
+        [BlackBerry] Add a method to find the ScrollView for a text selection.
+        https://bugs.webkit.org/show_bug.cgi?id=112061
+
+        Reviewed by Rob Buis.
+
+        Internally reviewed by Mike Fenton and Jakob Petsovits.
+        PR #278490
+
+        Refactor the code in InRegionScroller so that we can add a method to find
+        the InRegionScrollableArea for a text selection.
+
+        * Api/InRegionScroller.cpp:
+        (BlackBerry::WebKit::InRegionScrollerPrivate::clipToRect):
+            - Pull out recursive clipping code into its own function.
+        (WebKit):
+        (BlackBerry::WebKit::InRegionScrollerPrivate::calculateInRegionScrollableAreasForPoint):
+        (BlackBerry::WebKit::InRegionScrollerPrivate::firstScrollableInRegionForNode):
+            - This new method allows us to get just the first scrollable region instead of looking
+              for more nested ones. We may want to refactor in the future because some of the code is
+              very similar to calculateInRegionScrollableAreasForPoint.
+        (BlackBerry::WebKit::InRegionScrollerPrivate::clipAndCreateInRegionScrollableArea):
+            - Add a convenience method for the previous function
+        * Api/InRegionScroller.h:
+        (WebKit):
+        * Api/InRegionScroller_p.h:
+        (InRegionScrollerPrivate):
+
+2013-03-11  Genevieve Mak  <gmak@rim.com>
+
+        [BlackBerry] Set the documentViewportRect and viewport size.
+        https://bugs.webkit.org/show_bug.cgi?id=112056
+
+        Reviewed by Rob Buis.
+
+        Internally reviewed by Mike Fenton and Jakob Petsovits.
+        PR #278490
+
+        * WebKitSupport/InRegionScrollableArea.cpp:
+        (BlackBerry::WebKit::InRegionScrollableArea::InRegionScrollableArea):
+
+2013-03-11  Alberto Garcia  <agarcia@igalia.com>
+
+        [BlackBerry] SelectionHandler: bring back m_lastSelection attribute
+        https://bugs.webkit.org/show_bug.cgi?id=111972
+
+        Reviewed by Rob Buis.
+
+        This was removed in r144515 but is still needed by
+        SelectionHandler::selectionPositionChanged().
+
+        * WebKitSupport/SelectionHandler.h:
+        (SelectionHandler):
+
+2013-03-07  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] RefCounting ParsedCookie to avoid SegFaults
+        https://bugs.webkit.org/show_bug.cgi?id=111761
+
+        Reviewed by Rob Buis.
+
+        Making necessary changes to ref-count the ParsedCookie object.
+
+        * Api/WebCookieJar.cpp:
+        (BlackBerry::WebKit::WebCookieJar::cookies):
+
+2013-03-07  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Prevent text selection inside Colour and Date/Time input fields
+        https://bugs.webkit.org/show_bug.cgi?id=111733
+
+        Reviewed by Rob Buis.
+
+        PR 305194.
+
+        Prevent selection for popup input fields as they are buttons.
+
+        Informally Reviewed Gen Mak.
+
+        * WebCoreSupport/EditorClientBlackBerry.cpp:
+        (WebCore::EditorClientBlackBerry::shouldChangeSelectedRange):
+
+2013-03-06  Nima Ghanavatian  <nghanavatian@rim.com>
+
+        [BlackBerry] Selection handles don't drag to expand correctly for RTL languages
+        https://bugs.webkit.org/show_bug.cgi?id=111618
+
+        Reviewed by Rob Buis.
+
+        PR 303712
+        If we are using a RTL language, we should ensure that the selection handles are angled the right way.
+        Further, when expanding the selection, the start and end handles should be appropriately set so that
+        expansion in the natural direction is possible.
+
+        Internally reviewed by Mike Fenton.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::SelectionHandler):
+        (BlackBerry::WebKit::SelectionHandler::selectionPositionChanged):
+        * WebKitSupport/SelectionHandler.h:
+        (SelectionHandler):
+
+2013-03-06  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [BlackBerry] Use the new authenticationChallenge API in WebPage
+        https://bugs.webkit.org/show_bug.cgi?id=111542
+
+        Reviewed by Rob Buis.
+
+        Use the new API that expects requestURL and isProxy parameters.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::authenticationChallenge):
+        * Api/WebPageClient.h:
+
+2013-03-05  Geoffrey Garen  <ggaren@apple.com>
+
+        Removed some dead code in the page cache
+        https://bugs.webkit.org/show_bug.cgi?id=111525
+
+        Reviewed by Alexey Proskuryakov.
+
+        Page cache autorelease doesn't exist anymore, so there's no need to keep
+        around these olds hacks.
+
+        * Api/BlackBerryGlobal.cpp:
+        (BlackBerry::WebKit::clearMemoryCaches):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::destroy):
+
+2013-03-06  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [BlackBerry] Use CachedResource::resourceBuffer() instead of CachedResource::data()
+        https://bugs.webkit.org/show_bug.cgi?id=111555
+
+        Reviewed by Rob Buis.
+
+        CachedResource::data() was renamed to
+        CachedResource::resourceBuffer() in r130947.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::webContext):
+
+2013-03-06  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [BlackBerry] Remove some unneeded header includes
+        https://bugs.webkit.org/show_bug.cgi?id=111545
+
+        Reviewed by Rob Buis.
+
+        * WebCoreSupport/CredentialTransformData.cpp:
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+
+2013-03-06  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [BlackBerry] Use hasTagName instead of hasLocalName in CredentialTransformData
+        https://bugs.webkit.org/show_bug.cgi?id=111544
+
+        Reviewed by Rob Buis.
+
+        hasLocalName() expects an AtomicString, but we are passing a
+        HTMLName which is a QualifiedName.
+
+        * WebCoreSupport/CredentialTransformData.cpp:
+        (WebCore::CredentialTransformData::findPasswordFormFields): Use
+        hasTagName() instead of hasLocalName().
+
+2013-03-05  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] Authentication credentials lost when opening a new tab
+        https://bugs.webkit.org/show_bug.cgi?id=111445
+
+        PR 286627
+
+        Reviewed by Rob Buis.
+        Internally Reviewed by Lianghui Chen.
+
+        Prevent changing the private mode boolean value in didChangeSettings if the value
+        hasn't changed.
+
+        Setting the private mode value of credentialstorage every time didChangeSettings gets
+        called causes the session credential mapping to be cleared on every tab change in
+        non-private mode.
+
+        Tested changing tabs after logging into a site using the HTTP Basic Auth protocol to see
+        if the credentials are cleared. Also ensured the functionality of private mode is not changed.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::didChangeSettings):
+
+2013-03-05  Tiancheng Jiang  <tijiang@rim.com>
+
+        [BlackBerry] FatFinger pairs the wrong element with fatfinger rect part.
+        https://bugs.webkit.org/show_bug.cgi?id=111444
+
+        Reviewed by Rob Buis.
+
+        Internal PR 266214
+        Internally reviewed by Genevieve Mak.
+
+        Instead of subtracting with the element region, we should get the remaining
+        rect by find the intersect region of element region and fatfinger detection
+        region.
+
+
+        * WebKitSupport/FatFingers.cpp:
+        (BlackBerry::WebKit::FatFingers::checkForClickableElement):
+
+2013-03-05  Andrew Lo  <anlo@rim.com>
+
+        [BlackBerry] Clean up animated scroll/zoom code in WebPagePrivate
+        https://bugs.webkit.org/show_bug.cgi?id=111373
+
+        Reviewed by Rob Buis.
+
+        Internally reviewed by Jakob Petsovits.
+        Internal PR 285468.
+
+        Have WebPageClient pass the final scale and position to WebPage when a zoom/scroll
+        animation finishes, rather than keeping those values as instance variables in
+        WebPagePrivate.
+
+        Rename some functions & variables to reflect that they are used for both block zoom
+        and generic zoom/scroll animations.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::zoomAnimationFinished):
+        (BlackBerry::WebKit::WebPage::zoomAnimationFinished):
+        (BlackBerry::WebKit::WebPagePrivate::resetBlockZoom):
+        (BlackBerry::WebKit::WebPage::blockZoom):
+        (BlackBerry::WebKit::WebPagePrivate::animateToScaleAndDocumentScrollPosition):
+        * Api/WebPage.h:
+        * Api/WebPageClient.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+
+2013-03-04  Iris Wu  <shuwu@rim.com>
+
+        [BlackBerry] Upstream selection start animation.
+        https://bugs.webkit.org/show_bug.cgi?id=111335
+
+        Reviewed by Rob Buis.
+
+        PR 219960
+
+        To indicate selection starts, we draw an overlay rect larger than
+        the selected word at the start of selection. Then shrink it down
+        to the actual size.
+
+        Reviewed Internally by Genevieve Mak and Andrew Lo and Mike Fenton.
+
+        * Api/WebAnimation.cpp:
+        (BlackBerry::WebKit::WebAnimation::shrinkAnimation):
+        (WebKit):
+        * Api/WebAnimation.h:
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::init):
+        (BlackBerry::WebKit::WebPage::selectionHighlight):
+        (WebKit):
+        * Api/WebPage.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * Api/WebTapHighlight.h:
+        * WebKitSupport/DefaultTapHighlight.cpp:
+        (WebKit):
+        (BlackBerry::WebKit::shrinkAnimationName):
+        (BlackBerry::WebKit::DefaultTapHighlight::draw):
+        * WebKitSupport/DefaultTapHighlight.h:
+        (DefaultTapHighlight):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::cancelSelection):
+        (BlackBerry::WebKit::textGranularityFromSelectionExpansionType):
+        (WebKit):
+        (BlackBerry::WebKit::SelectionHandler::selectNodeIfFatFingersResultIsLink):
+        (BlackBerry::WebKit::SelectionHandler::selectAtPoint):
+        * WebKitSupport/SelectionHandler.h:
+        (SelectionHandler):
+        * WebKitSupport/TouchEventHandler.cpp:
+        (BlackBerry::WebKit::TouchEventHandler::handleTouchPoint):
+
+2013-03-02  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move computedStyleIncludingVisitedInfo from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109772
+
+        Reviewed by Andreas Kling.
+
+        * WebKitSupport/DumpRenderTreeSupport.cpp:
+        * WebKitSupport/DumpRenderTreeSupport.h:
+        (DumpRenderTreeSupport):
+
+2013-03-01  Iris Wu  <shuwu@rim.com>
+
+        [BlackBerry] Upstream smart selection
+        https://bugs.webkit.org/show_bug.cgi?id=111226
+
+        Reviewed by Rob Buis.
+
+        1.  Extend the touch hold text selection to next paragraph.
+        2.  Draw and expand overlay over text as touch hold selection expands.
+            Select paragraph when it's entirely covered by overlay.
+        3.  Start scrolling at a constant rate when the end of
+            next pargraph is not in the viewport.
+
+        Reviewed Internally By Genevieve Mak and Mike Fenton.
+        PR 217897 238485 258279 279042 299779
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::selectAtDocumentPoint):
+        (BlackBerry::WebKit::WebPage::expandSelection):
+        (WebKit):
+        (BlackBerry::WebKit::WebPage::setOverlayExpansionPixelHeight):
+        (BlackBerry::WebKit::WebPagePrivate::setOverlayExpansionPixelHeight):
+        (BlackBerry::WebKit::WebPage::setParagraphExpansionPixelScrollMargin):
+        * Api/WebPage.h:
+        * Api/WebPageClient.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::cancelSelection):
+        (BlackBerry::WebKit::SelectionHandler::selectAtPoint):
+        (BlackBerry::WebKit::isInvalidLine):
+        (WebKit):
+        (BlackBerry::WebKit::isInvalidParagraph):
+        (BlackBerry::WebKit::SelectionHandler::selectNextParagraph):
+        (BlackBerry::WebKit::SelectionHandler::drawOverlay):
+        (BlackBerry::WebKit::SelectionHandler::findNextOverlayRegion):
+        (BlackBerry::WebKit::SelectionHandler::expandSelection):
+        (BlackBerry::WebKit::SelectionHandler::ensureSelectedTextVisible):
+        (BlackBerry::WebKit::SelectionHandler::setParagraphExpansionScrollMargin):
+        (BlackBerry::WebKit::SelectionHandler::expandSelectionToGranularity):
+        * WebKitSupport/SelectionHandler.h:
+        (SelectionHandler):
+        (BlackBerry::WebKit::SelectionHandler::setOverlayExpansionHeight):
+
+2013-03-01  Jacky Jiang  <zhajiang@rim.com>
+
+        [BlackBerry] Screen went black while navigating back/forward on the reddit.com page
+        https://bugs.webkit.org/show_bug.cgi?id=111192
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Jakob Petsovits.
+
+        PR: 299783
+        When going back to the previous reddit.com page, the actual contents
+        size was much less than the history contents size. However, we expanded
+        the actual contents size to history contents size which caused a huge
+        black area below the actual contents.
+        To fix that, don't restore the contents size from history contents size
+        and scroll back to the valid contents area if we are about to overscroll.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::restoreHistoryViewState):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::restoreViewState):
+
+2013-03-01  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Improve input bounds clipping for search fields.
+        https://bugs.webkit.org/show_bug.cgi?id=111204
+
+        Reviewed by Rob Buis.
+
+        PR 292673.
+
+        Use the standardized InputHandler function to get the
+        bounds of an input field so that search fields are
+        truncated smaller to account for the X.
+
+        Reviewed Internally by Gen Mak.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::setCaretPosition):
+
+2013-03-01  Nima Ghanavatian  <nghanavatian@rim.com>
+
+        [BlackBerry] Reverse the base and extent of a selection when reversing its handles
+        https://bugs.webkit.org/show_bug.cgi?id=111098
+
+        Reviewed by Yong Li.
+
+        PR283969
+        Swap the base and extent if base does not come first, and set the new selection.
+
+        Internally reviewed by Mike Fenton
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::setSelection):
+
+2013-03-01  Alberto Garcia  <albgarcia@rim.com>
+
+        Fix definition of DatePickerClient::setValue()
+        https://bugs.webkit.org/show_bug.cgi?id=110336
+
+        Reviewed by Carlos Garcia Campos.
+
+        The definition of DatePickerClient::setValue() introduced in
+        r142987 does not match the prototype.
+
+        * WebCoreSupport/DatePickerClient.cpp:
+        (WebCore::DatePickerClient::setValue):
+
+2013-02-28  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Maintain the directionality of the selection after modifying the selection using key events.
+        https://bugs.webkit.org/show_bug.cgi?id=111078
+
+        Reviewed by Yong Li.
+
+        PR 295224.
+
+        When using the key navigation to modify the selection, reset the
+        directionality of the selection to the original to prevent
+        changing the anchor.
+
+        Reviewed Internally by Nima Ghanavatian.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::updateOrHandleInputSelection):
+
 2013-02-28  Lianghui Chen  <liachen@rim.com>
 
         [BlackBerry] Disable auto-filling password in forms when auto-form-filling is not enabled.

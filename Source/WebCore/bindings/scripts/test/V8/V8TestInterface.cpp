@@ -234,7 +234,7 @@ static v8::Handle<v8::Value> supplementalNodeAttrGetterCallback(v8::Local<v8::St
 static void supplementalNodeAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
 {
     TestInterface* imp = V8TestInterface::toNative(info.Holder());
-    Node* v = V8Node::HasInstance(value, info.GetIsolate()) ? V8Node::toNative(v8::Handle<v8::Object>::Cast(value)) : 0;
+    Node* v = V8Node::HasInstance(value, info.GetIsolate(), worldType(info.GetIsolate())) ? V8Node::toNative(v8::Handle<v8::Object>::Cast(value)) : 0;
     TestSupplemental::setSupplementalNode(imp, WTF::getPtr(v));
     return;
 }
@@ -280,7 +280,7 @@ static v8::Handle<v8::Value> supplementalMethod2Method(const v8::Arguments& args
     ExceptionCode ec = 0;
     {
     V8TRYCATCH_FOR_V8STRINGRESOURCE(V8StringResource<>, strArg, args[0]);
-    V8TRYCATCH(TestObj*, objArg, V8TestObj::HasInstance(args[1], args.GetIsolate()) ? V8TestObj::toNative(v8::Handle<v8::Object>::Cast(args[1])) : 0);
+    V8TRYCATCH(TestObj*, objArg, V8TestObj::HasInstance(args[1], args.GetIsolate(), worldType(args.GetIsolate())) ? V8TestObj::toNative(v8::Handle<v8::Object>::Cast(args[1])) : 0);
     ScriptExecutionContext* scriptContext = getScriptExecutionContext();
     RefPtr<TestObj> result = TestSupplemental::supplementalMethod2(scriptContext, imp, strArg, objArg, ec);
     if (UNLIKELY(ec))
@@ -392,10 +392,10 @@ static const V8DOMConfiguration::BatchedMethod V8TestInterfaceMethods[] = {
 
 static const V8DOMConfiguration::BatchedConstant V8TestInterfaceConsts[] = {
 #if ENABLE(Condition11) || ENABLE(Condition12)
-    {"SUPPLEMENTALCONSTANT1", static_cast<signed int>(1)},
+    {"SUPPLEMENTALCONSTANT1", 1},
 #endif
 #if ENABLE(Condition11) || ENABLE(Condition12)
-    {"SUPPLEMENTALCONSTANT2", static_cast<signed int>(2)},
+    {"SUPPLEMENTALCONSTANT2", 2},
 #endif
 };
 
@@ -418,7 +418,7 @@ v8::Handle<v8::Value> V8TestInterface::constructorCallback(const v8::Arguments& 
     return TestInterfaceV8Internal::constructor(args);
 }
 
-static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestInterfaceTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
+static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestInterfaceTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate, WrapperWorldType worldType)
 {
     desc->ReadOnlyPrototype();
 
@@ -438,7 +438,7 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestInterfaceTemplate(v8:
 
     // Custom Signature 'supplementalMethod2'
     const int supplementalMethod2Argc = 2;
-    v8::Handle<v8::FunctionTemplate> supplementalMethod2Argv[supplementalMethod2Argc] = { v8::Handle<v8::FunctionTemplate>(), V8TestObj::GetRawTemplate(isolate) };
+    v8::Handle<v8::FunctionTemplate> supplementalMethod2Argv[supplementalMethod2Argc] = { v8::Handle<v8::FunctionTemplate>(), V8PerIsolateData::from(isolate)->rawTemplate(&V8TestObj::info, worldType) };
     v8::Handle<v8::Signature> supplementalMethod2Signature = v8::Signature::New(desc, supplementalMethod2Argc, supplementalMethod2Argv);
 #if ENABLE(Condition11) || ENABLE(Condition12)
     proto->Set(v8::String::NewSymbol("supplementalMethod2"), v8::FunctionTemplate::New(TestInterfaceV8Internal::supplementalMethod2MethodCallback, v8Undefined(), supplementalMethod2Signature));
@@ -453,36 +453,23 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestInterfaceTemplate(v8:
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestInterface::GetRawTemplate(v8::Isolate* isolate)
+v8::Persistent<v8::FunctionTemplate> V8TestInterface::GetTemplate(v8::Isolate* isolate, WrapperWorldType worldType)
 {
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
-    if (result != data->rawTemplateMap().end())
-        return result->value;
-
-    v8::HandleScope handleScope;
-    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate(isolate);
-    data->rawTemplateMap().add(&info, templ);
-    return templ;
-}
-
-v8::Persistent<v8::FunctionTemplate> V8TestInterface::GetTemplate(v8::Isolate* isolate)
-{
-    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
-    if (result != data->templateMap().end())
+    V8PerIsolateData::TemplateMap::iterator result = data->templateMap(worldType).find(&info);
+    if (result != data->templateMap(worldType).end())
         return result->value;
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        ConfigureV8TestInterfaceTemplate(GetRawTemplate(isolate), isolate);
-    data->templateMap().add(&info, templ);
+        ConfigureV8TestInterfaceTemplate(data->rawTemplate(&info, worldType), isolate, worldType);
+    data->templateMap(worldType).add(&info, templ);
     return templ;
 }
 
-bool V8TestInterface::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate)
+bool V8TestInterface::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate, WrapperWorldType worldType)
 {
-    return GetRawTemplate(isolate)->HasInstance(value);
+    return V8PerIsolateData::from(isolate)->hasInstance(&info, value, worldType);
 }
 
 ActiveDOMObject* V8TestInterface::toActiveDOMObject(v8::Handle<v8::Object> object)

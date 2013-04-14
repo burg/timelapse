@@ -86,6 +86,7 @@
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
 #include "SecurityOrigin.h"
+#include "SecurityPolicy.h"
 #include "SerializedScriptValue.h"
 #include "Settings.h"
 #include "Storage.h"
@@ -884,7 +885,7 @@ void DOMWindow::dispatchMessageEventWithOriginCheck(SecurityOrigin* intendedTarg
         if (!intendedTargetOrigin->isSameSchemeHostPort(document()->securityOrigin())) {
             String message = "Unable to post message to " + intendedTargetOrigin->toString() +
                              ". Recipient has origin " + document()->securityOrigin()->toString() + ".\n";
-            console()->addMessage(JSMessageSource, ErrorMessageLevel, message, stackTrace);
+            console()->addMessage(SecurityMessageSource, ErrorMessageLevel, message, stackTrace);
             return;
         }
     }
@@ -920,7 +921,7 @@ void DOMWindow::focus(ScriptExecutionContext* context)
     bool allowFocus = WindowFocusAllowedIndicator::windowFocusAllowed() || !m_frame->settings()->windowFocusRestricted();
     if (context) {
         ASSERT(isMainThread());
-        Document* activeDocument = static_cast<Document*>(context);
+        Document* activeDocument = toDocument(context);
         if (opener() && activeDocument->domWindow() == opener())
             allowFocus = true;
     }
@@ -973,7 +974,7 @@ void DOMWindow::close(ScriptExecutionContext* context)
 
     if (context) {
         ASSERT(isMainThread());
-        Document* activeDocument = static_cast<Document*>(context);
+        Document* activeDocument = toDocument(context);
         if (!activeDocument)
             return;
 
@@ -1323,8 +1324,7 @@ DOMWindow* DOMWindow::top() const
 Document* DOMWindow::document() const
 {
     ScriptExecutionContext* context = ContextDestructionObserver::scriptExecutionContext();
-    ASSERT(!context || context->isDocument());
-    return static_cast<Document*>(context);
+    return toDocument(context);
 }
 
 PassRefPtr<StyleMedia> DOMWindow::styleMedia() const
@@ -1849,7 +1849,7 @@ String DOMWindow::crossDomainAccessErrorMessage(DOMWindow* activeWindow)
         return message + " The frame being accessed set 'document.domain' to '" + targetOrigin->domain() + "', but the frame requesting access did not. Both must set 'document.domain' to the same value to allow access.\n";
 
     // Default.
-    return message + " Domains, protocols and ports must match.\n";
+    return "Blocked a frame with origin \"" + activeOrigin->toString() + "\" from accessing a frame with origin \"" + targetOrigin->toString() + "\". Protocols, domains, and ports must match.";
 }
 
 bool DOMWindow::isInsecureScriptAccess(DOMWindow* activeWindow, const String& urlString)
@@ -1881,15 +1881,15 @@ Frame* DOMWindow::createWindow(const String& urlString, const AtomicString& fram
 {
     Frame* activeFrame = activeWindow->frame();
 
-    // For whatever reason, Firefox uses the first frame to determine the outgoingReferrer. We replicate that behavior here.
-    String referrer = firstFrame->loader()->outgoingReferrer();
-
     KURL completedURL = urlString.isEmpty() ? KURL(ParsedURLString, emptyString()) : firstFrame->document()->completeURL(urlString);
     if (!completedURL.isEmpty() && !completedURL.isValid()) {
         // Don't expose client code to invalid URLs.
         activeWindow->printErrorMessage("Unable to open a window with invalid URL '" + completedURL.string() + "'.\n");
         return 0;
     }
+
+    // For whatever reason, Firefox uses the first frame to determine the outgoingReferrer. We replicate that behavior here.
+    String referrer = SecurityPolicy::generateReferrerHeader(firstFrame->document()->referrerPolicy(), completedURL, firstFrame->loader()->outgoingReferrer());
 
     ResourceRequest request(completedURL, referrer);
     FrameLoader::addHTTPOriginIfNeeded(request, firstFrame->loader()->outgoingOrigin());

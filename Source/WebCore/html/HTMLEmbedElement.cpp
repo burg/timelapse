@@ -28,6 +28,7 @@
 #include "CSSPropertyNames.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "HTMLImageLoader.h"
 #include "HTMLNames.h"
@@ -209,9 +210,9 @@ bool HTMLEmbedElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == srcAttr || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
-const QualifiedName& HTMLEmbedElement::imageSourceAttributeName() const
+const AtomicString& HTMLEmbedElement::imageSourceURL() const
 {
-    return srcAttr;
+    return getAttribute(srcAttr);
 }
 
 void HTMLEmbedElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const

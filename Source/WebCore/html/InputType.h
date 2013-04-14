@@ -237,6 +237,7 @@ public:
 
     virtual bool rendererIsNeeded();
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) const;
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer(PassRefPtr<RenderStyle>);
     virtual void addSearchResult();
     virtual void attach();
     virtual void detach();
@@ -244,7 +245,6 @@ public:
     virtual void stepAttributeChanged();
     virtual void altAttributeChanged();
     virtual void srcAttributeChanged();
-    virtual void willMoveToNewOwnerDocument();
     virtual bool shouldRespectAlignAttribute();
     virtual FileList* files();
     virtual void setFiles(PassRefPtr<FileList>);
@@ -260,7 +260,6 @@ public:
     virtual bool canSetValue(const String&);
     virtual bool storesValueSeparateFromAttribute();
     virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior);
-    virtual bool shouldApplyLocaleDirection() const;
     virtual bool shouldResetOnDocumentActivation();
     virtual bool shouldRespectListAttribute();
     virtual bool shouldRespectSpeechAttribute();
@@ -275,11 +274,13 @@ public:
     virtual void multipleAttributeChanged();
     virtual void disabledAttributeChanged();
     virtual void readonlyAttributeChanged();
+    virtual void requiredAttributeChanged();
     virtual String defaultToolTip() const;
 #if ENABLE(DATALIST_ELEMENT)
     virtual void listAttributeTargetChanged();
     virtual Decimal findClosestTickMarkValue(const Decimal&);
 #endif
+    virtual void updateClearButtonVisibility();
 
     // Parses the specified string for the type, and return
     // the Decimal value for the parsing result if the parsing

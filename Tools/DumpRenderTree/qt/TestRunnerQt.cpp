@@ -34,12 +34,13 @@
 #include "NotificationPresenterClientQt.h"
 #include "WorkQueue.h"
 #include "WorkQueueItemQt.h"
+#include <JSStringRefQt.h>
 #include <QCoreApplication>
 #include <QDir>
 #include <QLocale>
 #include <qwebsettings.h>
 
-TestRunnerQt::TestRunnerQt(WebCore::DumpRenderTree* drt)
+TestRunnerQt::TestRunnerQt(DumpRenderTree* drt)
     : QObject()
     , m_drt(drt)
     , m_shouldTimeout(true)
@@ -48,19 +49,19 @@ TestRunnerQt::TestRunnerQt(WebCore::DumpRenderTree* drt)
     reset();
 }
 
+TestRunner::~TestRunner()
+{
+}
+
 void TestRunnerQt::reset()
 {
     m_hasDumped = false;
     m_loadFinished = false;
-    m_textDump = false;
     m_audioDump = false;
-    m_shouldDumpPixels = true;
-    m_dumpBackForwardList = false;
     m_dumpChildrenAsText = false;
     m_dumpChildFrameScrollPositions = false;
     m_canOpenWindows = false;
     m_waitForDone = false;
-    m_disallowIncreaseForApplicationCacheQuota = false;
     m_dumpTitleChanges = false;
     m_dumpDatabaseCallbacks = false;
     m_dumpApplicationCacheDelegateCallbacks = false;
@@ -149,12 +150,6 @@ void TestRunnerQt::maybeDump(bool /*success*/)
         emit done();
         m_hasDumped = true;
     }
-}
-
-void TestRunnerQt::dumpAsText(bool shouldDumpPixels)
-{
-    m_textDump = true;
-    m_shouldDumpPixels = shouldDumpPixels;
 }
 
 void TestRunnerQt::waitUntilDone()
@@ -720,16 +715,6 @@ void TestRunnerQt::setScrollbarPolicy(const QString& orientation, const QString&
     m_drt->webPage()->mainFrame()->setScrollBarPolicy(o, p);
 }
 
-void TestRunnerQt::setSmartInsertDeleteEnabled(bool enable)
-{
-    DumpRenderTreeSupportQt::setSmartInsertDeleteEnabled(m_drt->pageAdapter(), enable);
-}
-
-void TestRunnerQt::setSelectTrailingWhitespaceEnabled(bool enable)
-{
-    DumpRenderTreeSupportQt::setSelectTrailingWhitespaceEnabled(m_drt->pageAdapter(), enable);
-}
-
 void TestRunnerQt::execCommand(const QString& name, const QString& value)
 {
     DumpRenderTreeSupportQt::executeCoreCommandByName(m_drt->pageAdapter(), name, value);
@@ -740,24 +725,38 @@ bool TestRunnerQt::isCommandEnabled(const QString& name) const
     return DumpRenderTreeSupportQt::isCommandEnabled(m_drt->pageAdapter(), name);
 }
 
-bool TestRunnerQt::findString(const QString& string, const QStringList& optionArray)
+bool TestRunner::findString(JSContextRef context, JSStringRef string, JSObjectRef optionsArray)
 {
-    return DumpRenderTreeSupportQt::findString(m_drt->pageAdapter(), string, optionArray);
-}
+    JSRetainPtr<JSStringRef> lengthPropertyName(Adopt, JSStringCreateWithUTF8CString("length"));
+    JSValueRef lengthValue = JSObjectGetProperty(context, optionsArray, lengthPropertyName.get(), 0);
+    if (!JSValueIsNumber(context, lengthValue))
+        return false;
 
-QString TestRunnerQt::markerTextForListItem(const QWebElement& listItem)
-{
-    return DumpRenderTreeSupportQt::markerTextForListItem(listItem);
-}
+    QWebPage::FindFlags findFlags = QWebPage::FindCaseSensitively;
 
-QVariantMap TestRunnerQt::computedStyleIncludingVisitedInfo(const QWebElement& element) const
-{
-    return DumpRenderTreeSupportQt::computedStyleIncludingVisitedInfo(element);
-}
+    int length = static_cast<int>(JSValueToNumber(context, lengthValue, 0));
+    for (int i = 0; i < length; ++i) {
+        JSValueRef value = JSObjectGetPropertyAtIndex(context, optionsArray, i, 0);
+        if (!JSValueIsString(context, value))
+            continue;
 
-bool TestRunnerQt::elementDoesAutoCompleteForElementWithId(const QString& elementId)
-{
-    return DumpRenderTreeSupportQt::elementDoesAutoCompleteForElementWithId(m_drt->mainFrameAdapter(), elementId);
+        JSRetainPtr<JSStringRef> optionName(Adopt, JSValueToStringCopy(context, value, 0));
+        if (JSStringIsEqualToUTF8CString(optionName.get(), "CaseInsensitive"))
+            findFlags &= ~QWebPage::FindCaseSensitively;
+        else if (JSStringIsEqualToUTF8CString(optionName.get(), "AtWordStarts"))
+            findFlags |= QWebPage::FindAtWordBeginningsOnly;
+        else if (JSStringIsEqualToUTF8CString(optionName.get(), "TreatMedialCapitalAsWordStart"))
+            findFlags |=  QWebPage::TreatMedialCapitalAsWordBeginning;
+        else if (JSStringIsEqualToUTF8CString(optionName.get(), "Backwards"))
+            findFlags |=  QWebPage::FindBackward;
+        else if (JSStringIsEqualToUTF8CString(optionName.get(), "WrapAround"))
+            findFlags |=  QWebPage::FindWrapsAroundDocument;
+        else if (JSStringIsEqualToUTF8CString(optionName.get(), "StartInSelection"))
+            findFlags |=  QWebPage::FindBeginsInSelection;
+    }
+
+    DumpRenderTree* drt = DumpRenderTree::instance();
+    return drt->webPage()->findText(JSStringCopyQString(string), findFlags);
 }
 
 void TestRunnerQt::authenticateSession(const QString&, const QString&, const QString&)
@@ -775,24 +774,24 @@ void TestRunnerQt::setIconDatabaseEnabled(bool enable)
 
 void TestRunnerQt::setMockDeviceOrientation(bool canProvideAlpha, double alpha, bool canProvideBeta, double beta, bool canProvideGamma, double gamma)
 {
-    QList<WebCore::WebPage*> pages = m_drt->getAllPages();
-    foreach (WebCore::WebPage* page, pages)
+    QList<WebPage*> pages = m_drt->getAllPages();
+    foreach (WebPage* page, pages)
         DumpRenderTreeSupportQt::setMockDeviceOrientation(page->handle(), canProvideAlpha, alpha, canProvideBeta, beta, canProvideGamma, gamma);
 }
 
 void TestRunnerQt::setGeolocationPermission(bool allow)
 {
     setGeolocationPermissionCommon(allow);
-    QList<WebCore::WebPage*> pages = m_drt->getAllPages();
-    foreach (WebCore::WebPage* page, pages)
+    QList<WebPage*> pages = m_drt->getAllPages();
+    foreach (WebPage* page, pages)
         DumpRenderTreeSupportQt::setMockGeolocationPermission(page->handle(), allow);
 }
 
 int TestRunnerQt::numberOfPendingGeolocationPermissionRequests()
 {
     int pendingPermissionCount = 0;
-    QList<WebCore::WebPage*> pages = m_drt->getAllPages();
-    foreach (WebCore::WebPage* page, pages)
+    QList<WebPage*> pages = m_drt->getAllPages();
+    foreach (WebPage* page, pages)
         pendingPermissionCount += DumpRenderTreeSupportQt::numberOfPendingGeolocationPermissionRequests(page->handle());
 
     return pendingPermissionCount;
@@ -806,15 +805,15 @@ void TestRunnerQt::setGeolocationPermissionCommon(bool allow)
 
 void TestRunnerQt::setMockGeolocationPositionUnavailableError(const QString& message)
 {
-    QList<WebCore::WebPage*> pages = m_drt->getAllPages();
-    foreach (WebCore::WebPage* page, pages)
+    QList<WebPage*> pages = m_drt->getAllPages();
+    foreach (WebPage* page, pages)
         DumpRenderTreeSupportQt::setMockGeolocationPositionUnavailableError(page->handle(), message);
 }
 
 void TestRunnerQt::setMockGeolocationPosition(double latitude, double longitude, double accuracy)
 {
-    QList<WebCore::WebPage*> pages = m_drt->getAllPages();
-    foreach (WebCore::WebPage* page, pages)
+    QList<WebPage*> pages = m_drt->getAllPages();
+    foreach (WebPage* page, pages)
         DumpRenderTreeSupportQt::setMockGeolocationPosition(page->handle(), latitude, longitude, accuracy);
 }
 
@@ -941,3 +940,414 @@ void TestRunnerQt::setAudioData(const QByteArray& audioData)
 
 const unsigned TestRunnerQt::maxViewWidth = 800;
 const unsigned TestRunnerQt::maxViewHeight = 600;
+
+// --- JSC C API stubs
+
+void TestRunner::addDisallowedURL(JSStringRef url)
+{
+}
+
+void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
+{
+}
+
+void TestRunner::removeAllVisitedLinks()
+{
+}
+
+void TestRunner::setAcceptsEditing(bool)
+{
+}
+
+void TestRunner::simulateLegacyWebNotificationClick(JSStringRef title)
+{
+}
+
+void TestRunner::setWindowIsKey(bool)
+{
+}
+
+void TestRunner::setAlwaysAcceptCookies(bool)
+{
+}
+
+void TestRunner::addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+{
+}
+
+void TestRunner::setWebViewEditable(bool)
+{
+}
+
+void TestRunner::clearAllApplicationCaches()
+{
+}
+
+void TestRunner::setTextDirection(JSStringRef)
+{
+}
+
+void TestRunner::notifyDone()
+{
+}
+
+int TestRunner::numberOfPendingGeolocationPermissionRequests()
+{
+    return 0;
+}
+
+void TestRunner::overridePreference(JSStringRef key, JSStringRef value)
+{
+}
+
+JSStringRef TestRunner::pathToLocalResource(JSContextRef, JSStringRef url)
+{
+    return JSStringCreateWithUTF8CString(0); // ### Take impl from WTR
+}
+
+void TestRunner::removeAllWebNotificationPermissions()
+{
+}
+
+void TestRunner::simulateWebNotificationClick(JSValueRef notification)
+{
+}
+
+void TestRunner::closeIdleLocalStorageDatabases()
+{
+}
+
+void TestRunner::focusWebView()
+{
+}
+
+void TestRunner::setBackingScaleFactor(double)
+{
+}
+
+void TestRunner::removeChromeInputField()
+{
+}
+
+void TestRunner::addChromeInputField()
+{
+}
+
+JSValueRef TestRunner::originsWithLocalStorage(JSContextRef context)
+{
+    return JSValueMakeNull(context);
+}
+
+void TestRunner::deleteAllLocalStorage()
+{
+}
+
+void TestRunner::deleteLocalStorageForOrigin(JSStringRef originIdentifier)
+{
+}
+
+void TestRunner::observeStorageTrackerNotifications(unsigned number)
+{
+}
+
+void TestRunner::syncLocalStorage()
+{
+}
+
+int TestRunner::windowCount()
+{
+    return 0;
+}
+
+void TestRunner::setWaitToDump(bool)
+{
+}
+
+void TestRunner::waitForPolicyDelegate()
+{
+}
+
+size_t TestRunner::webHistoryItemCount()
+{
+    return 0;
+}
+
+void TestRunner::showWebInspector()
+{
+}
+
+void TestRunner::closeWebInspector()
+{
+}
+
+void TestRunner::evaluateInWebInspector(long callId, JSStringRef script)
+{
+}
+
+void TestRunner::setSerializeHTTPLoads(bool)
+{
+}
+
+void TestRunner::apiTestNewWindowDataLoadBaseURL(JSStringRef utf8Data, JSStringRef baseURL)
+{
+}
+
+void TestRunner::setCustomPolicyDelegate(bool setDelegate, bool permissive)
+{
+}
+
+void TestRunner::setDatabaseQuota(unsigned long long quota)
+{
+}
+
+void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool forbidden, JSStringRef scheme)
+{
+}
+
+void TestRunner::resetPageVisibility()
+{
+}
+
+void TestRunner::keepWebHistory()
+{
+}
+
+void TestRunner::goBack()
+{
+}
+
+JSValueRef TestRunner::originsWithApplicationCache(JSContextRef context)
+{
+    return JSValueMakeNull(context);
+}
+
+long long TestRunner::applicationCacheDiskUsageForOrigin(JSStringRef name)
+{
+    return 0;
+}
+
+void TestRunner::display()
+{
+}
+
+void TestRunner::dispatchPendingLoadRequests()
+{
+}
+
+void TestRunner::clearPersistentUserStyleSheet()
+{
+}
+
+bool TestRunner::callShouldCloseOnWebView()
+{
+    return false;
+}
+
+JSStringRef TestRunner::copyDecodedHostName(JSStringRef name)
+{
+    return JSStringCreateWithUTF8CString(0);
+}
+
+void TestRunner::clearBackForwardList()
+{
+}
+
+void TestRunner::clearAllDatabases()
+{
+}
+
+void TestRunner::clearApplicationCacheForOrigin(JSStringRef name)
+{
+}
+
+void TestRunner::apiTestGoToCurrentBackForwardItem()
+{
+}
+
+void TestRunner::authenticateSession(JSStringRef url, JSStringRef username, JSStringRef password)
+{
+}
+
+void TestRunner::abortModal()
+{
+}
+
+void TestRunner::setStorageDatabaseIdleInterval(double)
+{
+}
+
+void TestRunner::setAsynchronousSpellCheckingEnabled(bool)
+{
+}
+
+void TestRunner::setXSSAuditorEnabled(bool flag)
+{
+}
+
+void TestRunner::setSpatialNavigationEnabled(bool)
+{
+}
+
+void TestRunner::setScrollbarPolicy(JSStringRef orientation, JSStringRef policy)
+{
+}
+
+void TestRunner::setJavaScriptCanAccessClipboard(bool flag)
+{
+}
+
+void TestRunner::setAutomaticLinkDetectionEnabled(bool flag)
+{
+}
+
+void TestRunner::setUserStyleSheetEnabled(bool flag)
+{
+}
+
+void TestRunner::setUserStyleSheetLocation(JSStringRef path)
+{
+}
+
+void TestRunner::setUseDashboardCompatibilityMode(bool flag)
+{
+}
+
+void TestRunner::setTabKeyCyclesThroughElements(bool)
+{
+}
+
+void TestRunner::setPrivateBrowsingEnabled(bool)
+{
+}
+
+void TestRunner::setPluginsEnabled(bool)
+{
+}
+
+void TestRunner::setPopupBlockingEnabled(bool)
+{
+}
+
+void TestRunner::setMockSpeechInputDumpRect(bool flag)
+{
+}
+
+void TestRunner::setPersistentUserStyleSheetLocation(JSStringRef path)
+{
+}
+
+void TestRunner::setMockGeolocationPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed)
+{
+}
+
+void TestRunner::setMockGeolocationPositionUnavailableError(JSStringRef message)
+{
+}
+
+void TestRunner::setMockDeviceOrientation(bool canProvideAlpha, double alpha, bool canProvideBeta, double beta, bool canProvideGamma, double gamma)
+{
+}
+
+void TestRunner::setMainFrameIsFirstResponder(bool flag)
+{
+}
+
+void TestRunner::setIconDatabaseEnabled(bool)
+{
+}
+
+void TestRunner::setGeolocationPermission(bool allow)
+{
+}
+
+void TestRunner::setDefersLoading(bool)
+{
+}
+
+void TestRunner::setCacheModel(int)
+{
+}
+
+void TestRunner::setAuthorAndUserStylesEnabled(bool)
+{
+}
+
+void TestRunner::setAllowFileAccessFromFileURLs(bool)
+{
+}
+
+void TestRunner::setAppCacheMaximumSize(unsigned long long quota)
+{
+}
+
+void TestRunner::setAllowUniversalAccessFromFileURLs(bool)
+{
+}
+
+void TestRunner::setApplicationCacheOriginQuota(unsigned long long)
+{
+}
+
+void TestRunner::denyWebNotificationPermission(JSStringRef origin)
+{
+}
+
+void TestRunner::grantWebNotificationPermission(JSStringRef origin)
+{
+}
+
+void TestRunner::setValueForUser(JSContextRef, JSValueRef nodeObject, JSStringRef value)
+{
+}
+
+void TestRunner::setViewModeMediaFeature(JSStringRef)
+{
+}
+
+void TestRunner::setPageVisibility(const char *)
+{
+}
+
+void TestRunner::addMockSpeechInputResult(JSStringRef result, double confidence, JSStringRef language)
+{
+}
+
+void TestRunner::removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains)
+{
+}
+
+void TestRunner::addUserScript(JSStringRef source, bool runAtStart, bool allFrames)
+{
+}
+
+bool TestRunner::isCommandEnabled(JSStringRef name)
+{
+    return false;
+}
+
+void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef globalObject, JSStringRef script)
+{
+}
+
+void TestRunner::evaluateScriptInIsolatedWorldAndReturnValue(unsigned worldID, JSObjectRef globalObject, JSStringRef script)
+{
+}
+
+JSStringRef TestRunner::copyEncodedHostName(JSStringRef name)
+{
+    return JSStringCreateWithUTF8CString(0);
+}
+
+void TestRunner::addUserStyleSheet(JSStringRef source, bool allFrames)
+{
+}
+
+void TestRunner::execCommand(JSStringRef name, JSStringRef value)
+{
+}
+
+long long TestRunner::localStorageDiskUsageForOrigin(JSStringRef originIdentifier)
+{
+    return 0;
+}
+

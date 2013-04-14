@@ -51,6 +51,11 @@
 #include "TextEncoding.h"
 #include "TextResourceDecoder.h"
 #include "XLinkNames.h"
+#include "XSSAuditorDelegate.h"
+
+#if ENABLE(SVG)
+#include "SVGNames.h"
+#endif
 
 #include <wtf/Functional.h>
 #include <wtf/MainThread.h>
@@ -84,7 +89,7 @@ static bool isRequiredForInjection(UChar c)
 
 static bool isTerminatingCharacter(UChar c)
 {
-    return (c == '&' || c == '/' || c == '"' || c == '\'' || c == '<');
+    return (c == '&' || c == '/' || c == '"' || c == '\'' || c == '<' || c == '>');
 }
 
 static bool isHTMLQuote(UChar c)
@@ -113,17 +118,22 @@ static bool startsMultiLineCommentAt(const String& string, size_t start)
     return (start + 1 < string.length() && string[start] == '/' && string[start+1] == '*');
 }
 
+// If other files need this, we should move this to HTMLParserIdioms.h
+template<size_t inlineCapacity>
+bool threadSafeMatch(const Vector<UChar, inlineCapacity>& vector, const QualifiedName& qname)
+{
+    return equalIgnoringNullity(vector, qname.localName().impl());
+}
+
 static bool hasName(const HTMLToken& token, const QualifiedName& name)
 {
-    return equalIgnoringNullity(token.name(), static_cast<const String&>(name.localName()));
+    return threadSafeMatch(token.name(), name);
 }
 
 static bool findAttributeWithName(const HTMLToken& token, const QualifiedName& name, size_t& indexOfMatchingAttribute)
 {
-    String attrName = name.localName().string();
-
-    if (name.namespaceURI() == XLinkNames::xlinkNamespaceURI)
-        attrName = "xlink:" + attrName;
+    // Notice that we're careful not to ref the StringImpl here because we might be on a background thread.
+    const String& attrName = name.namespaceURI() == XLinkNames::xlinkNamespaceURI ? "xlink:" + name.localName().string() : name.localName().string();
 
     for (size_t i = 0; i < token.attributes().size(); ++i) {
         if (equalIgnoringNullity(token.attributes().at(i).name, attrName)) {
@@ -184,9 +194,31 @@ static ContentSecurityPolicy::ReflectedXSSDisposition combineXSSProtectionHeader
     return result;
 }
 
+static bool isSemicolonSeparatedAttribute(const HTMLToken::Attribute& attribute)
+{
+#if ENABLE(SVG)
+    return threadSafeMatch(attribute.name, SVGNames::valuesAttr);
+#else
+    return false;
+#endif
+}
+
+static bool semicolonSeparatedValueContainsJavaScriptURL(const String& value)
+{
+    Vector<String> valueList;
+    value.split(';', valueList);
+    for (size_t i = 0; i < valueList.size(); ++i) {
+        if (protocolIsJavaScript(valueList[i]))
+            return true;
+    }
+    return false;
+}
+
 XSSAuditor::XSSAuditor()
     : m_isEnabled(false)
     , m_xssProtection(ContentSecurityPolicy::FilterReflectedXSS)
+    , m_didSendValidCSPHeader(false)
+    , m_didSendValidXSSProtectionHeader(false)
     , m_state(Uninitialized)
     , m_scriptTagNestingLevel(0)
     , m_encoding(UTF8Encoding())
@@ -195,7 +227,7 @@ XSSAuditor::XSSAuditor()
     // we want to reference might not all have been constructed yet.
 }
 
-void XSSAuditor::init(Document* document)
+void XSSAuditor::init(Document* document, XSSAuditorDelegate* auditorDelegate)
 {
     const size_t miniumLengthForSuffixTree = 512; // FIXME: Tune this parameter.
     const int suffixTreeDepth = 5;
@@ -251,6 +283,7 @@ void XSSAuditor::init(Document* document)
 
         // Process the X-XSS-Protection header, then mix in the CSP header's value.
         ContentSecurityPolicy::ReflectedXSSDisposition xssProtectionHeader = parseXSSProtectionHeader(headerValue, errorDetails, errorPosition, reportURL);
+        m_didSendValidXSSProtectionHeader = xssProtectionHeader != ContentSecurityPolicy::ReflectedXSSUnset && xssProtectionHeader != ContentSecurityPolicy::ReflectedXSSInvalid;
         if ((xssProtectionHeader == ContentSecurityPolicy::FilterReflectedXSS || xssProtectionHeader == ContentSecurityPolicy::BlockReflectedXSS) && !reportURL.isEmpty()) {
             xssProtectionReportURL = document->completeURL(reportURL);
             if (MixedContentChecker::isMixedContent(document->securityOrigin(), xssProtectionReportURL)) {
@@ -260,11 +293,15 @@ void XSSAuditor::init(Document* document)
             }
         }
         if (xssProtectionHeader == ContentSecurityPolicy::ReflectedXSSInvalid)
-            document->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Error parsing header X-XSS-Protection: " + headerValue + ": "  + errorDetails + " at character position " + String::format("%u", errorPosition) + ". The default protections will be applied.");
+            document->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, "Error parsing header X-XSS-Protection: " + headerValue + ": "  + errorDetails + " at character position " + String::format("%u", errorPosition) + ". The default protections will be applied.");
 
-        m_xssProtection = combineXSSProtectionHeaderAndCSP(xssProtectionHeader, document->contentSecurityPolicy()->reflectedXSSDisposition());
-        m_reportURL = xssProtectionReportURL; // FIXME: Combine the two report URLs in some reasonable way.
+        ContentSecurityPolicy::ReflectedXSSDisposition cspHeader = document->contentSecurityPolicy()->reflectedXSSDisposition();
+        m_didSendValidCSPHeader = cspHeader != ContentSecurityPolicy::ReflectedXSSUnset && cspHeader != ContentSecurityPolicy::ReflectedXSSInvalid;
 
+        m_xssProtection = combineXSSProtectionHeaderAndCSP(xssProtectionHeader, cspHeader);
+        // FIXME: Combine the two report URLs in some reasonable way.
+        if (auditorDelegate)
+            auditorDelegate->setReportURL(xssProtectionReportURL.copy());
         FormData* httpBody = documentLoader->originalRequest().httpBody();
         if (httpBody && !httpBody->isEmpty()) {
             httpBodyAsString = httpBody->flattenToString();
@@ -281,12 +318,6 @@ void XSSAuditor::init(Document* document)
     if (m_decodedURL.isEmpty() && m_decodedHTTPBody.isEmpty()) {
         m_isEnabled = false;
         return;
-    }
-
-    if (!m_reportURL.isEmpty()) {
-        // May need these for reporting later on.
-        m_originalURL = m_documentURL.string().isolatedCopy();
-        m_originalHTTPBody = httpBodyAsString;
     }
 }
 
@@ -308,12 +339,7 @@ PassOwnPtr<XSSInfo> XSSAuditor::filterToken(const FilterTokenRequest& request)
 
     if (didBlockScript) {
         bool didBlockEntirePage = (m_xssProtection == ContentSecurityPolicy::BlockReflectedXSS);
-        OwnPtr<XSSInfo> xssInfo = XSSInfo::create(m_reportURL, m_originalURL, m_originalHTTPBody, didBlockEntirePage);
-        if (!m_reportURL.isEmpty()) {
-            m_reportURL = KURL();
-            m_originalURL = String();
-            m_originalHTTPBody = String();
-        }
+        OwnPtr<XSSInfo> xssInfo = XSSInfo::create(didBlockEntirePage, m_didSendValidXSSProtectionHeader, m_didSendValidCSPHeader);
         return xssInfo.release();
     }
     return nullptr;
@@ -505,7 +531,9 @@ bool XSSAuditor::eraseDangerousAttributesIfInjected(const FilterTokenRequest& re
     for (size_t i = 0; i < request.token.attributes().size(); ++i) {
         const HTMLToken::Attribute& attribute = request.token.attributes().at(i);
         bool isInlineEventHandler = isNameOfInlineEventHandler(attribute.name);
-        bool valueContainsJavaScriptURL = !isInlineEventHandler && protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(String(attribute.value)));
+        // FIXME: It would be better if we didn't create a new String for every attribute in the document.
+        String strippedValue = stripLeadingAndTrailingHTMLSpaces(String(attribute.value));
+        bool valueContainsJavaScriptURL = (!isInlineEventHandler && protocolIsJavaScript(strippedValue)) || (isSemicolonSeparatedAttribute(attribute) && semicolonSeparatedValueContainsJavaScriptURL(strippedValue));
         if (!isInlineEventHandler && !valueContainsJavaScriptURL)
             continue;
         if (!isContainedInRequest(decodedSnippetForAttribute(request, attribute, ScriptLikeAttribute)))
@@ -700,12 +728,9 @@ bool XSSAuditor::isLikelySafeResource(const String& url)
 bool XSSAuditor::isSafeToSendToAnotherThread() const
 {
     return m_documentURL.isSafeToSendToAnotherThread()
-        && m_originalURL.isSafeToSendToAnotherThread()
-        && m_originalHTTPBody.isSafeToSendToAnotherThread()
         && m_decodedURL.isSafeToSendToAnotherThread()
         && m_decodedHTTPBody.isSafeToSendToAnotherThread()
-        && m_cachedDecodedSnippet.isSafeToSendToAnotherThread()
-        && m_reportURL.isSafeToSendToAnotherThread();
+        && m_cachedDecodedSnippet.isSafeToSendToAnotherThread();
 }
 
 } // namespace WebCore

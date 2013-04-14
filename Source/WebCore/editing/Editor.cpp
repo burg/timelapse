@@ -34,6 +34,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CachedResourceLoader.h"
+#include "Clipboard.h"
 #include "ClipboardEvent.h"
 #include "CompositionEvent.h"
 #include "CreateLinkCommand.h"
@@ -90,9 +91,9 @@
 #include "TextIterator.h"
 #include "TypingCommand.h"
 #include "UserTypingGestureIndicator.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
 #include "markup.h"
-#include "visible_units.h"
 #include <wtf/UnusedParam.h>
 #include <wtf/unicode/CharacterNames.h>
 #include <wtf/unicode/Unicode.h>
@@ -2720,7 +2721,7 @@ void Editor::applyEditingStyleToBodyElement() const
     RefPtr<NodeList> list = m_frame->document()->getElementsByTagName("body");
     unsigned len = list->length();
     for (unsigned i = 0; i < len; i++)
-        applyEditingStyleToElement(static_cast<Element*>(list->item(i)));
+        applyEditingStyleToElement(toElement(list->item(i)));
 }
 
 void Editor::applyEditingStyleToElement(Element* element) const

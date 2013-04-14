@@ -33,16 +33,15 @@ namespace WebCore {
 
 class V8TestNamedConstructorConstructor {
 public:
-    static v8::Persistent<v8::FunctionTemplate> GetTemplate(v8::Isolate*);
+    static v8::Persistent<v8::FunctionTemplate> GetTemplate(v8::Isolate*, WrapperWorldType);
     static WrapperTypeInfo info;
 };
 
 class V8TestNamedConstructor {
 public:
     static const bool hasDependentLifetime = true;
-    static bool HasInstance(v8::Handle<v8::Value>, v8::Isolate*);
-    static v8::Persistent<v8::FunctionTemplate> GetRawTemplate(v8::Isolate*);
-    static v8::Persistent<v8::FunctionTemplate> GetTemplate(v8::Isolate*);
+    static bool HasInstance(v8::Handle<v8::Value>, v8::Isolate*, WrapperWorldType);
+    static v8::Persistent<v8::FunctionTemplate> GetTemplate(v8::Isolate*, WrapperWorldType);
     static TestNamedConstructor* toNative(v8::Handle<v8::Object> object)
     {
         return reinterpret_cast<TestNamedConstructor*>(object->GetAlignedPointerFromInternalField(v8DOMWrapperObjectIndex));

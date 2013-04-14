@@ -189,6 +189,10 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     WebKit::initializeLogChannelsIfNecessary();
 #endif // !LOG_DISABLED
 
+#if ENABLE(NETSCAPE_PLUGIN_API)
+    m_pluginInfoStore.setClient(this);
+#endif
+
 #ifndef NDEBUG
     webContextCounter.increment();
 #endif
@@ -237,7 +241,11 @@ WebContext::~WebContext()
     invalidateCallbackMap(m_dictionaryCallbacks);
 
     platformInvalidateContext();
-    
+
+#if ENABLE(NETSCAPE_PLUGIN_API)
+    m_pluginInfoStore.setClient(0);
+#endif
+
 #ifndef NDEBUG
     webContextCounter.decrement();
 #endif
@@ -1184,6 +1192,37 @@ void WebContext::registerSchemeForCustomProtocol(const String& scheme)
 void WebContext::unregisterSchemeForCustomProtocol(const String& scheme)
 {
     sendToNetworkingProcess(Messages::CustomProtocolManager::UnregisterScheme(scheme));
+}
+#endif
+
+#if ENABLE(NETSCAPE_PLUGIN_API)
+void WebContext::pluginInfoStoreDidLoadPlugins(PluginInfoStore* store)
+{
+    ASSERT(store == &m_pluginInfoStore);
+
+    Vector<RefPtr<APIObject> > pluginArray;
+
+    Vector<PluginModuleInfo> plugins = m_pluginInfoStore.plugins();
+    for (size_t i = 0; i < plugins.size(); ++i) {
+        PluginModuleInfo& plugin = plugins[i];
+        ImmutableDictionary::MapType map;
+        map.set(ASCIILiteral("path"), WebString::create(plugin.path));
+        map.set(ASCIILiteral("name"), WebString::create(plugin.info.name));
+        map.set(ASCIILiteral("file"), WebString::create(plugin.info.file));
+        map.set(ASCIILiteral("desc"), WebString::create(plugin.info.desc));
+        Vector<RefPtr<APIObject> > mimeArray;
+        for (size_t j = 0; j <  plugin.info.mimes.size(); ++j)
+            mimeArray.append(WebString::create(plugin.info.mimes[j].type));
+        map.set(ASCIILiteral("mimes"), ImmutableArray::adopt(mimeArray));
+#if PLATFORM(MAC)
+        map.set(ASCIILiteral("bundleId"), WebString::create(plugin.bundleIdentifier));
+        map.set(ASCIILiteral("version"), WebString::create(plugin.versionString));
+#endif
+
+        pluginArray.append(ImmutableDictionary::adopt(map));
+    }
+
+    m_client.plugInInformationBecameAvailable(this, ImmutableArray::adopt(pluginArray).leakRef());
 }
 #endif
 

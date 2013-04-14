@@ -61,11 +61,11 @@
 #include "TextCheckerClient.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
+#include "VisibleUnits.h"
 #include "WebPageClient.h"
 #include "WebPage_p.h"
 #include "WebSettings.h"
 #include "htmlediting.h"
-#include "visible_units.h"
 
 #include <BlackBerryPlatformDeviceInfo.h>
 #include <BlackBerryPlatformIMF.h>
@@ -431,7 +431,7 @@ void InputHandler::focusedNodeChanged()
     }
 
     if (node && node->isElementNode()) {
-        Element* element = static_cast<Element*>(node);
+        Element* element = toElement(node);
         if (DOMSupport::isElementTypePlugin(element)) {
             setPluginFocused(element);
             return;
@@ -1861,7 +1861,7 @@ bool InputHandler::willOpenPopupForNode(Node* node)
     }
 
     if (node->isElementNode()) {
-        Element* element = static_cast<Element*>(node);
+        Element* element = toElement(node);
         if (DOMSupport::isPopupInputField(element))
             return true;
     }

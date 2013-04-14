@@ -190,7 +190,9 @@ static const CSSPropertyID computedProperties[] = {
 #if ENABLE(CSS3_TEXT)
     CSSPropertyWebkitTextDecorationLine,
     CSSPropertyWebkitTextDecorationStyle,
+    CSSPropertyWebkitTextDecorationColor,
     CSSPropertyWebkitTextAlignLast,
+    CSSPropertyWebkitTextUnderlinePosition,
 #endif // CSS3_TEXT
     CSSPropertyTextIndent,
     CSSPropertyTextRendering,
@@ -198,6 +200,10 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyTextOverflow,
     CSSPropertyTextTransform,
     CSSPropertyTop,
+    CSSPropertyTransitionDelay,
+    CSSPropertyTransitionDuration,
+    CSSPropertyTransitionProperty,
+    CSSPropertyTransitionTimingFunction,
     CSSPropertyUnicodeBidi,
     CSSPropertyVerticalAlign,
     CSSPropertyVisibility,
@@ -259,6 +265,9 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitColumnRuleWidth,
     CSSPropertyWebkitColumnSpan,
     CSSPropertyWebkitColumnWidth,
+#if ENABLE(CURSOR_VISIBILITY)
+    CSSPropertyWebkitCursorVisibility,
+#endif
 #if ENABLE(DASHBOARD_SUPPORT)
     CSSPropertyWebkitDashboardRegion,
 #endif
@@ -280,8 +289,10 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitGridAutoFlow,
     CSSPropertyWebkitGridColumns,
     CSSPropertyWebkitGridRows,
-    CSSPropertyWebkitGridColumn,
-    CSSPropertyWebkitGridRow,
+    CSSPropertyWebkitGridStart,
+    CSSPropertyWebkitGridEnd,
+    CSSPropertyWebkitGridBefore,
+    CSSPropertyWebkitGridAfter,
     CSSPropertyWebkitHighlight,
     CSSPropertyWebkitHyphenateCharacter,
     CSSPropertyWebkitHyphenateLimitAfter,
@@ -1839,6 +1850,10 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             }
             return value.release();
         }
+#if ENABLE(CURSOR_VISIBILITY)
+        case CSSPropertyWebkitCursorVisibility:
+            return cssValuePool().createValue(style->cursorVisibility());
+#endif
         case CSSPropertyDirection:
             return cssValuePool().createValue(style->direction());
         case CSSPropertyDisplay:
@@ -1924,10 +1939,18 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitGridRows:
             return valueForGridTrackList(style->gridRows(), style.get(), m_node->document()->renderView());
 
+        case CSSPropertyWebkitGridStart:
+            return valueForGridPosition(style->gridItemStart());
+        case CSSPropertyWebkitGridEnd:
+            return valueForGridPosition(style->gridItemEnd());
+        case CSSPropertyWebkitGridBefore:
+            return valueForGridPosition(style->gridItemBefore());
+        case CSSPropertyWebkitGridAfter:
+            return valueForGridPosition(style->gridItemAfter());
         case CSSPropertyWebkitGridColumn:
-            return valueForGridPosition(style->gridItemColumn());
+            return getCSSPropertyValuesForGridShorthand(webkitGridColumnShorthand());
         case CSSPropertyWebkitGridRow:
-            return valueForGridPosition(style->gridItemRow());
+            return getCSSPropertyValuesForGridShorthand(webkitGridRowShorthand());
 
         case CSSPropertyHeight:
             if (renderer) {
@@ -2132,8 +2155,12 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return renderTextDecorationFlagsToCSSValue(style->textDecoration());
         case CSSPropertyWebkitTextDecorationStyle:
             return renderTextDecorationStyleFlagsToCSSValue(style->textDecorationStyle());
+        case CSSPropertyWebkitTextDecorationColor:
+            return currentColorOrValidColor(style.get(), style->textDecorationColor());
         case CSSPropertyWebkitTextAlignLast:
             return cssValuePool().createValue(style->textAlignLast());
+        case CSSPropertyWebkitTextUnderlinePosition:
+            return cssValuePool().createValue(style->textUnderlinePosition());
 #endif // CSS3_TEXT
         case CSSPropertyWebkitTextDecorationsInEffect:
             return renderTextDecorationFlagsToCSSValue(style->textDecorationsInEffect());
@@ -2175,10 +2202,6 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return cssValuePool().createIdentifierValue(CSSValueClip);
         case CSSPropertyWebkitTextSecurity:
             return cssValuePool().createValue(style->textSecurity());
-        case CSSPropertyWebkitTextSizeAdjust:
-            if (style->textSizeAdjust())
-                return cssValuePool().createIdentifierValue(CSSValueAuto);
-            return cssValuePool().createIdentifierValue(CSSValueNone);
         case CSSPropertyWebkitTextStrokeColor:
             return currentColorOrValidColor(style.get(), style->textStrokeColor());
         case CSSPropertyWebkitTextStrokeWidth:
@@ -2517,14 +2540,19 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         }
         case CSSPropertyWebkitTransformStyle:
             return cssValuePool().createIdentifierValue((style->transformStyle3D() == TransformStyle3DPreserve3D) ? CSSValuePreserve3d : CSSValueFlat);
+        case CSSPropertyTransitionDelay:
         case CSSPropertyWebkitTransitionDelay:
             return getDelayValue(style->transitions());
+        case CSSPropertyTransitionDuration:
         case CSSPropertyWebkitTransitionDuration:
             return getDurationValue(style->transitions());
+        case CSSPropertyTransitionProperty:
         case CSSPropertyWebkitTransitionProperty:
             return getTransitionPropertyValue(style->transitions());
+        case CSSPropertyTransitionTimingFunction:
         case CSSPropertyWebkitTransitionTimingFunction:
             return getTimingFunctionValue(style->transitions());
+        case CSSPropertyTransition:
         case CSSPropertyWebkitTransition: {
             const AnimationList* animList = style->transitions();
             if (animList) {
@@ -2671,6 +2699,10 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return getCSSPropertyValuesForShorthandProperties(borderTopShorthand());
         case CSSPropertyBorderWidth:
             return getCSSPropertyValuesForSidesShorthand(borderWidthShorthand());
+        case CSSPropertyWebkitColumnRule:
+            return getCSSPropertyValuesForShorthandProperties(webkitColumnRuleShorthand());
+        case CSSPropertyWebkitColumns:
+            return getCSSPropertyValuesForShorthandProperties(webkitColumnsShorthand());
         case CSSPropertyListStyle:
             return getCSSPropertyValuesForShorthandProperties(listStyleShorthand());
         case CSSPropertyMargin:
@@ -2752,8 +2784,6 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         /* Unimplemented -webkit- properties */
         case CSSPropertyWebkitAnimation:
         case CSSPropertyWebkitBorderRadius:
-        case CSSPropertyWebkitColumns:
-        case CSSPropertyWebkitColumnRule:
         case CSSPropertyWebkitMarginCollapse:
         case CSSPropertyWebkitMarquee:
         case CSSPropertyWebkitMarqueeSpeed:
@@ -2920,6 +2950,16 @@ PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForSid
     if (showLeft)
         list->append(leftValue);
 
+    return list.release();
+}
+
+PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForGridShorthand(const StylePropertyShorthand& shorthand) const
+{
+    RefPtr<CSSValueList> list = CSSValueList::createSlashSeparated();
+    for (size_t i = 0; i < shorthand.length(); ++i) {
+        RefPtr<CSSValue> value = getPropertyCSSValue(shorthand.properties()[i], DoNotUpdateLayout);
+        list->append(value);
+    }
     return list.release();
 }
 

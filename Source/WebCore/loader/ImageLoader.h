@@ -69,6 +69,8 @@ public:
     static void dispatchPendingLoadEvents();
     static void dispatchPendingErrorEvents();
 
+    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
+
 protected:
     virtual void notifyFinished(CachedResource*);
 
@@ -88,8 +90,11 @@ private:
     void setImageWithoutConsideringPendingLoadEvent(CachedImage*);
     void clearFailedLoadURL();
 
+    void timerFired(Timer<ImageLoader>*);
+
     Element* m_element;
     CachedResourceHandle<CachedImage> m_image;
+    Timer<ImageLoader> m_derefElementTimer;
     AtomicString m_failedLoadURL;
     bool m_hasPendingBeforeLoadEvent : 1;
     bool m_hasPendingLoadEvent : 1;

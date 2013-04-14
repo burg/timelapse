@@ -142,13 +142,20 @@ WebInspector.DOMStorageItemsView.prototype = {
 
         event.consume(true);
 
+        var keyFound = false;
         for (var i = 0; i < children.length; ++i) {
             var childNode = children[i];
             if (childNode.data.key === storageData.key) {
+                if (keyFound) {
+                    rootNode.removeChild(childNode);
+                    return;
+                }
+                keyFound = true;
                 childNode.data.value = storageData.newValue;
                 childNode.refresh();
+                childNode.select();
+                childNode.reveal();
                 this.deleteButton.visible = true;
-                return;
             }
         }
     },
@@ -172,13 +179,10 @@ WebInspector.DOMStorageItemsView.prototype = {
 
     _dataGridForDOMStorageItems: function(items)
     {
-        var columns = {key: {}, value: {}};
-
-        columns.key.title = WebInspector.UIString("Key");
-        columns.key.editable = true;
-
-        columns.value.title = WebInspector.UIString("Value");
-        columns.value.editable = true;
+        var columns = [
+            {id: "key", title: WebInspector.UIString("Key"), editable: true},
+            {id: "value", title: WebInspector.UIString("Value"), editable: true}
+        ];
 
         var nodes = [];
 

@@ -30,9 +30,14 @@
 #include "ContextMenuClientQt.h"
 #include "ContextMenuController.h"
 #if ENABLE(DEVICE_ORIENTATION)
-#include "DeviceMotionClientQt.h"
+#include "DeviceMotionClientMock.h"
+#include "DeviceMotionController.h"
 #include "DeviceOrientationClientMock.h"
+#include "DeviceOrientationController.h"
+#if HAVE(QTSENSORS)
+#include "DeviceMotionClientQt.h"
 #include "DeviceOrientationClientQt.h"
+#endif
 #endif
 #include "DocumentLoader.h"
 #include "DragClientQt.h"
@@ -41,11 +46,14 @@
 #include "DragSession.h"
 #include "EditorClientQt.h"
 #include "FocusController.h"
+#include "FrameLoadRequest.h"
 #include "FrameView.h"
 #if ENABLE(GEOLOCATION)
 #include "GeolocationClientMock.h"
-#include "GeolocationClientQt.h"
 #include "GeolocationController.h"
+#if HAVE(QTLOCATION)
+#include "GeolocationClientQt.h"
+#endif
 #endif
 #include "GeolocationPermissionClientQt.h"
 #include "HTMLFrameOwnerElement.h"
@@ -173,7 +181,7 @@ QWebPageAdapter::QWebPageAdapter()
 void QWebPageAdapter::initializeWebCorePage()
 {
 #if ENABLE(GEOLOCATION) || ENABLE(DEVICE_ORIENTATION)
-    bool useMock = QWebPageAdapter::drtRun;
+    const bool useMock = QWebPageAdapter::drtRun;
 #endif
     Page::PageClients pageClients;
     pageClients.chromeClient = new ChromeClientQt(this);
@@ -182,21 +190,36 @@ void QWebPageAdapter::initializeWebCorePage()
     pageClients.dragClient = new DragClientQt(pageClients.chromeClient);
     pageClients.inspectorClient = new InspectorClientQt(this);
     page = new Page(pageClients);
+
 #if ENABLE(GEOLOCATION)
     if (useMock) {
         // In case running in DumpRenderTree mode set the controller to mock provider.
         GeolocationClientMock* mock = new GeolocationClientMock;
         WebCore::provideGeolocationTo(page, mock);
         mock->setController(WebCore::GeolocationController::from(page));
-    } else
+    }
+#if HAVE(QTLOCATION)
+    else
         WebCore::provideGeolocationTo(page, new GeolocationClientQt(this));
 #endif
+#endif
+
 #if ENABLE(DEVICE_ORIENTATION)
-    if (useMock)
-        WebCore::provideDeviceOrientationTo(page, new DeviceOrientationClientMock);
-    else
+    if (useMock) {
+        DeviceOrientationClientMock* mockOrientationClient = new DeviceOrientationClientMock;
+        WebCore::provideDeviceOrientationTo(page, mockOrientationClient);
+        mockOrientationClient->setController(WebCore::DeviceOrientationController::from(page));
+
+        DeviceMotionClientMock* mockMotionClient= new DeviceMotionClientMock;
+        WebCore::provideDeviceMotionTo(page, mockMotionClient);
+        mockMotionClient->setController(WebCore::DeviceMotionController::from(page));
+    }
+#if HAVE(QTSENSORS)
+    else {
         WebCore::provideDeviceOrientationTo(page, new DeviceOrientationClientQt);
-    WebCore::provideDeviceMotionTo(page, new DeviceMotionClientQt);
+        WebCore::provideDeviceMotionTo(page, new DeviceMotionClientQt);
+    }
+#endif
 #endif
 
     // By default each page is put into their own unique page group, which affects popup windows
@@ -313,16 +336,32 @@ void QWebPageAdapter::setContentEditable(bool editable)
 
 bool QWebPageAdapter::findText(const QString& subString, FindFlag options)
 {
-    ::TextCaseSensitivity caseSensitivity = ::TextCaseInsensitive;
-    if (options & FindCaseSensitively)
-        caseSensitivity = ::TextCaseSensitive;
+    ::WebCore::FindOptions webCoreFindOptions = 0;
+
+    if (!(options & FindCaseSensitively))
+        webCoreFindOptions |= WebCore::CaseInsensitive;
+
+    if (options & FindBackward)
+        webCoreFindOptions |= WebCore::Backwards;
+
+    if (options & FindWrapsAroundDocument)
+        webCoreFindOptions |= WebCore::WrapAround;
+
+    if (options & FindAtWordBeginningsOnly)
+        webCoreFindOptions |= WebCore::AtWordStarts;
+
+    if (options & TreatMedialCapitalAsWordBeginning)
+        webCoreFindOptions |= WebCore::TreatMedialCapitalAsWordStart;
+
+    if (options & FindBeginsInSelection)
+        webCoreFindOptions |= WebCore::StartInSelection;
 
     if (options & HighlightAllOccurrences) {
         if (subString.isEmpty()) {
             page->unmarkAllTextMatches();
             return true;
         }
-        return page->markAllMatchesForText(subString, caseSensitivity, true, 0);
+        return page->markAllMatchesForText(subString, webCoreFindOptions, /*shouldHighlight*/ true, /*limit*/ 0);
     }
 
     if (subString.isEmpty()) {
@@ -333,13 +372,8 @@ bool QWebPageAdapter::findText(const QString& subString, FindFlag options)
             frame = frame->tree()->traverseNextWithWrap(false);
         }
     }
-    ::FindDirection direction = ::FindDirectionForward;
-    if (options & FindBackward)
-        direction = ::FindDirectionBackward;
 
-    const bool shouldWrap = options & FindWrapsAroundDocument;
-
-    return page->findString(subString, caseSensitivity, direction, shouldWrap);
+    return page->findString(subString, webCoreFindOptions);
 }
 
 void QWebPageAdapter::adjustPointForClicking(QMouseEvent* ev)
@@ -1144,7 +1178,7 @@ void QWebPageAdapter::setSystemTrayIcon(QObject *icon)
 #endif // QT_NO_SYSTEMTRAYICON
 #endif // ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
 
-#if ENABLE(GEOLOCATION)
+#if ENABLE(GEOLOCATION) && HAVE(QTLOCATION)
 void QWebPageAdapter::setGeolocationEnabledForFrame(QWebFrameAdapter* frame, bool on)
 {
     GeolocationPermissionClientQt::geolocationPermissionClient()->setPermission(frame, on);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -43,7 +43,7 @@
 #endif
 
 #if PLATFORM(MAC)
-#include "SchedulePair.h"
+#include <wtf/SchedulePair.h>
 #endif
 
 namespace JSC {
@@ -217,6 +217,7 @@ public:
 
     FeatureObserver* featureObserver() { return &m_featureObserver; }
 
+#if ENABLE(VIEW_MODE_CSS_MEDIA)
     enum ViewMode {
         ViewModeInvalid,
         ViewModeWindowed,
@@ -229,6 +230,7 @@ public:
 
     ViewMode viewMode() const { return m_viewMode; }
     void setViewMode(ViewMode);
+#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
     void setTabKeyCyclesThroughElements(bool b) { m_tabKeyCyclesThroughElements = b; }
     bool tabKeyCyclesThroughElements() const { return m_tabKeyCyclesThroughElements; }
@@ -388,6 +390,10 @@ public:
 
     void reportMemoryUsage(MemoryObjectInfo*) const;
 
+#if ENABLE(VIDEO_TRACK)
+    void captionPreferencesChanged();
+#endif
+
 private:
     void initGroup();
 
@@ -484,7 +490,9 @@ private:
 
     RefPtr<StorageNamespace> m_sessionStorage;
 
+#if ENABLE(VIEW_MODE_CSS_MEDIA)
     ViewMode m_viewMode;
+#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
     double m_minimumTimerInterval;
 
@@ -502,7 +510,8 @@ private:
     LayoutMilestones m_layoutMilestones;
 
     HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
-    Region m_relevantPaintedRegion;
+    Region m_topRelevantPaintedRegion;
+    Region m_bottomRelevantPaintedRegion;
     Region m_relevantUnpaintedRegion;
     bool m_isCountingRelevantRepaintedObjects;
 #ifndef NDEBUG

@@ -115,6 +115,7 @@ PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGro
 
     NSRect rect = NSMakeRect(0, 0, 800, 600);
     m_view = [[TestRunnerWKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef useTiledDrawing:useTiledDrawing];
+    [m_view setWindowOcclusionDetectionEnabled:NO];
 
     NSRect windowRect = NSOffsetRect(rect, -10000, [(NSScreen *)[[NSScreen screens] objectAtIndex:0] frame].size.height - rect.size.height + 10000);
     m_window = [[WebKitTestRunnerWindow alloc] initWithContentRect:windowRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
@@ -165,6 +166,14 @@ WKRect PlatformWebView::windowFrame()
 void PlatformWebView::setWindowFrame(WKRect frame)
 {
     [m_window setFrame:NSMakeRect(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height) display:YES];
+}
+
+void PlatformWebView::didInitializeClients()
+{
+    // Set a temporary 1x1 window frame to force a WindowAndViewFramesChanged notification. <rdar://problem/13380145>
+    WKRect wkFrame = windowFrame();
+    [m_window setFrame:NSMakeRect(0, 0, 1, 1) display:YES];
+    setWindowFrame(wkFrame);
 }
 
 void PlatformWebView::addChromeInputField()

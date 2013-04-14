@@ -56,7 +56,6 @@ SpeculativeJIT::SpeculativeJIT(JITCompiler& jit)
 
 SpeculativeJIT::~SpeculativeJIT()
 {
-    WTF::deleteAllValues(m_slowPathGenerators);
 }
 
 void SpeculativeJIT::emitAllocateJSArray(GPRReg resultGPR, Structure* structure, GPRReg storageGPR, unsigned numElements)
@@ -104,7 +103,7 @@ void SpeculativeJIT::emitAllocateJSArray(GPRReg resultGPR, Structure* structure,
             structure, numElements)));
 }
 
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail)
+void SpeculativeJIT::backwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail)
 {
     if (!m_compileOkay)
         return;
@@ -113,13 +112,31 @@ void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource
     m_jit.codeBlock()->appendOSRExit(OSRExit(kind, jsValueSource, m_jit.graph().methodOfGettingAValueProfileFor(node), this, m_stream->size()));
 }
 
+void SpeculativeJIT::backwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, const MacroAssembler::JumpList& jumpsToFail)
+{
+    if (!m_compileOkay)
+        return;
+    ASSERT(m_isCheckingArgumentTypes || m_canExit);
+    m_jit.appendExitInfo(jumpsToFail);
+    m_jit.codeBlock()->appendOSRExit(OSRExit(kind, jsValueSource, m_jit.graph().methodOfGettingAValueProfileFor(node), this, m_stream->size()));
+}
+
+void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail)
+{
+    if (!m_compileOkay)
+        return;
+    backwardSpeculationCheck(kind, jsValueSource, node, jumpToFail);
+    if (m_speculationDirection == ForwardSpeculation)
+        convertLastOSRExitToForward();
+}
+
 void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge nodeUse, MacroAssembler::Jump jumpToFail)
 {
     ASSERT(m_isCheckingArgumentTypes || m_canExit);
     speculationCheck(kind, jsValueSource, nodeUse.node(), jumpToFail);
 }
 
-OSRExitJumpPlaceholder SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node)
+OSRExitJumpPlaceholder SpeculativeJIT::backwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node)
 {
     if (!m_compileOkay)
         return OSRExitJumpPlaceholder();
@@ -130,19 +147,19 @@ OSRExitJumpPlaceholder SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSo
     return OSRExitJumpPlaceholder(index);
 }
 
-OSRExitJumpPlaceholder SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge nodeUse)
+OSRExitJumpPlaceholder SpeculativeJIT::backwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge nodeUse)
 {
     ASSERT(m_isCheckingArgumentTypes || m_canExit);
-    return speculationCheck(kind, jsValueSource, nodeUse.node());
+    return backwardSpeculationCheck(kind, jsValueSource, nodeUse.node());
 }
 
 void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, const MacroAssembler::JumpList& jumpsToFail)
 {
     if (!m_compileOkay)
         return;
-    ASSERT(m_isCheckingArgumentTypes || m_canExit);
-    m_jit.appendExitInfo(jumpsToFail);
-    m_jit.codeBlock()->appendOSRExit(OSRExit(kind, jsValueSource, m_jit.graph().methodOfGettingAValueProfileFor(node), this, m_stream->size()));
+    backwardSpeculationCheck(kind, jsValueSource, node, jumpsToFail);
+    if (m_speculationDirection == ForwardSpeculation)
+        convertLastOSRExitToForward();
 }
 
 void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge nodeUse, const MacroAssembler::JumpList& jumpsToFail)
@@ -151,7 +168,7 @@ void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource
     speculationCheck(kind, jsValueSource, nodeUse.node(), jumpsToFail);
 }
 
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery)
+void SpeculativeJIT::backwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery)
 {
     if (!m_compileOkay)
         return;
@@ -161,22 +178,24 @@ void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource
     m_jit.codeBlock()->appendOSRExit(OSRExit(kind, jsValueSource, m_jit.graph().methodOfGettingAValueProfileFor(node), this, m_stream->size(), m_jit.codeBlock()->numberOfSpeculationRecoveries()));
 }
 
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge nodeUse, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery)
+void SpeculativeJIT::backwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge nodeUse, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery)
 {
     ASSERT(m_isCheckingArgumentTypes || m_canExit);
-    speculationCheck(kind, jsValueSource, nodeUse.node(), jumpToFail, recovery);
+    backwardSpeculationCheck(kind, jsValueSource, nodeUse.node(), jumpToFail, recovery);
 }
 
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery, SpeculationDirection direction)
+void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery)
 {
-    speculationCheck(kind, jsValueSource, node, jumpToFail, recovery);
-    if (direction == ForwardSpeculation)
+    if (!m_compileOkay)
+        return;
+    backwardSpeculationCheck(kind, jsValueSource, node, jumpToFail, recovery);
+    if (m_speculationDirection == ForwardSpeculation)
         convertLastOSRExitToForward();
 }
 
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge edge, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery, SpeculationDirection direction)
+void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge edge, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery)
 {
-    speculationCheck(kind, jsValueSource, edge.node(), jumpToFail, recovery, direction);
+    speculationCheck(kind, jsValueSource, edge.node(), jumpToFail, recovery);
 }
 
 JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind, JSValueSource jsValueSource, Node* node)
@@ -192,6 +211,8 @@ JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind, 
             this, m_stream->size())));
     exit.m_watchpointIndex = m_jit.codeBlock()->appendWatchpoint(
         JumpReplacementWatchpoint(m_jit.watchpointLabel()));
+    if (m_speculationDirection == ForwardSpeculation)
+        convertLastOSRExitToForward();
     return &m_jit.codeBlock()->watchpoint(exit.m_watchpointIndex);
 }
 
@@ -205,9 +226,9 @@ void SpeculativeJIT::convertLastOSRExitToForward(const ValueRecovery& valueRecov
     if (!valueRecovery) {
         // Check that either the current node is a SetLocal, or the preceding node was a
         // SetLocal with the same code origin.
-        if (m_currentNode->op() != SetLocal) {
+        if (!m_currentNode->containsMovHint()) {
             Node* setLocal = m_jit.graph().m_blocks[m_block]->at(m_indexInBlock - 1);
-            ASSERT_UNUSED(setLocal, setLocal->op() == SetLocal);
+            ASSERT_UNUSED(setLocal, setLocal->containsMovHint());
             ASSERT_UNUSED(setLocal, setLocal->codeOrigin == m_currentNode->codeOrigin);
         }
         
@@ -250,7 +271,7 @@ void SpeculativeJIT::convertLastOSRExitToForward(const ValueRecovery& valueRecov
         ASSERT(setLocal->child1()->child1() == m_currentNode);
     else
         ASSERT(setLocal->child1() == m_currentNode);
-    ASSERT(setLocal->op() == SetLocal);
+    ASSERT(setLocal->containsMovHint());
     ASSERT(setLocal->codeOrigin == m_currentNode->codeOrigin);
 
     Node* nextNode = m_jit.graph().m_blocks[m_block]->at(setLocalIndexInBlock + 1);
@@ -268,46 +289,18 @@ void SpeculativeJIT::convertLastOSRExitToForward(const ValueRecovery& valueRecov
         new ValueRecoveryOverride(setLocal->local(), valueRecovery));
 }
 
-JumpReplacementWatchpoint* SpeculativeJIT::forwardSpeculationWatchpoint(ExitKind kind)
-{
-    JumpReplacementWatchpoint* result = speculationWatchpoint(kind);
-    convertLastOSRExitToForward();
-    return result;
-}
-
-JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind, SpeculationDirection direction)
-{
-    JumpReplacementWatchpoint* result = speculationWatchpoint(kind);
-    if (direction == ForwardSpeculation)
-        convertLastOSRExitToForward();
-    return result;
-}
-
 void SpeculativeJIT::forwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail, const ValueRecovery& valueRecovery)
 {
     ASSERT(m_isCheckingArgumentTypes || m_canExit);
-    speculationCheck(kind, jsValueSource, node, jumpToFail);
+    backwardSpeculationCheck(kind, jsValueSource, node, jumpToFail);
     convertLastOSRExitToForward(valueRecovery);
 }
 
 void SpeculativeJIT::forwardSpeculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, const MacroAssembler::JumpList& jumpsToFail, const ValueRecovery& valueRecovery)
 {
     ASSERT(m_isCheckingArgumentTypes || m_canExit);
-    speculationCheck(kind, jsValueSource, node, jumpsToFail);
+    backwardSpeculationCheck(kind, jsValueSource, node, jumpsToFail);
     convertLastOSRExitToForward(valueRecovery);
-}
-
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Node* node, MacroAssembler::Jump jumpToFail, SpeculationDirection direction)
-{
-    if (direction == ForwardSpeculation)
-        forwardSpeculationCheck(kind, jsValueSource, node, jumpToFail);
-    else
-        speculationCheck(kind, jsValueSource, node, jumpToFail);
-}
-
-void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, Edge edge, MacroAssembler::Jump jumpToFail, SpeculationDirection direction)
-{
-    speculationCheck(kind, jsValueSource, edge.node(), jumpToFail, direction);
 }
 
 void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs jsValueRegs, Node* node)
@@ -328,41 +321,29 @@ void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs js
     terminateSpeculativeExecution(kind, jsValueRegs, nodeUse.node());
 }
 
-void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs jsValueRegs, Node* node, SpeculationDirection direction)
+void SpeculativeJIT::backwardTypeCheck(JSValueSource source, Edge edge, SpeculatedType typesPassedThrough, MacroAssembler::Jump jumpToFail)
 {
-    ASSERT(m_isCheckingArgumentTypes || m_canExit);
-#if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLogF("SpeculativeJIT was terminated.\n");
-#endif
-    if (!m_compileOkay)
-        return;
-    speculationCheck(kind, jsValueRegs, node, m_jit.jump(), direction);
-    m_compileOkay = false;
+    ASSERT(needsTypeCheck(edge, typesPassedThrough));
+    m_state.forNode(edge).filter(typesPassedThrough);
+    backwardSpeculationCheck(BadType, source, edge.node(), jumpToFail);
 }
 
 void SpeculativeJIT::typeCheck(JSValueSource source, Edge edge, SpeculatedType typesPassedThrough, MacroAssembler::Jump jumpToFail)
 {
-    ASSERT(needsTypeCheck(edge, typesPassedThrough));
-    m_state.forNode(edge).filter(typesPassedThrough);
-    speculationCheck(BadType, source, edge, jumpToFail);
+    backwardTypeCheck(source, edge, typesPassedThrough, jumpToFail);
+    if (m_speculationDirection == ForwardSpeculation)
+        convertLastOSRExitToForward();
 }
 
 void SpeculativeJIT::forwardTypeCheck(JSValueSource source, Edge edge, SpeculatedType typesPassedThrough, MacroAssembler::Jump jumpToFail, const ValueRecovery& valueRecovery)
 {
-    typeCheck(source, edge, typesPassedThrough, jumpToFail);
+    backwardTypeCheck(source, edge, typesPassedThrough, jumpToFail);
     convertLastOSRExitToForward(valueRecovery);
-}
-
-void SpeculativeJIT::typeCheck(JSValueSource source, Edge edge, SpeculatedType typesPassedThrough, MacroAssembler::Jump jumpToFail, SpeculationDirection direction)
-{
-    typeCheck(source, edge, typesPassedThrough, jumpToFail);
-    if (direction == ForwardSpeculation)
-        convertLastOSRExitToForward();
 }
 
 void SpeculativeJIT::addSlowPathGenerator(PassOwnPtr<SlowPathGenerator> slowPathGenerator)
 {
-    m_slowPathGenerators.append(slowPathGenerator.leakPtr());
+    m_slowPathGenerators.append(slowPathGenerator);
 }
 
 void SpeculativeJIT::runSlowPathGenerators()
@@ -687,7 +668,7 @@ const TypedArrayDescriptor* SpeculativeJIT::typedArrayDescriptor(ArrayMode array
     }
 }
 
-JITCompiler::Jump SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, ArrayMode arrayMode, IndexingType shape, bool invert)
+JITCompiler::Jump SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, ArrayMode arrayMode, IndexingType shape)
 {
     switch (arrayMode.arrayClass()) {
     case Array::OriginalArray: {
@@ -699,27 +680,27 @@ JITCompiler::Jump SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, A
     case Array::Array:
         m_jit.and32(TrustedImm32(IsArray | IndexingShapeMask), tempGPR);
         return m_jit.branch32(
-            invert ? MacroAssembler::Equal : MacroAssembler::NotEqual, tempGPR, TrustedImm32(IsArray | shape));
+            MacroAssembler::NotEqual, tempGPR, TrustedImm32(IsArray | shape));
         
     default:
         m_jit.and32(TrustedImm32(IndexingShapeMask), tempGPR);
-        return m_jit.branch32(invert ? MacroAssembler::Equal : MacroAssembler::NotEqual, tempGPR, TrustedImm32(shape));
+        return m_jit.branch32(MacroAssembler::NotEqual, tempGPR, TrustedImm32(shape));
     }
 }
 
-JITCompiler::JumpList SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, ArrayMode arrayMode, bool invert)
+JITCompiler::JumpList SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGPR, ArrayMode arrayMode)
 {
     JITCompiler::JumpList result;
     
     switch (arrayMode.type()) {
     case Array::Int32:
-        return jumpSlowForUnwantedArrayMode(tempGPR, arrayMode, Int32Shape, invert);
+        return jumpSlowForUnwantedArrayMode(tempGPR, arrayMode, Int32Shape);
 
     case Array::Double:
-        return jumpSlowForUnwantedArrayMode(tempGPR, arrayMode, DoubleShape, invert);
+        return jumpSlowForUnwantedArrayMode(tempGPR, arrayMode, DoubleShape);
 
     case Array::Contiguous:
-        return jumpSlowForUnwantedArrayMode(tempGPR, arrayMode, ContiguousShape, invert);
+        return jumpSlowForUnwantedArrayMode(tempGPR, arrayMode, ContiguousShape);
 
     case Array::ArrayStorage:
     case Array::SlowPutArrayStorage: {
@@ -727,19 +708,6 @@ JITCompiler::JumpList SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGP
         
         if (arrayMode.isJSArray()) {
             if (arrayMode.isSlowPut()) {
-                if (invert) {
-                    JITCompiler::Jump slow = m_jit.branchTest32(
-                        MacroAssembler::Zero, tempGPR, MacroAssembler::TrustedImm32(IsArray));
-                    m_jit.and32(TrustedImm32(IndexingShapeMask), tempGPR);
-                    m_jit.sub32(TrustedImm32(ArrayStorageShape), tempGPR);
-                    result.append(
-                        m_jit.branch32(
-                            MacroAssembler::BelowOrEqual, tempGPR,
-                            TrustedImm32(SlowPutArrayStorageShape - ArrayStorageShape)));
-                    
-                    slow.link(&m_jit);
-                }
-                
                 result.append(
                     m_jit.branchTest32(
                         MacroAssembler::Zero, tempGPR, MacroAssembler::TrustedImm32(IsArray)));
@@ -753,7 +721,7 @@ JITCompiler::JumpList SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGP
             }
             m_jit.and32(TrustedImm32(IsArray | IndexingShapeMask), tempGPR);
             result.append(
-                m_jit.branch32(invert ? MacroAssembler::Equal : MacroAssembler::NotEqual, tempGPR, TrustedImm32(IsArray | ArrayStorageShape)));
+                m_jit.branch32(MacroAssembler::NotEqual, tempGPR, TrustedImm32(IsArray | ArrayStorageShape)));
             break;
         }
         m_jit.and32(TrustedImm32(IndexingShapeMask), tempGPR);
@@ -761,12 +729,12 @@ JITCompiler::JumpList SpeculativeJIT::jumpSlowForUnwantedArrayMode(GPRReg tempGP
             m_jit.sub32(TrustedImm32(ArrayStorageShape), tempGPR);
             result.append(
                 m_jit.branch32(
-                    invert ? MacroAssembler::BelowOrEqual : MacroAssembler::Above, tempGPR,
+                    MacroAssembler::Above, tempGPR,
                     TrustedImm32(SlowPutArrayStorageShape - ArrayStorageShape)));
             break;
         }
         result.append(
-            m_jit.branch32(invert ? MacroAssembler::Equal : MacroAssembler::NotEqual, tempGPR, TrustedImm32(ArrayStorageShape)));
+            m_jit.branch32(MacroAssembler::NotEqual, tempGPR, TrustedImm32(ArrayStorageShape)));
         break;
     }
     default:
@@ -918,7 +886,7 @@ GPRReg SpeculativeJIT::fillStorage(Edge edge)
         }
         
         // Must be a cell; fill it as a cell and then return the pointer.
-        return fillSpeculateCell(edge, BackwardSpeculation);
+        return fillSpeculateCell(edge);
     }
         
     case DataFormatStorage: {
@@ -928,7 +896,7 @@ GPRReg SpeculativeJIT::fillStorage(Edge edge)
     }
         
     default:
-        return fillSpeculateCell(edge, BackwardSpeculation);
+        return fillSpeculateCell(edge);
     }
 }
 
@@ -1585,7 +1553,7 @@ void SpeculativeJIT::noticeOSRBirth(Node* node)
 
 void SpeculativeJIT::compileMovHint(Node* node)
 {
-    ASSERT(node->op() == SetLocal);
+    ASSERT(node->containsMovHint() && node->op() != ZombieHint);
     
     m_lastSetOperand = node->local();
 
@@ -1596,6 +1564,54 @@ void SpeculativeJIT::compileMovHint(Node* node)
         noticeOSRBirth(child->child1().node());
     
     m_stream->appendAndLog(VariableEvent::movHint(MinifiedID(child), node->local()));
+}
+
+void SpeculativeJIT::compileMovHintAndCheck(Node* node)
+{
+    compileMovHint(node);
+    speculate(node, node->child1());
+    noResult(node);
+}
+
+void SpeculativeJIT::compileInlineStart(Node* node)
+{
+    InlineCallFrame* inlineCallFrame = node->codeOrigin.inlineCallFrame;
+    int argumentCountIncludingThis = inlineCallFrame->arguments.size();
+    unsigned argumentPositionStart = node->argumentPositionStart();
+    CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(inlineCallFrame);
+    for (int i = 0; i < argumentCountIncludingThis; ++i) {
+        ValueRecovery recovery;
+        if (codeBlock->isCaptured(argumentToOperand(i)))
+            recovery = ValueRecovery::alreadyInJSStack();
+        else {
+            ArgumentPosition& argumentPosition =
+                m_jit.graph().m_argumentPositions[argumentPositionStart + i];
+            ValueSource valueSource;
+            if (!argumentPosition.shouldUnboxIfPossible())
+                valueSource = ValueSource(ValueInJSStack);
+            else if (argumentPosition.shouldUseDoubleFormat())
+                valueSource = ValueSource(DoubleInJSStack);
+            else if (isInt32Speculation(argumentPosition.prediction()))
+                valueSource = ValueSource(Int32InJSStack);
+            else if (isCellSpeculation(argumentPosition.prediction()))
+                valueSource = ValueSource(CellInJSStack);
+            else if (isBooleanSpeculation(argumentPosition.prediction()))
+                valueSource = ValueSource(BooleanInJSStack);
+            else
+                valueSource = ValueSource(ValueInJSStack);
+            recovery = computeValueRecoveryFor(valueSource);
+        }
+        // The recovery should refer either to something that has already been
+        // stored into the stack at the right place, or to a constant,
+        // since the Arguments code isn't smart enough to handle anything else.
+        // The exception is the this argument, which we don't really need to be
+        // able to recover.
+#if DFG_ENABLE(DEBUG_VERBOSE)
+        dataLogF("\nRecovery for argument %d: ", i);
+        recovery.dump(WTF::dataFile());
+#endif
+        inlineCallFrame->arguments[i] = recovery;
+    }
 }
 
 void SpeculativeJIT::compile(BasicBlock& block)
@@ -1696,50 +1712,19 @@ void SpeculativeJIT::compile(BasicBlock& block)
                 break;
                 
             case SetLocal:
+                RELEASE_ASSERT_NOT_REACHED();
+                break;
+                
+            case MovHint:
                 compileMovHint(m_currentNode);
                 break;
-
-            case InlineStart: {
-                InlineCallFrame* inlineCallFrame = m_currentNode->codeOrigin.inlineCallFrame;
-                int argumentCountIncludingThis = inlineCallFrame->arguments.size();
-                unsigned argumentPositionStart = m_currentNode->argumentPositionStart();
-                CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(inlineCallFrame);
-                for (int i = 0; i < argumentCountIncludingThis; ++i) {
-                    ValueRecovery recovery;
-                    if (codeBlock->isCaptured(argumentToOperand(i)))
-                        recovery = ValueRecovery::alreadyInJSStack();
-                    else {
-                        ArgumentPosition& argumentPosition =
-                            m_jit.graph().m_argumentPositions[argumentPositionStart + i];
-                        ValueSource valueSource;
-                        if (!argumentPosition.shouldUnboxIfPossible())
-                            valueSource = ValueSource(ValueInJSStack);
-                        else if (argumentPosition.shouldUseDoubleFormat())
-                            valueSource = ValueSource(DoubleInJSStack);
-                        else if (isInt32Speculation(argumentPosition.prediction()))
-                            valueSource = ValueSource(Int32InJSStack);
-                        else if (isCellSpeculation(argumentPosition.prediction()))
-                            valueSource = ValueSource(CellInJSStack);
-                        else if (isBooleanSpeculation(argumentPosition.prediction()))
-                            valueSource = ValueSource(BooleanInJSStack);
-                        else
-                            valueSource = ValueSource(ValueInJSStack);
-                        recovery = computeValueRecoveryFor(valueSource);
-                    }
-                    // The recovery should refer either to something that has already been
-                    // stored into the stack at the right place, or to a constant,
-                    // since the Arguments code isn't smart enough to handle anything else.
-                    // The exception is the this argument, which we don't really need to be
-                    // able to recover.
-#if DFG_ENABLE(DEBUG_VERBOSE)
-                    dataLogF("\nRecovery for argument %d: ", i);
-                    recovery.dump(WTF::dataFile());
-#endif
-                    inlineCallFrame->arguments[i] = recovery;
-                }
+                
+            case ZombieHint: {
+                m_lastSetOperand = m_currentNode->local();
+                m_stream->appendAndLog(VariableEvent::setLocal(m_currentNode->local(), DataFormatDead));
                 break;
             }
-                
+
             default:
                 if (belongsInMinifiedGraph(m_currentNode->op()))
                     m_minifiedGraph->append(MinifiedNode::fromNode(m_currentNode));
@@ -1766,6 +1751,9 @@ void SpeculativeJIT::compile(BasicBlock& block)
             m_jit.xorPtr(JITCompiler::TrustedImm32(m_currentNode->index()), GPRInfo::regT0);
 #endif
             checkConsistency();
+            
+            m_speculationDirection = (m_currentNode->flags() & NodeExitsForward) ? ForwardSpeculation : BackwardSpeculation;
+            
             compile(m_currentNode);
             if (!m_compileOkay) {
                 m_compileOkay = true;
@@ -1825,6 +1813,7 @@ void SpeculativeJIT::checkArgumentTypes()
 {
     ASSERT(!m_currentNode);
     m_isCheckingArgumentTypes = true;
+    m_speculationDirection = BackwardSpeculation;
     m_codeOriginForOSR = CodeOrigin(0);
 
     for (size_t i = 0; i < m_arguments.size(); ++i)
@@ -2162,7 +2151,7 @@ void SpeculativeJIT::compileValueToInt32(Node* node)
     case NotCellUse: {
         switch (checkGeneratedTypeForToInt32(node->child1().node())) {
         case GeneratedOperandInteger: {
-            SpeculateIntegerOperand op1(this, node->child1(), BackwardSpeculation, ManualOperandSpeculation);
+            SpeculateIntegerOperand op1(this, node->child1(), ManualOperandSpeculation);
             GPRTemporary result(this, op1);
             m_jit.move(op1.gpr(), result.gpr());
             integerResult(result.gpr(), node, op1.format());
@@ -2170,7 +2159,7 @@ void SpeculativeJIT::compileValueToInt32(Node* node)
         }
         case GeneratedOperandDouble: {
             GPRTemporary result(this);
-            SpeculateDoubleOperand op1(this, node->child1(), BackwardSpeculation, ManualOperandSpeculation);
+            SpeculateDoubleOperand op1(this, node->child1(), ManualOperandSpeculation);
             FPRReg fpr = op1.fpr();
             GPRReg gpr = result.gpr();
             JITCompiler::Jump notTruncatedToInteger = m_jit.branchTruncateDoubleToInt32(fpr, gpr, JITCompiler::BranchIfTruncateFailed);
@@ -2376,7 +2365,7 @@ void SpeculativeJIT::compileInt32ToDouble(Node* node)
     ASSERT(!isInt32Constant(node->child1().node())); // This should have been constant folded.
     
     if (isInt32Speculation(m_state.forNode(node->child1()).m_type)) {
-        SpeculateIntegerOperand op1(this, node->child1(), BackwardSpeculation, ManualOperandSpeculation);
+        SpeculateIntegerOperand op1(this, node->child1(), ManualOperandSpeculation);
         FPRTemporary result(this);
         m_jit.convertInt32ToDouble(op1.gpr(), result.fpr());
         doubleResult(result.fpr(), node);
@@ -2403,7 +2392,7 @@ void SpeculativeJIT::compileInt32ToDouble(Node* node)
                 m_jit.branchTest64(MacroAssembler::Zero, op1GPR, GPRInfo::tagTypeNumberRegister),
                 ValueRecovery::inGPR(op1GPR, DataFormatJS));
         } else {
-            typeCheck(
+            backwardTypeCheck(
                 JSValueRegs(op1GPR), node->child1(), SpecNumber,
                 m_jit.branchTest64(MacroAssembler::Zero, op1GPR, GPRInfo::tagTypeNumberRegister));
         }
@@ -2434,7 +2423,7 @@ void SpeculativeJIT::compileInt32ToDouble(Node* node)
                 m_jit.branch32(MacroAssembler::AboveOrEqual, op1TagGPR, TrustedImm32(JSValue::LowestTag)),
                 ValueRecovery::inPair(op1TagGPR, op1PayloadGPR));
         } else {
-            typeCheck(
+            backwardTypeCheck(
                 JSValueRegs(op1TagGPR, op1PayloadGPR), node->child1(), SpecNumber,
                 m_jit.branch32(MacroAssembler::AboveOrEqual, op1TagGPR, TrustedImm32(JSValue::LowestTag)));
         }

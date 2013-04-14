@@ -57,6 +57,7 @@ bool RuntimeEnabledFeatures::isSpeechInputEnabled = true;
 bool RuntimeEnabledFeatures::isCanvasPathEnabled = false;
 bool RuntimeEnabledFeatures::isCSSExclusionsEnabled = false;
 bool RuntimeEnabledFeatures::isCSSRegionsEnabled = false;
+bool RuntimeEnabledFeatures::isCSSCompositingEnabled = false;
 bool RuntimeEnabledFeatures::isLangAttributeAwareFormControlUIEnabled = false;
 
 #if ENABLE(SCRIPTED_SPEECH)
@@ -240,6 +241,10 @@ bool RuntimeEnabledFeatures::areExperimentalContentSecurityPolicyFeaturesEnabled
 
 #if ENABLE(IFRAME_SEAMLESS)
 bool RuntimeEnabledFeatures::areSeamlessIFramesEnabled = false;
+#endif
+
+#if ENABLE(FONT_LOAD_EVENTS)
+bool RuntimeEnabledFeatures::isFontLoadEventsEnabled = false;
 #endif
 
 } // namespace WebCore

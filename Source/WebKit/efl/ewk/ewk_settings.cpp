@@ -79,7 +79,7 @@ static WTF::String _ewk_settings_webkit_os_version_get()
 {
     WTF::String uaOsVersion;
 #if OS(DARWIN)
-#if CPU(X86)
+#if CPU(X86) || CPU(X86_64)
     uaOsVersion = "Intel Mac OS X";
 #else
     uaOsVersion = "PPC Mac OS X";
@@ -292,7 +292,6 @@ void ewk_settings_memory_cache_clear()
     int pageCapacity = WebCore::pageCache()->capacity();
     // Setting size to 0, makes all pages be released.
     WebCore::pageCache()->setCapacity(0);
-    WebCore::pageCache()->releaseAutoreleasedPagesNow();
     WebCore::pageCache()->setCapacity(pageCapacity);
 
     // Invalidating the font cache and freeing all inactive font data.

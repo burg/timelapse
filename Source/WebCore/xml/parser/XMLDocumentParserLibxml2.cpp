@@ -599,7 +599,7 @@ XMLDocumentParser::XMLDocumentParser(DocumentFragment* fragment, Element* parent
         ContainerNode* n = parentElement->parentNode();
         if (!n || !n->isElementNode())
             break;
-        parentElement = static_cast<Element*>(n);
+        parentElement = toElement(n);
     }
 
     if (elemStack.isEmpty())
@@ -863,7 +863,7 @@ void XMLDocumentParser::endElementNs()
     if (hackAroundLibXMLEntityParsingBug() && context()->depth <= depthTriggeringEntityExpansion())
         setDepthTriggeringEntityExpansion(-1);
 
-    if (!scriptingContentIsAllowed(m_scriptingPermission) && n->isElementNode() && toScriptElement(static_cast<Element*>(n.get()))) {
+    if (!scriptingContentIsAllowed(m_scriptingPermission) && n->isElementNode() && toScriptElement(toElement(n.get()))) {
         popCurrentNode();
         n->remove(IGNORE_EXCEPTION);
         return;
@@ -874,7 +874,7 @@ void XMLDocumentParser::endElementNs()
         return;
     }
 
-    Element* element = static_cast<Element*>(n.get());
+    Element* element = toElement(n.get());
 
     // The element's parent may have already been removed from document.
     // Parsing continues in this case, but scripts aren't executed.
@@ -1291,7 +1291,9 @@ static void externalSubsetHandler(void* closure, const xmlChar*, const xmlChar* 
         || (extId == "-//W3C//DTD XHTML Basic 1.0//EN")
         || (extId == "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN")
         || (extId == "-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN")
-        || (extId == "-//WAPFORUM//DTD XHTML Mobile 1.0//EN"))
+        || (extId == "-//WAPFORUM//DTD XHTML Mobile 1.0//EN")
+        || (extId == "-//WAPFORUM//DTD XHTML Mobile 1.1//EN")
+        || (extId == "-//WAPFORUM//DTD XHTML Mobile 1.2//EN"))
         getParser(closure)->setIsXHTMLDocument(true); // controls if we replace entities or not.
 }
 
@@ -1444,7 +1446,10 @@ void XMLDocumentParser::resumeParsing()
     // Then, write any pending data
     SegmentedString rest = m_pendingSrc;
     m_pendingSrc.clear();
-    append(rest);
+    // There is normally only one string left, so toString() shouldn't copy.
+    // In any case, the XML parser runs on the main thread and it's OK if
+    // the passed string has more than one reference.
+    append(rest.toString().impl());
 
     // Finally, if finish() has been called and write() didn't result
     // in any further callbacks being queued, call end()

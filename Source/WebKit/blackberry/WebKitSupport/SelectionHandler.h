@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011, 2012 Research In Motion Limited. All rights reserved.
+ * Copyright (C) 2010, 2011, 2012, 2013 Research In Motion Limited. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -22,6 +22,7 @@
 #include "BlackBerryPlatformIntRectRegion.h"
 #include "BlackBerryPlatformPrimitives.h"
 #include "BlackBerryPlatformStopWatch.h"
+#include "Color.h"
 #include "TextGranularity.h"
 
 #include <wtf/Vector.h>
@@ -63,7 +64,7 @@ public:
     bool selectionContains(const WebCore::IntPoint&);
 
     void setSelection(const WebCore::IntPoint& start, const WebCore::IntPoint& end);
-    void selectAtPoint(const WebCore::IntPoint&);
+    void selectAtPoint(const WebCore::IntPoint&, SelectionExpansionType);
     void selectObject(const WebCore::IntPoint&, WebCore::TextGranularity);
     void selectObject(WebCore::TextGranularity);
     void selectObject(WebCore::Node*);
@@ -75,6 +76,12 @@ public:
     bool lastUpdatedEndPointIsValid() const { return m_lastUpdatedEndPointIsValid; }
 
     void inputHandlerDidFinishProcessingChange();
+
+    void expandSelection(bool isScrollStarted);
+    void setOverlayExpansionHeight(int dy) { m_overlayExpansionHeight = dy; }
+    void setParagraphExpansionScrollMargin(const WebCore::IntSize&);
+    void setSelectionViewportRect(const WebCore::IntRect& selectionViewportRect) { m_selectionViewportRect = selectionViewportRect; }
+    WebCore::IntRect selectionViewportRect() const;
 
 private:
     void notifyCaretPositionChangedIfNeeded(bool userTouchTriggered = true);
@@ -88,6 +95,13 @@ private:
     unsigned extendSelectionToFieldBoundary(bool isStartHandle, const WebCore::IntPoint& selectionPoint, WebCore::VisibleSelection& newSelection);
     WebCore::IntPoint clipPointToVisibleContainer(const WebCore::IntPoint&) const;
 
+    void selectNextParagraph();
+    void drawAnimationOverlay(BlackBerry::Platform::IntRectRegion, bool isExpandingOverlayAtConstantRate, bool isStartOfSelection = false);
+    Platform::IntRectRegion regionForSelectionQuads(WebCore::VisibleSelection);
+    bool findNextAnimationOverlayRegion();
+    bool ensureSelectedTextVisible(const WebCore::IntPoint&, bool scrollIfNeeded);
+    bool expandSelectionToGranularity(WebCore::Frame*, WebCore::VisibleSelection, WebCore::TextGranularity, bool isInputMode);
+
     bool inputNodeOverridesTouch() const;
     BlackBerry::Platform::RequestedHandlePosition requestedSelectionHandlePosition(const WebCore::VisibleSelection&) const;
 
@@ -100,8 +114,17 @@ private:
     bool m_lastUpdatedEndPointIsValid;
     bool m_didSuppressCaretPositionChangedNotification;
     BlackBerry::Platform::IntRectRegion m_lastSelectionRegion;
+    WebCore::VisiblePosition m_animationOverlayStartPos;
+    WebCore::VisiblePosition m_animationOverlayEndPos;
+    BlackBerry::Platform::IntRectRegion m_currentAnimationOverlayRegion;
+    BlackBerry::Platform::IntRectRegion m_nextAnimationOverlayRegion;
+    int m_overlayExpansionHeight;
+    WebCore::Color m_animationHighlightColor;
 
     BlackBerry::Platform::StopWatch m_timer;
+
+    WebCore::IntSize m_scrollMargin;
+    WebCore::IntRect m_selectionViewportRect;
     WebCore::VisibleSelection m_lastSelection;
 };
 

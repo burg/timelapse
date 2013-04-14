@@ -47,6 +47,7 @@
 #include "HTMLCollection.h"
 #include "HTMLDataListElement.h"
 #include "HTMLFormElement.h"
+#include "HTMLImageLoader.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
@@ -145,6 +146,13 @@ PassRefPtr<HTMLInputElement> HTMLInputElement::create(const QualifiedName& tagNa
     RefPtr<HTMLInputElement> inputElement = adoptRef(new HTMLInputElement(tagName, document, form, createdByParser));
     inputElement->ensureUserAgentShadowRoot();
     return inputElement.release();
+}
+
+HTMLImageLoader* HTMLInputElement::imageLoader()
+{
+    if (!m_imageLoader)
+        m_imageLoader = adoptPtr(new HTMLImageLoader(this));
+    return m_imageLoader.get();
 }
 
 void HTMLInputElement::didAddUserAgentShadowRoot(ShadowRoot*)
@@ -1466,6 +1474,11 @@ void HTMLInputElement::onSearch()
     dispatchEvent(Event::create(eventNames().searchEvent, true, false));
 }
 
+void HTMLInputElement::updateClearButtonVisibility()
+{
+    m_inputType->updateClearButtonVisibility();
+}
+
 void HTMLInputElement::documentDidResumeFromPageCache()
 {
     ASSERT(needsSuspensionCallback());
@@ -1508,7 +1521,9 @@ void HTMLInputElement::removedFrom(ContainerNode* insertionPoint)
 
 void HTMLInputElement::didMoveToNewDocument(Document* oldDocument)
 {
-    m_inputType->willMoveToNewOwnerDocument();
+    if (hasImageLoader())
+        imageLoader()->elementDidMoveToNewDocument();
+
     bool needsSuspensionCallback = this->needsSuspensionCallback();
     if (oldDocument) {
         // Always unregister for cache callbacks when leaving a document, even if we would otherwise like to be registered
@@ -1550,6 +1565,7 @@ void HTMLInputElement::requiredAttributeChanged()
     HTMLTextFormControlElement::requiredAttributeChanged();
     if (CheckedRadioButtons* buttons = checkedRadioButtons())
         buttons->requiredAttributeChanged(this);
+    m_inputType->requiredAttributeChanged();
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -1963,15 +1979,7 @@ void HTMLInputElement::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) con
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 PassRefPtr<RenderStyle> HTMLInputElement::customStyleForRenderer()
 {
-    RefPtr<RenderStyle> originalStyle = document()->styleResolver()->styleForElement(this);
-    if (!m_inputType->shouldApplyLocaleDirection())
-        return originalStyle.release();
-    TextDirection contentDirection = locale().isRTL() ? RTL : LTR;
-    if (originalStyle->direction() == contentDirection)
-        return originalStyle.release();
-    RefPtr<RenderStyle> style = RenderStyle::clone(originalStyle.get());
-    style->setDirection(contentDirection);
-    return style.release();
+    return m_inputType->customStyleForRenderer(document()->styleResolver()->styleForElement(this));
 }
 #endif
 

@@ -31,6 +31,7 @@
 #include <JavaScriptCore/APICast.h>
 #include <WebCore/Document.h>
 #include <WebCore/Frame.h>
+#include <WebCore/FrameLoader.h>
 #include <WebCore/HTMLFrameElement.h>
 #include <WebCore/HTMLIFrameElement.h>
 #include <WebCore/HTMLInputElement.h>
@@ -109,7 +110,7 @@ IntRect InjectedBundleNodeHandle::elementBounds() const
     if (!m_node->isElementNode())
         return IntRect();
 
-    return static_cast<Element*>(m_node.get())->boundsInRootViewSpace();
+    return toElement(m_node.get())->boundsInRootViewSpace();
 }
     
 IntRect InjectedBundleNodeHandle::renderRect(bool* isReplaced) const

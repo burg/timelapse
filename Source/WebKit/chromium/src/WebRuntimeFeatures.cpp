@@ -710,6 +710,26 @@ bool WebRuntimeFeatures::isCSSRegionsEnabled()
     return RuntimeEnabledFeatures::cssRegionsEnabled();
 }
 
+void WebRuntimeFeatures::enableCSSCompositing(bool enable)
+{
+    RuntimeEnabledFeatures::setCSSCompositingEnabled(enable);
+}
+
+bool WebRuntimeFeatures::isCSSCompositingEnabled()
+{
+    return RuntimeEnabledFeatures::cssCompositingEnabled();
+}
+
+void WebRuntimeFeatures::enableFontLoadEvents(bool enable)
+{
+    RuntimeEnabledFeatures::setFontLoadEventsEnabled(enable);
+}
+
+bool WebRuntimeFeatures::isFontLoadEventsEnabled()
+{
+    return RuntimeEnabledFeatures::fontLoadEventsEnabled();
+}
+
 void WebRuntimeFeatures::enableRequestAutocomplete(bool enable)
 {
 #if ENABLE(REQUEST_AUTOCOMPLETE)

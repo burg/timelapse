@@ -185,7 +185,7 @@ PassRefPtr<DOMStringList> toDOMStringList(v8::Handle<v8::Value> value, v8::Isola
 {
     v8::Local<v8::Value> v8Value(v8::Local<v8::Value>::New(value));
 
-    if (V8DOMStringList::HasInstance(v8Value, isolate)) {
+    if (V8DOMStringList::HasInstance(v8Value, isolate, worldType(isolate))) {
         RefPtr<DOMStringList> ret = V8DOMStringList::toNative(v8::Handle<v8::Object>::Cast(v8Value));
         return ret.release();
     }
@@ -205,7 +205,7 @@ PassRefPtr<DOMStringList> toDOMStringList(v8::Handle<v8::Value> value, v8::Isola
 PassRefPtr<XPathNSResolver> toXPathNSResolver(v8::Handle<v8::Value> value, v8::Isolate* isolate)
 {
     RefPtr<XPathNSResolver> resolver;
-    if (V8XPathNSResolver::HasInstance(value, isolate))
+    if (V8XPathNSResolver::HasInstance(value, isolate, worldType(isolate)))
         resolver = V8XPathNSResolver::toNative(v8::Handle<v8::Object>::Cast(value));
     else if (value->IsObject())
         resolver = V8CustomXPathNSResolver::create(value->ToObject(), isolate);
@@ -221,19 +221,25 @@ DOMWindow* toDOMWindow(v8::Handle<v8::Context> context)
 {
     v8::Handle<v8::Object> global = context->Global();
     ASSERT(!global.IsEmpty());
-    global = global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(context->GetIsolate()));
-    ASSERT(!global.IsEmpty());
-    return V8DOMWindow::toNative(global);
+    v8::Handle<v8::Object> window = global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(context->GetIsolate(), MainWorld));
+    if (!window.IsEmpty())
+        return V8DOMWindow::toNative(window);
+    window = global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(context->GetIsolate(), IsolatedWorld));
+    ASSERT(!window.IsEmpty());
+    return V8DOMWindow::toNative(window);
 }
 
 ScriptExecutionContext* toScriptExecutionContext(v8::Handle<v8::Context> context)
 {
     v8::Handle<v8::Object> global = context->Global();
-    v8::Handle<v8::Object> windowWrapper = global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(context->GetIsolate()));
+    v8::Handle<v8::Object> windowWrapper = global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(context->GetIsolate(), MainWorld));
+    if (!windowWrapper.IsEmpty())
+        return V8DOMWindow::toNative(windowWrapper)->scriptExecutionContext();
+    windowWrapper = global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(context->GetIsolate(), IsolatedWorld));
     if (!windowWrapper.IsEmpty())
         return V8DOMWindow::toNative(windowWrapper)->scriptExecutionContext();
 #if ENABLE(WORKERS)
-    v8::Handle<v8::Object> workerWrapper = global->FindInstanceInPrototypeChain(V8WorkerContext::GetTemplate(context->GetIsolate()));
+    v8::Handle<v8::Object> workerWrapper = global->FindInstanceInPrototypeChain(V8WorkerContext::GetTemplate(context->GetIsolate(), WorkerWorld));
     if (!workerWrapper.IsEmpty())
         return V8WorkerContext::toNative(workerWrapper)->scriptExecutionContext();
 #endif
@@ -255,8 +261,28 @@ Frame* toFrameIfNotDetached(v8::Handle<v8::Context> context)
 v8::Local<v8::Context> toV8Context(ScriptExecutionContext* context, const WorldContextHandle& worldContext)
 {
     if (context->isDocument()) {
-        if (Frame* frame = static_cast<Document*>(context)->frame())
+        if (Frame* frame = toDocument(context)->frame())
             return worldContext.adjustedContext(frame->script());
+#if ENABLE(WORKERS)
+    } else if (context->isWorkerContext()) {
+        if (WorkerScriptController* script = static_cast<WorkerContext*>(context)->script())
+            return script->context();
+#endif
+    }
+    return v8::Local<v8::Context>();
+}
+
+v8::Local<v8::Context> toV8Context(ScriptExecutionContext* context, DOMWrapperWorld* world)
+{
+    if (context->isDocument()) {
+        if (Frame* frame = toDocument(context)->frame()) {
+            // FIXME: Store the DOMWrapperWorld for the main world in the v8::Context so callers
+            // that are looking up their world with DOMWrapperWorld::isolatedWorld(v8::Context::GetCurrent())
+            // won't end up passing null here when later trying to get their v8::Context back.
+            if (!world)
+                return frame->script()->mainWorldContext();
+            return v8::Local<v8::Context>::New(frame->script()->windowShell(world)->context());
+        }
 #if ENABLE(WORKERS)
     } else if (context->isWorkerContext()) {
         if (WorkerScriptController* script = static_cast<WorkerContext*>(context)->script())
@@ -303,6 +329,26 @@ void crashIfV8IsDead()
         // such as out-of-memory by crashing the renderer.
         CRASH();
     }
+}
+
+WrapperWorldType worldType(v8::Isolate* isolate)
+{
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
+    // FIXME: Rename domDataStore() to workerDataStore().
+    if (!data->domDataStore())
+        return worldTypeInMainThread(isolate);
+    return WorkerWorld;
+}
+
+WrapperWorldType worldTypeInMainThread(v8::Isolate* isolate)
+{
+    if (!DOMWrapperWorld::isolatedWorldsExist())
+        return MainWorld;
+    ASSERT(!v8::Context::GetEntered().IsEmpty());
+    DOMWrapperWorld* isolatedWorld = DOMWrapperWorld::isolatedWorld(v8::Context::GetEntered());
+    if (isolatedWorld)
+        return IsolatedWorld;
+    return MainWorld;
 }
 
 } // namespace WebCore

@@ -88,11 +88,6 @@ String InspectorFrontendClientImpl::localizedStringsURL()
     return "";
 }
 
-String InspectorFrontendClientImpl::hiddenPanels()
-{
-    return "";
-}
-
 void InspectorFrontendClientImpl::bringToFront()
 {
     m_client->activateWindow();
@@ -137,11 +132,6 @@ void InspectorFrontendClientImpl::save(const String& url, const String& content,
 void InspectorFrontendClientImpl::append(const String& url, const String& content)
 {
     m_client->append(url, content);
-}
-
-bool InspectorFrontendClientImpl::canInspectWorkers()
-{
-    return true;
 }
 
 void InspectorFrontendClientImpl::inspectedURLChanged(const String& url)

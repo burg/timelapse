@@ -44,27 +44,25 @@
 namespace WebCore {
 
 class Document;
-class HTMLElement;
+class Element;
 class ScriptState;
 class ScriptValue;
 
 class CustomElementConstructor : public RefCounted<CustomElementConstructor> , public ContextDestructionObserver {
 public:
-    static PassRefPtr<CustomElementConstructor> create(ScriptState*, Document*, const QualifiedName&, const String&, const ScriptValue&);
+    static PassRefPtr<CustomElementConstructor> create(ScriptState*, Document*, const QualifiedName&, const ScriptValue&);
 
     virtual ~CustomElementConstructor();
 
-    Document* document() const { return static_cast<Document*>(m_scriptExecutionContext); }
-    const QualifiedName& tagName() const { return m_tagName; }
-    const AtomicString& name() const { return m_name; }
+    Document* document() const { return toDocument(m_scriptExecutionContext); }
+    const QualifiedName& name() const { return m_name; }
 
-    PassRefPtr<HTMLElement> createElement() const;
+    PassRefPtr<Element> createElement() const;
     
 private:
-    CustomElementConstructor(Document*, const QualifiedName&, const String&);
+    CustomElementConstructor(Document*, const QualifiedName&);
 
-    QualifiedName m_tagName;
-    AtomicString m_name;
+    QualifiedName m_name;
 };
 
 }

@@ -51,7 +51,7 @@
 #include "TextIterator.h"
 #include "VisiblePosition.h"
 #include "VisibleSelection.h"
-#include "visible_units.h"
+#include "VisibleUnits.h"
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -199,7 +199,7 @@ Element* unsplittableElementForPosition(const Position& p)
 {
     // Since enclosingNodeOfType won't search beyond the highest root editable node,
     // this code works even if the closest table cell was outside of the root editable node.
-    Element* enclosingCell = static_cast<Element*>(enclosingNodeOfType(p, &isTableCell));
+    Element* enclosingCell = toElement(enclosingNodeOfType(p, &isTableCell));
     if (enclosingCell)
         return enclosingCell;
 
@@ -580,7 +580,7 @@ bool isListElement(Node *n)
     return (n && (n->hasTagName(ulTag) || n->hasTagName(olTag) || n->hasTagName(dlTag)));
 }
 
-bool isListItem(Node *n)
+bool isListItem(const Node *n)
 {
     return n && n->renderer() && n->renderer()->isListItem();
 }
@@ -671,7 +671,7 @@ Node* highestNodeToRemoveInPruning(Node* node)
 
 Node* enclosingTableCell(const Position& p)
 {
-    return static_cast<Element*>(enclosingNodeOfType(p, isTableCell));
+    return toElement(enclosingNodeOfType(p, isTableCell));
 }
 
 Node* enclosingAnchorElement(const Position& p)

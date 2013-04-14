@@ -108,7 +108,7 @@ PassRefPtr<SVGFilterBuilder> RenderSVGResourceFilter::buildPrimitives(SVGFilter*
         if (!node->isSVGElement())
             continue;
 
-        SVGElement* element = static_cast<SVGElement*>(node);
+        SVGElement* element = toSVGElement(node);
         if (!element->isFilterEffect())
             continue;
 
@@ -166,7 +166,7 @@ bool RenderSVGResourceFilter::applyResource(RenderObject* object, RenderStyle*, 
 
     // Determine absolute transformation matrix for filter. 
     AffineTransform absoluteTransform;
-    SVGRenderingContext::calculateTransformationToOutermostSVGCoordinateSystem(object, absoluteTransform);
+    SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(object, absoluteTransform);
     if (!absoluteTransform.isInvertible())
         return false;
 

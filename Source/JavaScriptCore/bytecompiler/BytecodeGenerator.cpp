@@ -141,6 +141,10 @@ void ResolveResult::checkValidity()
     case Dynamic:
         ASSERT(!m_local);
         return;
+    case Lexical:
+    case ReadOnlyLexical:
+        ASSERT(!m_local);
+        return;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -226,7 +230,7 @@ void BytecodeGenerator::preserveLastVar()
         m_lastVar = &m_calleeRegisters.last();
 }
 
-BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, ProgramNode* programNode, UnlinkedProgramCodeBlock* codeBlock, DebuggerMode debuggerMode, ProfilerMode profilerMode)
+BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, JSScope*, ProgramNode* programNode, UnlinkedProgramCodeBlock* codeBlock, DebuggerMode debuggerMode, ProfilerMode profilerMode)
     : m_shouldEmitDebugHooks(debuggerMode == DebuggerOn)
     , m_shouldEmitProfileHooks(profilerMode == ProfilerOn)
     , m_symbolTable(0)
@@ -234,6 +238,7 @@ BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, ProgramNode* prog
     , m_codeBlock(globalData, codeBlock)
     , m_thisRegister(CallFrame::thisArgumentOffset())
     , m_emptyValueRegister(0)
+    , m_globalObjectRegister(0)
     , m_finallyDepth(0)
     , m_dynamicScopeDepth(0)
     , m_codeType(GlobalCode)
@@ -273,14 +278,16 @@ BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, ProgramNode* prog
 
 }
 
-BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, FunctionBodyNode* functionBody, UnlinkedFunctionCodeBlock* codeBlock, DebuggerMode debuggerMode, ProfilerMode profilerMode)
+BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, JSScope* scope, FunctionBodyNode* functionBody, UnlinkedFunctionCodeBlock* codeBlock, DebuggerMode debuggerMode, ProfilerMode profilerMode)
     : m_shouldEmitDebugHooks(debuggerMode == DebuggerOn)
     , m_shouldEmitProfileHooks(profilerMode == ProfilerOn)
     , m_symbolTable(codeBlock->symbolTable())
     , m_scopeNode(functionBody)
+    , m_scope(globalData, scope)
     , m_codeBlock(globalData, codeBlock)
     , m_activationRegister(0)
     , m_emptyValueRegister(0)
+    , m_globalObjectRegister(0)
     , m_finallyDepth(0)
     , m_dynamicScopeDepth(0)
     , m_codeType(FunctionCode)
@@ -468,14 +475,16 @@ BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, FunctionBodyNode*
     }
 }
 
-BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, EvalNode* evalNode, UnlinkedEvalCodeBlock* codeBlock, DebuggerMode debuggerMode, ProfilerMode profilerMode)
+BytecodeGenerator::BytecodeGenerator(JSGlobalData& globalData, JSScope* scope, EvalNode* evalNode, UnlinkedEvalCodeBlock* codeBlock, DebuggerMode debuggerMode, ProfilerMode profilerMode)
     : m_shouldEmitDebugHooks(debuggerMode == DebuggerOn)
     , m_shouldEmitProfileHooks(profilerMode == ProfilerOn)
     , m_symbolTable(codeBlock->symbolTable())
     , m_scopeNode(evalNode)
+    , m_scope(globalData, scope)
     , m_codeBlock(globalData, codeBlock)
     , m_thisRegister(CallFrame::thisArgumentOffset())
     , m_emptyValueRegister(0)
+    , m_globalObjectRegister(0)
     , m_finallyDepth(0)
     , m_dynamicScopeDepth(0)
     , m_codeType(EvalCode)
@@ -630,7 +639,7 @@ RegisterID* BytecodeGenerator::newTemporary()
     return result;
 }
 
-PassRefPtr<LabelScope> BytecodeGenerator::newLabelScope(LabelScope::Type type, const Identifier* name)
+LabelScopePtr BytecodeGenerator::newLabelScope(LabelScope::Type type, const Identifier* name)
 {
     // Reclaim free label scopes.
     while (m_labelScopes.size() && !m_labelScopes.last().refCount())
@@ -639,7 +648,7 @@ PassRefPtr<LabelScope> BytecodeGenerator::newLabelScope(LabelScope::Type type, c
     // Allocate new label scope.
     LabelScope scope(type, name, scopeDepth(), newLabel(), type == LabelScope::Loop ? newLabel() : PassRefPtr<Label>()); // Only loops have continue targets.
     m_labelScopes.append(scope);
-    return &m_labelScopes.last();
+    return LabelScopePtr(&m_labelScopes, m_labelScopes.size() - 1);
 }
 
 PassRefPtr<Label> BytecodeGenerator::newLabel()
@@ -1227,6 +1236,21 @@ RegisterID* BytecodeGenerator::emitLoad(RegisterID* dst, JSValue v)
     return constantID;
 }
 
+RegisterID* BytecodeGenerator::emitLoadGlobalObject(RegisterID* dst)
+{
+    if (!m_globalObjectRegister) {
+        int index = m_nextConstantOffset;
+        m_constantPoolRegisters.append(FirstConstantRegisterIndex + m_nextConstantOffset);
+        ++m_nextConstantOffset;
+        m_codeBlock->addConstant(JSValue());
+        m_globalObjectRegister = &m_constantPoolRegisters[index];
+        m_codeBlock->setGlobalObjectRegister(index);
+    }
+    if (dst)
+        emitMove(dst, m_globalObjectRegister);
+    return m_globalObjectRegister;
+}
+
 ResolveResult BytecodeGenerator::resolve(const Identifier& property)
 {
     if (property == propertyNames().thisIdentifier)
@@ -1243,13 +1267,51 @@ ResolveResult BytecodeGenerator::resolve(const Identifier& property)
             return ResolveResult::registerResolve(local, flags);
         }
     }
+    // Cases where we cannot statically optimize the lookup.
+    if (property == propertyNames().arguments || !canOptimizeNonLocals())
+        return ResolveResult::dynamicResolve();
+
+    if (!m_scope || m_codeType != FunctionCode || m_shouldEmitDebugHooks)
+        return ResolveResult::dynamicResolve();
+
+    ScopeChainIterator iter = m_scope->begin();
+    ScopeChainIterator end = m_scope->end();
+    size_t depth = m_codeBlock->needsFullScopeChain();
+    unsigned flags = 0;
+    for (; iter != end; ++iter, ++depth) {
+        JSObject* currentScope = iter.get();
+        if (!currentScope->isVariableObject())
+            return ResolveResult::dynamicResolve();
+
+        JSSymbolTableObject* currentVariableObject = jsCast<JSSymbolTableObject*>(currentScope);
+        SymbolTableEntry entry = currentVariableObject->symbolTable()->get(property.impl());
+
+        // Found the property
+        if (!entry.isNull()) {
+            if (entry.isReadOnly())
+                flags |= ResolveResult::ReadOnlyFlag;
+            if (++iter == end)
+                return ResolveResult::dynamicResolve();
+#if !ASSERT_DISABLED
+            if (JSActivation* activation = jsDynamicCast<JSActivation*>(currentVariableObject))
+                ASSERT(activation->isValid(entry));
+#endif
+            return ResolveResult::lexicalResolve(entry.getIndex(), depth, flags);
+        }
+        bool scopeRequiresDynamicChecks = false;
+        if (currentVariableObject->isDynamicScope(scopeRequiresDynamicChecks))
+            break;
+        if (scopeRequiresDynamicChecks)
+            flags |= ResolveResult::DynamicFlag;
+    }
+
     return ResolveResult::dynamicResolve();
 }
 
 ResolveResult BytecodeGenerator::resolveConstDecl(const Identifier& property)
 {
     // Register-allocated const declarations.
-    if (m_codeType != EvalCode && m_codeType != GlobalCode && m_symbolTable) {
+    if (m_codeType == FunctionCode && m_symbolTable) {
         SymbolTableEntry entry = symbolTable().get(property.impl());
         if (!entry.isNull()) {
             unsigned flags = entry.isReadOnly() ? ResolveResult::ReadOnlyFlag : 0;
@@ -1288,8 +1350,8 @@ bool BytecodeGenerator::shouldAvoidResolveGlobal()
 RegisterID* BytecodeGenerator::emitResolve(RegisterID* dst, const ResolveResult& resolveResult, const Identifier& property)
 {
 
-    if (resolveResult.isRegister())
-        return emitGetLocalVar(dst, resolveResult, property);
+    if (resolveResult.isStatic())
+        return emitGetStaticVar(dst, resolveResult, property);
 
     UnlinkedValueProfile profile = emitProfiledOpcode(op_resolve);
     instructions().append(kill(dst));
@@ -1301,7 +1363,11 @@ RegisterID* BytecodeGenerator::emitResolve(RegisterID* dst, const ResolveResult&
 
 RegisterID* BytecodeGenerator::emitResolveBase(RegisterID* dst, const ResolveResult& resolveResult, const Identifier& property)
 {
-    ASSERT_UNUSED(resolveResult, !resolveResult.isRegister());
+    if (!resolveResult.isDynamic()) {
+        // Global object is the base
+        return emitLoadGlobalObject(dst);
+    }
+
     // We can't optimise at all :-(
     UnlinkedValueProfile profile = emitProfiledOpcode(op_resolve_base);
     instructions().append(kill(dst));
@@ -1313,9 +1379,8 @@ RegisterID* BytecodeGenerator::emitResolveBase(RegisterID* dst, const ResolveRes
     return dst;
 }
 
-RegisterID* BytecodeGenerator::emitResolveBaseForPut(RegisterID* dst, const ResolveResult& resolveResult, const Identifier& property, NonlocalResolveInfo& verifier)
+RegisterID* BytecodeGenerator::emitResolveBaseForPut(RegisterID* dst, const ResolveResult&, const Identifier& property, NonlocalResolveInfo& verifier)
 {
-    ASSERT_UNUSED(resolveResult, !resolveResult.isRegister());
     // We can't optimise at all :-(
     UnlinkedValueProfile profile = emitProfiledOpcode(op_resolve_base);
     instructions().append(kill(dst));
@@ -1331,7 +1396,7 @@ RegisterID* BytecodeGenerator::emitResolveBaseForPut(RegisterID* dst, const Reso
 
 RegisterID* BytecodeGenerator::emitResolveWithBaseForPut(RegisterID* baseDst, RegisterID* propDst, const ResolveResult& resolveResult, const Identifier& property, NonlocalResolveInfo& verifier)
 {
-    ASSERT_UNUSED(resolveResult, !resolveResult.isRegister());
+    ASSERT_UNUSED(resolveResult, !resolveResult.isStatic());
     UnlinkedValueProfile profile = emitProfiledOpcode(op_resolve_with_base);
     instructions().append(kill(baseDst));
     instructions().append(propDst->index());
@@ -1346,9 +1411,9 @@ RegisterID* BytecodeGenerator::emitResolveWithBaseForPut(RegisterID* baseDst, Re
 
 RegisterID* BytecodeGenerator::emitResolveWithThis(RegisterID* baseDst, RegisterID* propDst, const ResolveResult& resolveResult, const Identifier& property)
 {
-    if (resolveResult.isRegister()) {
+    if (resolveResult.isStatic()) {
         emitLoad(baseDst, jsUndefined());
-        emitGetLocalVar(propDst, resolveResult, property);
+        emitGetStaticVar(propDst, resolveResult, property);
         return baseDst;
     }
 
@@ -1361,14 +1426,25 @@ RegisterID* BytecodeGenerator::emitResolveWithThis(RegisterID* baseDst, Register
     return baseDst;
 }
 
-RegisterID* BytecodeGenerator::emitGetLocalVar(RegisterID* dst, const ResolveResult& resolveResult, const Identifier&)
+RegisterID* BytecodeGenerator::emitGetStaticVar(RegisterID* dst, const ResolveResult& resolveResult, const Identifier&)
 {
+    ASSERT(m_codeType == FunctionCode);
     switch (resolveResult.type()) {
     case ResolveResult::Register:
     case ResolveResult::ReadOnlyRegister:
         if (dst == ignoredResult())
             return 0;
         return moveToDestinationIfNeeded(dst, resolveResult.local());
+
+    case ResolveResult::Lexical:
+    case ResolveResult::ReadOnlyLexical: {
+        UnlinkedValueProfile profile = emitProfiledOpcode(op_get_scoped_var);
+        instructions().append(dst->index());
+        instructions().append(resolveResult.index());
+        instructions().append(resolveResult.depth());
+        instructions().append(profile);
+        return dst;
+    }
 
     default:
         RELEASE_ASSERT_NOT_REACHED();
@@ -1385,6 +1461,28 @@ RegisterID* BytecodeGenerator::emitInitGlobalConst(const Identifier& identifier,
     instructions().append(0);
     instructions().append(addConstant(identifier));
     return value;
+}
+
+RegisterID* BytecodeGenerator::emitPutStaticVar(const ResolveResult& resolveResult, const Identifier&, RegisterID* value)
+{
+    ASSERT(m_codeType == FunctionCode);
+    switch (resolveResult.type()) {
+    case ResolveResult::Register:
+    case ResolveResult::ReadOnlyRegister:
+        return moveToDestinationIfNeeded(resolveResult.local(), value);
+
+    case ResolveResult::Lexical:
+    case ResolveResult::ReadOnlyLexical:
+        emitOpcode(op_put_scoped_var);
+        instructions().append(resolveResult.index());
+        instructions().append(resolveResult.depth());
+        instructions().append(value->index());
+        return value;
+
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return 0;
+    }
 }
 
 RegisterID* BytecodeGenerator::emitGetById(RegisterID* dst, RegisterID* base, const Identifier& property)
@@ -2183,7 +2281,7 @@ PassRefPtr<Label> BytecodeGenerator::emitComplexJumpScopes(Label* target, Contro
         Vector<SwitchInfo> savedSwitchContextStack;
         Vector<ForInContext> savedForInContextStack;
         Vector<TryContext> poppedTryContexts;
-        SegmentedVector<LabelScope, 8> savedLabelScopes;
+        LabelScopeStore savedLabelScopes;
         while (topScope > bottomScope && topScope->isFinallyBlock) {
             RefPtr<Label> beforeFinally = emitLabel(newLabel().get());
             

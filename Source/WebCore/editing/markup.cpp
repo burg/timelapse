@@ -56,15 +56,16 @@
 #include "MarkupAccumulator.h"
 #include "NodeTraversal.h"
 #include "Range.h"
+#include "RenderBlock.h"
 #include "RenderObject.h"
 #include "Settings.h"
 #include "StylePropertySet.h"
 #include "StyleResolver.h"
 #include "TextIterator.h"
 #include "VisibleSelection.h"
+#include "VisibleUnits.h"
 #include "XMLNSNames.h"
 #include "htmlediting.h"
-#include "visible_units.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -170,7 +171,7 @@ void StyledMarkupAccumulator::wrapWithNode(Node* node, bool convertBlocksToInlin
 {
     StringBuilder markup;
     if (node->isElementNode())
-        appendElement(markup, static_cast<Element*>(node), convertBlocksToInlines && isBlock(const_cast<Node*>(node)), rangeFullySelectsNode);
+        appendElement(markup, toElement(node), convertBlocksToInlines && isBlock(const_cast<Node*>(node)), rangeFullySelectsNode);
     else
         appendStartMarkup(markup, node, 0);
     m_reversedPrecedingMarkup.append(markup.toString());
@@ -515,6 +516,14 @@ static Node* highestAncestorToWrapMarkup(const Range* range, EAnnotateForInterch
         // the structure and appearance of the copied markup.
         specialCommonAncestor = ancestorToRetainStructureAndAppearance(commonAncestor);
 
+        if (Node* parentListNode = enclosingNodeOfType(firstPositionInOrBeforeNode(range->firstNode()), isListItem)) {
+            if (WebCore::areRangesEqual(VisibleSelection::selectionFromContentsOfNode(parentListNode).toNormalizedRange().get(), range)) {
+                specialCommonAncestor = parentListNode->parentNode();
+                while (specialCommonAncestor && !isListElement(specialCommonAncestor))
+                    specialCommonAncestor = specialCommonAncestor->parentNode();
+            }
+        }
+
         // Retain the Mail quote level by including all ancestor mail block quotes.
         if (Node* highestMailBlockquote = highestEnclosingNodeOfType(firstPositionInOrBeforeNode(range->firstNode()), isMailBlockquote, CanCrossEditingBoundary))
             specialCommonAncestor = highestMailBlockquote;
@@ -522,7 +531,7 @@ static Node* highestAncestorToWrapMarkup(const Range* range, EAnnotateForInterch
 
     Node* checkAncestor = specialCommonAncestor ? specialCommonAncestor : commonAncestor;
     if (checkAncestor->renderer()) {
-        Node* newSpecialCommonAncestor = highestEnclosingNodeOfType(firstPositionInNode(checkAncestor), &isElementPresentational);
+        Node* newSpecialCommonAncestor = highestEnclosingNodeOfType(firstPositionInNode(checkAncestor), &isElementPresentational, CanCrossEditingBoundary, checkAncestor->renderer()->containingBlock()->node());
         if (newSpecialCommonAncestor)
             specialCommonAncestor = newSpecialCommonAncestor;
     }
@@ -595,8 +604,8 @@ static String createMarkupInternal(Document* document, const Range* range, const
                 // Bring the background attribute over, but not as an attribute because a background attribute on a div
                 // appears to have no effect.
                 if ((!fullySelectedRootStyle || !fullySelectedRootStyle->style() || !fullySelectedRootStyle->style()->getPropertyCSSValue(CSSPropertyBackgroundImage))
-                    && static_cast<Element*>(fullySelectedRoot)->hasAttribute(backgroundAttr))
-                    fullySelectedRootStyle->style()->setProperty(CSSPropertyBackgroundImage, "url('" + static_cast<Element*>(fullySelectedRoot)->getAttribute(backgroundAttr) + "')");
+                    && toElement(fullySelectedRoot)->hasAttribute(backgroundAttr))
+                    fullySelectedRootStyle->style()->setProperty(CSSPropertyBackgroundImage, "url('" + toElement(fullySelectedRoot)->getAttribute(backgroundAttr) + "')");
 
                 if (fullySelectedRootStyle->style()) {
                     // Reset the CSS properties to avoid an assertion error in addStyleMarkup().
@@ -751,7 +760,7 @@ PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document* docum
     if (specialCommonAncestor)
         fragment->appendChild(specialCommonAncestor, ASSERT_NO_EXCEPTION);
     else
-        fragment->takeAllChildrenFrom(static_cast<ContainerNode*>(commonAncestor));
+        fragment->takeAllChildrenFrom(toContainerNode(commonAncestor));
 
     trimFragment(fragment.get(), nodeBeforeContext.get(), nodeAfterContext.get());
 
@@ -817,7 +826,7 @@ static void fillContainerFromString(ContainerNode* paragraph, const String& stri
 
 bool isPlainTextMarkup(Node *node)
 {
-    if (!node->isElementNode() || !node->hasTagName(divTag) || static_cast<Element*>(node)->hasAttributes())
+    if (!node->isElementNode() || !node->hasTagName(divTag) || toElement(node)->hasAttributes())
         return false;
     
     if (node->childNodeCount() == 1 && (node->firstChild()->isTextNode() || (node->firstChild()->firstChild())))
@@ -867,7 +876,7 @@ PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String
 
     // Break string into paragraphs. Extra line breaks turn into empty paragraphs.
     Node* blockNode = enclosingBlock(context->firstNode());
-    Element* block = static_cast<Element*>(blockNode);
+    Element* block = toElement(blockNode);
     bool useClonesOfEnclosingBlock = blockNode
         && blockNode->isElementNode()
         && !block->hasTagName(bodyTag)

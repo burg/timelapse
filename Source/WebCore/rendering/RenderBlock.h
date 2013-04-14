@@ -35,6 +35,7 @@
 #include <wtf/ListHashSet.h>
 
 #if ENABLE(CSS_EXCLUSIONS)
+#include "ExclusionShapeInsideInfo.h"
 #include "ExclusionShapeValue.h"
 #endif
 
@@ -54,7 +55,6 @@ class LineInfo;
 class RenderRubyRun;
 #if ENABLE(CSS_EXCLUSIONS)
 class BasicShape;
-class ExclusionShapeInsideInfo;
 #endif
 class TextLayout;
 class WordMeasurement;
@@ -141,6 +141,15 @@ public:
 
     void setHasMarkupTruncation(bool b) { m_hasMarkupTruncation = b; }
     bool hasMarkupTruncation() const { return m_hasMarkupTruncation; }
+
+    void setHasMarginBeforeQuirk(bool b) { m_hasMarginBeforeQuirk = b; }
+    void setHasMarginAfterQuirk(bool b) { m_hasMarginAfterQuirk = b; }
+
+    bool hasMarginBeforeQuirk() const { return m_hasMarginBeforeQuirk; }
+    bool hasMarginAfterQuirk() const { return m_hasMarginAfterQuirk; }
+
+    bool hasMarginBeforeQuirk(const RenderBox* child) const;
+    bool hasMarginAfterQuirk(const RenderBox* child) const;
 
     RootInlineBox* createAndAppendRootInlineBox();
 
@@ -437,7 +446,23 @@ public:
 #endif
 
 #if ENABLE(CSS_EXCLUSIONS)
-    ExclusionShapeInsideInfo* exclusionShapeInsideInfo() const;
+    ExclusionShapeInsideInfo* ensureExclusionShapeInsideInfo()
+    {
+        if (!m_rareData || !m_rareData->m_shapeInsideInfo)
+            setExclusionShapeInsideInfo(ExclusionShapeInsideInfo::createInfo(this));
+        return m_rareData->m_shapeInsideInfo.get();
+    }
+    ExclusionShapeInsideInfo* exclusionShapeInsideInfo() const
+    {
+        return m_rareData && m_rareData->m_shapeInsideInfo && ExclusionShapeInsideInfo::isEnabledFor(this) ? m_rareData->m_shapeInsideInfo.get() : 0;
+    }
+    void setExclusionShapeInsideInfo(PassOwnPtr<ExclusionShapeInsideInfo> value)
+    {
+        if (!m_rareData)
+            m_rareData = adoptPtr(new RenderBlockRareData(this));
+        m_rareData->m_shapeInsideInfo = value;
+    }
+    ExclusionShapeInsideInfo* layoutExclusionShapeInsideInfo() const;
     bool allowsExclusionShapeInsideInfoSharing() const { return !isInline() && !isFloating(); }
 #endif
 
@@ -535,7 +560,7 @@ protected:
     void addOverflowFromInlineChildren();
     void addVisualOverflowFromTheme();
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint&);
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) OVERRIDE;
 
 #if ENABLE(SVG)
     // Only used by RenderSVGText, which explicitely overrides RenderBlock::layoutBlock(), do NOT use for anything else.
@@ -548,8 +573,8 @@ protected:
     }
 #endif
 
-    void updateRegionsAndExclusionsLogicalSize();
-    void computeRegionRangeForBlock();
+    bool updateRegionsAndExclusionsLogicalSize(RenderFlowThread*);
+    void computeRegionRangeForBlock(RenderFlowThread*);
 
     void updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, RenderBox*);
 
@@ -595,8 +620,6 @@ private:
 
     void insertIntoTrackedRendererMaps(RenderBox* descendant, TrackedDescendantsMap*&, TrackedContainerMap*&);
     static void removeFromTrackedRendererMaps(RenderBox* descendant, TrackedDescendantsMap*&, TrackedContainerMap*&);
-
-    virtual void borderFitAdjust(LayoutRect&) const; // Shrink the box in which the border paints if border-fit is set.
 
     virtual RootInlineBox* createRootInlineBox(); // Subclassed by SVG and Ruby.
 
@@ -888,6 +911,7 @@ private:
     
     virtual RenderObject* hoverAncestor() const;
     virtual void updateDragState(bool dragOn);
+    virtual void childBecameNonInline(RenderObject* child);
 
     virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool /*clipToVisibleContent*/) OVERRIDE
     {
@@ -917,6 +941,8 @@ private:
     virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
 
     void adjustPointToColumnContents(LayoutPoint&) const;
+    
+    void fitBorderToLinesIfNeeded(); // Shrink the box in which the border paints if border-fit is set.
     void adjustForBorderFit(LayoutUnit x, LayoutUnit& left, LayoutUnit& right) const; // Helper function for borderFitAdjust
 
     void markLinesDirtyInBlockRange(LayoutUnit logicalTop, LayoutUnit logicalBottom, RootInlineBox* highest = 0);
@@ -962,8 +988,8 @@ private:
 
         // These variables are used to detect quirky margins that we need to collapse away (in table cells
         // and in the body element).
-        bool m_marginBeforeQuirk : 1;
-        bool m_marginAfterQuirk : 1;
+        bool m_hasMarginBeforeQuirk : 1;
+        bool m_hasMarginAfterQuirk : 1;
         bool m_determinedMarginBeforeQuirk : 1;
 
         bool m_discardMargin : 1;
@@ -982,8 +1008,8 @@ private:
             m_positiveMargin = 0;
             m_negativeMargin = 0;
         }
-        void setMarginBeforeQuirk(bool b) { m_marginBeforeQuirk = b; }
-        void setMarginAfterQuirk(bool b) { m_marginAfterQuirk = b; }
+        void setHasMarginBeforeQuirk(bool b) { m_hasMarginBeforeQuirk = b; }
+        void setHasMarginAfterQuirk(bool b) { m_hasMarginAfterQuirk = b; }
         void setDeterminedMarginBeforeQuirk(bool b) { m_determinedMarginBeforeQuirk = b; }
         void setPositiveMargin(LayoutUnit p) { ASSERT(!m_discardMargin); m_positiveMargin = p; }
         void setNegativeMargin(LayoutUnit n) { ASSERT(!m_discardMargin); m_negativeMargin = n; }
@@ -1011,8 +1037,8 @@ private:
         bool canCollapseMarginAfterWithChildren() const { return m_canCollapseMarginAfterWithChildren; }
         bool quirkContainer() const { return m_quirkContainer; }
         bool determinedMarginBeforeQuirk() const { return m_determinedMarginBeforeQuirk; }
-        bool marginBeforeQuirk() const { return m_marginBeforeQuirk; }
-        bool marginAfterQuirk() const { return m_marginAfterQuirk; }
+        bool hasMarginBeforeQuirk() const { return m_hasMarginBeforeQuirk; }
+        bool hasMarginAfterQuirk() const { return m_hasMarginAfterQuirk; }
         LayoutUnit positiveMargin() const { return m_positiveMargin; }
         LayoutUnit negativeMargin() const { return m_negativeMargin; }
         bool discardMargin() const { return m_discardMargin; }
@@ -1031,7 +1057,6 @@ private:
     LayoutUnit clearFloatsIfNeeded(RenderBox* child, MarginInfo&, LayoutUnit oldTopPosMargin, LayoutUnit oldTopNegMargin, LayoutUnit yPos);
     LayoutUnit estimateLogicalTopPosition(RenderBox* child, const MarginInfo&, LayoutUnit& estimateWithoutPagination);
     void marginBeforeEstimateForChild(RenderBox*, LayoutUnit&, LayoutUnit&, bool&) const;
-    void determineLogicalLeftPositionForChild(RenderBox* child);
     void handleAfterSideOfBlock(LayoutUnit top, LayoutUnit bottom, MarginInfo&);
     void setCollapsedBottomMargin(const MarginInfo&);
     // End helper functions and structs used by layoutBlockChildren.
@@ -1045,6 +1070,8 @@ private:
     static void repaintDirtyFloats(Vector<FloatWithRect>& floats);
 
 protected:
+    void determineLogicalLeftPositionForChild(RenderBox* child, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
+
     // Pagination routines.
     virtual bool relayoutForPagination(bool hasSpecifiedPageLogicalHeight, LayoutUnit pageLogicalHeight, LayoutStateMaintainer&);
     
@@ -1071,7 +1098,7 @@ protected:
     bool pushToNextPageWithMinimumLogicalHeight(LayoutUnit& adjustment, LayoutUnit logicalOffset, LayoutUnit minimumLogicalHeight) const;
 
     LayoutUnit adjustForUnsplittableChild(RenderBox* child, LayoutUnit logicalOffset, bool includeMargins = false); // If the child is unsplittable and can't fit on the current page, return the top of the next page/column.
-    void adjustLinePositionForPagination(RootInlineBox*, LayoutUnit& deltaOffset); // Computes a deltaOffset value that put a line at the top of the next page if it doesn't fit on the current page.
+    void adjustLinePositionForPagination(RootInlineBox*, LayoutUnit& deltaOffset, RenderFlowThread*); // Computes a deltaOffset value that put a line at the top of the next page if it doesn't fit on the current page.
     LayoutUnit adjustBlockChildForPagination(LayoutUnit logicalTopAfterClear, LayoutUnit estimateWithoutPagination, RenderBox* child, bool atBeforeSideOfBlock);
 
     // Adjust from painting offsets to the local coords of this renderer
@@ -1080,9 +1107,9 @@ protected:
     // This function is called to test a line box that has moved in the block direction to see if it has ended up in a new
     // region/page/column that has a different available line width than the old one. Used to know when you have to dirty a
     // line, i.e., that it can't be re-used.
-    bool lineWidthForPaginatedLineChanged(RootInlineBox*, LayoutUnit lineDelta = 0) const;
+    bool lineWidthForPaginatedLineChanged(RootInlineBox*, LayoutUnit lineDelta, RenderFlowThread*) const;
 
-    bool logicalWidthChangedInRegions() const;
+    bool logicalWidthChangedInRegions(RenderFlowThread*) const;
 
     virtual bool requiresColumns(int desiredColumnCount) const;
 
@@ -1122,6 +1149,9 @@ protected:
             , m_highValue(highValue)
             , m_offset(offset)
             , m_heightRemaining(heightRemaining)
+#if ENABLE(CSS_EXCLUSIONS)
+            , m_last(0)
+#endif
         {
         }
         
@@ -1129,12 +1159,30 @@ protected:
         inline int highValue() const { return m_highValue; }
         void collectIfNeeded(const IntervalType&) const;
 
+#if ENABLE(CSS_EXCLUSIONS)
+        // When computing the offset caused by the floats on a given line, if
+        // the outermost float on that line has a shape-outside, the inline
+        // content that butts up against that float must be positioned using
+        // the contours of the shape, not the shape's bounding box. We save the
+        // last float encountered so that the offset can be computed correctly
+        // by the code using this adapter.
+        const FloatingObject* lastFloat() const { return m_last; }
+#endif
+
     private:
         const RenderBlock* m_renderer;
         int m_lowValue;
         int m_highValue;
         LayoutUnit& m_offset;
         LayoutUnit* m_heightRemaining;
+#if ENABLE(CSS_EXCLUSIONS)
+        // This member variable is mutable because the collectIfNeeded method
+        // is declared as const, even though it doesn't actually respect that
+        // contract. It modifies other member variables via loopholes in the
+        // const behavior. Instead of using loopholes, I decided it was better
+        // to make the fact that this is modified in a const method explicit.
+        mutable const FloatingObject* m_last;
+#endif
     };
 
     void createFloatingObjects();
@@ -1181,10 +1229,6 @@ public:
         friend void RenderBlock::createFloatingObjects();
     };
 
-protected:
-
-    OwnPtr<FloatingObjects> m_floatingObjects;
-
     // Allocated only when some of these fields have non-default values
     struct RenderBlockRareData {
         WTF_MAKE_NONCOPYABLE(RenderBlockRareData); WTF_MAKE_FAST_ALLOCATED;
@@ -1225,17 +1269,25 @@ protected:
         RootInlineBox* m_lineGridBox;
 
         RootInlineBox* m_lineBreakToAvoidWidow;
+#if ENABLE(CSS_EXCLUSIONS)
+        OwnPtr<ExclusionShapeInsideInfo> m_shapeInsideInfo;
+#endif
         bool m_shouldBreakAtLineToAvoidWidow : 1;
         bool m_discardMarginBefore : 1;
         bool m_discardMarginAfter : 1;
      };
 
+protected:
+
+    OwnPtr<FloatingObjects> m_floatingObjects;
     OwnPtr<RenderBlockRareData> m_rareData;
 
     RenderObjectChildList m_children;
     RenderLineBoxList m_lineBoxes;   // All of the root line boxes created for this block flow.  For example, <div>Hello<br>world.</div> will have two total lines for the <div>.
 
-    mutable signed m_lineHeight : 29;
+    mutable signed m_lineHeight : 27;
+    unsigned m_hasMarginBeforeQuirk : 1; // Note these quirk values can't be put in RenderBlockRareData since they are set too frequently.
+    unsigned m_hasMarginAfterQuirk : 1;
     unsigned m_beingDestroyed : 1;
     unsigned m_hasMarkupTruncation : 1;
     unsigned m_hasBorderOrPaddingLogicalWidthChanged : 1;

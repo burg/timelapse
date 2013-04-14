@@ -36,7 +36,7 @@
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     // FIXME: This should eventually be available (if they are wanted) for all languages.
-    [JSCustomGetter, CustomSetter, Deletable] attribute HTMLAllCollection all;
+    [JSCustom, Replaceable, Deletable] attribute HTMLAllCollection all;
 #endif
 
     void clear();
@@ -52,11 +52,6 @@
 
     readonly attribute Element activeElement;
     boolean hasFocus();
-
-#if defined(ENABLE_CUSTOM_ELEMENTS) && ENABLE_CUSTOM_ELEMENTS
-    [V8EnabledAtRuntime=customDOMElements, Conditional=CUSTOM_ELEMENTS, ImplementedAs=registerElement, CallWith=ScriptState]
-    CustomElementConstructor webkitRegister(in DOMString name, in [Optional] Dictionary options) raises(DOMException);
-#endif
 
     // Deprecated attributes
              [TreatNullAs=NullString] attribute DOMString bgColor;

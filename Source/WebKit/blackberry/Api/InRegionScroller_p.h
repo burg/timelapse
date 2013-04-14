@@ -53,6 +53,7 @@ public:
 
     void calculateInRegionScrollableAreasForPoint(const WebCore::IntPoint&);
     const std::vector<Platform::ScrollViewBase*>& activeInRegionScrollableAreas() const;
+    void updateSelectionScrollView(const WebCore::Node*);
 
     void clearDocumentData(const WebCore::Document*);
 
@@ -62,6 +63,7 @@ public:
     bool m_needsActiveScrollableAreaCalculation;
 
 private:
+    Platform::ScrollViewBase* firstScrollableInRegionForNode(const WebCore::Node*);
     bool setLayerScrollPosition(WebCore::RenderLayer*, const WebCore::IntPoint& scrollPosition);
 
     void calculateActiveAndShrinkCachedScrollableAreas(WebCore::RenderLayer*);
@@ -69,9 +71,11 @@ private:
     void pushBackInRegionScrollable(InRegionScrollableArea*);
 
     void adjustScrollDelta(const WebCore::IntPoint& maxOffset, const WebCore::IntPoint& currentOffset, WebCore::IntSize& delta) const;
+    Platform::ScrollViewBase* clipAndCreateInRegionScrollableArea(WebCore::RenderLayer*);
 
     bool isValidScrollableLayerWebKitThread(WebCore::LayerWebKitThread*) const;
     bool isValidScrollableNode(WebCore::Node*) const;
+    WebCore::IntRect clipToRect(const WebCore::IntRect&, InRegionScrollableArea*);
     std::vector<Platform::ScrollViewBase*> m_activeInRegionScrollableAreas;
 };
 

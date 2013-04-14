@@ -1,3 +1,4 @@
+
 # Copied from mac-wk2/Skipped and removed Mac specific tests.
 #
 # Copyright (C) 2010 Apple Inc. All rights reserved.
@@ -103,6 +104,8 @@ svg/custom/use-events-crash.svg
 # [WK2] [Qt] Support drag in mouse events for WebKit2 EventSender
 # <https://bugs.webkit.org/show_bug.cgi?id=69946>
 editing/pasteboard/drag-drop-iframe-refresh-crash.html
+
+webkit.org/b/111439 fast/events/wheelevent-in-text-node.html [ Skip ]
 
 # WebKit2 needs layoutTestController.overridePreference
 # <https://bugs.webkit.org/show_bug.cgi?id=42197>
@@ -374,16 +377,15 @@ webkit.org/b/101165 compositing/repaint/invalidations-on-composited-layers.html
 # [Qt][Wk2] REGGRESSION (r142112): It made compositing tests fail.
 webkit.org/b/109291 compositing/iframes/iframe-composited-scrolling.html
 webkit.org/b/109291 compositing/layer-creation/fixed-position-in-view-dynamic.html
-webkit.org/b/109291 compositing/layer-creation/fixed-position-out-of-view-dynamic.html
-webkit.org/b/109291 compositing/layer-creation/fixed-position-out-of-view-scroll-reason.html
-webkit.org/b/109291 compositing/layer-creation/no-compositing-for-fixed-position-under-transform.html
-webkit.org/b/109291 scrollingcoordinator/non-fast-scrollable-region-scaled-iframe.html
-webkit.org/b/109291 scrollingcoordinator/non-fast-scrollable-region-transformed-iframe.html
 
 # [Qt] [WK2] Some fullscreen layout tests are timing out on the bot
 # https://bugs.webkit.org/show_bug.cgi?id=92543
 fullscreen/video-controls-timeline.html
 fullscreen/full-screen-iframe-legacy.html
+
+webkit.org/b/112146 fullscreen/video-controls-drag.html [ Skip ]
+
+webkit.org/b/112128 fullscreen/full-screen-table-section.html [ Skip ]
 
 # [Qt][WK2] http/tests/security/xss-DENIED-xsl-document-securityOrigin.xml crashes
 # https://bugs.webkit.org/show_bug.cgi?id=80209
@@ -716,22 +718,17 @@ fast/dom/shadow/wheel-event-on-input-in-shadow-dom.html
 webkit.org/b/100769 animations/negative-delay.html [ Failure Pass ]
 webkit.org/b/100769 transitions/negative-delay.html [ Failure Pass ]
 
-# [Qt] Text on scaled layer is blurry
-webkit.org/b/101491 compositing/text-on-scaled-layer.html [ ImageOnlyFailure ]
-webkit.org/b/101491 compositing/text-on-scaled-surface.html [ ImageOnlyFailure ]
-
 # [Qt][WK2] New compositing/overflow/* tests fails, because ENABLE_ACCELERATED_OVERFLOW_SCROLLING is disabled
 webkit.org/b/102678 compositing/overflow/updating-scrolling-content.html
 webkit.org/b/102678 compositing/overflow/scrolling-without-painting.html
+
+webkit.org/b/108257 compositing/overflow/automatically-opt-into-composited-scrolling.html [ Skip ]
 
 # [Qt][WK2] New fast/events/mouse-cursor.html fails
 webkit.org/b/103122 fast/events/mouse-cursor.html
 
 # [Qt][WK2] new fast/dom/Geolocation/cached-position-iframe.html fails since it was introduced in r136164
 webkit.org/b/103876 fast/dom/Geolocation/cached-position-iframe.html
-
-# [Qt][WK2] compositing/overflow/automatically-opt-into-composited-scrolling.html makes other tests fail
-webkit.org/b/105173 compositing/overflow/automatically-opt-into-composited-scrolling.html
 
 # [Qt][WK2] The new compositing/repaint/resize-repaint.html fails
 webkit.org/b/105182 compositing/repaint/resize-repaint.html
@@ -741,3 +738,14 @@ webkit.org/b/105182 compositing/repaint/resize-repaint.html
 svg/text/select-textLength-spacing-stretch-1.svg
 svg/text/select-x-list-with-tspans-1.svg
 svg/text/select-x-list-1.svg
+
+# Missing TextChecker::requestCheckingOfString() implementation for Qt.
+editing/spelling/grammar-markers.html
+editing/spelling/grammar-paste.html
+editing/spelling/grammar-markers-hidpi.html
+editing/spelling/spellcheck-async-mutation.html
+editing/spelling/spellcheck-async-remove-frame.html
+editing/spelling/spellcheck-async.html
+editing/spelling/spellcheck-queue.html
+editing/spelling/spellcheck-sequencenum.html
+editing/spelling/spelling-marker-description.html

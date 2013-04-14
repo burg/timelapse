@@ -43,8 +43,9 @@ public:
     static PassRefPtr<StorageManager> create();
     ~StorageManager();
 
-    void createSessionStorageNamespace(uint64_t storageNamespaceID);
+    void createSessionStorageNamespace(uint64_t storageNamespaceID, CoreIPC::Connection* allowedConnection, unsigned quotaInBytes);
     void destroySessionStorageNamespace(uint64_t storageNamespaceID);
+    void setAllowedSessionStorageNamespaceConnection(uint64_t storageNamespaceID, CoreIPC::Connection* allowedConnection);
     void cloneSessionStorageNamespace(uint64_t storageNamespaceID, uint64_t newStorageNamespaceID);
 
     void processWillOpenConnection(WebProcessProxy*);
@@ -61,18 +62,22 @@ private:
     void createStorageArea(CoreIPC::Connection*, uint64_t storageAreaID, uint64_t storageNamespaceID, const SecurityOriginData&);
     void destroyStorageArea(CoreIPC::Connection*, uint64_t storageAreaID);
     void getValues(CoreIPC::Connection*, uint64_t storageAreaID, HashMap<String, String>& values);
-    void setItem(CoreIPC::Connection*, uint64_t storageAreaID, const String& key, const String& value);
+    void setItem(CoreIPC::Connection*, uint64_t storageAreaID, const String& key, const String& value, const String& urlString);
 
-    void createSessionStorageNamespaceInternal(uint64_t storageNamespaceID);
+    void createSessionStorageNamespaceInternal(uint64_t storageNamespaceID, CoreIPC::Connection* allowedConnection, unsigned quotaInBytes);
     void destroySessionStorageNamespaceInternal(uint64_t storageNamespaceID);
+    void setAllowedSessionStorageNamespaceConnectionInternal(uint64_t storageNamespaceID, CoreIPC::Connection* allowedConnection);
     void cloneSessionStorageNamespaceInternal(uint64_t storageNamespaceID, uint64_t newStorageNamespaceID);
+
+    class StorageArea;
+    StorageArea* findStorageArea(CoreIPC::Connection*, uint64_t) const;
 
     RefPtr<WorkQueue> m_queue;
 
     class SessionStorageNamespace;
     HashMap<uint64_t, RefPtr<SessionStorageNamespace> > m_sessionStorageNamespaces;
 
-    class StorageArea;
+    HashMap<std::pair<RefPtr<CoreIPC::Connection>, uint64_t>, RefPtr<StorageArea> > m_storageAreas;
 };
 
 } // namespace WebKit

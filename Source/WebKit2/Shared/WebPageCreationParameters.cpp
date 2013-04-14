@@ -43,6 +43,7 @@ void WebPageCreationParameters::encode(CoreIPC::ArgumentEncoder& encoder) const
     encoder << pageGroupData;
     encoder << drawsBackground;
     encoder << drawsTransparentBackground;
+    encoder << underlayColor;
     encoder << areMemoryCacheClientCallsEnabled;
     encoder << useFixedLayout;
     encoder << fixedLayoutSize;
@@ -58,6 +59,7 @@ void WebPageCreationParameters::encode(CoreIPC::ArgumentEncoder& encoder) const
     encoder << deviceScaleFactor;
     encoder << mediaVolume;
     encoder << mayStartMediaWhenInWindow;
+    encoder << overridePrivateBrowsingEnabled;
 
 #if PLATFORM(MAC)
     encoder.encodeEnum(layerHostingMode);
@@ -86,6 +88,8 @@ bool WebPageCreationParameters::decode(CoreIPC::ArgumentDecoder& decoder, WebPag
     if (!decoder.decode(parameters.drawsBackground))
         return false;
     if (!decoder.decode(parameters.drawsTransparentBackground))
+        return false;
+    if (!decoder.decode(parameters.underlayColor))
         return false;
     if (!decoder.decode(parameters.areMemoryCacheClientCallsEnabled))
         return false;
@@ -117,7 +121,9 @@ bool WebPageCreationParameters::decode(CoreIPC::ArgumentDecoder& decoder, WebPag
         return false;
     if (!decoder.decode(parameters.mayStartMediaWhenInWindow))
         return false;
-
+    if (!decoder.decode(parameters.overridePrivateBrowsingEnabled))
+        return false;
+    
 #if PLATFORM(MAC)
     if (!decoder.decodeEnum(parameters.layerHostingMode))
         return false;

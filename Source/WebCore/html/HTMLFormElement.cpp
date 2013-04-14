@@ -208,7 +208,7 @@ static inline HTMLFormControlElement* submitElementFromEvent(const Event* event)
     Node* targetNode = event->target()->toNode();
     if (!targetNode || !targetNode->isElementNode())
         return 0;
-    Element* targetElement = static_cast<Element*>(targetNode);
+    Element* targetElement = toElement(targetNode);
     if (!targetElement->isFormControlElement())
         return 0;
     return static_cast<HTMLFormControlElement*>(targetElement);
@@ -261,7 +261,7 @@ bool HTMLFormElement::validateInteractively(Event* event)
                 continue;
             String message("An invalid form control with name='%name' is not focusable.");
             message.replace("%name", unhandledAssociatedElement->name());
-            document()->addConsoleMessage(HTMLMessageSource, ErrorMessageLevel, message);
+            document()->addConsoleMessage(RenderingMessageSource, ErrorMessageLevel, message);
         }
     }
     return false;

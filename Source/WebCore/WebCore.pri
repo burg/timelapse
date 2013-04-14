@@ -152,9 +152,7 @@ enable?(NETSCAPE_PLUGIN_API) {
     }
 }
 
-enable?(ORIENTATION_EVENTS)|enable?(DEVICE_ORIENTATION) {
-    QT += sensors
-}
+have?(qtsensors):if(enable?(ORIENTATION_EVENTS)|enable?(DEVICE_ORIENTATION)): QT += sensors
 
 use?(QT_MOBILITY_SYSTEMINFO) {
      CONFIG *= mobility
@@ -241,7 +239,7 @@ use?(3D_GRAPHICS) {
             }
         }
     } else {
-        contains(QT_CONFIG, opengles2): LIBS += -lEGL
+        contains(QT_CONFIG, opengles2): CONFIG += egl
     }
 }
 
@@ -327,9 +325,6 @@ contains(DEFINES, ENABLE_OPENCL=1) {
 
     INCLUDEPATH += $$SOURCE_DIR/platform/graphics/gpu/opencl
 }
-
-# Disable C++0x mode in WebCore for those who enabled it in their Qt's mkspec
-*-g++*:QMAKE_CXXFLAGS -= -std=c++0x -std=gnu++0x
 
 enable_fast_mobile_scrolling: DEFINES += ENABLE_FAST_MOBILE_SCROLLING=1
 

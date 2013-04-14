@@ -38,10 +38,9 @@ namespace WebCore {
 
 struct SameSizeAsCompactHTMLToken  {
     unsigned bitfields;
-    String name;
+    HTMLIdentifier data;
     Vector<Attribute> vector;
     TextPosition textPosition;
-    OwnPtr<XSSInfo> xssInfo;
 };
 
 COMPILE_ASSERT(sizeof(CompactHTMLToken) == sizeof(SameSizeAsCompactHTMLToken), CompactHTMLToken_should_stay_small);
@@ -57,10 +56,10 @@ CompactHTMLToken::CompactHTMLToken(const HTMLToken* token, const TextPosition& t
         ASSERT_NOT_REACHED();
         break;
     case HTMLToken::DOCTYPE: {
-        m_data = String(token->name());
+        m_data = HTMLIdentifier(token->name(), Likely8Bit);
         // There is only 1 DOCTYPE token per document, so to avoid increasing the
         // size of CompactHTMLToken, we just use the m_attributes vector.
-        m_attributes.append(Attribute(String(token->publicIdentifier()), String(token->systemIdentifier())));
+        m_attributes.append(Attribute(HTMLIdentifier(token->publicIdentifier(), Likely8Bit), String(token->systemIdentifier())));
         m_doctypeForcesQuirks = token->forceQuirks();
         break;
     }
@@ -68,38 +67,22 @@ CompactHTMLToken::CompactHTMLToken(const HTMLToken* token, const TextPosition& t
         break;
     case HTMLToken::StartTag:
         m_attributes.reserveInitialCapacity(token->attributes().size());
-        // FIXME: Attribute names and values should be 8bit when possible.
         for (Vector<HTMLToken::Attribute>::const_iterator it = token->attributes().begin(); it != token->attributes().end(); ++it)
-            m_attributes.append(Attribute(String(it->name), String(it->value)));
+            m_attributes.append(Attribute(HTMLIdentifier(it->name, Likely8Bit), StringImpl::create8BitIfPossible(it->value)));
         // Fall through!
     case HTMLToken::EndTag:
         m_selfClosing = token->selfClosing();
         // Fall through!
     case HTMLToken::Comment:
-    case HTMLToken::Character:
-        if (token->isAll8BitData()) {
-            m_data = String::make8BitFrom16BitSource(token->data());
-            m_isAll8BitData = true;
-        } else
-            m_data = String(token->data());
+    case HTMLToken::Character: {
+        m_isAll8BitData = token->isAll8BitData();
+        m_data = HTMLIdentifier(token->data(), token->isAll8BitData() ? Force8Bit : Force16Bit);
         break;
+    }
     default:
         ASSERT_NOT_REACHED();
         break;
     }
-}
-
-CompactHTMLToken::CompactHTMLToken(const CompactHTMLToken& other)
-    : m_type(other.m_type)
-    , m_selfClosing(other.m_selfClosing)
-    , m_isAll8BitData(other.m_isAll8BitData)
-    , m_doctypeForcesQuirks(other.m_doctypeForcesQuirks)
-    , m_data(other.m_data)
-    , m_attributes(other.m_attributes)
-    , m_textPosition(other.m_textPosition)
-{
-    if (other.m_xssInfo)
-        m_xssInfo = adoptPtr(new XSSInfo(*other.m_xssInfo));
 }
 
 const CompactHTMLToken::Attribute* CompactHTMLToken::getAttributeItem(const QualifiedName& name) const
@@ -119,19 +102,7 @@ bool CompactHTMLToken::isSafeToSendToAnotherThread() const
         if (!it->value.isSafeToSendToAnotherThread())
             return false;
     }
-    if (m_xssInfo && !m_xssInfo->isSafeToSendToAnotherThread())
-        return false;
     return m_data.isSafeToSendToAnotherThread();
-}
-
-XSSInfo* CompactHTMLToken::xssInfo() const
-{
-    return m_xssInfo.get();
-}
-
-void CompactHTMLToken::setXSSInfo(PassOwnPtr<XSSInfo> xssInfo)
-{
-    m_xssInfo = xssInfo;
 }
 
 }

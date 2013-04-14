@@ -16,6 +16,7 @@
 # WebKitTestRunner needs an implementation of eventSender
 # <https://bugs.webkit.org/show_bug.cgi?id=42194>
 editing/pasteboard/4947130.html
+editing/pasteboard/cleanup-on-move.html
 editing/pasteboard/copy-standalone-image-crash.html
 editing/pasteboard/drag-and-drop-image-contenteditable.html
 editing/pasteboard/drag-and-drop-inputimage-contenteditable.html
@@ -27,6 +28,7 @@ editing/pasteboard/drag-drop-modifies-page.html
 editing/pasteboard/drag-drop-url-text.html
 editing/pasteboard/drag-image-in-about-blank-frame.html
 editing/pasteboard/drag-image-to-contenteditable-in-iframe.html
+editing/pasteboard/drag-list-item.html
 editing/pasteboard/drag-selected-image-to-contenteditable.html
 editing/pasteboard/drop-file-svg.html
 editing/pasteboard/drop-inputtext-acquires-style.html
@@ -284,13 +286,15 @@ webkit.org/b/105988 [ Debug ] inspector/debugger/properties-special.html [ Pass 
 webkit.org/b/105988 [ Debug ] inspector/debugger/reveal-execution-line.html [ Pass Crash ]
 webkit.org/b/105988 [ Debug ] inspector/debugger/watch-expressions-preserve-expansion.html [ Pass Crash ]
 
-webkit.org/b/105998 [ Lion Release ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure ]
-webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure Pass ]
 webkit.org/b/105998 [ Lion Release ] fast/css/sticky/inline-sticky.html [ ImageOnlyFailure ]
 webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky.html [ ImageOnlyFailure Pass ]
 webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/sticky-both-sides.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/93552 inspector/device-orientation-success.html [ Failure ]
+
+webkit.org/b/107935 compositing/overflow/do-not-paint-outline-into-composited-scrolling-contents.html [ Missing ]
+webkit.org/b/107935 compositing/overflow/paint-neg-z-order-descendants-into-scrolling-contents-layer.html [ Missing ]
+webkit.org/b/107935 compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Failure ]
 
 webkit.org/b/106405 http/tests/loading/authentication-after-redirect-stores-wrong-credentials/authentication-after-redirect-stores-wrong-credentials.html [ Failure ]
 webkit.org/b/106405 http/tests/loading/basic-auth-resend-wrong-credentials.html [ Failure ]
@@ -313,14 +317,23 @@ webkit.org/b/107356 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
 
 webkit.org/b/109890 [ Debug ] platform/mac-wk2/plugins/destroy-during-async-npp-new.html [ Crash ]
 
-webkit.org/b/111052 http/tests/xmlhttprequest/navigation-should-abort.html [ Pass ]
-
 ### END OF (1) Classified failures with bug reports
 ########################################
 
 
 ########################################
 ### START OF (2) Classified failures without bug reports (yet)
+
+# Missing TextChecker::requestCheckingOfString() implementation for Mac.
+editing/spelling/grammar-markers.html
+editing/spelling/grammar-paste.html
+editing/spelling/grammar-markers-hidpi.html
+editing/spelling/spellcheck-async-mutation.html
+editing/spelling/spellcheck-async-remove-frame.html
+editing/spelling/spellcheck-async.html
+editing/spelling/spellcheck-queue.html
+editing/spelling/spellcheck-sequencenum.html
+editing/spelling/spelling-marker-description.html
 
 ### END OF (2) Classified failures without bug reports (yet)
 ########################################

@@ -378,7 +378,7 @@ Document* InspectorDOMAgent::assertDocument(ErrorString* errorString, int nodeId
         *errorString = "Document is not available";
         return 0;
     }
-    return static_cast<Document*>(node);
+    return toDocument(node);
 }
 
 Element* InspectorDOMAgent::assertElement(ErrorString* errorString, int nodeId)
@@ -599,18 +599,6 @@ int InspectorDOMAgent::pushNodePathToFrontend(Node* nodeToPush)
     return map->get(nodeToPush);
 }
 
-int InspectorDOMAgent::pushNodePathForRenderLayerToFrontend(const RenderLayer* renderLayer)
-{
-    Node* node = renderLayer->renderer()->node();
-
-    // RenderLayers may not be associated with a Node, for instance
-    // in the case of CSS generated content.
-    if (!node)
-        return 0;
-
-    return pushNodePathToFrontend(node);
-}
-
 int InspectorDOMAgent::boundNodeId(Node* node)
 {
     return m_documentNodeToIdMap.get(node);
@@ -745,7 +733,7 @@ void InspectorDOMAgent::setOuterHTML(ErrorString* errorString, int nodeId, const
     if (!node)
         return;
 
-    Document* document = node->isDocumentNode() ? static_cast<Document*>(node) : node->ownerDocument();
+    Document* document = node->isDocumentNode() ? toDocument(node) : node->ownerDocument();
     if (!document || !document->isHTMLDocument()) {
         *errorString = "Not an HTML document";
         return;
@@ -1340,7 +1328,7 @@ PassRefPtr<TypeBuilder::DOM::Node> InspectorDOMAgent::buildObjectForNode(Node* n
     }
 
     if (node->isElementNode()) {
-        Element* element = static_cast<Element*>(node);
+        Element* element = toElement(node);
         value->setAttributes(buildArrayForElementAttributes(element));
         if (node->isFrameOwnerElement()) {
             HTMLFrameOwnerElement* frameOwner = static_cast<HTMLFrameOwnerElement*>(node);
@@ -1366,7 +1354,7 @@ PassRefPtr<TypeBuilder::DOM::Node> InspectorDOMAgent::buildObjectForNode(Node* n
 #endif
 
     } else if (node->isDocumentNode()) {
-        Document* document = static_cast<Document*>(node);
+        Document* document = toDocument(node);
         value->setDocumentURL(documentURLString(document));
         value->setBaseURL(documentBaseURLString(document));
         value->setXmlVersion(document->xmlVersion());
@@ -1501,7 +1489,7 @@ unsigned InspectorDOMAgent::innerChildNodeCount(Node* node)
 Node* InspectorDOMAgent::innerParentNode(Node* node)
 {
     if (node->isDocumentNode()) {
-        Document* document = static_cast<Document*>(node);
+        Document* document = toDocument(node);
         return document->ownerElement();
     }
     return node->parentNode();
@@ -1666,7 +1654,7 @@ void InspectorDOMAgent::didInvalidateStyleAttr(Node* node)
 
     if (!m_revalidateStyleAttrTask)
         m_revalidateStyleAttrTask = adoptPtr(new RevalidateStyleAttributeTask(this));
-    m_revalidateStyleAttrTask->scheduleFor(static_cast<Element*>(node));
+    m_revalidateStyleAttrTask->scheduleFor(toElement(node));
 }
 
 void InspectorDOMAgent::didPushShadowRoot(Element* host, ShadowRoot* root)
@@ -1682,6 +1670,22 @@ void InspectorDOMAgent::willPopShadowRoot(Element* host, ShadowRoot* root)
     int rootId = m_documentNodeToIdMap.get(root);
     if (hostId && rootId)
         m_frontend->shadowRootPopped(hostId, rootId);
+}
+
+void InspectorDOMAgent::frameDocumentUpdated(Frame* frame)
+{
+    Document* document = frame->document();
+    if (!document)
+        return;
+
+    Page* page = frame->page();
+    ASSERT(page);
+    if (frame != page->mainFrame())
+        return;
+
+    // Only update the main frame document, nested frame document updates are not required
+    // (will be handled by loadEventFired()).
+    setDocument(document);
 }
 
 Node* InspectorDOMAgent::nodeForPath(const String& path)

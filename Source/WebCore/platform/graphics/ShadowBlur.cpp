@@ -679,12 +679,17 @@ void ShadowBlur::drawInsetShadowWithTiling(GraphicsContext* graphicsContext, con
 
         blurAndColorShadowBuffer(templateSize);
     }
+    FloatSize offset = m_offset;
+    if (shadowsIgnoreTransforms()) {
+        AffineTransform transform = graphicsContext->getCTM();
+        offset.scale(1 / transform.xScale(), 1 / transform.yScale());
+    }
 
     FloatRect boundingRect = rect;
-    boundingRect.move(m_offset);
+    boundingRect.move(offset);
 
     FloatRect destHoleRect = holeRect;
-    destHoleRect.move(m_offset);
+    destHoleRect.move(offset);
     FloatRect destHoleBounds = destHoleRect;
     destHoleBounds.inflateX(edgeSize.width());
     destHoleBounds.inflateY(edgeSize.height());
@@ -696,9 +701,9 @@ void ShadowBlur::drawInsetShadowWithTiling(GraphicsContext* graphicsContext, con
 
     {
         GraphicsContextStateSaver fillStateSaver(*graphicsContext);
-        graphicsContext->clearShadow();
         graphicsContext->setFillRule(RULE_EVENODD);
         graphicsContext->setFillColor(m_color, m_colorSpace);
+        graphicsContext->clearShadow();
         graphicsContext->fillPath(exteriorPath);
     }
     
@@ -736,9 +741,14 @@ void ShadowBlur::drawRectShadowWithTiling(GraphicsContext* graphicsContext, cons
 
         blurAndColorShadowBuffer(templateSize);
     }
+    FloatSize offset = m_offset;
+    if (shadowsIgnoreTransforms()) {
+        AffineTransform transform = graphicsContext->getCTM();
+        offset.scale(1 / transform.xScale(), 1 / transform.yScale());
+    }
 
     FloatRect shadowBounds = shadowedRect;
-    shadowBounds.move(m_offset.width(), m_offset.height());
+    shadowBounds.move(offset);
     shadowBounds.inflateX(edgeSize.width());
     shadowBounds.inflateY(edgeSize.height());
 
@@ -772,8 +782,8 @@ void ShadowBlur::drawLayerPieces(GraphicsContext* graphicsContext, const FloatRe
     }
 
     GraphicsContextStateSaver stateSaver(*graphicsContext);
-    graphicsContext->clearShadow();
     graphicsContext->setFillColor(m_color, m_colorSpace);
+    graphicsContext->clearShadow();
 
     // Note that drawing the ImageBuffer is faster than creating a Image and drawing that,
     // because ImageBuffer::draw() knows that it doesn't have to copy the image bits.

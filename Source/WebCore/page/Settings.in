@@ -195,4 +195,10 @@ unifiedTextCheckerEnabled initial=defaultUnifiedTextCheckerEnabled
 
 logsPageMessagesToSystemConsoleEnabled initial=false
 
-smartInsertDeleteEnabled initial=true
+backForwardCacheExpirationInterval type=double, initial=1800
+
+# Some apps could have a default video poster if it is not set.
+defaultVideoPosterURL type=String
+
+smartInsertDeleteEnabled initial=defaultSmartInsertDeleteEnabled
+selectTrailingWhitespaceEnabled initial=defaultSelectTrailingWhitespaceEnabled

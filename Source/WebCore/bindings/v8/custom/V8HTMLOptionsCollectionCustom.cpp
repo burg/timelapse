@@ -85,13 +85,13 @@ v8::Handle<v8::Value> V8HTMLOptionsCollection::namedItemMethodCustom(const v8::A
 v8::Handle<v8::Value> V8HTMLOptionsCollection::removeMethodCustom(const v8::Arguments& args)
 {
     HTMLOptionsCollection* imp = V8HTMLOptionsCollection::toNative(args.Holder());
-    HTMLSelectElement* base = static_cast<HTMLSelectElement*>(imp->ownerNode());
+    HTMLSelectElement* base = toHTMLSelectElement(imp->ownerNode());
     return removeElement(base, args);
 }
 
 v8::Handle<v8::Value> V8HTMLOptionsCollection::addMethodCustom(const v8::Arguments& args)
 {
-    if (!V8HTMLOptionElement::HasInstance(args[0], args.GetIsolate()))
+    if (!V8HTMLOptionElement::HasInstance(args[0], args.GetIsolate(), worldType(args.GetIsolate())))
         return setDOMException(TYPE_MISMATCH_ERR, args.GetIsolate());
     HTMLOptionsCollection* imp = V8HTMLOptionsCollection::toNative(args.Holder());
     HTMLOptionElement* option = V8HTMLOptionElement::toNative(v8::Handle<v8::Object>(v8::Handle<v8::Object>::Cast(args[0])));
@@ -148,7 +148,7 @@ v8::Handle<v8::Value> V8HTMLOptionsCollection::indexedPropertyGetter(uint32_t in
 v8::Handle<v8::Value> V8HTMLOptionsCollection::indexedPropertySetter(uint32_t index, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
 {
     HTMLOptionsCollection* collection = V8HTMLOptionsCollection::toNative(info.Holder());
-    HTMLSelectElement* base = static_cast<HTMLSelectElement*>(collection->ownerNode());
+    HTMLSelectElement* base = toHTMLSelectElement(collection->ownerNode());
     return toOptionsCollectionSetter(index, value, base, info.GetIsolate());
 }
 

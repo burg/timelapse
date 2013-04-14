@@ -63,8 +63,8 @@
 #include "StylePropertySet.h"
 #include "TextIterator.h"
 #include "TypingCommand.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
-#include "visible_units.h"
 #include <limits.h>
 #include <stdio.h>
 #include <wtf/text/CString.h>
@@ -280,7 +280,13 @@ void FrameSelection::setSelection(const VisibleSelection& newSelection, SetSelec
     if (s.base().anchorNode()) {
         Document* document = s.base().anchorNode()->document();
         if (document && document->frame() && document->frame() != m_frame && document != m_frame->document()) {
+            RefPtr<Frame> guard = document->frame();
             document->frame()->selection()->setSelection(s, options, align, granularity);
+            // It's possible that during the above set selection, this FrameSelection has been modified by
+            // selectFrameElementInParentIfFullySelected, but that the selection is no longer valid since
+            // the frame is about to be destroyed. If this is the case, clear our selection.
+            if (guard->hasOneRef() && !m_selection.isNonOrphanedCaretOrRange())
+                clear();
             return;
         }
     }
@@ -348,7 +354,7 @@ static bool removingNodeRemovesPosition(Node* node, const Position& position)
     if (!node->isElementNode())
         return false;
 
-    Element* element = static_cast<Element*>(node);
+    Element* element = toElement(node);
     return element->containsIncludingShadowDOM(position.anchorNode());
 }
 

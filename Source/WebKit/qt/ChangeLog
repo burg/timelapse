@@ -1,3 +1,254 @@
+2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Add selectTrailingWhitespaceEnabled setting to WebCore::Page
+        https://bugs.webkit.org/show_bug.cgi?id=109404
+
+        Reviewed by Tony Chang.
+
+        Use new settings for smartInsertDeleteEnabled and
+        selectTrailingWhitespaceEnabled.
+
+        Remove code related to DRT as it is not needed anymore.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+        * WebCoreSupport/EditorClientQt.cpp:
+        (WebCore::EditorClientQt::smartInsertDeleteEnabled):
+        (WebCore::EditorClientQt::toggleSmartInsertDelete):
+        (WebCore::EditorClientQt::isSelectTrailingWhitespaceEnabled):
+        (WebCore::EditorClientQt::EditorClientQt):
+        * WebCoreSupport/EditorClientQt.h:
+        (EditorClientQt):
+
+2013-03-14  Rik Cabanier  <cabanier@adobe.com>
+
+        [Qt][WK1] REGRESSION(r145784): Blend tests are failing
+        https://bugs.webkit.org/show_bug.cgi?id=112333
+
+        Reviewed by Ryosuke Niwa.
+
+        Added code to passed compositing prefence to WebCore.
+
+        * Api/qwebsettings.cpp:
+        (QWebSettingsPrivate::apply):
+        (QWebSettings::QWebSettings):
+        * Api/qwebsettings.h:
+
+2013-03-14  Abhishek Arya  <inferno@chromium.org>
+
+        Replace static_casts with to* helper functions.
+        https://bugs.webkit.org/show_bug.cgi?id=112296
+
+        Reviewed by Kentaro Hara.
+
+        to* helper functions are preferred over static_cast calls since they
+        help to catch bad casts easily on the testing infrastructure.
+
+        * Api/qwebelement.cpp:
+        (QWebElement::firstChild):
+        (QWebElement::lastChild):
+        (QWebElement::nextSibling):
+        (QWebElement::previousSibling):
+        (QWebElementCollection::at):
+        (QWebElementCollection::toList):
+        * WebCoreSupport/QWebFrameAdapter.cpp:
+        (QWebHitTestResultPrivate::elementForInnerNode):
+
+2013-03-14  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Improve the handling of mock geolocation, device orientation and motion clients
+
+        Reviewed by Tor Arne Vestbø.
+
+        The mock versions of these web facing features should be instantiated when
+        running in DumpRenderTree only. In order for them to work, no extra Qt modules
+        such as QtLocation are actually needed.
+
+        This patch decouples enabling device orientation/motion and geolocation from
+        the underlying Qt modules and makes them available in developer builds
+        (!production_build) and backed by mock backends when running in drt.
+
+        So if the Qt 5 modules are available, they'll be used (unless drtRun). For
+        developers the web facing features are always enabled (although requests will
+        time out) and the mock backends are enabled inside DRT, allowing for the layout
+        tests to run with less dependencies.
+
+        In addition this also enables the mock device motion client, which was
+        previously never instantiated.
+
+        * WebCoreSupport/QWebFrameAdapter.cpp:
+        (QWebFrameAdapter::_q_orientationChanged):
+        * WebCoreSupport/QWebFrameAdapter.h:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::initializeWebCorePage):
+        * WebCoreSupport/QWebPageAdapter.h:
+        * WidgetApi/qwebframe.cpp:
+        (QWebFrame::QWebFrame):
+        * WidgetApi/qwebpage.cpp:
+        (QWebPage::setFeaturePermission):
+
+2013-03-13  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Port TestRunner::findString to shared interface
+        https://bugs.webkit.org/show_bug.cgi?id=112147
+
+        Reviewed by Jocelyn Turcotte.
+
+        Add new find options used by the DRT.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::findText):
+        * WebCoreSupport/QWebPageAdapter.h:
+        * WidgetApi/qwebpage.cpp:
+        * WidgetApi/qwebpage.h:
+
+2013-03-13  Pavel Feldman  <pfeldman@chromium.org>
+
+        Web Inspector: get rid of hiddenPanels filter
+        https://bugs.webkit.org/show_bug.cgi?id=112252
+
+        Reviewed by Vsevolod Vlasov.
+
+        * WebCoreSupport/InspectorClientQt.cpp:
+        (WebCore):
+        * WebCoreSupport/InspectorClientQt.h:
+        (InspectorFrontendClientQt):
+
+2013-03-11  Jochen Eisinger  <jochen@chromium.org>
+
+        Rename DefinitelyProcessingUserGesture to DefinitelyProcessingNewUserGesture
+        https://bugs.webkit.org/show_bug.cgi?id=111959
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/NotificationPresenterClientQt.cpp:
+        (WebCore::NotificationPresenterClientQt::notificationClicked):
+
+2013-03-08  Arunprasad Rajkumar  <arunprasadr@nds.com>
+
+        [Qt] QWebSettings::clearMemoryCaches should release FastMalloc's free pages to OS
+        https://bugs.webkit.org/show_bug.cgi?id=111605
+
+        Reviewed by Jocelyn Turcotte.
+
+        * Api/qwebsettings.cpp:
+        (QWebSettings::clearMemoryCaches):
+
+2013-03-07  Arunprasad Rajkumar  <arunprasadr@nds.com>
+
+        [Qt] QWebSettings::clearMemoryCaches should clear JS garbage
+        https://bugs.webkit.org/show_bug.cgi?id=111094
+
+        Reviewed by Jocelyn Turcotte.
+
+        * Api/qwebsettings.cpp:
+        (QWebSettings::clearMemoryCaches):
+
+2013-03-06  Benjamin Poulain  <benjamin@webkit.org>
+
+        WebKitTestRunner needs layoutTestController.elementDoesAutoCompleteForElementWithId
+        https://bugs.webkit.org/show_bug.cgi?id=42696
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2013-03-06  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Illegal narrowing in tst_qwebhistory
+        https://bugs.webkit.org/show_bug.cgi?id=111562
+
+        Reviewed by Jocelyn Turcotte.
+
+        The bytearray in tst_QWebHistory::restoreIncompatibleVersion1 has integer
+        values higher than 127 assigned into an array of signed chars. This causes
+        compiler errors in C++11 since it assigns constants (>127) that does not
+        fit the destination (-128 to 127)
+
+        * tests/qwebhistory/tst_qwebhistory.cpp:
+        (tst_QWebHistory::restoreIncompatibleVersion1):
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed attempted build fix. Adds back some includes removed in
+        http://trac.webkit.org/changeset/144565.
+
+        * WebCoreSupport/NotificationPresenterClientQt.cpp:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed rollout of http://trac.webkit.org/r144530
+        As described in https://bugs.webkit.org/show_bug.cgi?id=111167 and
+        https://bugs.webkit.org/show_bug.cgi?id=111035, this patch caused a
+        large number of ASSERTs in chromium-win.
+
+        * WebCoreSupport/NotificationPresenterClientQt.cpp:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+
+2013-03-02  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move computedStyleIncludingVisitedInfo from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109772
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * WebCoreSupport/NotificationPresenterClientQt.cpp:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+
+2013-03-01  Jason Anderssen  <janderssen@gmail.com>
+
+        Move markerTextForListItem from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=110939
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2013-03-01  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r144422 and r144424.
+        http://trac.webkit.org/changeset/144422
+        http://trac.webkit.org/changeset/144424
+        https://bugs.webkit.org/show_bug.cgi?id=111167
+
+        Caused over 20 tests to fail assertion on Chromium Win port as
+        ASSERTION FAILED: m_platformRequestUpdated (Requested by
+        toyoshim on #webkit).
+
+        * WebCoreSupport/NotificationPresenterClientQt.cpp:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * WebCoreSupport/NotificationPresenterClientQt.cpp:
+        * WebCoreSupport/QWebPageAdapter.cpp:
+
 2013-02-24  Andreas Kling  <akling@apple.com>
 
         StyledElement: Don't expose a mutable direct interface to the inline style.

@@ -101,6 +101,7 @@
 #include "TemplateContentDocumentFragment.h"
 #include "Text.h"
 #include "TextEvent.h"
+#include "TouchEvent.h"
 #include "TreeScopeAdopter.h"
 #include "UIEvent.h"
 #include "UIEventWithKeyState.h"
@@ -200,7 +201,7 @@ void Node::dumpStatistics()
                 ++elementNodes;
 
                 // Tag stats
-                Element* element = static_cast<Element*>(node);
+                Element* element = toElement(node);
                 HashMap<String, size_t>::AddResult result = perTagCount.add(element->tagName(), 1);
                 if (!result.isNewEntry)
                     result.iterator->value++;
@@ -382,11 +383,6 @@ Node::StyleChange Node::diff(const RenderStyle* s1, const RenderStyle* s2, Docum
     if ((s1 && s2) && (s1->regionThread() != s2->regionThread()))
         ch = Detach;
 
-    // Re-attach the renderer when either the element changes from position:static to position:absolute/fixed, vice-versa
-    // or float:none to floating, vice-versa.
-    if ((s1 && s2 ) && (s1->isFloating() != s2->isFloating() || s1->hasOutOfFlowPosition() != s2->hasOutOfFlowPosition()))
-        ch = Detach;
-
     return ch;
 }
 
@@ -442,8 +438,7 @@ Node::~Node()
     if (m_next)
         m_next->setPreviousSibling(0);
 
-    if (doc)
-        doc->guardDeref();
+    m_treeScope->guardDeref();
 
     InspectorCounters::decrementCounter(InspectorCounters::NodeCounter);
 }
@@ -541,22 +536,22 @@ Node* Node::firstDescendant() const
     return n;
 }
 
-bool Node::insertBefore(PassRefPtr<Node> newChild, Node* refChild, ExceptionCode& ec, bool shouldLazyAttach)
+bool Node::insertBefore(PassRefPtr<Node> newChild, Node* refChild, ExceptionCode& ec, AttachBehavior attachBehavior)
 {
     if (!isContainerNode()) {
         ec = HIERARCHY_REQUEST_ERR;
         return false;
     }
-    return toContainerNode(this)->insertBefore(newChild, refChild, ec, shouldLazyAttach);
+    return toContainerNode(this)->insertBefore(newChild, refChild, ec, attachBehavior);
 }
 
-bool Node::replaceChild(PassRefPtr<Node> newChild, Node* oldChild, ExceptionCode& ec, bool shouldLazyAttach)
+bool Node::replaceChild(PassRefPtr<Node> newChild, Node* oldChild, ExceptionCode& ec, AttachBehavior attachBehavior)
 {
     if (!isContainerNode()) {
         ec = HIERARCHY_REQUEST_ERR;
         return false;
     }
-    return toContainerNode(this)->replaceChild(newChild, oldChild, ec, shouldLazyAttach);
+    return toContainerNode(this)->replaceChild(newChild, oldChild, ec, attachBehavior);
 }
 
 bool Node::removeChild(Node* oldChild, ExceptionCode& ec)
@@ -568,13 +563,13 @@ bool Node::removeChild(Node* oldChild, ExceptionCode& ec)
     return toContainerNode(this)->removeChild(oldChild, ec);
 }
 
-bool Node::appendChild(PassRefPtr<Node> newChild, ExceptionCode& ec, bool shouldLazyAttach)
+bool Node::appendChild(PassRefPtr<Node> newChild, ExceptionCode& ec, AttachBehavior attachBehavior)
 {
     if (!isContainerNode()) {
         ec = HIERARCHY_REQUEST_ERR;
         return false;
     }
-    return toContainerNode(this)->appendChild(newChild, ec, shouldLazyAttach);
+    return toContainerNode(this)->appendChild(newChild, ec, attachBehavior);
 }
 
 void Node::remove(ExceptionCode& ec)
@@ -594,7 +589,7 @@ void Node::normalize()
     while (node) {
         NodeType type = node->nodeType();
         if (type == ELEMENT_NODE)
-            static_cast<Element*>(node.get())->normalizeAttributes();
+            toElement(node.get())->normalizeAttributes();
 
         if (node == this)
             break;
@@ -892,11 +887,6 @@ bool Node::isFocusable() const
     return true;
 }
 
-bool Node::isTreeScope() const
-{
-    return treeScope()->rootNode() == this;
-}
-
 bool Node::isKeyboardFocusable(KeyboardEvent*) const
 {
     return isFocusable() && tabIndex() >= 0;
@@ -911,6 +901,14 @@ Node* Node::focusDelegate()
 {
     return this;
 }
+
+#if ENABLE(DIALOG_ELEMENT)
+bool Node::isInert() const
+{
+    Element* dialog = document()->activeModalDialog();
+    return dialog && !containsIncludingShadowDOM(dialog) && !dialog->containsIncludingShadowDOM(this);
+}
+#endif
 
 unsigned Node::nodeIndex() const
 {
@@ -1068,7 +1066,6 @@ void Node::attach()
     ASSERT(!attached());
     ASSERT(!renderer() || (renderer()->style() && renderer()->parent()));
 
-    // FIXME: This is O(N^2) for the innerHTML case, where all children are replaced at once (and not attached).
     // If this node got a renderer it may be the previousRenderer() of sibling text nodes and thus affect the
     // result of Text::textRendererIsNeeded() for those nodes.
     if (renderer()) {
@@ -1076,9 +1073,16 @@ void Node::attach()
             if (next->renderer())
                 break;
             if (!next->attached())
-                break;  // Assume this means none of the following siblings are attached.
-            if (next->isTextNode())
-                toText(next)->createTextRendererIfNeeded();
+                break; // Assume this means none of the following siblings are attached.
+            if (!next->isTextNode())
+                continue;
+            ASSERT(!next->renderer());
+            toText(next)->createTextRendererIfNeeded();
+            // If we again decided not to create a renderer for next, we can bail out the loop,
+            // because it won't affect the result of Text::textRendererIsNeeded() for the rest
+            // of sibling nodes.
+            if (!next->renderer())
+                break;
         }
     }
 
@@ -1314,7 +1318,7 @@ Element* Node::rootEditableElement() const
     Element* result = 0;
     for (Node* n = const_cast<Node*>(this); n && n->rendererIsEditable(); n = n->parentNode()) {
         if (n->isElementNode())
-            result = static_cast<Element*>(n);
+            result = toElement(n);
         if (n->hasTagName(bodyTag))
             break;
     }
@@ -1468,7 +1472,7 @@ bool Node::isDefaultNamespace(const AtomicString& namespaceURIMaybeEmpty) const
 
     switch (nodeType()) {
         case ELEMENT_NODE: {
-            const Element* elem = static_cast<const Element*>(this);
+            const Element* elem = toElement(this);
             
             if (elem->prefix().isNull())
                 return elem->namespaceURI() == namespaceURI;
@@ -1488,7 +1492,7 @@ bool Node::isDefaultNamespace(const AtomicString& namespaceURIMaybeEmpty) const
             return false;
         }
         case DOCUMENT_NODE:
-            if (Element* de = static_cast<const Document*>(this)->documentElement())
+            if (Element* de = toDocument(this)->documentElement())
                 return de->isDefaultNamespace(namespaceURI);
             return false;
         case ENTITY_NODE:
@@ -1521,7 +1525,7 @@ String Node::lookupPrefix(const AtomicString &namespaceURI) const
         case ELEMENT_NODE:
             return lookupNamespacePrefix(namespaceURI, static_cast<const Element *>(this));
         case DOCUMENT_NODE:
-            if (Element* de = static_cast<const Document*>(this)->documentElement())
+            if (Element* de = toDocument(this)->documentElement())
                 return de->lookupPrefix(namespaceURI);
             return String();
         case ENTITY_NODE:
@@ -1579,7 +1583,7 @@ String Node::lookupNamespaceURI(const String &prefix) const
             return String();
         }
         case DOCUMENT_NODE:
-            if (Element* de = static_cast<const Document*>(this)->documentElement())
+            if (Element* de = toDocument(this)->documentElement())
                 return de->lookupNamespaceURI(prefix);
             return String();
         case ENTITY_NODE:
@@ -1713,7 +1717,7 @@ Element* Node::ancestorElement() const
     // In theory, there can be EntityReference nodes between elements, but this is currently not supported.
     for (ContainerNode* n = parentNode(); n; n = n->parentNode()) {
         if (n->isElementNode())
-            return static_cast<Element*>(n);
+            return toElement(n);
     }
     return 0;
 }
@@ -1864,7 +1868,7 @@ static void appendAttributeDesc(const Node* node, StringBuilder& stringBuilder, 
     if (!node->isElementNode())
         return;
 
-    String attr = static_cast<const Element*>(node)->getAttribute(name);
+    String attr = toElement(node)->getAttribute(name);
     if (attr.isEmpty())
         return;
 
@@ -2328,6 +2332,10 @@ bool Node::dispatchEvent(PassRefPtr<Event> event)
 {
     if (event->isMouseEvent())
         return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(adoptRef(toMouseEvent(event.leakRef())), MouseEventDispatchMediator::SyntheticMouseEvent));
+#if ENABLE(TOUCH_EVENTS)
+    if (event->isTouchEvent())
+        return dispatchTouchEvent(adoptRef(toTouchEvent(event.leakRef())));
+#endif
     return EventDispatcher::dispatchEvent(this, EventDispatchMediator::create(event));
 }
 
@@ -2388,6 +2396,13 @@ bool Node::dispatchGestureEvent(const PlatformGestureEvent& event)
 }
 #endif
 
+#if ENABLE(TOUCH_EVENTS)
+bool Node::dispatchTouchEvent(PassRefPtr<TouchEvent> event)
+{
+    return EventDispatcher::dispatchEvent(this, TouchEventDispatchMediator::create(event));
+}
+#endif
+
 void Node::dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions eventOptions, SimulatedClickVisualOptions visualOptions)
 {
     EventDispatcher::dispatchSimulatedClick(this, underlyingEvent, eventOptions, visualOptions);
@@ -2439,6 +2454,10 @@ void Node::dispatchInputEvent()
 
 bool Node::disabled() const
 {
+#if ENABLE(DIALOG_ELEMENT)
+    if (isInert())
+        return true;
+#endif
     return false;
 }
 
@@ -2561,6 +2580,31 @@ PassRefPtr<PropertyNodeList> Node::propertyNodeList(const String& name)
 }
 #endif
 
+// This is here for inlining
+inline void TreeScope::removedLastRefToScope()
+{
+    ASSERT(!deletionHasBegun());
+    if (m_guardRefCount) {
+        // If removing a child removes the last self-only ref, we don't
+        // want the scope to be destructed until after
+        // removeDetachedChildren returns, so we guard ourselves with an
+        // extra self-only ref.
+        guardRef();
+        dispose();
+#ifndef NDEBUG
+        // We need to do this right now since guardDeref() can delete this.
+        rootNode()->m_inRemovedLastRefFunction = false;
+#endif
+        guardDeref();
+    } else {
+#ifndef NDEBUG
+        rootNode()->m_inRemovedLastRefFunction = false;
+        beginDeletion();
+#endif
+        delete this;
+    }
+}
+
 // It's important not to inline removedLastRef, because we don't want to inline the code to
 // delete a Node at each deref call site.
 void Node::removedLastRef()
@@ -2568,10 +2612,11 @@ void Node::removedLastRef()
     // An explicit check for Document here is better than a virtual function since it is
     // faster for non-Document nodes, and because the call to removedLastRef that is inlined
     // at all deref call sites is smaller if it's a non-virtual function.
-    if (isDocumentNode()) {
-        static_cast<Document*>(this)->removedLastRef();
+    if (isTreeScope()) {
+        treeScope()->removedLastRefToScope();
         return;
     }
+
 #ifndef NDEBUG
     m_deletionHasBegun = true;
 #endif

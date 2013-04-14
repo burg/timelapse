@@ -66,7 +66,6 @@ public:
     long long applicationCacheDiskUsageForOrigin(JSStringRef name);
     bool isCommandEnabled(JSStringRef name);
     void keepWebHistory();
-    JSValueRef computedStyleIncludingVisitedInfo(JSContextRef, JSValueRef);
     void notifyDone();
     int numberOfPendingGeolocationPermissionRequests();
     void overridePreference(JSStringRef key, JSStringRef value);
@@ -104,8 +103,6 @@ public:
     void setPluginsEnabled(bool);
     void setPopupBlockingEnabled(bool);
     void setPrivateBrowsingEnabled(bool);
-    void setSelectTrailingWhitespaceEnabled(bool);
-    void setSmartInsertDeleteEnabled(bool);
     void setTabKeyCyclesThroughElements(bool);
     void setUseDashboardCompatibilityMode(bool flag);
     void setUserStyleSheetEnabled(bool flag);
@@ -135,8 +132,6 @@ public:
     void denyWebNotificationPermission(JSStringRef origin);
     void removeAllWebNotificationPermissions();
     void simulateWebNotificationClick(JSValueRef notification);
-
-    bool elementDoesAutoCompleteForElementWithId(JSStringRef id);
 
     bool dumpAsAudio() const { return m_dumpAsAudio; }
     void setDumpAsAudio(bool dumpAsAudio) { m_dumpAsAudio = dumpAsAudio; }
@@ -325,8 +320,6 @@ public:
 
     // Simulate a request an embedding application could make, populating per-session credential storage.
     void authenticateSession(JSStringRef url, JSStringRef username, JSStringRef password);
-
-    JSRetainPtr<JSStringRef> markerTextForListItem(JSContextRef, JSValueRef nodeObject) const;
 
     JSValueRef originsWithLocalStorage(JSContextRef);
     void deleteAllLocalStorage();

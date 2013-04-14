@@ -8,6 +8,7 @@ lib_LTLIBRARIES += \
 # We need to make sure plugin process is always built with gtk2, because plugins like flash
 # still use gtk2. Since webcore was built with gtk3, we need to build webcoregtk sources again with gtk2
 noinst_LTLIBRARIES += \
+	libPlatformGtk2.la \
 	libWebCoreGtk2.la
 
 libexec_PROGRAMS += \
@@ -35,6 +36,7 @@ libwebkit2gtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_SOU
 
 libwebkit2gtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPPFLAGS = \
 	-fno-strict-aliasing \
+	-DPACKAGE_LOCALE_DIR=\"$(localedir)\" \
 	$(global_cppflags) \
 	-include $(srcdir)/Source/WebKit2/WebKit2Prefix.h \
 	-I$(srcdir)/Source/WebKit/gtk \
@@ -124,6 +126,7 @@ libwebkit2gtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CPP
 	-DBUILDING_WEBKIT \
 	-DWEBKIT2_COMPILATION \
 	-DENABLE_PLUGIN_PROCESS=1 \
+	$(platformgtk_cppflags) \
 	$(webcore_cppflags) \
 	$(webcoregtk_cppflags) \
 	$(javascriptcore_cppflags) \
@@ -150,8 +153,10 @@ libwebkit2gtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_CFL
 # Artificial dependency to make sure libwebkit2gtk and libwebkitgtk are not linked at the same time
 # The variable creation is to avoid having automake override the entire rule instead of adding the
 # dependency.
+if ENABLE_WEBKIT1
 webkit2gtk_lib_for_dep = libwebkit2gtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
 $(webkit2gtk_lib_for_dep): libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
+endif
 
 libwebkit2gtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_ladir = \
 	$(libwebkit2gtkincludedir)/WebKit2
@@ -179,6 +184,7 @@ endif
 
 libwebkit2gtk_@WEBKITGTK_API_MAJOR_VERSION@_@WEBKITGTK_API_MINOR_VERSION@_la_LIBADD += \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
+	libPlatformGtk.la \
 	libWebCoreDOM.la \
 	libWebCoreGtk.la \
 	$(CAIRO_LIBS) \
@@ -451,17 +457,18 @@ libWebCoreGtk2_la_SOURCES = \
 	$(webcoregtk_sources)
 
 libWebCoreGtk2_la_CXXFLAGS = \
-	$(SYMBOL_VISIBILITY_INLINES) \
+	-fvisibility-inlines-hidden \
 	$(global_cxxflags)
 
 libWebCoreGtk2_la_CFLAGS = \
-	$(SYMBOL_VISIBILITY) \
+	-fvisibility=hidden \
 	$(global_cflags)
 
 libWebCoreGtk2_la_CPPFLAGS = \
 	-DBUILDING_WEBKIT \
 	-DGTK_API_VERSION_2=1 \
 	$(global_cppflags) \
+	$(platformgtk_cppflags) \
 	$(webcore_cppflags) \
 	$(webcoregtk_cppflags) \
 	$(javascriptcore_cppflags) \
@@ -481,6 +488,26 @@ libWebCoreGtk2_la_CPPFLAGS = \
 	$(UNICODE_CFLAGS) \
 	$(XRENDER_CFLAGS) \
 	$(XT_CFLAGS)
+
+libPlatformGtk2_la_SOURCES = \
+	$(platformgtk_sources)
+
+libPlatformGtk2_la_CXXFLAGS = \
+	-fvisibility-inlines-hidden \
+	$(global_cxxflags)
+
+libPlatformGtk2_la_CFLAGS = \
+	-fvisibility=hidden \
+	$(global_cflags)
+
+libPlatformGtk2_la_CPPFLAGS = \
+	-DBUILDING_WEBKIT \
+	-DGTK_API_VERSION_2=1 \
+	$(global_cppflags) \
+	$(platformgtk_cppflags) \
+	$(javascriptcore_cppflags) \
+	-fno-strict-aliasing \
+	$(GTK2_CFLAGS)
 
 # Injected Bundle
 injectedbundledir = $(libdir)/webkit2gtk-3.0/injected-bundle
@@ -512,7 +539,12 @@ libwebkit2gtkinjectedbundle_la_CPPFLAGS = \
 
 # Serialize linking of the plugin process with both webkit libraries.
 plugin_process_for_dep = Programs/WebKitPluginProcess
-$(plugin_process_for_dep): libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la libwebkit2gtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
+plugin_process_for_dep_list = libwebkit2gtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
+if ENABLE_WEBKIT1
+plugin_process_for_dep_list += \
+	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la
+endif
+$(plugin_process_for_dep): $(plugin_process_for_dep_list)
 
 Programs_WebKitPluginProcess_CPPFLAGS = \
 	-include $(srcdir)/Source/WebKit2/WebKit2Prefix.h \
@@ -539,6 +571,7 @@ Programs_WebKitPluginProcess_CPPFLAGS = \
 	-DENABLE_PLUGIN_PROCESS=1 \
 	-DLIBEXECDIR=\""$(libexecdir)"\" \
 	$(global_cppflags) \
+	$(platformgtk_cppflags) \
 	$(webcore_cppflags) \
 	$(webcoregtk_cppflags) \
 	$(javascriptcore_cppflags) \
@@ -552,7 +585,7 @@ Programs_WebKitPluginProcess_CPPFLAGS = \
 	$(UNICODE_CFLAGS)
 
 Programs_WebKitPluginProcess_CFLAGS = \
-	$(SYMBOL_VISIBILITY) \
+	-fvisibility-inlines-hidden \
 	$(global_cflags) \
 	$(CAIRO_CFLAGS) \
 	$(GLIB_CFLAGS) \
@@ -572,14 +605,16 @@ Programs_WebKitPluginProcess_LDADD = \
 	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
 	libWebCore.la
 
-#if ENABLE_SVG
+if ENABLE_SVG
 Programs_WebKitPluginProcess_LDADD += \
 	libWebCoreSVG.la
-#endif
+endif
 
 Programs_WebKitPluginProcess_LDADD += \
-	libWebCorePlatform.la \
+	libPlatformGtk2.la \
+	libWebCoreModules.la \
 	libWebCoreGtk2.la \
+	libWebCorePlatform.la \
 	$(CAIRO_LIBS) \
 	$(COVERAGE_LDFLAGS) \
 	$(GEOCLUE_LIBS) \
@@ -613,7 +648,7 @@ Programs_WebKitPluginProcess_LDFLAGS = \
 	-Wl,--unresolved-symbols=ignore-in-object-files
 
 Programs_WebKitPluginProcess_CXXFLAGS = \
-	$(SYMBOL_VISIBILITY_INLINES) \
+	-fvisibility-inlines-hidden \
 	$(global_cxxflags)
 
 EXTRA_DIST += \

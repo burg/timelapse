@@ -21,6 +21,7 @@ fast/js/array-reduce
 fast/js/array-reduceRight
 fast/js/array-reset-large-index
 fast/js/array-slow-put
+fast/js/array-sort-small-sparse-array-with-large-length
 fast/js/array-sort-numericCompare
 fast/js/array-sort-reentrance
 fast/js/array-splice
@@ -78,8 +79,12 @@ fast/js/dfg-arguments-alias
 fast/js/dfg-arguments-cross-code-origin
 fast/js/dfg-arguments-mixed-alias
 fast/js/dfg-arguments-osr-exit
+fast/js/dfg-arguments-osr-exit-multiple-blocks
+fast/js/dfg-arguments-osr-exit-multiple-blocks-before-exit
 fast/js/dfg-arguments-out-of-bounds
 fast/js/dfg-arguments-unexpected-escape
+fast/js/dfg-arith-add-overflow-check-elimination-tower-of-large-numbers
+fast/js/dfg-arith-add-overflow-check-elimination-predicted-but-not-proven-int
 fast/js/dfg-arrayify-elimination
 fast/js/dfg-arrayify-when-late-prevent-extensions
 fast/js/dfg-arrayify-when-prevent-extensions
@@ -91,7 +96,11 @@ fast/js/dfg-array-push-slow-put
 fast/js/dfg-bool-to-int32-reuse
 fast/js/dfg-branch-logical-not-peephole-around-osr-exit
 fast/js/dfg-branch-not-fail
+fast/js/dfg-captured-var-get-local
 fast/js/dfg-cfa-merge-with-dead-use-at-tail
+fast/js/dfg-cfg-simplify-eliminate-set-local-type-check-then-branch-not-null
+fast/js/dfg-cfg-simplify-eliminate-set-local-type-check-then-branch-not-null-and-decrement
+fast/js/dfg-cfg-simplify-eliminate-set-local-type-check-then-typeof
 fast/js/dfg-cfg-simplify-phantom-get-local-on-same-block-set-local
 fast/js/dfg-cfg-simplify-redundant-dead-get-local
 fast/js/dfg-check-two-structures
@@ -99,6 +108,10 @@ fast/js/dfg-check-structure-elimination-for-non-cell
 fast/js/dfg-constant-fold-first-local-read-after-block-merge
 fast/js/dfg-constant-fold-uncaptured-variable-that-is-later-captured
 fast/js/dfg-convert-this-dom-window
+fast/js/dfg-convert-this-object-then-exit-on-other
+fast/js/dfg-convert-this-other-then-exit-on-object
+fast/js/dfg-convert-this-polymorphic-object-then-exit-on-other
+fast/js/dfg-convert-this-polymorphic-object-then-exit-on-string
 fast/js/dfg-create-inlined-arguments-in-closure-inline
 fast/js/dfg-cse-cfa-discrepancy
 fast/js/dfg-cse-dead-get-scoped-var
@@ -106,7 +119,9 @@ fast/js/dfg-dead-min-one-arg
 fast/js/dfg-dead-min-two-args
 fast/js/dfg-dead-redundant-get-array-length
 fast/js/dfg-dead-speculation
+fast/js/dfg-dead-unreachable-code-with-chain-of-dead-unchecked-nodes
 fast/js/dfg-dead-variable-on-exit
+fast/js/dfg-double-addition-simplify-to-int.html
 fast/js/dfg-double-use-of-post-simplification-double-prediction
 fast/js/dfg-double-vote-fuzz
 fast/js/dfg-ensure-array-storage-on-string

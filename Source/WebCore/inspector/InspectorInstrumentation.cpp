@@ -118,7 +118,7 @@ static Frame* frameForScriptExecutionContext(ScriptExecutionContext* context)
 {
     Frame* frame = 0;
     if (context->isDocument())
-        frame = static_cast<Document*>(context)->frame();
+        frame = toDocument(context)->frame();
     return frame;
 }
 
@@ -611,11 +611,11 @@ void InspectorInstrumentation::didScheduleStyleRecalculationImpl(InstrumentingAg
         resourceAgent->didScheduleStyleRecalculation(document);
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willMatchRuleImpl(InstrumentingAgents* instrumentingAgents, StyleRule* rule, StyleResolver* styleResolver)
+InspectorInstrumentationCookie InspectorInstrumentation::willMatchRuleImpl(InstrumentingAgents* instrumentingAgents, StyleRule* rule, InspectorCSSOMWrappers& inspectorCSSOMWrappers, DocumentStyleSheetCollection* sheetCollection)
 {
     InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent();
     if (cssAgent) {
-        cssAgent->willMatchRule(rule, styleResolver);
+        cssAgent->willMatchRule(rule, inspectorCSSOMWrappers, sheetCollection);
         return InspectorInstrumentationCookie(instrumentingAgents, 1);
     }
 
@@ -963,6 +963,16 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
 
 }
 
+void InspectorInstrumentation::frameDocumentUpdatedImpl(InstrumentingAgents* instrumentingAgents, Frame* frame)
+{
+    InspectorAgent* inspectorAgent = instrumentingAgents->inspectorAgent();
+    if (!inspectorAgent || !inspectorAgent->developerExtrasEnabled())
+        return;
+
+    if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
+        domAgent->frameDocumentUpdated(frame);
+}
+
 void InspectorInstrumentation::loaderDetachedFromFrameImpl(InstrumentingAgents* instrumentingAgents, DocumentLoader* loader)
 {
     if (InspectorPageAgent* inspectorPageAgent = instrumentingAgents->inspectorPageAgent())
@@ -1018,17 +1028,17 @@ void InspectorInstrumentation::willDestroyCachedResourceImpl(CachedResource* cac
     }
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willWriteHTMLImpl(InstrumentingAgents* instrumentingAgents, unsigned int length, unsigned int startLine, Frame* frame)
+InspectorInstrumentationCookie InspectorInstrumentation::willWriteHTMLImpl(InstrumentingAgents* instrumentingAgents, unsigned startLine, Frame* frame)
 {
     int timelineAgentId = 0;
     if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent()) {
-        timelineAgent->willWriteHTML(length, startLine, frame);
+        timelineAgent->willWriteHTML(startLine, frame);
         timelineAgentId = timelineAgent->id();
     }
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
-void InspectorInstrumentation::didWriteHTMLImpl(const InspectorInstrumentationCookie& cookie, unsigned int endLine)
+void InspectorInstrumentation::didWriteHTMLImpl(const InspectorInstrumentationCookie& cookie, unsigned endLine)
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didWriteHTML(endLine);
@@ -1466,6 +1476,12 @@ void InspectorInstrumentation::renderLayerDestroyedImpl(InstrumentingAgents* ins
 {
     if (InspectorLayerTreeAgent* layerTreeAgent = instrumentingAgents->inspectorLayerTreeAgent())
         layerTreeAgent->renderLayerDestroyed(renderLayer);
+}
+
+void InspectorInstrumentation::pseudoElementDestroyedImpl(InstrumentingAgents* instrumentingAgents, PseudoElement* pseudoElement)
+{
+    if (InspectorLayerTreeAgent* layerTreeAgent = instrumentingAgents->inspectorLayerTreeAgent())
+        layerTreeAgent->pseudoElementDestroyed(pseudoElement);
 }
 #endif
 

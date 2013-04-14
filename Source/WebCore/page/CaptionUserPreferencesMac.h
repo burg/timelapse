@@ -26,7 +26,7 @@
 #ifndef CaptionUserPreferencesMac_h
 #define CaptionUserPreferencesMac_h
 
-#if ENABLE(VIDEO_TRACK) && !PLATFORM(IOS)
+#if ENABLE(VIDEO_TRACK)
 
 #include "CSSPropertyNames.h"
 #include "CaptionUserPreferences.h"
@@ -40,14 +40,14 @@ public:
     static PassOwnPtr<CaptionUserPreferencesMac> create(PageGroup* group) { return adoptPtr(new CaptionUserPreferencesMac(group)); }
     virtual ~CaptionUserPreferencesMac();
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     virtual bool userHasCaptionPreferences() const OVERRIDE;
     virtual bool userPrefersCaptions() const OVERRIDE;
     virtual void setUserPrefersCaptions(bool) OVERRIDE;
     virtual float captionFontSizeScale(bool&) const OVERRIDE;
     virtual String captionsStyleSheetOverride() const OVERRIDE;
 
-    virtual void registerForPreferencesChangedCallbacks(CaptionPreferencesChangedListener*) OVERRIDE;
+    virtual void setInterestedInCaptionPreferenceChanges() OVERRIDE;
 
     virtual void setPreferredLanguage(String) OVERRIDE;
     virtual Vector<String> preferredLanguages() const OVERRIDE;
@@ -60,7 +60,7 @@ public:
 private:
     CaptionUserPreferencesMac(PageGroup*);
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     String captionsWindowCSS() const;
     String captionsBackgroundCSS() const;
     String captionsTextColorCSS() const;

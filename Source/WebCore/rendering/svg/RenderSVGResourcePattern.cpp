@@ -84,7 +84,7 @@ PatternData* RenderSVGResourcePattern::buildPattern(RenderObject* object, unsign
         return 0;
 
     AffineTransform absoluteTransformIgnoringRotation;
-    SVGRenderingContext::calculateTransformationToOutermostSVGCoordinateSystem(object, absoluteTransformIgnoringRotation);
+    SVGRenderingContext::calculateTransformationToOutermostCoordinateSystem(object, absoluteTransformIgnoringRotation);
 
     // Ignore 2D rotation, as it doesn't affect the size of the tile.
     SVGRenderingContext::clear2DRotation(absoluteTransformIgnoringRotation);
@@ -269,7 +269,7 @@ PassOwnPtr<ImageBuffer> RenderSVGResourcePattern::createTileImage(const PatternA
 
     // Draw the content into the ImageBuffer.
     for (Node* node = attributes.patternContentElement()->firstChild(); node; node = node->nextSibling()) {
-        if (!node->isSVGElement() || !static_cast<SVGElement*>(node)->isStyled() || !node->renderer())
+        if (!node->isSVGElement() || !toSVGElement(node)->isSVGStyledElement() || !node->renderer())
             continue;
         if (node->renderer()->needsLayout())
             return nullptr;

@@ -48,6 +48,7 @@ namespace WebCore {
 
 class DatabaseBackendBase;
 class DatabaseBackendContext;
+class OriginLock;
 class SecurityOrigin;
 
 #if !PLATFORM(CHROMIUM)
@@ -102,6 +103,7 @@ public:
     unsigned long long usageForOrigin(SecurityOrigin*);
     unsigned long long quotaForOrigin(SecurityOrigin*);
     void setQuota(SecurityOrigin*, unsigned long long);
+    PassRefPtr<OriginLock> originLockFor(SecurityOrigin*);
 
     void deleteAllDatabases();
     bool deleteOrigin(SecurityOrigin*);
@@ -135,9 +137,10 @@ private:
     bool hasEntryForDatabase(SecurityOrigin*, const String& databaseIdentifier);
 
     bool addDatabase(SecurityOrigin*, const String& name, const String& path);
-    void populateOriginsIfNeeded();
 
     bool deleteDatabaseFile(SecurityOrigin*, const String& name);
+
+    void deleteOriginLockFor(SecurityOrigin*);
 
     typedef HashSet<DatabaseBackendBase*> DatabaseSet;
     typedef HashMap<String, DatabaseSet*> DatabaseNameMap;
@@ -146,12 +149,12 @@ private:
     Mutex m_openDatabaseMapGuard;
     mutable OwnPtr<DatabaseOriginMap> m_openDatabaseMap;
 
-    // This lock protects m_database, m_quotaMap, m_databaseDirectoryPath, m_originsBeingDeleted, m_beingCreated, and m_beingDeleted.
+    // This lock protects m_database, m_originLockMap, m_databaseDirectoryPath, m_originsBeingDeleted, m_beingCreated, and m_beingDeleted.
     Mutex m_databaseGuard;
     SQLiteDatabase m_database;
 
-    typedef HashMap<RefPtr<SecurityOrigin>, unsigned long long> QuotaMap;
-    mutable OwnPtr<QuotaMap> m_quotaMap;
+    typedef HashMap<String, RefPtr<OriginLock> > OriginLockMap;
+    OriginLockMap m_originLockMap;
 
     String m_databaseDirectoryPath;
 

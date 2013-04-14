@@ -25,7 +25,6 @@
 
 #include "APICast.h"
 #include "ApplicationCacheStorage.h"
-#include "CSSComputedStyleDeclaration.h"
 #include "ChromeClientQt.h"
 #include "ContainerNode.h"
 #include "ContextMenu.h"
@@ -327,18 +326,6 @@ void DumpRenderTreeSupportQt::setAuthorAndUserStylesEnabled(QWebPageAdapter* ada
     adapter->page->settings()->setAuthorAndUserStylesEnabled(value);
 }
 
-void DumpRenderTreeSupportQt::setSmartInsertDeleteEnabled(QWebPageAdapter *adapter, bool enabled)
-{
-    static_cast<EditorClientQt*>(adapter->page->editorClient())->setSmartInsertDeleteEnabled(enabled);
-}
-
-
-void DumpRenderTreeSupportQt::setSelectTrailingWhitespaceEnabled(QWebPageAdapter *adapter, bool enabled)
-{
-    static_cast<EditorClientQt*>(adapter->page->editorClient())->setSelectTrailingWhitespaceEnabled(enabled);
-}
-
-
 void DumpRenderTreeSupportQt::executeCoreCommandByName(QWebPageAdapter* adapter, const QString& name, const QString& value)
 {
     adapter->page->focusController()->focusedOrMainFrame()->editor()->command(name).execute(value);
@@ -347,69 +334,6 @@ void DumpRenderTreeSupportQt::executeCoreCommandByName(QWebPageAdapter* adapter,
 bool DumpRenderTreeSupportQt::isCommandEnabled(QWebPageAdapter *adapter, const QString& name)
 {
     return adapter->page->focusController()->focusedOrMainFrame()->editor()->command(name).isEnabled();
-}
-
-bool DumpRenderTreeSupportQt::findString(QWebPageAdapter *adapter, const QString& string, const QStringList& optionArray)
-{
-    // 1. Parse the options from the array
-    WebCore::FindOptions options = 0;
-    const int optionCount = optionArray.size();
-    for (int i = 0; i < optionCount; ++i) {
-        const QString& option = optionArray.at(i);
-        if (option == QLatin1String("CaseInsensitive"))
-            options |= WebCore::CaseInsensitive;
-        else if (option == QLatin1String("AtWordStarts"))
-            options |= WebCore::AtWordStarts;
-        else if (option == QLatin1String("TreatMedialCapitalAsWordStart"))
-            options |= WebCore::TreatMedialCapitalAsWordStart;
-        else if (option == QLatin1String("Backwards"))
-            options |= WebCore::Backwards;
-        else if (option == QLatin1String("WrapAround"))
-            options |= WebCore::WrapAround;
-        else if (option == QLatin1String("StartInSelection"))
-            options |= WebCore::StartInSelection;
-    }
-
-    // 2. find the string
-    WebCore::Frame* frame = adapter->page->focusController()->focusedOrMainFrame();
-    return frame && frame->editor()->findString(string, options);
-}
-
-QString DumpRenderTreeSupportQt::markerTextForListItem(const QWebElement& listItem)
-{
-    return WebCore::markerTextForListItem(listItem.m_element);
-}
-
-static QString convertToPropertyName(const QString& name)
-{
-    QStringList parts = name.split(QLatin1Char('-'));
-    QString camelCaseName;
-    for (int j = 0; j < parts.count(); ++j) {
-        QString part = parts.at(j);
-        if (j)
-            camelCaseName.append(part.replace(0, 1, part.left(1).toUpper()));
-        else
-            camelCaseName.append(part);
-    }
-    return camelCaseName;
-}
-
-QVariantMap DumpRenderTreeSupportQt::computedStyleIncludingVisitedInfo(const QWebElement& element)
-{
-    QVariantMap res;
-
-    WebCore::Element* webElement = element.m_element;
-    if (!webElement)
-        return res;
-
-    RefPtr<WebCore::CSSComputedStyleDeclaration> computedStyleDeclaration = CSSComputedStyleDeclaration::create(webElement, true);
-    CSSStyleDeclaration* style = static_cast<WebCore::CSSStyleDeclaration*>(computedStyleDeclaration.get());
-    for (unsigned i = 0; i < style->length(); i++) {
-        QString name = style->item(i);
-        QString value = style->getPropertyValue(name);
-        res[convertToPropertyName(name)] = QVariant(value);
-    }
-    return res;
 }
 
 QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
@@ -452,24 +376,6 @@ QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter
     QRect resultRect = frame->editor()->firstRectForRange(range.get());
     rect << resultRect.x() << resultRect.y() << resultRect.width() << resultRect.height();
     return rect;
-}
-
-bool DumpRenderTreeSupportQt::elementDoesAutoCompleteForElementWithId(QWebFrameAdapter *adapter, const QString& elementId)
-{
-    Frame* coreFrame = adapter->frame;
-    if (!coreFrame)
-        return false;
-
-    Document* doc = coreFrame->document();
-    Q_ASSERT(doc);
-
-    Node* coreNode = doc->getElementById(elementId);
-    if (!coreNode || !coreNode->renderer())
-        return false;
-
-    HTMLInputElement* inputElement = static_cast<HTMLInputElement*>(coreNode);
-
-    return inputElement->isTextField() && !inputElement->isPasswordField() && inputElement->shouldAutocomplete();
 }
 
 void DumpRenderTreeSupportQt::setWindowsBehaviorAsEditingBehavior(QWebPageAdapter* adapter)

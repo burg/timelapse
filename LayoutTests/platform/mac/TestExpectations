@@ -90,14 +90,15 @@ http/tests/plugins/plugin-document-has-focus.html
 # Requires testRunner.setMediaType() and implementation
 fast/media/print-restores-previous-mediatype.html
 
-# Requires testRunner.setViewModeMediaFeature()
-fast/media/view-mode-media-feature.html
-fast/media/media-query-list-02.html
-fast/media/media-query-list-03.html
-fast/media/media-query-list-04.html
-fast/media/media-query-list-05.html
-fast/media/media-query-list-06.html
-fast/media/media-query-list-07.html
+# VIEW_MODE_CSS_MEDIA is not enabled on Mac.
+# DumpRenderTree requires testRunner.setViewModeMediaFeature()
+fast/media/view-mode-media-feature.html [ ImageOnlyFailure ]
+fast/media/media-query-list-02.html [ Failure ]
+fast/media/media-query-list-03.html [ Failure ]
+fast/media/media-query-list-04.html [ Failure ]
+fast/media/media-query-list-05.html [ Failure ]
+fast/media/media-query-list-06.html [ Failure ]
+fast/media/media-query-list-07.html [ Failure ]
 
 # Needs layoutTestController.enableAutoResizeMode()
 fast/autoresize
@@ -198,9 +199,6 @@ http/tests/security/contentTypeOptions
 
 # Speech input is not yet enabled.
 fast/speech
-
-# Speech synthesis is not yet enabled.
-platform/mac/fast/speechsynthesis
 
 # Speech JavaScript API is not yet enabled.
 fast/events/constructors/speech-recognition-event-constructor.html
@@ -403,6 +401,8 @@ storage/storageinfo-missing-arguments.html
 storage/storageinfo-no-callbacks.html
 storage/storageinfo-query-usage.html
 storage/storageinfo-request-quota.html
+storage/storagequota-query-usage.html
+storage/storagequota-request-quota.html
 
 # Tests that require ENABLE(DOWNLOAD_ATTRIBUTE).
 fast/dom/HTMLAnchorElement/anchor-nodownload.html
@@ -756,6 +756,12 @@ fast/sub-pixel/zoomed-image-tiles.html [ ImageOnlyFailure ]
 # Needs rebaseline
 fast/sub-pixel/inline-block-with-padding.html [ Failure ]
 
+# Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=107618
+# https://bugs.webkit.org/show_bug.cgi?id=107952
+compositing/overflow/paint-neg-z-order-descendants-into-scrolling-contents-layer.html [ Missing ]
+compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Missing ]
+compositing/overflow/do-not-paint-outline-into-composited-scrolling-contents.html [ Failure ]
+
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
 
@@ -874,7 +880,6 @@ platform/mac/fast/forms/listbox-scrollbar-hit-test.html
 # <rdar://problem/11224894> Several Japanese vertical text tests failing on Mountain Lion
 fast/dynamic/text-combine.html
 fast/repaint/japanese-rl-selection-clear.html
-fast/repaint/japanese-rl-selection-repaint-in-regions.html
 fast/repaint/japanese-rl-selection-repaint.html
 fast/repaint/repaint-across-writing-mode-boundary.html
 fast/ruby/base-shorter-than-text.html
@@ -953,11 +958,13 @@ fast/canvas/canvas-quadratic-same-endpoint.html
 css3/filters/composited-during-transition-layertree.html
 
 # --- Custom Filters ---
-# The following 3 tests are currently skipped on Mac for slight color differences,
+# The following 5 tests are currently skipped on Mac for slight color differences,
 # please see the relevant bug: http://webkit.org/b/107487
 webkit.org/b/107487 css3/filters/custom/custom-filter-blend-fractional-destination-alpha.html [ Skip ]
 webkit.org/b/107487 css3/filters/custom/custom-filter-nonseparable-blend-mode-color.html [ Skip ]
 webkit.org/b/107487 css3/filters/custom/custom-filter-nonseparable-blend-mode-luminosity.html [ Skip ]
+webkit.org/b/107487 css3/filters/custom/custom-filter-nonseparable-blend-mode-hue.html [ Skip ]
+webkit.org/b/107487 css3/filters/custom/custom-filter-nonseparable-blend-mode-saturation.html [ Skip ]
 
 # --- Text ---
 fast/forms/text-control-intrinsic-widths.html
@@ -1366,11 +1373,6 @@ webkit.org/b/106151 [ Lion ] http/tests/misc/link-rel-icon-beforeload.html [ Pas
 
 webkit.org/b/106185 fast/frames/flattening/iframe-flattening-fixed-height.html [ Pass Failure ]
 
-webkit.org/b/106412 [ Debug ] editing/style/justify-without-enclosing-block.xhtml [ Crash ]
-webkit.org/b/106412 [ Debug ] editing/execCommand/insert-list-xml.xhtml [ Crash ]
-webkit.org/b/106412 [ Debug ] editing/pasteboard/paste-noscript-xhtml.xhtml [ Crash ]
-webkit.org/b/106412 [ Debug ] editing/pasteboard/paste-xml.xhtml [ Crash ]
-
 webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
 
 # Enable when support drag-and-drop autoscrolling
@@ -1403,13 +1405,6 @@ webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ]
 webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ] 
 webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
 
-# Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=70634
-webkit.org/b/109507 compositing/contents-opaque/contents-opaque-background-color.html [ Failure ]
-webkit.org/b/109507 compositing/contents-opaque/contents-opaque-layer-opacity.html [ Failure ]
-webkit.org/b/109507 compositing/contents-opaque/contents-opaque-layer-transform.html [ Failure ]
-webkit.org/b/109507 compositing/rtl/rtl-fixed.html [ Failure ]
-webkit.org/b/109507 compositing/rtl/rtl-fixed-overflow.html [ Failure ]
-
 # Spellchecker behavior tests.
 webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-double-clicked-word-with-underscores.html [ Skip ]
@@ -1423,9 +1418,6 @@ webkit.org/b/108370 editing/spelling/spelling-with-punctuation-selection.html [ 
 webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-changed-text.html [ Skip ]
-
-webkit.org/b/108257 [ Debug ] compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Crash ]
-webkit.org/b/108257 [ Debug ] compositing/overflow/automatically-opt-into-composited-scrolling.html [ Crash ]
 
 # Rebaseline required after https://webkit.org/b/95772
 webkit.org/b/109209 fast/text/international/bidi-ignored-for-first-child-inline.html [ Failure ]
@@ -1453,4 +1445,41 @@ webkit.org/b/110654 css3/flexbox/button.html [ Failure ]
 # Need support for ResourceHandle::didChangePriority and DRT support
 webkit.org/b/111016 http/tests/loading/promote-img-preload-priority.html [ Failure ]
 
-webkit.org/b/111052 http/tests/xmlhttprequest/navigation-should-abort.html [ Failure ]
+webkit.org/b/111521 editing/selection/selection-invalid-offset.html [ Crash Pass ]
+webkit.org/b/111521 editing/selection/selection-in-iframe-removed-crash.html [ Crash Pass ]
+
+webkit.org/b/111613 platform/mac/fast/speechsynthesis/speech-synthesis-cancel.html [ Crash Pass ]
+
+webkit.org/b/110546 [ DEBUG ] fast/parser/document-write-fighting-eof.html [ Skip ]
+webkit.org/b/110546 [ DEBUG ] fast/parser/document-write-partial-entity-before-load.html [ Skip ]
+
+webkit.org/b/111647 sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A1.1_T2.html [ Skip ]
+webkit.org/b/111647 sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A2.1_T2.html [ Skip ]
+
+webkit.org/b/111650 http/tests/cookies/third-party-cookie-relaxing.html [ Failure Pass ]
+webkit.org/b/111650 http/tests/plugins/third-party-cookie-accept-policy.html [ Failure Pass ]
+
+webkit.org/b/111754 inspector/debugger/debugger-expand-scope.html [ Crash Pass ]
+
+webkit.org/b/111606 fast/borders/border-fit-2.html [ Failure Pass ]
+webkit.org/b/111606 fast/borders/border-fit.html [ Failure Pass ]
+webkit.org/b/111606 fast/repaint/border-fit-lines.html [ Failure Pass ]
+
+# The following tests only fail on Mac EWS bots. Unfortunately, we haven't been able to figure out the cause of these failures.
+webkit.org/b/112176 canvas/philip/tests/2d.path.arc.scale.2.html [ Failure Pass ]
+webkit.org/b/112176 canvas/philip/tests/2d.path.arcTo.scale.html [ Failure Pass ]
+webkit.org/b/112176 canvas/philip/tests/2d.path.arcTo.transformation.html [ Failure Pass ]
+webkit.org/b/112176 canvas/philip/tests/2d.path.stroke.scale1.html [ Failure Pass ]
+webkit.org/b/112176 canvas/philip/tests/2d.path.stroke.skew.html [ Failure Pass ]
+webkit.org/b/112176 compositing/overflow/composited-scrolling-paint-phases.html [ Failure Pass ]
+webkit.org/b/112176 fast/canvas/canvas-composite-alpha.html [ Failure Pass ]
+webkit.org/b/112176 fast/canvas/webgl/read-pixels-test.html [ Failure Pass ]
+
+# The following ref-test appears to fail on EWS bots as well.
+webkit.org/b/112176 fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure Pass ]
+# Once the bug 112176 is fixed, potentially restore the following test expectations.
+# webkit.org/b/105998 [ Lion Release ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure ]
+# webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure Pass ]
+
+# Feature not implemented
+webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]

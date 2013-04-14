@@ -83,23 +83,6 @@ function runExpectationsTest(builder, test, expectations, modifiers)
     equal(resultsForTest.modifiers, modifiers, message);
 }
 
-test('flattenTrie', 1, function() {
-    resetGlobals();
-    var tests = {
-        'bar.html': {'results': [[100, 'F']], 'times': [[100, 0]]},
-        'foo': {
-            'bar': {
-                'baz.html': {'results': [[100, 'F']], 'times': [[100, 0]]},
-            }
-        }
-    };
-    var expectedFlattenedTests = {
-        'bar.html': {'results': [[100, 'F']], 'times': [[100, 0]]},
-        'foo/bar/baz.html': {'results': [[100, 'F']], 'times': [[100, 0]]},
-    };
-    equal(JSON.stringify(flattenTrie(tests)), JSON.stringify(expectedFlattenedTests))
-});
-
 test('releaseFail', 2, function() {
     resetGlobals();
     loadBuildersList('@ToT - chromium.org', 'layout-tests');
@@ -365,7 +348,7 @@ test('headerForTestTableHtml', 1, function() {
 test('htmlForTestTypeSwitcherGroup', 6, function() {
     var container = document.createElement('div');
     g_crossDashboardState.testType = 'ui_tests';
-    container.innerHTML = htmlForTestTypeSwitcher(true);
+    container.innerHTML = ui.html.testTypeSwitcher(true);
     var selects = container.querySelectorAll('select');
     equal(selects.length, 2);
     var group = selects[1];
@@ -373,7 +356,7 @@ test('htmlForTestTypeSwitcherGroup', 6, function() {
     equal(group.children.length, 3);
 
     g_crossDashboardState.testType = 'layout-tests';
-    container.innerHTML = htmlForTestTypeSwitcher(true);
+    container.innerHTML = ui.html.testTypeSwitcher(true);
     var selects = container.querySelectorAll('select');
     equal(selects.length, 2);
     var group = selects[1];
@@ -647,9 +630,9 @@ test('sortTests', 4, function() {
 });
 
 test('popup', 2, function() {
-    showPopup(document.body, 'dummy content');
+    ui.popup.show(document.body, 'dummy content');
     ok(document.querySelector('#popup'));
-    hidePopup();
+    ui.popup.hide();
     ok(!document.querySelector('#popup'));
 });
 

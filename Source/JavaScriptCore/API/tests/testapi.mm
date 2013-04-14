@@ -23,7 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-#import "JavaScriptCore.h"
+#import <JavaScriptCore/JavaScriptCore.h>
+
+void JSSynchronousGarbageCollectForDebugging(JSContextRef);
 
 extern "C" bool _Block_has_signature(id);
 extern "C" const char * _Block_signature(id);
@@ -58,6 +60,7 @@ JSExportAs(testArgumentTypes,
 - (NSString *)testArgumentTypesWithInt:(int)i double:(double)d boolean:(BOOL)b string:(NSString *)s number:(NSNumber *)n array:(NSArray *)a dictionary:(NSDictionary *)o
 );
 - (void)callback:(JSValue *)function;
+- (void)bogusCallback:(void(^)(int))function;
 @end
 
 @interface TestObject : ParentObject <TestObject>
@@ -89,6 +92,10 @@ JSExportAs(testArgumentTypes,
 {
     [function callWithArguments:[NSArray arrayWithObject:[NSNumber numberWithInt:42]]];
 }
+- (void)bogusCallback:(void(^)(int))function
+{
+    function(42);
+}
 @end
 
 bool testXYZTested = false;
@@ -96,6 +103,8 @@ bool testXYZTested = false;
 @protocol TextXYZ <JSExport>
 @property int x;
 @property (readonly) int y;
+@property JSValue *onclick;
+@property JSValue *weakOnclick;
 - (void)test:(NSString *)message;
 @end
 
@@ -103,15 +112,44 @@ bool testXYZTested = false;
 @property int x;
 @property int y;
 @property int z;
+- (void)click;
 @end
 
-@implementation TextXYZ
+@implementation TextXYZ {
+    JSManagedValue *m_weakOnclickHandler;
+    JSManagedValue *m_onclickHandler;
+}
 @synthesize x;
 @synthesize y;
 @synthesize z;
 - (void)test:(NSString *)message
 {
     testXYZTested = [message isEqual:@"test"] && x == 13 & y == 4 && z == 5;
+}
+- (void)setWeakOnclick:(JSValue *)value
+{
+    m_weakOnclickHandler = [JSManagedValue managedValueWithValue:value];
+}
+
+- (void)setOnclick:(JSValue *)value
+{
+    m_onclickHandler = [JSManagedValue managedValueWithValue:value owner:self];
+}
+- (JSValue *)weakOnclick
+{
+    return [m_weakOnclickHandler value];
+}
+- (JSValue *)onclick
+{
+    return [m_onclickHandler value];
+}
+- (void)click
+{
+    if (!m_onclickHandler)
+        return;
+
+    JSValue *function = [m_onclickHandler value];
+    [function callWithArguments:[NSArray array]];
 }
 @end
 
@@ -476,6 +514,17 @@ void testObjectiveCAPI()
         context[@"testObject"] = testObject;
         JSValue *result = [context evaluateScript:@"var result = 0; testObject.callback(function(x){ result = x; }); result"];
         checkResult(@"testObject.callback", [result isNumber] && [result toInt32] == 42);
+        result = [context evaluateScript:@"testObject.bogusCallback"];
+        checkResult(@"testObject.bogusCallback == undefined", [result isUndefined]);
+    }
+
+    @autoreleasepool {
+        JSContext *context = [[JSContext alloc] init];
+        TestObject *testObject = [TestObject testObject];
+        context[@"testObject"] = testObject;
+        JSValue *result = [context evaluateScript:@"Function.prototype.toString.call(testObject.callback)"];
+        NSLog(@"toString = %@", [result toString]);
+        checkResult(@"Function.prototype.toString", !context.exception && ![result isUndefined]);
     }
 
     @autoreleasepool {
@@ -485,6 +534,84 @@ void testObjectiveCAPI()
         context1[@"passValueBetweenContexts"] = value;
         JSValue *result = [context1 evaluateScript:@"passValueBetweenContexts"];
         checkResult(@"[value isEqualToObject:result]", [value isEqualToObject:result]);
+    }
+
+    @autoreleasepool {
+        JSContext *context = [[JSContext alloc] init];
+        context[@"handleTheDictionary"] = ^(NSDictionary *dict) {
+            NSDictionary *expectedDict = @{
+                @"foo" : [NSNumber numberWithInt:1],
+                @"bar" : @{
+                    @"baz": [NSNumber numberWithInt:2]
+                }
+            };
+            checkResult(@"recursively convert nested dictionaries", [dict isEqualToDictionary:expectedDict]);
+        };
+        [context evaluateScript:@"var myDict = { \
+            'foo': 1, \
+            'bar': {'baz': 2} \
+        }; \
+        handleTheDictionary(myDict);"];
+
+        context[@"handleTheArray"] = ^(NSArray *array) {
+            NSArray *expectedArray = @[@"foo", @"bar", @[@"baz"]];
+            checkResult(@"recursively convert nested arrays", [array isEqualToArray:expectedArray]);
+        };
+        [context evaluateScript:@"var myArray = ['foo', 'bar', ['baz']]; handleTheArray(myArray);"];
+    }
+
+    @autoreleasepool {
+        JSContext *context = [[JSContext alloc] init];
+        TextXYZ *testXYZ = [[TextXYZ alloc] init];
+
+        @autoreleasepool {
+            context[@"testXYZ"] = testXYZ;
+
+            [context evaluateScript:@" \
+                didClick = false; \
+                testXYZ.onclick = function() { \
+                    didClick = true; \
+                }; \
+                 \
+                testXYZ.weakOnclick = function() { \
+                    return 'foo'; \
+                }; \
+            "];
+        }
+
+        @autoreleasepool {
+            [testXYZ click];
+            JSValue *result = [context evaluateScript:@"didClick"];
+            checkResult(@"Event handler onclick", [result toBool]);
+        }
+
+        JSSynchronousGarbageCollectForDebugging([context globalContextRef]);
+
+        @autoreleasepool {
+            JSValue *result = [context evaluateScript:@"testXYZ.onclick"];
+            checkResult(@"onclick still around after GC", !([result isNull] || [result isUndefined]));
+        }
+
+
+        @autoreleasepool {
+            JSValue *result = [context evaluateScript:@"testXYZ.weakOnclick"];
+            checkResult(@"weakOnclick not around after GC", [result isNull] || [result isUndefined]);
+        }
+
+        @autoreleasepool {
+            [context evaluateScript:@" \
+                didClick = false; \
+                testXYZ = null; \
+            "];
+        }
+
+        JSSynchronousGarbageCollectForDebugging([context globalContextRef]);
+
+        @autoreleasepool {
+            [testXYZ click];
+            JSValue *result = [context evaluateScript:@"didClick"];
+            checkResult(@"Event handler onclick doesn't fire", ![result toBool]);
+        }
     }
 }
 

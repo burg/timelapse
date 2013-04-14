@@ -138,7 +138,7 @@ XMLDocumentParser::XMLDocumentParser(DocumentFragment* fragment, Element* parent
         Node* n = parentElement->parentNode();
         if (!n || !n->isElementNode())
             break;
-        parentElement = static_cast<Element*>(n);
+        parentElement = toElement(n);
     }
 
     if (elemStack.isEmpty())
@@ -262,7 +262,7 @@ void XMLDocumentParser::resumeParsing()
     // Then, write any pending data
     SegmentedString rest = m_pendingSrc;
     m_pendingSrc.clear();
-    append(rest);
+    append(rest.toString().impl());
 
     // Finally, if finish() has been called and append() didn't result
     // in any further callbacks being queued, call end()
@@ -273,9 +273,9 @@ void XMLDocumentParser::resumeParsing()
 bool XMLDocumentParser::appendFragmentSource(const String& source)
 {
     ASSERT(!m_sawFirstElement);
-    append(String("<qxmlstreamdummyelement>"));
-    append(source);
-    append(String("</qxmlstreamdummyelement>"));
+    append(String("<qxmlstreamdummyelement>").impl());
+    append(source.impl());
+    append(String("</qxmlstreamdummyelement>").impl());
     return !hasError();
 }
 
@@ -510,7 +510,7 @@ void XMLDocumentParser::parseEndElement()
     RefPtr<ContainerNode> n = m_currentNode;
     n->finishParsingChildren();
 
-    if (!scriptingContentIsAllowed(m_scriptingPermission) && n->isElementNode() && toScriptElement(static_cast<Element*>(n.get()))) {
+    if (!scriptingContentIsAllowed(m_scriptingPermission) && n->isElementNode() && toScriptElement(toElement(n.get()))) {
         popCurrentNode();
         n->remove(IGNORE_EXCEPTION);
         return;
@@ -522,7 +522,7 @@ void XMLDocumentParser::parseEndElement()
         return;
     }
 
-    Element* element = static_cast<Element*>(n.get());
+    Element* element = toElement(n.get());
 
     // The element's parent may have already been removed from document.
     // Parsing continues in this case, but scripts aren't executed.
@@ -641,6 +641,8 @@ void XMLDocumentParser::parseDtd()
         || (publicId == QLatin1String("-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN"))
         || (publicId == QLatin1String("-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN"))
         || (publicId == QLatin1String("-//WAPFORUM//DTD XHTML Mobile 1.0//EN"))
+        || (publicId == QLatin1String("-//WAPFORUM//DTD XHTML Mobile 1.1//EN"))
+        || (publicId == QLatin1String("-//WAPFORUM//DTD XHTML Mobile 1.2//EN"))
        )
         setIsXHTMLDocument(true); // controls if we replace entities or not.
     if (!m_parsingFragment)

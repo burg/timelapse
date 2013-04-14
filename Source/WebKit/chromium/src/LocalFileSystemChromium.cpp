@@ -39,7 +39,6 @@
 #include "FileSystemCallback.h"
 #include "FileSystemCallbacks.h"
 #include "FileSystemType.h"
-#include "WebFileError.h"
 #include "WebFileSystemCallbacksImpl.h"
 #include "WebFrameClient.h"
 #include "WebFrameImpl.h"
@@ -49,6 +48,7 @@
 #include "WorkerContext.h"
 #include "WorkerFileSystemCallbacksBridge.h"
 #include "WorkerThread.h"
+#include <public/WebFileError.h>
 #include <public/WebFileSystem.h>
 #include <wtf/Threading.h>
 #include <wtf/text/WTFString.h>
@@ -153,7 +153,7 @@ bool allowFileSystemForWorker(WebCommonWorkerClient* commonClient)
     return bridge->result();
 }
 
-void openFileSystemForWorker(WebCommonWorkerClient* commonClient, WebFileSystem::Type type, long long size, bool create, WebFileSystemCallbacks* callbacks, FileSystemSynchronousType synchronousType)
+void openFileSystemForWorker(WebCommonWorkerClient* commonClient, WebFileSystem::Type type, long long size, bool create, WebFileSystemCallbacksImpl* callbacks, FileSystemSynchronousType synchronousType)
 {
     WorkerScriptController* controller = WorkerScriptController::controllerForContext();
     WorkerContext* workerContext = controller->workerContext();

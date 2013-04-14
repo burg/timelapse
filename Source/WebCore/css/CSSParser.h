@@ -94,6 +94,7 @@ public:
     static PassRefPtr<StylePropertySet> parseInlineStyleDeclaration(const String&, Element*);
     PassOwnPtr<MediaQuery> parseMediaQuery(const String&);
 
+    void addPropertyWithPrefixingVariant(CSSPropertyID, PassRefPtr<CSSValue>, bool important, bool implicit = false);
     void addProperty(CSSPropertyID, PassRefPtr<CSSValue>, bool important, bool implicit = false);
     void rollbackLastProperties(int num);
     bool hasProperties() const { return !m_parsedProperties.isEmpty(); }
@@ -151,10 +152,11 @@ public:
     bool parseTransformOriginShorthand(RefPtr<CSSValue>&, RefPtr<CSSValue>&, RefPtr<CSSValue>&);
     bool parseCubicBezierTimingFunctionValue(CSSParserValueList*& args, double& result);
     bool parseAnimationProperty(CSSPropertyID, RefPtr<CSSValue>&, AnimationParseContext&);
-    bool parseTransitionShorthand(bool important);
+    bool parseTransitionShorthand(CSSPropertyID, bool important);
     bool parseAnimationShorthand(bool important);
 
     bool cssGridLayoutEnabled() const;
+    bool parseGridItemPositionShorthand(CSSPropertyID, bool important);
     bool parseGridTrackList(CSSPropertyID, bool important);
     bool parseGridTrackGroup(CSSValueList*);
     bool parseGridTrackMinMax(CSSValueList*);
@@ -182,7 +184,8 @@ public:
     bool parseColorFromValue(CSSParserValue*, RGBA32&);
     void parseSelector(const String&, CSSSelectorList&);
 
-    static bool fastParseColor(RGBA32&, const String&, bool strict);
+    template<typename StringType>
+    static bool fastParseColor(RGBA32&, const StringType&, bool strict);
 
     bool parseLineHeight(bool important);
     bool parseFontSize(bool important);
@@ -261,6 +264,9 @@ public:
 
     void addTextDecorationProperty(CSSPropertyID, PassRefPtr<CSSValue>, bool important);
     bool parseTextDecoration(CSSPropertyID propId, bool important);
+#if ENABLE(CSS3_TEXT)
+    bool parseTextUnderlinePosition(bool important);
+#endif // CSS3_TEXT
 
     bool parseLineBoxContain(bool important);
     bool parseCalculation(CSSParserValue*, CalculationPermittedValueRange);
@@ -269,6 +275,7 @@ public:
     bool parseFontFeatureSettings(bool important);
 
     bool cssRegionsEnabled() const;
+    bool cssCompositingEnabled() const;
     bool parseFlowThread(const String& flowName);
     bool parseFlowThread(CSSPropertyID, bool important);
     bool parseRegionThread(CSSPropertyID, bool important);
@@ -336,6 +343,9 @@ public:
     CSSParserSelector* rewriteSpecifiersWithElementName(const AtomicString& namespacePrefix, const AtomicString& elementName, CSSParserSelector*, bool isNamespacePlaceholder = false);
     CSSParserSelector* rewriteSpecifiersWithNamespaceIfNeeded(CSSParserSelector*);
     CSSParserSelector* rewriteSpecifiers(CSSParserSelector*, CSSParserSelector*);
+#if ENABLE(SHADOW_DOM)
+    CSSParserSelector* rewriteSpecifiersForShadowDistributed(CSSParserSelector* specifiers, CSSParserSelector* distributedPseudoElementSelector);
+#endif
 
     void invalidBlockHit();
 

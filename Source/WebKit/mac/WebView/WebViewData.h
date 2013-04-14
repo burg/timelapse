@@ -146,9 +146,6 @@ private:
     BOOL hasSpellCheckerDocumentTag;
     NSInteger spellCheckerDocumentTag;
 
-    BOOL smartInsertDeleteEnabled;
-    BOOL selectTrailingWhitespaceEnabled;
-        
 #if ENABLE(DASHBOARD_SUPPORT)
     BOOL dashboardBehaviorAlwaysSendMouseEventsToAllWindows;
     BOOL dashboardBehaviorAlwaysSendActiveNullEventsToPlugIns;
@@ -205,5 +202,7 @@ private:
 #if USE(DICTATION_ALTERNATIVES)
     OwnPtr<WebCore::AlternativeTextUIController> m_alternativeTextUIController;
 #endif
+
+    RetainPtr<NSData> sourceApplicationAuditData;
 }
 @end

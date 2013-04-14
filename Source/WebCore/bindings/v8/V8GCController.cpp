@@ -49,13 +49,13 @@ namespace WebCore {
 
 class ImplicitConnection {
 public:
-    ImplicitConnection(void* root, v8::Persistent<v8::Value> wrapper)
+    ImplicitConnection(void* root, v8::Persistent<v8::Object> wrapper)
         : m_root(root)
         , m_wrapper(wrapper)
         , m_rootNode(0)
     {
     }
-    ImplicitConnection(Node* root, v8::Persistent<v8::Value> wrapper)
+    ImplicitConnection(Node* root, v8::Persistent<v8::Object> wrapper)
         : m_root(root)
         , m_wrapper(wrapper)
         , m_rootNode(root)
@@ -63,7 +63,7 @@ public:
     }
 
     void* root() const { return m_root; }
-    v8::Persistent<v8::Value> wrapper() const { return m_wrapper; }
+    v8::Persistent<v8::Object> wrapper() const { return m_wrapper; }
 
     PassOwnPtr<RetainedObjectInfo> retainedObjectInfo()
     {
@@ -74,13 +74,29 @@ public:
 
 private:
     void* m_root;
-    v8::Persistent<v8::Value> m_wrapper;
+    v8::Persistent<v8::Object> m_wrapper;
     Node* m_rootNode;
 };
 
 bool operator<(const ImplicitConnection& left, const ImplicitConnection& right)
 {
     return left.root() < right.root();
+}
+
+struct ImplicitReference {
+    ImplicitReference(void* parent, v8::Persistent<v8::Object> child)
+        : parent(parent)
+        , child(child)
+    {
+    }
+
+    void* parent;
+    v8::Persistent<v8::Object> child;
+};
+
+bool operator<(const ImplicitReference& left, const ImplicitReference& right)
+{
+    return left.parent < right.parent;
 }
 
 class WrapperGrouper {
@@ -90,14 +106,20 @@ public:
         m_liveObjects.append(V8PerIsolateData::current()->ensureLiveRoot());
     }
 
-    void addObjectWrapperToGroup(void* root, v8::Persistent<v8::Value> wrapper)
+    void addObjectWrapperToGroup(void* root, v8::Persistent<v8::Object> wrapper)
     {
         m_connections.append(ImplicitConnection(root, wrapper));
     }
 
-    void addNodeWrapperToGroup(Node* root, v8::Persistent<v8::Value> wrapper)
+    void addNodeWrapperToGroup(Node* root, v8::Persistent<v8::Object> wrapper)
     {
         m_connections.append(ImplicitConnection(root, wrapper));
+    }
+
+    void addImplicitReference(void* parent, v8::Persistent<v8::Object> child)
+    {
+        m_references.append(ImplicitReference(parent, child));
+        m_rootGroupMap.add(parent, v8::Persistent<v8::Object>());
     }
 
     void keepAlive(v8::Persistent<v8::Value> wrapper)
@@ -115,6 +137,7 @@ public:
         size_t i = 0;
         while (i < m_connections.size()) {
             void* root = m_connections[i].root();
+            v8::Persistent<v8::Object> groupRepresentativeWrapper = m_connections[i].wrapper();
             OwnPtr<RetainedObjectInfo> retainedObjectInfo = m_connections[i].retainedObjectInfo();
 
             do {
@@ -124,13 +147,37 @@ public:
             if (group.size() > 1)
                 v8::V8::AddObjectGroup(group.data(), group.size(), retainedObjectInfo.leakPtr());
 
+            HashMap<void*, v8::Persistent<v8::Object> >::iterator iter = m_rootGroupMap.find(root);
+            if (iter != m_rootGroupMap.end())
+                iter->value = groupRepresentativeWrapper;
+
             group.shrink(0);
+        }
+
+        std::sort(m_references.begin(), m_references.end());
+        i = 0;
+        while (i < m_references.size()) {
+            void* parent = m_references[i].parent;
+            v8::Persistent<v8::Object> parentWrapper = m_rootGroupMap.get(parent);
+            if (parentWrapper.IsEmpty()) {
+                ++i;
+                continue;
+            }
+
+            Vector<v8::Persistent<v8::Value> > children;
+            do {
+                children.append(m_references[i++].child);
+            } while (i < m_references.size() && parent == m_references[i].parent);
+
+            v8::V8::AddImplicitReferences(parentWrapper, children.data(), children.size());
         }
     }
 
 private:
     Vector<v8::Persistent<v8::Value> > m_liveObjects;
     Vector<ImplicitConnection> m_connections;
+    Vector<ImplicitReference> m_references;
+    HashMap<void*, v8::Persistent<v8::Object> > m_rootGroupMap;
 };
 
 // FIXME: This should use opaque GC roots.
@@ -256,10 +303,19 @@ public:
         ASSERT(value->IsObject());
         v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
         ASSERT(V8DOMWrapper::maybeDOMWrapper(value));
-        ASSERT(V8Node::HasInstance(wrapper, m_isolate));
+        ASSERT(V8Node::HasInstance(wrapper, m_isolate, MainWorld) || V8Node::HasInstance(wrapper, m_isolate, IsolatedWorld));
         Node* node = V8Node::toNative(wrapper);
-        m_nodesInNewSpace.append(node);
-        node->setV8CollectableDuringMinorGC(true);
+        // A minor DOM GC can handle only node wrappers in the main world.
+        // Note that node->wrapper().IsEmpty() returns true for nodes that
+        // do not have wrappers in the main world.
+        if (!node->wrapper().IsEmpty()) {
+            WrapperTypeInfo* type = toWrapperTypeInfo(wrapper);
+            ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
+            if (activeDOMObject && activeDOMObject->hasPendingActivity())
+                return;
+            m_nodesInNewSpace.append(node);
+            node->setV8CollectableDuringMinorGC(true);
+        }
     }
 
     void notifyFinished()
@@ -311,7 +367,7 @@ public:
             MutationObserver* observer = static_cast<MutationObserver*>(object);
             HashSet<Node*> observedNodes = observer->getObservedNodes();
             for (HashSet<Node*>::iterator it = observedNodes.begin(); it != observedNodes.end(); ++it)
-                m_grouper.addObjectWrapperToGroup(V8GCController::opaqueRootForGC(*it, m_isolate), wrapper);
+                m_grouper.addImplicitReference(V8GCController::opaqueRootForGC(*it, m_isolate), wrapper);
         } else {
             ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
             if (activeDOMObject && activeDOMObject->hasPendingActivity())
@@ -320,7 +376,7 @@ public:
 
         if (classId == v8DOMNodeClassId) {
             UNUSED_PARAM(m_isolate);
-            ASSERT(V8Node::HasInstance(wrapper, m_isolate));
+            ASSERT(V8Node::HasInstance(wrapper, m_isolate, MainWorld) || V8Node::HasInstance(wrapper, m_isolate, IsolatedWorld));
             ASSERT(!wrapper.IsIndependent(m_isolate));
 
             Node* node = static_cast<Node*>(object);
@@ -364,13 +420,9 @@ void V8GCController::minorGCPrologue(v8::Isolate* isolate)
         v8::Isolate* isolate = v8::Isolate::GetCurrent();
         v8::HandleScope scope;
 
-        // A minor GC can handle the main world only.
-        DOMWrapperWorld* world = worldForEnteredContextWithoutContextCheck();
-        if (world && world->isMainWorld()) {
-            MinorGCWrapperVisitor visitor(isolate);
-            v8::V8::VisitHandlesForPartialDependence(isolate, &visitor);
-            visitor.notifyFinished();
-        }
+        MinorGCWrapperVisitor visitor(isolate);
+        v8::V8::VisitHandlesForPartialDependence(isolate, &visitor);
+        visitor.notifyFinished();
     }
 }
 
@@ -438,7 +490,7 @@ void V8GCController::checkMemoryUsage()
         // Memory usage is large and doubled since the last GC.
         // Check if we need to send low memory notification.
         v8::HeapStatistics heapStatistics;
-        v8::V8::GetHeapStatistics(&heapStatistics);
+        v8::Isolate::GetCurrent()->GetHeapStatistics(&heapStatistics);
         int heapSizeMB = heapStatistics.total_heap_size() >> 20;
         // Do not send low memory notification if V8 heap size is more than 7/8
         // of total memory usage. Let V8 to schedule GC itself in this case.

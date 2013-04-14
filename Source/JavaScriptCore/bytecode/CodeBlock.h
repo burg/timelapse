@@ -532,7 +532,7 @@ namespace JSC {
         {
             return needsFullScopeChain() && codeType() != GlobalCode;
         }
-        
+
         bool isCaptured(int operand, InlineCallFrame* inlineCallFrame = 0) const
         {
             if (operandIsArgument(operand))
@@ -605,12 +605,7 @@ namespace JSC {
         }
 
         unsigned numberOfValueProfiles() { return m_valueProfiles.size(); }
-        ValueProfile* valueProfile(int index)
-        {
-            ValueProfile* result = &m_valueProfiles[index];
-            ASSERT(result->m_bytecodeOffset != -1);
-            return result;
-        }
+        ValueProfile* valueProfile(int index) { return &m_valueProfiles[index]; }
         ValueProfile* valueProfileForBytecodeOffset(int bytecodeOffset)
         {
             ValueProfile* result = binarySearch<ValueProfile, int>(
@@ -1160,9 +1155,11 @@ namespace JSC {
         int m_activationRegister;
 
         bool m_isStrictMode;
+        bool m_needsActivation;
 
         RefPtr<SourceProvider> m_source;
         unsigned m_sourceOffset;
+        unsigned m_codeType;
 
 #if ENABLE(LLINT)
         SegmentedVector<LLIntCallLinkInfo, 8> m_llintCallLinkInfos;

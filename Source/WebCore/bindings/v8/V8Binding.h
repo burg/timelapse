@@ -243,6 +243,41 @@ namespace WebCore {
 
     v8::Handle<v8::Value> v8Array(PassRefPtr<DOMStringList>, v8::Isolate*);
 
+    // Convert a value to a 32-bit integer. The conversion fails if the
+    // value cannot be converted to an integer or converts to nan or to an infinity.
+    int toInt32(v8::Handle<v8::Value>, bool& ok);
+
+    // Convert a value to a 32-bit integer assuming the conversion cannot fail.
+    inline int toInt32(v8::Handle<v8::Value> value)
+    {
+        bool ok;
+        return toInt32(value, ok);
+    }
+
+    // Convert a value to a 32-bit unsigned integer. The conversion fails if the
+    // value cannot be converted to an unsigned integer or converts to nan or to an infinity.
+    uint32_t toUInt32(v8::Handle<v8::Value>, bool& ok);
+
+    // Convert a value to a 32-bit unsigned integer assuming the conversion cannot fail.
+    inline uint32_t toUInt32(v8::Handle<v8::Value> value)
+    {
+        bool ok;
+        return toUInt32(value, ok);
+    }
+
+    inline float toFloat(v8::Local<v8::Value> value)
+    {
+        return static_cast<float>(value->NumberValue());
+    }
+
+    inline long long toInt64(v8::Local<v8::Value> value)
+    {
+        return static_cast<long long>(value->IntegerValue());
+    }
+
+    WrapperWorldType worldType(v8::Isolate*);
+    WrapperWorldType worldTypeInMainThread(v8::Isolate*);
+
     template<class T> struct NativeValueTraits;
 
     template<>
@@ -250,6 +285,14 @@ namespace WebCore {
         static inline String nativeValue(const v8::Handle<v8::Value>& value)
         {
             return toWebCoreString(value);
+        }
+    };
+
+    template<>
+    struct NativeValueTraits<unsigned> {
+        static inline unsigned nativeValue(const v8::Handle<v8::Value>& value)
+        {
+            return toUInt32(value);
         }
     };
 
@@ -282,7 +325,7 @@ namespace WebCore {
         for (size_t i = 0; i < length; ++i) {
             v8::Handle<v8::Value> element = array->Get(i);
 
-            if (V8T::HasInstance(element, isolate)) {
+            if (V8T::HasInstance(element, isolate, worldType(isolate))) {
                 v8::Handle<v8::Object> object = v8::Handle<v8::Object>::Cast(element);
                 result.append(V8T::toNative(object));
             } else {
@@ -348,38 +391,6 @@ namespace WebCore {
 
     PassRefPtr<NodeFilter> toNodeFilter(v8::Handle<v8::Value>);
 
-    // Convert a value to a 32-bit integer.  The conversion fails if the
-    // value cannot be converted to an integer or converts to nan or to an infinity.
-    int toInt32(v8::Handle<v8::Value> value, bool& ok);
-
-    // Convert a value to a 32-bit integer assuming the conversion cannot fail.
-    inline int toInt32(v8::Handle<v8::Value> value)
-    {
-        bool ok;
-        return toInt32(value, ok);
-    }
-
-    // Convert a value to a 32-bit unsigned integer.  The conversion fails if the
-    // value cannot be converted to an unsigned integer or converts to nan or to an infinity.
-    uint32_t toUInt32(v8::Handle<v8::Value> value, bool& ok);
-
-    // Convert a value to a 32-bit unsigned integer assuming the conversion cannot fail.
-    inline uint32_t toUInt32(v8::Handle<v8::Value> value)
-    {
-        bool ok;
-        return toUInt32(value, ok);
-    }
-
-    inline float toFloat(v8::Local<v8::Value> value)
-    {
-        return static_cast<float>(value->NumberValue());
-    }
-
-    inline long long toInt64(v8::Local<v8::Value> value)
-    {
-        return static_cast<long long>(value->IntegerValue());
-    }
-
     inline bool isUndefinedOrNull(v8::Handle<v8::Value> value)
     {
         return value->IsNull() || value->IsUndefined();
@@ -437,33 +448,18 @@ namespace WebCore {
 
     // Returns the context associated with a ScriptExecutionContext.
     v8::Local<v8::Context> toV8Context(ScriptExecutionContext*, const WorldContextHandle&);
+    v8::Local<v8::Context> toV8Context(ScriptExecutionContext*, DOMWrapperWorld*);
 
     // Returns the frame object of the window object associated with
     // a context, if the window is currently being displayed in the Frame.
     Frame* toFrameIfNotDetached(v8::Handle<v8::Context>);
 
-    inline DOMWrapperWorld* worldForEnteredContext()
+    inline DOMWrapperWorld* isolatedWorldForEnteredContext()
     {
         v8::Handle<v8::Context> context = v8::Context::GetEntered();
         if (context.IsEmpty())
             return 0;
-        return DOMWrapperWorld::getWorld(context);
-    }
-
-    // This is a slightly different version of worldForEnteredContext().
-    // The difference is just that worldForEnteredContextWithoutContextCheck()
-    // does not call assertContextHasCorrectPrototype() (which is enabled on
-    // Debug builds only). Because assertContextHasCorrectPrototype() crashes
-    // if it is called when a current context is not completely initialized,
-    // you have to use worldForEnteredContextWithoutContextCheck() if you need
-    // to get a DOMWrapperWorld while a current context is being initialized.
-    // See https://bugs.webkit.org/show_bug.cgi?id=108579#c15 for more details.
-    inline DOMWrapperWorld* worldForEnteredContextWithoutContextCheck()
-    {
-        v8::Handle<v8::Context> context = v8::Context::GetEntered();
-        if (context.IsEmpty())
-            return 0;
-        return DOMWrapperWorld::getWorldWithoutContextCheck(context);
+        return DOMWrapperWorld::isolatedWorld(context);
     }
 
     // If the current context causes out of memory, JavaScript setting

@@ -44,7 +44,7 @@ TextDocumentParser::~TextDocumentParser()
 {
 }
 
-void TextDocumentParser::append(const SegmentedString& text)
+void TextDocumentParser::append(PassRefPtr<StringImpl> text)
 {
     if (!m_haveInsertedFakePreElement)
         insertFakePreElement();
@@ -60,8 +60,8 @@ void TextDocumentParser::insertFakePreElement()
     // distrubing the line/column number calculations.
     Vector<Attribute> attributes;
     attributes.append(Attribute(styleAttr, "word-wrap: break-word; white-space: pre-wrap;"));
-    RefPtr<AtomicHTMLToken> fakePre = AtomicHTMLToken::create(HTMLToken::StartTag, preTag.localName(), attributes);
-    treeBuilder()->constructTree(fakePre.get());
+    AtomicHTMLToken fakePre(HTMLToken::StartTag, preTag.localName(), attributes);
+    treeBuilder()->constructTree(&fakePre);
 
     // Normally we would skip the first \n after a <pre> element, but we don't
     // want to skip the first \n for text documents!

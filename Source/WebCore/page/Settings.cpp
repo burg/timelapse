@@ -141,6 +141,21 @@ static const double defaultUnifiedTextCheckerEnabled = true;
 #else
 static const double defaultUnifiedTextCheckerEnabled = false;
 #endif
+#if PLATFORM(CHROMIUM)
+#if OS(MAC_OS_X)
+static const bool defaultSmartInsertDeleteEnabled = true;
+#else
+static const bool defaultSmartInsertDeleteEnabled = false;
+#endif
+#if OS(WINDOWS)
+static const bool defaultSelectTrailingWhitespaceEnabled = true;
+#else
+static const bool defaultSelectTrailingWhitespaceEnabled = false;
+#endif
+#else
+static const bool defaultSmartInsertDeleteEnabled = true;
+static const bool defaultSelectTrailingWhitespaceEnabled = false;
+#endif
 
 Settings::Settings(Page* page)
     : m_page(0)
@@ -184,6 +199,7 @@ Settings::Settings(Page* page)
 #endif
     , m_scrollingPerformanceLoggingEnabled(false)
     , m_aggressiveTileRetentionEnabled(false)
+    , m_timeWithoutMouseMovementBeforeHidingControls(3)
     , m_setImageLoadingSettingsTimer(this, &Settings::imageLoadingSettingsTimerFired)
 {
     // A Frame may not have been created yet, so we initialize the AtomicString
@@ -469,7 +485,6 @@ void Settings::setUsesPageCache(bool usesPageCache)
         int last = m_page->backForward()->forwardCount();
         for (int i = first; i <= last; i++)
             pageCache()->remove(m_page->backForward()->itemAtIndex(i));
-        pageCache()->releaseAutoreleasedPagesNow();
     }
 }
 

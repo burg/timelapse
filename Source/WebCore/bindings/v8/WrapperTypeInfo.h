@@ -43,11 +43,19 @@ namespace WebCore {
     static const int v8DOMWrapperTypeIndex = 0;
     static const int v8DOMWrapperObjectIndex = 1;
     static const int v8DefaultWrapperInternalFieldCount = 2;
+    static const int v8PrototypeTypeIndex = 0;
+    static const int v8PrototypeInternalFieldcount = 1;
 
     static const uint16_t v8DOMNodeClassId = 1;
     static const uint16_t v8DOMObjectClassId = 2;
 
-    typedef v8::Persistent<v8::FunctionTemplate> (*GetTemplateFunction)(v8::Isolate*);
+    enum WrapperWorldType {
+        MainWorld,
+        IsolatedWorld,
+        WorkerWorld
+    };
+
+    typedef v8::Persistent<v8::FunctionTemplate> (*GetTemplateFunction)(v8::Isolate*, WrapperWorldType);
     typedef void (*DerefObjectFunction)(void*);
     typedef ActiveDOMObject* (*ToActiveDOMObjectFunction)(v8::Handle<v8::Object>);
     typedef EventTarget* (*ToEventTargetFunction)(v8::Handle<v8::Object>);
@@ -85,7 +93,7 @@ namespace WebCore {
             return false;
         }
         
-        v8::Persistent<v8::FunctionTemplate> getTemplate(v8::Isolate* isolate) { return getTemplateFunction(isolate); }
+        v8::Persistent<v8::FunctionTemplate> getTemplate(v8::Isolate* isolate, WrapperWorldType worldType) { return getTemplateFunction(isolate, worldType); }
         
         void derefObject(void* object)
         {

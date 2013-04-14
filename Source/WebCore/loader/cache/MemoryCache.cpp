@@ -23,12 +23,8 @@
 #include "config.h"
 #include "MemoryCache.h"
 
-#include "CachedCSSStyleSheet.h"
-#include "CachedFont.h"
-#include "CachedImage.h"
-#include "CachedScript.h"
-#include "CachedXSLStyleSheet.h"
-#include "CachedResourceLoader.h"
+#include "CachedResource.h"
+#include "CachedResourceHandle.h"
 #include "CrossThreadTask.h"
 #include "Document.h"
 #include "FrameLoader.h"
@@ -37,7 +33,6 @@
 #include "Image.h"
 #include "Logging.h"
 #include "PublicSuffix.h"
-#include "ResourceHandle.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginHash.h"
 #include "WebCoreMemoryInstrumentation.h"
@@ -61,22 +56,6 @@ static const int cDefaultCacheCapacity = 8192 * 1024;
 static const double cMinDelayBeforeLiveDecodedPrune = 1; // Seconds.
 static const float cTargetPrunePercentage = .95f; // Percentage of capacity toward which we prune, to avoid immediately pruning again.
 static const double cDefaultDecodedDataDeletionInterval = 0;
-
-#if ENABLE(CACHE_PARTITIONING)
-static String partitionName(String domain)
-{
-    if (domain.isNull())
-        return emptyString();
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-    String highLevel = topPrivatelyControlledDomain(domain);
-    if (highLevel.isNull())
-        return emptyString();
-    return highLevel;
-#else
-    return domain;
-#endif
-}
-#endif
 
 MemoryCache* memoryCache()
 {
@@ -126,7 +105,7 @@ bool MemoryCache::add(CachedResource* resource)
         originMap = new CachedResourceItem;
         m_resources.set(resource->url(), adoptPtr(originMap));
     }
-    originMap->set(partitionName(resource->cachePartition()), resource);
+    originMap->set(resource->cachePartition(), resource);
 #else
     m_resources.set(resource->url(), resource);
 #endif
@@ -154,13 +133,13 @@ void MemoryCache::revalidationSucceeded(CachedResource* revalidatingResource, co
     evict(revalidatingResource);
 
 #if ENABLE(CACHE_PARTITIONING)
-    ASSERT(!m_resources.get(resource->url()) || !m_resources.get(resource->url())->get(partitionName(resource->cachePartition())));
+    ASSERT(!m_resources.get(resource->url()) || !m_resources.get(resource->url())->get(resource->cachePartition()));
     CachedResourceItem* originMap = m_resources.get(resource->url());
     if (!originMap) {
         originMap = new CachedResourceItem;
         m_resources.set(resource->url(), adoptPtr(originMap));
     }
-    originMap->set(partitionName(resource->cachePartition()), resource);
+    originMap->set(resource->cachePartition(), resource);
 #else
     ASSERT(!m_resources.get(resource->url()));
     m_resources.set(resource->url(), resource);
@@ -201,7 +180,7 @@ CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request)
     CachedResourceItem* item = m_resources.get(url);
     CachedResource* resource = 0;
     if (item)
-        resource = item->get(partitionName(request.cachePartition()));
+        resource = item->get(request.cachePartition());
 #else
     CachedResource* resource = m_resources.get(url);
 #endif
@@ -446,7 +425,7 @@ void MemoryCache::evict(CachedResource* resource)
 #if ENABLE(CACHE_PARTITIONING)
         CachedResourceItem* item = m_resources.get(resource->url());
         if (item) {
-            item->remove(partitionName(resource->cachePartition()));
+            item->remove(resource->cachePartition());
             if (!item->size())
                 m_resources.remove(resource->url());
         }
@@ -466,7 +445,7 @@ void MemoryCache::evict(CachedResource* resource)
             adjustSize(resource->hasClients(), -static_cast<int>(resource->size()));
     } else
 #if ENABLE(CACHE_PARTITIONING)
-        ASSERT(!m_resources.get(resource->url()) || m_resources.get(resource->url())->get(partitionName(resource->cachePartition())) != resource);
+        ASSERT(!m_resources.get(resource->url()) || m_resources.get(resource->url())->get(resource->cachePartition()) != resource);
 #else
         ASSERT(m_resources.get(resource->url()) != resource);
 #endif
@@ -589,10 +568,19 @@ void MemoryCache::removeResourcesWithOrigin(SecurityOrigin* origin)
     Vector<CachedResource*> resourcesWithOrigin;
 
     CachedResourceMap::iterator e = m_resources.end();
+#if ENABLE(CACHE_PARTITIONING)
+    String originPartition = ResourceRequest::partitionName(origin->host());
+#endif
+
     for (CachedResourceMap::iterator it = m_resources.begin(); it != e; ++it) {
 #if ENABLE(CACHE_PARTITIONING)
         for (CachedResourceItem::iterator itemIterator = it->value->begin(); itemIterator != it->value->end(); ++itemIterator) {
             CachedResource* resource = itemIterator->value;
+            String partition = itemIterator->key;
+            if (partition == originPartition) {
+                resourcesWithOrigin.append(resource);
+                continue;
+            }
 #else
             CachedResource* resource = it->value;
 #endif
@@ -612,13 +600,20 @@ void MemoryCache::removeResourcesWithOrigin(SecurityOrigin* origin)
 
 void MemoryCache::getOriginsWithCache(SecurityOriginSet& origins)
 {
-    CachedResourceMap::iterator e = m_resources.end();
-    for (CachedResourceMap::iterator it = m_resources.begin(); it != e; ++it)
 #if ENABLE(CACHE_PARTITIONING)
-        origins.add(SecurityOrigin::createFromString(it->value->begin()->value->url()));
+    DEFINE_STATIC_LOCAL(String, httpString, ("http"));
+#endif
+    CachedResourceMap::iterator e = m_resources.end();
+    for (CachedResourceMap::iterator it = m_resources.begin(); it != e; ++it) {
+#if ENABLE(CACHE_PARTITIONING)
+        if (it->value->begin()->key == emptyString())
+            origins.add(SecurityOrigin::createFromString(it->value->begin()->value->url()));
+        else
+            origins.add(SecurityOrigin::create(httpString, it->value->begin()->key, 0));
 #else
         origins.add(SecurityOrigin::createFromString(it->value->url()));
 #endif
+    }
 }
 
 void MemoryCache::removeFromLiveDecodedResourcesList(CachedResource* resource)
@@ -800,6 +795,10 @@ void MemoryCache::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_resources, "resources");
     info.addMember(m_allResources, "allResources");
     info.addMember(m_liveDecodedResources, "liveDecodedResources");
+#if !ENABLE(CACHE_PARTITIONING)
+    for (CachedResourceMap::const_iterator i = m_resources.begin(); i != m_resources.end(); ++i)
+        info.addMember(i->value, "cachedResourceItem", WTF::RetainingPointer);
+#endif
 }
 
 void MemoryCache::setDisabled(bool disabled)

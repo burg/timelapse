@@ -147,14 +147,15 @@ public:
     void positionOverflowControlsLayers(const IntSize& offsetFromRoot);
     bool hasUnpositionedOverflowControlsLayers() const;
 
-    bool usingTileCache() const { return m_usingTiledCacheLayer; }
+    bool usingTiledBacking() const { return m_usingTiledCacheLayer; }
     TiledBacking* tiledBacking() const;
-    void adjustTileCacheCoverage();
+    void adjustTiledBackingCoverage();
     
     void updateDebugIndicators(bool showBorder, bool showRepaintCounter);
 
     // GraphicsLayerClient interface
-    virtual bool shouldUseTileCache(const GraphicsLayer*) const OVERRIDE;
+    virtual bool shouldUseTiledBacking(const GraphicsLayer*) const OVERRIDE;
+    virtual void tiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/) OVERRIDE;
     virtual void notifyAnimationStarted(const GraphicsLayer*, double startTime) OVERRIDE;
     virtual void notifyFlushRequired(const GraphicsLayer*) OVERRIDE;
     virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) OVERRIDE;
@@ -197,6 +198,8 @@ public:
 private:
     void createPrimaryGraphicsLayer();
     void destroyGraphicsLayers();
+    
+    void willDestroyLayer(const GraphicsLayer*);
     
     PassOwnPtr<GraphicsLayer> createGraphicsLayer(const String&);
 
@@ -260,7 +263,7 @@ private:
 
     bool shouldClipCompositedBounds() const;
 
-    bool hasTileCacheFlatteningLayer() const { return (m_childContainmentLayer && m_usingTiledCacheLayer); }
+    bool hasTiledBackingFlatteningLayer() const { return (m_childContainmentLayer && m_usingTiledCacheLayer); }
     GraphicsLayer* tileCacheFlatteningLayer() const { return m_usingTiledCacheLayer ? m_childContainmentLayer.get() : 0; }
 
     void paintIntoLayer(const GraphicsLayer*, GraphicsContext*, const IntRect& paintDirtyRect, PaintBehavior, GraphicsLayerPaintingPhase);

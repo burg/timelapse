@@ -69,7 +69,7 @@ void RenderSVGShape::updateShapeFromElement()
     m_path = adoptPtr(new Path);
     ASSERT(RenderSVGShape::isEmpty());
 
-    SVGStyledTransformableElement* element = static_cast<SVGStyledTransformableElement*>(node());
+    SVGStyledTransformableElement* element = toSVGStyledTransformableElement(node());
     updatePathFromGraphicsElement(element, path());
     processMarkerPositions();
 
@@ -146,7 +146,7 @@ void RenderSVGShape::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
     LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(this) && selfNeedsLayout());
-    SVGStyledTransformableElement* element = static_cast<SVGStyledTransformableElement*>(node());
+    SVGStyledTransformableElement* element = toSVGStyledTransformableElement(node());
 
     bool updateCachedBoundariesInParents = false;
 
@@ -198,7 +198,7 @@ bool RenderSVGShape::setupNonScalingStrokeContext(AffineTransform& strokeTransfo
 
 AffineTransform RenderSVGShape::nonScalingStrokeTransform() const
 {
-    SVGStyledTransformableElement* element = static_cast<SVGStyledTransformableElement*>(node());
+    SVGStyledTransformableElement* element = toSVGStyledTransformableElement(node());
     return element->getScreenCTM(SVGLocatable::DisallowStyleUpdate);
 }
 
@@ -207,7 +207,7 @@ bool RenderSVGShape::shouldGenerateMarkerPositions() const
     if (!style()->svgStyle()->hasMarkers())
         return false;
 
-    SVGStyledTransformableElement* element = static_cast<SVGStyledTransformableElement*>(node());
+    SVGStyledTransformableElement* element = toSVGStyledTransformableElement(node());
     if (!element->supportsMarkers())
         return false;
 
@@ -297,13 +297,13 @@ void RenderSVGShape::paint(PaintInfo& paintInfo, const LayoutPoint&)
         }
 
         if (drawsOutline)
-            paintOutline(childPaintInfo.context, IntRect(boundingBox));
+            paintOutline(childPaintInfo, IntRect(boundingBox));
     }
 }
 
 // This method is called from inside paintOutline() since we call paintOutline()
 // while transformed to our coord system, return local coords
-void RenderSVGShape::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint&)
+void RenderSVGShape::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint&, const RenderLayerModelObject*)
 {
     IntRect rect = enclosingIntRect(repaintRectInLocalCoordinates());
     if (!rect.isEmpty())
@@ -415,7 +415,7 @@ void RenderSVGShape::updateRepaintBoundingBox()
 
 float RenderSVGShape::strokeWidth() const
 {
-    SVGElement* svgElement = static_cast<SVGElement*>(node());
+    SVGElement* svgElement = toSVGElement(node());
     SVGLengthContext lengthContext(svgElement);
     return style()->svgStyle()->strokeWidth().value(lengthContext);
 }

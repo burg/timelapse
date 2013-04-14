@@ -104,6 +104,7 @@ audio::-webkit-media-controls-timeline-container, video::-webkit-media-controls-
     -webkit-flex: 1 1;
     -webkit-user-select: none;
     height: 16px;
+    min-width: 0;
 }
 
 audio::-webkit-media-controls-current-time-display, video::-webkit-media-controls-current-time-display {
@@ -124,6 +125,7 @@ audio::-webkit-media-controls-timeline, video::-webkit-media-controls-timeline {
     border: initial;
     color: inherit;
     margin: initial;
+    min-width: 0;
 }
 
 audio::-webkit-media-controls-volume-slider, video::-webkit-media-controls-volume-slider {
@@ -221,8 +223,7 @@ video::-webkit-media-text-track-container {
     overflow: hidden;
     padding-bottom: 5px;
 
-    font-size: 22px;
-    font-family: sans-serif;
+    font: 22px sans-serif;
     text-align: center;
     color: rgba(255, 255, 255, 1);
 
@@ -238,7 +239,7 @@ video::-webkit-media-text-track-container {
     -webkit-flex: 1 1;
 }
 
-video::-webkit-media-text-track-all-nodes {
+video::cue {
     display: inline;
 
     background-color: rgba(0, 0, 0, 0.8);
@@ -249,6 +250,7 @@ video::-webkit-media-text-track-display {
     position: absolute;
     overflow: hidden;
     white-space: pre-wrap;
+    -webkit-box-sizing: border-box;
 }
 
 video::cue(:future) {

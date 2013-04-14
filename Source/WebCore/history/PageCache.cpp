@@ -326,7 +326,6 @@ PageCache::PageCache()
     , m_size(0)
     , m_head(0)
     , m_tail(0)
-    , m_autoreleaseTimer(this, &PageCache::releaseAutoreleasedPagesNowDueToTimer)
 #if USE(ACCELERATED_COMPOSITING)
     , m_shouldClearBackingStores(false)
 #endif
@@ -420,11 +419,6 @@ int PageCache::frameCount() const
     return frameCount;
 }
 
-int PageCache::autoreleasedPageCount() const
-{
-    return m_autoreleaseSet.size();
-}
-
 void PageCache::markPagesForVistedLinkStyleRecalc()
 {
     for (HistoryItem* current = m_head; current; current = current->m_next)
@@ -441,6 +435,14 @@ void PageCache::markPagesForFullStyleRecalc(Page* page)
             cachedPage->markForFullStyleRecalc();
     }
 }
+
+#if ENABLE(VIDEO_TRACK)
+void PageCache::markPagesForCaptionPreferencesChanged()
+{
+    for (HistoryItem* current = m_head; current; current = current->m_next)
+        current->m_cachedPage->markForCaptionPreferencesChanged();
+}
+#endif
 
 void PageCache::add(PassRefPtr<HistoryItem> prpItem, Page* page)
 {
@@ -467,10 +469,7 @@ CachedPage* PageCache::get(HistoryItem* item)
         return 0;
 
     if (CachedPage* cachedPage = item->m_cachedPage.get()) {
-        // FIXME: 1800 should not be hardcoded, it should come from
-        // WebKitBackForwardCacheExpirationIntervalKey in WebKit.
-        // Or we should remove WebKitBackForwardCacheExpirationIntervalKey.
-        if (currentTime() - cachedPage->timeStamp() <= 1800)
+        if (!cachedPage->hasExpired())
             return cachedPage;
         
         LOG(PageCache, "Not restoring page for %s from back/forward cache because cache entry has expired", item->url().string().ascii().data());
@@ -485,7 +484,7 @@ void PageCache::remove(HistoryItem* item)
     if (!item || !item->m_cachedPage)
         return;
 
-    autorelease(item->m_cachedPage.release());
+    item->m_cachedPage.clear();
     removeFromLRUList(item);
     --m_size;
 
@@ -533,40 +532,6 @@ void PageCache::removeFromLRUList(HistoryItem* item)
         ASSERT(item != m_head);
         item->m_prev->m_next = item->m_next;
     }
-}
-
-void PageCache::releaseAutoreleasedPagesNowDueToTimer(Timer<PageCache>*)
-{
-    LOG(PageCache, "WebCorePageCache: Releasing page caches - %i objects pending release", m_autoreleaseSet.size());
-    releaseAutoreleasedPagesNow();
-}
-
-void PageCache::releaseAutoreleasedPagesNow()
-{
-    m_autoreleaseTimer.stop();
-
-    // Postpone dead pruning until all our resources have gone dead.
-    memoryCache()->setPruneEnabled(false);
-
-    CachedPageSet tmp;
-    tmp.swap(m_autoreleaseSet);
-
-    CachedPageSet::iterator end = tmp.end();
-    for (CachedPageSet::iterator it = tmp.begin(); it != end; ++it)
-        (*it)->destroy();
-
-    // Now do the prune.
-    memoryCache()->setPruneEnabled(true);
-    memoryCache()->prune();
-}
-
-void PageCache::autorelease(PassRefPtr<CachedPage> page)
-{
-    ASSERT(page);
-    ASSERT(!m_autoreleaseSet.contains(page.get()));
-    m_autoreleaseSet.add(page);
-    if (!m_autoreleaseTimer.isActive())
-        m_autoreleaseTimer.startOneShot(0);
 }
 
 } // namespace WebCore

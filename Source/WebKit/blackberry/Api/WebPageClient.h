@@ -159,6 +159,7 @@ public:
     virtual void cancelSelectionVisuals() = 0;
     virtual void notifySelectionHandlesReversed() = 0;
     virtual void notifyCaretChanged(const Platform::IntRect& documentCaretRect, bool userTouchTriggered, bool isSingleLineInput = false, const Platform::IntRect& singleLineDocumentBoundingBox = Platform::IntRect(), bool textFieldIsEmpty = false) = 0;
+    virtual void notifySelectionScrollView(Platform::ScrollViewBase*) = 0;
 
     virtual void cursorChanged(Platform::CursorType, const char* url, const Platform::IntPoint& hotSpotInImage) = 0;
 
@@ -203,10 +204,10 @@ public:
 
     virtual BlackBerry::Platform::ViewportAccessor* userInterfaceViewportAccessor() const = 0;
 
-    virtual void animateBlockZoom(double finalScale, const Platform::FloatPoint& finalDocumentScrollPosition) = 0;
+    virtual void animateToScaleAndDocumentScrollPosition(double finalScale, const Platform::FloatPoint& finalDocumentScrollPosition, bool shouldConstrainScrollingToContentEdge) = 0;
 
     virtual void setPreventsScreenIdleDimming(bool noDimming) = 0;
-    virtual bool authenticationChallenge(const unsigned short* realm, unsigned realmLength, BlackBerry::Platform::String& username, BlackBerry::Platform::String& password) = 0;
+    virtual bool authenticationChallenge(const unsigned short* realm, unsigned realmLength, BlackBerry::Platform::String& username, BlackBerry::Platform::String& password, BlackBerry::Platform::String& requestURL, bool isProxy) = 0;
     virtual SaveCredentialType notifyShouldSaveCredential(bool isNew) = 0;
     virtual void syncProxyCredential(const BlackBerry::Platform::String& username, const BlackBerry::Platform::String& password) = 0;
     virtual void notifyPopupAutofillDialog(const std::vector<BlackBerry::Platform::String>&) = 0;
@@ -279,6 +280,8 @@ public:
     virtual void cancelNotification(const BlackBerry::Platform::String& /*id*/) = 0;
     virtual void clearNotifications(const std::vector<BlackBerry::Platform::String>& /*notificationIds*/) = 0;
     virtual void notificationDestroyed(const BlackBerry::Platform::String& /*notificationId*/) = 0;
+    virtual void startSelectionScroll() = 0;
+    virtual void stopExpandingSelection() = 0;
 };
 } // namespace WebKit
 } // namespace BlackBerry

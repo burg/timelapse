@@ -30,7 +30,6 @@
 
 #include <APICast.h>
 #include <AnimationController.h>
-#include <CSSComputedStyleDeclaration.h>
 #include <DocumentLoader.h>
 #include <EditorClientEfl.h>
 #include <Eina.h>
@@ -38,6 +37,7 @@
 #include <FindOptions.h>
 #include <FloatSize.h>
 #include <FocusController.h>
+#include <FrameLoader.h>
 #include <FrameView.h>
 #include <HTMLInputElement.h>
 #include <InspectorController.h>
@@ -123,21 +123,6 @@ String DumpRenderTreeSupportEfl::layerTreeAsText(const Evas_Object* ewkFrame)
     DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, String());
 
     return frame->layerTreeAsText();
-}
-
-bool DumpRenderTreeSupportEfl::elementDoesAutoCompleteForElementWithId(const Evas_Object* ewkFrame, const String& elementId)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, false);
-
-    WebCore::Document* document = frame->document();
-    ASSERT(document);
-
-    WebCore::HTMLInputElement* inputElement = static_cast<WebCore::HTMLInputElement*>(document->getElementById(elementId));
-
-    if (!inputElement)
-        return false;
-
-    return inputElement->isTextField() && !inputElement->isPasswordField() && inputElement->shouldAutocomplete();
 }
 
 Eina_List* DumpRenderTreeSupportEfl::frameChildren(const Evas_Object* ewkFrame)
@@ -338,28 +323,6 @@ bool DumpRenderTreeSupportEfl::isCommandEnabled(const Evas_Object* ewkView, cons
     return page->focusController()->focusedOrMainFrame()->editor()->command(name).isEnabled();
 }
 
-void DumpRenderTreeSupportEfl::setSmartInsertDeleteEnabled(Evas_Object* ewkView, bool enabled)
-{
-    DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
-
-    WebCore::EditorClientEfl* editorClient = static_cast<WebCore::EditorClientEfl*>(page->editorClient());
-    if (!editorClient)
-        return;
-
-    editorClient->setSmartInsertDeleteEnabled(enabled);
-}
-
-void DumpRenderTreeSupportEfl::setSelectTrailingWhitespaceEnabled(Evas_Object* ewkView, bool enabled)
-{
-    DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
-
-    WebCore::EditorClientEfl* editorClient = static_cast<WebCore::EditorClientEfl*>(page->editorClient());
-    if (!editorClient)
-        return;
-
-    editorClient->setSelectTrailingWhitespaceEnabled(enabled);
-}
-
 void DumpRenderTreeSupportEfl::forceLayout(Evas_Object* ewkFrame)
 {
     ewk_frame_force_layout(ewkFrame);
@@ -541,16 +504,6 @@ void DumpRenderTreeSupportEfl::deliverAllMutationsIfNecessary()
     WebCore::MutationObserver::deliverAllMutations();
 }
 
-String DumpRenderTreeSupportEfl::markerTextForListItem(JSContextRef context, JSValueRef nodeObject)
-{
-    JSC::ExecState* exec = toJS(context);
-    WebCore::Element* element = WebCore::toElement(toJS(exec, nodeObject));
-    if (!element)
-        return String();
-
-    return WebCore::markerTextForListItem(element);
-}
-
 void DumpRenderTreeSupportEfl::setInteractiveFormValidationEnabled(Evas_Object* ewkView, bool enabled)
 {
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
@@ -563,22 +516,6 @@ void DumpRenderTreeSupportEfl::setValidationMessageTimerMagnification(Evas_Objec
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
 
     page->settings()->setValidationMessageTimerMagnification(value);
-}
-
-JSValueRef DumpRenderTreeSupportEfl::computedStyleIncludingVisitedInfo(JSContextRef context, JSValueRef value)
-{
-    if (!value)
-        return JSValueMakeUndefined(context);
-
-    JSC::ExecState* exec = toJS(context);
-    JSC::JSValue jsValue = toJS(exec, value);
-    if (!jsValue.inherits(&WebCore::JSElement::s_info))
-        return JSValueMakeUndefined(context);
-
-    WebCore::JSElement* jsElement = static_cast<WebCore::JSElement*>(asObject(jsValue));
-    WebCore::Element* element = jsElement->impl();
-    RefPtr<WebCore::CSSComputedStyleDeclaration> style = WebCore::CSSComputedStyleDeclaration::create(element, true);
-    return toRef(exec, toJS(exec, jsElement->globalObject(), style.get()));
 }
 
 void DumpRenderTreeSupportEfl::setAuthorAndUserStylesEnabled(Evas_Object* ewkView, bool enabled)
@@ -798,6 +735,18 @@ int DumpRenderTreeSupportEfl::numberOfPendingGeolocationPermissionRequests(const
 }
 
 #if HAVE(ACCESSIBILITY)
+String DumpRenderTreeSupportEfl::accessibilityHelpText(const AtkObject* axObject)
+{
+    if (!axObject || !WEBKIT_IS_ACCESSIBLE(axObject))
+        return String();
+
+    WebCore::AccessibilityObject* coreObject = webkitAccessibleGetAccessibilityObject(WEBKIT_ACCESSIBLE(axObject));
+    if (!coreObject)
+        return String();
+
+    return coreObject->helpText();
+}
+
 AtkObject* DumpRenderTreeSupportEfl::rootAccessibleElement(const Evas_Object* ewkFrame)
 {
     DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, 0);

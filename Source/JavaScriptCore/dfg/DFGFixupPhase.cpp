@@ -82,9 +82,6 @@ private:
     
     void fixupNode(Node* node)
     {
-        if (!node->shouldGenerate())
-            return;
-        
         NodeType op = node->op();
 
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
@@ -197,7 +194,7 @@ private:
                 // We don't need to do ref'ing on the children because we're stealing them from
                 // the original division.
                 Node* newDivision = m_insertionSet.insertNode(
-                    m_indexInBlock, DontRefChildren, RefNode, SpecDouble, *node);
+                    m_indexInBlock, SpecDouble, *node);
                 
                 node->setOp(DoubleAsInt32);
                 node->children.initialize(Edge(newDivision, KnownNumberUse), Edge(), Edge());
@@ -493,8 +490,7 @@ private:
                 fixDoubleEdge<NumberUse>(node->child1());
 
             Node* logicalNot = node->child1().node();
-            if (logicalNot->op() == LogicalNot
-                && logicalNot->adjustedRefCount() == 1) {
+            if (logicalNot->op() == LogicalNot) {
                 
                 // Make sure that OSR exit can't observe the LogicalNot. If it can,
                 // then we must compute it and cannot peephole around it.
@@ -502,8 +498,6 @@ private:
                 bool ok = true;
                 for (unsigned i = m_indexInBlock; i--;) {
                     Node* candidate = m_block->at(i);
-                    if (!candidate->shouldGenerate())
-                        continue;
                     if (candidate == logicalNot) {
                         found = true;
                         break;
@@ -519,8 +513,6 @@ private:
                 if (ok) {
                     Edge newChildEdge = logicalNot->child1();
                     if (newChildEdge->hasBooleanResult()) {
-                        m_graph.ref(newChildEdge);
-                        m_graph.deref(logicalNot);
                         node->children.setChild1(newChildEdge);
                         
                         BlockIndex toBeTaken = node->notTakenBlockIndex();
@@ -557,8 +549,7 @@ private:
                     // would have already exited by now, but insert a forced exit just to
                     // be safe.
                     m_insertionSet.insertNode(
-                        m_indexInBlock, DontRefChildren, DontRefNode, SpecNone, ForceOSRExit,
-                        node->codeOrigin);
+                        m_indexInBlock, SpecNone, ForceOSRExit, node->codeOrigin);
                 }
                 break;
             case ALL_INT32_INDEXING_TYPES:
@@ -585,12 +576,21 @@ private:
         }
             
         case ConvertThis: {
-            // FIXME: Use Phantom(type check) and Identity instead.
-            // https://bugs.webkit.org/show_bug.cgi?id=110395
-            if (isOtherSpeculation(node->child1()->prediction()))
-                setUseKindAndUnboxIfProfitable<OtherUse>(node->child1());
-            else if (isObjectSpeculation(node->child1()->prediction()))
+            if (isOtherSpeculation(node->child1()->prediction())) {
+                m_insertionSet.insertNode(
+                    m_indexInBlock, SpecNone, Phantom, node->codeOrigin,
+                    Edge(node->child1().node(), OtherUse));
+                observeUseKindOnNode<OtherUse>(node->child1().node());
+                node->convertToWeakConstant(m_graph.globalThisObjectFor(node->codeOrigin));
+                break;
+            }
+            
+            if (isObjectSpeculation(node->child1()->prediction())) {
                 setUseKindAndUnboxIfProfitable<ObjectUse>(node->child1());
+                node->convertToIdentity();
+                break;
+            }
+            
             break;
         }
             
@@ -639,8 +639,8 @@ private:
                     node->child1()->prediction(), node->prediction());
                 if (arrayMode.supportsLength() && arrayProfile->hasDefiniteStructure()) {
                     m_insertionSet.insertNode(
-                        m_indexInBlock, RefChildren, DontRefNode, SpecNone, CheckStructure,
-                        node->codeOrigin, OpInfo(m_graph.addStructureSet(arrayProfile->expectedStructure())),
+                        m_indexInBlock, SpecNone, CheckStructure, node->codeOrigin,
+                        OpInfo(m_graph.addStructureSet(arrayProfile->expectedStructure())),
                         node->child1());
                 }
             } else
@@ -651,10 +651,9 @@ private:
             ASSERT(node->flags() & NodeMustGenerate);
             node->clearFlags(NodeMustGenerate | NodeClobbersWorld);
             setUseKindAndUnboxIfProfitable<KnownCellUse>(node->child1());
-            m_graph.deref(node);
             node->setArrayMode(arrayMode);
             
-            Node* storage = checkArray(arrayMode, node->codeOrigin, node->child1().node(), 0, lengthNeedsStorage, node->shouldGenerate());
+            Node* storage = checkArray(arrayMode, node->codeOrigin, node->child1().node(), 0, lengthNeedsStorage);
             if (!storage)
                 break;
             
@@ -731,6 +730,9 @@ private:
         case PhantomPutStructure:
         case GetIndexedPropertyStorage:
         case LastNodeType:
+        case MovHint:
+        case MovHintAndCheck:
+        case ZombieHint:
             RELEASE_ASSERT_NOT_REACHED();
             break;
         
@@ -814,8 +816,6 @@ private:
             Node* node = m_currentNode = block->at(m_indexInBlock);
             if (node->op() != SetLocal)
                 continue;
-            if (!node->shouldGenerate())
-                continue;
             
             VariableAccessData* variable = node->variableAccessData();
             
@@ -838,7 +838,26 @@ private:
         m_insertionSet.execute(block);
     }
     
-    Node* checkArray(ArrayMode arrayMode, CodeOrigin codeOrigin, Node* array, Node* index, bool (*storageCheck)(const ArrayMode&) = canCSEStorage, bool shouldGenerate = true)
+    void findAndRemoveUnnecessaryStructureCheck(Node* array, const CodeOrigin& codeOrigin)
+    {
+        for (unsigned index = m_indexInBlock; index--;) {
+            Node* previousNode = m_block->at(index);
+            if (previousNode->codeOrigin != codeOrigin)
+                return;
+            
+            if (previousNode->op() != CheckStructure)
+                continue;
+            
+            if (previousNode->child1() != array)
+                continue;
+            
+            previousNode->child1() = Edge();
+            previousNode->convertToPhantom();
+            return; // Assume we were smart enough to only insert one CheckStructure on the array.
+        }
+    }
+    
+    Node* checkArray(ArrayMode arrayMode, const CodeOrigin& codeOrigin, Node* array, Node* index, bool (*storageCheck)(const ArrayMode&) = canCSEStorage)
     {
         ASSERT(arrayMode.isSpecific());
         
@@ -850,30 +869,27 @@ private:
             if (structure) {
                 if (m_indexInBlock > 0) {
                     // If the previous node was a CheckStructure inserted because of stuff
-                    // that the array profile told us, then remove it.
-                    Node* previousNode = m_block->at(m_indexInBlock - 1);
-                    if (previousNode->op() == CheckStructure
-                        && previousNode->child1() == array
-                        && previousNode->codeOrigin == codeOrigin)
-                        previousNode->setOpAndDefaultFlags(Phantom);
+                    // that the array profile told us, then remove it, since we're going to be
+                    // doing arrayification instead.
+                    findAndRemoveUnnecessaryStructureCheck(array, codeOrigin);
                 }
                 
                 m_insertionSet.insertNode(
-                    m_indexInBlock, RefChildren, DontRefNode, SpecNone, ArrayifyToStructure, codeOrigin,
+                    m_indexInBlock, SpecNone, ArrayifyToStructure, codeOrigin,
                     OpInfo(structure), OpInfo(arrayMode.asWord()), Edge(array, CellUse), indexEdge);
             } else {
                 m_insertionSet.insertNode(
-                    m_indexInBlock, RefChildren, DontRefNode, SpecNone, Arrayify, codeOrigin,
+                    m_indexInBlock, SpecNone, Arrayify, codeOrigin,
                     OpInfo(arrayMode.asWord()), Edge(array, CellUse), indexEdge);
             }
         } else {
             if (structure) {
                 m_insertionSet.insertNode(
-                    m_indexInBlock, RefChildren, DontRefNode, SpecNone, CheckStructure, codeOrigin,
+                    m_indexInBlock, SpecNone, CheckStructure, codeOrigin,
                     OpInfo(m_graph.addStructureSet(structure)), Edge(array, CellUse));
             } else {
                 m_insertionSet.insertNode(
-                    m_indexInBlock, RefChildren, DontRefNode, SpecNone, CheckArray, codeOrigin,
+                    m_indexInBlock, SpecNone, CheckArray, codeOrigin,
                     OpInfo(arrayMode.asWord()), Edge(array, CellUse));
             }
         }
@@ -883,17 +899,12 @@ private:
         
         if (arrayMode.usesButterfly()) {
             return m_insertionSet.insertNode(
-                m_indexInBlock,
-                shouldGenerate ? RefChildren : DontRefChildren,
-                shouldGenerate ? RefNode : DontRefNode,
-                SpecNone, GetButterfly, codeOrigin, Edge(array, KnownCellUse));
+                m_indexInBlock, SpecNone, GetButterfly, codeOrigin, Edge(array, KnownCellUse));
         }
         
         return m_insertionSet.insertNode(
-            m_indexInBlock,
-            shouldGenerate ? RefChildren : DontRefChildren,
-            shouldGenerate ? RefNode : DontRefNode,
-            SpecNone, GetIndexedPropertyStorage, codeOrigin, OpInfo(arrayMode.asWord()), Edge(array, KnownCellUse));
+            m_indexInBlock, SpecNone, GetIndexedPropertyStorage, codeOrigin,
+            OpInfo(arrayMode.asWord()), Edge(array, KnownCellUse));
     }
     
     void blessArrayOperation(Edge base, Edge index, Edge& storageChild)
@@ -903,8 +914,7 @@ private:
         switch (node->arrayMode().type()) {
         case Array::ForceExit: {
             m_insertionSet.insertNode(
-                m_indexInBlock, DontRefChildren, DontRefNode, SpecNone, ForceOSRExit,
-                node->codeOrigin);
+                m_indexInBlock, SpecNone, ForceOSRExit, node->codeOrigin);
             return;
         }
             
@@ -914,6 +924,7 @@ private:
             return;
             
         case Array::Generic:
+            findAndRemoveUnnecessaryStructureCheck(base.node(), node->codeOrigin);
             return;
             
         default: {
@@ -937,41 +948,47 @@ private:
 #endif
     }
     
+    template<UseKind useKind>
+    void observeUseKindOnNode(Node* node)
+    {
+        if (node->op() != GetLocal)
+            return;
+        
+        VariableAccessData* variable = node->variableAccessData();
+        switch (useKind) {
+        case Int32Use:
+            if (alwaysUnboxSimplePrimitives()
+                || isInt32Speculation(variable->prediction()))
+                m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
+            break;
+        case NumberUse:
+        case RealNumberUse:
+            if (variable->doubleFormatState() == UsingDoubleFormat)
+                m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
+            break;
+        case BooleanUse:
+            if (alwaysUnboxSimplePrimitives()
+                || isBooleanSpeculation(variable->prediction()))
+                m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
+            break;
+        case CellUse:
+        case ObjectUse:
+        case StringUse:
+            if (alwaysUnboxSimplePrimitives()
+                || isCellSpeculation(variable->prediction()))
+                m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
+            break;
+        default:
+            break;
+        }
+    }
+    
     // Set the use kind of the edge. In the future (https://bugs.webkit.org/show_bug.cgi?id=110433),
     // this can be used to notify the GetLocal that the variable is profitable to unbox.
     template<UseKind useKind>
     void setUseKindAndUnboxIfProfitable(Edge& edge)
     {
-        if (edge->op() == GetLocal) {
-            VariableAccessData* variable = edge->variableAccessData();
-            switch (useKind) {
-            case Int32Use:
-                if (alwaysUnboxSimplePrimitives()
-                    || isInt32Speculation(variable->prediction()))
-                    m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
-                break;
-            case NumberUse:
-            case RealNumberUse:
-                if (variable->doubleFormatState() == UsingDoubleFormat)
-                    m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
-                break;
-            case BooleanUse:
-                if (alwaysUnboxSimplePrimitives()
-                    || isBooleanSpeculation(variable->prediction()))
-                    m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
-                break;
-            case CellUse:
-            case ObjectUse:
-            case StringUse:
-                if (alwaysUnboxSimplePrimitives()
-                    || isCellSpeculation(variable->prediction()))
-                    m_profitabilityChanged |= variable->mergeIsProfitableToUnbox(true);
-                break;
-            default:
-                break;
-            }
-        }
-        
+        observeUseKindOnNode<useKind>(edge.node());
         edge.setUseKind(useKind);
     }
     
@@ -983,7 +1000,6 @@ private:
             return;
         }
         
-        Edge oldEdge = edge;
         Edge newEdge = node->child1();
         
         if (newEdge.useKind() != Int32Use) {
@@ -993,8 +1009,10 @@ private:
         
         ASSERT(newEdge->shouldSpeculateInteger());
         
-        m_graph.ref(newEdge);
-        m_graph.deref(oldEdge);
+        // Completely kill the ValueToInt32. We wouldn't have to do crazy things like this
+        // if it weren't for https://bugs.webkit.org/show_bug.cgi?id=111238.
+        node->setOpAndDefaultFlags(Nop);
+        node->child1() = Edge();
         
         edge = newEdge;
     }
@@ -1015,7 +1033,7 @@ private:
     void injectInt32ToDoubleNode(Edge& edge, UseKind useKind = NumberUse, SpeculationDirection direction = BackwardSpeculation)
     {
         Node* result = m_insertionSet.insertNode(
-            m_indexInBlock, DontRefChildren, RefNode, SpecDouble,
+            m_indexInBlock, SpecDouble, 
             direction == BackwardSpeculation ? Int32ToDouble : ForwardInt32ToDouble,
             m_currentNode->codeOrigin, Edge(edge.node(), NumberUse));
         
@@ -1040,9 +1058,8 @@ private:
         value = jsNumber(JSC::toInt32(value.asNumber()));
         ASSERT(value.isInt32());
         edge.setNode(m_insertionSet.insertNode(
-            m_indexInBlock, DontRefChildren, RefNode, SpecInt32, JSConstant,
-            m_currentNode->codeOrigin, OpInfo(codeBlock()->addOrFindConstant(value))));
-        m_graph.deref(oldNode);
+            m_indexInBlock, SpecInt32, JSConstant, m_currentNode->codeOrigin,
+            OpInfo(codeBlock()->addOrFindConstant(value))));
     }
     
     void truncateConstantsIfNecessary(Node* node, AddSpeculationMode mode)

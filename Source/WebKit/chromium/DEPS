@@ -32,7 +32,7 @@
 
 vars = {
   'chromium_svn': 'http://src.chromium.org/svn/trunk/src',
-  'chromium_rev': '184931'
+  'chromium_rev': '188004'
 }
 
 deps = {
@@ -46,6 +46,8 @@ deps = {
     From('chromium_deps', 'src/tools/gyp'),
   'tools/clang':
     Var('chromium_svn')+'/tools/clang@'+Var('chromium_rev'),
+  'tools/protoc_wrapper':
+    Var('chromium_svn')+'/tools/protoc_wrapper@'+Var('chromium_rev'),
 
   # Basic tools
   'base':
@@ -197,6 +199,8 @@ deps_os = {
       From('chromium_deps', 'src/third_party/android_tools'),
     'third_party/freetype':
       From('chromium_deps', 'src/third_party/freetype'),
+    'third_party/jsr-305/src':
+      From('chromium_deps', 'src/third_party/jsr-305/src'),
     'tools/android':
       Var('chromium_svn') + '/tools/android@' + Var('chromium_rev'),
   },

@@ -802,12 +802,17 @@ void GraphicsContext::fillRect(const FloatRect& rect)
     } else {
         if (hasShadow()) {
             if (shadow->mustUseShadowBlur(this)) {
-                GraphicsContext* shadowContext = shadow->beginShadowLayer(this, normalizedRect);
-                if (shadowContext) {
-                    QPainter* shadowPainter = shadowContext->platformContext();
-                    shadowPainter->fillRect(normalizedRect, p->brush());
-                    shadow->endShadowLayer(this);
-                }
+                // drawRectShadowWithTiling does not work with rotations, and the fallback of
+                // drawing though clipToImageBuffer() produces scaling artifacts for us.
+                if (!getCTM().preservesAxisAlignment()) {
+                    GraphicsContext* shadowContext = shadow->beginShadowLayer(this, normalizedRect);
+                    if (shadowContext) {
+                        QPainter* shadowPainter = shadowContext->platformContext();
+                        shadowPainter->fillRect(normalizedRect, p->brush());
+                        shadow->endShadowLayer(this);
+                    }
+                } else
+                    shadow->drawRectShadow(this, rect, RoundedRect::Radii());
             } else {
                 // Solid rectangle fill with no blur shadow or transformations applied can be done
                 // faster without using the shadow layer at all.
@@ -862,6 +867,37 @@ void GraphicsContext::fillRoundedRect(const IntRect& rect, const IntSize& topLef
         }
     }
     p->fillPath(path.platformPath(), QColor(color));
+}
+
+void GraphicsContext::fillRectWithRoundedHole(const IntRect& rect, const RoundedRect& roundedHoleRect, const Color& color, ColorSpace colorSpace)
+{
+    if (paintingDisabled() || !color.isValid())
+        return;
+
+    Path path;
+    path.addRect(rect);
+    if (!roundedHoleRect.radii().isZero())
+        path.addRoundedRect(roundedHoleRect);
+    else
+        path.addRect(roundedHoleRect.rect());
+
+    QPainterPath platformPath = path.platformPath();
+    platformPath.setFillRule(Qt::OddEvenFill);
+
+    QPainter* p = m_data->p();
+    if (hasShadow()) {
+        ShadowBlur* shadow = shadowBlur();
+        if (shadow->mustUseShadowBlur(this))
+            shadow->drawInsetShadow(this, rect, roundedHoleRect.rect(), roundedHoleRect.radii());
+        else {
+            const QPointF shadowOffset(m_state.shadowOffset.width(), m_state.shadowOffset.height());
+            p->translate(shadowOffset);
+            p->fillPath(platformPath, QColor(m_state.shadowColor));
+            p->translate(-shadowOffset);
+        }
+    }
+
+    p->fillPath(platformPath, QColor(color));
 }
 
 bool GraphicsContext::isInTransparencyLayer() const

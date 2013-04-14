@@ -144,11 +144,19 @@ all : \
 
 # Mac-specific rules
 
-ifeq ($(OS),MACOS)
+ifeq ($(PLATFORM_NAME),macosx)
 
 FRAMEWORK_FLAGS = $(shell echo $(BUILT_PRODUCTS_DIR) $(FRAMEWORK_SEARCH_PATHS) | perl -e 'print "-F " . join(" -F ", split(" ", <>));')
 HEADER_FLAGS = $(shell echo $(BUILT_PRODUCTS_DIR) $(HEADER_SEARCH_PATHS) | perl -e 'print "-I" . join(" -I", split(" ", <>));')
+
+# Some versions of clang incorrectly strip out // comments in c89 code.
+# Use -traditional as a workaround, but only when needed since that causes
+# other problems with later versions of clang.
+ifeq ($(shell echo '//x' | $(CC) -E -P -x c -std=c89 - | grep x),)
 TEXT_PREPROCESSOR_FLAGS=-E -P -x c -traditional -w
+else
+TEXT_PREPROCESSOR_FLAGS=-E -P -x c -std=c89 -w
+endif
 
 ifneq ($(SDKROOT),)
 	SDK_FLAGS=-isysroot $(SDKROOT)
@@ -164,7 +172,7 @@ all: $(SANDBOX_PROFILES)
 	@echo Pre-processing $* sandbox profile...
 	$(CC) $(SDK_FLAGS) $(TEXT_PREPROCESSOR_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" $< > $@
 
-endif # MACOS
+endif # macosx
 
 # ------------------------
 

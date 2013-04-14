@@ -25,7 +25,7 @@
 
 #import "config.h"
 
-#if ENABLE(VIDEO_TRACK) && !PLATFORM(IOS)
+#if ENABLE(VIDEO_TRACK)
 
 #import "CaptionUserPreferencesMac.h"
 
@@ -45,11 +45,15 @@
 #import <wtf/RetainPtr.h>
 #import <wtf/text/StringBuilder.h>
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(IOS)
+#import "WebCoreThreadRun.h"
+#endif
+
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 #import "MediaAccessibility/MediaAccessibility.h"
 #endif
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 
 SOFT_LINK_FRAMEWORK_OPTIONAL(MediaAccessibility)
 
@@ -77,16 +81,22 @@ using namespace std;
 
 namespace WebCore {
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 static void userCaptionPreferencesChangedNotificationCallback(CFNotificationCenterRef, void* observer, CFStringRef, const void *, CFDictionaryRef)
 {
+#if !PLATFORM(IOS)
     static_cast<CaptionUserPreferencesMac*>(observer)->captionPreferencesChanged();
+#else
+    WebThreadRun(^{
+        static_cast<CaptionUserPreferencesMac*>(observer)->captionPreferencesChanged();
+    });
+#endif
 }
 #endif
 
 CaptionUserPreferencesMac::CaptionUserPreferencesMac(PageGroup* group)
     : CaptionUserPreferences(group)
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     , m_listeningForPreferenceChanges(false)
 #endif
 {
@@ -94,13 +104,13 @@ CaptionUserPreferencesMac::CaptionUserPreferencesMac(PageGroup* group)
 
 CaptionUserPreferencesMac::~CaptionUserPreferencesMac()
 {
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     if (kMAXCaptionAppearanceSettingsChangedNotification)
         CFNotificationCenterRemoveObserver(CFNotificationCenterGetLocalCenter(), this, kMAXCaptionAppearanceSettingsChangedNotification, NULL);
 #endif
 }
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 bool CaptionUserPreferencesMac::userPrefersCaptions() const
 {
     if (testingMode() || !MediaAccessibilityLibrary())
@@ -127,10 +137,8 @@ bool CaptionUserPreferencesMac::userHasCaptionPreferences() const
     return true;
 }
 
-void CaptionUserPreferencesMac::registerForPreferencesChangedCallbacks(CaptionPreferencesChangedListener* listener)
+void CaptionUserPreferencesMac::setInterestedInCaptionPreferenceChanges()
 {
-    CaptionUserPreferences::registerForPreferencesChangedCallbacks(listener);
-
     if (!MediaAccessibilityLibrary())
         return;
 
@@ -147,7 +155,7 @@ void CaptionUserPreferencesMac::registerForPreferencesChangedCallbacks(CaptionPr
 
 void CaptionUserPreferencesMac::captionPreferencesChanged()
 {
-    if (havePreferenceChangeListeners())
+    if (m_listeningForPreferenceChanges)
         updateCaptionStyleSheetOveride();
 
     CaptionUserPreferences::captionPreferencesChanged();
@@ -369,7 +377,7 @@ String CaptionUserPreferencesMac::captionsStyleSheetOverride() const
     String background = captionsBackgroundCSS();
     if (!background.isEmpty()) {
         captionsOverrideStyleSheet.append(" video::");
-        captionsOverrideStyleSheet.append(TextTrackCue::allNodesShadowPseudoId());
+        captionsOverrideStyleSheet.append(TextTrackCue::cueShadowPseudoId());
         captionsOverrideStyleSheet.append('{');
         captionsOverrideStyleSheet.append(background);
         captionsOverrideStyleSheet.append('}');
@@ -527,4 +535,4 @@ String CaptionUserPreferencesMac::displayNameForTrack(TextTrack* track) const
 
 }
 
-#endif // ENABLE(VIDEO_TRACK) && !PLATFORM(IOS)
+#endif // ENABLE(VIDEO_TRACK)

@@ -47,17 +47,23 @@ public:
         if (m_graph.m_form == ThreadedCPS)
             return false;
         
+        clearIsLoadedFrom();
         freeUnnecessaryNodes();
         canonicalizeLocalsInBlocks();
         propagatePhis<LocalOperand>();
         propagatePhis<ArgumentOperand>();
-        m_graph.collectGarbage();
         
         m_graph.m_form = ThreadedCPS;
         return true;
     }
 
 private:
+    
+    void clearIsLoadedFrom()
+    {
+        for (unsigned i = 0; i < m_graph.m_variableAccessData.size(); ++i)
+            m_graph.m_variableAccessData[i].setIsLoadedFrom(false);
+    }
     
     void freeUnnecessaryNodes()
     {
@@ -124,7 +130,7 @@ private:
     
     ALWAYS_INLINE Node* addPhiSilently(BasicBlock* block, const CodeOrigin& codeOrigin, VariableAccessData* variable)
     {
-        Node* result = m_graph.addNode(DontRefChildren, DontRefNode, SpecNone, Phi, codeOrigin, OpInfo(variable));
+        Node* result = m_graph.addNode(SpecNone, Phi, codeOrigin, OpInfo(variable));
         block->phis.append(result);
         return result;
     }
@@ -171,12 +177,14 @@ private:
             ASSERT(otherNode->variableAccessData() == variable);
             
             if (otherNode->op() == SetArgument) {
+                variable->setIsLoadedFrom(true);
                 node->children.setChild1(Edge(otherNode));
                 m_block->variablesAtTail.atFor<operandKind>(idx) = node;
                 return;
             }
             
             if (variable->isCaptured()) {
+                variable->setIsLoadedFrom(true);
                 if (otherNode->op() == GetLocal)
                     otherNode = otherNode->child1().node();
                 else
@@ -201,6 +209,7 @@ private:
             return;
         }
         
+        variable->setIsLoadedFrom(true);
         Node* phi = addPhi<operandKind>(node->codeOrigin, variable, idx);
         node->children.setChild1(Edge(phi));
         m_block->variablesAtHead.atFor<operandKind>(idx) = phi;
@@ -252,11 +261,12 @@ private:
                 
                 // So we turn this into a Phantom on the child of the SetLocal.
                 
-                node->setOpAndDefaultFlags(Phantom);
+                node->convertToPhantom();
                 node->children.setChild1(otherNode->child1());
                 return;
             }
             
+            variable->setIsLoadedFrom(true);
             // There is nothing wrong with having redundant Flush's. It just needs to
             // be linked appropriately. Note that if there had already been a previous
             // use at tail then we don't override it. It's fine for variablesAtTail to
@@ -267,6 +277,7 @@ private:
             return;
         }
         
+        variable->setIsLoadedFrom(true);
         node->children.setChild1(Edge(addPhi<operandKind>(node->codeOrigin, variable, idx)));
         m_block->variablesAtHead.atFor<operandKind>(idx) = node;
         m_block->variablesAtTail.atFor<operandKind>(idx) = node;

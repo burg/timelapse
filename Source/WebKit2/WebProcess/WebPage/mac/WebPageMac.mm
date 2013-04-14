@@ -37,6 +37,7 @@
 #import "WebEvent.h"
 #import "WebEventConversion.h"
 #import "WebFrame.h"
+#import "WebImage.h"
 #import "WebInspector.h"
 #import "WebPageProxyMessages.h"
 #import "WebPreferencesStore.h"
@@ -46,6 +47,7 @@
 #import <WebCore/Document.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/Frame.h>
+#import <WebCore/FrameLoader.h>
 #import <WebCore/FrameView.h>
 #import <WebCore/HitTestResult.h>
 #import <WebCore/HTMLConverter.h>
@@ -61,7 +63,7 @@
 #import <WebCore/StyleInheritedData.h>
 #import <WebCore/TextIterator.h>
 #import <WebCore/WindowsKeyboardCodes.h>
-#import <WebCore/visible_units.h>
+#import <WebCore/VisibleUnits.h>
 #import <WebKitSystemInterface.h>
 
 #if ENABLE(TIMELAPSE)
@@ -507,10 +509,7 @@ void WebPage::performDictionaryLookupAtLocation(const FloatPoint& floatPoint)
     if (!frame)
         return;
 
-    if (frame->document()->isPluginDocument()) {
-        PluginDocument* pluginDocument = static_cast<PluginDocument*>(frame->document());
-        PluginView* pluginView = static_cast<PluginView*>(pluginDocument->pluginWidget());
-
+    if (PluginView* pluginView = pluginViewForFrame(frame)) {
         if (pluginView->performDictionaryLookupAtLocation(floatPoint))
             return;
     }
@@ -690,7 +689,19 @@ void WebPage::readSelectionFromPasteboard(const String& pasteboardName, bool& re
 void WebPage::getStringSelectionForPasteboard(String& stringValue)
 {
     Frame* frame = m_page->focusController()->focusedOrMainFrame();
-    if (!frame || frame->selection()->isNone())
+
+    if (!frame)
+        return;
+
+    if (PluginView* pluginView = focusedPluginViewForFrame(frame)) {
+        String selection = pluginView->getSelectionString();
+        if (!selection.isNull()) {
+            stringValue = selection;
+            return;
+        }
+    }
+
+    if (frame->selection()->isNone())
         return;
 
     stringValue = frame->editor()->stringSelectionForPasteboard();
@@ -806,6 +817,39 @@ void WebPage::setLayerHostingMode(LayerHostingMode layerHostingMode)
         (*it)->setLayerHostingMode(layerHostingMode);
 }
 
+void WebPage::setTopOverhangImage(PassRefPtr<WebImage> image)
+{
+    FrameView* frameView = m_mainFrame->coreFrame()->view();
+    if (!frameView)
+        return;
+
+    GraphicsLayer* layer = frameView->setWantsLayerForTopOverHangArea(image.get());
+    if (!layer)
+        return;
+
+    layer->setSize(image->size());
+    layer->setPosition(FloatPoint(0, -image->size().height()));
+
+    RetainPtr<CGImageRef> cgImage = image->bitmap()->makeCGImageCopy();
+    layer->platformLayer().contents =(id)cgImage.get();
+}
+
+void WebPage::setBottomOverhangImage(PassRefPtr<WebImage> image)
+{
+    FrameView* frameView = m_mainFrame->coreFrame()->view();
+    if (!frameView)
+        return;
+
+    GraphicsLayer* layer = frameView->setWantsLayerForBottomOverHangArea(image.get());
+    if (!layer)
+        return;
+
+    layer->setSize(image->size());
+    
+    RetainPtr<CGImageRef> cgImage = image->bitmap()->makeCGImageCopy();
+    layer->platformLayer().contents =(id)cgImage.get();
+}
+
 void WebPage::computePagesForPrintingPDFDocument(uint64_t frameID, const PrintInfo& printInfo, Vector<IntRect>& resultPageRects)
 {
     ASSERT(resultPageRects.isEmpty());
@@ -841,6 +885,11 @@ static void drawPDFPage(PDFDocument *pdfDocument, CFIndex pageIndex, CGContextRe
         cropBox = [pdfPage boundsForBox:kPDFDisplayBoxMediaBox];
     else
         cropBox = NSIntersectionRect(cropBox, [pdfPage boundsForBox:kPDFDisplayBoxMediaBox]);
+
+    // Always auto-rotate PDF content regardless of the paper orientation.
+    NSInteger rotation = [pdfPage rotation];
+    if (rotation == 90 || rotation == 270)
+        std::swap(cropBox.size.width, cropBox.size.height);
 
     bool shouldRotate = (paperSize.width < paperSize.height) != (cropBox.size.width < cropBox.size.height);
     if (shouldRotate)

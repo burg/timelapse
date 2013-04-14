@@ -116,7 +116,6 @@
 #import <WebCore/BackForwardListImpl.h>
 #import <WebCore/MemoryCache.h>
 #import <WebCore/ColorMac.h>
-#import <WebCore/CSSComputedStyleDeclaration.h>
 #import <WebCore/Cursor.h>
 #import <WebCore/DatabaseManager.h>
 #import <WebCore/Document.h>
@@ -741,7 +740,6 @@ static bool shouldRespectPriorityInCSSAttributeSetters()
         // of the initialization code which may depend on the strategies.
         WebPlatformStrategies::initialize();
 
-        [WebHistoryItem initWindowWatcherIfNecessary];
 #if ENABLE(SQL_DATABASE)
         WebKitInitializeDatabasesIfNecessary();
 #endif
@@ -784,6 +782,9 @@ static bool shouldRespectPriorityInCSSAttributeSetters()
         _private->page->settings()->setShouldInjectUserScriptsInInitialEmptyDocument(true);
         [self _injectOutlookQuirksScript];
     }
+
+    if ([[NSUserDefaults standardUserDefaults] objectForKey:WebSmartInsertDeleteEnabled])
+        [self setSmartInsertDeleteEnabled:[[NSUserDefaults standardUserDefaults] boolForKey:WebSmartInsertDeleteEnabled]];
 
     [WebFrame _createMainFrameWithPage:_private->page frameName:frameName frameView:frameView];
 
@@ -1490,6 +1491,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings->setDOMPasteAllowed([preferences isDOMPasteAllowed]);
     settings->setUsesPageCache([self usesPageCache]);
     settings->setPageCacheSupportsPlugins([preferences pageCacheSupportsPlugins]);
+    settings->setBackForwardCacheExpirationInterval([preferences _backForwardCacheExpirationInterval]);
     settings->setShowsURLsInToolTips([preferences showsURLsInToolTips]);
     settings->setShowsToolTipOverTruncatedText([preferences showsToolTipOverTruncatedText]);
     settings->setDeveloperExtrasEnabled([preferences developerExtrasEnabled]);
@@ -1535,6 +1537,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings->setCSSCustomFilterEnabled([preferences cssCustomFilterEnabled]);
 #endif
     RuntimeEnabledFeatures::setCSSRegionsEnabled([preferences cssRegionsEnabled]);
+    RuntimeEnabledFeatures::setCSSCompositingEnabled([preferences cssCompositingEnabled]);
 #if ENABLE(IFRAME_SEAMLESS)
     RuntimeEnabledFeatures::setSeamlessIFramesEnabled([preferences seamlessIFramesEnabled]);
 #endif
@@ -2472,14 +2475,15 @@ static inline IMP getMethod(id o, SEL s)
 
 - (void)setSelectTrailingWhitespaceEnabled:(BOOL)flag
 {
-    _private->selectTrailingWhitespaceEnabled = flag;
-    if (flag)
-        [self setSmartInsertDeleteEnabled:false];
+    if (_private->page->settings()->selectTrailingWhitespaceEnabled() != flag) {
+        _private->page->settings()->setSelectTrailingWhitespaceEnabled(flag);
+        [self setSmartInsertDeleteEnabled:!flag];
+    }
 }
 
 - (BOOL)isSelectTrailingWhitespaceEnabled
 {
-    return _private->selectTrailingWhitespaceEnabled;
+    return _private->page->settings()->selectTrailingWhitespaceEnabled();
 }
 
 - (void)setMemoryCacheDelegateCallsEnabled:(BOOL)enabled
@@ -3085,6 +3089,19 @@ static Vector<String> toStringVector(NSArray* patterns)
 + (void)_setHTTPPipeliningEnabled:(BOOL)enabled
 {
     ResourceRequest::setHTTPPipeliningEnabled(enabled);
+}
+
+- (void)_setSourceApplicationAuditData:(NSData *)sourceApplicationAuditData
+{
+    if (_private->sourceApplicationAuditData == sourceApplicationAuditData)
+        return;
+
+    _private->sourceApplicationAuditData = adoptNS([sourceApplicationAuditData copy]);
+}
+
+- (NSData *)_sourceApplicationAuditData
+{
+    return _private->sourceApplicationAuditData.get();
 }
 
 @end
@@ -5418,17 +5435,16 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (void)setSmartInsertDeleteEnabled:(BOOL)flag
 {
-    if (_private->smartInsertDeleteEnabled != flag) {
-        _private->smartInsertDeleteEnabled = flag;
-        [[NSUserDefaults standardUserDefaults] setBool:_private->smartInsertDeleteEnabled forKey:WebSmartInsertDeleteEnabled];
+    if (_private->page->settings()->smartInsertDeleteEnabled() != flag) {
+        _private->page->settings()->setSmartInsertDeleteEnabled(flag);
+        [[NSUserDefaults standardUserDefaults] setBool:_private->page->settings()->smartInsertDeleteEnabled() forKey:WebSmartInsertDeleteEnabled];
+        [self setSelectTrailingWhitespaceEnabled:!flag];
     }
-    if (flag)
-        [self setSelectTrailingWhitespaceEnabled:false];
 }
 
 - (BOOL)smartInsertDeleteEnabled
 {
-    return _private->smartInsertDeleteEnabled;
+    return _private->page->settings()->smartInsertDeleteEnabled();
 }
 
 - (void)setContinuousSpellCheckingEnabled:(BOOL)flag
@@ -6455,7 +6471,7 @@ bool LayerFlushController::flushLayers()
 - (void)_enterFullscreenForNode:(WebCore::Node*)node
 {
     ASSERT(node->hasTagName(WebCore::HTMLNames::videoTag));
-    HTMLMediaElement* videoElement = static_cast<HTMLMediaElement*>(node);
+    HTMLMediaElement* videoElement = toMediaElement(node);
 
     if (_private->fullscreenController) {
         if ([_private->fullscreenController mediaElement] == videoElement) {
@@ -6693,25 +6709,6 @@ static void glibContextIterationCallback(CFRunLoopObserverRef, CFRunLoopActivity
     return 0;
 #endif
 }
-@end
-
-@implementation WebView (WebViewPrivateStyleInfo)
-
-- (JSValueRef)_computedStyleIncludingVisitedInfo:(JSContextRef)context forElement:(JSValueRef)value
-{
-    ExecState* exec = toJS(context);
-    JSLockHolder lock(exec);
-    if (!value)
-        return JSValueMakeUndefined(context);
-    JSC::JSValue jsValue = toJS(exec, value);
-    if (!jsValue.inherits(&JSElement::s_info))
-        return JSValueMakeUndefined(context);
-    JSElement* jsElement = static_cast<JSElement*>(asObject(jsValue));
-    Element* element = jsElement->impl();
-    RefPtr<CSSComputedStyleDeclaration> style = CSSComputedStyleDeclaration::create(element, true);
-    return toRef(exec, toJS(exec, jsElement->globalObject(), style.get()));
-}
-
 @end
 
 @implementation WebView (WebViewFullScreen)

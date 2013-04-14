@@ -26,6 +26,7 @@
 #include "config.h"
 
 #import "APICast.h"
+#import "APIShims.h"
 #import "JSContextInternal.h"
 #import "JSGlobalObject.h"
 #import "JSValueInternal.h"
@@ -71,6 +72,8 @@
     self.exceptionHandler = ^(JSContext *context, JSValue *exceptionValue) {
         context.exception = exceptionValue;
     };
+
+    [m_virtualMachine addContext:self forGlobalContextRef:m_context];
 
     return self;
 }
@@ -187,12 +190,9 @@
         context.exception = exceptionValue;
     };
 
-    return self;
-}
+    [m_virtualMachine addContext:self forGlobalContextRef:m_context];
 
-JSGlobalContextRef contextInternalContext(JSContext *context)
-{
-    return context->m_context;
+    return self;
 }
 
 - (void)dealloc
@@ -259,10 +259,8 @@ JSGlobalContextRef contextInternalContext(JSContext *context)
 {
     JSVirtualMachine *virtualMachine = [JSVirtualMachine virtualMachineWithContextGroupRef:toRef(&toJS(globalContext)->globalData())];
     JSContext *context = [virtualMachine contextForGlobalContextRef:globalContext];
-    if (!context) {
+    if (!context)
         context = [[[JSContext alloc] initWithGlobalContextRef:globalContext] autorelease];
-        [virtualMachine addContext:context forGlobalContextRef:globalContext];
-    }
     return context;
 }
 

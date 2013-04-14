@@ -151,11 +151,6 @@ void TestRunner::setWindowIsKey(bool windowIsKey)
     // FIXME: implement
 }
 
-void TestRunner::setSmartInsertDeleteEnabled(bool flag)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setWaitToDump(bool waitUntilDone)
 {
     static const int timeoutSeconds = 10;
@@ -207,12 +202,6 @@ void TestRunner::setPopupBlockingEnabled(bool popupBlockingEnabled)
 void TestRunner::setPluginsEnabled(bool flag)
 {
     // FIXME: Implement
-}
-
-bool TestRunner::elementDoesAutoCompleteForElementWithId(JSStringRef id) 
-{
-    // FIXME: implement
-    return false;
 }
 
 void TestRunner::execCommand(JSStringRef name, JSStringRef value)
@@ -290,11 +279,6 @@ void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool, JSStringRef)
 }
 
 void TestRunner::setAppCacheMaximumSize(unsigned long long size)
-{
-    // FIXME: implement
-}
-
-void TestRunner::setSelectTrailingWhitespaceEnabled(bool flag)
 {
     // FIXME: implement
 }
@@ -456,16 +440,6 @@ void TestRunner::setWebViewEditable(bool)
 bool TestRunner::callShouldCloseOnWebView()
 {
     return false;
-}
-
-JSRetainPtr<JSStringRef> TestRunner::markerTextForListItem(JSContextRef context, JSValueRef nodeObject) const
-{
-    return 0;
-}
-
-JSValueRef TestRunner::computedStyleIncludingVisitedInfo(JSContextRef, JSValueRef)
-{
-    return 0;
 }
 
 void TestRunner::authenticateSession(JSStringRef, JSStringRef, JSStringRef)

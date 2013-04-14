@@ -40,6 +40,7 @@
     const WebCore::PlatformSpeechSynthesisUtterance* m_utterance;
     
     RetainPtr<NSSpeechSynthesizer> m_synthesizer;
+    float m_basePitch;
 }
 
 - (WebSpeechSynthesisWrapper *)initWithSpeechSynthesizer:(WebCore::PlatformSpeechSynthesizer *)synthesizer;
@@ -55,6 +56,7 @@
         return nil;
     
     m_synthesizerObject = synthesizer;
+    [self updateBasePitchForSynthesizer];
     return self;
 }
 
@@ -64,6 +66,19 @@
 {
     // We'll say 200 WPM is the default 1x value.
     return 200.0f * rate;
+}
+
+- (float)convertPitchToNSSpeechValue:(float)pitch
+{
+    // This allows the base pitch to range from 0% - 200% of the normal pitch.
+    return m_basePitch * pitch;
+}
+
+- (void)updateBasePitchForSynthesizer
+{
+    // Reset the base pitch whenever we change voices, since the base pitch is different for each voice.
+    [m_synthesizer setObject:nil forProperty:NSSpeechResetProperty error:nil];
+    m_basePitch = [[m_synthesizer objectForProperty:NSSpeechPitchBaseProperty error:nil] floatValue];
 }
 
 - (void)speakUtterance:(const WebCore::PlatformSpeechSynthesisUtterance *)utterance
@@ -83,34 +98,36 @@
     Vector<RefPtr<WebCore::PlatformSpeechSynthesisVoice> > voiceList = m_synthesizerObject->voiceList();
     size_t voiceListSize = voiceList.size();
     
-    WebCore::PlatformSpeechSynthesisVoice *utteranceVoiceByURI = 0;
-    WebCore::PlatformSpeechSynthesisVoice *utteranceVoiceByLanguage = 0;
-    for (size_t k = 0; k < voiceListSize; k++) {
-        if (utterance->voiceURI() == voiceList[k]->voiceURI()) {
-            utteranceVoiceByURI = voiceList[k].get();
-            break;
-        } else if (!utteranceVoiceByLanguage && equalIgnoringCase(utterance->lang(), voiceList[k]->lang())) {
-            utteranceVoiceByLanguage = voiceList[k].get();
-            
-            // If there was no voiceURI specified, then once we find a language we're good to go.
-            if (utterance->voiceURI().isEmpty())
+    WebCore::PlatformSpeechSynthesisVoice* utteranceVoice = utterance->voice();
+    // If no voice was specified, try to match by language.
+    if (!utteranceVoice && !utterance->lang().isEmpty()) {
+        for (size_t k = 0; k < voiceListSize; k++) {
+            if (equalIgnoringCase(utterance->lang(), voiceList[k]->lang())) {
+                utteranceVoice = voiceList[k].get();
                 break;
+            }
         }
     }
     
     NSString *voiceURI = nil;
-    if (utteranceVoiceByURI)
-        voiceURI = utteranceVoiceByURI->voiceURI();
-    else if (utteranceVoiceByLanguage)
-        voiceURI = utteranceVoiceByLanguage->voiceURI();
+    if (utteranceVoice)
+        voiceURI = utteranceVoice->voiceURI();
     else
         voiceURI = [NSSpeechSynthesizer defaultVoice];
 
     // Don't set the voice unless necessary. There's a bug in NSSpeechSynthesizer such that
     // setting the voice for the first time will cause the first speechDone callback to report it was unsuccessful.
-    if (![[m_synthesizer voice] isEqualToString:voiceURI])
+    BOOL updatePitch = NO;
+    if (![[m_synthesizer voice] isEqualToString:voiceURI]) {
         [m_synthesizer setVoice:voiceURI];
+        // Reset the base pitch whenever we change voices.
+        updatePitch = YES;
+    }
     
+    if (m_basePitch == 0 || updatePitch)
+        [self updateBasePitchForSynthesizer];    
+    
+    [m_synthesizer setObject:[NSNumber numberWithFloat:[self convertPitchToNSSpeechValue:utterance->pitch()]] forProperty:NSSpeechPitchBaseProperty error:nil];
     [m_synthesizer setRate:[self convertRateToWPM:utterance->rate()]];
     [m_synthesizer setVolume:utterance->volume()];
     
@@ -155,6 +172,16 @@
         m_synthesizerObject->client()->didFinishSpeaking(utterance);
     else
         m_synthesizerObject->client()->speakingErrorOccurred(utterance);
+}
+
+- (void)speechSynthesizer:(NSSpeechSynthesizer *)sender willSpeakWord:(NSRange)characterRange ofString:(NSString *)string
+{
+    ASSERT(m_utterance);
+    UNUSED_PARAM(sender);
+    UNUSED_PARAM(string);
+
+    // Mac platform only supports word boundaries.
+    m_synthesizerObject->client()->boundaryEventOccurred(m_utterance, WebCore::SpeechWordBoundary, characterRange.location);
 }
 
 @end

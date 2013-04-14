@@ -125,7 +125,7 @@ void TextChecker::closeSpellDocumentWithTag(int64_t tag)
 #endif
 }
 
-#if USE(UNIFIED_TEXT_CHECKING)
+#if ENABLE(SPELLCHECK)
 static int nextWordOffset(const UChar* text, int length, int currentOffset)
 {
     // FIXME: avoid creating textIterator object here, it could be passed as a parameter.
@@ -151,7 +151,9 @@ static int nextWordOffset(const UChar* text, int length, int currentOffset)
 
     return wordOffset;
 }
+#endif // ENABLE(SPELLCHECK)
 
+#if USE(UNIFIED_TEXT_CHECKING)
 Vector<TextCheckingResult> TextChecker::checkTextOfParagraph(int64_t spellDocumentTag, const UChar* text, int length, uint64_t checkingTypes)
 {
     Vector<TextCheckingResult> paragraphCheckingResult;
@@ -287,6 +289,25 @@ void TextChecker::ignoreWord(int64_t spellDocumentTag, const String& word)
 #else
     UNUSED_PARAM(spellDocumentTag);
     UNUSED_PARAM(word);
+#endif
+}
+
+void TextChecker::requestCheckingOfString(PassRefPtr<TextCheckerCompletion> completion)
+{
+#if ENABLE(SPELLCHECK)
+    if (!completion)
+        return;
+
+    TextCheckingRequestData request = completion->textCheckingRequestData();
+    ASSERT(request.sequence() != unrequestedTextCheckingSequence);
+    ASSERT(request.mask() != TextCheckingTypeNone);
+
+    String text = request.text();
+    Vector<TextCheckingResult> result = checkTextOfParagraph(completion->spellDocumentTag(), text.characters(), text.length(), request.mask());
+
+    completion->didFinishCheckingText(result);
+#else
+    UNUSED_PARAM(completion);
 #endif
 }
 

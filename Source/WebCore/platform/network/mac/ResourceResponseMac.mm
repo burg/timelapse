@@ -30,9 +30,8 @@
 #import "WebCoreURLResponse.h"
 #import "WebCoreSystemInterface.h"
 #import <Foundation/Foundation.h>
-#import <wtf/StdLibExtras.h>
 #import <limits>
-#include <wtf/text/CString.h>
+#import <wtf/StdLibExtras.h>
 
 using namespace std;
 
@@ -53,7 +52,7 @@ static const int numCommonHeaderFields = sizeof(commonHeaderFields) / sizeof(Ato
 
 void ResourceResponse::initNSURLResponse() const
 {
-    // Work around a mistake in the NSURLResponse class - <rdar://problem/3346574>.
+    // Work around a mistake in the NSURLResponse class - <rdar://problem/6875219>.
     // The init function takes an NSInteger, even though the accessor returns a long long.
     // For values that won't fit in an NSInteger, pass -1 instead.
     NSInteger expectedContentLength;
@@ -61,6 +60,9 @@ void ResourceResponse::initNSURLResponse() const
         expectedContentLength = -1;
     else
         expectedContentLength = static_cast<NSInteger>(m_expectedContentLength);
+
+    // FIXME: This creates a very incomplete NSURLResponse, which does not even have a status code.
+
     m_nsResponse.adoptNS([[NSURLResponse alloc] initWithURL:m_url MIMEType:m_mimeType expectedContentLength:expectedContentLength textEncodingName:m_textEncodingName]);
 }
 
@@ -71,6 +73,7 @@ NSURLResponse *ResourceResponse::nsURLResponse() const
     if (!m_nsResponse && !m_cfResponse && !m_isNull) {
         initNSURLResponse();
         m_cfResponse = [m_nsResponse.get() _CFURLResponse];
+        return m_nsResponse.get();
     }
 
     if (!m_cfResponse)
@@ -86,6 +89,7 @@ ResourceResponse::ResourceResponse(NSURLResponse* nsResponse)
     : m_cfResponse([nsResponse _CFURLResponse])
     , m_nsResponse(nsResponse)
     , m_initLevel(Uninitialized)
+    , m_platformResponseIsUpToDate(true)
 {
     m_isNull = !nsResponse;
 }

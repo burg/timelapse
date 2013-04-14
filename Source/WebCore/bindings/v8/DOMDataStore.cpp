@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-DOMDataStore::DOMDataStore(Type type)
+DOMDataStore::DOMDataStore(WrapperWorldType type)
     : m_type(type)
     , m_wrapperMap(v8::Isolate::GetCurrent()) // FIXME Don't call GetCurrent twice.
 {
@@ -66,7 +66,7 @@ DOMDataStore* DOMDataStore::current(v8::Isolate* isolate)
         return data->domDataStore();
 
     if (DOMWrapperWorld::isolatedWorldsExist()) {
-        DOMWrapperWorld* isolatedWorld = DOMWrapperWorld::getWorld(v8::Context::GetEntered());
+        DOMWrapperWorld* isolatedWorld = DOMWrapperWorld::isolatedWorld(v8::Context::GetEntered());
         if (UNLIKELY(!!isolatedWorld))
             return isolatedWorld->isolatedWorldDOMDataStore();
     }

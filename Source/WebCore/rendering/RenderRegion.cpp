@@ -189,7 +189,7 @@ void RenderRegion::checkRegionStyle()
 
     // FIXME: Region styling doesn't work for pseudo elements.
     if (node()) {
-        Element* regionElement = static_cast<Element*>(node());
+        Element* regionElement = toElement(node());
         customRegionStyle = view()->document()->styleResolver()->checkRegionStyle(regionElement);
     }
     setHasCustomRegionStyle(customRegionStyle);
@@ -268,7 +268,7 @@ void RenderRegion::layoutBlock(bool relayoutChildren, LayoutUnit)
         if (view()->checkTwoPassLayoutForAutoHeightRegions() && hasAutoLogicalHeight())
             view()->flowThreadController()->setNeedsTwoPassLayoutForAutoHeightRegions(true);
 
-        if (oldRegionRect.width() != pageLogicalWidth() || oldRegionRect.height() != pageLogicalHeight()) {
+        if (!isRenderRegionSet() && (oldRegionRect.width() != pageLogicalWidth() || oldRegionRect.height() != pageLogicalHeight())) {
             m_flowThread->invalidateRegions();
             if (view()->checkTwoPassLayoutForAutoHeightRegions())
                 view()->flowThreadController()->setNeedsTwoPassLayoutForAutoHeightRegions(true);
@@ -541,7 +541,7 @@ void RenderRegion::computeChildrenStyleInRegion(const RenderObject* object)
             childStyleInRegion = it->value.style;
             objectRegionStyleCached = true;
         } else {
-            if (child->isAnonymous())
+            if (child->isAnonymous() || child->isInFlowRenderFlowThread())
                 childStyleInRegion = RenderStyle::createAnonymousStyleWithDisplay(object->style(), child->style()->display());
             else if (child->isText())
                 childStyleInRegion = RenderStyle::clone(object->style());
@@ -557,9 +557,7 @@ void RenderRegion::computeChildrenStyleInRegion(const RenderObject* object)
 
 void RenderRegion::setObjectStyleInRegion(RenderObject* object, PassRefPtr<RenderStyle> styleInRegion, bool objectRegionStyleCached)
 {
-    ASSERT(object->inRenderFlowThread());
-    if (!object->inRenderFlowThread())
-        return;
+    ASSERT(object->flowThreadContainingBlock());
 
     RefPtr<RenderStyle> objectOriginalStyle = object->style();
     object->setStyleInternal(styleInRegion);

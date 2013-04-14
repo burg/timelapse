@@ -30,9 +30,9 @@ namespace WebCore {
 
 namespace {
 
-class GestureToken : public UserGestureIndicator::Token {
+class GestureToken : public UserGestureToken {
 public:
-    static PassRefPtr<UserGestureIndicator::Token> create() { return adoptRef(new GestureToken); }
+    static PassRefPtr<UserGestureToken> create() { return adoptRef(new GestureToken); }
 
     virtual ~GestureToken() { }
 
@@ -59,7 +59,7 @@ private:
 
 static bool isDefinite(ProcessingUserGestureState state)
 {
-    return state == DefinitelyProcessingUserGesture || state == DefinitelyNotProcessingUserGesture;
+    return state == DefinitelyProcessingNewUserGesture || state == DefinitelyProcessingUserGesture || state == DefinitelyNotProcessingUserGesture;
 }
 
 ProcessingUserGestureState UserGestureIndicator::s_state = DefinitelyNotProcessingUserGesture;
@@ -78,12 +78,14 @@ UserGestureIndicator::UserGestureIndicator(ProcessingUserGestureState state)
         s_state = state;
     }
 
-    if (state == DefinitelyProcessingUserGesture)
+    if (state == DefinitelyProcessingNewUserGesture)
+        static_cast<GestureToken*>(m_token.get())->addGesture();
+    else if (state == DefinitelyProcessingUserGesture && s_topmostIndicator == this)
         static_cast<GestureToken*>(m_token.get())->addGesture();
     ASSERT(isDefinite(s_state));
 }
 
-UserGestureIndicator::UserGestureIndicator(PassRefPtr<UserGestureIndicator::Token> token)
+UserGestureIndicator::UserGestureIndicator(PassRefPtr<UserGestureToken> token)
     : m_previousState(s_state)
 {
     if (token && static_cast<GestureToken*>(token.get())->hasGestures()) {
@@ -111,7 +113,7 @@ UserGestureIndicator::~UserGestureIndicator()
 
 bool UserGestureIndicator::processingUserGesture()
 {
-    return s_topmostIndicator && static_cast<GestureToken*>(s_topmostIndicator->currentToken())->hasGestures() && s_state == DefinitelyProcessingUserGesture;
+    return s_topmostIndicator && static_cast<GestureToken*>(s_topmostIndicator->currentToken())->hasGestures() && (s_state == DefinitelyProcessingNewUserGesture || s_state == DefinitelyProcessingUserGesture);
 }
 
 bool UserGestureIndicator::consumeUserGesture()
@@ -121,7 +123,7 @@ bool UserGestureIndicator::consumeUserGesture()
     return static_cast<GestureToken*>(s_topmostIndicator->currentToken())->consumeGesture();
 }
 
-UserGestureIndicator::Token* UserGestureIndicator::currentToken()
+UserGestureToken* UserGestureIndicator::currentToken()
 {
     if (!s_topmostIndicator)
         return 0;

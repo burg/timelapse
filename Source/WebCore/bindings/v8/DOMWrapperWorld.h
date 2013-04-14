@@ -32,6 +32,7 @@
 #define DOMWrapperWorld_h
 
 #include "SecurityOrigin.h"
+#include "V8DOMActivityLogger.h"
 #include "V8PerContextData.h"
 #include <v8.h>
 #include <wtf/PassRefPtr.h>
@@ -61,14 +62,9 @@ public:
     void makeContextWeak(v8::Handle<v8::Context>);
     void setIsolatedWorldField(v8::Handle<v8::Context>);
 
-    static void assertContextHasCorrectPrototype(v8::Handle<v8::Context>);
-    static DOMWrapperWorld* getWorld(v8::Handle<v8::Context> context)
+    static DOMWrapperWorld* isolatedWorld(v8::Handle<v8::Context> context)
     {
-        assertContextHasCorrectPrototype(context);
-        return static_cast<DOMWrapperWorld*>(context->GetAlignedPointerFromEmbedderData(v8ContextIsolatedWorld));
-    }
-    static DOMWrapperWorld* getWorldWithoutContextCheck(v8::Handle<v8::Context> context)
-    {
+        ASSERT(contextHasCorrectPrototype(context));
         return static_cast<DOMWrapperWorld*>(context->GetAlignedPointerFromEmbedderData(v8ContextIsolatedWorld));
     }
 
@@ -91,6 +87,11 @@ public:
     static void clearIsolatedWorldContentSecurityPolicy(int worldID);
     bool isolatedWorldHasContentSecurityPolicy();
 
+    // Associate a logger with the world identified by worldId (worlId may be 0
+    // identifying the main world).  
+    static void setActivityLogger(int worldId, PassOwnPtr<V8DOMActivityLogger>);
+    static V8DOMActivityLogger* activityLogger(int worldId);
+
     // FIXME: this is a workaround for a problem in WebViewImpl.
     // Do not use this anywhere else!!
     static PassRefPtr<DOMWrapperWorld> createUninitializedWorld();
@@ -107,9 +108,12 @@ public:
         return m_domDataStore.get();
     }
 
+    static void setInitializingWindow(bool);
+
 private:
     static int isolatedWorldCount;
     static PassRefPtr<DOMWrapperWorld> createMainWorld();
+    static bool contextHasCorrectPrototype(v8::Handle<v8::Context>);
 
     DOMWrapperWorld(int worldId, int extensionGroup);
 

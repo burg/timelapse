@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "PlatformSpeechSynthesizerMock.h"
+#include "PlatformSpeechSynthesisUtterance.h"
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
@@ -49,6 +50,7 @@ PlatformSpeechSynthesizerMock::~PlatformSpeechSynthesizerMock()
 
 void PlatformSpeechSynthesizerMock::speakingFinished(Timer<PlatformSpeechSynthesizerMock>*)
 {
+    ASSERT(m_utterance);
     client()->didFinishSpeaking(m_utterance);
     m_utterance = 0;
 }
@@ -63,8 +65,13 @@ void PlatformSpeechSynthesizerMock::initializeVoiceList()
 
 void PlatformSpeechSynthesizerMock::speak(const PlatformSpeechSynthesisUtterance& utterance)
 {
+    ASSERT(!m_utterance);
     m_utterance = &utterance;
     client()->didStartSpeaking(m_utterance);
+    
+    // Fire a fake word and then sentence boundary event.
+    client()->boundaryEventOccurred(m_utterance, SpeechWordBoundary, 0);
+    client()->boundaryEventOccurred(m_utterance, SpeechSentenceBoundary, m_utterance->text().length());
     
     // Give the fake speech job some time so that pause and other functions have time to be called.
     m_speakingFinishedTimer.startOneShot(.1);
@@ -72,6 +79,9 @@ void PlatformSpeechSynthesizerMock::speak(const PlatformSpeechSynthesisUtterance
     
 void PlatformSpeechSynthesizerMock::cancel()
 {
+    if (!m_utterance)
+        return;
+    
     m_speakingFinishedTimer.stop();
     client()->speakingErrorOccurred(m_utterance);
     m_utterance = 0;

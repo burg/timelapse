@@ -49,10 +49,11 @@
 #include "WebHitTestResult.h"
 #include "WebLoaderClient.h"
 #include "WebPageContextMenuClient.h"
+#include <WebCore/AlternativeTextClient.h> // FIXME: Needed by WebPageProxyMessages.h for DICTATION_ALTERNATIVES.
+#include "WebPageProxyMessages.h"
 #include "WebPolicyClient.h"
 #include "WebPopupMenuProxy.h"
 #include "WebUIClient.h"
-#include <WebCore/AlternativeTextClient.h>
 #include <WebCore/Color.h>
 #include <WebCore/DragActions.h>
 #include <WebCore/DragSession.h>
@@ -318,6 +319,9 @@ public:
     bool drawsTransparentBackground() const { return m_drawsTransparentBackground; }
     void setDrawsTransparentBackground(bool);
 
+    WebCore::Color underlayColor() const { return m_underlayColor; }
+    void setUnderlayColor(const WebCore::Color&);
+
     void viewWillStartLiveResize();
     void viewWillEndLiveResize();
 
@@ -381,7 +385,7 @@ public:
 
 #if PLATFORM(MAC)
     void updateWindowIsVisible(bool windowIsVisible);
-    void windowAndViewFramesChanged(const WebCore::IntRect& windowFrameInScreenCoordinates, const WebCore::IntRect& viewFrameInWindowCoordinates, const WebCore::IntPoint& accessibilityViewCoordinates);
+    void windowAndViewFramesChanged(const WebCore::FloatRect& windowFrameInScreenCoordinates, const WebCore::FloatRect& viewFrameInWindowCoordinates, const WebCore::FloatPoint& accessibilityViewCoordinates);
     void viewExposedRectChanged(const WebCore::FloatRect& exposedRect);
     void setMainFrameIsScrollable(bool);
 
@@ -651,7 +655,6 @@ public:
 
 #if PLATFORM(QT)
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize&);
-    void didReceiveMessageFromNavigatorQtObject(const String&);
 #endif
 
 #if PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(GTK)
@@ -751,7 +754,17 @@ public:
     bool mainFrameInViewSourceMode() const { return m_mainFrameInViewSourceMode; }
     void setMainFrameInViewSourceMode(bool);
 
+    bool overridePrivateBrowsingEnabled() const { return m_overridePrivateBrowsingEnabled; }
+    void setOverridePrivateBrowsingEnabled(bool);
+
     void didReceiveAuthenticationChallengeProxy(uint64_t frameID, PassRefPtr<AuthenticationChallengeProxy>);
+
+    int64_t spellDocumentTag();
+    void didFinishCheckingText(uint64_t requestID, const Vector<WebCore::TextCheckingResult>&) const;
+    void didCancelCheckingText(uint64_t requestID) const;
+
+    void connectionWillOpen(CoreIPC::Connection*);
+    void connectionWillClose(CoreIPC::Connection*);
 
     static String pluginInformationBundleIdentifierKey();
     static String pluginInformationBundleVersionKey();
@@ -847,7 +860,7 @@ private:
     void pageDidScroll();
     void runOpenPanel(uint64_t frameID, const WebCore::FileChooserSettings&);
     void printFrame(uint64_t frameID);
-    void exceededDatabaseQuota(uint64_t frameID, const String& originIdentifier, const String& databaseName, const String& displayName, uint64_t currentQuota, uint64_t currentOriginUsage, uint64_t currentDatabaseUsage, uint64_t expectedUsage, uint64_t& newQuota);
+    void exceededDatabaseQuota(uint64_t frameID, const String& originIdentifier, const String& databaseName, const String& displayName, uint64_t currentQuota, uint64_t currentOriginUsage, uint64_t currentDatabaseUsage, uint64_t expectedUsage, PassRefPtr<Messages::WebPageProxy::ExceededDatabaseQuota::DelayedReply>);
     void requestGeolocationPermissionForFrame(uint64_t geolocationID, uint64_t frameID, String originIdentifier);
     void runModal();
     void notifyScrollerThumbIsVisibleInRect(const WebCore::IntRect&);
@@ -942,13 +955,14 @@ private:
 
     // Spotlight.
     void searchWithSpotlight(const String&);
+        
+    void searchTheWeb(const String&);
 
     // Dictionary.
     void didPerformDictionaryLookup(const AttributedString&, const DictionaryPopupInfo&);
 #endif
 
     // Spelling and grammar.
-    int64_t spellDocumentTag();
 #if USE(UNIFIED_TEXT_CHECKING)
     void checkTextOfParagraph(const String& text, uint64_t checkingTypes, Vector<WebCore::TextCheckingResult>& results);
 #endif
@@ -960,6 +974,7 @@ private:
     void getGuessesForWord(const String& word, const String& context, Vector<String>& guesses);
     void learnWord(const String& word);
     void ignoreWord(const String& word);
+    void requestCheckingOfString(uint64_t requestID, const WebCore::TextCheckingRequestData&);
 
     void setFocus(bool focused);
     void takeFocus(uint32_t direction);
@@ -1133,6 +1148,8 @@ private:
     bool m_drawsBackground;
     bool m_drawsTransparentBackground;
 
+    WebCore::Color m_underlayColor;
+
     bool m_areMemoryCacheClientCallsEnabled;
 
     bool m_useFixedLayout;
@@ -1227,7 +1244,8 @@ private:
     bool m_rubberBandsAtTop;
 
     bool m_mainFrameInViewSourceMode;
-
+    bool m_overridePrivateBrowsingEnabled;
+        
     unsigned m_pageCount;
 
     WebCore::IntRect m_visibleScrollerThumbRect;

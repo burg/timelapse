@@ -41,6 +41,7 @@
 #include "CachedResourceLoader.h"
 #include "DocumentType.h"
 #include "EditorClient.h"
+#include "Event.h"
 #include "EventNames.h"
 #include "FloatQuad.h"
 #include "FocusController.h"
@@ -84,13 +85,14 @@
 #include "TextResourceDecoder.h"
 #include "UserContentURLPattern.h"
 #include "UserTypingGestureIndicator.h"
+#include "VisibleUnits.h"
 #include "WebKitFontFamilyNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include "htmlediting.h"
 #include "markup.h"
 #include "npruntime_impl.h"
-#include "visible_units.h"
+#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 
@@ -420,7 +422,7 @@ String Frame::searchForLabelsBeforeElement(const Vector<String>& labels, Element
     Node* n;
     for (n = NodeTraversal::previous(element); n && lengthSearched < charsSearchedThreshold; n = NodeTraversal::previous(n)) {
         if (n->hasTagName(formTag)
-            || (n->isHTMLElement() && static_cast<Element*>(n)->isFormControlElement()))
+            || (n->isHTMLElement() && toElement(n)->isFormControlElement()))
         {
             // We hit another form element or the start of the form - bail out
             break;
@@ -929,7 +931,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     // Respect SVGs zoomAndPan="disabled" property in standalone SVG documents.
     // FIXME: How to handle compound documents + zoomAndPan="disabled"? Needs SVG WG clarification.
     if (document->isSVGDocument()) {
-        if (!static_cast<SVGDocument*>(document)->zoomAndPanEnabled())
+        if (!toSVGDocument(document)->zoomAndPanEnabled())
             return;
     }
 #endif
@@ -1083,7 +1085,7 @@ DragImageRef Frame::nodeImage(Node* node)
     m_view->setPaintBehavior(state.paintBehavior | PaintBehaviorFlattenCompositingLayers);
 
     // When generating the drag image for an element, ignore the document background.
-    m_view->setBaseBackgroundColor(colorWithOverrideAlpha(Color::white, 1.0));
+    m_view->setBaseBackgroundColor(Color::transparent);
     m_doc->updateLayout();
     m_view->setNodeToDraw(node); // Enable special sub-tree drawing mode.
 

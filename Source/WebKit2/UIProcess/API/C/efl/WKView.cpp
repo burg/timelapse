@@ -24,14 +24,16 @@
 #include "EwkView.h"
 #include "WKAPICast.h"
 #include "ewk_context_private.h"
+#include "ewk_page_group_private.h"
 #include <WebKit2/WKImageCairo.h>
 
 using namespace WebKit;
 
 static inline WKViewRef createWKView(Evas* canvas, WKContextRef contextRef, WKPageGroupRef pageGroupRef, EwkView::ViewBehavior behavior)
 {
-    RefPtr<EwkContext> context = contextRef ? EwkContext::create(contextRef) : EwkContext::defaultContext();
-    Evas_Object* evasObject = EwkView::createEvasObject(canvas, context, pageGroupRef, behavior);
+    RefPtr<EwkContext> context = contextRef ? EwkContext::findOrCreateWrapper(contextRef) : EwkContext::defaultContext();
+    RefPtr<EwkPageGroup> pageGroup = EwkPageGroup::create(pageGroupRef);
+    Evas_Object* evasObject = EwkView::createEvasObject(canvas, context, pageGroup, behavior);
     if (!evasObject)
         return 0;
 
@@ -106,7 +108,7 @@ bool WKViewGetDrawsTransparentBackground(WKViewRef viewRef)
 
 void WKViewSetThemePath(WKViewRef viewRef, WKStringRef theme)
 {
-    toImpl(viewRef)->setThemePath(theme);
+    toImpl(viewRef)->setThemePath(toImpl(theme)->string());
 }
 
 void WKViewSuspendActiveDOMObjectsAndAnimations(WKViewRef viewRef)

@@ -1,3 +1,91 @@
+2013-03-14  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Improve the handling of mock geolocation, device orientation and motion clients
+
+        Reviewed by Tor Arne Vestbø.
+
+        The mock versions of these web facing features should be instantiated when
+        running in DumpRenderTree only. In order for them to work, no extra Qt modules
+        such as QtLocation are actually needed.
+
+        This patch decouples enabling device orientation/motion and geolocation from
+        the underlying Qt modules and makes them available in developer builds
+        (!production_build) and backed by mock backends when running in drt.
+
+        So if the Qt 5 modules are available, they'll be used (unless drtRun). For
+        developers the web facing features are always enabled (although requests will
+        time out) and the mock backends are enabled inside DRT, allowing for the layout
+        tests to run with less dependencies.
+
+        In addition this also enables the mock device motion client, which was
+        previously never instantiated.
+
+        * WebKit1.pri:
+        * WebKit1.pro:
+
+2013-03-13  Genevieve Mak  <gmak@rim.com>
+
+        [BlackBerry] Add Proximity Detector.
+        https://bugs.webkit.org/show_bug.cgi?id=112278
+
+        Reviewed by Rob Buis.
+
+        Internally Reviewed by Mike Lattanzio.
+        PR #243385
+
+        * PlatformBlackBerry.cmake:
+
+2013-03-08  Roger Fong  <roger_fong@apple.com>
+
+        Build fix for AppleWin VS2010.
+
+        * WebKit.vcxproj/FeatureDefines.props:
+
+2013-03-06  Jer Noble  <jer.noble@apple.com>
+
+        Unreviewed partial roll-out of r145003. Disable
+        ENABLE_CURSOR_VISIBILITY on win.
+
+        * WebKit.vcxproj/FeatureDefines.props:
+
+2013-03-04  Jer Noble  <jer.noble@apple.com>
+
+        Default mouse cursor behavior should be auto-hide for full screen video with custom controls
+        https://bugs.webkit.org/show_bug.cgi?id=107601
+
+        Reviewed by Beth Dakin.
+
+        Enable the CURSOR_VISIBILITY feature.
+
+        * WebKit.vcxproj/FeatureDefines.props:
+
+2013-03-05  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Build break with latest EFL libraries
+        https://bugs.webkit.org/show_bug.cgi?id=111028
+
+        Reviewed by Dirk Pranke.
+
+        * PlatformEfl.cmake: Added ECORE_X_INCLUDE_DIRS.
+
+2013-03-04  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. AppleWin build fix.
+
+        * WebKit.vcxproj/FeatureDefines.props:
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+
+2013-03-03  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r144567.
+        http://trac.webkit.org/changeset/144567
+        https://bugs.webkit.org/show_bug.cgi?id=111266
+
+        Does not compile on apple-win (Requested by abarth on
+        #webkit).
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+
 2013-02-26  Roger Fong  <roger_fong@apple.com>
 
         Unreviewed AppleWin build fix.

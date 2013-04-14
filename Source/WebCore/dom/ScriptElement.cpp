@@ -31,6 +31,7 @@
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
 #include "DocumentParser.h"
+#include "Event.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "HTMLNames.h"
@@ -295,7 +296,7 @@ void ScriptElement::executeScript(const ScriptSourceCode& sourceCode)
 
 #if ENABLE(NOSNIFF)
     if (m_isExternalScript && m_cachedScript && !m_cachedScript->mimeTypeAllowedByNosniff()) {
-        m_element->document()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Refused to execute script from '" + m_cachedScript->url().string() + "' because its MIME type ('" + m_cachedScript->mimeType() + "') is not executable, and strict MIME type checking is enabled.");
+        m_element->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, "Refused to execute script from '" + m_cachedScript->url().elidedString() + "' because its MIME type ('" + m_cachedScript->mimeType() + "') is not executable, and strict MIME type checking is enabled.");
         return;
     }
 #endif

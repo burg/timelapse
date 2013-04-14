@@ -3,8 +3,8 @@
 <head>
 <script src="../js/resources/js-test-pre.js"></script>
 <script type="text/javascript">
-shouldNotBe('window.webkitNotifications', 'undefined');
-shouldNotThrow('window.webkitNotifications.requestPermission()');
+shouldBeDefined("window.webkitNotifications");
+shouldNotThrow("window.webkitNotifications.requestPermission()");
 </script>
 <script src="../js/resources/js-test-post.js"></script>
 </head>

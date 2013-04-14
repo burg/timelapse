@@ -354,7 +354,7 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
             frame->selection()->setSelection(newSelection);
     }
 
-    static_cast<Element*>(node.get())->focus(false, direction);
+    toElement(node.get())->focus(false, direction);
     return true;
 }
 
@@ -849,7 +849,7 @@ bool FocusController::advanceFocusDirectionally(FocusDirection direction, Keyboa
     Node* container = focusedDocument;
 
     if (container->isDocumentNode())
-        static_cast<Document*>(container)->updateLayoutIgnorePendingStylesheets();
+        toDocument(container)->updateLayoutIgnorePendingStylesheets();
         
     // Figure out the starting rect.
     LayoutRect startingRect;
@@ -870,7 +870,7 @@ bool FocusController::advanceFocusDirectionally(FocusDirection direction, Keyboa
         startingRect = nodeRectInAbsoluteCoordinates(container, true /* ignore border */);
         container = scrollableEnclosingBoxOrParentFrameForNodeInDirection(direction, container);
         if (container && container->isDocumentNode())
-            static_cast<Document*>(container)->updateLayoutIgnorePendingStylesheets();
+            toDocument(container)->updateLayoutIgnorePendingStylesheets();
     } while (!consumed && container);
 
     return consumed;

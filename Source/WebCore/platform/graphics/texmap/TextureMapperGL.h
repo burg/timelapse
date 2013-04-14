@@ -96,8 +96,19 @@ private:
         void push();
         void pop();
         void apply(GraphicsContext3D*);
+        void applyIfNeeded(GraphicsContext3D*);
         inline ClipState& current() { return clipState; }
         void reset(const IntRect&);
+        void intersect(const IntRect&);
+        void setStencilIndex(int);
+        inline int getStencilIndex() const
+        {
+            return clipState.stencilIndex;
+        }
+        inline bool isCurrentScissorBoxEmpty() const
+        {
+            return clipState.scissorBox.isEmpty();
+        }
 
     private:
         ClipState clipState;

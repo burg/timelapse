@@ -54,8 +54,6 @@ Bug(GTK) fast/encoding/mailto-always-utf-8.html [ Failure ]
 
 Bug(GTK) fast/loader/subframe-removes-itself.html [ Failure ]
 
-webkit.org/b/108508 fast/canvas/canvas-currentPath-crash.html [ Failure ]
-
 # Missing support in DRT for Geolocation's Coordinate attributes.
 Bug(GTK) fast/dom/Geolocation/coordinates-interface-attributes.html [ Failure ]
 
@@ -87,8 +85,6 @@ Bug(GTK) http/tests/loading/bad-server-subframe.html [ Failure ]
 Bug(GTK) http/tests/misc/will-send-request-returns-null-on-redirect.html [ Failure ]
 
 Bug(GTK) inspector/debugger/linkifier.html [ Failure ]
-
-webkit.org/b/71849 inspector-protocol/layer-tree.html [ Failure ]
 
 webkit.org/b/108747 inspector-protocol/page/javascriptDialogEvents.html [ Failure ]
 

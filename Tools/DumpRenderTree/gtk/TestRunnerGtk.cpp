@@ -108,11 +108,6 @@ void TestRunner::keepWebHistory()
     // FIXME: implement
 }
 
-JSValueRef TestRunner::computedStyleIncludingVisitedInfo(JSContextRef context, JSValueRef value)
-{
-    return DumpRenderTreeSupportGtk::computedStyleIncludingVisitedInfo(context, value);
-}
-
 size_t TestRunner::webHistoryItemCount()
 {
     WebKitWebView* webView = webkit_web_frame_get_web_view(mainFrame);
@@ -328,11 +323,6 @@ void TestRunner::setWindowIsKey(bool windowIsKey)
     // FIXME: implement
 }
 
-void TestRunner::setSmartInsertDeleteEnabled(bool flag)
-{
-    DumpRenderTreeSupportGtk::setSmartInsertDeleteEnabled(webkit_web_frame_get_web_view(mainFrame), flag);
-}
-
 static gboolean waitToDumpWatchdogFired(void*)
 {
     setWaitToDumpWatchdog(0);
@@ -490,11 +480,6 @@ void TestRunner::setIconDatabaseEnabled(bool enabled)
         webkit_icon_database_set_path(database, 0);
 }
 
-void TestRunner::setSelectTrailingWhitespaceEnabled(bool flag)
-{
-    DumpRenderTreeSupportGtk::setSelectTrailingWhitespaceEnabled(flag);
-}
-
 void TestRunner::setPopupBlockingEnabled(bool flag)
 {
     WebKitWebView* view = webkit_web_frame_get_web_view(mainFrame);
@@ -512,11 +497,6 @@ void TestRunner::setPluginsEnabled(bool flag)
 
     WebKitWebSettings* settings = webkit_web_view_get_settings(view);
     g_object_set(G_OBJECT(settings), "enable-plugins", flag, NULL);
-}
-
-bool TestRunner::elementDoesAutoCompleteForElementWithId(JSStringRef id) 
-{
-    return DumpRenderTreeSupportGtk::elementDoesAutoCompleteForElementWithId(mainFrame, id);
 }
 
 void TestRunner::execCommand(JSStringRef name, JSStringRef value)
@@ -862,16 +842,6 @@ void TestRunner::apiTestGoToCurrentBackForwardItem()
 
 void TestRunner::setWebViewEditable(bool)
 {
-}
-
-JSRetainPtr<JSStringRef> TestRunner::markerTextForListItem(JSContextRef context, JSValueRef nodeObject) const
-{
-    CString markerTextGChar = DumpRenderTreeSupportGtk::markerTextForListItem(mainFrame, context, nodeObject);
-    if (markerTextGChar.isNull())
-        return 0;
-
-    JSRetainPtr<JSStringRef> markerText(Adopt, JSStringCreateWithUTF8CString(markerTextGChar.data()));
-    return markerText;
 }
 
 void TestRunner::authenticateSession(JSStringRef, JSStringRef, JSStringRef)

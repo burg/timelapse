@@ -635,6 +635,8 @@ Could be worth adding to the API.
  */
 + (void)_setHTTPPipeliningEnabled:(BOOL)enabled;
 
+@property (nonatomic, copy, getter=_sourceApplicationAuditData, setter=_setSourceApplicationAuditData:) NSData *sourceApplicationAuditData;
+
 @end
 
 @interface WebView (WebViewPrintingPrivate)
@@ -743,10 +745,6 @@ Could be worth adding to the API.
 - (void)_notificationsDidClose:(NSArray *)notificationIDs;
 
 - (uint64_t)_notificationIDForTesting:(JSValueRef)jsNotification;
-@end
-
-@interface WebView (WebViewPrivateStyleInfo)
-- (JSValueRef)_computedStyleIncludingVisitedInfo:(JSContextRef)context forElement:(JSValueRef)value;
 @end
 
 @interface NSObject (WebViewFrameLoadDelegatePrivate)

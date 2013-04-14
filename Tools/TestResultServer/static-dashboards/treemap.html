@@ -109,7 +109,9 @@ td {
 </style>
 <script src="builders.js"></script>
 <script src="loader.js"></script>
+<script src="string.js"></script>
 <script src="dashboard_base.js"></script>
+<script src="ui.js"></script>
 <script src='webtreemap.js'></script>
 
 <div id='header-container'></div>
@@ -229,7 +231,7 @@ var g_webTree;
 
 function generatePage()
 {
-    $('header-container').innerHTML = htmlForTestTypeSwitcher();
+    $('header-container').innerHTML = ui.html.testTypeSwitcher();
 
     g_isGeneratingPage = true;
 
@@ -312,14 +314,6 @@ function handleQueryParameterChange(params)
     return false;
 }
 
-// Overrides handleResourceLoadError in dashboard_base.js.
-function handleResourceLoadError(builderName, e)
-{
-    $('map').innerHTML = '<span class=error>Could not load data for ' + builderName + '. ' +
-        'Either there was a server-side error or ' + builderName + ' does not run ' +
-        g_crossDashboardState.testType + '.</span>';
-}
-
 function extractName(node)
 {
     return node.name.split(' ')[0];
@@ -367,4 +361,9 @@ function handleFocus(tree)
     if (!g_isGeneratingPage)
         setQueryParameter('treemapfocus', name);
 }
+
+window.addEventListener('load', function() {
+    var resourceLoader = new loader.Loader(intializeHistory);
+    resourceLoader.load();
+}, false);
 </script>

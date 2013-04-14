@@ -145,7 +145,7 @@ JSValue JSNode::insertBefore(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, true);
+    bool ok = imp->insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -156,7 +156,7 @@ JSValue JSNode::replaceChild(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, true);
+    bool ok = imp->replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(1);
@@ -178,7 +178,7 @@ JSValue JSNode::appendChild(ExecState* exec)
 {
     Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, true);
+    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -218,7 +218,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
                 wrapper = createJSHTMLWrapper(exec, globalObject, toHTMLElement(node));
 #if ENABLE(SVG)
             else if (node->isSVGElement())
-                wrapper = createJSSVGWrapper(exec, globalObject, static_cast<SVGElement*>(node));
+                wrapper = createJSSVGWrapper(exec, globalObject, toSVGElement(node));
 #endif
             else
                 wrapper = CREATE_DOM_WRAPPER(exec, globalObject, Element, node);
@@ -243,7 +243,7 @@ static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObj
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(exec, globalObject, static_cast<Document*>(node));
+            return toJS(exec, globalObject, toDocument(node));
         case Node::DOCUMENT_TYPE_NODE:
             wrapper = CREATE_DOM_WRAPPER(exec, globalObject, DocumentType, node);
             break;

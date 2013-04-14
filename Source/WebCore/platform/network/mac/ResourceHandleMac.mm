@@ -30,7 +30,6 @@
 
 #import "AuthenticationChallenge.h"
 #import "AuthenticationMac.h"
-#import "BlobRegistry.h"
 #import "BlockExceptions.h"
 #import "CookieStorage.h"
 #import "CredentialStorage.h"
@@ -45,12 +44,12 @@
 #import "Page.h"
 #import "ResourceError.h"
 #import "ResourceResponse.h"
-#import "SchedulePair.h"
 #import "Settings.h"
 #import "SharedBuffer.h"
 #import "SubresourceLoader.h"
 #import "WebCoreSystemInterface.h"
 #import "WebCoreURLResponse.h"
+#import <wtf/SchedulePair.h>
 #import <wtf/UnusedParam.h>
 #import <wtf/text/Base64.h>
 #import <wtf/text/CString.h>
@@ -178,26 +177,24 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
         nsRequest = mutableRequest;
     }
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
-    ASSERT([NSURLConnection instancesRespondToSelector:@selector(_initWithRequest:delegate:usesCache:maxContentLength:startImmediately:connectionProperties:)]);
-    static bool supportsSettingConnectionProperties = true;
-#else
-    static bool supportsSettingConnectionProperties = [NSURLConnection instancesRespondToSelector:@selector(_initWithRequest:delegate:usesCache:maxContentLength:startImmediately:connectionProperties:)];
-#endif
-
     if (d->m_storageSession)
         nsRequest = [wkCopyRequestWithStorageSession(d->m_storageSession.get(), nsRequest) autorelease];
 
-    if (supportsSettingConnectionProperties) {
-        NSDictionary *sessionID = shouldUseCredentialStorage ? [NSDictionary dictionary] : [NSDictionary dictionaryWithObject:@"WebKitPrivateSession" forKey:@"_kCFURLConnectionSessionID"];
-        NSDictionary *propertyDictionary = [NSDictionary dictionaryWithObject:sessionID forKey:@"kCFURLConnectionSocketStreamProperties"];
-        d->m_connection.adoptNS([[NSURLConnection alloc] _initWithRequest:nsRequest delegate:delegate usesCache:YES maxContentLength:0 startImmediately:NO connectionProperties:propertyDictionary]);
-        return;
-    }
+    ASSERT([NSURLConnection instancesRespondToSelector:@selector(_initWithRequest:delegate:usesCache:maxContentLength:startImmediately:connectionProperties:)]);
 
-    d->m_connection.adoptNS([[NSURLConnection alloc] initWithRequest:nsRequest delegate:delegate startImmediately:NO]);
-    return;
+    NSMutableDictionary *streamProperties = [NSMutableDictionary dictionary];
 
+    if (!shouldUseCredentialStorage)
+        [streamProperties setObject:@"WebKitPrivateSession" forKey:@"_kCFURLConnectionSessionID"];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    RetainPtr<CFDataRef> sourceApplicationAuditData = d->m_context->sourceApplicationAuditData();
+    if (sourceApplicationAuditData)
+        [streamProperties setObject:(NSData *)sourceApplicationAuditData.get() forKey:@"kCFStreamPropertySourceApplication"];
+#endif
+
+    NSDictionary *propertyDictionary = [NSDictionary dictionaryWithObject:streamProperties forKey:@"kCFURLConnectionSocketStreamProperties"];
+    d->m_connection.adoptNS([[NSURLConnection alloc] _initWithRequest:nsRequest delegate:delegate usesCache:YES maxContentLength:0 startImmediately:NO connectionProperties:propertyDictionary]);
 }
 
 bool ResourceHandle::start()
@@ -457,7 +454,6 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
     // we make sure that is actually present
     ASSERT(challenge.nsURLAuthenticationChallenge());
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     // Proxy authentication is handled by CFNetwork internally. We can get here if the user cancels
     // CFNetwork authentication dialog, and we shouldn't ask the client to display another one in that case.
     if (challenge.protectionSpace().isProxy()) {
@@ -465,7 +461,6 @@ void ResourceHandle::didReceiveAuthenticationChallenge(const AuthenticationChall
         [challenge.sender() continueWithoutCredentialForAuthenticationChallenge:challenge.nsURLAuthenticationChallenge()];
         return;
     }
-#endif
 
     if (!d->m_user.isNull() && !d->m_pass.isNull()) {
         NSURLCredential *credential = [[NSURLCredential alloc] initWithUser:d->m_user
@@ -536,6 +531,8 @@ bool ResourceHandle::canAuthenticateAgainstProtectionSpace(const ProtectionSpace
 
 void ResourceHandle::receivedCredential(const AuthenticationChallenge& challenge, const Credential& credential)
 {
+    LOG(Network, "Handle %p receivedCredential", this);
+
     ASSERT(!challenge.isNull());
     if (challenge != d->m_currentWebChallenge)
         return;
@@ -564,6 +561,8 @@ void ResourceHandle::receivedCredential(const AuthenticationChallenge& challenge
 
 void ResourceHandle::receivedRequestToContinueWithoutCredential(const AuthenticationChallenge& challenge)
 {
+    LOG(Network, "Handle %p receivedRequestToContinueWithoutCredential", this);
+
     ASSERT(!challenge.isNull());
     if (challenge != d->m_currentWebChallenge)
         return;
@@ -575,6 +574,8 @@ void ResourceHandle::receivedRequestToContinueWithoutCredential(const Authentica
 
 void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challenge)
 {
+    LOG(Network, "Handle %p receivedCancellation", this);
+
     if (challenge != d->m_currentWebChallenge)
         return;
 
@@ -677,6 +678,8 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
 
 - (void)connection:(NSURLConnection *)connection didCancelAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 {
+    // FIXME: We probably don't need to implement this (see <rdar://problem/8960124>).
+
     UNUSED_PARAM(connection);
 
     LOG(Network, "Handle %p delegate connection:%p didCancelAuthenticationChallenge:%p", m_handle, connection, challenge);
@@ -689,11 +692,9 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
 - (BOOL)connection:(NSURLConnection *)connection canAuthenticateAgainstProtectionSpace:(NSURLProtectionSpace *)protectionSpace
 {
-#if LOG_DISABLED
     UNUSED_PARAM(connection);
-#endif
 
-    LOG(Network, "Handle %p delegate connection:%p canAuthenticateAgainstProtectionSpace:%p", m_handle, connection, protectionSpace);
+    LOG(Network, "Handle %p delegate connection:%p canAuthenticateAgainstProtectionSpace:%@://%@:%u realm:%@ method:%@ %@%@", m_handle, connection, [protectionSpace protocol], [protectionSpace host], [protectionSpace port], [protectionSpace realm], [protectionSpace authenticationMethod], [protectionSpace isProxy] ? @"proxy:" : @"", [protectionSpace isProxy] ? [protectionSpace proxyType] : @"");
 
     if (!m_handle)
         return NO;
@@ -755,7 +756,7 @@ void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challen
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=19793
     // -1 means we do not provide any data about transfer size to inspector so it would use
     // Content-Length headers or content size to show transfer size.
-    m_handle->client()->didReceiveData(m_handle, (const char*)[data bytes], [data length], -1);
+    m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::wrapNSData(data), -1);
 }
 
 - (void)connection:(NSURLConnection *)connection willStopBufferingData:(NSData *)data

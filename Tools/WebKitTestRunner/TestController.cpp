@@ -241,6 +241,8 @@ WKPageRef TestController::createOtherPage(WKPageRef oldPage, WKURLRequestRef, WK
     };
     WKPageSetPageUIClient(newPage, &otherPageUIClient);
 
+    view->didInitializeClients();
+
     WKRetain(newPage);
     return newPage;
 }
@@ -483,9 +485,7 @@ void TestController::createWebViewWithOptions(WKDictionaryRef options)
     };
     WKPageSetPagePolicyClient(m_mainWebView->page(), &pagePolicyClient);
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    setVisibilityState(kWKPageVisibilityStateVisible, true);
-#endif
+    m_mainWebView->didInitializeClients();
 }
 
 void TestController::ensureViewSupportsOptions(WKDictionaryRef options)
@@ -573,6 +573,7 @@ bool TestController::resetStateToConsistentValues()
 #endif
     WKPreferencesSetScreenFontSubstitutionEnabled(preferences, true);
     WKPreferencesSetInspectorUsesWebKitUserInterface(preferences, true);
+    WKPreferencesSetAsynchronousSpellCheckingEnabled(preferences, false);
 #if !PLATFORM(MAC)
     WKTextCheckerContinuousSpellCheckingEnabledStateChanged(true);
 #endif

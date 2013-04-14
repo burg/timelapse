@@ -142,21 +142,20 @@ void MemoryPressureHandler::respondToMemoryPressure()
 }
 #endif // !PLATFORM(IOS)
 
-void MemoryPressureHandler::releaseMemory(bool critical)
+void MemoryPressureHandler::releaseMemory(bool)
 {
     int savedPageCacheCapacity = pageCache()->capacity();
-    pageCache()->setCapacity(critical ? 0 : pageCache()->pageCount() / 2);
+    pageCache()->setCapacity(0);
     pageCache()->setCapacity(savedPageCacheCapacity);
-    pageCache()->releaseAutoreleasedPagesNow();
 
     NSURLCache *nsurlCache = [NSURLCache sharedURLCache];
     NSUInteger savedNsurlCacheMemoryCapacity = [nsurlCache memoryCapacity];
-    [nsurlCache setMemoryCapacity:critical ? 0 : [nsurlCache currentMemoryUsage] / 2];
+    [nsurlCache setMemoryCapacity:0];
     [nsurlCache setMemoryCapacity:savedNsurlCacheMemoryCapacity];
 
     fontCache()->purgeInactiveFontData();
 
-    memoryCache()->pruneToPercentage(critical ? 0 : 0.5f);
+    memoryCache()->pruneToPercentage(0);
 
     LayerPool::sharedPool()->drain();
 

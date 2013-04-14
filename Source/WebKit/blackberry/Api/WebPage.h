@@ -80,6 +80,8 @@ class WebViewportArguments;
 
 enum JavaScriptDataType { JSUndefined = 0, JSNull, JSBoolean, JSNumber, JSString, JSObject, JSException, JSDataTypeMax };
 
+enum SelectionExpansionType { Word = 0, Sentence, Paragraph, NextParagraph };
+
 enum ActivationStateType { ActivationActive, ActivationInactive, ActivationStandby };
 
 enum TargetDetectionStrategy {PointBased, RectBased, FocusBased};
@@ -190,7 +192,7 @@ public:
     InRegionScroller* inRegionScroller() const;
 
     bool blockZoom(const Platform::IntPoint& documentTargetPoint);
-    void blockZoomAnimationFinished();
+    void zoomAnimationFinished(double finalScale, const Platform::FloatPoint& finalDocumentScrollPosition, bool shouldConstrainScrollingToContentEdge);
     void resetBlockZoom();
     bool isAtInitialZoom() const;
     bool isMaxZoomed() const;
@@ -260,7 +262,10 @@ public:
     bool isInputMode() const;
     void setDocumentSelection(const Platform::IntPoint& documentStartPoint, const Platform::IntPoint& documentEndPoint);
     void setDocumentCaretPosition(const Platform::IntPoint&);
-    void selectAtDocumentPoint(const Platform::IntPoint&);
+    void selectAtDocumentPoint(const Platform::IntPoint&, SelectionExpansionType = Word);
+    void expandSelection(bool isScrollStarted);
+    void setOverlayExpansionPixelHeight(int);
+    void setParagraphExpansionPixelScrollMargin(const Platform::IntSize&);
     void selectionCancelled();
     bool selectionContainsDocumentPoint(const Platform::IntPoint&);
 
@@ -349,6 +354,7 @@ public:
     void resetUserViewportArguments();
 
     WebTapHighlight* tapHighlight() const;
+    WebTapHighlight* selectionHighlight() const;
 
     // Adds an overlay that can be modified on the WebKit thread, and
     // whose attributes can be overridden on the compositing thread.

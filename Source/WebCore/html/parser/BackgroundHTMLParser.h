@@ -35,6 +35,8 @@
 #include "HTMLSourceTracker.h"
 #include "HTMLToken.h"
 #include "HTMLTokenizer.h"
+#include "HTMLTreeBuilderSimulator.h"
+#include "XSSAuditorDelegate.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -42,7 +44,6 @@
 
 namespace WebCore {
 
-typedef const void* ParserIdentifier;
 class HTMLDocumentParser;
 class XSSAuditor;
 
@@ -66,6 +67,7 @@ public:
         WeakPtr<HTMLDocumentParser> parser;
         OwnPtr<HTMLToken> token;
         OwnPtr<HTMLTokenizer> tokenizer;
+        HTMLTreeBuilderSimulator::State treeBuilderState;
         HTMLInputCheckpoint inputCheckpoint;
         TokenPreloadScannerCheckpoint preloadScannerCheckpoint;
         String unparsedInput;
@@ -73,38 +75,31 @@ public:
 
     void append(const String&);
     void resumeFrom(PassOwnPtr<Checkpoint>);
+    void startedChunkWithCheckpoint(HTMLInputCheckpoint);
     void finish();
     void stop();
 
     void forcePlaintextForTextDocument();
 
 private:
-    enum Namespace {
-        HTML,
-        SVG,
-        MathML
-    };
-
     BackgroundHTMLParser(PassRefPtr<WeakReference<BackgroundHTMLParser> >, PassOwnPtr<Configuration>);
 
     void markEndOfFile();
     void pumpTokenizer();
-    bool simulateTreeBuilder(const CompactHTMLToken&);
-
     void sendTokensToMainThread();
-    bool inForeignContent() const { return m_namespaceStack.last() != HTML; }
 
-    Vector<Namespace, 1> m_namespaceStack;
     WeakPtrFactory<BackgroundHTMLParser> m_weakFactory;
     BackgroundHTMLInputStream m_input;
     HTMLSourceTracker m_sourceTracker;
     OwnPtr<HTMLToken> m_token;
     OwnPtr<HTMLTokenizer> m_tokenizer;
+    HTMLTreeBuilderSimulator m_treeBuilderSimulator;
     HTMLParserOptions m_options;
     WeakPtr<HTMLDocumentParser> m_parser;
 
     OwnPtr<CompactHTMLTokenStream> m_pendingTokens;
     PreloadRequestStream m_pendingPreloads;
+    XSSInfoStream m_pendingXSSInfos;
 
     OwnPtr<XSSAuditor> m_xssAuditor;
     OwnPtr<TokenPreloadScanner> m_preloadScanner;

@@ -84,8 +84,6 @@ public:
     virtual float volume() const;
     virtual void playbackStateChanged();
     virtual WebMediaPlayer::Preload preload() const;
-    virtual void sourceOpened();
-    virtual WebKit::WebURL sourceURL() const;
     virtual void keyAdded(const WebString& keySystem, const WebString& sessionId);
     virtual void keyError(const WebString& keySystem, const WebString& sessionId, MediaKeyErrorCode, unsigned short systemCode);
     virtual void keyMessage(const WebString& keySystem, const WebString& sessionId, const unsigned char* message, unsigned messageLength, const WebURL& defaultURL);
@@ -132,6 +130,7 @@ public:
     virtual void setSize(const WebCore::IntSize&);
     virtual void paint(WebCore::GraphicsContext*, const WebCore::IntRect&);
     virtual void paintCurrentFrameInContext(WebCore::GraphicsContext*, const WebCore::IntRect&);
+    virtual bool copyVideoTextureToPlatformTexture(WebCore::GraphicsContext3D*, Platform3DObject texture, GC3Dint level, GC3Denum type, GC3Denum internalFormat, bool premultiplyAlpha, bool flipY);
     virtual void setPreload(WebCore::MediaPlayer::Preload);
     virtual bool hasSingleSecurityOrigin() const;
     virtual bool didPassCORSAccessCheck() const;

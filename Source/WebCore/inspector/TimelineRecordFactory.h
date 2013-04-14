@@ -49,6 +49,7 @@ namespace WebCore {
     class TimelineRecordFactory {
     public:
         static PassRefPtr<InspectorObject> createGenericRecord(double startTime, int maxCallStackDepth);
+        static PassRefPtr<InspectorObject> createBackgroundRecord(double startTime, const String& thread);
 
         static PassRefPtr<InspectorObject> createGCEventData(const size_t usedHeapSizeDelta);
 
@@ -84,7 +85,9 @@ namespace WebCore {
 
         static PassRefPtr<InspectorObject> createResizeImageData(bool shouldCache);
 
-        static PassRefPtr<InspectorObject> createParseHTMLData(unsigned int length, unsigned int startLine);
+        static PassRefPtr<InspectorObject> createMarkData(bool isMainFrame);
+
+        static PassRefPtr<InspectorObject> createParseHTMLData(unsigned startLine);
 
         static PassRefPtr<InspectorObject> createAnimationFrameData(int callbackId);
 
@@ -106,8 +109,6 @@ namespace WebCore {
             return data.release();
         }
 #endif
-        static PassRefPtr<InspectorObject> createRasterData(double totalCPUTime, int threadsUsed);
-
     private:
         TimelineRecordFactory() { }
     };

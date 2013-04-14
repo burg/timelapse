@@ -30,7 +30,6 @@
 
 #include "FileSystem.h"
 #include "HistogramSupport.h"
-#include "IDBFactoryBackendImpl.h"
 #include "IDBKey.h"
 #include "IDBKeyPath.h"
 #include "IDBKeyRange.h"
@@ -324,31 +323,39 @@ WARN_UNUSED_RETURN static bool getMaxObjectStoreId(DBOrTransaction* db, const Ve
     return true;
 }
 
-IDBBackingStore::IDBBackingStore(const String& identifier, IDBFactoryBackendImpl* factory, PassOwnPtr<LevelDBDatabase> db)
+class DefaultLevelDBFactory : public LevelDBFactory {
+public:
+    virtual PassOwnPtr<LevelDBDatabase> openLevelDB(const String& fileName, const LevelDBComparator* comparator)
+    {
+        return LevelDBDatabase::open(fileName, comparator);
+    }
+    virtual bool destroyLevelDB(const String& fileName)
+    {
+        return LevelDBDatabase::destroy(fileName);
+    }
+};
+
+IDBBackingStore::IDBBackingStore(const String& identifier, PassOwnPtr<LevelDBDatabase> db)
     : m_identifier(identifier)
-    , m_factory(factory)
     , m_db(db)
+    , m_weakFactory(this)
 {
-    m_factory->addIDBBackingStore(identifier, this);
 }
 
 IDBBackingStore::IDBBackingStore()
+    : m_weakFactory(this)
 {
 }
 
 IDBBackingStore::~IDBBackingStore()
 {
-    // Only null in tests.
-    if (m_factory)
-        m_factory->removeIDBBackingStore(m_identifier);
-
     // m_db's destructor uses m_comparator. The order of destruction is important.
     m_db.clear();
     m_comparator.clear();
 }
 
 enum IDBLevelDBBackingStoreOpenResult {
-    IDBLevelDBBackingStoreOpenMemory,
+    IDBLevelDBBackingStoreOpenMemorySuccess,
     IDBLevelDBBackingStoreOpenSuccess,
     IDBLevelDBBackingStoreOpenFailedDirectory,
     IDBLevelDBBackingStoreOpenFailedUnknownSchema,
@@ -356,10 +363,19 @@ enum IDBLevelDBBackingStoreOpenResult {
     IDBLevelDBBackingStoreOpenCleanupReopenFailed,
     IDBLevelDBBackingStoreOpenCleanupReopenSuccess,
     IDBLevelDBBackingStoreOpenFailedIOErrCheckingSchema,
+    IDBLevelDBBackingStoreOpenFailedUnknownErr,
+    IDBLevelDBBackingStoreOpenMemoryFailed,
+    IDBLevelDBBackingStoreOpenAttemptNonASCII,
     IDBLevelDBBackingStoreOpenMax,
 };
 
-PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin, const String& pathBaseArg, const String& fileIdentifier, IDBFactoryBackendImpl* factory)
+PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin, const String& pathBaseArg, const String& fileIdentifier)
+{
+    DefaultLevelDBFactory levelDBFactory;
+    return IDBBackingStore::open(securityOrigin, pathBaseArg, fileIdentifier, &levelDBFactory);
+}
+
+PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin, const String& pathBaseArg, const String& fileIdentifier, LevelDBFactory* levelDBFactory)
 {
     IDB_TRACE("IDBBackingStore::open");
     String pathBase = pathBaseArg;
@@ -368,9 +384,16 @@ PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin
     OwnPtr<LevelDBDatabase> db;
 
     if (pathBase.isEmpty()) {
-        HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenMemory, IDBLevelDBBackingStoreOpenMax);
         db = LevelDBDatabase::openInMemory(comparator.get());
+        if (!db) {
+            LOG_ERROR("LevelDBDatabase::openInMemory failed.");
+            HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenMemoryFailed, IDBLevelDBBackingStoreOpenMax);
+            return PassRefPtr<IDBBackingStore>();
+        }
+        HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenMemorySuccess, IDBLevelDBBackingStoreOpenMax);
     } else {
+        if (!pathBase.containsOnlyASCII())
+            HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenAttemptNonASCII, IDBLevelDBBackingStoreOpenMax);
         if (!makeAllDirectories(pathBase)) {
             LOG_ERROR("Unable to create IndexedDB database path %s", pathBase.utf8().data());
             HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenFailedDirectory, IDBLevelDBBackingStoreOpenMax);
@@ -379,15 +402,15 @@ PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin
 
         String path = pathByAppendingComponent(pathBase, securityOrigin->databaseIdentifier() + ".indexeddb.leveldb");
 
-        db = LevelDBDatabase::open(path, comparator.get());
+        db = levelDBFactory->openLevelDB(path, comparator.get());
         if (db) {
             bool known = false;
             bool ok = isSchemaKnown(db.get(), known);
             if (!ok) {
+                LOG_ERROR("IndexedDB had IO error checking schema, treating it as failure to open");
                 HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenFailedIOErrCheckingSchema, IDBLevelDBBackingStoreOpenMax);
-                return PassRefPtr<IDBBackingStore>();
-            }
-            if (!known) {
+                db.clear();
+            } else if (!known) {
                 LOG_ERROR("IndexedDB backing store had unknown schema, treating it as failure to open");
                 HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenFailedUnknownSchema, IDBLevelDBBackingStoreOpenMax);
                 db.clear();
@@ -398,7 +421,7 @@ PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin
             HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenSuccess, IDBLevelDBBackingStoreOpenMax);
         else {
             LOG_ERROR("IndexedDB backing store open failed, attempting cleanup");
-            bool success = LevelDBDatabase::destroy(path);
+            bool success = levelDBFactory->destroyLevelDB(path);
             if (!success) {
                 LOG_ERROR("IndexedDB backing store cleanup failed");
                 HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenCleanupDestroyFailed, IDBLevelDBBackingStoreOpenMax);
@@ -406,7 +429,7 @@ PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin
             }
 
             LOG_ERROR("IndexedDB backing store cleanup succeeded, reopening");
-            db = LevelDBDatabase::open(path, comparator.get());
+            db = levelDBFactory->openLevelDB(path, comparator.get());
             if (!db) {
                 LOG_ERROR("IndexedDB backing store reopen after recovery failed");
                 HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenCleanupReopenFailed, IDBLevelDBBackingStoreOpenMax);
@@ -416,12 +439,15 @@ PassRefPtr<IDBBackingStore> IDBBackingStore::open(SecurityOrigin* securityOrigin
         }
     }
 
-    if (!db)
+    if (!db) {
+        ASSERT_NOT_REACHED();
+        HistogramSupport::histogramEnumeration("WebCore.IndexedDB.BackingStore.OpenStatus", IDBLevelDBBackingStoreOpenFailedUnknownErr, IDBLevelDBBackingStoreOpenMax);
         return PassRefPtr<IDBBackingStore>();
+    }
 
     // FIXME: Handle comparator name changes.
 
-    RefPtr<IDBBackingStore> backingStore(adoptRef(new IDBBackingStore(fileIdentifier, factory, db.release())));
+    RefPtr<IDBBackingStore> backingStore(adoptRef(new IDBBackingStore(fileIdentifier, db.release())));
     backingStore->m_comparator = comparator.release();
 
     if (!setUpMetadata(backingStore->m_db.get(), fileIdentifier))
@@ -1279,7 +1305,7 @@ bool IDBBackingStore::Cursor::continueFunction(const IDBKey* key, IteratorState 
 {
     RefPtr<IDBKey> previousKey = m_currentKey;
 
-    // When iterating with PREV_NO_DUPLICATE, spec requires that the
+    // When iterating with PrevNoDuplicate, spec requires that the
     // value we yield for each key is the first duplicate in forwards
     // order.
     RefPtr<IDBKey> lastDuplicateKey;
@@ -1689,12 +1715,12 @@ bool IndexCursorImpl::loadCurrentRow()
     return true;
 }
 
-bool objectStoreCursorOptions(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId, const IDBKeyRange* range, IDBCursor::Direction direction, IDBBackingStore::Cursor::CursorOptions& cursorOptions)
+bool objectStoreCursorOptions(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId, const IDBKeyRange* range, IndexedDB::CursorDirection direction, IDBBackingStore::Cursor::CursorOptions& cursorOptions)
 {
     bool lowerBound = range && range->lower();
     bool upperBound = range && range->upper();
-    cursorOptions.forward = (direction == IDBCursor::NEXT_NO_DUPLICATE || direction == IDBCursor::NEXT);
-    cursorOptions.unique = (direction == IDBCursor::NEXT_NO_DUPLICATE || direction == IDBCursor::PREV_NO_DUPLICATE);
+    cursorOptions.forward = (direction == IndexedDB::CursorNextNoDuplicate || direction == IndexedDB::CursorNext);
+    cursorOptions.unique = (direction == IndexedDB::CursorNextNoDuplicate || direction == IndexedDB::CursorPrevNoDuplicate);
 
     if (!lowerBound) {
         cursorOptions.lowKey = ObjectStoreDataKey::encode(databaseId, objectStoreId, minIDBKey());
@@ -1736,13 +1762,13 @@ bool objectStoreCursorOptions(LevelDBTransaction* transaction, int64_t databaseI
     return true;
 }
 
-bool indexCursorOptions(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKeyRange* range, IDBCursor::Direction direction, IDBBackingStore::Cursor::CursorOptions& cursorOptions)
+bool indexCursorOptions(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKeyRange* range, IndexedDB::CursorDirection direction, IDBBackingStore::Cursor::CursorOptions& cursorOptions)
 {
     ASSERT(transaction);
     bool lowerBound = range && range->lower();
     bool upperBound = range && range->upper();
-    cursorOptions.forward = (direction == IDBCursor::NEXT_NO_DUPLICATE || direction == IDBCursor::NEXT);
-    cursorOptions.unique = (direction == IDBCursor::NEXT_NO_DUPLICATE || direction == IDBCursor::PREV_NO_DUPLICATE);
+    cursorOptions.forward = (direction == IndexedDB::CursorNextNoDuplicate || direction == IndexedDB::CursorNext);
+    cursorOptions.unique = (direction == IndexedDB::CursorNextNoDuplicate || direction == IndexedDB::CursorPrevNoDuplicate);
 
     if (!lowerBound) {
         cursorOptions.lowKey = IndexDataKey::encodeMinKey(databaseId, objectStoreId, indexId);
@@ -1779,7 +1805,7 @@ bool indexCursorOptions(LevelDBTransaction* transaction, int64_t databaseId, int
     return true;
 }
 
-PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openObjectStoreCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, const IDBKeyRange* range, IDBCursor::Direction direction)
+PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openObjectStoreCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, const IDBKeyRange* range, IndexedDB::CursorDirection direction)
 {
     IDB_TRACE("IDBBackingStore::openObjectStoreCursor");
     LevelDBTransaction* levelDBTransaction = IDBBackingStore::Transaction::levelDBTransactionFrom(transaction);
@@ -1793,7 +1819,7 @@ PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openObjectStoreCursor(IDBBa
     return cursor.release();
 }
 
-PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openObjectStoreKeyCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, const IDBKeyRange* range, IDBCursor::Direction direction)
+PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openObjectStoreKeyCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, const IDBKeyRange* range, IndexedDB::CursorDirection direction)
 {
     IDB_TRACE("IDBBackingStore::openObjectStoreKeyCursor");
     LevelDBTransaction* levelDBTransaction = IDBBackingStore::Transaction::levelDBTransactionFrom(transaction);
@@ -1807,7 +1833,7 @@ PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openObjectStoreKeyCursor(ID
     return cursor.release();
 }
 
-PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openIndexKeyCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKeyRange* range, IDBCursor::Direction direction)
+PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openIndexKeyCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKeyRange* range, IndexedDB::CursorDirection direction)
 {
     IDB_TRACE("IDBBackingStore::openIndexKeyCursor");
     LevelDBTransaction* levelDBTransaction = IDBBackingStore::Transaction::levelDBTransactionFrom(transaction);
@@ -1821,7 +1847,7 @@ PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openIndexKeyCursor(IDBBacki
     return cursor.release();
 }
 
-PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openIndexCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKeyRange* range, IDBCursor::Direction direction)
+PassRefPtr<IDBBackingStore::Cursor> IDBBackingStore::openIndexCursor(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const IDBKeyRange* range, IndexedDB::CursorDirection direction)
 {
     IDB_TRACE("IDBBackingStore::openIndexCursor");
     LevelDBTransaction* levelDBTransaction = IDBBackingStore::Transaction::levelDBTransactionFrom(transaction);

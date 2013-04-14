@@ -180,7 +180,7 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
         return false;
     if (element->document()->isSandboxed(SandboxAutomaticFeatures)) {
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-        element->document()->addConsoleMessage(HTMLMessageSource, ErrorMessageLevel, "Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set.");
+        element->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, "Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set.");
         return false;
     }
     if (element->hasAutofocused())
@@ -204,7 +204,7 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
 
 static void focusPostAttach(Node* element, unsigned)
 { 
-    static_cast<Element*>(element)->focus(); 
+    toElement(element)->focus(); 
     element->deref(); 
 }
 
@@ -281,7 +281,9 @@ bool HTMLFormControlElement::disabled() const
 
     if (m_ancestorDisabledState == AncestorDisabledStateUnknown)
         updateAncestorDisabledState();
-    return m_ancestorDisabledState == AncestorDisabledStateDisabled;
+    if (m_ancestorDisabledState == AncestorDisabledStateDisabled)
+        return true;
+    return HTMLElement::disabled();
 }
 
 bool HTMLFormControlElement::isRequired() const
@@ -292,7 +294,7 @@ bool HTMLFormControlElement::isRequired() const
 static void updateFromElementCallback(Node* node, unsigned)
 {
     ASSERT_ARG(node, node->isElementNode());
-    ASSERT_ARG(node, static_cast<Element*>(node)->isFormControlElement());
+    ASSERT_ARG(node, toElement(node)->isFormControlElement());
     if (RenderObject* renderer = node->renderer())
         renderer->updateFromElement();
 }

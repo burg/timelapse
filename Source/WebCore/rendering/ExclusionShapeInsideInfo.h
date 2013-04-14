@@ -33,35 +33,46 @@
 #if ENABLE(CSS_EXCLUSIONS)
 
 #include "ExclusionShapeInfo.h"
-#include "InlineIterator.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
+class InlineIterator;
 class RenderBlock;
+class RenderObject;
 
-struct LineSegmentRange {
-    InlineIterator start;
-    InlineIterator end;
-    LineSegmentRange(InlineIterator start, InlineIterator end)
-        : start(start)
-        , end(end)
+struct LineSegmentIterator {
+    RenderObject* root;
+    RenderObject* object;
+    unsigned offset;
+    LineSegmentIterator(RenderObject* root, RenderObject* object, unsigned offset)
+        : root(root)
+        , object(object)
+        , offset(offset)
     {
     }
 };
+
+struct LineSegmentRange {
+    LineSegmentIterator start;
+    LineSegmentIterator end;
+    LineSegmentRange(const InlineIterator& start, const InlineIterator& end);
+};
+
 typedef Vector<LineSegmentRange> SegmentRangeList;
 
-class ExclusionShapeInsideInfo : public ExclusionShapeInfo<RenderBlock, &RenderStyle::resolvedShapeInside>, public MappedInfo<RenderBlock, ExclusionShapeInsideInfo> {
+class ExclusionShapeInsideInfo : public ExclusionShapeInfo<RenderBlock, &RenderStyle::resolvedShapeInside, &ExclusionShape::getIncludedIntervals> {
 public:
     static PassOwnPtr<ExclusionShapeInsideInfo> createInfo(const RenderBlock* renderer) { return adoptPtr(new ExclusionShapeInsideInfo(renderer)); }
 
-    static bool isEnabledFor(const RenderBlock* renderer)
+    static bool isEnabledFor(const RenderBlock* renderer);
+
+    virtual bool computeSegmentsForLine(LayoutUnit lineTop, LayoutUnit lineHeight) OVERRIDE
     {
-        ExclusionShapeValue* shapeValue = renderer->style()->resolvedShapeInside();
-        return (shapeValue && shapeValue->type() == ExclusionShapeValue::SHAPE) ? shapeValue->shape() : 0;
+        m_segmentRanges.clear();
+        return ExclusionShapeInfo<RenderBlock, &RenderStyle::resolvedShapeInside, &ExclusionShape::getIncludedIntervals>::computeSegmentsForLine(lineTop, lineHeight);
     }
-    bool lineOverlapsShapeBounds() const { return logicalLineTop() < shapeLogicalBottom() && logicalLineBottom() >= shapeLogicalTop(); }
 
     bool hasSegments() const
     {
@@ -81,19 +92,19 @@ public:
         ASSERT(m_segmentRanges.size() < m_segments.size());
         return &m_segments[m_segmentRanges.size()];
     }
-    bool computeSegmentsForLine(LayoutUnit lineTop, LayoutUnit lineHeight);
     bool adjustLogicalLineTop(float minSegmentWidth);
-    LayoutUnit logicalLineTop() const { return m_shapeLineTop + logicalTopOffset(); }
-    LayoutUnit logicalLineBottom() const { return m_shapeLineTop + m_lineHeight + logicalTopOffset(); }
+
+    void setNeedsLayout(bool value) { m_needsLayout = value; }
+    bool needsLayout() { return m_needsLayout; }
 
 private:
-    ExclusionShapeInsideInfo(const RenderBlock* renderer) : ExclusionShapeInfo<RenderBlock, &RenderStyle::resolvedShapeInside>(renderer) { }
+    ExclusionShapeInsideInfo(const RenderBlock* renderer)
+    : ExclusionShapeInfo<RenderBlock, &RenderStyle::resolvedShapeInside, &ExclusionShape::getIncludedIntervals> (renderer)
+    , m_needsLayout(false)
+    { }
 
-    LayoutUnit m_shapeLineTop;
-    LayoutUnit m_lineHeight;
-
-    SegmentList m_segments;
     SegmentRangeList m_segmentRanges;
+    bool m_needsLayout;
 };
 
 }

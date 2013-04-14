@@ -36,10 +36,10 @@
 #include "AsyncFileSystemChromium.h"
 #include "FileMetadata.h"
 #include "ScriptExecutionContext.h"
-#include "WebFileSystemEntry.h"
 #include "WorkerAsyncFileSystemChromium.h"
 #include <public/WebFileInfo.h>
 #include <public/WebFileSystem.h>
+#include <public/WebFileSystemEntry.h>
 #include <public/WebString.h>
 #include <wtf/Vector.h>
 
@@ -73,6 +73,27 @@ void WebFileSystemCallbacksImpl::didReadMetadata(const WebFileInfo& webFileInfo)
     fileMetadata.type = static_cast<FileMetadata::Type>(webFileInfo.type);
     fileMetadata.platformPath = webFileInfo.platformPath;
     m_callbacks->didReadMetadata(fileMetadata);
+    delete this;
+}
+
+void WebFileSystemCallbacksImpl::didCreateSnapshotFile(const WebFileInfo& webFileInfo)
+{
+    // It's important to create a BlobDataHandle that refers to the platform file path prior
+    // to return from this method so the underlying file will not be deleted.
+    OwnPtr<BlobData> blobData = BlobData::create();
+    blobData->appendFile(webFileInfo.platformPath);
+    RefPtr<BlobDataHandle> snapshotBlob = BlobDataHandle::create(blobData.release(), webFileInfo.length);
+    didCreateSnapshotFile(webFileInfo, snapshotBlob);
+}
+
+void WebFileSystemCallbacksImpl::didCreateSnapshotFile(const WebFileInfo& webFileInfo, PassRefPtr<WebCore::BlobDataHandle> snapshot)
+{
+    FileMetadata fileMetadata;
+    fileMetadata.modificationTime = webFileInfo.modificationTime;
+    fileMetadata.length = webFileInfo.length;
+    fileMetadata.type = static_cast<FileMetadata::Type>(webFileInfo.type);
+    fileMetadata.platformPath = webFileInfo.platformPath;
+    m_callbacks->didCreateSnapshotFile(fileMetadata, snapshot);
     delete this;
 }
 

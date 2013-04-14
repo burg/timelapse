@@ -26,6 +26,7 @@
 
 #include "Attribute.h"
 #include "CSSValueKeywords.h"
+#include "CachedImage.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "EventNames.h"
@@ -363,9 +364,9 @@ bool HTMLObjectElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == dataAttr || (attribute.name() == usemapAttr && attribute.value().string()[0] != '#') || HTMLPlugInImageElement::isURLAttribute(attribute);
 }
 
-const QualifiedName& HTMLObjectElement::imageSourceAttributeName() const
+const AtomicString& HTMLObjectElement::imageSourceURL() const
 {
-    return dataAttr;
+    return getAttribute(dataAttr);
 }
 
 void HTMLObjectElement::renderFallbackContent()
@@ -429,7 +430,7 @@ void HTMLObjectElement::updateDocNamedItem()
     Node* child = firstChild();
     while (child && isNamedItem) {
         if (child->isElementNode()) {
-            Element* element = static_cast<Element*>(child);
+            Element* element = toElement(child);
             // FIXME: Use of isRecognizedTagName is almost certainly wrong here.
             if (isRecognizedTagName(element->tagQName()) && !element->hasTagName(paramTag))
                 isNamedItem = false;
@@ -441,7 +442,7 @@ void HTMLObjectElement::updateDocNamedItem()
         child = child->nextSibling();
     }
     if (isNamedItem != wasNamedItem && document()->isHTMLDocument()) {
-        HTMLDocument* document = static_cast<HTMLDocument*>(this->document());
+        HTMLDocument* document = toHTMLDocument(this->document());
         if (isNamedItem) {
             document->addNamedItem(getNameAttribute());
             document->addExtraNamedItem(getIdAttribute());

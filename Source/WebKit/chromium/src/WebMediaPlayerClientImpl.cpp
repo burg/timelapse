@@ -12,6 +12,7 @@
 #include "AudioSourceProviderClient.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
+#include "GraphicsContext3DPrivate.h"
 #include "GraphicsLayerChromium.h"
 #include "HTMLMediaElement.h"
 #include "IntSize.h"
@@ -22,11 +23,11 @@
 #include "RenderView.h"
 #include "TimeRanges.h"
 #include "WebAudioSourceProvider.h"
+#include "WebDocument.h"
 #include "WebFrameClient.h"
 #include "WebFrameImpl.h"
 #include "WebHelperPluginImpl.h"
 #include "WebMediaPlayer.h"
-#include "WebMediaSourceClient.h"
 #include "WebMediaSourceImpl.h"
 #include "WebViewImpl.h"
 #include <public/Platform.h>
@@ -50,83 +51,6 @@
 using namespace WebCore;
 
 namespace WebKit {
-
-// FIXME: Remove this class once the Chromium code implements its own
-// version of WebMediaPlayer::load(WebURL, WebMediaSource, CORSMode).
-// https://bugs.webkit.org/show_bug.cgi?id=110371
-class WebMediaSourceClientImpl : public WebMediaSourceClient {
-public:
-    explicit WebMediaSourceClientImpl(WebMediaPlayer*);
-    virtual ~WebMediaSourceClientImpl();
-
-    // WebMediaSourceClient methods.
-    virtual AddIdStatus addId(const WebString& id, const WebString& type, const WebVector<WebString>& codecs);
-    virtual bool removeId(const WebString& id);
-    virtual WebTimeRanges buffered(const WebString& id);
-    virtual bool append(const WebString& id, const unsigned char* data, unsigned length);
-    virtual bool abort(const WebString& id);
-    virtual double duration();
-    virtual void setDuration(double);
-    virtual void endOfStream(EndOfStreamStatus);
-    virtual bool setTimestampOffset(const WebString& id, double offset);
-
-private:
-    WebMediaPlayer* m_webMediaPlayer;
-};
-
-WebMediaSourceClientImpl::WebMediaSourceClientImpl(WebMediaPlayer* webMediaPlayer)
-    : m_webMediaPlayer(webMediaPlayer)
-{
-}
-
-WebMediaSourceClientImpl::~WebMediaSourceClientImpl()
-{
-}
-
-WebMediaSourceClient::AddIdStatus WebMediaSourceClientImpl::addId(const WebString& id, const WebString& type, const WebVector<WebString>& codecs)
-{
-    return static_cast<WebMediaSourceClient::AddIdStatus>(m_webMediaPlayer->sourceAddId(id, type, codecs));
-}
-
-bool WebMediaSourceClientImpl::removeId(const WebString& id)
-{
-    return m_webMediaPlayer->sourceRemoveId(id);
-}
-
-WebTimeRanges WebMediaSourceClientImpl::buffered(const WebString& id)
-{
-    return m_webMediaPlayer->sourceBuffered(id);
-}
-
-bool WebMediaSourceClientImpl::append(const WebString& id, const unsigned char* data, unsigned length)
-{
-    return m_webMediaPlayer->sourceAppend(id, data, length);
-}
-
-bool WebMediaSourceClientImpl::abort(const WebString& id)
-{
-    return m_webMediaPlayer->sourceAbort(id);
-}
-
-double WebMediaSourceClientImpl::duration()
-{
-    return m_webMediaPlayer->duration();
-}
-
-void WebMediaSourceClientImpl::setDuration(double duration)
-{
-    return m_webMediaPlayer->sourceSetDuration(duration);
-}
-
-void WebMediaSourceClientImpl::endOfStream(EndOfStreamStatus status)
-{
-    m_webMediaPlayer->sourceEndOfStream(static_cast<WebMediaPlayer::EndOfStreamStatus>(status));
-}
-
-bool WebMediaSourceClientImpl::setTimestampOffset(const WebString& id, double offset)
-{
-    return m_webMediaPlayer->sourceSetTimestampOffset(id, offset);
-}
 
 static PassOwnPtr<WebMediaPlayer> createWebMediaPlayer(WebMediaPlayerClient* client, const WebURL& url, Frame* frame)
 {
@@ -297,29 +221,6 @@ WebMediaPlayer::Preload WebMediaPlayerClientImpl::preload() const
     return static_cast<WebMediaPlayer::Preload>(m_preload);
 }
 
-// FIXME: Remove this and sourceURL() once the Chromium code implements
-// its own version of WebMediaPlayer::load(WebURL, WebMediaSource, CORSMode).
-// https://bugs.webkit.org/show_bug.cgi?id=110371
-void WebMediaPlayerClientImpl::sourceOpened()
-{
-#if ENABLE(MEDIA_SOURCE)
-    ASSERT(m_webMediaPlayer);
-    if (m_mediaSource) {
-        OwnPtr<WebMediaSource> mediaSource = adoptPtr(new WebMediaSourceImpl(m_mediaSource));
-        mediaSource->open(new WebMediaSourceClientImpl(m_webMediaPlayer.get()));
-    }
-#endif
-}
-
-WebKit::WebURL WebMediaPlayerClientImpl::sourceURL() const
-{
-#if ENABLE(MEDIA_SOURCE)
-    if (m_mediaSource)
-        return m_url;
-#endif
-    return KURL();
-}
-
 void WebMediaPlayerClientImpl::keyAdded(const WebString& keySystem, const WebString& sessionId)
 {
 #if ENABLE(ENCRYPTED_MEDIA)
@@ -374,8 +275,9 @@ void WebMediaPlayerClientImpl::keyNeeded(const WebString& keySystem, const WebSt
 WebPlugin* WebMediaPlayerClientImpl::createHelperPlugin(const WebString& pluginType, WebFrame* frame)
 {
     ASSERT(!m_helperPlugin);
+
     WebViewImpl* webView = static_cast<WebViewImpl*>(frame->view());
-    m_helperPlugin = webView->createHelperPlugin(pluginType);
+    m_helperPlugin = webView->createHelperPlugin(pluginType, frame->document());
     if (!m_helperPlugin)
         return 0;
 
@@ -729,6 +631,17 @@ void WebMediaPlayerClientImpl::paintCurrentFrameInContext(GraphicsContext* conte
         WebCanvas* canvas = platformContext->canvas();
         m_webMediaPlayer->paint(canvas, rect, platformContext->getNormalizedAlpha());
     }
+}
+
+bool WebMediaPlayerClientImpl::copyVideoTextureToPlatformTexture(WebCore::GraphicsContext3D* context, Platform3DObject texture, GC3Dint level, GC3Denum type, GC3Denum internalFormat, bool premultiplyAlpha, bool flipY)
+{
+    if (!context || !m_webMediaPlayer)
+        return false;
+    Extensions3D* extensions = context->getExtensions();
+    if (!extensions || !extensions->supports("GL_CHROMIUM_copy_texture") || !extensions->supports("GL_CHROMIUM_flipy") || !context->makeContextCurrent())
+        return false;
+    WebGraphicsContext3D* webGraphicsContext3D = GraphicsContext3DPrivate::extractWebGraphicsContext3D(context);
+    return m_webMediaPlayer->copyVideoTextureToPlatformTexture(webGraphicsContext3D, texture, level, internalFormat, premultiplyAlpha, flipY);
 }
 
 void WebMediaPlayerClientImpl::setPreload(MediaPlayer::Preload preload)

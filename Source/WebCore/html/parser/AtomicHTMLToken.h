@@ -34,27 +34,9 @@
 
 namespace WebCore {
 
-class AtomicHTMLToken : public RefCounted<AtomicHTMLToken> {
+class AtomicHTMLToken {
     WTF_MAKE_NONCOPYABLE(AtomicHTMLToken);
 public:
-    static PassRefPtr<AtomicHTMLToken> create(HTMLToken& token)
-    {
-        return adoptRef(new AtomicHTMLToken(token));
-    }
-
-#if ENABLE(THREADED_HTML_PARSER)
-
-    static PassRefPtr<AtomicHTMLToken> create(const CompactHTMLToken& token)
-    {
-        return adoptRef(new AtomicHTMLToken(token));
-    }
-
-#endif
-
-    static PassRefPtr<AtomicHTMLToken> create(HTMLToken::Type type, const AtomicString& name, const Vector<Attribute>& attributes = Vector<Attribute>())
-    {
-        return adoptRef(new AtomicHTMLToken(type, name, attributes));
-    }
 
     bool forceQuirks() const
     {
@@ -137,14 +119,6 @@ public:
         return m_doctypeData->m_systemIdentifier;
     }
 
-    void clearExternalCharacters()
-    {
-        m_externalCharacters = 0;
-        m_externalCharactersLength = 0;
-        m_isAll8BitData = false;
-    }
-
-private:
     explicit AtomicHTMLToken(HTMLToken& token)
         : m_type(token.type())
     {
@@ -153,7 +127,7 @@ private:
             ASSERT_NOT_REACHED();
             break;
         case HTMLToken::DOCTYPE:
-            m_name = AtomicString(token.nameString()); // FIXME: Should be AtomicString(token.name()) to avoid mallocing every time.
+            m_name = AtomicString(token.name());
             m_doctypeData = token.releaseDoctypeData();
             break;
         case HTMLToken::EndOfFile:
@@ -161,7 +135,7 @@ private:
         case HTMLToken::StartTag:
         case HTMLToken::EndTag: {
             m_selfClosing = token.selfClosing();
-            m_name = AtomicString(token.nameString()); // FIXME: Should be AtomicString(token.name()) to avoid mallocing every time.
+            m_name = AtomicString(token.name());
             initializeAttributes(token.attributes());
             break;
         }
@@ -189,10 +163,10 @@ private:
             ASSERT_NOT_REACHED();
             break;
         case HTMLToken::DOCTYPE:
-            m_name = token.data();
+            m_name = token.data().asString();
             m_doctypeData = adoptPtr(new DoctypeData());
             m_doctypeData->m_hasPublicIdentifier = true;
-            append(m_doctypeData->m_publicIdentifier, token.publicIdentifier());
+            append(m_doctypeData->m_publicIdentifier, token.publicIdentifier().asString());
             m_doctypeData->m_hasSystemIdentifier = true;
             append(m_doctypeData->m_systemIdentifier, token.systemIdentifier());
             m_doctypeData->m_forceQuirks = token.doctypeForcesQuirks();
@@ -202,7 +176,7 @@ private:
         case HTMLToken::StartTag:
             m_attributes.reserveInitialCapacity(token.attributes().size());
             for (Vector<CompactHTMLToken::Attribute>::const_iterator it = token.attributes().begin(); it != token.attributes().end(); ++it) {
-                QualifiedName name(nullAtom, it->name, nullAtom);
+                QualifiedName name(nullAtom, it->name.asString(), nullAtom);
                 // FIXME: This is N^2 for the number of attributes.
                 if (!findAttributeInVector(m_attributes, name))
                     m_attributes.append(Attribute(name, it->value));
@@ -210,16 +184,23 @@ private:
             // Fall through!
         case HTMLToken::EndTag:
             m_selfClosing = token.selfClosing();
-            m_name = token.data();
+            m_name = token.data().asString();
             break;
         case HTMLToken::Comment:
-            m_data = token.data();
+            m_data = token.data().asString();
             break;
-        case HTMLToken::Character:
-            m_externalCharacters = token.data().characters();
-            m_externalCharactersLength = token.data().length();
+        case HTMLToken::Character: {
+            const String& string = token.data().asString();
+            m_externalCharacters = string.characters();
+            m_externalCharactersLength = string.length();
             m_isAll8BitData = token.isAll8BitData();
+            // FIXME: We would like a stronger ASSERT here:
+            // ASSERT(string.is8Bit() == token.isAll8BitData());
+            // but currently that fires, likely due to bugs in HTMLTokenizer
+            // not setting isAll8BitData in all the times it could.
+            ASSERT(!token.isAll8BitData() || string.is8Bit());
             break;
+        }
         }
     }
 
@@ -246,6 +227,7 @@ private:
         ASSERT(usesName());
     }
 
+private:
     HTMLToken::Type m_type;
 
     void initializeAttributes(const HTMLToken::AttributeList& attributes);

@@ -24,6 +24,7 @@ set(JavaScriptCore_INCLUDE_DIRECTORIES
 )
 
 set(JavaScriptCore_SOURCES
+    API/JSAPIWrapperObject.cpp
     API/JSBase.cpp
     API/JSCallbackConstructor.cpp
     API/JSCallbackFunction.cpp
@@ -77,6 +78,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGArgumentsSimplificationPhase.cpp
     dfg/DFGArrayMode.cpp
     dfg/DFGAssemblyHelpers.cpp
+    dfg/DFGBackwardsPropagationPhase.cpp
     dfg/DFGByteCodeParser.cpp
     dfg/DFGCapabilities.cpp
     dfg/DFGCommon.cpp
@@ -85,6 +87,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGCPSRethreadingPhase.cpp
     dfg/DFGConstantFoldingPhase.cpp
     dfg/DFGCSEPhase.cpp
+    dfg/DFGDCEPhase.cpp
     dfg/DFGDisassembler.cpp
     dfg/DFGDominators.cpp
     dfg/DFGDriver.cpp
@@ -280,6 +283,7 @@ set(JavaScriptCore_SOURCES
     runtime/PropertyDescriptor.cpp
     runtime/PropertyNameArray.cpp
     runtime/PropertySlot.cpp
+    runtime/PropertyTable.cpp
     runtime/PrototypeMap.cpp
     runtime/RegExp.cpp
     runtime/RegExpCache.cpp
@@ -325,7 +329,6 @@ set(JavaScriptCore_LUT_FILES
     runtime/NumberConstructor.cpp
     runtime/NumberPrototype.cpp
     runtime/ObjectConstructor.cpp
-    runtime/ObjectPrototype.cpp
     runtime/RegExpConstructor.cpp
     runtime/RegExpObject.cpp
     runtime/RegExpPrototype.cpp
@@ -352,7 +355,7 @@ if (ENABLE_LLINT)
     )
 
     set(OFFLINE_ASM
-        offlineasm/armv7.rb
+        offlineasm/arm.rb
         offlineasm/ast.rb
         offlineasm/backends.rb
         offlineasm/cloop.rb

@@ -539,8 +539,11 @@ void CodeBlock::dumpBytecode(PrintStream& out)
         static_cast<unsigned long>(instructions().size()),
         static_cast<unsigned long>(instructions().size() * sizeof(Instruction)),
         m_numParameters, m_numCalleeRegisters, m_numVars);
-    if (symbolTable() && symbolTable()->captureCount())
-        out.printf("; %d captured var(s)", symbolTable()->captureCount());
+    if (symbolTable() && symbolTable()->captureCount()) {
+        out.printf(
+            "; %d captured var(s) (from r%d to r%d, inclusive)",
+            symbolTable()->captureCount(), symbolTable()->captureStart(), symbolTable()->captureEnd() - 1);
+    }
     if (usesArguments()) {
         out.printf(
             "; uses arguments, in r%d, r%d",
@@ -978,6 +981,21 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int resolveInfo = (++it)->u.operand;
             out.printf("[%4d] resolve\t\t %s, %s, %d", location, registerName(exec, r0).data(), idName(id0, m_identifiers[id0]).data(), resolveInfo);
             dumpValueProfiling(out, it, hasPrintedProfiling);
+            break;
+        }
+        case op_get_scoped_var: {
+            int r0 = (++it)->u.operand;
+            int index = (++it)->u.operand;
+            int skipLevels = (++it)->u.operand;
+            out.printf("[%4d] get_scoped_var\t %s, %d, %d", location, registerName(exec, r0).data(), index, skipLevels);
+            dumpValueProfiling(out, it, hasPrintedProfiling);
+            break;
+        }
+        case op_put_scoped_var: {
+            int index = (++it)->u.operand;
+            int skipLevels = (++it)->u.operand;
+            int r0 = (++it)->u.operand;
+            out.printf("[%4d] put_scoped_var\t %d, %d, %s", location, index, skipLevels, registerName(exec, r0).data());
             break;
         }
         case op_init_global_const_nop: {
@@ -1644,8 +1662,10 @@ CodeBlock::CodeBlock(CopyParsedBlockTag, CodeBlock& other)
     , m_argumentsRegister(other.m_argumentsRegister)
     , m_activationRegister(other.m_activationRegister)
     , m_isStrictMode(other.m_isStrictMode)
+    , m_needsActivation(other.m_needsActivation)
     , m_source(other.m_source)
     , m_sourceOffset(other.m_sourceOffset)
+    , m_codeType(other.m_codeType)
     , m_identifiers(other.m_identifiers)
     , m_constantRegisters(other.m_constantRegisters)
     , m_functionDecls(other.m_functionDecls)
@@ -1687,8 +1707,10 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
     , m_argumentsRegister(unlinkedCodeBlock->argumentsRegister())
     , m_activationRegister(unlinkedCodeBlock->activationRegister())
     , m_isStrictMode(unlinkedCodeBlock->isStrictMode())
+    , m_needsActivation(unlinkedCodeBlock->needsFullScopeChain())
     , m_source(sourceProvider)
     , m_sourceOffset(sourceOffset)
+    , m_codeType(unlinkedCodeBlock->codeType())
     , m_alternative(alternative)
     , m_osrExitCounter(0)
     , m_optimizationDelayCounter(0)
@@ -1704,7 +1726,8 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 #endif
     setIdentifiers(unlinkedCodeBlock->identifiers());
     setConstantRegisters(unlinkedCodeBlock->constantRegisters());
-
+    if (unlinkedCodeBlock->usesGlobalObject())
+        m_constantRegisters[unlinkedCodeBlock->globalObjectRegister()].set(*m_globalData, ownerExecutable, globalObject);
     m_functionDecls.grow(unlinkedCodeBlock->numberOfFunctionDecls());
     for (size_t count = unlinkedCodeBlock->numberOfFunctionDecls(), i = 0; i < count; ++i) {
         UnlinkedFunctionExecutable* unlinkedExecutable = unlinkedCodeBlock->functionDecl(i);
@@ -1917,6 +1940,16 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
             instructions[i + opLength - 1] = objectAllocationProfile;
             objectAllocationProfile->initialize(*globalData(),
                 m_ownerExecutable.get(), m_globalObject->objectPrototype(), inferredInlineCapacity);
+            break;
+        }
+
+        case op_get_scoped_var: {
+#if ENABLE(DFG_JIT)
+            ValueProfile* profile = &m_valueProfiles[pc[i + opLength - 1].u.operand];
+            ASSERT(profile->m_bytecodeOffset == -1);
+            profile->m_bytecodeOffset = i;
+            instructions[i + opLength - 1] = profile;
+#endif
             break;
         }
 
@@ -2301,7 +2334,7 @@ void CodeBlock::finalizeUnconditionally()
         alternative()->optimizeAfterWarmUp();
         
         if (DFG::shouldShowDisassembly()) {
-            dataLog(*this, "will be jettisoned because of the following dead references:\n");
+            dataLog(*this, " will be jettisoned because of the following dead references:\n");
             for (unsigned i = 0; i < m_dfgData->transitions.size(); ++i) {
                 WeakReferenceTransition& transition = m_dfgData->transitions[i];
                 JSCell* origin = transition.m_codeOrigin.get();

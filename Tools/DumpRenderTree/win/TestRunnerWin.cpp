@@ -160,39 +160,6 @@ void TestRunner::keepWebHistory()
     history->setOptionalSharedHistory(sharedHistory.get());
 }
 
-JSValueRef TestRunner::computedStyleIncludingVisitedInfo(JSContextRef context, JSValueRef value)
-{
-    // FIXME: Implement this.
-    return JSValueMakeUndefined(context);
-}
-
-JSRetainPtr<JSStringRef> TestRunner::markerTextForListItem(JSContextRef context, JSValueRef nodeObject) const
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return 0;
-
-    COMPtr<IWebViewPrivate> webViewPrivate(Query, webView);
-    if (!webViewPrivate)
-        return 0;
-
-    COMPtr<IDOMElement> element;
-    if (FAILED(webViewPrivate->elementFromJS(context, nodeObject, &element)))
-        return 0;
-
-    COMPtr<IDOMElementPrivate> elementPrivate(Query, element);
-    if (!elementPrivate)
-        return 0;
-
-    BSTR textBSTR = 0;
-    if (FAILED(elementPrivate->markerTextForListItem(&textBSTR)))
-        return 0;
-
-    JSRetainPtr<JSStringRef> markerText(Adopt, JSStringCreateWithBSTR(textBSTR));
-    SysFreeString(textBSTR);
-    return markerText;
-}
-
 void TestRunner::waitForPolicyDelegate()
 {
     COMPtr<IWebView> webView;
@@ -756,32 +723,6 @@ void TestRunner::setWindowIsKey(bool flag)
     ::SendMessage(webViewWindow, flag ? WM_SETFOCUS : WM_KILLFOCUS, (WPARAM)::GetDesktopWindow(), 0);
 }
 
-void TestRunner::setSmartInsertDeleteEnabled(bool flag)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebViewEditing> viewEditing;
-    if (FAILED(webView->QueryInterface(&viewEditing)))
-        return;
-
-    viewEditing->setSmartInsertDeleteEnabled(flag ? TRUE : FALSE);
-}
-
-void TestRunner::setSelectTrailingWhitespaceEnabled(bool flag)
-{
-    COMPtr<IWebView> webView;
-    if (FAILED(frame->webView(&webView)))
-        return;
-
-    COMPtr<IWebViewEditing> viewEditing;
-    if (FAILED(webView->QueryInterface(&viewEditing)))
-        return;
-
-    viewEditing->setSelectTrailingWhitespaceEnabled(flag ? TRUE : FALSE);
-}
-
 static const CFTimeInterval waitToDumpWatchdogInterval = 30.0;
 
 static void CALLBACK waitUntilDoneWatchdogFired(HWND, UINT, UINT_PTR, DWORD)
@@ -799,32 +740,6 @@ void TestRunner::setWaitToDump(bool waitUntilDone)
 int TestRunner::windowCount()
 {
     return openWindows().size();
-}
-
-bool TestRunner::elementDoesAutoCompleteForElementWithId(JSStringRef id)
-{
-    COMPtr<IDOMDocument> document;
-    if (FAILED(frame->DOMDocument(&document)))
-        return false;
-
-    wstring idWstring = jsStringRefToWString(id);
-    BSTR idBSTR = SysAllocStringLen((OLECHAR*)idWstring.c_str(), idWstring.length());
-    COMPtr<IDOMElement> element;
-    HRESULT result = document->getElementById(idBSTR, &element);
-    SysFreeString(idBSTR);
-
-    if (FAILED(result))
-        return false;
-
-    COMPtr<IWebFramePrivate> framePrivate(Query, frame);
-    if (!framePrivate)
-        return false;
-
-    BOOL autoCompletes;
-    if (FAILED(framePrivate->elementDoesAutoComplete(element.get(), &autoCompletes)))
-        return false;
-
-    return autoCompletes;
 }
 
 void TestRunner::execCommand(JSStringRef name, JSStringRef value)

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,9 +47,13 @@
 #include "ExceptionCode.h"
 #include "FormController.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameView.h"
 #include "HTMLContentElement.h"
 #include "HTMLInputElement.h"
+#if ENABLE(VIDEO)
+#include "HTMLMediaElement.h"
+#endif
 #include "HTMLNames.h"
 #include "HTMLTextAreaElement.h"
 #include "HistoryItem.h"
@@ -160,7 +165,6 @@ public:
     virtual void detachWindow() OVERRIDE { }
 
     virtual String localizedStringsURL() OVERRIDE { return String(); }
-    virtual String hiddenPanels() OVERRIDE { return String(); }
 
     virtual void bringToFront() OVERRIDE { }
     virtual void closeWindow() OVERRIDE { }
@@ -281,7 +285,7 @@ Internals::Internals(Document* document)
 
 Document* Internals::contextDocument() const
 {
-    return static_cast<Document*>(scriptExecutionContext());
+    return toDocument(scriptExecutionContext());
 }
 
 Frame* Internals::frame() const
@@ -657,6 +661,17 @@ size_t Internals::numberOfScopedHTMLStyleChildren(const Node* scope, ExceptionCo
 
     ec = INVALID_ACCESS_ERR;
     return 0;
+}
+
+PassRefPtr<CSSComputedStyleDeclaration> Internals::computedStyleIncludingVisitedInfo(Node* node, ExceptionCode& ec) const
+{
+    if (!node) {
+        ec = INVALID_ACCESS_ERR;
+        return 0;
+    }
+
+    bool allowVisitedStyle = true;
+    return CSSComputedStyleDeclaration::create(node, allowVisitedStyle);
 }
 
 Internals::ShadowRootIfShadowDOMEnabledOrNode* Internals::ensureShadowRoot(Element* host, ExceptionCode& ec)
@@ -1088,6 +1103,20 @@ bool Internals::wasLastChangeUserEdit(Element* textField, ExceptionCode& ec)
     // FIXME: We should be using hasTagName instead but Windows port doesn't link QualifiedNames properly.
     if (textField->tagName() == "TEXTAREA")
         return static_cast<HTMLTextAreaElement*>(textField)->lastChangeWasUserEdit();
+
+    ec = INVALID_NODE_TYPE_ERR;
+    return false;
+}
+
+bool Internals::elementShouldAutoComplete(Element* element, ExceptionCode& ec)
+{
+    if (!element) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    if (HTMLInputElement* inputElement = element->toInputElement())
+        return inputElement->shouldAutocomplete();
 
     ec = INVALID_NODE_TYPE_ERR;
     return false;
@@ -1648,6 +1677,8 @@ String Internals::layerTreeAsText(Document* document, unsigned flags, ExceptionC
         layerTreeFlags |= LayerTreeFlagsIncludeTileCaches;
     if (flags & LAYER_TREE_INCLUDES_REPAINT_RECTS)
         layerTreeFlags |= LayerTreeFlagsIncludeRepaintRects;
+    if (flags & LAYER_TREE_INCLUDES_PAINTING_PHASES)
+        layerTreeFlags |= LayerTreeFlagsIncludePaintingPhases;
 
     return document->frame()->layerTreeAsText(layerTreeFlags);
 }
@@ -1754,9 +1785,9 @@ int Internals::pageNumber(Element* element, float pageWidth, float pageHeight)
     return PrintContext::pageNumberForElement(element, FloatSize(pageWidth, pageHeight));
 }
 
-Vector<String> Internals::iconURLs(Document* document) const
+Vector<String> Internals::iconURLs(Document* document, int iconTypesMask) const
 {
-    Vector<IconURL> iconURLs = document->iconURLs();
+    Vector<IconURL> iconURLs = document->iconURLs(iconTypesMask);
     Vector<String> array;
 
     Vector<IconURL>::const_iterator iter(iconURLs.begin());
@@ -1764,6 +1795,16 @@ Vector<String> Internals::iconURLs(Document* document) const
         array.append(iter->m_iconURL.string());
 
     return array;
+}
+
+Vector<String> Internals::shortcutIconURLs(Document* document) const
+{
+    return iconURLs(document, Favicon);
+}
+
+Vector<String> Internals::allIconURLs(Document* document) const
+{
+    return iconURLs(document, Favicon | TouchIcon | TouchPrecomposedIcon);
 }
 
 int Internals::numberOfPages(float pageWidth, float pageHeight)
@@ -2003,10 +2044,45 @@ void Internals::setUsesOverlayScrollbars(bool enabled)
     WebCore::Settings::setUsesOverlayScrollbars(enabled);
 }
 
+void Internals::forceReload(bool endToEnd)
+{
+    frame()->loader()->reload(endToEnd);
+}
+
 #if ENABLE(ENCRYPTED_MEDIA_V2)
 void Internals::initializeMockCDM()
 {
     CDM::registerCDMFactory(MockCDM::create, MockCDM::supportsKeySytem);
+}
+#endif
+
+String Internals::markerTextForListItem(Element* element, ExceptionCode& ec)
+{
+    if (!element) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+    return WebCore::markerTextForListItem(element);
+}
+
+String Internals::getImageSourceURL(Element* element, ExceptionCode& ec)
+{
+    if (!element) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+    return element->imageSourceURL();
+}
+
+#if ENABLE(VIDEO)
+void Internals::simulateAudioInterruption(Node* node)
+{
+#if USE(GSTREAMER)
+    HTMLMediaElement* element = toMediaElement(node);
+    element->player()->simulateAudioInterruption();
+#else
+    UNUSED_PARAM(node);
+#endif
 }
 #endif
 

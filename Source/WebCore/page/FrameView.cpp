@@ -38,6 +38,7 @@
 #include "FloatRect.h"
 #include "FocusController.h"
 #include "FontCache.h"
+#include "FontLoader.h"
 #include "Frame.h"
 #include "FrameActionScheduler.h"
 #include "FrameLoader.h"
@@ -863,6 +864,32 @@ GraphicsLayer* FrameView::layerForOverhangAreas() const
     if (!renderView)
         return 0;
     return renderView->compositor()->layerForOverhangAreas();
+}
+
+GraphicsLayer* FrameView::setWantsLayerForTopOverHangArea(bool wantsLayer) const
+{
+    RenderView* renderView = this->renderView();
+    if (!renderView)
+        return 0;
+
+#if USE(ACCELERATED_COMPOSITING)
+    return renderView->compositor()->updateLayerForTopOverhangArea(wantsLayer);
+#else
+    return 0;
+#endif
+}
+
+GraphicsLayer* FrameView::setWantsLayerForBottomOverHangArea(bool wantsLayer) const
+{
+    RenderView* renderView = this->renderView();
+    if (!renderView)
+        return 0;
+
+#if USE(ACCELERATED_COMPOSITING)
+    return renderView->compositor()->updateLayerForBottomOverhangArea(wantsLayer);
+#else
+    return 0;
+#endif
 }
 #endif
 
@@ -1768,7 +1795,7 @@ bool FrameView::scrollToAnchor(const String& name)
 
 #if ENABLE(SVG)
     if (m_frame->document()->isSVGDocument()) {
-        if (SVGSVGElement* svg = static_cast<SVGDocument*>(m_frame->document())->rootElement()) {
+        if (SVGSVGElement* svg = toSVGDocument(m_frame->document())->rootElement()) {
             svg->setupInitialView(name, anchorNode);
             if (!anchorNode)
                 return true;
@@ -2494,7 +2521,7 @@ void FrameView::scrollToAnchor()
 void FrameView::updateWidget(RenderObject* object)
 {
     ASSERT(!object->node() || object->node()->isElementNode());
-    Element* ownerElement = static_cast<Element*>(object->node());
+    Element* ownerElement = toElement(object->node());
     // The object may have already been destroyed (thus node cleared),
     // but FrameView holds a manual ref, so it won't have been deleted.
     ASSERT(m_widgetUpdateSet->contains(object));
@@ -2617,6 +2644,10 @@ void FrameView::performPostLayoutTasks()
     }
 
     m_frame->loader()->didLayout(milestonesAchieved);
+#if ENABLE(FONT_LOAD_EVENTS)
+    if (RuntimeEnabledFeatures::fontLoadEventsEnabled())
+        m_frame->document()->fontloader()->didLayout();
+#endif
     
     // FIXME: We should consider adding DidLayout as a LayoutMilestone. That would let us merge this
     // with didLayout(LayoutMilestones).

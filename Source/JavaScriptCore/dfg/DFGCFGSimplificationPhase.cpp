@@ -134,14 +134,14 @@ public:
                         
                             ASSERT(block->last()->isTerminal());
                             CodeOrigin boundaryCodeOrigin = block->last()->codeOrigin;
-                            block->last()->setOpAndDefaultFlags(Phantom);
+                            block->last()->convertToPhantom();
                             ASSERT(block->last()->refCount() == 1);
                         
                             jettisonBlock(blockIndex, notTakenBlockIndex, boundaryCodeOrigin);
                         
                             block->appendNode(
-                                m_graph, DontRefChildren, DontRefNode, SpecNone, Jump,
-                                boundaryCodeOrigin, OpInfo(takenBlockIndex));
+                                m_graph, SpecNone, Jump, boundaryCodeOrigin,
+                                OpInfo(takenBlockIndex));
                         }
                         innerChanged = outerChanged = true;
                         break;
@@ -167,12 +167,12 @@ public:
                             Node* branch = block->last();
                             ASSERT(branch->isTerminal());
                             ASSERT(branch->op() == Branch);
-                            branch->setOpAndDefaultFlags(Phantom);
+                            branch->convertToPhantom();
                             ASSERT(branch->refCount() == 1);
                             
                             block->appendNode(
-                                m_graph, DontRefChildren, DontRefNode, SpecNone, Jump,
-                                branch->codeOrigin, OpInfo(targetBlockIndex));
+                                m_graph, SpecNone, Jump, branch->codeOrigin,
+                                OpInfo(targetBlockIndex));
                         }
                         innerChanged = outerChanged = true;
                         break;
@@ -269,10 +269,8 @@ private:
             return;
         if (livenessNode->variableAccessData()->isCaptured())
             return;
-        if (!livenessNode->shouldGenerate())
-            return;
         block->appendNode(
-            m_graph, DontRefChildren, DontRefNode, SpecNone, PhantomLocal, codeOrigin,
+            m_graph, SpecNone, PhantomLocal, codeOrigin, 
             OpInfo(livenessNode->variableAccessData()));
     }
     
@@ -321,7 +319,7 @@ private:
         // really remove it; we actually turn it into a Phantom.
         ASSERT(firstBlock->last()->isTerminal());
         CodeOrigin boundaryCodeOrigin = firstBlock->last()->codeOrigin;
-        firstBlock->last()->setOpAndDefaultFlags(Phantom);
+        firstBlock->last()->convertToPhantom();
         ASSERT(firstBlock->last()->refCount() == 1);
         
         if (jettisonedBlockIndex != NoBlock) {

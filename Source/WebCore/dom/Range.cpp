@@ -45,9 +45,9 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "VisiblePosition.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
 #include "markup.h"
-#include "visible_units.h"
 #include <stdio.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/Vector.h>
@@ -1918,7 +1918,7 @@ void Range::getBorderAndTextQuads(Vector<FloatQuad>& quads) const
     for (Node* node = firstNode(); node != stopNode; node = NodeTraversal::next(node)) {
         if (node->isElementNode()) {
             if (!nodeSet.contains(node->parentNode())) {
-                if (RenderBoxModelObject* renderBoxModelObject = static_cast<Element*>(node)->renderBoxModelObject()) {
+                if (RenderBoxModelObject* renderBoxModelObject = toElement(node)->renderBoxModelObject()) {
                     Vector<FloatQuad> elementQuads;
                     renderBoxModelObject->absoluteQuads(elementQuads);
                     m_ownerDocument->adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(elementQuads, renderBoxModelObject);

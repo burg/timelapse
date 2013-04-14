@@ -36,6 +36,8 @@
 #include "HTMLScriptRunnerHost.h"
 #include "HTMLSourceTracker.h"
 #include "HTMLToken.h"
+#include "HTMLTokenizer.h"
+#include "HTMLTreeBuilderSimulator.h"
 #include "ScriptableDocumentParser.h"
 #include "SegmentedString.h"
 #include "Timer.h"
@@ -54,7 +56,6 @@ class Document;
 class DocumentFragment;
 class HTMLDocument;
 class HTMLParserScheduler;
-class HTMLTokenizer;
 class HTMLScriptRunner;
 class HTMLTreeBuilder;
 class HTMLResourcePreloader;
@@ -89,6 +90,9 @@ public:
     struct ParsedChunk {
         OwnPtr<CompactHTMLTokenStream> tokens;
         PreloadRequestStream preloads;
+        XSSInfoStream xssInfos;
+        HTMLTokenizer::State tokenizerState;
+        HTMLTreeBuilderSimulator::State treeBuilderState;
         HTMLInputCheckpoint inputCheckpoint;
         TokenPreloadScannerCheckpoint preloadScannerCheckpoint;
     };
@@ -97,7 +101,7 @@ public:
 
 protected:
     virtual void insert(const SegmentedString&) OVERRIDE;
-    virtual void append(const SegmentedString&) OVERRIDE;
+    virtual void append(PassRefPtr<StringImpl>) OVERRIDE;
     virtual void finish() OVERRIDE;
 
     HTMLDocumentParser(HTMLDocument*, bool reportErrors);
@@ -139,8 +143,8 @@ private:
 #if ENABLE(THREADED_HTML_PARSER)
     void startBackgroundParser();
     void stopBackgroundParser();
-    void checkForSpeculationFailure();
-    void didFailSpeculation(PassOwnPtr<HTMLToken>, PassOwnPtr<HTMLTokenizer>);
+    void validateSpeculations(PassOwnPtr<ParsedChunk> lastChunk);
+    void discardSpeculationsAndResumeFrom(PassOwnPtr<ParsedChunk> lastChunk, PassOwnPtr<HTMLToken>, PassOwnPtr<HTMLTokenizer>);
     void processParsedChunkFromBackgroundParser(PassOwnPtr<ParsedChunk>);
     void pumpPendingSpeculations();
 #endif
@@ -192,7 +196,9 @@ private:
     XSSAuditorDelegate m_xssAuditorDelegate;
 
 #if ENABLE(THREADED_HTML_PARSER)
-    OwnPtr<ParsedChunk> m_currentChunk;
+    // FIXME: m_lastChunkBeforeScript, m_tokenizer, m_token, and m_input should be combined into a single state object
+    // so they can be set and cleared together and passed between threads together.
+    OwnPtr<ParsedChunk> m_lastChunkBeforeScript;
     Deque<OwnPtr<ParsedChunk> > m_speculations;
     WeakPtrFactory<HTMLDocumentParser> m_weakFactory;
     WeakPtr<BackgroundHTMLParser> m_backgroundParser;

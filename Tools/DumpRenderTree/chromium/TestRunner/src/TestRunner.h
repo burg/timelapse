@@ -118,8 +118,6 @@ public:
     bool policyDelegateIsPermissive() const;
     bool policyDelegateShouldNotifyDone() const;
     bool shouldInterceptPostMessage() const;
-    bool isSmartInsertDeleteEnabled() const;
-    bool isSelectTrailingWhitespaceEnabled() const;
     bool shouldDumpResourcePriorities() const;
 #if ENABLE_NOTIFICATIONS
     WebKit::WebNotificationPresenter* notificationPresenter() const;
@@ -214,7 +212,6 @@ private:
     // Checks if an internal command is currently available.
     void isCommandEnabled(const CppArgumentList&, CppVariant*);
 
-    void elementDoesAutoCompleteForElementWithId(const CppArgumentList&, CppVariant*);
     void callShouldCloseOnWebView(const CppArgumentList&, CppVariant*);
     void setDomainRelaxationForbiddenForURLScheme(const CppArgumentList&, CppVariant*);
     void evaluateScriptInIsolatedWorldAndReturnValue(const CppArgumentList&, CppVariant*);
@@ -239,7 +236,6 @@ private:
 
     void startSpeechInput(const CppArgumentList&, CppVariant*);
 
-    void markerTextForListItem(const CppArgumentList&, CppVariant*);
     void findString(const CppArgumentList&, CppVariant*);
 
     // Expects the first argument to be an input element and the second argument to be a string value.
@@ -271,11 +267,6 @@ private:
     // length to retrieve.
     void textSurroundingNode(const CppArgumentList&, CppVariant*);
 
-    // Enable or disable smart insert/delete. This is enabled by default.
-    void setSmartInsertDeleteEnabled(const CppArgumentList&, CppVariant*);
-
-    // Enable or disable trailing whitespace selection on double click.
-    void setSelectTrailingWhitespaceEnabled(const CppArgumentList&, CppVariant*);
     void enableAutoResizeMode(const CppArgumentList&, CppVariant*);
     void disableAutoResizeMode(const CppArgumentList&, CppVariant*);
 
@@ -525,7 +516,6 @@ private:
     void didNotAcquirePointerLockInternal();
     void didLosePointerLockInternal();
 
-    bool elementDoesAutoCompleteForElementWithId(const WebKit::WebString&);
     bool cppVariantToBool(const CppVariant&);
     int32_t cppVariantToInt32(const CppVariant&);
     WebKit::WebString cppVariantToWebString(const CppVariant&);
@@ -670,10 +660,6 @@ private:
     bool m_shouldBlockRedirects;
 
     bool m_willSendRequestShouldReturnNull;
-
-    bool m_smartInsertDeleteEnabled;
-
-    bool m_selectTrailingWhitespaceEnabled;
 
     bool m_shouldDumpResourcePriorities;
 

@@ -49,6 +49,7 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameView.h"
 #include "GeolocationController.h"
 #include "GeolocationError.h"
@@ -463,7 +464,7 @@ void InspectorPageAgent::reload(ErrorString*, const bool* const optionalIgnoreCa
 
 void InspectorPageAgent::navigate(ErrorString*, const String& url)
 {
-    UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
+    UserGestureIndicator indicator(DefinitelyProcessingNewUserGesture);
     Frame* frame = m_page->mainFrame();
     frame->loader()->changeLocation(frame->document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
 }
@@ -851,11 +852,11 @@ void InspectorPageAgent::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWor
         for (InspectorObject::const_iterator it = scripts->begin(); it != end; ++it) {
             String scriptText;
             if (it->value->asString(&scriptText))
-                m_injectedScriptManager->injectScript(scriptText, mainWorldScriptState(frame));
+                frame->script()->executeScript(scriptText);
         }
     }
     if (!m_scriptToEvaluateOnLoadOnce.isEmpty())
-        m_injectedScriptManager->injectScript(m_scriptToEvaluateOnLoadOnce, mainWorldScriptState(frame));
+        frame->script()->executeScript(m_scriptToEvaluateOnLoadOnce);
 }
 
 void InspectorPageAgent::domContentEventFired()
@@ -932,15 +933,9 @@ String InspectorPageAgent::loaderId(DocumentLoader* loader)
 
 Frame* InspectorPageAgent::findFrameWithSecurityOrigin(const String& originRawString)
 {
-    RefPtr<SecurityOrigin> securityOriginPtr = SecurityOrigin::createFromString(originRawString);
-    SecurityOrigin* securityOrigin = securityOriginPtr.get();
-    bool isLocal = securityOrigin->isLocal();
     for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         RefPtr<SecurityOrigin> documentOrigin = frame->document()->securityOrigin();
-        // Emulate the !enforceFilePathSeparation for security origins.
-        if (isLocal && documentOrigin->isLocal())
-            return frame;
-        if (documentOrigin->equal(securityOrigin))
+        if (documentOrigin->toRawString() == originRawString)
             return frame;
     }
     return 0;

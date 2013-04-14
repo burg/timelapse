@@ -53,7 +53,7 @@ v8::Handle<v8::Value> V8MessageEvent::dataAttrGetterCustom(v8::Local<v8::String>
         if (scriptValue.hasNoValue())
             result = v8Null(info.GetIsolate());
         else
-            result = v8::Local<v8::Value>::New(scriptValue.v8Value());
+            result = scriptValue.v8Value();
         break;
     }
 
@@ -116,7 +116,7 @@ v8::Handle<v8::Value> V8MessageEvent::initMessageEventMethodCustom(const v8::Arg
     DOMWindow* sourceArg = 0;
     if (args[6]->IsObject()) {
         v8::Handle<v8::Object> wrapper = v8::Handle<v8::Object>::Cast(args[6]);
-        v8::Handle<v8::Object> window = wrapper->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(args.GetIsolate()));
+        v8::Handle<v8::Object> window = wrapper->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(args.GetIsolate(), worldTypeInMainThread(args.GetIsolate())));
         if (!window.IsEmpty())
             sourceArg = V8DOMWindow::toNative(window);
     }

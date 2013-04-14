@@ -217,9 +217,31 @@ enum UnificationState {
     GloballyUnified
 };
 
+// Describes how reference counts in the graph behave.
+enum RefCountState {
+    // Everything has refCount() == 1.
+    EverythingIsLive,
+
+    // Set after DCE has run.
+    ExactRefCount
+};
+
 enum OperandSpeculationMode { AutomaticOperandSpeculation, ManualOperandSpeculation };
 
 enum SpeculationDirection { ForwardSpeculation, BackwardSpeculation };
+
+enum ProofStatus { NeedsCheck, IsProved };
+
+inline bool isProved(ProofStatus proofStatus)
+{
+    ASSERT(proofStatus == IsProved || proofStatus == NeedsCheck);
+    return proofStatus == IsProved;
+}
+
+inline ProofStatus proofStatusForIsProved(bool isProved)
+{
+    return isProved ? IsProved : NeedsCheck;
+}
 
 template<typename T, typename U>
 bool checkAndSet(T& left, U right)
@@ -237,6 +259,8 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::DFG::OptimizationFixpointState);
 void printInternal(PrintStream&, JSC::DFG::GraphForm);
 void printInternal(PrintStream&, JSC::DFG::UnificationState);
+void printInternal(PrintStream&, JSC::DFG::RefCountState);
+void printInternal(PrintStream&, JSC::DFG::ProofStatus);
 
 } // namespace WTF
 

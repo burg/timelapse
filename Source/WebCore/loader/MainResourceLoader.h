@@ -37,7 +37,7 @@
 #include <wtf/Forward.h>
 
 #if HAVE(RUNLOOP_TIMER)
-#include "RunLoopTimer.h"
+#include <wtf/RunLoopTimer.h>
 #else
 #include "Timer.h"
 #endif
@@ -46,10 +46,6 @@ namespace WebCore {
 
 class FormState;
 class ResourceRequest;
-    
-#if USE(CONTENT_FILTERING)
-class ContentFilter;
-#endif
 
 class MainResourceLoader : public RefCounted<MainResourceLoader>, public CachedRawResourceClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -71,6 +67,10 @@ public:
 #else
     typedef Timer<MainResourceLoader> MainResourceLoaderTimer;
 #endif
+
+    CachedRawResource* cachedMainResource() { return m_resource.get(); }
+    unsigned long identifierForLoadWithoutResourceLoader() const { return m_identifierForLoadWithoutResourceLoader; }
+    void clearIdentifierForLoadWithoutResourceLoader() { m_identifierForLoadWithoutResourceLoader = 0; }
 
     unsigned long identifier() const;
     bool isLoadingMultipartContent() const { return m_loadingMultipartContent; }
@@ -127,15 +127,10 @@ private:
 
     bool m_loadingMultipartContent;
     bool m_waitingForContentPolicy;
-    double m_timeOfLastDataReceived;
 #if ENABLE(TIMELAPSE)
     int m_loaderId; // used by Timelapse to name resource loaders
 #endif
     unsigned long m_identifierForLoadWithoutResourceLoader;
-
-#if USE(CONTENT_FILTERING)
-    RefPtr<ContentFilter> m_contentFilter;
-#endif
 };
 
 }

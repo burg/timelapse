@@ -29,19 +29,19 @@
 #if ENABLE(NETWORK_PROCESS)
 
 #include "MessageSender.h"
-#include "NetworkConnectionToWebProcess.h"
 #include "SchedulableLoader.h"
 #include <WebCore/ResourceHandleClient.h>
 #include <WebCore/ResourceLoaderOptions.h>
-#include <WebCore/ResourceRequest.h>
 
 namespace WebCore {
 class ResourceBuffer;
 class ResourceHandle;
+class ResourceRequest;
 }
 
 namespace WebKit {
 
+class NetworkConnectionToWebProcess;
 class RemoteNetworkingContext;
 
 class NetworkResourceLoader : public SchedulableLoader, public WebCore::ResourceHandleClient, public CoreIPC::MessageSender<NetworkResourceLoader> {
@@ -57,7 +57,8 @@ public:
     CoreIPC::Connection* connection() const;
     uint64_t destinationID() const;
     
-    virtual void start();
+    virtual void start() OVERRIDE;
+    virtual void connectionToWebProcessDidClose() OVERRIDE;
         
     // ResourceHandleClient methods
     virtual void willSendRequest(WebCore::ResourceHandle*, WebCore::ResourceRequest&, const WebCore::ResourceResponse& /*redirectResponse*/) OVERRIDE;
@@ -91,17 +92,16 @@ public:
     virtual void willStopBufferingData(WebCore::ResourceHandle*, const char*, int) OVERRIDE;
 #endif // PLATFORM(MAC)
 
-#if ENABLE(BLOB)
-    virtual WebCore::AsyncFileStream* createAsyncFileStream(WebCore::FileStreamClient*) OVERRIDE;
-#endif
-
 private:
     NetworkResourceLoader(const NetworkResourceLoadParameters&, NetworkConnectionToWebProcess*);
 
-    void scheduleStopOnMainThread();
-    static void performStops(void*);
+    void scheduleCleanupOnMainThread();
+    static void performCleanups(void*);
+    void cleanup();
 
-    void resourceHandleStopped();
+    template<typename U> void sendAbortingOnFailure(const U& message);
+    template<typename U> bool sendSyncAbortingOnFailure(const U& message, const typename U::Reply& reply);
+    void abortInProgressLoad();
 
     RefPtr<RemoteNetworkingContext> m_networkingContext;
     RefPtr<WebCore::ResourceHandle> m_handle;    

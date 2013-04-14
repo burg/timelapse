@@ -92,12 +92,7 @@ bool RenderView::hitTest(const HitTestRequest& request, HitTestResult& result)
 
 bool RenderView::hitTest(const HitTestRequest& request, const HitTestLocation& location, HitTestResult& result)
 {
-    bool inside = layer()->hitTest(request, location, result);
-
-    // Next set up the correct :hover/:active state along the new chain.
-    document()->updateHoverActiveState(request, result);
-
-    return inside;
+    return layer()->hitTest(request, location, result);
 }
 
 void RenderView::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit, LogicalExtentComputedValues& computedValues) const
@@ -162,8 +157,8 @@ void RenderView::addChild(RenderObject* newChild, RenderObject* beforeChild)
     // up regions in the parent document during layout.
     if (newChild && !newChild->isRenderFlowThread()) {
         RenderBox* seamlessBox = enclosingSeamlessRenderer(document());
-        if (seamlessBox && seamlessBox->inRenderFlowThread())
-            newChild->setInRenderFlowThread();
+        if (seamlessBox && seamlessBox->flowThreadContainingBlock())
+            newChild->setFlowThreadState(seamlessBox->flowThreadState());
     }
     RenderBlock::addChild(newChild, beforeChild);
 }
@@ -200,7 +195,7 @@ bool RenderView::initializeLayoutState(LayoutState& state)
         
         // Set the current render flow thread to point to our ancestor. This will allow the seamless document to locate the correct
         // regions when doing a layout.
-        if (seamlessAncestor->inRenderFlowThread()) {
+        if (seamlessAncestor->flowThreadContainingBlock()) {
             flowThreadController()->setCurrentRenderFlowThread(seamlessAncestor->view()->flowThreadController()->currentRenderFlowThread());
             isSeamlessAncestorInFlowThread = true;
         }
@@ -676,7 +671,7 @@ void RenderView::setSelection(RenderObject* start, int startPos, RenderObject* e
         m_selectionEnd == end && m_selectionEndPos == endPos)
         return;
 
-    if ((start && end) && (start->enclosingRenderFlowThread() != end->enclosingRenderFlowThread()))
+    if ((start && end) && (start->flowThreadContainingBlock() != end->flowThreadContainingBlock()))
         return;
 
     // Record the old selected objects.  These will be used later
@@ -1145,6 +1140,44 @@ void RenderView::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_intervalArena, "intervalArena");
     info.addWeakPointer(m_renderQuoteHead);
     info.addMember(m_legacyPrinting, "legacyPrinting");
+}
+
+FragmentationDisabler::FragmentationDisabler(RenderObject* root)
+{
+    RenderView* renderView = root->view();
+    ASSERT(renderView);
+
+    LayoutState* layoutState = renderView->layoutState();
+
+    m_root = root;
+    m_fragmenting = layoutState && layoutState->isPaginated();
+    m_flowThreadState = m_root->flowThreadState();
+#ifndef NDEBUG
+    m_layoutState = layoutState;
+#endif
+
+    if (layoutState)
+        layoutState->m_isPaginated = false;
+        
+    if (m_flowThreadState != RenderObject::NotInsideFlowThread)
+        m_root->setFlowThreadStateIncludingDescendants(RenderObject::NotInsideFlowThread);
+}
+
+FragmentationDisabler::~FragmentationDisabler()
+{
+    RenderView* renderView = m_root->view();
+    ASSERT(renderView);
+
+    LayoutState* layoutState = renderView->layoutState();
+#ifndef NDEBUG
+    ASSERT(m_layoutState == layoutState);
+#endif
+
+    if (layoutState)
+        layoutState->m_isPaginated = m_fragmenting;
+        
+    if (m_flowThreadState != RenderObject::NotInsideFlowThread)
+        m_root->setFlowThreadStateIncludingDescendants(m_flowThreadState);
 }
 
 } // namespace WebCore

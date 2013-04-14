@@ -31,16 +31,15 @@
 #include "JSCJSValue.h"
 #include "JSCell.h"
 #include "JSType.h"
-#include "PropertyMapHashTable.h"
 #include "PropertyName.h"
 #include "PropertyNameArray.h"
+#include "PropertyOffset.h"
 #include "Protect.h"
 #include "StructureRareData.h"
 #include "StructureTransitionTable.h"
 #include "JSTypeInfo.h"
 #include "Watchpoint.h"
 #include "Weak.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/StringImpl.h>
@@ -51,6 +50,7 @@ namespace JSC {
 class LLIntOffsetsExtractor;
 class PropertyNameArray;
 class PropertyNameArrayData;
+class PropertyTable;
 class StructureChain;
 class SlotVisitor;
 class JSString;
@@ -108,25 +108,7 @@ public:
     bool isFrozen(JSGlobalData&);
     bool isExtensible() const { return !m_preventExtensions; }
     bool didTransition() const { return m_didTransition; }
-    bool putWillGrowOutOfLineStorage()
-    {
-        checkOffsetConsistency();
-            
-        ASSERT(outOfLineCapacity() >= outOfLineSize());
-            
-        if (!m_propertyTable) {
-            unsigned currentSize = numberOfOutOfLineSlotsForLastOffset(m_offset);
-            ASSERT(outOfLineCapacity() >= currentSize);
-            return currentSize == outOfLineCapacity();
-        }
-            
-        ASSERT(totalStorageCapacity() >= m_propertyTable->propertyStorageSize());
-        if (m_propertyTable->hasDeletedOffset())
-            return false;
-            
-        ASSERT(totalStorageCapacity() >= m_propertyTable->size());
-        return m_propertyTable->size() == totalStorageCapacity();
-    }
+    bool putWillGrowOutOfLineStorage();
     JS_EXPORT_PRIVATE size_t suggestedNewOutOfLineStorageCapacity(); 
 
     Structure* flattenDictionaryStructure(JSGlobalData&, JSObject*);
@@ -251,7 +233,8 @@ public:
     bool masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject);
 
     PropertyOffset get(JSGlobalData&, PropertyName);
-    PropertyOffset get(JSGlobalData&, const WTF::String& name);
+    PropertyOffset get(JSGlobalData&, PropertyName, unsigned& attributes);
+    PropertyOffset get(JSGlobalData&, const WTF::String& name, unsigned& attributes);
     JS_EXPORT_PRIVATE PropertyOffset get(JSGlobalData&, PropertyName, unsigned& attributes, JSCell*& specificValue);
 
     bool hasGetterSetterProperties() const { return m_hasGetterSetterProperties; }
@@ -382,27 +365,29 @@ private:
     PropertyOffset putSpecificValue(JSGlobalData&, PropertyName, unsigned attributes, JSCell* specificValue);
     PropertyOffset remove(PropertyName);
 
-    void createPropertyMap(unsigned keyCount = 0);
+    void createPropertyMap(JSGlobalData&, unsigned keyCount = 0);
     void checkConsistency();
 
     bool despecifyFunction(JSGlobalData&, PropertyName);
     void despecifyAllFunctions(JSGlobalData&);
 
-    PassOwnPtr<PropertyTable> copyPropertyTable(JSGlobalData&, Structure* owner);
-    PassOwnPtr<PropertyTable> copyPropertyTableForPinning(JSGlobalData&, Structure* owner);
+    WriteBarrier<PropertyTable>& propertyTable();
+    PropertyTable* takePropertyTableOrCloneIfPinned(JSGlobalData&, Structure* owner);
+    PropertyTable* copyPropertyTable(JSGlobalData&, Structure* owner);
+    PropertyTable* copyPropertyTableForPinning(JSGlobalData&, Structure* owner);
     JS_EXPORT_PRIVATE void materializePropertyMap(JSGlobalData&);
     void materializePropertyMapIfNecessary(JSGlobalData& globalData)
     {
         ASSERT(structure()->classInfo() == &s_info);
         ASSERT(checkOffsetConsistency());
-        if (!m_propertyTable && previousID())
+        if (!propertyTable() && previousID())
             materializePropertyMap(globalData);
     }
     void materializePropertyMapIfNecessaryForPinning(JSGlobalData& globalData)
     {
         ASSERT(structure()->classInfo() == &s_info);
         checkOffsetConsistency();
-        if (!m_propertyTable)
+        if (!propertyTable())
             materializePropertyMap(globalData);
     }
 
@@ -445,19 +430,7 @@ private:
         return static_cast<StructureRareData*>(m_previousOrRareData.get());
     }
         
-    ALWAYS_INLINE bool checkOffsetConsistency() const
-    {
-        if (!m_propertyTable) {
-            ASSERT(!m_isPinnedPropertyTable);
-            return true;
-        }
-            
-        RELEASE_ASSERT(numberOfSlotsForLastOffset(m_offset, m_inlineCapacity) == m_propertyTable->propertyStorageSize());
-        unsigned totalSize = m_propertyTable->propertyStorageSize();
-        RELEASE_ASSERT((totalSize < inlineCapacity() ? 0 : totalSize - inlineCapacity()) == numberOfOutOfLineSlotsForLastOffset(m_offset));
-            
-        return true;
-    }
+    bool checkOffsetConsistency() const;
 
     void allocateRareData(JSGlobalData&);
     void cloneRareDataFrom(JSGlobalData&, const Structure*);
@@ -465,9 +438,6 @@ private:
     static const int s_maxTransitionLength = 64;
 
     static const unsigned maxSpecificFunctionThrashCount = 3;
-
-    TypeInfo m_typeInfo;
-    IndexingType m_indexingType;
         
     WriteBarrier<JSGlobalObject> m_globalObject;
     WriteBarrier<Unknown> m_prototype;
@@ -482,22 +452,26 @@ private:
 
     StructureTransitionTable m_transitionTable;
 
-    OwnPtr<PropertyTable> m_propertyTable;
+    // Should be accessed through propertyTable(). During GC, it may be set to 0 by another thread.
+    WriteBarrier<PropertyTable> m_propertyTableUnsafe;
 
     mutable InlineWatchpointSet m_transitionWatchpointSet;
 
-    uint8_t m_inlineCapacity;
     COMPILE_ASSERT(firstOutOfLineOffset < 256, firstOutOfLineOffset_fits);
 
     // m_offset does not account for anonymous slots
     PropertyOffset m_offset;
 
+    TypeInfo m_typeInfo;
+    IndexingType m_indexingType;
+
+    uint8_t m_inlineCapacity;
     unsigned m_dictionaryKind : 2;
     bool m_isPinnedPropertyTable : 1;
     bool m_hasGetterSetterProperties : 1;
     bool m_hasReadOnlyOrGetterSetterPropertiesExcludingProto : 1;
     bool m_hasNonEnumerableProperties : 1;
-    unsigned m_attributesInPrevious : 22;
+    unsigned m_attributesInPrevious : 14;
     unsigned m_specificFunctionThrashCount : 2;
     unsigned m_preventExtensions : 1;
     unsigned m_didTransition : 1;

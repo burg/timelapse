@@ -171,6 +171,7 @@ public:
     void didInvalidateStyleAttr(Node*);
     void didPushShadowRoot(Element* host, ShadowRoot*);
     void willPopShadowRoot(Element* host, ShadowRoot*);
+    void frameDocumentUpdated(Frame*);
 
     int pushNodeToFrontend(ErrorString*, int documentNodeId, Node*);
     Node* nodeForId(int nodeId);
@@ -203,7 +204,6 @@ public:
 
     // Methods called from other agents.
     InspectorPageAgent* pageAgent() { return m_pageAgent; }
-    int pushNodePathForRenderLayerToFrontend(const RenderLayer*);
 
 private:
     InspectorDOMAgent(InstrumentingAgents*, InspectorPageAgent*, InspectorCompositeState*, InjectedScriptManager*, InspectorOverlay*, InspectorClient*);

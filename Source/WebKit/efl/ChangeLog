@@ -1,3 +1,187 @@
+2013-03-14  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        Add selectTrailingWhitespaceEnabled setting to WebCore::Page
+        https://bugs.webkit.org/show_bug.cgi?id=109404
+
+        Reviewed by Tony Chang.
+
+        Use new settings for smartInsertDeleteEnabled and
+        selectTrailingWhitespaceEnabled.
+
+        Remove code related to DRT as it is not needed anymore.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+        * WebCoreSupport/EditorClientEfl.cpp:
+        (WebCore::EditorClientEfl::smartInsertDeleteEnabled):
+        (WebCore::EditorClientEfl::isSelectTrailingWhitespaceEnabled):
+        (WebCore::EditorClientEfl::EditorClientEfl):
+        * WebCoreSupport/EditorClientEfl.h:
+        (EditorClientEfl):
+
+2013-03-14  Jesus Sanchez-Palencia  <jesus.palencia@openbossa.org>
+
+        [EFL] Use CROSS_PLATFORM_CONTEXT_MENU
+        https://bugs.webkit.org/show_bug.cgi?id=111877
+
+        Reviewed by Caio Marcelo de Oliveira Filho.
+
+        Adjust ContextMenuClient to use the CROSS_PLATFORM_CONTEXT_MENUS USE flag
+        by implementing customizeMenu() instead of getCustomMenuFromDefaultItems()
+        and by calling coreMenu->items() instead of coreMenu->platformDescription().
+
+        * WebCoreSupport/ContextMenuClientEfl.cpp:
+        (WebCore::ContextMenuClientEfl::customizeMenu):
+        * WebCoreSupport/ContextMenuClientEfl.h:
+        (ContextMenuClientEfl):
+        * ewk/ewk_contextmenu.cpp:
+        (ewk_context_menu_new):
+
+2013-03-14  Jonathan Liu  <net147@gmail.com>
+
+        Fix detection of Intel Mac OS X platform on Intel Mac 64-bit
+        https://bugs.webkit.org/show_bug.cgi?id=112312
+
+        Reviewed by Simon Hausmann.
+
+        * ewk/ewk_settings.cpp:
+        (_ewk_settings_webkit_os_version_get):
+
+2013-03-13  Pavel Feldman  <pfeldman@chromium.org>
+
+        Web Inspector: get rid of hiddenPanels filter
+        https://bugs.webkit.org/show_bug.cgi?id=112252
+
+        Reviewed by Vsevolod Vlasov.
+
+        * WebCoreSupport/InspectorClientEfl.cpp:
+        * WebCoreSupport/InspectorClientEfl.h:
+        (InspectorFrontendClientEfl):
+
+2013-03-06  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] Missing implementation of AccessibilityControllerEfl and AccessibilityUIElementEfl files
+        https://bugs.webkit.org/show_bug.cgi?id=110584
+
+        Reviewed by Gyuyoung Kim.
+
+        Adds support for help text in DumpRenderTree.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::accessibilityHelpText):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-03-06  Benjamin Poulain  <benjamin@webkit.org>
+
+        WebKitTestRunner needs layoutTestController.elementDoesAutoCompleteForElementWithId
+        https://bugs.webkit.org/show_bug.cgi?id=42696
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-03-05  Geoffrey Garen  <ggaren@apple.com>
+
+        Removed some dead code in the page cache
+        https://bugs.webkit.org/show_bug.cgi?id=111525
+
+        Reviewed by Alexey Proskuryakov.
+
+        Page cache autorelease doesn't exist anymore, so there's no need to keep
+        around these olds hacks.
+
+        * ewk/ewk_settings.cpp:
+        (ewk_settings_memory_cache_clear):
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed attempted build fix. Adds back some includes removed in
+        http://trac.webkit.org/changeset/144565.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * ewk/ewk_frame.cpp:
+
+2013-03-03  Adam Barth  <abarth@webkit.org>
+
+        Unreviewed rollout of http://trac.webkit.org/r144530
+        As described in https://bugs.webkit.org/show_bug.cgi?id=111167 and
+        https://bugs.webkit.org/show_bug.cgi?id=111035, this patch caused a
+        large number of ASSERTs in chromium-win.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * ewk/ewk_frame.cpp:
+
+2013-03-02  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move computedStyleIncludingVisitedInfo from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109772
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * ewk/ewk_frame.cpp:
+
+2013-03-01  Jason Anderssen  <janderssen@gmail.com>
+
+        Move markerTextForListItem from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=110939
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-03-01  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r144422 and r144424.
+        http://trac.webkit.org/changeset/144422
+        http://trac.webkit.org/changeset/144424
+        https://bugs.webkit.org/show_bug.cgi?id=111167
+
+        Caused over 20 tests to fail assertion on Chromium Win port as
+        ASSERTION FAILED: m_platformRequestUpdated (Requested by
+        toyoshim on #webkit).
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * ewk/ewk_frame.cpp:
+
+2013-02-28  Alexey Proskuryakov  <ap@apple.com>
+
+        Reduce amount of rebuilding when touching networking headers
+        https://bugs.webkit.org/show_bug.cgi?id=111035
+
+        Reviewed by Eric Seidel.
+
+        Adding includes that are now necessary because WebCore headers don't have them
+        any more.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * ewk/ewk_frame.cpp:
+
+2013-02-28  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        [EFL] Focus problem in inspector/extensions/extensions-panel.html
+        https://bugs.webkit.org/show_bug.cgi?id=97077
+
+        Reviewed by Laszlo Gombos.
+
+        * WebCoreSupport/InspectorClientEfl.cpp:
+        (WebCore::InspectorFrontendClientEfl::bringToFront): Set focus on inspectorView.
+
 2013-02-23  Jason Anderssen  <janderssen@gmail.com>
 
         Move setAutofilled from TestRunner to WebCore

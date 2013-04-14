@@ -32,10 +32,12 @@
 #include "CachedImage.h"
 #include "CheckedInt.h"
 #include "DOMWindow.h"
+#include "EXTDrawBuffers.h"
 #include "EXTTextureFilterAnisotropic.h"
 #include "ExceptionCode.h"
 #include "Extensions3D.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameView.h"
 #include "HTMLCanvasElement.h"
@@ -48,12 +50,14 @@
 #include "OESElementIndexUint.h"
 #include "OESStandardDerivatives.h"
 #include "OESTextureFloat.h"
+#include "OESTextureHalfFloat.h"
 #include "OESVertexArrayObject.h"
 #include "Page.h"
 #include "RenderBox.h"
 #include "Settings.h"
 #include "WebGLActiveInfo.h"
 #include "WebGLBuffer.h"
+#include "WebGLCompressedTextureATC.h"
 #include "WebGLCompressedTextureS3TC.h"
 #include "WebGLContextAttributes.h"
 #include "WebGLContextEvent.h"
@@ -389,7 +393,11 @@ class WebGLRenderingContextErrorMessageCallback : public GraphicsContext3D::Erro
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit WebGLRenderingContextErrorMessageCallback(WebGLRenderingContext* cb) : m_context(cb) { }
-    virtual void onErrorMessage(const String& message, GC3Dint) { m_context->printGLErrorToConsole(message); }
+    virtual void onErrorMessage(const String& message, GC3Dint)
+    {
+        if (m_context->m_synthesizedErrorsToConsole)
+            m_context->printGLErrorToConsole(message);
+    }
     virtual ~WebGLRenderingContextErrorMessageCallback() { }
 private:
     WebGLRenderingContext* m_context;
@@ -537,6 +545,10 @@ void WebGLRenderingContext::initializeNewContext()
     m_maxCubeMapTextureLevel = WebGLTexture::computeLevelCount(m_maxCubeMapTextureSize, m_maxCubeMapTextureSize);
     m_maxRenderbufferSize = 0;
     m_context->getIntegerv(GraphicsContext3D::MAX_RENDERBUFFER_SIZE, &m_maxRenderbufferSize);
+
+    // These two values from EXT_draw_buffers are lazily queried.
+    m_maxDrawBuffers = 0;
+    m_maxColorAttachments = 0;
 
     m_defaultVertexArrayObject = WebGLVertexArrayObjectOES::create(this, WebGLVertexArrayObjectOES::VaoTypeDefault);
     addContextObject(m_defaultVertexArrayObject.get());
@@ -751,10 +763,10 @@ void WebGLRenderingContext::paintRenderingResultsToCanvas()
         if (m_drawingBuffer)
             m_drawingBuffer->paintCompositedResultsToCanvas(canvas()->buffer());
 #endif
-
         canvas()->makePresentationCopy();
     } else
         canvas()->clearPresentationCopy();
+
     clearIfComposited();
 
     if (!m_markedCanvasDirty && !m_layerCleared)
@@ -1101,6 +1113,10 @@ void WebGLRenderingContext::bufferData(GC3Denum target, long long size, GC3Denum
         return;
     if (size < 0) {
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "bufferData", "size < 0");
+        return;
+    }
+    if (!size) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "bufferData", "size == 0");
         return;
     }
     if (!isErrorGeneratedOnOutOfBoundsAccesses()) {
@@ -2153,12 +2169,6 @@ void WebGLRenderingContext::framebufferRenderbuffer(GC3Denum target, GC3Denum at
         m_context->framebufferRenderbuffer(target, GraphicsContext3D::DEPTH_ATTACHMENT, renderbuffertarget, bufferObject);
         m_context->framebufferRenderbuffer(target, GraphicsContext3D::STENCIL_ATTACHMENT, renderbuffertarget, bufferObject);
         break;
-    case GraphicsContext3D::DEPTH_ATTACHMENT:
-        m_context->framebufferRenderbuffer(target, attachment, renderbuffertarget, bufferObject);
-        break;
-    case GraphicsContext3D::STENCIL_ATTACHMENT:
-        m_context->framebufferRenderbuffer(target, attachment, renderbuffertarget, bufferObject);
-        break;
     default:
         m_context->framebufferRenderbuffer(target, attachment, renderbuffertarget, bufferObject);
     }
@@ -2340,12 +2350,17 @@ PassRefPtr<WebGLContextAttributes> WebGLRenderingContext::getContextAttributes()
 
     // Also, we need to enforce requested values of "false" for depth
     // and stencil, regardless of the properties of the underlying
-    // GraphicsContext3D.
+    // GraphicsContext3D or DrawingBuffer.
     RefPtr<WebGLContextAttributes> attributes = WebGLContextAttributes::create(m_context->getContextAttributes());
     if (!m_attributes.depth)
         attributes->setDepth(false);
     if (!m_attributes.stencil)
         attributes->setStencil(false);
+    if (m_drawingBuffer) {
+        // The DrawingBuffer obtains its parameters from GraphicsContext3D::getContextAttributes(),
+        // but it makes its own determination of whether multisampling is supported.
+        attributes->setAntialias(m_drawingBuffer->multisample());
+    }
     return attributes.release();
 }
 
@@ -2383,6 +2398,14 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
         }
         return m_oesTextureFloat.get();
     }
+    if (equalIgnoringCase(name, "OES_texture_half_float")
+        && m_context->getExtensions()->supports("GL_OES_texture_half_float")) {
+        if (!m_oesTextureHalfFloat) {
+            m_context->getExtensions()->ensureEnabled("GL_OES_texture_half_float");
+            m_oesTextureHalfFloat = OESTextureHalfFloat::create(this);
+        }
+        return m_oesTextureHalfFloat.get();
+    }
     if (equalIgnoringCase(name, "OES_vertex_array_object")
         && m_context->getExtensions()->supports("GL_OES_vertex_array_object")) {
         if (!m_oesVertexArrayObject) {
@@ -2408,6 +2431,12 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
             m_webglLoseContext = WebGLLoseContext::create(this);
         return m_webglLoseContext.get();
     }
+    if ((equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_atc"))
+        && WebGLCompressedTextureATC::supported(this)) {
+        if (!m_webglCompressedTextureATC)
+            m_webglCompressedTextureATC = WebGLCompressedTextureATC::create(this);
+        return m_webglCompressedTextureATC.get();
+    }
     if ((equalIgnoringCase(name, "WEBGL_compressed_texture_s3tc")
          // FIXME: remove this after a certain grace period.
          || equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_s3tc"))
@@ -2425,6 +2454,13 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
             m_webglDepthTexture = WebGLDepthTexture::create(this);
         }
         return m_webglDepthTexture.get();
+    }
+    if (equalIgnoringCase(name, "EXT_draw_buffers") && EXTDrawBuffers::supported(this)) {
+        if (!m_extDrawBuffers) {
+            m_context->getExtensions()->ensureEnabled("GL_EXT_draw_buffers");
+            m_extDrawBuffers = EXTDrawBuffers::create(this);
+        }
+        return m_extDrawBuffers.get();
     }
     if (allowPrivilegedExtensions()) {
         if (equalIgnoringCase(name, "WEBGL_debug_renderer_info")) {
@@ -2709,6 +2745,50 @@ WebGLGetInfo WebGLRenderingContext::getParameter(GC3Denum pname, ExceptionCode& 
             return getUnsignedIntParameter(Extensions3D::MAX_TEXTURE_MAX_ANISOTROPY_EXT);
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_texture_filter_anisotropic not enabled");
         return WebGLGetInfo();
+    case Extensions3D::MAX_COLOR_ATTACHMENTS_EXT: // EXT_draw_buffers BEGIN
+        if (m_extDrawBuffers)
+            return WebGLGetInfo(getMaxColorAttachments());
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_draw_buffers not enabled");
+        return WebGLGetInfo();
+    case Extensions3D::MAX_DRAW_BUFFERS_EXT:
+        if (m_extDrawBuffers)
+            return WebGLGetInfo(getMaxDrawBuffers());
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_draw_buffers not enabled");
+        return WebGLGetInfo();
+    case Extensions3D::DRAW_BUFFER0_EXT: // DRAW_BUFFER0_EXT is special as the backbuffer is simulated.
+        if (m_extDrawBuffers) {
+            GC3Dint value = 0;
+            m_context->getIntegerv(pname, &value);
+            if (!m_framebufferBinding && value != GraphicsContext3D::NONE)
+                value = GraphicsContext3D::BACK;
+            return WebGLGetInfo(value);
+        }
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_draw_buffers not enabled");
+        return WebGLGetInfo();
+    case Extensions3D::DRAW_BUFFER1_EXT:
+    case Extensions3D::DRAW_BUFFER2_EXT:
+    case Extensions3D::DRAW_BUFFER3_EXT:
+    case Extensions3D::DRAW_BUFFER4_EXT:
+    case Extensions3D::DRAW_BUFFER5_EXT:
+    case Extensions3D::DRAW_BUFFER6_EXT:
+    case Extensions3D::DRAW_BUFFER7_EXT:
+    case Extensions3D::DRAW_BUFFER8_EXT:
+    case Extensions3D::DRAW_BUFFER9_EXT:
+    case Extensions3D::DRAW_BUFFER10_EXT:
+    case Extensions3D::DRAW_BUFFER11_EXT:
+    case Extensions3D::DRAW_BUFFER12_EXT:
+    case Extensions3D::DRAW_BUFFER13_EXT:
+    case Extensions3D::DRAW_BUFFER14_EXT:
+    case Extensions3D::DRAW_BUFFER15_EXT: // EXT_draw_buffers END
+        if (m_extDrawBuffers) {
+            if (static_cast<GC3Denum>(Extensions3D::DRAW_BUFFER0_EXT + getMaxDrawBuffers()) <= pname) {
+                synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter, exceeds MAX_COLOR_ATTACHMENTS_EXT");
+                return WebGLGetInfo();
+            }
+            return getIntParameter(pname);
+        }
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter name, EXT_draw_buffers not enabled");
+        return WebGLGetInfo();
     default:
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getParameter", "invalid parameter name");
         return WebGLGetInfo();
@@ -2909,10 +2989,14 @@ Vector<String> WebGLRenderingContext::getSupportedExtensions()
     if (m_context->getExtensions()->supports("GL_OES_element_index_uint"))
         result.append("OES_element_index_uint");
     result.append("WEBGL_lose_context");
+    if (WebGLCompressedTextureATC::supported(this))
+        result.append("WEBKIT_WEBGL_compressed_texture_atc");
     if (WebGLCompressedTextureS3TC::supported(this))
         result.append("WEBKIT_WEBGL_compressed_texture_s3tc");
     if (WebGLDepthTexture::supported(graphicsContext3D()))
         result.append("WEBKIT_WEBGL_depth_texture");
+    if (EXTDrawBuffers::supported(this))
+        result.append("EXT_draw_buffers");
 
     if (allowPrivilegedExtensions()) {
         if (m_context->getExtensions()->supports("GL_ANGLE_translated_shader_source"))
@@ -3064,7 +3148,7 @@ WebGLGetInfo WebGLRenderingContext::getUniform(WebGLProgram* program, const WebG
                 case GraphicsContext3D::FLOAT: {
                     GC3Dfloat value[16] = {0};
                     if (m_isRobustnessEXTSupported)
-                        m_context->getExtensions()->getnUniformfvEXT(objectOrZero(program), location, 16, value);
+                        m_context->getExtensions()->getnUniformfvEXT(objectOrZero(program), location, 16 * sizeof(GC3Dfloat), value);
                     else
                         m_context->getUniformfv(objectOrZero(program), location, value);
                     if (length == 1)
@@ -3074,7 +3158,7 @@ WebGLGetInfo WebGLRenderingContext::getUniform(WebGLProgram* program, const WebG
                 case GraphicsContext3D::INT: {
                     GC3Dint value[4] = {0};
                     if (m_isRobustnessEXTSupported)
-                        m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4, value);
+                        m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4 * sizeof(GC3Dint), value);
                     else
                         m_context->getUniformiv(objectOrZero(program), location, value);
                     if (length == 1)
@@ -3084,7 +3168,7 @@ WebGLGetInfo WebGLRenderingContext::getUniform(WebGLProgram* program, const WebG
                 case GraphicsContext3D::BOOL: {
                     GC3Dint value[4] = {0};
                     if (m_isRobustnessEXTSupported)
-                        m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4, value);
+                        m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4 * sizeof(GC3Dint), value);
                     else
                         m_context->getUniformiv(objectOrZero(program), location, value);
                     if (length > 1) {
@@ -3715,6 +3799,13 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         return;
     if (!validateSettableTexFormat("texImage2D", format))
         return;
+    // FIXME: Uploading ImageData to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texImage2D", "Operation not supported yet");
+        return;
+    }
+
     bool needConversion = true;
     // The data from ImageData is always of format RGBA8.
     // No conversion is needed if destination format is RGBA and type is USIGNED_BYTE and no Flip or Premultiply operation is required.
@@ -3745,6 +3836,12 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         ec = SECURITY_ERR;
         return;
     }
+    // FIXME: Uploading ImageElement to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texImage2D", "Operation not supported yet");
+        return;
+    }
 
     texImage2DImpl(target, level, internalformat, format, type, image->cachedImage()->imageForRenderer(image->renderer()), GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
 }
@@ -3767,6 +3864,12 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         return;
     if (!validateSettableTexFormat("texImage2D", format))
         return;
+    // FIXME: Uploading HTMLCanvasElement to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texImage2D", "Operation not supported yet");
+        return;
+    }
 
     WebGLTexture* texture = validateTextureBinding("texImage2D", target, true);
     // If possible, copy from the canvas element directly to the texture
@@ -3792,20 +3895,12 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
 }
 
 #if ENABLE(VIDEO)
-PassRefPtr<Image> WebGLRenderingContext::videoFrameToImage(HTMLVideoElement* video, BackingStoreCopy backingStoreCopy, ExceptionCode& ec)
+PassRefPtr<Image> WebGLRenderingContext::videoFrameToImage(HTMLVideoElement* video, BackingStoreCopy backingStoreCopy, ExceptionCode&)
 {
-    if (!video || !video->videoWidth() || !video->videoHeight()) {
-        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texImage2D", "no video");
-        return 0;
-    }
     IntSize size(video->videoWidth(), video->videoHeight());
     ImageBuffer* buf = m_videoCache.imageBuffer(size);
     if (!buf) {
         synthesizeGLError(GraphicsContext3D::OUT_OF_MEMORY, "texImage2D", "out of memory");
-        return 0;
-    }
-    if (wouldTaintOrigin(video)) {
-        ec = SECURITY_ERR;
         return 0;
     }
     IntRect destRect(0, 0, size.width(), size.height());
@@ -3820,9 +3915,47 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
     ec = 0;
     if (isContextLost())
         return;
+    if (!video || !video->videoWidth() || !video->videoHeight()) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texImage2D", "no video");
+        return;
+    }
+    if (wouldTaintOrigin(video)) {
+        ec = SECURITY_ERR;
+        return;
+    }
+    if (!validateTexFuncFormatAndType("texImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texImage2D", format))
+        return;
+
+    // Go through the fast path doing a GPU-GPU textures copy without a readback to system memory if possible.
+    // Otherwise, it will fall back to the normal SW path.
+    // FIXME: The current restrictions require that format shoud be RGB or RGBA,
+    // type should be UNSIGNED_BYTE and level should be 0. It may be lifted in the future.
+    WebGLTexture* texture = validateTextureBinding("texImage2D", target, true);
+    if (GraphicsContext3D::TEXTURE_2D == target && texture
+        && (format == GraphicsContext3D::RGB || format == GraphicsContext3D::RGBA)
+        && type == GraphicsContext3D::UNSIGNED_BYTE
+        && (texture->getType(target, level) == GraphicsContext3D::UNSIGNED_BYTE || !texture->isValid(target, level))
+        && !level) {
+        if (video->copyVideoTextureToPlatformTexture(m_context.get(), texture->object(), level, type, internalformat, m_unpackPremultiplyAlpha, m_unpackFlipY)) {
+            texture->setLevelInfo(target, level, internalformat, video->videoWidth(), video->videoHeight(), type);
+            cleanupAfterGraphicsCall(false);
+            return;
+        }
+    }
+
+    // Normal pure SW path.
     RefPtr<Image> image = videoFrameToImage(video, ImageBuffer::fastCopyImageMode(), ec);
     if (!image)
         return;
+    // FIXME: Uploading HTMLVideoElement to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texImage2D", "Operation not supported yet");
+        return;
+    }
+
     texImage2DImpl(target, level, internalformat, format, type, image.get(), GraphicsContext3D::HtmlDomVideo, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
 }
 #endif
@@ -3977,6 +4110,13 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
         return;
     if (!validateSettableTexFormat("texSubImage2D", format))
         return;
+    // FIXME: Uploading ImageData to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texSubImage2D", "Operation not supported yet");
+        return;
+    }
+
     Vector<uint8_t> data;
     bool needConversion = true;
     // The data from ImageData is always of format RGBA8.
@@ -4008,6 +4148,13 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
         ec = SECURITY_ERR;
         return;
     }
+    // FIXME: Uploading HTMLImageElement to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texSubImage2D", "Operation not supported yet");
+        return;
+    }
+
     texSubImage2DImpl(target, level, xoffset, yoffset, format, type, image->cachedImage()->imageForRenderer(image->renderer()), GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
 }
 
@@ -4029,6 +4176,13 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
         return;
     if (!validateSettableTexFormat("texSubImage2D", format))
         return;
+    // FIXME: Uploading HTMLCanvasElement to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texSubImage2D", "Operation not supported yet");
+        return;
+    }
+
     RefPtr<ImageData> imageData = canvas->getImageData();
     if (imageData)
         texSubImage2D(target, level, xoffset, yoffset, format, type, imageData.get(), ec);
@@ -4043,9 +4197,30 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
     ec = 0;
     if (isContextLost())
         return;
+    if (!video || !video->videoWidth() || !video->videoHeight()) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texSubImage2D", "no video");
+        return;
+    }
+
+    if (wouldTaintOrigin(video)) {
+        ec = SECURITY_ERR;
+        return;
+    }
+    if (!validateTexFuncFormatAndType("texSubImage2D", format, type, level))
+        return;
+    if (!validateSettableTexFormat("texSubImage2D", format))
+        return;
+
     RefPtr<Image> image = videoFrameToImage(video, ImageBuffer::fastCopyImageMode(), ec);
     if (!image)
         return;
+    // FIXME: Uploading HTMLVideoElement to half floating point texture is not supported yet
+    // https://bugs.webkit.org/show_bug.cgi?id=110936
+    if (type == GraphicsContext3D::HALF_FLOAT_OES) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "texSubImage2D", "Operation not supported yet");
+        return;
+    }
+
     texSubImage2DImpl(target, level, xoffset, yoffset, format, type, image.get(), GraphicsContext3D::HtmlDomVideo, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
 }
 #endif
@@ -4928,6 +5103,11 @@ bool WebGLRenderingContext::validateTexFuncFormatAndType(const char* functionNam
             break;
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid texture type");
         return false;
+    case GraphicsContext3D::HALF_FLOAT_OES:
+        if (m_oesTextureHalfFloat)
+            break;
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid texture type");
+        return false;
     case GraphicsContext3D::UNSIGNED_INT:
     case GraphicsContext3D::UNSIGNED_INT_24_8:
     case GraphicsContext3D::UNSIGNED_SHORT:
@@ -4946,7 +5126,8 @@ bool WebGLRenderingContext::validateTexFuncFormatAndType(const char* functionNam
     case GraphicsContext3D::LUMINANCE:
     case GraphicsContext3D::LUMINANCE_ALPHA:
         if (type != GraphicsContext3D::UNSIGNED_BYTE
-            && type != GraphicsContext3D::FLOAT) {
+            && type != GraphicsContext3D::FLOAT
+            && type != GraphicsContext3D::HALF_FLOAT_OES) {
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "invalid type for format");
             return false;
         }
@@ -4954,7 +5135,8 @@ bool WebGLRenderingContext::validateTexFuncFormatAndType(const char* functionNam
     case GraphicsContext3D::RGB:
         if (type != GraphicsContext3D::UNSIGNED_BYTE
             && type != GraphicsContext3D::UNSIGNED_SHORT_5_6_5
-            && type != GraphicsContext3D::FLOAT) {
+            && type != GraphicsContext3D::FLOAT
+            && type != GraphicsContext3D::HALF_FLOAT_OES) {
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "invalid type for RGB format");
             return false;
         }
@@ -4963,7 +5145,8 @@ bool WebGLRenderingContext::validateTexFuncFormatAndType(const char* functionNam
         if (type != GraphicsContext3D::UNSIGNED_BYTE
             && type != GraphicsContext3D::UNSIGNED_SHORT_4_4_4_4
             && type != GraphicsContext3D::UNSIGNED_SHORT_5_5_5_1
-            && type != GraphicsContext3D::FLOAT) {
+            && type != GraphicsContext3D::FLOAT
+            && type != GraphicsContext3D::HALF_FLOAT_OES) {
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "invalid type for RGBA format");
             return false;
         }
@@ -5133,6 +5316,14 @@ bool WebGLRenderingContext::validateTexFuncData(const char* functionName, GC3Din
             return false;
         }
         break;
+    case GraphicsContext3D::HALF_FLOAT_OES: // OES_texture_half_float
+        // As per the specification, ArrayBufferView should be null when
+        // OES_texture_half_float is enabled.
+        if (pixels) {
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "type HALF_FLOAT_OES but ArrayBufferView is not NULL");
+            return false;
+        }
+        break;
     default:
         ASSERT_NOT_REACHED();
     }
@@ -5200,6 +5391,17 @@ bool WebGLRenderingContext::validateCompressedTexFuncData(const char* functionNa
             int numBlocksDown = (height + kBlockHeight - 1) / kBlockHeight;
             int numBlocks = numBlocksAcross * numBlocksDown;
             bytesRequired = numBlocks * kBlockSize;
+        }
+        break;
+    case Extensions3D::COMPRESSED_ATC_RGB_AMD:
+        {
+            bytesRequired = floor(static_cast<double>((width + 3) / 4)) * floor(static_cast<double>((height + 3) / 4)) * 8;
+        }
+        break;
+    case Extensions3D::COMPRESSED_ATC_RGBA_EXPLICIT_ALPHA_AMD:
+    case Extensions3D::COMPRESSED_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
+        {
+            bytesRequired = floor(static_cast<double>((width + 3) / 4)) * floor(static_cast<double>((height + 3) / 4)) * 16;
         }
         break;
     default:
@@ -5331,7 +5533,7 @@ void WebGLRenderingContext::printWarningToConsole(const String& message)
     Document* document = canvas()->document();
     if (!document)
         return;
-    document->addConsoleMessage(HTMLMessageSource, WarningMessageLevel, message);
+    document->addConsoleMessage(RenderingMessageSource, WarningMessageLevel, message);
 }
 
 bool WebGLRenderingContext::validateFramebufferFuncParameters(const char* functionName, GC3Denum target, GC3Denum attachment)
@@ -5345,6 +5547,31 @@ bool WebGLRenderingContext::validateFramebufferFuncParameters(const char* functi
     case GraphicsContext3D::DEPTH_ATTACHMENT:
     case GraphicsContext3D::STENCIL_ATTACHMENT:
     case GraphicsContext3D::DEPTH_STENCIL_ATTACHMENT:
+        break;
+    case Extensions3D::COLOR_ATTACHMENT1_EXT: // EXT_draw_buffers BEGIN
+    case Extensions3D::COLOR_ATTACHMENT2_EXT:
+    case Extensions3D::COLOR_ATTACHMENT3_EXT:
+    case Extensions3D::COLOR_ATTACHMENT4_EXT:
+    case Extensions3D::COLOR_ATTACHMENT5_EXT:
+    case Extensions3D::COLOR_ATTACHMENT6_EXT:
+    case Extensions3D::COLOR_ATTACHMENT7_EXT:
+    case Extensions3D::COLOR_ATTACHMENT8_EXT:
+    case Extensions3D::COLOR_ATTACHMENT9_EXT:
+    case Extensions3D::COLOR_ATTACHMENT10_EXT:
+    case Extensions3D::COLOR_ATTACHMENT11_EXT:
+    case Extensions3D::COLOR_ATTACHMENT12_EXT:
+    case Extensions3D::COLOR_ATTACHMENT13_EXT:
+    case Extensions3D::COLOR_ATTACHMENT14_EXT:
+    case Extensions3D::COLOR_ATTACHMENT15_EXT: // EXT_draw_buffers END
+        // COLOR_ATTACHMENT0_EXT is equal to COLOR_ATTACHMENT0.
+        if (!m_extDrawBuffers) {
+            synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid attachment, EXT_draw_buffers not enabled");
+            return false;
+        }
+        if (static_cast<GC3Denum>(Extensions3D::COLOR_ATTACHMENT0_EXT + getMaxColorAttachments()) <= attachment) {
+            synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid attachment, exceeds MAX_DRAW_BUFFERS_EXT");
+            return false;
+        }
         break;
     default:
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid attachment");
@@ -5860,6 +6087,20 @@ IntSize WebGLRenderingContext::clampedCanvasSize()
 {
     return IntSize(clamp(canvas()->width(), 1, m_maxViewportDims[0]),
                    clamp(canvas()->height(), 1, m_maxViewportDims[1]));
+}
+
+GC3Dint WebGLRenderingContext::getMaxDrawBuffers()
+{
+    if (!m_maxDrawBuffers && EXTDrawBuffers::supported(this))
+        m_context->getIntegerv(Extensions3D::MAX_DRAW_BUFFERS_EXT, &m_maxDrawBuffers);
+    return m_maxDrawBuffers;
+}
+
+GC3Dint WebGLRenderingContext::getMaxColorAttachments()
+{
+    if (!m_maxColorAttachments && EXTDrawBuffers::supported(this))
+        m_context->getIntegerv(Extensions3D::MAX_COLOR_ATTACHMENTS_EXT, &m_maxColorAttachments);
+    return m_maxColorAttachments;
 }
 
 } // namespace WebCore

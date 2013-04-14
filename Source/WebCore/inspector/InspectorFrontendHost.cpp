@@ -48,10 +48,11 @@
 #include "InspectorFrontendClient.h"
 #include "Page.h"
 #include "Pasteboard.h"
+#include "ResourceError.h"
+#include "ResourceRequest.h"
+#include "ResourceResponse.h"
 #include "ScriptFunctionCall.h"
 #include "UserGestureIndicator.h"
-
-#include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 
 using namespace std;
@@ -94,7 +95,7 @@ private:
     virtual void contextMenuItemSelected(ContextMenuItem* item)
     {
         if (m_frontendHost) {
-            UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
+            UserGestureIndicator gestureIndicator(DefinitelyProcessingNewUserGesture);
             int itemNumber = item->action() - ContextMenuItemBaseCustomTag;
 
             ScriptFunctionCall function(m_frontendApiObject, "contextMenuItemSelected");
@@ -210,11 +211,6 @@ String InspectorFrontendHost::localizedStringsURL()
     return m_client ? m_client->localizedStringsURL() : "";
 }
 
-String InspectorFrontendHost::hiddenPanels()
-{
-    return m_client ? m_client->hiddenPanels() : "";
-}
-
 void InspectorFrontendHost::copyText(const String& text)
 {
     Pasteboard::generalPasteboard()->writePlainText(text, Pasteboard::CannotSmartReplace);
@@ -247,17 +243,6 @@ void InspectorFrontendHost::append(const String& url, const String& content)
 
 void InspectorFrontendHost::close(const String&)
 {
-}
-
-bool InspectorFrontendHost::canInspectWorkers()
-{
-#if ENABLE(WORKERS)
-    if (m_client)
-        return m_client->canInspectWorkers();
-    return false;
-#else
-    return false;
-#endif
 }
 
 void InspectorFrontendHost::sendMessageToBackend(const String& message)
@@ -334,6 +319,21 @@ PassRefPtr<DOMFileSystem> InspectorFrontendHost::isolatedFileSystem(const String
 bool InspectorFrontendHost::isUnderTest()
 {
     return m_client && m_client->isUnderTest();
+}
+
+bool InspectorFrontendHost::canSaveAs()
+{
+    return false;
+}
+
+bool InspectorFrontendHost::canInspectWorkers()
+{
+    return false;
+}
+
+String InspectorFrontendHost::hiddenPanels()
+{
+    return "";
 }
 
 } // namespace WebCore

@@ -31,6 +31,7 @@
 #include "SourceCode.h"
 #include "Strong.h"
 #include "WeakRandom.h"
+#include <wtf/CurrentTime.h>
 #include <wtf/FixedArray.h>
 #include <wtf/Forward.h>
 #include <wtf/PassOwnPtr.h>
@@ -42,6 +43,7 @@ namespace JSC {
 class EvalExecutable;
 class FunctionBodyNode;
 class Identifier;
+class JSScope;
 class ProgramExecutable;
 class UnlinkedCodeBlock;
 class UnlinkedEvalCodeBlock;
@@ -134,15 +136,15 @@ public:
     typedef MapType::iterator iterator;
     typedef MapType::AddResult AddResult;
 
-    enum { MinCacheCapacity = 1000000 }; // Size in characters
-
     CodeCacheMap()
         : m_size(0)
-        , m_capacity(MinCacheCapacity)
+        , m_sizeAtLastPrune(0)
+        , m_timeAtLastPrune(monotonicallyIncreasingTime())
+        , m_minCapacity(0)
+        , m_capacity(0)
         , m_age(0)
     {
     }
-
 
     AddResult add(const SourceCodeKey& key, const SourceCodeValue& value)
     {
@@ -166,8 +168,8 @@ public:
             // infer that requested objects are subject to low eviction probability,
             // so we shrink the cache to save memory.
             m_capacity -= recencyBias * key.length();
-            if (m_capacity < MinCacheCapacity)
-                m_capacity = MinCacheCapacity;
+            if (m_capacity < m_minCapacity)
+                m_capacity = m_minCapacity;
         }
 
         addResult.iterator->value.age = m_age;
@@ -191,6 +193,11 @@ public:
     int64_t age() { return m_age; }
 
 private:
+    // This constant factor biases cache capacity toward allowing a minimum
+    // working set to enter the cache before it starts evicting.
+    static const double workingSetTime;
+    static const int64_t workingSetMax = 16000000;
+
     // This constant factor biases cache capacity toward recent activity. We
     // want to adapt to changing workloads.
     static const int64_t recencyBias = 4;
@@ -203,13 +210,21 @@ private:
     void pruneSlowCase();
     void prune()
     {
-        if (m_size < m_capacity)
+        if (m_size <= m_capacity)
             return;
+
+        if (monotonicallyIncreasingTime() - m_timeAtLastPrune < workingSetTime
+            && m_size - m_sizeAtLastPrune < workingSetMax)
+                return;
+
         pruneSlowCase();
     }
 
     MapType m_map;
     int64_t m_size;
+    int64_t m_sizeAtLastPrune;
+    double m_timeAtLastPrune;
+    int64_t m_minCapacity;
     int64_t m_capacity;
     int64_t m_age;
 };
@@ -220,7 +235,7 @@ public:
     static PassOwnPtr<CodeCache> create() { return adoptPtr(new CodeCache); }
 
     UnlinkedProgramCodeBlock* getProgramCodeBlock(JSGlobalData&, ProgramExecutable*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
-    UnlinkedEvalCodeBlock* getEvalCodeBlock(JSGlobalData&, EvalExecutable*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
+    UnlinkedEvalCodeBlock* getEvalCodeBlock(JSGlobalData&, JSScope*, EvalExecutable*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
     UnlinkedFunctionExecutable* getFunctionExecutableFromGlobalCode(JSGlobalData&, const Identifier&, const SourceCode&, ParserError&);
     ~CodeCache();
 
@@ -233,7 +248,7 @@ private:
     CodeCache();
 
     template <class UnlinkedCodeBlockType, class ExecutableType> 
-    UnlinkedCodeBlockType* getCodeBlock(JSGlobalData&, ExecutableType*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
+    UnlinkedCodeBlockType* getCodeBlock(JSGlobalData&, JSScope*, ExecutableType*, const SourceCode&, JSParserStrictness, DebuggerMode, ProfilerMode, ParserError&);
 
     CodeCacheMap m_sourceCode;
 };

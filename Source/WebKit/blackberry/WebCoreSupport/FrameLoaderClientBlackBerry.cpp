@@ -29,7 +29,6 @@
 #include "ChromeClientBlackBerry.h"
 #include "ClientExtension.h"
 #include "CookieManager.h"
-#include "CredentialBackingStore.h"
 #include "CredentialManager.h"
 #include "CredentialTransformData.h"
 #include "DumpRenderTreeClient.h"
@@ -58,7 +57,6 @@
 #include "PluginDatabase.h"
 #include "PluginView.h"
 #include "ProgressTracker.h"
-#include "ProtectionSpace.h"
 #include "ScopePointer.h"
 #if ENABLE(BLACKBERRY_CREDENTIAL_PERSIST)
 #include "Settings.h"
@@ -1120,7 +1118,6 @@ void FrameLoaderClientBlackBerry::restoreViewState()
     // that, and the worst thing that could happen is that
     // HistoryController::restoreScrollPositionAndViewState calls
     // setScrollPosition with the the same point, which is a NOOP.
-    IntSize contentsSize = currentItem->contentsSize();
     IntPoint scrollPosition = currentItem->scrollPoint();
     if (m_webPagePrivate->m_userPerformedManualScroll)
         scrollPosition = m_webPagePrivate->scrollPosition();
@@ -1164,7 +1161,7 @@ void FrameLoaderClientBlackBerry::restoreViewState()
 
     // It is not safe to render the page at this point. So we post a message instead. Messages have higher priority than timers.
     BlackBerry::Platform::webKitThreadMessageClient()->dispatchMessage(BlackBerry::Platform::createMethodCallMessage(
-        &WebPagePrivate::restoreHistoryViewState, m_webPagePrivate, contentsSize, scrollPosition, scale, viewState.shouldReflowBlock));
+        &WebPagePrivate::restoreHistoryViewState, m_webPagePrivate, scrollPosition, scale, viewState.shouldReflowBlock));
 }
 
 PolicyAction FrameLoaderClientBlackBerry::decidePolicyForExternalLoad(const ResourceRequest& request, bool isFragmentScroll)

@@ -47,7 +47,7 @@ void RenderSVGViewportContainer::determineIfLayoutSizeChanged()
     if (!node()->hasTagName(SVGNames::svgTag))
         return;
 
-    m_isLayoutSizeChanged = static_cast<SVGSVGElement*>(node())->hasRelativeLengths() && selfNeedsLayout();
+    m_isLayoutSizeChanged = toSVGSVGElement(node())->hasRelativeLengths() && selfNeedsLayout();
 }
 
 void RenderSVGViewportContainer::applyViewportClip(PaintInfo& paintInfo)
@@ -58,10 +58,10 @@ void RenderSVGViewportContainer::applyViewportClip(PaintInfo& paintInfo)
 
 void RenderSVGViewportContainer::calcViewport()
 {
-    SVGElement* element = static_cast<SVGElement*>(node());
+    SVGElement* element = toSVGElement(node());
     if (!element->hasTagName(SVGNames::svgTag))
         return;
-    SVGSVGElement* svg = static_cast<SVGSVGElement*>(element);
+    SVGSVGElement* svg = toSVGSVGElement(element);
     FloatRect oldViewport = m_viewport;
 
     SVGLengthContext lengthContext(element);
@@ -133,7 +133,7 @@ bool RenderSVGViewportContainer::calculateLocalTransform()
 AffineTransform RenderSVGViewportContainer::viewportTransform() const
 {
     if (node()->hasTagName(SVGNames::svgTag)) {
-        SVGSVGElement* svg = static_cast<SVGSVGElement*>(node());
+        SVGSVGElement* svg = toSVGSVGElement(node());
         return svg->viewBoxToViewTransform(m_viewport.width(), m_viewport.height());
     }
 

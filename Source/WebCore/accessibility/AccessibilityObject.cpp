@@ -57,8 +57,8 @@
 #include "TextCheckingHelper.h"
 #include "TextIterator.h"
 #include "UserGestureIndicator.h"
+#include "VisibleUnits.h"
 #include "htmlediting.h"
-#include "visible_units.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -561,7 +561,7 @@ bool AccessibilityObject::press() const
     if (Frame* f = actionElem->document()->frame())
         f->loader()->resetMultipleFormSubmissionProtection();
     
-    UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
+    UserGestureIndicator gestureIndicator(DefinitelyProcessingNewUserGesture);
     actionElem->accessKeyAction(true);
     return true;
 }
@@ -1320,7 +1320,7 @@ bool AccessibilityObject::hasAttribute(const QualifiedName& attribute) const
     if (!elementNode->isElementNode())
         return false;
     
-    Element* element = static_cast<Element*>(elementNode);
+    Element* element = toElement(elementNode);
     return element->fastHasAttribute(attribute);
 }
     
@@ -1333,7 +1333,7 @@ const AtomicString& AccessibilityObject::getAttribute(const QualifiedName& attri
     if (!elementNode->isElementNode())
         return nullAtom;
     
-    Element* element = static_cast<Element*>(elementNode);
+    Element* element = toElement(elementNode);
     return element->fastGetAttribute(attribute);
 }
     
@@ -1584,6 +1584,26 @@ bool AccessibilityObject::supportsRangeValue() const
         || isSlider()
         || isScrollbar()
         || isSpinButton();
+}
+    
+bool AccessibilityObject::supportsARIASetSize() const
+{
+    return hasAttribute(aria_setsizeAttr);
+}
+
+bool AccessibilityObject::supportsARIAPosInSet() const
+{
+    return hasAttribute(aria_posinsetAttr);
+}
+    
+int AccessibilityObject::ariaSetSize() const
+{
+    return getAttribute(aria_setsizeAttr).toInt();
+}
+
+int AccessibilityObject::ariaPosInSet() const
+{
+    return getAttribute(aria_posinsetAttr).toInt();
 }
     
 bool AccessibilityObject::supportsARIAExpanded() const

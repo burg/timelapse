@@ -162,7 +162,7 @@ public:
 
     // Bounds of the outline box in absolute coords. Respects transforms
     virtual LayoutRect outlineBoundsForRepaint(const RenderLayerModelObject* /*repaintContainer*/, const RenderGeometryMap*) const OVERRIDE;
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint&);
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) OVERRIDE;
 
     // Use this with caution! No type checking is done!
     RenderBox* previousSiblingBox() const;
@@ -294,9 +294,6 @@ public:
     virtual void paint(PaintInfo&, const LayoutPoint&);
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
-    LayoutUnit minIntrinsicLogicalWidth() const;
-    LayoutUnit maxIntrinsicLogicalWidth() const;
-
     virtual LayoutUnit minPreferredLogicalWidth() const;
     virtual LayoutUnit maxPreferredLogicalWidth() const;
 
@@ -329,8 +326,6 @@ public:
     LayoutUnit adjustBorderBoxLogicalHeightForBoxSizing(LayoutUnit height) const;
     LayoutUnit adjustContentBoxLogicalWidthForBoxSizing(LayoutUnit width) const;
     LayoutUnit adjustContentBoxLogicalHeightForBoxSizing(LayoutUnit height) const;
-
-    virtual void borderFitAdjust(LayoutRect&) const { } // Shrink the box in which the border paints if border-fit is set.
 
     struct ComputedMarginValues {
         ComputedMarginValues()
@@ -596,8 +591,9 @@ protected:
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
     virtual void updateFromStyle() OVERRIDE;
 
-    virtual bool backgroundIsOpaqueInRect(const LayoutRect&) const OVERRIDE;
-    virtual bool backgroundIsObscured() const { return false; }
+    LayoutRect backgroundPaintedExtent() const;
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect) const;
+    virtual bool backgroundIsKnownToBeObscured() const;
     void paintBackground(const PaintInfo&, const LayoutRect&, BackgroundBleedAvoidance = BackgroundBleedNone);
     
     void paintFillLayer(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, BackgroundBleedAvoidance, CompositeOperator, RenderObject* backgroundObject);
@@ -613,6 +609,8 @@ protected:
 #endif
 
     void computePositionedLogicalWidth(LogicalExtentComputedValues&, RenderRegion* = 0, LayoutUnit offsetFromLogicalTopOfFirstPage = 0) const;
+
+    LayoutUnit computeIntrinsicLogicalWidthUsing(Length logicalWidthLength, LayoutUnit availableLogicalWidth, LayoutUnit borderAndPadding) const;
     
     virtual bool shouldComputeSizeAsReplaced() const { return isReplaced() && !isInlineBlockOrInlineTable(); }
 
@@ -658,7 +656,8 @@ private:
     void computePositionedLogicalHeightReplaced(LogicalExtentComputedValues&) const;
     void computePositionedLogicalWidthReplaced(LogicalExtentComputedValues&) const;
 
-    LayoutUnit computeIntrinsicLogicalWidthUsing(Length logicalWidthLength, LayoutUnit availableLogicalWidth) const;
+    LayoutUnit fillAvailableMeasure(LayoutUnit availableLogicalWidth) const;
+    LayoutUnit fillAvailableMeasure(LayoutUnit availableLogicalWidth, LayoutUnit& marginStart, LayoutUnit& marginEnd) const;
 
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
 

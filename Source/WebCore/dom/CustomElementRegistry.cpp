@@ -38,7 +38,7 @@
 #include "CustomElementHelpers.h"
 #include "Dictionary.h"
 #include "Document.h"
-#include "HTMLElement.h"
+#include "Element.h"
 #include "HTMLNames.h"
 #include "RuntimeEnabledFeatures.h"
 #include <wtf/ASCIICType.h>
@@ -62,7 +62,7 @@ CustomElementRegistry::~CustomElementRegistry()
 {
 }
 
-PassRefPtr<CustomElementConstructor> CustomElementRegistry::constructorOf(HTMLElement* element)
+PassRefPtr<CustomElementConstructor> CustomElementRegistry::constructorOf(Element* element)
 {
     RefPtr<CustomElementRegistry> self = element->document()->registry();
     if (!self)
@@ -139,13 +139,13 @@ PassRefPtr<CustomElementConstructor> CustomElementRegistry::registerElement(Scri
         return 0;
     }
 
-    RefPtr<CustomElementConstructor> constructor = CustomElementConstructor::create(state, document(), newName, "HTMLCustomElement", prototypeValue);
+    RefPtr<CustomElementConstructor> constructor = CustomElementConstructor::create(state, document(), newName, prototypeValue);
     if (!constructor) {
         ec = INVALID_STATE_ERR;
         return 0;
     }
         
-    m_constructors.add(constructor->tagName().impl(), constructor);
+    m_constructors.add(constructor->name().impl(), constructor);
     return constructor;
 }
 
@@ -155,7 +155,7 @@ PassRefPtr<CustomElementConstructor> CustomElementRegistry::find(const Qualified
     return (found != m_constructors.end()) ? found->value : 0;
 }
 
-PassRefPtr<HTMLElement> CustomElementRegistry::createElement(const QualifiedName& name) const
+PassRefPtr<Element> CustomElementRegistry::createElement(const QualifiedName& name) const
 {
     if (RefPtr<CustomElementConstructor> found = find(name))
         return found->createElement();
@@ -164,7 +164,7 @@ PassRefPtr<HTMLElement> CustomElementRegistry::createElement(const QualifiedName
 
 inline Document* CustomElementRegistry::document() const
 {
-    return static_cast<Document*>(m_scriptExecutionContext);
+    return toDocument(m_scriptExecutionContext);
 }
 
 }

@@ -28,6 +28,7 @@
 
 #if ENABLE(THREADED_HTML_PARSER)
 
+#include "HTMLIdentifier.h"
 #include "HTMLToken.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
@@ -40,28 +41,26 @@
 namespace WebCore {
 
 class QualifiedName;
-class XSSInfo;
 
 class CompactHTMLToken {
 public:
     struct Attribute {
-        Attribute(const String& name, const String& value)
+        Attribute(const HTMLIdentifier& name, const String& value)
             : name(name)
             , value(value)
         {
         }
 
-        String name;
+        HTMLIdentifier name;
         String value;
     };
 
     CompactHTMLToken(const HTMLToken*, const TextPosition&);
-    CompactHTMLToken(const CompactHTMLToken&);
 
     bool isSafeToSendToAnotherThread() const;
 
     HTMLToken::Type type() const { return static_cast<HTMLToken::Type>(m_type); }
-    const String& data() const { return m_data; }
+    const HTMLIdentifier& data() const { return m_data; }
     bool selfClosing() const { return m_selfClosing; }
     bool isAll8BitData() const { return m_isAll8BitData; }
     const Vector<Attribute>& attributes() const { return m_attributes; }
@@ -70,11 +69,9 @@ public:
 
     // There is only 1 DOCTYPE token per document, so to avoid increasing the
     // size of CompactHTMLToken, we just use the m_attributes vector.
-    const String& publicIdentifier() const { return m_attributes[0].name; }
+    const HTMLIdentifier& publicIdentifier() const { return m_attributes[0].name; }
     const String& systemIdentifier() const { return m_attributes[0].value; }
     bool doctypeForcesQuirks() const { return m_doctypeForcesQuirks; }
-    XSSInfo* xssInfo() const;
-    void setXSSInfo(PassOwnPtr<XSSInfo>);
 
 private:
     unsigned m_type : 4;
@@ -82,20 +79,13 @@ private:
     unsigned m_isAll8BitData : 1;
     unsigned m_doctypeForcesQuirks: 1;
 
-    String m_data; // "name", "characters", or "data" depending on m_type
+    HTMLIdentifier m_data; // "name", "characters", or "data" depending on m_type
     Vector<Attribute> m_attributes;
     TextPosition m_textPosition;
-    OwnPtr<XSSInfo> m_xssInfo;
 };
 
 typedef Vector<CompactHTMLToken> CompactHTMLTokenStream;
 
-}
-
-namespace WTF {
-// This is required for a struct with OwnPtr. We know CompactHTMLToken is simple enough that
-// initializing to 0 and moving with memcpy (and then not destructing the original) will work.
-template<> struct VectorTraits<WebCore::CompactHTMLToken> : SimpleClassVectorTraits { };
 }
 
 #endif // ENABLE(THREADED_HTML_PARSER)

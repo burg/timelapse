@@ -28,6 +28,7 @@
 
 #include "MessageReceiver.h"
 #include <WebCore/StorageArea.h>
+#include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -64,15 +65,21 @@ private:
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
 
     void didSetItem(const String& key, bool quotaError);
+    void dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, const String& urlString);
 
+    WebCore::StorageType storageType() const;
     bool disabledByPrivateBrowsingInFrame(const WebCore::Frame* sourceFrame) const;
 
+    bool shouldApplyChangesForKey(const String& key) const;
     void loadValuesIfNeeded();
+    void resetValues();
 
-    WebCore::StorageType m_storageType;
+    uint64_t m_storageNamespaceID;
     unsigned m_quotaInBytes;
     uint64_t m_storageAreaID;
     RefPtr<WebCore::StorageMap> m_storageMap;
+
+    HashCountedSet<String> m_pendingValueChanges;
 };
 
 } // namespace WebKit

@@ -93,12 +93,12 @@ v8::Handle<v8::Value> V8TestNode::constructorCallback(const v8::Arguments& args)
     return TestNodeV8Internal::constructor(args);
 }
 
-static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestNodeTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
+static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestNodeTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate, WrapperWorldType worldType)
 {
     desc->ReadOnlyPrototype();
 
     v8::Local<v8::Signature> defaultSignature;
-    defaultSignature = V8DOMConfiguration::configureTemplate(desc, "TestNode", V8Node::GetTemplate(isolate), V8TestNode::internalFieldCount,
+    defaultSignature = V8DOMConfiguration::configureTemplate(desc, "TestNode", V8Node::GetTemplate(isolate, worldType), V8TestNode::internalFieldCount,
         0, 0,
         0, 0, isolate);
     UNUSED_PARAM(defaultSignature); // In some cases, it will not be used.
@@ -110,36 +110,23 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestNodeTemplate(v8::Pers
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestNode::GetRawTemplate(v8::Isolate* isolate)
+v8::Persistent<v8::FunctionTemplate> V8TestNode::GetTemplate(v8::Isolate* isolate, WrapperWorldType worldType)
 {
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
-    if (result != data->rawTemplateMap().end())
-        return result->value;
-
-    v8::HandleScope handleScope;
-    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate(isolate);
-    data->rawTemplateMap().add(&info, templ);
-    return templ;
-}
-
-v8::Persistent<v8::FunctionTemplate> V8TestNode::GetTemplate(v8::Isolate* isolate)
-{
-    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
-    V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
-    if (result != data->templateMap().end())
+    V8PerIsolateData::TemplateMap::iterator result = data->templateMap(worldType).find(&info);
+    if (result != data->templateMap(worldType).end())
         return result->value;
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        ConfigureV8TestNodeTemplate(GetRawTemplate(isolate), isolate);
-    data->templateMap().add(&info, templ);
+        ConfigureV8TestNodeTemplate(data->rawTemplate(&info, worldType), isolate, worldType);
+    data->templateMap(worldType).add(&info, templ);
     return templ;
 }
 
-bool V8TestNode::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate)
+bool V8TestNode::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate, WrapperWorldType worldType)
 {
-    return GetRawTemplate(isolate)->HasInstance(value);
+    return V8PerIsolateData::from(isolate)->hasInstance(&info, value, worldType);
 }
 
 EventTarget* V8TestNode::toEventTarget(v8::Handle<v8::Object> object)

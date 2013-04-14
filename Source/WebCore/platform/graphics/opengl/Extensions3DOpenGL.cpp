@@ -178,7 +178,26 @@ bool Extensions3DOpenGL::supportsExtension(const String& name)
     if (name == "GL_EXT_texture_filter_anisotropic")
         return m_availableExtensions.contains("GL_EXT_texture_filter_anisotropic");
 
+    if (name == "GL_EXT_draw_buffers") {
+#if PLATFORM(MAC)
+        return m_availableExtensions.contains("GL_ARB_draw_buffers");
+#else
+        // FIXME: implement support for other platforms.
+        return false;
+#endif
+    }
     return m_availableExtensions.contains(name);
+}
+
+void Extensions3DOpenGL::drawBuffersEXT(GC3Dsizei n, const GC3Denum* bufs)
+{
+    //  FIXME: implement support for other platforms.
+#if PLATFORM(MAC)
+    ::glDrawBuffersARB(n, bufs);
+#else
+    UNUSED_PARAM(n);
+    UNUSED_PARAM(bufs);
+#endif
 }
 
 String Extensions3DOpenGL::getExtensions()

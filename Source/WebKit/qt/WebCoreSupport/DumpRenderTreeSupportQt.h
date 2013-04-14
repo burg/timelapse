@@ -93,9 +93,6 @@ public:
 
     static void executeCoreCommandByName(QWebPageAdapter*, const QString& name, const QString& value);
     static bool isCommandEnabled(QWebPageAdapter*, const QString& name);
-    static bool findString(QWebPageAdapter*, const QString&, const QStringList& optionArray);
-    static void setSmartInsertDeleteEnabled(QWebPageAdapter*, bool enabled);
-    static void setSelectTrailingWhitespaceEnabled(QWebPageAdapter*, bool enabled);
     static QVariantList selectedRange(QWebPageAdapter*);
     static QVariantList firstRectForCharacterRange(QWebPageAdapter*, int location, int length);
     static void confirmComposition(QWebPageAdapter*, const char* text);
@@ -122,7 +119,6 @@ public:
     static void clearFrameName(QWebFrameAdapter*);
     static void overwritePluginDirectories();
     static bool hasDocumentElement(QWebFrameAdapter*);
-    static bool elementDoesAutoCompleteForElementWithId(QWebFrameAdapter*, const QString& elementId);
     static void setWindowsBehaviorAsEditingBehavior(QWebPageAdapter*);
 
     static void clearAllApplicationCaches();
@@ -138,9 +134,6 @@ public:
     static void setMockGeolocationPosition(QWebPageAdapter*, double latitude, double longitude, double accuracy);
     static void setMockGeolocationPositionUnavailableError(QWebPageAdapter*, const QString& message);
     static int numberOfPendingGeolocationPermissionRequests(QWebPageAdapter*);
-
-    static QString markerTextForListItem(const QWebElement& listItem);
-    static QVariantMap computedStyleIncludingVisitedInfo(const QWebElement&);
 
     static void dumpFrameLoader(bool);
     static void dumpProgressFinishedCallback(bool);

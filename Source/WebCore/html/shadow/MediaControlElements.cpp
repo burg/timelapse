@@ -59,6 +59,10 @@
 #include "TextTrackList.h"
 #endif
 
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+#include "RenderPart.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -1181,13 +1185,6 @@ MediaControlTextTrackContainerElement::MediaControlTextTrackContainerElement(Doc
 {
 }
 
-void MediaControlTextTrackContainerElement::createSubtrees(Document* document)
-{
-    m_cueContainer = HTMLElement::create(spanTag, document);
-    m_cueContainer->setPseudo(TextTrackCue::cueShadowPseudoId());
-    appendChild(m_cueContainer, ASSERT_NO_EXCEPTION, false);
-}
-
 PassRefPtr<MediaControlTextTrackContainerElement> MediaControlTextTrackContainerElement::create(Document* document)
 {
     RefPtr<MediaControlTextTrackContainerElement> element = adoptRef(new MediaControlTextTrackContainerElement(document));
@@ -1214,7 +1211,7 @@ const AtomicString& MediaControlTextTrackContainerElement::shadowPseudoId() cons
 void MediaControlTextTrackContainerElement::updateDisplay()
 {
     if (!mediaController()->closedCaptionsVisible()) {
-        m_cueContainer->removeChildren();
+        removeChildren();
         return;
     }
 
@@ -1273,7 +1270,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         RefPtr<TextTrackCueBox> displayBox = cue->getDisplayTree(m_videoDisplaySize.size());
         if (displayBox->hasChildNodes() && !contains(static_cast<Node*>(displayBox.get())))
             // Note: the display tree of a cue is removed when the active flag of the cue is unset.
-            m_cueContainer->appendChild(displayBox, ASSERT_NO_EXCEPTION, false);
+            appendChild(displayBox, ASSERT_NO_EXCEPTION, AttachNow);
     }
 
     // 11. Return output.
@@ -1314,9 +1311,15 @@ void MediaControlTextTrackContainerElement::updateSizes(bool forceUpdate)
     if (m_textTrackRepresentation)
         videoBox = m_textTrackRepresentation->bounds();
     else {
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+        if (!mediaElement->renderer() || !mediaElement->renderer()->isRenderPart())
+            return;
+        videoBox = pixelSnappedIntRect(toRenderPart(mediaElement->renderer())->contentBoxRect());
+#else
         if (!mediaElement->renderer() || !mediaElement->renderer()->isVideo())
             return;
         videoBox = toRenderVideo(mediaElement->renderer())->videoBox();
+#endif
     }
 
     if (!forceUpdate && m_videoDisplaySize == videoBox)

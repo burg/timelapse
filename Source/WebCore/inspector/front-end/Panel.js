@@ -39,7 +39,7 @@ WebInspector.Panel = function(name)
     this.element.addStyleClass(name);
     this._panelName = name;
 
-    this._shortcuts = {};
+    this._shortcuts = /** !Object.<number, function(Event=):boolean> */ ({});
 
     WebInspector.settings[this._sidebarWidthSettingName()] = WebInspector.settings.createSetting(this._sidebarWidthSettingName(), undefined);
 }
@@ -260,15 +260,13 @@ WebInspector.Panel.prototype = {
     {
         var shortcutKey = WebInspector.KeyboardShortcut.makeKeyFromEvent(event);
         var handler = this._shortcuts[shortcutKey];
-        if (handler) {
-            handler(event);
+        if (handler && handler(event))
             event.handled = true;
-        }
     },
 
     /**
      * @param {!Array.<!WebInspector.KeyboardShortcut.Descriptor>} keys
-     * @param {function(KeyboardEvent)} handler
+     * @param {function(Event=):boolean} handler
      */
     registerShortcuts: function(keys, handler)
     {

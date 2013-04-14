@@ -81,8 +81,8 @@ public:
     
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint&);
-    void paintOutline(GraphicsContext*, const LayoutPoint&);
+    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) OVERRIDE;
+    void paintOutline(PaintInfo&, const LayoutPoint&);
 
     using RenderBoxModelObject::continuation;
     using RenderBoxModelObject::setContinuation;
@@ -165,6 +165,8 @@ private:
 
     virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
+    
+    virtual void childBecameNonInline(RenderObject* child);
 
     virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&);
 

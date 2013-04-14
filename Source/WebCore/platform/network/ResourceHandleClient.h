@@ -26,6 +26,7 @@
 #ifndef ResourceHandleClient_h
 #define ResourceHandleClient_h
 
+#include "SharedBuffer.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -86,7 +87,13 @@ namespace WebCore {
         virtual void didSendData(ResourceHandle*, unsigned long long /*bytesSent*/, unsigned long long /*totalBytesToBeSent*/) { }
 
         virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) { }
+        
         virtual void didReceiveData(ResourceHandle*, const char*, int, int /*encodedDataLength*/) { }
+        virtual void didReceiveBuffer(ResourceHandle* handle, PassRefPtr<SharedBuffer> buffer, int encodedDataLength)
+        {
+            didReceiveData(handle, buffer->data(), buffer->size(), encodedDataLength);
+        }
+        
         virtual void didReceiveCachedMetadata(ResourceHandle*, const char*, int) { }
         virtual void didFinishLoading(ResourceHandle*, double /*finishTime*/) { }
         virtual void didFail(ResourceHandle*, const ResourceError&) { }
@@ -131,9 +138,6 @@ namespace WebCore {
 #endif
 #if PLATFORM(CHROMIUM)
         virtual void didDownloadData(ResourceHandle*, int /*dataLength*/) { }
-#endif
-#if ENABLE(BLOB)
-        virtual AsyncFileStream* createAsyncFileStream(FileStreamClient*) { return 0; }
 #endif
 
 #if USE(SOUP)

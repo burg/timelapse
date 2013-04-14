@@ -110,8 +110,8 @@ public:
     // Controls the device scale factor of the main WebView for hidpi tests.
     virtual void setDeviceScaleFactor(float) = 0;
 
-    // Controls whether or not the main WebView should be focused.
-    virtual void setFocus(bool) = 0;
+    // Controls which WebView should be focused.
+    virtual void setFocus(WebTestProxyBase*, bool) = 0;
 
     // Controls whether all cookies should be accepted or writing cookies in a
     // third-party context is blocked.

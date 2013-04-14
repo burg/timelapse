@@ -89,13 +89,6 @@ void AbstractState::initialize(Graph& graph)
     for (size_t i = 0; i < root->valuesAtHead.numberOfArguments(); ++i) {
         Node* node = root->variablesAtHead.argument(i);
         ASSERT(node->op() == SetArgument);
-        if (!node->shouldGenerate()) {
-            // The argument is dead. We don't do any checks for such arguments, and so
-            // for the purpose of the analysis, they contain no value.
-            root->valuesAtHead.argument(i).clear();
-            continue;
-        }
-        
         if (!node->variableAccessData()->shouldUnboxIfPossible()) {
             root->valuesAtHead.argument(i).makeTop();
             continue;
@@ -319,6 +312,18 @@ bool AbstractState::executeEffects(unsigned indexInBlock, Node* node)
         
     case SetLocal: {
         m_variables.operand(node->local()) = forNode(node->child1());
+        break;
+    }
+        
+    case MovHintAndCheck: {
+        // Don't need to do anything. A MovHint is effectively a promise that the SetLocal
+        // was dead.
+        break;
+    }
+        
+    case MovHint:
+    case ZombieHint: {
+        RELEASE_ASSERT_NOT_REACHED();
         break;
     }
             
@@ -1095,31 +1100,8 @@ bool AbstractState::executeEffects(unsigned indexInBlock, Node* node)
         AbstractValue& source = forNode(node->child1());
         AbstractValue& destination = forNode(node);
             
-        if (isObjectSpeculation(source.m_type)) {
-            // This is the simple case. We already know that the source is an
-            // object, so there's nothing to do. I don't think this case will
-            // be hit, but then again, you never know.
-            destination = source;
-            m_foundConstants = true; // Tell the constant folder to turn this into Identity.
-            break;
-        }
-        
-        node->setCanExit(true);
-        switch (node->child1().useKind()) {
-        case OtherUse:
-            destination.set(SpecObjectOther);
-            break;
-        case ObjectUse:
-            destination = source;
-            break;
-        case UntypedUse:
-            destination = source;
-            destination.merge(SpecObjectOther);
-            break;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            break;
-        }
+        destination = source;
+        destination.merge(SpecObjectOther);
         break;
     }
 
@@ -1616,20 +1598,6 @@ inline bool AbstractState::mergeStateAtTail(AbstractValue& destination, Abstract
         dataLogF(" from last access due to captured variable.\n");
 #endif
     } else {
-        if (!node->shouldGenerate()) {
-            // If the node at tail is a GetLocal that is dead, then skip it to get to the Phi.
-            // The Phi may be live.
-            if (node->op() != GetLocal)
-                return false;
-            
-            node = node->child1().node();
-            ASSERT(node->op() == Phi);
-            if (!node->shouldGenerate())
-                return false;
-        }
-        
-        ASSERT(node->shouldGenerate());
-
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
         dataLogF("          It's live, node @%u.\n", node->index());
 #endif

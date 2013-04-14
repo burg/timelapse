@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -727,6 +727,11 @@ void MediaPlayer::paintCurrentFrameInContext(GraphicsContext* p, const IntRect& 
     m_private->paintCurrentFrameInContext(p, r);
 }
 
+bool MediaPlayer::copyVideoTextureToPlatformTexture(GraphicsContext3D* context, Platform3DObject texture, GC3Dint level, GC3Denum type, GC3Denum internalFormat, bool premultiplyAlpha, bool flipY)
+{
+    return m_private->copyVideoTextureToPlatformTexture(context, texture, level, type, internalFormat, premultiplyAlpha, flipY);
+}
+
 MediaPlayer::SupportsType MediaPlayer::supportsType(const ContentType& contentType, const String& keySystem, const KURL& url, const MediaPlayerSupportsTypeClient* client)
 {
     String type = contentType.type().lower();
@@ -1120,12 +1125,34 @@ void MediaPlayer::setTextTrackRepresentation(TextTrackRepresentation* representa
 {
     m_private->setTextTrackRepresentation(representation);
 }
-#endif
+#endif // ENABLE(VIDEO_TRACK)
+
+#if USE(PLATFORM_TEXT_TRACK_MENU)
+bool MediaPlayer::implementsTextTrackControls() const
+{
+    return m_private->implementsTextTrackControls();
+}
+
+PassRefPtr<PlatformTextTrackMenuInterface> MediaPlayer::textTrackMenu()
+{
+    return m_private->textTrackMenu();
+}
+#endif // USE(PLATFORM_TEXT_TRACK_MENU)
 
 void MediaPlayer::resetMediaEngines()
 {
     installedMediaEngines(ResetEngines);
 }
+
+#if USE(GSTREAMER)
+void MediaPlayer::simulateAudioInterruption()
+{
+    if (!m_private)
+        return;
+
+    m_private->simulateAudioInterruption();
+}
+#endif
 
 }
 

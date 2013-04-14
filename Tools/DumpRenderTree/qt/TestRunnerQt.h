@@ -49,22 +49,16 @@
 
 class QWebFrame;
 class DumpRenderTreeSupportQt;
-namespace WebCore {
 class DumpRenderTree;
-}
 
 class TestRunnerQt : public QObject {
     Q_OBJECT
     Q_PROPERTY(int webHistoryItemCount READ webHistoryItemCount)
     Q_PROPERTY(bool globalFlag READ globalFlag WRITE setGlobalFlag)
 public:
-    TestRunnerQt(WebCore::DumpRenderTree*);
+    TestRunnerQt(DumpRenderTree*);
 
-    bool shouldDisallowIncreaseForApplicationCacheQuota() const { return m_disallowIncreaseForApplicationCacheQuota; }
-    bool shouldDumpAsText() const { return m_textDump; }
     bool shouldDumpAsAudio() const { return m_audioDump; }
-    bool shouldDumpPixels() const { return m_shouldDumpPixels; }
-    bool shouldDumpBackForwardList() const { return m_dumpBackForwardList; }
     bool shouldDumpChildrenAsText() const { return m_dumpChildrenAsText; }
     bool shouldDumpChildFrameScrollPositions() const { return m_dumpChildFrameScrollPositions; }
     bool shouldDumpDatabaseCallbacks() const { return m_dumpDatabaseCallbacks; }
@@ -100,8 +94,6 @@ Q_SIGNALS:
 
 public Q_SLOTS:
     void maybeDump(bool ok);
-    void disallowIncreaseForApplicationCacheQuota() { m_disallowIncreaseForApplicationCacheQuota = true; }
-    void dumpAsText(bool shouldDumpPixels = false);
     void dumpChildFramesAsText() { m_dumpChildrenAsText = true; }
     void dumpChildFrameScrollPositions() { m_dumpChildFrameScrollPositions = true; }
     void dumpDatabaseCallbacks() { m_dumpDatabaseCallbacks = true; }
@@ -114,7 +106,6 @@ public Q_SLOTS:
     int webHistoryItemCount();
     void keepWebHistory();
     void notifyDone();
-    void dumpBackForwardList() { m_dumpBackForwardList = true; }
     bool globalFlag() const { return m_globalFlag; }
     void setGlobalFlag(bool flag) { m_globalFlag = flag; }
     void handleErrorPages() { m_handleErrorPages = true; }
@@ -137,7 +128,6 @@ public Q_SLOTS:
     void queueLoadingScript(const QString& script);
     void queueNonLoadingScript(const QString& script);
     void provisionalLoad();
-    void setCloseRemainingWindowsWhenComplete(bool = false) { }
     int windowCount();
     void ignoreLegacyWebNotificationPermissionRequests();
     void simulateLegacyWebNotificationClick(const QString& title);
@@ -178,13 +168,8 @@ public Q_SLOTS:
     void setCaretBrowsingEnabled(bool);
     void setAuthorAndUserStylesEnabled(bool);
     void setViewModeMediaFeature(const QString& mode);
-    void setSmartInsertDeleteEnabled(bool);
-    void setSelectTrailingWhitespaceEnabled(bool);
     void execCommand(const QString& name, const QString& value = QString());
     bool isCommandEnabled(const QString& name) const;
-    bool findString(const QString&, const QStringList& optionArray);
-
-    bool elementDoesAutoCompleteForElementWithId(const QString& elementId);
 
     void addOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
     void removeOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
@@ -210,13 +195,6 @@ public Q_SLOTS:
     void setUserStyleSheetEnabled(bool);
     void setDomainRelaxationForbiddenForURLScheme(bool forbidden, const QString& scheme);
     bool callShouldCloseOnWebView();
-    // For now, this is a no-op. This may change depending on outcome of
-    // https://bugs.webkit.org/show_bug.cgi?id=33333
-    void setCallCloseOnWebViews() { }
-    // This is a no-op - it allows us to pass
-    // plugins/get-url-that-the-resource-load-delegate-will-disallow.html
-    // which is a Mac-specific test.
-    void addDisallowedURL(const QString&) { }
 
     void setMockDeviceOrientation(bool canProvideAlpha, double alpha, bool canProvideBeta, double beta, bool canProvideGamma, double gamma);
 
@@ -236,9 +214,6 @@ public Q_SLOTS:
 
     void setAutomaticLinkDetectionEnabled(bool);
 
-    // Empty stub method to keep parity with object model exposed by global TestRunner.
-    void abortModal() { }
-
     void addURLToRedirect(const QString& origin, const QString& destination);
 
     /*
@@ -246,9 +221,6 @@ public Q_SLOTS:
         Orientation values: 'vertical' or 'horizontal'.
     */
     void setScrollbarPolicy(const QString& orientation, const QString& policy);
-
-    QString markerTextForListItem(const QWebElement& listItem);
-    QVariantMap computedStyleIncludingVisitedInfo(const QWebElement&) const;
 
     // Simulate a request an embedding application could make, populating per-session credential storage.
     void authenticateSession(const QString& url, const QString& username, const QString& password);
@@ -279,11 +251,8 @@ private:
 
 private:
     bool m_hasDumped;
-    bool m_textDump;
     bool m_audioDump;
-    bool m_shouldDumpPixels;
     bool m_disallowIncreaseForApplicationCacheQuota;
-    bool m_dumpBackForwardList;
     bool m_dumpChildrenAsText;
     bool m_dumpChildFrameScrollPositions;
     bool m_canOpenWindows;
@@ -304,7 +273,7 @@ private:
     QUrl m_userStyleSheetLocation;
     QBasicTimer m_timeoutTimer;
     QWebFrame* m_topLoadingFrame;
-    WebCore::DumpRenderTree* m_drt;
+    DumpRenderTree* m_drt;
     QWebHistory* m_webHistory;
     bool m_ignoreDesktopNotification;
 

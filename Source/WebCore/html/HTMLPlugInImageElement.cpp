@@ -48,6 +48,7 @@
 #include "ShadowRoot.h"
 #include "StyleResolver.h"
 #include "Text.h"
+#include <wtf/CurrentTime.h>
 
 namespace WebCore {
 
@@ -57,6 +58,8 @@ static const int sizingTinyDimensionThreshold = 40;
 static const int sizingSmallWidthThreshold = 250;
 static const int sizingMediumWidthThreshold = 450;
 static const int sizingMediumHeightThreshold = 300;
+static const float sizingFullPageAreaRatioThreshold = 0.96;
+static const float autostartSoonAfterUserGestureThreshold = 5.0;
 
 // This delay should not exceed the snapshot delay in PluginView.cpp
 static const double simulatedMouseClickTimerDelay = .75;
@@ -70,8 +73,10 @@ HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Doc
     , m_needsWidgetUpdate(!createdByParser)
     , m_shouldPreferPlugInsForImages(preferPlugInsForImagesOption == ShouldPreferPlugInsForImages)
     , m_needsDocumentActivationCallbacks(false)
+    , m_isPrimarySnapshottedPlugIn(false)
     , m_simulatedMouseClickTimer(this, &HTMLPlugInImageElement::simulatedMouseClickTimerFired, simulatedMouseClickTimerDelay)
     , m_swapRendererTimer(this, &HTMLPlugInImageElement::swapRendererTimerFired)
+    , m_createdDuringUserGesture(ScriptController::processingUserGesture())
 {
     setHasCustomStyleCallbacks();
 }
@@ -294,12 +299,13 @@ void HTMLPlugInImageElement::updateSnapshot(PassRefPtr<Image> image)
         renderer()->repaint();
 }
 
-static AtomicString classNameForShadowRoot(const Node* node)
+static AtomicString classNameForShadowRoot(const Node* node, bool isPrimary)
 {
     DEFINE_STATIC_LOCAL(const AtomicString, plugInTinySizeClassName, ("tiny", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, plugInSmallSizeClassName, ("small", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, plugInMediumSizeClassName, ("medium", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, plugInLargeSizeClassName, ("large", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, plugInLargeSizePrimaryClassName, ("large primary", AtomicString::ConstructFromLiteral));
 
     RenderBox* renderBox = static_cast<RenderBox*>(node->renderer());
     LayoutUnit width = renderBox->contentWidth();
@@ -314,7 +320,14 @@ static AtomicString classNameForShadowRoot(const Node* node)
     if (width < sizingMediumWidthThreshold || height < sizingMediumHeightThreshold)
         return plugInMediumSizeClassName;
 
-    return plugInLargeSizeClassName;
+    return isPrimary ? plugInLargeSizePrimaryClassName : plugInLargeSizeClassName;
+}
+    
+void HTMLPlugInImageElement::setIsPrimarySnapshottedPlugIn(bool isPrimarySnapshottedPlugIn)
+{
+    m_isPrimarySnapshottedPlugIn = isPrimarySnapshottedPlugIn;
+    
+    updateSnapshotInfo();
 }
 
 void HTMLPlugInImageElement::updateSnapshotInfo()
@@ -323,8 +336,8 @@ void HTMLPlugInImageElement::updateSnapshotInfo()
     if (!root)
         return;
 
-    Element* shadowContainer = static_cast<Element*>(root->firstChild());
-    shadowContainer->setAttribute(classAttr, classNameForShadowRoot(this));
+    Element* shadowContainer = toElement(root->firstChild());
+    shadowContainer->setAttribute(classAttr, classNameForShadowRoot(this, m_isPrimarySnapshottedPlugIn));
 }
 
 void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
@@ -367,6 +380,14 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 
     container->appendChild(label, ASSERT_NO_EXCEPTION);
 
+    // Make this into a button for accessibility clients.
+    String combinedText = titleText;
+    if (!combinedText.isEmpty() && !subtitleText.isEmpty())
+        combinedText.append(" ");
+    combinedText.append(subtitleText);
+    container->setAttribute(aria_labelAttr, combinedText);
+    container->setAttribute(roleAttr, "button");
+    
     shadowContainer->appendChild(container, ASSERT_NO_EXCEPTION);
     root->appendChild(shadowContainer, ASSERT_NO_EXCEPTION);
 }
@@ -414,7 +435,9 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
         || !document()->page()->settings()->plugInSnapshottingEnabled())
         return;
 
-    if (document()->isPluginDocument() && document()->frame() == document()->page()->mainFrame()) {
+    bool inMainFrame = document()->frame() == document()->page()->mainFrame();
+
+    if (document()->isPluginDocument() && inMainFrame) {
         LOG(Plugins, "%p Plug-in document in main frame", this);
         return;
     }
@@ -424,11 +447,38 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
         return;
     }
 
-    LayoutRect rect = toRenderEmbeddedObject(renderer())->contentBoxRect();
-    int width = rect.width();
-    int height = rect.height();
-    if (width <= sizingTinyDimensionThreshold || height <= sizingTinyDimensionThreshold) {
-        LOG(Plugins, "%p Plug-in is %dx%d, set to play", this, width, height);
+    if (m_createdDuringUserGesture) {
+        LOG(Plugins, "%p Plug-in was created when processing user gesture, set to play", this);
+        return;
+    }
+
+    double lastKnownUserGestureTimestamp = document()->lastHandledUserGestureTimestamp();
+    if (!inMainFrame && document()->page()->mainFrame() && document()->page()->mainFrame()->document())
+        lastKnownUserGestureTimestamp = std::max(lastKnownUserGestureTimestamp, document()->page()->mainFrame()->document()->lastHandledUserGestureTimestamp());
+    if (currentTime() - lastKnownUserGestureTimestamp < autostartSoonAfterUserGestureThreshold) {
+        LOG(Plugins, "%p Plug-in was created shortly after a user gesture, set to play", this);
+        return;
+    }
+
+    RenderBox* renderEmbeddedObject = toRenderBox(renderer());
+    Length styleWidth = renderEmbeddedObject->style()->width();
+    Length styleHeight = renderEmbeddedObject->style()->height();
+    LayoutRect contentBoxRect = renderEmbeddedObject->contentBoxRect();
+    int contentWidth = contentBoxRect.width();
+    int contentHeight = contentBoxRect.height();
+    int contentArea = contentWidth * contentHeight;
+    IntSize visibleViewSize = document()->frame()->view()->visibleSize();
+    int visibleArea = visibleViewSize.width() * visibleViewSize.height();
+
+    if (inMainFrame && styleWidth.isPercent() && (styleWidth.percent() == 100)
+        && styleHeight.isPercent() && (styleHeight.percent() == 100)
+        && (static_cast<float>(contentArea) / visibleArea > sizingFullPageAreaRatioThreshold)) {
+        LOG(Plugins, "%p Plug-in is top level full page, set to play", this);
+        return;
+    }
+
+    if (contentWidth <= sizingTinyDimensionThreshold || contentHeight <= sizingTinyDimensionThreshold) {
+        LOG(Plugins, "%p Plug-in is %dx%d, set to play", this, contentWidth, contentHeight);
         return;
     }
 
@@ -446,7 +496,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
         return;
     }
 
-    LOG(Plugins, "%p Plug-in hash %x is %dx%d, origin is not auto-start, set to wait for snapshot", this, m_plugInOriginHash, width, height);
+    LOG(Plugins, "%p Plug-in hash %x is %dx%d, origin is not auto-start, set to wait for snapshot", this, m_plugInOriginHash, contentWidth, contentHeight);
     // We may have got to this point by restarting a snapshotted plug-in, in which case we don't want to
     // reset the display state.
     if (displayState() != PlayingWithPendingMouseClick)
