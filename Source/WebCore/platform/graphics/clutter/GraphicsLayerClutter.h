@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  * Copyright (C) 2011, 2012 Collabora Ltd.
- * Copyright (C) 2012 Intel Corporation. All rights reserved.
+ * Copyright (C) 2012, 2013 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -78,25 +78,48 @@ public:
     virtual void setName(const String&);
     virtual void setNeedsDisplay();
     virtual void setNeedsDisplayInRect(const FloatRect&);
+    virtual void setContentsNeedsDisplay();
+
+    virtual void setContentsToImage(Image*);
+    virtual void setContentsRect(const IntRect&);
+
+    virtual bool hasContentsLayer() const { return m_contentsLayer; }
+
+    virtual void setPreserves3D(bool);
 
     virtual bool addAnimation(const KeyframeValueList&, const IntSize& boxSize, const Animation*, const String& animationName, double timeOffset);
+    virtual void removeAnimation(const String& animationName);
 
     virtual void flushCompositingState(const FloatRect&);
     virtual void flushCompositingStateForThisLayerOnly();
 
-    void recursiveCommitChanges(const TransformState&, float pageScaleFactor = 1, const FloatPoint& positionRelativeToBase = FloatPoint(), bool affectedByPageScale = false);
+    struct CommitState {
+        bool ancestorHasTransformAnimation;
+        CommitState()
+            : ancestorHasTransformAnimation(false)
+        { }
+    };
+    void recursiveCommitChanges(const CommitState&, const TransformState&, float pageScaleFactor = 1, const FloatPoint& positionRelativeToBase = FloatPoint(), bool affectedByPageScale = false);
 
 private:
     FloatPoint computePositionRelativeToBase(float& pageScale) const;
+
+    bool animationIsRunning(const String& animationName) const
+    {
+        return m_runningAnimations.find(animationName) != m_runningAnimations.end();
+    }
+
     void commitLayerChangesBeforeSublayers(float pageScaleFactor, const FloatPoint& positionRelativeToBase);
     void commitLayerChangesAfterSublayers();
 
     void updateOpacityOnLayer();
+    void setupContentsLayer(GraphicsLayerActor*);
+    GraphicsLayerActor* contentsLayer() const { return m_contentsLayer.get(); }
 
     virtual void platformClutterLayerAnimationStarted(double beginTime);
     virtual void platformClutterLayerPaintContents(GraphicsContext&, const IntRect& clip);
 
-    GraphicsLayerActor* primaryLayer() const { return m_layer.get(); }
+    GraphicsLayerActor* primaryLayer() const { return m_structuralLayer.get() ? m_structuralLayer.get() : m_layer.get(); }
     GraphicsLayerActor* layerForSuperlayer() const;
     GraphicsLayerActor* animatedLayer(AnimatedPropertyID) const;
 
@@ -119,6 +142,9 @@ private:
     bool setTransformAnimationEndpoints(const KeyframeValueList&, const Animation*, PlatformClutterAnimation*, int functionIndex, TransformOperation::OperationType, bool isMatrixAnimation, const IntSize& boxSize);
     bool setTransformAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformClutterAnimation*, int functionIndex, TransformOperation::OperationType, bool isMatrixAnimation, const IntSize& boxSize);
 
+    enum MoveOrCopy { Move, Copy };
+    void moveOrCopyAnimations(MoveOrCopy, GraphicsLayerActor* fromLayer, GraphicsLayerActor* toLayer);
+
     bool appendToUncommittedAnimations(const KeyframeValueList&, const TransformOperations*, const Animation*, const String& animationName, const IntSize& boxSize, int animationIndex, double timeOffset, bool isMatrixAnimation);
 
     enum LayerChange {
@@ -140,12 +166,17 @@ private:
         ContentsImageChanged = 1 << 15,
         ContentsMediaLayerChanged = 1 << 16,
         ContentsCanvasLayerChanged = 1 << 17,
-        ContentsRectChanged = 1 << 18,
-        MaskLayerChanged = 1 << 19,
-        ReplicatedLayerChanged = 1 << 20,
-        ContentsNeedsDisplay = 1 << 21,
-        AcceleratesDrawingChanged = 1 << 22,
-        ContentsScaleChanged = 1 << 23
+        ContentsColorLayerChanged = 1 << 18,
+        ContentsRectChanged = 1 << 19,
+        MaskLayerChanged = 1 << 20,
+        ReplicatedLayerChanged = 1 << 21,
+        ContentsNeedsDisplay = 1 << 22,
+        AcceleratesDrawingChanged = 1 << 23,
+        ContentsScaleChanged = 1 << 24,
+        ContentsVisibilityChanged = 1 << 25,
+        VisibleRectChanged = 1 << 26,
+        FiltersChanged = 1 << 27,
+        DebugIndicatorsChanged = 1 << 28
     };
 
     typedef unsigned LayerChangeFlags;
@@ -153,17 +184,40 @@ private:
     void noteSublayersChanged();
 
     void updateBackfaceVisibility();
+    void updateStructuralLayer();
     void updateLayerNames();
     void updateSublayerList();
     void updateGeometry(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
     void updateTransform();
     void updateLayerDrawsContent(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
-
+    void updateContentsImage();
+    void updateContentsRect();
+    void updateContentsNeedsDisplay();
     void updateAnimations();
+
+    enum StructuralLayerPurpose {
+        NoStructuralLayer = 0,
+        StructuralLayerForPreserves3D,
+        StructuralLayerForReplicaFlattening
+    };
+    void ensureStructuralLayer(StructuralLayerPurpose);
+    StructuralLayerPurpose structuralLayerPurpose() const;
 
     void repaintLayerDirtyRects();
 
     GRefPtr<GraphicsLayerActor> m_layer;
+    GRefPtr<GraphicsLayerActor> m_structuralLayer; // A layer used for structural reasons, like preserves-3d or replica-flattening. Is the parent of m_layer.
+    GRefPtr<GraphicsLayerActor> m_contentsLayer; // A layer used for inner content, like image and video
+    enum ContentsLayerPurpose {
+        NoContentsLayer = 0,
+        ContentsLayerForImage,
+        ContentsLayerForMedia,
+        ContentsLayerForCanvas,
+        ContentsLayerForBackgroundColor
+    };
+
+    ContentsLayerPurpose m_contentsLayerPurpose;
+    RefPtr<cairo_surface_t> m_pendingContentsImage;
 
     Vector<FloatRect> m_dirtyRects;
     LayerChangeFlags m_uncommittedChanges;

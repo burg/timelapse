@@ -569,7 +569,7 @@ void PluginView::didInitializePlugin()
     redeliverManualStream();
 
 #if PLATFORM(MAC)
-    if (m_pluginElement->displayState() < HTMLPlugInElement::PlayingWithPendingMouseClick) {
+    if (m_pluginElement->displayState() < HTMLPlugInElement::Restarting) {
         if (frame() && !frame()->settings()->maximumPlugInSnapshotAttempts()) {
             m_pluginElement->setDisplayState(HTMLPlugInElement::DisplayingSnapshot);
             return;
@@ -582,7 +582,7 @@ void PluginView::didInitializePlugin()
                 m_pluginElement->setNeedsStyleRecalc(SyntheticStyleChange);
             }
         }
-        if (m_pluginElement->displayState() < HTMLPlugInElement::Playing)
+        if (m_pluginElement->displayState() == HTMLPlugInElement::RestartingWithPendingMouseClick)
             m_pluginElement->dispatchPendingMouseClick();
     }
 
@@ -709,7 +709,7 @@ void PluginView::setFrameRect(const WebCore::IntRect& rect)
 
 void PluginView::paint(GraphicsContext* context, const IntRect& /*dirtyRect*/)
 {
-    if (!m_plugin || !m_isInitialized || m_pluginElement->displayState() < HTMLPlugInElement::PlayingWithPendingMouseClick)
+    if (!m_plugin || !m_isInitialized || m_pluginElement->displayState() < HTMLPlugInElement::Restarting)
         return;
 
     if (context->paintingDisabled()) {
@@ -1079,6 +1079,8 @@ void PluginView::performFrameLoadURLRequest(URLRequest* request)
         return;
     }
 
+    UserGestureIndicator gestureIndicator(request->allowPopups() ? DefinitelyProcessingNewUserGesture : PossiblyProcessingUserGesture);
+
     // First, try to find a target frame.
     Frame* targetFrame = frame->loader()->findFrameForNavigation(request->target());
     if (!targetFrame) {
@@ -1215,7 +1217,7 @@ void PluginView::invalidateRect(const IntRect& dirtyRect)
         return;
 #endif
 
-    if (m_pluginElement->displayState() < HTMLPlugInElement::PlayingWithPendingMouseClick)
+    if (m_pluginElement->displayState() < HTMLPlugInElement::Restarting)
         return;
 
     RenderBoxModelObject* renderer = toRenderBoxModelObject(m_pluginElement->renderer());
@@ -1373,7 +1375,7 @@ bool PluginView::isAcceleratedCompositingEnabled()
     if (!settings)
         return false;
 
-    if (m_pluginElement->displayState() < HTMLPlugInElement::PlayingWithPendingMouseClick)
+    if (m_pluginElement->displayState() < HTMLPlugInElement::Restarting)
         return false;
     return settings->acceleratedCompositingEnabled();
 }
@@ -1650,6 +1652,9 @@ bool PluginView::shouldAlwaysAutoStart() const
 
 void PluginView::pluginDidReceiveUserInteraction()
 {
+    // FIXME: Extend autostart timeout when this codepath is hit.
+    // http://webkit.org/b/113232
+
     if (frame() && !frame()->settings()->plugInSnapshottingEnabled())
         return;
 
@@ -1657,7 +1662,6 @@ void PluginView::pluginDidReceiveUserInteraction()
         return;
 
     m_didReceiveUserInteraction = true;
-    WebProcess::shared().plugInDidReceiveUserInteraction(m_pluginElement->plugInOriginHash());
 }
 
 } // namespace WebKit

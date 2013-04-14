@@ -45,14 +45,18 @@
 #include "FrameLoaderClient.h"
 #include "FrameTree.h"
 #include "HTMLFormElement.h"
+#include "HTMLFrameOwnerElement.h"
 #include "HistoryItem.h"
+#include "IconController.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "MemoryCache.h"
 #include "Page.h"
+#include "PolicyChecker.h"
 #include "ProgressTracker.h"
 #include "ResourceBuffer.h"
 #include "SchemeRegistry.h"
+#include "SecurityPolicy.h"
 #include "Settings.h"
 #include "SubresourceLoader.h"
 #include "TextResourceDecoder.h"
@@ -102,6 +106,7 @@ DocumentLoader::DocumentLoader(const ResourceRequest& req, const SubstituteData&
     , m_substituteData(substituteData)
     , m_originalRequestCopy(req)
     , m_request(req)
+    , m_originalSubstituteDataWasValid(substituteData.isValid())
     , m_committed(false)
     , m_isStopping(false)
     , m_gotFirstByte(false)
@@ -342,13 +347,10 @@ void DocumentLoader::notifyFinished(CachedResource* resource)
         return;
     }
 
-    // FIXME: we should fix the design to eliminate the need for a platform ifdef here
-#if !PLATFORM(CHROMIUM)
     if (m_request.cachePolicy() == ReturnCacheDataDontLoad && !m_mainResource->wasCanceled()) {
         frameLoader()->retryAfterFailedCacheOnlyMainResourceLoad();
         return;
     }
-#endif
 
     mainReceivedError(m_mainResource->resourceError());
 }
@@ -449,7 +451,7 @@ void DocumentLoader::startDataLoadTimer()
 
 void DocumentLoader::handleSubstituteDataLoadSoon()
 {
-    if (deferMainResourceDataLoad())
+    if (m_deferMainResourceDataLoad)
         startDataLoadTimer();
     else
         handleSubstituteDataLoadNow(0);
@@ -564,14 +566,7 @@ void DocumentLoader::responseReceived(CachedResource* resource, const ResourceRe
 
     // The memory cache doesn't understand the application cache or its caching rules. So if a main resource is served
     // from the application cache, ensure we don't save the result for future use.
-    bool shouldRemoveResourceFromCache = willLoadFallback;
-#if PLATFORM(CHROMIUM)
-    // chromium's ApplicationCacheHost implementation always returns true for maybeLoadFallbackForMainResponse(). However, all responses loaded
-    // from appcache will have a non-zero appCacheID().
-    if (response.appCacheID())
-        shouldRemoveResourceFromCache = true;
-#endif
-    if (shouldRemoveResourceFromCache)
+    if (willLoadFallback)
         memoryCache()->remove(m_mainResource.get());
 
     if (willLoadFallback)
@@ -581,11 +576,16 @@ void DocumentLoader::responseReceived(CachedResource* resource, const ResourceRe
     HTTPHeaderMap::const_iterator it = response.httpHeaderFields().find(xFrameOptionHeader);
     if (it != response.httpHeaderFields().end()) {
         String content = it->value;
-        unsigned long identifier = m_identifierForLoadWithoutResourceLoader ? m_identifierForLoadWithoutResourceLoader : mainResourceLoader()->identifier();
+        ASSERT(m_mainResource);
+        unsigned long identifier = m_identifierForLoadWithoutResourceLoader ? m_identifierForLoadWithoutResourceLoader : m_mainResource->identifier();
+        ASSERT(identifier);
         if (frameLoader()->shouldInterruptLoadForXFrameOptions(content, response.url(), identifier)) {
             InspectorInstrumentation::continueAfterXFrameOptionsDenied(m_frame, this, identifier, response);
             String message = "Refused to display '" + response.url().elidedString() + "' in a frame because it set 'X-Frame-Options' to '" + content + "'.";
             frame()->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, message, identifier);
+            frame()->document()->enforceSandboxFlags(SandboxOrigin);
+            if (HTMLFrameOwnerElement* ownerElement = frame()->ownerElement())
+                ownerElement->dispatchEvent(Event::create(eventNames().loadEvent, false, false));
             cancelMainResourceLoad(frameLoader()->cancelledError(m_request));
             return;
         }
@@ -605,7 +605,7 @@ void DocumentLoader::responseReceived(CachedResource* resource, const ResourceRe
         m_isLoadingMultipartContent = true;
     }
 
-    setResponse(response);
+    m_response = response;
 
     if (m_identifierForLoadWithoutResourceLoader)
         frameLoader()->notifier()->dispatchDidReceiveResponse(this, m_identifierForLoadWithoutResourceLoader, m_response, 0);
@@ -755,6 +755,14 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
         m_writer.begin(documentURL(), false);
         m_writer.setDocumentWasLoadedAsPartOfNavigation();
 
+        if (SecurityPolicy::allowSubstituteDataAccessToLocal() && m_originalSubstituteDataWasValid) {
+            // If this document was loaded with substituteData, then the document can
+            // load local resources. See https://bugs.webkit.org/show_bug.cgi?id=16756
+            // and https://bugs.webkit.org/show_bug.cgi?id=19760 for further
+            // discussion.
+            m_frame->document()->securityOrigin()->grantLoadLocalResources();
+        }
+
         if (frameLoader()->stateMachine()->creatingInitialEmptyDocument())
             return;
         
@@ -830,7 +838,7 @@ void DocumentLoader::dataReceived(CachedResource* resource, const char* data, in
 #if USE(CFNETWORK) || PLATFORM(MAC)
     // Workaround for <rdar://problem/6060782>
     if (m_response.isNull())
-        setResponse(ResourceResponse(KURL(), "text/html", 0, String(), String()));
+        m_response = ResourceResponse(KURL(), "text/html", 0, String(), String());
 #endif
 
     // There is a bug in CFNetwork where callbacks can be dispatched even when loads are deferred.
@@ -1255,7 +1263,7 @@ KURL DocumentLoader::documentURL() const
     if (url.isEmpty())
         url = requestURL();
     if (url.isEmpty())
-        url = responseURL();
+        url = m_response.url();
     return url;
 }
 
@@ -1271,8 +1279,12 @@ const KURL& DocumentLoader::unreachableURL() const
 
 void DocumentLoader::setDefersLoading(bool defers)
 {
-    if (mainResourceLoader())
+    // Multiple frames may be loading the same main resource simultaneously. If deferral state changes,
+    // each frame's DocumentLoader will try to send a setDefersLoading() to the same underlying ResourceLoader. Ensure only
+    // the "owning" DocumentLoader does so, as setDefersLoading() is not resilient to setting the same value repeatedly.
+    if (mainResourceLoader() && mainResourceLoader()->documentLoader() == this)
         mainResourceLoader()->setDefersLoading(defers);
+
     setAllDefersLoading(m_subresourceLoaders, defers);
     setAllDefersLoading(m_plugInStreamLoaders, defers);
     if (!defers)
@@ -1344,7 +1356,7 @@ bool DocumentLoader::maybeLoadEmpty()
     if (m_request.url().isEmpty() && !frameLoader()->stateMachine()->creatingInitialEmptyDocument())
         m_request.setURL(blankURL());
     String mimeType = shouldLoadEmpty ? "text/html" : frameLoader()->client()->generatedMIMETypeForURLScheme(m_request.url().protocol());
-    setResponse(ResourceResponse(m_request.url(), mimeType, 0, String(), String()));
+    m_response = ResourceResponse(m_request.url(), mimeType, 0, String(), String());
     finishedLoading(monotonicallyIncreasingTime());
     return true;
 }

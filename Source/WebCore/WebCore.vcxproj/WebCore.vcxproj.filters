@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="DerivedSources">
@@ -1734,6 +1734,9 @@
     <ClCompile Include="..\Modules\filesystem\WorkerContextFileSystem.cpp">
       <Filter>Modules\filesystem</Filter>
     </ClCompile>
+    <ClCompile Include="..\Modules\geolocation\Coordinates.cpp">
+      <Filter>Modules\geolocation</Filter>
+    </ClCompile>
     <ClCompile Include="..\Modules\geolocation\Geolocation.cpp">
       <Filter>Modules\geolocation</Filter>
     </ClCompile>
@@ -2217,9 +2220,6 @@
     <ClCompile Include="..\page\win\FrameWin.cpp">
       <Filter>page\win</Filter>
     </ClCompile>
-    <ClCompile Include="..\loader\CachedMetadata.cpp">
-      <Filter>loader</Filter>
-    </ClCompile>
     <ClCompile Include="..\loader\CookieJar.cpp">
       <Filter>loader</Filter>
     </ClCompile>
@@ -2517,9 +2517,6 @@
     <ClCompile Include="..\platform\Language.cpp">
       <Filter>platform</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\LayoutTestSupport.cpp">
-      <Filter>platform</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\Length.cpp">
       <Filter>platform</Filter>
     </ClCompile>
@@ -2595,9 +2592,6 @@
     <ClCompile Include="..\platform\SharedBufferChunkReader.cpp">
       <Filter>platform</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\StatsCounter.cpp">
-      <Filter>platform</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\ThreadGlobalData.cpp">
       <Filter>platform</Filter>
     </ClCompile>
@@ -2608,9 +2602,6 @@
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\UUID.cpp">
-      <Filter>platform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\platform\VisitedLinks.cpp">
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\Widget.cpp">
@@ -3033,9 +3024,6 @@
     <ClCompile Include="..\platform\graphics\cairo\IntRectCairo.cpp">
       <Filter>platform\graphics\cairo</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\graphics\cairo\NativeImageCairo.cpp">
-      <Filter>platform\graphics\cairo</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\graphics\cairo\OwnPtrCairo.cpp">
       <Filter>platform\graphics\cairo</Filter>
     </ClCompile>
@@ -3189,9 +3177,6 @@
     <ClCompile Include="..\platform\graphics\filters\FilterOperations.cpp">
       <Filter>platform\graphics\filters</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\graphics\filters\LightSource.cpp">
-      <Filter>platform\graphics\filters</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\graphics\filters\PointLightSource.cpp">
       <Filter>platform\graphics\filters</Filter>
     </ClCompile>
@@ -3276,9 +3261,6 @@
     <ClCompile Include="..\platform\network\HTTPRequest.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\network\HTTPValidation.cpp">
-      <Filter>platform\network</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\network\MIMEHeader.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
@@ -3303,6 +3285,9 @@
     <ClCompile Include="..\platform\network\ResourceHandle.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
+    <ClCompile Include="..\platform\network\ResourceHandleClient.cpp">
+      <Filter>platform\network</Filter>
+    </ClCompile>
     <ClCompile Include="..\platform\network\ResourceLoadTiming.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
@@ -3316,6 +3301,9 @@
       <Filter>platform\network</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\SocketStreamHandleBase.cpp">
+      <Filter>platform\network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\network\SynchronousLoaderClient.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\cf\AuthenticationCF.cpp">
@@ -5871,9 +5859,6 @@
     <ClCompile Include="..\bindings\js\JSConsoleCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
-    <ClCompile Include="..\bindings\js\JSCoordinatesCustom.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
     <ClCompile Include="..\bindings\js\JSCSSFontFaceRuleCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
@@ -6084,6 +6069,9 @@
     <ClCompile Include="..\bindings\js\JSSQLTransactionSyncCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
+    <ClCompile Include="..\bindings\js\JSRTCStatsResponseCustom.cpp">
+      <Filter>bindings\js</Filter>
+    </ClCompile>
     <ClCompile Include="..\bindings\js\JSStorageCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
@@ -6214,9 +6202,6 @@
       <Filter>plugins</Filter>
     </ClCompile>
     <ClCompile Include="..\plugins\PluginMainThreadScheduler.cpp">
-      <Filter>plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="..\plugins\PlugInOriginHash.cpp">
       <Filter>plugins</Filter>
     </ClCompile>
     <ClCompile Include="..\plugins\PluginPackage.cpp">
@@ -6861,6 +6846,12 @@
     </ClCompile>
     <ClCompile Include="..\platform\image-decoders\ImageDecoder.cpp">
       <Filter>platform\image-decoders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\network\curl\CookieJarCurl.cpp">
+      <Filter>platform\network\curl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\cg\SubimageCacheWithTimer.cpp">
+      <Filter>platform\graphics\cg</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -8364,8 +8355,14 @@
     <ClInclude Include="..\Modules\filesystem\WorkerContextFileSystem.h">
       <Filter>Modules\filesystem</Filter>
     </ClInclude>
+    <ClInclude Include="..\Modules\geolocation\Coordinates.h">
+      <Filter>Modules\geolocation</Filter>
+    </ClInclude>
     <ClInclude Include="..\Modules\geolocation\Geolocation.h">
       <Filter>Modules\geolocation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\geolocation\GeolocationClient.h">
+      <Filter>page</Filter>
     </ClInclude>
     <ClInclude Include="..\Modules\geolocation\GeolocationController.h">
       <Filter>Modules\geolocation</Filter>
@@ -8835,9 +8832,6 @@
     <ClInclude Include="..\page\ContextMenuProvider.h">
       <Filter>page</Filter>
     </ClInclude>
-    <ClInclude Include="..\page\Coordinates.h">
-      <Filter>page</Filter>
-    </ClInclude>
     <ClInclude Include="..\page\Crypto.h">
       <Filter>page</Filter>
     </ClInclude>
@@ -8908,9 +8902,6 @@
       <Filter>page</Filter>
     </ClInclude>
     <ClInclude Include="..\page\FrameView.h">
-      <Filter>page</Filter>
-    </ClInclude>
-    <ClInclude Include="..\page\GeolocationClient.h">
       <Filter>page</Filter>
     </ClInclude>
     <ClInclude Include="..\page\GroupSettings.h">
@@ -8996,9 +8987,6 @@
     </ClInclude>
     <ClInclude Include="..\page\win\FrameWin.h">
       <Filter>page\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\loader\CachedMetadata.h">
-      <Filter>loader</Filter>
     </ClInclude>
     <ClInclude Include="..\loader\CookieJar.h">
       <Filter>loader</Filter>
@@ -9354,9 +9342,6 @@
     <ClInclude Include="..\platform\Language.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\LayoutTestSupport.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\LayoutUnit.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -9498,9 +9483,6 @@
     <ClInclude Include="..\platform\SSLKeyGenerator.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\StatsCounter.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\SuddenTermination.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -9526,12 +9508,6 @@
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\UUID.h">
-      <Filter>platform</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\VisitedLinks.h">
-      <Filter>platform</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\VisitedLinkStrategy.h">
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\Widget.h">
@@ -10080,9 +10056,6 @@
     <ClInclude Include="..\platform\network\HTTPRequest.h">
       <Filter>platform\network</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\network\HTTPValidation.h">
-      <Filter>platform\network</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\network\MIMEHeader.h">
       <Filter>platform\network</Filter>
     </ClInclude>
@@ -10147,6 +10120,9 @@
       <Filter>platform\network</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\network\SocketStreamHandleClient.h">
+      <Filter>platform\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platform\network\SynchronousLoaderClient.h">
       <Filter>platform\network</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\network\cf\DownloadBundle.h">
@@ -13008,9 +12984,6 @@
     <ClInclude Include="..\plugins\PluginMainThreadScheduler.h">
       <Filter>plugins</Filter>
     </ClInclude>
-    <ClInclude Include="..\plugins\PlugInOriginHash.h">
-      <Filter>plugins</Filter>
-    </ClInclude>
     <ClInclude Include="..\plugins\PluginPackage.h">
       <Filter>plugins</Filter>
     </ClInclude>
@@ -14396,6 +14369,9 @@
     <ClInclude Include="..\platform\image-decoders\ImageDecoder.h">
       <Filter>platform\image-decoders</Filter>
     </ClInclude>
+    <ClInclude Include="..\platform\graphics\cg\SubimageCacheWithTimer.h">
+      <Filter>platform\graphics\cg</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\css\CSSGrammar.y.in">
@@ -14878,6 +14854,9 @@
     <None Include="..\inspector\front-end\NetworkUISourceCodeProvider.js">
       <Filter>inspector\front-end</Filter>
     </None>
+    <None Include="..\inspector\front-end\InspectElementModeController.js">
+      <Filter>inspector\front-end</Filter>
+    </None>
     <None Include="..\inspector\front-end\Object.js">
       <Filter>inspector\front-end</Filter>
     </None>
@@ -15291,9 +15270,6 @@
       <Filter>platform\network\cf</Filter>
     </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\curl\AuthenticationChallenge.h">
-      <Filter>platform\network\curl</Filter>
-    </CustomBuildStep>
-    <CustomBuildStep Include="..\platform\network\curl\CookieJarCurl.cpp">
       <Filter>platform\network\curl</Filter>
     </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\curl\FormDataStreamCurl.h">

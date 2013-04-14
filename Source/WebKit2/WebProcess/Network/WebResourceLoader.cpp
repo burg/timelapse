@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "DataReference.h"
 #include "Logging.h"
 #include "NetworkProcessConnection.h"
+#include "NetworkResourceLoaderMessages.h"
 #include "PlatformCertificateInfo.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebErrors.h"
@@ -72,12 +73,29 @@ void WebResourceLoader::cancelResourceLoader()
     m_coreLoader->cancel();
 }
 
-void WebResourceLoader::willSendRequest(const ResourceRequest& proposedRequest, const ResourceResponse& redirectResponse, ResourceRequest& newRequest)
+void WebResourceLoader::detachFromCoreLoader()
+{
+    m_coreLoader = 0;
+}
+
+void WebResourceLoader::willSendRequest(const ResourceRequest& proposedRequest, const ResourceResponse& redirectResponse)
 {
     LOG(Network, "(WebProcess) WebResourceLoader::willSendRequest to '%s'", proposedRequest.url().string().utf8().data());
+
+    RefPtr<WebResourceLoader> protector(this);
     
-    newRequest = proposedRequest;
+    ResourceRequest newRequest = proposedRequest;
     m_coreLoader->willSendRequest(newRequest, redirectResponse);
+    
+    if (!m_coreLoader)
+        return;
+    
+    send(Messages::NetworkResourceLoader::ContinueWillSendRequest(newRequest));
+}
+
+void WebResourceLoader::didSendData(uint64_t bytesSent, uint64_t totalBytesToBeSent)
+{
+    m_coreLoader->didSendData(bytesSent, totalBytesToBeSent);
 }
 
 void WebResourceLoader::didReceiveResponseWithCertificateInfo(const ResourceResponse& response, const PlatformCertificateInfo& certificateInfo)
@@ -107,54 +125,39 @@ void WebResourceLoader::didFailResourceLoad(const ResourceError& error)
     m_coreLoader->didFail(error);
 }
 
-static void shareableResourceDeallocate(void *ptr, void *info)
-{
-    ShareableResource* resource = static_cast<ShareableResource*>(info);
-    resource->deref();
-}
-    
-static CFAllocatorRef createShareableResourceDeallocator(PassRefPtr<ShareableResource> resource)
-{
-    CFAllocatorContext context = { 0,
-        resource.leakRef(),
-        NULL, // retain
-        NULL, // release
-        NULL, // copyDescription
-        NULL, // allocate
-        NULL, // reallocate
-        shareableResourceDeallocate,
-        NULL,
-    };
-
-    return CFAllocatorCreate(kCFAllocatorDefault, &context);
-}
-
 void WebResourceLoader::didReceiveResource(const ShareableResource::Handle& handle, double finishTime)
 {
     LOG(Network, "(WebProcess) WebResourceLoader::didReceiveResource for '%s'", m_coreLoader->url().string().utf8().data());
 
-    RefPtr<ShareableResource> resource = ShareableResource::create(handle);
-    if (!resource) {
-        LOG_ERROR("Unabled to recreate the ShareableResource sent from the network process.");
+    RefPtr<SharedBuffer> buffer = handle.tryWrapInSharedBuffer();
+    if (!buffer) {
+        LOG_ERROR("Unable to create buffer from ShareableResource sent from the network process.");
         m_coreLoader->didFail(internalError(m_coreLoader->request().url()));
         return;
     }
 
-    // Only send data to the didReceiveData callback if it exists.
-    if (resource->size()) {
-        RetainPtr<CFAllocatorRef> deallocator(AdoptCF, createShareableResourceDeallocator(resource));
-        RetainPtr<CFDataRef> data(AdoptCF, CFDataCreateWithBytesNoCopy(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(resource->data()), static_cast<CFIndex>(resource->size()), deallocator.get()));
+    RefPtr<WebResourceLoader> protector(this);
 
-        RefPtr<SharedBuffer> buffer = SharedBuffer::wrapCFData(data.get());
+    // Only send data to the didReceiveData callback if it exists.
+    if (buffer->size())
         m_coreLoader->didReceiveBuffer(buffer.get(), buffer->size(), DataPayloadWholeResource);
-    }
+
+    if (!m_coreLoader)
+        return;
 
     m_coreLoader->didFinishLoading(finishTime);
 }
 
-void WebResourceLoader::canAuthenticateAgainstProtectionSpace(const ProtectionSpace& protectionSpace, bool& result)
+void WebResourceLoader::canAuthenticateAgainstProtectionSpace(const ProtectionSpace& protectionSpace)
 {
-    result = m_coreLoader->canAuthenticateAgainstProtectionSpace(protectionSpace);
+    RefPtr<WebResourceLoader> protector(this);
+
+    bool result = m_coreLoader->canAuthenticateAgainstProtectionSpace(protectionSpace);
+
+    if (!m_coreLoader)
+        return;
+
+    send(Messages::NetworkResourceLoader::ContinueCanAuthenticateAgainstProtectionSpace(result));
 }
 
 } // namespace WebKit

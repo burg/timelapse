@@ -200,6 +200,10 @@ public:
     bool hasSpellingMarker(Document*, int from, int length, ExceptionCode&);
     bool hasGrammarMarker(Document*, int from, int length, ExceptionCode&);
     bool hasAutocorrectedMarker(Document*, int from, int length, ExceptionCode&);
+    void setContinuousSpellCheckingEnabled(bool enabled, ExceptionCode&);
+
+    bool isOverwriteModeEnabled(Document*, ExceptionCode&);
+    void toggleOverwriteModeEnabled(Document*, ExceptionCode&);
 
     unsigned numberOfScrollableAreas(Document*, ExceptionCode&);
 
@@ -259,6 +263,9 @@ public:
 
     void setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCode&);
 
+    void setHeaderHeight(Document*, float);
+    void setFooterHeight(Document*, float);
+
 #if ENABLE(FULLSCREEN_API)
     void webkitWillEnterFullScreenForElement(Document*, Element*);
     void webkitDidEnterFullScreenForElement(Document*, Element*);
@@ -301,6 +308,11 @@ public:
 #if ENABLE(VIDEO)
     void simulateAudioInterruption(Node*);
 #endif
+
+    bool isSelectPopupVisible(Node*);
+
+    String captionsStyleSheetOverride(ExceptionCode&);
+    void setCaptionsStyleSheetOverride(const String&, ExceptionCode&);
 
 private:
     explicit Internals(Document*);

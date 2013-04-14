@@ -52,6 +52,7 @@
 #include "ViewportArguments.h"
 #include <wtf/Deque.h>
 #include <wtf/FixedArray.h>
+#include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
@@ -307,6 +308,9 @@ public:
 #if ENABLE(PAGE_VISIBILITY_API)
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitvisibilitychange);
 #endif
+#if ENABLE(CSP_NEXT)
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(securitypolicyviolation);
+#endif
 
     void setViewportArguments(const ViewportArguments& viewportArguments) { m_viewportArguments = viewportArguments; }
     ViewportArguments viewportArguments() const { return m_viewportArguments; }
@@ -367,8 +371,8 @@ public:
      * @param leftPadding How much to expand the left of the rectangle
      */
     PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY,
-                                       unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding,
-                                       HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active) const;
+        unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding,
+        HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowShadowContent) const;
     Element* elementFromPoint(int x, int y) const;
     PassRefPtr<Range> caretRangeFromPoint(int x, int y);
 
@@ -555,10 +559,10 @@ public:
         Node::setRenderer(renderer);
     }
 
-    void clearAXObjectCache();
+    AXObjectCache* existingAXObjectCache() const;
     AXObjectCache* axObjectCache() const;
-    bool axObjectCacheExists() const;
-    
+    void clearAXObjectCache();
+
     // to get visually ordered hebrew and arabic pages right
     void setVisuallyOrdered();
     bool visuallyOrdered() const { return m_visuallyOrdered; }
@@ -720,8 +724,6 @@ public:
     void detachRange(Range*);
 
     void updateRangesAfterChildrenChanged(ContainerNode*);
-    // nodeChildrenWillBeRemoved is used when removing all node children at once.
-    void nodeChildrenWillBeRemoved(ContainerNode*);
     // nodeWillBeRemoved is only safe when removing one node at a time.
     void nodeWillBeRemoved(Node*);
     bool canReplaceChild(Node* newChild, Node* oldChild);
@@ -929,9 +931,6 @@ public:
     const Vector<IconURL>& shortcutIconURLs();
     const Vector<IconURL>& iconURLs(int iconTypesMask);
     void addIconURL(const String& url, const String& mimeType, const String& size, IconType);
-
-    void setUseSecureKeyboardEntryWhenActive(bool);
-    bool useSecureKeyboardEntryWhenActive() const;
 
     void updateFocusAppearanceSoon(bool restorePreviousSelection);
     void cancelFocusAppearanceUpdate();
@@ -1166,6 +1165,7 @@ public:
     PassRefPtr<CustomElementConstructor> registerElement(WebCore::ScriptState*, const AtomicString& name, ExceptionCode&);
     PassRefPtr<CustomElementConstructor> registerElement(WebCore::ScriptState*, const AtomicString& name, const Dictionary& options, ExceptionCode&);
     CustomElementRegistry* registry() const { return m_registry.get(); }
+    void didCreateCustomElement(Element*, CustomElementConstructor*);
 #endif
 
     void adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(Vector<FloatQuad>&, RenderObject*);
@@ -1205,6 +1205,8 @@ public:
     void setTemplateDocumentHost(Document* templateDocumentHost) { m_templateDocumentHost = templateDocumentHost; }
     Document* templateDocumentHost() { return m_templateDocumentHost; }
 #endif
+
+    void didAssociateFormControl(Element*);
 
     virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0);
 
@@ -1293,6 +1295,8 @@ private:
 
     void addListenerType(ListenerType listenerType) { m_listenerTypes |= listenerType; }
     void addMutationEventListenerTypeIfEnabled(ListenerType);
+
+    void didAssociateFormControlsTimerFired(Timer<Document>*);
 
     void styleResolverThrowawayTimerFired(Timer<Document>*);
     Timer<Document> m_styleResolverThrowawayTimer;
@@ -1482,8 +1486,6 @@ private:
 
     OwnPtr<SelectorQueryCache> m_selectorQueryCache;
 
-    bool m_useSecureKeyboardEntryWhenActive;
-
     bool m_isXHTML;
     bool m_isHTML;
 
@@ -1589,6 +1591,10 @@ private:
 #if ENABLE(FONT_LOAD_EVENTS)
     RefPtr<FontLoader> m_fontloader;
 #endif
+
+    Timer<Document> m_didAssociateFormControlsTimer;
+    HashSet<RefPtr<Element> > m_associatedFormControls;
+
 };
 
 inline void Document::notifyRemovePendingSheetIfNeeded()

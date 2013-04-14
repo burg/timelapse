@@ -67,6 +67,7 @@
 #include "InstrumentingAgents.h"
 #include "PageDebuggerAgent.h"
 #include "PageRuntimeAgent.h"
+#include "RenderObject.h"
 #include "ScriptArguments.h"
 #include "ScriptCallStack.h"
 #include "ScriptProfile.h"
@@ -78,10 +79,6 @@
 #include "XMLHttpRequest.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
-
-#if PLATFORM(CHROMIUM)
-#include "platform/chromium/TraceEvent.h"
-#endif
 
 namespace WebCore {
 
@@ -546,25 +543,17 @@ void InspectorInstrumentation::didDispatchXHRLoadEventImpl(const InspectorInstru
         timelineAgent->didDispatchXHRLoadEvent();
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willPaintImpl(InstrumentingAgents* instrumentingAgents, Frame* frame)
+void InspectorInstrumentation::willPaintImpl(InstrumentingAgents* instrumentingAgents, RenderObject* renderer)
 {
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT_INSTANT1("instrumentation", InstrumentationEvents::Paint, InstrumentationEventArguments::PageId, frame ? reinterpret_cast<unsigned long long>(frame->page()) : 0);
-#endif
-
-    int timelineAgentId = 0;
-    if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent()) {
-        timelineAgent->willPaint(frame);
-        timelineAgentId = timelineAgent->id();
-    }
-    return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
+    if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent())
+        timelineAgent->willPaint(renderer->frame());
 }
 
-void InspectorInstrumentation::didPaintImpl(const InspectorInstrumentationCookie& cookie, GraphicsContext* context, const LayoutRect& rect)
+void InspectorInstrumentation::didPaintImpl(InstrumentingAgents*  instrumentingAgents, RenderObject* renderer, GraphicsContext* context, const LayoutRect& rect)
 {
-    if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
-        timelineAgent->didPaint(rect);
-    if (InspectorPageAgent* pageAgent = cookie.instrumentingAgents()->inspectorPageAgent())
+    if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent())
+        timelineAgent->didPaint(renderer, rect);
+    if (InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent())
         pageAgent->didPaint(context, rect);
 }
 
@@ -932,7 +921,7 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
 
         if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
             resourceAgent->mainFrameNavigated(loader);
-#if ENABLE(JAVASCRIPT_DEBUGGER) && USE(JSC)
+#if ENABLE(JAVASCRIPT_DEBUGGER)
         if (InspectorProfilerAgent* profilerAgent = instrumentingAgents->inspectorProfilerAgent())
             profilerAgent->resetState();
         if (InspectorHeapProfilerAgent* heapProfilerAgent = instrumentingAgents->inspectorHeapProfilerAgent())
@@ -1431,6 +1420,11 @@ InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForPage(Page* 
     if (!page)
         return 0;
     return instrumentationForPage(page);
+}
+
+InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForRenderer(RenderObject* renderer)
+{
+    return instrumentingAgentsForFrame(renderer->frame());
 }
 
 #if ENABLE(WORKERS)

@@ -66,6 +66,9 @@
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ProgressTracker.h"
+#include "SVGElement.h"
+#include "SVGNames.h"
+#include "SVGStyledElement.h"
 #include "Text.h"
 #include "TextControlInnerElements.h"
 #include "TextIterator.h"
@@ -598,7 +601,7 @@ bool AccessibilityNodeObject::isEnabled() const
     if (!node || !node->isElementNode())
         return true;
 
-    return toElement(node)->isEnabledFormControl();
+    return !toElement(node)->isDisabledFormControl();
 }
 
 bool AccessibilityNodeObject::isIndeterminate() const
@@ -611,7 +614,7 @@ bool AccessibilityNodeObject::isIndeterminate() const
     if (!inputElement)
         return false;
 
-    return inputElement->isIndeterminate();
+    return inputElement->shouldAppearIndeterminate();
 }
 
 bool AccessibilityNodeObject::isPressed() const
@@ -683,12 +686,12 @@ bool AccessibilityNodeObject::isReadOnly() const
         return true;
 
     if (node->hasTagName(textareaTag))
-        return static_cast<HTMLTextAreaElement*>(node)->readOnly();
+        return static_cast<HTMLTextAreaElement*>(node)->isReadOnly();
 
     if (node->hasTagName(inputTag)) {
         HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
         if (input->isTextField())
-            return input->readOnly();
+            return input->isReadOnly();
     }
 
     return !node->rendererIsEditable();
@@ -909,7 +912,7 @@ Element* AccessibilityNodeObject::actionElement() const
 
     if (node->hasTagName(inputTag)) {
         HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
-        if (!input->disabled() && (isCheckboxOrRadio() || input->isTextButton()))
+        if (!input->isDisabledFormControl() && (isCheckboxOrRadio() || input->isTextButton()))
             return input;
     } else if (node->hasTagName(buttonTag))
         return toElement(node);
@@ -1184,9 +1187,18 @@ void AccessibilityNodeObject::alternativeText(Vector<AccessibilityText>& textOrd
             textOrder.append(AccessibilityText(alt, AlternativeText));
     }
     
-#if ENABLE(MATHML)
     Node* node = this->node();
-    if (node && node->isElementNode() && toElement(node)->isMathMLElement())
+    if (!node)
+        return;
+    
+#if ENABLE(SVG)
+    // SVG elements all can have a <svg:title> element inside which should act as the descriptive text.
+    if (node->isSVGElement() && toSVGElement(node)->isSVGStyledElement())
+        textOrder.append(AccessibilityText(toSVGStyledElement(node)->title(), AlternativeText));
+#endif
+    
+#if ENABLE(MATHML)
+    if (node->isElementNode() && toElement(node)->isMathMLElement())
         textOrder.append(AccessibilityText(getAttribute(MathMLNames::alttextAttr), AlternativeText));
 #endif
 }
@@ -1370,9 +1382,14 @@ String AccessibilityNodeObject::accessibilityDescription() const
             return alt;
     }
 
+#if ENABLE(SVG)
+    // SVG elements all can have a <svg:title> element inside which should act as the descriptive text.
+    if (m_node && m_node->isSVGElement() && toSVGElement(m_node)->isSVGStyledElement())
+        return toSVGStyledElement(m_node)->title();
+#endif
+    
 #if ENABLE(MATHML)
-    Node* node = this->node();
-    if (node && node->isElementNode() && toElement(node)->isMathMLElement())
+    if (m_node && m_node->isElementNode() && toElement(m_node)->isMathMLElement())
         return getAttribute(MathMLNames::alttextAttr);
 #endif
 
@@ -1475,6 +1492,11 @@ static bool shouldUseAccessiblityObjectInnerText(AccessibilityObject* obj)
     // quite long. As a heuristic, skip links, controls, and elements that are usually
     // containers with lots of children.
 
+    // If something doesn't expose any children, then we can always take the inner text content.
+    // This is what we want when someone puts an <a> inside a <button> for example.
+    if (obj->isDescendantOfBarrenParent())
+        return true;
+    
     // Skip focusable children, so we don't include the text of links and controls.
     if (obj->canSetFocusAttribute())
         return false;
@@ -1760,7 +1782,7 @@ bool AccessibilityNodeObject::canSetFocusAttribute() const
     if (!node)
         return false;
 
-    if (node->isElementNode() && !toElement(node)->isEnabledFormControl())
+    if (isDisabledFormControl(node))
         return false;
 
     return node->supportsFocus();

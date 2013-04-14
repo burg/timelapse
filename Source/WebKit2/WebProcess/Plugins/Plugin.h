@@ -50,10 +50,12 @@ namespace CoreIPC {
 
 namespace WebCore {
     class AffineTransform;
+    class FloatPoint;
     class GraphicsContext;
     class IntPoint;
     class IntRect;
     class IntSize;
+    class FloatPoint;
     class Scrollbar;
     class SharedBuffer;
 }

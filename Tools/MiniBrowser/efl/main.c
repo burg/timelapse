@@ -49,6 +49,7 @@ static Eina_Bool encoding_detector_enabled = EINA_FALSE;
 static Eina_Bool frame_flattening_enabled = EINA_FALSE;
 static Eina_Bool local_storage_enabled = EINA_TRUE;
 static Eina_Bool fullscreen_enabled = EINA_FALSE;
+static Eina_Bool spell_checking_enabled = EINA_FALSE;
 static int window_width = 800;
 static int window_height = 600;
 /* Default value of device_pixel_ratio is '0' so that we don't set custom device
@@ -149,6 +150,8 @@ static const Ecore_Getopt options = {
             ('l', "local-storage", "HTML5 local storage support (enabled by default).", EINA_TRUE),
         ECORE_GETOPT_STORE_DEF_BOOL
             ('F', "full-screen", "start in full-screen.", EINA_FALSE),
+        ECORE_GETOPT_STORE_DEF_BOOL
+            ('t', "text-checking", "text spell checking enabled", EINA_TRUE),
         ECORE_GETOPT_VERSION
             ('V', "version"),
         ECORE_GETOPT_COPYRIGHT
@@ -929,7 +932,9 @@ popup_menu_populate(Evas_Object *elm_menu, Ewk_Popup_Menu *ewk_menu, void *user_
                 elm_object_item_disabled_set(item, EINA_TRUE);
             } else {
                 Elm_Object_Item *item = elm_menu_item_add(elm_menu, NULL, NULL, ewk_popup_menu_item_text_get(ewk_item), on_popup_menu_item_clicked, user_data);
-                elm_object_item_tooltip_text_set(item, ewk_popup_menu_item_tooltip_get(ewk_item));
+                const char *tooltip_text = ewk_popup_menu_item_tooltip_get(ewk_item);
+                if (tooltip_text && tooltip_text[0] != '\0')
+                    elm_object_item_tooltip_text_set(item, tooltip_text);
                 elm_object_item_disabled_set(item, !ewk_popup_menu_item_enabled_get(ewk_item));
                 elm_menu_item_selected_set(item, ewk_popup_menu_item_selected_get(ewk_item));
             }
@@ -1005,6 +1010,7 @@ on_fullscreen_accept(void *user_data, Evas_Object *obj, void *event_info)
     PermissionData *permission_data = (PermissionData *)user_data;
 
     evas_object_del(permission_data->permission_popup);
+    evas_object_focus_set(permission_data->ewk_view, EINA_TRUE);
     free(permission_data);
 }
 
@@ -1015,6 +1021,7 @@ on_fullscreen_deny(void *user_data, Evas_Object *obj, void *event_info)
 
     ewk_view_fullscreen_exit(permission_data->ewk_view);
     evas_object_del(permission_data->permission_popup);
+    evas_object_focus_set(permission_data->ewk_view, EINA_TRUE);
     free(permission_data);
 }
 
@@ -1427,7 +1434,7 @@ static Browser_Window *window_create(Evas_Object *opener, const char *url, int w
         Ewk_Page_Group *pageGroup = opener ? ewk_view_page_group_get(opener) : ewk_page_group_create("");
         window->ewk_view = ewk_view_smart_add(evas, smart, context, pageGroup);
     }
-    ewk_view_theme_set(window->ewk_view, THEME_DIR "/default.edj");
+    ewk_view_theme_set(window->ewk_view, TEST_THEME_DIR "/default.edj");
     if (device_pixel_ratio)
         ewk_view_device_pixel_ratio_set(window->ewk_view, (float)device_pixel_ratio);
     ewk_view_source_mode_set(window->ewk_view, view_mode);
@@ -1444,6 +1451,7 @@ static Browser_Window *window_create(Evas_Object *opener, const char *url, int w
     elm_win_fullscreen_set(window->elm_window, fullscreen_enabled);
     ewk_settings_developer_extras_enabled_set(settings, EINA_TRUE);
     ewk_settings_preferred_minimum_contents_width_set(settings, 0);
+    ewk_settings_continuous_spell_checking_enabled_set(spell_checking_enabled);
 
     evas_object_smart_callback_add(window->ewk_view, "authentication,request", on_authentication_request, window);
     evas_object_smart_callback_add(window->ewk_view, "download,failed", on_download_failed, window);
@@ -1472,6 +1480,7 @@ static Browser_Window *window_create(Evas_Object *opener, const char *url, int w
 
     evas_object_resize(window->elm_window, width ? width : window_width, height ? height : window_height);
     evas_object_show(window->elm_window);
+    search_box_hide(window);
 
     view_focus_set(window, EINA_TRUE);
 
@@ -1525,6 +1534,7 @@ elm_main(int argc, char *argv[])
         ECORE_GETOPT_VALUE_BOOL(frame_flattening_enabled),
         ECORE_GETOPT_VALUE_BOOL(local_storage_enabled),
         ECORE_GETOPT_VALUE_BOOL(fullscreen_enabled),
+        ECORE_GETOPT_VALUE_BOOL(spell_checking_enabled),
         ECORE_GETOPT_VALUE_BOOL(quitOption),
         ECORE_GETOPT_VALUE_BOOL(quitOption),
         ECORE_GETOPT_VALUE_BOOL(quitOption),

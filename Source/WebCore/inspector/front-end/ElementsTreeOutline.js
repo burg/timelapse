@@ -1480,7 +1480,7 @@ WebInspector.ElementsTreeElement.prototype = {
     {
         if (error)
             return;
-        if (this._htmlEditElement && WebInspector.isBeingEdited(this._htmlEditElement))
+        if (this._editing)
             return;
 
         function consume(event)
@@ -1493,7 +1493,6 @@ WebInspector.ElementsTreeElement.prototype = {
 
         this._htmlEditElement = document.createElement("div");
         this._htmlEditElement.className = "source-code elements-tree-editor";
-        this._htmlEditElement.textContent = initialValue;
 
         // Hide header items.
         var child = this.listItemElement.firstChild;
@@ -1510,9 +1509,13 @@ WebInspector.ElementsTreeElement.prototype = {
 
         this.updateSelection();
 
-        function commit()
+        /**
+         * @param {Element} element
+         * @param {string} newValue
+         */
+        function commit(element, newValue)
         {
-            commitCallback(initialValue, this._htmlEditElement.textContent);
+            commitCallback(initialValue, newValue);
             dispose.call(this);
         }
 
@@ -1538,7 +1541,7 @@ WebInspector.ElementsTreeElement.prototype = {
         }
 
         var config = new WebInspector.EditingConfig(commit.bind(this), dispose.bind(this));
-        config.setMultiline(true);
+        config.setMultilineOptions(initialValue, { name: "xml", htmlMode: true }, "web-inspector-html", true, true);
         this._editing = WebInspector.startEditing(this._htmlEditElement, config);
     },
 

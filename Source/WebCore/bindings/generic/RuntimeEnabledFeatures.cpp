@@ -178,7 +178,7 @@ bool RuntimeEnabledFeatures::isMediaSourceEnabled = false;
 #endif
 
 #if ENABLE(VIDEO_TRACK)
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY) || PLATFORM(WIN)
+#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(BLACKBERRY) || PLATFORM(WIN) || PLATFORM(QT)
     bool RuntimeEnabledFeatures::isVideoTrackEnabled = true;
 #else
     bool RuntimeEnabledFeatures::isVideoTrackEnabled = false;
@@ -207,12 +207,8 @@ bool RuntimeEnabledFeatures::isStyleScopedEnabled = false;
 bool RuntimeEnabledFeatures::isInputTypeDateEnabled = true;
 #endif
 
-#if ENABLE(INPUT_TYPE_DATETIME)
-#if PLATFORM(CHROMIUM) && !OS(ANDROID)
+#if ENABLE(INPUT_TYPE_DATETIME_INCOMPLETE)
 bool RuntimeEnabledFeatures::isInputTypeDateTimeEnabled = false;
-#else
-bool RuntimeEnabledFeatures::isInputTypeDateTimeEnabled = true;
-#endif
 #endif
 
 #if ENABLE(INPUT_TYPE_DATETIMELOCAL)

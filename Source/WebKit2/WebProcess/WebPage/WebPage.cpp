@@ -102,6 +102,7 @@
 #include <WebCore/HTMLInputElement.h>
 #include <WebCore/HTMLPlugInElement.h>
 #include <WebCore/HTMLPlugInImageElement.h>
+#include <WebCore/HistoryController.h>
 #include <WebCore/HistoryItem.h>
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/MIMETypeRegistry.h>
@@ -366,6 +367,11 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 
     setActive(parameters.isActive);
     setFocused(parameters.isFocused);
+
+    // Page defaults to in-window, but setIsInWindow depends on it being a valid indicator of actually having been put into a window.
+    if (!parameters.isInWindow)
+        m_page->setIsInWindow(false);
+
     setIsInWindow(parameters.isInWindow);
 
     m_userAgent = parameters.userAgent;
@@ -542,7 +548,7 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
         if ((parameters.mimeType == "application/pdf" || parameters.mimeType == "application/postscript")
             || (parameters.mimeType.isEmpty() && (path.endsWith(".pdf", false) || path.endsWith(".ps", false)))) {
 #if ENABLE(PDFKIT_PLUGIN)
-            if (pdfPluginEnabled())
+            if (shouldUsePDFPlugin())
                 return PDFPlugin::create(frame);
 #endif
             return SimplePDFPlugin::create(frame);
@@ -554,8 +560,10 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
     }
 
 #if ENABLE(PLUGIN_PROCESS)
+
     PluginProcess::Type processType = (pluginElement->displayState() == HTMLPlugInElement::WaitingForSnapshot ? PluginProcess::TypeSnapshotProcess : PluginProcess::TypeRegularProcess);
-    return PluginProxy::create(pluginPath, processType);
+    bool isRestartedProcess = (pluginElement->displayState() == HTMLPlugInElement::Restarting || pluginElement->displayState() == HTMLPlugInElement::RestartingWithPendingMouseClick);
+    return PluginProxy::create(pluginPath, processType, isRestartedProcess);
 #else
     NetscapePlugin::setSetExceptionFunction(NPRuntimeObjectMap::setGlobalException);
     return NetscapePlugin::create(NetscapePluginModule::getOrCreate(pluginPath));
@@ -786,6 +794,10 @@ void WebPage::close()
         return;
 
     m_isClosed = true;
+
+    // If there is still no URL, then we never loaded anything in this page, so nothing to report.
+    if (!mainWebFrame()->url().isEmpty())
+        reportUsedFeatures();
 
     if (pageGroup()->isVisibleToInjectedBundle() && WebProcess::shared().injectedBundle())
         WebProcess::shared().injectedBundle()->willDestroyPage(this);
@@ -1182,13 +1194,6 @@ void WebPage::windowScreenDidChange(uint64_t displayID)
     m_page->windowScreenDidChange(static_cast<PlatformDisplayID>(displayID));
 }
 
-#if ENABLE(VIEW_MODE_CSS_MEDIA)
-void WebPage::setViewMode(Page::ViewMode mode)
-{
-    m_page->setViewMode(mode);
-}
-#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
-
 void WebPage::scalePage(double scale, const IntPoint& origin)
 {
     PluginView* pluginView = pluginViewForFrame(m_page->mainFrame());
@@ -1262,7 +1267,7 @@ void WebPage::setUseFixedLayout(bool fixed)
 #if USE(TILED_BACKING_STORE) && ENABLE(SMOOTH_SCROLLING)
     // Delegated scrolling will be enabled when the FrameView is created if fixed layout is enabled.
     // Ensure we don't do animated scrolling in the WebProcess in that case.
-    m_page->settings()->setEnableScrollAnimator(!fixed);
+    m_page->settings()->setScrollAnimatorEnabled(!fixed);
 #endif
 
     FrameView* view = mainFrameView();
@@ -1368,7 +1373,6 @@ void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay, bool shoul
         overlay->startFadeInAnimation();
 
     m_drawingArea->didInstallPageOverlay(overlay.get());
-    overlay->setNeedsDisplay();
 }
 
 void WebPage::uninstallPageOverlay(PageOverlay* pageOverlay, bool shouldFadeOut)
@@ -1448,6 +1452,19 @@ WebContextMenu* WebPage::contextMenu()
     if (!m_contextMenu)
         m_contextMenu = WebContextMenu::create(this);
     return m_contextMenu.get();
+}
+
+WebContextMenu* WebPage::contextMenuAtPointInWindow(const IntPoint& point)
+{
+    corePage()->contextMenuController()->clearContextMenu();
+    
+    // Simulate a mouse click to generate the correct menu.
+    PlatformMouseEvent mouseEvent(point, point, RightButton, PlatformEvent::MousePressed, 1, false, false, false, false, currentTime());
+    bool handled = corePage()->mainFrame()->eventHandler()->sendContextMenuEvent(mouseEvent);
+    if (!handled)
+        return 0;
+
+    return contextMenu();
 }
 #endif
 
@@ -1761,7 +1778,7 @@ void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize&
             return;
 
 #else
-        HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
+        HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
         adjustedNode = result.innerNode();
 #endif
         // Find the node to highlight. This is not the same as the node responding the tap gesture, because many
@@ -1965,10 +1982,15 @@ inline bool WebPage::canHandleUserEvents() const
 
 void WebPage::setIsInWindow(bool isInWindow)
 {
+    bool pageWasInWindow = m_page->isInWindow();
+    
     if (!isInWindow) {
         m_setCanStartMediaTimer.stop();
         m_page->setCanStartMedia(false);
         m_page->willMoveOffscreen();
+        
+        if (pageWasInWindow)
+            WebProcess::shared().pageWillLeaveWindow(this);
     } else {
         // Defer the call to Page::setCanStartMedia() since it ends up sending a synchronous message to the UI process
         // in order to get plug-in connections, and the UI process will be waiting for the Web process to update the backing
@@ -1977,6 +1999,9 @@ void WebPage::setIsInWindow(bool isInWindow)
             m_setCanStartMediaTimer.startOneShot(0);
 
         m_page->didMoveOnscreen();
+        
+        if (!pageWasInWindow)
+            WebProcess::shared().pageDidEnterWindow(this);
     }
 
     m_page->setIsInWindow(isInWindow);
@@ -2276,6 +2301,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 #undef INITIALIZE_SETTINGS
 
     settings->setScriptEnabled(store.getBoolValueForKey(WebPreferencesKey::javaScriptEnabledKey()));
+    settings->setScriptMarkupEnabled(store.getBoolValueForKey(WebPreferencesKey::javaScriptMarkupEnabledKey()));
     settings->setLoadsImagesAutomatically(store.getBoolValueForKey(WebPreferencesKey::loadsImagesAutomaticallyKey()));
     settings->setLoadsSiteIconsIgnoringImageLoadingSetting(store.getBoolValueForKey(WebPreferencesKey::loadsSiteIconsIgnoringImageLoadingPreferenceKey()));
     settings->setPluginsEnabled(store.getBoolValueForKey(WebPreferencesKey::pluginsEnabledKey()));
@@ -2349,7 +2375,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setHyperlinkAuditingEnabled(store.getBoolValueForKey(WebPreferencesKey::hyperlinkAuditingEnabledKey()));
     settings->setRequestAnimationFrameEnabled(store.getBoolValueForKey(WebPreferencesKey::requestAnimationFrameEnabledKey()));
 #if ENABLE(SMOOTH_SCROLLING)
-    settings->setEnableScrollAnimator(store.getBoolValueForKey(WebPreferencesKey::scrollAnimatorEnabledKey()));
+    settings->setScrollAnimatorEnabled(store.getBoolValueForKey(WebPreferencesKey::scrollAnimatorEnabledKey()));
 #endif
     settings->setInteractiveFormValidationEnabled(store.getBoolValueForKey(WebPreferencesKey::interactiveFormValidationEnabledKey()));
 
@@ -2400,6 +2426,9 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setScrollingPerformanceLoggingEnabled(m_scrollingPerformanceLoggingEnabled);
 
     settings->setPlugInSnapshottingEnabled(store.getBoolValueForKey(WebPreferencesKey::plugInSnapshottingEnabledKey()));
+    settings->setSnapshotAllPlugIns(store.getBoolValueForKey(WebPreferencesKey::snapshotAllPlugInsKey()));
+    settings->setAutostartOriginPlugInSnapshottingEnabled(store.getBoolValueForKey(WebPreferencesKey::autostartOriginPlugInSnapshottingEnabledKey()));
+    settings->setPrimaryPlugInSnapshotDetectionEnabled(store.getBoolValueForKey(WebPreferencesKey::primaryPlugInSnapshotDetectionEnabledKey()));
     settings->setUsesEncodingDetector(store.getBoolValueForKey(WebPreferencesKey::usesEncodingDetectorKey()));
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -2411,6 +2440,13 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 
     settings->setSmartInsertDeleteEnabled(store.getBoolValueForKey(WebPreferencesKey::smartInsertDeleteEnabledKey()));
     settings->setShowsURLsInToolTips(store.getBoolValueForKey(WebPreferencesKey::showsURLsInToolTipsEnabledKey()));
+
+#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
+    settings->setHiddenPageDOMTimerThrottlingEnabled(store.getBoolValueForKey(WebPreferencesKey::hiddenPageDOMTimerThrottlingEnabledKey()));
+#endif
+#if ENABLE(PAGE_VISIBILITY_API)
+    settings->setHiddenPageCSSAnimationSuspensionEnabled(store.getBoolValueForKey(WebPreferencesKey::hiddenPageCSSAnimationSuspensionEnabledKey()));
+#endif
 
     platformPreferencesDidChange(store);
 
@@ -2897,7 +2933,8 @@ void WebPage::addPluginView(PluginView* pluginView)
 
     m_pluginViews.add(pluginView);
 #if ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
-    determinePrimarySnapshottedPlugIn();
+    if (!m_page->settings()->snapshotAllPlugIns() && m_page->settings()->primaryPlugInSnapshotDetectionEnabled())
+        determinePrimarySnapshottedPlugIn();
 #endif
 }
 
@@ -3042,7 +3079,7 @@ void WebPage::findZoomableAreaForPoint(const WebCore::IntPoint& point, const Web
 {
     UNUSED_PARAM(area);
     Frame* mainframe = m_mainFrame->coreFrame();
-    HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
+    HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
 
     Node* node = result.innerNode();
 
@@ -3153,6 +3190,8 @@ void WebPage::SandboxExtensionTracker::didStartProvisionalLoad(WebFrame* frame)
     if (!m_provisionalSandboxExtension)
         return;
 
+    ASSERT(!m_provisionalSandboxExtension || frame->coreFrame()->loader()->provisionalDocumentLoader()->url().isLocalFile());
+
     m_provisionalSandboxExtension->consume();
 }
 
@@ -3161,14 +3200,13 @@ void WebPage::SandboxExtensionTracker::didCommitProvisionalLoad(WebFrame* frame)
     if (!frame->isMainFrame())
         return;
 
-    // Generally, there should be no pending extension at this stage, but we can have one if UI process
-    // has an out of date idea of WebProcess state, and initiates a load or reload without stopping an existing one.
-    m_pendingProvisionalSandboxExtension = nullptr;
-
     if (m_committedSandboxExtension)
         m_committedSandboxExtension->revoke();
 
     m_committedSandboxExtension = m_provisionalSandboxExtension.release();
+
+    // We can also have a non-null m_pendingProvisionalSandboxExtension if a new load is being started.
+    // This extension is not cleared, because it does not pertain to the failed load, and will be needed.
 }
 
 void WebPage::SandboxExtensionTracker::didFailProvisionalLoad(WebFrame* frame)
@@ -3176,15 +3214,15 @@ void WebPage::SandboxExtensionTracker::didFailProvisionalLoad(WebFrame* frame)
     if (!frame->isMainFrame())
         return;
 
-    // Generally, there should be no pending extension at this stage, but we can have one if UI process
-    // has an out of date idea of WebProcess state, and initiates a load or reload without stopping an existing one.
-    m_pendingProvisionalSandboxExtension = nullptr;
-
     if (!m_provisionalSandboxExtension)
         return;
 
     m_provisionalSandboxExtension->revoke();
     m_provisionalSandboxExtension = nullptr;
+
+    // We can also have a non-null m_pendingProvisionalSandboxExtension if a new load is being started
+    // (notably, if the current one fails because the new one cancels it). This extension is not cleared,
+    // because it does not pertain to the failed load, and will be needed.
 }
 
 bool WebPage::hasLocalDataForURL(const KURL& url)
@@ -3852,6 +3890,11 @@ void WebPage::didCancelCheckingText(uint64_t requestID)
 
 void WebPage::didCommitLoad(WebFrame* frame)
 {
+    // If previous URL is invalid, then it's not a real page that's being navigated away from.
+    // Most likely, this is actually the first load to be committed in this page.
+    if (frame->isMainFrame() && frame->coreFrame()->loader()->previousURL().isValid())
+        reportUsedFeatures();
+
     // Only restore the scale factor for standard frame loads (of the main frame).
     if (frame->isMainFrame() && frame->coreFrame()->loader()->loadType() == FrameLoadTypeStandard) {
         Page* page = frame->coreFrame()->page();
@@ -3869,7 +3912,10 @@ void WebPage::didFinishLoad(WebFrame* frame)
 {
 #if ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
     m_readyToFindPrimarySnapshottedPlugin = true;
-    determinePrimarySnapshottedPlugIn();
+    if (!m_page->settings()->snapshotAllPlugIns() && m_page->settings()->primaryPlugInSnapshotDetectionEnabled())
+        determinePrimarySnapshottedPlugIn();
+#else
+    UNUSED_PARAM(frame);
 #endif
 }
 
@@ -3882,6 +3928,9 @@ static int primarySnapshottedPlugInMinimumHeight = 300;
 
 void WebPage::determinePrimarySnapshottedPlugIn()
 {
+    if (!m_page->settings()->plugInSnapshottingEnabled())
+        return;
+
     if (!m_readyToFindPrimarySnapshottedPlugin)
         return;
 
@@ -3896,7 +3945,7 @@ void WebPage::determinePrimarySnapshottedPlugIn()
     IntRect searchRect = IntRect(IntPoint(), corePage()->mainFrame()->view()->contentsSize());
     searchRect.intersect(IntRect(IntPoint(), IntSize(primarySnapshottedPlugInSearchLimit, primarySnapshottedPlugInSearchLimit)));
 
-    HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent | HitTestRequest::IgnoreClipping);
+    HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowChildFrameContent | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
 
     HashSet<RenderObject*> seenRenderers;
     HTMLPlugInImageElement* candidatePlugIn = 0;
@@ -3949,6 +3998,9 @@ void WebPage::determinePrimarySnapshottedPlugIn()
         return;
 
     m_didFindPrimarySnapshottedPlugin = true;
+    m_primaryPlugInPageOrigin = m_page->mainFrame()->document()->baseURL().host();
+    m_primaryPlugInOrigin = candidatePlugIn->loadedUrl().host();
+    m_primaryPlugInMimeType = candidatePlugIn->loadedMimeType();
 
     candidatePlugIn->setIsPrimarySnapshottedPlugIn(true);
 }
@@ -3957,6 +4009,14 @@ void WebPage::resetPrimarySnapshottedPlugIn()
 {
     m_readyToFindPrimarySnapshottedPlugin = false;
     m_didFindPrimarySnapshottedPlugin = false;
+}
+
+bool WebPage::matchesPrimaryPlugIn(const String& pageOrigin, const String& pluginOrigin, const String& mimeType) const
+{
+    if (!m_didFindPrimarySnapshottedPlugin)
+        return false;
+
+    return (pageOrigin == m_primaryPlugInPageOrigin && pluginOrigin == m_primaryPlugInOrigin && mimeType == m_primaryPlugInMimeType);
 }
 #endif // ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
 
@@ -3967,6 +4027,17 @@ PassRefPtr<Range> WebPage::currentSelectionAsRange()
         return 0;
 
     return frame->selection()->toNormalizedRange();
+}
+
+void WebPage::reportUsedFeatures()
+{
+    // FIXME: Feature names should not be hardcoded.
+    const BitVector* features = m_page->featureObserver()->accumulatedFeatureBits();
+    Vector<String> namedFeatures;
+    if (features && features->quickGet(FeatureObserver::SharedWorkerStart))
+        namedFeatures.append("SharedWorker");
+
+    m_loaderClient.featuresUsedInPage(this, namedFeatures);
 }
 
 } // namespace WebKit

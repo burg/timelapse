@@ -31,6 +31,7 @@ import logging
 import re
 
 from webkitpy.common.config.committers import CommitterList
+from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.bot.irc_command import IRCCommand
 from webkitpy.tool.bot.irc_command import Help
 from webkitpy.tool.bot.irc_command import Hi
@@ -56,6 +57,8 @@ class NewCommitBot(AbstractQueue, StepSequenceErrorHandler):
         "restart": Restart,
     }
 
+    _maximum_number_of_revisions_to_avoid_spamming_irc = 10
+
     # AbstractQueue methods
 
     def begin_work_queue(self):
@@ -72,32 +75,23 @@ class NewCommitBot(AbstractQueue, StepSequenceErrorHandler):
 
         _log.info('Last SVN revision: %d' % self._last_svn_revision)
 
-        _log.info('Updating checkout')
-        self._update_checkout()
+        for revision in range(self._last_svn_revision + 1, self._last_svn_revision + self._maximum_number_of_revisions_to_avoid_spamming_irc):
+            try:
+                commit_log = self._tool.executive.run_command(['svn', 'log', 'https://svn.webkit.org/repository/webkit/trunk', '--non-interactive', '--revision',
+                    self._tool.scm().strip_r_from_svn_revision(revision)])
+            except ScriptError:
+                break
+            if self._is_empty_log(commit_log) or commit_log.find('No such revision') >= 0:
+                continue
+            _log.info('Found revision %d' % revision)
+            self._last_svn_revision = revision
+            self._tool.irc().post(self._summarize_commit_log(commit_log).encode('utf-8'))
 
-        _log.info('Obtaining new SVN revisions')
-        revisions = self._new_svn_revisions()
-
-        _log.info('Obtaining commit logs for %d revisions' % len(revisions))
-        for revision in revisions:
-            commit_log = self._tool.scm().svn_commit_log(revision)
-            self._tool.irc().post(self._summarize_commit_log(commit_log).encode('ascii', 'ignore'))
-
-        return
+    def _is_empty_log(self, commit_log):
+        return re.match(r'^\-+$', commit_log)
 
     def process_work_item(self, failure_map):
         return True
-
-    def _update_checkout(self):
-        tool = self._tool
-        tool.executive.run_and_throw_if_fail(tool.deprecated_port().update_webkit_command(), quiet=True, cwd=tool.scm().checkout_root)
-
-    def _new_svn_revisions(self):
-        scm = self._tool.scm()
-        current_head = int(scm.head_svn_revision())
-        first_new_revision = self._last_svn_revision + 1
-        self._last_svn_revision = current_head
-        return range(max(first_new_revision, current_head - 20), current_head + 1)
 
     _patch_by_regex = re.compile(r'^Patch\s+by\s+(?P<author>.+?)\s+on(\s+\d{4}-\d{2}-\d{2})?\n?', re.MULTILINE | re.IGNORECASE)
     _rollout_regex = re.compile(r'(rolling out|reverting) (?P<revisions>r?\d+((,\s*|,?\s*and\s+)?r?\d+)*)\.?\s*', re.MULTILINE | re.IGNORECASE)

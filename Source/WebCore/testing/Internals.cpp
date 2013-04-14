@@ -55,7 +55,9 @@
 #include "HTMLMediaElement.h"
 #endif
 #include "HTMLNames.h"
+#include "HTMLSelectElement.h"
 #include "HTMLTextAreaElement.h"
+#include "HistoryController.h"
 #include "HistoryItem.h"
 #include "InspectorClient.h"
 #include "InspectorConsoleAgent.h"
@@ -77,6 +79,7 @@
 #include "PrintContext.h"
 #include "PseudoElement.h"
 #include "Range.h"
+#include "RenderMenuList.h"
 #include "RenderObject.h"
 #include "RenderTreeAsText.h"
 #include "RuntimeEnabledFeatures.h"
@@ -124,14 +127,6 @@
 #include <wtf/dtoa.h>
 #endif
 
-#if PLATFORM(CHROMIUM)
-#include "FilterOperation.h"
-#include "FilterOperations.h"
-#include "GraphicsLayer.h"
-#include "GraphicsLayerChromium.h"
-#include "RenderLayerBacking.h"
-#endif
-
 #if ENABLE(ENCRYPTED_MEDIA_V2)
 #include "CDM.h"
 #include "MockCDM.h"
@@ -161,7 +156,7 @@ class InspectorFrontendClientDummy : public InspectorFrontendClientLocal {
 public:
     InspectorFrontendClientDummy(InspectorController*, Page*);
     virtual ~InspectorFrontendClientDummy() { }
-    virtual void attachWindow() OVERRIDE { }
+    virtual void attachWindow(DockSide) OVERRIDE { }
     virtual void detachWindow() OVERRIDE { }
 
     virtual String localizedStringsURL() OVERRIDE { return String(); }
@@ -173,6 +168,7 @@ public:
 
 protected:
     virtual void setAttachedWindowHeight(unsigned) OVERRIDE { }
+    virtual void setAttachedWindowWidth(unsigned) OVERRIDE { }
 };
 
 InspectorFrontendClientDummy::InspectorFrontendClientDummy(InspectorController* controller, Page* page)
@@ -256,6 +252,14 @@ void Internals::resetToConsistentState(Page* page)
 
     page->setPageScaleFactor(1, IntPoint(0, 0));
     page->setPagination(Pagination());
+
+#if USE(ACCELERATED_COMPOSITING)
+    FrameView* mainFrameView = page->mainFrame()->view();
+    if (mainFrameView) {
+        mainFrameView->setHeaderHeight(0);
+        mainFrameView->setFooterHeight(0);
+    }
+#endif
     TextRun::setAllowsRoundingHacks(false);
     WebCore::overrideUserPreferredLanguages(Vector<String>());
     WebCore::Settings::setUsesOverlayScrollbars(false);
@@ -270,8 +274,13 @@ void Internals::resetToConsistentState(Page* page)
         page->inspectorController()->setProfilerEnabled(false);
 #endif
 #if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
+    page->group().captionPreferences()->setCaptionsStyleSheetOverride(emptyString());
     page->group().captionPreferences()->setTestingMode(false);
 #endif
+    if (!page->mainFrame()->editor()->isContinuousSpellCheckingEnabled())
+        page->mainFrame()->editor()->toggleContinuousSpellChecking();
+    if (page->mainFrame()->editor()->isOverwriteModeEnabled())
+        page->mainFrame()->editor()->toggleOverwriteModeEnabled();
 }
 
 Internals::Internals(Document* document)
@@ -1411,8 +1420,8 @@ PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int x, int y, 
     HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active;
     if (ignoreClipping)
         hitType |= HitTestRequest::IgnoreClipping;
-    if (allowShadowContent)
-        hitType |= HitTestRequest::AllowShadowContent;
+    if (!allowShadowContent)
+        hitType |= HitTestRequest::DisallowShadowContent;
     if (allowChildFrameContent)
         hitType |= HitTestRequest::AllowChildFrameContent;
 
@@ -1500,6 +1509,31 @@ bool Internals::hasAutocorrectedMarker(Document* document, int from, int length,
         return 0;
     
     return document->frame()->editor()->selectionStartHasMarkerFor(DocumentMarker::Autocorrected, from, length);
+}
+
+void Internals::setContinuousSpellCheckingEnabled(bool enabled, ExceptionCode&)
+{
+    if (!contextDocument() || !contextDocument()->frame() || !contextDocument()->frame()->editor())
+        return;
+
+    if (enabled != contextDocument()->frame()->editor()->isContinuousSpellCheckingEnabled())
+        contextDocument()->frame()->editor()->toggleContinuousSpellChecking();
+}
+
+bool Internals::isOverwriteModeEnabled(Document* document, ExceptionCode&)
+{
+    if (!document || !document->frame())
+        return 0;
+
+    return document->frame()->editor()->isOverwriteModeEnabled();
+}
+
+void Internals::toggleOverwriteModeEnabled(Document* document, ExceptionCode&)
+{
+    if (!document || !document->frame())
+        return;
+
+    document->frame()->editor()->toggleOverwriteModeEnabled();
 }
 
 #if ENABLE(INSPECTOR)
@@ -1810,6 +1844,26 @@ void Internals::setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCod
     page->setPageScaleFactor(scaleFactor, IntPoint(x, y));
 }
 
+void Internals::setHeaderHeight(Document* document, float height)
+{
+    if (!document || !document->view())
+        return;
+#if USE(ACCELERATED_COMPOSITING)
+    FrameView* frameView = document->view();
+    frameView->setHeaderHeight(height);
+#endif
+}
+
+void Internals::setFooterHeight(Document* document, float height)
+{
+    if (!document || !document->view())
+        return;
+#if USE(ACCELERATED_COMPOSITING)
+    FrameView* frameView = document->view();
+    frameView->setFooterHeight(height);
+#endif
+}
+
 #if ENABLE(FULLSCREEN_API)
 void Internals::webkitWillEnterFullScreenForElement(Document* document, Element* element)
 {
@@ -1982,25 +2036,15 @@ String Internals::getCurrentCursorInfo(Document* document, ExceptionCode& ec)
 
 PassRefPtr<ArrayBuffer> Internals::serializeObject(PassRefPtr<SerializedScriptValue> value) const
 {
-#if USE(V8)
-    String stringValue = value->toWireString();
-    return ArrayBuffer::create(static_cast<const void*>(stringValue.impl()->characters()), stringValue.sizeInBytes());
-#else
     Vector<uint8_t> bytes = value->data();
     return ArrayBuffer::create(bytes.data(), bytes.size());
-#endif
 }
 
 PassRefPtr<SerializedScriptValue> Internals::deserializeBuffer(PassRefPtr<ArrayBuffer> buffer) const
 {
-#if USE(V8)
-    String value(static_cast<const UChar*>(buffer->data()), buffer->byteLength() / sizeof(UChar));
-    return SerializedScriptValue::createFromWire(value);
-#else
     Vector<uint8_t> bytes;
     bytes.append(static_cast<const uint8_t*>(buffer->data()), buffer->byteLength());
     return SerializedScriptValue::adopt(bytes);
-#endif
 }
 
 void Internals::setUsesOverlayScrollbars(bool enabled)
@@ -2049,5 +2093,48 @@ void Internals::simulateAudioInterruption(Node* node)
 #endif
 }
 #endif
+
+bool Internals::isSelectPopupVisible(Node* node)
+{
+    if (!isHTMLSelectElement(node))
+        return false;
+
+    HTMLSelectElement* select = toHTMLSelectElement(node);
+
+    RenderObject* renderer = select->renderer();
+    if (!renderer->isMenuList())
+        return false;
+
+    RenderMenuList* menuList = toRenderMenuList(renderer);
+    return menuList->popupIsVisible();
+}
+
+String Internals::captionsStyleSheetOverride(ExceptionCode& ec)
+{
+    Document* document = contextDocument();
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return emptyString();
+    }
+
+#if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
+    return document->page()->group().captionPreferences()->captionsStyleSheetOverride();
+#else
+    return emptyString();
+#endif
+}
+
+void Internals::setCaptionsStyleSheetOverride(const String& override, ExceptionCode& ec)
+{
+    Document* document = contextDocument();
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+#if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
+    document->page()->group().captionPreferences()->setCaptionsStyleSheetOverride(override);
+#endif
+}
 
 }

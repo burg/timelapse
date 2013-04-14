@@ -572,6 +572,7 @@ ArrayStorage* JSObject::enterDictionaryIndexingModeWhenArrayStorageAlreadyExists
 void JSObject::enterDictionaryIndexingMode(JSGlobalData& globalData)
 {
     switch (structure()->indexingType()) {
+    case ALL_BLANK_INDEXING_TYPES:
     case ALL_UNDECIDED_INDEXING_TYPES:
     case ALL_INT32_INDEXING_TYPES:
     case ALL_DOUBLE_INDEXING_TYPES:
@@ -1441,6 +1442,7 @@ bool JSObject::getPropertySpecificValue(ExecState* exec, PropertyName propertyNa
 
 void JSObject::getPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
+    propertyNames.setBaseObject(object);
     object->methodTable()->getOwnPropertyNames(object, exec, propertyNames, mode);
 
     if (object->prototype().isNull())
@@ -1505,13 +1507,13 @@ void JSObject::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNa
         }
         
         if (SparseArrayValueMap* map = storage->m_sparseMap.get()) {
-            Vector<unsigned> keys;
-            keys.reserveCapacity(map->size());
+            Vector<unsigned, 0, UnsafeVectorOverflow> keys;
+            keys.reserveInitialCapacity(map->size());
             
             SparseArrayValueMap::const_iterator end = map->end();
             for (SparseArrayValueMap::const_iterator it = map->begin(); it != end; ++it) {
                 if (mode == IncludeDontEnumProperties || !(it->value.attributes & DontEnum))
-                    keys.append(static_cast<unsigned>(it->key));
+                    keys.uncheckedAppend(static_cast<unsigned>(it->key));
             }
             
             std::sort(keys.begin(), keys.end());
@@ -1531,7 +1533,12 @@ void JSObject::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNa
 void JSObject::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
     getClassPropertyNames(exec, object->classInfo(), propertyNames, mode, object->staticFunctionsReified());
+
+    bool canCachePropertiesFromStructure = !propertyNames.size();
     object->structure()->getPropertyNamesFromStructure(exec->globalData(), propertyNames, mode);
+
+    if (canCachePropertiesFromStructure)
+        propertyNames.setNumCacheableSlotsForObject(object, propertyNames.size());
 }
 
 double JSObject::toNumber(ExecState* exec) const

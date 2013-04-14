@@ -554,6 +554,7 @@ WebView *createWebViewAndOffscreenWindow()
     [[window contentView] addSubview:webView];
     [window orderBack:nil];
     [window setAutodisplay:NO];
+    [window _setWindowResolution:1 displayIfChanged:YES];
 
     [window startListeningForAcceleratedCompositingChanges];
     
@@ -595,7 +596,11 @@ static void resetDefaultsToConsistentValues()
     [defaults setBool:YES forKey:@"UseWebKitWebInspector"];
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-    [defaults setObject:[NSDictionary dictionaryWithObjectsAndKeys:@"notational", @"notationl", nil] forKey:@"NSTestCorrectionDictionary"];
+    [defaults setObject:[NSDictionary dictionaryWithObjectsAndKeys:
+        @"notational", @"notationl",
+        @"message", @"mesage",
+        @"would", @"wouldn",
+        nil] forKey:@"NSTestCorrectionDictionary"];
 #endif
 
     // Scrollbars are drawn either using AppKit (which uses NSUserDefaults) or using HIToolbox (which uses CFPreferences / kCFPreferencesAnyApplication / kCFPreferencesCurrentUser / kCFPreferencesAnyHost)
@@ -609,7 +614,7 @@ static void resetDefaultsToConsistentValues()
 #endif
 
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 && !PLATFORM(CHROMIUM)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     [defaults setBool:NO forKey:@"NSScrollAnimationEnabled"];
 #else
     [defaults setBool:NO forKey:@"AppleScrollAnimationEnabled"];

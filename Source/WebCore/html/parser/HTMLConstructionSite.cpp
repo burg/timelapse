@@ -41,6 +41,7 @@
 #include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLPlugInElement.h"
 #include "HTMLScriptElement.h"
 #include "HTMLStackItem.h"
 #include "HTMLTemplateElement.h"
@@ -59,7 +60,7 @@ using namespace HTMLNames;
 static inline void setAttributes(Element* element, AtomicHTMLToken* token, ParserContentPolicy parserContentPolicy)
 {
     if (!scriptingContentIsAllowed(parserContentPolicy))
-        element->stripJavaScriptAttributes(token->attributes());
+        element->stripScriptingAttributes(token->attributes());
     element->parserSetAttributes(token->attributes());
 }
 
@@ -106,6 +107,9 @@ static inline void executeTask(HTMLConstructionSiteTask& task)
 
 void HTMLConstructionSite::attachLater(ContainerNode* parent, PassRefPtr<Node> prpChild, bool selfClosing)
 {
+    ASSERT(scriptingContentIsAllowed(m_parserContentPolicy) || !prpChild.get()->isElementNode() || !toScriptElementIfPossible(toElement(prpChild.get())));
+    ASSERT(pluginContentIsAllowed(m_parserContentPolicy) || !prpChild->isPluginElement());
+
     HTMLConstructionSiteTask task;
     task.parent = parent;
     task.child = prpChild;
@@ -462,7 +466,8 @@ void HTMLConstructionSite::insertForeignElement(AtomicHTMLToken* token, const At
     notImplemented(); // parseError when xmlns or xmlns:xlink are wrong.
 
     RefPtr<Element> element = createElement(token, namespaceURI);
-    attachLater(currentNode(), element, token->selfClosing());
+    if (scriptingContentIsAllowed(m_parserContentPolicy) || !toScriptElementIfPossible(element.get()))
+        attachLater(currentNode(), element, token->selfClosing());
     if (!token->selfClosing())
         m_openElements.push(HTMLStackItem::create(element.release(), token, namespaceURI));
 }
@@ -591,7 +596,7 @@ void HTMLConstructionSite::reconstructTheActiveFormattingElements()
 
 void HTMLConstructionSite::generateImpliedEndTagsWithExclusion(const AtomicString& tagName)
 {
-    while (hasImpliedEndTag(currentStackItem()) && !currentStackItem()->hasLocalName(tagName))
+    while (hasImpliedEndTag(currentStackItem()) && !currentStackItem()->matchesHTMLTag(tagName))
         m_openElements.pop();
 }
 
@@ -624,7 +629,11 @@ void HTMLConstructionSite::findFosterSite(HTMLConstructionSiteTask& task)
         ContainerNode* parent = lastTableElement->parentNode();
         // When parsing HTML fragments, we skip step 4.2 ("Let root be a new html element with no attributes") for efficiency,
         // and instead use the DocumentFragment as a root node. So we must treat the root node (DocumentFragment) as if it is a html element here.
-        if (parent && (parent->isElementNode() || (m_isParsingFragment && parent == m_openElements.rootNode()))) {
+        bool parentCanBeFosterParent = parent && (parent->isElementNode() || (m_isParsingFragment && parent == m_openElements.rootNode()));
+#if ENABLE(TEMPLATE_ELEMENT)
+        parentCanBeFosterParent = parentCanBeFosterParent || (parent && parent->isDocumentFragment() && static_cast<DocumentFragment*>(parent)->isTemplateContent());
+#endif
+        if (parentCanBeFosterParent) {
             task.parent = parent;
             task.nextChild = lastTableElement;
             return;

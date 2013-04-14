@@ -30,6 +30,7 @@
 #import <WebCore/ResourceError.h>
 #import <WebKitSystemInterface.h>
 #import <wtf/MainThread.h>
+#import <wtf/PassOwnPtr.h>
 
 using namespace WebCore;
 
@@ -88,17 +89,6 @@ NetworkStorageSession& RemoteNetworkingContext::privateBrowsingSession()
 {
     ASSERT(privateBrowsingStorageSession());
     return *privateBrowsingStorageSession();
-}
-
-NSOperationQueue *RemoteNetworkingContext::scheduledOperationQueue() const
-{
-    static NSOperationQueue *queue;
-    if (!queue) {
-        queue = [[NSOperationQueue alloc] init];
-        // Default concurrent operation count depends on current system workload, but delegate methods are mostly idling in IPC, so we can run as many as needed.
-        [queue setMaxConcurrentOperationCount:NSIntegerMax];
-    }
-    return queue;
 }
 
 RetainPtr<CFDataRef> RemoteNetworkingContext::sourceApplicationAuditData() const

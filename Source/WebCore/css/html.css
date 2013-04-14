@@ -509,7 +509,7 @@ input[type="date"] {
     -webkit-padding-start: 1px;
 }
 #endif
-#if defined(ENABLE_INPUT_TYPE_DATETIME) && ENABLE_INPUT_TYPE_DATETIME
+#if defined(ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE) && ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE
 input[type="datetime"] {
     -webkit-align-items: center;
     display: -webkit-inline-flex;
@@ -564,7 +564,6 @@ input::-webkit-datetime-edit {
     -webkit-flex: 1;
     -webkit-user-modify: read-only !important;
     display: inline-block;
-    min-width: 0;
     overflow: hidden;
 }
 
@@ -650,7 +649,7 @@ input[type="date"] {
     width: 10em;
 }
 #endif
-#if defined(ENABLE_INPUT_TYPE_DATETIME) && ENABLE_INPUT_TYPE_DATETIME
+#if defined(ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE) && ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE
 input[type="datetime"] {
     -webkit-align-items: center;
     -webkit-appearance: menulist-button;
@@ -829,8 +828,6 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-container, input[type="range"]::-webkit-media-slider-container {
     -webkit-flex: 1;
-    min-width: 0;
-
     box-sizing: border-box;
     -webkit-user-modify: read-only !important;
     display: -webkit-flex;
@@ -839,7 +836,6 @@ input[type="range"]::-webkit-slider-container, input[type="range"]::-webkit-medi
 
 input[type="range"]::-webkit-slider-runnable-track {
     -webkit-flex: 1;
-    min-width: 0;
     -webkit-align-self: center;
 
     box-sizing: border-box;

@@ -471,7 +471,6 @@ SYMBOL_STRING(ctiTrampoline) ":" "\n"
     "sw    $28," STRINGIZE_VALUE_OF(PRESERVED_GP_OFFSET) "($29)" "\n"
 #endif
     "move  $16,$6       # set callFrameRegister" "\n"
-    "li    $17,512      # set timeoutCheckRegister" "\n"
     "move  $25,$4       # move executableAddress to t9" "\n"
     "sw    $5," STRINGIZE_VALUE_OF(REGISTER_FILE_OFFSET) "($29) # store JSStack to current stack" "\n"
     "lw    $9," STRINGIZE_VALUE_OF(STACK_LENGTH + 20) "($29)    # load globalData from previous stack" "\n"
@@ -940,12 +939,14 @@ NEVER_INLINE static void tryCacheGetByID(CallFrame* callFrame, CodeBlock* codeBl
     // Cache hit: Specialize instruction and ref Structures.
 
     if (slot.slotBase() == baseValue) {
-        stubInfo->initGetByIdSelf(callFrame->globalData(), codeBlock->ownerExecutable(), structure);
+        RELEASE_ASSERT(stubInfo->accessType == access_unset);
         if ((slot.cachedPropertyType() != PropertySlot::Value)
             || !MacroAssembler::isCompactPtrAlignedAddressOffset(maxOffsetRelativeToPatchedStorage(slot.cachedOffset())))
             ctiPatchCallByReturnAddress(codeBlock, returnAddress, FunctionPtr(cti_op_get_by_id_self_fail));
-        else
+        else {
             JIT::patchGetByIdSelf(codeBlock, stubInfo, structure, slot.cachedOffset(), returnAddress);
+            stubInfo->initGetByIdSelf(callFrame->globalData(), codeBlock->ownerExecutable(), structure);
+        }
         return;
     }
 
@@ -1371,24 +1372,6 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_pre_inc)
     return JSValue::encode(result);
 }
 
-DEFINE_STUB_FUNCTION(int, timeout_check)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSGlobalData* globalData = stackFrame.globalData;
-    TimeoutChecker& timeoutChecker = globalData->timeoutChecker;
-
-    if (globalData->terminator.shouldTerminate()) {
-        globalData->exception = createTerminatedExecutionException(globalData);
-        VM_THROW_EXCEPTION_AT_END();
-    } else if (timeoutChecker.didTimeOut(stackFrame.callFrame)) {
-        globalData->exception = createInterruptedExecutionException(globalData);
-        VM_THROW_EXCEPTION_AT_END();
-    }
-
-    return timeoutChecker.ticksUntilNextCheck();
-}
-
 DEFINE_STUB_FUNCTION(void*, stack_check)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
@@ -1456,10 +1439,8 @@ DEFINE_STUB_FUNCTION(void, op_put_by_id)
     stackFrame.args[0].jsValue().put(callFrame, ident, stackFrame.args[2].jsValue(), slot);
     
     if (accessType == static_cast<AccessType>(stubInfo->accessType)) {
-        if (!stubInfo->seenOnce())
-            stubInfo->setSeen();
-        else
-            tryCachePutByID(callFrame, codeBlock, STUB_RETURN_ADDRESS, stackFrame.args[0].jsValue(), slot, stubInfo, false);
+        stubInfo->setSeen();
+        tryCachePutByID(callFrame, codeBlock, STUB_RETURN_ADDRESS, stackFrame.args[0].jsValue(), slot, stubInfo, false);
     }
     
     CHECK_FOR_EXCEPTION_AT_END();
@@ -1482,10 +1463,8 @@ DEFINE_STUB_FUNCTION(void, op_put_by_id_direct)
     asObject(baseValue)->putDirect(callFrame->globalData(), ident, stackFrame.args[2].jsValue(), slot);
     
     if (accessType == static_cast<AccessType>(stubInfo->accessType)) {
-        if (!stubInfo->seenOnce())
-            stubInfo->setSeen();
-        else
-            tryCachePutByID(callFrame, codeBlock, STUB_RETURN_ADDRESS, stackFrame.args[0].jsValue(), slot, stubInfo, true);
+        stubInfo->setSeen();
+        tryCachePutByID(callFrame, codeBlock, STUB_RETURN_ADDRESS, stackFrame.args[0].jsValue(), slot, stubInfo, true);
     }
     
     CHECK_FOR_EXCEPTION_AT_END();
@@ -1595,6 +1574,9 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_get_by_id_self_fail)
 
         PolymorphicAccessStructureList* polymorphicStructureList;
         int listIndex = 1;
+
+        if (stubInfo->accessType == access_unset)
+            stubInfo->initGetByIdSelf(callFrame->globalData(), codeBlock->ownerExecutable(), baseValue.asCell()->structure());
 
         if (stubInfo->accessType == access_get_by_id_self) {
             ASSERT(!stubInfo->stubRoutine);
@@ -3308,19 +3290,6 @@ DEFINE_STUB_FUNCTION(void, op_push_name_scope)
 
     CallFrame* callFrame = stackFrame.callFrame;
     callFrame->setScope(scope);
-}
-
-DEFINE_STUB_FUNCTION(void, op_jmp_scopes)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    unsigned count = stackFrame.args[0].int32();
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    JSScope* tmp = callFrame->scope();
-    while (count--)
-        tmp = tmp->next();
-    callFrame->setScope(tmp);
 }
 
 DEFINE_STUB_FUNCTION(void, op_put_by_index)

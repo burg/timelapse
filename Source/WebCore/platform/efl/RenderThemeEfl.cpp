@@ -71,6 +71,10 @@ float RenderThemeEfl::defaultFontSize = 16.0f;
 static const float minCancelButtonSize = 5;
 static const float maxCancelButtonSize = 21;
 
+static const float minSearchDecorationButtonSize = 1;
+static const float maxSearchDecorationButtonSize = 15;
+static const float searchFieldDecorationButtonOffset = 3;
+
 // Constants for progress tag animation.
 // These values have been copied from RenderThemeGtk.cpp
 static const int progressAnimationFrames = 10;
@@ -326,7 +330,7 @@ void RenderThemeEfl::applyEdjeRTLState(Evas_Object* edje, RenderObject* object, 
         HTMLInputElement* input = renderSlider->node()->toInputElement();
         double valueRange = input->maximum() - input->minimum();
 
-        OwnPtr<Edje_Message_Float_Set> msg = adoptPtr(static_cast<Edje_Message_Float_Set*>(operator new (sizeof(Edje_Message_Float_Set) + sizeof(double))));
+        OwnPtr<Edje_Message_Float_Set> msg = adoptPtr(static_cast<Edje_Message_Float_Set*>(::operator new (sizeof(Edje_Message_Float_Set) + sizeof(double))));
         msg->count = 2;
 
         // The first parameter of the message decides if the progress bar
@@ -347,7 +351,7 @@ void RenderThemeEfl::applyEdjeRTLState(Evas_Object* edje, RenderObject* object, 
         int max = rect.width();
         double value = renderProgress->position();
 
-        OwnPtr<Edje_Message_Float_Set> msg = adoptPtr(static_cast<Edje_Message_Float_Set*>(operator new (sizeof(Edje_Message_Float_Set) + sizeof(double))));
+        OwnPtr<Edje_Message_Float_Set> msg = adoptPtr(static_cast<Edje_Message_Float_Set*>(::operator new (sizeof(Edje_Message_Float_Set) + sizeof(double))));
         msg->count = 2;
 
         if (object->style()->direction() == RTL)
@@ -759,8 +763,9 @@ bool RenderThemeEfl::supportsDataListUI(const AtomicString& type) const
 {
 #if ENABLE(DATALIST_ELEMENT)
     // FIXME: We need to support other types.
-    return type == InputTypeNames::range()
-        || type == InputTypeNames::email()
+    return type == InputTypeNames::email()
+        || type == InputTypeNames::range()
+        || type == InputTypeNames::search()
         || type == InputTypeNames::url();
 #else
     UNUSED_PARAM(type);
@@ -902,6 +907,12 @@ void RenderThemeEfl::adjustSearchFieldDecorationStyle(StyleResolver* styleResolv
     adjustSizeConstraints(style, SearchFieldDecoration);
     style->resetBorder();
     style->setWhiteSpace(PRE);
+
+    float fontScale = style->fontSize() / defaultFontSize;
+    int decorationSize = lroundf(std::min(std::max(minSearchDecorationButtonSize, defaultFontSize * fontScale), maxSearchDecorationButtonSize));
+
+    style->setWidth(Length(decorationSize + searchFieldDecorationButtonOffset, Fixed));
+    style->setHeight(Length(decorationSize, Fixed));
 }
 
 bool RenderThemeEfl::paintSearchFieldDecoration(RenderObject* object, const PaintInfo& info, const IntRect& rect)

@@ -30,6 +30,7 @@
 #include <WebCore/RunLoop.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashSet.h>
+#include <wtf/text/WTFString.h>
 
 using namespace WebCore;
 
@@ -271,7 +272,10 @@ void Connection::removeWorkQueueMessageReceiver(StringReference messageReceiverN
 
 void Connection::addWorkQueueMessageReceiverOnConnectionWorkQueue(StringReference messageReceiverName, WorkQueue* workQueue, WorkQueueMessageReceiver* workQueueMessageReceiver)
 {
+    ASSERT(workQueue);
+    ASSERT(workQueueMessageReceiver);
     ASSERT(!m_workQueueMessageReceivers.contains(messageReceiverName));
+
     m_workQueueMessageReceivers.add(messageReceiverName, std::make_pair(workQueue, workQueueMessageReceiver));
 }
 
@@ -607,12 +611,29 @@ void Connection::processIncomingMessage(PassOwnPtr<MessageDecoder> incomingMessa
 {
     OwnPtr<MessageDecoder> message = incomingMessage;
 
+    ASSERT(!message->messageReceiverName().isEmpty());
+    ASSERT(!message->messageName().isEmpty());
+
     if (message->messageReceiverName() == "IPC" && message->messageName() == "SyncMessageReply") {
         processIncomingSyncReply(message.release());
         return;
     }
 
-    // Check if any work queue message receivers are interested in this message.
+    if (!m_workQueueMessageReceivers.isValidKey(message->messageReceiverName())) {
+        if (message->messageReceiverName().isEmpty() && message->messageName().isEmpty()) {
+            // Something went wrong when decoding the message. Encode the message length so we can figure out if this
+            // happens for certain message lengths.
+            CString messageReceiverName = "<unknown message>";
+            CString messageName = String::format("<message length: %zu bytes>", incomingMessage->length()).utf8();
+
+            m_clientRunLoop->dispatch(bind(&Connection::dispatchDidReceiveInvalidMessage, this, messageReceiverName, messageName));
+            return;
+        }
+
+        m_clientRunLoop->dispatch(bind(&Connection::dispatchDidReceiveInvalidMessage, this, message->messageReceiverName().toString(), message->messageName().toString()));
+        return;
+    }
+
     HashMap<StringReference, std::pair<RefPtr<WorkQueue>, RefPtr<WorkQueueMessageReceiver> > >::const_iterator it = m_workQueueMessageReceivers.find(message->messageReceiverName());
     if (it != m_workQueueMessageReceivers.end()) {
         it->value.first->dispatch(bind(&Connection::dispatchWorkQueueMessageReceiverMessage, this, it->value.second, message.release().leakPtr()));
@@ -732,6 +753,16 @@ void Connection::dispatchSyncMessage(MessageDecoder& decoder)
 
     if (replyEncoder)
         sendSyncReply(adoptPtr(static_cast<MessageEncoder*>(replyEncoder.leakPtr())));
+}
+
+void Connection::dispatchDidReceiveInvalidMessage(const CString& messageReceiverNameString, const CString& messageNameString)
+{
+    ASSERT(RunLoop::current() == m_clientRunLoop);
+
+    if (!m_client)
+        return;
+
+    m_client->didReceiveInvalidMessage(this, StringReference(messageReceiverNameString.data(), messageReceiverNameString.length()), StringReference(messageNameString.data(), messageNameString.length()));
 }
 
 void Connection::didFailToSendSyncMessage()

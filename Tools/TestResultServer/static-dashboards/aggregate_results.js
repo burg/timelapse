@@ -34,10 +34,7 @@
 //     -copy them to the appropriate location
 //     -add the builder name to the list of builders in dashboard_base.js.
 
-//////////////////////////////////////////////////////////////////////////////
-// Methods and objects from dashboard_base.js to override.
-//////////////////////////////////////////////////////////////////////////////
-function generatePage()
+function generatePage(historyInstance)
 {
     var html = ui.html.testTypeSwitcher(true) + '<br>';
     for (var builder in currentBuilders())
@@ -45,11 +42,11 @@ function generatePage()
     document.body.innerHTML = html;
 }
 
-function handleValidHashParameter(key, value)
+function handleValidHashParameter(historyInstance, key, value)
 {
     switch(key) {
     case 'rawValues':
-        g_currentState[key] = value == 'true';
+        historyInstance.dashboardSpecificState[key] = value == 'true';
         return true;
 
     default:
@@ -57,9 +54,20 @@ function handleValidHashParameter(key, value)
     }
 }
 
-g_defaultDashboardSpecificStateValues = {
+var defaultDashboardSpecificStateValues = {
     rawValues: false
 };
+
+
+var aggregateResultsConfig = {
+    defaultStateValues: defaultDashboardSpecificStateValues,
+    generatePage: generatePage,
+    handleValidHashParameter: handleValidHashParameter,
+};
+
+// FIXME(jparent): Eventually remove all usage of global history object.
+var g_history = new history.History(aggregateResultsConfig);
+g_history.parseCrossDashboardParameters();
 
 function htmlForBuilder(builder)
 {
@@ -72,7 +80,7 @@ function htmlForBuilder(builder)
     var numColumns = results[ALL_FIXABLE_COUNT_KEY].length;
     var html = '<div class=container><h2>' + builder + '</h2>';
 
-    if (g_currentState.rawValues)
+    if (g_history.dashboardSpecificState.rawValues)
         html += rawValuesHTML(results, numColumns);
     else {
         html += '<a href="timeline_explorer.html' + (location.hash ? location.hash + '&' : '#') + 'builder=' + builder + '">' +
@@ -87,7 +95,7 @@ function rawValuesHTML(results, numColumns)
 {
     var html = htmlForSummaryTable(results, numColumns) +
         htmlForTestType(results, FIXABLE_COUNTS_KEY, FIXABLE_DESCRIPTION, numColumns);
-    if (isLayoutTestResults()) {
+    if (g_history.isLayoutTestResults()) {
         html += htmlForTestType(results, DEFERRED_COUNTS_KEY, DEFERRED_DESCRIPTION, numColumns) +
             htmlForTestType(results, WONTFIX_COUNTS_KEY, WONTFIX_DESCRIPTION, numColumns);
     }
@@ -267,6 +275,6 @@ function extendedEncode(arrVals, maxVal)
 }
 
 window.addEventListener('load', function() {
-    var resourceLoader = new loader.Loader(intializeHistory);
+    var resourceLoader = new loader.Loader();
     resourceLoader.load();
 }, false);

@@ -29,36 +29,7 @@
 // @fileoverview Base JS file for pages that want to parse the results JSON
 // from the testing bots. This deals with generic utility functions, visible
 // history, popups and appending the script elements for the JSON files.
-//
-// The calling page is expected to implement the following "abstract"
-// functions/objects:
 
-// Generates the contents of the dashboard. The page should override this with
-// a function that generates the page assuming all resources have loaded.
-function generatePage() {}
-
-// Takes a key and a value and sets the g_currentState[key] = value iff key is
-// a valid hash parameter and the value is a valid value for that key.
-//
-// @return {boolean} Whether the key what inserted into the g_currentState.
-function handleValidHashParameter(key, value)
-{
-    return false;
-}
-
-// Default hash parameters for the page. The page should override this to create
-// default states.
-var g_defaultDashboardSpecificStateValues = {};
-
-
-// The page should override this to modify page state due to
-// changing query parameters.
-// @param {Object} params New or modified query params as key: value.
-// @return {boolean} Whether changing this parameter should cause generatePage to be called.
-function handleQueryParameterChange(params)
-{
-    return true;
-}
 
 //////////////////////////////////////////////////////////////////////////////
 // CONSTANTS
@@ -84,11 +55,6 @@ var LAYOUT_TEST_EXPECTATIONS_MAP_ = {
     'O': 'MISSING'
 };
 
-// Map of parameter to other parameter it invalidates.
-var CROSS_DB_INVALIDATING_PARAMETERS = {
-    'testType': 'group'
-};
-var DB_SPECIFIC_INVALIDATING_PARAMETERS;
 
 // Keys in the JSON files.
 var WONTFIX_COUNTS_KEY = 'wontfixCounts';
@@ -107,8 +73,8 @@ var TESTS_KEY = 'tests';
 var ONE_DAY_SECONDS = 60 * 60 * 24;
 var ONE_WEEK_SECONDS = ONE_DAY_SECONDS * 7;
 
-// These should match the testtype uploaded to test-results.appspot.com.
-// See http://test-results.appspot.com/testfile.
+// These should match the testtype uploaded to webkit-test-results.appspot.com.
+// See http://webkit-test-results.appspot.com/testfile.
 var TEST_TYPES = [
     'base_unittests',
     'browser_tests',
@@ -148,7 +114,6 @@ var TEST_TYPES = [
     'cc_unittests'
 ];
 
-var RELOAD_REQUIRING_PARAMETERS = ['showAllRuns', 'group', 'testType'];
 
 // Enum for indexing into the run-length encoded results in the JSON files.
 // 0 is where the count is length is stored. 1 is the value.
@@ -162,140 +127,15 @@ function isFailingResult(value)
     return 'FSTOCIZ'.indexOf(value) != -1;
 }
 
-// Takes a key and a value and sets the g_currentState[key] = value iff key is
-// a valid hash parameter and the value is a valid value for that key. Handles
-// cross-dashboard parameters then falls back to calling
-// handleValidHashParameter for dashboard-specific parameters.
-//
-// @return {boolean} Whether the key what inserted into the g_currentState.
-function handleValidHashParameterWrapper(key, value)
-{
-    switch(key) {
-    case 'testType':
-        history.validateParameter(g_crossDashboardState, key, value,
-            function() { return TEST_TYPES.indexOf(value) != -1; });
-        return true;
-
-    case 'group':
-        history.validateParameter(g_crossDashboardState, key, value,
-            function() {
-              return value in LAYOUT_TESTS_BUILDER_GROUPS ||
-                  value in CHROMIUM_GPU_TESTS_BUILDER_GROUPS ||
-                  value in CHROMIUM_INSTRUMENTATION_TESTS_BUILDER_GROUPS ||
-                  value in CHROMIUM_GTESTS_BUILDER_GROUPS;
-            });
-        return true;
-
-    case 'useTestData':
-    case 'showAllRuns':
-        g_crossDashboardState[key] = value == 'true';
-        return true;
-
-    default:
-        return handleValidHashParameter(key, value);
-    }
-}
-
-var g_defaultCrossDashboardStateValues = {
-    group: null,
-    showAllRuns: false,
-    testType: 'layout-tests',
-    useTestData: false,
-}
-
 // Generic utility functions.
 function $(id)
 {
     return document.getElementById(id);
 }
 
-function parseParameter(parameters, key)
-{
-    if (!(key in parameters))
-        return;
-    var value = parameters[key];
-    if (!handleValidHashParameterWrapper(key, value))
-        console.log("Invalid query parameter: " + key + '=' + value);
-}
-
-function parseCrossDashboardParameters()
-{
-    g_crossDashboardState = {};
-    var parameters = history.queryHashAsMap();
-    for (parameterName in g_defaultCrossDashboardStateValues)
-        parseParameter(parameters, parameterName);
-
-    history.fillMissingValues(g_crossDashboardState, g_defaultCrossDashboardStateValues);
-}
-
-function parseDashboardSpecificParameters()
-{
-    g_currentState = {};
-    var parameters = history.queryHashAsMap();
-    for (parameterName in g_defaultDashboardSpecificStateValues)
-        parseParameter(parameters, parameterName);
-}
-
-// @return {boolean} Whether to generate the page.
-function parseParameters()
-{
-    var oldCrossDashboardState = g_crossDashboardState;
-    var oldDashboardSpecificState = g_currentState;
-
-    parseCrossDashboardParameters();
-    
-    // Some parameters require loading different JSON files when the value changes. Do a reload.
-    if (Object.keys(oldCrossDashboardState).length) {
-        for (var key in g_crossDashboardState) {
-            if (oldCrossDashboardState[key] != g_crossDashboardState[key] && RELOAD_REQUIRING_PARAMETERS.indexOf(key) != -1) {
-                window.location.reload();
-                return false;
-            }
-        }
-    }
-
-    parseDashboardSpecificParameters();
-    var dashboardSpecificDiffState = history.diffStates(oldDashboardSpecificState, g_currentState);
-
-    history.fillMissingValues(g_currentState, g_defaultDashboardSpecificStateValues);
-
-    // FIXME: dashboard_base shouldn't know anything about specific dashboard specific keys.
-    if (dashboardSpecificDiffState.builder)
-        delete g_currentState.tests;
-    if (g_currentState.tests)
-        delete g_currentState.builder;
-
-    var shouldGeneratePage = true;
-    if (Object.keys(dashboardSpecificDiffState).length)
-        shouldGeneratePage = handleQueryParameterChange(dashboardSpecificDiffState);
-    return shouldGeneratePage;
-}
-
-function defaultValue(key)
-{
-    if (key in g_defaultDashboardSpecificStateValues)
-        return g_defaultDashboardSpecificStateValues[key];
-    return g_defaultCrossDashboardStateValues[key];
-}
-
-// FIXME: Rename this to g_dashboardSpecificState;
-var g_currentState = {};
-var g_crossDashboardState = {};
-parseCrossDashboardParameters();
-
-function isLayoutTestResults()
-{
-    return g_crossDashboardState.testType == 'layout-tests';
-}
-
-function isGPUTestResults()
-{
-    return g_crossDashboardState.testType == 'gpu_tests';
-}
-
 function currentBuilderGroupCategory()
 {
-    switch (g_crossDashboardState.testType) {
+    switch (g_history.crossDashboardState.testType) {
     case 'gl_tests':
     case 'gpu_tests':
         return CHROMIUM_GPU_TESTS_BUILDER_GROUPS;
@@ -311,13 +151,13 @@ function currentBuilderGroupCategory()
     case 'cc_unittests':
         return CC_UNITTEST_BUILDER_GROUPS;
     default:
-        return CHROMIUM_GTESTS_BUILDER_GROUPS;
+        return LAYOUT_TESTS_BUILDER_GROUPS;
     }
 }
 
 function currentBuilderGroupName()
 {
-    return g_crossDashboardState.group || Object.keys(currentBuilderGroupCategory())[0];
+    return g_history.crossDashboardState.group || Object.keys(currentBuilderGroupCategory())[0];
 }
 
 function currentBuilderGroup()
@@ -343,75 +183,6 @@ function isFlakinessDashboard()
     return string.endsWith(window.location.pathname, 'flakiness_dashboard.html');
 }
 
-function handleLocationChange()
-{
-    if (parseParameters())
-        generatePage();
-}
-
-// TODO(jparent): Move this to upcoming History object.
-function intializeHistory() {
-    window.onhashchange = handleLocationChange;
-    handleLocationChange();
-}
-
-function combinedDashboardState()
-{
-    var combinedState = Object.create(g_currentState);
-    for (var key in g_crossDashboardState)
-        combinedState[key] = g_crossDashboardState[key];
-    return combinedState;    
-}
-
-function invalidateQueryParameters(queryParamsAsState) {
-    for (var key in queryParamsAsState) {
-        if (key in CROSS_DB_INVALIDATING_PARAMETERS)
-            delete g_crossDashboardState[CROSS_DB_INVALIDATING_PARAMETERS[key]];
-        if (DB_SPECIFIC_INVALIDATING_PARAMETERS && key in DB_SPECIFIC_INVALIDATING_PARAMETERS)
-            delete g_currentState[DB_SPECIFIC_INVALIDATING_PARAMETERS[key]];
-    }
-}
-
-// Sets the page state. Takes varargs of key, value pairs.
-function setQueryParameter(var_args)
-{
-    var queryParamsAsState = {};
-    for (var i = 0; i < arguments.length; i += 2) {
-        var key = arguments[i];
-        queryParamsAsState[key] = arguments[i + 1];
-    }
-
-    invalidateQueryParameters(queryParamsAsState);
-
-    var newState = combinedDashboardState();
-    for (var key in queryParamsAsState) {
-        newState[key] = queryParamsAsState[key];
-    }
-
-    // Note: We use window.location.hash rather that window.location.replace
-    // because of bugs in Chrome where extra entries were getting created
-    // when back button was pressed and full page navigation was occuring.
-    // FIXME: file those bugs.
-    window.location.hash = permaLinkURLHash(newState);
-}
-
-function permaLinkURLHash(opt_state)
-{
-    var state = opt_state || combinedDashboardState();
-    return '#' + joinParameters(state);
-}
-
-function joinParameters(stateObject)
-{
-    var state = [];
-    for (var key in stateObject) {
-        var value = stateObject[key];
-        if (value != defaultValue(key))
-            state.push(key + '=' + encodeURIComponent(value));
-    }
-    return state.join('&');
-}
-
 // Create a new function with some of its arguements
 // pre-filled.
 // Taken from goog.partial in the Closure library.
@@ -434,15 +205,5 @@ function partial(fn, var_args)
 // Returns the appropriate expectations map for the current testType.
 function expectationsMap()
 {
-    return isLayoutTestResults() ? LAYOUT_TEST_EXPECTATIONS_MAP_ : GTEST_EXPECTATIONS_MAP_;
-}
-
-function toggleQueryParameter(param)
-{
-    setQueryParameter(param, !queryParameterValue(param));
-}
-
-function queryParameterValue(parameter)
-{
-    return g_currentState[parameter] || g_crossDashboardState[parameter];
+    return g_history.isLayoutTestResults() ? LAYOUT_TEST_EXPECTATIONS_MAP_ : GTEST_EXPECTATIONS_MAP_;
 }

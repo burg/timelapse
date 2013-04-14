@@ -42,9 +42,11 @@
 #include "HTMLIFrameElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
+#include "HTMLPlugInElement.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeList.h"
 #include "PluginViewBase.h"
+#include "ProgressTracker.h"
 #include "RenderApplet.h"
 #include "RenderIFrame.h"
 #include "RenderImage.h"
@@ -207,32 +209,40 @@ TiledBacking* RenderLayerBacking::tiledBacking() const
     return m_graphicsLayer->tiledBacking();
 }
 
-void RenderLayerBacking::adjustTiledBackingCoverage()
+static TiledBacking::TileCoverage computeTileCoverage(const RenderLayerBacking* backing)
 {
-    if (!m_usingTiledCacheLayer)
-        return;
+    // FIXME: When we use TiledBacking for overflow, this should look at RenderView scrollability.
+    Frame* frame = backing->owningLayer()->renderer()->frame();
+    if (!frame)
+        return TiledBacking::CoverageForVisibleArea;
 
     TiledBacking::TileCoverage tileCoverage = TiledBacking::CoverageForVisibleArea;
-
-    // FIXME: When we use TiledBacking for overflow, this should look at RenderView scrollability.
-    Frame* frame = renderer()->frame();
-    if (frame) {
-        FrameView* frameView = frame->view();
-        bool clipsToExposedRect = tiledBacking()->clipsToExposedRect();
+    FrameView* frameView = frame->view();
+    bool useMinimalTilesDuringLiveResize = frameView->inLiveResize();
+    bool useMinimalTilesDuringLoading = frame->page()->progress()->isLoadProgressing() && !frameView->wasScrolledByUser();
+    if (!(useMinimalTilesDuringLoading || useMinimalTilesDuringLiveResize)) {
+        bool clipsToExposedRect = backing->tiledBacking()->clipsToExposedRect();
         if (frameView->horizontalScrollbarMode() != ScrollbarAlwaysOff || clipsToExposedRect)
             tileCoverage |= TiledBacking::CoverageForHorizontalScrolling;
 
         if (frameView->verticalScrollbarMode() != ScrollbarAlwaysOff || clipsToExposedRect)
             tileCoverage |= TiledBacking::CoverageForVerticalScrolling;
-
-        if (ScrollingCoordinator* scrollingCoordinator = scrollingCoordinatorFromLayer(m_owningLayer)) {
-            // Ask our TiledBacking for large tiles unless the only reason we're main-thread-scrolling
-            // is a page overlay (find-in-page, the Web Inspector highlight mechanism, etc.).
-            if (scrollingCoordinator->mainThreadScrollingReasons() & ~ScrollingCoordinator::ForcedOnMainThread)
-                tileCoverage |= TiledBacking::CoverageForSlowScrolling;
-        }
     }
+    if (ScrollingCoordinator* scrollingCoordinator = scrollingCoordinatorFromLayer(backing->owningLayer())) {
+        // Ask our TiledBacking for large tiles unless the only reason we're main-thread-scrolling
+        // is a page overlay (find-in-page, the Web Inspector highlight mechanism, etc.).
+        if (scrollingCoordinator->mainThreadScrollingReasons() & ~ScrollingCoordinator::ForcedOnMainThread)
+            tileCoverage |= TiledBacking::CoverageForSlowScrolling;
+    }
+    return tileCoverage;
+}
 
+void RenderLayerBacking::adjustTiledBackingCoverage()
+{
+    if (!m_usingTiledCacheLayer)
+        return;
+
+    TiledBacking::TileCoverage tileCoverage = computeTileCoverage(this);
     tiledBacking()->setTileCoverage(tileCoverage);
 }
 
@@ -695,6 +705,11 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         if (m_boundsConstrainedByClipping)
             m_graphicsLayer->setNeedsDisplay();
     }
+    if (!m_isMainFrameRenderViewLayer) {
+        // For non-root layers, background is always painted by the primary graphics layer.
+        ASSERT(!m_backgroundLayer);
+        m_graphicsLayer->setContentsOpaque(m_owningLayer->backgroundIsKnownToBeOpaqueInRect(localCompositingBounds));
+    }
 
     // If we have a layer that clips children, position it.
     IntRect clippingBox;
@@ -804,7 +819,7 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         ASSERT(m_scrollingContentsLayer);
         RenderBox* renderBox = toRenderBox(renderer());
         IntRect paddingBox(renderBox->borderLeft(), renderBox->borderTop(), renderBox->width() - renderBox->borderLeft() - renderBox->borderRight(), renderBox->height() - renderBox->borderTop() - renderBox->borderBottom());
-        IntSize scrollOffset = m_owningLayer->scrolledContentOffset();
+        IntSize scrollOffset = m_owningLayer->scrollOffset();
 
         m_scrollingLayer->setPosition(FloatPoint(paddingBox.location() - localCompositingBounds.location()));
 
@@ -855,14 +870,11 @@ void RenderLayerBacking::registerScrollingLayers()
 
     compositor()->updateViewportConstraintStatus(m_owningLayer);
 
-    // FIXME: it would be nice to avoid all this work if the platform doesn't implement setLayerIsFixedToContainerLayer().
-    if (renderer()->style()->position() == FixedPosition || compositor()->fixedPositionedByAncestor(m_owningLayer))
-        scrollingCoordinator->setLayerIsFixedToContainerLayer(childForSuperlayers(), true);
-    else {
-        if (m_ancestorClippingLayer)
-            scrollingCoordinator->setLayerIsFixedToContainerLayer(m_ancestorClippingLayer.get(), false);
-        scrollingCoordinator->setLayerIsFixedToContainerLayer(m_graphicsLayer.get(), false);
-    }
+    if (!scrollingCoordinator->supportsFixedPositionLayers())
+        return;
+
+    scrollingCoordinator->updateLayerPositionConstraint(m_owningLayer);
+
     // Page scale is applied as a transform on the root render view layer. Because the scroll
     // layer is further up in the hierarchy, we need to avoid marking the root render view
     // layer as a container.
@@ -1003,28 +1015,22 @@ void RenderLayerBacking::setBackgroundLayerPaintsFixedRootBackground(bool backgr
 
 bool RenderLayerBacking::requiresHorizontalScrollbarLayer() const
 {
-#if !PLATFORM(CHROMIUM)
     if (!m_owningLayer->hasOverlayScrollbars() && !m_owningLayer->needsCompositedScrolling())
         return false;
-#endif
     return m_owningLayer->horizontalScrollbar();
 }
 
 bool RenderLayerBacking::requiresVerticalScrollbarLayer() const
 {
-#if !PLATFORM(CHROMIUM)
     if (!m_owningLayer->hasOverlayScrollbars() && !m_owningLayer->needsCompositedScrolling())
         return false;
-#endif
     return m_owningLayer->verticalScrollbar();
 }
 
 bool RenderLayerBacking::requiresScrollCornerLayer() const
 {
-#if !PLATFORM(CHROMIUM)
     if (!m_owningLayer->hasOverlayScrollbars() && !m_owningLayer->needsCompositedScrolling())
         return false;
-#endif
     return !m_owningLayer->scrollCornerAndResizerRect().isEmpty();
 }
 
@@ -1437,6 +1443,18 @@ bool RenderLayerBacking::paintsChildren() const
     return false;
 }
 
+static bool isRestartedPlugin(RenderObject* renderer)
+{
+    if (!renderer->isEmbeddedObject())
+        return false;
+
+    Element* element = toElement(renderer->node());
+    if (!element || !element->isPluginElement())
+        return false;
+
+    return toHTMLPlugInElement(element)->restartedPlugin();
+}
+
 static bool isCompositedPlugin(RenderObject* renderer)
 {
     return renderer->isEmbeddedObject() && toRenderEmbeddedObject(renderer)->allowsAcceleratedCompositing();
@@ -1451,9 +1469,9 @@ bool RenderLayerBacking::isSimpleContainerCompositingLayer() const
     if (renderObject->hasMask()) // masks require special treatment
         return false;
 
-    if (renderObject->isReplaced() && !isCompositedPlugin(renderObject))
+    if (renderObject->isReplaced() && (!isCompositedPlugin(renderObject) || isRestartedPlugin(renderObject)))
         return false;
-    
+
     if (paintsBoxDecorations() || paintsChildren())
         return false;
 
@@ -1895,7 +1913,7 @@ void RenderLayerBacking::paintContents(const GraphicsLayer* graphicsLayer, Graph
         || graphicsLayer == m_backgroundLayer.get()
         || graphicsLayer == m_maskLayer.get()
         || graphicsLayer == m_scrollingContentsLayer.get()) {
-        InspectorInstrumentationCookie cookie = InspectorInstrumentation::willPaint(m_owningLayer->renderer()->frame());
+        InspectorInstrumentation::willPaint(renderer());
 
         // The dirtyRect is in the coords of the painting root.
         IntRect dirtyRect = clip;
@@ -1906,9 +1924,9 @@ void RenderLayerBacking::paintContents(const GraphicsLayer* graphicsLayer, Graph
         paintIntoLayer(graphicsLayer, &context, dirtyRect, PaintBehaviorNormal, paintingPhase);
 
         if (m_usingTiledCacheLayer)
-            m_owningLayer->renderer()->frame()->view()->setLastPaintTime(currentTime());
+            renderer()->frame()->view()->setLastPaintTime(currentTime());
 
-        InspectorInstrumentation::didPaint(cookie, &context, clip);
+        InspectorInstrumentation::didPaint(renderer(), &context, clip);
     } else if (graphicsLayer == layerForHorizontalScrollbar()) {
         paintScrollbar(m_owningLayer->horizontalScrollbar(), context, clip);
     } else if (graphicsLayer == layerForVerticalScrollbar()) {
@@ -2129,10 +2147,11 @@ void RenderLayerBacking::notifyAnimationStarted(const GraphicsLayer*, double tim
     renderer()->animation()->notifyAnimationStarted(renderer(), time);
 }
 
-void RenderLayerBacking::notifyFlushRequired(const GraphicsLayer*)
+void RenderLayerBacking::notifyFlushRequired(const GraphicsLayer* layer)
 {
-    if (!renderer()->documentBeingDestroyed())
-        compositor()->scheduleLayerFlush();
+    if (renderer()->documentBeingDestroyed())
+        return;
+    compositor()->scheduleLayerFlush(layer->canThrottleLayerFlush());
 }
 
 void RenderLayerBacking::notifyFlushBeforeDisplayRefresh(const GraphicsLayer* layer)

@@ -37,10 +37,7 @@
 #include "ScrollBehavior.h"
 #include "StyleInheritedData.h"
 #include "TextAffinity.h"
-#include "TransformationMatrix.h"
 #include <wtf/HashSet.h>
-#include <wtf/StackStats.h>
-#include <wtf/UnusedParam.h>
 
 namespace WebCore {
 
@@ -51,8 +48,6 @@ class Document;
 class HitTestLocation;
 class HitTestResult;
 class InlineBox;
-class InlineFlowBox;
-class OverlapTestRequestClient;
 class Path;
 class Position;
 class PseudoStyleRequest;
@@ -64,7 +59,6 @@ class RenderGeometryMap;
 class RenderLayer;
 class RenderLayerModelObject;
 class RenderNamedFlowThread;
-class RenderTable;
 class RenderTheme;
 class TransformState;
 class VisiblePosition;
@@ -403,7 +397,6 @@ public:
     virtual bool isRenderMultiColumnSet() const { return false; }
 
     virtual bool isRenderScrollbarPart() const { return false; }
-    bool canHaveRegionStyle() const { return isRenderBlock() && !isAnonymous() && !isRenderFlowThread(); }
 
     bool isRoot() const { return document()->documentElement() == m_node; }
     bool isBody() const;
@@ -528,7 +521,7 @@ public:
         // RenderBlock::createAnonymousBlock(). This includes creating an anonymous
         // RenderBlock having a BLOCK or BOX display. Other classes such as RenderTextFragment
         // are not RenderBlocks and will return false. See https://bugs.webkit.org/show_bug.cgi?id=56709. 
-        return isAnonymous() && (style()->display() == BLOCK || style()->display() == BOX) && style()->styleType() == NOPSEUDO && isRenderBlock() && !isListMarker()
+        return isAnonymous() && (style()->display() == BLOCK || style()->display() == BOX) && style()->styleType() == NOPSEUDO && isRenderBlock() && !isListMarker() && !isRenderFlowThread()
 #if ENABLE(FULLSCREEN_API)
             && !isRenderFullScreen()
             && !isRenderFullScreenPlaceholder()
@@ -555,7 +548,7 @@ public:
 #if ENABLE(CSS_EXCLUSIONS)
         // Shape outside on a float can reposition the float in much the
         // same way as relative positioning, so treat it as such.
-        positioned = positioned || (m_bitfields.floating() && m_bitfields.isBox() && style()->shapeOutside());
+        positioned = positioned || isFloatingWithShapeOutside();
 #endif
         return positioned;
     }
@@ -667,8 +660,7 @@ public:
 
     virtual RenderObject* hoverAncestor() const { return parent(); }
 
-    // IE Extension that can be called on any RenderObject.  See the implementation for the details.
-    RenderBoxModelObject* offsetParent() const;
+    Element* offsetParent() const;
 
     void markContainingBlocksForLayout(bool scheduleRelayout = true, RenderObject* newRoot = 0);
     void setNeedsLayout(bool needsLayout, MarkingBehavior = MarkContainingBlockChain);
@@ -844,12 +836,6 @@ public:
     // Repaint only if our old bounds and new bounds are different. The caller may pass in newBounds and newOutlineBox if they are known.
     bool repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repaintContainer, const LayoutRect& oldBounds, const LayoutRect& oldOutlineBox, const LayoutRect* newBoundsPtr = 0, const LayoutRect* newOutlineBoxPtr = 0);
 
-    // Repaint only if the object moved.
-    virtual void repaintDuringLayoutIfMoved(const LayoutRect&);
-
-    // Called to repaint a block's floats.
-    virtual void repaintOverhangingFloats(bool paintAllDescendants = false);
-
     bool checkForRepaintDuringLayout() const;
 
     // Returns the rect that should be repainted whenever this object changes.  The rect is in the view's
@@ -887,6 +873,7 @@ public:
     virtual unsigned int length() const { return 1; }
 
     bool isFloatingOrOutOfFlowPositioned() const { return (isFloating() || isOutOfFlowPositioned()); }
+    bool isFloatingWithShapeOutside() const { return isBox() && isFloating() && style()->shapeOutside(); }
 
     bool isTransparent() const { return style()->opacity() < 1.0f; }
     float opacity() const { return style()->opacity(); }
@@ -1334,17 +1321,6 @@ inline bool RenderObject::backgroundIsKnownToBeObscured()
         m_bitfields.setBoxDecorationState(boxDecorationState);
     }
     return m_bitfields.boxDecorationState() == HasBoxDecorationsAndBackgroundIsKnownToBeObscured;
-}
-
-inline void makeMatrixRenderable(TransformationMatrix& matrix, bool has3DRendering)
-{
-#if !ENABLE(3D_RENDERING)
-    UNUSED_PARAM(has3DRendering);
-    matrix.makeAffine();
-#else
-    if (!has3DRendering)
-        matrix.makeAffine();
-#endif
 }
 
 inline int adjustForAbsoluteZoom(int value, RenderObject* renderer)

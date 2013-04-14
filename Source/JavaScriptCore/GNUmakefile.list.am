@@ -34,7 +34,6 @@ javascriptcore_built_nosources += \
 javascriptcore_sources += \
 	Source/JavaScriptCore/API/APICast.h \
 	Source/JavaScriptCore/API/APIShims.h \
-    Source/JavaScriptCore/API/JSAPIWrapperObject.cpp \
     Source/JavaScriptCore/API/JSAPIWrapperObject.h \
 	Source/JavaScriptCore/API/JSBase.cpp \
 	Source/JavaScriptCore/API/JSBasePrivate.h \
@@ -312,6 +311,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/heap/DFGCodeBlocks.h \
 	Source/JavaScriptCore/heap/GCAssertions.h \
 	Source/JavaScriptCore/heap/Handle.h \
+    Source/JavaScriptCore/heap/HandleBlock.h \
+    Source/JavaScriptCore/heap/HandleBlockInlines.h \
 	Source/JavaScriptCore/heap/HandleSet.cpp \
 	Source/JavaScriptCore/heap/HandleSet.h \
 	Source/JavaScriptCore/heap/HeapBlock.h \
@@ -355,8 +356,11 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/heap/MarkedSpace.cpp \
 	Source/JavaScriptCore/heap/MarkedSpace.h \
 	Source/JavaScriptCore/heap/PassWeak.h \
+	Source/JavaScriptCore/heap/Region.h \
 	Source/JavaScriptCore/heap/Strong.h \
 	Source/JavaScriptCore/heap/StrongInlines.h \
+    Source/JavaScriptCore/heap/SuperRegion.cpp \
+    Source/JavaScriptCore/heap/SuperRegion.h \
 	Source/JavaScriptCore/heap/UnconditionalFinalizer.h \
 	Source/JavaScriptCore/heap/VTableSpectrum.cpp \
 	Source/JavaScriptCore/heap/VTableSpectrum.h \
@@ -778,8 +782,6 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/runtime/SymbolTable.cpp \
 	Source/JavaScriptCore/runtime/SymbolTable.h \
 	Source/JavaScriptCore/runtime/Terminator.h \
-	Source/JavaScriptCore/runtime/TimeoutChecker.cpp \
-	Source/JavaScriptCore/runtime/TimeoutChecker.h \
 	Source/JavaScriptCore/runtime/Tracing.h \
 	Source/JavaScriptCore/runtime/TypedArrayDescriptor.h \
 	Source/JavaScriptCore/runtime/Uint16WithFraction.h \

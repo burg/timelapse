@@ -39,7 +39,6 @@
 #include "GraphicsLayerClient.h"
 #include "IntRect.h"
 #include "PlatformLayer.h"
-#include "TransformationMatrix.h"
 #include "TransformOperations.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
@@ -64,6 +63,7 @@ class Image;
 class TextStream;
 class TiledBacking;
 class TimingFunction;
+class TransformationMatrix;
 
 // Base class for animation values (also used for transitions). Here to
 // represent values for properties being animated via the GraphicsLayer,
@@ -408,8 +408,12 @@ public:
     // and descendant layers, and this layer only.
     virtual void flushCompositingState(const FloatRect& /* clipRect */) { }
     virtual void flushCompositingStateForThisLayerOnly() { }
-    
-    // Return a string with a human readable form of the layer tree, If debug is true 
+
+    // If the exposed rect of this layer changes, returns true if this or descendant layers need a flush,
+    // for example to allocate new tiles.
+    virtual bool visibleRectChangeRequiresFlush(const FloatRect& /* clipRect */) const { return false; }
+
+    // Return a string with a human readable form of the layer tree, If debug is true
     // pointers for the layers and timing data will be included in the returned string.
     String layerTreeAsText(LayerTreeAsTextBehavior = LayerTreeAsTextBehaviorNormal) const;
 
@@ -432,6 +436,8 @@ public:
     }
 
     void updateDebugIndicators();
+
+    virtual bool canThrottleLayerFlush() const { return false; }
 
     virtual void reportMemoryUsage(MemoryObjectInfo*) const;
 

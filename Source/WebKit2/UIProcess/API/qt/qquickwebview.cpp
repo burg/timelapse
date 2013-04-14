@@ -23,6 +23,7 @@
 #include "config.h"
 #include "qquickwebview_p.h"
 
+#include "CoordinatedLayerTreeHostProxy.h"
 #include "DownloadProxy.h"
 #include "DrawingAreaProxyImpl.h"
 #include "PageViewportControllerClientQt.h"
@@ -66,6 +67,7 @@
 #include <QtCore/QFile>
 #include <QtQml/QJSValue>
 #include <QtQuick/QQuickView>
+#include <WKNumber.h>
 #include <WKOpenPanelResultListener.h>
 #include <WKPageGroup.h>
 #include <WKPreferences.h>
@@ -73,6 +75,7 @@
 #include <WKString.h>
 #include <WKStringQt.h>
 #include <WKURLQt.h>
+#include <WebCore/CoordinatedGraphicsScene.h>
 #include <WebCore/IntPoint.h>
 #include <WebCore/IntRect.h>
 #include <limits>
@@ -332,8 +335,7 @@ void QQuickWebViewPrivate::initialize(WKContextRef contextRef, WKPageGroupRef pa
     webPageProxy->fullScreenManager()->setWebView(q_ptr);
 #endif
 
-    QQuickWebPagePrivate* const pageViewPrivate = pageView.data()->d;
-    pageViewPrivate->initialize(webPageProxy.get());
+    pageEventHandler.reset(new QtWebPageEventHandler(webPage.get(), pageView.data(), q_ptr));
 
     {
         WKPageFindClient findClient;
@@ -382,7 +384,7 @@ void QQuickWebViewPrivate::initialize(WKContextRef contextRef, WKPageGroupRef pa
     WKPreferencesSetWebGLEnabled(preferencesRef, true);
     webPageProxy->pageGroup()->preferences()->setForceCompositingMode(true);
 
-    pageClient.initialize(q_ptr, pageViewPrivate->eventHandler.data(), &undoController);
+    pageClient.initialize(q_ptr, pageEventHandler.data(), &undoController);
     webPageProxy->initializeWebPage();
     webPageProxy->registerApplicationScheme(ASCIILiteral("qrc"));
 
@@ -538,13 +540,13 @@ void QQuickWebViewPrivate::handleMouseEvent(QMouseEvent* event)
 {
     switch (event->type()) {
     case QEvent::MouseButtonPress:
-        pageView->eventHandler()->handleMousePressEvent(event);
+        pageEventHandler->handleMousePressEvent(event);
         break;
     case QEvent::MouseMove:
-        pageView->eventHandler()->handleMouseMoveEvent(event);
+        pageEventHandler->handleMouseMoveEvent(event);
         break;
     case QEvent::MouseButtonRelease:
-        pageView->eventHandler()->handleMouseReleaseEvent(event);
+        pageEventHandler->handleMouseReleaseEvent(event);
         break;
     case QEvent::MouseButtonDblClick:
         // If a MouseButtonDblClick was received then we got a MouseButtonPress before.
@@ -587,7 +589,7 @@ void QQuickWebViewPrivate::processDidCrash()
     QUrl url(KURL(WebCore::ParsedURLString, webPageProxy->urlAtProcessExit()));
     qWarning("WARNING: The web process experienced a crash on '%s'.", qPrintable(url.toString(QUrl::RemoveUserInfo)));
 
-    pageView->eventHandler()->resetGestureRecognizers();
+    pageEventHandler->resetGestureRecognizers();
 
     // Check if loading was ongoing, when process crashed.
     if (m_loadProgress > 0 && m_loadProgress < 100) {
@@ -839,9 +841,9 @@ void QQuickWebViewPrivate::setNavigatorQtObjectEnabled(bool enabled)
     // FIXME: Currently we have to keep this information in both processes and the setting is asynchronous.
     m_navigatorQtObjectEnabled = enabled;
 
-    static String messageName("SetNavigatorQtObjectEnabled");
-    RefPtr<WebBoolean> webEnabled = WebBoolean::create(enabled);
-    webPageProxy->postMessageToInjectedBundle(messageName, webEnabled.get());
+    static WKStringRef messageName = WKStringCreateWithUTF8CString("SetNavigatorQtObjectEnabled");
+    WKRetainPtr<WKBooleanRef> wkEnabled = adoptWK(WKBooleanCreate(enabled));
+    WKPagePostMessageToInjectedBundle(webPage.get(), messageName, wkEnabled.get());
 }
 
 static WKRetainPtr<WKStringRef> readUserScript(const QUrl& url)
@@ -935,6 +937,24 @@ void QQuickWebViewPrivate::didReceiveMessageFromNavigatorQtObject(WKStringRef me
     emit q_ptr->experimental()->messageReceived(variantMap);
 }
 
+CoordinatedGraphicsScene* QQuickWebViewPrivate::coordinatedGraphicsScene()
+{
+    if (webPageProxy && webPageProxy->drawingArea() && webPageProxy->drawingArea()->coordinatedLayerTreeHostProxy())
+        return webPageProxy->drawingArea()->coordinatedLayerTreeHostProxy()->coordinatedGraphicsScene();
+
+    return 0;
+}
+
+float QQuickWebViewPrivate::deviceScaleFactor()
+{
+    return webPageProxy->deviceScaleFactor();
+}
+
+void QQuickWebViewPrivate::setIntrinsicDeviceScaleFactor(float scaleFactor)
+{
+    webPageProxy->setIntrinsicDeviceScaleFactor(scaleFactor);
+}
+
 QQuickWebViewLegacyPrivate::QQuickWebViewLegacyPrivate(QQuickWebView* viewport)
     : QQuickWebViewPrivate(viewport)
 {
@@ -995,7 +1015,7 @@ void QQuickWebViewFlickablePrivate::onComponentComplete()
     Q_Q(QQuickWebView);
     m_pageViewportControllerClient.reset(new PageViewportControllerClientQt(q, pageView.data()));
     m_pageViewportController.reset(new PageViewportController(webPageProxy.get(), m_pageViewportControllerClient.data()));
-    pageView->eventHandler()->setViewportController(m_pageViewportControllerClient.data());
+    pageEventHandler->setViewportController(m_pageViewportControllerClient.data());
 
     // Trigger setting of correct visibility flags after everything was allocated and initialized.
     _q_onVisibleChanged();
@@ -1942,25 +1962,25 @@ void QQuickWebView::componentComplete()
 void QQuickWebView::keyPressEvent(QKeyEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleKeyPressEvent(event);
+    d->pageEventHandler->handleKeyPressEvent(event);
 }
 
 void QQuickWebView::keyReleaseEvent(QKeyEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleKeyReleaseEvent(event);
+    d->pageEventHandler->handleKeyReleaseEvent(event);
 }
 
 void QQuickWebView::inputMethodEvent(QInputMethodEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleInputMethodEvent(event);
+    d->pageEventHandler->handleInputMethodEvent(event);
 }
 
 void QQuickWebView::focusInEvent(QFocusEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleFocusInEvent(event);
+    d->pageEventHandler->handleFocusInEvent(event);
 }
 
 void QQuickWebView::itemChange(ItemChange change, const ItemChangeData &value)
@@ -1969,7 +1989,7 @@ void QQuickWebView::itemChange(ItemChange change, const ItemChangeData &value)
     if (change == ItemActiveFocusHasChanged) {
         bool focus = value.boolValue;
         if (!focus)
-            d->pageView->eventHandler()->handleFocusLost();
+            d->pageEventHandler->handleFocusLost();
     }
     QQuickFlickable::itemChange(change, value);
 }
@@ -1989,7 +2009,7 @@ void QQuickWebView::touchEvent(QTouchEvent* event)
         d->axisLocker.reset();
 
     forceActiveFocus();
-    d->pageView->eventHandler()->handleTouchEvent(event);
+    d->pageEventHandler->handleTouchEvent(event);
 }
 
 void QQuickWebView::mousePressEvent(QMouseEvent* event)
@@ -2021,50 +2041,50 @@ void QQuickWebView::mouseDoubleClickEvent(QMouseEvent* event)
 void QQuickWebView::wheelEvent(QWheelEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleWheelEvent(event);
+    d->pageEventHandler->handleWheelEvent(event);
 }
 
 void QQuickWebView::hoverEnterEvent(QHoverEvent* event)
 {
     Q_D(QQuickWebView);
     // Map HoverEnter to Move, for WebKit the distinction doesn't matter.
-    d->pageView->eventHandler()->handleHoverMoveEvent(event);
+    d->pageEventHandler->handleHoverMoveEvent(event);
 }
 
 void QQuickWebView::hoverMoveEvent(QHoverEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleHoverMoveEvent(event);
+    d->pageEventHandler->handleHoverMoveEvent(event);
 }
 
 void QQuickWebView::hoverLeaveEvent(QHoverEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleHoverLeaveEvent(event);
+    d->pageEventHandler->handleHoverLeaveEvent(event);
 }
 
 void QQuickWebView::dragMoveEvent(QDragMoveEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleDragMoveEvent(event);
+    d->pageEventHandler->handleDragMoveEvent(event);
 }
 
 void QQuickWebView::dragEnterEvent(QDragEnterEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleDragEnterEvent(event);
+    d->pageEventHandler->handleDragEnterEvent(event);
 }
 
 void QQuickWebView::dragLeaveEvent(QDragLeaveEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleDragLeaveEvent(event);
+    d->pageEventHandler->handleDragLeaveEvent(event);
 }
 
 void QQuickWebView::dropEvent(QDropEvent* event)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleDropEvent(event);
+    d->pageEventHandler->handleDropEvent(event);
 }
 
 bool QQuickWebView::event(QEvent* ev)
@@ -2291,7 +2311,7 @@ void QQuickWebViewPrivate::didFailToFindString(WKPageRef page, WKStringRef strin
 
     \row
     \li InternalErrorDomain
-    \li Content fails to be interpreted by QtWebKit.
+    \li Content fails to be interpreted by Qt WebKit.
 
     \row
     \li NetworkErrorDomain

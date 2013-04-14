@@ -512,11 +512,7 @@ void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const
     if (name == placeholderAttr) {
         updatePlaceholderVisibility(true);
         FeatureObserver::observe(document(), FeatureObserver::PlaceholderAttribute);
-    } else if (name == onselectAttr)
-        setAttributeEventListener(eventNames().selectEvent, createAttributeEventListener(this, name, value));
-    else if (name == onchangeAttr)
-        setAttributeEventListener(eventNames().changeEvent, createAttributeEventListener(this, name, value));
-    else
+    } else
         HTMLFormControlElementWithState::parseAttribute(name, value);
 }
 
@@ -534,9 +530,10 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
 
     bool textIsChanged = value != innerTextValue();
     if (textIsChanged || !innerTextElement()->hasChildNodes()) {
-        if (textIsChanged && document() && renderer() && AXObjectCache::accessibilityEnabled())
-            document()->axObjectCache()->postNotification(this, AXObjectCache::AXValueChanged, false);
-
+        if (textIsChanged && document() && renderer()) {
+            if (AXObjectCache* cache = document()->existingAXObjectCache())
+                cache->postNotification(this, AXObjectCache::AXValueChanged, false);
+        }
         innerTextElement()->setInnerText(value, ASSERT_NO_EXCEPTION);
 
         if (value.endsWith('\n') || value.endsWith('\r'))

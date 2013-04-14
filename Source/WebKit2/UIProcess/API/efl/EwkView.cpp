@@ -64,7 +64,9 @@
 #include <Ecore_Evas.h>
 #include <Ecore_X.h>
 #include <Edje.h>
+#if USE(ACCELERATED_COMPOSITING)
 #include <Evas_GL.h>
+#endif
 #include <WebCore/CairoUtilitiesEfl.h>
 #include <WebCore/Cursor.h>
 #include <WebCore/PlatformContextCairo.h>
@@ -214,17 +216,14 @@ template <>
 void EwkViewEventHandler<EVAS_CALLBACK_SHOW>::handleEvent(void* data, Evas*, Evas_Object*, void*)
 {
     Ewk_View_Smart_Data* smartData = static_cast<Ewk_View_Smart_Data*>(data);
-    toEwkView(smartData)->page()->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    WKViewSetIsVisible(toEwkView(smartData)->wkView(), true);
 }
 
 template <>
 void EwkViewEventHandler<EVAS_CALLBACK_HIDE>::handleEvent(void* data, Evas*, Evas_Object*, void*)
 {
     Ewk_View_Smart_Data* smartData = static_cast<Ewk_View_Smart_Data*>(data);
-
-    // We need to pass ViewIsVisible here. viewStateDidChange() itself is responsible for actually setting the visibility to Visible or Hidden
-    // depending on what WebPageProxy::isViewVisible() returns, this simply triggers the process.
-    toEwkView(smartData)->page()->viewStateDidChange(WebPageProxy::ViewIsVisible);
+    WKViewSetIsVisible(toEwkView(smartData)->wkView(), false);
 }
 
 typedef HashMap<WKPageRef, Evas_Object*> WKPageToEvasObjectMap;
@@ -254,7 +253,6 @@ EwkView::EwkView(WKViewRef view, Evas_Object* evasObject)
     , m_vibrationClient(VibrationClientEfl::create(this))
 #endif
     , m_backForwardList(EwkBackForwardList::create(WKPageGetBackForwardList(wkPage())))
-    , m_pageScaleFactor(1)
     , m_settings(EwkSettings::create(this))
     , m_cursorIdentifier(0)
     , m_mouseEventsEnabled(false)
@@ -263,8 +261,10 @@ EwkView::EwkView(WKViewRef view, Evas_Object* evasObject)
 #endif
     , m_displayTimer(this, &EwkView::displayTimerFired)
     , m_inputMethodContext(InputMethodContextEfl::create(this, smartData()->base.evas))
+#if USE(ACCELERATED_COMPOSITING)
     , m_pageViewportControllerClient(PageViewportControllerClientEfl::create(this))
     , m_pageViewportController(adoptPtr(new PageViewportController(page(), m_pageViewportControllerClient.get())))
+#endif
     , m_isAccelerated(true)
 {
     ASSERT(m_evasObject);
@@ -272,7 +272,7 @@ EwkView::EwkView(WKViewRef view, Evas_Object* evasObject)
 
     // FIXME: Remove when possible.
     webView()->setEwkView(this);
-
+#if USE(ACCELERATED_COMPOSITING)
     m_evasGL = adoptPtr(evas_gl_new(evas_object_evas_get(m_evasObject)));
     if (m_evasGL)
         m_evasGLContext = EvasGLContext::create(m_evasGL.get());
@@ -281,13 +281,14 @@ EwkView::EwkView(WKViewRef view, Evas_Object* evasObject)
         WARN("Failed to create Evas_GL, falling back to software mode.");
         m_isAccelerated = false;
     }
-
+#endif
     WKViewInitialize(wkView());
 
     WKPageGroupRef wkPageGroup = WKPageGetPageGroup(wkPage());
     WKPreferencesRef wkPreferences = WKPageGroupGetPreferences(wkPageGroup);
-
+#if USE(ACCELERATED_COMPOSITING)
     WKPreferencesSetWebGLEnabled(wkPreferences, true);
+#endif
     WKPreferencesSetFullScreenEnabled(wkPreferences, true);
     WKPreferencesSetWebAudioEnabled(wkPreferences, true);
     WKPreferencesSetOfflineWebApplicationCacheEnabled(wkPreferences, true);
@@ -465,40 +466,16 @@ void EwkView::setCursor(const Cursor& cursor)
 
 void EwkView::setDeviceScaleFactor(float scale)
 {
+    const WKSize& deviceSize = WKViewGetSize(wkView());
     page()->setIntrinsicDeviceScaleFactor(scale);
 
     // Update internal viewport size after device-scale change.
-    setDeviceSize(deviceSize());
+    WKViewSetSize(wkView(), deviceSize);
 }
 
 float EwkView::deviceScaleFactor() const
 {
     return WKPageGetBackingScaleFactor(wkPage());
-}
-
-void EwkView::setDeviceSize(const IntSize& deviceSize)
-{
-    m_deviceSize = deviceSize;
-
-    DrawingAreaProxy* drawingArea = page()->drawingArea();
-    if (!drawingArea)
-        return;
-
-    drawingArea->setSize(size(), IntSize());
-    webView()->updateViewportSize();
-}
-
-IntSize EwkView::size() const
-{
-    // WebPage expects a size in UI units, and not raw device units.
-    FloatSize uiSize = m_deviceSize;
-    uiSize.scale(1 / deviceScaleFactor());
-    return roundedIntSize(uiSize);
-}
-
-IntSize EwkView::deviceSize() const
-{
-    return m_deviceSize;
 }
 
 AffineTransform EwkView::transformToScreen() const
@@ -539,15 +516,29 @@ inline Ewk_View_Smart_Data* EwkView::smartData() const
     return toSmartData(m_evasObject);
 }
 
+inline IntSize EwkView::size() const
+{
+    // WebPage expects a size in UI units, and not raw device units.
+    FloatSize uiSize = deviceSize();
+    uiSize.scale(1 / deviceScaleFactor());
+    return roundedIntSize(uiSize);
+}
+
+inline IntSize EwkView::deviceSize() const
+{
+    return toIntSize(WKViewGetSize(wkView()));
+}
+
 void EwkView::displayTimerFired(Timer<EwkView>*)
 {
     Ewk_View_Smart_Data* sd = smartData();
 
     if (m_pendingSurfaceResize) {
+#if USE(ACCELERATED_COMPOSITING)
         // Create a GL surface here so that Evas has no chance of painting to an empty GL surface.
         if (!createGLSurface())
             return;
-
+#endif
         m_pendingSurfaceResize = false;
     }
 
@@ -560,18 +551,18 @@ void EwkView::displayTimerFired(Timer<EwkView>*)
         evas_object_image_data_update_add(sd->image, 0, 0, sd->view.w, sd->view.h);
         return;
     }
-
+#if USE(ACCELERATED_COMPOSITING)
     evas_gl_make_current(m_evasGL.get(), m_evasGLSurface->surface(), m_evasGLContext->context());
 
     WKViewPaintToCurrentGLContext(wkView());
-
+#endif
     // sd->image is tied to a native surface, which is in the parent's coordinates.
     evas_object_image_data_update_add(sd->image, sd->view.x, sd->view.y, sd->view.w, sd->view.h);
 }
 
 void EwkView::scheduleUpdateDisplay()
 {
-    if (m_deviceSize.isEmpty())
+    if (deviceSize().isEmpty())
         return;
 
     if (!m_displayTimer.isActive())
@@ -631,16 +622,6 @@ void EwkView::setWindowGeometry(const WKRect& rect)
         Ecore_Evas* ee = ecore_evas_ecore_evas_get(sd->base.evas);
         ecore_evas_move_resize(ee, rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
     }
-}
-
-bool EwkView::isFocused() const
-{
-    return evas_object_focus_get(m_evasObject);
-}
-
-bool EwkView::isVisible() const
-{
-    return evas_object_visible_get(m_evasObject);
 }
 
 const char* EwkView::title() const
@@ -744,6 +725,7 @@ void EwkView::setTouchEventsEnabled(bool enabled)
 }
 #endif
 
+#if USE(ACCELERATED_COMPOSITING)
 bool EwkView::createGLSurface()
 {
     if (!m_isAccelerated)
@@ -777,6 +759,7 @@ bool EwkView::createGLSurface()
 
     return true;
 }
+#endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
 /**
@@ -1125,7 +1108,12 @@ void EwkView::handleEvasObjectCalculate(Evas_Object* evasObject)
         smartData->view.w = width;
         smartData->view.h = height;
 
-        self->setDeviceSize(IntSize(width, height));
+        WKViewSetSize(self->wkView(), WKSizeMake(width, height));
+#if USE(ACCELERATED_COMPOSITING)
+        if (WKPageUseFixedLayout(self->wkPage()))
+            self->pageViewportController()->didChangeViewportSize(self->size());
+#endif
+
         self->setNeedsSurfaceResize();
     }
 }
@@ -1171,13 +1159,13 @@ void EwkView::handleEvasObjectColorSet(Evas_Object* evasObject, int red, int gre
 
 Eina_Bool EwkView::handleEwkViewFocusIn(Ewk_View_Smart_Data* smartData)
 {
-    toEwkView(smartData)->page()->viewStateDidChange(WebPageProxy::ViewIsFocused | WebPageProxy::ViewWindowIsActive);
+    WKViewSetIsFocused(toEwkView(smartData)->wkView(), true);
     return true;
 }
 
 Eina_Bool EwkView::handleEwkViewFocusOut(Ewk_View_Smart_Data* smartData)
 {
-    toEwkView(smartData)->page()->viewStateDidChange(WebPageProxy::ViewIsFocused | WebPageProxy::ViewWindowIsActive);
+    WKViewSetIsFocused(toEwkView(smartData)->wkView(), false);
     return true;
 }
 
@@ -1291,15 +1279,16 @@ PassRefPtr<cairo_surface_t> EwkView::takeSnapshot()
         ecore_main_loop_iterate();
 
     Ewk_View_Smart_Data* sd = smartData();
-    if (!m_isAccelerated) {
-        RefPtr<cairo_surface_t> snapshot = createSurfaceForImage(sd->image);
+#if USE(ACCELERATED_COMPOSITING)
+    if (m_isAccelerated) {
+        RefPtr<cairo_surface_t> snapshot = getImageSurfaceFromFrameBuffer(0, 0, sd->view.w, sd->view.h);
         // Resume all animations.
         WKViewResumeActiveDOMObjectsAndAnimations(wkView());
 
         return snapshot.release();
     }
-
-    RefPtr<cairo_surface_t> snapshot = getImageSurfaceFromFrameBuffer(0, 0, sd->view.w, sd->view.h);
+#endif
+    RefPtr<cairo_surface_t> snapshot = createSurfaceForImage(sd->image);
     // Resume all animations.
     WKViewResumeActiveDOMObjectsAndAnimations(wkView());
 

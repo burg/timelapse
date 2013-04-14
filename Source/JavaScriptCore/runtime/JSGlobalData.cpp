@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,7 +44,6 @@
 #include "JSActivation.h"
 #include "JSAPIValueWrapper.h"
 #include "JSArray.h"
-#include "JSClassRef.h"
 #include "JSFunction.h"
 #include "JSLock.h"
 #include "JSNameScope.h"
@@ -61,7 +60,9 @@
 #include "StrictEvalActivation.h"
 #include "StrongInlines.h"
 #include "UnlinkedCodeBlock.h"
+#include <wtf/ProcessID.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/StringPrintStream.h>
 #include <wtf/Threading.h>
 #include <wtf/WTFThreadData.h>
 
@@ -179,10 +180,7 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, HeapType heapType)
 #ifndef NDEBUG
     , exclusiveThread(0)
 #endif
-#if CPU(X86) && ENABLE(JIT)
-    , m_timeoutCount(512)
-#endif
-    , m_newStringsSinceLastHashConst(0)
+    , m_newStringsSinceLastHashCons(0)
 #if ENABLE(ASSEMBLER)
     , m_canUseAssembler(enableAssembler(executableAllocator))
 #endif
@@ -248,8 +246,18 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, HeapType heapType)
 
     LLInt::Data::performAssertions(*this);
     
-    if (Options::enableProfiler())
+    if (Options::enableProfiler()) {
         m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*this));
+
+        StringPrintStream pathOut;
+#if !OS(WINCE)
+        const char* profilerPath = getenv("JSC_PROFILER_PATH");
+        if (profilerPath)
+            pathOut.print(profilerPath, "/");
+#endif
+        pathOut.print("JSCProfile-", getCurrentProcessID(), "-", m_perBytecodeProfiler->databaseID(), ".json");
+        m_perBytecodeProfiler->registerToSaveAtExit(pathOut.toCString().data());
+    }
 
 #if ENABLE(DFG_JIT)
     if (canUseJIT())
@@ -305,8 +313,6 @@ JSGlobalData::~JSGlobalData()
     fastDelete(const_cast<HashTable*>(regExpConstructorTable));
     fastDelete(const_cast<HashTable*>(regExpPrototypeTable));
     fastDelete(const_cast<HashTable*>(stringConstructorTable));
-
-    opaqueJSClassData.clear();
 
     delete emptyList;
 

@@ -107,7 +107,6 @@ public Q_SLOTS:
     void setWillSendRequestClearHeader(const QStringList& headers);
     void queueBackNavigation(int howFarBackward);
     void queueForwardNavigation(int howFarForward);
-    void queueLoad(const QString& url, const QString& target = QString());
     void queueLoadHTMLString(const QString& content, const QString& baseURL = QString(), const QString& failingURL = QString());
     void queueReload();
     void queueLoadingScript(const QString& script);
@@ -119,7 +118,6 @@ public Q_SLOTS:
     void grantWebNotificationPermission(const QString& origin);
     void denyWebNotificationPermission(const QString& origin);
     void removeAllWebNotificationPermissions();
-    void simulateWebNotificationClick(const QWebElement&);
     void display();
     void displayInvalidatedRegion();
     void clearBackForwardList();
@@ -139,12 +137,10 @@ public Q_SLOTS:
     void setFixedContentsSize(int width, int height);
     void setPrivateBrowsingEnabled(bool);
     void setSpatialNavigationEnabled(bool);
-    void setPluginsEnabled(bool flag);
     void setPopupBlockingEnabled(bool);
     void setPOSIXLocale(const QString& locale);
     void resetLoadFinished() { m_loadFinished = false; }
     void setWindowIsKey(bool);
-    void setMainFrameIsFirstResponder(bool);
     void setDeferMainResourceDataLoad(bool);
     void setJavaScriptCanAccessClipboard(bool enable);
     void setXSSAuditorEnabled(bool);
@@ -157,14 +153,9 @@ public Q_SLOTS:
     void addOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
     void removeOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
 
-    void dispatchPendingLoadRequests();
-
     void clearAllApplicationCaches();
-    void clearApplicationCacheForOrigin(const QString& url);
     void setApplicationCacheOriginQuota(unsigned long long);
     QStringList originsWithApplicationCache();
-    long long applicationCacheDiskUsageForOrigin(const QString&); 
-    void setCacheModel(int);
 
     void setDatabaseQuota(int size);
     void clearAllDatabases();
@@ -188,15 +179,6 @@ public Q_SLOTS:
     bool isGeolocationPermissionSet() const { return m_isGeolocationPermissionSet; }
     bool geolocationPermission() const { return m_geolocationPermission; }
 
-    void addMockSpeechInputResult(const QString& result, double confidence, const QString& language);
-    void setMockSpeechInputDumpRect(bool flag);
-    void startSpeechInput(const QString& inputElement);
-
-    void setPageVisibility(const char*);
-    void resetPageVisibility();
-
-    void setAutomaticLinkDetectionEnabled(bool);
-
     void addURLToRedirect(const QString& origin, const QString& destination);
 
     /*
@@ -205,22 +187,6 @@ public Q_SLOTS:
     */
     void setScrollbarPolicy(const QString& orientation, const QString& policy);
 
-    // Simulate a request an embedding application could make, populating per-session credential storage.
-    void authenticateSession(const QString& url, const QString& username, const QString& password);
-
-    void evaluateScriptInIsolatedWorldAndReturnValue(int worldID, const QString& script);
-    void evaluateScriptInIsolatedWorld(int worldID, const QString& script);
-    void addUserStyleSheet(const QString& sourceCode);
-    
-    void originsWithLocalStorage();
-    void deleteAllLocalStorage();
-    void deleteLocalStorageForOrigin(const QString& originIdentifier);
-    long long localStorageDiskUsageForOrigin(const QString& originIdentifier);
-    void observeStorageTrackerNotifications(unsigned number);
-    void syncLocalStorage();
-    void setTextDirection(const QString& directionName);
-    void goBack();
-    void setDefersLoading(bool);
     void setAlwaysAcceptCookies(bool);
     void setAlwaysBlockCookies(bool);
 

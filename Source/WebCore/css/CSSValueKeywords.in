@@ -220,6 +220,16 @@ justify
 -webkit-center
 -webkit-match-parent
 //
+// CSS_PROP_TEXT_JUSTIFY:
+//
+//auto
+//none
+inter-word
+inter-ideograph
+inter-cluster
+distribute
+kashida
+//
 // CSS_PROP_LIST_STYLE_POSITION:
 //
 outside
@@ -1009,3 +1019,9 @@ snap
 drag
 no-drag
 #endif
+
+#if defined(ENABLE_CSS3_TEXT) && ENABLE_CSS3_TEXT
+// text-indent
+-webkit-each-line
+#endif
+

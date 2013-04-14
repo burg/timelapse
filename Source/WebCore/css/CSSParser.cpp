@@ -67,6 +67,7 @@
 #include "MediaList.h"
 #include "MediaQueryExp.h"
 #include "Page.h"
+#include "PageConsole.h"
 #include "Pair.h"
 #include "Rect.h"
 #include "RenderTheme.h"
@@ -264,6 +265,7 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const KURL& baseURL)
 #endif
     , needsSiteSpecificQuirks(false)
     , enforcesCSSMIMETypeInNoQuirksMode(true)
+    , useLegacyBackgroundSizeShorthandBehavior(false)
 {
 }
 
@@ -282,6 +284,7 @@ CSSParserContext::CSSParserContext(Document* document, const KURL& baseURL, cons
 #endif
     , needsSiteSpecificQuirks(document->settings() ? document->settings()->needsSiteSpecificQuirks() : false)
     , enforcesCSSMIMETypeInNoQuirksMode(!document->settings() || document->settings()->enforceCSSMIMETypeInNoQuirksMode())
+    , useLegacyBackgroundSizeShorthandBehavior(document->settings() ? document->settings()->useLegacyBackgroundSizeShorthandBehavior() : false)
 {
 }
 
@@ -300,7 +303,8 @@ bool operator==(const CSSParserContext& a, const CSSParserContext& b)
         && a.isCSSVariablesEnabled == b.isCSSVariablesEnabled
 #endif
         && a.needsSiteSpecificQuirks == b.needsSiteSpecificQuirks
-        && a.enforcesCSSMIMETypeInNoQuirksMode == b.enforcesCSSMIMETypeInNoQuirksMode;
+        && a.enforcesCSSMIMETypeInNoQuirksMode == b.enforcesCSSMIMETypeInNoQuirksMode
+        && a.useLegacyBackgroundSizeShorthandBehavior == b.useLegacyBackgroundSizeShorthandBehavior;
 }
 
 CSSParser::CSSParser(const CSSParserContext& context)
@@ -318,6 +322,7 @@ CSSParser::CSSParser(const CSSParserContext& context)
     , m_implicitShorthand(false)
     , m_hasFontFaceOnlyValues(false)
     , m_hadSyntacticallyValidCSSRule(false)
+    , m_logErrors(false)
 #if ENABLE(CSS_SHADERS)
     , m_inFilterRule(false)
 #endif
@@ -332,6 +337,7 @@ CSSParser::CSSParser(const CSSParserContext& context)
     , m_length(0)
     , m_token(0)
     , m_lineNumber(0)
+    , m_tokenStartLineNumber(0)
     , m_lastSelectorLineNumber(0)
     , m_allowImportRules(true)
     , m_allowNamespaceDeclarations(true)
@@ -453,7 +459,7 @@ void CSSParser::setupParser(const char* prefix, unsigned prefixLength, const Str
     m_lexFunc = &CSSParser::realLex<UChar>;
 }
 
-void CSSParser::parseSheet(StyleSheetContents* sheet, const String& string, int startLineNumber, RuleSourceDataList* ruleSourceDataResult)
+void CSSParser::parseSheet(StyleSheetContents* sheet, const String& string, int startLineNumber, RuleSourceDataList* ruleSourceDataResult, bool logErrors)
 {
     setStyleSheet(sheet);
     m_defaultNamespace = starAtom; // Reset the default namespace.
@@ -461,6 +467,7 @@ void CSSParser::parseSheet(StyleSheetContents* sheet, const String& string, int 
         m_currentRuleDataStack = adoptPtr(new RuleSourceDataList());
     m_ruleSourceDataResult = ruleSourceDataResult;
 
+    m_logErrors = logErrors && sheet->singleOwnerDocument() && !sheet->baseURL().isEmpty() && sheet->singleOwnerDocument()->page();
     m_lineNumber = startLineNumber;
     setupParser("", string, "");
     cssyyparse(this);
@@ -468,6 +475,7 @@ void CSSParser::parseSheet(StyleSheetContents* sheet, const String& string, int 
     m_currentRuleDataStack.clear();
     m_ruleSourceDataResult = 0;
     m_rule = 0;
+    m_logErrors = false;
 }
 
 PassRefPtr<StyleRuleBase> CSSParser::parseRule(StyleSheetContents* sheet, const String& string)
@@ -594,7 +602,6 @@ static inline bool isSimpleLengthPropertyID(CSSPropertyID propertyId, bool& acce
     case CSSPropertyMarginRight:
     case CSSPropertyMarginTop:
     case CSSPropertyRight:
-    case CSSPropertyTextIndent:
     case CSSPropertyTop:
     case CSSPropertyWebkitMarginAfter:
     case CSSPropertyWebkitMarginBefore:
@@ -990,6 +997,13 @@ static inline bool isValidKeywordPropertyAndValue(CSSPropertyID propertyId, int 
         if (valueID == CSSValueOver || valueID == CSSValueUnder)
             return true;
         break;
+#if ENABLE(CSS3_TEXT)
+    case CSSPropertyWebkitTextJustify:
+        // auto | none | inter-word | inter-ideograph | inter-cluster | distribute | kashida
+        if ((valueID >= CSSValueInterWord && valueID <= CSSValueKashida) || valueID == CSSValueAuto || valueID == CSSValueNone)
+            return true;
+        break;
+#endif // CSS3_TEXT
     case CSSPropertyWebkitTextSecurity:
         // disc | circle | square | none | inherit
         if (valueID == CSSValueDisc || valueID == CSSValueCircle || valueID == CSSValueSquare || valueID == CSSValueNone)
@@ -1145,6 +1159,9 @@ static inline bool isKeywordPropertyID(CSSPropertyID propertyId)
 #endif // CSS3_TEXT
     case CSSPropertyWebkitTextCombine:
     case CSSPropertyWebkitTextEmphasisPosition:
+#if ENABLE(CSS3_TEXT)
+    case CSSPropertyWebkitTextJustify:
+#endif // CSS3_TEXT
     case CSSPropertyWebkitTextSecurity:
     case CSSPropertyWebkitTransformStyle:
     case CSSPropertyWebkitUserDrag:
@@ -2185,8 +2202,8 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
             validPrimitive = validUnit(value, FLength);
         break;
 
-    case CSSPropertyTextIndent:          // <length> | <percentage> | inherit
-        validPrimitive = (!id && validUnit(value, FLength | FPercent));
+    case CSSPropertyTextIndent:
+        parsedValue = parseTextIndent();
         break;
 
     case CSSPropertyPaddingTop:          //// <padding-width> | inherit
@@ -2207,6 +2224,9 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 
     case CSSPropertyMinWidth:
     case CSSPropertyWebkitMinLogicalWidth:
+        validPrimitive = validWidth(value);
+        break;
+
     case CSSPropertyWidth:
     case CSSPropertyWebkitLogicalWidth:
         validPrimitive = (id == CSSValueAuto || validWidth(value));
@@ -2219,6 +2239,9 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 
     case CSSPropertyMinHeight:
     case CSSPropertyWebkitMinLogicalHeight:
+        validPrimitive = validHeight(value);
+        break;
+
     case CSSPropertyHeight:
     case CSSPropertyWebkitLogicalHeight:
         validPrimitive = (id == CSSValueAuto || validHeight(value));
@@ -2630,7 +2653,7 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
         if (!cssGridLayoutEnabled())
             return false;
 
-        validPrimitive = id == CSSValueAuto || validUnit(value, FInteger);
+        validPrimitive = id == CSSValueAuto || (validUnit(value, FInteger) && value->fValue);
         break;
 
     case CSSPropertyWebkitGridColumn:
@@ -3048,6 +3071,9 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 #endif // CSS3_TEXT
     case CSSPropertyWebkitTextCombine:
     case CSSPropertyWebkitTextEmphasisPosition:
+#if ENABLE(CSS3_TEXT)
+    case CSSPropertyWebkitTextJustify:
+#endif // CSS3_TEXT
     case CSSPropertyWebkitTextSecurity:
     case CSSPropertyWebkitTransformStyle:
     case CSSPropertyWebkitUserDrag:
@@ -3120,6 +3146,11 @@ static bool parseBackgroundClip(CSSParserValue* parserValue, RefPtr<CSSValue>& c
         return true;
     }
     return false;
+}
+
+bool CSSParser::useLegacyBackgroundSizeShorthandBehavior() const
+{
+    return m_context.useLegacyBackgroundSizeShorthandBehavior;
 }
 
 const int cMaxFillProperties = 9;
@@ -3252,6 +3283,8 @@ bool CSSParser::parseFillShorthand(CSSPropertyID propId, const CSSPropertyID* pr
             addProperty(CSSPropertyWebkitMaskRepeatY, repeatYValue.release(), important);
         } else if ((properties[i] == CSSPropertyBackgroundClip || properties[i] == CSSPropertyWebkitMaskClip) && !foundClip)
             // Value is already set while updating origin
+            continue;
+        else if (properties[i] == CSSPropertyBackgroundSize && !parsedProperty[i] && useLegacyBackgroundSizeShorthandBehavior())
             continue;
         else
             addProperty(properties[i], values[i].release(), important);
@@ -6349,6 +6382,10 @@ PassRefPtr<CSSValueList> CSSParser::parseShadow(CSSParserValueList* valueList, C
             if (!context.allowLength())
                 return 0;
 
+            // Blur radius must be non-negative.
+            if (context.allowBlur && !validUnit(val, FLength | FNonNeg, CSSStrictMode))
+                return 0;
+
             // A length is allowed here.  Construct the value and add it.
             context.commitLength(val);
         } else if (val->id == CSSValueInset) {
@@ -9240,6 +9277,50 @@ bool CSSParser::parseTextEmphasisStyle(bool important)
     return false;
 }
 
+PassRefPtr<CSSValue> CSSParser::parseTextIndent()
+{
+    RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+
+    // <length> | <percentage> | inherit
+    if (m_valueList->size() == 1) {
+        CSSParserValue* value = m_valueList->current();
+        if (!value->id && validUnit(value, FLength | FPercent)) {
+            list->append(createPrimitiveNumericValue(value));
+            m_valueList->next();
+            return list.release();
+        }
+    }
+
+#if ENABLE(CSS3_TEXT)
+    // The case where text-indent has only <length>(or <percentage>) value
+    // is handled above if statement even though CSS3_TEXT is enabled.
+
+    // [ [ <length> | <percentage> ] && -webkit-each-line ] | inherit
+    if (m_valueList->size() != 2)
+        return 0;
+
+    CSSParserValue* firstValue = m_valueList->current();
+    CSSParserValue* secondValue = m_valueList->next();
+    CSSParserValue* lengthOrPercentageValue = 0;
+
+    // [ <length> | <percentage> ] -webkit-each-line
+    if (validUnit(firstValue, FLength | FPercent) && secondValue->id == CSSValueWebkitEachLine)
+        lengthOrPercentageValue = firstValue;
+    // -webkit-each-line [ <length> | <percentage> ]
+    else if (firstValue->id == CSSValueWebkitEachLine && validUnit(secondValue, FLength | FPercent))
+        lengthOrPercentageValue = secondValue;
+
+    if (lengthOrPercentageValue) {
+        list->append(createPrimitiveNumericValue(lengthOrPercentageValue));
+        list->append(cssValuePool().createIdentifierValue(CSSValueWebkitEachLine));
+        m_valueList->next();
+        return list.release();
+    }
+#endif
+
+    return 0;
+}
+
 bool CSSParser::parseLineBoxContain(bool important)
 {
     LineBoxContain lineBoxContain = LineBoxContainNone;
@@ -9688,6 +9769,17 @@ template <>
 inline UChar* CSSParser::tokenStart<UChar>()
 {
     return m_tokenStart.ptr16;
+}
+
+CSSParser::Location CSSParser::currentLocation()
+{
+    Location location;
+    location.lineNumber = m_tokenStartLineNumber;
+    if (is8BitSource())
+        location.token.init(tokenStart<LChar>(), currentCharacter<LChar>() - tokenStart<LChar>());
+    else
+        location.token.init(tokenStart<UChar>(), currentCharacter<UChar>() - tokenStart<UChar>());
+    return location;
 }
 
 template <typename CharacterType>
@@ -10545,6 +10637,7 @@ int CSSParser::realLex(void* yylvalWithoutType)
 restartAfterComment:
     result = currentCharacter<SrcCharacterType>();
     setTokenStart(result);
+    m_tokenStartLineNumber = m_lineNumber;
     m_token = *currentCharacter<SrcCharacterType>();
     ++currentCharacter<SrcCharacterType>();
 
@@ -11208,6 +11301,40 @@ PassRefPtr<CSSRuleSourceData> CSSParser::popRuleData()
     RefPtr<CSSRuleSourceData> data = m_currentRuleDataStack->last();
     m_currentRuleDataStack->removeLast();
     return data.release();
+}
+
+void CSSParser::syntaxError(const Location& location, SyntaxErrorType error)
+{
+    if (!isLoggingErrors())
+        return;
+    StringBuilder builder;
+    switch (error) {
+    case PropertyDeclarationError:
+        builder.appendLiteral("Invalid CSS property declaration at: ");
+        break;
+
+    default:
+        builder.appendLiteral("Unexpected CSS token: ");
+    }
+
+    if (location.token.is8Bit())
+        builder.append(location.token.characters8(), location.token.length());
+    else
+        builder.append(location.token.characters16(), location.token.length());
+
+    logError(builder.toString(), location.lineNumber);
+}
+
+bool CSSParser::isLoggingErrors()
+{
+    // FIXME: return logging back (https://bugs.webkit.org/show_bug.cgi?id=113401).
+    return false;
+}
+
+void CSSParser::logError(const String& message, int lineNumber)
+{
+    PageConsole* console = m_styleSheet->singleOwnerDocument()->page()->console();
+    console->addMessage(CSSMessageSource, WarningMessageLevel, message, m_styleSheet->baseURL().string(), lineNumber + 1);
 }
 
 StyleRuleKeyframes* CSSParser::createKeyframesRule(const String& name, PassOwnPtr<Vector<RefPtr<StyleKeyframe> > > popKeyframes)

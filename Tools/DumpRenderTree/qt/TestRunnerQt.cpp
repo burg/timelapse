@@ -88,6 +88,8 @@ void TestRunnerQt::reset()
     DumpRenderTreeSupportQt::dumpVisitedLinksCallbacks(false);
     DumpRenderTreeSupportQt::resetGeolocationMock(m_drt->pageAdapter());
     DumpRenderTreeSupportQt::dumpNotification(false);
+    DumpRenderTreeSupportQt::setShouldUseFontSmoothing(false);
+    DumpRenderTreeSupportQt::disableDefaultTypesettingFeatures();
     setIconDatabaseEnabled(false);
     clearAllDatabases();
     removeAllWebNotificationPermissions();
@@ -226,11 +228,6 @@ void TestRunnerQt::removeAllWebNotificationPermissions()
     DumpRenderTreeSupportQt::clearNotificationPermissions();
 }
 
-void TestRunnerQt::simulateWebNotificationClick(const QWebElement& notification)
-{
-    // FIXME: implement.
-}
-
 void TestRunnerQt::simulateLegacyWebNotificationClick(const QString& title)
 {
     DumpRenderTreeSupportQt::simulateDesktopNotificationClick(title);
@@ -334,48 +331,40 @@ void TestRunnerQt::queueBackNavigation(int howFarBackward)
 {
     //qDebug() << ">>>queueBackNavigation" << howFarBackward;
     for (int i = 0; i != howFarBackward; ++i)
-        WorkQueue::shared()->queue(new BackItem(1, m_drt->webPage()));
+        WorkQueue::shared()->queue(new BackItem(1));
 }
 
 void TestRunnerQt::queueForwardNavigation(int howFarForward)
 {
     //qDebug() << ">>>queueForwardNavigation" << howFarForward;
     for (int i = 0; i != howFarForward; ++i)
-        WorkQueue::shared()->queue(new ForwardItem(1, m_drt->webPage()));
-}
-
-void TestRunnerQt::queueLoad(const QString& url, const QString& target)
-{
-    //qDebug() << ">>>queueLoad" << url << target;
-    QUrl mainResourceUrl = m_drt->webPage()->mainFrame()->url();
-    QString absoluteUrl = mainResourceUrl.resolved(QUrl(url)).toEncoded();
-    WorkQueue::shared()->queue(new LoadItem(absoluteUrl, target, m_drt->webPage()));
+        WorkQueue::shared()->queue(new ForwardItem(1));
 }
 
 void TestRunnerQt::queueLoadHTMLString(const QString& content, const QString& baseURL, const QString& failingURL)
 {
     if (failingURL.isEmpty())
-        WorkQueue::shared()->queue(new LoadHTMLStringItem(content, baseURL, m_drt->webPage()));
+        WorkQueue::shared()->queue(new LoadHTMLStringItem(JSStringCreateWithQString(content).get(), JSStringCreateWithQString(baseURL).get()));
     else
-        WorkQueue::shared()->queue(new LoadAlternateHTMLStringItem(content, baseURL, failingURL, m_drt->webPage()));
+        WorkQueue::shared()->queue(new LoadAlternateHTMLStringItem(JSStringCreateWithQString(content), JSStringCreateWithQString(baseURL), JSStringCreateWithQString(failingURL)));
 }
 
 void TestRunnerQt::queueReload()
 {
     //qDebug() << ">>>queueReload";
-    WorkQueue::shared()->queue(new ReloadItem(m_drt->webPage()));
+    WorkQueue::shared()->queue(new ReloadItem());
 }
 
 void TestRunnerQt::queueLoadingScript(const QString& script)
 {
     //qDebug() << ">>>queueLoadingScript" << script;
-    WorkQueue::shared()->queue(new LoadingScriptItem(script, m_drt->webPage()));
+    WorkQueue::shared()->queue(new LoadingScriptItem(JSStringCreateWithQString(script).get()));
 }
 
 void TestRunnerQt::queueNonLoadingScript(const QString& script)
 {
     //qDebug() << ">>>queueNonLoadingScript" << script;
-    WorkQueue::shared()->queue(new NonLoadingScriptItem(script, m_drt->webPage()));
+    WorkQueue::shared()->queue(new NonLoadingScriptItem(JSStringCreateWithQString(script).get()));
 }
 
 void TestRunnerQt::provisionalLoad()
@@ -432,16 +421,6 @@ void TestRunnerQt::evaluateInWebInspector(long callId, const QString& script)
     DumpRenderTreeSupportQt::webInspectorExecuteScript(m_drt->pageAdapter(), callId, script);
 }
 
-void TestRunnerQt::goBack()
-{
-    DumpRenderTreeSupportQt::goBack(m_drt->pageAdapter());
-}
-
-void TestRunnerQt::setDefersLoading(bool flag)
-{
-    DumpRenderTreeSupportQt::setDefersLoading(m_drt->pageAdapter(), flag);
-}
-
 void TestRunnerQt::setAllowUniversalAccessFromFileURLs(bool enabled)
 {
     m_drt->webPage()->settings()->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, enabled);
@@ -482,11 +461,6 @@ void TestRunnerQt::setPopupBlockingEnabled(bool enable)
     m_drt->webPage()->settings()->setAttribute(QWebSettings::JavascriptCanOpenWindows, !enable);
 }
 
-void TestRunnerQt::setPluginsEnabled(bool flag)
-{
-    // FIXME: Implement
-}
-
 void TestRunnerQt::setPOSIXLocale(const QString& locale)
 {
     QLocale qlocale(locale);
@@ -496,11 +470,6 @@ void TestRunnerQt::setPOSIXLocale(const QString& locale)
 void TestRunnerQt::setWindowIsKey(bool isKey)
 {
     m_drt->switchFocus(isKey);
-}
-
-void TestRunnerQt::setMainFrameIsFirstResponder(bool isFirst)
-{
-    //FIXME: only need this for the moment: https://bugs.webkit.org/show_bug.cgi?id=32990
 }
 
 void TestRunnerQt::setJavaScriptCanAccessClipboard(bool enable)
@@ -518,25 +487,9 @@ void TestRunnerQt::setXSSAuditorEnabled(bool enable)
     m_drt->webPage()->settings()->setAttribute(QWebSettings::XSSAuditingEnabled, enable);
 }
 
-void TestRunnerQt::dispatchPendingLoadRequests()
-{
-    // FIXME: Implement for testing fix for 6727495
-}
-
 void TestRunnerQt::clearAllApplicationCaches()
 {
     DumpRenderTreeSupportQt::clearAllApplicationCaches();
-}
-
-void TestRunnerQt::clearApplicationCacheForOrigin(const QString& url)
-{
-    // FIXME: Implement to support deleting all application caches for an origin.
-}
-
-long long TestRunnerQt::localStorageDiskUsageForOrigin(const QString& originIdentifier)
-{
-    // FIXME: Implement to support getting disk usage in bytes for an origin.
-    return 0;
 }
 
 void TestRunnerQt::setApplicationCacheOriginQuota(unsigned long long quota)
@@ -546,26 +499,10 @@ void TestRunnerQt::setApplicationCacheOriginQuota(unsigned long long quota)
     m_topLoadingFrame->securityOrigin().setApplicationCacheQuota(quota);
 }
 
-long long TestRunnerQt::applicationCacheDiskUsageForOrigin(const QString& origin)
-{
-    // FIXME: Implement to support getting disk usage by all application caches for an origin.
-    return 0;
-}
-
 QStringList TestRunnerQt::originsWithApplicationCache()
 {
     // FIXME: Implement to get origins that have application caches.
     return QStringList();
-}
-
-void TestRunnerQt::setCacheModel(int model)
-{
-    // qwebsetting doesn't have matched setting yet :
-    // WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER
-    // WEBKIT_CACHE_MODEL_DOCUMENT_BROWSER
-    // WEBKIT_CACHE_MODEL_WEB_BROWSER
-
-    // FIXME: Implement.
 }
 
 void TestRunnerQt::setDatabaseQuota(int size)
@@ -746,11 +683,6 @@ bool TestRunner::findString(JSContextRef context, JSStringRef string, JSObjectRe
     return drt->webPage()->findText(JSStringCopyQString(string), findFlags);
 }
 
-void TestRunnerQt::authenticateSession(const QString&, const QString&, const QString&)
-{
-    // FIXME: If there is a concept per-session (per-process) credential storage, the credentials should be added to it for later use.
-}
-
 void TestRunnerQt::setIconDatabaseEnabled(bool enable)
 {
     if (enable && !m_drt->persistentStoragePath().isEmpty())
@@ -804,39 +736,6 @@ void TestRunnerQt::setMockGeolocationPosition(double latitude, double longitude,
         DumpRenderTreeSupportQt::setMockGeolocationPosition(page->handle(), latitude, longitude, accuracy);
 }
 
-void TestRunnerQt::addMockSpeechInputResult(const QString& result, double confidence, const QString& language)
-{
-    // FIXME: Implement for speech input layout tests.
-    // See https://bugs.webkit.org/show_bug.cgi?id=39485.
-}
-
-void TestRunnerQt::setMockSpeechInputDumpRect(bool flag)
-{
-    // FIXME: Implement for speech input layout tests.
-    // See https://bugs.webkit.org/show_bug.cgi?id=39485.
-}
-
-void TestRunnerQt::startSpeechInput(const QString& inputElement)
-{
-    // FIXME: Implement for speech input layout tests.
-    // See https://bugs.webkit.org/show_bug.cgi?id=39485.
-}
-
-void TestRunnerQt::evaluateScriptInIsolatedWorldAndReturnValue(int worldID, const QString& script)
-{
-    // FIXME: Implement.
-}
-
-void TestRunnerQt::evaluateScriptInIsolatedWorld(int worldID, const QString& script)
-{
-    DumpRenderTreeSupportQt::evaluateScriptInIsolatedWorld(m_drt->mainFrameAdapter(), worldID, script);
-}
-
-void TestRunnerQt::addUserStyleSheet(const QString& sourceCode)
-{
-    DumpRenderTreeSupportQt::addUserStyleSheet(m_drt->pageAdapter(), sourceCode);
-}
-
 void TestRunnerQt::removeAllVisitedLinks()
 {
     QWebHistory* history = m_drt->webPage()->history();
@@ -847,56 +746,6 @@ void TestRunnerQt::removeAllVisitedLinks()
 void TestRunnerQt::addURLToRedirect(const QString& origin, const QString& destination)
 {
     DumpRenderTreeSupportQt::addURLToRedirect(origin, destination);
-}
-
-void TestRunnerQt::originsWithLocalStorage()
-{
-    // FIXME: Implement.
-}
-
-void TestRunnerQt::deleteAllLocalStorage()
-{
-    // FIXME: Implement.
-}
-
-void TestRunnerQt::deleteLocalStorageForOrigin(const QString& originIdentifier)
-{
-    // FIXME: Implement.
-}
-
-void TestRunnerQt::observeStorageTrackerNotifications(unsigned number)
-{
-    // FIXME: Implement.
-}
-
-void TestRunnerQt::syncLocalStorage()
-{
-    // FIXME: Implement.
-}
-
-void TestRunnerQt::resetPageVisibility()
-{
-    // FIXME: Implement this.
-}
-
-void TestRunnerQt::setPageVisibility(const char*)
-{
-    // FIXME: Implement this.
-}
-
-void TestRunnerQt::setAutomaticLinkDetectionEnabled(bool)
-{
-    // FIXME: Implement this.
-}
-
-void TestRunnerQt::setTextDirection(const QString& directionName)
-{
-    if (directionName == "auto")
-        m_drt->webPage()->triggerAction(QWebPage::SetTextDirectionDefault);
-    else if (directionName == "rtl")
-        m_drt->webPage()->triggerAction(QWebPage::SetTextDirectionRightToLeft);
-    else if (directionName == "ltr")
-        m_drt->webPage()->triggerAction(QWebPage::SetTextDirectionLeftToRight);
 }
 
 void TestRunnerQt::setAlwaysAcceptCookies(bool accept)
@@ -936,6 +785,10 @@ void TestRunner::addDisallowedURL(JSStringRef url)
 
 void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
 {
+    DumpRenderTree* drt = DumpRenderTree::instance();
+    QUrl mainResourceUrl = drt->webPage()->mainFrame()->url();
+    QString absoluteUrl = mainResourceUrl.resolved(QUrl(JSStringCopyQString(url))).toEncoded();
+    WorkQueue::shared()->queue(new LoadItem(JSStringCreateWithQString(absoluteUrl).get(), target));
 }
 
 void TestRunner::removeAllVisitedLinks()
@@ -970,8 +823,15 @@ void TestRunner::clearAllApplicationCaches()
 {
 }
 
-void TestRunner::setTextDirection(JSStringRef)
+void TestRunner::setTextDirection(JSStringRef directionName)
 {
+    QWebPage* webPage = DumpRenderTree::instance()->webPage();
+    if (JSStringIsEqualToUTF8CString(directionName, "auto"))
+        webPage->triggerAction(QWebPage::SetTextDirectionDefault);
+    else if (JSStringIsEqualToUTF8CString(directionName, "rtl"))
+        webPage->triggerAction(QWebPage::SetTextDirectionRightToLeft);
+    else if (JSStringIsEqualToUTF8CString(directionName, "ltr"))
+        webPage->triggerAction(QWebPage::SetTextDirectionLeftToRight);
 }
 
 void TestRunner::notifyDone()
@@ -1101,6 +961,7 @@ void TestRunner::keepWebHistory()
 
 void TestRunner::goBack()
 {
+    DumpRenderTreeSupportQt::goBack(DumpRenderTree::instance()->pageAdapter());
 }
 
 JSValueRef TestRunner::originsWithApplicationCache(JSContextRef context)
@@ -1243,8 +1104,9 @@ void TestRunner::setGeolocationPermission(bool allow)
 {
 }
 
-void TestRunner::setDefersLoading(bool)
+void TestRunner::setDefersLoading(bool flag)
 {
+    DumpRenderTreeSupportQt::setDefersLoading(DumpRenderTree::instance()->pageAdapter(), flag);
 }
 
 void TestRunner::setCacheModel(int)
@@ -1310,6 +1172,7 @@ bool TestRunner::isCommandEnabled(JSStringRef name)
 
 void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldID, JSObjectRef globalObject, JSStringRef script)
 {
+    DumpRenderTreeSupportQt::evaluateScriptInIsolatedWorld(DumpRenderTree::instance()->mainFrameAdapter(), worldID, JSStringCopyQString(script));
 }
 
 void TestRunner::evaluateScriptInIsolatedWorldAndReturnValue(unsigned worldID, JSObjectRef globalObject, JSStringRef script)
@@ -1323,6 +1186,7 @@ JSStringRef TestRunner::copyEncodedHostName(JSStringRef name)
 
 void TestRunner::addUserStyleSheet(JSStringRef source, bool allFrames)
 {
+    DumpRenderTreeSupportQt::addUserStyleSheet(DumpRenderTree::instance()->pageAdapter(), JSStringCopyQString(source));
 }
 
 void TestRunner::execCommand(JSStringRef name, JSStringRef value)

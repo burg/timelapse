@@ -62,7 +62,6 @@ public:
     virtual void didSendData(ResourceHandle*, unsigned long long, unsigned long long) OVERRIDE;
     virtual void didReceiveResponse(ResourceHandle*, const ResourceResponse&) OVERRIDE;
     virtual void didReceiveData(ResourceHandle*, const char*, int, int) OVERRIDE;
-    virtual void didReceiveCachedMetadata(ResourceHandle*, const char*, int) OVERRIDE;
     virtual void didFinishLoading(ResourceHandle*, double) OVERRIDE;
     virtual void didFail(ResourceHandle*, const ResourceError&) OVERRIDE;
     virtual void wasBlocked(ResourceHandle*) OVERRIDE;

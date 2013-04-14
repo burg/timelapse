@@ -841,7 +841,7 @@ bool HTMLInputElement::isSuccessfulSubmitButton() const
 {
     // HTML spec says that buttons must have names to be considered successful.
     // However, other browsers do not impose this constraint. So we do not.
-    return !disabled() && m_inputType->canBeSuccessfulSubmitButton();
+    return !isDisabledFormControl() && m_inputType->canBeSuccessfulSubmitButton();
 }
 
 bool HTMLInputElement::isActivatedSubmit() const
@@ -897,8 +897,10 @@ void HTMLInputElement::setChecked(bool nowChecked, TextFieldEventBehavior eventB
     // Ideally we'd do this from the render tree (matching
     // RenderTextView), but it's not possible to do it at the moment
     // because of the way the code is structured.
-    if (renderer() && AXObjectCache::accessibilityEnabled())
-        renderer()->document()->axObjectCache()->checkedStateChanged(this);
+    if (renderer()) {
+        if (AXObjectCache* cache = renderer()->document()->existingAXObjectCache())
+            cache->checkedStateChanged(this);
+    }
 
     // Only send a change event for items in the document (avoid firing during
     // parsing) and don't send a change event for a radio button that's getting
@@ -1220,7 +1222,7 @@ void HTMLInputElement::defaultEventHandler(Event* evt)
 bool HTMLInputElement::willRespondToMouseClickEvents()
 {
     // FIXME: Consider implementing willRespondToMouseClickEvents() in InputType if more accurate results are necessary.
-    if (!disabled())
+    if (!isDisabledFormControl())
         return true;
 
     return HTMLTextFormControlElement::willRespondToMouseClickEvents();
@@ -1454,12 +1456,12 @@ bool HTMLInputElement::isRequiredFormControl() const
 
 bool HTMLInputElement::matchesReadOnlyPseudoClass() const
 {
-    return m_inputType->supportsReadOnly() && readOnly();
+    return m_inputType->supportsReadOnly() && isReadOnly();
 }
 
 bool HTMLInputElement::matchesReadWritePseudoClass() const
 {
-    return m_inputType->supportsReadOnly() && !readOnly();
+    return m_inputType->supportsReadOnly() && !isReadOnly();
 }
 
 void HTMLInputElement::addSearchResult()
@@ -1795,7 +1797,7 @@ String HTMLInputElement::defaultToolTip() const
     return m_inputType->defaultToolTip();
 }
 
-bool HTMLInputElement::isIndeterminate() const 
+bool HTMLInputElement::shouldAppearIndeterminate() const 
 {
     return m_inputType->supportsIndeterminateAppearance() && indeterminate();
 }

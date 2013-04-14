@@ -53,13 +53,6 @@ class NSCachedURLResponse;
 class NSView;
 #endif
 
-#if USE(V8)
-namespace v8 {
-class Context;
-template<class T> class Handle;
-}
-#endif
-
 namespace WebCore {
 
     class AuthenticationChallenge;
@@ -209,13 +202,6 @@ namespace WebCore {
         virtual bool shouldStopLoadingForHistoryItem(HistoryItem*) const = 0;
         virtual void updateGlobalHistoryItemForPage() { }
 
-#if PLATFORM(CHROMIUM)
-        // Another page has accessed the initial empty document of this frame.
-        // It is no longer safe to display a provisional URL, since a URL spoof
-        // is now possible.
-        virtual void didAccessInitialDocument() { }
-#endif
-
         // This frame has set its opener to null, disowning it for the lifetime of the frame.
         // See http://html.spec.whatwg.org/#dom-opener.
         // FIXME: JSC should allow disowning opener. - <https://bugs.webkit.org/show_bug.cgi?id=103913>.
@@ -294,12 +280,6 @@ namespace WebCore {
         virtual void didPerformFirstNavigation() const = 0; // "Navigation" here means a transition from one page to another that ends up in the back/forward list.
 
         virtual void didExhaustMemoryAvailableForScript() { };
-
-#if USE(V8)
-        virtual void didCreateScriptContext(v8::Handle<v8::Context>, int extensionGroup, int worldId) = 0;
-        virtual void willReleaseScriptContext(v8::Handle<v8::Context>, int worldId) = 0;
-        virtual bool allowScriptExtension(const String& extensionName, int extensionGroup, int worldId) = 0;
-#endif
 
         virtual void registerForIconNotification(bool listen = true) = 0;
         

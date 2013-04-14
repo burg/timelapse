@@ -51,7 +51,7 @@ using namespace std;
 HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
     : LabelableElement(tagName, document)
     , m_disabled(false)
-    , m_readOnly(false)
+    , m_isReadOnly(false)
     , m_isRequired(false)
     , m_valueMatchesRenderer(false)
     , m_ancestorDisabledState(AncestorDisabledStateUnknown)
@@ -113,7 +113,7 @@ void HTMLFormControlElement::updateAncestorDisabledState() const
             break;
         }
     }
-    m_ancestorDisabledState = (fieldSetAncestor && fieldSetAncestor->disabled() && !(legendAncestor && legendAncestor == fieldSetAncestor->legend())) ? AncestorDisabledStateDisabled : AncestorDisabledStateEnabled;
+    m_ancestorDisabledState = (fieldSetAncestor && fieldSetAncestor->isDisabledFormControl() && !(legendAncestor && legendAncestor == fieldSetAncestor->legend())) ? AncestorDisabledStateDisabled : AncestorDisabledStateEnabled;
 }
 
 void HTMLFormControlElement::ancestorDisabledStateWasChanged()
@@ -133,9 +133,9 @@ void HTMLFormControlElement::parseAttribute(const QualifiedName& name, const Ato
         if (oldDisabled != m_disabled)
             disabledAttributeChanged();
     } else if (name == readonlyAttr) {
-        bool oldReadOnly = m_readOnly;
-        m_readOnly = !value.isNull();
-        if (oldReadOnly != m_readOnly) {
+        bool wasReadOnly = m_isReadOnly;
+        m_isReadOnly = !value.isNull();
+        if (wasReadOnly != m_isReadOnly) {
             setNeedsWillValidateCheck();
             setNeedsStyleRecalc();
             if (renderer() && renderer()->style()->hasAppearance())
@@ -274,7 +274,7 @@ void HTMLFormControlElement::dispatchFormControlInputEvent()
     HTMLElement::dispatchInputEvent();
 }
 
-bool HTMLFormControlElement::disabled() const
+bool HTMLFormControlElement::isDisabledFormControl() const
 {
     if (m_disabled)
         return true;
@@ -283,7 +283,7 @@ bool HTMLFormControlElement::disabled() const
         updateAncestorDisabledState();
     if (m_ancestorDisabledState == AncestorDisabledStateDisabled)
         return true;
-    return HTMLElement::disabled();
+    return HTMLElement::isDisabledFormControl();
 }
 
 bool HTMLFormControlElement::isRequired() const
@@ -309,7 +309,7 @@ void HTMLFormControlElement::didRecalcStyle(StyleChange)
 
 bool HTMLFormControlElement::supportsFocus() const
 {
-    return !disabled();
+    return !isDisabledFormControl();
 }
 
 bool HTMLFormControlElement::isFocusable() const

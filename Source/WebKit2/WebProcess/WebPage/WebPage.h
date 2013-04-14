@@ -95,6 +95,7 @@
 #include "DictionaryPopupInfo.h"
 #include "LayerHostingContext.h"
 #include <wtf/RetainPtr.h>
+OBJC_CLASS CALayer;
 OBJC_CLASS NSDictionary;
 OBJC_CLASS NSObject;
 OBJC_CLASS WKAccessibilityWebPageObject;
@@ -165,10 +166,8 @@ class WebTouchEvent;
 
 typedef Vector<RefPtr<PageOverlay> > PageOverlayList;
 
-class WebPage : public APIObject, public CoreIPC::MessageReceiver, public CoreIPC::MessageSender<WebPage> {
+class WebPage : public TypedAPIObject<APIObject::TypeBundlePage>, public CoreIPC::MessageReceiver, public CoreIPC::MessageSender<WebPage> {
 public:
-    static const Type APIType = TypeBundlePage;
-
     static PassRefPtr<WebPage> create(uint64_t pageID, const WebPageCreationParameters&);
     virtual ~WebPage();
 
@@ -315,9 +314,6 @@ public:
     void setPageZoomFactor(double);
     void setPageAndTextZoomFactors(double pageZoomFactor, double textZoomFactor);
     void windowScreenDidChange(uint64_t);
-#if ENABLE(VIEW_MODE_CSS_MEDIA)
-    void setViewMode(WebCore::Page::ViewMode);
-#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
     void scalePage(double scale, const WebCore::IntPoint& origin);
     double pageScaleFactor() const;
@@ -371,6 +367,11 @@ public:
 
     void setTopOverhangImage(PassRefPtr<WebImage>);
     void setBottomOverhangImage(PassRefPtr<WebImage>);
+
+    CALayer *getHeaderLayer() const;
+    void setHeaderLayerWithHeight(CALayer *, int);
+    CALayer *getFooterLayer() const;
+    void setFooterLayerWithHeight(CALayer *, int);
 #endif
 
     bool windowIsFocused() const;
@@ -407,6 +408,7 @@ public:
 
 #if ENABLE(CONTEXT_MENUS)
     WebContextMenu* contextMenu();
+    WebContextMenu* contextMenuAtPointInWindow(const WebCore::IntPoint&);
 #endif
     
     bool hasLocalDataForURL(const WebCore::KURL&);
@@ -616,6 +618,7 @@ public:
     void setScrollingPerformanceLoggingEnabled(bool);
 
 #if PLATFORM(MAC)
+    bool shouldUsePDFPlugin() const;
     bool pdfPluginEnabled() const { return m_pdfPluginEnabled; }
     void setPDFPluginEnabled(bool enabled) { m_pdfPluginEnabled = enabled; }
 #endif
@@ -643,12 +646,11 @@ public:
 #if ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
     void determinePrimarySnapshottedPlugIn();
     void resetPrimarySnapshottedPlugIn();
+    bool matchesPrimaryPlugIn(const String& pageOrigin, const String& pluginOrigin, const String& mimeType) const;
 #endif
 
 private:
     WebPage(uint64_t pageID, const WebPageCreationParameters&);
-
-    virtual Type type() const { return APIType; }
 
     void platformInitialize();
 
@@ -825,6 +827,8 @@ private:
     static PluginView* focusedPluginViewForFrame(WebCore::Frame*);
     static PluginView* pluginViewForFrame(WebCore::Frame*);
 
+    void reportUsedFeatures();
+
     OwnPtr<WebCore::Page> m_page;
     RefPtr<WebFrame> m_mainFrame;
     RefPtr<InjectedBundleBackForwardList> m_backForwardList;
@@ -863,6 +867,9 @@ private:
 #if ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
     bool m_readyToFindPrimarySnapshottedPlugin;
     bool m_didFindPrimarySnapshottedPlugin;
+    String m_primaryPlugInPageOrigin;
+    String m_primaryPlugInOrigin;
+    String m_primaryPlugInMimeType;
 #endif
 
 #if PLATFORM(MAC)
@@ -886,6 +893,9 @@ private:
     LayerHostingMode m_layerHostingMode;
 
     RetainPtr<WKAccessibilityWebPageObject> m_mockAccessibilityElement;
+
+    RetainPtr<CALayer> m_headerLayer;
+    RetainPtr<CALayer> m_footerLayer;
 
     WebCore::KeyboardEvent* m_keyboardEventBeingInterpreted;
 

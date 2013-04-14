@@ -125,6 +125,11 @@ void WebInspectorProxy::platformDidClose()
     m_inspectorView = 0;
 }
 
+void WebInspectorProxy::platformHide()
+{
+    notImplemented();
+}
+
 void WebInspectorProxy::platformBringToFront()
 {
     if (m_client.bringToFront(this))
@@ -168,9 +173,12 @@ String WebInspectorProxy::inspectorBaseURL() const
 
 unsigned WebInspectorProxy::platformInspectedWindowHeight()
 {
-    GtkAllocation allocation;
-    gtk_widget_get_allocation(m_page->viewWidget(), &allocation);
-    return allocation.height;
+    return gtk_widget_get_allocated_height(m_page->viewWidget());
+}
+
+unsigned WebInspectorProxy::platformInspectedWindowWidth()
+{
+    return gtk_widget_get_allocated_width(m_page->viewWidget());
 }
 
 void WebInspectorProxy::platformAttach()
@@ -219,6 +227,11 @@ void WebInspectorProxy::platformSetAttachedWindowHeight(unsigned height)
 
     m_client.didChangeAttachedHeight(this, height);
     webkitWebViewBaseSetInspectorViewHeight(WEBKIT_WEB_VIEW_BASE(m_page->viewWidget()), height);
+}
+
+void WebInspectorProxy::platformSetAttachedWindowWidth(unsigned)
+{
+    notImplemented();
 }
 
 void WebInspectorProxy::platformAttachAvailabilityChanged(bool)

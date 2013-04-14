@@ -109,12 +109,6 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = { &all
 @end
 */
 
-// Default number of ticks before a timeout check should be done.
-static const int initialTickCountThreshold = 255;
-
-// Preferred number of milliseconds between each timeout check
-static const int preferredScriptCheckTimeInterval = 1000;
-
 JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
     : Base(globalData, structure, 0)
 #if ENABLE(TIMELAPSE)
@@ -244,8 +238,8 @@ void JSGlobalObject::reset(JSValue prototype)
     m_callbackObjectStructure.set(exec->globalData(), this, JSCallbackObject<JSDestructibleObject>::createStructure(exec->globalData(), this, m_objectPrototype.get()));
 #if JSC_OBJC_API_ENABLED
     m_objcCallbackFunctionStructure.set(exec->globalData(), this, ObjCCallbackFunction::createStructure(exec->globalData(), this, m_functionPrototype.get()));
-#endif
     m_objcWrapperObjectStructure.set(exec->globalData(), this, JSCallbackObject<JSAPIWrapperObject>::createStructure(exec->globalData(), this, m_objectPrototype.get()));
+#endif
 
     m_arrayPrototype.set(exec->globalData(), this, ArrayPrototype::create(exec, this, ArrayPrototype::createStructure(exec->globalData(), this, m_objectPrototype.get())));
     
@@ -530,8 +524,8 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(&thisObject->m_callbackObjectStructure);
 #if JSC_OBJC_API_ENABLED
     visitor.append(&thisObject->m_objcCallbackFunctionStructure);
-#endif
     visitor.append(&thisObject->m_objcWrapperObjectStructure);
+#endif
     visitor.append(&thisObject->m_dateStructure);
     visitor.append(&thisObject->m_nullPrototypeObjectStructure);
     visitor.append(&thisObject->m_errorStructure);
@@ -621,6 +615,8 @@ DynamicGlobalObjectScope::DynamicGlobalObjectScope(JSGlobalData& globalData, JSG
         // to observe time zone changes.
         globalData.resetDateCache();
     }
+    // Clear the exception stack between entries
+    globalData.exceptionStack = RefCountedArray<StackFrame>();
 }
 
 void slowValidateCell(JSGlobalObject* globalObject)

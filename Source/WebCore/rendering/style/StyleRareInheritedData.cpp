@@ -87,6 +87,9 @@ StyleRareInheritedData::StyleRareInheritedData()
     , textEmphasisMark(TextEmphasisMarkNone)
     , textEmphasisPosition(TextEmphasisPositionOver)
     , m_textOrientation(TextOrientationVerticalRight)
+#if ENABLE(CSS3_TEXT)
+    , m_textIndentLine(RenderStyle::initialTextIndentLine())
+#endif
     , m_lineBoxContain(RenderStyle::initialLineBoxContain())
 #if ENABLE(CSS_IMAGE_ORIENTATION)
     , m_imageOrientation(RenderStyle::initialImageOrientation())
@@ -103,6 +106,7 @@ StyleRareInheritedData::StyleRareInheritedData()
 #endif
 #if ENABLE(CSS3_TEXT)
     , m_textAlignLast(RenderStyle::initialTextAlignLast())
+    , m_textJustify(RenderStyle::initialTextJustify())
     , m_textUnderlinePosition(RenderStyle::initialTextUnderlinePosition())
 #endif // CSS3_TEXT
     , m_rubyPosition(RenderStyle::initialRubyPosition())
@@ -157,6 +161,9 @@ StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
     , textEmphasisMark(o.textEmphasisMark)
     , textEmphasisPosition(o.textEmphasisPosition)
     , m_textOrientation(o.m_textOrientation)
+#if ENABLE(CSS3_TEXT)
+    , m_textIndentLine(o.m_textIndentLine)
+#endif
     , m_lineBoxContain(o.m_lineBoxContain)
 #if ENABLE(CSS_IMAGE_ORIENTATION)
     , m_imageOrientation(o.m_imageOrientation)
@@ -173,6 +180,7 @@ StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
 #endif
 #if ENABLE(CSS3_TEXT)
     , m_textAlignLast(o.m_textAlignLast)
+    , m_textJustify(o.m_textJustify)
     , m_textUnderlinePosition(o.m_textUnderlinePosition)
 #endif // CSS3_TEXT
     , m_rubyPosition(o.m_rubyPosition)
@@ -251,6 +259,9 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && textEmphasisMark == o.textEmphasisMark
         && textEmphasisPosition == o.textEmphasisPosition
         && m_textOrientation == o.m_textOrientation
+#if ENABLE(CSS3_TEXT)
+        && m_textIndentLine == o.m_textIndentLine
+#endif
         && m_lineBoxContain == o.m_lineBoxContain
         && hyphenationString == o.hyphenationString
         && locale == o.locale
@@ -269,6 +280,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
 #endif
 #if ENABLE(CSS3_TEXT)
         && m_textAlignLast == o.m_textAlignLast
+        && m_textJustify == o.m_textJustify
         && m_textUnderlinePosition == o.m_textUnderlinePosition
 #endif // CSS3_TEXT
         && m_rubyPosition == o.m_rubyPosition

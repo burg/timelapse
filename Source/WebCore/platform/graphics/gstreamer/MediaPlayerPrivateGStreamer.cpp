@@ -32,10 +32,12 @@
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MediaPlayer.h"
+#include "NotImplemented.h"
 #include "SecurityOrigin.h"
 #include "TimeRanges.h"
 #include "WebKitWebSourceGStreamer.h"
 #include <gst/gst.h>
+#include <gst/pbutils/missing-plugins.h>
 #include <limits>
 #include <wtf/gobject/GOwnPtr.h>
 #include <wtf/text/CString.h>
@@ -130,6 +132,12 @@ static gboolean mediaPlayerPrivateVideoChangeTimeoutCallback(MediaPlayerPrivateG
     return FALSE;
 }
 
+static void mediaPlayerPrivatePluginInstallerResultFunction(GstInstallPluginsReturn result, gpointer userData)
+{
+    MediaPlayerPrivateGStreamer* player = reinterpret_cast<MediaPlayerPrivateGStreamer*>(userData);
+    player->handlePluginInstallerResult(result);
+}
+
 void MediaPlayerPrivateGStreamer::setAudioStreamProperties(GObject* object)
 {
     if (g_strcmp0(G_OBJECT_TYPE_NAME(object), "GstPulseSink"))
@@ -140,7 +148,8 @@ void MediaPlayerPrivateGStreamer::setAudioStreamProperties(GObject* object)
     GstStructure* structure = gst_structure_new("stream-properties", "media.role", G_TYPE_STRING, role, NULL);
     g_object_set(object, "stream-properties", structure, NULL);
     gst_structure_free(structure);
-    LOG_MEDIA_MESSAGE("Set media.role as %s at %s", role, gst_element_get_name(GST_ELEMENT(object)));
+    GOwnPtr<gchar> elementName(gst_element_get_name(GST_ELEMENT(object)));
+    LOG_MEDIA_MESSAGE("Set media.role as %s at %s", role, elementName.get());
 }
 
 PassOwnPtr<MediaPlayerPrivateInterface> MediaPlayerPrivateGStreamer::create(MediaPlayer* player)
@@ -211,6 +220,7 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
     , m_originalPreloadWasAutoAndWasOverridden(false)
     , m_preservesPitch(false)
     , m_requestedState(GST_STATE_VOID_PENDING)
+    , m_missingPlugins(false)
 {
 }
 
@@ -296,6 +306,13 @@ void MediaPlayerPrivateGStreamer::load(const String& url)
     if (!m_delayingLoad)
         commitLoad();
 }
+
+#if ENABLE(MEDIA_SOURCE)
+void MediaPlayerPrivateGStreamer::load(const String& url, PassRefPtr<MediaSource>)
+{
+    notImplemented();
+}
+#endif
 
 void MediaPlayerPrivateGStreamer::commitLoad()
 {
@@ -678,6 +695,8 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
     case GST_MESSAGE_ERROR:
         if (m_resetPipeline)
             break;
+        if (m_missingPlugins)
+            break;
         gst_message_parse_error(message, &err.outPtr(), &debug.outPtr());
         LOG_MEDIA_MESSAGE("Error %d: %s (url=%s)", err->code, err->message, m_url.string().utf8().data());
 
@@ -751,10 +770,20 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
         gst_message_parse_request_state(message, &requestedState);
         gst_element_get_state(m_playBin.get(), &currentState, NULL, 250);
         if (requestedState < currentState) {
-            LOG_MEDIA_MESSAGE("Element %s requested state change to %s", gst_element_get_name(GST_MESSAGE_SRC(message)),
+            GOwnPtr<gchar> elementName(gst_element_get_name(GST_ELEMENT(message)));
+            LOG_MEDIA_MESSAGE("Element %s requested state change to %s", elementName.get(),
                 gst_element_state_get_name(requestedState));
             m_requestedState = requestedState;
             changePipelineState(requestedState);
+        }
+        break;
+    case GST_MESSAGE_ELEMENT:
+        if (gst_is_missing_plugin_message(message)) {
+            gchar* detail = gst_missing_plugin_message_get_installer_detail(message);
+            gchar* detailArray[2] = {detail, 0};
+            GstInstallPluginsReturn result = gst_install_plugins_async(detailArray, 0, mediaPlayerPrivatePluginInstallerResultFunction, this);
+            m_missingPlugins = result == GST_INSTALL_PLUGINS_STARTED_OK;
+            g_free(detail);
         }
         break;
     default:
@@ -763,6 +792,15 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
         break;
     }
     return TRUE;
+}
+
+void MediaPlayerPrivateGStreamer::handlePluginInstallerResult(GstInstallPluginsReturn result)
+{
+    m_missingPlugins = false;
+    if (result == GST_INSTALL_PLUGINS_SUCCESS) {
+        gst_element_set_state(m_playBin.get(), GST_STATE_READY);
+        gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
+    }
 }
 
 void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
@@ -793,6 +831,11 @@ void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
             m_fillTimer.stop();
 
         m_fillTimer.startRepeating(0.2);
+    }
+
+    if (!m_paused && m_bufferingPercentage < 100) {
+        LOG_MEDIA_MESSAGE("[Buffering] Download in progress, pausing pipeline.");
+        gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
     }
 }
 
@@ -1244,21 +1287,10 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
         // Found a candidate. new-location is not always an absolute url
         // though. We need to take the base of the current url and
         // append the value of new-location to it.
+        KURL baseUrl = gst_uri_is_valid(newLocation) ? KURL() : m_url;
+        KURL newUrl = KURL(baseUrl, newLocation);
 
-        gchar* currentLocation = 0;
-        g_object_get(m_playBin.get(), "uri", &currentLocation, NULL);
-
-        KURL currentUrl(KURL(), currentLocation);
-        g_free(currentLocation);
-
-        KURL newUrl;
-
-        if (gst_uri_is_valid(newLocation))
-            newUrl = KURL(KURL(), newLocation);
-        else
-            newUrl = KURL(KURL(), currentUrl.baseAsString() + newLocation);
-
-        RefPtr<SecurityOrigin> securityOrigin = SecurityOrigin::create(currentUrl);
+        RefPtr<SecurityOrigin> securityOrigin = SecurityOrigin::create(m_url);
         if (securityOrigin->canRequest(newUrl)) {
             LOG_MEDIA_MESSAGE("New media url: %s", newUrl.string().utf8().data());
 
@@ -1277,10 +1309,12 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
             if (state <= GST_STATE_READY) {
                 // Set the new uri and start playing.
                 g_object_set(m_playBin.get(), "uri", newUrl.string().utf8().data(), NULL);
+                m_url = newUrl;
                 gst_element_set_state(m_playBin.get(), GST_STATE_PLAYING);
                 return true;
             }
-        }
+        } else
+            LOG_MEDIA_MESSAGE("Not allowed to load new media location: %s", newUrl.string().utf8().data());
     }
     m_mediaLocationCurrentIndex--;
     return false;

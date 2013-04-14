@@ -199,9 +199,12 @@ public:
     static void getTrackedRepaintRects(QWebFrameAdapter*, QVector<QRect>& result);
 
     static void setSeamlessIFramesEnabled(bool);
+    static void setShouldUseFontSmoothing(bool);
 
     static QString frameRenderTreeDump(QWebFrameAdapter*);
     static void clearNotificationPermissions();
+
+    static void disableDefaultTypesettingFeatures();
 
     static void getJSWindowObject(QWebFrameAdapter*, JSContextRef*, JSObjectRef*);
 };

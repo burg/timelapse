@@ -121,9 +121,8 @@ namespace JSC { namespace DFG {
 // This class is used to compile the dataflow graph from a CodeBlock.
 class ByteCodeParser {
 public:
-    ByteCodeParser(ExecState* exec, Graph& graph)
-        : m_exec(exec)
-        , m_globalData(&graph.m_globalData)
+    ByteCodeParser(Graph& graph)
+        : m_globalData(&graph.m_globalData)
         , m_codeBlock(graph.m_codeBlock)
         , m_profiledBlock(graph.m_profiledBlock)
         , m_graph(graph)
@@ -140,7 +139,6 @@ public:
         , m_preservedVars(m_codeBlock->m_numVars)
         , m_parameterSlots(0)
         , m_numPassedVarArgs(0)
-        , m_globalResolveNumber(0)
         , m_inlineStackTop(0)
         , m_haveBuiltOperandMaps(false)
         , m_emptyJSValueIndex(UINT_MAX)
@@ -193,13 +191,6 @@ private:
     // Link block successors.
     void linkBlock(BasicBlock*, Vector<BlockIndex>& possibleTargets);
     void linkBlocks(Vector<UnlinkedBlock>& unlinkedBlocks, Vector<BlockIndex>& possibleTargets);
-    // Link GetLocal & SetLocal nodes, to ensure live values are generated.
-    enum PhiStackType {
-        LocalPhiStack,
-        ArgumentPhiStack
-    };
-    template<PhiStackType stackType>
-    void processPhiStack();
     
     VariableAccessData* newVariableAccessData(int operand, bool isCaptured)
     {
@@ -697,8 +688,6 @@ private:
         return value.isBoolean() || value.isUndefinedOrNull();
     }
     
-    // These methods create a node and add it to the graph. If nodes of this type are
-    // 'mustGenerate' then the node  will implicitly be ref'ed to ensure generation.
     Node* addToGraph(NodeType op, Node* child1 = 0, Node* child2 = 0, Node* child3 = 0)
     {
         Node* result = m_graph.addNode(
@@ -719,10 +708,8 @@ private:
     {
         Node* result = m_graph.addNode(
             SpecNone, op, currentCodeOrigin(), info, Edge(child1), Edge(child2), Edge(child3));
-        if (op == Phi)
-            m_currentBlock->phis.append(result);
-        else
-            m_currentBlock->append(result);
+        ASSERT(op != Phi);
+        m_currentBlock->append(result);
         return result;
     }
     Node* addToGraph(NodeType op, OpInfo info1, OpInfo info2, Node* child1 = 0, Node* child2 = 0, Node* child3 = 0)
@@ -745,13 +732,6 @@ private:
         
         m_numPassedVarArgs = 0;
         
-        return result;
-    }
-
-    Node* insertPhiNode(OpInfo info, BasicBlock* block)
-    {
-        Node* result = m_graph.addNode(SpecNone, Phi, currentCodeOrigin(), info);
-        block->phis.append(result);
         return result;
     }
 
@@ -962,7 +942,6 @@ private:
     
     void buildOperandMapsIfNecessary();
     
-    ExecState* m_exec;
     JSGlobalData* m_globalData;
     CodeBlock* m_codeBlock;
     CodeBlock* m_profiledBlock;
@@ -1021,24 +1000,7 @@ private:
     unsigned m_parameterSlots;
     // The number of var args passed to the next var arg node.
     unsigned m_numPassedVarArgs;
-    // The index in the global resolve info.
-    unsigned m_globalResolveNumber;
 
-    struct PhiStackEntry {
-        PhiStackEntry(BasicBlock* block, Node* phi, unsigned varNo)
-            : m_block(block)
-            , m_phi(phi)
-            , m_varNo(varNo)
-        {
-        }
-
-        BasicBlock* m_block;
-        Node* m_phi;
-        unsigned m_varNo;
-    };
-    Vector<PhiStackEntry, 16> m_argumentPhiStack;
-    Vector<PhiStackEntry, 16> m_localPhiStack;
-    
     HashMap<ConstantBufferKey, unsigned> m_constantBufferCache;
     
     struct InlineStackEntry {
@@ -1230,10 +1192,15 @@ void ByteCodeParser::handleCall(Interpreter* interpreter, Instruction* currentIn
             // the inputs must be kept alive whatever exits the intrinsic may do.
             addToGraph(Phantom, callTarget);
             emitArgumentPhantoms(registerOffset, argumentCountIncludingThis, kind);
+            if (m_graph.m_compilation)
+                m_graph.m_compilation->noticeInlinedCall();
             return;
         }
-    } else if (handleInlining(usesResult, callTarget, resultOperand, callLinkStatus, registerOffset, argumentCountIncludingThis, nextOffset, kind))
+    } else if (handleInlining(usesResult, callTarget, resultOperand, callLinkStatus, registerOffset, argumentCountIncludingThis, nextOffset, kind)) {
+        if (m_graph.m_compilation)
+            m_graph.m_compilation->noticeInlinedCall();
         return;
+    }
     
     addCall(interpreter, currentInstruction, op);
 }
@@ -1597,6 +1564,18 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
             set(resultOperand, charCode);
         return true;
     }
+    case FromCharCodeIntrinsic: {
+        if (argumentCountIncludingThis != 2)
+            return false;
+
+        int indexOperand = registerOffset + argumentToOperand(1);
+        Node* charCode = addToGraph(StringFromCharCode, getToInt32(indexOperand));
+
+        if (usesResult)
+            set(resultOperand, charCode);
+
+        return true;
+    }
 
     case RegExpExecIntrinsic: {
         if (argumentCountIncludingThis != 2)
@@ -1703,7 +1682,8 @@ void ByteCodeParser::handleGetById(
     const GetByIdStatus& getByIdStatus)
 {
     if (!getByIdStatus.isSimple()
-        || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache)) {
+        || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache)
+        || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadWeakConstantCache)) {
         set(destinationOperand,
             addToGraph(
                 getByIdStatus.makesCalls() ? GetByIdFlush : GetById,
@@ -1717,6 +1697,8 @@ void ByteCodeParser::handleGetById(
     // execution if it doesn't have a prediction, so we do it manually.
     if (prediction == SpecNone)
         addToGraph(ForceOSRExit);
+    else if (m_graph.m_compilation)
+        m_graph.m_compilation->noticeInlinedGetById();
     
     Node* originalBaseForBaselineJIT = base;
                 
@@ -2352,9 +2334,31 @@ bool ByteCodeParser::parseBlock(unsigned limit)
         case op_strcat: {
             int startOperand = currentInstruction[2].u.operand;
             int numOperands = currentInstruction[3].u.operand;
-            for (int operandIdx = startOperand; operandIdx < startOperand + numOperands; ++operandIdx)
-                addVarArgChild(get(operandIdx));
-            set(currentInstruction[1].u.operand, addToGraph(Node::VarArg, StrCat, OpInfo(0), OpInfo(0)));
+#if CPU(X86)
+            // X86 doesn't have enough registers to compile MakeRope with three arguments.
+            // Rather than try to be clever, we just make MakeRope dumber on this processor.
+            const unsigned maxRopeArguments = 2;
+#else
+            const unsigned maxRopeArguments = 3;
+#endif
+            Node* operands[AdjacencyList::Size];
+            unsigned indexInOperands = 0;
+            for (unsigned i = 0; i < AdjacencyList::Size; ++i)
+                operands[i] = 0;
+            for (int operandIdx = startOperand; operandIdx < startOperand + numOperands; ++operandIdx) {
+                if (indexInOperands == maxRopeArguments) {
+                    operands[0] = addToGraph(MakeRope, operands[0], operands[1], operands[2]);
+                    for (unsigned i = 1; i < AdjacencyList::Size; ++i)
+                        operands[i] = 0;
+                    indexInOperands = 1;
+                }
+                
+                ASSERT(indexInOperands < AdjacencyList::Size);
+                ASSERT(indexInOperands < maxRopeArguments);
+                operands[indexInOperands++] = addToGraph(ToString, get(operandIdx));
+            }
+            set(currentInstruction[1].u.operand,
+                addToGraph(MakeRope, operands[0], operands[1], operands[2]));
             NEXT_OPCODE(op_strcat);
         }
 
@@ -2573,10 +2577,15 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                 m_inlineStackTop->m_profiledBlock,
                 m_currentIndex,
                 m_codeBlock->identifier(identifierNumber));
-            if (!putByIdStatus.isSet())
+            bool canCountAsInlined = true;
+            if (!putByIdStatus.isSet()) {
                 addToGraph(ForceOSRExit);
+                canCountAsInlined = false;
+            }
             
-            bool hasExitSite = m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache);
+            bool hasExitSite =
+                m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache)
+                || m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadWeakConstantCache);
             
             if (!hasExitSite && putByIdStatus.isSimpleReplace()) {
                 addToGraph(CheckStructure, OpInfo(m_graph.addStructureSet(putByIdStatus.oldStructure())), base);
@@ -2662,7 +2671,11 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                     addToGraph(PutByIdDirect, OpInfo(identifierNumber), base, value);
                 else
                     addToGraph(PutById, OpInfo(identifierNumber), base, value);
+                canCountAsInlined = false;
             }
+            
+            if (canCountAsInlined && m_graph.m_compilation)
+                m_graph.m_compilation->noticeInlinedPutById();
 
             NEXT_OPCODE(op_put_by_id);
         }
@@ -2711,14 +2724,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_jmp);
         }
 
-        case op_loop: {
-            unsigned relativeOffset = currentInstruction[1].u.operand;
-            addToGraph(Jump, OpInfo(m_currentIndex + relativeOffset));
-            LAST_OPCODE(op_loop);
-        }
-
-        case op_jtrue:
-        case op_loop_if_true: {
+        case op_jtrue: {
             unsigned relativeOffset = currentInstruction[2].u.operand;
             Node* condition = get(currentInstruction[1].u.operand);
             if (canFold(condition)) {
@@ -2737,8 +2743,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_jtrue);
         }
 
-        case op_jfalse:
-        case op_loop_if_false: {
+        case op_jfalse: {
             unsigned relativeOffset = currentInstruction[2].u.operand;
             Node* condition = get(currentInstruction[1].u.operand);
             if (canFold(condition)) {
@@ -2773,8 +2778,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_jneq_null);
         }
 
-        case op_jless:
-        case op_loop_if_less: {
+        case op_jless: {
             unsigned relativeOffset = currentInstruction[3].u.operand;
             Node* op1 = get(currentInstruction[1].u.operand);
             Node* op2 = get(currentInstruction[2].u.operand);
@@ -2800,8 +2804,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_jless);
         }
 
-        case op_jlesseq:
-        case op_loop_if_lesseq: {
+        case op_jlesseq: {
             unsigned relativeOffset = currentInstruction[3].u.operand;
             Node* op1 = get(currentInstruction[1].u.operand);
             Node* op2 = get(currentInstruction[2].u.operand);
@@ -2827,8 +2830,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_jlesseq);
         }
 
-        case op_jgreater:
-        case op_loop_if_greater: {
+        case op_jgreater: {
             unsigned relativeOffset = currentInstruction[3].u.operand;
             Node* op1 = get(currentInstruction[1].u.operand);
             Node* op2 = get(currentInstruction[2].u.operand);
@@ -2854,8 +2856,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_jgreater);
         }
 
-        case op_jgreatereq:
-        case op_loop_if_greatereq: {
+        case op_jgreatereq: {
             unsigned relativeOffset = currentInstruction[3].u.operand;
             Node* op1 = get(currentInstruction[1].u.operand);
             Node* op2 = get(currentInstruction[2].u.operand);
@@ -3721,9 +3722,6 @@ bool ByteCodeParser::parse()
 
     linkBlocks(inlineStackEntry.m_unlinkedBlocks, inlineStackEntry.m_blockLinkingTargets);
     m_graph.determineReachability();
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-    dataLogF("Processing local variable phis.\n");
-#endif
     
     ASSERT(m_preservedVars.size());
     size_t numberOfLocals = 0;
@@ -3753,7 +3751,7 @@ bool ByteCodeParser::parse()
     return true;
 }
 
-bool parse(ExecState* exec, Graph& graph)
+bool parse(ExecState*, Graph& graph)
 {
     SamplingRegion samplingRegion("DFG Parsing");
 #if DFG_DEBUG_LOCAL_DISBALE
@@ -3761,7 +3759,7 @@ bool parse(ExecState* exec, Graph& graph)
     UNUSED_PARAM(graph);
     return false;
 #else
-    return ByteCodeParser(exec, graph).parse();
+    return ByteCodeParser(graph).parse();
 #endif
 }
 

@@ -127,8 +127,8 @@ bool RenderImage::setImageSizeForAltText(CachedImage* newImage /* = 0 */)
         FontCachePurgePreventer fontCachePurgePreventer;
 
         const Font& font = style()->font();
-        IntSize textSize(min(font.width(RenderBlock::constructTextRun(this, font, m_altText, style())), maxAltTextWidth), min(font.fontMetrics().height(), maxAltTextHeight));
-        imageSize = imageSize.expandedTo(textSize);
+        IntSize paddedTextSize(paddingWidth + min(ceilf(font.width(RenderBlock::constructTextRun(this, font, m_altText, style()))), maxAltTextWidth), paddingHeight + min(font.fontMetrics().height(), maxAltTextHeight));
+        imageSize = imageSize.expandedTo(paddedTextSize);
     }
 
     if (imageSize == intrinsicSize())
@@ -321,6 +321,8 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
             page->addRelevantUnpaintedObject(this, visualOverflowRect());
 
         if (cWidth > 2 && cHeight > 2) {
+            const int borderWidth = 1;
+
             // Draw an outline rect where the image should be.
             context->setStrokeStyle(SolidStroke);
             context->setStrokeColor(Color::lightGray, style()->colorSpace());
@@ -331,8 +333,8 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
             LayoutSize imageOffset;
             // When calculating the usable dimensions, exclude the pixels of
             // the ouline rect so the error image/alt text doesn't draw on it.
-            LayoutUnit usableWidth = cWidth - 2;
-            LayoutUnit usableHeight = cHeight - 2;
+            LayoutUnit usableWidth = cWidth - 2 * borderWidth;
+            LayoutUnit usableHeight = cHeight - 2 * borderWidth;
 
             RefPtr<Image> image = m_imageResource->image();
 
@@ -350,7 +352,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 LayoutUnit centerY = (usableHeight - imageSize.height()) / 2;
                 if (centerY < 0)
                     centerY = 0;
-                imageOffset = LayoutSize(leftBorder + leftPad + centerX + 1, topBorder + topPad + centerY + 1);
+                imageOffset = LayoutSize(leftBorder + leftPad + centerX + borderWidth, topBorder + topPad + centerY + borderWidth);
                 context->drawImage(image.get(), style()->colorSpace(), pixelSnappedIntRect(LayoutRect(paintOffset + imageOffset, imageSize)), CompositeSourceOver, shouldRespectImageOrientation());
                 errorPictureDrawn = true;
             }
@@ -362,7 +364,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 const FontMetrics& fontMetrics = font.fontMetrics();
                 LayoutUnit ascent = fontMetrics.ascent();
                 LayoutPoint altTextOffset = paintOffset;
-                altTextOffset.move(leftBorder + leftPad, topBorder + topPad + ascent);
+                altTextOffset.move(leftBorder + leftPad + (paddingWidth / 2) - borderWidth, topBorder + topPad + ascent + (paddingHeight / 2) - borderWidth);
 
                 // Only draw the alt text if it'll fit within the content box,
                 // and only if it fits above the error image.
@@ -371,7 +373,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 if (errorPictureDrawn) {
                     if (usableWidth >= textWidth && fontMetrics.height() <= imageOffset.height())
                         context->drawText(font, textRun, altTextOffset);
-                } else if (usableWidth >= textWidth && cHeight >= fontMetrics.height())
+                } else if (usableWidth >= textWidth && usableHeight >= fontMetrics.height())
                     context->drawText(font, textRun, altTextOffset);
             }
         }
@@ -484,13 +486,15 @@ bool RenderImage::boxShadowShouldBeAppliedToBackground(BackgroundBleedAvoidance 
     return !const_cast<RenderImage*>(this)->backgroundIsKnownToBeObscured();
 }
 
-bool RenderImage::computeBackgroundIsKnownToBeObscured()
+bool RenderImage::foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const
 {
+    UNUSED_PARAM(maxDepthToTest);
     if (!m_imageResource->hasImage() || m_imageResource->errorOccurred())
         return false;
     if (m_imageResource->cachedImage() && !m_imageResource->cachedImage()->isLoaded())
         return false;
-
+    if (!contentBoxRect().contains(localRect))
+        return false;
     EFillBox backgroundClip = style()->backgroundClip();
     // Background paints under borders.
     if (backgroundClip == BorderFillBox && style()->hasBorder() && !borderObscuresBackground())
@@ -498,9 +502,15 @@ bool RenderImage::computeBackgroundIsKnownToBeObscured()
     // Background shows in padding area.
     if ((backgroundClip == BorderFillBox || backgroundClip == PaddingFillBox) && style()->hasPadding())
         return false;
-
     // Check for image with alpha.
     return m_imageResource->cachedImage() && m_imageResource->cachedImage()->currentFrameKnownToBeOpaque(this);
+}
+
+bool RenderImage::computeBackgroundIsKnownToBeObscured()
+{
+    if (!hasBackground())
+        return false;
+    return foregroundIsKnownToBeOpaqueInRect(backgroundPaintedExtent(), 0);
 }
 
 LayoutUnit RenderImage::minimumReplacedHeight() const

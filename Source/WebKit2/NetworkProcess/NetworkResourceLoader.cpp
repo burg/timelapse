@@ -33,6 +33,7 @@
 #include "Logging.h"
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcess.h"
+#include "NetworkProcessConnectionMessages.h"
 #include "NetworkResourceLoadParameters.h"
 #include "PlatformCertificateInfo.h"
 #include "RemoteNetworkingContext.h"
@@ -43,6 +44,7 @@
 #include <WebCore/NotImplemented.h>
 #include <WebCore/ResourceBuffer.h>
 #include <WebCore/ResourceHandle.h>
+#include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
 
 using namespace WebCore;
@@ -51,6 +53,7 @@ namespace WebKit {
 
 NetworkResourceLoader::NetworkResourceLoader(const NetworkResourceLoadParameters& loadParameters, NetworkConnectionToWebProcess* connection)
     : SchedulableLoader(loadParameters, connection)
+    , m_bytesReceived(0)
 {
     ASSERT(isMainThread());
 }
@@ -187,31 +190,50 @@ template<typename U> bool NetworkResourceLoader::sendSyncAbortingOnFailure(const
 void NetworkResourceLoader::abortInProgressLoad()
 {
     ASSERT(m_handle);
-    ASSERT(!isMainThread());
- 
+    ASSERT(isMainThread());
+
     m_handle->cancel();
 
     scheduleCleanupOnMainThread();
 }
 
-void NetworkResourceLoader::didReceiveResponse(ResourceHandle*, const ResourceResponse& response)
+void NetworkResourceLoader::didReceiveResponseAsync(ResourceHandle*, const ResourceResponse& response)
 {
     // FIXME (NetworkProcess): Cache the response.
     if (FormData* formData = request().httpBody())
         formData->removeGeneratedFilesIfNeeded();
 
-    if (!sendAbortingOnFailure(Messages::WebResourceLoader::DidReceiveResponseWithCertificateInfo(response, PlatformCertificateInfo(response))))
-        return;
+    sendAbortingOnFailure(Messages::WebResourceLoader::DidReceiveResponseWithCertificateInfo(response, PlatformCertificateInfo(response)));
 
-    platformDidReceiveResponse(response);
+    m_handle->continueDidReceiveResponse();
 }
 
 void NetworkResourceLoader::didReceiveData(ResourceHandle*, const char* data, int length, int encodedDataLength)
 {
+    // The NetworkProcess should never get a didReceiveData callback.
+    // We should always be using didReceiveBuffer.
+    ASSERT_NOT_REACHED();
+}
+
+void NetworkResourceLoader::didReceiveBuffer(WebCore::ResourceHandle*, PassRefPtr<WebCore::SharedBuffer> buffer, int encodedDataLength)
+{
     // FIXME (NetworkProcess): For the memory cache we'll also need to cache the response data here.
     // Such buffering will need to be thread safe, as this callback is happening on a background thread.
     
-    CoreIPC::DataReference dataReference(reinterpret_cast<const uint8_t*>(data), length);
+    m_bytesReceived += buffer->size();
+    
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    ShareableResource::Handle handle;
+    tryGetShareableHandleFromSharedBuffer(handle, buffer.get());
+    if (!handle.isNull()) {
+        // Since we're delivering this resource by ourselves all at once, we'll abort the resource handle since we don't need anymore callbacks from ResourceHandle.
+        abortInProgressLoad();
+        send(Messages::WebResourceLoader::DidReceiveResource(handle, currentTime()));
+        return;
+    }
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+
+    CoreIPC::DataReference dataReference(reinterpret_cast<const uint8_t*>(buffer->data()), buffer->size());
     sendAbortingOnFailure(Messages::WebResourceLoader::DidReceiveData(dataReference, encodedDataLength));
 }
 
@@ -221,6 +243,7 @@ void NetworkResourceLoader::didFinishLoading(ResourceHandle*, double finishTime)
     // Such bookkeeping will need to be thread safe, as this callback is happening on a background thread.
     invalidateSandboxExtensions();
     send(Messages::WebResourceLoader::DidFinishResourceLoad(finishTime));
+    
     scheduleCleanupOnMainThread();
 }
 
@@ -233,54 +256,60 @@ void NetworkResourceLoader::didFail(ResourceHandle*, const ResourceError& error)
     scheduleCleanupOnMainThread();
 }
 
-void NetworkResourceLoader::willSendRequest(ResourceHandle*, ResourceRequest& request, const ResourceResponse& redirectResponse)
+void NetworkResourceLoader::willSendRequestAsync(ResourceHandle*, const ResourceRequest& request, const ResourceResponse& redirectResponse)
 {
     // We only expect to get the willSendRequest callback from ResourceHandle as the result of a redirect.
     ASSERT(!redirectResponse.isNull());
-    ASSERT(!isMainThread());
+    ASSERT(isMainThread());
 
-    // IMPORTANT: The fact that this message to the WebProcess is sync is what makes our current approach to synchronous XMLHttpRequests safe.
-    // If this message changes to be asynchronous we might introduce a situation where the NetworkProcess is deadlocked waiting for 6 connections
+    m_suggestedRequestForWillSendRequest = request;
+
+    // This message is DispatchMessageEvenWhenWaitingForSyncReply to avoid a situation where the NetworkProcess is deadlocked waiting for 6 connections
     // to complete while the WebProcess is waiting for a 7th to complete.
-    // If we ever change this message to be asynchronous we have to include safeguards to make sure the new design interacts well with sync XHR.
-    ResourceRequest returnedRequest;
-    if (!sendSyncAbortingOnFailure(Messages::WebResourceLoader::WillSendRequest(request, redirectResponse), Messages::WebResourceLoader::WillSendRequest::Reply(returnedRequest)))
-        return;
-    
-    request.updateFromDelegatePreservingOldHTTPBody(returnedRequest.nsURLRequest(DoNotUpdateHTTPBody));
+    connection()->send(Messages::WebResourceLoader::WillSendRequest(request, redirectResponse), destinationID(), CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply);
+}
 
-    RunLoop::main()->dispatch(bind(&NetworkResourceLoadScheduler::receivedRedirect, &NetworkProcess::shared().networkResourceLoadScheduler(), this, request.url()));
+void NetworkResourceLoader::continueWillSendRequest(const ResourceRequest& newRequest)
+{
+    m_suggestedRequestForWillSendRequest.updateFromDelegatePreservingOldHTTPBody(newRequest.nsURLRequest(DoNotUpdateHTTPBody));
+
+    RunLoop::main()->dispatch(bind(&NetworkResourceLoadScheduler::receivedRedirect, &NetworkProcess::shared().networkResourceLoadScheduler(), this, m_suggestedRequestForWillSendRequest.url()));
+    m_handle->continueWillSendRequest(m_suggestedRequestForWillSendRequest);
+
+    m_suggestedRequestForWillSendRequest = ResourceRequest();
+}
+
+void NetworkResourceLoader::didSendData(ResourceHandle*, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
+{
+    send(Messages::WebResourceLoader::DidSendData(bytesSent, totalBytesToBeSent));
 }
 
 // FIXME (NetworkProcess): Many of the following ResourceHandleClient methods definitely need implementations. A few will not.
 // Once we know what they are they can be removed.
 
-void NetworkResourceLoader::didSendData(WebCore::ResourceHandle*, unsigned long long /*bytesSent*/, unsigned long long /*totalBytesToBeSent*/)
+void NetworkResourceLoader::wasBlocked(ResourceHandle*)
 {
     notImplemented();
 }
 
-void NetworkResourceLoader::didReceiveCachedMetadata(WebCore::ResourceHandle*, const char*, int)
+void NetworkResourceLoader::cannotShowURL(ResourceHandle*)
 {
     notImplemented();
 }
 
-void NetworkResourceLoader::wasBlocked(WebCore::ResourceHandle*)
-{
-    notImplemented();
-}
-
-void NetworkResourceLoader::cannotShowURL(WebCore::ResourceHandle*)
-{
-    notImplemented();
-}
-
-bool NetworkResourceLoader::shouldUseCredentialStorage(ResourceHandle*)
+bool NetworkResourceLoader::shouldUseCredentialStorage(WebCore::ResourceHandle*)
 {
     // When the WebProcess is handling loading a client is consulted each time this shouldUseCredentialStorage question is asked.
     // In NetworkProcess mode we ask the WebProcess client up front once and then reuse the cached answer.
 
+    // We still need this sync version, because ResourceHandle itself uses it internally, even when the delegate uses an async one.
+
     return allowStoredCredentials() == AllowStoredCredentials;
+}
+
+void NetworkResourceLoader::shouldUseCredentialStorageAsync(ResourceHandle* handle)
+{
+    handle->continueShouldUseCredentialStorage(shouldUseCredentialStorage(handle));
 }
 
 void NetworkResourceLoader::didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge)
@@ -290,24 +319,25 @@ void NetworkResourceLoader::didReceiveAuthenticationChallenge(ResourceHandle*, c
 
 void NetworkResourceLoader::didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge)
 {
-    // FIXME (NetworkProcess): Tell AuthenticationManager.
+    // This function is probably not needed (see <rdar://problem/8960124>).
+    notImplemented();
 }
 
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
-bool NetworkResourceLoader::canAuthenticateAgainstProtectionSpace(ResourceHandle*, const ProtectionSpace& protectionSpace)
+void NetworkResourceLoader::canAuthenticateAgainstProtectionSpaceAsync(ResourceHandle*, const ProtectionSpace& protectionSpace)
 {
-    ASSERT(!isMainThread());
+    ASSERT(isMainThread());
 
-    // IMPORTANT: The fact that this message to the WebProcess is sync is what makes our current approach to synchronous XMLHttpRequests safe.
-    // If this message changes to be asynchronous we might introduce a situation where the NetworkProcess is deadlocked waiting for 6 connections
-    // to complete while the WebProcess is waiting for a 7th to complete.
-    // If we ever change this message to be asynchronous we have to include safeguards to make sure the new design interacts well with sync XHR.
-    bool result;
-    if (!sendSyncAbortingOnFailure(Messages::WebResourceLoader::CanAuthenticateAgainstProtectionSpace(protectionSpace), Messages::WebResourceLoader::CanAuthenticateAgainstProtectionSpace::Reply(result)))
-        return false;
-
-    return result;
+    // This message is DispatchMessageEvenWhenWaitingForSyncReply to avoid a situation where the NetworkProcess is deadlocked
+    // waiting for 6 connections to complete while the WebProcess is waiting for a 7th to complete.
+    connection()->send(Messages::WebResourceLoader::CanAuthenticateAgainstProtectionSpace(protectionSpace), destinationID(), CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply);
 }
+
+void NetworkResourceLoader::continueCanAuthenticateAgainstProtectionSpace(bool result)
+{
+    m_handle->continueCanAuthenticateAgainstProtectionSpace(result);
+}
+
 #endif
 
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
@@ -317,7 +347,7 @@ bool NetworkResourceLoader::supportsDataArray()
     return false;
 }
 
-void NetworkResourceLoader::didReceiveDataArray(WebCore::ResourceHandle*, CFArrayRef)
+void NetworkResourceLoader::didReceiveDataArray(ResourceHandle*, CFArrayRef)
 {
     ASSERT_NOT_REACHED();
     notImplemented();
@@ -325,21 +355,7 @@ void NetworkResourceLoader::didReceiveDataArray(WebCore::ResourceHandle*, CFArra
 #endif
 
 #if PLATFORM(MAC)
-#if USE(CFNETWORK)
-CFCachedURLResponseRef NetworkResourceLoader::willCacheResponse(WebCore::ResourceHandle*, CFCachedURLResponseRef response)
-{
-    notImplemented();
-    return response;
-}
-#else
-NSCachedURLResponse* NetworkResourceLoader::willCacheResponse(WebCore::ResourceHandle*, NSCachedURLResponse* response)
-{
-    notImplemented();
-    return response;
-}
-#endif
-
-void NetworkResourceLoader::willStopBufferingData(WebCore::ResourceHandle*, const char*, int)
+void NetworkResourceLoader::willStopBufferingData(ResourceHandle*, const char*, int)
 {
     notImplemented();
 }

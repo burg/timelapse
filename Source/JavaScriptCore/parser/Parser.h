@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2011, 2013 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -752,17 +752,16 @@ private:
     
     NEVER_INLINE void updateErrorMessage() 
     {
-        m_error = true;
         const char* name = getTokenName(m_token.m_type);
         if (!name) 
             updateErrorMessageSpecialCase(m_token.m_type);
         else 
             m_errorMessage = String::format("Unexpected token '%s'", name);
+        ASSERT(!m_errorMessage.isNull());
     }
     
     NEVER_INLINE void updateErrorMessage(JSTokenType expectedToken) 
     {
-        m_error = true;
         const char* name = getTokenName(expectedToken);
         if (name)
             m_errorMessage = String::format("Expected token '%s'", name);
@@ -772,18 +771,19 @@ private:
             else
                 updateErrorMessageSpecialCase(expectedToken);
         }
+        ASSERT(!m_errorMessage.isNull());
     }
     
     NEVER_INLINE void updateErrorWithNameAndMessage(const char* beforeMsg, String name, const char* afterMsg)
     {
-        m_error = true;
         m_errorMessage = makeString(beforeMsg, " '", name, "' ", afterMsg);
     }
     
     NEVER_INLINE void updateErrorMessage(const char* msg)
-    {   
-        m_error = true;
+    {
+        ASSERT(msg);
         m_errorMessage = String(msg);
+        ASSERT(!m_errorMessage.isNull());
     }
     
     void startLoop() { currentScope()->startLoop(); }
@@ -889,6 +889,11 @@ private:
         return m_lastTokenEnd;
     }
 
+    bool hasError() const
+    {
+        return !m_errorMessage.isNull();
+    }
+
     JSGlobalData* m_globalData;
     const SourceCode* m_source;
     ParserArena* m_arena;
@@ -896,7 +901,6 @@ private:
     
     StackBounds m_stack;
     bool m_hasStackOverflow;
-    bool m_error;
     String m_errorMessage;
     JSToken m_token;
     bool m_allowsIn;
@@ -950,6 +954,8 @@ PassRefPtr<ParsedNode> Parser<LexerType>::parse(ParserError& error)
     errLine = -1;
     errMsg = String();
 
+    JSTokenLocation startLocation(tokenLocation());
+
     String parseError = parseInner();
 
     int lineNumber = m_lexer->lineNumber();
@@ -966,11 +972,12 @@ PassRefPtr<ParsedNode> Parser<LexerType>::parse(ParserError& error)
 
     RefPtr<ParsedNode> result;
     if (m_sourceElements) {
-        JSTokenLocation location;
-        location.line = m_lexer->lastLineNumber();
-        location.column = m_lexer->currentColumnNumber();
+        JSTokenLocation endLocation;
+        endLocation.line = m_lexer->lastLineNumber();
+        endLocation.charPosition = m_lexer->currentCharPosition();
         result = ParsedNode::create(m_globalData,
-                                    location,
+                                    startLocation,
+                                    endLocation,
                                     m_sourceElements,
                                     m_varDeclarations ? &m_varDeclarations->data : 0,
                                     m_funcDeclarations ? &m_funcDeclarations->data : 0,
@@ -978,7 +985,7 @@ PassRefPtr<ParsedNode> Parser<LexerType>::parse(ParserError& error)
                                     *m_source,
                                     m_features,
                                     m_numConstants);
-        result->setLoc(m_source->firstLine(), m_lastLine, m_lexer->currentColumnNumber());
+        result->setLoc(m_source->firstLine(), m_lastLine, m_lexer->currentCharPosition());
     } else {
         // We can never see a syntax error when reparsing a function, since we should have
         // reported the error when parsing the containing program or eval code. So if we're

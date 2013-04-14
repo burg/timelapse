@@ -142,9 +142,9 @@ void TextFieldDecorationElement::updateImage()
         return;
     RenderImageResource* resource = toRenderImage(renderer())->imageResource();
     CachedImage* image;
-    if (hostInput()->disabled())
+    if (hostInput()->isDisabledFormControl())
         image = m_textFieldDecorator->imageForDisabledState();
-    else if (hostInput()->readOnly())
+    else if (hostInput()->isReadOnly())
         image = m_textFieldDecorator->imageForReadonlyState();
     else if (m_isInHoverState)
         image = m_textFieldDecorator->imageForHoverState();

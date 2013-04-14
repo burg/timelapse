@@ -55,10 +55,10 @@ typedef LPVOID HINTERNET;
 #endif
 
 #if PLATFORM(MAC)
+OBJC_CLASS NSCachedURLResponse;
 OBJC_CLASS NSData;
 OBJC_CLASS NSError;
 OBJC_CLASS NSURLConnection;
-OBJC_CLASS WebCoreResourceHandleAsDelegate;
 #ifndef __OBJC__
 typedef struct objc_object *id;
 #endif
@@ -103,8 +103,6 @@ public:
     static PassRefPtr<ResourceHandle> create(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff);
     static void loadResourceSynchronously(NetworkingContext*, const ResourceRequest&, StoredCredentials, ResourceError&, ResourceResponse&, Vector<char>& data);
 
-    static void cacheMetadata(const ResourceResponse&, const Vector<char>&);
-
     virtual ~ResourceHandle();
 
 #if PLATFORM(MAC) || USE(CFNETWORK)
@@ -125,9 +123,8 @@ public:
 #if !USE(CFNETWORK)
     void didCancelAuthenticationChallenge(const AuthenticationChallenge&);
     NSURLConnection *connection() const;
-    WebCoreResourceHandleAsDelegate *delegate();
+    id delegate();
     void releaseDelegate();
-    id releaseProxy();
 #endif
 
     void schedule(WTF::SchedulePair*);
@@ -188,10 +185,29 @@ public:
     ResourceHandleClient* client() const;
     void setClient(ResourceHandleClient*);
 
+    // Called in response to ResourceHandleClient::willSendRequestAsync().
+    void continueWillSendRequest(const ResourceRequest&);
+
+    // Called in response to ResourceHandleClient::didReceiveResponseAsync().
+    void continueDidReceiveResponse();
+
+    // Called in response to ResourceHandleClient::shouldUseCredentialStorageAsync().
+    void continueShouldUseCredentialStorage(bool);
+
+#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
+    // Called in response to ResourceHandleClient::canAuthenticateAgainstProtectionSpaceAsync().
+    void continueCanAuthenticateAgainstProtectionSpace(bool);
+#endif
+
+#if PLATFORM(MAC)
+    // Called in response to ResourceHandleClient::willCacheResponseAsync().
+    void continueWillCacheResponse(NSCachedURLResponse *);
+#endif
+
     void setDefersLoading(bool);
 
 #if PLATFORM(BLACKBERRY)
-    void pauseLoad(bool);
+    void pauseLoad(bool); // FIXME: How is this different from setDefersLoading()?
 #endif
 
     void didChangePriority(ResourceLoadPriority);

@@ -32,6 +32,7 @@
 #include <wtf/HashMap.h>
 
 OBJC_CLASS AVURLAsset;
+OBJC_CLASS AVMediaSelectionGroup;
 OBJC_CLASS AVPlayer;
 OBJC_CLASS AVPlayerItem;
 OBJC_CLASS AVPlayerItemLegibleOutput;
@@ -39,6 +40,8 @@ OBJC_CLASS AVPlayerItemVideoOutput;
 OBJC_CLASS AVPlayerLayer;
 OBJC_CLASS AVAssetImageGenerator;
 OBJC_CLASS WebCoreAVFMovieObserver;
+
+typedef struct objc_object* id;
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 OBJC_CLASS WebCoreAVFLoaderDelegate;
@@ -159,11 +162,14 @@ private:
     virtual MediaPlayer::MediaKeyException cancelKeyRequest(const String&, const String&);
 #endif
 
+    virtual String languageOfPrimaryAudioTrack() const OVERRIDE;
+
 #if HAVE(AVFOUNDATION_TEXT_TRACK_SUPPORT)
     virtual void setCurrentTrack(InbandTextTrackPrivateAVF*) OVERRIDE;
     virtual InbandTextTrackPrivateAVF* currentTrack() OVERRIDE;
     void processTextTracks();
     void clearTextTracks();
+    AVMediaSelectionGroup* safeMediaSelectionGroupForLegibleMedia();
 #endif
 
     RetainPtr<AVURLAsset> m_avAsset;
@@ -172,6 +178,7 @@ private:
     RetainPtr<AVPlayerLayer> m_videoLayer;
     RetainPtr<WebCoreAVFMovieObserver> m_objcObserver;
     RetainPtr<id> m_timeObserver;
+    mutable String m_languageOfPrimaryAudioTrack;
     bool m_videoFrameHasDrawn;
     bool m_haveCheckedPlayability;
 

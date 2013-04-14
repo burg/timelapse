@@ -24,7 +24,7 @@
 #include "AuthenticationChallengeManager.h"
 #include "AutofillManager.h"
 #include "BackForwardController.h"
-#include "BackForwardListImpl.h"
+#include "BackForwardListBlackBerry.h"
 #include "BackingStoreClient.h"
 #include "BackingStore_p.h"
 #if ENABLE(BATTERY_STATUS)
@@ -114,6 +114,7 @@
 #include "RenderTreeAsText.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
+#include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "ScriptValue.h"
 #include "ScrollTypes.h"
@@ -175,6 +176,7 @@
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSStringRef.h>
 #include <SharedPointer.h>
+#include <cmath>
 #include <sys/keycodes.h>
 #include <unicode/ustring.h> // platform ICU
 
@@ -343,11 +345,6 @@ void WebPage::autofillTextField(const BlackBerry::Platform::String& item)
     d->m_autofillManager->autofillTextField(item);
 }
 
-void WebPage::enableQnxJavaScriptObject(bool enabled)
-{
-    d->m_enableQnxJavaScriptObject = enabled;
-}
-
 BlackBerry::Platform::String WebPage::renderTreeAsText()
 {
     return externalRepresentation(d->m_mainFrame);
@@ -387,7 +384,7 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_transformationMatrix(new TransformationMatrix())
     , m_backingStore(0) // Initialized by init.
     , m_backingStoreClient(0) // Initialized by init.
-    , m_webkitThreadViewportAccessor(0) // Initialized by init.
+    , m_webkitThreadViewportAccessor(new WebKitThreadViewportAccessor(this))
     , m_inPageSearchManager(new InPageSearchManager(this))
     , m_inputHandler(new InputHandler(this))
     , m_selectionHandler(new SelectionHandler(this))
@@ -423,7 +420,6 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_fullscreenNode(0)
     , m_hasInRegionScrollableAreas(false)
     , m_updateDelegatedOverlaysDispatched(false)
-    , m_enableQnxJavaScriptObject(false)
     , m_deferredTasksTimer(this, &WebPagePrivate::deferredTasksTimerFired)
     , m_selectPopup(0)
     , m_autofillManager(AutofillManager::create(this))
@@ -514,8 +510,8 @@ Page* WebPagePrivate::core(const WebPage* webPage)
 void WebPagePrivate::init(const BlackBerry::Platform::String& pageGroupName)
 {
     ChromeClientBlackBerry* chromeClient = new ChromeClientBlackBerry(this);
-    ContextMenuClientBlackBerry* contextMenuClient = 0;
 #if ENABLE(CONTEXT_MENUS)
+    ContextMenuClientBlackBerry* contextMenuClient = 0;
     contextMenuClient = new ContextMenuClientBlackBerry();
 #endif
     EditorClientBlackBerry* editorClient = new EditorClientBlackBerry(this);
@@ -531,10 +527,13 @@ void WebPagePrivate::init(const BlackBerry::Platform::String& pageGroupName)
 
     Page::PageClients pageClients;
     pageClients.chromeClient = chromeClient;
+#if ENABLE(CONTEXT_MENUS)
     pageClients.contextMenuClient = contextMenuClient;
+#endif
     pageClients.editorClient = editorClient;
     pageClients.dragClient = dragClient;
     pageClients.inspectorClient = m_inspectorClient;
+    pageClients.backForwardClient = BackForwardListBlackBerry::create(this);
 
     m_page = new Page(pageClients);
 #if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
@@ -571,7 +570,8 @@ void WebPagePrivate::init(const BlackBerry::Platform::String& pageGroupName)
 #endif
 
 #if ENABLE(NAVIGATOR_CONTENT_UTILS)
-    WebCore::provideNavigatorContentUtilsTo(m_page, new NavigatorContentUtilsClientBlackBerry(this));
+    m_navigatorContentUtilsClient = adoptPtr(new NavigatorContentUtilsClientBlackBerry(this));
+    WebCore::provideNavigatorContentUtilsTo(m_page, m_navigatorContentUtilsClient.get());
 #endif
 
 #if ENABLE(NETWORK_INFO)
@@ -625,8 +625,6 @@ void WebPagePrivate::init(const BlackBerry::Platform::String& pageGroupName)
     // is owned by BackingStoreClient and then deleted by its destructor.
     m_backingStore = m_backingStoreClient->backingStore();
 
-    m_webkitThreadViewportAccessor = new WebKitThreadViewportAccessor(this);
-
     blockClickRadius = int(roundf(0.35 * Platform::Graphics::Screen::primaryScreen()->pixelsPerInch(0).width())); // The clicked rectangle area should be a fixed unit of measurement.
 
     m_page->settings()->setDelegateSelectionPaint(true);
@@ -662,7 +660,7 @@ private:
     }
 };
 
-void WebPagePrivate::load(const BlackBerry::Platform::String& url, const BlackBerry::Platform::String& networkToken, const BlackBerry::Platform::String& method, Platform::NetworkRequest::CachePolicy cachePolicy, const char* data, size_t dataLength, const char* const* headers, size_t headersLength, bool isInitial, bool mustHandleInternally, bool forceDownload, const BlackBerry::Platform::String& overrideContentType, const BlackBerry::Platform::String& suggestedSaveName)
+void WebPagePrivate::load(const BlackBerry::Platform::String& url, const BlackBerry::Platform::String& networkToken, const BlackBerry::Platform::String& method, Platform::NetworkRequest::CachePolicy cachePolicy, const char* data, size_t dataLength, const char* const* headers, size_t headersLength, bool isInitial, bool mustHandleInternally, bool needReferer, bool forceDownload, const BlackBerry::Platform::String& overrideContentType, const BlackBerry::Platform::String& suggestedSaveName)
 {
     stopCurrentLoad();
     DeferredTaskLoadManualScript::finishOrCancel(this);
@@ -701,6 +699,8 @@ void WebPagePrivate::load(const BlackBerry::Platform::String& url, const BlackBe
 
     for (unsigned i = 0; i + 1 < headersLength; i += 2)
         request.addHTTPHeaderField(headers[i], headers[i + 1]);
+    if (needReferer && focusedOrMainFrame() && focusedOrMainFrame()->document())
+        request.addHTTPHeaderField("Referer", focusedOrMainFrame()->document()->url().string().utf8().data());
 
     if (forceDownload)
         request.setForceDownload(true);
@@ -710,14 +710,14 @@ void WebPagePrivate::load(const BlackBerry::Platform::String& url, const BlackBe
     m_mainFrame->loader()->load(FrameLoadRequest(m_mainFrame, request));
 }
 
-void WebPage::load(const BlackBerry::Platform::String& url, const BlackBerry::Platform::String& networkToken, bool isInitial)
+void WebPage::load(const BlackBerry::Platform::String& url, const BlackBerry::Platform::String& networkToken, bool isInitial, bool needReferer, bool forceDownload)
 {
-    d->load(url, networkToken, "GET", Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, 0, 0, isInitial, false);
+    d->load(url, networkToken, "GET", Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, 0, 0, isInitial, false, needReferer, forceDownload);
 }
 
 void WebPage::loadExtended(const char* url, const char* networkToken, const char* method, Platform::NetworkRequest::CachePolicy cachePolicy, const char* data, size_t dataLength, const char* const* headers, size_t headersLength, bool mustHandleInternally)
 {
-    d->load(url, networkToken, method, cachePolicy, data, dataLength, headers, headersLength, false, mustHandleInternally, false, "");
+    d->load(url, networkToken, method, cachePolicy, data, dataLength, headers, headersLength, false, mustHandleInternally, false, false, "");
 }
 
 void WebPage::loadFile(const BlackBerry::Platform::String& path, const BlackBerry::Platform::String& overrideContentType)
@@ -728,7 +728,7 @@ void WebPage::loadFile(const BlackBerry::Platform::String& path, const BlackBerr
     else if (!fileUrl.startsWith("file:///"))
         return;
 
-    d->load(fileUrl, BlackBerry::Platform::String::emptyString(), BlackBerry::Platform::String("GET", 3), Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, 0, 0, false, false, false, overrideContentType.c_str());
+    d->load(fileUrl, BlackBerry::Platform::String::emptyString(), BlackBerry::Platform::String("GET", 3), Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, 0, 0, false, false, false, false, overrideContentType.c_str());
 }
 
 void WebPage::download(const Platform::NetworkRequest& request)
@@ -739,7 +739,7 @@ void WebPage::download(const Platform::NetworkRequest& request)
         headers.push_back(list[i].first.c_str());
         headers.push_back(list[i].second.c_str());
     }
-    d->load(request.getUrlRef(), BlackBerry::Platform::String::emptyString(), "GET", Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, headers.empty() ? 0 : &headers[0], headers.size(), false, false, true, "", request.getSuggestedSaveName().c_str());
+    d->load(request.getUrlRef(), BlackBerry::Platform::String::emptyString(), "GET", Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, headers.empty() ? 0 : &headers[0], headers.size(), false, false, false, true, "", request.getSuggestedSaveName().c_str());
 }
 
 void WebPagePrivate::loadString(const BlackBerry::Platform::String& string, const BlackBerry::Platform::String& baseURL, const BlackBerry::Platform::String& contentType, const BlackBerry::Platform::String& failingURL)
@@ -895,7 +895,7 @@ void WebPage::executeJavaScriptFunction(const std::vector<BlackBerry::Platform::
     for (unsigned i = 0; i < args.size(); ++i)
         argListRef[i] = BlackBerryJavaScriptVariantToJSValueRef(ctx, args[i]);
 
-    JSValueRef windowObjectValue = windowObject();
+    JSValueRef windowObjectValue = toRef(d->m_mainFrame->script()->globalObject(mainThreadNormalWorld()));
     JSObjectRef obj = JSValueToObject(ctx, windowObjectValue, 0);
     JSObjectRef thisObject = obj;
     for (unsigned i = 0; i < function.size(); ++i) {
@@ -1039,9 +1039,7 @@ void WebPagePrivate::setLoadState(LoadState state)
         m_mainFrame->document()->updateStyleIfNeeded();
 
     // Dispatch the backingstore background color at important state changes.
-    m_backingStore->d->setWebPageBackgroundColor(m_mainFrame && m_mainFrame->view()
-        ? m_mainFrame->view()->documentBackgroundColor()
-        : m_webSettings->backgroundColor());
+    m_backingStore->d->setWebPageBackgroundColor(documentBackgroundColor());
 
     m_loadState = state;
 
@@ -1174,7 +1172,7 @@ double WebPagePrivate::clampedScale(double scale) const
 
 bool WebPagePrivate::shouldZoomAboutPoint(double scale, const FloatPoint&, bool enforceScaleClamping, double* clampedScale)
 {
-    if (!m_mainFrame->view())
+    if (!m_mainFrame || !m_mainFrame->view())
         return false;
 
     if (enforceScaleClamping)
@@ -1330,16 +1328,23 @@ void WebPagePrivate::requestLayoutIfNeeded() const
 
 IntPoint WebPagePrivate::scrollPosition() const
 {
+    if (!m_backingStoreClient)
+        return IntPoint();
+
     return m_backingStoreClient->scrollPosition();
 }
 
 IntPoint WebPagePrivate::maximumScrollPosition() const
 {
+    if (!m_backingStoreClient)
+        return IntPoint();
+
     return m_backingStoreClient->maximumScrollPosition();
 }
 
 void WebPagePrivate::setScrollPosition(const IntPoint& pos)
 {
+    ASSERT(m_backingStoreClient);
     m_backingStoreClient->setScrollPosition(pos);
 }
 
@@ -1371,7 +1376,7 @@ void WebPage::setDocumentScrollPosition(const Platform::IntPoint& documentScroll
 
 bool WebPagePrivate::shouldSendResizeEvent()
 {
-    if (!m_mainFrame->document())
+    if (!m_mainFrame || !m_mainFrame->document())
         return false;
 
     // PR#96865 : Provide an option to always send resize events, regardless of the loading
@@ -1444,12 +1449,12 @@ void WebPagePrivate::setHasInRegionScrollableAreas(bool b)
 
 IntSize WebPagePrivate::viewportSize() const
 {
-    return mapFromTransformed(transformedViewportSize());
+    return m_webkitThreadViewportAccessor->roundToDocumentFromPixelContents(Platform::IntRect(Platform::IntPoint::zero(), transformedViewportSize())).size();
 }
 
 IntSize WebPagePrivate::actualVisibleSize() const
 {
-    return mapFromTransformed(transformedActualVisibleSize());
+    return m_webkitThreadViewportAccessor->documentViewportSize();
 }
 
 bool WebPagePrivate::hasVirtualViewport() const
@@ -1508,7 +1513,7 @@ IntRect WebPagePrivate::visibleContentsRect() const
 
 IntSize WebPagePrivate::contentsSize() const
 {
-    if (!m_mainFrame->view())
+    if (!m_mainFrame || !m_mainFrame->view())
         return IntSize();
 
     return m_backingStoreClient->contentsSize();
@@ -1516,7 +1521,7 @@ IntSize WebPagePrivate::contentsSize() const
 
 IntSize WebPagePrivate::absoluteVisibleOverflowSize() const
 {
-    if (!m_mainFrame->contentRenderer())
+    if (!m_mainFrame || !m_mainFrame->contentRenderer())
         return IntSize();
 
     return IntSize(m_mainFrame->contentRenderer()->rightAbsoluteVisibleOverflow(), m_mainFrame->contentRenderer()->bottomAbsoluteVisibleOverflow());
@@ -1608,11 +1613,11 @@ void WebPagePrivate::layoutFinished()
                 notifyTransformedScrollChanged();
             }
 
-            // If the content size is too small, zoom it to fit the viewport.
-            if ((loadState() == Finished || loadState() == Committed)
-                && (transformedContentsSize().width() < transformedActualVisibleSize().width() || transformedContentsSize().height() < transformedActualVisibleSize().height()))
-                    zoomAboutPoint(initialScale(), newScrollPosition);
+            const Platform::IntSize pixelContentsSize = m_webkitThreadViewportAccessor->pixelContentsSize();
 
+            // If the content size is too small, zoom it to fit the viewport.
+            if ((loadState() == Finished || loadState() == Committed) && (pixelContentsSize.width() < m_actualVisibleWidth || pixelContentsSize.height() < m_actualVisibleHeight))
+                zoomAboutPoint(initialScale(), newScrollPosition);
         }
     }
 }
@@ -1818,149 +1823,6 @@ IntSize WebPagePrivate::transformedViewportSize() const
     return BlackBerry::Platform::Settings::instance()->applicationSize();
 }
 
-IntRect WebPagePrivate::transformedVisibleContentsRect() const
-{
-    // Usually this would be mapToTransformed(visibleContentsRect()), but
-    // that results in rounding errors because we already set the WebCore
-    // viewport size from our original transformedViewportSize().
-    // Instead, we only transform the scroll position and take the
-    // viewport size as it is, which ensures that e.g. blitting operations
-    // always cover the whole widget/screen.
-    return IntRect(transformedScrollPosition(), transformedViewportSize());
-}
-
-IntSize WebPagePrivate::transformedContentsSize() const
-{
-    // mapToTransformed() functions use this method to crop their results,
-    // so we can't make use of them here. While we want rounding inside page
-    // boundaries to extend rectangles and round points, we need to crop the
-    // contents size to the floored values so that we don't try to display
-    // or report points that are not fully covered by the actual float-point
-    // contents rectangle.
-    const IntSize untransformedContentsSize = contentsSize();
-    const FloatPoint transformedBottomRight = m_transformationMatrix->mapPoint(
-        FloatPoint(untransformedContentsSize.width(), untransformedContentsSize.height()));
-    return IntSize(floorf(transformedBottomRight.x()), floorf(transformedBottomRight.y()));
-}
-
-IntPoint WebPagePrivate::mapFromContentsToViewport(const IntPoint& point) const
-{
-    return m_backingStoreClient->mapFromContentsToViewport(point);
-}
-
-IntPoint WebPagePrivate::mapFromViewportToContents(const IntPoint& point) const
-{
-    return m_backingStoreClient->mapFromViewportToContents(point);
-}
-
-IntRect WebPagePrivate::mapFromContentsToViewport(const IntRect& rect) const
-{
-    return m_backingStoreClient->mapFromContentsToViewport(rect);
-}
-
-IntRect WebPagePrivate::mapFromViewportToContents(const IntRect& rect) const
-{
-    return m_backingStoreClient->mapFromViewportToContents(rect);
-}
-
-IntPoint WebPagePrivate::mapFromTransformedContentsToTransformedViewport(const IntPoint& point) const
-{
-    return m_backingStoreClient->mapFromTransformedContentsToTransformedViewport(point);
-}
-
-IntPoint WebPagePrivate::mapFromTransformedViewportToTransformedContents(const IntPoint& point) const
-{
-    return m_backingStoreClient->mapFromTransformedViewportToTransformedContents(point);
-}
-
-IntRect WebPagePrivate::mapFromTransformedContentsToTransformedViewport(const IntRect& rect) const
-{
-    return m_backingStoreClient->mapFromTransformedContentsToTransformedViewport(rect);
-}
-
-IntRect WebPagePrivate::mapFromTransformedViewportToTransformedContents(const IntRect& rect) const
-{
-    return m_backingStoreClient->mapFromTransformedViewportToTransformedContents(rect);
-}
-
-// NOTE: PIXEL ROUNDING!
-// Accurate back-and-forth rounding is not possible with information loss
-// by integer points and sizes, so we always expand the resulting mapped
-// float rectangles to the nearest integer. For points, we always use
-// floor-rounding in mapToTransformed() so that we don't have to crop to
-// the (floor'd) transformed contents size.
-static inline IntPoint roundTransformedPoint(const FloatPoint &point)
-{
-    // Maps by rounding half towards zero.
-    return IntPoint(static_cast<int>(floorf(point.x())), static_cast<int>(floorf(point.y())));
-}
-
-static inline IntPoint roundUntransformedPoint(const FloatPoint &point)
-{
-    // Maps by rounding half away from zero.
-    return IntPoint(static_cast<int>(ceilf(point.x())), static_cast<int>(ceilf(point.y())));
-}
-
-IntPoint WebPagePrivate::mapToTransformed(const IntPoint& point) const
-{
-    return roundTransformedPoint(m_transformationMatrix->mapPoint(FloatPoint(point)));
-}
-
-FloatPoint WebPagePrivate::mapToTransformedFloatPoint(const FloatPoint& point) const
-{
-    return m_transformationMatrix->mapPoint(point);
-}
-
-IntPoint WebPagePrivate::mapFromTransformed(const IntPoint& point) const
-{
-    return roundUntransformedPoint(m_transformationMatrix->inverse().mapPoint(FloatPoint(point)));
-}
-
-FloatPoint WebPagePrivate::mapFromTransformedFloatPoint(const FloatPoint& point) const
-{
-    return m_transformationMatrix->inverse().mapPoint(point);
-}
-
-FloatRect WebPagePrivate::mapFromTransformedFloatRect(const FloatRect& rect) const
-{
-    return m_transformationMatrix->inverse().mapRect(rect);
-}
-
-IntSize WebPagePrivate::mapToTransformed(const IntSize& size) const
-{
-    return mapToTransformed(IntRect(IntPoint::zero(), size)).size();
-}
-
-IntSize WebPagePrivate::mapFromTransformed(const IntSize& size) const
-{
-    return mapFromTransformed(IntRect(IntPoint::zero(), size)).size();
-}
-
-IntRect WebPagePrivate::mapToTransformed(const IntRect& rect) const
-{
-    return enclosingIntRect(m_transformationMatrix->mapRect(FloatRect(rect)));
-}
-
-// Use this in conjunction with mapToTransformed(IntRect), in most cases.
-void WebPagePrivate::clipToTransformedContentsRect(IntRect& rect) const
-{
-    rect.intersect(IntRect(IntPoint::zero(), transformedContentsSize()));
-}
-
-IntRect WebPagePrivate::mapFromTransformed(const IntRect& rect) const
-{
-    return enclosingIntRect(m_transformationMatrix->inverse().mapRect(FloatRect(rect)));
-}
-
-bool WebPagePrivate::transformedPointEqualsUntransformedPoint(const IntPoint& transformedPoint, const IntPoint& untransformedPoint)
-{
-    // Scaling down is always more accurate than scaling up.
-    if (m_transformationMatrix->a() > 1.0)
-        return transformedPoint == mapToTransformed(untransformedPoint);
-
-    return mapFromTransformed(transformedPoint) == untransformedPoint;
-}
-
 void WebPagePrivate::notifyTransformChanged()
 {
     notifyTransformedContentsSizeChanged();
@@ -1974,7 +1836,7 @@ void WebPagePrivate::notifyTransformedContentsSizeChanged()
     // We mark here as the last reported content size we sent to the client.
     m_previousContentsSize = contentsSize();
 
-    const IntSize size = transformedContentsSize();
+    const IntSize size = m_webkitThreadViewportAccessor->pixelContentsSize();
     m_backingStore->d->contentsSizeChanged(size);
     m_client->contentsSizeChanged();
 }
@@ -1992,7 +1854,7 @@ void WebPagePrivate::notifyTransformedScrollChanged()
 
 bool WebPagePrivate::setViewMode(ViewMode mode)
 {
-    if (!m_mainFrame->view())
+    if (!m_mainFrame || !m_mainFrame->view())
         return false;
 
     m_viewMode = mode;
@@ -2118,7 +1980,7 @@ void WebPagePrivate::notifyPageOnLoad()
         (*it)->handleOnLoadEvent();
 }
 
-bool WebPagePrivate::shouldPluginEnterFullScreen(PluginView* plugin, const char* windowUniquePrefix)
+bool WebPagePrivate::shouldPluginEnterFullScreen(PluginView*, const char*)
 {
     return m_client->shouldPluginEnterFullScreen();
 }
@@ -2135,7 +1997,7 @@ void WebPagePrivate::didPluginEnterFullScreen(PluginView* plugin, const char* wi
     m_client->window()->setSensitivityFullscreenOverride(true);
 }
 
-void WebPagePrivate::didPluginExitFullScreen(PluginView* plugin, const char* windowUniquePrefix)
+void WebPagePrivate::didPluginExitFullScreen(PluginView*, const char*)
 {
     m_fullScreenPluginView = 0;
     m_client->didPluginExitFullScreen();
@@ -2147,12 +2009,12 @@ void WebPagePrivate::didPluginExitFullScreen(PluginView* plugin, const char* win
     m_client->window()->setSensitivityFullscreenOverride(false);
 }
 
-void WebPagePrivate::onPluginStartBackgroundPlay(PluginView* plugin, const char* windowUniquePrefix)
+void WebPagePrivate::onPluginStartBackgroundPlay(PluginView*, const char*)
 {
     m_client->onPluginStartBackgroundPlay();
 }
 
-void WebPagePrivate::onPluginStopBackgroundPlay(PluginView* plugin, const char* windowUniquePrefix)
+void WebPagePrivate::onPluginStopBackgroundPlay(PluginView*, const char*)
 {
     m_client->onPluginStopBackgroundPlay();
 }
@@ -2272,7 +2134,7 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     // which node we want, we can send it directly to the node and not do a hit test. The onContextMenu event doesn't require
     // mouse positions so we just set the position at (0,0)
     PlatformMouseEvent mouseEvent(IntPoint(), IntPoint(), PlatformEvent::MouseMoved, 0, NoButton, false, false, false, TouchScreen);
-    if (m_currentContextNode->dispatchMouseEvent(mouseEvent, eventNames().contextmenuEvent, 0)) {
+    if (!m_currentContextNode->dispatchMouseEvent(mouseEvent, eventNames().contextmenuEvent, 0)) {
         context.setFlag(Platform::WebContext::IsOnContextMenuPrevented);
         return context;
     }
@@ -2280,7 +2142,8 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     requestLayoutIfNeeded();
 
     bool nodeAllowSelectionOverride = false;
-    if (Node* linkNode = node->enclosingLinkEventParentOrSelf()) {
+    Node* linkNode = node->enclosingLinkEventParentOrSelf();
+    if (node->isLink() || (node->isTextNode() && linkNode)) {
         KURL href;
         if (linkNode->isLink() && linkNode->hasAttributes()) {
             if (const Attribute* attribute = toElement(linkNode)->getAttributeItem(HTMLNames::hrefAttr))
@@ -2316,10 +2179,25 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
         if (imageElement && imageElement->renderer()) {
             context.setFlag(Platform::WebContext::IsImage);
             // FIXME: At the mean time, we only show "Save Image" when the image data is available.
-            if (CachedResource* cachedResource = imageElement->cachedImage()) {
-                if (cachedResource->isLoaded() && cachedResource->resourceBuffer()) {
+            if (CachedImage* cachedImage = imageElement->cachedImage()) {
+                if (cachedImage->isLoaded() && cachedImage->resourceBuffer()) {
                     String url = stripLeadingAndTrailingHTMLSpaces(imageElement->getAttribute(HTMLNames::srcAttr).string());
                     context.setSrc(node->document()->completeURL(url).string());
+
+                    String mimeType = cachedImage->response().mimeType();
+                    if (mimeType.isEmpty()) {
+                        StringBuilder builder;
+                        String extension = cachedImage->image()->filenameExtension();
+                        builder.append("image/");
+                        if (extension.isEmpty())
+                            builder.append("unknown");
+                        else if (extension == "jpg")
+                            builder.append("jpeg");
+                        else
+                            builder.append(extension);
+                        mimeType = builder.toString();
+                    }
+                    context.setMimeType(mimeType);
                 }
             }
             String alt = imageElement->altText();
@@ -2415,10 +2293,16 @@ void WebPagePrivate::updateCursor()
         m_lastMouseEvent.ctrlKey() ? 0 : KEYMOD_CTRL |
         m_lastMouseEvent.altKey() ? 0 : KEYMOD_ALT;
 
-    BlackBerry::Platform::MouseEvent event(buttonMask, buttonMask, mapToTransformed(m_lastMouseEvent.position()), mapToTransformed(m_lastMouseEvent.globalPosition()), 0, modifiers,  0);
+    const Platform::ViewportAccessor* viewportAccessor = m_webkitThreadViewportAccessor;
 
-    // We have added document viewport position and document content position as members of the mouse event, when we create the event, we should initial them as well.
-    event.populateDocumentPosition(m_lastMouseEvent.position(), mapFromTransformedViewportToTransformedContents(m_lastMouseEvent.position()));
+    BlackBerry::Platform::MouseEvent event(buttonMask, buttonMask,
+        viewportAccessor->roundToPixelFromDocumentContents(WebCore::FloatPoint(m_lastMouseEvent.position())),
+        viewportAccessor->roundToPixelFromDocumentContents(WebCore::FloatPoint(m_lastMouseEvent.globalPosition())),
+        0, modifiers, 0);
+
+    // We have added document viewport position and document content position as members of the mouse event. When we create the event, we should initialize them as well.
+    event.populateDocumentPosition(m_lastMouseEvent.position(), viewportAccessor->documentContentsFromViewport(m_lastMouseEvent.position()));
+
     m_webPage->mouseEvent(event);
 }
 
@@ -2659,10 +2543,12 @@ Platform::IntRect WebPagePrivate::focusNodeRect()
     if (!doc || !view || view->needsLayout())
         return Platform::IntRect();
 
+    const Platform::ViewportAccessor* viewportAccessor = m_webkitThreadViewportAccessor;
+
     IntRect focusRect = rectForNode(doc->focusedNode());
     focusRect = adjustRectOffsetForFrameOffset(focusRect, doc->focusedNode());
-    focusRect = mapToTransformed(focusRect);
-    clipToTransformedContentsRect(focusRect);
+    focusRect = viewportAccessor->roundToPixelFromDocumentContents(WebCore::FloatRect(focusRect));
+    focusRect.intersect(viewportAccessor->pixelContentsRect());
     return focusRect;
 }
 
@@ -2699,7 +2585,7 @@ PassRefPtr<Node> WebPagePrivate::contextNode(TargetDetectionStrategy strategy)
     if (isTouching)
         contentPos = lastFatFingersResult.adjustedPosition();
     else
-        contentPos = mapFromViewportToContents(m_lastMouseEvent.position());
+        contentPos = m_webkitThreadViewportAccessor->documentContentsFromViewport(m_lastMouseEvent.position());
 
     HitTestResult result = eventHandler->hitTestResultAtPoint(contentPos);
     return result.innerNode();
@@ -2850,15 +2736,15 @@ IntRect WebPagePrivate::rectForNode(Node* node)
         int xOffset = 0;
         int yOffset = 0;
         while (!renderBlock->isRoot()) {
-            xOffset += renderBlock->x();
-            yOffset += renderBlock->y();
+            xOffset += renderBlock->x().toInt();
+            yOffset += renderBlock->y().toInt();
             renderBlock = renderBlock->containingBlock();
         }
         const RenderText* renderText = toRenderText(renderer);
         IntRect linesBox = renderText->linesBoundingBox();
         blockRect = IntRect(xOffset + linesBox.x(), yOffset + linesBox.y(), linesBox.width(), linesBox.height());
     } else
-        blockRect = renderer->absoluteClippedOverflowRect();
+        blockRect = IntRect(renderer->absoluteClippedOverflowRect());
 
     if (renderer->isText()) {
         RenderBlock* rb = renderer->containingBlock();
@@ -2867,7 +2753,7 @@ IntRect WebPagePrivate::rectForNode(Node* node)
         int blockWidth = 0;
         int lineCount = rb->lineCount();
         for (int i = 0; i < lineCount; i++)
-            blockWidth = max(blockWidth, rb->availableLogicalWidthForLine(i, false));
+            blockWidth = max(blockWidth, rb->availableLogicalWidthForLine(i, false).toInt());
 
         blockRect.setWidth(blockWidth);
         blockRect.setX(blockRect.x() + rb->logicalLeftOffsetForLine(1, false));
@@ -2971,9 +2857,11 @@ IntRect WebPagePrivate::blockZoomRectForNode(Node* node)
         }
     }
 
+    const Platform::ViewportAccessor* viewportAccessor = m_webkitThreadViewportAccessor;
+
     blockRect = adjustRectOffsetForFrameOffset(blockRect, node);
-    blockRect = mapToTransformed(blockRect);
-    clipToTransformedContentsRect(blockRect);
+    blockRect = viewportAccessor->roundToPixelFromDocumentContents(WebCore::FloatRect(blockRect));
+    blockRect.intersect(viewportAccessor->pixelContentsRect());
 
     return blockRect;
 }
@@ -2985,7 +2873,9 @@ void WebPagePrivate::zoomAnimationFinished(double finalAnimationScale, const Web
     if (!m_mainFrame)
         return;
 
-    IntPoint anchor(roundUntransformedPoint(finalAnimationDocumentScrollPosition));
+    const Platform::ViewportAccessor* viewportAccessor = m_webkitThreadViewportAccessor;
+
+    IntPoint anchor(viewportAccessor->roundedDocumentContents(finalAnimationDocumentScrollPosition));
     bool willUseTextReflow = false;
 
 #if ENABLE(VIEWPORT_REFLOW)
@@ -3012,9 +2902,14 @@ void WebPagePrivate::zoomAnimationFinished(double finalAnimationScale, const Web
 #if ENABLE(VIEWPORT_REFLOW)
     requestLayoutIfNeeded();
     if (willUseTextReflow && m_shouldReflowBlock) {
+        Platform::IntPoint roundedReflowOffset(
+            std::floorf(m_finalAnimationDocumentScrollPositionReflowOffset.x()),
+            std::floorf(m_finalAnimationDocumentScrollPositionReflowOffset.y()));
+
         IntRect reflowedRect = rectForNode(m_currentBlockZoomAdjustedNode.get());
         reflowedRect = adjustRectOffsetForFrameOffset(reflowedRect, m_currentBlockZoomAdjustedNode.get());
-        reflowedRect.move(roundTransformedPoint(m_finalAnimationDocumentScrollPositionReflowOffset).x(), roundTransformedPoint(m_finalAnimationDocumentScrollPositionReflowOffset).y());
+        reflowedRect.move(roundedReflowOffset.x(), roundedReflowOffset.y());
+
         RenderObject* renderer = m_currentBlockZoomAdjustedNode->renderer();
         IntPoint topLeftPoint(reflowedRect.location());
         if (renderer && renderer->isText()) {
@@ -3033,7 +2928,7 @@ void WebPagePrivate::zoomAnimationFinished(double finalAnimationScale, const Web
             case WEBKIT_RIGHT:
                 textAnchor = IntPoint(reflowedRect.x() + reflowedRect.width() - actualVisibleSize().width(), topLeftPoint.y());
                 break;
-            case TAAUTO:
+            case TASTART:
             case JUSTIFY:
             default:
                 if (renderer->style()->isLeftToRightDirection())
@@ -3141,6 +3036,8 @@ bool WebPage::canGoBackOrForward(int delta) const
 bool WebPage::goBackOrForward(int delta)
 {
     if (d->m_page->canGoBackOrForward(delta)) {
+        d->m_userPerformedManualZoom = false;
+        d->m_userPerformedManualScroll = false;
         d->m_backingStore->d->suspendScreenUpdates();
         d->m_page->goBackOrForward(delta);
         d->m_backingStore->d->resumeScreenUpdates(BackingStore::None);
@@ -3630,10 +3527,10 @@ void WebPage::applyPendingOrientationIfNeeded()
     d->m_inputHandler->redrawSpellCheckDialogIfRequired(false /* shouldMoveDialog */);
 }
 
-void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize, bool ensureFocusElementVisible)
+bool WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize, const IntSize& defaultLayoutSize, bool ensureFocusElementVisible)
 {
     if (m_pendingOrientation == -1 && transformedActualVisibleSize == this->transformedActualVisibleSize())
-        return;
+        return false;
 
     // Suspend all screen updates to the backingstore to make sure no-one tries to blit
     // while the window surface and the BackingStore are out of sync.
@@ -3658,15 +3555,12 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
     bool atTop = !scrollPosition().y();
     bool atLeft = !scrollPosition().x();
 
-    setDefaultLayoutSize(transformedActualVisibleSize);
+    setDefaultLayoutSize(defaultLayoutSize);
 
     // Recompute our virtual viewport.
     bool needsLayout = false;
-    static ViewportArguments defaultViewportArguments;
-    if (m_viewportArguments != defaultViewportArguments) {
-        // We may need to infer the width and height for the viewport with respect to the rotation.
-        Platform::IntSize newVirtualViewport = recomputeVirtualViewportFromViewportArguments();
-        ASSERT(!newVirtualViewport.isEmpty());
+    Platform::IntSize newVirtualViewport = recomputeVirtualViewportFromViewportArguments();
+    if (!newVirtualViewport.isEmpty()) {
         m_webPage->setVirtualViewportSize(newVirtualViewport);
         m_mainFrame->view()->setUseFixedLayout(useFixedLayout());
         m_mainFrame->view()->setFixedLayoutSize(fixedLayoutSize());
@@ -3681,7 +3575,7 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
     IntSize viewportSizeAfter = actualVisibleSize();
 
     IntSize offset;
-    if (hasPendingOrientation && !m_fullscreenVideoNode) {
+    if (hasPendingOrientation && !m_fullscreenNode) {
         offset = IntSize(roundf((viewportSizeBefore.width() - viewportSizeAfter.width()) / 2.0),
             roundf((viewportSizeBefore.height() - viewportSizeAfter.height()) / 2.0));
     }
@@ -3878,11 +3772,16 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
 
     m_backingStore->d->resumeScreenUpdates(screenResumeOperation);
     m_inputHandler->redrawSpellCheckDialogIfRequired();
+
+    return true;
 }
 
-void WebPage::setViewportSize(const Platform::IntSize& viewportSize, bool ensureFocusElementVisible)
+void WebPage::setViewportSize(const Platform::IntSize& viewportSize, const Platform::IntSize& defaultLayoutSize, bool ensureFocusElementVisible)
 {
-    d->setViewportSize(viewportSize, ensureFocusElementVisible);
+    if (!d->setViewportSize(viewportSize, defaultLayoutSize, ensureFocusElementVisible)) {
+        // If the viewport didn't change, try to apply only the new default layout size.
+        setDefaultLayoutSize(defaultLayoutSize);
+    }
 }
 
 void WebPagePrivate::setDefaultLayoutSize(const IntSize& size)
@@ -3892,14 +3791,30 @@ void WebPagePrivate::setDefaultLayoutSize(const IntSize& size)
     m_defaultLayoutSize = size.expandedTo(minimumLayoutSize).shrunkTo(screenSize);
 }
 
+Platform::IntSize WebPage::defaultLayoutSize() const
+{
+    return d->m_defaultLayoutSize;
+}
+
 void WebPage::setDefaultLayoutSize(const Platform::IntSize& platformSize)
 {
+    bool needsLayout = false;
     WebCore::IntSize size = platformSize;
     if (size == d->m_defaultLayoutSize)
         return;
 
     d->setDefaultLayoutSize(size);
-    bool needsLayout = d->setViewMode(d->viewMode());
+
+    // The default layout size affects interpretation of any viewport arguments present.
+    Platform::IntSize virtualViewportSize = d->recomputeVirtualViewportFromViewportArguments();
+    if (!virtualViewportSize.isEmpty()) {
+        setVirtualViewportSize(virtualViewportSize);
+        needsLayout = true;
+    }
+
+    if (d->setViewMode(d->viewMode()))
+        needsLayout = true;
+
     if (needsLayout) {
         d->setNeedsLayout();
         if (!d->isLoading())
@@ -4012,7 +3927,8 @@ bool WebPagePrivate::handleMouseEvent(PlatformMouseEvent& mouseEvent)
     }
 
     if (!node) {
-        HitTestResult result = eventHandler->hitTestResultAtPoint(mapFromViewportToContents(mouseEvent.position()));
+        IntPoint documentContentsPoint = m_webkitThreadViewportAccessor->documentContentsFromViewport(mouseEvent.position());
+        HitTestResult result = eventHandler->hitTestResultAtPoint(documentContentsPoint);
         node = result.innerNode();
     }
 
@@ -4570,10 +4486,13 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     const double margin = endOfBlockZoomMode ? 0 : blockZoomMargin * 2 * oldScale;
     bool isFirstZoom = false;
 
+    const Platform::ViewportAccessor* viewportAccessor = webkitThreadViewportAccessor();
+
     if (endOfBlockZoomMode) {
         // End of block zoom mode
-        IntRect rect = d->blockZoomRectForNode(node);
-        blockRect = IntRect(0, rect.y(), d->transformedContentsSize().width(), d->transformedContentsSize().height() - rect.y());
+        const Platform::IntSize pixelContentsSize = viewportAccessor->pixelContentsSize();
+        const IntRect rect = d->blockZoomRectForNode(node);
+        blockRect = IntRect(0, rect.y(), pixelContentsSize.width(), pixelContentsSize.height() - rect.y());
         d->m_shouldReflowBlock = false;
     } else {
         // Start/continue block zoom mode
@@ -4583,7 +4502,7 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
         // Don't use a block if it is too close to the size of the actual contents.
         // We allow this for images only so that they can be zoomed tight to the screen.
         if (!node->hasTagName(HTMLNames::imgTag)) {
-            IntRect tRect = d->mapFromTransformed(blockRect);
+            const IntRect tRect = viewportAccessor->roundToDocumentFromPixelContents(WebCore::FloatRect(blockRect));
             int blockArea = tRect.width() * tRect.height();
             int pageArea = d->contentsSize().width() * d->contentsSize().height();
             double blockToPageRatio = static_cast<double>(pageArea - blockArea) / pageArea;
@@ -4626,16 +4545,16 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
 #endif
 
     // Align the zoomed block in the screen.
-    double newBlockHeight = d->mapFromTransformed(blockRect).height();
-    double newBlockWidth = d->mapFromTransformed(blockRect).width();
-    double scaledViewportWidth = static_cast<double>(d->actualVisibleSize().width()) * oldScale / newScale;
-    double scaledViewportHeight = static_cast<double>(d->actualVisibleSize().height()) * oldScale / newScale;
-    double dx = std::max(0.0, (scaledViewportWidth - newBlockWidth) / 2.0);
-    double dy = std::max(0.0, (scaledViewportHeight - newBlockHeight) / 2.0);
+    const Platform::FloatRect newBlockRect = viewportAccessor->documentFromPixelContents(WebCore::FloatRect(blockRect));
+    float scaledViewportWidth = static_cast<double>(d->actualVisibleSize().width()) * oldScale / newScale;
+    float scaledViewportHeight = static_cast<double>(d->actualVisibleSize().height()) * oldScale / newScale;
+    float dx = std::max(0.0f, (scaledViewportWidth - newBlockRect.width()) / 2.0f);
+    float dy = std::max(0.0f, (scaledViewportHeight - newBlockRect.height()) / 2.0f);
 
-    RenderObject* renderer = d->m_currentBlockZoomAdjustedNode->renderer();
+    const RenderObject* renderer = d->m_currentBlockZoomAdjustedNode->renderer();
+    const FloatPoint topLeftPoint = newBlockRect.location();
     FloatPoint anchor;
-    FloatPoint topLeftPoint(d->mapFromTransformed(blockRect).location());
+
     if (renderer && renderer->isText()) {
         ETextAlign textAlign = renderer->style()->textAlign();
         switch (textAlign) {
@@ -4651,7 +4570,7 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
         case WEBKIT_RIGHT:
             anchor = FloatPoint(nodeRect.x() + nodeRect.width() - scaledViewportWidth, topLeftPoint.y());
             break;
-        case TAAUTO:
+        case TASTART:
         case JUSTIFY:
         default:
             if (renderer->style()->isLeftToRightDirection())
@@ -4665,7 +4584,7 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
 
     WebCore::FloatPoint finalAnimationDocumentScrollPosition;
 
-    if (newBlockHeight <= scaledViewportHeight) {
+    if (newBlockRect.height() <= scaledViewportHeight) {
         // The block fits in the viewport so center it.
         finalAnimationDocumentScrollPosition = FloatPoint(anchor.x() - dx, anchor.y() - dy);
     } else {
@@ -4710,8 +4629,10 @@ bool WebPage::blockZoom(const Platform::IntPoint& documentTargetPoint)
     // oldScale with only a marginal change in scroll position. Ignore scroll difference in the special case
     // that the zoom level is the minimumScale.
     if (!endOfBlockZoomMode && abs(newScale - oldScale) / oldScale < minimumExpandingRatio) {
-        const double minimumDisplacement = minimumExpandingRatio * webkitThreadViewportAccessor()->documentViewportSize().width();
-        if (oldScale == d->minimumScale() || (distanceBetweenPoints(d->scrollPosition(), roundUntransformedPoint(finalAnimationDocumentScrollPosition)) < minimumDisplacement && abs(newScale - oldScale) / oldScale < 0.10)) {
+        const double minimumDisplacement = minimumExpandingRatio * viewportAccessor->documentViewportSize().width();
+        const int scrollPositionDisplacement = distanceBetweenPoints(viewportAccessor->documentScrollPosition(), viewportAccessor->roundedDocumentContents(finalAnimationDocumentScrollPosition));
+
+        if (oldScale == d->minimumScale() || (scrollPositionDisplacement < minimumDisplacement && abs(newScale - oldScale) / oldScale < 0.10)) {
             if (isFirstZoom) {
                 d->resetBlockZoom();
                 return false;
@@ -4810,30 +4731,14 @@ unsigned WebPage::timeoutForJavaScriptExecution() const
 void WebPage::setTimeoutForJavaScriptExecution(unsigned ms)
 {
     Settings::setTimeoutForJavaScriptExecution(d->m_page->groupName(), ms);
-
-    Document* doc = d->m_page->mainFrame()->document();
-    if (!doc)
-        return;
-
-    doc->globalData()->timeoutChecker.setTimeoutInterval(ms);
 }
 
-JSContextRef WebPage::scriptContext() const
+JSGlobalContextRef WebPage::globalContext() const
 {
     if (!d->m_mainFrame)
         return 0;
 
-    JSC::Bindings::RootObject *root = d->m_mainFrame->script()->bindingRootObject();
-    if (!root)
-        return 0;
-
-    JSC::ExecState *exec = root->globalObject()->globalExec();
-    return toRef(exec);
-}
-
-JSValueRef WebPage::windowObject() const
-{
-    return toRef(d->m_mainFrame->script()->globalObject(mainThreadNormalWorld()));
+    return toGlobalRef(d->m_mainFrame->script()->globalObject(mainThreadNormalWorld())->globalExec());
 }
 
 // Serialize only the members of HistoryItem which are needed by the client,
@@ -4841,7 +4746,7 @@ JSValueRef WebPage::windowObject() const
 // will be used by the client as an opaque reference to identify the item.
 void WebPage::getBackForwardList(SharedArray<BackForwardEntry>& result) const
 {
-    HistoryItemVector entries = static_cast<BackForwardListImpl*>(d->m_page->backForward()->client())->entries();
+    HistoryItemVector entries = static_cast<BackForwardListBlackBerry*>(d->m_page->backForward()->client())->entries();
     result.reset(new BackForwardEntry[entries.size()], entries.size());
 
     for (unsigned i = 0; i < entries.size(); ++i) {
@@ -4927,12 +4832,11 @@ void WebPage::clearCache()
 
 void WebPage::clearBackForwardList(bool keepCurrentPage) const
 {
-    BackForwardListImpl* backForwardList = static_cast<BackForwardListImpl*>(d->m_page->backForward()->client());
+    BackForwardListBlackBerry* backForwardList = static_cast<BackForwardListBlackBerry*>(d->m_page->backForward()->client());
     RefPtr<HistoryItem> currentItem = backForwardList->currentItem();
-    while (!backForwardList->entries().isEmpty())
-        backForwardList->removeItem(backForwardList->entries().last().get());
+    backForwardList->clear();
     if (keepCurrentPage)
-        backForwardList->addItem(currentItem);
+        d->m_page->backForward()->client()->addItem(currentItem);
 }
 
 bool WebPage::isEnableLocalAccessToAllCookies() const
@@ -5165,7 +5069,7 @@ void WebPage::setExtraPluginDirectory(const BlackBerry::Platform::String& path)
     PluginDatabase* database = PluginDatabase::installedPlugins(true /* true for loading default directories */);
     if (!database)
         return;
-    
+
     Vector<String> pluginDirectories = database->pluginDirectories();
     if (path.empty() || pluginDirectories.contains(String(path)))
         return;
@@ -5311,7 +5215,7 @@ bool WebPagePrivate::compositorDrawsRootLayer() const
     if (!renderView || !renderView->layer() || !renderView->layer()->backing())
         return false;
 
-    return !renderView->layer()->backing()->paintingGoesToWindow();
+    return !renderView->layer()->backing()->paintsIntoWindow();
 #else
     return false;
 #endif
@@ -5511,7 +5415,6 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
         return false;
     }
 
-    willComposite();
     m_needsCommit = false;
     // We get here either due to the commit timer, which would have called
     // render if a one shot sync was needed. Or we get called from render
@@ -5528,6 +5431,7 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
     if (m_overlayLayer)
         m_overlayLayer->platformLayer()->commitOnWebKitThread(scale);
 
+    willComposite();
     // Stash the visible content rect according to webkit thread
     // This is the rectangle used to layout fixed positioned elements,
     // and that's what the layer renderer wants.
@@ -5976,18 +5880,7 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setWebSecurityEnabled(!webSettings->allowCrossSiteRequests());
     coreSettings->setApplyPageScaleFactorInCompositor(webSettings->applyDeviceScaleFactorInCompositor());
 
-    if (m_mainFrame && m_mainFrame->view()) {
-        Color backgroundColor(webSettings->backgroundColor());
-        m_mainFrame->view()->updateBackgroundRecursively(backgroundColor, backgroundColor.hasAlpha());
-
-        Platform::userInterfaceThreadMessageClient()->dispatchMessage(
-            createMethodCallMessage(&WebPagePrivate::setCompositorBackgroundColor, this, backgroundColor));
-    }
-    if (m_backingStore) {
-        m_backingStore->d->setWebPageBackgroundColor(m_mainFrame && m_mainFrame->view()
-            ? m_mainFrame->view()->documentBackgroundColor()
-            : webSettings->backgroundColor());
-    }
+    updateBackgroundColor(webSettings->backgroundColor());
 
     m_page->setDeviceScaleFactor(webSettings->devicePixelRatio());
 }
@@ -6188,18 +6081,17 @@ void WebPagePrivate::restoreHistoryViewState(const WebCore::IntPoint& scrollPosi
 
     m_shouldReflowBlock = shouldReflowBlock;
 
-    bool didZoom = zoomAboutPoint(scale, m_mainFrame->view()->scrollPosition(), true /* enforceScaleClamping */, true /*forceRendering*/, true /*isRestoringZoomLevel*/);
+    if (!zoomAboutPoint(scale, m_mainFrame->view()->scrollPosition(), true /* enforceScaleClamping */, true /*forceRendering*/, true /*isRestoringZoomLevel*/)) {
+        // We need to notify the client of the scroll position and content size change(s) above even if we didn't scale.
+        notifyTransformedContentsSizeChanged();
+        notifyTransformedScrollChanged();
+    }
+
     // If we're already at that scale, then we should still force rendering
     // since our scroll position changed.
     // FIXME: Do we really need to suspend/resume both backingstore and screen here?
     m_backingStore->d->resumeBackingStoreUpdates();
     m_backingStore->d->resumeScreenUpdates(BackingStore::RenderAndBlit);
-
-    if (!didZoom) {
-        // We need to notify the client of the scroll position and content size change(s) above even if we didn't scale.
-        notifyTransformedContentsSizeChanged();
-        notifyTransformedScrollChanged();
-    }
 }
 
 IntSize WebPagePrivate::screenSize() const
@@ -6236,7 +6128,7 @@ const HitTestResult& WebPagePrivate::hitTestResult(const IntPoint& contentPos)
 {
     if (m_cachedHitTestContentPos != contentPos) {
         m_cachedHitTestContentPos = contentPos;
-        m_cachedHitTestResult = m_mainFrame->eventHandler()->hitTestResultAtPoint(m_cachedHitTestContentPos, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+        m_cachedHitTestResult = m_mainFrame->eventHandler()->hitTestResultAtPoint(m_cachedHitTestContentPos, HitTestRequest::ReadOnly | HitTestRequest::Active);
     }
 
     return m_cachedHitTestResult;
@@ -6321,6 +6213,37 @@ void WebPagePrivate::animateToScaleAndDocumentScrollPosition(double destinationZ
 void WebPage::animateToScaleAndDocumentScrollPosition(double destinationZoomScale, const BlackBerry::Platform::FloatPoint& destinationScrollPosition, bool shouldConstrainScrollingToContentEdge)
 {
     d->animateToScaleAndDocumentScrollPosition(destinationZoomScale, destinationScrollPosition, shouldConstrainScrollingToContentEdge);
+}
+
+void WebPagePrivate::updateBackgroundColor(const Color& backgroundColor)
+{
+    if (!m_mainFrame || !m_mainFrame->view())
+        return;
+
+    m_mainFrame->view()->updateBackgroundRecursively(backgroundColor, backgroundColor.hasAlpha());
+
+    // FIXME: The BackingStore uses the document background color but the WebPageCompositor gets
+    // the color from settings, which can be different.
+    Platform::userInterfaceThreadMessageClient()->dispatchMessage(
+        createMethodCallMessage(&WebPagePrivate::setCompositorBackgroundColor, this, backgroundColor));
+
+    if (m_backingStore)
+        m_backingStore->d->setWebPageBackgroundColor(documentBackgroundColor());
+}
+
+Color WebPagePrivate::documentBackgroundColor() const
+{
+    Color color;
+    if (m_mainFrame && m_mainFrame->view())
+        color = m_mainFrame->view()->documentBackgroundColor();
+    if (!color.isValid())
+        color = m_webSettings->backgroundColor();
+    return color;
+}
+
+bool WebPage::isProcessingUserGesture() const
+{
+    return ScriptController::processingUserGesture();
 }
 
 }

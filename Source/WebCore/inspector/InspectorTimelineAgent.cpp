@@ -225,9 +225,6 @@ void InspectorTimelineAgent::supportsFrameInstrumentation(ErrorString*, bool* re
 
 void InspectorTimelineAgent::didBeginFrame()
 {
-#if PLATFORM(CHROMIUM)
-    TRACE_EVENT_INSTANT0("webkit", InstrumentationEvents::BeginFrame);
-#endif
     m_pendingFrameRecord = TimelineRecordFactory::createGenericRecord(timestamp(), 0);
 }
 
@@ -263,17 +260,34 @@ void InspectorTimelineAgent::didInvalidateLayout(Frame* frame)
 
 void InspectorTimelineAgent::willLayout(Frame* frame)
 {
-    pushCurrentRecord(InspectorObject::create(), TimelineRecordType::Layout, true, frame);
+    RenderObject* root = frame->view()->layoutRoot();
+    bool partialLayout = !!root;
+
+    if (!partialLayout)
+        root = frame->contentRenderer();
+
+    unsigned dirtyObjects = 0;
+    unsigned totalObjects = 0;
+    for (RenderObject* o = root; o; o = o->nextInPreOrder(root)) {
+        ++totalObjects;
+        if (o->needsLayout())
+            ++dirtyObjects;
+    }
+    pushCurrentRecord(TimelineRecordFactory::createLayoutData(dirtyObjects, totalObjects, partialLayout), TimelineRecordType::Layout, true, frame);
 }
 
 void InspectorTimelineAgent::didLayout(RenderObject* root)
 {
     if (m_recordStack.isEmpty())
         return;
-    LayoutRect rect = root->frame()->view()->contentsToRootView(root->absoluteBoundingBoxRect());
-    TimelineRecordEntry entry = m_recordStack.last();
+    TimelineRecordEntry& entry = m_recordStack.last();
     ASSERT(entry.type == TimelineRecordType::Layout);
-    TimelineRecordFactory::addRectData(entry.data.get(), rect);
+    Vector<FloatQuad> quads;
+    root->absoluteQuads(quads);
+    if (quads.size() >= 1)
+        TimelineRecordFactory::appendLayoutRoot(entry.data.get(), quads[0]);
+    else
+        ASSERT_NOT_REACHED();
     didCompleteCurrentRecord(TimelineRecordType::Layout);
 }
 
@@ -297,11 +311,13 @@ void InspectorTimelineAgent::willPaint(Frame* frame)
     pushCurrentRecord(InspectorObject::create(), TimelineRecordType::Paint, true, frame, true);
 }
 
-void InspectorTimelineAgent::didPaint(const LayoutRect& rect)
+void InspectorTimelineAgent::didPaint(RenderObject* renderer, const LayoutRect& clipRect)
 {
-    TimelineRecordEntry entry = m_recordStack.last();
+    TimelineRecordEntry& entry = m_recordStack.last();
     ASSERT(entry.type == TimelineRecordType::Paint);
-    TimelineRecordFactory::addRectData(entry.data.get(), rect);
+    FloatQuad quad;
+    localToPageQuad(*renderer, clipRect, &quad);
+    entry.data = TimelineRecordFactory::createPaintData(quad);
     didCompleteCurrentRecord(TimelineRecordType::Paint);
 }
 
@@ -539,8 +555,8 @@ void InspectorTimelineAgent::addRecordToTimeline(PassRefPtr<InspectorObject> rec
 
 void InspectorTimelineAgent::innerAddRecordToTimeline(PassRefPtr<InspectorObject> prpRecord, const String& type)
 {
-    RefPtr<InspectorObject> record(prpRecord);
-    record->setString("type", type);
+    prpRecord->setString("type", type);
+    RefPtr<TypeBuilder::Timeline::TimelineEvent> record = TypeBuilder::Timeline::TimelineEvent::runtimeCast(prpRecord);
     if (type == TimelineRecordType::Program)
         setNativeHeapStatistics(record.get());
     else
@@ -561,20 +577,27 @@ static size_t getUsedHeapSize()
     return info.usedJSHeapSize;
 }
 
-void InspectorTimelineAgent::setDOMCounters(InspectorObject* record)
+void InspectorTimelineAgent::setDOMCounters(TypeBuilder::Timeline::TimelineEvent* record)
 {
-    record->setNumber("usedHeapSize", getUsedHeapSize());
+    record->setUsedHeapSize(getUsedHeapSize());
 
     if (m_state->getBoolean(TimelineAgentState::includeDomCounters)) {
-        RefPtr<InspectorObject> counters = InspectorObject::create();
-        counters->setNumber("nodes", (m_inspectorType == PageInspector) ? InspectorCounters::counterValue(InspectorCounters::NodeCounter) : 0);
-        counters->setNumber("documents", (m_inspectorType == PageInspector) ? InspectorCounters::counterValue(InspectorCounters::DocumentCounter) : 0);
-        counters->setNumber("jsEventListeners", ThreadLocalInspectorCounters::current().counterValue(ThreadLocalInspectorCounters::JSEventListenerCounter));
-        record->setObject("counters", counters.release());
+        int documentCount = 0;
+        int nodeCount = 0;
+        if (m_inspectorType == PageInspector) {
+            documentCount = InspectorCounters::counterValue(InspectorCounters::DocumentCounter);
+            nodeCount = InspectorCounters::counterValue(InspectorCounters::NodeCounter);
+        }
+        int listenerCount = ThreadLocalInspectorCounters::current().counterValue(ThreadLocalInspectorCounters::JSEventListenerCounter);
+        RefPtr<TypeBuilder::Timeline::DOMCounters> counters = TypeBuilder::Timeline::DOMCounters::create()
+            .setDocuments(documentCount)
+            .setNodes(nodeCount)
+            .setJsEventListeners(listenerCount);
+        record->setCounters(counters.release());
     }
 }
 
-void InspectorTimelineAgent::setNativeHeapStatistics(InspectorObject* record)
+void InspectorTimelineAgent::setNativeHeapStatistics(TypeBuilder::Timeline::TimelineEvent* record)
 {
     if (!m_memoryAgent)
         return;
@@ -589,7 +612,7 @@ void InspectorTimelineAgent::setNativeHeapStatistics(InspectorObject* record)
     size_t sharedBytes = 0;
     MemoryUsageSupport::processMemorySizesInBytes(&privateBytes, &sharedBytes);
     stats->setNumber("PrivateBytes", privateBytes);
-    record->setObject("nativeHeapStatistics", stats.release());
+    record->setNativeHeapStatistics(stats.release());
 }
 
 void InspectorTimelineAgent::setFrameIdentifier(InspectorObject* record, Frame* frame)
@@ -687,6 +710,17 @@ void InspectorTimelineAgent::clearRecordStack()
     m_pendingFrameRecord.clear();
     m_recordStack.clear();
     m_id++;
+}
+
+void InspectorTimelineAgent::localToPageQuad(const RenderObject& renderer, const LayoutRect& rect, FloatQuad* quad)
+{
+    Frame* frame = renderer.frame();
+    FrameView* view = frame->view();
+    FloatQuad absolute = renderer.localToAbsoluteQuad(FloatQuad(rect));
+    quad->setP1(view->contentsToRootView(roundedIntPoint(absolute.p1())));
+    quad->setP2(view->contentsToRootView(roundedIntPoint(absolute.p2())));
+    quad->setP3(view->contentsToRootView(roundedIntPoint(absolute.p3())));
+    quad->setP4(view->contentsToRootView(roundedIntPoint(absolute.p4())));
 }
 
 double InspectorTimelineAgent::timestamp()

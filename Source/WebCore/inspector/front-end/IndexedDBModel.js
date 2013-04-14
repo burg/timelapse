@@ -164,7 +164,8 @@ WebInspector.IndexedDBModel.prototype = {
 
     /**
      * @param {WebInspector.IndexedDBModel.DatabaseId} databaseId
-     * @param {WebInspector.IndexedDBModel.ObjectStore} objectStore
+     * @param {string} objectStoreName
+     * @param {function()} callback
      */
     clearObjectStore: function(databaseId, objectStoreName, callback)
     {
@@ -353,7 +354,7 @@ WebInspector.IndexedDBModel.prototype = {
      * @param {webkitIDBKeyRange} idbKeyRange
      * @param {number} skipCount
      * @param {number} pageSize
-     * @param {function(Array.<IndexedDBAgent.DataEntry>, boolean)} callback
+     * @param {function(Array.<WebInspector.IndexedDBModel.Entry>, boolean)} callback
      */
     _requestData: function(databaseId, databaseName, objectStoreName, indexName, idbKeyRange, skipCount, pageSize, callback)
     {

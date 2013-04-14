@@ -873,7 +873,7 @@ PassRefPtr<Node> Range::processAncestorsAndTheirSiblings(ActionType action, Node
         ancestors.append(n);
 
     RefPtr<Node> firstChildInAncestorToProcess = direction == ProcessContentsForward ? container->nextSibling() : container->previousSibling();
-    for (Vector<RefPtr<Node> >::const_iterator it = ancestors.begin(); it != ancestors.end(); it++) {
+    for (Vector<RefPtr<Node> >::const_iterator it = ancestors.begin(); it != ancestors.end(); ++it) {
         RefPtr<Node> ancestor = *it;
         if (action == EXTRACT_CONTENTS || action == CLONE_CONTENTS) {
             if (RefPtr<Node> clonedAncestor = ancestor->cloneNode(false)) { // Might have been removed already during mutation event.
@@ -892,7 +892,7 @@ PassRefPtr<Node> Range::processAncestorsAndTheirSiblings(ActionType action, Node
             child = (direction == ProcessContentsForward) ? child->nextSibling() : child->previousSibling())
             nodes.append(child);
 
-        for (NodeVector::const_iterator it = nodes.begin(); it != nodes.end(); it++) {
+        for (NodeVector::const_iterator it = nodes.begin(); it != nodes.end(); ++it) {
             Node* child = it->get();
             switch (action) {
             case DELETE_CONTENTS:
@@ -1730,31 +1730,6 @@ void Range::nodeChildrenChanged(ContainerNode* container)
     ASSERT(container->document() == m_ownerDocument);
     boundaryNodeChildrenChanged(m_start, container);
     boundaryNodeChildrenChanged(m_end, container);
-}
-
-static inline void boundaryNodeChildrenWillBeRemoved(RangeBoundaryPoint& boundary, ContainerNode* container)
-{
-    for (Node* nodeToBeRemoved = container->firstChild(); nodeToBeRemoved; nodeToBeRemoved = nodeToBeRemoved->nextSibling()) {
-        if (boundary.childBefore() == nodeToBeRemoved) {
-            boundary.setToStartOfNode(container);
-            return;
-        }
-
-        for (Node* n = boundary.container(); n; n = n->parentNode()) {
-            if (n == nodeToBeRemoved) {
-                boundary.setToStartOfNode(container);
-                return;
-            }
-        }
-    }
-}
-
-void Range::nodeChildrenWillBeRemoved(ContainerNode* container)
-{
-    ASSERT(container);
-    ASSERT(container->document() == m_ownerDocument);
-    boundaryNodeChildrenWillBeRemoved(m_start, container);
-    boundaryNodeChildrenWillBeRemoved(m_end, container);
 }
 
 static inline void boundaryNodeWillBeRemoved(RangeBoundaryPoint& boundary, Node* nodeToBeRemoved)

@@ -171,7 +171,6 @@
     <ClInclude Include="..\wtf\MemoryInstrumentationHashMap.h" />
     <ClInclude Include="..\wtf\MemoryInstrumentationHashSet.h" />
     <ClInclude Include="..\wtf\MemoryInstrumentationListHashSet.h" />
-    <ClInclude Include="..\wtf\MemoryInstrumentationParsedURL.h" />
     <ClInclude Include="..\wtf\MemoryInstrumentationSequence.h" />
     <ClInclude Include="..\wtf\MemoryInstrumentationString.h" />
     <ClInclude Include="..\wtf\MemoryInstrumentationVector.h" />
@@ -326,7 +325,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="WTFDebug.props" />
-    <Import Project="..\..\WebKit\WebKit.vcxproj\debugsuffix.props" />
+    <Import Project="$(WebKit_Libraries)\tools\vsprops\debugsuffix.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />

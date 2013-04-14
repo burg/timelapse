@@ -118,38 +118,6 @@ void JIT::emitOptimizationCheck(OptimizationCheckKind kind)
 }
 #endif
 
-#if CPU(X86)
-void JIT::emitTimeoutCheck()
-{
-    Jump skipTimeout = branchSub32(NonZero, TrustedImm32(1), AbsoluteAddress(&m_globalData->m_timeoutCount));
-    JITStubCall stubCall(this, cti_timeout_check);
-    stubCall.addArgument(regT1, regT0); // save last result registers.
-    stubCall.call(regT0);
-    store32(regT0, &m_globalData->m_timeoutCount);
-    stubCall.getArgument(0, regT1, regT0); // reload last result registers.
-    skipTimeout.link(this);
-}
-#elif USE(JSVALUE32_64)
-void JIT::emitTimeoutCheck()
-{
-    Jump skipTimeout = branchSub32(NonZero, TrustedImm32(1), timeoutCheckRegister);
-    JITStubCall stubCall(this, cti_timeout_check);
-    stubCall.addArgument(regT1, regT0); // save last result registers.
-    stubCall.call(timeoutCheckRegister);
-    stubCall.getArgument(0, regT1, regT0); // reload last result registers.
-    skipTimeout.link(this);
-}
-#else
-void JIT::emitTimeoutCheck()
-{
-    Jump skipTimeout = branchSub32(NonZero, TrustedImm32(1), timeoutCheckRegister);
-    JITStubCall(this, cti_timeout_check).call(timeoutCheckRegister);
-    skipTimeout.link(this);
-
-    killLastResultRegister();
-}
-#endif
-
 #define NEXT_OPCODE(name) \
     m_bytecodeOffset += OPCODE_LENGTH(name); \
     break;
@@ -293,7 +261,6 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_jeq_null)
         DEFINE_OP(op_jfalse)
         DEFINE_OP(op_jmp)
-        DEFINE_OP(op_jmp_scopes)
         DEFINE_OP(op_jneq_null)
         DEFINE_OP(op_jneq_ptr)
         DEFINE_OP(op_jless)
@@ -305,14 +272,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_jngreater)
         DEFINE_OP(op_jngreatereq)
         DEFINE_OP(op_jtrue)
-        DEFINE_OP(op_loop)
         DEFINE_OP(op_loop_hint)
-        DEFINE_OP(op_loop_if_less)
-        DEFINE_OP(op_loop_if_lesseq)
-        DEFINE_OP(op_loop_if_greater)
-        DEFINE_OP(op_loop_if_greatereq)
-        DEFINE_OP(op_loop_if_true)
-        DEFINE_OP(op_loop_if_false)
         DEFINE_OP(op_lshift)
         DEFINE_OP(op_mod)
         DEFINE_OP(op_mov)
@@ -502,12 +462,6 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_jngreater)
         DEFINE_SLOWCASE_OP(op_jngreatereq)
         DEFINE_SLOWCASE_OP(op_jtrue)
-        DEFINE_SLOWCASE_OP(op_loop_if_less)
-        DEFINE_SLOWCASE_OP(op_loop_if_lesseq)
-        DEFINE_SLOWCASE_OP(op_loop_if_greater)
-        DEFINE_SLOWCASE_OP(op_loop_if_greatereq)
-        DEFINE_SLOWCASE_OP(op_loop_if_true)
-        DEFINE_SLOWCASE_OP(op_loop_if_false)
         DEFINE_SLOWCASE_OP(op_lshift)
         DEFINE_SLOWCASE_OP(op_mod)
         DEFINE_SLOWCASE_OP(op_mul)

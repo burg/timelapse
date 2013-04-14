@@ -42,7 +42,6 @@
 #include "ResourceCannotShowURL.h"
 #include "ResourceDidFail.h"
 #include "ResourceDidFinishLoading.h"
-#include "ResourceDidReceiveCachedMetadata.h"
 #include "ResourceDidReceiveData.h"
 #include "ResourceDidReceiveResponse.h"
 #include "ResourceDidSendData.h"
@@ -95,13 +94,6 @@ void CapturingResourceHandleClient::didReceiveData(ResourceHandle* handle, const
     if (InputIterator* it = m_proxy->controller()->activeIterator())
         it->storeInput(adoptPtr(new ResourceDidReceiveData(m_id, data, length, encodedLength)));
     m_client->didReceiveData(handle, data, length, encodedLength);
-}
-
-void CapturingResourceHandleClient::didReceiveCachedMetadata(ResourceHandle* handle, const char* data, int length)
-{
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
-        it->storeInput(adoptPtr(new ResourceDidReceiveCachedMetadata(m_id, data, length)));
-    m_client->didReceiveCachedMetadata(handle, data, length);
 }
 
 void CapturingResourceHandleClient::didFinishLoading(ResourceHandle* handle, double finishTime)

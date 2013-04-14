@@ -39,6 +39,7 @@
 #endif
 
 #if ENABLE(VIDEO_TRACK)
+#include "CaptionUserPreferences.h"
 #include "PODIntervalTree.h"
 #include "TextTrack.h"
 #include "TextTrackCue.h"
@@ -96,7 +97,7 @@ public:
     virtual bool hasVideo() const { return false; }
     virtual bool hasAudio() const;
 
-    void rewind(float timeDelta);
+    void rewind(double timeDelta);
     void returnToRealtime();
 
     // Eventually overloaded in HTMLVideoElement
@@ -112,8 +113,9 @@ public:
 
     enum DelayedActionType {
         LoadMediaResource = 1 << 0,
-        LoadTextTrackResource = 1 << 1,
-        TextTrackChangesNotification = 1 << 2
+        ConfigureTextTracks = 1 << 1,
+        TextTrackChangesNotification = 1 << 2,
+        ConfigureTextTrackDisplay = 1 << 3,
     };
     void scheduleDelayedAction(DelayedActionType);
     
@@ -144,16 +146,16 @@ public:
     bool seeking() const;
 
 // playback state
-    float currentTime() const;
-    void setCurrentTime(float, ExceptionCode&);
+    double currentTime() const;
+    void setCurrentTime(double, ExceptionCode&);
     double initialTime() const;
-    float startTime() const;
-    float duration() const;
+    double startTime() const;
+    double duration() const;
     bool paused() const;
-    float defaultPlaybackRate() const;
-    void setDefaultPlaybackRate(float);
-    float playbackRate() const;
-    void setPlaybackRate(float);
+    double defaultPlaybackRate() const;
+    void setDefaultPlaybackRate(double);
+    double playbackRate() const;
+    void setPlaybackRate(double);
     void updatePlaybackRate();
     bool webkitPreservesPitch() const;
     void setWebkitPreservesPitch(bool);
@@ -206,8 +208,8 @@ public:
 // controls
     bool controls() const;
     void setControls(bool);
-    float volume() const;
-    void setVolume(float, ExceptionCode&);
+    double volume() const;
+    void setVolume(double, ExceptionCode&);
     bool muted() const;
     void setMuted(bool);
 
@@ -217,7 +219,7 @@ public:
     
     bool canPlay() const;
 
-    float percentLoaded() const;
+    double percentLoaded() const;
 
 #if ENABLE(VIDEO_TRACK)
     PassRefPtr<TextTrack> addTextTrack(const String& kind, const String& label, const String& language, ExceptionCode&);
@@ -267,12 +269,8 @@ public:
     void configureTextTracks();
     void configureTextTrackGroup(const TrackGroup&);
 
-    void toggleTrackAtIndex(int index, bool exclusive = true);
-    static int textTracksOffIndex() { return -1; }
-    static int textTracksIndexNotFound() { return -2; }
+    void setSelectedTextTrack(TextTrack*);
 
-    bool userPrefersCaptions() const;
-    bool userIsInterestedInThisTrackKind(String) const;
     bool textTracksAreReady() const;
     void configureTextTrackDisplay();
     void updateTextTrackDisplay();
@@ -497,10 +495,10 @@ private:
     void startProgressEventTimer();
     void stopPeriodicTimers();
 
-    void seek(float time, ExceptionCode&);
+    void seek(double time, ExceptionCode&);
     void finishSeek();
     void checkIfSeekNeeded();
-    void addPlayedRange(float start, float end);
+    void addPlayedRange(double start, double end);
     
     void scheduleTimeupdateEvent(bool periodicEvent);
     void scheduleEvent(const AtomicString& eventName);
@@ -524,7 +522,7 @@ private:
     void mediaLoadingFailed(MediaPlayer::NetworkState);
 
 #if ENABLE(VIDEO_TRACK)
-    void updateActiveTextTrackCues(float);
+    void updateActiveTextTrackCues(double);
     HTMLTrackElement* showingTrackWithSameKind(HTMLTrackElement*) const;
 
     void markCaptionAndSubtitleTracksAsUnconfigured();
@@ -551,13 +549,13 @@ private:
     bool pausedForUserInteraction() const;
     bool couldPlayIfEnoughData() const;
 
-    float minTimeSeekable() const;
-    float maxTimeSeekable() const;
+    double minTimeSeekable() const;
+    double maxTimeSeekable() const;
 
     // Pauses playback without changing any states or generating events
     void setPausedInternal(bool);
 
-    void setPlaybackRateInternal(float);
+    void setPlaybackRateInternal(double);
 
     virtual void mediaCanStart();
 
@@ -601,8 +599,8 @@ private:
     RefPtr<TimeRanges> m_playedTimeRanges;
     OwnPtr<GenericEventQueue> m_asyncEventQueue;
 
-    float m_playbackRate;
-    float m_defaultPlaybackRate;
+    double m_playbackRate;
+    double m_defaultPlaybackRate;
     bool m_webkitPreservesPitch;
     NetworkState m_networkState;
     ReadyState m_readyState;
@@ -611,8 +609,8 @@ private:
 
     RefPtr<MediaError> m_error;
 
-    float m_volume;
-    float m_lastSeekTime;
+    double m_volume;
+    double m_lastSeekTime;
     
     unsigned m_previousProgress;
     double m_previousProgressTime;
@@ -621,7 +619,7 @@ private:
     double m_lastTimeUpdateEventWallTime;
 
     // The last time a timeupdate event was sent in movie time.
-    float m_lastTimeUpdateEventMovieTime;
+    double m_lastTimeUpdateEventMovieTime;
     
     // Loading state.
     enum LoadState { WaitingForSource, LoadingFromSrcAttr, LoadingFromSourceElement };
@@ -648,7 +646,7 @@ private:
     RefPtr<MediaSource> m_mediaSource;
 #endif
 
-    mutable float m_cachedTime;
+    mutable double m_cachedTime;
     mutable double m_cachedTimeWallClockUpdateTime;
     mutable double m_minimumWallClockTimeToCacheMediaTime;
 
@@ -699,6 +697,8 @@ private:
     bool m_processingPreferenceChange : 1;
     float m_lastTextTrackUpdateTime;
 
+    CaptionUserPreferences::CaptionDisplayMode m_captionDisplayMode;
+
     RefPtr<TextTrackList> m_textTracks;
     Vector<RefPtr<TextTrack> > m_textTracksWhenResourceSelectionBegan;
 
@@ -706,7 +706,6 @@ private:
 
     CueList m_currentlyActiveCues;
     int m_ignoreTrackDisplayUpdate;
-    bool m_disableCaptions;
 #endif
 
 #if ENABLE(WEB_AUDIO)

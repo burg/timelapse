@@ -31,11 +31,10 @@ module('loader');
 test('loading steps', 1, function() {
     resetGlobals();
     var loadedSteps = [];
-    var loadingCompleteCallback = handleLocationChange;
-    handleLocationChange = function() {
+    g_history._handleLocationChange = function() {
         deepEqual(loadedSteps, ['step 1', 'step 2']);
     }
-    var resourceLoader = new loader.Loader(handleLocationChange);
+    var resourceLoader = new loader.Loader();
     function loadingStep1() {
         loadedSteps.push('step 1');
         resourceLoader.load();
@@ -48,9 +47,7 @@ test('loading steps', 1, function() {
     try {
         resourceLoader._loadingSteps = [loadingStep1, loadingStep2];
         resourceLoader.load();
-    } finally {
-        handleLocationChange = loadingCompleteCallback;
-    }
+    } 
 });
 
 // Total number of assertions is 1 for the deepEqual of the builder lists
@@ -86,7 +83,7 @@ test('results files loading', 11, function() {
 
 test('expectations files loading', 1, function() {
     resetGlobals();
-    parseCrossDashboardParameters();
+    g_history.parseCrossDashboardParameters();
     var expectedLoadedPlatforms = ["chromium", "chromium-android", "efl", "efl-wk1", "efl-wk2", "gtk",
                                    "gtk-wk2", "mac", "mac-lion", "mac-snowleopard", "qt", "win", "wk2"];
     var loadedPlatforms = [];

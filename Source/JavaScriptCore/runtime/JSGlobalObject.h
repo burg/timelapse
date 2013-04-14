@@ -24,6 +24,7 @@
 
 #include "ArrayAllocationProfile.h"
 #include "JSArray.h"
+#include "JSClassRef.h"
 #include "JSGlobalData.h"
 #include "JSSegmentedVariableObject.h"
 #include "JSWeakObjectMapRefInternal.h"
@@ -44,6 +45,9 @@
 #include <wtf/replay/InputIterator.h>
 #include "RiggedWeakRandom.h"
 #endif
+
+struct OpaqueJSClass;
+struct OpaqueJSClassContextData;
 
 namespace JSC {
 
@@ -93,6 +97,7 @@ struct GlobalObjectMethodTable {
 class JSGlobalObject : public JSSegmentedVariableObject {
 private:
     typedef HashSet<RefPtr<OpaqueJSWeakObjectMap> > WeakMapSet;
+    typedef HashMap<OpaqueJSClass*, OwnPtr<OpaqueJSClassContextData> > OpaqueJSClassDataMap;
 
     struct JSGlobalObjectRareData {
         JSGlobalObjectRareData()
@@ -102,6 +107,8 @@ private:
 
         WeakMapSet weakMaps;
         unsigned profileGroup;
+        
+        OpaqueJSClassDataMap opaqueJSClassData;
     };
 
 protected:
@@ -151,8 +158,8 @@ protected:
     WriteBarrier<Structure> m_callbackObjectStructure;
 #if JSC_OBJC_API_ENABLED
     WriteBarrier<Structure> m_objcCallbackFunctionStructure;
-#endif
     WriteBarrier<Structure> m_objcWrapperObjectStructure;
+#endif
     WriteBarrier<Structure> m_dateStructure;
     WriteBarrier<Structure> m_nullPrototypeObjectStructure;
     WriteBarrier<Structure> m_errorStructure;
@@ -321,8 +328,8 @@ public:
     Structure* callbackObjectStructure() const { return m_callbackObjectStructure.get(); }
 #if JSC_OBJC_API_ENABLED
     Structure* objcCallbackFunctionStructure() const { return m_objcCallbackFunctionStructure.get(); }
-#endif
     Structure* objcWrapperObjectStructure() const { return m_objcWrapperObjectStructure.get(); }
+#endif
     Structure* dateStructure() const { return m_dateStructure.get(); }
     Structure* nullPrototypeObjectStructure() const { return m_nullPrototypeObjectStructure.get(); }
     Structure* errorStructure() const { return m_errorStructure.get(); }
@@ -412,6 +419,12 @@ public:
     {
         if (m_rareData)
             m_rareData->weakMaps.remove(map);
+    }
+
+    OpaqueJSClassDataMap& opaqueJSClassData()
+    {
+        createRareDataIfNeeded();
+        return m_rareData->opaqueJSClassData;
     }
 
     double weakRandomNumber() { return m_weakRandom.get(); }

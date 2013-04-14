@@ -67,6 +67,7 @@
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
+#include "InsertionPoint.h"
 #include "InspectorCounters.h"
 #include "KeyboardEvent.h"
 #include "LabelsNodeList.h"
@@ -131,10 +132,8 @@
 #include "InspectorController.h"
 #endif
 
-#if USE(JSC)
 #include <runtime/JSGlobalData.h>
 #include <runtime/Operations.h>
-#endif
 
 #if ENABLE(MICRODATA)
 #include "HTMLPropertiesCollection.h"
@@ -417,22 +416,14 @@ Node::~Node()
     if (hasRareData())
         clearRareData();
 
-    Document* doc = documentInternal();
-
-    if (hasEventTargetData()) {
-#if ENABLE(TOUCH_EVENT_TRACKING)
-        if (doc)
-            doc->didRemoveEventTargetNode(this);
-#endif
-        clearEventTargetData();
-    }
-
     if (renderer())
         detach();
 
-    if (AXObjectCache::accessibilityEnabled() && doc && doc->axObjectCacheExists() && !isContainerNode())
-        doc->axObjectCache()->remove(this);
-    
+    if (!isContainerNode()) {
+        if (Document* document = documentInternal())
+            willBeDeletedFrom(document);
+    }
+
     if (m_previous)
         m_previous->setNextSibling(0);
     if (m_next)
@@ -441,6 +432,22 @@ Node::~Node()
     m_treeScope->guardDeref();
 
     InspectorCounters::decrementCounter(InspectorCounters::NodeCounter);
+}
+
+void Node::willBeDeletedFrom(Document* document)
+{
+    if (hasEventTargetData()) {
+#if ENABLE(TOUCH_EVENT_TRACKING)
+        if (document)
+            document->didRemoveEventTargetNode(this);
+#endif
+        clearEventTargetData();
+    }
+
+    if (document) {
+        if (AXObjectCache* cache = document->existingAXObjectCache())
+            cache->remove(this);
+    }
 }
 
 NodeRareData* Node::rareData() const
@@ -725,10 +732,12 @@ bool Node::isEditableToAccessibility(EditableLevel editableLevel) const
 
     ASSERT(document());
     ASSERT(AXObjectCache::accessibilityEnabled());
-    ASSERT(document()->axObjectCacheExists());
+    ASSERT(document()->existingAXObjectCache());
 
-    if (document() && AXObjectCache::accessibilityEnabled() && document()->axObjectCacheExists())
-        return document()->axObjectCache()->rootAXEditableElement(this);
+    if (document()) {
+        if (AXObjectCache* cache = document()->existingAXObjectCache())
+            return cache->rootAXEditableElement(this);
+    }
 
     return false;
 }
@@ -901,14 +910,6 @@ Node* Node::focusDelegate()
 {
     return this;
 }
-
-#if ENABLE(DIALOG_ELEMENT)
-bool Node::isInert() const
-{
-    Element* dialog = document()->activeModalDialog();
-    return dialog && !containsIncludingShadowDOM(dialog) && !dialog->containsIncludingShadowDOM(this);
-}
-#endif
 
 unsigned Node::nodeIndex() const
 {
@@ -1089,9 +1090,10 @@ void Node::attach()
     setAttached();
     clearNeedsStyleRecalc();
 
-    Document* doc = documentInternal();
-    if (AXObjectCache::accessibilityEnabled() && doc && doc->axObjectCacheExists())
-        doc->axObjectCache()->updateCacheAfterNodeIsAttached(this);
+    if (Document* doc = documentInternal()) {
+        if (AXObjectCache* cache = doc->axObjectCache())
+            cache->updateCacheAfterNodeIsAttached(this);
+    }
 }
 
 #ifndef NDEBUG
@@ -1128,6 +1130,62 @@ void Node::detach()
 #ifndef NDEBUG
     detachingNode = 0;
 #endif
+}
+
+Node* Node::pseudoAwarePreviousSibling() const
+{
+    if (parentElement() && !previousSibling()) {
+        Element* parent = parentElement();
+        if (isAfterPseudoElement() && parent->lastChild())
+            return parent->lastChild();
+        if (!isBeforePseudoElement())
+            return parent->pseudoElement(BEFORE);
+    }
+    return previousSibling();
+}
+
+Node* Node::pseudoAwareNextSibling() const
+{
+    if (parentElement() && !nextSibling()) {
+        Element* parent = parentElement();
+        if (isBeforePseudoElement() && parent->firstChild())
+            return parent->firstChild();
+        if (!isAfterPseudoElement())
+            return parent->pseudoElement(AFTER);
+    }
+    return nextSibling();
+}
+
+Node* Node::pseudoAwareFirstChild() const
+{
+    if (isElementNode()) {
+        const Element* currentElement = toElement(this);
+        Node* first = currentElement->pseudoElement(BEFORE);
+        if (first)
+            return first;
+        first = currentElement->firstChild();
+        if (!first)
+            first = currentElement->pseudoElement(AFTER);
+        return first;
+    }
+
+    return firstChild();
+}
+
+Node* Node::pseudoAwareLastChild() const
+{
+    if (isElementNode()) {
+        const Element* currentElement = toElement(this);
+        Node* last = currentElement->pseudoElement(AFTER);
+        if (last)
+            return last;
+        last = currentElement->lastChild();
+        if (!last)
+            last = currentElement->pseudoElement(BEFORE);
+        return last;
+    }
+
+    return lastChild();
 }
 
 // FIXME: This code is used by editing.  Seems like it could move over there and not pollute Node.
@@ -1273,28 +1331,33 @@ Element* Node::parentOrShadowHostElement() const
     return toElement(parent);
 }
 
+Node* Node::insertionParentForBinding() const
+{
+    return resolveReprojection(this);
+}
+
 bool Node::needsShadowTreeWalkerSlow() const
 {
     return (isShadowRoot() || (isElementNode() && (isInsertionPoint() || isPseudoElement() || toElement(this)->hasPseudoElements() || toElement(this)->shadow())));
 }
 
-bool Node::isBlockFlow() const
+bool Node::isBlockFlowElement() const
 {
-    return renderer() && renderer()->isBlockFlow();
+    return isElementNode() && renderer() && renderer()->isBlockFlow();
 }
 
 Element *Node::enclosingBlockFlowElement() const
 {
     Node *n = const_cast<Node *>(this);
-    if (isBlockFlow())
-        return static_cast<Element *>(n);
+    if (isBlockFlowElement())
+        return toElement(n);
 
     while (1) {
         n = n->parentNode();
         if (!n)
             break;
-        if (n->isBlockFlow() || n->hasTagName(bodyTag))
-            return static_cast<Element *>(n);
+        if (n->isBlockFlowElement() || n->hasTagName(bodyTag))
+            return toElement(n);
     }
     return 0;
 }
@@ -1307,9 +1370,11 @@ bool Node::isRootEditableElement() const
 
 Element* Node::rootEditableElement(EditableType editableType) const
 {
-    if (editableType == HasEditableAXRole)
-        return const_cast<Element*>(document()->axObjectCache()->rootAXEditableElement(this));
-
+    if (editableType == HasEditableAXRole) {
+        if (AXObjectCache* cache = document()->existingAXObjectCache())
+            return const_cast<Element*>(cache->rootAXEditableElement(this));
+    }
+    
     return rootEditableElement();
 }
 
@@ -2087,10 +2152,18 @@ void Node::didMoveToNewDocument(Document* oldDocument)
 {
     TreeScopeAdopter::ensureDidMoveToNewDocumentWasCalled(oldDocument);
 
-    if (AXObjectCache::accessibilityEnabled() && oldDocument && oldDocument->axObjectCacheExists())
-        oldDocument->axObjectCache()->remove(this);
+    if (const EventTargetData* eventTargetData = this->eventTargetData()) {
+        const EventListenerMap& listenerMap = eventTargetData->eventListenerMap;
+        if (!listenerMap.isEmpty()) {
+            Vector<AtomicString> types = listenerMap.eventTypes();
+            for (unsigned i = 0; i < types.size(); ++i)
+                document()->addListenerTypeIfNeeded(types[i]);
+        }
+    }
 
-    // FIXME: Event listener types for this node should be set on the new owner document here.
+    if (AXObjectCache::accessibilityEnabled() && oldDocument)
+        if (AXObjectCache* cache = oldDocument->existingAXObjectCache())
+            cache->remove(this);
 
     const EventListenerVector& wheelListeners = getEventListeners(eventNames().mousewheelEvent);
     for (size_t i = 0; i < wheelListeners.size(); ++i) {
@@ -2312,7 +2385,7 @@ void Node::handleLocalEvents(Event* event)
     if (!hasEventTargetData())
         return;
 
-    if (disabled() && event->isMouseEvent())
+    if (isDisabledFormControl(this) && event->isMouseEvent())
         return;
 
     fireEventListeners(event);
@@ -2452,15 +2525,6 @@ void Node::dispatchInputEvent()
     dispatchScopedEvent(Event::create(eventNames().inputEvent, true, false));
 }
 
-bool Node::disabled() const
-{
-#if ENABLE(DIALOG_ELEMENT)
-    if (isInert())
-        return true;
-#endif
-    return false;
-}
-
 void Node::defaultEventHandler(Event* event)
 {
     if (event->target() != this)
@@ -2520,14 +2584,14 @@ void Node::defaultEventHandler(Event* event)
 
 bool Node::willRespondToMouseMoveEvents()
 {
-    if (disabled())
+    if (isDisabledFormControl(this))
         return false;
     return hasEventListeners(eventNames().mousemoveEvent) || hasEventListeners(eventNames().mouseoverEvent) || hasEventListeners(eventNames().mouseoutEvent);
 }
 
 bool Node::willRespondToMouseClickEvents()
 {
-    if (disabled())
+    if (isDisabledFormControl(this))
         return false;
     return isContentEditable(UserSelectAllIsAlwaysNonEditable) || hasEventListeners(eventNames().mouseupEvent) || hasEventListeners(eventNames().mousedownEvent) || hasEventListeners(eventNames().clickEvent) || hasEventListeners(eventNames().DOMActivateEvent);
 }
@@ -2535,7 +2599,7 @@ bool Node::willRespondToMouseClickEvents()
 bool Node::willRespondToTouchEvents()
 {
 #if ENABLE(TOUCH_EVENTS)
-    if (disabled())
+    if (isDisabledFormControl(this))
         return false;
     return hasEventListeners(eventNames().touchstartEvent) || hasEventListeners(eventNames().touchmoveEvent) || hasEventListeners(eventNames().touchcancelEvent) || hasEventListeners(eventNames().touchendEvent);
 #else
@@ -2626,7 +2690,6 @@ void Node::removedLastRef()
 void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    ScriptWrappable::reportMemoryUsage(memoryObjectInfo);
     info.addMember(m_parentOrShadowHostNode, "parentOrShadowHostNode");
     info.addMember(m_treeScope, "treeScope");
     info.ignoreMember(m_next);

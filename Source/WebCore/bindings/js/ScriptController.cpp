@@ -137,9 +137,7 @@ ScriptValue ScriptController::evaluateInWorld(const ScriptSourceCode& sourceCode
 
     JSValue evaluationException;
 
-    exec->globalData().timeoutChecker.start();
     JSValue returnValue = JSMainThreadExecState::evaluate(exec, jsSourceCode, shell, &evaluationException);
-    exec->globalData().timeoutChecker.stop();
 
     InspectorInstrumentation::didEvaluateScript(cookie);
 
@@ -469,6 +467,17 @@ ScriptValue ScriptController::executeScriptInWorld(DOMWrapperWorld* world, const
         return ScriptValue();
 
     return evaluateInWorld(sourceCode, world);
+}
+
+bool ScriptController::shouldBypassMainWorldContentSecurityPolicy()
+{
+    CallFrame* callFrame = JSDOMWindow::commonJSGlobalData()->topCallFrame;
+    if (!callFrame || callFrame == CallFrame::noCaller()) 
+        return false;
+    DOMWrapperWorld* domWrapperWorld = currentWorld(callFrame);
+    if (domWrapperWorld->isNormal())
+        return false;
+    return true;
 }
 
 } // namespace WebCore

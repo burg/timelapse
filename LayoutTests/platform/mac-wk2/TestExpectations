@@ -85,6 +85,7 @@ editing/selection/word-granularity.html
 editing/spelling/context-menu-suggestions.html
 editing/spelling/spellcheck-paste.html
 editing/spelling/spellcheck-paste-disabled.html
+editing/spelling/spellcheck-paste-continuous-disabled.html
 editing/undo/undo-smart-delete-reversed-selection.html
 fast/block/positioning/hittest-on-relative-positioned-children.html
 fast/css/user-drag-none.html
@@ -96,7 +97,6 @@ fast/events/5056619.html
 fast/events/autoscroll-in-textfield.html
 fast/events/autoscroll-nonscrollable-iframe-in-scrollable-div.html
 fast/events/autoscroll-with-non-scrollable-parent.html
-fast/events/autoscroll.html
 fast/events/bogus-dropEffect-effectAllowed.html
 fast/events/click-count.html
 fast/events/content-changed-during-drop.html
@@ -166,6 +166,11 @@ svg/custom/use-events-crash.svg
 
 # [WK2] [Mac] Spellcheck tests don't seem to work
 webkit.org/b/105616 platform/mac/editing/spelling/removing-underline-after-accepting-autocorrection-using-punctuation.html [ Failure ]
+webkit.org/b/105616 platform/mac/editing/spelling/click-autocorrected-word.html
+webkit.org/b/105616 platform/mac/editing/spelling/move-cursor-to-beginning-of-autocorrected-word.html
+webkit.org/b/105616 platform/mac/editing/spelling/move-cursor-to-autocorrected-word.html
+webkit.org/b/105616 platform/mac/editing/spelling/delete-into-autocorrected-word.html
+webkit.org/b/105616 platform/mac/editing/spelling/forward-delete-into-autocorrected-word.html
 
 # [WK2] [Mac] Support drag in mouse events for WebKit2 EventSender
 # <https://bugs.webkit.org/show_bug.cgi?id=68552>
@@ -259,10 +264,9 @@ fast/dom/StyleSheet/detached-stylesheet-without-wrapper.html
 webkit.org/b/96438 fast/spatial-navigation
 
 # WK2 tests fail image diff
-webkit.org/b/96580 css3/filters/custom/filter-fallback-to-software.html [ ImageOnlyFailure ]
+webkit.org/b/96580 [ Debug ] css3/filters/custom/filter-fallback-to-software.html [ ImageOnlyFailure ]
 
 # new fast/load tests fail https://bugs.webkit.org/show_bug.cgi?id=96832
-webkit.org/b/96832 fast/loader/images-enabled-unset-can-block-image-and-can-reload-in-place.html [ Failure ]
 webkit.org/b/96832 fast/loader/display-image-unset-can-block-image-and-can-reload-in-place.html [ Failure ]
 
 # Causes next test to crash
@@ -310,10 +314,6 @@ webkit.org/b/108507 printing/quirks-percentage-height-body.html [ Skip ]
 webkit.org/b/108507 printing/quirks-percentage-height.html [ Skip ]
 webkit.org/b/108507 printing/standards-percentage-heights.html [ Skip ]
 
-webkit.org/b/107356 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
-
-webkit.org/b/109890 [ Debug ] platform/mac-wk2/plugins/destroy-during-async-npp-new.html [ Crash ]
-
 webkit.org/b/97124 [ Debug ] fast/loader/stateobjects/document-destroyed-navigate-back.html [ Pass Crash ]
 webkit.org/b/97124 [ Debug ] fast/loader/document-with-fragment-url-3.html [ Pass Crash ]
 webkit.org/b/97124 [ Debug ] fast/loader/document-with-fragment-url-4.html [ Pass Crash ]
@@ -323,6 +323,26 @@ webkit.org/b/97124 [ Debug ] svg/animations/mozilla/animateMotion-by-1.svg [ Pas
 
 webkit.org/b/112642 [ Debug ] editing/deleting/paste-with-transparent-background-color.html [ Crash Pass ]
 webkit.org/b/112642 [ Debug ] editing/pasteboard/5780697-1.html [ Crash Pass ]
+
+webkit.org/b/113020 [ Debug ] inspector/profiler/cpu-profiler-profile-removal.html [ Crash Pass ]
+webkit.org/b/113020 [ Debug ] inspector/profiler/webgl/webgl-profiler-get-error.html [ Crash Pass ]
+webkit.org/b/113020 [ Debug ] inspector/profiler/canvas2d/canvas2d-gradient-capturing.html [ Crash Pass ]
+
+webkit.org/b/113513 inspector/styles/paste-property.html [ Failure ]
+webkit.org/b/113515 compositing/iframes/remove-iframe-crash.html [ Crash Pass ]
+
+# http/tests/canvas/canvas-slow-font-loading.html pass from time to time on WebKit2 Release builds.
+webkit.org/b/104954 [ Release ] http/tests/canvas/canvas-slow-font-loading.html [ Pass ImageOnlyFailure ]
+webkit.org/b/104954 [ Debug ] http/tests/canvas/canvas-slow-font-loading.html [ ImageOnlyFailure ]
+
+webkit.org/b/114217 platform/mac-wk2/plugins/slow/asynchronous-plugin-initialization-multiple.html [ Skip ]
+
+# The test pass reliably on WebKit2 Mountain Lion in release.
+webkit.org/b/60731 [ MountainLion Release ] ietestcenter/css3/grid/grid-items-003.htm [ Pass ]
+webkit.org/b/60731 ietestcenter/css3/grid/grid-items-003.htm [ ImageOnlyFailure ]
+
+# Flaky everywhere.
+webkit.org/b/114302 platform/mac-wk2/plugins/mouse-events-scaled-iframe.html [ Pass Failure ]
 
 ### END OF (1) Classified failures with bug reports
 ########################################

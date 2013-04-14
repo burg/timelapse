@@ -203,9 +203,7 @@ void CoordinatedGraphicsScene::createCanvasIfNeeded(GraphicsLayer* layer, const 
 
     RefPtr<TextureMapperSurfaceBackingStore> canvasBackingStore(TextureMapperSurfaceBackingStore::create());
     m_surfaceBackingStores.set(layer, canvasBackingStore);
-
-    GraphicsSurface::Flags surfaceFlags = GraphicsSurface::SupportsTextureTarget | GraphicsSurface::SupportsSharing;
-    canvasBackingStore->setGraphicsSurface(GraphicsSurface::create(state.canvasSize, surfaceFlags, state.canvasToken));
+    canvasBackingStore->setGraphicsSurface(GraphicsSurface::create(state.canvasSize, state.canvasSurfaceFlags, state.canvasToken));
     layer->setContentsToMedia(canvasBackingStore.get());
 }
 
@@ -741,6 +739,7 @@ void CoordinatedGraphicsScene::setAnimationsLocked(bool locked)
 void CoordinatedGraphicsScene::detach()
 {
     ASSERT(isMainThread());
+    m_renderQueue.clear();
     m_client = 0;
 }
 

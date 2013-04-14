@@ -76,6 +76,7 @@
 #include "RenderMathMLBlock.h"
 #include "RenderMathMLOperator.h"
 #include "RenderMenuList.h"
+#include "RenderSVGShape.h"
 #include "RenderText.h"
 #include "RenderTextControl.h"
 #include "RenderTextControlSingleLine.h"
@@ -87,6 +88,7 @@
 #include "SVGDocument.h"
 #include "SVGImage.h"
 #include "SVGImageChromeClient.h"
+#include "SVGNames.h"
 #include "SVGSVGElement.h"
 #include "Text.h"
 #include "TextControlInnerElements.h"
@@ -833,6 +835,26 @@ LayoutRect AccessibilityRenderObject::elementRect() const
         return checkboxOrRadioRect();
     
     return boundingBoxRect();
+}
+    
+bool AccessibilityRenderObject::supportsPath() const
+{
+#if ENABLE(SVG)
+    if (m_renderer && m_renderer->isSVGShape())
+        return true;
+#endif
+    
+    return false;
+}
+    
+Path AccessibilityRenderObject::elementPath() const
+{
+#if ENABLE(SVG)
+    if (m_renderer && m_renderer->isSVGShape())
+        return toRenderSVGShape(m_renderer)->path();
+#endif
+    
+    return Path();
 }
 
 IntPoint AccessibilityRenderObject::clickPoint()
@@ -2157,7 +2179,7 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityHitTest(const IntPo
     
     RenderLayer* layer = toRenderBox(m_renderer)->layer();
      
-    HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active);
+    HitTestRequest request(HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AccessibilityHitTest);
     HitTestResult hitTestResult = HitTestResult(point);
     layer->hitTest(request, hitTestResult);
     if (!hitTestResult.innerNode())
@@ -2460,6 +2482,8 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
         return ImageRole;
     if (m_renderer->isSVGRoot())
         return SVGRootRole;
+    if (node && node->hasTagName(SVGNames::gTag))
+        return GroupRole;
 #endif
 
 #if ENABLE(MATHML)
@@ -2476,6 +2500,9 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     
     if (node && node->hasTagName(dtTag))
         return DescriptionListTermRole;
+
+    if (node && node->hasTagName(dlTag))
+        return DescriptionListRole;
 
     if (node && (node->hasTagName(rpTag) || node->hasTagName(rtTag)))
         return AnnotationRole;
@@ -3673,6 +3700,11 @@ String AccessibilityRenderObject::mathFencedCloseString() const
         return String();
     
     return getAttribute(MathMLNames::closeAttr);
+}
+
+int AccessibilityRenderObject::mathLineThickness() const
+{
+    return getAttribute(MathMLNames::linethicknessAttr).toInt();
 }
 
 #endif

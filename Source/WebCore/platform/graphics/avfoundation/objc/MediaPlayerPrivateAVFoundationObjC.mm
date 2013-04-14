@@ -171,6 +171,7 @@ enum MediaPlayerAVFoundationObservationContext {
 }
 - (id)initWithCallback:(MediaPlayerPrivateAVFoundationObjC*)callback;
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader shouldWaitForLoadingOfRequestedResource:(AVAssetResourceLoadingRequest *)loadingRequest;
+- (void)setCallback:(MediaPlayerPrivateAVFoundationObjC*)callback;
 @end
 #endif
 
@@ -234,6 +235,7 @@ MediaPlayerPrivateAVFoundationObjC::~MediaPlayerPrivateAVFoundationObjC()
     playerToPrivateMap().remove(player());
 #endif
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    [m_loaderDelegate.get() setCallback:0];
     [[m_avAsset.get() resourceLoader] setDelegate:nil queue:0];
 #endif
     cancelLoad();
@@ -462,10 +464,6 @@ void MediaPlayerPrivateAVFoundationObjC::createAVPlayerItem()
     m_legibleOutput = adoptNS([[AVPlayerItemLegibleOutput alloc] initWithMediaSubtypesForNativeRepresentation:[NSArray array]]);
     [m_legibleOutput.get() setSuppressesPlayerRendering:YES];
 
-    // We enabled automatic media selection because we want alternate audio tracks to be enabled/disabled automatically,
-    // but set the selected legible track to nil so text tracks will not be automatically configured.
-    [m_avPlayerItem.get() selectMediaOption:nil inMediaSelectionGroup:[m_avAsset.get() mediaSelectionGroupForMediaCharacteristic:AVMediaCharacteristicLegible]];
-
     [m_legibleOutput.get() setDelegate:m_objcObserver.get() queue:dispatch_get_main_queue()];
     [m_legibleOutput.get() setAdvanceIntervalForDelegateInvocation:legibleOutputAdvanceInterval];
     [m_legibleOutput.get() setTextStylingResolution:AVPlayerItemLegibleOutputTextStylingResolutionSourceAndRulesOnly];
@@ -527,7 +525,6 @@ PlatformMedia MediaPlayerPrivateAVFoundationObjC::platformMedia() const
 
 PlatformLayer* MediaPlayerPrivateAVFoundationObjC::platformLayer() const
 {
-    LOG(Media, "MediaPlayerPrivateAVFoundationObjC::platformLayer(%p)", this);
     return m_videoLayer.get();
 }
 
@@ -944,6 +941,8 @@ float MediaPlayerPrivateAVFoundationObjC::mediaTimeForTimeValue(float timeValue)
 
 void MediaPlayerPrivateAVFoundationObjC::tracksChanged()
 {
+    m_languageOfPrimaryAudioTrack = String();
+
     if (!m_avAsset)
         return;
 
@@ -982,7 +981,7 @@ void MediaPlayerPrivateAVFoundationObjC::tracksChanged()
 
 #if HAVE(AVFOUNDATION_TEXT_TRACK_SUPPORT)
     if (!hasCaptions && m_legibleOutput) {
-        AVMediaSelectionGroupType *legibleGroup = [m_avAsset.get() mediaSelectionGroupForMediaCharacteristic:AVMediaCharacteristicLegible];
+        AVMediaSelectionGroupType *legibleGroup = safeMediaSelectionGroupForLegibleMedia();
         hasCaptions = [[AVMediaSelectionGroup playableMediaSelectionOptionsFromArray:[legibleGroup options]] count];
     }
     if (hasCaptions)
@@ -1293,14 +1292,30 @@ void MediaPlayerPrivateAVFoundationObjC::clearTextTracks()
     m_textTracks.clear();
 }
 
+AVMediaSelectionGroupType* MediaPlayerPrivateAVFoundationObjC::safeMediaSelectionGroupForLegibleMedia()
+{
+    if (!m_avAsset)
+        return nil;
+
+    if ([m_avAsset.get() statusOfValueForKey:@"availableMediaCharacteristicsWithMediaSelectionOptions" error:NULL] != AVKeyValueStatusLoaded)
+        return nil;
+
+    return [m_avAsset.get() mediaSelectionGroupForMediaCharacteristic:AVMediaCharacteristicLegible];
+}
+
 void MediaPlayerPrivateAVFoundationObjC::processTextTracks()
 {
-    AVMediaSelectionGroupType *legibleGroup = [m_avAsset.get() mediaSelectionGroupForMediaCharacteristic:AVMediaCharacteristicLegible];
+    AVMediaSelectionGroupType *legibleGroup = safeMediaSelectionGroupForLegibleMedia();
     if (!legibleGroup) {
         LOG(Media, "MediaPlayerPrivateAVFoundationObjC::processTextTracks(%p) - nil mediaSelectionGroup", this);
         return;
     }
-    
+
+    // We enabled automatic media selection because we want alternate audio tracks to be enabled/disabled automatically,
+    // but set the selected legible track to nil so text tracks will not be automatically configured.
+    if (!m_textTracks.size())
+        [m_avPlayerItem.get() selectMediaOption:nil inMediaSelectionGroup:safeMediaSelectionGroupForLegibleMedia()];
+
     Vector<RefPtr<InbandTextTrackPrivateAVF> > removedTextTracks = m_textTracks;
     NSArray *legibleOptions = [AVMediaSelectionGroup playableMediaSelectionOptionsFromArray:[legibleGroup options]];
     for (AVMediaSelectionOptionType *option in legibleOptions) {
@@ -1363,9 +1378,9 @@ void MediaPlayerPrivateAVFoundationObjC::setCurrentTrack(InbandTextTrackPrivateA
 
     AVMediaSelectionOptionType *mediaSelectionOption = trackPrivate ? trackPrivate->mediaSelectionOption() : 0;
 
-    LOG(Media, "MediaPlayerPrivateAVFoundationObjC::setCurrentTrack(%p) - selecting media option %p", this, mediaSelectionOption);
+    LOG(Media, "MediaPlayerPrivateAVFoundationObjC::setCurrentTrack(%p) - selecting media option %p, language = %s", this, mediaSelectionOption, [[[mediaSelectionOption locale] localeIdentifier] UTF8String]);
 
-    [m_avPlayerItem.get() selectMediaOption:mediaSelectionOption inMediaSelectionGroup:[m_avAsset.get() mediaSelectionGroupForMediaCharacteristic:AVMediaCharacteristicLegible]];
+    [m_avPlayerItem.get() selectMediaOption:mediaSelectionOption inMediaSelectionGroup:safeMediaSelectionGroupForLegibleMedia()];
     m_currentTrack = trackPrivate;
 }
 
@@ -1375,6 +1390,45 @@ InbandTextTrackPrivateAVF* MediaPlayerPrivateAVFoundationObjC::currentTrack()
 }
 #endif // HAVE(AVFOUNDATION_TEXT_TRACK_SUPPORT)
 
+String MediaPlayerPrivateAVFoundationObjC::languageOfPrimaryAudioTrack() const
+{
+    if (!m_languageOfPrimaryAudioTrack.isNull())
+        return m_languageOfPrimaryAudioTrack;
+
+    if (!m_avPlayerItem.get())
+        return emptyString();
+
+#if HAVE(AVFOUNDATION_TEXT_TRACK_SUPPORT)
+    // If AVFoundation has an audible group, return the language of the currently selected audible option.
+    AVMediaSelectionGroupType *audibleGroup = [m_avAsset.get() mediaSelectionGroupForMediaCharacteristic:AVMediaCharacteristicAudible];
+    AVMediaSelectionOptionType *currentlySelectedAudibleOption = [m_avPlayerItem.get() selectedMediaOptionInMediaSelectionGroup:audibleGroup];
+    if (currentlySelectedAudibleOption) {
+        m_languageOfPrimaryAudioTrack = [[currentlySelectedAudibleOption locale] localeIdentifier];
+        return m_languageOfPrimaryAudioTrack;
+    }
+#endif // HAVE(AVFOUNDATION_TEXT_TRACK_SUPPORT)
+
+    // AVFoundation synthesizes an audible group when there is only one ungrouped audio track if there is also a legible group (one or
+    // more in-band text tracks). It doesn't know about out-of-band tracks, so if there is a single audio track return its language.
+    NSArray *tracks = [m_avAsset.get() tracksWithMediaType:AVMediaTypeAudio];
+    if (!tracks || [tracks count] != 1) {
+        m_languageOfPrimaryAudioTrack = emptyString();
+        return m_languageOfPrimaryAudioTrack;
+    }
+
+    AVAssetTrack *track = [tracks objectAtIndex:0];
+    NSString *language = [track extendedLanguageTag];
+
+    // Some legacy tracks have "und" as a language, treat that the same as no language at all.
+    if (language && ![language isEqualToString:@"und"]) {
+        m_languageOfPrimaryAudioTrack = language;
+        return m_languageOfPrimaryAudioTrack;
+    }
+
+    m_languageOfPrimaryAudioTrack = emptyString();
+    return m_languageOfPrimaryAudioTrack;
+}
+    
 NSArray* assetMetadataKeyNames()
 {
     static NSArray* keys;
@@ -1386,6 +1440,7 @@ NSArray* assetMetadataKeyNames()
                     @"preferredRate",
                     @"playable",
                     @"tracks",
+                    @"availableMediaCharacteristicsWithMediaSelectionOptions",
                    nil];
     }
     return keys;
@@ -1531,13 +1586,24 @@ NSArray* itemKVOProperties()
 - (BOOL)resourceLoader:(AVAssetResourceLoader *)resourceLoader shouldWaitForLoadingOfRequestedResource:(AVAssetResourceLoadingRequest *)loadingRequest
 {
     UNUSED_PARAM(resourceLoader);
+    if (!m_callback)
+        return NO;
+
     return m_callback->shouldWaitForLoadingOfResource(loadingRequest);
 }
 
 - (void)resourceLoader:(AVAssetResourceLoader *)resourceLoader didCancelLoadingRequest:(AVAssetResourceLoadingRequest *)loadingRequest
 {
     UNUSED_PARAM(resourceLoader);
+    if (!m_callback)
+        return;
+
     return m_callback->didCancelLoadingRequest(loadingRequest);
+}
+
+- (void)setCallback:(MediaPlayerPrivateAVFoundationObjC*)callback
+{
+    m_callback = callback;
 }
 @end
 #endif

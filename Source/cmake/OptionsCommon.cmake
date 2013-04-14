@@ -3,8 +3,6 @@ add_definitions(-DHAVE_CONFIG_H=1)
 
 if (WTF_OS_UNIX)
     add_definitions(-DXP_UNIX)
-    #TODO: check for X11 target
-    add_definitions(-DMOZ_X11)
 endif (WTF_OS_UNIX)
 
 # CODE_GENERATOR_PREPROCESSOR_WITH_LINEMARKERS only matters with GCC >= 4.7.0.  Since this
@@ -27,10 +25,10 @@ endif ()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 string(TOLOWER ${CMAKE_HOST_SYSTEM_PROCESSOR} LOWERCASE_CMAKE_HOST_SYSTEM_PROCESSOR)
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${LOWERCASE_CMAKE_HOST_SYSTEM_PROCESSOR}" MATCHES "(i[3-6]86|x86)" AND "${CMAKE_BUILD_TYPE}" STREQUAL "debug")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND "${LOWERCASE_CMAKE_HOST_SYSTEM_PROCESSOR}" MATCHES "(i[3-6]86|x86)")
     # To avoid out of memory when building with debug option in 32bit system.
     # See https://bugs.webkit.org/show_bug.cgi?id=77327
-    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-keep-memory ${CMAKE_SHARED_LINKER_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "-Wl,--no-keep-memory ${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
 endif ()
 
 set(LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)")

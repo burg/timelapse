@@ -446,7 +446,7 @@ void WebOverlayLayerCompositingThreadClient::uploadTexturesIfNeeded(LayerComposi
         return;
     }
 
-    Texture::HostType textureContents = Texture::HostType();
+    LayerTexture::HostType textureContents = LayerTexture::HostType();
     IntSize textureSize;
 
     if (m_drawsContent) {
@@ -460,13 +460,17 @@ void WebOverlayLayerCompositingThreadClient::uploadTexturesIfNeeded(LayerComposi
 
         clearBuffer(textureContents, 0, 0, 0, 0);
         PlatformGraphicsContext* platformContext = lockBufferDrawable(textureContents);
+        if (!platformContext) {
+            destroyBuffer(textureContents);
+            return;
+        }
         double transform[] = {
             1, 0,
             0, 1,
             -layer->bounds().width() / 2.0, -layer->bounds().height() / 2.0
         };
         platformContext->setTransform(transform);
-        m_client->drawOverlayContents(m_overlay->q, platformContext);
+        m_overlay->client->drawOverlayContents(m_overlay->q, platformContext);
 
         releaseBufferDrawable(textureContents);
     } else if (!m_image.isNull()) {
@@ -476,6 +480,10 @@ void WebOverlayLayerCompositingThreadClient::uploadTexturesIfNeeded(LayerComposi
             return;
 
         PlatformGraphicsContext* platformContext = BlackBerry::Platform::Graphics::lockBufferDrawable(textureContents);
+        if (!platformContext) {
+            destroyBuffer(textureContents);
+            return;
+        }
 
         AffineTransform transform;
         platformContext->getTransform(reinterpret_cast<double*>(&transform));
@@ -488,7 +496,7 @@ void WebOverlayLayerCompositingThreadClient::uploadTexturesIfNeeded(LayerComposi
         m_uploadedImage = m_image;
     }
 
-    m_texture = Texture::create();
+    m_texture = LayerTexture::create();
     m_texture->protect(IntSize(), BlackBerry::Platform::Graphics::BackedWhenNecessary);
     IntRect bitmapRect(0, 0, textureSize.width(), textureSize.height());
     m_texture->updateContents(textureContents, bitmapRect, bitmapRect, false);
@@ -626,7 +634,7 @@ void WebOverlayPrivateCompositingThread::removeAnimation(const String& name)
 Platform::IntRect WebOverlayPrivateCompositingThread::pixelViewportRect() const
 {
     if (LayerRenderer* renderer = m_layerCompositingThread->layerRenderer())
-        return renderer->toWebKitWindowCoordinates(m_layerCompositingThread->getDrawRect());
+        return renderer->toPixelViewportCoordinates(m_layerCompositingThread->getDrawRect());
 
     return Platform::IntRect();
 }

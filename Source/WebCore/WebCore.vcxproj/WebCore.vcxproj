@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DebugSuffix|Win32">
@@ -82,7 +82,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="WebCoreDebug.props" />
-    <Import Project="..\..\WebKit\WebKit.vcxproj\debugsuffix.props" />
+    <Import Project="$(WebKit_Libraries)\tools\vsprops\debugsuffix.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -3634,6 +3634,7 @@
     <ClCompile Include="..\Modules\filesystem\FileWriterSync.cpp" />
     <ClCompile Include="..\Modules\filesystem\LocalFileSystem.cpp" />
     <ClCompile Include="..\Modules\filesystem\WorkerContextFileSystem.cpp" />
+    <ClCompile Include="..\Modules\geolocation\Coordinates.cpp" />
     <ClCompile Include="..\Modules\geolocation\Geolocation.cpp" />
     <ClCompile Include="..\Modules\geolocation\GeolocationController.cpp" />
     <ClCompile Include="..\Modules\geolocation\NavigatorGeolocation.cpp" />
@@ -3974,7 +3975,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\page\win\FrameWin.cpp" />
-    <ClCompile Include="..\loader\CachedMetadata.cpp" />
     <ClCompile Include="..\loader\CookieJar.cpp" />
     <ClCompile Include="..\loader\CrossOriginAccessControl.cpp" />
     <ClCompile Include="..\loader\CrossOriginPreflightResultCache.cpp" />
@@ -4098,11 +4098,11 @@
     <ClCompile Include="..\platform\FileStream.cpp" />
     <ClCompile Include="..\platform\FileSystem.cpp" />
     <ClCompile Include="..\platform\graphics\ca\win\PlatformCAFiltersWin.cpp" />
+    <ClCompile Include="..\platform\graphics\cg\SubimageCacheWithTimer.cpp" />
     <ClCompile Include="..\platform\HistogramSupport.cpp" />
     <ClCompile Include="..\platform\KillRingNone.cpp" />
     <ClCompile Include="..\platform\KURL.cpp" />
     <ClCompile Include="..\platform\Language.cpp" />
-    <ClCompile Include="..\platform\LayoutTestSupport.cpp" />
     <ClCompile Include="..\platform\Length.cpp" />
     <ClCompile Include="..\platform\LengthBox.cpp" />
     <ClCompile Include="..\platform\LinkHash.cpp" />
@@ -4128,12 +4128,10 @@
     <ClCompile Include="..\platform\ScrollView.cpp" />
     <ClCompile Include="..\platform\SharedBuffer.cpp" />
     <ClCompile Include="..\platform\SharedBufferChunkReader.cpp" />
-    <ClCompile Include="..\platform\StatsCounter.cpp" />
     <ClCompile Include="..\platform\ThreadGlobalData.cpp" />
     <ClCompile Include="..\platform\ThreadTimers.cpp" />
     <ClCompile Include="..\platform\Timer.cpp" />
     <ClCompile Include="..\platform\UUID.cpp" />
-    <ClCompile Include="..\platform\VisitedLinks.cpp" />
     <ClCompile Include="..\platform\Widget.cpp" />
     <ClCompile Include="..\platform\win\BitmapInfo.cpp" />
     <ClCompile Include="..\platform\win\BString.cpp" />
@@ -4267,10 +4265,8 @@
     <ClCompile Include="..\platform\graphics\ImageOrientation.cpp" />
     <ClCompile Include="..\platform\graphics\ImageSource.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\platform\graphics\IntRect.cpp" />
@@ -4511,12 +4507,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\platform\graphics\cairo\NativeImageCairo.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\platform\graphics\cairo\OwnPtrCairo.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
@@ -4603,7 +4593,6 @@
     <ClCompile Include="..\platform\graphics\filters\FilterEffect.cpp" />
     <ClCompile Include="..\platform\graphics\filters\FilterOperation.cpp" />
     <ClCompile Include="..\platform\graphics\filters\FilterOperations.cpp" />
-    <ClCompile Include="..\platform\graphics\filters\LightSource.cpp" />
     <ClCompile Include="..\platform\graphics\filters\PointLightSource.cpp" />
     <ClCompile Include="..\platform\graphics\filters\SourceAlpha.cpp" />
     <ClCompile Include="..\platform\graphics\filters\SourceGraphic.cpp" />
@@ -4632,15 +4621,12 @@
     <ClCompile Include="..\platform\network\HTTPHeaderMap.cpp" />
     <ClCompile Include="..\platform\network\HTTPParsers.cpp" />
     <ClCompile Include="..\platform\network\HTTPRequest.cpp" />
-    <ClCompile Include="..\platform\network\HTTPValidation.cpp" />
     <ClCompile Include="..\platform\network\MIMEHeader.cpp" />
     <ClCompile Include="..\platform\network\NetworkStateNotifier.cpp" />
     <ClCompile Include="..\platform\network\NetworkStorageSessionStub.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\platform\network\ParsedContentType.cpp" />
@@ -4648,11 +4634,13 @@
     <ClCompile Include="..\platform\network\ProxyServer.cpp" />
     <ClCompile Include="..\platform\network\ResourceErrorBase.cpp" />
     <ClCompile Include="..\platform\network\ResourceHandle.cpp" />
+    <ClCompile Include="..\platform\network\ResourceHandleClient.cpp" />
     <ClCompile Include="..\platform\network\ResourceLoadTiming.cpp" />
     <ClCompile Include="..\platform\network\ResourceRequestBase.cpp" />
     <ClCompile Include="..\platform\network\ResourceResponseBase.cpp" />
     <ClCompile Include="..\platform\network\SocketStreamErrorBase.cpp" />
     <ClCompile Include="..\platform\network\SocketStreamHandleBase.cpp" />
+    <ClCompile Include="..\platform\network\SynchronousLoaderClient.cpp" />
     <ClCompile Include="..\platform\network\cf\AuthenticationCF.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
@@ -4708,12 +4696,12 @@
     </ClCompile>
     <ClCompile Include="..\platform\network\win\DownloadBundleWin.cpp" />
     <ClCompile Include="..\platform\network\win\NetworkStateNotifierWin.cpp" />
-    <CustomBuildStep Include="..\platform\network\curl\CookieJarCurl.cpp">
+    <ClCompile Include="..\platform\network\curl\CookieJarCurl.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
-    </CustomBuildStep>
+    </ClCompile>
     <ClCompile Include="..\platform\network\curl\CredentialStorageCurl.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
@@ -9233,14 +9221,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\bindings\js\JSCoordinatesCustom.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\bindings\js\JSCSSFontFaceRuleCustom.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
@@ -9940,6 +9920,14 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\bindings\js\JSRTCStatsResponseCustom.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\bindings\js\JSStorageCustom.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
@@ -10208,7 +10196,6 @@
     <ClCompile Include="..\plugins\PluginDatabase.cpp" />
     <ClCompile Include="..\plugins\PluginDebug.cpp" />
     <ClCompile Include="..\plugins\PluginMainThreadScheduler.cpp" />
-    <ClCompile Include="..\plugins\PlugInOriginHash.cpp" />
     <ClCompile Include="..\plugins\PluginPackage.cpp" />
     <ClCompile Include="..\plugins\PluginStream.cpp" />
     <ClCompile Include="..\plugins\PluginView.cpp" />
@@ -11237,7 +11224,9 @@
     <ClInclude Include="..\Modules\filesystem\MetadataCallback.h" />
     <ClInclude Include="..\Modules\filesystem\SyncCallbackHelper.h" />
     <ClInclude Include="..\Modules\filesystem\WorkerContextFileSystem.h" />
+    <ClInclude Include="..\Modules\geolocation\Coordinates.h" />
     <ClInclude Include="..\Modules\geolocation\Geolocation.h" />
+    <ClInclude Include="..\Modules\geolocation\GeolocationClient.h" />
     <ClInclude Include="..\Modules\geolocation\GeolocationController.h" />
     <ClInclude Include="..\Modules\geolocation\GeolocationError.h" />
     <ClInclude Include="..\Modules\geolocation\GeolocationPosition.h" />
@@ -11400,7 +11389,6 @@
     <ClInclude Include="..\page\ContextMenuClient.h" />
     <ClInclude Include="..\page\ContextMenuController.h" />
     <ClInclude Include="..\page\ContextMenuProvider.h" />
-    <ClInclude Include="..\page\Coordinates.h" />
     <ClInclude Include="..\page\Crypto.h" />
     <ClInclude Include="..\page\animation\CSSPropertyAnimation.h" />
     <ClInclude Include="..\page\DeviceClient.h" />
@@ -11425,7 +11413,6 @@
     <ClInclude Include="..\page\FrameDestructionObserver.h" />
     <ClInclude Include="..\page\FrameTree.h" />
     <ClInclude Include="..\page\FrameView.h" />
-    <ClInclude Include="..\page\GeolocationClient.h" />
     <ClInclude Include="..\page\GroupSettings.h" />
     <ClInclude Include="..\page\History.h" />
     <ClInclude Include="..\page\animation\ImplicitAnimation.h" />
@@ -11470,7 +11457,6 @@
     <ClInclude Include="..\page\WindowFocusAllowedIndicator.h" />
     <ClInclude Include="..\page\WorkerNavigator.h" />
     <ClInclude Include="..\page\win\FrameWin.h" />
-    <ClInclude Include="..\loader\CachedMetadata.h" />
     <ClInclude Include="..\loader\CookieJar.h" />
     <ClInclude Include="..\loader\CrossOriginAccessControl.h" />
     <ClInclude Include="..\loader\CrossOriginPreflightResultCache.h" />
@@ -11586,13 +11572,13 @@
     <ClInclude Include="..\platform\FileStreamClient.h" />
     <ClInclude Include="..\platform\FileSystem.h" />
     <ClInclude Include="..\platform\FloatConversion.h" />
+    <ClInclude Include="..\platform\graphics\cg\SubimageCacheWithTimer.h" />
     <ClInclude Include="..\platform\HistogramSupport.h" />
     <ClInclude Include="..\platform\HostWindow.h" />
     <ClInclude Include="..\platform\KillRing.h" />
     <ClInclude Include="..\platform\KURL.h" />
     <ClInclude Include="..\platform\KURLHash.h" />
     <ClInclude Include="..\platform\Language.h" />
-    <ClInclude Include="..\platform\LayoutTestSupport.h" />
     <ClInclude Include="..\platform\LayoutUnit.h" />
     <ClInclude Include="..\platform\Length.h" />
     <ClInclude Include="..\platform\LengthBox.h" />
@@ -11640,7 +11626,6 @@
     <ClInclude Include="..\platform\SharedTimer.h" />
     <ClInclude Include="..\platform\Sound.h" />
     <ClInclude Include="..\platform\SSLKeyGenerator.h" />
-    <ClInclude Include="..\platform\StatsCounter.h" />
     <ClInclude Include="..\platform\SuddenTermination.h" />
     <ClInclude Include="..\platform\SystemTime.h" />
     <ClInclude Include="..\platform\Theme.h" />
@@ -11650,7 +11635,6 @@
     <ClInclude Include="..\platform\Timer.h" />
     <ClInclude Include="..\platform\TreeShared.h" />
     <ClInclude Include="..\platform\UUID.h" />
-    <ClInclude Include="..\platform\VisitedLinks.h" />
     <ClInclude Include="..\platform\VisitedLinkStrategy.h" />
     <ClInclude Include="..\platform\Widget.h" />
     <ClInclude Include="..\platform\win\BitmapInfo.h" />
@@ -11921,7 +11905,6 @@
     <ClInclude Include="..\platform\network\HTTPHeaderMap.h" />
     <ClInclude Include="..\platform\network\HTTPParsers.h" />
     <ClInclude Include="..\platform\network\HTTPRequest.h" />
-    <ClInclude Include="..\platform\network\HTTPValidation.h" />
     <ClInclude Include="..\platform\network\MIMEHeader.h" />
     <ClInclude Include="..\platform\network\NetworkingContext.h" />
     <ClInclude Include="..\platform\network\NetworkStateNotifier.h" />
@@ -11944,6 +11927,7 @@
     <ClInclude Include="..\platform\network\SocketStreamErrorBase.h" />
     <ClInclude Include="..\platform\network\SocketStreamHandleBase.h" />
     <ClInclude Include="..\platform\network\SocketStreamHandleClient.h" />
+    <ClInclude Include="..\platform\network\SynchronousLoaderClient.h" />
     <CustomBuildStep Include="..\platform\network\cf\AuthenticationCF.h" />
     <CustomBuildStep Include="..\platform\network\cf\AuthenticationChallenge.h" />
     <ClInclude Include="..\platform\network\cf\DownloadBundle.h" />
@@ -13009,7 +12993,6 @@
     <ClInclude Include="..\plugins\PluginDatabase.h" />
     <ClInclude Include="..\plugins\PluginDebug.h" />
     <ClInclude Include="..\plugins\PluginMainThreadScheduler.h" />
-    <ClInclude Include="..\plugins\PlugInOriginHash.h" />
     <ClInclude Include="..\plugins\PluginPackage.h" />
     <ClInclude Include="..\plugins\PluginQuirkSet.h" />
     <ClInclude Include="..\plugins\PluginStrategy.h" />
@@ -13516,6 +13499,7 @@
     <None Include="..\inspector\front-end\NetworkPanelDescriptor.js" />
     <None Include="..\inspector\front-end\NetworkRequest.js" />
     <None Include="..\inspector\front-end\NetworkUISourceCodeProvider.js" />
+    <None Include="..\inspector\front-end\InspectElementModeController.js" />
     <None Include="..\inspector\front-end\Object.js" />
     <None Include="..\inspector\front-end\ObjectPopoverHelper.js" />
     <None Include="..\inspector\front-end\ObjectPropertiesSection.js" />

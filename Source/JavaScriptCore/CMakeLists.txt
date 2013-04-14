@@ -24,7 +24,6 @@ set(JavaScriptCore_INCLUDE_DIRECTORIES
 )
 
 set(JavaScriptCore_SOURCES
-    API/JSAPIWrapperObject.cpp
     API/JSBase.cpp
     API/JSCallbackConstructor.cpp
     API/JSCallbackFunction.cpp
@@ -141,11 +140,13 @@ set(JavaScriptCore_SOURCES
     heap/IncrementalSweeper.cpp
     heap/JITStubRoutineSet.cpp
     heap/MachineStackMarker.cpp
+
     heap/MarkedAllocator.cpp
     heap/MarkedBlock.cpp
     heap/MarkedSpace.cpp
     heap/MarkStack.cpp
     heap/SlotVisitor.cpp
+    heap/SuperRegion.cpp
     heap/WeakSet.cpp
     heap/WeakHandleOwner.cpp
     heap/WeakBlock.cpp
@@ -303,7 +304,6 @@ set(JavaScriptCore_SOURCES
     runtime/StructureRareData.cpp
     runtime/StructureChain.cpp
     runtime/SymbolTable.cpp
-    runtime/TimeoutChecker.cpp
 
     tools/CodeProfile.cpp
     tools/CodeProfiling.cpp

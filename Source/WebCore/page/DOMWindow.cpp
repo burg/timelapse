@@ -1449,6 +1449,9 @@ void DOMWindow::scrollTo(int x, int y) const
 
 void DOMWindow::moveBy(float x, float y) const
 {
+    if (UserGestureIndicator::processingUserGesture())
+        return;
+
     if (!m_frame)
         return;
 
@@ -1468,6 +1471,9 @@ void DOMWindow::moveBy(float x, float y) const
 
 void DOMWindow::moveTo(float x, float y) const
 {
+    if (UserGestureIndicator::processingUserGesture())
+        return;
+
     if (!m_frame)
         return;
 
@@ -1489,6 +1495,9 @@ void DOMWindow::moveTo(float x, float y) const
 
 void DOMWindow::resizeBy(float x, float y) const
 {
+    if (UserGestureIndicator::processingUserGesture())
+        return;
+
     if (!m_frame)
         return;
 
@@ -1507,6 +1516,9 @@ void DOMWindow::resizeBy(float x, float y) const
 
 void DOMWindow::resizeTo(float width, float height) const
 {
+    if (UserGestureIndicator::processingUserGesture())
+        return;
+
     if (!m_frame)
         return;
 
@@ -1832,32 +1844,36 @@ String DOMWindow::crossDomainAccessErrorMessage(DOMWindow* activeWindow)
     ASSERT(!activeWindow->document()->securityOrigin()->canAccess(document()->securityOrigin()));
 
     // FIXME: This message, and other console messages, have extra newlines. Should remove them.
-    String message = "Unsafe JavaScript attempt to access frame with URL " + document()->url().string() + " from frame with URL " + activeWindowURL.string() + ".";
-
-    // Sandbox errors.
-    if (document()->isSandboxed(SandboxOrigin) || activeWindow->document()->isSandboxed(SandboxOrigin)) {
-        if (document()->isSandboxed(SandboxOrigin) && activeWindow->document()->isSandboxed(SandboxOrigin))
-            return "Sandbox access violation: " + message + " Both frames are sandboxed into unique origins.\n";
-        if (document()->isSandboxed(SandboxOrigin))
-            return "Sandbox access violation: " + message + " The frame being accessed is sandboxed into a unique origin.\n";
-        return "Sandbox access violation: " + message + " The frame requesting access is sandboxed into a unique origin.\n";
-    }
-
     SecurityOrigin* activeOrigin = activeWindow->document()->securityOrigin();
     SecurityOrigin* targetOrigin = document()->securityOrigin();
+    String message = "Blocked a frame with origin \"" + activeOrigin->toString() + "\" from accessing a frame with origin \"" + targetOrigin->toString() + "\". ";
+
+    // Sandbox errors: Use the origin of the frames' location, rather than their actual origin (since we know that at least one will be "null").
+    KURL activeURL = activeWindow->document()->url();
+    KURL targetURL = document()->url();
+    if (document()->isSandboxed(SandboxOrigin) || activeWindow->document()->isSandboxed(SandboxOrigin)) {
+        message = "Blocked a frame at \"" + SecurityOrigin::create(activeURL)->toString() + "\" from accessing a frame at \"" + SecurityOrigin::create(targetURL)->toString() + "\". ";
+        if (document()->isSandboxed(SandboxOrigin) && activeWindow->document()->isSandboxed(SandboxOrigin))
+            return "Sandbox access violation: " + message + " Both frames are sandboxed and lack the \"allow-same-origin\" flag.";
+        if (document()->isSandboxed(SandboxOrigin))
+            return "Sandbox access violation: " + message + " The frame being accessed is sandboxed and lacks the \"allow-same-origin\" flag.";
+        return "Sandbox access violation: " + message + " The frame requesting access is sandboxed and lacks the \"allow-same-origin\" flag.";
+    }
+
+    // Protocol errors: Use the URL's protocol rather than the origin's protocol so that we get a useful message for non-heirarchal URLs like 'data:'.
     if (targetOrigin->protocol() != activeOrigin->protocol())
-        return message + " The frame requesting access has a protocol of '" + activeOrigin->protocol() + "', the frame being accessed has a protocol of '" + targetOrigin->protocol() + "'. Protocols must match.\n";
+        return message + " The frame requesting access has a protocol of \"" + activeURL.protocol() + "\", the frame being accessed has a protocol of \"" + targetURL.protocol() + "\". Protocols must match.\n";
 
     // 'document.domain' errors.
     if (targetOrigin->domainWasSetInDOM() && activeOrigin->domainWasSetInDOM())
-        return message + " The frame requesting access set 'document.domain' to '" + activeOrigin->domain() + "', the frame being accessed set it to '" + targetOrigin->domain() + "'. Both must set 'document.domain' to the same value to allow access.\n";
+        return message + "The frame requesting access set \"document.domain\" to \"" + activeOrigin->domain() + "\", the frame being accessed set it to \"" + targetOrigin->domain() + "\". Both must set \"document.domain\" to the same value to allow access.";
     if (activeOrigin->domainWasSetInDOM())
-        return message + " The frame requesting access set 'document.domain' to '" + activeOrigin->domain() + "', but the frame being accessed did not. Both must set 'document.domain' to the same value to allow access.\n";
+        return message + "The frame requesting access set \"document.domain\" to \"" + activeOrigin->domain() + "\", but the frame being accessed did not. Both must set \"document.domain\" to the same value to allow access.";
     if (targetOrigin->domainWasSetInDOM())
-        return message + " The frame being accessed set 'document.domain' to '" + targetOrigin->domain() + "', but the frame requesting access did not. Both must set 'document.domain' to the same value to allow access.\n";
+        return message + "The frame being accessed set \"document.domain\" to \"" + targetOrigin->domain() + "\", but the frame requesting access did not. Both must set \"document.domain\" to the same value to allow access.";
 
     // Default.
-    return "Blocked a frame with origin \"" + activeOrigin->toString() + "\" from accessing a frame with origin \"" + targetOrigin->toString() + "\". Protocols, domains, and ports must match.";
+    return message + "Protocols, domains, and ports must match.";
 }
 
 bool DOMWindow::isInsecureScriptAccess(DOMWindow* activeWindow, const String& urlString)
@@ -2008,7 +2024,7 @@ void DOMWindow::showModalDialog(const String& urlString, const String& dialogFea
         activeWindow, firstFrame, m_frame, function, functionContext);
     if (!dialogFrame)
         return;
-
+    UserGestureIndicatorDisabler disabler;
     dialogFrame->page()->chrome()->runModal();
 }
 

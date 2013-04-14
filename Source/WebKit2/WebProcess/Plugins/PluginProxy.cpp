@@ -56,12 +56,12 @@ static uint64_t generatePluginInstanceID()
     return ++uniquePluginInstanceID;
 }
 
-PassRefPtr<PluginProxy> PluginProxy::create(const String& pluginPath, PluginProcess::Type processType)
+PassRefPtr<PluginProxy> PluginProxy::create(const String& pluginPath, PluginProcess::Type processType, bool isRestartedProcess)
 {
-    return adoptRef(new PluginProxy(pluginPath, processType));
+    return adoptRef(new PluginProxy(pluginPath, processType, isRestartedProcess));
 }
 
-PluginProxy::PluginProxy(const String& pluginPath, PluginProcess::Type processType)
+PluginProxy::PluginProxy(const String& pluginPath, PluginProcess::Type processType, bool isRestartedProcess)
     : m_pluginPath(pluginPath)
     , m_pluginInstanceID(generatePluginInstanceID())
     , m_pluginBackingStoreContainsValidData(false)
@@ -71,6 +71,7 @@ PluginProxy::PluginProxy(const String& pluginPath, PluginProcess::Type processTy
     , m_remoteLayerClientID(0)
     , m_waitingOnAsynchronousInitialization(false)
     , m_processType(processType)
+    , m_isRestartedProcess(isRestartedProcess)
 {
 }
 
@@ -354,6 +355,9 @@ void PluginProxy::manualStreamDidFail(bool wasCancelled)
 
 bool PluginProxy::handleMouseEvent(const WebMouseEvent& mouseEvent)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandleMouseEvent(mouseEvent), Messages::PluginControllerProxy::HandleMouseEvent::Reply(handled), m_pluginInstanceID))
         return false;
@@ -363,6 +367,9 @@ bool PluginProxy::handleMouseEvent(const WebMouseEvent& mouseEvent)
 
 bool PluginProxy::handleWheelEvent(const WebWheelEvent& wheelEvent)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandleWheelEvent(wheelEvent), Messages::PluginControllerProxy::HandleWheelEvent::Reply(handled), m_pluginInstanceID))
         return false;
@@ -372,6 +379,9 @@ bool PluginProxy::handleWheelEvent(const WebWheelEvent& wheelEvent)
 
 bool PluginProxy::handleMouseEnterEvent(const WebMouseEvent& mouseEnterEvent)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandleMouseEnterEvent(mouseEnterEvent), Messages::PluginControllerProxy::HandleMouseEnterEvent::Reply(handled), m_pluginInstanceID))
         return false;
@@ -381,6 +391,9 @@ bool PluginProxy::handleMouseEnterEvent(const WebMouseEvent& mouseEnterEvent)
 
 bool PluginProxy::handleMouseLeaveEvent(const WebMouseEvent& mouseLeaveEvent)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandleMouseLeaveEvent(mouseLeaveEvent), Messages::PluginControllerProxy::HandleMouseLeaveEvent::Reply(handled), m_pluginInstanceID))
         return false;
@@ -396,6 +409,9 @@ bool PluginProxy::handleContextMenuEvent(const WebMouseEvent&)
 
 bool PluginProxy::handleKeyboardEvent(const WebKeyboardEvent& keyboardEvent)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandleKeyboardEvent(keyboardEvent), Messages::PluginControllerProxy::HandleKeyboardEvent::Reply(handled), m_pluginInstanceID))
         return false;
@@ -410,6 +426,9 @@ void PluginProxy::setFocus(bool hasFocus)
 
 bool PluginProxy::handleEditingCommand(const String& commandName, const String& argument)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandleEditingCommand(commandName, argument), Messages::PluginControllerProxy::HandleEditingCommand::Reply(handled), m_pluginInstanceID))
         return false;
@@ -419,6 +438,9 @@ bool PluginProxy::handleEditingCommand(const String& commandName, const String& 
     
 bool PluginProxy::isEditingCommandEnabled(const String& commandName)
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool enabled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::IsEditingCommandEnabled(commandName), Messages::PluginControllerProxy::IsEditingCommandEnabled::Reply(enabled), m_pluginInstanceID))
         return false;
@@ -428,6 +450,9 @@ bool PluginProxy::isEditingCommandEnabled(const String& commandName)
     
 bool PluginProxy::handlesPageScaleFactor()
 {
+    if (m_waitingOnAsynchronousInitialization)
+        return false;
+
     bool handled = false;
     if (!m_connection->connection()->sendSync(Messages::PluginControllerProxy::HandlesPageScaleFactor(), Messages::PluginControllerProxy::HandlesPageScaleFactor::Reply(handled), m_pluginInstanceID))
         return false;

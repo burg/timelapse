@@ -1136,10 +1136,10 @@ public:
     }
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
     {
-        if (!value->isValueList())
-            return;
+        bool setCounterIncrementToNone = counterBehavior == Increment && value->isPrimitiveValue() && static_cast<CSSPrimitiveValue*>(value)->getIdent() == CSSValueNone;
 
-        CSSValueList* list = static_cast<CSSValueList*>(value);
+        if (!value->isValueList() && !setCounterIncrementToNone)
+            return;
 
         CounterDirectiveMap& map = styleResolver->style()->accessCounterDirectives();
         typedef CounterDirectiveMap::iterator Iterator;
@@ -1150,7 +1150,11 @@ public:
                 it->value.clearReset();
             else
                 it->value.clearIncrement();
-
+        
+        if (setCounterIncrementToNone)
+            return;
+        
+        CSSValueList* list = static_cast<CSSValueList*>(value);
         int length = list ? list->length() : 0;
         for (int i = 0; i < length; ++i) {
             CSSValue* currValue = list->itemWithoutBoundsCheck(i);
@@ -1259,6 +1263,91 @@ public:
     static PropertyHandler createHandler()
     {
         PropertyHandler handler = ApplyPropertyDefaultBase<ETextDecoration, &RenderStyle::textDecoration, ETextDecoration, &RenderStyle::setTextDecoration, ETextDecoration, &RenderStyle::initialTextDecoration>::createHandler();
+        return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
+    }
+};
+
+class ApplyPropertyMarqueeIncrement {
+public:
+    static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
+    {
+        if (!value->isPrimitiveValue())
+            return;
+
+        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        if (primitiveValue->getIdent()) {
+            switch (primitiveValue->getIdent()) {
+            case CSSValueSmall:
+                styleResolver->style()->setMarqueeIncrement(Length(1, Fixed)); // 1px.
+                break;
+            case CSSValueNormal:
+                styleResolver->style()->setMarqueeIncrement(Length(6, Fixed)); // 6px. The WinIE default.
+                break;
+            case CSSValueLarge:
+                styleResolver->style()->setMarqueeIncrement(Length(36, Fixed)); // 36px.
+                break;
+            }
+        } else {
+            Length marqueeLength = styleResolver->convertToIntLength(primitiveValue, styleResolver->style(), styleResolver->rootElementStyle());
+            if (!marqueeLength.isUndefined())
+                styleResolver->style()->setMarqueeIncrement(marqueeLength);
+        }
+    }
+    static PropertyHandler createHandler()
+    {
+        PropertyHandler handler = ApplyPropertyLength<&RenderStyle::marqueeIncrement, &RenderStyle::setMarqueeIncrement, &RenderStyle::initialMarqueeIncrement>::createHandler();
+        return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
+    }
+};
+
+class ApplyPropertyMarqueeRepetition {
+public:
+    static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
+    {
+        if (!value->isPrimitiveValue())
+            return;
+
+        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        if (primitiveValue->getIdent() == CSSValueInfinite)
+            styleResolver->style()->setMarqueeLoopCount(-1); // -1 means repeat forever.
+        else if (primitiveValue->isNumber())
+            styleResolver->style()->setMarqueeLoopCount(primitiveValue->getIntValue());
+    }
+    static PropertyHandler createHandler()
+    {
+        PropertyHandler handler = ApplyPropertyDefault<int, &RenderStyle::marqueeLoopCount, int, &RenderStyle::setMarqueeLoopCount, int, &RenderStyle::initialMarqueeLoopCount>::createHandler();
+        return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
+    }
+};
+
+class ApplyPropertyMarqueeSpeed {
+public:
+    static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
+    {
+        if (!value->isPrimitiveValue())
+            return;
+
+        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        if (int ident = primitiveValue->getIdent()) {
+            switch (ident) {
+            case CSSValueSlow:
+                styleResolver->style()->setMarqueeSpeed(500); // 500 msec.
+                break;
+            case CSSValueNormal:
+                styleResolver->style()->setMarqueeSpeed(85); // 85msec. The WinIE default.
+                break;
+            case CSSValueFast:
+                styleResolver->style()->setMarqueeSpeed(10); // 10msec. Super fast.
+                break;
+            }
+        } else if (primitiveValue->isTime())
+            styleResolver->style()->setMarqueeSpeed(primitiveValue->computeTime<int, CSSPrimitiveValue::Milliseconds>());
+        else if (primitiveValue->isNumber()) // For scrollamount support.
+            styleResolver->style()->setMarqueeSpeed(primitiveValue->getIntValue());
+    }
+    static PropertyHandler createHandler()
+    {
+        PropertyHandler handler = ApplyPropertyDefault<int, &RenderStyle::marqueeSpeed, int, &RenderStyle::setMarqueeSpeed, int, &RenderStyle::initialMarqueeSpeed>::createHandler();
         return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
     }
 };
@@ -1933,6 +2022,56 @@ public:
 };
 #endif
 
+class ApplyPropertyTextIndent {
+public:
+    static void applyInheritValue(CSSPropertyID, StyleResolver* styleResolver)
+    {
+        styleResolver->style()->setTextIndent(styleResolver->parentStyle()->textIndent());
+#if ENABLE(CSS3_TEXT)
+        styleResolver->style()->setTextIndentLine(styleResolver->parentStyle()->textIndentLine());
+#endif
+    }
+
+    static void applyInitialValue(CSSPropertyID, StyleResolver* styleResolver)
+    {
+        styleResolver->style()->setTextIndent(RenderStyle::initialTextIndent());
+#if ENABLE(CSS3_TEXT)
+        styleResolver->style()->setTextIndentLine(RenderStyle::initialTextIndentLine());
+#endif
+    }
+
+    static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
+    {
+        if (!value->isValueList())
+            return;
+
+        // [ <length> | <percentage> ] -webkit-each-line
+        // The order is guaranteed. See CSSParser::parseTextIndent.
+        // The second value, -webkit-each-line is handled only when CSS3_TEXT is enabled.
+
+        CSSValueList* valueList = static_cast<CSSValueList*>(value);
+        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(valueList->itemWithoutBoundsCheck(0));
+        Length lengthOrPercentageValue = primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | CalculatedConversion | ViewportPercentageConversion>(styleResolver->style(), styleResolver->rootElementStyle(), styleResolver->style()->effectiveZoom());
+        ASSERT(!lengthOrPercentageValue.isUndefined());
+        styleResolver->style()->setTextIndent(lengthOrPercentageValue);
+
+#if ENABLE(CSS3_TEXT)
+        ASSERT(valueList->length() <= 2);
+        CSSPrimitiveValue* eachLineValue = static_cast<CSSPrimitiveValue*>(valueList->item(1));
+        if (eachLineValue) {
+            ASSERT(eachLineValue->getIdent() == CSSValueWebkitEachLine);
+            styleResolver->style()->setTextIndentLine(TextIndentEachLine);
+        } else
+            styleResolver->style()->setTextIndentLine(TextIndentFirstLine);
+#endif
+    }
+
+    static PropertyHandler createHandler()
+    {
+        return PropertyHandler(&applyInheritValue, &applyInitialValue, &applyValue);
+    }
+};
+
 const StyleBuilder& StyleBuilder::sharedStyleBuilder()
 {
     DEFINE_STATIC_LOCAL(StyleBuilder, styleBuilderInstance, ());
@@ -2048,9 +2187,10 @@ StyleBuilder::StyleBuilder()
     setPropertyHandler(CSSPropertyWebkitTextDecorationStyle, ApplyPropertyDefault<TextDecorationStyle, &RenderStyle::textDecorationStyle, TextDecorationStyle, &RenderStyle::setTextDecorationStyle, TextDecorationStyle, &RenderStyle::initialTextDecorationStyle>::createHandler());
     setPropertyHandler(CSSPropertyWebkitTextDecorationColor, ApplyPropertyColor<NoInheritFromParent, &RenderStyle::textDecorationColor, &RenderStyle::setTextDecorationColor, &RenderStyle::setVisitedLinkTextDecorationColor, &RenderStyle::color>::createHandler());
     setPropertyHandler(CSSPropertyWebkitTextAlignLast, ApplyPropertyDefault<TextAlignLast, &RenderStyle::textAlignLast, TextAlignLast, &RenderStyle::setTextAlignLast, TextAlignLast, &RenderStyle::initialTextAlignLast>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitTextJustify, ApplyPropertyDefault<TextJustify, &RenderStyle::textJustify, TextJustify, &RenderStyle::setTextJustify, TextJustify, &RenderStyle::initialTextJustify>::createHandler());
     setPropertyHandler(CSSPropertyWebkitTextUnderlinePosition, ApplyPropertyTextUnderlinePosition::createHandler());
 #endif // CSS3_TEXT
-    setPropertyHandler(CSSPropertyTextIndent, ApplyPropertyLength<&RenderStyle::textIndent, &RenderStyle::setTextIndent, &RenderStyle::initialTextIndent>::createHandler());
+    setPropertyHandler(CSSPropertyTextIndent, ApplyPropertyTextIndent::createHandler());
     setPropertyHandler(CSSPropertyTextOverflow, ApplyPropertyDefault<TextOverflow, &RenderStyle::textOverflow, TextOverflow, &RenderStyle::setTextOverflow, TextOverflow, &RenderStyle::initialTextOverflow>::createHandler());
     setPropertyHandler(CSSPropertyTextRendering, ApplyPropertyFont<TextRenderingMode, &FontDescription::textRenderingMode, &FontDescription::setTextRenderingMode, AutoTextRendering>::createHandler());
     setPropertyHandler(CSSPropertyTextTransform, ApplyPropertyDefault<ETextTransform, &RenderStyle::textTransform, ETextTransform, &RenderStyle::setTextTransform, ETextTransform, &RenderStyle::initialTextTransform>::createHandler());
@@ -2142,6 +2282,9 @@ StyleBuilder::StyleBuilder()
     setPropertyHandler(CSSPropertyWebkitMarginBottomCollapse, CSSPropertyWebkitMarginAfterCollapse);
     setPropertyHandler(CSSPropertyWebkitMarginTopCollapse, CSSPropertyWebkitMarginBeforeCollapse);
     setPropertyHandler(CSSPropertyWebkitMarqueeDirection, ApplyPropertyDefault<EMarqueeDirection, &RenderStyle::marqueeDirection, EMarqueeDirection, &RenderStyle::setMarqueeDirection, EMarqueeDirection, &RenderStyle::initialMarqueeDirection>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitMarqueeIncrement, ApplyPropertyMarqueeIncrement::createHandler());
+    setPropertyHandler(CSSPropertyWebkitMarqueeRepetition, ApplyPropertyMarqueeRepetition::createHandler());
+    setPropertyHandler(CSSPropertyWebkitMarqueeSpeed, ApplyPropertyMarqueeSpeed::createHandler());
     setPropertyHandler(CSSPropertyWebkitMarqueeStyle, ApplyPropertyDefault<EMarqueeBehavior, &RenderStyle::marqueeBehavior, EMarqueeBehavior, &RenderStyle::setMarqueeBehavior, EMarqueeBehavior, &RenderStyle::initialMarqueeBehavior>::createHandler());
     setPropertyHandler(CSSPropertyWebkitMaskBoxImage, ApplyPropertyBorderImage<BorderMask, CSSPropertyWebkitMaskBoxImage, &RenderStyle::maskBoxImage, &RenderStyle::setMaskBoxImage>::createHandler());
     setPropertyHandler(CSSPropertyWebkitMaskBoxImageOutset, ApplyPropertyBorderImageModifier<BorderMask, Outset>::createHandler());

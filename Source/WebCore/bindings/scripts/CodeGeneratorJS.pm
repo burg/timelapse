@@ -2190,21 +2190,18 @@ sub GenerateImplementation
                                     }
                                 }
 
-                                my $nativeValue;
+                                push(@implContent, "    " . GetNativeTypeFromSignature($attribute->signature) . " nativeValue(" . JSValueToNative($attribute->signature, "value") . ");\n");
+                                push(@implContent, "    if (exec->hadException())\n");
+                                push(@implContent, "        return;\n");
+
                                 if ($codeGenerator->IsEnumType($type)) {
-                                    push(@implContent, "    const String string = value.isEmpty() ? String() : value.toString(exec)->value(exec);\n");
-                                    push(@implContent, "    if (exec->hadException())\n");
-                                    push(@implContent, "        return;\n");
                                     my @enumValues = $codeGenerator->ValidEnumValues($type);
                                     my @enumChecks = ();
                                     foreach my $enumValue (@enumValues) {
-                                        push(@enumChecks, "string != \"$enumValue\"");
+                                        push(@enumChecks, "nativeValue != \"$enumValue\"");
                                     }
                                     push (@implContent, "    if (" . join(" && ", @enumChecks) . ")\n");
                                     push (@implContent, "        return;\n");
-                                    $nativeValue = "string";
-                                } else {
-                                    $nativeValue = JSValueToNative($attribute->signature, "value");
                                 }
 
                                 if ($svgPropertyOrListPropertyType) {
@@ -2217,9 +2214,9 @@ sub GenerateImplementation
                                     }
                                     push(@implContent, "    $svgPropertyOrListPropertyType& podImpl = impl->propertyReference();\n");
                                     if ($svgPropertyOrListPropertyType eq "float") { # Special case for JSSVGNumber
-                                        push(@implContent, "    podImpl = $nativeValue;\n");
+                                        push(@implContent, "    podImpl = nativeValue;\n");
                                     } else {
-                                        push(@implContent, "    podImpl.set$implSetterFunctionName($nativeValue");
+                                        push(@implContent, "    podImpl.set$implSetterFunctionName(nativeValue");
                                         push(@implContent, ", ec") if @{$attribute->setterExceptions};
                                         push(@implContent, ");\n");
                                         push(@implContent, "    setDOMException(exec, ec);\n") if @{$attribute->setterExceptions};
@@ -2234,7 +2231,7 @@ sub GenerateImplementation
                                     }
                                 } else {
                                     my ($functionName, @arguments) = $codeGenerator->SetterExpression(\%implIncludes, $interfaceName, $attribute);
-                                    push(@arguments, $nativeValue);
+                                    push(@arguments, "nativeValue");
                                     if ($attribute->signature->extendedAttributes->{"ImplementedBy"}) {
                                         my $implementedBy = $attribute->signature->extendedAttributes->{"ImplementedBy"};
                                         $implIncludes{"${implementedBy}.h"} = 1;
@@ -3206,6 +3203,7 @@ my %nativeType = (
     "DOMString" => "const String&",
     "NodeFilter" => "RefPtr<NodeFilter>",
     "SerializedScriptValue" => "RefPtr<SerializedScriptValue>",
+    "Date" => "double",
     "Dictionary" => "Dictionary",
     "any" => "ScriptValue",
     "boolean" => "bool",
@@ -3235,6 +3233,10 @@ sub GetNativeType
     my $arrayOrSequenceType = $arrayType || $sequenceType;
 
     return "Vector<" . GetNativeVectorInnerType($arrayOrSequenceType) . ">" if $arrayOrSequenceType;
+
+    if ($codeGenerator->IsEnumType($type)) {
+        return "const String";
+    }
 
     # For all other types, the native type is a pointer with same type name as the IDL type.
     return "${type}*";
@@ -3323,10 +3325,12 @@ sub JSValueToNative
     return "$value.toBoolean(exec)" if $type eq "boolean";
     return "$value.toNumber(exec)" if $type eq "double";
     return "$value.toFloat(exec)" if $type eq "float";
-    # FIXME: Add [EnforceRange] support
-    return "$value.toInt32(exec)" if $type eq "long" or $type eq "short";
-    return "$value.toUInt32(exec)" if $type eq "unsigned long" or $type eq "unsigned short";
-    return "static_cast<$type>($value.toInteger(exec))" if $type eq "long long" or $type eq "unsigned long long";
+
+    my $intConversion = $signature->extendedAttributes->{"EnforceRange"} ? "EnforceRange" : "NormalConversion";
+    return "toInt32(exec, $value, $intConversion)" if $type eq "long" or $type eq "short";
+    return "toUInt32(exec, $value, $intConversion)" if $type eq "unsigned long" or $type eq "unsigned short";
+    return "toInt64(exec, $value, $intConversion)" if $type eq "long long";
+    return "toUInt64(exec, $value, $intConversion)" if $type eq "unsigned long long";
 
     return "valueToDate(exec, $value)" if $type eq "Date";
     return "static_cast<Range::CompareHow>($value.toInt32(exec))" if $type eq "CompareHow";
@@ -3386,6 +3390,10 @@ sub JSValueToNative
             return "(toRefPtrNativeArray<${arrayOrSequenceType}, JS${arrayOrSequenceType}>(exec, $value, &to${arrayOrSequenceType}))";
         }
         return "toNativeArray<" . GetNativeVectorInnerType($arrayOrSequenceType) . ">(exec, $value)";
+    }
+
+    if ($codeGenerator->IsEnumType($type)) {
+        return "$value.isEmpty() ? String() : $value.toString(exec)->value(exec)";
     }
 
     # Default, assume autogenerated type conversion routines

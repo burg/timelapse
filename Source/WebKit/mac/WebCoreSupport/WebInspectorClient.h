@@ -76,6 +76,9 @@ public:
     bool inspectorStartsAttached();
     void setInspectorStartsAttached(bool);
 
+    bool inspectorAttachDisabled();
+    void setInspectorAttachDisabled(bool);
+
     void releaseFrontend();
 
 private:
@@ -102,10 +105,12 @@ public:
     virtual void closeWindow();
     virtual void disconnectFromBackend();
 
-    virtual void attachWindow();
+    virtual void attachWindow(DockSide);
     virtual void detachWindow();
 
     virtual void setAttachedWindowHeight(unsigned height);
+    virtual void setAttachedWindowWidth(unsigned height);
+
     virtual void inspectedURLChanged(const String& newURL);
 
 private:

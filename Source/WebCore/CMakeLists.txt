@@ -179,6 +179,7 @@ set(WebCore_IDL_FILES
     Modules/gamepad/GamepadList.idl
     Modules/gamepad/NavigatorGamepad.idl
 
+    Modules/geolocation/Coordinates.idl
     Modules/geolocation/Geolocation.idl
     Modules/geolocation/Geoposition.idl
     Modules/geolocation/NavigatorGeolocation.idl
@@ -251,7 +252,6 @@ set(WebCore_IDL_FILES
     Modules/webaudio/ChannelMergerNode.idl
     Modules/webaudio/AudioContext.idl
     Modules/webaudio/AudioDestinationNode.idl
-    Modules/webaudio/AudioGain.idl
     Modules/webaudio/GainNode.idl
     Modules/webaudio/AudioListener.idl
     Modules/webaudio/AudioNode.idl
@@ -385,6 +385,7 @@ set(WebCore_IDL_FILES
     dom/RangeException.idl
     dom/Range.idl
     dom/RequestAnimationFrameCallback.idl
+    dom/SecurityPolicyViolationEvent.idl
     dom/ShadowRoot.idl
     dom/StringCallback.idl
     dom/TextEvent.idl
@@ -527,6 +528,7 @@ set(WebCore_IDL_FILES
     html/canvas/WebGLActiveInfo.idl
     html/canvas/WebGLBuffer.idl
     html/canvas/WebGLCompressedTextureATC.idl
+    html/canvas/WebGLCompressedTexturePVRTC.idl
     html/canvas/WebGLCompressedTextureS3TC.idl
     html/canvas/WebGLContextAttributes.idl
     html/canvas/WebGLContextEvent.idl
@@ -563,7 +565,6 @@ set(WebCore_IDL_FILES
 
     page/BarInfo.idl
     page/Console.idl
-    page/Coordinates.idl
     page/Crypto.idl
     page/DOMSecurityPolicy.idl
     page/DOMSelection.idl
@@ -804,6 +805,7 @@ set(WebCore_SOURCES
     Modules/gamepad/GamepadList.cpp
     Modules/gamepad/NavigatorGamepad.cpp
 
+    Modules/geolocation/Coordinates.cpp
     Modules/geolocation/Geolocation.cpp
     Modules/geolocation/GeolocationController.cpp
     Modules/geolocation/NavigatorGeolocation.cpp
@@ -840,6 +842,7 @@ set(WebCore_SOURCES
     Modules/indexeddb/WorkerContextIndexedDatabase.cpp
 
     Modules/mediasource/MediaSource.cpp
+    Modules/mediasource/MediaSourceRegistry.cpp
     Modules/mediasource/SourceBuffer.cpp
     Modules/mediasource/SourceBufferList.cpp
 
@@ -1514,6 +1517,7 @@ set(WebCore_SOURCES
     html/canvas/OESElementIndexUint.cpp
     html/canvas/WebGLBuffer.cpp
     html/canvas/WebGLCompressedTextureATC.cpp
+    html/canvas/WebGLCompressedTexturePVRTC.cpp
     html/canvas/WebGLCompressedTextureS3TC.cpp
     html/canvas/WebGLContextAttributes.cpp
     html/canvas/WebGLContextEvent.cpp
@@ -1666,7 +1670,6 @@ set(WebCore_SOURCES
     inspector/WorkerInspectorController.cpp
     inspector/WorkerRuntimeAgent.cpp
 
-    loader/CachedMetadata.cpp
     loader/CookieJar.cpp
     loader/CrossOriginAccessControl.cpp
     loader/CrossOriginPreflightResultCache.cpp
@@ -1844,7 +1847,6 @@ set(WebCore_SOURCES
     platform/KURL.cpp
     platform/KillRingNone.cpp
     platform/Language.cpp
-    platform/LayoutTestSupport.cpp
     platform/Length.cpp
     platform/LengthBox.cpp
     platform/LinkHash.cpp
@@ -1867,12 +1869,10 @@ set(WebCore_SOURCES
     platform/SharedBuffer.cpp
     platform/SharedBufferChunkReader.cpp
     platform/SchemeRegistry.cpp
-    platform/StatsCounter.cpp
     platform/ThreadGlobalData.cpp
     platform/ThreadTimers.cpp
     platform/Timer.cpp
     platform/UUID.cpp
-    platform/VisitedLinks.cpp
     platform/Widget.cpp
 
     platform/animation/Animation.cpp
@@ -1895,7 +1895,6 @@ set(WebCore_SOURCES
     platform/audio/EqualPowerPanner.cpp
     platform/audio/FFTConvolver.cpp
     platform/audio/FFTFrame.cpp
-    platform/audio/FFTFrameStub.cpp
     platform/audio/HRTFDatabase.cpp
     platform/audio/HRTFDatabaseLoader.cpp
     platform/audio/HRTFElevation.cpp
@@ -1995,7 +1994,6 @@ set(WebCore_SOURCES
     platform/graphics/filters/FilterEffect.cpp
     platform/graphics/filters/FilterOperation.cpp
     platform/graphics/filters/FilterOperations.cpp
-    platform/graphics/filters/LightSource.cpp
     platform/graphics/filters/PointLightSource.cpp
     platform/graphics/filters/SourceAlpha.cpp
     platform/graphics/filters/SourceGraphic.cpp
@@ -2071,7 +2069,6 @@ set(WebCore_SOURCES
     platform/network/HTTPHeaderMap.cpp
     platform/network/HTTPParsers.cpp
     platform/network/HTTPRequest.cpp
-    platform/network/HTTPValidation.cpp
     platform/network/MIMEHeader.cpp
     platform/network/NetworkStateNotifier.cpp
     platform/network/ParsedContentType.cpp
@@ -2079,6 +2076,7 @@ set(WebCore_SOURCES
     platform/network/ProxyServer.cpp
     platform/network/ResourceErrorBase.cpp
     platform/network/ResourceHandle.cpp
+    platform/network/ResourceHandleClient.cpp
     platform/network/ResourceLoadTiming.cpp
     platform/network/ResourceRequestBase.cpp
     platform/network/ResourceResponseBase.cpp
@@ -2118,7 +2116,6 @@ set(WebCore_SOURCES
     plugins/DOMMimeType.cpp
     plugins/DOMPluginArray.cpp
     plugins/DOMPlugin.cpp
-    plugins/PlugInOriginHash.cpp
     plugins/PluginData.cpp
     plugins/PluginMainThreadScheduler.cpp
 
@@ -2636,6 +2633,7 @@ if (ENABLE_WEBGL)
         html/canvas/OESElementIndexUint.cpp
         html/canvas/WebGLBuffer.cpp
         html/canvas/WebGLCompressedTextureATC.cpp
+        html/canvas/WebGLCompressedTexturePVRTC.cpp
         html/canvas/WebGLCompressedTextureS3TC.cpp
         html/canvas/WebGLContextAttributes.cpp
         html/canvas/WebGLContextEvent.cpp
@@ -2677,6 +2675,7 @@ if (ENABLE_WEBGL)
         html/canvas/WebGLActiveInfo.idl
         html/canvas/WebGLBuffer.idl
         html/canvas/WebGLCompressedTextureATC.idl
+        html/canvas/WebGLCompressedTexturePVRTC.idl
         html/canvas/WebGLCompressedTextureS3TC.idl
         html/canvas/WebGLContextAttributes.idl
         html/canvas/WebGLContextEvent.idl
@@ -2709,6 +2708,7 @@ if (ENABLE_QUOTA)
         Modules/quota/StorageErrorCallback.cpp
         Modules/quota/StorageInfo.cpp
         Modules/quota/StorageQuota.cpp
+        Modules/quota/WorkerNavigatorStorageQuota.cpp
     )
 
     list(APPEND WebCore_IDL_FILES
@@ -2719,6 +2719,7 @@ if (ENABLE_QUOTA)
         Modules/quota/StorageQuota.idl
         Modules/quota/StorageQuotaCallback.idl
         Modules/quota/StorageUsageCallback.idl
+        Modules/quota/WorkerNavigatorStorageQuota.idl
     )
 endif ()
 

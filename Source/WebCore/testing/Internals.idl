@@ -167,6 +167,10 @@
     boolean hasSpellingMarker(in Document document, in long from, in long length) raises (DOMException);
     boolean hasGrammarMarker(in Document document, in long from, in long length) raises (DOMException);
     boolean hasAutocorrectedMarker(in Document document, in long from, in long length) raises (DOMException);
+    void setContinuousSpellCheckingEnabled(in boolean enabled) raises (DOMException);
+
+    boolean isOverwriteModeEnabled(in Document document) raises (DOMException);
+    void toggleOverwriteModeEnabled(in Document document) raises (DOMException);
 
     unsigned long numberOfScrollableAreas(in Document document) raises (DOMException);
 
@@ -225,6 +229,9 @@
 
     void setPageScaleFactor(in float scaleFactor, in long x, in long y) raises(DOMException);
 
+    void setHeaderHeight(in Document document, in float height);
+    void setFooterHeight(in Document document, in float height);
+
 #if defined(ENABLE_FULLSCREEN_API) && ENABLE_FULLSCREEN_API
     void webkitWillEnterFullScreenForElement(in Document document, in Element element);
     void webkitDidEnterFullScreenForElement(in Document document, in Element element);
@@ -264,4 +271,9 @@
     [Conditional=SPEECH_SYNTHESIS] void enableMockSpeechSynthesizer();
 
     DOMString getImageSourceURL(in Element element) raises(DOMException);
+
+    [Conditional=VIDEO_TRACK] DOMString captionsStyleSheetOverride() raises (DOMException);
+    [Conditional=VIDEO_TRACK] void setCaptionsStyleSheetOverride(in DOMString override) raises (DOMException);
+
+    boolean isSelectPopupVisible(in Node node);
 };

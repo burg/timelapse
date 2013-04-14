@@ -55,7 +55,7 @@ PassRefPtr<Image> Image::loadPlatformResource(const char *name)
     return img.release();
 }
 
-NativeImagePtr ImageFrame::asNewNativeImage() const
+PassNativeImagePtr ImageFrame::asNewNativeImage() const
 {
     return new BlackBerry::Platform::Graphics::TiledImage(m_size, m_bytes);
 }
@@ -73,7 +73,7 @@ bool FrameData::clear(bool clearMetadata)
     return false;
 }
 
-BitmapImage::BitmapImage(NativeImagePtr nativeImage, ImageObserver* observer)
+BitmapImage::BitmapImage(PassNativeImagePtr nativeImage, ImageObserver* observer)
     : Image(observer)
     , m_currentFrame(0)
     , m_frames(0)
@@ -121,6 +121,11 @@ void BitmapImage::invalidatePlatformData()
 
 void BitmapImage::draw(GraphicsContext* context, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode)
 {
+    draw(context, dstRect, srcRect, styleColorSpace, op, DoNotRespectImageOrientation);
+}
+
+void BitmapImage::draw(GraphicsContext* context, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, RespectImageOrientationEnum shouldRespectImageOrientation)
+{
     startAnimation();
 
     NativeImagePtr image = nativeImageForCurrentFrame();
@@ -136,6 +141,27 @@ void BitmapImage::draw(GraphicsContext* context, const FloatRect& dstRect, const
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     normSrcRect = adjustSourceRectForDownSampling(normSrcRect, image->size());
 #endif
+
+    // use similar orientation code as ImageSkia
+    ImageOrientation orientation = DefaultImageOrientation;
+    if (shouldRespectImageOrientation == RespectImageOrientation)
+        orientation = frameOrientationAtIndex(m_currentFrame);
+
+    GraphicsContextStateSaver saveContext(*context, false);
+    if (orientation != DefaultImageOrientation) {
+        saveContext.save();
+
+        // ImageOrientation expects the origin to be at (0, 0)
+        context->translate(normDstRect.x(), normDstRect.y());
+        normDstRect.setLocation(FloatPoint());
+
+        context->concatCTM(orientation.transformFromDefault(normDstRect.size()));
+        if (orientation.usesWidthAsHeight()) {
+            // The destination rect will have its width and height already reversed for the orientation of
+            // the image, as it was needed for page layout, so we need to reverse it back here.
+            normDstRect = FloatRect(normDstRect.x(), normDstRect.y(), normDstRect.height(), normDstRect.width());
+        }
+    }
 
     CompositeOperator oldOperator = context->compositeOperation();
     context->setCompositeOperation(op);

@@ -7,7 +7,7 @@
       (contentsOpaque 1)
       (children 2
         (GraphicsLayer
-          (bounds 358.00 208.00)
+          (bounds 366.00 216.00)
           (drawsContent 1)
           (children 1
             (GraphicsLayer
@@ -48,6 +48,7 @@
                                                         (GraphicsLayer
                                                           (position 18.00 10.00)
                                                           (bounds 210.00 210.00)
+                                                          (contentsOpaque 1)
                                                         )
                                                       )
                                                     )
@@ -76,6 +77,7 @@
         (GraphicsLayer
           (position 18.00 202.00)
           (bounds 210.00 210.00)
+          (contentsOpaque 1)
           (transform [1.00 0.00 0.00 0.00] [0.00 1.00 0.00 0.00] [0.00 0.00 1.00 0.00] [0.00 0.00 1.00 1.00])
         )
       )

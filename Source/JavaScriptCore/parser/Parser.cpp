@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003, 2006, 2007, 2008, 2009, 2010, 2013 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -35,11 +35,11 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/WTFThreadData.h>
 
-#define fail() do { if (!m_error) updateErrorMessage(); return 0; } while (0)
-#define failWithToken(tok) do { if (!m_error) updateErrorMessage(tok); return 0; } while (0)
-#define failWithMessage(msg) do { if (!m_error) updateErrorMessage(msg); return 0; } while (0)
-#define failWithNameAndMessage(before, name, after) do { if (!m_error) updateErrorWithNameAndMessage(before, name, after); return 0; } while (0)
-#define failWithStackOverflow() do { m_error = true; m_hasStackOverflow = true; return 0; } while (0)
+#define fail() do { if (!hasError()) updateErrorMessage(); return 0; } while (0)
+#define failWithToken(tok) do { if (!hasError()) updateErrorMessage(tok); return 0; } while (0)
+#define failWithMessage(msg) do { if (!hasError()) updateErrorMessage(msg); return 0; } while (0)
+#define failWithNameAndMessage(before, name, after) do { if (!hasError()) updateErrorWithNameAndMessage(before, name, after); return 0; } while (0)
+#define failWithStackOverflow() do { updateErrorMessage("Stack exhausted"); m_hasStackOverflow = true; return 0; } while (0)
 #define failIfFalse(cond) do { if (!(cond)) fail(); } while (0)
 #define failIfFalseWithMessage(cond, msg) do { if (!(cond)) failWithMessage(msg); } while (0)
 #define failIfFalseWithNameAndMessage(cond, before, name, msg) do { if (!(cond)) failWithNameAndMessage(before, name, msg); } while (0)
@@ -67,8 +67,6 @@ Parser<LexerType>::Parser(JSGlobalData* globalData, const SourceCode& source, Fu
     , m_source(&source)
     , m_stack(wtfThreadData().stack())
     , m_hasStackOverflow(false)
-    , m_error(false)
-    , m_errorMessage("Parse error")
     , m_allowsIn(true)
     , m_lastLine(0)
     , m_lastTokenEnd(0)
@@ -97,7 +95,6 @@ Parser<LexerType>::Parser(JSGlobalData* globalData, const SourceCode& source, Fu
     if (!name.isNull())
         scope->declareCallee(&name);
     next();
-    m_lexer->setLastLineNumber(tokenLine());
 }
 
 template <typename LexerType>
@@ -115,8 +112,12 @@ String Parser<LexerType>::parseInner()
         m_statementDepth--;
     ScopeRef scope = currentScope();
     SourceElements* sourceElements = parseSourceElements<CheckForStrictMode>(context);
-    if (!sourceElements || !consume(EOFTOK))
-        parseError = m_errorMessage;
+    if (!sourceElements || !consume(EOFTOK)) {
+        if (hasError())
+            parseError = m_errorMessage;
+        else
+            parseError = ASCIILiteral("Parser error");
+    }
 
     IdentifierSet capturedVariables;
     scope->getCapturedVariables(capturedVariables);
@@ -175,7 +176,7 @@ template <SourceElementsMode mode, class TreeBuilder> TreeSourceElements Parser<
                     next();
                     m_lexer->setLastLineNumber(oldLastLineNumber);
                     m_lexer->setLineNumber(oldLineNumber);
-                    failIfTrue(m_error);
+                    failIfTrue(hasError());
                     continue;
                 }
             } else
@@ -183,9 +184,8 @@ template <SourceElementsMode mode, class TreeBuilder> TreeSourceElements Parser<
         }
         context.appendStatement(sourceElements, statement);
     }
-    
-    if (m_error)
-        fail();
+
+    failIfTrue(hasError());
     return sourceElements;
 }
 
@@ -201,7 +201,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseVarDeclaratio
     TreeExpression scratch2 = 0;
     int scratch3 = 0;
     TreeExpression varDecls = parseVarDeclarationList(context, scratch, scratch1, scratch2, scratch3, scratch3, scratch3);
-    failIfTrue(m_error);
+    failIfTrue(hasError());
     failIfFalse(autoSemiColon());
     
     return context.createVarStatement(location, varDecls, start, end);
@@ -215,7 +215,7 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseConstDeclarat
     int start = tokenLine();
     int end = 0;
     TreeConstDeclList constDecls = parseConstDeclarationList(context);
-    failIfTrue(m_error);
+    failIfTrue(hasError());
     failIfFalse(autoSemiColon());
     
     return context.createConstStatement(location, constDecls, start, end);
@@ -354,9 +354,8 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseForStatement(
         int initEnd = 0;
         decls = parseVarDeclarationList(context, declarations, forInTarget, forInInitializer, declsStart, initStart, initEnd);
         m_allowsIn = true;
-        if (m_error)
-            fail();
-        
+        failIfTrue(hasError());
+
         // Remainder of a standard for loop is handled identically
         if (match(SEMICOLON))
             goto standardForLoop;
@@ -574,13 +573,13 @@ template <class TreeBuilder> TreeStatement Parser<LexerType>::parseSwitchStateme
     consumeOrFail(OPENBRACE);
     startSwitch();
     TreeClauseList firstClauses = parseSwitchClauses(context);
-    failIfTrue(m_error);
+    failIfTrue(hasError());
     
     TreeClause defaultClause = parseSwitchDefaultClause(context);
-    failIfTrue(m_error);
+    failIfTrue(hasError());
     
     TreeClauseList secondClauses = parseSwitchClauses(context);
-    failIfTrue(m_error);
+    failIfTrue(hasError());
     endSwitch();
     consumeOrFail(CLOSEBRACE);
     
@@ -794,13 +793,16 @@ template <class TreeBuilder> TreeFormalParameterList Parser<LexerType>::parseFor
 template <typename LexerType>
 template <class TreeBuilder> TreeFunctionBody Parser<LexerType>::parseFunctionBody(TreeBuilder& context)
 {
+    JSTokenLocation startLocation(tokenLocation());
+    next();
+
     if (match(CLOSEBRACE))
-        return context.createFunctionBody(tokenLocation(), strictMode());
+        return context.createFunctionBody(startLocation, tokenLocation(), strictMode());
     DepthManager statementDepth(&m_statementDepth);
     m_statementDepth = 0;
     typename TreeBuilder::FunctionBodyBuilder bodyBuilder(const_cast<JSGlobalData*>(m_globalData), m_lexer.get());
     failIfFalse(parseSourceElements<CheckForStrictMode>(bodyBuilder));
-    return context.createFunctionBody(tokenLocation(), strictMode());
+    return context.createFunctionBody(startLocation, tokenLocation(), strictMode());
 }
 
 template <typename LexerType>
@@ -826,13 +828,16 @@ template <FunctionRequirements requirements, bool nameIsInContainingScope, class
     
     openBracePos = m_token.m_data.intValue;
     bodyStartLine = tokenLine();
-    JSTokenLocation location(tokenLocation());
+    JSTokenLocation startLocation(tokenLocation());
     
     // If we know about this function already, we can use the cached info and skip the parser to the end of the function.
     if (const SourceProviderCacheItem* cachedInfo = TreeBuilder::CanUseFunctionCache ? findCachedFunctionInfo(openBracePos) : 0) {
         // If we're in a strict context, the cached function info must say it was strict too.
         ASSERT(!strictMode() || cachedInfo->strictMode);
-        body = context.createFunctionBody(location, cachedInfo->strictMode);
+        JSTokenLocation endLocation;
+        endLocation.line = cachedInfo->closeBraceLine;
+        endLocation.charPosition = cachedInfo->closeBracePos;
+        body = context.createFunctionBody(startLocation, endLocation, cachedInfo->strictMode);
         
         functionScope->restoreFromSourceProviderCache(cachedInfo);
         failIfFalse(popScope(functionScope, TreeBuilder::NeedsFreeVariableInfo));
@@ -846,8 +851,6 @@ template <FunctionRequirements requirements, bool nameIsInContainingScope, class
         next();
         return true;
     }
-    
-    next();
     
     body = parseFunctionBody(context);
     failIfFalse(body);
@@ -1534,7 +1537,6 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parsePrimaryExpre
         TreeExpression re = context.createRegExp(location, *pattern, *flags, start);
         if (!re) {
             const char* yarrErrorMsg = Yarr::checkSyntax(pattern->string());
-            ASSERT(!m_errorMessage.isNull());
             failWithMessage(yarrErrorMsg);
         }
         return re;

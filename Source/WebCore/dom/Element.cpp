@@ -33,6 +33,7 @@
 #include "ClassList.h"
 #include "ClientRect.h"
 #include "ClientRectList.h"
+#include "CustomElementRegistry.h"
 #include "DOMTokenList.h"
 #include "DatasetDOMStringMap.h"
 #include "Document.h"
@@ -547,9 +548,8 @@ Element* Element::bindingsOffsetParent()
 Element* Element::offsetParent()
 {
     document()->updateLayoutIgnorePendingStylesheets();
-    if (RenderObject* rend = renderer())
-        if (RenderObject* offsetParent = rend->offsetParent())
-            return toElement(offsetParent->node());
+    if (RenderObject* renderer = this->renderer())
+        return renderer->offsetParent();
     return 0;
 }
 
@@ -817,10 +817,13 @@ inline void Element::setAttributeInternal(size_t index, const QualifiedName& nam
         willModifyAttribute(name, attributeItem(index)->value(), newValue);
 
     if (newValue != attributeItem(index)->value()) {
-        ensureUniqueElementData()->attributeItem(index)->setValue(newValue);
-
+        // If there is an Attr node hooked to this attribute, the Attr::setValue() call below
+        // will write into the ElementData.
+        // FIXME: Refactor this so it makes some sense.
         if (RefPtr<Attr> attrNode = inSynchronizationOfLazyAttribute ? 0 : attrIfExists(name))
-            attrNode->recreateTextChildAfterAttributeValueChanged();
+            attrNode->setValue(newValue);
+        else
+            ensureUniqueElementData()->attributeItem(index)->setValue(newValue);
     }
 
     if (!inSynchronizationOfLazyAttribute)
@@ -844,7 +847,7 @@ static bool checkNeedsStyleInvalidationForIdChange(const AtomicString& oldId, co
     return false;
 }
 
-void Element::attributeChanged(const QualifiedName& name, const AtomicString& newValue)
+void Element::attributeChanged(const QualifiedName& name, const AtomicString& newValue, AttributeModificationReason)
 {
     if (ElementShadow* parentElementShadow = shadowOfParentForDistribution(this)) {
         if (shouldInvalidateDistributionWhenAttributeChanged(parentElementShadow, name, newValue))
@@ -883,8 +886,19 @@ void Element::attributeChanged(const QualifiedName& name, const AtomicString& ne
     if (shouldInvalidateStyle)
         setNeedsStyleRecalc();
 
-    if (AXObjectCache::accessibilityEnabled())
-        document()->axObjectCache()->handleAttributeChanged(name, this);
+    if (AXObjectCache* cache = document()->existingAXObjectCache())
+        cache->handleAttributeChanged(name, this);
+}
+
+inline void Element::attributeChangedFromParserOrByCloning(const QualifiedName& name, const AtomicString& newValue, AttributeModificationReason reason)
+{
+#if ENABLE(CUSTOM_ELEMENTS)
+    if (name == isAttr) {
+        if (CustomElementRegistry* registry = document()->registry())
+            registry->didGiveTypeExtension(this);
+    }
+#endif
+    attributeChanged(name, newValue, reason);
 }
 
 template <typename CharacterType>
@@ -1024,29 +1038,18 @@ static inline bool isEventHandlerAttribute(const Attribute& attribute)
     return attribute.name().namespaceURI().isNull() && attribute.name().localName().startsWith("on");
 }
 
-bool Element::isJavaScriptURLAttribute(const Attribute& attribute)
+bool Element::isJavaScriptURLAttribute(const Attribute& attribute) const
 {
-    if (!isURLAttribute(attribute))
-        return false;
-    if (!protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(attribute.value())))
-        return false;
-    return true;
+    return isURLAttribute(attribute) && protocolIsJavaScript(stripLeadingAndTrailingHTMLSpaces(attribute.value()));
 }
 
-bool Element::isJavaScriptAttribute(const Attribute& attribute)
-{
-    if (isEventHandlerAttribute(attribute))
-        return true;
-    if (isJavaScriptURLAttribute(attribute))
-        return true;
-    return false;
-}
-
-void Element::stripJavaScriptAttributes(Vector<Attribute>& attributeVector)
+void Element::stripScriptingAttributes(Vector<Attribute>& attributeVector) const
 {
     size_t destination = 0;
     for (size_t source = 0; source < attributeVector.size(); ++source) {
-        if (isJavaScriptAttribute(attributeVector[source]))
+        if (isEventHandlerAttribute(attributeVector[source])
+            || isJavaScriptURLAttribute(attributeVector[source])
+            || isHTMLContentAttribute(attributeVector[source]))
             continue;
 
         if (source != destination)
@@ -1073,7 +1076,7 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector)
 
     // Use attributeVector instead of m_elementData because attributeChanged might modify m_elementData.
     for (unsigned i = 0; i < attributeVector.size(); ++i)
-        attributeChanged(attributeVector[i].name(), attributeVector[i].value());
+        attributeChangedFromParserOrByCloning(attributeVector[i].name(), attributeVector[i].value(), ModifiedDirectly);
 }
 
 bool Element::hasAttributes() const
@@ -1163,6 +1166,25 @@ bool Element::wasChangedSinceLastFormControlChangeEvent() const
 void Element::setChangedSinceLastFormControlChangeEvent(bool)
 {
 }
+
+bool Element::isDisabledFormControl() const
+{
+#if ENABLE(DIALOG_ELEMENT)
+    // FIXME: disabled and inert are separate concepts in the spec, but now we treat them as the same.
+    // For example, an inert, non-disabled form control should not be grayed out.
+    if (isInert())
+        return true;
+#endif
+    return false;
+}
+
+#if ENABLE(DIALOG_ELEMENT)
+bool Element::isInert() const
+{
+    Element* dialog = document()->activeModalDialog();
+    return dialog && !containsIncludingShadowDOM(dialog) && !dialog->containsIncludingShadowDOM(this);
+}
+#endif
 
 Node::InsertionNotificationRequest Element::insertedInto(ContainerNode* insertionPoint)
 {
@@ -1660,6 +1682,13 @@ void Element::childrenChanged(bool changedByParser, Node* beforeChange, Node* af
 
     if (ElementShadow * shadow = this->shadow())
         shadow->invalidateDistribution();
+}
+
+void Element::removeAllEventListeners()
+{
+    ContainerNode::removeAllEventListeners();
+    if (ElementShadow* shadow = this->shadow())
+        shadow->removeAllEventListeners();
 }
 
 void Element::beginParsingChildren()
@@ -2351,6 +2380,11 @@ bool Element::webkitMatchesSelector(const String& selector, ExceptionCode& ec)
     return selectorQuery->matches(this);
 }
 
+bool Element::shouldAppearIndeterminate() const
+{
+    return false;
+}
+
 DOMTokenList* Element::classList()
 {
     ElementRareData* data = ensureElementRareData();
@@ -2857,7 +2891,7 @@ void Element::cloneAttributesFromElement(const Element& other)
 
     for (unsigned i = 0; i < m_elementData->length(); ++i) {
         const Attribute* attribute = const_cast<const ElementData*>(m_elementData.get())->attributeItem(i);
-        attributeChanged(attribute->name(), attribute->value());
+        attributeChangedFromParserOrByCloning(attribute->name(), attribute->value(), ModifiedByCloning);
     }
 }
 

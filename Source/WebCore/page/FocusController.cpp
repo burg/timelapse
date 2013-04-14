@@ -254,8 +254,8 @@ bool FocusController::setInitialFocus(FocusDirection direction, KeyboardEvent* e
     // If focus is being set initially, accessibility needs to be informed that system focus has moved 
     // into the web area again, even if focus did not change within WebCore. PostNotification is called instead
     // of handleFocusedUIElementChanged, because this will send the notification even if the element is the same.
-    if (AXObjectCache::accessibilityEnabled())
-        focusedOrMainFrame()->document()->axObjectCache()->postNotification(focusedOrMainFrame()->document(), AXObjectCache::AXFocusedUIElementChanged, true);
+    if (AXObjectCache* cache = focusedOrMainFrame()->document()->existingAXObjectCache())
+        cache->postNotification(focusedOrMainFrame()->document(), AXObjectCache::AXFocusedUIElementChanged, true);
 
     return didAdvanceFocus;
 }
@@ -612,7 +612,11 @@ bool FocusController::setFocusedNode(Node* node, PassRefPtr<Frame> newFocusedFra
     
     if (oldDocument && oldDocument != newDocument)
         oldDocument->setFocusedNode(0);
-    
+
+    if (newFocusedFrame && !newFocusedFrame->page()) {
+        setFocusedFrame(0);
+        return false;
+    }
     setFocusedFrame(newFocusedFrame);
 
     // Setting the focused node can result in losing our last reft to node when JS event handlers fire.
@@ -718,7 +722,7 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
         // If 2 nodes are intersecting, do hit test to find which node in on top.
         LayoutUnit x = intersectionRect.x() + intersectionRect.width() / 2;
         LayoutUnit y = intersectionRect.y() + intersectionRect.height() / 2;
-        HitTestResult result = candidate.visibleNode->document()->page()->mainFrame()->eventHandler()->hitTestResultAtPoint(IntPoint(x, y), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
+        HitTestResult result = candidate.visibleNode->document()->page()->mainFrame()->eventHandler()->hitTestResultAtPoint(IntPoint(x, y), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
         if (candidate.visibleNode->contains(result.innerNode())) {
             closest = candidate;
             return;

@@ -1,3 +1,293 @@
+2013-04-10  Benjamin Poulain  <bpoulain@apple.com>
+
+        Mass remove all the empty directories
+
+        Rubberstamped by Ryosuke Niwa.
+
+        * ForwardingHeaders/wtf/unicode/icu: Removed.
+
+2013-04-08  Anders Carlsson  <andersca@apple.com>
+
+        Remove unneeded headers from FrameLoader.h
+        https://bugs.webkit.org/show_bug.cgi?id=114223
+
+        Reviewed by Geoffrey Garen.
+
+        Include HistoryController.h from WebCore.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        * WebView/WebView.mm:
+
+2013-04-09  Geoffrey Garen  <ggaren@apple.com>
+
+        Removed bitrotted TimeoutChecker code
+        https://bugs.webkit.org/show_bug.cgi?id=114336
+
+        Reviewed by Alexey Proskuryakov.
+
+        This mechanism hasn't worked for a while.
+
+        MarkL is working on a new version of this feature with a distinct
+        implementation.
+
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::evaluate):
+
+2013-04-08  Benjamin Poulain  <benjamin@webkit.org>
+
+        Remove HTML Notification
+        https://bugs.webkit.org/show_bug.cgi?id=114231
+
+        Reviewed by Ryosuke Niwa.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-04-05  Anders Carlsson  <andersca@apple.com>
+
+        Stop building Objective-C bindings for the SVG DOM
+        https://bugs.webkit.org/show_bug.cgi?id=114076
+
+        Reviewed by Geoffrey Garen.
+
+        The DOM SVG Objective-C bindings have never been exposed as API, and not building them cuts WebCore build by 10%.
+
+        * Configurations/FeatureDefines.xcconfig:
+        * MigrateHeaders.make:
+
+2013-04-05  Timothy Hatcher  <timothy@apple.com>
+
+        Allow the Web Inspector to use WebSQL.
+
+        This fixes an exception on load in the Safari Web Inspector.
+
+        https://webkit.org/b/114040
+        rdar://problem/13581422
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (-[WebInspectorWindowController webView:frame:exceededDatabaseQuotaForSecurityOrigin:database:]): Added.
+
+2013-04-02  Timothy Hatcher  <timothy@apple.com>
+
+        Provide a user default that can be used to disable docking of the Web Inspector.
+
+        The user default is "WebKit Web Inspector Setting - inspectorAttachDisabled".
+
+        https://webkit.org/b/113779
+        rdar://problem/13446021
+
+        Reviewed by Joseph Pecoraro.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorClient::inspectorAttachDisabled): Added.
+        (WebInspectorClient::setInspectorAttachDisabled): Added.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorClient::didResizeMainFrame):
+        (-[WebInspectorWindowController window]):
+        (-[WebInspectorWindowController showWindow:]):
+        Check inspectorAttachDisabled() in places where we attach or update the dock button.
+
+2013-04-02  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac] Remove WKCreateNSURLConnectionDelegateProxy
+        https://bugs.webkit.org/show_bug.cgi?id=113810
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface):
+
+2013-04-02  Alexey Proskuryakov  <ap@apple.com>
+
+        <rdar://problem/13551119> [WK2] Crashes in NetworkProcess when canceling loads
+        https://bugs.webkit.org/show_bug.cgi?id=113803
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::convertMainResourceLoadToDownload):
+        Just pass nil instead of proxy.
+
+2013-04-01  Ryosuke Niwa  <rniwa@webkit.org>
+
+        WebKit/mac shouldn't have code for Mac 10.5 and earlier
+        https://bugs.webkit.org/show_bug.cgi?id=113746
+
+        Reviewed by Darin Adler.
+
+        Deleted the code for 10.5 and removed if-defs for 10.6.
+
+        * Plugins/Hosted/WebHostedNetscapePluginView.mm:
+        (-[WebHostedNetscapePluginView createPlugin]):
+        * Plugins/WebBaseNetscapePluginView.mm:
+        (-[WebBaseNetscapePluginView initWithFrame:pluginPackage:URL:baseURL:MIMEType:attributeKeys:attributeValues:loadManually:element:WebCore::]):
+        * Plugins/WebNetscapePluginView.mm:
+        (-[WebNetscapePluginView createPlugin]):
+        (-[WebNetscapePluginView getVariable:forURL:value:length:]):
+        (-[WebNetscapePluginView _workaroundSilverlightFullscreenBug:]):
+        * WebCoreSupport/WebChromeClient.mm:
+        (WebChromeClient::selectItemWritingDirectionIsNatural):
+        (WebChromeClient::selectItemAlignmentFollowsMenuWritingDirection):
+        * WebCoreSupport/WebEditorClient.mm:
+        (core):
+        (WebEditorClient::checkTextOfParagraph):
+        (WebEditorClient::requestCheckingOfString):
+        * WebView/WebDynamicScrollBarsView.mm:
+        (-[WebDynamicScrollBarsView reflectScrolledClipView:]):
+        * WebView/WebFullScreenController.mm:
+        (-[WebFullScreenController _updateMenuAndDockForFullScreen]):
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView _documentFragmentFromPasteboard:inContext:allowPlainText:]):
+        (-[WebHTMLView _frameOrBoundsChanged]):
+        (+[WebHTMLView _insertablePasteboardTypes]):
+        (-[WebHTMLView _documentFragmentFromPasteboard:forType:inContext:subresources:]):
+        (-[WebHTMLView validateUserInterfaceItemWithoutDelegate:]):
+        (writingDirectionKeyBindingsEnabled):
+        (-[WebHTMLView _lookUpInDictionaryFromMenu:]):
+        (-[WebHTMLView attachRootLayer:]):
+        * WebView/WebHTMLViewInternal.h:
+        * WebView/WebPDFDocumentExtras.mm:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        * WebView/WebResourceInternal.h:
+        * WebView/WebScriptDebugDelegate.h:
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (-[WebView _preferencesChanged:]):
+        (+[WebView initialize]):
+        (clientNeedsWebViewInitThreadWorkaround):
+        (-[WebView validateUserInterfaceItemWithoutDelegate:]):
+        (-[WebView setGrammarCheckingEnabled:]):
+        (-[WebView isAutomaticQuoteSubstitutionEnabled]):
+        (-[WebView isAutomaticLinkDetectionEnabled]):
+        (-[WebView isAutomaticDashSubstitutionEnabled]):
+        (-[WebView isAutomaticTextReplacementEnabled]):
+        (-[WebView isAutomaticSpellingCorrectionEnabled]):
+        (-[WebView _searchWithSpotlightFromMenu:]):
+        (WebInstallMemoryPressureHandler):
+        * WebView/WebViewPrivate.h:
+
+2013-04-01  Tim Horton  <timothy_horton@apple.com>
+
+        WebCache should do the normal initialization dance
+        https://bugs.webkit.org/show_bug.cgi?id=113722
+        <rdar://problem/13424530>
+
+        Reviewed by Anders Carlsson.
+
+        In case a WebKit1 client uses WebCache before creating a WebView (or any of the other
+        initialization-ready classes), we should do the initialization work in WebCache as well.
+
+        * Misc/WebCache.mm:
+        (+[WebCache initialize]):
+
+2013-03-26  Timothy Hatcher  <timothy@apple.com>
+
+        Add support for dock-to-right of the Web Inspector in the Mac port.
+
+        Unfortunately this requires Safari changes, so it is disabled in the nightly builds.
+
+        https://webkit.org/b/113341
+        rdar://problem/10368152
+
+        Reviewed by Joseph Pecoraro.
+
+        * Resources/Dock.pdf: Updated.
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorFrontendClient):
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::frontendLoaded):
+        (WebInspectorFrontendClient::attachWindow):
+        (WebInspectorFrontendClient::setAttachedWindowWidth):
+        (-[WebInspectorWindowController attachWindow:]):
+        (-[WebInspectorWindowController attach]):
+        (-[WebInspectorWindowController detach]):
+        * WebInspector/WebInspectorFrontend.mm:
+        (-[WebInspectorFrontend attach]):
+
+2013-03-26  Tim Horton  <timothy_horton@apple.com>
+
+        Unreviewed attempted cr-mac build fix.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface):
+
+2013-03-26  Hayato Ito  <hayato@chromium.org>
+
+        Allow ShadowContents in HitTests by default.
+        https://bugs.webkit.org/show_bug.cgi?id=113171
+
+        Reviewed by Dimitri Glazkov.
+
+        * WebView/WebFrame.mm:
+        (-[WebFrame elementAtPoint:]):
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView elementAtPoint:allowShadowContent:]):
+
+2013-03-26  Tim Horton  <timothy_horton@apple.com>
+
+        [ca] Tell CA to clean up unused resources if a given WebProcess won't be drawing
+        https://bugs.webkit.org/show_bug.cgi?id=107539
+        <rdar://problem/13032692>
+
+        Reviewed by Simon Fraser.
+
+        Update WebSystemInterface.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface):
+
+2013-03-26  Sergio Villar Senin  <svillar@igalia.com>
+
+        Implement overtype mode for editable content
+        https://bugs.webkit.org/show_bug.cgi?id=112126
+
+        Reviewed by Ryosuke Niwa.
+
+        Added the OverWrite editing command to the WebCore editing
+        commands lists.
+
+        * WebView/WebHTMLView.mm:
+        * WebView/WebView.h:
+        * WebView/WebView.mm:
+
+2013-03-25  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_INPUT_TYPE_DATETIME
+        https://bugs.webkit.org/show_bug.cgi?id=113254
+
+        Reviewed by Kentaro Hara.
+
+        Rename ENABLE_INPUT_TYPE_DATETIME to ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE.
+        Actually I'd like to remove the code, but we shouldn't remove it yet
+        because we shipped products with it on some platforms.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-03-21  Kiran Muppala  <cmuppala@apple.com>
+
+        Add runtime setting for hidden page DOM timer throttling and CSS animation suspension
+        https://bugs.webkit.org/show_bug.cgi?id=112308
+
+        Reviewed by Gavin Barraclough.
+
+        Add private preference for enabling/disabling hidden page DOM timer
+        throttling and CSS animation suspension.  The preference should be
+        disabled by default to avoid compatibility issues.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences hiddenPageDOMTimerThrottlingEnabled]):
+        (-[WebPreferences setHiddenPageDOMTimerThrottlingEnabled:]):
+        (-[WebPreferences hiddenPageCSSAnimationSuspensionEnabled]):
+        (-[WebPreferences setHiddenPageCSSAnimationSuspensionEnabled:]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
 2013-03-19  Ryosuke Niwa  <rniwa@webkit.org>
 
         Another Mac build fix attempt after r146239.

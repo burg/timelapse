@@ -38,6 +38,7 @@
 #include "IDBTransactionBackendImpl.h"
 #include "IDBTransactionCoordinator.h"
 #include "SharedBuffer.h"
+#include <wtf/TemporaryChange.h>
 
 namespace WebCore {
 
@@ -621,7 +622,7 @@ void CreateIndexOperation::perform(IDBTransactionBackendImpl* transaction)
 void CreateIndexAbortOperation::perform(IDBTransactionBackendImpl* transaction)
 {
     IDB_TRACE("CreateIndexAbortOperation");
-    ASSERT(!transaction);
+    ASSERT_UNUSED(transaction, !transaction);
     m_database->removeIndex(m_objectStoreId, m_indexId);
 }
 
@@ -657,7 +658,7 @@ void DeleteIndexOperation::perform(IDBTransactionBackendImpl* transaction)
 void DeleteIndexAbortOperation::perform(IDBTransactionBackendImpl* transaction)
 {
     IDB_TRACE("DeleteIndexAbortOperation");
-    ASSERT(!transaction);
+    ASSERT_UNUSED(transaction, !transaction);
     m_database->addIndex(m_objectStoreId, m_indexMetadata, IDBIndexMetadata::InvalidId);
 }
 
@@ -915,7 +916,7 @@ void IDBDatabaseBackendImpl::setIndexKeys(int64_t transactionId, int64_t objectS
     }
 }
 
-void IDBDatabaseBackendImpl::setIndexesReady(int64_t transactionId, int64_t objectStoreId, const Vector<int64_t>& indexIds)
+void IDBDatabaseBackendImpl::setIndexesReady(int64_t transactionId, int64_t, const Vector<int64_t>& indexIds)
 {
     IDB_TRACE("IDBObjectStoreBackendImpl::setIndexesReady");
 
@@ -1210,6 +1211,7 @@ void IDBDatabaseBackendImpl::openConnection(PassRefPtr<IDBCallbacks> prpCallback
     bool isNewDatabase = m_metadata.version == NoStringVersion && m_metadata.intVersion == IDBDatabaseMetadata::NoIntVersion;
 
     if (version == IDBDatabaseMetadata::DefaultIntVersion) {
+        // FIXME: this comments was related to Chromium code. It may be incorrect
         // For unit tests only - skip upgrade steps. Calling from script with DefaultIntVersion throws exception.
         ASSERT(isNewDatabase);
         m_databaseCallbacksSet.add(databaseCallbacks);
@@ -1334,7 +1336,7 @@ void IDBDatabaseBackendImpl::close(PassRefPtr<IDBDatabaseCallbacks> prpCallbacks
     // To avoid that situation, don't proceed in case of reentrancy.
     if (m_closingConnection)
         return;
-    m_closingConnection = true;
+    TemporaryChange<bool> closingConnection(m_closingConnection, true);
     processPendingCalls();
 
     // FIXME: Add a test for the m_pendingOpenCalls cases below.
@@ -1347,31 +1349,32 @@ void IDBDatabaseBackendImpl::close(PassRefPtr<IDBDatabaseCallbacks> prpCallbacks
         ASSERT(m_transactions.isEmpty());
 
         m_backingStore.clear();
-        // This check should only be false in tests.
+
+        // This check should only be false in unit tests.
+        ASSERT(m_factory);
         if (m_factory)
             m_factory->removeIDBDatabaseBackend(m_identifier);
     }
-    m_closingConnection = false;
 }
 
 void CreateObjectStoreAbortOperation::perform(IDBTransactionBackendImpl* transaction)
 {
     IDB_TRACE("CreateObjectStoreAbortOperation");
-    ASSERT(!transaction);
+    ASSERT_UNUSED(transaction, !transaction);
     m_database->removeObjectStore(m_objectStoreId);
 }
 
 void DeleteObjectStoreAbortOperation::perform(IDBTransactionBackendImpl* transaction)
 {
     IDB_TRACE("DeleteObjectStoreAbortOperation");
-    ASSERT(!transaction);
+    ASSERT_UNUSED(transaction, !transaction);
     m_database->addObjectStore(m_objectStoreMetadata, IDBObjectStoreMetadata::InvalidId);
 }
 
 void IDBDatabaseBackendImpl::VersionChangeAbortOperation::perform(IDBTransactionBackendImpl* transaction)
 {
     IDB_TRACE("VersionChangeAbortOperation");
-    ASSERT(!transaction);
+    ASSERT_UNUSED(transaction, !transaction);
     m_database->m_metadata.version = m_previousVersion;
     m_database->m_metadata.intVersion = m_previousIntVersion;
 }

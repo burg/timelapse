@@ -43,6 +43,7 @@
 #include "HTMLUnknownElement.h"
 #include "RuntimeEnabledFeatures.h"
 #include <wtf/ASCIICType.h>
+#include <wtf/HashSet.h>
 
 #if ENABLE(SVG)
 #include "SVGNames.h"
@@ -54,6 +55,15 @@
 
 namespace WebCore {
 
+CustomElementInvocation::CustomElementInvocation(PassRefPtr<Element> element)
+    : m_element(element)
+{
+}
+
+CustomElementInvocation::~CustomElementInvocation()
+{
+}
+
 CustomElementRegistry::CustomElementRegistry(Document* document)
     : ContextDestructionObserver(document)
 {
@@ -61,6 +71,7 @@ CustomElementRegistry::CustomElementRegistry(Document* document)
 
 CustomElementRegistry::~CustomElementRegistry()
 {
+    deactivate();
 }
 
 static inline bool nameIncludesHyphen(const AtomicString& name)
@@ -104,8 +115,8 @@ PassRefPtr<CustomElementConstructor> CustomElementRegistry::registerElement(Scri
     if (!CustomElementHelpers::isFeatureAllowed(state))
         return 0;
 
-    QualifiedName newName(nullAtom, name.lower(), HTMLNames::xhtmlNamespaceURI);
-    if (!isValidName(newName.localName())) {
+    AtomicString lowerName = name.lower();
+    if (!isValidName(lowerName)) {
         ec = INVALID_CHARACTER_ERR;
         return 0;
     }
@@ -121,19 +132,21 @@ PassRefPtr<CustomElementConstructor> CustomElementRegistry::registerElement(Scri
         return 0;
     }
 
-    if (!CustomElementHelpers::isValidPrototypeParameter(prototypeValue, state)) {
+    AtomicString namespaceURI;
+    if (!CustomElementHelpers::isValidPrototypeParameter(prototypeValue, state, namespaceURI)) {
         ec = INVALID_STATE_ERR;
         return 0;
     }
 
-    if (m_names.contains(newName)) {
+    if (m_names.contains(lowerName)) {
         ec = INVALID_STATE_ERR;
         return 0;
     }
 
     const QualifiedName* localNameFound = CustomElementHelpers::findLocalName(prototypeValue);
-    QualifiedName localNameToUse = localNameFound ? *localNameFound : newName;
-    if (find(newName, localNameToUse)) {
+    QualifiedName typeName(nullAtom, lowerName, namespaceURI);
+    QualifiedName localNameToUse = localNameFound ? *localNameFound : typeName;
+    if (find(typeName, localNameToUse)) {
         ec = INVALID_STATE_ERR;
         return 0;
     }
@@ -144,14 +157,14 @@ PassRefPtr<CustomElementConstructor> CustomElementRegistry::registerElement(Scri
         return 0;
     }
 
-    RefPtr<CustomElementConstructor> constructor = CustomElementConstructor::create(state, document(), newName, localNameToUse, prototypeValue);
+    RefPtr<CustomElementConstructor> constructor = CustomElementConstructor::create(state, document(), typeName, localNameToUse, prototypeValue);
     if (!constructor) {
         ec = INVALID_STATE_ERR;
         return 0;
     }
         
     m_constructors.add(std::make_pair(constructor->typeName(), constructor->localName()), constructor);
-    m_names.add(constructor->typeName());
+    m_names.add(lowerName);
 
     return constructor;
 }
@@ -193,9 +206,62 @@ PassRefPtr<Element> CustomElementRegistry::createElement(const QualifiedName& lo
     return 0;
 }
 
+void CustomElementRegistry::didGiveTypeExtension(Element* element)
+{
+    RefPtr<CustomElementConstructor> constructor = findFor(element);
+    if (!constructor || !constructor->isExtended())
+        return;
+    activate(CustomElementInvocation(element));
+}
+
+void CustomElementRegistry::didCreateElement(Element* element)
+{
+    activate(CustomElementInvocation(element));
+}
+
+void CustomElementRegistry::activate(const CustomElementInvocation& invocation)
+{
+    bool wasInactive = m_invocations.isEmpty();
+    m_invocations.append(invocation);
+    if (wasInactive)
+        activeCustomElementRegistries().add(this);
+}
+
+void CustomElementRegistry::deactivate()
+{
+    ASSERT(m_invocations.isEmpty());
+    if (activeCustomElementRegistries().contains(this))
+        activeCustomElementRegistries().remove(this);
+}
+
 inline Document* CustomElementRegistry::document() const
 {
     return toDocument(m_scriptExecutionContext);
+}
+
+void CustomElementRegistry::deliverLifecycleCallbacks()
+{
+    ASSERT(!m_invocations.isEmpty());
+
+    if (!m_invocations.isEmpty()) {
+        Vector<CustomElementInvocation> invocations;
+        m_invocations.swap(invocations);
+        CustomElementHelpers::invokeReadyCallbacksIfNeeded(m_scriptExecutionContext, invocations);
+    }
+
+    ASSERT(m_invocations.isEmpty());
+    deactivate();
+}
+
+void CustomElementRegistry::deliverAllLifecycleCallbacks()
+{
+    while (!activeCustomElementRegistries().isEmpty()) {
+        Vector<RefPtr<CustomElementRegistry> > registries;
+        copyToVector(activeCustomElementRegistries(), registries);
+        activeCustomElementRegistries().clear();
+        for (size_t i = 0; i < registries.size(); ++i)
+            registries[i]->deliverLifecycleCallbacks();
+    }
 }
 
 }

@@ -39,12 +39,6 @@ def platform_options(use_globs=False):
     return [
         optparse.make_option('--platform', action='store',
             help=('Glob-style list of platform/ports to use (e.g., "mac*")' if use_globs else 'Platform to use (e.g., "mac-lion")')),
-        optparse.make_option('--chromium', action='store_const', dest='platform',
-            const=('chromium*' if use_globs else 'chromium'),
-            help=('Alias for --platform=chromium*' if use_globs else 'Alias for --platform=chromium')),
-        optparse.make_option('--chromium-android', action='store_const', dest='platform',
-            const=('chromium-android*' if use_globs else 'chromium-android'),
-            help=('Alias for --platform=chromium-android*' if use_globs else 'Alias for --platform=chromium')),
         optparse.make_option('--efl', action='store_const', dest='platform',
             const=('efl*' if use_globs else 'efl'),
             help=('Alias for --platform=efl*' if use_globs else 'Alias for --platform=efl')),
@@ -80,10 +74,6 @@ def _builder_options(builder_name):
 
 class PortFactory(object):
     PORT_CLASSES = (
-        'chromium_android.ChromiumAndroidPort',
-        'chromium_linux.ChromiumLinuxPort',
-        'chromium_mac.ChromiumMacPort',
-        'chromium_win.ChromiumWinPort',
         'efl.EflPort',
         'gtk.GtkPort',
         'mac.MacPort',
@@ -99,7 +89,7 @@ class PortFactory(object):
     def _default_port(self, options):
         platform = self._host.platform
         if platform.is_linux() or platform.is_freebsd():
-            return 'chromium-linux'
+            return 'qt-linux'
         elif platform.is_mac():
             return 'mac'
         elif platform.is_win():
@@ -111,12 +101,6 @@ class PortFactory(object):
         port_name is None, this routine attempts to guess at the most
         appropriate port on this platform."""
         port_name = port_name or self._default_port(options)
-
-        # FIXME(dpranke): We special-case '--platform chromium' so that it can co-exist
-        # with '--platform chromium-mac' and '--platform chromium-linux' properly (we
-        # can't look at the port_name prefix in this case).
-        if port_name == 'chromium':
-            port_name = 'chromium-' + self._host.platform.os_name
 
         for port_class in self.PORT_CLASSES:
             module_name, class_name = port_class.rsplit('.', 1)

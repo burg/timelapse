@@ -27,6 +27,7 @@ CONFIG += staticlib
 }
 
 SOURCES += \
+    Modules/geolocation/Coordinates.cpp \
     Modules/geolocation/Geolocation.cpp \
     Modules/geolocation/GeolocationController.cpp \
     Modules/geolocation/NavigatorGeolocation.cpp \
@@ -95,7 +96,6 @@ SOURCES += \
      bindings/js/JSCanvasRenderingContextCustom.cpp \
      bindings/js/JSClipboardCustom.cpp \
      bindings/js/JSConsoleCustom.cpp \
-     bindings/js/JSCoordinatesCustom.cpp \
      bindings/js/JSCryptoCustom.cpp \
      bindings/js/JSCustomXPathNSResolver.cpp \
      bindings/js/JSDictionary.cpp \
@@ -174,6 +174,7 @@ SOURCES += \
      bindings/js/JSPopStateEventCustom.cpp \
      bindings/js/JSProcessingInstructionCustom.cpp \
      bindings/js/JSRequestAnimationFrameCallbackCustom.cpp \
+     bindings/js/JSRTCStatsResponseCustom.cpp \
      bindings/js/JSStorageCustom.cpp \
      bindings/js/JSStyleSheetCustom.cpp \
      bindings/js/JSStyleSheetListCustom.cpp \
@@ -847,7 +848,6 @@ SOURCES += \
     loader/appcache/ManifestParser.cpp \
     loader/archive/ArchiveResource.cpp \
     loader/archive/ArchiveResourceCollection.cpp \
-    loader/CachedMetadata.cpp \
     loader/cache/MemoryCache.cpp \
     loader/cache/CachedCSSStyleSheet.cpp \
     loader/cache/CachedFont.cpp \
@@ -975,7 +975,6 @@ SOURCES += \
     plugins/PluginMainThreadScheduler.cpp \
     plugins/DOMMimeType.cpp \
     plugins/DOMMimeTypeArray.cpp \
-    plugins/PlugInOriginHash.cpp \
     platform/animation/Animation.cpp \
     platform/animation/AnimationList.cpp \
     platform/Arena.cpp \
@@ -1051,7 +1050,6 @@ SOURCES += \
     platform/graphics/surfaces/qt/GraphicsSurfaceQt.cpp \
     platform/graphics/SurrogatePairAwareTextIterator.cpp \
     platform/graphics/TextRun.cpp \
-    platform/graphics/TextTrackRepresentation.cpp \
     platform/graphics/TiledBackingStore.cpp \
     platform/graphics/transforms/AffineTransform.cpp \
     platform/graphics/transforms/TransformationMatrix.cpp \
@@ -1073,7 +1071,6 @@ SOURCES += \
     platform/KillRingNone.cpp \
     platform/KURL.cpp \
     platform/Language.cpp \
-    platform/LayoutTestSupport.cpp \
     platform/Length.cpp \
     platform/LengthBox.cpp \
     platform/text/LineEnding.cpp \
@@ -1102,7 +1099,6 @@ SOURCES += \
     platform/network/HTTPHeaderMap.cpp \
     platform/network/HTTPParsers.cpp \
     platform/network/HTTPRequest.cpp \
-    platform/network/HTTPValidation.cpp \
     platform/network/MIMEHeader.cpp \
     platform/network/NetworkStateNotifier.cpp \
     platform/network/NetworkStorageSessionStub.cpp \
@@ -1111,6 +1107,7 @@ SOURCES += \
     platform/network/ProxyServer.cpp \
     platform/network/ResourceErrorBase.cpp \
     platform/network/ResourceHandle.cpp \
+    platform/network/ResourceHandleClient.cpp \
     platform/network/ResourceLoadTiming.cpp \
     platform/network/ResourceRequestBase.cpp \
     platform/network/ResourceResponseBase.cpp \
@@ -1130,7 +1127,6 @@ SOURCES += \
     platform/ScrollView.cpp \
     platform/SharedBuffer.cpp \
     platform/SharedBufferChunkReader.cpp \
-    platform/StatsCounter.cpp \
     platform/sql/SQLiteAuthorizer.cpp \
     platform/sql/SQLiteDatabase.cpp \
     platform/sql/SQLiteFileSystem.cpp \
@@ -1156,7 +1152,6 @@ SOURCES += \
     platform/text/UnicodeRange.cpp \
     platform/text/transcoder/FontTranscoder.cpp \
     platform/UUID.cpp \
-    platform/VisitedLinks.cpp \
     platform/Widget.cpp \
     platform/PlatformStrategies.cpp \
     plugins/IFrameShimSupport.cpp \
@@ -1263,7 +1258,6 @@ SOURCES += \
     rendering/RenderTextControlMultiLine.cpp \
     rendering/RenderTextControlSingleLine.cpp \
     rendering/RenderTextFragment.cpp \
-    rendering/RenderTextTrackCue.cpp \
     rendering/RenderTheme.cpp \
     rendering/RenderTreeAsText.cpp \
     rendering/RenderView.cpp \
@@ -1285,6 +1279,8 @@ SOURCES += \
     rendering/style/StyleCachedImage.cpp \
     rendering/style/StyleCachedImageSet.cpp \
     rendering/style/StyleCachedShader.cpp \
+    rendering/style/StyleCustomFilterProgram.cpp \
+    rendering/style/StyleCustomFilterProgramCache.cpp \
     rendering/style/StyleDeprecatedFlexibleBoxData.cpp \
     rendering/style/StyleFilterData.cpp \
     rendering/style/StyleFlexibleBoxData.cpp \
@@ -1444,6 +1440,7 @@ HEADERS += \
     plugins/npruntime.h
 
 HEADERS += \
+    Modules/geolocation/Coordinates.h \
     Modules/geolocation/Geolocation.h \
     Modules/geolocation/GeolocationController.h \
     Modules/geolocation/GeolocationError.h \
@@ -1914,7 +1911,6 @@ HEADERS += \
     html/HTMLTextAreaElement.h \
     html/HTMLTextFormControlElement.h \
     html/HTMLTitleElement.h \
-    html/HTMLTrackElement.h \
     html/HTMLUListElement.h \
     html/HTMLVideoElement.h \
     html/HTMLViewSourceDocument.h \
@@ -1967,18 +1963,6 @@ HEADERS += \
     html/shadow/MediaControls.h \
     html/shadow/MediaControlsApple.h \
     html/shadow/DetailsMarkerControl.h \
-    html/track/InbandTextTrack.h \
-    html/track/LoadableTextTrack.h \
-    html/track/TextTrack.h \
-    html/track/TextTrackCue.h \
-    html/track/TextTrackCueGeneric.h \
-    html/track/TextTrackCueList.h \
-    html/track/TextTrackList.h \
-    html/track/TrackBase.h \
-    html/track/TrackEvent.h \
-    html/track/WebVTTParser.h \
-    html/track/WebVTTToken.h \
-    html/track/WebVTTTokenizer.h \
     inspector/BindingVisitors.h \
     inspector/ConsoleAPITypes.h \
     inspector/ConsoleMessage.h \
@@ -2094,7 +2078,6 @@ HEADERS += \
     loader/SubresourceLoader.h \
     loader/SubstituteData.h \
     loader/TextResourceDecoder.h \
-    loader/TextTrackLoader.h \
     loader/ThreadableLoader.h \
     loader/WorkerThreadableLoader.h \
     mathml/MathMLElement.h \
@@ -2115,7 +2098,6 @@ HEADERS += \
     page/ConsoleTypes.h \
     page/ContextMenuController.h \
     page/ContextMenuProvider.h \
-    page/Coordinates.h \
     page/DeviceClient.h \
     page/DeviceController.h \
     page/DiagnosticLoggingKeys.h \
@@ -2172,6 +2154,7 @@ HEADERS += \
     platform/ClockGeneric.h \
     platform/ContentType.h \
     platform/ContextMenu.h \
+    platform/ContextMenuItem.h \
     platform/CrossThreadCopier.h \
     platform/DateComponents.h \
     platform/Decimal.h \
@@ -2265,8 +2248,6 @@ HEADERS += \
     platform/graphics/Image.h \
     platform/graphics/ImageOrientation.h \
     platform/graphics/ImageSource.h \
-    platform/graphics/InbandTextTrackPrivate.h \
-    platform/graphics/InbandTextTrackPrivateClient.h \
     platform/graphics/IntPoint.h \
     platform/graphics/IntPointHash.h \
     platform/graphics/IntRect.h \
@@ -2361,7 +2342,6 @@ HEADERS += \
     platform/network/HTTPHeaderMap.h \
     platform/network/HTTPParsers.h \
     platform/network/HTTPRequest.h \
-    platform/network/HTTPValidation.h \
     platform/network/HTTPStatusCodes.h \
     platform/network/MIMESniffing.h \
     platform/network/NetworkStorageSession.h \
@@ -2446,7 +2426,6 @@ HEADERS += \
     plugins/PluginDebug.h \
     plugins/DOMPlugin.h \
     plugins/IFrameShimSupport.h \
-    plugins/PlugInOriginHash.h \
     plugins/PluginMainThreadScheduler.h \
     plugins/PluginPackage.h \
     plugins/PluginStream.h \
@@ -2582,6 +2561,7 @@ HEADERS += \
     rendering/style/StyleCachedImage.h \
     rendering/style/StyleCachedShader.h \
     rendering/style/StyleCustomFilterProgram.h \
+    rendering/style/StyleCustomFilterProgramCache.h \
     rendering/style/StyleDeprecatedFlexibleBoxData.h \
     rendering/style/StyleFilterData.h \
     rendering/style/StyleFlexibleBoxData.h \
@@ -2953,6 +2933,8 @@ SOURCES += \
     platform/network/qt/QNetworkReplyHandler.cpp \
     editing/qt/EditorQt.cpp \
     platform/Cursor.cpp \
+    platform/ContextMenu.cpp \
+    platform/ContextMenuItem.cpp \
     platform/qt/ClipboardQt.cpp \
     platform/qt/ContextMenuItemQt.cpp \
     platform/qt/ContextMenuQt.cpp \
@@ -3307,6 +3289,13 @@ enable?(QUOTA) {
         Modules/quota/StorageErrorCallback.cpp \
         Modules/quota/StorageInfo.cpp \
         Modules/quota/StorageQuota.cpp
+    enable?(WORKERS) {
+        HEADERS += \
+            Modules/quota/NavigatorStorageQuota.idl \
+            Modules/quota/WorkerNavigatorStorageQuota.h
+        SOURCES += \
+            Modules/quota/WorkerNavigatorStorageQuota.h
+    }
 }
 
 enable?(GAMEPAD) {
@@ -3436,7 +3425,6 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/ChannelSplitterNode.h \
         Modules/webaudio/AudioContext.h \
         Modules/webaudio/AudioDestinationNode.h \
-        Modules/webaudio/AudioGain.h \
         Modules/webaudio/GainNode.h \
         Modules/webaudio/AudioListener.h \
         Modules/webaudio/AudioNode.h \
@@ -3686,7 +3674,6 @@ enable?(FILTERS) {
         platform/graphics/filters/FilterOperations.cpp \
         platform/graphics/filters/FilterOperation.cpp \
         platform/graphics/filters/FilterEffect.cpp \
-        platform/graphics/filters/LightSource.cpp \
         platform/graphics/filters/PointLightSource.cpp \
         platform/graphics/filters/SpotLightSource.cpp \
         platform/graphics/filters/SourceAlpha.cpp \
@@ -3977,14 +3964,49 @@ enable?(JAVASCRIPT_DEBUGGER) {
 
 
 enable?(VIDEO_TRACK) {
+    HEADERS += \
+        bindings/js/JSTextTrackCustom.h \
+        bindings/js/JSTrackCustom.h \
+        html/HTMLTrackElement.h \
+        html/track/InbandTextTrack.h \
+        html/track/LoadableTextTrack.h \
+        html/track/TextTrack.h \
+        html/track/TextTrackCue.h \
+        html/track/TextTrackCueGeneric.h \
+        html/track/TextTrackCueList.h \
+        html/track/TextTrackList.h \
+        html/track/TrackBase.h \
+        html/track/TrackEvent.h \
+        html/track/WebVTTParser.h \
+        html/track/WebVTTToken.h \
+        html/track/WebVTTTokenizer.h \
+        loader/TextTrackLoader.h \
+        platform/graphics/InbandTextTrackPrivate.h \
+        platform/graphics/InbandTextTrackPrivateClient.h
+
     SOURCES += \
         bindings/js/JSTextTrackCueCustom.cpp \
         bindings/js/JSTextTrackCustom.cpp \
-        bindings/js/JSTextTrackCustom.h \
         bindings/js/JSTrackCustom.cpp \
-        bindings/js/JSTrackCustom.h \
         bindings/js/JSTrackEventCustom.cpp \
-        bindings/js/JSTextTrackListCustom.cpp
+        bindings/js/JSTextTrackListCustom.cpp \
+        html/HTMLTrackElement.cpp \
+        html/track/InbandTextTrack.cpp \
+        html/track/LoadableTextTrack.cpp \
+        html/track/TextTrack.cpp \
+        html/track/TextTrackCue.cpp \
+        html/track/TextTrackCueGeneric.cpp \
+        html/track/TextTrackCueList.cpp \
+        html/track/TextTrackList.cpp \
+        html/track/TrackBase.cpp \
+        html/track/TrackEvent.cpp \
+        html/track/WebVTTElement.cpp \
+        html/track/WebVTTParser.cpp \
+        html/track/WebVTTTokenizer.cpp \
+        loader/cache/CachedTextTrack.cpp \
+        loader/TextTrackLoader.cpp \
+        platform/graphics/TextTrackRepresentation.cpp \
+        rendering/RenderTextTrackCue.cpp
 }
 
 enable?(WEB_SOCKETS) {
@@ -4041,6 +4063,7 @@ enable?(WEBGL) {
         html/canvas/WebGLActiveInfo.h \
         html/canvas/WebGLBuffer.h \
         html/canvas/WebGLCompressedTextureATC.h \
+        html/canvas/WebGLCompressedTexturePVRTC.h \
         html/canvas/WebGLCompressedTextureS3TC.h \
         html/canvas/WebGLContextAttributes.h \
         html/canvas/WebGLContextEvent.h \
@@ -4078,6 +4101,7 @@ enable?(WEBGL) {
         html/canvas/WebGLObject.cpp \
         html/canvas/WebGLBuffer.cpp \
         html/canvas/WebGLCompressedTextureATC.cpp \
+        html/canvas/WebGLCompressedTexturePVRTC.cpp \
         html/canvas/WebGLCompressedTextureS3TC.cpp \
         html/canvas/WebGLContextAttributes.cpp \
         html/canvas/WebGLContextEvent.cpp \
@@ -4222,6 +4246,11 @@ use?(WEBP) {
     SOURCES += platform/image-decoders/webp/WEBPImageDecoder.cpp
 }
 
+use?(ZLIB) {
+    HEADERS += platform/graphics/WOFFFileFormat.h
+    SOURCES += platform/graphics/WOFFFileFormat.cpp
+}
+
 !have?(sqlite3):exists($${SQLITE3SRCDIR}/sqlite3.c) {
     # Build sqlite3 into WebCore from source
     # somewhat copied from $$QT_SOURCE_TREE/src/plugins/sqldrivers/sqlite/sqlite.pro
@@ -4252,7 +4281,7 @@ contains(CONFIG, opengl-shims) {
     DEFINES += QT_OPENGL_SHIMS=1
 }
 
-contains(DEFINES, ENABLE_OPENCL=1) {
+enable?(opencl) {
     HEADERS += \
         platform/graphics/gpu/opencl/OpenCLHandle.h \
         platform/graphics/gpu/opencl/FilterContextOpenCL.h

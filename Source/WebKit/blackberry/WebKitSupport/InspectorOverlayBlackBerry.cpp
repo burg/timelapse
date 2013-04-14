@@ -47,7 +47,7 @@ void InspectorOverlay::notifyFlushRequired(const WebCore::GraphicsLayer* layer)
     m_webPage->notifyFlushRequired(layer);
 }
 
-void InspectorOverlay::paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext& context, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect& inClip)
+void InspectorOverlay::paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext& context, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect&)
 {
     context.save();
     WebCore::IntPoint scrollPosition = m_webPage->focusedOrMainFrame()->view()->scrollPosition();
@@ -56,15 +56,6 @@ void InspectorOverlay::paintContents(const WebCore::GraphicsLayer*, WebCore::Gra
     context.restore();
 }
 
-bool InspectorOverlay::showDebugBorders(const WebCore::GraphicsLayer* layer) const
-{
-    return m_webPage->showDebugBorders(layer);
-}
-
-bool InspectorOverlay::showRepaintCounter(const WebCore::GraphicsLayer* layer) const
-{
-    return m_webPage->showRepaintCounter(layer);
-}
 #endif
 
 InspectorOverlay::~InspectorOverlay() { }

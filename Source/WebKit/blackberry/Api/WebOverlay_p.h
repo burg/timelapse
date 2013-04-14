@@ -23,7 +23,7 @@
 
 #include "GraphicsLayer.h"
 #include "LayerCompositingThread.h"
-#include "Texture.h"
+#include "LayerTexture.h"
 #include "WebOverlay.h"
 #include "WebOverlayOverride.h"
 
@@ -166,11 +166,9 @@ public:
     virtual WebCore::GraphicsLayer* graphicsLayer() const { return m_layer.get(); }
 
     // GraphicsLayerClient
-    virtual void notifyAnimationStarted(const WebCore::GraphicsLayer*, double time) { }
+    virtual void notifyAnimationStarted(const WebCore::GraphicsLayer*, double) { }
     virtual void notifyFlushRequired(const WebCore::GraphicsLayer*);
-    virtual void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect& inClip);
-    virtual bool showDebugBorders(const WebCore::GraphicsLayer*) const { return false; }
-    virtual bool showRepaintCounter(const WebCore::GraphicsLayer*) const { return false; }
+    virtual void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect&);
 
 private:
     OwnPtr<WebCore::GraphicsLayer> m_layer;
@@ -207,7 +205,7 @@ private:
 
 private:
     bool m_drawsContent;
-    RefPtr<WebCore::Texture> m_texture;
+    RefPtr<WebCore::LayerTexture> m_texture;
     BlackBerry::Platform::Graphics::TiledImage m_image;
     BlackBerry::Platform::Graphics::TiledImage m_uploadedImage;
     WebCore::Color m_color;

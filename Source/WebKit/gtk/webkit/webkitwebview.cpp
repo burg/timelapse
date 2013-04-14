@@ -328,7 +328,7 @@ static void contextMenuConnectActivate(GtkMenuItem* item, ContextMenuController*
 
 static MouseEventWithHitTestResults prepareMouseEventForFrame(Frame* frame, const PlatformMouseEvent& event)
 {
-    HitTestRequest request(HitTestRequest::Active);
+    HitTestRequest request(HitTestRequest::Active| HitTestRequest::DisallowShadowContent);
     IntPoint point = frame->view()->windowToContents(event.position());
     return frame->document()->prepareMouseEvent(request, point, event);
 }
@@ -3576,7 +3576,7 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
 #endif
 
 #if ENABLE(SMOOTH_SCROLLING)
-    coreSettings->setEnableScrollAnimator(settingsPrivate->enableSmoothScrolling);
+    coreSettings->setScrollAnimatorEnabled(settingsPrivate->enableSmoothScrolling);
 #endif
 
 #if ENABLE(CSS_SHADERS)
@@ -3723,7 +3723,7 @@ static void webkit_web_view_settings_notify(WebKitWebSettings* webSettings, GPar
 
 #if ENABLE(SMOOTH_SCROLLING)
     else if (name == g_intern_string("enable-smooth-scrolling"))
-        settings->setEnableScrollAnimator(g_value_get_boolean(&value));
+        settings->setScrollAnimatorEnabled(g_value_get_boolean(&value));
 #endif
 
 #if ENABLE(CSS_SHADERS)
@@ -5313,7 +5313,7 @@ WebKitHitTestResult* webkit_web_view_get_hit_test_result(WebKitWebView* webView,
 
     PlatformMouseEvent mouseEvent = PlatformMouseEvent(event);
     Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
-    HitTestRequest request(HitTestRequest::Active);
+    HitTestRequest request(HitTestRequest::Active | HitTestRequest::DisallowShadowContent);
     IntPoint documentPoint = documentPointForWindowPoint(frame, mouseEvent.position());
     MouseEventWithHitTestResults mev = frame->document()->prepareMouseEvent(request, documentPoint, mouseEvent);
 

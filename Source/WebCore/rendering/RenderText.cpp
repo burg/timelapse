@@ -1465,9 +1465,8 @@ void RenderText::setText(PassRefPtr<StringImpl> text, bool force)
     setNeedsLayoutAndPrefWidthsRecalc();
     m_knownToHaveNoOverflowAndNoFallbackFonts = false;
     
-    AXObjectCache* axObjectCache = document()->axObjectCache();
-    if (axObjectCache->accessibilityEnabled())
-        axObjectCache->textChanged(this);
+    if (AXObjectCache* cache = document()->existingAXObjectCache())
+        cache->textChanged(this);
 }
 
 String RenderText::textWithoutTranscoding() const
@@ -1741,7 +1740,7 @@ int RenderText::previousOffset(int current) const
     return result;
 }
 
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM) && OS(MAC_OS_X)
+#if PLATFORM(MAC)
 
 #define HANGUL_CHOSEONG_START (0x1100)
 #define HANGUL_CHOSEONG_END (0x115F)
@@ -1783,7 +1782,7 @@ inline bool isRegionalIndicator(UChar32 c)
 
 int RenderText::previousOffsetForBackwardDeletion(int current) const
 {
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM) && OS(MAC_OS_X)
+#if PLATFORM(MAC)
     ASSERT(m_text);
     StringImpl& text = *m_text.impl();
     UChar32 character;

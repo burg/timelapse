@@ -44,6 +44,7 @@
 #include "NameInstance.h"
 #include "ObjectConstructor.h"
 #include "Operations.h"
+#include "StringConstructor.h"
 #include <wtf/InlineASM.h>
 
 #if ENABLE(JIT)
@@ -995,6 +996,23 @@ size_t DFG_OPERATION operationCompareEq(ExecState* exec, EncodedJSValue encodedO
     return JSValue::equalSlowCaseInline(exec, JSValue::decode(encodedOp1), JSValue::decode(encodedOp2));
 }
 
+#if USE(JSVALUE64)
+EncodedJSValue DFG_OPERATION operationCompareStringEq(ExecState* exec, JSCell* left, JSCell* right)
+#else
+size_t DFG_OPERATION operationCompareStringEq(ExecState* exec, JSCell* left, JSCell* right)
+#endif
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+    
+    bool result = asString(left)->value(exec) == asString(right)->value(exec);
+#if USE(JSVALUE64)
+    return JSValue::encode(jsBoolean(result));
+#else
+    return result;
+#endif
+}
+
 size_t DFG_OPERATION operationCompareStrictEqCell(ExecState* exec, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2)
 {
     JSGlobalData* globalData = &exec->globalData();
@@ -1253,14 +1271,6 @@ EncodedJSValue DFG_OPERATION operationToPrimitive(ExecState* exec, EncodedJSValu
     return JSValue::encode(JSValue::decode(value).toPrimitive(exec));
 }
 
-EncodedJSValue DFG_OPERATION operationStrCat(ExecState* exec, void* buffer, size_t size)
-{
-    JSGlobalData* globalData = &exec->globalData();
-    NativeCallFrameTracer tracer(globalData, exec);
-
-    return JSValue::encode(jsString(exec, static_cast<Register*>(buffer), size));
-}
-
 char* DFG_OPERATION operationNewArray(ExecState* exec, Structure* arrayStructure, void* buffer, size_t size)
 {
     JSGlobalData* globalData = &exec->globalData();
@@ -1281,7 +1291,10 @@ char* DFG_OPERATION operationNewArrayWithSize(ExecState* exec, Structure* arrayS
 {
     JSGlobalData* globalData = &exec->globalData();
     NativeCallFrameTracer tracer(globalData, exec);
-    
+
+    if (size < 0)
+        return bitwise_cast<char*>(throwError(exec, createRangeError(exec, ASCIILiteral("Array size is not a small enough positive integer."))));
+
     return bitwise_cast<char*>(JSArray::create(*globalData, arrayStructure, size));
 }
 
@@ -1571,19 +1584,32 @@ JSCell* DFG_OPERATION operationToString(ExecState* exec, EncodedJSValue value)
     return JSValue::decode(value).toString(exec);
 }
 
-JSCell* DFG_OPERATION operationStringAdd(ExecState* exec, JSString* left, JSString* right)
+JSCell* DFG_OPERATION operationMakeRope2(ExecState* exec, JSString* left, JSString* right)
 {
     JSGlobalData& globalData = exec->globalData();
     NativeCallFrameTracer tracer(&globalData, exec);
 
-    // Don't even bother calling jsString() because our fast path would have done whatever
-    // optimizations that function would have done.
     return JSRopeString::create(globalData, left, right);
+}
+
+JSCell* DFG_OPERATION operationMakeRope3(ExecState* exec, JSString* a, JSString* b, JSString* c)
+{
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
+    return JSRopeString::create(globalData, a, b, c);
 }
 
 double DFG_OPERATION operationFModOnInts(int32_t a, int32_t b)
 {
     return fmod(a, b);
+}
+
+JSCell* DFG_OPERATION operationStringFromCharCode(ExecState* exec, int32_t op1)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+    return JSC::stringFromCharCode(exec, op1);
 }
 
 DFGHandlerEncoded DFG_OPERATION lookupExceptionHandler(ExecState* exec, uint32_t callIndex)

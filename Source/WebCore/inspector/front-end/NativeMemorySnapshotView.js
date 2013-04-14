@@ -56,7 +56,7 @@ WebInspector.NativeSnapshotDataGrid = function(profile)
 {
     var columns = [
         {id: "name", title: WebInspector.UIString("Object"), width: "200px", disclosure: true, sortable: true},
-        {id: "size", title: WebInspector.UIString("Size"), sortable: true, sort: "descending"},
+        {id: "size", title: WebInspector.UIString("Size"), sortable: true, sort: WebInspector.DataGrid.Order.Descending},
     ];
     WebInspector.DataGrid.call(this, columns);
     this._profile = profile;
@@ -67,9 +67,9 @@ WebInspector.NativeSnapshotDataGrid = function(profile)
         this._totalNode.expand();
     } else {
         this.setRootNode(this._totalNode);
-        this._totalNode._populate();
+        this._totalNode.populate();
     }
-    this.addEventListener("sorting changed", this.sortingChanged.bind(this), this);
+    this.addEventListener(WebInspector.DataGrid.Events.SortingChanged, this.sortingChanged.bind(this), this);
 }
 
 WebInspector.NativeSnapshotDataGrid.prototype = {
@@ -78,7 +78,7 @@ WebInspector.NativeSnapshotDataGrid.prototype = {
         var expandedNodes = {};
         this._totalNode._storeState(expandedNodes);
         this._totalNode.removeChildren();
-        this._totalNode._populate();
+        this._totalNode.populate();
         this._totalNode._shouldRefreshChildren = true;
         this._totalNode._restoreState(expandedNodes);
     },
@@ -89,8 +89,8 @@ WebInspector.NativeSnapshotDataGrid.prototype = {
      */
     _sortingFunction: function(nodeA, nodeB)
     {
-        var sortColumnIdentifier = this.sortColumnIdentifier;
-        var sortAscending = this.sortOrder === "ascending";
+        var sortColumnIdentifier = this.sortColumnIdentifier();
+        var sortAscending = this.isSortOrderAscending();
         var field1 = nodeA[sortColumnIdentifier];
         var field2 = nodeB[sortColumnIdentifier];
         var result = field1 < field2 ? -1 : (field1 > field2 ? 1 : 0);
@@ -115,7 +115,6 @@ WebInspector.NativeSnapshotNode = function(nodeData, profile)
     var data = { name: viewProperties._description, size: this._nodeData.size };
     var hasChildren = this._addChildrenFromGraph();
     WebInspector.DataGridNode.call(this, data, hasChildren);
-    this.addEventListener("populate", this._populate, this);
 }
 
 WebInspector.NativeSnapshotNode.prototype = {
@@ -216,8 +215,10 @@ WebInspector.NativeSnapshotNode.prototype = {
         return cell;
     },
 
-    _populate: function() {
-        this.removeEventListener("populate", this._populate, this);
+    populate: function() {
+        if (this._populated)
+            return;
+        this._populated = true;
         if (this._nodeData.children)
             this._addChildren();
     },

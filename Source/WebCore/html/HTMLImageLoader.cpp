@@ -33,11 +33,9 @@
 #include "Page.h"
 #include "Settings.h"
 
-#if USE(JSC)
 #include "JSDOMWindowBase.h"
 #include <runtime/JSLock.h>
 #include <runtime/Operations.h>
-#endif
 
 namespace WebCore {
 
@@ -81,7 +79,6 @@ void HTMLImageLoader::notifyFinished(CachedResource*)
     ImageLoader::notifyFinished(cachedImage);
 
     bool loadError = cachedImage->errorOccurred() || cachedImage->response().httpStatusCode() >= 400;
-#if USE(JSC)
     if (!loadError) {
         if (!element->inDocument()) {
             JSC::JSGlobalData* globalData = JSDOMWindowBase::commonJSGlobalData();
@@ -89,7 +86,6 @@ void HTMLImageLoader::notifyFinished(CachedResource*)
             globalData->heap.reportExtraMemoryCost(cachedImage->encodedSize());
         }
     }
-#endif
 
     if (loadError && element->hasTagName(HTMLNames::objectTag))
         static_cast<HTMLObjectElement*>(element.get())->renderFallbackContent();

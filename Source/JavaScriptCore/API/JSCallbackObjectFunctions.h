@@ -294,6 +294,65 @@ void JSCallbackObject<Parent>::put(JSCell* cell, ExecState* exec, PropertyName p
 }
 
 template <class Parent>
+void JSCallbackObject<Parent>::putByIndex(JSCell* cell, ExecState* exec, unsigned propertyIndex, JSValue value, bool shouldThrow)
+{
+    JSCallbackObject* thisObject = jsCast<JSCallbackObject*>(cell);
+    JSContextRef ctx = toRef(exec);
+    JSObjectRef thisRef = toRef(thisObject);
+    RefPtr<OpaqueJSString> propertyNameRef;
+    JSValueRef valueRef = toRef(exec, value);
+    Identifier propertyName = Identifier(exec, String::number(propertyIndex));
+
+    for (JSClassRef jsClass = thisObject->classRef(); jsClass; jsClass = jsClass->parentClass) {
+        if (JSObjectSetPropertyCallback setProperty = jsClass->setProperty) {
+            if (!propertyNameRef)
+                propertyNameRef = OpaqueJSString::create(propertyName.impl());
+            JSValueRef exception = 0;
+            bool result;
+            {
+                APICallbackShim callbackShim(exec);
+                result = setProperty(ctx, thisRef, propertyNameRef.get(), valueRef, &exception);
+            }
+            if (exception)
+                throwError(exec, toJS(exec, exception));
+            if (result || exception)
+                return;
+        }
+
+        if (OpaqueJSClassStaticValuesTable* staticValues = jsClass->staticValues(exec)) {
+            if (StaticValueEntry* entry = staticValues->get(propertyName.impl())) {
+                if (entry->attributes & kJSPropertyAttributeReadOnly)
+                    return;
+                if (JSObjectSetPropertyCallback setProperty = entry->setProperty) {
+                    if (!propertyNameRef)
+                        propertyNameRef = OpaqueJSString::create(propertyName.impl());
+                    JSValueRef exception = 0;
+                    bool result;
+                    {
+                        APICallbackShim callbackShim(exec);
+                        result = setProperty(ctx, thisRef, propertyNameRef.get(), valueRef, &exception);
+                    }
+                    if (exception)
+                        throwError(exec, toJS(exec, exception));
+                    if (result || exception)
+                        return;
+                }
+            }
+        }
+
+        if (OpaqueJSClassStaticFunctionsTable* staticFunctions = jsClass->staticFunctions(exec)) {
+            if (StaticFunctionEntry* entry = staticFunctions->get(propertyName.impl())) {
+                if (entry->attributes & kJSPropertyAttributeReadOnly)
+                    return;
+                break;
+            }
+        }
+    }
+
+    return Parent::putByIndex(thisObject, exec, propertyIndex, value, shouldThrow);
+}
+
+template <class Parent>
 bool JSCallbackObject<Parent>::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     JSCallbackObject* thisObject = jsCast<JSCallbackObject*>(cell);
@@ -368,10 +427,11 @@ EncodedJSValue JSCallbackObject<Parent>::construct(ExecState* exec)
     
     for (JSClassRef jsClass = jsCast<JSCallbackObject<Parent>*>(constructor)->classRef(); jsClass; jsClass = jsClass->parentClass) {
         if (JSObjectCallAsConstructorCallback callAsConstructor = jsClass->callAsConstructor) {
-            int argumentCount = static_cast<int>(exec->argumentCount());
-            Vector<JSValueRef, 16> arguments(argumentCount);
-            for (int i = 0; i < argumentCount; i++)
-                arguments[i] = toRef(exec, exec->argument(i));
+            size_t argumentCount = exec->argumentCount();
+            Vector<JSValueRef, 16> arguments;
+            arguments.reserveInitialCapacity(argumentCount);
+            for (size_t i = 0; i < argumentCount; ++i)
+                arguments.uncheckedAppend(toRef(exec, exec->argument(i)));
             JSValueRef exception = 0;
             JSObject* result;
             {
@@ -434,10 +494,11 @@ EncodedJSValue JSCallbackObject<Parent>::call(ExecState* exec)
     
     for (JSClassRef jsClass = jsCast<JSCallbackObject<Parent>*>(toJS(functionRef))->classRef(); jsClass; jsClass = jsClass->parentClass) {
         if (JSObjectCallAsFunctionCallback callAsFunction = jsClass->callAsFunction) {
-            int argumentCount = static_cast<int>(exec->argumentCount());
-            Vector<JSValueRef, 16> arguments(argumentCount);
-            for (int i = 0; i < argumentCount; i++)
-                arguments[i] = toRef(exec, exec->argument(i));
+            size_t argumentCount = exec->argumentCount();
+            Vector<JSValueRef, 16> arguments;
+            arguments.reserveInitialCapacity(argumentCount);
+            for (size_t i = 0; i < argumentCount; ++i)
+                arguments.uncheckedAppend(toRef(exec, exec->argument(i)));
             JSValueRef exception = 0;
             JSValue result;
             {

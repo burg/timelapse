@@ -46,10 +46,8 @@ class CoordinatedGraphicsScene;
 
 namespace WebKit {
 
-class WebView : public APIObject, public PageClient {
+class WebView : public TypedAPIObject<APIObject::TypeView>, public PageClient {
 public:
-    static const Type APIType = TypeView;
-
     virtual ~WebView();
 
     static PassRefPtr<WebView> create(WebContext*, WebPageGroup*);
@@ -58,6 +56,21 @@ public:
     void setEwkView(EwkView*);
 
     void initialize();
+
+    void setSize(const WebCore::IntSize&);
+    const WebCore::IntSize& size() const { return m_size; }
+
+    bool isFocused() const { return m_focused; }
+    void setFocused(bool);
+
+    bool isVisible() const { return m_visible; }
+    void setVisible(bool);
+
+    void setContentScaleFactor(float scaleFactor) { m_contentScaleFactor = scaleFactor; }
+    float contentScaleFactor() const { return m_contentScaleFactor; }
+
+    void setContentPosition(const WebCore::FloatPoint& position) { m_contentPosition = position; }
+    const WebCore::FloatPoint& contentPosition() const { return m_contentPosition; }
 
     void setUserViewportTranslation(double tx, double ty);
     WebCore::IntPoint userViewportToContents(const WebCore::IntPoint&) const;
@@ -91,8 +104,6 @@ public:
     Evas_Object* evasObject();
     WebPageProxy* page() { return m_page.get(); }
 
-    void didCommitLoad();
-    void updateViewportSize();
     void didChangeContentsSize(const WebCore::IntSize&);
 
     // FIXME: Should become private when Web Events creation is moved to WebView.
@@ -103,6 +114,8 @@ private:
     WebView(WebContext*, WebPageGroup*);
     WebCore::CoordinatedGraphicsScene* coordinatedGraphicsScene();
 
+    void updateViewportSize();
+    WebCore::FloatSize dipSize() const;
     // PageClient
     PassOwnPtr<DrawingAreaProxy> createDrawingAreaProxy() OVERRIDE;
 
@@ -177,13 +190,16 @@ private:
     void countStringMatchesInCustomRepresentation(const String&, FindOptions, unsigned) OVERRIDE;
 
 private:
-    virtual Type type() const { return APIType; }
-
     WebViewClient m_client;
     EwkView* m_ewkView;
     RefPtr<WebPageProxy> m_page;
     DefaultUndoController m_undoController;
     WebCore::TransformationMatrix m_userViewportTransform;
+    WebCore::IntSize m_size; // Size in device units.
+    bool m_focused;
+    bool m_visible;
+    float m_contentScaleFactor;
+    WebCore::FloatPoint m_contentPosition; // Position in UI units.
 };
 
 }

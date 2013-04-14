@@ -69,6 +69,7 @@ MESSAGE_RECEIVERS = \
     NetworkProcess \
     NetworkProcessConnection \
     NetworkProcessProxy \
+    NetworkResourceLoader \
     NPObjectMessageReceiver \
     OfflineStorageProcess \
     PluginControllerProxy \
@@ -89,7 +90,7 @@ MESSAGE_RECEIVERS = \
     RemoteLayerTreeHost \
     SecItemShim \
     SecItemShimProxy \
-    StorageAreaProxy \
+    StorageAreaMap \
     WebContext \
     WebDatabaseManager \
     WebDatabaseManagerProxy \

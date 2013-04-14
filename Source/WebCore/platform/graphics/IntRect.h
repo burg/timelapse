@@ -29,11 +29,11 @@
 #include "IntPoint.h"
 #include <wtf/Vector.h>
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
 typedef struct CGRect CGRect;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN)) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGRect NSRect;
 #else
@@ -220,7 +220,7 @@ public:
     operator cairo_rectangle_int_t() const;
 #endif
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
     operator CGRect() const;
 #endif
 
@@ -230,9 +230,7 @@ public:
     operator SkIRect() const;
 #endif
 
-#if (PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))) \
-        && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES) \
-        || (PLATFORM(QT) && USE(QTKIT))
+#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))
     operator NSRect() const;
 #endif
 
@@ -279,12 +277,11 @@ inline IntRect enclosingIntRect(const IntRect& rect)
     return rect;
 }
 
-#if USE(CG) || USE(SKIA_ON_MAC_CHROMIUM)
+#if USE(CG)
 IntRect enclosingIntRect(const CGRect&);
 #endif
 
-#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) \
-        || (PLATFORM(CHROMIUM) && OS(DARWIN)) || (PLATFORM(QT) && USE(QTKIT))
+#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))
 IntRect enclosingIntRect(const NSRect&);
 #endif
 

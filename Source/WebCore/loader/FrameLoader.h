@@ -35,13 +35,10 @@
 #include "CachePolicy.h"
 #include "FrameLoaderStateMachine.h"
 #include "FrameLoaderTypes.h"
-#include "HistoryController.h"
-#include "IconController.h"
 #include "IconURL.h"
 #include "LayoutMilestones.h"
 #include "MixedContentChecker.h"
-#include "PolicyChecker.h"
-#include "ResourceHandle.h"
+#include "ResourceHandleTypes.h"
 #include "ResourceLoadNotifier.h"
 #include "SecurityContext.h"
 #include "SubframeLoader.h"
@@ -63,9 +60,13 @@ class FormState;
 class FormSubmission;
 class FrameLoaderClient;
 class FrameNetworkingContext;
+class HistoryController;
+class HistoryItem;
+class IconController;
 class NavigationAction;
 class NetworkingContext;
 class Page;
+class PolicyChecker;
 class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
@@ -89,11 +90,11 @@ public:
 
     Frame* frame() const { return m_frame; }
 
-    PolicyChecker* policyChecker() const { return &m_policyChecker; }
-    HistoryController* history() const { return &m_history; }
+    PolicyChecker* policyChecker() const { return m_policyChecker.get(); }
+    HistoryController* history() const { return m_history.get(); }
     ResourceLoadNotifier* notifier() const { return &m_notifer; }
     SubframeLoader* subframeLoader() const { return &m_subframeLoader; }
-    IconController* icon() const { return &m_icon; }
+    IconController* icon() const { return m_icon.get(); }
     MixedContentChecker* mixedContentChecker() const { return &m_mixedContentChecker; }
 
     void prepareForHistoryNavigation();
@@ -136,11 +137,6 @@ public:
     void cancelAndClear();
     // FIXME: clear() is trying to do too many things. We should break it down into smaller functions (ideally with fewer raw Boolean parameters).
     void clear(Document* newDocument, bool clearWindowProperties = true, bool clearScriptObjects = true, bool clearFrameView = true);
-
-#if PLATFORM(CHROMIUM)
-    void didAccessInitialDocument();
-    void didAccessInitialDocumentTimerFired(Timer<FrameLoader>*);
-#endif
 
     bool isLoading() const;
     bool frameHasLoaded() const;
@@ -186,7 +182,7 @@ public:
     void didLayout(LayoutMilestones);
     void didFirstLayout();
 
-    void loadedResourceFromMemoryCache(CachedResource*);
+    void loadedResourceFromMemoryCache(CachedResource*, ResourceRequest& newRequest);
     void tellClientAboutPastMemoryCacheLoads();
 
     void checkLoadComplete();
@@ -285,6 +281,10 @@ public:
     PageDismissalType pageDismissalEventBeingDispatched() const { return m_pageDismissalEventBeingDispatched; }
 
     NetworkingContext* networkingContext() const;
+
+    void loadProgressingStatusChanged();
+
+    const KURL& previousURL() const { return m_previousURL; }
 
     void reportMemoryUsage(MemoryObjectInfo*) const;
 
@@ -385,12 +385,12 @@ private:
     // FIXME: These should be OwnPtr<T> to reduce build times and simplify
     // header dependencies unless performance testing proves otherwise.
     // Some of these could be lazily created for memory savings on devices.
-    mutable PolicyChecker m_policyChecker;
-    mutable HistoryController m_history;
+    OwnPtr<PolicyChecker> m_policyChecker;
+    OwnPtr<HistoryController> m_history;
     mutable ResourceLoadNotifier m_notifer;
     mutable SubframeLoader m_subframeLoader;
     mutable FrameLoaderStateMachine m_stateMachine;
-    mutable IconController m_icon;
+    OwnPtr<IconController> m_icon;
     mutable MixedContentChecker m_mixedContentChecker;
 
     class FrameProgressTracker;
@@ -435,10 +435,6 @@ private:
     Frame* m_opener;
     HashSet<Frame*> m_openedFrames;
 
-#if PLATFORM(CHROMIUM)
-    bool m_didAccessInitialDocument;
-    Timer<FrameLoader> m_didAccessInitialDocumentTimer;
-#endif
     bool m_didPerformFirstNavigation;
     bool m_loadingFromCachedPage;
     bool m_suppressOpenerInNewFrame;
@@ -447,7 +443,7 @@ private:
 
     RefPtr<FrameNetworkingContext> m_networkingContext;
 
-    KURL m_previousUrl;
+    KURL m_previousURL;
     RefPtr<HistoryItem> m_requestedHistoryItem;
 };
 

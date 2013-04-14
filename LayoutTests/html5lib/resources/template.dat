@@ -569,7 +569,6 @@
 |         <td>
 |         <td>
 
-
 #data
 <body><template><td></td><tbody><td></td></template>
 #errors
@@ -1147,8 +1146,8 @@
 |       content
 |         <template>
 |           content
-|             <table>
 |             "Foo"
+|             <table>
 |   <body>
 
 #data
@@ -1258,3 +1257,15 @@
 |                 <div>
 |   <body>
 |     <div>
+
+#data
+<dummy><template><span></dummy>
+#errors
+#document
+| <html>
+|   <head>
+|   <body>
+|     <dummy>
+|       <template>
+|         content
+|           <span>

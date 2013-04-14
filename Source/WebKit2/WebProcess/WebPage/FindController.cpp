@@ -170,10 +170,9 @@ void FindController::updateFindUIAfterPageScroll(bool found, const String& strin
             RefPtr<PageOverlay> findPageOverlay = PageOverlay::create(this);
             m_findPageOverlay = findPageOverlay.get();
             m_webPage->installPageOverlay(findPageOverlay.release(), true);
-        } else {
-            // The page overlay needs to be repainted.
             m_findPageOverlay->setNeedsDisplay();
-        }
+        } else
+            m_findPageOverlay->setNeedsDisplay();
     }
 }
 
@@ -363,7 +362,7 @@ Vector<IntRect> FindController::rectsForTextMatches()
 
         IntRect visibleRect = frame->view()->visibleContentRect();
         Vector<IntRect> frameRects = document->markers()->renderedRectsForMarkers(DocumentMarker::TextMatch);
-        IntPoint frameOffset(-frame->view()->scrollOffset().width(), -frame->view()->scrollOffset().height());
+        IntPoint frameOffset(-frame->view()->scrollOffsetRelativeToDocument().width(), -frame->view()->scrollOffsetRelativeToDocument().height());
         frameOffset = frame->view()->convertToContainingWindow(frameOffset);
 
         for (Vector<IntRect>::iterator it = frameRects.begin(), end = frameRects.end(); it != end; ++it) {

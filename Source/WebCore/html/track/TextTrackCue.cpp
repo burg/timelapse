@@ -42,6 +42,7 @@
 #include "HTMLDivElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLSpanElement.h"
+#include "Logging.h"
 #include "NodeTraversal.h"
 #include "RenderTextTrackCue.h"
 #include "Text.h"
@@ -534,6 +535,18 @@ bool TextTrackCue::dispatchEvent(PassRefPtr<Event> event)
     return EventTarget::dispatchEvent(event);
 }
 
+#if ENABLE(WEBVTT_REGIONS)
+void TextTrackCue::setRegionId(const String& regionId)
+{
+    if (m_regionId == regionId)
+        return;
+
+    cueWillChange();
+    m_regionId = regionId;
+    cueDidChange();
+}
+#endif
+
 bool TextTrackCue::isActive()
 {
     return m_isActive && track() && track()->mode() != TextTrack::disabledKeyword();
@@ -751,7 +764,7 @@ void TextTrackCue::markFutureAndPastNodes(ContainerNode* root, double previousTi
     }
 }
 
-void TextTrackCue::updateDisplayTree(float movieTime)
+void TextTrackCue::updateDisplayTree(double movieTime)
 {
     // The display tree may contain WebVTT timestamp objects representing
     // timestamps (processing instructions), along with displayable nodes.
@@ -862,6 +875,9 @@ TextTrackCue::CueSetting TextTrackCue::settingName(const String& name)
     DEFINE_STATIC_LOCAL(const String, positionKeyword, (ASCIILiteral("position")));
     DEFINE_STATIC_LOCAL(const String, sizeKeyword, (ASCIILiteral("size")));
     DEFINE_STATIC_LOCAL(const String, alignKeyword, (ASCIILiteral("align")));
+#if ENABLE(WEBVTT_REGIONS)
+    DEFINE_STATIC_LOCAL(const String, regionIdKeyword, (ASCIILiteral("region")));
+#endif
 
     if (name == verticalKeyword)
         return Vertical;
@@ -873,6 +889,10 @@ TextTrackCue::CueSetting TextTrackCue::settingName(const String& name)
         return Size;
     else if (name == alignKeyword)
         return Align;
+#if ENABLE(WEBVTT_REGIONS)
+    else if (name == regionIdKeyword)
+        return RegionId;
+#endif
 
     return None;
 }
@@ -1066,6 +1086,11 @@ void TextTrackCue::setCueSettings(const String& input)
                 m_cueAlignment = End;
             }
             break;
+#if ENABLE(WEBVTT_REGIONS)
+        case RegionId:
+            m_regionId = WebVTTParser::collectWord(input, &position);
+            break;
+#endif
         case None:
             break;
         }
@@ -1073,6 +1098,16 @@ void TextTrackCue::setCueSettings(const String& input)
 NextSetting:
         position = endOfSetting;
     }
+#if ENABLE(WEBVTT_REGIONS)
+    // If cue's line position is not auto or cue's size is not 100 or cue's
+    // writing direction is not horizontal, but cue's region identifier is not
+    // the empty string, let cue's region identifier be the empty string.
+    if (m_regionId.isEmpty())
+        return;
+
+    if (m_linePosition != undefinedPosition || m_cueSize != 100 || m_writingDirection != Horizontal)
+        m_regionId = emptyString();
+#endif
 }
 
 int TextTrackCue::getCSSWritingDirection() const
@@ -1143,6 +1178,16 @@ bool TextTrackCue::operator==(const TextTrackCue& cue) const
         return false;
     
     return true;
+}
+
+void TextTrackCue::setFontSize(int fontSize, const IntSize&, bool important)
+{
+    if (!hasDisplayTree() || !fontSize)
+        return;
+    
+    LOG(Media, "TextTrackCue::setFontSize - setting cue font size to %i", fontSize);
+
+    element()->setInlineStyleProperty(CSSPropertyFontSize, String::number(fontSize) + "px", important);
 }
 
 } // namespace WebCore

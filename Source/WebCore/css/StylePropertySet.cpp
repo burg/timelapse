@@ -30,6 +30,7 @@
 #include "PropertySetCSSStyleDeclaration.h"
 #include "StylePropertyShorthand.h"
 #include "StyleSheetContents.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/BitArray.h>
 #include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
@@ -1096,6 +1097,7 @@ static const CSSPropertyID blockProperties[] = {
     CSSPropertyTextAlign,
 #if ENABLE(CSS3_TEXT)
     CSSPropertyWebkitTextAlignLast,
+    CSSPropertyWebkitTextJustify,
 #endif // CSS3_TEXT
     CSSPropertyTextIndent,
     CSSPropertyWidows

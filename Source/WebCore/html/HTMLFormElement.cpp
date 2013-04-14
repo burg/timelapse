@@ -139,6 +139,8 @@ bool HTMLFormElement::rendererIsNeeded(const NodeRenderingContext& context)
 Node::InsertionNotificationRequest HTMLFormElement::insertedInto(ContainerNode* insertionPoint)
 {
     HTMLElement::insertedInto(insertionPoint);
+    if (insertionPoint->inDocument())
+        this->document()->didAssociateFormControl(this);
     return InsertionDone;
 }
 
@@ -454,10 +456,7 @@ void HTMLFormElement::parseAttribute(const QualifiedName& name, const AtomicStri
             document()->registerForPageCacheSuspensionCallbacks(this);
         else
             document()->unregisterForPageCacheSuspensionCallbacks(this);
-    } else if (name == onsubmitAttr)
-        setAttributeEventListener(eventNames().submitEvent, createAttributeEventListener(this, name, value));
-    else if (name == onresetAttr)
-        setAttributeEventListener(eventNames().resetEvent, createAttributeEventListener(this, name, value));
+    }
 #if ENABLE(REQUEST_AUTOCOMPLETE)
     else if (name == onautocompleteAttr)
         setAttributeEventListener(eventNames().autocompleteEvent, createAttributeEventListener(this, name, value));

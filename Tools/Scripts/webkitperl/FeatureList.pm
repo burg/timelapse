@@ -125,6 +125,7 @@ my (
     $requestAnimationFrameSupport,
     $resourceTimingSupport,
     $scriptedSpeechSupport,
+    $seccompFiltersSupport,
     $shadowDOMSupport,
     $sharedWorkersSupport,
     $sqlDatabaseSupport,
@@ -286,7 +287,7 @@ my @features = (
       define => "ENABLE_IFRAME_SEAMLESS", default => 1, value => \$iframeSeamlessSupport },
 
     { option => "indexed-database", desc => "Toggle Indexed Database support",
-      define => "ENABLE_INDEXED_DATABASE", default => isGtk(), value => \$indexedDatabaseSupport },
+      define => "ENABLE_INDEXED_DATABASE", default => (isGtk() || isEfl()), value => \$indexedDatabaseSupport },
 
     { option => "input-speech", desc => "Toggle Input Speech support",
       define => "ENABLE_INPUT_SPEECH", default => 0, value => \$inputSpeechSupport },
@@ -297,8 +298,8 @@ my @features = (
     { option => "input-type-date", desc => "Toggle Input Type Date support",
       define => "ENABLE_INPUT_TYPE_DATE", default => 0, value => \$inputTypeDateSupport },
 
-    { option => "input-type-datetime", desc => "Toggle Input Type Datetime support",
-      define => "ENABLE_INPUT_TYPE_DATETIME", default => 0, value => \$inputTypeDatetimeSupport },
+    { option => "input-type-datetime", desc => "Toggle broken Input Type Datetime support",
+      define => "ENABLE_INPUT_TYPE_DATETIME_INCOMPLETE", default => 0, value => \$inputTypeDatetimeSupport },
 
     { option => "input-type-datetimelocal", desc => "Toggle Input Type Datetimelocal support",
       define => "ENABLE_INPUT_TYPE_DATETIMELOCAL", default => 0, value => \$inputTypeDatetimelocalSupport },
@@ -379,7 +380,7 @@ my @features = (
       define => "ENABLE_ORIENTATION_EVENTS", default => isBlackBerry(), value => \$orientationEventsSupport },
 
     { option => "page-visibility-api", desc => "Toggle Page Visibility API support",
-      define => "ENABLE_PAGE_VISIBILITY_API", default => (isBlackBerry() || isEfl()), value => \$pageVisibilityAPISupport },
+      define => "ENABLE_PAGE_VISIBILITY_API", default => (isBlackBerry() || isEfl() || isGtk()), value => \$pageVisibilityAPISupport },
 
     { option => "performance-timeline", desc => "Toggle Performance Timeline support",
       define => "ENABLE_PERFORMANCE_TIMELINE", default => isGtk(), value => \$performanceTimelineSupport },
@@ -402,6 +403,9 @@ my @features = (
     { option => "request-animation-frame", desc => "Toggle Request Animation Frame support",
       define => "ENABLE_REQUEST_ANIMATION_FRAME", default => (isAppleMacWebKit() || isGtk() || isEfl() || isBlackBerry()), value => \$requestAnimationFrameSupport },
 
+    { option => "seccomp-filters", desc => "Toggle Seccomp Filter sandbox",
+      define => "ENABLE_SECCOMP_FILTERS", default => 0, value => \$seccompFiltersSupport },
+
     { option => "scripted-speech", desc => "Toggle Scripted Speech support",
       define => "ENABLE_SCRIPTED_SPEECH", default => 0, value => \$scriptedSpeechSupport },
 
@@ -422,9 +426,6 @@ my @features = (
 
     { option => "svg", desc => "Toggle SVG support",
       define => "ENABLE_SVG", default => 1, value => \$svgSupport },
-
-    { option => "svg-dom-objc-bindings", desc => "Toggle SVG DOM ObjC Bindings support",
-      define => "ENABLE_SVG_DOM_OBJC_BINDINGS", default => isAppleMacWebKit(), value => \$svgDOMObjCBindingsSupport },
 
     { option => "svg-fonts", desc => "Toggle SVG Fonts support",
       define => "ENABLE_SVG_FONTS", default => 1, value => \$svgFontsSupport },

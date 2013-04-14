@@ -31,6 +31,7 @@
 
 #include "InjectedBundle.h"
 #include "InjectedBundlePage.h"
+#include "NotImplemented.h"
 #include <JavaScriptCore/JSStringRef.h>
 #include <atk/atk.h>
 #include <wtf/Assertions.h>
@@ -541,8 +542,19 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::description()
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::orientation() const
 {
-    // FIXME: implement
-    return JSStringCreateWithCharacters(0, 0);
+    if (!m_element || !ATK_IS_OBJECT(m_element))
+        return JSStringCreateWithCharacters(0, 0);
+
+    const gchar* axOrientation = 0;
+    if (checkElementState(m_element, ATK_STATE_HORIZONTAL))
+        axOrientation = "AXOrientation: AXHorizontalOrientation";
+    else if (checkElementState(m_element, ATK_STATE_VERTICAL))
+        axOrientation = "AXOrientation: AXVerticalOrientation";
+
+    if (!axOrientation)
+        return JSStringCreateWithCharacters(0, 0);
+
+    return JSStringCreateWithUTF8CString(axOrientation);
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::stringValue()
@@ -790,7 +802,7 @@ bool AccessibilityUIElement::attributedStringRangeIsMisspelled(unsigned location
     return false;
 }
 
-PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::uiElementForSearchPredicate(AccessibilityUIElement* startElement, bool isDirectionNext, JSStringRef searchKey, JSStringRef searchText)
+PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::uiElementForSearchPredicate(JSContextRef context, AccessibilityUIElement* startElement, bool isDirectionNext, JSValueRef searchKey, JSStringRef searchText)
 {
     // FIXME: implement
     return 0;
@@ -1137,6 +1149,12 @@ void AccessibilityUIElement::scrollToMakeVisible()
 JSRetainPtr<JSStringRef> AccessibilityUIElement::supportedActions() const
 {
     // FIXME: implement
+    return 0;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::pathDescription() const
+{
+    notImplemented();
     return 0;
 }
 

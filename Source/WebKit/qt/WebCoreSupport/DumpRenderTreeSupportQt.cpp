@@ -38,6 +38,7 @@
 #include "EditorClientQt.h"
 #include "Element.h"
 #include "FocusController.h"
+#include "Font.h"
 #include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoaderClientQt.h"
@@ -872,6 +873,11 @@ void DumpRenderTreeSupportQt::setSeamlessIFramesEnabled(bool enabled)
 #endif
 }
 
+void DumpRenderTreeSupportQt::setShouldUseFontSmoothing(bool enabled)
+{
+    WebCore::Font::setShouldUseSmoothing(enabled);
+}
+
 QString DumpRenderTreeSupportQt::frameRenderTreeDump(QWebFrameAdapter* adapter)
 {
     if (adapter->frame->view() && adapter->frame->view()->layoutPending())
@@ -885,6 +891,11 @@ void DumpRenderTreeSupportQt::clearNotificationPermissions()
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     WebCore::NotificationPresenterClientQt::notificationPresenter()->clearCachedPermissions();
 #endif
+}
+
+void DumpRenderTreeSupportQt::disableDefaultTypesettingFeatures()
+{
+    WebCore::Font::setDefaultTypesettingFeatures(0);
 }
 
 void DumpRenderTreeSupportQt::getJSWindowObject(QWebFrameAdapter* adapter, JSContextRef* context, JSObjectRef* object)

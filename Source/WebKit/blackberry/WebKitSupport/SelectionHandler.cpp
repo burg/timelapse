@@ -158,7 +158,7 @@ void SelectionHandler::regionForTextQuads(Vector<FloatQuad> &quadList, IntRectRe
                 enclosingRect.intersect(clippingRect);
 
             adjustedIntRects.push_back(enclosingRect);
-            selectionBoundingBox = unionOfRects(enclosingRect, selectionBoundingBox);
+            selectionBoundingBox.unite(enclosingRect);
         }
         region = IntRectRegion(selectionBoundingBox, adjustedIntRects.size(), adjustedIntRects);
     }
@@ -172,7 +172,7 @@ static VisiblePosition visiblePositionForPointIgnoringClipping(const Frame& fram
     // outside the visible rect. To work around the bug, this is a copy of
     // visiblePositionAtPoint which which passes ignoreClipping=true.
     // See RIM Bug #4315.
-    HitTestResult result = frame.eventHandler()->hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent | HitTestRequest::IgnoreClipping);
+    HitTestResult result = frame.eventHandler()->hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
 
     Node* node = result.innerNode();
     if (!node || node->document() != frame.document())
@@ -507,43 +507,31 @@ void SelectionHandler::setSelection(const WebCore::IntPoint& start, const WebCor
     WebCore::IntPoint relativeStart = start;
     WebCore::IntPoint relativeEnd = end;
 
-    VisibleSelection newSelection(controller->selection());
-
-    // We need the selection to be ordered base then extent.
-    if (!controller->selection().isBaseFirst())
-        controller->setSelection(VisibleSelection(controller->selection().start(), controller->selection().end(), true /* isDirectional */));
+    // Initialize the new start and end of our selection at the current positions.
+    VisiblePosition newStart = controller->selection().visibleStart();
+    VisiblePosition newEnd = controller->selection().visibleEnd();
 
     // We don't return early in the following, so that we can do input field scrolling if the
     // handle is outside the bounds of the field. This can be extended to handle sub-region
     // scrolling as well
     if (startIsValid) {
         relativeStart = DOMSupport::convertPointToFrame(m_webPage->mainFrame(), focusedFrame, start);
-
         VisiblePosition base = visiblePositionForPointIgnoringClipping(*focusedFrame, clipPointToVisibleContainer(start));
-        if (base.isNotNull()) {
-            // The function setBase validates the "base"
-            newSelection.setBase(base);
-            newSelection.setWithoutValidation(newSelection.base(), controller->selection().end());
-            // Don't return early.
-        }
+        if (base.isNotNull())
+            newStart = base;
     }
 
     if (m_lastUpdatedEndPointIsValid) {
         relativeEnd = DOMSupport::convertPointToFrame(m_webPage->mainFrame(), focusedFrame, end);
-
         VisiblePosition extent = visiblePositionForPointIgnoringClipping(*focusedFrame, clipPointToVisibleContainer(end));
-        if (extent.isNotNull()) {
-            // The function setExtent validates the "extent"
-            newSelection.setExtent(extent);
-            newSelection.setWithoutValidation(controller->selection().start(), newSelection.extent());
-            // Don't return early.
-        }
+        if (extent.isNotNull())
+            newEnd = extent;
     }
+
+    VisibleSelection newSelection(newStart, newEnd, true /* isDirectional */);
 
     if (!controller->selection().isRange())
         m_webPage->updateSelectionScrollView(newSelection.visibleEnd().deepEquivalent().anchorNode());
-
-    newSelection.setIsDirectional(true);
 
     if (m_webPage->m_inputHandler->isInputMode()) {
         if (updateOrHandleInputSelection(newSelection, relativeStart, relativeEnd))
@@ -674,11 +662,6 @@ void SelectionHandler::selectAtPoint(const WebCore::IntPoint& location, Selectio
     selectObject(targetPosition, textGranularityFromSelectionExpansionType(selectionExpansionType));
 }
 
-static bool isInvalidLine(const VisiblePosition& pos)
-{
-    return endOfLine(pos).isNull() || pos == endOfLine(pos) || !inSameLine(pos, endOfLine(pos));
-}
-
 static bool isInvalidParagraph(const VisiblePosition& pos)
 {
     return endOfParagraph(pos).isNull() || pos == endOfParagraph(pos);
@@ -689,14 +672,14 @@ void SelectionHandler::selectNextParagraph()
     FrameSelection* controller = m_webPage->focusedOrMainFrame()->selection();
 
     VisiblePosition startPos = VisiblePosition(controller->start(), controller->affinity());
-    if (isStartOfLine(startPos) && isEndOfEditableOrNonEditableContent(startPos))
-        startPos = startPos.previous();
+    if (isStartOfLine(startPos) && isEndOfDocument(startPos))
+        startPos = startPos.previous(CannotCrossEditingBoundary);
 
     // Find next paragraph end position.
     VisiblePosition endPos(controller->end(), controller->affinity()); // endPos here indicates the end of current paragraph
-    endPos = endPos.next(); // find the start of next paragraph
-    while (!isEndOfDocument(endPos.deepEquivalent()) && endPos.isNotNull() && isInvalidParagraph(endPos))
-        endPos = endPos.next(); // go to next position
+    endPos = endPos.next(CannotCrossEditingBoundary); // find the start of next paragraph
+    while (!isEndOfDocument(endPos) && endPos.isNotNull() && isInvalidParagraph(endPos))
+        endPos = endPos.next(CannotCrossEditingBoundary); // go to next position
     endPos = endOfParagraph(endPos); // find the end of paragraph
 
     // Set selection if the paragraph is covered by overlay and endPos is not null.
@@ -706,7 +689,7 @@ void SelectionHandler::selectNextParagraph()
         controller->setSelection(selection);
 
         // Stop expansion if reaching the end of page.
-        if (isEndOfDocument(endPos.deepEquivalent()))
+        if (isEndOfDocument(endPos))
             m_webPage->m_client->stopExpandingSelection();
     }
 }
@@ -741,13 +724,13 @@ IntRectRegion SelectionHandler::regionForSelectionQuads(VisibleSelection selecti
 bool SelectionHandler::findNextAnimationOverlayRegion()
 {
     // If overlay is at the end of document, stop overlay expansion.
-    if (isEndOfDocument(m_animationOverlayEndPos.deepEquivalent()) || m_animationOverlayEndPos.isNull())
+    if (isEndOfDocument(m_animationOverlayEndPos) || m_animationOverlayEndPos.isNull())
         return false;
 
-    m_animationOverlayEndPos = m_animationOverlayEndPos.next();
-    while (!isEndOfDocument(m_animationOverlayEndPos.deepEquivalent()) && m_animationOverlayEndPos.isNotNull() && isInvalidLine(m_animationOverlayEndPos))
-        m_animationOverlayEndPos = m_animationOverlayEndPos.next(); // go to next position
-    m_animationOverlayEndPos = endOfLine(m_animationOverlayEndPos); // find end of line
+    m_animationOverlayEndPos = m_animationOverlayEndPos.next(CannotCrossEditingBoundary);
+    while (!isEndOfDocument(m_animationOverlayEndPos) && m_animationOverlayEndPos.isNotNull() && isInvalidParagraph(m_animationOverlayEndPos))
+        m_animationOverlayEndPos = m_animationOverlayEndPos.next(CannotCrossEditingBoundary); // go to next position
+    m_animationOverlayEndPos = endOfParagraph(m_animationOverlayEndPos); // find end of paragraph
 
     VisibleSelection selection(m_animationOverlayStartPos, m_animationOverlayEndPos);
     m_nextAnimationOverlayRegion = regionForSelectionQuads(selection);
@@ -764,7 +747,6 @@ void SelectionHandler::expandSelection(bool isScrollStarted)
         if (!findNextAnimationOverlayRegion()) {
             drawAnimationOverlay(m_nextAnimationOverlayRegion, false);
             selectNextParagraph();
-            m_webPage->m_client->stopExpandingSelection();
             return;
         }
 
@@ -784,7 +766,8 @@ bool SelectionHandler::ensureSelectedTextVisible(const WebCore::IntPoint& point,
 {
     WebCore::IntRect viewportRect = selectionViewportRect();
     if (!scrollIfNeeded)
-        return viewportRect.maxY() >= point.y() + m_scrollMargin.height();
+        // If reaching the bottom of content, ignore scroll margin so the text on the bottom can be selected.
+        return viewportRect.maxY() >= m_webPage->contentsSize().height() ? viewportRect.maxY() >= point.y() : viewportRect.maxY() >= point.y() + m_scrollMargin.height();
 
     // Scroll position adjustment here is based on main frame. If selecting in a subframe, don't do animation.
     if (!m_selectionViewportRect.isEmpty())

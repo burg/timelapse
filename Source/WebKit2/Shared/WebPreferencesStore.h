@@ -54,8 +54,17 @@ namespace WebKit {
 #define DEFAULT_SCREEN_FONT_SUBSTITUTION_ENABLED true
 #endif
 
+#if PLATFORM(MAC)
+#define DEFAULT_HIDDEN_PAGE_DOM_TIMER_THROTTLING_ENABLED true
+#define DEFAULT_HIDDEN_PAGE_CSS_ANIMATION_SUSPENSION_ENABLED true
+#else
+#define DEFAULT_HIDDEN_PAGE_DOM_TIMER_THROTTLING_ENABLED false
+#define DEFAULT_HIDDEN_PAGE_CSS_ANIMATION_SUSPENSION_ENABLED false
+#endif
+
 #define FOR_EACH_WEBKIT_BOOL_PREFERENCE(macro) \
     macro(JavaScriptEnabled, javaScriptEnabled, Bool, bool, true) \
+    macro(JavaScriptMarkupEnabled, javaScriptMarkupEnabled, Bool, bool, true) \
     macro(LoadsImagesAutomatically, loadsImagesAutomatically, Bool, bool, true) \
     macro(LoadsSiteIconsIgnoringImageLoadingPreference, loadsSiteIconsIgnoringImageLoadingPreference, Bool, bool, false) \
     macro(PluginsEnabled, pluginsEnabled, Bool, bool, true) \
@@ -135,6 +144,9 @@ namespace WebKit {
     macro(ScreenFontSubstitutionEnabled, screenFontSubstitutionEnabled, Bool, bool, DEFAULT_SCREEN_FONT_SUBSTITUTION_ENABLED) \
     macro(CookieEnabled, cookieEnabled, Bool, bool, true) \
     macro(PlugInSnapshottingEnabled, plugInSnapshottingEnabled, Bool, bool, false) \
+    macro(SnapshotAllPlugIns, snapshotAllPlugIns, Bool, bool, false) \
+    macro(AutostartOriginPlugInSnapshottingEnabled, autostartOriginPlugInSnapshottingEnabled, Bool, bool, true) \
+    macro(PrimaryPlugInSnapshotDetectionEnabled, primaryPlugInSnapshotDetectionEnabled, Bool, bool, true) \
     macro(PDFPluginEnabled, pdfPluginEnabled, Bool, bool, false) \
     macro(UsesEncodingDetector, usesEncodingDetector, Bool, bool, false) \
     macro(TextAutosizingEnabled, textAutosizingEnabled, Bool, bool, false) \
@@ -145,6 +157,8 @@ namespace WebKit {
     macro(SmartInsertDeleteEnabled, smartInsertDeleteEnabled, Bool, bool, true) \
     macro(ShowsURLsInToolTipsEnabled, showsURLsInToolTipsEnabled, Bool, bool, false) \
     macro(AcceleratedCompositingForOverflowScrollEnabled, acceleratedCompositingForOverflowScrollEnabled, Bool, bool, false) \
+    macro(HiddenPageDOMTimerThrottlingEnabled, hiddenPageDOMTimerThrottlingEnabled, Bool, bool, DEFAULT_HIDDEN_PAGE_DOM_TIMER_THROTTLING_ENABLED) \
+    macro(HiddenPageCSSAnimationSuspensionEnabled, hiddenPageCSSAnimationSuspensionEnabled, Bool, bool, DEFAULT_HIDDEN_PAGE_CSS_ANIMATION_SUSPENSION_ENABLED) \
     \
 
 #define FOR_EACH_WEBKIT_DOUBLE_PREFERENCE(macro) \
@@ -166,6 +180,8 @@ namespace WebKit {
     macro(PDFDisplayMode, pdfDisplayMode, UInt32, uint32_t, 1) \
     macro(EditableLinkBehavior, editableLinkBehavior, UInt32, uint32_t, WebCore::EditableLinkNeverLive) \
     macro(InspectorAttachedHeight, inspectorAttachedHeight, UInt32, uint32_t, 300) \
+    macro(InspectorAttachedWidth, inspectorAttachedWidth, UInt32, uint32_t, 750) \
+    macro(InspectorAttachmentSide, inspectorAttachmentSide, UInt32, uint32_t, 0) \
     \
 
 #if PLATFORM(MAC)

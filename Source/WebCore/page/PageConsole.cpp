@@ -49,10 +49,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(CHROMIUM)
-#include "TraceEvent.h"
-#endif
-
 namespace WebCore {
 
 namespace {
@@ -168,6 +164,9 @@ void PageConsole::addMessage(MessageSource source, MessageLevel level, const Str
         InspectorInstrumentation::addMessageToConsole(page, source, LogMessageType, level, message, callStack, requestIdentifier);
     else
         InspectorInstrumentation::addMessageToConsole(page, source, LogMessageType, level, message, url, lineNumber, state, requestIdentifier);
+
+    if (source == CSSMessageSource)
+        return;
 
     if (page->settings()->privateBrowsingEnabled())
         return;

@@ -61,6 +61,7 @@
 #include <WebCore/FrameView.h>
 #include <WebCore/HTMLAppletElement.h>
 #include <WebCore/HTMLFormElement.h>
+#include <WebCore/HistoryController.h>
 #include <WebCore/HistoryItem.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MouseEvent.h>
@@ -907,7 +908,7 @@ void WebFrameLoaderClient::updateGlobalHistory()
     DocumentLoader* loader = m_frame->coreFrame()->loader()->documentLoader();
 
     WebNavigationDataStore data;
-    data.url = loader->urlForHistory().string();
+    data.url = loader->url().string();
     // FIXME: use direction of title.
     data.title = loader->title().string();
     data.originalRequest = loader->originalRequestCopy();
@@ -1346,7 +1347,8 @@ void WebFrameLoaderClient::recreatePlugin(Widget* widget)
 
 void WebFrameLoaderClient::redirectDataToPlugin(Widget* pluginWidget)
 {
-    m_pluginView = static_cast<PluginView*>(pluginWidget);
+    if (pluginWidget)
+        m_pluginView = static_cast<PluginView*>(pluginWidget);
 }
 
 PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement* appletElement, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues)
@@ -1544,6 +1546,8 @@ void WebFrameLoaderClient::didChangeScrollOffset()
     WebPage* webPage = m_frame->page();
     if (!webPage)
         return;
+
+    webPage->drawingArea()->didChangeScrollOffsetForAnyFrame();
 
     if (!m_frame->isMainFrame())
         return;

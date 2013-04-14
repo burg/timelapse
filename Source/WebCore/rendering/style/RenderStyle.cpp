@@ -343,7 +343,7 @@ bool RenderStyle::inheritedDataShared(const RenderStyle* other) const
         && rareInheritedData.get() == other->rareInheritedData.get();
 }
 
-static bool positionedObjectMoved(const LengthBox& a, const LengthBox& b)
+static bool positionedObjectMoved(const LengthBox& a, const LengthBox& b, const Length& width)
 {
     // If any unit types are different, then we can't guarantee
     // that this was just a movement.
@@ -359,6 +359,10 @@ static bool positionedObjectMoved(const LengthBox& a, const LengthBox& b)
     if (!a.left().isIntrinsicOrAuto() && !a.right().isIntrinsicOrAuto())
         return false;
     if (!a.top().isIntrinsicOrAuto() && !a.bottom().isIntrinsicOrAuto())
+        return false;
+    // If our width is auto and left or right is specified then this 
+    // is not just a movement - we need to resize to our container.
+    if ((!a.left().isIntrinsicOrAuto() || !a.right().isIntrinsicOrAuto()) && width.isIntrinsicOrAuto())
         return false;
 
     // One of the units is fixed or percent in both directions and stayed
@@ -481,6 +485,9 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
     if (rareInheritedData.get() != other->rareInheritedData.get()) {
         if (rareInheritedData->highlight != other->rareInheritedData->highlight
             || rareInheritedData->indent != other->rareInheritedData->indent
+#if ENABLE(CSS3_TEXT)
+            || rareInheritedData->m_textIndentLine != other->rareInheritedData->m_textIndentLine
+#endif
             || rareInheritedData->m_effectiveZoom != other->rareInheritedData->m_effectiveZoom
             || rareInheritedData->wordBreak != other->rareInheritedData->wordBreak
             || rareInheritedData->overflowWrap != other->rareInheritedData->overflowWrap
@@ -626,7 +633,8 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
     if (position() != StaticPosition) {
         if (surround->offset != other->surround->offset) {
              // Optimize for the case where a positioned layer is moving but not changing size.
-            if (position() == AbsolutePosition && positionedObjectMoved(surround->offset, other->surround->offset))
+            if (position() == AbsolutePosition && positionedObjectMoved(surround->offset, other->surround->offset, m_box->width()))
+
                 return StyleDifferenceLayoutPositionedMovementOnly;
 
             // FIXME: We would like to use SimplifiedLayout for relative positioning, but we can't quite do that yet.
@@ -1337,12 +1345,12 @@ void RenderStyle::getShadowExtent(const ShadowData* shadow, LayoutUnit &top, Lay
     for ( ; shadow; shadow = shadow->next()) {
         if (shadow->style() == Inset)
             continue;
-        int blurAndSpread = shadow->blur() + shadow->spread();
 
-        top = min<LayoutUnit>(top, shadow->y() - blurAndSpread);
-        right = max<LayoutUnit>(right, shadow->x() + blurAndSpread);
-        bottom = max<LayoutUnit>(bottom, shadow->y() + blurAndSpread);
-        left = min<LayoutUnit>(left, shadow->x() - blurAndSpread);
+        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        top = min<LayoutUnit>(top, shadow->y() - extentAndSpread);
+        right = max<LayoutUnit>(right, shadow->x() + extentAndSpread);
+        bottom = max<LayoutUnit>(bottom, shadow->y() + extentAndSpread);
+        left = min<LayoutUnit>(left, shadow->x() - extentAndSpread);
     }
 }
 
@@ -1356,11 +1364,12 @@ LayoutBoxExtent RenderStyle::getShadowInsetExtent(const ShadowData* shadow) cons
     for ( ; shadow; shadow = shadow->next()) {
         if (shadow->style() == Normal)
             continue;
-        int blurAndSpread = shadow->blur() + shadow->spread();
-        top = max<LayoutUnit>(top, shadow->y() + blurAndSpread);
-        right = min<LayoutUnit>(right, shadow->x() - blurAndSpread);
-        bottom = min<LayoutUnit>(bottom, shadow->y() - blurAndSpread);
-        left = max<LayoutUnit>(left, shadow->x() + blurAndSpread);
+
+        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        top = max<LayoutUnit>(top, shadow->y() + extentAndSpread);
+        right = min<LayoutUnit>(right, shadow->x() - extentAndSpread);
+        bottom = min<LayoutUnit>(bottom, shadow->y() - extentAndSpread);
+        left = max<LayoutUnit>(left, shadow->x() + extentAndSpread);
     }
 
     return LayoutBoxExtent(top, right, bottom, left);
@@ -1374,10 +1383,10 @@ void RenderStyle::getShadowHorizontalExtent(const ShadowData* shadow, LayoutUnit
     for ( ; shadow; shadow = shadow->next()) {
         if (shadow->style() == Inset)
             continue;
-        int blurAndSpread = shadow->blur() + shadow->spread();
 
-        left = min<LayoutUnit>(left, shadow->x() - blurAndSpread);
-        right = max<LayoutUnit>(right, shadow->x() + blurAndSpread);
+        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        left = min<LayoutUnit>(left, shadow->x() - extentAndSpread);
+        right = max<LayoutUnit>(right, shadow->x() + extentAndSpread);
     }
 }
 
@@ -1389,10 +1398,10 @@ void RenderStyle::getShadowVerticalExtent(const ShadowData* shadow, LayoutUnit &
     for ( ; shadow; shadow = shadow->next()) {
         if (shadow->style() == Inset)
             continue;
-        int blurAndSpread = shadow->blur() + shadow->spread();
 
-        top = min<LayoutUnit>(top, shadow->y() - blurAndSpread);
-        bottom = max<LayoutUnit>(bottom, shadow->y() + blurAndSpread);
+        int extentAndSpread = shadow->paintingExtent() + shadow->spread();
+        top = min<LayoutUnit>(top, shadow->y() - extentAndSpread);
+        bottom = max<LayoutUnit>(bottom, shadow->y() + extentAndSpread);
     }
 }
 

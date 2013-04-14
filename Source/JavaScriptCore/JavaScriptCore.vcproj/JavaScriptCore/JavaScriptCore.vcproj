@@ -1374,14 +1374,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\runtime\TimeoutChecker.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\runtime\TimeoutChecker.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\runtime\TypedArrayDescriptor.h"
 				>
 			</File>
@@ -1415,10 +1407,6 @@
 			</File>
 			<File
 				RelativePath="..\..\runtime\JSAPIValueWrapper.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\API\JSAPIWrapperObject.cpp"
 				>
 			</File>
 			<File
@@ -2658,6 +2646,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\heap\HandleBlock.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\heap\HandleBlockInlines.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\heap\HandleSet.cpp"
 				>
 			</File>
@@ -2774,6 +2770,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\heap\Region.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\heap\SlotVisitor.cpp"
 				>
 			</File>
@@ -2783,6 +2783,14 @@
 			</File>
 			<File
 				RelativePath="..\..\heap\StrongInlines.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\heap\SuperRegion.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\heap\SuperRegion.h"
 				>
 			</File>
 			<File

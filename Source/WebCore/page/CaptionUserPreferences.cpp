@@ -28,17 +28,114 @@
 #if ENABLE(VIDEO_TRACK)
 
 #include "CaptionUserPreferences.h"
+#include "DOMWrapperWorld.h"
+#include "Page.h"
 #include "PageGroup.h"
+#include "Settings.h"
+#include "TextTrackList.h"
+#include "UserStyleSheetTypes.h"
+#include <wtf/NonCopyingSort.h>
 
 namespace WebCore {
 
+CaptionUserPreferences::CaptionUserPreferences(PageGroup* group)
+    : m_pageGroup(group)
+    , m_displayMode(AlwaysOn)
+    , m_timer(this, &CaptionUserPreferences::timerFired)
+    , m_testingMode(false)
+    , m_havePreferences(false)
+{
+}
+
+CaptionUserPreferences::~CaptionUserPreferences()
+{
+}
+
+void CaptionUserPreferences::timerFired(Timer<CaptionUserPreferences>*)
+{
+    captionPreferencesChanged();
+}
+
+void CaptionUserPreferences::notify()
+{
+    if (!m_testingMode)
+        return;
+
+    m_havePreferences = true;
+    if (!m_timer.isActive())
+        m_timer.startOneShot(0);
+}
+
+CaptionUserPreferences::CaptionDisplayMode CaptionUserPreferences::captionDisplayMode() const
+{
+    return m_displayMode;
+}
+
+void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::CaptionDisplayMode mode)
+{
+    m_displayMode = mode;
+    if (m_testingMode && mode != AlwaysOn) {
+        setUserPrefersCaptions(false);
+        setUserPrefersSubtitles(false);
+    }
+    notify();
+}
+
+bool CaptionUserPreferences::userPrefersCaptions() const
+{
+    Page* page = *(pageGroup()->pages().begin());
+    if (!page)
+        return false;
+
+    return page->settings()->shouldDisplayCaptions();
+}
+
 void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 {
-    m_userPrefersCaptions = preference;
-    if (m_testingMode) {
-        m_havePreferences = true;
-        captionPreferencesChanged();
-    }
+    Page* page = *(pageGroup()->pages().begin());
+    if (!page)
+        return;
+
+    page->settings()->setShouldDisplayCaptions(preference);
+    notify();
+}
+
+bool CaptionUserPreferences::userPrefersSubtitles() const
+{
+    Page* page = *(pageGroup()->pages().begin());
+    if (!page)
+        return false;
+
+    return page->settings()->shouldDisplaySubtitles();
+}
+
+void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
+{
+    Page* page = *(pageGroup()->pages().begin());
+    if (!page)
+        return;
+
+    page->settings()->setShouldDisplaySubtitles(preference);
+    notify();
+}
+
+bool CaptionUserPreferences::userPrefersTextDescriptions() const
+{
+    Page* page = *(pageGroup()->pages().begin());
+    if (!page)
+        return false;
+    
+    return page->settings()->shouldDisplayTextDescriptions();
+}
+
+void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
+{
+    Page* page = *(pageGroup()->pages().begin());
+    if (!page)
+        return;
+    
+    page->settings()->setShouldDisplayTextDescriptions(preference);
+    notify();
 }
 
 void CaptionUserPreferences::captionPreferencesChanged()
@@ -55,16 +152,13 @@ Vector<String> CaptionUserPreferences::preferredLanguages() const
     return languages;
 }
 
-void CaptionUserPreferences::setPreferredLanguage(String language)
+void CaptionUserPreferences::setPreferredLanguage(const String& language)
 {
     m_userPreferredLanguage = language;
-    if (m_testingMode) {
-        m_havePreferences = true;
-        captionPreferencesChanged();
-    }
+    notify();
 }
 
-String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
+static String trackDisplayName(TextTrack* track)
 {
     if (track->label().isEmpty() && track->language().isEmpty())
         return textTrackNoLabelText();
@@ -73,6 +167,84 @@ String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
     return track->language();
 }
 
+String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
+{
+    return trackDisplayName(track);
+}
+    
+static bool textTrackCompare(const RefPtr<TextTrack>& a, const RefPtr<TextTrack>& b)
+{
+    return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
+}
+
+Vector<RefPtr<TextTrack> > CaptionUserPreferences::sortedTrackListForMenu(TextTrackList* trackList)
+{
+    ASSERT(trackList);
+
+    Vector<RefPtr<TextTrack> > tracksForMenu;
+
+    for (unsigned i = 0, length = trackList->length(); i < length; ++i)
+        tracksForMenu.append(trackList->item(i));
+
+    nonCopyingSort(tracksForMenu.begin(), tracksForMenu.end(), textTrackCompare);
+
+    return tracksForMenu;
+}
+
+int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaElement*) const
+{
+    int trackScore = 0;
+
+    if (track->kind() != TextTrack::captionsKeyword() && track->kind() != TextTrack::subtitlesKeyword())
+        return trackScore;
+    
+    if (!userPrefersSubtitles() && !userPrefersCaptions())
+        return trackScore;
+    
+    if (track->kind() == TextTrack::subtitlesKeyword() && userPrefersSubtitles())
+        trackScore = 1;
+    else if (track->kind() == TextTrack::captionsKeyword() && userPrefersCaptions())
+        trackScore = 1;
+    
+    return trackScore + textTrackLanguageSelectionScore(track, preferredLanguages());
+}
+
+int CaptionUserPreferences::textTrackLanguageSelectionScore(TextTrack* track, const Vector<String>& preferredLanguages) const
+{
+    if (track->language().isEmpty())
+        return 0;
+
+    size_t languageMatchIndex = indexOfBestMatchingLanguageInList(track->language(), preferredLanguages);
+    if (languageMatchIndex >= preferredLanguages.size())
+        return 0;
+
+    // Matching a track language is more important than matching track type, so this multiplier must be
+    // greater than the maximum value returned by textTrackSelectionScore.
+    return (preferredLanguages.size() - languageMatchIndex) * 10;
+}
+
+void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& override)
+{
+    m_captionsStyleSheetOverride = override;
+    updateCaptionStyleSheetOveride();
+}
+
+void CaptionUserPreferences::updateCaptionStyleSheetOveride()
+{
+    // Identify our override style sheet with a unique URL - a new scheme and a UUID.
+    DEFINE_STATIC_LOCAL(KURL, captionsStyleSheetURL, (ParsedURLString, "user-captions-override:01F6AF12-C3B0-4F70-AF5E-A3E00234DC23"));
+
+    pageGroup()->removeUserStyleSheetFromWorld(mainThreadNormalWorld(), captionsStyleSheetURL);
+
+    String captionsOverrideStyleSheet = captionsStyleSheetOverride();
+    if (captionsOverrideStyleSheet.isEmpty())
+        return;
+
+    pageGroup()->addUserStyleSheetToWorld(mainThreadNormalWorld(), captionsOverrideStyleSheet, captionsStyleSheetURL, Vector<String>(),
+        Vector<String>(), InjectInAllFrames, UserStyleAuthorLevel, InjectInExistingDocuments);
+}
+
+    
 }
 
 #endif // ENABLE(VIDEO_TRACK)

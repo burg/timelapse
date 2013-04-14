@@ -192,6 +192,7 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitTextDecorationStyle,
     CSSPropertyWebkitTextDecorationColor,
     CSSPropertyWebkitTextAlignLast,
+    CSSPropertyWebkitTextJustify,
     CSSPropertyWebkitTextUnderlinePosition,
 #endif // CSS3_TEXT
     CSSPropertyTextIndent,
@@ -382,6 +383,7 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitWrapThrough,
 #endif
 #if ENABLE(SVG)
+    CSSPropertyBufferedRendering,
     CSSPropertyClipPath,
     CSSPropertyClipRule,
     CSSPropertyMask,
@@ -1271,7 +1273,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::valueForShadow(const ShadowDat
     for (const ShadowData* s = shadow; s; s = s->next()) {
         RefPtr<CSSPrimitiveValue> x = zoomAdjustedPixelValue(s->x(), style);
         RefPtr<CSSPrimitiveValue> y = zoomAdjustedPixelValue(s->y(), style);
-        RefPtr<CSSPrimitiveValue> blur = zoomAdjustedPixelValue(s->blur(), style);
+        RefPtr<CSSPrimitiveValue> blur = zoomAdjustedPixelValue(s->radius(), style);
         RefPtr<CSSPrimitiveValue> spread = propertyID == CSSPropertyTextShadow ? PassRefPtr<CSSPrimitiveValue>() : zoomAdjustedPixelValue(s->spread(), style);
         RefPtr<CSSPrimitiveValue> style = propertyID == CSSPropertyTextShadow || s->style() == Normal ? PassRefPtr<CSSPrimitiveValue>() : cssValuePool().createIdentifierValue(CSSValueInset);
         RefPtr<CSSPrimitiveValue> color = cssValuePool().createColorValue(s->color().rgb());
@@ -2160,6 +2162,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return currentColorOrValidColor(style.get(), style->textDecorationColor());
         case CSSPropertyWebkitTextAlignLast:
             return cssValuePool().createValue(style->textAlignLast());
+        case CSSPropertyWebkitTextJustify:
+            return cssValuePool().createValue(style->textJustify());
         case CSSPropertyWebkitTextUnderlinePosition:
             return cssValuePool().createValue(style->textUnderlinePosition());
 #endif // CSS3_TEXT
@@ -2191,8 +2195,18 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
                 return list.release();
             }
             }
-        case CSSPropertyTextIndent:
-            return zoomAdjustedPixelValueForLength(style->textIndent(), style.get());
+        case CSSPropertyTextIndent: {
+            RefPtr<CSSValue> textIndent = zoomAdjustedPixelValueForLength(style->textIndent(), style.get());
+#if ENABLE(CSS3_TEXT)
+            if (style->textIndentLine() == TextIndentEachLine) {
+                RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+                list->append(textIndent.release());
+                list->append(cssValuePool().createIdentifierValue(CSSValueWebkitEachLine));
+                return list.release();
+            }
+#endif
+            return textIndent.release();
+        }
         case CSSPropertyTextShadow:
             return valueForShadow(style->textShadow(), propertyID, style.get());
         case CSSPropertyTextRendering:
@@ -2811,6 +2825,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
 #endif
 
 #if ENABLE(SVG)
+        case CSSPropertyBufferedRendering:
         case CSSPropertyClipPath:
         case CSSPropertyClipRule:
         case CSSPropertyMask:

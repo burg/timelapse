@@ -81,7 +81,7 @@ bool HTMLPlugInElement::canProcessDrag() const
 
 bool HTMLPlugInElement::willRespondToMouseClickEvents()
 {
-    if (disabled())
+    if (isDisabledFormControl())
         return false;
     RenderObject* r = renderer();
     if (!r)
@@ -203,7 +203,7 @@ void HTMLPlugInElement::defaultEventHandler(Event* event)
             return;
         }
 
-        if (r->isSnapshottedPlugIn() && displayState() < PlayingWithPendingMouseClick) {
+        if (r->isSnapshottedPlugIn() && displayState() < Restarting) {
             toRenderSnapshottedPlugIn(r)->handleEvent(event);
             HTMLFrameOwnerElement::defaultEventHandler(event);
             return;
@@ -240,6 +240,16 @@ bool HTMLPlugInElement::isKeyboardFocusable(KeyboardEvent* event) const
 bool HTMLPlugInElement::isPluginElement() const
 {
     return true;
+}
+
+bool HTMLPlugInElement::supportsFocus() const
+{
+    if (HTMLFrameOwnerElement::supportsFocus())
+        return true;
+
+    if (useFallbackContent() || !renderer() || !renderer()->isEmbeddedObject())
+        return false;
+    return !toRenderEmbeddedObject(renderer())->showsUnavailablePluginIndicator();
 }
 
 #if ENABLE(NETSCAPE_PLUGIN_API)

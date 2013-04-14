@@ -55,6 +55,8 @@ using std::isnan;
 void testObjectiveCAPI(void);
 #endif
 
+extern void JSSynchronousGarbageCollectForDebugging(JSContextRef);
+
 static JSGlobalContextRef context;
 int failed;
 static void assertEqualsAsBoolean(JSValueRef value, bool expectedValue)
@@ -486,6 +488,11 @@ static bool PropertyCatchalls_setProperty(JSContextRef context, JSObjectRef obje
             return false;
 
         // Swallow all .x sets after 4.
+        return true;
+    }
+
+    if (JSStringIsEqualToUTF8CString(propertyName, "make_throw") || JSStringIsEqualToUTF8CString(propertyName, "0")) {
+        *exception = JSValueMakeNumber(context, 5);
         return true;
     }
 

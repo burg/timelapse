@@ -47,7 +47,7 @@
 
 using namespace std;
 
-#if (PLATFORM(CHROMIUM) && (OS(UNIX) && !OS(DARWIN))) || PLATFORM(GTK)
+#if PLATFORM(GTK)
 // The position of the scrollbar thumb affects the appearance of the steppers, so
 // when the thumb moves, we have to invalidate them for painting.
 #define THUMB_POSITION_AFFECTS_BUTTONS
@@ -110,8 +110,8 @@ Scrollbar::Scrollbar(ScrollableArea* scrollableArea, ScrollbarOrientation orient
 
 Scrollbar::~Scrollbar()
 {
-    if (AXObjectCache::accessibilityEnabled() && axObjectCache())
-        axObjectCache()->remove(this);
+    if (AXObjectCache* cache = existingAXObjectCache())
+        cache->remove(this);
     
     stopTimerIfNeeded();
     
@@ -566,16 +566,13 @@ bool Scrollbar::isWindowActive() const
 {
     return m_scrollableArea && m_scrollableArea->isActive();
 }
-    
-AXObjectCache* Scrollbar::axObjectCache() const
+
+AXObjectCache* Scrollbar::existingAXObjectCache() const
 {
-    if (!parent() || !parent()->isFrameView())
+    if (!parent())
         return 0;
     
-    // FIXME: Accessing the FrameView and Document here is a layering violation
-    // and should be removed.
-    Document* document = toFrameView(parent())->frame()->document();
-    return document->axObjectCache();
+    return parent()->axObjectCache();
 }
 
 void Scrollbar::invalidateRect(const IntRect& rect)

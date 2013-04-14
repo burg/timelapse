@@ -743,6 +743,10 @@ SMILTime SVGSMILElement::findInstanceTime(BeginOrEnd beginOrEnd, SMILTime minimu
     const SMILTimeWithOrigin* result = approximateBinarySearch<const SMILTimeWithOrigin, SMILTime>(list, sizeOfList, minimumTime, extractTimeFromVector);
     int indexOfResult = result - list.begin();
     ASSERT_WITH_SECURITY_IMPLICATION(indexOfResult < sizeOfList);
+
+    if (list[indexOfResult].time() < minimumTime && indexOfResult < sizeOfList - 1)
+        ++indexOfResult;
+
     const SMILTime& currentTime = list[indexOfResult].time();
 
     // The special value "indefinite" does not yield an instance time in the begin list.
@@ -1066,8 +1070,11 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement* resultElement, b
 
     if (elapsed < m_intervalBegin) {
         ASSERT(m_activeState != Active);
-        if (m_activeState == Frozen)
+        if (m_activeState == Frozen) {
+            if (this == resultElement)
+                resetAnimatedType();
             updateAnimation(m_lastPercent, m_lastRepeat, resultElement);
+        }
         m_nextProgressTime = m_intervalBegin;
         return false;
     }

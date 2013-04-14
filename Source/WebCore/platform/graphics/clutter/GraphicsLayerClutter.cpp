@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Apple Inc. All rights reserved.
  * Copyright (C) 2011, 2012, 2013 Collabora Ltd.
- * Copyright (C) 2012 Intel Corporation. All rights reserved.
+ * Copyright (C) 2012, 2013 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,7 @@
 #include "RotateTransformOperation.h"
 #include "ScaleTransformOperation.h"
 #include "TransformState.h"
+#include "TransformationMatrix.h"
 #include "TranslateTransformOperation.h"
 #include <limits.h>
 #include <wtf/text/CString.h>
@@ -251,6 +252,7 @@ PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerClient* client)
 
 GraphicsLayerClutter::GraphicsLayerClutter(GraphicsLayerClient* client)
     : GraphicsLayer(client)
+    , m_contentsLayerPurpose(NoContentsLayer)
     , m_uncommittedChanges(0)
 {
     // ClutterRectangle will be used to show the debug border.
@@ -282,6 +284,13 @@ GraphicsLayerClutter::~GraphicsLayerClutter()
     if (graphicsLayerActorGetLayerType(m_layer.get()) == GraphicsLayerClutter::LayerTypeRootLayer)
         return;
 
+    // Even though we call notifyFlushRequired to remove existing animations in removeAnimation(),
+    // removeClutterAnimationFromLayer has been never reached since the root layer is destroyed.
+    // It means that we haven't lost a change to remove actual animations from clutterActor. 
+    // So, we call explictly updateAnimations once here to remove uncommitted animations. 
+    if (m_uncommittedChanges & AnimationChanged)
+        updateAnimations();
+
     willBeDestroyed();
 
     // We destroy the actors on an idle so that the main loop can run enough to
@@ -289,6 +298,16 @@ GraphicsLayerClutter::~GraphicsLayerClutter()
     if (m_layer) {
         graphicsLayerActorSetClient(m_layer.get(), 0);
         g_idle_add(idleDestroy, m_layer.leakRef());
+    }
+
+    if (m_structuralLayer) {
+        graphicsLayerActorSetClient(m_structuralLayer.get(), 0);
+        g_idle_add(idleDestroy, m_structuralLayer.leakRef());
+    }
+
+    if (m_contentsLayer) {
+        graphicsLayerActorSetClient(m_contentsLayer.get(), 0);
+        g_idle_add(idleDestroy, m_contentsLayer.leakRef());
     }
 }
 
@@ -301,7 +320,7 @@ void GraphicsLayerClutter::setName(const String& name)
 
 ClutterActor* GraphicsLayerClutter::platformLayer() const
 {
-    return CLUTTER_ACTOR(m_layer.get());
+    return CLUTTER_ACTOR(primaryLayer());
 }
 
 void GraphicsLayerClutter::setNeedsDisplay()
@@ -381,6 +400,20 @@ void GraphicsLayerClutter::setTransform(const TransformationMatrix& t)
     noteLayerPropertyChanged(TransformChanged);
 }
 
+void GraphicsLayerClutter::moveOrCopyAnimations(MoveOrCopy operation, GraphicsLayerActor* fromLayer, GraphicsLayerActor* toLayer)
+{
+    notImplemented();
+}
+
+void GraphicsLayerClutter::setPreserves3D(bool preserves3D)
+{
+    if (preserves3D == m_preserves3D)
+        return;
+
+    GraphicsLayer::setPreserves3D(preserves3D);
+    noteLayerPropertyChanged(Preserves3DChanged);
+}
+
 void GraphicsLayerClutter::setDrawsContent(bool drawsContent)
 {
     if (drawsContent == m_drawsContent)
@@ -388,6 +421,43 @@ void GraphicsLayerClutter::setDrawsContent(bool drawsContent)
 
     GraphicsLayer::setDrawsContent(drawsContent);
     noteLayerPropertyChanged(DrawsContentChanged);
+}
+
+
+void GraphicsLayerClutter::setContentsToImage(Image* image)
+{
+    if (image) {
+        RefPtr<cairo_surface_t> newImage = image->nativeImageForCurrentFrame();
+        if (!newImage)
+            return;
+
+        m_pendingContentsImage = newImage;
+
+        m_contentsLayerPurpose = ContentsLayerForImage;
+        if (!m_contentsLayer)
+            noteSublayersChanged();
+    } else {
+        m_pendingContentsImage = 0;
+        m_contentsLayerPurpose = NoContentsLayer;
+        if (m_contentsLayer)
+            noteSublayersChanged();
+    }
+
+    noteLayerPropertyChanged(ContentsImageChanged);
+}
+
+void GraphicsLayerClutter::setContentsNeedsDisplay()
+{
+    noteLayerPropertyChanged(ContentsNeedsDisplay);
+}
+
+void GraphicsLayerClutter::setContentsRect(const IntRect& rect)
+{
+    if (rect == m_contentsRect)
+        return;
+
+    GraphicsLayer::setContentsRect(rect);
+    noteLayerPropertyChanged(ContentsRectChanged);
 }
 
 void GraphicsLayerClutter::setParent(GraphicsLayer* childLayer)
@@ -547,14 +617,11 @@ FloatPoint GraphicsLayerClutter::computePositionRelativeToBase(float& pageScale)
 void GraphicsLayerClutter::flushCompositingState(const FloatRect& clipRect)
 {
     TransformState state(TransformState::UnapplyInverseTransformDirection, FloatQuad(clipRect));
-    recursiveCommitChanges(state);
+    recursiveCommitChanges(CommitState(), state);
 }
 
-void GraphicsLayerClutter::recursiveCommitChanges(const TransformState& state, float pageScaleFactor, const FloatPoint& positionRelativeToBase, bool affectedByPageScale)
+void GraphicsLayerClutter::recursiveCommitChanges(const CommitState& commitState, const TransformState& state, float pageScaleFactor, const FloatPoint& positionRelativeToBase, bool affectedByPageScale)
 {
-    // FIXME: Save the state before sending down to kids and restore it after
-    TransformState localState = state;
-
     if (appliesPageScale()) {
         pageScaleFactor = this->pageScaleFactor();
         affectedByPageScale = true;
@@ -571,8 +638,8 @@ void GraphicsLayerClutter::recursiveCommitChanges(const TransformState& state, f
     size_t numChildren = childLayers.size();
 
     for (size_t i = 0; i < numChildren; ++i) {
-        GraphicsLayerClutter* curChild = static_cast<GraphicsLayerClutter*>(childLayers[i]);
-        curChild->recursiveCommitChanges(localState, pageScaleFactor, baseRelativePosition, affectedByPageScale);
+        GraphicsLayerClutter* currentChild = static_cast<GraphicsLayerClutter*>(childLayers[i]);
+        currentChild->recursiveCommitChanges(commitState, state, pageScaleFactor, baseRelativePosition, affectedByPageScale);
     }
 
     commitLayerChangesAfterSublayers();
@@ -590,6 +657,9 @@ void GraphicsLayerClutter::commitLayerChangesAfterSublayers()
 {
     if (!m_uncommittedChanges)
         return;
+
+    if (m_uncommittedChanges & ChildrenChanged)
+        updateSublayerList();
 
     m_uncommittedChanges = NoChange;
 }
@@ -611,8 +681,15 @@ void GraphicsLayerClutter::commitLayerChangesBeforeSublayers(float pageScaleFact
     if (!m_uncommittedChanges)
         return;
 
+    // Need to handle Preserves3DChanged first, because it affects which layers subsequent properties are applied to
+    if (m_uncommittedChanges & Preserves3DChanged)
+        updateStructuralLayer();
+
     if (m_uncommittedChanges & NameChanged)
         updateLayerNames();
+
+    if (m_uncommittedChanges & ContentsImageChanged) // Needs to happen before ChildrenChanged
+        updateContentsImage();
 
     if (m_uncommittedChanges & ChildrenChanged)
         updateSublayerList();
@@ -620,25 +697,90 @@ void GraphicsLayerClutter::commitLayerChangesBeforeSublayers(float pageScaleFact
     if (m_uncommittedChanges & GeometryChanged)
         updateGeometry(pageScaleFactor, positionRelativeToBase);
 
-    if (m_uncommittedChanges & TransformChanged)
-        updateTransform();
-
     if (m_uncommittedChanges & DrawsContentChanged)
         updateLayerDrawsContent(pageScaleFactor, positionRelativeToBase);
 
-    if (m_uncommittedChanges & DirtyRectsChanged)
-        repaintLayerDirtyRects();
+    if (m_uncommittedChanges & NameChanged)
+        updateLayerNames();
+
+    if (m_uncommittedChanges & TransformChanged)
+        updateTransform();
 
     if (m_uncommittedChanges & OpacityChanged)
         updateOpacityOnLayer();
 
     if (m_uncommittedChanges & AnimationChanged)
         updateAnimations();
+
+    if (m_uncommittedChanges & DirtyRectsChanged)
+        repaintLayerDirtyRects();
+
+    if (m_uncommittedChanges & ContentsRectChanged)
+        updateContentsRect();
+
+    if (m_uncommittedChanges & ContentsNeedsDisplay)
+        updateContentsNeedsDisplay();
+
+    if (m_uncommittedChanges & ChildrenChanged) {
+        updateSublayerList();
+        // Sublayers may set this flag again, so clear it to avoid always updating sublayers in commitLayerChangesAfterSublayers().
+        m_uncommittedChanges &= ~ChildrenChanged;
+    }
 }
+
+void GraphicsLayerClutter::setupContentsLayer(GraphicsLayerActor* contentsLayer)
+{
+    graphicsLayerActorSetAnchorPoint(contentsLayer, 0.0, 0.0, 0.0);
+}
+
+void GraphicsLayerClutter::updateContentsImage()
+{
+    if (m_pendingContentsImage) {
+        if (!m_contentsLayer) {
+            m_contentsLayer = graphicsLayerActorNewWithClient(LayerTypeLayer, this);
+            clutter_actor_set_name(CLUTTER_ACTOR(m_contentsLayer.get()), "Image Layer");
+            setupContentsLayer(m_contentsLayer.get());
+        }
+
+        graphicsLayerActorSetSurface(GRAPHICS_LAYER_ACTOR(m_contentsLayer.get()), m_pendingContentsImage.get());
+        m_pendingContentsImage = 0;
+
+        updateContentsRect();
+    } else {
+        // No image.
+        // m_contentsLayer will be removed via updateSublayerList.
+        m_contentsLayer = 0;
+    }
+}
+
+void GraphicsLayerClutter::updateContentsNeedsDisplay()
+{
+    if (m_contentsLayer)
+        graphicsLayerActorInvalidateRectangle(m_contentsLayer.get(), FloatRect(FloatPoint(0, 0), size()));
+}
+
+void GraphicsLayerClutter::updateContentsRect()
+{
+    if (!m_contentsLayer)
+        return;
+
+    FloatPoint point(m_contentsRect.x(), m_contentsRect.y());
+    FloatRect rect(0, 0, m_contentsRect.width(), m_contentsRect.height());
+
+    clutter_actor_set_position(CLUTTER_ACTOR(m_contentsLayer.get()), point.x(), point.y());
+    clutter_actor_set_size(CLUTTER_ACTOR(m_contentsLayer.get()), rect.width(), rect.height());
+}
+
 
 void GraphicsLayerClutter::updateGeometry(float pageScaleFactor, const FloatPoint& positionRelativeToBase)
 {
     // FIXME: Need to support page scaling.
+    if (m_structuralLayer) {
+        clutter_actor_set_position(CLUTTER_ACTOR(m_structuralLayer.get()), m_position.x(), m_position.y());
+        clutter_actor_set_size(CLUTTER_ACTOR(m_structuralLayer.get()), m_size.width(), m_size.height());
+        graphicsLayerActorSetAnchorPoint(m_structuralLayer.get(), m_anchorPoint.x(), m_anchorPoint.y(), m_anchorPoint.z());
+    }
+
     clutter_actor_set_position(CLUTTER_ACTOR(m_layer.get()), m_position.x(), m_position.y());
     clutter_actor_set_size(CLUTTER_ACTOR(m_layer.get()), m_size.width(), m_size.height());
     graphicsLayerActorSetAnchorPoint(m_layer.get(), m_anchorPoint.x(), m_anchorPoint.y(), m_anchorPoint.z());
@@ -648,27 +790,33 @@ void GraphicsLayerClutter::updateGeometry(float pageScaleFactor, const FloatPoin
 // So whenever the list of child layer changes, the list of GraphicsLayerActor should be updated accordingly.
 void GraphicsLayerClutter::updateSublayerList()
 {
-    GraphicsLayerActorList newSublayers;
+    GraphicsLayerActorList structuralLayerChildren;
+    GraphicsLayerActorList primaryLayerChildren;
+
+    GraphicsLayerActorList& childListForSublayers = m_structuralLayer ? structuralLayerChildren : primaryLayerChildren;
+
+    if (m_structuralLayer)
+        structuralLayerChildren.append(m_layer);
+
+    if (m_contentsLayer)
+        primaryLayerChildren.append(m_contentsLayer);
+
     const Vector<GraphicsLayer*>& childLayers = children();
+    size_t numChildren = childLayers.size();
+    for (size_t i = 0; i < numChildren; ++i) {
+        GraphicsLayerClutter* currentChild = static_cast<GraphicsLayerClutter*>(childLayers[i]);
+        GraphicsLayerActor* childLayer = currentChild->layerForSuperlayer();
+        ASSERT(GRAPHICS_LAYER_IS_ACTOR(childLayer));
+        childListForSublayers.append(childLayer);
 
-    if (childLayers.size() > 0) {
-        size_t numChildren = childLayers.size();
-        for (size_t i = 0; i < numChildren; ++i) {
-            GraphicsLayerClutter* curChild = static_cast<GraphicsLayerClutter*>(childLayers[i]);
-            GraphicsLayerActor* childLayer = curChild->layerForSuperlayer();
-            g_assert(GRAPHICS_LAYER_IS_ACTOR(childLayer));
-            newSublayers.append(childLayer);
-        }
-
-        for (size_t i = 0; i < newSublayers.size(); i++) {
-            ClutterActor* layerActor = CLUTTER_ACTOR(newSublayers[i].get());
-            ClutterActor* parentActor = clutter_actor_get_parent(layerActor);
-            if (parentActor)
-                clutter_actor_remove_child(parentActor, layerActor);
-        }
+        // The child layer only preserves 3D if either itself or its parent has preserves3D set.
+        graphicsLayerActorSetFlatten(childLayer, !(preserves3D() || currentChild->preserves3D()));
     }
 
-    graphicsLayerActorSetSublayers(m_layer.get(), newSublayers);
+    if (m_structuralLayer)
+        graphicsLayerActorSetSublayers(m_structuralLayer.get(), structuralLayerChildren);
+
+    graphicsLayerActorSetSublayers(m_layer.get(), primaryLayerChildren);
 }
 
 void GraphicsLayerClutter::updateLayerNames()
@@ -679,7 +827,93 @@ void GraphicsLayerClutter::updateLayerNames()
 void GraphicsLayerClutter::updateTransform()
 {
     CoglMatrix matrix = m_transform;
-    graphicsLayerActorSetTransform(primaryLayer(), &matrix);
+    clutter_actor_set_transform(CLUTTER_ACTOR(primaryLayer()), &matrix);
+}
+
+void GraphicsLayerClutter::updateStructuralLayer()
+{
+    ensureStructuralLayer(structuralLayerPurpose());
+}
+
+void GraphicsLayerClutter::ensureStructuralLayer(StructuralLayerPurpose purpose)
+{
+    const LayerChangeFlags structuralLayerChangeFlags = NameChanged
+        | GeometryChanged
+        | TransformChanged
+        | ChildrenTransformChanged
+        | ChildrenChanged
+        | BackfaceVisibilityChanged
+        | OpacityChanged;
+
+    if (purpose == NoStructuralLayer) {
+        if (m_structuralLayer) {
+            // Replace the transformLayer in the parent with this layer.
+            graphicsLayerActorRemoveFromSuperLayer(m_layer.get());
+
+            // If m_layer doesn't have a parent, it means it's the root layer and
+            // is likely hosted by something that is not expecting to be changed
+            ClutterActor* parentActor = clutter_actor_get_parent(CLUTTER_ACTOR(m_structuralLayer.get()));
+            ASSERT(parentActor);
+            graphicsLayerActorReplaceSublayer(GRAPHICS_LAYER_ACTOR(parentActor), CLUTTER_ACTOR(m_structuralLayer.get()), CLUTTER_ACTOR(m_layer.get()));
+
+            moveOrCopyAnimations(Move, m_structuralLayer.get(), m_layer.get());
+
+            // Release the structural layer.
+            m_structuralLayer = 0;
+
+            m_uncommittedChanges |= structuralLayerChangeFlags;
+        }
+        return;
+    }
+
+    bool structuralLayerChanged = false;
+    if (purpose == StructuralLayerForPreserves3D) {
+        if (m_structuralLayer && (graphicsLayerActorGetLayerType(m_structuralLayer.get()) != GraphicsLayerClutter::LayerTypeTransformLayer))
+            m_structuralLayer = 0;
+
+        if (!m_structuralLayer) {
+            m_structuralLayer = graphicsLayerActorNewWithClient(GraphicsLayerClutter::LayerTypeTransformLayer, this);
+            structuralLayerChanged = true;
+        }
+    } else {
+        if (m_structuralLayer && (graphicsLayerActorGetLayerType(m_structuralLayer.get()) != GraphicsLayerClutter::LayerTypeLayer))
+            m_structuralLayer = 0;
+
+        if (!m_structuralLayer) {
+            m_structuralLayer = graphicsLayerActorNewWithClient(GraphicsLayerClutter::LayerTypeLayer, this);
+            structuralLayerChanged = true;
+        }
+    }
+
+    if (!structuralLayerChanged)
+        return;
+
+    m_uncommittedChanges |= structuralLayerChangeFlags;
+
+    // We've changed the layer that our parent added to its sublayer list, so tell it to update
+    // sublayers again in its commitLayerChangesAfterSublayers().
+    static_cast<GraphicsLayerClutter*>(parent())->noteSublayersChanged();
+
+    // Set properties of m_layer to their default values, since these are expressed on on the structural layer.
+    FloatPoint point(0, 0);
+    FloatPoint3D anchorPoint(0.5f, 0.5f, 0);
+    clutter_actor_set_position(CLUTTER_ACTOR(m_layer.get()), point.x(), point.y());
+    graphicsLayerActorSetAnchorPoint(m_layer.get(), anchorPoint.x(), anchorPoint.y(), anchorPoint.z());
+
+    CoglMatrix matrix = TransformationMatrix();
+    clutter_actor_set_transform(CLUTTER_ACTOR(m_layer.get()), &matrix);
+
+    clutter_actor_set_opacity(CLUTTER_ACTOR(m_layer.get()), 255);
+
+    moveOrCopyAnimations(Move, m_layer.get(), m_structuralLayer.get());
+}
+
+GraphicsLayerClutter::StructuralLayerPurpose GraphicsLayerClutter::structuralLayerPurpose() const
+{
+    if (preserves3D())
+        return StructuralLayerForPreserves3D;
+
+    return NoStructuralLayer;
 }
 
 void GraphicsLayerClutter::updateLayerDrawsContent(float pageScaleFactor, const FloatPoint& positionRelativeToBase)
@@ -992,10 +1226,27 @@ bool GraphicsLayerClutter::addAnimation(const KeyframeValueList& valueList, cons
     return createdAnimations;
 }
 
+void GraphicsLayerClutter::removeAnimation(const String& animationName)
+{
+    if (!animationIsRunning(animationName))
+        return;
+
+    m_animationsToProcess.add(animationName, AnimationProcessingAction(Remove));
+    noteLayerPropertyChanged(AnimationChanged);
+}
+
 bool GraphicsLayerClutter::removeClutterAnimationFromLayer(AnimatedPropertyID property, const String& animationName, int index)
 {
-    notImplemented();
-    return false;
+    GraphicsLayerActor* layer = animatedLayer(property);
+
+    String animationID = animationIdentifier(animationName, property, index);
+
+    PlatformClutterAnimation* existingAnimation = graphicsLayerActorGetAnimationForKey(layer, animationID);
+    if (!existingAnimation)
+        return false;
+
+    existingAnimation->removeAnimationForKey(layer, animationID);
+    return true;
 }
 
 void GraphicsLayerClutter::pauseClutterAnimationOnLayer(AnimatedPropertyID property, const String& animationName, int index, double timeOffset)
@@ -1083,7 +1334,7 @@ bool GraphicsLayerClutter::setAnimationKeyframes(const KeyframeValueList& valueL
 
 GraphicsLayerActor* GraphicsLayerClutter::layerForSuperlayer() const
 {
-    return m_layer.get();
+    return m_structuralLayer ? m_structuralLayer.get() : m_layer.get();
 }
 
 GraphicsLayerActor* GraphicsLayerClutter::animatedLayer(AnimatedPropertyID property) const

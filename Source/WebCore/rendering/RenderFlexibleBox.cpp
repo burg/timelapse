@@ -178,13 +178,13 @@ void RenderFlexibleBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidt
             maxLogicalWidth += maxPreferredLogicalWidth;
             if (isMultiline()) {
                 // For multiline, the min preferred width is if you put a break between each item.
-                minLogicalWidth = std::max(m_minPreferredLogicalWidth, minPreferredLogicalWidth);
+                minLogicalWidth = std::max(minLogicalWidth, minPreferredLogicalWidth);
             } else
                 minLogicalWidth += minPreferredLogicalWidth;
         } else {
             minLogicalWidth = std::max(minPreferredLogicalWidth, minLogicalWidth);
             if (isMultiline()) {
-                // For multiline, the max preferred width is if you put a break between each item.
+                // For multiline, the max preferred width is if you never break between items.
                 maxLogicalWidth += maxPreferredLogicalWidth;
             } else
                 maxLogicalWidth = std::max(maxPreferredLogicalWidth, maxLogicalWidth);
@@ -339,7 +339,7 @@ void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
     RenderFlowThread* flowThread = flowThreadContainingBlock();
     if (logicalWidthChangedInRegions(flowThread))
         relayoutChildren = true;
-    if (updateRegionsAndExclusionsLogicalSize(flowThread))
+    if (updateRegionsAndExclusionsBeforeChildLayout(flowThread))
         relayoutChildren = true;
 
     m_numberOfInFlowChildrenOnFirstLine = -1;
@@ -365,7 +365,7 @@ void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
 
     layoutPositionedObjects(relayoutChildren || isRoot());
 
-    computeRegionRangeForBlock(flowThread);
+    updateRegionsAndExclusionsAfterChildLayout(flowThread);
 
     repaintChildrenDuringLayoutIfMoved(oldChildRects);
     // FIXME: css3/flexbox/repaint-rtl-column.html seems to repaint more overflow than it needs to.
@@ -534,10 +534,11 @@ LayoutUnit RenderFlexibleBox::computeMainAxisExtentForChild(RenderBox* child, Si
 {
     // FIXME: This is wrong for orthogonal flows. It should use the flexbox's writing-mode, not the child's in order
     // to figure out the logical height/width.
+    // FIXME: This is wrong if the height is set to an intrinsic keyword value. computeContentLogicalHeight will return -1.
+    // Instead, we need to layout the child an get the appropriate height value.
+    // https://bugs.webkit.org/show_bug.cgi?id=113610
     if (isColumnFlow())
-        return child->computeContentLogicalHeight(sizeType, size);
-    if (size.isAuto())
-        return -1;
+        return child->computeContentLogicalHeight(size);
     // FIXME: Figure out how this should work for regions and pass in the appropriate values.
     LayoutUnit offsetFromLogicalTopOfFirstPage = 0;
     RenderRegion* region = 0;
@@ -906,8 +907,7 @@ void RenderFlexibleBox::computeMainAxisPreferredSizes(OrderHashSet& orderValues)
         child->clearOverrideSize();
 
         // Only need to layout here if we will need to get the logicalHeight of the child in computeNextFlexLine.
-        Length childMainAxisMin = isHorizontalFlow() ? child->style()->minWidth() : child->style()->minHeight();
-        if (hasOrthogonalFlow(child) && (flexBasisForChild(child).isAuto() || childMainAxisMin.isAuto())) {
+        if (hasOrthogonalFlow(child) && flexBasisForChild(child).isAuto()) {
             child->setChildNeedsLayout(true, MarkOnlyThis);
             child->layout();
         }
@@ -937,12 +937,6 @@ LayoutUnit RenderFlexibleBox::adjustChildSizeForMinAndMax(RenderBox* child, Layo
     LayoutUnit minExtent = 0;
     if (min.isSpecifiedOrIntrinsic())
         minExtent = computeMainAxisExtentForChild(child, MinSize, min);
-    else if (min.isAuto()) {
-        if (hasOrthogonalFlow(child))
-            minExtent = child->logicalHeight() - child->borderAndPaddingLogicalHeight();
-        else
-            minExtent = computeMainAxisExtentForChild(child, MinSize, Length(MinContent));
-    }
     return std::max(childSize, minExtent);
 }
 

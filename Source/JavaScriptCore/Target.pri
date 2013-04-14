@@ -33,7 +33,6 @@ INSTALLDEPS += all
 debug_and_release: INCLUDEPATH += $$JAVASCRIPTCORE_GENERATED_SOURCES_DIR/$$targetSubDir()
 
 SOURCES += \
-    API/JSAPIWrapperObject.cpp \
     API/JSBase.cpp \
     API/JSCallbackConstructor.cpp \
     API/JSCallbackFunction.cpp \
@@ -106,6 +105,7 @@ SOURCES += \
     heap/MarkedBlock.cpp \
     heap/MarkedSpace.cpp \
     heap/SlotVisitor.cpp \
+    heap/SuperRegion.cpp \
     heap/VTableSpectrum.cpp \
     heap/WriteBarrierSupport.cpp \
     debugger/DebuggerActivation.cpp \
@@ -323,7 +323,6 @@ SOURCES += \
     runtime/Structure.cpp \
     runtime/StructureRareData.cpp \
     runtime/SymbolTable.cpp \
-    runtime/TimeoutChecker.cpp \
     tools/CodeProfile.cpp \
     tools/CodeProfiling.cpp \
     yarr/YarrJIT.cpp \

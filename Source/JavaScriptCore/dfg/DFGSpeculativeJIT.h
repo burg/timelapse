@@ -1098,6 +1098,11 @@ public:
         m_jit.setupArgumentsWithExecState(arg1, arg2);
         return appendCallWithExceptionCheckSetResult(operation, result);
     }
+    JITCompiler::Call callOperation(C_DFGOperation_EJssJssJss operation, GPRReg result, GPRReg arg1, GPRReg arg2, GPRReg arg3)
+    {
+        m_jit.setupArgumentsWithExecState(arg1, arg2, arg3);
+        return appendCallWithExceptionCheckSetResult(operation, result);
+    }
     JITCompiler::Call callOperation(C_DFGOperation_EJ operation, GPRReg result, GPRReg arg1)
     {
         m_jit.setupArgumentsWithExecState(arg1);
@@ -1254,6 +1259,11 @@ public:
         return appendCallSetResult(operation, result);
     }
     JITCompiler::Call callOperation(Str_DFGOperation_EJss operation, GPRReg result, GPRReg arg1)
+    {
+        m_jit.setupArgumentsWithExecState(arg1);
+        return appendCallWithExceptionCheckSetResult(operation, result);
+    }
+    JITCompiler::Call callOperation(C_DFGOperation_EZ operation, GPRReg result, GPRReg arg1)
     {
         m_jit.setupArgumentsWithExecState(arg1);
         return appendCallWithExceptionCheckSetResult(operation, result);
@@ -1501,9 +1511,14 @@ public:
         m_jit.setupArgumentsWithExecState(arg1, arg2);
         return appendCallWithExceptionCheckSetResult(operation, result);
     }
+    JITCompiler::Call callOperation(C_DFGOperation_EJssJssJss operation, GPRReg result, GPRReg arg1, GPRReg arg2, GPRReg arg3)
+    {
+        m_jit.setupArgumentsWithExecState(arg1, arg2, arg3);
+        return appendCallWithExceptionCheckSetResult(operation, result);
+    }
     JITCompiler::Call callOperation(C_DFGOperation_EJ operation, GPRReg result, GPRReg arg1Tag, GPRReg arg1Payload)
     {
-        m_jit.setupArgumentsWithExecState(arg1Payload, arg1Tag);
+        m_jit.setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG arg1Payload, arg1Tag);
         return appendCallWithExceptionCheckSetResult(operation, result);
     }
     JITCompiler::Call callOperation(S_DFGOperation_J operation, GPRReg result, GPRReg arg1Tag, GPRReg arg1Payload)
@@ -1676,6 +1691,12 @@ public:
         m_jit.setupArgumentsWithExecState(arg1);
         return appendCallWithExceptionCheckSetResult(operation, result);
     }
+    JITCompiler::Call callOperation(C_DFGOperation_EZ operation, GPRReg result, GPRReg arg1)
+    {
+        m_jit.setupArgumentsWithExecState(arg1);
+        return appendCallWithExceptionCheckSetResult(operation, result);
+    }
+
 
 #undef EABI_32BIT_DUMMY_ARG
     
@@ -2061,6 +2082,7 @@ public:
     void compileValueAdd(Node*);
     void compileObjectOrOtherLogicalNot(Edge value);
     void compileLogicalNot(Node*);
+    void compileStringEquality(Node*);
     void emitObjectOrOtherBranch(Edge value, BlockIndex taken, BlockIndex notTaken);
     void emitBranch(Node*);
     
@@ -2094,6 +2116,7 @@ public:
     
     void compileGetCharCodeAt(Node*);
     void compileGetByValOnString(Node*);
+    void compileFromCharCode(Node*); 
 
     void compileGetByValOnArguments(Node*);
     void compileGetArgumentsLength(Node*);
@@ -2105,6 +2128,7 @@ public:
     void compileDoubleAsInt32(Node*);
     void compileInt32ToDouble(Node*);
     void compileAdd(Node*);
+    void compileMakeRope(Node*);
     void compileArithSub(Node*);
     void compileArithNegate(Node*);
     void compileArithMul(Node*);
@@ -2249,8 +2273,8 @@ public:
     void speculateObjectOrOther(Edge);
     void speculateString(Edge);
     template<typename StructureLocationType>
-    void speculateStringObjectForStructure(StructureLocationType);
-    void speculateStringObject(GPRReg);
+    void speculateStringObjectForStructure(Edge, StructureLocationType);
+    void speculateStringObject(Edge, GPRReg);
     void speculateStringObject(Edge);
     void speculateStringOrStringObject(Edge);
     void speculateNotCell(Edge);
@@ -2887,6 +2911,8 @@ public:
         , m_gprOrInvalid(InvalidGPRReg)
     {
         ASSERT(m_jit);
+        if (!edge)
+            return;
         ASSERT_UNUSED(mode, mode == ManualOperandSpeculation || (edge.useKind() == CellUse || edge.useKind() == KnownCellUse || edge.useKind() == ObjectUse || edge.useKind() == StringUse || edge.useKind() == KnownStringUse || edge.useKind() == StringObjectUse || edge.useKind() == StringOrStringObjectUse));
         if (jit->isFilled(node()))
             gpr();
@@ -2894,6 +2920,8 @@ public:
 
     ~SpeculateCellOperand()
     {
+        if (!m_edge)
+            return;
         ASSERT(m_gprOrInvalid != InvalidGPRReg);
         m_jit->unlock(m_gprOrInvalid);
     }
@@ -2910,6 +2938,7 @@ public:
 
     GPRReg gpr()
     {
+        ASSERT(m_edge);
         if (m_gprOrInvalid == InvalidGPRReg)
             m_gprOrInvalid = m_jit->fillSpeculateCell(edge());
         return m_gprOrInvalid;
@@ -2917,6 +2946,7 @@ public:
     
     void use()
     {
+        ASSERT(m_edge);
         m_jit->use(node());
     }
 
@@ -2974,17 +3004,19 @@ private:
 };
 
 template<typename StructureLocationType>
-void SpeculativeJIT::speculateStringObjectForStructure(StructureLocationType structureLocation)
+void SpeculativeJIT::speculateStringObjectForStructure(Edge edge, StructureLocationType structureLocation)
 {
     Structure* stringObjectStructure =
         m_jit.globalObjectFor(m_currentNode->codeOrigin)->stringObjectStructure();
     Structure* stringPrototypeStructure = stringObjectStructure->storedPrototype().asCell()->structure();
     ASSERT(stringPrototypeStructure->transitionWatchpointSetIsStillValid());
     
-    speculationCheck(
-        NotStringObject, JSValueRegs(), 0,
-        m_jit.branchPtr(
-            JITCompiler::NotEqual, structureLocation, TrustedImmPtr(stringObjectStructure)));
+    if (!m_state.forNode(edge).m_currentKnownStructure.isSubsetOf(StructureSet(m_jit.globalObjectFor(m_currentNode->codeOrigin)->stringObjectStructure()))) {
+        speculationCheck(
+            NotStringObject, JSValueRegs(), 0,
+            m_jit.branchPtr(
+                JITCompiler::NotEqual, structureLocation, TrustedImmPtr(stringObjectStructure)));
+    }
     stringPrototypeStructure->addTransitionWatchpoint(speculationWatchpoint(NotStringObject));
 }
 

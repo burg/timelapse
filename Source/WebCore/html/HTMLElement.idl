@@ -21,8 +21,6 @@
 [
     JSGenerateToNativeObject,
     JSCustomPushEventHandlerScope,
-    V8CustomToJSObject,
-    V8SkipVTableValidation
 ] interface HTMLElement : Element {
              // iht.com relies on id returning the empty string when no id is present. 
              // Other browsers do this as well. So we don't convert null to JS null.
@@ -74,9 +72,7 @@
     [Conditional=MICRODATA] readonly attribute DOMSettableTokenList itemRef;
     [Conditional=MICRODATA] readonly attribute DOMSettableTokenList itemProp;
 
-#if defined(ENABLE_MICRODATA) && ENABLE_MICRODATA
     [Conditional=MICRODATA] readonly attribute HTMLPropertiesCollection properties;
-#endif
 #endif
 
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP

@@ -31,6 +31,7 @@
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
 #include "DFGPhase.h"
+#include "DFGPredictionPropagationPhase.h"
 #include "DFGVariableAccessDataDump.h"
 #include "Operations.h"
 
@@ -175,6 +176,11 @@ private:
             break;
         }
             
+        case MakeRope: {
+            fixupMakeRope(node);
+            break;
+        }
+            
         case ArithAdd:
         case ArithSub: {
             if (attemptToMakeIntegerAdd(node))
@@ -278,14 +284,15 @@ private:
             break;
         }
             
+        case CompareEqConstant: {
+            break;
+        }
+
         case CompareEq:
-        case CompareEqConstant:
         case CompareLess:
         case CompareLessEq:
         case CompareGreater:
         case CompareGreaterEq: {
-            if (node->op() == CompareEqConstant)
-                break;
             if (Node::shouldSpeculateInteger(node->child1().node(), node->child2().node())) {
                 setUseKindAndUnboxIfProfitable<Int32Use>(node->child1());
                 setUseKindAndUnboxIfProfitable<Int32Use>(node->child2());
@@ -298,8 +305,11 @@ private:
             }
             if (node->op() != CompareEq)
                 break;
-            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString())
+            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString() && GPRInfo::numberOfRegisters >= 7) {
+                setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
+                setUseKindAndUnboxIfProfitable<StringUse>(node->child2());
                 break;
+            }
             if (node->child1()->shouldSpeculateObject() && node->child2()->shouldSpeculateObject()) {
                 setUseKindAndUnboxIfProfitable<ObjectUse>(node->child1());
                 setUseKindAndUnboxIfProfitable<ObjectUse>(node->child2());
@@ -318,10 +328,11 @@ private:
             break;
         }
             
-        case CompareStrictEq:
         case CompareStrictEqConstant: {
-            if (node->op() == CompareStrictEqConstant)
-                break;
+            break;
+        }
+            
+        case CompareStrictEq: {
             if (Node::shouldSpeculateInteger(node->child1().node(), node->child2().node())) {
                 setUseKindAndUnboxIfProfitable<Int32Use>(node->child1());
                 setUseKindAndUnboxIfProfitable<Int32Use>(node->child2());
@@ -332,8 +343,11 @@ private:
                 fixDoubleEdge<NumberUse>(node->child2());
                 break;
             }
-            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString())
+            if (node->child1()->shouldSpeculateString() && node->child2()->shouldSpeculateString() && GPRInfo::numberOfRegisters >= 7) {
+                setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
+                setUseKindAndUnboxIfProfitable<StringUse>(node->child2());
                 break;
+            }
             if (node->child1()->shouldSpeculateObject() && node->child2()->shouldSpeculateObject()) {
                 setUseKindAndUnboxIfProfitable<ObjectUse>(node->child1());
                 setUseKindAndUnboxIfProfitable<ObjectUse>(node->child2());
@@ -341,6 +355,10 @@ private:
             }
             break;
         }
+
+        case StringFromCharCode:
+            setUseKindAndUnboxIfProfitable<Int32Use>(node->child1());
+            break;
 
         case StringCharAt:
         case StringCharCodeAt: {
@@ -550,61 +568,12 @@ private:
         }
             
         case ToPrimitive: {
-            if (node->child1()->shouldSpeculateInteger()) {
-                setUseKindAndUnboxIfProfitable<Int32Use>(node->child1());
-                node->convertToIdentity();
-                break;
-            }
-            
-            if (node->child1()->shouldSpeculateString()) {
-                setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
-                node->convertToIdentity();
-                break;
-            }
-            
-            if (node->child1()->shouldSpeculateStringObject()
-                && canOptimizeStringObjectAccess(node->codeOrigin)) {
-                setUseKindAndUnboxIfProfitable<StringObjectUse>(node->child1());
-                node->convertToToString();
-                break;
-            }
-            
-            if (node->child1()->shouldSpeculateStringOrStringObject()
-                && canOptimizeStringObjectAccess(node->codeOrigin)) {
-                setUseKindAndUnboxIfProfitable<StringOrStringObjectUse>(node->child1());
-                node->convertToToString();
-                break;
-            }
-            
-            // FIXME: Add string speculation here.
-            // https://bugs.webkit.org/show_bug.cgi?id=110175
+            fixupToPrimitive(node);
             break;
         }
             
         case ToString: {
-            if (node->child1()->shouldSpeculateString()) {
-                setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
-                node->convertToIdentity();
-                break;
-            }
-            
-            if (node->child1()->shouldSpeculateStringObject()
-                && canOptimizeStringObjectAccess(node->codeOrigin)) {
-                setUseKindAndUnboxIfProfitable<StringObjectUse>(node->child1());
-                break;
-            }
-            
-            if (node->child1()->shouldSpeculateStringOrStringObject()
-                && canOptimizeStringObjectAccess(node->codeOrigin)) {
-                setUseKindAndUnboxIfProfitable<StringOrStringObjectUse>(node->child1());
-                break;
-            }
-            
-            if (node->child1()->shouldSpeculateCell()) {
-                setUseKindAndUnboxIfProfitable<CellUse>(node->child1());
-                break;
-            }
-            
+            fixupToString(node);
             break;
         }
             
@@ -862,7 +831,6 @@ private:
         case IsString:
         case IsObject:
         case IsFunction:
-        case StrCat:
         case CreateActivation:
         case TearOffActivation:
         case CreateArguments:
@@ -898,11 +866,11 @@ private:
     }
     
     template<UseKind useKind>
-    Node* createToString(Node* node, Edge edge)
+    void createToString(Node* node, Edge& edge)
     {
-        return m_insertionSet.insertNode(
+        edge.setNode(m_insertionSet.insertNode(
             m_indexInBlock, SpecString, ToString, node->codeOrigin,
-            Edge(edge.node(), useKind));
+            Edge(edge.node(), useKind)));
     }
     
     template<UseKind useKind>
@@ -913,7 +881,7 @@ private:
         if (!canOptimizeStringObjectAccess(node->codeOrigin))
             return;
         
-        node->child1().setNode(createToString<useKind>(node, node->child1()));
+        createToString<useKind>(node, node->child1());
         arrayMode = ArrayMode(Array::String);
     }
     
@@ -947,7 +915,89 @@ private:
         // FIXME: We ought to be able to have a ToPrimitiveToString node.
         
         observeUseKindOnNode<useKind>(edge.node());
-        edge = Edge(createToString<useKind>(node, edge), KnownStringUse);
+        createToString<useKind>(node, edge);
+    }
+    
+    void convertToMakeRope(Node* node)
+    {
+        node->setOpAndDefaultFlags(MakeRope);
+        fixupMakeRope(node);
+    }
+    
+    void fixupMakeRope(Node* node)
+    {
+        for (unsigned i = 0; i < AdjacencyList::Size; ++i) {
+            Edge& edge = node->children.child(i);
+            if (!edge)
+                break;
+            edge.setUseKind(KnownStringUse);
+            if (!m_graph.isConstant(edge.node()))
+                continue;
+            JSString* string = jsCast<JSString*>(m_graph.valueOfJSConstant(edge.node()).asCell());
+            if (string->length())
+                continue;
+            node->children.removeEdge(i--);
+        }
+        
+        if (!node->child2()) {
+            ASSERT(!node->child3());
+            node->convertToIdentity();
+        }
+    }
+    
+    void fixupToPrimitive(Node* node)
+    {
+        if (node->child1()->shouldSpeculateInteger()) {
+            setUseKindAndUnboxIfProfitable<Int32Use>(node->child1());
+            node->convertToIdentity();
+            return;
+        }
+        
+        if (node->child1()->shouldSpeculateString()) {
+            setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
+            node->convertToIdentity();
+            return;
+        }
+        
+        if (node->child1()->shouldSpeculateStringObject()
+            && canOptimizeStringObjectAccess(node->codeOrigin)) {
+            setUseKindAndUnboxIfProfitable<StringObjectUse>(node->child1());
+            node->convertToToString();
+            return;
+        }
+        
+        if (node->child1()->shouldSpeculateStringOrStringObject()
+            && canOptimizeStringObjectAccess(node->codeOrigin)) {
+            setUseKindAndUnboxIfProfitable<StringOrStringObjectUse>(node->child1());
+            node->convertToToString();
+            return;
+        }
+    }
+    
+    void fixupToString(Node* node)
+    {
+        if (node->child1()->shouldSpeculateString()) {
+            setUseKindAndUnboxIfProfitable<StringUse>(node->child1());
+            node->convertToIdentity();
+            return;
+        }
+        
+        if (node->child1()->shouldSpeculateStringObject()
+            && canOptimizeStringObjectAccess(node->codeOrigin)) {
+            setUseKindAndUnboxIfProfitable<StringObjectUse>(node->child1());
+            return;
+        }
+        
+        if (node->child1()->shouldSpeculateStringOrStringObject()
+            && canOptimizeStringObjectAccess(node->codeOrigin)) {
+            setUseKindAndUnboxIfProfitable<StringOrStringObjectUse>(node->child1());
+            return;
+        }
+        
+        if (node->child1()->shouldSpeculateCell()) {
+            setUseKindAndUnboxIfProfitable<CellUse>(node->child1());
+            return;
+        }
     }
     
     template<UseKind leftUseKind>
@@ -958,29 +1008,37 @@ private:
         if (isStringObjectUse<leftUseKind>() && !canOptimizeStringObjectAccess(node->codeOrigin))
             return false;
         
-        if (right->shouldSpeculateString()) {
-            convertStringAddUse<leftUseKind>(node, left);
+        convertStringAddUse<leftUseKind>(node, left);
+        
+        if (right->shouldSpeculateString())
             convertStringAddUse<StringUse>(node, right);
-            return true;
-        }
-        
-        if (right->shouldSpeculateStringObject()
-            && canOptimizeStringObjectAccess(node->codeOrigin)) {
-            convertStringAddUse<leftUseKind>(node, left);
+        else if (right->shouldSpeculateStringObject() && canOptimizeStringObjectAccess(node->codeOrigin))
             convertStringAddUse<StringObjectUse>(node, right);
-            return true;
-        }
-        
-        if (right->shouldSpeculateStringOrStringObject()
-            && canOptimizeStringObjectAccess(node->codeOrigin)) {
-            convertStringAddUse<leftUseKind>(node, left);
+        else if (right->shouldSpeculateStringOrStringObject() && canOptimizeStringObjectAccess(node->codeOrigin))
             convertStringAddUse<StringOrStringObjectUse>(node, right);
-            return true;
+        else {
+            // At this point we know that the other operand is something weird. The semantically correct
+            // way of dealing with this is:
+            //
+            // MakeRope(@left, ToString(ToPrimitive(@right)))
+            //
+            // So that's what we emit. NB, we need to do all relevant type checks on @left before we do
+            // anything to @right, since ToPrimitive may be effectful.
+            
+            Node* toPrimitive = m_insertionSet.insertNode(
+                m_indexInBlock, resultOfToPrimitive(right->prediction()), ToPrimitive, node->codeOrigin,
+                Edge(right.node()));
+            Node* toString = m_insertionSet.insertNode(
+                m_indexInBlock, SpecString, ToString, node->codeOrigin, Edge(toPrimitive));
+            
+            fixupToPrimitive(toPrimitive);
+            fixupToString(toString);
+            
+            right.setNode(toString);
         }
         
-        // FIXME: We ought to be able to convert the right case to do
-        // ToPrimitiveToString.
-        return false; // Let the slow path worry about it.
+        convertToMakeRope(node);
+        return true;
     }
     
     bool isStringPrototypeMethodSane(Structure* stringPrototypeStructure, const Identifier& ident)

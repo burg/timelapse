@@ -186,6 +186,11 @@ fast/forms/datalist
 # Color input is not yet enabled.
 fast/forms/color
 
+# Times out only in non-wk2 Mac, possibly because of platform-specific behaviour
+# interfering with how the test is executed.
+# https://bugs.webkit.org/show_bug.cgi?id=113220
+fast/forms/select/popup-closes-on-blur.html [ Timeout Pass ]
+
 # ENABLE_INPUT_TYPE_* are not enabled.
 # https://bugs.webkit.org/show_bug.cgi?id=29359
 fast/forms/date
@@ -250,6 +255,9 @@ perf/
 # https://bugs.webkit.org/show_bug.cgi?id=42821
 animations/play-state.html
 
+webkit.org/b/113598 animations/animation-delay-changed.html [ Pass Failure ]
+webkit.org/b/113599 svg/animations/reinserting-svg-into-document.html [ Pass Failure ]
+
 # window.eventSender doesn't exist in devtools front-end on mac.
 # https://bugs.webkit.org/show_bug.cgi?id=106793
 inspector/editor/text-editor-formatter.html [ Skip ]
@@ -266,6 +274,9 @@ inspector/debugger/event-listener-breakpoints.html
 inspector/debugger/step-through-event-listeners.html
 inspector/debugger/xhr-breakpoints.html
 
+# Test is flaky and thus not useful until fixed.
+webkit.org/b/113589 inspector/debugger/debugger-scripts-reload.html [ Pass Failure ]
+
 # JSC doesn't support heap profiling
 # https://bugs.webkit.org/show_bug.cgi?id=50485
 inspector/profiler/heap-snapshot-inspect-dom-wrapper.html
@@ -280,6 +291,10 @@ inspector/profiler/heap-snapshot-summary-sorting-fields.html
 inspector/profiler/heap-snapshot-summary-sorting.html
 inspector/profiler/heap-snapshot-summary-sorting-instances.html
 webkit.org/b/50485 inspector-protocol/heap-profiler [ Skip ]
+
+webkit.org/b/113787 inspector/profiler/memory-instrumentation-external-array.html [ Skip ]
+
+webkit.org/b/113787 inspector/profiler/memory-instrumentation-external-string.html [ Skip ]
 
 # New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
 webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
@@ -354,6 +369,9 @@ plugins/plugin-initiate-popup-window.html
 # Requires WebP support.
 fast/canvas/canvas-toDataURL-webp.html
 fast/images/webp-image-decoding.html
+fast/images/webp-color-profile-lossless.html
+fast/images/webp-color-profile-lossy-alpha.html
+fast/images/webp-color-profile-lossy.html
 http/tests/images/webp-partial-load.html
 http/tests/images/webp-progressive-load.html
 
@@ -372,6 +390,8 @@ fast/js/i18n-bindings-locale.html
 # Non-premultiplied-alpha currently broken on mac.
 # https://bugs.webkit.org/show_bug.cgi?id=55509
 compositing/webgl/webgl-nonpremultiplied-blend.html
+
+webkit.org/b/114321 compositing/plugins/invalidate_rect.html [ Failure Pass ]
 
 # DataTransferItems is not yet implemented.
 editing/pasteboard/data-transfer-items.html
@@ -412,6 +432,8 @@ storage/storageinfo-query-usage.html
 storage/storageinfo-request-quota.html
 storage/storagequota-query-usage.html
 storage/storagequota-request-quota.html
+fast/workers/worker-storagequota-query-usage.html
+fast/workers/shared-worker-storagequota-query-usage.html
 
 # Tests that require ENABLE(DOWNLOAD_ATTRIBUTE).
 fast/dom/HTMLAnchorElement/anchor-nodownload.html
@@ -471,10 +493,6 @@ fast/xsl/xslt-processor-template.html
 
 # JSC does not support setIsolatedWorldSecurityOrigin (http://webkit.org/b/61540)
 http/tests/security/isolatedWorld/cross-origin-xhr.html
-
-# JSC also doesn't support setIsolatedWorldContentSecurityPolicy (webkit.org/b/100815)
-webkit.org/b/100815 http/tests/security/isolatedWorld/bypass-main-world-csp.html [ Failure ]
-webkit.org/b/100815 http/tests/security/isolatedWorld/bypass-main-world-csp-for-xhr.html [ Failure ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=63282 layerTreeAsText doesn't work for iframes
 compositing/rtl/rtl-iframe-absolute-overflow-scrolled.html
@@ -666,13 +684,6 @@ fast/events/dropzone-005.html
 
 # Spelling tests that are flakey. https://bugs.webkit.org/show_bug.cgi?id=82555
 editing/spelling/spellcheck-async-mutation.html
-platform/mac/editing/spelling/move-cursor-to-beginning-of-autocorrected-word.html
-platform/mac/editing/spelling/move-cursor-to-autocorrected-word.html
-platform/mac/editing/spelling/forward-delete-into-autocorrected-word.html
-platform/mac/editing/spelling/editing-word-with-marker-1.html
-platform/mac/editing/spelling/delete-into-autocorrected-word.html
-platform/mac/editing/spelling/click-autocorrected-word.html
-platform/mac/editing/spelling/autocorrection-contraction.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=82665
 http/tests/webarchive/test-css-url-encoding-shift-jis.html
@@ -824,10 +835,6 @@ fast/canvas/canvas-imageSmoothingEnabled-repaint.html
 # https://bugs.webkit.org/show_bug.cgi?id=89845
 fast/forms/input-set-composition-scroll.html
 
-# https://bugs.webkit.org/show_bug.cgi?id=90649
-fast/canvas/webgl/tex-image-with-format-and-type.html
-fast/canvas/webgl/tex-sub-image-2d.html
-
 # https://bugs.webkit.org/show_bug.cgi?id=90706
 inspector/timeline/timeline-frames.html
 
@@ -929,6 +936,13 @@ compositing/overflow/scrolling-without-painting.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=110871
 compositing/overlap-blending/reflection-opacity-huge.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=114340
+compositing/overlap-blending/nested-overlap.html
+compositing/overlap-blending/nested-non-overlap-clipping.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=114338
+compositing/overlap-blending/nested-overlap-overflow.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=95027
 fast/block/float/016.html
@@ -1154,6 +1168,8 @@ webkit.org/b/89052 fast/css/image-orientation
 # CSS3 Text support is not yet enabled (needs ENABLE_CSS3_TEXT).
 webkit.org/b/58491 fast/css3-text/css3-text-decoration
 webkit.org/b/76173 fast/css3-text/css3-text-align-last
+webkit.org/b/99945 fast/css3-text/css3-text-justify [ Failure ]
+webkit.org/b/112755 fast/css3-text/css3-text-indent [ Failure ImageOnlyFailure ]
 
 # Our slow tests, in alphabetical order.
 webkit.org/b/57672 http/tests/local/fileapi/send-sliced-dragged-file.html [ Failure Pass ]
@@ -1186,6 +1202,7 @@ webkit.org/b/82752 plugins/netscape-dom-access-and-reload.html [ Failure Pass ]
 # Asserts sometimes
 webkit.org/b/111902 [ Debug ] fast/frames/sandboxed-iframe-navigation-allowed.html [ Crash Pass ]
 webkit.org/b/111902 [ Debug ] fast/frames/sandboxed-iframe-plugins.html [ Crash Pass ]
+webkit.org/b/111902 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-deny-multiple-clients.html [ Crash Pass ]
 
 # Flaky tests when run multi-process
 webkit.org/b/58192 fast/dom/frame-loading-via-document-write.html [ Failure Pass ]
@@ -1225,10 +1242,10 @@ webkit.org/b/84773 ietestcenter/css3/multicolumn/column-width-applies-to-012.htm
 webkit.org/b/84777 ietestcenter/css3/multicolumn/column-width-applies-to-015.htm [ ImageOnlyFailure ]
 
 webkit.org/b/60731 ietestcenter/css3/grid/grid-column-001.htm [ ImageOnlyFailure ]
-webkit.org/b/60731 ietestcenter/css3/grid/grid-column-002.htm [ ImageOnlyFailure ]
 webkit.org/b/60731 ietestcenter/css3/grid/grid-column-003.htm [ ImageOnlyFailure ]
 webkit.org/b/60731 ietestcenter/css3/grid/grid-items-002.htm [ ImageOnlyFailure ]
 webkit.org/b/60731 ietestcenter/css3/grid/grid-items-003.htm [ ImageOnlyFailure ]
+webkit.org/b/60731 [ MountainLion Release ] ietestcenter/css3/grid/grid-items-003.htm [ Pass ImageOnlyFailure ]
 
 webkit.org/b/85404 fast/loader/javascript-url-in-embed.html [ Failure Pass ]
 
@@ -1252,11 +1269,6 @@ webkit.org/b/85308 ietestcenter/css3/valuesandunits/units-000.htm [ Skip ]
 # IETC namespace failures
 webkit.org/b/86142 ietestcenter/css3/namespaces/syntax-021.xml [ ImageOnlyFailure ]
 
-# Safari needs to be fixed after bug 84195 updated the layout tests
-webkit.org/b/85918 compositing/backface-visibility/backface-visibility-3d.html [ ImageOnlyFailure ]
-webkit.org/b/85918 compositing/backface-visibility/backface-visibility-hierarchical-transform.html [ ImageOnlyFailure ]
-webkit.org/b/85918 compositing/backface-visibility/backface-visibility-non3d.html [ ImageOnlyFailure ]
-
 # Disable webaudio codec tests, including proprietary codecs.
 webkit.org/b/88794 webaudio/codec-tests
 
@@ -1272,22 +1284,8 @@ webkit.org/b/90987 fast/forms/input-in-table-cell-no-value.html [ ImageOnlyFailu
 # Skip tests in fast/text/shaping
 webkit.org/b/90951 fast/text/shaping
 
-# Rebaseline required after https://bugs.webkit.org/show_bug.cgi?id=101177
-webkit.org/b/101177 svg/dynamic-updates/SVGUseElement-dom-requiredFeatures.html [ ImageOnlyFailure Pass ]
-webkit.org/b/101177 svg/repaint/inner-svg-change-viewBox.svg [ ImageOnlyFailure Pass ]
-
-# These tests need to be rebaselined after https://bugs.webkit.org/show_bug.cgi?id=99984
-webkit.org/b/99984 svg/as-image/image-preserveAspectRatio-all.svg [ ImageOnlyFailure Pass ]
-webkit.org/b/99984 svg/filters/feImage-preserveAspectRatio-all.svg [ ImageOnlyFailure Pass ]
-webkit.org/b/99984 svg/dynamic-updates/SVGFEImageElement-dom-preserveAspectRatio-attr.html [ ImageOnlyFailure Pass ]
-webkit.org/b/99984 svg/dynamic-updates/SVGFEImageElement-svgdom-preserveAspectRatio-prop.html [ ImageOnlyFailure Pass ]
-
 # Needs rebaseline after bug https://bugs.webkit.org/show_bug.cgi?id=104462
 webkit.org/b/98687 fast/css-generated-content/table-row-group-to-inline.html [ Failure ]
-webkit.org/b/104595 fast/css/empty-generated-content.html [ Failure ]
-
-# Needs a rebaseline after WK108429 lands.
-webkit.org/b/108429 svg/custom/text-ctm.svg [ Pass Failure ]
 
 # (r125790): Newly added test inspector/timeline/timeline-decode-resize.html is failing on mac
 webkit.org/b/94374 inspector/timeline/timeline-decode-resize.html [ Failure ]
@@ -1344,14 +1342,12 @@ webkit.org/b/98257 fast/canvas/webgl/oes-element-index-uint.html [ Failure Pass 
 # Resource Timing is not enable yet, skip it.
 webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Skip ]
 
-# Can't hide scrollbars in WK1
+# Flacky on Mountain Lion Release, fails everywhere else.
 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
+webkit.org/b/107356 [ MountainLion Release ] fast/css/sticky/sticky-top-zoomed.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html [ Skip ]
 webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html [ Skip ]
-
-webkit.org/b/100142 css3/filters/effect-reference-hw.html [ Failure ]
-webkit.org/b/100142 css3/filters/effect-reference.html [ Failure ]
 
 # Mac doesn't have a toggle for CC any more, it's based on a menu of choices.
 webkit.org/b/101670 media/video-controls-captions.html [ Skip ]
@@ -1369,6 +1365,7 @@ Bug(jernoble) [ MountainLion Lion SnowLeopard ] media/video-src-blob.html
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band.html
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-cues-added-once.html
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-style.html
+webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-legacy-api.html
 
 # These two tests sometimes timeout
 webkit.org/b/112492 media/track/track-language-preference.html [ Failure Pass ]
@@ -1398,32 +1395,18 @@ webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
 # Enable when support drag-and-drop autoscrolling
 webkit.org/b/39725 fast/events/drag-and-drop-autoscroll.html [ Skip ]
 
-# Transient. Needs rebaseline.
-webkit.org/b/103955 fast/repaint/caret-with-transformation.html [ Missing ]
-
-# Needs rebaseline.
-webkit.org/b/105574 editing/input/caret-at-the-edge-of-contenteditable.html [ Failure ]
-webkit.org/b/105574 editing/input/reveal-caret-of-multiline-contenteditable.html [ Failure ]
-webkit.org/b/105574 editing/input/reveal-caret-of-multiline-input.html [ Failure ]
-webkit.org/b/105574 fast/spatial-navigation/snav-div-overflow-scrol-hidden.html [ Failure ]
-
-# Rebaseline required after https://webkit.org/b/31397
-webkit.org/b/107567 svg/batik/text/xmlSpace.svg [ Failure ] 
-webkit.org/b/107567 fast/text/capitalize-empty-generated-string.html [ Failure ] 
-webkit.org/b/107567 fast/text/whitespace/007.html [ Failure ] 
-webkit.org/b/107567 fast/text/whitespace/006.html [ Failure ] 
-webkit.org/b/107567 fast/inline/drawStyledEmptyInlinesWithWS.html [ Failure ] 
-webkit.org/b/107567 tables/mozilla/bugs/bug1318.html [ Failure ] 
-webkit.org/b/107567 fast/inline/drawStyledEmptyInlines.html [ Failure ] 
-webkit.org/b/107567 tables/mozilla/bugs/bug113235-3.html [ Failure ] 
-webkit.org/b/107567 css2.1/t0505-c16-descendant-01-e.html [ Failure ] 
-webkit.org/b/107567 tables/mozilla/bugs/bug1188.html [ Failure ] 
-webkit.org/b/107567 editing/selection/extend-by-sentence-001.html [ Failure ] 
-webkit.org/b/107567 svg/carto.net/combobox.svg [ Failure ] 
-
 webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ] 
 webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ] 
 webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
+
+# Needs rebaseline.
+webkit.org/b/94198 fast/dom/HTMLImageElement/image-alt-text.html [ Failure ]
+webkit.org/b/94198 fast/dom/HTMLInputElement/input-image-alt-text.html [ Failure ]
+webkit.org/b/94198 fast/encoding/utf-16-big-endian.html [ Failure ]
+webkit.org/b/94198 fast/encoding/utf-16-little-endian.html [ Failure ]
+webkit.org/b/94198 fast/forms/input-value.html [ Failure ]
+webkit.org/b/94198 fast/lists/inlineBoxWrapperNullCheck.html [ Failure ]
+webkit.org/b/94198 tables/mozilla/collapsing_borders/bug41262-3.html [ Failure ]
 
 # Spellchecker behavior tests.
 webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]
@@ -1439,28 +1422,11 @@ webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ S
 webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-changed-text.html [ Skip ]
 
-# Rebaseline required after https://webkit.org/b/95772
-webkit.org/b/109209 fast/text/international/bidi-ignored-for-first-child-inline.html [ Failure ]
-
-# Crashing after https://webkit.org/b/105667
-webkit.org/b/109232 [ Debug ] inspector/debugger/debugger-reload-on-pause.html [ Crash ]
-
 webkit.org/b/110027 compositing/transitions/transform-on-large-layer.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/110173 media/video-controls-captions-trackmenu.html [ Crash Pass ]
 
 webkit.org/b/110186 inspector-protocol/page/javascriptDialogEvents.html [ Skip ]
-
-webkit.org/b/110554 http/tests/security/feed-urls-from-remote.html [ Failure ]
-webkit.org/b/110555 fast/canvas/canvas-currentPath.html [ Failure ]
-webkit.org/b/110555 fast/canvas/canvas-path-constructors.html [ Failure ]
-
-# Need rebaseline
-webkit.org/b/110654 css2.1/20110323/replaced-elements-001.htm [ Failure ]
-webkit.org/b/110654 svg/custom/foreign-object-skew.svg [ Failure ]
-webkit.org/b/110654 tables/mozilla/bugs/bug92647-2.html [ Failure ]
-# New test
-webkit.org/b/110654 css3/flexbox/button.html [ Failure ]
 
 # Need support for ResourceHandle::didChangePriority and DRT support
 webkit.org/b/111016 http/tests/loading/promote-img-preload-priority.html [ Failure ]
@@ -1509,6 +1475,8 @@ webkit.org/b/112176 fast/canvas/webgl/read-pixels-test.html [ Failure Pass ]
 
 # The following ref-test appears to fail on EWS bots as well.
 webkit.org/b/112176 fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure Pass ]
+webkit.org/b/112176 fast/css/sticky/inline-sticky.html [ ImageOnlyFailure Pass ]
+webkit.org/b/112176 fast/css/sticky/sticky-both-sides.html [ ImageOnlyFailure Pass ]
 # Once the bug 112176 is fixed, potentially restore the following test expectations.
 # webkit.org/b/105998 [ Lion Release ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure ]
 # webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure Pass ]
@@ -1520,3 +1488,14 @@ webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]
 
 # Snapshotted plugins not enabled on WK1
 plugins/snapshotting [ Skip ]
+
+webkit.org/b/113094 editing/pasteboard/can-read-in-copy-and-cut-events.html [ Failure ]
+webkit.org/b/113094 editing/pasteboard/can-read-in-dragstart-event.html [ Failure ]
+
+webkit.org/b/113227 transitions/cross-fade-background-image.html [ Pass Failure ]
+webkit.org/b/113227 transitions/cross-fade-border-image.html [ Pass Failure ]
+webkit.org/b/113227 transitions/default-timing-function.html [ Pass Failure ]
+webkit.org/b/113227 transitions/svg-text-shadow-transition.html [ Pass Failure ]
+
+# New test failing, needs investigation.
+webkit.org/b/103857 fast/events/mouse-cursor-change.html

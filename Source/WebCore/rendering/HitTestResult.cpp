@@ -512,6 +512,11 @@ bool HitTestResult::isLiveLink() const
     return false;
 }
 
+bool HitTestResult::isOverLink() const
+{
+    return m_innerURLElement && m_innerURLElement->isLink();
+}
+
 String HitTestResult::titleDisplayString() const
 {
     if (!m_innerURLElement)
@@ -556,7 +561,7 @@ bool HitTestResult::addNodeToRectBasedTestResult(Node* node, const HitTestReques
     if (!node)
         return true;
 
-    if (!request.allowsShadowContent())
+    if (request.disallowsShadowContent())
         node = node->document()->ancestorInThisScope(node);
 
     mutableRectBasedTestResult().add(node);
@@ -576,7 +581,7 @@ bool HitTestResult::addNodeToRectBasedTestResult(Node* node, const HitTestReques
     if (!node)
         return true;
 
-    if (!request.allowsShadowContent())
+    if (request.disallowsShadowContent())
         node = node->document()->ancestorInThisScope(node);
 
     mutableRectBasedTestResult().add(node);

@@ -115,6 +115,7 @@ case "$host" in
     *-*-mingw*)
         UNICODE_CFLAGS=""
         UNICODE_LIBS="-licui18n -licuuc"
+        AC_CHECK_HEADERS([unicode/uchar.h], [], [AC_MSG_ERROR([Could not find ICU headers.])])
         ;;
     *)
         AC_PATH_PROG(icu_config, icu-config, no)
@@ -359,9 +360,11 @@ PKG_CHECK_MODULES([LIBSOUP], [libsoup-2.4 >= libsoup_required_version])
 AC_SUBST([LIBSOUP_CFLAGS])
 AC_SUBST([LIBSOUP_LIBS])
 
-PKG_CHECK_MODULES([LIBSECRET], [libsecret-1])
-AC_SUBST([LIBSECRET_CFLAGS])
-AC_SUBST([LIBSECRET_LIBS])
+if test "$enable_credential_storage" = "yes"; then
+    PKG_CHECK_MODULES([LIBSECRET], [libsecret-1])
+    AC_SUBST([LIBSECRET_CFLAGS])
+    AC_SUBST([LIBSECRET_LIBS])
+fi
 
 # Check if FreeType/FontConfig are available.
 if test "$with_target" = "directfb"; then

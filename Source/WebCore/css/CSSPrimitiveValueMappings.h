@@ -2357,6 +2357,58 @@ template<> inline CSSPrimitiveValue::operator TextAlignLast() const
     ASSERT_NOT_REACHED();
     return TextAlignLastAuto;
 }
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextJustify e)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (e) {
+    case TextJustifyAuto:
+        m_value.ident = CSSValueAuto;
+        break;
+    case TextJustifyNone:
+        m_value.ident = CSSValueNone;
+        break;
+    case TextJustifyInterWord:
+        m_value.ident = CSSValueInterWord;
+        break;
+    case TextJustifyInterIdeograph:
+        m_value.ident = CSSValueInterIdeograph;
+        break;
+    case TextJustifyInterCluster:
+        m_value.ident = CSSValueInterCluster;
+        break;
+    case TextJustifyDistribute:
+        m_value.ident = CSSValueDistribute;
+        break;
+    case TextJustifyKashida:
+        m_value.ident = CSSValueKashida;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator TextJustify() const
+{
+    switch (m_value.ident) {
+    case CSSValueAuto:
+        return TextJustifyAuto;
+    case CSSValueNone:
+        return TextJustifyNone;
+    case CSSValueInterWord:
+        return TextJustifyInterWord;
+    case CSSValueInterIdeograph:
+        return TextJustifyInterIdeograph;
+    case CSSValueInterCluster:
+        return TextJustifyInterCluster;
+    case CSSValueDistribute:
+        return TextJustifyDistribute;
+    case CSSValueKashida:
+        return TextJustifyKashida;
+    }
+
+    ASSERT_NOT_REACHED();
+    return TextJustifyAuto;
+}
 #endif // CSS3_TEXT
 
 template<> inline CSSPrimitiveValue::operator ETextDecoration() const
@@ -4237,6 +4289,38 @@ template<int supported> Length CSSPrimitiveValue::convertToLength(RenderStyle* s
 }
 
 #if ENABLE(SVG)
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EBufferedRendering e)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (e) {
+    case BR_AUTO:
+        m_value.ident = CSSValueAuto;
+        break;
+    case BR_DYNAMIC:
+        m_value.ident = CSSValueDynamic;
+        break;
+    case BR_STATIC:
+        m_value.ident = CSSValueStatic;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator EBufferedRendering() const
+{
+    switch (m_value.ident) {
+    case CSSValueAuto:
+        return BR_AUTO;
+    case CSSValueDynamic:
+        return BR_DYNAMIC;
+    case CSSValueStatic:
+        return BR_STATIC;
+    }
+
+    ASSERT_NOT_REACHED();
+    return BR_AUTO;
+}
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EColorInterpolation e)
     : CSSValue(PrimitiveClass)
