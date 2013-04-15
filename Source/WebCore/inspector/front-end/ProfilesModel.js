@@ -32,6 +32,7 @@
 importScript("ProfileHeader.js");
 importScript("ProfileType.js");
 importScript("CPUProfile.js");
+importScript("CSSSelectorProfile.js");
 importScript("HeapSnapshotProfile.js");
 importScript("NativeMemoryProfile.js");
 importScript("NativeSnapshotProfile.js");
