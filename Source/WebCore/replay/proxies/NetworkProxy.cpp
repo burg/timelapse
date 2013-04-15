@@ -57,7 +57,6 @@ NetworkProxy::NetworkProxy(Page* page)
 // start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX
 , m_nextId(1)
 , m_expectsPageLoad(false)
-, m_initiatingPageLoad(false)
 , m_replayHandleMap(HashMap<int, HandleContext>())
 #endif // ENABLE(TIMELAPSE)
 {}

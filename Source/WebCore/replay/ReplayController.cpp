@@ -373,7 +373,6 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
         return;
     
     page()->networkProxy()->setExpectsPageLoad(false);
-    page()->networkProxy()->setInitiatingPageLoad(false);
     loader->frame()->script()->globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
 

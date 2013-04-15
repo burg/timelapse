@@ -129,10 +129,7 @@ bool ResourceLoader::init(const ResourceRequest& r)
     NetworkProxy* proxy = m_frame->page()->networkProxy();
     InputIterator* it = getInputIteratorForDocument(m_frame->tree()->top()->document());
     bool capturingOrReplaying = it && (it->isCapturing() || it->isReplaying());
-    // if the page's MainResourceLoader has been created but not loaded, we set
-    // NetworkProxy::initiatingPageLoad() to indicate that the next ResourceLoader
-    // (nested inside the MainResourceLoader) should get a loader id.
-    if (capturingOrReplaying || proxy->initiatingPageLoad())
+    if (capturingOrReplaying || proxy->expectsPageLoad())
         m_loaderId = proxy->nextLoaderId(r);
 #endif // ENABLE(TIMELAPSE)
     
