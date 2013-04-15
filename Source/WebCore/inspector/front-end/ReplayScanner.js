@@ -126,15 +126,7 @@ WebInspector.ReplayScanner.prototype = {
         }, this);
 
         task.chain("willEnterRegion", this.willEnterRegion, this);
-        // Workaround: currently there is no way to force replay up to the current mark index.
         if (currentIndex == endIndex && currentIndex != startIndex) {
-            var endActionIndex = model.loadedRecording.actionIndexFromMarkIndex(endIndex);
-            var prevIndex = actions[endActionIndex - 1].mark.index;
-            task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {
-                model.onceEventListener(replayEvents.InputWaiting,
-                                        this._createPreventDefaultCallback(cb), this);
-                model.startReplayUpToMarkIndexTask(prevIndex, true).run();
-            }, this);
             // if this is the last step, then don't prevent default action of InputWaiting
             task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
                 model.onceEventListener(replayEvents.InputWaiting, cb, task);
