@@ -314,7 +314,7 @@ WebInspector.ReplayModel.prototype = {
             // decide replay starting and ending mark indices
             var actions = model.loadedRecording.actions;
             var canReplayWithoutRestart = model.isReplaying &&
-                model._currentMarkIndex && model._currentMarkIndex <= markIndex;
+                model._currentMarkIndex && model._currentMarkIndex < markIndex;
 
             model._replayStartIndex = (canReplayWithoutRestart) ? model._currentMarkIndex
                                          : model.loadedRecording.actions[0].mark.index;
@@ -396,17 +396,7 @@ WebInspector.ReplayModel.prototype = {
         var replayEvents = WebInspector.ReplayModel.Events;
         var task = new WebInspector.ReplayTask("ReplayToBreakpointHit");
 
-        // Always hit a breakpoint by seeking to preceding mark (if not there),
-        // play one mark, and then start playback and resume |hitIndex-1| times.
-        if (this._currentMarkIndex != markIndex-1) {
-            task.chain("ReplayToPrecedingMark", function(cb) {
-                var actionIndex = model.loadedRecording.actionIndexFromMarkIndex(markIndex);
-                var prevIndex = model.loadedRecording.actions[actionIndex - 1].mark.index;
-                model.onceEventListener(replayEvents.InputPaused, cb, task);
-                model.startReplayUpToMarkIndexTask(prevIndex, allowBreakpoints, replaySpeed).run();
-            });
-        }
-        task.chain("ReplayOneMark", function(cb) {
+        task.chain("ReplayToMark", function(cb) {
             model.onceEventListener(replayEvents.InputPaused, cb, task);
             model.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed).run();
         });
