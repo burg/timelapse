@@ -181,6 +181,13 @@ void Console::markTimeline(PassRefPtr<ScriptArguments> arguments)
     InspectorInstrumentation::consoleTimeStamp(m_frame, arguments);
 }
 
+#if ENABLE(TIMELAPSE)
+void Console::probe(ScriptState* state, PassRefPtr<ScriptArguments> arguments, unsigned uid)
+{
+    InspectorInstrumentation::addScriptProbeSample(m_frame, state, arguments, uid);
+}
+#endif
+
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 
 void Console::profile(const String& title, ScriptState* state)
