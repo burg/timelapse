@@ -52,6 +52,7 @@ class InspectorFileSystemAgent;
 class InspectorHeapProfilerAgent;
 class InspectorLayerTreeAgent;
 class InspectorPageAgent;
+class InspectorProbeAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
 class InspectorReplayAgent;
@@ -98,6 +99,9 @@ public:
 #if ENABLE(TIMELAPSE)
     InspectorReplayAgent* inspectorReplayAgent() const { return m_inspectorReplayAgent; }
     void setInspectorReplayAgent(InspectorReplayAgent* agent) { m_inspectorReplayAgent = agent; }
+
+    InspectorProbeAgent* inspectorProbeAgent() const { return m_inspectorProbeAgent; }
+    void setInspectorProbeAgent(InspectorProbeAgent* agent) { m_inspectorProbeAgent = agent; }
 #endif
 
     WorkerRuntimeAgent* workerRuntimeAgent() const { return m_workerRuntimeAgent; }
@@ -167,6 +171,7 @@ private:
     PageRuntimeAgent* m_pageRuntimeAgent;
 #if ENABLE(TIMELAPSE)
     InspectorReplayAgent* m_inspectorReplayAgent;
+    InspectorProbeAgent* m_inspectorProbeAgent;
 #endif
     WorkerRuntimeAgent* m_workerRuntimeAgent;
     InspectorTimelineAgent* m_inspectorTimelineAgent;

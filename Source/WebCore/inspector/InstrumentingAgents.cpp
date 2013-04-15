@@ -55,6 +55,7 @@ InstrumentingAgents::InstrumentingAgents()
     , m_pageRuntimeAgent(0)
 #if ENABLE(TIMELAPSE)
     , m_inspectorReplayAgent(0)
+    , m_inspectorProbeAgent(0)
 #endif
     , m_workerRuntimeAgent(0)
     , m_inspectorTimelineAgent(0)
@@ -93,6 +94,7 @@ void InstrumentingAgents::reset()
     m_pageRuntimeAgent = 0;
 #if ENABLE(TIMELAPSE)
     m_inspectorReplayAgent = 0;
+    m_inspectorProbeAgent = 0;
 #endif
     m_workerRuntimeAgent = 0;
     m_inspectorTimelineAgent = 0;

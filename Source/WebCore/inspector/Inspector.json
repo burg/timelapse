@@ -2638,6 +2638,126 @@
         ]
     },
     {
+        "domain": "Probe",
+        "hidden": true,
+        "description": "Controls data probe instrumentation.",
+        "types": [
+            {
+                "id": "DataProbeType",
+                "type": "string",
+                "description": "Data probe type. Valid types defined in ProbeAgent.js and InspectorProbeAgent.cpp"
+            },
+            {
+                "id": "DataProbeId",
+                "type": "integer",
+                "description": "Unique data probe identifier."
+            },            
+            {
+                "id": "DataProbe",
+                "type": "object",
+                "properties": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Probe unique id." },
+                    { "name": "type", "$ref": "DataProbeType", "description": "Probe type." },
+                    { "name": "isEnabled", "type": "boolean", "description": "Whether the probe is active" },
+                    { "name": "metadata", "type": "object", "optional": true, "description": "Probe metadata." },
+                    { "name": "samples", "type": "object", "optional": true, "description": "Probe samples." }
+                ]
+            }
+        ],
+        "commands": [
+            {
+                "name": "enable"
+            },
+            {
+                "name": "disable"
+            },
+            {
+                "name": "isEnabled",
+                "returns": [
+                    { "name": "state", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "clearAllProbes"
+            },
+            {
+                "name": "getAllProbes",
+                "returns": [
+                    { "name": "probes", "type": "array", "items": { "$ref": "DataProbeId" }, "description": "Get unique ids for all probes" }
+                ],
+                "description": "Array of all probes registered with the backend probe agent."
+            },
+            {
+                "name": "getProbeDetails",
+                "parameters": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Id of the requested probe." }
+                ],
+                "returns": [
+                    { "name": "probe", "$ref": "DataProbe", "description": "The requested probe, if it exists." }
+                ]
+            },
+            {
+                "name": "enableProbe",
+                "parameters": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Id of the requested probe." }
+                ]
+            },
+            {
+                "name": "disableProbe",
+                "parameters": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Id of the requested probe." }
+                ]
+            },
+            {
+                "name": "createScriptProbe",
+                "parameters": [
+                    { "name": "url", "type": "string", "description": "Script URL." },
+                    { "name": "lineNumber", "type": "integer", "description": "Script line number." },
+                    { "name": "columnNumber", "type": "integer", "description": "Script column number." },
+                    { "name": "expression", "type": "string", "description": "Expression to sample." }              
+                ],
+                "description": "Create a new script probe at the specified file, line, column which samples the provided expression."
+            }
+        ],
+        
+        "events": [
+            {
+                "name": "probeDataReceived",
+                "parameters": [
+                    { "name": "probeId", "$ref": "DataProbeId", "description": "Id of probe which generated the sample." },
+                    { "name": "sampleId", "type": "integer", "description": "How many samples have been collected with this probe." },
+                    { "name": "data", "type": "object", "description": "Data of the probe sample." }
+                ],
+                "description": "Fires when a new probe sample is collected or re-requested."
+            },
+            {
+                "name": "probeAdded",
+                "parameters": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of newly-created probe." }
+                ],
+                "description": "A new probe was added."
+            },
+            {
+                "name": "probeEnabled",
+                "parameters": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of probe." }
+                ],
+                "description": "A probe was enabled."
+            },
+            {
+                "name": "probeDisabled",
+                "parameters": [
+                    { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of probe." }
+                ],
+                "description": "A probe was disabled."
+            },            
+            {
+                "name": "allProbesCleared",
+                "description": "All probes were destroyed."
+            }            
+        ]
+    },
+    {
         "domain": "Replay",
 	"hidden": true,
         "description": "Controls per-page deterministic record/replay. In capture mode,  nondeterministic inputs are captured into a log (aka recording). In replaying mode, the captured execution is replicated by reusing nondeterministic inputs.",
