@@ -38,6 +38,11 @@
 #include <runtime/JSLock.h>
 #include <wtf/text/WTFString.h>
 
+#if ENABLE(TIMELAPSE)
+#include "CaptureInputIterator.h"
+#include "ReplayInputIterator.h"
+#endif
+
 using namespace JSC;
 
 namespace WebCore {
@@ -135,12 +140,26 @@ ScriptValue ScriptFunctionCall::call(bool& hadException, bool reportExceptions)
     if (callType == CallTypeNone)
         return ScriptValue();
 
+#if ENABLE(TIMELAPSE)
+    InputIterator* it = m_exec->lexicalGlobalObject()->inputIterator();
+    bool wasCapturing = it && it->isCapturing();
+    bool wasReplaying = it && it->isReplaying();
+    if (wasCapturing)
+        static_cast<CaptureInputIterator*>(it)->setIsActive(false);
+    if (wasReplaying)
+        static_cast<ReplayInputIterator*>(it)->setIsActive(false);
+#endif
     JSValue result;
     if (isMainThread())
         result = JSMainThreadExecState::call(m_exec, function, callType, callData, thisObject, m_arguments);
     else
         result = JSC::call(m_exec, function, callType, callData, thisObject, m_arguments);
-
+#if ENABLE(TIMELAPSE)
+    if (wasCapturing)
+        static_cast<CaptureInputIterator*>(it)->setIsActive(true);
+    if (wasReplaying)
+        static_cast<ReplayInputIterator*>(it)->setIsActive(true);
+#endif
     if (m_exec->hadException()) {
         if (reportExceptions)
             reportException(m_exec, m_exec->exception());
