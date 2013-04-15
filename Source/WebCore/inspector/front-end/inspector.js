@@ -94,38 +94,32 @@ var WebInspector = {
         this._toggleConsoleButton.addEventListener("click", this._toggleConsoleButtonClicked.bind(this), false);
         mainStatusBar.insertBefore(this._toggleConsoleButton.element, bottomStatusBarContainer);
 
-	this._toggleReplayControllerButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show Replay controller."), "replay-controller-status-bar-item");
-	this._toggleReplayControllerButton.addEventListener("click", this._toggleReplayControllerButtonClicked.bind(this), false);
-        mainStatusBar.insertBefore(this._toggleReplayControllerButton.element, bottomStatusBarContainer);
+        this._toggleReplayControllerButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show Replay controller."), "replay-controller-status-bar-item");
+        this._toggleReplayControllerButton.addEventListener("click", this._toggleReplayControllerButtonClicked.bind(this), false);
+            mainStatusBar.insertBefore(this._toggleReplayControllerButton.element, bottomStatusBarContainer);
 
-	if (WebInspector.RecordingsPanel) {
-	    // create status message widget
-	    var model = WebInspector.replayModel;
-	    var eventNames = WebInspector.ReplayModel.Events;
+        if (WebInspector.RecordingsPanel) {
+            // create status message widget
+            var model = WebInspector.replayModel;
+            var eventNames = WebInspector.ReplayModel.Events;
 
-            this._replayStatusMessage = document.createElement("div");
-            this._replayStatusMessage.id = "replay-status";
-            model.addEventListener(eventNames.Enabled, function() {
-		this.classList.remove("hidden");
-            }, this._replayStatusMessage);
-            model.addEventListener(eventNames.Disabled, function() {
-		this.classList.add("hidden");
-            }, this._replayStatusMessage);
-	    model.addEventListener(eventNames.StatusChanged, function(event) {
-		var message = event.data;
-		this.removeChildren();
-		var messageSpan = document.createElement("span");
-		messageSpan.textContent = WebInspector.UIString(message);
-		this.appendChild(messageSpan);
-            }, this._replayStatusMessage);
+                this._replayStatusMessage = document.createElement("div");
+                this._replayStatusMessage.id = "replay-status";
+                model.addEventListener(eventNames.Enabled, function() {
+            this.classList.remove("hidden");
+                }, this._replayStatusMessage);
+                model.addEventListener(eventNames.Disabled, function() {
+            this.classList.add("hidden");
+                }, this._replayStatusMessage);
+            model.addEventListener(eventNames.StatusChanged, function(event) {
+            var message = event.data;
+            this.removeChildren();
+            var messageSpan = document.createElement("span");
+            messageSpan.textContent = WebInspector.UIString(message);
+            this.appendChild(messageSpan);
+                }, this._replayStatusMessage);
 
-	    mainStatusBar.appendChild(this._replayStatusMessage);
-	}
-
-        if (!WebInspector.WorkerManager.isWorkerFrontend()) {
-            this._nodeSearchButton = new WebInspector.StatusBarButton(WebInspector.UIString("Select an element in the page to inspect it."), "node-search-status-bar-item");
-            this._nodeSearchButton.addEventListener("click", this.toggleSearchingForNode, this);
-            mainStatusBar.insertBefore(this._nodeSearchButton.element, bottomStatusBarContainer);
+            mainStatusBar.appendChild(this._replayStatusMessage);
         }
 
         if (this.inspectElementModeController)
