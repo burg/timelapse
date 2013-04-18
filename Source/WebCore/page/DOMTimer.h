@@ -55,23 +55,24 @@ namespace WebCore {
         virtual void fired();
 
         virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
+    protected:
+        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>);
+        // add to list of active context objects, start initial timer.
+        virtual void start(int timeout, bool singleShot);
+
+        int m_timeoutId;
+        bool m_shouldScheduleNormally;
 
     private:
-        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
-
         double intervalClampedToMinimum(int timeout, double minimumTimerInterval) const;
 
         // Retuns timer fire time rounded to the next multiple of timer alignment interval.
         virtual double alignedFireTime(double) const;
-
-        int m_timeoutId;
+        
         int m_nestingLevel;
         OwnPtr<ScheduledAction> m_action;
         int m_originalInterval;
         RefPtr<UserGestureToken> m_userGestureToken;
-#if ENABLE(TIMELAPSE)
-        bool m_shouldScheduleNormally;
-#endif
     };
 
 } // namespace WebCore
