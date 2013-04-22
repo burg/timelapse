@@ -41,13 +41,35 @@ namespace WebCore {
 
 String FrameCamera::dataUriImageFromFrame(Frame* frame)
 {
-    NSRect imageSize = NSMakeRect(0.0, 0.0, 200.0, 200.0);
+    const float maxSize = 1000.0; // px
+    float frameWidth = (float) frame->document()->domWindow()->innerWidth();
+    float frameHeight = (float) frame->document()->domWindow()->innerHeight();
+
+    NSRect imageSize = NSMakeRect(0.0, 0.0, frameWidth, frameHeight);
     NSImage* image = frame->imageFromRect(imageSize);
+
+    if (frameWidth > maxSize || frameHeight > maxSize) {
+        // scale image to maxSize x maxSize or smaller
+        NSRect newSize;
+        if (frameWidth > frameHeight) {
+            newSize = NSMakeRect(0.0, 0.0, maxSize, frameHeight * (maxSize / frameWidth));
+        } else {
+            newSize = NSMakeRect(0.0, 0.0, frameWidth * (maxSize / frameHeight), maxSize);
+        }
+        NSImage* smallImage = [[[NSImage alloc] initWithSize: newSize.size] autorelease];
+        [smallImage lockFocus];
+        [image setSize: newSize.size];
+        [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationHigh];
+        [image drawAtPoint:NSZeroPoint fromRect:newSize operation:NSCompositeCopy fraction:1.0];
+        [smallImage unlockFocus];
+        image = smallImage;
+    }
+
     NSBitmapImageRep* imageRep = [[NSBitmapImageRep alloc] initWithData: [image TIFFRepresentation]];
     NSData* pngData = [imageRep representationUsingType: NSPNGFileType
                                              properties: [NSDictionary dictionary]];
 
-    String encodedImage = base64Encode(reinterpret_cast<const char *>([pngData bytes]), [pngData length]);
+    String encodedImage = base64Encode((const char *) [pngData bytes], [pngData length]);
     String dataUri = "url(\"data:image/png;base64,";
     dataUri.append(encodedImage);
     dataUri.append("\")");

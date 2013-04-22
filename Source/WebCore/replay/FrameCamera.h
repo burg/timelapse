@@ -39,7 +39,9 @@
 namespace WebCore {
 
 namespace FrameCamera {
+#if PLATFORM(MAC)
     String dataUriImageFromFrame(Frame* frame);
+#endif
 }
 
 } // namespace WebCore
