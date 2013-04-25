@@ -174,21 +174,6 @@ inline void InspectorInstrumentation::consoleTimeStamp(Frame* frame, PassRefPtr<
 #endif
 }
 
-#if ENABLE(TIMELAPSE)
-inline void InspectorInstrumentation::addScriptProbeSample(Frame* frame, ScriptState* state, PassRefPtr<ScriptArguments> arguments, unsigned uid)
-{
-#if ENABLE(INSPECTOR)
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
-        addScriptProbeSampleImpl(instrumentingAgents, frame, state, arguments, uid);
-#else
-    UNUSED_PARAM(frame);
-    UNUSED_PARAM(state);
-    UNUSED_PARAM(arguments);
-    UNUSED_PARAM(uid);
-#endif
-}
-#endif
-
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 inline void InspectorInstrumentation::addStartProfilingMessageToConsole(Page* page, const String& title, unsigned lineNumber, const String& sourceURL)
 {

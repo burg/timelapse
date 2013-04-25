@@ -80,7 +80,6 @@ ScriptObject InjectedScriptManager::createInjectedScript(const String& source, S
     args.append(globalThisValue);
     args.append(jsNumber(id));
 
-    // TODO: aoeu - do the iterator disablement here?
     JSValue result = JSC::call(scriptState, functionValue, callType, callData, globalThisValue, args);
     if (result.isObject())
         return ScriptObject(scriptState, result.getObject());

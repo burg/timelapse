@@ -68,7 +68,7 @@ public:
     void markTimeline(PassRefPtr<ScriptArguments>);
 
 #if ENABLE(TIMELAPSE)
-    void probe(ScriptState*, PassRefPtr<ScriptArguments>, unsigned uid);
+    void probe(ScriptState*, int probeId);
 #endif
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)

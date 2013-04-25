@@ -29,34 +29,60 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DataProbe_h
-#define DataProbe_h
+#ifndef ScriptProbe_h
+#define ScriptProbe_h
 
-#include <wtf/RefCounted.h>
+#if ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+
+#include "DataProbe.h"
+
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class DataProbe : public RefCounted<DataProbe> {
+class ScriptProbe : public DataProbe {
 public:
-    virtual ~DataProbe() {}
+    static RefPtr<ScriptProbe> create(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
+    virtual ~ScriptProbe() {}
 
     // DataProbe interface
-    virtual void enable() =0;
-    virtual void disable() =0;
-    virtual bool isEnabled() const =0;
-
-    unsigned uid() const { return m_uid; }
+    virtual void enable() { setIsEnabled(true); }
+    virtual void disable() { setIsEnabled(false); }
+    virtual bool isEnabled() const { return m_isEnabled; }
     
+    const String& url() const { return m_url; }
+    int lineNumber() const { return m_lineNumber; }
+    int columnNumber() const { return m_columnNumber; }
+    const String& expression() const { return m_expression; }
+
 protected:
-    DataProbe(unsigned uid);
 
 private:
-    unsigned m_uid;
+    ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
+    virtual void setIsEnabled(bool state) { m_isEnabled = state; }
+
+    bool m_isEnabled;
+    String m_url;
+    int m_lineNumber;
+    int m_columnNumber;
+    String m_expression;
 };
 
-inline DataProbe::DataProbe(unsigned uid)
-: m_uid(uid) {}
+inline RefPtr<ScriptProbe> ScriptProbe::create(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression)
+{
+    return adoptRef(new ScriptProbe(uid, url, lineNumber, columnNumber, expression));
+}
+
+inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression)
+: DataProbe(uid)
+, m_isEnabled(false)
+, m_url(url)
+, m_lineNumber(lineNumber)
+, m_columnNumber(columnNumber)
+, m_expression(expression) {}
 
 } // namespace WebCore
 
-#endif // DataProbe_h
+#endif // ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+
+#endif // ScriptProbe_h

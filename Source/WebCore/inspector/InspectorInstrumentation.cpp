@@ -1091,13 +1091,6 @@ void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents* instrum
      }
 }
 
-#if ENABLE(TIMELAPSE)
-void InspectorInstrumentation::addScriptProbeSampleImpl(InstrumentingAgents*, Frame*, ScriptState*, PassRefPtr<ScriptArguments>, unsigned)
-{
-    // TODO: implement
-}
-#endif
-
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 void InspectorInstrumentation::addStartProfilingMessageToConsoleImpl(InstrumentingAgents* instrumentingAgents, const String& title, unsigned lineNumber, const String& sourceURL)
 {

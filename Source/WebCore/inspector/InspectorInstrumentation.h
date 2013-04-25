@@ -249,10 +249,6 @@ public:
     static void stopConsoleTiming(Frame*, const String& title, PassRefPtr<ScriptCallStack>);
     static void consoleTimeStamp(Frame*, PassRefPtr<ScriptArguments>);
 
-#if ENABLE(TIMELAPSE)
-    static void addScriptProbeSample(Frame*, ScriptState*, PassRefPtr<ScriptArguments>, unsigned uid);
-#endif
-
     static void didRequestAnimationFrame(Document*, int callbackId);
     static void didCancelAnimationFrame(Document*, int callbackId);
     static InspectorInstrumentationCookie willFireAnimationFrame(Document*, int callbackId);
@@ -468,10 +464,6 @@ private:
     static void startConsoleTimingImpl(InstrumentingAgents*, Frame*, const String& title);
     static void stopConsoleTimingImpl(InstrumentingAgents*, Frame*, const String& title, PassRefPtr<ScriptCallStack>);
     static void consoleTimeStampImpl(InstrumentingAgents*, Frame*, PassRefPtr<ScriptArguments>);
-
-#if ENABLE(TIMELAPSE)
-    static void addScriptProbeSampleImpl(InstrumentingAgents*, Frame*, ScriptState*, PassRefPtr<ScriptArguments>, unsigned uid);
-#endif
 
     static void didRequestAnimationFrameImpl(InstrumentingAgents*, int callbackId, Frame*);
     static void didCancelAnimationFrameImpl(InstrumentingAgents*, int callbackId, Frame*);

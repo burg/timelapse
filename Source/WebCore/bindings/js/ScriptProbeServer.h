@@ -29,34 +29,59 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DataProbe_h
-#define DataProbe_h
+#ifndef ScriptProbeServer_h
+#define ScriptProbeServer_h
 
-#include <wtf/RefCounted.h>
+#if ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+
+#include "ScriptValue.h"
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
+#include <wtf/PassOwnPtr.h>
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
+
+namespace JSC {
+class DebuggerCallFrame;
+}
 
 namespace WebCore {
+class ScriptObject;
+class ScriptProbe;
+class ScriptValue;
 
-class DataProbe : public RefCounted<DataProbe> {
+class ScriptProbeServer {
+    WTF_MAKE_NONCOPYABLE(ScriptProbeServer); WTF_MAKE_FAST_ALLOCATED;
 public:
-    virtual ~DataProbe() {}
-
-    // DataProbe interface
-    virtual void enable() =0;
-    virtual void disable() =0;
-    virtual bool isEnabled() const =0;
-
-    unsigned uid() const { return m_uid; }
+    static PassOwnPtr<ScriptProbeServer> create();
+    virtual ~ScriptProbeServer();
     
-protected:
-    DataProbe(unsigned uid);
+    void addProbeForScriptId(intptr_t scriptId, PassRefPtr<ScriptProbe>);
+    void clearProbesForScriptId(intptr_t scriptId);
+    void setIsActive(bool active) { m_isActive = active; }
+    bool isActive() const { return m_isActive; }
 
+    void addSampleFromConsole(int probeId, ScriptState*);
+    
+    // callback from ScriptDebugServer
+    void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
 private:
-    unsigned m_uid;
-};
+    ScriptProbeServer();
 
-inline DataProbe::DataProbe(unsigned uid)
-: m_uid(uid) {}
+    typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
+    typedef HashMap<int, RefPtr<ScriptProbe> > ProbeMap;
+    typedef long LineNumber;
+    typedef intptr_t ScriptId;
+    typedef HashMap<LineNumber, ProbeSet> LineToScriptProbeMap;
+    typedef HashMap<ScriptId, LineToScriptProbeMap> ScriptIdToLinesMap;
+
+    bool m_isActive;
+    ScriptIdToLinesMap m_probeRegistry;
+    ProbeMap m_probesById;
+};
 
 } // namespace WebCore
 
-#endif // DataProbe_h
+#endif // ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+
+#endif // ScriptProbeServer_h

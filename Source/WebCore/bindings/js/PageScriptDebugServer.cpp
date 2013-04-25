@@ -49,6 +49,13 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/StdLibExtras.h>
 
+#if ENABLE(TIMELAPSE)
+#include "ScriptProbeServer.h"
+#include <debugger/DebuggerCallFrame.h>
+#include <wtf/replay/InputIterator.h>
+#include <wtf/TemporaryChange.h>
+#endif
+
 using namespace JSC;
 
 namespace WebCore {
@@ -71,6 +78,9 @@ PageScriptDebugServer& PageScriptDebugServer::shared()
 PageScriptDebugServer::PageScriptDebugServer()
     : ScriptDebugServer()
     , m_pausedPage(0)
+#if ENABLE(TIMELAPSE)
+    , m_probeServer(ScriptProbeServer::create())
+#endif
 {
 }
 
@@ -170,6 +180,36 @@ void PageScriptDebugServer::runEventLoopWhilePaused()
     while (!m_doneProcessingDebuggerEvents && !loop.ended())
         loop.cycle();
 }
+
+#if ENABLE(TIMELAPSE)
+void PageScriptDebugServer::atStatement(const JSC::DebuggerCallFrame& callFrame, intptr_t sourceID, int firstLine, int columnNumber)
+{
+    JSC::JSGlobalObject* globalObject = callFrame.dynamicGlobalObject();
+    InputIterator* it = globalObject->inputIterator();
+    // only generate probe samples during replay.
+    if (m_probeServer->isActive() && it && it->isReplaying())
+        m_probeServer->atStatement(callFrame, sourceID, firstLine, columnNumber);
+    
+    ScriptDebugServer::atStatement(callFrame, sourceID, firstLine, columnNumber);
+}
+
+void PageScriptDebugServer::addScriptProbeSample(int probeId, ScriptState* exec, const ScriptValue& value)
+{
+    if (m_callingListeners)
+        return;
+
+    ListenerSet* listeners = getListenersForGlobalObject(exec->lexicalGlobalObject());
+    if (!listeners)
+        return;
+    
+    ASSERT(!listeners->isEmpty());
+    TemporaryChange<bool> change(m_callingListeners, true);
+    Vector<ScriptDebugListener*> copy;
+    copyToVector(*listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->addScriptProbeSample(probeId, exec, value);
+}
+#endif
 
 void PageScriptDebugServer::setJavaScriptPaused(const PageGroup& pageGroup, bool paused)
 {

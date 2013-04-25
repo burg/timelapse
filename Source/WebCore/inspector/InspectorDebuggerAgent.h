@@ -148,6 +148,9 @@ protected:
     virtual void disable();
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();
+#if ENABLE(TIMELAPSE)
+    virtual void addScriptProbeSample(int /*probeId*/, ScriptState*, const ScriptValue&) {}
+#endif
     void reset();
 
 private:

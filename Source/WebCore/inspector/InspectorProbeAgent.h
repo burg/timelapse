@@ -36,12 +36,18 @@
 
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
-#include "ScriptState.h"
+#include <wtf/HashMap.h>
+#include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+
+#if ENABLE(JAVASCRIPT_DEBUGGER)
+#include "ScriptDebugListener.h"
+#include "ScriptState.h"
+#endif
 
 namespace WebCore {
 
@@ -51,9 +57,46 @@ class InspectorController;
 class InspectorCompositeState;
 class InstrumentingAgents;
 class Page;
-class ScriptArguments;
 
 typedef String ErrorString;
+
+#if ENABLE(JAVASCRIPT_DEBUGGER)
+class ScriptArguments;
+class ScriptProbe;
+class ScriptValue;
+
+// This helper class encapsulates the logic to add/remove probes from the probe
+// server's list as scripts are parsed.
+class ScriptProbeResolver : public ScriptDebugListener {
+    WTF_MAKE_NONCOPYABLE(ScriptProbeResolver);
+public:
+    static PassOwnPtr<ScriptProbeResolver> create(Page*);
+    virtual ~ScriptProbeResolver();
+
+    void clearScriptMapping();
+    void clearProbes();
+    void addProbe(PassRefPtr<ScriptProbe>);
+    
+private:
+    ScriptProbeResolver(Page*);
+
+    // ScriptDebugListener API
+    virtual void didParseSource(const String& scriptId, const Script&);
+    virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
+    virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
+    virtual void didContinue();
+#if ENABLE(JAVASCRIPT_DEBUGGER)
+    void addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&);
+#endif
+    
+    Page* m_page;
+    typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
+    ProbeSet m_probes;
+    typedef intptr_t ScriptId;
+    typedef HashMap<String, ScriptId> UrlToScriptIdMap;
+    UrlToScriptIdMap m_urlToScriptIdMap;
+};
+#endif
 
 class InspectorProbeAgent
 : public InspectorBaseAgent<InspectorProbeAgent>
@@ -74,7 +117,7 @@ public:
     virtual void enable(ErrorString*);
     virtual void disable(ErrorString*);
     virtual void isEnabled(ErrorString*, bool* out_state);
-    
+
     virtual void clearAllProbes(ErrorString*);
     virtual void getAllProbes(ErrorString*, RefPtr<TypeBuilder::Array<int> >& result);
     virtual void getProbeDetails(ErrorString*, int uid, RefPtr<TypeBuilder::Probe::DataProbe>& result);
@@ -82,17 +125,18 @@ public:
     virtual void disableProbe(ErrorString*, int uid);
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
-    // Calls from WebKit (InspectorInstrumentation/InstrumentingAgents)
-    void addScriptProbeSample(Frame*, ScriptState*, PassRefPtr<ScriptArguments>, unsigned);
-
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
     
+    int m_nextUID;
     InstrumentingAgents *m_instrumentingAgents;
-    InspectorFrontend::Replay* m_frontend;
-    Page *m_inspectedPage;
+    InspectorFrontend::Probe* m_frontend;
+    Page* m_inspectedPage;
     typedef HashMap<int, RefPtr<DataProbe>> ProbeMap;
     ProbeMap m_probeMap;
+#if ENABLE(JAVASCRIPT_DEBUGGER)
+    OwnPtr<ScriptProbeResolver> m_scriptProbeResolver;
+#endif
 };
 
 } // namespace WebCore
