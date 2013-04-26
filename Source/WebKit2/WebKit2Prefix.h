@@ -32,12 +32,7 @@
 
 #if PLATFORM(MAC)
 
-// for now, Timelapse requires disabling the sandbox, so that we can
-// naively write recordings to disk without proxying out of WebProcess.
-// In the future, we should whitelist recording directories or proxy out.
-#if !ENABLE(TIMELAPSE)
 #define ENABLE_WEB_PROCESS_SANDBOX 1
-#endif // !ENABLE(TIMELAPSE)
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
 #define ENABLE_PLUGIN_PROCESS 1
