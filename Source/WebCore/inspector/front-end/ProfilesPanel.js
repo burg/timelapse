@@ -193,7 +193,7 @@ WebInspector.ProfilesPanel.prototype = {
         sidebarParent.appendChild(profileTreeElement);
         
         if (!this.visibleView && !profile.isTemporary)
-            this.showProfile(profile);
+            this._showProfile(profile);
     },
 
     _profileRemoved: function(event)
@@ -406,7 +406,7 @@ WebInspector.ProfilesPanel.prototype = {
     {
         var profile = this._model.getProfileForURL(url);
         if (profile)
-            this.showProfile(profile);
+            this._showProfile(profile);
     },
 
     closeVisibleView: function()
