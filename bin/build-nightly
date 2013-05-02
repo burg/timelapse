@@ -1,5 +1,7 @@
 #!/bin/bash
 
+OUT_DIR="$1"
+
 # resolve links - $0 may be a link to this script
 PRG="$0"
 
@@ -24,3 +26,5 @@ WEBKIT_LION_PRODUCT_PATH=$REAL_HOME/../WebKitBuild
 WEBKIT_MOUNTAIN_LION_PRODUCT_PATH=$REAL_HOME/../WebKitBuild
 
 $REAL_HOME/../Tools/BuildSlaveSupport/build-launcher-app --no-sign --build-dir-10-7 $WEBKIT_LION_PRODUCT_PATH --build-dir-10-8 $WEBKIT_MOUNTAIN_LION_PRODUCT_PATH
+
+tar -cvzf $OUT_DIR/TimelapseNightly.app.tar.gz WebKitBuild/Release/WebKit.app/
