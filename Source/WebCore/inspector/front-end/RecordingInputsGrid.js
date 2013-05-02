@@ -30,42 +30,48 @@
 
 WebInspector.RecordingInputsGrid = function(model, recording) {
     /* column definitions */
-    var columns = {
-	gutter: {},
-	index: {},
-	group: {},
-	type: {},
-	timestamp: {},
-	preview: {}
-    };
+    var columns = [];
 
-    columns.gutter.title = " ";
-    columns.gutter.sortable = false;
-    columns.gutter.width = "15px";
-    columns.gutter.aligned = "center";
-
-    columns.index.title = " ";
-    columns.index.sortable = true;
-    columns.index.width = "10%";
-    columns.index.aligned = "right";
-    columns.index.sort = "ascending";
-
-    columns.group.title = " ";
-    columns.group.sortable = true;
-    columns.group.width = "1%";
-
-    columns.type.title = "What Happened?";
-    columns.type.sortable = true;
-    columns.type.width = "30%";
-    columns.type.aligned = "right";
-
-    columns.timestamp.title = "When?";
-    columns.timestamp.sortable = true;
-    columns.timestamp.width = "15%";
-    
-    columns.preview.title = "Input Preview";
-    columns.preview.sortable = false;
-    columns.preview.width = "45%";
+    columns.push({
+        id: "gutter",
+        title: " ",
+        sortable: false,
+        weight: 5,
+        align: WebInspector.DataGrid.Align.Center
+    });
+    columns.push({
+        id: "index",
+        title: " ",
+        sortable: true,
+        weight: 10,
+        aligned: WebInspector.DataGrid.Align.Right,
+        sort: WebInspector.DataGrid.Order.Ascending
+    });
+    columns.push({
+        id: "group",
+        title: " ",
+        sortable: true,
+        weight: 1
+    });
+    columns.push({
+        id: "type",
+        title: WebInspector.UIString("What Happened?"),
+        sortable: true,
+        weight: 30,
+        aligned: WebInspector.DataGrid.Align.Right
+    });
+    columns.push({
+        id: "timestamp",
+        title: WebInspector.UIString("When?"),
+        sortable: true,
+        weight: 15
+    });
+    columns.push({
+        id: "preview",
+        title: WebInspector.UIString("Input Preview"),
+        sortable: false,
+        weight: 45
+    });
 
     /* call to super with the constructed columns. */
     WebInspector.DataGrid.call(this, columns);
@@ -196,6 +202,7 @@ WebInspector.RecordingInputsGrid.prototype = {
     var wasScrolledToLastRow = this.isScrolledToLastRow();
 
 	this.updateWidths();
+    this.applyColumnWeights();
 	this._invalidateVisibleRows();
 
 	for (var key in this.sliders) {
