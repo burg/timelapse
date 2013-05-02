@@ -40,11 +40,7 @@
 #include <wtf/RefPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RandomNumber.h>
-
-#if ENABLE(TIMELAPSE)
 #include <wtf/replay/InputIterator.h>
-#include "RiggedWeakRandom.h"
-#endif
 
 struct OpaqueJSClass;
 struct OpaqueJSClassContextData;
@@ -177,20 +173,13 @@ protected:
     void* m_specialPointers[Special::TableSize]; // Special pointers used by the LLInt and JIT.
 
     Debugger* m_debugger;
-#if ENABLE(TIMELAPSE)
     InputIterator* m_inputIterator;
-#endif
 
     RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
     RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
 
     OwnPtr<JSGlobalObjectRareData> m_rareData;
-
-#if ENABLE(TIMELAPSE)
-    RiggedWeakRandom m_weakRandom;
-#else
     WeakRandom m_weakRandom;
-#endif
 
     bool m_evalEnabled;
     String m_evalDisabledErrorMessage;

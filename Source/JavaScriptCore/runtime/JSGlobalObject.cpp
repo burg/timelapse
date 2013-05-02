@@ -82,10 +82,6 @@
 #include "StringConstructor.h"
 #include "StringPrototype.h"
 
-#if ENABLE(TIMELAPSE)
-#include "Logging.h"
-#endif // ENABLE(TIMELAPSE)
-
 #include "JSGlobalObject.lut.h"
 
 namespace JSC {
@@ -111,16 +107,10 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = { &all
 
 JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
     : Base(globalData, structure, 0)
-#if ENABLE(TIMELAPSE)
     , m_inputIterator(0)
-#endif
     , m_masqueradesAsUndefinedWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
     , m_havingABadTimeWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
-#if ENABLE(TIMELAPSE)
-    , m_weakRandom(RiggedWeakRandom())
-#else
     , m_weakRandom(Options::forceWeakRandomSeed() ? Options::forcedWeakRandomSeed() : static_cast<unsigned>(randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0)))
-#endif
     , m_evalEnabled(true)
     , m_globalObjectMethodTable(globalObjectMethodTable ? globalObjectMethodTable : &s_globalObjectMethodTable)
 {
@@ -554,9 +544,6 @@ ExecState* JSGlobalObject::globalExec()
 void JSGlobalObject::setInputIterator(InputIterator* it)
 {
     m_inputIterator = it;
-    
-    LOG(JSCDeterministicReplay, "%-30s Setting input iterator=%p for global object=%p\n",
-        "[InputIterator]", (void*)it, (void*)this);
 
     //set up determinism elsewhere in JSC
     m_weakRandom.setInputIterator(it);

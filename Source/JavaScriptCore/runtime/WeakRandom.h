@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Brian Burg (burg@cs.washington.edu)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,16 +52,31 @@
 #define WeakRandom_h
 
 #include <limits.h>
+#include "SetRandomSeed.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/replay/InputIterator.h>
 
 namespace JSC {
 
 class WeakRandom {
 public:
     WeakRandom(unsigned seed)
-        : m_low(seed ^ 0x49616E42)
-        , m_high(seed)
+    : m_inputIterator(0)
     {
+        initializeSeed(seed);
+    }
+
+    void setInputIterator(InputIterator* it) {
+        if (it && it->isCapturing())
+            it->storeInput(adoptPtr(new SetRandomSeed(seedUnsafe())));
+        if (it && it->isReplaying()) {
+            SetRandomSeed* action = static_cast<SetRandomSeed*>(it->loadInput(WTF::ScriptMemoizedDataQueue,
+                                                                              ReplayInputTypes::SetRandomSeed));
+            if (action)
+                initializeSeed(action->randomSeed());
+        }
+        
+        m_inputIterator = it;
     }
     
     // Returns the seed provided that you've never called get() or getUint32().
@@ -84,9 +100,16 @@ private:
         m_low += m_high;
         return m_high;
     }
+    
+    void initializeSeed(unsigned seed)
+    {
+        m_low = seed ^ 0x49616E42;
+        m_high = seed;
+    }
 
     unsigned m_low;
     unsigned m_high;
+    InputIterator* m_inputIterator;
 };
 
 } // namespace JSC

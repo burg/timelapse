@@ -859,12 +859,8 @@
 		C2FE18A416BAEC4000AF3061 /* StructureRareData.h in Headers */ = {isa = PBXBuildFile; fileRef = C2FE18A316BAEC4000AF3061 /* StructureRareData.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481087317052FCC00AB4BAA /* GetCurrentTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481086B17052FCC00AB4BAA /* GetCurrentTime.cpp */; };
 		C481087417052FCC00AB4BAA /* GetCurrentTime.h in Headers */ = {isa = PBXBuildFile; fileRef = C481086C17052FCC00AB4BAA /* GetCurrentTime.h */; };
-		C481087517052FCC00AB4BAA /* Logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481086D17052FCC00AB4BAA /* Logging.cpp */; };
-		C481087617052FCC00AB4BAA /* Logging.h in Headers */ = {isa = PBXBuildFile; fileRef = C481086E17052FCC00AB4BAA /* Logging.h */; };
-		C481087717052FCC00AB4BAA /* RiggedWeakRandom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481086F17052FCC00AB4BAA /* RiggedWeakRandom.cpp */; };
-		C481087817052FCC00AB4BAA /* RiggedWeakRandom.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087017052FCC00AB4BAA /* RiggedWeakRandom.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481087917052FCC00AB4BAA /* SetRandomSeed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481087117052FCC00AB4BAA /* SetRandomSeed.cpp */; };
-		C481087A17052FCC00AB4BAA /* SetRandomSeed.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087217052FCC00AB4BAA /* SetRandomSeed.h */; };
+		C481087A17052FCC00AB4BAA /* SetRandomSeed.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087217052FCC00AB4BAA /* SetRandomSeed.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DDF7ABD411F60ED200108E36 /* GCActivityCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = DDF7ABD211F60ED200108E36 /* GCActivityCallback.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E124A8F70E555775003091F1 /* OpaqueJSString.h in Headers */ = {isa = PBXBuildFile; fileRef = E124A8F50E555775003091F1 /* OpaqueJSString.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E124A8F80E555775003091F1 /* OpaqueJSString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E124A8F60E555775003091F1 /* OpaqueJSString.cpp */; };
@@ -1773,10 +1769,6 @@
 		C2FE18A316BAEC4000AF3061 /* StructureRareData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StructureRareData.h; sourceTree = "<group>"; };
 		C481086B17052FCC00AB4BAA /* GetCurrentTime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GetCurrentTime.cpp; path = replay/GetCurrentTime.cpp; sourceTree = "<group>"; };
 		C481086C17052FCC00AB4BAA /* GetCurrentTime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GetCurrentTime.h; path = replay/GetCurrentTime.h; sourceTree = "<group>"; };
-		C481086D17052FCC00AB4BAA /* Logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Logging.cpp; path = replay/Logging.cpp; sourceTree = "<group>"; };
-		C481086E17052FCC00AB4BAA /* Logging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Logging.h; path = replay/Logging.h; sourceTree = "<group>"; };
-		C481086F17052FCC00AB4BAA /* RiggedWeakRandom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RiggedWeakRandom.cpp; path = replay/RiggedWeakRandom.cpp; sourceTree = "<group>"; };
-		C481087017052FCC00AB4BAA /* RiggedWeakRandom.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RiggedWeakRandom.h; path = replay/RiggedWeakRandom.h; sourceTree = "<group>"; };
 		C481087117052FCC00AB4BAA /* SetRandomSeed.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SetRandomSeed.cpp; path = replay/SetRandomSeed.cpp; sourceTree = "<group>"; };
 		C481087217052FCC00AB4BAA /* SetRandomSeed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SetRandomSeed.h; path = replay/SetRandomSeed.h; sourceTree = "<group>"; };
 		D21202280AD4310C00ED79B6 /* DateConversion.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = DateConversion.cpp; sourceTree = "<group>"; };
@@ -2957,10 +2949,6 @@
 			children = (
 				C481086B17052FCC00AB4BAA /* GetCurrentTime.cpp */,
 				C481086C17052FCC00AB4BAA /* GetCurrentTime.h */,
-				C481086D17052FCC00AB4BAA /* Logging.cpp */,
-				C481086E17052FCC00AB4BAA /* Logging.h */,
-				C481086F17052FCC00AB4BAA /* RiggedWeakRandom.cpp */,
-				C481087017052FCC00AB4BAA /* RiggedWeakRandom.h */,
 				C481087117052FCC00AB4BAA /* SetRandomSeed.cpp */,
 				C481087217052FCC00AB4BAA /* SetRandomSeed.h */,
 			);
@@ -3000,7 +2988,6 @@
 				0FB7F39515ED8E4600F167B2 /* ArrayConventions.h in Headers */,
 				0F63945515D07057006A597C /* ArrayProfile.h in Headers */,
 				BC18C3E70E16F5CD00B34460 /* ArrayPrototype.h in Headers */,
-				C481087817052FCC00AB4BAA /* RiggedWeakRandom.h in Headers */,
 				C2DF44301707AC0100A5CA96 /* SuperRegion.h in Headers */,
 				C20B25991706536200C21F4E /* Region.h in Headers */,
 				C283190016FE4B7D00157BFD /* HandleBlock.h in Headers */,
@@ -3452,7 +3439,6 @@
 				0FBE0F7516C1DB0B0082C5E8 /* DFGPredictionInjectionPhase.h in Headers */,
 				0FBE0F7716C1DB120082C5E8 /* DFGUnificationPhase.h in Headers */,
 				C481087417052FCC00AB4BAA /* GetCurrentTime.h in Headers */,
-				C481087617052FCC00AB4BAA /* Logging.h in Headers */,
 				C481087A17052FCC00AB4BAA /* SetRandomSeed.h in Headers */,
 				0FD2C92416D01EE900C7803F /* StructureInlines.h in Headers */,
 				0F2E892C16D028AD009E4FD2 /* UnusedPointer.h in Headers */,
@@ -4109,8 +4095,6 @@
 				0FBE0F7416C1DB090082C5E8 /* DFGPredictionInjectionPhase.cpp in Sources */,
 				0FBE0F7616C1DB0F0082C5E8 /* DFGUnificationPhase.cpp in Sources */,
 				C481087317052FCC00AB4BAA /* GetCurrentTime.cpp in Sources */,
-				C481087517052FCC00AB4BAA /* Logging.cpp in Sources */,
-				C481087717052FCC00AB4BAA /* RiggedWeakRandom.cpp in Sources */,
 				C481087917052FCC00AB4BAA /* SetRandomSeed.cpp in Sources */,
 				0F493AFA16D0CAD30084508B /* SourceProvider.cpp in Sources */,
 				ADE39FFF16DD144B0003CD4A /* PropertyTable.cpp in Sources */,
