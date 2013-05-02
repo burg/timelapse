@@ -22,11 +22,10 @@ platforms, and future work.
 
 ### Binary Distribution
 
-A binary version of Timelapse is created monthly, based on recent
-Timelapse development and upstream changes to WebKit. You can download
-the latest binary from the <a
-href="https://github.com/burg/timelapse/downloads">project downloads
-page</a>.
+A binary version of Timelapse is created irregularly, based on recent
+Timelapse development and upstream changes to WebKit. You can find a link to
+the latest binary on the <a
+href="https://github.com/burg/timelapse/wiki">project wiki</a>.
 
 ## From Source
 
@@ -44,12 +43,13 @@ other operating systems and browsers is planned, but has not been
 actively explored. The stated versions below are what we know will
 work; other versions may work, but are untested.
 
-* OS X 10.7
+* OS X 10.8
+* Safari 6.0.3+
 
 The following are additionally necessary to build WebKit and Timelapse:
 
 * 4 GB of RAM (necessary to link Debug builds without dynamic paging)
-* XCode 3.1.4+ or 4.3+
+* XCode 4.6+
 * git 1.7+ 
 
 ## Building, Running, Debugging
