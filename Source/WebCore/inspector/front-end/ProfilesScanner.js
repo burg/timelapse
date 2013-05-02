@@ -101,7 +101,7 @@ WebInspector.ProfilesScanner.prototype = {
                 WebInspector.inspectorView.panel("profiles");
 
             var panel = WebInspector.panels.profiles;
-            panel.showProfile(profile); // profile.view() will also force serialization, but not change view.
+            panel._showProfile(profile); // profile.view() will also force serialization, but not change view.
             
             if (WebInspector.inspectorView.currentPanel() !== panel) {
                 var toolbarItem = WebInspector.toolbar.getItemForPanelName(panel.name);

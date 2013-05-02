@@ -688,6 +688,7 @@ WebInspector.documentClick = function(event)
 
         const profileMatch = WebInspector.ProfilesPanelDescriptor.ProfileURLRegExp.exec(anchor.href);
         if (profileMatch) {
+            //FIXME: probably broken
             WebInspector.showPanel("profiles").showProfile(profileMatch[1], profileMatch[2]);
             return;
         }

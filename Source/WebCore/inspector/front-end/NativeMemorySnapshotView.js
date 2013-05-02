@@ -533,7 +533,6 @@ WebInspector.NativeSnapshotProfileHeader.prototype = {
 
 /**
  * @constructor
-####### Ancestor
  * @extends {WebInspector.ProfileType}
  * @implements {MemoryAgent.Dispatcher}
  */
@@ -733,115 +732,6 @@ WebInspector.NativeHeapSnapshotView.prototype = {
     __proto__: WebInspector.HeapSnapshotView.prototype
 };
 
-
-
-
-/**
- * @constructor
- * @extends {WebInspector.NativeProfileTypeBase}
- */
-WebInspector.NativeMemoryProfileType = function()
-{
-    WebInspector.NativeProfileTypeBase.call(this, WebInspector.NativeMemoryProfileHeader, WebInspector.NativeMemoryProfileType.TypeId, WebInspector.UIString("Capture Native Memory Distribution"));
-}
-
-WebInspector.NativeMemoryProfileType.TypeId = "NATIVE_MEMORY_DISTRIBUTION";
-
-WebInspector.NativeMemoryProfileType.prototype = {
-    get buttonTooltip()
-    {
-        return WebInspector.UIString("Capture native memory distribution.");
-    },
-
-    get treeItemTitle()
-    {
-        return WebInspector.UIString("MEMORY DISTRIBUTION");
-    },
-
-    get description()
-    {
-        return WebInspector.UIString("Native memory snapshot profiles show memory distribution among browser subsystems");
-    },
-
-    __proto__: WebInspector.NativeProfileTypeBase.prototype
-}
-
-/**
- * @constructor
- * @extends {WebInspector.NativeSnapshotProfileHeader}
- * @param {!WebInspector.ProfileType} type
- * @param {string} title
- * @param {number=} uid
- */
-WebInspector.NativeMemoryProfileHeader = function(type, title, uid)
-{
-    WebInspector.NativeSnapshotProfileHeader.call(this, type, title, uid);
-
-    /**
-     * @type {MemoryAgent.MemoryBlock}
-     */
-    this._memoryBlock = null;
-}
-
-WebInspector.NativeMemoryProfileHeader.prototype = {
-    /**
-     * @override
-     */
-    createSidebarTreeElement: function()
-    {
-        return new WebInspector.ProfileSidebarTreeElement(this, WebInspector.UIString("Snapshot %d"), "heap-snapshot-sidebar-tree-item");
-    },
-
-    /**
-     * @override
-     * @param {WebInspector.ProfilesPanel} profilesPanel
-     */
-    createView: function(profilesPanel)
-    {
-        return new WebInspector.NativeMemorySnapshotView(this);
-    },
-
-    /**
-     * @override
-     */
-    _updateSnapshotStatus: function()
-    {
-        WebInspector.NativeSnapshotProfileHeader.prototype._updateSnapshotStatus.call(this);
-        this.sidebarElement.subtitle = Number.bytesToString(/** @type{number} */ (this._memoryBlock.size));
-    },
-
-    /**
-     * @override
-     * @param {?string} error
-     * @param {?MemoryAgent.MemoryBlock} memoryBlock
-     * @param {Object=} graphMetaInformation
-     */
-    _didReceiveMemorySnapshot: function(error, memoryBlock, graphMetaInformation)
-    {
-        WebInspector.NativeSnapshotProfileHeader.prototype._didReceiveMemorySnapshot.call(this, error, memoryBlock, graphMetaInformation);
-        if (memoryBlock.size && memoryBlock.children) {
-            var knownSize = 0;
-            for (var i = 0; i < memoryBlock.children.length; i++) {
-                var size = memoryBlock.children[i].size;
-                if (size)
-                    knownSize += size;
-            }
-            var otherSize = memoryBlock.size - knownSize;
-
-            if (otherSize) {
-                memoryBlock.children.push({
-                    name: "Other",
-                    size: otherSize
-                });
-            }
-        }
-        this._memoryBlock = memoryBlock;
-    },
-
-    __proto__: WebInspector.NativeSnapshotProfileHeader.prototype
-}
-
-####### Ancestor
 
 /**
  * @constructor

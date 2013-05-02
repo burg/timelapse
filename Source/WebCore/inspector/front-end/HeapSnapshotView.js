@@ -1167,7 +1167,6 @@ WebInspector.HeapSnapshotLoadFromFileDelegate.prototype = {
         }
     }
 }
-####### Ancestor
 
 
 /**

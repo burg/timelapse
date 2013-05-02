@@ -29,14 +29,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-importScript("ProfileHeader.js");
-importScript("ProfileType.js");
-importScript("CPUProfile.js");
-importScript("CSSSelectorProfile.js");
-importScript("HeapSnapshotProfile.js");
-importScript("NativeMemoryProfile.js");
-importScript("NativeSnapshotProfile.js");
-
 /**
  * @constructor
  * @extends {WebInspector.Object}
@@ -552,12 +544,3 @@ WebInspector.HeapProfilerDispatcher.prototype = {
         this._model._reportHeapSnapshotProgress(done, total);
     }
 }
-
-importScript("HeapSnapshot.js");
-importScript("HeapSnapshotLoader.js");
-importScript("HeapSnapshotProxy.js");
-importScript("HeapSnapshotWorkerDispatcher.js");
-importScript("JSHeapSnapshot.js");
-importScript("NativeHeapSnapshot.js");
-importScript("NativeMemoryProfile.js");
-importScript("NativeSnapshotProfile.js");
