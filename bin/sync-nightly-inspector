@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NIGHTLY_SVN_REVISION=149474
+NIGHTLY_SVN_REVISION=149667
 NIGHTLY_DMG_URL="http://builds.nightly.webkit.org/files/trunk/mac/WebKit-SVN-r${NIGHTLY_SVN_REVISION}.dmg"
 
 # resolve links - $0 may be a link to this script
