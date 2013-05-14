@@ -62,7 +62,6 @@
 #endif
 
 using namespace WebCore;
-using namespace std;
 
 #define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 #define MESSAGE_CHECK_URL(url) MESSAGE_CHECK_BASE(checkURLReceivedFromWebProcess(url), connection())
@@ -148,7 +147,7 @@ void WebProcessProxy::disconnect()
 
     m_responsivenessTimer.stop();
 
-    Vector<RefPtr<WebFrameProxy> > frames;
+    Vector<RefPtr<WebFrameProxy>> frames;
     copyValuesToVector(m_frameMap, frames);
 
     for (size_t i = 0, size = frames.size(); i < size; ++i)
@@ -199,6 +198,13 @@ void WebProcessProxy::removeWebPage(uint64_t pageID)
     m_processSuppressiblePages.remove(pageID);
     updateProcessSuppressionState();
 #endif
+
+#if ENABLE(NETWORK_PROCESS)
+    // Terminate the web process immediately if we have enough information to confidently do so.
+    // This only works if we're using a network process. Otherwise we have to wait for the web process to clean up.
+    if (canTerminateChildProcess() && m_context->usesNetworkProcess())
+        requestTermination();
+#endif
 }
 
 Vector<WebPageProxy*> WebProcessProxy::pages() const
@@ -210,7 +216,7 @@ Vector<WebPageProxy*> WebProcessProxy::pages() const
 
 WebBackForwardListItem* WebProcessProxy::webBackForwardItem(uint64_t itemID) const
 {
-    return m_backForwardListItemMap.get(itemID).get();
+    return m_backForwardListItemMap.get(itemID);
 }
 
 void WebProcessProxy::registerNewWebBackForwardListItem(WebBackForwardListItem* item)
@@ -397,7 +403,7 @@ void WebProcessProxy::didClose(CoreIPC::Connection*)
 
     webConnection()->didClose();
 
-    Vector<RefPtr<WebPageProxy> > pages;
+    Vector<RefPtr<WebPageProxy>> pages;
     copyValuesToVector(m_pageMap, pages);
 
     disconnect();
@@ -423,7 +429,7 @@ void WebProcessProxy::didReceiveInvalidMessage(CoreIPC::Connection* connection, 
 
 void WebProcessProxy::didBecomeUnresponsive(ResponsivenessTimer*)
 {
-    Vector<RefPtr<WebPageProxy> > pages;
+    Vector<RefPtr<WebPageProxy>> pages;
     copyValuesToVector(m_pageMap, pages);
     for (size_t i = 0, size = pages.size(); i < size; ++i)
         pages[i]->processDidBecomeUnresponsive();
@@ -431,7 +437,7 @@ void WebProcessProxy::didBecomeUnresponsive(ResponsivenessTimer*)
 
 void WebProcessProxy::interactionOccurredWhileUnresponsive(ResponsivenessTimer*)
 {
-    Vector<RefPtr<WebPageProxy> > pages;
+    Vector<RefPtr<WebPageProxy>> pages;
     copyValuesToVector(m_pageMap, pages);
     for (size_t i = 0, size = pages.size(); i < size; ++i)
         pages[i]->interactionOccurredWhileProcessUnresponsive();
@@ -439,7 +445,7 @@ void WebProcessProxy::interactionOccurredWhileUnresponsive(ResponsivenessTimer*)
 
 void WebProcessProxy::didBecomeResponsive(ResponsivenessTimer*)
 {
-    Vector<RefPtr<WebPageProxy> > pages;
+    Vector<RefPtr<WebPageProxy>> pages;
     copyValuesToVector(m_pageMap, pages);
     for (size_t i = 0, size = pages.size(); i < size; ++i)
         pages[i]->processDidBecomeResponsive();
@@ -463,7 +469,7 @@ WebFrameProxy* WebProcessProxy::webFrame(uint64_t frameID) const
     if (!WebFrameProxyMap::isValidKey(frameID))
         return 0;
 
-    return m_frameMap.get(frameID).get();
+    return m_frameMap.get(frameID);
 }
 
 bool WebProcessProxy::canCreateFrame(uint64_t frameID) const
@@ -488,7 +494,7 @@ void WebProcessProxy::didDestroyFrame(uint64_t frameID)
 
 void WebProcessProxy::disconnectFramesFromPage(WebPageProxy* page)
 {
-    Vector<RefPtr<WebFrameProxy> > frames;
+    Vector<RefPtr<WebFrameProxy>> frames;
     copyValuesToVector(m_frameMap, frames);
     for (size_t i = 0, size = frames.size(); i < size; ++i) {
         if (frames[i]->page() == page)
@@ -499,24 +505,34 @@ void WebProcessProxy::disconnectFramesFromPage(WebPageProxy* page)
 size_t WebProcessProxy::frameCountInPage(WebPageProxy* page) const
 {
     size_t result = 0;
-    for (HashMap<uint64_t, RefPtr<WebFrameProxy> >::const_iterator iter = m_frameMap.begin(); iter != m_frameMap.end(); ++iter) {
+    for (HashMap<uint64_t, RefPtr<WebFrameProxy>>::const_iterator iter = m_frameMap.begin(); iter != m_frameMap.end(); ++iter) {
         if (iter->value->page() == page)
             ++result;
     }
     return result;
 }
 
+bool WebProcessProxy::canTerminateChildProcess()
+{
+    if (!m_pageMap.isEmpty())
+        return false;
+
+    if (m_downloadProxyMap && !m_downloadProxyMap->isEmpty())
+        return false;
+
+    if (!m_context->shouldTerminate(this))
+        return false;
+
+    return true;
+}
+
 void WebProcessProxy::shouldTerminate(bool& shouldTerminate)
 {
-    if (!m_pageMap.isEmpty() || (m_downloadProxyMap && !m_downloadProxyMap->isEmpty()) || !m_context->shouldTerminate(this)) {
-        shouldTerminate = false;
-        return;
+    shouldTerminate = canTerminateChildProcess();
+    if (shouldTerminate) {
+        // We know that the web process is going to terminate so disconnect it from the context.
+        disconnect();
     }
-
-    shouldTerminate = true;
-
-    // We know that the web process is going to terminate so disconnect it from the context.
-    disconnect();
 }
 
 void WebProcessProxy::updateTextCheckerState()
@@ -624,6 +640,16 @@ void WebProcessProxy::pagePreferencesChanged(WebKit::WebPageProxy *page)
 #else
     UNUSED_PARAM(page);
 #endif
+}
+
+void WebProcessProxy::requestTermination()
+{
+    ChildProcessProxy::terminate();
+
+    if (webConnection())
+        webConnection()->didClose();
+
+    disconnect();
 }
 
 } // namespace WebKit

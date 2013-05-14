@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2006, 2007 Apple Inc.
  * Copyright (C) 2009 Google Inc.
- * Copyright (C) 2009, 2010, 2011, 2012 Research In Motion Limited. All rights reserved.
+ * Copyright (C) 2009, 2010, 2011, 2012, 2013 Research In Motion Limited. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@
 #include "HTMLMediaElement.h"
 #include "HostWindow.h"
 #include "InputType.h"
+#include "InputTypeNames.h"
 #include "MediaControlElements.h"
 #include "MediaPlayerPrivateBlackBerry.h"
 #include "Page.h"
@@ -42,6 +43,8 @@
 namespace WebCore {
 
 // Sizes (unit px)
+const float progressMinWidth = 16;
+const float progressTextureUnitWidth = 9.0;
 const float mediaControlsHeight = 44;
 const float mediaBackButtonHeight = 33;
 // Scale exit-fullscreen button size.
@@ -213,7 +216,7 @@ static RefPtr<Image> loadImage(const char* filename)
     return resource;
 }
 
-PassRefPtr<RenderTheme> RenderTheme::themeForPage(Page* page)
+PassRefPtr<RenderTheme> RenderTheme::themeForPage(Page*)
 {
     static RenderTheme* theme = RenderThemeBlackBerry::create().leakRef();
     return theme;
@@ -389,14 +392,13 @@ bool RenderThemeBlackBerry::paintSearchFieldCancelButton(RenderObject* cancelBut
     // Center the button vertically. Round up though, so if it has to be one pixel off-center, it will
     // be one pixel closer to the bottom of the field. This tends to look better with the text.
     LayoutRect cancelButtonRect(cancelButtonObject->offsetFromAncestorContainer(inputRenderBox).width(),
-                                inputContentBox.y() + (inputContentBox.height() - cancelButtonSize + 1) / 2,
-                                cancelButtonSize, cancelButtonSize);
+        inputContentBox.y() + (inputContentBox.height() - cancelButtonSize + 1) / 2, cancelButtonSize, cancelButtonSize);
     IntRect paintingRect = convertToPaintingRect(inputRenderBox, cancelButtonObject, cancelButtonRect, r);
 
     static Image* cancelImage = Image::loadPlatformResource("searchCancel").leakRef();
     static Image* cancelPressedImage = Image::loadPlatformResource("searchCancelPressed").leakRef();
     paintInfo.context->drawImage(isPressed(cancelButtonObject) ? cancelPressedImage : cancelImage,
-                                 cancelButtonObject->style()->colorSpace(), paintingRect);
+        cancelButtonObject->style()->colorSpace(), paintingRect);
     return false;
 }
 
@@ -563,9 +565,9 @@ bool RenderThemeBlackBerry::paintButton(RenderObject* object, const PaintInfo& i
     if (!isEnabled(object)) {
         drawNineSlice(context, rect, ctm.xScale(), inactive.get(), largeSlice);
         drawNineSlice(context, rect, ctm.xScale(), disabled.get(), largeSlice);
-    } else if (isPressed(object)) {
+    } else if (isPressed(object))
         drawNineSlice(context, rect, ctm.xScale(), pressed.get(), largeSlice);
-    } else
+    else
         drawNineSlice(context, rect, ctm.xScale(), inactive.get(), largeSlice);
 
     context->restore();
@@ -728,9 +730,8 @@ bool RenderThemeBlackBerry::paintSliderThumb(RenderObject* object, const PaintIn
         if (isPressed(object) || isHovered(object) || isFocused(object)) {
             drawControl(context, tmpRect, pressed.get());
             drawControl(context, auraRect, aura.get());
-        } else {
+        } else
             drawControl(context, tmpRect, inactive.get());
-        }
     }
 
     context->restore();
@@ -1077,6 +1078,73 @@ double RenderThemeBlackBerry::animationDurationForProgressBar(RenderProgress* re
     return renderProgress->isDeterminate() ? 0.0 : 2.0;
 }
 
+bool RenderThemeBlackBerry::paintProgressTrackRect(const PaintInfo& info, const IntRect& rect, Image* image)
+{
+    ASSERT(info.context);
+    info.context->save();
+    GraphicsContext* context = info.context;
+    drawThreeSliceHorizontal(context, rect, image, mediumSlice);
+    context->restore();
+    return false;
+}
+
+static void drawProgressTexture(GraphicsContext* gc, const FloatRect& rect, int n, Image* image)
+{
+    if (!image)
+        return;
+    float finalTexturePercentage = (int(rect.width()) % int(progressTextureUnitWidth)) / progressTextureUnitWidth;
+    FloatSize dstSlice(progressTextureUnitWidth, rect.height() - 2);
+    FloatRect srcRect(1, 2, image->width() - 2, image->height() - 4);
+    FloatRect dstRect(FloatPoint(rect.location().x() + 1, rect.location().y() + 1), dstSlice);
+
+    for (int i = 0; i < n; i++) {
+        gc->drawImage(image, ColorSpaceDeviceRGB, dstRect, srcRect);
+        dstRect.move(dstSlice.width(), 0);
+    }
+    if (finalTexturePercentage) {
+        srcRect.setWidth(srcRect.width() * finalTexturePercentage * finalTexturePercentage);
+        dstRect.setWidth(dstRect.width() * finalTexturePercentage * finalTexturePercentage);
+        gc->drawImage(image, ColorSpaceDeviceRGB, dstRect, srcRect);
+    }
+}
+
+bool RenderThemeBlackBerry::paintProgressBar(RenderObject* object, const PaintInfo& info, const IntRect& rect)
+{
+    if (!object->isProgress())
+        return true;
+
+    RenderProgress* renderProgress = toRenderProgress(object);
+
+    static Image* progressTrack = Image::loadPlatformResource("core_progressindicator_bg").leakRef();
+    static Image* progressBar = Image::loadPlatformResource("core_progressindicator_progress").leakRef();
+    static Image* progressPattern = Image::loadPlatformResource("core_progressindicator_pattern").leakRef();
+    static Image* progressComplete = Image::loadPlatformResource("core_progressindicator_complete").leakRef();
+
+    paintProgressTrackRect(info, rect, progressTrack);
+
+    IntRect progressRect = rect;
+    progressRect.setX(progressRect.x() + 1);
+    progressRect.setHeight(progressRect.height() - 2);
+    progressRect.setY(progressRect.y() + 1);
+
+    if (renderProgress->isDeterminate())
+        progressRect.setWidth((progressRect.width() - progressMinWidth) * renderProgress->position() + progressMinWidth - 2);
+    else {
+        // Animating
+        progressRect.setWidth(progressRect.width() - 2);
+    }
+
+    if (renderProgress->position() < 1) {
+        paintProgressTrackRect(info, progressRect, progressBar);
+        int loop = floor((progressRect.width() - 2) / progressTextureUnitWidth);
+        progressRect.setWidth(progressRect.width() - 2);
+        drawProgressTexture(info.context, progressRect, loop, progressPattern);
+    } else
+        paintProgressTrackRect(info, progressRect, progressComplete);
+
+    return false;
+}
+
 Color RenderThemeBlackBerry::platformActiveTextSearchHighlightColor() const
 {
     return Color(255, 150, 50); // Orange.
@@ -1089,8 +1157,26 @@ Color RenderThemeBlackBerry::platformInactiveTextSearchHighlightColor() const
 
 bool RenderThemeBlackBerry::supportsDataListUI(const AtomicString& type) const
 {
-    // TODO: support other input types in the future.
-    return type == InputTypeNames::text();
+#if ENABLE(DATALIST_ELEMENT)
+    // We support all non-popup driven types.
+    return type == InputTypeNames::text() || type == InputTypeNames::search() || type == InputTypeNames::url()
+        || type == InputTypeNames::telephone() || type == InputTypeNames::email() || type == InputTypeNames::number()
+        || type == InputTypeNames::range();
+#else
+    return false;
+#endif
 }
+
+#if ENABLE(DATALIST_ELEMENT)
+IntSize RenderThemeBlackBerry::sliderTickSize() const
+{
+    return IntSize(1, 3);
+}
+
+int RenderThemeBlackBerry::sliderTickOffsetFromTrackCenter() const
+{
+    return -9;
+}
+#endif
 
 } // namespace WebCore

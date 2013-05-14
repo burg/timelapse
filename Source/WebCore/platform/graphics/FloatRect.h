@@ -48,10 +48,6 @@ class QRectF;
 QT_END_NAMESPACE
 #endif
 
-#if PLATFORM(WX) && USE(WXGC)
-class wxRect2DDouble;
-#endif
-
 #if PLATFORM(BLACKBERRY)
 namespace BlackBerry {
 namespace Platform {
@@ -60,19 +56,11 @@ class FloatRect;
 }
 #endif
 
-#if USE(SKIA)
-struct SkRect;
-#endif
-
 #if USE(CAIRO)
 typedef struct _cairo_rectangle cairo_rectangle_t;
 #endif
 
 namespace WebCore {
-
-#if PLATFORM(OPENVG)
-class VGRect;
-#endif
 
 class LayoutRect;
 class IntRect;
@@ -209,20 +197,6 @@ public:
     FloatRect(const QRectF&);
     operator QRectF() const;
     FloatRect normalized() const;
-#endif
-
-#if PLATFORM(WX) && USE(WXGC)
-    FloatRect(const wxRect2DDouble&);
-    operator wxRect2DDouble() const;
-#endif
-
-#if USE(SKIA)
-    FloatRect(const SkRect&);
-    operator SkRect() const;
-#endif
-
-#if PLATFORM(OPENVG)
-    operator VGRect() const;
 #endif
 
 #if USE(CAIRO)

@@ -39,12 +39,14 @@
 #include "Document.h"
 #include "DOMWindow.h"
 #include "Event.h"
+#include "EventHandler.h"
 #include "Frame.h"
 #include "Location.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
 #include <wtf/replay/InputIterator.h>
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 

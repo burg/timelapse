@@ -44,6 +44,7 @@
 #include "ResourceLoaderCreated.h"
 #include "ResourceRequest.h"
 #include <wtf/replay/InputIterator.h>
+#include <wtf/text/CString.h>
 
 /* We must always define these symbols even if Timelapse support is
    not compiled, because the embedding API (WebKit or WebKit2) may be

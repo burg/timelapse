@@ -118,12 +118,12 @@ static inline void appendArc(Vector<FloatPoint>& vertices, const FloatPoint& arc
     if (endAngle < 0)
         endAngle += twoPI;
     float angle = (startAngle > endAngle) ? (startAngle - endAngle) : (startAngle + twoPI - endAngle);
-    const float arcSegmentCount = 5; // An odd number so that one arc vertex will be eactly arcRadius from arcCenter.
-    float angle5 =  ((padding) ? -angle : twoPI - angle) / arcSegmentCount;
+    const float arcSegmentCount = 6; // An even number so that one arc vertex will be eactly arcRadius from arcCenter.
+    float arcSegmentAngle =  ((padding) ? -angle : twoPI - angle) / arcSegmentCount;
 
     vertices.append(startArcVertex);
     for (unsigned i = 1; i < arcSegmentCount; ++i) {
-        float angle = startAngle + angle5 * i;
+        float angle = startAngle + arcSegmentAngle * i;
         vertices.append(arcCenter + FloatPoint(cos(angle) * arcRadius, sin(angle) * arcRadius));
     }
     vertices.append(endArcVertex);
@@ -135,9 +135,9 @@ static inline void snapVerticesToLayoutUnitGrid(Vector<FloatPoint>& vertices)
         vertices[i].set(LayoutUnit(vertices[i].x()).toFloat(), LayoutUnit(vertices[i].y()).toFloat());
 }
 
-static inline FloatPolygon *computeShapePaddingBounds(const FloatPolygon& polygon, float padding, WindRule fillRule)
+static inline PassOwnPtr<FloatPolygon> computeShapePaddingBounds(const FloatPolygon& polygon, float padding, WindRule fillRule)
 {
-    Vector<FloatPoint>* paddedVertices = new Vector<FloatPoint>();
+    OwnPtr<Vector<FloatPoint> > paddedVertices = adoptPtr(new Vector<FloatPoint>());
     FloatPoint intersection;
 
     for (unsigned i = 0; i < polygon.numberOfEdges(); ++i) {
@@ -153,12 +153,12 @@ static inline FloatPolygon *computeShapePaddingBounds(const FloatPolygon& polygo
     }
 
     snapVerticesToLayoutUnitGrid(*paddedVertices);
-    return new FloatPolygon(adoptPtr(paddedVertices), fillRule);
+    return adoptPtr(new FloatPolygon(paddedVertices.release(), fillRule));
 }
 
-static inline FloatPolygon *computeShapeMarginBounds(const FloatPolygon& polygon, float margin, WindRule fillRule)
+static inline PassOwnPtr<FloatPolygon> computeShapeMarginBounds(const FloatPolygon& polygon, float margin, WindRule fillRule)
 {
-    Vector<FloatPoint>* marginVertices = new Vector<FloatPoint>();
+    OwnPtr<Vector<FloatPoint> > marginVertices = adoptPtr(new Vector<FloatPoint>());
     FloatPoint intersection;
 
     for (unsigned i = 0; i < polygon.numberOfEdges(); ++i) {
@@ -174,7 +174,7 @@ static inline FloatPolygon *computeShapeMarginBounds(const FloatPolygon& polygon
     }
 
     snapVerticesToLayoutUnitGrid(*marginVertices);
-    return new FloatPolygon(adoptPtr(marginVertices), fillRule);
+    return adoptPtr(new FloatPolygon(marginVertices.release(), fillRule));
 }
 
 const FloatPolygon& ExclusionPolygon::shapePaddingBounds() const
@@ -184,7 +184,7 @@ const FloatPolygon& ExclusionPolygon::shapePaddingBounds() const
         return m_polygon;
 
     if (!m_paddingBounds)
-        m_paddingBounds = adoptPtr(computeShapePaddingBounds(m_polygon, shapePadding(), m_polygon.fillRule()));
+        m_paddingBounds = computeShapePaddingBounds(m_polygon, shapePadding(), m_polygon.fillRule());
 
     return *m_paddingBounds;
 }
@@ -196,7 +196,7 @@ const FloatPolygon& ExclusionPolygon::shapeMarginBounds() const
         return m_polygon;
 
     if (!m_marginBounds)
-        m_marginBounds = adoptPtr(computeShapeMarginBounds(m_polygon, shapeMargin(), m_polygon.fillRule()));
+        m_marginBounds = computeShapeMarginBounds(m_polygon, shapeMargin(), m_polygon.fillRule());
 
     return *m_marginBounds;
 }
@@ -345,14 +345,14 @@ static void computeOverlappingEdgeXProjections(const FloatPolygon& polygon, floa
     sortExclusionIntervals(result);
 }
 
-void ExclusionPolygon::getExcludedIntervals(float logicalTop, float logicalHeight, SegmentList& result) const
+void ExclusionPolygon::getExcludedIntervals(LayoutUnit logicalTop, LayoutUnit logicalHeight, SegmentList& result) const
 {
     const FloatPolygon& polygon = shapeMarginBounds();
     if (polygon.isEmpty())
         return;
 
     float y1 = logicalTop;
-    float y2 = y1 + logicalHeight;
+    float y2 = logicalTop + logicalHeight;
 
     Vector<ExclusionInterval> y1XIntervals, y2XIntervals;
     computeXIntersections(polygon, y1, true, y1XIntervals);
@@ -373,14 +373,14 @@ void ExclusionPolygon::getExcludedIntervals(float logicalTop, float logicalHeigh
     }
 }
 
-void ExclusionPolygon::getIncludedIntervals(float logicalTop, float logicalHeight, SegmentList& result) const
+void ExclusionPolygon::getIncludedIntervals(LayoutUnit logicalTop, LayoutUnit logicalHeight, SegmentList& result) const
 {
     const FloatPolygon& polygon = shapePaddingBounds();
     if (polygon.isEmpty())
         return;
 
     float y1 = logicalTop;
-    float y2 = y1 + logicalHeight;
+    float y2 = logicalTop + logicalHeight;
 
     Vector<ExclusionInterval> y1XIntervals, y2XIntervals;
     computeXIntersections(polygon, y1, true, y1XIntervals);
@@ -425,24 +425,28 @@ static inline bool aboveOrToTheLeft(const FloatRect& r1, const FloatRect& r2)
     return false;
 }
 
-bool ExclusionPolygon::firstIncludedIntervalLogicalTop(float minLogicalIntervalTop, const FloatSize& minLogicalIntervalSize, float& result) const
+bool ExclusionPolygon::firstIncludedIntervalLogicalTop(LayoutUnit minLogicalIntervalTop, const LayoutSize& minLogicalIntervalSize, LayoutUnit& result) const
 {
+    float minIntervalTop = minLogicalIntervalTop;
+    float minIntervalHeight = minLogicalIntervalSize.height();
+    float minIntervalWidth = minLogicalIntervalSize.width();
+
     const FloatPolygon& polygon = shapePaddingBounds();
     const FloatRect boundingBox = polygon.boundingBox();
-    if (minLogicalIntervalSize.width() > boundingBox.width())
+    if (minIntervalWidth > boundingBox.width())
         return false;
 
-    float minY = std::max(boundingBox.y(), minLogicalIntervalTop);
-    float maxY = minY + minLogicalIntervalSize.height();
+    float minY = std::max(boundingBox.y(), minIntervalTop);
+    float maxY = minY + minIntervalHeight;
 
     if (maxY > boundingBox.maxY())
         return false;
 
     Vector<const FloatPolygonEdge*> edges;
-    polygon.overlappingEdges(minLogicalIntervalTop, boundingBox.maxY(), edges);
+    polygon.overlappingEdges(minIntervalTop, boundingBox.maxY(), edges);
 
-    float dx = minLogicalIntervalSize.width() / 2;
-    float dy = minLogicalIntervalSize.height() / 2;
+    float dx = minIntervalWidth / 2;
+    float dy = minIntervalHeight / 2;
     Vector<OffsetPolygonEdge> offsetEdges;
 
     for (unsigned i = 0; i < edges.size(); ++i) {
@@ -476,7 +480,7 @@ bool ExclusionPolygon::firstIncludedIntervalLogicalTop(float minLogicalIntervalT
                 offsetEdges.append(offsetEdgeBuffer[j]);
     }
 
-    offsetEdges.append(OffsetPolygonEdge(polygon, minLogicalIntervalTop, FloatSize(0, dy)));
+    offsetEdges.append(OffsetPolygonEdge(polygon, minIntervalTop, FloatSize(0, dy)));
 
     FloatPoint offsetEdgesIntersection;
     FloatRect firstFitRect;
@@ -487,7 +491,9 @@ bool ExclusionPolygon::firstIncludedIntervalLogicalTop(float minLogicalIntervalT
             if (offsetEdges[i].intersection(offsetEdges[j], offsetEdgesIntersection)) {
                 FloatPoint potentialFirstFitLocation(offsetEdgesIntersection.x() - dx, offsetEdgesIntersection.y() - dy);
                 FloatRect potentialFirstFitRect(potentialFirstFitLocation, minLogicalIntervalSize);
-                if ((potentialFirstFitLocation.y() >= minLogicalIntervalTop)
+                if ((offsetEdges[i].basis() == OffsetPolygonEdge::LineTop
+                    || offsetEdges[j].basis() == OffsetPolygonEdge::LineTop
+                    || potentialFirstFitLocation.y() >= minIntervalTop)
                     && (!firstFitFound || aboveOrToTheLeft(potentialFirstFitRect, firstFitRect))
                     && polygon.contains(offsetEdgesIntersection)
                     && firstFitRectInPolygon(polygon, potentialFirstFitRect, offsetEdges[i].edgeIndex(), offsetEdges[j].edgeIndex())) {
@@ -499,7 +505,7 @@ bool ExclusionPolygon::firstIncludedIntervalLogicalTop(float minLogicalIntervalT
     }
 
     if (firstFitFound)
-        result = firstFitRect.y();
+        result = ceiledLayoutUnit(firstFitRect.y());
     return firstFitFound;
 }
 

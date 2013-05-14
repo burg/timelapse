@@ -38,6 +38,7 @@
 #include "AsyncEventProxy.h"
 #include "ReplayController.h"
 #include "Document.h"
+#include "DOMWindow.h"
 #include "Event.h"
 #include "DispatchEventBase.h"
 #include "Frame.h"

@@ -76,7 +76,7 @@ static const char* gPlaybinName = "playbin2";
 static const gint64 gPercentMax = 100;
 #endif
 
-GST_DEBUG_CATEGORY_STATIC(webkit_media_player_debug);
+GST_DEBUG_CATEGORY_EXTERN(webkit_media_player_debug);
 #define GST_CAT_DEFAULT webkit_media_player_debug
 
 using namespace std;
@@ -207,17 +207,17 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
     , m_fillTimer(this, &MediaPlayerPrivateGStreamer::fillTimerFired)
     , m_maxTimeLoaded(0)
     , m_bufferingPercentage(0)
-    , m_preload(MediaPlayer::Auto)
+    , m_preload(player->preload())
     , m_delayingLoad(false)
     , m_mediaDurationKnown(true)
     , m_maxTimeLoadedAtLastDidLoadingProgress(0)
+    , m_volumeAndMuteInitialized(false)
     , m_hasVideo(false)
     , m_hasAudio(false)
     , m_audioTimerHandler(0)
     , m_videoTimerHandler(0)
     , m_webkitAudioSink(0)
     , m_totalBytes(-1)
-    , m_originalPreloadWasAutoAndWasOverridden(false)
     , m_preservesPitch(false)
     , m_requestedState(GST_STATE_VOID_PENDING)
     , m_missingPlugins(false)
@@ -299,10 +299,6 @@ void MediaPlayerPrivateGStreamer::load(const String& url)
     m_player->readyStateChanged();
     m_volumeAndMuteInitialized = false;
 
-    // GStreamer needs to have the pipeline set to a paused state to
-    // start providing anything useful.
-    gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
-
     if (!m_delayingLoad)
         commitLoad();
 }
@@ -318,6 +314,11 @@ void MediaPlayerPrivateGStreamer::commitLoad()
 {
     ASSERT(!m_delayingLoad);
     LOG_MEDIA_MESSAGE("Committing load.");
+
+    // GStreamer needs to have the pipeline set to a paused state to
+    // start providing anything useful.
+    gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
+
     updateStates();
 }
 
@@ -1389,15 +1390,6 @@ void MediaPlayerPrivateGStreamer::durationChanged()
     // HTMLMediaElement.
     if (previousDuration && m_mediaDuration != previousDuration)
         m_player->durationChanged();
-
-    if (m_preload == MediaPlayer::None && m_originalPreloadWasAutoAndWasOverridden) {
-        m_totalBytes = -1;
-        if (totalBytes() && !isLiveStream()) {
-            setPreload(MediaPlayer::Auto);
-            gst_element_set_state(m_playBin.get(), GST_STATE_NULL);
-            gst_element_set_state(m_playBin.get(), GST_STATE_PAUSED);
-        }
-    }
 }
 
 void MediaPlayerPrivateGStreamer::loadingFailed(MediaPlayer::NetworkState error)
@@ -1444,6 +1436,7 @@ static HashSet<String> mimeTypeCache()
         "audio/opus",
         "audio/qcelp",
         "audio/riff-midi",
+        "audio/speex",
         "audio/wav",
         "audio/webm",
         "audio/x-ac3",
@@ -1552,7 +1545,8 @@ void MediaPlayerPrivateGStreamer::setDownloadBuffering()
 
 void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
 {
-    m_originalPreloadWasAutoAndWasOverridden = m_preload != preload && m_preload == MediaPlayer::Auto;
+    if (preload == MediaPlayer::Auto && isLiveStream())
+        return;
 
     m_preload = preload;
 

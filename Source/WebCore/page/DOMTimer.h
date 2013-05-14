@@ -54,7 +54,6 @@ namespace WebCore {
         void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
         virtual void fired();
 
-        virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
     protected:
         DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>);
         // add to list of active context objects, start initial timer.

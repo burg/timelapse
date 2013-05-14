@@ -86,9 +86,10 @@ SOURCES += \
     heap/CopyVisitor.cpp \
     heap/ConservativeRoots.cpp \
     heap/DFGCodeBlocks.cpp \
-    heap/WeakSet.cpp \
-    heap/WeakHandleOwner.cpp \
+    heap/Weak.cpp \
     heap/WeakBlock.cpp \
+    heap/WeakHandleOwner.cpp \
+    heap/WeakSet.cpp \
     heap/HandleSet.cpp \
     heap/HandleStack.cpp \
     heap/BlockAllocator.cpp \
@@ -150,7 +151,7 @@ SOURCES += \
     dfg/DFGSpeculativeJIT.cpp \
     dfg/DFGSpeculativeJIT32_64.cpp \
     dfg/DFGSpeculativeJIT64.cpp \
-    dfg/DFGStructureCheckHoistingPhase.cpp \
+    dfg/DFGTypeCheckHoistingPhase.cpp \
     dfg/DFGThunks.cpp \
     dfg/DFGUnificationPhase.cpp \
     dfg/DFGUseKind.cpp \
@@ -265,7 +266,7 @@ SOURCES += \
     runtime/JSDateMath.cpp \
     runtime/JSFunction.cpp \
     runtime/JSBoundFunction.cpp \
-    runtime/JSGlobalData.cpp \
+    runtime/VM.cpp \
     runtime/JSGlobalObject.cpp \
     runtime/JSGlobalObjectFunctions.cpp \
     runtime/JSProxy.cpp \
@@ -323,6 +324,8 @@ SOURCES += \
     runtime/Structure.cpp \
     runtime/StructureRareData.cpp \
     runtime/SymbolTable.cpp \
+    runtime/Watchdog.cpp \
+    runtime/WatchdogNone.cpp \
     tools/CodeProfile.cpp \
     tools/CodeProfiling.cpp \
     yarr/YarrJIT.cpp \

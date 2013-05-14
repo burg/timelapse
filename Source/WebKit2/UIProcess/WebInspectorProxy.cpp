@@ -67,10 +67,6 @@ static PassRefPtr<WebPageGroup> createInspectorPageGroup()
     pageGroup->preferences()->setLogsPageMessagesToSystemConsoleEnabled(true);
 #endif
 
-#if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-    pageGroup->preferences()->setAcceleratedDrawingEnabled(true);
-#endif
-
     pageGroup->preferences()->setApplicationChromeModeEnabled(true);
 
     return pageGroup.release();
@@ -427,8 +423,6 @@ void WebInspectorProxy::createInspectorPage(uint64_t& inspectorPageID, WebPageCr
 
 void WebInspectorProxy::open()
 {
-    ASSERT(m_createdInspectorPage);
-
     m_isVisible = true;
 
     platformOpen();
@@ -478,6 +472,16 @@ void WebInspectorProxy::attachAvailabilityChanged(bool available)
 void WebInspectorProxy::inspectedURLChanged(const String& urlString)
 {
     platformInspectedURLChanged(urlString);
+}
+
+void WebInspectorProxy::save(const String& filename, const String& content, bool forceSaveAs)
+{
+    platformSave(filename, content, forceSaveAs);
+}
+
+void WebInspectorProxy::append(const String& filename, const String& content)
+{
+    platformAppend(filename, content);
 }
 
 bool WebInspectorProxy::canAttach()

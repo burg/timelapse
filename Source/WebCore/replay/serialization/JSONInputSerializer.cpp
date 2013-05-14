@@ -112,6 +112,10 @@ JSONInputSerializer::JSONInputSerializer(PassRefPtr<ReplayRecording> recording)
     , m_currentObject(0)
     , m_currentArray(0) {}
 
+JSONInputSerializer::~JSONInputSerializer()
+{
+}
+
 // insert key-value pair into current object
 void JSONInputSerializer::putString(const String& key, const String& value)
 {

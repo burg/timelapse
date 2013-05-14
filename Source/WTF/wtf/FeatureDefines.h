@@ -231,23 +231,6 @@
 
 #endif /* PLATFORM(WIN_CAIRO) */
 
-/* --------- WX port (Mac OS and Windows) --------- */
-#if PLATFORM(WX)
-
-#if OS(DARWIN)
-#if !defined(ENABLE_WEB_ARCHIVE)
-#define ENABLE_WEB_ARCHIVE 1
-#endif
-#endif
-
-#if OS(UNIX)
-#if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
-#define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 1
-#endif
-#endif
-
-#endif /* PLATFORM(WX) */
-
 /* --------- EFL port (Unix) --------- */
 #if PLATFORM(EFL)
 
@@ -679,10 +662,6 @@
 #endif
 #endif
 
-#if !defined(ENABLE_PARSED_STYLE_SHEET_CACHING)
-#define ENABLE_PARSED_STYLE_SHEET_CACHING 1
-#endif
-
 #if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
 #define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 0
 #endif
@@ -713,10 +692,6 @@
 
 #if !defined(ENABLE_REQUEST_ANIMATION_FRAME)
 #define ENABLE_REQUEST_ANIMATION_FRAME 0
-#endif
-
-#if !defined(ENABLE_REQUEST_AUTOCOMPLETE)
-#define ENABLE_REQUEST_AUTOCOMPLETE 0
 #endif
 
 #if !defined(ENABLE_RUBBER_BANDING)
@@ -845,6 +820,10 @@
 #define ENABLE_WEB_TIMING 0
 #endif
 
+#if !defined(ENABLE_WEB_TIMING_MINIMAL)
+#define ENABLE_WEB_TIMING_MINIMAL 0
+#endif
+
 #if !defined(ENABLE_WORKERS)
 #define ENABLE_WORKERS 0
 #endif
@@ -869,6 +848,10 @@
 
 #if ENABLE(VIDEO_TRACK) && !ENABLE(VIDEO)
 #error "ENABLE(VIDEO_TRACK) requires ENABLE(VIDEO)"
+#endif
+
+#if ENABLE(WEB_TIMING) && ENABLE(WEB_TIMING_MINIMAL)
+#error "ENABLE(WEB_TIMING) and ENABLE(WEB_TIMING_MINIMAL) are mutually exclusive."
 #endif
 
 #endif /* WTF_FeatureDefines_h */

@@ -43,10 +43,6 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/AtomicStringHash.h>
 
-#if USE(SOUP)
-#include "WebSoupRequestManager.h"
-#endif
-
 #if PLATFORM(QT)
 QT_BEGIN_NAMESPACE
 class QNetworkAccessManager;
@@ -57,17 +53,10 @@ QT_END_NAMESPACE
 #include <dispatch/dispatch.h>
 #endif
 
-#if ENABLE(BATTERY_STATUS)
-#include "WebBatteryManager.h"
-#endif
-
-#if ENABLE(NETWORK_INFO)
-#include "WebNetworkInfoManager.h"
-#endif
-
 namespace WebCore {
-    class ResourceRequest;
-    struct PluginInfo;
+class PageGroup;
+class ResourceRequest;
+struct PluginInfo;
 }
 
 namespace WebKit {
@@ -128,7 +117,7 @@ public:
 
     bool shouldPlugInAutoStartFromOrigin(const WebPage*, const String& pageOrigin, const String& pluginOrigin, const String& mimeType);
     void plugInDidStartFromOrigin(const String& pageOrigin, const String& pluginOrigin, const String& mimeType);
-    void plugInDidReceiveUserInteraction(unsigned plugInOriginHash);
+    void plugInDidReceiveUserInteraction(const String& pageOrigin, const String& pluginOrigin, const String& mimeType);
 
     bool fullKeyboardAccessEnabled() const { return m_fullKeyboardAccessEnabled; }
 
@@ -136,6 +125,7 @@ public:
     void addWebFrame(uint64_t, WebFrame*);
     void removeWebFrame(uint64_t);
 
+    WebPageGroupProxy* webPageGroup(WebCore::PageGroup*);
     WebPageGroupProxy* webPageGroup(uint64_t pageGroupID);
     WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
 
@@ -149,15 +139,6 @@ public:
 
 #if PLATFORM(QT)
     QNetworkAccessManager* networkAccessManager() { return m_networkAccessManager; }
-#endif
-#if ENABLE(BATTERY_STATUS)
-    WebBatteryManager& batteryManager() { return m_batteryManager; }
-#endif
-#if ENABLE(NETWORK_INFO)
-    WebNetworkInfoManager& networkInfoManager() { return m_networkInfoManager; }
-#endif
-#if USE(SOUP)
-    WebSoupRequestManager& soupRequestManager() { return m_soupRequestManager; }
 #endif
 
     void clearResourceCaches(ResourceCachesToClear = AllResourceCaches);
@@ -182,8 +163,10 @@ public:
     
     void pageDidEnterWindow(WebPage*);
     void pageWillLeaveWindow(WebPage*);
-    
+
     void nonVisibleProcessCleanupTimerFired(WebCore::Timer<WebProcess>*);
+
+    void updateActivePages();
 
 private:
     WebProcess();
@@ -273,8 +256,8 @@ private:
 
     RefPtr<WebConnectionToUIProcess> m_webConnection;
 
-    HashMap<uint64_t, RefPtr<WebPage> > m_pageMap;
-    HashMap<uint64_t, RefPtr<WebPageGroupProxy> > m_pageGroupMap;
+    HashMap<uint64_t, RefPtr<WebPage>> m_pageMap;
+    HashMap<uint64_t, RefPtr<WebPageGroupProxy>> m_pageGroupMap;
     RefPtr<InjectedBundle> m_injectedBundle;
 
     RefPtr<EventDispatcher> m_eventDispatcher;
@@ -308,17 +291,11 @@ private:
 
     HashMap<uint64_t, WebFrame*> m_frameMap;
 
-    typedef HashMap<const char*, OwnPtr<WebProcessSupplement>, PtrHash<const char*> > WebProcessSupplementMap;
+    typedef HashMap<const char*, OwnPtr<WebProcessSupplement>, PtrHash<const char*>> WebProcessSupplementMap;
     WebProcessSupplementMap m_supplements;
 
     TextCheckerState m_textCheckerState;
 
-#if ENABLE(BATTERY_STATUS)
-    WebBatteryManager m_batteryManager;
-#endif
-#if ENABLE(NETWORK_INFO)
-    WebNetworkInfoManager m_networkInfoManager;
-#endif
     WebIconDatabaseProxy* m_iconDatabaseProxy;
 
 #if ENABLE(NETWORK_PROCESS)
@@ -332,10 +309,6 @@ private:
     RefPtr<PluginProcessConnectionManager> m_pluginProcessConnectionManager;
 #endif
 
-#if USE(SOUP)
-    WebSoupRequestManager m_soupRequestManager;
-#endif
-    
     int m_inWindowPageCount;
     WebCore::Timer<WebProcess> m_nonVisibleProcessCleanupTimer;
 };

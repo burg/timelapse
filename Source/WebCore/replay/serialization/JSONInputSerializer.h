@@ -49,7 +49,7 @@ namespace WebCore {
         WTF_MAKE_NONCOPYABLE(JSONInputSerializer);
     public:       
         JSONInputSerializer(PassRefPtr<ReplayRecording>);
-        virtual ~JSONInputSerializer() {};
+        virtual ~JSONInputSerializer();
 
         // insert key-value pair into current object
         virtual void putString(const String&, const String&) OVERRIDE;

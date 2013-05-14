@@ -36,6 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "DispatchEventBase.h"
+#include "Document.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "Page.h"

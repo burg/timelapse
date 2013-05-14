@@ -80,7 +80,6 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "SpatialNavigation.h"
-#include "StaticHashSetNodeList.h"
 #include "StyleCachedImage.h"
 #include "TextEvent.h"
 #include "TextIterator.h"
@@ -286,7 +285,6 @@ static inline bool scrollNode(float delta, ScrollGranularity granularity, Scroll
     return enclosingBox->scroll(delta < 0 ? negativeDirection : positiveDirection, granularity, absDelta, stopNode);
 }
 
-#if ENABLE(GESTURE_EVENTS)
 static inline bool shouldGesturesTriggerActive()
 {
     // If the platform we're on supports GestureTapDown and GestureTapCancel then we'll
@@ -294,7 +292,6 @@ static inline bool shouldGesturesTriggerActive()
     // know in advance what event types are supported.
     return false;
 }
-#endif
 
 #if !PLATFORM(MAC)
 
@@ -355,6 +352,7 @@ EventHandler::EventHandler(Frame* frame)
     , m_baseEventType(PlatformEvent::NoType)
     , m_didStartDrag(false)
     , m_didLongPressInvokeContextMenu(false)
+    , m_isHandlingWheelEvent(false)
 #if ENABLE(CURSOR_VISIBILITY)
     , m_autoHideCursorTimer(this, &EventHandler::autoHideCursorTimerFired)
 #endif
@@ -612,7 +610,7 @@ bool EventHandler::handleMousePressEventSingleClick(const MouseEventWithHitTestR
                 pos = selectionInUserSelectAll.end();
         }
 
-        if (!m_frame->editor()->behavior().shouldConsiderSelectionAsDirectional()) {
+        if (!m_frame->editor()->behavior().shouldConsiderSelectionAsDirectional() && pos.isNotNull()) {
             // See <rdar://problem/3668157> REGRESSION (Mail): shift-click deselects when selection
             // was created right-to-left
             Position start = newSelection.start();
@@ -1777,7 +1775,7 @@ bool EventHandler::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, Hi
     if (m_lastScrollbarUnderMouse && m_mousePressed)
         return m_lastScrollbarUnderMouse->mouseMoved(mouseEvent);
 
-    HitTestRequest::HitTestRequestType hitType = HitTestRequest::Move | HitTestRequest::DisallowShadowContent;
+    HitTestRequest::HitTestRequestType hitType = HitTestRequest::Move | HitTestRequest::DisallowShadowContent | HitTestRequest::AllowFrameScrollbars;
     if (m_mousePressed)
         hitType |= HitTestRequest::Active;
     else if (onlyUpdateScrollbars) {
@@ -1798,18 +1796,13 @@ bool EventHandler::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, Hi
     if (hoveredNode)
         *hoveredNode = mev.hitTestResult();
 
-    Scrollbar* scrollbar = 0;
-
     if (m_resizeLayer && m_resizeLayer->inResizeMode())
         m_resizeLayer->resize(mouseEvent, m_offsetFromResizeCorner);
     else {
-        if (FrameView* view = m_frame->view())
-            scrollbar = view->scrollbarAtPoint(mouseEvent.position());
-
-        if (!scrollbar)
-            scrollbar = mev.scrollbar();
-
+        Scrollbar* scrollbar = mev.scrollbar();
         updateLastScrollbarUnderMouse(scrollbar, !m_mousePressed);
+        if (!m_mousePressed && scrollbar)
+            scrollbar->mouseMoved(mouseEvent); // Handle hover effects on platforms that support visual feedback on scrollbar hovering.
         if (onlyUpdateScrollbars)
             return true;
     }
@@ -1830,8 +1823,6 @@ bool EventHandler::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, Hi
         if (newSubframe->view())
             swallowEvent |= passMouseMoveEventToSubframe(mev, newSubframe.get(), hoveredNode);
     } else {
-        if (scrollbar && !m_mousePressed)
-            scrollbar->mouseMoved(mouseEvent); // Handle hover effects on platforms that support visual feedback on scrollbar hovering.
         if (FrameView* view = m_frame->view()) {
             OptionalCursor optionalCursor = selectCursor(mev.hitTestResult(), mouseEvent.shiftKey());
             if (optionalCursor.isCursorChange()) {
@@ -2416,7 +2407,8 @@ bool EventHandler::handleWheelEvent(const PlatformWheelEvent& e)
     FrameView* view = m_frame->view();
     if (!view)
         return false;
-    
+
+    m_isHandlingWheelEvent = true;
     setFrameWasScrolledByUser();
     LayoutPoint vPoint = view->windowToContents(e.position());
 
@@ -2462,21 +2454,24 @@ bool EventHandler::handleWheelEvent(const PlatformWheelEvent& e)
         
         if (isOverWidget && target && target->isWidget()) {
             Widget* widget = toRenderWidget(target)->widget();
-            if (widget && passWheelEventToWidget(e, widget))
+            if (widget && passWheelEventToWidget(e, widget)) {
+                m_isHandlingWheelEvent = false;
                 return true;
+            }
         }
 
-        if (node && !node->dispatchWheelEvent(event))
+        if (node && !node->dispatchWheelEvent(event)) {
+            m_isHandlingWheelEvent = false;
             return true;
+        }
     }
 
 
     // We do another check on the frame view because the event handler can run JS which results in the frame getting destroyed.
     view = m_frame->view();
-    if (!view)
-        return false;
-    
-    return view->wheelEvent(event);
+    bool didHandleEvent = view ? view->wheelEvent(event) : false;
+    m_isHandlingWheelEvent = false;
+    return didHandleEvent;
 }
 
 void EventHandler::defaultWheelEventHandler(Node* startNode, WheelEvent* wheelEvent)
@@ -2554,10 +2549,6 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
         IntPoint hitTestPoint = m_frame->view()->windowToContents(adjustedPoint);
         HitTestResult result = hitTestResultAtPoint(hitTestPoint, hitType | HitTestRequest::AllowFrameScrollbars);
         eventTarget = result.targetNode();
-        if (!scrollbar) {
-            FrameView* view = m_frame->view();
-            scrollbar = view ? view->scrollbarAtPoint(gestureEvent.position()) : 0;
-        }
         if (!scrollbar)
             scrollbar = result.scrollbar();
     }
@@ -2848,13 +2839,12 @@ bool EventHandler::bestClickableNodeForTouchPoint(const IntPoint& touchCenter, c
     HitTestResult result = hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active, touchRadius);
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
-    RefPtr<StaticHashSetNodeList> nodeList = StaticHashSetNodeList::adopt(result.rectBasedTestResult());
 
     // FIXME: Should be able to handle targetNode being a shadow DOM node to avoid performing uncessary hit tests
     // in the case where further processing on the node is required. Returning the shadow ancestor prevents a
     // regression in touchadjustment/html-label.html. Some refinement is required to testing/internals to
     // handle targetNode being a shadow DOM node. 
-    bool success = findBestClickableCandidate(targetNode, targetPoint, touchCenter, touchRect, *nodeList.get());
+    bool success = findBestClickableCandidate(targetNode, targetPoint, touchCenter, touchRect, result.rectBasedTestResult());
     if (success && targetNode)
         targetNode = targetNode->deprecatedShadowAncestorNode();
     return success;
@@ -2866,8 +2856,7 @@ bool EventHandler::bestContextMenuNodeForTouchPoint(const IntPoint& touchCenter,
     HitTestResult result = hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active, touchRadius);
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
-    RefPtr<StaticHashSetNodeList> nodeList = StaticHashSetNodeList::adopt(result.rectBasedTestResult());
-    return findBestContextMenuCandidate(targetNode, targetPoint, touchCenter, touchRect, *nodeList.get());
+    return findBestContextMenuCandidate(targetNode, targetPoint, touchCenter, touchRect, result.rectBasedTestResult());
 }
 
 bool EventHandler::bestZoomableAreaForTouchPoint(const IntPoint& touchCenter, const IntSize& touchRadius, IntRect& targetArea, Node*& targetNode)
@@ -2876,8 +2865,7 @@ bool EventHandler::bestZoomableAreaForTouchPoint(const IntPoint& touchCenter, co
     HitTestResult result = hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowShadowContent, touchRadius);
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
-    RefPtr<StaticHashSetNodeList> nodeList = StaticHashSetNodeList::adopt(result.rectBasedTestResult());
-    return findBestZoomableArea(targetNode, targetArea, touchCenter, touchRect, *nodeList.get());
+    return findBestZoomableArea(targetNode, targetArea, touchCenter, touchRect, result.rectBasedTestResult());
 }
 
 bool EventHandler::adjustGesturePosition(const PlatformGestureEvent& gestureEvent, IntPoint& adjustedPoint)
@@ -3116,6 +3104,16 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
 void EventHandler::setResizingFrameSet(HTMLFrameSetElement* frameSet)
 {
     m_frameSetBeingResized = frameSet;
+}
+
+void EventHandler::sendResizeEvent(bool dispatchSynchronously)
+{
+    RefPtr<Event> resizeEvent = Event::create(eventNames().resizeEvent, false, false);
+    if (dispatchSynchronously)
+        m_frame->document()->dispatchWindowEvent(resizeEvent.release(), m_frame->document()->domWindow());
+    else
+        m_frame->document()->enqueueWindowEvent(resizeEvent.release());
+
 }
 
 void EventHandler::resizeLayerDestroyed()
@@ -3612,7 +3610,7 @@ bool EventHandler::handleDrag(const MouseEventWithHitTestResults& event, CheckDr
             m_mouseDownMayStartDrag = false;
             return true;
         }
-        if (dragState().shouldDispatchEvents()) {
+        if (dragState().m_dragSrc && dragState().shouldDispatchEvents()) {
             // Drag was canned at the last minute - we owe m_dragSrc a DRAGEND event
             dispatchDragSrcEvent(eventNames().dragendEvent, event.event());
             m_mouseDownMayStartDrag = false;
@@ -3693,13 +3691,6 @@ void EventHandler::defaultTextInputEventHandler(TextEvent* event)
         event->setDefaultHandled();
 }
 
-#if PLATFORM(QT)
-// Qt handles the space event in platform-specific WebKit code.
-// Eventually it would be good to eliminate that and use the code here instead.
-void EventHandler::defaultSpaceEventHandler(KeyboardEvent*)
-{
-}
-#else
 
 void EventHandler::defaultSpaceEventHandler(KeyboardEvent* event)
 {
@@ -3721,8 +3712,6 @@ void EventHandler::defaultSpaceEventHandler(KeyboardEvent* event)
     if (view->logicalScroll(direction, ScrollByPage))
         event->setDefaultHandled();
 }
-
-#endif
 
 void EventHandler::defaultBackspaceEventHandler(KeyboardEvent* event)
 {
@@ -3809,11 +3798,6 @@ void EventHandler::capsLockStateMayHaveChanged()
                 toRenderTextControlSingleLine(r)->capsLockStateMayHaveChanged();
         }
     }
-}
-
-void EventHandler::sendResizeEvent()
-{
-    m_frame->document()->enqueueWindowEvent(Event::create(eventNames().resizeEvent, false, false));
 }
 
 void EventHandler::sendScrollEvent()
@@ -3959,10 +3943,8 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
             break;
         }
 
-#if ENABLE(GESTURE_EVENTS)
         if (shouldGesturesTriggerActive())
             hitType |= HitTestRequest::ReadOnly;
-#endif
 
         // Increment the platform touch id by 1 to avoid storing a key of 0 in the hashmap.
         unsigned touchPointTargetKey = point.id() + 1;
@@ -4002,14 +3984,12 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
             m_originatingTouchPointTargets.set(touchPointTargetKey, node);
             touchTarget = node;
         } else if (pointState == PlatformTouchPoint::TouchReleased || pointState == PlatformTouchPoint::TouchCancelled) {
-            // We only perform a hittest on release or cancel to unset :active or :hover state.
-            if (touchPointTargetKey == m_originatingTouchPointTargetKey) {
-                hitTestResultAtPoint(pagePoint, hitType);
+            // No need to perform a hit-test since we only need to unset :hover and :active states.
+            if (!shouldGesturesTriggerActive() && allTouchReleased)
+                m_frame->document()->updateHoverActiveState(hitType, 0);
+            if (touchPointTargetKey == m_originatingTouchPointTargetKey)
                 m_originatingTouchPointTargetKey = 0;
-            } else if (m_originatingTouchPointDocument.get() && m_originatingTouchPointDocument->frame()) {
-                LayoutPoint pagePointInOriginatingDocument = documentPointForWindowPoint(m_originatingTouchPointDocument->frame(), point.pos());
-                hitTestResultInFrame(m_originatingTouchPointDocument->frame(), pagePointInOriginatingDocument, hitType);
-            }
+
             // The target should be the original target for this touch, so get it from the hashmap. As it's a release or cancel
             // we also remove it from the map.
             touchTarget = m_originatingTouchPointTargets.take(touchPointTargetKey);

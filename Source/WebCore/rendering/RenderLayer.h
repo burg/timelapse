@@ -820,8 +820,6 @@ public:
     bool isInTopLayerSubtree() const;
 #endif
 
-    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
-
 #if USE(ACCELERATED_COMPOSITING)
     enum ViewportConstrainedNotCompositedReason {
         NoNotCompositedReason,
@@ -1024,6 +1022,7 @@ private:
     virtual IntSize contentsSize() const;
     virtual IntSize overhangAmount() const;
     virtual IntPoint lastKnownMousePosition() const;
+    virtual bool isHandlingWheelEvent() const OVERRIDE;
     virtual bool shouldSuspendScrollAnimations() const;
     virtual bool scrollbarsCanBeActive() const;
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;

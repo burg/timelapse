@@ -48,10 +48,10 @@ from webkitpy.common.system.systemhost import SystemHost
 from webkitpy.common.host import Host
 from webkitpy.common.host_mock import MockHost
 
-from webkitpy.layout_tests import port
+from webkitpy import port
 from webkitpy.layout_tests import run_webkit_tests
-from webkitpy.layout_tests.port import Port
-from webkitpy.layout_tests.port import test
+from webkitpy.port import Port
+from webkitpy.port import test
 from webkitpy.test.skip import skip_if
 from webkitpy.tool.mocktool import MockOptions
 
@@ -820,7 +820,7 @@ class RunTest(unittest.TestCase, StreamTestingMixin):
     def test_build_check(self):
         # By using a port_name for a different platform than the one we're running on, the build check should always fail.
         if sys.platform == 'darwin':
-            port_name = 'qt-linux'
+            port_name = 'gtk'
         else:
             port_name = 'mac-lion'
         out = StringIO.StringIO()

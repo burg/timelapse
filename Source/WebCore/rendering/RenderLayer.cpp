@@ -44,6 +44,7 @@
 #include "config.h"
 #include "RenderLayer.h"
 
+#include "AnimationController.h"
 #include "ColumnInfo.h"
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
@@ -99,8 +100,6 @@
 #include "TextStream.h"
 #include "TransformationMatrix.h"
 #include "TranslateTransformOperation.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
@@ -2369,13 +2368,10 @@ void RenderLayer::updateCompositingLayersAfterScroll()
         // Our stacking container is guaranteed to contain all of our descendants that may need
         // repositioning, so update compositing layers from there.
         if (RenderLayer* compositingAncestor = stackingContainer()->enclosingCompositingLayer()) {
-            if (compositor()->compositingConsultsOverlap()) {
-                if (usesCompositedScrolling() && !hasOutOfFlowPositionedDescendant())
-                    compositor()->updateCompositingLayers(CompositingUpdateOnCompositedScroll, compositingAncestor);
-                else
-                    compositor()->updateCompositingLayers(CompositingUpdateOnScroll, compositingAncestor);
-            } else
-                compositingAncestor->backing()->updateAfterLayout(RenderLayerBacking::IsUpdateRoot);
+            if (usesCompositedScrolling() && !hasOutOfFlowPositionedDescendant())
+                compositor()->updateCompositingLayers(CompositingUpdateOnCompositedScroll, compositingAncestor);
+            else
+                compositor()->updateCompositingLayers(CompositingUpdateOnScroll, compositingAncestor);
         }
     }
 #endif
@@ -2755,6 +2751,11 @@ IntPoint RenderLayer::lastKnownMousePosition() const
     return renderer()->frame() ? renderer()->frame()->eventHandler()->lastKnownMousePosition() : IntPoint();
 }
 
+bool RenderLayer::isHandlingWheelEvent() const
+{
+    return renderer()->frame() ? renderer()->frame()->eventHandler()->isHandlingWheelEvent() : false;
+}
+
 IntRect RenderLayer::rectForHorizontalScrollbar(const IntRect& borderBoxRect) const
 {
     if (!m_hBar)
@@ -2878,10 +2879,7 @@ PassRefPtr<Scrollbar> RenderLayer::createScrollbar(ScrollbarOrientation orientat
         widget = RenderScrollbar::createCustomScrollbar(this, orientation, actualRenderer->node());
     else {
         widget = Scrollbar::createNativeScrollbar(this, orientation, RegularScrollbar);
-        if (orientation == HorizontalScrollbar)
-            didAddHorizontalScrollbar(widget.get());
-        else 
-            didAddVerticalScrollbar(widget.get());
+        didAddScrollbar(widget.get(), orientation);
     }
     renderer()->document()->view()->addChild(widget.get());        
     return widget.release();
@@ -2893,12 +2891,8 @@ void RenderLayer::destroyScrollbar(ScrollbarOrientation orientation)
     if (!scrollbar)
         return;
 
-    if (!scrollbar->isCustomScrollbar()) {
-        if (orientation == HorizontalScrollbar)
-            willRemoveHorizontalScrollbar(scrollbar.get());
-        else
-            willRemoveVerticalScrollbar(scrollbar.get());
-    }
+    if (!scrollbar->isCustomScrollbar())
+        willRemoveScrollbar(scrollbar.get(), orientation);
 
     scrollbar->removeFromParent();
     scrollbar->disconnectFromScrollableArea();
@@ -2971,14 +2965,14 @@ ScrollableArea* RenderLayer::enclosingScrollableArea() const
 
 int RenderLayer::verticalScrollbarWidth(OverlayScrollbarSizeRelevancy relevancy) const
 {
-    if (!m_vBar || (m_vBar->isOverlayScrollbar() && relevancy == IgnoreOverlayScrollbarSize))
+    if (!m_vBar || (m_vBar->isOverlayScrollbar() && (relevancy == IgnoreOverlayScrollbarSize || !m_vBar->shouldParticipateInHitTesting())))
         return 0;
     return m_vBar->width();
 }
 
 int RenderLayer::horizontalScrollbarHeight(OverlayScrollbarSizeRelevancy relevancy) const
 {
-    if (!m_hBar || (m_hBar->isOverlayScrollbar() && relevancy == IgnoreOverlayScrollbarSize))
+    if (!m_hBar || (m_hBar->isOverlayScrollbar() && (relevancy == IgnoreOverlayScrollbarSize || !m_hBar->shouldParticipateInHitTesting())))
         return 0;
     return m_hBar->height();
 }
@@ -3520,15 +3514,15 @@ static bool inContainingBlockChain(RenderLayer* startLayer, RenderLayer* endLaye
 void RenderLayer::clipToRect(RenderLayer* rootLayer, GraphicsContext* context, const LayoutRect& paintDirtyRect, const ClipRect& clipRect,
                              BorderRadiusClippingRule rule)
 {
-    if (clipRect.rect() == paintDirtyRect)
-        return;
-    context->save();
-    context->clip(pixelSnappedIntRect(clipRect.rect()));
+    if (clipRect.rect() != paintDirtyRect) {
+        context->save();
+        context->clip(pixelSnappedIntRect(clipRect.rect()));
+    }
     
+#ifndef DISABLE_ROUNDED_CORNER_CLIPPING
     if (!clipRect.hasRadius())
         return;
 
-#ifndef DISABLE_ROUNDED_CORNER_CLIPPING
     // If the clip rect has been tainted by a border radius, then we have to walk up our layer chain applying the clips from
     // any layers with overflow. The condition for being able to apply these clips is that the overflow object be in our
     // containing block chain so we check that also.
@@ -5570,6 +5564,11 @@ bool RenderLayer::backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect)
     if (paintsWithTransparency(PaintBehaviorNormal))
         return false;
 
+    // We can't use hasVisibleContent(), because that will be true if our renderer is hidden, but some child
+    // is visible and that child doesn't cover the entire rect.
+    if (renderer()->style()->visibility() != VISIBLE)
+        return false;
+
 #if ENABLE(CSS_FILTERS)
     if (paintsWithFilters() && renderer()->style()->filter().hasFilterThatAffectsOpacity())
         return false;
@@ -5587,8 +5586,15 @@ bool RenderLayer::backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect)
 
     // FIXME: We currently only check the immediate renderer,
     // which will miss many cases.
-    return renderer()->backgroundIsKnownToBeOpaqueInRect(localRect)
-        || listBackgroundIsKnownToBeOpaqueInRect(posZOrderList(), localRect)
+    if (renderer()->backgroundIsKnownToBeOpaqueInRect(localRect))
+        return true;
+    
+    // We can't consult child layers if we clip, since they might cover
+    // parts of the rect that are clipped out.
+    if (renderer()->hasOverflowClip())
+        return false;
+    
+    return listBackgroundIsKnownToBeOpaqueInRect(posZOrderList(), localRect)
         || listBackgroundIsKnownToBeOpaqueInRect(negZOrderList(), localRect)
         || listBackgroundIsKnownToBeOpaqueInRect(normalFlowList(), localRect);
 }
@@ -6191,12 +6197,18 @@ void RenderLayer::updateScrollableAreaSet(bool hasOverflow)
     if (HTMLFrameOwnerElement* owner = frame->ownerElement())
         isVisibleToHitTest &= owner->renderer() && owner->renderer()->visibleToHitTesting();
 
-    if (hasOverflow && isVisibleToHitTest ? frameView->addScrollableArea(this) : frameView->removeScrollableArea(this))
+    bool isScrollable = hasOverflow && isVisibleToHitTest;
+    bool addedOrRemoved = false;
+    if (isScrollable)
+        addedOrRemoved = frameView->addScrollableArea(this);
+    else
+        addedOrRemoved = frameView->removeScrollableArea(this);
+    
+    if (addedOrRemoved) {
 #if USE(ACCELERATED_COMPOSITING)
         updateNeedsCompositedScrolling();
-#else
-        return;
 #endif
+    }
 }
 
 void RenderLayer::updateScrollCornerStyle()
@@ -6326,9 +6338,15 @@ FilterOperations RenderLayer::computeFilterOperations(const RenderStyle* style)
             RefPtr<CustomFilterProgram> program = customOperation->program();
             if (!program->isLoaded())
                 continue;
-            
-            CustomFilterGlobalContext* globalContext = renderer()->view()->customFilterGlobalContext();
-            RefPtr<CustomFilterValidatedProgram> validatedProgram = globalContext->getValidatedProgram(program->programInfo());
+
+            RefPtr<CustomFilterValidatedProgram> validatedProgram = program->validatedProgram();
+            if (!validatedProgram) {
+                // Lazily create a validated program and store it on the CustomFilterProgram.
+                CustomFilterGlobalContext* globalContext = renderer()->view()->customFilterGlobalContext();
+                validatedProgram = CustomFilterValidatedProgram::create(globalContext, program->programInfo());
+                program->setValidatedProgram(validatedProgram);
+            }
+
             if (!validatedProgram->isInitialized())
                 continue;
 
@@ -6407,33 +6425,6 @@ void RenderLayer::filterNeedsRepaint()
         renderer()->repaint();
 }
 #endif
-
-void RenderLayer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Rendering);
-    ScrollableArea::reportMemoryUsage(memoryObjectInfo);
-    info.addWeakPointer(m_renderer);
-    info.addWeakPointer(m_parent);
-    info.addWeakPointer(m_previous);
-    info.addWeakPointer(m_next);
-    info.addWeakPointer(m_first);
-    info.addWeakPointer(m_last);
-    info.addMember(m_hBar, "hBar");
-    info.addMember(m_vBar, "vBar");
-    info.addMember(m_posZOrderList, "posZOrderList");
-    info.addMember(m_negZOrderList, "negZOrderList");
-    info.addMember(m_normalFlowList, "normalFlowList");
-    info.addMember(m_clipRectsCache, "clipRectsCache");
-    info.addMember(m_marquee, "marquee");
-    info.addMember(m_transform, "transform");
-    info.addWeakPointer(m_reflection);
-    info.addWeakPointer(m_scrollCorner);
-    info.addWeakPointer(m_resizer);
-#if USE(ACCELERATED_COMPOSITING)
-    info.addMember(m_backing, "backing");
-#endif
-    info.setCustomAllocation(true);
-}
 
 } // namespace WebCore
 

@@ -324,6 +324,8 @@ enum { kWKPageFindMatchesClientCurrentVersion = 0 };
 typedef void (*WKPageGetContextMenuFromProposedContextMenuCallback)(WKPageRef page, WKArrayRef proposedMenu, WKArrayRef* newMenu, WKHitTestResultRef hitTestResult, WKTypeRef userData, const void* clientInfo);
 typedef void (*WKPageCustomContextMenuItemSelectedCallback)(WKPageRef page, WKContextMenuItemRef contextMenuItem, const void* clientInfo);
 typedef void (*WKPageContextMenuDismissedCallback)(WKPageRef page, const void* clientInfo);
+typedef void (*WKPageShowContextMenuCallback)(WKPageRef page, WKPoint menuLocation, WKArrayRef menuItems, const void* clientInfo);
+typedef void (*WKPageHideContextMenuCallback)(WKPageRef page, const void* clientInfo);
 
 // Deprecated
 typedef void (*WKPageGetContextMenuFromProposedContextMenuCallback_deprecatedForUseWithV0)(WKPageRef page, WKArrayRef proposedMenu, WKArrayRef* newMenu, WKTypeRef userData, const void* clientInfo);
@@ -340,10 +342,14 @@ struct WKPageContextMenuClient {
 
     // Version 2
     WKPageGetContextMenuFromProposedContextMenuCallback                          getContextMenuFromProposedMenu;
+
+    // Version 3
+    WKPageShowContextMenuCallback                                                showContextMenu;
+    WKPageHideContextMenuCallback                                                hideContextMenu;
 };
 typedef struct WKPageContextMenuClient WKPageContextMenuClient;
 
-enum { kWKPageContextMenuClientCurrentVersion = 2 };
+enum { kWKPageContextMenuClientCurrentVersion = 3 };
 
 WK_EXPORT WKTypeID WKPageGetTypeID();
 
@@ -356,6 +362,7 @@ WK_EXPORT void WKPageLoadHTMLString(WKPageRef page, WKStringRef htmlString, WKUR
 WK_EXPORT void WKPageLoadAlternateHTMLString(WKPageRef page, WKStringRef htmlString, WKURLRef baseURL, WKURLRef unreachableURL);
 WK_EXPORT void WKPageLoadPlainTextString(WKPageRef page, WKStringRef plainTextString);
 WK_EXPORT void WKPageLoadWebArchiveData(WKPageRef page, WKDataRef webArchiveData);
+WK_EXPORT void WKPageLoadFile(WKPageRef page, WKURLRef fileURL, WKURLRef resourceDirectoryURL);
 
 WK_EXPORT void WKPageStopLoading(WKPageRef page);
 WK_EXPORT void WKPageReload(WKPageRef page);
@@ -524,6 +531,12 @@ WK_EXPORT void WKPageExecuteCommand(WKPageRef page, WKStringRef command);
 
 WK_EXPORT void WKPagePostMessageToInjectedBundle(WKPageRef page, WKStringRef messageName, WKTypeRef messageBody);
 
+WK_EXPORT void WKPageSelectContextMenuItem(WKPageRef page, WKContextMenuItemRef item);
+
+
+
+/* DEPRECATED -  Please use constants from WKPluginInformation instead. */
+
 /* Value type: WKStringRef */
 WK_EXPORT WKStringRef WKPageGetPluginInformationBundleIdentifierKey();
 
@@ -547,7 +560,6 @@ WK_EXPORT WKStringRef WKPageGetPluginInformationPluginspageAttributeURLKey();
 
 /* Value type: WKURLRef */
 WK_EXPORT WKStringRef WKPageGetPluginInformationPluginURLKey();
-
 
 #ifdef __cplusplus
 }

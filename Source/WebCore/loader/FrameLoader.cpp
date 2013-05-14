@@ -39,7 +39,6 @@
 #include "ApplicationCacheHost.h"
 #include "BackForwardController.h"
 #include "BeforeUnloadEvent.h"
-#include "MemoryCache.h"
 #include "CachedPage.h"
 #include "CachedResourceLoader.h"
 #include "Chrome.h"
@@ -56,6 +55,7 @@
 #include "EditorClient.h"
 #include "Element.h"
 #include "Event.h"
+#include "EventHandler.h"
 #include "EventNames.h"
 #include "FloatRect.h"
 #include "FormState.h"
@@ -81,6 +81,7 @@
 #include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
+#include "MemoryCache.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "PageTransitionEvent.h"
@@ -103,11 +104,9 @@
 #include "SerializedScriptValue.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WindowFeatures.h"
 #include "XMLDocumentParser.h"
 #include <wtf/CurrentTime.h>
-#include <wtf/MemoryInstrumentationHashSet.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -2554,7 +2553,7 @@ void FrameLoader::loadPostRequest(const ResourceRequest& inRequest, const String
     }
 }
 
-unsigned long FrameLoader::loadResourceSynchronously(const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+unsigned long FrameLoader::loadResourceSynchronously(const ResourceRequest& request, StoredCredentials storedCredentials, ClientCredentialPolicy clientCredentialPolicy, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
     ASSERT(m_frame->document());
     String referrer = SecurityPolicy::generateReferrerHeader(m_frame->document()->referrerPolicy(), request.url(), outgoingReferrer());
@@ -2580,15 +2579,14 @@ unsigned long FrameLoader::loadResourceSynchronously(const ResourceRequest& requ
         
         if (!documentLoader()->applicationCacheHost()->maybeLoadSynchronously(newRequest, error, response, data)) {
 #if USE(PLATFORM_STRATEGIES)
-            platformStrategies()->loaderStrategy()->loadResourceSynchronously(networkingContext(), identifier, newRequest, storedCredentials, error, response, data);
+            platformStrategies()->loaderStrategy()->loadResourceSynchronously(networkingContext(), identifier, newRequest, storedCredentials, clientCredentialPolicy, error, response, data);
 #else
             ResourceHandle::loadResourceSynchronously(networkingContext(), newRequest, storedCredentials, error, response, data);
 #endif
             documentLoader()->applicationCacheHost()->maybeLoadFallbackSynchronously(newRequest, error, response, data);
         }
     }
-    int encodedDataLength = response.resourceLoadInfo() ? static_cast<int>(response.resourceLoadInfo()->encodedDataLength) : -1;
-    notifier()->sendRemainingDelegateMessages(m_documentLoader.get(), identifier, request, response, data.data(), data.size(), encodedDataLength, error);
+    notifier()->sendRemainingDelegateMessages(m_documentLoader.get(), identifier, request, response, data.data(), data.size(), -1, error);
     return identifier;
 }
 
@@ -3321,30 +3319,9 @@ NetworkingContext* FrameLoader::networkingContext() const
 
 void FrameLoader::loadProgressingStatusChanged()
 {
-    bool isLoadProgressing = m_frame->page()->progress()->isLoadProgressing();
     FrameView* view = m_frame->page()->mainFrame()->view();
-    view->updateLayerFlushThrottlingInAllFrames(isLoadProgressing);
+    view->updateLayerFlushThrottlingInAllFrames();
     view->adjustTiledBackingCoverage();
-}
-
-void FrameLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_frame, "frame");
-    info.ignoreMember(m_client);
-    info.addMember(m_progressTracker, "progressTracker");
-    info.addMember(m_documentLoader, "documentLoader");
-    info.addMember(m_provisionalDocumentLoader, "provisionalDocumentLoader");
-    info.addMember(m_policyDocumentLoader, "policyDocumentLoader");
-    info.addMember(m_pendingStateObject, "pendingStateObject");
-    info.addMember(m_submittedFormURL, "submittedFormURL");
-    info.addMember(m_checkTimer, "checkTimer");
-    info.addMember(m_opener, "opener");
-    info.addMember(m_openedFrames, "openedFrames");
-    info.addMember(m_outgoingReferrer, "outgoingReferrer");
-    info.addMember(m_networkingContext, "networkingContext");
-    info.addMember(m_previousURL, "previousURL");
-    info.addMember(m_requestedHistoryItem, "requestedHistoryItem");
 }
 
 bool FrameLoaderClient::hasHTMLView() const
@@ -3352,14 +3329,16 @@ bool FrameLoaderClient::hasHTMLView() const
     return true;
 }
 
-Frame* createWindow(Frame* openerFrame, Frame* lookupFrame, const FrameLoadRequest& request, const WindowFeatures& features, bool& created)
+PassRefPtr<Frame> createWindow(Frame* openerFrame, Frame* lookupFrame, const FrameLoadRequest& request, const WindowFeatures& features, bool& created)
 {
     ASSERT(!features.dialog || request.frameName().isEmpty());
 
     if (!request.frameName().isEmpty() && request.frameName() != "_blank") {
         if (Frame* frame = lookupFrame->loader()->findFrameForNavigation(request.frameName(), openerFrame->document())) {
-            if (Page* page = frame->page())
-                page->chrome()->focus();
+            if (request.frameName() != "_self") {
+                if (Page* page = frame->page())
+                    page->chrome()->focus();
+            }
             created = false;
             return frame;
         }

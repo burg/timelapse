@@ -65,15 +65,6 @@ class IntRect;
 typedef struct _cairo_rectangle_int cairo_rectangle_int_t;
 #endif
 
-#if PLATFORM(WX)
-class wxRect;
-#endif
-
-#if USE(SKIA)
-struct SkRect;
-struct SkIRect;
-#endif
-
 namespace WebCore {
 
 class FloatRect;
@@ -194,11 +185,6 @@ public:
 
     IntRect transposedRect() const { return IntRect(m_location.transposedPoint(), m_size.transposedSize()); }
 
-#if PLATFORM(WX)
-    IntRect(const wxRect&);
-    operator wxRect() const;
-#endif
-
 #if PLATFORM(WIN)
     IntRect(const RECT&);
     operator RECT() const;
@@ -222,12 +208,6 @@ public:
 
 #if USE(CG)
     operator CGRect() const;
-#endif
-
-#if USE(SKIA)
-    IntRect(const SkIRect&);
-    operator SkRect() const;
-    operator SkIRect() const;
 #endif
 
 #if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))

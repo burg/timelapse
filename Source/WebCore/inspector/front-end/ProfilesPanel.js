@@ -92,6 +92,14 @@ WebInspector.ProfilesPanel = function(name, type)
     } else {
         this._launcherView = new WebInspector.MultiProfileLauncherView(this);
         this._launcherView.addEventListener(WebInspector.MultiProfileLauncherView.EventTypes.ProfileTypeSelected, this._onProfileTypeSelected, this);
+
+        this._registerProfileType(new WebInspector.CPUProfileType());
+        if (!WebInspector.WorkerManager.isWorkerFrontend())
+            this._registerProfileType(new WebInspector.CSSSelectorProfileType());
+        if (Capabilities.heapProfilerPresent)
+            this._registerProfileType(new WebInspector.HeapSnapshotProfileType());
+        if (!WebInspector.WorkerManager.isWorkerFrontend() && WebInspector.experimentsSettings.canvasInspection.isEnabled())
+            this._registerProfileType(new WebInspector.CanvasProfileType());
     }
 
     this._createFileSelectorElement();
@@ -905,44 +913,20 @@ WebInspector.CanvasProfilerPanel.prototype = {
 }
 
 
-/**
- * @constructor
- * @extends {WebInspector.ProfilesPanel}
- */
-WebInspector.MemoryChartProfilerPanel = function()
-{
-    WebInspector.ProfilesPanel.call(this, "memory-chart-profiler", new WebInspector.NativeMemoryProfileType());
-}
-
-WebInspector.MemoryChartProfilerPanel.prototype = {
-    __proto__: WebInspector.ProfilesPanel.prototype
-}
-
-
-/**
- * @constructor
- * @extends {WebInspector.ProfilesPanel}
- */
-WebInspector.NativeMemoryProfilerPanel = function()
-{
-    WebInspector.ProfilesPanel.call(this, "memory-snapshot-profiler", new WebInspector.NativeSnapshotProfileType());
-}
-
-WebInspector.NativeMemoryProfilerPanel.prototype = {
-    __proto__: WebInspector.ProfilesPanel.prototype
-}
-
+importScript("ProfileDataGridTree.js");
+importScript("BottomUpProfileDataGridTree.js");
 importScript("CPUProfileView.js");
 importScript("CSSSelectorProfileView.js");
 importScript("FlameChart.js");
 importScript("HeapSnapshot.js");
 importScript("HeapSnapshotDataGrids.js");
 importScript("HeapSnapshotGridNodes.js");
+importScript("HeapSnapshotLoader.js");
+importScript("HeapSnapshotProxy.js");
 importScript("HeapSnapshotView.js");
-importScript("NativeMemorySnapshotView.js");
-importScript("CanvasProfileView.js");
-importScript("CSSSelectorProfileView.js");
-importScript("ProfileDataGridTree.js");
-importScript("BottomUpProfileDataGridTree.js");
+importScript("HeapSnapshotWorkerDispatcher.js");
+importScript("JSHeapSnapshot.js");
+importScript("NativeHeapSnapshot.js");
 importScript("ProfileLauncherView.js");
 importScript("TopDownProfileDataGridTree.js");
+importScript("CanvasProfileView.js");

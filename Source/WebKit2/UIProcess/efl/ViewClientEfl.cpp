@@ -28,8 +28,10 @@
 
 #include "EwkView.h"
 #include "PageViewportController.h" 
+#include "WebViewportAttributes.h"
 #include <WebKit2/WKString.h>
 #include <WebKit2/WKView.h>
+#include <WebKit2/WKViewEfl.h>
 
 using namespace EwkViewCallbacks;
 using namespace WebCore;
@@ -131,6 +133,27 @@ void ViewClientEfl::didCompletePageTransition(WKViewRef, const void* clientInfo)
     ewkView->scheduleUpdateDisplay();
 }
 
+void ViewClientEfl::didChangeViewportAttributes(WKViewRef, WKViewportAttributesRef attributes, const void* clientInfo)
+{
+    EwkView* ewkView = toEwkView(clientInfo);
+    if (WKPageUseFixedLayout(ewkView->wkPage())) {
+#if USE(ACCELERATED_COMPOSITING)
+        // FIXME: pageViewportController should accept WKViewportAttributesRef.
+        ewkView->pageViewportController()->didChangeViewportAttributes(toImpl(attributes)->originalAttributes());
+#endif
+        return;
+    }
+    ewkView->scheduleUpdateDisplay();
+}
+
+void ViewClientEfl::didChangeTooltip(WKViewRef, WKStringRef tooltip, const void* clientInfo)
+{
+    if (WKStringIsEmpty(tooltip))
+        toEwkView(clientInfo)->smartCallback<TooltipTextUnset>().call();
+    else
+        toEwkView(clientInfo)->smartCallback<TooltipTextSet>().call(WKEinaSharedString(tooltip));
+}
+
 ViewClientEfl::ViewClientEfl(EwkView* view)
     : m_view(view)
 {
@@ -147,6 +170,7 @@ ViewClientEfl::ViewClientEfl(EwkView* view)
     viewClient.didChangeContentsPosition = didChangeContentsPosition;
     viewClient.didRenderFrame = didRenderFrame;
     viewClient.didCompletePageTransition = didCompletePageTransition;
+    viewClient.didChangeViewportAttributes = didChangeViewportAttributes;
 
     WKViewSetViewClient(m_view->wkView(), &viewClient);
 }

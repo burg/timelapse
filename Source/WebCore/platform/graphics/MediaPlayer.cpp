@@ -135,6 +135,7 @@ public:
     virtual MediaPlayer::ReadyState readyState() const { return MediaPlayer::HaveNothing; }
 
     virtual double maxTimeSeekableDouble() const { return 0; }
+    virtual double minTimeSeekable() const { return 0; }
     virtual PassRefPtr<TimeRanges> buffered() const { return TimeRanges::create(); }
 
     virtual unsigned totalBytes() const { return 0; }
@@ -681,6 +682,11 @@ double MediaPlayer::maxTimeSeekable()
     return m_private->maxTimeSeekableDouble();
 }
 
+double MediaPlayer::minTimeSeekable()
+{
+    return m_private->minTimeSeekable();
+}
+
 bool MediaPlayer::didLoadingProgress()
 {
     return m_private->didLoadingProgress();
@@ -896,7 +902,7 @@ void MediaPlayer::getSitesInMediaCache(Vector<String>& sites)
             continue;
         Vector<String> engineSites;
         engines[i]->getSitesInMediaCache(engineSites);
-        sites.append(engineSites);
+        sites.appendVector(engineSites);
     }
 }
 
@@ -1097,12 +1103,28 @@ CachedResourceLoader* MediaPlayer::cachedResourceLoader()
 }
 
 #if ENABLE(VIDEO_TRACK)
+void MediaPlayer::addAudioTrack(PassRefPtr<AudioTrackPrivate> track)
+{
+    if (!m_mediaPlayerClient)
+        return;
+
+    m_mediaPlayerClient->mediaPlayerDidAddAudioTrack(track);
+}
+
+void MediaPlayer::removeAudioTrack(PassRefPtr<AudioTrackPrivate> track)
+{
+    if (!m_mediaPlayerClient)
+        return;
+
+    m_mediaPlayerClient->mediaPlayerDidRemoveAudioTrack(track);
+}
+
 void MediaPlayer::addTextTrack(PassRefPtr<InbandTextTrackPrivate> track)
 {
     if (!m_mediaPlayerClient)
         return;
 
-    m_mediaPlayerClient->mediaPlayerDidAddTrack(track);
+    m_mediaPlayerClient->mediaPlayerDidAddTextTrack(track);
 }
 
 void MediaPlayer::removeTextTrack(PassRefPtr<InbandTextTrackPrivate> track)
@@ -1110,7 +1132,23 @@ void MediaPlayer::removeTextTrack(PassRefPtr<InbandTextTrackPrivate> track)
     if (!m_mediaPlayerClient)
         return;
 
-    m_mediaPlayerClient->mediaPlayerDidRemoveTrack(track);
+    m_mediaPlayerClient->mediaPlayerDidRemoveTextTrack(track);
+}
+
+void MediaPlayer::addVideoTrack(PassRefPtr<VideoTrackPrivate> track)
+{
+    if (!m_mediaPlayerClient)
+        return;
+
+    m_mediaPlayerClient->mediaPlayerDidAddVideoTrack(track);
+}
+
+void MediaPlayer::removeVideoTrack(PassRefPtr<VideoTrackPrivate> track)
+{
+    if (!m_mediaPlayerClient)
+        return;
+
+    m_mediaPlayerClient->mediaPlayerDidRemoveVideoTrack(track);
 }
 
 bool MediaPlayer::requiresTextTrackRepresentation() const

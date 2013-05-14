@@ -35,6 +35,7 @@
 
 #include "HandleContextMenu.h"
 
+#include "Document.h"
 #include "ReplayController.h"
 #include "Page.h"
 #include "UserInputProxy.h"

@@ -161,9 +161,16 @@ bool ImageQualityController::shouldPaintAtLowQuality(GraphicsContext* context, R
     if (!image || !image->isBitmapImage() || context->paintingDisabled())
         return false;
 
-    if (object->style()->imageRendering() == ImageRenderingOptimizeContrast)
+    switch (object->style()->imageRendering()) {
+    case ImageRenderingOptimizeSpeed:
+    case ImageRenderingCrispEdges:
         return true;
-    
+    case ImageRenderingOptimizeQuality:
+        return false;
+    case ImageRenderingAuto:
+        break;
+    }
+
     // Make sure to use the unzoomed image size, since if a full page zoom is in effect, the image
     // is actually being scaled.
     IntSize imageSize(image->width(), image->height());
@@ -481,11 +488,7 @@ LayoutPoint RenderBoxModelObject::adjustedPositionRelativeToOffsetParent(const L
     // If the offsetParent of the element is null, or is the HTML body element,
     // return the distance between the canvas origin and the left border edge 
     // of the element and stop this algorithm.
-    Element* element = offsetParent();
-    if (!element)
-        return referencePoint;
-
-    if (const RenderBoxModelObject* offsetParent = element->renderBoxModelObject()) {
+    if (const RenderBoxModelObject* offsetParent = this->offsetParent()) {
         if (offsetParent->isBox() && !offsetParent->isBody())
             referencePoint.move(-toRenderBox(offsetParent)->borderLeft(), -toRenderBox(offsetParent)->borderTop());
         if (!isOutOfFlowPositioned()) {
@@ -780,16 +783,16 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
         if (hasRoundedBorder && bleedAvoidance != BackgroundBleedUseTransparencyLayer) {
             RoundedRect border = backgroundRoundedRectAdjustedForBleedAvoidance(context, rect, bleedAvoidance, box, boxSize, includeLeftEdge, includeRightEdge);
             if (border.isRenderable())
-                context->fillRoundedRect(border, bgColor, style()->colorSpace());
+                context->fillRoundedRect(border, bgColor, style()->colorSpace(), bgLayer->blendMode());
             else {
                 context->save();
                 clipRoundedInnerRect(context, rect, border);
-                context->fillRect(border.rect(), bgColor, style()->colorSpace());
+                context->fillRect(border.rect(), bgColor, style()->colorSpace(), context->compositeOperation(), bgLayer->blendMode());
                 context->restore();
             }
         } else
-            context->fillRect(pixelSnappedIntRect(rect), bgColor, style()->colorSpace());
-        
+            context->fillRect(pixelSnappedIntRect(rect), bgColor, style()->colorSpace(), context->compositeOperation(), bgLayer->blendMode());
+
         return;
     }
 
@@ -933,10 +936,10 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
                 if (bgColor.alpha())
                     baseColor = baseColor.blend(bgColor);
 
-                context->fillRect(backgroundRect, baseColor, style()->colorSpace(), CompositeCopy);
+                context->fillRect(backgroundRect, baseColor, style()->colorSpace(), CompositeCopy, bgLayer->blendMode());
             } else if (bgColor.alpha()) {
                 CompositeOperator operation = shouldClearBackground ? CompositeCopy : context->compositeOperation();
-                context->fillRect(backgroundRect, bgColor, style()->colorSpace(), operation);
+                context->fillRect(backgroundRect, bgColor, style()->colorSpace(), operation, bgLayer->blendMode());
             } else if (shouldClearBackground)
                 context->clearRect(backgroundRect);
         }
@@ -1275,6 +1278,16 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const FillLayer* fil
 
     geometry.clip(snappedPaintRect);
     geometry.setDestOrigin(geometry.destRect().location());
+}
+
+void RenderBoxModelObject::getGeometryForBackgroundImage(IntRect& destRect, IntPoint& phase, IntSize& tileSize)
+{
+    const FillLayer* backgroundLayer = style()->backgroundLayers();
+    BackgroundImageGeometry geometry;
+    calculateBackgroundImageGeometry(backgroundLayer, destRect, geometry);
+    phase = geometry.phase();
+    tileSize = geometry.tileSize();
+    destRect = geometry.destRect();
 }
 
 static LayoutUnit computeBorderImageSide(Length borderSlice, LayoutUnit borderSide, LayoutUnit imageSide, LayoutUnit boxExtent, RenderView* renderView)

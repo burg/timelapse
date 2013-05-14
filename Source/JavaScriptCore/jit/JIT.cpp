@@ -70,9 +70,9 @@ void ctiPatchCallByReturnAddress(CodeBlock* codeblock, ReturnAddressPtr returnAd
     repatchBuffer.relinkCallerToFunction(returnAddress, newCalleeFunction);
 }
 
-JIT::JIT(JSGlobalData* globalData, CodeBlock* codeBlock)
-    : m_interpreter(globalData->interpreter)
-    , m_globalData(globalData)
+JIT::JIT(VM* vm, CodeBlock* codeBlock)
+    : m_interpreter(vm->interpreter)
+    , m_vm(vm)
     , m_codeBlock(codeBlock)
     , m_labels(codeBlock ? codeBlock->numberOfInstructions() : 0)
     , m_bytecodeOffset((unsigned)-1)
@@ -90,11 +90,7 @@ JIT::JIT(JSGlobalData* globalData, CodeBlock* codeBlock)
     , m_lastResultBytecodeRegister(std::numeric_limits<int>::max())
     , m_jumpTargetsPosition(0)
 #endif
-#if USE(OS_RANDOMNESS)
     , m_randomGenerator(cryptographicallyRandomNumber())
-#else
-    , m_randomGenerator(static_cast<unsigned>(randomNumber() * 0xFFFFFFF))
-#endif
 #if ENABLE(VALUE_PROFILER)
     , m_canBeOptimized(false)
     , m_shouldEmitProfiling(false)
@@ -103,16 +99,15 @@ JIT::JIT(JSGlobalData* globalData, CodeBlock* codeBlock)
 }
 
 #if ENABLE(DFG_JIT)
-void JIT::emitOptimizationCheck(OptimizationCheckKind kind)
+void JIT::emitEnterOptimizationCheck()
 {
     if (!canBeOptimized())
         return;
-    
-    Jump skipOptimize = branchAdd32(Signed, TrustedImm32(kind == LoopOptimizationCheck ? Options::executionCounterIncrementForLoop() : Options::executionCounterIncrementForReturn()), AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter()));
+
+    Jump skipOptimize = branchAdd32(Signed, TrustedImm32(Options::executionCounterIncrementForReturn()), AbsoluteAddress(m_codeBlock->addressOfJITExecuteCounter()));
     JITStubCall stubCall(this, cti_optimize);
     stubCall.addArgument(TrustedImm32(m_bytecodeOffset));
-    if (kind == EnterOptimizationCheck)
-        ASSERT(!m_bytecodeOffset);
+    ASSERT(!m_bytecodeOffset);
     stubCall.call();
     skipOptimize.link(this);
 }
@@ -291,10 +286,8 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_not)
         DEFINE_OP(op_nstricteq)
         DEFINE_OP(op_pop_scope)
-        DEFINE_OP(op_post_dec)
-        DEFINE_OP(op_post_inc)
-        DEFINE_OP(op_pre_dec)
-        DEFINE_OP(op_pre_inc)
+        DEFINE_OP(op_dec)
+        DEFINE_OP(op_inc)
         DEFINE_OP(op_profile_did_call)
         DEFINE_OP(op_profile_will_call)
         DEFINE_OP(op_push_name_scope)
@@ -329,7 +322,6 @@ void JIT::privateCompileMainPass()
         case op_put_to_base_variable:
         DEFINE_OP(op_put_to_base)
 
-        DEFINE_OP(op_ensure_property_exists)
         DEFINE_OP(op_resolve_with_base)
         DEFINE_OP(op_resolve_with_this)
         DEFINE_OP(op_ret)
@@ -347,7 +339,7 @@ void JIT::privateCompileMainPass()
         DEFINE_OP(op_tear_off_arguments)
         DEFINE_OP(op_throw)
         DEFINE_OP(op_throw_static_error)
-        DEFINE_OP(op_to_jsnumber)
+        DEFINE_OP(op_to_number)
         DEFINE_OP(op_to_primitive)
 
         DEFINE_OP(op_get_scoped_var)
@@ -462,6 +454,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_jngreater)
         DEFINE_SLOWCASE_OP(op_jngreatereq)
         DEFINE_SLOWCASE_OP(op_jtrue)
+        DEFINE_SLOWCASE_OP(op_loop_hint)
         DEFINE_SLOWCASE_OP(op_lshift)
         DEFINE_SLOWCASE_OP(op_mod)
         DEFINE_SLOWCASE_OP(op_mul)
@@ -470,10 +463,8 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_new_object)
         DEFINE_SLOWCASE_OP(op_not)
         DEFINE_SLOWCASE_OP(op_nstricteq)
-        DEFINE_SLOWCASE_OP(op_post_dec)
-        DEFINE_SLOWCASE_OP(op_post_inc)
-        DEFINE_SLOWCASE_OP(op_pre_dec)
-        DEFINE_SLOWCASE_OP(op_pre_inc)
+        DEFINE_SLOWCASE_OP(op_dec)
+        DEFINE_SLOWCASE_OP(op_inc)
         case op_put_by_id_out_of_line:
         case op_put_by_id_transition_direct:
         case op_put_by_id_transition_normal:
@@ -486,7 +477,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_urshift)
         DEFINE_SLOWCASE_OP(op_stricteq)
         DEFINE_SLOWCASE_OP(op_sub)
-        DEFINE_SLOWCASE_OP(op_to_jsnumber)
+        DEFINE_SLOWCASE_OP(op_to_number)
         DEFINE_SLOWCASE_OP(op_to_primitive)
 
         case op_resolve_global_property:
@@ -600,11 +591,11 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffo
     }
 #endif
     
-    if (Options::showDisassembly() || m_globalData->m_perBytecodeProfiler)
+    if (Options::showDisassembly() || m_vm->m_perBytecodeProfiler)
         m_disassembler = adoptPtr(new JITDisassembler(m_codeBlock));
-    if (m_globalData->m_perBytecodeProfiler) {
-        m_compilation = m_globalData->m_perBytecodeProfiler->newCompilation(m_codeBlock, Profiler::Baseline);
-        m_compilation->addProfiledBytecodes(*m_globalData->m_perBytecodeProfiler, m_codeBlock);
+    if (m_vm->m_perBytecodeProfiler) {
+        m_compilation = m_vm->m_perBytecodeProfiler->newCompilation(m_codeBlock, Profiler::Baseline);
+        m_compilation->addProfiledBytecodes(*m_vm->m_perBytecodeProfiler, m_codeBlock);
     }
     
     if (m_disassembler)
@@ -655,7 +646,7 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffo
 #endif
 
         addPtr(TrustedImm32(m_codeBlock->m_numCalleeRegisters * sizeof(Register)), callFrameRegister, regT1);
-        stackCheck = branchPtr(Below, AbsoluteAddress(m_globalData->interpreter->stack().addressOfEnd()), regT1);
+        stackCheck = branchPtr(Below, AbsoluteAddress(m_vm->interpreter->stack().addressOfEnd()), regT1);
     }
 
     Label functionBody = label();
@@ -699,7 +690,7 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffo
     if (m_disassembler)
         m_disassembler->setEndOfCode(label());
 
-    LinkBuffer patchBuffer(*m_globalData, this, m_codeBlock, effort);
+    LinkBuffer patchBuffer(*m_vm, this, m_codeBlock, effort);
     if (patchBuffer.didFailToAllocate())
         return JITCode();
 
@@ -798,7 +789,7 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffo
     
     CodeRef result = patchBuffer.finalizeCodeWithoutDisassembly();
     
-    m_globalData->machineCodeBytesPerBytecodeWordForBaselineJIT.add(
+    m_vm->machineCodeBytesPerBytecodeWordForBaselineJIT.add(
         static_cast<double>(result.size()) /
         static_cast<double>(m_codeBlock->instructions().size()));
     
@@ -811,13 +802,13 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffo
     return JITCode(result, JITCode::BaselineJIT);
 }
 
-void JIT::linkFor(JSFunction* callee, CodeBlock* callerCodeBlock, CodeBlock* calleeCodeBlock, JIT::CodePtr code, CallLinkInfo* callLinkInfo, JSGlobalData* globalData, CodeSpecializationKind kind)
+void JIT::linkFor(JSFunction* callee, CodeBlock* callerCodeBlock, CodeBlock* calleeCodeBlock, JIT::CodePtr code, CallLinkInfo* callLinkInfo, VM* vm, CodeSpecializationKind kind)
 {
     RepatchBuffer repatchBuffer(callerCodeBlock);
 
     ASSERT(!callLinkInfo->isLinked());
-    callLinkInfo->callee.set(*globalData, callLinkInfo->hotPathBegin, callerCodeBlock->ownerExecutable(), callee);
-    callLinkInfo->lastSeenCallee.set(*globalData, callerCodeBlock->ownerExecutable(), callee);
+    callLinkInfo->callee.set(*vm, callLinkInfo->hotPathBegin, callerCodeBlock->ownerExecutable(), callee);
+    callLinkInfo->lastSeenCallee.set(*vm, callerCodeBlock->ownerExecutable(), callee);
     repatchBuffer.relink(callLinkInfo->hotPathOther, code);
 
     if (calleeCodeBlock)
@@ -828,23 +819,23 @@ void JIT::linkFor(JSFunction* callee, CodeBlock* callerCodeBlock, CodeBlock* cal
         ASSERT(callLinkInfo->callType == CallLinkInfo::Call
                || callLinkInfo->callType == CallLinkInfo::CallVarargs);
         if (callLinkInfo->callType == CallLinkInfo::Call) {
-            repatchBuffer.relink(callLinkInfo->callReturnLocation, globalData->getCTIStub(linkClosureCallGenerator).code());
+            repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(linkClosureCallGenerator).code());
             return;
         }
 
-        repatchBuffer.relink(callLinkInfo->callReturnLocation, globalData->getCTIStub(virtualCallGenerator).code());
+        repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(virtualCallGenerator).code());
         return;
     }
 
     ASSERT(kind == CodeForConstruct);
-    repatchBuffer.relink(callLinkInfo->callReturnLocation, globalData->getCTIStub(virtualConstructGenerator).code());
+    repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(virtualConstructGenerator).code());
 }
 
 void JIT::linkSlowCall(CodeBlock* callerCodeBlock, CallLinkInfo* callLinkInfo)
 {
     RepatchBuffer repatchBuffer(callerCodeBlock);
 
-    repatchBuffer.relink(callLinkInfo->callReturnLocation, callerCodeBlock->globalData()->getCTIStub(virtualCallGenerator).code());
+    repatchBuffer.relink(callLinkInfo->callReturnLocation, callerCodeBlock->vm()->getCTIStub(virtualCallGenerator).code());
 }
 
 } // namespace JSC

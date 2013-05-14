@@ -44,7 +44,7 @@
 #import "WebContextMenuClient.h"
 #import "WebDOMOperationsPrivate.h"
 #import "WebDataSourceInternal.h"
-#import "WebDatabaseManagerInternal.h"
+#import "WebDatabaseManagerPrivate.h"
 #import "WebDefaultEditingDelegate.h"
 #import "WebDefaultPolicyDelegate.h"
 #import "WebDefaultUIDelegate.h"
@@ -112,6 +112,7 @@
 #import <JavaScriptCore/APICast.h>
 #import <JavaScriptCore/JSValueRef.h>
 #import <WebCore/AlternativeTextUIController.h>
+#import <WebCore/AnimationController.h>
 #import <WebCore/ApplicationCacheStorage.h>
 #import <WebCore/BackForwardListImpl.h>
 #import <WebCore/MemoryCache.h>
@@ -636,7 +637,7 @@ static bool shouldEnableLoadDeferring()
     [types release];
 }
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
 // This method should be removed once we no longer want to keep Safari 5.0.x working with nightly builds.
 - (BOOL)_usesDocumentViews
 {
@@ -672,6 +673,13 @@ static bool shouldRespectPriorityInCSSAttributeSetters()
     return isIAdProducerNeedingAttributeSetterQuirk;
 }
 
+static bool shouldUseLegacyBackgroundSizeShorthandBehavior()
+{
+    static bool shouldUseLegacyBackgroundSizeShorthandBehavior = applicationIsVersions()
+        && !WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITHOUT_LEGACY_BACKGROUNDSIZE_SHORTHAND_BEHAVIOR);
+    return shouldUseLegacyBackgroundSizeShorthandBehavior;
+}
+
 - (void)_commonInitializationWithFrameName:(NSString *)frameName groupName:(NSString *)groupName
 {
     WebCoreThreadViolationCheckRoundTwo();
@@ -704,10 +712,10 @@ static bool shouldRespectPriorityInCSSAttributeSetters()
 
         // Initialize our platform strategies first before invoking the rest
         // of the initialization code which may depend on the strategies.
-        WebPlatformStrategies::initialize();
+        WebPlatformStrategies::initializeIfNecessary();
 
 #if ENABLE(SQL_DATABASE)
-        WebKitInitializeDatabasesIfNecessary();
+        [WebDatabaseManager sharedWebDatabaseManager];
 #endif
 
         WebKitInitializeStorageIfNecessary();
@@ -742,6 +750,7 @@ static bool shouldRespectPriorityInCSSAttributeSetters()
 
     _private->page->setCanStartMedia([self window]);
     _private->page->settings()->setLocalStorageDatabasePath([[self preferences] _localStorageDatabasePath]);
+    _private->page->settings()->setUseLegacyBackgroundSizeShorthandBehavior(shouldUseLegacyBackgroundSizeShorthandBehavior());
 
     if (needsOutlookQuirksScript()) {
         _private->page->settings()->setShouldInjectUserScriptsInInitialEmptyDocument(true);
@@ -2760,17 +2769,20 @@ static Vector<String> toStringVector(NSArray* patterns)
 
 - (BOOL)cssAnimationsSuspended
 {
-    return _private->cssAnimationsSuspended;
+    // should ask the page!
+    Frame* frame = core([self mainFrame]);
+    if (frame)
+        return frame->animation()->isSuspended();
+
+    return false;
 }
 
 - (void)setCSSAnimationsSuspended:(BOOL)suspended
 {
-    if (suspended == _private->cssAnimationsSuspended)
+    Frame* frame = core([self mainFrame]);
+    if (suspended == frame->animation()->isSuspended())
         return;
         
-    _private->cssAnimationsSuspended = suspended;
-    
-    Frame* frame = core([self mainFrame]);
     if (suspended)
         frame->animation()->suspendAnimations();
     else
@@ -2930,7 +2942,7 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!page)
         return 0;
 
-    return kitLayoutMilestones(page->layoutMilestones());
+    return kitLayoutMilestones(page->requestedLayoutMilestones());
 }
 
 - (void)_setVisibilityState:(WebPageVisibilityState)visibilityState isInitialState:(BOOL)isInitialState
@@ -3044,7 +3056,7 @@ static Vector<String> toStringVector(NSArray* patterns)
 
 + (void)_setLoadResourcesSerially:(BOOL)serialize 
 {
-    WebPlatformStrategies::initialize();
+    WebPlatformStrategies::initializeIfNecessary();
     resourceLoadScheduler()->setSerialLoadingEnabled(serialize);
 }
 
@@ -3127,7 +3139,7 @@ static Vector<String> toStringVector(NSArray* patterns)
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillTerminate) name:NSApplicationWillTerminateNotification object:NSApp];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_cacheModelChangedNotification:) name:WebPreferencesCacheModelChangedInternalNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_preferencesRemovedNotification:) name:WebPreferencesRemovedNotification object:nil];    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_preferencesRemovedNotification:) name:WebPreferencesRemovedNotification object:nil];
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 
@@ -3140,19 +3152,86 @@ static Vector<String> toStringVector(NSArray* patterns)
 
     Font::setDefaultTypesettingFeatures([defaults boolForKey:WebKitKerningAndLigaturesEnabledByDefaultDefaultsKey] ? Kerning | Ligatures : 0);
 
-    automaticQuoteSubstitutionEnabled = [defaults boolForKey:WebAutomaticQuoteSubstitutionEnabled];
+    automaticQuoteSubstitutionEnabled = [self _shouldAutomaticQuoteSubstitutionBeEnabled];
     automaticLinkDetectionEnabled = [defaults boolForKey:WebAutomaticLinkDetectionEnabled];
-    automaticDashSubstitutionEnabled = [defaults boolForKey:WebAutomaticDashSubstitutionEnabled];
-    automaticTextReplacementEnabled = [defaults boolForKey:WebAutomaticTextReplacementEnabled];
-    automaticSpellingCorrectionEnabled = [defaults boolForKey:WebAutomaticSpellingCorrectionEnabled];
+    automaticDashSubstitutionEnabled = [self _shouldAutomaticDashSubstitutionBeEnabled];
+    automaticTextReplacementEnabled = [self _shouldAutomaticTextReplacementBeEnabled];
+    automaticSpellingCorrectionEnabled = [self _shouldAutomaticSpellingCorrectionBeEnabled];
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-    if (![defaults objectForKey:WebAutomaticTextReplacementEnabled])
-        automaticTextReplacementEnabled = [NSSpellChecker isAutomaticTextReplacementEnabled];
-    if (![defaults objectForKey:WebAutomaticSpellingCorrectionEnabled])
-        automaticSpellingCorrectionEnabled = [NSSpellChecker isAutomaticSpellingCorrectionEnabled];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticTextReplacementEnabled:)
+        name:NSSpellCheckerDidChangeAutomaticTextReplacementNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticSpellingCorrectionEnabled:)
+        name:NSSpellCheckerDidChangeAutomaticSpellingCorrectionNotification object:nil];
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticQuoteSubstitutionEnabled:)
+        name:NSSpellCheckerDidChangeAutomaticQuoteSubstitutionNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_didChangeAutomaticDashSubstitutionEnabled:)
+        name:NSSpellCheckerDidChangeAutomaticDashSubstitutionNotification object:nil];
 #endif
 }
+
++ (BOOL)_shouldAutomaticTextReplacementBeEnabled
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if (![defaults objectForKey:WebAutomaticTextReplacementEnabled])
+        return [NSSpellChecker isAutomaticTextReplacementEnabled];
+    return [defaults boolForKey:WebAutomaticTextReplacementEnabled];
+}
+
++ (void)_didChangeAutomaticTextReplacementEnabled:(NSNotification *)notification
+{
+    automaticTextReplacementEnabled = [self _shouldAutomaticTextReplacementBeEnabled];
+    [[NSSpellChecker sharedSpellChecker] updatePanels];
+}
+
++ (BOOL)_shouldAutomaticSpellingCorrectionBeEnabled
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if (![defaults objectForKey:WebAutomaticSpellingCorrectionEnabled])
+        return [NSSpellChecker isAutomaticTextReplacementEnabled];
+    return [defaults boolForKey:WebAutomaticSpellingCorrectionEnabled];
+}
+
++ (void)_didChangeAutomaticSpellingCorrectionEnabled:(NSNotification *)notification
+{
+    automaticSpellingCorrectionEnabled = [self _shouldAutomaticSpellingCorrectionBeEnabled];
+    [[NSSpellChecker sharedSpellChecker] updatePanels];
+}
+
++ (BOOL)_shouldAutomaticQuoteSubstitutionBeEnabled
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    if (![defaults objectForKey:WebAutomaticQuoteSubstitutionEnabled])
+        return [NSSpellChecker isAutomaticQuoteSubstitutionEnabled];
+#endif
+    return [defaults boolForKey:WebAutomaticQuoteSubstitutionEnabled];
+}
+
++ (BOOL)_shouldAutomaticDashSubstitutionBeEnabled
+{
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    if (![defaults objectForKey:WebAutomaticDashSubstitutionEnabled])
+        return [NSSpellChecker isAutomaticDashSubstitutionEnabled];
+#endif
+    return [defaults boolForKey:WebAutomaticDashSubstitutionEnabled];
+}
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
++ (void)_didChangeAutomaticQuoteSubstitutionEnabled:(NSNotification *)notification
+{
+    automaticQuoteSubstitutionEnabled = [self _shouldAutomaticQuoteSubstitutionBeEnabled];
+    [[NSSpellChecker sharedSpellChecker] updatePanels];
+}
+
++ (void)_didChangeAutomaticDashSubstitutionEnabled:(NSNotification *)notification
+{
+    automaticDashSubstitutionEnabled = [self _shouldAutomaticDashSubstitutionBeEnabled];
+    [[NSSpellChecker sharedSpellChecker] updatePanels];
+}
+#endif
 
 + (void)_applicationWillTerminate
 {   
@@ -4507,7 +4586,7 @@ static WebFrame *incrementFrame(WebFrame *frame, WebFindOptions options = 0)
 
     // Use a visited set so we don't loop indefinitely when walking crazy key loops.
     // AppKit uses such sets internally and we want our loop to be as robust as its loops.
-    RetainPtr<CFMutableSetRef> visitedViews(AdoptCF, CFSetCreateMutable(0, 0, 0));
+    RetainPtr<CFMutableSetRef> visitedViews = adoptCF(CFSetCreateMutable(0, 0, 0));
     CFSetAddValue(visitedViews.get(), result);
 
     NSView *previousView = self;
@@ -5662,7 +5741,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
     Frame* coreFrame = core(webFrame);
     // FIXME: We shouldn't have to make a copy here.
     if (coreFrame)
-        coreFrame->editor()->applyStyle(core(style)->copy().get());
+        coreFrame->editor()->applyStyle(core(style)->copyProperties().get());
 }
 
 @end
@@ -6508,11 +6587,6 @@ static void glibContextIterationCallback(CFRunLoopObserverRef, CFRunLoopActivity
     _private->m_alternativeTextUIController->showAlternatives(self, [self _convertRectFromRootView:boundingBoxOfDictatedText], dictationContext, ^(NSString* acceptedAlternative) {
         [self handleAcceptedAlternativeText:acceptedAlternative];
     });
-}
-
-- (void)_dismissDictationAlternativeUI
-{
-    _private->m_alternativeTextUIController->dismissAlternatives();
 }
 
 - (void)_removeDictationAlternatives:(uint64_t)dictationContext

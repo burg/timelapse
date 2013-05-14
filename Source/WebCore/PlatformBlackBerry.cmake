@@ -35,9 +35,6 @@ list(APPEND WebCore_SOURCES
     platform/posix/FileSystemPOSIX.cpp
     platform/posix/SharedBufferPOSIX.cpp
     platform/text/LocaleNone.cpp
-    platform/text/TextBreakIteratorICU.cpp
-    platform/text/TextCodecICU.cpp
-    platform/text/TextEncodingDetectorICU.cpp
     platform/text/blackberry/TextBreakIteratorInternalICUBlackBerry.cpp
 )
 
@@ -206,9 +203,6 @@ endif ()
 
 if (ENABLE_NETSCAPE_PLUGIN_API)
     list(APPEND WebCore_SOURCES
-        plugins/PluginDatabase.cpp
-        plugins/PluginPackage.cpp
-        plugins/PluginView.cpp
         plugins/blackberry/NPCallbacksBlackBerry.cpp
         plugins/blackberry/PluginDataBlackBerry.cpp
         plugins/blackberry/PluginPackageBlackBerry.cpp
@@ -218,11 +212,12 @@ if (ENABLE_NETSCAPE_PLUGIN_API)
 else ()
     list(APPEND WebCore_SOURCES
         plugins/PluginDataNone.cpp
-        plugins/PluginDatabase.cpp
-        plugins/PluginPackage.cpp
-        plugins/PluginPackageNone.cpp
-        plugins/PluginView.cpp
-        plugins/PluginViewNone.cpp
+    )
+endif ()
+
+if (ENABLE_TEXT_AUTOSIZING)
+    list(APPEND WebCore_SOURCES
+        ${WEBCORE_DIR}/rendering/TextAutosizer.cpp
     )
 endif ()
 
@@ -304,9 +299,9 @@ endforeach ()
 file(WRITE ${IDL_FILES_TMP} ${IDL_FILES_LIST})
 
 add_custom_command(
-    OUTPUT ${SUPPLEMENTAL_DEPENDENCY_FILE}
+    OUTPUT ${SUPPLEMENTAL_DEPENDENCY_FILE} ${WINDOW_CONSTRUCTORS_FILE}
     DEPENDS ${WEBCORE_DIR}/bindings/scripts/preprocess-idls.pl ${SCRIPTS_RESOLVE_SUPPLEMENTAL} ${WebCore_CPP_IDL_FILES} ${IDL_ATTRIBUTES_FILE}
-    COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${WEBCORE_DIR}/bindings/scripts/preprocess-idls.pl --defines "${FEATURE_DEFINES_JAVASCRIPT}" --idlFilesList ${IDL_FILES_TMP} --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --supplementalDependencyFile ${SUPPLEMENTAL_DEPENDENCY_FILE} --idlAttributesFile ${IDL_ATTRIBUTES_FILE}
+    COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${WEBCORE_DIR}/bindings/scripts/preprocess-idls.pl --defines "${FEATURE_DEFINES_JAVASCRIPT}" --idlFilesList ${IDL_FILES_TMP} --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --supplementalDependencyFile ${SUPPLEMENTAL_DEPENDENCY_FILE} --idlAttributesFile ${IDL_ATTRIBUTES_FILE} --windowConstructorsFile ${WINDOW_CONSTRUCTORS_FILE}
     VERBATIM)
 
 GENERATE_BINDINGS(WebCore_SOURCES
@@ -315,7 +310,8 @@ GENERATE_BINDINGS(WebCore_SOURCES
     "${IDL_INCLUDES}"
     "${FEATURE_DEFINES_WEBCORE}"
     ${DERIVED_SOURCES_WEBCORE_DIR} WebDOM CPP
-    ${SUPPLEMENTAL_DEPENDENCY_FILE})
+    ${SUPPLEMENTAL_DEPENDENCY_FILE}
+    ${WINDOW_CONSTRUCTORS_FILE})
 
 # Generate contents for PopupPicker.cpp
 set(WebCore_POPUP_CSS_AND_JS

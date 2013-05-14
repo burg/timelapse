@@ -255,19 +255,21 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
     m_page->focusController()->focusedOrMainFrame()->eventHandler()->logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
 }        
 
-void UserInputProxy::sendResizeEvent(const Frame* frame, bool fromReplay)
+void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay)
     {
 #if ENABLE(TIMELAPSE)
         if (!fromReplay && m_mode == Replaying)
             return;
         
+        // on replay, whether it is synchronous or not doesn't matter because
+        // the document event queue is always emptied before dispatching event loop inputs.
         if (m_mode == Capturing && m_page->replayController())
             m_page->replayController()->activeIterator()->storeInput(adoptPtr(new SendResizeEvent(frame)));
 #else
         UNUSED_PARAM(fromReplay);
 #endif
         
-        frame->eventHandler()->sendResizeEvent();
+        frame->eventHandler()->sendResizeEvent(dispatchSynchronously);
     }
 
 } // namespace WebCore

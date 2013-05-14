@@ -48,10 +48,6 @@ WebInspector.ProfilesModel = function()
         this._registerProfileType(new WebInspector.CSSSelectorProfileType());
     if (Capabilities.heapProfilerPresent)
         this._registerProfileType(new WebInspector.HeapSnapshotProfileType());
-    if (WebInspector.experimentsSettings.nativeMemorySnapshots.isEnabled()) {
-        this._registerProfileType(new WebInspector.NativeMemoryProfileType());
-        this._registerProfileType(new WebInspector.NativeSnapshotProfileType());
-    }
     if (WebInspector.experimentsSettings.canvasInspection.isEnabled())
         this._registerProfileType(new WebInspector.CanvasProfileType());
     

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc.  All rights reserved.
+ * Copyright (C) 2008, 2011, 2012, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,21 +31,11 @@
 #include "CSSGradientValue.h"
 #include "Image.h"
 #include "RenderObject.h"
-#include "WebCoreMemoryInstrumentation.h"
-#include <wtf/MemoryInstrumentationHashCountedSet.h>
-#include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/text/WTFString.h>
 
-
-namespace WTF {
-
-template<> struct SequenceMemoryInstrumentationTraits<const WebCore::RenderObject*> {
-    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
-};
-
-}
-
 namespace WebCore {
+
+static const double timeToKeepCachedGeneratedImagesInSeconds = 3;
 
 CSSImageGeneratorValue::CSSImageGeneratorValue(ClassType classType)
     : CSSValue(classType)
@@ -56,76 +46,58 @@ CSSImageGeneratorValue::~CSSImageGeneratorValue()
 {
 }
 
-void CSSImageGeneratorValue::addClient(RenderObject* renderer, const IntSize& size)
+void CSSImageGeneratorValue::addClient(RenderObject* renderer)
 {
-    ref();
-
     ASSERT(renderer);
-    if (!size.isEmpty())
-        m_sizes.add(size);
-
-    RenderObjectSizeCountMap::iterator it = m_clients.find(renderer);
-    if (it == m_clients.end())
-        m_clients.add(renderer, SizeAndCount(size, 1));
-    else {
-        SizeAndCount& sizeCount = it->value;
-        ++sizeCount.count;
-    }
+    ref();
+    m_clients.add(renderer);
 }
 
 void CSSImageGeneratorValue::removeClient(RenderObject* renderer)
 {
     ASSERT(renderer);
-    RenderObjectSizeCountMap::iterator it = m_clients.find(renderer);
-    ASSERT(it != m_clients.end());
-
-    IntSize removedImageSize;
-    SizeAndCount& sizeCount = it->value;
-    IntSize size = sizeCount.size;
-    if (!size.isEmpty()) {
-        m_sizes.remove(size);
-        if (!m_sizes.contains(size))
-            m_images.remove(size);
-    }
-
-    if (!--sizeCount.count)
-        m_clients.remove(renderer);
-
+    m_clients.remove(renderer);
     deref();
 }
 
-Image* CSSImageGeneratorValue::getImage(RenderObject* renderer, const IntSize& size)
+GeneratorGeneratedImage* CSSImageGeneratorValue::cachedImageForSize(IntSize size)
 {
-    RenderObjectSizeCountMap::iterator it = m_clients.find(renderer);
-    if (it != m_clients.end()) {
-        SizeAndCount& sizeCount = it->value;
-        IntSize oldSize = sizeCount.size;
-        if (oldSize != size) {
-            RefPtr<CSSImageGeneratorValue> protect(this);
-            removeClient(renderer);
-            addClient(renderer, size);
-        }
-    }
-
-    // Don't generate an image for empty sizes.
     if (size.isEmpty())
         return 0;
 
-    // Look up the image in our cache.
-    return m_images.get(size).get();
+    CachedGeneratedImage* cachedGeneratedImage = m_images.get(size);
+    if (!cachedGeneratedImage)
+        return 0;
+
+    cachedGeneratedImage->puntEvictionTimer();
+    return cachedGeneratedImage->image();
 }
 
-void CSSImageGeneratorValue::putImage(const IntSize& size, PassRefPtr<Image> image)
+void CSSImageGeneratorValue::saveCachedImageForSize(IntSize size, PassRefPtr<GeneratorGeneratedImage> image)
 {
-    m_images.add(size, image);
+    ASSERT(!m_images.contains(size));
+    m_images.add(size, adoptPtr(new CachedGeneratedImage(*this, size, image)));
 }
 
-void CSSImageGeneratorValue::reportBaseClassMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+void CSSImageGeneratorValue::evictCachedGeneratedImage(IntSize size)
 {
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_sizes, "sizes");
-    info.addMember(m_clients, "clients");
-    info.addMember(m_images, "images");
+    ASSERT(m_images.contains(size));
+    m_images.remove(size);
+}
+
+CSSImageGeneratorValue::CachedGeneratedImage::CachedGeneratedImage(CSSImageGeneratorValue& owner, IntSize size, PassRefPtr<GeneratorGeneratedImage> image)
+    : m_owner(owner)
+    , m_size(size)
+    , m_image(image)
+    , m_evictionTimer(this, &CSSImageGeneratorValue::CachedGeneratedImage::evictionTimerFired, timeToKeepCachedGeneratedImagesInSeconds)
+{
+    m_evictionTimer.restart();
+}
+
+void CSSImageGeneratorValue::CachedGeneratedImage::evictionTimerFired(DeferrableOneShotTimer<CachedGeneratedImage>*)
+{
+    // NOTE: This is essentially a "delete this", the object is no longer valid after this line.
+    m_owner.evictCachedGeneratedImage(m_size);
 }
 
 PassRefPtr<Image> CSSImageGeneratorValue::image(RenderObject* renderer, const IntSize& size)

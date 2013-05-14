@@ -38,6 +38,7 @@
 
 namespace WebCore {
 
+class AXObjectCache;
 class Element;
 class Event;
 class FloatSize;
@@ -50,6 +51,7 @@ class RenderEmbeddedObject;
 class RenderLayer;
 class RenderObject;
 class RenderScrollbarPart;
+class RenderStyle;
 
 Pagination::Mode paginationModeForRenderStyle(RenderStyle*);
 
@@ -236,7 +238,7 @@ public:
     void startDeferredRepaintTimer(double delay);
     void resetDeferredRepaintDelay();
 
-    void updateLayerFlushThrottlingInAllFrames(bool isLoadProgressing);
+    void updateLayerFlushThrottlingInAllFrames();
     void adjustTiledBackingCoverage();
 
     void beginDisableRepaints();
@@ -290,7 +292,7 @@ public:
 
     void incrementVisuallyNonEmptyCharacterCount(unsigned);
     void incrementVisuallyNonEmptyPixelCount(const IntSize&);
-    void setIsVisuallyNonEmpty() { m_isVisuallyNonEmpty = true; }
+    void setIsVisuallyNonEmpty();
     bool isVisuallyNonEmpty() const { return m_isVisuallyNonEmpty; }
     void enableAutoSizeMode(bool enable, const IntSize& minSize, const IntSize& maxSize);
 
@@ -343,6 +345,7 @@ public:
     static void setRepaintThrottlingDeferredRepaintDelayIncrementDuringLoading(double p);
 
     virtual IntPoint lastKnownMousePosition() const;
+    virtual bool isHandlingWheelEvent() const OVERRIDE;
     bool shouldSetCursor() const;
 
     virtual bool scrollbarsCanBeActive() const OVERRIDE;
@@ -418,6 +421,10 @@ public:
     virtual void willStartLiveResize() OVERRIDE;
     virtual void willEndLiveResize() OVERRIDE;
 
+    void addPaintPendingMilestones(LayoutMilestones);
+    void firePaintRelatedMilestones();
+    LayoutMilestones milestonesPendingPaint() const { return m_milestonesPendingPaint; }
+
 protected:
     virtual bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect);
     virtual void scrollContentsSlowPath(const IntRect& updateRect);
@@ -484,9 +491,11 @@ private:
 #endif
 #endif
 
-    void scheduleResizeEvent();
-    void sendResizeEvent();
-    void delayedResizeEventTimerFired(Timer<FrameView>*);
+    // Override scrollbar notifications to update the AXObject cache.
+    virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation) OVERRIDE;
+    virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation) OVERRIDE;
+
+    void dispatchResizeEvent();
 
     void updateScrollableAreaSet();
 
@@ -533,8 +542,6 @@ private:
     unsigned m_slowRepaintObjectCount;
     int m_borderX;
     int m_borderY;
-
-    Timer<FrameView> m_delayedResizeEventTimer;
 
     Timer<FrameView> m_layoutTimer;
     bool m_delayedLayout;
@@ -617,6 +624,8 @@ private:
 
     int m_headerHeight;
     int m_footerHeight;
+
+    LayoutMilestones m_milestonesPendingPaint;
 
     static double s_normalDeferredRepaintDelay;
     static double s_initialDeferredRepaintDelayDuringLoading;

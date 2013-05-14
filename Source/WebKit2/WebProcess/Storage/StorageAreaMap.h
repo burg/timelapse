@@ -30,6 +30,7 @@
 #include <WebCore/SecurityOrigin.h>
 #include <WebCore/StorageArea.h>
 #include <wtf/Forward.h>
+#include <wtf/HashCountedSet.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
@@ -48,12 +49,14 @@ public:
     static PassRefPtr<StorageAreaMap> create(StorageNamespaceImpl*, PassRefPtr<WebCore::SecurityOrigin>);
     ~StorageAreaMap();
 
-    WebCore::StorageType storageType() const;
+    WebCore::StorageType storageType() const { return m_storageType; }
 
     unsigned length();
     String key(unsigned index);
     String item(const String& key);
-    void setItem(StorageAreaImpl* sourceArea, const String& key, const String& value, bool& quotaException);
+    void setItem(WebCore::Frame* sourceFrame, StorageAreaImpl* sourceArea, const String& key, const String& value, bool& quotaException);
+    void removeItem(WebCore::Frame* sourceFrame, StorageAreaImpl* sourceArea, const String& key);
+    void clear(WebCore::Frame* sourceFrame, StorageAreaImpl* sourceArea);
     bool contains(const String& key);
 
 private:
@@ -62,18 +65,32 @@ private:
     // CoreIPC::MessageReceiver
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
 
+    void didGetValues();
     void didSetItem(const String& key, bool quotaError);
-    void dispatchStorageEvent(const String& key, const String& oldValue, const String& newValue, const String& urlString);
+    void didRemoveItem(const String& key);
+    void didClear();
 
+    void resetValues();
     void loadValuesIfNeeded();
 
+    bool shouldApplyChangeForKey(const String& key) const;
+    void applyChange(const String& key, const String& newValue);
+
+    void dispatchStorageEvent(uint64_t sourceStorageAreaID, const String& key, const String& oldValue, const String& newValue, const String& urlString);
+
+    void dispatchSessionStorageEvent(uint64_t sourceStorageAreaID, const String& key, const String& oldValue, const String& newValue, const String& urlString);
+    void dispatchLocalStorageEvent(uint64_t sourceStorageAreaID, const String& key, const String& oldValue, const String& newValue, const String& urlString);
+
     uint64_t m_storageMapID;
+
+    WebCore::StorageType m_storageType;
     uint64_t m_storageNamespaceID;
     unsigned m_quotaInBytes;
     RefPtr<WebCore::SecurityOrigin> m_securityOrigin;
 
-
     RefPtr<WebCore::StorageMap> m_storageMap;
+    bool m_hasPendingClear;
+    HashCountedSet<String> m_pendingValueChanges;
 };
 
 } // namespace WebKit

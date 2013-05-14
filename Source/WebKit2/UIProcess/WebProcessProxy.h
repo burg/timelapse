@@ -60,8 +60,8 @@ struct WebNavigationDataStore;
 
 class WebProcessProxy : public ChildProcessProxy, ResponsivenessTimer::Client {
 public:
-    typedef HashMap<uint64_t, RefPtr<WebBackForwardListItem> > WebBackForwardListItemMap;
-    typedef HashMap<uint64_t, RefPtr<WebFrameProxy> > WebFrameProxyMap;
+    typedef HashMap<uint64_t, RefPtr<WebBackForwardListItem>> WebBackForwardListItemMap;
+    typedef HashMap<uint64_t, RefPtr<WebFrameProxy>> WebFrameProxyMap;
     typedef HashMap<uint64_t, WebPageProxy*> WebPageProxyMap;
 
     static PassRefPtr<WebProcessProxy> create(PassRefPtr<WebContext>);
@@ -114,6 +114,8 @@ public:
     static bool pageIsProcessSuppressible(WebPageProxy*);
     void updateProcessSuppressionState();
 #endif
+
+    void requestTermination();
 
 private:
     explicit WebProcessProxy(PassRefPtr<WebContext>);
@@ -175,6 +177,8 @@ private:
     // Implemented in generated WebProcessProxyMessageReceiver.cpp
     void didReceiveWebProcessProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
     void didReceiveSyncWebProcessProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
+
+    bool canTerminateChildProcess();
 
     ResponsivenessTimer m_responsivenessTimer;
     

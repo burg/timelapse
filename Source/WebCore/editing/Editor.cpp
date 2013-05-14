@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2011, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -1369,7 +1369,7 @@ void Editor::setBaseWritingDirection(WritingDirection direction)
         return;
     }
 
-    RefPtr<StylePropertySet> style = StylePropertySet::create();
+    RefPtr<MutableStylePropertySet> style = MutableStylePropertySet::create();
     style->setProperty(CSSPropertyDirection, direction == LeftToRightWritingDirection ? "ltr" : direction == RightToLeftWritingDirection ? "rtl" : "inherit", false);
     applyParagraphStyleToSelection(style.get(), EditActionSetWritingDirection);
 }
@@ -2246,7 +2246,8 @@ void Editor::markAndReplaceFor(PassRefPtr<SpellCheckRequest> request, const Vect
             // In this case the result range just has to touch the spelling range, so we can handle replacing non-word text such as punctuation.
             ASSERT(resultLength > 0 && resultLocation >= 0);
 
-            if (shouldShowCorrectionPanel && (resultEndLocation < spellingRangeEndOffset || resultType != TextCheckingTypeCorrection))
+            if (shouldShowCorrectionPanel && (resultEndLocation < spellingRangeEndOffset
+                || !(resultType & (TextCheckingTypeReplacement | TextCheckingTypeCorrection))))
                 continue;
 
             // Apply replacement if:
@@ -2257,7 +2258,7 @@ void Editor::markAndReplaceFor(PassRefPtr<SpellCheckRequest> request, const Vect
             RefPtr<Range> rangeToReplace = paragraph.subrange(resultLocation, resultLength);
 
             // adding links should be done only immediately after they are typed
-            if (resultType == TextCheckingTypeLink && (selectionOffset > resultEndLocation + 1 || selectionOffset <= resultLocation))
+            if (resultType == TextCheckingTypeLink && selectionOffset != resultEndLocation + 1)
                 continue;
 
             if (!(shouldPerformReplacement || shouldCheckForCorrection || shouldMarkLink) || !doReplacement)
@@ -2297,6 +2298,10 @@ void Editor::markAndReplaceFor(PassRefPtr<SpellCheckRequest> request, const Vect
                     if (Element* root = m_frame->selection()->selection().rootEditableElement())
                         cache->postNotification(root, AXObjectCache::AXAutocorrectionOccured, true);
                 }
+
+                // Skip all other results for the replaced text.
+                while (i + 1 < results.size() && results[i + 1].location + offsetDueToReplacement <= resultLocation)
+                    i++;
 
                 selectionChanged = true;
                 offsetDueToReplacement += replacement.length() - resultLength;
@@ -2519,19 +2524,6 @@ bool Editor::getCompositionSelection(unsigned& selectionStart, unsigned& selecti
     return true;
 }
 
-bool Editor::setSelectionOffsets(int selectionStart, int selectionEnd)
-{
-    Element* rootEditableElement = m_frame->selection()->rootEditableElement();
-    if (!rootEditableElement)
-        return false;
-
-    RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(rootEditableElement, selectionStart, selectionEnd - selectionStart);
-    if (!range)
-        return false;
-
-    return m_frame->selection()->setSelectedRange(range.get(), VP_DEFAULT_AFFINITY, false);
-}
-
 void Editor::transpose()
 {
     if (!canEdit())
@@ -2643,7 +2635,7 @@ String Editor::selectedTextForClipboard() const
 String Editor::selectedText(TextIteratorBehavior behavior) const
 {
     // We remove '\0' characters because they are not visibly rendered to the user.
-    return plainText(m_frame->selection()->toNormalizedRange().get(), behavior).replace(0, "");
+    return plainText(m_frame->selection()->toNormalizedRange().get(), behavior).replaceWithLiteral('\0', "");
 }
 
 IntRect Editor::firstRectForRange(Range* range) const
@@ -3119,5 +3111,11 @@ void Editor::applyDictationAlternativelternative(const String& alternativeString
 {
     m_alternativeTextController->applyDictationAlternative(alternativeString);
 }
+
+void Editor::toggleOverwriteModeEnabled()
+{
+    m_overwriteModeEnabled = !m_overwriteModeEnabled;
+    frame()->selection()->setShouldShowBlockCursor(m_overwriteModeEnabled);
+};
 
 } // namespace WebCore

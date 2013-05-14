@@ -29,7 +29,6 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "Length.h"
-#include "PlatformMemoryInstrumentation.h"
 
 namespace WebCore {
 
@@ -77,22 +76,6 @@ void GeneratorGeneratedImage::drawPattern(GraphicsContext* destContext, const Fl
 
     // Tile the image buffer into the context.
     m_cachedImageBuffer->drawPattern(destContext, adjustedSrcRect, adjustedPatternCTM, phase, styleColorSpace, compositeOp, destRect);
-    m_cacheTimer.restart();
-}
-
-void GeneratorGeneratedImage::invalidateCacheTimerFired(DeferrableOneShotTimer<GeneratorGeneratedImage>*)
-{
-    m_cachedImageBuffer.clear();
-    m_cachedAdjustedSize = IntSize();
-}
-
-void GeneratorGeneratedImage::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Image);
-    GeneratedImage::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_generator, "generator");
-    info.addMember(m_cachedImageBuffer, "cachedImageBuffer");
-    info.addMember(m_cacheTimer, "cacheTimer");
 }
 
 }

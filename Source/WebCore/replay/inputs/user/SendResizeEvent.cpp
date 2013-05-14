@@ -37,6 +37,8 @@
 
 #include "ReplayController.h"
 #include "DispatchEventBase.h"
+#include "Document.h"
+#include "DOMWindow.h"
 #include "Frame.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>

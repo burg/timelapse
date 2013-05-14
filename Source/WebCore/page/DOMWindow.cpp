@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2010, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 #include "BarInfo.h"
 #include "BeforeUnloadEvent.h"
 #include "CSSComputedStyleDeclaration.h"
+#include "CSSRule.h"
 #include "CSSRuleList.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
@@ -49,11 +50,12 @@
 #include "DOMWindowNotifications.h"
 #include "DeviceMotionController.h"
 #include "DeviceOrientationController.h"
-#include "DeviceProximityController.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "Editor.h"
 #include "Element.h"
 #include "EventException.h"
+#include "EventHandler.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
@@ -86,6 +88,7 @@
 #include "Screen.h"
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
+#include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "SerializedScriptValue.h"
@@ -105,6 +108,10 @@
 #include <wtf/MathExtras.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
+
+#if ENABLE(PROXIMITY_EVENTS)
+#include "DeviceProximityController.h"
+#endif
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
 #include "RequestAnimationFrameCallback.h"
@@ -424,7 +431,7 @@ DOMWindow::~DOMWindow()
         ASSERT(!m_toolbar);
         ASSERT(!m_console);
         ASSERT(!m_navigator);
-#if ENABLE(WEB_TIMING)
+#if ENABLE(WEB_TIMING) || ENABLE(WEB_TIMING_MINIMAL)
         ASSERT(!m_performance);
 #endif
         ASSERT(!m_location);
@@ -581,7 +588,7 @@ void DOMWindow::resetDOMWindowProperties()
     m_toolbar = 0;
     m_console = 0;
     m_navigator = 0;
-#if ENABLE(WEB_TIMING)
+#if ENABLE(WEB_TIMING) || ENABLE(WEB_TIMING_MINIMAL)
     m_performance = 0;
 #endif
     m_location = 0;
@@ -721,7 +728,7 @@ Navigator* DOMWindow::navigator() const
     return m_navigator.get();
 }
 
-#if ENABLE(WEB_TIMING)
+#if ENABLE(WEB_TIMING) || ENABLE(WEB_TIMING_MINIMAL)
 Performance* DOMWindow::performance() const
 {
     if (!isCurrentlyDisplayedInFrame())
@@ -786,7 +793,7 @@ Storage* DOMWindow::localStorage(ExceptionCode& ec) const
     if (!document)
         return 0;
 
-    if (!document->securityOrigin()->canAccessLocalStorage(document->topOrigin())) {
+    if (!document->securityOrigin()->canAccessLocalStorage(0)) {
         ec = SECURITY_ERR;
         return 0;
     }
@@ -806,7 +813,12 @@ Storage* DOMWindow::localStorage(ExceptionCode& ec) const
     if (!page->settings()->localStorageEnabled())
         return 0;
 
-    RefPtr<StorageArea> storageArea = page->group().localStorage()->storageArea(document->securityOrigin());
+    RefPtr<StorageArea> storageArea;
+    if (!document->securityOrigin()->canAccessLocalStorage(document->topOrigin()))
+        storageArea = page->group().transientLocalStorage(document->topOrigin())->storageArea(document->securityOrigin());
+    else
+        storageArea = page->group().localStorage()->storageArea(document->securityOrigin());
+
     if (!storageArea->canAccessStorage(m_frame)) {
         ec = SECURITY_ERR;
         return 0;
@@ -930,7 +942,7 @@ void DOMWindow::focus(ScriptExecutionContext* context)
     if (context) {
         ASSERT(isMainThread());
         Document* activeDocument = toDocument(context);
-        if (opener() && activeDocument->domWindow() == opener())
+        if (opener() && opener() != this && activeDocument->domWindow() == opener())
             allowFocus = true;
     }
 
@@ -1372,7 +1384,15 @@ PassRefPtr<CSSRuleList> DOMWindow::getMatchedCSSRules(Element* element, const St
 
     PseudoId pseudoId = CSSSelector::pseudoId(pseudoType);
 
-    return m_frame->document()->styleResolver()->pseudoStyleRulesForElement(element, pseudoId, rulesToInclude);
+    Vector<RefPtr<StyleRuleBase> > matchedRules = m_frame->document()->ensureStyleResolver()->pseudoStyleRulesForElement(element, pseudoId, rulesToInclude);
+    if (matchedRules.isEmpty())
+        return 0;
+
+    RefPtr<StaticCSSRuleList> ruleList = StaticCSSRuleList::create();
+    for (unsigned i = 0; i < matchedRules.size(); ++i)
+        ruleList->rules().append(matchedRules[i]->createCSSOMWrapper());
+
+    return ruleList.release();
 }
 
 PassRefPtr<WebKitPoint> DOMWindow::webkitConvertPointFromNodeToPage(Node* node, const WebKitPoint* p) const
@@ -1447,21 +1467,27 @@ void DOMWindow::scrollTo(int x, int y) const
     view->setScrollPosition(layoutPos);
 }
 
+bool DOMWindow::allowedToChangeWindowGeometry() const
+{
+    if (!m_frame)
+        return false;
+    const Page* page = m_frame->page();
+    if (!page)
+        return false;
+    if (m_frame != page->mainFrame())
+        return false;
+    // Prevent web content from tricking the user into initiating a drag.
+    if (m_frame->eventHandler()->mousePressed())
+        return false;
+    return true;
+}
+
 void DOMWindow::moveBy(float x, float y) const
 {
-    if (UserGestureIndicator::processingUserGesture())
-        return;
-
-    if (!m_frame)
+    if (!allowedToChangeWindowGeometry())
         return;
 
     Page* page = m_frame->page();
-    if (!page)
-        return;
-
-    if (m_frame != page->mainFrame())
-        return;
-
     FloatRect fr = page->chrome()->windowRect();
     FloatRect update = fr;
     update.move(x, y);
@@ -1471,19 +1497,10 @@ void DOMWindow::moveBy(float x, float y) const
 
 void DOMWindow::moveTo(float x, float y) const
 {
-    if (UserGestureIndicator::processingUserGesture())
-        return;
-
-    if (!m_frame)
+    if (!allowedToChangeWindowGeometry())
         return;
 
     Page* page = m_frame->page();
-    if (!page)
-        return;
-
-    if (m_frame != page->mainFrame())
-        return;
-
     FloatRect fr = page->chrome()->windowRect();
     FloatRect sr = screenAvailableRect(page->mainFrame()->view());
     fr.setLocation(sr.location());
@@ -1495,19 +1512,10 @@ void DOMWindow::moveTo(float x, float y) const
 
 void DOMWindow::resizeBy(float x, float y) const
 {
-    if (UserGestureIndicator::processingUserGesture())
-        return;
-
-    if (!m_frame)
+    if (!allowedToChangeWindowGeometry())
         return;
 
     Page* page = m_frame->page();
-    if (!page)
-        return;
-
-    if (m_frame != page->mainFrame())
-        return;
-
     FloatRect fr = page->chrome()->windowRect();
     FloatSize dest = fr.size() + FloatSize(x, y);
     FloatRect update(fr.location(), dest);
@@ -1516,19 +1524,10 @@ void DOMWindow::resizeBy(float x, float y) const
 
 void DOMWindow::resizeTo(float width, float height) const
 {
-    if (UserGestureIndicator::processingUserGesture())
-        return;
-
-    if (!m_frame)
+    if (!allowedToChangeWindowGeometry())
         return;
 
     Page* page = m_frame->page();
-    if (!page)
-        return;
-
-    if (m_frame != page->mainFrame())
-        return;
-
     FloatRect fr = page->chrome()->windowRect();
     FloatSize dest = FloatSize(width, height);
     FloatRect update(fr.location(), dest);
@@ -1900,7 +1899,7 @@ bool DOMWindow::isInsecureScriptAccess(DOMWindow* activeWindow, const String& ur
     return true;
 }
 
-Frame* DOMWindow::createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures& windowFeatures,
+PassRefPtr<Frame> DOMWindow::createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures& windowFeatures,
     DOMWindow* activeWindow, Frame* firstFrame, Frame* openerFrame, PrepareDialogFunction function, void* functionContext)
 {
     Frame* activeFrame = activeWindow->frame();
@@ -1922,7 +1921,7 @@ Frame* DOMWindow::createWindow(const String& urlString, const AtomicString& fram
     // We pass the opener frame for the lookupFrame in case the active frame is different from
     // the opener frame, and the name references a frame relative to the opener frame.
     bool created;
-    Frame* newFrame = WebCore::createWindow(activeFrame, openerFrame, frameRequest, windowFeatures, created);
+    RefPtr<Frame> newFrame = WebCore::createWindow(activeFrame, openerFrame, frameRequest, windowFeatures, created);
     if (!newFrame)
         return 0;
 
@@ -1930,7 +1929,7 @@ Frame* DOMWindow::createWindow(const String& urlString, const AtomicString& fram
     newFrame->page()->setOpenedByDOM();
 
     if (newFrame->document()->domWindow()->isInsecureScriptAccess(activeWindow, completedURL))
-        return newFrame;
+        return newFrame.release();
 
     if (function)
         function(newFrame->document()->domWindow(), functionContext);
@@ -1942,7 +1941,11 @@ Frame* DOMWindow::createWindow(const String& urlString, const AtomicString& fram
         newFrame->navigationScheduler()->scheduleLocationChange(activeWindow->document()->securityOrigin(), completedURL.string(), referrer, lockHistory, false);
     }
 
-    return newFrame;
+    // Navigating the new frame could result in it being detached from its page by a navigation policy delegate.
+    if (!newFrame->page())
+        return 0;
+
+    return newFrame.release();
 }
 
 PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicString& frameName, const String& windowFeaturesString,
@@ -2000,7 +2003,7 @@ PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicStrin
     }
 
     WindowFeatures windowFeatures(windowFeaturesString);
-    Frame* result = createWindow(urlString, frameName, windowFeatures, activeWindow, firstFrame, m_frame);
+    RefPtr<Frame> result = createWindow(urlString, frameName, windowFeatures, activeWindow, firstFrame, m_frame);
     return result ? result->document()->domWindow() : 0;
 }
 
@@ -2020,7 +2023,7 @@ void DOMWindow::showModalDialog(const String& urlString, const String& dialogFea
         return;
 
     WindowFeatures windowFeatures(dialogFeaturesString, screenAvailableRect(m_frame->view()));
-    Frame* dialogFrame = createWindow(urlString, emptyAtom, windowFeatures,
+    RefPtr<Frame> dialogFrame = createWindow(urlString, emptyAtom, windowFeatures,
         activeWindow, firstFrame, m_frame, function, functionContext);
     if (!dialogFrame)
         return;

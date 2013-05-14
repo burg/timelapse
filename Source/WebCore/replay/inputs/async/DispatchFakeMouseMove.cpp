@@ -36,10 +36,11 @@
 #include "DispatchFakeMouseMove.h"
 
 #include "AsyncEventProxy.h"
-#include "ReplayController.h"
 #include "DispatchEventBase.h"
+#include "Document.h"
 #include "Frame.h"
 #include "Page.h"
+#include "ReplayController.h"
 #include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {

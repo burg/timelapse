@@ -33,8 +33,10 @@ all_queue_names = [
     "qt-ews",
     "qt-wk2-ews",
     "gtk-ews",
+    "gtk-wk2-ews",
     "mac-ews",
     "mac-wk2-ews",
     "win-ews",
     "efl-ews",
+    "efl-wk2-ews",
 ]

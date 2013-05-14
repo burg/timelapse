@@ -63,7 +63,9 @@ public:
     virtual void addChildAtIndex(GraphicsLayer*, int index);
     virtual void addChildAbove(GraphicsLayer*, GraphicsLayer* sibling);
     virtual void addChildBelow(GraphicsLayer*, GraphicsLayer* sibling);
+
     virtual void removeFromParent();
+
     virtual bool replaceChild(GraphicsLayer* oldChild, GraphicsLayer* newChild);
     virtual bool setChildren(const Vector<GraphicsLayer*>&);
     virtual void setParent(GraphicsLayer*);
@@ -86,6 +88,7 @@ public:
     virtual bool hasContentsLayer() const { return m_contentsLayer; }
 
     virtual void setPreserves3D(bool);
+    virtual void setMasksToBounds(bool);
 
     virtual bool addAnimation(const KeyframeValueList&, const IntSize& boxSize, const Animation*, const String& animationName, double timeOffset);
     virtual void removeAnimation(const String& animationName);
@@ -127,7 +130,7 @@ private:
     PassRefPtr<PlatformClutterAnimation> createKeyframeAnimation(const Animation*, const String&, bool additive);
     void setupAnimation(PlatformClutterAnimation*, const Animation*, bool additive);
 
-    const TimingFunction* timingFunctionForAnimationValue(const AnimationValue*, const Animation*);
+    const TimingFunction* timingFunctionForAnimationValue(const AnimationValue&, const Animation&);
 
     bool setAnimationEndpoints(const KeyframeValueList&, const Animation*, PlatformClutterAnimation*);
     bool setAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformClutterAnimation*);
@@ -143,6 +146,7 @@ private:
     bool setTransformAnimationKeyframes(const KeyframeValueList&, const Animation*, PlatformClutterAnimation*, int functionIndex, TransformOperation::OperationType, bool isMatrixAnimation, const IntSize& boxSize);
 
     enum MoveOrCopy { Move, Copy };
+    static void moveOrCopyLayerAnimation(MoveOrCopy, const String& animationIdentifier, GraphicsLayerActor* fromLayer, GraphicsLayerActor* toLayer);
     void moveOrCopyAnimations(MoveOrCopy, GraphicsLayerActor* fromLayer, GraphicsLayerActor* toLayer);
 
     bool appendToUncommittedAnimations(const KeyframeValueList&, const TransformOperations*, const Animation*, const String& animationName, const IntSize& boxSize, int animationIndex, double timeOffset, bool isMatrixAnimation);
@@ -189,6 +193,7 @@ private:
     void updateSublayerList();
     void updateGeometry(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
     void updateTransform();
+    void updateMasksToBounds();
     void updateLayerDrawsContent(float pixelAlignmentScale, const FloatPoint& positionRelativeToBase);
     void updateContentsImage();
     void updateContentsRect();

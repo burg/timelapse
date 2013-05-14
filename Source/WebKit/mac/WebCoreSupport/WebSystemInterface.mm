@@ -126,7 +126,7 @@ void InitWebCoreSystemInterface(void)
     INIT(GetGlyphsForCharacters);
     INIT(GetVerticalGlyphsForCharacters);
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED <= 1060
+#if __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
     INIT(GetHyphenationLocationBeforeIndex);
     INIT(GetNSEventMomentumPhase);
 #endif
@@ -137,6 +137,7 @@ void InitWebCoreSystemInterface(void)
     INIT(IOSurfaceContextCreate);
     INIT(IOSurfaceContextCreateImage);
     INIT(CreateCTTypesetterWithUniCharProviderAndOptions);
+    INIT(CTRunGetInitialAdvance);
     INIT(RecommendedScrollerStyle);
     INIT(ExecutableWasLinkedOnOrBeforeSnowLeopard);
     INIT(SetCrashReportApplicationSpecificInformation);
@@ -153,6 +154,10 @@ void InitWebCoreSystemInterface(void)
     INIT(SetRequestStorageSession);
 #endif
 
+#if PLATFORM(MAC)
+    INIT(SpeechSynthesisGetVoiceIdentifiers);
+    INIT(SpeechSynthesisGetDefaultVoiceIdentifierForLocale);
+#endif
     INIT(GetAXTextMarkerTypeID);
     INIT(GetAXTextMarkerRangeTypeID);
     INIT(CreateAXTextMarker);

@@ -29,6 +29,7 @@
 
 #include "PrintInfo.h"
 #include "WKAPICast.h"
+#include "WKPluginInformation.h"
 #include "WebBackForwardList.h"
 #include "WebData.h"
 #include "WebPageProxy.h"
@@ -38,6 +39,10 @@
 
 #ifdef __BLOCKS__
 #include <Block.h>
+#endif
+
+#if ENABLE(CONTEXT_MENUS)
+#include "WebContextMenuItem.h"
 #endif
 
 using namespace WebCore;
@@ -86,6 +91,11 @@ void WKPageLoadPlainTextString(WKPageRef pageRef, WKStringRef plainTextStringRef
 void WKPageLoadWebArchiveData(WKPageRef pageRef, WKDataRef webArchiveDataRef)
 {
     toImpl(pageRef)->loadWebArchiveData(toImpl(webArchiveDataRef));
+}
+
+void WKPageLoadFile(WKPageRef pageRef, WKURLRef fileURL, WKURLRef resourceDirectoryURL)
+{
+    toImpl(pageRef)->loadFile(toWTFString(fileURL), toWTFString(resourceDirectoryURL));
 }
 
 void WKPageStopLoading(WKPageRef pageRef)
@@ -817,58 +827,6 @@ void WKPageSetMayStartMediaWhenInWindow(WKPageRef pageRef, bool mayStartMedia)
     toImpl(pageRef)->setMayStartMediaWhenInWindow(mayStartMedia);
 }
 
-void WKPageSetInvalidMessageFunction(WKPageInvalidMessageFunction)
-{
-    // FIXME: Remove this function when doing so won't break WebKit nightlies.
-}
-
-WKStringRef WKPageGetPluginInformationBundleIdentifierKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationBundleIdentifierKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationBundleVersionKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationBundleVersionKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationDisplayNameKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationDisplayNameKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationFrameURLKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationFrameURLKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationMIMETypeKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationMIMETypeKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationPageURLKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationPageURLKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationPluginspageAttributeURLKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationPluginspageAttributeURLKey()).leakRef();
-    return toAPI(key);
-}
-
-WKStringRef WKPageGetPluginInformationPluginURLKey()
-{
-    static WebString* key = WebString::create(WebPageProxy::pluginInformationPluginURLKey()).leakRef();
-    return toAPI(key);
-}
 
 void WKPageSetOverridePrivateBrowsingEnabled(WKPageRef pageRef, bool enabled)
 {
@@ -879,3 +837,62 @@ bool WKPageGetOverridePrivateBrowsingEnabled(WKPageRef pageRef)
 {
     return toImpl(pageRef)->overridePrivateBrowsingEnabled();
 }
+
+void WKPageSelectContextMenuItem(WKPageRef page, WKContextMenuItemRef item)
+{
+#if ENABLE(CONTEXT_MENUS)
+    toImpl(page)->contextMenuItemSelected(*(toImpl(item)->data()));
+#endif
+}
+
+
+
+// -- DEPRECATED --
+
+void WKPageSetInvalidMessageFunction(WKPageInvalidMessageFunction)
+{
+    // FIXME: Remove this function when doing so won't break WebKit nightlies.
+}
+
+WKStringRef WKPageGetPluginInformationBundleIdentifierKey()
+{
+    return WKPluginInformationBundleIdentifierKey();
+}
+
+WKStringRef WKPageGetPluginInformationBundleVersionKey()
+{
+    return WKPluginInformationBundleVersionKey();
+}
+
+WKStringRef WKPageGetPluginInformationDisplayNameKey()
+{
+    return WKPluginInformationBundleVersionKey();
+}
+
+WKStringRef WKPageGetPluginInformationFrameURLKey()
+{
+    return WKPluginInformationFrameURLKey();
+}
+
+WKStringRef WKPageGetPluginInformationMIMETypeKey()
+{
+    return WKPluginInformationMIMETypeKey();
+}
+
+WKStringRef WKPageGetPluginInformationPageURLKey()
+{
+    return WKPluginInformationPageURLKey();
+}
+
+WKStringRef WKPageGetPluginInformationPluginspageAttributeURLKey()
+{
+    return WKPluginInformationPluginspageAttributeURLKey();
+}
+
+WKStringRef WKPageGetPluginInformationPluginURLKey()
+{
+    return WKPluginInformationPluginURLKey();
+}
+
+// -- DEPRECATED --
+

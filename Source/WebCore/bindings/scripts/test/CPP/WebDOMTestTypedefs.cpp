@@ -21,17 +21,16 @@
 #include "config.h"
 #include "WebDOMTestTypedefs.h"
 
-#include "Array.h"
 #include "KURL.h"
 #include "SVGPoint.h"
 #include "SerializedScriptValue.h"
-#include "WebDOMArray.h"
+#include "TestTypedefs.h"
 #include "WebDOMSVGPoint.h"
 #include "WebDOMString.h"
 #include "WebExceptionHandler.h"
-#include "wtf/text/AtomicString.h"
 #include <wtf/GetPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/text/AtomicString.h>
 
 struct WebDOMTestTypedefs::WebDOMTestTypedefsPrivate {
     WebDOMTestTypedefsPrivate(WebCore::TestTypedefs* object = 0)
@@ -190,14 +189,6 @@ void WebDOMTestTypedefs::func(const WebDOMlong[]& x)
         return;
 
     impl()->func(toWebCore(x));
-}
-
-void WebDOMTestTypedefs::multiTransferList(const WebDOMString& first, const WebDOMArray& tx, const WebDOMString& second, const WebDOMArray& txx)
-{
-    if (!impl())
-        return;
-
-    impl()->multiTransferList(WebCore::SerializedScriptValue::create(WTF::String(first)), toWebCore(tx), WebCore::SerializedScriptValue::create(WTF::String(second)), toWebCore(txx));
 }
 
 void WebDOMTestTypedefs::setShadow(float width, float height, float blur, const WebDOMString& color, float alpha)

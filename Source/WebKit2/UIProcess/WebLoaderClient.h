@@ -44,6 +44,7 @@ namespace WebKit {
 class APIObject;
 class AuthenticationChallengeProxy;
 class AuthenticationDecisionListener;
+class ImmutableDictionary;
 class WebBackForwardListItem;
 class WebFrameProxy;
 class WebPageProxy;
@@ -85,14 +86,13 @@ public:
     void processDidBecomeResponsive(WebPageProxy*);
     void processDidCrash(WebPageProxy*);
 
-    void didChangeBackForwardList(WebPageProxy*, WebBackForwardListItem* addedItem, Vector<RefPtr<APIObject> >* removedItems);
+    void didChangeBackForwardList(WebPageProxy*, WebBackForwardListItem* addedItem, Vector<RefPtr<APIObject>>* removedItems);
     bool shouldGoToBackForwardListItem(WebPageProxy*, WebBackForwardListItem*);
     void willGoToBackForwardListItem(WebPageProxy*, WebBackForwardListItem*, APIObject*);
 
-    PluginModuleLoadPolicy pluginLoadPolicy(WebPageProxy*, const String& pluginBundleIdentifier, const String& pluginBundleVersion, const String& displayName, const String& frameURLString, const String& pageURLString, PluginModuleLoadPolicy currentPluginLoadPolicy);
-    void didFailToInitializePlugin(WebPageProxy*, const String& mimeType, const String& frameURLString, const String& pageURLString);
-    void didBlockInsecurePluginVersion(WebPageProxy*, const String& mimeType, const String& pluginBundleIdentifier, const String& pluginBundleVersion, const String& frameURLString, const String& pageURLString);
-
+    PluginModuleLoadPolicy pluginLoadPolicy(WebPageProxy*, PluginModuleLoadPolicy currentPluginLoadPolicy, ImmutableDictionary*);
+    void didFailToInitializePlugin(WebPageProxy*, ImmutableDictionary*);
+    void didBlockInsecurePluginVersion(WebPageProxy*, ImmutableDictionary*);
 };
 
 } // namespace WebKit

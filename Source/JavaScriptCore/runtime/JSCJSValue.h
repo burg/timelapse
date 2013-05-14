@@ -26,7 +26,6 @@
 #include <math.h>
 #include <stddef.h> // for size_t
 #include <stdint.h>
-#include <wtf/AlwaysInline.h>
 #include <wtf/Assertions.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -43,7 +42,7 @@ namespace JSC {
 
 class ExecState;
 class JSCell;
-class JSGlobalData;
+class VM;
 class JSGlobalObject;
 class JSObject;
 class JSString;

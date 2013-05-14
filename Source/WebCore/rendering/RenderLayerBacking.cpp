@@ -58,7 +58,6 @@
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "TiledBacking.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -120,6 +119,7 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer* layer)
     , m_canCompositeFilters(false)
 #endif
     , m_backgroundLayerPaintsFixedRootBackground(false)
+    , m_didSwitchToFullTileCoverageDuringLoading(false)
 {
     if (layer->isRootLayer()) {
         Frame* frame = toRenderView(renderer())->frameView()->frame();
@@ -209,7 +209,7 @@ TiledBacking* RenderLayerBacking::tiledBacking() const
     return m_graphicsLayer->tiledBacking();
 }
 
-static TiledBacking::TileCoverage computeTileCoverage(const RenderLayerBacking* backing)
+static TiledBacking::TileCoverage computeTileCoverage(RenderLayerBacking* backing)
 {
     // FIXME: When we use TiledBacking for overflow, this should look at RenderView scrollability.
     Frame* frame = backing->owningLayer()->renderer()->frame();
@@ -219,7 +219,13 @@ static TiledBacking::TileCoverage computeTileCoverage(const RenderLayerBacking* 
     TiledBacking::TileCoverage tileCoverage = TiledBacking::CoverageForVisibleArea;
     FrameView* frameView = frame->view();
     bool useMinimalTilesDuringLiveResize = frameView->inLiveResize();
-    bool useMinimalTilesDuringLoading = frame->page()->progress()->isLoadProgressing() && !frameView->wasScrolledByUser();
+    bool useMinimalTilesDuringLoading = false;
+    // Avoid churn.
+    if (!backing->didSwitchToFullTileCoverageDuringLoading()) {
+        useMinimalTilesDuringLoading = !frameView->isVisuallyNonEmpty() || (frame->page()->progress()->isMainLoadProgressing() && !frameView->wasScrolledByUser());
+        if (!useMinimalTilesDuringLoading)
+            backing->setDidSwitchToFullTileCoverageDuringLoading();
+    }
     if (!(useMinimalTilesDuringLoading || useMinimalTilesDuringLiveResize)) {
         bool clipsToExposedRect = backing->tiledBacking()->clipsToExposedRect();
         if (frameView->horizontalScrollbarMode() != ScrollbarAlwaysOff || clipsToExposedRect)
@@ -412,9 +418,6 @@ bool RenderLayerBacking::shouldClipCompositedBounds() const
     if (m_usingTiledCacheLayer)
         return false;
 
-    if (!compositor()->compositingConsultsOverlap())
-        return false;
-
     if (layerOrAncestorIsTransformedOrUsingCompositedScrolling(m_owningLayer))
         return false;
 
@@ -552,7 +555,10 @@ bool RenderLayerBacking::updateGraphicsLayerConfiguration()
     } else
         m_graphicsLayer->setReplicatedByLayer(0);
 
-    updateBackgroundColor(isSimpleContainerCompositingLayer());
+    bool isSimpleContainer = isSimpleContainerCompositingLayer();
+    bool didUpdateContentsRect = false;
+    updateDirectlyCompositedContents(isSimpleContainer, didUpdateContentsRect);
+
     updateRootLayerConfiguration();
     
     if (isDirectlyCompositedImage())
@@ -854,11 +860,20 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
     // If this layer was created just for clipping or to apply perspective, it doesn't need its own backing store.
     setRequiresOwnBackingStore(compositor()->requiresOwnBackingStore(m_owningLayer, compAncestor));
 
-    updateContentsRect(isSimpleContainer);
-    updateBackgroundColor(isSimpleContainer);
+    bool didUpdateContentsRect = false;
+    updateDirectlyCompositedContents(isSimpleContainer, didUpdateContentsRect);
+    if (!didUpdateContentsRect)
+        resetContentsRect();
+
     updateDrawsContent(isSimpleContainer);
     updateAfterWidgetResize();
     registerScrollingLayers();
+}
+
+void RenderLayerBacking::updateDirectlyCompositedContents(bool isSimpleContainer, bool& didUpdateContentsRect)
+{
+    updateDirectlyCompositedBackgroundImage(isSimpleContainer, didUpdateContentsRect);
+    updateDirectlyCompositedBackgroundColor(isSimpleContainer, didUpdateContentsRect);
 }
 
 void RenderLayerBacking::registerScrollingLayers()
@@ -932,15 +947,12 @@ void RenderLayerBacking::updateInternalHierarchy()
     }
 }
 
-void RenderLayerBacking::updateContentsRect(bool isSimpleContainer)
+void RenderLayerBacking::resetContentsRect()
 {
-    IntRect contentsRect;
-    if (isSimpleContainer && renderer()->hasBackground())
-        contentsRect = backgroundBox();
-    else
-        contentsRect = contentsBox();
-
-    m_graphicsLayer->setContentsRect(contentsRect);
+    IntRect rect = contentsBox();
+    m_graphicsLayer->setContentsRect(rect);
+    m_graphicsLayer->setContentsTileSize(IntSize());
+    m_graphicsLayer->setContentsTilePhase(IntPoint());
 }
 
 void RenderLayerBacking::updateDrawsContent()
@@ -1356,9 +1368,17 @@ static bool hasBoxDecorations(const RenderStyle* style)
     return style->hasBorder() || style->hasBorderRadius() || style->hasOutline() || style->hasAppearance() || style->boxShadow() || style->hasFilter();
 }
 
+static bool canCreateTiledImage(const RenderStyle*);
+
 static bool hasBoxDecorationsOrBackgroundImage(const RenderStyle* style)
 {
-    return hasBoxDecorations(style) || style->hasBackgroundImage();
+    if (hasBoxDecorations(style))
+        return true;
+
+    if (!style->hasBackgroundImage())
+        return false;
+
+    return !GraphicsLayer::supportsContentsTiling() || !canCreateTiledImage(style);
 }
 
 Color RenderLayerBacking::rendererBackgroundColor() const
@@ -1370,14 +1390,78 @@ Color RenderLayerBacking::rendererBackgroundColor() const
     return backgroundRenderer->style()->visitedDependentColor(CSSPropertyBackgroundColor);
 }
 
-void RenderLayerBacking::updateBackgroundColor(bool isSimpleContainer)
+void RenderLayerBacking::updateDirectlyCompositedBackgroundColor(bool isSimpleContainer, bool& didUpdateContentsRect)
 {
-    Color backgroundColor;
-    if (isSimpleContainer)
-        backgroundColor = rendererBackgroundColor();
+    if (!isSimpleContainer) {
+        m_graphicsLayer->setContentsToSolidColor(Color());
+        return;
+    }
+
+    Color backgroundColor = rendererBackgroundColor();
 
     // An unset (invalid) color will remove the solid color.
     m_graphicsLayer->setContentsToSolidColor(backgroundColor);
+    m_graphicsLayer->setContentsRect(backgroundBox());
+    didUpdateContentsRect = true;
+}
+
+bool canCreateTiledImage(const RenderStyle* style)
+{
+    const FillLayer* fillLayer = style->backgroundLayers();
+    if (fillLayer->next())
+        return false;
+
+    if (!fillLayer->imagesAreLoaded())
+        return false;
+
+    if (fillLayer->attachment() != ScrollBackgroundAttachment)
+        return false;
+
+    Color color = style->visitedDependentColor(CSSPropertyBackgroundColor);
+
+    // FIXME: Allow color+image compositing when it makes sense.
+    // For now bailing out.
+    if (color.isValid() && color.alpha())
+        return false;
+
+    StyleImage* styleImage = fillLayer->image();
+
+    // FIXME: support gradients with isGeneratedImage.
+    if (!styleImage->isCachedImage())
+        return false;
+
+    Image* image = styleImage->cachedImage()->image();
+    if (!image->isBitmapImage())
+        return false;
+
+    return true;
+}
+
+void RenderLayerBacking::updateDirectlyCompositedBackgroundImage(bool isSimpleContainer, bool& didUpdateContentsRect)
+{
+    if (!GraphicsLayer::supportsContentsTiling())
+        return;
+
+    if (isDirectlyCompositedImage())
+        return;
+
+    const RenderStyle* style = renderer()->style();
+
+    if (!isSimpleContainer || !style->hasBackgroundImage()) {
+        m_graphicsLayer->setContentsToImage(0);
+        return;
+    }
+
+    IntRect destRect = backgroundBox();
+    IntPoint phase;
+    IntSize tileSize;
+    RefPtr<Image> image = style->backgroundLayers()->image()->cachedImage()->image();
+    toRenderBox(renderer())->getGeometryForBackgroundImage(destRect, phase, tileSize);
+    m_graphicsLayer->setContentsTileSize(tileSize);
+    m_graphicsLayer->setContentsTilePhase(phase);
+    m_graphicsLayer->setContentsRect(destRect);
+    m_graphicsLayer->setContentsToImage(image.get());
+    didUpdateContentsRect = true;
 }
 
 void RenderLayerBacking::updateRootLayerConfiguration()
@@ -1452,7 +1536,7 @@ static bool isRestartedPlugin(RenderObject* renderer)
     if (!element || !element->isPluginElement())
         return false;
 
-    return toHTMLPlugInElement(element)->restartedPlugin();
+    return toHTMLPlugInElement(element)->isRestartedPlugin();
 }
 
 static bool isCompositedPlugin(RenderObject* renderer)
@@ -1614,6 +1698,9 @@ void RenderLayerBacking::contentChanged(ContentChangeType changeType)
         return;
     }
 
+    if ((changeType == BackgroundImageChanged) && canCreateTiledImage(renderer()->style()))
+        updateGraphicsLayerGeometry();
+
     if ((changeType == MaskImageChanged) && m_maskLayer) {
         // The composited layer bounds relies on box->maskClipRect(), which changes
         // when the mask image becomes available.
@@ -1708,8 +1795,7 @@ IntRect RenderLayerBacking::contentsBox() const
 
 static LayoutRect backgroundRectForBox(const RenderBox* box)
 {
-    EFillBox clip = box->style()->backgroundClip();
-    switch (clip) {
+    switch (box->style()->backgroundClip()) {
     case BorderFillBox:
         return box->borderBoxRect();
     case PaddingFillBox:
@@ -1759,7 +1845,7 @@ bool RenderLayerBacking::paintsIntoWindow() const
         return false;
 
     if (m_owningLayer->isRootLayer()) {
-#if PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY) || USE(COORDINATED_GRAPHICS)
         if (compositor()->inForcedCompositingMode())
             return false;
 #endif
@@ -2021,39 +2107,31 @@ bool RenderLayerBacking::startAnimation(double timeOffset, const Animation* anim
         
         bool isFirstOrLastKeyframe = key == 0 || key == 1;
         if ((hasTransform && isFirstOrLastKeyframe) || currentKeyframe.containsProperty(CSSPropertyWebkitTransform))
-            transformVector.insert(new TransformAnimationValue(key, &(keyframeStyle->transform()), tf));
-        
+            transformVector.insert(TransformAnimationValue::create(key, keyframeStyle->transform(), tf));
+
         if ((hasOpacity && isFirstOrLastKeyframe) || currentKeyframe.containsProperty(CSSPropertyOpacity))
-            opacityVector.insert(new FloatAnimationValue(key, keyframeStyle->opacity(), tf));
+            opacityVector.insert(FloatAnimationValue::create(key, keyframeStyle->opacity(), tf));
 
 #if ENABLE(CSS_FILTERS)
         if ((hasFilter && isFirstOrLastKeyframe) || currentKeyframe.containsProperty(CSSPropertyWebkitFilter))
-            filterVector.insert(new FilterAnimationValue(key, &(keyframeStyle->filter()), tf));
+            filterVector.insert(FilterAnimationValue::create(key, keyframeStyle->filter(), tf));
 #endif
     }
 
-    bool didAnimateTransform = false;
-    bool didAnimateOpacity = false;
-#if ENABLE(CSS_FILTERS)
-    bool didAnimateFilter = false;
-#endif
+    bool didAnimate = false;
     
     if (hasTransform && m_graphicsLayer->addAnimation(transformVector, toRenderBox(renderer())->pixelSnappedBorderBoxRect().size(), anim, keyframes.animationName(), timeOffset))
-        didAnimateTransform = true;
+        didAnimate = true;
 
     if (hasOpacity && m_graphicsLayer->addAnimation(opacityVector, IntSize(), anim, keyframes.animationName(), timeOffset))
-        didAnimateOpacity = true;
+        didAnimate = true;
 
 #if ENABLE(CSS_FILTERS)
     if (hasFilter && m_graphicsLayer->addAnimation(filterVector, IntSize(), anim, keyframes.animationName(), timeOffset))
-        didAnimateFilter = true;
+        didAnimate = true;
 #endif
 
-#if ENABLE(CSS_FILTERS)
-    return didAnimateTransform || didAnimateOpacity || didAnimateFilter;
-#else
-    return didAnimateTransform || didAnimateOpacity;
-#endif
+    return didAnimate;
 }
 
 void RenderLayerBacking::animationPaused(double timeOffset, const String& animationName)
@@ -2068,11 +2146,7 @@ void RenderLayerBacking::animationFinished(const String& animationName)
 
 bool RenderLayerBacking::startTransition(double timeOffset, CSSPropertyID property, const RenderStyle* fromStyle, const RenderStyle* toStyle)
 {
-    bool didAnimateOpacity = false;
-    bool didAnimateTransform = false;
-#if ENABLE(CSS_FILTERS)
-    bool didAnimateFilter = false;
-#endif
+    bool didAnimate = false;
 
     ASSERT(property != CSSPropertyInvalid);
 
@@ -2080,13 +2154,13 @@ bool RenderLayerBacking::startTransition(double timeOffset, CSSPropertyID proper
         const Animation* opacityAnim = toStyle->transitionForProperty(CSSPropertyOpacity);
         if (opacityAnim && !opacityAnim->isEmptyOrZeroDuration()) {
             KeyframeValueList opacityVector(AnimatedPropertyOpacity);
-            opacityVector.insert(new FloatAnimationValue(0, compositingOpacity(fromStyle->opacity())));
-            opacityVector.insert(new FloatAnimationValue(1, compositingOpacity(toStyle->opacity())));
+            opacityVector.insert(FloatAnimationValue::create(0, compositingOpacity(fromStyle->opacity())));
+            opacityVector.insert(FloatAnimationValue::create(1, compositingOpacity(toStyle->opacity())));
             // The boxSize param is only used for transform animations (which can only run on RenderBoxes), so we pass an empty size here.
             if (m_graphicsLayer->addAnimation(opacityVector, IntSize(), opacityAnim, GraphicsLayer::animationNameForTransition(AnimatedPropertyOpacity), timeOffset)) {
                 // To ensure that the correct opacity is visible when the animation ends, also set the final opacity.
                 updateOpacity(toStyle);
-                didAnimateOpacity = true;
+                didAnimate = true;
             }
         }
     }
@@ -2095,12 +2169,12 @@ bool RenderLayerBacking::startTransition(double timeOffset, CSSPropertyID proper
         const Animation* transformAnim = toStyle->transitionForProperty(CSSPropertyWebkitTransform);
         if (transformAnim && !transformAnim->isEmptyOrZeroDuration()) {
             KeyframeValueList transformVector(AnimatedPropertyWebkitTransform);
-            transformVector.insert(new TransformAnimationValue(0, &fromStyle->transform()));
-            transformVector.insert(new TransformAnimationValue(1, &toStyle->transform()));
+            transformVector.insert(TransformAnimationValue::create(0, fromStyle->transform()));
+            transformVector.insert(TransformAnimationValue::create(1, toStyle->transform()));
             if (m_graphicsLayer->addAnimation(transformVector, toRenderBox(renderer())->pixelSnappedBorderBoxRect().size(), transformAnim, GraphicsLayer::animationNameForTransition(AnimatedPropertyWebkitTransform), timeOffset)) {
                 // To ensure that the correct transform is visible when the animation ends, also set the final transform.
                 updateTransform(toStyle);
-                didAnimateTransform = true;
+                didAnimate = true;
             }
         }
     }
@@ -2110,22 +2184,18 @@ bool RenderLayerBacking::startTransition(double timeOffset, CSSPropertyID proper
         const Animation* filterAnim = toStyle->transitionForProperty(CSSPropertyWebkitFilter);
         if (filterAnim && !filterAnim->isEmptyOrZeroDuration()) {
             KeyframeValueList filterVector(AnimatedPropertyWebkitFilter);
-            filterVector.insert(new FilterAnimationValue(0, &fromStyle->filter()));
-            filterVector.insert(new FilterAnimationValue(1, &toStyle->filter()));
+            filterVector.insert(FilterAnimationValue::create(0, fromStyle->filter()));
+            filterVector.insert(FilterAnimationValue::create(1, toStyle->filter()));
             if (m_graphicsLayer->addAnimation(filterVector, IntSize(), filterAnim, GraphicsLayer::animationNameForTransition(AnimatedPropertyWebkitFilter), timeOffset)) {
                 // To ensure that the correct filter is visible when the animation ends, also set the final filter.
                 updateFilters(toStyle);
-                didAnimateFilter = true;
+                didAnimate = true;
             }
         }
     }
 #endif
 
-#if ENABLE(CSS_FILTERS)
-    return didAnimateOpacity || didAnimateTransform || didAnimateFilter;
-#else
-    return didAnimateOpacity || didAnimateTransform;
-#endif
+    return didAnimate;
 }
 
 void RenderLayerBacking::transitionPaused(double timeOffset, CSSPropertyID property)
@@ -2278,24 +2348,6 @@ bool RenderLayerBacking::contentsVisible(const GraphicsLayer*, const IntRect& lo
     return absoluteContentQuad.enclosingBoundingBox().intersects(visibleContentRect);
 }
 #endif
-
-void RenderLayerBacking::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addWeakPointer(m_owningLayer);
-    info.addMember(m_ancestorClippingLayer, "ancestorClippingLayer");
-    info.addMember(m_contentsContainmentLayer, "contentsContainmentLayer");
-    info.addMember(m_graphicsLayer, "graphicsLayer");
-    info.addMember(m_foregroundLayer, "foregroundLayer");
-    info.addMember(m_backgroundLayer, "backgroundLayer");
-    info.addMember(m_childContainmentLayer, "childContainmentLayer");
-    info.addMember(m_maskLayer, "maskLayer");
-    info.addMember(m_layerForHorizontalScrollbar, "layerForHorizontalScrollbar");
-    info.addMember(m_layerForVerticalScrollbar, "layerForVerticalScrollbar");
-    info.addMember(m_layerForScrollCorner, "layerForScrollCorner");
-    info.addMember(m_scrollingLayer, "scrollingLayer");
-    info.addMember(m_scrollingContentsLayer, "scrollingContentsLayer");
-}
 
 } // namespace WebCore
 

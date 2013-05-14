@@ -21,7 +21,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 messages -> StorageAreaMap {
+    DidGetValues()
     DidSetItem(WTF::String key, bool quotaException)
+    DidRemoveItem(WTF::String key)
+    DidClear()
 
-    DispatchStorageEvent(WTF::String key, WTF::String oldValue, WTF::String newValue, WTF::String urlString)
+    DispatchStorageEvent(uint64_t sourceStorageAreaID, WTF::String key, WTF::String oldValue, WTF::String newValue, WTF::String urlString)
 }

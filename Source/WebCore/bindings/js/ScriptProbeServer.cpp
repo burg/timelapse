@@ -105,7 +105,7 @@ void ScriptProbeServer::addSampleFromConsole(int probeId, ScriptState* exec)
     if (exception)
         return;
     
-    ScriptValue wrappedResult = ScriptValue(exec->globalData(), result);
+    ScriptValue wrappedResult = ScriptValue(exec->vm(), result);
     PageScriptDebugServer::shared().addScriptProbeSample(probeId, exec, wrappedResult);
 }
 
@@ -143,7 +143,7 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
             if (exception)
                 continue;
             
-            ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->globalData(), result);
+            ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
             PageScriptDebugServer::shared().addScriptProbeSample(probe->uid(), debuggerCallFrame.callFrame(), wrappedResult);
         }
     }

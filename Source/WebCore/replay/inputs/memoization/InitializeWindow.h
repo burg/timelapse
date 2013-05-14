@@ -34,6 +34,8 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "Document.h"
+#include "DOMWindow.h"
 #include "EventLoopInput.h"
 #include "Frame.h"
 #include "Page.h"

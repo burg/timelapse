@@ -50,6 +50,7 @@
 #include "PluginDocument.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderView.h"
+#include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
@@ -413,7 +414,7 @@ bool SubframeLoader::allowPlugins(ReasonForCallingAllowPlugins reason)
 
 bool SubframeLoader::shouldUsePlugin(const KURL& url, const String& mimeType, bool shouldPreferPlugInsForImages, bool hasFallback, bool& useFallback)
 {
-    if (m_frame->loader()->client()->shouldUsePluginDocument(mimeType)) {
+    if (m_frame->loader()->client()->shouldAlwaysUsePluginDocument(mimeType)) {
         useFallback = false;
         return true;
     }

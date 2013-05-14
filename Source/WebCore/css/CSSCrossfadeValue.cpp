@@ -34,7 +34,6 @@
 #include "RenderObject.h"
 #include "StyleCachedImage.h"
 #include "StyleGeneratedImage.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -169,19 +168,6 @@ void CSSCrossfadeValue::loadSubimages(CachedResourceLoader* cachedResourceLoader
     m_crossfadeSubimageObserver.setReady(true);
 }
 
-void CSSCrossfadeValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    CSSImageGeneratorValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_fromValue, "fromValue");
-    info.addMember(m_toValue, "toValue");
-    info.addMember(m_percentageValue, "percentageValue");
-    // FIXME: add instrumentation for
-    // m_cachedFromImage
-    // m_cachedToImage
-    // m_generatedImage
-}
-
 PassRefPtr<Image> CSSCrossfadeValue::image(RenderObject* renderer, const IntSize& size)
 {
     if (size.isEmpty())
@@ -207,8 +193,8 @@ PassRefPtr<Image> CSSCrossfadeValue::image(RenderObject* renderer, const IntSize
 
 void CSSCrossfadeValue::crossfadeChanged(const IntRect&)
 {
-    RenderObjectSizeCountMap::const_iterator end = clients().end();
-    for (RenderObjectSizeCountMap::const_iterator curr = clients().begin(); curr != end; ++curr) {
+    HashCountedSet<RenderObject*>::const_iterator end = clients().end();
+    for (HashCountedSet<RenderObject*>::const_iterator curr = clients().begin(); curr != end; ++curr) {
         RenderObject* client = const_cast<RenderObject*>(curr->key);
         client->imageChanged(static_cast<WrappedImagePtr>(this));
     }

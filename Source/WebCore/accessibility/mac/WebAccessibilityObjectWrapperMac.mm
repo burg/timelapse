@@ -46,6 +46,7 @@
 #import "ChromeClient.h"
 #import "ColorMac.h"
 #import "ContextMenuController.h"
+#import "Editor.h"
 #import "Font.h"
 #import "Frame.h"
 #import "FrameLoaderClient.h"
@@ -109,6 +110,10 @@ using namespace std;
 // Lists
 #ifndef NSAccessibilityContentListSubrole
 #define NSAccessibilityContentListSubrole @"AXContentList"
+#endif
+
+#ifndef NSAccessibilityDefinitionListSubrole
+#define NSAccessibilityDefinitionListSubrole @"AXDefinitionList"
 #endif
 
 #ifndef NSAccessibilityDescriptionListSubrole
@@ -1751,8 +1756,13 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         AccessibilityList* listObject = toAccessibilityList(m_object);
         if (listObject->isUnorderedList() || listObject->isOrderedList())
             return NSAccessibilityContentListSubrole;
-        if (listObject->isDescriptionList())
+        if (listObject->isDescriptionList()) {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < 1090
+            return NSAccessibilityDefinitionListSubrole;
+#else
             return NSAccessibilityDescriptionListSubrole;
+#endif
+        }
     }
     
     // ARIA content subroles.
@@ -1803,8 +1813,6 @@ static NSString* roleValueToNSString(AccessibilityRole value)
             return @"AXTabPanel";
         case DefinitionRole:
             return @"AXDefinition";
-        case DescriptionListRole:
-            return @"AXDescriptionList";
         case DescriptionListTermRole:
             return @"AXTerm";
         case DescriptionListDetailRole:
@@ -1867,51 +1875,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     NSString* axRole = [self role];
     
     if ([axRole isEqualToString:NSAccessibilityGroupRole]) {
+        
+        NSString *ariaLandmarkRoleDescription = [self ariaLandmarkRoleDescription];
+        if (ariaLandmarkRoleDescription)
+            return ariaLandmarkRoleDescription;
+        
         switch (m_object->roleValue()) {
-            default:
-                return NSAccessibilityRoleDescription(NSAccessibilityGroupRole, [self subrole]);
-            case LandmarkApplicationRole:
-                return AXARIAContentGroupText(@"ARIALandmarkApplication");
-            case LandmarkBannerRole:
-                return AXARIAContentGroupText(@"ARIALandmarkBanner");
-            case LandmarkComplementaryRole:
-                return AXARIAContentGroupText(@"ARIALandmarkComplementary");
-            case LandmarkContentInfoRole:
-                return AXARIAContentGroupText(@"ARIALandmarkContentInfo");
-            case LandmarkMainRole:
-                return AXARIAContentGroupText(@"ARIALandmarkMain");
-            case LandmarkNavigationRole:
-                return AXARIAContentGroupText(@"ARIALandmarkNavigation");
-            case LandmarkSearchRole:
-                return AXARIAContentGroupText(@"ARIALandmarkSearch");
-            case ApplicationAlertRole:
-                return AXARIAContentGroupText(@"ARIAApplicationAlert");
-            case ApplicationAlertDialogRole:
-                return AXARIAContentGroupText(@"ARIAApplicationAlertDialog");
-            case ApplicationDialogRole:
-                return AXARIAContentGroupText(@"ARIAApplicationDialog");
-            case ApplicationLogRole:
-                return AXARIAContentGroupText(@"ARIAApplicationLog");
-            case ApplicationMarqueeRole:
-                return AXARIAContentGroupText(@"ARIAApplicationMarquee");
-            case ApplicationStatusRole:
-                return AXARIAContentGroupText(@"ARIAApplicationStatus");
-            case ApplicationTimerRole:
-                return AXARIAContentGroupText(@"ARIAApplicationTimer");
-            case DocumentRole:
-                return AXARIAContentGroupText(@"ARIADocument");
-            case DocumentArticleRole:
-                return AXARIAContentGroupText(@"ARIADocumentArticle");
-            case DocumentMathRole:
-                return AXARIAContentGroupText(@"ARIADocumentMath");
-            case DocumentNoteRole:
-                return AXARIAContentGroupText(@"ARIADocumentNote");
-            case DocumentRegionRole:
-                return AXARIAContentGroupText(@"ARIADocumentRegion");
-            case UserInterfaceTooltipRole:
-                return AXARIAContentGroupText(@"ARIAUserInterfaceTooltip");
-            case TabPanelRole:
-                return AXARIAContentGroupText(@"ARIATabPanel");
             case DefinitionRole:
                 return AXDefinitionText();
             case DescriptionListTermRole:
@@ -1920,6 +1889,8 @@ static NSString* roleValueToNSString(AccessibilityRole value)
                 return AXDescriptionListDetailText();
             case FooterRole:
                 return AXFooterRoleDescriptionText();
+            default:
+                return NSAccessibilityRoleDescription(NSAccessibilityGroupRole, [self subrole]);
         }
     }
     
@@ -2325,7 +2296,12 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         
         return m_object->stringValue();
     }
-    
+
+    if ([attributeName isEqualToString:(NSString *)kAXMenuItemMarkCharAttribute]) {
+        const unichar ch = 0x2713; // ✓ used on Mac for selected menu items.
+        return (m_object->isChecked()) ? [NSString stringWithCharacters:&ch length:1] : nil;
+    }
+
     if ([attributeName isEqualToString: NSAccessibilityMinValueAttribute])
         return [NSNumber numberWithFloat:m_object->minValueForRange()];
     

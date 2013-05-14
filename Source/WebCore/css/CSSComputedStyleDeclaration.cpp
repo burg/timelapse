@@ -61,7 +61,6 @@
 #include "StylePropertySet.h"
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
-#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitCSSTransformValue.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/text/StringBuilder.h>
@@ -72,11 +71,13 @@
 
 #if ENABLE(CSS_SHADERS)
 #include "CustomFilterArrayParameter.h"
+#include "CustomFilterColorParameter.h"
 #include "CustomFilterNumberParameter.h"
 #include "CustomFilterOperation.h"
 #include "CustomFilterParameter.h"
 #include "CustomFilterTransformParameter.h"
 #include "WebKitCSSArrayFunctionValue.h"
+#include "WebKitCSSMatFunctionValue.h"
 #include "WebKitCSSMixFunctionValue.h"
 #endif
 
@@ -839,6 +840,21 @@ static PassRefPtr<CSSValue> valueForCustomFilterArrayParameter(const CustomFilte
     return arrayParameterValue.release();
 }
 
+static PassRefPtr<CSSValue> valueForCustomFilterMatParameter(const CustomFilterArrayParameter* matrixParameter)
+{
+    RefPtr<WebKitCSSMatFunctionValue> matrixParameterValue = WebKitCSSMatFunctionValue::create();
+    for (unsigned i = 0, size = matrixParameter->size(); i < size; ++i)
+        matrixParameterValue->append(cssValuePool().createValue(matrixParameter->valueAt(i), CSSPrimitiveValue::CSS_NUMBER));
+    return matrixParameterValue.release();
+}
+
+static PassRefPtr<CSSValue> valueForCustomFilterColorParameter(const CustomFilterColorParameter* colorParameter)
+{
+    RefPtr<CSSValueList> colorParameterValue = CSSValueList::createSpaceSeparated();
+    colorParameterValue->append(cssValuePool().createColorValue(colorParameter->color().rgb()));
+    return colorParameterValue.release();
+}
+
 static PassRefPtr<CSSValue> valueForCustomFilterNumberParameter(const CustomFilterNumberParameter* numberParameter)
 {
     RefPtr<CSSValueList> numberParameterValue = CSSValueList::createSpaceSeparated();
@@ -863,6 +879,10 @@ static PassRefPtr<CSSValue> valueForCustomFilterParameter(const RenderObject* re
     switch (parameter->parameterType()) {
     case CustomFilterParameter::ARRAY:
         return valueForCustomFilterArrayParameter(static_cast<const CustomFilterArrayParameter*>(parameter));
+    case CustomFilterParameter::COLOR:
+        return valueForCustomFilterColorParameter(static_cast<const CustomFilterColorParameter*>(parameter));
+    case CustomFilterParameter::MATRIX:
+        return valueForCustomFilterMatParameter(static_cast<const CustomFilterArrayParameter*>(parameter));
     case CustomFilterParameter::NUMBER:
         return valueForCustomFilterNumberParameter(static_cast<const CustomFilterNumberParameter*>(parameter));
     case CustomFilterParameter::TRANSFORM:
@@ -2196,12 +2216,19 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             }
             }
         case CSSPropertyTextIndent: {
+            // If CSS3_TEXT is disabled or text-indent has only one value(<length> | <percentage>),
+            // getPropertyCSSValue() returns CSSValue.
             RefPtr<CSSValue> textIndent = zoomAdjustedPixelValueForLength(style->textIndent(), style.get());
 #if ENABLE(CSS3_TEXT)
-            if (style->textIndentLine() == TextIndentEachLine) {
+            // If CSS3_TEXT is enabled and text-indent has -webkit-each-line or -webkit-hanging,
+            // getPropertyCSSValue() returns CSSValueList.
+            if (style->textIndentLine() == TextIndentEachLine || style->textIndentType() == TextIndentHanging) {
                 RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
                 list->append(textIndent.release());
-                list->append(cssValuePool().createIdentifierValue(CSSValueWebkitEachLine));
+                if (style->textIndentLine() == TextIndentEachLine)
+                    list->append(cssValuePool().createIdentifierValue(CSSValueWebkitEachLine));
+                if (style->textIndentType() == TextIndentHanging)
+                    list->append(cssValuePool().createIdentifierValue(CSSValueWebkitHanging));
                 return list.release();
             }
 #endif
@@ -2791,6 +2818,9 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             break;
 
         /* Other unimplemented properties */
+#if ENABLE(CSS_SHADERS)
+        case CSSPropertyGeometry:
+#endif
         case CSSPropertyPage: // for @page
         case CSSPropertyQuotes: // FIXME: needs implementation
         case CSSPropertySize: // for @page
@@ -2811,8 +2841,9 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitTransformOriginX:
         case CSSPropertyWebkitTransformOriginY:
         case CSSPropertyWebkitTransformOriginZ:
-#if ENABLE(CSS_EXCLUSIONS)
-        case CSSPropertyWebkitWrap:
+#if ENABLE(CSS_SHADERS)
+        case CSSPropertyMix:
+        case CSSPropertyParameters:
 #endif
             break;
 
@@ -2921,14 +2952,9 @@ bool CSSComputedStyleDeclaration::cssPropertyMatches(CSSPropertyID propertyID, c
     return value && propertyValue && value->equals(*propertyValue);
 }
 
-PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::copy() const
+PassRefPtr<MutableStylePropertySet> CSSComputedStyleDeclaration::copyProperties() const
 {
     return copyPropertiesInSet(computedProperties, numComputedProperties);
-}
-
-PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::makeMutable()
-{
-    return copy();
 }
 
 PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForShorthandProperties(const StylePropertyShorthand& shorthand) const
@@ -2979,7 +3005,7 @@ PassRefPtr<CSSValueList> CSSComputedStyleDeclaration::getCSSPropertyValuesForGri
     return list.release();
 }
 
-PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const
+PassRefPtr<MutableStylePropertySet> CSSComputedStyleDeclaration::copyPropertiesInSet(const CSSPropertyID* set, unsigned length) const
 {
     Vector<CSSProperty, 256> list;
     list.reserveInitialCapacity(length);
@@ -2988,13 +3014,7 @@ PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::copyPropertiesInSet(co
         if (value)
             list.append(CSSProperty(set[i], value.release(), false));
     }
-    return StylePropertySet::create(list.data(), list.size());
-}
-
-void CSSComputedStyleDeclaration::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
-{
-    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_node, "node");
+    return MutableStylePropertySet::create(list.data(), list.size());
 }
 
 CSSRule* CSSComputedStyleDeclaration::parentRule() const

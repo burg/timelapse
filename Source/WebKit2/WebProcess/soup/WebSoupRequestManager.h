@@ -22,6 +22,8 @@
 
 #include "DataReference.h"
 #include "MessageReceiver.h"
+#include "WebProcessSupplement.h"
+#include <WebCore/ResourceError.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OwnPtr.h>
@@ -36,11 +38,13 @@ namespace WebKit {
 class WebProcess;
 struct WebSoupRequestAsyncData;
 
-class WebSoupRequestManager : private CoreIPC::MessageReceiver {
+class WebSoupRequestManager : public WebProcessSupplement, private CoreIPC::MessageReceiver {
     WTF_MAKE_NONCOPYABLE(WebSoupRequestManager);
 public:
     explicit WebSoupRequestManager(WebProcess*);
     ~WebSoupRequestManager();
+
+    static const char* supplementName();
 
     void send(GSimpleAsyncResult*, GCancellable*);
     GInputStream* finish(GSimpleAsyncResult*);
@@ -53,6 +57,7 @@ private:
 
     void didHandleURIRequest(const CoreIPC::DataReference&, uint64_t contentLength, const String& mimeType, uint64_t requestID);
     void didReceiveURIRequestData(const CoreIPC::DataReference&, uint64_t requestID);
+    void didFailURIRequest(const WebCore::ResourceError&, uint64_t requestID);
 
     WebProcess* m_process;
     GRefPtr<GPtrArray> m_schemes;

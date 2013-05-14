@@ -40,7 +40,7 @@ namespace WebCore {
 
 CaptionUserPreferences::CaptionUserPreferences(PageGroup* group)
     : m_pageGroup(group)
-    , m_displayMode(AlwaysOn)
+    , m_displayMode(ForcedOnly)
     , m_timer(this, &CaptionUserPreferences::timerFired)
     , m_testingMode(false)
     , m_havePreferences(false)
@@ -58,9 +58,6 @@ void CaptionUserPreferences::timerFired(Timer<CaptionUserPreferences>*)
 
 void CaptionUserPreferences::notify()
 {
-    if (!m_testingMode)
-        return;
-
     m_havePreferences = true;
     if (!m_timer.isActive())
         m_timer.startOneShot(0);
@@ -244,6 +241,12 @@ void CaptionUserPreferences::updateCaptionStyleSheetOveride()
         Vector<String>(), InjectInAllFrames, UserStyleAuthorLevel, InjectInExistingDocuments);
 }
 
+String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const
+{
+    if (!m_primaryAudioTrackLanguageOverride.isEmpty())
+        return m_primaryAudioTrackLanguageOverride;
+    return defaultLanguage();
+}
     
 }
 

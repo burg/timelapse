@@ -479,7 +479,7 @@ enum TextOrientation { TextOrientationVerticalRight, TextOrientationUpright, Tex
 
 enum TextOverflow { TextOverflowClip = 0, TextOverflowEllipsis };
 
-enum EImageRendering { ImageRenderingAuto, ImageRenderingOptimizeSpeed, ImageRenderingOptimizeQuality, ImageRenderingOptimizeContrast };
+enum EImageRendering { ImageRenderingAuto = 0, ImageRenderingOptimizeSpeed, ImageRenderingOptimizeQuality, ImageRenderingCrispEdges };
 
 enum ImageResolutionSource { ImageResolutionSpecified = 0, ImageResolutionFromImage };
 
@@ -514,6 +514,7 @@ static const float maximumAllowedFontSize = 1000000.0f;
 
 #if ENABLE(CSS3_TEXT)
 enum TextIndentLine { TextIndentFirstLine, TextIndentEachLine };
+enum TextIndentType { TextIndentNormal, TextIndentHanging };
 #endif
 
 } // namespace WebCore

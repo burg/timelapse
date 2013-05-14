@@ -62,6 +62,7 @@
 #include "ReplayRecording.h"
 #include "ReplayUtilities.h"
 #include "ResourceResponse.h"
+#include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
 #include "TimerFired.h"
@@ -69,6 +70,7 @@
 #include <stdarg.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 

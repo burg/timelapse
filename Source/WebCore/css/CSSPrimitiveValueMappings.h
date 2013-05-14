@@ -4031,14 +4031,14 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EImageRendering e)
     case ImageRenderingAuto:
         m_value.ident = CSSValueAuto;
         break;
+    case ImageRenderingCrispEdges:
+        m_value.ident = CSSValueWebkitCrispEdges;
+        break;
     case ImageRenderingOptimizeSpeed:
         m_value.ident = CSSValueOptimizespeed;
         break;
     case ImageRenderingOptimizeQuality:
         m_value.ident = CSSValueOptimizequality;
-        break;
-    case ImageRenderingOptimizeContrast:
-        m_value.ident = CSSValueWebkitOptimizeContrast;
         break;
     }
 }
@@ -4048,12 +4048,13 @@ template<> inline CSSPrimitiveValue::operator EImageRendering() const
     switch (m_value.ident) {
     case CSSValueAuto:
         return ImageRenderingAuto;
+    case CSSValueWebkitOptimizeContrast:
+    case CSSValueWebkitCrispEdges:
+        return ImageRenderingCrispEdges;
     case CSSValueOptimizespeed:
         return ImageRenderingOptimizeSpeed;
     case CSSValueOptimizequality:
         return ImageRenderingOptimizeQuality;
-    case CSSValueWebkitOptimizeContrast:
-        return ImageRenderingOptimizeContrast;
     }
 
     ASSERT_NOT_REACHED();
@@ -4264,7 +4265,7 @@ enum LengthConversion {
     ViewportPercentageConversion = 1 << 6
 };
 
-template<int supported> Length CSSPrimitiveValue::convertToLength(RenderStyle* style, RenderStyle* rootStyle, double multiplier, bool computingFontSize)
+template<int supported> Length CSSPrimitiveValue::convertToLength(const RenderStyle* style, const RenderStyle* rootStyle, double multiplier, bool computingFontSize) const
 {
 #if ENABLE(CSS_VARIABLES)
     ASSERT(!hasVariableReference());
