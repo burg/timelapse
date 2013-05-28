@@ -36,15 +36,15 @@
 WebInspector.ReplayControllerView = function(model)
 {
     WebInspector.View.call(this);
-    
+
     this._model = model;
-    
+
     this.element.id = "replay-controller-view";
     this.element.tabIndex = 0;
-    
+
     this._createSharedStatusBarButtons();
     this.currentView = new WebInspector.ReplayDefaultView(model);
-    
+
     var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayControllerView listeners");
     this._callbacks.register(this._model, replayEvents.Enabled,  this._replayEnabled);
@@ -52,17 +52,17 @@ WebInspector.ReplayControllerView = function(model)
     this._callbacks.register(this._model, replayEvents.RecordingCreated,  this._recordingCreated);
     this._callbacks.register(this._model, replayEvents.RecordingLoaded,   this._recordingLoaded);
     this._callbacks.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
-    
+
     this._callbacks.register(this.element,      "focus", this.focus);
     this._callbacks.register(this.element,       "blur", this.blur);
     this._callbacks.register(this.recordButton, "click", this._recordButtonClicked);
-    
+
     this._callbacks.register(this._model, replayEvents.CaptureWillStart, this._disableRecordButton);
     this._callbacks.register(this._model, replayEvents.CaptureDidStart,  this._captureDidStart);
     this._callbacks.register(this._model, replayEvents.CaptureWillStop,  this._disableRecordButton);
     this._callbacks.register(this._model, replayEvents.CaptureDidStop,   this._captureDidStop);
     this._callbacks.install();
-    
+
     // Tell backend to enable itself.
     this._model.enable();
 };
@@ -71,16 +71,16 @@ WebInspector.ReplayControllerView.prototype = {
     get statusBarItems()
     {
         return [
-                this.recordButton.element,
-                this._contextStatusBarItems
-                ];
+            this.recordButton.element,
+            this._contextStatusBarItems
+        ];
     },
-    
-willDispose: function()
+
+    willDispose: function()
     {
         this._callbacks.uninstall(true);
     },
-    
+
     get currentView()
     {
         return this._currentView;
@@ -100,104 +100,104 @@ willDispose: function()
         
         for (var i = 0; i < buttons.length; i++)
             this._contextStatusBarItems.appendChild(buttons[i].element);
-        
+
         this._currentView.show(this.element);
     },
-    
-afterShow: function()
+
+    afterShow: function()
     {
         this.focus();
     },
-    
-focus: function()
+
+    focus: function()
     {
         WebInspector.View.prototype.focus.call(this);
         this.element.style.opacity = 1.0;
     },
-    
-blur: function()
+
+    blur: function()
     {
         this.element.style.opacity = 0.7;
     },
-    
-_createSharedStatusBarButtons: function()
+
+    _createSharedStatusBarButtons: function()
     {
         // only create buttons once.
         if (this._contextStatusBarItems)
             return;
-        
+
         this._contextStatusBarItems = document.createElement("div");
         this._contextStatusBarItems.className = "status-bar-items-group";
-        
+
         this.recordButton = new WebInspector.StatusBarButton("", "toggle-record-status-bar-item");
     },
-    
-_recordButtonClicked: function()
+
+    _recordButtonClicked: function()
     {
         if (this._model.isCapturing)
             this._model.stopCapture();
         else
             this._model.startCapture();
     },
-    
-_replayEnabled: function()
+
+    _replayEnabled: function()
     {
         this._enabled = true;
         this._createSharedStatusBarButtons();
         this.currentView = new WebInspector.ReplayDefaultView(this._model);
     },
-    
-_replayDisabled: function()
+
+    _replayDisabled: function()
     {
         this._enabled = false;
         this.currentView = new WebInspector.ReplayDefaultView(this._model);
     },
-    
-_disableRecordButton: function()
+
+    _disableRecordButton: function()
     {
         this.recordButton.disabled = true;
     },
-    
-_captureDidStart: function()
+
+    _captureDidStart: function()
     {
         this.recordButton.disabled = false;
         this.recordButton.toggled = true;
         this.recordButton.title = "Capture. Click to stop.";
     },
-    
-_captureDidStop: function()
+
+    _captureDidStop: function()
     {
         this.recordButton.disabled = false;
         this.recordButton.toggled = false;
         this.recordButton.title = "Not recording. Click to re-record.";
     },
-    
-_recordingCreated: function(event)
+
+    _recordingCreated: function(event)
     {
         var recording = event.data;
         this.currentView = new WebInspector.ReplayCaptureView(this._model, recording);
     },
-    
-_recordingLoaded: function(event)
+
+    _recordingLoaded: function(event)
     {
         // XXX: parameterize the default view's message
-        
+    
         // if nothing was recorded, don't even show the replay view.
         // the capture view knows to change its message in this situation.
-        
+
         var recording = event.data;
         if (recording.actions.length == 0)
             return;
-        
+
         this.currentView = new WebInspector.ReplayReplayView(this._model, recording);
     },
     
-_recordingUnloaded: function()
+    _recordingUnloaded: function()
     {
         this.currentView = new WebInspector.ReplayDefaultView(this._model);
     },
     
-__proto__: WebInspector.View.prototype
+    __proto__: WebInspector.View.prototype
 }
 
 /**
@@ -207,15 +207,15 @@ __proto__: WebInspector.View.prototype
 WebInspector.ReplayDefaultView = function(model)
 {
     WebInspector.View.call(this);
-    
+
     this._model = model;
-    
+
     this.element.id = "replay-default-view";
-    
+
     this._messagePanel = document.createElement("div");
     this._messagePanel.className = "replay-capture-message";
     this._messagePanel.textContent = "Nothing loaded. Click to start recording.";
-    
+
     var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayDefaultView listeners");
     this._callbacks.register(this._messagePanel, "click", this._messagePanelClicked);
@@ -226,28 +226,28 @@ WebInspector.ReplayDefaultView = function(model)
 };
 
 WebInspector.ReplayDefaultView.prototype = {
-willDispose: function()
+    willDispose: function()
     {
         this._callbacks.uninstall(true);
     },
-    
+
     get statusBarItems()
     {
         return [];
     },
-    
-_messagePanelClicked: function(event)
+
+    _messagePanelClicked: function(event)
     {
         this._model.startCapture();
     },
     
-_captureWillStart: function()
+    _captureWillStart: function()
     {
         this._messagePanel.textContent = "Initializing...";
         this._messagePanel.classList.add("message-pulse");
     },
     
-__proto__: WebInspector.View.prototype
+    __proto__: WebInspector.View.prototype
 };
 
 /**
@@ -257,69 +257,69 @@ __proto__: WebInspector.View.prototype
 WebInspector.ReplayCaptureView = function(model, recording)
 {
     WebInspector.View.call(this);
-    
+
     this._model = model;
     this._recording = recording;
-    
+
     this.element.id = "replay-capture-view";
-    
+
     this._messagePanel = document.createElement("div");
     this._messagePanel.classList.add("replay-capture-message");
     this._messagePanel.classList.add("message-pulse");
     this._messagePanel.textContent = "Reloading page...";
     this.element.appendChild(this._messagePanel);
-    
+
     var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayCaptureView listeners");
     this._callbacks.register(this._messagePanel, "click", this._messagePanelClicked);
     this._callbacks.register(this._model, replayEvents.CaptureWillStop, this._captureWillStop);
     this._callbacks.register(this._model, replayEvents.CaptureDidStop,  this._captureDidStop);
-    this._callbacks.register(WebInspector.resourceTreeModel,
+    this._callbacks.register(WebInspector.resourceTreeModel, 
                              WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._onMainFrameNavigated);
     this._callbacks.install();
-    
+
     this._scrollview = new WebInspector.ReplayScrollview(model, recording);
     this._scrollview.show(this.element);
 };
 
 WebInspector.ReplayCaptureView.prototype = {
-willDispose: function()
+    willDispose: function()
     {
         this._callbacks.uninstall(true);
     },
-    
+
     get statusBarItems()
     {
-        return [];
+    return [];
     },
-    
-_onMainFrameNavigated: function()
+
+    _onMainFrameNavigated: function()
     {
-        if (this._model.isCapturing)
-            this._messagePanel.textContent = "Capturing... Click again to stop.";
+    if (this._model.isCapturing)
+        this._messagePanel.textContent = "Capturing... Click again to stop.";
     },
-    
-_captureWillStop: function()
+
+    _captureWillStop: function()
     {
-        this._messagePanel.textContent = "Working...";
+    this._messagePanel.textContent = "Working...";
     },
-    
-_captureDidStop: function()
+
+    _captureDidStop: function()
     {
-        this._messagePanel.classList.remove("message-pulse");
-        
-        // TODO: move to ReplayingView
-        if (this._recording.actions.length == 0)
-            this._messagePanel.textContent = "Nothing was captured. Please try again.";
+    this._messagePanel.classList.remove("message-pulse");
+
+    // TODO: move to ReplayingView
+    if (this._recording.actions.length == 0)
+        this._messagePanel.textContent = "Nothing was captured. Please try again.";
     },
-    
-_messagePanelClicked: function(event)
+
+    _messagePanelClicked: function(event)
     {
-        if (this._model.isCapturing)
-            this._model.stopCapture();
+    if (this._model.isCapturing)
+        this._model.stopCapture();
     },
     
-__proto__: WebInspector.View.prototype
+    __proto__: WebInspector.View.prototype
 };
 
 /**
@@ -329,28 +329,28 @@ __proto__: WebInspector.View.prototype
 WebInspector.ReplayReplayView = function(model, recording)
 {
     WebInspector.View.call(this);
-    
+
     this.element.id = "replay-replay-view";
-    
+
     this._model = model;
     this._recording = recording;
-    
+
     this._createReplayStatusBarButtons();
-    
+
     var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayReplayView listeners");
     this._callbacks.register(this.element, "keydown", this._keyDown);
-    
+        
     this._callbacks.register(this.lockButton, "click", this._lockButtonClicked);
     this._callbacks.register(this._model, replayEvents.InputLocked,   this._inputLocked);
     this._callbacks.register(this._model, replayEvents.InputUnlocked, this._inputUnlocked);
-    
+
     this._callbacks.register(this.playbackButton, "click", this._playbackButtonClicked);
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._showPauseGlyph);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._showPlaybackGlyph);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._showPlaybackGlyph);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._showPlaybackGlyph);
-    
+
     this._callbacks.register(this.setSavepointButton, "click", this._setSavepointButtonClicked);
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._disableSavepoints);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._enableSavepoints);
@@ -363,49 +363,49 @@ WebInspector.ReplayReplayView = function(model, recording)
     this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointRemoved, this._savepointsChanged);
     this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointLabelChanged, this._savepointsChanged);
     this._callbacks.install();
-    
+
     this._sidebarView = new WebInspector.SidebarView(WebInspector.SidebarView.SidebarPosition.End,
-                                                     "replayControllerSidebarView", 200);
+                        "replayControllerSidebarView", 200);
     this._sidebarView.show(this.element);
-    
+
     this._overviewWindow = new WebInspector.ReplayOverview(model, recording);
     this._overviewWindow.show(this._sidebarView.mainElement);
-    
+
     this._miniview = new WebInspector.ReplayMiniview(model, recording);
     this._miniview.show(this._sidebarView.mainElement);
-    
+
     this._overviewPreview = new WebInspector.ReplayOverviewPreview(model, recording);
     this._overviewPreview.show(this._sidebarView.sidebarElement);
-    
+
     this._registerShortcuts();
 };
 
 WebInspector.ReplayReplayView.prototype = {
-willDispose: function()
+    willDispose: function()
     {
         this._callbacks.uninstall(true);
     },
-    
+
     get statusBarItems()
     {
         return [
-                this.lockButton,
-                this.playbackButton,
-                this.setSavepointButton,
-                this.savepointSelector,
-                this.scanSelector,
-                ];
+            this.lockButton,
+            this.playbackButton,
+            this.setSavepointButton,
+            this.savepointSelector,
+            this.scanSelector,
+        ];
     },
-    
-_createReplayStatusBarButtons: function()
+
+    _createReplayStatusBarButtons: function()
     {
         this.lockButton = new WebInspector.StatusBarButton(WebInspector.UIString("Replay Locking Mode"), "replay-lock-status-bar-item");
-        
+
         this.playbackButton = new WebInspector.StatusBarButton("", "playback-toggle-status-bar-item");
         this.playbackButton.disabled = false;
         this.playbackButton.toggled = false;
         this.playbackButton.element.addStyleClass("play-playback-status-bar-item");
-        
+
         this.setSavepointButton = new WebInspector.StatusBarButton("", "set-savepoint-status-bar-item");
         this.setSavepointButton.disabled = true;
         this.setSavepointButton.toggled = false;
@@ -439,27 +439,27 @@ _createReplayStatusBarButtons: function()
         this._savepointsChanged();
         
     },
-    
-_scanSelectorChanged: function()
+
+    _scanSelectorChanged: function()
     {
         var option = this.scanSelector.selectedOption();
         var scanner = option._scanner;
         if (!scanner)
             return; // case for dummy option.
-        
+            
         var scannerEvents = WebInspector.ReplayScanner.Events;
         scanner.onceEventListener(scannerEvents.ScanStarted, function() {
-                                  this.toggled = true;
-                                  }, this.scanSelector);
+            this.toggled = true;
+        }, this.scanSelector);
         scanner.onceEventListener(scannerEvents.ScanStopped, function() {
-                                  this.toggled = false;
-                                  }, this.scanSelector);
-        
+            this.toggled = false;
+        }, this.scanSelector);
+
         this._model.loadedRecording.scanInZoomRegion(scanner);
         this.scanSelector.select(this.scanSelectorDefaultOption);
     },
-    
-_savepointSelectorChanged: function()
+
+    _savepointSelectorChanged: function()
     {
         var option = this.savepointSelector.selectedOption();
         var savepoint = option._savepoint;
@@ -470,8 +470,8 @@ _savepointSelectorChanged: function()
         var task = savepoint.createRestoreTask(false);
         this._model.scheduler.enqueue(task);
     },
-    
-_savepointsChanged: function()
+
+    _savepointsChanged: function()
     {
         var selectedOption = this.savepointSelector.selectedOption();
         var selectedSavepoint = (selectedOption) ? selectedOption._savepoint : null;
@@ -481,7 +481,7 @@ _savepointsChanged: function()
         this.savepointSelector.setEnabled(!!savepoints.length);
         this.savepointSelector.removeOptions();
         this.savepointSelector.element.enableStyleClass("hidden", !savepoints.length);
-        
+    
         var option = document.createElement("option");
         if (!!savepoints.length) {
             option.text = WebInspector.UIString("Jump to bookmark...");
@@ -505,8 +505,8 @@ _savepointsChanged: function()
             this.savepointSelector.addOption(option);
         }
     },
-    
-_lockButtonClicked: function()
+
+    _lockButtonClicked: function()
     {
         // if in playback mode and locked, then unlock. This should
         // just stop the current playback, which will cause unlock
@@ -514,43 +514,43 @@ _lockButtonClicked: function()
         if (this._model.inputLocked)
             this._model.stopPlayback(true);
     },
-    
-_inputLocked: function()
+
+    _inputLocked: function()
     {
         this.lockButton.title = "Input locked.";
         this.lockButton.toggled = true;
     },
     
-_inputUnlocked: function()
+    _inputUnlocked: function()
     {
         if (this._capture) return;
-        this.lockButton.title = "Input unlocked.";
-        this.lockButton.toggled = false;
+            this.lockButton.title = "Input unlocked.";
+            this.lockButton.toggled = false;
     },
-    
-_showPauseGlyph: function()
+
+    _showPauseGlyph: function()
     {
         this.playbackButton.element.addStyleClass("pause-playback-status-bar-item");
         this.playbackButton.element.removeStyleClass("play-playback-status-bar-item");
     },
-    
-_showPlaybackGlyph: function()
+
+    _showPlaybackGlyph: function()
     {
         this.playbackButton.element.removeStyleClass("pause-playback-status-bar-item");
         this.playbackButton.element.addStyleClass("play-playback-status-bar-item");
     },
-    
-_enableSavepoints: function()
+
+    _enableSavepoints: function()
     {
         this.setSavepointButton.setEnabled(true);
     },
-    
-_disableSavepoints: function()
+
+    _disableSavepoints: function()
     {
         this.setSavepointButton.setEnabled(false);
     },
-    
-_registerShortcuts: function()
+
+    _registerShortcuts: function()
     {
         var shortcut = WebInspector.KeyboardShortcut;
         var keys = shortcut.Keys;
@@ -562,8 +562,8 @@ _registerShortcuts: function()
         this._shortcuts[playPauseShortcut] = this._playbackButtonClicked.bind(this);
         section.addKey(playPauseShortcut, WebInspector.UIString("Play/pause recording"));
     },
-    
-_keyDown: function(event)
+
+    _keyDown: function(event)
     {
         var shortcut = WebInspector.KeyboardShortcut.makeKeyFromEvent(event);
         var handler = this._shortcuts[shortcut];
@@ -573,39 +573,38 @@ _keyDown: function(event)
             return;
         }
     },
-    
-_playbackButtonClicked: function()
+
+    _playbackButtonClicked: function()
     {
         if (!this._model.canReplay)
             return;
-        
+
         if (!this._model.isReplaying)
             this._model.replayToCompletion(true, WebInspector.ReplayModel.ReplaySpeed.Normal);
-        
+
         else if (this._model.isReplaying && this._model.inputPaused)
             this._model.replayToCompletion(true, WebInspector.ReplayModel.ReplaySpeed.Normal);
-        
+
         else if (this._model.isReplaying && this._model.debuggerPaused)
             DebuggerAgent.resume();
-        
+
         else if (this._model.isReplaying && !this._model.inputPaused)
             this._model.pausePlayback();
     },
-    
-_radarButtonClicked: function()
+
+    _radarButtonClicked: function()
     {
         if (!this._model.scanners.breakpoint.isScanning)
             this._recording.scanInZoomRegion(this._model.scanners.breakpoint);
         else
             this._model.pausePlayback();
     },
-    
-_setSavepointButtonClicked: function()
+
+    _setSavepointButtonClicked: function()
     {
         var savepoint = this._model.savepointTracker.createSavepoint();
         this._recording.savepointList.addSavepoint(savepoint);
     },
     
-__proto__: WebInspector.View.prototype
+    __proto__: WebInspector.View.prototype
 };
-

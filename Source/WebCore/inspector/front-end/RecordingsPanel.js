@@ -38,7 +38,7 @@ WebInspector.RecordingsPanel = function()
     WebInspector.Panel.call(this, "recordings");
     WebInspector.RecordingsPanel._instance = this;
     this.registerRequiredCSS("recordingsPanel.css");
-    
+
     this._replayModel = WebInspector.replayModel;
     this._recordingsModel = WebInspector.recordingsModel;
     this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel static listeners");
@@ -55,10 +55,10 @@ WebInspector.RecordingsPanel = function()
     this._callbacks.register(this._recordingsModel, recordingsEvents.RecordingAdded,   this._recordingAdded);
     this._callbacks.register(this._recordingsModel, recordingsEvents.RecordingRemoved, this._recordingRemoved);
     this._callbacks.install();
-    
+
     this._viewsByUID = {};
     this._treeElementsByUID = {};
-    
+
     this._registerShortcuts();
     this.createSidebarViewWithTree(this.element, undefined, 220);
     this.landingItemTreeElement = new WebInspector.RecordingsSidebarTreeElement(this);
@@ -68,35 +68,32 @@ WebInspector.RecordingsPanel = function()
                                                                         "", null, false);
     var sidebarGroup = new WebInspector.SidebarSectionTreeElement(WebInspector.UIString("AVAILABLE RECORDINGS"), null, true);
     this.sidebarTree.appendChild(sidebarGroup);
-    
+
     if (this._replayModel.isCapturing)
         this.sidebarTree.appendChild(this.capturingItemTreeElement);
-    
-    this._landingView = new WebInspector.RecordingsPanel.LandingView(this._replayModel);
+
+    this._landingView = new WebInspector.RecordingsPanel.LandingView();
     this.showLandingView();
-    
+
     var recordings = WebInspector.recordingsModel.recordings;
     for (var i = 0; i < recordings.length; ++i)
         this._recordingAdded({data: recordings[i]});
     
     if (this._replayModel.canReplay)
         this._recordingLoaded();
-    
-    
-    
 };
 
 WebInspector.RecordingsPanel.prototype = {
-willDispose: function()
+    willDispose: function()
     {
         this._callbacks.uninstall(true);
     },
-    
+
     get toolbarItemLabel()
     {
         return WebInspector.UIString("Recordings");
     },
-    
+
     get activeView()
     {
         return this._activeView;
@@ -115,53 +112,53 @@ willDispose: function()
             this.sidebarTree.selected = false;
             return;
         }
-        
+            
         var treeItem = this._treeElementsByUID[newView.recording.uid];
         treeItem._suppressOnSelect = true;
         treeItem.revealAndSelect();
         delete treeItem._suppressOnSelect;
     },
-    
-showLandingView: function()
+
+    showLandingView: function()
     {
         this.activeView = this._landingView;
     },
-    
-showRecording: function(recording)
+
+    showRecording: function(recording)
     {
         var view = this._viewsByUID[recording.uid];
         this.activeView = view;
     },
     
-_recordingUnloaded: function(event)
+    _recordingUnloaded: function(event)
     {
         var recording = event.data;
-        
+    
         this.searchCanceled();
         this.sidebarTree.selected = false;
         if (recording)
             this._treeElementsByUID[recording.uid]._listItemNode.removeStyleClass("loaded");
     },
-    
-_recordingLoaded: function()
+
+    _recordingLoaded: function()
     {
         this.searchCanceled();
         var recording = this._replayModel.loadedRecording;
         this.showRecording(recording);
         this._treeElementsByUID[recording.uid]._listItemNode.addStyleClass("loaded");
     },
-    
-_captureStarted: function()
+
+    _captureStarted: function()
     {
         this.sidebarTree.appendChild(this.capturingItemTreeElement);
     },
     
-_captureStopped: function()
+    _captureStopped: function()
     {
         this.sidebarTree.removeChild(this.capturingItemTreeElement);
     },
-    
-_playbackStarted: function()
+
+    _playbackStarted: function()
     {
         var recording = this._replayModel.loadedRecording;
         var treeItem = this._treeElementsByUID[recording.uid]._listItemNode;
@@ -169,7 +166,7 @@ _playbackStarted: function()
         treeItem.removeStyleClass("paused");
     },
     
-_playbackPaused: function()
+    _playbackPaused: function()
     {
         var recording = this._replayModel.loadedRecording;
         var treeItem = this._treeElementsByUID[recording.uid]._listItemNode;
@@ -177,24 +174,24 @@ _playbackPaused: function()
         treeItem.addStyleClass("paused");
     },
     
-_playbackStopped: function()
+    _playbackStopped: function()
     {
         var recording = this._replayModel.loadedRecording;
         var treeItem = this._treeElementsByUID[recording.uid]._listItemNode;
         treeItem.removeStyleClass("replaying");
         treeItem.removeStyleClass("paused");
     },
-    
-_recordingAdded: function(event)
+
+    _recordingAdded: function(event)
     {
         var recording = event.data;
         console.assert(!this._viewsByUID[recording.uid], "already have view for this uid");
-        
+
         var view = new WebInspector.RecordingInputsGrid(this._replayModel, recording);
         this._viewsByUID[recording.uid] = view;
         var treeItem = new WebInspector.RecordingSidebarTreeElement(recording, "recording-sidebar-tree-item");
         this._treeElementsByUID[recording.uid] = treeItem;
-        
+
         if (!this._recordingsModel.recordings.length) {
             this.element.addStyleClass("recordings-available");
             this.element.removeStyleClass("recordings-unavailable");
@@ -202,8 +199,8 @@ _recordingAdded: function(event)
         
         this.sidebarTree.appendChild(treeItem);
     },
-    
-_recordingRemoved: function(event)
+
+    _recordingRemoved: function(event)
     {
         var recording = event.data;
         var view = this._viewsByUID[recording.uid];
@@ -221,13 +218,13 @@ _recordingRemoved: function(event)
             this.element.addStyleClass("recordings-available");
             this.element.removeStyleClass("recordings-unavailable");
         }
-        
+
         // if we were staring at view for this recording, show landing view.
         if (view === this.activeView)
             this.showLandingView();
     },
-    
-_registerShortcuts: function()
+
+    _registerShortcuts: function()
     {
         // Next/previous input.
         var handlerPrev = function() {
@@ -240,84 +237,64 @@ _registerShortcuts: function()
             var grid = this._dataGrid;
             grid.replayToNextNode.call(grid);
         };
-        
+
         var shortcut = WebInspector.KeyboardShortcut;
         var shortcutPrev = shortcut.makeDescriptor("P", shortcut.Modifiers.Alt);
         var shortcutNext = shortcut.makeDescriptor("N", shortcut.Modifiers.Alt);
         this.registerShortcuts(shortcutPrev, handlerPrev.bind(this));
         this.registerShortcuts(shortcutNext, handlerNext.bind(this));
-        
+
         var keys = [shortcutPrev, shortcutNext];
         var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Recordings Panel"));
         section.addRelatedKeys(keys, WebInspector.UIString("Replay to previous/next input"));
     },
-    
-__proto__: WebInspector.Panel.prototype
+
+    __proto__: WebInspector.Panel.prototype
 };
 
 
-WebInspector.RecordingsPanel.LandingView = function(model)
+WebInspector.RecordingsPanel.LandingView = function()
 {
     WebInspector.View.call(this);
-    
+
     this.element = document.createElement("div");
     this.element.addStyleClass("landing-view");
     
-    this._replayModel = model;
-    
-    /*var instructions = [];
-    var selectRecording = document.createElement("p");
-     selectRecording.textContent = WebInspector.UIString("Select a recording to view.");
-     selectRecording.addStyleClass("recording-landing-view-message");
-     instructions.push(selectRecording);*/
-    
-    this._messagePanel = document.createElement("p");
-    this._messagePanel.className = "recording-landing-view-message";
-    
-    var recordings = WebInspector.recordingsModel.recordings;
-    if (recordings.length > 0) {
-         this._messagePanel.textContent = "Select a recording to view. Click to create a recording.";
-    } else {
-         this._messagePanel.textContent = "No recordings available. Click to create a recording.";
-    }
-    
-    
-    var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel landing view listeners");
-    this._callbacks.register(this._messagePanel, "click", this._createRecordingAnchorClicked);
-    this._callbacks.install();
+
+    var instructions = [];
+    var selectRecording = document.createElement("p");
+    selectRecording.textContent = WebInspector.UIString("Select a recording to view.");
+    selectRecording.addStyleClass("recording-available-text");
+    instructions.push(selectRecording);
     
-    this.element.appendChild(this._messagePanel);
+    var createRecording = document.createElement("p");
+    createRecording.addStyleClass("recording-unavailable-text");
+    createRecording.appendChild(document.createTextNode(WebInspector.UIString("No recordings available.")));
+    var createRecordingAnchor = document.createElement("a");
+    createRecordingAnchor.textContent = WebInspector.UIString("Click to create a recording.");
+    this._callbacks.register(createRecordingAnchor, "click", this._createRecordingAnchorClicked);
+    createRecording.appendChild(createRecordingAnchor);
+    instructions.push(createRecording);
+    
+    for (var i = 0; i < instructions.length; ++i)
+        this.element.appendChild(instructions[i]);
+    
+    this._callbacks.install();
 };
 
 WebInspector.RecordingsPanel.LandingView.prototype = {
-willDispose: function()
+    willDispose: function()
     {
         this._callbacks.uninstall(true);
     },
-    
-_createRecordingAnchorClicked: function(event)
+
+    _createRecordingAnchorClicked: function()
     {
-       
-        var button = WebInspector._toggleReplayControllerButton;
-        button.disabled = false;
-        
-        if(WebInspector._consoleWasShown) {
-            delete WebInspector._consoleWasShown;
-            WebInspector._toggleConsoleButton.toggled = false;
-        }
-        
-        button.toggled = true;
-        
-        var animationType = window.event && window.event.shiftKey ? WebInspector.Drawer.AnimationType.Slow : WebInspector.Drawer.AnimationType.Normal;
-        button.title = WebInspector.UIString("Hide Replay controller.");
-        WebInspector.drawer.show(WebInspector.replayControllerView, animationType);
-        WebInspector._replayWasShown = true;
         this._replayModel.startCapture();
-        
     },
-    
-__proto__: WebInspector.View.prototype,
+
+    __proto__: WebInspector.View.prototype,
 };
 
 /**
@@ -336,19 +313,19 @@ WebInspector.RecordingSidebarTreeElement = function(recording, className)
 };
 
 WebInspector.RecordingSidebarTreeElement.prototype = {
-onselect: function()
+    onselect: function()
     {
         if (!this._suppressOnSelect)
             this.treeOutline.panel.showRecording(this.recording);
     },
-    
-ondelete: function()
+
+    ondelete: function()
     {
         WebInspector.recordingsModel.removeRecording(this.recording);
         return true;
     },
-    
-ondblclick: function()
+
+    ondblclick: function()
     {
         var model = WebInspector.replayModel;
         if (!model.canReplay)
@@ -358,11 +335,11 @@ ondblclick: function()
         
         model.scheduler.executeImmediately(model.switchRecordingTask(this.recording));
     },
-    
+
     /**
      * @param {!Event} event
      */
-handleContextMenuEvent: function(event)
+    handleContextMenuEvent: function(event)
     {
         // TODO: (Issue #237): add sensible context menu items to recording tree element
         // see WebInspector.ProfileSidebarTreeElement.handleContextMenuEvent()
@@ -370,8 +347,8 @@ handleContextMenuEvent: function(event)
         contextMenu.appendItem(WebInspector.UIString("Delete Recording"), this.ondelete.bind(this));
         contextMenu.show();
     },
-    
-__proto__: WebInspector.SidebarTreeElement.prototype
+
+    __proto__: WebInspector.SidebarTreeElement.prototype
 };
 
 /**
@@ -383,23 +360,20 @@ WebInspector.RecordingsSidebarTreeElement = function(panel)
 {
     this._panel = panel;
     this.small = false;
-    
+
     WebInspector.SidebarTreeElement.call(this, "recordings-landing-view-tree-item", WebInspector.UIString("Recordings"), "", null, false);
 }
 
 WebInspector.RecordingsSidebarTreeElement.prototype = {
-onselect: function()
+    onselect: function()
     {
         this._panel.showLandingView();
     },
-    
+
     get selectable()
     {
         return true;
     },
-    
-__proto__: WebInspector.SidebarTreeElement.prototype
+
+    __proto__: WebInspector.SidebarTreeElement.prototype
 }
-
-
-
