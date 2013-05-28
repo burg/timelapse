@@ -34,7 +34,6 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include <stdio.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/replay/InputSerializer.h>
 #include <wtf/replay/InputIterator.h>
@@ -77,7 +76,7 @@ namespace WebCore {
         virtual void storeResourceBytes(int, const char* data, int length) OVERRIDE;
 
         size_t memorySize();
-        bool serializeToFile(FILE*);
+        String serializeToString();
     private:
         RefPtr<ReplayRecording> m_recording;
         RefPtr<InspectorObject> m_currentObject;

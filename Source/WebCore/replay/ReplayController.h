@@ -115,10 +115,6 @@ namespace WebCore {
         void resetReplayState();
         void pauseReplay();
         void finishReplay();
-
-        // TODO: remove
-        void serialize();
-
         void changeProxyMode(ReplayProxy::ProxyMode);
         
         // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying

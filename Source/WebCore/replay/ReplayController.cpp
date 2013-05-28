@@ -46,7 +46,6 @@
 #include "Event.h"
 #include "Frame.h"
 #include "FrameTree.h"
-#include "JSONInputSerializer.h"
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InspectorInstrumentation.h"
@@ -226,9 +225,6 @@ bool ReplayController::endCapturing()
     m_activeIterator->storeInput(adoptPtr(new EnableCache()));
     m_activeIterator->storeInput(adoptPtr(new EndSentinel()));
     m_activeIterator = 0;
-    
-    // TODO: (Issue #236): turn serialization into an API (that doesn't involve ReplayController)
-    serialize();
 
     // hold on to a reference so unloading the recording doesn't deallocate it
     RefPtr<ReplayRecording> recording = m_loadedRecording;
@@ -462,26 +458,6 @@ void ReplayController::finishReplay()
     m_status = PlaybackFinished;
     resetReplayState();
     InspectorInstrumentation::playbackFinished(m_page);
-}
-
-void ReplayController::serialize()
-{
-    JSONInputSerializer serializer(m_loadedRecording);
-
-    LOG(DeterministicReplay, "%-30sMETRIC: memory overhead: %zu bytes\n", "[ReplayController]", serializer.memorySize());
-
-    FILE* file = 0;
-    const char* filename = getenv("TIMELAPSE_SERIALIZED_RECORDING_FILENAME");
-    if (filename) {
-        file = fopen(filename, "w");
-        if (!file)
-            fprintf(stderr, "Warning: Could not open log file %s for writing.\n", filename);
-    }
-    if (file) {
-        LOG(DeterministicReplay, "%-30sMETRIC: dumping serialized recording to %s\n", "[ReplayController]", filename);
-        serializer.serializeToFile(file);
-        fclose(file);
-    }
 }
 
 bool ReplayController::unloadRecording(bool suppressNotifications)

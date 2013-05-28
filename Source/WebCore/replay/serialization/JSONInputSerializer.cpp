@@ -301,9 +301,9 @@ void JSONInputSerializer::popObjectAsElement()
     m_stack.removeLast();
 }
 
-void JSONInputSerializer::storeResourceBytes(int /*id*/, const char* /*data*/, int /*length*/) 
+void JSONInputSerializer::storeResourceBytes(int /*id*/, const char* /*data*/, int /*length*/)
 {
-    // TODO
+    // TODO(Issue #265): serialize resource bytes using base64 encoding.
 }
 
 size_t JSONInputSerializer::memorySize()
@@ -318,7 +318,7 @@ size_t JSONInputSerializer::memorySize()
     return counter.returnValue();
 }
 
-bool JSONInputSerializer::serializeToFile(FILE* fh)
+String JSONInputSerializer::serializeToString()
 {
     pushObject();
     
@@ -369,9 +369,7 @@ bool JSONInputSerializer::serializeToFile(FILE* fh)
 
     ASSERT(m_currentObject);
     // hella expensive. woops.
-    String jsonStr = m_currentObject->toJSONString();
-    fputs(jsonStr.utf8().data(), fh);
-    return true;
+    return m_currentObject->toJSONString();
 }
         
 }; // namespace WebCore
