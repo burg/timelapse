@@ -34,7 +34,6 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
-#include "ReplayController.h"
 #include "DocumentLoader.h"
 #include "DOMWindow.h"
 #include "Element.h"
@@ -42,8 +41,8 @@
 #include "EventContext.h"
 #include "FocusSetActive.h"
 #include "FocusSetFocused.h"
-#include "FunctorInputIterator.h"
 #include "Frame.h"
+#include "FunctorInputIterator.h"
 #include "HandleKeyPress.h"
 #include "HandleMouseMove.h"
 #include "HandleMousePress.h"
@@ -53,16 +52,17 @@
 #include "InspectorDebuggerAgent.h"
 #include "InspectorFrontend.h"
 #include "InspectorState.h"
-#include "InspectorReplayAgent.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMGlobalObject.h"
+#include "JSONInputSerializer.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
+#include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include "ResourceDidFinishLoading.h"
@@ -71,8 +71,8 @@
 #include "ResourceWillSendRequest.h"
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
-#include "ReplayAgentStateMachine.h"
 #include "ReplayActionFactory.h"
+#include "ReplayAgentStateMachine.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/UnusedParam.h>
@@ -80,10 +80,6 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-
-#include <unistd.h>
-#include <errno.h>
-#include <limits>
 
 using namespace std;
 using namespace WTF;
@@ -149,7 +145,7 @@ static const char* getFrontendTypeForAction(EventLoopInput* action)
         return ReplayActionType::ReceiveData;
     if (action->type() == ReplayInputTypes::ResourceDidFinishLoading)
         return ReplayActionType::ResourceLoaded;
-    
+
     if (action->type() == ReplayInputTypes::FocusSetActive) {
         bool toState = static_cast<FocusSetActive*>(action)->toState();
         return (toState) ? ReplayActionType::WindowActive
@@ -160,7 +156,7 @@ static const char* getFrontendTypeForAction(EventLoopInput* action)
         return (toState) ? ReplayActionType::WindowFocused
                          : ReplayActionType::WindowUnfocused;
     }
-    
+
     // actions that should not be user visible must override EventLoopInput::isUserVisible()
     ASSERT_NOT_REACHED();
     return 0;
@@ -194,14 +190,14 @@ static PassRefPtr<InspectorObject> createFrontendDataForAction(EventLoopInput* a
         return ReplayActionFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action));
     if (action->type() == ReplayInputTypes::ResourceDidFinishLoading)
         return ReplayActionFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action));
-    
+
     // actions that should not be user visible must override EventLoopInput::isUserVisible()
     ASSERT_NOT_REACHED();
     return 0;
 }
 
 static PassRefPtr<TypeBuilder::Replay::ReplayAction> createInspectorObjectForAction(EventLoopInput* action)
-{       
+{
     RefPtr<TypeBuilder::Replay::Mark> markObject = TypeBuilder::Replay::Mark::create()
         .setTimestamp(action->mark().time())
         .setIndex(action->mark().index());
@@ -223,15 +219,15 @@ public:
     void operator()(size_t, NondeterministicInput* replayAction)
     {
         ASSERT(replayAction->queue() == EventLoopInputQueue);
-        
+
         EventLoopInput* action = static_cast<EventLoopInput*>(replayAction);
         if (!action->isUserVisible())
             return;
-        
+
         m_actions->addItem(createInspectorObjectForAction(action));
     }
     ReturnType returnValue() { return m_actions.release(); }
-    
+
 private:
     RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > m_actions;
 };
@@ -316,9 +312,9 @@ void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecord
     RefPtr<ReplayRecording> recording = prpRecording;
     // in case we didn't know about the loaded recording, add here.
     m_recordingsMap.add(recording->uid(), recording);
-    
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
-    
+
     if (m_frontend)
         m_frontend->recordingLoaded(recording->uid());
 }
@@ -332,7 +328,7 @@ void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecor
 
     if (m_frontend)
         m_frontend->recordingAdded(recording->uid());
-    
+
     // automatically load the created recording if nothing else is loaded.
     if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
         m_inspectedPage->replayController()->loadRecording(recording);
@@ -355,11 +351,11 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
 
     m_frontend->capturedAction(createInspectorObjectForAction(input));
 }
-    
+
 void InspectorReplayAgent::captureStarted()
 {
     LOG(DeterministicReplay, "-----CAPTURE START-----");
-    
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::Capturing);
     m_inputLocked = false;
     if (m_frontend) {
@@ -372,9 +368,9 @@ void InspectorReplayAgent::captureStarted()
 void InspectorReplayAgent::captureFinished()
 {
     LOG(DeterministicReplay, "-----CAPTURE STOP-----");
-    
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
-    
+
     if (m_frontend)
         m_frontend->captureStopped();
 }
@@ -382,7 +378,7 @@ void InspectorReplayAgent::captureFinished()
 void InspectorReplayAgent::playbackStarted()
 {
     LOG(DeterministicReplay, "-----REPLAY START-----");
-    
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::Replaying);
     m_inputLocked = true;
     if (m_frontend) {
@@ -405,7 +401,7 @@ void InspectorReplayAgent::playbackHitMark(PositionMarkIndex index)
     if (m_lastHitMarkIndex == index)
         return;
     m_lastHitMarkIndex = index;
-    
+
     if (m_frontend)
         m_frontend->playbackHitMark(index);
 }
@@ -413,7 +409,7 @@ void InspectorReplayAgent::playbackHitMark(PositionMarkIndex index)
 void InspectorReplayAgent::playbackFinished()
 {
     LOG(DeterministicReplay, "-----REPLAY STOP-----");
-    
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
     if (m_frontend)
         m_frontend->playbackFinished();
@@ -465,11 +461,11 @@ void InspectorReplayAgent::enable(ErrorString*)
 {
     if (m_stateMachine.enabled())
         return;
-    
+
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
     m_state->setBoolean(ReplayPersistentAgentState::replayEnabled, true);
     m_instrumentingAgents->setInspectorReplayAgent(this);
-    
+
     if (m_frontend)
         m_frontend->replayEnabled();
 }
@@ -488,7 +484,7 @@ void InspectorReplayAgent::disable(ErrorString*)
 }
 
 void InspectorReplayAgent::startCapture(ErrorString*)
-{   
+{
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForCapture);
     m_nextMarkIndex = 0;
 
@@ -530,10 +526,10 @@ void InspectorReplayAgent::pausePlayback(ErrorString*)
     // listener for that will change state machine and tell frontend.
     m_inspectedPage->replayController()->pauseAtNextMark();
 }
-    
+
 void InspectorReplayAgent::stopPlayback(ErrorString*, bool shouldUnlock)
 {
-    m_inputLocked = !shouldUnlock;   
+    m_inputLocked = !shouldUnlock;
     m_inspectedPage->replayController()->cancelPlayback();
 }
 
@@ -579,6 +575,18 @@ void InspectorReplayAgent::getRecording(ErrorString* errorString, int uid, RefPt
                         .setUid(it->value->uid())
                         .setDateCreated(it->value->creationTimestamp())
                         .setActions(actions);
+}
+
+void InspectorReplayAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<InspectorObject>& serializedObject)
+{
+    RecordingsMap::iterator it = m_recordingsMap.find(uid);
+    if (it == m_recordingsMap.end()) {
+        *errorString = "Couldn't find recording with specified uid";
+        return;
+    }
+
+    JSONInputSerializer serializer(it->value);
+    serializedObject = serializer.serialize();
 }
 
 void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)

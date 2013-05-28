@@ -2683,7 +2683,7 @@
                 "id": "DataProbeId",
                 "type": "integer",
                 "description": "Unique data probe identifier."
-            },            
+            },
             {
                 "id": "DataProbe",
                 "type": "object",
@@ -2746,12 +2746,12 @@
                     { "name": "url", "type": "string", "description": "Script URL." },
                     { "name": "lineNumber", "type": "integer", "description": "Script line number." },
                     { "name": "columnNumber", "type": "integer", "description": "Script column number." },
-                    { "name": "expression", "type": "string", "description": "Expression to sample." }              
+                    { "name": "expression", "type": "string", "description": "Expression to sample." }
                 ],
                 "description": "Create a new script probe at the specified file, line, column which samples the provided expression."
             }
         ],
-        
+
         "events": [
             {
                 "name": "probeDataReceived",
@@ -2782,11 +2782,11 @@
                     { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of probe." }
                 ],
                 "description": "A probe was disabled."
-            },            
+            },
             {
                 "name": "allProbesCleared",
                 "description": "All probes were destroyed."
-            }            
+            }
         ]
     },
     {
@@ -2920,6 +2920,16 @@
                 ]
             },
             {
+                "name": "getSerializedRecording",
+                "description": "Returns the recording serialized to a JSON object.",
+                "parameters": [
+                    { "name": "uid", "$ref": "RecordingId" }
+                ],
+                "returns": [
+                    { "name": "serializedRecording", "type": "object", "description": "the requested recording", "optional": true }
+                ]
+            },
+            {
                 "name": "getAvailableRecordings",
                 "description": "Returns uids for all available recordings.",
                 "returns": [
@@ -2949,14 +2959,14 @@
 		"parameters": [
 		    { "name": "record", "$ref": "ReplayAction", "description": "An action representing a captured event loop input." }
 		]
-	    },	     
+	    },
 	    {
 		"name": "playbackHitMark",
 		"description": "A mark was reached during the replay.",
 		"parameters": [
 		    { "name": "mark", "$ref": "MarkIndex", "description": "The mark that was hit." }
 		]
-	    },	    
+	    },
             {
                 "name": "playbackStarted",
                 "description": "Fired when replaying has started."

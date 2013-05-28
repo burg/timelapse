@@ -62,9 +62,14 @@ WebInspector.RecordingsModel.prototype = {
 
         filename = filename || recording.filename() || WebInspector.UIString("SavedRecording.webreplay");
 
-        // TODO(Issue #236): implement protocol message to retrieve JSON-serialized recording.
-        // That serialized recording should be passed as the second argument below.
-        InspectorFrontendHost.save(filename, "TODO: implement", true);
+        ReplayAgent.getSerializedRecording(recording.uid, function(error, data) {
+            if (error) {
+                console.log("Couldn't save recording to disk: " + error);
+                return;
+            }
+
+            InspectorFrontendHost.save(filename, JSON.stringify(data), true);
+        });
     },
 
     addRecording: function(uid) {
@@ -80,13 +85,13 @@ WebInspector.RecordingsModel.prototype = {
         var newRecording = new WebInspector.SerializedRecording(WebInspector.replayModel, uid);
         this._recordingsByUID[uid] = newRecording;
         this._recordings.push(newRecording);
-        
+
         var loadDataForRecording = function(recording, error, data) {
             if (error) {
                 console.error("Couldn't load data for recording "+recording.uid+":"+error);
                 return;
             }
-                
+
             recording.loadData(data);
             this.dispatchEventToListeners(WebInspector.RecordingsModel.Events.RecordingAdded, recording);
         };

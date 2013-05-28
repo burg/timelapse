@@ -40,7 +40,6 @@
 #include "Logging.h"
 #include "ReplayRecording.h"
 #include <wtf/RefPtr.h>
-#include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/replay/InputIterator.h>
 
@@ -318,7 +317,7 @@ size_t JSONInputSerializer::memorySize()
     return counter.returnValue();
 }
 
-String JSONInputSerializer::serializeToString()
+PassRefPtr<InspectorObject> JSONInputSerializer::serialize()
 {
     pushObject();
 
@@ -369,7 +368,7 @@ String JSONInputSerializer::serializeToString()
 
     ASSERT(m_currentObject);
     // hella expensive. woops.
-    return m_currentObject->toJSONString();
+    return m_currentObject.release();
 }
 
 }; // namespace WebCore

@@ -76,7 +76,7 @@ namespace WebCore {
         virtual void storeResourceBytes(int, const char* data, int length) OVERRIDE;
 
         size_t memorySize();
-        String serializeToString();
+        PassRefPtr<InspectorObject> serialize();
     private:
         RefPtr<ReplayRecording> m_recording;
         RefPtr<InspectorObject> m_currentObject;

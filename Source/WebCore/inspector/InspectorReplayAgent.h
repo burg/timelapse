@@ -76,7 +76,7 @@ public:
     {
         return adoptPtr(new InspectorReplayAgent(instrumentingAgents, state, page));
     }
-    
+
     ~InspectorReplayAgent();
 
     void setFrontend(InspectorFrontend*);
@@ -106,7 +106,7 @@ public:
     void playbackCancelled();
     void playbackError(bool isFatal, const String&);
 
-    // Figures out current state and stops everything. 
+    // Figures out current state and stops everything.
     void stop();
     bool enabled() const;
 
@@ -124,13 +124,14 @@ public:
     void loadRecording(ErrorString*, int, bool*);
     void unloadRecording(ErrorString*, bool*);
     void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Replay::ReplayRecording>&);
+    void getSerializedRecording(ErrorString*, int, RefPtr<InspectorObject>&);
     void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&);
 
 private:
     InspectorReplayAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
     PositionMark createMark();
     PositionMark reuseMark() const;
-    
+
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Replay* m_frontend;
     Page *m_inspectedPage;
