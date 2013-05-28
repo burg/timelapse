@@ -46,7 +46,7 @@ namespace WebCore {
 
     class JSONInputSerializer : public InputSerializer {
         WTF_MAKE_NONCOPYABLE(JSONInputSerializer);
-    public:       
+    public:
         JSONInputSerializer(PassRefPtr<ReplayRecording>);
         virtual ~JSONInputSerializer();
 

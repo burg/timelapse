@@ -111,7 +111,7 @@ static bool debugHookOnDomEvents(const Event& event)
     if (event.type() == eventNames().errorEvent)
         return false;
     if (event.type() == eventNames().focusEvent)
-        return false;                
+        return false;
     if (event.type() == eventNames().keydownEvent)
         return false;
     if (event.type() == eventNames().keypressEvent)
@@ -147,7 +147,7 @@ static bool debugHookOnDomEvents(const Event& event)
     // enqueue selectionchange into the DocumentEventQueue. (enqueued
     // by FrameSelection::setSelection).
     if (event.type() == eventNames().selectionchangeEvent)
-        return false;    
+        return false;
     if (event.type() == eventNames().selectstartEvent)
         return false;
     if (event.type() == eventNames().unloadEvent)
@@ -170,9 +170,9 @@ ReplayController::ReplayController(Page* page)
 ReplayController::~ReplayController()
 {
 }
-    
+
 //-- capture controls
-    
+
 void ReplayController::beginCapturing()
 {
     if (m_loadedRecording) {
@@ -180,14 +180,14 @@ void ReplayController::beginCapturing()
         cancelPlayback();
         return;
     }
-        
+
     m_status = CannotReplay;
     m_loadedRecording = ReplayRecording::create(m_nextRecordingId++);
     m_activeIterator = m_loadedRecording->createCaptureIterator(m_page);
     changeProxyMode(ReplayProxy::Capturing);
 
     InspectorInstrumentation::captureStarted(m_page);
-    
+
     // create begin sentinel
     m_activeIterator->storeInput(adoptPtr(new BeginSentinel()));
 
@@ -195,7 +195,7 @@ void ReplayController::beginCapturing()
     m_activeIterator->storeInput(adoptPtr(new DisableCache()));
     m_activeIterator->storeInput(adoptPtr(new InitializeFocus(m_page)));
     m_activeIterator->storeInput(adoptPtr(new InitializeWindow(m_page)));
-    // attempt to pull reasonable values here to save in the log, and 
+    // attempt to pull reasonable values here to save in the log, and
     // also to use for the initial refresh.
     Frame* mainFrame = m_page->mainFrame();
     NavigateToPage* reloadInput = new NavigateToPage(mainFrame->document()->securityOrigin(),
@@ -232,7 +232,7 @@ bool ReplayController::endCapturing()
     unloadRecording(true);
     m_cacheController->enableCache();
     changeProxyMode(ReplayProxy::Open);
-    
+
     //now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
     InspectorInstrumentation::captureFinished(m_page);
@@ -294,7 +294,7 @@ void ReplayController::replayToCompletion(ReplayMode mode)
     dispatcher()->run();
 }
 
-    
+
 void ReplayController::cancelPlayback()
 {
     switch (m_status) {
@@ -305,34 +305,34 @@ void ReplayController::cancelPlayback()
 
         /* from here, we intentionally fall through the cases. Depending on the current state, we
            need to perform some or all of the following transitions to cancel gracefully:
-         
-            running --> paused --> finished --> cancelled 
-        */   
+
+            running --> paused --> finished --> cancelled
+        */
         case ReplayToStart:
         case ReplayUpToMarkIndex:
         case ReplayToCompletion:
         case PlaybackResetting:
             // this cancels any pending timers, and fires instrumentation.
             pauseReplay();
-            
+
         case PlaybackPaused:
             // this disconnects the determinism log from global object, and fires instrumentation.
             finishReplay();
-                
+
         case PlaybackFinished:
             changeProxyMode(ReplayProxy::Open);
             InspectorInstrumentation::playbackCancelled(m_page);
     }
 
 }
-    
-//-- external callbacks    
+
+//-- external callbacks
 
 void ReplayController::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const PositionMark&)
 {
     if (!window)
         return;
-    
+
     InputIterator* it = getInputIteratorForDocument(window->document());
     bool shouldIgnore =  !it || (!it->isCapturing() && !it->isReplaying());
 
@@ -358,7 +358,7 @@ void ReplayController::willDispatchEvent(const Event& event, DOMWindow* window, 
     if (m_activeIterator->isReplaying())
         dispatcher()->incrementDomEventCounter();
 }
-    
+
 void ReplayController::didDispatchEvent()
 {
     if (replaying())
@@ -369,7 +369,7 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
 {
     if (!capturing() && !replaying())
         return;
-    
+
     page()->networkProxy()->setExpectsPageLoad(false);
     loader->frame()->script()->globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
@@ -400,14 +400,14 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
     LOG(DeterministicReplay, "%-30s %sPlayback error: %s", "[ReplayController]",
         isFatal ? "FATAL " : "",
         errorMessage.utf8().data());
-    
+
     if (isFatal) {
         LOG(DeterministicReplay, "%-30s Terminating playback due to fatal error.", "[ReplayController]");
         cancelPlayback();
         InspectorInstrumentation::playbackError(m_page, true, errorMessage);
         return;
     }
-    
+
     if (m_errorStrategy == ContinueOnError) {
         LOG(DeterministicReplay, "%-30s Continuing past non-fatal error.", "[ReplayController]");
     } else {
@@ -448,7 +448,7 @@ void ReplayController::resetReplayState()
 void ReplayController::pauseReplay()
 {
     dispatcher()->pause();
-    
+
     m_status = PlaybackPaused;
     InspectorInstrumentation::playbackPaused(m_page, dispatcher()->currentMark().index());
 }
@@ -468,14 +468,14 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
         LOG_ERROR("Tried to unload recording, but none was loaded.");
         return false;
     }
-    
+
     if (!(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay)) {
         LOG_ERROR("Tried to unload recording that was capturing or replaying.");
         return false;
     }
 
     LOG(DeterministicReplay, "%-30sUnloading recording: %p.\n", "[ReplayController]", (void*)m_loadedRecording.get());
-    
+
     resetReplayState();
     m_loadedRecording = 0;
 
@@ -496,9 +496,9 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
         LOG_ERROR("Tried to load recording, but a recording is already loaded.");
         return false;
     }
-    
+
     LOG(DeterministicReplay, "%-30sLoading recording: %p.\n", "[ReplayController]", (void*)recording.get());
-    
+
     m_loadedRecording = recording;
     if (!suppressNotifications)
         InspectorInstrumentation::recordingLoaded(m_page, recording);
@@ -529,7 +529,7 @@ EventLoopInputDispatcher* ReplayController::dispatcher() const
 {
     ASSERT(m_activeIterator);
     ASSERT(m_activeIterator->isReplaying());
-    
+
     return static_cast<ReplayInputIterator*>(m_activeIterator.get())->dispatcher();
 }
 

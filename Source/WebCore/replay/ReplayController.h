@@ -55,7 +55,7 @@ namespace WebCore {
     class Node;
     class Page;
     class ReplayRecording;
-    
+
     enum ReplayStatus {
         CannotReplay,
         ReplayToStart,
@@ -66,12 +66,12 @@ namespace WebCore {
         PlaybackPaused,
         PlaybackFinished
     };
- 
+
     enum ErrorStrategy {
         PauseOnError,
         ContinueOnError,
     };
-     
+
     class ReplayController : public EventLoopInputDispatcherClient {
         WTF_MAKE_NONCOPYABLE(ReplayController);
     public:
@@ -85,7 +85,7 @@ namespace WebCore {
         void replayUpToMarkIndex(PositionMarkIndex, ReplayMode mode = FullSpeed);
         void replayToCompletion(ReplayMode mode = FullSpeed);
         void cancelPlayback();
-        
+
         // External callbacks
         void willDispatchEvent(const Event&, DOMWindow*, Node*, const PositionMark&);
         void didDispatchEvent();
@@ -97,10 +97,10 @@ namespace WebCore {
         virtual void willDispatchInput(EventLoopInput*) OVERRIDE;
         virtual void didDispatchInput(EventLoopInput*) OVERRIDE;
         virtual void didDispatchFinalInput() OVERRIDE;
-        
+
         // Accessors and queries
         WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
-        
+
         ErrorStrategy errorStrategy() const { return m_errorStrategy; }
         void setErrorStrategy(ErrorStrategy mode) { m_errorStrategy = mode; }
 
@@ -111,12 +111,12 @@ namespace WebCore {
         bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
         bool unloadRecording(bool suppressNotifications = false);
 
-    private:       
+    private:
         void resetReplayState();
         void pauseReplay();
         void finishReplay();
         void changeProxyMode(ReplayProxy::ProxyMode);
-        
+
         // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying
         // TODO: remove
         bool capturing() const;

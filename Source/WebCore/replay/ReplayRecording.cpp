@@ -73,7 +73,7 @@ PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()
 {
     return FunctorInputIterator::create(m_inputStorage.get());
 }
-    
+
 }; // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

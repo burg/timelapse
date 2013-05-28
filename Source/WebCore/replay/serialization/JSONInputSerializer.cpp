@@ -99,7 +99,7 @@ public:
         action->serialize(m_serializer);
         m_serializer->popObjectAsProperty("action");
 
-        m_serializer->popObjectAsElement(); // a single action object    
+        m_serializer->popObjectAsElement(); // a single action object
     }
     ReturnType returnValue() { return void(); }
 
@@ -135,77 +135,77 @@ void JSONInputSerializer::putString(const String& value)
 void JSONInputSerializer::putUnsigned(const String& key, unsigned value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
 void JSONInputSerializer::putUInt32(const String& key, uint32_t value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
 void JSONInputSerializer::pushUInt32(uint32_t value)
 {
     ASSERT(m_currentArray);
-    
+
     m_currentArray->pushNumber((double) value);
 }
 
 void JSONInputSerializer::putUInt64(const String& key, uint64_t value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
 void JSONInputSerializer::putInt(const String& key, int value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
 void JSONInputSerializer::pushInt32(int32_t value)
 {
     ASSERT(m_currentArray);
-    
+
     m_currentArray->pushNumber((double) value);
 }
 
 void JSONInputSerializer::putInt32(const String& key, int32_t value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
 void JSONInputSerializer::putInt64(const String& key, int64_t value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
 void JSONInputSerializer::putBoolean(const String& key, bool value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setBoolean(key, value);
 }
 
 void JSONInputSerializer::putDouble(const String& key, double value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, value);
 }
 
 void JSONInputSerializer::putFloat(const String& key, float value)
 {
     ASSERT(m_currentObject);
-    
+
     m_currentObject->setNumber(key, (double) value);
 }
 
@@ -275,11 +275,11 @@ void JSONInputSerializer::popArrayAsElement()
 
     RefPtr<InspectorValue> popped = m_stack.last();
     ASSERT(popped->asArray());
-    
+
     RefPtr<InspectorArray> oldArray = m_currentArray;
     m_currentArray = popped->asArray();
     m_currentObject = 0;
-    
+
     m_currentArray->pushArray(oldArray);
     m_stack.removeLast();
 }
@@ -292,11 +292,11 @@ void JSONInputSerializer::popObjectAsElement()
 
     RefPtr<InspectorValue> popped = m_stack.last();
     ASSERT(popped->asArray());
-    
+
     RefPtr<InspectorObject> oldObject = m_currentObject;
     m_currentArray = popped->asArray();
     m_currentObject = 0;
-    
+
     m_currentArray->pushObject(oldObject);
     m_stack.removeLast();
 }
@@ -309,7 +309,7 @@ void JSONInputSerializer::storeResourceBytes(int /*id*/, const char* /*data*/, i
 size_t JSONInputSerializer::memorySize()
 {
     CountMemorySize counter;
-    
+
     for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
         ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
         m_recording->createFunctorIterator()->forEachInputInQueue(queueType, counter);
@@ -321,7 +321,7 @@ size_t JSONInputSerializer::memorySize()
 String JSONInputSerializer::serializeToString()
 {
     pushObject();
-    
+
     /* the overall recording has the form:
     {
       metadata: {
@@ -330,38 +330,38 @@ String JSONInputSerializer::serializeToString()
       },
       queues: [ { 'name': 'foo', actions: [ { ... }, { ... }, ... ] } ]
     }*/
-    
+
     pushObject(); // the entire recording object
     // TODO: add other recording metadata?
     putInt("memorySize", memorySize());
     popObjectAsProperty("metadata");
-    
+
     pushArray(); // array of queues
-    
+
     /* each action has the form:
     {
-      metadata: { 
+      metadata: {
                  "type":   ...,
                  "number": ...,
                 ...
       },
-      action: { 
+      action: {
                 "foo": ...,
                 ...
       }
     }*/
 
     SerializeActionFunctor collector(this);
-    
+
     for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
         ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
         pushObject(); // a single queue object
-    
+
         putString("name", WTF::queueTypeToString(queueType));
         pushArray(); // array of action objects
 
         m_recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
-        
+
         popArrayAsProperty("actions");
         popObjectAsElement();
     }
@@ -371,7 +371,7 @@ String JSONInputSerializer::serializeToString()
     // hella expensive. woops.
     return m_currentObject->toJSONString();
 }
-        
+
 }; // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
