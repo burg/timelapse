@@ -870,7 +870,11 @@ WebInspector.ReplayDispatcher.prototype = {
     
     recordingRemoved: function(uid)
     {
-        WebInspector.recordingsModel.removeRecording(uid);
+        var recording = WebInspector.recordingsModel.getRecordingWithUID(uid);
+        if (!recording)
+            return;
+
+        WebInspector.recordingsModel.removeRecording(recording);
     },
 };
 

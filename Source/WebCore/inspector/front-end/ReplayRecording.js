@@ -142,6 +142,7 @@ WebInspector.ReplayRecording.prototype = {
     
     // Public API
     displayName: function() {},
+    filename: function() {},
     dataLoaded: function() {},
     
     get savepointList() {
@@ -354,6 +355,11 @@ WebInspector.SerializedRecording.prototype = {
     get dateCreated()
     {
         return this._dateCreated;
+    },
+
+    filename: function()
+    {
+        return "CapturedRecording-" + this.dateCreated.toISO8601Compact() + ".webreplay";
     },
 
     displayName: function()

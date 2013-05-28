@@ -32,6 +32,7 @@
 /**
  * @constructor
  * @extends {WebInspector.Panel}
+ * @implements {WebInspector.ContextMenu.Provider}
  */
 WebInspector.RecordingsPanel = function()
 {
@@ -54,6 +55,7 @@ WebInspector.RecordingsPanel = function()
     this._callbacks.register(this._replayModel, replayEvents.PlaybackStopped,   this._playbackStopped);
     this._callbacks.register(this._recordingsModel, recordingsEvents.RecordingAdded,   this._recordingAdded);
     this._callbacks.register(this._recordingsModel, recordingsEvents.RecordingRemoved, this._recordingRemoved);
+    this._callbacks.register(this.element, "contextmenu", this._handlePanelContextMenuEvent);
     this._callbacks.install();
 
     this._viewsByUID = {};
@@ -72,6 +74,9 @@ WebInspector.RecordingsPanel = function()
     if (this._replayModel.isCapturing)
         this.sidebarTree.appendChild(this.capturingItemTreeElement);
 
+    WebInspector.ContextMenu.registerProvider(this);
+    this._createFileSelectorElement();
+
     this._landingView = new WebInspector.RecordingsPanel.LandingView();
     this.showLandingView();
 
@@ -84,6 +89,30 @@ WebInspector.RecordingsPanel = function()
 };
 
 WebInspector.RecordingsPanel.prototype = {
+    _handlePanelContextMenuEvent: function(event)
+    {
+        var contextMenu = new WebInspector.ContextMenu(event);
+        contextMenu.appendApplicableItems();
+        contextMenu.show();
+    },
+
+    _createFileSelectorElement: function()
+    {
+        if (this._fileSelectorElement)
+            this.element.removeChild(this._fileSelectorElement);
+        this._fileSelectorElement = WebInspector.createFileSelectorElement(this._loadFromFile.bind(this));
+        this.element.appendChild(this._fileSelectorElement);
+    },
+
+    /**
+     * @param {!File} file
+     */
+    _loadFromFile: function(file)
+    {
+        this._recordingsModel.loadFromFile(file);
+        this._createFileSelectorElement();
+    },
+
     willDispose: function()
     {
         this._callbacks.uninstall(true);
@@ -206,8 +235,7 @@ WebInspector.RecordingsPanel.prototype = {
         var view = this._viewsByUID[recording.uid];
         if (!view)
             return;
-        
-        view.dispose();
+
         delete this._viewsByUID[recording.uid];
         var treeItem = this._treeElementsByUID[recording.uid];
         delete this._treeElementsByUID[recording.uid];
@@ -222,6 +250,8 @@ WebInspector.RecordingsPanel.prototype = {
         // if we were staring at view for this recording, show landing view.
         if (view === this.activeView)
             this.showLandingView();
+
+        view.dispose();
     },
 
     _registerShortcuts: function()
@@ -249,6 +279,30 @@ WebInspector.RecordingsPanel.prototype = {
         section.addRelatedKeys(keys, WebInspector.UIString("Replay to previous/next input"));
     },
 
+     /**
+     * @param {WebInspector.ContextMenu} contextMenu
+     * @param {Object} target
+     */
+    appendApplicableItems: function(event, contextMenu, target)
+    {
+        if (WebInspector.inspectorView.currentPanel() != this)
+            return;
+
+        contextMenu.appendItem(WebInspector.UIString("Load Recording\u2026"),
+                               this._fileSelectorElement.click.bind(this._fileSelectorElement));
+        contextMenu.appendSeparator();
+
+        if (!(target instanceof WebInspector.ReplayRecording))
+            return;
+
+        var recording = target;
+        contextMenu.appendItem(WebInspector.UIString("Save Recording\u2026"),
+                               this._recordingsModel.saveToFile.bind(this._recordingsModel, recording));
+        contextMenu.appendItem(WebInspector.UIString("Delete Recording"),
+                               this._recordingsModel.removeRecording.bind(this._recordingsModel, recording));
+
+    },
+
     __proto__: WebInspector.Panel.prototype
 };
 
@@ -271,7 +325,7 @@ WebInspector.RecordingsPanel.LandingView = function()
     var createRecording = document.createElement("p");
     createRecording.addStyleClass("recording-unavailable-text");
     createRecording.appendChild(document.createTextNode(WebInspector.UIString("No recordings available.")));
-    var createRecordingAnchor = document.createElement("a");
+    var createRecordingAnchor = document.createElement("span");
     createRecordingAnchor.textContent = WebInspector.UIString("Click to create a recording.");
     this._callbacks.register(createRecordingAnchor, "click", this._createRecordingAnchorClicked);
     createRecording.appendChild(createRecordingAnchor);
@@ -336,15 +390,19 @@ WebInspector.RecordingSidebarTreeElement.prototype = {
         model.scheduler.executeImmediately(model.switchRecordingTask(this.recording));
     },
 
+    onattach: function()
+    {
+        WebInspector.SidebarTreeElement.prototype.onattach.call(this);
+        this.listItemElement.addEventListener("contextmenu", this._handleTreeContextMenuEvent.bind(this), true);
+    },
+
     /**
      * @param {!Event} event
      */
-    handleContextMenuEvent: function(event)
+    _handleTreeContextMenuEvent: function(event)
     {
-        // TODO: (Issue #237): add sensible context menu items to recording tree element
-        // see WebInspector.ProfileSidebarTreeElement.handleContextMenuEvent()
         var contextMenu = new WebInspector.ContextMenu(event);
-        contextMenu.appendItem(WebInspector.UIString("Delete Recording"), this.ondelete.bind(this));
+        contextMenu.appendApplicableItems(this.recording);
         contextMenu.show();
     },
 

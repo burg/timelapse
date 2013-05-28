@@ -47,6 +47,26 @@ WebInspector.RecordingsModel.prototype = {
         return this._recordings.slice();
     },
 
+    loadFromFile: function(file)
+    {
+        // TODO(Issue #269): implement deserialization API in RecordingsModel.
+        console.error("Loading recording from file not supported.");
+    },
+
+    saveToFile: function(recording, filename)
+    {
+        if (!InspectorFrontendHost.canSave()) {
+            console.error("Saving a recording to file not supported.");
+            return;
+        }
+
+        filename = filename || recording.filename() || WebInspector.UIString("SavedRecording.webreplay");
+
+        // TODO(Issue #236): implement protocol message to retrieve JSON-serialized recording.
+        // That serialized recording should be passed as the second argument below.
+        InspectorFrontendHost.save(filename, "TODO: implement", true);
+    },
+
     addRecording: function(uid) {
         console.assert(uid > 0, "tried to add recording with invalid uid: "+uid);
 
@@ -73,17 +93,30 @@ WebInspector.RecordingsModel.prototype = {
 
         ReplayAgent.getRecording(uid, loadDataForRecording.bind(this, newRecording));
     },
-    
-    removeRecording: function(uid) {
-        console.assert(uid > 0, "tried to remove recording with invalid uid: "+uid);
 
-        // XXX: unload recording if it's loaded!!
+    removeRecording: function(recording) {
+        console.assert(recording instanceof WebInspector.ReplayRecording,
+                       "tried to remove object that's not a recording: ", recording);
+        console.assert(recording === this._recordingsByUID[recording.uid],
+                       "Unknown recording, cannot remove: ", recording);
 
-        var recording = this._recordingsByUID[uid];
-        this._recordings.splice(this._recordings.indexOf(recording), 1);
-        delete this._recordingsByUID[uid];
-        
-        this.dispatchEventToListeners(WebInspector.RecordingsModel.Events.RecordingRemoved, recording);
+        var replayModel = WebInspector.replayModel;
+        var recordingsModel = this;
+        var task = new WebInspector.ReplayTask("UnloadRecordingBeforeRemoval");
+        // Asynchronously unload the recording if it's loaded, then remove the recording views.
+        if (replayModel.loadedRecording === recording) {
+            task.chain("unloadRecording", function(cb) {
+                replayModel.unloadRecordingTask().run(cb);
+            });
+        }
+        task.chain("removeRecording", function(cb) {
+            recordingsModel._recordings.splice(recordingsModel._recordings.indexOf(recording), 1);
+            delete recordingsModel._recordingsByUID[recording.uid];
+
+            recordingsModel.dispatchEventToListeners(WebInspector.RecordingsModel.Events.RecordingRemoved, recording);
+            cb();
+        });
+        replayModel.scheduler.enqueue(task);
     },
 
     getRecordingWithUID: function(uid)
