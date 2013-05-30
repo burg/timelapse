@@ -89,7 +89,7 @@ WebInspector.ReplayModel.Events = {
     // RecordingUnloaded -> CaptureStarted -> CaptureStopped -> RecordingAdded -> RecordingLoaded
     // InspectorReplayAgent will automatically load the created recording if none is loaded.
     // The frontend RecordingsModel tracks available recordings and fires Recording{Added,Removed}.
-    
+
     // fires when a new recording is initialized for capturing.
     // this recording object does not exist in the backend.
     RecordingCreated: "ReplayRecordingCreated",
@@ -131,7 +131,7 @@ WebInspector.ReplayModel.prototype = {
     /* ReplayModel represents the state of execution and capture
      * or replay. Clients call methods of ReplayModel to issue
      * commands that affect capture or replay, or to query its state.
-     * 
+     *
      * This model also translates backend->frontend calls into events.
      */
 
@@ -179,7 +179,7 @@ WebInspector.ReplayModel.prototype = {
         var task = this.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
         this._scheduler.cancelAllTasks().enqueue(task);
     },
-    
+
     replayToCompletion: function(allowBreakpoints, replaySpeed)
     {
         var task = this.replayToCompletionTask(allowBreakpoints, replaySpeed);
@@ -191,19 +191,19 @@ WebInspector.ReplayModel.prototype = {
         var task = this.replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, replaySpeed);
         this._scheduler.cancelAllTasks().enqueue(task);
     },
-    
+
     pausePlayback: function()
     {
         var task = this.pausePlaybackTask();
         this._scheduler.cancelAllTasks().enqueue(task);
     },
-    
+
     stopPlayback: function(shouldUnlock)
     {
         this.changeStatus("Stopping playback...");
         this._scheduler.cancelAllTasks().enqueue(this.stopPlaybackTask(shouldUnlock));
     },
-    
+
     // Public task creation API
     startCaptureTask: function()
     {
@@ -220,7 +220,7 @@ WebInspector.ReplayModel.prototype = {
         .chain("unloadRecordingIfNeeded", function(cb) {
             if (!model.canReplay)
                 return cb();
-               
+
             model.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, cb);
             model._unloadRecording();
         })
@@ -249,7 +249,7 @@ WebInspector.ReplayModel.prototype = {
             model.changeStatus("Capturing...");
             cb();
         });
-        
+
         return task;
     },
 
@@ -279,7 +279,7 @@ WebInspector.ReplayModel.prototype = {
             model._currentMarkIndex = -1;
             cb();
         });
-        
+
         return task;
     },
 
@@ -305,7 +305,7 @@ WebInspector.ReplayModel.prototype = {
             task.chain("unsuppressBreakpointsIfNeeded", function(cb) {
                     model._unsuppressBreakpoints();
                 cb();
-            });      
+            });
         }
 
         task.chain("resumeDebuggerIfPaused",
@@ -325,14 +325,14 @@ WebInspector.ReplayModel.prototype = {
             model.onceEventListener(WebInspector.ReplayModel.Events.PlaybackDidStart, cb, model);
             ReplayAgent.replayUpToMarkIndex(markIndex+1, model.replaySpeed == seeking);
         });
-        
+
         task.chain("notifyReplayStarted", function(cb){
             model._replaying = true;
             model._inputPaused = false;
             model.changeStatus("Replaying...");
             cb();
         });
-        
+
         return task;
     },
 
@@ -359,7 +359,7 @@ WebInspector.ReplayModel.prototype = {
             task.chain("unsuppressBreakpointsIfNeeded", function(cb) {
                     model._unsuppressBreakpoints();
                 cb();
-            });      
+            });
         }
 
         task.chain("resumeDebuggerIfPaused",
@@ -386,10 +386,10 @@ WebInspector.ReplayModel.prototype = {
             model.changeStatus("Replaying...");
             cb();
         });
-        
+
         return task;
     },
-    
+
     replayToBreakpointHitTask: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
     {
         var model = this;
@@ -419,14 +419,14 @@ WebInspector.ReplayModel.prototype = {
                 if (WebInspector.debuggerModel.isPaused())
                     DebuggerAgent.resume();
             };
-           
+
             model.addEventListener(replayEvents.DebuggerWaiting,
                                    debuggerWaitingCallback, task);
         });
-        
+
         return task;
     },
-       
+
     pausePlaybackTask: function()
     {
         var model = this;
@@ -443,7 +443,7 @@ WebInspector.ReplayModel.prototype = {
             model.onceEventListener(events.InputPaused, cb, this);
             ReplayAgent.pausePlayback();
         });
-        
+
         return task;
     },
 
@@ -462,7 +462,7 @@ WebInspector.ReplayModel.prototype = {
             model.onceEventListener(events.PlaybackStopped, cb, this);
             ReplayAgent.stopPlayback(!!shouldUnlock);
         });
-        
+
         return task;
     },
 
@@ -479,12 +479,12 @@ WebInspector.ReplayModel.prototype = {
         .chain("unloadRecordingIfNeeded", function(cb) {
             if (!model.canReplay)
                 return cb();
-               
+
             model.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, cb);
             model._unloadRecording();
         });
     },
-    
+
     loadRecordingTask: function(recording)
     {
         var model = this;
@@ -497,7 +497,7 @@ WebInspector.ReplayModel.prototype = {
             model._loadRecording(recording);
         });
     },
-    
+
     switchRecordingTask: function(recording)
     {
         var model = this;
@@ -524,7 +524,7 @@ WebInspector.ReplayModel.prototype = {
     console.assert(this.canReplay, "ReplayModel.loadedRecording only available when replay is possible.");
     return this._activeRecording;
     },
-    
+
     get isCapturing()
     {
 	return this._capturing;
@@ -579,17 +579,17 @@ WebInspector.ReplayModel.prototype = {
     {
         return this._scheduler;
     },
-    
+
     get breakpointTracker()
     {
         return this._breakpointTracker;
     },
-    
+
     get savepointTracker()
     {
         return this._savepointTracker;
     },
-    
+
     get scanners()
     {
         return this._scanners;
@@ -602,14 +602,14 @@ WebInspector.ReplayModel.prototype = {
         // TODO: receiving !wasAllowed should trigger task error.
         ReplayAgent.unloadRecording();
     },
-    
+
     _loadRecording: function(recording)
     {
         console.assert(!this._activeRecording, "Can't load recording because one is already loaded");
         // TODO: receiving !wasAllowed should trigger task error.
         ReplayAgent.loadRecording(recording.uid);
     },
-    
+
     // Callbacks from the backend message dispatcher (ReplayDispatcher below)
     _replayEnabled: function()
     {
@@ -624,11 +624,11 @@ WebInspector.ReplayModel.prototype = {
 	this.changeStatus("Disabled");
 	this.dispatchEventToListeners(WebInspector.ReplayModel.Events.Disabled);
     },
-    
+
     _playbackPausedAtInput: function(markIndex)
     {
     var replayEvents = WebInspector.ReplayModel.Events;
-    
+
     // This event is used to allow default action prevention when pausing at an input.
     var defaultPrevented = this.dispatchEventToListeners(replayEvents.InputWaiting, markIndex);
     if (defaultPrevented)
@@ -659,7 +659,7 @@ WebInspector.ReplayModel.prototype = {
             "errorMessage": errorMessage,
             "isFatal": isFatal,
         };
-    
+
         this.dispatchEventToListeners(WebInspector.ReplayModel.Events.PlaybackError, data);
     },
 
@@ -706,7 +706,7 @@ WebInspector.ReplayModel.prototype = {
 
         var recording = this._recordingsModel.getRecordingWithUID(uid);
         console.assert(recording, "Unknown recording loaded!");
-        
+
         if (recording.dataLoaded())
             setActiveRecording.call(this);
         else
@@ -736,12 +736,12 @@ WebInspector.ReplayModel.prototype = {
     var restoreStatusCallback = function() {
         this.changeStatus(oldStatus);
     };
-    
+
     if (this._breakpointTracker.currentBreakpoint)
         this.changeStatus("Hit breakpoint");
     else
         this.changeStatus("Debugger paused");
-    
+
     WebInspector.debuggerModel.onceEventListener(debuggerEvents.DebuggerResumed,
                                                 restoreStatusCallback, this);
 
@@ -761,7 +761,7 @@ WebInspector.ReplayModel.prototype = {
 
     /* suppressing breakpoints will temporarily ignore the state of
      * WebInspector.debuggerModel.breakpointsActive and never hit breakpoints.
-     * 
+     *
      * This is generally only called as an optional behavior during replay.
      */
     _suppressBreakpoints: function()
@@ -782,7 +782,7 @@ WebInspector.ReplayModel.prototype = {
 	WebInspector.debuggerModel.setBreakpointsActive(this._breakpointsWereEnabled);
 	this._suppressingBreakpoints = false;
     },
-    
+
     __proto__: WebInspector.Object.prototype
 };
 
@@ -852,7 +852,7 @@ WebInspector.ReplayDispatcher.prototype = {
     {
         this._model._setReplayCursor(markIndex);
     },
-    
+
     recordingUnloaded: function()
     {
         this._model._recordingUnloaded();
@@ -861,21 +861,7 @@ WebInspector.ReplayDispatcher.prototype = {
     recordingLoaded: function(uid)
     {
         this._model._recordingLoaded(uid);
-    },
-    
-    recordingAdded: function(uid)
-    {
-        WebInspector.recordingsModel.addRecording(uid);
-    },
-    
-    recordingRemoved: function(uid)
-    {
-        var recording = WebInspector.recordingsModel.getRecordingWithUID(uid);
-        if (!recording)
-            return;
-
-        WebInspector.recordingsModel.removeRecording(recording);
-    },
+    }
 };
 
 WebInspector.ReplayModel.Steps = {

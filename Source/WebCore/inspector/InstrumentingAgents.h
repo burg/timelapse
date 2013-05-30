@@ -55,6 +55,7 @@ class InspectorPageAgent;
 class InspectorProbeAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
+class InspectorRecordingsAgent;
 class InspectorReplayAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
@@ -97,6 +98,9 @@ public:
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
 
 #if ENABLE(TIMELAPSE)
+    InspectorRecordingsAgent* inspectorRecordingsAgent() const { return m_inspectorRecordingsAgent; }
+    void setInspectorRecordingsAgent(InspectorRecordingsAgent* agent) { m_inspectorRecordingsAgent = agent; }
+
     InspectorReplayAgent* inspectorReplayAgent() const { return m_inspectorReplayAgent; }
     void setInspectorReplayAgent(InspectorReplayAgent* agent) { m_inspectorReplayAgent = agent; }
 
@@ -170,6 +174,7 @@ private:
     InspectorResourceAgent* m_inspectorResourceAgent;
     PageRuntimeAgent* m_pageRuntimeAgent;
 #if ENABLE(TIMELAPSE)
+    InspectorRecordingsAgent* m_inspectorRecordingsAgent;
     InspectorReplayAgent* m_inspectorReplayAgent;
     InspectorProbeAgent* m_inspectorProbeAgent;
 #endif

@@ -67,6 +67,7 @@
 #include "InspectorResourceAgent.h"
 #include "InspectorState.h"
 #include "InspectorTimelineAgent.h"
+#include "InspectorRecordingsAgent.h"
 #include "InspectorReplayAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
@@ -121,8 +122,9 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     InspectorDOMStorageAgent* domStorageAgent = domStorageAgentPtr.get();
     m_agents.append(domStorageAgentPtr.release());
 #if ENABLE(TIMELAPSE)
+    m_agents.append(InspectorRecordingsAgent::create(m_instrumentingAgents.get(), m_state.get()));
     m_agents.append(InspectorReplayAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
-#endif    
+#endif
     OwnPtr<InspectorMemoryAgent> memoryAgentPtr(InspectorMemoryAgent::create(m_instrumentingAgents.get(), m_state.get()));
     m_memoryAgent = memoryAgentPtr.get();
     m_agents.append(memoryAgentPtr.release());

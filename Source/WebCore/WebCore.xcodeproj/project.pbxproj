@@ -5246,6 +5246,8 @@
 		C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */; };
 		C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA712171776FA001A8BB4 /* EventLoopInput.h */; };
 		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
+		C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */; };
+		C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */; };
 		C4954A9F1720807C00344F9E /* ScriptProbeServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4954A9D1720807C00344F9E /* ScriptProbeServer.cpp */; };
 		C49826F7172E16630050DD62 /* ScriptProbe.h in Headers */ = {isa = PBXBuildFile; fileRef = C49826F6172E16630050DD62 /* ScriptProbe.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C49905E81714BC83000AEC13 /* JSONInputSerializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */; };
@@ -12091,6 +12093,8 @@
 		C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventLoopInput.cpp; sourceTree = "<group>"; };
 		C48EA712171776FA001A8BB4 /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventLoopInput.h; sourceTree = "<group>"; };
 		C48EA71517178087001A8BB4 /* FunctorInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctorInputIterator.h; path = replay/FunctorInputIterator.h; sourceTree = "<group>"; };
+		C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorRecordingsAgent.cpp; sourceTree = "<group>"; };
+		C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorRecordingsAgent.h; sourceTree = "<group>"; };
 		C4954A9D1720807C00344F9E /* ScriptProbeServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ScriptProbeServer.cpp; sourceTree = "<group>"; };
 		C49826F6172E16630050DD62 /* ScriptProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScriptProbe.h; sourceTree = "<group>"; };
 		C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONInputSerializer.cpp; sourceTree = "<group>"; };
@@ -13852,6 +13856,8 @@
 				C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */,
 				9F0D6B2C121BFEBA006C0288 /* InspectorProfilerAgent.cpp */,
 				9F0D6B2D121BFEBA006C0288 /* InspectorProfilerAgent.h */,
+				C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */,
+				C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */,
 				C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */,
 				C4F7F9391705EA1F005AB205 /* InspectorReplayAgent.h */,
 				82AB1771125C826700C5069D /* InspectorResourceAgent.cpp */,
@@ -24537,6 +24543,7 @@
 				BE8EF04B171C9014009B48C3 /* JSVideoTrack.h in Headers */,
 				BE8EF04D171C9014009B48C3 /* JSVideoTrackList.h in Headers */,
 				FB719C3F17238CA80022DE34 /* WebKitCSSMatFunctionValue.h in Headers */,
+				C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -27545,6 +27552,7 @@
 				BE6DF711171CA2DA00DD52B8 /* JSAudioTrackCustom.cpp in Sources */,
 				BE6DF713171CA2DA00DD52B8 /* JSAudioTrackListCustom.cpp in Sources */,
 				FB719C4017238CAE0022DE34 /* WebKitCSSMatFunctionValue.cpp in Sources */,
+				C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

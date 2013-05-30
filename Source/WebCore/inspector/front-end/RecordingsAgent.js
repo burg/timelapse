@@ -32,12 +32,13 @@
 /**
  * @constructor
  */
-WebInspector.ReplayAgent = function() {
+// TODO(Issue #271): remove backend-side interpretation of inputs
+WebInspector.RecordingsAgent = function() {
     // Not implemented.
 };
 
-// Must be kept in sync with InspectorReplayAgent.h
-WebInspector.ReplayAgent.RecordType = {
+// Must be kept in sync with InspectorRecordingsAgent.h
+WebInspector.RecordingsAgent.RecordType = {
     MousePress: "MousePress",
     MouseRelease: "MouseRelease",
     MouseMove: "MouseMove",
@@ -55,9 +56,9 @@ WebInspector.ReplayAgent.RecordType = {
     ReceiveResponse: "ReceiveResponse",
     ReceiveData: "ReceiveData",
     ResourceLoaded: "ResourceLoaded",
-    
+
     TimerFire: "TimerFire",
-    
+
     FrameNavigated: "FrameNavigated",
     CaptureBegin: "CaptureBegin",
     CaptureEnd: "CaptureEnd",

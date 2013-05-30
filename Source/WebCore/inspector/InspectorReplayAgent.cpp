@@ -39,40 +39,21 @@
 #include "Element.h"
 #include "Event.h"
 #include "EventContext.h"
-#include "FocusSetActive.h"
-#include "FocusSetFocused.h"
 #include "Frame.h"
-#include "FunctorInputIterator.h"
-#include "HandleKeyPress.h"
-#include "HandleMouseMove.h"
-#include "HandleMousePress.h"
-#include "HandleMouseRelease.h"
-#include "HandleWheelEvent.h"
 #include "InspectorController.h"
 #include "InspectorDebuggerAgent.h"
 #include "InspectorFrontend.h"
+#include "InspectorRecordingsAgent.h"
 #include "InspectorState.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMGlobalObject.h"
-#include "JSONInputSerializer.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
-#include "PlatformKeyboardEvent.h"
-#include "PlatformMouseEvent.h"
-#include "PlatformWheelEvent.h"
-#include "ReplayController.h"
-#include "ReplayInputTypes.h"
-#include "ReplayRecording.h"
-#include "ResourceDidFinishLoading.h"
-#include "ResourceDidReceiveData.h"
-#include "ResourceDidReceiveResponse.h"
-#include "ResourceWillSendRequest.h"
-#include "ScrollPage.h"
-#include "SendResizeEvent.h"
-#include "ReplayActionFactory.h"
 #include "ReplayAgentStateMachine.h"
+#include "ReplayController.h"
+#include "ReplayRecording.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/UnusedParam.h>
@@ -84,153 +65,11 @@
 using namespace std;
 using namespace WTF;
 
+namespace WebCore {
+
 namespace ReplayPersistentAgentState {
 static const char replayEnabled[] = "replayEnabled";
 }
-
-// This must be kept in sync with ReplayAgent.js so that record types and data are decoded properly.
-namespace ReplayActionType {
-static const char MousePress[] = "MousePress";
-static const char MouseRelease[] = "MouseRelease";
-static const char MouseMove[] = "MouseMove";
-static const char MouseWheel[] = "MouseWheel";
-static const char KeyPress[] = "KeyPress";
-static const char Scroll[] = "Scroll";
-static const char Resize[] = "Resize";
-
-static const char WindowActive[] = "WindowActive";
-static const char WindowInactive[] = "WindowInactive";
-static const char WindowFocused[] = "WindowFocused";
-static const char WindowUnfocused[] = "WindowUnfocused";
-
-static const char RequestResource[] = "RequestResource";
-static const char ReceiveResponse[] = "ReceiveResponse";
-static const char ReceiveData[] = "ReceiveData";
-static const char ResourceLoaded[] = "ResourceLoaded";
-
-static const char TimerFire[] = "TimerFire";
-
-static const char FrameNavigated[] = "FrameNavigated";
-static const char CaptureBegin[] = "CaptureBegin";
-static const char CaptureEnd[] = "CaptureEnd";
-}
-
-namespace WebCore {
-
-// this function is only necessary because we don't have 1:1 mapping between
-// replay action types and user-visible names. Disambiguations below.
-static const char* getFrontendTypeForAction(EventLoopInput* action)
-{
-    if (action->type() == ReplayInputTypes::TimerFired)
-        return ReplayActionType::TimerFire;
-    if (action->type() == ReplayInputTypes::HandleMouseMove)
-        return ReplayActionType::MouseMove;
-    if (action->type() == ReplayInputTypes::HandleMousePress)
-        return ReplayActionType::MousePress;
-    if (action->type() == ReplayInputTypes::HandleMouseRelease)
-        return ReplayActionType::MouseRelease;
-    if (action->type() == ReplayInputTypes::HandleWheelEvent)
-        return ReplayActionType::MouseWheel;
-    if (action->type() == ReplayInputTypes::HandleKeyPress)
-        return ReplayActionType::KeyPress;
-    if (action->type() == ReplayInputTypes::ScrollPage)
-        return ReplayActionType::Scroll;
-    if (action->type() == ReplayInputTypes::SendResizeEvent)
-        return ReplayActionType::Resize;
-    if (action->type() == ReplayInputTypes::ResourceWillSendRequest)
-        return ReplayActionType::RequestResource;
-    if (action->type() == ReplayInputTypes::ResourceDidReceiveResponse)
-        return ReplayActionType::ReceiveResponse;
-    if (action->type() == ReplayInputTypes::ResourceDidReceiveData)
-        return ReplayActionType::ReceiveData;
-    if (action->type() == ReplayInputTypes::ResourceDidFinishLoading)
-        return ReplayActionType::ResourceLoaded;
-
-    if (action->type() == ReplayInputTypes::FocusSetActive) {
-        bool toState = static_cast<FocusSetActive*>(action)->toState();
-        return (toState) ? ReplayActionType::WindowActive
-                         : ReplayActionType::WindowInactive;
-    }
-    if (action->type() == ReplayInputTypes::FocusSetFocused) {
-        bool toState = static_cast<FocusSetFocused*>(action)->toState();
-        return (toState) ? ReplayActionType::WindowFocused
-                         : ReplayActionType::WindowUnfocused;
-    }
-
-    // actions that should not be user visible must override EventLoopInput::isUserVisible()
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-static PassRefPtr<InspectorObject> createFrontendDataForAction(EventLoopInput* action)
-{
-    if (action->type() == ReplayInputTypes::FocusSetActive ||
-        action->type() == ReplayInputTypes::FocusSetFocused ||
-        action->type() == ReplayInputTypes::TimerFired)
-        return ReplayActionFactory::createEmptyData();
-    if (action->type() == ReplayInputTypes::HandleMouseMove)
-        return ReplayActionFactory::createMouseData(static_cast<HandleMouseMove*>(action)->platformEvent());
-    if (action->type() == ReplayInputTypes::HandleMousePress)
-        return ReplayActionFactory::createMouseData(static_cast<HandleMousePress*>(action)->platformEvent());
-    if (action->type() == ReplayInputTypes::HandleMouseRelease)
-        return ReplayActionFactory::createMouseData(static_cast<HandleMouseRelease*>(action)->platformEvent());
-    if (action->type() == ReplayInputTypes::HandleWheelEvent)
-        return ReplayActionFactory::createWheelData(static_cast<HandleWheelEvent*>(action)->platformEvent());
-    if (action->type() == ReplayInputTypes::HandleKeyPress)
-        return ReplayActionFactory::createKeyPressData(static_cast<HandleKeyPress*>(action)->platformEvent());
-    if (action->type() == ReplayInputTypes::ScrollPage)
-        return ReplayActionFactory::createScrollData(static_cast<ScrollPage*>(action));
-    if (action->type() == ReplayInputTypes::SendResizeEvent)
-        return ReplayActionFactory::createResizeData(static_cast<SendResizeEvent*>(action));
-    if (action->type() == ReplayInputTypes::ResourceWillSendRequest)
-        return ReplayActionFactory::createRequestResourceData(static_cast<ResourceWillSendRequest*>(action));
-    if (action->type() == ReplayInputTypes::ResourceDidReceiveResponse)
-        return ReplayActionFactory::createReceiveResponseData(static_cast<ResourceDidReceiveResponse*>(action));
-    if (action->type() == ReplayInputTypes::ResourceDidReceiveData)
-        return ReplayActionFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action));
-    if (action->type() == ReplayInputTypes::ResourceDidFinishLoading)
-        return ReplayActionFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action));
-
-    // actions that should not be user visible must override EventLoopInput::isUserVisible()
-    ASSERT_NOT_REACHED();
-    return 0;
-}
-
-static PassRefPtr<TypeBuilder::Replay::ReplayAction> createInspectorObjectForAction(EventLoopInput* action)
-{
-    RefPtr<TypeBuilder::Replay::Mark> markObject = TypeBuilder::Replay::Mark::create()
-        .setTimestamp(action->mark().time())
-        .setIndex(action->mark().index());
-
-    return TypeBuilder::Replay::ReplayAction::create()
-            .setMark(markObject.release())
-            .setType(getFrontendTypeForAction(action))
-            .setData(createFrontendDataForAction(action))
-            .release();
-}
-
-class ActionCollector {
-public:
-    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > ReturnType;
-
-    ActionCollector()
-    : m_actions(TypeBuilder::Array<TypeBuilder::Replay::ReplayAction>::create()) {}
-    ~ActionCollector() {}
-    void operator()(size_t, NondeterministicInput* replayAction)
-    {
-        ASSERT(replayAction->queue() == EventLoopInputQueue);
-
-        EventLoopInput* action = static_cast<EventLoopInput*>(replayAction);
-        if (!action->isUserVisible())
-            return;
-
-        m_actions->addItem(createInspectorObjectForAction(action));
-    }
-    ReturnType returnValue() { return m_actions.release(); }
-
-private:
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > m_actions;
-};
 
 InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
 : InspectorBaseAgent<InspectorReplayAgent>("Replay", instrumentingAgents, state)
@@ -309,29 +148,17 @@ void InspectorReplayAgent::recordingUnloaded()
 
 void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecording)
 {
-    RefPtr<ReplayRecording> recording = prpRecording;
-    // in case we didn't know about the loaded recording, add here.
-    m_recordingsMap.add(recording->uid(), recording);
-
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
 
     if (m_frontend)
-        m_frontend->recordingLoaded(recording->uid());
+        m_frontend->recordingLoaded(prpRecording->uid());
 }
 
 void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
 {
-    RefPtr<ReplayRecording> recording = prpRecording;
-    RecordingsMap::AddResult result = m_recordingsMap.add(recording->uid(), recording);
-    // can't have two recordings with same uid
-    ASSERT_UNUSED(result, result.isNewEntry);
-
-    if (m_frontend)
-        m_frontend->recordingAdded(recording->uid());
-
     // automatically load the created recording if nothing else is loaded.
     if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
-        m_inspectedPage->replayController()->loadRecording(recording);
+        m_inspectedPage->replayController()->loadRecording(prpRecording);
     }
 }
 
@@ -349,7 +176,8 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     if (!input->isUserVisible())
         return;
 
-    m_frontend->capturedAction(createInspectorObjectForAction(input));
+    // TODO(Issue #271): remove backend-side interpretation of inputs
+    m_frontend->capturedAction(InspectorRecordingsAgent::createInspectorObjectForAction(input));
 }
 
 void InspectorReplayAgent::captureStarted()
@@ -540,13 +368,14 @@ void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
 
 void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool* wasAllowed)
 {
-    RecordingsMap::iterator it = m_recordingsMap.find(uid);
-    if (it == m_recordingsMap.end()) {
+    InspectorRecordingsAgent* recordingsAgent = m_instrumentingAgents->inspectorRecordingsAgent();
+    RefPtr<ReplayRecording> recording = recordingsAgent->findRecording(errorString, uid);
+    if (!recording) {
         *wasAllowed = false;
-        *errorString = "Couldn't find recording with specified uid";
         return;
     }
-    *wasAllowed = m_inspectedPage->replayController()->loadRecording(it->value);
+
+    *wasAllowed = m_inspectedPage->replayController()->loadRecording(recording);
 }
 
 void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAllowed)
@@ -558,43 +387,6 @@ void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAl
     }
 
     *wasAllowed = m_inspectedPage->replayController()->unloadRecording();
-}
-
-void InspectorReplayAgent::getRecording(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& recordingObject)
-{
-    RecordingsMap::iterator it = m_recordingsMap.find(uid);
-    if (it == m_recordingsMap.end()) {
-        *errorString = "Couldn't find recording with specified uid";
-        return;
-    }
-
-    ActionCollector collector;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = it->value->createFunctorIterator()->forEachInputInQueue(EventLoopInputQueue, collector);
-
-    recordingObject = TypeBuilder::Replay::ReplayRecording::create()
-                        .setUid(it->value->uid())
-                        .setDateCreated(it->value->creationTimestamp())
-                        .setActions(actions);
-}
-
-void InspectorReplayAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<InspectorObject>& serializedObject)
-{
-    RecordingsMap::iterator it = m_recordingsMap.find(uid);
-    if (it == m_recordingsMap.end()) {
-        *errorString = "Couldn't find recording with specified uid";
-        return;
-    }
-
-    JSONInputSerializer serializer(it->value);
-    serializedObject = serializer.serialize();
-}
-
-void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
-{
-    recordingsList = TypeBuilder::Array<int>::create();
-    for (RecordingsMap::iterator it = m_recordingsMap.begin(); it != m_recordingsMap.end(); ++it) {
-        recordingsList->addItem(it->key);
-    }
 }
 
 }; // namespace WebCore

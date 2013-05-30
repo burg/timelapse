@@ -123,9 +123,6 @@ public:
     void setPauseOnError(ErrorString*, bool);
     void loadRecording(ErrorString*, int, bool*);
     void unloadRecording(ErrorString*, bool*);
-    void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Replay::ReplayRecording>&);
-    void getSerializedRecording(ErrorString*, int, RefPtr<InspectorObject>&);
-    void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&);
 
 private:
     InspectorReplayAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
@@ -138,8 +135,6 @@ private:
     ReplayAgentStateMachine m_stateMachine;
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;
-    typedef HashMap<int, RefPtr<ReplayRecording>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > RecordingsMap;
-    RecordingsMap m_recordingsMap;
 
     bool m_inputLocked;
 };

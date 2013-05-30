@@ -35,7 +35,7 @@
 WebInspector.ReplayBreakpointTracker = function(model)
 {
     WebInspector.Object.call(this);
-    
+
     this._model = model;
     this._exploredIntervals = new WebInspector.IntervalTracker();
 
@@ -57,7 +57,7 @@ WebInspector.ReplayBreakpointTracker = function(model)
 
     var debugEvents = WebInspector.DebuggerModel.Events;
     replayCallbacks.register(WebInspector.debuggerModel, debugEvents.DebuggerPaused, this._debuggerPaused);
-    
+
     // always reset/init data structures, since we track breakpoints even outside of capturing or replaying.
     this._recordingUnloaded();
 };
@@ -102,7 +102,7 @@ WebInspector.ReplayBreakpointTracker.prototype = {
     {
 	return this._exploredIntervals.hasIntervalContaining(markIndex);
     },
-    
+
     _recordingLoaded: function()
     {
         this._model.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
@@ -161,12 +161,12 @@ WebInspector.ReplayBreakpointTracker.prototype = {
     {
         // ???: is this actually needed?
         this._endPendingInterval();
-    
+
         var rawLocation = event.data.callFrames[0].location;
         var uiLocation = WebInspector.debuggerModel.rawLocationToUILocation(rawLocation);
         var lineNumber = rawLocation.lineNumber;
         var breakpoint = WebInspector.breakpointManager.findBreakpoint(uiLocation.uiSourceCode, lineNumber);
-        
+
         if (!breakpoint) {
             this._debuggerWaitIndex++;
             return;
@@ -177,7 +177,7 @@ WebInspector.ReplayBreakpointTracker.prototype = {
         var hitIndex = ++this._breakpointHitIndex;
         var sourceURL = WebInspector.debuggerModel.scriptForId(rawLocation.scriptId).sourceURL;
         var debuggerId = sourceURL + ":" + lineNumber;
-    
+
         // lazily add unknown breakpoints as we hit them
         if (!this._breakpoints[debuggerId])
             this._breakpoints[debuggerId] = new WebInspector.ReplayBreakpoint(rawLocation);
@@ -192,7 +192,7 @@ WebInspector.ReplayBreakpointTracker.prototype = {
             idx = -(idx + 1);
             var actionIndex = this._model.loadedRecording.actionIndexFromMarkIndex(markIndex);
             hitRecords.splice(idx, 0, {
-            type: WebInspector.ReplayAgent.RecordType.BreakpointHit,
+            type: WebInspector.RecordingsAgent.RecordType.BreakpointHit,
             mark: this._model.loadedRecording.actions[actionIndex].mark,
             hits: []
             });
@@ -203,7 +203,7 @@ WebInspector.ReplayBreakpointTracker.prototype = {
         this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Events.BreakpointHit, {
             breakpoint: this._breakpoints[debuggerId],
             mark:       hitRecords[idx].mark,
-            type:       WebInspector.ReplayAgent.RecordType.BreakpointHit,
+            type:       WebInspector.RecordingsAgent.RecordType.BreakpointHit,
             hitIndex:   this.breakpointHitIndex
         });
     },
@@ -255,7 +255,7 @@ WebInspector.ReplayBreakpointTracker.prototype = {
 	this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Events.BreakpointRemoved, this._breakpoints[debuggerId]);
 	delete this._breakpoints[debuggerId];
     },
-    
+
     __proto__: WebInspector.Object.prototype
 };
 
@@ -343,7 +343,7 @@ WebInspector.ReplayBreakpoint.prototype = {
     {
         return linkifier.linkifyLocation(this._sourceURL, this._lineNumber, 0, "replay-breakpoint-link source-code");
     },
-    
+
     __proto__: WebInspector.Object.prototype
 };
 
@@ -412,7 +412,7 @@ WebInspector.IntervalTracker.prototype = {
 	    intervals.unshift(makeInterval(start, end));
 	    return;
 	}
-	
+
 	/* case: interval is after all others */
 	if (intervals[intervals.length-1].end < start) {
 	    intervals.push(makeInterval(start, end));

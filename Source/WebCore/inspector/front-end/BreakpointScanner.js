@@ -58,17 +58,17 @@ WebInspector.BreakpointScanner.prototype = {
                                      this._resumeFromBreakpointPause, this);
         cb();
     },
-    
+
     scanWillStop: function(cb)
     {
         var savedDebuggerState = this._savedDebuggerState;
         var savedBreakpointsState = this._savedBreakpointsState;
         delete this._savedDebuggerState;
         delete this._savedBreakpointsState;
-        
+
         if (!savedDebuggerState)
             WebInspector.debuggerModel.disableDebugger();
-        
+
         WebInspector.debuggerModel.setBreakpointsActive(savedBreakpointsState);
 
         this._model.removeEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
@@ -152,7 +152,7 @@ WebInspector.ReplayBreakpointDataProvider.prototype = {
                 this._records.push({
                     breakpoint: hits[j],
                     mark: records[i].mark,
-                    type: WebInspector.ReplayAgent.RecordType.BreakpointHit,
+                    type: WebInspector.RecordingsAgent.RecordType.BreakpointHit,
                     hitIndex: j
                 });
             }
@@ -199,6 +199,6 @@ WebInspector.ReplayBreakpointDataProvider.prototype = {
         tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
         tracker.removeEventListener(events.IntervalExplored, this._onIntervalExplored, this);
     },
-    
+
     __proto__: WebInspector.ReplayInputDataProvider.prototype
 };

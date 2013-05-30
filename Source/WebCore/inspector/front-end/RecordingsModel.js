@@ -32,6 +32,8 @@
 WebInspector.RecordingsModel = function()
 {
     WebInspector.Object.call(this);
+    this._dispatcher = new WebInspector.RecordingsDispatcher(this);
+
     this._recordings = [];
     this._recordingsByUID = {};
 };
@@ -62,7 +64,7 @@ WebInspector.RecordingsModel.prototype = {
 
         filename = filename || recording.filename() || WebInspector.UIString("SavedRecording.webreplay");
 
-        ReplayAgent.getSerializedRecording(recording.uid, function(error, data) {
+        RecordingsAgent.getSerializedRecording(recording.uid, function(error, data) {
             if (error) {
                 console.log("Couldn't save recording to disk: " + error);
                 return;
@@ -96,7 +98,7 @@ WebInspector.RecordingsModel.prototype = {
             this.dispatchEventToListeners(WebInspector.RecordingsModel.Events.RecordingAdded, recording);
         };
 
-        ReplayAgent.getRecording(uid, loadDataForRecording.bind(this, newRecording));
+        RecordingsAgent.getRecording(uid, loadDataForRecording.bind(this, newRecording));
     },
 
     removeRecording: function(recording) {
@@ -132,3 +134,25 @@ WebInspector.RecordingsModel.prototype = {
 
     __proto__: WebInspector.Object.prototype
 };
+
+WebInspector.RecordingsDispatcher = function(model)
+{
+    this._model = model;
+    InspectorBackend.registerRecordingsDispatcher(this);
+};
+
+WebInspector.RecordingsDispatcher.prototype = {
+    recordingAdded: function(uid)
+    {
+        this._model.addRecording(uid);
+    },
+
+    recordingRemoved: function(uid)
+    {
+        var recording = this._model.getRecordingWithUID(uid);
+        if (!recording)
+            return;
+
+        this._model.removeRecording(recording);
+    }
+}

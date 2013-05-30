@@ -61,6 +61,7 @@
 #include "InspectorPageAgent.h"
 #include "InspectorProfilerAgent.h"
 #include "InspectorResourceAgent.h"
+#include "InspectorRecordingsAgent.h"
 #include "InspectorReplayAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InspectorWorkerAgent.h"
@@ -1234,14 +1235,24 @@ void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instru
         replayAgent->recordingUnloaded();
 }
 
-void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
+void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> prpRecording)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
+
+    if (InspectorRecordingsAgent* recordingsAgent = instrumentingAgents->inspectorRecordingsAgent())
+        recordingsAgent->recordingLoaded(recording);
+
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->recordingLoaded(recording);
 }
 
-void InspectorInstrumentation::recordingCreatedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
+void InspectorInstrumentation::recordingCreatedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> prpRecording)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
+
+    if (InspectorRecordingsAgent* recordingsAgent = instrumentingAgents->inspectorRecordingsAgent())
+        recordingsAgent->recordingCreated(recording);
+
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->recordingCreated(recording);
 }
@@ -1251,7 +1262,7 @@ void InspectorInstrumentation::capturedEventLoopInputImpl(InstrumentingAgents* i
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->capturedEventLoopInput(action);
 }
-    
+
 void InspectorInstrumentation::captureStartedImpl(InstrumentingAgents* instrumentingAgents)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())

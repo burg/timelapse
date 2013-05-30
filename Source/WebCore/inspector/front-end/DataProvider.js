@@ -101,14 +101,14 @@ WebInspector.DataProvider.prototype = {
     // This should be used by listeners as an opportunity to remove callbacks
     willRemove: function() {
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.WillRemove, this);
-	
+
 	if (this.hasAnyEventListeners()){
 	    console.error("Provider still has listeners after dispatching WillRemove event.");
 	    console.error(this);
 	    console.error(this._listeners);
 	}
     },
-    
+
     __proto__: WebInspector.Object.prototype
 };
 
@@ -183,7 +183,7 @@ WebInspector.ReplayInputDataProvider.prototype = {
 
 	return records;
     },
-    
+
     get selectedIndices()
     {
 	return this._selectedIndices.slice();
@@ -193,10 +193,10 @@ WebInspector.ReplayInputDataProvider.prototype = {
     {
         if (!indices || indices.length == 0)
 	    return;
-	
+
 	for (var i = 0; i < indices.length; i++) {
 	    var withinBounds = indices[i] >= 0 && indices[i] < this._records.length;
-	    console.assert(withinBounds, "Tried to select record index out of bounds");	    
+	    console.assert(withinBounds, "Tried to select record index out of bounds");
 	    if (!withinBounds)
 		return;
 	}
@@ -219,7 +219,7 @@ WebInspector.ReplayInputDataProvider.prototype = {
 	if (styles[record.type].group != this.name)
 	    return;
 
-	var recordTypes = WebInspector.ReplayAgent.RecordType;
+	var recordTypes = WebInspector.RecordingsAgent.RecordType;
 	if (record.type == recordTypes.RequestResource
 	    || record.type == recordTypes.ReceiveResponse) {
 	    this._resourceUrlById[record.data.id] = record.data.url;
@@ -240,13 +240,13 @@ WebInspector.ReplayInputDataProvider.prototype = {
     {
 	return this._resourceUrlById[id];
     },
-    
+
     __proto__: WebInspector.DataProvider.prototype
 };
 
 WebInspector.ReplayInputDataProvider.InputStyles = (function()
 {
-    var types = WebInspector.ReplayAgent.RecordType;
+    var types = WebInspector.RecordingsAgent.RecordType;
     var styles = {};
     styles[types.MousePress] = { title: WebInspector.UIString("Mouse Press"), group: "userinput" };
     styles[types.MouseRelease] = { title: WebInspector.UIString("Mouse Release"), group: "userinput" };
