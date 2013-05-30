@@ -106,7 +106,7 @@ WebInspector.ReplayOverview = function(model, recording)
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
-    
+
     // add savepoint list if already created
     var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.SavepointList);
     for (var i = 0; i < providers.length; i++)
@@ -412,7 +412,7 @@ WebInspector.ReplayOverview.prototype = {
 
         this._addProvider(provider);
     },
-    
+
     _addProvider: function(provider)
     {
         var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
@@ -791,7 +791,7 @@ WebInspector.ReplayOverview.prototype = {
         if (currentBreakpoint)
             currentBreakpoint.contextMenu(event);
     },
-    
+
     _onZoomChanged: function()
     {
         if (!this._currentZoomInterval || this.calculator.zoomInterval != this._currentZoomInterval)
@@ -924,7 +924,7 @@ WebInspector.ReplayOverview.prototype = {
         this._messagePanel.content = document.createTextNode(message);
         this._messagePanel.show(this.element);
     },
-    
+
     _hideMessagePanel: function(event)
     {
         this._messagePanel.detach();
@@ -949,10 +949,10 @@ WebInspector.ReplayOverview.prototype = {
         this.sliders.playback.disable();
         this.sliders.playback.setPosition(this.calculator.computeOverviewPercentage(currentAction.mark.timestamp), true);
         this.sliders.playback.element.addStyleClass("playback-pulse");
-    var replaySpeeds = WebInspector.ReplayModel.ReplaySpeed;
+        var replaySpeeds = WebInspector.ReplayModel.ReplaySpeed;
         this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
-    
-    this._showMessagePanel();
+
+        this._showMessagePanel();
     },
 
     _onPlaybackStopped: function(event)
@@ -971,7 +971,7 @@ WebInspector.ReplayOverview.prototype = {
     {
         var actions = this._recording.actions;
         var actionIndex = this._recording.actionIndexFromMarkIndex(this._model.currentMarkIndex);
-        
+
         if (actionIndex != -1) {
             var percent = this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp);
             this.sliders.playback.setPosition(percent, true);
@@ -979,7 +979,7 @@ WebInspector.ReplayOverview.prototype = {
 
         // required because setPosition implicitly calls show()
         if (WebInspector.debuggerModel.isPaused())
-            this.sliders.playback.hide(); 
+            this.sliders.playback.hide();
 
         this.sliders.previous.hide();
         this.sliders.tentative.hide();
@@ -1071,7 +1071,7 @@ WebInspector.ReplayOverview.prototype = {
         for (var i = 0; i < this.sliders.savepoint.length; ++i) {
             if (this.sliders.savepoint[i]._savepoint !== savepoint)
                 continue;
-            
+
             var slider = this.sliders.savepoint.splice(i, 1)[0];
             slider._listenerGroup.uninstall();
             slider.dispose();
@@ -1088,7 +1088,7 @@ WebInspector.ReplayOverview.prototype = {
         else
             return new WebInspector.OverviewPreviewViews.InputView(provider);
     },
-    
+
     __proto__: WebInspector.View.prototype
 };
 
@@ -1675,7 +1675,7 @@ WebInspector.ReplayCircleTimeline.prototype = {
         if (this.isShowing())
             this.refresh();
     },
-    
+
     __proto__: WebInspector.View.prototype
 };
 
@@ -1708,7 +1708,7 @@ WebInspector.ReplayOverviewMessagePanel.prototype = {
         this.element.appendChild(val);
         this._content = val;
     },
-    
+
     __proto__: WebInspector.View.prototype
 };
 
@@ -1771,12 +1771,17 @@ WebInspector.ReplayOverviewSlider.prototype = {
     minimumResolution: 1.0, /* in pixels */
     defaultMinimumResolution: 1.0,
 
-    /* percent is a value between 0 and 1. */
-    setPosition: function(percent, suppressEvents)
+    /* percent is a value between 0 and 1.
+       deferToAnimations to position slider without cancelling animation. */
+    setPosition: function(percent, suppressEvents, deferToAnimations)
     {
         this._position = Number.constrain(percent, 0.0, 1.0);
 
-        this.cancelAnimation();
+        if (this._currentAnimation && !deferToAnimations) {
+            window.webkitCancelAnimationFrame(this._currentAnimation.callbackId);
+            delete this._currentAnimation;
+        }
+
         this.refresh();
 
         if (!suppressEvents) {
@@ -1797,27 +1802,44 @@ WebInspector.ReplayOverviewSlider.prototype = {
 
     animateTo: function(position, duration)
     {
-        animations = [
-            {
-                element: this.element,
-                start: {left: this.position * 100.0},
-                end: {left: position * 100.0},
-                timingFunction: WebInspector.TimingFunctions.Linear
-            }
-        ];
+        if (this._currentAnimation) {
+            window.webkitCancelAnimationFrame(this._currentAnimation.callbackId);
+            delete this._currentAnimation;
+        }
 
-        this.cancelAnimation();
-        this._currentAnimation = WebInspector.animateStyle(animations, duration * 1000.0,
-                                                           this.cancelAnimation.bind(this));
+        this._currentAnimation = {
+            "startPosition": this.position,
+            "targetPosition": position,
+            "duration": duration, // in seconds
+            "startTime": Date.now(),
+            "callbackId": 0, // dummy value
+        };
+
+        this._currentAnimation.callbackId = window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
     },
 
-    cancelAnimation: function()
+    animateFrame: function()
     {
         if (!this._currentAnimation)
             return;
 
-        this._currentAnimation.cancel();
-        delete this._currentAnimation;
+        if (!WebInspector.replayModel.isReplaying)
+            return;
+
+        var anim = this._currentAnimation;
+        var elapsedSeconds = (Date.now() - anim.startTime) / 1000.0;
+        if (elapsedSeconds > anim.duration) {
+            this.position = anim.targetPosition;
+            delete this._currentAnimation;
+            return;
+        }
+
+        var elapsedPercent = elapsedSeconds / anim.duration;
+        var positionRange = anim.targetPosition - anim.startPosition;
+        var interpolatedPosition = anim.startPosition + (positionRange * elapsedPercent);
+        this.setPosition(interpolatedPosition, true, true);
+
+        anim.callbackId = window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
     },
 
     get position()
@@ -1838,8 +1860,6 @@ WebInspector.ReplayOverviewSlider.prototype = {
     hide: function()
     {
         this.element.classList.add("hidden");
-        if (this._currentAnimation)
-            this._currentAnimation.cancel();
     },
 
     disable: function()
@@ -1918,7 +1938,7 @@ WebInspector.ReplayOverviewSlider.prototype = {
         this.element.classList.remove("slider-dragging");
         this.dispatchEventToListeners(WebInspector.ReplayOverviewSlider.Events.DragEnd);
     },
-    
+
     __proto__: WebInspector.Object.prototype
 };
 
@@ -1972,6 +1992,6 @@ WebInspector.ReplayTimelineLabel.prototype = {
         this._callbacks.uninstall(true);
         delete this._provider;
     },
-    
+
     __proto__: WebInspector.View.prototype
 };

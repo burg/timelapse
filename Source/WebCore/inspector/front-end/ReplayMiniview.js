@@ -51,7 +51,7 @@ WebInspector.ReplayMiniview = function(model, recording)
     this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
     this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);
     WebInspector.installDragHandle(this.element, this._startZoomSelectorDragging.bind(this), this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), "ew-resize");
-    
+
     this._canvas = document.createElement("canvas");
     this._canvas.className = "replay-miniview-canvas";
     this.element.appendChild(this._canvas);
@@ -134,22 +134,22 @@ WebInspector.ReplayMiniview = function(model, recording)
 
     this._previousMaxValue = 0;
     this._clearGraph();
-    
+
     // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
-    
+
     // add savepoint list if already created
     var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.SavepointList);
     for (var i = 0; i < providers.length; i++)
         this._addProvider(providers[i]);
-    
+
     // initialize slider position
     this.sliders.playback.enable();
   	this.sliders.playback.show();
     this._onCursorChanged();
-    
+
     this._scheduleRefresh();
 };
 
@@ -165,7 +165,7 @@ WebInspector.ReplayMiniview.prototype = {
     {
         this._callbacks.uninstall(true);
     },
-    
+
     wasShown: function()
     {
 	WebInspector.View.prototype.wasShown.call(this);
@@ -219,7 +219,7 @@ WebInspector.ReplayMiniview.prototype = {
 		found.push(provider);
 	    }
 	}
-	
+
 	return found;
     },
 
@@ -303,7 +303,7 @@ WebInspector.ReplayMiniview.prototype = {
 	    else
 		provider.records.map(markPercentagesForAction.bind(this));
 	}
-	
+
 	for (var key in this._timelines) {
 	    var timeline = this._timelines[key];
 	    var highMark = 0;
@@ -340,7 +340,7 @@ WebInspector.ReplayMiniview.prototype = {
 	ctx.save();
 	ctx.translate(this._graphBorderWidth, this._graphBorderWidth);
 	availHeight -= this._graphBorderWidth*2;
-	availWidth -= this._graphBorderWidth*2; 
+	availWidth -= this._graphBorderWidth*2;
 
 	/* draw 1/3, 2/3 */
 	var shouldDrawLabels = this._timelines && this._timelines.all.data.length > 0;
@@ -411,7 +411,7 @@ WebInspector.ReplayMiniview.prototype = {
 	    if (name == "all")
 		this._previousMaxValue = highMark;
 	}
-	
+
 	var currentData = this._timelines.all.data.slice();
 	ctx.fillStyle = "rgba(0,0,0,0.3)";
 	drawLineGraph.call(this, currentData, "all");
@@ -463,7 +463,7 @@ WebInspector.ReplayMiniview.prototype = {
 	    // overpainting disabled timelines ensures same alpha blending look
 	    if (anyProviderDisabled)
 		continue;
-	    
+
 	    for (var j = 0; j < timeline.data.length; j++)
 		if (timeline.data[j])
 		    currentData[j] -= timeline.data[j];
@@ -481,7 +481,7 @@ WebInspector.ReplayMiniview.prototype = {
 
     this._addProvider(provider);
     },
-    
+
     _addProvider: function(provider)
     {
         var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
@@ -609,7 +609,7 @@ WebInspector.ReplayMiniview.prototype = {
     {
 	var actions = this._recording.actions;
 	var actionIndex = this._recording.actionIndexFromMarkIndex(this._model.currentMarkIndex);
-	
+
 	if (actionIndex != -1) {
 	    var percent = this.calculator.computeMiniviewPercentage(actions[actionIndex].mark.timestamp);
 	    this.sliders.playback.setPosition(percent, true);
@@ -701,12 +701,12 @@ WebInspector.ReplayMiniview.prototype = {
         for (var i = 0; i < this.sliders.savepoint.length; ++i) {
             if (this.sliders.savepoint[i]._savepoint !== savepoint)
                 continue;
-            
+
             var slider = this.sliders.savepoint.splice(i, 1)[0];
             slider.dispose();
             return;
         }
-    
+
         this._updateSavepointSliders();
     },
 
@@ -817,7 +817,7 @@ WebInspector.ReplayMiniview.prototype = {
 	    else if (start >= this.sliders.rightZoom.position - minSelectableSize)
 	        start = this.sliders.rightZoom.position - minSelectableSize;
 
-	    this._recording.calculator.zoomLeft = start;	    
+	    this._recording.calculator.zoomLeft = start;
 	} else {
 	    var end = this.sliders.rightZoom.position;
 	    // Glue to edge
@@ -897,7 +897,7 @@ WebInspector.ReplayMiniview.prototype = {
 	var zoomRight = this._recording.calculator.zoomRight;
 	var zoomInterval = this._recording.calculator.zoomInterval;
 
-        if (typeof event.wheelDeltaX === "number" && 
+        if (typeof event.wheelDeltaX === "number" &&
 	    event.wheelDeltaX && zoomInterval != 1.0) {
 	    var delta = event.wheelDeltaX * WebInspector.ReplayMiniview.WindowScrollSpeedFactor;
 	    zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
@@ -915,7 +915,7 @@ WebInspector.ReplayMiniview.prototype = {
 
 	this._recording.calculator.setZoomInterval(zoomLeft, zoomRight);
     },
-    
+
     __proto__: WebInspector.View.prototype
 };
 
@@ -971,18 +971,23 @@ WebInspector.ReplayMiniviewSlider.prototype = {
     minimumResolution: 1.0, /* in pixels */
     defaultMinimumResolution: 1.0,
 
-    /* percent is a value between 0 and 1. */
-    setPosition: function(percent, suppressEvents)
+    /* percent is a value between 0 and 1.
+       deferToAnimations to position slider without cancelling animation. */
+    setPosition: function(percent, suppressEvents, deferToAnimations)
     {
-	this._position = Number.constrain(percent, 0.0, 1.0);
-	this.element.classList.remove("hidden");
+        this._position = Number.constrain(percent, 0.0, 1.0);
 
-	this.cancelAnimation();
-	this.refresh();
-	
-	if (!suppressEvents) {
-	    this.dispatchEventToListeners(WebInspector.ReplayMiniviewSlider.Events.Moved);
-	}
+        if (this._currentAnimation && !deferToAnimations) {
+            window.webkitCancelAnimationFrame(this._currentAnimation.callbackId);
+            delete this._currentAnimation;
+        }
+
+        this.element.classList.remove("hidden");
+        this.refresh();
+
+        if (!suppressEvents) {
+            this.dispatchEventToListeners(WebInspector.ReplayMiniviewSlider.Events.Moved);
+        }
     },
 
     resetResolution: function()
@@ -992,27 +997,44 @@ WebInspector.ReplayMiniviewSlider.prototype = {
 
     animateTo: function(position, duration)
     {
-	animations = [
-	    {
-		element: this.element, 
-		start: {left: this.position * 100.0},
-		end: {left: position * 100.0},
-		timingFunction: WebInspector.TimingFunctions.Linear
-	    }
-	];
+        if (this._currentAnimation) {
+            window.webkitCancelAnimationFrame(this._currentAnimation.callbackId);
+            delete this._currentAnimation;
+        }
 
-	this.cancelAnimation();
-	this._currentAnimation = WebInspector.animateStyle(animations, duration * 1000.0,
-							   this.cancelAnimation.bind(this));
+        this._currentAnimation = {
+            "startPosition": this.position,
+            "targetPosition": position,
+            "duration": duration, // in seconds
+            "startTime": Date.now(),
+            "callbackId": 0, // dummy value
+        };
+
+        this._currentAnimation.callbackId = window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
     },
 
-    cancelAnimation: function()
+    animateFrame: function()
     {
-	if (!this._currentAnimation)
-	    return;
+        if (!this._currentAnimation)
+            return;
 
-	this._currentAnimation.cancel();
-	delete this._currentAnimation;
+        if (!WebInspector.replayModel.isReplaying)
+            return;
+
+        var anim = this._currentAnimation;
+        var elapsedSeconds = (Date.now() - anim.startTime) / 1000.0;
+        if (elapsedSeconds > anim.duration) {
+            this.position = anim.targetPosition;
+            delete this._currentAnimation;
+            return;
+        }
+
+        var elapsedPercent = elapsedSeconds / anim.duration;
+        var positionRange = anim.targetPosition - anim.startPosition;
+        var interpolatedPosition = anim.startPosition + (positionRange * elapsedPercent);
+        this.setPosition(interpolatedPosition, true, true);
+
+        anim.callbackId = window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
     },
 
     get position()
@@ -1099,14 +1121,14 @@ WebInspector.ReplayMiniviewSlider.prototype = {
     },
 
     _endSliderDragging: function(event)
-    {	
+    {
 	if (!this._enabled)
 	    return;
 
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.ReplayMiniviewSlider.Events.DragEnd);
     },
-    
+
     __proto__: WebInspector.Object.prototype
 };
 
