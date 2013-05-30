@@ -38,11 +38,11 @@
 #include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
-    
+
     namespace ReplayInputTypes {
         extern const char *ResourceWillSendRequest;
     }
-    
+
     class ReplayController;
     class ResourceRequest;
     class ResourceResponse;
@@ -50,26 +50,26 @@ namespace WebCore {
     class ResourceWillSendRequest : public EventLoopInput {
     public:
         ResourceWillSendRequest(int id, ResourceRequest&, const ResourceResponse& redirectResponse);
-        virtual ~ResourceWillSendRequest() {}
-        
+        virtual ~ResourceWillSendRequest();
+
         int id() const { return m_id; }
         ResourceRequest* request() const { return m_request.get(); }
         ResourceResponse* redirectResponse() const { return m_redirectResponse.get(); }
 
         // EventLoopInput API
         virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-        
+
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
         virtual void serialize(InputSerializer*) const OVERRIDE;
-        
+
     private:
         int m_id;
         OwnPtr<ResourceRequest> m_request;
         OwnPtr<ResourceResponse> m_redirectResponse;
     };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

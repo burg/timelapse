@@ -58,6 +58,8 @@ ResourceWillSendRequest::ResourceWillSendRequest(int id, ResourceRequest& reques
     , m_request(ResourceRequest::adopt(request.copyData()))
     , m_redirectResponse(ResourceResponse::adopt(redirectResponse.copyData())) {}
 
+ResourceWillSendRequest::~ResourceWillSendRequest() {}
+
 //EventLoopInput API
 void ResourceWillSendRequest::dispatch(ReplayController* controller,
                                        EventLoopInputDispatcher* dispatcher)
@@ -93,7 +95,7 @@ void ResourceWillSendRequest::serialize(InputSerializer* serializer) const
     serializer->pushObject();
     serializeResourceRequest(serializer, m_request.get());
     serializer->popObjectAsProperty("request");
-    
+
     serializer->pushObject();
     serializeResourceResponse(serializer, m_redirectResponse.get());
     serializer->popObjectAsProperty("redirectResponse");
