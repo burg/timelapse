@@ -381,3 +381,16 @@
     background-image: url(Images/replayButtonGlyphs.png);
     background-position: -94px 0px;
 }
+
+.recording-landing-view-message {
+    font-weight: bold;
+    font-size: 18pt;
+    color: #666;
+    text-align: center;
+    cursor:pointer;
+}
+
+.recording-landing-view-message:hover {
+    text-decoration: underline;
+    color: #a04010;
+}

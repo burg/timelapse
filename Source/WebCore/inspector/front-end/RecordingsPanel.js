@@ -77,7 +77,7 @@ WebInspector.RecordingsPanel = function()
     WebInspector.ContextMenu.registerProvider(this);
     this._createFileSelectorElement();
 
-    this._landingView = new WebInspector.RecordingsPanel.LandingView();
+    this._landingView = new WebInspector.RecordingsPanel.LandingView(this._replayModel);
     this.showLandingView();
 
     var recordings = WebInspector.recordingsModel.recordings;
@@ -307,16 +307,16 @@ WebInspector.RecordingsPanel.prototype = {
 };
 
 
-WebInspector.RecordingsPanel.LandingView = function()
+WebInspector.RecordingsPanel.LandingView = function(model)
 {
     WebInspector.View.call(this);
 
     this.element = document.createElement("div");
     this.element.addStyleClass("landing-view");
     
-    this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel landing view listeners");
+    this._replayModel = model;
 
-    var instructions = [];
+    /*var instructions = [];
     var selectRecording = document.createElement("p");
     selectRecording.textContent = WebInspector.UIString("Select a recording to view.");
     selectRecording.addStyleClass("recording-available-text");
@@ -332,9 +332,24 @@ WebInspector.RecordingsPanel.LandingView = function()
     instructions.push(createRecording);
     
     for (var i = 0; i < instructions.length; ++i)
-        this.element.appendChild(instructions[i]);
+        this.element.appendChild(instructions[i]);*/
     
+    this._messagePanel = document.createElement("p");
+    this._messagePanel.className = "recording-landing-view-message";
+    
+    var recordings = WebInspector.recordingsModel.recordings;
+    if(recordings.length > 0) {
+        this._messagePanel.textContent = "Select a recording to view. Click to create a recording.";
+    } else {
+        this._messagePanel.textContent = "No recordings available. Click to create a recording.";
+    }
+    
+    var replayEvents = WebInspector.ReplayModel.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel landing view listeners");
+    this._callbacks.register(this._messagePanel, "click", this._createRecordingAnchorClicked);
     this._callbacks.install();
+    
+    this.element.appendChild(this._messagePanel);
 };
 
 WebInspector.RecordingsPanel.LandingView.prototype = {
@@ -343,9 +358,25 @@ WebInspector.RecordingsPanel.LandingView.prototype = {
         this._callbacks.uninstall(true);
     },
 
-    _createRecordingAnchorClicked: function()
+    _createRecordingAnchorClicked: function(event)
     {
+        var button = WebInspector._toggleReplayControllerButton;
+        if (button.disabled)
+            return;
+        
+        if (WebInspector._consoleWasShown) {
+            delete WebInspector._consoleWasShown;
+            WebInspector._toggleConsoleButton.toggled = false;
+        }
+        
+        button.toggled = true;
+        
+        button.title = WebInspector.UIString("Hide Replay controller.");
+        var animationType = window.event && window.event.shiftKey ? WebInspector.Drawer.AnimationType.Slow : WebInspector.Drawer.AnimationType.Normal;
+        WebInspector.drawer.show(WebInspector.replayControllerView, animationType);
+        WebInspector._replayWasShown = true;
         this._replayModel.startCapture();
+
     },
 
     __proto__: WebInspector.View.prototype,
