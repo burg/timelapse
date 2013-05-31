@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, 2013 Brian Burg.
+ *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -74,41 +74,54 @@ struct CountMemorySize : CountFunctor {
     }
 };
 
-class SerializeActionFunctor {
-public:
-    typedef void ReturnType;
+static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRecording)
+{
+    RefPtr<ReplayRecording> recording = prpRecording;
+    CountMemorySize counter;
 
-    SerializeActionFunctor(InputSerializer* serializer)
-    : m_serializer(serializer) {}
-    ~SerializeActionFunctor() {}
+    for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
+        ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
+        recording->createFunctorIterator()->forEachInputInQueue(queueType, counter);
+    }
+
+    return counter.returnValue();
+}
+
+class SerializeInputToJSONFunctor {
+public:
+    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > ReturnType;
+
+    SerializeInputToJSONFunctor(JSONInputSerializer* serializer)
+    : m_serializer(serializer)
+    , m_actions(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) {}
+    ~SerializeInputToJSONFunctor() {}
 
     void operator()(size_t index, const NondeterministicInput* action)
     {
-        LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeAction]",
-                                index, action->type());
-        m_serializer->pushObject(); // a single action object
-        m_serializer->pushObject(); // action object's metadata
-        m_serializer->putString("type", action->type());
-        m_serializer->putInt("number", index);
+        LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeAction]", index, action->type());
+
+        m_serializer->pushObject(); // the "data" object
+        m_serializer->putInt("id", index);
         if (action->queue() == WTF::EventLoopInputQueue)
             action->serializeDispatchInfo(m_serializer);
-        m_serializer->popObjectAsProperty("metadata");
-
-        m_serializer->pushObject(); // action object's main data
         action->serialize(m_serializer);
-        m_serializer->popObjectAsProperty("action");
 
-        m_serializer->popObjectAsElement(); // a single action object
+        RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = TypeBuilder::Recordings::ReplayInput::create()
+            .setType(action->type())
+            .setData(m_serializer->popObject());
+
+        m_actions->addItem(serializedInput.release());
     }
-    ReturnType returnValue() { return void(); }
+
+    ReturnType returnValue() { return m_actions.release(); }
 
 private:
-    InputSerializer* m_serializer;
+    JSONInputSerializer* m_serializer;
+    RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > m_actions;
 };
 
-JSONInputSerializer::JSONInputSerializer(PassRefPtr<ReplayRecording> recording)
-    : m_recording(recording)
-    , m_currentObject(0)
+JSONInputSerializer::JSONInputSerializer()
+    : m_currentObject(0)
     , m_currentArray(0) {}
 
 JSONInputSerializer::~JSONInputSerializer()
@@ -305,69 +318,38 @@ void JSONInputSerializer::storeResourceBytes(int /*id*/, const char* /*data*/, i
     // TODO(Issue #265): serialize resource bytes using base64 encoding.
 }
 
-size_t JSONInputSerializer::memorySize()
+PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONInputSerializer::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
-    CountMemorySize counter;
+    RefPtr<ReplayRecording> recording = prpRecording;
+    RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue>::create();
 
     for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
+        SerializeInputToJSONFunctor collector(this);
         ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
-        m_recording->createFunctorIterator()->forEachInputInQueue(queueType, counter);
+        PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
+
+        RefPtr<TypeBuilder::Recordings::ReplayInputQueue> queue = TypeBuilder::Recordings::ReplayInputQueue::create()
+            .setType(WTF::queueTypeToString(queueType))
+            .setInputs(queueInputs);
+
+        queues->addItem(queue.release());
     }
 
-    return counter.returnValue();
+    RefPtr<TypeBuilder::Recordings::ReplayRecordingNew> recordingObject = TypeBuilder::Recordings::ReplayRecordingNew::create()
+        .setUid(recording->uid())
+        .setDateCreated(recording->creationTimestamp())
+        .setMemorySize(calculateMemorySizeForRecording(recording))
+        .setQueues(queues.release());
+
+    return recordingObject;
 }
 
-PassRefPtr<InspectorObject> JSONInputSerializer::serialize()
+// Only to be used to pop the root object, not nested objects.
+PassRefPtr<InspectorObject> JSONInputSerializer::popObject()
 {
-    pushObject();
-
-    /* the overall recording has the form:
-    {
-      metadata: {
-                  memorySize: ...,
-                  ...
-      },
-      queues: [ { 'name': 'foo', actions: [ { ... }, { ... }, ... ] } ]
-    }*/
-
-    pushObject(); // the entire recording object
-    // TODO: add other recording metadata?
-    putInt("memorySize", memorySize());
-    popObjectAsProperty("metadata");
-
-    pushArray(); // array of queues
-
-    /* each action has the form:
-    {
-      metadata: {
-                 "type":   ...,
-                 "number": ...,
-                ...
-      },
-      action: {
-                "foo": ...,
-                ...
-      }
-    }*/
-
-    SerializeActionFunctor collector(this);
-
-    for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
-        ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
-        pushObject(); // a single queue object
-
-        putString("name", WTF::queueTypeToString(queueType));
-        pushArray(); // array of action objects
-
-        m_recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
-
-        popArrayAsProperty("actions");
-        popObjectAsElement();
-    }
-    popArrayAsProperty("queues");
-
     ASSERT(m_currentObject);
-    // hella expensive. woops.
+    ASSERT(m_stack.isEmpty());
+
     return m_currentObject.release();
 }
 

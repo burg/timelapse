@@ -2824,7 +2824,34 @@
                 "description": "(Deprecated) A replay action contains information about a captured event loop input."
             },
             {
-               "id": "ReplayRecording",
+                "id": "ReplayInput",
+                "type": "object",
+                "properties": [
+                    { "name": "type", "type": "string", "description": "Input type." },
+                    { "name": "data", "type": "object", "description": "Per-input payload." }
+                ]
+            },
+            {
+                "id": "ReplayInputQueue",
+                "type": "object",
+                "properties": [
+                    { "name": "type", "type": "string", "description": "Queue type" },
+                    { "name": "inputs", "type": "array", "items": { "$ref": "ReplayInput"}, "description": "Inputs belonging to this queue." }
+                ]
+            },
+            {
+                "id": "ReplayRecordingNew",
+                "type": "object",
+                "properties": [
+                    { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
+                    { "name": "dateCreated", "type": "number", "description": "Creation time of recording, in milliseconds since the epoch." },
+                    { "name": "memorySize", "type": "number", "description": "Approximate size of in-memory recording representation." },
+                    { "name": "queues", "type": "array", "items": { "$ref": "ReplayInputQueue"} }
+                ],
+                "description": "A replay recording serialized to JSON."
+            },
+            {
+                "id": "ReplayRecording",
                 "type": "object",
                 "properties": [
                     { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
@@ -2852,7 +2879,7 @@
                     { "name": "uid", "$ref": "RecordingId" }
                 ],
                 "returns": [
-                    { "name": "serializedRecording", "type": "object", "description": "the requested recording", "optional": true }
+                    { "name": "recording", "$ref": "ReplayRecordingNew", "description": "the requested recording", "optional": true }
                 ]
             },
             {

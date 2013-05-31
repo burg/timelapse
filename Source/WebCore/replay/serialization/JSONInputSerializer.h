@@ -34,6 +34,7 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "InspectorTypeBuilder.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/replay/InputSerializer.h>
 #include <wtf/replay/InputIterator.h>
@@ -47,7 +48,7 @@ namespace WebCore {
     class JSONInputSerializer : public InputSerializer {
         WTF_MAKE_NONCOPYABLE(JSONInputSerializer);
     public:
-        JSONInputSerializer(PassRefPtr<ReplayRecording>);
+        JSONInputSerializer();
         virtual ~JSONInputSerializer();
 
         // insert key-value pair into current object
@@ -76,9 +77,9 @@ namespace WebCore {
         virtual void storeResourceBytes(int, const char* data, int length) OVERRIDE;
 
         size_t memorySize();
-        PassRefPtr<InspectorObject> serialize();
+        PassRefPtr<InspectorObject> popObject();
+        PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
     private:
-        RefPtr<ReplayRecording> m_recording;
         RefPtr<InspectorObject> m_currentObject;
         RefPtr<InspectorArray> m_currentArray;
         Vector<RefPtr<InspectorValue> > m_stack;

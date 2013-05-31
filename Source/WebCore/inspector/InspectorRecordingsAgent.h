@@ -77,9 +77,9 @@ public:
     void recordingCreated(PassRefPtr<ReplayRecording>);
 
     // Calls from the frontend
-    void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecording>&);
-    void getSerializedRecording(ErrorString*, int, RefPtr<InspectorObject>&);
-    void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&);
+    virtual void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecording>&) OVERRIDE;
+    virtual void getSerializedRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecordingNew>&) OVERRIDE;
+    virtual void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&) OVERRIDE;
 
     // TODO(Issue #271): remove backend-side interpretation of inputs
     static PassRefPtr<TypeBuilder::Recordings::ReplayAction> createInspectorObjectForAction(EventLoopInput* action);

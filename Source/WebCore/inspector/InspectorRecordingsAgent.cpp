@@ -277,14 +277,14 @@ void InspectorRecordingsAgent::getRecording(ErrorString* errorString, int uid, R
                         .setActions(actions);
 }
 
-void InspectorRecordingsAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<InspectorObject>& serializedObject)
+void InspectorRecordingsAgent::getSerializedRecording(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Recordings::ReplayRecordingNew>& serializedObject)
 {
     RefPtr<ReplayRecording> recording = findRecording(errorString, uid);
     if (!recording)
         return;
 
-    JSONInputSerializer serializer(recording);
-    serializedObject = serializer.serialize();
+    JSONInputSerializer serializer;
+    serializedObject = serializer.serialize(recording);
 }
 
 void InspectorRecordingsAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
