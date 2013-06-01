@@ -42,7 +42,7 @@
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -62,7 +62,7 @@ void ResourceDidFail::dispatch(ReplayController* controller,
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
-    
+
     client->didFail(handle.get(), m_error.copy());
     dispatcher->didDispatch(this);
 }
@@ -93,13 +93,13 @@ size_t ResourceDidFail::memorySize() const
     return size;
 }
 
-void ResourceDidFail::serialize(InputSerializer* serializer) const
+void ResourceDidFail::serialize(InputCoder& coder) const
 {
-    serializer->putInt("handleId", m_id);
+    coder.putInt("handleId", m_id);
 
-    serializer->pushObject();
-    serializeResourceError(serializer, m_error);
-    serializer->popObjectAsProperty("error");
+    coder.pushObject();
+    serializeResourceError(coder, m_error);
+    coder.popObjectAsProperty("error");
 }
 
 } // namespace WebCore

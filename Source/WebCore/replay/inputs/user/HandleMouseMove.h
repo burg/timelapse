@@ -56,7 +56,7 @@ public:
     {
         return HandleMouseBase::memorySize() + (sizeof(HandleMouseMove) - sizeof(HandleMouseBase));
     }
-    virtual void serialize(WTF::InputSerializer*) const OVERRIDE;
+    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
 
  private:
     bool m_scrollbarTargeted;

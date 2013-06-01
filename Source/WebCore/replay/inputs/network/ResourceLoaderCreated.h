@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "ResourceRequest.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -56,7 +56,7 @@ public:
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(InputSerializer*) const OVERRIDE;
+    virtual void serialize(InputCoder&) const OVERRIDE;
 
 private:
     int m_id;

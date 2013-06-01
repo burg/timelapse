@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -64,11 +64,11 @@ String InitializeFocus::toString() const
                       "; frameIndex=", String::number(m_frameIndex), ")");
 }
 
-void InitializeFocus::serialize(InputSerializer* serializer) const
+void InitializeFocus::serialize(InputCoder& coder) const
 {
-    serializer->putBoolean("active", m_active);
-    serializer->putBoolean("focused", m_focus);
-    serializer->putInt("frameIndex", m_frameIndex);
+    coder.putBoolean("active", m_active);
+    coder.putBoolean("focused", m_focus);
+    coder.putInt("frameIndex", m_frameIndex);
 }
  
 } // namespace WebCore

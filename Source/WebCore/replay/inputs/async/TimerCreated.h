@@ -40,7 +40,7 @@
 #include "ReplayInputTypes.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -59,10 +59,10 @@ public:
         return makeString("TimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
     }
     size_t memorySize() const OVERRIDE { return sizeof(TimerCreated); }
-    void serialize(InputSerializer* serializer) const OVERRIDE
+    void serialize(InputCoder& coder) const OVERRIDE
     {
-        serializer->putInt("timerId", m_timerId);
-        serializer->putInt("frameIndex", m_frameIndex);
+        coder.putInt("timerId", m_timerId);
+        coder.putInt("frameIndex", m_frameIndex);
     }
     
     int timerId() const { return m_timerId; }

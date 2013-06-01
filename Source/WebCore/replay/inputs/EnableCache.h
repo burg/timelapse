@@ -60,7 +60,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("EnableCache"); }
     virtual size_t memorySize() const OVERRIDE { return sizeof(EnableCache); }
-    virtual void serialize(InputSerializer*) const OVERRIDE { }
+    virtual void serialize(InputCoder&) const OVERRIDE { }
 };
 
 } //namespace WebCore

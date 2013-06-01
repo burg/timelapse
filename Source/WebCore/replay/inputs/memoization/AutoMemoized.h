@@ -38,7 +38,7 @@
 #include "SerializedScriptValue.h"
 #include <runtime/JSObject.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace JSC {
 
@@ -60,7 +60,7 @@ public:
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(InputSerializer*) const OVERRIDE;
+    virtual void serialize(InputCoder&) const OVERRIDE;
     
 private:
     String m_attribute;
@@ -96,46 +96,46 @@ template<typename T> inline size_t AutoMemoized<T>::memorySize() const
     return size;
 }
 
-template<typename T> inline void AutoMemoized<T>::serialize(InputSerializer* serializer) const
+template<typename T> inline void AutoMemoized<T>::serialize(InputCoder& coder) const
 {
-    serializer->putString("attribute", attributeName());
+    coder.putString("attribute", attributeName());
 }
 
-template<> inline void AutoMemoized<int>::serialize(InputSerializer* serializer) const
+template<> inline void AutoMemoized<int>::serialize(InputCoder& coder) const
 {
-    serializer->putString("attribute", attributeName());
-    serializer->putInt("result", m_result);
+    coder.putString("attribute", attributeName());
+    coder.putInt("result", m_result);
 }
 
-template<> inline void AutoMemoized<unsigned>::serialize(InputSerializer* serializer) const
+template<> inline void AutoMemoized<unsigned>::serialize(InputCoder& coder) const
 {
-    serializer->putString("attribute", attributeName());
-    serializer->putUInt64("result", (uint64_t) m_result);
+    coder.putString("attribute", attributeName());
+    coder.putUInt64("result", (uint64_t) m_result);
 }
 
-template<> inline void AutoMemoized<double>::serialize(InputSerializer* serializer) const
+template<> inline void AutoMemoized<double>::serialize(InputCoder& coder) const
 {
-    serializer->putString("attribute", attributeName());
-    serializer->putDouble("result", m_result);
+    coder.putString("attribute", attributeName());
+    coder.putDouble("result", m_result);
 }
 
-template<> inline void AutoMemoized<bool>::serialize(InputSerializer* serializer) const
+template<> inline void AutoMemoized<bool>::serialize(InputCoder& coder) const
 {
-    serializer->putString("attribute", attributeName());
-    serializer->putBoolean("result", m_result);
+    coder.putString("attribute", attributeName());
+    coder.putBoolean("result", m_result);
 }
 
-template<> inline void AutoMemoized<String>::serialize(InputSerializer* serializer) const
+template<> inline void AutoMemoized<String>::serialize(InputCoder& coder) const
 {
-    serializer->putString("attribute", attributeName());
-    serializer->putString("result", m_result);
+    coder.putString("attribute", attributeName());
+    coder.putString("result", m_result);
 }
 
-template<> inline void AutoMemoized<WebCore::SerializedScriptValue>::serialize(InputSerializer* serializer) const
+template<> inline void AutoMemoized<WebCore::SerializedScriptValue>::serialize(InputCoder& coder) const
 {
     const String res = m_result.toString();
-    serializer->putString("attribute", attributeName());
-    serializer->putString("result", res);
+    coder.putString("attribute", attributeName());
+    coder.putString("result", res);
 }
 
 template<typename T> inline String AutoMemoized<T>::resultString() const

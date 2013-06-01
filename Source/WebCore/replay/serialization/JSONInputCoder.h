@@ -29,14 +29,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JSONInputSerializer_h
-#define JSONInputSerializer_h
+#ifndef JSONInputCoder_h
+#define JSONInputCoder_h
 
 #if ENABLE(TIMELAPSE)
 
 #include "InspectorTypeBuilder.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
@@ -45,11 +45,11 @@ namespace WebCore {
     class InspectorValue;
     class ReplayRecording;
 
-    class JSONInputSerializer : public InputSerializer {
-        WTF_MAKE_NONCOPYABLE(JSONInputSerializer);
+    class JSONInputCoder : public InputCoder {
+        WTF_MAKE_NONCOPYABLE(JSONInputCoder);
     public:
-        JSONInputSerializer();
-        virtual ~JSONInputSerializer();
+        JSONInputCoder();
+        virtual ~JSONInputCoder();
 
         // insert key-value pair into current object
         virtual void putString(const String&, const String&) OVERRIDE;
@@ -89,4 +89,4 @@ namespace WebCore {
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // JSONInputSerializer_h
+#endif // JSONInputCoder_h

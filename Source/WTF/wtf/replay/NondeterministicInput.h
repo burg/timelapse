@@ -37,7 +37,7 @@
 
 namespace WTF {
 
-class InputSerializer;
+class InputCoder;
 
 typedef enum {
     ScriptMemoizedDataQueue    = 0x0,
@@ -60,8 +60,8 @@ public:
     virtual ReplayInputQueueType queue() const =0;
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
-    virtual void serialize(InputSerializer*) const =0;
-    virtual void serializeDispatchInfo(InputSerializer*) const { ASSERT_NOT_REACHED(); }
+    virtual void serialize(InputCoder&) const =0;
+    virtual void serializeDispatchInfo(InputCoder&) const { ASSERT_NOT_REACHED(); }
     
 private:
     ReplayInputType m_type;

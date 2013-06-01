@@ -42,7 +42,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -96,22 +96,22 @@ size_t HandleKeyPress::memorySize() const
     return size;
 }
 
-void HandleKeyPress::serialize(InputSerializer* serializer) const
+void HandleKeyPress::serialize(InputCoder& coder) const
 {
-    serializer->pushObject();
-    serializer->putDouble("timestamp", m_platformEvent.timestamp());
-    serializer->putInt("type", (int)m_platformEvent.type());
-    serializer->putUnsigned("modifiers", m_platformEvent.modifiers());
-    serializer->putString("text", m_platformEvent.text());
-    serializer->putString("unmodifiedText", m_platformEvent.unmodifiedText());
-    serializer->putString("keyIdentifier", m_platformEvent.keyIdentifier());
-    serializer->putInt("windowsVirtualKeyCode", m_platformEvent.windowsVirtualKeyCode());
-    serializer->putInt("nativeVirtualKeyCode", m_platformEvent.nativeVirtualKeyCode());
-    serializer->putInt("macCharCode", m_platformEvent.macCharCode());
-    serializer->putBoolean("autoRepeat", m_platformEvent.isAutoRepeat());
-    serializer->putBoolean("keypad", m_platformEvent.isKeypad());
-    serializer->putBoolean("systemKey", m_platformEvent.isSystemKey());
-    serializer->popObjectAsProperty("keyEvent");
+    coder.pushObject();
+    coder.putDouble("timestamp", m_platformEvent.timestamp());
+    coder.putInt("type", (int)m_platformEvent.type());
+    coder.putUnsigned("modifiers", m_platformEvent.modifiers());
+    coder.putString("text", m_platformEvent.text());
+    coder.putString("unmodifiedText", m_platformEvent.unmodifiedText());
+    coder.putString("keyIdentifier", m_platformEvent.keyIdentifier());
+    coder.putInt("windowsVirtualKeyCode", m_platformEvent.windowsVirtualKeyCode());
+    coder.putInt("nativeVirtualKeyCode", m_platformEvent.nativeVirtualKeyCode());
+    coder.putInt("macCharCode", m_platformEvent.macCharCode());
+    coder.putBoolean("autoRepeat", m_platformEvent.isAutoRepeat());
+    coder.putBoolean("keypad", m_platformEvent.isKeypad());
+    coder.putBoolean("systemKey", m_platformEvent.isSystemKey());
+    coder.popObjectAsProperty("keyEvent");
 }
 
 void HandleKeyPress::dispatch(ReplayController* controller,

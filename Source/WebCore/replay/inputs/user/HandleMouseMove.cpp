@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "Page.h"
 #include "UserInputProxy.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -56,10 +56,10 @@ void HandleMouseMove::dispatch(ReplayController* controller,
     dispatcher->didDispatch(this);
 }
 
-void HandleMouseMove::serialize(InputSerializer* serializer) const
+void HandleMouseMove::serialize(InputCoder& coder) const
 {
-    HandleMouseBase::serializeMouseInfo(serializer);
-    serializer->putBoolean("scrollbarTargeted", m_scrollbarTargeted);
+    HandleMouseBase::serializeMouseInfo(coder);
+    coder.putBoolean("scrollbarTargeted", m_scrollbarTargeted);
 }
 
 } // namespace WebCore

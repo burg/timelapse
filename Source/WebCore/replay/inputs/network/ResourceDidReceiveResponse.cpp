@@ -42,7 +42,7 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -63,14 +63,14 @@ void ResourceDidReceiveResponse::dispatch(ReplayController* controller,
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
-    
+
     if (!client) {
         // FIXME: this shouldn't be fatal error, because we can just not deliver the callback.
         controller->playbackError(true,
                                   String::format("Couldn't find handle context for id: %d", m_id));
         return;
     }
-    
+
     client->didReceiveResponse(handle.get(), *m_response);
     dispatcher->didDispatch(this);
 }
@@ -91,13 +91,13 @@ size_t ResourceDidReceiveResponse::memorySize() const
     return sizeof(ResourceDidReceiveResponse) + m_response->memoryUsage();
 }
 
-void ResourceDidReceiveResponse::serialize(InputSerializer* serializer) const
+void ResourceDidReceiveResponse::serialize(InputCoder& coder) const
 {
-    serializer->putInt("handleId", m_id);
+    coder.putInt("handleId", m_id);
 
-    serializer->pushObject();
-    serializeResourceResponse(serializer, m_response.get());
-    serializer->popObjectAsProperty("response");
+    coder.pushObject();
+    serializeResourceResponse(coder, m_response.get());
+    coder.popObjectAsProperty("response");
 }
 
 } // namespace WebCore

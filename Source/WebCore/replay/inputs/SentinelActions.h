@@ -37,7 +37,7 @@
 #include "ReplayController.h"
 #include "EventLoopInput.h"
 #include "ReplayInputTypes.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -59,7 +59,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("Begin"); }
     size_t memorySize() const OVERRIDE { return sizeof(BeginSentinel); }
-    void serialize(InputSerializer*) const OVERRIDE { }
+    void serialize(InputCoder&) const OVERRIDE { }
 };
 
 class EndSentinel : public EventLoopInput {
@@ -80,7 +80,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("End"); }
     size_t memorySize() const OVERRIDE { return sizeof(EndSentinel); }
-    void serialize(InputSerializer*) const OVERRIDE { }
+    void serialize(InputCoder&) const OVERRIDE { }
 };
 
 } //namespace WebCore

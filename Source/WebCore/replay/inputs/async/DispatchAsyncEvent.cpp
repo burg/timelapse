@@ -53,7 +53,7 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -118,16 +118,16 @@ size_t DispatchAsyncEvent::memorySize() const
     return size;
 }
 
-void DispatchAsyncEvent::serialize(InputSerializer* serializer) const
+void DispatchAsyncEvent::serialize(InputCoder& coder) const
 {
-    serializer->putString("eventType", m_event.type());
+    coder.putString("eventType", m_event.type());
 
     // TODO(Issue #276): this hits an assertion inside CloneDeserializer. Are we using it wrong?
     //if (isPopstateEvent())
-    //    serializer->putString("historyState", m_historyState->toString());
+    //    coder.putString("historyState", m_historyState->toString());
 
     if (isPageTransitionEvent())
-        serializer->putBoolean("pageTransitionEventPersisted", m_pageTransitionEventPersisted);
+        coder.putBoolean("pageTransitionEventPersisted", m_pageTransitionEventPersisted);
 }
 
 EventTarget* DispatchAsyncEvent::target(Page* page)

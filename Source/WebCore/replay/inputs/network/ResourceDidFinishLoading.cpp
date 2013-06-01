@@ -78,10 +78,10 @@ size_t ResourceDidFinishLoading::memorySize() const
     return sizeof(ResourceDidFinishLoading);
 }
 
-void ResourceDidFinishLoading::serialize(InputSerializer* serializer) const
+void ResourceDidFinishLoading::serialize(InputCoder& coder) const
 {
-    serializer->putInt("handleId", m_id);
-    serializer->putDouble("finishTime", m_finishTime);
+    coder.putInt("handleId", m_id);
+    coder.putDouble("finishTime", m_finishTime);
 }
 
 } // namespace WebCore

@@ -40,7 +40,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -70,20 +70,20 @@ String HandleMouseBase::toString() const
     return sb.toString();
 }
 
-void HandleMouseBase::serializeMouseInfo(InputSerializer* serializer) const
+void HandleMouseBase::serializeMouseInfo(InputCoder& coder) const
 {
-    serializer->putInt("positionX", m_platformEvent.position().x());
-    serializer->putInt("positionY", m_platformEvent.position().y());
-    serializer->putInt("globalPositionX", m_platformEvent.globalPosition().x());
-    serializer->putInt("globalPositionY", m_platformEvent.globalPosition().y());
-    serializer->putInt("mouseButton", m_platformEvent.button());
-    serializer->putInt("type", m_platformEvent.type());
-    serializer->putInt("clickCount", m_platformEvent.clickCount());
-    serializer->putBoolean("shiftKey", m_platformEvent.shiftKey());
-    serializer->putBoolean("ctrlKey", m_platformEvent.ctrlKey());
-    serializer->putBoolean("altKey", m_platformEvent.altKey());
-    serializer->putBoolean("metaKey", m_platformEvent.metaKey());
-    serializer->putDouble("timestamp", m_platformEvent.timestamp());
+    coder.putInt("positionX", m_platformEvent.position().x());
+    coder.putInt("positionY", m_platformEvent.position().y());
+    coder.putInt("globalPositionX", m_platformEvent.globalPosition().x());
+    coder.putInt("globalPositionY", m_platformEvent.globalPosition().y());
+    coder.putInt("mouseButton", m_platformEvent.button());
+    coder.putInt("type", m_platformEvent.type());
+    coder.putInt("clickCount", m_platformEvent.clickCount());
+    coder.putBoolean("shiftKey", m_platformEvent.shiftKey());
+    coder.putBoolean("ctrlKey", m_platformEvent.ctrlKey());
+    coder.putBoolean("altKey", m_platformEvent.altKey());
+    coder.putBoolean("metaKey", m_platformEvent.metaKey());
+    coder.putDouble("timestamp", m_platformEvent.timestamp());
 }
 
 String HandleMouseBase::mouseButtonToString(MouseButton button)

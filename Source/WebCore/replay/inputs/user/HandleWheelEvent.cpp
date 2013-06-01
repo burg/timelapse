@@ -41,7 +41,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -143,33 +143,33 @@ size_t HandleWheelEvent::memorySize() const
     return sizeof(HandleWheelEvent);
 }
 
-void HandleWheelEvent::serialize(InputSerializer* serializer) const
+void HandleWheelEvent::serialize(InputCoder& coder) const
 {
-    serializer->pushObject();
-    serializer->putInt("positionX", m_platformEvent.position().x());
-    serializer->putInt("positionY", m_platformEvent.position().y());
-    serializer->putInt("globalPositionX", m_platformEvent.globalPosition().x());
-    serializer->putInt("globalPositionY", m_platformEvent.globalPosition().y());
-    serializer->putBoolean("shiftKey", m_platformEvent.shiftKey());
-    serializer->putBoolean("ctrlKey", m_platformEvent.ctrlKey());
-    serializer->putBoolean("altKey", m_platformEvent.altKey());
-    serializer->putBoolean("metaKey", m_platformEvent.metaKey());
-    serializer->putFloat("deltaX", m_platformEvent.deltaX());
-    serializer->putFloat("deltaY", m_platformEvent.deltaY());
-    serializer->putFloat("wheelTicksX", m_platformEvent.wheelTicksX());
-    serializer->putFloat("wheelTicksY", m_platformEvent.wheelTicksY());
-    serializer->putInt("granularity", m_platformEvent.granularity());
-    serializer->putBoolean("directionInvertedFromDevice", m_platformEvent.directionInvertedFromDevice());
-    serializer->putDouble("timestamp", m_platformEvent.timestamp());
+    coder.pushObject();
+    coder.putInt("positionX", m_platformEvent.position().x());
+    coder.putInt("positionY", m_platformEvent.position().y());
+    coder.putInt("globalPositionX", m_platformEvent.globalPosition().x());
+    coder.putInt("globalPositionY", m_platformEvent.globalPosition().y());
+    coder.putBoolean("shiftKey", m_platformEvent.shiftKey());
+    coder.putBoolean("ctrlKey", m_platformEvent.ctrlKey());
+    coder.putBoolean("altKey", m_platformEvent.altKey());
+    coder.putBoolean("metaKey", m_platformEvent.metaKey());
+    coder.putFloat("deltaX", m_platformEvent.deltaX());
+    coder.putFloat("deltaY", m_platformEvent.deltaY());
+    coder.putFloat("wheelTicksX", m_platformEvent.wheelTicksX());
+    coder.putFloat("wheelTicksY", m_platformEvent.wheelTicksY());
+    coder.putInt("granularity", m_platformEvent.granularity());
+    coder.putBoolean("directionInvertedFromDevice", m_platformEvent.directionInvertedFromDevice());
+    coder.putDouble("timestamp", m_platformEvent.timestamp());
 #if PLATFORM(MAC)
-    serializer->putBoolean("hasPreciseScrollingDeltas", m_platformEvent.hasPreciseScrollingDeltas());
-    serializer->putInt("phase", m_platformEvent.phase());
-    serializer->putInt("momentumPhase", m_platformEvent.momentumPhase());
-    serializer->putUnsigned("scrollCount", m_platformEvent.scrollCount());
-    serializer->putFloat("unacceleratedScrollingDeltaX", m_platformEvent.unacceleratedScrollingDeltaX());
-    serializer->putFloat("unacceleratedScrollingDeltaY", m_platformEvent.unacceleratedScrollingDeltaY());
+    coder.putBoolean("hasPreciseScrollingDeltas", m_platformEvent.hasPreciseScrollingDeltas());
+    coder.putInt("phase", m_platformEvent.phase());
+    coder.putInt("momentumPhase", m_platformEvent.momentumPhase());
+    coder.putUnsigned("scrollCount", m_platformEvent.scrollCount());
+    coder.putFloat("unacceleratedScrollingDeltaX", m_platformEvent.unacceleratedScrollingDeltaX());
+    coder.putFloat("unacceleratedScrollingDeltaY", m_platformEvent.unacceleratedScrollingDeltaY());
 #endif
-    serializer->popObjectAsProperty("wheelEvent");
+    coder.popObjectAsProperty("wheelEvent");
 }
 
 } // namespace WebCore

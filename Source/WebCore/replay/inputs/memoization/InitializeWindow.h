@@ -62,7 +62,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
-    void serialize(WTF::InputSerializer*) const OVERRIDE;
+    void serialize(WTF::InputCoder&) const OVERRIDE;
   
 private:
     int m_width;

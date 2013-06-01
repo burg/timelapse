@@ -36,7 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "ReplayInputTypes.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -61,7 +61,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("DisableCache"); }
     virtual size_t memorySize() const OVERRIDE { return sizeof(DisableCache); }
-    virtual void serialize(InputSerializer*) const OVERRIDE { }
+    virtual void serialize(InputCoder&) const OVERRIDE { }
 };
  
 

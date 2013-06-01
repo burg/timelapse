@@ -44,7 +44,7 @@
 #include "ResourceResponse.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -88,17 +88,17 @@ size_t ResourceWillSendRequest::memorySize() const
     return sizeof(ResourceWillSendRequest) + 2 * m_redirectResponse->memoryUsage();
 }
 
-void ResourceWillSendRequest::serialize(InputSerializer* serializer) const
+void ResourceWillSendRequest::serialize(InputCoder& coder) const
 {
-    serializer->putInt("handleId", m_id);
+    coder.putInt("handleId", m_id);
 
-    serializer->pushObject();
-    serializeResourceRequest(serializer, m_request.get());
-    serializer->popObjectAsProperty("request");
+    coder.pushObject();
+    serializeResourceRequest(coder, m_request.get());
+    coder.popObjectAsProperty("request");
 
-    serializer->pushObject();
-    serializeResourceResponse(serializer, m_redirectResponse.get());
-    serializer->popObjectAsProperty("redirectResponse");
+    coder.pushObject();
+    serializeResourceResponse(coder, m_redirectResponse.get());
+    coder.popObjectAsProperty("redirectResponse");
 }
 
 } // namespace WebCore

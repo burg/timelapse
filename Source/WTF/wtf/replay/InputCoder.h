@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InputSerializer_h
-#define InputSerializer_h
+#ifndef InputCoder_h
+#define InputCoder_h
 
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -38,12 +38,12 @@
 
 namespace WTF {
 
-    class InputSerializer {
-        WTF_MAKE_NONCOPYABLE(InputSerializer);
+    class InputCoder {
+        WTF_MAKE_NONCOPYABLE(InputCoder);
 
     public:
-        InputSerializer() {}
-        virtual ~InputSerializer() {}
+        InputCoder() {}
+        virtual ~InputCoder() {}
 
         // insert key-value pair into current object
         WTF_EXPORT_PRIVATE virtual void putString(const String&, const String&) =0;
@@ -73,6 +73,6 @@ namespace WTF {
 
 } // namespace WTF
 
-using WTF::InputSerializer;
+using WTF::InputCoder;
 
-#endif // InputSerializer_h
+#endif // InputCoder_h

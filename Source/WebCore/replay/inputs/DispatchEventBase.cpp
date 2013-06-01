@@ -49,7 +49,7 @@
 #include "Page.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -113,11 +113,11 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
     return SerializedEventTarget(targetType, nodeIndex, frameIndex);
 }
 
-void SerializedEventTarget::serialize(InputSerializer* serializer) const
+void SerializedEventTarget::serialize(InputCoder& coder) const
 {
-    serializer->putString("eventTarget_type", (m_targetType == NODE) ? "NODE" : "WINDOW");
-    serializer->putInt("eventTarget_nodeIndex", m_nodeIndex);
-    serializer->putInt("eventTarget_FrameIndex", m_frameIndex);
+    coder.putString("eventTarget_type", (m_targetType == NODE) ? "NODE" : "WINDOW");
+    coder.putInt("eventTarget_nodeIndex", m_nodeIndex);
+    coder.putInt("eventTarget_FrameIndex", m_frameIndex);
 }
 
 EventTarget* SerializedEventTarget::deserialize(Page* page)
@@ -149,11 +149,11 @@ SerializedGenericEvent SerializedGenericEvent::serialize(Event* event)
                                  event->cancelable());
 }
 
-void SerializedGenericEvent::serialize(InputSerializer* serializer) const
+void SerializedGenericEvent::serialize(InputCoder& coder) const
 {
-    serializer->putString("event_name", deserializeEventName(m_name));
-    serializer->putBoolean("event_canBubble", m_canBubble);
-    serializer->putBoolean("event_cancelable", m_cancelable);
+    coder.putString("event_name", deserializeEventName(m_name));
+    coder.putBoolean("event_canBubble", m_canBubble);
+    coder.putBoolean("event_cancelable", m_cancelable);
 }
 
 PassRefPtr<Event> SerializedGenericEvent::deserialize(Page*)

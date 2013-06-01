@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "ResourceRequest.h"
 #include "SerializationMethods.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -72,12 +72,12 @@ size_t ResourceLoaderCreated::memorySize() const
     return sizeof(ResourceLoaderCreated) + 1280 + 256;
 }
 
-void ResourceLoaderCreated::serialize(InputSerializer* serializer) const
+void ResourceLoaderCreated::serialize(InputCoder& coder) const
 {
-    serializer->putInt("loaderId", m_id);
-    serializer->pushObject();
-    serializeResourceRequest(serializer, m_request.get());
-    serializer->popObjectAsProperty("request");
+    coder.putInt("loaderId", m_id);
+    coder.pushObject();
+    serializeResourceRequest(coder, m_request.get());
+    coder.popObjectAsProperty("request");
 }
 
 } // namespace WebCore

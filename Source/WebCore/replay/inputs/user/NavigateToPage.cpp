@@ -45,7 +45,7 @@
 #include "SecurityOrigin.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -98,11 +98,11 @@ size_t NavigateToPage::memorySize() const
     return size;
 }
 
-void NavigateToPage::serialize(InputSerializer* serializer) const
+void NavigateToPage::serialize(InputCoder& coder) const
 {
-    serializer->putString("securityOrigin", m_securityOrigin->toString());
-    serializer->putString("url", m_url);
-    serializer->putString("referrer", m_referrer);
+    coder.putString("securityOrigin", m_securityOrigin->toString());
+    coder.putString("url", m_url);
+    coder.putString("referrer", m_referrer);
 }
 
 } // namespace WebCore

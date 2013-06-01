@@ -40,7 +40,7 @@
 #include "Page.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -74,9 +74,9 @@ size_t ResourceCannotShowURL::memorySize() const
     return sizeof(ResourceCannotShowURL);
 }
 
-void ResourceCannotShowURL::serialize(InputSerializer* serializer) const
+void ResourceCannotShowURL::serialize(InputCoder& coder) const
 {
-    serializer->putInt("handleId", m_id);
+    coder.putInt("handleId", m_id);
 }
 
 } // namespace WebCore

@@ -57,7 +57,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(RanPendingScripts); }
-    void serialize(WTF::InputSerializer*) const OVERRIDE;
+    void serialize(WTF::InputCoder&) const OVERRIDE;
 
 private:
     int m_frameIndex;

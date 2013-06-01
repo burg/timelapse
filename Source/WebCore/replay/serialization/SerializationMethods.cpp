@@ -41,47 +41,47 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
-static void serializeStringVector(InputSerializer* serializer, const Vector<String>& vec)
+static void serializeStringVector(InputCoder& coder, const Vector<String>& vec)
 {
     for (size_t i = 0; i < vec.size(); i++)
-        serializer->putString(vec[i]);
+        coder.putString(vec[i]);
 }
 
 /* map is serialized from a WTF::HashMap, which has unique keys. So, this can be stored in an object */
-static void serializeHTTPHeaderMap(InputSerializer* serializer, const HTTPHeaderMap& map)
+static void serializeHTTPHeaderMap(InputCoder& coder, const HTTPHeaderMap& map)
 {
     HTTPHeaderMap::const_iterator end_it = map.end();
     for (HTTPHeaderMap::const_iterator it = map.begin(); it != end_it; ++it)
-        serializer->putString(it->key.string(), it->value);
+        coder.putString(it->key.string(), it->value);
 }
 
-static void serializeFormDataElement(InputSerializer* serializer, const FormDataElement& element)
+static void serializeFormDataElement(InputCoder& coder, const FormDataElement& element)
 {
-    serializer->putInt("type", element.m_type);
+    coder.putInt("type", element.m_type);
     switch (element.m_type) {
     case FormDataElement::data:
-        serializer->pushArray();
+        coder.pushArray();
         for (size_t i = 0; i < element.m_data.size(); i++)
-            serializer->pushUInt32(element.m_data[i]);
-        serializer->popArrayAsProperty("data");
+            coder.pushUInt32(element.m_data[i]);
+        coder.popArrayAsProperty("data");
         return;
     case FormDataElement::encodedFile:
-        serializer->putString("filename", element.m_filename);
-        serializer->putBoolean("shouldGenerateFile", element.m_shouldGenerateFile);
+        coder.putString("filename", element.m_filename);
+        coder.putBoolean("shouldGenerateFile", element.m_shouldGenerateFile);
 #if ENABLE(BLOB)
-        serializer->putInt64("fileStart", element.m_fileStart);
-        serializer->putInt64("fileLength", element.m_fileLength);
-        serializer->putDouble("exepcetedFileModificationTime", element.m_expectedFileModificationTime);
+        coder.putInt64("fileStart", element.m_fileStart);
+        coder.putInt64("fileLength", element.m_fileLength);
+        coder.putDouble("exepcetedFileModificationTime", element.m_expectedFileModificationTime);
 #endif
         return;
 
 #if ENABLE(BLOB)
     case FormDataElement::encodedBlob:
-        serializer->putString(element.m_url.string());
+        coder.putString(element.m_url.string());
         return;
 #endif
     }
@@ -89,99 +89,99 @@ static void serializeFormDataElement(InputSerializer* serializer, const FormData
 
 // This is based on FormData::encodeForBackForward, except we use key/value objects instead
 // of a byte array.
-static void serializeFormData(InputSerializer* serializer, FormData* data)
+static void serializeFormData(InputCoder& coder, FormData* data)
 {
     // sometimes, there's no form data.
     if (!data)
         return;
 
-    serializer->putBoolean("alwaysStream", data->alwaysStream());
-    serializer->putInt64("identifier", data->identifier());
+    coder.putBoolean("alwaysStream", data->alwaysStream());
+    coder.putInt64("identifier", data->identifier());
 
-    serializer->pushArray();
+    coder.pushArray();
     const Vector<char> bytes = data->boundary();
     for (size_t i = 0; i < bytes.size(); i++)
-        serializer->pushUInt32(bytes[i]);
-    serializer->popArrayAsProperty("boundary");
+        coder.pushUInt32(bytes[i]);
+    coder.popArrayAsProperty("boundary");
 
-    serializer->pushArray();
-    const Vector<FormDataElement> elems = data->elements(); 
+    coder.pushArray();
+    const Vector<FormDataElement> elems = data->elements();
     for (size_t i = 0; i < elems.size(); i++) {
-        serializer->pushObject();
-        serializeFormDataElement(serializer, elems[i]);
-        serializer->popObjectAsElement();
+        coder.pushObject();
+        serializeFormDataElement(coder, elems[i]);
+        coder.popObjectAsElement();
     }
-    serializer->popArrayAsProperty("elements");
+    coder.popArrayAsProperty("elements");
 }
 
-static void serializeResourceLoadTiming(InputSerializer* serializer, ResourceLoadTiming* data)
+static void serializeResourceLoadTiming(InputCoder& coder, ResourceLoadTiming* data)
 {
-    serializer->putDouble("requestTime", data->requestTime);
-    serializer->putInt("proxyStart", data->proxyStart);
-    serializer->putInt("proxyEnd", data->proxyEnd);
-    serializer->putInt("dnsStart", data->dnsStart);
-    serializer->putInt("dnsEnd", data->dnsEnd);
-    serializer->putInt("connectStart", data->connectStart);
-    serializer->putInt("connectEnd", data->connectEnd);
-    serializer->putInt("sendStart", data->sendStart);
-    serializer->putInt("sendEnd", data->sendEnd);
-    serializer->putInt("receiveHeadersEnd", data->receiveHeadersEnd);
-    serializer->putInt("sslStart", data->sslStart);
-    serializer->putInt("sslEnd", data->sslEnd);
+    coder.putDouble("requestTime", data->requestTime);
+    coder.putInt("proxyStart", data->proxyStart);
+    coder.putInt("proxyEnd", data->proxyEnd);
+    coder.putInt("dnsStart", data->dnsStart);
+    coder.putInt("dnsEnd", data->dnsEnd);
+    coder.putInt("connectStart", data->connectStart);
+    coder.putInt("connectEnd", data->connectEnd);
+    coder.putInt("sendStart", data->sendStart);
+    coder.putInt("sendEnd", data->sendEnd);
+    coder.putInt("receiveHeadersEnd", data->receiveHeadersEnd);
+    coder.putInt("sslStart", data->sslStart);
+    coder.putInt("sslEnd", data->sslEnd);
 }
 
-void serializeResourceError(InputSerializer* serializer, const ResourceError& error)
+void serializeResourceError(InputCoder& coder, const ResourceError& error)
 {
-    serializer->putString("domain", error.domain());
-    serializer->putInt("errorCode", error.errorCode());
-    serializer->putString("failingURL", error.failingURL());
-    serializer->putString("localizedDescription", error.localizedDescription());
+    coder.putString("domain", error.domain());
+    coder.putInt("errorCode", error.errorCode());
+    coder.putString("failingURL", error.failingURL());
+    coder.putString("localizedDescription", error.localizedDescription());
 }
 
-void serializeResourceRequest(InputSerializer* serializer, const ResourceRequest* request)
+void serializeResourceRequest(InputCoder& coder, const ResourceRequest* request)
 {
-    serializer->putString("url", request->url().string());
-    serializer->putInt("cachePolicy", request->cachePolicy());
-    serializer->putDouble("timeoutInterval", request->timeoutInterval());
-    serializer->putString("firstPartyForCookies", request->firstPartyForCookies().string());
-    serializer->putString("httpMethod", request->httpMethod());
+    coder.putString("url", request->url().string());
+    coder.putInt("cachePolicy", request->cachePolicy());
+    coder.putDouble("timeoutInterval", request->timeoutInterval());
+    coder.putString("firstPartyForCookies", request->firstPartyForCookies().string());
+    coder.putString("httpMethod", request->httpMethod());
 
-    serializer->pushObject();
-    serializeHTTPHeaderMap(serializer, request->httpHeaderFields());
-    serializer->popObjectAsProperty("httpHeaders");
+    coder.pushObject();
+    serializeHTTPHeaderMap(coder, request->httpHeaderFields());
+    coder.popObjectAsProperty("httpHeaders");
 
-    serializer->pushArray();
-    serializeStringVector(serializer, request->responseContentDispositionEncodingFallbackArray());
-    serializer->popArrayAsProperty("responseContentDispositionEncodingFallbackArray");
+    coder.pushArray();
+    serializeStringVector(coder, request->responseContentDispositionEncodingFallbackArray());
+    coder.popArrayAsProperty("responseContentDispositionEncodingFallbackArray");
 
-    serializer->pushObject();
-    serializeFormData(serializer, request->httpBody());
-    serializer->popObjectAsProperty("httpBody");
+    coder.pushObject();
+    serializeFormData(coder, request->httpBody());
+    coder.popObjectAsProperty("httpBody");
 
-    serializer->putBoolean("allowCookies", request->allowCookies());
-    serializer->putInt("loadPriority", request->priority());
+    coder.putBoolean("allowCookies", request->allowCookies());
+    coder.putInt("loadPriority", request->priority());
 }
 
-void serializeResourceResponse(InputSerializer* serializer, const ResourceResponse* response)
+void serializeResourceResponse(InputCoder& coder, const ResourceResponse* response)
 {
-    serializer->putString("url", response->url().string());
-    serializer->putString("mimeType", response->mimeType());
-    serializer->putDouble("expectedContentLength", response->expectedContentLength());
-    serializer->putString("textEncodingName", response->textEncodingName());
-    serializer->putString("suggestedFilename", response->suggestedFilename());
-    serializer->putInt("httpStatusCode", response->httpStatusCode());
-    serializer->putString("httpStatusText", response->httpStatusText());
+    coder.putString("url", response->url().string());
+    coder.putString("mimeType", response->mimeType());
+    coder.putDouble("expectedContentLength", response->expectedContentLength());
+    coder.putString("textEncodingName", response->textEncodingName());
+    coder.putString("suggestedFilename", response->suggestedFilename());
+    coder.putInt("httpStatusCode", response->httpStatusCode());
+    coder.putString("httpStatusText", response->httpStatusText());
 
-    serializer->pushObject();
-    serializeHTTPHeaderMap(serializer, response->httpHeaderFields());
-    serializer->popObjectAsProperty("httpHeaders");
+    coder.pushObject();
+    serializeHTTPHeaderMap(coder, response->httpHeaderFields());
+    coder.popObjectAsProperty("httpHeaders");
 
-    serializer->putDouble("lastModifiedDate", response->lastModifiedDate());
-    
+    coder.putDouble("lastModifiedDate", response->lastModifiedDate());
+
     if (ResourceLoadTiming* data = response->resourceLoadTiming()) {
-        serializer->pushObject();
-        serializeResourceLoadTiming(serializer, data);
-        serializer->popObjectAsProperty("loadTiming");
+        coder.pushObject();
+        serializeResourceLoadTiming(coder, data);
+        coder.popObjectAsProperty("loadTiming");
     }
 }
 

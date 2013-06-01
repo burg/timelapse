@@ -36,7 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "HandleMouseBase.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
     
@@ -61,7 +61,7 @@ public:
     {
         return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
     }
-    virtual void serialize(InputSerializer*) const OVERRIDE;
+    virtual void serialize(InputCoder&) const OVERRIDE;
 private:
     int m_frameIndex;
 };

@@ -57,7 +57,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(FocusSetFocused); }
-    virtual void serialize(WTF::InputSerializer*) const OVERRIDE;
+    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
 
 private:
     bool m_toState;

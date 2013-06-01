@@ -42,7 +42,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
@@ -100,11 +100,11 @@ String ScrollPage::toString() const
     return sb.toString();
 }
 
-void ScrollPage::serialize(InputSerializer* serializer) const
+void ScrollPage::serialize(InputCoder& coder) const
 {
-    serializer->putInt("scrollDirection", (m_isLogicalScroll) ? m_direction.normal : m_direction.logical);
-    serializer->putBoolean("isLogicalScroll", m_isLogicalScroll);
-    serializer->putInt("granularity", m_granularity);
+    coder.putInt("scrollDirection", (m_isLogicalScroll) ? m_direction.normal : m_direction.logical);
+    coder.putBoolean("isLogicalScroll", m_isLogicalScroll);
+    coder.putInt("granularity", m_granularity);
 }
 
 void ScrollPage::dispatch(ReplayController* controller,

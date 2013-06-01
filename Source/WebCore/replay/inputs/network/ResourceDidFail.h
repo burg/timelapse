@@ -36,7 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "ResourceError.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
     
@@ -58,7 +58,7 @@ namespace WebCore {
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(InputSerializer*) const OVERRIDE;
+        virtual void serialize(InputCoder&) const OVERRIDE;
         
     private:
         int m_id;
