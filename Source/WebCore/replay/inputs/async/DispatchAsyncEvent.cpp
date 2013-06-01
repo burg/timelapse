@@ -67,19 +67,19 @@ DispatchAsyncEvent::DispatchAsyncEvent(PassRefPtr<Event> event, PassRefPtr<Event
 {
     if (isSimpleEvent())
         return;
-        
+
     if (isPopstateEvent()) {
         PopStateEvent* ev = static_cast<PopStateEvent*>(event.get());
         m_historyState = ev->serializedState();
         return;
     }
-    
+
     if (isPageTransitionEvent()) {
         PageTransitionEvent* ev = static_cast<PageTransitionEvent*>(event.get());
         m_pageTransitionEventPersisted = ev->persisted();
         return;
      }
-    
+
     // we should have serialized the value in one of the cases above.
     ASSERT_NOT_REACHED();
 }
@@ -122,7 +122,7 @@ void DispatchAsyncEvent::serialize(InputSerializer* serializer) const
 {
     serializer->putString("eventType", m_event.type());
 
-    // FIXME: this hits an assertion inside CloneDeserializer. Are we using it wrong?
+    // TODO(Issue #276): this hits an assertion inside CloneDeserializer. Are we using it wrong?
     //if (isPopstateEvent())
     //    serializer->putString("historyState", m_historyState->toString());
 
@@ -149,7 +149,7 @@ PassRefPtr<Event> DispatchAsyncEvent::event(Page* page)
 
     if (isPageTransitionEvent())
         return PageTransitionEvent::create(m_event.type(), m_pageTransitionEventPersisted);
-    
+
     ASSERT_NOT_REACHED();
     return 0;
 }

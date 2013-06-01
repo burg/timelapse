@@ -58,7 +58,7 @@ static String wheelEventGranularityToString(PlatformWheelEventGranularity ty)
     }
 }
 
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
+#if PLATFORM(MAC)
 static String wheelEventPhaseToString(PlatformWheelEventPhase ty)
 {
     switch (ty) {
@@ -80,14 +80,14 @@ String HandleWheelEvent::toString() const
 {
     StringBuilder sb;
     sb.append("HandleWheelEvent(");
-    sb.append(makeString("pagePos=[", 
-                         String::number(m_platformEvent.position().x()), 
-                         ",", 
+    sb.append(makeString("pagePos=[",
+                         String::number(m_platformEvent.position().x()),
+                         ",",
                          String::number(m_platformEvent.position().y()),
                          "];"));
     sb.append(makeString(" globalPos=[",
                          String::number(m_platformEvent.globalPosition().x()),
-                         ",", 
+                         ",",
                          String::number(m_platformEvent.globalPosition().y()),
                          "];"));
 
@@ -118,7 +118,7 @@ String HandleWheelEvent::toString() const
 
     sb.append(makeString(" inverted from device: ", (m_platformEvent.directionInvertedFromDevice()) ? "true" : "false", ";"));
 
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
+#if PLATFORM(MAC)
     sb.append(makeString(" phase=", wheelEventPhaseToString(m_platformEvent.phase()), ";"));
     sb.append(makeString(" momentumPhase=", wheelEventPhaseToString(m_platformEvent.momentumPhase()), ";"));
     sb.append(makeString(" PreciseScrollDeltas=", (m_platformEvent.hasPreciseScrollingDeltas()) ? "true" : "false", ";"));
@@ -145,6 +145,7 @@ size_t HandleWheelEvent::memorySize() const
 
 void HandleWheelEvent::serialize(InputSerializer* serializer) const
 {
+    serializer->pushObject();
     serializer->putInt("positionX", m_platformEvent.position().x());
     serializer->putInt("positionY", m_platformEvent.position().y());
     serializer->putInt("globalPositionX", m_platformEvent.globalPosition().x());
@@ -160,16 +161,15 @@ void HandleWheelEvent::serialize(InputSerializer* serializer) const
     serializer->putInt("granularity", m_platformEvent.granularity());
     serializer->putBoolean("directionInvertedFromDevice", m_platformEvent.directionInvertedFromDevice());
     serializer->putDouble("timestamp", m_platformEvent.timestamp());
-#if PLATFORM(MAC) || PLATFORM(CHROMIUM)
+#if PLATFORM(MAC)
     serializer->putBoolean("hasPreciseScrollingDeltas", m_platformEvent.hasPreciseScrollingDeltas());
-#endif
-#if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
     serializer->putInt("phase", m_platformEvent.phase());
     serializer->putInt("momentumPhase", m_platformEvent.momentumPhase());
     serializer->putUnsigned("scrollCount", m_platformEvent.scrollCount());
     serializer->putFloat("unacceleratedScrollingDeltaX", m_platformEvent.unacceleratedScrollingDeltaX());
     serializer->putFloat("unacceleratedScrollingDeltaY", m_platformEvent.unacceleratedScrollingDeltaY());
 #endif
+    serializer->popObjectAsProperty("wheelEvent");
 }
 
 } // namespace WebCore

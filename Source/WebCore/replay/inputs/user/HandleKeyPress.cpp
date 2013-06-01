@@ -98,6 +98,7 @@ size_t HandleKeyPress::memorySize() const
 
 void HandleKeyPress::serialize(InputSerializer* serializer) const
 {
+    serializer->pushObject();
     serializer->putDouble("timestamp", m_platformEvent.timestamp());
     serializer->putInt("type", (int)m_platformEvent.type());
     serializer->putUnsigned("modifiers", m_platformEvent.modifiers());
@@ -110,6 +111,7 @@ void HandleKeyPress::serialize(InputSerializer* serializer) const
     serializer->putBoolean("autoRepeat", m_platformEvent.isAutoRepeat());
     serializer->putBoolean("keypad", m_platformEvent.isKeypad());
     serializer->putBoolean("systemKey", m_platformEvent.isSystemKey());
+    serializer->popObjectAsProperty("keyEvent");
 }
 
 void HandleKeyPress::dispatch(ReplayController* controller,

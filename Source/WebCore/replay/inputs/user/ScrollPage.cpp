@@ -47,28 +47,28 @@
 namespace WebCore {
 
 //TODO: move to ScrollTypes.h?
-String ScrollPage::scrollDirectionToString(ScrollDirection direction) 
+String ScrollPage::scrollDirectionToString(ScrollDirection direction)
 {
     switch (direction) {
     case ScrollUp:     return "Up";
     case ScrollDown:   return "Down";
     case ScrollLeft:   return "Left";
     case ScrollRight:  return "Right";
-    default: 
-        ASSERT_NOT_REACHED(); 
+    default:
+        ASSERT_NOT_REACHED();
         return String();
     }
 }
 
-String ScrollPage::logicalScrollDirectionToString(ScrollLogicalDirection direction) 
+String ScrollPage::logicalScrollDirectionToString(ScrollLogicalDirection direction)
 {
     switch (direction) {
     case ScrollBlockDirectionBackward:  return "BlockBackward";
     case ScrollBlockDirectionForward:   return "BlockForward";
     case ScrollInlineDirectionBackward: return "InlineBackward";
     case ScrollInlineDirectionForward:  return "InlineForward";
-    default: 
-        ASSERT_NOT_REACHED(); 
+    default:
+        ASSERT_NOT_REACHED();
         return String();
     }
 }
@@ -80,8 +80,8 @@ String ScrollPage::scrollGranularityToString(ScrollGranularity granularity)
     case ScrollByPage:     return "Page";
     case ScrollByDocument: return "Document";
     case ScrollByPixel:    return "Pixel";
-    default: 
-        ASSERT_NOT_REACHED(); 
+    default:
+        ASSERT_NOT_REACHED();
         return String();
     }
 }
@@ -102,10 +102,8 @@ String ScrollPage::toString() const
 
 void ScrollPage::serialize(InputSerializer* serializer) const
 {
-    if (m_isLogicalScroll)
-        serializer->putInt("scrollDirection", m_direction.normal);
-    else
-        serializer->putInt("scrollLogicalDirection", m_direction.logical);
+    serializer->putInt("scrollDirection", (m_isLogicalScroll) ? m_direction.normal : m_direction.logical);
+    serializer->putBoolean("isLogicalScroll", m_isLogicalScroll);
     serializer->putInt("granularity", m_granularity);
 }
 
@@ -114,7 +112,7 @@ void ScrollPage::dispatch(ReplayController* controller,
 {
     ASSERT(controller->page());
     ASSERT(sealed());
-    
+
     if (isLogicalScroll())
         controller->page()->userInputProxy()->scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
     else
