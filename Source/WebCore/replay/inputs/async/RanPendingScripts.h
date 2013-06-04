@@ -53,11 +53,12 @@ public:
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*);
     virtual bool isUserVisible() const OVERRIDE { return false; }
-    
+
     // NondeterministicInput API
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(RanPendingScripts); }
-    void serialize(WTF::InputCoder&) const OVERRIDE;
+
+    void serialize(InputEncoder&) const;
 
 private:
     int m_frameIndex;

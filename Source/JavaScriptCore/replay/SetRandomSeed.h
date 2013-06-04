@@ -43,21 +43,20 @@ namespace ReplayInputTypes {
 class SetRandomSeed : public NondeterministicInput {
 
 public:
-    SetRandomSeed(uint64_t);
+    JS_EXPORT_PRIVATE SetRandomSeed(uint64_t);
     virtual ~SetRandomSeed();
-    
+
     // NondeterministicInput API
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(SetRandomSeed); }
-    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
-    
+
     uint64_t randomSeed() const { return m_randomSeed; }
-    
+
 private:
     uint64_t m_randomSeed;
 };
 
-} //namespace JSC
+} // namespace JSC
 
 #endif // SetRandomSeed_h

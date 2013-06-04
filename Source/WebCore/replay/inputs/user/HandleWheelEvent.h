@@ -52,12 +52,12 @@ public:
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-    
+
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(WTF::InputCoder&) const OVERRIDE;
-    
+    void serialize(InputEncoder&) const;
+
     const PlatformWheelEvent& platformEvent() const { return m_platformEvent; }
 
 private:

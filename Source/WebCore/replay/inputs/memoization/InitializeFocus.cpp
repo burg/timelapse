@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -46,10 +46,10 @@ void InitializeFocus::dispatch(ReplayController* controller,
                                EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
-    
+
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
     PassRefPtr<Frame> framePtr(document->frame());
-    
+
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
     controller->page()->userInputProxy()->focusSetActive(m_active, true);
     controller->page()->userInputProxy()->focusSetFocused(m_focus, true);
@@ -64,13 +64,13 @@ String InitializeFocus::toString() const
                       "; frameIndex=", String::number(m_frameIndex), ")");
 }
 
-void InitializeFocus::serialize(InputCoder& coder) const
+void InitializeFocus::serialize(InputEncoder& encoder) const
 {
-    coder.putBoolean("active", m_active);
-    coder.putBoolean("focused", m_focus);
-    coder.putInt("frameIndex", m_frameIndex);
+    encoder.put("active", m_active);
+    encoder.put("focused", m_focus);
+    encoder.put("frameIndex", m_frameIndex);
 }
- 
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

@@ -35,6 +35,7 @@
 #include <wtf/StdLibExtras.h>
 
 #if ENABLE(TIMELAPSE)
+#include "DispatchEventBase.h"
 #include "ReplayInputTypes.h"
 #include "ReplayUtilities.h"
 #include "TimerCreated.h"
@@ -77,12 +78,13 @@ void InstrumentedDOMTimer::start(int timeout, bool singleShot)
     DOMTimer::start(timeout, singleShot);
     if (!scriptExecutionContext()->isDocument())
         return;
-    
+
     InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(scriptExecutionContext()));
     if (!it || !it->isCapturing())
         return;
-    
-    TimerCreated* input = new TimerCreated(m_timeoutId, static_cast<Document*>(scriptExecutionContext()));
+
+    int frameIndex = SerializedEventTarget::frameIndexFromDocument(static_cast<Document*>(scriptExecutionContext()));
+    TimerCreated* input = new TimerCreated(m_timeoutId, frameIndex);
     it->storeInput(adoptPtr(input));
 }
 
@@ -93,11 +95,11 @@ void DeterministicDOMTimer::start(int timeout, bool singleShot)
 {
     if (!scriptExecutionContext()->isDocument())
         return;
-    
+
     InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(scriptExecutionContext()));
     if (!it || !it->isReplaying())
         return;
-    
+
     NondeterministicInput* input = it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
     TimerCreated* castedInput = static_cast<TimerCreated*>(input);
     // error handling case: if fetch failed, schedule normally.
@@ -110,11 +112,11 @@ void DeterministicDOMTimer::start(int timeout, bool singleShot)
     ASSERT_UNUSED(document, castedInput->document(document->page()) == document);
     m_timeoutId = castedInput->timerId();
     m_shouldScheduleNormally = false;
-    
+
     DOMTimer::start(timeout, singleShot);
 }
 #endif
-    
+
 static inline bool shouldForwardUserGesture(int interval, int nestingLevel)
 {
     return UserGestureIndicator::processingUserGesture()
@@ -141,7 +143,7 @@ DOMTimer::~DOMTimer()
 void DOMTimer::start(int interval, bool singleShot)
 {
     m_originalInterval = interval;
-    
+
     if (m_shouldScheduleNormally) {
         // Keep asking for the next id until we're given one that we don't already have.
         do {

@@ -45,17 +45,20 @@ namespace ReplayInputTypes {
 } // namespace ReplayInputTypes
 
 #if PLATFORM(MAC)
+
+class InputEncoder;
+
 class InterpretedKeyCommands : public NondeterministicInput {
 
 public:
     InterpretedKeyCommands(Vector<KeypressCommand>&);
     virtual ~InterpretedKeyCommands();
-    
+
     // NondeterministicInput API
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(WTF::InputCoder&) const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
     const Vector<KeypressCommand>& commands() const { return m_commands; }
 

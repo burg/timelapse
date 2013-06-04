@@ -35,20 +35,23 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "ReplayInputTypes.h"
-#include <wtf/PassRefPtr.h>
+#include "InputCoder.h"
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
-    class ReplayController;
-    class Document;
-    
+class InputDecoder;
+class InputEncoder;
+class ReplayController;
+
 class TimerFired : public EventLoopInput {
 
 public:
-    TimerFired(int, Document*);
+    TimerFired(int timerId, int frameIndex);
     virtual ~TimerFired() {}
+
+    int timerId() const { return m_timerId; }
+    int frameIndex() const { return m_frameIndex; }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*);
@@ -56,11 +59,15 @@ public:
     // NondeterministicInput API
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(TimerFired); }
-    void serialize(WTF::InputCoder&) const OVERRIDE;
 
 private:
     int m_timerId;
     int m_frameIndex;
+};
+
+template<> struct InputCoder<TimerFired> {
+    static void encode(InputEncoder& encoder, const TimerFired& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<TimerFired>& input);
 };
 
 } //namespace WebCore

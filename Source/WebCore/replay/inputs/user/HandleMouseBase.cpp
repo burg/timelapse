@@ -40,14 +40,14 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
 String HandleMouseBase::toString() const
 {
     StringBuilder sb;
-    sb.append(makeString("HandleMouse", 
+    sb.append(makeString("HandleMouse",
                          mouseEventTypeToString(m_platformEvent.type()), "("));
     sb.append(makeString("pagePos=[", String::number(m_platformEvent.position().x()), ",", String::number(m_platformEvent.position().y()), "];"));
     sb.append(makeString(" globalPos=[", String::number(m_platformEvent.globalPosition().x()), ",", String::number(m_platformEvent.globalPosition().y()), "];"));
@@ -70,20 +70,20 @@ String HandleMouseBase::toString() const
     return sb.toString();
 }
 
-void HandleMouseBase::serializeMouseInfo(InputCoder& coder) const
+void HandleMouseBase::serializeMouseInfo(InputEncoder& encoder) const
 {
-    coder.putInt("positionX", m_platformEvent.position().x());
-    coder.putInt("positionY", m_platformEvent.position().y());
-    coder.putInt("globalPositionX", m_platformEvent.globalPosition().x());
-    coder.putInt("globalPositionY", m_platformEvent.globalPosition().y());
-    coder.putInt("mouseButton", m_platformEvent.button());
-    coder.putInt("type", m_platformEvent.type());
-    coder.putInt("clickCount", m_platformEvent.clickCount());
-    coder.putBoolean("shiftKey", m_platformEvent.shiftKey());
-    coder.putBoolean("ctrlKey", m_platformEvent.ctrlKey());
-    coder.putBoolean("altKey", m_platformEvent.altKey());
-    coder.putBoolean("metaKey", m_platformEvent.metaKey());
-    coder.putDouble("timestamp", m_platformEvent.timestamp());
+    encoder.put("positionX", m_platformEvent.position().x());
+    encoder.put("positionY", m_platformEvent.position().y());
+    encoder.put("globalPositionX", m_platformEvent.globalPosition().x());
+    encoder.put("globalPositionY", m_platformEvent.globalPosition().y());
+    encoder.put("mouseButton", (uint64_t)m_platformEvent.button());
+    encoder.put("type", (uint64_t)m_platformEvent.type());
+    encoder.put("clickCount", m_platformEvent.clickCount());
+    encoder.put("shiftKey", m_platformEvent.shiftKey());
+    encoder.put("ctrlKey", m_platformEvent.ctrlKey());
+    encoder.put("altKey", m_platformEvent.altKey());
+    encoder.put("metaKey", m_platformEvent.metaKey());
+    encoder.put("timestamp", m_platformEvent.timestamp());
 }
 
 String HandleMouseBase::mouseButtonToString(MouseButton button)
@@ -93,7 +93,7 @@ String HandleMouseBase::mouseButtonToString(MouseButton button)
     case LeftButton:     return "LeftButton";
     case MiddleButton:   return "MiddleButton";
     case RightButton:    return "RightButton";
-    default: 
+    default:
         ASSERT_NOT_REACHED();
         return String();
     }

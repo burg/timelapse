@@ -30,10 +30,9 @@
  */
 
 #include "config.h"
-
 #include "SetRandomSeed.h"
+
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
 
 namespace JSC {
 
@@ -46,14 +45,9 @@ SetRandomSeed::SetRandomSeed(uint64_t randomSeed)
     , m_randomSeed(randomSeed) {}
 
 SetRandomSeed::~SetRandomSeed() {}
-    
+
 String SetRandomSeed::toString() const {
     return makeString("SetRandomSeed(", String::number(m_randomSeed), ")");
-}
-
-void SetRandomSeed::serialize(InputCoder& coder) const
-{
-    coder.putString("randomSeed", String::number(m_randomSeed));
 }
 
 } //namespace JSC

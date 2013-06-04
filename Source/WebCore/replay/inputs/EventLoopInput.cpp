@@ -29,22 +29,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h" 
+#include "config.h"
 
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
 
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
-void EventLoopInput::serializeDispatchInfo(InputCoder& coder) const
+void EventLoopInput::serializeDispatchInfo(InputEncoder& encoder) const
 {
-    coder.putInt("dispatchCount", m_dispatchCount);
-    coder.putInt("domEventQuota", m_domEventQuota);
-    coder.putInt("markIndex", m_mark.index());
-    coder.putDouble("markTimestamp", m_mark.time());
+    encoder.put("dispatchCount", m_dispatchCount);
+    encoder.put("domEventQuota", m_domEventQuota);
+    encoder.put("markIndex", m_mark.index());
+    encoder.put("markTimestamp", m_mark.time());
 }
 
 } // namespace WebCore

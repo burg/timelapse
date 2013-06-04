@@ -33,7 +33,7 @@
 
 #include "InterpretedKeyCommands.h"
 #include <wtf/text/StringBuilder.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -74,17 +74,17 @@ size_t InterpretedKeyCommands::memorySize() const
     return size;
 }
 
-void InterpretedKeyCommands::serialize(InputCoder& coder) const
+void InterpretedKeyCommands::serialize(InputEncoder& encoder) const
 {
-    coder.pushArray();
+    encoder.pushArray();
     for (size_t i = 0; i < m_commands.size(); i++) {
-        coder.pushObject();
-        coder.putString("commandName", m_commands[i].commandName);
-        coder.putString("text", m_commands[i].text);
-        coder.popObjectAsElement();
+        encoder.pushObject();
+        encoder.put("commandName", m_commands[i].commandName);
+        encoder.put("text", m_commands[i].text);
+        encoder.popObjectAsElement();
     }
-    
-    coder.popArrayAsProperty("commands");
+
+    encoder.popArrayAsProperty("commands");
 }
 
 } //namespace WebCore

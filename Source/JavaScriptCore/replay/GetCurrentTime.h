@@ -43,17 +43,16 @@ namespace ReplayInputTypes {
 class GetCurrentTime : public NondeterministicInput {
 
 public:
-    GetCurrentTime(double);
+    JS_EXPORT_PRIVATE GetCurrentTime(double);
     virtual ~GetCurrentTime();
-    
+
     // NondeterministicInput API
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(GetCurrentTime); }
-    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
 
     double currentTime() const { return m_currentTime; }
-    
+
 private:
     double m_currentTime;
 };

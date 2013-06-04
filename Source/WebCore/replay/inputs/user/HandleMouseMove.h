@@ -50,13 +50,13 @@ public:
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-    
+
     // NondeterministicInput API
     virtual size_t memorySize() const OVERRIDE
     {
         return HandleMouseBase::memorySize() + (sizeof(HandleMouseMove) - sizeof(HandleMouseBase));
     }
-    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
  private:
     bool m_scrollbarTargeted;

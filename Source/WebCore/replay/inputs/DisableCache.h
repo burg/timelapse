@@ -36,11 +36,11 @@
 
 #include "EventLoopInput.h"
 #include "ReplayInputTypes.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
-class DisableCache : public EventLoopInput { 
+class DisableCache : public EventLoopInput {
 
 public:
     DisableCache()
@@ -52,7 +52,7 @@ public:
                           EventLoopInputDispatcher* dispatcher) OVERRIDE
     {
         ASSERT(sealed());
-        
+
         controller->cacheController()->disableCache();
         dispatcher->didDispatch(this);
     }
@@ -61,9 +61,10 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("DisableCache"); }
     virtual size_t memorySize() const OVERRIDE { return sizeof(DisableCache); }
-    virtual void serialize(InputCoder&) const OVERRIDE { }
+
+    void serialize(InputEncoder&) const { }
 };
- 
+
 
 } //namespace WebCore
 

@@ -43,7 +43,7 @@ namespace WebCore {
     class DocumentLoader;
     class SecurityOrigin;
 
-class NavigateToPage : public EventLoopInput { 
+class NavigateToPage : public EventLoopInput {
 
 public:
     NavigateToPage(PassRefPtr<SecurityOrigin>, const String& url, const String& referrer);
@@ -56,11 +56,11 @@ public:
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
-    
+
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(WTF::InputCoder&) const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
 private:
     RefPtr<SecurityOrigin> m_securityOrigin;

@@ -42,7 +42,7 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -91,13 +91,13 @@ size_t ResourceDidReceiveResponse::memorySize() const
     return sizeof(ResourceDidReceiveResponse) + m_response->memoryUsage();
 }
 
-void ResourceDidReceiveResponse::serialize(InputCoder& coder) const
+void ResourceDidReceiveResponse::serialize(InputEncoder& encoder) const
 {
-    coder.putInt("handleId", m_id);
+    encoder.put("handleId", m_id);
 
-    coder.pushObject();
-    serializeResourceResponse(coder, m_response.get());
-    coder.popObjectAsProperty("response");
+    encoder.pushObject();
+    serializeResourceResponse(encoder, m_response.get());
+    encoder.popObjectAsProperty("response");
 }
 
 } // namespace WebCore

@@ -36,7 +36,6 @@
 
 #include <wtf/CurrentTime.h>
 #include <wtf/PassRefPtr.h>
-#include <wtf/replay/InputCoder.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -46,6 +45,7 @@ namespace WebCore {
     class Event;
     class EventLoopInputDispatcher;
     class EventTarget;
+    class InputEncoder;
     class Node;
     class ResourceResponse;
 
@@ -102,14 +102,13 @@ public:
     // NondeterministicInput API
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
-    virtual void serialize(InputCoder&) const =0;
-    
+
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) =0;
-    
+
     virtual ReplayInputQueueType queue() const { return WTF::EventLoopInputQueue; }
     virtual bool isUserVisible() const { return true; }
-    virtual void serializeDispatchInfo(InputCoder&) const OVERRIDE;
-    
+    virtual void serializeDispatchInfo(InputEncoder&) const;
+
     // mark, dispatch count, and quota are not always known at construction time. They can
     // only be set when the event is "unsealed".
 
@@ -118,7 +117,7 @@ public:
 
     void setMark(const PositionMark& mark) { ASSERT(!m_sealed); m_mark = mark; }
     PositionMark mark() const { return m_mark; }
-    
+
     void setDOMEventQuota(unsigned quota) { ASSERT(!m_sealed); m_domEventQuota = quota; }
     int DOMEventQuota() const { return m_domEventQuota; }
 
@@ -131,10 +130,10 @@ public:
         ASSERT(m_domEventQuota > -1);
         ASSERT(m_dispatchCount > -1);
         ASSERT(!m_sealed);
-        
+
         m_sealed = true;
     }
-    
+
     bool sealed() const { return m_sealed; }
 
 private:

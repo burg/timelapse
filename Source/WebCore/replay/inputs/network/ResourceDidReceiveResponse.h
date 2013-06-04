@@ -36,37 +36,37 @@
 
 #include "EventLoopInput.h"
 #include "ResourceResponse.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
-    
+
     namespace ReplayInputTypes {
         extern const char *ResourceDidReceiveResponse;
     }
-    
+
     class ReplayController;
-    
+
     class ResourceDidReceiveResponse : public EventLoopInput {
     public:
         ResourceDidReceiveResponse(int id, const ResourceResponse& response);
         virtual ~ResourceDidReceiveResponse() {}
-        
+
         int id() const { return m_id; }
         ResourceResponse* response() const { return m_response.get(); }
 
         // EventLoopInput API
         virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-        
+
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(InputCoder&) const OVERRIDE;
-        
+        void serialize(InputEncoder&) const;
+
     private:
         int m_id;
         OwnPtr<ResourceResponse> m_response;
     };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

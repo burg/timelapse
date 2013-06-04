@@ -40,7 +40,7 @@
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -52,9 +52,9 @@ String FocusSetFocused::toString() const
         return "FocusSetFocused(to=false)";
 }
 
-void FocusSetFocused::serialize(InputCoder& coder) const
+void FocusSetFocused::serialize(InputEncoder& encoder) const
 {
-    coder.putBoolean("toState", m_toState);
+    encoder.put("toState", m_toState);
 }
 
 void FocusSetFocused::dispatch(ReplayController* controller,
@@ -62,11 +62,11 @@ void FocusSetFocused::dispatch(ReplayController* controller,
 {
     ASSERT(controller->page());
     ASSERT(sealed());
-    
+
     controller->page()->userInputProxy()->focusSetFocused(m_toState, true);
     dispatcher->didDispatch(this);
 }
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

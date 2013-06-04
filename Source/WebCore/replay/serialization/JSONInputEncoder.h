@@ -29,14 +29,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JSONInputCoder_h
-#define JSONInputCoder_h
+#ifndef JSONInputEncoder_h
+#define JSONInputEncoder_h
 
 #if ENABLE(TIMELAPSE)
 
+#include "InputEncoder.h"
 #include "InspectorTypeBuilder.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/replay/InputCoder.h>
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
@@ -45,29 +45,34 @@ namespace WebCore {
     class InspectorValue;
     class ReplayRecording;
 
-    class JSONInputCoder : public InputCoder {
-        WTF_MAKE_NONCOPYABLE(JSONInputCoder);
+    class JSONInputEncoder : public InputEncoder {
+        WTF_MAKE_NONCOPYABLE(JSONInputEncoder);
     public:
-        JSONInputCoder();
-        virtual ~JSONInputCoder();
-
+        JSONInputEncoder();
+        virtual ~JSONInputEncoder();
+        PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
+    protected:
         // insert key-value pair into current object
-        virtual void putString(const String&, const String&) OVERRIDE;
         // insert string as element of current array
-        virtual void putString(const String&) OVERRIDE;
+        virtual void putString(const String&, const String&) OVERRIDE;
         virtual void putUnsigned(const String&, unsigned) OVERRIDE;
-        virtual void pushUInt32(uint32_t) OVERRIDE;
         virtual void putUInt32(const String&, uint32_t) OVERRIDE;
         virtual void putUInt64(const String&, uint64_t) OVERRIDE;
         virtual void putInt(const String&, int) OVERRIDE;
-        virtual void pushInt32(int32_t) OVERRIDE;
-        virtual void putInt32(const String&, int32_t) OVERRIDE;
-        virtual void putInt64(const String&, int64_t) OVERRIDE;
         virtual void putBoolean(const String&, bool) OVERRIDE;
         virtual void putDouble(const String&, double) OVERRIDE;
         virtual void putFloat(const String&, float) OVERRIDE;
+        virtual void putInt32(const String&, int32_t) OVERRIDE;
+        virtual void putInt64(const String&, int64_t) OVERRIDE;
+
+        virtual void appendInt32(int32_t) OVERRIDE;
+        virtual void appendString(const String&) OVERRIDE;
+        virtual void appendUInt32(uint32_t) OVERRIDE;
+
+    public:
         virtual void pushArray() OVERRIDE;
         virtual void pushObject() OVERRIDE;
+
         // pops and stores key-value pair with it as value
         virtual void popArrayAsProperty(const String&) OVERRIDE;
         virtual void popObjectAsProperty(const String&) OVERRIDE;
@@ -75,11 +80,11 @@ namespace WebCore {
         virtual void popArrayAsElement() OVERRIDE;
         virtual void popObjectAsElement() OVERRIDE;
         virtual void storeResourceBytes(int, const char* data, int length) OVERRIDE;
-
-        size_t memorySize();
         PassRefPtr<InspectorObject> popObject();
-        PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
+
     private:
+        size_t memorySize();
+
         RefPtr<InspectorObject> m_currentObject;
         RefPtr<InspectorArray> m_currentArray;
         Vector<RefPtr<InspectorValue> > m_stack;
@@ -89,4 +94,4 @@ namespace WebCore {
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // JSONInputCoder_h
+#endif // JSONInputEncoder_h

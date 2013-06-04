@@ -35,37 +35,37 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
-    
+
     namespace ReplayInputTypes {
         extern const char *ResourceLoaderDestroyed;
     }
-    
+
     class ReplayController;
-    
+
     class ResourceLoaderDestroyed : public EventLoopInput {
     public:
         ResourceLoaderDestroyed(int id);
         virtual ~ResourceLoaderDestroyed() {};
-        
+
         int id() const { return m_id; }
-        
+
         // EventLoopInput API
         virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         virtual bool isUserVisible() const OVERRIDE { return false; }
-        
+
         // NondeterministicInput API
         virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(InputCoder&) const OVERRIDE;
-        
+        void serialize(InputEncoder&) const;
+
     private:
         int m_id;
     };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

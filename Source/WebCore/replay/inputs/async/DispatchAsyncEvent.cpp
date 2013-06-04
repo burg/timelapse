@@ -53,12 +53,9 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
-
-// TODO: for async events with more data than cancelable and bubbles flags,
-// consult ~/Desktop/old_DispatchKeyboardEvent.{cpp,h} to see how it was done before.
 
 DispatchAsyncEvent::DispatchAsyncEvent(PassRefPtr<Event> event, PassRefPtr<EventTarget> eventTarget)
     : DispatchEventBase(ReplayInputTypes::DispatchAsyncEvent)
@@ -118,16 +115,16 @@ size_t DispatchAsyncEvent::memorySize() const
     return size;
 }
 
-void DispatchAsyncEvent::serialize(InputCoder& coder) const
+void DispatchAsyncEvent::serialize(InputEncoder& encoder) const
 {
-    coder.putString("eventType", m_event.type());
+    encoder.put("eventType", m_event.type().string());
 
     // TODO(Issue #276): this hits an assertion inside CloneDeserializer. Are we using it wrong?
     //if (isPopstateEvent())
-    //    coder.putString("historyState", m_historyState->toString());
+    //    encoder.put("historyState", m_historyState->toString());
 
     if (isPageTransitionEvent())
-        coder.putBoolean("pageTransitionEventPersisted", m_pageTransitionEventPersisted);
+        encoder.put("pageTransitionEventPersisted", m_pageTransitionEventPersisted);
 }
 
 EventTarget* DispatchAsyncEvent::target(Page* page)

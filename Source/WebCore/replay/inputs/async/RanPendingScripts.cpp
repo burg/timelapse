@@ -42,7 +42,7 @@
 #include "ScriptRunner.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -56,9 +56,9 @@ String RanPendingScripts::toString() const
     return makeString("RanPendingScripts(", String::number(m_frameIndex), ")");
 }
 
-void RanPendingScripts::serialize(InputCoder& coder) const
+void RanPendingScripts::serialize(InputEncoder& encoder) const
 {
-    coder.putInt("frameIndex", m_frameIndex);
+    encoder.put("frameIndex", m_frameIndex);
 }
 
 void RanPendingScripts::dispatch(ReplayController* controller,

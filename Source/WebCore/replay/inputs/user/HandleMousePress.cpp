@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "Page.h"
 #include "UserInputProxy.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -52,9 +52,9 @@ void HandleMousePress::dispatch(ReplayController* controller,
     dispatcher->didDispatch(this);
 }
 
-void HandleMousePress::serialize(InputCoder& coder) const
+void HandleMousePress::serialize(InputEncoder& encoder) const
 {
-    HandleMouseBase::serializeMouseInfo(coder);
+    HandleMouseBase::serializeMouseInfo(encoder);
 }
 
 } // namespace WebCore

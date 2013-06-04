@@ -44,7 +44,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -81,10 +81,10 @@ String SendResizeEvent::toString() const
     return sb.toString();
 }
 
-void SendResizeEvent::serialize(InputCoder& coder) const
+void SendResizeEvent::serialize(InputEncoder& encoder) const
 {
-    coder.putInt("width", m_width);
-    coder.putInt("height", m_height);
+    encoder.put("width", m_width);
+    encoder.put("height", m_height);
 }
 
 } // namespace WebCore

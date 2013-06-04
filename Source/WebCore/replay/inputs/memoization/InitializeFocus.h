@@ -46,7 +46,7 @@ namespace WebCore {
 
     class ReplayController;
 
-class InitializeFocus : public EventLoopInput { 
+class InitializeFocus : public EventLoopInput {
 
 public:
     InitializeFocus(Page* page)
@@ -60,12 +60,12 @@ public:
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
-    
+
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeFocus); }
-    void serialize(WTF::InputCoder&) const OVERRIDE;
-  
+    void serialize(InputEncoder&) const;
+
 private:
     bool m_focus;
     bool m_active;

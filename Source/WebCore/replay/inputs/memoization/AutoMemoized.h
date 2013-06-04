@@ -38,9 +38,10 @@
 #include "SerializedScriptValue.h"
 #include <runtime/JSObject.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
+#include "InputDecoder.h"
 
-namespace JSC {
+namespace WebCore {
 
 template<typename T>
 class AutoMemoized : public NondeterministicInput {
@@ -51,7 +52,7 @@ public:
         , m_attribute(attribute)
         , m_result(result) {}
     virtual ~AutoMemoized() {}
-    
+
     const String& attributeName() const { return m_attribute; }
     T result() const { return m_result; }
     String resultString() const;
@@ -60,8 +61,7 @@ public:
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(InputCoder&) const OVERRIDE;
-    
+
 private:
     String m_attribute;
     T m_result;
@@ -83,60 +83,6 @@ public:
 private:
     ExceptionCode m_exceptionCode;
 };
-
-template<typename T> inline String AutoMemoized<T>::toString() const
-{
-    return makeString("AutoMemoized(attribute=", attributeName(), ";result=", resultString(), ")");
-}
-
-template<typename T> inline size_t AutoMemoized<T>::memorySize() const
-{
-    size_t size = sizeof(AutoMemoized);
-    size += m_attribute.impl()->cost();
-    return size;
-}
-
-template<typename T> inline void AutoMemoized<T>::serialize(InputCoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-}
-
-template<> inline void AutoMemoized<int>::serialize(InputCoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putInt("result", m_result);
-}
-
-template<> inline void AutoMemoized<unsigned>::serialize(InputCoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putUInt64("result", (uint64_t) m_result);
-}
-
-template<> inline void AutoMemoized<double>::serialize(InputCoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putDouble("result", m_result);
-}
-
-template<> inline void AutoMemoized<bool>::serialize(InputCoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putBoolean("result", m_result);
-}
-
-template<> inline void AutoMemoized<String>::serialize(InputCoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putString("result", m_result);
-}
-
-template<> inline void AutoMemoized<WebCore::SerializedScriptValue>::serialize(InputCoder& coder) const
-{
-    const String res = m_result.toString();
-    coder.putString("attribute", attributeName());
-    coder.putString("result", res);
-}
 
 template<typename T> inline String AutoMemoized<T>::resultString() const
 {
@@ -173,7 +119,85 @@ template<> inline String AutoMemoized<WebCore::SerializedScriptValue>::resultStr
     return String::String(m_result.toString());
 }
 
-} //namespace JSC
+template<typename T> struct InputCoder<AutoMemoized<T> > {
+    static void encode(InputEncoder& encoder, const AutoMemoized<T>& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<AutoMemoized<T> >& input);
+};
+
+template<typename T> inline String AutoMemoized<T>::toString() const
+{
+    return makeString("AutoMemoized(attribute=", attributeName(), ";result=", resultString(), ")");
+}
+
+template<typename T> inline size_t AutoMemoized<T>::memorySize() const
+{
+    size_t size = sizeof(AutoMemoized);
+    size += m_attribute.impl()->cost();
+    return size;
+}
+
+template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(InputEncoder& encoder, const AutoMemoized<T>& input)
+{
+    encoder.put("attribute", input.attributeName());
+    encoder.put("result", input.result());
+}
+
+template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(InputDecoder& decoder, OwnPtr<AutoMemoized<T> >& input)
+{
+    String attribute;
+    if (!decoder.get("attribute", attribute))
+        return false;
+
+    T result;
+    if (!decoder.get("result", result))
+        return false;
+
+    input = adoptRef(new AutoMemoized<T>(attribute, result));
+    return true;
+}
+
+// AOEU: encode/decode for exceptionCode version.
+
+/*
+template<> inline void AutoMemoized<int>::serialize(InputEncoder& coder) const
+{
+    coder.putString("attribute", attributeName());
+    coder.putInt("result", m_result);
+}
+
+template<> inline void AutoMemoized<unsigned>::serialize(InputEncoder& coder) const
+{
+    coder.putString("attribute", attributeName());
+    coder.putUInt64("result", (uint64_t) m_result);
+}
+
+template<> inline void AutoMemoized<double>::serialize(InputEncoder& coder) const
+{
+    coder.putString("attribute", attributeName());
+    coder.putDouble("result", m_result);
+}
+
+template<> inline void AutoMemoized<bool>::serialize(InputEncoder& coder) const
+{
+    coder.putString("attribute", attributeName());
+    coder.putBoolean("result", m_result);
+}
+
+template<> inline void AutoMemoized<String>::serialize(InputEncoder& coder) const
+{
+    coder.putString("attribute", attributeName());
+    coder.putString("result", m_result);
+}
+
+template<> inline void AutoMemoized<WebCore::SerializedScriptValue>::serialize(InputEncoder& coder) const
+{
+    const String res = m_result.toString();
+    coder.putString("attribute", attributeName());
+    coder.putString("result", res);
+}
+*/
+
+} //namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 

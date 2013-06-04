@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "ResourceRequest.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -48,7 +48,7 @@ class ResourceLoaderCreated : public NondeterministicInput {
 public:
     ResourceLoaderCreated(int id, const ResourceRequest&);
     virtual ~ResourceLoaderCreated();
-    
+
     int id() const { return m_id; }
     ResourceRequest* request() const { return m_request.get(); }
 
@@ -56,13 +56,13 @@ public:
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(InputCoder&) const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
 private:
     int m_id;
     OwnPtr<ResourceRequest> m_request;
 };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

@@ -35,21 +35,22 @@
 #if ENABLE(TIMELAPSE)
 
 #include "DispatchEventBase.h"
-#include "Document.h"
-#include "Page.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/replay/InputCoder.h>
 
 namespace WebCore {
 
+class Document;
+class Page;
+
 class TimerCreated : public NondeterministicInput {
 public:
-    TimerCreated(int timerId, Document* document)
+    TimerCreated(int timerId, int frameIndex)
     : NondeterministicInput(ReplayInputTypes::TimerCreated)
     , m_timerId(timerId)
-    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(document)) {}
+    , m_frameIndex(frameIndex) {}
     virtual ~TimerCreated() {}
 
     // NondeterministicInput API
@@ -59,18 +60,18 @@ public:
         return makeString("TimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
     }
     size_t memorySize() const OVERRIDE { return sizeof(TimerCreated); }
-    void serialize(InputCoder& coder) const OVERRIDE
-    {
-        coder.putInt("timerId", m_timerId);
-        coder.putInt("frameIndex", m_frameIndex);
-    }
-    
     int timerId() const { return m_timerId; }
+    int frameIndex() const { return m_frameIndex; }
     Document* document(Page* page) const { return SerializedEventTarget::documentFromFrameIndex(page, m_frameIndex); }
-    
+
 private:
     int m_timerId;
     int m_frameIndex;
+};
+
+template<> struct InputCoder<TimerCreated> {
+    static void encode(InputEncoder& encoder, const TimerCreated& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<TimerCreated>& input);
 };
 
 } //namespace WebCore

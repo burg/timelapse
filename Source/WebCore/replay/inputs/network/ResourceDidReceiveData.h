@@ -35,22 +35,22 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
-    
+
     namespace ReplayInputTypes {
         extern const char *ResourceDidReceiveData;
     }
-    
+
     class ReplayController;
-    
+
     class ResourceDidReceiveData : public EventLoopInput {
     public:
         ResourceDidReceiveData(int, const char* data, int length, int encodedLength);
         virtual ~ResourceDidReceiveData();
-        
+
         int id() const { return m_id; }
         const char* data() const { return m_buffer.data(); }
         int length() const { return m_buffer.size(); }
@@ -58,18 +58,18 @@ namespace WebCore {
 
         // EventLoopInput API
         virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-        
+
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(InputCoder&) const OVERRIDE;
-        
+        void serialize(InputEncoder&) const;
+
     private:
         int m_id;
         Vector<char, 0> m_buffer;
         int m_encodedLength;
     };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

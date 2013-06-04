@@ -30,35 +30,31 @@
  */
 
 #include "config.h"
+#include "TimerFired.h"
 
 #if ENABLE(TIMELAPSE)
 
-#include "TimerFired.h"
-
-#include "ReplayController.h"
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMTimer.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/replay/InputCoder.h>
+
 
 namespace WebCore {
 
-TimerFired::TimerFired(int timerId, Document* document)
+TimerFired::TimerFired(int timerId, int frameIndex)
 : EventLoopInput(ReplayInputTypes::TimerFired)
 , m_timerId(timerId)
-, m_frameIndex(SerializedEventTarget::frameIndexFromDocument(document)) {}
+, m_frameIndex(frameIndex) {}
 
 String TimerFired::toString() const
 {
     return makeString("TimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
-}
-
-void TimerFired::serialize(InputCoder& coder) const
-{
-    coder.putInt("timerId", m_timerId);
-    coder.putInt("frameIndex", m_frameIndex);
 }
 
 void TimerFired::dispatch(ReplayController* controller,
@@ -75,8 +71,28 @@ void TimerFired::dispatch(ReplayController* controller,
         LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find and fire timer %d/%d.\n",
                   "[ReplayController]", m_frameIndex, m_timerId);
     }
-    
+
     dispatcher->didDispatch(this);
+}
+
+void InputCoder<TimerFired>::encode(InputEncoder& encoder, const TimerFired& input)
+{
+    encoder.put("timerId", input.timerId());
+    encoder.put("frameIndex", input.frameIndex());
+}
+
+bool InputCoder<TimerFired>::decode(InputDecoder& decoder, OwnPtr<TimerFired>& input)
+{
+    int timerId;
+    if (!decoder.get("timerId", timerId))
+        return false;
+
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new TimerFired(timerId, frameIndex));
+    return true;
 }
 
 } // namespace WebCore

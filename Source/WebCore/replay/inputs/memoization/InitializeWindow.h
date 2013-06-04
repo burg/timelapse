@@ -45,7 +45,7 @@ namespace WebCore {
 
     class ReplayController;
 
-class InitializeWindow : public EventLoopInput { 
+class InitializeWindow : public EventLoopInput {
 
 public:
     InitializeWindow(Page* page)
@@ -58,12 +58,13 @@ public:
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
-    
+
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
-    void serialize(WTF::InputCoder&) const OVERRIDE;
-  
+
+    void serialize(InputEncoder&) const;
+
 private:
     int m_width;
     int m_height;

@@ -861,7 +861,7 @@
 		C2FC9BD316644DFB00810D33 /* CopiedBlockInlines.h in Headers */ = {isa = PBXBuildFile; fileRef = C2FC9BD216644DFB00810D33 /* CopiedBlockInlines.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C2FE18A416BAEC4000AF3061 /* StructureRareData.h in Headers */ = {isa = PBXBuildFile; fileRef = C2FE18A316BAEC4000AF3061 /* StructureRareData.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481087317052FCC00AB4BAA /* GetCurrentTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481086B17052FCC00AB4BAA /* GetCurrentTime.cpp */; };
-		C481087417052FCC00AB4BAA /* GetCurrentTime.h in Headers */ = {isa = PBXBuildFile; fileRef = C481086C17052FCC00AB4BAA /* GetCurrentTime.h */; };
+		C481087417052FCC00AB4BAA /* GetCurrentTime.h in Headers */ = {isa = PBXBuildFile; fileRef = C481086C17052FCC00AB4BAA /* GetCurrentTime.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481087917052FCC00AB4BAA /* SetRandomSeed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481087117052FCC00AB4BAA /* SetRandomSeed.cpp */; };
 		C481087A17052FCC00AB4BAA /* SetRandomSeed.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087217052FCC00AB4BAA /* SetRandomSeed.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		DDF7ABD411F60ED200108E36 /* GCActivityCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = DDF7ABD211F60ED200108E36 /* GCActivityCallback.h */; settings = {ATTRIBUTES = (Private, ); }; };

@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2013 Brian Burg.
+ *  Copyright (C) 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,33 +30,43 @@
  */
 
 #include "config.h"
+#include "JavaScriptCoreInputCoders.h"
 
-#if ENABLE(TIMELAPSE)
-
-#include "HandleMouseRelease.h"
-
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
+#include "InputDecoder.h"
 #include "InputEncoder.h"
+#include <replay/GetCurrentTime.h>
+#include <replay/SetRandomSeed.h>
 
 namespace WebCore {
 
-void HandleMouseRelease::dispatch(ReplayController* controller,
-                                  EventLoopInputDispatcher* dispatcher)
+void InputCoder<JSC::GetCurrentTime>::encode(InputEncoder& encoder, const JSC::GetCurrentTime& input)
 {
-    ASSERT(controller->page());
-    ASSERT(sealed());
-
-    controller->page()->userInputProxy()->handleMouseReleaseEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
+    encoder.put("currentTime", input.currentTime());
 }
 
-void HandleMouseRelease::serialize(InputEncoder& encoder) const
+bool InputCoder<JSC::GetCurrentTime>::decode(InputDecoder& decoder, OwnPtr<JSC::GetCurrentTime>& input)
 {
-    HandleMouseBase::serializeMouseInfo(encoder);
+    double currentTime;
+    if (!decoder.get("currentTime", currentTime))
+        return false;
+
+    input = adoptPtr(new JSC::GetCurrentTime(currentTime));
+    return true;
 }
 
-} // namespace WebCore
+void InputCoder<JSC::SetRandomSeed>::encode(InputEncoder& encoder, const JSC::SetRandomSeed& input)
+{
+    encoder.put("randomSeed", input.randomSeed());
+}
 
-#endif // ENABLE(TIMELAPSE)
+bool InputCoder<JSC::SetRandomSeed>::decode(InputDecoder& decoder, OwnPtr<JSC::SetRandomSeed>& input)
+{
+    double randomSeed;
+    if (!decoder.get("randomSeed", randomSeed))
+        return false;
+
+    input = adoptPtr(new JSC::SetRandomSeed(randomSeed));
+    return true;
+}
+
+}; // namespace WebCore

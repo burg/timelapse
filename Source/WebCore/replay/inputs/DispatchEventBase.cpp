@@ -49,7 +49,7 @@
 #include "Page.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -57,14 +57,14 @@ int SerializedEventTarget::frameIndexFromDocument(Document* document)
 {
     ASSERT(document);
     ASSERT(document->frame());
-    
+
     int idx = 0;
     Frame* targetFrame = document->frame();
     Frame* mainFrame = targetFrame->tree()->top();
     for (Frame* frame = mainFrame; frame; idx++, frame = frame->tree()->traverseNext(mainFrame))
         if (frame == targetFrame)
             return idx;
-            
+
     ASSERT_NOT_REACHED();
     return 0;
 }
@@ -78,7 +78,7 @@ Document* SerializedEventTarget::documentFromFrameIndex(Page* page, int frameInd
     Frame* frame = mainFrame;
     int idx = 0;
     for (; idx < frameIndex && frame; idx++, frame = frame->tree()->traverseNext(mainFrame));
-        
+
     ASSERT(idx == frameIndex);
     ASSERT(frame && frame->document());
     return frame->document();
@@ -109,15 +109,15 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
         targetType = NONE;
         ASSERT_NOT_REACHED();
     }
-    
+
     return SerializedEventTarget(targetType, nodeIndex, frameIndex);
 }
 
-void SerializedEventTarget::serialize(InputCoder& coder) const
+void SerializedEventTarget::serialize(InputEncoder& encoder) const
 {
-    coder.putString("eventTarget_type", (m_targetType == NODE) ? "NODE" : "WINDOW");
-    coder.putInt("eventTarget_nodeIndex", m_nodeIndex);
-    coder.putInt("eventTarget_FrameIndex", m_frameIndex);
+    encoder.put("DET_type", String((m_targetType == NODE) ? "NODE" : "WINDOW"));
+    encoder.put("DET_nodeIndex", m_nodeIndex);
+    encoder.put("DET_FrameIndex", m_frameIndex);
 }
 
 EventTarget* SerializedEventTarget::deserialize(Page* page)
@@ -149,16 +149,16 @@ SerializedGenericEvent SerializedGenericEvent::serialize(Event* event)
                                  event->cancelable());
 }
 
-void SerializedGenericEvent::serialize(InputCoder& coder) const
+void SerializedGenericEvent::serialize(InputEncoder& encoder) const
 {
-    coder.putString("event_name", deserializeEventName(m_name));
-    coder.putBoolean("event_canBubble", m_canBubble);
-    coder.putBoolean("event_cancelable", m_cancelable);
+    encoder.put("DE_name", deserializeEventName(m_name).string());
+    encoder.put("DE_canBubble", m_canBubble);
+    encoder.put("DE_cancelable", m_cancelable);
 }
 
 PassRefPtr<Event> SerializedGenericEvent::deserialize(Page*)
 {
-    return Event::create(deserializeEventName(m_name), 
+    return Event::create(deserializeEventName(m_name),
                          m_canBubble,
                          m_cancelable);
 }

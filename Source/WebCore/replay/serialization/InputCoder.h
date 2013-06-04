@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,34 +29,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef InputCoder_h
+#define InputCoder_h
 
-#if ENABLE(TIMELAPSE)
-
-#include "HandleMouseRelease.h"
-
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
-#include "InputEncoder.h"
+#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
-void HandleMouseRelease::dispatch(ReplayController* controller,
-                                  EventLoopInputDispatcher* dispatcher)
-{
-    ASSERT(controller->page());
-    ASSERT(sealed());
+class InputDecoder;
+class InputEncoder;
 
-    controller->page()->userInputProxy()->handleMouseReleaseEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
-}
+template<typename T> struct InputCoder {
+    static void encode(InputEncoder& encoder, T& t)
+    {
+        t.encode(encoder);
+    }
 
-void HandleMouseRelease::serialize(InputEncoder& encoder) const
-{
-    HandleMouseBase::serializeMouseInfo(encoder);
-}
+    static bool decode(InputDecoder& decoder, OwnPtr<T>& t)
+    {
+        return T::decode(decoder, t);
+    }
+};
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // InputCoder_h

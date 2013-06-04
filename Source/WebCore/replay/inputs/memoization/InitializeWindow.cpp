@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -46,7 +46,7 @@ void InitializeWindow::dispatch(ReplayController* controller,
                                 EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(sealed());
-    
+
     controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
     dispatcher->didDispatch(this);
 }
@@ -56,12 +56,12 @@ String InitializeWindow::toString() const
     return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
-void InitializeWindow::serialize(InputCoder& coder) const
+void InitializeWindow::serialize(InputEncoder& encoder) const
 {
-    coder.putInt("width", m_width);
-    coder.putInt("height", m_height);
+    encoder.put("width", m_width);
+    encoder.put("height", m_height);
 }
- 
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

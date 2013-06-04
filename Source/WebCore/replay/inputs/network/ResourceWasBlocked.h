@@ -35,34 +35,34 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
-    
+
     namespace ReplayInputTypes {
         extern const char *ResourceWasBlocked;
     }
-    
+
     class ReplayController;
-    
+
     class ResourceWasBlocked : public EventLoopInput {
     public:
         ResourceWasBlocked(int);
         virtual ~ResourceWasBlocked() {}
-        
+
         // EventLoopInput API
         virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         virtual bool isUserVisible() const OVERRIDE { return false; }
-        
+
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(InputCoder&) const OVERRIDE;
-        
+        void serialize(InputEncoder&) const;
+
     private:
         int m_id;
     };
-    
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

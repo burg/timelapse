@@ -56,8 +56,8 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(WTF::InputCoder&) const OVERRIDE;
-    
+    void serialize(InputEncoder&) const;
+
     const PlatformKeyboardEvent& platformEvent() const { return m_platformEvent; }
 
 private:

@@ -50,14 +50,14 @@ public:
     virtual ~FocusSetActive() {}
 
     bool toState() const { return m_toState; }
-    
+
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-    
+
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(FocusSetActive); }
-    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
 private:
     bool m_toState;

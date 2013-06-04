@@ -37,7 +37,7 @@
 #include "EventLoopInput.h"
 #include "PlatformEvent.h"
 #include "PlatformMouseEvent.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -54,7 +54,7 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(HandleMouseBase); }
 
-    void serializeMouseInfo(InputCoder&) const;
+    void serializeMouseInfo(InputEncoder&) const;
     const PlatformMouseEvent& platformEvent() const { return m_platformEvent; }
     static String mouseButtonToString(MouseButton);
     static String mouseEventTypeToString(PlatformEvent::Type);

@@ -53,13 +53,13 @@ public:
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
-    
+
     // NondeterministicInput API
     virtual size_t memorySize() const OVERRIDE
     {
         return HandleMouseBase::memorySize();
     }
-    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
 private:
     int m_frameIndex;

@@ -43,7 +43,7 @@
 #include "HandleMouseRelease.h"
 #include "HandleWheelEvent.h"
 #include "InstrumentingAgents.h"
-#include "JSONInputCoder.h"
+#include "JSONInputEncoder.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
@@ -283,7 +283,7 @@ void InspectorRecordingsAgent::getSerializedRecording(ErrorString* errorString, 
     if (!recording)
         return;
 
-    JSONInputCoder coder;
+    JSONInputEncoder coder;
     serializedObject = coder.serialize(recording);
 }
 

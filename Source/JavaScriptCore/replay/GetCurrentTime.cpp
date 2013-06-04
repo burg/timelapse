@@ -30,11 +30,9 @@
  */
 
 #include "config.h"
-
 #include "GetCurrentTime.h"
 
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
 
 namespace JSC {
 
@@ -44,17 +42,12 @@ const char *GetCurrentTime = "GetCurrentTime";
 
 GetCurrentTime::GetCurrentTime(double currentTime)
     : NondeterministicInput(ReplayInputTypes::GetCurrentTime)
-      , m_currentTime(currentTime) {}
+    , m_currentTime(currentTime) {}
 
 GetCurrentTime::~GetCurrentTime() {}
-    
+
 String GetCurrentTime::toString() const {
     return makeString("GetCurrentTime(", String::number(m_currentTime), ")");
-}
-
-void GetCurrentTime::serialize(InputCoder& coder) const
-{
-    coder.putString("randomSeed", String::number(m_currentTime));
 }
 
 } //namespace JSC

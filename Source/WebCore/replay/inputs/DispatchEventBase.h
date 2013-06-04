@@ -60,11 +60,12 @@ public:
 
     static int frameIndexFromDocument(Document*);
     static Document* documentFromFrameIndex(Page*, int);
-    
+
     static SerializedEventTarget serialize(EventTarget*);
     EventTarget* deserialize(Page*);
-    void serialize(WTF::InputCoder&) const;
-    
+
+    void serialize(InputEncoder&) const;
+
     Document* document(Page*);
 private:
     SerializedEventTarget(TargetType type, int nodeIndex, int frameIndex)
@@ -90,10 +91,11 @@ const AtomicString& deserializeEventName(SerializedEventName);
 struct SerializedGenericEvent {
 public:
     static SerializedGenericEvent serialize(Event*);
-    void serialize(WTF::InputCoder&) const;
     PassRefPtr<Event> deserialize(Page*);
     SerializedEventName name() const { return m_name; }
     const AtomicString& type() const { return deserializeEventName(m_name); }
+
+    void serialize(InputEncoder&) const;
 private:
     SerializedGenericEvent(SerializedEventName name, bool canBubble, bool cancelable)
         : m_name(name)

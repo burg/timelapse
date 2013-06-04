@@ -40,7 +40,7 @@
 #include "Page.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -85,12 +85,12 @@ size_t ResourceDidReceiveData::memorySize() const
     return sizeof(ResourceDidReceiveData) + m_buffer.size();
 }
 
-void ResourceDidReceiveData::serialize(InputCoder& coder) const
+void ResourceDidReceiveData::serialize(InputEncoder& encoder) const
 {
-    coder.putInt("handleId", m_id);
-    coder.putInt("length", length());
-    coder.putInt("encodedLength", m_encodedLength);
-    coder.storeResourceBytes(m_id, data(), length());
+    encoder.put("handleId", m_id);
+    encoder.put("length", length());
+    encoder.put("encodedLength", m_encodedLength);
+    encoder.storeResourceBytes(m_id, data(), length());
 }
 
 } // namespace WebCore

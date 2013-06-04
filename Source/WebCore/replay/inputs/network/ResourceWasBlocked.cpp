@@ -40,7 +40,7 @@
 #include "Page.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -60,7 +60,7 @@ void ResourceWasBlocked::dispatch(ReplayController* controller,
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
-    
+
     dispatcher->didDispatch(this);
 }
 
@@ -74,9 +74,9 @@ size_t ResourceWasBlocked::memorySize() const
     return sizeof(ResourceWasBlocked);
 }
 
-void ResourceWasBlocked::serialize(InputCoder& coder) const
+void ResourceWasBlocked::serialize(InputEncoder& encoder) const
 {
-    coder.putInt("handleId", m_id);
+    encoder.put("handleId", m_id);
 }
 
 } // namespace WebCore

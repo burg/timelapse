@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012 Brian Burg.
+ *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,34 +29,34 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef GetCurrentTime_h
+#define GetCurrentTime_h
 
-#if ENABLE(TIMELAPSE)
+#include <wtf/replay/NondeterministicInput.h>
 
-#include "HandleMouseRelease.h"
+namespace JSC {
 
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
-#include "InputEncoder.h"
-
-namespace WebCore {
-
-void HandleMouseRelease::dispatch(ReplayController* controller,
-                                  EventLoopInputDispatcher* dispatcher)
-{
-    ASSERT(controller->page());
-    ASSERT(sealed());
-
-    controller->page()->userInputProxy()->handleMouseReleaseEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
+namespace ReplayInputTypes {
+    extern const char *GetCurrentTime;
 }
 
-void HandleMouseRelease::serialize(InputEncoder& encoder) const
-{
-    HandleMouseBase::serializeMouseInfo(encoder);
-}
+class GetCurrentTime : public NondeterministicInput {
 
-} // namespace WebCore
+public:
+    GetCurrentTime(double);
+    virtual ~GetCurrentTime();
 
-#endif // ENABLE(TIMELAPSE)
+    // NondeterministicInput API
+    virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE { return sizeof(GetCurrentTime); }
+
+    double currentTime() const { return m_currentTime; }
+
+private:
+    double m_currentTime;
+};
+
+} // namespace JSC
+
+#endif // GetCurrentTime_h

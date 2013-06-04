@@ -39,7 +39,7 @@
 
 namespace WebCore {
 
-class EnableCache : public EventLoopInput { 
+class EnableCache : public EventLoopInput {
 
 public:
     EnableCache()
@@ -51,7 +51,7 @@ public:
                           EventLoopInputDispatcher* dispatcher) OVERRIDE
     {
         ASSERT(sealed());
-    
+
         controller->cacheController()->enableCache();
         dispatcher->didDispatch(this);
     }
@@ -60,7 +60,8 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("EnableCache"); }
     virtual size_t memorySize() const OVERRIDE { return sizeof(EnableCache); }
-    virtual void serialize(InputCoder&) const OVERRIDE { }
+
+    void serialize(InputEncoder&) const { }
 };
 
 } //namespace WebCore

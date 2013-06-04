@@ -37,7 +37,7 @@
 
 #include "ReplayController.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -53,11 +53,11 @@ String PlaybackError::toString() const
     return makeString("PlaybackError(", m_errorMessage,")");
 }
 
-void PlaybackError::serialize(InputCoder& coder) const
+void PlaybackError::serialize(InputEncoder& encoder) const
 {
-    coder.putString("errorMessage", m_errorMessage);
+    encoder.put("errorMessage", m_errorMessage);
 }
- 
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

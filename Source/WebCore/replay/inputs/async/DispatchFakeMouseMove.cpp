@@ -41,7 +41,7 @@
 #include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -71,10 +71,10 @@ String DispatchFakeMouseMove::toString() const
     return makeString("DispatchFakeMouseMove(", String::number(m_frameIndex), "/_)");
 }
 
-void DispatchFakeMouseMove::serialize(InputCoder& coder) const
+void DispatchFakeMouseMove::serialize(InputEncoder& encoder) const
 {
-    HandleMouseBase::serializeMouseInfo(coder);
-    coder.putInt("frameIndex", m_frameIndex);
+    HandleMouseBase::serializeMouseInfo(encoder);
+    encoder.put("frameIndex", m_frameIndex);
 }
 
 } // namespace WebCore

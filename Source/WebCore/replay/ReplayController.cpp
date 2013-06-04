@@ -377,8 +377,10 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
 void ReplayController::willFireTimer(int timerId, Document* document)
 {
     InputIterator* it = getInputIteratorForDocument(document);
+    int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
+
     if (it && it->isCapturing())
-        m_activeIterator->storeInput(adoptPtr(new TimerFired(timerId, document)));
+        m_activeIterator->storeInput(adoptPtr(new TimerFired(timerId, frameIndex)));
 }
 
 //-- accessors

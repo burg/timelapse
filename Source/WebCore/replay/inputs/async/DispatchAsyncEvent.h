@@ -39,7 +39,7 @@
 #include <wtf/PassRefPtr.h>
 
 namespace WebCore {
-    
+
 class Event;
 class EventTarget;
 class Node;
@@ -60,7 +60,8 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(WTF::InputCoder&) const OVERRIDE;
+
+    void serialize(InputEncoder&) const;
 
     bool isSimpleEvent() const;
     bool isPopstateEvent() const;

@@ -35,21 +35,21 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include <wtf/replay/InputCoder.h>
+#include "InputEncoder.h"
 
 namespace WebCore {
-    
+
     namespace ReplayInputTypes {
         extern const char *ResourceDidSendData;
     }
-    
+
     class ReplayController;
-    
+
     class ResourceDidSendData : public EventLoopInput {
     public:
         ResourceDidSendData(int, unsigned long long, unsigned long long);
         virtual ~ResourceDidSendData() {}
-        
+
         int id() const { return m_id; }
         unsigned long long bytesSent() const { return m_bytesSent; }
         unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }
@@ -57,18 +57,18 @@ namespace WebCore {
         // EventLoopInput API
         virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
         virtual bool isUserVisible() const OVERRIDE { return false; }
-        
+
         // NondeterministicInput API
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(InputCoder&) const OVERRIDE;
-        
+        void serialize(InputEncoder&) const;
+
     private:
         int m_id;
         unsigned long long m_bytesSent;
         unsigned long long m_totalBytesToBeSent;
     };
-    
+
 } // namespace Webcore
 
 #endif // ENABLE(TIMELAPSE)

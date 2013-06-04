@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,31 +30,33 @@
  */
 
 #include "config.h"
+#include "TimerCreated.h"
+
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 
 #if ENABLE(TIMELAPSE)
 
-#include "HandleMouseRelease.h"
-
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
-#include "InputEncoder.h"
-
 namespace WebCore {
 
-void HandleMouseRelease::dispatch(ReplayController* controller,
-                                  EventLoopInputDispatcher* dispatcher)
+void InputCoder<TimerCreated>::encode(InputEncoder& encoder, const TimerCreated& input)
 {
-    ASSERT(controller->page());
-    ASSERT(sealed());
-
-    controller->page()->userInputProxy()->handleMouseReleaseEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
+    encoder.put("timerId", input.timerId());
+    encoder.put("frameIndex", input.frameIndex());
 }
 
-void HandleMouseRelease::serialize(InputEncoder& encoder) const
+bool InputCoder<TimerCreated>::decode(InputDecoder& decoder, OwnPtr<TimerCreated>& input)
 {
-    HandleMouseBase::serializeMouseInfo(encoder);
+    int timerId;
+    if (!decoder.get("timerId", timerId))
+        return false;
+
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new TimerCreated(timerId, frameIndex));
+    return true;
 }
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2013 Brian Burg.
+ *  Copyright (C) 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,34 +29,28 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef JavaScriptCoreInputCoders_h
+#define JavaScriptCoreInputCoders_h
 
-#if ENABLE(TIMELAPSE)
-
-#include "HandleMouseRelease.h"
-
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
+#include <replay/GetCurrentTime.h>
+#include <replay/SetRandomSeed.h>
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
+class InputEncoder;
+class InputDecoder;
 
-void HandleMouseRelease::dispatch(ReplayController* controller,
-                                  EventLoopInputDispatcher* dispatcher)
-{
-    ASSERT(controller->page());
-    ASSERT(sealed());
+template<> struct InputCoder<JSC::GetCurrentTime> {
+    static void encode(InputEncoder&, const JSC::GetCurrentTime&);
+    static bool decode(InputDecoder&, OwnPtr<JSC::GetCurrentTime>&);
+};
 
-    controller->page()->userInputProxy()->handleMouseReleaseEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
-}
+template<> struct InputCoder<JSC::SetRandomSeed> {
+    static void encode(InputEncoder&, const JSC::SetRandomSeed&);
+    static bool decode(InputDecoder&, OwnPtr<JSC::SetRandomSeed>&);
+};
 
-void HandleMouseRelease::serialize(InputEncoder& encoder) const
-{
-    HandleMouseBase::serializeMouseInfo(encoder);
-}
+} //namespace WebCore
 
-} // namespace WebCore
-
-#endif // ENABLE(TIMELAPSE)
+#endif // JavaScriptCoreInputCoders_h
