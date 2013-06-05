@@ -44,7 +44,9 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/replay/InputIterator.h>
 
-// includes for type-specific dispatch
+#include "DisableCache.h"
+#include "EnableCache.h"
+#include "SentinelActions.h"
 #include "TimerCreated.h"
 #include "TimerFired.h"
 
@@ -95,6 +97,23 @@ static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRec
 static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const NondeterministicInput* input)
 {
     const char* type = input->type();
+
+    if (type == ReplayInputTypes::BeginSentinel) {
+        InputCoder<BeginSentinel>::encode(encoder, *(static_cast<const BeginSentinel*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::DisableCache) {
+        InputCoder<DisableCache>::encode(encoder, *(static_cast<const DisableCache*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::EnableCache) {
+        InputCoder<EnableCache>::encode(encoder, *(static_cast<const EnableCache*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::EndSentinel) {
+        InputCoder<EndSentinel>::encode(encoder, *(static_cast<const EndSentinel*>(input)));
+        return true;
+    }
     if (type == ReplayInputTypes::TimerCreated) {
         InputCoder<TimerCreated>::encode(encoder, *(static_cast<const TimerCreated*>(input)));
         return true;

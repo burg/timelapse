@@ -32,10 +32,10 @@
 #include "config.h"
 #include "TimerCreated.h"
 
+#if ENABLE(TIMELAPSE)
+
 #include "InputDecoder.h"
 #include "InputEncoder.h"
-
-#if ENABLE(TIMELAPSE)
 
 namespace WebCore {
 

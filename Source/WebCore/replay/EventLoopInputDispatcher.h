@@ -71,28 +71,28 @@ class EventLoopInputDispatcher {
 public:
     ~EventLoopInputDispatcher();
     static PassOwnPtr<EventLoopInputDispatcher> create(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
-    
+
     // Main API
     void run();
     void pause();
     void setMode(ReplayMode mode) { m_mode = mode; }
     ReplayMode mode() const { return m_mode; }
     const PositionMark& currentMark() const { return m_currentMark; }
-    
+
     // External callbacks
     void incrementDomEventCounter();
     void maybeDispatchInput();
 
     // Post-dispatch callback
     void didDispatch(EventLoopInput*);
-    
+
 private:
     EventLoopInputDispatcher(Page*, ReplayInputIterator*,
                              EventLoopInputDispatcherClient*);
     void asyncDispatchInput();
     void syncDispatchInput();
     void timerFired(Timer<EventLoopInputDispatcher>*);
-    
+
     Page* m_page;
     EventLoopInputDispatcherClient* m_client;
     ReplayInputIterator* m_iterator;
@@ -106,7 +106,7 @@ private:
     EventLoopInput* m_runningInput;
     bool m_dispatching;
     bool m_running;
-    
+
     int m_domEventDispatchCount;
     // used during replay to check for DOM event dispatch count consistency.
     int m_domEventRemainingQuota;

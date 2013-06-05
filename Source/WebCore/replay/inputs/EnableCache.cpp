@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, 2013 Brian Burg.
- *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,47 +29,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef EnableCache_h
-#define EnableCache_h
+#include "config.h"
 
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
-#include "InputCoder.h"
-#include "ReplayInputTypes.h"
+#include "EnableCache.h"
+
+#include "CacheController.h"
+#include "EventLoopInputDispatcher.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
+#include "ReplayController.h"
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class EventLoopInputDispatcher;
-class InputDecoder;
-class InputEncoder;
-class ReplayController;
+void EnableCache::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
+{
+    ASSERT(sealed());
 
-class EnableCache : public EventLoopInput {
+    controller->cacheController()->enableCache();
+    dispatcher->didDispatch(this);
+}
 
-public:
-    EnableCache()
-    : EventLoopInput(ReplayInputTypes::EnableCache) {}
-    virtual ~EnableCache() {};
+void InputCoder<EnableCache>::encode(InputEncoder&, const EnableCache&)
+{
+}
 
-    // EventLoopInput API
-    virtual void dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
+bool InputCoder<EnableCache>::decode(InputDecoder&, OwnPtr<EnableCache>& input)
+{
+    input = adoptPtr(new EnableCache());
+    return true;
+}
 
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE { return String("EnableCache"); }
-    virtual size_t memorySize() const OVERRIDE { return sizeof(EnableCache); }
-
-    void serialize(InputEncoder&) const { }
-};
-
-template<> struct InputCoder<EnableCache> {
-    static void encode(InputEncoder& encoder, const EnableCache& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<EnableCache>& input);
-};
-
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
-
-#endif // EnableCache_h

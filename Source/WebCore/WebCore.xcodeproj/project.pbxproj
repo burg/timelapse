@@ -5156,6 +5156,8 @@
 		C41D35581712064900E40FB7 /* CaptureInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35541712064800E40FB7 /* CaptureInputIterator.h */; };
 		C41D35591712064900E40FB7 /* ReplayInputIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41D35551712064800E40FB7 /* ReplayInputIterator.cpp */; };
 		C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35561712064800E40FB7 /* ReplayInputIterator.h */; };
+		C42BB778175FAA41008BF639 /* DisableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB776175FAA41008BF639 /* DisableCache.cpp */; };
+		C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB777175FAA41008BF639 /* EnableCache.cpp */; };
 		C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */; };
 		C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E40991702201F00FB0F77 /* ReplayActionFactory.h */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
@@ -5255,6 +5257,7 @@
 		C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */; };
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4B991FC17122B750029CA63 /* InputStorage.cpp */; };
+		C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4ECA671175FAD98005490E0 /* SentinelActions.cpp */; };
 		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; };
 		C4F4CA44175AC86B00F71FE1 /* InputDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */; };
 		C4F4CA45175AC86B00F71FE1 /* InputEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA42175AC86B00F71FE1 /* InputEncoder.h */; };
@@ -12009,6 +12012,8 @@
 		C41D35541712064800E40FB7 /* CaptureInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CaptureInputIterator.h; path = replay/CaptureInputIterator.h; sourceTree = "<group>"; };
 		C41D35551712064800E40FB7 /* ReplayInputIterator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayInputIterator.cpp; path = replay/ReplayInputIterator.cpp; sourceTree = "<group>"; };
 		C41D35561712064800E40FB7 /* ReplayInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayInputIterator.h; path = replay/ReplayInputIterator.h; sourceTree = "<group>"; };
+		C42BB776175FAA41008BF639 /* DisableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DisableCache.cpp; sourceTree = "<group>"; };
+		C42BB777175FAA41008BF639 /* EnableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EnableCache.cpp; sourceTree = "<group>"; };
 		C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReplayActionFactory.cpp; sourceTree = "<group>"; };
 		C42E40991702201F00FB0F77 /* ReplayActionFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReplayActionFactory.h; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
@@ -12108,6 +12113,7 @@
 		C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EventLoopInputDispatcher.cpp; path = replay/EventLoopInputDispatcher.cpp; sourceTree = "<group>"; };
 		C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventLoopInputDispatcher.h; path = replay/EventLoopInputDispatcher.h; sourceTree = "<group>"; };
 		C4B991FC17122B750029CA63 /* InputStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InputStorage.cpp; path = replay/InputStorage.cpp; sourceTree = "<group>"; };
+		C4ECA671175FAD98005490E0 /* SentinelActions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SentinelActions.cpp; sourceTree = "<group>"; };
 		C4F4CA40175AC86B00F71FE1 /* InputCoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputCoder.h; sourceTree = "<group>"; };
 		C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputDecoder.h; sourceTree = "<group>"; };
 		C4F4CA42175AC86B00F71FE1 /* InputEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputEncoder.h; sourceTree = "<group>"; };
@@ -19725,12 +19731,15 @@
 				C481088D17052FF100AB4BAA /* memoization */,
 				C481089517052FF100AB4BAA /* network */,
 				C48108AD17052FF100AB4BAA /* user */,
+				C42BB776175FAA41008BF639 /* DisableCache.cpp */,
 				C481088917052FF100AB4BAA /* DisableCache.h */,
 				C481088A17052FF100AB4BAA /* DispatchEventBase.cpp */,
 				C481088B17052FF100AB4BAA /* DispatchEventBase.h */,
+				C42BB777175FAA41008BF639 /* EnableCache.cpp */,
 				C481088C17052FF100AB4BAA /* EnableCache.h */,
 				C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */,
 				C48EA712171776FA001A8BB4 /* EventLoopInput.h */,
+				C4ECA671175FAD98005490E0 /* SentinelActions.cpp */,
 				C48108AC17052FF100AB4BAA /* SentinelActions.h */,
 			);
 			name = inputs;
@@ -27577,6 +27586,9 @@
 				C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */,
 				C4F4CA4E175AF8D200F71FE1 /* JSONInputEncoder.cpp in Sources */,
 				C4F4CA52175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp in Sources */,
+				C42BB778175FAA41008BF639 /* DisableCache.cpp in Sources */,
+				C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */,
+				C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

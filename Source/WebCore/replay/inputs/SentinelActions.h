@@ -34,12 +34,16 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "ReplayController.h"
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
+
+class EventLoopInputDispatcher;
+class InputDecoder;
+class InputEncoder;
+class ReplayController;
 
 class BeginSentinel : public EventLoopInput {
 
@@ -49,17 +53,17 @@ public:
     virtual ~BeginSentinel() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE
-    {
-        ASSERT(sealed());
-        dispatcher->didDispatch(this);
-    }
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("Begin"); }
     size_t memorySize() const OVERRIDE { return sizeof(BeginSentinel); }
-    void serialize(InputEncoder&) const { }
+};
+
+template<> struct InputCoder<BeginSentinel> {
+    static void encode(InputEncoder& encoder, const BeginSentinel& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<BeginSentinel>& input);
 };
 
 class EndSentinel : public EventLoopInput {
@@ -70,17 +74,17 @@ public:
     virtual ~EndSentinel() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE
-    {
-        ASSERT(sealed());
-        dispatcher->didDispatch(this);
-    }
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("End"); }
     size_t memorySize() const OVERRIDE { return sizeof(EndSentinel); }
-    void serialize(InputEncoder&) const { }
+};
+
+template<> struct InputCoder<EndSentinel> {
+    static void encode(InputEncoder& encoder, const EndSentinel& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<EndSentinel>& input);
 };
 
 } //namespace WebCore

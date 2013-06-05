@@ -30,16 +30,15 @@
  */
 
 #include "config.h"
-
-#if ENABLE(TIMELAPSE)
-
 #include "EventLoopInputDispatcher.h"
 
+#if ENABLE(TIMELAPSE)
 #include "Document.h"
 #include "DocumentEventQueue.h"
 #include "EventLoopInput.h"
 #include "Frame.h"
 #include "Logging.h"
+#include "Page.h"
 #include "ReplayInputIterator.h"
 #include "SentinelActions.h"
 
@@ -69,19 +68,19 @@ EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterat
 EventLoopInputDispatcher::~EventLoopInputDispatcher()
 {
 }
- 
+
 PassOwnPtr<EventLoopInputDispatcher> EventLoopInputDispatcher::create(Page* page, ReplayInputIterator* it,
                                                    EventLoopInputDispatcherClient* client)
 {
     return adoptPtr(new EventLoopInputDispatcher(page, it, client));
 }
-    
+
 //-- replay API
 void EventLoopInputDispatcher::run()
 {
     if (m_running)
         return;
-    
+
     m_running = true;
 
     LOG(DeterministicReplay, "%-30s Running...\n", "[EventLoopInputDispatcher]");
@@ -92,7 +91,7 @@ void EventLoopInputDispatcher::pause()
 {
     if (!m_running)
         return;
-    
+
     m_running = false;
 
     LOG(DeterministicReplay, "%-30s Pausing...\n", "[EventLoopInputDispatcher]");
@@ -100,12 +99,12 @@ void EventLoopInputDispatcher::pause()
         m_timer.stop();
 }
 
-//-- external callbacks    
+//-- external callbacks
 void EventLoopInputDispatcher::incrementDomEventCounter()
 {
     m_domEventDispatchCount++;
     m_domEventRemainingQuota--;
-    
+
     if (m_domEventRemainingQuota < 0) {
         if (m_timer.isActive()) {
             //fire the timer early to try and inject the next event before the "willDispatchEvent" event happens.
@@ -136,7 +135,7 @@ void EventLoopInputDispatcher::didDispatch(EventLoopInput* input)
     m_runningInput = 0;
     m_dispatching = false;
     m_client->didDispatchInput(input);
-    
+
     // if the expected input never came, just forget we were expecting it.
     // it may have been consumed by another instrumenting agent.
     maybeDispatchInput();
@@ -162,25 +161,25 @@ void EventLoopInputDispatcher::maybeDispatchInput()
 
     ASSERT(m_waitingInput);
     m_currentMark = m_waitingInput->mark();
-    
+
     if (m_waitingInput->type() == ReplayInputTypes::EndSentinel) {
         m_client->didDispatchFinalInput();
         return;
     }
-    
+
     //if this event is overdue, then the replay has diverged (probably caused by user interaction)
     if (m_waitingInput->dispatchCounted() && m_waitingInput->dispatchCount() < m_domEventDispatchCount) {
         String errorMessage = String::format("Next input should be injected after %d retired DOM events, but %d DOM events have retired.",
-                                             m_waitingInput->dispatchCount(), 
+                                             m_waitingInput->dispatchCount(),
                                              m_domEventDispatchCount);
 
         m_client->playbackError(false, errorMessage);
     }
-    
+
     m_client->willDispatchInput(m_waitingInput);
     if (!m_running) // could be changed by client in the previous call, so re-check.
         return;
-    
+
     //if this event is next in line or overdue, promote it to "running", then fire immediately.
     if (!m_waitingInput->dispatchCounted() || m_waitingInput->dispatchCount() <= m_domEventDispatchCount) {
         m_runningInput = m_waitingInput;
@@ -234,13 +233,13 @@ void EventLoopInputDispatcher::asyncDispatchInput()
             waitInterval = (1.0 * 0.001);
 
         LOG(DeterministicReplay, "%-30s WAIT: %.3f ms", "[EventLoopInputDispatcher]", waitInterval*1000.0);
-        
+
         if (waitInterval > 1000.0) {
             LOG_ERROR("%-30s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
                       "[EventLoopInputDispatcher]");
             waitInterval = 1.0 * 0.001;
         }
-        
+
         m_timer.startOneShot(waitInterval);
         break;
     }
@@ -266,7 +265,7 @@ void EventLoopInputDispatcher::syncDispatchInput()
     m_dispatching = true;
     m_runningInput->dispatch(m_page->replayController(), this);
 }
-        
+
 }; // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

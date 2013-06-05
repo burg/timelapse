@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, 2013 Brian Burg.
- *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,47 +29,50 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef EnableCache_h
-#define EnableCache_h
+#include "config.h"
+#include "SentinelActions.h"
 
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
-#include "InputCoder.h"
-#include "ReplayInputTypes.h"
+#include "EventLoopInputDispatcher.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-class EventLoopInputDispatcher;
-class InputDecoder;
-class InputEncoder;
-class ReplayController;
+void BeginSentinel::dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher)
+{
+    ASSERT(sealed());
+    dispatcher->didDispatch(this);
+}
 
-class EnableCache : public EventLoopInput {
+void InputCoder<BeginSentinel>::encode(InputEncoder&, const BeginSentinel&)
+{
+}
 
-public:
-    EnableCache()
-    : EventLoopInput(ReplayInputTypes::EnableCache) {}
-    virtual ~EnableCache() {};
+bool InputCoder<BeginSentinel>::decode(InputDecoder&, OwnPtr<BeginSentinel>& input)
+{
+    input = adoptPtr(new BeginSentinel());
+    return true;
+}
 
-    // EventLoopInput API
-    virtual void dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
+void EndSentinel::dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher)
+{
+    ASSERT(sealed());
+    dispatcher->didDispatch(this);
+}
 
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE { return String("EnableCache"); }
-    virtual size_t memorySize() const OVERRIDE { return sizeof(EnableCache); }
+void InputCoder<EndSentinel>::encode(InputEncoder&, const EndSentinel&)
+{
+}
 
-    void serialize(InputEncoder&) const { }
-};
+bool InputCoder<EndSentinel>::decode(InputDecoder&, OwnPtr<EndSentinel>& input)
+{
+    input = adoptPtr(new EndSentinel());
+    return true;
+}
 
-template<> struct InputCoder<EnableCache> {
-    static void encode(InputEncoder& encoder, const EnableCache& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<EnableCache>& input);
-};
-
-} //namespace WebCore
+} // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
-
-#endif // EnableCache_h

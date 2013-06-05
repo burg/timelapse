@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, 2013 Brian Burg.
+ *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,10 +35,15 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
+
+class EventLoopInputDispatcher;
+class InputDecoder;
+class InputEncoder;
+class ReplayController;
 
 class DisableCache : public EventLoopInput {
 
@@ -48,14 +53,7 @@ public:
     virtual ~DisableCache() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController* controller,
-                          EventLoopInputDispatcher* dispatcher) OVERRIDE
-    {
-        ASSERT(sealed());
-
-        controller->cacheController()->disableCache();
-        dispatcher->didDispatch(this);
-    }
+    virtual void dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
@@ -65,6 +63,10 @@ public:
     void serialize(InputEncoder&) const { }
 };
 
+template<> struct InputCoder<DisableCache> {
+    static void encode(InputEncoder& encoder, const DisableCache& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<DisableCache>& input);
+};
 
 } //namespace WebCore
 
