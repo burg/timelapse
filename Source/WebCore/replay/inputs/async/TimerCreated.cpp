@@ -36,6 +36,7 @@
 
 #include "InputDecoder.h"
 #include "InputEncoder.h"
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
