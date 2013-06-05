@@ -56,9 +56,12 @@ public:
 
 protected:
     // virtual methods to be overridden
-    virtual bool getFloat(const String&, float&) =0;
-    virtual bool getDouble(const String&, double&) =0;
     virtual bool getString(const String&, String&) =0;
+    virtual bool getBoolean(const String&, bool&) =0;
+
+    virtual bool getDouble(const String&, double&) =0;
+    virtual bool getFloat(const String&, float&) =0;
+
     virtual bool getInt32(const String&, int32_t&) =0;
     virtual bool getInt64(const String&, int64_t&) =0;
     virtual bool getUInt32(const String&, uint32_t&) =0;
@@ -67,16 +70,20 @@ protected:
 
 
 // redirects to virtual methods
-template<> inline bool InputDecoder::get(const String& key, float& result) {
-    return getFloat(key, result);
+template<> inline bool InputDecoder::get(const String& key, String& result) {
+    return getString(key, result);
+}
+
+template<> inline bool InputDecoder::get(const String& key, bool& result) {
+    return getBoolean(key, result);
 }
 
 template<> inline bool InputDecoder::get(const String& key, double& result) {
     return getDouble(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, String& result) {
-    return getString(key, result);
+template<> inline bool InputDecoder::get(const String& key, float& result) {
+    return getFloat(key, result);
 }
 
 template<> inline bool InputDecoder::get(const String& key, int32_t& result) {

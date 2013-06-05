@@ -41,8 +41,6 @@
 namespace WebCore {
 
 class EventLoopInputDispatcher;
-class InputDecoder;
-class InputEncoder;
 class ReplayController;
 
 class EnableCache : public EventLoopInput {

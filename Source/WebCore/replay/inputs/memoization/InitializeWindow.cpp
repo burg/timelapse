@@ -35,10 +35,15 @@
 
 #include "InitializeWindow.h"
 
+#include "Document.h"
+#include "DOMWindow.h"
+#include "Frame.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
+#include "Page.h"
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -56,10 +61,31 @@ String InitializeWindow::toString() const
     return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
-void InitializeWindow::serialize(InputEncoder& encoder) const
+PassOwnPtr<InitializeWindow> InitializeWindow::createFromPage(Page* page)
 {
-    encoder.put("width", m_width);
-    encoder.put("height", m_height);
+    int width = page->mainFrame()->document()->domWindow()->outerWidth();
+    int height = page->mainFrame()->document()->domWindow()->outerHeight();
+    return adoptPtr(new InitializeWindow(width, height));
+}
+
+void InputCoder<InitializeWindow>::encode(InputEncoder& encoder, const InitializeWindow& input)
+{
+    encoder.put("width", input.width());
+    encoder.put("height", input.height());
+}
+
+bool InputCoder<InitializeWindow>::decode(InputDecoder& decoder, OwnPtr<InitializeWindow>& input)
+{
+    int width;
+    if (!decoder.get("width", width))
+        return false;
+
+    int height;
+    if (!decoder.get("height", height))
+        return false;
+
+    input = adoptPtr(new InitializeWindow(width, height));
+    return true;
 }
 
 } // namespace WebCore

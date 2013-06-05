@@ -46,6 +46,10 @@
 
 #include "DisableCache.h"
 #include "EnableCache.h"
+#include "FocusSetActive.h"
+#include "FocusSetFocused.h"
+#include "InitializeFocus.h"
+#include "InitializeWindow.h"
 #include "SentinelActions.h"
 #include "TimerCreated.h"
 #include "TimerFired.h"
@@ -112,6 +116,22 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == ReplayInputTypes::EndSentinel) {
         InputCoder<EndSentinel>::encode(encoder, *(static_cast<const EndSentinel*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::FocusSetActive) {
+        InputCoder<FocusSetActive>::encode(encoder, *(static_cast<const FocusSetActive*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::FocusSetFocused) {
+        InputCoder<FocusSetFocused>::encode(encoder, *(static_cast<const FocusSetFocused*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::InitializeFocus) {
+        InputCoder<InitializeFocus>::encode(encoder, *(static_cast<const InitializeFocus*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::InitializeWindow) {
+        InputCoder<InitializeWindow>::encode(encoder, *(static_cast<const InitializeWindow*>(input)));
         return true;
     }
     if (type == ReplayInputTypes::TimerCreated) {

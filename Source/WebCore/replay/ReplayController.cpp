@@ -193,8 +193,8 @@ void ReplayController::beginCapturing()
 
     m_cacheController->disableCache();
     m_activeIterator->storeInput(adoptPtr(new DisableCache()));
-    m_activeIterator->storeInput(adoptPtr(new InitializeFocus(m_page)));
-    m_activeIterator->storeInput(adoptPtr(new InitializeWindow(m_page)));
+    m_activeIterator->storeInput(InitializeFocus::createFromPage(m_page));
+    m_activeIterator->storeInput(InitializeWindow::createFromPage(m_page));
     // attempt to pull reasonable values here to save in the log, and
     // also to use for the initial refresh.
     Frame* mainFrame = m_page->mainFrame();

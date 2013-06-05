@@ -35,36 +35,46 @@
 
 #include "FocusSetFocused.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "ReplayController.h"
 #include "Page.h"
-#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
 String FocusSetFocused::toString() const
 {
     if (m_toState)
-        return "FocusSetFocused(to=true)";
+        return "FocusSetFocused(to=active)";
     else
-        return "FocusSetFocused(to=false)";
-}
-
-void FocusSetFocused::serialize(InputEncoder& encoder) const
-{
-    encoder.put("toState", m_toState);
+        return "FocusSetFocused(to=inactive)";
 }
 
 void FocusSetFocused::dispatch(ReplayController* controller,
-                               EventLoopInputDispatcher* dispatcher)
+                              EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());
 
     controller->page()->userInputProxy()->focusSetFocused(m_toState, true);
     dispatcher->didDispatch(this);
+}
+
+void InputCoder<FocusSetFocused>::encode(InputEncoder& encoder, const FocusSetFocused& input)
+{
+    encoder.put("toState", input.toState());
+}
+
+bool InputCoder<FocusSetFocused>::decode(InputDecoder& decoder, OwnPtr<FocusSetFocused>& input)
+{
+    bool toState;
+    if (!decoder.get("toState", toState))
+        return false;
+
+    input = adoptPtr(new FocusSetFocused(toState));
+    return true;
 }
 
 } // namespace WebCore

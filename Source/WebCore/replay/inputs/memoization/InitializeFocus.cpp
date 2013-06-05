@@ -35,10 +35,15 @@
 
 #include "InitializeFocus.h"
 
+#include "DispatchEventBase.h"
+#include "Document.h"
+#include "FocusController.h"
+#include "Frame.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -64,11 +69,37 @@ String InitializeFocus::toString() const
                       "; frameIndex=", String::number(m_frameIndex), ")");
 }
 
-void InitializeFocus::serialize(InputEncoder& encoder) const
+PassOwnPtr<InitializeFocus> InitializeFocus::createFromPage(Page* page)
 {
-    encoder.put("active", m_active);
-    encoder.put("focused", m_focus);
-    encoder.put("frameIndex", m_frameIndex);
+    int focusedFrameIndex = SerializedEventTarget::frameIndexFromDocument(page->focusController()->focusedFrame()->document());
+    bool isFocused = page->focusController()->isFocused();
+    bool isActive = page->focusController()->isActive();
+    return adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));
+}
+
+void InputCoder<InitializeFocus>::encode(InputEncoder& encoder, const InitializeFocus& input)
+{
+    encoder.put("active", input.isActive());
+    encoder.put("focused", input.isFocused());
+    encoder.put("frameIndex", input.frameIndex());
+}
+
+bool InputCoder<InitializeFocus>::decode(InputDecoder& decoder, OwnPtr<InitializeFocus>& input)
+{
+    bool isActive;
+    if (!decoder.get("active", isActive))
+        return false;
+
+    bool isFocused;
+    if (!decoder.get("focused", isFocused))
+        return false;
+
+    int focusedFrameIndex;
+    if (!decoder.get("frameIndex", focusedFrameIndex))
+        return false;
+
+    input = adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));
+    return true;
 }
 
 } // namespace WebCore

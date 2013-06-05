@@ -35,27 +35,24 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "DispatchEventBase.h"
-#include "Document.h"
-#include "FocusController.h"
-#include "Frame.h"
-#include "Page.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-    class ReplayController;
+class Page;
+class ReplayController;
 
 class InitializeFocus : public EventLoopInput {
 
 public:
-    InitializeFocus(Page* page)
+    InitializeFocus(int frameIndex, bool isFocused, bool isActive)
     : EventLoopInput(ReplayInputTypes::InitializeFocus)
-    , m_focus(page->focusController()->isFocused())
-    , m_active(page->focusController()->isActive())
-    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(page->focusController()->focusedFrame()->document())) {}
+    , m_focus(isFocused)
+    , m_active(isActive)
+    , m_frameIndex(frameIndex) {}
 
-    virtual ~InitializeFocus() {};
+    virtual ~InitializeFocus() {}
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
@@ -64,12 +61,21 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeFocus); }
-    void serialize(InputEncoder&) const;
+
+    bool isFocused() const { return m_focus; }
+    bool isActive() const { return m_active; }
+    int frameIndex() const { return m_frameIndex; }
+    static PassOwnPtr<InitializeFocus> createFromPage(Page*);
 
 private:
     bool m_focus;
     bool m_active;
     int m_frameIndex;
+};
+
+template<> struct InputCoder<InitializeFocus> {
+    static void encode(InputEncoder& encoder, const InitializeFocus& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<InitializeFocus>& input);
 };
 
 } //namespace WebCore

@@ -40,8 +40,6 @@
 
 namespace WebCore {
 
-class InputDecoder;
-class InputEncoder;
 class ReplayController;
 
 class TimerFired : public EventLoopInput {

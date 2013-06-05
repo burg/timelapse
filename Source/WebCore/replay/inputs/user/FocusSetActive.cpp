@@ -35,12 +35,12 @@
 
 #include "FocusSetActive.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "ReplayController.h"
 #include "Page.h"
-#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -52,11 +52,6 @@ String FocusSetActive::toString() const
         return "FocusSetActive(to=inactive)";
 }
 
-void FocusSetActive::serialize(InputEncoder& encoder) const
-{
-    encoder.put("toState", m_toState);
-}
-
 void FocusSetActive::dispatch(ReplayController* controller,
                               EventLoopInputDispatcher* dispatcher)
 {
@@ -65,6 +60,21 @@ void FocusSetActive::dispatch(ReplayController* controller,
 
     controller->page()->userInputProxy()->focusSetActive(m_toState, true);
     dispatcher->didDispatch(this);
+}
+
+void InputCoder<FocusSetActive>::encode(InputEncoder& encoder, const FocusSetActive& input)
+{
+    encoder.put("toState", input.toState());
+}
+
+bool InputCoder<FocusSetActive>::decode(InputDecoder& decoder, OwnPtr<FocusSetActive>& input)
+{
+    bool toState;
+    if (!decoder.get("toState", toState))
+        return false;
+
+    input = adoptPtr(new FocusSetActive(toState));
+    return true;
 }
 
 } // namespace WebCore

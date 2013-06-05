@@ -35,11 +35,12 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-    class ReplayController;
+class ReplayController;
 
 class FocusSetActive : public EventLoopInput {
 
@@ -57,10 +58,14 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(FocusSetActive); }
-    void serialize(InputEncoder&) const;
 
 private:
     bool m_toState;
+};
+
+template<> struct InputCoder<FocusSetActive> {
+    static void encode(InputEncoder& encoder, const FocusSetActive& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<FocusSetActive>& input);
 };
 
 } //namespace WebCore

@@ -158,45 +158,6 @@ template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(InputDecod
 
 // AOEU: encode/decode for exceptionCode version.
 
-/*
-template<> inline void AutoMemoized<int>::serialize(InputEncoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putInt("result", m_result);
-}
-
-template<> inline void AutoMemoized<unsigned>::serialize(InputEncoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putUInt64("result", (uint64_t) m_result);
-}
-
-template<> inline void AutoMemoized<double>::serialize(InputEncoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putDouble("result", m_result);
-}
-
-template<> inline void AutoMemoized<bool>::serialize(InputEncoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putBoolean("result", m_result);
-}
-
-template<> inline void AutoMemoized<String>::serialize(InputEncoder& coder) const
-{
-    coder.putString("attribute", attributeName());
-    coder.putString("result", m_result);
-}
-
-template<> inline void AutoMemoized<WebCore::SerializedScriptValue>::serialize(InputEncoder& coder) const
-{
-    const String res = m_result.toString();
-    coder.putString("attribute", attributeName());
-    coder.putString("result", res);
-}
-*/
-
 } //namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

@@ -34,24 +34,21 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "Document.h"
-#include "DOMWindow.h"
 #include "EventLoopInput.h"
-#include "Frame.h"
-#include "Page.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-    class ReplayController;
+class Page;
+class ReplayController;
 
 class InitializeWindow : public EventLoopInput {
-
 public:
-    InitializeWindow(Page* page)
+    InitializeWindow(int width, int height)
     : EventLoopInput(ReplayInputTypes::InitializeWindow)
-    , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
-    , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
+    , m_width(width)
+    , m_height(height) {}
 
     virtual ~InitializeWindow() {};
 
@@ -63,11 +60,17 @@ public:
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
 
-    void serialize(InputEncoder&) const;
-
+    int width() const { return m_width; }
+    int height() const { return m_height; }
+    static PassOwnPtr<InitializeWindow> createFromPage(Page*);
 private:
     int m_width;
     int m_height;
+};
+
+template<> struct InputCoder<InitializeWindow> {
+    static void encode(InputEncoder& encoder, const InitializeWindow& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<InitializeWindow>& input);
 };
 
 } //namespace WebCore
