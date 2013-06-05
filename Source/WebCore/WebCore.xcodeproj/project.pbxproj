@@ -5258,7 +5258,7 @@
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4B991FC17122B750029CA63 /* InputStorage.cpp */; };
 		C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4ECA671175FAD98005490E0 /* SentinelActions.cpp */; };
-		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; };
+		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C4F4CA44175AC86B00F71FE1 /* InputDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */; };
 		C4F4CA45175AC86B00F71FE1 /* InputEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA42175AC86B00F71FE1 /* InputEncoder.h */; };
 		C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F4CA4A175AF4DC00F71FE1 /* TimerCreated.cpp */; };

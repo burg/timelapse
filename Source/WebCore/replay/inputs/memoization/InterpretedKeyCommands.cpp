@@ -31,9 +31,10 @@
 
 #include "config.h"
 
-#include "InterpretedKeyCommands.h"
-#include <wtf/text/StringBuilder.h>
 #include "InputEncoder.h"
+#include "InterpretedKeyCommands.h"
+#include "KeyboardEvent.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -74,18 +75,25 @@ size_t InterpretedKeyCommands::memorySize() const
     return size;
 }
 
-void InterpretedKeyCommands::serialize(InputEncoder& encoder) const
+void InputCoder<InterpretedKeyCommands>::encode(InputEncoder& encoder, const InterpretedKeyCommands& input)
 {
+    const Vector<KeypressCommand>& commands = input.commands();
+
     encoder.pushArray();
-    for (size_t i = 0; i < m_commands.size(); i++) {
+    for (size_t i = 0; i < commands.size(); i++) {
         encoder.pushObject();
-        encoder.put("commandName", m_commands[i].commandName);
-        encoder.put("text", m_commands[i].text);
+        encoder.put("commandName", commands[i].commandName);
+        encoder.put("text", commands[i].text);
         encoder.popObjectAsElement();
     }
 
     encoder.popArrayAsProperty("commands");
 }
 
-} //namespace WebCore
+bool InputCoder<InterpretedKeyCommands>::decode(InputDecoder&, OwnPtr<InterpretedKeyCommands>&)
+{
+    // TODO: implement
+    return false;
+}
 
+} //namespace WebCore

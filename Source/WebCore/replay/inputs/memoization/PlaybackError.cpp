@@ -35,9 +35,10 @@
 
 #include "PlaybackError.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "ReplayController.h"
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -53,9 +54,19 @@ String PlaybackError::toString() const
     return makeString("PlaybackError(", m_errorMessage,")");
 }
 
-void PlaybackError::serialize(InputEncoder& encoder) const
+void InputCoder<PlaybackError>::encode(InputEncoder& encoder, const PlaybackError& input)
 {
-    encoder.put("errorMessage", m_errorMessage);
+    encoder.put("errorMessage", input.errorMessage());
+}
+
+bool InputCoder<PlaybackError>::decode(InputDecoder& decoder, OwnPtr<PlaybackError>& input)
+{
+    String errorMessage;
+    if (!decoder.get("errorMessage", errorMessage))
+        return false;
+
+    input = adoptPtr(new PlaybackError(errorMessage));
+    return true;
 }
 
 } // namespace WebCore

@@ -35,11 +35,12 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-    class ReplayController;
+class ReplayController;
 
 class PlaybackError : public EventLoopInput {
 
@@ -58,10 +59,14 @@ public:
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(PlaybackError); }
 
-    void serialize(InputEncoder&) const;
-
+    String errorMessage() const { return m_errorMessage; }
 private:
     String m_errorMessage;
+};
+
+template<> struct InputCoder<PlaybackError> {
+    static void encode(InputEncoder& encoder, const PlaybackError& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<PlaybackError>& input);
 };
 
 } //namespace WebCore

@@ -50,6 +50,8 @@
 #include "FocusSetFocused.h"
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
+#include "InterpretedKeyCommands.h"
+#include "PlaybackError.h"
 #include "SentinelActions.h"
 #include "TimerCreated.h"
 #include "TimerFired.h"
@@ -132,6 +134,16 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == ReplayInputTypes::InitializeWindow) {
         InputCoder<InitializeWindow>::encode(encoder, *(static_cast<const InitializeWindow*>(input)));
+        return true;
+    }
+#if PLATFORM(MAC)
+    if (type == ReplayInputTypes::InterpretedKeyCommands) {
+        InputCoder<InterpretedKeyCommands>::encode(encoder, *(static_cast<const InterpretedKeyCommands*>(input)));
+        return true;
+    }
+#endif // PLATFORM(MAC)
+    if (type == ReplayInputTypes::PlaybackError) {
+        InputCoder<PlaybackError>::encode(encoder, *(static_cast<const PlaybackError*>(input)));
         return true;
     }
     if (type == ReplayInputTypes::TimerCreated) {

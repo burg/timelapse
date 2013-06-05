@@ -33,8 +33,9 @@
 #ifndef InterpretedKeyCommands_h
 #define InterpretedKeyCommands_h
 
-#include "KeyboardEvent.h"
+#if ENABLE(TIMELAPSE) && PLATFORM(MAC)
 
+#include "InputCoder.h"
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
 
@@ -44,10 +45,7 @@ namespace ReplayInputTypes {
     extern const char* InterpretedKeyCommands;
 } // namespace ReplayInputTypes
 
-#if PLATFORM(MAC)
-
-class InputEncoder;
-
+struct KeypressCommand;
 class InterpretedKeyCommands : public NondeterministicInput {
 
 public:
@@ -65,7 +63,13 @@ public:
 private:
     Vector<KeypressCommand> m_commands;
 };
-#endif
+
+template<> struct InputCoder<InterpretedKeyCommands> {
+    static void encode(InputEncoder& encoder, const InterpretedKeyCommands& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<InterpretedKeyCommands>& input);
+};
+
+#endif // ENABLE(TIMELAPSE) && PLATFORM(MAC)
 
 } // namespace WebCore
 
