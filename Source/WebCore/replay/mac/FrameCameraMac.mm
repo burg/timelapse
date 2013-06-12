@@ -34,6 +34,9 @@
 #if ENABLE(TIMELAPSE)
 
 #include "FrameCamera.h"
+
+#include "Document.h"
+#include "DOMWindow.h"
 #include "Logging.h"
 #include <wtf/text/Base64.h>
 
@@ -45,8 +48,7 @@ String FrameCamera::dataUriImageFromFrame(Frame* frame)
     float frameWidth = (float) frame->document()->domWindow()->innerWidth();
     float frameHeight = (float) frame->document()->domWindow()->innerHeight();
 
-    NSRect imageSize = NSMakeRect(0.0, 0.0, frameWidth, frameHeight);
-    NSImage* image = frame->imageFromRect(imageSize);
+    NSImage* image = frame->nodeImage(frame->document()->firstChild()).get();
 
     if (frameWidth > maxSize || frameHeight > maxSize) {
         // scale image to maxSize x maxSize or smaller
