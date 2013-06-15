@@ -676,10 +676,9 @@ void ReplaceSelectionCommand::removeUnrenderedTextNodesAtEnds(InsertedNodes& ins
         removeNode(lastLeafInserted);
     }
 
-    // We don't have to make sure that firstNodeInserted isn't inside a select or script element, because
-    // it is a top level node in the fragment and the user can't insert into those elements.
+    // We don't have to make sure that firstNodeInserted isn't inside a select or script element
+    // because it is a top level node in the fragment and the user can't insert into those elements.
     Node* firstNodeInserted = insertedNodes.firstNodeInserted();
-    lastLeafInserted = insertedNodes.lastLeafInserted();
     if (firstNodeInserted && firstNodeInserted->isTextNode() && !nodeHasVisibleRenderText(toText(firstNodeInserted))) {
         insertedNodes.willRemoveNode(firstNodeInserted);
         removeNode(firstNodeInserted);
@@ -842,11 +841,11 @@ void ReplaceSelectionCommand::mergeEndIfNeeded()
 static Node* enclosingInline(Node* node)
 {
     while (ContainerNode* parent = node->parentNode()) {
-        if (parent->isBlockFlowElement() || parent->hasTagName(bodyTag))
+        if (isBlockFlowElement(parent) || parent->hasTagName(bodyTag))
             return node;
         // Stop if any previous sibling is a block.
         for (Node* sibling = node->previousSibling(); sibling; sibling = sibling->previousSibling()) {
-            if (sibling->isBlockFlowElement())
+            if (isBlockFlowElement(sibling))
                 return node;
         }
         node = parent;
@@ -1335,6 +1334,7 @@ void ReplaceSelectionCommand::completeHTMLReplacement(const Position &lastPositi
             end = lastPositionToSelect;
 
         mergeTextNodesAroundPosition(start, end);
+        mergeTextNodesAroundPosition(end, start);
     } else if (lastPositionToSelect.isNotNull())
         start = end = lastPositionToSelect;
     else

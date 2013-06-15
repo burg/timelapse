@@ -42,7 +42,6 @@
 #include "TimeRanges.h"
 #include <CoreMedia/CoreMedia.h>
 #include <wtf/MainThread.h>
-#include <wtf/UnusedParam.h>
 
 using namespace std;
 
@@ -78,6 +77,7 @@ MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(MediaPlayer* play
 #if !PLATFORM(WIN)
     , m_inbandTrackConfigurationPending(false)
 #endif
+    , m_seekCount(0)
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::MediaPlayerPrivateAVFoundation(%p)", this);
 }
@@ -275,6 +275,7 @@ void MediaPlayerPrivateAVFoundation::seek(float time)
     LOG(Media, "MediaPlayerPrivateAVFoundation::seek(%p) - seeking to %f", this, time);
     m_seekTo = time;
 
+    ++m_seekCount;
     seekToTime(time);
 }
 
@@ -593,6 +594,10 @@ void MediaPlayerPrivateAVFoundation::seekCompleted(bool finished)
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::seekCompleted(%p) - finished = %d", this, finished);
     UNUSED_PARAM(finished);
+
+    ASSERT(m_seekCount);
+    if (--m_seekCount)
+        return;
 
 #if !PLATFORM(WIN)
     if (currentTrack())

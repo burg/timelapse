@@ -674,15 +674,16 @@ Node* enclosingTableCell(const Position& p)
     return toElement(enclosingNodeOfType(p, isTableCell));
 }
 
-Node* enclosingAnchorElement(const Position& p)
+Element* enclosingAnchorElement(const Position& p)
 {
     if (p.isNull())
         return 0;
-    
-    Node* node = p.deprecatedNode();
-    while (node && !(node->isElementNode() && node->isLink()))
-        node = node->parentNode();
-    return node;
+
+    for (Node* node = p.deprecatedNode(); node; node = node->parentNode()) {
+        if (node->isElementNode() && node->isLink())
+            return toElement(node);
+    }
+    return 0;
 }
 
 HTMLElement* enclosingList(Node* node)
@@ -801,6 +802,55 @@ Node* highestAncestor(Node* node)
     return parent;
 }
 
+static Node* previousNodeConsideringAtomicNodes(const Node* node)
+{
+    if (node->previousSibling()) {
+        Node* n = node->previousSibling();
+        while (!isAtomicNode(n) && n->lastChild())
+            n = n->lastChild();
+        return n;
+    }
+    if (node->parentNode())
+        return node->parentNode();
+    return 0;
+}
+
+static Node* nextNodeConsideringAtomicNodes(const Node* node)
+{
+    if (!isAtomicNode(node) && node->firstChild())
+        return node->firstChild();
+    if (node->nextSibling())
+        return node->nextSibling();
+    const Node* n = node;
+    while (n && !n->nextSibling())
+        n = n->parentNode();
+    if (n)
+        return n->nextSibling();
+    return 0;
+}
+
+Node* previousLeafNode(const Node* node)
+{
+    Node* n = previousNodeConsideringAtomicNodes(node);
+    while (n) {
+        if (isAtomicNode(n))
+            return n;
+        n = previousNodeConsideringAtomicNodes(n);
+    }
+    return 0;
+}
+
+Node* nextLeafNode(const Node* node)
+{
+    Node* n = nextNodeConsideringAtomicNodes(node);
+    while (n) {
+        if (isAtomicNode(n))
+            return n;
+        n = nextNodeConsideringAtomicNodes(n);
+    }
+    return 0;
+}
+
 // FIXME: do not require renderer, so that this can be used within fragments, or rename to isRenderedTable()
 bool isTableElement(Node* n)
 {
@@ -855,7 +905,7 @@ bool isEmptyTableCell(const Node* node)
 
 PassRefPtr<HTMLElement> createDefaultParagraphElement(Document* document)
 {
-    switch (document->frame()->editor()->defaultParagraphSeparator()) {
+    switch (document->frame()->editor().defaultParagraphSeparator()) {
     case EditorParagraphSeparatorIsDiv:
         return HTMLDivElement::create(document);
     case EditorParagraphSeparatorIsP:
@@ -1205,6 +1255,28 @@ Position adjustedSelectionStartForStyleComputation(const VisibleSelection& selec
     // otherwise, make sure to be at the start of the first selected node,
     // instead of possibly at the end of the last node before the selection
     return visiblePosition.deepEquivalent().downstream();
+}
+
+// FIXME: Should this be deprecated like deprecatedEnclosingBlockFlowElement is?
+bool isBlockFlowElement(const Node* node)
+{
+    if (!node->isElementNode())
+        return false;
+    RenderObject* renderer = node->renderer();
+    return renderer && renderer->isBlockFlow();
+}
+
+Element* deprecatedEnclosingBlockFlowElement(Node* node)
+{
+    if (!node)
+        return 0;
+    if (isBlockFlowElement(node))
+        return toElement(node);
+    while ((node = node->parentNode())) {
+        if (isBlockFlowElement(node) || node->hasTagName(bodyTag))
+            return toElement(node);
+    }
+    return 0;
 }
 
 } // namespace WebCore

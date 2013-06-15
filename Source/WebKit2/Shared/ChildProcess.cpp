@@ -40,6 +40,11 @@ ChildProcess::ChildProcess()
     : m_terminationTimeout(0)
     , m_terminationCounter(0)
     , m_terminationTimer(RunLoop::main(), this, &ChildProcess::terminationTimerFired)
+#if PLATFORM(MAC)
+    , m_activeTaskCount(0)
+    , m_shouldSuspend(false)
+    , m_suspensionHysteresisTimer(RunLoop::main(), this, &ChildProcess::suspensionHysteresisTimerFired)
+#endif
 {
 }
 
@@ -127,6 +132,16 @@ void ChildProcess::enableTermination()
     }
 
     m_terminationTimer.startOneShot(m_terminationTimeout);
+}
+
+CoreIPC::Connection* ChildProcess::messageSenderConnection()
+{
+    return m_connection.get();
+}
+
+uint64_t ChildProcess::messageSenderDestinationID()
+{
+    return 0;
 }
 
 void ChildProcess::terminationTimerFired()

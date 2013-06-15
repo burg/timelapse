@@ -51,8 +51,8 @@ add_library(TestWebKitAPIInjectedBundle SHARED
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WillSendSubmitEvent_Bundle.cpp
 )
 
-target_link_libraries(TestWebKitAPIInjectedBundle ${WTF_LIBRARY_NAME})
-add_dependencies(TestWebKitAPIInjectedBundle ${WebKit2_LIBRARY_NAME} ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
+target_link_libraries(TestWebKitAPIInjectedBundle WTF)
+add_dependencies(TestWebKitAPIInjectedBundle WebKit2 ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
 
 get_property(TestWebKitAPIInjectedBundle_PATH TARGET TestWebKitAPIInjectedBundle PROPERTY LOCATION)
 
@@ -62,7 +62,7 @@ add_definitions(-DGTEST_LINKED_AS_SHARED_LIBRARY=1
 )
 
 set(test_wtf_LIBRARIES
-    ${WTF_LIBRARY_NAME}
+    WTF
     gtest
 )
 
@@ -76,9 +76,11 @@ add_executable(test_wtf
     ${TESTWEBKITAPI_DIR}/Tests/WTF/HashMap.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/IntegerToStringConversion.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/ListHashSet.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WTF/MD5.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/MathExtras.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/MetaAllocator.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/RedBlackTree.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WTF/SHA1.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/SaturatedArithmeticOperations.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/StringBuilder.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/StringHasher.cpp
@@ -98,8 +100,8 @@ set_tests_properties(test_wtf PROPERTIES TIMEOUT 60)
 
 set(test_webcore_LIBRARIES
     gtest
-    ${WTF_LIBRARY_NAME}
-    ${WebCore_LIBRARY_NAME}
+    WTF
+    WebCore
 )
 
 foreach (testName ${test_webcore_BINARIES})
@@ -117,13 +119,13 @@ add_library(TestWebKitAPIBase
     ${TESTWEBKITAPI_DIR}/TestsController.cpp
 )
 
-add_dependencies(TestWebKitAPIBase ${WebKit2_LIBRARY_NAME} ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
+add_dependencies(TestWebKitAPIBase WebKit2 ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
 
 set(test_webkit2_api_LIBRARIES
     TestWebKitAPIBase
-    ${WTF_LIBRARY_NAME}
-    ${JavaScriptCore_LIBRARY_NAME}
-    ${WebKit2_LIBRARY_NAME}
+    WTF
+    JavaScriptCore
+    WebKit2
     gtest
 )
 

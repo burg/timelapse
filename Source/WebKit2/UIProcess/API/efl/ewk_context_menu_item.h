@@ -144,19 +144,17 @@ typedef enum {
 EAPI Ewk_Context_Menu_Item *ewk_context_menu_item_new(Ewk_Context_Menu_Item_Type type, Ewk_Context_Menu_Item_Action action, const char *title, Eina_Bool checked, Eina_Bool enabled);
 
 /**
- * Creates a new item of the context menu.
+ * Creates a new sub menu type item of the context menu.
  *
- * @param type specifies a type of the item
  * @param action specifies a action of the item
  * @param title specifies a title of the item
- * @param checked @c EINA_TRUE if the item should be toggled or @c EINA_FALSE if not
  * @param enabled @c EINA_TRUE to enable the item or @c EINA_FALSE to disable
  * @param submenu specifies a submenu of the item
  * @return the pointer to the new item
  *
  * @see ewk_context_menu_item_new
  */
-EAPI Ewk_Context_Menu_Item *ewk_context_menu_item_new_with_submenu(Ewk_Context_Menu_Item_Type type, Ewk_Context_Menu_Item_Action action, const char *title, Eina_Bool checked, Eina_Bool enabled, Ewk_Context_Menu *submenu);
+EAPI Ewk_Context_Menu_Item *ewk_context_menu_item_new_with_submenu(Ewk_Context_Menu_Item_Action action, const char *title, Eina_Bool enabled, Ewk_Context_Menu *submenu);
 
 /**
  * Gets type of the item.
@@ -267,6 +265,15 @@ EAPI Eina_Bool ewk_context_menu_item_enabled_set(Ewk_Context_Menu_Item *o, Eina_
  * @return the pointer to parent menu on success or @c NULL on failure
  */
 EAPI Ewk_Context_Menu *ewk_context_menu_item_parent_menu_get(const Ewk_Context_Menu_Item *o);
+
+/**
+ * Gets the submenu for the item.
+ *
+ * @param o item to get the submenu
+ *
+ * @return the pointer to submenu on success or @c NULL on failure
+ */
+EAPI Ewk_Context_Menu *ewk_context_menu_item_submenu_get(const Ewk_Context_Menu_Item *o);
 
 #ifdef __cplusplus
 }

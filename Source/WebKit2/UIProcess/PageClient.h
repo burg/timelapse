@@ -112,6 +112,8 @@ public:
     virtual void didRelaunchProcess() = 0;
     virtual void pageClosed() = 0;
 
+    virtual void preferencesDidChange() = 0;
+
     virtual void toolTipChanged(const String&, const String&) = 0;
 
 #if USE(TILED_BACKING_STORE)
@@ -156,8 +158,9 @@ public:
     virtual bool interpretKeyEvent(const NativeWebKeyboardEvent&, Vector<WebCore::KeypressCommand>&) = 0;
     virtual bool executeSavedCommandBySelector(const String& selector) = 0;
     virtual void setDragImage(const WebCore::IntPoint& clientPosition, PassRefPtr<ShareableBitmap> dragImage, bool isLinkDrag) = 0;
-    virtual void updateTextInputState(bool updateSecureInputState) = 0;
-    virtual void resetTextInputState() = 0;
+    virtual void updateSecureInputState() = 0;
+    virtual void resetSecureInputState() = 0;
+    virtual void notifyInputContextAboutDiscardedComposition() = 0;
     virtual void makeFirstResponder() = 0;
     virtual void setPromisedData(const String& pasteboardName, PassRefPtr<WebCore::SharedBuffer> imageBuffer, const String& filename, const String& extension, const String& title,
                                  const String& url, const String& visibleUrl, PassRefPtr<WebCore::SharedBuffer> archiveBuffer) = 0;

@@ -37,8 +37,6 @@
     [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void forward();
     [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void go([Default=Undefined] optional long distance);
 
-    [Custom, ReplayNotImplemented] void pushState(any data, DOMString title, optional DOMString url)
-        raises(DOMException);
-    [Custom, ReplayNotImplemented] void replaceState(any data, DOMString title, optional DOMString url)
-        raises(DOMException);
+    [Custom, RaisesException, ReplayNotImplemented] void pushState(any data, DOMString title, optional DOMString url);
+    [Custom, RaisesException, ReplayNotImplemented] void replaceState(any data, DOMString title, optional DOMString url);
 };

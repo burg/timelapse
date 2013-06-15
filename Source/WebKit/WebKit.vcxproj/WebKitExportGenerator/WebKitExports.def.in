@@ -130,12 +130,14 @@ EXPORTS
         ?currentThread@WTF@@YAIXZ
         ?detachThread@WTF@@YAXI@Z
         ?destroy@StringImpl@WTF@@SAXPAV12@@Z
+        ?directoryName@WebCore@@YA?AVString@WTF@@ABV23@@Z
         ?initializeMainThread@WTF@@YAXXZ
         ?initializeThreading@WTF@@YAXXZ
         ?instrumentationForPage@WebCore@@YAPAVInstrumentingAgents@1@PAVPage@1@@Z
         ?isMainThread@WTF@@YA_NXZ
         ?lock@Mutex@WTF@@QAEXXZ
         ?lockAtomicallyInitializedStaticMutex@WTF@@YAXXZ
+        ?scriptedAnimationControllerSetThrottled@Document@WebCore@@UAEX_N@Z
         ?signal@ThreadCondition@WTF@@QAEXXZ
         ?timedWait@ThreadCondition@WTF@@QAE_NAAVMutex@2@N@Z
         ?tlsKeyCount@WTF@@YAAAJXZ
@@ -177,6 +179,9 @@ EXPORTS
         ?childItemWithTarget@HistoryItem@WebCore@@QBEPAV12@ABVString@WTF@@@Z
         ?create@Range@WebCore@@SA?AV?$PassRefPtr@VRange@WebCore@@@WTF@@V?$PassRefPtr@VDocument@WebCore@@@4@V?$PassRefPtr@VNode@WebCore@@@4@H1H@Z
         ?create@SerializedScriptValue@WebCore@@SA?AV?$PassRefPtr@VSerializedScriptValue@WebCore@@@WTF@@ABVString@4@@Z
+#if USE(CF)
+        ?createCFString@String@WTF@@QBE?AV?$RetainPtr@PBU__CFString@@@2@XZ
+#endif
         ?createShadowRoot@Element@WebCore@@QAE?AV?$PassRefPtr@VShadowRoot@WebCore@@@WTF@@AAH@Z
         ?createWrapper@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@PAVJSDOMGlobalObject@1@PAVNode@1@@Z
         ?deprecatedShadowAncestorNode@Node@WebCore@@QBEPAV12@XZ
@@ -221,6 +226,7 @@ EXPORTS
         ?setProperty@Settings@InspectorFrontendClientLocal@WebCore@@UAEXABVString@WTF@@0@Z
         ?windowObjectCleared@InspectorFrontendClientLocal@WebCore@@UAEXXZ
         ?setResourcesDataSizeLimitsFromInternals@InspectorController@WebCore@@QAEXHH@Z
+        ?pathByAppendingComponent@WebCore@@YA?AVString@WTF@@ABV23@0@Z
         ?profilerEnabled@InspectorController@WebCore@@QAE_NXZ
         ?setProfilerEnabled@InspectorController@WebCore@@QAEX_N@Z
         ?disconnectFrontend@InspectorController@WebCore@@QAEXXZ
@@ -236,6 +242,7 @@ EXPORTS
         ?firstChild@ComposedShadowTreeWalker@WebCore@@QAEXXZ
         ?lastChild@ComposedShadowTreeWalker@WebCore@@QAEXXZ
         ?length@StaticNodeList@WebCore@@UBEIXZ
+        ?localUserSpecificStorageDirectory@WebCore@@YA?AVString@WTF@@XZ
         ?namedItem@StaticNodeList@WebCore@@UBEPAVNode@2@ABVAtomicString@WTF@@@Z
         ?next@ComposedShadowTreeWalker@WebCore@@QAEXXZ
         ?previous@ComposedShadowTreeWalker@WebCore@@QAEXXZ
@@ -394,8 +401,6 @@ EXPORTS
         ?pseudoElement@Element@WebCore@@QBEPAVPseudoElement@2@W4PseudoId@2@@Z
         ?pauseTransitionAtTime@AnimationController@WebCore@@QAE_NPAVRenderObject@2@ABVString@WTF@@N@Z
         ?addFromLiteralData@AtomicString@WTF@@CA?AV?$PassRefPtr@VStringImpl@WTF@@@2@PBDI@Z
-        ?hasContentElement@ScopeContentDistribution@WebCore@@SA_NPBVShadowRoot@2@@Z
-        ?countElementShadow@ScopeContentDistribution@WebCore@@SAIPBVShadowRoot@2@@Z
         ?memoryCache@WebCore@@YAPAVMemoryCache@1@XZ
         ?resourceForURL@MemoryCache@WebCore@@QAEPAVCachedResource@2@ABVKURL@2@@Z
         ?nonFastScrollableRects@Page@WebCore@@QAE?AV?$PassRefPtr@VClientRectList@WebCore@@@WTF@@PBVFrame@2@@Z
@@ -434,6 +439,7 @@ EXPORTS
         ?toInt64@WebCore@@YA_JPAVExecState@JSC@@VJSValue@3@W4IntegerConversionConfiguration@1@@Z
         ?toUInt32EnforceRange@WebCore@@YAIPAVExecState@JSC@@VJSValue@3@@Z
         ?toUInt64@WebCore@@YA_KPAVExecState@JSC@@VJSValue@3@W4IntegerConversionConfiguration@1@@Z
+        ?getHeapSize@ScriptGCEvent@WebCore@@SAXAAUHeapInfo@2@@Z
 
 #if ENABLE(WORKERS)
         ?workerThreadCount@WorkerThread@WebCore@@SAIXZ

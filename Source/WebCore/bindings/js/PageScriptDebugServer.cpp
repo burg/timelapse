@@ -247,7 +247,7 @@ void PageScriptDebugServer::setJavaScriptPaused(Frame* frame, bool paused)
         document->suspendScriptedAnimationControllerCallbacks();
         document->suspendActiveDOMObjects(ActiveDOMObject::JavaScriptDebuggerPaused);
     } else {
-        document->resumeActiveDOMObjects();
+        document->resumeActiveDOMObjects(ActiveDOMObject::JavaScriptDebuggerPaused);
         document->resumeScriptedAnimationControllerCallbacks();
     }
 

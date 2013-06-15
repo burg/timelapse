@@ -241,6 +241,8 @@ void MediaControls::changedVolume()
 {
     if (m_volumeSlider)
         m_volumeSlider->setVolume(m_mediaController->volume());
+    if (m_panelMuteButton && m_panelMuteButton->renderer())
+        m_panelMuteButton->renderer()->repaint();
 }
 
 void MediaControls::changedClosedCaptionsVisibility()
@@ -271,7 +273,7 @@ void MediaControls::enteredFullscreen()
     m_fullScreenButton->setIsFullscreen(true);
 
     if (Page* page = document()->page())
-        page->chrome()->setCursorHiddenUntilMouseMoves(true);
+        page->chrome().setCursorHiddenUntilMouseMoves(true);
 
     startHideFullscreenControlsTimer();
 }
@@ -331,7 +333,7 @@ void MediaControls::hideFullscreenControlsTimerFired(Timer<MediaControls>*)
         return;
 
     if (Page* page = document()->page())
-        page->chrome()->setCursorHiddenUntilMouseMoves(true);
+        page->chrome().setCursorHiddenUntilMouseMoves(true);
 
     makeTransparent();
 }

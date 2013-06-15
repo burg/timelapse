@@ -1,8 +1,8 @@
 webkitgtk_gdom_built_sources += \
 	DerivedSources/webkitdom/WebKitDOMAttr.cpp \
 	DerivedSources/webkitdom/WebKitDOMAttrPrivate.h \
-	DerivedSources/webkitdom/WebKitDOMBarInfo.cpp \
-	DerivedSources/webkitdom/WebKitDOMBarInfoPrivate.h \
+	DerivedSources/webkitdom/WebKitDOMBarProp.cpp \
+	DerivedSources/webkitdom/WebKitDOMBarPropPrivate.h \
 	DerivedSources/webkitdom/WebKitDOMBatteryManager.cpp \
 	DerivedSources/webkitdom/WebKitDOMBatteryManagerPrivate.h \
 	DerivedSources/webkitdom/WebKitDOMBlob.cpp \
@@ -213,8 +213,6 @@ webkitgtk_gdom_built_sources += \
 	DerivedSources/webkitdom/WebKitDOMMediaListPrivate.h \
 	DerivedSources/webkitdom/WebKitDOMMediaQueryList.cpp \
 	DerivedSources/webkitdom/WebKitDOMMediaQueryListPrivate.h \
-	DerivedSources/webkitdom/WebKitDOMMemoryInfo.cpp \
-	DerivedSources/webkitdom/WebKitDOMMemoryInfoPrivate.h \
 	DerivedSources/webkitdom/WebKitDOMMessagePort.cpp \
 	DerivedSources/webkitdom/WebKitDOMMessagePortPrivate.h \
 	DerivedSources/webkitdom/WebKitDOMMicroDataItemValue.cpp \
@@ -397,7 +395,7 @@ webkitgtk_gdom_built_h_api += \
 	DerivedSources/webkitdom/WebKitDOMTimeRanges.h \
 	DerivedSources/webkitdom/WebKitDOMValidityState.h \
 	DerivedSources/webkitdom/WebKitDOMDOMApplicationCache.h \
-	DerivedSources/webkitdom/WebKitDOMBarInfo.h \
+	DerivedSources/webkitdom/WebKitDOMBarProp.h \
 	DerivedSources/webkitdom/WebKitDOMConsole.h \
 	DerivedSources/webkitdom/WebKitDOMCustom.h \
 	DerivedSources/webkitdom/WebKitDOMDOMWindowCSS.h \
@@ -406,7 +404,6 @@ webkitgtk_gdom_built_h_api += \
 	DerivedSources/webkitdom/WebKitDOMEventTarget.h \
 	DerivedSources/webkitdom/WebKitDOMHistory.h \
 	DerivedSources/webkitdom/WebKitDOMLocation.h \
-	DerivedSources/webkitdom/WebKitDOMMemoryInfo.h \
 	DerivedSources/webkitdom/WebKitDOMMicroDataItemValue.h \
 	DerivedSources/webkitdom/WebKitDOMObject.h \
 	DerivedSources/webkitdom/WebKitDOMNavigator.h \
@@ -546,6 +543,7 @@ libWebCoreDOM_la_CPPFLAGS = \
 	-I$(WebCore)/bindings/gobject \
 	-I$(GENSOURCES_WEBKITDOM) \
 	$(global_cppflags) \
+	$(platform_cppflags) \
 	$(platformgtk_cppflags) \
 	$(webcore_cppflags) \
 	$(webcoregtk_cppflags) \

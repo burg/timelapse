@@ -143,10 +143,7 @@ DocumentLoader::~DocumentLoader()
         m_iconDataCallback->invalidate();
     m_cachedResourceLoader->clearDocumentLoader();
     
-    if (m_mainResource) {
-        m_mainResource->removeClient(this);
-        m_mainResource = 0;
-    }
+    clearMainResource();
 }
 
 PassRefPtr<ResourceBuffer> DocumentLoader::mainResourceData() const
@@ -224,8 +221,6 @@ void DocumentLoader::setMainDocumentError(const ResourceError& error)
 void DocumentLoader::mainReceivedError(const ResourceError& error)
 {
     ASSERT(!error.isNull());
-    if (m_applicationCacheHost->maybeLoadFallbackForMainError(request(), error))
-        return;
 
     if (m_identifierForLoadWithoutResourceLoader) {
         ASSERT(!mainResourceLoader());
@@ -297,10 +292,16 @@ void DocumentLoader::stopLoading()
 
     FrameLoader* frameLoader = DocumentLoader::frameLoader();
     
-    if (isLoadingMainResource())
+    if (isLoadingMainResource()) {
         // Stop the main resource loader and let it send the cancelled message.
         cancelMainResourceLoad(frameLoader->cancelledError(m_request));
-    else if (!m_subresourceLoaders.isEmpty())
+    
+        // When cancelling the main resource load, we need to also cancel the Document's parser.
+        // Otherwise cancelling the parser when starting the next page load might result
+        // in unexpected side effects such as erroneous event dispatch. ( http://webkit.org/b/117112 )
+        if (Document* doc = document())
+            doc->cancelParsing();
+    } else if (!m_subresourceLoaders.isEmpty())
         // The main resource loader already finished loading. Set the cancelled error on the 
         // document and let the subresourceLoaders send individual cancelled messages below.
         setMainDocumentError(frameLoader->cancelledError(m_request));
@@ -546,10 +547,7 @@ void DocumentLoader::continueAfterNavigationPolicy(const ResourceRequest&, bool 
         RefPtr<ResourceLoader> resourceLoader = mainResourceLoader();
         ASSERT(resourceLoader->shouldSendResourceLoadCallbacks());
         resourceLoader->setSendCallbackPolicy(DoNotSendCallbacks);
-        if (m_mainResource) {
-            m_mainResource->removeClient(this);
-            m_mainResource = 0;
-        }
+        clearMainResource();
         resourceLoader->setSendCallbackPolicy(SendCallbacks);
         handleSubstituteDataLoadSoon();
     }
@@ -578,7 +576,7 @@ void DocumentLoader::responseReceived(CachedResource* resource, const ResourceRe
         ASSERT(identifier);
         if (frameLoader()->shouldInterruptLoadForXFrameOptions(content, response.url(), identifier)) {
             InspectorInstrumentation::continueAfterXFrameOptionsDenied(m_frame, this, identifier, response);
-            String message = "Refused to display '" + response.url().elidedString() + "' in a frame because it set 'X-Frame-Options' to '" + content + "'.";
+            String message = "Refused to display '" + response.url().stringCenterEllipsizedToLength() + "' in a frame because it set 'X-Frame-Options' to '" + content + "'.";
             frame()->document()->addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, message, identifier);
             frame()->document()->enforceSandboxFlags(SandboxOrigin);
             if (HTMLFrameOwnerElement* ownerElement = frame()->ownerElement())
@@ -674,7 +672,9 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
             mainReceivedError(frameLoader()->client()->cannotShowURLError(m_request));
             return;
         }
-        InspectorInstrumentation::continueWithPolicyDownload(m_frame, this, mainResourceLoader()->identifier(), m_response);
+
+        if (ResourceLoader* mainResourceLoader = this->mainResourceLoader())
+            InspectorInstrumentation::continueWithPolicyDownload(m_frame, this, mainResourceLoader->identifier(), m_response);
 
         // When starting the request, we didn't know that it would result in download and not navigation. Now we know that main document URL didn't change.
         // Download may use this knowledge for purposes unrelated to cookies, notably for setting file quarantine data.
@@ -687,7 +687,8 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
         return;
     }
     case PolicyIgnore:
-        InspectorInstrumentation::continueWithPolicyIgnore(m_frame, this, mainResourceLoader()->identifier(), m_response);
+        if (ResourceLoader* mainResourceLoader = this->mainResourceLoader())
+            InspectorInstrumentation::continueWithPolicyIgnore(m_frame, this, mainResourceLoader->identifier(), m_response);
         stopLoadingForPolicyChange();
         return;
     
@@ -899,6 +900,8 @@ void DocumentLoader::detachFromFrame()
     // It never makes sense to have a document loader that is detached from its
     // frame have any loads active, so go ahead and kill all the loads.
     stopLoading();
+    if (m_mainResource && m_mainResource->hasClient(this))
+        m_mainResource->removeClient(this);
 
     m_applicationCacheHost->setDOMApplicationCache(0);
     InspectorInstrumentation::loaderDetachedFromFrame(m_frame, this);
@@ -1288,9 +1291,10 @@ void DocumentLoader::addSubresourceLoader(ResourceLoader* loader)
 
 void DocumentLoader::removeSubresourceLoader(ResourceLoader* loader)
 {
-    if (!m_subresourceLoaders.contains(loader))
+    ResourceLoaderSet::iterator it = m_subresourceLoaders.find(loader);
+    if (it == m_subresourceLoaders.end())
         return;
-    m_subresourceLoaders.remove(loader);
+    m_subresourceLoaders.remove(it);
     checkLoadComplete();
     if (Frame* frame = m_frame)
         frame->loader()->checkLoadComplete();
@@ -1409,7 +1413,17 @@ void DocumentLoader::cancelMainResourceLoad(const ResourceError& resourceError)
     if (mainResourceLoader())
         mainResourceLoader()->cancel(error);
 
+    clearMainResource();
+
     mainReceivedError(error);
+}
+
+void DocumentLoader::clearMainResource()
+{
+    if (m_mainResource && m_mainResource->hasClient(this))
+        m_mainResource->removeClient(this);
+
+    m_mainResource = 0;
 }
 
 void DocumentLoader::subresourceLoaderFinishedLoadingOnePart(ResourceLoader* loader)

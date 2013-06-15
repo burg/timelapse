@@ -571,7 +571,7 @@ class Port(object):
         if not reftest_list:
             reftest_list = []
             for expectation, prefix in (('==', ''), ('!=', '-mismatch')):
-                for extention in Port._supported_file_extensions:
+                for extention in Port._supported_reference_extensions:
                     path = self.expected_filename(test_name, prefix + extention)
                     if self._filesystem.exists(path):
                         reftest_list.append((expectation, path))
@@ -606,15 +606,17 @@ class Port(object):
         return [self.relative_test_filename(f) for f in files]
 
     # When collecting test cases, we include any file with these extensions.
-    _supported_file_extensions = set(['.html', '.shtml', '.xml', '.xhtml', '.pl',
-                                      '.htm', '.php', '.svg', '.mht'])
+    _supported_test_extensions = set(['.html', '.shtml', '.xml', '.xhtml', '.pl', '.htm', '.php', '.svg', '.mht'])
+    _supported_reference_extensions = set(['.html', '.xml', '.xhtml', '.htm', '.svg'])
 
     @staticmethod
     # If any changes are made here be sure to update the isUsedInReftest method in old-run-webkit-tests as well.
     def is_reference_html_file(filesystem, dirname, filename):
         if filename.startswith('ref-') or filename.startswith('notref-'):
             return True
-        filename_wihout_ext, unused = filesystem.splitext(filename)
+        filename_wihout_ext, ext = filesystem.splitext(filename)
+        if ext not in Port._supported_reference_extensions:
+            return False
         for suffix in ['-expected', '-expected-mismatch', '-ref', '-notref']:
             if filename_wihout_ext.endswith(suffix):
                 return True
@@ -624,7 +626,7 @@ class Port(object):
     def _has_supported_extension(filesystem, filename):
         """Return true if filename is one of the file extensions we want to run a test on."""
         extension = filesystem.splitext(filename)[1]
-        return extension in Port._supported_file_extensions
+        return extension in Port._supported_test_extensions
 
     @staticmethod
     def _is_test_file(filesystem, dirname, filename):
@@ -926,11 +928,6 @@ class Port(object):
         method."""
         pass
 
-    def requires_http_server(self):
-        """Does the port require an HTTP server for running tests? This could
-        be the case when the tests aren't run on the host platform."""
-        return False
-
     def start_http_server(self, additional_dirs=None, number_of_servers=None):
         """Start a web server. Raise an error if it can't start or is already running.
 
@@ -1209,6 +1206,9 @@ class Port(object):
     def _is_debian_based(self):
         return self._filesystem.exists('/etc/debian_version')
 
+    def _is_arch_based(self):
+        return self._filesystem.exists('/etc/arch-release')
+
     def _apache_version(self):
         config = self._executive.run_command([self._path_to_apache(), '-v'])
         return re.sub(r'(?:.|\n)*Server version: Apache/(\d+\.\d+)(?:.|\n)*', r'\1', config)
@@ -1222,6 +1222,8 @@ class Port(object):
                 return 'fedora-httpd-' + self._apache_version() + '.conf'
             if self._is_debian_based():
                 return 'apache2-debian-httpd.conf'
+            if self._is_arch_based():
+                return 'archlinux-httpd.conf'
         # All platforms use apache2 except for CYGWIN (and Mac OS X Tiger and prior, which we no longer support).
         return "apache2-httpd.conf"
 
@@ -1259,6 +1261,12 @@ class Port(object):
     def _path_to_driver(self, configuration=None):
         """Returns the full path to the test driver (DumpRenderTree)."""
         return self._build_path(self.driver_name())
+
+    def _driver_tempdir(self):
+        return self._filesystem.mkdtemp(prefix='%s-' % self.driver_name())
+
+    def _driver_tempdir_for_environment(self):
+        return self._driver_tempdir()
 
     def _path_to_webcore_library(self):
         """Returns the full path to a built copy of WebCore."""
@@ -1341,6 +1349,10 @@ class Port(object):
 
     def virtual_test_suites(self):
         return []
+
+    def find_system_pid(self, name, pid):
+        # This is only overridden on Windows
+        return pid
 
     @memoized
     def populated_virtual_test_suites(self):
@@ -1442,6 +1454,9 @@ class Port(object):
     def _build_driver_flags(self):
         return []
 
+    def test_search_path(self):
+        return self.baseline_search_path()
+
     def _tests_for_other_platforms(self):
         # By default we will skip any directory under LayoutTests/platform
         # that isn't in our baseline search path (this mirrors what
@@ -1450,7 +1465,7 @@ class Port(object):
         entries = self._filesystem.glob(self._webkit_baseline_path('*'))
         dirs_to_skip = []
         for entry in entries:
-            if self._filesystem.isdir(entry) and entry not in self.baseline_search_path():
+            if self._filesystem.isdir(entry) and entry not in self.test_search_path():
                 basename = self._filesystem.basename(entry)
                 dirs_to_skip.append('platform/%s' % basename)
         return dirs_to_skip

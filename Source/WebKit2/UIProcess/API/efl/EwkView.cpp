@@ -51,6 +51,7 @@
 #include "WebPreferences.h"
 #include "ewk_back_forward_list_private.h"
 #include "ewk_color_picker_private.h"
+#include "ewk_context_menu_item_private.h"
 #include "ewk_context_menu_private.h"
 #include "ewk_context_private.h"
 #include "ewk_favicon_database_private.h"
@@ -480,7 +481,7 @@ void EwkView::setCursor(const Cursor& cursor)
 void EwkView::setDeviceScaleFactor(float scale)
 {
     const WKSize& deviceSize = WKViewGetSize(wkView());
-    page()->setIntrinsicDeviceScaleFactor(scale);
+    WKPageSetCustomBackingScaleFactor(wkPage(), scale);
 
     // Update internal viewport size after device-scale change.
     WKViewSetSize(wkView(), deviceSize);
@@ -670,21 +671,14 @@ void EwkView::setThemePath(const char* theme)
     }
 }
 
-const char* EwkView::customTextEncodingName() const
+void EwkView::setCustomTextEncodingName(const char* customEncoding)
 {
-    WKRetainPtr<WKStringRef> customEncoding = adoptWK(WKPageCopyCustomTextEncodingName(wkPage()));
-    if (WKStringIsEmpty(customEncoding.get()))
-        return 0;
+    if (m_customEncoding == customEncoding)
+        return;
 
-    m_customEncoding = WKEinaSharedString(customEncoding.get());
-
-    return m_customEncoding;
-}
-
-void EwkView::setCustomTextEncodingName(const String& encoding)
-{
-    WKRetainPtr<WKStringRef> wkEncoding = adoptWK(toCopiedAPI(encoding));
-    WKPageSetCustomTextEncodingName(wkPage(), wkEncoding.get());
+    m_customEncoding = customEncoding;
+    WKRetainPtr<WKStringRef> wkCustomEncoding = adoptWK(WKStringCreateWithUTF8CString(customEncoding));
+    WKPageSetCustomTextEncodingName(wkPage(), wkCustomEncoding.get());
 }
 
 void EwkView::setUserAgent(const char* userAgent)
@@ -781,7 +775,7 @@ bool EwkView::createGLSurface()
 
     Evas_GL_API* gl = evas_gl_api_get(m_evasGL.get());
 
-    const WKPoint& boundsEnd = WKViewUserViewportToContents(wkView(), WKPointMake(deviceSize().width(), deviceSize().height()));
+    WKPoint boundsEnd = WKViewUserViewportToScene(wkView(), WKPointMake(deviceSize().width(), deviceSize().height()));
     gl->glViewport(0, 0, boundsEnd.x, boundsEnd.y);
     gl->glClearColor(1.0, 1.0, 1.0, 0);
     gl->glClear(GL_COLOR_BUFFER_BIT);
@@ -833,6 +827,19 @@ void EwkView::dismissColorPicker()
 COMPILE_ASSERT_MATCHING_ENUM(EWK_TEXT_DIRECTION_RIGHT_TO_LEFT, RTL);
 COMPILE_ASSERT_MATCHING_ENUM(EWK_TEXT_DIRECTION_LEFT_TO_RIGHT, LTR);
 
+void EwkView::customContextMenuItemSelected(WKContextMenuItemRef contextMenuItem)
+{
+    Ewk_View_Smart_Data* sd = smartData();
+    ASSERT(sd->api);
+
+    if (!sd->api->custom_item_selected)
+        return;
+
+    OwnPtr<EwkContextMenuItem> item = EwkContextMenuItem::create(contextMenuItem, 0);
+
+    sd->api->custom_item_selected(sd, item.get());
+}
+
 void EwkView::showContextMenu(WKPoint position, WKArrayRef items)
 {
     Ewk_View_Smart_Data* sd = smartData();
@@ -844,7 +851,7 @@ void EwkView::showContextMenu(WKPoint position, WKArrayRef items)
     if (m_contextMenu)
         hideContextMenu();
 
-    m_contextMenu = Ewk_Context_Menu::create(this, items);
+    m_contextMenu = EwkContextMenu::create(this, items);
 
     sd->api->context_menu_show(sd, position.x, position.y, m_contextMenu.get());
 }

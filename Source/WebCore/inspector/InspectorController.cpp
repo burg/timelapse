@@ -77,7 +77,6 @@
 #include "Page.h"
 #include "ScriptObject.h"
 #include "Settings.h"
-#include <wtf/UnusedParam.h>
 
 namespace WebCore {
 

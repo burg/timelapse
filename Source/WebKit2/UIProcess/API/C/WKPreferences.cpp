@@ -1104,6 +1104,16 @@ bool WKPreferencesGetSmartInsertDeleteEnabled(WKPreferencesRef preferencesRef)
     return toImpl(preferencesRef)->smartInsertDeleteEnabled();
 }
 
+void WKPreferencesSetSelectTrailingWhitespaceEnabled(WKPreferencesRef preferencesRef, bool enabled)
+{
+    toImpl(preferencesRef)->setSelectTrailingWhitespaceEnabled(enabled);
+}
+
+bool WKPreferencesGetSelectTrailingWhitespaceEnabled(WKPreferencesRef preferencesRef)
+{
+    return toImpl(preferencesRef)->selectTrailingWhitespaceEnabled();
+}
+
 void WKPreferencesSetShowsURLsInToolTipsEnabled(WKPreferencesRef preferencesRef, bool enabled)
 {
     toImpl(preferencesRef)->setShowsURLsInToolTipsEnabled(enabled);
@@ -1132,4 +1142,14 @@ void WKPreferencesSetHiddenPageCSSAnimationSuspensionEnabled(WKPreferencesRef pr
 bool WKPreferencesGetHiddenPageCSSAnimationSuspensionEnabled(WKPreferencesRef preferencesRef)
 {
     return toImpl(preferencesRef)->hiddenPageCSSAnimationSuspensionEnabled();
+}
+
+void WKPreferencesSetIncrementalRenderingSuppressionTimeout(WKPreferencesRef preferencesRef, double timeout)
+{
+    toImpl(preferencesRef)->setIncrementalRenderingSuppressionTimeout(timeout);
+}
+
+double WKPreferencesGetIncrementalRenderingSuppressionTimeout(WKPreferencesRef preferencesRef)
+{
+    return toAPI(toImpl(preferencesRef)->incrementalRenderingSuppressionTimeout());
 }

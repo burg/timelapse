@@ -167,17 +167,11 @@ webkit.org/b/98935 fast/forms/color [ Skip ]
 
 # ENABLE_INPUT_TYPE_* are not enabled.
 webkit.org/b/98936 fast/forms/date [ Skip ]
-webkit.org/b/98936 fast/forms/date-multiple-fields [ Skip ]
 webkit.org/b/98936 fast/forms/datetime [ Skip ]
-webkit.org/b/98936 fast/forms/datetime-multiple-fields [ Skip ]
 webkit.org/b/98936 fast/forms/datetimelocal [ Skip ]
-webkit.org/b/98936 fast/forms/datetimelocal-multiple-fields [ Skip ]
 webkit.org/b/98936 fast/forms/month [ Skip ]
-webkit.org/b/98936 fast/forms/month-multiple-fields [ Skip ]
 webkit.org/b/98936 fast/forms/time [ Skip ]
-webkit.org/b/98936 fast/forms/time-multiple-fields [ Skip ]
 webkit.org/b/98936 fast/forms/week [ Skip ]
-webkit.org/b/98936 fast/forms/week-multiple-fields [ Skip ]
 
 # ENABLE_GAMEPAD not enabled.
 webkit.org/b/98937 gamepad [ Skip ]
@@ -220,6 +214,7 @@ webkit.org/b/98940 fast/events/drag-dataTransferItemList-file-handling.html [ Sk
 
 # setAutomaticLinkDetectionEnabled is not yet implemented.
 webkit.org/b/99069 editing/inserting/typing-space-to-trigger-smart-link.html [ Failure ]
+webkit.org/b/85463 editing/inserting/smart-link-when-caret-is-moved-before-URL.html [ Failure ]
 
 # Custom MIME type support in DataTransfer is not yet implemented.
 webkit.org/b/99068 editing/pasteboard/clipboard-customData.html [ Failure ]
@@ -415,6 +410,9 @@ Bug(GTK) [ Debug ] perf [ Skip ]
 webkit.org/b/115374 editing/shadow [ Skip ]
 webkit.org/b/115374 fast/dom/shadow [ Skip ]
 
+# No concept of secure text input
+Bug(GTK) editing/secure-input [ Failure ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Expected failures
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -434,9 +432,6 @@ webkit.org/b/90957 [ Release ] fast/js/random-array-gc-stress.html [ Crash Pass 
 webkit.org/b/94458 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-allowall.html [ Crash Failure ]
 webkit.org/b/94458 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html [ Crash Failure ]
 webkit.org/b/94458 [ Debug ] fast/events/message-port-context-destroyed.html [ Crash Pass ]
-
-webkit.org/b/99020 [ Debug ] fast/css/style-scoped/style-scoped-apply-author-styles.html [ Crash Pass ]
-webkit.org/b/99020 [ Debug ] fast/css/style-scoped/style-scoped-attach.html [ Crash Pass ]
 
 webkit.org/b/100688 fast/css-generated-content/first-letter-table-cell-format-block-crash.html [ Crash Pass ]
 webkit.org/b/100688 fast/text/text-fragment-first-letter-update-crash.html [ Crash Pass ]
@@ -549,7 +544,6 @@ webkit.org/b/89650 svg/W3C-SVG-1.1/struct-dom-06-b.svg [ Failure Pass ]
 
 webkit.org/b/80158 plugins/netscape-plugin-page-cache-works.html [ Failure Pass ]
 
-webkit.org/b/83704 media/event-attributes.html [ Failure Pass ]
 webkit.org/b/89811 media/media-blocked-by-beforeload.html [ Failure Pass ]
 webkit.org/b/84856 media/media-controller-playback.html [ Failure Pass ]
 
@@ -639,7 +633,16 @@ webkit.org/b/114735 fast/dynamic/window-resize-scrollbars-test.html [ Failure Pa
 webkit.org/b/114735 svg/filters/filter-hidden-content.svg [ Failure Pass ]
 webkit.org/b/114735 fast/dom/rtl-scroll-to-leftmost-and-resize.html [ Failure Pass ]
 
-webkit.org/b/115630  fast/images/support-broken-image-delegate.html [ Failure Pass ]
+webkit.org/b/115630 fast/images/support-broken-image-delegate.html [ Failure Pass ]
+
+webkit.org/b/116960 perf/adding-radio-buttons.html [ Failure Pass ]
+webkit.org/b/116961 perf/show-hide-table-rows.html [ Failure Pass ]
+
+webkit.org/b/116975 media/track/track-cue-overlap-snap-to-lines-not-set.html [ Failure Pass ]
+
+webkit.org/b/116976 media/video-played-collapse.html [ Failure Pass ]
+
+webkit.org/b/116977 media/event-attributes.html [ Failure Timeout Pass ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Flaky tests
@@ -744,6 +747,7 @@ webkit.org/b/101670 media/video-controls-captions-trackmenu.html [ Skip ]
 webkit.org/b/101670 media/video-controls-captions-trackmenu-sorted.html [ Skip ]
 webkit.org/b/101670 media/video-controls-captions-trackmenu-localized.html [ Skip ]
 webkit.org/b/101670 media/video-controls-captions-trackmenu-hide-on-click.html [ Skip ]
+webkit.org/b/101670 media/video-controls-captions-trackmenu-hide-on-click-outside.html [ Skip ]
 webkit.org/b/101670 media/track/track-user-preferences.html [ Skip ]
 
 webkit.org/b/107194 storage/indexeddb/database-quota.html [ Timeout ]
@@ -754,6 +758,16 @@ webkit.org/b/107194 storage/indexeddb/transaction-complete-workers.html [ Timeou
 webkit.org/b/108925 http/tests/media/video-play-stall.html [ Timeout Failure ]
 
 webkit.org/b/114789 fast/events/page-visibility-transition-test.html [ Timeout ]
+
+webkit.org/b/116956 fast/events/event-view-toString.html [ Timeout ]
+
+webkit.org/b/116957 media/track/track-automatic-subtitles.html [ Timeout ]
+
+webkit.org/b/116958 http/tests/navigation/redirect-to-random-url-versus-memory-cache.html [ Timeout ]
+webkit.org/b/116958 http/tests/navigation/slowmetaredirect-basic.html [ Timeout ]
+webkit.org/b/116958 http/tests/navigation/slowtimerredirect-basic.html [ Timeout ]
+webkit.org/b/116958 http/tests/navigation/scrollstate-after-http-equiv-refresh.html [ Timeout ]
+webkit.org/b/116958 http/tests/navigation/scrollstate-after-location-reload.html [ Timeout ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests timing out
@@ -767,8 +781,6 @@ webkit.org/b/114789 fast/events/page-visibility-transition-test.html [ Timeout ]
 webkit.org/b/84857 fast/repaint/moving-shadow-on-container.html [ Failure Pass ]
 webkit.org/b/84857 fast/repaint/moving-shadow-on-path.html [ Failure Pass ]
 webkit.org/b/80210 security/block-test.html [ Failure Pass ]
-webkit.org/b/43568 sputnik/Conformance/15_Native_Objects/15.8_Math/15.8.2/15.8.2.16_sin/S15.8.2.16_A7.html [ Failure Pass ]
-webkit.org/b/43568 sputnik/Conformance/15_Native_Objects/15.8_Math/15.8.2/15.8.2.18_tan/S15.8.2.18_A7.html [ Failure Pass ]
 webkit.org/b/62204 svg/W3C-SVG-1.1/paths-data-03-f.svg [ Failure Pass ]
 Bug(GTK) svg/css/composite-shadow-example.html [ Failure Pass ]
 Bug(GTK) svg/css/composite-shadow-with-opacity.html [ Failure Pass ]
@@ -932,7 +944,7 @@ Bug(GTK) inspector/timeline/timeline-decode-resize.html [ Failure ]
 Bug(GTK) http/tests/inspector/resource-har-pages.html [ Failure ]
 Bug(GTK) http/tests/inspector/resource-parameters.html [ Timeout ]
 
-webkit.org/b/56691 http/tests/inspector/network/network-size-chunked.html [ Missing ]
+webkit.org/b/56691 http/tests/inspector/network/network-size-chunked.html [ Failure ]
 webkit.org/b/56691 http/tests/inspector/network/network-size-sync.html [ Failure ]
 webkit.org/b/56691 http/tests/inspector/network/network-size.html [ Failure ]
 webkit.org/b/51380 http/tests/inspector/console-websocket-error.html [ Failure Timeout ]
@@ -1026,7 +1038,7 @@ webkit.org/b/44316 platform/gtk/accessibility/title-and-alt.html [ Failure ]
 # not get user gesture in frameload callbacks.
 # The related bugs are https://bugs.webkit.org/show_bug.cgi?id=47849/47817.
 Bug(GTK) fast/frames/location-redirect-user-gesture.html [ Failure ]
-Bug(GTK) fast/frames/meta-refresh-user-gesture.html [ Failure ]
+Bug(GTK) fast/frames/meta-refresh-user-gesture.html [ Failure Timeout ]
 
 # Rounding color problems inside pixman
 webkit.org/b/49964 fast/canvas/canvas-fillPath-shadow.html [ Failure ]
@@ -1338,7 +1350,7 @@ webkit.org/b/114251 accessibility/svg-group-element-with-title.html [ Failure ]
 webkit.org/b/114259 platform/gtk/accessibility/aria-slider-required-attributes.html [ Failure ]
 webkit.org/b/114259 platform/gtk/accessibility/combo-box-collapsed-selection-changed.html [ Failure ]
 
-webkit.org/b/114625 fast/loader/willsendrequest-returns-null-for-memory-cache-load.html [ Failure ]
+webkit.org/b/114625 http/tests/cache/willsendrequest-returns-null-for-memory-cache-load.html [ Failure ]
 
 webkit.org/b/114626 accessibility/link-inside-button-accessible-text.html [ Failure ]
 
@@ -1367,10 +1379,7 @@ webkit.org/b/115374 fast/dom/HTMLTemplateElement/cycles-in-shadow.html [ Failure
 
 webkit.org/b/115437 css3/flexbox/auto-margins.html [ ImageOnlyFailure ]
 webkit.org/b/115437 fast/css/sticky/sticky-writing-mode-vertical-lr.html [ ImageOnlyFailure ]
-webkit.org/b/115437 fast/exclusions/shape-inside/shape-inside-percentage.html [ ImageOnlyFailure ]
 webkit.org/b/115437 fast/regions/region-content-flown-into-region.html [ ImageOnlyFailure ]
-webkit.org/b/115437 fast/regions/webkit-flow-inlines-inside-regions-bounds-vertical.html [ ImageOnlyFailure ]
-webkit.org/b/115437 fast/regions/webkit-flow-inlines-inside-regions-bounds.html [ ImageOnlyFailure ]
 
 webkit.org/b/115437 fast/text/complex-initial-advance.html [ ImageOnlyFailure ]
 
@@ -1378,17 +1387,15 @@ webkit.org/b/115440 svg/stroke/animated-non-scaling-stroke.html [ ImageOnlyFailu
 
 webkit.org/b/115441 media/video-poster-background.html [ ImageOnlyFailure ]
 
-webkit.org/b/115632 fast/exclusions/shape-inside/shape-inside-polygon-layout.html [ Failure ]
-webkit.org/b/115632 fast/exclusions/shape-outside-floats/shape-outside-floats-diamond-margin-polygon.html [ Failure ]
-webkit.org/b/115632 fast/exclusions/shape-outside-floats/shape-outside-floats-ellipse-margin-left.html [ Failure ]
-webkit.org/b/115632 fast/exclusions/shape-outside-floats/shape-outside-floats-ellipse-margin-right.html [ Failure ]
-
 webkit.org/b/115633 accessibility/meter-element.html [ Failure ]
 
-webkit.org/b/115783 fast/regions/webkit-flow-double-pagination-float-push.html [ ImageOnlyFailure ]
-webkit.org/b/115783 fast/regions/webkit-flow-float-pushed-to-last-region.html [ ImageOnlyFailure ]
-webkit.org/b/115783 fast/regions/webkit-flow-float-unable-to-push.html [ ImageOnlyFailure ]
-webkit.org/b/115783 fast/regions/webkit-flow-floats-inside-regions-bounds.html [ ImageOnlyFailure ]
+webkit.org/b/116153 fast/css/text-overflow-ellipsis-full-truncate-rtl.html [ ImageOnlyFailure ]
+
+webkit.org/b/90589 fast/css/user-drag-none.html [ Failure ]
+
+webkit.org/b/116806 fast/css/text-overflow-ellipsis-behind-floats.html [ ImageOnlyFailure ]
+
+webkit.org/b/116808 fast/regions/offsetLeft-offsetTop-in-multiple-regions.html [ Failure ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests failing

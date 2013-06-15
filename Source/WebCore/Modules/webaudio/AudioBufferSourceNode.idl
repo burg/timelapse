@@ -26,9 +26,8 @@
 [
     Conditional=WEB_AUDIO,
     JSGenerateToJSObject
-] interface AudioBufferSourceNode : AudioSourceNode {
-    [CustomSetter] attribute AudioBuffer buffer
-        setter raises (DOMException);
+] interface AudioBufferSourceNode : AudioNode {
+    [CustomSetter, SetterRaisesException] attribute AudioBuffer buffer;
 
     const unsigned short UNSCHEDULED_STATE = 0;
     const unsigned short SCHEDULED_STATE = 1;
@@ -55,4 +54,6 @@
     [Conditional=LEGACY_WEB_AUDIO] void noteOn(double when);
     [Conditional=LEGACY_WEB_AUDIO] void noteGrainOn(double when, double grainOffset, double grainDuration);
     [Conditional=LEGACY_WEB_AUDIO] void noteOff(double when);
+    
+    attribute EventListener onended;
 };

@@ -34,6 +34,8 @@
 	<true/>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
+	<key>NSSupportsAppNap</key>
+	<true/>
 	<key>XPCService</key>
 	<dict>
 		<key>JoinExistingSession</key>
@@ -45,5 +47,7 @@
 		<key>_MultipleInstances</key>
 		<true/>
 	</dict>
+	<key>NSMainNibFile</key>
+	<string>WebContentProcess</string>
 </dict>
 </plist>

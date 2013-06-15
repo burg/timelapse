@@ -46,7 +46,7 @@ class HTMLInputElement;
 class Event;
 class FloatPoint;
 
-class SliderThumbElement : public HTMLDivElement {
+class SliderThumbElement FINAL : public HTMLDivElement {
 public:
     static PassRefPtr<SliderThumbElement> create(Document*);
 
@@ -56,7 +56,7 @@ public:
     virtual void defaultEventHandler(Event*);
     virtual bool willRespondToMouseMoveEvents() OVERRIDE;
     virtual bool willRespondToMouseClickEvents() OVERRIDE;
-    virtual void detach();
+    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
     virtual const AtomicString& shadowPseudoId() const;
     HTMLInputElement* hostInput() const;
     void setPositionFromPoint(const LayoutPoint&);
@@ -68,7 +68,7 @@ private:
     virtual bool isDisabledFormControl() const OVERRIDE;
     virtual bool matchesReadOnlyPseudoClass() const OVERRIDE;
     virtual bool matchesReadWritePseudoClass() const OVERRIDE;
-    virtual Node* focusDelegate();
+    virtual Element* focusDelegate() OVERRIDE;
     void startDragging();
     void stopDragging();
 
@@ -104,7 +104,7 @@ HTMLElement* sliderTrackElementOf(Node*);
 
 // --------------------------------
 
-class RenderSliderThumb : public RenderBlock {
+class RenderSliderThumb FINAL : public RenderBlock {
 public:
     RenderSliderThumb(SliderThumbElement*);
     void updateAppearance(RenderStyle* parentStyle);
@@ -115,7 +115,7 @@ private:
 
 // --------------------------------
 
-class SliderContainerElement : public HTMLDivElement {
+class SliderContainerElement FINAL : public HTMLDivElement {
 public:
     static PassRefPtr<SliderContainerElement> create(Document*);
 

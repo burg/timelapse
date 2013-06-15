@@ -34,7 +34,7 @@
 
 namespace WebCore {
 
-class PseudoElement : public Element {
+class PseudoElement FINAL : public Element {
 public:
     static PassRefPtr<PseudoElement> create(Element* parent, PseudoId pseudoId)
     {
@@ -43,7 +43,7 @@ public:
     ~PseudoElement();
 
     virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
-    virtual void attach() OVERRIDE;
+    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
     virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
 
     // As per http://dev.w3.org/csswg/css3-regions/#flow-into, pseudo-elements such as ::first-line, ::first-letter, ::before or ::after

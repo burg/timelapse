@@ -79,6 +79,7 @@ WK_EXPORT void WKViewSetContentPosition(WKViewRef, WKPoint);
 
 WK_EXPORT void WKViewSetUserViewportTranslation(WKViewRef, double tx, double ty);
 WK_EXPORT WKPoint WKViewUserViewportToContents(WKViewRef, WKPoint);
+WK_EXPORT WKPoint WKViewUserViewportToScene(WKViewRef, WKPoint);
 
 WK_EXPORT void WKViewPaintToCurrentGLContext(WKViewRef);
 
@@ -97,6 +98,9 @@ WK_EXPORT void WKViewSetShowsAsSource(WKViewRef, bool);
 WK_EXPORT bool WKViewGetShowsAsSource(WKViewRef);
 
 WK_EXPORT bool WKViewExitFullScreen(WKViewRef);
+
+WK_EXPORT void WKViewSetOpacity(WKViewRef view, double opacity);
+WK_EXPORT double WKViewOpacity(WKViewRef view);
 
 #ifdef __cplusplus
 }

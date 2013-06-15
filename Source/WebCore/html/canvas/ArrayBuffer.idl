@@ -24,9 +24,9 @@
  */
 
 [
+    GlobalContext=WindowAndWorker,
     GenerateIsReachable=Impl,
-    CustomConstructor,
-    ConstructorParameters=1,
+    CustomConstructor(unsigned long length),
     JSNoStaticTables,
     ImplementationNamespace=WTF,
     ImplementationLacksVTable

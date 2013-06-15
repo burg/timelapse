@@ -31,7 +31,6 @@ list(APPEND WebCore_SOURCES
 
     platform/Cursor.cpp
     platform/LocalizedStrings.cpp
-    platform/PlatformStrategies.cpp
     platform/ScrollAnimatorNone.cpp
 
     platform/win/BitmapInfo.cpp
@@ -60,7 +59,6 @@ list(APPEND WebCore_SOURCES
     platform/win/SharedTimerWin.cpp
     platform/win/SoundWin.cpp
     platform/win/SystemInfo.cpp
-    platform/win/SystemTimeWin.cpp
     platform/win/WCDataObject.cpp
     platform/win/WebCoreInstanceHandle.cpp
     platform/win/WidgetWin.cpp

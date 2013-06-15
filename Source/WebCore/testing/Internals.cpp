@@ -72,7 +72,7 @@
 #include "Language.h"
 #include "MallocStatistics.h"
 #include "MemoryCache.h"
-#include "MockPagePopupDriver.h"
+#include "MemoryInfo.h"
 #include "NodeRenderingContext.h"
 #include "Page.h"
 #include "PrintContext.h"
@@ -116,10 +116,6 @@
 #include "DeviceProximityController.h"
 #endif
 
-#if ENABLE(PAGE_POPUP)
-#include "PagePopupController.h"
-#endif
-
 #if ENABLE(TOUCH_ADJUSTMENT)
 #include "WebKitPoint.h"
 #endif
@@ -151,10 +147,6 @@
 
 namespace WebCore {
 
-#if ENABLE(PAGE_POPUP)
-static MockPagePopupDriver* s_pagePopupDriver = 0;
-#endif
-
 using namespace HTMLNames;
 
 #if ENABLE(INSPECTOR)
@@ -175,6 +167,7 @@ public:
 protected:
     virtual void setAttachedWindowHeight(unsigned) OVERRIDE { }
     virtual void setAttachedWindowWidth(unsigned) OVERRIDE { }
+    virtual void setToolbarHeight(unsigned) OVERRIDE { }
 };
 
 InspectorFrontendClientDummy::InspectorFrontendClientDummy(InspectorController* controller, Page* page)
@@ -235,10 +228,10 @@ static bool markerTypesFrom(const String& markerType, DocumentMarker::MarkerType
 
 static SpellChecker* spellchecker(Document* document)
 {
-    if (!document || !document->frame() || !document->frame()->editor())
+    if (!document || !document->frame())
         return 0;
 
-    return document->frame()->editor()->spellChecker();
+    return document->frame()->editor().spellChecker();
 }
 
 const char* Internals::internalsId = "internals";
@@ -269,12 +262,6 @@ void Internals::resetToConsistentState(Page* page)
     TextRun::setAllowsRoundingHacks(false);
     WebCore::overrideUserPreferredLanguages(Vector<String>());
     WebCore::Settings::setUsesOverlayScrollbars(false);
-#if ENABLE(PAGE_POPUP)
-    delete s_pagePopupDriver;
-    s_pagePopupDriver = 0;
-    if (page->chrome())
-        page->chrome()->client()->resetPagePopupDriver();
-#endif
 #if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
     if (page->inspectorController())
         page->inspectorController()->setProfilerEnabled(false);
@@ -283,10 +270,10 @@ void Internals::resetToConsistentState(Page* page)
     page->group().captionPreferences()->setCaptionsStyleSheetOverride(emptyString());
     page->group().captionPreferences()->setTestingMode(false);
 #endif
-    if (!page->mainFrame()->editor()->isContinuousSpellCheckingEnabled())
-        page->mainFrame()->editor()->toggleContinuousSpellChecking();
-    if (page->mainFrame()->editor()->isOverwriteModeEnabled())
-        page->mainFrame()->editor()->toggleOverwriteModeEnabled();
+    if (!page->mainFrame()->editor().isContinuousSpellCheckingEnabled())
+        page->mainFrame()->editor().toggleContinuousSpellChecking();
+    if (page->mainFrame()->editor().isOverwriteModeEnabled())
+        page->mainFrame()->editor().toggleOverwriteModeEnabled();
 }
 
 Internals::Internals(Document* document)
@@ -511,25 +498,6 @@ bool Internals::pauseTransitionAtTimeOnPseudoElement(const String& property, dou
     }
 
     return frame()->animation()->pauseTransitionAtTime(pseudoElement->renderer(), property, pauseTime);
-}
-
-bool Internals::hasContentElement(const Node* root, ExceptionCode& ec) const
-{
-    if (root && root->isShadowRoot())
-        return ScopeContentDistribution::hasContentElement(toShadowRoot(root));
-
-    ec = INVALID_ACCESS_ERR;
-    return 0;
-}
-
-size_t Internals::countElementShadow(const Node* root, ExceptionCode& ec) const
-{
-    if (!root || !root->isShadowRoot()) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-
-    return ScopeContentDistribution::countElementShadow(toShadowRoot(root));
 }
 
 bool Internals::attached(Node* node, ExceptionCode& ec)
@@ -785,33 +753,6 @@ void Internals::enableMockSpeechSynthesizer()
 }
 #endif
     
-void Internals::setEnableMockPagePopup(bool enabled, ExceptionCode& ec)
-{
-#if ENABLE(PAGE_POPUP)
-    Document* document = contextDocument();
-    if (!document || !document->page() || !document->page()->chrome())
-        return;
-    Page* page = document->page();
-    if (!enabled) {
-        page->chrome()->client()->resetPagePopupDriver();
-        return;
-    }
-    if (!s_pagePopupDriver)
-        s_pagePopupDriver = MockPagePopupDriver::create(page->mainFrame()).leakPtr();
-    page->chrome()->client()->setPagePopupDriver(s_pagePopupDriver);
-#else
-    UNUSED_PARAM(enabled);
-    UNUSED_PARAM(ec);
-#endif
-}
-
-#if ENABLE(PAGE_POPUP)
-PassRefPtr<PagePopupController> Internals::pagePopupController()
-{
-    return s_pagePopupDriver ? s_pagePopupDriver->pagePopupController() : 0;
-}
-#endif
-
 PassRefPtr<ClientRect> Internals::absoluteCaretBounds(ExceptionCode& ec)
 {
     Document* document = contextDocument();
@@ -1444,7 +1385,7 @@ bool Internals::hasSpellingMarker(Document* document, int from, int length, Exce
     if (!document || !document->frame())
         return 0;
 
-    return document->frame()->editor()->selectionStartHasMarkerFor(DocumentMarker::Spelling, from, length);
+    return document->frame()->editor().selectionStartHasMarkerFor(DocumentMarker::Spelling, from, length);
 }
     
 bool Internals::hasAutocorrectedMarker(Document* document, int from, int length, ExceptionCode&)
@@ -1452,7 +1393,7 @@ bool Internals::hasAutocorrectedMarker(Document* document, int from, int length,
     if (!document || !document->frame())
         return 0;
     
-    return document->frame()->editor()->selectionStartHasMarkerFor(DocumentMarker::Autocorrected, from, length);
+    return document->frame()->editor().selectionStartHasMarkerFor(DocumentMarker::Autocorrected, from, length);
 }
 
 void Internals::setContinuousSpellCheckingEnabled(bool enabled, ExceptionCode&)
@@ -1460,8 +1401,8 @@ void Internals::setContinuousSpellCheckingEnabled(bool enabled, ExceptionCode&)
     if (!contextDocument() || !contextDocument()->frame())
         return;
 
-    if (enabled != contextDocument()->frame()->editor()->isContinuousSpellCheckingEnabled())
-        contextDocument()->frame()->editor()->toggleContinuousSpellChecking();
+    if (enabled != contextDocument()->frame()->editor().isContinuousSpellCheckingEnabled())
+        contextDocument()->frame()->editor().toggleContinuousSpellChecking();
 }
 
 void Internals::setAutomaticQuoteSubstitutionEnabled(bool enabled, ExceptionCode&)
@@ -1470,8 +1411,8 @@ void Internals::setAutomaticQuoteSubstitutionEnabled(bool enabled, ExceptionCode
         return;
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-    if (enabled != contextDocument()->frame()->editor()->isAutomaticQuoteSubstitutionEnabled())
-        contextDocument()->frame()->editor()->toggleAutomaticQuoteSubstitution();
+    if (enabled != contextDocument()->frame()->editor().isAutomaticQuoteSubstitutionEnabled())
+        contextDocument()->frame()->editor().toggleAutomaticQuoteSubstitution();
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -1483,8 +1424,8 @@ void Internals::setAutomaticLinkDetectionEnabled(bool enabled, ExceptionCode&)
         return;
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-    if (enabled != contextDocument()->frame()->editor()->isAutomaticLinkDetectionEnabled())
-        contextDocument()->frame()->editor()->toggleAutomaticLinkDetection();
+    if (enabled != contextDocument()->frame()->editor().isAutomaticLinkDetectionEnabled())
+        contextDocument()->frame()->editor().toggleAutomaticLinkDetection();
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -1496,8 +1437,8 @@ void Internals::setAutomaticDashSubstitutionEnabled(bool enabled, ExceptionCode&
         return;
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-    if (enabled != contextDocument()->frame()->editor()->isAutomaticDashSubstitutionEnabled())
-        contextDocument()->frame()->editor()->toggleAutomaticDashSubstitution();
+    if (enabled != contextDocument()->frame()->editor().isAutomaticDashSubstitutionEnabled())
+        contextDocument()->frame()->editor().toggleAutomaticDashSubstitution();
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -1509,8 +1450,8 @@ void Internals::setAutomaticTextReplacementEnabled(bool enabled, ExceptionCode&)
         return;
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-    if (enabled != contextDocument()->frame()->editor()->isAutomaticTextReplacementEnabled())
-        contextDocument()->frame()->editor()->toggleAutomaticTextReplacement();
+    if (enabled != contextDocument()->frame()->editor().isAutomaticTextReplacementEnabled())
+        contextDocument()->frame()->editor().toggleAutomaticTextReplacement();
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -1522,8 +1463,8 @@ void Internals::setAutomaticSpellingCorrectionEnabled(bool enabled, ExceptionCod
         return;
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-    if (enabled != contextDocument()->frame()->editor()->isAutomaticSpellingCorrectionEnabled())
-        contextDocument()->frame()->editor()->toggleAutomaticSpellingCorrection();
+    if (enabled != contextDocument()->frame()->editor().isAutomaticSpellingCorrectionEnabled())
+        contextDocument()->frame()->editor().toggleAutomaticSpellingCorrection();
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -1534,7 +1475,7 @@ bool Internals::isOverwriteModeEnabled(Document* document, ExceptionCode&)
     if (!document || !document->frame())
         return 0;
 
-    return document->frame()->editor()->isOverwriteModeEnabled();
+    return document->frame()->editor().isOverwriteModeEnabled();
 }
 
 void Internals::toggleOverwriteModeEnabled(Document* document, ExceptionCode&)
@@ -1542,7 +1483,7 @@ void Internals::toggleOverwriteModeEnabled(Document* document, ExceptionCode&)
     if (!document || !document->frame())
         return;
 
-    document->frame()->editor()->toggleOverwriteModeEnabled();
+    document->frame()->editor().toggleOverwriteModeEnabled();
 }
 
 #if ENABLE(INSPECTOR)
@@ -1637,7 +1578,7 @@ bool Internals::hasGrammarMarker(Document* document, int from, int length, Excep
     if (!document || !document->frame())
         return 0;
 
-    return document->frame()->editor()->selectionStartHasMarkerFor(DocumentMarker::Grammar, from, length);
+    return document->frame()->editor().selectionStartHasMarkerFor(DocumentMarker::Grammar, from, length);
 }
 
 unsigned Internals::numberOfScrollableAreas(Document* document, ExceptionCode&)
@@ -1921,6 +1862,11 @@ PassRefPtr<MallocStatistics> Internals::mallocStatistics() const
 PassRefPtr<TypeConversions> Internals::typeConversions() const
 {
     return TypeConversions::create();
+}
+
+PassRefPtr<MemoryInfo> Internals::memoryInfo() const
+{
+    return MemoryInfo::create();
 }
 
 Vector<String> Internals::getReferencedFilePaths() const

@@ -29,22 +29,20 @@
  */
  
 [
-    NoInterfaceObject,
-    Conditional=MEDIA_SOURCE
+    Conditional=MEDIA_SOURCE,
+    InterfaceName=WebKitSourceBuffer
 ] interface SourceBuffer {
 
     // Returns the time ranges buffered.
-    readonly attribute TimeRanges buffered
-        getter raises(DOMException);
+    [GetterRaisesException] readonly attribute TimeRanges buffered;
 
     // Applies an offset to media segment timestamps.
-    attribute double timestampOffset
-        setter raises(DOMException);
+    [SetterRaisesException] attribute double timestampOffset;
 
     // Append segment data.
-    void append(Uint8Array data) raises (DOMException);
+    [RaisesException] void append(Uint8Array data);
 
     // Abort the current segment append sequence.
-    void abort() raises (DOMException);
+    [RaisesException] void abort();
 };
 

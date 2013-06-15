@@ -106,6 +106,12 @@ WKPoint WKViewUserViewportToContents(WKViewRef viewRef, WKPoint point)
     return WKPointMake(result.x(), result.y());
 }
 
+WKPoint WKViewUserViewportToScene(WKViewRef viewRef, WKPoint point)
+{
+    WebCore::IntPoint result = toImpl(viewRef)->userViewportToScene(toIntPoint(point));
+    return WKPointMake(result.x(), result.y());
+}
+
 void WKViewPaintToCurrentGLContext(WKViewRef viewRef)
 {
     toImpl(viewRef)->paintToCurrentGLContext();
@@ -164,6 +170,16 @@ bool WKViewExitFullScreen(WKViewRef viewRef)
     UNUSED_PARAM(viewRef);
     return false;
 #endif
+}
+
+void WKViewSetOpacity(WKViewRef view, double opacity)
+{
+    toImpl(view)->setOpacity(opacity);
+}
+
+double WKViewOpacity(WKViewRef view)
+{
+    return toImpl(view)->opacity();
 }
 
 #endif // USE(COORDINATED_GRAPHICS)

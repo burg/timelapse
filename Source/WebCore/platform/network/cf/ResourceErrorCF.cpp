@@ -32,7 +32,6 @@
 #include <CoreFoundation/CFError.h>
 #include <CFNetwork/CFNetworkErrors.h>
 #include <wtf/RetainPtr.h>
-#include <wtf/UnusedParam.h>
 
 #if PLATFORM(WIN)
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
@@ -108,6 +107,8 @@ void ResourceError::platformLazyInit()
             if (failingURL) {
                 RetainPtr<CFURLRef> absoluteURLRef = adoptCF(CFURLCopyAbsoluteURL(failingURL));
                 if (absoluteURLRef.get()) {
+                    // FIXME: CFURLGetString returns a normalized URL which is different from what is actually used by CFNetwork.
+                    // We should use CFURLGetBytes instead.
                     failingURLString = CFURLGetString(absoluteURLRef.get());
                     m_failingURL = String(failingURLString);
                 }

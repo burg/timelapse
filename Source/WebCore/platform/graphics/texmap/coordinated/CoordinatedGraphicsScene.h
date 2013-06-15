@@ -1,5 +1,6 @@
 /*
     Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
+    Copyright (C) 2013 Company 100, Inc.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -53,9 +54,6 @@ class CustomFilterProgramInfo;
 class CoordinatedGraphicsSceneClient {
 public:
     virtual ~CoordinatedGraphicsSceneClient() { }
-#if ENABLE(REQUEST_ANIMATION_FRAME)
-    virtual void animationFrameReady() = 0;
-#endif
     virtual void purgeBackingStores() = 0;
     virtual void renderNextFrame() = 0;
     virtual void updateViewport() = 0;
@@ -83,30 +81,13 @@ public:
 
     void commitSceneState(const CoordinatedGraphicsState&);
 
-    void createLayers(const Vector<CoordinatedLayerID>&);
-    void deleteLayers(const Vector<CoordinatedLayerID>&);
-
-#if ENABLE(CSS_SHADERS)
-    void injectCachedCustomFilterPrograms(const FilterOperations& filters) const;
-    void createCustomFilterProgram(int id, const CustomFilterProgramInfo&);
-    void removeCustomFilterProgram(int id);
-#endif
-
-    void createUpdateAtlas(uint32_t atlasID, PassRefPtr<CoordinatedSurface>);
-    void removeUpdateAtlas(uint32_t atlasID);
-    void createImageBacking(CoordinatedImageBackingID);
-    void updateImageBacking(CoordinatedImageBackingID, PassRefPtr<CoordinatedSurface>);
-    void clearImageBackingContents(CoordinatedImageBackingID);
-    void removeImageBacking(CoordinatedImageBackingID);
     void setBackgroundColor(const Color&);
     void setDrawsBackground(bool enable) { m_setDrawsBackground = enable; }
 
-#if ENABLE(REQUEST_ANIMATION_FRAME)
-    void requestAnimationFrame();
-#endif
-
 private:
     void setRootLayerID(CoordinatedLayerID);
+    void createLayers(const Vector<CoordinatedLayerID>&);
+    void deleteLayers(const Vector<CoordinatedLayerID>&);
     void setLayerState(CoordinatedLayerID, const CoordinatedGraphicsLayerState&);
     void setLayerChildrenIfNeeded(TextureMapperLayer*, const CoordinatedGraphicsLayerState&);
     void updateTilesIfNeeded(TextureMapperLayer*, const CoordinatedGraphicsLayerState&);
@@ -123,6 +104,23 @@ private:
 #endif
     void setLayerRepaintCountIfNeeded(TextureMapperLayer*, const CoordinatedGraphicsLayerState&);
 
+    void syncUpdateAtlases(const CoordinatedGraphicsState&);
+    void createUpdateAtlas(uint32_t atlasID, PassRefPtr<CoordinatedSurface>);
+    void removeUpdateAtlas(uint32_t atlasID);
+
+    void syncImageBackings(const CoordinatedGraphicsState&);
+    void createImageBacking(CoordinatedImageBackingID);
+    void updateImageBacking(CoordinatedImageBackingID, PassRefPtr<CoordinatedSurface>);
+    void clearImageBackingContents(CoordinatedImageBackingID);
+    void removeImageBacking(CoordinatedImageBackingID);
+
+#if ENABLE(CSS_SHADERS)
+    void syncCustomFilterPrograms(const CoordinatedGraphicsState&);
+    void injectCachedCustomFilterPrograms(const FilterOperations& filters) const;
+    void createCustomFilterProgram(int id, const CustomFilterProgramInfo&);
+    void removeCustomFilterProgram(int id);
+#endif
+
     TextureMapperLayer* layerByID(CoordinatedLayerID id)
     {
         ASSERT(m_layers.contains(id));
@@ -137,9 +135,6 @@ private:
 
     void dispatchOnMainThread(const Function<void()>&);
     void updateViewport();
-#if ENABLE(REQUEST_ANIMATION_FRAME)
-    void animationFrameReady();
-#endif
     void renderNextFrame();
     void purgeBackingStores();
 
@@ -194,9 +189,6 @@ private:
     CoordinatedLayerID m_rootLayerID;
     FloatPoint m_scrollPosition;
     FloatPoint m_renderedContentsScrollPosition;
-#if ENABLE(REQUEST_ANIMATION_FRAME)
-    bool m_animationFrameRequested;
-#endif
     Color m_backgroundColor;
     bool m_setDrawsBackground;
 

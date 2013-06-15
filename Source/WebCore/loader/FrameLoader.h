@@ -66,6 +66,7 @@ class IconController;
 class NavigationAction;
 class NetworkingContext;
 class Page;
+class PageActivityAssertionToken;
 class PolicyChecker;
 class ResourceError;
 class ResourceRequest;
@@ -286,6 +287,8 @@ public:
 
     const KURL& previousURL() const { return m_previousURL; }
 
+    void forcePageTransitionIfNeeded();
+
 private:
     enum FormSubmissionCacheLoadPolicy {
         MayAttemptCacheOnlyLoadForFormSubmissionItem,
@@ -316,7 +319,7 @@ private:
     static void callContinueLoadAfterNewWindowPolicy(void*, const ResourceRequest&, PassRefPtr<FormState>, const String& frameName, const NavigationAction&, bool shouldContinue);
     static void callContinueFragmentScrollAfterNavigationPolicy(void*, const ResourceRequest&, PassRefPtr<FormState>, bool shouldContinue);
     
-    bool fireBeforeUnloadEvent(Chrome*);
+    bool fireBeforeUnloadEvent(Chrome&);
 
     void continueLoadAfterNavigationPolicy(const ResourceRequest&, PassRefPtr<FormState>, bool shouldContinue);
     void continueLoadAfterNewWindowPolicy(const ResourceRequest&, PassRefPtr<FormState>, const String& frameName, const NavigationAction&, bool shouldContinue);
@@ -367,6 +370,7 @@ private:
     void prepareForLoadStart();
     void provisionalLoadStarted();
 
+    void willTransitionToCommitted();
     bool didOpenURL();
 
     void scheduleCheckCompleted();
@@ -443,6 +447,7 @@ private:
 
     KURL m_previousURL;
     RefPtr<HistoryItem> m_requestedHistoryItem;
+    OwnPtr<PageActivityAssertionToken> m_activityAssertion;
 };
 
 // This function is called by createWindow() in JSDOMWindowBase.cpp, for example, for

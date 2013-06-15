@@ -30,11 +30,11 @@ set(DumpRenderTree_SOURCES
 )
 
 set(DumpRenderTree_LIBRARIES
-    ${JavaScriptCore_LIBRARY_NAME}
-    ${WebCoreTestSupport_LIBRARY_NAME}
-    ${WebCore_LIBRARY_NAME}
-    ${WebKit_LIBRARY_NAME}
-    ${WTF_LIBRARY_NAME}
+    JavaScriptCore
+    WebCoreTestSupport
+    WebCore
+    WebKit
+    WTF
     ${CAIRO_LIBRARIES}
     ${ECORE_LIBRARIES}
     ${ECORE_EVAS_LIBRARIES}
@@ -46,7 +46,7 @@ set(DumpRenderTree_LIBRARIES
     ${EVAS_LIBRARIES}
     ${FONTCONFIG_LIBRARIES}
     ${LIBXML2_LIBRARIES}
-    ${LIBXSLT_LIBRARIES}
+    ${LIBXSLT_LIBRARIES} -lm
     ${SQLITE_LIBRARIES}
     ${GLIB_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
@@ -77,6 +77,7 @@ set(DumpRenderTree_INCLUDE_DIRECTORIES
     ${WEBCORE_DIR}/platform/network/soup
     ${WEBCORE_DIR}/plugins
     ${WEBCORE_DIR}/rendering
+    ${WEBCORE_DIR}/rendering/shapes
     ${WEBCORE_DIR}/rendering/style
     ${WEBCORE_DIR}/history
     ${WEBCORE_DIR}/loader

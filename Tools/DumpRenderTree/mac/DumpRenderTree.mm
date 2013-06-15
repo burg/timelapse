@@ -417,9 +417,6 @@ static void swizzleNSFontManagerMethods()
 
 static void activateTestingFonts()
 {
-    // Work around <rdar://problem/6698023> by activating fonts from disk
-    // FIXME: This code can be removed once <rdar://problem/6698023> is addressed.
-
     static const char* fontFileNames[] = {
         "AHEM____.TTF",
         "WebKitWeightWatcher100.ttf",
@@ -544,8 +541,9 @@ WebView *createWebViewAndOffscreenWindow()
     [webView setAutomaticDashSubstitutionEnabled:NO];
     [webView setAutomaticTextReplacementEnabled:NO];
     [webView setAutomaticSpellingCorrectionEnabled:YES];
-    [webView setDefersCallbacks:NO];
     [webView setGrammarCheckingEnabled:YES];
+
+    [webView setDefersCallbacks:NO];
     [webView setInteractiveFormValidationEnabled:YES];
     [webView setValidationMessageTimerMagnification:-1];
     
@@ -859,8 +857,8 @@ static void prepareConsistentTestingEnvironment()
     makeLargeMallocFailSilently();
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    static id assertion = [[[NSProcessInfo processInfo] beginSuspensionOfSystemBehaviors:NSSystemBehaviorCommonBehaviors
-        reason:@"DumpRenderTree should not be subject to process suppression"] retain];
+    NSActivityOptions options = (NSActivityUserInitiatedAllowingIdleSystemSleep | NSActivityLatencyCritical) & ~(NSActivitySuddenTerminationDisabled | NSActivityAutomaticTerminationDisabled);
+    static id assertion = [[[NSProcessInfo processInfo] beginActivityWithOptions:options reason:@"DumpRenderTree should not be subject to process suppression"] retain];
     ASSERT_UNUSED(assertion, assertion);
 #endif
 }
@@ -1289,6 +1287,14 @@ static void resetWebViewToConsistentStateBeforeTesting()
         // in the case that a test using the chrome input field failed, be sure to clean up for the next test
         gTestRunner->removeChromeInputField();
     }
+
+    [webView setContinuousSpellCheckingEnabled:YES];
+    [webView setAutomaticQuoteSubstitutionEnabled:NO];
+    [webView setAutomaticLinkDetectionEnabled:NO];
+    [webView setAutomaticDashSubstitutionEnabled:NO];
+    [webView setAutomaticTextReplacementEnabled:NO];
+    [webView setAutomaticSpellingCorrectionEnabled:YES];
+    [webView setGrammarCheckingEnabled:YES];
 
     [WebView _setUsesTestModeFocusRingColor:YES];
     [WebView _resetOriginAccessWhitelists];

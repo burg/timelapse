@@ -217,7 +217,7 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
 }
 
 WebInspector.ScriptsPanel.prototype = {
-    get statusBarItems()
+    statusBarItems: function()
     {
         return [
                 this.enableToggleButton.element,

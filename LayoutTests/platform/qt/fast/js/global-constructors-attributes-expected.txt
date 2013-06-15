@@ -23,6 +23,11 @@ PASS Object.getOwnPropertyDescriptor(global, 'Audio').hasOwnProperty('get') is f
 PASS Object.getOwnPropertyDescriptor(global, 'Audio').hasOwnProperty('set') is false
 PASS Object.getOwnPropertyDescriptor(global, 'Audio').enumerable is false
 PASS Object.getOwnPropertyDescriptor(global, 'Audio').configurable is true
+PASS Object.getOwnPropertyDescriptor(global, 'BarProp').value is BarProp
+PASS Object.getOwnPropertyDescriptor(global, 'BarProp').hasOwnProperty('get') is false
+PASS Object.getOwnPropertyDescriptor(global, 'BarProp').hasOwnProperty('set') is false
+PASS Object.getOwnPropertyDescriptor(global, 'BarProp').enumerable is false
+PASS Object.getOwnPropertyDescriptor(global, 'BarProp').configurable is true
 PASS Object.getOwnPropertyDescriptor(global, 'BeforeLoadEvent').value is BeforeLoadEvent
 PASS Object.getOwnPropertyDescriptor(global, 'BeforeLoadEvent').hasOwnProperty('get') is false
 PASS Object.getOwnPropertyDescriptor(global, 'BeforeLoadEvent').hasOwnProperty('set') is false
@@ -783,6 +788,11 @@ PASS Object.getOwnPropertyDescriptor(global, 'NodeFilter').hasOwnProperty('get')
 PASS Object.getOwnPropertyDescriptor(global, 'NodeFilter').hasOwnProperty('set') is false
 PASS Object.getOwnPropertyDescriptor(global, 'NodeFilter').enumerable is false
 PASS Object.getOwnPropertyDescriptor(global, 'NodeFilter').configurable is true
+PASS Object.getOwnPropertyDescriptor(global, 'NodeIterator').value is NodeIterator
+PASS Object.getOwnPropertyDescriptor(global, 'NodeIterator').hasOwnProperty('get') is false
+PASS Object.getOwnPropertyDescriptor(global, 'NodeIterator').hasOwnProperty('set') is false
+PASS Object.getOwnPropertyDescriptor(global, 'NodeIterator').enumerable is false
+PASS Object.getOwnPropertyDescriptor(global, 'NodeIterator').configurable is true
 PASS Object.getOwnPropertyDescriptor(global, 'NodeList').value is NodeList
 PASS Object.getOwnPropertyDescriptor(global, 'NodeList').hasOwnProperty('get') is false
 PASS Object.getOwnPropertyDescriptor(global, 'NodeList').hasOwnProperty('set') is false
@@ -1668,6 +1678,11 @@ PASS Object.getOwnPropertyDescriptor(global, 'TransitionEvent').hasOwnProperty('
 PASS Object.getOwnPropertyDescriptor(global, 'TransitionEvent').hasOwnProperty('set') is false
 PASS Object.getOwnPropertyDescriptor(global, 'TransitionEvent').enumerable is false
 PASS Object.getOwnPropertyDescriptor(global, 'TransitionEvent').configurable is true
+PASS Object.getOwnPropertyDescriptor(global, 'TreeWalker').value is TreeWalker
+PASS Object.getOwnPropertyDescriptor(global, 'TreeWalker').hasOwnProperty('get') is false
+PASS Object.getOwnPropertyDescriptor(global, 'TreeWalker').hasOwnProperty('set') is false
+PASS Object.getOwnPropertyDescriptor(global, 'TreeWalker').enumerable is false
+PASS Object.getOwnPropertyDescriptor(global, 'TreeWalker').configurable is true
 PASS Object.getOwnPropertyDescriptor(global, 'UIEvent').value is UIEvent
 PASS Object.getOwnPropertyDescriptor(global, 'UIEvent').hasOwnProperty('get') is false
 PASS Object.getOwnPropertyDescriptor(global, 'UIEvent').hasOwnProperty('set') is false
@@ -1873,6 +1888,11 @@ PASS Object.getOwnPropertyDescriptor(global, 'XPathException').hasOwnProperty('g
 PASS Object.getOwnPropertyDescriptor(global, 'XPathException').hasOwnProperty('set') is false
 PASS Object.getOwnPropertyDescriptor(global, 'XPathException').enumerable is false
 PASS Object.getOwnPropertyDescriptor(global, 'XPathException').configurable is true
+PASS Object.getOwnPropertyDescriptor(global, 'XPathExpression').value is XPathExpression
+PASS Object.getOwnPropertyDescriptor(global, 'XPathExpression').hasOwnProperty('get') is false
+PASS Object.getOwnPropertyDescriptor(global, 'XPathExpression').hasOwnProperty('set') is false
+PASS Object.getOwnPropertyDescriptor(global, 'XPathExpression').enumerable is false
+PASS Object.getOwnPropertyDescriptor(global, 'XPathExpression').configurable is true
 PASS Object.getOwnPropertyDescriptor(global, 'XPathResult').value is XPathResult
 PASS Object.getOwnPropertyDescriptor(global, 'XPathResult').hasOwnProperty('get') is false
 PASS Object.getOwnPropertyDescriptor(global, 'XPathResult').hasOwnProperty('set') is false
@@ -1883,11 +1903,6 @@ PASS Object.getOwnPropertyDescriptor(global, 'XSLTProcessor').hasOwnProperty('ge
 PASS Object.getOwnPropertyDescriptor(global, 'XSLTProcessor').hasOwnProperty('set') is false
 PASS Object.getOwnPropertyDescriptor(global, 'XSLTProcessor').enumerable is false
 PASS Object.getOwnPropertyDescriptor(global, 'XSLTProcessor').configurable is true
-PASS Object.getOwnPropertyDescriptor(global, 'constructor').value is constructor
-PASS Object.getOwnPropertyDescriptor(global, 'constructor').hasOwnProperty('get') is false
-PASS Object.getOwnPropertyDescriptor(global, 'constructor').hasOwnProperty('set') is false
-PASS Object.getOwnPropertyDescriptor(global, 'constructor').enumerable is false
-FAIL Object.getOwnPropertyDescriptor(global, 'constructor').configurable should be true. Was false.
 PASS Object.getOwnPropertyDescriptor(global, 'webkitURL').value is webkitURL
 PASS Object.getOwnPropertyDescriptor(global, 'webkitURL').hasOwnProperty('get') is false
 PASS Object.getOwnPropertyDescriptor(global, 'webkitURL').hasOwnProperty('set') is false

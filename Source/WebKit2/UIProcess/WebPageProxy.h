@@ -166,6 +166,7 @@ class WebGestureEvent;
 class WebVibrationProxy;
 #endif
 
+typedef GenericCallback<WKDictionaryRef> DictionaryCallback;
 typedef GenericCallback<WKStringRef, StringImpl*> StringCallback;
 typedef GenericCallback<WKSerializedScriptValueRef, WebSerializedScriptValue*> ScriptValueCallback;
 
@@ -282,13 +283,14 @@ public:
     bool tryClose();
     bool isClosed() const { return m_isClosed; }
 
-    void loadURL(const String&);
-    void loadURLRequest(WebURLRequest*);
-    void loadHTMLString(const String& htmlString, const String& baseURL);
-    void loadAlternateHTMLString(const String& htmlString, const String& baseURL, const String& unreachableURL);
-    void loadPlainTextString(const String& string);
-    void loadWebArchiveData(const WebData*);
-    void loadFile(const String& fileURL, const String& resourceDirectoryURL);
+    void loadURL(const String&, APIObject* userData = 0);
+    void loadURLRequest(WebURLRequest*, APIObject* userData = 0);
+    void loadFile(const String& fileURL, const String& resourceDirectoryURL, APIObject* userData = 0);
+    void loadData(WebData*, const String& MIMEType, const String& encoding, const String& baseURL, APIObject* userData = 0);
+    void loadHTMLString(const String& htmlString, const String& baseURL, APIObject* userData = 0);
+    void loadAlternateHTMLString(const String& htmlString, const String& baseURL, const String& unreachableURL, APIObject* userData = 0);
+    void loadPlainTextString(const String& string, APIObject* userData = 0);
+    void loadWebArchiveData(const WebData*, APIObject* userData = 0);
 
     void stopLoading();
     void reload(bool reloadFromOrigin);
@@ -535,6 +537,9 @@ public:
     void makeFirstResponder();
 
     ColorSpaceData colorSpace();
+
+    void getPlugInInformation(pid_t plugInProcessID, PassRefPtr<DictionaryCallback>);
+    void containsPlugInCallback(bool containsPlugIn, uint64_t plugInToken, uint64_t callbackID);
 #endif
 
     void pageScaleFactorDidChange(double);
@@ -758,9 +763,6 @@ public:
     bool mainFrameInViewSourceMode() const { return m_mainFrameInViewSourceMode; }
     void setMainFrameInViewSourceMode(bool);
 
-    bool overridePrivateBrowsingEnabled() const { return m_overridePrivateBrowsingEnabled; }
-    void setOverridePrivateBrowsingEnabled(bool);
-
     void didReceiveAuthenticationChallengeProxy(uint64_t frameID, PassRefPtr<AuthenticationChallengeProxy>);
 
     int64_t spellDocumentTag();
@@ -769,6 +771,8 @@ public:
 
     void connectionWillOpen(CoreIPC::Connection*);
     void connectionWillClose(CoreIPC::Connection*);
+
+    void didSaveToPageCache();
 
 private:
     WebPageProxy(PageClient*, PassRefPtr<WebProcessProxy>, WebPageGroup*, uint64_t pageID);
@@ -872,7 +876,10 @@ private:
 
     void requestNotificationPermission(uint64_t notificationID, const String& originString);
     void showNotification(const String& title, const String& body, const String& iconURL, const String& tag, const String& lang, const String& dir, const String& originString, uint64_t notificationID);
-    
+    void cancelNotification(uint64_t notificationID);
+    void clearNotifications(const Vector<uint64_t>& notificationIDs);
+    void didDestroyNotification(uint64_t notificationID);
+
 #if USE(TILED_BACKING_STORE)
     void pageDidRequestScroll(const WebCore::IntPoint&);
     void pageTransitionViewportReady();
@@ -1044,7 +1051,7 @@ private:
     void sendWheelEvent(const WebWheelEvent&);
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-    void findPlugin(const String& mimeType, const String& urlString, const String& frameURLString, const String& pageURLString, String& pluginPath, String& newMIMEType, uint32_t& pluginLoadPolicy);
+    void findPlugin(const String& mimeType, uint32_t processType, const String& urlString, const String& frameURLString, const String& pageURLString, bool allowOnlyApplicationPlugins, uint64_t& pluginProcessToken, String& newMIMEType, uint32_t& pluginLoadPolicy);
 #endif
 
     PageClient* m_pageClient;
@@ -1096,6 +1103,9 @@ private:
 #if PLATFORM(GTK)
     HashMap<uint64_t, RefPtr<PrintFinishedCallback>> m_printFinishedCallbacks;
 #endif
+#if PLATFORM(MAC)
+    HashMap<uint64_t, RefPtr<DictionaryCallback>> m_plugInInformationCallbacks;
+#endif
 
     HashSet<WebEditCommandProxy*> m_editCommandSet;
 
@@ -1130,6 +1140,7 @@ private:
     WebFrameProxy::LoadState m_loadStateAtProcessExit;
 
     EditorState m_editorState;
+    bool m_temporarilyClosedComposition; // Editor state changed from hasComposition to !hasComposition, but that was only with shouldIgnoreCompositionSelectionChange yet.
 
     double m_textZoomFactor;
     double m_pageZoomFactor;
@@ -1238,7 +1249,6 @@ private:
     bool m_rubberBandsAtTop;
 
     bool m_mainFrameInViewSourceMode;
-    bool m_overridePrivateBrowsingEnabled;
         
     unsigned m_pageCount;
 

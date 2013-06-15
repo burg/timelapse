@@ -40,7 +40,6 @@
 namespace WebCore {
 
 class Frame;
-class MemoryInfo;
 class Page;
 class ScriptArguments;
 
@@ -82,8 +81,6 @@ public:
     void group(ScriptState*, PassRefPtr<ScriptArguments>);
     void groupCollapsed(ScriptState*, PassRefPtr<ScriptArguments>);
     void groupEnd();
-
-    PassRefPtr<MemoryInfo> memory() const;
 
 private:
     inline Page* page() const;

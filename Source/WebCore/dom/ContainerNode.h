@@ -106,13 +106,10 @@ public:
 
     void cloneChildNodes(ContainerNode* clone);
 
-    virtual void attach() OVERRIDE;
-    virtual void detach() OVERRIDE;
+    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
     virtual LayoutRect boundingBox() const OVERRIDE;
-    virtual void setFocus(bool) OVERRIDE;
-    virtual void setActive(bool active = true, bool pause = false) OVERRIDE;
-    virtual void setHovered(bool = true) OVERRIDE;
-    virtual void scheduleSetNeedsStyleRecalc(StyleChangeType = FullStyleChange) OVERRIDE;
+    virtual void scheduleSetNeedsStyleRecalc(StyleChangeType = FullStyleChange) OVERRIDE FINAL;
 
     // -----------------------------------------------------------------------------
     // Notification of document structure changes (see Node.h for more notification methods)
@@ -260,6 +257,11 @@ inline bool Node::needsShadowTreeWalker() const
         return true;
     ContainerNode* parent = parentOrShadowHostNode();
     return parent && parent->getFlag(NeedsShadowTreeWalkerFlag);
+}
+
+inline bool Node::isTreeScope() const
+{
+    return treeScope()->rootNode() == this;
 }
 
 // This constant controls how much buffer is initially allocated

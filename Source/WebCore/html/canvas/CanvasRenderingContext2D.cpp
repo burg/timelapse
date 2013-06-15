@@ -73,7 +73,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/Uint8ClampedArray.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/text/StringBuilder.h>
 
 #if USE(CG)
@@ -1113,21 +1112,13 @@ void CanvasRenderingContext2D::strokeRect(float x, float y, float width, float h
 {
     if (!validateRectForCanvas(x, y, width, height))
         return;
-    strokeRect(x, y, width, height, state().m_lineWidth);
-}
-
-void CanvasRenderingContext2D::strokeRect(float x, float y, float width, float height, float lineWidth)
-{
-    if (!validateRectForCanvas(x, y, width, height))
-        return;
-
-    if (!(lineWidth >= 0))
-        return;
 
     GraphicsContext* c = drawingContext();
     if (!c)
         return;
     if (!state().m_invertibleCTM)
+        return;
+    if (!(state().m_lineWidth >= 0))
         return;
 
     // If gradient size is zero, then paint nothing.
@@ -1138,9 +1129,9 @@ void CanvasRenderingContext2D::strokeRect(float x, float y, float width, float h
     FloatRect rect(x, y, width, height);
 
     FloatRect boundingRect = rect;
-    boundingRect.inflate(lineWidth / 2);
+    boundingRect.inflate(state().m_lineWidth / 2);
 
-    c->strokeRect(rect, lineWidth);
+    c->strokeRect(rect, state().m_lineWidth);
     didDraw(boundingRect);
 }
 
@@ -1989,13 +1980,11 @@ String CanvasRenderingContext2D::font() const
     serializedFont.appendNumber(fontDescription.computedPixelSize());
     serializedFont.appendLiteral("px");
 
-    const FontFamily& firstFontFamily = fontDescription.family();
-    for (const FontFamily* fontFamily = &firstFontFamily; fontFamily; fontFamily = fontFamily->next()) {
-        if (fontFamily != &firstFontFamily)
+    for (unsigned i = 0; i < state().m_font.familyCount(); ++i) {
+        if (i)
             serializedFont.append(',');
-
         // FIXME: We should append family directly to serializedFont rather than building a temporary string.
-        String family = fontFamily->family();
+        String family = state().m_font.familyAt(i);
         if (family.startsWith("-webkit-"))
             family = family.substring(8);
         if (family.contains(' '))
@@ -2036,11 +2025,8 @@ void CanvasRenderingContext2D::setFont(const String& newFont)
     if (RenderStyle* computedStyle = canvas()->computedStyle())
         newStyle->setFontDescription(computedStyle->fontDescription());
     else {
-        FontFamily fontFamily;
-        fontFamily.setFamily(defaultFontFamily);
-
         FontDescription defaultFontDescription;
-        defaultFontDescription.setFamily(fontFamily);
+        defaultFontDescription.setOneFamily(defaultFontFamily);
         defaultFontDescription.setSpecifiedSize(defaultFontSize);
         defaultFontDescription.setComputedSize(defaultFontSize);
 

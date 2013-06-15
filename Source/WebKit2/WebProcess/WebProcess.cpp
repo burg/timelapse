@@ -42,7 +42,6 @@
 #include "WebFrameNetworkingContext.h"
 #include "WebGeolocationManager.h"
 #include "WebIconDatabaseProxy.h"
-#include "WebKeyValueStorageManager.h"
 #include "WebMediaCacheManager.h"
 #include "WebMemorySampler.h"
 #include "WebPage.h"
@@ -177,20 +176,14 @@ WebProcess::WebProcess()
 #if ENABLE(PLUGIN_PROCESS)
     , m_pluginProcessConnectionManager(PluginProcessConnectionManager::create())
 #endif
-    , m_inWindowPageCount(0)
     , m_nonVisibleProcessCleanupTimer(this, &WebProcess::nonVisibleProcessCleanupTimerFired)
 {
-#if USE(PLATFORM_STRATEGIES)
     // Initialize our platform strategies.
     WebPlatformStrategies::initialize();
-#endif // USE(PLATFORM_STRATEGIES)
-
 
     // FIXME: This should moved to where WebProcess::initialize is called,
     // so that ports have a chance to customize, and ifdefs in this file are
     // limited.
-    addSupplement<WebKeyValueStorageManager>();
-
     addSupplement<WebGeolocationManager>();
     addSupplement<WebApplicationCacheManager>();
     addSupplement<WebResourceCacheManager>();
@@ -376,7 +369,7 @@ void WebProcess::ensureNetworkProcessConnection()
 
     CoreIPC::Attachment encodedConnectionIdentifier;
 
-    if (!connection()->sendSync(Messages::WebProcessProxy::GetNetworkProcessConnection(),
+    if (!parentProcessConnection()->sendSync(Messages::WebProcessProxy::GetNetworkProcessConnection(),
         Messages::WebProcessProxy::GetNetworkProcessConnection::Reply(encodedConnectionIdentifier), 0))
         return;
 
@@ -556,6 +549,19 @@ WebPage* WebProcess::focusedWebPage() const
     return 0;
 }
     
+#if PLATFORM(MAC)
+void WebProcess::setProcessSuppressionEnabled(bool processSuppressionEnabled)
+{
+    HashMap<uint64_t, RefPtr<WebPage> >::const_iterator end = m_pageMap.end();
+    for (HashMap<uint64_t, RefPtr<WebPage> >::const_iterator it = m_pageMap.begin(); it != end; ++it) {
+        WebPage* page = (*it).value.get();
+        page->setThrottled(processSuppressionEnabled);
+    }
+    
+    ChildProcess::setProcessSuppressionEnabled(processSuppressionEnabled);
+}
+#endif
+
 WebPage* WebProcess::webPage(uint64_t pageID) const
 {
     return m_pageMap.get(pageID);
@@ -581,6 +587,7 @@ void WebProcess::removeWebPage(uint64_t pageID)
 {
     ASSERT(m_pageMap.contains(pageID));
 
+    pageWillLeaveWindow(pageID);
     m_pageMap.remove(pageID);
 
     enableTermination();
@@ -598,7 +605,7 @@ bool WebProcess::shouldTerminate()
 
     // FIXME: the ShouldTerminate message should also send termination parameters, such as any session cookies that need to be preserved.
     bool shouldTerminate = false;
-    if (connection()->sendSync(Messages::WebProcessProxy::ShouldTerminate(), Messages::WebProcessProxy::ShouldTerminate::Reply(shouldTerminate), 0)
+    if (parentProcessConnection()->sendSync(Messages::WebProcessProxy::ShouldTerminate(), Messages::WebProcessProxy::ShouldTerminate::Reply(shouldTerminate), 0)
         && !shouldTerminate)
         return false;
 
@@ -1128,6 +1135,13 @@ void WebProcess::setTextCheckerState(const TextCheckerState& textCheckerState)
     }
 }
 
+void WebProcess::releasePageCache()
+{
+    int savedPageCacheCapacity = pageCache()->capacity();
+    pageCache()->setCapacity(0);
+    pageCache()->setCapacity(savedPageCacheCapacity);
+}
+
 #if !PLATFORM(MAC)
 void WebProcess::initializeProcessName(const ChildProcessInitializationParameters&)
 {
@@ -1147,27 +1161,26 @@ void WebProcess::updateActivePages()
 
 #endif
     
-void WebProcess::pageDidEnterWindow(WebPage*)
+void WebProcess::pageDidEnterWindow(uint64_t pageID)
 {
-    m_inWindowPageCount++;
+    m_pagesInWindows.add(pageID);
     m_nonVisibleProcessCleanupTimer.stop();
 }
 
-void WebProcess::pageWillLeaveWindow(WebPage*)
+void WebProcess::pageWillLeaveWindow(uint64_t pageID)
 {
-    ASSERT(m_inWindowPageCount > 0);
-    if (m_inWindowPageCount <= 0)
-        return;
+    m_pagesInWindows.remove(pageID);
 
-    m_inWindowPageCount--;
-
-    if (!m_inWindowPageCount)
+    if (m_pagesInWindows.isEmpty() && !m_nonVisibleProcessCleanupTimer.isActive())
         m_nonVisibleProcessCleanupTimer.startOneShot(nonVisibleProcessCleanupDelay);
 }
     
 void WebProcess::nonVisibleProcessCleanupTimerFired(Timer<WebProcess>*)
 {
-    ASSERT(!m_inWindowPageCount);
+    ASSERT(m_pagesInWindows.isEmpty());
+    if (!m_pagesInWindows.isEmpty())
+        return;
+
 #if PLATFORM(MAC)
     wkDestroyRenderingResources();
 #endif

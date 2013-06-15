@@ -74,6 +74,7 @@
 #include "RenderListBox.h"
 #include "RenderListMarker.h"
 #include "RenderMathMLBlock.h"
+#include "RenderMathMLFraction.h"
 #include "RenderMathMLOperator.h"
 #include "RenderMenuList.h"
 #include "RenderSVGShape.h"
@@ -1576,13 +1577,13 @@ bool AccessibilityRenderObject::isFocused() const
     if (!document)
         return false;
     
-    Node* focusedNode = document->focusedNode();
-    if (!focusedNode)
+    Element* focusedElement = document->focusedElement();
+    if (!focusedElement)
         return false;
     
     // A web area is represented by the Document node in the DOM tree, which isn't focusable.
     // Check instead if the frame's selection controller is focused
-    if (focusedNode == m_renderer->node()
+    if (focusedElement == m_renderer->node()
         || (roleValue() == WebAreaRole && document->frame()->selection()->isFocusedAndActive()))
         return true;
     
@@ -1595,21 +1596,20 @@ void AccessibilityRenderObject::setFocused(bool on)
         return;
     
     Document* document = this->document();
-    if (!on)
-        document->setFocusedNode(0);
-    else {
-        Node* node = this->node();
-        if (node && node->isElementNode()) {
-            // If this node is already the currently focused node, then calling focus() won't do anything.
-            // That is a problem when focus is removed from the webpage to chrome, and then returns.
-            // In these cases, we need to do what keyboard and mouse focus do, which is reset focus first.
-            if (document->focusedNode() == node)
-                document->setFocusedNode(0);
-            
-            toElement(node)->focus();
-        } else
-            document->setFocusedNode(node);
+    Node* node = this->node();
+
+    if (!on || !node || !node->isElementNode()) {
+        document->setFocusedElement(0);
+        return;
     }
+
+    // If this node is already the currently focused node, then calling focus() won't do anything.
+    // That is a problem when focus is removed from the webpage to chrome, and then returns.
+    // In these cases, we need to do what keyboard and mouse focus do, which is reset focus first.
+    if (document->focusedElement() == node)
+        document->setFocusedElement(0);
+
+    toElement(node)->focus();
 }
 
 void AccessibilityRenderObject::setSelectedRows(AccessibilityChildrenVector& selectedRows)
@@ -2330,7 +2330,7 @@ void AccessibilityRenderObject::handleActiveDescendantChanged()
     if (!element)
         return;
     Document* doc = renderer()->document();
-    if (!doc->frame()->selection()->isFocusedAndActive() || doc->focusedNode() != element)
+    if (!doc->frame()->selection()->isFocusedAndActive() || doc->focusedElement() != element)
         return; 
     AccessibilityRenderObject* activedescendant = static_cast<AccessibilityRenderObject*>(activeDescendant());
     
@@ -3234,7 +3234,7 @@ bool AccessibilityRenderObject::hasPlainText() const
     
     return style->fontDescription().weight() == FontWeightNormal
         && style->fontDescription().italic() == FontItalicOff
-        && style->textDecorationsInEffect() == TDNONE;
+        && style->textDecorationsInEffect() == TextDecorationNone;
 }
 
 bool AccessibilityRenderObject::hasSameFont(RenderObject* renderer) const
@@ -3242,7 +3242,7 @@ bool AccessibilityRenderObject::hasSameFont(RenderObject* renderer) const
     if (!m_renderer || !renderer)
         return false;
     
-    return m_renderer->style()->fontDescription().family() == renderer->style()->fontDescription().family();
+    return m_renderer->style()->fontDescription().families() == renderer->style()->fontDescription().families();
 }
 
 bool AccessibilityRenderObject::hasSameFontColor(RenderObject* renderer) const
@@ -3266,7 +3266,7 @@ bool AccessibilityRenderObject::hasUnderline() const
     if (!m_renderer)
         return false;
     
-    return m_renderer->style()->textDecorationsInEffect() & UNDERLINE;
+    return m_renderer->style()->textDecorationsInEffect() & TextDecorationUnderline;
 }
 
 String AccessibilityRenderObject::nameForMSAA() const
@@ -3529,6 +3529,11 @@ bool AccessibilityRenderObject::isMathIdentifier() const
     return node() && node()->hasTagName(MathMLNames::miTag);
 }
 
+bool AccessibilityRenderObject::isMathMultiscript() const
+{
+    return node() && node()->hasTagName(MathMLNames::mmultiscriptsTag);
+}
+    
 bool AccessibilityRenderObject::isMathTable() const
 {
     return node() && node()->hasTagName(MathMLNames::mtableTag);
@@ -3567,7 +3572,7 @@ bool AccessibilityRenderObject::isIgnoredElementWithinMathTree() const
         if (isMathFraction() || isMathFenced() || isMathSubscriptSuperscript() || isMathRow()
             || isMathUnderOver() || isMathRoot() || isMathText() || isMathNumber()
             || isMathOperator() || isMathFenceOperator() || isMathSeparatorOperator()
-            || isMathIdentifier() || isMathTable() || isMathTableRow() || isMathTableCell())
+            || isMathIdentifier() || isMathTable() || isMathTableRow() || isMathTableCell() || isMathMultiscript())
             return false;
         return true;
     }
@@ -3660,7 +3665,7 @@ AccessibilityObject* AccessibilityRenderObject::mathOverObject()
 
 AccessibilityObject* AccessibilityRenderObject::mathBaseObject()
 {
-    if (!isMathSubscriptSuperscript() && !isMathUnderOver())
+    if (!isMathSubscriptSuperscript() && !isMathUnderOver() && !isMathMultiscript())
         return 0;
     
     AccessibilityChildrenVector children = this->children();
@@ -3718,10 +3723,75 @@ String AccessibilityRenderObject::mathFencedCloseString() const
     
     return getAttribute(MathMLNames::closeAttr);
 }
+    
+void AccessibilityRenderObject::mathPrescripts(AccessibilityMathMultiscriptPairs& prescripts)
+{
+    if (!isMathMultiscript() || !node())
+        return;
+    
+    bool foundPrescript = false;
+    pair<AccessibilityObject*, AccessibilityObject*> prescriptPair;
+    for (Node* child = node()->firstChild(); child; child = child->nextSibling()) {
+        if (foundPrescript) {
+            AccessibilityObject* axChild = axObjectCache()->getOrCreate(child);
+            if (axChild && axChild->isMathElement()) {
+                if (!prescriptPair.first)
+                    prescriptPair.first = axChild;
+                else {
+                    prescriptPair.second = axChild;
+                    prescripts.append(prescriptPair);
+                    prescriptPair.first = 0;
+                    prescriptPair.second = 0;
+                }
+            }
+        } else if (child->hasTagName(MathMLNames::mprescriptsTag))
+            foundPrescript = true;
+    }
+    
+    // Handle the odd number of pre scripts case.
+    if (prescriptPair.first)
+        prescripts.append(prescriptPair);
+}
+
+void AccessibilityRenderObject::mathPostscripts(AccessibilityMathMultiscriptPairs& postscripts)
+{
+    if (!isMathMultiscript() || !node())
+        return;
+
+    // In Multiscripts, the post-script elements start after the first element (which is the base)
+    // and continue until a <mprescripts> tag is found
+    pair<AccessibilityObject*, AccessibilityObject*> postscriptPair;
+    bool foundBaseElement = false;
+    for (Node* child = node()->firstChild(); child; child = child->nextSibling()) {
+        if (child->hasTagName(MathMLNames::mprescriptsTag))
+            break;
+
+        AccessibilityObject* axChild = axObjectCache()->getOrCreate(child);
+        if (axChild && axChild->isMathElement()) {
+            if (!foundBaseElement)
+                foundBaseElement = true;
+            else if (!postscriptPair.first)
+                postscriptPair.first = axChild;
+            else {
+                postscriptPair.second = axChild;
+                postscripts.append(postscriptPair);
+                postscriptPair.first = 0;
+                postscriptPair.second = 0;
+            }
+        }
+    }
+
+    // Handle the odd number of post scripts case.
+    if (postscriptPair.first)
+        postscripts.append(postscriptPair);
+}
 
 int AccessibilityRenderObject::mathLineThickness() const
 {
-    return getAttribute(MathMLNames::linethicknessAttr).toInt();
+    if (!isMathFraction())
+        return -1;
+    
+    return toRenderMathMLFraction(m_renderer)->lineThickness();
 }
 
 #endif

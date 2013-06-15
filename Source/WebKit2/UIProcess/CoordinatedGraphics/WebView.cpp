@@ -45,11 +45,14 @@ using namespace WebCore;
 namespace WebKit {
 
 WebView::WebView(WebContext* context, WebPageGroup* pageGroup)
-    : m_page(context->createWebPage(this, pageGroup))
-    , m_focused(false)
+    : m_focused(false)
     , m_visible(false)
     , m_contentScaleFactor(1.0)
+    , m_opacity(1.0)
 {
+    // Need to call createWebPage after other data members, specifically m_visible, are initialized.
+    m_page = context->createWebPage(this, pageGroup);
+
     m_page->pageGroup()->preferences()->setAcceleratedCompositingEnabled(true);
     m_page->pageGroup()->preferences()->setForceCompositingMode(true);
 
@@ -76,6 +79,9 @@ void WebView::initialize()
 
 void WebView::setSize(const WebCore::IntSize& size)
 {
+    if (m_size == size)
+        return;
+
     m_size = size;
 
     updateViewportSize();
@@ -106,6 +112,11 @@ void WebView::setUserViewportTranslation(double tx, double ty)
 
 IntPoint WebView::userViewportToContents(const IntPoint& point) const
 {
+    return transformFromScene().mapPoint(point);
+}
+
+IntPoint WebView::userViewportToScene(const WebCore::IntPoint& point) const
+{
     return m_userViewportTransform.mapPoint(point);
 }
 
@@ -119,7 +130,7 @@ void WebView::paintToCurrentGLContext()
     scene->setDrawsBackground(m_page->drawsBackground());
     const FloatRect& viewport = m_userViewportTransform.mapRect(IntRect(IntPoint(), m_size));
 
-    scene->paintToCurrentGLContext(transformToScene().toTransformationMatrix(), /* opacity */ 1, viewport);
+    scene->paintToCurrentGLContext(transformToScene().toTransformationMatrix(), m_opacity, viewport);
 }
 
 void WebView::setDrawsBackground(bool drawsBackground)
@@ -182,7 +193,13 @@ void WebView::initializeClient(const WKViewClient* client)
 
 void WebView::didChangeContentsSize(const WebCore::IntSize& size)
 {
+    if (m_contentsSize == size)
+        return;
+
+    m_contentsSize = size;
     m_client.didChangeContentsSize(this, size);
+
+    updateViewportSize();
 }
 
 AffineTransform WebView::transformFromScene() const
@@ -192,12 +209,13 @@ AffineTransform WebView::transformFromScene() const
 
 AffineTransform WebView::transformToScene() const
 {
-    TransformationMatrix transform = m_userViewportTransform;
+    FloatPoint position = -m_contentPosition;
+    float effectiveScale = m_contentScaleFactor * m_page->deviceScaleFactor();
+    position.scale(effectiveScale, effectiveScale);
 
-    const FloatPoint& position = contentPosition();
-    transform.scale(m_page->deviceScaleFactor());
-    transform.translate(-position.x(), -position.y());
-    transform.scale(contentScaleFactor());
+    TransformationMatrix transform = m_userViewportTransform;
+    transform.translate(position.x(), position.y());
+    transform.scale(effectiveScale);
 
     return transform.toAffineTransform();
 }
@@ -220,7 +238,9 @@ void WebView::updateViewportSize()
     if (DrawingAreaProxy* drawingArea = page()->drawingArea()) {
         // Web Process expects sizes in UI units, and not raw device units.
         drawingArea->setSize(roundedIntSize(dipSize()), IntSize(), IntSize());
-        drawingArea->setVisibleContentsRect(FloatRect(contentPosition(), dipSize()), FloatPoint());
+        FloatRect visibleContentsRect(contentPosition(), visibleContentsSize());
+        visibleContentsRect.intersect(FloatRect(FloatPoint(), contentsSize()));
+        drawingArea->setVisibleContentsRect(visibleContentsRect, FloatPoint());
     }
 }
 
@@ -230,6 +250,14 @@ inline WebCore::FloatSize WebView::dipSize() const
     dipSize.scale(1 / m_page->deviceScaleFactor());
 
     return dipSize;
+}
+
+WebCore::FloatSize WebView::visibleContentsSize() const
+{
+    FloatSize visibleContentsSize(dipSize());
+    visibleContentsSize.scale(1 / m_contentScaleFactor);
+
+    return visibleContentsSize;
 }
 
 // Page Client
@@ -297,6 +325,11 @@ void WebView::pageClosed()
     notImplemented();
 }
 
+void WebView::preferencesDidChange()
+{
+    notImplemented();
+}
+
 void WebView::toolTipChanged(const String&, const String& newToolTip)
 {
     m_client.didChangeTooltip(this, newToolTip);
@@ -356,7 +389,7 @@ void WebView::doneWithTouchEvent(const NativeWebTouchEvent&, bool /*wasEventHand
 }
 #endif
 
-PassRefPtr<WebPopupMenuProxy> WebView::createPopupMenuProxy(WebPageProxy* page)
+PassRefPtr<WebPopupMenuProxy> WebView::createPopupMenuProxy(WebPageProxy*)
 {
     notImplemented();
     return 0;

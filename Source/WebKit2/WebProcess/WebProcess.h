@@ -132,6 +132,8 @@ public:
 #if PLATFORM(MAC)
     pid_t presenterApplicationPid() const { return m_presenterApplicationPid; }
     bool shouldForceScreenFontSubstitution() const { return m_shouldForceScreenFontSubstitution; }
+
+    void setProcessSuppressionEnabled(bool);
 #endif
     
     const TextCheckerState& textCheckerState() const { return m_textCheckerState; }
@@ -161,8 +163,8 @@ public:
     void ensurePrivateBrowsingSession();
     void destroyPrivateBrowsingSession();
     
-    void pageDidEnterWindow(WebPage*);
-    void pageWillLeaveWindow(WebPage*);
+    void pageDidEnterWindow(uint64_t pageID);
+    void pageWillLeaveWindow(uint64_t pageID);
 
     void nonVisibleProcessCleanupTimerFired(WebCore::Timer<WebProcess>*);
 
@@ -227,6 +229,8 @@ private:
     void getWebCoreStatistics(uint64_t callbackID);
     void garbageCollectJavaScriptObjects();
     void setJavaScriptGarbageCollectorTimerEnabled(bool flag);
+
+    void releasePageCache();
 
 #if USE(SOUP)
     void setIgnoreTLSErrors(bool);
@@ -309,7 +313,7 @@ private:
     RefPtr<PluginProcessConnectionManager> m_pluginProcessConnectionManager;
 #endif
 
-    int m_inWindowPageCount;
+    HashSet<uint64_t> m_pagesInWindows;
     WebCore::Timer<WebProcess> m_nonVisibleProcessCleanupTimer;
 };
 

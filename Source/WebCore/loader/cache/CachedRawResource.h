@@ -30,7 +30,7 @@ namespace WebCore {
 class CachedResourceClient;
 class SubresourceLoader;
 
-class CachedRawResource : public CachedResource {
+class CachedRawResource FINAL : public CachedResource {
 public:
     CachedRawResource(ResourceRequest&, Type);
 
@@ -44,24 +44,23 @@ public:
     // FIXME: This is exposed for the InpsectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
     unsigned long identifier() const { return m_identifier; }
 
-    SubresourceLoader* loader() const;
     void clear();
 
-    virtual bool canReuse(const ResourceRequest&) const;
-
 private:
-    virtual void didAddClient(CachedResourceClient*);
-    virtual void data(PassRefPtr<ResourceBuffer> data, bool allDataReceived);
+    virtual void didAddClient(CachedResourceClient*) OVERRIDE;
+    virtual void data(ResourceBuffer*, bool allDataReceived) OVERRIDE;
 
-    virtual bool shouldIgnoreHTTPStatusCodeErrors() const { return true; }
-    virtual void allClientsRemoved();
+    virtual bool shouldIgnoreHTTPStatusCodeErrors() const OVERRIDE { return true; }
+    virtual void allClientsRemoved() OVERRIDE;
 
-    virtual void willSendRequest(ResourceRequest&, const ResourceResponse&);
-    virtual void responseReceived(const ResourceResponse&);
-    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
+    virtual void willSendRequest(ResourceRequest&, const ResourceResponse&) OVERRIDE;
+    virtual void responseReceived(const ResourceResponse&) OVERRIDE;
+    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) OVERRIDE;
 
     virtual void switchClientsToRevalidatedResource() OVERRIDE;
     virtual bool mayTryReplaceEncodedData() const OVERRIDE { return true; }
+
+    virtual bool canReuse(const ResourceRequest&) const OVERRIDE;
 
     unsigned long m_identifier;
 

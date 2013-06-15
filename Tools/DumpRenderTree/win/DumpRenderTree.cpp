@@ -54,15 +54,13 @@
 #include <wtf/Vector.h>
 #include <windows.h>
 #include <CoreFoundation/CoreFoundation.h>
+#include <WebCore/FileSystem.h>
 #include <WebKit/WebKit.h>
 #include <WebKit/WebKitCOMAPI.h>
 
 #if USE(CFNETWORK)
-#include <CFNetwork/CFURLCachePriv.h>
-#endif
-
-#if USE(CFNETWORK)
 #include <CFNetwork/CFHTTPCookiesPriv.h>
+#include <CFNetwork/CFURLCachePriv.h>
 #endif
 
 using namespace std;
@@ -74,7 +72,12 @@ const LPWSTR TestPluginDir = L"TestNetscapePlugin";
 #endif
 
 static LPCWSTR fontsEnvironmentVariable = L"WEBKIT_TESTFONTS";
+static LPCWSTR dumpRenderTreeTemp = L"DUMPRENDERTREE_TEMP";
 #define USE_MAC_FONTS
+
+static CFStringRef WebDatabaseDirectoryDefaultsKey = CFSTR("WebDatabaseDirectory");
+static CFStringRef WebKitLocalCacheDefaultsKey = CFSTR("WebKitLocalCache");
+static CFStringRef WebStorageDirectoryDefaultsKey = CFSTR("WebKitLocalStorageDatabasePathPreferenceKey");
 
 const LPCWSTR kDumpRenderTreeClassName = L"DumpRenderTreeWindow";
 
@@ -190,6 +193,22 @@ static string toUTF8(const wchar_t* wideString, size_t length)
 
     return string(utf8Vector.data(), utf8Vector.size() - 1);
 }
+
+#if USE(CF)
+static String libraryPathForDumpRenderTree()
+{
+    DWORD size = ::GetEnvironmentVariable(dumpRenderTreeTemp, 0, 0);
+    Vector<TCHAR> buffer(size);
+    if (::GetEnvironmentVariable(dumpRenderTreeTemp, buffer.data(), buffer.size())) {
+        wstring path = buffer.data();
+        if (!path.empty() && (path[path.length() - 1] != L'\\'))
+            path.append(L"\\");
+        return String (path.data(), path.length());
+    }
+
+    return WebCore::localUserSpecificStorageDirectory();
+}
+#endif
 
 string toUTF8(BSTR bstr)
 {
@@ -940,6 +959,75 @@ static void sizeWebViewForCurrentTest()
     ::SetWindowPos(webViewWindow, 0, 0, 0, width, height, SWP_NOMOVE);
 }
 
+static String findFontFallback(const char* pathOrUrl)
+{
+    String pathToFontFallback = WebCore::directoryName(pathOrUrl);
+
+    wchar_t fullPath[_MAX_PATH];
+    if (!_wfullpath(fullPath, pathToFontFallback.charactersWithNullTermination(), _MAX_PATH))
+        return emptyString();
+
+    if (!::PathIsDirectoryW(fullPath))
+        return emptyString();
+
+    String pathToCheck = fullPath;
+
+    static const String layoutTests = "LayoutTests";
+
+    // Find the layout test root on the current path:
+    size_t location = pathToCheck.find(layoutTests);
+    if (WTF::notFound == location)
+        return emptyString();
+
+    String pathToTest = pathToCheck.substring(location + layoutTests.length() + 1);
+    String possiblePathToLogue = WebCore::pathByAppendingComponent(pathToCheck.substring(0, location + layoutTests.length() + 1), "platform\\win");
+
+    Vector<String> possiblePaths;
+    possiblePaths.append(WebCore::pathByAppendingComponent(possiblePathToLogue, pathToTest));
+
+    size_t nextCandidateEnd = pathToTest.reverseFind('\\');
+    while (nextCandidateEnd && nextCandidateEnd != WTF::notFound) {
+        pathToTest = pathToTest.substring(0, nextCandidateEnd);
+        possiblePaths.append(WebCore::pathByAppendingComponent(possiblePathToLogue, pathToTest));
+        nextCandidateEnd = pathToTest.reverseFind('\\');
+    }
+
+    for (Vector<String>::iterator pos = possiblePaths.begin(); pos != possiblePaths.end(); ++pos) {
+        pathToFontFallback = WebCore::pathByAppendingComponent(*pos, "resources\\"); 
+
+        if (::PathIsDirectoryW(pathToFontFallback.charactersWithNullTermination()))
+            return pathToFontFallback;
+    }
+
+    return emptyString();
+}
+
+static void addFontFallbackIfPresent(const String& fontFallbackPath)
+{
+    if (fontFallbackPath.isEmpty())
+        return;
+
+    String fontFallback = WebCore::pathByAppendingComponent(fontFallbackPath, "Mac-compatible-font-fallback.css");
+
+    if (!::PathFileExistsW(fontFallback.charactersWithNullTermination()))
+        return;
+
+    ::setPersistentUserStyleSheetLocation(fontFallback.createCFString().get());
+}
+
+static void removeFontFallbackIfPresent(const String& fontFallbackPath)
+{
+    if (fontFallbackPath.isEmpty())
+        return;
+
+    String fontFallback = WebCore::pathByAppendingComponent(fontFallbackPath, "Mac-compatible-font-fallback.css");
+
+    if (!::PathFileExistsW(fontFallback.charactersWithNullTermination()))
+        return;
+
+    ::setPersistentUserStyleSheetLocation(0);
+}
+
 static void runTest(const string& inputLine)
 {
     TestCommand command = parseInputLine(inputLine);
@@ -958,6 +1046,8 @@ static void runTest(const string& inputLine)
 
     CFRelease(str);
 
+    String fallbackPath = findFontFallback(pathOrURL.c_str());
+
     str = CFURLGetString(url);
 
     CFIndex length = CFStringGetLength(str);
@@ -972,6 +1062,8 @@ static void runTest(const string& inputLine)
     ::gTestRunner = TestRunner::create(pathOrURL, command.expectedPixelHash);
     done = false;
     topLoadingFrame = 0;
+
+    addFontFallbackIfPresent(fallbackPath);
 
     sizeWebViewForCurrentTest();
     gTestRunner->setIconDatabaseEnabled(false);
@@ -1064,6 +1156,7 @@ static void runTest(const string& inputLine)
     }
 
 exit:
+    removeFontFallbackIfPresent(fallbackPath);
     SysFreeString(urlBStr);
     ::gTestRunner.clear();
 
@@ -1274,6 +1367,14 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
         printf("SupportedFeatures:%s %s\n", acceleratedCompositingAvailable ? "AcceleratedCompositing" : "", threeDRenderingAvailable ? "3DRendering" : "");
         return 0;
     }
+
+#if USE(CF)
+    // Set up these values before creating the WebView so that the various initializations will see these preferred values.
+    String path = libraryPathForDumpRenderTree();
+    CFPreferencesSetAppValue(WebDatabaseDirectoryDefaultsKey, WebCore::pathByAppendingComponent(path, "Databases").createCFString().get(), kCFPreferencesCurrentApplication);
+    CFPreferencesSetAppValue(WebStorageDirectoryDefaultsKey, WebCore::pathByAppendingComponent(path, "LocalStorage").createCFString().get(), kCFPreferencesCurrentApplication);
+    CFPreferencesSetAppValue(WebKitLocalCacheDefaultsKey, WebCore::pathByAppendingComponent(path, "LocalCache").createCFString().get(), kCFPreferencesCurrentApplication);
+#endif
 
     COMPtr<IWebView> webView(AdoptCOM, createWebViewAndOffscreenWindow(&webViewWindow));
     if (!webView)

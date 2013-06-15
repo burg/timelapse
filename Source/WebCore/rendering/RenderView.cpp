@@ -27,6 +27,7 @@
 #include "FloatQuad.h"
 #include "FlowThreadController.h"
 #include "Frame.h"
+#include "FrameSelection.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "HTMLFrameOwnerElement.h"
@@ -68,6 +69,7 @@ RenderView::RenderView(Document* document)
     , m_layoutStateDisableCount(0)
     , m_renderQuoteHead(0)
     , m_renderCounterCount(0)
+    , m_selectionWasCaret(false)
 {
     // init RenderObject attributes
     setInline(false);
@@ -662,9 +664,8 @@ void RenderView::repaintSelection() const
 
         // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
         for (RenderBlock* block = o->containingBlock(); block && !block->isRenderView(); block = block->containingBlock()) {
-            if (processedBlocks.contains(block))
+            if (!processedBlocks.add(block).isNewEntry)
                 break;
-            processedBlocks.add(block);
             RenderSelectionInfo(block, true).repaint();
         }
     }
@@ -692,9 +693,11 @@ void RenderView::setSelection(RenderObject* start, int startPos, RenderObject* e
     if ((start && !end) || (end && !start))
         return;
 
+    bool caretChanged = m_selectionWasCaret != view()->frame()->selection()->isCaret();
+    m_selectionWasCaret = view()->frame()->selection()->isCaret();
     // Just return if the selection hasn't changed.
     if (m_selectionStart == start && m_selectionStartPos == startPos &&
-        m_selectionEnd == end && m_selectionEndPos == endPos)
+        m_selectionEnd == end && m_selectionEndPos == endPos && !caretChanged)
         return;
 
     if ((start && end) && (start->flowThreadContainingBlock() != end->flowThreadContainingBlock()))
@@ -1026,6 +1029,7 @@ void RenderView::pushLayoutState(RenderObject* root)
     ASSERT(m_layoutStateDisableCount == 0);
     ASSERT(m_layoutState == 0);
 
+    pushLayoutStateForCurrentFlowThread(root);
     m_layoutState = new (renderArena()) LayoutState(root);
 }
 
@@ -1138,6 +1142,30 @@ FlowThreadController* RenderView::flowThreadController()
         m_flowThreadController = FlowThreadController::create(this);
 
     return m_flowThreadController.get();
+}
+
+void RenderView::pushLayoutStateForCurrentFlowThread(const RenderObject* object)
+{
+    if (!m_flowThreadController)
+        return;
+
+    RenderFlowThread* currentFlowThread = m_flowThreadController->currentRenderFlowThread();
+    if (!currentFlowThread)
+        return;
+
+    currentFlowThread->pushFlowThreadLayoutState(object);
+}
+
+void RenderView::popLayoutStateForCurrentFlowThread()
+{
+    if (!m_flowThreadController)
+        return;
+
+    RenderFlowThread* currentFlowThread = m_flowThreadController->currentRenderFlowThread();
+    if (!currentFlowThread)
+        return;
+
+    currentFlowThread->popFlowThreadLayoutState();
 }
 
 RenderBlock::IntervalArena* RenderView::intervalArena()

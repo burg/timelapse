@@ -99,7 +99,7 @@ WebInspector.Drawer.prototype = {
 
         if (drawerWasVisible)
             return;
-        
+
         var height = this._constrainHeight(this._savedHeight || this.element.offsetHeight);
 
         this._floatingStatusBarContainer.style.paddingLeft = this._bottomStatusBar.offsetLeft + "px";

@@ -36,6 +36,8 @@
 #include "FrameLoader.h"
 #include "Logging.h"
 #include "MemoryCache.h"
+#include "Page.h"
+#include "PageActivityAssertionToken.h"
 #include "ResourceBuffer.h"
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
@@ -106,6 +108,8 @@ bool SubresourceLoader::init(const ResourceRequest& request)
 
     ASSERT(!reachedTerminalState());
     m_state = Initialized;
+    if (m_frame && m_frame->page() && !m_activityAssertion)
+        m_activityAssertion = m_frame->page()->createActivityToken();
     m_documentLoader->addSubresourceLoader(this);
     return true;
 }
@@ -246,6 +250,7 @@ bool SubresourceLoader::checkForHTTPStatusCodeError()
         return false;
 
     m_state = Finishing;
+    m_activityAssertion.clear();
     m_resource->error(CachedResource::LoadError);
     cancel();
     return true;
@@ -261,7 +266,7 @@ void SubresourceLoader::sendDataToResource(const char* data, int length)
     //     that all data has been received yet. 
     if (m_loadingMultipartContent || !resourceData()) { 
         RefPtr<ResourceBuffer> copiedData = ResourceBuffer::create(data, length); 
-        m_resource->data(copiedData.release(), m_loadingMultipartContent);
+        m_resource->data(copiedData.get(), m_loadingMultipartContent);
     } else 
         m_resource->data(resourceData(), false);
 }
@@ -278,10 +283,19 @@ void SubresourceLoader::didFinishLoading(double finishTime)
     RefPtr<SubresourceLoader> protect(this);
     CachedResourceHandle<CachedResource> protectResource(m_resource);
     m_state = Finishing;
+    m_activityAssertion.clear();
     m_resource->setLoadFinishTime(finishTime);
     m_resource->data(resourceData(), true);
+
+    if (wasCancelled())
+        return;
     m_resource->finish();
-    ResourceLoader::didFinishLoading(finishTime);
+    ASSERT(!reachedTerminalState());
+    didFinishLoadingOnePart(finishTime);
+    notifyDone();
+    if (reachedTerminalState())
+        return;
+    releaseResources();
 }
 
 void SubresourceLoader::didFail(const ResourceError& error)
@@ -294,13 +308,18 @@ void SubresourceLoader::didFail(const ResourceError& error)
     RefPtr<SubresourceLoader> protect(this);
     CachedResourceHandle<CachedResource> protectResource(m_resource);
     m_state = Finishing;
+    m_activityAssertion.clear();
     if (m_resource->resourceToRevalidate())
         memoryCache()->revalidationFailed(m_resource);
     m_resource->setResourceError(error);
-    m_resource->error(CachedResource::LoadError);
     if (!m_resource->isPreloaded())
         memoryCache()->remove(m_resource);
-    ResourceLoader::didFail(error);
+    m_resource->error(CachedResource::LoadError);
+    cleanupForError(error);
+    notifyDone();
+    if (reachedTerminalState())
+        return;
+    releaseResources();
 }
 
 void SubresourceLoader::willCancel(const ResourceError& error)
@@ -312,23 +331,37 @@ void SubresourceLoader::willCancel(const ResourceError& error)
 
     RefPtr<SubresourceLoader> protect(this);
     m_state = Finishing;
+    m_activityAssertion.clear();
     if (m_resource->resourceToRevalidate())
         memoryCache()->revalidationFailed(m_resource);
     m_resource->setResourceError(error);
     memoryCache()->remove(m_resource);
 }
 
+void SubresourceLoader::didCancel(const ResourceError&)
+{
+    m_resource->cancelLoad();
+    notifyDone();
+}
+
+void SubresourceLoader::notifyDone()
+{
+    if (reachedTerminalState())
+        return;
+
+    m_requestCountTracker.clear();
+    m_documentLoader->cachedResourceLoader()->loadDone(m_resource);
+    if (reachedTerminalState())
+        return;
+    m_documentLoader->removeSubresourceLoader(this);
+}
+
 void SubresourceLoader::releaseResources()
 {
     ASSERT(!reachedTerminalState());
-    if (m_state != Uninitialized) {
-        m_requestCountTracker.clear();
-        m_documentLoader->cachedResourceLoader()->loadDone(m_resource);
-        if (reachedTerminalState())
-            return;
-        m_resource->stopLoading();
-        m_documentLoader->removeSubresourceLoader(this);
-    }
+    if (m_state != Uninitialized)
+        m_resource->clearLoader();
+    m_resource = 0;
     ResourceLoader::releaseResources();
 }
 

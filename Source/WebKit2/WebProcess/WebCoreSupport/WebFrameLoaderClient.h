@@ -224,6 +224,8 @@ private:
 
     virtual PassRefPtr<WebCore::FrameNetworkingContext> createNetworkingContext() OVERRIDE;
 
+    virtual void forcePageTransitionIfNeeded() OVERRIDE;
+
     WebFrame* m_frame;
     RefPtr<PluginView> m_pluginView;
     bool m_hasSentResponseToPluginView;
@@ -231,6 +233,12 @@ private:
     bool m_frameHasCustomRepresentation;
     bool m_frameCameFromPageCache;
 };
+
+// As long as EmptyFrameLoaderClient exists in WebCore, this can return 0.
+inline WebFrameLoaderClient* toWebFrameLoaderClient(WebCore::FrameLoaderClient* client)
+{
+    return client->isEmptyFrameLoaderClient() ? 0 : static_cast<WebFrameLoaderClient*>(client);
+}
 
 } // namespace WebKit
 

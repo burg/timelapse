@@ -51,11 +51,11 @@ using namespace WTF::Unicode;
 static Node* previousLeafWithSameEditability(Node* node, EditableType editableType)
 {
     bool editable = node->rendererIsEditable(editableType);
-    node = node->previousLeafNode();
+    node = previousLeafNode(node);
     while (node) {
         if (editable == node->rendererIsEditable(editableType))
             return node;
-        node = node->previousLeafNode();
+        node = previousLeafNode(node);
     }
     return 0;
 }
@@ -66,11 +66,11 @@ static Node* nextLeafWithSameEditability(Node* node, EditableType editableType =
         return 0;
     
     bool editable = node->rendererIsEditable(editableType);
-    node = node->nextLeafNode();
+    node = nextLeafNode(node);
     while (node) {
         if (editable == node->rendererIsEditable(editableType))
             return node;
-        node = node->nextLeafNode();
+        node = nextLeafNode(node);
     }
     return 0;
 }
@@ -130,10 +130,10 @@ public:
 
     size_t size() const { return m_leafBoxes.size(); }
     const InlineBox* firstBox() const { return m_leafBoxes[0]; }
-    
+
 private:
     const Vector<InlineBox*>& collectBoxes(const RootInlineBox*);
-    int boxIndexInLeaves(const InlineTextBox*);
+    int boxIndexInLeaves(const InlineTextBox*) const;
 
     const RootInlineBox* m_rootInlineBox;
     Vector<InlineBox*> m_leafBoxes;
@@ -192,7 +192,7 @@ const Vector<InlineBox*>& CachedLogicallyOrderedLeafBoxes::collectBoxes(const Ro
     return m_leafBoxes;
 }
 
-int CachedLogicallyOrderedLeafBoxes::boxIndexInLeaves(const InlineTextBox* box)
+int CachedLogicallyOrderedLeafBoxes::boxIndexInLeaves(const InlineTextBox* box) const
 {
     for (size_t i = 0; i < m_leafBoxes.size(); ++i) {
         if (box == m_leafBoxes[i])

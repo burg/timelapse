@@ -7,6 +7,7 @@
  * Copyright (C) 2008 Nuanti Ltd.
  * Copyright (C) 2009 Appcelerator Inc.
  * Copyright (C) 2009 Brent Fulgham <bfulgham@webkit.org>
+ * Copyright (C) 2013 Peter Gal <galpeter@inf.u-szeged.hu>, University of Szeged
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -210,10 +211,8 @@ static size_t writeCallback(void* ptr, size_t size, size_t nmemb, void* data)
     if (d->m_cancelled)
         return 0;
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // We should never be called when deferred loading is activated.
     ASSERT(!d->m_defersLoading);
-#endif
 
     size_t totalSize = size * nmemb;
 
@@ -253,15 +252,13 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
     if (d->m_cancelled)
         return 0;
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // We should never be called when deferred loading is activated.
     ASSERT(!d->m_defersLoading);
-#endif
 
     size_t totalSize = size * nmemb;
     ResourceHandleClient* client = d->client();
 
-    String header(static_cast<const char*>(ptr), totalSize);
+    String header = String::fromUTF8WithLatin1Fallback(static_cast<const char*>(ptr), totalSize);
 
     /*
      * a) We can finish and send the ResourceResponse
@@ -292,7 +289,7 @@ static size_t headerCallback(char* ptr, size_t size, size_t nmemb, void* data)
         d->m_response.setURL(KURL(ParsedURLString, hdr));
 
         d->m_response.setHTTPStatusCode(httpCode);
-        d->m_response.setMimeType(extractMIMETypeFromMediaType(d->m_response.httpHeaderField("Content-Type")));
+        d->m_response.setMimeType(extractMIMETypeFromMediaType(d->m_response.httpHeaderField("Content-Type")).lower());
         d->m_response.setTextEncodingName(extractCharsetFromMediaType(d->m_response.httpHeaderField("Content-Type")));
         d->m_response.setSuggestedFilename(filenameFromHTTPContentDisposition(d->m_response.httpHeaderField("Content-Disposition")));
 
@@ -338,10 +335,8 @@ size_t readCallback(void* ptr, size_t size, size_t nmemb, void* data)
     if (d->m_cancelled)
         return 0;
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // We should never be called when deferred loading is activated.
     ASSERT(!d->m_defersLoading);
-#endif
 
     if (!size || !nmemb)
         return 0;
@@ -485,42 +480,30 @@ void ResourceHandleManager::removeFromCurl(ResourceHandle* job)
     job->deref();
 }
 
-void ResourceHandleManager::setupPUT(ResourceHandle*, struct curl_slist**)
+static inline size_t getFormElementsCount(ResourceHandle* job)
 {
-    notImplemented();
+    RefPtr<FormData> formData = job->firstRequest().httpBody();
+
+    if (!formData)
+        return 0;
+
+#if ENABLE(BLOB)
+    // Resolve the blob elements so the formData can correctly report it's size.
+    formData = formData->resolveBlobReferences();
+    job->firstRequest().setHTTPBody(formData);
+#endif
+
+    return formData->elements().size();
 }
 
-/* Calculate the length of the POST.
-   Force chunked data transfer if size of files can't be obtained.
- */
-void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** headers)
+static void setupFormData(ResourceHandle* job, CURLoption sizeOption, struct curl_slist** headers)
 {
     ResourceHandleInternal* d = job->getInternal();
-    curl_easy_setopt(d->m_handle, CURLOPT_POST, TRUE);
-    curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, 0);
-
-    if (!job->firstRequest().httpBody())
-        return;
-
     Vector<FormDataElement> elements = job->firstRequest().httpBody()->elements();
     size_t numElements = elements.size();
-    if (!numElements)
-        return;
 
-    // Do not stream for simple POST data
-    if (numElements == 1) {
-        job->firstRequest().httpBody()->flatten(d->m_postBytes);
-        if (d->m_postBytes.size() != 0) {
-            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, d->m_postBytes.size());
-            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDS, d->m_postBytes.data());
-        }
-        return;
-    }
-
-    // Obtain the total size of the POST
     // The size of a curl_off_t could be different in WebKit and in cURL depending on
-    // compilation flags of both. For CURLOPT_POSTFIELDSIZE_LARGE we have to pass the
-    // right size or random data will be used as the size.
+    // compilation flags of both.
     static int expectedSizeOfCurlOffT = 0;
     if (!expectedSizeOfCurlOffT) {
         curl_version_info_data *infoData = curl_version_info(CURLVERSION_NOW);
@@ -536,6 +519,7 @@ void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** h
 #pragma warning(disable: 4307)
 #endif
     static const long long maxCurlOffT = (1LL << (expectedSizeOfCurlOffT * 8 - 1)) - 1;
+    // Obtain the total size of the form data
     curl_off_t size = 0;
     bool chunkedTransfer = false;
     for (size_t i = 0; i < numElements; i++) {
@@ -562,13 +546,52 @@ void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** h
         *headers = curl_slist_append(*headers, "Transfer-Encoding: chunked");
     else {
         if (sizeof(long long) == expectedSizeOfCurlOffT)
-          curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE_LARGE, (long long)size);
+            curl_easy_setopt(d->m_handle, sizeOption, (long long)size);
         else
-          curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE_LARGE, (int)size);
+            curl_easy_setopt(d->m_handle, sizeOption, (int)size);
     }
 
     curl_easy_setopt(d->m_handle, CURLOPT_READFUNCTION, readCallback);
     curl_easy_setopt(d->m_handle, CURLOPT_READDATA, job);
+}
+
+void ResourceHandleManager::setupPUT(ResourceHandle* job, struct curl_slist** headers)
+{
+    ResourceHandleInternal* d = job->getInternal();
+    curl_easy_setopt(d->m_handle, CURLOPT_UPLOAD, TRUE);
+    curl_easy_setopt(d->m_handle, CURLOPT_INFILESIZE, 0);
+
+    // Disable the Expect: 100 continue header
+    *headers = curl_slist_append(*headers, "Expect:");
+
+    size_t numElements = getFormElementsCount(job);
+    if (!numElements)
+        return;
+
+    setupFormData(job, CURLOPT_INFILESIZE_LARGE, headers);
+}
+
+void ResourceHandleManager::setupPOST(ResourceHandle* job, struct curl_slist** headers)
+{
+    ResourceHandleInternal* d = job->getInternal();
+    curl_easy_setopt(d->m_handle, CURLOPT_POST, TRUE);
+    curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, 0);
+
+    size_t numElements = getFormElementsCount(job);
+    if (!numElements)
+        return;
+
+    // Do not stream for simple POST data
+    if (numElements == 1) {
+        job->firstRequest().httpBody()->flatten(d->m_postBytes);
+        if (d->m_postBytes.size()) {
+            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDSIZE, d->m_postBytes.size());
+            curl_easy_setopt(d->m_handle, CURLOPT_POSTFIELDS, d->m_postBytes.data());
+        }
+        return;
+    }
+
+    setupFormData(job, CURLOPT_POSTFIELDSIZE_LARGE, headers);
 }
 
 void ResourceHandleManager::add(ResourceHandle* job)
@@ -619,12 +642,10 @@ void ResourceHandleManager::dispatchSynchronousJob(ResourceHandle* job)
 
     ResourceHandleInternal* handle = job->getInternal();
 
-#if LIBCURL_VERSION_NUM > 0x071200
     // If defersLoading is true and we call curl_easy_perform
     // on a paused handle, libcURL would do the transfert anyway
     // and we would assert so force defersLoading to be false.
     handle->m_defersLoading = false;
-#endif
 
     initializeHandle(job);
 
@@ -665,6 +686,7 @@ void ResourceHandleManager::startJob(ResourceHandle* job)
 
 void ResourceHandleManager::initializeHandle(ResourceHandle* job)
 {
+    static const int allowedProtocols = CURLPROTO_FILE | CURLPROTO_FTP | CURLPROTO_FTPS | CURLPROTO_HTTP | CURLPROTO_HTTPS;
     KURL kurl = job->firstRequest().url();
 
     // Remove any fragment part, otherwise curl will send it as part of the request.
@@ -674,12 +696,11 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     String url = kurl.string();
 
     if (kurl.isLocalFile()) {
-        String query = kurl.query();
         // Remove any query part sent to a local file.
-        if (!query.isEmpty()) {
-            int queryIndex = url.find(query);
-            if (queryIndex != -1)
-                url = url.left(queryIndex - 1);
+        if (!kurl.query().isEmpty()) {
+            // By setting the query to a null string it'll be removed.
+            kurl.setQuery(String());
+            url = kurl.string();
         }
         // Determine the MIME type based on the path.
         d->m_response.setMimeType(MIMETypeRegistry::getMIMETypeForPath(url));
@@ -687,14 +708,12 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
 
     d->m_handle = curl_easy_init();
 
-#if LIBCURL_VERSION_NUM > 0x071200
     if (d->m_defersLoading) {
         CURLcode error = curl_easy_pause(d->m_handle, CURLPAUSE_ALL);
         // If we did not pause the handle, we would ASSERT in the
         // header callback. So just assert here.
         ASSERT_UNUSED(error, error == CURLE_OK);
     }
-#endif
 #ifndef NDEBUG
     if (getenv("DEBUG_CURL"))
         curl_easy_setopt(d->m_handle, CURLOPT_VERBOSE, 1);
@@ -711,6 +730,8 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
     curl_easy_setopt(d->m_handle, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
     curl_easy_setopt(d->m_handle, CURLOPT_SHARE, m_curlShareHandle);
     curl_easy_setopt(d->m_handle, CURLOPT_DNS_CACHE_TIMEOUT, 60 * 5); // 5 minutes
+    curl_easy_setopt(d->m_handle, CURLOPT_PROTOCOLS, allowedProtocols);
+    curl_easy_setopt(d->m_handle, CURLOPT_REDIR_PROTOCOLS, allowedProtocols);
     // FIXME: Enable SSL verification when we have a way of shipping certs
     // and/or reporting SSL errors to the user.
     if (ignoreSSLErrors)
@@ -740,21 +761,31 @@ void ResourceHandleManager::initializeHandle(ResourceHandle* job)
             String key = it->key;
             String value = it->value;
             String headerString(key);
-            headerString.append(": ");
-            headerString.append(value);
+            if (value.isEmpty())
+                // Insert the ; to tell curl that this header has an empty value.
+                headerString.append(";");
+            else {
+                headerString.append(": ");
+                headerString.append(value);
+            }
             CString headerLatin1 = headerString.latin1();
             headers = curl_slist_append(headers, headerLatin1.data());
         }
     }
 
-    if ("GET" == job->firstRequest().httpMethod())
+    String method = job->firstRequest().httpMethod();
+    if ("GET" == method)
         curl_easy_setopt(d->m_handle, CURLOPT_HTTPGET, TRUE);
-    else if ("POST" == job->firstRequest().httpMethod())
+    else if ("POST" == method)
         setupPOST(job, &headers);
-    else if ("PUT" == job->firstRequest().httpMethod())
+    else if ("PUT" == method)
         setupPUT(job, &headers);
-    else if ("HEAD" == job->firstRequest().httpMethod())
+    else if ("HEAD" == method)
         curl_easy_setopt(d->m_handle, CURLOPT_NOBODY, TRUE);
+    else {
+        curl_easy_setopt(d->m_handle, CURLOPT_CUSTOMREQUEST, method.latin1().data());
+        setupPUT(job, &headers);
+    }
 
     if (headers) {
         curl_easy_setopt(d->m_handle, CURLOPT_HTTPHEADER, headers);

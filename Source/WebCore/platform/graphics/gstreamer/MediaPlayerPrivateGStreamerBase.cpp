@@ -111,12 +111,28 @@ MediaPlayerPrivateGStreamerBase::MediaPlayerPrivateGStreamerBase(MediaPlayer* pl
     , m_repaintHandler(0)
     , m_volumeSignalHandler(0)
     , m_muteSignalHandler(0)
+#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER_GL) && !USE(COORDINATED_GRAPHICS)
+    , m_texture(0)
+#endif
 {
+#if GLIB_CHECK_VERSION(2, 31, 0)
+    m_bufferMutex = WTF::fastNew<GMutex>();
+    g_mutex_init(m_bufferMutex);
+#else
+    m_bufferMutex = g_mutex_new();
+#endif
 }
 
 MediaPlayerPrivateGStreamerBase::~MediaPlayerPrivateGStreamerBase()
 {
     g_signal_handler_disconnect(m_webkitVideoSink.get(), m_repaintHandler);
+
+#if GLIB_CHECK_VERSION(2, 31, 0)
+    g_mutex_clear(m_bufferMutex);
+    WTF::fastDelete(m_bufferMutex);
+#else
+    g_mutex_free(m_bufferMutex);
+#endif
 
     if (m_buffer)
         gst_buffer_unref(m_buffer);
@@ -155,7 +171,17 @@ IntSize MediaPlayerPrivateGStreamerBase::naturalSize() const
     if (!m_videoSize.isEmpty())
         return m_videoSize;
 
+#ifdef GST_API_VERSION_1
+    /* FIXME this has a race with the pad setting caps as the buffer (m_buffer)
+     * and the caps won't match and might cause a crash. (In case a
+     * renegotiation happens)
+     */
     GRefPtr<GstCaps> caps = webkitGstGetPadCaps(m_videoSinkPad.get());
+#else
+    g_mutex_lock(m_bufferMutex);
+    GRefPtr<GstCaps> caps = m_buffer ? GST_BUFFER_CAPS(m_buffer) : 0;
+    g_mutex_unlock(m_bufferMutex);
+#endif
     if (!caps)
         return IntSize();
 
@@ -297,11 +323,56 @@ void MediaPlayerPrivateGStreamerBase::muteChanged()
     m_muteTimerHandler = g_timeout_add(0, reinterpret_cast<GSourceFunc>(mediaPlayerPrivateMuteChangeTimeoutCallback), this);
 }
 
+
+#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER_GL) && !USE(COORDINATED_GRAPHICS)
+void MediaPlayerPrivateGStreamerBase::updateTexture(GstBuffer* buffer)
+{
+    if (!m_texture)
+        return;
+
+    if (!client())
+        return;
+
+    const void* srcData = 0;
+    IntSize size = naturalSize();
+
+    if (m_texture->size() != size)
+        m_texture->reset(size);
+
+#ifdef GST_API_VERSION_1
+    GstMapInfo srcInfo;
+    gst_buffer_map(buffer, &srcInfo, GST_MAP_READ);
+    srcData = srcInfo.data;
+#else
+    srcData = GST_BUFFER_DATA(buffer);
+#endif
+
+    // @TODO: support cropping
+    m_texture->updateContents(srcData, WebCore::IntRect(WebCore::IntPoint(0, 0), size), WebCore::IntPoint(0, 0), size.width() * 4, BitmapTexture::UpdateCannotModifyOriginalImageData);
+
+#ifdef GST_API_VERSION_1
+    gst_buffer_unmap(buffer, &srcInfo);
+#endif
+
+    client()->setPlatformLayerNeedsDisplay();
+}
+#endif
+
 void MediaPlayerPrivateGStreamerBase::triggerRepaint(GstBuffer* buffer)
 {
     g_return_if_fail(GST_IS_BUFFER(buffer));
-    gst_buffer_replace(&m_buffer, buffer);
-    m_player->repaint();
+
+#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER_GL) && !USE(COORDINATED_GRAPHICS)
+    if (supportsAcceleratedRendering() && m_player->mediaPlayerClient()->mediaPlayerRenderingCanBeAccelerated(m_player))
+        updateTexture(buffer);
+    else
+#endif
+    {
+        g_mutex_lock(m_bufferMutex);
+        gst_buffer_replace(&m_buffer, buffer);
+        g_mutex_unlock(m_bufferMutex);
+        m_player->repaint();
+    }
 }
 
 void MediaPlayerPrivateGStreamerBase::setSize(const IntSize& size)
@@ -311,26 +382,62 @@ void MediaPlayerPrivateGStreamerBase::setSize(const IntSize& size)
 
 void MediaPlayerPrivateGStreamerBase::paint(GraphicsContext* context, const IntRect& rect)
 {
+#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER_GL) && !USE(COORDINATED_GRAPHICS)
+    if (m_texture)
+        return;
+#endif
+
     if (context->paintingDisabled())
         return;
 
     if (!m_player->visible())
         return;
 
-    if (!m_buffer)
+    g_mutex_lock(m_bufferMutex);
+    if (!m_buffer) {
+        g_mutex_unlock(m_bufferMutex);
         return;
+    }
 
+#ifdef GST_API_VERSION_1
+    /* FIXME this has a race with the pad setting caps as the buffer (m_buffer)
+     * and the caps won't match and might cause a crash. (In case a
+     * renegotiation happens)
+     */
     GRefPtr<GstCaps> caps = webkitGstGetPadCaps(m_videoSinkPad.get());
-    if (!caps)
+#else
+    GRefPtr<GstCaps> caps = GST_BUFFER_CAPS(m_buffer);
+#endif
+    if (!caps) {
+        g_mutex_unlock(m_bufferMutex);
         return;
+    }
 
     RefPtr<ImageGStreamer> gstImage = ImageGStreamer::createImage(m_buffer, caps.get());
-    if (!gstImage)
+    if (!gstImage) {
+        g_mutex_unlock(m_bufferMutex);
         return;
+    }
 
     context->drawImage(reinterpret_cast<Image*>(gstImage->image().get()), ColorSpaceSRGB,
         rect, gstImage->rect(), CompositeCopy, DoNotRespectImageOrientation, false);
+    g_mutex_unlock(m_bufferMutex);
 }
+
+#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER_GL) && !USE(COORDINATED_GRAPHICS)
+void MediaPlayerPrivateGStreamerBase::paintToTextureMapper(TextureMapper* textureMapper, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity)
+{
+    if (textureMapper->accelerationMode() != TextureMapper::OpenGLMode)
+        return;
+
+    if (!m_texture) {
+        m_texture = textureMapper->acquireTextureFromPool(naturalSize());
+        return;
+    }
+
+    textureMapper->drawTexture(*m_texture.get(), targetRect, matrix, opacity);
+}
+#endif
 
 #if USE(NATIVE_FULLSCREEN_VIDEO)
 void MediaPlayerPrivateGStreamerBase::enterFullscreen()

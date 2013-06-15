@@ -69,6 +69,7 @@
 #include "MIMETypeRegistry.h"
 #include "NodeRenderingContext.h"
 #include "Page.h"
+#include "PageActivityAssertionToken.h"
 #include "PageGroup.h"
 #include "RenderVideo.h"
 #include "RenderView.h"
@@ -134,6 +135,10 @@
 
 #if USE(PLATFORM_TEXT_TRACK_MENU)
 #include "PlatformTextTrack.h"
+#endif
+
+#if USE(AUDIO_SESSION)
+#include "AudioSessionManager.h"
 #endif
 
 using namespace std;
@@ -316,6 +321,9 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* docum
 #if ENABLE(WEB_AUDIO)
     , m_audioSourceNode(0)
 #endif
+#if USE(AUDIO_SESSION)
+    , m_audioSessionManagerToken(AudioSessionManagerToken::create(tagName == videoTag ? AudioSessionManager::Video : AudioSessionManager::Audio))
+#endif
 {
     LOG(Media, "HTMLMediaElement::HTMLMediaElement");
     document->registerForMediaVolumeCallbacks(this);
@@ -337,6 +345,7 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* docum
 HTMLMediaElement::~HTMLMediaElement()
 {
     LOG(Media, "HTMLMediaElement::~HTMLMediaElement");
+
     if (m_isWaitingUntilMediaCanStart)
         document()->removeMediaCanStartListener(this);
     setShouldDelayLoadEvent(false);
@@ -578,19 +587,25 @@ bool HTMLMediaElement::childShouldCreateRenderer(const NodeRenderingContext& chi
 Node::InsertionNotificationRequest HTMLMediaElement::insertedInto(ContainerNode* insertionPoint)
 {
     LOG(Media, "HTMLMediaElement::insertedInto");
+
     HTMLElement::insertedInto(insertionPoint);
-    if (insertionPoint->inDocument() && !getAttribute(srcAttr).isEmpty() && m_networkState == NETWORK_EMPTY)
-        scheduleDelayedAction(LoadMediaResource);
+    if (insertionPoint->inDocument()) {
+        m_inActiveDocument = true;
+
+        if (m_networkState == NETWORK_EMPTY && !getAttribute(srcAttr).isEmpty())
+            scheduleDelayedAction(LoadMediaResource);
+    }
+
     configureMediaControls();
     return InsertionDone;
 }
 
 void HTMLMediaElement::removedFrom(ContainerNode* insertionPoint)
 {
-    m_inActiveDocument = false;
+    LOG(Media, "HTMLMediaElement::removedFrom");
 
+    m_inActiveDocument = false;
     if (insertionPoint->inDocument()) {
-        LOG(Media, "HTMLMediaElement::removedFrom");
         configureMediaControls();
         if (m_networkState > NETWORK_EMPTY)
             pause();
@@ -601,7 +616,7 @@ void HTMLMediaElement::removedFrom(ContainerNode* insertionPoint)
     HTMLElement::removedFrom(insertionPoint);
 }
 
-void HTMLMediaElement::attach()
+void HTMLMediaElement::attach(const AttachContext& context)
 {
     ASSERT(!attached());
 
@@ -609,7 +624,7 @@ void HTMLMediaElement::attach()
     m_needWidgetUpdate = true;
 #endif
 
-    HTMLElement::attach();
+    HTMLElement::attach(context);
 
     if (renderer())
         renderer()->updateFromElement();
@@ -729,7 +744,7 @@ String HTMLMediaElement::canPlayType(const String& mimeType, const String& keySy
             break;
     }
     
-    LOG(Media, "HTMLMediaElement::canPlayType(%s, %s, %s) -> %s", mimeType.utf8().data(), keySystem.utf8().data(), url.elidedString().utf8().data(), canPlay.utf8().data());
+    LOG(Media, "HTMLMediaElement::canPlayType(%s, %s, %s) -> %s", mimeType.utf8().data(), keySystem.utf8().data(), url.stringCenterEllipsizedToLength().utf8().data(), canPlay.utf8().data());
 
     return canPlay;
 }
@@ -1110,6 +1125,11 @@ static bool eventTimeCueCompare(const std::pair<double, TextTrackCue*>& a,
     return a.second->cueIndex() - b.second->cueIndex() < 0;
 }
 
+static bool compareCueInterval(const CueInterval& one, const CueInterval& two)
+{
+    return one.data()->isOrderedBefore(two.data());
+};
+
 
 void HTMLMediaElement::updateActiveTextTrackCues(double movieTime)
 {
@@ -1132,8 +1152,10 @@ void HTMLMediaElement::updateActiveTextTrackCues(double movieTime)
 
     // The user agent must synchronously unset [the text track cue active] flag
     // whenever ... the media element's readyState is changed back to HAVE_NOTHING.
-    if (m_readyState != HAVE_NOTHING && m_player)
+    if (m_readyState != HAVE_NOTHING && m_player) {
         currentCues = m_cueTree.allOverlaps(m_cueTree.createInterval(movieTime, movieTime));
+        std::sort(currentCues.begin(), currentCues.end(), &compareCueInterval);
+    }
 
     CueList previousCues;
     CueList missedCues;
@@ -1504,7 +1526,7 @@ bool HTMLMediaElement::isSafeToLoadURL(const KURL& url, InvalidURLAction actionI
     Frame* frame = document()->frame();
     if (!frame || !document()->securityOrigin()->canDisplay(url)) {
         if (actionIfInvalid == Complain)
-            FrameLoader::reportLocalLoadFailed(frame, url.elidedString());
+            FrameLoader::reportLocalLoadFailed(frame, url.stringCenterEllipsizedToLength());
         LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> FALSE rejected by SecurityOrigin", urlForLoggingMedia(url).utf8().data());
         return false;
     }
@@ -1650,7 +1672,7 @@ static void logMediaLoadRequest(Page* page, const String& mediaEngine, const Str
     if (!page || !page->settings()->diagnosticLoggingEnabled())
         return;
 
-    ChromeClient* client = page->chrome()->client();
+    ChromeClient* client = page->chrome().client();
 
     if (!succeeded) {
         client->logDiagnosticMessage(DiagnosticLoggingKeys::mediaLoadingFailedKey(), errorMessage, DiagnosticLoggingKeys::failKey());
@@ -2482,7 +2504,6 @@ void HTMLMediaElement::playInternal()
             scheduleEvent(eventNames().playingEvent);
     }
     m_autoplaying = false;
-
     updatePlayState();
     updateMediaController();
 }
@@ -2650,7 +2671,7 @@ bool HTMLMediaElement::controls() const
         return true;
 
     // always show controls for video when fullscreen playback is required.
-    if (isVideo() && document()->page() && document()->page()->chrome()->requiresFullscreenForVideoPlayback())
+    if (isVideo() && document()->page() && document()->page()->chrome().requiresFullscreenForVideoPlayback())
         return true;
 
     // Always show controls when in full screen mode.
@@ -2782,7 +2803,7 @@ void HTMLMediaElement::playbackProgressTimerFired(Timer<HTMLMediaElement>*)
 
     if (!m_paused && hasMediaControls())
         mediaControls()->playbackProgressed();
-    
+
 #if ENABLE(VIDEO_TRACK)
     if (RuntimeEnabledFeatures::webkitVideoTrackEnabled())
         updateActiveTextTrackCues(currentTime());
@@ -3784,7 +3805,7 @@ GraphicsDeviceAdapter* HTMLMediaElement::mediaPlayerGraphicsDeviceAdapter(const 
     if (!document() || !document()->page())
         return 0;
 
-    return document()->page()->chrome()->client()->graphicsDeviceAdapter();
+    return document()->page()->chrome().client()->graphicsDeviceAdapter();
 }
 #endif
 
@@ -3959,6 +3980,7 @@ void HTMLMediaElement::updatePlayState()
         m_playbackProgressTimer.stop();
         if (hasMediaControls())
             mediaControls()->playbackStopped();
+        m_activityToken = nullptr;
         return;
     }
     
@@ -3973,7 +3995,7 @@ void HTMLMediaElement::updatePlayState()
         invalidateCachedTime();
 
         if (playerPaused) {
-            if (!m_isFullscreen && isVideo() && document() && document()->page() && document()->page()->chrome()->requiresFullscreenForVideoPlayback())
+            if (!m_isFullscreen && isVideo() && document() && document()->page() && document()->page()->chrome().requiresFullscreenForVideoPlayback())
                 enterFullscreen();
 
             // Set rate, muted before calling play in case they were set before the media engine was setup.
@@ -3986,6 +4008,9 @@ void HTMLMediaElement::updatePlayState()
 
         if (hasMediaControls())
             mediaControls()->playbackStarted();
+        if (document()->page())
+            m_activityToken = document()->page()->createActivityToken();
+
         startPlaybackProgressTimer();
         m_playing = true;
 
@@ -4005,6 +4030,7 @@ void HTMLMediaElement::updatePlayState()
 
         if (hasMediaControls())
             mediaControls()->playbackStopped();
+        m_activityToken = nullptr;
     }
 
     updateMediaController();
@@ -4351,7 +4377,7 @@ void HTMLMediaElement::enterFullscreen()
     if (hasMediaControls())
         mediaControls()->enteredFullscreen();
     if (document() && document()->page()) {
-        document()->page()->chrome()->client()->enterFullscreenForNode(this);
+        document()->page()->chrome().client()->enterFullscreenForNode(this);
         scheduleEvent(eventNames().webkitbeginfullscreenEvent);
     }
 }
@@ -4372,9 +4398,9 @@ void HTMLMediaElement::exitFullscreen()
     if (hasMediaControls())
         mediaControls()->exitedFullscreen();
     if (document() && document()->page()) {
-        if (document()->page()->chrome()->requiresFullscreenForVideoPlayback())
+        if (document()->page()->chrome().requiresFullscreenForVideoPlayback())
             pauseInternal();
-        document()->page()->chrome()->client()->exitFullscreenForNode(this);
+        document()->page()->chrome().client()->exitFullscreenForNode(this);
         scheduleEvent(eventNames().webkitendfullscreenEvent);
     }
 }
@@ -4611,11 +4637,11 @@ void HTMLMediaElement::configureMediaControls()
 
     mediaControls()->show();
 #else
-    if (!hasMediaControls())
-        createMediaControls();
-
     if (m_player)
         m_player->setControls(controls());
+
+    if (!hasMediaControls() && inDocument())
+        createMediaControls();
 #endif
 }
 

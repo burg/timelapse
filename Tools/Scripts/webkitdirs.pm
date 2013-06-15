@@ -104,7 +104,10 @@ my $shouldUseGuardMalloc;
 my $xcodeVersion;
 
 # Variables for Win32 support
+my $programFilesPath;
 my $vcBuildPath;
+my $vsInstallDir;
+my $vsVersion;
 my $windowsSourceDir;
 my $winVersion;
 my $willUseVCExpressWhenBuilding = 0;
@@ -180,7 +183,12 @@ sub determineBaseProductDir
     determineSourceDir();
 
     my $setSharedPrecompsDir;
-    $baseProductDir = $ENV{"WEBKITOUTPUTDIR"}; # FIXME: Switch to WEBKIT_OUTPUTDIR as part of https://bugs.webkit.org/show_bug.cgi?id=109472
+
+    # FIXME: See https://bugs.webkit.org/show_bug.cgi?id=117249.
+    #        Once all ports have migrated to WEBKIT_OUTPUTDIR, we can stop
+    #        reading the WEBKITOUTPUTDIR environment variable.
+    $baseProductDir = $ENV{"WEBKIT_OUTPUTDIR"};
+    $baseProductDir = $ENV{"WEBKITOUTPUTDIR"} if not $baseProductDir;
 
     if (!defined($baseProductDir) and isAppleMacWebKit()) {
         # Silently remove ~/Library/Preferences/xcodebuild.plist which can
@@ -244,7 +252,6 @@ sub determineBaseProductDir
     if (isCygwin()) {
         my $dosBuildPath = `cygpath --windows \"$baseProductDir\"`;
         chomp $dosBuildPath;
-        $ENV{"WEBKITOUTPUTDIR"} = $dosBuildPath;
         $ENV{"WEBKIT_OUTPUTDIR"} = $dosBuildPath;
         my $unixBuildPath = `cygpath --unix \"$baseProductDir\"`;
         chomp $unixBuildPath;
@@ -275,8 +282,8 @@ sub determineConfiguration
     }
 
     if ($configuration && isWinCairo()) {
-        unless ($configuration =~ /_Cairo_CFLite$/) {
-            $configuration .= "_Cairo_CFLite";
+        unless ($configuration =~ /_WinCairo$/) {
+            $configuration .= "_WinCairo";
         }
     }
 }
@@ -411,6 +418,41 @@ sub xcodeSDK
     return $xcodeSDK;
 }
 
+sub programFilesPath
+{
+    return $programFilesPath if defined $programFilesPath;
+
+    $programFilesPath = $ENV{'PROGRAMFILES(X86)'} || $ENV{'PROGRAMFILES'} || "C:\\Program Files";
+
+    return $programFilesPath;
+}
+
+sub visualStudioInstallDir
+{
+    return $vsInstallDir if defined $vsInstallDir;
+
+    if ($ENV{'VSINSTALLDIR'}) {
+        $vsInstallDir = $ENV{'VSINSTALLDIR'};
+        $vsInstallDir =~ s|[\\/]$||;
+    } else {
+        $vsInstallDir = File::Spec->catdir(programFilesPath(), "Microsoft Visual Studio 10.0");
+    }
+    chomp($vsInstallDir = `cygpath "$vsInstallDir"`) if isCygwin();
+
+    return $vsInstallDir;
+}
+
+sub visualStudioVersion
+{
+    return $vsVersion if defined $vsVersion;
+
+    my $installDir = visualStudioInstallDir();
+
+    $vsVersion = ($installDir =~ /Microsoft Visual Studio ([0-9]+\.[0-9]*)/) ? $1 : "8";
+
+    return $vsVersion;
+}
+
 sub determineConfigurationForVisualStudio
 {
     return if defined $configurationForVisualStudio;
@@ -434,7 +476,8 @@ sub determineConfigurationProductDir
     determineBaseProductDir();
     determineConfiguration();
     if (isAppleWinWebKit()) {
-        $configurationProductDir = File::Spec->catdir($baseProductDir, configurationForVisualStudio(), "bin");
+        my $binDir = "bin32";
+        $configurationProductDir = File::Spec->catdir($baseProductDir, configurationForVisualStudio(), $binDir);
     } else {
         if (usesPerConfigurationBuildDirectory()) {
             $configurationProductDir = "$baseProductDir";
@@ -558,9 +601,6 @@ sub XcodeCoverageSupportOptions()
     my @coverageSupportOptions = ();
     push @coverageSupportOptions, "GCC_GENERATE_TEST_COVERAGE_FILES=YES";
     push @coverageSupportOptions, "GCC_INSTRUMENT_PROGRAM_FLOW_ARCS=YES";
-    push @coverageSupportOptions, "EXTRA_LINK= \$(EXTRA_LINK) -ftest-coverage -fprofile-arcs";
-    push @coverageSupportOptions, "OTHER_CFLAGS= \$(OTHER_CFLAGS) -DCOVERAGE -MD";
-    push @coverageSupportOptions, "OTHER_LDFLAGS=\$(OTHER_LDFLAGS) -ftest-coverage -fprofile-arcs -lgcov";
     return @coverageSupportOptions;
 }
 
@@ -576,19 +616,19 @@ sub determinePassedConfiguration
         if ($opt =~ /^--debug$/i) {
             splice(@ARGV, $i, 1);
             $passedConfiguration = "Debug";
-            $passedConfiguration .= "_Cairo_CFLite" if (isWinCairo() && isCygwin());
+            $passedConfiguration .= "_WinCairo" if (isWinCairo() && isCygwin());
             return;
         }
         if ($opt =~ /^--release$/i) {
             splice(@ARGV, $i, 1);
             $passedConfiguration = "Release";
-            $passedConfiguration .= "_Cairo_CFLite" if (isWinCairo() && isCygwin());
+            $passedConfiguration .= "_WinCairo" if (isWinCairo() && isCygwin());
             return;
         }
         if ($opt =~ /^--profil(e|ing)$/i) {
             splice(@ARGV, $i, 1);
             $passedConfiguration = "Profiling";
-            $passedConfiguration .= "_Cairo_CFLite" if (isWinCairo() && isCygwin());
+            $passedConfiguration .= "_WinCairo" if (isWinCairo() && isCygwin());
             return;
         }
     }
@@ -1537,29 +1577,19 @@ sub setupAppleWinEnv()
         }
         
         # Those environment variables must be set to be able to build inside Visual Studio.
-        $variablesToSet{WEBKITLIBRARIESDIR} = windowsLibrariesDir() unless $ENV{WEBKITLIBRARIESDIR};
         $variablesToSet{WEBKIT_LIBRARIES} = windowsLibrariesDir() unless $ENV{WEBKIT_LIBRARIES};
-        $variablesToSet{WEBKITOUTPUTDIR} = windowsOutputDir() unless $ENV{WEBKITOUTPUTDIR};
         $variablesToSet{WEBKIT_OUTPUTDIR} = windowsOutputDir() unless $ENV{WEBKIT_OUTPUTDIR};
-        $variablesToSet{WEBKIT_SOURCE} = windowsSourceSourceDir() unless $ENV{WEBKIT_SOURCE};
 
         foreach my $variable (keys %variablesToSet) {
             print "Setting the Environment Variable '" . $variable . "' to '" . $variablesToSet{$variable} . "'\n\n";
             system qw(regtool -s set), '\\HKEY_CURRENT_USER\\Environment\\' . $variable, $variablesToSet{$variable};
-            $restartNeeded ||= $variable eq "WEBKITLIBRARIESDIR" || $variable eq "WEBKITOUTPUTDIR" || $variable eq "WEBKIT_LIBRARIES" || $variable eq "WEBKIT_OUTPUTDIR" || $variable eq "WEBKIT_SOURCE";
+            $restartNeeded ||=  $variable eq "WEBKIT_LIBRARIES" || $variable eq "WEBKIT_OUTPUTDIR";
         }
 
         if ($restartNeeded) {
             print "Please restart your computer before attempting to build inside Visual Studio.\n\n";
         }
     } else {
-        if (!$ENV{'WEBKITLIBRARIESDIR'}) {
-            # VS2005 version.  This will be removed as part of https://bugs.webkit.org/show_bug.cgi?id=109472.
-            print "Warning: You must set the 'WebKitLibrariesDir' environment variable\n";
-            print "         to be able build WebKit from within Visual Studio 2005.\n";
-            print "         Make sure that 'WebKitLibrariesDir' points to the\n";
-            print "         'WebKitLibraries/win' directory, not the 'WebKitLibraries/' directory.\n\n";
-        }
         if (!$ENV{'WEBKIT_LIBRARIES'}) {
             # VS2010 (and newer) version. This will replace the VS2005 version as part of
             # https://bugs.webkit.org/show_bug.cgi?id=109472. 
@@ -1568,19 +1598,10 @@ sub setupAppleWinEnv()
             print "         Make sure that 'WebKit_Libraries' points to the\n";
             print "         'WebKitLibraries/win' directory, not the 'WebKitLibraries/' directory.\n\n";
         }
-        if (!$ENV{'WEBKITOUTPUTDIR'}) {
-            # VS2005 version.  This will be removed as part of https://bugs.webkit.org/show_bug.cgi?id=109472.
-            print "Warning: You must set the 'WebKitOutputDir' environment variable\n";
-            print "         to be able build WebKit from within Visual Studio 2005.\n\n";
-        }
         if (!$ENV{'WEBKIT_OUTPUTDIR'}) {
             # VS2010 (and newer) version. This will replace the VS2005 version as part of
             # https://bugs.webkit.org/show_bug.cgi?id=109472. 
             print "Warning: You must set the 'WebKit_OutputDir' environment variable\n";
-            print "         to be able build WebKit from within Visual Studio 2010 and newer.\n\n";
-        }
-        if (!$ENV{'WEBKIT_SOURCE'}) {
-            print "Warning: You must set the 'WebKit_Source' environment variable\n";
             print "         to be able build WebKit from within Visual Studio 2010 and newer.\n\n";
         }
     }
@@ -1591,22 +1612,16 @@ sub setupCygwinEnv()
     return if !isCygwin() && !isWindows();
     return if $vcBuildPath;
 
-    my $vsInstallDir;
-    my $programFilesPath = $ENV{'PROGRAMFILES(X86)'} || $ENV{'PROGRAMFILES'} || "C:\\Program Files";
-    if ($ENV{'VSINSTALLDIR'}) {
-        $vsInstallDir = $ENV{'VSINSTALLDIR'};
-    } else {
-        $vsInstallDir = File::Spec->catdir($programFilesPath, "Microsoft Visual Studio 8");
-    }
-    chomp($vsInstallDir = `cygpath "$vsInstallDir"`) if isCygwin();
-    $vcBuildPath = File::Spec->catfile($vsInstallDir, qw(Common7 IDE devenv.com));
+    my $programFilesPath = programFilesPath();
+    $vcBuildPath = File::Spec->catfile(visualStudioInstallDir(), qw(Common7 IDE devenv.com));
     if (-e $vcBuildPath) {
-        # Visual Studio is installed; we can use pdevenv to build.
-        # FIXME: Make pdevenv work with non-Cygwin Perl.
-        $vcBuildPath = File::Spec->catfile(sourceDir(), qw(Tools Scripts pdevenv)) if isCygwin();
+        # Visual Studio is installed;
+        if (visualStudioVersion() eq "10") {
+            $vcBuildPath = File::Spec->catfile(visualStudioInstallDir(), qw(Common7 IDE devenv.exe));
+        }
     } else {
         # Visual Studio not found, try VC++ Express
-        $vcBuildPath = File::Spec->catfile($vsInstallDir, qw(Common7 IDE VCExpress.exe));
+        $vcBuildPath = File::Spec->catfile(visualStudioInstallDir(), qw(Common7 IDE VCExpress.exe));
         if (! -e $vcBuildPath) {
             print "*************************************************************\n";
             print "Cannot find '$vcBuildPath'\n";
@@ -1628,20 +1643,9 @@ sub setupCygwinEnv()
         print "*************************************************************\n";
         die;
     }
-    
-    unless ($ENV{WEBKITLIBRARIESDIR}) {
-        $ENV{'WEBKITLIBRARIESDIR'} = File::Spec->catdir($sourceDir, "WebKitLibraries", "win");
-        chomp($ENV{WEBKITLIBRARIESDIR} = `cygpath -wa '$ENV{WEBKITLIBRARIESDIR}'`) if isCygwin();
-    }
-    unless ($ENV{WEBKIT_LIBRARIES}) {
-        $ENV{'WEBKIT_LIBRARIES'} = File::Spec->catdir($sourceDir, "WebKitLibraries", "win");
-        chomp($ENV{WEBKIT_LIBRARIES} = `cygpath -wa '$ENV{WEBKIT_LIBRARIES}'`) if isCygwin();
-    }
 
     print "Building results into: ", baseProductDir(), "\n";
-    print "WEBKITOUTPUTDIR is set to: ", $ENV{"WEBKITOUTPUTDIR"}, "\n";
     print "WEBKIT_OUTPUTDIR is set to: ", $ENV{"WEBKIT_OUTPUTDIR"}, "\n";
-    print "WEBKITLIBRARIESDIR is set to: ", $ENV{"WEBKITLIBRARIESDIR"}, "\n";
     print "WEBKIT_LIBRARIES is set to: ", $ENV{"WEBKIT_LIBRARIES"}, "\n";
 }
 
@@ -1649,17 +1653,27 @@ sub dieIfWindowsPlatformSDKNotInstalled
 {
     my $registry32Path = "/proc/registry/";
     my $registry64Path = "/proc/registry64/";
-    my $windowsPlatformSDKRegistryEntry = "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/MicrosoftSDK/InstalledSDKs/D2FF9F89-8AA2-4373-8A31-C838BF4DBBE1";
+    my @windowsPlatformSDKRegistryEntries = (
+        "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v8.0A",
+        "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v8.0",
+        "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v7.1A",
+        "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Microsoft SDKs/Windows/v7.0A",
+        "HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/MicrosoftSDK/InstalledSDKs/D2FF9F89-8AA2-4373-8A31-C838BF4DBBE1",
+    );
 
     # FIXME: It would be better to detect whether we are using 32- or 64-bit Windows
     # and only check the appropriate entry. But for now we just blindly check both.
-    return if (-e $registry32Path . $windowsPlatformSDKRegistryEntry) || (-e $registry64Path . $windowsPlatformSDKRegistryEntry);
+    my $recommendedPlatformSDK = $windowsPlatformSDKRegistryEntries[0];
+
+    while (@windowsPlatformSDKRegistryEntries) {
+        my $windowsPlatformSDKRegistryEntry = shift @windowsPlatformSDKRegistryEntries;
+        return if (-e $registry32Path . $windowsPlatformSDKRegistryEntry) || (-e $registry64Path . $windowsPlatformSDKRegistryEntry);
+    }
 
     print "*************************************************************\n";
-    print "Cannot find registry entry '$windowsPlatformSDKRegistryEntry'.\n";
-    print "Please download and install the Microsoft Windows Server 2003 R2\n";
-    print "Platform SDK from <http://www.microsoft.com/downloads/details.aspx?\n";
-    print "familyid=0baf2b35-c656-4969-ace8-e4c0c0716adb&displaylang=en>.\n\n";
+    print "Cannot find registry entry '$recommendedPlatformSDK'.\n";
+    print "Please download and install the Microsoft Windows SDK\n";
+    print "from <http://www.microsoft.com/en-us/download/details.aspx?id=8279>.\n\n";
     print "Then follow step 2 in the Windows section of the \"Installing Developer\n";
     print "Tools\" instructions at <http://www.webkit.org/building/tools.html>.\n";
     print "*************************************************************\n";
@@ -2529,15 +2543,6 @@ sub debugSafari
         execMacWebKitAppForDebugging(safariPath());
     }
 
-    if (isAppleWinWebKit()) {
-        setupCygwinEnv();
-        my $productDir = productDir();
-        chomp($ENV{WEBKITNIGHTLY} = `cygpath -wa "$productDir"`);
-        my $safariPath = safariPath();
-        chomp($safariPath = `cygpath -wa "$safariPath"`);
-        return system { $vcBuildPath } $vcBuildPath, "/debugexe", "\"$safariPath\"", @ARGV;
-    }
-
     return 1; # Unsupported platform; can't debug Safari on this platform.
 }
 
@@ -2551,7 +2556,7 @@ sub runSafari
     if (isAppleWinWebKit()) {
         my $result;
         my $productDir = productDir();
-        my $webKitLauncherPath = File::Spec->catfile(productDir(), "WebKit.exe");
+        my $webKitLauncherPath = File::Spec->catfile(productDir(), "WinLauncher.exe");
         return system { $webKitLauncherPath } $webKitLauncherPath, @ARGV;
     }
 

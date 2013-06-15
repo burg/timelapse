@@ -1,6 +1,5 @@
 list(INSERT WebCore_INCLUDE_DIRECTORIES 0
     "${BLACKBERRY_THIRD_PARTY_DIR}" # For <unicode.h>, which is included from <sys/keycodes.h>.
-    "${BLACKBERRY_THIRD_PARTY_DIR}/icu"
 )
 
 list(REMOVE_ITEM WebCore_SOURCES
@@ -8,7 +7,6 @@ list(REMOVE_ITEM WebCore_SOURCES
 )
 
 list(APPEND WebCore_INCLUDE_DIRECTORIES
-    "${WEBCORE_DIR}/bindings/cpp"
     "${WEBCORE_DIR}/platform/blackberry/CookieDatabaseBackingStore"
     "${WEBCORE_DIR}/platform/graphics/harfbuzz"
     "${WEBCORE_DIR}/platform/graphics/opentype/"
@@ -18,10 +16,6 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
 
 # Other sources
 list(APPEND WebCore_SOURCES
-    bindings/cpp/WebDOMCString.cpp
-    bindings/cpp/WebDOMEventTarget.cpp
-    bindings/cpp/WebDOMString.cpp
-    bindings/cpp/WebExceptionHandler.cpp
     platform/blackberry/CookieDatabaseBackingStore/CookieDatabaseBackingStore.cpp
     platform/blackberry/AuthenticationChallengeManager.cpp
     platform/blackberry/CookieManager.cpp
@@ -44,6 +38,8 @@ list(APPEND WebCore_SOURCES
     platform/network/NetworkStorageSessionStub.cpp
     platform/network/ProxyServer.cpp
     platform/network/blackberry/AutofillBackingStore.cpp
+    platform/network/blackberry/BlobStream.cpp
+    platform/network/blackberry/CookieJarBlackBerry.cpp
     platform/network/blackberry/DNSBlackBerry.cpp
     platform/network/blackberry/DeferredData.cpp
     platform/network/blackberry/NetworkJob.cpp
@@ -91,15 +87,12 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
 
 # BlackBerry sources
 list(APPEND WebCore_SOURCES
-    editing/blackberry/EditorBlackBerry.cpp
     editing/blackberry/SmartReplaceBlackBerry.cpp
     html/shadow/MediaControlsBlackBerry.cpp
-    loader/blackberry/CookieJarBlackBerry.cpp
     page/blackberry/AccessibilityObjectBlackBerry.cpp
     page/blackberry/DragControllerBlackBerry.cpp
     page/blackberry/EventHandlerBlackBerry.cpp
     page/blackberry/SettingsBlackBerry.cpp
-    platform/blackberry/ClipboardBlackBerry.cpp
     platform/blackberry/ContextMenuBlackBerry.cpp
     platform/blackberry/ContextMenuItemBlackBerry.cpp
     platform/blackberry/CursorBlackBerry.cpp
@@ -123,7 +116,6 @@ list(APPEND WebCore_SOURCES
     platform/blackberry/SearchPopupMenuBlackBerry.cpp
     platform/blackberry/SharedTimerBlackBerry.cpp
     platform/blackberry/SoundBlackBerry.cpp
-    platform/blackberry/SystemTimeBlackBerry.cpp
     platform/blackberry/TemporaryLinkStubs.cpp
     platform/blackberry/WidgetBlackBerry.cpp
     platform/graphics/blackberry/FloatPointBlackBerry.cpp
@@ -151,25 +143,11 @@ if (ENABLE_FILE_SYSTEM)
     )
 endif ()
 
-# Touch sources
-list(APPEND WebCore_SOURCES
-    dom/Touch.cpp
-    dom/TouchEvent.cpp
-    dom/TouchList.cpp
-)
-
 if (ENABLE_SMOOTH_SCROLLING)
     list(APPEND WebCore_SOURCES
         platform/blackberry/ScrollAnimatorBlackBerry.cpp
     )
 endif ()
-
-list(APPEND WEBDOM_IDL_HEADERS
-    bindings/cpp/WebDOMCString.h
-    bindings/cpp/WebDOMEventTarget.h
-    bindings/cpp/WebDOMObject.h
-    bindings/cpp/WebDOMString.h
-)
 
 if (ENABLE_REQUEST_ANIMATION_FRAME)
     list(APPEND WebCore_SOURCES
@@ -204,7 +182,6 @@ endif ()
 if (ENABLE_NETSCAPE_PLUGIN_API)
     list(APPEND WebCore_SOURCES
         plugins/blackberry/NPCallbacksBlackBerry.cpp
-        plugins/blackberry/PluginDataBlackBerry.cpp
         plugins/blackberry/PluginPackageBlackBerry.cpp
         plugins/blackberry/PluginViewBlackBerry.cpp
         plugins/blackberry/PluginViewPrivateBlackBerry.cpp
@@ -261,57 +238,6 @@ set(ENV{COMPUTERNAME} ${host1})
 if ($ENV{PUBLIC_BUILD})
     add_definitions(-DPUBLIC_BUILD=$ENV{PUBLIC_BUILD})
 endif ()
-
-install(FILES ${WEBDOM_IDL_HEADERS} DESTINATION usr/include/browser/webkit/dom)
-
-# Create DOM C++ code given an IDL input
-# We define a new list of feature defines that is prefixed with LANGUAGE_CPP=1 so as to avoid the
-# warning "missing whitespace after the macro name" when inlining "LANGUAGE_CPP=1 ${FEATURE_DEFINES}".
-set(FEATURE_DEFINES_WEBCORE "LANGUAGE_CPP=1 ${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}")
-
-# FIXME: We need to add the IDLs for SQL storage and Web Workers. See PR #123484.
-set(WebCore_NO_CPP_IDL_FILES
-    ${WebCore_SVG_IDL_FILES}
-    dom/CustomEvent.idl
-    dom/PopStateEvent.idl
-    inspector/ScriptProfile.idl
-    inspector/ScriptProfileNode.idl
-)
-
-list(APPEND WebCore_IDL_FILES
-    css/MediaQueryListListener.idl
-)
-
-set(WebCore_CPP_IDL_FILES ${WebCore_IDL_FILES})
-
-foreach (_file ${WebCore_NO_CPP_IDL_FILES})
-    string(REPLACE "${_file}" "" WebCore_CPP_IDL_FILES "${WebCore_CPP_IDL_FILES}")
-endforeach ()
-
-set(WebCore_CPP_IDL_FILES
-    dom/EventListener.idl
-    "${WebCore_CPP_IDL_FILES}"
-)
-
-foreach (_idl ${WebCore_CPP_IDL_FILES})
-    set(IDL_FILES_LIST "${IDL_FILES_LIST}${WEBCORE_DIR}/${_idl}\n")
-endforeach ()
-file(WRITE ${IDL_FILES_TMP} ${IDL_FILES_LIST})
-
-add_custom_command(
-    OUTPUT ${SUPPLEMENTAL_DEPENDENCY_FILE} ${WINDOW_CONSTRUCTORS_FILE}
-    DEPENDS ${WEBCORE_DIR}/bindings/scripts/preprocess-idls.pl ${SCRIPTS_RESOLVE_SUPPLEMENTAL} ${WebCore_CPP_IDL_FILES} ${IDL_ATTRIBUTES_FILE}
-    COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${WEBCORE_DIR}/bindings/scripts/preprocess-idls.pl --defines "${FEATURE_DEFINES_JAVASCRIPT}" --idlFilesList ${IDL_FILES_TMP} --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --supplementalDependencyFile ${SUPPLEMENTAL_DEPENDENCY_FILE} --idlAttributesFile ${IDL_ATTRIBUTES_FILE} --windowConstructorsFile ${WINDOW_CONSTRUCTORS_FILE}
-    VERBATIM)
-
-GENERATE_BINDINGS(WebCore_SOURCES
-    "${WebCore_CPP_IDL_FILES}"
-    "${WEBCORE_DIR}"
-    "${IDL_INCLUDES}"
-    "${FEATURE_DEFINES_WEBCORE}"
-    ${DERIVED_SOURCES_WEBCORE_DIR} WebDOM CPP
-    ${SUPPLEMENTAL_DEPENDENCY_FILE}
-    ${WINDOW_CONSTRUCTORS_FILE})
 
 # Generate contents for PopupPicker.cpp
 set(WebCore_POPUP_CSS_AND_JS

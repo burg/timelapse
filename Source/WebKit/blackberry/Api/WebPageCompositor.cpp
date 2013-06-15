@@ -82,7 +82,7 @@ void WebPageCompositorPrivate::attachOverlays(LayerCompositingThread* overlayRoo
     if (!overlayRoot)
         return;
 
-    const Vector<RefPtr<LayerCompositingThread> >& overlays = overlayRoot->getSublayers();
+    const Vector<RefPtr<LayerCompositingThread> >& overlays = overlayRoot->sublayers();
     for (size_t i = 0; i < overlays.size(); ++i) {
         LayerCompositingThread* overlay = overlays[i].get();
         if (LayerCompositingThreadClient* client = overlay->client()) {
@@ -144,7 +144,7 @@ void WebPageCompositorPrivate::prepareFrame(double animationTime)
         m_layerRenderer->prepareFrame(animationTime, m_compositingThreadOverlayLayer.get());
 }
 
-void WebPageCompositorPrivate::render(const IntRect& targetRect, const IntRect& clipRect, const TransformationMatrix& transformIn, const FloatRect& documentContents, const FloatRect& /*viewport*/)
+void WebPageCompositorPrivate::render(const IntRect& targetRect, const IntRect& clipRect, const TransformationMatrix& transformIn, const FloatRect& documentSrcRect)
 {
     // m_layerRenderer should have been created in prepareFrame
     if (!m_layerRenderer)
@@ -157,13 +157,13 @@ void WebPageCompositorPrivate::render(const IntRect& targetRect, const IntRect& 
     if (!m_webPage || m_webPage->compositor() != this)
         return;
 
-    m_layerRenderer->setViewport(targetRect, clipRect, documentContents, m_layoutRect, m_documentRect.size());
+    m_layerRenderer->setViewport(targetRect, clipRect, documentSrcRect, m_layoutRect, m_documentRect.size());
 
     TransformationMatrix transform(transformIn);
     transform.translate(-m_documentRect.x(), -m_documentRect.y());
 
     if (!drawsRootLayer())
-        m_webPage->m_backingStore->d->compositeContents(m_layerRenderer.get(), transform, documentContents, !m_backgroundColor.hasAlpha());
+        m_webPage->m_backingStore->d->compositeContents(m_layerRenderer.get(), transform, documentSrcRect, !m_backgroundColor.hasAlpha());
 
     compositeLayers(transform);
 }
@@ -275,14 +275,14 @@ void WebPageCompositorPrivate::removeOverlay(LayerCompositingThread* layer)
 
     layer->removeFromSuperlayer();
 
-    if (m_compositingThreadOverlayLayer && m_compositingThreadOverlayLayer->getSublayers().isEmpty())
+    if (m_compositingThreadOverlayLayer && m_compositingThreadOverlayLayer->sublayers().isEmpty())
         m_compositingThreadOverlayLayer.clear();
 }
 
 void WebPageCompositorPrivate::findFixedElementRect(LayerCompositingThread* layer, WebCore::IntRect& fixedElementRect)
 {
     if ((layer->hasFixedContainer() || layer->isFixedPosition() || layer->hasFixedAncestorInDOMTree()) && layer->layerRenderer()) {
-        IntRect fixedRect = layer->layerRenderer()->toPixelViewportCoordinates(layer->getDrawRect());
+        IntRect fixedRect = layer->layerRenderer()->toPixelViewportCoordinates(layer->boundingBox());
         // FIXME: It's possible that the rects don't intersect now, but will be connected by a fixed rect found later.
         // We need to handle it as well.
         if (fixedElementRect.isEmpty() || fixedElementRect.intersects(fixedRect)) // Unite rects if they intersect each other.
@@ -291,7 +291,7 @@ void WebPageCompositorPrivate::findFixedElementRect(LayerCompositingThread* laye
             fixedElementRect = fixedRect;
     }
 
-    const Vector<RefPtr<LayerCompositingThread> >& sublayers = layer->getSublayers();
+    const Vector<RefPtr<LayerCompositingThread> >& sublayers = layer->sublayers();
     for (size_t i = 0; i < sublayers.size(); i++)
         findFixedElementRect(sublayers[i].get(), fixedElementRect);
 }
@@ -344,10 +344,10 @@ void WebPageCompositor::prepareFrame(Platform::Graphics::GLES2Context* context, 
     d->prepareFrame(animationTime);
 }
 
-void WebPageCompositor::render(Platform::Graphics::GLES2Context* context, const Platform::IntRect& targetRect, const Platform::IntRect& clipRect, const Platform::TransformationMatrix& transform, const Platform::FloatRect& documentContents, const Platform::FloatRect& viewport)
+void WebPageCompositor::render(Platform::Graphics::GLES2Context* context, const Platform::IntRect& targetRect, const Platform::IntRect& clipRect, const Platform::TransformationMatrix& transform, const Platform::FloatRect& documentSrcRect)
 {
     d->setContext(context);
-    d->render(targetRect, clipRect, TransformationMatrix(reinterpret_cast<const TransformationMatrix&>(transform)), documentContents, viewport);
+    d->render(targetRect, clipRect, TransformationMatrix(reinterpret_cast<const TransformationMatrix&>(transform)), documentSrcRect);
 }
 
 void WebPageCompositor::cleanup(Platform::Graphics::GLES2Context*)
@@ -397,7 +397,6 @@ void WebPageCompositor::render(Platform::Graphics::GLES2Context*,
     const Platform::IntRect&,
     const Platform::IntRect&,
     const Platform::TransformationMatrix&,
-    const Platform::FloatRect&,
     const Platform::FloatRect&)
 {
 }

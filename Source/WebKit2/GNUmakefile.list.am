@@ -204,10 +204,6 @@ webkit2_built_sources += \
 	DerivedSources/WebKit2/WebInspectorMessages.h \
 	DerivedSources/WebKit2/WebInspectorProxyMessageReceiver.cpp \
 	DerivedSources/WebKit2/WebInspectorProxyMessages.h \
-	DerivedSources/WebKit2/WebKeyValueStorageManagerMessageReceiver.cpp \
-	DerivedSources/WebKit2/WebKeyValueStorageManagerMessages.h \
-	DerivedSources/WebKit2/WebKeyValueStorageManagerProxyMessageReceiver.cpp \
-	DerivedSources/WebKit2/WebKeyValueStorageManagerProxyMessages.h \
 	DerivedSources/WebKit2/WebMediaCacheManagerMessageReceiver.cpp \
 	DerivedSources/WebKit2/WebMediaCacheManagerMessages.h \
 	DerivedSources/WebKit2/WebMediaCacheManagerProxyMessageReceiver.cpp \
@@ -218,8 +214,6 @@ webkit2_built_sources += \
 	DerivedSources/WebKit2/WebNetworkInfoManagerProxyMessages.h \
 	DerivedSources/WebKit2/WebNotificationManagerMessageReceiver.cpp \
 	DerivedSources/WebKit2/WebNotificationManagerMessages.h \
-	DerivedSources/WebKit2/WebNotificationManagerProxyMessageReceiver.cpp \
-	DerivedSources/WebKit2/WebNotificationManagerProxyMessages.h \
 	DerivedSources/WebKit2/WebPageGroupProxyMessageReceiver.cpp \
 	DerivedSources/WebKit2/WebPageGroupProxyMessages.h \
 	DerivedSources/WebKit2/WebPageProxyMessageReceiver.cpp \
@@ -274,6 +268,7 @@ webkit2platform_sources += \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiver.h \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiverMap.cpp \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiverMap.h \
+	Source/WebKit2/Platform/CoreIPC/MessageSender.cpp \
 	Source/WebKit2/Platform/CoreIPC/MessageSender.h \
 	Source/WebKit2/Platform/CoreIPC/StringReference.cpp \
 	Source/WebKit2/Platform/CoreIPC/StringReference.h \
@@ -378,6 +373,8 @@ webkit2_sources += \
 	Source/WebKit2/Shared/API/c/WKUserContentURLPattern.h \
 	Source/WebKit2/Shared/APIObject.cpp \
 	Source/WebKit2/Shared/APIObject.h \
+	Source/WebKit2/Shared/ActivityAssertion.cpp \
+	Source/WebKit2/Shared/ActivityAssertion.h \
 	Source/WebKit2/Shared/Authentication/AuthenticationManager.cpp \
 	Source/WebKit2/Shared/Authentication/AuthenticationManager.h \
 	Source/WebKit2/Shared/BlockingResponseMap.h \
@@ -457,6 +454,7 @@ webkit2_sources += \
 	Source/WebKit2/Shared/Plugins/NPVariantData.h \
 	Source/WebKit2/Shared/Plugins/PluginModuleInfo.cpp \
 	Source/WebKit2/Shared/Plugins/PluginModuleInfo.h \
+	Source/WebKit2/Shared/Plugins/PluginProcessAttributes.h \
 	Source/WebKit2/Shared/Plugins/PluginProcessCreationParameters.cpp \
 	Source/WebKit2/Shared/Plugins/PluginProcessCreationParameters.h \
 	Source/WebKit2/Shared/Plugins/PluginQuirks.h \
@@ -944,8 +942,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/WebIconDatabaseClient.h \
 	Source/WebKit2/UIProcess/WebInspectorProxy.cpp \
 	Source/WebKit2/UIProcess/WebInspectorProxy.h \
-	Source/WebKit2/UIProcess/WebKeyValueStorageManagerProxy.cpp \
-	Source/WebKit2/UIProcess/WebKeyValueStorageManagerProxy.h \
+	Source/WebKit2/UIProcess/WebKeyValueStorageManager.cpp \
+	Source/WebKit2/UIProcess/WebKeyValueStorageManager.h \
 	Source/WebKit2/UIProcess/WebMediaCacheManagerProxy.cpp \
 	Source/WebKit2/UIProcess/WebMediaCacheManagerProxy.h \
 	Source/WebKit2/UIProcess/WebLoaderClient.cpp \
@@ -979,6 +977,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/WebTextCheckerClient.h \
 	Source/WebKit2/UIProcess/WebUIClient.cpp \
 	Source/WebKit2/UIProcess/WebUIClient.h \
+	Source/WebKit2/UIProcess/InspectorServer/HTTPRequest.cpp \
+	Source/WebKit2/UIProcess/InspectorServer/HTTPRequest.h \
 	Source/WebKit2/UIProcess/InspectorServer/WebInspectorServer.cpp \
 	Source/WebKit2/UIProcess/InspectorServer/WebInspectorServer.h \
 	Source/WebKit2/UIProcess/InspectorServer/WebSocketServer.cpp \
@@ -1142,8 +1142,6 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/Storage/StorageAreaMap.h \
 	Source/WebKit2/WebProcess/Storage/StorageNamespaceImpl.cpp \
 	Source/WebKit2/WebProcess/Storage/StorageNamespaceImpl.h \
-	Source/WebKit2/WebProcess/Storage/WebKeyValueStorageManager.cpp \
-	Source/WebKit2/WebProcess/Storage/WebKeyValueStorageManager.h \
 	Source/WebKit2/WebProcess/soup/WebSoupRequestManager.cpp \
 	Source/WebKit2/WebProcess/soup/WebSoupRequestManager.h \
 	Source/WebKit2/WebProcess/soup/WebProcessSoup.cpp \
@@ -1275,6 +1273,8 @@ webkit2_plugin_process_sources += \
 	Source/WebKit2/PluginProcess/unix/PluginProcessMainUnix.h \
 	Source/WebKit2/PluginProcess/unix/PluginProcessMainUnix.cpp \
 	Source/WebKit2/PluginProcess/unix/PluginProcessUnix.cpp \
+	Source/WebKit2/Shared/ActivityAssertion.cpp \
+	Source/WebKit2/Shared/ActivityAssertion.h \
 	Source/WebKit2/Shared/ChildProcess.cpp \
 	Source/WebKit2/Shared/ChildProcess.h \
 	Source/WebKit2/Shared/ChildProcessProxy.cpp \

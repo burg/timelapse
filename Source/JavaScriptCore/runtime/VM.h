@@ -51,6 +51,7 @@
 #include "Watchdog.h"
 #include "WeakRandom.h"
 #include <wtf/BumpPointerAllocator.h>
+#include <wtf/DateMath.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCountedArray.h>
@@ -101,21 +102,23 @@ namespace JSC {
     struct HashTable;
     struct Instruction;
 
-    struct DSTOffsetCache {
-        DSTOffsetCache()
+    struct LocalTimeOffsetCache {
+        LocalTimeOffsetCache()
+            : start(0.0)
+            , end(-1.0)
+            , increment(0.0)
         {
-            reset();
         }
         
         void reset()
         {
-            offset = 0.0;
+            offset = LocalTimeOffset();
             start = 0.0;
             end = -1.0;
             increment = 0.0;
         }
 
-        double offset;
+        LocalTimeOffset offset;
         double start;
         double end;
         double increment;
@@ -326,7 +329,8 @@ namespace JSC {
         NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor);
 
         JSValue exception;
-        RefCountedArray<StackFrame> exceptionStack;
+        JS_EXPORT_PRIVATE void clearExceptionStack();
+        RefCountedArray<StackFrame>& exceptionStack() { return m_exceptionStack; }
 
         const ClassInfo* const jsArrayClassInfo;
         const ClassInfo* const jsFinalObjectClassInfo;
@@ -369,8 +373,7 @@ namespace JSC {
 
         HashSet<JSObject*> stringRecursionCheckVisitedObjects;
 
-        double cachedUTCOffset;
-        DSTOffsetCache dstOffsetCache;
+        LocalTimeOffsetCache localTimeOffsetCache;
         
         String cachedDateString;
         double cachedDateStringValue;
@@ -491,6 +494,7 @@ namespace JSC {
 #endif
         bool m_inDefineOwnProperty;
         RefPtr<CodeCache> m_codeCache;
+        RefCountedArray<StackFrame> m_exceptionStack;
 
         TypedArrayDescriptor m_int8ArrayDescriptor;
         TypedArrayDescriptor m_int16ArrayDescriptor;

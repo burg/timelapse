@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES) && !ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 #include "BaseChooserOnlyDateAndTimeInputType.h"
 
 #include "Chrome.h"
@@ -50,13 +50,10 @@ void BaseChooserOnlyDateAndTimeInputType::handleDOMActivateEvent(Event*)
         return;
     if (!element()->document()->page())
         return;
-    Chrome* chrome = element()->document()->page()->chrome();
-    if (!chrome)
-        return;
     DateTimeChooserParameters parameters;
     if (!element()->setupDateTimeChooserParameters(parameters))
         return;
-    m_dateTimeChooser = chrome->openDateTimeChooser(this, parameters);
+    m_dateTimeChooser = element()->document()->page()->chrome().openDateTimeChooser(this, parameters);
 }
 
 void BaseChooserOnlyDateAndTimeInputType::createShadowSubtree()

@@ -46,6 +46,7 @@
 #include "FrameTree.h"
 #include "Logging.h"
 #include "Node.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringConcatenate.h>
@@ -84,6 +85,24 @@ Document* SerializedEventTarget::documentFromFrameIndex(Page* page, int frameInd
     return frame->document();
 }
 
+int SerializedEventTarget::nodeAbsIndex(Document* document, Node *node)
+{
+    ASSERT(node->document() == document);
+
+    int absIndex = 0;
+    for (Node* n = node; n && n != document; n = NodeTraversal::previous(n))
+        absIndex++;
+    return absIndex;
+}
+
+Node* SerializedEventTarget::nodeWithAbsIndex(Document* document, int absIndex)
+{
+    Node* n = document;
+    for (int i = 0; n && (i < absIndex); i++)
+        n = NodeTraversal::next(n);
+    return n;
+}
+
 SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
 {
     TargetType targetType;
@@ -103,7 +122,7 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
         ASSERT(node->inDocument() || node->ownerDocument());
         targetType = NODE;
         Document* nodeDocument = (node->inDocument()) ? node->document() : node->ownerDocument();
-        nodeIndex = nodeDocument->nodeAbsIndex(node);
+        nodeIndex = SerializedEventTarget::nodeAbsIndex(nodeDocument, node);
         frameIndex = frameIndexFromDocument(nodeDocument);
     } else {
         targetType = NONE;
@@ -126,7 +145,7 @@ EventTarget* SerializedEventTarget::deserialize(Page* page)
 
     switch (m_targetType) {
     case NODE:
-        return targetDocument->nodeWithAbsIndex(m_nodeIndex);
+        return SerializedEventTarget::nodeWithAbsIndex(targetDocument, m_nodeIndex);
     case WINDOW:
         return static_cast<EventTarget*>(targetDocument->domWindow());
     case NONE:

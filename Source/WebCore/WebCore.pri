@@ -36,6 +36,7 @@ INCLUDEPATH += \
     $$SOURCE_DIR/history \
     $$SOURCE_DIR/html \
     $$SOURCE_DIR/html/canvas \
+    $$SOURCE_DIR/html/forms \
     $$SOURCE_DIR/html/parser \
     $$SOURCE_DIR/html/shadow \
     $$SOURCE_DIR/html/track \
@@ -84,6 +85,7 @@ INCLUDEPATH += \
     $$SOURCE_DIR/plugins \
     $$SOURCE_DIR/rendering \
     $$SOURCE_DIR/rendering/mathml \
+    $$SOURCE_DIR/rendering/shapes \
     $$SOURCE_DIR/rendering/style \
     $$SOURCE_DIR/rendering/svg \
     $$SOURCE_DIR/storage \

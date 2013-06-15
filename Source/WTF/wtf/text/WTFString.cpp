@@ -28,6 +28,7 @@
 #include <wtf/DataLog.h>
 #include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/StringExtras.h>
 #include <wtf/Vector.h>
@@ -54,15 +55,8 @@ String::String(const UChar* str)
 {
     if (!str)
         return;
-        
-    size_t len = 0;
-    while (str[len] != UChar(0))
-        ++len;
 
-    if (len > numeric_limits<unsigned>::max())
-        CRASH();
-    
-    m_impl = StringImpl::create(str, len);
+    m_impl = StringImpl::create(str, lengthOfNullTerminatedString(str));
 }
 
 // Construct a string with latin1 data.
@@ -1242,7 +1236,8 @@ float charactersToFloat(const UChar* data, size_t length, size_t& parsedLength)
 
 const String& emptyString()
 {
-    DEFINE_STATIC_LOCAL(String, emptyString, (StringImpl::empty()));
+    static NeverDestroyed<String> emptyString(StringImpl::empty());
+
     return emptyString;
 }
 

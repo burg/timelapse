@@ -63,13 +63,17 @@ messages -> WebPage LegacyReceiver {
     GoForward(uint64_t backForwardItemID)
     GoToBackForwardItem(uint64_t backForwardItemID)
     TryRestoreScrollPosition()
-    LoadHTMLString(WTF::String htmlString, WTF::String baseURL)
-    LoadAlternateHTMLString(WTF::String htmlString, WTF::String baseURL, WTF::String unreachableURL)
-    LoadPlainTextString(WTF::String string)
-    LoadWebArchiveData(CoreIPC::DataReference webArchiveData)
-    LoadURL(WTF::String url, WebKit::SandboxExtension::Handle sandboxExtensionHandle)
-    LoadURLRequest(WebCore::ResourceRequest request, WebKit::SandboxExtension::Handle sandboxExtensionHandle)
+
+    LoadURL(WTF::String url, WebKit::SandboxExtension::Handle sandboxExtensionHandle, WebKit::WebContextUserMessageEncoder userData) Variadic
+    LoadURLRequest(WebCore::ResourceRequest request, WebKit::SandboxExtension::Handle sandboxExtensionHandle, WebKit::WebContextUserMessageEncoder userData) Variadic
+    LoadData(CoreIPC::DataReference data, WTF::String MIMEType, WTF::String encoding, WTF::String baseURL, WebKit::WebContextUserMessageEncoder userData) Variadic
+    LoadHTMLString(WTF::String htmlString, WTF::String baseURL, WebKit::WebContextUserMessageEncoder userData) Variadic
+    LoadAlternateHTMLString(WTF::String htmlString, WTF::String baseURL, WTF::String unreachableURL, WebKit::WebContextUserMessageEncoder userData) Variadic
+    LoadPlainTextString(WTF::String string, WebKit::WebContextUserMessageEncoder userData) Variadic
+    LoadWebArchiveData(CoreIPC::DataReference webArchiveData, WebKit::WebContextUserMessageEncoder userData) Variadic
+
     LinkClicked(WTF::String url, WebKit::WebMouseEvent event)
+
     Reload(bool reloadFromOrigin, WebKit::SandboxExtension::Handle sandboxExtensionHandle)
     StopLoading()
 
@@ -259,6 +263,8 @@ messages -> WebPage LegacyReceiver {
     # Complex text input support for plug-ins.
     SendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdentifier, String textInput)
 
+    ContainsPluginViewsWithPluginProcessToken(uint64_t plugInProcessToken, uint64_t callbackID)
+
     SetWindowIsVisible(bool windowIsVisible)
     WindowAndViewFramesChanged(WebCore::FloatRect windowFrameInScreenCoordinates, WebCore::FloatRect windowFrameInUnflippedScreenCoordinates, WebCore::FloatRect viewFrameInWindowCoordinates, WebCore::FloatPoint accessibilityViewCoordinates)
     ViewExposedRectChanged(WebCore::FloatRect exposedRect)
@@ -308,5 +314,4 @@ messages -> WebPage LegacyReceiver {
 #endif
 
     SetMainFrameInViewSourceMode(bool inViewSourceMode)
-    SetOverridePrivateBrowsingEnabled(bool overridePrivateBrowsingEnabled)
 }

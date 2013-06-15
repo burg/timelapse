@@ -347,6 +347,18 @@ class PortTest(unittest.TestCase):
         self.assertFalse(Port._is_test_file(filesystem, '', 'ref-foo.html'))
         self.assertFalse(Port._is_test_file(filesystem, '', 'notref-foo.xhr'))
 
+    def test_is_reference_html_file(self):
+        filesystem = MockFileSystem()
+        self.assertTrue(Port.is_reference_html_file(filesystem, '', 'foo-expected.html'))
+        self.assertTrue(Port.is_reference_html_file(filesystem, '', 'foo-expected-mismatch.xml'))
+        self.assertTrue(Port.is_reference_html_file(filesystem, '', 'foo-ref.xhtml'))
+        self.assertTrue(Port.is_reference_html_file(filesystem, '', 'foo-notref.svg'))
+        self.assertFalse(Port.is_reference_html_file(filesystem, '', 'foo.html'))
+        self.assertFalse(Port.is_reference_html_file(filesystem, '', 'foo-expected.txt'))
+        self.assertFalse(Port.is_reference_html_file(filesystem, '', 'foo-expected.shtml'))
+        self.assertFalse(Port.is_reference_html_file(filesystem, '', 'foo-expected.php'))
+        self.assertFalse(Port.is_reference_html_file(filesystem, '', 'foo-expected.mht'))
+
     def test_parse_reftest_list(self):
         port = self.make_port(with_tests=True)
         port.host.filesystem.files['bar/reftest.list'] = "\n".join(["== test.html test-ref.html",
@@ -450,10 +462,6 @@ class PortTest(unittest.TestCase):
     def test_build_path(self):
         port = self.make_port(options=optparse.Values({'build_directory': '/my-build-directory/'}))
         self.assertEqual(port._build_path(), '/my-build-directory/Release')
-
-    def test_dont_require_http_server(self):
-        port = self.make_port()
-        self.assertEqual(port.requires_http_server(), False)
 
 
 class NaturalCompareTest(unittest.TestCase):

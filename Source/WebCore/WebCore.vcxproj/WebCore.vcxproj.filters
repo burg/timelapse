@@ -202,6 +202,9 @@
     <Filter Include="html">
       <UniqueIdentifier>{7f307654-5fd9-4fc8-9b64-d4afbdaf0e8c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="html\forms">
+      <UniqueIdentifier>{76631c4f-10d3-4e45-b289-088cd8314a98}</UniqueIdentifier>
+    </Filter>
     <Filter Include="html\parser">
       <UniqueIdentifier>{5208479d-ffff-4f5b-a98f-d87083ec9221}</UniqueIdentifier>
     </Filter>
@@ -258,9 +261,6 @@
     </Filter>
     <Filter Include="history">
       <UniqueIdentifier>{6f39dedf-2d3a-414e-83fe-7bf64f911cfb}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="history\cf">
-      <UniqueIdentifier>{99868b4c-8965-4d92-bddf-31bd5cf62812}</UniqueIdentifier>
     </Filter>
     <Filter Include="storage">
       <UniqueIdentifier>{e5121f0f-9548-4aa4-b23c-23d197118a0d}</UniqueIdentifier>
@@ -588,12 +588,6 @@
     <ClCompile Include="..\Modules\websockets\WebSocketHandshake.cpp">
       <Filter>Modules\websockets</Filter>
     </ClCompile>
-    <ClCompile Include="..\Modules\websockets\WebSocketHandshakeRequest.cpp">
-      <Filter>Modules\websockets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Modules\websockets\WebSocketHandshakeResponse.cpp">
-      <Filter>Modules\websockets</Filter>
-    </ClCompile>
     <ClCompile Include="..\Modules\websockets\WorkerThreadableWebSocketChannel.cpp">
       <Filter>Modules\websockets</Filter>
     </ClCompile>
@@ -692,6 +686,9 @@
     </ClCompile>
     <ClCompile Include="..\accessibility\AXObjectCache.cpp">
       <Filter>accessibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\accessibility\win\AccessibilityObjectWrapperWin.cpp">
+      <Filter>accessibility\win</Filter>
     </ClCompile>
     <ClCompile Include="..\accessibility\win\AccessibilityObjectWin.cpp">
       <Filter>accessibility\win</Filter>
@@ -924,12 +921,6 @@
     <ClCompile Include="..\loader\PolicyChecker.cpp">
       <Filter>loader</Filter>
     </ClCompile>
-    <ClCompile Include="..\loader\Prerenderer.cpp">
-      <Filter>loader</Filter>
-    </ClCompile>
-    <ClCompile Include="..\loader\PrerendererClient.cpp">
-      <Filter>loader</Filter>
-    </ClCompile>
     <ClCompile Include="..\loader\ProgressTracker.cpp">
       <Filter>loader</Filter>
     </ClCompile>
@@ -1117,9 +1108,6 @@
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\FileChooser.cpp">
-      <Filter>platform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\platform\FileIconLoader.cpp">
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\FileStream.cpp">
@@ -1336,9 +1324,6 @@
       <Filter>platform\win</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\win\SystemInfo.cpp">
-      <Filter>platform\win</Filter>
-    </ClCompile>
-    <ClCompile Include="..\platform\win\SystemTimeWin.cpp">
       <Filter>platform\win</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\win\TemporaryLinkStubs.cpp">
@@ -1875,9 +1860,6 @@
     <ClCompile Include="..\platform\network\HTTPParsers.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\network\HTTPRequest.cpp">
-      <Filter>platform\network</Filter>
-    </ClCompile>
     <ClCompile Include="..\platform\network\MIMEHeader.cpp">
       <Filter>platform\network</Filter>
     </ClCompile>
@@ -1972,6 +1954,9 @@
       <Filter>platform\network\win</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\curl\CredentialStorageCurl.cpp">
+      <Filter>platform\network\curl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platform\network\curl\CurlDownload.cpp">
       <Filter>platform\network\curl</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\network\curl\DNSCurl.cpp">
@@ -2451,22 +2436,22 @@
     <ClCompile Include="..\rendering\EllipsisBox.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\ExclusionInterval.cpp">
+    <ClCompile Include="..\rendering\shapes\PolygonShape.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\ExclusionPolygon.cpp">
+    <ClCompile Include="..\rendering\shapes\RectangleShape.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\ExclusionRectangle.cpp">
+    <ClCompile Include="..\rendering\shapes\Shape.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\ExclusionShape.cpp">
+    <ClCompile Include="..\rendering\shapes\ShapeInsideInfo.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\ExclusionShapeInsideInfo.cpp">
+    <ClCompile Include="..\rendering\shapes\ShapeInterval.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\ExclusionShapeOutsideInfo.cpp">
+    <ClCompile Include="..\rendering\shapes\ShapeOutsideInfo.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\FilterEffectRenderer.cpp">
@@ -3780,9 +3765,6 @@
     <ClCompile Include="..\html\BaseDateAndTimeInputType.cpp">
       <Filter>html</Filter>
     </ClCompile>
-    <ClCompile Include="..\html\BaseMultipleFieldsDateAndTimeInputType.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
     <ClCompile Include="..\html\BaseTextInputType.cpp">
       <Filter>html</Filter>
     </ClCompile>
@@ -4242,6 +4224,9 @@
     <ClCompile Include="..\html\WeekInputType.cpp">
       <Filter>html</Filter>
     </ClCompile>
+    <ClCompile Include="..\html\forms\FileIconLoader.cpp">
+      <Filter>html\forms</Filter>
+    </ClCompile>
     <ClCompile Include="..\html\parser\BackgroundHTMLInputStream.cpp">
       <Filter>html\parser</Filter>
     </ClCompile>
@@ -4317,25 +4302,7 @@
     <ClCompile Include="..\html\parser\XSSAuditorDelegate.cpp">
       <Filter>html\parser</Filter>
     </ClCompile>
-    <ClCompile Include="..\html\shadow\ClearButtonElement.cpp">
-      <Filter>html\shadow</Filter>
-    </ClCompile>
     <ClCompile Include="..\html\shadow\ContentDistributor.cpp">
-      <Filter>html\shadow</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\shadow\DateTimeEditElement.cpp">
-      <Filter>html\shadow</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\shadow\DateTimeFieldElement.cpp">
-      <Filter>html\shadow</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\shadow\DateTimeFieldElements.cpp">
-      <Filter>html\shadow</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\shadow\DateTimeNumericFieldElement.cpp">
-      <Filter>html\shadow</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\shadow\DateTimeSymbolicFieldElement.cpp">
       <Filter>html\shadow</Filter>
     </ClCompile>
     <ClCompile Include="..\html\shadow\DetailsMarkerControl.cpp">
@@ -4615,9 +4582,6 @@
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSMediaListCustom.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\JSMemoryInfoCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSMessageChannelCustom.cpp">
@@ -4908,9 +4872,6 @@
     <ClCompile Include="..\history\PageCache.cpp">
       <Filter>history</Filter>
     </ClCompile>
-    <ClCompile Include="..\history\cf\HistoryPropertyList.cpp">
-      <Filter>history\cf</Filter>
-    </ClCompile>
     <ClCompile Include="..\storage\Storage.cpp">
       <Filter>storage</Filter>
     </ClCompile>
@@ -5193,16 +5154,16 @@
     <ClCompile Include="..\page\AutoscrollController.cpp">
       <Filter>page</Filter>
     </ClCompile>
-    <ClCompile Include="..\page\BarInfo.cpp">
+    <ClCompile Include="..\page\BarProp.cpp">
       <Filter>page</Filter>
     </ClCompile>
     <ClCompile Include="..\page\Chrome.cpp">
       <Filter>page</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\cf\SharedBufferCF.cpp">
+    <ClCompile Include="..\platform\cf\CFURLExtras.cpp">
       <Filter>platform\cf</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\cf\BinaryPropertyList.cpp">
+    <ClCompile Include="..\platform\cf\SharedBufferCF.cpp">
       <Filter>platform\cf</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\cf\FileSystemCF.cpp">
@@ -5235,10 +5196,10 @@
     <ClCompile Include="..\platform\graphics\FontDescription.cpp">
       <Filter>platform\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\graphics\FontFallbackList.cpp">
-      <Filter>platform\graphics</Filter>
+    <ClCompile Include="..\platform\graphics\FontGenericFamilies.cpp">
+        <Filter>platform\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\platform\graphics\FontFamily.cpp">
+    <ClCompile Include="..\platform\graphics\FontGlyphs.cpp">
       <Filter>platform\graphics</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\graphics\FontFastPath.cpp">
@@ -5265,6 +5226,9 @@
     <ClCompile Include="..\page\Page.cpp">
       <Filter>page</Filter>
     </ClCompile>
+    <ClCompile Include="..\page\PageActivityAssertionToken.cpp">
+      <Filter>page</Filter>
+    </ClCompile>
     <ClCompile Include="..\page\PageConsole.cpp">
       <Filter>page</Filter>
     </ClCompile>
@@ -5275,6 +5239,9 @@
       <Filter>page</Filter>
     </ClCompile>
     <ClCompile Include="..\page\PageSerializer.cpp">
+      <Filter>page</Filter>
+    </ClCompile>
+    <ClCompile Include="..\page\PageThrottler.cpp">
       <Filter>page</Filter>
     </ClCompile>
     <ClCompile Include="..\page\PageVisibilityState.cpp">
@@ -5353,12 +5320,6 @@
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDOMWindowShell.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\JSDOMWindowWebAudioCustom.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
-    <ClCompile Include="..\bindings\js\JSDOMWindowWebSocketCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDOMWrapper.cpp">
@@ -5497,7 +5458,7 @@
     <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSAttr.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSBarInfo.cpp">
+    <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSBarProp.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSBeforeLoadEvent.cpp">
@@ -6089,9 +6050,6 @@
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSMediaQueryList.cpp">
-      <Filter>DerivedSources</Filter>
-    </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSMemoryInfo.cpp">
       <Filter>DerivedSources</Filter>
     </ClCompile>
     <ClCompile Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSMessageChannel.cpp">
@@ -7284,12 +7242,6 @@
     <ClInclude Include="..\Modules\websockets\WebSocketHandshake.h">
       <Filter>Modules\websockets</Filter>
     </ClInclude>
-    <ClInclude Include="..\Modules\websockets\WebSocketHandshakeRequest.h">
-      <Filter>Modules\websockets</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Modules\websockets\WebSocketHandshakeResponse.h">
-      <Filter>Modules\websockets</Filter>
-    </ClInclude>
     <ClInclude Include="..\Modules\websockets\WorkerThreadableWebSocketChannel.h">
       <Filter>Modules\websockets</Filter>
     </ClInclude>
@@ -7665,12 +7617,6 @@
     <ClInclude Include="..\loader\PolicyChecker.h">
       <Filter>loader</Filter>
     </ClInclude>
-    <ClInclude Include="..\loader\Prerenderer.h">
-      <Filter>loader</Filter>
-    </ClInclude>
-    <ClInclude Include="..\loader\PrerendererClient.h">
-      <Filter>loader</Filter>
-    </ClInclude>
     <ClInclude Include="..\loader\ProgressTracker.h">
       <Filter>loader</Filter>
     </ClInclude>
@@ -7890,9 +7836,6 @@
     <ClInclude Include="..\platform\FileChooser.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\FileIconLoader.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\FileMetadata.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -7995,12 +7938,6 @@
     <ClInclude Include="..\platform\PopupMenuStyle.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\PrerenderClient.h">
-      <Filter>platform</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\PrerenderHandle.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\PurgeableBuffer.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -8062,12 +7999,6 @@
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\SuddenTermination.h">
-      <Filter>platform</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\SystemTime.h">
-      <Filter>platform</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\Theme.h">
       <Filter>platform</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\ThemeTypes.h">
@@ -8191,9 +8122,6 @@
       <Filter>platform\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\GeneratedImage.h">
-      <Filter>platform\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\graphics\Generator.h">
       <Filter>platform\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\Glyph.h">
@@ -9195,19 +9123,22 @@
     <ClInclude Include="..\rendering\EllipsisBox.h">
       <Filter>rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\ExclusionInterval.h">
+    <ClInclude Include="..\rendering\shapes\PolygonShape.h">
       <Filter>rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\ExclusionPolygon.h">
+    <ClInclude Include="..\rendering\shapes\RectangleShape.h">
       <Filter>rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\ExclusionShape.h">
+    <ClInclude Include="..\rendering\shapes\Shape.h">
       <Filter>rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\ExclusionShapeInsideInfo.h">
+    <ClInclude Include="..\rendering\shapes\ShapeInsideInfo.h">
       <Filter>rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\ExclusionShapeOutsideInfo.h">
+    <ClInclude Include="..\rendering\shapes\ShapeInterval.h">
+      <Filter>rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rendering\shapes\ShapeOutsideInfo.h">
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\FilterEffectRenderer.h">
@@ -9663,9 +9594,6 @@
     <ClInclude Include="..\rendering\style\DataRef.h">
       <Filter>rendering\style</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\style\ExclusionShapeValue.h">
-      <Filter>rendering\style</Filter>
-    </ClInclude>
     <ClInclude Include="..\rendering\style\FillLayer.h">
       <Filter>rendering\style</Filter>
     </ClInclude>
@@ -9694,6 +9622,9 @@
       <Filter>rendering\style</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\style\ShadowData.h">
+      <Filter>rendering\style</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rendering\style\ShapeValue.h">
       <Filter>rendering\style</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\style\StyleBackgroundData.h">
@@ -10680,9 +10611,6 @@
     <ClInclude Include="..\html\BaseDateAndTimeInputType.h">
       <Filter>html</Filter>
     </ClInclude>
-    <ClInclude Include="..\html\BaseMultipleFieldsDateAndTimeInputType.h">
-      <Filter>html</Filter>
-    </ClInclude>
     <ClInclude Include="..\html\BaseTextInputType.h">
       <Filter>html</Filter>
     </ClInclude>
@@ -11154,6 +11082,9 @@
     <ClInclude Include="..\html\WeekInputType.h">
       <Filter>html</Filter>
     </ClInclude>
+    <ClInclude Include="..\html\forms\FileIconLoader.h">
+      <Filter>html\forms</Filter>
+    </ClInclude>
     <ClInclude Include="..\html\parser\AtomicHTMLToken.h">
       <Filter>html\parser</Filter>
     </ClInclude>
@@ -11247,25 +11178,7 @@
     <ClInclude Include="..\html\parser\XSSAuditorDelegate.h">
       <Filter>html\parser</Filter>
     </ClInclude>
-    <ClInclude Include="..\html\shadow\ClearButtonElement.h">
-      <Filter>html\shadow</Filter>
-    </ClInclude>
     <ClInclude Include="..\html\shadow\ContentDistributor.h">
-      <Filter>html\shadow</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\shadow\DateTimeEditElement.h">
-      <Filter>html\shadow</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\shadow\DateTimeFieldElement.h">
-      <Filter>html\shadow</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\shadow\DateTimeFieldElements.h">
-      <Filter>html\shadow</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\shadow\DateTimeNumericFieldElement.h">
-      <Filter>html\shadow</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\shadow\DateTimeSymbolicFieldElement.h">
       <Filter>html\shadow</Filter>
     </ClInclude>
     <ClInclude Include="..\html\shadow\DetailsMarkerControl.h">
@@ -12186,9 +12099,6 @@
     <ClInclude Include="..\history\PageCache.h">
       <Filter>history</Filter>
     </ClInclude>
-    <ClInclude Include="..\history\cf\HistoryPropertyList.h">
-      <Filter>history\cf</Filter>
-    </ClInclude>
     <ClInclude Include="..\storage\Storage.h">
       <Filter>storage</Filter>
     </ClInclude>
@@ -12667,7 +12577,7 @@
     <ClInclude Include="..\page\AutoscrollController.h">
       <Filter>page</Filter>
     </ClInclude>
-    <ClInclude Include="..\page\BarInfo.h">
+    <ClInclude Include="..\page\BarProp.h">
       <Filter>page</Filter>
     </ClInclude>
     <ClInclude Include="..\page\Chrome.h">
@@ -12739,7 +12649,7 @@
     <ClInclude Include="..\svg\SVGAnimatedTypeAnimator.h">
       <Filter>rendering\svg</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\cf\BinaryPropertyList.h">
+    <ClInclude Include="..\platform\cf\CFURLExtras.h">
       <Filter>platform\cf</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\cf\win\CertificateCFWin.h">
@@ -12766,10 +12676,10 @@
     <ClInclude Include="..\platform\graphics\FontDescription.h">
       <Filter>platform\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\graphics\FontFallbackList.h">
-      <Filter>platform\graphics</Filter>
+    <ClInclude Include="..\platform\graphics\FontGenericFamilies.h">
+        <Filter>platform\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\graphics\FontFamily.h">
+    <ClInclude Include="..\platform\graphics\FontGlyphs.h">
       <Filter>platform\graphics</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\FontFeatureSettings.h">
@@ -13007,7 +12917,7 @@
     <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSAttr.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSBarInfo.h">
+    <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSBarProp.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSBeforeLoadEvent.h">
@@ -13593,9 +13503,6 @@
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSMediaQueryList.h">
-      <Filter>DerivedSources</Filter>
-    </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSMemoryInfo.h">
       <Filter>DerivedSources</Filter>
     </ClInclude>
     <ClInclude Include="$(ConfigurationBuildDir)\obj32\$(ProjectName)\DerivedSources\JSMessageChannel.h">
@@ -14777,12 +14684,6 @@
       <Filter>inspector\front-end</Filter>
     </None>
     <None Include="..\inspector\front-end\NativeHeapGraph.js">
-      <Filter>inspector\front-end</Filter>
-    </None>
-    <None Include="..\inspector\front-end\nativeMemoryProfiler.css">
-      <Filter>inspector\front-end</Filter>
-    </None>
-    <None Include="..\inspector\front-end\NativeMemorySnapshotView.js">
       <Filter>inspector\front-end</Filter>
     </None>
     <None Include="..\inspector\front-end\NavigatorOverlayController.js">

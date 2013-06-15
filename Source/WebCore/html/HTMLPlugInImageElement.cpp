@@ -78,7 +78,7 @@ static const String titleText(Page* page, String mimeType)
     if (!titleText.isEmpty())
         return titleText;
 
-    titleText = page->chrome()->client()->plugInStartLabelTitle(mimeType);
+    titleText = page->chrome().client()->plugInStartLabelTitle(mimeType);
     if (titleText.isEmpty())
         titleText = snapshottedPlugInLabelTitle();
     mimeTypeToLabelTitleMap.set(mimeType, titleText);
@@ -92,7 +92,7 @@ static const String subtitleText(Page* page, String mimeType)
     if (!subtitleText.isEmpty())
         return subtitleText;
 
-    subtitleText = page->chrome()->client()->plugInStartLabelSubtitle(mimeType);
+    subtitleText = page->chrome().client()->plugInStartLabelSubtitle(mimeType);
     if (subtitleText.isEmpty())
         subtitleText = snapshottedPlugInLabelSubtitle();
     mimeTypeToLabelSubtitleMap.set(mimeType, subtitleText);
@@ -234,7 +234,7 @@ bool HTMLPlugInImageElement::willRecalcStyle(StyleChange)
     return true;
 }
 
-void HTMLPlugInImageElement::attach()
+void HTMLPlugInImageElement::attach(const AttachContext& context)
 {
     PostAttachCallbackDisabler disabler(this);
 
@@ -243,7 +243,7 @@ void HTMLPlugInImageElement::attach()
     if (!isImage)
         queuePostAttachCallback(&HTMLPlugInImageElement::updateWidgetCallback, this);
 
-    HTMLPlugInElement::attach();
+    HTMLPlugInElement::attach(context);
 
     if (isImage && renderer() && !useFallbackContent()) {
         if (!m_imageLoader)
@@ -252,7 +252,7 @@ void HTMLPlugInImageElement::attach()
     }
 }
 
-void HTMLPlugInImageElement::detach()
+void HTMLPlugInImageElement::detach(const AttachContext& context)
 {
     // FIXME: Because of the insanity that is HTMLPlugInImageElement::recalcStyle,
     // we can end up detaching during an attach() call, before we even have a
@@ -260,7 +260,7 @@ void HTMLPlugInImageElement::detach()
     if (attached() && renderer() && !useFallbackContent())
         // Update the widget the next time we attach (detaching destroys the plugin).
         setNeedsWidgetUpdate(true);
-    HTMLPlugInElement::detach();
+    HTMLPlugInElement::detach(context);
 }
 
 void HTMLPlugInImageElement::updateWidgetIfNecessary()
@@ -366,6 +366,11 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
     Page* page = document()->page();
     if (!page)
         return;
+
+    // Reset any author styles that may apply as we only want explicit
+    // styles defined in the injected user agents stylesheets to specify
+    // the look-and-feel of the snapshotted plug-in overlay. 
+    root->setResetStyleInheritance(true);
     
     String mimeType = loadedMimeType();
 
@@ -470,7 +475,6 @@ void HTMLPlugInImageElement::restartSimilarPlugIns()
         HTMLPlugInImageElement* plugInToRestart = similarPlugins[i].get();
         if (plugInToRestart->displayState() <= HTMLPlugInElement::DisplayingSnapshot) {
             LOG(Plugins, "%p Plug-in looks similar to a restarted plug-in. Restart.", plugInToRestart);
-            plugInToRestart->setDisplayState(Playing);
             plugInToRestart->restartSnapshottedPlugIn();
         }
         plugInToRestart->m_snapshotDecision = NeverSnapshot;
@@ -488,6 +492,8 @@ void HTMLPlugInImageElement::userDidClickSnapshot(PassRefPtr<MouseEvent> event, 
 
     LOG(Plugins, "%p User clicked on snapshotted plug-in. Restart.", this);
     restartSnapshottedPlugIn();
+    if (forwardEvent)
+        setDisplayState(HTMLPlugInElement::RestartingWithPendingMouseClick);
     restartSimilarPlugIns();
 }
 
@@ -571,7 +577,8 @@ void HTMLPlugInImageElement::checkSizeChangeForSnapshotting()
 void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
 {
     LOG(Plugins, "%p Plug-in URL: %s", this, m_url.utf8().data());
-    LOG(Plugins, "   Loaded URL: %s", url.string().utf8().data());
+    LOG(Plugins, "   Actual URL: %s", url.string().utf8().data());
+    LOG(Plugins, "   MIME type: %s", loadedMimeType().utf8().data());
 
     m_loadedUrl = url;
     m_plugInWasCreated = false;
@@ -636,6 +643,12 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
     if (document()->page()->settings()->autostartOriginPlugInSnapshottingEnabled() && document()->page()->plugInClient() && document()->page()->plugInClient()->shouldAutoStartFromOrigin(document()->page()->mainFrame()->document()->baseURL().host(), url.host(), loadedMimeType())) {
         LOG(Plugins, "%p Plug-in from (%s, %s) is marked to auto-start, set to play", this, document()->page()->mainFrame()->document()->baseURL().host().utf8().data(), url.host().utf8().data());
         m_snapshotDecision = NeverSnapshot;
+        return;
+    }
+
+    if (m_loadedUrl.isEmpty() && !loadedMimeType().isEmpty()) {
+        LOG(Plugins, "%p Plug-in has no src URL but does have a valid mime type %s, set to play", this, loadedMimeType().utf8().data());
+        m_snapshotDecision = MaySnapshotWhenContentIsSet;
         return;
     }
 

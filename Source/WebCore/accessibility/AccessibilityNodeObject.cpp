@@ -315,7 +315,7 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
         return ParagraphRole;
     if (node()->hasTagName(labelTag))
         return LabelRole;
-    if (node()->isFocusable())
+    if (node()->isElementNode() && toElement(node())->isFocusable())
         return GroupRole;
     
     return UnknownRole;
@@ -634,7 +634,9 @@ bool AccessibilityNodeObject::isPressed() const
         return false;
     }
 
-    return node->active();
+    if (!node->isElementNode())
+        return false;
+    return toElement(node)->active();
 }
 
 bool AccessibilityNodeObject::isChecked() const
@@ -672,7 +674,7 @@ bool AccessibilityNodeObject::isHovered() const
     if (!node)
         return false;
 
-    return node->hovered();
+    return node->isElementNode() && toElement(node)->hovered();
 }
 
 bool AccessibilityNodeObject::isMultiSelectable() const
@@ -1495,6 +1497,9 @@ static bool shouldUseAccessiblityObjectInnerText(AccessibilityObject* obj)
     // quite long. As a heuristic, skip links, controls, and elements that are usually
     // containers with lots of children.
 
+    if (equalIgnoringCase(obj->getAttribute(aria_hiddenAttr), "true"))
+        return false;
+    
     // If something doesn't expose any children, then we can always take the inner text content.
     // This is what we want when someone puts an <a> inside a <button> for example.
     if (obj->isDescendantOfBarrenParent())
@@ -1517,7 +1522,7 @@ String AccessibilityNodeObject::textUnderElement() const
     if (node && node->isTextNode())
         return toText(node)->wholeText();
 
-    String result;
+    StringBuilder builder;
     for (AccessibilityObject* child = firstChild(); child; child = child->nextSibling()) {
         if (!shouldUseAccessiblityObjectInnerText(child))
             continue;
@@ -1525,16 +1530,23 @@ String AccessibilityNodeObject::textUnderElement() const
         if (child->isAccessibilityNodeObject()) {
             Vector<AccessibilityText> textOrder;
             toAccessibilityNodeObject(child)->alternativeText(textOrder);
-            if (textOrder.size() > 0) {
-                result.append(textOrder[0].text);
+            if (textOrder.size() > 0 && textOrder[0].text.length()) {
+                if (builder.length())
+                    builder.append(' ');
+                builder.append(textOrder[0].text);
                 continue;
             }
         }
 
-        result.append(child->textUnderElement());
+        String childText = child->textUnderElement();
+        if (childText.length()) {
+            if (builder.length())
+                builder.append(' ');
+            builder.append(childText);
+        }
     }
 
-    return result;
+    return builder.toString().stripWhiteSpace().simplifyWhiteSpace();
 }
 
 String AccessibilityNodeObject::title() const
@@ -1779,16 +1791,21 @@ bool AccessibilityNodeObject::canSetFocusAttribute() const
     if (isWebArea())
         return true;
     
-    // NOTE: It would be more accurate to ask the document whether setFocusedNode() would
-    // do anything. For example, setFocusedNode() will do nothing if the current focused
+    // NOTE: It would be more accurate to ask the document whether setFocusedElement() would
+    // do anything. For example, setFocusedElement() will do nothing if the current focused
     // node will not relinquish the focus.
     if (!node)
         return false;
 
-    if (isDisabledFormControl(node))
+    if (!node->isElementNode())
         return false;
 
-    return node->supportsFocus();
+    Element* element = toElement(node);
+
+    if (element->isDisabledFormControl())
+        return false;
+
+    return element->supportsFocus();
 }
 
 AccessibilityRole AccessibilityNodeObject::determineAriaRoleAttribute() const

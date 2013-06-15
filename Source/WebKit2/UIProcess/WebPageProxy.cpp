@@ -44,6 +44,7 @@
 #include "NotificationPermissionRequestManager.h"
 #include "PageClient.h"
 #include "PluginInformation.h"
+#include "PluginProcessManager.h"
 #include "PrintInfo.h"
 #include "SessionState.h"
 #include "TextChecker.h"
@@ -245,6 +246,7 @@ WebPageProxy::WebPageProxy(PageClient* pageClient, PassRefPtr<WebProcessProxy> p
     , m_isVisible(m_pageClient->isViewVisible())
     , m_backForwardList(WebBackForwardList::create(this))
     , m_loadStateAtProcessExit(WebFrameProxy::LoadStateFinished)
+    , m_temporarilyClosedComposition(false)
     , m_textZoomFactor(1)
     , m_pageZoomFactor(1)
     , m_pageScaleFactor(1)
@@ -301,7 +303,6 @@ WebPageProxy::WebPageProxy(PageClient* pageClient, PassRefPtr<WebProcessProxy> p
     , m_rubberBandsAtBottom(false)
     , m_rubberBandsAtTop(false)
     , m_mainFrameInViewSourceMode(false)
-    , m_overridePrivateBrowsingEnabled(false)
     , m_pageCount(0)
     , m_renderTreeSize(0)
     , m_shouldSendEventsSynchronously(false)
@@ -590,6 +591,7 @@ void WebPageProxy::close()
 #endif
 
     m_notificationPermissionRequestManager.invalidateRequests();
+    m_process->context()->supplement<WebNotificationManagerProxy>()->clearNotifications(this);
 
     m_toolTip = String();
 
@@ -612,6 +614,9 @@ void WebPageProxy::close()
     invalidateCallbackMap(m_computedPagesCallbacks);
 #if PLATFORM(GTK)
     invalidateCallbackMap(m_printFinishedCallbacks);
+#endif
+#if PLATFORM(MAC)
+    invalidateCallbackMap(m_plugInInformationCallbacks);
 #endif
 
     Vector<WebEditCommandProxy*> editCommandVector;
@@ -668,7 +673,7 @@ bool WebPageProxy::maybeInitializeSandboxExtensionHandle(const KURL& url, Sandbo
     return true;
 }
 
-void WebPageProxy::loadURL(const String& url)
+void WebPageProxy::loadURL(const String& url, APIObject* userData)
 {
     setPendingAPIRequestURL(url);
 
@@ -679,11 +684,11 @@ void WebPageProxy::loadURL(const String& url)
     bool createdExtension = maybeInitializeSandboxExtensionHandle(KURL(KURL(), url), sandboxExtensionHandle);
     if (createdExtension)
         m_process->willAcquireUniversalFileReadSandboxExtension();
-    m_process->send(Messages::WebPage::LoadURL(url, sandboxExtensionHandle), m_pageID);
+    m_process->send(Messages::WebPage::LoadURL(url, sandboxExtensionHandle, WebContextUserMessageEncoder(userData)), m_pageID);
     m_process->responsivenessTimer()->start();
 }
 
-void WebPageProxy::loadURLRequest(WebURLRequest* urlRequest)
+void WebPageProxy::loadURLRequest(WebURLRequest* urlRequest, APIObject* userData)
 {
     setPendingAPIRequestURL(urlRequest->resourceRequest().url());
 
@@ -694,52 +699,11 @@ void WebPageProxy::loadURLRequest(WebURLRequest* urlRequest)
     bool createdExtension = maybeInitializeSandboxExtensionHandle(urlRequest->resourceRequest().url(), sandboxExtensionHandle);
     if (createdExtension)
         m_process->willAcquireUniversalFileReadSandboxExtension();
-    m_process->send(Messages::WebPage::LoadURLRequest(urlRequest->resourceRequest(), sandboxExtensionHandle), m_pageID);
+    m_process->send(Messages::WebPage::LoadURLRequest(urlRequest->resourceRequest(), sandboxExtensionHandle, WebContextUserMessageEncoder(userData)), m_pageID);
     m_process->responsivenessTimer()->start();
 }
 
-void WebPageProxy::loadHTMLString(const String& htmlString, const String& baseURL)
-{
-    if (!isValid())
-        reattachToWebProcess();
-
-    m_process->assumeReadAccessToBaseURL(baseURL);
-    m_process->send(Messages::WebPage::LoadHTMLString(htmlString, baseURL), m_pageID);
-    m_process->responsivenessTimer()->start();
-}
-
-void WebPageProxy::loadAlternateHTMLString(const String& htmlString, const String& baseURL, const String& unreachableURL)
-{
-    if (!isValid())
-        reattachToWebProcess();
-
-    if (m_mainFrame)
-        m_mainFrame->setUnreachableURL(unreachableURL);
-
-    m_process->assumeReadAccessToBaseURL(baseURL);
-    m_process->send(Messages::WebPage::LoadAlternateHTMLString(htmlString, baseURL, unreachableURL), m_pageID);
-    m_process->responsivenessTimer()->start();
-}
-
-void WebPageProxy::loadPlainTextString(const String& string)
-{
-    if (!isValid())
-        reattachToWebProcess();
-
-    m_process->send(Messages::WebPage::LoadPlainTextString(string), m_pageID);
-    m_process->responsivenessTimer()->start();
-}
-
-void WebPageProxy::loadWebArchiveData(const WebData* webArchiveData)
-{
-    if (!isValid())
-        reattachToWebProcess();
-
-    m_process->send(Messages::WebPage::LoadWebArchiveData(webArchiveData->dataReference()), m_pageID);
-    m_process->responsivenessTimer()->start();
-}
-
-void WebPageProxy::loadFile(const String& fileURLString, const String& resourceDirectoryURLString)
+void WebPageProxy::loadFile(const String& fileURLString, const String& resourceDirectoryURLString, APIObject* userData)
 {
     if (!isValid())
         reattachToWebProcess();
@@ -762,7 +726,58 @@ void WebPageProxy::loadFile(const String& fileURLString, const String& resourceD
     SandboxExtension::Handle sandboxExtensionHandle;
     SandboxExtension::createHandle(resourceDirectoryPath, SandboxExtension::ReadOnly, sandboxExtensionHandle);
     m_process->assumeReadAccessToBaseURL(resourceDirectoryURL);
-    m_process->send(Messages::WebPage::LoadURL(fileURL, sandboxExtensionHandle), m_pageID);
+    m_process->send(Messages::WebPage::LoadURL(fileURL, sandboxExtensionHandle, WebContextUserMessageEncoder(userData)), m_pageID);
+    m_process->responsivenessTimer()->start();
+}
+
+void WebPageProxy::loadData(WebData* data, const String& MIMEType, const String& encoding, const String& baseURL, APIObject* userData)
+{
+    if (!isValid())
+        reattachToWebProcess();
+
+    m_process->assumeReadAccessToBaseURL(baseURL);
+    m_process->send(Messages::WebPage::LoadData(data->dataReference(), MIMEType, encoding, baseURL, WebContextUserMessageEncoder(userData)), m_pageID);
+    m_process->responsivenessTimer()->start();
+}
+
+void WebPageProxy::loadHTMLString(const String& htmlString, const String& baseURL, APIObject* userData)
+{
+    if (!isValid())
+        reattachToWebProcess();
+
+    m_process->assumeReadAccessToBaseURL(baseURL);
+    m_process->send(Messages::WebPage::LoadHTMLString(htmlString, baseURL, WebContextUserMessageEncoder(userData)), m_pageID);
+    m_process->responsivenessTimer()->start();
+}
+
+void WebPageProxy::loadAlternateHTMLString(const String& htmlString, const String& baseURL, const String& unreachableURL, APIObject* userData)
+{
+    if (!isValid())
+        reattachToWebProcess();
+
+    if (m_mainFrame)
+        m_mainFrame->setUnreachableURL(unreachableURL);
+
+    m_process->assumeReadAccessToBaseURL(baseURL);
+    m_process->send(Messages::WebPage::LoadAlternateHTMLString(htmlString, baseURL, unreachableURL, WebContextUserMessageEncoder(userData)), m_pageID);
+    m_process->responsivenessTimer()->start();
+}
+
+void WebPageProxy::loadPlainTextString(const String& string, APIObject* userData)
+{
+    if (!isValid())
+        reattachToWebProcess();
+
+    m_process->send(Messages::WebPage::LoadPlainTextString(string, WebContextUserMessageEncoder(userData)), m_pageID);
+    m_process->responsivenessTimer()->start();
+}
+
+void WebPageProxy::loadWebArchiveData(const WebData* webArchiveData, APIObject* userData)
+{
+    if (!isValid())
+        reattachToWebProcess();
+
+    m_process->send(Messages::WebPage::LoadWebArchiveData(webArchiveData->dataReference(), WebContextUserMessageEncoder(userData)), m_pageID);
     m_process->responsivenessTimer()->start();
 }
 
@@ -1089,6 +1104,9 @@ void WebPageProxy::waitForDidUpdateInWindowState()
     if (m_waitingForDidUpdateInWindowState)
         return;
 
+    if (!isValid())
+        return;
+
     m_waitingForDidUpdateInWindowState = true;
 
     if (!m_process->isLaunching()) {
@@ -1387,18 +1405,21 @@ void WebPageProxy::handleKeyboardEvent(const NativeWebKeyboardEvent& event)
 }
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-void WebPageProxy::findPlugin(const String& mimeType, const String& urlString, const String& frameURLString, const String& pageURLString, String& pluginPath, String& newMimeType, uint32_t& pluginLoadPolicy)
+void WebPageProxy::findPlugin(const String& mimeType, uint32_t processType, const String& urlString, const String& frameURLString, const String& pageURLString, bool allowOnlyApplicationPlugins, uint64_t& pluginProcessToken, String& newMimeType, uint32_t& pluginLoadPolicy)
 {
     MESSAGE_CHECK_URL(urlString);
 
     newMimeType = mimeType.lower();
     pluginLoadPolicy = PluginModuleLoadNormally;
-    
-    PluginModuleInfo plugin = m_process->context()->pluginInfoStore().findPlugin(newMimeType, KURL(KURL(), urlString));
-    if (!plugin.path)
-        return;
 
-    pluginLoadPolicy = PluginInfoStore::policyForPlugin(plugin);
+    PluginData::AllowedPluginTypes allowedPluginTypes = allowOnlyApplicationPlugins ? PluginData::OnlyApplicationPlugins : PluginData::AllPlugins;
+    PluginModuleInfo plugin = m_process->context()->pluginInfoStore().findPlugin(newMimeType, KURL(KURL(), urlString), allowedPluginTypes);
+    if (!plugin.path) {
+        pluginProcessToken = 0;
+        return;
+    }
+
+    pluginLoadPolicy = PluginInfoStore::defaultLoadPolicyForPlugin(plugin);
 
 #if PLATFORM(MAC)
     RefPtr<ImmutableDictionary> pluginInformation = createPluginInformationDictionary(plugin, frameURLString, String(), pageURLString, String(), String());
@@ -1408,11 +1429,24 @@ void WebPageProxy::findPlugin(const String& mimeType, const String& urlString, c
     UNUSED_PARAM(pageURLString);
 #endif
 
-    if (pluginLoadPolicy != PluginModuleLoadNormally)
-        return;
+    PluginProcessSandboxPolicy pluginProcessSandboxPolicy = PluginProcessSandboxPolicyNormal;
+    switch (pluginLoadPolicy) {
+    case PluginModuleLoadNormally:
+        pluginProcessSandboxPolicy = PluginProcessSandboxPolicyNormal;
+        break;
+    case PluginModuleLoadUnsandboxed:
+        pluginProcessSandboxPolicy = PluginProcessSandboxPolicyUnsandboxed;
+        break;
 
-    pluginPath = plugin.path;
+    case PluginModuleBlocked:
+    case PluginModuleInactive:
+        pluginProcessToken = 0;
+        return;
+    }
+
+    pluginProcessToken = PluginProcessManager::shared().pluginProcessToken(plugin, static_cast<PluginProcessType>(processType), pluginProcessSandboxPolicy);
 }
+
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
 
 #if ENABLE(GESTURE_EVENTS)
@@ -2111,6 +2145,8 @@ void WebPageProxy::preferencesDidChange()
 
     m_process->pagePreferencesChanged(this);
 
+    m_pageClient->preferencesDidChange();
+
     // FIXME: It probably makes more sense to send individual preference changes.
     // However, WebKitTestRunner depends on getting a preference change notification
     // even if nothing changed in UI process, so that overrides get removed.
@@ -2249,9 +2285,8 @@ void WebPageProxy::didCommitLoadForFrame(uint64_t frameID, const String& mimeTyp
 
 #if PLATFORM(MAC)
     // FIXME (bug 59111): didCommitLoadForFrame comes too late when restoring a page from b/f cache, making us disable secure event mode in password fields.
-    // FIXME (bug 59121): A load going on in one frame shouldn't affect typing in sibling frames.
-    m_pageClient->resetTextInputState();
-    // FIXME: Should this be moved inside resetTextInputState()?
+    // FIXME: A load going on in one frame shouldn't affect text editing in other frames on the page.
+    m_pageClient->resetSecureInputState();
     dismissCorrectionPanel(ReasonForDismissingAlternativeTextIgnored);
     m_pageClient->dismissDictionaryLookupPanel();
 #endif
@@ -3058,12 +3093,28 @@ void WebPageProxy::editorStateChanged(const EditorState& editorState)
 {
 #if PLATFORM(MAC)
     bool couldChangeSecureInputState = m_editorState.isInPasswordField != editorState.isInPasswordField || m_editorState.selectionIsNone;
+    bool closedComposition = !editorState.shouldIgnoreCompositionSelectionChange && !editorState.hasComposition && (m_editorState.hasComposition || m_temporarilyClosedComposition);
+    m_temporarilyClosedComposition = editorState.shouldIgnoreCompositionSelectionChange && (m_temporarilyClosedComposition || m_editorState.hasComposition) && !editorState.hasComposition;
 #endif
 
     m_editorState = editorState;
 
 #if PLATFORM(MAC)
-    m_pageClient->updateTextInputState(couldChangeSecureInputState);
+    // Selection being none is a temporary state when editing. Flipping secure input state too quickly was causing trouble (not fully understood).
+    if (couldChangeSecureInputState && !editorState.selectionIsNone)
+        m_pageClient->updateSecureInputState();
+
+    if (editorState.shouldIgnoreCompositionSelectionChange)
+        return;
+
+    if (closedComposition)
+        m_pageClient->notifyInputContextAboutDiscardedComposition();
+    if (editorState.hasComposition) {
+        // Abandon the current inline input session if selection changed for any other reason but an input method changing the composition.
+        // FIXME: This logic should be in WebCore, no need to round-trip to UI process to cancel the composition.
+        cancelComposition();
+        m_pageClient->notifyInputContextAboutDiscardedComposition();
+    }
 #elif PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(GTK)
     m_pageClient->updateTextInputState();
 #endif
@@ -3801,6 +3852,7 @@ void WebPageProxy::resetStateAfterProcessExited()
 
     m_isValid = false;
     m_isPageSuspended = false;
+    m_waitingForDidUpdateInWindowState = false;
 
     if (m_mainFrame) {
         m_urlAtProcessExit = m_mainFrame->url();
@@ -3905,6 +3957,10 @@ void WebPageProxy::resetStateAfterProcessExited()
     m_touchEventQueue.clear();
 #endif
 
+    // FIXME: Reset m_editorState.
+    // FIXME: Notify input methods about abandoned composition.
+    m_temporarilyClosedComposition = false;
+
 #if PLATFORM(MAC)
     dismissCorrectionPanel(ReasonForDismissingAlternativeTextIgnored);
     m_pageClient->dismissDictionaryLookupPanel();
@@ -3939,10 +3995,10 @@ WebPageCreationParameters WebPageProxy::creationParameters() const
     parameters.highestUsedBackForwardItemID = WebBackForwardListItem::highedUsedItemID();
     parameters.canRunBeforeUnloadConfirmPanel = m_uiClient.canRunBeforeUnloadConfirmPanel();
     parameters.canRunModal = m_canRunModal;
-    parameters.deviceScaleFactor = m_intrinsicDeviceScaleFactor;
+    parameters.deviceScaleFactor = deviceScaleFactor();
     parameters.mediaVolume = m_mediaVolume;
     parameters.mayStartMediaWhenInWindow = m_mayStartMediaWhenInWindow;
-    parameters.overridePrivateBrowsingEnabled = m_overridePrivateBrowsingEnabled;
+    parameters.minimumLayoutWidth = m_minimumLayoutWidth;
 
 #if PLATFORM(MAC)
     parameters.layerHostingMode = m_layerHostingMode;
@@ -4055,6 +4111,21 @@ void WebPageProxy::requestNotificationPermission(uint64_t requestID, const Strin
 void WebPageProxy::showNotification(const String& title, const String& body, const String& iconURL, const String& tag, const String& lang, const String& dir, const String& originString, uint64_t notificationID)
 {
     m_process->context()->supplement<WebNotificationManagerProxy>()->show(this, title, body, iconURL, tag, lang, dir, originString, notificationID);
+}
+
+void WebPageProxy::cancelNotification(uint64_t notificationID)
+{
+    m_process->context()->supplement<WebNotificationManagerProxy>()->cancel(this, notificationID);
+}
+
+void WebPageProxy::clearNotifications(const Vector<uint64_t>& notificationIDs)
+{
+    m_process->context()->supplement<WebNotificationManagerProxy>()->clearNotifications(this, notificationIDs);
+}
+
+void WebPageProxy::didDestroyNotification(uint64_t notificationID)
+{
+    m_process->context()->supplement<WebNotificationManagerProxy>()->didDestroyNotification(this, notificationID);
 }
 
 float WebPageProxy::headerHeight(WebFrameProxy* frame)
@@ -4312,10 +4383,11 @@ void WebPageProxy::setMinimumLayoutWidth(double minimumLayoutWidth)
     if (m_minimumLayoutWidth == minimumLayoutWidth)
         return;
 
+    m_minimumLayoutWidth = minimumLayoutWidth;
+
     if (!isValid())
         return;
 
-    m_minimumLayoutWidth = minimumLayoutWidth;
     m_process->send(Messages::WebPage::SetMinimumLayoutWidth(minimumLayoutWidth), m_pageID, 0);
     m_drawingArea->minimumLayoutWidthDidChange();
 
@@ -4422,15 +4494,9 @@ void WebPageProxy::setMainFrameInViewSourceMode(bool mainFrameInViewSourceMode)
         m_process->send(Messages::WebPage::SetMainFrameInViewSourceMode(mainFrameInViewSourceMode), m_pageID);
 }
 
-void WebPageProxy::setOverridePrivateBrowsingEnabled(bool overridePrivateBrowsingEnabled)
+void WebPageProxy::didSaveToPageCache()
 {
-    if (m_overridePrivateBrowsingEnabled == overridePrivateBrowsingEnabled)
-        return;
-    
-    m_overridePrivateBrowsingEnabled = overridePrivateBrowsingEnabled;
-    
-    if (isValid())
-        m_process->send(Messages::WebPage::SetOverridePrivateBrowsingEnabled(overridePrivateBrowsingEnabled), m_pageID);
+    m_process->didSaveToPageCache();
 }
 
 } // namespace WebKit

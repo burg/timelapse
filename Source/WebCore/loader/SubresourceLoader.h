@@ -39,6 +39,7 @@ namespace WebCore {
 class CachedResource;
 class CachedResourceLoader;
 class Document;
+class PageActivityAssertionToken;
 class ResourceRequest;
 
 class SubresourceLoader : public ResourceLoader {
@@ -64,7 +65,7 @@ private:
     virtual void didFinishLoading(double finishTime) OVERRIDE;
     virtual void didFail(const ResourceError&) OVERRIDE;
     virtual void willCancel(const ResourceError&) OVERRIDE;
-    virtual void didCancel(const ResourceError&) OVERRIDE { }
+    virtual void didCancel(const ResourceError&) OVERRIDE;
 
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
     virtual bool supportsDataArray() OVERRIDE { return true; }
@@ -76,6 +77,8 @@ private:
     void sendDataToResource(const char*, int);
 
     void didReceiveDataOrBuffer(const char*, int, PassRefPtr<SharedBuffer>, long long encodedDataLength, DataPayloadType);
+
+    void notifyDone();
 
     enum SubresourceLoaderState {
         Uninitialized,
@@ -96,6 +99,7 @@ private:
     bool m_loadingMultipartContent;
     SubresourceLoaderState m_state;
     OwnPtr<RequestCountTracker> m_requestCountTracker;
+    OwnPtr<PageActivityAssertionToken> m_activityAssertion;
 };
 
 }

@@ -33,6 +33,7 @@
 #include <WebKit2/WKAuthenticationDecisionListener.h>
 #include <WebKit2/WKContextPrivate.h>
 #include <WebKit2/WKCredential.h>
+#include <WebKit2/WKIconDatabase.h>
 #include <WebKit2/WKNotification.h>
 #include <WebKit2/WKNotificationManager.h>
 #include <WebKit2/WKNotificationPermissionRequest.h>
@@ -120,6 +121,8 @@ TestController::TestController(int argc, const char* argv[])
 
 TestController::~TestController()
 {
+    WKIconDatabaseClose(WKContextGetIconDatabase(m_context.get()));
+
     platformDestroy();
 }
 
@@ -362,6 +365,7 @@ void TestController::initialize(int argc, const char* argv[])
         const char separator = '/';
 #endif
 
+        WKContextSetApplicationCacheDirectory(m_context.get(), toWK(temporaryFolder + separator + "ApplicationCache").get());
         WKContextSetDatabaseDirectory(m_context.get(), toWK(temporaryFolder + separator + "Databases").get());
         WKContextSetLocalStorageDirectory(m_context.get(), toWK(temporaryFolder + separator + "LocalStorage").get());
         WKContextSetDiskCacheDirectory(m_context.get(), toWK(temporaryFolder + separator + "Cache").get());

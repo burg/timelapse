@@ -46,6 +46,18 @@
 #import "NetworkProcessProxy.h"
 #endif
 
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+
+#if __has_include(<CFNetwork/CFURLProtocolPriv.h>)
+#include <CFNetwork/CFURLProtocolPriv.h>
+#else
+extern "C" Boolean _CFNetworkIsKnownHSTSHostWithSession(CFURLRef url, CFURLStorageSessionRef session);
+extern "C" void _CFNetworkResetHSTSHostsWithSession(CFURLStorageSessionRef session);
+#endif
+
+#endif
+
 using namespace WebCore;
 
 NSString *WebDatabaseDirectoryDefaultsKey = @"WebDatabaseDirectory";
@@ -242,25 +254,20 @@ void WebContext::platformInitialize()
     enableOcclusionNotifications();
 }
 
-String WebContext::applicationCacheDirectory()
+String WebContext::platformDefaultApplicationCacheDirectory() const
 {
     NSString *appName = [[NSBundle mainBundle] bundleIdentifier];
     if (!appName)
         appName = [[NSProcessInfo processInfo] processName];
-    
+
     ASSERT(appName);
-    
-    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-    NSString *cacheDir = [defaults objectForKey:WebKitLocalCacheDefaultsKey];
 
-    if (!cacheDir || ![cacheDir isKindOfClass:[NSString class]]) {
-        char cacheDirectory[MAXPATHLEN];
-        size_t cacheDirectoryLen = confstr(_CS_DARWIN_USER_CACHE_DIR, cacheDirectory, MAXPATHLEN);
-    
-        if (cacheDirectoryLen)
-            cacheDir = [[NSFileManager defaultManager] stringWithFileSystemRepresentation:cacheDirectory length:cacheDirectoryLen - 1];
-    }
+    char cacheDirectory[MAXPATHLEN];
+    size_t cacheDirectoryLen = confstr(_CS_DARWIN_USER_CACHE_DIR, cacheDirectory, MAXPATHLEN);
+    if (!cacheDirectoryLen)
+        return String();
 
+    NSString *cacheDir = [[NSFileManager defaultManager] stringWithFileSystemRepresentation:cacheDirectory length:cacheDirectoryLen - 1];
     return [cacheDir stringByAppendingPathComponent:appName];
 }
 
@@ -557,6 +564,40 @@ void WebContext::unregisterNotificationObservers()
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     [[NSNotificationCenter defaultCenter] removeObserver:m_automaticQuoteSubstitutionNotificationObserver.get()];
     [[NSNotificationCenter defaultCenter] removeObserver:m_automaticDashSubstitutionNotificationObserver.get()];
+#endif
+}
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+static CFURLStorageSessionRef privateBrowsingSession()
+{
+    static CFURLStorageSessionRef session;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        NSString *identifier = [NSString stringWithFormat:@"%@.PrivateBrowsing", [[NSBundle mainBundle] bundleIdentifier]];
+
+        session = WKCreatePrivateStorageSession((CFStringRef)identifier);
+    });
+
+    return session;
+}
+#endif
+
+bool WebContext::isURLKnownHSTSHost(const String& urlString, bool privateBrowsingEnabled) const
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    RetainPtr<CFURLRef> url = KURL(KURL(), urlString).createCFURL();
+
+    return _CFNetworkIsKnownHSTSHostWithSession(url.get(), privateBrowsingEnabled ? privateBrowsingSession() : nullptr);
+#else
+    return false;
+#endif
+}
+
+void WebContext::resetHSTSHosts()
+{
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    _CFNetworkResetHSTSHostsWithSession(nullptr);
+    _CFNetworkResetHSTSHostsWithSession(privateBrowsingSession());
 #endif
 }
 

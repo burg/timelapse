@@ -41,6 +41,7 @@
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "Scrollbar.h"
+#include "UserGestureIndicator.h"
 
 #if ENABLE(SVG)
 #include "SVGNames.h"
@@ -404,8 +405,10 @@ void HitTestResult::enterFullscreenForVideo() const
     HTMLMediaElement* mediaElt(mediaElement());
     if (mediaElt && mediaElt->hasTagName(HTMLNames::videoTag)) {
         HTMLVideoElement* videoElt = static_cast<HTMLVideoElement*>(mediaElt);
-        if (!videoElt->isFullscreen() && mediaElt->supportsFullscreen())
+        if (!videoElt->isFullscreen() && mediaElt->supportsFullscreen()) {
+            UserGestureIndicator indicator(DefinitelyProcessingNewUserGesture);
             videoElt->enterFullscreen();
+        }
     }
 #endif
 }
@@ -640,7 +643,7 @@ Vector<String> HitTestResult::dictationAlternatives() const
     if (!frame)
         return Vector<String>();
 
-    return frame->editor()->dictationAlternativesForMarker(marker);
+    return frame->editor().dictationAlternativesForMarker(marker);
 }
 
 Node* HitTestResult::targetNode() const

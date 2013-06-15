@@ -35,6 +35,10 @@ OBJC_CLASS CALayer;
 #include <wtf/RetainPtr.h>
 #endif
 
+namespace WebCore {
+class GraphicsLayer;
+}
+
 namespace WebKit {
 
 class WebPage;
@@ -69,6 +73,8 @@ public:
     bool mouseEvent(const WebMouseEvent&);
     void didChangeDeviceScaleFactor(float scaleFactor);
 
+    void didAddParentLayer(WebCore::GraphicsLayer*);
+
 private:
 #if PLATFORM(MAC)
     explicit PageBanner(CALayer *, int height, Client*);
@@ -77,6 +83,8 @@ private:
     Type m_type;
     Client* m_client;
     WebPage* m_webPage;
+
+    bool m_mouseDownInBanner;
 
 #if PLATFORM(MAC)
     RetainPtr<CALayer> m_layer;

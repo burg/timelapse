@@ -36,6 +36,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 #if OS(SOLARIS)
@@ -77,8 +78,10 @@ class InspectorController;
 class MediaCanStartListener;
 class NetworkProxy;
 class Node;
+class PageActivityAssertionToken;
 class PageConsole;
 class PageGroup;
+class PageThrottler;
 class PlugInClient;
 class PluginData;
 class PluginViewBase;
@@ -114,6 +117,8 @@ struct ArenaSize {
 class Page : public Supplementable<Page> {
     WTF_MAKE_NONCOPYABLE(Page);
     friend class Settings;
+    friend class PageThrottler;
+
 public:
     static void updateStyleForAllPagesAfterGlobalChangeInEnvironment();
 
@@ -183,7 +188,7 @@ public:
     void decrementSubframeCount() { ASSERT(m_subframeCount); --m_subframeCount; }
     int subframeCount() const { checkSubframeCountConsistency(); return m_subframeCount; }
 
-    Chrome* chrome() const { return m_chrome.get(); }
+    Chrome& chrome() const { return *m_chrome; }
     DragCaretController* dragCaretController() const { return m_dragCaretController.get(); }
 #if ENABLE(DRAG_SUPPORT)
     DragController* dragController() const { return m_dragController.get(); }
@@ -242,9 +247,9 @@ public:
 
     PassRefPtr<Range> rangeOfString(const String&, Range*, FindOptions);
 
-    unsigned markAllMatchesForText(const String&, FindOptions, bool shouldHighlight, unsigned);
-    // FIXME: Switch callers over to the FindOptions version and retire this one.
-    unsigned markAllMatchesForText(const String&, TextCaseSensitivity, bool shouldHighlight, unsigned);
+    unsigned countFindMatches(const String&, FindOptions, unsigned maxMatchCount);
+    unsigned markAllMatchesForText(const String&, FindOptions, bool shouldHighlight, unsigned maxMatchCount);
+
     void unmarkAllTextMatches();
 
     // find all the Ranges for the matching text.
@@ -312,6 +317,7 @@ public:
     void suspendScriptedAnimations();
     void resumeScriptedAnimations();
     bool scriptedAnimationsSuspended() const { return m_scriptedAnimationsSuspended; }
+    void setThrottled(bool);
 
     void userStyleSheetLocationChanged();
     const String& userStyleSheet() const;
@@ -365,6 +371,14 @@ public:
     void removeLayoutMilestones(LayoutMilestones);
     LayoutMilestones requestedLayoutMilestones() const { return m_requestedLayoutMilestones; }
 
+#if ENABLE(RUBBER_BANDING)
+    void addHeaderWithHeight(int);
+    void addFooterWithHeight(int);
+#endif
+
+    int headerHeight() const { return m_headerHeight; }
+    int footerHeight() const { return m_footerHeight; }
+
     bool isCountingRelevantRepaintedObjects() const;
     void startCountingRelevantRepaintedObjects();
     void resetRelevantPaintedObjectCounter();
@@ -390,6 +404,9 @@ public:
     void sawMediaEngine(const String& engineName);
     void resetSeenMediaEngines();
 
+    PageThrottler* pageThrottler() { return m_pageThrottler.get(); }
+    PassOwnPtr<PageActivityAssertionToken> createActivityToken();
+
     PageConsole* console() { return m_console.get(); }
 
 #if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
@@ -412,6 +429,11 @@ private:
     void checkSubframeCountConsistency() const;
 #endif
 
+    enum ShouldHighlightMatches { DoNotHighlightMatches, HighlightMatches };
+    enum ShouldMarkMatches { DoNotMarkMatches, MarkMatches };
+
+    unsigned findMatchesForText(const String&, FindOptions, unsigned maxMatchCount, ShouldHighlightMatches, ShouldMarkMatches);
+
     MediaCanStartListener* takeAnyMediaCanStartListener();
 
     void setMinimumTimerInterval(double);
@@ -422,7 +444,10 @@ private:
 
     void collectPluginViews(Vector<RefPtr<PluginViewBase>, 32>& pluginViewBases);
 
-    OwnPtr<Chrome> m_chrome;
+    void throttleTimers();
+    void unthrottleTimers();
+
+    const OwnPtr<Chrome> m_chrome;
     OwnPtr<DragCaretController> m_dragCaretController;
 
 #if ENABLE(DRAG_SUPPORT)
@@ -518,6 +543,9 @@ private:
 
     LayoutMilestones m_requestedLayoutMilestones;
 
+    int m_headerHeight;
+    int m_footerHeight;
+
     HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
     Region m_topRelevantPaintedRegion;
     Region m_bottomRelevantPaintedRegion;
@@ -529,6 +557,8 @@ private:
     AlternativeTextClient* m_alternativeTextClient;
 
     bool m_scriptedAnimationsSuspended;
+    RefPtr<PageThrottler> m_pageThrottler;
+
     OwnPtr<PageConsole> m_console;
 
     HashSet<String> m_seenPlugins;

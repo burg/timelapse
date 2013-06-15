@@ -31,7 +31,7 @@
 #include "JSArrayBuffer.cpp"
 #include "JSArrayBufferView.cpp"
 #include "JSAttr.cpp"
-#include "JSBarInfo.cpp"
+#include "JSBarProp.cpp"
 #include "JSBeforeLoadEvent.cpp"
 #include "JSBlob.cpp"
 #include "JSCanvasGradient.cpp"
@@ -252,7 +252,6 @@
 #if ENABLE(MEDIA_SOURCE)
 #include "JSMediaSource.cpp"
 #endif
-#include "JSMemoryInfo.cpp"
 #include "JSMessageChannel.cpp"
 #include "JSMessageEvent.cpp"
 #include "JSMessagePort.cpp"

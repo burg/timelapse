@@ -29,13 +29,11 @@
  */
 
 [
-    CustomConstructor,
-    ConstructorParameters=1,
+    CustomConstructor(MutationCallback callback),
     CustomIsReachable,
     ImplementationLacksVTable
 ] interface MutationObserver {
-    void observe(Node target, Dictionary options)
-        raises(DOMException);
+    [RaisesException] void observe(Node target, Dictionary options);
     sequence<MutationRecord> takeRecords();
     void disconnect();
 };

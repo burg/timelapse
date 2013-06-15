@@ -97,7 +97,7 @@ WebInspector.CanvasProfileView.prototype = {
         this._linkifier.reset();
     },
 
-    get statusBarItems()
+    statusBarItems: function()
     {
         return [];
     },

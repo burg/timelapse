@@ -747,7 +747,7 @@ void InlineFlowBox::placeBoxesInBlockDirection(LayoutUnit top, LayoutUnit maxHei
 }
 
 #if ENABLE(CSS3_TEXT)
-void InlineFlowBox::computeMaxLogicalTop(float& maxLogicalTop)
+void InlineFlowBox::computeMaxLogicalTop(float& maxLogicalTop) const
 {
     for (InlineBox* curr = firstChild(); curr; curr = curr->nextOnLine()) {
         if (curr->renderer()->isOutOfFlowPositioned())
@@ -1141,7 +1141,7 @@ void InlineFlowBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     PaintPhase paintPhase = paintInfo.phase == PaintPhaseChildOutlines ? PaintPhaseOutline : paintInfo.phase;
     PaintInfo childInfo(paintInfo);
     childInfo.phase = paintPhase;
-    childInfo.updatePaintingRootForChildren(renderer());
+    childInfo.updateSubtreePaintRootForChildren(renderer());
     
     // Paint our children.
     if (paintPhase != PaintPhaseSelfOutline) {

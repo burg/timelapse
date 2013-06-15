@@ -178,6 +178,7 @@ enum {
     STSFPSCR_OPCODE = 0x006a,
     LDSRMFPUL_OPCODE = 0x405a,
     FSTSFPULFRN_OPCODE = 0xf00d,
+    FABS_OPCODE = 0xf05d,
     FSQRT_OPCODE = 0xf06d,
     FSCHG_OPCODE = 0xf3fd,
     CLRT_OPCODE = 8,
@@ -829,6 +830,12 @@ public:
         oneShortOp(opc, true, false);
     }
 
+    void fmovsRegReg(FPRegisterID src, FPRegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup1(FMOV_OPCODE, dst, src);
+        oneShortOp(opc, true, false);
+    }
+
     void fmovsReadrm(RegisterID src, FPRegisterID dst)
     {
         uint16_t opc = getOpcodeGroup1(FMOVS_READ_RM_OPCODE, dst, src);
@@ -948,6 +955,12 @@ public:
     void ddivRegReg(FPRegisterID src, FPRegisterID dst)
     {
         uint16_t opc = getOpcodeGroup8(FDIV_OPCODE, dst >> 1, src >> 1);
+        oneShortOp(opc);
+    }
+
+    void dabs(FPRegisterID dst)
+    {
+        uint16_t opc = getOpcodeGroup7(FABS_OPCODE, dst >> 1);
         oneShortOp(opc);
     }
 
@@ -1528,18 +1541,11 @@ public:
         cacheFlush(instruction, sizeof(SH4Word) * nbinst);
     }
 
-    static void revertJump(void* instructionStart, SH4Word imm)
+    static void revertJump(void* instructionStart, void *immptr)
     {
         SH4Word *insn = reinterpret_cast<SH4Word*>(instructionStart);
-        SH4Word disp;
-
         ASSERT((insn[0] & 0xf000) == MOVL_READ_OFFPC_OPCODE);
-
-        disp = insn[0] & 0x00ff;
-        insn += 2 + (disp << 1); // PC += 4 + (disp*4)
-        insn = (SH4Word *) ((unsigned) insn & (~3));
-        insn[0] = imm;
-        cacheFlush(insn, sizeof(SH4Word));
+        changePCrelativeAddress(insn[0] & 0x00ff, insn, reinterpret_cast<uint32_t>(immptr));
     }
 
     void linkJump(AssemblerLabel from, AssemblerLabel to, JumpType type = JumpFar)
@@ -1593,7 +1599,7 @@ public:
         }
 
         instruction = *instructionPtr;
-        if ((instruction  & 0xf000) == 0xe000) {
+        if ((instruction & 0xf000) == 0xe000) {
             uint32_t* addr = getLdrImmAddressOnPool(instructionPtr, m_buffer.poolAddress());
             *addr = offsetBits - 2;
             printInstr(*instructionPtr, from.m_offset + 2);
@@ -1836,6 +1842,9 @@ public:
             break;
         case FTRC_OPCODE:
             format = "    FTRC FR%d, FPUL\n";
+            break;
+        case FABS_OPCODE:
+            format = "    FABS FR%d\n";
             break;
         case FSQRT_OPCODE:
             format = "    FSQRT FR%d\n";

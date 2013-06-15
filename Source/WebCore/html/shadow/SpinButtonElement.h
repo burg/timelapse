@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-class SpinButtonElement : public HTMLDivElement, public PopupOpeningObserver {
+class SpinButtonElement FINAL : public HTMLDivElement, public PopupOpeningObserver {
 public:
     enum UpDownState {
         Indeterminate, // Hovered, but the event is not handled.
@@ -70,7 +70,7 @@ private:
     SpinButtonElement(Document*, SpinButtonOwner&);
 
     virtual const AtomicString& shadowPseudoId() const;
-    virtual void detach();
+    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
     virtual bool isSpinButtonElement() const { return true; }
     virtual bool isDisabledFormControl() const OVERRIDE { return shadowHost() && shadowHost()->isDisabledFormControl(); }
     virtual bool matchesReadOnlyPseudoClass() const OVERRIDE;
@@ -81,7 +81,7 @@ private:
     void startRepeatingTimer();
     void stopRepeatingTimer();
     void repeatingTimerFired(Timer<SpinButtonElement>*);
-    virtual void setHovered(bool = true);
+    virtual void setHovered(bool = true) OVERRIDE;
     bool shouldRespondToMouseEvents();
     virtual bool isMouseFocusable() const { return false; }
 

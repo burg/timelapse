@@ -1190,7 +1190,7 @@ sub GenerateImplementation
             # document when called on the document itself. Legacy behavior, see <https://bugs.webkit.org/show_bug.cgi?id=10889>.
             $getterExpressionPrefix =~ s/\bownerDocument\b/document/;
 
-            my $hasGetterException = @{$attribute->getterExceptions};
+            my $hasGetterException = $attribute->signature->extendedAttributes->{"GetterRaisesException"};
             my $getterContentHead;
             if ($attribute->signature->extendedAttributes->{"ImplementedBy"}) {
                 my $implementedBy = $attribute->signature->extendedAttributes->{"ImplementedBy"};
@@ -1380,7 +1380,7 @@ sub GenerateImplementation
             # - SETTER
             if (!$attribute->isReadOnly) {
                 # Exception handling
-                my $hasSetterException = @{$attribute->setterExceptions};
+                my $hasSetterException = $attribute->signature->extendedAttributes->{"SetterRaisesException"};
 
                 my $coreSetterName = "set" . $codeGenerator->WK_ucfirst($attributeName);
                 my $setterName = "set" . ucfirst($attributeInterfaceName);
@@ -1475,7 +1475,7 @@ sub GenerateImplementation
             my $functionName = $function->signature->name;
             my $returnType = GetObjCType($function->signature->type);
             my $hasParameters = @{$function->parameters};
-            my $raisesExceptions = @{$function->raisesExceptions};
+            my $raisesExceptions = $function->signature->extendedAttributes->{"RaisesException"};
 
             my @parameterNames = ();
             my @needsAssert = ();

@@ -1,6 +1,7 @@
 # Micro benchmarks not worth running at the moment.
 DOM/TraverseChildNodes.html
 Interactive/SelectAll.html
+Interactive/CopyAll.html
 
 # Not enabled by default on some ports
 Mutation
@@ -60,9 +61,6 @@ Dromaeo/v8-deltablue.html
 Dromaeo/v8-earley-boyer.html
 Dromaeo/v8-raytrace.html
 Dromaeo/v8-richards.html
-
-# Bug 77024 - Web Inspector: tests in PerformanceTests/inspector/ are timing out
-inspector
 
 # Bug 100262 - REGRESSION(r131982): this test is crashing
 SVG/SvgNestedUse.html

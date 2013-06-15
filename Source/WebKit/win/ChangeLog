@@ -1,3 +1,451 @@
+2013-06-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        Remove memoryInfoEnabled, quantizedMemoryInfoEnabled settings
+        https://bugs.webkit.org/show_bug.cgi?id=117512
+
+        Reviewed by Darin Adler.
+
+        * Interfaces/IWebPreferencesPrivate.idl: Remove memoryInfoEnabled, setMemoryInfoEnabled entries.
+        * WebPreferenceKeysPrivate.h: Remove the WebKitMemoryInfoEnabledPreferenceKey definition.
+        * WebPreferences.cpp: Remove the memoryInfo, setMemoryInfoEnabled methods.
+        (WebPreferences::initializeDefaultSettings): Remove the WebKitMemoryInfoEnabledPreferenceKey entry initialization.
+        * WebPreferences.h: Remove the memoryInfo, setMemoryInfoEnabled method declarations.
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged): Remove the Settings::setMemoryInfoEnabled call, the method is being removed.
+
+2013-06-11  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build correction after r151440.
+
+        * AccessibleBase.cpp:
+        (MSAARole): Switch back to emiting ROLE_SYSTEM_LISTITEM for
+        ListItemRole Web role to avoid breaking existing test.
+
+2013-06-11  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Implement 'attributeValue' accessor to support testing.
+        https://bugs.webkit.org/show_bug.cgi?id=117513
+
+        Reviewed by Anders Carlsson.
+
+        * AccessibleBase.cpp:
+        (AccessibleBase::attributeValue): Added.
+        * AccessibleBase.h: Added method declaration.
+        * Interfaces/AccessibleComparable.idl: New accessor interface.
+
+2013-06-09  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Provide MSAA mappings for more WebCore roles.
+        https://bugs.webkit.org/show_bug.cgi?id=117389
+
+        Reviewed by Chris Fleizach.
+
+        * AccessibleBase.cpp:
+        (MSAARole): Add additional mappings between WebCore roles and MSAA roles.
+
+2013-06-07  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Get rid of outdated raises() from Web IDL
+        https://bugs.webkit.org/show_bug.cgi?id=117350
+
+        Reviewed by Darin Adler.
+
+        Replace raises() by [RaisesException].
+
+        * Interfaces/DOMEvents.idl:
+
+2013-06-03  Roger Fong  <roger_fong@apple.com>
+
+        Nuke VS2005 files from the tree.
+        <rdar://problem/14042021>.
+
+        Rubberstamped by Brent Fulgham.
+
+        * WebKit.vcproj: Removed.
+        * WebKit.vcproj/FixMIDLHeaders.pl: Removed.
+        * WebKit.vcproj/Interfaces.vcproj: Removed.
+        * WebKit.vcproj/InterfacesCommon.vsprops: Removed.
+        * WebKit.vcproj/InterfacesDebug.vsprops: Removed.
+        * WebKit.vcproj/InterfacesDebugAll.vsprops: Removed.
+        * WebKit.vcproj/InterfacesDebugCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/InterfacesPostBuild.cmd: Removed.
+        * WebKit.vcproj/InterfacesPreBuild.cmd: Removed.
+        * WebKit.vcproj/InterfacesProduction.vsprops: Removed.
+        * WebKit.vcproj/InterfacesRelease.vsprops: Removed.
+        * WebKit.vcproj/InterfacesReleaseCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKit.make: Removed.
+        * WebKit.vcproj/WebKit.rc: Removed.
+        * WebKit.vcproj/WebKit.sln: Removed.
+        * WebKit.vcproj/WebKit.submit.sln: Removed.
+        * WebKit.vcproj/WebKit.vcproj: Removed.
+        * WebKit.vcproj/WebKitApple.vsprops: Removed.
+        * WebKit.vcproj/WebKitCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKitDirectX.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGenerator.vcproj: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorBuildCmd.cmd: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorCommon.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorDebug.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorDebugAll.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorDebugCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorPostBuild.cmd: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorPreBuild.cmd: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorProduction.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorRelease.vsprops: Removed.
+        * WebKit.vcproj/WebKitExportGeneratorReleaseCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKitExports.def.in: Removed.
+        * WebKit.vcproj/WebKitGUID.vcproj: Removed.
+        * WebKit.vcproj/WebKitGUIDCommon.vsprops: Removed.
+        * WebKit.vcproj/WebKitGUIDDebug.vsprops: Removed.
+        * WebKit.vcproj/WebKitGUIDDebugAll.vsprops: Removed.
+        * WebKit.vcproj/WebKitGUIDDebugCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKitGUIDPostBuild.cmd: Removed.
+        * WebKit.vcproj/WebKitGUIDPreBuild.cmd: Removed.
+        * WebKit.vcproj/WebKitGUIDProduction.vsprops: Removed.
+        * WebKit.vcproj/WebKitGUIDRelease.vsprops: Removed.
+        * WebKit.vcproj/WebKitGUIDReleaseCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibCommon.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibDebug.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibDebugAll.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibDebugCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibPostBuild.cmd: Removed.
+        * WebKit.vcproj/WebKitLibPreBuild.cmd: Removed.
+        * WebKit.vcproj/WebKitLibProduction.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibRelease.vsprops: Removed.
+        * WebKit.vcproj/WebKitLibReleaseCairoCFLite.vsprops: Removed.
+        * WebKit.vcproj/WebKit_Cairo.def: Removed.
+        * WebKit.vcproj/WebKit_Cairo_debug.def: Removed.
+        * WebKit.vcproj/deleteButton.png: Removed.
+        * WebKit.vcproj/deleteButtonPressed.png: Removed.
+        * WebKit.vcproj/fsVideoAudioVolumeHigh.png: Removed.
+        * WebKit.vcproj/fsVideoAudioVolumeLow.png: Removed.
+        * WebKit.vcproj/fsVideoExitFullscreen.png: Removed.
+        * WebKit.vcproj/fsVideoPause.png: Removed.
+        * WebKit.vcproj/fsVideoPlay.png: Removed.
+        * WebKit.vcproj/missingImage.png: Removed.
+        * WebKit.vcproj/nullplugin.png: Removed.
+        * WebKit.vcproj/panEastCursor.png: Removed.
+        * WebKit.vcproj/panIcon.png: Removed.
+        * WebKit.vcproj/panNorthCursor.png: Removed.
+        * WebKit.vcproj/panNorthEastCursor.png: Removed.
+        * WebKit.vcproj/panNorthWestCursor.png: Removed.
+        * WebKit.vcproj/panSouthCursor.png: Removed.
+        * WebKit.vcproj/panSouthEastCursor.png: Removed.
+        * WebKit.vcproj/panSouthWestCursor.png: Removed.
+        * WebKit.vcproj/panWestCursor.png: Removed.
+        * WebKit.vcproj/resource.h: Removed.
+        * WebKit.vcproj/searchCancel.png: Removed.
+        * WebKit.vcproj/searchCancelPressed.png: Removed.
+        * WebKit.vcproj/searchMagnifier.png: Removed.
+        * WebKit.vcproj/searchMagnifierResults.png: Removed.
+        * WebKit.vcproj/textAreaResizeCorner.png: Removed.
+        * WebKit.vcproj/verticalTextCursor.png: Removed.
+        * WebKit.vcproj/zoomInCursor.png: Removed.
+        * WebKit.vcproj/zoomOutCursor.png: Removed.
+
+2013-05-31  peavo@outlook.com  <peavo@outlook.com>
+
+        [Curl] Unable to download files.
+        https://bugs.webkit.org/show_bug.cgi?id=116150
+
+        Reviewed by Brent Fulgham.
+
+        Implemented basic download functionality for Curl.
+
+        * WebDownload.h:
+        * WebDownloadCurl.cpp:
+        (WebDownload::init):
+        (WebDownload::start):
+        (WebDownload::cancel):
+        (WebDownload::deletesFileUponFailure):
+        (WebDownload::setDeletesFileUponFailure):
+        (WebDownload::setDestination):
+        (WebDownload::useCredential):
+        (WebDownload::didReceiveResponse):
+        (WebDownload::didReceiveDataOfLength):
+        (WebDownload::didFinish):
+        (WebDownload::didFail):
+
+2013-05-29  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Be consistent with allocation/deallocation behavior
+        https://bugs.webkit.org/show_bug.cgi?id=116998
+
+        Reviewed by Anders Carlsson.
+
+        * WebPreferences.cpp:
+        (WebPreferences::setStringValue): Switch from using _wcsdup and
+        CFStringCreateWithCharactersNoCopy to just use the standard
+        CFStringCreateWithCharacters call.
+
+2013-05-28  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Many css2.1 tests fail on Apple's Windows port.
+        https://bugs.webkit.org/show_bug.cgi?id=75707
+
+        Reviewed by Darin Adler.
+
+        * WebKit.vcproj/WebKitExports.def.in: Export the
+        WebCore::directoryName method for DRT use.
+
+2013-05-28  Andreas Kling  <akling@apple.com>
+
+        Document::setFocusedNode() should be setFocusedElement().
+        <http://webkit.org/b/116857>
+
+        Reviewed by Antti Koivisto.
+
+        * DOMCoreClasses.cpp:
+        (DOMElement::isFocused):
+        * WebView.cpp:
+        (WebView::setInitialFocus):
+
+2013-05-27  Xueqing Huang  <huangxueqing@baidu.com>
+
+        Move Windows port off legacy clipboard.
+        https://bugs.webkit.org/show_bug.cgi?id=116258
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebDragClient.cpp:
+        (WebDragClient::willPerformDragSourceAction): Get IDataObject from Pasteboard instead of Clipboard.
+        (WebDragClient::startDrag): Ditto.
+
+2013-05-26  Antti Koivisto  <antti@apple.com>
+
+        Another build fix.
+        
+        Not reviewed.
+
+        * DOMCoreClasses.cpp:
+        (DOMElement::font):
+        * FullscreenVideoController.cpp:
+        (FullscreenVideoController::draw):
+
+2013-05-26  Antti Koivisto  <antti@apple.com>
+
+        Build fix
+        
+        Not reviewed.
+
+        * WebKitGraphics.cpp:
+        (makeFont):
+
+2013-05-26  Andreas Kling  <akling@apple.com>
+
+        FocusController::setFocusedNode() should be setFocusedElement().
+        <http://webkit.org/b/116780>
+
+        Reviewed by Antti Koivisto.
+
+        * WebView.cpp:
+        (WebView::clearFocusNode):
+
+2013-05-24  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Expose database storage and cache locations via preferences.
+        https://bugs.webkit.org/show_bug.cgi?id=116729
+
+        Reviewed by Tim Horton.
+
+        * WebDatabaseManager.cpp: Update to check preferences for the
+        desired location of the database store.
+        (databasesDirectory): Added.
+        (WebKitInitializeWebDatabasesIfNecessary): Use new databasesDirectory
+        method to determine what system path to use for file storage.
+        * WebKit.vcproj/WebKitExports.def.in: Export three symbols
+        needed to implement the feature.
+        * WebView.cpp: Update to check preferences for the desired location
+        of the various caches used by WebKit.
+        (WebView::setCacheModel): Update to check preferences for URL cache
+        storage.
+        (WebKitSetApplicationCachePathIfNecessary): Update to check
+        preferences for ccache storage.
+
+2013-05-24  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Remove custom code for webkitAudioContext global constructor getter
+        https://bugs.webkit.org/show_bug.cgi?id=116530
+
+        Reviewed by Geoffrey Garen.
+
+        Use RuntimeEnabledFeatures instead of Settings to toggle Web Audio support.
+
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged):
+
+2013-05-24  Anders Carlsson  <andersca@apple.com>
+
+        Remove unused code to read/write history
+        https://bugs.webkit.org/show_bug.cgi?id=116738
+
+        Reviewed by Brent Fulgham.
+
+        * Interfaces/IWebHistory.idl:
+        Replace loadFromURL and saveToURL with unused1/unused2.
+
+        * Interfaces/IWebHistoryPrivate.idl:
+        Replace data with unused1.
+
+        * WebHistory.cpp:
+        Remove history loading/saving code.
+
+        (WebHistory::unused1):
+        (WebHistory::unused2):
+        Add implementations.
+
+        * WebHistory.h:
+        (WebHistory):
+
+2013-05-21  Mark Salisbury  <mark.salisbury@hp.com>
+
+        [Windows, curl] WebDownloadCurl.cpp should not include SystemTime.h
+        https://bugs.webkit.org/show_bug.cgi?id=116584
+
+        Reviewed by Brent Fulgham.
+
+        SystemTime header and implementation are no longer used and were removed
+        recently - http://trac.webkit.org/changeset/150216.
+
+        * WebDownloadCurl.cpp:
+
+2013-05-19  Anders Carlsson  <andersca@apple.com>
+
+        Remove ChromeClient::webView()
+        https://bugs.webkit.org/show_bug.cgi?id=116054
+
+        Reviewed by Darin Adler.
+
+        This blatantly horrible layer violation was only used to know if a ChromeClient is an empty
+        client or not. We already have a (slightly less horrible) way to do that.
+
+        * WebCoreSupport/WebChromeClient.h:
+        (WebChromeClient):
+
+2013-05-16  Tim Horton  <timothy_horton@apple.com>
+
+        PDFPlugins don't load when plugins are disabled, but they should
+        https://bugs.webkit.org/show_bug.cgi?id=75790
+        <rdar://problem/11650197>
+
+        Reviewed by Anders Carlsson.
+
+        * WebView.cpp:
+        (WebView::canShowMIMEType):
+        Previously, this caller depended on pluginData() returning null if
+        plug-ins were disabled. Since that is no longer the case, we have to
+        check if we can use plug-ins, and otherwise ignore non-application-plug-ins.
+
+2013-05-16  Andreas Kling  <akling@apple.com>
+
+        Page::chrome() should return a reference.
+        <http://webkit.org/b/116185>
+
+        Reviewed by Anders Carlsson.
+
+2013-05-15  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Revert the previous commit.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-05-15  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Windows build fix attempt after r150160.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-05-15  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Windows build fix attempt after r150156.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-05-13  Anders Carlsson  <andersca@apple.com>
+
+        Frame::editor() should return a reference
+        https://bugs.webkit.org/show_bug.cgi?id=116037
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebContextMenuClient.cpp:
+        (WebContextMenuClient::searchWithGoogle):
+        * WebFrame.cpp:
+        (WebFrame::hasSpellingMarker):
+        (WebFrame::setTextDirection):
+        (WebFrame::selectedString):
+        (WebFrame::selectAll):
+        * WebView.cpp:
+        (WebView::execCommand):
+        (WebView::handleEditingKeyboardEvent):
+        (WebView::executeCoreCommandByName):
+        (WebView::selectedText):
+        (WebView::deleteEnabled):
+        (WebView::editingEnabled):
+        (WebView::replaceSelectionWithText):
+        (WebView::copy):
+        (WebView::cut):
+        (WebView::paste):
+        (WebView::copyURL):
+        (WebView::delete_):
+        (WebView::checkSpelling):
+        (WebView::showGuessPanel):
+        (WebView::clearUndoRedoOperations):
+        (WebView::prepareCandidateWindow):
+        (WebView::resetIME):
+        (WebView::updateSelectionForIME):
+        (WebView::onIMEComposition):
+        (WebView::onIMEEndComposition):
+        (WebView::onIMERequestCharPosition):
+        (WebView::onIMERequest):
+        (WebView::setCompositionForTesting):
+        (WebView::hasCompositionForTesting):
+        (WebView::confirmCompositionForTesting):
+        (WebView::compositionRangeForTesting):
+        (WebView::firstRectForCharacterRangeForTesting):
+        (WebView::selectedRangeForTesting):
+
+2013-05-15  Patrick Gansterer  <paroga@webkit.org>
+
+        Remove unnecessary dependecy on CoreFoundation from WebDatabaseManager
+        https://bugs.webkit.org/show_bug.cgi?id=115993
+
+        Reviewed by Anders Carlsson.
+
+        Using COMPropertyBag instead of CFDictionaryPropertyBag also reduces
+        the total lines of code needed for the same functionality.
+
+        * WebDatabaseManager.cpp:
+        (WebDatabaseManager::dispatchDidModifyDatabase):
+
+2013-05-12  Timothy Hatcher  <timothy@apple.com>
+
+        Add support for updating the Web Inspector toolbar height.
+
+        https://bugs.webkit.org/show_bug.cgi?id=115996
+
+        Reviewed by Joseph Pecoraro and Benjamin Poulain.
+
+        * WebCoreSupport/WebInspectorClient.cpp:
+        (WebInspectorFrontendClient::setToolbarHeight):
+        * WebCoreSupport/WebInspectorClient.h:
+
+2013-05-13  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. AppleWin VS2005 build fix.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-05-12  Anders Carlsson  <andersca@apple.com>
+
+        Stop including UnusedParam.h
+        https://bugs.webkit.org/show_bug.cgi?id=116003
+
+        Reviewed by Sam Weinig.
+
+        UnusedParam.h is empty now so there's no need to include it anymore.
+
+        * WebSecurityOrigin.cpp:
+
 2013-05-09  Max Feil  <mfeil@rim.com>
 
         shouldUsePluginDocument() needs to be respected when a document is created

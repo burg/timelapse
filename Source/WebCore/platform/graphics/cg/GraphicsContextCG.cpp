@@ -43,7 +43,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/RetainPtr.h>
-#include <wtf/UnusedParam.h>
 
 #if PLATFORM(MAC)
 #include "WebCoreSystemInterface.h"
@@ -1290,7 +1289,7 @@ void GraphicsContext::setURLForRect(const KURL& link, const IntRect& destRect)
     if (paintingDisabled())
         return;
 
-    RetainPtr<CFURLRef> urlRef = adoptCF(link.createCFURL());
+    RetainPtr<CFURLRef> urlRef = link.createCFURL();
     if (!urlRef)
         return;
 

@@ -95,7 +95,6 @@ private:
     void invalidateQueuedObjects();
 
     PluginView* m_pluginView;
-
     HashMap<JSC::JSObject*, NPJSObject*> m_npJSObjects;
     HashMap<NPObject*, JSC::Weak<JSNPObject>> m_jsNPObjects;
     Vector<NPObject*> m_npObjectsToFinalize;

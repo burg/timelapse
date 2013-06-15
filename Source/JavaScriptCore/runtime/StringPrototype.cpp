@@ -797,7 +797,12 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncLastIndexOf(ExecState* exec)
     else if (!(dpos <= len)) // true for NaN
         dpos = len;
 
-    size_t result = s.reverseFind(u2, static_cast<unsigned>(dpos));
+    size_t result;
+    unsigned startPosition = static_cast<unsigned>(dpos);
+    if (!startPosition)
+        result = s.startsWith(u2) ? 0 : notFound;
+    else
+        result = s.reverseFind(u2, startPosition);
     if (result == notFound)
         return JSValue::encode(jsNumber(-1));
     return JSValue::encode(jsNumber(result));
@@ -1277,9 +1282,6 @@ EncodedJSValue JSC_HOST_CALL stringProtoFuncToUpperCase(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL stringProtoFuncLocaleCompare(ExecState* exec)
 {
-    if (exec->argumentCount() < 1)
-      return JSValue::encode(jsNumber(0));
-
     JSValue thisValue = exec->hostThisValue();
     if (thisValue.isUndefinedOrNull()) // CheckObjectCoercible
         return throwVMTypeError(exec);

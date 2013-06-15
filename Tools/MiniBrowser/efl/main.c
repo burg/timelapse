@@ -45,6 +45,7 @@ static const double TOOLTIP_DELAY_SECONDS = 1.0;
 static int verbose = 1;
 static Eina_List *windows = NULL;
 static char *evas_engine_name = NULL;
+static char *user_agent_string = NULL;
 static Eina_Bool encoding_detector_enabled = EINA_FALSE;
 static Eina_Bool frame_flattening_enabled = EINA_FALSE;
 static Eina_Bool local_storage_enabled = EINA_TRUE;
@@ -90,6 +91,12 @@ typedef struct _Tooltip_Information {
     Eina_Bool shown;
 } Tooltip_Information;
 
+typedef struct _Color_Selector {
+    Ewk_Color_Picker *ewk_picker;
+    Evas_Object *elm_selector;
+    Evas_Object *elm_selector_window;
+} Color_Selector;
+
 typedef struct _Browser_Window {
     Evas_Object *elm_window;
     Evas_Object *ewk_view;
@@ -108,7 +115,11 @@ typedef struct _Browser_Window {
     } search;
     int current_zoom_level; 
     Tooltip_Information tooltip;
-    Evas_Object *context_popup;
+    Color_Selector color_selector;
+    struct {
+        Evas_Object *elm_menu;
+        Ewk_Context_Menu *ewk_menu;
+    } context_menu;
 } Browser_Window;
 
 typedef struct _File_Selector_Data {
@@ -136,6 +147,8 @@ static const Ecore_Getopt options = {
             ('e', "engine", "ecore-evas engine to use."),
         ECORE_GETOPT_STORE_STR
             ('s', "window-size", "window size in following format (width)x(height)."),
+        ECORE_GETOPT_STORE_STR
+            ('u', "user-agent", "user agent to set."),
         ECORE_GETOPT_STORE_DEF_BOOL
             ('b', "legacy", "Legacy mode", EINA_FALSE),
         ECORE_GETOPT_STORE_DOUBLE
@@ -153,6 +166,8 @@ static const Ecore_Getopt options = {
             ('F', "full-screen", "start in full-screen.", EINA_FALSE),
         ECORE_GETOPT_STORE_DEF_BOOL
             ('t', "text-checking", "text spell checking enabled", EINA_TRUE),
+        ECORE_GETOPT_STORE_DEF_STR
+            ('p', "policy-cookies", "Cookies policy:\n  always - always accept,\n  never - never accept,\n  no-third-party - don't accept third-party cookies.", "no-third-party"),
         ECORE_GETOPT_VERSION
             ('V', "version"),
         ECORE_GETOPT_COPYRIGHT
@@ -255,11 +270,31 @@ on_mouse_out(void *user_data, Evas *e, Evas_Object *ewk_view, void *event_info)
     window_tooltip_update(window);
 }
 
+static void
+on_window_resize(void *user_data, Evas *e, Evas_Object *elm_window, void *event_info)
+{
+    Browser_Window *window = (Browser_Window *)user_data;
+
+    if (!window) {
+        info("ERROR: window is NULL.");
+        return;
+    }
+
+    if (window->context_menu.ewk_menu)
+        ewk_context_menu_hide(window->context_menu.ewk_menu);
+    if (window->popup.ewk_menu)
+        ewk_popup_menu_close(window->popup.ewk_menu);
+    if (window->popup.elm_menu)
+        elm_menu_close(window->popup.elm_menu);
+}
+
 static void window_free(Browser_Window *window)
 {
     evas_object_event_callback_del(window->ewk_view, EVAS_CALLBACK_MOUSE_IN, on_mouse_in);
     evas_object_event_callback_del(window->ewk_view, EVAS_CALLBACK_MOUSE_OUT, on_mouse_out);
     evas_object_event_callback_del(window->ewk_view, EVAS_CALLBACK_MOUSE_MOVE, on_mouse_move);
+
+    evas_object_event_callback_del(window->elm_window, EVAS_CALLBACK_RESIZE, on_window_resize);
 
     evas_object_del(window->ewk_view);
     /* The elm_win will take care of freeing its children */
@@ -267,6 +302,9 @@ static void window_free(Browser_Window *window)
 
     if (window->tooltip.show_timer)
         ecore_timer_del(window->tooltip.show_timer);
+
+    if (window->color_selector.elm_selector_window)
+        evas_object_del(window->color_selector.elm_selector_window);
 
     free(window);
 }
@@ -551,6 +589,7 @@ on_fileselector_done(void *user_data, Evas_Object *file_selector, void *event_in
 static void
 on_file_chooser_request(void *user_data, Evas_Object *ewk_view, void *event_info)
 {
+    Evas_Object *bg;
     Browser_Window *window = (Browser_Window *)user_data;
     Ewk_File_Chooser_Request *request = (Ewk_File_Chooser_Request *)event_info;
 
@@ -559,6 +598,11 @@ on_file_chooser_request(void *user_data, Evas_Object *ewk_view, void *event_info
     Evas_Object *elm_window = elm_win_add(window->elm_window, "file-picker-window", ELM_WIN_DIALOG_BASIC);
     elm_win_title_set(elm_window, "File picker");
     elm_win_modal_set(elm_window, EINA_TRUE);
+
+    bg = elm_bg_add(elm_window);
+    evas_object_size_hint_weight_set(bg, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    elm_win_resize_object_add(elm_window, bg);
+    evas_object_show(bg);
 
     File_Selector_Data *fs_data = (File_Selector_Data *)malloc(sizeof(File_Selector_Data));
     fs_data->parent = window;
@@ -592,6 +636,133 @@ static void
 on_download_failed(void *user_data, Evas_Object *ewk_view, void *event_info)
 {
     info("Download failed!");
+}
+
+static void
+on_color_changed(void *data, Evas_Object *obj, void *event_info)
+{
+    int r, g, b, a;
+
+    elm_colorselector_color_get(obj, &r, &g, &b, &a);
+    evas_object_color_set(data, r, g, b, a);
+}
+
+static void
+on_color_item_selected(void *data, Evas_Object *obj, void *event_info)
+{
+    int r, g, b, a;
+    Elm_Object_Item *color_item = (Elm_Object_Item *)event_info;
+
+    elm_colorselector_palette_item_color_get(color_item, &r, &g, &b, &a);
+    evas_object_color_set(data, r, g, b, a);
+}
+
+static void
+on_color_picker_ok_clicked(void *data, Evas_Object *obj, void *event_info)
+{
+    int r, g, b, a;
+    Color_Selector *color_selector = (Color_Selector *)data;
+
+    elm_colorselector_color_get(color_selector->elm_selector, &r, &g, &b, &a);
+    ewk_color_picker_color_set(color_selector->ewk_picker, r, g, b, a);
+}
+
+static void
+on_color_picker_cancel_clicked(void *data, Evas_Object *obj, void *event_info)
+{
+    int r, g, b, a;
+
+    ewk_color_picker_color_get(data, &r, &g, &b, &a);
+    ewk_color_picker_color_set(data, r, g, b, a);
+}
+
+static Eina_Bool
+on_color_picker_dismiss(Ewk_View_Smart_Data *sd)
+{
+    Browser_Window *window = window_find_with_ewk_view(sd->self);
+
+    evas_object_del(window->color_selector.elm_selector_window);
+    window->color_selector.elm_selector_window = NULL;
+
+    return EINA_TRUE;
+}
+
+static Eina_Bool
+on_color_picker_request(Ewk_View_Smart_Data *sd, Ewk_Color_Picker *color_picker)
+{
+    int r, g, b, a;
+    Evas_Object *background, *rect, *box, *button_box, *rect_frame, *cs_frame, *ok_button, *cancel_button;
+
+    Browser_Window *window = window_find_with_ewk_view(sd->self);
+    window->color_selector.elm_selector_window = elm_win_add(window->elm_window, "color selector", ELM_WIN_BASIC);
+    window->color_selector.ewk_picker = color_picker;
+
+    elm_win_title_set(window->color_selector.elm_selector_window, "Color selector");
+
+    /* Show color view */
+    background = elm_bg_add(window->color_selector.elm_selector_window);
+    evas_object_size_hint_weight_set(background, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    elm_win_resize_object_add(window->color_selector.elm_selector_window, background);
+    evas_object_show(background);
+
+    box = elm_box_add(window->color_selector.elm_selector_window);
+    evas_object_size_hint_weight_set(box, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    elm_win_resize_object_add(window->color_selector.elm_selector_window, box);
+    evas_object_show(box);
+
+    rect_frame = elm_frame_add(window->color_selector.elm_selector_window);
+    evas_object_size_hint_weight_set(rect_frame, EVAS_HINT_EXPAND, 0.3);
+    evas_object_size_hint_align_set(rect_frame, EVAS_HINT_FILL, EVAS_HINT_FILL);
+    elm_object_text_set(rect_frame, "Color View");
+    elm_box_pack_end(box, rect_frame);
+    evas_object_show(rect_frame);
+
+    rect = evas_object_rectangle_add(evas_object_evas_get(window->color_selector.elm_selector_window));
+    elm_object_content_set(rect_frame, rect);
+    ewk_color_picker_color_get(window->color_selector.ewk_picker, &r, &g, &b, &a);
+    evas_object_color_set(rect, r, g, b, a);
+    evas_object_show(rect);
+
+    /* Show color selector */
+    cs_frame = elm_frame_add(window->color_selector.elm_selector_window);
+    evas_object_size_hint_weight_set(cs_frame, EVAS_HINT_EXPAND, 0.7);
+    evas_object_size_hint_align_set(cs_frame, EVAS_HINT_FILL, EVAS_HINT_FILL);
+    elm_object_text_set(cs_frame, "Color Selector");
+    elm_box_pack_end(box, cs_frame);
+    evas_object_show(cs_frame);
+
+    window->color_selector.elm_selector = elm_colorselector_add(window->color_selector.elm_selector_window);
+    elm_object_content_set(cs_frame, window->color_selector.elm_selector);
+    evas_object_show(window->color_selector.elm_selector);
+
+    /* OK, Cancel Buttons */
+    button_box = elm_box_add(window->color_selector.elm_selector_window);
+    elm_box_horizontal_set(button_box, EINA_TRUE);
+    evas_object_size_hint_min_set(button_box, 200, 50);
+    elm_box_pack_end(box, button_box);
+    evas_object_show(button_box);
+
+    ok_button = elm_button_add(window->color_selector.elm_selector_window);
+    elm_object_text_set(ok_button, "OK");
+    elm_box_pack_end(button_box, ok_button);
+    evas_object_show(ok_button);
+
+    cancel_button = elm_button_add(window->color_selector.elm_selector_window);
+    elm_object_text_set(cancel_button, "Cancel");
+    elm_box_pack_end(button_box, cancel_button);
+    evas_object_show(cancel_button);
+
+    evas_object_smart_callback_add(ok_button, "clicked", on_color_picker_ok_clicked, &(window->color_selector));
+    evas_object_smart_callback_add(cancel_button, "clicked", on_color_picker_cancel_clicked, window->color_selector.ewk_picker);
+    evas_object_smart_callback_add(window->color_selector.elm_selector_window, "delete,request", on_color_picker_cancel_clicked, window->color_selector.ewk_picker);
+    evas_object_smart_callback_add(window->color_selector.elm_selector, "changed", on_color_changed, rect);
+    evas_object_smart_callback_add(window->color_selector.elm_selector, "color,item,selected", on_color_item_selected, rect);
+
+    elm_win_center(window->color_selector.elm_selector_window, EINA_TRUE, EINA_TRUE);
+    evas_object_resize(window->color_selector.elm_selector_window, 350, 500);
+    evas_object_show(window->color_selector.elm_selector_window);
+
+    return EINA_TRUE;
 }
 
 static void
@@ -1105,49 +1276,56 @@ on_window_close(Ewk_View_Smart_Data *smartData)
 }
 
 static void
-context_popup_populate(Browser_Window *window, Ewk_Context_Menu *ewk_menu);
-
-static void
-context_popup_item_selected_cb(void *data, Evas_Object *obj, void *event_info)
+context_menu_item_selected_cb(void *data, Evas_Object *obj, void *event_info)
 {
     if (!data) {
-        info("ERROR: context popup callback data is NULL.");
+        info("ERROR: context menu callback data is NULL.");
         return;
     }
 
     Ewk_Context_Menu_Item *ewk_item = (Ewk_Context_Menu_Item *)data;
-    info("Selected context popup item: %s.", ewk_context_menu_item_title_get(ewk_item));
+    info("Selected context menu item: %s.", ewk_context_menu_item_title_get(ewk_item));
     ewk_context_menu_item_select(ewk_context_menu_item_parent_menu_get(ewk_item), ewk_item);
     ewk_context_menu_hide(ewk_context_menu_item_parent_menu_get(ewk_item));
 }
 
 static void
-context_popup_populate(Browser_Window *window, Ewk_Context_Menu *ewk_menu)
+context_menu_populate(Evas_Object* context_menu, Ewk_Context_Menu *ewk_menu, Elm_Object_Item *parent_item)
 {
+    if (!context_menu || !ewk_menu) {
+        info("ERROR: necessary objects are NULL.");
+        return;
+    }
+
     const Eina_List *list = ewk_context_menu_items_get(ewk_menu);
     const Eina_List *l;
     void *data;
 
     Ewk_Context_Menu_Item *ewk_item;
-    Elm_Object_Item *elm_popup_item;
+    Elm_Object_Item *elm_menu_item;
     Evas_Object *elm_check_item;
 
     EINA_LIST_FOREACH(list, l, data) {
         ewk_item = (Ewk_Context_Menu_Item *)data;
         switch (ewk_context_menu_item_type_get(ewk_item)) {
         case EWK_ACTION_TYPE:
-            elm_popup_item = elm_ctxpopup_item_append(window->context_popup, ewk_context_menu_item_title_get(ewk_item), NULL, context_popup_item_selected_cb, ewk_item);
+            elm_menu_item = elm_menu_item_add(context_menu, parent_item, NULL, ewk_context_menu_item_title_get(ewk_item), context_menu_item_selected_cb, ewk_item);
             break;
         case EWK_CHECKABLE_ACTION_TYPE:
-            elm_check_item = elm_check_add(window->context_popup);
-            elm_popup_item = elm_ctxpopup_item_append(window->context_popup, ewk_context_menu_item_title_get(ewk_item), NULL, context_popup_item_selected_cb, ewk_item);
-            elm_object_item_content_set(elm_popup_item, elm_check_item);
+            elm_check_item = elm_check_add(context_menu);
+            elm_menu_item = elm_menu_item_add(context_menu, parent_item, NULL, ewk_context_menu_item_title_get(ewk_item), context_menu_item_selected_cb, ewk_item);
+            elm_object_item_content_set(elm_menu_item, elm_check_item);
             elm_check_state_set(elm_check_item, ewk_context_menu_item_checked_get(ewk_item));
+            break;
+        case EWK_SUBMENU_TYPE:
+            elm_menu_item = elm_menu_item_add(context_menu, parent_item, NULL, ewk_context_menu_item_title_get(ewk_item), NULL, ewk_item);
+            if (elm_menu_item)
+                context_menu_populate(context_menu, ewk_context_menu_item_submenu_get(ewk_item), elm_menu_item);
             break;
         default:
             continue;
         }
-        elm_object_item_disabled_set(elm_popup_item, !ewk_context_menu_item_enabled_get(ewk_item));
+        elm_object_item_disabled_set(elm_menu_item, !ewk_context_menu_item_enabled_get(ewk_item));
     }
 }
 
@@ -1161,18 +1339,25 @@ on_context_menu_show(Ewk_View_Smart_Data *sd, Evas_Coord x, Evas_Coord y, Ewk_Co
         return EINA_FALSE;
     }
 
-    window->context_popup = elm_ctxpopup_add(window->elm_window);
+    window->context_menu.elm_menu = elm_menu_add(window->elm_window);
 
-    if (!window->context_popup) {
-        info("ERROR: could not create context popup widget.");
+    if (!window->context_menu.elm_menu) {
+        info("ERROR: could not create menu widget.");
         return EINA_FALSE;
     }
 
-    context_popup_populate(window, menu);
+    window->context_menu.ewk_menu = menu;
 
-    info("Showing context popup at (%d, %d).", x, y);
-    evas_object_move(window->context_popup, x, y);
-    evas_object_show(window->context_popup);
+    context_menu_populate(window->context_menu.elm_menu, menu, NULL);
+
+    Evas_Coord ewk_x, ewk_y;
+    evas_object_geometry_get(window->ewk_view, &ewk_x, &ewk_y, NULL, NULL);
+    x += ewk_x;
+    y += ewk_y;
+
+    info("Showing context menu at (%d, %d).", x, y);
+    elm_menu_move(window->context_menu.elm_menu, x, y);
+    evas_object_show(window->context_menu.elm_menu);
 
     return EINA_TRUE;
 }
@@ -1182,14 +1367,15 @@ on_context_menu_hide(Ewk_View_Smart_Data *sd)
 {
     Browser_Window *window = window_find_with_ewk_view(sd->self);
 
-    if (!window || !window->context_popup) {
+    if (!window || !window->context_menu.elm_menu) {
         info("ERROR: necessary objects are NULL.");
         return EINA_FALSE;
     }
 
-    elm_ctxpopup_dismiss(window->context_popup);
-    evas_object_del(window->context_popup);
-    window->context_popup = NULL;
+    elm_menu_close(window->context_menu.elm_menu);
+    evas_object_del(window->context_menu.elm_menu);
+    window->context_menu.elm_menu = NULL;
+    window->context_menu.ewk_menu = NULL;
 
     return EINA_TRUE;
 }
@@ -1516,6 +1702,8 @@ static Browser_Window *window_create(Evas_Object *opener, const char *url, int w
     ewkViewClass->popup_menu_hide = on_popup_menu_hide;
     ewkViewClass->context_menu_show = on_context_menu_show;
     ewkViewClass->context_menu_hide = on_context_menu_hide;
+    ewkViewClass->input_picker_color_request = on_color_picker_request;
+    ewkViewClass->input_picker_color_dismiss = on_color_picker_dismiss;
 
     Evas *evas = evas_object_evas_get(window->elm_window);
     if (legacy_behavior_enabled) {
@@ -1531,6 +1719,7 @@ static Browser_Window *window_create(Evas_Object *opener, const char *url, int w
     if (device_pixel_ratio)
         ewk_view_device_pixel_ratio_set(window->ewk_view, (float)device_pixel_ratio);
     ewk_view_source_mode_set(window->ewk_view, view_mode);
+    ewk_view_user_agent_set(window->ewk_view, user_agent_string);
 
     /* Set the zoom level to default */
     window->current_zoom_level = DEFAULT_ZOOM_LEVEL;
@@ -1580,8 +1769,21 @@ static Browser_Window *window_create(Evas_Object *opener, const char *url, int w
     evas_object_event_callback_add(window->ewk_view, EVAS_CALLBACK_MOUSE_IN, on_mouse_in, window);
     evas_object_event_callback_add(window->ewk_view, EVAS_CALLBACK_MOUSE_OUT, on_mouse_out, window);
     evas_object_event_callback_add(window->ewk_view, EVAS_CALLBACK_MOUSE_MOVE, on_mouse_move, window);
+    evas_object_event_callback_add(window->elm_window, EVAS_CALLBACK_RESIZE, on_window_resize, window);
 
     return window;
+}
+
+static Ewk_Cookie_Accept_Policy
+parse_cookies_policy(const char *input_string)
+{
+    if (!strcmp(input_string, "always")) 
+        return EWK_COOKIE_ACCEPT_POLICY_ALWAYS;
+    if (!strcmp(input_string, "never"))
+        return EWK_COOKIE_ACCEPT_POLICY_NEVER;
+    if (strcmp(input_string, "no-third-party"))
+        info("Unrecognized type for cookies policy: %s.", input_string);
+    return EWK_COOKIE_ACCEPT_POLICY_NO_THIRD_PARTY;
 }
 
 static void
@@ -1616,10 +1818,12 @@ elm_main(int argc, char *argv[])
     unsigned char quitOption = 0;
     Browser_Window *window;
     char *window_size_string = NULL;
+    char *cookies_policy_string = NULL;
 
     Ecore_Getopt_Value values[] = {
         ECORE_GETOPT_VALUE_STR(evas_engine_name),
         ECORE_GETOPT_VALUE_STR(window_size_string),
+        ECORE_GETOPT_VALUE_STR(user_agent_string),
         ECORE_GETOPT_VALUE_BOOL(legacy_behavior_enabled),
         ECORE_GETOPT_VALUE_DOUBLE(device_pixel_ratio),
         ECORE_GETOPT_VALUE_BOOL(quitOption),
@@ -1628,6 +1832,7 @@ elm_main(int argc, char *argv[])
         ECORE_GETOPT_VALUE_BOOL(local_storage_enabled),
         ECORE_GETOPT_VALUE_BOOL(fullscreen_enabled),
         ECORE_GETOPT_VALUE_BOOL(spell_checking_enabled),
+        ECORE_GETOPT_VALUE_STR(cookies_policy_string),
         ECORE_GETOPT_VALUE_BOOL(quitOption),
         ECORE_GETOPT_VALUE_BOOL(quitOption),
         ECORE_GETOPT_VALUE_BOOL(quitOption),
@@ -1660,6 +1865,9 @@ elm_main(int argc, char *argv[])
     // Enable favicon database.
     Ewk_Context *context = ewk_context_default_get();
     ewk_context_favicon_database_directory_set(context, NULL);
+
+    if (cookies_policy_string)
+        ewk_cookie_manager_accept_policy_set(ewk_context_cookie_manager_get(context), parse_cookies_policy(cookies_policy_string));
 
     if (window_size_string)
         parse_window_size(window_size_string, &window_width, &window_height);

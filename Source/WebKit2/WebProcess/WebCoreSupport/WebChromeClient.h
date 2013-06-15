@@ -170,6 +170,9 @@ private:
     // will be called frequently, so handling should be very fast.
     virtual void formStateDidChange(const WebCore::Node*) OVERRIDE;
 
+    virtual void didAssociateFormControls(const Vector<RefPtr<WebCore::Element>>&) OVERRIDE;
+    virtual bool shouldNotifyOnFormChanges() OVERRIDE;
+
     virtual bool selectItemWritingDirectionIsNatural() OVERRIDE;
     virtual bool selectItemAlignmentFollowsMenuWritingDirection() OVERRIDE;
     virtual bool hasOpenedPopup() const OVERRIDE;
@@ -191,6 +194,8 @@ private:
             CanvasTrigger |
             AnimationTrigger);
     }
+
+    virtual bool layerTreeStateIsFrozen() const OVERRIDE;
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
@@ -206,6 +211,9 @@ private:
 #if PLATFORM(MAC)
     virtual void makeFirstResponder() OVERRIDE;
 #endif
+
+    virtual void enableSuddenTermination() OVERRIDE;
+    virtual void disableSuddenTermination() OVERRIDE;
     
     virtual void dispatchViewportPropertiesDidChange(const WebCore::ViewportArguments&) const OVERRIDE;
 
@@ -223,6 +231,12 @@ private:
     virtual String plugInStartLabelSubtitle(const String& mimeType) const OVERRIDE;
     virtual String plugInExtraStyleSheet() const OVERRIDE;
     virtual String plugInExtraScript() const OVERRIDE;
+
+    virtual void didAddHeaderLayer(WebCore::GraphicsLayer*) OVERRIDE;
+    virtual void didAddFooterLayer(WebCore::GraphicsLayer*) OVERRIDE;
+
+    virtual void incrementActivePageCount() OVERRIDE;
+    virtual void decrementActivePageCount() OVERRIDE;
 
     String m_cachedToolTip;
     mutable RefPtr<WebFrame> m_cachedFrameSetLargestFrame;

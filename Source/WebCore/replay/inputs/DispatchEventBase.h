@@ -61,6 +61,10 @@ public:
     static int frameIndexFromDocument(Document*);
     static Document* documentFromFrameIndex(Page*, int);
 
+    // copied from Document, since it was removed upstream.
+    static int nodeAbsIndex(Document* document, Node *node);
+    static Node* nodeWithAbsIndex(Document* document, int absIndex);
+
     static SerializedEventTarget serialize(EventTarget*);
     EventTarget* deserialize(Page*);
 

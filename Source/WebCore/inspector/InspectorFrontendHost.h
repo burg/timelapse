@@ -42,9 +42,7 @@ class ContextMenuItem;
 class DOMFileSystem;
 class Event;
 class FrontendMenuProvider;
-class InspectorClient;
 class InspectorFrontendClient;
-class Node;
 class Page;
 
 class InspectorFrontendHost : public RefCounted<InspectorFrontendHost> {
@@ -66,6 +64,8 @@ public:
 
     void setAttachedWindowHeight(unsigned);
     void setAttachedWindowWidth(unsigned);
+    void setToolbarHeight(unsigned);
+
     void moveWindowBy(float x, float y) const;
     void setInjectedScriptForOrigin(const String& origin, const String& script);
 
@@ -96,13 +96,12 @@ public:
 
     bool canInspectWorkers();
     bool canSaveAs();
-    String hiddenPanels();
 
 private:
 #if ENABLE(CONTEXT_MENUS)
     friend class FrontendMenuProvider;
 #endif
-    InspectorFrontendHost(InspectorFrontendClient* client, Page* frontendPage);
+    InspectorFrontendHost(InspectorFrontendClient*, Page* frontendPage);
 
     InspectorFrontendClient* m_client;
     Page* m_frontendPage;

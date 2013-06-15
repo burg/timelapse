@@ -30,6 +30,7 @@
 #ifndef FontCache_h
 #define FontCache_h
 
+#include "FontDescription.h"
 #include <limits.h>
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
@@ -49,7 +50,6 @@ namespace WebCore {
 class Font;
 class FontPlatformData;
 class FontData;
-class FontDescription;
 class FontSelector;
 class OpenTypeVerticalData;
 class SimpleFontData;
@@ -62,6 +62,43 @@ typedef IMLangFontLink IMLangFontLinkType;
 #endif
 #endif
 
+// This key contains the FontDescription fields other than family that matter when fetching FontDatas (platform fonts).
+struct FontDescriptionFontDataCacheKey {
+    explicit FontDescriptionFontDataCacheKey(unsigned size = 0)
+        : size(size)
+        , weight(0)
+        , flags(0)
+    { }
+    FontDescriptionFontDataCacheKey(const FontDescription& description)
+        : size(description.computedPixelSize())
+        , weight(description.weight())
+        , flags(makeFlagKey(description))
+    { }
+    static unsigned makeFlagKey(const FontDescription& description)
+    {
+        return static_cast<unsigned>(description.widthVariant()) << 4
+            | static_cast<unsigned>(description.orientation()) << 3
+            | static_cast<unsigned>(description.italic()) << 2
+            | static_cast<unsigned>(description.usePrinterFont()) << 1
+            | static_cast<unsigned>(description.renderingMode());
+    }
+    bool operator==(const FontDescriptionFontDataCacheKey& other) const
+    {
+        return size == other.size && weight == other.weight && flags == other.flags;
+    }
+    bool operator!=(const FontDescriptionFontDataCacheKey& other) const
+    {
+        return !(*this == other);
+    }
+    inline unsigned computeHash() const
+    {
+        return StringHasher::hashMemory<sizeof(FontDescriptionFontDataCacheKey)>(this);
+    }
+    unsigned size;
+    unsigned weight;
+    unsigned flags;
+};
+
 class FontCache {
     friend class FontCachePurgePreventer;
 
@@ -71,11 +108,11 @@ public:
 
     enum ShouldRetain { Retain, DoNotRetain };
 
-    PassRefPtr<FontData> getFontData(const Font&, int& familyIndex, FontSelector*);
+    PassRefPtr<FontData> getFontData(const FontDescription&, int& familyIndex, FontSelector*);
     void releaseFontData(const SimpleFontData*);
 
     // This method is implemented by the platform.
-    PassRefPtr<SimpleFontData> getFontDataForCharacters(const Font&, const UChar* characters, int length);
+    PassRefPtr<SimpleFontData> systemFallbackForCharacters(const FontDescription&, const SimpleFontData* originalFontData, bool isPlatformFont, const UChar* characters, int length);
 
     // Also implemented by the platform.
     void platformInit();
@@ -141,8 +178,10 @@ private:
     FontPlatformData* getCachedFontPlatformData(const FontDescription&, const AtomicString& family, bool checkingAlternateName = false);
 
     // These methods are implemented by each platform.
-    PassRefPtr<SimpleFontData> getSimilarFontPlatformData(const Font&);
     PassOwnPtr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomicString& family);
+#if PLATFORM(MAC)
+    PassRefPtr<SimpleFontData> similarFontPlatformData(const FontDescription&);
+#endif
 
     PassRefPtr<SimpleFontData> getCachedFontData(const FontPlatformData*, ShouldRetain = Retain);
 
@@ -153,7 +192,7 @@ private:
     friend class ComplexTextController;
 #endif
     friend class SimpleFontData; // For getCachedFontData(const FontPlatformData*)
-    friend class FontFallbackList;
+    friend class FontGlyphs;
 };
 
 // Get the global fontCache.

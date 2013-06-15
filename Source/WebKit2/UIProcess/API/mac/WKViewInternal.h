@@ -55,6 +55,7 @@ namespace WebKit {
 - (void)_processDidCrash;
 - (void)_pageClosed;
 - (void)_didRelaunchProcess;
+- (void)_preferencesDidChange;
 - (void)_toolTipChangedFrom:(NSString *)oldToolTip to:(NSString *)newToolTip;
 - (void)_setCursor:(NSCursor *)cursor;
 - (void)_setUserInterfaceItemState:(NSString *)commandName enabled:(BOOL)isEnabled state:(int)newState;
@@ -82,8 +83,8 @@ namespace WebKit {
 - (void)_setDragImage:(NSImage *)image at:(NSPoint)clientPoint linkDrag:(BOOL)linkDrag;
 - (void)_setPromisedData:(WebCore::Image *)image withFileName:(NSString *)filename withExtension:(NSString *)extension withTitle:(NSString *)title withURL:(NSString *)url withVisibleURL:(NSString *)visibleUrl withArchive:(WebCore::SharedBuffer*) archiveBuffer forPasteboard:(NSString *)pasteboardName;
 - (void)_updateSecureInputState;
-- (void)_updateTextInputStateIncludingSecureInputState:(BOOL)updateSecureInputState;
-- (void)_resetTextInputState;
+- (void)_resetSecureInputState;
+- (void)_notifyInputContextAboutDiscardedComposition;
 
 - (WebKit::ColorSpaceData)_colorSpace;
 

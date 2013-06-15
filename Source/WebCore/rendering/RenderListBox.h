@@ -88,6 +88,8 @@ private:
     virtual void autoscroll(const IntPoint&);
     virtual void stopAutoscroll();
 
+    virtual LayoutSize intrinsicSize() const OVERRIDE FINAL { return LayoutSize(maxPreferredLogicalWidth(), m_intrinsicLogicalHeight); }
+
     virtual bool shouldPanScroll() const { return true; }
     virtual void panScroll(const IntPoint&);
 
@@ -122,6 +124,7 @@ private:
     virtual bool isHandlingWheelEvent() const OVERRIDE;
     virtual bool shouldSuspendScrollAnimations() const OVERRIDE;
     virtual bool scrollbarsCanBeActive() const OVERRIDE;
+    virtual bool scrollbarAnimationsAreSuppressed() const OVERRIDE;
 
     virtual ScrollableArea* enclosingScrollableArea() const OVERRIDE;
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;
@@ -148,6 +151,7 @@ private:
     bool m_inAutoscroll;
     int m_optionsWidth;
     int m_indexOffset;
+    mutable LayoutUnit m_intrinsicLogicalHeight;
 
     RefPtr<Scrollbar> m_vBar;
 };

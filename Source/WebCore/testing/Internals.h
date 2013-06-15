@@ -49,9 +49,9 @@ class Element;
 class Frame;
 class InspectorFrontendChannelDummy;
 class InternalSettings;
+class MemoryInfo;
 class Node;
 class Page;
-class PagePopupController;
 class Range;
 class ScriptExecutionContext;
 class ShadowRoot;
@@ -90,8 +90,6 @@ public:
     ShadowRootIfShadowDOMEnabledOrNode* createShadowRoot(Element* host, ExceptionCode&);
     ShadowRootIfShadowDOMEnabledOrNode* shadowRoot(Element* host, ExceptionCode&);
     String shadowRootType(const Node*, ExceptionCode&) const;
-    bool hasContentElement(const Node*, ExceptionCode&) const;
-    size_t countElementShadow(const Node*, ExceptionCode&) const;
     Element* includerFor(Node*, ExceptionCode&);
     String shadowPseudoId(Element*, ExceptionCode&);
     void setShadowPseudoId(Element*, const String&, ExceptionCode&);
@@ -132,10 +130,6 @@ public:
 #endif
     Vector<String> formControlStateOfPreviousHistoryItem(ExceptionCode&);
     void setFormControlStateOfPreviousHistoryItem(const Vector<String>&, ExceptionCode&);
-    void setEnableMockPagePopup(bool, ExceptionCode&);
-#if ENABLE(PAGE_POPUP)
-    PassRefPtr<PagePopupController> pagePopupController();
-#endif
 
     PassRefPtr<ClientRect> absoluteCaretBounds(ExceptionCode&);
 
@@ -281,6 +275,7 @@ public:
 
     PassRefPtr<MallocStatistics> mallocStatistics() const;
     PassRefPtr<TypeConversions> typeConversions() const;
+    PassRefPtr<MemoryInfo> memoryInfo() const;
 
     Vector<String> getReferencedFilePaths() const;
 

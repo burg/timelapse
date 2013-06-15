@@ -26,6 +26,7 @@
 #include "Element.h"
 #include "FontMetrics.h"
 #include "Frame.h"
+#include "FrameSelection.h"
 #include "GraphicsContext.h"
 #include "LocalWindowsContext.h"
 #include "PaintInfo.h"
@@ -285,7 +286,7 @@ static void fillFontDescription(FontDescription& fontDescription, LOGFONT& logFo
 {    
     fontDescription.setIsAbsoluteSize(true);
     fontDescription.setGenericFamily(FontDescription::NoFamily);
-    fontDescription.firstFamily().setFamily(String(logFont.lfFaceName));
+    fontDescription.setOneFamily(String(logFont.lfFaceName));
     fontDescription.setSpecifiedSize(fontSize);
     fontDescription.setWeight(logFont.lfWeight >= 700 ? FontWeightBold : FontWeightNormal); // FIXME: Use real weight.
     fontDescription.setItalic(logFont.lfItalic);

@@ -29,7 +29,7 @@ namespace WebCore {
 class ProgressValueElement;
 class RenderProgress;
 
-class HTMLProgressElement : public LabelableElement {
+class HTMLProgressElement FINAL : public LabelableElement {
 public:
     static const double IndeterminatePosition;
     static const double InvalidPosition;
@@ -60,7 +60,7 @@ private:
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
-    virtual void attach();
+    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
 
     void didElementStateChange();
     virtual void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;

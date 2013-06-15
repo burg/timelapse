@@ -51,7 +51,6 @@
 #import <wtf/Uint16Array.h>
 #import <wtf/Uint32Array.h>
 #import <wtf/Uint8Array.h>
-#import <wtf/UnusedParam.h>
 #import <wtf/text/CString.h>
 
 #import <AVFoundation/AVFoundation.h>
@@ -366,6 +365,7 @@ void MediaPlayerPrivateAVFoundationObjC::createVideoLayer()
     if (!m_videoLayer) {
         m_videoLayer = adoptNS([[AVPlayerLayer alloc] init]);
         [m_videoLayer.get() setPlayer:m_avPlayer.get()];
+        [m_videoLayer.get() setBackgroundColor:CGColorGetConstantColor(kCGColorBlack)];
 #ifndef NDEBUG
         [m_videoLayer.get() setName:@"Video layer"];
 #endif

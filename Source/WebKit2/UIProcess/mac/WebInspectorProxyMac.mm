@@ -50,7 +50,7 @@
 #import <WebCore/SoftLinking.h>
 #import <wtf/text/WTFString.h>
 
-SOFT_LINK_STAGED_FRAMEWORK_OPTIONAL(WebInspector, PrivateFrameworks, A)
+SOFT_LINK_STAGED_FRAMEWORK_OPTIONAL(WebInspectorUI, PrivateFrameworks, A)
 
 using namespace WebCore;
 using namespace WebKit;
@@ -195,9 +195,9 @@ static bool inspectorReallyUsesWebKitUserInterface(WebPreferences* preferences)
     // This matches a similar check in WebInspectorMac.mm. Keep them in sync.
 
     // Call the soft link framework function to dlopen it, then [NSBundle bundleWithIdentifier:] will work.
-    WebInspectorLibrary();
+    WebInspectorUILibrary();
 
-    if (![[NSBundle bundleWithIdentifier:@"com.apple.WebInspector"] pathForResource:@"Main" ofType:@"html"])
+    if (![[NSBundle bundleWithIdentifier:@"com.apple.WebInspectorUI"] pathForResource:@"Main" ofType:@"html"])
         return true;
 
     if (![[NSBundle bundleWithIdentifier:@"com.apple.WebCore"] pathForResource:@"inspector" ofType:@"html" inDirectory:@"inspector"])
@@ -625,6 +625,7 @@ void WebInspectorProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
     NSRect inspectedViewFrame = [inspectedView frame];
     NSRect inspectorFrame = NSZeroRect;
     NSRect parentBounds = [[inspectedView superview] bounds];
+    CGFloat inspectedViewTop = NSMaxY(inspectedViewFrame);
 
     switch (m_attachmentSide) {
         case AttachmentSideBottom: {
@@ -634,7 +635,8 @@ void WebInspectorProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
             CGFloat parentHeight = NSHeight(parentBounds);
             CGFloat inspectorHeight = InspectorFrontendClientLocal::constrainedAttachedWindowHeight(currentDimension, parentHeight);
 
-            inspectedViewFrame = NSMakeRect(0, inspectorHeight, NSWidth(parentBounds), parentHeight - inspectorHeight);
+            // Preserve the top position of the inspected view so banners in Safari still work.
+            inspectedViewFrame = NSMakeRect(0, inspectorHeight, NSWidth(parentBounds), inspectedViewTop - inspectorHeight);
             inspectorFrame = NSMakeRect(0, 0, NSWidth(inspectedViewFrame), inspectorHeight);
             break;
         }
@@ -646,8 +648,10 @@ void WebInspectorProxy::inspectedViewFrameDidChange(CGFloat currentDimension)
             CGFloat parentWidth = NSWidth(parentBounds);
             CGFloat inspectorWidth = InspectorFrontendClientLocal::constrainedAttachedWindowWidth(currentDimension, parentWidth);
 
-            inspectedViewFrame = NSMakeRect(0, 0, parentWidth - inspectorWidth, NSHeight(parentBounds));
-            inspectorFrame = NSMakeRect(parentWidth - inspectorWidth, 0, inspectorWidth, NSHeight(inspectedViewFrame));
+            // Preserve the top position of the inspected view so banners in Safari still work. But don't use that
+            // top position for the inspector view since the banners only stretch as wide as the the inspected view.
+            inspectedViewFrame = NSMakeRect(0, 0, parentWidth - inspectorWidth, inspectedViewTop);
+            inspectorFrame = NSMakeRect(parentWidth - inspectorWidth, 0, inspectorWidth, NSHeight(parentBounds));
             break;
         }
     }
@@ -714,9 +718,9 @@ void WebInspectorProxy::platformDetach()
     [m_inspectorView.get() removeFromSuperview];
 
     // Make sure that we size the inspected view's frame after detaching so that it takes up the space that the
-    // attached inspector used to.
+    // attached inspector used to. Preserve the top position of the inspected view so banners in Safari still work.
 
-    [inspectedView setFrame:[[inspectedView superview] bounds]];
+    inspectedView.frame = NSMakeRect(0, 0, NSWidth(inspectedView.superview.bounds), NSMaxY(inspectedView.frame));
 
     // Return early if we are not visible. This means the inspector was closed while attached
     // and we should not create and show the inspector window.
@@ -744,13 +748,18 @@ void WebInspectorProxy::platformSetAttachedWindowWidth(unsigned width)
     inspectedViewFrameDidChange(width);
 }
 
+void WebInspectorProxy::platformSetToolbarHeight(unsigned height)
+{
+    [m_inspectorWindow setContentBorderThickness:height forEdge:NSMaxYEdge];
+}
+
 String WebInspectorProxy::inspectorPageURL() const
 {
     NSString *path;
     if (inspectorReallyUsesWebKitUserInterface(page()->pageGroup()->preferences()))
         path = [[NSBundle bundleWithIdentifier:@"com.apple.WebCore"] pathForResource:@"inspector" ofType:@"html" inDirectory:@"inspector"];
     else
-        path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspector"] pathForResource:@"Main" ofType:@"html"];
+        path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspectorUI"] pathForResource:@"Main" ofType:@"html"];
 
     ASSERT([path length]);
 
@@ -763,7 +772,7 @@ String WebInspectorProxy::inspectorBaseURL() const
     if (inspectorReallyUsesWebKitUserInterface(page()->pageGroup()->preferences()))
         path = [[NSBundle bundleWithIdentifier:@"com.apple.WebCore"] resourcePath];
     else
-        path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspector"] resourcePath];
+        path = [[NSBundle bundleWithIdentifier:@"com.apple.WebInspectorUI"] resourcePath];
 
     ASSERT([path length]);
 

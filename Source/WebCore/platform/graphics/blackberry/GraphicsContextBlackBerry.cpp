@@ -23,13 +23,13 @@
 #include "GraphicsContext3D.h"
 #include "KURL.h"
 #include "NotImplemented.h"
+#include "RoundedRect.h"
 #include "TransformationMatrix.h"
 
 #include <BlackBerryPlatformGraphicsContext.h>
 #include <stdio.h>
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
-#include <wtf/UnusedParam.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {

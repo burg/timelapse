@@ -113,8 +113,6 @@ SOURCES += \
      bindings/js/JSDOMWindowBase.cpp \
      bindings/js/JSDOMWindowCustom.cpp \
      bindings/js/JSDOMWindowShell.cpp \
-     bindings/js/JSDOMWindowWebAudioCustom.cpp \
-     bindings/js/JSDOMWindowWebSocketCustom.cpp \
      bindings/js/JSDOMWrapper.cpp \
      bindings/js/JSDataViewCustom.cpp \
      bindings/js/JSDeviceMotionEventCustom.cpp \
@@ -157,7 +155,6 @@ SOURCES += \
      bindings/js/JSLocationCustom.cpp \
      bindings/js/JSMainThreadExecState.cpp \
      bindings/js/JSMediaListCustom.cpp \
-     bindings/js/JSMemoryInfoCustom.cpp \
      bindings/js/JSMessageChannelCustom.cpp \
      bindings/js/JSMessageEventCustom.cpp \
      bindings/js/JSMessagePortCustom.cpp \
@@ -587,7 +584,6 @@ SOURCES += \
     html/BaseChooserOnlyDateAndTimeInputType.cpp \
     html/BaseClickableWithKeyInputType.cpp \
     html/BaseDateAndTimeInputType.cpp \
-    html/BaseMultipleFieldsDateAndTimeInputType.cpp \
     html/BaseTextInputType.cpp \
     html/ButtonInputType.cpp \
     html/CheckboxInputType.cpp \
@@ -731,6 +727,7 @@ SOURCES += \
     html/canvas/CanvasRenderingContext2D.cpp \
     html/canvas/CanvasStyle.cpp \
     html/canvas/DataView.cpp \
+    html/forms/FileIconLoader.cpp \
     html/parser/BackgroundHTMLInputStream.cpp \
     html/parser/BackgroundHTMLParser.cpp \
     html/parser/CSSPreloadScanner.cpp \
@@ -759,13 +756,7 @@ SOURCES += \
     html/parser/TextViewSourceParser.cpp \
     html/parser/XSSAuditor.cpp \
     html/parser/XSSAuditorDelegate.cpp \
-    html/shadow/ClearButtonElement.cpp \
     html/shadow/ContentDistributor.cpp \
-    html/shadow/DateTimeEditElement.cpp \
-    html/shadow/DateTimeFieldElement.cpp \
-    html/shadow/DateTimeFieldElements.cpp \
-    html/shadow/DateTimeNumericFieldElement.cpp \
-    html/shadow/DateTimeSymbolicFieldElement.cpp \
     html/shadow/DetailsMarkerControl.cpp \
     html/shadow/HTMLContentElement.cpp \
     html/shadow/InsertionPoint.cpp \
@@ -888,8 +879,6 @@ SOURCES += \
     loader/PolicyCallback.cpp \
     loader/PolicyChecker.cpp \
     loader/ProgressTracker.cpp \
-    loader/Prerenderer.cpp \
-    loader/PrerendererClient.cpp \
     loader/NavigationScheduler.cpp \
     loader/ResourceBuffer.cpp \
     loader/ResourceLoader.cpp \
@@ -907,7 +896,7 @@ SOURCES += \
     page/animation/ImplicitAnimation.cpp \
     page/animation/KeyframeAnimation.cpp \
     page/AutoscrollController.cpp \
-    page/BarInfo.cpp \
+    page/BarProp.cpp \
     page/CaptionUserPreferences.cpp \
     page/Chrome.cpp \
     page/Console.cpp \
@@ -935,15 +924,16 @@ SOURCES += \
     page/GroupSettings.cpp \
     page/History.cpp \
     page/Location.cpp \
-    page/MemoryInfo.cpp \
     page/MouseEventWithHitTestResults.cpp \
     page/Navigator.cpp \
     page/NavigatorBase.cpp \
     page/OriginAccessEntry.cpp \
     page/Page.cpp \
+    page/PageActivityAssertionToken.cpp \
     page/PageConsole.cpp \
     page/PageGroup.cpp \
     page/PageGroupLoadDeferrer.cpp \
+    page/PageThrottler.cpp \
     page/PageVisibilityState.cpp \
     page/Performance.cpp \
     page/PerformanceEntry.cpp \
@@ -991,13 +981,12 @@ SOURCES += \
     platform/DragData.cpp \
     platform/DragImage.cpp \
     platform/FileChooser.cpp \
-    platform/FileIconLoader.cpp \
     platform/FileStream.cpp \
     platform/FileSystem.cpp \
     platform/HistogramSupport.cpp \
     platform/graphics/FontDescription.cpp \
-    platform/graphics/FontFallbackList.cpp \
-    platform/graphics/FontFamily.cpp \
+    platform/graphics/FontGenericFamilies.cpp \
+    platform/graphics/FontGlyphs.cpp \
     platform/graphics/FontFeatureSettings.cpp \
     platform/graphics/BitmapImage.cpp \
     platform/graphics/Color.cpp \
@@ -1091,7 +1080,6 @@ SOURCES += \
     platform/network/FormDataBuilder.cpp \
     platform/network/HTTPHeaderMap.cpp \
     platform/network/HTTPParsers.cpp \
-    platform/network/HTTPRequest.cpp \
     platform/network/MIMEHeader.cpp \
     platform/network/NetworkStateNotifier.cpp \
     platform/network/NetworkStorageSessionStub.cpp \
@@ -1157,13 +1145,6 @@ SOURCES += \
     rendering/BidiRun.cpp \
     rendering/CounterNode.cpp \
     rendering/EllipsisBox.cpp \
-    rendering/ExclusionInterval.cpp \
-    rendering/ExclusionPolygon.cpp \
-    rendering/ExclusionRectangle.cpp \
-    rendering/ExclusionShape.cpp \
-    rendering/ExclusionShapeInfo.cpp \
-    rendering/ExclusionShapeInsideInfo.cpp \
-    rendering/ExclusionShapeOutsideInfo.cpp \
     rendering/FilterEffectRenderer.cpp \
     rendering/FixedTableLayout.cpp \
     rendering/FlowThreadController.cpp \
@@ -1257,6 +1238,13 @@ SOURCES += \
     rendering/RenderWordBreak.cpp \
     rendering/RootInlineBox.cpp \
     rendering/ScrollBehavior.cpp \
+    rendering/shapes/PolygonShape.cpp \
+    rendering/shapes/RectangleShape.cpp \
+    rendering/shapes/Shape.cpp \
+    rendering/shapes/ShapeInfo.cpp \
+    rendering/shapes/ShapeInsideInfo.cpp \
+    rendering/shapes/ShapeInterval.cpp \
+    rendering/shapes/ShapeOutsideInfo.cpp \
     rendering/style/BasicShapes.cpp \
     rendering/style/ContentData.cpp \
     rendering/style/CounterDirectives.cpp \
@@ -2057,8 +2045,6 @@ HEADERS += \
     loader/NavigationAction.h \
     loader/NetscapePlugInStreamLoader.h \
     loader/PlaceholderDocument.h \
-    loader/Prerenderer.h \
-    loader/PrerendererClient.h \
     loader/ProgressTracker.h \
     loader/ResourceBuffer.h \
     loader/ResourceLoader.h \
@@ -2079,7 +2065,7 @@ HEADERS += \
     page/animation/KeyframeAnimation.h \
     page/AdjustViewSizeOrNot.h \
     page/AutoscrollController.h \
-    page/BarInfo.h \
+    page/BarProp.h \
     page/CaptionUserPreferences.h \
     page/Chrome.h \
     page/Console.h \
@@ -2113,7 +2099,9 @@ HEADERS += \
     page/PageGroup.h \
     page/PageGroupLoadDeferrer.h \
     page/Page.h \
+    page/PageActivityAssertionToken.h \
     page/PageConsole.h \
+    page/PageThrottler.h \
     page/PageVisibilityState.h \
     page/PlugInClient.h \
     page/PopupOpeningObserver.h \
@@ -2218,7 +2206,6 @@ HEADERS += \
     platform/graphics/FloatSize.h \
     platform/graphics/FontData.h \
     platform/graphics/FontDescription.h \
-    platform/graphics/FontFamily.h \
     platform/graphics/FontFeatureSettings.h \
     platform/graphics/FontMetrics.h \
     platform/graphics/Font.h \
@@ -2328,7 +2315,6 @@ HEADERS += \
     platform/network/FormData.h \
     platform/network/HTTPHeaderMap.h \
     platform/network/HTTPParsers.h \
-    platform/network/HTTPRequest.h \
     platform/network/HTTPStatusCodes.h \
     platform/network/MIMESniffing.h \
     platform/network/NetworkStorageSession.h \
@@ -2354,7 +2340,6 @@ HEADERS += \
     platform/PlatformTouchPoint.h \
     platform/PopupMenu.h \
     platform/ReferrerPolicy.h \
-    platform/qt/ClipboardQt.h \
     platform/qt/QWebPageClient.h \
     platform/qt/QStyleFacade.h \
     platform/qt/RenderThemeQStyle.h \
@@ -2400,8 +2385,6 @@ HEADERS += \
     platform/Timer.h \
     platform/Widget.h \
     platform/PlatformStrategies.h \
-    platform/PrerenderClient.h \
-    platform/PrerenderHandle.h \
     platform/LocalizedStrings.h \
     plugins/DOMMimeTypeArray.h \
     plugins/DOMMimeType.h \
@@ -2420,13 +2403,6 @@ HEADERS += \
     rendering/break_lines.h \
     rendering/CounterNode.h \
     rendering/EllipsisBox.h \
-    rendering/ExclusionInterval.h \
-    rendering/ExclusionPolygon.h \
-    rendering/ExclusionRectangle.h \
-    rendering/ExclusionShape.h \
-    rendering/ExclusionShapeInfo.h \
-    rendering/ExclusionShapeInsideInfo.h \
-    rendering/ExclusionShapeOutsideInfo.h \
     rendering/FilterEffectRenderer.h \
     rendering/FixedTableLayout.h \
     rendering/HitTestingTransformState.h \
@@ -2530,18 +2506,25 @@ HEADERS += \
     rendering/RenderWordBreak.h \
     rendering/RootInlineBox.h \
     rendering/ScrollBehavior.h \
+    rendering/shapes/PolygonShape.h \
+    rendering/shapes/RectangleShape.h \
+    rendering/shapes/Shape.h \
+    rendering/shapes/ShapeInfo.h \
+    rendering/shapes/ShapeInsideInfo.h \
+    rendering/shapes/ShapeInterval.h \
+    rendering/shapes/ShapeOutsideInfo.h \
     rendering/style/BasicShapes.h \
     rendering/style/ContentData.h \
     rendering/style/CounterDirectives.h \
     rendering/style/CursorData.h \
     rendering/style/CursorList.h \
-    rendering/style/ExclusionShapeValue.h \
     rendering/style/FillLayer.h \
     rendering/style/KeyframeList.h \
     rendering/style/NinePieceImage.h \
     rendering/style/QuotesData.h \
     rendering/style/RenderStyle.h \
     rendering/style/ShadowData.h \
+    rendering/style/ShapeValue.h \
     rendering/style/StyleBackgroundData.h \
     rendering/style/StyleBoxData.h \
     rendering/style/StyleCachedImage.h \
@@ -2829,6 +2812,7 @@ HEADERS += \
     testing/Internals.h \
     testing/InternalSettings.h \
     testing/MallocStatistics.h \
+    testing/MemoryInfo.h \
     testing/TypeConversions.h \
     workers/AbstractWorker.h \
     workers/DedicatedWorkerContext.h \
@@ -2916,13 +2900,12 @@ SOURCES += \
     platform/network/qt/ProxyServerQt.cpp \
     platform/network/qt/QtMIMETypeSniffer.cpp \
     platform/network/qt/QNetworkReplyHandler.cpp \
-    editing/qt/EditorQt.cpp \
     platform/Cursor.cpp \
     platform/ContextMenu.cpp \
     platform/ContextMenuItem.cpp \
     platform/qt/ClipboardQt.cpp \
-    platform/qt/ContextMenuItemQt.cpp \
-    platform/qt/ContextMenuQt.cpp \
+    platform/ContextMenuItemNone.cpp \
+    platform/ContextMenuNone.cpp \
     platform/qt/CursorQt.cpp \
     platform/qt/DragDataQt.cpp \
     platform/qt/DragImageQt.cpp \
@@ -2976,7 +2959,6 @@ win32-*|wince* {
     HEADERS += platform/win/SystemInfo.h
     SOURCES += \
         platform/win/SystemInfo.cpp \
-        platform/win/SystemTimeWin.cpp \
         platform/graphics/win/TransformationMatrixWin.cpp
 }
 
@@ -3331,7 +3313,8 @@ enable?(VIDEO) {
     use?(QTKIT) {
         INCLUDEPATH += \
             $$SOURCE_DIR/../WebKitLibraries/ \
-            $$PWD/platform/mac
+            $$PWD/platform/mac \
+            $$PWD/platform/cf
 
 
         HEADERS += \
@@ -3342,13 +3325,15 @@ enable?(VIDEO) {
             platform/mac/WebCoreObjCExtras.h \
             platform/mac/WebVideoFullscreenController.h \
             platform/mac/WebVideoFullscreenHUDWindowController.h \
-            platform/mac/WebWindowAnimation.h
+            platform/mac/WebWindowAnimation.h \
+            platform/cf/CFURLExtras.h
 
         SOURCES += \
             platform/mac/DisplaySleepDisabler.cpp \
             platform/graphics/cg/IntRectCG.cpp \
             platform/graphics/cg/FloatSizeCG.cpp \
-            platform/cf/KURLCFNet.cpp
+            platform/cf/KURLCFNet.cpp \
+            platform/cf/CFURLExtras.cpp
 
          OBJECTIVE_SOURCES += \
             platform/qt/WebCoreSystemInterface.mm \
@@ -3420,7 +3405,6 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/AudioParamTimeline.h \
         Modules/webaudio/AudioProcessingEvent.h \
         Modules/webaudio/AudioScheduledSourceNode.h \
-        Modules/webaudio/AudioSourceNode.h \
         Modules/webaudio/AudioSummingJunction.h \
         Modules/webaudio/BiquadDSPKernel.h \
         Modules/webaudio/BiquadFilterNode.h \
@@ -3490,7 +3474,6 @@ enable?(WEB_AUDIO) {
         bindings/js/JSAudioBufferSourceNodeCustom.cpp \
         bindings/js/JSAudioContextCustom.cpp \
         bindings/js/JSBiquadFilterNodeCustom.cpp \
-        bindings/js/JSDOMWindowWebAudioCustom.cpp \
         bindings/js/JSOscillatorNodeCustom.cpp \
         bindings/js/JSPannerNodeCustom.cpp \
         Modules/webaudio/AsyncAudioDecoder.cpp \
@@ -4024,8 +4007,6 @@ enable?(WEB_SOCKETS) {
         Modules/websockets/WebSocketExtensionProcessor.h \
         Modules/websockets/WebSocketFrame.h \
         Modules/websockets/WebSocketHandshake.h \
-        Modules/websockets/WebSocketHandshakeRequest.h \
-        Modules/websockets/WebSocketHandshakeResponse.h \
         Modules/websockets/WorkerThreadableWebSocketChannel.h \
         platform/network/qt/SocketStreamHandlePrivate.h
 
@@ -4038,8 +4019,6 @@ enable?(WEB_SOCKETS) {
         Modules/websockets/WebSocketExtensionParser.cpp \
         Modules/websockets/WebSocketFrame.cpp \
         Modules/websockets/WebSocketHandshake.cpp \
-        Modules/websockets/WebSocketHandshakeRequest.cpp \
-        Modules/websockets/WebSocketHandshakeResponse.cpp \
         Modules/websockets/WorkerThreadableWebSocketChannel.cpp \
         Modules/websockets/ThreadableWebSocketChannel.cpp \
         Modules/websockets/ThreadableWebSocketChannelClientWrapper.cpp \
