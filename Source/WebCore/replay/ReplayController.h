@@ -98,6 +98,9 @@ namespace WebCore {
         virtual void didDispatchInput(EventLoopInput*) OVERRIDE;
         virtual void didDispatchFinalInput() OVERRIDE;
 
+        // FrameCamera API
+        void imageCaptured(const String& imageDataUri);
+
         // Accessors and queries
         WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
 

@@ -111,6 +111,11 @@ WebInspector.ReplayModel.Events = {
     CursorChanged: "ReplayCursorChanged",
     BreakpointHit: "ReplayBreakpointHit",
 
+    // Fired when an image of a DOM node is captured.
+    // This may eventually happen when an image probe is triggered during replay,
+    // but is currently only fired by hard-coded image capture events in the backend.
+    ImageCaptured: "ReplayImageCaptured",
+
     // Debugger pauses or input pauses are preceded by the *Waiting events.
     // *Waiting events allow listeners to prevent the default actions, in
     // the case that they perform automated steps without user interaction.
@@ -663,6 +668,11 @@ WebInspector.ReplayModel.prototype = {
         this.dispatchEventToListeners(WebInspector.ReplayModel.Events.PlaybackError, data);
     },
 
+    _imageCaptured: function(imageDataUri)
+    {
+        this.dispatchEventToListeners(WebInspector.ReplayModel.Events.ImageCaptured, imageDataUri);
+    },
+
     _lockedInput: function()
     {
     	this._inputLocked = true;
@@ -853,6 +863,11 @@ WebInspector.ReplayDispatcher.prototype = {
         this._model._setReplayCursor(markIndex);
     },
 
+    imageCaptured: function(imageDataUri)
+    {
+        this._model._imageCaptured(imageDataUri);
+    },
+    
     recordingUnloaded: function()
     {
         this._model._recordingUnloaded();
