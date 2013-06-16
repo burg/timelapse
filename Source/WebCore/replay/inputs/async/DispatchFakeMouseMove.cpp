@@ -38,10 +38,11 @@
 #include "AsyncEventProxy.h"
 #include "DispatchEventBase.h"
 #include "Document.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -49,9 +50,9 @@ namespace ReplayInputTypes {
 const char *DispatchFakeMouseMove = "DispatchFakeMouseMove";
 }
 
-DispatchFakeMouseMove::DispatchFakeMouseMove(Frame* frame, const PlatformMouseEvent& event)
+DispatchFakeMouseMove::DispatchFakeMouseMove(const PlatformMouseEvent& event, int frameIndex)
     : HandleMouseBase(event, ReplayInputTypes::DispatchFakeMouseMove)
-    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) { }
+    , m_frameIndex(frameIndex) { }
 
 //EventLoopInput API
 void DispatchFakeMouseMove::dispatch(ReplayController* controller,
@@ -71,10 +72,25 @@ String DispatchFakeMouseMove::toString() const
     return makeString("DispatchFakeMouseMove(", String::number(m_frameIndex), "/_)");
 }
 
-void DispatchFakeMouseMove::serialize(InputEncoder& encoder) const
+void InputCoder<DispatchFakeMouseMove>::encode(InputEncoder& encoder, const DispatchFakeMouseMove& input)
 {
-    HandleMouseBase::serializeMouseInfo(encoder);
-    encoder.put("frameIndex", m_frameIndex);
+    encoder.put("frameIndex", input.frameIndex());
+
+    InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
+}
+
+bool InputCoder<DispatchFakeMouseMove>::decode(InputDecoder& decoder, OwnPtr<DispatchFakeMouseMove>& input)
+{
+    OwnPtr<PlatformMouseEvent> mouseEvent;
+    if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
+        return false;
+
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new DispatchFakeMouseMove(*mouseEvent, frameIndex));
+    return true;
 }
 
 } // namespace WebCore

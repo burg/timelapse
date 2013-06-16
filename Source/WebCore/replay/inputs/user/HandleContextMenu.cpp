@@ -35,11 +35,14 @@
 
 #include "HandleContextMenu.h"
 
+#include "DispatchEventBase.h"
 #include "Document.h"
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
+#include "Frame.h"
+#include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "Page.h"
+#include "ReplayController.h"
+#include "UserInputProxy.h"
 
 namespace WebCore {
 
@@ -54,9 +57,25 @@ void HandleContextMenu::dispatch(ReplayController* controller,
     dispatcher->didDispatch(this);
 }
 
-void HandleContextMenu::serialize(InputEncoder& encoder) const
+void InputCoder<HandleContextMenu>::encode(InputEncoder& encoder, const HandleContextMenu& input)
 {
-    HandleMouseBase::serializeMouseInfo(encoder);
+    encoder.put("frameIndex", input.frameIndex());
+
+    InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
+}
+
+bool InputCoder<HandleContextMenu>::decode(InputDecoder& decoder, OwnPtr<HandleContextMenu>& input)
+{
+    OwnPtr<PlatformMouseEvent> mouseEvent;
+    if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
+        return false;
+
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new HandleContextMenu(*mouseEvent, frameIndex));
+    return true;
 }
 
 } // namespace WebCore

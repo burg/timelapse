@@ -35,10 +35,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "PlatformEvent.h"
+#include "InputCoder.h"
 #include "PlatformMouseEvent.h"
-#include "InputEncoder.h"
-#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
@@ -54,13 +52,17 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(HandleMouseBase); }
 
-    void serializeMouseInfo(InputEncoder&) const;
     const PlatformMouseEvent& platformEvent() const { return m_platformEvent; }
     static String mouseButtonToString(MouseButton);
     static String mouseEventTypeToString(PlatformEvent::Type);
 
 private:
     PlatformMouseEvent m_platformEvent;
+};
+
+template<> struct InputCoder<PlatformMouseEvent> {
+    static void encode(InputEncoder& encoder, const PlatformMouseEvent& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<PlatformMouseEvent>& input);
 };
 
 } //namespace WebCore

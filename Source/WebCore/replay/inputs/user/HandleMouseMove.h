@@ -56,11 +56,16 @@ public:
     {
         return HandleMouseBase::memorySize() + (sizeof(HandleMouseMove) - sizeof(HandleMouseBase));
     }
-    void serialize(InputEncoder&) const;
+
+    bool scrollbarTargeted() const { return m_scrollbarTargeted; }
 
  private:
     bool m_scrollbarTargeted;
+};
 
+template<> struct InputCoder<HandleMouseMove> {
+    static void encode(InputEncoder& encoder, const HandleMouseMove& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<HandleMouseMove>& input);
 };
 
 } //namespace WebCore

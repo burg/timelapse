@@ -35,12 +35,14 @@
 
 #include "HandleMouseBase.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "PlatformMouseEvent.h"
 #include "ReplayInputTypes.h"
 #include <wtf/Assertions.h>
+#include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -70,22 +72,6 @@ String HandleMouseBase::toString() const
     return sb.toString();
 }
 
-void HandleMouseBase::serializeMouseInfo(InputEncoder& encoder) const
-{
-    encoder.put("positionX", m_platformEvent.position().x());
-    encoder.put("positionY", m_platformEvent.position().y());
-    encoder.put("globalPositionX", m_platformEvent.globalPosition().x());
-    encoder.put("globalPositionY", m_platformEvent.globalPosition().y());
-    encoder.put("mouseButton", (uint64_t)m_platformEvent.button());
-    encoder.put("type", (uint64_t)m_platformEvent.type());
-    encoder.put("clickCount", m_platformEvent.clickCount());
-    encoder.put("shiftKey", m_platformEvent.shiftKey());
-    encoder.put("ctrlKey", m_platformEvent.ctrlKey());
-    encoder.put("altKey", m_platformEvent.altKey());
-    encoder.put("metaKey", m_platformEvent.metaKey());
-    encoder.put("timestamp", m_platformEvent.timestamp());
-}
-
 String HandleMouseBase::mouseButtonToString(MouseButton button)
 {
     switch (button) {
@@ -110,6 +96,80 @@ String HandleMouseBase::mouseEventTypeToString(PlatformEvent::Type type)
         ASSERT_NOT_REACHED();
         return String();
     }
+}
+
+void InputCoder<PlatformMouseEvent>::encode(InputEncoder& encoder, const PlatformMouseEvent& input)
+{
+    encoder.put("positionX", input.position().x());
+    encoder.put("positionY", input.position().y());
+    encoder.put("globalPositionX", input.globalPosition().x());
+    encoder.put("globalPositionY", input.globalPosition().y());
+    encoder.put("mouseButton", (uint64_t)input.button());
+    encoder.put("type", (uint64_t)input.type());
+    encoder.put("clickCount", input.clickCount());
+    encoder.put("shiftKey", input.shiftKey());
+    encoder.put("ctrlKey", input.ctrlKey());
+    encoder.put("altKey", input.altKey());
+    encoder.put("metaKey", input.metaKey());
+    encoder.put("timestamp", input.timestamp());
+}
+
+bool InputCoder<PlatformMouseEvent>::decode(InputDecoder& decoder, OwnPtr<PlatformMouseEvent>& input)
+{
+    int positionX;
+    if (!decoder.get("positionX", positionX))
+        return false;
+
+    int positionY;
+    if (!decoder.get("positionY", positionY))
+        return false;
+
+    int globalPositionX;
+    if (!decoder.get("globalPositionX", globalPositionX))
+        return false;
+
+    int globalPositionY;
+    if (!decoder.get("globalPositionY", globalPositionY))
+        return false;
+
+    uint64_t button;
+    if (!decoder.get("button", button))
+        return false;
+
+    uint64_t type;
+    if (!decoder.get("type", type))
+        return false;
+
+    int clickCount;
+    if (!decoder.get("clickCount", clickCount))
+        return false;
+
+    bool shiftKey;
+    if (!decoder.get("shiftKey", shiftKey))
+        return false;
+
+    bool ctrlKey;
+    if (!decoder.get("ctrlKey", ctrlKey))
+        return false;
+
+    bool altKey;
+    if (!decoder.get("altKey", altKey))
+        return false;
+
+    bool metaKey;
+    if (!decoder.get("metaKey", metaKey))
+        return false;
+
+    int timestamp;
+    if (!decoder.get("timestamp", timestamp))
+        return false;
+
+    input = adoptPtr(new PlatformMouseEvent(IntPoint(positionX, positionY),
+                                            IntPoint(globalPositionX, globalPositionY),
+                                            (MouseButton)button, (PlatformEvent::Type)type,
+                                            clickCount,
+                                            shiftKey, ctrlKey, altKey, metaKey, timestamp));
+    return true;
 }
 
 } // namespace WebCore

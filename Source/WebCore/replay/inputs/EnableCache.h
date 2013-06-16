@@ -57,8 +57,6 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE { return String("EnableCache"); }
     virtual size_t memorySize() const OVERRIDE { return sizeof(EnableCache); }
-
-    void serialize(InputEncoder&) const { }
 };
 
 template<> struct InputCoder<EnableCache> {

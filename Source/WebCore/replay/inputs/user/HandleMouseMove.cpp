@@ -35,10 +35,11 @@
 
 #include "HandleMouseMove.h"
 
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
+#include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "Page.h"
+#include "ReplayController.h"
+#include "UserInputProxy.h"
 
 namespace WebCore {
 
@@ -56,10 +57,25 @@ void HandleMouseMove::dispatch(ReplayController* controller,
     dispatcher->didDispatch(this);
 }
 
-void HandleMouseMove::serialize(InputEncoder& encoder) const
+void InputCoder<HandleMouseMove>::encode(InputEncoder& encoder, const HandleMouseMove& input)
 {
-    HandleMouseBase::serializeMouseInfo(encoder);
-    encoder.put("scrollbarTargeted", m_scrollbarTargeted);
+    encoder.put("scrollbarTargeted", input.scrollbarTargeted());
+
+    InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
+}
+
+bool InputCoder<HandleMouseMove>::decode(InputDecoder& decoder, OwnPtr<HandleMouseMove>& input)
+{
+    OwnPtr<PlatformMouseEvent> mouseEvent;
+    if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
+        return false;
+
+    bool scrollbarTargeted;
+    if (!decoder.get("scrollbarTargeted", scrollbarTargeted))
+        return false;
+
+    input = adoptPtr(new HandleMouseMove(*mouseEvent, scrollbarTargeted));
+    return true;
 }
 
 } // namespace WebCore

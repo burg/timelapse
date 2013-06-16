@@ -45,9 +45,14 @@
 #include <wtf/replay/InputIterator.h>
 
 #include "DisableCache.h"
+#include "DispatchFakeMouseMove.h"
 #include "EnableCache.h"
 #include "FocusSetActive.h"
 #include "FocusSetFocused.h"
+#include "HandleContextMenu.h"
+#include "HandleMousePress.h"
+#include "HandleMouseMove.h"
+#include "HandleMouseRelease.h"
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InterpretedKeyCommands.h"
@@ -112,6 +117,10 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
         InputCoder<DisableCache>::encode(encoder, *(static_cast<const DisableCache*>(input)));
         return true;
     }
+    if (type == ReplayInputTypes::DispatchFakeMouseMove) {
+        InputCoder<DispatchFakeMouseMove>::encode(encoder, *(static_cast<const DispatchFakeMouseMove*>(input)));
+        return true;
+    }
     if (type == ReplayInputTypes::EnableCache) {
         InputCoder<EnableCache>::encode(encoder, *(static_cast<const EnableCache*>(input)));
         return true;
@@ -126,6 +135,22 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == ReplayInputTypes::FocusSetFocused) {
         InputCoder<FocusSetFocused>::encode(encoder, *(static_cast<const FocusSetFocused*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::HandleContextMenu) {
+        InputCoder<HandleContextMenu>::encode(encoder, *(static_cast<const HandleContextMenu*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::HandleMousePress) {
+        InputCoder<HandleMousePress>::encode(encoder, *(static_cast<const HandleMousePress*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::HandleMouseMove) {
+        InputCoder<HandleMouseMove>::encode(encoder, *(static_cast<const HandleMouseMove*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::HandleMouseRelease) {
+        InputCoder<HandleMouseRelease>::encode(encoder, *(static_cast<const HandleMouseRelease*>(input)));
         return true;
     }
     if (type == ReplayInputTypes::InitializeFocus) {

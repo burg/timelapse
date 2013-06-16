@@ -34,9 +34,6 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
-#include "DispatchEventBase.h"
-#include "Frame.h"
 #include "HandleMouseBase.h"
 #include "ReplayInputTypes.h"
 
@@ -45,9 +42,9 @@ namespace WebCore {
 class HandleContextMenu : public HandleMouseBase {
 
 public:
-    HandleContextMenu(const PlatformMouseEvent& event, const Frame* frame)
+    HandleContextMenu(const PlatformMouseEvent& event, int frameIndex)
         : HandleMouseBase(event, ReplayInputTypes::HandleContextMenu)
-        , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) {}
+        , m_frameIndex(frameIndex) {}
     virtual ~HandleContextMenu() {};
 
     // EventLoopInput API
@@ -59,12 +56,16 @@ public:
     {
         return HandleMouseBase::memorySize();
     }
-    void serialize(InputEncoder&) const;
 
+    int frameIndex() const { return m_frameIndex; }
 private:
     int m_frameIndex;
 };
 
+template<> struct InputCoder<HandleContextMenu> {
+    static void encode(InputEncoder& encoder, const HandleContextMenu& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<HandleContextMenu>& input);
+};
 
 } //namespace WebCore
 

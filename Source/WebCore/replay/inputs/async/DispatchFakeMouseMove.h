@@ -34,9 +34,7 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
 #include "HandleMouseBase.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -48,7 +46,7 @@ class Frame;
 
 class DispatchFakeMouseMove : public HandleMouseBase {
 public:
-    DispatchFakeMouseMove(Frame*, const PlatformMouseEvent&);
+    DispatchFakeMouseMove(const PlatformMouseEvent&, int frameIndex);
     virtual ~DispatchFakeMouseMove() {}
 
     // EventLoopInput API
@@ -62,9 +60,14 @@ public:
         return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
     }
 
-    void serialize(InputEncoder&) const;
+    int frameIndex() const { return m_frameIndex; }
 private:
     int m_frameIndex;
+};
+
+template<> struct InputCoder<DispatchFakeMouseMove> {
+    static void encode(InputEncoder& encoder, const DispatchFakeMouseMove& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<DispatchFakeMouseMove>& input);
 };
 
 } // namespace WebCore

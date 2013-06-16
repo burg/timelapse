@@ -57,7 +57,7 @@ static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> event
 {
     if (!eventTarget)
         return;
-        
+
     if (Node* node = eventTarget->toNode())
         LOG(DeterministicReplay, "%-30s %s event: type=%s, target=%d/node[%p] %s\n", "[AsyncEventProxy]",
             (wasIgnored) ? "IGNORED" : "Received",
@@ -103,9 +103,11 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEve
 #if ENABLE(TIMELAPSE)
     if (mode() == ReplayProxy::Replaying && !fromReplay)
         return;
-    
-    if (mode() == ReplayProxy::Capturing)
-        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchFakeMouseMove(frame, fakeMouseMove)));
+
+    if (mode() == ReplayProxy::Capturing) {
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
+    }
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(TIMELAPSE)
@@ -128,23 +130,23 @@ bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<
 
     if (shouldIgnoreDispatchRequest)
         return false;
-        
+
     if (mode() == ReplayProxy::Capturing && isCapturableEventType(event->type()))
         m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchAsyncEvent(event, eventTarget)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(TIMELAPSE)
-    
+
     return AsyncEventProxy::dispatchEvent(event, eventTarget);
 }
 
 bool AsyncEventProxy::dispatchEvent(PassRefPtr<Event> event, PassRefPtr<EventTarget> eventTarget)
 {
-    //must dispatch differently depending on target type. Node overrides 
+    //must dispatch differently depending on target type. Node overrides
     //EventTarget::dispatchEvent, but DOMWindow implements this dispatch in overloaded function.
     if (Node* node = eventTarget->toNode())
         return node->dispatchEvent(event);
-    
+
     if (DOMWindow* window = eventTarget->toDOMWindow())
         return window->dispatchEvent(event, window->document());
 

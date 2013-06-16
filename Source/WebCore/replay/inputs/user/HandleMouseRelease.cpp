@@ -35,10 +35,11 @@
 
 #include "HandleMouseRelease.h"
 
-#include "ReplayController.h"
-#include "Page.h"
-#include "UserInputProxy.h"
+#include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "Page.h"
+#include "ReplayController.h"
+#include "UserInputProxy.h"
 
 namespace WebCore {
 
@@ -52,9 +53,19 @@ void HandleMouseRelease::dispatch(ReplayController* controller,
     dispatcher->didDispatch(this);
 }
 
-void HandleMouseRelease::serialize(InputEncoder& encoder) const
+void InputCoder<HandleMouseRelease>::encode(InputEncoder& encoder, const HandleMouseRelease& input)
 {
-    HandleMouseBase::serializeMouseInfo(encoder);
+    InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
+}
+
+bool InputCoder<HandleMouseRelease>::decode(InputDecoder& decoder, OwnPtr<HandleMouseRelease>& input)
+{
+    OwnPtr<PlatformMouseEvent> mouseEvent;
+    if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
+        return false;
+
+    input = adoptPtr(new HandleMouseRelease(*mouseEvent));
+    return true;
 }
 
 } // namespace WebCore

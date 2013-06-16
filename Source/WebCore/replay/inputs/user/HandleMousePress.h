@@ -55,9 +55,12 @@ public:
     {
         return HandleMouseBase::memorySize();
     }
-    void serialize(InputEncoder&) const;
 };
 
+template<> struct InputCoder<HandleMousePress> {
+    static void encode(InputEncoder& encoder, const HandleMousePress& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<HandleMousePress>& input);
+};
 
 } //namespace WebCore
 
