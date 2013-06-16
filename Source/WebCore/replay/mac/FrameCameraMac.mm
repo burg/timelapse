@@ -76,7 +76,6 @@ String FrameCamera::dataUriImageFromFrame(Frame* frame)
     dataUri.append(encodedImage);
     dataUri.append("\")");
 
-    LOG(DeterministicReplay, "%-30s Captured image: %s", "[FrameCamera]", dataUri.utf8().data());
     return dataUri;
 }
 

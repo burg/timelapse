@@ -2937,6 +2937,13 @@
             {
                 "name": "recordingUnloaded",
                 "description": "Fired when a recording is unloaded."
+            },
+            {
+                "name": "imageCaptured",
+                "description": "Fired when an image of a DOM node is captured.",
+                "parameters": [
+                    { "name": "image", "type": "string", "description": "A data URI encoding the captured image." }
+                ]
             }
         ]
     },
