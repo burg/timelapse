@@ -35,12 +35,13 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "PlatformWheelEvent.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-    class ReplayController;
+class ReplayController;
 
 class HandleWheelEvent : public EventLoopInput {
 
@@ -56,12 +57,21 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
     const PlatformWheelEvent& platformEvent() const { return m_platformEvent; }
 
 private:
     PlatformWheelEvent m_platformEvent;
+};
+
+template<> struct InputCoder<PlatformWheelEvent> {
+    static void encode(InputEncoder& encoder, const PlatformWheelEvent& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<PlatformWheelEvent>& input);
+};
+
+template<> struct InputCoder<HandleWheelEvent> {
+    static void encode(InputEncoder& encoder, const HandleWheelEvent& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<HandleWheelEvent>& input);
 };
 
 } //namespace WebCore

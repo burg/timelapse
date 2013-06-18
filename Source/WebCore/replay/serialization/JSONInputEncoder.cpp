@@ -54,6 +54,7 @@
 #include "HandleMousePress.h"
 #include "HandleMouseMove.h"
 #include "HandleMouseRelease.h"
+#include "HandleWheelEvent.h"
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InterpretedKeyCommands.h"
@@ -156,6 +157,10 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == ReplayInputTypes::HandleMouseRelease) {
         InputCoder<HandleMouseRelease>::encode(encoder, *(static_cast<const HandleMouseRelease*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::HandleWheelEvent) {
+        InputCoder<HandleWheelEvent>::encode(encoder, *(static_cast<const HandleWheelEvent*>(input)));
         return true;
     }
     if (type == ReplayInputTypes::InitializeFocus) {

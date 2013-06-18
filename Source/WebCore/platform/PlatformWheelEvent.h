@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef PlatformWheelEvent_h
@@ -147,7 +147,7 @@ namespace WebCore {
         void setHasPreciseScrollingDeltas(bool b) { m_hasPreciseScrollingDeltas = b; }
 #if ENABLE(TIMELAPSE)
         // add this constructor so Timelapse can recreate Mac wheel events without using NSEvent.
-        PlatformWheelEvent(IntPoint position, IntPoint globalPosition, float deltaX, float deltaY, float wheelTicksX, float wheelTicksY, PlatformWheelEventGranularity granularity, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, bool directionInverted, bool hasPreciseScrollingDeltas, PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase, double timestamp)
+        PlatformWheelEvent(IntPoint position, IntPoint globalPosition, float deltaX, float deltaY, float wheelTicksX, float wheelTicksY, PlatformWheelEventGranularity granularity, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, bool directionInverted, bool hasPreciseScrollingDeltas, PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase, double timestamp, float unacceleratedScrollingDeltaX, float unacceleratedScrollingDeltaY)
         : PlatformEvent(PlatformEvent::Wheel, shiftKey, ctrlKey, altKey, metaKey, timestamp)
         , m_position(position)
         , m_globalPosition(globalPosition)
@@ -160,6 +160,8 @@ namespace WebCore {
         , m_hasPreciseScrollingDeltas(hasPreciseScrollingDeltas)
         , m_phase(phase)
         , m_momentumPhase(momentumPhase)
+        , m_unacceleratedScrollingDeltaX(unacceleratedScrollingDeltaX)
+        , m_unacceleratedScrollingDeltaY(unacceleratedScrollingDeltaY)
         { }
 #endif
         PlatformWheelEventPhase phase() const { return m_phase; }

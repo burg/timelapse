@@ -30,12 +30,15 @@
  */
 
 #include "config.h"
+
 #if ENABLE(TIMELAPSE)
 
 #include "HandleWheelEvent.h"
 
-#include "ReplayController.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "Page.h"
+#include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
@@ -44,7 +47,6 @@
 #include "InputEncoder.h"
 
 namespace WebCore {
-
 
 static String wheelEventGranularityToString(PlatformWheelEventGranularity ty)
 {
@@ -143,33 +145,147 @@ size_t HandleWheelEvent::memorySize() const
     return sizeof(HandleWheelEvent);
 }
 
-void HandleWheelEvent::serialize(InputEncoder& encoder) const
+void InputCoder<PlatformWheelEvent>::encode(InputEncoder& encoder, const PlatformWheelEvent& input)
 {
-    encoder.pushObject();
-    encoder.put("positionX", m_platformEvent.position().x());
-    encoder.put("positionY", m_platformEvent.position().y());
-    encoder.put("globalPositionX", m_platformEvent.globalPosition().x());
-    encoder.put("globalPositionY", m_platformEvent.globalPosition().y());
-    encoder.put("shiftKey", m_platformEvent.shiftKey());
-    encoder.put("ctrlKey", m_platformEvent.ctrlKey());
-    encoder.put("altKey", m_platformEvent.altKey());
-    encoder.put("metaKey", m_platformEvent.metaKey());
-    encoder.put("deltaX", m_platformEvent.deltaX());
-    encoder.put("deltaY", m_platformEvent.deltaY());
-    encoder.put("wheelTicksX", m_platformEvent.wheelTicksX());
-    encoder.put("wheelTicksY", m_platformEvent.wheelTicksY());
-    encoder.put("granularity", (uint64_t)m_platformEvent.granularity());
-    encoder.put("directionInvertedFromDevice", m_platformEvent.directionInvertedFromDevice());
-    encoder.put("timestamp", m_platformEvent.timestamp());
+    encoder.put("positionX", input.position().x());
+    encoder.put("positionY", input.position().y());
+    encoder.put("globalPositionX", input.globalPosition().x());
+    encoder.put("globalPositionY", input.globalPosition().y());
+    encoder.put("shiftKey", input.shiftKey());
+    encoder.put("ctrlKey", input.ctrlKey());
+    encoder.put("altKey", input.altKey());
+    encoder.put("metaKey", input.metaKey());
+    encoder.put("deltaX", input.deltaX());
+    encoder.put("deltaY", input.deltaY());
+    encoder.put("wheelTicksX", input.wheelTicksX());
+    encoder.put("wheelTicksY", input.wheelTicksY());
+    encoder.put("granularity", (uint64_t)input.granularity());
+    encoder.put("directionInvertedFromDevice", input.directionInvertedFromDevice());
+    encoder.put("timestamp", input.timestamp());
 #if PLATFORM(MAC)
-    encoder.put("hasPreciseScrollingDeltas", m_platformEvent.hasPreciseScrollingDeltas());
-    encoder.put("phase", (uint64_t)m_platformEvent.phase());
-    encoder.put("momentumPhase", (uint64_t)m_platformEvent.momentumPhase());
-    encoder.put("scrollCount", m_platformEvent.scrollCount());
-    encoder.put("unacceleratedScrollingDeltaX", m_platformEvent.unacceleratedScrollingDeltaX());
-    encoder.put("unacceleratedScrollingDeltaY", m_platformEvent.unacceleratedScrollingDeltaY());
+    encoder.put("hasPreciseScrollingDeltas", input.hasPreciseScrollingDeltas());
+    encoder.put("phase", (uint64_t)input.phase());
+    encoder.put("momentumPhase", (uint64_t)input.momentumPhase());
+    encoder.put("scrollCount", input.scrollCount());
+    encoder.put("unacceleratedScrollingDeltaX", input.unacceleratedScrollingDeltaX());
+    encoder.put("unacceleratedScrollingDeltaY", input.unacceleratedScrollingDeltaY());
 #endif
-    encoder.popObjectAsProperty("wheelEvent");
+}
+
+bool InputCoder<PlatformWheelEvent>::decode(InputDecoder& decoder, OwnPtr<PlatformWheelEvent>& input)
+{
+
+    int positionX;
+    if (!decoder.get("positionX", positionX))
+        return false;
+
+    int positionY;
+    if (!decoder.get("positionY", positionY))
+        return false;
+
+    int globalPositionX;
+    if (!decoder.get("globalPositionX", globalPositionX))
+        return false;
+
+    int globalPositionY;
+    if (!decoder.get("globalPositionY", globalPositionY))
+        return false;
+
+    bool shiftKey;
+    if (!decoder.get("shiftKey", shiftKey))
+        return false;
+
+    bool ctrlKey;
+    if (!decoder.get("ctrlKey", ctrlKey))
+        return false;
+
+    bool altKey;
+    if (!decoder.get("altKey", altKey))
+        return false;
+
+    bool metaKey;
+    if (!decoder.get("metaKey", metaKey))
+        return false;
+
+    float deltaX;
+    if (!decoder.get("deltaX", deltaX))
+        return false;
+
+    float deltaY;
+    if (!decoder.get("deltaY", deltaY))
+        return false;
+
+    float wheelTicksX;
+    if (!decoder.get("wheelTicksX", wheelTicksX))
+        return false;
+
+    float wheelTicksY;
+    if (!decoder.get("wheelTicksY", wheelTicksY))
+        return false;
+
+    uint64_t granularity;
+    if (!decoder.get("granularity", granularity))
+        return false;
+
+    bool directionInvertedFromDevice;
+    if (!decoder.get("directionInvertedFromDevice", directionInvertedFromDevice))
+        return false;
+
+    double timestamp;
+    if (!decoder.get("timestamp", timestamp))
+        return false;
+
+#if PLATFORM(MAC)
+    bool hasPreciseScrollingDeltas;
+    if (!decoder.get("hasPreciseScrollingDeltas", hasPreciseScrollingDeltas))
+        return false;
+
+    uint64_t phase;
+    if (!decoder.get("phase", phase))
+        return false;
+
+    uint64_t momentumPhase;
+    if (!decoder.get("momentumPhase", momentumPhase))
+        return false;
+
+    int scrollCount;
+    if (!decoder.get("scrollCount", scrollCount))
+        return false;
+
+    float unacceleratedScrollingDeltaX;
+    if (!decoder.get("unacceleratedScrollingDeltaX", unacceleratedScrollingDeltaX))
+        return false;
+
+    float unacceleratedScrollingDeltaY;
+    if (!decoder.get("unacceleratedScrollingDeltaY", unacceleratedScrollingDeltaY))
+        return false;
+#endif
+
+    input = adoptPtr(new PlatformWheelEvent(IntPoint(positionX, positionY), IntPoint(globalPositionX, globalPositionY),
+                     deltaX, deltaY, wheelTicksX, wheelTicksY, (PlatformWheelEventGranularity)granularity,
+                     shiftKey, ctrlKey, altKey, metaKey, directionInvertedFromDevice
+#if PLATFORM(MAC)
+                     , hasPreciseScrollingDeltas,
+                     (PlatformWheelEventPhase)phase, (PlatformWheelEventPhase)momentumPhase, timestamp,
+                     unacceleratedScrollingDeltaX, unacceleratedScrollingDeltaY
+#endif
+            ));
+    return true;
+}
+
+void InputCoder<HandleWheelEvent>::encode(InputEncoder& encoder, const HandleWheelEvent& input)
+{
+    InputCoder<PlatformWheelEvent>::encode(encoder, input.platformEvent());
+}
+
+bool InputCoder<HandleWheelEvent>::decode(InputDecoder& decoder, OwnPtr<HandleWheelEvent>& input)
+{
+    OwnPtr<PlatformWheelEvent> wheelEvent;
+    if (!InputCoder<PlatformWheelEvent>::decode(decoder, wheelEvent))
+        return false;
+
+    input = adoptPtr(new HandleWheelEvent(*wheelEvent));
+    return true;
 }
 
 } // namespace WebCore
