@@ -35,14 +35,15 @@
 
 #include "HandleKeyPress.h"
 
-#include "ReplayController.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "Page.h"
+#include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -96,24 +97,6 @@ size_t HandleKeyPress::memorySize() const
     return size;
 }
 
-void HandleKeyPress::serialize(InputEncoder& encoder) const
-{
-    encoder.pushObject();
-    encoder.put("timestamp", m_platformEvent.timestamp());
-    encoder.put("type", (int)m_platformEvent.type());
-    encoder.put("modifiers", m_platformEvent.modifiers());
-    encoder.put("text", m_platformEvent.text());
-    encoder.put("unmodifiedText", m_platformEvent.unmodifiedText());
-    encoder.put("keyIdentifier", m_platformEvent.keyIdentifier());
-    encoder.put("windowsVirtualKeyCode", m_platformEvent.windowsVirtualKeyCode());
-    encoder.put("nativeVirtualKeyCode", m_platformEvent.nativeVirtualKeyCode());
-    encoder.put("macCharCode", m_platformEvent.macCharCode());
-    encoder.put("autoRepeat", m_platformEvent.isAutoRepeat());
-    encoder.put("keypad", m_platformEvent.isKeypad());
-    encoder.put("systemKey", m_platformEvent.isSystemKey());
-    encoder.popObjectAsProperty("keyEvent");
-}
-
 void HandleKeyPress::dispatch(ReplayController* controller,
                               EventLoopInputDispatcher* dispatcher)
 {
@@ -122,6 +105,91 @@ void HandleKeyPress::dispatch(ReplayController* controller,
 
     controller->page()->userInputProxy()->handleKeyPressEvent(platformEvent(), true);
     dispatcher->didDispatch(this);
+}
+
+void InputCoder<PlatformKeyboardEvent>::encode(InputEncoder& encoder, const PlatformKeyboardEvent& input)
+{
+    encoder.put("timestamp", input.timestamp());
+    encoder.put("type", (uint64_t)input.type());
+    encoder.put("modifiers", input.modifiers());
+    encoder.put("text", input.text());
+    encoder.put("unmodifiedText", input.unmodifiedText());
+    encoder.put("keyIdentifier", input.keyIdentifier());
+    encoder.put("windowsVirtualKeyCode", input.windowsVirtualKeyCode());
+    encoder.put("nativeVirtualKeyCode", input.nativeVirtualKeyCode());
+    encoder.put("macCharCode", input.macCharCode());
+    encoder.put("autoRepeat", input.isAutoRepeat());
+    encoder.put("keypad", input.isKeypad());
+    encoder.put("systemKey", input.isSystemKey());
+}
+
+bool InputCoder<PlatformKeyboardEvent>::decode(InputDecoder& decoder, OwnPtr<PlatformKeyboardEvent>& input)
+{
+    double timestamp;
+    if (!decoder.get("timestamp", timestamp))
+        return false;
+
+    uint64_t type;
+    if (!decoder.get("type", type))
+        return false;
+
+    uint64_t modifiers;
+    if (!decoder.get("modifiers", modifiers))
+        return false;
+
+    String text;
+    if (!decoder.get("text", text))
+        return false;
+
+    String unmodifiedText;
+    if (!decoder.get("unmodifiedText", unmodifiedText))
+        return false;
+
+    String keyIdentifier;
+    if (!decoder.get("keyIdentifier", keyIdentifier))
+        return false;
+
+    int windowsVirtualKeyCode;
+    if (!decoder.get("windowsVirtualKeyCode", windowsVirtualKeyCode))
+        return false;
+
+    int nativeVirtualKeyCode;
+    if (!decoder.get("nativeVirtualKeyCode", nativeVirtualKeyCode))
+        return false;
+
+    int macCharCode;
+    if (!decoder.get("macCharCode", macCharCode))
+        return false;
+
+    bool isAutoRepeat;
+    if (!decoder.get("autoRepeat", isAutoRepeat))
+        return false;
+
+    bool isKeypad;
+    if (!decoder.get("keypad", isKeypad))
+        return false;
+
+    bool isSystemKey;
+    if (!decoder.get("systemKey", isSystemKey))
+        return false;
+
+    input = adoptPtr(new PlatformKeyboardEvent((PlatformKeyboardEvent::Type)type, text, unmodifiedText, keyIdentifier, windowsVirtualKeyCode, nativeVirtualKeyCode, macCharCode, isAutoRepeat, isKeypad, isSystemKey, (PlatformEvent::Modifiers)modifiers, timestamp));
+    return true;
+}
+
+void InputCoder<HandleKeyPress>::encode(InputEncoder& encoder, const HandleKeyPress& input)
+{
+    InputCoder<PlatformKeyboardEvent>::encode(encoder, input.platformEvent());
+}
+
+bool InputCoder<HandleKeyPress>::decode(InputDecoder& decoder, OwnPtr<HandleKeyPress>& input)
+{
+    OwnPtr<PlatformKeyboardEvent> keyEvent;
+    if (!InputCoder<PlatformKeyboardEvent>::decode(decoder, keyEvent))
+        return false;
+
+    input = adoptPtr(new HandleKeyPress(*keyEvent));
+    return true;
 }
 
 } // namespace WebCore

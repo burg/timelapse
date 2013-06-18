@@ -50,6 +50,7 @@
 #include "FocusSetActive.h"
 #include "FocusSetFocused.h"
 #include "HandleContextMenu.h"
+#include "HandleKeyPress.h"
 #include "HandleMousePress.h"
 #include "HandleMouseMove.h"
 #include "HandleMouseRelease.h"
@@ -139,6 +140,10 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == ReplayInputTypes::HandleContextMenu) {
         InputCoder<HandleContextMenu>::encode(encoder, *(static_cast<const HandleContextMenu*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::HandleKeyPress) {
+        InputCoder<HandleKeyPress>::encode(encoder, *(static_cast<const HandleKeyPress*>(input)));
         return true;
     }
     if (type == ReplayInputTypes::HandleMousePress) {

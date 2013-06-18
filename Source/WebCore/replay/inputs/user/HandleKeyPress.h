@@ -35,6 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "PlatformKeyboardEvent.h"
 #include "ReplayInputTypes.h"
 
@@ -56,12 +57,21 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
     const PlatformKeyboardEvent& platformEvent() const { return m_platformEvent; }
 
 private:
     PlatformKeyboardEvent m_platformEvent;
+};
+
+template<> struct InputCoder<PlatformKeyboardEvent> {
+    static void encode(InputEncoder& encoder, const PlatformKeyboardEvent& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<PlatformKeyboardEvent>& input);
+};
+
+template<> struct InputCoder<HandleKeyPress> {
+    static void encode(InputEncoder& encoder, const HandleKeyPress& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<HandleKeyPress>& input);
 };
 
 } //namespace WebCore
