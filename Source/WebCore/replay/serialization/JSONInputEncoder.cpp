@@ -60,6 +60,9 @@
 #include "InterpretedKeyCommands.h"
 #include "NavigateToPage.h"
 #include "PlaybackError.h"
+#include "RanPendingScripts.h"
+#include "ScrollPage.h"
+#include "SendResizeEvent.h"
 #include "SentinelActions.h"
 #include "TimerCreated.h"
 #include "TimerFired.h"
@@ -184,6 +187,18 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == ReplayInputTypes::PlaybackError) {
         InputCoder<PlaybackError>::encode(encoder, *(static_cast<const PlaybackError*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::RanPendingScripts) {
+        InputCoder<RanPendingScripts>::encode(encoder, *(static_cast<const RanPendingScripts*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::ScrollPage) {
+        InputCoder<ScrollPage>::encode(encoder, *(static_cast<const ScrollPage*>(input)));
+        return true;
+    }
+    if (type == ReplayInputTypes::SendResizeEvent) {
+        InputCoder<SendResizeEvent>::encode(encoder, *(static_cast<const SendResizeEvent*>(input)));
         return true;
     }
     if (type == ReplayInputTypes::TimerCreated) {

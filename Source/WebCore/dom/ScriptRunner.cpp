@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -33,6 +33,7 @@
 #include "ScriptElement.h"
 
 #if ENABLE(TIMELAPSE)
+#include "DispatchEventBase.h"
 #include "RanPendingScripts.h"
 #include "ReplayUtilities.h"
 #include <wtf/replay/InputIterator.h>
@@ -122,8 +123,10 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
     ASSERT_UNUSED(timer, timer == &m_timer);
 #if ENABLE(TIMELAPSE)
     InputIterator* it = getInputIteratorForDocument(m_document);
-    if (it && it->isCapturing())
-        it->storeInput(adoptPtr(new RanPendingScripts(m_document)));
+    if (it && it->isCapturing()) {
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(m_document);
+        it->storeInput(adoptPtr(new RanPendingScripts(frameIndex)));
+    }
 #endif
 
     RefPtr<Document> protect(m_document);

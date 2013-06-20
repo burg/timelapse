@@ -35,19 +35,18 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
-#include <wtf/PassRefPtr.h>
-#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
-    class ReplayController;
-    class Document;
+class ReplayController;
+class Document;
 
 class RanPendingScripts : public EventLoopInput {
 
 public:
-    RanPendingScripts(Document*);
+    RanPendingScripts(int frameIndex);
     virtual ~RanPendingScripts() {}
 
     // EventLoopInput API
@@ -58,10 +57,15 @@ public:
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(RanPendingScripts); }
 
-    void serialize(InputEncoder&) const;
+    int frameIndex() const { return m_frameIndex; }
 
 private:
     int m_frameIndex;
+};
+
+template<> struct InputCoder<RanPendingScripts> {
+    static void encode(InputEncoder& encoder, const RanPendingScripts& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<RanPendingScripts>& input);
 };
 
 } //namespace WebCore

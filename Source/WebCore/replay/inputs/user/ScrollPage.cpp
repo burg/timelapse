@@ -35,14 +35,15 @@
 
 #include "ScrollPage.h"
 
-#include "ReplayController.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "Page.h"
+#include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -100,13 +101,6 @@ String ScrollPage::toString() const
     return sb.toString();
 }
 
-void ScrollPage::serialize(InputEncoder& encoder) const
-{
-    encoder.put("scrollDirection", (m_isLogicalScroll) ? m_direction.normal : m_direction.logical);
-    encoder.put("isLogicalScroll", m_isLogicalScroll);
-    encoder.put("granularity", (uint64_t)m_granularity);
-}
-
 void ScrollPage::dispatch(ReplayController* controller,
                           EventLoopInputDispatcher* dispatcher)
 {
@@ -119,6 +113,35 @@ void ScrollPage::dispatch(ReplayController* controller,
         controller->page()->userInputProxy()->scrollRecursively(scrollDirection(), scrollGranularity(), true);
 
     dispatcher->didDispatch(this);
+}
+
+void InputCoder<ScrollPage>::encode(InputEncoder& encoder, const ScrollPage& input)
+{
+    encoder.put("scrollDirection", (input.isLogicalScroll()) ? input.logicalScrollDirection() : input.scrollDirection());
+    encoder.put("isLogicalScroll", input.isLogicalScroll());
+    encoder.put("granularity", (uint64_t)input.scrollGranularity());
+}
+
+bool InputCoder<ScrollPage>::decode(InputDecoder& decoder, OwnPtr<ScrollPage>& input)
+{
+    uint64_t scrollDirection;
+    if (!decoder.get("scrollDirection", scrollDirection))
+        return false;
+
+    uint64_t granularity;
+    if (!decoder.get("granularity", granularity))
+        return false;
+
+    bool isLogicalScroll;
+    if (!decoder.get("isLogicalScroll", isLogicalScroll))
+        return false;
+
+    if (isLogicalScroll)
+        input = adoptPtr(new ScrollPage((ScrollLogicalDirection)scrollDirection, (ScrollGranularity)granularity));
+    else
+        input = adoptPtr(new ScrollPage((ScrollDirection)scrollDirection, (ScrollGranularity)granularity));
+
+    return true;
 }
 
 } // namespace WebCore

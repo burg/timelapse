@@ -35,6 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 #include "ScrollTypes.h"
 
@@ -70,8 +71,6 @@ public:
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(ScrollPage); }
 
-    void serialize(InputEncoder&) const;
-
     bool isLogicalScroll() const { return m_isLogicalScroll; }
     ScrollDirection scrollDirection() const { ASSERT(!isLogicalScroll()); return m_direction.normal; }
     ScrollLogicalDirection logicalScrollDirection() const { ASSERT(isLogicalScroll()); return m_direction.logical; }
@@ -88,6 +87,11 @@ private:
         ScrollLogicalDirection logical;
     } m_direction;
     ScrollGranularity m_granularity;
+};
+
+template<> struct InputCoder<ScrollPage> {
+    static void encode(InputEncoder& encoder, const ScrollPage& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ScrollPage>& input);
 };
 
 } //namespace WebCore

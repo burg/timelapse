@@ -35,24 +35,25 @@
 
 #include "SendResizeEvent.h"
 
-#include "ReplayController.h"
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMWindow.h"
 #include "Frame.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
+#include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-SendResizeEvent::SendResizeEvent(const Frame* frame)
+SendResizeEvent::SendResizeEvent(int width, int height, int frameIndex)
     : EventLoopInput(ReplayInputTypes::SendResizeEvent)
-    , m_width(frame->document()->domWindow()->outerWidth())
-    , m_height(frame->document()->domWindow()->outerHeight())
-    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) {}
+    , m_width(width)
+    , m_height(height)
+    , m_frameIndex(frameIndex) {}
 
 void SendResizeEvent::dispatch(ReplayController* controller,
                                EventLoopInputDispatcher* dispatcher)
@@ -81,10 +82,29 @@ String SendResizeEvent::toString() const
     return sb.toString();
 }
 
-void SendResizeEvent::serialize(InputEncoder& encoder) const
+void InputCoder<SendResizeEvent>::encode(InputEncoder& encoder, const SendResizeEvent& input)
 {
-    encoder.put("width", m_width);
-    encoder.put("height", m_height);
+    encoder.put("width", input.width());
+    encoder.put("height", input.height());
+    encoder.put("frameIndex", input.frameIndex());
+}
+
+bool InputCoder<SendResizeEvent>::decode(InputDecoder& decoder, OwnPtr<SendResizeEvent>& input)
+{
+    int width;
+    if (!decoder.get("width", width))
+        return false;
+
+    int height;
+    if (!decoder.get("height", height))
+        return false;
+
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new SendResizeEvent(width, height, frameIndex));
+    return true;
 }
 
 } // namespace WebCore

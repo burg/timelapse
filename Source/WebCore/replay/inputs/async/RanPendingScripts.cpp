@@ -35,30 +35,25 @@
 
 #include "RanPendingScripts.h"
 
-#include "ReplayController.h"
 #include "DispatchEventBase.h"
 #include "Document.h"
-#include "Timer.h"
-#include "ScriptRunner.h"
-#include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/NondeterministicInput.h>
+#include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "ReplayController.h"
+#include "ScriptRunner.h"
+#include "Timer.h"
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
-RanPendingScripts::RanPendingScripts(Document* document)
+RanPendingScripts::RanPendingScripts(int frameIndex)
 : EventLoopInput(ReplayInputTypes::RanPendingScripts)
-, m_frameIndex(SerializedEventTarget::frameIndexFromDocument(document)) {}
+, m_frameIndex(frameIndex) {}
 
 
 String RanPendingScripts::toString() const
 {
     return makeString("RanPendingScripts(", String::number(m_frameIndex), ")");
-}
-
-void RanPendingScripts::serialize(InputEncoder& encoder) const
-{
-    encoder.put("frameIndex", m_frameIndex);
 }
 
 void RanPendingScripts::dispatch(ReplayController* controller,
@@ -73,6 +68,21 @@ void RanPendingScripts::dispatch(ReplayController* controller,
     scriptRunner->timerFired(&scriptRunner->m_timer);
 
     dispatcher->didDispatch(this);
+}
+
+void InputCoder<RanPendingScripts>::encode(InputEncoder& encoder, const RanPendingScripts& input)
+{
+    encoder.put("frameIndex", input.frameIndex());
+}
+
+bool InputCoder<RanPendingScripts>::decode(InputDecoder& decoder, OwnPtr<RanPendingScripts>& input)
+{
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new RanPendingScripts(frameIndex));
+    return true;
 }
 
 } // namespace WebCore

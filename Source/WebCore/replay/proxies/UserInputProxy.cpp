@@ -34,6 +34,8 @@
 #include "UserInputProxy.h"
 
 #include "DispatchEventBase.h"
+#include "Document.h"
+#include "DOMWindow.h"
 #include "EventHandler.h"
 #include "FocusController.h"
 #include "FocusSetActive.h"
@@ -266,8 +268,13 @@ void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronou
 
         // on replay, whether it is synchronous or not doesn't matter because
         // the document event queue is always emptied before dispatching event loop inputs.
-        if (m_mode == Capturing && m_page->replayController())
-            m_page->replayController()->activeIterator()->storeInput(adoptPtr(new SendResizeEvent(frame)));
+        if (m_mode == Capturing && m_page->replayController()) {
+            int width = frame->document()->domWindow()->outerWidth();
+            int height = frame->document()->domWindow()->outerHeight();
+            int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+
+            m_page->replayController()->activeIterator()->storeInput(adoptPtr(new SendResizeEvent(width, height, frameIndex)));
+        }
 #else
         UNUSED_PARAM(fromReplay);
 #endif

@@ -35,20 +35,20 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "Page.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
-#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
 class SendResizeEvent : public EventLoopInput {
 
 public:
-    SendResizeEvent(const Frame* frame);
+    SendResizeEvent(int width, int height, int frameIndex);
     virtual ~SendResizeEvent() {}
 
     int width() const { return m_width; }
     int height() const { return m_height; }
+    int frameIndex() const { return m_frameIndex; }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
@@ -57,12 +57,15 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(SendResizeEvent); }
 
-    void serialize(InputEncoder&) const;
-
 private:
     int m_width;
     int m_height;
     int m_frameIndex;
+};
+
+template<> struct InputCoder<SendResizeEvent> {
+    static void encode(InputEncoder& encoder, const SendResizeEvent& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<SendResizeEvent>& input);
 };
 
 } //namespace WebCore
