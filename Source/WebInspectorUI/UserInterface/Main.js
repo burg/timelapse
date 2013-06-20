@@ -49,6 +49,8 @@ WebInspector.loaded = function()
         InspectorBackend.registerLayerTreeDispatcher(new WebInspector.LayerTreeObserver);
     if (InspectorBackend.registerRuntimeDispatcher)
         InspectorBackend.registerRuntimeDispatcher(new WebInspector.RuntimeObserver);
+    InspectorBackend.registerReplayDispatcher(new WebInspector.ReplayObserver);
+    InspectorBackend.registerRecordingsDispatcher(new WebInspector.RecordingsObserver);
 
     // Enable agents.
     InspectorAgent.enable();
