@@ -32,7 +32,7 @@
 #ifndef InputCoder_h
 #define InputCoder_h
 
-#include <wtf/OwnPtr.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -46,6 +46,11 @@ template<typename T> struct InputCoder {
     }
 
     static bool decode(InputDecoder& decoder, OwnPtr<T>& t)
+    {
+        return T::decode(decoder, t);
+    }
+
+    static bool decode(InputDecoder& decoder, RefPtr<T>& t)
     {
         return T::decode(decoder, t);
     }

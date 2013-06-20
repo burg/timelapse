@@ -38,6 +38,8 @@
 #include "ReplayController.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "KURL.h"
 #include "NavigationScheduler.h"
 #include "NetworkProxy.h"
@@ -45,7 +47,6 @@
 #include "SecurityOrigin.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -57,6 +58,8 @@ NavigateToPage::NavigateToPage(PassRefPtr<SecurityOrigin> securityOrigin, const 
 {
     KURL parsedUrl = KURL(ParsedURLString, url);
 }
+
+NavigateToPage::~NavigateToPage() {}
 
 PassRefPtr<SecurityOrigin> NavigateToPage::securityOrigin() const
 {
@@ -98,11 +101,44 @@ size_t NavigateToPage::memorySize() const
     return size;
 }
 
-void NavigateToPage::serialize(InputEncoder& encoder) const
+void InputCoder<SecurityOrigin>::encode(InputEncoder& encoder, const SecurityOrigin& input)
 {
-    encoder.put("securityOrigin", m_securityOrigin->toString());
-    encoder.put("url", m_url);
-    encoder.put("referrer", m_referrer);
+    encoder.put("origin", input.toString());
+}
+
+bool InputCoder<SecurityOrigin>::decode(InputDecoder& decoder, RefPtr<SecurityOrigin>& input)
+{
+    String originString;
+    if (!decoder.get("securityOrigin", originString))
+        return false;
+
+    input = SecurityOrigin::createFromString(originString);
+    return true;
+}
+
+void InputCoder<NavigateToPage>::encode(InputEncoder& encoder, const NavigateToPage& input)
+{
+    InputCoder<SecurityOrigin>::encode(encoder, *input.securityOrigin());
+    encoder.put("url", input.url());
+    encoder.put("referrer", input.referrer());
+}
+
+bool InputCoder<NavigateToPage>::decode(InputDecoder& decoder, OwnPtr<NavigateToPage>& input)
+{
+    RefPtr<SecurityOrigin> origin;
+    if (!InputCoder<SecurityOrigin>::decode(decoder, origin))
+        return false;
+
+    String url;
+    if (!decoder.get("url", url))
+        return false;
+
+    String referrer;
+    if (!decoder.get("referrer", referrer))
+        return false;
+
+    input = adoptPtr(new NavigateToPage(origin.release(), url, referrer));
+    return true;
 }
 
 } // namespace WebCore

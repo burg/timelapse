@@ -35,19 +35,20 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-    class ReplayController;
-    class DocumentLoader;
-    class SecurityOrigin;
+class ReplayController;
+class DocumentLoader;
+class SecurityOrigin;
 
 class NavigateToPage : public EventLoopInput {
 
 public:
     NavigateToPage(PassRefPtr<SecurityOrigin>, const String& url, const String& referrer);
-    virtual ~NavigateToPage() {};
+    virtual ~NavigateToPage();
 
     PassRefPtr<SecurityOrigin> securityOrigin() const;
     const String& url() const { return m_url; }
@@ -60,12 +61,21 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
 private:
     RefPtr<SecurityOrigin> m_securityOrigin;
     String m_url;
     String m_referrer;
+};
+
+template<> struct InputCoder<SecurityOrigin> {
+    static void encode(InputEncoder& encoder, const SecurityOrigin& input);
+    static bool decode(InputDecoder& decoder, RefPtr<SecurityOrigin>& input);
+};
+
+template<> struct InputCoder<NavigateToPage> {
+    static void encode(InputEncoder& encoder, const NavigateToPage& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<NavigateToPage>& input);
 };
 
 } //namespace WebCore

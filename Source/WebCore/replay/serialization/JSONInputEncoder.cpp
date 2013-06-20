@@ -58,6 +58,7 @@
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InterpretedKeyCommands.h"
+#include "NavigateToPage.h"
 #include "PlaybackError.h"
 #include "SentinelActions.h"
 #include "TimerCreated.h"
@@ -177,6 +178,10 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
         return true;
     }
 #endif // PLATFORM(MAC)
+    if (type == ReplayInputTypes::NavigateToPage) {
+        InputCoder<NavigateToPage>::encode(encoder, *(static_cast<const NavigateToPage*>(input)));
+        return true;
+    }
     if (type == ReplayInputTypes::PlaybackError) {
         InputCoder<PlaybackError>::encode(encoder, *(static_cast<const PlaybackError*>(input)));
         return true;
