@@ -670,7 +670,10 @@ WebInspector.ReplayModel.prototype = {
 
     _imageCaptured: function(imageDataUri)
     {
-        this.dispatchEventToListeners(WebInspector.ReplayModel.Events.ImageCaptured, imageDataUri);
+        this.dispatchEventToListeners(WebInspector.ReplayModel.Events.ImageCaptured, {
+            imageDataUri: imageDataUri,
+            markIndex: this._currentMarkIndex
+        });
     },
 
     _lockedInput: function()

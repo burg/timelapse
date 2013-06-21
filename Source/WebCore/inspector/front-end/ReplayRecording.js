@@ -328,6 +328,7 @@ WebInspector.SerializedRecording = function(model, uid)
     WebInspector.ReplayRecording.call(this, model);
     this.uid = uid;
     this._dataLoaded = false;
+    this.addProvider(new WebInspector.ReplayScreenshotDataProvider(this, "screenshots"));
 }
 
 WebInspector.SerializedRecording.prototype = {
@@ -365,6 +366,15 @@ WebInspector.SerializedRecording.prototype = {
     displayName: function()
     {
         return WebInspector.UIString("Captured Recording %d", this.uid) || WebInspector.UIString("(uninitialized)");
+    },
+
+    _recordingUnloaded: function()
+    {
+        WebInspector.ReplayRecording.prototype._recordingUnloaded.call(this);
+        var screenshotProviders = this.providersWithType(WebInspector.DataProvider.Types.Screenshots);
+        for (var i = 0; i < screenshotProviders.length; i++) {
+            this.removeProvider(screenshotProviders[i]);
+        };
     },
 
     __proto__: WebInspector.ReplayRecording.prototype
@@ -423,6 +433,43 @@ WebInspector.ReplayLiveRecording.prototype = {
     
     __proto__: WebInspector.ReplayRecording.prototype
 };
+
+/**
+ * @constructor
+ */
+WebInspector.ReplayScreenshotDataProvider = function(recording, name)
+{
+    WebInspector.DataProvider.call(this, recording, name,
+                   WebInspector.DataProvider.Types.Screenshots);
+
+    this._screenshots = [];
+
+    var eventNames = WebInspector.ReplayModel.Events;
+    WebInspector.replayModel.addEventListener(eventNames.ImageCaptured, this._imageCaptured, this);
+};
+
+WebInspector.ReplayScreenshotDataProvider.prototype = {
+
+    get screenshots()
+    {
+        return this._screenshots;
+    },
+
+    willRemove: function() {
+        var eventNames = WebInspector.ReplayModel.Events;
+        recording.removeEventListener(eventNames.ImageCaptured, this._imageCaptured, this);
+    },
+
+    _imageCaptured: function(event) {
+        var imageDataUri = event.data.imageDataUri;
+        var markIndex = event.data.markIndex;
+        this._screenshots[markIndex] = imageDataUri;
+        this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
+    },
+
+    __proto__: WebInspector.DataProvider.prototype
+};
+
 
 /**
  * @constructor
