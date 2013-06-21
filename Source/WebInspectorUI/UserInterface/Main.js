@@ -49,6 +49,8 @@ WebInspector.loaded = function()
         InspectorBackend.registerLayerTreeDispatcher(new WebInspector.LayerTreeObserver);
     if (InspectorBackend.registerRuntimeDispatcher)
         InspectorBackend.registerRuntimeDispatcher(new WebInspector.RuntimeObserver);
+    InspectorBackend.registerReplayDispatcher(new WebInspector.ReplayObserver);
+    InspectorBackend.registerRecordingsDispatcher(new WebInspector.RecordingsObserver);
 
     // Enable agents.
     InspectorAgent.enable();
@@ -72,10 +74,14 @@ WebInspector.loaded = function()
     this.debuggerManager = new WebInspector.DebuggerManager;
     this.sourceMapManager = new WebInspector.SourceMapManager;
     this.layerTreeManager = new WebInspector.LayerTreeManager;
+    this.replayManager = new WebInspector.ReplayManager;
     this.dashboardManager = new WebInspector.DashboardManager;
 
     // Enable the Console Agent after creating the singleton managers.
     ConsoleAgent.enable();
+
+    // For now unconditionally enable replay.
+    ReplayAgent.enable();
 
     // Enable the RuntimeAgent to receive notification of execution contexts.
     if (RuntimeAgent.enable)

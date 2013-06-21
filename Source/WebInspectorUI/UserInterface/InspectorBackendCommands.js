@@ -401,3 +401,40 @@ InspectorBackend.registerCommand("LayerTree.enable", [], []);
 InspectorBackend.registerCommand("LayerTree.disable", [], []);
 InspectorBackend.registerCommand("LayerTree.layersForNode", [{"name": "nodeId", "type": "number", "optional": false}], ["layers"]);
 InspectorBackend.registerCommand("LayerTree.reasonsForCompositingLayer", [{"name": "layerId", "type": "string", "optional": false}], ["compositingReasons"]);
+
+// Recordings.
+InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");
+InspectorBackend.registerEvent("Recordings.recordingAdded", ["uid"]);
+InspectorBackend.registerEvent("Recordings.recordingRemoved", ["uid"]);
+InspectorBackend.registerCommand("Recordings.getRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
+InspectorBackend.registerCommand("Recordings.getSerializedRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
+InspectorBackend.registerCommand("Recordings.getAvailableRecordings", [], ["recordingUids"]);
+
+// Replay.
+InspectorBackend.registerReplayDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Replay");
+InspectorBackend.registerEvent("Replay.replayEnabled", []);
+InspectorBackend.registerEvent("Replay.replayDisabled", []);
+InspectorBackend.registerEvent("Replay.captureStarted", []);
+InspectorBackend.registerEvent("Replay.captureStopped", []);
+InspectorBackend.registerEvent("Replay.capturedAction", ["record"]);
+InspectorBackend.registerEvent("Replay.playbackHitMark", ["mark"]);
+InspectorBackend.registerEvent("Replay.playbackStarted", []);
+InspectorBackend.registerEvent("Replay.playbackPaused", ["mark"]);
+InspectorBackend.registerEvent("Replay.playbackFinished", []);
+InspectorBackend.registerEvent("Replay.playbackError", ["isFatal", "error"]);
+InspectorBackend.registerEvent("Replay.inputLocked", []);
+InspectorBackend.registerEvent("Replay.inputUnlocked", []);
+InspectorBackend.registerEvent("Replay.recordingLoaded", ["uid"]);
+InspectorBackend.registerEvent("Replay.recordingUnloaded", []);
+InspectorBackend.registerCommand("Replay.enable", [], []);
+InspectorBackend.registerCommand("Replay.disable", [], []);
+InspectorBackend.registerCommand("Replay.isEnabled", [], ["state"]);
+InspectorBackend.registerCommand("Replay.startCapture", [], []);
+InspectorBackend.registerCommand("Replay.stopCapture", [], ["wasAllowed"]);
+InspectorBackend.registerCommand("Replay.replayUpToMarkIndex", [{"name": "markIndex", "type": "number", "optional": false}, {"name": "fastReplay", "type": "boolean", "optional": false}], []);
+InspectorBackend.registerCommand("Replay.replayToCompletion", [{"name": "fastReplay", "type": "boolean", "optional": false}], []);
+InspectorBackend.registerCommand("Replay.pausePlayback", [], []);
+InspectorBackend.registerCommand("Replay.stopPlayback", [{"name": "unlock", "type": "boolean", "optional": false}], []);
+InspectorBackend.registerCommand("Replay.setPauseOnError", [{"name": "shouldPause", "type": "boolean", "optional": false}], []);
+InspectorBackend.registerCommand("Replay.loadRecording", [{"name": "uid", "type": "number", "optional": false}], ["wasAllowed"]);
+InspectorBackend.registerCommand("Replay.unloadRecording", [], ["wasAllowed"]);

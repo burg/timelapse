@@ -53,11 +53,18 @@ WebInspector.DashboardView = function(element)
         issues: {
             tooltip: WebInspector.UIString("Console warnings, click to show the Console"),
             handler: this._consoleItemWasClicked.bind(this, WebInspector.LogContentView.Scopes.Warnings)
+        },
+        replay: {
+            tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
+            handler: this._replayItemWasClicked
         }
     };
 
     for (var name in this._items)
         this._appendElementForNamedItem(name);
+
+    this._setItemEnabled(this._items.replay, true);
+    this._items.replay.container.classList.add("ready");
 
     this.resourcesCount = 0;
     this.resourcesSize = 0;
@@ -151,6 +158,39 @@ WebInspector.DashboardView.prototype = {
         this._setItemEnabled(item, resourcesSize > 0);
     },
 
+    captureStateChanged: function()
+    {
+        var item = this._items.replay;
+
+        item.container.classList.remove("ready");
+        item.container.classList.remove("capturing");
+        item.container.classList.remove("paused");
+        item.container.classList.remove("replaying");
+
+        switch (WebInspector.replayManager.replayState) {
+
+        case WebInspector.ReplayManager.ReplayState.Paused:
+        case WebInspector.ReplayManager.ReplayState.CanReplay:
+            item.container.classList.add("paused");
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.Replaying:
+            item.container.classList.add("replaying");
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.Capturing:
+            item.container.classList.add("capturing");
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.CanCapture:
+            item.container.classList.add("ready");
+            break;
+
+        default:
+            console.assert(false, "ReplayManager in invalid state");
+        }
+    },
+
     // Private
 
     _formatPossibleLargeNumber: function(number)
@@ -210,6 +250,32 @@ WebInspector.DashboardView.prototype = {
     _consoleItemWasClicked: function(scope)
     {
         WebInspector.showConsoleView(scope);
+    },
+
+    _replayItemWasClicked: function()
+    {
+        switch (WebInspector.replayManager.replayState) {
+
+        case WebInspector.ReplayManager.ReplayState.Paused:
+        case WebInspector.ReplayManager.ReplayState.CanReplay:
+            ReplayAgent.replayToCompletion(false);
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.Replaying:
+            ReplayAgent.pausePlayback();
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.Capturing:
+            ReplayAgent.stopCapture();
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.CanCapture:
+            ReplayAgent.startCapture();
+            break;
+
+        default:
+            console.assert(false, "ReplayManager in invalid state");
+        }
     },
 
     _setItemEnabled: function(item, enabled)
