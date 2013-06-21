@@ -203,6 +203,10 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
+	var recording = WebInspector.recordingsModel.recordings[0];
+	var screenshotsProvider = recording.providersWithType(WebInspector.DataProvider.Types.Screenshots)[0];
+	var screenshots = screenshotsProvider.screenshots;
+
 	for (var i = 0; i < records.length; i++) {
 	    var record = records[i];
 	    var row = document.createElement("tr");
@@ -225,6 +229,21 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 	    row.addEventListener("dblclick", function(markIndex) {
 				     this.replayUpToMarkIndex(markIndex);
 				 }.bind(WebInspector.replayModel, record.mark.index));
+
+		if (screenshots[record.mark.index]) {
+		    table.appendChild(row);
+		    row = document.createElement("tr");
+		    cell = document.createElement("td");
+		    cell.colSpan = 2;
+
+			var img = document.createElement("img");
+			img.src = screenshots[record.mark.index];
+			img.style.maxWidth = "150px";
+			img.style.maxHeight = "150px";
+			cell.appendChild(img);
+
+			row.appendChild(cell);
+		}
 
 	    table.appendChild(row);
 	}
