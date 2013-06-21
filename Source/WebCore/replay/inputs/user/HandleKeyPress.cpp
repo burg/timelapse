@@ -35,13 +35,17 @@
 
 #include "HandleKeyPress.h"
 
+#include "Document.h"
+#include "FrameCamera.h"
 #include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "Logging.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
 
@@ -102,6 +106,9 @@ void HandleKeyPress::dispatch(ReplayController* controller,
 {
     ASSERT(controller->page());
     ASSERT(sealed());
+
+    const String& screenshotDataUri = FrameCamera::dataUriImageFromFrame(controller->page()->mainFrame());
+    controller->imageCaptured(screenshotDataUri);
 
     controller->page()->userInputProxy()->handleKeyPressEvent(platformEvent(), true);
     dispatcher->didDispatch(this);
