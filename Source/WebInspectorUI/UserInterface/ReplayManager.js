@@ -27,6 +27,7 @@ WebInspector.ReplayManager = function()
 {
     WebInspector.Object.call(this);
 
+    this._canReplay = false;
     this._isCapturing = false;
     this._isReplaying = false;
     this._isPaused = false;
@@ -47,6 +48,11 @@ WebInspector.ReplayManager.prototype = {
     constructor: WebInspector.ReplayManager,
 
     // Public
+
+    get canReplay()
+    {
+        return this._canReplay;
+    },
 
     get isCapturing()
     {
@@ -72,12 +78,13 @@ WebInspector.ReplayManager.prototype = {
     captureStopped: function()
     {
         this._isCapturing = false;
-        this._isPaused = true;
+        this._canReplay = true;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureDidStop);
     },
 
     playbackStarted: function()
     {
+        console.assert(this._canReplay);
         this._isReplaying = true;
         this._isPaused = false;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackDidStart);
@@ -85,6 +92,7 @@ WebInspector.ReplayManager.prototype = {
 
     playbackPaused: function(mark)
     {
+        console.assert(this._canReplay);
         console.assert(this._isReplaying);
         this._isPaused = true;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackPaused);
@@ -92,6 +100,8 @@ WebInspector.ReplayManager.prototype = {
 
     playbackFinished: function()
     {
+        console.assert(this._canReplay);
+        console.assert(this._isReplaying);
         this._isReplaying = false;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackFinished);
     }

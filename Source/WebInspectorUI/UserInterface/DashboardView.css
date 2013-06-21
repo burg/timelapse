@@ -165,11 +165,11 @@ body.window-inactive .toolbar .dashboard {
 }
 
 .toolbar .dashboard > .replay.paused > img {
-    content: url(Images/ReplayButtonPaused.png);
+    content: url(Images/ReplayButtonReplaying.png);
 }
 
 .toolbar .dashboard > .replay.replaying > img {
-    content: url(Images/ReplayButtonReplaying.png);
+    content: url(Images/ReplayButtonPaused.png);
 }
 
 .toolbar .dashboard > .errors.enabled:hover > img {

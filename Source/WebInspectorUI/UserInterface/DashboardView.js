@@ -56,7 +56,7 @@ WebInspector.DashboardView = function(element)
         },
         replay: {
             tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
-            handler: this._recordItemWasClicked
+            handler: this._replayItemWasClicked
         }
     };
 
@@ -167,14 +167,17 @@ WebInspector.DashboardView.prototype = {
         item.container.classList.remove("paused");
         item.container.classList.remove("replaying");
 
-        if (WebInspector.replayManager.isCapturing)
-            item.container.classList.add("capturing");
-
-        else if (WebInspector.replayManager.isPaused)
+        if (WebInspector.replayManager.isPaused)
             item.container.classList.add("paused");
 
         else if (WebInspector.replayManager.isReplaying)
             item.container.classList.add("replaying");
+
+        else if (WebInspector.replayManager.canReplay)
+            item.container.classList.add("paused");
+
+        else if (WebInspector.replayManager.isCapturing)
+            item.container.classList.add("capturing");
 
         else
             item.container.classList.add("ready");
@@ -241,14 +244,16 @@ WebInspector.DashboardView.prototype = {
         WebInspector.showConsoleView(scope);
     },
 
-    _recordItemWasClicked: function()
+    _replayItemWasClicked: function()
     {
-        if (WebInspector.replayManager.isCapturing)
-            ReplayAgent.stopCapture();
-        else if (WebInspector.replayManager.isPaused)
+        if (WebInspector.replayManager.isPaused)
             ReplayAgent.replayToCompletion(false);
         else if (WebInspector.replayManager.isReplaying)
             ReplayAgent.pausePlayback();
+        else if (WebInspector.replayManager.canReplay)
+            ReplayAgent.replayToCompletion(false);
+        else if (WebInspector.replayManager.isCapturing)
+            ReplayAgent.stopCapture();
         else
             ReplayAgent.startCapture();
     },
