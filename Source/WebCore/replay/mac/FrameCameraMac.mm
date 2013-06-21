@@ -72,9 +72,8 @@ String FrameCamera::dataUriImageFromFrame(Frame* frame)
                                              properties: [NSDictionary dictionary]];
 
     String encodedImage = base64Encode((const char *) [pngData bytes], [pngData length]);
-    String dataUri = "url(\"data:image/png;base64,";
+    String dataUri = "data:image/png;base64,";
     dataUri.append(encodedImage);
-    dataUri.append("\")");
 
     return dataUri;
 }
