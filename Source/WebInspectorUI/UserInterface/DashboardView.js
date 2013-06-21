@@ -169,16 +169,16 @@ WebInspector.DashboardView.prototype = {
 
         switch (WebInspector.replayManager.replayState) {
 
-        case WebInspector.ReplayManager.ReplayState.IsPaused:
+        case WebInspector.ReplayManager.ReplayState.Paused:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             item.container.classList.add("paused");
             break;
 
-        case WebInspector.ReplayManager.ReplayState.IsReplaying:
+        case WebInspector.ReplayManager.ReplayState.Replaying:
             item.container.classList.add("replaying");
             break;
 
-        case WebInspector.ReplayManager.ReplayState.IsCapturing:
+        case WebInspector.ReplayManager.ReplayState.Capturing:
             item.container.classList.add("capturing");
             break;
 
@@ -256,16 +256,16 @@ WebInspector.DashboardView.prototype = {
     {
         switch (WebInspector.replayManager.replayState) {
 
-        case WebInspector.ReplayManager.ReplayState.IsPaused:
+        case WebInspector.ReplayManager.ReplayState.Paused:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             ReplayAgent.replayToCompletion(false);
             break;
 
-        case WebInspector.ReplayManager.ReplayState.IsReplaying:
+        case WebInspector.ReplayManager.ReplayState.Replaying:
             ReplayAgent.pausePlayback();
             break;
 
-        case WebInspector.ReplayManager.ReplayState.IsCapturing:
+        case WebInspector.ReplayManager.ReplayState.Capturing:
             ReplayAgent.stopCapture();
             break;
 
