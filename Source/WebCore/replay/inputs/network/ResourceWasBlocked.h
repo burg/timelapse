@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
 
 namespace WebCore {
 
@@ -54,10 +54,15 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
 private:
-    int m_id;
+    int m_handleId;
+};
+
+template<> struct InputCoder<ResourceWasBlocked> {
+    static void encode(InputEncoder& encoder, const ResourceWasBlocked& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceWasBlocked>& input);
 };
 
 } // namespace WebCore

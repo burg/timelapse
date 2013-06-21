@@ -35,6 +35,8 @@
 
 #include "ResourceWillSendRequest.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -45,14 +47,19 @@
 #include "ResourceResponse.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
-#include "InputEncoder.h"
+#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
-ResourceWillSendRequest::ResourceWillSendRequest(int id, ResourceRequest& request, const ResourceResponse& redirectResponse)
-    : m_id(id)
+ResourceWillSendRequest::ResourceWillSendRequest(int handleId, ResourceRequest& request, const ResourceResponse& redirectResponse)
+    : m_handleId(handleId)
     , m_request(ResourceRequest::adopt(request.copyData()))
     , m_redirectResponse(ResourceResponse::adopt(redirectResponse.copyData())) {}
+
+ResourceWillSendRequest::ResourceWillSendRequest(int handleId, PassOwnPtr<ResourceRequest> request, PassOwnPtr<ResourceResponse> redirectResponse)
+    : m_handleId(handleId)
+    , m_request(request)
+    , m_redirectResponse(redirectResponse) {}
 
 ResourceWillSendRequest::~ResourceWillSendRequest() {}
 
@@ -60,7 +67,7 @@ ResourceWillSendRequest::~ResourceWillSendRequest() {}
 void ResourceWillSendRequest::dispatch(ReplayController* controller,
                                        EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -77,7 +84,7 @@ String ResourceWillSendRequest::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceWillSendRequest(id=");
-    sb.append(String::number(m_id));
+    sb.append(String::number(m_handleId));
     sb.append("; url=");
     sb.append(m_request->url().string());
     sb.append(")");
@@ -89,17 +96,35 @@ size_t ResourceWillSendRequest::memorySize() const
     return sizeof(ResourceWillSendRequest) + 2 * m_redirectResponse->memoryUsage();
 }
 
-void ResourceWillSendRequest::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceWillSendRequest>::encode(InputEncoder& encoder, const ResourceWillSendRequest& input)
 {
-    encoder.put("handleId", m_id);
+    encoder.put("handleId", input.handleId());
 
     encoder.pushObject();
-    serializeResourceRequest(encoder, m_request.get());
+    InputCoder<ResourceRequest>::encode(encoder, input.request());
     encoder.popObjectAsProperty("request");
 
     encoder.pushObject();
-    serializeResourceResponse(encoder, m_redirectResponse.get());
+    InputCoder<ResourceResponse>::encode(encoder, input.redirectResponse());
     encoder.popObjectAsProperty("redirectResponse");
+}
+
+bool InputCoder<ResourceWillSendRequest>::decode(InputDecoder& decoder, OwnPtr<ResourceWillSendRequest>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    OwnPtr<ResourceRequest> request;
+    if (!InputCoder<ResourceRequest>::decode(decoder, request))
+        return false;
+
+    OwnPtr<ResourceResponse> redirectResponse;
+    if (!InputCoder<ResourceResponse>::decode(decoder, redirectResponse))
+        return false;
+
+    input = adoptPtr(new ResourceWillSendRequest(handleId, request.release(), redirectResponse.release()));
+    return true;
 }
 
 } // namespace WebCore

@@ -34,30 +34,34 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "InputCoder.h"
 #include "ResourceRequest.h"
-#include "InputEncoder.h"
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
 class ResourceLoaderCreated : public NondeterministicInput {
 public:
-    ResourceLoaderCreated(int id, const ResourceRequest&);
+    ResourceLoaderCreated(int handleId, const ResourceRequest&);
+    ResourceLoaderCreated(int handleId, PassOwnPtr<ResourceRequest>);
     virtual ~ResourceLoaderCreated();
-
-    int id() const { return m_id; }
-    ResourceRequest* request() const { return m_request.get(); }
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::LoaderMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    const ResourceRequest& request() const { return *m_request; }
 private:
-    int m_id;
+    int m_handleId;
     OwnPtr<ResourceRequest> m_request;
+};
+
+template<> struct InputCoder<ResourceLoaderCreated> {
+    static void encode(InputEncoder& encoder, const ResourceLoaderCreated& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceLoaderCreated>& input);
 };
 
 } // namespace WebCore

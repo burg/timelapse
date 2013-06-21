@@ -35,24 +35,25 @@
 
 #include "ResourceWasBlocked.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-ResourceWasBlocked::ResourceWasBlocked(int id)
-    : m_id(id) {}
+ResourceWasBlocked::ResourceWasBlocked(int handleId)
+    : m_handleId(handleId) {}
 
 //EventLoopInput API
 void ResourceWasBlocked::dispatch(ReplayController* controller,
                                   EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
@@ -67,7 +68,7 @@ const AtomicString& ResourceWasBlocked::type() const
 
 String ResourceWasBlocked::toString() const
 {
-    return makeString("ResourceWasBlocked(id=", String::number(m_id), ")");
+    return makeString("ResourceWasBlocked(id=", String::number(m_handleId), ")");
 }
 
 size_t ResourceWasBlocked::memorySize() const
@@ -75,9 +76,19 @@ size_t ResourceWasBlocked::memorySize() const
     return sizeof(ResourceWasBlocked);
 }
 
-void ResourceWasBlocked::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceWasBlocked>::encode(InputEncoder& encoder, const ResourceWasBlocked& input)
 {
-    encoder.put("handleId", m_id);
+    encoder.put("handleId", input.handleId());
+}
+
+bool InputCoder<ResourceWasBlocked>::decode(InputDecoder& decoder, OwnPtr<ResourceWasBlocked>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    input = adoptPtr(new ResourceWasBlocked(handleId));
+    return true;
 }
 
 } // namespace WebCore

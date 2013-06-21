@@ -35,22 +35,19 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
+#include "ResourceResponse.h"
+#include "ResourceRequest.h"
 
 namespace WebCore {
 
 class ReplayController;
-class ResourceRequest;
-class ResourceResponse;
 
 class ResourceWillSendRequest : public EventLoopInput {
 public:
     ResourceWillSendRequest(int id, ResourceRequest&, const ResourceResponse& redirectResponse);
+    ResourceWillSendRequest(int id, PassOwnPtr<ResourceRequest>, PassOwnPtr<ResourceResponse> redirectResponse);
     virtual ~ResourceWillSendRequest();
-
-    int id() const { return m_id; }
-    ResourceRequest* request() const { return m_request.get(); }
-    ResourceResponse* redirectResponse() const { return m_redirectResponse.get(); }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
@@ -59,12 +56,19 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    const ResourceRequest& request() const { return *m_request; }
+    const ResourceResponse& redirectResponse() const { return *m_redirectResponse; }
 private:
-    int m_id;
+    int m_handleId;
     OwnPtr<ResourceRequest> m_request;
     OwnPtr<ResourceResponse> m_redirectResponse;
+};
+
+template<> struct InputCoder<ResourceWillSendRequest> {
+    static void encode(InputEncoder& encoder, const ResourceWillSendRequest& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceWillSendRequest>& input);
 };
 
 } // namespace WebCore

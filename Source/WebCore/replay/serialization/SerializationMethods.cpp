@@ -36,30 +36,44 @@
 #include "SerializationMethods.h"
 
 #include "HTTPHeaderMap.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "ResourceError.h"
 #include "ResourceLoadTiming.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
-
-#include "InputEncoder.h"
+#include <wtf/Vector.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-static void serializeStringVector(InputEncoder& encoder, const Vector<String>& vec)
+void InputCoder<Vector<String> >::encode(InputEncoder& encoder, const Vector<String>& input)
 {
-    for (size_t i = 0; i < vec.size(); i++)
-        encoder.append(vec[i]);
+    for (size_t i = 0; i < input.size(); i++)
+        encoder.append(input[i]);
+}
+
+bool InputCoder<Vector<String> >::decode(InputDecoder&, OwnPtr<Vector<String> >&)
+{
+    // TODO: implement
+    return false;
 }
 
 /* map is serialized from a WTF::HashMap, which has unique keys. So, this can be stored in an object */
-static void serializeHTTPHeaderMap(InputEncoder& encoder, const HTTPHeaderMap& map)
+void InputCoder<HTTPHeaderMap>::encode(InputEncoder& encoder, const HTTPHeaderMap& input)
 {
-    HTTPHeaderMap::const_iterator end_it = map.end();
-    for (HTTPHeaderMap::const_iterator it = map.begin(); it != end_it; ++it)
+    HTTPHeaderMap::const_iterator end_it = input.end();
+    for (HTTPHeaderMap::const_iterator it = input.begin(); it != end_it; ++it)
         encoder.put(it->key.string(), it->value);
 }
 
-static void serializeFormDataElement(InputEncoder& encoder, const FormDataElement& element)
+bool InputCoder<HTTPHeaderMap>::decode(InputDecoder&, OwnPtr<HTTPHeaderMap>&)
+{
+    // TODO: implement
+    return false;
+}
+
+void InputCoder<FormDataElement>::encode(InputEncoder& encoder, const FormDataElement& element)
 {
     encoder.put("type", (uint64_t)element.m_type);
     switch (element.m_type) {
@@ -87,50 +101,65 @@ static void serializeFormDataElement(InputEncoder& encoder, const FormDataElemen
     }
 }
 
-// This is based on FormData::encodeForBackForward, except we use key/value objects instead
-// of a byte array.
-static void serializeFormData(InputEncoder& encoder, FormData* data)
+bool InputCoder<FormDataElement>::decode(InputDecoder&, OwnPtr<FormDataElement>&)
 {
-    // sometimes, there's no form data.
-    if (!data)
-        return;
+    // TODO: implement
+    return false;
+}
 
-    encoder.put("alwaysStream", data->alwaysStream());
-    encoder.put("identifier", data->identifier());
+void InputCoder<FormData>::encode(InputEncoder& encoder, const FormData& data)
+{
+    // This is based on FormData::encodeForBackForward, except we use key/value objects instead
+    // of a byte array.
+
+    encoder.put("alwaysStream", data.alwaysStream());
+    encoder.put("identifier", data.identifier());
 
     encoder.pushArray();
-    const Vector<char> bytes = data->boundary();
+    const Vector<char> bytes = data.boundary();
     for (size_t i = 0; i < bytes.size(); i++)
         encoder.append((uint32_t)bytes[i]);
     encoder.popArrayAsProperty("boundary");
 
     encoder.pushArray();
-    const Vector<FormDataElement> elems = data->elements();
+    const Vector<FormDataElement> elems = data.elements();
     for (size_t i = 0; i < elems.size(); i++) {
         encoder.pushObject();
-        serializeFormDataElement(encoder, elems[i]);
+        InputCoder<FormDataElement>::encode(encoder, elems[i]);
         encoder.popObjectAsElement();
     }
     encoder.popArrayAsProperty("elements");
 }
 
-static void serializeResourceLoadTiming(InputEncoder& encoder, ResourceLoadTiming* data)
+bool InputCoder<FormData>::decode(InputDecoder&, OwnPtr<FormData>&)
 {
-    encoder.put("requestTime", data->requestTime);
-    encoder.put("proxyStart", data->proxyStart);
-    encoder.put("proxyEnd", data->proxyEnd);
-    encoder.put("dnsStart", data->dnsStart);
-    encoder.put("dnsEnd", data->dnsEnd);
-    encoder.put("connectStart", data->connectStart);
-    encoder.put("connectEnd", data->connectEnd);
-    encoder.put("sendStart", data->sendStart);
-    encoder.put("sendEnd", data->sendEnd);
-    encoder.put("receiveHeadersEnd", data->receiveHeadersEnd);
-    encoder.put("sslStart", data->sslStart);
-    encoder.put("sslEnd", data->sslEnd);
+    // TODO: implement
+    return false;
 }
 
-void serializeResourceError(InputEncoder& encoder, const ResourceError& error)
+void InputCoder<ResourceLoadTiming>::encode(InputEncoder& encoder, const ResourceLoadTiming& data)
+{
+    encoder.put("requestTime", data.requestTime);
+    encoder.put("proxyStart", data.proxyStart);
+    encoder.put("proxyEnd", data.proxyEnd);
+    encoder.put("dnsStart", data.dnsStart);
+    encoder.put("dnsEnd", data.dnsEnd);
+    encoder.put("connectStart", data.connectStart);
+    encoder.put("connectEnd", data.connectEnd);
+    encoder.put("sendStart", data.sendStart);
+    encoder.put("sendEnd", data.sendEnd);
+    encoder.put("receiveHeadersEnd", data.receiveHeadersEnd);
+    encoder.put("sslStart", data.sslStart);
+    encoder.put("sslEnd", data.sslEnd);
+}
+
+bool InputCoder<ResourceLoadTiming>::decode(InputDecoder&, OwnPtr<ResourceLoadTiming>&)
+{
+    // TODO: implement
+    return false;
+}
+
+void InputCoder<ResourceError>::encode(InputEncoder& encoder, const ResourceError& error)
 {
     encoder.put("domain", error.domain());
     encoder.put("errorCode", error.errorCode());
@@ -138,51 +167,72 @@ void serializeResourceError(InputEncoder& encoder, const ResourceError& error)
     encoder.put("localizedDescription", error.localizedDescription());
 }
 
-void serializeResourceRequest(InputEncoder& encoder, const ResourceRequest* request)
+bool InputCoder<ResourceError>::decode(InputDecoder&, OwnPtr<ResourceError>&)
 {
-    encoder.put("url", request->url().string());
-    encoder.put("cachePolicy", (uint64_t)request->cachePolicy());
-    encoder.put("timeoutInterval", request->timeoutInterval());
-    encoder.put("firstPartyForCookies", request->firstPartyForCookies().string());
-    encoder.put("httpMethod", request->httpMethod());
+    // TODO: implement
+    return false;
+}
+
+void InputCoder<ResourceRequest>::encode(InputEncoder& encoder, const ResourceRequest& request)
+{
+    encoder.put("url", request.url().string());
+    encoder.put("cachePolicy", (uint64_t)request.cachePolicy());
+    encoder.put("timeoutInterval", request.timeoutInterval());
+    encoder.put("firstPartyForCookies", request.firstPartyForCookies().string());
+    encoder.put("httpMethod", request.httpMethod());
 
     encoder.pushObject();
-    serializeHTTPHeaderMap(encoder, request->httpHeaderFields());
+    InputCoder<HTTPHeaderMap>::encode(encoder, request.httpHeaderFields());
     encoder.popObjectAsProperty("httpHeaders");
 
     encoder.pushArray();
-    serializeStringVector(encoder, request->responseContentDispositionEncodingFallbackArray());
+    InputCoder<Vector<String> >::encode(encoder, request.responseContentDispositionEncodingFallbackArray());
     encoder.popArrayAsProperty("responseContentDispositionEncodingFallbackArray");
 
-    encoder.pushObject();
-    serializeFormData(encoder, request->httpBody());
-    encoder.popObjectAsProperty("httpBody");
+    // sometimes, there's no form data.
+    if (FormData* body = request.httpBody()) {
+        encoder.pushObject();
+        InputCoder<FormData>::encode(encoder, *body);
+        encoder.popObjectAsProperty("httpBody");
+    }
 
-    encoder.put("allowCookies", request->allowCookies());
-    encoder.put("loadPriority", (uint64_t)request->priority());
+    encoder.put("allowCookies", request.allowCookies());
+    encoder.put("loadPriority", (uint64_t)request.priority());
 }
 
-void serializeResourceResponse(InputEncoder& encoder, const ResourceResponse* response)
+bool InputCoder<ResourceRequest>::decode(InputDecoder&, OwnPtr<ResourceRequest>&)
 {
-    encoder.put("url", response->url().string());
-    encoder.put("mimeType", response->mimeType());
-    encoder.put("expectedContentLength", (int64_t)response->expectedContentLength());
-    encoder.put("textEncodingName", response->textEncodingName());
-    encoder.put("suggestedFilename", response->suggestedFilename());
-    encoder.put("httpStatusCode", response->httpStatusCode());
-    encoder.put("httpStatusText", response->httpStatusText());
+    // TODO: implement
+    return false;
+}
+
+void InputCoder<ResourceResponse>::encode(InputEncoder& encoder, const ResourceResponse& response)
+{
+    encoder.put("url", response.url().string());
+    encoder.put("mimeType", response.mimeType());
+    encoder.put("expectedContentLength", (int64_t)response.expectedContentLength());
+    encoder.put("textEncodingName", response.textEncodingName());
+    encoder.put("suggestedFilename", response.suggestedFilename());
+    encoder.put("httpStatusCode", response.httpStatusCode());
+    encoder.put("httpStatusText", response.httpStatusText());
 
     encoder.pushObject();
-    serializeHTTPHeaderMap(encoder, response->httpHeaderFields());
+    InputCoder<HTTPHeaderMap>::encode(encoder, response.httpHeaderFields());
     encoder.popObjectAsProperty("httpHeaders");
 
-    encoder.put("lastModifiedDate", (uint64_t)response->lastModifiedDate());
+    encoder.put("lastModifiedDate", (uint64_t)response.lastModifiedDate());
 
-    if (ResourceLoadTiming* data = response->resourceLoadTiming()) {
+    if (ResourceLoadTiming* data = response.resourceLoadTiming()) {
         encoder.pushObject();
-        serializeResourceLoadTiming(encoder, data);
+        InputCoder<ResourceLoadTiming>::encode(encoder, *data);
         encoder.popObjectAsProperty("loadTiming");
     }
+}
+
+bool InputCoder<ResourceResponse>::decode(InputDecoder&, OwnPtr<ResourceResponse>&)
+{
+    // TODO: implement
+    return false;
 }
 
 } // namespace WebCore

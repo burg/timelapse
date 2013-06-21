@@ -35,8 +35,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ResourceError.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -44,7 +44,8 @@ class ReplayController;
 
 class ResourceDidFail : public EventLoopInput {
 public:
-    ResourceDidFail(int id, const ResourceError&);
+    ResourceDidFail(int handleId, const ResourceError&);
+    ResourceDidFail(int handleId, PassOwnPtr<ResourceError>);
     virtual ~ResourceDidFail() {}
 
     // EventLoopInput API
@@ -55,11 +56,17 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    const ResourceError& error() const { return m_error; }
 private:
-    int m_id;
+    int m_handleId;
     ResourceError m_error;
+};
+
+template<> struct InputCoder<ResourceDidFail> {
+    static void encode(InputEncoder& encoder, const ResourceDidFail& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceDidFail>& input);
 };
 
 } // namespace WebCore

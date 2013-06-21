@@ -55,15 +55,15 @@ public:
     static PassRefPtr<InspectorObject> createMouseData(const PlatformMouseEvent&);
     static PassRefPtr<InspectorObject> createWheelData(const PlatformWheelEvent&);
     static PassRefPtr<InspectorObject> createKeyPressData(const PlatformKeyboardEvent&);
-    static PassRefPtr<InspectorObject> createScrollData(ScrollPage* scrollAction);
-    static PassRefPtr<InspectorObject> createResizeData(SendResizeEvent* action);
+    static PassRefPtr<InspectorObject> createScrollData(const ScrollPage&);
+    static PassRefPtr<InspectorObject> createResizeData(const SendResizeEvent&);
 
     static PassRefPtr<InspectorObject> createEmptyData();
 
-    static PassRefPtr<InspectorObject> createRequestResourceData(ResourceWillSendRequest*);
-    static PassRefPtr<InspectorObject> createReceiveResponseData(ResourceDidReceiveResponse*);
-    static PassRefPtr<InspectorObject> createReceiveDataData(ResourceDidReceiveData*);
-    static PassRefPtr<InspectorObject> createResourceLoadedData(ResourceDidFinishLoading*);
+    static PassRefPtr<InspectorObject> createRequestResourceData(const ResourceWillSendRequest&);
+    static PassRefPtr<InspectorObject> createReceiveResponseData(const ResourceDidReceiveResponse&);
+    static PassRefPtr<InspectorObject> createReceiveDataData(const ResourceDidReceiveData&);
+    static PassRefPtr<InspectorObject> createResourceLoadedData(const ResourceDidFinishLoading&);
 
     static PassRefPtr<InspectorObject> createFrameNavigatedData(DocumentLoader*);
 

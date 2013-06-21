@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
 
 namespace WebCore {
 
@@ -46,10 +46,6 @@ public:
     ResourceDidSendData(int, unsigned long long, unsigned long long);
     virtual ~ResourceDidSendData() {}
 
-    int id() const { return m_id; }
-    unsigned long long bytesSent() const { return m_bytesSent; }
-    unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
@@ -58,12 +54,19 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    unsigned long long bytesSent() const { return m_bytesSent; }
+    unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }
 private:
-    int m_id;
+    int m_handleId;
     unsigned long long m_bytesSent;
     unsigned long long m_totalBytesToBeSent;
+};
+
+template<> struct InputCoder<ResourceDidSendData> {
+    static void encode(InputEncoder& encoder, const ResourceDidSendData& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceDidSendData>& input);
 };
 
 } // namespace Webcore

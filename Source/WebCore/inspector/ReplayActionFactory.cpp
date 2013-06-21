@@ -90,23 +90,23 @@ PassRefPtr<InspectorObject> ReplayActionFactory::createKeyPressData(const Platfo
     return data.release();
 }
 
-PassRefPtr<InspectorObject> ReplayActionFactory::createScrollData(ScrollPage* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createScrollData(const ScrollPage& action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setBoolean("logical", action->isLogicalScroll());
-    if (action->isLogicalScroll())
-        data->setString("direction", ScrollPage::logicalScrollDirectionToString(action->logicalScrollDirection()));
+    data->setBoolean("logical", action.isLogicalScroll());
+    if (action.isLogicalScroll())
+        data->setString("direction", ScrollPage::logicalScrollDirectionToString(action.logicalScrollDirection()));
     else
-        data->setString("direction", ScrollPage::scrollDirectionToString(action->scrollDirection()));
-    data->setString("granularity", ScrollPage::scrollGranularityToString(action->scrollGranularity()));
+        data->setString("direction", ScrollPage::scrollDirectionToString(action.scrollDirection()));
+    data->setString("granularity", ScrollPage::scrollGranularityToString(action.scrollGranularity()));
     return data.release();
 }
 
-PassRefPtr<InspectorObject> ReplayActionFactory::createResizeData(SendResizeEvent* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createResizeData(const SendResizeEvent& action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("width", action->width());
-    data->setNumber("height", action->height());
+    data->setNumber("width", action.width());
+    data->setNumber("height", action.height());
     return data.release();
 }
 
@@ -115,33 +115,33 @@ PassRefPtr<InspectorObject> ReplayActionFactory::createEmptyData()
     return InspectorObject::create();
 }
 
-PassRefPtr<InspectorObject> ReplayActionFactory::createRequestResourceData(ResourceWillSendRequest* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createRequestResourceData(const ResourceWillSendRequest& action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("id", action->id());
-    data->setString("url", action->request()->url().string());
+    data->setNumber("id", action.handleId());
+    data->setString("url", action.request().url().string());
     return data.release();
 }
 
-PassRefPtr<InspectorObject> ReplayActionFactory::createReceiveResponseData(ResourceDidReceiveResponse* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createReceiveResponseData(const ResourceDidReceiveResponse& action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("id", action->id());
-    data->setString("url", action->response()->url().string());
+    data->setNumber("id", action.handleId());
+    data->setString("url", action.response().url().string());
     return data.release();
 }
 
-PassRefPtr<InspectorObject> ReplayActionFactory::createReceiveDataData(ResourceDidReceiveData* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createReceiveDataData(const ResourceDidReceiveData& action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("id", action->id());
+    data->setNumber("id", action.handleId());
     return data.release();
 }
 
-PassRefPtr<InspectorObject> ReplayActionFactory::createResourceLoadedData(ResourceDidFinishLoading* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createResourceLoadedData(const ResourceDidFinishLoading& action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setNumber("id", action->id());
+    data->setNumber("id", action.handleId());
     return data.release();
 }
 

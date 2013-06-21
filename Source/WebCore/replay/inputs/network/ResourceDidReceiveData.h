@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -47,11 +47,6 @@ public:
     ResourceDidReceiveData(int, const char* data, int length, int encodedLength);
     virtual ~ResourceDidReceiveData();
 
-    int id() const { return m_id; }
-    const char* data() const { return m_buffer.data(); }
-    int length() const { return m_buffer.size(); }
-    int encodedLength() const { return m_encodedLength; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
@@ -59,12 +54,20 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    const char* data() const { return m_buffer.data(); }
+    int length() const { return m_buffer.size(); }
+    int encodedLength() const { return m_encodedLength; }
 private:
-    int m_id;
+    int m_handleId;
     Vector<char, 0> m_buffer;
     int m_encodedLength;
+};
+
+template<> struct InputCoder<ResourceDidReceiveData> {
+    static void encode(InputEncoder& encoder, const ResourceDidReceiveData& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceDidReceiveData>& input);
 };
 
 } // namespace WebCore

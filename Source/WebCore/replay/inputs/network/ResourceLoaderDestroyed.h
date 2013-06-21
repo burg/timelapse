@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
 
 namespace WebCore {
 
@@ -43,10 +43,8 @@ class ReplayController;
 
 class ResourceLoaderDestroyed : public EventLoopInput {
 public:
-    ResourceLoaderDestroyed(int id);
+    ResourceLoaderDestroyed(int handleId);
     virtual ~ResourceLoaderDestroyed() {};
-
-    int id() const { return m_id; }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
@@ -57,10 +55,14 @@ public:
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::LoaderMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
-
+    int handleId() const { return m_handleId; }
 private:
-    int m_id;
+    int m_handleId;
+};
+
+template<> struct InputCoder<ResourceLoaderDestroyed> {
+    static void encode(InputEncoder& encoder, const ResourceLoaderDestroyed& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceLoaderDestroyed>& input);
 };
 
 } // namespace WebCore

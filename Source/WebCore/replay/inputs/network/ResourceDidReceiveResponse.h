@@ -35,8 +35,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
+#include "InputCoder.h"
 #include "ResourceResponse.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
@@ -44,11 +44,9 @@ class ReplayController;
 
 class ResourceDidReceiveResponse : public EventLoopInput {
 public:
-    ResourceDidReceiveResponse(int id, const ResourceResponse& response);
+    ResourceDidReceiveResponse(int handleId, const ResourceResponse& response);
+    ResourceDidReceiveResponse(int handleId, PassOwnPtr<ResourceResponse> response);
     virtual ~ResourceDidReceiveResponse() {}
-
-    int id() const { return m_id; }
-    ResourceResponse* response() const { return m_response.get(); }
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
@@ -57,11 +55,17 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    const ResourceResponse& response() const { return *m_response; }
 private:
-    int m_id;
+    int m_handleId;
     OwnPtr<ResourceResponse> m_response;
+};
+
+template<> struct InputCoder<ResourceDidReceiveResponse> {
+    static void encode(InputEncoder& encoder, const ResourceDidReceiveResponse& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceDidReceiveResponse>& input);
 };
 
 } // namespace WebCore

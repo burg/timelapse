@@ -82,7 +82,7 @@ public:
     virtual void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&) OVERRIDE;
 
     // TODO(Issue #271): remove backend-side interpretation of inputs
-    static PassRefPtr<TypeBuilder::Recordings::ReplayAction> createInspectorObjectForAction(EventLoopInput* action);
+    static PassRefPtr<TypeBuilder::Recordings::ReplayAction> createInspectorObjectForAction(const EventLoopInput&);
 
 private:
     InspectorRecordingsAgent(InstrumentingAgents*, InspectorCompositeState*);

@@ -63,6 +63,16 @@
 #include "NavigateToPage.h"
 #include "PlaybackError.h"
 #include "RanPendingScripts.h"
+#include "ResourceCannotShowURL.h"
+#include "ResourceDidFail.h"
+#include "ResourceDidFinishLoading.h"
+#include "ResourceDidReceiveData.h"
+#include "ResourceDidReceiveResponse.h"
+#include "ResourceDidSendData.h"
+#include "ResourceLoaderCreated.h"
+#include "ResourceLoaderDestroyed.h"
+#include "ResourceWasBlocked.h"
+#include "ResourceWillSendRequest.h"
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
 #include "SentinelActions.h"
@@ -198,6 +208,46 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == inputTypes().RanPendingScripts) {
         InputCoder<RanPendingScripts>::encode(encoder, *(static_cast<const RanPendingScripts*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceCannotShowURL) {
+        InputCoder<ResourceCannotShowURL>::encode(encoder, *(static_cast<const ResourceCannotShowURL*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceDidFail) {
+        InputCoder<ResourceDidFail>::encode(encoder, *(static_cast<const ResourceDidFail*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceDidFinishLoading) {
+        InputCoder<ResourceDidFinishLoading>::encode(encoder, *(static_cast<const ResourceDidFinishLoading*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceDidReceiveData) {
+        InputCoder<ResourceDidReceiveData>::encode(encoder, *(static_cast<const ResourceDidReceiveData*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceDidReceiveResponse) {
+        InputCoder<ResourceDidReceiveResponse>::encode(encoder, *(static_cast<const ResourceDidReceiveResponse*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceDidSendData) {
+        InputCoder<ResourceDidSendData>::encode(encoder, *(static_cast<const ResourceDidSendData*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceLoaderCreated) {
+        InputCoder<ResourceLoaderCreated>::encode(encoder, *(static_cast<const ResourceLoaderCreated*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceLoaderDestroyed) {
+        InputCoder<ResourceLoaderDestroyed>::encode(encoder, *(static_cast<const ResourceLoaderDestroyed*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceWasBlocked) {
+        InputCoder<ResourceWasBlocked>::encode(encoder, *(static_cast<const ResourceWasBlocked*>(input)));
+        return true;
+    }
+    if (type == inputTypes().ResourceWillSendRequest) {
+        InputCoder<ResourceWillSendRequest>::encode(encoder, *(static_cast<const ResourceWillSendRequest*>(input)));
         return true;
     }
     if (type == inputTypes().ScrollPage) {

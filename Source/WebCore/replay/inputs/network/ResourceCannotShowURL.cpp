@@ -35,6 +35,7 @@
 
 #include "ResourceCannotShowURL.h"
 
+#include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
@@ -45,14 +46,14 @@
 
 namespace WebCore {
 
-ResourceCannotShowURL::ResourceCannotShowURL(int id)
-    : m_id(id) {}
+ResourceCannotShowURL::ResourceCannotShowURL(int handleId)
+    : m_handleId(handleId) {}
 
 //EventLoopInput API
 void ResourceCannotShowURL::dispatch(ReplayController* controller,
                                      EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
@@ -67,7 +68,7 @@ const AtomicString& ResourceCannotShowURL::type() const
 
 String ResourceCannotShowURL::toString() const
 {
-    return makeString("ResourceCannotShowURL(id=", String::number(m_id), ")");
+    return makeString("ResourceCannotShowURL(id=", String::number(m_handleId), ")");
 }
 
 size_t ResourceCannotShowURL::memorySize() const
@@ -75,9 +76,19 @@ size_t ResourceCannotShowURL::memorySize() const
     return sizeof(ResourceCannotShowURL);
 }
 
-void ResourceCannotShowURL::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceCannotShowURL>::encode(InputEncoder& encoder, const ResourceCannotShowURL& input)
 {
-    encoder.put("handleId", m_id);
+    encoder.put("handleId", input.handleId());
+}
+
+bool InputCoder<ResourceCannotShowURL>::decode(InputDecoder& decoder, OwnPtr<ResourceCannotShowURL>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    input = adoptPtr(new ResourceCannotShowURL(handleId));
+    return true;
 }
 
 } // namespace WebCore

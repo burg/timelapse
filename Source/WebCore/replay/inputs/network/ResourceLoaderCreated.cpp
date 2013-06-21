@@ -35,6 +35,7 @@
 
 #include "ResourceLoaderCreated.h"
 
+#include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -43,9 +44,13 @@
 
 namespace WebCore {
 
-ResourceLoaderCreated::ResourceLoaderCreated(int id, const ResourceRequest& request)
-    : m_id(id)
+ResourceLoaderCreated::ResourceLoaderCreated(int handleId, const ResourceRequest& request)
+    : m_handleId(handleId)
     , m_request(ResourceRequest::adopt(request.copyData())) {}
+
+ResourceLoaderCreated::ResourceLoaderCreated(int handleId, PassOwnPtr<ResourceRequest> request)
+    : m_handleId(handleId)
+    , m_request(request) {}
 
 ResourceLoaderCreated::~ResourceLoaderCreated()
 {
@@ -62,7 +67,7 @@ const AtomicString& ResourceLoaderCreated::type() const
 String ResourceLoaderCreated::toString() const
 {
     return makeString("ResourceLoaderCreated(handleId=",
-                      String::number(m_id),
+                      String::number(m_handleId),
                       "; url=",
                       m_request->url().string(),
                       ")");
@@ -74,12 +79,27 @@ size_t ResourceLoaderCreated::memorySize() const
     return sizeof(ResourceLoaderCreated) + 1280 + 256;
 }
 
-void ResourceLoaderCreated::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceLoaderCreated>::encode(InputEncoder& encoder, const ResourceLoaderCreated& input)
 {
-    encoder.put("loaderId", m_id);
+    encoder.put("handleId", input.handleId());
+
     encoder.pushObject();
-    serializeResourceRequest(encoder, m_request.get());
+    InputCoder<ResourceRequest>::encode(encoder, input.request());
     encoder.popObjectAsProperty("request");
+}
+
+bool InputCoder<ResourceLoaderCreated>::decode(InputDecoder& decoder, OwnPtr<ResourceLoaderCreated>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    OwnPtr<ResourceRequest> request;
+    if (!InputCoder<ResourceRequest>::decode(decoder, request))
+        return false;
+
+    input = adoptPtr(new ResourceLoaderCreated(handleId, request.release()));
+    return true;
 }
 
 } // namespace WebCore

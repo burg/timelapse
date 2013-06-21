@@ -177,7 +177,7 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
         return;
 
     // TODO(Issue #271): remove backend-side interpretation of inputs
-    m_frontend->capturedAction(InspectorRecordingsAgent::createInspectorObjectForAction(input));
+    m_frontend->capturedAction(InspectorRecordingsAgent::createInspectorObjectForAction(*input));
 
     DEFINE_STATIC_LOCAL(JSONInputEncoder, encoder, ());
     RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = encoder.serializeInput(input, newMark.index());

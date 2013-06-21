@@ -35,18 +35,19 @@
 
 #include "ResourceDidReceiveData.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-ResourceDidReceiveData::ResourceDidReceiveData(int id, const char* data, int length, int encodedLength)
-    : m_id(id)
+ResourceDidReceiveData::ResourceDidReceiveData(int handleId, const char* data, int length, int encodedLength)
+    : m_handleId(handleId)
     , m_buffer(Vector<char,0>())
     , m_encodedLength(encodedLength)
 {
@@ -59,7 +60,7 @@ ResourceDidReceiveData::~ResourceDidReceiveData() {}
 void ResourceDidReceiveData::dispatch(ReplayController* controller,
                                       EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(id());
+    HandleContext context = controller->page()->networkProxy()->handleContextById(handleId());
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -75,7 +76,7 @@ const AtomicString& ResourceDidReceiveData::type() const
 String ResourceDidReceiveData::toString() const
 {
     return makeString("ResourceDidReceiveData(id=",
-                      String::number(id()),
+                      String::number(handleId()),
                       ";bytes=",
                       String::number(length()),
                       ")");
@@ -86,12 +87,18 @@ size_t ResourceDidReceiveData::memorySize() const
     return sizeof(ResourceDidReceiveData) + m_buffer.size();
 }
 
-void ResourceDidReceiveData::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceDidReceiveData>::encode(InputEncoder& encoder, const ResourceDidReceiveData& input)
 {
-    encoder.put("handleId", m_id);
-    encoder.put("length", length());
-    encoder.put("encodedLength", m_encodedLength);
-    encoder.storeResourceBytes(m_id, data(), length());
+    encoder.put("handleId", input.handleId());
+    encoder.put("length", input.length());
+    encoder.put("encodedLength", input.encodedLength());
+    encoder.storeResourceBytes(input.handleId(), input.data(), input.length());
+}
+
+bool InputCoder<ResourceDidReceiveData>::decode(InputDecoder&, OwnPtr<ResourceDidReceiveData>&)
+{
+    // TODO: implement
+    return false;
 }
 
 } // namespace WebCore

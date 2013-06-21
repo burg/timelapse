@@ -35,6 +35,8 @@
 
 #include "ResourceDidReceiveResponse.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "InspectorInstrumentation.h"
 #include "NetworkProxy.h"
 #include "Page.h"
@@ -43,27 +45,30 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
-#include "InputEncoder.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-ResourceDidReceiveResponse::ResourceDidReceiveResponse(int id, const ResourceResponse& response)
-    : m_id(id)
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, const ResourceResponse& response)
+    : m_handleId(handleId)
     , m_response(ResourceResponse::adopt(response.copyData())) {}
+
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, PassOwnPtr<ResourceResponse> response)
+    : m_handleId(handleId)
+    , m_response(response) {}
 
 //EventLoopInput API
 void ResourceDidReceiveResponse::dispatch(ReplayController* controller,
                                           EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     if (!client) {
         // FIXME: this shouldn't be fatal error, because we can just not deliver the callback.
         controller->playbackError(true,
-                                  String::format("Couldn't find handle context for id: %d", m_id));
+                                  String::format("Couldn't find handle context for id: %d", m_handleId));
         return;
     }
 
@@ -80,7 +85,7 @@ String ResourceDidReceiveResponse::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidReceiveResponse(id=");
-    sb.append(String::number(m_id));
+    sb.append(String::number(m_handleId));
     sb.append("; url=");
     sb.append(m_response->url().string());
     sb.append(")");
@@ -92,13 +97,27 @@ size_t ResourceDidReceiveResponse::memorySize() const
     return sizeof(ResourceDidReceiveResponse) + m_response->memoryUsage();
 }
 
-void ResourceDidReceiveResponse::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceDidReceiveResponse>::encode(InputEncoder& encoder, const ResourceDidReceiveResponse& input)
 {
-    encoder.put("handleId", m_id);
+    encoder.put("handleId", input.handleId());
 
     encoder.pushObject();
-    serializeResourceResponse(encoder, m_response.get());
+    InputCoder<ResourceResponse>::encode(encoder, input.response());
     encoder.popObjectAsProperty("response");
+}
+
+bool InputCoder<ResourceDidReceiveResponse>::decode(InputDecoder& decoder, OwnPtr<ResourceDidReceiveResponse>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    OwnPtr<ResourceResponse> response;
+    if (!InputCoder<ResourceResponse>::decode(decoder, response))
+        return false;
+
+    input = adoptPtr(new ResourceDidReceiveResponse(handleId, response.release()));
+    return true;
 }
 
 } // namespace WebCore

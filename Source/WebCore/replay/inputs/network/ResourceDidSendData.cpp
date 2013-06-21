@@ -35,6 +35,8 @@
 
 #include "ResourceDidSendData.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -42,19 +44,18 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include <wtf/text/StringBuilder.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-ResourceDidSendData::ResourceDidSendData(int id, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
-    : m_id(id)
+ResourceDidSendData::ResourceDidSendData(int handleId, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
+    : m_handleId(handleId)
     , m_bytesSent(bytesSent)
     , m_totalBytesToBeSent(totalBytesToBeSent) {}
 
 //EventLoopInput API
 void ResourceDidSendData::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -71,7 +72,7 @@ String ResourceDidSendData::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidSendData(id=");
-    sb.append(String::number(m_id));
+    sb.append(String::number(m_handleId));
     sb.append(";bytesSent=");
     sb.append(String::number(m_bytesSent));
     sb.append(")");
@@ -83,11 +84,29 @@ size_t ResourceDidSendData::memorySize() const
     return sizeof(ResourceDidSendData);
 }
 
-void ResourceDidSendData::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceDidSendData>::encode(InputEncoder& encoder, const ResourceDidSendData& input)
 {
-    encoder.put("handleId", m_id);
-    encoder.put("bytesSent", m_bytesSent);
-    encoder.put("totalBytesToBeSent", m_totalBytesToBeSent);
+    encoder.put("handleId", input.handleId());
+    encoder.put("bytesSent", input.bytesSent());
+    encoder.put("totalBytesToBeSent", input.totalBytesToBeSent());
+}
+
+bool InputCoder<ResourceDidSendData>::decode(InputDecoder& decoder, OwnPtr<ResourceDidSendData>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    uint64_t bytesSent;
+    if (!decoder.get("bytesSent", bytesSent))
+        return false;
+
+    uint64_t totalBytesToBeSent;
+    if (!decoder.get("totalBytesToBeSent", totalBytesToBeSent))
+        return false;
+
+    input = adoptPtr(new ResourceDidSendData(handleId, bytesSent, totalBytesToBeSent));
+    return true;
 }
 
 } // namespace WebCore

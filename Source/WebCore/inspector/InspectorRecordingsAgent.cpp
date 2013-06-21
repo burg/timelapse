@@ -90,40 +90,40 @@ static const char CaptureEnd[] = "CaptureEnd";
 
 // this function is only necessary because we don't have 1:1 mapping between
 // replay action types and user-visible names. Disambiguations below.
-static const char* getFrontendTypeForAction(EventLoopInput* action)
+static const char* getFrontendTypeForAction(const EventLoopInput& action)
 {
-    if (action->type() == inputTypes().TimerFired)
+    if (action.type() == inputTypes().TimerFired)
         return ReplayActionType::TimerFire;
-    if (action->type() == inputTypes().HandleMouseMove)
+    if (action.type() == inputTypes().HandleMouseMove)
         return ReplayActionType::MouseMove;
-    if (action->type() == inputTypes().HandleMousePress)
+    if (action.type() == inputTypes().HandleMousePress)
         return ReplayActionType::MousePress;
-    if (action->type() == inputTypes().HandleMouseRelease)
+    if (action.type() == inputTypes().HandleMouseRelease)
         return ReplayActionType::MouseRelease;
-    if (action->type() == inputTypes().HandleWheelEvent)
+    if (action.type() == inputTypes().HandleWheelEvent)
         return ReplayActionType::MouseWheel;
-    if (action->type() == inputTypes().HandleKeyPress)
+    if (action.type() == inputTypes().HandleKeyPress)
         return ReplayActionType::KeyPress;
-    if (action->type() == inputTypes().ScrollPage)
+    if (action.type() == inputTypes().ScrollPage)
         return ReplayActionType::Scroll;
-    if (action->type() == inputTypes().SendResizeEvent)
+    if (action.type() == inputTypes().SendResizeEvent)
         return ReplayActionType::Resize;
-    if (action->type() == inputTypes().ResourceWillSendRequest)
+    if (action.type() == inputTypes().ResourceWillSendRequest)
         return ReplayActionType::RequestResource;
-    if (action->type() == inputTypes().ResourceDidReceiveResponse)
+    if (action.type() == inputTypes().ResourceDidReceiveResponse)
         return ReplayActionType::ReceiveResponse;
-    if (action->type() == inputTypes().ResourceDidReceiveData)
+    if (action.type() == inputTypes().ResourceDidReceiveData)
         return ReplayActionType::ReceiveData;
-    if (action->type() == inputTypes().ResourceDidFinishLoading)
+    if (action.type() == inputTypes().ResourceDidFinishLoading)
         return ReplayActionType::ResourceLoaded;
 
-    if (action->type() == inputTypes().FocusSetActive) {
-        bool toState = static_cast<FocusSetActive*>(action)->toState();
+    if (action.type() == inputTypes().FocusSetActive) {
+        bool toState = static_cast<const FocusSetActive&>(action).toState();
         return (toState) ? ReplayActionType::WindowActive
                          : ReplayActionType::WindowInactive;
     }
-    if (action->type() == inputTypes().FocusSetFocused) {
-        bool toState = static_cast<FocusSetFocused*>(action)->toState();
+    if (action.type() == inputTypes().FocusSetFocused) {
+        bool toState = static_cast<const FocusSetFocused&>(action).toState();
         return (toState) ? ReplayActionType::WindowFocused
                          : ReplayActionType::WindowUnfocused;
     }
@@ -133,34 +133,34 @@ static const char* getFrontendTypeForAction(EventLoopInput* action)
     return 0;
 }
 
-static PassRefPtr<InspectorObject> createFrontendDataForAction(EventLoopInput* action)
+static PassRefPtr<InspectorObject> createFrontendDataForAction(const EventLoopInput& action)
 {
-    if (action->type() == inputTypes().FocusSetActive ||
-        action->type() == inputTypes().FocusSetFocused ||
-        action->type() == inputTypes().TimerFired)
+    if (action.type() == inputTypes().FocusSetActive ||
+        action.type() == inputTypes().FocusSetFocused ||
+        action.type() == inputTypes().TimerFired)
         return ReplayActionFactory::createEmptyData();
-    if (action->type() == inputTypes().HandleMouseMove)
-        return ReplayActionFactory::createMouseData(static_cast<HandleMouseMove*>(action)->platformEvent());
-    if (action->type() == inputTypes().HandleMousePress)
-        return ReplayActionFactory::createMouseData(static_cast<HandleMousePress*>(action)->platformEvent());
-    if (action->type() == inputTypes().HandleMouseRelease)
-        return ReplayActionFactory::createMouseData(static_cast<HandleMouseRelease*>(action)->platformEvent());
-    if (action->type() == inputTypes().HandleWheelEvent)
-        return ReplayActionFactory::createWheelData(static_cast<HandleWheelEvent*>(action)->platformEvent());
-    if (action->type() == inputTypes().HandleKeyPress)
-        return ReplayActionFactory::createKeyPressData(static_cast<HandleKeyPress*>(action)->platformEvent());
-    if (action->type() == inputTypes().ScrollPage)
-        return ReplayActionFactory::createScrollData(static_cast<ScrollPage*>(action));
-    if (action->type() == inputTypes().SendResizeEvent)
-        return ReplayActionFactory::createResizeData(static_cast<SendResizeEvent*>(action));
-    if (action->type() == inputTypes().ResourceWillSendRequest)
-        return ReplayActionFactory::createRequestResourceData(static_cast<ResourceWillSendRequest*>(action));
-    if (action->type() == inputTypes().ResourceDidReceiveResponse)
-        return ReplayActionFactory::createReceiveResponseData(static_cast<ResourceDidReceiveResponse*>(action));
-    if (action->type() == inputTypes().ResourceDidReceiveData)
-        return ReplayActionFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action));
-    if (action->type() == inputTypes().ResourceDidFinishLoading)
-        return ReplayActionFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action));
+    if (action.type() == inputTypes().HandleMouseMove)
+        return ReplayActionFactory::createMouseData(static_cast<const HandleMouseMove&>(action).platformEvent());
+    if (action.type() == inputTypes().HandleMousePress)
+        return ReplayActionFactory::createMouseData(static_cast<const HandleMousePress&>(action).platformEvent());
+    if (action.type() == inputTypes().HandleMouseRelease)
+        return ReplayActionFactory::createMouseData(static_cast<const HandleMouseRelease&>(action).platformEvent());
+    if (action.type() == inputTypes().HandleWheelEvent)
+        return ReplayActionFactory::createWheelData(static_cast<const HandleWheelEvent&>(action).platformEvent());
+    if (action.type() == inputTypes().HandleKeyPress)
+        return ReplayActionFactory::createKeyPressData(static_cast<const HandleKeyPress&>(action).platformEvent());
+    if (action.type() == inputTypes().ScrollPage)
+        return ReplayActionFactory::createScrollData(static_cast<const ScrollPage&>(action));
+    if (action.type() == inputTypes().SendResizeEvent)
+        return ReplayActionFactory::createResizeData(static_cast<const SendResizeEvent&>(action));
+    if (action.type() == inputTypes().ResourceWillSendRequest)
+        return ReplayActionFactory::createRequestResourceData(static_cast<const ResourceWillSendRequest&>(action));
+    if (action.type() == inputTypes().ResourceDidReceiveResponse)
+        return ReplayActionFactory::createReceiveResponseData(static_cast<const ResourceDidReceiveResponse&>(action));
+    if (action.type() == inputTypes().ResourceDidReceiveData)
+        return ReplayActionFactory::createReceiveDataData(static_cast<const ResourceDidReceiveData&>(action));
+    if (action.type() == inputTypes().ResourceDidFinishLoading)
+        return ReplayActionFactory::createResourceLoadedData(static_cast<const ResourceDidFinishLoading&>(action));
 
     // actions that should not be user visible must override EventLoopInput::isUserVisible()
     ASSERT_NOT_REACHED();
@@ -169,11 +169,11 @@ static PassRefPtr<InspectorObject> createFrontendDataForAction(EventLoopInput* a
 
 // TODO(Issue #271): remove backend-side interpretation of inputs
 PassRefPtr<TypeBuilder::Recordings::ReplayAction>
-InspectorRecordingsAgent::createInspectorObjectForAction(EventLoopInput* action)
+InspectorRecordingsAgent::createInspectorObjectForAction(const EventLoopInput& action)
 {
     RefPtr<TypeBuilder::Recordings::Mark> markObject = TypeBuilder::Recordings::Mark::create()
-        .setTimestamp(action->mark().time())
-        .setIndex(action->mark().index());
+        .setTimestamp(action.mark().time())
+        .setIndex(action.mark().index());
 
     return TypeBuilder::Recordings::ReplayAction::create()
             .setMark(markObject.release())
@@ -193,8 +193,8 @@ public:
     {
         ASSERT(replayAction->queue() == NondeterministicInput::EventLoopInputQueue);
 
-        EventLoopInput* action = static_cast<EventLoopInput*>(replayAction);
-        if (!action->isUserVisible())
+        const EventLoopInput& action = static_cast<const EventLoopInput&>(*replayAction);
+        if (!action.isUserVisible())
             return;
 
         // TODO(Issue #271): remove backend-side interpretation of inputs

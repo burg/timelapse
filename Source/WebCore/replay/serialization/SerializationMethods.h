@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,17 +34,58 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "InputEncoder.h"
+#include "InputCoder.h"
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-    class ResourceError;
-    class ResourceRequest;
-    class ResourceResponse;
+class FormData;
+class FormDataElement;
+class HTTPHeaderMap;
+class ResourceError;
+class ResourceLoadTiming;
+class ResourceRequest;
+class ResourceResponse;
 
-    void serializeResourceError(InputEncoder&, const ResourceError&);
-    void serializeResourceRequest(InputEncoder&, const ResourceRequest*);
-    void serializeResourceResponse(InputEncoder&, const ResourceResponse*);
+template<> struct InputCoder<FormData> {
+    static void encode(InputEncoder& encoder, const FormData& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<FormData>& input);
+};
+
+template<> struct InputCoder<FormDataElement> {
+    static void encode(InputEncoder& encoder, const FormDataElement& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<FormDataElement>& input);
+};
+
+template<> struct InputCoder<HTTPHeaderMap> {
+    static void encode(InputEncoder& encoder, const HTTPHeaderMap& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<HTTPHeaderMap>& input);
+};
+
+template<> struct InputCoder<ResourceError> {
+    static void encode(InputEncoder& encoder, const ResourceError& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceError>& input);
+};
+
+template<> struct InputCoder<ResourceLoadTiming> {
+    static void encode(InputEncoder& encoder, const ResourceLoadTiming& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceLoadTiming>& input);
+};
+
+template<> struct InputCoder<ResourceRequest> {
+    static void encode(InputEncoder& encoder, const ResourceRequest& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceRequest>& input);
+};
+
+template<> struct InputCoder<ResourceResponse> {
+    static void encode(InputEncoder& encoder, const ResourceResponse& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceResponse>& input);
+};
+
+template<> struct InputCoder<Vector<String> > {
+    static void encode(InputEncoder& encoder, const Vector<String>& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<Vector<String> >& input);
+};
 
 } // namespace WebCore
 

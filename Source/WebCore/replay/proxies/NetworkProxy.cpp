@@ -101,17 +101,17 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
         int loaderId;
         ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(NondeterministicInput::LoaderMemoizedDataQueue, inputTypes().ResourceLoaderCreated));
         if (memoizedData)
-            loaderId = memoizedData->id();
+            loaderId = memoizedData->handleId();
         else // error handling case
             loaderId = -1;
 
         // error handling when requests don't match
-        if (!memoizedData || !ResourceRequestBase::compare(*memoizedData->request(), request)) {
+        if (!memoizedData || !ResourceRequestBase::compare(memoizedData->request(), request)) {
             LOG_ERROR("%-30s Network request details differ from request observed when recording.", "[NetworkProxy]");
             LOG_ERROR("Replayed request URL: %s", request.url().string().utf8().data());
 
             if (memoizedData)
-                LOG_ERROR("Memoized request URL: %s", memoizedData->request()->url().string().utf8().data());
+                LOG_ERROR("Memoized request URL: %s", memoizedData->request().url().string().utf8().data());
             else
                 LOG_ERROR("Memoized request: NULL");
 

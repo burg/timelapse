@@ -35,6 +35,7 @@
 
 #include "ResourceLoaderDestroyed.h"
 
+#include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "ReplayController.h"
@@ -42,14 +43,14 @@
 
 namespace WebCore {
 
-ResourceLoaderDestroyed::ResourceLoaderDestroyed(int id)
-    : m_id(id) {}
+ResourceLoaderDestroyed::ResourceLoaderDestroyed(int handleId)
+    : m_handleId(handleId) {}
 
 //EventLoopInput API
 void ResourceLoaderDestroyed::dispatch(ReplayController* controller,
                                        EventLoopInputDispatcher* dispatcher)
 {
-    controller->page()->networkProxy()->removeHandleById(m_id);
+    controller->page()->networkProxy()->removeHandleById(m_handleId);
     dispatcher->didDispatch(this);
 }
 
@@ -60,7 +61,7 @@ const AtomicString& ResourceLoaderDestroyed::type() const
 
 String ResourceLoaderDestroyed::toString() const
 {
-    return makeString("ResourceLoaderDestroyed(id=", String::number(m_id), ")");
+    return makeString("ResourceLoaderDestroyed(id=", String::number(m_handleId), ")");
 }
 
 size_t ResourceLoaderDestroyed::memorySize() const
@@ -68,10 +69,21 @@ size_t ResourceLoaderDestroyed::memorySize() const
     return sizeof(ResourceLoaderDestroyed);
 }
 
-void ResourceLoaderDestroyed::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceLoaderDestroyed>::encode(InputEncoder& encoder, const ResourceLoaderDestroyed& input)
 {
-    encoder.put("loaderId", m_id);
+    encoder.put("handleId", input.handleId());
 }
+
+bool InputCoder<ResourceLoaderDestroyed>::decode(InputDecoder& decoder, OwnPtr<ResourceLoaderDestroyed>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    input = adoptPtr(new ResourceLoaderDestroyed(handleId));
+    return true;
+}
+
 
 } // namespace WebCore
 

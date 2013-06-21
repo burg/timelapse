@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "InputEncoder.h"
+#include "InputCoder.h"
 
 namespace WebCore {
 
@@ -45,9 +45,6 @@ class ResourceDidFinishLoading : public EventLoopInput {
 public:
     ResourceDidFinishLoading(int id, double finishTime);
 
-    int id() const { return m_id; }
-    double finishTime() const { return m_finishTime; }
-
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
@@ -55,11 +52,17 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
 
+    int handleId() const { return m_handleId; }
+    double finishTime() const { return m_finishTime; }
 private:
-    int m_id;
+    int m_handleId;
     double m_finishTime;
+};
+
+template<> struct InputCoder<ResourceDidFinishLoading> {
+    static void encode(InputEncoder& encoder, const ResourceDidFinishLoading& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ResourceDidFinishLoading>& input);
 };
 
 } // namespace WebCore

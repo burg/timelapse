@@ -35,6 +35,8 @@
 
 #include "ResourceDidFinishLoading.h"
 
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -44,15 +46,15 @@
 
 namespace WebCore {
 
-ResourceDidFinishLoading::ResourceDidFinishLoading(int id, double finishTime)
-    : m_id(id)
+ResourceDidFinishLoading::ResourceDidFinishLoading(int handleId, double finishTime)
+    : m_handleId(handleId)
     , m_finishTime(finishTime) {}
 
 //EventLoopInput API
 void ResourceDidFinishLoading::dispatch(ReplayController* controller,
                                         EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -68,7 +70,7 @@ const AtomicString& ResourceDidFinishLoading::type() const
 String ResourceDidFinishLoading::toString() const
 {
     return makeString("ResourceDidFinishLoading(id=",
-                      String::number(m_id),
+                      String::number(m_handleId),
                       "; finishTime=",
                       String::number(m_finishTime)
                       ,")");
@@ -79,10 +81,24 @@ size_t ResourceDidFinishLoading::memorySize() const
     return sizeof(ResourceDidFinishLoading);
 }
 
-void ResourceDidFinishLoading::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceDidFinishLoading>::encode(InputEncoder& encoder, const ResourceDidFinishLoading& input)
 {
-    encoder.put("handleId", m_id);
-    encoder.put("finishTime", m_finishTime);
+    encoder.put("handleId", input.handleId());
+    encoder.put("finishTime", input.finishTime());
+}
+
+bool InputCoder<ResourceDidFinishLoading>::decode(InputDecoder& decoder, OwnPtr<ResourceDidFinishLoading>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    double finishTime;
+    if (!decoder.get("finishTime", finishTime))
+        return false;
+
+    input = adoptPtr(new ResourceDidFinishLoading(handleId, finishTime));
+    return true;
 }
 
 } // namespace WebCore

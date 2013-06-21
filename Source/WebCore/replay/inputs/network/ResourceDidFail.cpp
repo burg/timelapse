@@ -35,27 +35,33 @@
 
 #include "ResourceDidFail.h"
 
-#include "ReplayController.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayInputTypes.h"
+#include "ReplayController.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
+#include <wtf/OwnPtr.h>
 #include <wtf/text/StringBuilder.h>
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-ResourceDidFail::ResourceDidFail(int id, const ResourceError& error)
-    : m_id(id)
+ResourceDidFail::ResourceDidFail(int handleId, const ResourceError& error)
+    : m_handleId(handleId)
     , m_error(error.copy()) {}
 
-//EventLoopInput API
+ResourceDidFail::ResourceDidFail(int handleId, PassOwnPtr<ResourceError> error)
+    : m_handleId(handleId)
+    , m_error(*error) {}
+
+// EventLoopInput API
 void ResourceDidFail::dispatch(ReplayController* controller,
                                EventLoopInputDispatcher* dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
+    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -72,7 +78,7 @@ String ResourceDidFail::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidFail(id=");
-    sb.append(String::number(m_id));
+    sb.append(String::number(m_handleId));
     sb.append(";domain=");
     sb.append(m_error.domain());
     sb.append(";failingURL=");
@@ -94,13 +100,27 @@ size_t ResourceDidFail::memorySize() const
     return size;
 }
 
-void ResourceDidFail::serialize(InputEncoder& encoder) const
+void InputCoder<ResourceDidFail>::encode(InputEncoder& encoder, const ResourceDidFail& input)
 {
-    encoder.put("handleId", m_id);
+    encoder.put("handleId", input.handleId());
 
     encoder.pushObject();
-    serializeResourceError(encoder, m_error);
+    InputCoder<ResourceError>::encode(encoder, input.error());
     encoder.popObjectAsProperty("error");
+}
+
+bool InputCoder<ResourceDidFail>::decode(InputDecoder& decoder, OwnPtr<ResourceDidFail>& input)
+{
+    int handleId;
+    if (!decoder.get("handleId", handleId))
+        return false;
+
+    OwnPtr<ResourceError> error;
+    if (!InputCoder<ResourceError>::decode(decoder, error))
+        return false;
+
+    input = adoptPtr(new ResourceDidFail(handleId, error.release()));
+    return true;
 }
 
 } // namespace WebCore
