@@ -53,11 +53,18 @@ WebInspector.DashboardView = function(element)
         issues: {
             tooltip: WebInspector.UIString("Console warnings, click to show the Console"),
             handler: this._consoleItemWasClicked.bind(this, WebInspector.LogContentView.Scopes.Warnings)
+        },
+        replay: {
+            tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
+            handler: this._recordItemWasClicked
         }
     };
 
     for (var name in this._items)
         this._appendElementForNamedItem(name);
+
+    this._setItemEnabled(this._items.replay, true);
+    this._items.replay.container.classList.add("ready");
 
     this.resourcesCount = 0;
     this.resourcesSize = 0;
@@ -151,6 +158,28 @@ WebInspector.DashboardView.prototype = {
         this._setItemEnabled(item, resourcesSize > 0);
     },
 
+    captureStateChanged: function()
+    {
+        var item = this._items.replay;
+
+        item.container.classList.remove("ready");
+        item.container.classList.remove("capturing");
+        item.container.classList.remove("paused");
+        item.container.classList.remove("replaying");
+
+        if (WebInspector.replayManager.isCapturing)
+            item.container.classList.add("capturing");
+
+        else if (WebInspector.replayManager.isPaused)
+            item.container.classList.add("paused");
+
+        else if (WebInspector.replayManager.isReplaying)
+            item.container.classList.add("replaying");
+
+        else
+            item.container.classList.add("ready");
+    },
+
     // Private
 
     _formatPossibleLargeNumber: function(number)
@@ -210,6 +239,18 @@ WebInspector.DashboardView.prototype = {
     _consoleItemWasClicked: function(scope)
     {
         WebInspector.showConsoleView(scope);
+    },
+
+    _recordItemWasClicked: function()
+    {
+        if (WebInspector.replayManager.isCapturing)
+            ReplayAgent.stopCapture();
+        else if (WebInspector.replayManager.isPaused)
+            ReplayAgent.replayToCompletion(false);
+        else if (WebInspector.replayManager.isReplaying)
+            ReplayAgent.pausePlayback();
+        else
+            ReplayAgent.startCapture();
     },
 
     _setItemEnabled: function(item, enabled)

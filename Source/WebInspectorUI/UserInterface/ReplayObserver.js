@@ -45,12 +45,12 @@ WebInspector.ReplayObserver.prototype = {
 
     captureStarted: function()
     {
-        // Not handled yet.
+        WebInspector.replayManager.captureStarted();
     },
 
     captureStopped: function()
     {
-        // Not handled yet.
+        WebInspector.replayManager.captureStopped();
     },
 
     capturedAction: function(record)
@@ -65,17 +65,17 @@ WebInspector.ReplayObserver.prototype = {
 
     playbackStarted: function()
     {
-        // Not handled yet.
+        WebInspector.replayManager.playbackStarted();
     },
 
     playbackPaused: function(mark)
     {
-        // Not handled yet.
+        WebInspector.replayManager.playbackPaused();
     },
 
     playbackFinished: function()
     {
-        // Not handled yet.
+        WebInspector.replayManager.playbackFinished();
     },
 
     playbackError: function(isFatal, error)
