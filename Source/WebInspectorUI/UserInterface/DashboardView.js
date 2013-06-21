@@ -167,20 +167,28 @@ WebInspector.DashboardView.prototype = {
         item.container.classList.remove("paused");
         item.container.classList.remove("replaying");
 
-        if (WebInspector.replayManager.isPaused)
-            item.container.classList.add("paused");
+        switch (WebInspector.replayManager.replayState) {
 
-        else if (WebInspector.replayManager.isReplaying)
+        case WebInspector.ReplayManager.ReplayState.IsPaused:
+        case WebInspector.ReplayManager.ReplayState.CanReplay:
+            item.container.classList.add("paused");
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.IsReplaying:
             item.container.classList.add("replaying");
+            break;
 
-        else if (WebInspector.replayManager.canReplay)
-            item.container.classList.add("paused");
-
-        else if (WebInspector.replayManager.isCapturing)
+        case WebInspector.ReplayManager.ReplayState.IsCapturing:
             item.container.classList.add("capturing");
+            break;
 
-        else
+        case WebInspector.ReplayManager.ReplayState.CanCapture:
             item.container.classList.add("ready");
+            break;
+
+        default:
+            console.assert(false, "ReplayManager in invalid state");
+        }
     },
 
     // Private
@@ -246,16 +254,28 @@ WebInspector.DashboardView.prototype = {
 
     _replayItemWasClicked: function()
     {
-        if (WebInspector.replayManager.isPaused)
+        switch (WebInspector.replayManager.replayState) {
+
+        case WebInspector.ReplayManager.ReplayState.IsPaused:
+        case WebInspector.ReplayManager.ReplayState.CanReplay:
             ReplayAgent.replayToCompletion(false);
-        else if (WebInspector.replayManager.isReplaying)
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.IsReplaying:
             ReplayAgent.pausePlayback();
-        else if (WebInspector.replayManager.canReplay)
-            ReplayAgent.replayToCompletion(false);
-        else if (WebInspector.replayManager.isCapturing)
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.IsCapturing:
             ReplayAgent.stopCapture();
-        else
+            break;
+
+        case WebInspector.ReplayManager.ReplayState.CanCapture:
             ReplayAgent.startCapture();
+            break;
+
+        default:
+            console.assert(false, "ReplayManager in invalid state");
+        }
     },
 
     _setItemEnabled: function(item, enabled)

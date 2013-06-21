@@ -27,10 +27,7 @@ WebInspector.ReplayManager = function()
 {
     WebInspector.Object.call(this);
 
-    this._canReplay = false;
-    this._isCapturing = false;
-    this._isReplaying = false;
-    this._isPaused = false;
+    this._replayState = WebInspector.ReplayManager.ReplayState.CanCapture;
 };
 
 WebInspector.ReplayManager.Event = {
@@ -44,65 +41,79 @@ WebInspector.ReplayManager.Event = {
     PlaybackFinished: "ReplayPlaybackFinished"
 };
 
+WebInspector.ReplayManager.ReplayState = {
+    CanCapture: "ReplayStateCanCapture",
+    CanReplay: "ReplayStateCanReplay",
+    IsCapturing: "ReplayStateIsCapturing",
+    IsReplaying: "ReplayStateIsReplaying",
+    IsPaused: "ReplayStateIsPaused"
+};
+
 WebInspector.ReplayManager.prototype = {
     constructor: WebInspector.ReplayManager,
 
     // Public
 
+    get replayState()
+    {
+        return this._replayState;
+    },
+
     get canReplay()
     {
-        return this._canReplay;
+        return this._replayState === WebInspector.ReplayManager.ReplayState.CanReplay;
     },
 
     get isCapturing()
     {
-        return this._isCapturing;
+        return this._replayState === WebInspector.ReplayManager.ReplayState.IsCapturing;
     },
     
     get isReplaying()
     {
-        return this._isReplaying;
+        return this._replayState === WebInspector.ReplayManager.ReplayState.IsReplaying;
     },
     
     get isPaused()
     {
-        return this._isPaused;
+        return this._replayState === WebInspector.ReplayManager.ReplayState.IsPaused;
     },
 
     captureStarted: function()
     {
-        this._isCapturing = true;
+        this._replayState = WebInspector.ReplayManager.ReplayState.IsCapturing;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureDidStart);
     },
 
     captureStopped: function()
     {
-        this._isCapturing = false;
-        this._canReplay = true;
+        this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureDidStop);
     },
 
     playbackStarted: function()
     {
-        console.assert(this._canReplay);
-        this._isReplaying = true;
-        this._isPaused = false;
+        var canReplay = WebInspector.ReplayManager.ReplayState.CanReplay;
+        var isPaused = WebInspector.ReplayManager.ReplayState.IsPaused;
+        console.assert(this._replayState === canReplay || this._replayState === isPaused);
+
+        this._replayState = WebInspector.ReplayManager.ReplayState.IsReplaying;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackDidStart);
     },
 
     playbackPaused: function(mark)
     {
-        console.assert(this._canReplay);
-        console.assert(this._isReplaying);
-        this._isPaused = true;
+        console.assert(this._replayState === WebInspector.ReplayManager.ReplayState.IsReplaying);
+
+        this._replayState = WebInspector.ReplayManager.ReplayState.IsPaused;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackPaused);
     },
 
     playbackFinished: function()
     {
-        console.assert(this._canReplay);
-        console.assert(this._isReplaying);
-        this._isReplaying = false;
+        console.assert(this._replayState === WebInspector.ReplayManager.ReplayState.IsReplaying);
+
+        this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackFinished);
     }
 };
