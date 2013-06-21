@@ -74,10 +74,14 @@ WebInspector.loaded = function()
     this.debuggerManager = new WebInspector.DebuggerManager;
     this.sourceMapManager = new WebInspector.SourceMapManager;
     this.layerTreeManager = new WebInspector.LayerTreeManager;
+    this.replayManager = new WebInspector.ReplayManager;
     this.dashboardManager = new WebInspector.DashboardManager;
 
     // Enable the Console Agent after creating the singleton managers.
     ConsoleAgent.enable();
+
+    // For now unconditionally enable replay.
+    ReplayAgent.enable();
 
     // Enable the RuntimeAgent to receive notification of execution contexts.
     if (RuntimeAgent.enable)

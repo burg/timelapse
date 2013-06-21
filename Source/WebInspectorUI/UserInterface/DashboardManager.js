@@ -46,6 +46,13 @@ WebInspector.DashboardManager = function() {
     logManager.addEventListener(WebInspector.LogManager.Event.ActiveLogCleared, this._consoleWasCleared, this);
     logManager.addEventListener(WebInspector.LogManager.Event.MessageAdded, this._consoleMessageAdded, this);
     logManager.addEventListener(WebInspector.LogManager.Event.PreviousMessageRepeatCountUpdated, this._consoleMessageWasRepeated, this);
+
+    // Necessary events required to track capture and replay state.
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStart, this._captureStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStop, this._captureStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackDidStart, this._captureStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._captureStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._captureStateChanged, this);
 };
 
 WebInspector.DashboardManager.prototype = {
@@ -185,6 +192,11 @@ WebInspector.DashboardManager.prototype = {
         this._view.logs = 0;
         this._view.issues = 0;
         this._view.errors = 0;
+    },
+
+    _captureStateChanged: function()
+    {
+        this._view.captureStateChanged();
     }
 };
 
