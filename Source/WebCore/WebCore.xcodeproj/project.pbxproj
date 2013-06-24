@@ -702,6 +702,8 @@
 		2292B27C1356669400CF11EF /* ImageBufferDataCG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2292B27B1356669400CF11EF /* ImageBufferDataCG.cpp */; };
 		22BD9F7F1353625C009BD102 /* ImageBufferData.h in Headers */ = {isa = PBXBuildFile; fileRef = 22BD9F7D1353625C009BD102 /* ImageBufferData.h */; };
 		22BD9F81135364FE009BD102 /* ImageBufferDataCG.h in Headers */ = {isa = PBXBuildFile; fileRef = 22BD9F80135364FE009BD102 /* ImageBufferDataCG.h */; };
+		23C217CA171CB77F00AEFD81 /* FrameCamera.h in Headers */ = {isa = PBXBuildFile; fileRef = 23C217C9171CB77F00AEFD81 /* FrameCamera.h */; };
+		23C217CC171CB78D00AEFD81 /* FrameCameraMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 23C217CB171CB78D00AEFD81 /* FrameCameraMac.mm */; };
 		24D9129113CA951E00D21915 /* JSSVGAltGlyphDefElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 24D9128F13CA951E00D21915 /* JSSVGAltGlyphDefElement.cpp */; };
 		24D9129213CA951E00D21915 /* JSSVGAltGlyphDefElement.h in Headers */ = {isa = PBXBuildFile; fileRef = 24D9129013CA951E00D21915 /* JSSVGAltGlyphDefElement.h */; };
 		24D9129513CA956100D21915 /* JSSVGAltGlyphItemElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 24D9129313CA956100D21915 /* JSSVGAltGlyphItemElement.cpp */; };
@@ -7086,6 +7088,8 @@
 		2292B27B1356669400CF11EF /* ImageBufferDataCG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImageBufferDataCG.cpp; sourceTree = "<group>"; };
 		22BD9F7D1353625C009BD102 /* ImageBufferData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferData.h; sourceTree = "<group>"; };
 		22BD9F80135364FE009BD102 /* ImageBufferDataCG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferDataCG.h; sourceTree = "<group>"; };
+		23C217C9171CB77F00AEFD81 /* FrameCamera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FrameCamera.h; path = replay/FrameCamera.h; sourceTree = "<group>"; };
+		23C217CB171CB78D00AEFD81 /* FrameCameraMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FrameCameraMac.mm; sourceTree = "<group>"; };
 		2442BBF81194C9D300D49469 /* HashChangeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashChangeEvent.h; sourceTree = "<group>"; };
 		24D9128F13CA951E00D21915 /* JSSVGAltGlyphDefElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSSVGAltGlyphDefElement.cpp; sourceTree = "<group>"; };
 		24D9129013CA951E00D21915 /* JSSVGAltGlyphDefElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSSVGAltGlyphDefElement.h; sourceTree = "<group>"; };
@@ -19640,6 +19644,7 @@
 				C41D35541712064800E40FB7 /* CaptureInputIterator.h */,
 				C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */,
 				C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */,
+				23C217C9171CB77F00AEFD81 /* FrameCamera.h */,
 				C48EA71517178087001A8BB4 /* FunctorInputIterator.h */,
 				C4B991FC17122B750029CA63 /* InputStorage.cpp */,
 				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
@@ -19775,6 +19780,7 @@
 		C48108C617052FF100AB4BAA /* mac */ = {
 			isa = PBXGroup;
 			children = (
+				23C217CB171CB78D00AEFD81 /* FrameCameraMac.mm */,
 				C48108C717052FF100AB4BAA /* CacheControllerMac.mm */,
 			);
 			name = mac;
@@ -24495,6 +24501,7 @@
 				C4F4CA45175AC86B00F71FE1 /* InputEncoder.h in Headers */,
 				C4F4CA4F175AF8D200F71FE1 /* JSONInputEncoder.h in Headers */,
 				C4F4CA53175C462B00F71FE1 /* JavaScriptCoreInputCoders.h in Headers */,
+				23C217CA171CB77F00AEFD81 /* FrameCamera.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -27524,6 +27531,7 @@
 				C42BB778175FAA41008BF639 /* DisableCache.cpp in Sources */,
 				C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */,
 				C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */,
+				23C217CC171CB78D00AEFD81 /* FrameCameraMac.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

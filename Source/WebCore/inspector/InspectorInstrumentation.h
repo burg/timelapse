@@ -284,6 +284,7 @@ public:
     static void playbackFinished(Page*);
     static void playbackCancelled(Page*);
     static void playbackError(Page*, bool isFatal, const String& errorMessage);
+    static void imageCaptured(Page*, const String&);
 #endif
     
 #if ENABLE(WEB_SOCKETS)
@@ -509,6 +510,7 @@ private:
     static void playbackFinishedImpl(InstrumentingAgents*);
     static void playbackCancelledImpl(InstrumentingAgents*);
     static void playbackErrorImpl(InstrumentingAgents*, bool isFatal, const String& errorMessage);
+    static void imageCapturedImpl(InstrumentingAgents*, const String& imageDataUri);
 #endif
     
     static void networkStateChangedImpl(InstrumentingAgents*);
@@ -2045,6 +2047,14 @@ inline void InspectorInstrumentation::playbackError(Page* page, bool isFatal, co
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
         playbackErrorImpl(instrumentingAgents, isFatal, errorMessage);
+#endif
+}
+
+inline void InspectorInstrumentation::imageCaptured(Page* page, const String& imageDataUri)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        imageCapturedImpl(instrumentingAgents, imageDataUri);
 #endif
 }
 #endif
