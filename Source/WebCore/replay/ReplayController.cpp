@@ -437,6 +437,11 @@ void ReplayController::didDispatchFinalInput()
     finishReplay();
 }
 
+void ReplayController::imageCaptured(const String& imageDataUri)
+{
+    InspectorInstrumentation::imageCaptured(m_page, imageDataUri);
+}
+
 // Private methods
 void ReplayController::resetReplayState()
 {

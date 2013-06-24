@@ -1310,6 +1310,12 @@ void InspectorInstrumentation::playbackErrorImpl(InstrumentingAgents* instrument
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->playbackError(isFatal, errorMessage);
 }
+
+void InspectorInstrumentation::imageCapturedImpl(InstrumentingAgents* instrumentingAgents, const String& imageDataUri)
+{
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->imageCaptured(imageDataUri);
+}
 #endif
 
 void InspectorInstrumentation::networkStateChangedImpl(InstrumentingAgents* instrumentingAgents)

@@ -118,6 +118,7 @@ WebInspector.DataProvider.Types = {
     SavepointList: "SavepointList",
     OverviewPreview: "OverviewPreview",
     ProfileHeatmap: "ProfileHeatmap",
+    Screenshots: "Screenshots",
 };
 
 WebInspector.DataProvider.Events = {
