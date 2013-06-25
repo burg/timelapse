@@ -156,19 +156,29 @@ body.window-inactive .toolbar .dashboard {
     opacity: 0.9;
 }
 
-.toolbar .dashboard > .replay.ready > img {
+.toolbar .dashboard > .replay > img {
+    content: url(Images/ReplayButtonCamera.png);
+    opacity: 0.9;
+}
+
+.toolbar .dashboard > .replay > div > img {
+    width: 11px;
+    opacity: 0.8;
+}
+
+.toolbar .dashboard > .replay.ready > div > img{
     content: url(Images/RecordingStopped.png);
 }
 
-.toolbar .dashboard > .replay.capturing > img {
+.toolbar .dashboard > .replay.capturing > div > img {
     content: url(Images/Recording.png);
 }
 
-.toolbar .dashboard > .replay.paused > img {
+.toolbar .dashboard > .replay.paused > div > img {
     content: url(Images/ReplayButtonReplaying.png);
 }
 
-.toolbar .dashboard > .replay.replaying > img {
+.toolbar .dashboard > .replay.replaying > div > img {
     content: url(Images/ReplayButtonPaused.png);
 }
 

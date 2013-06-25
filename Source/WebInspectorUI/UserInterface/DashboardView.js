@@ -222,19 +222,25 @@ WebInspector.DashboardView.prototype = {
             }
         });
 
+        // Adds additional state image to replay button
+        if (name == "replay") {
+           this._replayStateButton = document.createElement("img");
+           item.outlet.appendChild(this._replayStateButton);
+        }
+
         item.container.addEventListener("click", function(event) {
-            this._itemWasClicked(name);
+            this._itemWasClicked(name, event);
         }.bind(this));
     },
 
-    _itemWasClicked: function(name)
+    _itemWasClicked: function(name, event)
     {
         var item = this._items[name];
         if (!item.container.classList.contains(WebInspector.DashboardView.EnabledStyleClassName))
             return;
 
         if (item.handler)
-            item.handler.call(this);
+            item.handler.call(this, event);
     },
 
     _resourcesWasClicked: function()
@@ -254,8 +260,13 @@ WebInspector.DashboardView.prototype = {
         WebInspector.showConsoleView(scope);
     },
 
-    _replayItemWasClicked: function()
+    _replayItemWasClicked: function(event)
     {
+        if (event.target !== this._replayStateButton) {
+            console.log("Toggled replay dashboard");
+            return;
+        }
+
         switch (WebInspector.replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.Paused:
