@@ -70,11 +70,6 @@
 #include <runtime/ObjectConstructor.h>
 #include <runtime/RegExpObject.h>
 
-#if ENABLE(TIMELAPSE)
-#include "CaptureInputIterator.h"
-#include "ReplayInputIterator.h"
-#endif
-
 using namespace JSC;
 
 namespace WebCore {
