@@ -38,7 +38,11 @@ WebInspector.ReplayManager.Event = {
     // These events are associated with playback.
     PlaybackDidStart: "ReplayPlaybackDidStart",
     PlaybackPaused: "ReplayPlaybackPaused",
-    PlaybackFinished: "ReplayPlaybackFinished"
+    PlaybackFinished: "ReplayPlaybackFinished",
+
+    // fired when activeRecording changes.
+    RecordingLoaded: "ReplayRecordingLoaded",
+    RecordingUnloaded: "ReplayRecordingUnloaded",
 };
 
 WebInspector.ReplayManager.ReplayState = {
@@ -68,16 +72,30 @@ WebInspector.ReplayManager.prototype = {
     {
         return this._replayState === WebInspector.ReplayManager.ReplayState.Capturing;
     },
-    
+
     get isReplaying()
     {
         return this._replayState === WebInspector.ReplayManager.ReplayState.Replaying;
     },
-    
+
     get isPaused()
     {
         return this._replayState === WebInspector.ReplayManager.ReplayState.Paused;
     },
+
+    get createdRecording()
+    {
+        console.assert(this.isCapturing, "ReplayManager.createdRecording only available when capturing is in progress.");
+        return this._activeRecording;
+    },
+
+    get loadedRecording()
+    {
+        console.assert(this.canReplay, "ReplayManager.loadedRecording only available when replay is possible.");
+        return this._activeRecording;
+    },
+
+    // Protected (handlers for events from ReplayObserver)
 
     captureStarted: function()
     {
@@ -115,7 +133,34 @@ WebInspector.ReplayManager.prototype = {
 
         this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackFinished);
-    }
+    },
+
+    recordingUnloaded: function()
+    {
+        this._replayState = WebInspector.ReplayManager.ReplayState.CanCapture;
+
+        var unloadedRecording = this._activeRecording;
+        delete this._activeRecording;
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.RecordingUnloaded, unloadedRecording);
+    },
+
+    recordingLoaded: function(uid)
+    {
+        var setActiveRecording = function() {
+            this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
+            this._activeRecording = WebInspector.recordingsManager.getRecordingWithUID(uid);
+            // TODO: set replay cursor to initial position
+            this.dispatchEventToListeners(WebInspector.ReplayManager.Event.RecordingLoaded, this.loadedRecording);
+        };
+
+        var recording = WebInspector.recordingsManager.getRecordingWithUID(uid);
+        console.assert(recording, "Unknown recording loaded!");
+
+        if (recording.dataLoaded())
+            setActiveRecording.call(this);
+        else
+            WebInspector.recordingsManager.onceEventListener(WebInspector.RecordingsManager.Event.RecordingAdded, setActiveRecording, this);
+    },
 };
 
 WebInspector.ReplayManager.prototype.__proto__ = WebInspector.Object.prototype;

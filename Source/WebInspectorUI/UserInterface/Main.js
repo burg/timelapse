@@ -75,13 +75,15 @@ WebInspector.loaded = function()
     this.sourceMapManager = new WebInspector.SourceMapManager;
     this.layerTreeManager = new WebInspector.LayerTreeManager;
     this.replayManager = new WebInspector.ReplayManager;
+    this.recordingsManager = new WebInspector.RecordingsManager;
     this.dashboardManager = new WebInspector.DashboardManager;
 
     // Enable the Console Agent after creating the singleton managers.
     ConsoleAgent.enable();
 
     // For now unconditionally enable replay.
-    ReplayAgent.enable();
+    if (ReplayAgent.enable)
+        ReplayAgent.enable();
 
     // Enable the RuntimeAgent to receive notification of execution contexts.
     if (RuntimeAgent.enable)
@@ -467,13 +469,13 @@ WebInspector.openURL = function(url, frame, alwaysOpenExternally, lineNumber)
         InspectorFrontendHost.openInNewTab(url);
         return;
     }
-    
+
     var parsedURL = parseURL(url);
     if (parsedURL.scheme === WebInspector.ProfileType.ProfileScheme) {
         var profileType = parsedURL.host.toUpperCase();
         var profileTitle = parsedURL.path;
-        
-        // The path of of the profile URL starts with a slash, remove it, so 
+
+        // The path of of the profile URL starts with a slash, remove it, so
         // we can get the actual title.
         console.assert(profileTitle[0] === '/');
         profileTitle = profileTitle.substring(1);
@@ -1322,28 +1324,28 @@ WebInspector.elementDragStart = function(element, dividerDrag, elementDragEnd, e
 {
     if (WebInspector._elementDraggingEventListener || WebInspector._elementEndDraggingEventListener)
         WebInspector.elementDragEnd(event);
-    
+
     if (element) {
         // Install glass pane
         if (WebInspector._elementDraggingGlassPane)
             WebInspector._elementDraggingGlassPane.parentElement.removeChild(WebInspector._elementDraggingGlassPane);
-        
+
         var glassPane = document.createElement("div");
         glassPane.style.cssText = "position:absolute;top:0;bottom:0;left:0;right:0;opacity:0;z-index:1";
         glassPane.id = "glass-pane-for-drag";
         element.ownerDocument.body.appendChild(glassPane);
         WebInspector._elementDraggingGlassPane = glassPane;
     }
-    
+
     WebInspector._elementDraggingEventListener = dividerDrag;
     WebInspector._elementEndDraggingEventListener = elementDragEnd;
-    
+
     var targetDocument = event.target.ownerDocument;
     targetDocument.addEventListener("mousemove", dividerDrag, true);
     targetDocument.addEventListener("mouseup", elementDragEnd, true);
-    
+
     targetDocument.body.style.cursor = cursor;
-    
+
     event.preventDefault();
 }
 
@@ -1352,16 +1354,16 @@ WebInspector.elementDragEnd = function(event)
     var targetDocument = event.target.ownerDocument;
     targetDocument.removeEventListener("mousemove", WebInspector._elementDraggingEventListener, true);
     targetDocument.removeEventListener("mouseup", WebInspector._elementEndDraggingEventListener, true);
-    
+
     targetDocument.body.style.removeProperty("cursor");
-    
+
     if (WebInspector._elementDraggingGlassPane)
         WebInspector._elementDraggingGlassPane.parentElement.removeChild(WebInspector._elementDraggingGlassPane);
-    
+
     delete WebInspector._elementDraggingGlassPane;
     delete WebInspector._elementDraggingEventListener;
     delete WebInspector._elementEndDraggingEventListener;
-    
+
     event.preventDefault();
 }
 
@@ -1373,7 +1375,7 @@ WebInspector.createMessageTextView = function(message, isError)
         messageElement.classList.add("error");
 
     messageElement.textContent = message;
-    
+
     return messageElement;
 }
 
@@ -1525,9 +1527,9 @@ WebInspector.linkifyStringAsFragment = function(string)
         if (typeof(lineNumber) !== "undefined")
             urlNode.lineNumber = lineNumber;
 
-        return urlNode; 
+        return urlNode;
     }
-    
+
     return WebInspector.linkifyStringAsFragmentWithCustomLinkifier(string, linkifier);
 }
 

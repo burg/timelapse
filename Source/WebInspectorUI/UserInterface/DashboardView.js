@@ -89,7 +89,7 @@ WebInspector.DashboardView.prototype = {
     set logs(logs)
     {
         this._logs = logs;
-        
+
         var item = this._items.logs;
         item.text = this._formatPossibleLargeNumber(logs);
         this._setItemEnabled(item, logs > 0);
@@ -158,8 +158,10 @@ WebInspector.DashboardView.prototype = {
         this._setItemEnabled(item, resourcesSize > 0);
     },
 
-    captureStateChanged: function()
+    replayStateChanged: function()
     {
+        // called from WebInspector.DashboardManager
+
         var item = this._items.replay;
 
         item.container.classList.remove("ready");

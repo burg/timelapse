@@ -95,12 +95,12 @@ WebInspector.ReplayObserver.prototype = {
 
     recordingLoaded: function(uid)
     {
-        // Not handled yet.
+        WebInspector.replayManager.recordingLoaded(uid);
     },
 
     recordingUnloaded: function()
     {
-        // Not handled yet.
+        WebInspector.replayManager.recordingUnloaded();
     }
 };
 

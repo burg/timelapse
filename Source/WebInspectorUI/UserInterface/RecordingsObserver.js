@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, University of Washington. All rights reserved.
+  * Copyright (C) 2013, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,18 +30,17 @@ WebInspector.RecordingsObserver = function()
 
 WebInspector.RecordingsObserver.prototype = {
     constructor: WebInspector.RecordingsObserver,
+    __proto__: WebInspector.Object.prototype,
 
     // Events defined by the "Recordings" domain (see WebCore/inspector/Inspector.json).
 
     recordingAdded: function(uid)
     {
-        // Not handled yet.
+        WebInspector.recordingsManager.addRecording(uid);
     },
 
     recordingRemoved: function(uid)
     {
-        // Not handled yet.
+        WebInspector.recordingsManager.removeRecording(uid);
     }
 };
-
-WebInspector.RecordingsObserver.prototype.__proto__ = WebInspector.Object.prototype;

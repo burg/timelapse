@@ -48,11 +48,13 @@ WebInspector.DashboardManager = function() {
     logManager.addEventListener(WebInspector.LogManager.Event.PreviousMessageRepeatCountUpdated, this._consoleMessageWasRepeated, this);
 
     // Necessary events required to track capture and replay state.
-    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStart, this._captureStateChanged, this);
-    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStop, this._captureStateChanged, this);
-    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackDidStart, this._captureStateChanged, this);
-    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._captureStateChanged, this);
-    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._captureStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStart, this._replayStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStop, this._replayStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackDidStart, this._replayStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._replayStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._replayStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._replayStateChanged, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._replayStateChanged, this);
 };
 
 WebInspector.DashboardManager.prototype = {
@@ -194,9 +196,9 @@ WebInspector.DashboardManager.prototype = {
         this._view.errors = 0;
     },
 
-    _captureStateChanged: function()
+    _replayStateChanged: function()
     {
-        this._view.captureStateChanged();
+        this._view.replayStateChanged();
     }
 };
 
