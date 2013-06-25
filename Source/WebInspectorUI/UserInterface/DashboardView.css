@@ -166,22 +166,6 @@ body.window-inactive .toolbar .dashboard {
     opacity: 0.8;
 }
 
-/*.toolbar .dashboard > .replay.ready > img{
-    content: url(Images/RecordingStopped.png);
-}
-
-.toolbar .dashboard > .replay.capturing > img {
-    content: url(Images/Recording.png);
-}
-
-.toolbar .dashboard > .replay.paused > img {
-    content: url(Images/ReplayButtonReplaying.png);
-}
-
-.toolbar .dashboard > .replay.replaying > img {
-    content: url(Images/ReplayButtonPaused.png);
-}*/
-
 .toolbar .dashboard > .replay.ready > div > img{
     content: url(Images/RecordingStopped.png);
 }
