@@ -220,6 +220,12 @@ WebInspector.DashboardView.prototype = {
             }
         });
 
+        // Adds additional state image to replay button
+        if (name == "replay") {
+            var stateImg = document.createElement("img");
+            item.outlet.appendChild(stateImg);
+        }
+
         item.container.addEventListener("click", function(event) {
             this._itemWasClicked(name);
         }.bind(this));
