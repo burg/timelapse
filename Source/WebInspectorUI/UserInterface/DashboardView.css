@@ -225,7 +225,7 @@ body.window-inactive .toolbar .replay-dashboard {
     width: 25px;
     position: absolute;
     top: 9px;
-    opacity: 0.3;
+    opacity: 0.5;
 }
 
 .toolbar .replay-dashboard > .unload.enabled > img {
