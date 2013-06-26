@@ -39,9 +39,15 @@
 #include "InputEncoder.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 
 namespace WebCore {
+
+const AtomicString& HandleMouseMove::type() const
+{
+    return inputTypes().HandleMouseMove;
+}
 
 void HandleMouseMove::dispatch(ReplayController* controller,
                                EventLoopInputDispatcher* dispatcher)

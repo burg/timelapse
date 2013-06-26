@@ -40,6 +40,7 @@
 #include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ScriptRunner.h"
 #include "Timer.h"
 #include <wtf/text/StringConcatenate.h>
@@ -47,9 +48,12 @@
 namespace WebCore {
 
 RanPendingScripts::RanPendingScripts(int frameIndex)
-: EventLoopInput(ReplayInputTypes::RanPendingScripts)
-, m_frameIndex(frameIndex) {}
+: m_frameIndex(frameIndex) {}
 
+const AtomicString& RanPendingScripts::type() const
+{
+    return inputTypes().RanPendingScripts;
+}
 
 String RanPendingScripts::toString() const
 {

@@ -35,20 +35,16 @@
 
 #include "ResourceLoaderCreated.h"
 
+#include "InputEncoder.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceRequest.h"
 #include "SerializationMethods.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceLoaderCreated = "ResourceLoaderCreated";
-}
-
 ResourceLoaderCreated::ResourceLoaderCreated(int id, const ResourceRequest& request)
-    : NondeterministicInput(ReplayInputTypes::ResourceLoaderCreated)
-    , m_id(id)
+    : m_id(id)
     , m_request(ResourceRequest::adopt(request.copyData())) {}
 
 ResourceLoaderCreated::~ResourceLoaderCreated()
@@ -56,7 +52,13 @@ ResourceLoaderCreated::~ResourceLoaderCreated()
     m_request = 0;
 }
 
-//NondeterministicInput API
+// NondeterministicInput API
+
+const AtomicString& ResourceLoaderCreated::type() const
+{
+    return inputTypes().ResourceLoaderCreated;
+}
+
 String ResourceLoaderCreated::toString() const
 {
     return makeString("ResourceLoaderCreated(handleId=",

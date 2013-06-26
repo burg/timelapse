@@ -36,7 +36,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
 #include "ScrollTypes.h"
 
 namespace WebCore {
@@ -47,16 +46,14 @@ class ScrollPage : public EventLoopInput {
 
 public:
     ScrollPage(ScrollDirection direction, ScrollGranularity granularity)
-        : EventLoopInput(ReplayInputTypes::ScrollPage)
-        , m_isLogicalScroll(false)
+        : m_isLogicalScroll(false)
         , m_granularity(granularity)
         {
             m_direction.normal = direction;
         }
 
     ScrollPage(ScrollLogicalDirection logicalDirection, ScrollGranularity granularity)
-        : EventLoopInput(ReplayInputTypes::ScrollPage)
-        , m_isLogicalScroll(true)
+        : m_isLogicalScroll(true)
         , m_granularity(granularity)
         {
             m_direction.logical = logicalDirection;
@@ -68,6 +65,7 @@ public:
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(ScrollPage); }
 

@@ -39,31 +39,28 @@
 
 namespace WebCore {
 
-    namespace ReplayInputTypes {
-        extern const char *ResourceDidFinishLoading;
-    }
+class ReplayController;
 
-    class ReplayController;
+class ResourceDidFinishLoading : public EventLoopInput {
+public:
+    ResourceDidFinishLoading(int id, double finishTime);
 
-    class ResourceDidFinishLoading : public EventLoopInput {
-    public:
-        ResourceDidFinishLoading(int id, double finishTime);
+    int id() const { return m_id; }
+    double finishTime() const { return m_finishTime; }
 
-        int id() const { return m_id; }
-        double finishTime() const { return m_finishTime; }
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
-        // EventLoopInput API
-        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
-        // NondeterministicInput API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        void serialize(InputEncoder&) const;
-
-    private:
-        int m_id;
-        double m_finishTime;
-    };
+private:
+    int m_id;
+    double m_finishTime;
+};
 
 } // namespace WebCore
 

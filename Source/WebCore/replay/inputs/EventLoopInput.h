@@ -40,58 +40,53 @@
 
 namespace WebCore {
 
-    class ReplayController;
-    class DocumentLoader;
-    class Event;
-    class EventLoopInputDispatcher;
-    class EventTarget;
-    class InputEncoder;
-    class Node;
-    class ResourceResponse;
+class ReplayController;
+class DocumentLoader;
+class Event;
+class EventLoopInputDispatcher;
+class EventTarget;
+class InputEncoder;
+class Node;
+class ResourceResponse;
 
-    typedef unsigned PositionMarkIndex;
-    struct PositionMark {
-    public:
-        explicit PositionMark()
-        : m_index(0)
-        , m_time(0.0) {}
+typedef unsigned PositionMarkIndex;
+struct PositionMark {
+public:
+    explicit PositionMark()
+    : m_index(0)
+    , m_time(0.0) {}
 
-        PositionMark(PositionMarkIndex index)
-        : m_index(index)
-        , m_time(monotonicallyIncreasingTime()) {}
+    PositionMark(PositionMarkIndex index)
+    : m_index(index)
+    , m_time(monotonicallyIncreasingTime()) {}
 
-        PositionMarkIndex index() const { return m_index; }
-        double time() const { return m_time; }
+    PositionMarkIndex index() const { return m_index; }
+    double time() const { return m_time; }
 
-    private:
-        PositionMarkIndex m_index;
-        double m_time;
-    };
+private:
+    PositionMarkIndex m_index;
+    double m_time;
+};
 
 class EventLoopInput : public NondeterministicInput {
 
-using NondeterministicInput::ReplayInputType;
-
 public:
-    EventLoopInput(ReplayInputType type, int dispatchCount, const PositionMark& mark)
-    : NondeterministicInput(type)
-    , m_dispatchCount(dispatchCount)
+    EventLoopInput(int dispatchCount, const PositionMark& mark)
+    : m_dispatchCount(dispatchCount)
     , m_domEventQuota(-1)
     , m_mark(mark)
     , m_sealed(false)
     , m_dispatchCounted(true) {}
 
-    EventLoopInput(ReplayInputType type)
-    : NondeterministicInput(type)
-    , m_dispatchCount(-1)
+    EventLoopInput()
+    : m_dispatchCount(-1)
     , m_domEventQuota(-1)
     , m_mark(PositionMark())
     , m_sealed(false)
     , m_dispatchCounted(true) {}
 
-    EventLoopInput(ReplayInputType type, bool dispatchCounted)
-    : NondeterministicInput(type)
-    , m_dispatchCount(0)
+    EventLoopInput(bool dispatchCounted)
+    : m_dispatchCount(0)
     , m_domEventQuota(0)
     , m_mark(PositionMark())
     , m_sealed(true)
@@ -105,7 +100,7 @@ public:
 
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) =0;
 
-    virtual ReplayInputQueueType queue() const { return WTF::EventLoopInputQueue; }
+    virtual NondeterministicInput::QueueType queue() const { return NondeterministicInput::EventLoopInputQueue; }
     virtual bool isUserVisible() const { return true; }
     virtual void serializeDispatchInfo(InputEncoder&) const;
 

@@ -39,32 +39,29 @@
 
 namespace WebCore {
 
-    namespace ReplayInputTypes {
-        extern const char *ResourceLoaderDestroyed;
-    }
+class ReplayController;
 
-    class ReplayController;
+class ResourceLoaderDestroyed : public EventLoopInput {
+public:
+    ResourceLoaderDestroyed(int id);
+    virtual ~ResourceLoaderDestroyed() {};
 
-    class ResourceLoaderDestroyed : public EventLoopInput {
-    public:
-        ResourceLoaderDestroyed(int id);
-        virtual ~ResourceLoaderDestroyed() {};
+    int id() const { return m_id; }
 
-        int id() const { return m_id; }
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    virtual bool isUserVisible() const OVERRIDE { return false; }
 
-        // EventLoopInput API
-        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-        virtual bool isUserVisible() const OVERRIDE { return false; }
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::LoaderMemoizedDataQueue; }
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
-        // NondeterministicInput API
-        virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        void serialize(InputEncoder&) const;
-
-    private:
-        int m_id;
-    };
+private:
+    int m_id;
+};
 
 } // namespace WebCore
 

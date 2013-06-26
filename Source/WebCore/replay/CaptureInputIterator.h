@@ -35,11 +35,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -58,9 +55,9 @@ public:
     virtual bool isReplaying() const { return false; }
 
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
-    virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType);
-    virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType);
-   
+    virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
+    virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
+
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
     void incrementDomEventCounter() { m_domEventDispatchCount++; }
@@ -71,7 +68,7 @@ private:
 
     InputStorage* m_storage;
     Page* m_page;
-    
+
     EventLoopInput* m_previousEventLoopInput;
     int m_domEventDispatchCount;
     bool m_isActive;

@@ -40,30 +40,27 @@
 
 namespace WebCore {
 
-    namespace ReplayInputTypes {
-        extern const char *ResourceDidFail;
-    }
+class ReplayController;
 
-    class ReplayController;
+class ResourceDidFail : public EventLoopInput {
+public:
+    ResourceDidFail(int id, const ResourceError&);
+    virtual ~ResourceDidFail() {}
 
-    class ResourceDidFail : public EventLoopInput {
-    public:
-        ResourceDidFail(int id, const ResourceError&);
-        virtual ~ResourceDidFail() {}
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    virtual bool isUserVisible() const OVERRIDE { return false; }
 
-        // EventLoopInput API
-        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
-        virtual bool isUserVisible() const OVERRIDE { return false; }
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
-        // NondeterministicInput API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        void serialize(InputEncoder&) const;
-
-    private:
-        int m_id;
-        ResourceError m_error;
-    };
+private:
+    int m_id;
+    ResourceError m_error;
+};
 
 } // namespace WebCore
 

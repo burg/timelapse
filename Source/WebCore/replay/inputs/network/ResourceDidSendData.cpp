@@ -35,9 +35,10 @@
 
 #include "ResourceDidSendData.h"
 
-#include "ReplayController.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include <wtf/text/StringBuilder.h>
@@ -45,19 +46,13 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceDidSendData = "ResourceDidSendData";
-}
-
 ResourceDidSendData::ResourceDidSendData(int id, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
-    : EventLoopInput(ReplayInputTypes::ResourceDidSendData)
-    , m_id(id)
+    : m_id(id)
     , m_bytesSent(bytesSent)
     , m_totalBytesToBeSent(totalBytesToBeSent) {}
 
 //EventLoopInput API
-void ResourceDidSendData::dispatch(ReplayController* controller,
-                                   EventLoopInputDispatcher* dispatcher)
+void ResourceDidSendData::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
 {
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
@@ -65,6 +60,11 @@ void ResourceDidSendData::dispatch(ReplayController* controller,
 
     client->didSendData(handle.get(), m_bytesSent, m_totalBytesToBeSent);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceDidSendData::type() const
+{
+    return inputTypes().ResourceDidSendData;
 }
 
 String ResourceDidSendData::toString() const

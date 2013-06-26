@@ -78,6 +78,11 @@ static String wheelEventPhaseToString(PlatformWheelEventPhase ty)
 }
 #endif
 
+const AtomicString& HandleWheelEvent::type() const
+{
+    return inputTypes().HandleWheelEvent;
+}
+
 String HandleWheelEvent::toString() const
 {
     StringBuilder sb;

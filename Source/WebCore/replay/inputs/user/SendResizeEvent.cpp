@@ -50,8 +50,7 @@
 namespace WebCore {
 
 SendResizeEvent::SendResizeEvent(int width, int height, int frameIndex)
-    : EventLoopInput(ReplayInputTypes::SendResizeEvent)
-    , m_width(width)
+    : m_width(width)
     , m_height(height)
     , m_frameIndex(frameIndex) {}
 
@@ -71,6 +70,11 @@ void SendResizeEvent::dispatch(ReplayController* controller,
     // somehow.
     document->eventQueue()->flush();
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& SendResizeEvent::type() const
+{
+    return inputTypes().SendResizeEvent;
 }
 
 String SendResizeEvent::toString() const

@@ -40,10 +40,6 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-    extern const char *ResourceLoaderCreated;
-}
-
 class ResourceLoaderCreated : public NondeterministicInput {
 public:
     ResourceLoaderCreated(int id, const ResourceRequest&);
@@ -53,7 +49,8 @@ public:
     ResourceRequest* request() const { return m_request.get(); }
 
     // NondeterministicInput API
-    virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::LoaderMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
     void serialize(InputEncoder&) const;

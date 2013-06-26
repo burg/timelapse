@@ -40,32 +40,29 @@
 
 namespace WebCore {
 
-    namespace ReplayInputTypes {
-        extern const char *ResourceDidReceiveResponse;
-    }
+class ReplayController;
 
-    class ReplayController;
+class ResourceDidReceiveResponse : public EventLoopInput {
+public:
+    ResourceDidReceiveResponse(int id, const ResourceResponse& response);
+    virtual ~ResourceDidReceiveResponse() {}
 
-    class ResourceDidReceiveResponse : public EventLoopInput {
-    public:
-        ResourceDidReceiveResponse(int id, const ResourceResponse& response);
-        virtual ~ResourceDidReceiveResponse() {}
+    int id() const { return m_id; }
+    ResourceResponse* response() const { return m_response.get(); }
 
-        int id() const { return m_id; }
-        ResourceResponse* response() const { return m_response.get(); }
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
-        // EventLoopInput API
-        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
-        // NondeterministicInput API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        void serialize(InputEncoder&) const;
-
-    private:
-        int m_id;
-        OwnPtr<ResourceResponse> m_response;
-    };
+private:
+    int m_id;
+    OwnPtr<ResourceResponse> m_response;
+};
 
 } // namespace WebCore
 

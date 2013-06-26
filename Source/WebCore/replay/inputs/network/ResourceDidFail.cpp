@@ -38,6 +38,7 @@
 #include "ReplayController.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
@@ -46,13 +47,8 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceDidFail = "ResourceDidFail";
-}
-
 ResourceDidFail::ResourceDidFail(int id, const ResourceError& error)
-    : EventLoopInput(ReplayInputTypes::ResourceDidFail)
-    , m_id(id)
+    : m_id(id)
     , m_error(error.copy()) {}
 
 //EventLoopInput API
@@ -65,6 +61,11 @@ void ResourceDidFail::dispatch(ReplayController* controller,
 
     client->didFail(handle.get(), m_error.copy());
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceDidFail::type() const
+{
+    return inputTypes().ResourceDidFail;
 }
 
 String ResourceDidFail::toString() const

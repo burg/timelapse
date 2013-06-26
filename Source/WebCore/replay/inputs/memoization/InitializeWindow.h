@@ -36,7 +36,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -46,8 +45,7 @@ class ReplayController;
 class InitializeWindow : public EventLoopInput {
 public:
     InitializeWindow(int width, int height)
-    : EventLoopInput(ReplayInputTypes::InitializeWindow)
-    , m_width(width)
+    : m_width(width)
     , m_height(height) {}
 
     virtual ~InitializeWindow() {};
@@ -57,6 +55,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
 

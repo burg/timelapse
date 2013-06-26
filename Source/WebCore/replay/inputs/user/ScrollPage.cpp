@@ -87,6 +87,11 @@ String ScrollPage::scrollGranularityToString(ScrollGranularity granularity)
     }
 }
 
+const AtomicString& ScrollPage::type() const
+{
+    return inputTypes().ScrollPage;
+}
+
 String ScrollPage::toString() const
 {
     StringBuilder sb;

@@ -34,19 +34,20 @@
 #include "InputEncoder.h"
 #include "InterpretedKeyCommands.h"
 #include "KeyboardEvent.h"
+#include "ReplayInputTypes.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char* InterpretedKeyCommands = "InterpretedKeyCommands";
-} // namespace ReplayInputTypes
-
 InterpretedKeyCommands::InterpretedKeyCommands(Vector<KeypressCommand>& commands)
-    : NondeterministicInput(ReplayInputTypes::InterpretedKeyCommands)
-    , m_commands(commands) {}
+    : m_commands(commands) {}
 
 InterpretedKeyCommands::~InterpretedKeyCommands() {}
+
+const AtomicString& InterpretedKeyCommands::type() const
+{
+    return inputTypes().InterpretedKeyCommands;
+}
 
 String InterpretedKeyCommands::toString() const
 {

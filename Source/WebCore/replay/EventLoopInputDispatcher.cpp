@@ -48,8 +48,7 @@
 
 namespace WebCore {
 
-EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterator* it,
-                                                   EventLoopInputDispatcherClient* client)
+EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterator* it, EventLoopInputDispatcherClient* client)
     : m_page(page)
     , m_client(client)
     , m_iterator(it)
@@ -69,8 +68,7 @@ EventLoopInputDispatcher::~EventLoopInputDispatcher()
 {
 }
 
-PassOwnPtr<EventLoopInputDispatcher> EventLoopInputDispatcher::create(Page* page, ReplayInputIterator* it,
-                                                   EventLoopInputDispatcherClient* client)
+PassOwnPtr<EventLoopInputDispatcher> EventLoopInputDispatcher::create(Page* page, ReplayInputIterator* it, EventLoopInputDispatcherClient* client)
 {
     return adoptPtr(new EventLoopInputDispatcher(page, it, client));
 }
@@ -157,12 +155,14 @@ void EventLoopInputDispatcher::maybeDispatchInput()
 
     // if there is no waiting input, then get one.
     if (!m_waitingInput)
-        m_waitingInput = static_cast<EventLoopInput*>(m_iterator->uncheckedLoadInput(WTF::EventLoopInputQueue));
+        m_waitingInput = static_cast<EventLoopInput*>(m_iterator->uncheckedLoadInput(NondeterministicInput::EventLoopInputQueue));
 
     ASSERT(m_waitingInput);
     m_currentMark = m_waitingInput->mark();
 
-    if (m_waitingInput->type() == ReplayInputTypes::EndSentinel) {
+    DEFINE_STATIC_LOCAL(const AtomicString, endSentinel, ("EndSentinel", AtomicString::ConstructFromLiteral));
+
+    if (m_waitingInput->type() == endSentinel) {
         m_client->didDispatchFinalInput();
         return;
     }

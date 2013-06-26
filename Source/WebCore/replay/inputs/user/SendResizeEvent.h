@@ -54,6 +54,7 @@ public:
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(SendResizeEvent); }
 

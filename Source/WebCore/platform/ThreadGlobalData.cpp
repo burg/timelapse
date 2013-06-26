@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -49,6 +49,10 @@
 using namespace WTF;
 #endif
 
+#if ENABLE(TIMELAPSE)
+#include "ReplayInputTypes.h"
+#endif
+
 namespace WebCore {
 
 #if ENABLE(WORKERS)
@@ -61,6 +65,9 @@ ThreadGlobalData::ThreadGlobalData()
     : m_cachedResourceRequestInitiators(adoptPtr(new CachedResourceRequestInitiators))
     , m_eventNames(adoptPtr(new EventNames))
     , m_threadTimers(adoptPtr(new ThreadTimers))
+#if ENABLE(TIMELAPSE)
+    , m_inputTypes(adoptPtr(new ReplayInputTypes))
+#endif
 #ifndef NDEBUG
     , m_isMainThread(isMainThread())
 #endif
@@ -98,6 +105,10 @@ void ThreadGlobalData::destroy()
 
 #if ENABLE(INSPECTOR)
     m_inspectorCounters.clear();
+#endif
+
+#if ENABLE(TIMELAPSE)
+    m_inputTypes.clear();
 #endif
 
     m_eventNames.clear();

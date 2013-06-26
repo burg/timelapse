@@ -35,22 +35,18 @@
 
 #include "ResourceCannotShowURL.h"
 
-#include "ReplayController.h"
+#include "InputEncoder.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include "InputEncoder.h"
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceCannotShowURL = "ResourceCannotShowURL";
-}
-
 ResourceCannotShowURL::ResourceCannotShowURL(int id)
-    : EventLoopInput(ReplayInputTypes::ResourceCannotShowURL)
-    , m_id(id) {}
+    : m_id(id) {}
 
 //EventLoopInput API
 void ResourceCannotShowURL::dispatch(ReplayController* controller,
@@ -62,6 +58,11 @@ void ResourceCannotShowURL::dispatch(ReplayController* controller,
     client->cannotShowURL(handle.get());
 
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceCannotShowURL::type() const
+{
+    return inputTypes().ResourceCannotShowURL;
 }
 
 String ResourceCannotShowURL::toString() const

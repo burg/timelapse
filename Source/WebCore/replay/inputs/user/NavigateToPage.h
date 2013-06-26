@@ -59,6 +59,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
 

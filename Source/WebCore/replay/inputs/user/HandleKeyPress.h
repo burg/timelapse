@@ -37,7 +37,6 @@
 #include "EventLoopInput.h"
 #include "InputCoder.h"
 #include "PlatformKeyboardEvent.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -47,14 +46,14 @@ class HandleKeyPress : public EventLoopInput {
 
 public:
     HandleKeyPress(const PlatformKeyboardEvent& event)
-        : EventLoopInput(ReplayInputTypes::HandleKeyPress)
-        , m_platformEvent(event) {}
+        : m_platformEvent(event) {}
     virtual ~HandleKeyPress() {}
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
 

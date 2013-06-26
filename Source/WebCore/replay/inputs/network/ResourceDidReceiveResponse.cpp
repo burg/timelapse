@@ -35,10 +35,11 @@
 
 #include "ResourceDidReceiveResponse.h"
 
-#include "ReplayController.h"
 #include "InspectorInstrumentation.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
@@ -47,13 +48,8 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceDidReceiveResponse = "ResourceDidReceiveResponse";
-}
-
 ResourceDidReceiveResponse::ResourceDidReceiveResponse(int id, const ResourceResponse& response)
-    : EventLoopInput(ReplayInputTypes::ResourceDidReceiveResponse)
-    , m_id(id)
+    : m_id(id)
     , m_response(ResourceResponse::adopt(response.copyData())) {}
 
 //EventLoopInput API
@@ -73,6 +69,11 @@ void ResourceDidReceiveResponse::dispatch(ReplayController* controller,
 
     client->didReceiveResponse(handle.get(), *m_response);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceDidReceiveResponse::type() const
+{
+    return inputTypes().ResourceDidReceiveResponse;
 }
 
 String ResourceDidReceiveResponse::toString() const

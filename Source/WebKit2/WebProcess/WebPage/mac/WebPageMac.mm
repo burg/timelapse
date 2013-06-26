@@ -72,6 +72,7 @@
 
 #if ENABLE(TIMELAPSE)
 #import <WebCore/InterpretedKeyCommands.h>
+#import <WebCore/ReplayInputTypes.h>
 #import <WebCore/ReplayUtilities.h>
 #import <wtf/replay/InputIterator.h>
 #import <wtf/replay/NondeterministicInput.h>
@@ -94,12 +95,12 @@ void WebPage::platformInitialize()
     WKAccessibilityWebPageObject* mockAccessibilityElement = [[[WKAccessibilityWebPageObject alloc] init] autorelease];
 
     // Get the pid for the starting process.
-    pid_t pid = WebProcess::shared().presenterApplicationPid();    
+    pid_t pid = WebProcess::shared().presenterApplicationPid();
     WKAXInitializeElementWithPresenterPid(mockAccessibilityElement, pid);
     [mockAccessibilityElement setWebPage:this];
-    
+
     // send data back over
-    NSData* remoteToken = (NSData *)WKAXRemoteTokenForElement(mockAccessibilityElement); 
+    NSData* remoteToken = (NSData *)WKAXRemoteTokenForElement(mockAccessibilityElement);
     CoreIPC::DataReference dataToken = CoreIPC::DataReference(reinterpret_cast<const uint8_t*>([remoteToken bytes]), [remoteToken length]);
     send(Messages::WebPageProxy::RegisterWebProcessAccessibilityToken(dataToken));
     m_mockAccessibilityElement = mockAccessibilityElement;
@@ -207,7 +208,7 @@ bool WebPage::executeKeypressCommandsInternal(const Vector<WebCore::KeypressComm
                 }
             } else {
                 bool commandWasHandledByUIProcess = false;
-                WebProcess::shared().parentProcessConnection()->sendSync(Messages::WebPageProxy::ExecuteSavedCommandBySelector(commands[i].commandName), 
+                WebProcess::shared().parentProcessConnection()->sendSync(Messages::WebPageProxy::ExecuteSavedCommandBySelector(commands[i].commandName),
                     Messages::WebPageProxy::ExecuteSavedCommandBySelector::Reply(commandWasHandledByUIProcess), m_pageID);
                 eventWasHandled |= commandWasHandledByUIProcess;
             }
@@ -221,7 +222,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
     ASSERT(!saveCommands || event->keypressCommands().isEmpty()); // Save commands once for each event.
 
     Frame* frame = frameForEvent(event);
-    
+
     const PlatformKeyboardEvent* platformEvent = event->keyEvent();
     if (!platformEvent)
         return false;
@@ -241,7 +242,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #if ENABLE(TIMELAPSE)
         // if replaying, simply populate the commands from memoized state, and return.
         if (isReplaying) {
-            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::InterpretedKeyCommands));
+            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().InterpretedKeyCommands));
             if (memoizedCommands) {
                 commands = memoizedCommands->commands();
                 return eventWasHandled;
@@ -252,17 +253,17 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #endif
         KeyboardEvent* oldEvent = m_keyboardEventBeingInterpreted;
         m_keyboardEventBeingInterpreted = event;
-        bool sendResult = WebProcess::shared().parentProcessConnection()->sendSync(Messages::WebPageProxy::InterpretQueuedKeyEvent(editorState()), 
+        bool sendResult = WebProcess::shared().parentProcessConnection()->sendSync(Messages::WebPageProxy::InterpretQueuedKeyEvent(editorState()),
             Messages::WebPageProxy::InterpretQueuedKeyEvent::Reply(eventWasHandled, commands), m_pageID);
         m_keyboardEventBeingInterpreted = oldEvent;
-        
-        
+
+
 #if ENABLE(TIMELAPSE)
         // if capturing, save away the key commands as memoized state.
         if (isCapturing)
             it->storeInput(adoptPtr(new InterpretedKeyCommands(commands)));
 #endif
-        
+
         if (!sendResult)
             return false;
         // An input method may make several actions per keypress. For example, pressing Return with Korean IM both confirms it and sends a newline.
@@ -424,8 +425,8 @@ void WebPage::getAttributedSubstringFromRange(uint64_t location, uint64_t length
 
     result.string = [WebHTMLConverter editingAttributedStringFromRange:range.get()];
     NSAttributedString* attributedString = result.string.get();
-    
-    // [WebHTMLConverter editingAttributedStringFromRange:] insists on inserting a trailing 
+
+    // [WebHTMLConverter editingAttributedStringFromRange:] insists on inserting a trailing
     // whitespace at the end of the string which breaks the ATOK input method.  <rdar://problem/5400551>
     // To work around this we truncate the resultant string to the correct length.
     if ([attributedString length] > nsRange.length) {
@@ -444,7 +445,7 @@ void WebPage::characterIndexForPoint(IntPoint point, uint64_t& index)
 
     HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(point);
     frame = result.innerNonSharedNode() ? result.innerNodeFrame() : m_page->focusController()->focusedOrMainFrame();
-    
+
     RefPtr<Range> range = frame->rangeForPoint(result.roundedPointInInnerNodeFrame());
     if (!range)
         return;
@@ -461,7 +462,7 @@ PassRefPtr<Range> convertToRange(Frame* frame, NSRange nsrange)
         return 0;
     if (nsrange.length > INT_MAX || nsrange.location + nsrange.length > INT_MAX)
         nsrange.length = INT_MAX - nsrange.location;
-        
+
     // our critical assumption is that we are only called by input methods that
     // concentrate on a given area containing the selection
     // We have to do this because of text fields and textareas. The DOM for those is not
@@ -470,20 +471,20 @@ PassRefPtr<Range> convertToRange(Frame* frame, NSRange nsrange)
     // That fits with AppKit's idea of an input context.
     return TextIterator::rangeFromLocationAndLength(frame->selection()->rootEditableElementOrDocumentElement(), nsrange.location, nsrange.length);
 }
-    
+
 void WebPage::firstRectForCharacterRange(uint64_t location, uint64_t length, WebCore::IntRect& resultRect)
 {
     Frame* frame = m_page->focusController()->focusedOrMainFrame();
     resultRect.setLocation(IntPoint(0, 0));
     resultRect.setSize(IntSize(0, 0));
-    
+
     RefPtr<Range> range = convertToRange(frame, NSMakeRange(location, length));
     if (!range)
         return;
-    
+
     ASSERT(range->startContainer());
     ASSERT(range->endContainer());
-     
+
     IntRect rect = frame->editor().firstRectForRange(range.get());
     resultRect = frame->view()->contentsToWindow(rect);
 }
@@ -628,7 +629,7 @@ void WebPage::performDictionaryLookupForRange(Frame* frame, Range* range, NSDict
 {
     if (range->text().stripWhiteSpace().isEmpty())
         return;
-    
+
     RenderObject* renderer = range->startContainer()->renderer();
     RenderStyle* style = renderer->style();
 
@@ -638,7 +639,7 @@ void WebPage::performDictionaryLookupForRange(Frame* frame, Range* range, NSDict
         return;
 
     IntRect rangeRect = frame->view()->contentsToWindow(quads[0].enclosingBoundingBox());
-    
+
     DictionaryPopupInfo dictionaryPopupInfo;
     dictionaryPopupInfo.origin = FloatPoint(rangeRect.x(), rangeRect.y() + (style->fontMetrics().ascent() * pageScaleFactor()));
     dictionaryPopupInfo.options = (CFDictionaryRef)options;
@@ -715,7 +716,7 @@ void WebPage::registerUIProcessAccessibilityTokens(const CoreIPC::DataReference&
     id remoteElement = WKAXRemoteElementForToken(elementTokenData);
     id remoteWindow = WKAXRemoteElementForToken(windowTokenData);
     WKAXSetWindowForRemoteElement(remoteWindow, remoteElement);
-    
+
     [accessibilityRemoteObject() setRemoteParent:remoteElement];
 }
 
@@ -772,7 +773,7 @@ WKAccessibilityWebPageObject* WebPage::accessibilityRemoteObject()
 {
     return m_mockAccessibilityElement.get();
 }
-         
+
 bool WebPage::platformHasLocalDataForURL(const WebCore::KURL& url)
 {
     NSMutableURLRequest* request = [[NSMutableURLRequest alloc] initWithURL:url];
@@ -783,7 +784,7 @@ bool WebPage::platformHasLocalDataForURL(const WebCore::KURL& url)
     else
         cachedResponse = [[NSURLCache sharedURLCache] cachedResponseForRequest:request];
     [request release];
-    
+
     return cachedResponse;
 }
 
@@ -842,7 +843,7 @@ void WebPage::acceptsFirstMouse(int eventNumber, const WebKit::WebMouseEvent& ev
     Frame* frame = m_page->focusController()->focusedOrMainFrame();
     if (!frame)
         return;
-    
+
     HitTestResult hitResult = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(event.position()), HitTestRequest::ReadOnly | HitTestRequest::Active);
     frame->eventHandler()->setActivationEventNumber(eventNumber);
 #if ENABLE(DRAG_SUPPORT)
@@ -889,13 +890,13 @@ void WebPage::setBottomOverhangImage(PassRefPtr<WebImage> image)
         return;
 
     layer->setSize(image->size());
-    
+
     RetainPtr<CGImageRef> cgImage = image->bitmap()->makeCGImageCopy();
     layer->platformLayer().contents = (id)cgImage.get();
 }
 
 void WebPage::updateHeaderAndFooterLayersForDeviceScaleChange(float scaleFactor)
-{    
+{
     if (m_headerBanner)
         m_headerBanner->didChangeDeviceScaleFactor(scaleFactor);
     if (m_footerBanner)

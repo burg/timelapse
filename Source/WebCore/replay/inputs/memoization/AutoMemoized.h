@@ -34,12 +34,12 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "InputEncoder.h"
+#include "InputDecoder.h"
 #include "ReplayInputTypes.h"
 #include "SerializedScriptValue.h"
 #include <runtime/JSObject.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
-#include "InputDecoder.h"
 
 namespace WebCore {
 
@@ -48,8 +48,7 @@ class AutoMemoized : public NondeterministicInput {
 
 public:
     AutoMemoized(const String& attribute, T result)
-        : NondeterministicInput(WebCore::ReplayInputTypes::AutoMemoized)
-        , m_attribute(attribute)
+        : m_attribute(attribute)
         , m_result(result) {}
     virtual ~AutoMemoized() {}
 
@@ -58,7 +57,8 @@ public:
     String resultString() const;
 
     // NondeterministicInput API
-    virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
@@ -123,6 +123,11 @@ template<typename T> struct InputCoder<AutoMemoized<T> > {
     static void encode(InputEncoder& encoder, const AutoMemoized<T>& input);
     static bool decode(InputDecoder& decoder, OwnPtr<AutoMemoized<T> >& input);
 };
+
+template<typename T> inline const AtomicString& AutoMemoized<T>::type() const
+{
+    return inputTypes().AutoMemoized;
+}
 
 template<typename T> inline String AutoMemoized<T>::toString() const
 {

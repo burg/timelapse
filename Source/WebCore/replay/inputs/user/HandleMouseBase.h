@@ -43,9 +43,8 @@ namespace WebCore {
 class HandleMouseBase : public EventLoopInput {
 
 public:
-    HandleMouseBase(const PlatformMouseEvent& event, NondeterministicInput::ReplayInputType type)
-        : EventLoopInput(type)
-        , m_platformEvent(event) {}
+    HandleMouseBase(const PlatformMouseEvent& event)
+        : m_platformEvent(event) {}
     virtual ~HandleMouseBase() {}
 
     // NondeterministicInput API

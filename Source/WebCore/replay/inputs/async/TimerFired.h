@@ -36,7 +36,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
 
@@ -55,6 +54,7 @@ public:
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*);
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(TimerFired); }
 

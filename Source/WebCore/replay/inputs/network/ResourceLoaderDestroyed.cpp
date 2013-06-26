@@ -35,19 +35,15 @@
 
 #include "ResourceLoaderDestroyed.h"
 
-#include "ReplayController.h"
-#include "NetworkProxy.h"
 #include "InputEncoder.h"
+#include "NetworkProxy.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceLoaderDestroyed = "ResourceLoaderDestroyed";
-}
-
 ResourceLoaderDestroyed::ResourceLoaderDestroyed(int id)
-: EventLoopInput(ReplayInputTypes::ResourceLoaderDestroyed)
-, m_id(id) {}
+    : m_id(id) {}
 
 //EventLoopInput API
 void ResourceLoaderDestroyed::dispatch(ReplayController* controller,
@@ -55,6 +51,11 @@ void ResourceLoaderDestroyed::dispatch(ReplayController* controller,
 {
     controller->page()->networkProxy()->removeHandleById(m_id);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceLoaderDestroyed::type() const
+{
+    return inputTypes().ResourceLoaderDestroyed;
 }
 
 String ResourceLoaderDestroyed::toString() const

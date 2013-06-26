@@ -36,10 +36,6 @@
 
 namespace JSC {
 
-namespace ReplayInputTypes {
-    extern const char *SetRandomSeed;
-}
-
 class SetRandomSeed : public NondeterministicInput {
 
 public:
@@ -47,7 +43,8 @@ public:
     virtual ~SetRandomSeed();
 
     // NondeterministicInput API
-    virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(SetRandomSeed); }
 

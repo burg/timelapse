@@ -112,10 +112,8 @@ private:
 };
 
 class DispatchEventBase : public EventLoopInput {
-
 public:
-    DispatchEventBase(NondeterministicInput::ReplayInputType type)
-    : EventLoopInput(type) {}
+    DispatchEventBase() {}
     virtual ~DispatchEventBase() {}
 
     virtual PassRefPtr<Event> event(Page*) =0;

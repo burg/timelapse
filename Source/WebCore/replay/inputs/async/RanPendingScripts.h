@@ -36,7 +36,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -44,7 +43,6 @@ class ReplayController;
 class Document;
 
 class RanPendingScripts : public EventLoopInput {
-
 public:
     RanPendingScripts(int frameIndex);
     virtual ~RanPendingScripts() {}
@@ -54,6 +52,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(RanPendingScripts); }
 

@@ -36,15 +36,16 @@
 
 namespace JSC {
 
-namespace ReplayInputTypes {
-const char *GetCurrentTime = "GetCurrentTime";
-}
-
 GetCurrentTime::GetCurrentTime(double currentTime)
-    : NondeterministicInput(ReplayInputTypes::GetCurrentTime)
-    , m_currentTime(currentTime) {}
+    : m_currentTime(currentTime) {}
 
 GetCurrentTime::~GetCurrentTime() {}
+
+const AtomicString& GetCurrentTime::type() const
+{
+    DEFINE_STATIC_LOCAL(const AtomicString, type, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
+    return type;
+}
 
 String GetCurrentTime::toString() const {
     return makeString("GetCurrentTime(", String::number(m_currentTime), ")");

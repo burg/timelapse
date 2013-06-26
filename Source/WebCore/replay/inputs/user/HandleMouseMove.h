@@ -36,7 +36,6 @@
 
 #include "EventLoopInput.h"
 #include "HandleMouseBase.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -44,7 +43,7 @@ class HandleMouseMove : public HandleMouseBase {
 
 public:
     HandleMouseMove(const PlatformMouseEvent& event, bool scrollbarTargeted)
-        : HandleMouseBase(event, ReplayInputTypes::HandleMouseMove)
+        : HandleMouseBase(event)
         , m_scrollbarTargeted(scrollbarTargeted) {}
     virtual ~HandleMouseMove() {};
 
@@ -52,6 +51,7 @@ public:
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE
     {
         return HandleMouseBase::memorySize() + (sizeof(HandleMouseMove) - sizeof(HandleMouseBase));

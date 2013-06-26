@@ -58,8 +58,7 @@
 namespace WebCore {
 
 DispatchAsyncEvent::DispatchAsyncEvent(PassRefPtr<Event> event, PassRefPtr<EventTarget> eventTarget)
-    : DispatchEventBase(ReplayInputTypes::DispatchAsyncEvent)
-    , m_event(SerializedGenericEvent::serialize(event.get()))
+    : m_event(SerializedGenericEvent::serialize(event.get()))
     , m_eventTarget(SerializedEventTarget::serialize(eventTarget.get()))
 {
     if (isSimpleEvent())
@@ -83,7 +82,11 @@ DispatchAsyncEvent::DispatchAsyncEvent(PassRefPtr<Event> event, PassRefPtr<Event
 
 DispatchAsyncEvent::~DispatchAsyncEvent()
 {
+}
 
+const AtomicString& DispatchAsyncEvent::type() const
+{
+    return inputTypes().DispatchAsyncEvent;
 }
 
 String DispatchAsyncEvent::toString() const

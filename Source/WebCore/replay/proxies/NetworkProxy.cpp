@@ -38,6 +38,7 @@
 #include "InspectorInstrumentation.h"
 #include "NetworkingContext.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
@@ -98,12 +99,12 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
     if (mode() == ReplayProxy::Replaying) {
         ASSERT(it && it->isReplaying());
         int loaderId;
-        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(WTF::LoaderMemoizedDataQueue, ReplayInputTypes::ResourceLoaderCreated));
+        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(NondeterministicInput::LoaderMemoizedDataQueue, inputTypes().ResourceLoaderCreated));
         if (memoizedData)
             loaderId = memoizedData->id();
         else // error handling case
             loaderId = -1;
-        
+
         // error handling when requests don't match
         if (!memoizedData || !ResourceRequestBase::compare(*memoizedData->request(), request)) {
             LOG_ERROR("%-30s Network request details differ from request observed when recording.", "[NetworkProxy]");
@@ -119,10 +120,10 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
             controller()->playbackError(false,
                                         "Network request details missing or differ from request observed when recording.");
         }
-        
+
         return loaderId;
     }
-    
+
     return -1;
 }
 #endif // ENABLE(TIMELAPSE)

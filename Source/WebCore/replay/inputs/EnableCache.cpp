@@ -40,9 +40,15 @@
 #include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
+
+const AtomicString& EnableCache::type() const
+{
+    return inputTypes().EnableCache;
+}
 
 void EnableCache::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
 {

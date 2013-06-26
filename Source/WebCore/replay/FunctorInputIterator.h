@@ -57,10 +57,10 @@ public:
     virtual bool isReplaying() const { return false; }
 
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
-    virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType);
-    virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType);
-    
-    template<typename Functor> typename Functor::ReturnType forEachInputInQueue(ReplayInputQueueType, Functor&);
+    virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
+    virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
+
+    template<typename Functor> typename Functor::ReturnType forEachInputInQueue(NondeterministicInput::QueueType, Functor&);
 
 private:
     FunctorInputIterator(InputStorage*);
@@ -68,14 +68,14 @@ private:
     InputStorage* m_storage;
 };
 
-template<typename Functor> inline typename Functor::ReturnType FunctorInputIterator::forEachInputInQueue(ReplayInputQueueType queue, Functor& functor)
+template<typename Functor> inline typename Functor::ReturnType FunctorInputIterator::forEachInputInQueue(NondeterministicInput::QueueType queue, Functor& functor)
 {
-    ASSERT(queue < WTF::ReplayInputQueueTypeLength);
-    
+    ASSERT(queue < NondeterministicInput::QueueTypeLength);
+
     for (size_t i = 0; i < m_storage->m_queues[queue]->size(); i++) {
         functor(i, m_storage->m_queues[queue]->at(i).get());
     }
-    
+
     return functor.returnValue();
 }
 
@@ -94,13 +94,13 @@ inline void FunctorInputIterator::storeInput(PassOwnPtr<NondeterministicInput>)
     ASSERT_NOT_REACHED();
 }
 
-inline NondeterministicInput* FunctorInputIterator::loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType)
+inline NondeterministicInput* FunctorInputIterator::loadInput(NondeterministicInput::QueueType, const AtomicString&)
 {
     ASSERT_NOT_REACHED();
     return 0;
 }
 
-inline NondeterministicInput* FunctorInputIterator::uncheckedLoadInput(ReplayInputQueueType)
+inline NondeterministicInput* FunctorInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType)
 {
     ASSERT_NOT_REACHED();
     return 0;

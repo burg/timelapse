@@ -37,9 +37,15 @@
 #include "EventLoopInputDispatcher.h"
 #include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
+
+const AtomicString& BeginSentinel::type() const
+{
+    return inputTypes().BeginSentinel;
+}
 
 void BeginSentinel::dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher)
 {
@@ -55,6 +61,11 @@ bool InputCoder<BeginSentinel>::decode(InputDecoder&, OwnPtr<BeginSentinel>& inp
 {
     input = adoptPtr(new BeginSentinel());
     return true;
+}
+
+const AtomicString& EndSentinel::type() const
+{
+    return inputTypes().EndSentinel;
 }
 
 void EndSentinel::dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher)

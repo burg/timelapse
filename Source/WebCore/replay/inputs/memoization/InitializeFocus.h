@@ -36,7 +36,6 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -47,8 +46,7 @@ class InitializeFocus : public EventLoopInput {
 
 public:
     InitializeFocus(int frameIndex, bool isFocused, bool isActive)
-    : EventLoopInput(ReplayInputTypes::InitializeFocus)
-    , m_focus(isFocused)
+    : m_focus(isFocused)
     , m_active(isActive)
     , m_frameIndex(frameIndex) {}
 
@@ -59,6 +57,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeFocus); }
 

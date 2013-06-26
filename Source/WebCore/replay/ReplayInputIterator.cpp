@@ -43,19 +43,18 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
-static const char* queueTypeToString(ReplayInputQueueType queue) {
+static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
     switch (queue) {
-        case WTF::EventLoopInputQueue:        return "EventLoopInputQueue";
-        case WTF::LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
-        case WTF::ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
-        case WTF::ReplayInputQueueTypeLength: return "QueueTypeLength (error)";
+        case NondeterministicInput::EventLoopInputQueue:        return "EventLoopInputQueue";
+        case NondeterministicInput::LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
+        case NondeterministicInput::ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
+        case NondeterministicInput::QueueTypeLength:            return "QueueTypeLength (error)";
     }
 }
 
 namespace WebCore {
 
-ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page,
-                                         EventLoopInputDispatcherClient* client)
+ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page, EventLoopInputDispatcherClient* client)
 : m_storage(storage)
 , m_isActive(true)
 , m_dispatcher(EventLoopInputDispatcher::create(page, this, client))
@@ -63,7 +62,7 @@ ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page,
     ASSERT(m_storage->isReadOnly());
 
     m_errorData.error = NoReplayError;
-    for (size_t i = 0; i < ReplayInputQueueTypeLength; i++) {
+    for (size_t i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
         m_positions.append(0);
     }
 }
@@ -72,8 +71,7 @@ ReplayInputIterator::~ReplayInputIterator()
 {
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayInputIterator::create(InputStorage* storage, Page* page,
-                                                            EventLoopInputDispatcherClient* client)
+PassOwnPtr<ReplayInputIterator> ReplayInputIterator::create(InputStorage* storage, Page* page, EventLoopInputDispatcherClient* client)
 {
     return adoptPtr(new ReplayInputIterator(storage, page, client));
 }
@@ -84,23 +82,23 @@ void ReplayInputIterator::storeInput(PassOwnPtr<NondeterministicInput>)
     ASSERT_NOT_REACHED();
 }
 
-NondeterministicInput* ReplayInputIterator::loadInput(ReplayInputQueueType queue,
-                                                      NondeterministicInput::ReplayInputType type)
+NondeterministicInput* ReplayInputIterator::loadInput(NondeterministicInput::QueueType queue, const AtomicString& type)
 {
     if (hasError()) {
         LOG_ERROR("%-30s prior memoized value retrieval failed, so not consulting log and instead propagating error condition.",
                   "ReplayInputIterator::loadInput");
         return 0;
     }
-   
+
     NondeterministicInput* input = uncheckedLoadInput(queue);
 
     if (input->type() != type) {
-        LOG_ERROR("%-30s ERROR %p != %p\n", "[ReplayInputIterator]", type, input->type());
-        LOG_ERROR("%-25s Expected replay input of type %s, but got type %s (%s)\n",
+        LOG_ERROR("%-25s ERROR: Expected replay input of type %s, but got type %s (%s)\n",
                   "[ReplayInputIterator]",
-                  type, input->type(), input->toString().ascii().data());
-        
+                  type.string().ascii().data(),
+                  input->type().string().ascii().data(),
+                  input->toString().ascii().data());
+
         m_errorData.error = ErrorUnexpectedInputType;
         m_errorData.queue = queue;
         m_errorData.expectedInput = type;
@@ -110,14 +108,14 @@ NondeterministicInput* ReplayInputIterator::loadInput(ReplayInputQueueType queue
     return input;
 }
 
-NondeterministicInput* ReplayInputIterator::uncheckedLoadInput(ReplayInputQueueType queue)
+NondeterministicInput* ReplayInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType queue)
 {
     ASSERT(m_isActive);
     // callers should check for errors before requesting inputs.
     // if an error exists, the caller should call reset() or clearError()
     ASSERT(!hasError());
-    ASSERT(queue < ReplayInputQueueTypeLength);
-    
+    ASSERT(queue < NondeterministicInput::QueueTypeLength);
+
     if (m_positions[queue] >= m_storage->queueSize(queue)) {
         LOG_ERROR("%-30s ERROR No more inputs remain for determinism queue %s, but one was requested.",
                   "[ReplayInputIterator]",
@@ -126,7 +124,7 @@ NondeterministicInput* ReplayInputIterator::uncheckedLoadInput(ReplayInputQueueT
         m_errorData.queue = queue;
         return 0;
     }
-    
+
     return m_storage->load(queue, m_positions[queue]++);
 }
 
@@ -134,22 +132,22 @@ String ReplayInputIterator::errorMessage() const
 {
     ASSERT(hasError());
     StringBuilder sb;
-    
+
     switch (m_errorData.error) {
     case ErrorExhaustedQueue:
-        ASSERT(m_errorData.queue < ReplayInputQueueTypeLength);
+        ASSERT(m_errorData.queue < NondeterministicInput::QueueTypeLength);
         sb.append("Ran out of inputs on queue: ");
         sb.append(queueTypeToString(m_errorData.queue));
         sb.append(" because too many were requested.");
         break;
 
     case ErrorUnexpectedInputType: {
-        ReplayInputQueueType queue = m_errorData.queue;
-        ASSERT(queue < ReplayInputQueueTypeLength);
+        NondeterministicInput::QueueType queue = m_errorData.queue;
+        ASSERT(queue < NondeterministicInput::QueueTypeLength);
         sb.append("Expected next input to be a ");
         sb.append(m_errorData.expectedInput);
         sb.append(", but found a ");
-      
+
         NondeterministicInput* input = m_storage->load(queue, m_positions[queue]);
         sb.append(input->type());
         sb.append("(detail: ");
@@ -160,7 +158,7 @@ String ReplayInputIterator::errorMessage() const
     default:
         break;
     }
-    
+
     return sb.toString();
 }
 
@@ -169,7 +167,7 @@ void ReplayInputIterator::setIsActive(bool state)
     ASSERT(m_isActive != state);
     m_isActive = state;
 }
-    
+
 }; // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

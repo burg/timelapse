@@ -42,6 +42,7 @@
 #include "InputEncoder.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 
 namespace WebCore {
@@ -55,6 +56,11 @@ void HandleContextMenu::dispatch(ReplayController* controller,
 
     controller->page()->userInputProxy()->handleContextMenuEvent(platformEvent(), document->frame(), true);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& HandleContextMenu::type() const
+{
+    return inputTypes().HandleContextMenu;
 }
 
 void InputCoder<HandleContextMenu>::encode(InputEncoder& encoder, const HandleContextMenu& input)

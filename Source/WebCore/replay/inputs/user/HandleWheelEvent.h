@@ -37,7 +37,6 @@
 #include "EventLoopInput.h"
 #include "InputCoder.h"
 #include "PlatformWheelEvent.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -47,14 +46,14 @@ class HandleWheelEvent : public EventLoopInput {
 
 public:
     HandleWheelEvent(const PlatformWheelEvent& event)
-        : EventLoopInput(ReplayInputTypes::HandleWheelEvent)
-        , m_platformEvent(event) {}
+        : m_platformEvent(event) {}
     virtual ~HandleWheelEvent() {}
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
 

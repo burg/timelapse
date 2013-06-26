@@ -46,12 +46,13 @@ class PlaybackError : public EventLoopInput {
 
 public:
     PlaybackError(String errorMessage, bool dispatchCounted=false)
-    : EventLoopInput(ReplayInputTypes::PlaybackError, dispatchCounted)
+    : EventLoopInput(dispatchCounted)
     , m_errorMessage(errorMessage) {}
 
     virtual ~PlaybackError() {};
 
     // EventLoopInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 

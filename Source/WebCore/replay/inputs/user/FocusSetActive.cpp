@@ -38,11 +38,17 @@
 #include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "Page.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
+
+const AtomicString& FocusSetActive::type() const
+{
+    return inputTypes().FocusSetActive;
+}
 
 String FocusSetActive::toString() const
 {

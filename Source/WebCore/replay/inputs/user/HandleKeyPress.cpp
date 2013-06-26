@@ -64,6 +64,11 @@ static String keyTypeToString(PlatformKeyboardEvent::Type ty)
     }
 }
 
+const AtomicString& HandleKeyPress::type() const
+{
+    return inputTypes().HandleKeyPress;
+}
+
 String HandleKeyPress::toString() const
 {
     StringBuilder sb;

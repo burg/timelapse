@@ -35,22 +35,18 @@
 
 #include "ResourceWasBlocked.h"
 
-#include "ReplayController.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "InputEncoder.h"
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceWasBlocked = "ResourceWasBlocked";
-}
-
 ResourceWasBlocked::ResourceWasBlocked(int id)
-    : EventLoopInput(ReplayInputTypes::ResourceWasBlocked)
-    , m_id(id) {}
+    : m_id(id) {}
 
 //EventLoopInput API
 void ResourceWasBlocked::dispatch(ReplayController* controller,
@@ -62,6 +58,11 @@ void ResourceWasBlocked::dispatch(ReplayController* controller,
     client->cannotShowURL(handle.get());
 
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceWasBlocked::type() const
+{
+    return inputTypes().ResourceWasBlocked;
 }
 
 String ResourceWasBlocked::toString() const

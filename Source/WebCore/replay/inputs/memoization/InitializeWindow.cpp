@@ -42,6 +42,7 @@
 #include "InputEncoder.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
 
@@ -54,6 +55,11 @@ void InitializeWindow::dispatch(ReplayController* controller,
 
     controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& InitializeWindow::type() const
+{
+    return inputTypes().InitializeWindow;
 }
 
 String InitializeWindow::toString() const

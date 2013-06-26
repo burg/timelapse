@@ -41,10 +41,6 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-    extern const char* InterpretedKeyCommands;
-} // namespace ReplayInputTypes
-
 struct KeypressCommand;
 class InterpretedKeyCommands : public NondeterministicInput {
 
@@ -53,7 +49,8 @@ public:
     virtual ~InterpretedKeyCommands();
 
     // NondeterministicInput API
-    virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
     void serialize(InputEncoder&) const;

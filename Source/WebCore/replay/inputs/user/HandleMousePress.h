@@ -36,21 +36,20 @@
 
 #include "EventLoopInput.h"
 #include "HandleMouseBase.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
 class HandleMousePress : public HandleMouseBase {
-
 public:
     HandleMousePress(const PlatformMouseEvent& event)
-        : HandleMouseBase(event, ReplayInputTypes::HandleMousePress) {}
+        : HandleMouseBase(event) {}
     virtual ~HandleMousePress() {};
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE
     {
         return HandleMouseBase::memorySize();

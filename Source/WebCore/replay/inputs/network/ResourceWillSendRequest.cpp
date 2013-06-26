@@ -35,9 +35,10 @@
 
 #include "ResourceWillSendRequest.h"
 
-#include "ReplayController.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "ResourceRequest.h"
@@ -48,13 +49,8 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceWillSendRequest = "ResourceWillSendRequest";
-}
-
 ResourceWillSendRequest::ResourceWillSendRequest(int id, ResourceRequest& request, const ResourceResponse& redirectResponse)
-    : EventLoopInput(ReplayInputTypes::ResourceWillSendRequest)
-    , m_id(id)
+    : m_id(id)
     , m_request(ResourceRequest::adopt(request.copyData()))
     , m_redirectResponse(ResourceResponse::adopt(redirectResponse.copyData())) {}
 
@@ -70,6 +66,11 @@ void ResourceWillSendRequest::dispatch(ReplayController* controller,
 
     client->willSendRequest(handle.get(), *m_request, *m_redirectResponse);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceWillSendRequest::type() const
+{
+    return inputTypes().ResourceWillSendRequest;
 }
 
 String ResourceWillSendRequest::toString() const

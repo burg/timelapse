@@ -36,7 +36,6 @@
 
 #include "DispatchEventBase.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
 
@@ -48,22 +47,22 @@ class Page;
 class TimerCreated : public NondeterministicInput {
 public:
     TimerCreated(int timerId, int frameIndex)
-    : NondeterministicInput(ReplayInputTypes::TimerCreated)
-    , m_timerId(timerId)
+    : m_timerId(timerId)
     , m_frameIndex(frameIndex) {}
     virtual ~TimerCreated() {}
 
     // NondeterministicInput API
-    virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE
     {
         return makeString("TimerCreated(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
     }
     size_t memorySize() const OVERRIDE { return sizeof(TimerCreated); }
+
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }
     Document* document(Page* page) const { return SerializedEventTarget::documentFromFrameIndex(page, m_frameIndex); }
-
 private:
     int m_timerId;
     int m_frameIndex;

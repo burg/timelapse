@@ -35,7 +35,6 @@
 #if ENABLE(TIMELAPSE)
 
 #include "HandleMouseBase.h"
-#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -43,7 +42,7 @@ class HandleContextMenu : public HandleMouseBase {
 
 public:
     HandleContextMenu(const PlatformMouseEvent& event, int frameIndex)
-        : HandleMouseBase(event, ReplayInputTypes::HandleContextMenu)
+        : HandleMouseBase(event)
         , m_frameIndex(frameIndex) {}
     virtual ~HandleContextMenu() {};
 
@@ -52,6 +51,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE
     {
         return HandleMouseBase::memorySize();

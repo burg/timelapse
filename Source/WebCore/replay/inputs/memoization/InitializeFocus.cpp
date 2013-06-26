@@ -42,6 +42,7 @@
 #include "InputDecoder.h"
 #include "InputEncoder.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
 
@@ -60,6 +61,11 @@ void InitializeFocus::dispatch(ReplayController* controller,
     controller->page()->userInputProxy()->focusSetFocused(m_focus, true);
     controller->page()->focusController()->setFocusedFrame(framePtr);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& InitializeFocus::type() const
+{
+    return inputTypes().InitializeFocus;
 }
 
 String InitializeFocus::toString() const

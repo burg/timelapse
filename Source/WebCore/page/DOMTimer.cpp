@@ -100,7 +100,7 @@ void DeterministicDOMTimer::start(int timeout, bool singleShot)
     if (!it || !it->isReplaying())
         return;
 
-    NondeterministicInput* input = it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
+    NondeterministicInput* input = it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().TimerCreated);
     TimerCreated* castedInput = static_cast<TimerCreated*>(input);
     // error handling case: if fetch failed, schedule normally.
     // FIXME: This will cause divergences to happen later.

@@ -36,7 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -46,8 +46,7 @@ class ReplayController;
 class DisableCache : public EventLoopInput {
 
 public:
-    DisableCache()
-    : EventLoopInput(ReplayInputTypes::DisableCache) {}
+    DisableCache() {}
     virtual ~DisableCache() {};
 
     // EventLoopInput API
@@ -55,6 +54,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("DisableCache"); }
     virtual size_t memorySize() const OVERRIDE { return sizeof(DisableCache); }
 };

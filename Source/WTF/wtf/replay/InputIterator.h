@@ -32,11 +32,9 @@
 #ifndef InputIterator_h
 #define InputIterator_h
 
+#include "NondeterministicInput.h"
+#include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/replay/NondeterministicInput.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Vector.h>
 
 namespace WTF {
 
@@ -50,8 +48,8 @@ public:
     virtual bool isReplaying() const =0;
 
     WTF_EXPORT_PRIVATE virtual void storeInput(PassOwnPtr<NondeterministicInput>) =0;
-    WTF_EXPORT_PRIVATE virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType) =0;
-    WTF_EXPORT_PRIVATE virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType) =0;
+    WTF_EXPORT_PRIVATE virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&) =0;
+    WTF_EXPORT_PRIVATE virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType) =0;
 };
 
 } // namespace WTF

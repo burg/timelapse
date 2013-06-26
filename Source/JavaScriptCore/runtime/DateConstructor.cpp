@@ -74,7 +74,7 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 @end
 */
 
-#if ENABLE(TIMELAPSE)   
+#if ENABLE(TIMELAPSE)
 static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 {
     double currentTime = jsCurrentTime();
@@ -84,7 +84,8 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
     } else if (it->isCapturing()) {
         it->storeInput(adoptPtr(new GetCurrentTime(currentTime)));
     } else if (it->isReplaying()) {
-        GetCurrentTime* input = static_cast<GetCurrentTime*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::GetCurrentTime));
+        DEFINE_STATIC_LOCAL(const AtomicString, type, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
+        GetCurrentTime* input = static_cast<GetCurrentTime*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, type));
         if (input)
             currentTime = input->currentTime();
     }
@@ -95,7 +96,7 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(DateConstructor);
 
 DateConstructor::DateConstructor(JSGlobalObject* globalObject, Structure* structure)
-    : InternalFunction(globalObject, structure) 
+    : InternalFunction(globalObject, structure)
 {
 }
 
@@ -141,12 +142,12 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
         }
     } else {
         double doubleArguments[7] = {
-            args.at(0).toNumber(exec), 
-            args.at(1).toNumber(exec), 
-            args.at(2).toNumber(exec), 
-            args.at(3).toNumber(exec), 
-            args.at(4).toNumber(exec), 
-            args.at(5).toNumber(exec), 
+            args.at(0).toNumber(exec),
+            args.at(1).toNumber(exec),
+            args.at(2).toNumber(exec),
+            args.at(3).toNumber(exec),
+            args.at(4).toNumber(exec),
+            args.at(5).toNumber(exec),
             args.at(6).toNumber(exec)
         };
         if (!std::isfinite(doubleArguments[0])
@@ -174,7 +175,7 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
 
     return DateInstance::create(exec, globalObject->dateStructure(), value);
 }
-    
+
 static EncodedJSValue JSC_HOST_CALL constructWithDateConstructor(ExecState* exec)
 {
     ArgList args(exec);
@@ -216,15 +217,15 @@ static EncodedJSValue JSC_HOST_CALL dateNow(ExecState* exec)
 #endif
 }
 
-static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec) 
+static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
 {
     double doubleArguments[7] = {
-        exec->argument(0).toNumber(exec), 
-        exec->argument(1).toNumber(exec), 
-        exec->argument(2).toNumber(exec), 
-        exec->argument(3).toNumber(exec), 
-        exec->argument(4).toNumber(exec), 
-        exec->argument(5).toNumber(exec), 
+        exec->argument(0).toNumber(exec),
+        exec->argument(1).toNumber(exec),
+        exec->argument(2).toNumber(exec),
+        exec->argument(3).toNumber(exec),
+        exec->argument(4).toNumber(exec),
+        exec->argument(5).toNumber(exec),
         exec->argument(6).toNumber(exec)
     };
     int n = exec->argumentCount();

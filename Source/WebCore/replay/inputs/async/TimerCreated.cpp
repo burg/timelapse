@@ -36,9 +36,15 @@
 
 #include "InputDecoder.h"
 #include "InputEncoder.h"
+#include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
+
+const AtomicString& TimerCreated::type() const
+{
+    return inputTypes().TimerCreated;
+}
 
 void InputCoder<TimerCreated>::encode(InputEncoder& encoder, const TimerCreated& input)
 {

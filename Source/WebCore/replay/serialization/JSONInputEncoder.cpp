@@ -38,9 +38,10 @@
 #include "FunctorInputIterator.h"
 #include "InspectorValues.h"
 #include "Logging.h"
-#include "ReplayRecording.h"
 #include "ReplayInputTypes.h"
+#include "ReplayRecording.h"
 #include <wtf/RefPtr.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/replay/InputIterator.h>
 
@@ -67,16 +68,14 @@
 #include "TimerCreated.h"
 #include "TimerFired.h"
 
-namespace WTF {
-static const char* queueTypeToString(ReplayInputQueueType queue) {
+static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
     switch (queue) {
-        case WTF::EventLoopInputQueue:    return "EventLoopInputQueue";
-        case WTF::LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
-        case WTF::ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
-        case WTF::ReplayInputQueueTypeLength: return "QueueTypeLength (error)";
+        case NondeterministicInput::EventLoopInputQueue:     return "EventLoopInputQueue";
+        case NondeterministicInput::LoaderMemoizedDataQueue: return "LoaderMemoizedDataQueue";
+        case NondeterministicInput::ScriptMemoizedDataQueue: return "ScriptMemoizedDataQueue";
+        case NondeterministicInput::QueueTypeLength:         return "QueueTypeLength (error)";
     }
 }
-} // namespace WTF
 
 namespace WebCore {
 
@@ -103,8 +102,8 @@ static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRec
     RefPtr<ReplayRecording> recording = prpRecording;
     CountMemorySize counter;
 
-    for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
-        ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
+    for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
+        NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
         recording->createFunctorIterator()->forEachInputInQueue(queueType, counter);
     }
 
@@ -113,99 +112,99 @@ static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRec
 
 static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const NondeterministicInput* input)
 {
-    const char* type = input->type();
+    const AtomicString& type = input->type();
 
-    if (type == ReplayInputTypes::BeginSentinel) {
+    if (type == inputTypes().BeginSentinel) {
         InputCoder<BeginSentinel>::encode(encoder, *(static_cast<const BeginSentinel*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::DisableCache) {
+    if (type == inputTypes().DisableCache) {
         InputCoder<DisableCache>::encode(encoder, *(static_cast<const DisableCache*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::DispatchFakeMouseMove) {
+    if (type == inputTypes().DispatchFakeMouseMove) {
         InputCoder<DispatchFakeMouseMove>::encode(encoder, *(static_cast<const DispatchFakeMouseMove*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::EnableCache) {
+    if (type == inputTypes().EnableCache) {
         InputCoder<EnableCache>::encode(encoder, *(static_cast<const EnableCache*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::EndSentinel) {
+    if (type == inputTypes().EndSentinel) {
         InputCoder<EndSentinel>::encode(encoder, *(static_cast<const EndSentinel*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::FocusSetActive) {
+    if (type == inputTypes().FocusSetActive) {
         InputCoder<FocusSetActive>::encode(encoder, *(static_cast<const FocusSetActive*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::FocusSetFocused) {
+    if (type == inputTypes().FocusSetFocused) {
         InputCoder<FocusSetFocused>::encode(encoder, *(static_cast<const FocusSetFocused*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::HandleContextMenu) {
+    if (type == inputTypes().HandleContextMenu) {
         InputCoder<HandleContextMenu>::encode(encoder, *(static_cast<const HandleContextMenu*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::HandleKeyPress) {
+    if (type == inputTypes().HandleKeyPress) {
         InputCoder<HandleKeyPress>::encode(encoder, *(static_cast<const HandleKeyPress*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::HandleMousePress) {
+    if (type == inputTypes().HandleMousePress) {
         InputCoder<HandleMousePress>::encode(encoder, *(static_cast<const HandleMousePress*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::HandleMouseMove) {
+    if (type == inputTypes().HandleMouseMove) {
         InputCoder<HandleMouseMove>::encode(encoder, *(static_cast<const HandleMouseMove*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::HandleMouseRelease) {
+    if (type == inputTypes().HandleMouseRelease) {
         InputCoder<HandleMouseRelease>::encode(encoder, *(static_cast<const HandleMouseRelease*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::HandleWheelEvent) {
+    if (type == inputTypes().HandleWheelEvent) {
         InputCoder<HandleWheelEvent>::encode(encoder, *(static_cast<const HandleWheelEvent*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::InitializeFocus) {
+    if (type == inputTypes().InitializeFocus) {
         InputCoder<InitializeFocus>::encode(encoder, *(static_cast<const InitializeFocus*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::InitializeWindow) {
+    if (type == inputTypes().InitializeWindow) {
         InputCoder<InitializeWindow>::encode(encoder, *(static_cast<const InitializeWindow*>(input)));
         return true;
     }
 #if PLATFORM(MAC)
-    if (type == ReplayInputTypes::InterpretedKeyCommands) {
+    if (type == inputTypes().InterpretedKeyCommands) {
         InputCoder<InterpretedKeyCommands>::encode(encoder, *(static_cast<const InterpretedKeyCommands*>(input)));
         return true;
     }
 #endif // PLATFORM(MAC)
-    if (type == ReplayInputTypes::NavigateToPage) {
+    if (type == inputTypes().NavigateToPage) {
         InputCoder<NavigateToPage>::encode(encoder, *(static_cast<const NavigateToPage*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::PlaybackError) {
+    if (type == inputTypes().PlaybackError) {
         InputCoder<PlaybackError>::encode(encoder, *(static_cast<const PlaybackError*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::RanPendingScripts) {
+    if (type == inputTypes().RanPendingScripts) {
         InputCoder<RanPendingScripts>::encode(encoder, *(static_cast<const RanPendingScripts*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::ScrollPage) {
+    if (type == inputTypes().ScrollPage) {
         InputCoder<ScrollPage>::encode(encoder, *(static_cast<const ScrollPage*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::SendResizeEvent) {
+    if (type == inputTypes().SendResizeEvent) {
         InputCoder<SendResizeEvent>::encode(encoder, *(static_cast<const SendResizeEvent*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::TimerCreated) {
+    if (type == inputTypes().TimerCreated) {
         InputCoder<TimerCreated>::encode(encoder, *(static_cast<const TimerCreated*>(input)));
         return true;
     }
-    if (type == ReplayInputTypes::TimerFired) {
+    if (type == inputTypes().TimerFired) {
         InputCoder<TimerFired>::encode(encoder, *(static_cast<const TimerFired*>(input)));
         return true;
     }
@@ -224,13 +223,13 @@ public:
 
     void operator()(size_t index, const NondeterministicInput* input)
     {
-        LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type());
+        LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().string().ascii().data());
 
         m_encoder->pushObject(); // the "data" object
         m_encoder->put("id", (uint64_t)index);
 
         // TODO: remove
-        if (input->queue() == WTF::EventLoopInputQueue)
+        if (input->queue() == NondeterministicInput::EventLoopInputQueue)
             static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*m_encoder);
 
         // abort if we couldn't perform type-specific encoding based on the tag.
@@ -455,13 +454,13 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONInputEncoder::serial
     RefPtr<ReplayRecording> recording = prpRecording;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue>::create();
 
-    for (int i = 0; i < WTF::ReplayInputQueueTypeLength; i++) {
+    for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
         SerializeInputToJSONFunctor collector(this);
-        ReplayInputQueueType queueType = static_cast<ReplayInputQueueType>(i);
+        NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
         PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
 
         RefPtr<TypeBuilder::Recordings::ReplayInputQueue> queue = TypeBuilder::Recordings::ReplayInputQueue::create()
-            .setType(WTF::queueTypeToString(queueType))
+            .setType(queueTypeToString(queueType))
             .setInputs(queueInputs);
 
         queues->addItem(queue.release());

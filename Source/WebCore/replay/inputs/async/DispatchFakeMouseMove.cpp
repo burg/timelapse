@@ -46,12 +46,8 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *DispatchFakeMouseMove = "DispatchFakeMouseMove";
-}
-
 DispatchFakeMouseMove::DispatchFakeMouseMove(const PlatformMouseEvent& event, int frameIndex)
-    : HandleMouseBase(event, ReplayInputTypes::DispatchFakeMouseMove)
+    : HandleMouseBase(event)
     , m_frameIndex(frameIndex) { }
 
 //EventLoopInput API
@@ -65,6 +61,11 @@ void DispatchFakeMouseMove::dispatch(ReplayController* controller,
 
     controller->page()->asyncEventProxy()->dispatchFakeMouseMove(frame, platformEvent(), true);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& DispatchFakeMouseMove::type() const
+{
+    return inputTypes().DispatchFakeMouseMove;
 }
 
 String DispatchFakeMouseMove::toString() const

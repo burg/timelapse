@@ -38,10 +38,6 @@
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-    extern const char *DispatchFakeMouseMove;
-}
-
 class Frame;
 
 class DispatchFakeMouseMove : public HandleMouseBase {
@@ -54,6 +50,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE
     {

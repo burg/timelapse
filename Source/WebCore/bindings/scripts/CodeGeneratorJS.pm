@@ -2088,9 +2088,9 @@ sub GenerateImplementation
                         push(@implContent, "     }\n");
                         push(@implContent, "     if (it && it->isReplaying()) {\n");
                         if ($getterExceptions) {
-                            push(@implContent, "        AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                            push(@implContent, "        AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
                         } else {
-                            push(@implContent, "        AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                            push(@implContent, "        AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
                         }
                         push(@implContent, "        if (input) {\n");
                         push(@implContent, "            ASSERT(input->attributeName() == \"$interfaceName.$name\");\n");
@@ -3425,10 +3425,10 @@ sub GenerateImplementationFunctionCall()
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, "memoizedResult", $thisObject) . ";\n");
             push(@implContent, $indent . "} else if (it && it->isReplaying()) {\n");
             if ($raisesException) {
-                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
                 push(@implContent, $indent . "    ec = input->exceptionCode();\n")
             } else {
-                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
             }
             push(@implContent, $indent . "    if (input) {\n");
             push(@implContent, $indent . "        ASSERT(input->attributeName() == \"$bindingName\");\n");

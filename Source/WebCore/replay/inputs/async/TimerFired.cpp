@@ -48,9 +48,13 @@
 namespace WebCore {
 
 TimerFired::TimerFired(int timerId, int frameIndex)
-: EventLoopInput(ReplayInputTypes::TimerFired)
-, m_timerId(timerId)
+: m_timerId(timerId)
 , m_frameIndex(frameIndex) {}
+
+const AtomicString& TimerFired::type() const
+{
+    return inputTypes().TimerFired;
+}
 
 String TimerFired::toString() const
 {

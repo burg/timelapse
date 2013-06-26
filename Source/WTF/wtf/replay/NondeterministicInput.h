@@ -32,41 +32,33 @@
 #ifndef NondeterministicInput_h
 #define NondeterministicInput_h
 
+#include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/text/WTFString.h>
 
 namespace WTF {
-
-typedef enum {
-    ScriptMemoizedDataQueue    = 0x0,
-    LoaderMemoizedDataQueue    = 0x1,
-    EventLoopInputQueue        = 0x2,
-    ReplayInputQueueTypeLength = 0x3,
-} ReplayInputQueueType;
 
 class NondeterministicInput {
     WTF_MAKE_NONCOPYABLE(NondeterministicInput);
 
 public:
-    typedef const char * ReplayInputType;
-    NondeterministicInput(ReplayInputType type)
-    : m_type(type) {}
+    typedef enum {
+        ScriptMemoizedDataQueue    = 0x0,
+        LoaderMemoizedDataQueue    = 0x1,
+        EventLoopInputQueue        = 0x2,
+        QueueTypeLength = 0x3,
+    } QueueType;
+
+    NondeterministicInput() {}
     virtual ~NondeterministicInput() {};
 
-    ReplayInputType type() const { return m_type; }
-
-    virtual ReplayInputQueueType queue() const =0;
+    virtual const AtomicString& type() const =0;
+    virtual QueueType queue() const =0;
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
-
-private:
-    ReplayInputType m_type;
 };
 
 } // namespace WTF
 
 using WTF::NondeterministicInput;
-using WTF::ReplayInputQueueType;
-using WTF::ReplayInputQueueTypeLength;
 
 #endif // NondeterministicInput_h

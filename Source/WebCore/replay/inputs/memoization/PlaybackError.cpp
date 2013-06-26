@@ -49,6 +49,11 @@ void PlaybackError::dispatch(ReplayController* controller,
     dispatcher->didDispatch(this);
 }
 
+const AtomicString& PlaybackError::type() const
+{
+    return inputTypes().PlaybackError;
+}
+
 String PlaybackError::toString() const
 {
     return makeString("PlaybackError(", m_errorMessage,")");

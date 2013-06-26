@@ -40,35 +40,32 @@
 
 namespace WebCore {
 
-    namespace ReplayInputTypes {
-        extern const char *ResourceDidReceiveData;
-    }
+class ReplayController;
 
-    class ReplayController;
+class ResourceDidReceiveData : public EventLoopInput {
+public:
+    ResourceDidReceiveData(int, const char* data, int length, int encodedLength);
+    virtual ~ResourceDidReceiveData();
 
-    class ResourceDidReceiveData : public EventLoopInput {
-    public:
-        ResourceDidReceiveData(int, const char* data, int length, int encodedLength);
-        virtual ~ResourceDidReceiveData();
+    int id() const { return m_id; }
+    const char* data() const { return m_buffer.data(); }
+    int length() const { return m_buffer.size(); }
+    int encodedLength() const { return m_encodedLength; }
 
-        int id() const { return m_id; }
-        const char* data() const { return m_buffer.data(); }
-        int length() const { return m_buffer.size(); }
-        int encodedLength() const { return m_encodedLength; }
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
-        // EventLoopInput API
-        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
-        // NondeterministicInput API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        void serialize(InputEncoder&) const;
-
-    private:
-        int m_id;
-        Vector<char, 0> m_buffer;
-        int m_encodedLength;
-    };
+private:
+    int m_id;
+    Vector<char, 0> m_buffer;
+    int m_encodedLength;
+};
 
 } // namespace WebCore
 

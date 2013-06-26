@@ -39,12 +39,17 @@
 #include "InputEncoder.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 
 namespace WebCore {
 
-void HandleMousePress::dispatch(ReplayController* controller,
-                                EventLoopInputDispatcher* dispatcher)
+const AtomicString& HandleMousePress::type() const
+{
+    return inputTypes().HandleMousePress;
+}
+
+void HandleMousePress::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
 {
     ASSERT(controller->page());
     ASSERT(sealed());

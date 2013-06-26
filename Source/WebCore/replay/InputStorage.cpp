@@ -41,15 +41,16 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/WTFString.h>
 
 
 #if !defined(NDEBUG)
-static const char* queueTypeToMiniString(ReplayInputQueueType queue) {
+static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue) {
     switch (queue) {
-        case WTF::EventLoopInputQueue:        return "DSPTCH";
-        case WTF::LoaderMemoizedDataQueue:    return "LDMEMO";
-        case WTF::ScriptMemoizedDataQueue:    return "JSMEMO";
-        case WTF::ReplayInputQueueTypeLength: return "ERROR!";
+        case NondeterministicInput::EventLoopInputQueue:     return "DSPTCH";
+        case NondeterministicInput::LoaderMemoizedDataQueue: return "LDMEMO";
+        case NondeterministicInput::ScriptMemoizedDataQueue: return "JSMEMO";
+        case NondeterministicInput::QueueTypeLength:         return "ERROR!";
     }
 }
 #endif
@@ -60,13 +61,13 @@ InputStorage::InputStorage()
 : m_inputCount(0)
 , m_readOnly(false)
 {
-    for (size_t i = 0; i < ReplayInputQueueTypeLength; i++)
+    for (size_t i = 0; i < NondeterministicInput::QueueTypeLength; i++)
         m_queues.append(new InputQueue());
 }
 
 InputStorage::~InputStorage()
 {
-    for (size_t i = 0; i < ReplayInputQueueTypeLength; i++)
+    for (size_t i = 0; i < NondeterministicInput::QueueTypeLength; i++)
         delete m_queues.at(i);
 }
 
@@ -75,35 +76,35 @@ PassOwnPtr<InputStorage> InputStorage::create()
     return adoptPtr(new InputStorage());
 }
 
-NondeterministicInput* InputStorage::load(ReplayInputQueueType queue, uint offset)
+NondeterministicInput* InputStorage::load(NondeterministicInput::QueueType queue, uint offset)
 {
-    ASSERT(queue < ReplayInputQueueTypeLength);
+    ASSERT(queue < NondeterministicInput::QueueTypeLength);
     ASSERT(offset < m_queues[queue]->size());
-    
+
     NondeterministicInput* input = m_queues.at(queue)->at(offset).get();
 
     LOG(DeterministicReplay, "%-25s %s-LOAD: %s\n", "[InputStorage]",
         queueTypeToMiniString(queue), input->toString().utf8().data());
-    
+
     return input;
 }
 
 void InputStorage::store(PassOwnPtr<NondeterministicInput> input)
 {
     ASSERT(input);
-    ASSERT(input->queue() < ReplayInputQueueTypeLength);
-    
+    ASSERT(input->queue() < NondeterministicInput::QueueTypeLength);
+
     LOG(DeterministicReplay, "%-25s#%-5u %s-STORE: %s \n", "[InputStorage]",
         m_inputCount++, queueTypeToMiniString(input->queue()),
         input->toString().utf8().data());
-    
+
     m_queues.at(input->queue())->append(input);
 }
 
 void InputStorage::freeze()
 {
     ASSERT(!m_readOnly);
-    
+
     m_readOnly = true;
     for (size_t i = 0; i < m_queues.size(); i++)
         m_queues.at(i)->shrinkToFit();

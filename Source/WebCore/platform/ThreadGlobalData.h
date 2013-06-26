@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -42,6 +42,7 @@ using WTF::ThreadSpecific;
 namespace WebCore {
 
     class EventNames;
+    class ReplayInputTypes;
     class ThreadLocalInspectorCounters;
     class ThreadTimers;
 
@@ -59,6 +60,9 @@ namespace WebCore {
         const CachedResourceRequestInitiators& cachedResourceRequestInitiators() { return *m_cachedResourceRequestInitiators; }
         EventNames& eventNames() { return *m_eventNames; }
         ThreadTimers& threadTimers() { return *m_threadTimers; }
+#if ENABLE(TIMELAPSE)
+        ReplayInputTypes& inputTypes() { return *m_inputTypes; }
+#endif
 
 #if USE(ICU_UNICODE)
         ICUConverterWrapper& cachedConverterICU() { return *m_cachedConverterICU; }
@@ -76,6 +80,10 @@ namespace WebCore {
         OwnPtr<CachedResourceRequestInitiators> m_cachedResourceRequestInitiators;
         OwnPtr<EventNames> m_eventNames;
         OwnPtr<ThreadTimers> m_threadTimers;
+
+#if ENABLE(TIMELAPSE)
+        OwnPtr<ReplayInputTypes> m_inputTypes;
+#endif
 
 #ifndef NDEBUG
         bool m_isMainThread;
@@ -101,7 +109,7 @@ namespace WebCore {
         friend ThreadGlobalData& threadGlobalData();
     };
 
-inline ThreadGlobalData& threadGlobalData() 
+inline ThreadGlobalData& threadGlobalData()
 {
     // FIXME: Workers are not necessarily the only feature that make per-thread global data necessary.
     // We need to check for e.g. database objects manipulating strings on secondary threads.
@@ -120,7 +128,7 @@ inline ThreadGlobalData& threadGlobalData()
     return *ThreadGlobalData::staticData;
 #endif
 }
-    
+
 } // namespace WebCore
 
 #endif // ThreadGlobalData_h

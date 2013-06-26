@@ -34,6 +34,7 @@
 #include "config.h"
 
 #include "CaptureInputIterator.h"
+
 #include "Document.h"
 #include "DocumentEventQueue.h"
 #include "EventLoopInput.h"
@@ -42,7 +43,6 @@
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "Page.h"
-
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
 
@@ -63,7 +63,7 @@ CaptureInputIterator::~CaptureInputIterator()
 {
     if (m_previousEventLoopInput)
         finalizePreviousInput();
-    
+
     m_storage->freeze();
     LOG(DeterministicReplay, "%-30sDestroyed capture iterator=%p.\n", "[ReplayController]", (void*)this);
 }
@@ -80,7 +80,7 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
     ASSERT_ARG(input, input != NULL);
     ASSERT(m_isActive);
 
-    if (input->queue() == WTF::EventLoopInputQueue) {
+    if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
         // flush document event queue, so event dispatch count reflects anything
         // dispatched or queued before this input was captured.
         m_page->mainFrame()->document()->eventQueue()->flush();
@@ -96,15 +96,14 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
     m_storage->store(input);
 }
 
-NondeterministicInput* CaptureInputIterator::loadInput(ReplayInputQueueType,
-                                                       NondeterministicInput::ReplayInputType)
+NondeterministicInput* CaptureInputIterator::loadInput(NondeterministicInput::QueueType, const AtomicString&)
 {
     // can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();
     return 0;
 }
 
-NondeterministicInput* CaptureInputIterator::uncheckedLoadInput(ReplayInputQueueType)
+NondeterministicInput* CaptureInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType)
 {
     // can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();

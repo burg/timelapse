@@ -51,14 +51,14 @@ public:
 
     bool isReadOnly() const { return m_readOnly; }
     void freeze();
-    NondeterministicInput* load(ReplayInputQueueType, uint);
+    NondeterministicInput* load(NondeterministicInput::QueueType, uint);
     void store(PassOwnPtr<NondeterministicInput>);
-    uint queueSize(ReplayInputQueueType queue) const
+    uint queueSize(NondeterministicInput::QueueType queue) const
     {
-        ASSERT(queue < ReplayInputQueueTypeLength);
+        ASSERT(queue < NondeterministicInput::QueueTypeLength);
         return m_queues[queue]->size();
     }
-    
+
 private:
     typedef Vector<OwnPtr<NondeterministicInput> > InputQueue;
     InputStorage();

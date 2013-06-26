@@ -5192,7 +5192,7 @@
 		C481092F17052FF100AB4BAA /* ReplayController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108D217052FF100AB4BAA /* ReplayController.cpp */; };
 		C481093017052FF100AB4BAA /* ReplayController.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108D317052FF100AB4BAA /* ReplayController.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481093117052FF100AB4BAA /* ReplayInputTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108D417052FF100AB4BAA /* ReplayInputTypes.cpp */; };
-		C481093217052FF100AB4BAA /* ReplayInputTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108D517052FF100AB4BAA /* ReplayInputTypes.h */; };
+		C481093217052FF100AB4BAA /* ReplayInputTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108D517052FF100AB4BAA /* ReplayInputTypes.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481093317052FF100AB4BAA /* ReplayRecording.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108D617052FF100AB4BAA /* ReplayRecording.cpp */; };
 		C481093417052FF100AB4BAA /* ReplayRecording.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108D717052FF100AB4BAA /* ReplayRecording.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C481093717052FF100AB4BAA /* SerializationMethods.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108DB17052FF100AB4BAA /* SerializationMethods.cpp */; };

@@ -36,15 +36,16 @@
 
 namespace JSC {
 
-namespace ReplayInputTypes {
-const char *SetRandomSeed = "SetRandomSeed";
-}
-
 SetRandomSeed::SetRandomSeed(uint64_t randomSeed)
-    : NondeterministicInput(ReplayInputTypes::SetRandomSeed)
-    , m_randomSeed(randomSeed) {}
+    : m_randomSeed(randomSeed) {}
 
 SetRandomSeed::~SetRandomSeed() {}
+
+const AtomicString& SetRandomSeed::type() const
+{
+    DEFINE_STATIC_LOCAL(const AtomicString, type, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
+    return type;
+}
 
 String SetRandomSeed::toString() const {
     return makeString("SetRandomSeed(", String::number(m_randomSeed), ")");

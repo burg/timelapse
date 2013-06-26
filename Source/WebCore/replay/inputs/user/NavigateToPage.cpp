@@ -51,8 +51,7 @@
 namespace WebCore {
 
 NavigateToPage::NavigateToPage(PassRefPtr<SecurityOrigin> securityOrigin, const String& url, const String& referrer)
-    : EventLoopInput(ReplayInputTypes::NavigateToPage)
-    , m_securityOrigin(securityOrigin)
+    : m_securityOrigin(securityOrigin)
     , m_url(url)
     , m_referrer(referrer)
 {
@@ -81,6 +80,11 @@ void NavigateToPage::dispatch(ReplayController* controller,
 }
 
 // NondeterministicInput API
+
+const AtomicString& NavigateToPage::type() const
+{
+    return inputTypes().NavigateToPage;
+}
 
 String NavigateToPage::toString() const
 {

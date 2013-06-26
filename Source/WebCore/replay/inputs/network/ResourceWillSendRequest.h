@@ -39,36 +39,33 @@
 
 namespace WebCore {
 
-    namespace ReplayInputTypes {
-        extern const char *ResourceWillSendRequest;
-    }
+class ReplayController;
+class ResourceRequest;
+class ResourceResponse;
 
-    class ReplayController;
-    class ResourceRequest;
-    class ResourceResponse;
+class ResourceWillSendRequest : public EventLoopInput {
+public:
+    ResourceWillSendRequest(int id, ResourceRequest&, const ResourceResponse& redirectResponse);
+    virtual ~ResourceWillSendRequest();
 
-    class ResourceWillSendRequest : public EventLoopInput {
-    public:
-        ResourceWillSendRequest(int id, ResourceRequest&, const ResourceResponse& redirectResponse);
-        virtual ~ResourceWillSendRequest();
+    int id() const { return m_id; }
+    ResourceRequest* request() const { return m_request.get(); }
+    ResourceResponse* redirectResponse() const { return m_redirectResponse.get(); }
 
-        int id() const { return m_id; }
-        ResourceRequest* request() const { return m_request.get(); }
-        ResourceResponse* redirectResponse() const { return m_redirectResponse.get(); }
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
 
-        // EventLoopInput API
-        virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    void serialize(InputEncoder&) const;
 
-        // NondeterministicInput API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        void serialize(InputEncoder&) const;
-
-    private:
-        int m_id;
-        OwnPtr<ResourceRequest> m_request;
-        OwnPtr<ResourceResponse> m_redirectResponse;
-    };
+private:
+    int m_id;
+    OwnPtr<ResourceRequest> m_request;
+    OwnPtr<ResourceResponse> m_redirectResponse;
+};
 
 } // namespace WebCore
 

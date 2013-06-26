@@ -39,6 +39,7 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
+#include <wtf/text/AtomicString.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -56,15 +57,14 @@ typedef enum {
 
 struct ReplayErrorData {
     ReplayErrorType error;
-    NondeterministicInput::ReplayInputType expectedInput;
-    ReplayInputQueueType queue;
+    AtomicString expectedInput;
+    NondeterministicInput::QueueType queue;
 };
 
 class ReplayInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(ReplayInputIterator);
 public:
-    static PassOwnPtr<ReplayInputIterator> create(InputStorage*, Page*,
-                                                  EventLoopInputDispatcherClient*);
+    static PassOwnPtr<ReplayInputIterator> create(InputStorage*, Page*, EventLoopInputDispatcherClient*);
     virtual ~ReplayInputIterator();
 
     // InputIterator API
@@ -72,10 +72,9 @@ public:
     virtual bool isReplaying() const { return m_isActive; }
 
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
-    virtual NondeterministicInput* loadInput(ReplayInputQueueType,
-                                             NondeterministicInput::ReplayInputType);
-    virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType);
-   
+    virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
+    virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
+
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
     EventLoopInputDispatcher* dispatcher() const { return m_dispatcher.get(); }

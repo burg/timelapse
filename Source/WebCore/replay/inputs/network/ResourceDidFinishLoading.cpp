@@ -35,21 +35,17 @@
 
 #include "ResourceDidFinishLoading.h"
 
-#include "ReplayController.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 
 namespace WebCore {
 
-namespace ReplayInputTypes {
-const char *ResourceDidFinishLoading = "ResourceDidFinishLoading";
-}
-
 ResourceDidFinishLoading::ResourceDidFinishLoading(int id, double finishTime)
-    : EventLoopInput(ReplayInputTypes::ResourceDidFinishLoading)
-    , m_id(id)
+    : m_id(id)
     , m_finishTime(finishTime) {}
 
 //EventLoopInput API
@@ -62,6 +58,11 @@ void ResourceDidFinishLoading::dispatch(ReplayController* controller,
 
     client->didFinishLoading(handle.get(), m_finishTime);
     dispatcher->didDispatch(this);
+}
+
+const AtomicString& ResourceDidFinishLoading::type() const
+{
+    return inputTypes().ResourceDidFinishLoading;
 }
 
 String ResourceDidFinishLoading::toString() const

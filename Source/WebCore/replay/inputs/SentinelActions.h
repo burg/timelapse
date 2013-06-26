@@ -36,7 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
-#include "ReplayInputTypes.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
@@ -47,7 +47,7 @@ class BeginSentinel : public EventLoopInput {
 
 public:
     BeginSentinel()
-    : EventLoopInput(ReplayInputTypes::BeginSentinel) {}
+    : EventLoopInput() {}
     virtual ~BeginSentinel() {};
 
     // EventLoopInput API
@@ -55,6 +55,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("Begin"); }
     size_t memorySize() const OVERRIDE { return sizeof(BeginSentinel); }
 };
@@ -68,7 +69,7 @@ class EndSentinel : public EventLoopInput {
 
 public:
     EndSentinel()
-    : EventLoopInput(ReplayInputTypes::EndSentinel) {}
+    : EventLoopInput() {}
     virtual ~EndSentinel() {};
 
     // EventLoopInput API
@@ -76,6 +77,7 @@ public:
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE { return String("End"); }
     size_t memorySize() const OVERRIDE { return sizeof(EndSentinel); }
 };
