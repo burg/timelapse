@@ -216,16 +216,24 @@ body.window-inactive .toolbar .replay-dashboard {
     left: -3px;
 }
 
+.toolbar .replay-dashboard > .replay:hover > img {
+    cursor: pointer;
+}
+
 .toolbar .replay-dashboard > .unload > img {
     content: url(Images/StepOut.pdf);
     width: 25px;
     position: absolute;
     top: 9px;
-    opacity: 0.5;
+    opacity: 0.3;
 }
 
 .toolbar .replay-dashboard > .unload.enabled > img {
     opacity: 1;
+}
+
+.toolbar .replay-dashboard > .unload.enabled:hover > img {
+    cursor: pointer;
 }
 
 .toolbar .replay-dashboard > .replay > div {
@@ -236,6 +244,10 @@ body.window-inactive .toolbar .replay-dashboard {
 
 .toolbar .replay-dashboard > .replay > div > img {
     width: 14px;
+}
+
+.toolbar .replay-dashboard > .replay:hover > div > img {
+    cursor: pointer;
 }
 
 .toolbar .dashboard > .errors.enabled:hover > img {
