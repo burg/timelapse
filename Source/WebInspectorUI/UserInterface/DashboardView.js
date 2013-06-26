@@ -30,6 +30,10 @@ WebInspector.DashboardView = function(element)
     this._element = element;
 
     this._items = {
+        replay: {
+            tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
+            handler: this._replayItemWasClicked
+        },
         resourcesCount: {
             tooltip: WebInspector.UIString("Total number of resources, click to show the Resources navigation sidebar"),
             handler: this._resourcesWasClicked
@@ -53,10 +57,6 @@ WebInspector.DashboardView = function(element)
         issues: {
             tooltip: WebInspector.UIString("Console warnings, click to show the Console"),
             handler: this._consoleItemWasClicked.bind(this, WebInspector.LogContentView.Scopes.Warnings)
-        },
-        replay: {
-            tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
-            handler: this._replayItemWasClicked
         }
     };
 
@@ -265,7 +265,8 @@ WebInspector.DashboardView.prototype = {
     _replayItemWasClicked: function(event)
     {
         if (event.target !== this._replayStateButton) {
-            console.log("Toggled replay dashboard");
+            WebInspector.replayManager.toolbarItem.hidden = false;
+            WebInspector.dashboardManager.toolbarItem.hidden = true;
             return;
         }
 

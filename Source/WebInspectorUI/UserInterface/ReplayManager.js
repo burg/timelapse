@@ -27,6 +27,9 @@ WebInspector.ReplayManager = function()
 {
     WebInspector.Object.call(this);
 
+    this.toolbarItem = new WebInspector.NavigationItem("replay-dashboard");
+    this._view = new WebInspector.ReplayDashboardView(this);
+
     this._replayState = WebInspector.ReplayManager.ReplayState.CanCapture;
 };
 
