@@ -33,6 +33,10 @@ WebInspector.ReplayDashboardView = function(replayManager)
         replay: {
             tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
             handler: this._replayItemWasClicked
+        },
+        unload: {
+            tooltip: WebInspector.UIString("Click to unloaded recording"),
+            handler: this._unloadItemWasClicked
         }
     };
 
@@ -123,6 +127,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
         case WebInspector.ReplayManager.ReplayState.Capturing:
             ReplayAgent.stopCapture();
+            this._setItemEnabled(this._items.unload, true);
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
@@ -132,6 +137,19 @@ WebInspector.ReplayDashboardView.prototype = {
         default:
             console.assert(false, "ReplayManager in invalid state");
         }
+    },
+
+    _unloadItemWasClicked: function(event)
+    {
+        console.assert(WebInspector.replayManager.loadedRecording, "Can't unload recording because none is loaded");
+        ReplayAgent.unloadRecording();
+        this._setItemEnabled(this._items.unload, false);
+
+        var item = this._items.replay;
+
+        item.container.classList.remove("paused");
+        item.container.classList.remove("replaying");
+        item.container.classList.add("ready");
     },
 
     _setItemEnabled: function(item, enabled)
