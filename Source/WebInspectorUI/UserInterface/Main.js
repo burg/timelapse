@@ -217,6 +217,8 @@ WebInspector.contentLoaded = function()
     this.toolbar.addToolbarItem(this._consoleToolbarButton, WebInspector.Toolbar.Section.Center);
 
     this.toolbar.addToolbarItem(this.dashboardManager.toolbarItem, WebInspector.Toolbar.Section.Center);
+    this.toolbar.addToolbarItem(this.replayManager.toolbarItem, WebInspector.Toolbar.Section.Center);
+    this.replayManager.toolbarItem.hidden = true;
 
     // The toolbar button for node inspection.
     var toolTip = WebInspector.UIString("Enable point to inspect mode (%s)").format(WebInspector._inspectModeKeyboardShortcut.displayName);
