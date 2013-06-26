@@ -417,6 +417,7 @@ InspectorBackend.registerEvent("Replay.replayDisabled", []);
 InspectorBackend.registerEvent("Replay.captureStarted", []);
 InspectorBackend.registerEvent("Replay.captureStopped", []);
 InspectorBackend.registerEvent("Replay.capturedAction", ["record"]);
+InspectorBackend.registerEvent("Replay.capturedInput", ["input"]);
 InspectorBackend.registerEvent("Replay.playbackHitMark", ["mark"]);
 InspectorBackend.registerEvent("Replay.playbackStarted", []);
 InspectorBackend.registerEvent("Replay.playbackPaused", ["mark"]);

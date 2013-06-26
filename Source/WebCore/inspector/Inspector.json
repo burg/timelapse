@@ -2890,6 +2890,13 @@
                 ]
             },
             {
+                "name": "capturedInput",
+                "description": "A new (event loop) input was captured.",
+                "parameters": [
+                    { "name": "input", "$ref": "Recordings.ReplayInput", "description": "Data for the captured (event loop) input." }
+                ]
+            },
+            {
                 "name": "playbackHitMark",
                 "description": "A mark was reached during the replay.",
                 "parameters": [

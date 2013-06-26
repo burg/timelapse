@@ -50,7 +50,9 @@ namespace WebCore {
     public:
         JSONInputEncoder();
         virtual ~JSONInputEncoder();
+
         PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
+        PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index=0);
     protected:
         // insert key-value pair into current object
         // insert string as element of current array

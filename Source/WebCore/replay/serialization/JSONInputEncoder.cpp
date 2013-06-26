@@ -225,28 +225,11 @@ public:
     {
         LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().string().ascii().data());
 
-        m_encoder->pushObject(); // the "data" object
-        m_encoder->put("id", (uint64_t)index);
-
-        // TODO: remove
-        if (input->queue() == NondeterministicInput::EventLoopInputQueue)
-            static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*m_encoder);
-
-        // abort if we couldn't perform type-specific encoding based on the tag.
-        if (!dispatchTypeSpecificEncodeMethod(*m_encoder, input)) {
-            m_encoder->popObject();
-            return;
-        }
-
-        RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = TypeBuilder::Recordings::ReplayInput::create()
-            .setType(input->type())
-            .setData(m_encoder->popObject());
-
+        RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = m_encoder->serializeInput(input, index);
         m_inputs->addItem(serializedInput.release());
     }
 
     ReturnType returnValue() { return m_inputs.release(); }
-
 private:
     JSONInputEncoder* m_encoder;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > m_inputs;
@@ -449,6 +432,15 @@ void JSONInputEncoder::storeResourceBytes(int /*id*/, const char* /*data*/, int 
     // TODO(Issue #265): serialize resource bytes using base64 encoding.
 }
 
+// Only to be used to pop the root object, not nested objects.
+PassRefPtr<InspectorObject> JSONInputEncoder::popObject()
+{
+    ASSERT(m_currentObject);
+    ASSERT(m_stack.isEmpty());
+
+    return m_currentObject.release();
+}
+
 PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONInputEncoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
@@ -475,13 +467,26 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONInputEncoder::serial
     return recordingObject;
 }
 
-// Only to be used to pop the root object, not nested objects.
-PassRefPtr<InspectorObject> JSONInputEncoder::popObject()
+PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONInputEncoder::serializeInput(const NondeterministicInput* input, int index)
 {
-    ASSERT(m_currentObject);
-    ASSERT(m_stack.isEmpty());
+    pushObject(); // the "data" object
+    put("id", (uint64_t)index);
 
-    return m_currentObject.release();
+    // TODO: remove
+    if (input->queue() == NondeterministicInput::EventLoopInputQueue)
+        static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*this);
+
+    // abort if we couldn't perform type-specific encoding based on the tag.
+    if (!dispatchTypeSpecificEncodeMethod(*this, input)) {
+        popObject();
+        return 0;
+    }
+
+    RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = TypeBuilder::Recordings::ReplayInput::create()
+                .setType(input->type())
+                .setData(popObject());
+
+    return serializedInput.release();
 }
 
 }; // namespace WebCore

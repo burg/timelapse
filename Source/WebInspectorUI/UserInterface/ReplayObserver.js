@@ -53,7 +53,13 @@ WebInspector.ReplayObserver.prototype = {
         WebInspector.replayManager.captureStopped();
     },
 
+    // Deprecated; used capturedInput instead
     capturedAction: function(record)
+    {
+        // Not handled yet.
+    },
+
+    capturedInput: function(input)
     {
         // Not handled yet.
     },
