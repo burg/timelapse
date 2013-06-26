@@ -36,12 +36,15 @@ WebInspector.RecordingObject = function()
 {
     WebInspector.Object.call(this);
 
+    this._providers = [];
+
     this._callbacks = new WebInspector.EventListenerGroup(this, "RecordingObject listeners");
     this.registerListeners(this._callbacks);
     this._callbacks.install();
 };
 
 WebInspector.RecordingObject.Event = {
+    ProviderAdded:  "ProviderAdded",
 };
 
 WebInspector.RecordingObject.prototype = {
@@ -54,6 +57,41 @@ WebInspector.RecordingObject.prototype = {
     filename: function() {},
     dataLoaded: function() {},
     get isCapturing() { return false; },
+
+    addProvider: function(provider)
+    {
+        console.assert(provider instanceof WebInspector.DataProvider,
+                       "Tried to add unknown object as a data provider to a recording:", provider, this);
+
+        if (this._providers.indexOf(provider) != -1)
+            return;
+
+        this._providers.push(provider);
+        this.dispatchEventToListeners(WebInspector.RecordingObject.Event.ProviderAdded, provider);
+    },
+
+    removeProvider: function(provider)
+    {
+        var idx = this._providers.indexOf(provider);
+        if (idx == -1)
+            return;
+
+        this._removeProviderAtIndex(idx);
+    },
+
+    providersWithConstructor: function(ctor)
+    {
+        var found = [];
+        for (var i = 0; i < this._providers.length; i++) {
+            var provider = this._providers[i];
+            if (provider.constructor === ctor)
+                found.push(provider);
+        }
+
+        return found;
+    },
+
+    // Protected
 
     // NB. this is extended by subclasses, so don't inline it into a constructor.
     registerListeners: function(group) {
@@ -78,7 +116,21 @@ WebInspector.RecordingObject.prototype = {
             return;
 
         this._callbacks.install();
-    }
+    },
+
+    _removeProviderAtIndex: function(idx) {
+        console.assert(idx >= 0 && idx < this._providers.length,
+                       "Tried to remove provider at invalid index: "+i);
+
+        this._providers[idx].willRemove();
+        this._providers.splice(idx, 1);
+    },
+
+    _clearProviders: function() {
+        while (this._providers.length > 0) {
+            this._removeProviderAtIndex(0);
+        }
+    },
 };
 
 WebInspector.SerializedRecordingObject = function(uid)
