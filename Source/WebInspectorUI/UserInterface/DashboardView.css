@@ -224,6 +224,19 @@ body.window-inactive .toolbar .replay-dashboard {
     cursor: pointer;
 }
 
+.toolbar .replay-dashboard > .prompt {
+    opacity: 0;
+    transition: opacity 0.5s;
+    font-size: 16px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.toolbar .replay-dashboard > .prompt.enabled {
+    opacity: 1;
+    cursor: pointer;
+}
+
 .toolbar .replay-dashboard > .unload > img {
     content: url(Images/ReplayEjectButton.svg);
     visibility: hidden;
