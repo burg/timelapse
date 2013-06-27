@@ -162,6 +162,8 @@ WebInspector.DashboardView.prototype = {
     {
         // called from WebInspector.DashboardManager
 
+        if (this._replayStateButtonTemporarilyLocked)
+            delete this._replayStateButtonTemporarilyLocked;
         var item = this._items.replay;
 
         item.container.classList.remove("ready");
@@ -266,6 +268,13 @@ WebInspector.DashboardView.prototype = {
             console.log("Toggled replay dashboard");
             return;
         }
+
+        // This is necessary to prevent multiple clicks on the capture or replay button
+        // from triggering multiple capture/replay requests to the backend before the button is updated.
+        if (this._replayStateButtonTemporarilyLocked)
+            return;
+
+        this._replayStateButtonTemporarilyLocked = true;
 
         switch (WebInspector.replayManager.replayState) {
 
