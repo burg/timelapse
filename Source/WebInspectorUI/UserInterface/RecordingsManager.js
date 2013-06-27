@@ -110,7 +110,7 @@ WebInspector.RecordingsManager.prototype = {
 
     removeRecording: function(recording) {
         // FIXME: implement this (see old RecordingsModel.js).
-        // It depends on ReplayTaskScheduler to safely remove recordings that may be already loaded.
+        // It depends on AsyncTaskScheduler to safely remove recordings that may be already loaded.
     },
 
     getRecordingWithUID: function(uid)

@@ -28,6 +28,7 @@ WebInspector.ReplayManager = function()
     WebInspector.Object.call(this);
 
     this._replayState = WebInspector.ReplayManager.ReplayState.CanCapture;
+    this._scheduler = new WebInspector.AsyncTaskScheduler();
 
     this.toolbarItem = new WebInspector.NavigationItem("replay-dashboard");
     this._view = new WebInspector.ReplayDashboardView(this);
@@ -61,6 +62,11 @@ WebInspector.ReplayManager.prototype = {
     __proto__: WebInspector.Object.prototype,
 
     // Public
+
+    get scheduler()
+    {
+        return this._scheduler;
+    },
 
     get replayState()
     {
@@ -99,11 +105,9 @@ WebInspector.ReplayManager.prototype = {
         return this._activeRecording;
     },
 
-    // asynchronously tear down existing replay state and start capture of a new recording.
     startCaptureSoon: function()
     {
-        this._activeRecording = new WebInspector.LiveRecordingObject(this);
-        ReplayAgent.startCapture();
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.StartCapture());
     },
 
     // Protected (handlers for events from ReplayObserver)
@@ -172,4 +176,127 @@ WebInspector.ReplayManager.prototype = {
         else
             WebInspector.recordingsManager.addSingleFireEventListener(WebInspector.RecordingsManager.Event.RecordingAdded, setActiveRecording, this);
     },
+
+    // Protected (commands issued by AsyncTasks)
+
+    suppressBreakpoints: function()
+    {
+        if (this._suppressingBreakpoints)
+            return;
+
+        this._suppressingBreakpoints = true;
+        this._breakpointsWereEnabled = WebInspector.debuggerManager.breakpointsEnabled;
+        WebInspector.debuggerManager.breakpointsEnabled = false;
+    },
+
+    unsuppressBreakpoints: function()
+    {
+        if (!this._suppressingBreakpoints)
+            return;
+
+        delete this._suppressingBreakpoints;
+        delete this._breakpointsWereEnabled;
+        WebInspector.debuggerManager.breakpointsEnabled = this._breakpointsWereEnabled;
+    },
+
+    loadRecording: function(recording)
+    {
+        console.assert(!this._activeRecording, "Can't load recording because one is already loaded:", recording);
+        // TODO: receiving !wasAllowed should trigger task error.
+        ReplayAgent.loadRecording(recording.uid);
+    },
+
+    createRecording: function()
+    {
+        // we must create recording before receiving CaptureStarted, because
+        // the recording needs to listen for that event as well.
+        this._activeRecording = new WebInspector.LiveRecordingObject();
+        ReplayAgent.startCapture();
+    }
 };
+
+WebInspector.ReplayManager.AsyncTasks = {};
+WebInspector.ReplayManager.AsyncTasks.StartCapture = function() {
+    var task = new WebInspector.AsyncTask("StartCapture")
+    // if replaying, stop playback as the first subtask.
+    .chain("stopPlaybackIfNeeded", function(cb) {
+        if (!WebInspector.replayManager.isReplaying)
+            return cb();
+
+        WebInspector.ReplayManager.AsyncTasks.StopPlayback().run(cb);
+    })
+    .chain("unloadRecordingIfNeeded", function(cb) {
+        if (!WebInspector.replayManager.canReplay)
+            return cb();
+
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, cb);
+        WebInspector.replayManager.unloadRecording();
+    })
+    .chain("suppressBreakpoints", function(cb) {
+        // technically asynchronous, but is ordered before debugger resume command.
+        WebInspector.replayManager.suppressBreakpoints();
+        cb();
+    })
+    .chain("resumeDebuggerIfPaused",
+           WebInspector.ReplayManager.AsyncTaskSteps.ResumeDebuggerIfPaused)
+    .chain("requestStartCapture", function(cb) {
+        console.assert(WebInspector.replayManager.replayState === WebInspector.ReplayManager.ReplayState.CanCapture, "Cannot start capture whilst capturing or replaying alreday.");
+
+        WebInspector.replayManager.createRecording();
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.CaptureStarted, cb, this);
+    });
+
+    return task;
+};
+
+WebInspector.ReplayManager.AsyncTasks.StopCapture = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.LoadRecording = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.UnloadRecording = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.ReplayToIndex = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.ReplayToCompletion = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.StopPlayback = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.PausePlayback = function()
+{
+    // Not implemented
+    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTaskSteps = {};
+WebInspector.ReplayManager.AsyncTaskSteps.ResumeDebuggerIfPaused = function(cb)
+{
+    if (!WebInspector.debuggerManager.paused)
+        return cb();
+
+    WebInspector.debuggerManager.addSingleFireEventListener(WebInspector.DebuggerManager.Event.Resumed, cb, this);
+    WebInspector.debuggerManager.resume();
+}
