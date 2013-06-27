@@ -290,7 +290,7 @@ WebInspector.DashboardView.prototype = {
             break;
 
         case WebInspector.ReplayManager.ReplayState.Capturing:
-            ReplayAgent.stopCapture();
+            WebInspector.replayManager.stopCaptureSoon();
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:

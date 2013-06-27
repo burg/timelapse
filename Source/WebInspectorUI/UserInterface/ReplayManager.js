@@ -110,6 +110,11 @@ WebInspector.ReplayManager.prototype = {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.StartCapture());
     },
 
+    stopCaptureSoon: function()
+    {
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.StopCapture());
+    },
+
     // Protected (handlers for events from ReplayObserver)
 
     captureStarted: function()
@@ -121,6 +126,8 @@ WebInspector.ReplayManager.prototype = {
     captureStopped: function()
     {
         this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
+        delete this._activeRecording;
+        this.unsuppressBreakpoints();
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureStopped);
     },
 
@@ -212,6 +219,11 @@ WebInspector.ReplayManager.prototype = {
         // the recording needs to listen for that event as well.
         this._activeRecording = new WebInspector.LiveRecordingObject();
         ReplayAgent.startCapture();
+    },
+
+    finishRecording:  function()
+    {
+        ReplayAgent.stopCapture();
     }
 };
 
@@ -251,8 +263,14 @@ WebInspector.ReplayManager.AsyncTasks.StartCapture = function() {
 
 WebInspector.ReplayManager.AsyncTasks.StopCapture = function()
 {
-    // Not implemented
-    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+    if (!WebInspector.replayManager.isCapturing)
+        return;
+
+    return new WebInspector.AsyncTask("StopCapture")
+    .chain("requestCaptureStop", function(cb) {
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.CaptureStopped, cb);
+        WebInspector.replayManager.finishRecording();
+    });
 };
 
 WebInspector.ReplayManager.AsyncTasks.LoadRecording = function()
