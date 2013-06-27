@@ -164,44 +164,48 @@ body.window-inactive .toolbar .replay-dashboard {
 }
 
 .toolbar .dashboard > .replay > img {
-    content: url(Images/ReplayButtonCamera.png);
+    content: url(Images/ReplayCameraButton.svg);
     opacity: 0.9;
 }
 
-.toolbar .dashboard > .replay > img,
 .toolbar .replay-dashboard > .replay > img {
-    width: 20px;
-    height: 20px;
+    height: 16px;
 }
 
 .toolbar .dashboard > .replay > div > img,
 .toolbar .replay-dashboard > .replay > div > img {
-    width: 11px;
     opacity: 0.8;
+    padding: 1px 1px 0px 0px;
 }
 
 .toolbar .dashboard > .replay.ready > div > img,
 .toolbar .replay-dashboard > .replay.ready > div > img {
-    content: url(Images/RecordingStopped.png);
+    content: url(Images/ReplayReadyButton.svg);
+    opacity: 0.4;
 }
 
 .toolbar .dashboard > .replay.capturing > div > img,
 .toolbar .replay-dashboard > .replay.capturing > div > img {
-    content: url(Images/Recording.png);
+    content: url(Images/ReplayRecordingButton.svg);
 }
 
 .toolbar .dashboard > .replay.paused > div > img,
 .toolbar .replay-dashboard > .replay.paused > div > img {
-    content: url(Images/ReplayButtonReplaying.png);
+    content: url(Images/ReplayPlayButton.svg);
 }
 
 .toolbar .dashboard > .replay.replaying > div > img,
 .toolbar .replay-dashboard > .replay.replaying > div > img {
-    content: url(Images/ReplayButtonPaused.png);
+    content: url(Images/ReplayPauseButton.svg);
 }
 
 .toolbar .replay-dashboard {
+    height: 45px;
     position: relative;
+}
+
+.toolbar .replay-dashboard.hidden {
+    height: 30px;
 }
 
 .toolbar .replay-dashboard > .replay {
@@ -209,11 +213,11 @@ body.window-inactive .toolbar .replay-dashboard {
 }
 
 .toolbar .replay-dashboard > .replay > img {
-    content: url(Images/ReplayBackArrow.png);
-    opacity: 0.8;
+    content: url(Images/ReplayBackButton.svg);
+    opacity: 0.7;
     position: absolute;
-    top: 2px;
-    left: -3px;
+    top: 5px;
+    left: -1px;
 }
 
 .toolbar .replay-dashboard > .replay:hover > img {
@@ -221,15 +225,16 @@ body.window-inactive .toolbar .replay-dashboard {
 }
 
 .toolbar .replay-dashboard > .unload > img {
-    content: url(Images/StepOut.pdf);
-    width: 25px;
-    position: absolute;
-    top: 9px;
-    opacity: 0.3;
+    content: url(Images/ReplayEjectButton.svg);
+    visibility: hidden;
 }
 
 .toolbar .replay-dashboard > .unload.enabled > img {
-    opacity: 1;
+    visibility: visible;
+    width: 18px;
+    position: absolute;
+    top: 14px;
+    opacity: 0.7;
 }
 
 .toolbar .replay-dashboard > .unload.enabled:hover > img {
@@ -239,7 +244,7 @@ body.window-inactive .toolbar .replay-dashboard {
 .toolbar .replay-dashboard > .replay > div {
     position: absolute;
     bottom: 2px;
-    left: 0px;
+    left: 1px;
 }
 
 .toolbar .replay-dashboard > .replay > div > img {
