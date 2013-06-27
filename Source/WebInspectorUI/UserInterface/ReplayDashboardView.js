@@ -43,15 +43,17 @@ WebInspector.ReplayDashboardView = function(replayManager)
     for (var name in this._items)
         this._appendElementForNamedItem(name);
 
-    this._setItemEnabled(this._items.replay, true);
-    this._items.replay.container.classList.add("ready");
-
     // Necessary events required to track capture and replay state.
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStart, this._captureStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStop, this._captureStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackDidStart, this._captureStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._captureStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._captureStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStart, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStop, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackDidStart, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._replayStateChanged, this);
+
+    // initialize correct state
+    this._refreshButtonStates(replayManager);
 };
 
 WebInspector.ReplayDashboardView.EnabledStyleClassName = "enabled";
@@ -114,6 +116,8 @@ WebInspector.ReplayDashboardView.prototype = {
             return;
         }
 
+        this._setItemEnabled(this._items.replay, false);
+
         switch (WebInspector.replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.Paused:
@@ -131,7 +135,7 @@ WebInspector.ReplayDashboardView.prototype = {
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
-            ReplayAgent.startCapture();
+            WebInspector.replayManager.startCaptureSoon();
             break;
 
         default:
@@ -141,35 +145,33 @@ WebInspector.ReplayDashboardView.prototype = {
 
     _unloadItemWasClicked: function(event)
     {
-        console.assert(WebInspector.replayManager.loadedRecording, "Can't unload recording because none is loaded");
         ReplayAgent.unloadRecording();
         this._setItemEnabled(this._items.unload, false);
-
-        var item = this._items.replay;
-
-        item.container.classList.remove("paused");
-        item.container.classList.remove("replaying");
-        item.container.classList.add("ready");
     },
 
     _setItemEnabled: function(item, enabled)
     {
-        if (enabled)
-            item.container.classList.add(WebInspector.ReplayDashboardView.EnabledStyleClassName);
-        else
-            item.container.classList.remove(WebInspector.ReplayDashboardView.EnabledStyleClassName);
+        item.container.classList[(enabled) ? "add" : "remove"](WebInspector.ReplayDashboardView.EnabledStyleClassName);
     },
 
-    _captureStateChanged: function()
+    _replayStateChanged: function()
+    {
+        this._refreshButtonStates(WebInspector.replayManager);
+    },
+
+    _refreshButtonStates: function(replayManager)
     {
         var item = this._items.replay;
+
+        this._setItemEnabled(this._items.replay, true);
+        this._setItemEnabled(this._items.unload, true);
 
         item.container.classList.remove("ready");
         item.container.classList.remove("capturing");
         item.container.classList.remove("paused");
         item.container.classList.remove("replaying");
 
-        switch (WebInspector.replayManager.replayState) {
+        switch (replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.Paused:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
@@ -186,10 +188,11 @@ WebInspector.ReplayDashboardView.prototype = {
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
             item.container.classList.add("ready");
+            this._setItemEnabled(this._items.unload, false);
             break;
 
         default:
-            console.assert(false, "ReplayManager in invalid state");
+            console.assert(false, "ReplayManager in invalid state:", replayManager.replayState);
         }
     }
 };
