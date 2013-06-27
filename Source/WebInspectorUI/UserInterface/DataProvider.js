@@ -1,7 +1,6 @@
 /*
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -28,10 +27,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- * @extends {WebInspector.Object}
- */
+
+
+// DataProvider is the base class for objects that provide
+// recording-specific data. Subclasses store the data in an
+// implementation-dependent way; in the past, some subclasses store
+// ancillary state which needs to be coordinated across views.
+
+// In general, views listen for data providers they know how to use,
+// and have provider-specific code to fetch and render the data.
 WebInspector.DataProvider = function(name)
 {
     WebInspector.Object.call(this);
@@ -40,11 +44,10 @@ WebInspector.DataProvider = function(name)
     this._enabled = true;
 };
 
-WebInspector.DataProvider.DefaultCounterNoun = "Items";
-
 WebInspector.DataProvider.Event = {
     Enabled: "data-provider-enabled",
     Disabled: "data-provider-disabled",
+    DataChanged: "data-provider-data-changed",
     WillRemove: "data-provider-will-remove"
 };
 
@@ -66,7 +69,7 @@ WebInspector.DataProvider.prototype = {
 
     get counterNoun()
     {
-        return WebInspector.DataProvider.DefaultCounterNoun;
+        WebInspector.UIString("Items");
     },
 
     get enabled()
@@ -80,7 +83,8 @@ WebInspector.DataProvider.prototype = {
             return;
 
         this._enabled = flag;
-        var eventName = WebInspector.DataProvider.Event[(flag) ? "Enabled" : "Disabled"];
+        var eventName = (flag) ? WebInspector.DataProvider.Event.Enabled
+                               : WebInspector.DataProvider.Event.Disabled;
         this.dispatchEventToListeners(eventName, this);
     },
 

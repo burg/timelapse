@@ -116,7 +116,7 @@ WebInspector.Object.removeEventListener = function(eventType, listener, thisObje
         delete this._listeners;
 };
 
-WebInspector.Object.onceEventListener = function(eventType, listener, thisObject)
+WebInspector.Object.addSingleFireEventListener = function(eventType, listener, thisObject)
 {
     var wrappedCallback = function(event) {
         this.removeEventListener(eventType, wrappedCallback, thisObject);
@@ -159,7 +159,7 @@ WebInspector.Object.prototype = {
      */
     removeEventListener: WebInspector.Object.removeEventListener,
 
-    onceEventListener: WebInspector.Object.onceEventListener,
+    addSingleFireEventListener: WebInspector.Object.addSingleFireEventListener,
 
     removeAllListeners: WebInspector.Object.removeAllListeners,
 
@@ -213,76 +213,6 @@ WebInspector.Object.prototype = {
 
         return event.defaultPrevented;
     }
-}
-
-WebInspector.EventListenerGroup = function(ctx, name)
-{
-    this.name = name;
-    this._defaultCtx = ctx;
-    this._listeners = [];
-}
-
-WebInspector.EventListenerGroup.prototype = {
-    /**
-     * @param {string} eventType
-     * @param {function(WebInspector.Event)} listener
-     * @param {Object=} thisObject
-     */
-    register: function(emitter, eventType, listener, thisObject)
-    {
-        console.assert(listener, "Missing listener for eventType: "+eventType);
-        console.assert(emitter, "Missing event emitter for eventType: "+eventType);
-        console.assert(emitter instanceof WebInspector.Object ||
-                       emitter instanceof Node,
-                       "Event emitter (eventType:"+eventType+" does not implement Node or WebInspector.Object!");
-
-        if (!this._listeners)
-            this._listeners = [];
-
-        // if adding DOM event listener, adjust the `this` binding automatically.
-        if (emitter instanceof Node)
-            listener = listener.bind(thisObject || this._defaultCtx);
-
-        this._listeners.push({ emitter: emitter,
-                               eventType: eventType,
-                               listener: listener,
-                               thisObject: thisObject
-                            });
-    },
-
-    install: function()
-    {
-        console.assert(!this._listenersAreInstalled, "Already installed listener group"+this.name+".");
-
-        this._listenersAreInstalled = true;
-
-        for (var i = 0; i < this._listeners.length; ++i) {
-            var data = this._listeners[i];
-            if (data.emitter instanceof Node)
-                data.emitter.addEventListener(data.eventType, data.listener);
-            else
-                data.emitter.addEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
-        }
-    },
-
-    uninstall: function(unregisterListeners)
-    {
-        console.assert(this._listenersAreInstalled,
-                       "Trying to uninstall listener group "+this.name+", but it isn't installed.");
-
-        delete this._listenersAreInstalled;
-
-        for (var i = 0; i < this._listeners.length; ++i) {
-            var data = this._listeners[i];
-         if (data.emitter instanceof Node)
-                data.emitter.removeEventListener(data.eventType, data.listener);
-            else
-                data.emitter.removeEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
-        }
-
-        if (unregisterListeners)
-            this._listeners = [];
-    },
 }
 
 /**

@@ -131,7 +131,6 @@ WebInspector.ReplayDashboardView.prototype = {
 
         case WebInspector.ReplayManager.ReplayState.Capturing:
             ReplayAgent.stopCapture();
-            this._setItemEnabled(this._items.unload, true);
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:

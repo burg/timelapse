@@ -1,7 +1,6 @@
 /*
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -28,49 +27,59 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ReplayInputDataProvider = function(displayName)
+WebInspector.LiveRecordingObject = function()
 {
-    WebInspector.DataProvider.call(this, name);
-
-    this._displayName = displayName;
-    this._inputs = [];
-    this._resourceURLByIdentifier = {};
+    WebInspector.RecordingObject.call(this);
+    this.uid = -1;
+    this._isCapturing = false;
 };
 
-WebInspector.ReplayInputDataProvider.prototype = {
-    constructor: WebInspector.ReplayInputDataProvider,
-    __proto__: WebInspector.DataProvider.prototype,
+WebInspector.LiveRecordingObject.prototype = {
+    constructor: WebInspector.LiveRecordingObject,
+    __proto__: WebInspector.RecordingObject.prototype,
 
     // Public
 
-    get displayName()
+    displayName: function()
     {
-        return this._displayName;
+        return WebInspector.UIString("(Live Recording)");
     },
 
-    get counterNoun()
+    dataLoaded: function()
     {
-        return "Inputs";
+        return true;
     },
 
-    get inputs()
+    get isCapturing()
     {
-        return this._inputs;
-    },
-
-    resourceUrlForIdentifier: function(id)
-    {
-        return this._resourceURLByIdentifier[id];
+        return this._isCapturing;
     },
 
     addInput: function(input)
     {
-        this._inputs.push(input);
+        var inputProvider = this.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
+        inputProvider.addInput(input);
+    },
 
-        // update the mapping of resource handle ids to their URLs.
-        if (input.type === "ResourceWillSendRequest" || input.type === "ResourceDidReceiveResponse")
-            this._resourceURLByIdentifier[input.data.id] = input.data.url;
+    // Protected
 
-        this.dispatchEventToListeners(WebInspector.DataProvider.Event.DataChanged);
+    registerListeners: function(group) {
+        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStart, this._captureDidStart);
+        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStop,  this._captureDidStop);
+
+        WebInspector.RecordingObject.prototype.registerListeners.call(this, group);
+    },
+
+    // Private
+
+    _captureDidStart: function()
+    {
+        this._isCapturing = true;
+        this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Inputs")));
+    },
+
+    _captureDidStop: function()
+    {
+        this._isCapturing = false;
     },
 };

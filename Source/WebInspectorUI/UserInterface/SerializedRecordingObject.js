@@ -1,7 +1,6 @@
 /*
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -28,49 +27,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ReplayInputDataProvider = function(displayName)
+WebInspector.SerializedRecordingObject = function(uid)
 {
-    WebInspector.DataProvider.call(this, name);
+    WebInspector.RecordingObject.call(this);
+    this.uid = uid;
+    this._dataLoaded = false;
+}
 
-    this._displayName = displayName;
-    this._inputs = [];
-    this._resourceURLByIdentifier = {};
-};
-
-WebInspector.ReplayInputDataProvider.prototype = {
-    constructor: WebInspector.ReplayInputDataProvider,
-    __proto__: WebInspector.DataProvider.prototype,
+WebInspector.SerializedRecordingObject.prototype = {
+    constructor: WebInspector.SerializedRecordingObject,
+    __proto__: WebInspector.RecordingObject.prototype,
 
     // Public
 
-    get displayName()
+    loadData: function(data)
     {
-        return this._displayName;
+        // TODO: add action data and adjust calculator
+        this._dateCreated = new Date(data.dateCreated);
+        this._displayName = data.name;
+        this._dataLoaded = true;
     },
 
-    get counterNoun()
+    dataLoaded: function()
     {
-        return "Inputs";
+        return this._dataLoaded;
     },
 
-    get inputs()
+    get dateCreated()
     {
-        return this._inputs;
+        return this._dateCreated;
     },
 
-    resourceUrlForIdentifier: function(id)
+    filename: function()
     {
-        return this._resourceURLByIdentifier[id];
+        return "CapturedRecording-" + this.dateCreated.toISO8601Compact() + ".webreplay";
     },
 
-    addInput: function(input)
+    displayName: function()
     {
-        this._inputs.push(input);
-
-        // update the mapping of resource handle ids to their URLs.
-        if (input.type === "ResourceWillSendRequest" || input.type === "ResourceDidReceiveResponse")
-            this._resourceURLByIdentifier[input.data.id] = input.data.url;
-
-        this.dispatchEventToListeners(WebInspector.DataProvider.Event.DataChanged);
+        return WebInspector.UIString("Captured Recording %d", this.uid) || WebInspector.UIString("(uninitialized)");
     },
 };

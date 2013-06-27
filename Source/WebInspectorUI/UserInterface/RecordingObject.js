@@ -1,7 +1,6 @@
 /*
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -28,10 +27,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- * @extends {WebInspector.Object}
- */
 WebInspector.RecordingObject = function()
 {
     WebInspector.Object.call(this);
@@ -44,7 +39,7 @@ WebInspector.RecordingObject = function()
 };
 
 WebInspector.RecordingObject.Event = {
-    ProviderAdded:  "ProviderAdded",
+    ProviderAdded:  "recording-object-provider-added",
 };
 
 WebInspector.RecordingObject.prototype = {
@@ -60,10 +55,9 @@ WebInspector.RecordingObject.prototype = {
 
     addProvider: function(provider)
     {
-        console.assert(provider instanceof WebInspector.DataProvider,
-                       "Tried to add unknown object as a data provider to a recording:", provider, this);
+        console.assert(provider instanceof WebInspector.DataProvider, "Tried to add unknown object as a data provider to a recording:", provider, this);
 
-        if (this._providers.indexOf(provider) != -1)
+        if (this._providers.indexOf(provider) !== -1)
             return;
 
         this._providers.push(provider);
@@ -82,7 +76,7 @@ WebInspector.RecordingObject.prototype = {
     providersWithConstructor: function(ctor)
     {
         var found = [];
-        for (var i = 0; i < this._providers.length; i++) {
+        for (var i = 0; i < this._providers.length; ++i) {
             var provider = this._providers[i];
             if (provider.__proto__.constructor === ctor)
                 found.push(provider);
@@ -93,7 +87,7 @@ WebInspector.RecordingObject.prototype = {
 
     firstProviderWithConstructor: function(ctor)
     {
-        for (var i = 0; i < this._providers.length; i++) {
+        for (var i = 0; i < this._providers.length; ++i) {
             if (this._providers[i].__proto__.constructor === ctor)
                 return this._providers[i];
         }
@@ -117,7 +111,7 @@ WebInspector.RecordingObject.prototype = {
             return;
 
         this._callbacks.uninstall();
-        WebInspector.replayManager.onceEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._recordingLoaded, this);
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._recordingLoaded, this);
     },
 
     _recordingLoaded: function()
@@ -129,115 +123,14 @@ WebInspector.RecordingObject.prototype = {
     },
 
     _removeProviderAtIndex: function(idx) {
-        console.assert(idx >= 0 && idx < this._providers.length,
-                       "Tried to remove provider at invalid index: "+i);
+        console.assert(idx >= 0 && idx < this._providers.length, "Tried to remove provider at invalid index: " + i);
 
         this._providers[idx].willRemove();
         this._providers.splice(idx, 1);
     },
 
     _clearProviders: function() {
-        while (this._providers.length > 0) {
+        while (this._providers.length > 0)
             this._removeProviderAtIndex(0);
-        }
-    },
-};
-
-WebInspector.SerializedRecordingObject = function(uid)
-{
-    WebInspector.RecordingObject.call(this);
-    this.uid = uid;
-    this._dataLoaded = false;
-}
-
-WebInspector.SerializedRecordingObject.prototype = {
-    constructor: WebInspector.SerializedRecordingObject,
-    __proto__: WebInspector.RecordingObject.prototype,
-
-    // Public
-
-    loadData: function(data)
-    {
-        // TODO: add action data and adjust calculator
-        this._dateCreated = new Date(data.dateCreated);
-        this._displayName = data.name;
-        this._dataLoaded = true;
-    },
-
-    dataLoaded: function()
-    {
-        return this._dataLoaded;
-    },
-
-    get dateCreated()
-    {
-        return this._dateCreated;
-    },
-
-    filename: function()
-    {
-        return "CapturedRecording-" + this.dateCreated.toISO8601Compact() + ".webreplay";
-    },
-
-    displayName: function()
-    {
-        return WebInspector.UIString("Captured Recording %d", this.uid) || WebInspector.UIString("(uninitialized)");
-    },
-};
-
-WebInspector.LiveRecordingObject = function()
-{
-    WebInspector.RecordingObject.call(this);
-    this.uid = -1;
-    this._isCapturing = false;
-};
-
-WebInspector.LiveRecordingObject.prototype = {
-    constructor: WebInspector.LiveRecordingObject,
-    __proto__: WebInspector.RecordingObject.prototype,
-
-    // Public
-
-    displayName: function()
-    {
-        return WebInspector.UIString("(Live Recording)");
-    },
-
-    dataLoaded: function()
-    {
-        return true;
-    },
-
-    get isCapturing()
-    {
-        return this._isCapturing;
-    },
-
-    addInput: function(input)
-    {
-        var inputProvider = this.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
-        inputProvider.addInput(input);
-    },
-
-    // Protected
-
-    registerListeners: function(group) {
-        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStart, this._captureDidStart);
-        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStop,  this._captureDidStop);
-
-        WebInspector.RecordingObject.prototype.registerListeners.call(this, group);
-    },
-
-    // Private
-
-    _captureDidStart: function()
-    {
-        this._isCapturing = true;
-        this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Inputs")));
-    },
-
-    _captureDidStop: function()
-    {
-        this._isCapturing = false;
     },
 };

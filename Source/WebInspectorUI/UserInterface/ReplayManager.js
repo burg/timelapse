@@ -35,29 +35,30 @@ WebInspector.ReplayManager = function()
 
 WebInspector.ReplayManager.Event = {
     // These events are associated with capture.
-    CaptureDidStart: "ReplayCaptureDidStart",
-    CaptureDidStop: "ReplayCaptureDidStop",
+    CaptureDidStart: "replay-manager-capture-did-start",
+    CaptureDidStop: "replay-manager-capture-did-stop",
 
     // These events are associated with playback.
-    PlaybackDidStart: "ReplayPlaybackDidStart",
-    PlaybackPaused: "ReplayPlaybackPaused",
-    PlaybackFinished: "ReplayPlaybackFinished",
+    PlaybackDidStart: "replay-manager-playback-did-start",
+    PlaybackPaused: "replay-manager-playback-paused",
+    PlaybackFinished: "replay-manager-playback-finished",
 
     // fired when activeRecording changes.
-    RecordingLoaded: "ReplayRecordingLoaded",
-    RecordingUnloaded: "ReplayRecordingUnloaded",
+    RecordingLoaded: "replay-manager-recording-loaded",
+    RecordingUnloaded: "replay-manager-recording-unloaded",
 };
 
 WebInspector.ReplayManager.ReplayState = {
-    CanCapture: "ReplayStateCanCapture",
-    CanReplay: "ReplayStateCanReplay",
-    Capturing: "ReplayStateCapturing",
-    Replaying: "ReplayStateReplaying",
-    Paused: "ReplayStatePaused"
+    CanCapture: "replay-state-can-capture",
+    CanReplay: "replay-state-can-replay",
+    Capturing: "replay-state-capturing",
+    Replaying: "replay-state-replaying",
+    Paused: "replay-state-paused"
 };
 
 WebInspector.ReplayManager.prototype = {
     constructor: WebInspector.ReplayManager,
+    __proto__: WebInspector.Object.prototype,
 
     // Public
 
@@ -169,8 +170,6 @@ WebInspector.ReplayManager.prototype = {
         if (recording.dataLoaded())
             setActiveRecording.call(this);
         else
-            WebInspector.recordingsManager.onceEventListener(WebInspector.RecordingsManager.Event.RecordingAdded, setActiveRecording, this);
+            WebInspector.recordingsManager.addSingleFireEventListener(WebInspector.RecordingsManager.Event.RecordingAdded, setActiveRecording, this);
     },
 };
-
-WebInspector.ReplayManager.prototype.__proto__ = WebInspector.Object.prototype;
