@@ -44,9 +44,9 @@ WebInspector.ReplayDashboardView = function(replayManager)
         this._appendElementForNamedItem(name);
 
     // Necessary events required to track capture and replay state.
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStart, this._replayStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureDidStop, this._replayStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackDidStart, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStarted, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStopped, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackStarted, this._replayStateChanged, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._replayStateChanged, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._replayStateChanged, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._replayStateChanged, this);

@@ -64,21 +64,21 @@ WebInspector.LiveRecordingObject.prototype = {
     // Protected
 
     registerListeners: function(group) {
-        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStart, this._captureDidStart);
-        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStop,  this._captureDidStop);
+        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureStarted, this._captureStarted);
+        group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureStopped, this._captureStopped);
 
         WebInspector.RecordingObject.prototype.registerListeners.call(this, group);
     },
 
     // Private
 
-    _captureDidStart: function()
+    _captureStarted: function()
     {
         this._isCapturing = true;
         this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Inputs")));
     },
 
-    _captureDidStop: function()
+    _captureStopped: function()
     {
         this._isCapturing = false;
     },

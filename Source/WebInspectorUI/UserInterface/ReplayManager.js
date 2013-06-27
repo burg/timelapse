@@ -35,11 +35,11 @@ WebInspector.ReplayManager = function()
 
 WebInspector.ReplayManager.Event = {
     // These events are associated with capture.
-    CaptureDidStart: "replay-manager-capture-did-start",
-    CaptureDidStop: "replay-manager-capture-did-stop",
+    CaptureStarted: "replay-manager-capture-started",
+    CaptureStopped: "replay-manager-capture-stopped",
 
     // These events are associated with playback.
-    PlaybackDidStart: "replay-manager-playback-did-start",
+    PlaybackStarted: "replay-manager-playback-started",
     PlaybackPaused: "replay-manager-playback-paused",
     PlaybackFinished: "replay-manager-playback-finished",
 
@@ -111,13 +111,13 @@ WebInspector.ReplayManager.prototype = {
     captureStarted: function()
     {
         this._replayState = WebInspector.ReplayManager.ReplayState.Capturing;
-        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureDidStart);
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureStarted);
     },
 
     captureStopped: function()
     {
         this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
-        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureDidStop);
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CaptureStopped);
     },
 
     playbackStarted: function()
@@ -127,7 +127,7 @@ WebInspector.ReplayManager.prototype = {
         console.assert(this._replayState === canReplay || this._replayState === isPaused);
 
         this._replayState = WebInspector.ReplayManager.ReplayState.Replaying;
-        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackDidStart);
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackStarted);
     },
 
     playbackPaused: function(mark)
