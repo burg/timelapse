@@ -84,11 +84,21 @@ WebInspector.RecordingObject.prototype = {
         var found = [];
         for (var i = 0; i < this._providers.length; i++) {
             var provider = this._providers[i];
-            if (provider.constructor === ctor)
+            if (provider.__proto__.constructor === ctor)
                 found.push(provider);
         }
 
         return found;
+    },
+
+    firstProviderWithConstructor: function(ctor)
+    {
+        for (var i = 0; i < this._providers.length; i++) {
+            if (this._providers[i].__proto__.constructor === ctor)
+                return this._providers[i];
+        }
+
+        return false;
     },
 
     // Protected
@@ -173,9 +183,6 @@ WebInspector.SerializedRecordingObject.prototype = {
     {
         return WebInspector.UIString("Captured Recording %d", this.uid) || WebInspector.UIString("(uninitialized)");
     },
-
-    // Private
-
 };
 
 WebInspector.LiveRecordingObject = function()
@@ -206,6 +213,14 @@ WebInspector.LiveRecordingObject.prototype = {
         return this._isCapturing;
     },
 
+    addInput: function(input)
+    {
+        var inputProvider = this.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
+        inputProvider.addInput(input);
+    },
+
+    // Protected
+
     registerListeners: function(group) {
         group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStart, this._captureDidStart);
         group.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CaptureDidStop,  this._captureDidStop);
@@ -218,6 +233,7 @@ WebInspector.LiveRecordingObject.prototype = {
     _captureDidStart: function()
     {
         this._isCapturing = true;
+        this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Inputs")));
     },
 
     _captureDidStop: function()

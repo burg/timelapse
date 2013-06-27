@@ -30,6 +30,7 @@ WebInspector.ReplayObserver = function()
 
 WebInspector.ReplayObserver.prototype = {
     constructor: WebInspector.ReplayObserver,
+    __proto__: WebInspector.Object.prototype,
 
     // Events defined by the "Replay" domain (see WebCore/inspector/Inspector.json).
 
@@ -61,7 +62,7 @@ WebInspector.ReplayObserver.prototype = {
 
     capturedInput: function(input)
     {
-        // Not handled yet.
+        WebInspector.replayManager.createdRecording.addInput(input);
     },
 
     playbackHitMark: function(mark)
@@ -109,5 +110,3 @@ WebInspector.ReplayObserver.prototype = {
         WebInspector.replayManager.recordingUnloaded();
     }
 };
-
-WebInspector.ReplayObserver.prototype.__proto__ = WebInspector.Object.prototype;

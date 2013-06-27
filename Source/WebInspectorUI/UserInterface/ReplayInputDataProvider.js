@@ -28,71 +28,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- * @extends {WebInspector.Object}
- */
-WebInspector.DataProvider = function(name)
+WebInspector.ReplayInputDataProvider = function(displayName)
 {
-    WebInspector.Object.call(this);
+    WebInspector.DataProvider.call(this, name);
 
-    this._name = name;
-    this._enabled = true;
+    this._displayName = displayName;
+    this._inputs = [];
+    this._resourceUrlById = {};
 };
 
-WebInspector.DataProvider.DefaultCounterNoun = "Items";
-
-WebInspector.DataProvider.Event = {
-    Enabled: "data-provider-enabled",
-    Disabled: "data-provider-disabled",
-    WillRemove: "data-provider-will-remove"
-};
-
-WebInspector.DataProvider.prototype = {
-    constructor: WebInspector.DataProvider,
-    __proto__: WebInspector.Object.prototype,
+WebInspector.ReplayInputDataProvider.prototype = {
+    constructor: WebInspector.ReplayInputDataProvider,
+    __proto__: WebInspector.DataProvider.prototype,
 
     // Public
 
-    get name()
-    {
-        return this._name;
-    },
-
     get displayName()
     {
-        return this._name;
+        return this._displayName;
     },
 
     get counterNoun()
     {
-        return WebInspector.DataProvider.DefaultCounterNoun;
+        return "Inputs";
     },
 
-    get enabled()
+    get inputs()
     {
-        return this._enabled;
+        return this._inputs;
     },
 
-    set enabled(flag)
+    resourceUrlForId: function(id)
     {
-        if (this.enabled == flag)
-            return;
-
-        this._enabled = flag;
-        var eventName = WebInspector.DataProvider.Event[(flag) ? "Enabled" : "Disabled"];
-        this.dispatchEventToListeners(eventName, this);
+        return this._resourceUrlById[id];
     },
 
-    // This event notifies listeners that they should stop listening to this provider.
-    willRemove: function()
+    addInput: function(input)
     {
-        this.dispatchEventToListeners(WebInspector.DataProvider.Event.WillRemove, this);
+        this._inputs.push(input);
 
-        if (this.hasAnyEventListeners()){
-            console.error("Provider still has listeners after dispatching WillRemove event:");
-            console.error(this);
-            console.error(this._listeners);
+        // update the mapping of resource handle ids to their URLs.
+        if (input.type === "ResourceWillSendRequest" ||
+            input.type === "ResourceDidReceiveResponse") {
+            this._resourceUrlById[input.data.id] = input.data.url;
         }
-    }
+
+        this.dispatchEventToListeners(WebInspector.DataProvider.Event.DataChanged);
+    },
 };

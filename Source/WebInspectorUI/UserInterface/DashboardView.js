@@ -276,6 +276,7 @@ WebInspector.DashboardView.prototype = {
 
         this._replayStateButtonTemporarilyLocked = true;
 
+        // TODO: (Issue #294): port these commands to enqueue replay tasks
         switch (WebInspector.replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.Paused:
@@ -292,7 +293,7 @@ WebInspector.DashboardView.prototype = {
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
-            ReplayAgent.startCapture();
+            WebInspector.replayManager.startCaptureSoon();
             break;
 
         default:

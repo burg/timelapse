@@ -95,6 +95,13 @@ WebInspector.ReplayManager.prototype = {
         return this._activeRecording;
     },
 
+    // asynchronously tear down existing replay state and start capture of a new recording.
+    startCaptureSoon: function()
+    {
+        this._activeRecording = new WebInspector.LiveRecordingObject(this);
+        ReplayAgent.startCapture();
+    },
+
     // Protected (handlers for events from ReplayObserver)
 
     captureStarted: function()
