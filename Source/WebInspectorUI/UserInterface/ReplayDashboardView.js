@@ -34,8 +34,12 @@ WebInspector.ReplayDashboardView = function(replayManager)
             tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
             handler: this._replayItemWasClicked
         },
+        prompt: {
+            tooltip: WebInspector.UIString("Click to record"),
+            handler: this._promptItemWasClicked
+        },
         unload: {
-            tooltip: WebInspector.UIString("Click to unloaded recording"),
+            tooltip: WebInspector.UIString("Click to unload recording"),
             handler: this._unloadItemWasClicked
         }
     };
@@ -93,6 +97,11 @@ WebInspector.ReplayDashboardView.prototype = {
            item.outlet.appendChild(this._replayStateButton);
         }
 
+        if (name == "prompt") {
+           item.container.innerHTML = "";
+           item.container.textContent = "Click to Record";
+        }
+
         item.container.addEventListener("click", function(event) {
             this._itemWasClicked(name, event);
         }.bind(this));
@@ -131,6 +140,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
         case WebInspector.ReplayManager.ReplayState.Capturing:
             ReplayAgent.stopCapture();
+            this._setItemEnabled(this._items.unload, true);
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
@@ -140,6 +150,11 @@ WebInspector.ReplayDashboardView.prototype = {
         default:
             console.assert(false, "ReplayManager in invalid state");
         }
+    },
+
+    _promptItemWasClicked: function(event)
+    {
+        WebInspector.replayManager.startCaptureSoon();
     },
 
     _unloadItemWasClicked: function(event)
@@ -163,6 +178,7 @@ WebInspector.ReplayDashboardView.prototype = {
         var item = this._items.replay;
 
         this._setItemEnabled(this._items.replay, true);
+        this._setItemEnabled(this._items.prompt, false);
         this._setItemEnabled(this._items.unload, true);
 
         item.container.classList.remove("ready");
@@ -187,6 +203,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
             item.container.classList.add("ready");
+            this._setItemEnabled(this._items.prompt, true);
             this._setItemEnabled(this._items.unload, false);
             break;
 
