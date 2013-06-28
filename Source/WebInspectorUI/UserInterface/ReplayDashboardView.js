@@ -120,12 +120,12 @@ WebInspector.ReplayDashboardView.prototype = {
 
         switch (WebInspector.replayManager.replayState) {
 
-        case WebInspector.ReplayManager.ReplayState.Paused:
+        case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             ReplayAgent.replayToCompletion(false);
             break;
 
-        case WebInspector.ReplayManager.ReplayState.Replaying:
+        case WebInspector.ReplayManager.ReplayState.ReplayProgressing:
             ReplayAgent.pausePlayback();
             break;
 
@@ -144,8 +144,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
     _unloadItemWasClicked: function(event)
     {
-        ReplayAgent.unloadRecording();
-        this._setItemEnabled(this._items.unload, false);
+        WebInspector.replayManager.unloadRecordingSoon();
     },
 
     _setItemEnabled: function(item, enabled)
@@ -172,17 +171,18 @@ WebInspector.ReplayDashboardView.prototype = {
 
         switch (replayManager.replayState) {
 
-        case WebInspector.ReplayManager.ReplayState.Paused:
+        case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             item.container.classList.add("paused");
             break;
 
-        case WebInspector.ReplayManager.ReplayState.Replaying:
+        case WebInspector.ReplayManager.ReplayState.ReplayProgressing:
             item.container.classList.add("replaying");
             break;
 
         case WebInspector.ReplayManager.ReplayState.Capturing:
             item.container.classList.add("capturing");
+            this._setItemEnabled(this._items.unload, false);
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:

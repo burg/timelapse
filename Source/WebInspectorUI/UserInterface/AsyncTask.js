@@ -48,7 +48,7 @@ WebInspector.AsyncTask = function(taskName)
 }
 
 // adjust this to debug task actions
-WebInspector.AsyncTask.DebugLogging = true;
+WebInspector.AsyncTask.DebugLogging = false;
 
 // A AsyncTask is a sequence of asynchronously-executing task steps.
 // This machinery is useful when one needs to chain async round trips

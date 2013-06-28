@@ -173,12 +173,12 @@ WebInspector.DashboardView.prototype = {
 
         switch (WebInspector.replayManager.replayState) {
 
-        case WebInspector.ReplayManager.ReplayState.Paused:
+        case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             item.container.classList.add("paused");
             break;
 
-        case WebInspector.ReplayManager.ReplayState.Replaying:
+        case WebInspector.ReplayManager.ReplayState.ReplayProgressing:
             item.container.classList.add("replaying");
             break;
 
@@ -280,12 +280,12 @@ WebInspector.DashboardView.prototype = {
         // TODO: (Issue #294): port these commands to enqueue replay tasks
         switch (WebInspector.replayManager.replayState) {
 
-        case WebInspector.ReplayManager.ReplayState.Paused:
+        case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             ReplayAgent.replayToCompletion(false);
             break;
 
-        case WebInspector.ReplayManager.ReplayState.Replaying:
+        case WebInspector.ReplayManager.ReplayState.ReplayProgressing:
             ReplayAgent.pausePlayback();
             break;
 
