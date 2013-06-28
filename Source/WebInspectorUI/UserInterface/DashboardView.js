@@ -64,7 +64,7 @@ WebInspector.DashboardView = function(element)
         this._appendElementForNamedItem(name);
 
     this._setItemEnabled(this._items.replay, true);
-    this._items.replay.container.classList.add("ready");
+    this._items.replay.container.classList.add(WebInspector.DashboardView.ReadyStyleClassName);
 
     this.resourcesCount = 0;
     this.resourcesSize = 0;
@@ -74,7 +74,12 @@ WebInspector.DashboardView = function(element)
     this.issues = 0;
 };
 
+WebInspector.DashboardView.CapturingStyleClassName = "capturing";
 WebInspector.DashboardView.EnabledStyleClassName = "enabled";
+WebInspector.DashboardView.InputPausedStyleClassName = "paused";
+WebInspector.DashboardView.ReadyStyleClassName = "ready";
+WebInspector.DashboardView.ReplayingStyleClassName = "replaying";
+
 
 WebInspector.DashboardView.prototype = {
     constructor: WebInspector.DashboardView,
@@ -166,32 +171,32 @@ WebInspector.DashboardView.prototype = {
             delete this._replayStateButtonTemporarilyLocked;
         var item = this._items.replay;
 
-        item.container.classList.remove("ready");
-        item.container.classList.remove("capturing");
-        item.container.classList.remove("paused");
-        item.container.classList.remove("replaying");
+        item.container.classList.remove(WebInspector.DashboardView.ReadyStyleClassName);
+        item.container.classList.remove(WebInspector.DashboardView.CapturingStyleClassName);
+        item.container.classList.remove(WebInspector.DashboardView.InputPausedStyleClassName);
+        item.container.classList.remove(WebInspector.DashboardView.ReplayingStyleClassName);
 
         switch (WebInspector.replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
-            item.container.classList.add("paused");
+            item.container.classList.add(WebInspector.DashboardView.InputPausedStyleClassName);
             break;
 
         case WebInspector.ReplayManager.ReplayState.ReplayProgressing:
-            item.container.classList.add("replaying");
+            item.container.classList.add(WebInspector.DashboardView.ReplayingStyleClassName);
             break;
 
         case WebInspector.ReplayManager.ReplayState.Capturing:
-            item.container.classList.add("capturing");
+            item.container.classList.add(WebInspector.DashboardView.CapturingStyleClassName);
             break;
 
         case WebInspector.ReplayManager.ReplayState.CanCapture:
-            item.container.classList.add("ready");
+            item.container.classList.add(WebInspector.DashboardView.ReadyStyleClassName);
             break;
 
         default:
-            console.assert(false, "ReplayManager in invalid state");
+            console.error("ReplayManager in unknown state: ", this.replayState);
         }
     },
 
@@ -277,7 +282,6 @@ WebInspector.DashboardView.prototype = {
 
         this._replayStateButtonTemporarilyLocked = true;
 
-        // TODO: (Issue #294): port these commands to enqueue replay tasks
         switch (WebInspector.replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
@@ -298,7 +302,7 @@ WebInspector.DashboardView.prototype = {
             break;
 
         default:
-            console.assert(false, "ReplayManager in invalid state");
+            console.error("ReplayManager in invalid state: ", this.replayState);
         }
     },
 

@@ -75,7 +75,7 @@ WebInspector.LiveRecordingObject.prototype = {
     _captureStarted: function()
     {
         this._isCapturing = true;
-        this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Inputs")));
+        this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Event Loop Inputs")));
     },
 
     _captureStopped: function()
