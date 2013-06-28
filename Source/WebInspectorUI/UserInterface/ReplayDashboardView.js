@@ -131,11 +131,11 @@ WebInspector.ReplayDashboardView.prototype = {
 
         case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
-            ReplayAgent.replayToCompletion(false);
+            WebInspector.replayManager.replayToCompletionSoon(false, WebInspector.ReplayManager.ReplaySpeed.Normal);
             break;
 
         case WebInspector.ReplayManager.ReplayState.ReplayProgressing:
-            ReplayAgent.pausePlayback();
+            WebInspector.replayManager.pausePlaybackSoon();
             break;
 
         case WebInspector.ReplayManager.ReplayState.Capturing:

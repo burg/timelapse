@@ -29,6 +29,7 @@ WebInspector.ReplayManager = function()
 
     this._replayState = WebInspector.ReplayManager.ReplayState.CanCapture;
     this._scheduler = new WebInspector.AsyncTaskScheduler();
+    this._replaySpeed = WebInspector.ReplayManager.ReplaySpeed.Default;
 
     this.toolbarItem = new WebInspector.NavigationItem("replay-dashboard");
     this._view = new WebInspector.ReplayDashboardView(this);
@@ -56,6 +57,12 @@ WebInspector.ReplayManager.ReplayState = {
     ReplayProgressing: "replay-state-replay-progressing",
     ReplayPausedAtInput: "replay-state-replay-paused-at-input"
 };
+
+WebInspector.ReplayManager.ReplaySpeed = {
+    Normal: "replay-speed-normal",
+    Seeking: "replay-speed-seeking",
+};
+WebInspector.ReplayManager.ReplaySpeed.Default = WebInspector.ReplayManager.ReplaySpeed.Seeking;
 
 WebInspector.ReplayManager.prototype = {
     constructor: WebInspector.ReplayManager,
@@ -109,6 +116,16 @@ WebInspector.ReplayManager.prototype = {
         return this._activeRecording;
     },
 
+    get replaySpeed()
+    {
+        return this._replaySpeed;
+    },
+
+    set replaySpeed(value)
+    {
+        this._replaySpeed = value;
+    },
+
     startCaptureSoon: function()
     {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.StartCapture());
@@ -122,6 +139,16 @@ WebInspector.ReplayManager.prototype = {
     unloadRecordingSoon: function()
     {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.UnloadRecording());
+    },
+
+    pausePlaybackSoon: function()
+    {
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.PausePlayback());
+    },
+
+    replayToCompletionSoon: function(allowBreakpoints, replaySpeed)
+    {
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.BeginReplayToCompletion(allowBreakpoints, replaySpeed));
     },
 
     // Protected (handlers for events from ReplayObserver)
@@ -239,10 +266,23 @@ WebInspector.ReplayManager.prototype = {
         ReplayAgent.startCapture();
     },
 
-    finishRecording:  function()
+    finishRecording: function()
     {
         console.assert(this.isCapturing, "Can't stop capturing because nothing is being captured.");
         ReplayAgent.stopCapture();
+    },
+
+    replayToCompletion: function()
+    {
+        // TODO: save replay start and end mark indices here
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackWillStart);
+        ReplayAgent.replayToCompletion(this.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking);
+    },
+
+    pausePlayback: function()
+    {
+        console.assert(this.isReplaying && !this.inputPaused, "Can't pause playback because nothing is being replayed or playback is already paused");
+        ReplayAgent.pausePlayback();
     },
 
     stopPlayback: function(shouldUnlock)
@@ -264,7 +304,7 @@ WebInspector.ReplayManager.AsyncTasks.StartCapture = function() {
         console.assert(WebInspector.replayManager.replayState === WebInspector.ReplayManager.ReplayState.CanCapture, "Cannot start capture whilst capturing or replaying alreday.");
 
         WebInspector.replayManager.createRecording();
-        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.CaptureStarted, cb, this);
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.CaptureStarted, cb);
     });
 
     return task;
@@ -301,10 +341,21 @@ WebInspector.ReplayManager.AsyncTasks.ReplayToIndex = function()
     return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
 };
 
-WebInspector.ReplayManager.AsyncTasks.ReplayToCompletion = function()
+WebInspector.ReplayManager.AsyncTasks.BeginReplayToCompletion = function(allowBreakpoints, replaySpeed)
 {
-    // Not implemented
-    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+    var task = new WebInspector.AsyncTask("ReplayToCompletion");
+
+    if (!allowBreakpoints)
+        task.chain("suppressBreakpoints", WebInspector.ReplayManager.AsyncTaskSteps.UnsuppressBreakpoints);
+    else
+        task.chain("unsuppressBreakpoints", WebInspector.ReplayManager.AsyncTaskSteps.SuppressBreakpoints);
+    task.chain("resumeDebuggerIfPaused", WebInspector.ReplayManager.AsyncTaskSteps.ResumeDebuggerIfPaused);
+    task.chain("notifyAndRequestReplay", function(cb) {
+        WebInspector.replayManager.replaySpeed = replaySpeed;
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.PlaybackStarted, cb);
+        WebInspector.replayManager.replayToCompletion();
+    });
+    return task;
 };
 
 WebInspector.ReplayManager.AsyncTasks.StopPlayback = function(shouldUnlock)
@@ -320,8 +371,13 @@ WebInspector.ReplayManager.AsyncTasks.StopPlayback = function(shouldUnlock)
 
 WebInspector.ReplayManager.AsyncTasks.PausePlayback = function()
 {
-    // Not implemented
-    return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+    return new WebInspector.AsyncTask("PausePlayback")
+    .chain("suppressBreakpoints", WebInspector.ReplayManager.AsyncTaskSteps.SuppressBreakpoints)
+    .chain("resumeDebuggerIfPaused", WebInspector.ReplayManager.AsyncTaskSteps.ResumeDebuggerIfPaused)
+    .chain("requestPlaybackPause", function(cb) {
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, cb);
+        WebInspector.replayManager.pausePlayback();
+    });
 };
 
 WebInspector.ReplayManager.AsyncTaskSteps = {};
@@ -347,6 +403,16 @@ WebInspector.ReplayManager.AsyncTaskSteps.SuppressBreakpoints = function(cb)
     // This action is asynchronous. At the time of writing, two commands are sent to
     // backend by DebuggerManager: disable breakpoints, and disable break on exception.
     WebInspector.replayManager.suppressBreakpoints();
+    // Running the extra command below forces the task to wait until the above commands
+    // have been processed by the debugger agent. The result itself is unimportant.
+    DebuggerAgent.causesRecompilation(cb);
+};
+
+WebInspector.ReplayManager.AsyncTaskSteps.UnsuppressBreakpoints = function(cb)
+{
+    // This action is asynchronous. At the time of writing, two commands are sent to
+    // backend by DebuggerManager: enable breakpoints, and enable break on exception.
+    WebInspector.replayManager.unsuppressBreakpoints();
     // Running the extra command below forces the task to wait until the above commands
     // have been processed by the debugger agent. The result itself is unimportant.
     DebuggerAgent.causesRecompilation(cb);
