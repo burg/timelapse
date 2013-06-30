@@ -65,9 +65,15 @@ WebInspector.ContentView = function(representedObject)
 
         if (representedObject instanceof WebInspector.JavaScriptProfileObject)
             return new WebInspector.JavaScriptProfileView(representedObject);
-        
+
         if (representedObject instanceof WebInspector.CSSSelectorProfileObject)
             return new WebInspector.CSSSelectorProfileView(representedObject);
+
+        if (representedObject instanceof WebInspector.LiveRecordingObject)
+            return new WebInspector.LiveRecordingContentView(representedObject);
+
+        if (representedObject instanceof WebInspector.SerializedRecordingObject)
+            return new WebInspector.SerializedRecordingContentView(representedObject);
 
         if (typeof representedObject === "string" || representedObject instanceof String)
             return new WebInspector.TextContentView(representedObject);
@@ -120,6 +126,10 @@ WebInspector.ContentView.isViewable = function(representedObject)
     if (representedObject instanceof WebInspector.JavaScriptProfileObject)
         return true;
     if (representedObject instanceof WebInspector.CSSSelectorProfileObject)
+        return true;
+    if (representedObject instanceof WebInspector.SerializedRecordingObject)
+        return true;
+    if (representedObject instanceof WebInspector.LiveRecordingObject)
         return true;
     if (typeof representedObject === "string" || representedObject instanceof String)
         return true;

@@ -48,13 +48,13 @@ WebInspector.ReplayDashboardView = function(replayManager)
         this._appendElementForNamedItem(name);
 
     // Necessary events required to track capture and replay state.
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStarted, this._replayStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStopped, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStarted, this._captureStarted, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStopped, this._captureStopped, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackStarted, this._replayStateChanged, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackPaused, this._replayStateChanged, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackFinished, this._replayStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._replayStateChanged, this);
-    replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._replayStateChanged, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._recordingLoaded, this);
+    replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._recordingUnloaded, this);
 
     // initialize correct state
     this._refreshButtonStates(replayManager);
@@ -172,6 +172,52 @@ WebInspector.ReplayDashboardView.prototype = {
             item.container.classList.remove(WebInspector.ReplayDashboardView.EnabledStyleClassName);
     },
 
+    _captureStarted: function()
+    {
+        this._removeRecordingView();
+        this._addRecordingView(new WebInspector.ContentView(WebInspector.replayManager.createdRecording));
+        this._refreshButtonStates();
+    },
+
+    _captureStopped: function()
+    {
+        this._removeRecordingView();
+        this._refreshButtonStates();
+    },
+
+    _recordingLoaded: function()
+    {
+        this._removeRecordingView();
+        this._addRecordingView(new WebInspector.ContentView(WebInspector.replayManager.loadedRecording));
+        this._refreshButtonStates();
+    },
+
+    _recordingUnloaded: function()
+    {
+        this._removeRecordingView();
+        this._refreshButtonStates();
+    },
+
+    _addRecordingView: function(view)
+    {
+        console.assert(view instanceof WebInspector.SerializedRecordingContentView || view instanceof WebInspector.LiveRecordingContentView);
+        this._recordingView = view;
+        this._element.appendChild(this._recordingView.element);
+        this._recordingView.visible = true;
+    },
+
+    _removeRecordingView: function()
+    {
+        if (!this._recordingView)
+            return;
+
+        var recordingView = this._recordingView;
+        delete this._recordingView;
+        recordingView.visible = false;
+        this._element.removeChild(recordingView.element);
+        recordingView.closed();
+    },
+
     _replayStateChanged: function()
     {
         this._refreshButtonStates(WebInspector.replayManager);
@@ -179,6 +225,9 @@ WebInspector.ReplayDashboardView.prototype = {
 
     _refreshButtonStates: function(replayManager)
     {
+        replayManager = replayManager || WebInspector.replayManager;
+        console.assert(!!replayManager, "Could not find a valid reference to the replay manager.");
+
         var item = this._items.replay;
 
         this._setItemEnabled(this._items.replay, true);
