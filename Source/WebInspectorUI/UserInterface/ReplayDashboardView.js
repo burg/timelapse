@@ -33,12 +33,15 @@ WebInspector.ReplayDashboardView = function(replayManager)
     this._element = replayManager.toolbarItem.element;
 
     // build static dashboard elements
-    var replayButton = this._element.appendChild(document.createElement("div"));
+    var navigationContainer = this._element.appendChild(document.createElement("div"));
+    navigationContainer.className = WebInspector.ReplayDashboardView.NavigationContainerStyleClassName;
+    var backButton = navigationContainer.appendChild(document.createElement("div"));
+    backButton.className = WebInspector.ReplayDashboardView.BackButtonStyleClassName;
+    backButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
+    backButton.addEventListener("click", this._backButtonClicked.bind(this));
+    var replayButton = navigationContainer.appendChild(document.createElement("div"));
     replayButton.className = WebInspector.ReplayDashboardView.ReplayButtonStyleClassName;
     replayButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
-    replayButton.appendChild(document.createElement("img"));
-    var outlet = replayButton.appendChild(document.createElement("div"));
-    this._replayStateButton = outlet.appendChild(document.createElement("img"));
     replayButton.addEventListener("click", this._replayButtonClicked.bind(this));
 
     var promptElement = this._element.appendChild(document.createElement("div"));
@@ -75,9 +78,11 @@ WebInspector.ReplayDashboardView = function(replayManager)
 
 WebInspector.ReplayDashboardView.BackButtonStyleClassName = "back";
 WebInspector.ReplayDashboardView.EjectButtonStyleClassName = "eject";
-WebInspector.ReplayDashboardView.ReplayButtonStyleClassName = "replay";
+WebInspector.ReplayDashboardView.NavigationContainerStyleClassName = "navigation-container";
 WebInspector.ReplayDashboardView.PromptStyleClassName = "prompt";
+WebInspector.ReplayDashboardView.ReplayButtonStyleClassName = "replay";
 
+// Class names for states applied to the replay dashboard element.
 WebInspector.ReplayDashboardView.CapturingStyleClassName = "capturing";
 WebInspector.ReplayDashboardView.InputPausedStyleClassName = "input-paused";
 WebInspector.ReplayDashboardView.RecordingLoadedStyleClassName = "recording-loaded";
@@ -89,14 +94,14 @@ WebInspector.ReplayDashboardView.prototype = {
 
     // Private
 
+    _backButtonClicked: function()
+    {
+        WebInspector.replayManager.toolbarItem.hidden = true;
+        WebInspector.dashboardManager.toolbarItem.hidden = false;
+    },
+
     _replayButtonClicked: function(event)
     {
-        if (event.target !== this._replayStateButton) {
-            WebInspector.replayManager.toolbarItem.hidden = true;
-            WebInspector.dashboardManager.toolbarItem.hidden = false;
-            return;
-        }
-
         switch (WebInspector.replayManager.replayState) {
 
         case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:

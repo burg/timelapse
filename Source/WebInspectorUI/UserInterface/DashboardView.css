@@ -164,7 +164,6 @@ body.window-inactive .toolbar .dashboard {
 
 .toolbar .dashboard > .replay > div > img {
     opacity: 0.8;
-    padding: 1px 1px 0px 0px;
 }
 
 .toolbar .dashboard > .replay.ready > div > img {

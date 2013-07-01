@@ -30,12 +30,9 @@
 .toolbar .replay-dashboard {
     display: -webkit-flex;
     -webkit-flex-flow: row nowrap;
-
     -webkit-justify-content: space-between;
 
-    margin: 4px 10px;
-    padding: 0 5px;
-
+    margin: 4px 10px 6px 10px;
     width: 375px;
 
     background-image: -webkit-linear-gradient(bottom, rgba(0, 128, 255, 0.075), rgba(0, 128, 255, 0)),
@@ -57,64 +54,45 @@ body.window-inactive .toolbar .replay-dashboard {
     background-color: rgb(239, 239, 239);
 }
 
-.toolbar .replay-dashboard {
-    margin-bottom: 6px;
-    height: 45px;
-    position: relative;
-}
-
-.toolbar .replay-dashboard.hidden {
-    height: 30px;
-}
-
-.toolbar .replay-dashboard > div {
-    padding: 0 5px;
-    display: -webkit-flex;
-    min-width: 45px;
-    -webkit-justify-content: center;
-    -webkit-align-items: center;
-}
-
-.toolbar .replay-dashboard > div:hover {
+.toolbar .replay-dashboard .replay,
+.toolbar .replay-dashboard .back,
+.toolbar .replay-dashboard .prompt,
+.toolbar .replay-dashboard .eject {
     cursor: pointer;
 }
 
-.toolbar .replay-dashboard > .replay {
-    position: relative;
+.toolbar .replay-dashboard > .navigation-container {
+    display: -webkit-flex;
+    -webkit-flex-flow: column nowrap;
+    -webkit-justify-content: space-around;
+    margin: 3px 5px;
 }
 
-.toolbar .replay-dashboard > .replay > div {
-    position: absolute;
-    bottom: 2px;
-    left: 1px;
-}
-.toolbar .replay-dashboard > .replay > img {
-    content: url(Images/ReplayBackButton.svg);
+.toolbar .replay-dashboard > .navigation-container > div {
+    display: -webkit-flex;
     opacity: 0.7;
-    position: absolute;
-    top: 5px;
-    left: -1px;
     width: 14px;
     height: 16px;
 }
 
-.toolbar .replay-dashboard > .replay > div > img {
-    padding: 1px 1px 0px 0px;
-    content: url(Images/ReplayReadyButton.svg);
-    opacity: 0.7;
-    width: 14px;
+.toolbar .replay-dashboard .back {
+    content: url(Images/ReplayBackButton.svg);
 }
 
-.toolbar .replay-dashboard.capturing > .replay > div > img {
+.toolbar .replay-dashboard .replay {
+    content: url(Images/ReplayReadyButton.svg);
+}
+
+.toolbar .replay-dashboard.capturing .replay {
     content: url(Images/ReplayRecordingButton.svg);
 }
 
-.toolbar .replay-dashboard.recording-loaded > .replay > div > img,
-.toolbar .replay-dashboard.input-paused > .replay > div > img {
+.toolbar .replay-dashboard.recording-loaded .replay,
+.toolbar .replay-dashboard.input-paused .replay {
     content: url(Images/ReplayPlayButton.svg);
 }
 
-.toolbar .replay-dashboard.replaying:not(.input-paused) > .replay > div > img {
+.toolbar .replay-dashboard.replaying:not(.input-paused) .replay {
     content: url(Images/ReplayPauseButton.svg);
 }
 
