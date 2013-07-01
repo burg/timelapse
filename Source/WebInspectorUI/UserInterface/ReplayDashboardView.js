@@ -32,25 +32,28 @@ WebInspector.ReplayDashboardView = function(replayManager)
 
     this._element = replayManager.toolbarItem.element;
 
-    this._items = {
-        replay: {
-            tooltip: WebInspector.UIString("Click to create a new recording or replay a loaded recording"),
-            handler: this._replayItemWasClicked
-        },
-        prompt: {
-            tooltip: WebInspector.UIString("Click to record"),
-            handler: this._promptItemWasClicked
-        },
-        eject: {
-            tooltip: WebInspector.UIString("Click to eject recording"),
-            handler: this._ejectItemWasClicked
-        }
-    };
+    // build static dashboard elements
+    var replayButton = this._element.appendChild(document.createElement("div"));
+    replayButton.className = WebInspector.ReplayDashboardView.ReplayButtonStyleClassName;
+    replayButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
+    replayButton.appendChild(document.createElement("img"));
+    var outlet = replayButton.appendChild(document.createElement("div"));
+    this._replayStateButton = outlet.appendChild(document.createElement("img"));
+    replayButton.addEventListener("click", this._replayButtonClicked.bind(this));
 
-    for (var name in this._items)
-        this._appendElementForNamedItem(name);
+    var promptElement = this._element.appendChild(document.createElement("div"));
+    promptElement.className = WebInspector.ReplayDashboardView.PromptStyleClassName;
+    promptElement.title = WebInspector.UIString("Click to record");
+    promptElement.textContent = WebInspector.UIString("Click to start recording");
+    promptElement.addEventListener("click", this._promptClicked.bind(this));
 
-    // Necessary events required to track capture and replay state.
+    var ejectButton = this._element.appendChild(document.createElement("div"));
+    ejectButton.className = WebInspector.ReplayDashboardView.EjectButtonStyleClassName;
+    ejectButton.title = WebInspector.UIString("Click to eject recording");
+    ejectButton.addEventListener("click", this._ejectButtonClicked.bind(this));
+    ejectButton.appendChild(document.createElement("img"));
+
+    // Add events required to track capture and replay state.
     replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStarted, this._captureStarted, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStopped, this._captureStopped, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.PlaybackStarted, this._playbackStarted, this);
@@ -59,7 +62,7 @@ WebInspector.ReplayDashboardView = function(replayManager)
     replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._recordingLoaded, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._recordingUnloaded, this);
 
-    // manually iitialize style classes by querying current replay state
+    // Manually iitialize style classes by querying current replay state.
     if (replayManager.isCapturing)
         this._captureStarted();
     if (replayManager.canReplay)
@@ -70,8 +73,12 @@ WebInspector.ReplayDashboardView = function(replayManager)
         this._playbackPaused();
 };
 
+WebInspector.ReplayDashboardView.BackButtonStyleClassName = "back";
+WebInspector.ReplayDashboardView.EjectButtonStyleClassName = "eject";
+WebInspector.ReplayDashboardView.ReplayButtonStyleClassName = "replay";
+WebInspector.ReplayDashboardView.PromptStyleClassName = "prompt";
+
 WebInspector.ReplayDashboardView.CapturingStyleClassName = "capturing";
-WebInspector.ReplayDashboardView.EnabledStyleClassName = "enabled";
 WebInspector.ReplayDashboardView.InputPausedStyleClassName = "input-paused";
 WebInspector.ReplayDashboardView.RecordingLoadedStyleClassName = "recording-loaded";
 WebInspector.ReplayDashboardView.ReplayingStyleClassName = "replaying";
@@ -82,55 +89,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
     // Private
 
-    _appendElementForNamedItem: function(name)
-    {
-        var item = this._items[name];
-
-        item.container = this._element.appendChild(document.createElement("div"));
-        item.container.className = "enabled item " + name;
-        item.container.title = item.tooltip;
-
-        item.container.appendChild(document.createElement("img"));
-
-        item.outlet = item.container.appendChild(document.createElement("div"));
-
-        Object.defineProperty(item, "text",
-        {
-            set: function(newText)
-            {
-                if (newText === item.outlet.textContent)
-                    return;
-                item.outlet.textContent = newText;
-            }
-        });
-
-        // Adds additional state image to replay button
-        if (name === "replay") {
-           this._replayStateButton = document.createElement("img");
-           item.outlet.appendChild(this._replayStateButton);
-        }
-
-        if (name === "prompt") {
-           item.container.innerHTML = "";
-           item.container.textContent = WebInspector.UIString("Click to start recording");
-        }
-
-        item.container.addEventListener("click", function(event) {
-            this._itemWasClicked(name, event);
-        }.bind(this));
-    },
-
-    _itemWasClicked: function(name, event)
-    {
-        var item = this._items[name];
-        if (!item.container.classList.contains(WebInspector.ReplayDashboardView.EnabledStyleClassName))
-            return;
-
-        if (item.handler)
-            item.handler.call(this, event);
-    },
-
-    _replayItemWasClicked: function(event)
+    _replayButtonClicked: function(event)
     {
         if (event.target !== this._replayStateButton) {
             WebInspector.replayManager.toolbarItem.hidden = true;
@@ -162,12 +121,12 @@ WebInspector.ReplayDashboardView.prototype = {
         }
     },
 
-    _promptItemWasClicked: function(event)
+    _promptClicked: function(event)
     {
         WebInspector.replayManager.startCaptureSoon();
     },
 
-    _ejectItemWasClicked: function(event)
+    _ejectButtonClicked: function(event)
     {
         WebInspector.replayManager.unloadRecordingSoon();
     },
