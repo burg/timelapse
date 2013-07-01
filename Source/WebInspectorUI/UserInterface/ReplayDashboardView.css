@@ -31,6 +31,7 @@
     display: -webkit-flex;
     -webkit-flex-flow: row nowrap;
     -webkit-justify-content: space-between;
+    -webkit-align-items: center;
 
     margin: 4px 10px 6px 10px;
     width: 375px;
@@ -65,11 +66,11 @@ body.window-inactive .toolbar .replay-dashboard {
     display: -webkit-flex;
     -webkit-flex-flow: column nowrap;
     -webkit-justify-content: space-around;
+    -webkit-order: 1;
     margin: 3px 5px;
 }
 
-.toolbar .replay-dashboard > .navigation-container > div {
-    display: -webkit-flex;
+.toolbar .replay-dashboard > .navigation-container > img {
     opacity: 0.7;
     width: 14px;
     height: 16px;
@@ -96,13 +97,21 @@ body.window-inactive .toolbar .replay-dashboard {
     content: url(Images/ReplayPauseButton.svg);
 }
 
-.toolbar .replay-dashboard > .prompt {
+.toolbar .replay-dashboard > .prompt,
+.toolbar .replay-dashboard > .live-recording,
+.toolbar .replay-dashboard > .serialized-recording {
     font-family: Helvetica, sans-serif;
     font-weight: bold;
     font-size: 16px;
     color: #666;
-    margin-top: 5px;
-    margin-right: 80px;
+    text-align: center;
+    -webkit-flex-grow: 1;
+    -webkit-order: 2;
+}
+
+.toolbar .replay-dashboard > .live-recording,
+.toolbar .replay-dashboard > .serialized-recording {
+    border: 1px solid #ccc;
 }
 
 .toolbar .replay-dashboard.recording-loaded > .prompt,
@@ -110,15 +119,17 @@ body.window-inactive .toolbar .replay-dashboard {
     display: none;
 }
 
+.toolbar .replay-dashboard > .eject {
+    -webkit-order: 3;
+    margin: 2px 5px 0px;
+}
+
 .toolbar .replay-dashboard > .eject > img {
     content: url(Images/ReplayEjectButton.svg);
-    visibility: visible;
-    width: 18px;
-    position: absolute;
-    top: 14px;
+    width: 16px;
     opacity: 0.7;
 }
 
 .toolbar .replay-dashboard:not(.recording-loaded) > .eject {
-    display: none;
+    visibility: hidden;
 }

@@ -35,11 +35,11 @@ WebInspector.ReplayDashboardView = function(replayManager)
     // build static dashboard elements
     var navigationContainer = this._element.appendChild(document.createElement("div"));
     navigationContainer.className = WebInspector.ReplayDashboardView.NavigationContainerStyleClassName;
-    var backButton = navigationContainer.appendChild(document.createElement("div"));
+    var backButton = navigationContainer.appendChild(document.createElement("img"));
     backButton.className = WebInspector.ReplayDashboardView.BackButtonStyleClassName;
     backButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
     backButton.addEventListener("click", this._backButtonClicked.bind(this));
-    var replayButton = navigationContainer.appendChild(document.createElement("div"));
+    var replayButton = navigationContainer.appendChild(document.createElement("img"));
     replayButton.className = WebInspector.ReplayDashboardView.ReplayButtonStyleClassName;
     replayButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
     replayButton.addEventListener("click", this._replayButtonClicked.bind(this));
