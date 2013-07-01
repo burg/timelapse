@@ -27,24 +27,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ReplayInputDataProvider = function(displayName)
+WebInspector.LiveInputDataProvider = function()
 {
-    WebInspector.DataProvider.call(this, name);
-
-    this._displayName = displayName;
+    WebInspector.DataProvider.call(this, "live-input-data");
     this._inputs = [];
-    this._resourceURLByIdentifier = {};
 };
 
-WebInspector.ReplayInputDataProvider.prototype = {
-    constructor: WebInspector.ReplayInputDataProvider,
+WebInspector.LiveInputDataProvider.prototype = {
+    constructor: WebInspector.LiveInputDataProvider,
     __proto__: WebInspector.DataProvider.prototype,
 
     // Public
 
     get displayName()
     {
-        return this._displayName;
+        return "Live Inputs";
     },
 
     get counterNoun()
@@ -57,19 +54,11 @@ WebInspector.ReplayInputDataProvider.prototype = {
         return this._inputs;
     },
 
-    resourceUrlForIdentifier: function(id)
-    {
-        return this._resourceURLByIdentifier[id];
-    },
-
     addInput: function(input)
     {
+        console.assert(input instanceof WebInspector.LiveInputObject, "Tried to add wrong type of [object] to [provider]: ", input, this);
+
         this._inputs.push(input);
-
-        // update the mapping of resource handle ids to their URLs.
-        if (input.type === "ResourceWillSendRequest" || input.type === "ResourceDidReceiveResponse")
-            this._resourceURLByIdentifier[input.data.id] = input.data.url;
-
         this.dispatchEventToListeners(WebInspector.DataProvider.Event.DataChanged);
     },
 };

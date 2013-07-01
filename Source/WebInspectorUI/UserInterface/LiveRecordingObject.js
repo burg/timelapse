@@ -57,8 +57,8 @@ WebInspector.LiveRecordingObject.prototype = {
 
     addInput: function(input)
     {
-        var inputProvider = this.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
-        inputProvider.addInput(input);
+        var inputProvider = this.firstProviderWithConstructor(WebInspector.LiveInputDataProvider);
+        inputProvider.addInput(new WebInspector.LiveInputObject(input));
     },
 
     // Protected
@@ -75,7 +75,7 @@ WebInspector.LiveRecordingObject.prototype = {
     _captureStarted: function()
     {
         this._isCapturing = true;
-        this.addProvider(new WebInspector.ReplayInputDataProvider(WebInspector.UIString("Event Loop Inputs")));
+        this.addProvider(new WebInspector.LiveInputDataProvider());
     },
 
     _captureStopped: function()
@@ -83,3 +83,8 @@ WebInspector.LiveRecordingObject.prototype = {
         this._isCapturing = false;
     },
 };
+
+WebInspector.LiveInputObject = function(rawInput)
+{
+    this.timestamp = rawInput.data.markTimestamp;
+}
