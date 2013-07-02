@@ -65,6 +65,10 @@ WebInspector.ReplayDashboardView = function(replayManager)
     replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._recordingLoaded, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._recordingUnloaded, this);
 
+    // Track when the dashboard is shown and hidden so we can notify child ContentViews.
+    replayManager.toolbarItem.addEventListener(WebInspector.NavigationItem.Event.Hidden, this._dashboardHidden, this);
+    replayManager.toolbarItem.addEventListener(WebInspector.NavigationItem.Event.Shown, this._dashboardShown, this);
+
     // Manually iitialize style classes by querying current replay state.
     if (replayManager.isCapturing)
         this._captureStarted();
@@ -93,6 +97,25 @@ WebInspector.ReplayDashboardView.prototype = {
     __proto__: WebInspector.Object.prototype,
 
     // Private
+
+    _dashboardShown: function()
+    {
+        if (!this._recordingView)
+            return;
+
+        this._recordingView.visible = true;
+        this._recordingView.shown();
+        this._recordingView.updateLayout();
+    },
+
+    _dashboardHidden: function()
+    {
+        if (!this._recordingView)
+            return;
+
+        this._recordingView.visible = false;
+        this._recordingView.hidden();
+    },
 
     _backButtonClicked: function()
     {
@@ -183,7 +206,10 @@ WebInspector.ReplayDashboardView.prototype = {
         console.assert(view instanceof WebInspector.SerializedRecordingContentView || view instanceof WebInspector.LiveRecordingContentView);
         this._recordingView = view;
         this._element.appendChild(this._recordingView.element);
-        this._recordingView.visible = true;
+        if (WebInspector.replayManager.toolbarItem.hidden)
+            this._dashboardHidden();
+        else
+            this._dashboardShown();
     },
 
     _removeRecordingView: function()

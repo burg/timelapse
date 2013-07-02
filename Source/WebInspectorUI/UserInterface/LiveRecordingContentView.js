@@ -33,7 +33,8 @@ WebInspector.LiveRecordingContentView = function(recording)
 
     this._recording = recording;
     this.element.classList.add(WebInspector.LiveRecordingContentView.StyleClassName);
-    this.element.appendChild(document.createTextNode("hello. live recording"));
+
+    this._canvas = this.element.appendChild(document.createElement("canvas"));
 
     this._listeners = new WebInspector.EventListenerGroup("LiveRecordingContentView recording listeners");
     this._listeners.install();
@@ -41,20 +42,65 @@ WebInspector.LiveRecordingContentView = function(recording)
 
 WebInspector.LiveRecordingContentView.StyleClassName = "live-recording";
 
+WebInspector.LiveRecordingContentView.GraphBackgroundColor = new WebInspector.Color("#fff");
+WebInspector.LiveRecordingContentView.GraphBorderWidth = 1; // in pixels
+WebInspector.LiveRecordingContentView.BorderStrokeColor = new WebInspector.Color("#666");
+
 WebInspector.LiveRecordingContentView.prototype = {
     constructor: WebInspector.LiveRecordingContentView,
     __proto__: WebInspector.ContentView.prototype,
 
     // Public
 
-    shown: function()
+    updateLayout: function()
     {
-        WebInspector.ContentView.prototype.shown.call(this);
+        this._autosizeCanvas();
+        this._drawGraph();
     },
 
     closed: function()
     {
         WebInspector.ContentView.prototype.closed.call(this);
         this._listeners.uninstall(true);
+    },
+
+    // Private
+
+    _autosizeCanvas: function()
+    {
+        this._canvas.width = this.element.clientWidth;
+        this._canvas.style.width = this.element.clientWidth + 'px';
+        this._canvas.height = this.element.clientHeight;
+        this._canvas.style.height = this.element.clientHeight + 'px';
+        this._cachedOffsetWidth = this.element.offsetWidth;
+    },
+
+    _clearGraph: function(ctx)
+    {
+        if (typeof ctx === "undefined")
+            ctx = this._canvas.getContext("2d");
+
+        var availHeight = this._canvas.height;
+        var availWidth = this._canvas.width;
+
+        ctx.fillStyle = WebInspector.LiveRecordingContentView.GraphBackgroundColor.value;
+        ctx.clearRect(0, 0, availWidth, availHeight);
+
+        // Draw border.
+        ctx.strokeStyle = WebInspector.LiveRecordingContentView.BorderStrokeColor.value;
+        ctx.lineWidth = WebInspector.LiveRecordingContentView.GraphBorderWidth;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(availWidth, 0);
+        ctx.lineTo(availWidth, availHeight);
+        ctx.lineTo(0, availHeight);
+        ctx.lineTo(0, 0);
+        ctx.stroke();
+    },
+
+    _drawGraph: function()
+    {
+        var ctx = this._canvas.getContext('2d');
+        this._clearGraph(ctx);
     }
 };

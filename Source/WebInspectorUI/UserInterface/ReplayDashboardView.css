@@ -111,6 +111,10 @@ body.window-inactive .toolbar .replay-dashboard {
 
 .toolbar .replay-dashboard > .live-recording,
 .toolbar .replay-dashboard > .serialized-recording {
+    height: 30px;
+}
+
+.toolbar .replay-dashboard > .serialized-recording {
     border: 1px solid #ccc;
 }
 
