@@ -40,6 +40,10 @@ WebInspector.NavigationItem = function(identifier) {
 WebInspector.NavigationItem.StyleClassName = "item";
 WebInspector.NavigationItem.HiddenStyleClassName = "hidden";
 
+WebInspector.NavigationItem.Event = {
+    Shown: "navigation-item-shown",
+    Hidden: "navigation-item-hidden"
+};
 
 WebInspector.NavigationItem.prototype = {
     constructor: WebInspector.NavigationItem,
@@ -80,6 +84,11 @@ WebInspector.NavigationItem.prototype = {
 
         if (this._parentNavigationBar)
             this._parentNavigationBar.updateLayoutSoon();
+
+        if (flag)
+            this.dispatchEventToListeners(WebInspector.NavigationItem.Event.Hidden, this);
+        else
+            this.dispatchEventToListeners(WebInspector.NavigationItem.Event.Shown, this);
     },
 
     // Private
