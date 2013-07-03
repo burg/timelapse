@@ -226,6 +226,9 @@ public:
         LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().string().ascii().data());
 
         RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = m_encoder->serializeInput(input, index);
+        if (!serializedInput)
+            return;
+        
         m_inputs->addItem(serializedInput.release());
     }
 
