@@ -59,6 +59,7 @@
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InterpretedKeyCommands.h"
+#include "JavaScriptCoreInputCoders.h"
 #include "NavigateToPage.h"
 #include "PlaybackError.h"
 #include "RanPendingScripts.h"
@@ -112,6 +113,9 @@ static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRec
 
 static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const NondeterministicInput* input)
 {
+    DEFINE_STATIC_LOCAL(const AtomicString, getCurrentTimeType, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, setRandomSeedType, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
+
     const AtomicString& type = input->type();
 
     if (type == inputTypes().BeginSentinel) {
@@ -140,6 +144,10 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == inputTypes().FocusSetFocused) {
         InputCoder<FocusSetFocused>::encode(encoder, *(static_cast<const FocusSetFocused*>(input)));
+        return true;
+    }
+    if (type == getCurrentTimeType) {
+        InputCoder<JSC::GetCurrentTime>::encode(encoder, *(static_cast<const JSC::GetCurrentTime*>(input)));
         return true;
     }
     if (type == inputTypes().HandleContextMenu) {
@@ -198,6 +206,10 @@ static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const No
     }
     if (type == inputTypes().SendResizeEvent) {
         InputCoder<SendResizeEvent>::encode(encoder, *(static_cast<const SendResizeEvent*>(input)));
+        return true;
+    }
+    if (type == setRandomSeedType) {
+        InputCoder<JSC::SetRandomSeed>::encode(encoder, *(static_cast<const JSC::SetRandomSeed*>(input)));
         return true;
     }
     if (type == inputTypes().TimerCreated) {
