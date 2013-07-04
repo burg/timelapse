@@ -101,7 +101,7 @@ body.window-inactive .toolbar .replay-dashboard {
 .toolbar .replay-dashboard > .prompt,
 .toolbar .replay-dashboard > .recording-container {
     -webkit-flex-grow: 1;
-    -webkit-order: 3;
+    -webkit-order: 2;
 }
 
 .toolbar .replay-dashboard > .recording-container {
@@ -121,7 +121,7 @@ body.window-inactive .toolbar .replay-dashboard {
 .toolbar .replay-dashboard > .recording-container > .serialized-recording {
     font-family: Helvetica, sans-serif;
     font-weight: bold;
-    font-size: 16px;
+    font-size: 14px;
     color: #666;
     text-align: center;
 }
@@ -130,7 +130,6 @@ body.window-inactive .toolbar .replay-dashboard {
 .toolbar .replay-dashboard > .recording-container > .live-recording,
 .toolbar .replay-dashboard > .recording-container > .serialized-recording {
     position: absolute;
-    height: 30px;
     top: 0px;
     left: 0px;
     right: 0px;
@@ -144,19 +143,24 @@ body.window-inactive .toolbar .replay-dashboard {
 
 .toolbar .replay-dashboard > .recording-container > .live-recording {
     z-index: 0;
+    background-color: rgba(100, 100, 100, 0.1);
+    height: 25px;
+    top: 3px;
 }
 
 .toolbar .replay-dashboard > .recording-container > .live-recording > .stop {
-    background-color: #fff;
+    background-color: rgba(255, 255, 255, 0.6);
     opacity: 0;
     z-index: 1;
-    line-height: 34px;
+    line-height: 25px;
     transition: opacity ease 0.5s;
-
 }
 
 .toolbar .replay-dashboard > .recording-container > .live-recording > .stop:hover {
-    opacity: 0.7;
+    opacity: 1;
+    color: #933;
+    text-shadow: 0px 0px 10px #fff;
+    border: 1px solid #ccc;
 }
 
 .toolbar .replay-dashboard.recording-loaded > .prompt,
@@ -165,7 +169,7 @@ body.window-inactive .toolbar .replay-dashboard {
 }
 
 .toolbar .replay-dashboard > .eject {
-    -webkit-order: 4;
+    -webkit-order: 3;
     margin: 2px 5px 0px;
 }
 

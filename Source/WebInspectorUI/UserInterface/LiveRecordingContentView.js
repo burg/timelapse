@@ -55,12 +55,11 @@ WebInspector.LiveRecordingContentView = function(recording)
 WebInspector.LiveRecordingContentView.StyleClassName = "live-recording";
 WebInspector.ReplayDashboardView.StopStyleClassName = "stop";
 
-WebInspector.LiveRecordingContentView.GraphBackgroundColor = new WebInspector.Color("#fff");
 WebInspector.LiveRecordingContentView.GraphBorderWidth = 1; // in pixels
-WebInspector.LiveRecordingContentView.GraphBorderStrokeColor = new WebInspector.Color("#666");
+WebInspector.LiveRecordingContentView.GraphBorderStrokeColor = new WebInspector.Color("#999");
 WebInspector.LiveRecordingContentView.MaxRecordLifetime = 10.0; // seconds
-WebInspector.LiveRecordingContentView.MaxBinsPerTimeline = 600;
-WebInspector.LiveRecordingContentView.LineGraphFillColor = new WebInspector.Color.fromRGBA(8,32,130,0.6);
+WebInspector.LiveRecordingContentView.MaxBinsPerTimeline = 300;
+WebInspector.LiveRecordingContentView.LineGraphFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
 
 
 WebInspector.LiveRecordingContentView.prototype = {
@@ -176,19 +175,18 @@ WebInspector.LiveRecordingContentView.prototype = {
         var availHeight = this._canvas.height;
         var availWidth = this._canvas.width;
 
-        ctx.fillStyle = WebInspector.LiveRecordingContentView.GraphBackgroundColor.value;
         ctx.clearRect(0, 0, availWidth, availHeight);
 
         // Draw border.
         ctx.strokeStyle = WebInspector.LiveRecordingContentView.GraphBorderStrokeColor.value;
         ctx.lineWidth = WebInspector.LiveRecordingContentView.GraphBorderWidth;
+        ctx.lineJoin = "round";
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(availWidth, 0);
         ctx.lineTo(availWidth, availHeight);
         ctx.lineTo(0, availHeight);
         ctx.lineTo(0, 0);
-        ctx.fill();
         ctx.stroke();
     },
 
@@ -200,25 +198,23 @@ WebInspector.LiveRecordingContentView.prototype = {
         if (!this._timeline.data || !this._timeline.provider)
             return;
 
-        ctx.save();
-        ctx.translate(this._graphBorderWidth, this._graphBorderWidth);
+        //ctx.save();
+        //ctx.translate(WebInspector.LiveRecordingContentView.GraphBorderWidth, WebInspector.LiveRecordingContentView.GraphBorderWidth);
 
         var pointCount = this._binsPerTimeline;
-        var availHeight = this._canvas.height - WebInspector.LiveRecordingContentView.GraphBorderWidth*2+1;
-        var availWidth = this._canvas.width - WebInspector.LiveRecordingContentView.GraphBorderWidth*2+1;
+        var availHeight = this._canvas.height - WebInspector.LiveRecordingContentView.GraphBorderWidth * 2 + 1;
+        var availWidth = this._canvas.width - WebInspector.LiveRecordingContentView.GraphBorderWidth * 2 + 1;
         var offsetPerPoint = availWidth / pointCount;
         var maxValue = this._timeline.data[this._timeline.maxIndex];
 
         // Draw bars for all actions.
         function drawLineGraph(data) {
-            ctx.lineJoin = "round";
             ctx.beginPath();
             ctx.moveTo(0, availHeight);
-            var highMark = 0;
-            for (var i = 0; i < pointCount; i++) {
+            for (var i = 0; i < pointCount; ++i) {
                 var percent = (data[i] / maxValue) || 0;
-                var pointX = offsetPerPoint*i+offsetPerPoint/2;
-                var pointY = availHeight * (1-percent);
+                var pointX = (offsetPerPoint * i) + (offsetPerPoint / 2);
+                var pointY = availHeight * (1 - percent);
                 ctx.lineTo(pointX, pointY);
             }
             ctx.lineTo(availWidth, availHeight);
@@ -227,8 +223,11 @@ WebInspector.LiveRecordingContentView.prototype = {
             ctx.fill();
         }
 
-        var currentData = this._timeline.data.slice();
+        var currentData = this._timeline.data;
+        ctx.lineJoin = "round";
         ctx.fillStyle = WebInspector.LiveRecordingContentView.LineGraphFillColor.value;
         drawLineGraph.call(this, currentData);
+
+        //ctx.restore();
     }
 };
