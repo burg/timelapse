@@ -105,7 +105,7 @@ WebInspector.RecordingsManager.prototype = {
             this.dispatchEventToListeners(WebInspector.RecordingsManager.Event.RecordingAdded, recording);
         };
 
-        RecordingsAgent.getRecording(uid, loadDataForRecording.bind(this, newRecording));
+        RecordingsAgent.getSerializedRecording(uid, loadDataForRecording.bind(this, newRecording));
     },
 
     removeRecording: function(recording) {

@@ -33,7 +33,6 @@ WebInspector.ReplayInputDataProvider = function(displayName)
 
     this._displayName = displayName;
     this._inputs = [];
-    this._resourceURLByIdentifier = {};
 };
 
 WebInspector.ReplayInputDataProvider.prototype = {
@@ -57,19 +56,9 @@ WebInspector.ReplayInputDataProvider.prototype = {
         return this._inputs;
     },
 
-    resourceUrlForIdentifier: function(id)
-    {
-        return this._resourceURLByIdentifier[id];
-    },
-
     addInput: function(input)
     {
+        console.assert(input instanceof WebInspector.SerializedInputObject, "Added [input] of wrong class to [provider]: ", input, this);
         this._inputs.push(input);
-
-        // update the mapping of resource handle ids to their URLs.
-        if (input.type === "ResourceWillSendRequest" || input.type === "ResourceDidReceiveResponse")
-            this._resourceURLByIdentifier[input.data.id] = input.data.url;
-
-        this.dispatchEventToListeners(WebInspector.DataProvider.Event.DataChanged);
     },
 };

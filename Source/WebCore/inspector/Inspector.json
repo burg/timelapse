@@ -2744,7 +2744,7 @@
         "commands": [
             {
                 "name": "getRecording",
-                "description": "Returns recording with the specified id if one exists.",
+                "description": "(deprecated) Returns recording with the specified id if one exists.",
                 "parameters": [
                     { "name": "uid", "$ref": "RecordingId" }
                 ],

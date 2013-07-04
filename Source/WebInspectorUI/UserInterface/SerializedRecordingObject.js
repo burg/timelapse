@@ -32,7 +32,14 @@ WebInspector.SerializedRecordingObject = function(uid)
     WebInspector.RecordingObject.call(this);
     this.uid = uid;
     this._dataLoaded = false;
+    this._calculator = new WebInspector.RecordingCalculator(this);
 }
+
+WebInspector.SerializedRecordingObject.Queue = {
+    ScriptMemoizedDataQueue: "ScriptMemoizedDataQueue",
+    LoaderMemoizedDataQueue: "LoaderMemoizedDataQueue",
+    EventLoopInputQueue: "EventLoopInputQueue"
+};
 
 WebInspector.SerializedRecordingObject.prototype = {
     constructor: WebInspector.SerializedRecordingObject,
@@ -40,12 +47,30 @@ WebInspector.SerializedRecordingObject.prototype = {
 
     // Public
 
+    get calculator()
+    {
+        return this._calculator;
+    },
+
     loadData: function(data)
     {
-        // TODO: add action data and adjust calculator
         this._dateCreated = new Date(data.dateCreated);
         this._displayName = data.name;
         this._dataLoaded = true;
+
+        var inputProvider = new WebInspector.ReplayInputDataProvider("event-loop-inputs");
+
+        console.assert(data.queues, "Missing input queues in serialized recording.", data);
+        for (var i = 0; i < data.queues.length; ++i) {
+            var queue = data.queues[i];
+            if (queue.type !== WebInspector.SerializedRecordingObject.Queue.EventLoopInputQueue)
+                continue;
+
+            for (var j = 0; j < queue.inputs.length; ++j)
+                inputProvider.addInput(new WebInspector.SerializedInputObject(queue.inputs[j]));
+        }
+
+        this.addProvider(inputProvider);
     },
 
     dataLoaded: function()
@@ -68,3 +93,10 @@ WebInspector.SerializedRecordingObject.prototype = {
         return WebInspector.UIString("Captured Recording %d", this.uid) || WebInspector.UIString("(uninitialized)");
     },
 };
+
+WebInspector.SerializedInputObject = function(rawInput)
+{
+    this.timestamp = rawInput.data.markTimestamp;
+    this.markIndex = rawInput.data.markIndex;
+};
+
