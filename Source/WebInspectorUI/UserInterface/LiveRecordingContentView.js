@@ -36,6 +36,12 @@ WebInspector.LiveRecordingContentView = function(recording)
 
     this._canvas = this.element.appendChild(document.createElement("canvas"));
 
+    var stopElement = this.element.appendChild(document.createElement("div"));
+    stopElement.innerHTML = "Stop Recording?"
+    stopElement.className = WebInspector.ReplayDashboardView.StopStyleClassName;
+    stopElement.title = WebInspector.UIString("Click to stop recording");
+    stopElement.addEventListener("click", this._stopClicked.bind(this));
+
     this._timeline = { provider: null, maxIndex: -1, data: [] };
 
     this._listeners = new WebInspector.EventListenerGroup("LiveRecordingContentView recording listeners");
@@ -47,6 +53,7 @@ WebInspector.LiveRecordingContentView = function(recording)
 };
 
 WebInspector.LiveRecordingContentView.StyleClassName = "live-recording";
+WebInspector.ReplayDashboardView.StopStyleClassName = "stop";
 
 WebInspector.LiveRecordingContentView.GraphBackgroundColor = new WebInspector.Color("#fff");
 WebInspector.LiveRecordingContentView.GraphBorderWidth = 1; // in pixels
@@ -92,6 +99,11 @@ WebInspector.LiveRecordingContentView.prototype = {
         this._canvas.height = this.element.clientHeight;
         this._canvas.style.height = this.element.clientHeight + 'px';
         this._cachedOffsetWidth = this.element.offsetWidth;
+    },
+
+    _stopClicked: function(event)
+    {
+        WebInspector.replayManager.stopCaptureSoon();
     },
 
     // Clear the data of the timeline.

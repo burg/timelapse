@@ -56,6 +56,11 @@ WebInspector.ReplayDashboardView = function(replayManager)
     ejectButton.addEventListener("click", this._ejectButtonClicked.bind(this));
     ejectButton.appendChild(document.createElement("img"));
 
+    var recordingContainer = this._element.appendChild(document.createElement("div"));
+    recordingContainer.className = WebInspector.ReplayDashboardView.RecordingContainerStyleClassName;
+
+    this._recordingContainer = recordingContainer;
+
     // Add events required to track capture and replay state.
     replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStarted, this._captureStarted, this);
     replayManager.addEventListener(WebInspector.ReplayManager.Event.CaptureStopped, this._captureStopped, this);
@@ -85,6 +90,7 @@ WebInspector.ReplayDashboardView.EjectButtonStyleClassName = "eject";
 WebInspector.ReplayDashboardView.NavigationContainerStyleClassName = "navigation-container";
 WebInspector.ReplayDashboardView.PromptStyleClassName = "prompt";
 WebInspector.ReplayDashboardView.ReplayButtonStyleClassName = "replay";
+WebInspector.ReplayDashboardView.RecordingContainerStyleClassName = "recording-container";
 
 // Class names for states applied to the replay dashboard element.
 WebInspector.ReplayDashboardView.CapturingStyleClassName = "capturing";
@@ -205,7 +211,7 @@ WebInspector.ReplayDashboardView.prototype = {
     {
         console.assert(view instanceof WebInspector.SerializedRecordingContentView || view instanceof WebInspector.LiveRecordingContentView);
         this._recordingView = view;
-        this._element.appendChild(this._recordingView.element);
+        this._recordingContainer.appendChild(this._recordingView.element);
         if (WebInspector.replayManager.toolbarItem.hidden)
             this._dashboardHidden();
         else
@@ -220,7 +226,7 @@ WebInspector.ReplayDashboardView.prototype = {
         var recordingView = this._recordingView;
         delete this._recordingView;
         recordingView.visible = false;
-        this._element.removeChild(recordingView.element);
+        this._recordingContainer.removeChild(recordingView.element);
         recordingView.closed();
     }
 };
