@@ -58,6 +58,7 @@ body.window-inactive .toolbar .replay-dashboard {
 .toolbar .replay-dashboard .replay,
 .toolbar .replay-dashboard .back,
 .toolbar .replay-dashboard .prompt,
+.toolbar .replay-dashboard .stop,
 .toolbar .replay-dashboard .eject {
     cursor: pointer;
 }
@@ -98,24 +99,64 @@ body.window-inactive .toolbar .replay-dashboard {
 }
 
 .toolbar .replay-dashboard > .prompt,
-.toolbar .replay-dashboard > .live-recording,
-.toolbar .replay-dashboard > .serialized-recording {
+.toolbar .replay-dashboard > .recording-container {
+    -webkit-flex-grow: 1;
+    -webkit-order: 3;
+}
+
+.toolbar .replay-dashboard > .recording-container {
+    position: relative;
+    height: 30px;
+    display: none;
+}
+
+.toolbar .replay-dashboard.capturing > .recording-container,
+.toolbar .replay-dashboard.recording-loaded > .recording-container {
+    display: -webkit-flex;
+}
+
+.toolbar .replay-dashboard > .prompt,
+.toolbar .replay-dashboard > .recording-container > .stop,
+.toolbar .replay-dashboard > .recording-container > .live-recording,
+.toolbar .replay-dashboard > .recording-container > .serialized-recording {
     font-family: Helvetica, sans-serif;
     font-weight: bold;
     font-size: 16px;
     color: #666;
     text-align: center;
-    -webkit-flex-grow: 1;
-    -webkit-order: 2;
 }
 
-.toolbar .replay-dashboard > .live-recording,
-.toolbar .replay-dashboard > .serialized-recording {
+.toolbar .replay-dashboard > .recording-container  .stop,
+.toolbar .replay-dashboard > .recording-container > .live-recording,
+.toolbar .replay-dashboard > .recording-container > .serialized-recording {
+    position: absolute;
     height: 30px;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
 }
 
-.toolbar .replay-dashboard > .serialized-recording {
+.toolbar .replay-dashboard > .recording-container > .serialized-recording {
     border: 1px solid #ccc;
+    z-index: 0;
+}
+
+.toolbar .replay-dashboard > .recording-container > .live-recording {
+    z-index: 0;
+}
+
+.toolbar .replay-dashboard > .recording-container > .live-recording > .stop {
+    background-color: #fff;
+    opacity: 0;
+    z-index: 1;
+    line-height: 34px;
+    transition: opacity ease 0.5s;
+
+}
+
+.toolbar .replay-dashboard > .recording-container > .live-recording > .stop:hover {
+    opacity: 0.7;
 }
 
 .toolbar .replay-dashboard.recording-loaded > .prompt,
@@ -124,7 +165,7 @@ body.window-inactive .toolbar .replay-dashboard {
 }
 
 .toolbar .replay-dashboard > .eject {
-    -webkit-order: 3;
+    -webkit-order: 4;
     margin: 2px 5px 0px;
 }
 
