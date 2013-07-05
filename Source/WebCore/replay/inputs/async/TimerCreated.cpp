@@ -32,7 +32,7 @@
 #include "config.h"
 #include "TimerCreated.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InputDecoder.h"
 #include "InputEncoder.h"
@@ -68,4 +68,4 @@ bool InputCoder<TimerCreated>::decode(InputDecoder& decoder, OwnPtr<TimerCreated
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

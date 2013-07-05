@@ -54,7 +54,7 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "PageScriptDebugServer.h"
 #include "ScriptProbeServer.h"
 #endif
@@ -184,7 +184,7 @@ void Console::markTimeline(PassRefPtr<ScriptArguments> arguments)
     InspectorInstrumentation::consoleTimeStamp(m_frame, arguments);
 }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 void Console::probe(ScriptState* state, int probeId)
 {
     ScriptProbeServer* probeServer = PageScriptDebugServer::shared().probeServer();

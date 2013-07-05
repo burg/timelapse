@@ -46,9 +46,9 @@
 #include "WebSocketFrame.h"
 #include <wtf/RefPtr.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "ReplayRecording.h"
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 namespace WebCore {
 
@@ -271,7 +271,7 @@ public:
     static void willEvaluateWorkerScript(WorkerContext*, int workerThreadStartMode);
 #endif
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     static void recordingLoaded(Page*, PassRefPtr<ReplayRecording>);
     static void recordingUnloaded(Page*);
     static void recordingCreated(Page*, PassRefPtr<ReplayRecording>);
@@ -286,7 +286,7 @@ public:
     static void playbackError(Page*, bool isFatal, const String& errorMessage);
     static void imageCaptured(Page*, const String&);
 #endif
-    
+
 #if ENABLE(WEB_SOCKETS)
     static void didCreateWebSocket(Document*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol);
     static void willSendWebSocketHandshakeRequest(Document*, unsigned long identifier, const ResourceRequest&);
@@ -497,7 +497,7 @@ private:
     static void didReceiveWebSocketFrameErrorImpl(InstrumentingAgents*, unsigned long identifier, const String&);
 #endif
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     static void recordingLoadedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void recordingUnloadedImpl(InstrumentingAgents*);
     static void recordingCreatedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
@@ -512,7 +512,7 @@ private:
     static void playbackErrorImpl(InstrumentingAgents*, bool isFatal, const String& errorMessage);
     static void imageCapturedImpl(InstrumentingAgents*, const String& imageDataUri);
 #endif
-    
+
     static void networkStateChangedImpl(InstrumentingAgents*);
     static void updateApplicationCacheStatusImpl(InstrumentingAgents*, Frame*);
 
@@ -1952,8 +1952,8 @@ inline void InspectorInstrumentation::didSendWebSocketFrame(Document* document, 
 #endif
 }
 #endif
-    
-#if ENABLE(TIMELAPSE)
+
+#if ENABLE(WEB_REPLAY)
 inline void InspectorInstrumentation::recordingUnloaded(Page* page)
 {
 #if ENABLE(INSPECTOR)
@@ -1985,7 +1985,7 @@ inline void InspectorInstrumentation::capturedEventLoopInput(Page* page, EventLo
         capturedEventLoopInputImpl(instrumentingAgents, action);
 #endif
 }
-    
+
 inline void InspectorInstrumentation::captureStarted(Page* page)
 {
 #if ENABLE(INSPECTOR)

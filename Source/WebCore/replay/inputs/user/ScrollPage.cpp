@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ScrollPage.h"
 
@@ -151,4 +151,4 @@ bool InputCoder<ScrollPage>::decode(InputDecoder& decoder, OwnPtr<ScrollPage>& i
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

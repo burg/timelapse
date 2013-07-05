@@ -97,7 +97,7 @@ public:
     PageRuntimeAgent* pageRuntimeAgent() const { return m_pageRuntimeAgent; }
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     InspectorRecordingsAgent* inspectorRecordingsAgent() const { return m_inspectorRecordingsAgent; }
     void setInspectorRecordingsAgent(InspectorRecordingsAgent* agent) { m_inspectorRecordingsAgent = agent; }
 
@@ -173,7 +173,7 @@ private:
     InspectorDOMAgent* m_inspectorDOMAgent;
     InspectorResourceAgent* m_inspectorResourceAgent;
     PageRuntimeAgent* m_pageRuntimeAgent;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     InspectorRecordingsAgent* m_inspectorRecordingsAgent;
     InspectorReplayAgent* m_inspectorReplayAgent;
     InspectorProbeAgent* m_inspectorProbeAgent;

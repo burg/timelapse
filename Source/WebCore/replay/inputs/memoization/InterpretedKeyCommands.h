@@ -33,7 +33,7 @@
 #ifndef InterpretedKeyCommands_h
 #define InterpretedKeyCommands_h
 
-#if ENABLE(TIMELAPSE) && PLATFORM(MAC)
+#if ENABLE(WEB_REPLAY) && PLATFORM(MAC)
 
 #include "InputCoder.h"
 #include <wtf/replay/NondeterministicInput.h>
@@ -66,7 +66,7 @@ template<> struct InputCoder<InterpretedKeyCommands> {
     static bool decode(InputDecoder& decoder, OwnPtr<InterpretedKeyCommands>& input);
 };
 
-#endif // ENABLE(TIMELAPSE) && PLATFORM(MAC)
+#endif // ENABLE(WEB_REPLAY) && PLATFORM(MAC)
 
 } // namespace WebCore
 

@@ -33,7 +33,7 @@
 #ifndef ReplayUtilities_h
 #define ReplayUtilities_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 namespace WTF {
 class InputIterator;
@@ -46,6 +46,6 @@ WTF::InputIterator* getInputIteratorForDocument(Document*);
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ReplayUtilities_h

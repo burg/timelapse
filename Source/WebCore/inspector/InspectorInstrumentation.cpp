@@ -399,10 +399,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(I
         timelineAgent->willDispatchEvent(event, document->frame());
         timelineAgentId = timelineAgent->id();
     }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->willDispatchEvent(event, window, node);
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -421,10 +421,10 @@ void InspectorInstrumentation::didDispatchEventImpl(const InspectorInstrumentati
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
         replayAgent->didDispatchEvent();
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 }
 
 InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWindowImpl(InstrumentingAgents* instrumentingAgents, const Event& event, DOMWindow* window)
@@ -435,10 +435,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWind
         timelineAgent->willDispatchEvent(event, window ? window->frame() : 0);
         timelineAgentId = timelineAgent->id();
     }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->willDispatchEventOnWindow(event, window);
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -446,10 +446,10 @@ void InspectorInstrumentation::didDispatchEventOnWindowImpl(const InspectorInstr
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
         replayAgent->didDispatchEventOnWindow();
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 }
 
 InspectorInstrumentationCookie InspectorInstrumentation::willEvaluateScriptImpl(InstrumentingAgents* instrumentingAgents, const String& url, int lineNumber, Frame* frame)
@@ -489,10 +489,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willFireTimerImpl(Instr
         timelineAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
         timelineAgentId = timelineAgent->id();
     }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -948,7 +948,7 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
         canvasAgent->frameNavigated(loader->frame());
     if (InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent())
         pageAgent->frameNavigated(loader);
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->frameNavigated(loader);
 #endif
@@ -1228,7 +1228,7 @@ void InspectorInstrumentation::didSendWebSocketFrameImpl(InstrumentingAgents* in
 }
 #endif
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instrumentingAgents)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())

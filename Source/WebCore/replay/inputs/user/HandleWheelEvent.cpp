@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleWheelEvent.h"
 
@@ -295,4 +295,4 @@ bool InputCoder<HandleWheelEvent>::decode(InputDecoder& decoder, OwnPtr<HandleWh
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

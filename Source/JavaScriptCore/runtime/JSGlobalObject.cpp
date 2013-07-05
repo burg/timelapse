@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -131,7 +131,7 @@ void JSGlobalObject::destroy(JSCell* cell)
 }
 
 void JSGlobalObject::setGlobalThis(VM& vm, JSObject* globalThis)
-{ 
+{
     m_globalThis.set(vm, this, globalThis);
 }
 
@@ -232,7 +232,7 @@ void JSGlobalObject::reset(JSValue prototype)
 #endif
 
     m_arrayPrototype.set(exec->vm(), this, ArrayPrototype::create(exec, this, ArrayPrototype::createStructure(exec->vm(), this, m_objectPrototype.get())));
-    
+
     m_originalArrayStructureForIndexingShape[UndecidedShape >> IndexingShapeShift].set(exec->vm(), this, JSArray::createStructure(exec->vm(), this, m_arrayPrototype.get(), ArrayWithUndecided));
     m_originalArrayStructureForIndexingShape[Int32Shape >> IndexingShapeShift].set(exec->vm(), this, JSArray::createStructure(exec->vm(), this, m_arrayPrototype.get(), ArrayWithInt32));
     m_originalArrayStructureForIndexingShape[DoubleShape >> IndexingShapeShift].set(exec->vm(), this, JSArray::createStructure(exec->vm(), this, m_arrayPrototype.get(), ArrayWithDouble));
@@ -241,7 +241,7 @@ void JSGlobalObject::reset(JSValue prototype)
     m_originalArrayStructureForIndexingShape[SlowPutArrayStorageShape >> IndexingShapeShift].set(exec->vm(), this, JSArray::createStructure(exec->vm(), this, m_arrayPrototype.get(), ArrayWithSlowPutArrayStorage));
     for (unsigned i = 0; i < NumberOfIndexingShapes; ++i)
         m_arrayStructureForIndexingShapeDuringAllocation[i] = m_originalArrayStructureForIndexingShape[i];
-    
+
     m_regExpMatchesArrayStructure.set(exec->vm(), this, RegExpMatchesArray::createStructure(exec->vm(), this, m_arrayPrototype.get()));
 
     m_stringPrototype.set(exec->vm(), this, StringPrototype::create(exec, this, StringPrototype::createStructure(exec->vm(), this, m_objectPrototype.get())));
@@ -257,7 +257,7 @@ void JSGlobalObject::reset(JSValue prototype)
     m_dateStructure.set(exec->vm(), this, DateInstance::createStructure(exec->vm(), this, m_datePrototype.get()));
 
     RegExp* emptyRegex = RegExp::create(exec->vm(), "", NoFlags);
-    
+
     m_regExpPrototype.set(exec->vm(), this, RegExpPrototype::create(exec, this, RegExpPrototype::createStructure(exec->vm(), this, m_objectPrototype.get()), emptyRegex));
     m_regExpStructure.set(exec->vm(), this, RegExpObject::createStructure(exec->vm(), this, m_regExpPrototype.get()));
 
@@ -325,7 +325,7 @@ void JSGlobalObject::reset(JSValue prototype)
         GlobalPropertyInfo(Identifier(exec, "undefined"), jsUndefined(), DontEnum | DontDelete | ReadOnly)
     };
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
-    
+
     m_specialPointers[Special::CallFunction] = m_callFunction.get();
     m_specialPointers[Special::ApplyFunction] = m_applyFunction.get();
     m_specialPointers[Special::ObjectConstructor] = objectConstructor;
@@ -376,13 +376,13 @@ void ObjectsWithBrokenIndexingFinder::operator()(JSCell* cell)
 {
     if (!cell->isObject())
         return;
-    
+
     JSObject* object = asObject(cell);
 
     // Run this filter first, since it's cheap, and ought to filter out a lot of objects.
     if (!hasBrokenIndexing(object))
         return;
-    
+
     // We only want to have a bad time in the affected global object, not in the entire
     // VM. But we have to be careful, since there may be objects that claim to belong to
     // a different global object that have prototypes from our global object.
@@ -392,7 +392,7 @@ void ObjectsWithBrokenIndexingFinder::operator()(JSCell* cell)
             foundGlobalObject = true;
             break;
         }
-        
+
         JSValue prototypeValue = current->prototype();
         if (prototypeValue.isNull())
             break;
@@ -400,7 +400,7 @@ void ObjectsWithBrokenIndexingFinder::operator()(JSCell* cell)
     }
     if (!foundGlobalObject)
         return;
-    
+
     m_foundObjects.append(object);
 }
 
@@ -409,21 +409,21 @@ void ObjectsWithBrokenIndexingFinder::operator()(JSCell* cell)
 void JSGlobalObject::haveABadTime(VM& vm)
 {
     ASSERT(&vm == &this->vm());
-    
+
     if (isHavingABadTime())
         return;
-    
+
     // Make sure that all allocations or indexed storage transitions that are inlining
     // the assumption that it's safe to transition to a non-SlowPut array storage don't
     // do so anymore.
     m_havingABadTimeWatchpoint->notifyWrite();
     ASSERT(isHavingABadTime()); // The watchpoint is what tells us that we're having a bad time.
-    
+
     // Make sure that all JSArray allocations that load the appropriate structure from
     // this object now load a structure that uses SlowPut.
     for (unsigned i = 0; i < NumberOfIndexingShapes; ++i)
         m_arrayStructureForIndexingShapeDuringAllocation[i].set(vm, this, originalArrayStructureForIndexingType(ArrayWithSlowPutArrayStorage));
-    
+
     // Make sure that all objects that have indexed storage switch to the slow kind of
     // indexed storage.
     MarkedArgumentBuffer foundObjects; // Use MarkedArgumentBuffer because switchToSlowPutArrayStorage() may GC.
@@ -466,7 +466,7 @@ void JSGlobalObject::resetPrototype(VM& vm, JSValue prototype)
 }
 
 void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
-{ 
+{
     JSGlobalObject* thisObject = jsCast<JSGlobalObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
@@ -540,7 +540,7 @@ ExecState* JSGlobalObject::globalExec()
     return CallFrame::create(m_globalCallFrame + JSStack::CallFrameHeaderSize);
 }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 void JSGlobalObject::setInputIterator(InputIterator* it)
 {
     m_inputIterator = it;
@@ -557,7 +557,7 @@ void JSGlobalObject::addStaticGlobals(GlobalPropertyInfo* globals, int count)
     for (int i = 0; i < count; ++i) {
         GlobalPropertyInfo& global = globals[i];
         ASSERT(global.attributes & DontDelete);
-        
+
         int index = symbolTable()->size();
         SymbolTableEntry newEntry(index, global.attributes);
         symbolTable()->add(global.identifier.impl(), newEntry);
@@ -627,7 +627,7 @@ UnlinkedProgramCodeBlock* JSGlobalObject::createProgramCodeBlock(CallFrame* call
         *exception = error.toErrorObject(this, executable->source());
         return 0;
     }
-    
+
     return unlinkedCode;
 }
 

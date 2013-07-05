@@ -32,7 +32,7 @@
 #ifndef ResourceDidFinishLoading_h
 #define ResourceDidFinishLoading_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -67,7 +67,7 @@ template<> struct InputCoder<ResourceDidFinishLoading> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ResourceDidFinishLoading_h
 

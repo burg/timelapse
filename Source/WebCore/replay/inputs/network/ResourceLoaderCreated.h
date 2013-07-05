@@ -32,7 +32,7 @@
 #ifndef ResourceLoaderCreated_h
 #define ResourceLoaderCreated_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InputCoder.h"
 #include "ResourceRequest.h"
@@ -66,6 +66,6 @@ template<> struct InputCoder<ResourceLoaderCreated> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ResourceLoaderCreated_h

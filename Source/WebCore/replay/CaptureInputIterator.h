@@ -32,7 +32,7 @@
 #ifndef CaptureInputIterator_h
 #define CaptureInputIterator_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include <wtf/Noncopyable.h>
 #include <wtf/replay/InputIterator.h>
@@ -76,6 +76,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // CaptureInputIterator_h

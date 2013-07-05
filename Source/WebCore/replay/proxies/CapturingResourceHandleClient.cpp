@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "CapturingResourceHandleClient.h"
 
@@ -152,4 +152,4 @@ void CapturingResourceHandleClient::receivedCancellation(ResourceHandle* handle,
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

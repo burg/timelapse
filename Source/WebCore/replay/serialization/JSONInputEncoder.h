@@ -32,7 +32,7 @@
 #ifndef JSONInputEncoder_h
 #define JSONInputEncoder_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InputEncoder.h"
 #include "InspectorTypeBuilder.h"
@@ -94,6 +94,6 @@ namespace WebCore {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // JSONInputEncoder_h

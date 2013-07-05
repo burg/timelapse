@@ -22,7 +22,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ReplayInputTypes.h"
 
@@ -39,4 +39,4 @@ REPLAY_INPUT_TYPES_FOR_EACH(INITIALIZE_INPUT_TYPE)
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

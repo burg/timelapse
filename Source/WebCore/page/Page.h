@@ -200,7 +200,7 @@ public:
         NetworkProxy* networkProxy() const { return m_networkProxy.get(); }
         AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
         UserInputProxy* userInputProxy() const { return m_userInputProxy.get(); }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         ReplayController* replayController() const { return m_replayController.get(); }
 #endif
 #if ENABLE(INSPECTOR)
@@ -460,7 +460,7 @@ private:
         OwnPtr<NetworkProxy> m_networkProxy;
         OwnPtr<AsyncEventProxy> m_asyncEventProxy;
         OwnPtr<UserInputProxy> m_userInputProxy;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         OwnPtr<ReplayController> m_replayController;
 #endif
 #if ENABLE(INSPECTOR)
@@ -573,5 +573,5 @@ inline PageGroup& Page::group()
 }
 
 } // namespace WebCore
-    
+
 #endif // Page_h

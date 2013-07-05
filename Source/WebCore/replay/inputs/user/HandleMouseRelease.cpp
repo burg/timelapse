@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleMouseRelease.h"
 
@@ -75,4 +75,4 @@ bool InputCoder<HandleMouseRelease>::decode(InputDecoder& decoder, OwnPtr<Handle
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

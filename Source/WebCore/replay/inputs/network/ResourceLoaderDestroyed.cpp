@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ResourceLoaderDestroyed.h"
 
@@ -87,4 +87,4 @@ bool InputCoder<ResourceLoaderDestroyed>::decode(InputDecoder& decoder, OwnPtr<R
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

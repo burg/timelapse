@@ -32,7 +32,7 @@
 #ifndef ReplayController_h
 #define ReplayController_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInputDispatcher.h"
 #include "ReplayProxy.h"
@@ -141,7 +141,7 @@ namespace WebCore {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ReplayController_h
 

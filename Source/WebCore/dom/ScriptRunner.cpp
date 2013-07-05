@@ -32,7 +32,7 @@
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "DispatchEventBase.h"
 #include "RanPendingScripts.h"
 #include "ReplayUtilities.h"
@@ -87,7 +87,7 @@ void ScriptRunner::suspend()
 
 void ScriptRunner::resume()
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     // timerFired will be called deterministically during replay, so don't start m_timer.
     InputIterator* it = getInputIteratorForDocument(m_document);
     if (it && it->isReplaying())
@@ -109,7 +109,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
         break;
     }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     // timerFired will be called deterministically during replay, so don't start m_timer.
     InputIterator* it = getInputIteratorForDocument(m_document);
     if (it && it->isReplaying())
@@ -121,7 +121,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_timer);
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     InputIterator* it = getInputIteratorForDocument(m_document);
     if (it && it->isCapturing()) {
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(m_document);

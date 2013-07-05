@@ -72,12 +72,12 @@ struct ActivationStackNode;
 struct HashTable;
 
 typedef Vector<ExecState*, 16> ExecStateStack;
-    
+
 struct GlobalObjectMethodTable {
     typedef bool (*AllowsAccessFromFunctionPtr)(const JSGlobalObject*, ExecState*);
     AllowsAccessFromFunctionPtr allowsAccessFrom;
 
-    typedef bool (*SupportsProfilingFunctionPtr)(const JSGlobalObject*); 
+    typedef bool (*SupportsProfilingFunctionPtr)(const JSGlobalObject*);
     SupportsProfilingFunctionPtr supportsProfiling;
 
     typedef bool (*SupportsRichSourceInfoFunctionPtr)(const JSGlobalObject*);
@@ -103,7 +103,7 @@ private:
 
         WeakMapSet weakMaps;
         unsigned profileGroup;
-        
+
         OpaqueJSClassDataMap opaqueJSClassData;
     };
 
@@ -142,12 +142,12 @@ protected:
     WriteBarrier<Structure> m_activationStructure;
     WriteBarrier<Structure> m_nameScopeStructure;
     WriteBarrier<Structure> m_argumentsStructure;
-        
+
     // Lists the actual structures used for having these particular indexing shapes.
     WriteBarrier<Structure> m_originalArrayStructureForIndexingShape[NumberOfIndexingShapes];
     // Lists the structures we should use during allocation for these particular indexing shapes.
     WriteBarrier<Structure> m_arrayStructureForIndexingShapeDuringAllocation[NumberOfIndexingShapes];
-        
+
     WriteBarrier<Structure> m_booleanObjectStructure;
     WriteBarrier<Structure> m_callbackConstructorStructure;
     WriteBarrier<Structure> m_callbackFunctionStructure;
@@ -169,7 +169,7 @@ protected:
     WriteBarrier<Structure> m_regExpStructure;
     WriteBarrier<Structure> m_stringObjectStructure;
     WriteBarrier<Structure> m_internalFunctionStructure;
-        
+
     void* m_specialPointers[Special::TableSize]; // Special pointers used by the LLInt and JIT.
 
     Debugger* m_debugger;
@@ -194,7 +194,7 @@ protected:
             return;
         m_rareData = adoptPtr(new JSGlobalObjectRareData);
     }
-        
+
 public:
     typedef JSSegmentedVariableObject Base;
 
@@ -253,7 +253,7 @@ public:
     // lookups prior to initializing the properties
     bool symbolTableHasProperty(PropertyName);
 
-    // The following accessors return pristine values, even if a script 
+    // The following accessors return pristine values, even if a script
     // replaces the global object's associated property.
 
     RegExpConstructor* regExpConstructor() const { return m_regExpConstructor.get(); }
@@ -305,12 +305,12 @@ public:
     {
         return arrayStructureForIndexingTypeDuringAllocation(ArrayAllocationProfile::selectIndexingTypeFor(profile));
     }
-        
+
     bool isOriginalArrayStructure(Structure* structure)
     {
         return originalArrayStructureForIndexingType(structure->indexingType() | IsArray) == structure;
     }
-        
+
     Structure* booleanObjectStructure() const { return m_booleanObjectStructure.get(); }
     Structure* callbackConstructorStructure() const { return m_callbackConstructorStructure.get(); }
     Structure* callbackFunctionStructure() const { return m_callbackFunctionStructure.get(); }
@@ -341,19 +341,19 @@ public:
 
     WatchpointSet* masqueradesAsUndefinedWatchpoint() { return m_masqueradesAsUndefinedWatchpoint.get(); }
     WatchpointSet* havingABadTimeWatchpoint() { return m_havingABadTimeWatchpoint.get(); }
-        
+
     bool isHavingABadTime() const
     {
         return m_havingABadTimeWatchpoint->hasBeenInvalidated();
     }
-        
+
     void haveABadTime(VM&);
-        
+
     bool arrayPrototypeChainIsSane();
 
     void setProfileGroup(unsigned value) { createRareDataIfNeeded(); m_rareData->profileGroup = value; }
     unsigned profileGroup() const
-    { 
+    {
         if (!m_rareData)
             return 0;
         return m_rareData->profileGroup;
@@ -362,7 +362,7 @@ public:
     Debugger* debugger() const { return m_debugger; }
     void setDebugger(Debugger* debugger) { m_debugger = debugger; }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     JS_EXPORT_PRIVATE void setInputIterator(InputIterator*);
     InputIterator* inputIterator() const { return m_inputIterator; }
 #endif
@@ -446,7 +446,7 @@ protected:
 
 private:
     friend class LLIntOffsetsExtractor;
-        
+
     // FIXME: Fold reset into init.
     JS_EXPORT_PRIVATE void init(JSObject* thisValue);
     void reset(JSValue prototype);
@@ -484,7 +484,7 @@ inline JSGlobalObject* ExecState::dynamicGlobalObject()
     if (this == lexicalGlobalObject()->globalExec())
         return lexicalGlobalObject();
 
-    // For any ExecState that's not a globalExec, the 
+    // For any ExecState that's not a globalExec, the
     // dynamic global object must be set since code is running
     ASSERT(vm().dynamicGlobalObject);
     return vm().dynamicGlobalObject;
@@ -499,7 +499,7 @@ inline JSArray* constructEmptyArray(ExecState* exec, ArrayAllocationProfile* pro
 {
     return constructEmptyArray(exec, profile, exec->lexicalGlobalObject(), initialLength);
 }
- 
+
 inline JSArray* constructArray(ExecState* exec, ArrayAllocationProfile* profile, JSGlobalObject* globalObject, const ArgList& values)
 {
     return ArrayAllocationProfile::updateLastAllocationFor(profile, constructArray(exec, globalObject->arrayStructureForProfileDuringAllocation(profile), values));
@@ -541,12 +541,12 @@ inline bool JSGlobalObject::isDynamicScope(bool&) const
 }
 
 inline JSObject* JSScope::globalThis()
-{ 
+{
     return globalObject()->globalThis();
 }
 
 inline JSObject* JSGlobalObject::globalThis() const
-{ 
+{
     return m_globalThis.get();
 }
 

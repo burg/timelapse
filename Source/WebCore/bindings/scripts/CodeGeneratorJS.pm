@@ -2060,7 +2060,7 @@ sub GenerateImplementation
 
                 if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"} || $attribute->signature->extendedAttributes->{"Nondeterministic"}) {
                     $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
-                    push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+                    push(@implContent, "#if ENABLE(WEB_REPLAY)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
                     push(@implContent, "    InputIterator* it = globalObject->inputIterator();\n");
 
@@ -2550,7 +2550,7 @@ sub GenerateImplementation
             if ($function->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                 $implIncludes{"PlaybackError.h"} = 1;
                 $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
-                push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+                push(@implContent, "#if ENABLE(WEB_REPLAY)\n");
                 push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
                 push(@implContent, "    InputIterator* it = globalObject->inputIterator();\n");
                 push(@implContent, "    if (it && it->isCapturing()) {\n");
@@ -3384,7 +3384,7 @@ sub GenerateImplementationFunctionCall()
     if ($function->signature->type eq "void") {
         if ($nondeterministic) {
             $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
-            push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+            push(@implContent, "#if ENABLE(WEB_REPLAY)\n");
             push(@implContent, $indent . "InputIterator* it = exec->lexicalGlobalObject()->inputIterator();\n");
             push(@implContent, $indent . "if (!it || !it->isCapturing()) {\n");
             push(@implContent, $indent . "    $functionString;\n");
@@ -3413,7 +3413,7 @@ sub GenerateImplementationFunctionCall()
             my $nativeType = GetNativeTypeFromSignature($function->signature);
             my $memoizedType = GetNativeTypeForMemoization($function->signature->type);
             my $bindingName = $interfaceName . "." . $function->signature->name;
-            push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+            push(@implContent, "#if ENABLE(WEB_REPLAY)\n");
             push(@implContent, $indent . "InputIterator* it = exec->lexicalGlobalObject()->inputIterator();\n");
             push(@implContent, $indent . "if (it && it->isCapturing()) {\n");
             push(@implContent, $indent . "    $nativeType memoizedResult = $functionString;\n");

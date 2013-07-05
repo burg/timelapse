@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleMouseBase.h"
 
@@ -174,4 +174,4 @@ bool InputCoder<PlatformMouseEvent>::decode(InputDecoder& decoder, OwnPtr<Platfo
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

@@ -49,7 +49,7 @@
 using namespace WTF;
 #endif
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "ReplayInputTypes.h"
 #endif
 
@@ -65,7 +65,7 @@ ThreadGlobalData::ThreadGlobalData()
     : m_cachedResourceRequestInitiators(adoptPtr(new CachedResourceRequestInitiators))
     , m_eventNames(adoptPtr(new EventNames))
     , m_threadTimers(adoptPtr(new ThreadTimers))
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     , m_inputTypes(adoptPtr(new ReplayInputTypes))
 #endif
 #ifndef NDEBUG
@@ -107,7 +107,7 @@ void ThreadGlobalData::destroy()
     m_inspectorCounters.clear();
 #endif
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     m_inputTypes.clear();
 #endif
 

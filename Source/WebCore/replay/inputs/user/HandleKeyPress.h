@@ -32,7 +32,7 @@
 #ifndef HandleKeyPress_h
 #define HandleKeyPress_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -75,6 +75,6 @@ template<> struct InputCoder<HandleKeyPress> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // HandleKeyPress_h

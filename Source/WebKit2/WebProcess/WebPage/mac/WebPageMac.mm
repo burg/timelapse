@@ -70,7 +70,7 @@
 #import <WebCore/WindowsKeyboardCodes.h>
 #import <WebKitSystemInterface.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #import <WebCore/InterpretedKeyCommands.h>
 #import <WebCore/ReplayInputTypes.h>
 #import <WebCore/ReplayUtilities.h>
@@ -232,14 +232,14 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
         return false;
 
     bool eventWasHandled = false;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     InputIterator* it = getInputIteratorForDocument(corePage()->mainFrame()->document());
     bool isCapturing = it && it->isCapturing();
     bool isReplaying = it && it->isReplaying();
 #endif
 
     if (saveCommands) {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         // if replaying, simply populate the commands from memoized state, and return.
         if (isReplaying) {
             InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().InterpretedKeyCommands));
@@ -258,7 +258,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
         m_keyboardEventBeingInterpreted = oldEvent;
 
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         // if capturing, save away the key commands as memoized state.
         if (isCapturing)
             it->storeInput(adoptPtr(new InterpretedKeyCommands(commands)));

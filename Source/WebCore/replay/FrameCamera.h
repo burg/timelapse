@@ -32,7 +32,7 @@
 #ifndef FrameCamera_h
 #define FrameCamera_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "Frame.h"
 
@@ -46,6 +46,6 @@ namespace FrameCamera {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // FrameCamera_h

@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ReplayUtilities.h"
 
@@ -47,14 +47,14 @@ InputIterator* getInputIteratorForDocument(Document* document)
 {
     if (!document)
         return false;
-    
+
     JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
     if (!window)
         return 0;
-    
+
     return window->inputIterator();
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

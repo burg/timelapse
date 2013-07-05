@@ -32,7 +32,7 @@
 #ifndef FocusSetFocused_h
 #define FocusSetFocused_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -69,6 +69,6 @@ template<> struct InputCoder<FocusSetFocused> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // FocusSetFocused_h

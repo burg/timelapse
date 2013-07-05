@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ResourceDidFinishLoading.h"
 
@@ -103,5 +103,5 @@ bool InputCoder<ResourceDidFinishLoading>::decode(InputDecoder& decoder, OwnPtr<
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 

@@ -33,7 +33,7 @@
 #ifndef ReplayRecording_h
 #define ReplayRecording_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
@@ -71,6 +71,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ReplayRecording_h

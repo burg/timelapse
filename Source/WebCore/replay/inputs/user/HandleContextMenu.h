@@ -32,7 +32,7 @@
 #ifndef HandleContextMenu_h
 #define HandleContextMenu_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleMouseBase.h"
 
@@ -69,6 +69,6 @@ template<> struct InputCoder<HandleContextMenu> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // HandleContextMenu_h

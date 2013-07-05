@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleContextMenu.h"
 
@@ -86,4 +86,4 @@ bool InputCoder<HandleContextMenu>::decode(InputDecoder& decoder, OwnPtr<HandleC
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

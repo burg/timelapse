@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -1256,7 +1256,7 @@ void DOMWindow::setName(const String& string)
     m_frame->loader()->client()->didChangeName(string);
 }
 
-void DOMWindow::setStatus(const String& string) 
+void DOMWindow::setStatus(const String& string)
 {
     m_status = string;
 
@@ -1269,9 +1269,9 @@ void DOMWindow::setStatus(const String& string)
 
     ASSERT(m_frame->document()); // Client calls shouldn't be made when the frame is in inconsistent state.
     page->chrome().setStatusbarText(m_frame, m_status);
-} 
-    
-void DOMWindow::setDefaultStatus(const String& string) 
+}
+
+void DOMWindow::setDefaultStatus(const String& string)
 {
     m_defaultStatus = string;
 
@@ -1597,7 +1597,7 @@ static void didAddStorageEventListener(DOMWindow* window)
     // Creating these WebCore::Storage objects informs the system that we'd like to receive
     // notifications about storage events that might be triggered in other processes. Rather
     // than subscribe to these notifications explicitly, we subscribe to them implicitly to
-    // simplify the work done by the system. 
+    // simplify the work done by the system.
     window->localStorage(IGNORE_EXCEPTION);
     window->sessionStorage(IGNORE_EXCEPTION);
 }
@@ -1721,7 +1721,7 @@ bool DOMWindow::dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget
 
 bool DOMWindow::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     UNUSED_PARAM(prpTarget);
     // dispatch on the DOMWindow, even though prpTarget likely refers to document().
     // when this is actually dispatched, the DOMWindow's document is substituted

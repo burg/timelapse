@@ -32,7 +32,7 @@
 #ifndef DispatchEventBase_h
 #define DispatchEventBase_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "EventNames.h"
@@ -124,6 +124,6 @@ public:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // DispatchEventBase_h

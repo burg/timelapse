@@ -74,7 +74,7 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 @end
 */
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 {
     double currentTime = jsCurrentTime();
@@ -125,7 +125,7 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
     double value;
 
     if (numArgs == 0) // new Date() ECMA 15.9.3.3
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         value = jsRiggedCurrentTime(globalObject);
 #else
         value = jsCurrentTime();
@@ -209,7 +209,7 @@ static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
 
 static EncodedJSValue JSC_HOST_CALL dateNow(ExecState* exec)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     return JSValue::encode(jsNumber(jsRiggedCurrentTime(exec->lexicalGlobalObject())));
 #else
     UNUSED_PARAM(exec);

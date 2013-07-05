@@ -26,7 +26,7 @@
 #include "ThreadGlobalData.h"
 #include <wtf/text/AtomicString.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 namespace WebCore {
 
@@ -89,6 +89,6 @@ inline ReplayInputTypes& inputTypes()
 
 } // namespace Webcore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ReplayInputTypes_h

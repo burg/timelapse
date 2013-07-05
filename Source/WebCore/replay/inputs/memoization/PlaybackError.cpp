@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "PlaybackError.h"
 
@@ -76,4 +76,4 @@ bool InputCoder<PlaybackError>::decode(InputDecoder& decoder, OwnPtr<PlaybackErr
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

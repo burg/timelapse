@@ -32,7 +32,7 @@
 #ifndef ResourceDidReceiveData_h
 #define ResourceDidReceiveData_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -72,6 +72,6 @@ template<> struct InputCoder<ResourceDidReceiveData> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ResourceDidReceiveData_h

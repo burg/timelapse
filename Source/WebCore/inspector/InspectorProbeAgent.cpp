@@ -32,7 +32,7 @@
 #include "config.h"
 #include "InspectorProbeAgent.h"
 
-#if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "DataProbe.h"
 #include "InspectorState.h"
@@ -100,12 +100,12 @@ void ScriptProbeResolver::clearProbes()
 void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> probe)
 {
     m_probes.add(probe);
-    
+
     // if probe matches url with known script id, resolve immediately.
     UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
     if (findResult == m_urlToScriptIdMap.end())
         return;
-    
+
     probeServer()->addProbeForScriptId(findResult->value, probe);
 }
 
@@ -115,7 +115,7 @@ void ScriptProbeResolver::didParseSource(const String& stringId, const Script& s
     UrlToScriptIdMap::AddResult result = m_urlToScriptIdMap.add(script.url, scriptId);
     if (!result.isNewEntry)
         return;
-    
+
     // find any probes that should resolve within that file, add them.
     for (ProbeSet::const_iterator it = m_probes.begin(); it != m_probes.end(); ++it) {
         if ((*it)->url() == script.url)
@@ -190,7 +190,7 @@ void InspectorProbeAgent::clearAllProbes(ErrorString*)
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     m_scriptProbeResolver->clearProbes();
 #endif
-    
+
     m_probeMap.clear();
 }
 
@@ -209,7 +209,7 @@ void InspectorProbeAgent::getProbeDetails(ErrorString* errorString, int uid, Ref
         *errorString = "Couldn't find probe with specified uid";
         return;
     }
-    
+
     // FIXME: get samples/metadata from the probe
     result = TypeBuilder::Probe::DataProbe::create()
                 .setUid(uid)
@@ -226,7 +226,7 @@ void InspectorProbeAgent::enableProbe(ErrorString* errorString, int uid)
         *errorString = "Couldn't find probe with specified uid";
         return;
     }
-    
+
     it->value->enable();
 }
 
@@ -237,7 +237,7 @@ void InspectorProbeAgent::disableProbe(ErrorString* errorString, int uid)
         *errorString = "Couldn't find probe with specified uid";
         return;
     }
-    
+
     it->value->disable();
 }
 
@@ -260,4 +260,4 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
 
 }; // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)

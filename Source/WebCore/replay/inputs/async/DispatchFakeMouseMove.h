@@ -32,7 +32,7 @@
 #ifndef DispatchFakeMouseMove_h
 #define DispatchFakeMouseMove_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleMouseBase.h"
 
@@ -69,6 +69,6 @@ template<> struct InputCoder<DispatchFakeMouseMove> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // DispatchFakeMouseMove_h

@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InitializeFocus.h"
 
@@ -110,4 +110,4 @@ bool InputCoder<InitializeFocus>::decode(InputDecoder& decoder, OwnPtr<Initializ
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ReplayRecording.h"
 
@@ -76,4 +76,4 @@ PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()
 
 }; // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

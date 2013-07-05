@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "HandleKeyPress.h"
 
@@ -206,4 +206,4 @@ bool InputCoder<HandleKeyPress>::decode(InputDecoder& decoder, OwnPtr<HandleKeyP
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

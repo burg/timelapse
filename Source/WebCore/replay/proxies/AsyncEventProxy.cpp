@@ -50,7 +50,7 @@
 
 namespace WebCore {
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #if !LOG_DISABLED
 static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> eventTarget, bool wasIgnored)
@@ -87,7 +87,7 @@ static bool isCapturableEventType(const AtomicString&)
             eventType == eventNames().pageshowEvent ||
             eventType == eventNames().readystatechangeEvent); */
 }
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 AsyncEventProxy::AsyncEventProxy(Page* page)
 : ReplayProxy(page) {}
@@ -100,7 +100,7 @@ PassOwnPtr<AsyncEventProxy> AsyncEventProxy::create(Page* page)
 void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
 {
     ASSERT(frame);
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (mode() == ReplayProxy::Replaying && !fromReplay)
         return;
 
@@ -110,7 +110,7 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEve
     }
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
     frame->eventHandler()->mouseMoved(fakeMouseMove);
 }
@@ -120,7 +120,7 @@ bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<
     RefPtr<Event> event(prpEvent);
     RefPtr<EventTarget> eventTarget(prpEventTarget);
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     bool shouldIgnoreDispatchRequest = (mode() == ReplayProxy::Replaying && !fromReplay && isCapturableEventType(event->type()));
 
 #if !LOG_DISABLED
@@ -135,7 +135,7 @@ bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<
         m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchAsyncEvent(event, eventTarget)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
     return AsyncEventProxy::dispatchEvent(event, eventTarget);
 }

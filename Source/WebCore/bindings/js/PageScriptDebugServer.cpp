@@ -50,7 +50,7 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/StdLibExtras.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "ScriptProbeServer.h"
 #include <debugger/DebuggerCallFrame.h>
 #include <wtf/replay/InputIterator.h>
@@ -79,7 +79,7 @@ PageScriptDebugServer& PageScriptDebugServer::shared()
 PageScriptDebugServer::PageScriptDebugServer()
     : ScriptDebugServer()
     , m_pausedPage(0)
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     , m_probeServer(ScriptProbeServer::create())
 #endif
 {
@@ -182,7 +182,7 @@ void PageScriptDebugServer::runEventLoopWhilePaused()
         loop.cycle();
 }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 void PageScriptDebugServer::atStatement(const JSC::DebuggerCallFrame& callFrame, intptr_t sourceID, int firstLine, int columnNumber)
 {
     JSC::JSGlobalObject* globalObject = callFrame.dynamicGlobalObject();
@@ -190,7 +190,7 @@ void PageScriptDebugServer::atStatement(const JSC::DebuggerCallFrame& callFrame,
     // only generate probe samples during replay.
     if (m_probeServer->isActive() && it && it->isReplaying())
         m_probeServer->atStatement(callFrame, sourceID, firstLine, columnNumber);
-    
+
     ScriptDebugServer::atStatement(callFrame, sourceID, firstLine, columnNumber);
 }
 
@@ -202,7 +202,7 @@ void PageScriptDebugServer::addScriptProbeSample(int probeId, ScriptState* exec,
     ListenerSet* listeners = getListenersForGlobalObject(exec->lexicalGlobalObject());
     if (!listeners)
         return;
-    
+
     ASSERT(!listeners->isEmpty());
     TemporaryChange<bool> change(m_callingListeners, true);
     Vector<ScriptDebugListener*> copy;

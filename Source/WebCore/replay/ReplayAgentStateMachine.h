@@ -32,7 +32,7 @@
 #ifndef ReplayAgentStateMachine_h
 #define ReplayAgentStateMachine_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include <wtf/Noncopyable.h>
 
@@ -72,6 +72,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ReplayAgentStateMachine_h

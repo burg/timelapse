@@ -32,7 +32,7 @@
 #ifndef CapturingResourceHandleClient_h
 #define CapturingResourceHandleClient_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ResourceHandleClient.h"
 
@@ -70,15 +70,15 @@ public:
     virtual void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge&) OVERRIDE;
     virtual void didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge&) OVERRIDE;
     virtual void receivedCancellation(ResourceHandle*, const AuthenticationChallenge&) OVERRIDE;
-    
+
 private:
     NetworkProxy* m_proxy;
     ResourceHandleClient* m_client;
     int m_id;
 };
-    
+
 } // namespace WebCore
 
-#endif  // ENABLE(TIMELAPSE)
+#endif  // ENABLE(WEB_REPLAY)
 
 #endif // CapturingResourceHandleClient_h

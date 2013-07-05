@@ -47,20 +47,20 @@
 #include <wtf/replay/InputIterator.h>
 #include <wtf/text/CString.h>
 
-/* We must always define these symbols even if Timelapse support is
+/* We must always define these symbols even if web replay support is
    not compiled, because the embedding API (WebKit or WebKit2) may be
-   built with Timelapse support. */
+   built with web replay support. */
 
 namespace WebCore {
 
 NetworkProxy::NetworkProxy(Page* page)
 : ReplayProxy(page)
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 // start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX
 , m_nextId(1)
 , m_expectsPageLoad(false)
 , m_replayHandleMap(HashMap<int, HandleContext>())
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 {}
 
 PassOwnPtr<NetworkProxy> NetworkProxy::create(Page* page)
@@ -68,7 +68,7 @@ PassOwnPtr<NetworkProxy> NetworkProxy::create(Page* page)
     return adoptPtr(new NetworkProxy(page));
 }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 HandleContext NetworkProxy::handleContextById(int id)
 {
     return m_replayHandleMap.get(id);
@@ -126,11 +126,11 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 
     return -1;
 }
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, int loaderId, bool defersLoading, bool shouldContentSniff)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (mode() == ReplayProxy::Capturing) {
         ASSERT(loaderId > 0);
         CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, loaderId);
@@ -147,7 +147,7 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
     }
 #else
     UNUSED_PARAM(loaderId);
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
     return ResourceHandle::create(context, request, client, defersLoading, shouldContentSniff);
 }

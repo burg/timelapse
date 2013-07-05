@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ResourceWasBlocked.h"
 
@@ -93,4 +93,4 @@ bool InputCoder<ResourceWasBlocked>::decode(InputDecoder& decoder, OwnPtr<Resour
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

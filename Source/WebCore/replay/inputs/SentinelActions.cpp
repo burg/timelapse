@@ -32,7 +32,7 @@
 #include "config.h"
 #include "SentinelActions.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInputDispatcher.h"
 #include "InputDecoder.h"
@@ -86,4 +86,4 @@ bool InputCoder<EndSentinel>::decode(InputDecoder&, OwnPtr<EndSentinel>& input)
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

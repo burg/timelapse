@@ -32,7 +32,7 @@
 #ifndef EventLoopInputDispatcher_h
 #define EventLoopInputDispatcher_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "Timer.h"
@@ -121,7 +121,7 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // EventLoopInputDispatcher_h
 

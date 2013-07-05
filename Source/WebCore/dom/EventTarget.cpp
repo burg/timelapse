@@ -25,7 +25,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -161,13 +161,13 @@ bool EventTarget::dispatchEvent(PassRefPtr<Event> event)
 
 bool EventTarget::dispatchAsyncEvent(PassRefPtr<Event> event)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     AsyncEventProxy* eventProxy = 0;
     if (DOMWindow* window = toDOMWindow())
         eventProxy = window->frame()->page()->asyncEventProxy();
     else if (Node* node = toNode())
         eventProxy = node->document()->page()->asyncEventProxy();
-    
+
     ASSERT(eventProxy);
     return eventProxy->dispatchAsyncEvent(event, this);
 #else
@@ -230,7 +230,7 @@ bool EventTarget::fireEventListeners(Event* event)
 
     return !event->defaultPrevented();
 }
-        
+
 void EventTarget::fireEventListeners(Event* event, EventTargetData* d, EventListenerVector& entry)
 {
     RefPtr<EventTarget> protect = this;

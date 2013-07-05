@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInputDispatcher.h"
 #include "InputStorage.h"
@@ -170,4 +170,4 @@ void ReplayInputIterator::setIsActive(bool state)
 
 }; // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

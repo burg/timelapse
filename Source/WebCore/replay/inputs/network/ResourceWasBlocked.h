@@ -32,7 +32,7 @@
 #ifndef ResourceWasBlocked_h
 #define ResourceWasBlocked_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -67,6 +67,6 @@ template<> struct InputCoder<ResourceWasBlocked> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ResourceWasBlocked_h

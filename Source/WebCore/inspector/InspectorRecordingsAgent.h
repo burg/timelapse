@@ -32,7 +32,7 @@
 #ifndef InspectorRecordingsAgent_h
 #define InspectorRecordingsAgent_h
 
-#if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InspectorBaseAgent.h"
@@ -95,5 +95,5 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 #endif // InspectorRecordingsAgent_h

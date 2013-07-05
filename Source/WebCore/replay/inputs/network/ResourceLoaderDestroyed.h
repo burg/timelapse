@@ -32,7 +32,7 @@
 #ifndef ResourceLoaderDestroyed_h
 #define ResourceLoaderDestroyed_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -67,6 +67,6 @@ template<> struct InputCoder<ResourceLoaderDestroyed> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ResourceLoaderDestroyed_h

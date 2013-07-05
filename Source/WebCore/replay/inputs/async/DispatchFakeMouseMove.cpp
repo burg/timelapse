@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "DispatchFakeMouseMove.h"
 
@@ -96,4 +96,4 @@ bool InputCoder<DispatchFakeMouseMove>::decode(InputDecoder& decoder, OwnPtr<Dis
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

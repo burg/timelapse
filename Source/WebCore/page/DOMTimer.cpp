@@ -34,7 +34,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "DispatchEventBase.h"
 #include "ReplayInputTypes.h"
 #include "ReplayUtilities.h"
@@ -53,7 +53,7 @@ static const double oneMillisecond = 0.001;
 
 static int timerNestingLevel = 0;
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 class InstrumentedDOMTimer : public DOMTimer {
 public:
     InstrumentedDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action);
@@ -171,7 +171,7 @@ void DOMTimer::start(int interval, bool singleShot)
 int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int timeout, bool singleShot)
 {
     DOMTimer* timer;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (context->isDocument()) {
         InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(context));
         if (it && it->isCapturing())
@@ -225,7 +225,7 @@ void DOMTimer::fired()
         if (repeatInterval() && repeatInterval() < minimumInterval) {
             m_nestingLevel++;
             if (m_nestingLevel >= maxTimerNestingLevel)
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
                 if (m_shouldScheduleNormally)
 #endif
                 augmentRepeatInterval(minimumInterval - repeatInterval());
@@ -239,7 +239,7 @@ void DOMTimer::fired()
         return;
     }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     //prevent deletion if in replay mode, since the isActive() will never be true.
     //it will (hopefully) get cleaned by destroyContext()
     //TODO: another option is to explicitly log timer deletion, if too many are retained.
@@ -251,7 +251,7 @@ void DOMTimer::fired()
     // No access to member variables after this point.
     delete this;
     action->execute(context);
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     } else {
         m_action->execute(context);
     }
@@ -279,7 +279,7 @@ void DOMTimer::stop()
 
 void DOMTimer::adjustMinimumTimerInterval(double oldMinimumTimerInterval)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!m_shouldScheduleNormally)
         return;
 #endif

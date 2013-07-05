@@ -32,7 +32,7 @@
 #ifndef CacheController_h
 #define CacheController_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include <wtf/RefCounted.h>
 
@@ -63,7 +63,7 @@ namespace WebCore {
         void enableCache();
         void disableCache(bool saveSettings = true);
         bool cacheState() const;
-        
+
     private:
         bool m_haveSavedSettings;
 #if PLATFORM(MAC)
@@ -74,6 +74,6 @@ namespace WebCore {
 
 }
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // CacheController_h

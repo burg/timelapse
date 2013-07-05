@@ -32,7 +32,7 @@
 #ifndef DisableCache_h
 #define DisableCache_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -66,6 +66,6 @@ template<> struct InputCoder<DisableCache> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // DisableCache_h

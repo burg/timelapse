@@ -32,7 +32,7 @@
 #ifndef TimerCreated_h
 #define TimerCreated_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "DispatchEventBase.h"
 #include "InputCoder.h"
@@ -75,6 +75,6 @@ template<> struct InputCoder<TimerCreated> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // TimerCreated_h

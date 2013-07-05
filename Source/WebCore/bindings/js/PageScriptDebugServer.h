@@ -43,7 +43,7 @@ class FrameView;
 class Page;
 class PageGroup;
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 class ScriptProbeServer;
 #endif
 
@@ -57,7 +57,7 @@ public:
 
     virtual void recompileAllJSFunctions(Timer<ScriptDebugServer>*);
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     ScriptProbeServer* probeServer() const { return m_probeServer.get(); }
     void addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&);
 #endif
@@ -74,7 +74,7 @@ private:
 
     virtual void runEventLoopWhilePaused();
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     virtual void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int firstLine, int columnNumber) OVERRIDE;
 #endif
 
@@ -87,7 +87,7 @@ private:
 
     PageListenersMap m_pageListenersMap;
     Page* m_pausedPage;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     OwnPtr<ScriptProbeServer> m_probeServer;
 #endif
 };

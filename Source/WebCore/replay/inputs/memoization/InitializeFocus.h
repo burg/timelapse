@@ -32,7 +32,7 @@
 #ifndef InitializeFocus_h
 #define InitializeFocus_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -79,6 +79,6 @@ template<> struct InputCoder<InitializeFocus> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // InitializeFocus_h

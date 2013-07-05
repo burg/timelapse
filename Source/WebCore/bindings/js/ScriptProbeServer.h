@@ -32,7 +32,7 @@
 #ifndef ScriptProbeServer_h
 #define ScriptProbeServer_h
 
-#if ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+#if ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include "ScriptValue.h"
 #include <wtf/HashMap.h>
@@ -55,14 +55,14 @@ class ScriptProbeServer {
 public:
     static PassOwnPtr<ScriptProbeServer> create();
     virtual ~ScriptProbeServer();
-    
+
     void addProbeForScriptId(intptr_t scriptId, PassRefPtr<ScriptProbe>);
     void clearProbesForScriptId(intptr_t scriptId);
     void setIsActive(bool active) { m_isActive = active; }
     bool isActive() const { return m_isActive; }
 
     void addSampleFromConsole(int probeId, ScriptState*);
-    
+
     // callback from ScriptDebugServer
     void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
 private:
@@ -82,6 +82,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+#endif // ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #endif // ScriptProbeServer_h

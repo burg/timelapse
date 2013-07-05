@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "JSONInputEncoder.h"
 
@@ -290,7 +290,7 @@ public:
         RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = m_encoder->serializeInput(input, index);
         if (!serializedInput)
             return;
-        
+
         m_inputs->addItem(serializedInput.release());
     }
 
@@ -556,4 +556,4 @@ PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONInputEncoder::serializeInpu
 
 }; // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

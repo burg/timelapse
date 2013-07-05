@@ -60,7 +60,7 @@ namespace WebCore {
         const CachedResourceRequestInitiators& cachedResourceRequestInitiators() { return *m_cachedResourceRequestInitiators; }
         EventNames& eventNames() { return *m_eventNames; }
         ThreadTimers& threadTimers() { return *m_threadTimers; }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         ReplayInputTypes& inputTypes() { return *m_inputTypes; }
 #endif
 
@@ -81,7 +81,7 @@ namespace WebCore {
         OwnPtr<EventNames> m_eventNames;
         OwnPtr<ThreadTimers> m_threadTimers;
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         OwnPtr<ReplayInputTypes> m_inputTypes;
 #endif
 

@@ -48,7 +48,7 @@
 #include "Settings.h"
 #include <wtf/Functional.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "ReplayUtilities.h"
 #include <wtf/replay/InputIterator.h>
 #endif
@@ -411,7 +411,7 @@ void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<Parse
 
     for (XSSInfoStream::const_iterator it = chunk->xssInfos.begin(); it != chunk->xssInfos.end(); ++it) {
         m_textPosition = (*it)->m_textPosition;
-        m_xssAuditorDelegate.didBlockScript(**it); 
+        m_xssAuditorDelegate.didBlockScript(**it);
         if (isStopped())
             break;
     }
@@ -742,7 +742,7 @@ void HTMLDocumentParser::append(PassRefPtr<StringImpl> inputSource)
         return;
     }
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
     InputIterator* it = getInputIteratorForDocument(document());
     if (it && (it->isCapturing() || it->isReplaying()))
@@ -906,7 +906,7 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
 
     m_insertionPreloadScanner.clear();
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
     InputIterator* it = getInputIteratorForDocument(document());
     if (it && (it->isCapturing() || it->isReplaying()))
@@ -930,7 +930,7 @@ void HTMLDocumentParser::stopWatchingForLoad(CachedResource* cachedScript)
 {
     cachedScript->removeClient(this);
 }
-    
+
 void HTMLDocumentParser::appendCurrentInputStreamToPreloadScannerAndScan()
 {
     ASSERT(m_preloadScanner);
@@ -983,7 +983,7 @@ void HTMLDocumentParser::parseDocumentFragment(const String& source, DocumentFra
     ASSERT(!parser->processingData()); // Make sure we're done. <rdar://problem/3963151>
     parser->detach(); // Allows ~DocumentParser to assert it was detached before destruction.
 }
-    
+
 void HTMLDocumentParser::suspendScheduledTasks()
 {
     if (m_parserScheduler)

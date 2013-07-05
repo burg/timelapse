@@ -32,7 +32,7 @@
 #ifndef SerializationMethods_h
 #define SerializationMethods_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InputCoder.h"
 #include <wtf/Vector.h>
@@ -89,6 +89,6 @@ template<> struct InputCoder<Vector<String> > {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // SerializationMethods_h

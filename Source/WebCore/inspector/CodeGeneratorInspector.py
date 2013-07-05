@@ -48,7 +48,8 @@ DOMAIN_DEFINE_NAME_MAP = {
     "FileSystem": "FILE_SYSTEM",
     "IndexedDB": "INDEXED_DATABASE",
     "Profiler": "JAVASCRIPT_DEBUGGER",
-    "Timelapse": "TIMELAPSE",
+    "Replay": "WEB_REPLAY",
+    "Recordings": "WEB_REPLAY",
     "Worker": "WORKERS",
 }
 

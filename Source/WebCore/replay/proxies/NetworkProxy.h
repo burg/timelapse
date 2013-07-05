@@ -53,30 +53,30 @@ public:
     static PassOwnPtr<NetworkProxy> create(Page*);
     virtual ~NetworkProxy() {}
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     HandleContext handleContextById(int);
     void removeHandleById(int);
     ReplayController* controller() const;
     int nextLoaderId(const ResourceRequest&);
-    
+
     // These flags manage the initial sequence leading up to controller->capturing()
     // or controller->replaying() becoming true.
     bool expectsPageLoad() const { return m_expectsPageLoad; }
     void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
     PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, int loaderId, bool, bool);
 
 private:
     NetworkProxy(Page*);
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     int m_nextId;
     bool m_expectsPageLoad;
     HashMap<int, HandleContext> m_replayHandleMap;
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 };
-    
+
 } // namespace WebCore
 
 #endif // NetworkProxy_h

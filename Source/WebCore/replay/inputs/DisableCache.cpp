@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "DisableCache.h"
 
@@ -70,4 +70,4 @@ bool InputCoder<DisableCache>::decode(InputDecoder&, OwnPtr<DisableCache>& input
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

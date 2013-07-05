@@ -32,7 +32,7 @@
 #ifndef EventLoopInput_h
 #define EventLoopInput_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include <wtf/CurrentTime.h>
 #include <wtf/PassRefPtr.h>
@@ -145,6 +145,6 @@ private:
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // EventLoopInput_h

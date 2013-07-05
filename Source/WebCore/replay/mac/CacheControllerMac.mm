@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "CacheController.h"
 
@@ -79,7 +79,7 @@ void CacheController::disableCache(bool saveSettings)
     ASSERT([m_dummyCache.get() diskCapacity] > 0);
 
     [NSURLCache setSharedURLCache:m_dummyCache.get()];
-    LOG(DeterministicReplay, "%-30s Now using a Timelapse-only NSURLCache.\n", "[CacheController]");
+    LOG(DeterministicReplay, "%-30s Now using a web replay-only NSURLCache.\n", "[CacheController]");
     // again, we can't completely disable the memory cache, because it causes double loads.
     memoryCache()->evictResources();
     LOG(DeterministicReplay, "%-30s Evicted all contents of the MemoryCache.\n", "[CacheController]");
@@ -94,7 +94,7 @@ bool CacheController::cacheState() const
     [currentCache release];
     return state;
 }
-    
+
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

@@ -38,7 +38,7 @@
 #include <runtime/JSLock.h>
 #include <wtf/text/WTFString.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
 #include "ReplayInputIterator.h"
 #endif
@@ -140,7 +140,7 @@ ScriptValue ScriptFunctionCall::call(bool& hadException, bool reportExceptions)
     if (callType == CallTypeNone)
         return ScriptValue();
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     InputIterator* it = m_exec->lexicalGlobalObject()->inputIterator();
     bool wasCapturing = it && it->isCapturing();
     bool wasReplaying = it && it->isReplaying();
@@ -154,7 +154,7 @@ ScriptValue ScriptFunctionCall::call(bool& hadException, bool reportExceptions)
         result = JSMainThreadExecState::call(m_exec, function, callType, callData, thisObject, m_arguments);
     else
         result = JSC::call(m_exec, function, callType, callData, thisObject, m_arguments);
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (wasCapturing)
         static_cast<CaptureInputIterator*>(it)->setIsActive(true);
     if (wasReplaying)

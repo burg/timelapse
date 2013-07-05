@@ -141,7 +141,6 @@ my (
     $textAutosizingSupport,
     $tiledBackingStoreSupport,
     $threadedHTMLParserSupport,
-    $timelapseSupport,
     $touchEventsSupport,
     $touchSliderSupport,
     $touchIconLoadingSupport,
@@ -151,6 +150,7 @@ my (
     $videoTrackSupport,
     $webglSupport,
     $webAudioSupport,
+    $webReplaySupport,
     $webSocketsSupport,
     $webTimingSupport,
     $workersSupport,
@@ -447,9 +447,6 @@ my @features = (
     { option => "threaded-html-parser", desc => "Toggle threaded HTML parser support",
       define => "ENABLE_THREADED_HTML_PARSER", default => 0, value => \$threadedHTMLParserSupport },
 
-    { option => "timelapse", desc => "Toggle Timelapse support",
-      define => "ENABLE_TIMELAPSE", default => 0, value => \$timelapseSupport },
-
     { option => "touch-events", desc => "Toggle Touch Events support",
       define => "ENABLE_TOUCH_EVENTS", default => (isBlackBerry() || isEfl()), value => \$touchEventsSupport },
 
@@ -476,6 +473,9 @@ my @features = (
 
     { option => "web-audio", desc => "Toggle Web Audio support",
       define => "ENABLE_WEB_AUDIO", default => (isEfl() || isGtk()), value => \$webAudioSupport },
+
+    { option => "web-replay", desc => "Toggle Web Replay support",
+      define => "ENABLE_WEB_REPLAY", default => 0, value => \$webReplaySupport },
 
     { option => "web-sockets", desc => "Toggle Web Sockets support",
       define => "ENABLE_WEB_SOCKETS", default => 1, value => \$webSocketsSupport },

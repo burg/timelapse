@@ -66,7 +66,7 @@ public:
     void count(ScriptState*, PassRefPtr<ScriptArguments>);
     void markTimeline(PassRefPtr<ScriptArguments>);
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     void probe(ScriptState*, int probeId);
 #endif
 

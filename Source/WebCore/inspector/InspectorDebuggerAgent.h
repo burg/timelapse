@@ -146,7 +146,7 @@ protected:
     virtual void disable();
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     virtual void addScriptProbeSample(int /*probeId*/, ScriptState*, const ScriptValue&) {}
 #endif
     void reset();

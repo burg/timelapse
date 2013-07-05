@@ -32,7 +32,7 @@
 #ifndef NavigateToPage_h
 #define NavigateToPage_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -81,6 +81,6 @@ template<> struct InputCoder<NavigateToPage> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // NavigateToPage_h

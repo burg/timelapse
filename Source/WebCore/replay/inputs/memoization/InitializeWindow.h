@@ -32,7 +32,7 @@
 #ifndef InitializeWindow_h
 #define InitializeWindow_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -74,6 +74,6 @@ template<> struct InputCoder<InitializeWindow> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // InitializeWindow_h

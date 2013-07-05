@@ -32,7 +32,7 @@
 #include "config.h"
 #include "EventLoopInputDispatcher.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "Document.h"
 #include "DocumentEventQueue.h"
 #include "EventLoopInput.h"
@@ -268,4 +268,4 @@ void EventLoopInputDispatcher::syncDispatchInput()
 
 }; // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

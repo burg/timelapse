@@ -120,7 +120,7 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     OwnPtr<InspectorDOMStorageAgent> domStorageAgentPtr(InspectorDOMStorageAgent::create(m_instrumentingAgents.get(), m_pageAgent, m_state.get()));
     InspectorDOMStorageAgent* domStorageAgent = domStorageAgentPtr.get();
     m_agents.append(domStorageAgentPtr.release());
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     m_agents.append(InspectorRecordingsAgent::create(m_instrumentingAgents.get(), m_state.get()));
     m_agents.append(InspectorReplayAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
 #endif

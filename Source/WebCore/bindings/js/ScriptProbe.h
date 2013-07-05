@@ -32,7 +32,7 @@
 #ifndef ScriptProbe_h
 #define ScriptProbe_h
 
-#if ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+#if ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include "DataProbe.h"
 
@@ -49,7 +49,7 @@ public:
     virtual void enable() { setIsEnabled(true); }
     virtual void disable() { setIsEnabled(false); }
     virtual bool isEnabled() const { return m_isEnabled; }
-    
+
     const String& url() const { return m_url; }
     int lineNumber() const { return m_lineNumber; }
     int columnNumber() const { return m_columnNumber; }
@@ -83,6 +83,6 @@ inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, int lineNumber,
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+#endif // ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #endif // ScriptProbe_h

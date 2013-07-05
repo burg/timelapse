@@ -32,7 +32,7 @@
 #ifndef DispatchAsyncEvent_h
 #define DispatchAsyncEvent_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "DispatchEventBase.h"
 #include "ReplayInputTypes.h"
@@ -78,6 +78,6 @@ private:
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // DispatchAsyncEvent_h

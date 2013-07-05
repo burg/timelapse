@@ -32,7 +32,7 @@
 #include "config.h"
 #include "InspectorReplayAgent.h"
 
-#if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "DocumentLoader.h"
 #include "DOMWindow.h"
@@ -402,4 +402,4 @@ void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAl
 
 }; // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)

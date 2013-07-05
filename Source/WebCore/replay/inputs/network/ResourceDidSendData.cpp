@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ResourceDidSendData.h"
 
@@ -111,4 +111,4 @@ bool InputCoder<ResourceDidSendData>::decode(InputDecoder& decoder, OwnPtr<Resou
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

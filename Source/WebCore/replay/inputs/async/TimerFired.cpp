@@ -32,7 +32,7 @@
 #include "config.h"
 #include "TimerFired.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "DispatchEventBase.h"
 #include "Document.h"
@@ -101,4 +101,4 @@ bool InputCoder<TimerFired>::decode(InputDecoder& decoder, OwnPtr<TimerFired>& i
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

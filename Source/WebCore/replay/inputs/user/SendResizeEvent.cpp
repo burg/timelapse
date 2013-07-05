@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "SendResizeEvent.h"
 
@@ -113,4 +113,4 @@ bool InputCoder<SendResizeEvent>::decode(InputDecoder& decoder, OwnPtr<SendResiz
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

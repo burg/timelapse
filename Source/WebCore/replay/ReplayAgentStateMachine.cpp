@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ReplayAgentStateMachine.h"
 
@@ -82,7 +82,7 @@ const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State
     return NULL;
 }
 
-ReplayAgentStateMachine::ReplayAgentStateMachine() 
+ReplayAgentStateMachine::ReplayAgentStateMachine()
     : m_state(Disabled) { }
 
 bool ReplayAgentStateMachine::disabled() const
@@ -144,15 +144,15 @@ void ReplayAgentStateMachine::advanceTo(State newState)
     case WaitingForCapture:
         if (inState(RecordingUnloaded))
             goto commit_transition;
-        
+
         break;
-    
+
     case WaitingForReplay:
         if (inState(RecordingLoaded) || inState(ReplayPaused))
             goto commit_transition;
-        
+
         break;
-        
+
     case Capturing:
         if (inState(WaitingForCapture))
             goto commit_transition;
@@ -162,7 +162,7 @@ void ReplayAgentStateMachine::advanceTo(State newState)
     case Replaying:
         if (inState(WaitingForReplay))
             goto commit_transition;
-        
+
     case ReplayPaused:
         if (inState(Replaying))
             goto commit_transition;
@@ -177,4 +177,4 @@ commit_transition:
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

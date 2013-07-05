@@ -32,7 +32,7 @@
 #include "config.h"
 #include "InspectorRecordingsAgent.h"
 
-#if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "FocusSetActive.h"
 #include "FocusSetFocused.h"
@@ -297,4 +297,4 @@ void InspectorRecordingsAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeB
 
 }; // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)

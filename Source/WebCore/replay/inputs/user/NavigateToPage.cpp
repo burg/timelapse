@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "NavigateToPage.h"
 
@@ -147,4 +147,4 @@ bool InputCoder<NavigateToPage>::decode(InputDecoder& decoder, OwnPtr<NavigateTo
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

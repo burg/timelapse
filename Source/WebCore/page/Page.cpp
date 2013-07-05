@@ -93,7 +93,7 @@
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringHash.h>
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 #include "ReplayController.h"
 #endif
 
@@ -106,7 +106,7 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 static void networkStateChanged()
 {
     Vector<RefPtr<Frame> > frames;
-    
+
     // Get all the frames of all the pages in all the page groups
     HashSet<Page*>::iterator end = allPages->end();
     for (HashSet<Page*>::iterator it = allPages->begin(); it != end; ++it) {
@@ -143,7 +143,7 @@ Page::Page(PageClients& pageClients)
     , m_networkProxy(NetworkProxy::create(this))
     , m_asyncEventProxy(AsyncEventProxy::create(this))
     , m_userInputProxy(UserInputProxy::create(this))
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     , m_replayController(adoptPtr(new ReplayController(this)))
 #endif
 #if ENABLE(INSPECTOR)
@@ -206,7 +206,7 @@ Page::Page(PageClients& pageClients)
 
     if (!allPages) {
         allPages = new HashSet<Page*>;
-        
+
         networkStateNotifier().setNetworkStateChangedFunction(networkStateChanged);
     }
 
@@ -223,7 +223,7 @@ Page::~Page()
     m_mainFrame->setView(0);
     setGroupName(String());
     allPages->remove(this);
-    
+
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         frame->willDetachPage();
         frame->detachFromPage();
@@ -380,7 +380,7 @@ BackForwardList* Page::backForwardList() const
 bool Page::goBack()
 {
     HistoryItem* item = backForward()->backItem();
-    
+
     if (item) {
         goToItem(item, FrameLoadTypeBack);
         return true;
@@ -391,7 +391,7 @@ bool Page::goBack()
 bool Page::goForward()
 {
     HistoryItem* item = backForward()->forwardItem();
-    
+
     if (item) {
         goToItem(item, FrameLoadTypeForward);
         return true;
@@ -418,7 +418,7 @@ void Page::goBackOrForward(int distance)
     HistoryItem* item = backForward()->itemAtIndex(distance);
     if (!item) {
         if (distance > 0) {
-            if (int forwardCount = backForward()->forwardCount()) 
+            if (int forwardCount = backForward()->forwardCount())
                 item = backForward()->itemAtIndex(forwardCount);
         } else {
             if (int backCount = backForward()->backCount())
@@ -513,14 +513,14 @@ void Page::refreshPlugins(bool reload)
     HashSet<Page*>::iterator end = allPages->end();
     for (HashSet<Page*>::iterator it = allPages->begin(); it != end; ++it) {
         Page* page = *it;
-        
+
         // Clear out the page's plug-in data.
         if (page->m_pluginData)
             page->m_pluginData = 0;
 
         if (!reload)
             continue;
-        
+
         for (Frame* frame = (*it)->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
             if (frame->loader()->subframeLoader()->containsPlugins())
                 framesNeedingReload.append(frame);
@@ -836,7 +836,7 @@ void Page::setShouldSuppressScrollbarAnimations(bool suppressAnimations)
         return;
 
     view->finishCurrentScrollAnimations();
-    
+
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         FrameView* frameView = frame->view();
         if (!frameView)
@@ -917,7 +917,7 @@ void Page::didMoveOnscreen()
         if (FrameView* frameView = frame->view())
             frameView->didMoveOnscreen();
     }
-    
+
     resumeScriptedAnimations();
 }
 
@@ -929,7 +929,7 @@ void Page::willMoveOffscreen()
         if (FrameView* frameView = frame->view())
             frameView->willMoveOffscreen();
     }
-    
+
     suspendScriptedAnimations();
 }
 
@@ -949,7 +949,7 @@ void Page::setIsInWindow(bool isInWindow)
 void Page::windowScreenDidChange(PlatformDisplayID displayID)
 {
     m_displayID = displayID;
-    
+
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (frame->document())
             frame->document()->windowScreenDidChange(displayID);
@@ -984,7 +984,7 @@ void Page::userStyleSheetLocationChanged()
     // FIXME: Eventually we will move to a model of just being handed the sheet
     // text instead of loading the URL ourselves.
     KURL url = m_settings->userStyleSheetLocation();
-    
+
     // Allow any local file URL scheme to be loaded.
     if (SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
         m_userStyleSheetPath = url.fileSystemPath();
@@ -996,7 +996,7 @@ void Page::userStyleSheetLocationChanged()
     m_userStyleSheetModificationTime = 0;
 
     // Data URLs with base64-encoded UTF-8 style sheets are common. We can process them
-    // synchronously and avoid using a loader. 
+    // synchronously and avoid using a loader.
     if (url.protocolIsData() && url.string().startsWith("data:text/css;charset=utf-8;base64,")) {
         m_didLoadUserStyleSheet = true;
 

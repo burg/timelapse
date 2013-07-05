@@ -58,9 +58,9 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 
-/* We must always define these symbols even if Timelapse support is
+/* We must always define these symbols even if web replay support is
    not compiled, because the embedding API (WebKit or WebKit2) may be
-   built with Timelapse support. */
+   built with web replay support. */
 
 namespace WebCore {
 
@@ -74,7 +74,7 @@ PassOwnPtr<UserInputProxy> UserInputProxy::create(Page* page)
 
 bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, const Frame* frame, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -92,7 +92,7 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
 
 bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -108,7 +108,7 @@ bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent,
 
 bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -124,7 +124,7 @@ bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEven
 
 bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -140,7 +140,7 @@ bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, 
 
 bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -156,7 +156,7 @@ bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& m
 
 bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -172,7 +172,7 @@ bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, 
 
 bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent, bool /*fromReplay*/)
 {
-/*#if ENABLE(TIMELAPSE)
+/*#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -186,7 +186,7 @@ bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent,
 
 bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
@@ -202,7 +202,7 @@ bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool
 
 void UserInputProxy::focusSetActive(bool active, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return;
 
@@ -217,7 +217,7 @@ void UserInputProxy::focusSetActive(bool active, bool fromReplay)
 
 void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return;
 
@@ -232,7 +232,7 @@ void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
 
 void UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranularity granularity, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return;
 
@@ -247,7 +247,7 @@ void UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranular
 
 void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, ScrollGranularity granularity, bool fromReplay)
 {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     if (!fromReplay && m_mode == Replaying)
         return;
 
@@ -262,7 +262,7 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
 
 void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay)
     {
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
         if (!fromReplay && m_mode == Replaying)
             return;
 

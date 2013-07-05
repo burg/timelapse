@@ -32,7 +32,7 @@
 #ifndef HandleMouseMove_h
 #define HandleMouseMove_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "HandleMouseBase.h"
@@ -70,6 +70,6 @@ template<> struct InputCoder<HandleMouseMove> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // HandleMouseMove_h

@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+#if ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include "PageScriptDebugServer.h"
 #include "ScriptProbe.h"
@@ -54,7 +54,7 @@ ScriptProbeServer::~ScriptProbeServer()
     ScriptIdToLinesMap::iterator scriptsIt = m_probeRegistry.begin();
     for (; scriptsIt != m_probeRegistry.end(); ++scriptsIt)
         clearProbesForScriptId(scriptsIt->key);
-    
+
     m_probeRegistry.clear();
 }
 
@@ -62,9 +62,9 @@ void ScriptProbeServer::addProbeForScriptId(intptr_t scriptId, PassRefPtr<Script
 {
     if (probe->lineNumber() < 0 || probe->columnNumber() < 0)
         return;
-    
+
     m_probesById.add(probe->uid(), probe);
-    
+
     // each of these calls will only actually add key/value pairs if they don't already exist.
     ScriptIdToLinesMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, LineToScriptProbeMap());
     LineToScriptProbeMap::AddResult linesMap = scriptsMap.iterator->value.add(probe->lineNumber(), ProbeSet());
@@ -94,17 +94,17 @@ void ScriptProbeServer::addSampleFromConsole(int probeId, ScriptState* exec)
 {
     if (!m_isActive)
         return;
-    
+
     ProbeMap::const_iterator foundProbe = m_probesById.find(probeId);
     if (foundProbe == m_probesById.end())
         return;
-    
+
     JSC::DebuggerCallFrame debuggerCallFrame(exec);
     JSC::JSValue exception;
     JSC::JSValue result = debuggerCallFrame.evaluate(foundProbe->value->expression(), exception);
     if (exception)
         return;
-    
+
     ScriptValue wrappedResult = ScriptValue(exec->vm(), result);
     PageScriptDebugServer::shared().addScriptProbeSample(probeId, exec, wrappedResult);
 }
@@ -119,30 +119,30 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
     ScriptIdToLinesMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
     if (entryForScript == m_probeRegistry.end())
         return;
-    
+
     if (lineNumber < 0 || columnNumber < 0)
         return;
-    
+
     LineToScriptProbeMap::const_iterator entryForLine = entryForScript->value.find(lineNumber + 1);
     if (entryForLine == entryForScript->value.end())
         return;
-    
+
     const ProbeSet& probes = entryForLine->value;
     ProbeSet::iterator probesIt = probes.begin();
     for (; probesIt != probes.end(); ++probesIt) {
         RefPtr<ScriptProbe> probe = *probesIt;
         int probeLine = probe->lineNumber();
         int probeColumn = probe->columnNumber();
-        
+
         if ((lineNumber == probeLine && !probeColumn) ||
             (lineNumber == probeLine && columnNumber == probeColumn)) {
-         
+
             // aoeu: extract to share this code with addSampleFromConsole?
             JSC::JSValue exception;
             JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
             if (exception)
                 continue;
-            
+
             ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
             PageScriptDebugServer::shared().addScriptProbeSample(probe->uid(), debuggerCallFrame.callFrame(), wrappedResult);
         }
@@ -151,4 +151,4 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
 
 }; // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE) && ENABLE(JAVASCRIPT_DEBUGGER)
+#endif // ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)

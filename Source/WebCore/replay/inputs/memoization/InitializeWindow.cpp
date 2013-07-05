@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InitializeWindow.h"
 
@@ -96,4 +96,4 @@ bool InputCoder<InitializeWindow>::decode(InputDecoder& decoder, OwnPtr<Initiali
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

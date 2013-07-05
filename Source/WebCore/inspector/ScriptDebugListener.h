@@ -68,7 +68,7 @@ public:
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage) = 0;
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception) = 0;
     virtual void didContinue() = 0;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     virtual void addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&) = 0;
 #endif
 };

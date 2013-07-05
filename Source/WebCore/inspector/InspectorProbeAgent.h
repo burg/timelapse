@@ -32,7 +32,7 @@
 #ifndef InspectorProbeAgent_h
 #define InspectorProbeAgent_h
 
-#if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
@@ -76,7 +76,7 @@ public:
     void clearScriptMapping();
     void clearProbes();
     void addProbe(PassRefPtr<ScriptProbe>);
-    
+
 private:
     ScriptProbeResolver(Page*);
 
@@ -88,7 +88,7 @@ private:
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     void addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&);
 #endif
-    
+
     Page* m_page;
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
     ProbeSet m_probes;
@@ -107,7 +107,7 @@ public:
     {
         return adoptPtr(new InspectorProbeAgent(instrumentingAgents, state, page));
     }
-    
+
     ~InspectorProbeAgent();
 
     void setFrontend(InspectorFrontend*);
@@ -127,7 +127,7 @@ public:
 
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
-    
+
     int m_nextUID;
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Probe* m_frontend;
@@ -141,5 +141,5 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 #endif // InspectorProbeAgent_h

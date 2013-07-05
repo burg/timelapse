@@ -32,7 +32,7 @@
 #include "config.h"
 #include "ReplayActionFactory.h"
 
-#if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
 #include "DocumentLoader.h"
 #include "Frame.h"
@@ -155,4 +155,4 @@ PassRefPtr<InspectorObject> ReplayActionFactory::createFrameNavigatedData(Docume
 
 } // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
+#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)

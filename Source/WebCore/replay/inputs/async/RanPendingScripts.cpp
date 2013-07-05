@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "RanPendingScripts.h"
 
@@ -91,4 +91,4 @@ bool InputCoder<RanPendingScripts>::decode(InputDecoder& decoder, OwnPtr<RanPend
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

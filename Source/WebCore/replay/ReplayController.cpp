@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ReplayController.h"
 
@@ -542,4 +542,4 @@ EventLoopInputDispatcher* ReplayController::dispatcher() const
 
 }; // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)

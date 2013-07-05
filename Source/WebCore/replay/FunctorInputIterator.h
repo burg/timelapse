@@ -32,7 +32,7 @@
 #ifndef FunctorInputIterator_h
 #define FunctorInputIterator_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InputStorage.h"
 
@@ -108,6 +108,6 @@ inline NondeterministicInput* FunctorInputIterator::uncheckedLoadInput(Nondeterm
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // FunctorInputIterator_h

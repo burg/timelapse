@@ -32,7 +32,7 @@
 #ifndef SentinelActions_h
 #define SentinelActions_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -89,6 +89,6 @@ template<> struct InputCoder<EndSentinel> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // SentinelActions_h

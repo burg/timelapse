@@ -32,7 +32,7 @@
 #ifndef PlaybackError_h
 #define PlaybackError_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -72,6 +72,6 @@ template<> struct InputCoder<PlaybackError> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // PlaybackError_h

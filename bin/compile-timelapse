@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUILD_ARGS="--debug --timelapse"
+BUILD_ARGS="--debug --web-replay"
 HAPPY_NOISE="/System/Library/Sounds/Glass.aiff"
 SAD_NOISE="/System/Library/Sounds/Basso.aiff"
 

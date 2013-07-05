@@ -83,7 +83,7 @@ public:
     int rawDeltaX() const { return m_rawDelta.x(); }
     int rawDeltaY() const { return m_rawDelta.y(); }
     unsigned deltaMode() const { return m_deltaMode; }
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     const IntPoint& unscaledPageLocation() const { return m_unscaledPageLocation; }
 #endif
 
@@ -104,7 +104,7 @@ private:
     IntPoint m_wheelDelta;
     IntPoint m_rawDelta;
     unsigned m_deltaMode;
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
     // The initial coordinates are stashed here by the constructor.
     // Must be saved because MouseRelatedEvent mutates it to apply scaling.
     IntPoint m_unscaledPageLocation;

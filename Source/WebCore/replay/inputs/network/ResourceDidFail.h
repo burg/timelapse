@@ -32,7 +32,7 @@
 #ifndef ResourceDidFail_h
 #define ResourceDidFail_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
@@ -71,6 +71,6 @@ template<> struct InputCoder<ResourceDidFail> {
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // ResourceDidFail_h

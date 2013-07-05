@@ -32,7 +32,7 @@
 #ifndef AutoMemoized_h
 #define AutoMemoized_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "InputEncoder.h"
 #include "InputDecoder.h"
@@ -165,6 +165,6 @@ template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(InputDecod
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // AutoMemoized_h

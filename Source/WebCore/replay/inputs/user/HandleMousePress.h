@@ -32,7 +32,7 @@
 #ifndef HandleMousePress_h
 #define HandleMousePress_h
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInput.h"
 #include "HandleMouseBase.h"
@@ -63,6 +63,6 @@ template<> struct InputCoder<HandleMousePress> {
 
 } //namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
 
 #endif // HandleMousePress_h

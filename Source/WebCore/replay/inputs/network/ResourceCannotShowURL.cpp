@@ -31,7 +31,7 @@
 
 #include "config.h"
 
-#if ENABLE(TIMELAPSE)
+#if ENABLE(WEB_REPLAY)
 
 #include "ResourceCannotShowURL.h"
 
@@ -93,4 +93,4 @@ bool InputCoder<ResourceCannotShowURL>::decode(InputDecoder& decoder, OwnPtr<Res
 
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+#endif // ENABLE(WEB_REPLAY)
