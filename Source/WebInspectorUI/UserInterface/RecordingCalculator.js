@@ -31,6 +31,7 @@
 {
     WebInspector.Object.call(this);
     this._recording = recording;
+    this.reset();
 };
 
 WebInspector.RecordingCalculator.Event = {

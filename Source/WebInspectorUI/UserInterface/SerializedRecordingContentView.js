@@ -33,10 +33,18 @@ WebInspector.SerializedRecordingContentView = function(recording)
 
     this._recording = recording;
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
-    this.element.appendChild(document.createTextNode("hello. serialized recording"));
 
-    this._listeners = new WebInspector.EventListenerGroup("SerializedRecordingContentView recording listeners");
+    this._providerListeners = {};
+
+    this._listeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentView recording listeners");
     this._listeners.install();
+
+    this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded,  this._providerAdded);
+
+    // add input providers that have already been created
+    var inputProviders = recording.providersWithConstructor(WebInspector.ReplayInputDataProvider);
+    for (var i = 0; i < inputProviders.length; ++i)
+        this._setupProvider(inputProviders[i]);
 };
 
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
@@ -47,14 +55,78 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
     // Public
 
+    updateLayout: function()
+    {
+        WebInspector.ContentView.prototype.updateLayout.call(this);
+
+        if (this._lineGraph)
+            this._lineGraph.updateLayout();
+    },
+
     shown: function()
     {
         WebInspector.ContentView.prototype.shown.call(this);
+
+        if (this._lineGraph)
+            this._lineGraph.shown();
     },
 
     closed: function()
     {
         WebInspector.ContentView.prototype.closed.call(this);
         this._listeners.uninstall(true);
+
+        for (var providerName in this._providerListeners) {
+            var provider = this._providerListeners[providerName].provider;
+            this._teardownProvider(provider);
+        }
+    },
+
+    // Private
+
+    _providerAdded: function(event)
+    {
+        var provider = event.data;
+        this._setupProvider(provider);
+    },
+
+    _providerRemoved: function(event)
+    {
+        var provider = event.data;
+        this._teardownProvider(provider);
+    },
+
+    _setupProvider: function(provider)
+    {
+        console.assert(provider instanceof WebInspector.DataProvider, "Tried to setup non-provider [object]: ", provider);
+
+        var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
+        this._providerListeners[provider.name] = { "callbacks": callbacks, "provider": provider };
+
+        callbacks.register(provider, WebInspector.DataProvider.Event.WillRemove, this._teardownProvider);
+
+        // Provider-specific setup goes here.
+        if (provider instanceof WebInspector.ReplayInputDataProvider) {
+            this._lineGraph = new WebInspector.ReplayInputLineGraph(provider, this._recording.calculator);
+            this.element.appendChild(this._lineGraph.element);
+        }
+
+        callbacks.install();
+    },
+
+    _teardownProvider: function(provider)
+    {
+        console.assert(provider instanceof WebInspector.DataProvider, "Tried to teardown non-provider [object]: ", provider);
+
+        var callbacks = this._providerListeners[provider.name].callbacks;
+        delete this._providerListeners[provider.name];
+        callbacks.uninstall(true);
+
+        // Provider-specific teardown goes here.
+        if (provider instanceof WebInspector.ReplayInputDataProvider) {
+            this.element.removeChild(this._lineGraph.element);
+            this._lineGraph.closed();
+            delete this._lineGraph;
+        }
     }
 };

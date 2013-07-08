@@ -66,8 +66,11 @@ WebInspector.SerializedRecordingObject.prototype = {
             if (queue.type !== WebInspector.SerializedRecordingObject.Queue.EventLoopInputQueue)
                 continue;
 
-            for (var j = 0; j < queue.inputs.length; ++j)
-                inputProvider.addInput(new WebInspector.SerializedInputObject(queue.inputs[j]));
+            for (var j = 0; j < queue.inputs.length; ++j) {
+                var input = new WebInspector.SerializedInputObject(queue.inputs[j]);
+                inputProvider.addInput(input);
+                this._calculator.updateBoundaries(input.timestamp, true);
+            }
         }
 
         this.addProvider(inputProvider);

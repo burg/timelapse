@@ -136,11 +136,6 @@ body.window-inactive .toolbar .replay-dashboard {
     bottom: 0px;
 }
 
-.toolbar .replay-dashboard > .recording-container > .serialized-recording {
-    border: 1px solid #ccc;
-    z-index: 0;
-}
-
 .toolbar .replay-dashboard > .recording-container > .live-recording {
     z-index: 0;
     background-color: rgba(100, 100, 100, 0.1);
