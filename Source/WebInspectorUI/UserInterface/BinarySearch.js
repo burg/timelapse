@@ -78,3 +78,37 @@ function insertionIndexForObjectInListSortedByFunction(anObject, aList, aFunctio
         return index;
     }
 }
+
+function binarySearchNearest(key, array, comparator, distanceFunction)
+{
+    return binarySearchNearestWithin(key, array, 0, array.length-1, comparator, distanceFunction);
+}
+
+function binarySearchNearestWithin(key, array, first, last, comparator, distanceFunction)
+{
+    first = Math.max(0, first);
+    last = Math.min(last, array.length - 1);
+    while (first <= last) {
+    var mid = (first + last) >> 1;
+    var c = comparator(key, array[mid]);
+    if (c > 0)
+        first = mid + 1;
+    else if (c < 0)
+    last = mid - 1;
+    else
+        return mid;
+    }
+
+    var dLeft = distanceFunction(key, array[first]);
+    var dRight = distanceFunction(key, array[last]);
+    return (dRight <= dLeft) ? last : first;
+}
+
+Object.defineProperty(Array.prototype, "nearestBinaryIndexOf",
+{
+    value: function(value, comparator, distanceFunction)
+    {
+        var result = binarySearchNearest(value, this, comparator, distanceFunction);
+        return result >= 0 ? result : -1;
+    }
+});
