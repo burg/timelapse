@@ -49,7 +49,7 @@ WebInspector.RecordingCalculator.prototype = {
     reset: function()
     {
         this._zoomLeft = 0.0;
-        this._zoomRight = 0.0;
+        this._zoomRight = 1.0;
         delete this.minimumBoundary;
         delete this.maximumBoundary;
     },

@@ -43,9 +43,9 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this._providerListeners = {};
 
     this._listeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentView recording listeners");
-    this._listeners.install();
-
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded,  this._providerAdded);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._replayPositionChanged);
+    this._listeners.install();
 
     // add input providers that have already been created
     var inputProviders = recording.providersWithConstructor(WebInspector.ReplayInputDataProvider);
@@ -143,5 +143,19 @@ WebInspector.SerializedRecordingContentView.prototype = {
             this._lineGraph.closed();
             delete this._lineGraph;
         }
+    },
+
+    _replayPositionChanged: function()
+    {
+        var cursorPosition = WebInspector.replayManager.currentMarkIndex;
+        var inputProvider = this._recording.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
+        if (!inputProvider.inputs.length)
+            return;
+
+        // This assumes that there is a 1-to-1 corresponence between marks and provider inputs.
+        // Marks are counted starting from 1 while indices start from 0.
+        var inputIndex = Number.constrain(cursorPosition - 1, 0, inputProvider.length - 1);
+        var markTimestamp = inputProvider.inputs[inputIndex].timestamp;
+        this.markers.playback.position = this._recording.calculator.computeMiniviewPercentage(markTimestamp);
     }
 };

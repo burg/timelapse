@@ -65,9 +65,9 @@ WebInspector.ReplayObserver.prototype = {
         WebInspector.replayManager.createdRecording.addInput(input);
     },
 
-    playbackHitMark: function(mark)
+    playbackHitMark: function(markIndex)
     {
-        // Not handled yet.
+        WebInspector.replayManager.playbackHitMark(markIndex);
     },
 
     playbackStarted: function()

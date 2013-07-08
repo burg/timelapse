@@ -44,6 +44,7 @@ WebInspector.ReplayManager.Event = {
     PlaybackStarted: "replay-manager-playback-started",
     PlaybackPaused: "replay-manager-playback-paused",
     PlaybackFinished: "replay-manager-playback-finished",
+    CursorChanged: "replay-manager-cursor-changed",
 
     // fired when activeRecording changes.
     RecordingLoaded: "replay-manager-recording-loaded",
@@ -63,6 +64,8 @@ WebInspector.ReplayManager.ReplaySpeed = {
     Seeking: "replay-speed-seeking",
 };
 WebInspector.ReplayManager.ReplaySpeed.Default = WebInspector.ReplayManager.ReplaySpeed.Seeking;
+
+WebInspector.ReplayManager.DefaultMarkIndex = 0;
 
 WebInspector.ReplayManager.prototype = {
     constructor: WebInspector.ReplayManager,
@@ -124,6 +127,11 @@ WebInspector.ReplayManager.prototype = {
     set replaySpeed(value)
     {
         this._replaySpeed = value;
+    },
+
+    get currentMarkIndex()
+    {
+        return this._currentMarkIndex;
     },
 
     startCaptureSoon: function()
@@ -195,6 +203,11 @@ WebInspector.ReplayManager.prototype = {
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackFinished);
     },
 
+    playbackHitMark: function(markIndex)
+    {
+        this._setReplayCursor(markIndex);
+    },
+
     recordingUnloaded: function()
     {
         this._replayState = WebInspector.ReplayManager.ReplayState.CanCapture;
@@ -209,7 +222,13 @@ WebInspector.ReplayManager.prototype = {
         var setActiveRecording = function() {
             this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
             this._activeRecording = WebInspector.recordingsManager.getRecordingWithUID(uid);
-            // TODO: set replay cursor to initial position
+
+            var inputProvider = this._activeRecording.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
+            var initialMarkIndex = (inputProvider && inputProvider.inputs.length)
+                                       ? inputProvider.inputs[0].markIndex
+                                       : WebInspector.ReplayManager.DefaultMarkIndex;
+
+            this._setReplayCursor(initialMarkIndex);
             this.dispatchEventToListeners(WebInspector.ReplayManager.Event.RecordingLoaded, this.loadedRecording);
         };
 
@@ -289,7 +308,15 @@ WebInspector.ReplayManager.prototype = {
     {
         console.assert(this.isReplaying, "Can't stop replaying because nothing is being replayed");
         ReplayAgent.stopPlayback(!!shouldUnlock);
-    }
+    },
+
+    // Private
+
+    _setReplayCursor: function(markIndex)
+    {
+        this._currentMarkIndex = markIndex;
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.CursorChanged);
+    },
 };
 
 WebInspector.ReplayManager.AsyncTasks = {};

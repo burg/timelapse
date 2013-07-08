@@ -74,7 +74,7 @@ WebInspector.LineGraphMarker.prototype = {
         var parentWidth = this.element.parentElement.clientWidth;
         // subtract slider width when computing largest possible (left) position
         var maxPercent = (parentWidth - this.element.offsetWidth) / parentWidth;
-        this.element.style.left = Number.constrain(this.position, 0.0, maxPercent);
+        this.element.style.left = Number.constrain(this.position, 0.0, maxPercent) * 100.0 + "%";
     },
 
     get position()
