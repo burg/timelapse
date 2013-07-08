@@ -41,7 +41,9 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
     this.element = document.createElement("canvas");
     this.element.classList.add(WebInspector.ReplayInputLineGraph.StyleClassName);
 
-    this._calculator.addEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this._refreshSoon, this);
+    this._calculator.addEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon, this);
+
+    this._animateFrameCallback = this.animateFrame.bind(this);
 }
 
 WebInspector.ReplayInputLineGraph.MaxBins = 300;
@@ -55,8 +57,11 @@ WebInspector.ReplayInputLineGraph.prototype = {
 
     // Public
 
-    animateFrame: function()
+    animateFrame: function(shouldResizeCanvas)
     {
+        if (shouldResizeCanvas)
+            this._resizeCanvas();
+
         this._recomputeGraphData();
         this._drawGraph();
     },
@@ -65,32 +70,34 @@ WebInspector.ReplayInputLineGraph.prototype = {
     // These methods are used by the owning widget to signal setup, teardown, and resize.
     shown: function()
     {
-        this._refreshSoon(true);
+        this.refreshSoon(true);
     },
 
     updateLayout: function()
     {
-        this._refreshSoon(true);
+        this.refreshSoon(true);
     },
 
     closed: function()
     {
-        this._calculator.removeEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this._refreshSoon, this);
+        this._calculator.removeEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon, this);
+    },
+
+    refreshSoon: function(shouldResizeCanvas)
+    {
+        if (this._haveEnqueuedAnimationRequest)
+            return;
+
+        this._haveEnqueuedAnimationRequest = true;
+        if (shouldResizeCanvas)
+            window.requestAnimationFrame(this.animateFrame.bind(this, true));
+        else
+            window.requestAnimationFrame(this._animateFrameCallback);
     },
 
     // Private
 
-    _refreshSoon: function(shouldResizeCanvas)
-    {
-        // TODO: do this inside of animateFrame, using bound argument.
-        if (shouldResizeCanvas)
-            this._autosizeCanvas();
-
-        // TODO: enqueue requestAnimationFrame callback to animateFrame() if a request is not already enqueued.
-        this.animateFrame();
-    },
-
-    _autosizeCanvas: function()
+    _resizeCanvas: function()
     {
         if (this.element.parentElement === null)
             return;

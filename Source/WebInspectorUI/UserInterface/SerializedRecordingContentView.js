@@ -156,6 +156,6 @@ WebInspector.SerializedRecordingContentView.prototype = {
         // Marks are counted starting from 1 while indices start from 0.
         var inputIndex = Number.constrain(cursorPosition - 1, 0, inputProvider.length - 1);
         var markTimestamp = inputProvider.inputs[inputIndex].timestamp;
-        this.markers.playback.position = this._recording.calculator.computeMiniviewPercentage(markTimestamp);
+        this.markers.playback.position = this._recording.calculator.computeOverviewPercentage(markTimestamp);
     }
 };

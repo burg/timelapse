@@ -39,6 +39,7 @@ WebInspector.LineGraphMarker = function(adjustable)
 
     this.visible = false;
     this.enabled = true;
+    this._animateFrameCallback = this.animateFrame.bind(this);
 };
 
 WebInspector.LineGraphMarker.Event = {
@@ -65,16 +66,29 @@ WebInspector.LineGraphMarker.prototype = {
     {
     },
 
-    animateFrame: function()
+    refreshSoon: function()
     {
+        if (this._haveEnqueuedAnimationRequest)
+            return;
+
+        this._haveEnqueuedAnimationRequest = true;
+        window.requestAnimationFrame(this._animateFrameCallback);
+    },
+
+    animateFrame: function(animationRequestId)
+    {
+        if (this._haveEnqueuedAnimationRequest && animationRequestId)
+            window.cancelAnimationFrame(animationRequestId);
+
+        this._haveEnqueuedAnimationRequest = false;
+
         if (this.element.parentElement === null)
             return;
 
-        // TODO: use requestAnimationFrame to decide when to update.
         var parentWidth = this.element.parentElement.clientWidth;
         // subtract slider width when computing largest possible (left) position
-        var maxPercent = (parentWidth - this.element.offsetWidth) / parentWidth;
-        this.element.style.left = Number.constrain(this.position, 0.0, maxPercent) * 100.0 + "%";
+        var unavailablePercent = this.element.offsetWidth / parentWidth;
+        this.element.style.left = Number.constrain(this.position, 0.0, 1.0 - unavailablePercent) * 100.0 + "%";
     },
 
     get position()
@@ -90,8 +104,7 @@ WebInspector.LineGraphMarker.prototype = {
     setPosition: function(percent, suppressEvents)
     {
         this._position = Number.constrain(percent, 0.0, 1.0);
-        // TODO: use requestAnimationFrame to decide when to update.
-        this.animateFrame();
+        this.refreshSoon();
         if (!suppressEvents)
             this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.Moved);
     },

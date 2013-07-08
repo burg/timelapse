@@ -43,6 +43,5 @@
 
 .serialized-recording > .playback-slider {
     width: 2px;
-    height: 100%;
-    background-color: #f00;
+    background-color: #c33;
 }
