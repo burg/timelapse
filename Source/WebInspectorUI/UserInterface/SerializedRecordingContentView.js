@@ -39,6 +39,10 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.markers.playback.element.classList.add("playback-slider");
     this.markers.playback.position = 0.0;
     this.element.appendChild(this.markers.playback.element);
+    this.markers.smokescreen = new WebInspector.LineGraphMarker(false);
+    this.markers.smokescreen.element.classList.add("smokescreen");
+    this.markers.smokescreen.position = 0.0;
+    this.element.appendChild(this.markers.smokescreen.element);
 
     this._providerListeners = {};
 
@@ -156,6 +160,8 @@ WebInspector.SerializedRecordingContentView.prototype = {
         // Marks are counted starting from 1 while indices start from 0.
         var inputIndex = Number.constrain(cursorPosition - 1, 0, inputProvider.length - 1);
         var markTimestamp = inputProvider.inputs[inputIndex].timestamp;
-        this.markers.playback.position = this._recording.calculator.computeOverviewPercentage(markTimestamp);
+        var cursorPercent = this._recording.calculator.computeOverviewPercentage(markTimestamp);
+        this.markers.playback.position = cursorPercent;
+        this.markers.smokescreen.position = cursorPercent;
     }
 };

@@ -86,9 +86,10 @@ WebInspector.LineGraphMarker.prototype = {
             return;
 
         var parentWidth = this.element.parentElement.clientWidth;
-        // subtract slider width when computing largest possible (left) position
-        var unavailablePercent = this.element.offsetWidth / parentWidth;
-        this.element.style.left = Number.constrain(this.position, 0.0, 1.0 - unavailablePercent) * 100.0 + "%";
+        // subtract slider width when computing largest possible (left) position. If the width is
+        // not explicitly set, assume this marker has a dynamic width and don't substract any width.
+        var unavailablePercent = (this.element.style.width !== "") ? this.element.offsetWidth / parentWidth : 0.0;
+        this.element.style.left = (Number.constrain(this.position, 0.0, 1.0) - unavailablePercent) * 100.0 + "%";
     },
 
     get position()

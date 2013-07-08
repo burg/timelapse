@@ -45,3 +45,7 @@
     width: 2px;
     background-color: #c33;
 }
+
+.serialized-recording > .smokescreen {
+    background-color: rgba(100, 100, 100, 0.1);
+}
