@@ -128,8 +128,7 @@ WebInspector.RecordingCalculator.prototype = {
     // this takes into account the viewable interval, returning the percentage within that region. */
     computeOverviewPercentage: function(timestamp)
     {
-        var overallPercent = (timestamp - this.minimumBoundary) / this.boundarySpan;
-        return (overallPercent - this.zoomLeft) / this.zoomInterval;
+        return (timestamp - this.computeOverviewTimestamp(this.zoomLeft)) / (this.boundarySpan * this.zoomInterval);
     },
 
     computeMiniviewPercentage: function(timestamp)
