@@ -40,3 +40,9 @@
     right: 0px;
     bottom: 0px;
 }
+
+.serialized-recording > .playback-slider {
+    width: 2px;
+    height: 100%;
+    background-color: #f00;
+}

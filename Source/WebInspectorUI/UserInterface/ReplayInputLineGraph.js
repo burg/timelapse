@@ -61,7 +61,7 @@ WebInspector.ReplayInputLineGraph.prototype = {
         this._drawGraph();
     },
 
-    // This class contains ContentViwe workalikes, but is not actually a content view.
+    // This class contains ContentView workalikes, but is not actually a content view.
     // These methods are used by the owning widget to signal setup, teardown, and resize.
     shown: function()
     {

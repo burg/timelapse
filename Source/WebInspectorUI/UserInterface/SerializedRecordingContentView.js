@@ -34,6 +34,12 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this._recording = recording;
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
+    this.markers = {};
+    this.markers.playback = new WebInspector.LineGraphMarker(false);
+    this.markers.playback.element.classList.add("playback-slider");
+    this.markers.playback.position = 0.0;
+    this.element.appendChild(this.markers.playback.element);
+
     this._providerListeners = {};
 
     this._listeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentView recording listeners");
@@ -61,6 +67,9 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         if (this._lineGraph)
             this._lineGraph.updateLayout();
+
+        for (var key in this.markers)
+            this.markers[key].updateLayout();
     },
 
     shown: function()
@@ -69,6 +78,9 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         if (this._lineGraph)
             this._lineGraph.shown();
+
+        for (var key in this.markers)
+            this.markers[key].shown();
     },
 
     closed: function()
@@ -80,6 +92,9 @@ WebInspector.SerializedRecordingContentView.prototype = {
             var provider = this._providerListeners[providerName].provider;
             this._teardownProvider(provider);
         }
+
+        for (var key in this.markers)
+            this.markers[key].closed();
     },
 
     // Private
