@@ -115,14 +115,14 @@ WebInspector.ReplayInputLineGraph.prototype = {
             return;
 
         var binsPerTimeline = Math.min(Math.floor(this._cachedOffsetWidth / 2), WebInspector.ReplayInputLineGraph.MaxBins);
-        var timestampGranularity = this._calculator.boundarySpan / binsPerTimeline;
+        var timePerBin = this._calculator.boundarySpan * this._calculator.zoomInterval / binsPerTimeline;
         this._resetGraphData();
 
         // Create sparse arrays with 101 cells each to fill with counts for a given group.
         var markBinForTimestamp = function(timestamp)
         {
-            var snappedTimestamp = timestamp - (timestamp % timestampGranularity);
-            var percent = this._calculator.computeMiniviewPercentage(snappedTimestamp);
+            var snappedTimestamp = timestamp - (timestamp % timePerBin);
+            var percent = this._calculator.computeOverviewPercentage(snappedTimestamp);
             var binIndex = Number.constrain(Math.round(percent * binsPerTimeline), 0, binsPerTimeline - 1);
 
             if (!this._data.bins[binIndex])
@@ -135,9 +135,13 @@ WebInspector.ReplayInputLineGraph.prototype = {
 
         // TODO: only mark inputs within the active zoom interval
 
+        var leftBound = this._calculator.computeOverviewTimestamp(this._calculator.zoomLeft);
+        var rightBound = this._calculator.computeOverviewTimestamp(this._calculator.zoomRight);
+
         for (var i = 0; i < inputs.length; ++i)
-            if (!markBinForTimestamp.call(this, inputs[i].timestamp))
-                break;
+            if (inputs[i].timestamp >= leftBound && inputs[i].timestamp <= rightBound)
+                if (!markBinForTimestamp.call(this, inputs[i].timestamp))
+                    break;
 
         var highMark = 0;
         for (var i = 0; i < this._data.bins.length; ++i) {
