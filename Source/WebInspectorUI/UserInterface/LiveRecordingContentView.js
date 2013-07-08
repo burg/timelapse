@@ -37,14 +37,14 @@ WebInspector.LiveRecordingContentView = function(recording)
     this._canvas = this.element.appendChild(document.createElement("canvas"));
 
     var stopElement = this.element.appendChild(document.createElement("div"));
-    stopElement.innerHTML = "Stop Recording?"
+    stopElement.innerHTML = WebInspector.UIString("Stop Recording?");
     stopElement.className = WebInspector.ReplayDashboardView.StopStyleClassName;
     stopElement.title = WebInspector.UIString("Click to stop recording");
-    stopElement.addEventListener("click", this._stopClicked.bind(this));
 
     this._timeline = { provider: null, maxIndex: -1, data: [] };
 
-    this._listeners = new WebInspector.EventListenerGroup("LiveRecordingContentView recording listeners");
+    this._listeners = new WebInspector.EventListenerGroup(this, "LiveRecordingContentView recording listeners");
+    this._listeners.register(stopElement, "click", this._stopClicked);
     this._listeners.install();
 
     this._animateFrameCallback = this.animateFrame.bind(this);
@@ -60,7 +60,6 @@ WebInspector.LiveRecordingContentView.GraphBorderStrokeColor = new WebInspector.
 WebInspector.LiveRecordingContentView.MaxRecordLifetime = 10.0; // seconds
 WebInspector.LiveRecordingContentView.MaxBinsPerTimeline = 300;
 WebInspector.LiveRecordingContentView.LineGraphFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
-
 
 WebInspector.LiveRecordingContentView.prototype = {
     constructor: WebInspector.LiveRecordingContentView,
