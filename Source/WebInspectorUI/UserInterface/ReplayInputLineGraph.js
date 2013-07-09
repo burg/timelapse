@@ -41,6 +41,8 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
     this.element = document.createElement("canvas");
     this.element.classList.add(WebInspector.ReplayInputLineGraph.StyleClassName);
 
+    this.element.addEventListener("mousewheel", this._onMousewheel.bind(this), true);
+
     this._calculator.addEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon, this);
 
     this._animateFrameCallback = this.animateFrame.bind(this);
@@ -49,6 +51,9 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
 WebInspector.ReplayInputLineGraph.MaxBins = 300;
 WebInspector.ReplayInputLineGraph.LineFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
 WebInspector.ReplayInputLineGraph.StyleClassName = "line-graph";
+WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor = 0.001;
+WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor = 0.001;
+WebInspector.ReplayInputLineGraph.MinimumInterval = 0.05;
 
 
 WebInspector.ReplayInputLineGraph.prototype = {
@@ -96,6 +101,39 @@ WebInspector.ReplayInputLineGraph.prototype = {
     },
 
     // Private
+
+    _onMousewheel: function(event)
+    {
+        var zoomLeft = this._calculator.zoomLeft;
+        var zoomRight = this._calculator.zoomRight;
+        var zoomInterval = this._calculator.zoomInterval;
+
+        if (typeof event.wheelDeltaX === "number" && event.wheelDeltaX && zoomInterval != 1.0) {
+            var delta = event.wheelDeltaX * WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor;
+            zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
+            zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
+        }
+
+        if (event.shiftKey && typeof event.wheelDeltaY === "number" && event.wheelDeltaY && zoomInterval != 1.0) {
+            var delta = event.wheelDeltaY * WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor;
+            zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
+            zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
+        }
+
+        if (typeof event.wheelDeltaY === "number" && event.wheelDeltaY) {
+            var delta = event.wheelDeltaY * WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor;
+            /* calculate zoom adjustment from right side, and paste to left.
+            can't do naive scaling on LHS if it is near zero.  */
+            var zoomDelta = zoomRight - zoomRight * (1.0 + delta);
+            zoomLeft = Number.constrain(zoomLeft + zoomDelta, 0.0, zoomRight - WebInspector.ReplayInputLineGraph.MinimumInterval);
+            zoomRight = Number.constrain(zoomRight - zoomDelta, zoomLeft + WebInspector.ReplayInputLineGraph.MinimumInterval, 1.0);
+        }
+
+        this._calculator.setZoomInterval(zoomLeft, zoomRight);
+        //this.refreshSoon();
+        this._recomputeGraphData();
+        this._drawGraph();
+    },
 
     _resizeCanvas: function()
     {
