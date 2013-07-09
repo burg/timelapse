@@ -193,6 +193,7 @@ WebInspector.ReplayDashboardView.prototype = {
 
     _playbackStarted: function()
     {
+        this._element.classList.remove(WebInspector.ReplayDashboardView.InputPausedStyleClassName);
         this._element.classList.add(WebInspector.ReplayDashboardView.ReplayingStyleClassName);
     },
 
