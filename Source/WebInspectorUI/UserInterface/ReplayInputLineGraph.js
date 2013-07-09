@@ -121,12 +121,14 @@ WebInspector.ReplayInputLineGraph.prototype = {
         }
 
         if (typeof event.wheelDeltaY === "number" && event.wheelDeltaY) {
+            var xPosition = Number.constrain(event.clientX - this.element.parentElement.totalOffsetLeft, 0, this.element.width);
+            var percent = xPosition / this.element.width;
             var delta = event.wheelDeltaY * WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor;
             /* calculate zoom adjustment from right side, and paste to left.
             can't do naive scaling on LHS if it is near zero.  */
             var zoomDelta = zoomRight - zoomRight * (1.0 + delta);
-            zoomLeft = Number.constrain(zoomLeft + zoomDelta, 0.0, zoomRight - WebInspector.ReplayInputLineGraph.MinimumInterval);
-            zoomRight = Number.constrain(zoomRight - zoomDelta, zoomLeft + WebInspector.ReplayInputLineGraph.MinimumInterval, 1.0);
+            zoomLeft = Number.constrain(zoomLeft + (2 * zoomDelta * percent), 0.0, zoomRight - WebInspector.ReplayInputLineGraph.MinimumInterval);
+            zoomRight = Number.constrain(zoomRight - (2 * zoomDelta * (1 - percent)), zoomLeft + WebInspector.ReplayInputLineGraph.MinimumInterval, 1.0);
         }
 
         this._calculator.setZoomInterval(zoomLeft, zoomRight);
