@@ -44,7 +44,6 @@ WebInspector.LineGraphMarker = function(adjustable)
     this.visible = false;
     this.enabled = true;
     this._animateFrameCallback = this.animateFrame.bind(this);
-
 };
 
 WebInspector.LineGraphMarker.Event = {

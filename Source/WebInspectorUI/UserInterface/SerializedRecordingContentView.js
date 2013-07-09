@@ -32,22 +32,24 @@ WebInspector.SerializedRecordingContentView = function(recording)
     WebInspector.ContentView.call(this, recording);
 
     this._recording = recording;
+    this._providerListeners = {};
+    this._listeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentView recording listeners");
+
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
     this.markers = {};
     this.markers.playback = new WebInspector.LineGraphMarker(true);
     this.markers.playback.element.classList.add("playback-slider");
     this.markers.playback.position = 0.0;
+    this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.Moved, this._playbackMarkerMoved);
     this.element.appendChild(this.markers.playback.element);
+
     this.markers.smokescreen = new WebInspector.LineGraphMarker(false);
     this.markers.smokescreen.element.classList.add("smokescreen");
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
-    this._providerListeners = {};
-
-    this._listeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentView recording listeners");
-    this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded,  this._providerAdded);
+    this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._replayPositionChanged);
     this._listeners.install();
 
@@ -172,5 +174,10 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var timeDelta = nextInput.timestamp - markTimestamp;
         this.markers.playback.animateTo(nextCursorPercent, timeDelta);
         this.markers.smokescreen.animateTo(nextCursorPercent, timeDelta);
+    },
+
+    _playbackMarkerMoved: function()
+    {
+        this.markers.smokescreen.position = this.markers.playback.position;
     }
 };
