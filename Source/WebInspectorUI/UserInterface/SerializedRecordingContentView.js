@@ -163,5 +163,14 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var cursorPercent = this._recording.calculator.computeOverviewPercentage(markTimestamp);
         this.markers.playback.position = cursorPercent;
         this.markers.smokescreen.position = cursorPercent;
+
+        if (inputIndex === inputProvider.inputs.length - 1)
+            return;
+
+        var nextInput = inputProvider.inputs[inputIndex + 1];
+        var nextCursorPercent = this._recording.calculator.computeOverviewPercentage(nextInput.timestamp);
+        var timeDelta = nextInput.timestamp - markTimestamp;
+        this.markers.playback.animateTo(nextCursorPercent, timeDelta);
+        this.markers.smokescreen.animateTo(nextCursorPercent, timeDelta);
     }
 };

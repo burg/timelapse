@@ -75,6 +75,18 @@ WebInspector.LineGraphMarker.prototype = {
         window.requestAnimationFrame(this._animateFrameCallback);
     },
 
+    animateTo: function(position, duration)
+    {
+        this._currentAnimation = {
+            "startPosition": this.position,
+            "targetPosition": position,
+            "duration": duration, // in seconds
+            "startTime": Date.now(),
+        };
+
+        this.refreshSoon();
+    },
+
     animateFrame: function(animationRequestId)
     {
         if (this._haveEnqueuedAnimationRequest && animationRequestId)
@@ -85,11 +97,28 @@ WebInspector.LineGraphMarker.prototype = {
         if (this.element.parentElement === null)
             return;
 
+        // if an animation is in progress, then interpolate a new value for position.
+        if (this._currentAnimation) {
+            var elapsedSeconds = (Date.now() - this._currentAnimation.startTime) / 1000.0;
+            if (elapsedSeconds > this._currentAnimation.duration) {
+                this.position = this._currentAnimation.targetPosition;
+                delete this._currentAnimation;
+            } else {
+                var elapsedPercent = elapsedSeconds / this._currentAnimation.duration;
+                var positionRange = this._currentAnimation.targetPosition - this._currentAnimation.startPosition;
+                var interpolatedPosition = this._currentAnimation.startPosition + (positionRange * elapsedPercent);
+                this.setPosition(interpolatedPosition, true, true);
+            }
+        }
+
         var parentWidth = this.element.parentElement.clientWidth;
         // subtract slider width when computing largest possible (left) position. If the width is
         // not explicitly set, assume this marker has a dynamic width and don't substract any width.
         var unavailablePercent = (this.element.style.width !== "") ? this.element.offsetWidth / parentWidth : 0.0;
         this.element.style.left = (Number.constrain(this.position, 0.0, 1.0) - unavailablePercent) * 100.0 + "%";
+
+        if (this._currentAnimation)
+            this.refreshSoon();
     },
 
     get position()
