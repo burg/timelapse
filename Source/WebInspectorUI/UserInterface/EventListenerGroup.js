@@ -69,6 +69,11 @@ WebInspector.EventListenerGroup.prototype = {
         this._listeners = [];
     },
 
+    get installed()
+    {
+        return this._listenersAreInstalled;
+    },
+
     install: function()
     {
         console.assert(!this._listenersAreInstalled, "Already installed listener group: " + this.name);

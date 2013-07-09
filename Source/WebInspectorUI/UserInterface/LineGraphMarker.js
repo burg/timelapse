@@ -30,21 +30,31 @@
 WebInspector.LineGraphMarker = function(adjustable)
 {
     WebInspector.Object.call(this);
-    this._adjustable = adjustable;
-
     this.element = document.createElement("div");
-    if (adjustable)
-        this.element.classList.add("adjustable");
-    // TODO: install drag listeners
+    this.element.classList.add(WebInspector.LineGraphMarker.StyleClassName);
 
+    // These listeners must be set up before adjustable is initialized,
+    // because it may want to install drag listeners immediately.
+    this._dragListeners = new WebInspector.EventListenerGroup(this, "Drag-related listeners for LineGraphMarker");
+    this._dragListeners.register(this.element, "dragstart", this._markerDragStarted);
+    this._dragListeners.register(this.element, "drag", this._markerDragged);
+    this._dragListeners.register(this.element, "dragend", this._markerDragEnded);
+
+    this.adjustable = adjustable;
     this.visible = false;
     this.enabled = true;
     this._animateFrameCallback = this.animateFrame.bind(this);
+
 };
 
 WebInspector.LineGraphMarker.Event = {
+    DragEnd: "line-graph-marker-drag-end",
+    DragStart: "line-graph-marker-drag-start",
     Moved: "line-graph-marker-moved"
 };
+
+WebInspector.LineGraphMarker.StyleClassName = "line-graph-marker";
+WebInspector.LineGraphMarker.DraggingStyleClassName = "line-graph-marker-dragging";
 
 WebInspector.LineGraphMarker.prototype = {
     constructor: WebInspector.LineGraphMarker,
@@ -139,6 +149,28 @@ WebInspector.LineGraphMarker.prototype = {
             this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.Moved);
     },
 
+    get adjustable()
+    {
+        return this._adjustable;
+    },
+
+    set adjustable(value)
+    {
+        if (value === this._adjustable)
+            return;
+
+        this._adjustable = value;
+
+        if (value) {
+            this.element.classList.add("adjustable");
+            this._dragListeners.install();
+        } else {
+            this.element.classList.remove("adjustable");
+            if (this._dragListeners.installed)
+                this._dragListeners.uninstall();
+        }
+    },
+
     get visible()
     {
         return this._visible;
@@ -165,5 +197,32 @@ WebInspector.LineGraphMarker.prototype = {
             this.element.classList.remove("disabled");
         else
             this.element.classList.add("disabled");
+    },
+
+    // Private
+
+    _markerDragStarted: function(event)
+    {
+        console.log("drag started ", event);
+        event.dataTransfer.effectAllowed = "none";
+        this.element.parentElement.classList.add(WebInspector.LineGraphMarker.DraggingStyleClassName);
+        this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.DragStart, event);
+    },
+
+    _markerDragEnded: function(event)
+    {
+        console.log("drag ended ", event);
+        this.element.parentElement.classList.remove(WebInspector.LineGraphMarker.DraggingStyleClassName);
+        this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.DragEnd, event);
+    },
+
+    _markerDragged: function(event)
+    {
+        var parent = this.element.parentElement;
+        var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);
+        var minimumX = parent.clientLeft;
+        var maximumX = minimumX + parent.clientWidth - this.element.offsetWidth;
+        dragOffsetX = Number.constrain(dragOffsetX, minimumX, maximumX - this.element.offsetWidth);
+        this.position = dragOffsetX / (maximumX - minimumX);
     }
 };

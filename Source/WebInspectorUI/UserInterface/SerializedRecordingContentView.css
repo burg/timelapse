@@ -42,8 +42,22 @@
 }
 
 .serialized-recording > .playback-slider {
-    width: 2px;
+    width: 3px;
     background-color: #c33;
+}
+
+.serialized-recording > .line-graph-marker.adjustable {
+    -webkit-user-drag: element;
+    z-index: 10;
+}
+
+.serialized-recording.line-graph-marker-dragging,
+.serialized-recording > .line-graph-marker.adjustable {
+    cursor: ew-resize;
+}
+
+.serialized-recording > .line-graph-marker:-webkit-drag {
+    visibility: hidden;
 }
 
 .serialized-recording > .smokescreen {

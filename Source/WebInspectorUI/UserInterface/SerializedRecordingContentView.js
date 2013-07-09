@@ -35,7 +35,7 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
     this.markers = {};
-    this.markers.playback = new WebInspector.LineGraphMarker(false);
+    this.markers.playback = new WebInspector.LineGraphMarker(true);
     this.markers.playback.element.classList.add("playback-slider");
     this.markers.playback.position = 0.0;
     this.element.appendChild(this.markers.playback.element);
