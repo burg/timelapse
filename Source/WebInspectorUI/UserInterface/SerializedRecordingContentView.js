@@ -59,7 +59,8 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.element.appendChild(this.markers.smokescreen.element);
 
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
-    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._replayPositionChanged);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkPositions);
+    this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateMarkPositions.bind(this, true));
     this._listeners.install();
 
     // add input providers that have already been created
@@ -163,7 +164,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         }
     },
 
-    _replayPositionChanged: function()
+    _updateMarkPositions: function(event, suppressAnimations)
     {
         var cursorPosition = WebInspector.replayManager.currentMarkIndex;
         var inputProvider = this._recording.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
@@ -178,9 +179,11 @@ WebInspector.SerializedRecordingContentView.prototype = {
         this.markers.playback.position = cursorPercent;
         this.markers.smokescreen.position = cursorPercent;
 
-        if (inputIndex === inputProvider.inputs.length - 1)
+        if (suppressAnimations)
             return;
 
+        if (inputIndex === inputProvider.inputs.length - 1)
+            return;
         var nextInput = inputProvider.inputs[inputIndex + 1];
         var nextCursorPercent = this._recording.calculator.computeOverviewPercentage(nextInput.timestamp);
         var timeDelta = nextInput.timestamp - markTimestamp;
