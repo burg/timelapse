@@ -110,6 +110,10 @@ body.window-inactive .toolbar .replay-dashboard {
     display: none;
 }
 
+.toolbar .replay-dashboard.recording-loaded > .recording-container {
+    height: 34px;
+}
+
 .toolbar .replay-dashboard.capturing > .recording-container,
 .toolbar .replay-dashboard.recording-loaded > .recording-container {
     display: -webkit-flex;

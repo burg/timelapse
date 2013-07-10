@@ -44,12 +44,21 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
+    var recordingContainer = WebInspector.replayManager.toolbarItem.element.getElementsByClassName("recording-container")[0];
+    var fullBar = recordingContainer.appendChild(document.createElement("div"));
+    fullBar.className = WebInspector.SerializedRecordingContentView.FullBarStyleClassName;
+    var activeBar = recordingContainer.appendChild(document.createElement("div"));
+    activeBar.className = WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName;
+    this._recordingContainer = recordingContainer;
+    this._fullBar = fullBar;
+    this._activeBar = activeBar;
+
     this._providerListeners = {};
 
     this._listeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentView recording listeners");
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded,  this._providerAdded);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkPositions);
-    this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateMarkPositions.bind(this, true));
+    this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateZoomElements);
     this._listeners.install();
 
     // add input providers that have already been created
@@ -59,6 +68,8 @@ WebInspector.SerializedRecordingContentView = function(recording)
 };
 
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
+WebInspector.SerializedRecordingContentView.FullBarStyleClassName = "full-bar";
+WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName = "active-bar";
 
 WebInspector.SerializedRecordingContentView.prototype = {
     constructor: WebInspector.SerializedRecordingContentView,
@@ -92,6 +103,9 @@ WebInspector.SerializedRecordingContentView.prototype = {
     {
         WebInspector.ContentView.prototype.closed.call(this);
         this._listeners.uninstall(true);
+
+        this._recordingContainer.removeChild(this._activeBar);
+        this._recordingContainer.removeChild(this._fullBar);
 
         for (var providerName in this._providerListeners) {
             var provider = this._providerListeners[providerName].provider;
@@ -175,5 +189,19 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var timeDelta = nextInput.timestamp - markTimestamp;
         this.markers.playback.animateTo(nextCursorPercent, timeDelta);
         this.markers.smokescreen.animateTo(nextCursorPercent, timeDelta);
+    },
+
+    _updateZoomElements: function()
+    {
+        if (!this._lineGraph)
+            return;
+
+        this._updateMarkPositions(true);
+
+        var zoomLeft = this._recording.calculator.zoomLeft;
+        var zoomRight = this._recording.calculator.zoomRight;
+        var availWidth = this._lineGraph.element.width;
+        this._activeBar.style.left = Number.constrain(zoomLeft * availWidth, 0, availWidth) + "px";
+        this._activeBar.style.right = Number.constrain(availWidth - zoomRight * availWidth, 0, availWidth) + "px";
     }
 };

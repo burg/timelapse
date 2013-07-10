@@ -49,3 +49,21 @@
 .serialized-recording > .smokescreen {
     background-color: rgba(100, 100, 100, 0.1);
 }
+
+.replay-dashboard > .recording-container >  .active-bar,
+.toolbar .replay-dashboard > .recording-container > .full-bar {
+    height: 4px;
+    position: absolute;
+    top: 30px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+}
+
+.toolbar .replay-dashboard > .recording-container > .full-bar {
+    background-color: #444;
+}
+
+.replay-dashboard > .recording-container > .active-bar {
+    background-color: #CCC;
+}
