@@ -63,3 +63,8 @@
 .serialized-recording > .smokescreen {
     background-color: rgba(100, 100, 100, 0.1);
 }
+
+.serialized-recording > .drop-hint {
+    width: 1px;
+    border: 2px dashed #f3c;
+}

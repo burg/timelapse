@@ -38,14 +38,23 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
     this.markers = {};
-    this.markers.playback = new WebInspector.LineGraphMarker(true);
-    this.markers.playback.element.classList.add("playback-slider");
+    this.markers.playback = new WebInspector.LineGraphMarker(this);
+    this.markers.playback.adjustable = true;
+    this.markers.playback.element.classList.add(WebInspector.SerializedRecordingContentView.PlaybackMarkerStyleClassName);
     this.markers.playback.position = 0.0;
     this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.Moved, this._playbackMarkerMoved);
+    this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.DragStart, this._playbackMarkerDragStarted);
+    this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.DragEnd, this._playbackMarkerDragEnded);
     this.element.appendChild(this.markers.playback.element);
 
-    this.markers.smokescreen = new WebInspector.LineGraphMarker(false);
-    this.markers.smokescreen.element.classList.add("smokescreen");
+    this.markers.drophint = new WebInspector.LineGraphMarker(this);
+    this.markers.drophint.element.classList.add(WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName);
+    this.markers.drophint.position = 0.5;
+    this.markers.drophint.visible = false;
+    this.element.appendChild(this.markers.drophint.element);
+
+    this.markers.smokescreen = new WebInspector.LineGraphMarker(this);
+    this.markers.smokescreen.element.classList.add(WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName);
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
@@ -59,6 +68,9 @@ WebInspector.SerializedRecordingContentView = function(recording)
         this._setupProvider(inputProviders[i]);
 };
 
+WebInspector.SerializedRecordingContentView.PlaybackMarkerStyleClassName = "playback-slider";
+WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName = "drop-hint";
+WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName = "smokescreen";
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
 
 WebInspector.SerializedRecordingContentView.prototype = {
@@ -176,8 +188,20 @@ WebInspector.SerializedRecordingContentView.prototype = {
         this.markers.smokescreen.animateTo(nextCursorPercent, timeDelta);
     },
 
+    _playbackMarkerDragStarted: function()
+    {
+        this.markers.drophint.visible = true;
+    },
+
     _playbackMarkerMoved: function()
     {
         this.markers.smokescreen.position = this.markers.playback.position;
+
+    },
+
+    _playbackMarkerDragEnded: function()
+    {
+        this.markers.drophint.visible = false;
     }
+
 };
