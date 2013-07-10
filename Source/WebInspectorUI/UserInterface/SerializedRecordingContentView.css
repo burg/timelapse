@@ -64,6 +64,11 @@
     background-color: rgba(100, 100, 100, 0.1);
 }
 
+.serialized-recording > .drag-hint {
+    width: 3px;
+    background-color: rgba(160, 30, 30, 0.5);
+}
+
 .serialized-recording > .drop-hint {
     width: 1px;
     border: 1px dotted #c33;

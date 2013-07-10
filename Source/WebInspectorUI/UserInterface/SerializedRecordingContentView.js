@@ -47,12 +47,21 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.DragEnd, this._playbackMarkerDragEnded);
     this.element.appendChild(this.markers.playback.element);
 
+    // When dragging the playback marker, this shows where dragging began.
+    this.markers.draghint = new WebInspector.LineGraphMarker(this);
+    this.markers.draghint.element.classList.add(WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName);
+    this.markers.draghint.position = 0.5;
+    this.markers.draghint.visible = false;
+    this.element.appendChild(this.markers.draghint.element);
+
+    // When dragging the playback marker, this shows where the cursor would be dropped.
     this.markers.drophint = new WebInspector.LineGraphMarker(this);
     this.markers.drophint.element.classList.add(WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName);
     this.markers.drophint.position = 0.5;
     this.markers.drophint.visible = false;
     this.element.appendChild(this.markers.drophint.element);
 
+    // This provides a subtle gray effect over unplayed (future) sections of the recording.
     this.markers.smokescreen = new WebInspector.LineGraphMarker(this);
     this.markers.smokescreen.element.classList.add(WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName);
     this.markers.smokescreen.position = 0.0;
@@ -70,6 +79,7 @@ WebInspector.SerializedRecordingContentView = function(recording)
 };
 
 WebInspector.SerializedRecordingContentView.PlaybackMarkerStyleClassName = "playback-slider";
+WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName = "drag-hint";
 WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName = "smokescreen";
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
@@ -193,6 +203,8 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
     _playbackMarkerDragStarted: function()
     {
+        this.markers.draghint.position = this.markers.playback.position;
+        this.markers.draghint.visible = true;
         this.markers.drophint.visible = true;
     },
 
@@ -213,6 +225,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         this.markers.playback.position = snappedPosition;
         this.markers.smokescreen.position = this.markers.playback.position;
+        this.markers.draghint.visible = false;
         this.markers.drophint.visible = false;
 
         WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
