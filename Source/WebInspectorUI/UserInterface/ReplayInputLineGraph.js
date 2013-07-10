@@ -169,7 +169,7 @@ WebInspector.ReplayInputLineGraph.prototype = {
         var markBinForTimestamp = function(timestamp)
         {
             var snappedTimestamp = timestamp - (timestamp % timePerBin);
-            var percent = this._calculator.computeOverviewPercentage(snappedTimestamp);
+            var percent = this._calculator.zoomedPercentFromTimestamp(snappedTimestamp);
             var binIndex = Number.constrain(Math.round(percent * binsPerTimeline), 0, binsPerTimeline - 1);
 
             if (!this._data.bins[binIndex])
@@ -180,10 +180,8 @@ WebInspector.ReplayInputLineGraph.prototype = {
             return true;
         };
 
-        // TODO: only mark inputs within the active zoom interval
-
-        var leftBound = this._calculator.computeOverviewTimestamp(this._calculator.zoomLeft);
-        var rightBound = this._calculator.computeOverviewTimestamp(this._calculator.zoomRight);
+        var leftBound = this._calculator.timestampFromGlobalPercent(this._calculator.zoomLeft);
+        var rightBound = this._calculator.timestampFromGlobalPercent(this._calculator.zoomRight);
 
         for (var i = 0; i < inputs.length; ++i)
             if (inputs[i].timestamp >= leftBound && inputs[i].timestamp <= rightBound)

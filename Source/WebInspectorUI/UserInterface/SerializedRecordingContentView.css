@@ -66,5 +66,6 @@
 
 .serialized-recording > .drop-hint {
     width: 1px;
-    border: 2px dashed #f3c;
+    border: 1px dotted #c33;
+    opacity: 0.8;
 }

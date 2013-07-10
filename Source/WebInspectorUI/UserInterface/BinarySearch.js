@@ -112,3 +112,12 @@ Object.defineProperty(Array.prototype, "nearestBinaryIndexOf",
         return result >= 0 ? result : -1;
     }
 });
+
+Object.defineProperty(Array.prototype, "nearestBinaryIndexWithin",
+{
+    value: function(value, begin, end, comparator, distancefn)
+    {
+        var result = binarySearchNearestWithin(value, this, begin, end, comparator, distancefn);
+        return result >= 0 ? result : -1;
+    }
+});

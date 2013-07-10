@@ -171,11 +171,11 @@ WebInspector.SerializedRecordingContentView.prototype = {
         if (!inputProvider.inputs.length)
             return;
 
-        // This assumes that there is a 1-to-1 corresponence between marks and provider inputs.
+        // This assumes that there is a 1-to-1 corresponence between marks and inputs.
         // Marks are counted starting from 1 while indices start from 0.
-        var inputIndex = Number.constrain(cursorPosition - 1, 0, inputProvider.length - 1);
+        var inputIndex = Number.constrain(cursorPosition - 1, 0, inputProvider.inputs.length - 1);
         var markTimestamp = inputProvider.inputs[inputIndex].timestamp;
-        var cursorPercent = this._recording.calculator.computeOverviewPercentage(markTimestamp);
+        var cursorPercent = this._recording.calculator.zoomedPercentFromTimestamp(markTimestamp);
         this.markers.playback.position = cursorPercent;
         this.markers.smokescreen.position = cursorPercent;
 
@@ -185,7 +185,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         if (inputIndex === inputProvider.inputs.length - 1)
             return;
         var nextInput = inputProvider.inputs[inputIndex + 1];
-        var nextCursorPercent = this._recording.calculator.computeOverviewPercentage(nextInput.timestamp);
+        var nextCursorPercent = this._recording.calculator.zoomedPercentFromTimestamp(nextInput.timestamp);
         var timeDelta = nextInput.timestamp - markTimestamp;
         this.markers.playback.animateTo(nextCursorPercent, timeDelta);
         this.markers.smokescreen.animateTo(nextCursorPercent, timeDelta);
@@ -198,13 +198,15 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
     _playbackMarkerMoved: function()
     {
+        var closestInput = this._recording.calculator.closestInputFromZoomedPercent(this.markers.playback.position);
+        var snappedTimestamp = closestInput.timestamp;
+        var snappedPosition = this._recording.calculator.zoomedPercentFromTimestamp(snappedTimestamp);
+        this.markers.drophint.position = snappedPosition;
         this.markers.smokescreen.position = this.markers.playback.position;
-
     },
 
     _playbackMarkerDragEnded: function()
     {
         this.markers.drophint.visible = false;
     }
-
 };

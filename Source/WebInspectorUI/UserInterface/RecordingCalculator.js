@@ -112,48 +112,69 @@ WebInspector.RecordingCalculator.prototype = {
         return false;
     },
 
+    localPercentToGlobalPercent: function(localPercent)
+    {
+        return this.zoomLeft + this.zoomInterval * localPercent;
+    },
+
+    globalPercentToLocalPercent: function(globalPercent)
+    {
+        return (globalPercent - this.zoomLeft) / this.zoomInterval;
+    },
+
     // Computes a timestamp corresponding to a percent position on the overview.
-    computeOverviewTimestamp: function(percent)
+    timestampFromZoomedPercent: function(percent)
     {
     var overallPercent = this.zoomLeft + this.zoomInterval * percent;
     return this.minimumBoundary + this.boundarySpan * overallPercent;
     },
 
     // Computes a timestamp corresponding to a percent position on the miniview.
-    computeMiniviewTimestamp: function(percent)
+    timestampFromGlobalPercent: function(percent)
     {
     return this.minimumBoundary + this.boundarySpan * percent;
     },
 
     // this takes into account the viewable interval, returning the percentage within that region. */
-    computeOverviewPercentage: function(timestamp)
+    zoomedPercentFromTimestamp: function(timestamp)
     {
-        return (timestamp - this.computeOverviewTimestamp(this.zoomLeft)) / (this.boundarySpan * this.zoomInterval);
+        return (timestamp - this.timestampFromGlobalPercent(this.zoomLeft)) / (this.boundarySpan * this.zoomInterval);
     },
 
-    computeMiniviewPercentage: function(timestamp)
+    globalPercentFromTimestamp: function(timestamp)
     {
         return (timestamp - this.minimumBoundary) / this.boundarySpan;
     },
 
-    computeMarkIndexFromPercentage: function(percent)
+    closestInputFromZoomedPercent: function(zoomedPercent)
     {
-        var timestamp = this.minimumBoundary + this.boundarySpan * percent;
-
-        function timestampAndInputComparator(timestamp, input) {
+        var timestampAndInputComparator = function(timestamp, input) {
             var input_timestamp = input.timestamp;
-            if (input_timestamp > timestamp) return -1;
-            if (input_timestamp < timestamp) return 1;
+            if (input_timestamp > timestamp)
+                return -1;
+            if (input_timestamp < timestamp)
+                return 1;
+
             return 0;
-        }
+        };
 
-        function timeDistanceFunction(timestamp, input) {
-             return (input) ? Math.abs(timestamp - input.timestamp) : Number.POSITIVE_INFINITY;
-        }
+        var timeDistanceFunction = function(timestamp, input) {
+            return (input) ? Math.abs(timestamp - input.timestamp) : Number.POSITIVE_INFINITY;
+        };
 
-        var inputs = this._recording.inputs;
-        var arrayIndex = inputs.nearestBinaryIndexOf(timestamp, timestampAndInputComparator, timeDistanceFunction);
-        return inputs[arrayIndex].index;
+        var inputProvider = this._recording.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
+        var inputs = inputProvider.inputs;
+        if (!inputs.length)
+            return;
+
+        var interpolatedTimestamp = this.timestampFromZoomedPercent(zoomedPercent);
+        var leftZoomTimestamp = this.timestampFromZoomedPercent(0.0);
+        var rightZoomTimestamp = this.timestampFromZoomedPercent(1.0);
+
+        var leftZoomIndex = inputs.nearestBinaryIndexOf(leftZoomTimestamp, timestampAndInputComparator, timeDistanceFunction);
+        var rightZoomIndex = inputs.nearestBinaryIndexOf(rightZoomTimestamp, timestampAndInputComparator, timeDistanceFunction);
+        var closestIndex = inputs.nearestBinaryIndexWithin(interpolatedTimestamp, leftZoomIndex, rightZoomIndex, timestampAndInputComparator, timeDistanceFunction);
+        return inputs[Number.constrain(closestIndex, 0, inputs.length - 1)];
     },
 
     formatValue: function(value)
