@@ -207,6 +207,14 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
     _playbackMarkerDragEnded: function()
     {
+        var closestInput = this._recording.calculator.closestInputFromZoomedPercent(this.markers.playback.position);
+        var snappedTimestamp = closestInput.timestamp;
+        var snappedPosition = this._recording.calculator.zoomedPercentFromTimestamp(snappedTimestamp);
+
+        this.markers.playback.position = snappedPosition;
+        this.markers.smokescreen.position = this.markers.playback.position;
         this.markers.drophint.visible = false;
+
+        WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
     }
 };

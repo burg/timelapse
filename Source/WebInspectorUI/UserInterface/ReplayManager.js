@@ -159,6 +159,11 @@ WebInspector.ReplayManager.prototype = {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.BeginReplayToCompletion(allowBreakpoints, replaySpeed));
     },
 
+    replayToMarkIndexSoon: function(markIndex, allowBreakpoints, replaySpeed)
+    {
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.BeginReplayToMarkIndex(markIndex, allowBreakpoints, replaySpeed));
+    },
+
     // Protected (handlers for events from ReplayObserver)
 
     captureStarted: function()
@@ -291,6 +296,13 @@ WebInspector.ReplayManager.prototype = {
         ReplayAgent.stopCapture();
     },
 
+    replayToMarkIndex: function(index)
+    {
+        // TODO: save replay start and end mark indices here
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackWillStart);
+        ReplayAgent.replayUpToMarkIndex(index, this.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking);
+    },
+
     replayToCompletion: function()
     {
         // TODO: save replay start and end mark indices here
@@ -366,6 +378,23 @@ WebInspector.ReplayManager.AsyncTasks.ReplayToIndex = function()
 {
     // Not implemented
     return new WebInspector.AsyncTask("not implemented", function(cb) { return cb(); });
+};
+
+WebInspector.ReplayManager.AsyncTasks.BeginReplayToMarkIndex = function(markIndex, allowBreakpoints, replaySpeed)
+{
+    var task = new WebInspector.AsyncTask("ReplayToMarkIndex");
+
+    if (!allowBreakpoints)
+        task.chain("suppressBreakpoints", WebInspector.ReplayManager.AsyncTaskSteps.UnsuppressBreakpoints);
+    else
+        task.chain("unsuppressBreakpoints", WebInspector.ReplayManager.AsyncTaskSteps.SuppressBreakpoints);
+    task.chain("resumeDebuggerIfPaused", WebInspector.ReplayManager.AsyncTaskSteps.ResumeDebuggerIfPaused);
+    task.chain("notifyAndRequestReplay", function(cb) {
+        WebInspector.replayManager.replaySpeed = replaySpeed;
+        WebInspector.replayManager.addSingleFireEventListener(WebInspector.ReplayManager.Event.PlaybackStarted, cb);
+        WebInspector.replayManager.replayToMarkIndex(markIndex);
+    });
+    return task;
 };
 
 WebInspector.ReplayManager.AsyncTasks.BeginReplayToCompletion = function(allowBreakpoints, replaySpeed)
