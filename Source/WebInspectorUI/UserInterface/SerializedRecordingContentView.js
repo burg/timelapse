@@ -67,9 +67,15 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
+    this.element.appendChild(document.createElement("div")).classList.add("border");
+    this._fullBar = this.element.appendChild(document.createElement("div"));
+    this._fullBar.classList.add(WebInspector.SerializedRecordingContentView.FullBarStyleClassName);
+    this._activeBar = this.element.appendChild(document.createElement("div"));
+    this._activeBar.classList.add(WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName);
+
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkPositions);
-    this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateMarkPositions.bind(this, true));
+    this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateZoomElements);
     this._listeners.install();
 
     // add input providers that have already been created
@@ -83,6 +89,8 @@ WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName = "drag
 WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName = "smokescreen";
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
+WebInspector.SerializedRecordingContentView.FullBarStyleClassName = "full-bar";
+WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName = "active-bar";
 
 WebInspector.SerializedRecordingContentView.prototype = {
     constructor: WebInspector.SerializedRecordingContentView,
@@ -229,5 +237,20 @@ WebInspector.SerializedRecordingContentView.prototype = {
         this.markers.drophint.visible = false;
 
         WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
+
+    },
+
+    _updateZoomElements: function()
+    {
+        if (!this._lineGraph)
+            return;
+
+        this._updateMarkPositions(true);
+
+        var zoomLeft = this._recording.calculator.zoomLeft;
+        var zoomRight = this._recording.calculator.zoomRight;
+        var availWidth = this.element.offsetWidth;
+        this._activeBar.style.left = zoomLeft * 100 + "%";
+        this._activeBar.style.right = (1 - zoomRight) * 100 + "%";
     }
 };

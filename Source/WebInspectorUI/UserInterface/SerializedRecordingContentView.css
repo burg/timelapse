@@ -28,7 +28,6 @@
  */
 
 .replay-dashboard .serialized-recording {
-    border: 1px solid #ccc;
     z-index: 0;
     height: 30px;
 }
@@ -63,7 +62,6 @@
 .serialized-recording > .smokescreen {
     background-color: rgba(100, 100, 100, 0.1);
 }
-
 .serialized-recording > .drag-hint {
     width: 3px;
     background-color: rgba(160, 30, 30, 0.5);
@@ -73,4 +71,28 @@
     width: 1px;
     border: 1px dotted #c33;
     opacity: 0.8;
+}
+
+.serialized-recording > .border {
+    border: 1px solid #ccc;
+    bottom: 0px;
+    z-index: -1;
+}
+
+.replay-dashboard .serialized-recording >  .active-bar,
+.toolbar .replay-dashboard .serialized-recording > .full-bar {
+    height: 4px;
+    position: absolute;
+    top: 30px;
+    bottom: 0px;
+    left: 0px;
+    right: 0px;
+}
+
+.toolbar .replay-dashboard .serialized-recording > .full-bar {
+    background-color: #444;
+}
+
+.replay-dashboard .serialized-recording > .active-bar {
+    background-color: #CCC;
 }
