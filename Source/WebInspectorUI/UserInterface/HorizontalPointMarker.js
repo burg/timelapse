@@ -27,49 +27,50 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.LineGraphMarker = function(associatedGraph)
+WebInspector.HorizontalPointMarker = function(containingElement)
 {
     WebInspector.Object.call(this);
     this.element = document.createElement("div");
-    this.element.classList.add(WebInspector.LineGraphMarker.StyleClassName);
+    this.element.classList.add(WebInspector.HorizontalPointMarker.StyleClassName);
 
     // These listeners must be set up before adjustable is initialized,
     // because it may want to install drag listeners immediately.
-    this._dragListeners = new WebInspector.EventListenerGroup(this, "Drag-related listeners for LineGraphMarker");
-    this._dragListeners.register(this.element, "dragstart", this._markerDragStarted);
-    this._dragListeners.register(this.element, "drag", this._markerDragged);
-    this._dragListeners.register(this.element, "dragend", this._markerDragEnded);
+    this._dragListeners = new WebInspector.EventListenerGroup(this, "Drag-related listeners for HorizontalPointMarker");
+    this._dragListeners.register(this.element, "dragstart", this._dragStarted);
+    this._dragListeners.register(this.element, "drag", this._markerDragging);
+    this._dragListeners.register(this.element, "dragend", this._dragEnded);
 
-    this._dropListeners = new WebInspector.EventListenerGroup(this, "Drop-related listeners for LineGraph");
-    this._dropListeners.register(associatedGraph.element, "dragenter", this._markerEnteredGraph);
-    this._dropListeners.register(associatedGraph.element, "dragover", this._markerOverGraph);
+    this._dropListeners = new WebInspector.EventListenerGroup(this, "Drop-related listeners for marker's containing element");
+    this._dropListeners.register(containingElement, "dragenter", this._dragEnteredContainingElement);
+    this._dropListeners.register(containingElement, "dragover", this._draggedOverContainingElement);
+    this._dropListeners.register(containingElement, "drop", this._markerDropped);
 
     this._animateFrameCallback = this.animateFrame.bind(this);
 
-    this.adjustable = WebInspector.LineGraphMarker.DefaultAdjustableSetting;
-    this.visible = WebInspector.LineGraphMarker.DefaultVisibleSetting;
-    this.enabled = WebInspector.LineGraphMarker.DefaultEnabledSetting;
+    this.adjustable = WebInspector.HorizontalPointMarker.DefaultAdjustableSetting;
+    this.visible = WebInspector.HorizontalPointMarker.DefaultVisibleSetting;
+    this.enabled = WebInspector.HorizontalPointMarker.DefaultEnabledSetting;
 };
 
-WebInspector.LineGraphMarker.Event = {
-    DragEnd: "line-graph-marker-drag-end",
-    DragStart: "line-graph-marker-drag-start",
-    Moved: "line-graph-marker-moved"
+WebInspector.HorizontalPointMarker.Event = {
+    DragEnd: "horizontal-point-marker-drag-end",
+    DragStart: "horizontal-point-marker-drag-start",
+    Moved: "horizontal-point-marker-moved"
 };
 
-WebInspector.LineGraphMarker.DefaultAdjustableSetting = false;
-WebInspector.LineGraphMarker.DefaultVisibleSetting = true;
-WebInspector.LineGraphMarker.DefaultEnabledSetting = true;
+WebInspector.HorizontalPointMarker.DefaultAdjustableSetting = false;
+WebInspector.HorizontalPointMarker.DefaultVisibleSetting = true;
+WebInspector.HorizontalPointMarker.DefaultEnabledSetting = true;
 
-WebInspector.LineGraphMarker.StyleClassName = "line-graph-marker";
-WebInspector.LineGraphMarker.DraggingStyleClassName = "line-graph-marker-dragging";
-WebInspector.LineGraphMarker.AdjustableStyleClassName = "adjustable";
-WebInspector.LineGraphMarker.HiddenStyleClassName = "hidden";
-WebInspector.LineGraphMarker.DisabledStyleClassName = "disabled";
+WebInspector.HorizontalPointMarker.StyleClassName = "horizontal-point-marker";
+WebInspector.HorizontalPointMarker.DraggingStyleClassName = "horizontal-point-marker-dragging";
+WebInspector.HorizontalPointMarker.AdjustableStyleClassName = "adjustable";
+WebInspector.HorizontalPointMarker.HiddenStyleClassName = "hidden";
+WebInspector.HorizontalPointMarker.DisabledStyleClassName = "disabled";
 
 
-WebInspector.LineGraphMarker.prototype = {
-    constructor: WebInspector.LineGraphMarker,
+WebInspector.HorizontalPointMarker.prototype = {
+    constructor: WebInspector.HorizontalPointMarker,
     __proto__: WebInspector.Object.prototype,
 
     // Public
@@ -134,6 +135,7 @@ WebInspector.LineGraphMarker.prototype = {
         var parentWidth = this.element.parentElement.clientWidth;
         // subtract slider width when computing largest possible (left) position. If the width is
         // not explicitly set, assume this marker has a dynamic width and don't substract any width.
+        // FIXME: this is broken. it will be fixed when HorizontalRangeMarker is split from this class.
         var unavailablePercent = (this.element.style.width !== "") ? this.element.offsetWidth / parentWidth : 0.0;
         this.element.style.left = (Number.constrain(this.position, 0.0, 1.0) - unavailablePercent) * 100.0 + "%";
 
@@ -156,7 +158,7 @@ WebInspector.LineGraphMarker.prototype = {
         this._position = Number.constrain(percent, 0.0, 1.0);
         this.refreshSoon();
         if (!suppressEvents)
-            this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.Moved);
+            this.dispatchEventToListeners(WebInspector.HorizontalPointMarker.Event.Moved);
     },
 
     get adjustable()
@@ -172,10 +174,10 @@ WebInspector.LineGraphMarker.prototype = {
         this._adjustable = value;
 
         if (value) {
-            this.element.classList.add(WebInspector.LineGraphMarker.AdjustableStyleClassName);
+            this.element.classList.add(WebInspector.HorizontalPointMarker.AdjustableStyleClassName);
             this._dragListeners.install();
         } else {
-            this.element.classList.remove(WebInspector.LineGraphMarker.AdjustableStyleClassName);
+            this.element.classList.remove(WebInspector.HorizontalPointMarker.AdjustableStyleClassName);
             if (this._dragListeners.installed)
                 this._dragListeners.uninstall();
         }
@@ -190,9 +192,9 @@ WebInspector.LineGraphMarker.prototype = {
     {
         this._visible = !!value;
         if (value)
-            this.element.classList.remove(WebInspector.LineGraphMarker.HiddenStyleClassName);
+            this.element.classList.remove(WebInspector.HorizontalPointMarker.HiddenStyleClassName);
         else
-            this.element.classList.add(WebInspector.LineGraphMarker.HiddenStyleClassName);
+            this.element.classList.add(WebInspector.HorizontalPointMarker.HiddenStyleClassName);
     },
 
     get enabled()
@@ -204,18 +206,18 @@ WebInspector.LineGraphMarker.prototype = {
     {
         this._enabled = !!value;
         if (value)
-            this.element.classList.remove(WebInspector.LineGraphMarker.DisabledStyleClassName);
+            this.element.classList.remove(WebInspector.HorizontalPointMarker.DisabledStyleClassName);
         else
-            this.element.classList.add(WebInspector.LineGraphMarker.DisabledStyleClassName);
+            this.element.classList.add(WebInspector.HorizontalPointMarker.DisabledStyleClassName);
     },
 
     // Private
 
-    _markerDragStarted: function(event)
+    _dragStarted: function(event)
     {
         event.dataTransfer.effectAllowed = "none";
-        this.element.parentElement.classList.add(WebInspector.LineGraphMarker.DraggingStyleClassName);
-        this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.DragStart, event);
+        this.element.parentElement.classList.add(WebInspector.HorizontalPointMarker.DraggingStyleClassName);
+        this.dispatchEventToListeners(WebInspector.HorizontalPointMarker.Event.DragStart, event);
         this._dropListeners.install();
     },
 
@@ -225,28 +227,28 @@ WebInspector.LineGraphMarker.prototype = {
         event.stopPropagation();
     },
 
-    _markerEnteredGraph: function(event)
+    _dragEnteredContainingElement: function(event)
     {
         // This signals that the event target is an acceptable drop target for the dragged item.
         event.preventDefault();
         return true;
     },
 
-    _markerOverGraph: function(event)
+    _draggedOverContainingElement: function(event)
     {
         // This signals that the event target is an acceptable drop target for the dragged item.
         event.preventDefault();
         return true;
     },
 
-    _markerDragEnded: function(event)
+    _dragEnded: function(event)
     {
-        this.element.parentElement.classList.remove(WebInspector.LineGraphMarker.DraggingStyleClassName);
-        this.dispatchEventToListeners(WebInspector.LineGraphMarker.Event.DragEnd, event);
+        this.element.parentElement.classList.remove(WebInspector.HorizontalPointMarker.DraggingStyleClassName);
+        this.dispatchEventToListeners(WebInspector.HorizontalPointMarker.Event.DragEnd, event);
         this._dropListeners.uninstall();
    },
 
-    _markerDragged: function(event)
+    _markerDragging: function(event)
     {
         var parent = this.element.parentElement;
         var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);

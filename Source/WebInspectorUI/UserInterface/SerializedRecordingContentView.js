@@ -38,31 +38,31 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
     this.markers = {};
-    this.markers.playback = new WebInspector.LineGraphMarker(this);
+    this.markers.playback = new WebInspector.HorizontalPointMarker(this.element);
     this.markers.playback.adjustable = true;
     this.markers.playback.element.classList.add(WebInspector.SerializedRecordingContentView.PlaybackMarkerStyleClassName);
     this.markers.playback.position = 0.0;
-    this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.Moved, this._playbackMarkerMoved);
-    this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.DragStart, this._playbackMarkerDragStarted);
-    this._listeners.register(this.markers.playback, WebInspector.LineGraphMarker.Event.DragEnd, this._playbackMarkerDragEnded);
+    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.Moved, this._playbackMarkerMoved);
+    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragStart, this._playbackMarkerDragStarted);
+    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragEnd, this._playbackMarkerDragEnded);
     this.element.appendChild(this.markers.playback.element);
 
     // When dragging the playback marker, this shows where dragging began.
-    this.markers.draghint = new WebInspector.LineGraphMarker(this);
+    this.markers.draghint = new WebInspector.HorizontalPointMarker(this.element);
     this.markers.draghint.element.classList.add(WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName);
     this.markers.draghint.position = 0.5;
     this.markers.draghint.visible = false;
     this.element.appendChild(this.markers.draghint.element);
 
     // When dragging the playback marker, this shows where the cursor would be dropped.
-    this.markers.drophint = new WebInspector.LineGraphMarker(this);
+    this.markers.drophint = new WebInspector.HorizontalPointMarker(this.element);
     this.markers.drophint.element.classList.add(WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName);
     this.markers.drophint.position = 0.5;
     this.markers.drophint.visible = false;
     this.element.appendChild(this.markers.drophint.element);
 
     // This provides a subtle gray effect over unplayed (future) sections of the recording.
-    this.markers.smokescreen = new WebInspector.LineGraphMarker(this);
+    this.markers.smokescreen = new WebInspector.HorizontalPointMarker(this.element);
     this.markers.smokescreen.element.classList.add(WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName);
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
@@ -245,7 +245,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         if (!this._lineGraph)
             return;
 
-        this._updateMarkPositions(true);
+        this._updateMarkPositions(null, true);
 
         var zoomLeft = this._recording.calculator.zoomLeft;
         var zoomRight = this._recording.calculator.zoomRight;
