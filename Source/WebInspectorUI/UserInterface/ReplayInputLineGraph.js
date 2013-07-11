@@ -65,6 +65,11 @@ WebInspector.ReplayInputLineGraph.prototype = {
 
     animateFrame: function(shouldResizeCanvas)
     {
+        this._haveEnqueuedAnimationRequest = false;
+
+        if (this.element.parentElement === null)
+            return;
+
         if (shouldResizeCanvas)
             this._resizeCanvas();
 
@@ -133,9 +138,6 @@ WebInspector.ReplayInputLineGraph.prototype = {
         }
 
         this._calculator.setZoomInterval(zoomLeft, zoomRight);
-        //this.refreshSoon();
-        this._recomputeGraphData();
-        this._drawGraph();
     },
 
     _resizeCanvas: function()
