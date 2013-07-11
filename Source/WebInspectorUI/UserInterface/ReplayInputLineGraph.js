@@ -34,6 +34,8 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
 
     WebInspector.Object.call(this);
 
+    this._listeners = new WebInspector.EventListenerGroup(this, "ReplayInputLineGraph static listeners");
+
     this._provider = inputProvider;
     this._calculator = calculator;
     this._data = { maxIndex: -1, bins: [] };
@@ -42,9 +44,42 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
     this.element.classList.add(WebInspector.ReplayInputLineGraph.StyleClassName);
 
     this._canvas = this.element.createChild("canvas");
+    this._listeners.register(this.element, "mousewheel", this._onMousewheel);
 
-    this._canvas.addEventListener("mousewheel", this._onMousewheel.bind(this), true);
-    this._calculator.addEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon, this);
+    this.markers = {};
+    this.markers.playback = new WebInspector.HorizontalPointMarker(this.element);
+    this.markers.playback.adjustable = true;
+    this.markers.playback.element.classList.add(WebInspector.ReplayInputLineGraph.PlaybackMarkerStyleClassName);
+    this.markers.playback.position = 0.0;
+    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.Moved, this._playbackMarkerMoved);
+    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragStart, this._playbackMarkerDragStarted);
+    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragEnd, this._playbackMarkerDragEnded);
+    this.element.appendChild(this.markers.playback.element);
+
+    // When dragging the playback marker, this shows where dragging began.
+    this.markers.draghint = new WebInspector.HorizontalPointMarker(this.element);
+    this.markers.draghint.element.classList.add(WebInspector.ReplayInputLineGraph.DragHintMarkerStyleClassName);
+    this.markers.draghint.position = 0.5;
+    this.markers.draghint.visible = false;
+    this.element.appendChild(this.markers.draghint.element);
+
+    // When dragging the playback marker, this shows where the cursor would be dropped.
+    this.markers.drophint = new WebInspector.HorizontalPointMarker(this.element);
+    this.markers.drophint.element.classList.add(WebInspector.ReplayInputLineGraph.DropHintMarkerStyleClassName);
+    this.markers.drophint.position = 0.5;
+    this.markers.drophint.visible = false;
+    this.element.appendChild(this.markers.drophint.element);
+
+    // This provides a subtle gray effect over unplayed (future) sections of the recording.
+    this.markers.smokescreen = new WebInspector.HorizontalRangeMarker(this.element);
+    this.markers.smokescreen.element.classList.add(WebInspector.ReplayInputLineGraph.SmokescreenMarkerStyleClassName);
+    this.element.appendChild(this.markers.smokescreen.element);
+
+    // TODO: add as style of line-graph, and make the message absolutely positioned.
+    this.element.createChild("div").classList.add("border");
+
+    this._listeners.register(this._calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkerPositions);
 
     this._animateFrameCallback = this.animateFrame.bind(this);
 }
@@ -56,6 +91,10 @@ WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor = 0.001;
 WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor = 0.001;
 WebInspector.ReplayInputLineGraph.MinimumInterval = 0.05;
 
+WebInspector.ReplayInputLineGraph.PlaybackMarkerStyleClassName = "playback-slider";
+WebInspector.ReplayInputLineGraph.DragHintMarkerStyleClassName = "drag-hint";
+WebInspector.ReplayInputLineGraph.DropHintMarkerStyleClassName = "drop-hint";
+WebInspector.ReplayInputLineGraph.SmokescreenMarkerStyleClassName = "smokescreen";
 
 WebInspector.ReplayInputLineGraph.prototype = {
     constructor: WebInspector.ReplayInputLineGraph,
@@ -75,23 +114,35 @@ WebInspector.ReplayInputLineGraph.prototype = {
 
         this._recomputeGraphData();
         this._drawGraph();
+        this._updateMarkerPositions(null, true);
     },
 
     // This class contains ContentView workalikes, but is not actually a content view.
     // These methods are used by the owning widget to signal setup, teardown, and resize.
     shown: function()
     {
+        this._listeners.install();
+
+        for (var key in this.markers)
+            this.markers[key].shown();
+
         this.refreshSoon(true);
     },
 
     updateLayout: function()
     {
+        for (var key in this.markers)
+            this.markers[key].updateLayout();
+
         this.refreshSoon(true);
     },
 
     closed: function()
     {
-        this._calculator.removeEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon, this);
+        this._listeners.uninstall(true);
+
+        for (var key in this.markers)
+            this.markers[key].closed();
     },
 
     refreshSoon: function(shouldResizeCanvas)
@@ -138,6 +189,62 @@ WebInspector.ReplayInputLineGraph.prototype = {
         }
 
         this._calculator.setZoomInterval(zoomLeft, zoomRight);
+    },
+
+    _playbackMarkerDragStarted: function()
+    {
+        this.markers.draghint.position = this.markers.playback.position;
+        this.markers.draghint.visible = true;
+        this.markers.drophint.visible = true;
+    },
+
+    _playbackMarkerMoved: function()
+    {
+        var closestInput = this._calculator.closestInputFromZoomedPercent(this.markers.playback.position);
+        var snappedTimestamp = closestInput.timestamp;
+        var snappedPosition = this._calculator.zoomedPercentFromTimestamp(snappedTimestamp);
+        this.markers.drophint.position = snappedPosition;
+        this.markers.smokescreen.left = this.markers.playback.position;
+    },
+
+    _playbackMarkerDragEnded: function()
+    {
+        var closestInput = this._calculator.closestInputFromZoomedPercent(this.markers.playback.position);
+        var snappedTimestamp = closestInput.timestamp;
+        var snappedPosition = this._calculator.zoomedPercentFromTimestamp(snappedTimestamp);
+
+        this.markers.playback.position = snappedPosition;
+        this.markers.smokescreen.left = this.markers.playback.position;
+        this.markers.draghint.visible = false;
+        this.markers.drophint.visible = false;
+
+        WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
+    },
+
+    _updateMarkerPositions: function(event, suppressAnimations)
+    {
+        var cursorPosition = WebInspector.replayManager.currentMarkIndex;
+        if (!this._provider.inputs.length)
+            return
+
+        // This assumes that there is a 1-to-1 corresponence between marks and inputs.
+        // Marks are counted starting from 1 while indices start from 0.
+        var inputIndex = Number.constrain(cursorPosition - 1, 0, this._provider.inputs.length - 1);
+        var markTimestamp = this._provider.inputs[inputIndex].timestamp;
+        var cursorPercent = this._calculator.zoomedPercentFromTimestamp(markTimestamp);
+        this.markers.playback.position = cursorPercent;
+        this.markers.smokescreen.left = cursorPercent;
+
+        if (suppressAnimations)
+            return;
+
+        if (inputIndex === this._provider.inputs.length - 1)
+            return;
+        var nextInput = this._provider.inputs[inputIndex + 1];
+        var nextCursorPercent = this._calculator.zoomedPercentFromTimestamp(nextInput.timestamp);
+        var timeDelta = nextInput.timestamp - markTimestamp;
+        this.markers.playback.animateTo(nextCursorPercent, timeDelta);
+        this.markers.smokescreen.animateTo(nextCursorPercent, 1.0, timeDelta);
     },
 
     _resizeCanvas: function()

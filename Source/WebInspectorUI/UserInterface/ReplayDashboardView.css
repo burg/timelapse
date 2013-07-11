@@ -31,7 +31,7 @@
     display: -webkit-flex;
     -webkit-flex-flow: row nowrap;
     -webkit-justify-content: space-between;
-    -webkit-align-items: center;
+    -webkit-align-items: stretch;
 
     margin: 4px 10px 6px 10px;
     width: 375px;
@@ -63,10 +63,15 @@ body.window-inactive .toolbar .replay-dashboard {
     cursor: pointer;
 }
 
-.toolbar .replay-dashboard > .navigation-container {
+/* All items directly within the replay dashboard flex context are also
+   flex contexts themselves (nominally, to stretch and center vertically) */
+.toolbar .replay-dashboard > * {
     display: -webkit-flex;
     -webkit-flex-flow: column nowrap;
     -webkit-justify-content: space-around;
+    -webkit-align-items: stretch;
+}
+.toolbar .replay-dashboard > .navigation-container {
     -webkit-order: 1;
     margin: 3px 5px;
 }
@@ -98,6 +103,26 @@ body.window-inactive .toolbar .replay-dashboard {
     content: url(Images/ReplayPauseButton.svg);
 }
 
+.toolbar .replay-dashboard.recording-loaded > .prompt,
+.toolbar .replay-dashboard.capturing > .prompt {
+    display: none;
+}
+
+.toolbar .replay-dashboard > .eject-container {
+    -webkit-order: 3;
+    margin: 2px 5px 0px;
+}
+
+.toolbar .replay-dashboard > .eject-container > img {
+    content: url(Images/ReplayEjectButton.svg);
+    width: 16px;
+    opacity: 0.7;
+}
+
+.toolbar .replay-dashboard:not(.recording-loaded) > .eject-container {
+    visibility: hidden;
+}
+
 .toolbar .replay-dashboard > .prompt,
 .toolbar .replay-dashboard > .recording-container {
     -webkit-flex-grow: 1;
@@ -106,12 +131,7 @@ body.window-inactive .toolbar .replay-dashboard {
 
 .toolbar .replay-dashboard > .recording-container {
     position: relative;
-    height: 30px;
     display: none;
-}
-
-.toolbar .replay-dashboard.recording-loaded > .recording-container {
-    height: 34px;
 }
 
 .toolbar .replay-dashboard.capturing > .recording-container,
@@ -119,6 +139,7 @@ body.window-inactive .toolbar .replay-dashboard {
     display: -webkit-flex;
 }
 
+/* FIXME: these are inherited so move upwards */
 .toolbar .replay-dashboard > .prompt,
 .toolbar .replay-dashboard > .recording-container > .stop,
 .toolbar .replay-dashboard > .recording-container > .live-recording,
@@ -128,10 +149,10 @@ body.window-inactive .toolbar .replay-dashboard {
     font-size: 14px;
     color: #666;
     text-align: center;
+    z-index: 0;
 }
 
 .toolbar .replay-dashboard > .recording-container  .stop,
-.toolbar .replay-dashboard > .recording-container > .live-recording,
 .toolbar .replay-dashboard > .recording-container > .serialized-recording {
     position: absolute;
     top: 0px;
@@ -144,7 +165,7 @@ body.window-inactive .toolbar .replay-dashboard {
     z-index: 0;
     background-color: rgba(100, 100, 100, 0.1);
     height: 25px;
-    top: 3px;
+    position: relative;
 }
 
 .toolbar .replay-dashboard > .recording-container > .live-recording > .stop {
@@ -160,24 +181,4 @@ body.window-inactive .toolbar .replay-dashboard {
     color: #933;
     text-shadow: 0px 0px 10px #fff;
     border: 1px solid #ccc;
-}
-
-.toolbar .replay-dashboard.recording-loaded > .prompt,
-.toolbar .replay-dashboard.capturing > .prompt {
-    display: none;
-}
-
-.toolbar .replay-dashboard > .eject {
-    -webkit-order: 3;
-    margin: 2px 5px 0px;
-}
-
-.toolbar .replay-dashboard > .eject > img {
-    content: url(Images/ReplayEjectButton.svg);
-    width: 16px;
-    opacity: 0.7;
-}
-
-.toolbar .replay-dashboard:not(.recording-loaded) > .eject {
-    visibility: hidden;
 }

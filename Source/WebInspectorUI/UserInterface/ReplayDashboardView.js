@@ -33,30 +33,31 @@ WebInspector.ReplayDashboardView = function(replayManager)
     this._element = replayManager.toolbarItem.element;
 
     // build static dashboard elements
-    var navigationContainer = this._element.appendChild(document.createElement("div"));
+    var navigationContainer = this._element.createChild("div");
     navigationContainer.className = WebInspector.ReplayDashboardView.NavigationContainerStyleClassName;
-    var backButton = navigationContainer.appendChild(document.createElement("img"));
+    var backButton = navigationContainer.createChild("img");
     backButton.className = WebInspector.ReplayDashboardView.BackButtonStyleClassName;
     backButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
     backButton.addEventListener("click", this._backButtonClicked.bind(this));
-    var replayButton = navigationContainer.appendChild(document.createElement("img"));
+    var replayButton = navigationContainer.createChild("img");
     replayButton.className = WebInspector.ReplayDashboardView.ReplayButtonStyleClassName;
     replayButton.title = WebInspector.UIString("Click to create a new recording or replay a loaded recording");
     replayButton.addEventListener("click", this._replayButtonClicked.bind(this));
 
-    var promptElement = this._element.appendChild(document.createElement("div"));
+    var promptElement = this._element.createChild("div");
     promptElement.className = WebInspector.ReplayDashboardView.PromptStyleClassName;
     promptElement.title = WebInspector.UIString("Click to record");
     promptElement.textContent = WebInspector.UIString("Click to start recording");
     promptElement.addEventListener("click", this._promptClicked.bind(this));
 
-    var ejectButton = this._element.appendChild(document.createElement("div"));
+    var ejectContainer = this._element.createChild("div");
+    ejectContainer.className = WebInspector.ReplayDashboardView.EjectContainerStyleClassName;
+    var ejectButton = ejectContainer.createChild("img");
     ejectButton.className = WebInspector.ReplayDashboardView.EjectButtonStyleClassName;
     ejectButton.title = WebInspector.UIString("Click to eject recording");
     ejectButton.addEventListener("click", this._ejectButtonClicked.bind(this));
-    ejectButton.appendChild(document.createElement("img"));
 
-    var recordingContainer = this._element.appendChild(document.createElement("div"));
+    var recordingContainer = this._element.createChild("div");
     recordingContainer.className = WebInspector.ReplayDashboardView.RecordingContainerStyleClassName;
 
     this._recordingContainer = recordingContainer;
@@ -85,12 +86,16 @@ WebInspector.ReplayDashboardView = function(replayManager)
         this._playbackPaused();
 };
 
+// Class names for top-level flex items within the replay dashboard.
+WebInspector.ReplayDashboardView.EjectContainerStyleClassName = "eject-container";
+WebInspector.ReplayDashboardView.NavigationContainerStyleClassName = "navigation-container";
+WebInspector.ReplayDashboardView.RecordingContainerStyleClassName = "recording-container";
+
+// Class names for single buttons.
 WebInspector.ReplayDashboardView.BackButtonStyleClassName = "back";
 WebInspector.ReplayDashboardView.EjectButtonStyleClassName = "eject";
-WebInspector.ReplayDashboardView.NavigationContainerStyleClassName = "navigation-container";
 WebInspector.ReplayDashboardView.PromptStyleClassName = "prompt";
 WebInspector.ReplayDashboardView.ReplayButtonStyleClassName = "replay";
-WebInspector.ReplayDashboardView.RecordingContainerStyleClassName = "recording-container";
 
 // Class names for states applied to the replay dashboard element.
 WebInspector.ReplayDashboardView.CapturingStyleClassName = "capturing";

@@ -37,43 +37,12 @@ WebInspector.SerializedRecordingContentView = function(recording)
 
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
-    this.markers = {};
-    this.markers.playback = new WebInspector.HorizontalPointMarker(this.element);
-    this.markers.playback.adjustable = true;
-    this.markers.playback.element.classList.add(WebInspector.SerializedRecordingContentView.PlaybackMarkerStyleClassName);
-    this.markers.playback.position = 0.0;
-    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.Moved, this._playbackMarkerMoved);
-    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragStart, this._playbackMarkerDragStarted);
-    this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragEnd, this._playbackMarkerDragEnded);
-    this.element.appendChild(this.markers.playback.element);
-
-    // When dragging the playback marker, this shows where dragging began.
-    this.markers.draghint = new WebInspector.HorizontalPointMarker(this.element);
-    this.markers.draghint.element.classList.add(WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName);
-    this.markers.draghint.position = 0.5;
-    this.markers.draghint.visible = false;
-    this.element.appendChild(this.markers.draghint.element);
-
-    // When dragging the playback marker, this shows where the cursor would be dropped.
-    this.markers.drophint = new WebInspector.HorizontalPointMarker(this.element);
-    this.markers.drophint.element.classList.add(WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName);
-    this.markers.drophint.position = 0.5;
-    this.markers.drophint.visible = false;
-    this.element.appendChild(this.markers.drophint.element);
-
-    // This provides a subtle gray effect over unplayed (future) sections of the recording.
-    this.markers.smokescreen = new WebInspector.HorizontalRangeMarker(this.element);
-    this.markers.smokescreen.element.classList.add(WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName);
-    this.element.appendChild(this.markers.smokescreen.element);
-
-    this.element.appendChild(document.createElement("div")).classList.add("border");
-    this._fullBar = this.element.appendChild(document.createElement("div"));
+    this._fullBar = this.element.createChild("div");
     this._fullBar.classList.add(WebInspector.SerializedRecordingContentView.FullBarStyleClassName);
-    this._activeBar = this.element.appendChild(document.createElement("div"));
+    this._activeBar = this.element.createChild("div");
     this._activeBar.classList.add(WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName);
 
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
-    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkPositions);
     this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateZoomElements);
     this._listeners.install();
 
@@ -83,10 +52,6 @@ WebInspector.SerializedRecordingContentView = function(recording)
         this._setupProvider(inputProviders[i]);
 };
 
-WebInspector.SerializedRecordingContentView.PlaybackMarkerStyleClassName = "playback-slider";
-WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName = "drag-hint";
-WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName = "drop-hint";
-WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName = "smokescreen";
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
 WebInspector.SerializedRecordingContentView.FullBarStyleClassName = "full-bar";
 WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName = "active-bar";
@@ -103,9 +68,6 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         if (this._lineGraph)
             this._lineGraph.updateLayout();
-
-        for (var key in this.markers)
-            this.markers[key].updateLayout();
     },
 
     shown: function()
@@ -114,9 +76,6 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         if (this._lineGraph)
             this._lineGraph.shown();
-
-        for (var key in this.markers)
-            this.markers[key].shown();
     },
 
     closed: function()
@@ -128,9 +87,6 @@ WebInspector.SerializedRecordingContentView.prototype = {
             var provider = this._providerListeners[providerName].provider;
             this._teardownProvider(provider);
         }
-
-        for (var key in this.markers)
-            this.markers[key].closed();
     },
 
     // Private
@@ -181,70 +137,10 @@ WebInspector.SerializedRecordingContentView.prototype = {
         }
     },
 
-    _updateMarkPositions: function(event, suppressAnimations)
-    {
-        var cursorPosition = WebInspector.replayManager.currentMarkIndex;
-        var inputProvider = this._recording.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
-        if (!inputProvider.inputs.length)
-            return;
-
-        // This assumes that there is a 1-to-1 corresponence between marks and inputs.
-        // Marks are counted starting from 1 while indices start from 0.
-        var inputIndex = Number.constrain(cursorPosition - 1, 0, inputProvider.inputs.length - 1);
-        var markTimestamp = inputProvider.inputs[inputIndex].timestamp;
-        var cursorPercent = this._recording.calculator.zoomedPercentFromTimestamp(markTimestamp);
-        this.markers.playback.position = cursorPercent;
-        this.markers.smokescreen.left = cursorPercent;
-
-        if (suppressAnimations)
-            return;
-
-        if (inputIndex === inputProvider.inputs.length - 1)
-            return;
-        var nextInput = inputProvider.inputs[inputIndex + 1];
-        var nextCursorPercent = this._recording.calculator.zoomedPercentFromTimestamp(nextInput.timestamp);
-        var timeDelta = nextInput.timestamp - markTimestamp;
-        this.markers.playback.animateTo(nextCursorPercent, timeDelta);
-        this.markers.smokescreen.animateTo(nextCursorPercent, 1.0, timeDelta);
-    },
-
-    _playbackMarkerDragStarted: function()
-    {
-        this.markers.draghint.position = this.markers.playback.position;
-        this.markers.draghint.visible = true;
-        this.markers.drophint.visible = true;
-    },
-
-    _playbackMarkerMoved: function()
-    {
-        var closestInput = this._recording.calculator.closestInputFromZoomedPercent(this.markers.playback.position);
-        var snappedTimestamp = closestInput.timestamp;
-        var snappedPosition = this._recording.calculator.zoomedPercentFromTimestamp(snappedTimestamp);
-        this.markers.drophint.position = snappedPosition;
-        this.markers.smokescreen.left = this.markers.playback.position;
-    },
-
-    _playbackMarkerDragEnded: function()
-    {
-        var closestInput = this._recording.calculator.closestInputFromZoomedPercent(this.markers.playback.position);
-        var snappedTimestamp = closestInput.timestamp;
-        var snappedPosition = this._recording.calculator.zoomedPercentFromTimestamp(snappedTimestamp);
-
-        this.markers.playback.position = snappedPosition;
-        this.markers.smokescreen.left = this.markers.playback.position;
-        this.markers.draghint.visible = false;
-        this.markers.drophint.visible = false;
-
-        WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
-
-    },
-
     _updateZoomElements: function()
     {
         if (!this._lineGraph)
             return;
-
-        this._updateMarkPositions(null, true);
 
         var zoomLeft = this._recording.calculator.zoomLeft;
         var zoomRight = this._recording.calculator.zoomRight;

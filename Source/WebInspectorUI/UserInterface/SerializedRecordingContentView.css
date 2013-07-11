@@ -28,11 +28,12 @@
  */
 
 .replay-dashboard .serialized-recording {
-    z-index: 0;
-    height: 30px;
+    top: 5px;
+    bottom: 5px;
 }
 
-.replay-dashboard .serialized-recording > * {
+.replay-dashboard .serialized-recording > *,
+.line-graph > * {
     position: absolute;
     top: 0px;
     left: 0px;
@@ -40,58 +41,74 @@
     bottom: 0px;
 }
 
-.serialized-recording > .playback-slider {
-    width: 3px;
-    background-color: rgba(200, 50, 50, 1);
+.serialized-recording .horizontal-point-marker,
+.serialized-recording .horizontal-range-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
 }
 
-.serialized-recording > .horizontal-point-marker.adjustable,
-.serialized-recording > .horizontal-range-marker.adjustable {
+.serialized-recording .horizontal-range-marker {
+    right: 0;
+}
+
+.serialized-recording .horizontal-point-marker.adjustable,
+.serialized-recording .horizontal-range-marker.adjustable {
     -webkit-user-drag: element;
     z-index: 10;
 }
 
-.serialized-recording.horizontal-point-marker-dragging,
-.serialized-recording.horizontal-range-marker-dragging,
-.serialized-recording > .horizontal-point-marker.adjustable {
+.serialized-recording .horizontal-point-marker-dragging,
+.serialized-recording .horizontal-range-marker-dragging,
+.serialized-recording .horizontal-point-marker.adjustable {
     cursor: ew-resize;
 }
 
-.serialized-recording > *:-webkit-drag {
+.serialized-recording *:-webkit-drag {
     visibility: hidden;
 }
 
-.serialized-recording > .smokescreen {
+.serialized-recording > .line-graph {
+    top: 5px;
+    bottom: auto;
+    height: 25px;
+}
+
+.line-graph > .playback-slider {
+    width: 3px;
+    background-color: rgba(200, 50, 50, 1);
+}
+
+.line-graph > .smokescreen {
     background-color: rgba(100, 100, 100, 0.1);
 }
-.serialized-recording > .drag-hint {
+
+.line-graph > .drag-hint {
     width: 3px;
     background-color: rgba(160, 30, 30, 0.5);
 }
 
-.serialized-recording > .drop-hint {
+.line-graph > .drop-hint {
     width: 1px;
     border: 1px dotted #c33;
     opacity: 0.8;
 }
 
-.serialized-recording > .border {
+.line-graph > .border {
     border: 1px solid #ccc;
     bottom: 0px;
     z-index: -1;
 }
 
-.replay-dashboard .serialized-recording >  .active-bar,
-.toolbar .replay-dashboard .serialized-recording > .full-bar {
+.replay-dashboard .serialized-recording > .active-bar,
+.replay-dashboard .serialized-recording > .full-bar {
     height: 4px;
-    position: absolute;
-    top: 30px;
-    bottom: 0px;
-    left: 0px;
-    right: 0px;
+    top: auto;
+    bottom: 5px;
 }
 
-.toolbar .replay-dashboard .serialized-recording > .full-bar {
+.replay-dashboard .serialized-recording > .full-bar {
     background-color: #444;
 }
 
