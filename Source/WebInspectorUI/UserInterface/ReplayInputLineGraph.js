@@ -164,9 +164,11 @@ WebInspector.ReplayInputLineGraph.prototype = {
         if (!inputs.length)
             return;
 
+        this._resetGraphData();
         var binsPerTimeline = Math.min(Math.floor(this._cachedOffsetWidth / 2), WebInspector.ReplayInputLineGraph.MaxBins);
         var timePerBin = this._calculator.boundarySpan * this._calculator.zoomInterval / binsPerTimeline;
-        this._resetGraphData();
+        // Force bins.length to be constant, so binsPerTimeline does not need to be saved separately.
+        this._data.bins[binsPerTimeline - 1] = 0;
 
         // Create sparse arrays with 101 cells each to fill with counts for a given group.
         var markBinForTimestamp = function(timestamp)
