@@ -272,10 +272,8 @@ WebInspector.HorizontalRangeMarker.prototype = {
     {
         var parent = this.element.parentElement;
         var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);
-        var minimumX = parent.clientLeft;
-        var maximumX = minimumX + parent.clientWidth - this.element.offsetWidth;
-        dragOffsetX = Number.constrain(dragOffsetX, minimumX, maximumX - this.element.offsetWidth);
-        var position = dragOffsetX / (maximumX - minimumX);
+        dragOffsetX = Number.constrain(dragOffsetX, parent.clientLeft, parent.clientLeft + parent.clientWidth);
+        var position = dragOffsetX / parent.clientWidth;
         this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.Dragging, position);
     }
 };

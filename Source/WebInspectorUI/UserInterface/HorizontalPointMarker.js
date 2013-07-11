@@ -133,11 +133,9 @@ WebInspector.HorizontalPointMarker.prototype = {
         }
 
         var parentWidth = this.element.parentElement.clientWidth;
-        // subtract slider width when computing largest possible (left) position. If the width is
-        // not explicitly set, assume this marker has a dynamic width and don't substract any width.
-        // FIXME: this is broken. it will be fixed when HorizontalRangeMarker is split from this class.
-        var unavailablePercent = (this.element.style.width !== "") ? this.element.offsetWidth / parentWidth : 0.0;
-        this.element.style.left = (Number.constrain(this.position, 0.0, 1.0) - unavailablePercent) * 100.0 + "%";
+        // subtract slider width when computing largest possible (left) position.
+        var unavailablePercent = this.element.offsetWidth / parentWidth;
+        this.element.style.left = Number.constrain(this.position, 0.0, 1.0 - unavailablePercent) * 100.0 + "%";
 
         if (this._currentAnimation)
             this.refreshSoon();
@@ -254,7 +252,7 @@ WebInspector.HorizontalPointMarker.prototype = {
         var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);
         var minimumX = parent.clientLeft;
         var maximumX = minimumX + parent.clientWidth - this.element.offsetWidth;
-        dragOffsetX = Number.constrain(dragOffsetX, minimumX, maximumX - this.element.offsetWidth);
+        dragOffsetX = Number.constrain(dragOffsetX, minimumX, maximumX);
         this.position = dragOffsetX / (maximumX - minimumX);
     }
 };
