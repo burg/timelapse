@@ -45,17 +45,19 @@
     background-color: rgba(200, 50, 50, 1);
 }
 
-.serialized-recording > .horizontal-point-marker.adjustable {
+.serialized-recording > .horizontal-point-marker.adjustable,
+.serialized-recording > .horizontal-range-marker.adjustable {
     -webkit-user-drag: element;
     z-index: 10;
 }
 
 .serialized-recording.horizontal-point-marker-dragging,
+.serialized-recording.horizontal-range-marker-dragging,
 .serialized-recording > .horizontal-point-marker.adjustable {
     cursor: ew-resize;
 }
 
-.serialized-recording > .horizontal-point-marker:-webkit-drag {
+.serialized-recording > *:-webkit-drag {
     visibility: hidden;
 }
 

@@ -62,9 +62,8 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.element.appendChild(this.markers.drophint.element);
 
     // This provides a subtle gray effect over unplayed (future) sections of the recording.
-    this.markers.smokescreen = new WebInspector.HorizontalPointMarker(this.element);
+    this.markers.smokescreen = new WebInspector.HorizontalRangeMarker(this.element);
     this.markers.smokescreen.element.classList.add(WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName);
-    this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
     this.element.appendChild(document.createElement("div")).classList.add("border");
@@ -195,7 +194,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var markTimestamp = inputProvider.inputs[inputIndex].timestamp;
         var cursorPercent = this._recording.calculator.zoomedPercentFromTimestamp(markTimestamp);
         this.markers.playback.position = cursorPercent;
-        this.markers.smokescreen.position = cursorPercent;
+        this.markers.smokescreen.left = cursorPercent;
 
         if (suppressAnimations)
             return;
@@ -206,7 +205,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var nextCursorPercent = this._recording.calculator.zoomedPercentFromTimestamp(nextInput.timestamp);
         var timeDelta = nextInput.timestamp - markTimestamp;
         this.markers.playback.animateTo(nextCursorPercent, timeDelta);
-        this.markers.smokescreen.animateTo(nextCursorPercent, timeDelta);
+        this.markers.smokescreen.animateTo(nextCursorPercent, 1.0, timeDelta);
     },
 
     _playbackMarkerDragStarted: function()
@@ -222,7 +221,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var snappedTimestamp = closestInput.timestamp;
         var snappedPosition = this._recording.calculator.zoomedPercentFromTimestamp(snappedTimestamp);
         this.markers.drophint.position = snappedPosition;
-        this.markers.smokescreen.position = this.markers.playback.position;
+        this.markers.smokescreen.left = this.markers.playback.position;
     },
 
     _playbackMarkerDragEnded: function()
@@ -232,7 +231,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var snappedPosition = this._recording.calculator.zoomedPercentFromTimestamp(snappedTimestamp);
 
         this.markers.playback.position = snappedPosition;
-        this.markers.smokescreen.position = this.markers.playback.position;
+        this.markers.smokescreen.left = this.markers.playback.position;
         this.markers.draghint.visible = false;
         this.markers.drophint.visible = false;
 
