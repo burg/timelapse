@@ -38,11 +38,12 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
     this._calculator = calculator;
     this._data = { maxIndex: -1, bins: [] };
 
-    this.element = document.createElement("canvas");
+    this.element = document.createElement("div");
     this.element.classList.add(WebInspector.ReplayInputLineGraph.StyleClassName);
 
-    this.element.addEventListener("mousewheel", this._onMousewheel.bind(this), true);
+    this._canvas = this.element.createChild("canvas");
 
+    this._canvas.addEventListener("mousewheel", this._onMousewheel.bind(this), true);
     this._calculator.addEventListener(WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon, this);
 
     this._animateFrameCallback = this.animateFrame.bind(this);
@@ -121,8 +122,8 @@ WebInspector.ReplayInputLineGraph.prototype = {
         }
 
         if (typeof event.wheelDeltaY === "number" && event.wheelDeltaY) {
-            var xPosition = Number.constrain(event.clientX - this.element.parentElement.totalOffsetLeft, 0, this.element.width);
-            var percent = xPosition / this.element.width;
+            var xPosition = Number.constrain(event.clientX - this.element.totalOffsetLeft, 0, this.element.offsetWidth);
+            var percent = xPosition / this.element.offsetWidth;
             var delta = event.wheelDeltaY * WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor;
             /* calculate zoom adjustment from right side, and paste to left.
             can't do naive scaling on LHS if it is near zero.  */
@@ -142,11 +143,11 @@ WebInspector.ReplayInputLineGraph.prototype = {
         if (this.element.parentElement === null)
             return;
 
-        this.element.width = this.element.parentElement.clientWidth;
-        this.element.style.width = this.element.parentElement.clientWidth + 'px';
-        this.element.height = this.element.parentElement.clientHeight;
-        this.element.style.height = this.element.parentElement.clientHeight + 'px';
-        this._cachedOffsetWidth = this.element.parentElement.offsetWidth;
+        this._canvas.width = this.element.clientWidth;
+        this._canvas.style.width = this.element.clientWidth + 'px';
+        this._canvas.height = this.element.clientHeight;
+        this._canvas.style.height = this.element.clientHeight + 'px';
+        this._cachedOffsetWidth = this.element.offsetWidth;
     },
 
     _resetGraphData: function()
@@ -200,9 +201,9 @@ WebInspector.ReplayInputLineGraph.prototype = {
     _clearGraph: function(ctx)
     {
         if (typeof ctx === "undefined")
-            ctx = this.element.getContext("2d");
+            ctx = this._canvas.getContext("2d");
 
-        ctx.clearRect(0, 0, this.element.width, this.element.height);
+        ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
     },
 
     _drawGraph: function()
@@ -212,8 +213,8 @@ WebInspector.ReplayInputLineGraph.prototype = {
             if (!data.bins.length)
                 return;
 
-            var availHeight = this.element.height;
-            var availWidth = this.element.width;
+            var availHeight = this._canvas.height;
+            var availWidth = this._canvas.width;
             var offsetPerPoint = availWidth / data.bins.length;
             var maxValue = data.bins[data.maxIndex];
 
@@ -236,7 +237,7 @@ WebInspector.ReplayInputLineGraph.prototype = {
             ctx.fill();
         };
 
-        var context = this.element.getContext('2d');
+        var context = this._canvas.getContext('2d');
         this._clearGraph(context);
 
         context.lineJoin = WebInspector.ReplayInputLineGraph.LineJoinStyle;
