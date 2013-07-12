@@ -91,10 +91,18 @@ WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor = 0.001;
 WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor = 0.001;
 WebInspector.ReplayInputLineGraph.MinimumInterval = 0.05;
 
+WebInspector.ReplayInputLineGraph.GraphStyle = {
+    Bar: "graph-style-bar",
+    Line: "graph-style-line"
+};
+
+WebInspector.ReplayInputLineGraph.DefaultGraphStyle = WebInspector.ReplayInputLineGraph.GraphStyle.Line;
+
 WebInspector.ReplayInputLineGraph.PlaybackMarkerStyleClassName = "playback-slider";
 WebInspector.ReplayInputLineGraph.DragHintMarkerStyleClassName = "drag-hint";
 WebInspector.ReplayInputLineGraph.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.ReplayInputLineGraph.SmokescreenMarkerStyleClassName = "smokescreen";
+
 
 WebInspector.ReplayInputLineGraph.prototype = {
     constructor: WebInspector.ReplayInputLineGraph,
@@ -320,32 +328,54 @@ WebInspector.ReplayInputLineGraph.prototype = {
     _drawGraph: function()
     {
         // Draw line graph for all inputs.
-        var drawLineGraph = function(ctx, data) {
+        var drawLineGraph = function(ctx, data, graphStyle) {
             if (!data.bins.length)
                 return;
 
             var availHeight = this._canvas.height;
             var availWidth = this._canvas.width;
-            var offsetPerPoint = availWidth / data.bins.length;
+            var widthPerBin = Math.floor(availWidth / data.bins.length);
             var maxValue = data.bins[data.maxIndex];
 
-            // Start from top-left, add line segments.
-            ctx.beginPath();
-            ctx.moveTo(0, availHeight);
-            for (var i = 0; i < data.bins.length; ++i) {
-                var percent = (data.bins[i] / maxValue) || 0;
-                var pointX = (offsetPerPoint * i) + (offsetPerPoint / 2);
-                var pointY = availHeight * (1 - percent);
-                ctx.lineTo(pointX, pointY);
+            // Reminder: canvas starts with top-left as coordinates (0, 0).
+            var graphStyle = graphStyle || WebInspector.ReplayInputLineGraph.DefaultGraphStyle;
+            switch (graphStyle) {
+                case "graph-style-bar": {
+                    ctx.beginPath();
+                    ctx.moveTo(0, availHeight);
+                    for (var i = 0; i < data.bins.length; ++i) {
+                        var percent = data.bins[i] / maxValue || 0;
+                        var pointX = (widthPerBin * i);
+                        var pointY = Math.round(availHeight * (1 - percent));
+                        ctx.lineTo(pointX, pointY);
+                        ctx.lineTo(pointX + widthPerBin, pointY);
+                    }
+                    ctx.lineTo(availWidth, availHeight);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                }
+                case "graph-style-line": {
+                    ctx.beginPath();
+                    ctx.moveTo(0, availHeight);
+                    for (var i = 0; i < data.bins.length; ++i) {
+                        var percent = data.bins[i] / maxValue || 0;
+                        var pointX = (widthPerBin * i) + widthPerBin * 0.5;
+                        var pointY = Math.round(availHeight * (1 - percent));
+                        ctx.lineTo(pointX, pointY);
+                    }
+                    ctx.lineTo(availWidth, availHeight);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                }
+                default: console.assert("Unknown graph style requested: ", graphStyle);
             }
 
             // TODO: this is a good place to add a stroke to the top edge.
 
             // Close the path along the bottom of the canvas.
-            ctx.lineTo(availWidth, availHeight);
-            ctx.lineTo(0, availHeight);
-            ctx.closePath();
-            ctx.fill();
+
         };
 
         var context = this._canvas.getContext('2d');
