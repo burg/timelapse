@@ -67,8 +67,18 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
+    this._messagePanel = this.element.appendChild(document.createElement("div"));
+    this._messagePanel.classList.add(WebInspector.SerializedRecordingContentView.MessagePanelStyleClassName);
+    this._messagePanel.element = this._messagePanel.appendChild(document.createElement("div"));
+    this._listeners.register(this._messagePanel, "click", this._messageClicked);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackWillStart, this._showMessagePanel);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackStarted, this._showMessagePanel);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackPaused, this._hideMessagePanel);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackFinished, this._hideMessagePanel);
+
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkPositions);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackError, this._onPlaybackError);
     this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateMarkPositions.bind(this, true));
     this._listeners.install();
 
@@ -83,6 +93,7 @@ WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName = "drag
 WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName = "smokescreen";
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
+WebInspector.SerializedRecordingContentView.MessagePanelStyleClassName = "message-panel";
 
 WebInspector.SerializedRecordingContentView.prototype = {
     constructor: WebInspector.SerializedRecordingContentView,
@@ -229,5 +240,95 @@ WebInspector.SerializedRecordingContentView.prototype = {
         this.markers.drophint.visible = false;
 
         WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
+    },
+
+    _onPlaybackError: function(event)
+    {
+        var error = event.data.errorMessage;
+        var isFatal = event.data.isFatal;
+
+        if (isFatal) {
+            this._messagePanel.innerHTML = WebInspector.UIString("Playback was terminated by a fatal error. Please try again.");
+        } else {
+            this._messagePanel.innerHTML = WebInspector.UIString("Something went wrong during playback.");
+            var optionLabels = [
+                WebInspector.UIString("Keep going"),
+                WebInspector.UIString("Ignore warnings"),
+                WebInspector.UIString("Abort")
+            ];
+
+            var optionClasses = [
+                "keep-going",
+                "ignore",
+                "abort"
+            ];
+
+            var replayManager = WebInspector.replayManager;
+            var replaySpeeds = WebInspector.ReplayManager.ReplaySpeed;
+            var optionCallbacks = [
+                // case: moral equivalent of pressing play button
+                function(event) {
+                    var allowBreakpoints = /*model.scanningBreakpoints ||*/model.replaySpeed === replaySpeeds.Normal;
+                    replayManager.replayUpToMarkIndex(model.replayFinishMarkIndex, allowBreakpoints, replayManager.replaySpeed);
+                },
+
+                // case: disable pauses, then press play
+                function(event) {
+                    var allowBreakpoints = /*model.scanningBreakpoints ||*/model.replaySpeed === replaySpeeds.Normal;
+                    ReplayAgent.setPauseOnError(false);
+                    replayManager.replayUpToMarkIndex(replayManager.replayFinishMarkIndex,
+                                              allowBreakpoints, replayManager.replaySpeed);
+                },
+
+                // case: unlock
+                function() {
+                    replayManager.stopPlayback(true);
+                }
+            ];
+
+            this._errorListeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentViewErrorMessage recording listeners");
+            for (var i = 0; i < optionLabels.length; i++){
+                var temp = this._messagePanel.element.appendChild(document.createElement("div"));
+                temp.innerHTML = optionLabels[i];
+                temp.classList.add(optionClasses[i]);
+                this._errorListeners.register(temp, "click", optionCallbacks[i]);
+            }
+            this._errorListeners.install();
+            this._messagePanel._showMessagePanel(true);
+        }
+    },
+
+    _showMessagePanel: function(event, hasContent)
+    {
+        // If the message panel is already showing, this means some higher-level
+        // event has displayed a message.
+        if (this._messagePanel.classList.contains("shown"))
+            return;
+
+        this._messagePanel.classList.add("shown")
+
+        // figure out an appropriate message if none provided.
+        if (!hasContent) {
+            if (WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking) {
+                this._messagePanel.element.innerHTML = WebInspector.UIString("Seeking...");
+            } else {
+                this._messagePanel.element.innerHTML = WebInspector.UIString("Replaying... click to cancel.");
+            }
+        }
+    },
+
+    _hideMessagePanel: function()
+    {
+        if (this._errorListeners)
+            this._errorListeners.uninstall();
+        
+        this._messagePanel.classList.remove("shown");
+        this._messagePanel.element.innerHTML = "";
+    },
+
+    _messageClicked: function()
+    {
+        if (WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal)
+            WebInspector.replayManager.pausePlaybackSoon();
     }
 };

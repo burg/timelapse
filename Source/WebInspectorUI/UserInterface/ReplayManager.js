@@ -208,6 +208,16 @@ WebInspector.ReplayManager.prototype = {
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackFinished);
     },
 
+    playbackError: function(isFatal, error)
+    {
+        var data = {
+            "errorMessage": error,
+            "isFatal": isFatal
+        };
+
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackError, data);
+    },
+
     playbackHitMark: function(markIndex)
     {
         this._setReplayCursor(markIndex);

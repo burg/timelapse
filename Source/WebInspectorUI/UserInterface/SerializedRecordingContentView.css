@@ -74,3 +74,27 @@
     border: 1px dotted #c33;
     opacity: 0.8;
 }
+
+.serialized-recording > .message-panel {
+    visibility: hidden;
+    background-color: rgba(255, 255, 255, 0.6);
+    opacity: 0;
+    z-index: 15;
+    line-height: 25px;
+    transition: opacity ease 0.5s;
+}
+
+.serialized-recording > .message-panel.shown {
+    visibility: visible;
+    opacity: 1;
+    color: #999;
+    text-shadow: 0px 0px 10px #fff;
+    border: 1px solid #ccc;
+}
+
+.serialized-recording > .message-panel > .keep-going,
+.serialized-recording > .message-panel > .ignore,
+.serialized-recording > .message-panel > .abort {
+    color: blue;
+    font-size: 10px;
+}

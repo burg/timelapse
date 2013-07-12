@@ -87,7 +87,7 @@ WebInspector.ReplayObserver.prototype = {
 
     playbackError: function(isFatal, error)
     {
-        // Not handled yet.
+        WebInspector.replayManager.playbackError(isFatal, error);
     },
 
     inputLocked: function()
