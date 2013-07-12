@@ -37,10 +37,15 @@ WebInspector.SerializedRecordingContentView = function(recording)
 
     this.element.classList.add(WebInspector.SerializedRecordingContentView.StyleClassName);
 
-    this._fullBar = this.element.createChild("div");
-    this._fullBar.classList.add(WebInspector.SerializedRecordingContentView.FullBarStyleClassName);
-    this._activeBar = this.element.createChild("div");
-    this._activeBar.classList.add(WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName);
+    this._zoomGutter = this.element.createChild("div");
+    this._zoomGutter.classList.add(WebInspector.SerializedRecordingContentView.ZoomGutterStyleClassName);
+
+    this.markers = {};
+    this.markers.activezoom = new WebInspector.HorizontalRangeMarker(this._zoomGutter);
+    this.markers.activezoom.element.classList.add(WebInspector.SerializedRecordingContentView.ActiveZoomMarkerStyleClassName);
+    this.markers.activezoom.adjustable = true;
+    this._listeners.register(this.markers.activezoom, WebInspector.HorizontalRangeMarker.Event.Dragging, this._activeZoomMarkerDragged);
+    this._zoomGutter.appendChild(this.markers.activezoom.element);
 
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
     this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateZoomElements);
@@ -53,8 +58,8 @@ WebInspector.SerializedRecordingContentView = function(recording)
 };
 
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
-WebInspector.SerializedRecordingContentView.FullBarStyleClassName = "full-bar";
-WebInspector.SerializedRecordingContentView.ActiveBarStyleClassName = "active-bar";
+WebInspector.SerializedRecordingContentView.ZoomGutterStyleClassName = "zoom-gutter";
+WebInspector.SerializedRecordingContentView.ActiveZoomMarkerStyleClassName = "active-zoom-marker";
 
 WebInspector.SerializedRecordingContentView.prototype = {
     constructor: WebInspector.SerializedRecordingContentView,
@@ -139,13 +144,14 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
     _updateZoomElements: function()
     {
-        if (!this._lineGraph)
-            return;
+        this.markers.activezoom.setRange(this._recording.calculator.zoomLeft, this._recording.calculator.zoomRight);
+    },
 
-        var zoomLeft = this._recording.calculator.zoomLeft;
-        var zoomRight = this._recording.calculator.zoomRight;
-        var availWidth = this.element.offsetWidth;
-        this._activeBar.style.left = zoomLeft * 100 + "%";
-        this._activeBar.style.right = (1 - zoomRight) * 100 + "%";
+    _activeZoomMarkerDragged: function(event)
+    {
+        var data = event.data;
+        var dragDelta = data.dragPosition - data.initialDragPosition;
+        dragDelta = Number.constrain(dragDelta, -data.initialLeft, 1.0 - data.initialRight);
+        this._recording.calculator.setZoomInterval(data.initialLeft + dragDelta, data.initialRight + dragDelta);
     }
 };

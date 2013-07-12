@@ -60,9 +60,16 @@
 }
 
 .serialized-recording .horizontal-point-marker-dragging,
-.serialized-recording .horizontal-range-marker-dragging,
 .serialized-recording .horizontal-point-marker.adjustable {
     cursor: ew-resize;
+}
+
+.serialized-recording .horizontal-range-marker.adjustable {
+    cursor: -webkit-grab;
+}
+
+.serialized-recording .horizontal-range-marker-dragging {
+    cursor: -webkit-grabbing;
 }
 
 .serialized-recording *:-webkit-drag {
@@ -101,17 +108,13 @@
     z-index: -1;
 }
 
-.replay-dashboard .serialized-recording > .active-bar,
-.replay-dashboard .serialized-recording > .full-bar {
+.serialized-recording > .zoom-gutter {
     height: 4px;
     top: auto;
     bottom: 5px;
-}
-
-.replay-dashboard .serialized-recording > .full-bar {
     background-color: #444;
 }
 
-.replay-dashboard .serialized-recording > .active-bar {
-    background-color: #CCC;
+.zoom-gutter > .active-zoom-marker {
+    background-color: #ccc;
 }

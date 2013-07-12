@@ -57,7 +57,7 @@ WebInspector.HorizontalRangeMarker.Event = {
     Changed: "horizontal-range-marker-changed",
     DragEnd: "horizontal-range-marker-drag-end",
     DragStart: "horizontal-range-marker-drag-start",
-    Dragged: "horizontal-range-marker-dragged"
+    Dragging: "horizontal-range-marker-dragging"
 };
 
 WebInspector.HorizontalRangeMarker.DefaultAdjustableSetting = false;
@@ -67,7 +67,7 @@ WebInspector.HorizontalRangeMarker.DefaultRangeLeft = 0.0;
 WebInspector.HorizontalRangeMarker.DefaultRangeRight = 1.0;
 
 WebInspector.HorizontalRangeMarker.StyleClassName = "horizontal-range-marker";
-WebInspector.HorizontalRangeMarker.DraggingStyleClassName = "horizontal-point-marker-dragging";
+WebInspector.HorizontalRangeMarker.DraggingStyleClassName = "horizontal-range-marker-dragging";
 WebInspector.HorizontalRangeMarker.AdjustableStyleClassName = "adjustable";
 WebInspector.HorizontalRangeMarker.HiddenStyleClassName = "hidden";
 WebInspector.HorizontalRangeMarker.DisabledStyleClassName = "disabled";
@@ -233,12 +233,24 @@ WebInspector.HorizontalRangeMarker.prototype = {
 
     // Private
 
+    _computeDragPosition: function(event)
+    {
+        var parent = this.element.parentElement;
+        var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);
+        return dragOffsetX / parent.clientWidth;
+    },
+
     _dragStarted: function(event)
     {
         event.dataTransfer.effectAllowed = "none";
         this.element.parentElement.classList.add(WebInspector.HorizontalRangeMarker.DraggingStyleClassName);
         this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.DragStart, event);
         this._dropListeners.install();
+        this._dragData = {
+            initialLeft: this.left,
+            initialRight: this.right,
+            initialDragPosition: this._computeDragPosition(event)
+        };
     },
 
     _markerDropped: function(event)
@@ -266,14 +278,17 @@ WebInspector.HorizontalRangeMarker.prototype = {
         this.element.parentElement.classList.remove(WebInspector.HorizontalRangeMarker.DraggingStyleClassName);
         this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.DragEnd, event);
         this._dropListeners.uninstall();
+        delete this._dragData;
    },
 
     _markerDragging: function(event)
     {
-        var parent = this.element.parentElement;
-        var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);
-        dragOffsetX = Number.constrain(dragOffsetX, parent.clientLeft, parent.clientLeft + parent.clientWidth);
-        var position = dragOffsetX / parent.clientWidth;
-        this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.Dragging, position);
+        var data = {
+            initialLeft: this._dragData.initialLeft,
+            initialRight: this._dragData.initialRight,
+            initialDragPosition: this._dragData.initialDragPosition,
+            dragPosition: this._computeDragPosition(event)
+        };
+        this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.Dragging, data);
     }
 };
