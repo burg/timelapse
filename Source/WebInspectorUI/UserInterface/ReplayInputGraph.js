@@ -27,21 +27,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
+WebInspector.ReplayInputGraph = function(inputProvider, calculator)
 {
     console.assert(inputProvider instanceof WebInspector.ReplayInputDataProvider, "Wrong [object] type passed to constructor: ", inputProvider);
     console.assert(calculator instanceof WebInspector.RecordingCalculator, "Wrong [object] type passed to constructor: ", calculator);
 
     WebInspector.Object.call(this);
 
-    this._listeners = new WebInspector.EventListenerGroup(this, "ReplayInputLineGraph static listeners");
+    this._listeners = new WebInspector.EventListenerGroup(this, "ReplayInputGraph static listeners");
 
     this._provider = inputProvider;
     this._calculator = calculator;
     this._data = { maxIndex: -1, bins: [] };
 
     this.element = document.createElement("div");
-    this.element.classList.add(WebInspector.ReplayInputLineGraph.StyleClassName);
+    this.element.classList.add(WebInspector.ReplayInputGraph.StyleClassName);
 
     this._canvas = this.element.createChild("canvas");
     this._listeners.register(this.element, "mousewheel", this._onMousewheel);
@@ -49,7 +49,7 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
     this.markers = {};
     this.markers.playback = new WebInspector.HorizontalPointMarker(this.element);
     this.markers.playback.adjustable = true;
-    this.markers.playback.element.classList.add(WebInspector.ReplayInputLineGraph.PlaybackMarkerStyleClassName);
+    this.markers.playback.element.classList.add(WebInspector.ReplayInputGraph.PlaybackMarkerStyleClassName);
     this.markers.playback.position = 0.0;
     this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.Moved, this._playbackMarkerMoved);
     this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragStart, this._playbackMarkerDragStarted);
@@ -58,21 +58,21 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
 
     // When dragging the playback marker, this shows where dragging began.
     this.markers.draghint = new WebInspector.HorizontalPointMarker(this.element);
-    this.markers.draghint.element.classList.add(WebInspector.ReplayInputLineGraph.DragHintMarkerStyleClassName);
+    this.markers.draghint.element.classList.add(WebInspector.ReplayInputGraph.DragHintMarkerStyleClassName);
     this.markers.draghint.position = 0.5;
     this.markers.draghint.visible = false;
     this.element.appendChild(this.markers.draghint.element);
 
     // When dragging the playback marker, this shows where the cursor would be dropped.
     this.markers.drophint = new WebInspector.HorizontalPointMarker(this.element);
-    this.markers.drophint.element.classList.add(WebInspector.ReplayInputLineGraph.DropHintMarkerStyleClassName);
+    this.markers.drophint.element.classList.add(WebInspector.ReplayInputGraph.DropHintMarkerStyleClassName);
     this.markers.drophint.position = 0.5;
     this.markers.drophint.visible = false;
     this.element.appendChild(this.markers.drophint.element);
 
     // This provides a subtle gray effect over unplayed (future) sections of the recording.
     this.markers.smokescreen = new WebInspector.HorizontalRangeMarker(this.element);
-    this.markers.smokescreen.element.classList.add(WebInspector.ReplayInputLineGraph.SmokescreenMarkerStyleClassName);
+    this.markers.smokescreen.element.classList.add(WebInspector.ReplayInputGraph.SmokescreenMarkerStyleClassName);
     this.element.appendChild(this.markers.smokescreen.element);
 
     // TODO: add as style of line-graph, and make the message absolutely positioned.
@@ -84,28 +84,28 @@ WebInspector.ReplayInputLineGraph = function(inputProvider, calculator)
     this._animateFrameCallback = this.animateFrame.bind(this);
 }
 
-WebInspector.ReplayInputLineGraph.MaxBins = 300;
-WebInspector.ReplayInputLineGraph.LineFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
-WebInspector.ReplayInputLineGraph.StyleClassName = "line-graph";
-WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor = 0.001;
-WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor = 0.001;
-WebInspector.ReplayInputLineGraph.MinimumInterval = 0.05;
+WebInspector.ReplayInputGraph.MaxBins = 300;
+WebInspector.ReplayInputGraph.LineFillColor = new WebInspector.Color.fromRGBA(100, 100, 100, 0.6);
+WebInspector.ReplayInputGraph.StyleClassName = "line-graph";
+WebInspector.ReplayInputGraph.WindowScrollSpeedFactor = 0.001;
+WebInspector.ReplayInputGraph.WindowZoomSpeedFactor = 0.001;
+WebInspector.ReplayInputGraph.MinimumInterval = 0.05;
 
-WebInspector.ReplayInputLineGraph.GraphStyle = {
+WebInspector.ReplayInputGraph.GraphStyle = {
     Bar: "graph-style-bar",
     Line: "graph-style-line"
 };
 
-WebInspector.ReplayInputLineGraph.DefaultGraphStyle = WebInspector.ReplayInputLineGraph.GraphStyle.Line;
+WebInspector.ReplayInputGraph.DefaultGraphStyle = WebInspector.ReplayInputGraph.GraphStyle.Line;
 
-WebInspector.ReplayInputLineGraph.PlaybackMarkerStyleClassName = "playback-slider";
-WebInspector.ReplayInputLineGraph.DragHintMarkerStyleClassName = "drag-hint";
-WebInspector.ReplayInputLineGraph.DropHintMarkerStyleClassName = "drop-hint";
-WebInspector.ReplayInputLineGraph.SmokescreenMarkerStyleClassName = "smokescreen";
+WebInspector.ReplayInputGraph.PlaybackMarkerStyleClassName = "playback-slider";
+WebInspector.ReplayInputGraph.DragHintMarkerStyleClassName = "drag-hint";
+WebInspector.ReplayInputGraph.DropHintMarkerStyleClassName = "drop-hint";
+WebInspector.ReplayInputGraph.SmokescreenMarkerStyleClassName = "smokescreen";
 
 
-WebInspector.ReplayInputLineGraph.prototype = {
-    constructor: WebInspector.ReplayInputLineGraph,
+WebInspector.ReplayInputGraph.prototype = {
+    constructor: WebInspector.ReplayInputGraph,
     __proto__: WebInspector.Object.prototype,
 
     // Public
@@ -174,13 +174,13 @@ WebInspector.ReplayInputLineGraph.prototype = {
         var zoomInterval = this._calculator.zoomInterval;
 
         if (typeof event.wheelDeltaX === "number" && event.wheelDeltaX && zoomInterval != 1.0) {
-            var delta = event.wheelDeltaX * WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor;
+            var delta = event.wheelDeltaX * WebInspector.ReplayInputGraph.WindowScrollSpeedFactor;
             zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
             zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
         }
 
         if (event.shiftKey && typeof event.wheelDeltaY === "number" && event.wheelDeltaY && zoomInterval != 1.0) {
-            var delta = event.wheelDeltaY * WebInspector.ReplayInputLineGraph.WindowScrollSpeedFactor;
+            var delta = event.wheelDeltaY * WebInspector.ReplayInputGraph.WindowScrollSpeedFactor;
             zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
             zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
         }
@@ -188,12 +188,12 @@ WebInspector.ReplayInputLineGraph.prototype = {
         if (typeof event.wheelDeltaY === "number" && event.wheelDeltaY) {
             var xPosition = Number.constrain(event.clientX - this.element.totalOffsetLeft, 0, this.element.offsetWidth);
             var percent = xPosition / this.element.offsetWidth;
-            var delta = event.wheelDeltaY * WebInspector.ReplayInputLineGraph.WindowZoomSpeedFactor;
+            var delta = event.wheelDeltaY * WebInspector.ReplayInputGraph.WindowZoomSpeedFactor;
             /* calculate zoom adjustment from right side, and paste to left.
             can't do naive scaling on LHS if it is near zero.  */
             var zoomDelta = zoomRight - zoomRight * (1.0 + delta);
-            zoomLeft = Number.constrain(zoomLeft + (2 * zoomDelta * percent), 0.0, zoomRight - WebInspector.ReplayInputLineGraph.MinimumInterval);
-            zoomRight = Number.constrain(zoomRight - (2 * zoomDelta * (1 - percent)), zoomLeft + WebInspector.ReplayInputLineGraph.MinimumInterval, 1.0);
+            zoomLeft = Number.constrain(zoomLeft + (2 * zoomDelta * percent), 0.0, zoomRight - WebInspector.ReplayInputGraph.MinimumInterval);
+            zoomRight = Number.constrain(zoomRight - (2 * zoomDelta * (1 - percent)), zoomLeft + WebInspector.ReplayInputGraph.MinimumInterval, 1.0);
         }
 
         this._calculator.setZoomInterval(zoomLeft, zoomRight);
@@ -280,7 +280,7 @@ WebInspector.ReplayInputLineGraph.prototype = {
             return;
 
         this._resetGraphData();
-        var binsPerTimeline = Math.min(Math.floor(this._cachedOffsetWidth / 2), WebInspector.ReplayInputLineGraph.MaxBins);
+        var binsPerTimeline = Math.min(Math.floor(this._cachedOffsetWidth / 2), WebInspector.ReplayInputGraph.MaxBins);
         var timePerBin = this._calculator.boundarySpan * this._calculator.zoomInterval / binsPerTimeline;
         // Force bins.length to be constant, so binsPerTimeline does not need to be saved separately.
         this._data.bins[binsPerTimeline - 1] = 0;
@@ -338,7 +338,7 @@ WebInspector.ReplayInputLineGraph.prototype = {
             var maxValue = data.bins[data.maxIndex];
 
             // Reminder: canvas starts with top-left as coordinates (0, 0).
-            var graphStyle = graphStyle || WebInspector.ReplayInputLineGraph.DefaultGraphStyle;
+            var graphStyle = graphStyle || WebInspector.ReplayInputGraph.DefaultGraphStyle;
             switch (graphStyle) {
                 case "graph-style-bar": {
                     ctx.beginPath();
@@ -381,8 +381,8 @@ WebInspector.ReplayInputLineGraph.prototype = {
         var context = this._canvas.getContext('2d');
         this._clearGraph(context);
 
-        context.lineJoin = WebInspector.ReplayInputLineGraph.LineJoinStyle;
-        context.fillStyle = WebInspector.ReplayInputLineGraph.LineFillColor.value;
+        context.lineJoin = WebInspector.ReplayInputGraph.LineJoinStyle;
+        context.fillStyle = WebInspector.ReplayInputGraph.LineFillColor.value;
         drawLineGraph.call(this, context, this._data);
     }
 };

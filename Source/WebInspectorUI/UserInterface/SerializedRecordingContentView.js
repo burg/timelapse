@@ -119,7 +119,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         // Provider-specific setup goes here.
         if (provider instanceof WebInspector.ReplayInputDataProvider) {
-            this._lineGraph = new WebInspector.ReplayInputLineGraph(provider, this._recording.calculator);
+            this._lineGraph = new WebInspector.ReplayInputGraph(provider, this._recording.calculator);
             this.element.appendChild(this._lineGraph.element);
         }
 
