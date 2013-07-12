@@ -47,7 +47,13 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this._listeners.register(this.markers.activezoom, WebInspector.HorizontalRangeMarker.Event.Dragging, this._activeZoomMarkerDragged);
     this._zoomGutter.appendChild(this.markers.activezoom.element);
 
+    this.markers.highlight = new WebInspector.HorizontalRangeMarker(this._zoomGutter);
+    this.markers.highlight.element.classList.add(WebInspector.SerializedRecordingContentView.ZoomHighlightMarkerStyleClassName);
+    this.markers.highlight.adjustable = true;
+    this._zoomGutter.appendChild(this.markers.highlight.element);
+
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateReplayCursorPosition);
     this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateZoomElements);
     this._listeners.install();
 
@@ -60,6 +66,7 @@ WebInspector.SerializedRecordingContentView = function(recording)
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
 WebInspector.SerializedRecordingContentView.ZoomGutterStyleClassName = "zoom-gutter";
 WebInspector.SerializedRecordingContentView.ActiveZoomMarkerStyleClassName = "active-zoom-marker";
+WebInspector.SerializedRecordingContentView.ZoomHighlightMarkerStyleClassName = "zoom-highlight-marker";
 
 WebInspector.SerializedRecordingContentView.prototype = {
     constructor: WebInspector.SerializedRecordingContentView,
@@ -142,8 +149,34 @@ WebInspector.SerializedRecordingContentView.prototype = {
         }
     },
 
+    _updateReplayCursorPosition: function(event, suppressAnimations)
+    {
+        var inputProvider = this._recording.firstProviderWithConstructor(WebInspector.ReplayInputDataProvider);
+        var inputs = inputProvider.inputs;
+        if (!inputs.length)
+            return;
+
+        // This assumes that there is a 1-to-1 corresponence between marks and inputs.
+        // Marks are counted starting from 1 while indices start from 0.
+        var inputIndex = Number.constrain(WebInspector.replayManager.currentMarkIndex - 1, 0, inputs.length - 1);
+        var inputTimestamp = inputs[inputIndex].timestamp;
+        var cursorPercent = this._recording.calculator.globalPercentFromTimestamp(inputTimestamp);
+        this.markers.highlight.setRange(0.0, cursorPercent);
+
+        if (suppressAnimations)
+            return;
+
+        if (inputIndex === inputProvider.inputs.length - 1)
+            return;
+        var nextInput = inputProvider.inputs[inputIndex + 1];
+        var nextCursorPercent = this._recording.calculator.globalPercentFromTimestamp(nextInput.timestamp);
+        var timeDelta = nextInput.timestamp - inputTimestamp;
+        this.markers.highlight.animateTo(0.0, nextCursorPercent, timeDelta);
+    },
+
     _updateZoomElements: function()
     {
+        this._updateReplayCursorPosition();
         this.markers.activezoom.setRange(this._recording.calculator.zoomLeft, this._recording.calculator.zoomRight);
     },
 

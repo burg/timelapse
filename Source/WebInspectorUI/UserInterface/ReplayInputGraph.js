@@ -74,12 +74,11 @@ WebInspector.ReplayInputGraph = function(inputProvider, calculator)
     this.markers.smokescreen = new WebInspector.HorizontalRangeMarker(this.element);
     this.markers.smokescreen.element.classList.add(WebInspector.ReplayInputGraph.SmokescreenMarkerStyleClassName);
     this.element.appendChild(this.markers.smokescreen.element);
-
-    // TODO: add as style of line-graph, and make the message absolutely positioned.
-    this.element.createChild("div").classList.add("border");
+    this.element.createChild("div").classList.add(WebInspector.ReplayInputGraph.BorderStyleClassName);
 
     this._listeners.register(this._calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this.refreshSoon);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateMarkerPositions);
+    this._listeners.install();
 
     this._animateFrameCallback = this.animateFrame.bind(this);
 }
@@ -102,6 +101,7 @@ WebInspector.ReplayInputGraph.PlaybackMarkerStyleClassName = "playback-slider";
 WebInspector.ReplayInputGraph.DragHintMarkerStyleClassName = "drag-hint";
 WebInspector.ReplayInputGraph.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.ReplayInputGraph.SmokescreenMarkerStyleClassName = "smokescreen";
+WebInspector.ReplayInputGraph.BorderStyleClassName = "border";
 
 
 WebInspector.ReplayInputGraph.prototype = {
@@ -129,8 +129,6 @@ WebInspector.ReplayInputGraph.prototype = {
     // These methods are used by the owning widget to signal setup, teardown, and resize.
     shown: function()
     {
-        this._listeners.install();
-
         for (var key in this.markers)
             this.markers[key].shown();
 
@@ -231,17 +229,16 @@ WebInspector.ReplayInputGraph.prototype = {
 
     _updateMarkerPositions: function(event, suppressAnimations)
     {
-        var cursorPosition = WebInspector.replayManager.currentMarkIndex;
-        if (!this._provider.inputs.length)
-            return
+        var inputs = this._provider.inputs;
+        if (!inputs.length)
+            return;
 
         // This assumes that there is a 1-to-1 corresponence between marks and inputs.
         // Marks are counted starting from 1 while indices start from 0.
-        var inputIndex = Number.constrain(cursorPosition - 1, 0, this._provider.inputs.length - 1);
-        var markTimestamp = this._provider.inputs[inputIndex].timestamp;
-        var cursorPercent = this._calculator.zoomedPercentFromTimestamp(markTimestamp);
-        this.markers.playback.position = cursorPercent;
-        this.markers.smokescreen.left = cursorPercent;
+        var inputIndex = Number.constrain(WebInspector.replayManager.currentMarkIndex - 1, 0, inputs.length - 1);
+        var inputTimestamp = inputs[inputIndex].timestamp;
+        var cursorPercent = this._calculator.zoomedPercentFromTimestamp(inputTimestamp);
+        this.markers.playback.position = this.markers.smokescreen.left = cursorPercent;
 
         if (suppressAnimations)
             return;
@@ -250,7 +247,7 @@ WebInspector.ReplayInputGraph.prototype = {
             return;
         var nextInput = this._provider.inputs[inputIndex + 1];
         var nextCursorPercent = this._calculator.zoomedPercentFromTimestamp(nextInput.timestamp);
-        var timeDelta = nextInput.timestamp - markTimestamp;
+        var timeDelta = nextInput.timestamp - inputTimestamp;
         this.markers.playback.animateTo(nextCursorPercent, timeDelta);
         this.markers.smokescreen.animateTo(nextCursorPercent, 1.0, timeDelta);
     },

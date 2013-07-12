@@ -118,3 +118,7 @@
 .zoom-gutter > .active-zoom-marker {
     background-color: #ccc;
 }
+
+.zoom-gutter > .zoom-highlight-marker {
+    background-color: rgba(255, 255, 255, 0.33);
+}
