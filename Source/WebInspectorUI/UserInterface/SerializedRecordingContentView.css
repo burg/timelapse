@@ -87,6 +87,18 @@
     background-color: rgba(200, 50, 50, 1);
 }
 
+.line-graph > .zoom-selector {
+    background-color: rgba(0,0,0,0);
+    cursor: ew-resize;
+}
+
+.line-graph.horizontal-range-marker-dragging .zoom-selector {
+    background-color: rgba(100,100,255,0.1);
+    border-left: 1px solid #66c;
+    border-right: 1px solid #66c;
+    cursor: ew-resize;
+}
+
 .line-graph > .smokescreen {
     background-color: rgba(100, 100, 100, 0.1);
 }
@@ -112,7 +124,7 @@
     height: 4px;
     top: auto;
     bottom: 5px;
-    background-color: #444;
+    background-color: #888;
 }
 
 .zoom-gutter > .active-zoom-marker {

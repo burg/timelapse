@@ -56,6 +56,16 @@ WebInspector.ReplayInputGraph = function(inputProvider, calculator)
     this._listeners.register(this.markers.playback, WebInspector.HorizontalPointMarker.Event.DragEnd, this._playbackMarkerDragEnded);
     this.element.appendChild(this.markers.playback.element);
 
+    // Allows direct selection of a zoom interval.
+    this.markers.zoomselect = new WebInspector.HorizontalRangeMarker(this.element);
+    this.markers.zoomselect.element.classList.add(WebInspector.ReplayInputGraph.ZoomSelectorStyleClassName);
+    this.markers.zoomselect.adjustable = true;
+    this.markers.zoomselect.setRange(0.0, 1.0);
+    this._listeners.register(this.markers.zoomselect, WebInspector.HorizontalRangeMarker.Event.DragStart, this._zoomSelectorDragStarted);
+    this._listeners.register(this.markers.zoomselect, WebInspector.HorizontalRangeMarker.Event.DragEnd, this._zoomSelectorDragEnded);
+    this._listeners.register(this.markers.zoomselect, WebInspector.HorizontalRangeMarker.Event.Dragging, this._zoomSelectorDragging);
+    this.element.appendChild(this.markers.zoomselect.element);
+
     // When dragging the playback marker, this shows where dragging began.
     this.markers.draghint = new WebInspector.HorizontalPointMarker(this.element);
     this.markers.draghint.element.classList.add(WebInspector.ReplayInputGraph.DragHintMarkerStyleClassName);
@@ -98,6 +108,7 @@ WebInspector.ReplayInputGraph.GraphStyle = {
 WebInspector.ReplayInputGraph.DefaultGraphStyle = WebInspector.ReplayInputGraph.GraphStyle.Line;
 
 WebInspector.ReplayInputGraph.PlaybackMarkerStyleClassName = "playback-slider";
+WebInspector.ReplayInputGraph.ZoomSelectorStyleClassName = "zoom-selector";
 WebInspector.ReplayInputGraph.DragHintMarkerStyleClassName = "drag-hint";
 WebInspector.ReplayInputGraph.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.ReplayInputGraph.SmokescreenMarkerStyleClassName = "smokescreen";
@@ -225,6 +236,29 @@ WebInspector.ReplayInputGraph.prototype = {
         this.markers.drophint.visible = false;
 
         WebInspector.replayManager.replayToMarkIndexSoon(closestInput.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Seeking);
+    },
+
+    _zoomSelectorDragStarted: function(event)
+    {
+        var data = event.data;
+        this.markers.zoomselect.setRange(data.dragPosition, data.dragPosition);
+    },
+
+    _zoomSelectorDragEnded: function()
+    {
+        var globalLeft = this._calculator.localPercentToGlobalPercent(this.markers.zoomselect.left);
+        var globalRight = this._calculator.localPercentToGlobalPercent(this.markers.zoomselect.right);
+        this._calculator.setZoomInterval(globalLeft, globalRight);
+        this.markers.zoomselect.setRange(0.0, 1.0);
+    },
+
+    _zoomSelectorDragging: function(event)
+    {
+        var data = event.data;
+        if (data.dragPosition <= data.initialDragPosition)
+            this.markers.zoomselect.left = data.dragPosition;
+        else
+            this.markers.zoomselect.right = data.dragPosition;
     },
 
     _updateMarkerPositions: function(event, suppressAnimations)

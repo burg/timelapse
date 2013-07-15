@@ -165,7 +165,7 @@ WebInspector.HorizontalRangeMarker.prototype = {
 
     set right(pos)
     {
-        this.setRange(pos, this.right);
+        this.setRange(this.left, pos);
     },
 
     setRange: function(left, right, suppressEvents)
@@ -236,21 +236,30 @@ WebInspector.HorizontalRangeMarker.prototype = {
     _computeDragPosition: function(event)
     {
         var parent = this.element.parentElement;
-        var dragOffsetX = event.clientX - parent.totalOffsetLeft - (this.element.offsetWidth / 2);
+        var dragOffsetX = event.clientX - parent.totalOffsetLeft;
         return dragOffsetX / parent.clientWidth;
     },
 
     _dragStarted: function(event)
     {
         event.dataTransfer.effectAllowed = "none";
-        this.element.parentElement.classList.add(WebInspector.HorizontalRangeMarker.DraggingStyleClassName);
-        this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.DragStart, event);
+        var dragPosition = this._computeDragPosition(event);
+        var data = {
+            event: event,
+            dragPosition: dragPosition
+        };
+        this.dispatchEventToListeners(WebInspector.HorizontalRangeMarker.Event.DragStart, data);
         this._dropListeners.install();
         this._dragData = {
             initialLeft: this.left,
             initialRight: this.right,
-            initialDragPosition: this._computeDragPosition(event)
+            initialDragPosition: dragPosition
         };
+
+        // This is necessary to avoid background flickering caused by newly-matched CSS selectors.
+        window.requestAnimationFrame(function() {
+            this.element.parentElement.classList.add(WebInspector.HorizontalRangeMarker.DraggingStyleClassName);
+        }.bind(this));
     },
 
     _markerDropped: function(event)
@@ -284,6 +293,7 @@ WebInspector.HorizontalRangeMarker.prototype = {
     _markerDragging: function(event)
     {
         var data = {
+            event: event,
             initialLeft: this._dragData.initialLeft,
             initialRight: this._dragData.initialRight,
             initialDragPosition: this._dragData.initialDragPosition,
