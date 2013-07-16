@@ -75,26 +75,57 @@
     opacity: 0.8;
 }
 
-.serialized-recording > .message-panel {
-    visibility: hidden;
+.serialized-recording > .message-sheet {
+    overflow: hidden;
     background-color: rgba(255, 255, 255, 0.6);
-    opacity: 0;
     z-index: 15;
     line-height: 25px;
     transition: opacity ease 0.5s;
-}
-
-.serialized-recording > .message-panel.shown {
-    visibility: visible;
     opacity: 1;
     color: #999;
     text-shadow: 0px 0px 10px #fff;
     border: 1px solid #ccc;
 }
 
-.serialized-recording > .message-panel > .keep-going,
-.serialized-recording > .message-panel > .ignore,
-.serialized-recording > .message-panel > .abort {
-    color: blue;
-    font-size: 10px;
+.serialized-recording > .message-sheet.hidden {
+    opacity: 0;
+}
+
+.serialized-recording > .message-sheet > .message.clickable {
+    cursor: pointer;
+}
+
+.serialized-recording > .message-sheet.has-options {
+    line-height: 15px;
+    font-size: 13px;
+}
+
+.serialized-recording > .message-sheet > .options {
+    display: -webkit-flex;
+    -webkit-justify-content: space-between;
+    line-height: 11px;
+    padding: 0px 4px;
+}
+
+.serialized-recording > .message-sheet > .options > .keep-going,
+.serialized-recording > .message-sheet > .options > .ignore,
+.serialized-recording > .message-sheet > .options > .abort {
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.serialized-recording > .message-sheet > .options > .keep-going {
+    color: #191;
+    -webkit-order: 1;
+}
+
+.serialized-recording > .message-sheet > .options > .ignore {
+    color: #b90;
+    -webkit-order: 2;
+}
+
+.serialized-recording > .message-sheet > .options > .abort {
+    color: #a21;
+    -webkit-order: 3;
+
 }

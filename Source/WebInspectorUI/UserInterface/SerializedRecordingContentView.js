@@ -67,10 +67,8 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.markers.smokescreen.position = 0.0;
     this.element.appendChild(this.markers.smokescreen.element);
 
-    this._messagePanel = this.element.appendChild(document.createElement("div"));
-    this._messagePanel.classList.add(WebInspector.SerializedRecordingContentView.MessagePanelStyleClassName);
-    this._messagePanel.element = this._messagePanel.appendChild(document.createElement("div"));
-    this._listeners.register(this._messagePanel, "click", this._messageClicked);
+    this._messagePanel = new WebInspector.HorizontalMessageSheet();
+    this.element.appendChild(this._messagePanel.element);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackWillStart, this._showMessagePanel);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackStarted, this._showMessagePanel);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackPaused, this._hideMessagePanel);
@@ -93,7 +91,6 @@ WebInspector.SerializedRecordingContentView.DragHintMarkerStyleClassName = "drag
 WebInspector.SerializedRecordingContentView.DropHintMarkerStyleClassName = "drop-hint";
 WebInspector.SerializedRecordingContentView.SmokescreenMarkerStyleClassName = "smokescreen";
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
-WebInspector.SerializedRecordingContentView.MessagePanelStyleClassName = "message-panel";
 
 WebInspector.SerializedRecordingContentView.prototype = {
     constructor: WebInspector.SerializedRecordingContentView,
@@ -135,6 +132,8 @@ WebInspector.SerializedRecordingContentView.prototype = {
 
         for (var key in this.markers)
             this.markers[key].closed();
+        
+        this._messagePanel.closed();
     },
 
     // Private
@@ -248,87 +247,65 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var isFatal = event.data.isFatal;
 
         if (isFatal) {
-            this._messagePanel.innerHTML = WebInspector.UIString("Playback was terminated by a fatal error. Please try again.");
+            this._messagePanel.setMessage({ text: WebInspector.UIString("Playback was terminated by a fatal error.") });
         } else {
-            this._messagePanel.innerHTML = WebInspector.UIString("Something went wrong during playback.");
-            var optionLabels = [
-                WebInspector.UIString("Keep going"),
-                WebInspector.UIString("Ignore warnings"),
-                WebInspector.UIString("Abort")
-            ];
-
-            var optionClasses = [
-                "keep-going",
-                "ignore",
-                "abort"
-            ];
-
-            var replayManager = WebInspector.replayManager;
-            var replaySpeeds = WebInspector.ReplayManager.ReplaySpeed;
-            var optionCallbacks = [
-                // case: moral equivalent of pressing play button
-                function(event) {
-                    var allowBreakpoints = /*model.scanningBreakpoints ||*/model.replaySpeed === replaySpeeds.Normal;
-                    replayManager.replayUpToMarkIndex(model.replayFinishMarkIndex, allowBreakpoints, replayManager.replaySpeed);
+            this._messagePanel.setMessage({ text: WebInspector.UIString("Something went wrong during playback.") });
+            var options = [
+                {
+                    label: WebInspector.UIString("Keep going"),
+                    classname: "keep-going",
+                    callback: function(event) {
+                        var allowBreakpoints = WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal;
+                        WebInspector.replayManager.replayToCompletionSoon(allowBreakpoints, WebInspector.replayManager.replaySpeed);
+                    } 
                 },
 
-                // case: disable pauses, then press play
-                function(event) {
-                    var allowBreakpoints = /*model.scanningBreakpoints ||*/model.replaySpeed === replaySpeeds.Normal;
-                    ReplayAgent.setPauseOnError(false);
-                    replayManager.replayUpToMarkIndex(replayManager.replayFinishMarkIndex,
-                                              allowBreakpoints, replayManager.replaySpeed);
+                {
+                    label: WebInspector.UIString("Ignore warnings"),
+                    classname: "ignore",
+                    callback: function(event) {
+                        var allowBreakpoints = WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal;
+                        ReplayAgent.setPauseOnError(false);
+                        WebInspector.replayManager.replayToCompletionSoon(allowBreakpoints, WebInspector.replayManager.replaySpeed);
+                    } 
                 },
 
-                // case: unlock
-                function() {
-                    replayManager.stopPlayback(true);
-                }
+                {
+                    label: WebInspector.UIString("Abort"),
+                    classname: "abort",
+                    callback: function() {
+                        WebInspector.replayManager.stopPlaybackSoon(true);
+                    }
+                } 
             ];
-
-            this._errorListeners = new WebInspector.EventListenerGroup(this, "SerializedRecordingContentViewErrorMessage recording listeners");
-            for (var i = 0; i < optionLabels.length; i++){
-                var temp = this._messagePanel.element.appendChild(document.createElement("div"));
-                temp.innerHTML = optionLabels[i];
-                temp.classList.add(optionClasses[i]);
-                this._errorListeners.register(temp, "click", optionCallbacks[i]);
-            }
-            this._errorListeners.install();
-            this._messagePanel._showMessagePanel(true);
+            this._messagePanel.setOptions(options);
         }
+        this._messagePanel.shown();
     },
 
-    _showMessagePanel: function(event, hasContent)
+    _showMessagePanel: function()
     {
-        // If the message panel is already showing, this means some higher-level
-        // event has displayed a message.
-        if (this._messagePanel.classList.contains("shown"))
-            return;
+        this._messagePanel.hidden();
 
-        this._messagePanel.classList.add("shown")
-
-        // figure out an appropriate message if none provided.
-        if (!hasContent) {
+        // Figure out an appropriate message if none provided.
+        if (this._messagePanel.message === "") {
             if (WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking) {
-                this._messagePanel.element.innerHTML = WebInspector.UIString("Seeking...");
+                this._messagePanel.setMessage({ text: WebInspector.UIString("Seeking...") });
             } else {
-                this._messagePanel.element.innerHTML = WebInspector.UIString("Replaying... click to cancel.");
+                this._messagePanel.setMessage({ 
+                    text: WebInspector.UIString("Replaying... click to cancel."),
+                    callback:  function() {
+                        WebInspector.replayManager.pausePlaybackSoon()
+                    }
+                });
             }
         }
+
+        this._messagePanel.shown();
     },
 
     _hideMessagePanel: function()
-    {
-        if (this._errorListeners)
-            this._errorListeners.uninstall();
-        
-        this._messagePanel.classList.remove("shown");
-        this._messagePanel.element.innerHTML = "";
-    },
-
-    _messageClicked: function()
-    {
-        if (WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal)
-            WebInspector.replayManager.pausePlaybackSoon();
+    {   
+        this._messagePanel.hidden();
     }
 };
