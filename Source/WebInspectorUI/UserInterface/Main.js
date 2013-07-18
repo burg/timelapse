@@ -199,14 +199,17 @@ WebInspector.contentLoaded = function()
     this.resourceSidebarPanel = new WebInspector.ResourceSidebarPanel;
     this.instrumentSidebarPanel = new WebInspector.InstrumentSidebarPanel;
     this.debuggerSidebarPanel = new WebInspector.DebuggerSidebarPanel;
+    this.probesSidebarPanel = new WebInspector.ProbesSidebarPanel;
 
     this.navigationSidebar.addSidebarPanel(this.resourceSidebarPanel);
     this.navigationSidebar.addSidebarPanel(this.instrumentSidebarPanel);
     this.navigationSidebar.addSidebarPanel(this.debuggerSidebarPanel);
+    this.navigationSidebar.addSidebarPanel(this.probesSidebarPanel);
 
     this.toolbar.addToolbarItem(this.resourceSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
     this.toolbar.addToolbarItem(this.instrumentSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
     this.toolbar.addToolbarItem(this.debuggerSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
+    this.toolbar.addToolbarItem(this.probesSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
 
     // The toolbar button for the console.
     const consoleKeyboardShortcut = "\u2325\u2318C"; // Option-Command-C

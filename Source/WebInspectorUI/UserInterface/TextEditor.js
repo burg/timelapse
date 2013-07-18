@@ -924,6 +924,11 @@ WebInspector.TextEditor.prototype = {
         if (event.button !== 0 || event.ctrlKey)
             return;
 
+        if(event.shiftKey) {
+            console.log("ADD PROBE HERE?");
+            return;
+        }
+
         if (!this._codeMirror.hasLineClass(lineNumber, "wrap", WebInspector.TextEditor.HasBreakpointStyleClassName)) {
             console.assert(!(lineNumber in this._breakpoints));
 
