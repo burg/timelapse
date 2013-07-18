@@ -1,0 +1,77 @@
+/*
+ * Copyright (C) 2013, University of Washington. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+.sidebar > .panel.probes > .navigation-bar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+}
+
+.sidebar > .panel.probes > .content > .details-section {
+	width: 100%;
+	position: absolute;
+	top: 22px;
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options {
+	float: right;
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-remove,
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle {
+	float: right;
+	height: 11px;
+	margin-top: 1px;
+	margin-left: 5px;
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle {
+	content: url(Images/BreakpointInactive.png);
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle.enabled {
+	content: url(Images/Breakpoint.png);
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-remove {
+	content: url(Images/Close.pdf);
+}
+
+.panel.probes table {
+	border-collapse: collapse;
+	margin: 5px;
+	background-color: rgba(255,255,255,0.7);
+}
+
+.panel.probes table th, td {
+	padding: 3px;
+	border: 1px solid gray;
+}
+
+.panel.probes table input {
+	height: 16px;
+	width: 80px;
+}
