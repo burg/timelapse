@@ -55,6 +55,7 @@ class DataProbe;
 class Frame;
 class InspectorController;
 class InspectorCompositeState;
+class InspectorProbeAgent;
 class InstrumentingAgents;
 class Page;
 
@@ -70,7 +71,7 @@ class ScriptValue;
 class ScriptProbeResolver : public ScriptDebugListener {
     WTF_MAKE_NONCOPYABLE(ScriptProbeResolver);
 public:
-    static PassOwnPtr<ScriptProbeResolver> create(Page*);
+    static PassOwnPtr<ScriptProbeResolver> create(Page*, InspectorProbeAgent*);
     virtual ~ScriptProbeResolver();
 
     void clearScriptMapping();
@@ -78,7 +79,7 @@ public:
     void addProbe(PassRefPtr<ScriptProbe>);
 
 private:
-    ScriptProbeResolver(Page*);
+    ScriptProbeResolver(Page*, InspectorProbeAgent*);
 
     // ScriptDebugListener API
     virtual void didParseSource(const String& scriptId, const Script&);
@@ -90,6 +91,8 @@ private:
 #endif
 
     Page* m_page;
+    int m_nextSampleId;
+    InspectorProbeAgent* m_probeAgent;
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
     ProbeSet m_probes;
     typedef intptr_t ScriptId;
@@ -113,22 +116,26 @@ public:
     void setFrontend(InspectorFrontend*);
     void clearFrontend();
 
+    // Callbacks from ScriptProbeResolver
+    void scriptProbeSampleAdded(PassRefPtr<TypeBuilder::Probe::ScriptProbeSample>);
+    bool enabled();
+
     // ProbeCommandHandler API
     virtual void enable(ErrorString*);
     virtual void disable(ErrorString*);
     virtual void isEnabled(ErrorString*, bool* out_state);
 
     virtual void clearAllProbes(ErrorString*);
-    virtual void getAllProbes(ErrorString*, RefPtr<TypeBuilder::Array<int> >& result);
-    virtual void getProbeDetails(ErrorString*, int uid, RefPtr<TypeBuilder::Probe::DataProbe>& result);
-    virtual void enableProbe(ErrorString*, int uid);
-    virtual void disableProbe(ErrorString*, int uid);
+    virtual void getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& result);
+    virtual void getProbeSamples(ErrorString*, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result);
+    virtual void enableProbe(ErrorString*, int probeId);
+    virtual void disableProbe(ErrorString*, int probeId);
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
 
-    int m_nextUID;
+    int m_nextProbeId;
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Probe* m_frontend;
     Page* m_inspectedPage;

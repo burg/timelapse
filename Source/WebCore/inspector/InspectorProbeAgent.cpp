@@ -64,13 +64,15 @@ static ScriptProbeServer* probeServer()
 }
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-PassOwnPtr<ScriptProbeResolver> ScriptProbeResolver::create(Page* page)
+PassOwnPtr<ScriptProbeResolver> ScriptProbeResolver::create(Page* page, InspectorProbeAgent* probeAgent)
 {
-    return adoptPtr(new ScriptProbeResolver(page));
+    return adoptPtr(new ScriptProbeResolver(page, probeAgent));
 }
 
-ScriptProbeResolver::ScriptProbeResolver(Page* page)
+ScriptProbeResolver::ScriptProbeResolver(Page* page, InspectorProbeAgent* probeAgent)
 : m_page(page)
+, m_nextSampleId(1)
+, m_probeAgent(probeAgent)
 {
     PageScriptDebugServer::shared().addListener(this, m_page);
 }
@@ -97,8 +99,9 @@ void ScriptProbeResolver::clearProbes()
     m_probes.clear();
 }
 
-void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> probe)
+void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> prpProbe)
 {
+    RefPtr<ScriptProbe> probe = prpProbe;
     m_probes.add(probe);
 
     // if probe matches url with known script id, resolve immediately.
@@ -112,7 +115,8 @@ void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> probe)
 void ScriptProbeResolver::didParseSource(const String& stringId, const Script& script)
 {
     intptr_t scriptId = stringId.toInt();
-    UrlToScriptIdMap::AddResult result = m_urlToScriptIdMap.add(script.url, scriptId);
+    const String& key = (script.url.isNull()) ? emptyString() : script.url;
+    UrlToScriptIdMap::AddResult result = m_urlToScriptIdMap.add(key, scriptId);
     if (!result.isNewEntry)
         return;
 
@@ -137,22 +141,27 @@ void ScriptProbeResolver::didContinue()
 
 void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&)
 {
-    // FIXME: implement some sort of storage
-    UNUSED_PARAM(probeId);
+    // FIXME: implement some sort of storage for probe samples.
+    // FIXME: this is a dummy value.
+    RefPtr<InspectorObject> payload = InspectorBasicValue::create(42)->asObject();
+    RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
+                                                            .setProbeId(probeId)
+                                                            .setSampleId(m_nextSampleId++)
+                                                            .setTimestamp(WTF::currentTimeMS())
+                                                            .setPayload(payload.release());
+    m_probeAgent->scriptProbeSampleAdded(result.release());
 }
 #endif
 
 InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
 : InspectorBaseAgent<InspectorProbeAgent>("Probe", instrumentingAgents, state)
-, m_nextUID(1)
+, m_nextProbeId(1)
 , m_instrumentingAgents(instrumentingAgents)
 , m_inspectedPage(inspectedPage) {}
 
 InspectorProbeAgent::~InspectorProbeAgent()
 {
-    m_instrumentingAgents->setInspectorProbeAgent(0);
-    m_instrumentingAgents = 0;
-    m_inspectedPage = 0;
+    ASSERT(!m_instrumentingAgents->inspectorProbeAgent());
 }
 
 void InspectorProbeAgent::setFrontend(InspectorFrontend* frontend)
@@ -170,71 +179,90 @@ void InspectorProbeAgent::clearFrontend()
     m_frontend = 0;
 }
 
+void InspectorProbeAgent::scriptProbeSampleAdded(PassRefPtr<TypeBuilder::Probe::ScriptProbeSample> sample)
+{
+    if (m_frontend)
+        m_frontend->probeSampleReceived(sample);
+}
+
+bool InspectorProbeAgent::enabled()
+{
+    return m_state->getBoolean(ProbeAgentState::probesEnabled);
+}
+
 void InspectorProbeAgent::enable(ErrorString*)
 {
     m_state->setBoolean(ProbeAgentState::probesEnabled, true);
+    m_instrumentingAgents->setInspectorProbeAgent(this);
+#if ENABLE(JAVASCRIPT_DEBUGGER)
+    m_scriptProbeResolver = ScriptProbeResolver::create(m_inspectedPage, this);
+#endif
 }
 
 void InspectorProbeAgent::disable(ErrorString*)
 {
     m_state->setBoolean(ProbeAgentState::probesEnabled, false);
+    m_instrumentingAgents->setInspectorProbeAgent(0);
+    m_scriptProbeResolver = 0;
 }
 
 void InspectorProbeAgent::isEnabled(ErrorString*, bool* out_state)
 {
-   *out_state = m_state->getBoolean(ProbeAgentState::probesEnabled);
+   *out_state = enabled();
 }
 
-void InspectorProbeAgent::clearAllProbes(ErrorString*)
+void InspectorProbeAgent::clearAllProbes(ErrorString* errorString)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER)
+    if (!enabled()) {
+        *errorString = "Can't clear script probes because Probe agent is not enabled.";
+        return;
+    }
     m_scriptProbeResolver->clearProbes();
 #endif
 
     m_probeMap.clear();
 }
 
-void InspectorProbeAgent::getAllProbes(ErrorString*, RefPtr<TypeBuilder::Array<int> >& result)
+void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& result)
 {
-    result = TypeBuilder::Array<int>::create();
+    result = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe>::create();
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
-        result->addItem(it->key);
+        RefPtr<TypeBuilder::Probe::ScriptProbe> probe = TypeBuilder::Probe::ScriptProbe::create()
+                                                            .setProbeId(it->key)
+                                                            .setIsEnabled(true);
+        result->addItem(probe.release());
     }
 }
 
-void InspectorProbeAgent::getProbeDetails(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Probe::DataProbe>& result)
+void InspectorProbeAgent::getProbeSamples(ErrorString* errorString, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result)
 {
-    ProbeMap::iterator it = m_probeMap.find(uid);
+    ProbeMap::iterator it = m_probeMap.find(probeId);
     if (it == m_probeMap.end()) {
-        *errorString = "Couldn't find probe with specified uid";
+        *errorString = "Couldn't find probe with specified probeId";
         return;
     }
 
-    // FIXME: get samples/metadata from the probe
-    result = TypeBuilder::Probe::DataProbe::create()
-                .setUid(uid)
-                .setType(ProbeTypes::ScriptProbe)
-                .setIsEnabled(false);
-    //          .setMetadata(XXX)
-    //          .setSamples(XXX)
+    result = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample>::create();
+    // TODO: iterate through sample storage, create inspector objects for each sample.
 }
 
-void InspectorProbeAgent::enableProbe(ErrorString* errorString, int uid)
+void InspectorProbeAgent::enableProbe(ErrorString* errorString, int probeId)
 {
-    ProbeMap::iterator it = m_probeMap.find(uid);
+    ProbeMap::iterator it = m_probeMap.find(probeId);
     if (it == m_probeMap.end()) {
-        *errorString = "Couldn't find probe with specified uid";
+        *errorString = "Couldn't find probe with specified probeId";
         return;
     }
 
     it->value->enable();
 }
 
-void InspectorProbeAgent::disableProbe(ErrorString* errorString, int uid)
+void InspectorProbeAgent::disableProbe(ErrorString* errorString, int probeId)
 {
-    ProbeMap::iterator it = m_probeMap.find(uid);
+    ProbeMap::iterator it = m_probeMap.find(probeId);
     if (it == m_probeMap.end()) {
-        *errorString = "Couldn't find probe with specified uid";
+        *errorString = "Couldn't find probe with specified probeId";
         return;
     }
 
@@ -243,8 +271,18 @@ void InspectorProbeAgent::disableProbe(ErrorString* errorString, int uid)
 
 void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const String& url, int lineNumber, int columnNumber, const String& expression)
 {
+    if (!enabled()) {
+        *errorString = "Can't create script probe because Probe agent is not enabled.";
+        return;
+    }
+
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-    RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextUID++, url, lineNumber, columnNumber, expression);
+    if (expression.length() == 0) {
+        *errorString = "Cannot create a probe with a zero-length expression.";
+        return;
+    }
+    const String& nonNullUrl = (url.isNull()) ? emptyString() : url;
+    RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextProbeId++, nonNullUrl, lineNumber, columnNumber, expression);
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
     m_scriptProbeResolver->addProbe(probe);

@@ -79,7 +79,10 @@ inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, int lineNumber,
 , m_url(url)
 , m_lineNumber(lineNumber)
 , m_columnNumber(columnNumber)
-, m_expression(expression) {}
+, m_expression(expression) {
+    ASSERT(!url.isNull());
+    ASSERT(expression.length() > 0);
+}
 
 } // namespace WebCore
 

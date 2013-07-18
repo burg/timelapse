@@ -2552,27 +2552,34 @@
     {
         "domain": "Probe",
         "hidden": true,
-        "description": "Controls data probe instrumentation.",
+        "description": "Controls script probe instrumentation.",
         "types": [
             {
-                "id": "DataProbeType",
-                "type": "string",
-                "description": "Data probe type. Valid types defined in ProbeAgent.js and InspectorProbeAgent.cpp"
-            },
-            {
-                "id": "DataProbeId",
+                "id": "ScriptProbeId",
                 "type": "integer",
                 "description": "Unique data probe identifier."
             },
             {
-                "id": "DataProbe",
+                "id": "ScriptProbeSampleId",
+                "type": "integer",
+                "description": "Unique data probe sample identifier."
+            },
+            {
+                "id": "ScriptProbe",
                 "type": "object",
                 "properties": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Probe unique id." },
-                    { "name": "type", "$ref": "DataProbeType", "description": "Probe type." },
-                    { "name": "isEnabled", "type": "boolean", "description": "Whether the probe is active" },
-                    { "name": "metadata", "type": "object", "optional": true, "description": "Probe metadata." },
-                    { "name": "samples", "type": "object", "optional": true, "description": "Probe samples." }
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
+                    { "name": "isEnabled", "type": "boolean", "description": "Whether the probe is active" }
+                ]
+            },
+            {
+                "id": "ScriptProbeSample",
+                "type": "object",
+                "properties": [
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
+                    { "name": "sampleId", "$ref": "ScriptProbeSampleId", "description": "Sample unique id." },
+                    { "name": "timestamp", "type": "number", "description": "Sample timestamp." },
+                    { "name": "payload", "type": "object", "description": "Contents of the sample." }
                 ]
             }
         ],
@@ -2593,31 +2600,31 @@
                 "name": "clearAllProbes"
             },
             {
-                "name": "getAllProbes",
+                "name": "getAvailableProbes",
                 "returns": [
-                    { "name": "probes", "type": "array", "items": { "$ref": "DataProbeId" }, "description": "Get unique ids for all probes" }
+                    { "name": "probes", "type": "array", "items": { "$ref": "ScriptProbe" } }
                 ],
                 "description": "Array of all probes registered with the backend probe agent."
             },
             {
-                "name": "getProbeDetails",
+                "name": "getProbeSamples",
                 "parameters": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Id of the requested probe." }
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
                 ],
                 "returns": [
-                    { "name": "probe", "$ref": "DataProbe", "description": "The requested probe, if it exists." }
+                    { "name": "samples", "type": "array", "items": { "$ref": "ScriptProbeSample" }, "description": "All samples for the requested probe, if it exists." }
                 ]
             },
             {
                 "name": "enableProbe",
                 "parameters": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Id of the requested probe." }
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
                 ]
             },
             {
                 "name": "disableProbe",
                 "parameters": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Id of the requested probe." }
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
                 ]
             },
             {
@@ -2634,32 +2641,30 @@
 
         "events": [
             {
-                "name": "probeDataReceived",
+                "name": "probeSampleReceived",
                 "parameters": [
-                    { "name": "probeId", "$ref": "DataProbeId", "description": "Id of probe which generated the sample." },
-                    { "name": "sampleId", "type": "integer", "description": "How many samples have been collected with this probe." },
-                    { "name": "data", "type": "object", "description": "Data of the probe sample." }
+                    { "name": "sample", "$ref": "ScriptProbeSample", "description": "Generated script probe sample." }
                 ],
                 "description": "Fires when a new probe sample is collected or re-requested."
             },
             {
                 "name": "probeAdded",
                 "parameters": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of newly-created probe." }
+                    { "name": "probe", "$ref": "ScriptProbe", "description": "Information for newly-created probe." }
                 ],
                 "description": "A new probe was added."
             },
             {
                 "name": "probeEnabled",
                 "parameters": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of probe." }
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." }
                 ],
                 "description": "A probe was enabled."
             },
             {
                 "name": "probeDisabled",
                 "parameters": [
-                    { "name": "uid", "$ref": "DataProbeId", "description": "Unique id of probe." }
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." }
                 ],
                 "description": "A probe was disabled."
             },

@@ -51,6 +51,7 @@ WebInspector.loaded = function()
         InspectorBackend.registerRuntimeDispatcher(new WebInspector.RuntimeObserver);
     InspectorBackend.registerReplayDispatcher(new WebInspector.ReplayObserver);
     InspectorBackend.registerRecordingsDispatcher(new WebInspector.RecordingsObserver);
+    InspectorBackend.registerProbeDispatcher(new WebInspector.ProbeObserver);
 
     // Enable agents.
     InspectorAgent.enable();
@@ -76,6 +77,7 @@ WebInspector.loaded = function()
     this.layerTreeManager = new WebInspector.LayerTreeManager;
     this.replayManager = new WebInspector.ReplayManager;
     this.recordingsManager = new WebInspector.RecordingsManager;
+    this.probeManager = new WebInspector.ProbeManager;
     this.dashboardManager = new WebInspector.DashboardManager;
 
     // Enable the Console Agent after creating the singleton managers.

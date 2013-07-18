@@ -55,8 +55,6 @@ public:
     int columnNumber() const { return m_columnNumber; }
     const String& expression() const { return m_expression; }
 
-protected:
-
 private:
     ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
     virtual void setIsEnabled(bool state) { m_isEnabled = state; }
@@ -79,7 +77,13 @@ inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, int lineNumber,
 , m_url(url)
 , m_lineNumber(lineNumber)
 , m_columnNumber(columnNumber)
-, m_expression(expression) {}
+, m_expression(expression) {
+    // The URL is used as a hash key, so it should never be null. If there's no URL,
+    // then emptyString() should be used instead.
+    ASSERT(!url.isNull());
+    // Expression strings must have non-zero length.
+    ASSERT(!expression.isEmpty());
+}
 
 } // namespace WebCore
 

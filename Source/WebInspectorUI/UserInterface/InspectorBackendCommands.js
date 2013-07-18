@@ -402,6 +402,23 @@ InspectorBackend.registerCommand("LayerTree.disable", [], []);
 InspectorBackend.registerCommand("LayerTree.layersForNode", [{"name": "nodeId", "type": "number", "optional": false}], ["layers"]);
 InspectorBackend.registerCommand("LayerTree.reasonsForCompositingLayer", [{"name": "layerId", "type": "string", "optional": false}], ["compositingReasons"]);
 
+// Probe.
+InspectorBackend.registerProbeDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Probe");
+InspectorBackend.registerEvent("Probe.probeDataReceived", ["sample"]);
+InspectorBackend.registerEvent("Probe.probeAdded", ["probe"]);
+InspectorBackend.registerEvent("Probe.probeEnabled", ["probeId"]);
+InspectorBackend.registerEvent("Probe.probeDisabled", ["probeId"]);
+InspectorBackend.registerEvent("Probe.allProbesCleared", []);
+InspectorBackend.registerCommand("Probe.enable", [], []);
+InspectorBackend.registerCommand("Probe.disable", [], []);
+InspectorBackend.registerCommand("Probe.isEnabled", [], ["state"]);
+InspectorBackend.registerCommand("Probe.clearAllProbes", [], []);
+InspectorBackend.registerCommand("Probe.getAvailableProbes", [], ["probes"]);
+InspectorBackend.registerCommand("Probe.getProbeSamples", [{"name": "probeId", "type": "number", "optional": false}], ["samples"]);
+InspectorBackend.registerCommand("Probe.enableProbe", [{"name": "probeId", "type": "number", "optional": false}], []);
+InspectorBackend.registerCommand("Probe.disableProbe", [{"name": "probeId", "type": "number", "optional": false}], []);
+InspectorBackend.registerCommand("Probe.createScriptProbe", [{"name": "url", "type": "string", "optional": false}, {"name": "lineNumber", "type": "number", "optional": false}, {"name": "columnNumber", "type": "number", "optional": false}, {"name": "expression", "type": "string", "optional": false}], []);
+
 // Recordings.
 InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");
 InspectorBackend.registerEvent("Recordings.recordingAdded", ["uid"]);

@@ -58,8 +58,10 @@ ScriptProbeServer::~ScriptProbeServer()
     m_probeRegistry.clear();
 }
 
-void ScriptProbeServer::addProbeForScriptId(intptr_t scriptId, PassRefPtr<ScriptProbe> probe)
+void ScriptProbeServer::addProbeForScriptId(intptr_t scriptId, PassRefPtr<ScriptProbe> prpProbe)
 {
+    RefPtr<ScriptProbe> probe = prpProbe;
+
     if (probe->lineNumber() < 0 || probe->columnNumber() < 0)
         return;
 
