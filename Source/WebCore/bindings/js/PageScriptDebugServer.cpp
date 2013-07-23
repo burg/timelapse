@@ -185,13 +185,18 @@ void PageScriptDebugServer::runEventLoopWhilePaused()
 #if ENABLE(WEB_REPLAY)
 void PageScriptDebugServer::atStatement(const JSC::DebuggerCallFrame& callFrame, intptr_t sourceID, int firstLine, int columnNumber)
 {
+    ScriptDebugServer::atStatement(callFrame, sourceID, firstLine, columnNumber);
+
+    if (!m_probeServer->isActive())
+        return;
+    
+    // if web replay is active, only generate probe samples during replay.
     JSC::JSGlobalObject* globalObject = callFrame.dynamicGlobalObject();
     InputIterator* it = globalObject->inputIterator();
-    // only generate probe samples during replay.
-    if (m_probeServer->isActive() && it && it->isReplaying())
-        m_probeServer->atStatement(callFrame, sourceID, firstLine, columnNumber);
-
-    ScriptDebugServer::atStatement(callFrame, sourceID, firstLine, columnNumber);
+    if (it && !it->isReplaying())
+        return;
+    
+    m_probeServer->atStatement(callFrame, sourceID, firstLine, columnNumber);
 }
 
 void PageScriptDebugServer::addScriptProbeSample(int probeId, ScriptState* exec, const ScriptValue& value)
