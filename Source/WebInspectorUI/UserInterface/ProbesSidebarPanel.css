@@ -30,10 +30,13 @@
 	right: 0;
 }
 
-.sidebar > .panel.probes > .content > .details-section {
-	width: 100%;
+.sidebar > .panel.probes > .content {
 	position: absolute;
 	top: 22px;
+}
+
+.sidebar > .panel.probes > .content > .details-section {
+	width: 100%;
 }
 
 .sidebar > .panel.probes > .content > .details-section > .header > .options {
@@ -41,11 +44,14 @@
 }
 
 .sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-remove,
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-color,
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-add,
 .sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle {
 	float: right;
 	height: 11px;
 	margin-top: 1px;
 	margin-left: 5px;
+	cursor: pointer;
 }
 
 .sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle {
@@ -60,18 +66,88 @@
 	content: url(Images/Close.pdf);
 }
 
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-color {
+	margin-top: 0px;
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-color {
+	height: 13px;
+	width: 13px;
+	border: 1px solid #666;
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-add {
+	content: url(Images/Plus.pdf);
+}
+
+.sidebar > .panel.probes > .content > .details-section > .header > .options > input {
+	height: 12px;
+	width: 40px;
+	font-size: 10px;
+}
+
+.panel.probes .table-container .main-column {
+	position: absolute;
+	width: 56px;
+	left: 5px;
+}
+
+.panel.probes .table-container {
+	overflow-x: scroll;
+	margin-left: 60px;
+}
+
 .panel.probes table {
 	border-collapse: collapse;
-	margin: 5px;
-	background-color: rgba(255,255,255,0.7);
+	margin-bottom: 3px
+}
+
+.panel.probes table td {
+	margin: 0;
+	white-space: nowrap;
 }
 
 .panel.probes table th, td {
 	padding: 3px;
+	background-color: rgba(255,255,255,0.7);
 	border: 1px solid gray;
 }
 
 .panel.probes table input {
 	height: 16px;
-	width: 80px;
+	width: 95px;
+}
+
+.sidebar > .panel.probes > .content > .details-section > .content > .group > .row {
+	padding: 5px;
+}
+
+.panel.probes ::-webkit-scrollbar {
+    height: 5px;
+}
+
+.panel.probes ::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 2px rgba(0,0,0,0.3);
+    border-radius: 4px;
+    margin: 1px;
+}
+
+.panel.probes ::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    -webkit-box-shadow: inset 0 0 2px rgba(0,0,0,0.5);
+}
+
+.popover .color-container {
+	padding: 2px;
+}
+
+.popover .color-container > .color {
+	font-family: 'Lucida Grande', Helvetica, sans-serif;
+	font-size: 11px;
+	margin: 2px;
+	cursor: pointer;
+}
+
+.popover .color-container > .color:hover {
+	color: #aaa;
 }

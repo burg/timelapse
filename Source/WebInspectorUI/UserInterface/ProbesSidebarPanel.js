@@ -30,8 +30,8 @@ WebInspector.ProbesSidebarPanel = function()
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._mainResourceChanged, this);
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.ResourceWasAdded, this._resourceAdded, this);
 
-    //WebInspector.probeManager.addEventListener(WebInspector.ProbesManager.Event.ProbeAdded, this._probeAdded, this);
-    //WebInspector.probeManager.addEventListener(WebInspector.ProbesManager.Event.ProbeRemoved, this._probeRemoved, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeAdded, this._probeAdded, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeRemoved, this._probeRemoved, this);
 
 	this._navigationBar = new WebInspector.NavigationBar;
     this.element.appendChild(this._navigationBar.element);
@@ -45,80 +45,36 @@ WebInspector.ProbesSidebarPanel = function()
 
     this.filterBar.placeholder = WebInspector.UIString("Filter Probes List");
 
-    this._probesContentTreeOutline = this.contentTreeOutline;
-    this._probesContentTreeOutline.onselect = this._treeElementSelected.bind(this);
-    this._probesContentTreeOutline.ondelete = this._probeTreeOutlineDeleteTreeElement.bind(this);
-    this._probesContentTreeOutline.oncontextmenu = this._probeTreeOutlineContextMenuTreeElement.bind(this);
-
-    // Note: I think for probes we will want to get rid of the content tree outline and row
-    // and add directly to the group seeing as each probe will only have one associated table?
-    // Left for now because it impacts many later functions.
-	var dataTable = this._probesContentTreeOutline.element.createChild("table");
-	var tableHeader = dataTable.createChild("tr");
-	var mainObject = tableHeader.createChild("th");
-	mainObject.textContent = "$0";
-	mainObject.addEventListener("click", this._changeProbeValue.bind(this));
-	var foo = tableHeader.createChild("th");
-	foo.textContent = "$0.foo";
-	foo.addEventListener("click", this._changeProbeValue.bind(this));
-	var bar = tableHeader.createChild("th");
-	bar.textContent = "$0.bar";
-	bar.addEventListener("click", this._changeProbeValue.bind(this));
-	var baz = tableHeader.createChild("th")
-	baz.textContent = "$0.baz";
-	baz.addEventListener("click", this._changeProbeValue.bind(this));
-
-	var tableRowOne = dataTable.createChild("tr");
-	tableRowOne.createChild("td").textContent = "Object T1";
-	tableRowOne.createChild("td").textContent = "Foo T1";
-	tableRowOne.createChild("td").textContent = "Bar T1";
-	tableRowOne.createChild("td").textContent = "Baz T1";
-	var tableRowTwo = dataTable.createChild("tr");
-	tableRowTwo.createChild("td").textContent = "Object T2";
-	tableRowTwo.createChild("td").textContent = "Foo T2";
-	tableRowTwo.createChild("td").textContent = "Bar T2";
-	tableRowTwo.createChild("td").textContent = "Baz T2";
-	var tableRowThree = dataTable.createChild("tr");
-	tableRowThree.createChild("td").textContent = "Object T3";
-	tableRowThree.createChild("td").textContent = "Foo T3";
-	tableRowThree.createChild("td").textContent = "Bar T3";
-	tableRowThree.createChild("td").textContent = "Baz T3";
-
-    var probesRow = new WebInspector.DetailsSectionRow;
-    probesRow.element.appendChild(this._probesContentTreeOutline.element);
-
-	var probeOptions = document.createElement("div");
-	probeOptions.classList.add(WebInspector.ProbesSidebarPanel.ProbeOptionsStyleClassName);
-
-    var removeProbeButton = probeOptions.createChild("img");
-    removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName); 
-    removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
-    removeProbeButton.addEventListener("click", this._removeProbe.bind(this));
-
-    var probeToggleElement = probeOptions.createChild("img");
-    probeToggleElement.classList.add(WebInspector.ProbesSidebarPanel.ProbeToggleStyleClassName);
-    if (true/*WebInspector.probeManager.probesEnabled*/)
-        probeToggleElement.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
-    probeToggleElement.addEventListener("click", this._probesToggleButtonClicked.bind(this));
-
-
-    var probesGroup = new WebInspector.DetailsSectionGroup([probesRow]);
-    var probesSection = new WebInspector.DetailsSection("probe", WebInspector.UIString("Probe %d").format(1), [probesGroup], probeOptions);
-    this.contentElement.appendChild(probesSection.element);
-
     //WebInspector.Probe.addEventListener(WebInspector.Probe.Event.DisplayLocationDidChange, this._probeDisplayLocationDidChange, this);
 
 };
 
 WebInspector.ProbesSidebarPanel.OffsetSectionsStyleClassName  = "offset-sections";
 WebInspector.ProbesSidebarPanel.ProbeOptionsStyleClassName = "options";
+WebInspector.ProbesSidebarPanel.ProbeColorStyleClassName = "probe-color";
 WebInspector.ProbesSidebarPanel.ProbeToggleStyleClassName = "probe-toggle";
 WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName = "probe-remove";
+WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName = "enabled";
+WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName = "table-container";
+WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName = "main-column";
+WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName = "color-container";
+WebInspector.ProbesSidebarPanel.ColorStyleClassName = "color";
+WebInspector.ProbesSidebarPanel.ProbeColorValues = ["Yellow", "Red", "Blue", "Green", "Pink", "Orange", "Purple"];
+WebInspector.ProbesSidebarPanel.DefaultProbeColor = "Yellow";
 
 WebInspector.ProbesSidebarPanel.prototype = {
     constructor: WebInspector.ProbesSidebarPanel,
 
+    // Public
+
+    show: function()
+    {
+        WebInspector.NavigationSidebarPanel.prototype.show.call(this);
+        ProbeAgent.enable();
+    },
+
+    // Private
     _resourceAdded: function(event)
     {
         var resource = event.data.resource;
@@ -138,40 +94,94 @@ WebInspector.ProbesSidebarPanel.prototype = {
         //    this._addProbe(probes[i], sourceCode);
     },
 
-    _addProbe: function(probe, sourceCode)
+    _addProbe: function(lineNumber, lineElement) /*probe, sourceCode*/
     {
     	console.log("Adding Probe");
-        //var sourceCode = probe.sourceCodeLocation.displaySourceCode;
-        //if (!sourceCode)
-        //    return null;
 
-        //var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(sourceCode);
-        //if (!parentTreeElement) {
-        //    if (sourceCode instanceof WebInspector.SourceMapResource)
-        //        parentTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
-        //    else if (sourceCode instanceof WebInspector.Resource)
-        //        parentTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
-        //    else if (sourceCode instanceof WebInspector.Script)
-        //        parentTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
-        //}
+        var container = document.createElement("div");
+        container.classList.add(WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName);
+        var dataTable = container.createChild("table");
+        var tableHeader = dataTable.createChild("tr");
+        var initialExpression = tableHeader.createChild("th");
+        //initialExpression.addEventListener("click", this._changeProbeValue.bind(this));
 
-        //if (!parentTreeElement.parent) {
-        //    parentTreeElement.hasChildren = true;
-        //    parentTreeElement.expand();
+        //this._changeProbeValue({ target: initialExpression });
 
-        //    this._probesContentTreeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, this._probesContentTreeOutline.children, this._compareTopLevelTreeElements.bind(this)));
-        //}
+        //Hardcoded Example.....
+        initialExpression.textContent = "$0";
+        initialExpression.addEventListener("click", this._changeProbeValue.bind(this));
+        initialExpression.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
+        var foo = tableHeader.createChild("th");
+        foo.textContent = "$0.foo";
+        foo.addEventListener("click", this._changeProbeValue.bind(this));
+        var bar = tableHeader.createChild("th");
+        bar.textContent = "$0.bar";
+        bar.addEventListener("click", this._changeProbeValue.bind(this));
+        var baz = tableHeader.createChild("th")
+        baz.textContent = "$0.baz";
+        baz.addEventListener("click", this._changeProbeValue.bind(this));
+        /*var mumble = tableHeader.createChild("th")
+        mumble.textContent = "$0.mumble";
+        mumble.addEventListener("click", this._changeProbeValue.bind(this));
+        var bumble = tableHeader.createChild("th")
+        bumble.textContent = "$0.bumble";
+        bumble.addEventListener("click", this._changeProbeValue.bind(this));*/
 
-        //// Mark disabled probes as resolved if there is source code loaded with that URL.
-        //// This gives the illusion the probe was resolved, but since we don't send disabled
-        //// probes to the backend we don't know for sure. If the user enables the probe
-        //// it will be resolved properly.
-        //if (probe.disabled)
-        //    probe.resolved = true;
+        var tableRowOne = dataTable.createChild("tr");
+        var o1 = tableRowOne.createChild("td");
+        o1.textContent = "Object T1";
+        o1.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
+        tableRowOne.createChild("td").textContent = "Foo T1";
+        tableRowOne.createChild("td").textContent = "Bar T1";
+        tableRowOne.createChild("td").textContent = "Baz T1";
+        var tableRowTwo = dataTable.createChild("tr");
+        var o2 = tableRowTwo.createChild("td");
+        o2.textContent = "Object T2";
+        o2.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
+        tableRowTwo.createChild("td").textContent = "Foo T2";
+        tableRowTwo.createChild("td").textContent = "Bar T2";
+        tableRowTwo.createChild("td").textContent = "Baz T2";
+        var tableRowThree = dataTable.createChild("tr");
+        var o3 = tableRowThree.createChild("td");
+        o3.textContent = "Object T3";
+        o3.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
+        tableRowThree.createChild("td").textContent = "Foo T3";
+        tableRowThree.createChild("td").textContent = "Bar T3";
+        tableRowThree.createChild("td").textContent = "Baz T3";
 
-        //var probeTreeElement = new WebInspector.ProbeTreeElement(probe);
-        //parentTreeElement.insertChild(probeTreeElement, insertionIndexForObjectInListSortedByFunction(probeTreeElement, parentTreeElement.children, this._compareProbeTreeElements));
-        //return probeTreeElement;
+        var probesRow = new WebInspector.DetailsSectionRow;
+        probesRow.element.appendChild(container);
+
+        var probeOptions = document.createElement("div");
+        probeOptions.classList.add(WebInspector.ProbesSidebarPanel.ProbeOptionsStyleClassName);
+
+        var removeProbeButton = probeOptions.createChild("img");
+        removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName); 
+        removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
+        removeProbeButton.addEventListener("click", this._removeButtonClicked.bind(this));
+
+        var probeToggleElement = probeOptions.createChild("img");
+        probeToggleElement.classList.add(WebInspector.ProbesSidebarPanel.ProbeToggleStyleClassName);
+        probeToggleElement.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
+        probeToggleElement.addEventListener("click", this._probesToggleButtonClicked.bind(this));
+
+        var probeColorButton = probeOptions.createChild("div");
+        probeColorButton.style.backgroundColor = WebInspector.ProbesSidebarPanel.DefaultProbeColor;
+        probeColorButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeColorStyleClassName);
+        probeColorButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
+        probeColorButton.addEventListener("click", this._probeColorButtonClicked.bind(this, lineElement));
+
+        var addProbeValue = probeOptions.createChild("img");
+        addProbeValue.classList.add(WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName);
+        addProbeValue.addEventListener("click", this._addNewColumn.bind(this));
+
+        var probesGroup = new WebInspector.DetailsSectionGroup([probesRow]);
+        
+        var probesSection = new WebInspector.DetailsSection("probe", WebInspector.UIString("Probe %s:%d").format("fake.js",lineNumber), [probesGroup], probeOptions);
+        this.contentElement.appendChild(probesSection.element);
+
+        lineElement.style.backgroundColor = WebInspector.ProbesSidebarPanel.DefaultProbeColor;
+
     },
 
     _removeProbe: function(event, probe)
@@ -182,27 +192,32 @@ WebInspector.ProbesSidebarPanel.prototype = {
 
     _probeAdded: function(event)
     {
-        var probe = event.data.probe;
-        this._addProbe(probe);
+        //var probe = event.data; as arg to addProbe
+        console.log("PROBE:", event.data);
+        this._addProbe(event.data._lineNumber, event.data.lineElement);
     },
 
     _probeRemoved: function(event)
     {
-        var probe = event.data.probe;
 
-        var probeTreeElement = this._probesContentTreeOutline.getCachedTreeElement(probe);
-        console.assert(probeTreeElement);
-        if (!probeTreeElement)
-            return;
+    },
 
-        this._removeProbeTreeElement(probeTreeElement);
+    _addNewColumn: function(event)
+    {
+        console.log("ADD NEW PROBE + COLUMN");
+        var pop = new WebInspector.Popover;
+        pop.content = document.createTextNode("Add Probe Column.");
+        var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
+        pop.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
     },
 
     _changeProbeValue: function(event)
     {
     	var textBox = document.createElement("input");
     	textBox.addEventListener("keypress", this._updateProbe.bind(this));
-    	textBox.type = "text"
+        textBox.addEventListener("click", (function (event) {event.target.select()}));
+    	textBox.type = "text";
+        textBox.value = "Enter Expression";
     	event.target.innerHTML = "";
     	event.target.appendChild(textBox);
     },
@@ -215,9 +230,50 @@ WebInspector.ProbesSidebarPanel.prototype = {
 		// Use event.target.value to modify probes! Or delete if == "".
     },
 
+    _updateColor: function(color, lineElement, colorButton, popover, event)
+    {
+        lineElement.style.backgroundColor = color;
+        colorButton.style.backgroundColor = color;
+        popover.dismiss();
+    },
+
+    _removeButtonClicked: function(event)
+    {
+        var section = event.target.parentElement.parentElement.parentElement;
+        section.parentElement.removeChild(section);
+        //this._removeProbe(probe);
+    },
+
+    _probeColorButtonClicked: function(lineElement, event)
+    {
+        var popover = new WebInspector.Popover;
+
+        var colorContainer = document.createElement("div");
+        colorContainer.classList.add(WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName);
+        var colors = WebInspector.ProbesSidebarPanel.ProbeColorValues;
+        for (var i = 0; i <= colors.length - 1; i++) {
+            var color = colorContainer.createChild("div");
+            color.textContent = colors[i];
+            color.classList.add(WebInspector.ProbesSidebarPanel.ColorStyleClassName);
+            color.addEventListener("click", this._updateColor.bind(this, colors[i], lineElement, event.target, popover));
+        };
+
+        popover.content = colorContainer;
+        var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
+        popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
+    },
+
     _probesToggleButtonClicked: function(event)
     {
-        console.log("Probe toggle clicked");
+        if (event.target.classList.contains(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName)) {
+            console.log("Probe toggle clicked to disable");
+            event.target.classList.remove(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
+            //probeManager.disableProbe(probe);
+        } else {
+            console.log("Probe toggle clicked to enable");
+            event.target.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
+            //probeManager.enableProbe(probe);
+        }
         //WebInspector.probeManager.probesEnabled = this._probesToggleElement.classList.toggle(WebInspector.ProbesSidebarPanel.ProbeToggleEnabledStyleClassName);
     },
 
@@ -227,59 +283,6 @@ WebInspector.ProbesSidebarPanel.prototype = {
     		WebInspector.replayManager.replayToCompletionSoon(true, WebInspector.replayManager.replayState);
     	else
     		WebInspector.replayManager.pausePlaybackSoon();
-    },
-
-    _removeProbeTreeElement: function(probeTreeElement)
-    {
-        var parentTreeElement = probeTreeElement.parent;
-        parentTreeElement.removeChild(probeTreeElement);
-
-        console.assert(parentTreeElement.parent === this._probesContentTreeOutline);
-
-        if (!parentTreeElement.children.length)
-            this._probesContentTreeOutline.removeChild(parentTreeElement);
-    },
-
-    _treeElementSelected: function(treeElement, selectedByUser)
-    {
-
-    },
-
-    _probeTreeOutlineDeleteTreeElement: function(treeElement)
-    {
-
-    },
-
-    _probeTreeOutlineContextMenuTreeElement: function(event, treeElement)
-    {
-
-    },
-
-    _compareTopLevelTreeElements: function(a, b)
-    {
-        //if (a === this._allExceptionsProbeTreeElement)
-        //    return -1;
-        //if (b === this._allExceptionsProbeTreeElement)
-        //    return 1;
-
-        //if (a === this._allUncaughtExceptionsProbeTreeElement)
-        //    return -1;
-        //if (b === this._allUncaughtExceptionsProbeTreeElement)
-        //    return 1;
-
-        //return a.mainTitle.localeCompare(b.mainTitle);
-    },
-
-    _compareProbeTreeElements: function(a, b)
-    {
-        //var aLocation = a.probe.sourceCodeLocation;
-        //var bLocation = b.probe.sourceCodeLocation;
-
-        //var comparisonResult = aLocation.displayLineNumber - bLocation.displayLineNumber
-        //if (comparisonResult !== 0)
-        //    return comparisonResult;
-
-        //return aLocation.displayColumnNumber - bLocation.displayColumnNumber;
     }
 };
 
