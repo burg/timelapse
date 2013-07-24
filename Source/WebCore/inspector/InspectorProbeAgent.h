@@ -51,13 +51,13 @@
 
 namespace WebCore {
 
-class DataProbe;
 class Frame;
 class InspectorController;
 class InspectorCompositeState;
 class InspectorProbeAgent;
 class InstrumentingAgents;
 class Page;
+class ScriptProbe;
 
 typedef String ErrorString;
 
@@ -135,11 +135,12 @@ public:
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
 
+    typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
+
     int m_nextProbeId;
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Probe* m_frontend;
     Page* m_inspectedPage;
-    typedef HashMap<int, RefPtr<DataProbe>> ProbeMap;
     ProbeMap m_probeMap;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     OwnPtr<ScriptProbeResolver> m_scriptProbeResolver;

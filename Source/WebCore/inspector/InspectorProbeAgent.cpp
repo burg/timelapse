@@ -34,7 +34,6 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
-#include "DataProbe.h"
 #include "InspectorState.h"
 #include "InstrumentingAgents.h"
 #include "Logging.h"
@@ -53,11 +52,6 @@ namespace WebCore {
 
 namespace ProbeAgentState {
 static const char probesEnabled[] = "probesEnabled";
-}
-
-namespace ProbeTypes {
-// Keep this in sync with ProbeAgent.js and DataProbeType in inspector.json
-static const char ScriptProbe[] = "script";
 }
 
 static ScriptProbeServer* probeServer()

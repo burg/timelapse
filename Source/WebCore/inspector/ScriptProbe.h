@@ -34,21 +34,19 @@
 
 #if ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
-#include "DataProbe.h"
-
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class ScriptProbe : public DataProbe {
+class ScriptProbe : public RefCounted<ScriptProbe> {
 public:
     static RefPtr<ScriptProbe> create(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
     virtual ~ScriptProbe() {}
 
-    // DataProbe interface
     virtual void enable() { setIsEnabled(true); }
     virtual void disable() { setIsEnabled(false); }
     virtual bool isEnabled() const { return m_isEnabled; }
+    unsigned uid() const { return m_uid; }
 
     const String& url() const { return m_url; }
     int lineNumber() const { return m_lineNumber; }
@@ -59,6 +57,7 @@ private:
     ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
     virtual void setIsEnabled(bool state) { m_isEnabled = state; }
 
+    unsigned m_uid;
     bool m_isEnabled;
     String m_url;
     int m_lineNumber;
@@ -72,7 +71,7 @@ inline RefPtr<ScriptProbe> ScriptProbe::create(unsigned uid, const String& url, 
 }
 
 inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression)
-: DataProbe(uid)
+: m_uid(uid)
 , m_isEnabled(false)
 , m_url(url)
 , m_lineNumber(lineNumber)

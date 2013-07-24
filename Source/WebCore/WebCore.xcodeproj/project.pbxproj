@@ -5104,7 +5104,6 @@
 		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */; };
 		C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */; };
-		C41370E7171C9D280099A2D9 /* DataProbe.h in Headers */ = {isa = PBXBuildFile; fileRef = C41370E6171C9D280099A2D9 /* DataProbe.h */; };
 		C41D354E1711F57A00E40FB7 /* InputStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D354C1711F57A00E40FB7 /* InputStorage.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41D35571712064900E40FB7 /* CaptureInputIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */; };
 		C41D35581712064900E40FB7 /* CaptureInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35541712064800E40FB7 /* CaptureInputIterator.h */; };
@@ -11942,7 +11941,6 @@
 		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
 		C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorProbeAgent.cpp; sourceTree = "<group>"; };
 		C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorProbeAgent.h; sourceTree = "<group>"; };
-		C41370E6171C9D280099A2D9 /* DataProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DataProbe.h; sourceTree = "<group>"; };
 		C41D354C1711F57A00E40FB7 /* InputStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InputStorage.h; path = replay/InputStorage.h; sourceTree = "<group>"; };
 		C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CaptureInputIterator.cpp; path = replay/CaptureInputIterator.cpp; sourceTree = "<group>"; };
 		C41D35541712064800E40FB7 /* CaptureInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CaptureInputIterator.h; path = replay/CaptureInputIterator.h; sourceTree = "<group>"; };
@@ -13759,7 +13757,6 @@
 				41F0618C0F5F069800A07EAC /* ConsoleMessage.h */,
 				59102FB914327D3B003C9D04 /* ContentSearchUtils.cpp */,
 				59102FBA14327D3B003C9D04 /* ContentSearchUtils.h */,
-				C41370E6171C9D280099A2D9 /* DataProbe.h */,
 				7AABA25714BC613300AA9A11 /* DOMEditor.cpp */,
 				7AABA25814BC613300AA9A11 /* DOMEditor.h */,
 				7A54881614E432A1006AE05A /* DOMPatchSupport.cpp */,
@@ -24482,7 +24479,6 @@
 				E180811716FCF9CB00B80D07 /* SynchronousLoaderClient.h in Headers */,
 				E152551516FD2350003D7ADB /* WebCoreResourceHandleAsOperationQueueDelegate.h in Headers */,
 				C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */,
-				C41370E7171C9D280099A2D9 /* DataProbe.h in Headers */,
 				E1B533491717DEE300F205F9 /* CachedRawResourceClient.h in Headers */,
 				BE88E0C21715CE2600658D98 /* TrackListBase.h in Headers */,
 				FB484F4D171F821E00040755 /* TransformFunctions.h in Headers */,
