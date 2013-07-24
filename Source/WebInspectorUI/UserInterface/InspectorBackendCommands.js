@@ -404,7 +404,7 @@ InspectorBackend.registerCommand("LayerTree.reasonsForCompositingLayer", [{"name
 
 // Probe.
 InspectorBackend.registerProbeDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Probe");
-InspectorBackend.registerEvent("Probe.probeDataReceived", ["sample"]);
+InspectorBackend.registerEvent("Probe.probeSampleReceived", ["sample"]);
 InspectorBackend.registerEvent("Probe.probeAdded", ["probe"]);
 InspectorBackend.registerEvent("Probe.probeEnabled", ["probeId"]);
 InspectorBackend.registerEvent("Probe.probeDisabled", ["probeId"]);

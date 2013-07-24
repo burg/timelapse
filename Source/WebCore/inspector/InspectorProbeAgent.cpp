@@ -37,6 +37,8 @@
 #include "DataProbe.h"
 #include "InspectorState.h"
 #include "InstrumentingAgents.h"
+#include "Logging.h"
+#include <inttypes.h>
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 #include "Page.h"
@@ -104,6 +106,8 @@ void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> prpProbe)
     RefPtr<ScriptProbe> probe = prpProbe;
     m_probes.add(probe);
 
+    LOG(DeterministicReplay, "ScriptProbeResolver::addProbe id=%d, expression=%s", probe->uid(), probe->expression().utf8().data());
+
     // if probe matches url with known script id, resolve immediately.
     UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
     if (findResult == m_urlToScriptIdMap.end())
@@ -115,14 +119,14 @@ void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> prpProbe)
 void ScriptProbeResolver::didParseSource(const String& stringId, const Script& script)
 {
     intptr_t scriptId = stringId.toInt();
-    const String& key = (script.url.isNull()) ? emptyString() : script.url;
-    UrlToScriptIdMap::AddResult result = m_urlToScriptIdMap.add(key, scriptId);
-    if (!result.isNewEntry)
-        return;
+    const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
+    m_urlToScriptIdMap.add(nonNullUrl, scriptId);
+
+    LOG(DeterministicReplay, "ScriptProbeResolver::didParseSource id=%" PRIiPTR ", url=%s", scriptId, nonNullUrl.utf8().data());
 
     // find any probes that should resolve within that file, add them.
     for (ProbeSet::const_iterator it = m_probes.begin(); it != m_probes.end(); ++it) {
-        if ((*it)->url() == script.url)
+        if ((*it)->url() == nonNullUrl)
             probeServer()->addProbeForScriptId(scriptId, *it);
     }
 }
@@ -143,7 +147,9 @@ void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState*, const 
 {
     // FIXME: implement some sort of storage for probe samples.
     // FIXME: this is a dummy value.
-    RefPtr<InspectorObject> payload = InspectorBasicValue::create(42)->asObject();
+    RefPtr<InspectorObject> payload = InspectorObject::create();
+    payload->setValue("value", InspectorBasicValue::create(42));
+
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
                                                             .setProbeId(probeId)
                                                             .setSampleId(m_nextSampleId++)
@@ -286,6 +292,15 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
     m_scriptProbeResolver->addProbe(probe);
+    if (!m_frontend)
+        return;
+
+    RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
+                                                            .setProbeId(probe->uid())
+                                                            .setIsEnabled(true);
+    m_frontend->probeAdded(probeObject.release());
+    m_frontend->probeEnabled(probe->uid());
+
     UNUSED_PARAM(errorString);
 #else
     UNUSED_PARAM(url);

@@ -44,6 +44,7 @@ WebInspector.ReplayManager.Event = {
     PlaybackStarted: "replay-manager-playback-started",
     PlaybackPaused: "replay-manager-playback-paused",
     PlaybackFinished: "replay-manager-playback-finished",
+    PlaybackError: "replay-manager-playback-error",
     CursorChanged: "replay-manager-cursor-changed",
 
     // fired when activeRecording changes.
@@ -154,6 +155,11 @@ WebInspector.ReplayManager.prototype = {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.PausePlayback());
     },
 
+    stopPlaybackSoon: function(shouldUnlock)
+    {
+        this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.StopPlayback(shouldUnlock));
+    },
+
     replayToCompletionSoon: function(allowBreakpoints, replaySpeed)
     {
         this.scheduler.enqueue(new WebInspector.ReplayManager.AsyncTasks.BeginReplayToCompletion(allowBreakpoints, replaySpeed));
@@ -206,6 +212,16 @@ WebInspector.ReplayManager.prototype = {
 
         this._replayState = WebInspector.ReplayManager.ReplayState.CanReplay;
         this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackFinished);
+    },
+
+    playbackError: function(isFatal, error)
+    {
+        var data = {
+            "errorMessage": error,
+            "isFatal": isFatal
+        };
+
+        this.dispatchEventToListeners(WebInspector.ReplayManager.Event.PlaybackError, data);
     },
 
     playbackHitMark: function(markIndex)

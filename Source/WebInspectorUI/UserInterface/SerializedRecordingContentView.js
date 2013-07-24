@@ -52,9 +52,18 @@ WebInspector.SerializedRecordingContentView = function(recording)
     this.markers.highlight.adjustable = true;
     this._zoomGutter.appendChild(this.markers.highlight.element);
 
+    this._messagePanel = new WebInspector.HorizontalMessageSheet();
+    this.element.appendChild(this._messagePanel.element);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackWillStart, this._showMessagePanel);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackStarted, this._showMessagePanel);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackPaused, this._hideMessagePanel);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackFinished, this._hideMessagePanel);
+
     this._listeners.register(recording, WebInspector.RecordingObject.Event.ProviderAdded, this._providerAdded);
-    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateReplayCursorPosition);
     this._listeners.register(recording.calculator, WebInspector.RecordingCalculator.Event.ZoomChanged, this._updateZoomElements);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._updateReplayCursorPosition);
+    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackError, this._onPlaybackError);
+
     this._listeners.install();
 
     // add input providers that have already been created
@@ -64,8 +73,9 @@ WebInspector.SerializedRecordingContentView = function(recording)
 };
 
 WebInspector.SerializedRecordingContentView.StyleClassName = "serialized-recording";
-WebInspector.SerializedRecordingContentView.ZoomGutterStyleClassName = "zoom-gutter";
 WebInspector.SerializedRecordingContentView.ActiveZoomMarkerStyleClassName = "active-zoom-marker";
+WebInspector.SerializedRecordingContentView.MessagePanelStyleClassName = "message-panel";
+WebInspector.SerializedRecordingContentView.ZoomGutterStyleClassName = "zoom-gutter";
 WebInspector.SerializedRecordingContentView.ZoomHighlightMarkerStyleClassName = "zoom-highlight-marker";
 
 WebInspector.SerializedRecordingContentView.prototype = {
@@ -186,5 +196,73 @@ WebInspector.SerializedRecordingContentView.prototype = {
         var dragDelta = data.dragPosition - data.initialDragPosition;
         dragDelta = Number.constrain(dragDelta, -data.initialLeft, 1.0 - data.initialRight);
         this._recording.calculator.setZoomInterval(data.initialLeft + dragDelta, data.initialRight + dragDelta);
+    },
+
+    _onPlaybackError: function(event)
+    {
+        var error = event.data.errorMessage;
+        var isFatal = event.data.isFatal;
+
+        if (isFatal) {
+            this._messagePanel.setMessage({ text: WebInspector.UIString("Playback was terminated by a fatal error.") });
+        } else {
+            this._messagePanel.setMessage({ text: WebInspector.UIString("Something went wrong during playback.") });
+            var options = [
+                {
+                    label: WebInspector.UIString("Keep going"),
+                    classname: "keep-going",
+                    callback: function(event) {
+                        var allowBreakpoints = WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal;
+                        WebInspector.replayManager.replayToCompletionSoon(allowBreakpoints, WebInspector.replayManager.replaySpeed);
+                    } 
+                },
+
+                {
+                    label: WebInspector.UIString("Ignore warnings"),
+                    classname: "ignore",
+                    callback: function(event) {
+                        var allowBreakpoints = WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal;
+                        ReplayAgent.setPauseOnError(false);
+                        WebInspector.replayManager.replayToCompletionSoon(allowBreakpoints, WebInspector.replayManager.replaySpeed);
+                    } 
+                },
+
+                {
+                    label: WebInspector.UIString("Abort"),
+                    classname: "abort",
+                    callback: function() {
+                        WebInspector.replayManager.stopPlaybackSoon(true);
+                    }
+                } 
+            ];
+            this._messagePanel.setOptions(options);
+        }
+        this._messagePanel.shown();
+    },
+
+    _showMessagePanel: function()
+    {
+        this._messagePanel.hidden();
+
+        // Figure out an appropriate message if none provided.
+        if (this._messagePanel.message === "") {
+            if (WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking) {
+                this._messagePanel.setMessage({ text: WebInspector.UIString("Seeking...") });
+            } else {
+                this._messagePanel.setMessage({ 
+                    text: WebInspector.UIString("Replaying... click to cancel."),
+                    callback:  function() {
+                        WebInspector.replayManager.pausePlaybackSoon()
+                    }
+                });
+            }
+        }
+
+        this._messagePanel.shown();
+    },
+
+    _hideMessagePanel: function()
+    {   
+        this._messagePanel.hidden();
     }
 };
