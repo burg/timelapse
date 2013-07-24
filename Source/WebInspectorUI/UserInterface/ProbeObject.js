@@ -39,6 +39,7 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     this._columnNumber = columnNumber;
     this._expression = expression;
     this._enabled = true;
+    this._samples = [];
 }
 
 WebInspector.ProbeObject.prototype = {
@@ -66,6 +67,7 @@ WebInspector.ProbeObject.prototype = {
 
     addSample: function(sample)
     {
+        console.assert(sample instanceof WebInspector.ProbeSampleObject, "Wrong object type passed as probe sample.");
         this._samples.push(sample);
         console.log("DEBUG: Added probe sample: ", sample);
     },

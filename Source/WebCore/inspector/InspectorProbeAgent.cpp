@@ -147,7 +147,9 @@ void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState*, const 
 {
     // FIXME: implement some sort of storage for probe samples.
     // FIXME: this is a dummy value.
-    RefPtr<InspectorObject> payload = InspectorBasicValue::create(42)->asObject();
+    RefPtr<InspectorObject> payload = InspectorObject::create();
+    payload->setValue("value", InspectorBasicValue::create(42));
+
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
                                                             .setProbeId(probeId)
                                                             .setSampleId(m_nextSampleId++)
@@ -290,6 +292,15 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
     m_scriptProbeResolver->addProbe(probe);
+    if (!m_frontend)
+        return;
+
+    RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
+                                                            .setProbeId(probe->uid())
+                                                            .setIsEnabled(true);
+    m_frontend->probeAdded(probeObject.release());
+    m_frontend->probeEnabled(probe->uid());
+
     UNUSED_PARAM(errorString);
 #else
     UNUSED_PARAM(url);

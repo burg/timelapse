@@ -71,8 +71,8 @@ WebInspector.ProbeManager.prototype = {
     addProbeSample: function(sample)
     {
         console.assert(sample.probeId in this._probes, "Unknown probe id specified for sample: ", sample);
-        var probe = this._probes[probe.probeId];
-        probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.timestamp, sample.payload));
+        var probe = this._probes[sample.probeId];
+        probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.timestamp, sample.payload.value));
         this.dispatchEventToListeners(WebInspector.ProbeManager.Event.SamplesChanged, probe);
     },
 

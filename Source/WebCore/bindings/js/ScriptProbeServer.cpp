@@ -67,7 +67,7 @@ void ScriptProbeServer::addProbeForScriptId(intptr_t scriptId, PassRefPtr<Script
     if (probe->lineNumber() < 0 || probe->columnNumber() < 0)
         return;
 
-    LOG(DeterministicReplay, "ScriptProbeServer: added probe uid=%d (script id=%" PRIiPTR ", url=%s)", probe->uid(), scriptId, probe->url().utf8().data());
+    LOG(DeterministicReplay, "ScriptProbeServer: added probe uid=%d (script id=%" PRIiPTR ", url=%s, line=%d, col=%d)", probe->uid(), scriptId, probe->url().utf8().data(), probe->lineNumber(), probe->columnNumber());
 
     m_probesById.add(probe->uid(), probe);
 
@@ -131,10 +131,10 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
 
     LOG(DeterministicReplay, "ScriptProbeServer: maybe adding sample for file (script id: %" PRIiPTR ")", scriptId);
 
-    if (lineNumber < 0 || columnNumber < 0)
+    if (lineNumber < 1 || columnNumber < 1)
         return;
 
-    LineToScriptProbeMap::const_iterator entryForLine = entryForScript->value.find(lineNumber + 1);
+    LineToScriptProbeMap::const_iterator entryForLine = entryForScript->value.find(lineNumber);
     if (entryForLine == entryForScript->value.end())
         return;
 
@@ -144,14 +144,10 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
     ProbeSet::iterator probesIt = probes.begin();
     for (; probesIt != probes.end(); ++probesIt) {
         RefPtr<ScriptProbe> probe = *probesIt;
-        int probeLine = probe->lineNumber();
-        int probeColumn = probe->columnNumber();
 
-        if ((lineNumber == probeLine && !probeColumn) ||
-            (lineNumber == probeLine && columnNumber == probeColumn)) {
-
+        // FIXME: the column number is not checked here, but should be.
+        if (lineNumber == probe->lineNumber()) {
             LOG(DeterministicReplay, "ScriptProbeServer: adding sample for probe uid=%d", probe->uid());
-
             // aoeu: extract to share this code with addSampleFromConsole?
             JSC::JSValue exception;
             JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
