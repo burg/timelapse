@@ -38,7 +38,7 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     this._lineNumber = lineNumber;
     this._columnNumber = columnNumber;
     this._expression = expression;
-    this._enabled = true;
+    this._enabled = false;
     this._samples = [];
 }
 

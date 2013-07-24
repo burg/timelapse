@@ -137,12 +137,12 @@ void ScriptProbeResolver::didContinue()
 {
 }
 
-void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&)
+void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState* state, const ScriptValue& value)
 {
     // FIXME: implement some sort of storage for probe samples.
     // FIXME: this is a dummy value.
     RefPtr<InspectorObject> payload = InspectorObject::create();
-    payload->setValue("value", InspectorBasicValue::create(42));
+    payload->setValue("value", value.toInspectorValue(state));
 
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
                                                             .setProbeId(probeId)
@@ -224,14 +224,20 @@ void InspectorProbeAgent::clearAllProbes(ErrorString* errorString)
     m_probeMap.clear();
 }
 
-void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& result)
+void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& resultArray)
 {
-    result = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe>::create();
+    resultArray = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe>::create();
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
-        RefPtr<TypeBuilder::Probe::ScriptProbe> probe = TypeBuilder::Probe::ScriptProbe::create()
-                                                            .setProbeId(it->key)
-                                                            .setIsEnabled(true);
-        result->addItem(probe.release());
+        RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
+                                                               .setProbeId(it->key)
+                                                               .setLineNumber(it->value->lineNumber())
+                                                               .setExpression(it->value->expression())
+                                                               .setIsEnabled(false);
+       // Set optional fields.
+       probeObject->setUrl(it->value->url());
+       probeObject->setColumnNumber(it->value->columnNumber());
+
+        resultArray->addItem(probeObject.release());
     }
 }
 
@@ -290,9 +296,17 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
         return;
 
     RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
-                                                            .setProbeId(probe->uid())
-                                                            .setIsEnabled(true);
+                                                           .setProbeId(probe->uid())
+                                                           .setLineNumber(probe->lineNumber())
+                                                           .setExpression(probe->expression())
+                                                           .setIsEnabled(true);
+
+    // Set optional fields.
+    probeObject->setUrl(probe->url());
+    probeObject->setColumnNumber(probe->columnNumber());
+
     m_frontend->probeAdded(probeObject.release());
+    // Probes are not enabled when they are created, but the backend enables them immediately.
     m_frontend->probeEnabled(probe->uid());
 
     UNUSED_PARAM(errorString);
