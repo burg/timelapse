@@ -34,8 +34,11 @@ WebInspector.ProbeGroupObject = function(url, lineNumber)
 	this._gutterElement.classList.add(WebInspector.ProbeGroupObject.ProbeGutterStyleClassName);
 	this._gutterElement.style.backgroundColor = this._color;
 	this._gutterElement.textContent = this._lineNumber + 1;
-	WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._lineNumber, "CodeMirror-linenumbers", this._gutterElement)
 }
+
+WebInspector.ProbeGroupObject.Event = {
+    ProbesChanged: "probe-group-probes-changed"
+};
 
 WebInspector.ProbeGroupObject.ProbeGutterStyleClassName = "probe-gutter";
 WebInspector.ProbeGroupObject.DefaultProbeColor = "Yellow";
@@ -70,7 +73,7 @@ WebInspector.ProbeGroupObject.prototype = {
     {
         this._color = value;
 		this._gutterElement.style.backgroundColor = this._color;
-		WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._lineNumber, "CodeMirror-linenumbers", this._gutterElement)
+		WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._lineNumber, "CodeMirror-linenumbers", this._gutterElement);
     },
 
     enable: function()
@@ -86,5 +89,6 @@ WebInspector.ProbeGroupObject.prototype = {
     addProbe: function(probe)
     {
     	this._probes[probe.probeId] = probe;
+		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbesChanged, this)
     }
 };
