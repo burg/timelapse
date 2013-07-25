@@ -28,6 +28,7 @@ WebInspector.DebuggerManager = function()
     WebInspector.Object.call(this);
 
     DebuggerAgent.enable();
+    ProbeAgent.enable();
 
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisabledStateDidChange, this._breakpointDisabledStateDidChange, this);

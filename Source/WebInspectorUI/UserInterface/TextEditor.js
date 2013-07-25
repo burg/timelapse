@@ -925,18 +925,21 @@ WebInspector.TextEditor.prototype = {
             return;
 
         if (event.shiftKey) {
+            if(!ProbeAgent.isEnabled)
+                return;
+
             function getInitialProbeExpression(popover, event)
             {
                 if (event.keyCode !== 13)
                     return;
                 var url = WebInspector.contentBrowser.currentContentView.resource.url;
-                console.log("URL:", url);
                 ProbeAgent.createScriptProbe(url, lineNumber, 0, event.target.value);
                 popover.dismiss();
             }
 
             var popover = new WebInspector.Popover;
             var content = document.createElement("div");
+            content.classList.add(WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName);
             content.createChild("div").textContent = "Add Probe?";
             var textBox = content.createChild("input");
             textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
@@ -946,8 +949,9 @@ WebInspector.TextEditor.prototype = {
             popover.content = content;
             var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
             popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
-            console.log(WebInspector.contentBrowser.currentContentView.resource.urlComponents.lastPathComponent);
-            console.log(event.target.parentElement.parentElement.parentElement);
+            //console.log(WebInspector.contentBrowser.currentContentView.resource.urlComponents.lastPathComponent);
+            //console.log(event.target);
+            //console.log(document.getElementsByClassName("CodeMirror-linenumber CodeMirror-gutter-elt"));
             return;
         }
 

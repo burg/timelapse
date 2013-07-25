@@ -33,7 +33,7 @@ WebInspector.ProbesSidebarPanel = function()
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeAdded, this._probeAdded, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeRemoved, this._probeRemoved, this);
 
-	this._navigationBar = new WebInspector.NavigationBar;
+    this._navigationBar = new WebInspector.NavigationBar;
     this.element.appendChild(this._navigationBar.element);
 
     this._probesRecordStopButtonItem = new WebInspector.ToggleButtonNavigationItem("probes-record-stop", WebInspector.UIString("Click to play"), WebInspector.UIString("Click to pause"), "Images/Resume.pdf", "Images/Pause.pdf", 16, 16);
@@ -58,6 +58,7 @@ WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName = "enabled";
 WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName = "table-container";
 WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName = "main-column";
+WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName = "probe-popover";
 WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName = "color-container";
 WebInspector.ProbesSidebarPanel.ColorStyleClassName = "color";
 WebInspector.ProbesSidebarPanel.ProbeColorValues = ["Yellow", "Red", "Blue", "Green", "Pink", "Orange", "Purple"];
@@ -65,14 +66,6 @@ WebInspector.ProbesSidebarPanel.DefaultProbeColor = "Yellow";
 
 WebInspector.ProbesSidebarPanel.prototype = {
     constructor: WebInspector.ProbesSidebarPanel,
-
-    // Public
-
-    show: function()
-    {
-        WebInspector.NavigationSidebarPanel.prototype.show.call(this);
-        ProbeAgent.enable();
-    },
 
     // Private
     _resourceAdded: function(event)
@@ -94,23 +87,19 @@ WebInspector.ProbesSidebarPanel.prototype = {
         //    this._addProbe(probes[i], sourceCode);
     },
 
-    _addProbe: function(lineNumber, lineElement) /*probe, sourceCode*/
+    _addProbe: function(probe, lineElement) /*probe, sourceCode*/
     {
-    	console.log("Adding Probe");
-
         var container = document.createElement("div");
         container.classList.add(WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName);
         var dataTable = container.createChild("table");
         var tableHeader = dataTable.createChild("tr");
         var initialExpression = tableHeader.createChild("th");
-        //initialExpression.addEventListener("click", this._changeProbeValue.bind(this));
-
-        //this._changeProbeValue({ target: initialExpression });
-
-        //Hardcoded Example.....
-        initialExpression.textContent = "$0";
+        initialExpression.textContent = probe._expression;
         initialExpression.addEventListener("click", this._changeProbeValue.bind(this));
         initialExpression.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
+
+        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.SamplesChanged, this._addSampleToTable.bind(this, dataTable));
+        /* Harcoded sample data...
         var foo = tableHeader.createChild("th");
         foo.textContent = "$0.foo";
         foo.addEventListener("click", this._changeProbeValue.bind(this));
@@ -120,12 +109,12 @@ WebInspector.ProbesSidebarPanel.prototype = {
         var baz = tableHeader.createChild("th")
         baz.textContent = "$0.baz";
         baz.addEventListener("click", this._changeProbeValue.bind(this));
-        /*var mumble = tableHeader.createChild("th")
+        var mumble = tableHeader.createChild("th")
         mumble.textContent = "$0.mumble";
         mumble.addEventListener("click", this._changeProbeValue.bind(this));
         var bumble = tableHeader.createChild("th")
         bumble.textContent = "$0.bumble";
-        bumble.addEventListener("click", this._changeProbeValue.bind(this));*/
+        bumble.addEventListener("click", this._changeProbeValue.bind(this));
 
         var tableRowOne = dataTable.createChild("tr");
         var o1 = tableRowOne.createChild("td");
@@ -147,7 +136,7 @@ WebInspector.ProbesSidebarPanel.prototype = {
         o3.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
         tableRowThree.createChild("td").textContent = "Foo T3";
         tableRowThree.createChild("td").textContent = "Bar T3";
-        tableRowThree.createChild("td").textContent = "Baz T3";
+        tableRowThree.createChild("td").textContent = "Baz T3";*/
 
         var probesRow = new WebInspector.DetailsSectionRow;
         probesRow.element.appendChild(container);
@@ -173,14 +162,14 @@ WebInspector.ProbesSidebarPanel.prototype = {
 
         var addProbeValue = probeOptions.createChild("img");
         addProbeValue.classList.add(WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName);
-        addProbeValue.addEventListener("click", this._addNewColumn.bind(this));
+        addProbeValue.addEventListener("click", this._probeAddButtonClicked.bind(this, probe._lineNumber));
 
         var probesGroup = new WebInspector.DetailsSectionGroup([probesRow]);
         
-        var probesSection = new WebInspector.DetailsSection("probe", WebInspector.UIString("Probe %s:%d").format("fake.js",lineNumber), [probesGroup], probeOptions);
+        var probesSection = new WebInspector.DetailsSection("probe", WebInspector.UIString("Probe %s:%d").format(probe._url.split("/").lastValue,probe._lineNumber+1), [probesGroup], probeOptions);
         this.contentElement.appendChild(probesSection.element);
 
-        lineElement.style.backgroundColor = WebInspector.ProbesSidebarPanel.DefaultProbeColor;
+        //lineElement.style.backgroundColor = WebInspector.ProbesSidebarPanel.DefaultProbeColor;
 
     },
 
@@ -192,9 +181,9 @@ WebInspector.ProbesSidebarPanel.prototype = {
 
     _probeAdded: function(event)
     {
-        //var probe = event.data; as arg to addProbe
-        console.log("PROBE:", event.data);
-        this._addProbe(event.data._lineNumber, event.data.lineElement);
+        var probe = event.data;
+        // Distinguish between existing probed line and new line.
+        this._addProbe(probe, event.lineElement);
     },
 
     _probeRemoved: function(event)
@@ -202,13 +191,17 @@ WebInspector.ProbesSidebarPanel.prototype = {
 
     },
 
+    _addSampleToTable: function(table, event)
+    {
+        var newRow = table.createChild("tr");
+        var newColumnElement = newRow.createChild("td");
+        newColumnElement.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
+        newColumnElement.textContent = event.data.samples.lastValue.value;
+    },
+
     _addNewColumn: function(event)
     {
         console.log("ADD NEW PROBE + COLUMN");
-        var pop = new WebInspector.Popover;
-        pop.content = document.createTextNode("Add Probe Column.");
-        var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
-        pop.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
     },
 
     _changeProbeValue: function(event)
@@ -232,9 +225,35 @@ WebInspector.ProbesSidebarPanel.prototype = {
 
     _updateColor: function(color, lineElement, colorButton, popover, event)
     {
-        lineElement.style.backgroundColor = color;
+        //lineElement.style.backgroundColor = color;
         colorButton.style.backgroundColor = color;
         popover.dismiss();
+    },
+
+    _probeAddButtonClicked: function(lineNumber, event)
+    {
+        function getInitialProbeExpression(popover, event)
+        {
+            if (event.keyCode !== 13)
+                return;
+            var url = WebInspector.contentBrowser.currentContentView.resource.url;
+            ProbeAgent.createScriptProbe(url, lineNumber, 0, event.target.value);
+            popover.dismiss();
+        }
+
+        var popover = new WebInspector.Popover;
+        var content = document.createElement("div");
+        content.classList.add(WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName);
+        content.createChild("div").textContent = "Add Another Value?";
+        var textBox = content.createChild("input");
+        textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
+        textBox.addEventListener("click", function (event) {event.target.select()});
+        textBox.type = "text";
+        textBox.value = "Enter Expression";
+        popover.content = content;
+        var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
+        popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
+
     },
 
     _removeButtonClicked: function(event)
@@ -249,6 +268,7 @@ WebInspector.ProbesSidebarPanel.prototype = {
         var popover = new WebInspector.Popover;
 
         var colorContainer = document.createElement("div");
+        colorContainer.classList.add(WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName);
         colorContainer.classList.add(WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName);
         var colors = WebInspector.ProbesSidebarPanel.ProbeColorValues;
         for (var i = 0; i <= colors.length - 1; i++) {
