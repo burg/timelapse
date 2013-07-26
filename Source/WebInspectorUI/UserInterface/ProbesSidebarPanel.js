@@ -44,6 +44,7 @@ WebInspector.ProbesSidebarPanel = function()
     // Add this offset-sections class name so the sticky headers don't overlap the navigation bar.
     this.element.classList.add(WebInspector.ProbesSidebarPanel.OffsetSectionsStyleClassName);
 
+    // TODO: (Issue #313): Implement filter/search capabilities for the probes sidebar panel.
     this.filterBar.placeholder = WebInspector.UIString("Filter Probes List");
 
     //WebInspector.Probe.addEventListener(WebInspector.Probe.Event.DisplayLocationDidChange, this._probeDisplayLocationDidChange, this);
@@ -147,7 +148,7 @@ WebInspector.ProbesSidebarPanel.prototype = {
         probeOptions.classList.add(WebInspector.ProbesSidebarPanel.ProbeOptionsStyleClassName);
 
         var removeProbeButton = probeOptions.createChild("img");
-        removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName); 
+        removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName);
         removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
         removeProbeButton.addEventListener("click", this._removeButtonClicked.bind(this));
 

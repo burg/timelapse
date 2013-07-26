@@ -35,12 +35,13 @@
 #if ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include <wtf/text/WTFString.h>
+#include <wtf/text/TextPosition.h>
 
 namespace WebCore {
 
 class ScriptProbe : public RefCounted<ScriptProbe> {
 public:
-    static RefPtr<ScriptProbe> create(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
+    static RefPtr<ScriptProbe> create(unsigned uid, const String& url, const TextPosition&, const String& expression);
     virtual ~ScriptProbe() {}
 
     virtual void enable() { setIsEnabled(true); }
@@ -49,33 +50,30 @@ public:
     unsigned uid() const { return m_uid; }
 
     const String& url() const { return m_url; }
-    int lineNumber() const { return m_lineNumber; }
-    int columnNumber() const { return m_columnNumber; }
+    const TextPosition& position() const { return m_position; }
     const String& expression() const { return m_expression; }
 
 private:
-    ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression);
+    ScriptProbe(unsigned uid, const String& url, const TextPosition&, const String& expression);
     virtual void setIsEnabled(bool state) { m_isEnabled = state; }
 
     unsigned m_uid;
     bool m_isEnabled;
     String m_url;
-    int m_lineNumber;
-    int m_columnNumber;
+    TextPosition m_position;
     String m_expression;
 };
 
-inline RefPtr<ScriptProbe> ScriptProbe::create(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression)
+inline RefPtr<ScriptProbe> ScriptProbe::create(unsigned uid, const String& url, const TextPosition& position, const String& expression)
 {
-    return adoptRef(new ScriptProbe(uid, url, lineNumber, columnNumber, expression));
+    return adoptRef(new ScriptProbe(uid, url, position, expression));
 }
 
-inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, int lineNumber, int columnNumber, const String& expression)
+inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, const TextPosition& position, const String& expression)
 : m_uid(uid)
 , m_isEnabled(false)
 , m_url(url)
-, m_lineNumber(lineNumber)
-, m_columnNumber(columnNumber)
+, m_position(position)
 , m_expression(expression) {
     // The URL is used as a hash key, so it should never be null. If there's no URL,
     // then emptyString() should be used instead.

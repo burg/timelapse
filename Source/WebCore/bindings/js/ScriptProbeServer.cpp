@@ -60,31 +60,28 @@ ScriptProbeServer::~ScriptProbeServer()
     m_probeRegistry.clear();
 }
 
-void ScriptProbeServer::addProbeForScriptId(intptr_t scriptId, PassRefPtr<ScriptProbe> prpProbe)
+void ScriptProbeServer::addProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe> prpProbe)
 {
     RefPtr<ScriptProbe> probe = prpProbe;
 
-    if (probe->lineNumber() < 0 || probe->columnNumber() < 0)
-        return;
-
-    LOG(DeterministicReplay, "ScriptProbeServer: added probe uid=%d (script id=%" PRIiPTR ", url=%s, line=%d, col=%d)", probe->uid(), scriptId, probe->url().utf8().data(), probe->lineNumber(), probe->columnNumber());
+    LOG(DeterministicReplay, "ScriptProbeServer: added probe uid=%d (script id=%" PRIiPTR ", url=%s, line=%d, col=%d)", probe->uid(), scriptId, probe->url().utf8().data(), probe->position().m_line.zeroBasedInt(), probe->position().m_column.zeroBasedInt());
 
     m_probesById.add(probe->uid(), probe);
 
-    // each of these calls will only actually add key/value pairs if they don't already exist.
+    // Each of these calls will only actually add key/value pairs if they don't already exist.
     ScriptIdToLinesMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, LineToScriptProbeMap());
-    LineToScriptProbeMap::AddResult linesMap = scriptsMap.iterator->value.add(probe->lineNumber(), ProbeSet());
+    LineToScriptProbeMap::AddResult linesMap = scriptsMap.iterator->value.add(probe->position().m_line, ProbeSet());
     linesMap.iterator->value.add(probe);
 }
 
-void ScriptProbeServer::clearProbesForScriptId(intptr_t scriptId)
+void ScriptProbeServer::clearProbesForScriptId(ScriptId scriptId)
 {
     if (!m_probeRegistry.contains(scriptId))
         return;
 
     LineToScriptProbeMap linesForScript = m_probeRegistry.take(scriptId);
     LineToScriptProbeMap::iterator lineIterator = linesForScript.begin();
-    // clear probe sets for each line, then clear the lines map.
+    // Clear probe sets for each line, then clear the lines map.
     for (; lineIterator != linesForScript.end(); ++lineIterator) {
         ProbeSet::iterator probeIterator = lineIterator->value.begin();
         for (; probeIterator != lineIterator->value.end(); ++probeIterator) {
@@ -118,39 +115,34 @@ void ScriptProbeServer::addSampleFromConsole(int probeId, ScriptState* exec)
     PageScriptDebugServer::shared().addScriptProbeSample(probeId, exec, wrappedResult);
 }
 
-// callback from ScriptDebugServer
 void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFrame, intptr_t scriptId, int lineNumber, int columnNumber)
 {
-    // much of this code is adapted from ScriptDebugServer::hasBreakpoint()
+    TextPosition textPosition(OrdinalNumber::fromOneBasedInt(lineNumber), OrdinalNumber::fromOneBasedInt(columnNumber));
+    captureSamplesIfNeeded(debuggerCallFrame, scriptId, textPosition);
+}
+
+void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& debuggerCallFrame, ScriptId scriptId, const TextPosition& position)
+{
     if (!m_isActive)
         return;
 
-    ScriptIdToLinesMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
-    if (entryForScript == m_probeRegistry.end())
+    ProbeSet foundProbes;
+    if (!findProbesForPosition(scriptId, position, foundProbes))
         return;
 
-    LOG(DeterministicReplay, "ScriptProbeServer: maybe adding sample for file (script id: %" PRIiPTR ")", scriptId);
-
-    if (lineNumber < 1 || columnNumber < 1)
-        return;
-
-    LineToScriptProbeMap::const_iterator entryForLine = entryForScript->value.find(lineNumber);
-    if (entryForLine == entryForScript->value.end())
-        return;
-
-    LOG(DeterministicReplay, "ScriptProbeServer: maybe adding sample for line+col %d,%d (script id: %" PRIiPTR ")", lineNumber, columnNumber, scriptId);
-
-    const ProbeSet& probes = entryForLine->value;
-    ProbeSet::iterator probesIt = probes.begin();
-    for (; probesIt != probes.end(); ++probesIt) {
+    ProbeSet::iterator probesIt = foundProbes.begin();
+    for (; probesIt != foundProbes.end(); ++probesIt) {
         RefPtr<ScriptProbe> probe = *probesIt;
+        if (!probe->isEnabled())
+            continue;
 
-        // FIXME: the column number is not checked here, but should be.
-        if (lineNumber == probe->lineNumber()) {
+        // TODO: (Issue #315): The column number is not checked here, but should be.
+        // See the logic in ScriptDebugServer::hasBreakpoint for an exposition of cases and concerns.
+        if (position.m_line == probe->position().m_line) {
             LOG(DeterministicReplay, "ScriptProbeServer: adding sample for probe uid=%d", probe->uid());
-            // aoeu: extract to share this code with addSampleFromConsole?
             JSC::JSValue exception;
             JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
+            // TODO: (Issue #314): Propagate exception to the frontend instead of silently dropping it.
             if (exception)
                 continue;
 
@@ -158,6 +150,23 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
             PageScriptDebugServer::shared().addScriptProbeSample(probe->uid(), debuggerCallFrame.callFrame(), wrappedResult);
         }
     }
+}
+
+bool ScriptProbeServer::findProbesForPosition(ScriptId scriptId, const TextPosition& position, ProbeSet& result)
+{
+    ScriptIdToLinesMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
+    if (entryForScript == m_probeRegistry.end())
+        return false;
+
+    LineToScriptProbeMap::const_iterator entryForLine = entryForScript->value.find(position.m_line);
+    if (entryForLine == entryForScript->value.end())
+        return false;
+
+    LOG(DeterministicReplay, "ScriptProbeServer: maybe adding sample for line+col %d,%d (script id: %" PRIiPTR ")", position.m_line.zeroBasedInt(), position.m_column.zeroBasedInt(), scriptId);
+
+    result = entryForLine->value;
+    return true;
+
 }
 
 }; // namespace WebCore

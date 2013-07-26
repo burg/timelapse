@@ -90,7 +90,7 @@ void ScriptProbeResolver::clearScriptMapping()
 
 void ScriptProbeResolver::clearProbes()
 {
-    // remove any probes that may be installed the server
+    // Remove any probes that may be installed the server.
     clearScriptMapping();
     m_probes.clear();
 }
@@ -102,7 +102,7 @@ void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> prpProbe)
 
     LOG(DeterministicReplay, "ScriptProbeResolver::addProbe id=%d, expression=%s", probe->uid(), probe->expression().utf8().data());
 
-    // if probe matches url with known script id, resolve immediately.
+    // If probe matches url with known script id, resolve immediately.
     UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
     if (findResult == m_urlToScriptIdMap.end())
         return;
@@ -118,7 +118,7 @@ void ScriptProbeResolver::didParseSource(const String& stringId, const Script& s
 
     LOG(DeterministicReplay, "ScriptProbeResolver::didParseSource id=%" PRIiPTR ", url=%s", scriptId, nonNullUrl.utf8().data());
 
-    // find any probes that should resolve within that file, add them.
+    // Find any probes that should resolve within that file, add them.
     for (ProbeSet::const_iterator it = m_probes.begin(); it != m_probes.end(); ++it) {
         if ((*it)->url() == nonNullUrl)
             probeServer()->addProbeForScriptId(scriptId, *it);
@@ -139,8 +139,8 @@ void ScriptProbeResolver::didContinue()
 
 void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState* state, const ScriptValue& value)
 {
-    // FIXME: implement some sort of storage for probe samples.
-    // FIXME: this is a dummy value.
+    // TODO: (Issue #316): Implement some sort of storage for probe samples.
+    // TODO: (Issue #317): Send RemoteObject references to the frontend instead of InspectorValues.
     RefPtr<InspectorObject> payload = InspectorObject::create();
     payload->setValue("value", value.toInspectorValue(state));
 
@@ -230,12 +230,11 @@ void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::A
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
         RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
                                                                .setProbeId(it->key)
-                                                               .setLineNumber(it->value->lineNumber())
+                                                               .setLineNumber(it->value->position().m_line.zeroBasedInt())
                                                                .setExpression(it->value->expression())
                                                                .setIsEnabled(false);
-       // Set optional fields.
-       probeObject->setUrl(it->value->url());
-       probeObject->setColumnNumber(it->value->columnNumber());
+        probeObject->setUrl(it->value->url());
+        probeObject->setColumnNumber(it->value->position().m_column.zeroBasedInt());
 
         resultArray->addItem(probeObject.release());
     }
@@ -250,7 +249,7 @@ void InspectorProbeAgent::getProbeSamples(ErrorString* errorString, int probeId,
     }
 
     result = TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample>::create();
-    // TODO: iterate through sample storage, create inspector objects for each sample.
+    // TODO: (Issue #316): Iterate through sample storage, create inspector objects for each sample.
 }
 
 void InspectorProbeAgent::enableProbe(ErrorString* errorString, int probeId)
@@ -288,7 +287,8 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
         return;
     }
     const String& nonNullUrl = (url.isNull()) ? emptyString() : url;
-    RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextProbeId++, nonNullUrl, lineNumber, columnNumber, expression);
+    TextPosition position(OrdinalNumber::fromZeroBasedInt(lineNumber), OrdinalNumber::fromZeroBasedInt(columnNumber));
+    RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextProbeId++, nonNullUrl, position, expression);
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
     m_scriptProbeResolver->addProbe(probe);
@@ -297,16 +297,15 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
 
     RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
                                                            .setProbeId(probe->uid())
-                                                           .setLineNumber(probe->lineNumber())
+                                                           .setLineNumber(probe->position().m_line.zeroBasedInt())
                                                            .setExpression(probe->expression())
-                                                           .setIsEnabled(true);
-
-    // Set optional fields.
+                                                           .setIsEnabled(probe->isEnabled());
     probeObject->setUrl(probe->url());
-    probeObject->setColumnNumber(probe->columnNumber());
+    probeObject->setColumnNumber(probe->position().m_column.zeroBasedInt());
 
     m_frontend->probeAdded(probeObject.release());
     // Probes are not enabled when they are created, but the backend enables them immediately.
+    probe->enable();
     m_frontend->probeEnabled(probe->uid());
 
     UNUSED_PARAM(errorString);

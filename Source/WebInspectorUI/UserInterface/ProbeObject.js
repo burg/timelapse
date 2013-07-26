@@ -35,6 +35,7 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     WebInspector.Object.call(this);
     this._probeId = probeId;
     this._url = url;
+    // Line and column numbers are 0-based.
     this._lineNumber = lineNumber;
     this._columnNumber = columnNumber;
     this._expression = expression;

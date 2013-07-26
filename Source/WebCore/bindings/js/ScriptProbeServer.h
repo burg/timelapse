@@ -39,6 +39,7 @@
 #include <wtf/HashSet.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/text/TextPosition.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -53,27 +54,31 @@ class ScriptValue;
 class ScriptProbeServer {
     WTF_MAKE_NONCOPYABLE(ScriptProbeServer); WTF_MAKE_FAST_ALLOCATED;
 public:
+    typedef intptr_t ScriptId;
+
     static PassOwnPtr<ScriptProbeServer> create();
     virtual ~ScriptProbeServer();
 
-    void addProbeForScriptId(intptr_t scriptId, PassRefPtr<ScriptProbe>);
-    void clearProbesForScriptId(intptr_t scriptId);
+    void addProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe>);
+    void clearProbesForScriptId(ScriptId scriptId);
     void setIsActive(bool active) { m_isActive = active; }
     bool isActive() const { return m_isActive; }
 
     void addSampleFromConsole(int probeId, ScriptState*);
 
-    // callback from ScriptDebugServer
-    void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
+    // Callback from ScriptDebugServer.
+    void atStatement(const JSC::DebuggerCallFrame&, intptr_t scriptId, int lineNumber, int columnNumber);
 private:
-    ScriptProbeServer();
-
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
     typedef HashMap<int, RefPtr<ScriptProbe> > ProbeMap;
-    typedef long LineNumber;
-    typedef intptr_t ScriptId;
+    typedef OrdinalNumber LineNumber;
     typedef HashMap<LineNumber, ProbeSet> LineToScriptProbeMap;
     typedef HashMap<ScriptId, LineToScriptProbeMap> ScriptIdToLinesMap;
+
+    ScriptProbeServer();
+
+    void captureSamplesIfNeeded(const JSC::DebuggerCallFrame&, ScriptId scriptId, const TextPosition&);
+    bool findProbesForPosition(ScriptId scriptId, const TextPosition&, ProbeSet& result);
 
     bool m_isActive;
     ScriptIdToLinesMap m_probeRegistry;

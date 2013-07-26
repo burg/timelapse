@@ -130,6 +130,7 @@ public:
     virtual void getProbeSamples(ErrorString*, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result);
     virtual void enableProbe(ErrorString*, int probeId);
     virtual void disableProbe(ErrorString*, int probeId);
+    // Line and column numbers start counting from 0.
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
 private:
