@@ -26,6 +26,8 @@
 #define TextPosition_h
 
 #include <wtf/Assertions.h>
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
 
 namespace WTF {
 
@@ -41,8 +43,8 @@ public:
     int zeroBasedInt() const { return m_zeroBasedValue; }
     int oneBasedInt() const { return m_zeroBasedValue + 1; }
 
-    bool operator==(OrdinalNumber other) { return m_zeroBasedValue == other.m_zeroBasedValue; }
-    bool operator!=(OrdinalNumber other) { return !((*this) == other); }
+    bool operator==(OrdinalNumber other) const { return m_zeroBasedValue == other.m_zeroBasedValue; }
+    bool operator!=(OrdinalNumber other) const { return !((*this) == other); }
 
     static OrdinalNumber first() { return OrdinalNumber(0); }
     static OrdinalNumber beforeFirst() { return OrdinalNumber(-1); }
@@ -52,6 +54,19 @@ private:
     int m_zeroBasedValue;
 };
 
+template<> struct IntHash<OrdinalNumber> {
+    static unsigned hash(const OrdinalNumber& number) { return IntHash<int>::hash(number.zeroBasedInt()); }
+    static bool equal(const OrdinalNumber& a, const OrdinalNumber& b) { return a == b; }
+    static const bool safeToCompareToEmptyOrDeleted = true;
+};
+template<> struct DefaultHash<OrdinalNumber> { typedef IntHash<OrdinalNumber> Hash; };
+
+template<> struct HashTraits<OrdinalNumber> : GenericHashTraits<OrdinalNumber> {
+    static const bool emptyValueIsZero = true;
+    static const bool needsDestruction = false;
+    static void constructDeletedValue(OrdinalNumber& number) { number = OrdinalNumber::beforeFirst(); }
+    static bool isDeletedValue(const OrdinalNumber& number) { return number == OrdinalNumber::beforeFirst(); }
+};
 
 // TextPosition structure specifies coordinates within an text resource. It is used mostly
 // for saving script source position.
