@@ -30,7 +30,7 @@ WebInspector.ProbesSidebarPanel = function()
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._mainResourceChanged, this);
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.ResourceWasAdded, this._resourceAdded, this);
 
-    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.GroupAdded, this._groupAdded, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._groupAdded, this);
     //???????.addEventListener(WebInspector.ProbeGroupObject.Event.ProbesChanged, this._groupChanged, this);
 
     this._probeGroups = {};
@@ -68,8 +68,10 @@ WebInspector.ProbesSidebarPanel.DefaultProbeColor = "Yellow";
 
 WebInspector.ProbesSidebarPanel.prototype = {
     constructor: WebInspector.ProbesSidebarPanel,
+    __proto__: WebInspector.NavigationSidebarPanel.prototype,
 
     // Private
+
     _resourceAdded: function(event)
     {
         var resource = event.data.resource;
@@ -94,7 +96,7 @@ WebInspector.ProbesSidebarPanel.prototype = {
         var container = document.createElement("div");
         container.classList.add(WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName);
         var dataTable = container.createChild("table");
-        this._probeGroups[probeGroup.url + ":" + probeGroup.lineNumber] = dataTable;
+        this._probeGroups[probeGroup.groupKey] = dataTable;
         var tableHeader = dataTable.createChild("tr");
         var initialExpression = tableHeader.createChild("th");
         initialExpression.textContent = probeGroup.probes.lastValue._expression;
@@ -199,7 +201,7 @@ WebInspector.ProbesSidebarPanel.prototype = {
     {
         var probeGroup = event.data;
         // Assert group already exists?
-        this._updateExistingTable(probeGroup, this._probeGroups[probeGroup.url + ":" + probeGroup.lineNumber]);
+        this._updateExistingTable(probeGroup, this._probeGroups[probeGroup.groupKey]);
     },
 
     _probeRemoved: function(event)
@@ -321,6 +323,3 @@ WebInspector.ProbesSidebarPanel.prototype = {
     		WebInspector.replayManager.pausePlaybackSoon();
     }
 };
-
-WebInspector.ProbesSidebarPanel.prototype.__proto__ = WebInspector.NavigationSidebarPanel.prototype;
-

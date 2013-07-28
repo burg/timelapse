@@ -54,6 +54,21 @@ WebInspector.ProbeObject.prototype = {
         return this._probeId;
     },
 
+    get url()
+    {
+        return this._url;
+    },
+
+    get lineNumber()
+    {
+        return this._lineNumber;
+    },
+
+    get columnNumber()
+    {
+        return this._columnNumber;
+    },
+
     get samples()
     {
         return this._samples.slice();
@@ -64,13 +79,17 @@ WebInspector.ProbeObject.prototype = {
         return this._enabled;
     },
 
-    // Protected
+    get groupKey()
+    {
+        return [this.url, this.lineNumber].join(":");
+    },
+
+    // Protected (Called by ProbeManager)
 
     addSample: function(sample)
     {
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Wrong object type passed as probe sample.");
         this._samples.push(sample);
-        console.log("DEBUG: Added probe sample: ", sample);
     },
 
     set enabled(value)

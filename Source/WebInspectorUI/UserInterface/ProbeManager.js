@@ -36,8 +36,8 @@ WebInspector.ProbeManager.Event = {
     ProbeRemoved: "probe-manager-probe-removed",
     ProbeDisabled: "probe-manager-probe-disabled",
     ProbeEnabled: "probe-manager-probe-enabled",
-    SamplesChanged: "probe-manage-samples-changed",
-    GroupAdded: "probe-manager-group-added"
+    ProbeGroupAdded: "probe-manager-group-added",
+    SamplesChanged: "probe-manage-samples-changed"
 };
 
 WebInspector.ProbeManager.prototype = {
@@ -67,13 +67,13 @@ WebInspector.ProbeManager.prototype = {
         var probeObject = new WebInspector.ProbeObject(probe.probeId, probe.url, probe.lineNumber, probe.columnNumber, probe.expression);
         this._probes[probe.probeId] = probeObject;
 
-        if (this._probeGroups[probeObject._url + ":" + probeObject._lineNumber])
-            this._probeGroups[probeObject._url + ":" + probeObject._lineNumber].addProbe(probeObject);
+        if (this._probeGroups[probeObject.groupKey])
+            this._probeGroups[probeObject.groupKey].addProbe(probeObject);
         else {
-            var probeGroup = new WebInspector.ProbeGroupObject(probeObject._url, probeObject._lineNumber);
+            var probeGroup = new WebInspector.ProbeGroupObject(probeObject.url, probeObject.lineNumber);
             probeGroup.addProbe(probeObject);
-            this._probeGroups[probeObject._url + ":" + probeObject._lineNumber] = probeGroup;
-            this.dispatchEventToListeners(WebInspector.ProbeManager.Event.GroupAdded, probeGroup);
+            this._probeGroups[probeObject.groupKey] = probeGroup;
+            this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeGroupAdded, probeGroup);
         }
 
         this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeAdded, probeObject);

@@ -29,7 +29,11 @@ WebInspector.ProbeGroupObject = function(url, lineNumber)
 	this._url = url;
 	this._lineNumber = lineNumber;
 	this._probes = [];
+    this._probesByUid = {};
 	this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
+
+    // FIXME: the probe group object shouldn't store view objects.
+    // It should be managed by a coordinator class.
 	this._gutterElement = document.createElement("div");
 	this._gutterElement.classList.add(WebInspector.ProbeGroupObject.ProbeGutterStyleClassName);
 	this._gutterElement.style.backgroundColor = this._color;
@@ -42,6 +46,7 @@ WebInspector.ProbeGroupObject.Event = {
 
 WebInspector.ProbeGroupObject.ProbeGutterStyleClassName = "probe-gutter";
 WebInspector.ProbeGroupObject.DefaultProbeColor = "Yellow";
+WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
 
 WebInspector.ProbeGroupObject.prototype = {
     constructor: WebInspector.ProbeGroupObject,
@@ -61,12 +66,17 @@ WebInspector.ProbeGroupObject.prototype = {
 
     get probes()
     {
-        return this._probes;
+        return this._probes.slice();
     },
 
     get color()
     {
     	return this._color;
+    },
+
+    get groupKey()
+    {
+        return (this._probes.length) ? this._probes[0].groupKey : WebInspector.ProbeGroupObject.DefaultGroupKey;
     },
 
     set color(value)
@@ -76,19 +86,12 @@ WebInspector.ProbeGroupObject.prototype = {
 		WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._lineNumber, "CodeMirror-linenumbers", this._gutterElement);
     },
 
-    enable: function()
-    {
-    	//Enable All probes in probe group?
-    },
-
-    disable: function()
-    {
-    	//Disable all probes in group?
-    },
-
     addProbe: function(probe)
     {
-    	this._probes[probe.probeId] = probe;
+        console.assert(probe instanceof WebInspector.ProbeObject, "Tried to add non-probe ", probe, " to probe group", this);
+
+    	this._probes.push(probe);
+        this._probesByUid[probe.uid] = probe;
 		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbesChanged, this)
     }
 };
