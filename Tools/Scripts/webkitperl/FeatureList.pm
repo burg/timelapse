@@ -156,6 +156,7 @@ my (
     $workersSupport,
     $xhrTimeoutSupport,
     $xsltSupport,
+    $ftlJITSupport,
 );
 
 my @features = (
@@ -256,7 +257,7 @@ my @features = (
       define => "ENABLE_DIRECTORY_UPLOAD", default => 0, value => \$directoryUploadSupport },
 
     { option => "dom4-events-constructor", desc => "Expose DOM4 Events constructors",
-      define => "ENABLE_DOM4_EVENTS_CONSTRUCTOR", default => (isAppleWebKit() || isGtk()), value => \$dom4EventsConstructor },
+      define => "ENABLE_DOM4_EVENTS_CONSTRUCTOR", default => (isAppleWebKit() || isGtk() || isEfl()), value => \$dom4EventsConstructor },
 
     { option => "download-attribute", desc => "Toggle Download Attribute support",
       define => "ENABLE_DOWNLOAD_ATTRIBUTE", default => (isBlackBerry() || isEfl()), value => \$downloadAttributeSupport },
@@ -491,6 +492,9 @@ my @features = (
 
     { option => "xslt", desc => "Toggle XSLT support",
       define => "ENABLE_XSLT", default => 1, value => \$xsltSupport },
+
+    { option => "ftl-jit", desc => "Toggle FTLJIT support",
+      define => "ENABLE_FTL_JIT", default => 0, value => \$ftlJITSupport },
 );
 
 sub getFeatureOptionList()

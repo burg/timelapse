@@ -87,7 +87,7 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(CodeBlock* profiledBlock, unsign
     UNUSED_PARAM(bytecodeIndex);
 #if ENABLE(LLINT)
     Instruction* instruction = profiledBlock->instructions().begin() + bytecodeIndex;
-    LLIntCallLinkInfo* callLinkInfo = instruction[4].u.callLinkInfo;
+    LLIntCallLinkInfo* callLinkInfo = instruction[5].u.callLinkInfo;
     
     return CallLinkStatus(callLinkInfo->lastSeenCallee.get());
 #else
@@ -97,10 +97,12 @@ CallLinkStatus CallLinkStatus::computeFromLLInt(CodeBlock* profiledBlock, unsign
 
 CallLinkStatus CallLinkStatus::computeFor(CodeBlock* profiledBlock, unsigned bytecodeIndex)
 {
+    ConcurrentJITLocker locker(profiledBlock->m_lock);
+    
     UNUSED_PARAM(profiledBlock);
     UNUSED_PARAM(bytecodeIndex);
 #if ENABLE(JIT) && ENABLE(VALUE_PROFILER)
-    if (!profiledBlock->numberOfCallLinkInfos())
+    if (!profiledBlock->hasBaselineJITProfiling())
         return computeFromLLInt(profiledBlock, bytecodeIndex);
     
     if (profiledBlock->couldTakeSlowCase(bytecodeIndex))
@@ -141,8 +143,11 @@ void CallLinkStatus::dump(PrintStream& out) const
     if (m_callTarget)
         out.print(comma, "Known target: ", m_callTarget);
     
-    if (m_executable)
-        out.print(comma, "Executable/CallHash: ", RawPointer(m_executable), "/", m_executable->hashFor(CodeForCall));
+    if (m_executable) {
+        out.print(comma, "Executable/CallHash: ", RawPointer(m_executable));
+        if (!isCompilationThread())
+            out.print("/", m_executable->hashFor(CodeForCall));
+    }
     
     if (m_structure)
         out.print(comma, "Structure: ", RawPointer(m_structure));

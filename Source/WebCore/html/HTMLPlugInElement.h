@@ -89,6 +89,8 @@ protected:
 
     virtual bool useFallbackContent() const { return false; }
 
+    virtual void defaultEventHandler(Event*) OVERRIDE;
+
     // Subclasses should use guardedDispatchBeforeLoadEvent instead of calling dispatchBeforeLoadEvent directly.
     bool guardedDispatchBeforeLoadEvent(const String& sourceURL);
 
@@ -99,14 +101,12 @@ private:
 
     virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
 
-    virtual void defaultEventHandler(Event*);
-
     virtual RenderWidget* renderWidgetForJSBindings() const = 0;
 
     virtual bool supportsFocus() const OVERRIDE;
 
     virtual bool isKeyboardFocusable(KeyboardEvent*) const OVERRIDE;
-    virtual bool isPluginElement() const;
+    virtual bool isPluginElement() const OVERRIDE;
 
     RefPtr<JSC::Bindings::Instance> m_instance;
 #if ENABLE(NETSCAPE_PLUGIN_API)

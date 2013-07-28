@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2009, 2011, 2013 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2009. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -204,8 +204,8 @@ static HTMLFormElement *formElementFromDOMElement(IDOMElement *element)
         Element* ele;
         hr = elePriv->coreElement((void**)&ele);
         elePriv->Release();
-        if (SUCCEEDED(hr) && ele && ele->hasTagName(formTag))
-            return static_cast<HTMLFormElement*>(ele);
+        if (SUCCEEDED(hr) && ele && isHTMLFormElement(ele))
+            return toHTMLFormElement(ele);
     }
     return 0;
 }
@@ -221,8 +221,8 @@ static HTMLInputElement* inputElementFromDOMElement(IDOMElement* element)
         Element* ele;
         hr = elePriv->coreElement((void**)&ele);
         elePriv->Release();
-        if (SUCCEEDED(hr) && ele && ele->hasTagName(inputTag))
-            return static_cast<HTMLInputElement*>(ele);
+        if (SUCCEEDED(hr) && ele && isHTMLInputElement(ele))
+            return toHTMLInputElement(ele);
     }
     return 0;
 }
@@ -2590,7 +2590,7 @@ COMPtr<IAccessible> WebFrame::accessible() const
         // the Document renderer was destroyed and its wrapper was detached, or
         // the previous Document is in the page cache, and the current document
         // needs to be wrapped.
-        m_accessible = new AccessibleDocument(currentDocument);
+        m_accessible = new AccessibleDocument(currentDocument, webView()->viewWindow());
     }
     return m_accessible.get();
 }

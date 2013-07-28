@@ -120,6 +120,11 @@ IntPoint WebView::userViewportToScene(const WebCore::IntPoint& point) const
     return m_userViewportTransform.mapPoint(point);
 }
 
+IntPoint WebView::contentsToUserViewport(const IntPoint& point) const
+{
+    return transformToScene().mapPoint(point);
+}
+
 void WebView::paintToCurrentGLContext()
 {
     CoordinatedGraphicsScene* scene = coordinatedGraphicsScene();
@@ -200,6 +205,11 @@ void WebView::didChangeContentsSize(const WebCore::IntSize& size)
     m_client.didChangeContentsSize(this, size);
 
     updateViewportSize();
+}
+
+void WebView::didFindZoomableArea(const WebCore::IntPoint& target, const WebCore::IntRect& area)
+{
+    m_client.didFindZoomableArea(this, target, area);
 }
 
 AffineTransform WebView::transformFromScene() const
@@ -383,9 +393,9 @@ void WebView::doneWithKeyEvent(const NativeWebKeyboardEvent&, bool)
 }
 
 #if ENABLE(TOUCH_EVENTS)
-void WebView::doneWithTouchEvent(const NativeWebTouchEvent&, bool /*wasEventHandled*/)
+void WebView::doneWithTouchEvent(const NativeWebTouchEvent& event, bool wasEventHandled)
 {
-    notImplemented();
+    m_client.doneWithTouchEvent(this, event, wasEventHandled);
 }
 #endif
 
@@ -402,7 +412,7 @@ PassRefPtr<WebContextMenuProxy> WebView::createContextMenuProxy(WebPageProxy*)
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-PassRefPtr<WebColorChooserProxy> WebView::createColorChooserProxy(WebPageProxy*, const WebCore::Color&, const WebCore::IntRect&)
+PassRefPtr<WebColorPicker> WebView::createColorPicker(WebPageProxy*, const WebCore::Color&, const WebCore::IntRect&)
 {
     notImplemented();
     return 0;
@@ -431,38 +441,7 @@ void WebView::updateAcceleratedCompositingMode(const LayerTreeContext&)
     notImplemented();
 }
 
-void WebView::didCommitLoadForMainFrame(bool)
-{
-    notImplemented();
-}
-
-void WebView::didFinishLoadingDataForCustomRepresentation(const String&, const CoreIPC::DataReference&)
-{
-    notImplemented();
-}
-
-double WebView::customRepresentationZoomFactor()
-{
-    notImplemented();
-    return 0;
-}
-
-void WebView::setCustomRepresentationZoomFactor(double)
-{
-    notImplemented();
-}
-
 void WebView::flashBackingStoreUpdates(const Vector<IntRect>&)
-{
-    notImplemented();
-}
-
-void WebView::findStringInCustomRepresentation(const String&, FindOptions, unsigned)
-{
-    notImplemented();
-}
-
-void WebView::countStringMatchesInCustomRepresentation(const String&, FindOptions, unsigned)
 {
     notImplemented();
 }
@@ -523,6 +502,11 @@ void WebView::didRenderFrame(const WebCore::IntSize& contentsSize, const WebCore
 void WebView::pageTransitionViewportReady()
 {
     m_client.didCompletePageTransition(this);
+}
+
+void WebView::findZoomableAreaForPoint(const IntPoint& point, const IntSize& size)
+{
+    m_page->findZoomableAreaForPoint(transformFromScene().mapPoint(point), transformFromScene().mapSize(size));
 }
 
 } // namespace WebKit

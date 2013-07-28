@@ -30,11 +30,13 @@
 #include "ResourceHandle.h"
 #include <wtf/MainThread.h>
 #include <wtf/PassOwnPtr.h>
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
 
 NetworkStorageSession::NetworkStorageSession(SoupSession* session)
     : m_session(session)
+    , m_isPrivate(false)
 {
 }
 
@@ -52,16 +54,12 @@ NetworkStorageSession& NetworkStorageSession::defaultStorageSession()
     return *defaultSession();
 }
 
-PassOwnPtr<NetworkStorageSession> NetworkStorageSession::createDefaultSession(const String&)
-{
-    ASSERT(isMainThread());
-    return adoptPtr(new NetworkStorageSession(ResourceHandle::defaultSession()));
-}
-
 PassOwnPtr<NetworkStorageSession> NetworkStorageSession::createPrivateBrowsingSession(const String&)
 {
-    ASSERT_NOT_REACHED();
-    return nullptr;
+    OwnPtr<NetworkStorageSession> session = adoptPtr(new NetworkStorageSession(ResourceHandle::createPrivateBrowsingSession()));
+    session->m_isPrivate = true;
+
+    return session.release();
 }
 
 void NetworkStorageSession::switchToNewTestingSession()

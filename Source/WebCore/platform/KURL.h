@@ -35,7 +35,7 @@
 typedef const struct __CFURL* CFURLRef;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 OBJC_CLASS NSURL;
 #endif
 
@@ -88,11 +88,6 @@ public:
     bool isNull() const;
     bool isEmpty() const;
     bool isValid() const;
-
-    // Returns true if this URL has a path. Note that "http://foo.com/" has a
-    // path of "/", so this function will return true. Only invalid or
-    // non-hierarchical (like "javascript:") URLs will have no path.
-    bool hasPath() const;
 
     // Returns true if you can set the host and port for the URL.
     // Non-hierarchical URLs don't have a host and port.
@@ -171,7 +166,7 @@ public:
     RetainPtr<CFURLRef> createCFURL() const;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
     KURL(NSURL*);
     operator NSURL*() const;
 #endif
@@ -203,6 +198,8 @@ private:
     // it will use the passed-in string instead of allocating a new one.
     void parse(const String&);
     void parse(const char* url, const String* originalString = 0);
+
+    bool hasPath() const;
 
     String m_string;
     bool m_isValid : 1;

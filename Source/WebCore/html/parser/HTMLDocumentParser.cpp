@@ -419,13 +419,6 @@ void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<Parse
     for (Vector<CompactHTMLToken>::const_iterator it = tokens->begin(); it != tokens->end(); ++it) {
         ASSERT(!isWaitingForScripts());
 
-        m_textPosition = it->textPosition();
-
-        constructTreeFromCompactHTMLToken(*it);
-
-        if (isStopped())
-            break;
-
         if (!isParsingFragment()
             && document()->frame() && document()->frame()->navigationScheduler()->locationChangePending()) {
 
@@ -437,6 +430,13 @@ void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<Parse
             }
             break;
         }
+
+        m_textPosition = it->textPosition();
+
+        constructTreeFromCompactHTMLToken(*it);
+
+        if (isStopped())
+            break;
 
         if (isWaitingForScripts()) {
             ASSERT(it + 1 == tokens->end()); // The </script> is assumed to be the last token of this bunch.

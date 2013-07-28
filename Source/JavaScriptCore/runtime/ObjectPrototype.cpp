@@ -57,16 +57,16 @@ void ObjectPrototype::finishCreation(ExecState* exec, JSGlobalObject* globalObje
     ASSERT(inherits(&s_info));
     vm.prototypeMap.addPrototype(this);
     
-    JSC_NATIVE_FUNCTION("toString", objectProtoFuncToString, DontEnum, 0);
-    JSC_NATIVE_FUNCTION("toLocaleString", objectProtoFuncToLocaleString, DontEnum, 0);
-    JSC_NATIVE_FUNCTION("valueOf", objectProtoFuncValueOf, DontEnum, 0);
-    JSC_NATIVE_FUNCTION("hasOwnProperty", objectProtoFuncHasOwnProperty, DontEnum, 1);
-    JSC_NATIVE_FUNCTION("propertyIsEnumerable", objectProtoFuncPropertyIsEnumerable, DontEnum, 1);
-    JSC_NATIVE_FUNCTION("isPrototypeOf", objectProtoFuncIsPrototypeOf, DontEnum, 1);
-    JSC_NATIVE_FUNCTION("__defineGetter__", objectProtoFuncDefineGetter, DontEnum, 2);
-    JSC_NATIVE_FUNCTION("__defineSetter__", objectProtoFuncDefineSetter, DontEnum, 2);
-    JSC_NATIVE_FUNCTION("__lookupGetter__", objectProtoFuncLookupGetter, DontEnum, 1);
-    JSC_NATIVE_FUNCTION("__lookupSetter__", objectProtoFuncLookupSetter, DontEnum, 1);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->toString, objectProtoFuncToString, DontEnum, 0);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->toLocaleString, objectProtoFuncToLocaleString, DontEnum, 0);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->valueOf, objectProtoFuncValueOf, DontEnum, 0);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->hasOwnProperty, objectProtoFuncHasOwnProperty, DontEnum, 1);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->propertyIsEnumerable, objectProtoFuncPropertyIsEnumerable, DontEnum, 1);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->isPrototypeOf, objectProtoFuncIsPrototypeOf, DontEnum, 1);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->__defineGetter__, objectProtoFuncDefineGetter, DontEnum, 2);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->__defineSetter__, objectProtoFuncDefineSetter, DontEnum, 2);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->__lookupGetter__, objectProtoFuncLookupGetter, DontEnum, 1);
+    JSC_NATIVE_FUNCTION(vm.propertyNames->__lookupSetter__, objectProtoFuncLookupSetter, DontEnum, 1);
 }
 
 ObjectPrototype* ObjectPrototype::create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
@@ -80,19 +80,19 @@ ObjectPrototype* ObjectPrototype::create(ExecState* exec, JSGlobalObject* global
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncValueOf(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->hostThisValue().toThis(exec, StrictMode);
     return JSValue::encode(thisValue.toObject(exec));
 }
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncHasOwnProperty(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->hostThisValue().toThis(exec, StrictMode);
     return JSValue::encode(jsBoolean(thisValue.toObject(exec)->hasOwnProperty(exec, Identifier(exec, exec->argument(0).toString(exec)->value(exec)))));
 }
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncIsPrototypeOf(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->hostThisValue().toThis(exec, StrictMode);
     JSObject* thisObj = thisValue.toObject(exec);
 
     if (!exec->argument(0).isObject())
@@ -111,7 +111,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncIsPrototypeOf(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncDefineGetter(ExecState* exec)
 {
-    JSObject* thisObject = exec->hostThisValue().toObject(exec);
+    JSObject* thisObject = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -131,7 +131,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncDefineGetter(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncDefineSetter(ExecState* exec)
 {
-    JSObject* thisObject = exec->hostThisValue().toObject(exec);
+    JSObject* thisObject = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -151,7 +151,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncDefineSetter(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncLookupGetter(ExecState* exec)
 {
-    JSObject* thisObject = exec->hostThisValue().toObject(exec);
+    JSObject* thisObject = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -165,7 +165,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncLookupGetter(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncLookupSetter(ExecState* exec)
 {
-    JSObject* thisObject = exec->hostThisValue().toObject(exec);
+    JSObject* thisObject = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -179,7 +179,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncLookupSetter(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncPropertyIsEnumerable(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->hostThisValue().toThis(exec, StrictMode);
     return JSValue::encode(jsBoolean(thisValue.toObject(exec)->propertyIsEnumerable(exec, Identifier(exec, exec->argument(0).toString(exec)->value(exec)))));
 }
 
@@ -187,7 +187,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncPropertyIsEnumerable(ExecState* exec
 EncodedJSValue JSC_HOST_CALL objectProtoFuncToLocaleString(ExecState* exec)
 {
     // 1. Let O be the result of calling ToObject passing the this value as the argument.
-    JSObject* object = exec->hostThisValue().toObject(exec);
+    JSObject* object = exec->hostThisValue().toThis(exec, StrictMode).toObject(exec);
     if (exec->hadException())
         return JSValue::encode(jsUndefined());
 
@@ -206,7 +206,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncToLocaleString(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncToString(ExecState* exec)
 {
-    JSValue thisValue = exec->hostThisValue();
+    JSValue thisValue = exec->hostThisValue().toThis(exec, StrictMode);
     if (thisValue.isUndefinedOrNull())
         return JSValue::encode(jsNontrivialString(exec, String(thisValue.isUndefined() ? ASCIILiteral("[object Undefined]") : ASCIILiteral("[object Null]"))));
     JSObject* thisObject = thisValue.toObject(exec);

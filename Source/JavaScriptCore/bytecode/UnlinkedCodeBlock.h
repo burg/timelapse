@@ -27,7 +27,6 @@
 #define UnlinkedCodeBlock_h
 
 #include "BytecodeConventions.h"
-#include "CodeCache.h"
 #include "CodeSpecializationKind.h"
 #include "CodeType.h"
 #include "ExpressionRangeInfo.h"
@@ -103,12 +102,13 @@ public:
     unsigned firstLineOffset() const { return m_firstLineOffset; }
     unsigned lineCount() const { return m_lineCount; }
     unsigned functionStartOffset() const { return m_functionStartOffset; }
+    unsigned functionStartColumn() const { return m_functionStartColumn; }
     unsigned startOffset() const { return m_startOffset; }
     unsigned sourceLength() { return m_sourceLength; }
 
     String paramString() const;
 
-    UnlinkedFunctionCodeBlock* codeBlockFor(VM&, JSScope*, const SourceCode&, CodeSpecializationKind, DebuggerMode, ProfilerMode, ParserError&);
+    UnlinkedFunctionCodeBlock* codeBlockFor(VM&, const SourceCode&, CodeSpecializationKind, DebuggerMode, ProfilerMode, ParserError&);
 
     static UnlinkedFunctionExecutable* fromGlobalCode(const Identifier&, ExecState*, Debugger*, const SourceCode&, JSObject** exception);
 
@@ -159,6 +159,7 @@ private:
     unsigned m_firstLineOffset;
     unsigned m_lineCount;
     unsigned m_functionStartOffset;
+    unsigned m_functionStartColumn;
     unsigned m_startOffset;
     unsigned m_sourceLength;
 
@@ -245,19 +246,8 @@ public:
     bool needsFullScopeChain() const { return m_needsFullScopeChain; }
     void setNeedsFullScopeChain(bool needsFullScopeChain) { m_needsFullScopeChain = needsFullScopeChain; }
 
-    void addExpressionInfo(const ExpressionRangeInfo& expressionInfo)
-    {
-        m_expressionInfo.append(expressionInfo);
-    }
-
-    void addLineInfo(unsigned bytecodeOffset, int lineNo)
-    {
-        Vector<LineInfo>& lineInfo = m_lineInfo;
-        if (!lineInfo.size() || lineInfo.last().lineNumber != lineNo) {
-            LineInfo info = { bytecodeOffset, lineNo };
-            lineInfo.append(info);
-        }
-    }
+    void addExpressionInfo(unsigned instructionOffset, int divot,
+        int startOffset, int endOffset, unsigned line, unsigned column);
 
     bool hasExpressionInfo() { return m_expressionInfo.size(); }
 
@@ -331,7 +321,6 @@ public:
         m_constantRegisters.shrinkToFit();
         m_functionDecls.shrinkToFit();
         m_functionExprs.shrinkToFit();
-        m_lineInfo.shrinkToFit();
         m_propertyAccessInstructions.shrinkToFit();
         m_expressionInfo.shrinkToFit();
 
@@ -342,9 +331,9 @@ public:
             m_rareData->m_exceptionHandlers.shrinkToFit();
             m_rareData->m_regexps.shrinkToFit();
             m_rareData->m_constantBuffers.shrinkToFit();
-            m_rareData->m_immediateSwitchJumpTables.shrinkToFit();
-            m_rareData->m_characterSwitchJumpTables.shrinkToFit();
+            m_rareData->m_switchJumpTables.shrinkToFit();
             m_rareData->m_stringSwitchJumpTables.shrinkToFit();
+            m_rareData->m_expressionInfoFatPositions.shrinkToFit();
         }
     }
 
@@ -358,13 +347,9 @@ public:
 
     // Jump Tables
 
-    size_t numberOfImmediateSwitchJumpTables() const { return m_rareData ? m_rareData->m_immediateSwitchJumpTables.size() : 0; }
-    UnlinkedSimpleJumpTable& addImmediateSwitchJumpTable() { createRareDataIfNecessary(); m_rareData->m_immediateSwitchJumpTables.append(UnlinkedSimpleJumpTable()); return m_rareData->m_immediateSwitchJumpTables.last(); }
-    UnlinkedSimpleJumpTable& immediateSwitchJumpTable(int tableIndex) { ASSERT(m_rareData); return m_rareData->m_immediateSwitchJumpTables[tableIndex]; }
-
-    size_t numberOfCharacterSwitchJumpTables() const { return m_rareData ? m_rareData->m_characterSwitchJumpTables.size() : 0; }
-    UnlinkedSimpleJumpTable& addCharacterSwitchJumpTable() { createRareDataIfNecessary(); m_rareData->m_characterSwitchJumpTables.append(UnlinkedSimpleJumpTable()); return m_rareData->m_characterSwitchJumpTables.last(); }
-    UnlinkedSimpleJumpTable& characterSwitchJumpTable(int tableIndex) { ASSERT(m_rareData); return m_rareData->m_characterSwitchJumpTables[tableIndex]; }
+    size_t numberOfSwitchJumpTables() const { return m_rareData ? m_rareData->m_switchJumpTables.size() : 0; }
+    UnlinkedSimpleJumpTable& addSwitchJumpTable() { createRareDataIfNecessary(); m_rareData->m_switchJumpTables.append(UnlinkedSimpleJumpTable()); return m_rareData->m_switchJumpTables.last(); }
+    UnlinkedSimpleJumpTable& switchJumpTable(int tableIndex) { ASSERT(m_rareData); return m_rareData->m_switchJumpTables[tableIndex]; }
 
     size_t numberOfStringSwitchJumpTables() const { return m_rareData ? m_rareData->m_stringSwitchJumpTables.size() : 0; }
     UnlinkedStringJumpTable& addStringSwitchJumpTable() { createRareDataIfNecessary(); m_rareData->m_stringSwitchJumpTables.append(UnlinkedStringJumpTable()); return m_rareData->m_stringSwitchJumpTables.last(); }
@@ -397,11 +382,6 @@ public:
     SharedSymbolTable* symbolTable() const { return m_symbolTable.get(); }
 
     VM* vm() const { return m_vm; }
-
-    unsigned addResolve() { return m_resolveOperationCount++; }
-    unsigned numberOfResolveOperations() const { return m_resolveOperationCount; }
-    unsigned addPutToBase() { return m_putToBaseOperationCount++; }
-    unsigned numberOfPutToBaseOperations() const { return m_putToBaseOperationCount; }
 
     UnlinkedArrayProfile addArrayProfile() { return m_arrayProfileCount++; }
     unsigned numberOfArrayProfiles() { return m_arrayProfileCount; }
@@ -456,7 +436,8 @@ public:
 
     int lineNumberForBytecodeOffset(unsigned bytecodeOffset);
 
-    void expressionRangeForBytecodeOffset(unsigned bytecodeOffset, int& divot, int& startOffset, int& endOffset);
+    void expressionRangeForBytecodeOffset(unsigned bytecodeOffset, int& divot,
+        int& startOffset, int& endOffset, unsigned& line, unsigned& column);
 
     void recordParse(CodeFeatures features, bool hasCapturedVariables, unsigned firstLine, unsigned lineCount)
     {
@@ -470,16 +451,6 @@ public:
     bool hasCapturedVariables() const { return m_hasCapturedVariables; }
     unsigned firstLine() const { return m_firstLine; }
     unsigned lineCount() const { return m_lineCount; }
-
-    PassRefPtr<CodeCache> codeCacheForEval()
-    {
-        if (m_codeType == GlobalCode)
-            return m_vm->codeCache();
-        createRareDataIfNecessary();
-        if (!m_rareData->m_evalCodeCache)
-            m_rareData->m_evalCodeCache = CodeCache::create(CodeCache::NonGlobalCodeCache);
-        return m_rareData->m_evalCodeCache.get();
-    }
 
 protected:
     UnlinkedCodeBlock(VM*, Structure*, CodeType, const ExecutableInfo&);
@@ -534,8 +505,6 @@ private:
 
     WriteBarrier<SharedSymbolTable> m_symbolTable;
 
-    Vector<LineInfo> m_lineInfo;
-
     Vector<unsigned> m_propertyAccessInstructions;
 
 #if ENABLE(BYTECODE_COMMENTS)
@@ -543,8 +512,6 @@ private:
     size_t m_bytecodeCommentIterator;
 #endif
 
-    unsigned m_resolveOperationCount;
-    unsigned m_putToBaseOperationCount;
     unsigned m_arrayProfileCount;
     unsigned m_arrayAllocationProfileCount;
     unsigned m_objectAllocationProfileCount;
@@ -564,10 +531,10 @@ public:
         Vector<ConstantBuffer> m_constantBuffers;
 
         // Jump Tables
-        Vector<UnlinkedSimpleJumpTable> m_immediateSwitchJumpTables;
-        Vector<UnlinkedSimpleJumpTable> m_characterSwitchJumpTables;
+        Vector<UnlinkedSimpleJumpTable> m_switchJumpTables;
         Vector<UnlinkedStringJumpTable> m_stringSwitchJumpTables;
-        RefPtr<CodeCache> m_evalCodeCache;
+
+        Vector<ExpressionRangeInfo::FatPosition> m_expressionInfoFatPositions;
     };
 
 private:

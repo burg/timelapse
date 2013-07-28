@@ -1,3 +1,1461 @@
+2013-07-26  Oliver Hunt <oliver@apple.com>
+
+        ASSERT failure in wtf/CheckedBoolean.h line 43 on Windows
+        https://bugs.webkit.org/show_bug.cgi?id=119170
+
+        Reviewed by Michael Saboff.
+
+        Added a copy constructor to CheckedBoolean.
+
+        * wtf/CheckedBoolean.h:
+        (CheckedBoolean::CheckedBoolean):
+
+2013-07-25  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build fix.
+
+        * WTF.vcxproj/WTF.vcxproj: Add missing SixCharacterHash.h,.cpp files.
+        * WTF.vcxproj/WTF.vcxproj.filters: Ditto.
+        * wtf/NumberOfCores.h: Add export macro to numberOfProcessorCores.
+        * wtf/PrintStream.h: Add export macro to dumpCharacter.
+        * wtf/SixCharacterHash.h: Add export macro to sixCharacterHashStringToInteger
+        and integerToSixCharacterHashString.
+        * wtf/text/CString.h: Add export macro to hash and equal methods.
+        (WTF::CStringHash::hash): Add export macro.
+
+2013-07-25  peavo@outlook.com  <peavo@outlook.com>
+
+        [Windows] Provide ASM implemenation of 8-bit compare-and-swap
+        https://bugs.webkit.org/show_bug.cgi?id=119084
+
+        Reviewed by Brent Fulgham.
+
+        * wtf/Atomics.h:
+        (WTF::weakCompareAndSwap): Add a 32-bit X86 Assembly path for
+        Windows build.
+
+2013-07-25  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build fix.
+
+        * WTF.vcxproj/WTF.vcxproj: Add missing CompilationThread.h,.cpp
+        * WTF.vcxproj/WTF.vcxproj.filters: Ditto.
+
+2013-07-25  Michael Brüning  <michael.bruning@digia.com>
+
+        Fix Windows build after r153134.
+        https://bugs.webkit.org/show_bug.cgi?id=119090
+
+        Reviewed by Oliver Hunt.
+
+        Add USE(PTHREADS) guards around pthread specific code
+        for now. This will cause isCompilationThread to always
+        return false on non pthread platforms such as Windows.
+
+        We might be able to use the Windows one-time initialization
+        for this, but this is only available from Windows Vista on.
+
+        * wtf/CompilationThread.cpp:
+        (WTF::initializeCompilationThreads):
+
+2013-07-25  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Fix windows build after FTL upstream
+
+        Unreviewed build fix.
+
+        * wtf/Atomics.h:
+        (WTF::weakCompareAndSwap):
+
+2013-07-25  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        Unreviewed, build fix on the EFL port.
+
+        * wtf/CMakeLists.txt: Added SixCharacterHash.cpp
+
+2013-07-25  Gabor Rapcsanyi  <rgabor@webkit.org>
+
+        Unreviewed, build fix on the Qt port.
+
+        * WTF.pro: Add additional build files for the FTL.
+
+2013-07-25  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed, further GTK build fixing.
+
+        * GNUmakefile.am: Make libWTF.la depend on any changes made to the build targets list.
+        * GNUmakefile.list.am: Add SixCharacterHash source files to the build.
+
+2013-07-25  Csaba Osztrogonác  <ossy@webkit.org>
+
+        [GTK] Similar fix to r153304.
+
+        * GNUmakefile.list.am:
+
+2013-07-25  Grzegorz Czajkowski  <g.czajkowski@samsung.com>
+
+        Build break in debug after r153134: StringImpl.h:640: undefined reference to `WTF::isCompilationThread()
+        https://bugs.webkit.org/show_bug.cgi?id=119077
+
+        Reviewed by Christophe Dumez.
+
+        * wtf/CMakeLists.txt:
+        Added CompilationThread.{h/cpp}.
+
+2013-07-24  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG IR dumps should be easier to read
+        https://bugs.webkit.org/show_bug.cgi?id=119050
+
+        Reviewed by Mark Hahnenberg.
+        
+        Added support for dumping values within a context. By default, if you say
+        print(inContext(value, context)) it calls value.dumpInContext(out, context)
+        instead of value.dump(out).
+        
+        Hoisted the support for six-character hashes out of JSC::CodeBlockHash into
+        WTF, in the form of SixCharacterHash.h.
+        
+        Added a helper for creating dump contexts where the inContext() dump will
+        just use a short string hash to "name" the object being dumped, and then
+        will print out the full dumps in an endnote to your dump.
+        
+        Added support for using CString as a hashtable key.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/PrintStream.h:
+        (WTF):
+        (ValueInContext):
+        (WTF::ValueInContext::ValueInContext):
+        (WTF::ValueInContext::dump):
+        (WTF::inContext):
+        * wtf/SixCharacterHash.cpp: Added.
+        (WTF):
+        (WTF::sixCharacterHashStringToInteger):
+        (WTF::integerToSixCharacterHashString):
+        * wtf/SixCharacterHash.h: Added.
+        (WTF):
+        * wtf/StringHashDumpContext.h: Added.
+        (WTF):
+        (StringHashDumpContext):
+        (WTF::StringHashDumpContext::StringHashDumpContext):
+        (WTF::StringHashDumpContext::getID):
+        (WTF::StringHashDumpContext::dumpBrief):
+        (WTF::StringHashDumpContext::brief):
+        (WTF::StringHashDumpContext::isEmpty):
+        (WTF::StringHashDumpContext::dump):
+        * wtf/text/CString.cpp:
+        (WTF::CString::hash):
+        (WTF):
+        (WTF::operator<):
+        (WTF::CStringHash::equal):
+        * wtf/text/CString.h:
+        (WTF::CString::CString):
+        (CString):
+        (WTF::CString::isHashTableDeletedValue):
+        (WTF):
+        (WTF::CStringHash::hash):
+        (CStringHash):
+
+2013-07-21  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG Nodes should be able to abstractly tell you what they read and what they write
+        https://bugs.webkit.org/show_bug.cgi?id=118910
+
+        Reviewed by Sam Weinig.
+        
+        Fix compile goof in sortedListDump().
+
+        * wtf/ListDump.h:
+        (WTF::sortedListDump):
+
+2013-07-16  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: NaturalLoops should be able to quickly answer questions like "what loops own this basic block"
+        https://bugs.webkit.org/show_bug.cgi?id=118750
+
+        Reviewed by Mark Hahnenberg.
+        
+        Add a utility function for inserting an element into a vector that has bounded size,
+        and where the insertion causes things to drop off the end.
+
+        * wtf/StdLibExtras.h:
+        (WTF):
+        (WTF::insertIntoBoundedVector):
+
+2013-07-12  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG should have an SSA form for use by FTL
+        https://bugs.webkit.org/show_bug.cgi?id=118338
+
+        Reviewed by Mark Hahnenberg.
+        
+        - Extend variadicity of PrintStream and dataLog.
+        
+        - Give HashSet the ability to add a span of things.
+        
+        - Give HashSet the ability to == another HashSet.
+        
+        - Note FIXME's in HashTable concerning copying performance, that affects
+          the way that the DFG now uses HashSets and HashMaps.
+        
+        - Factor out the bulk-insertion logic of JSC::DFG::InsertionSet into
+          WTF::Insertion, so that it can be used in more places.
+        
+        - Create a dumper for lists and maps.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/DataLog.h:
+        (WTF):
+        (WTF::dataLog):
+        * wtf/HashSet.h:
+        (HashSet):
+        (WTF):
+        (WTF::::add):
+        (WTF::=):
+        * wtf/HashTable.h:
+        (WTF::::HashTable):
+        (WTF::=):
+        * wtf/Insertion.h: Added.
+        (WTF):
+        (Insertion):
+        (WTF::Insertion::Insertion):
+        (WTF::Insertion::index):
+        (WTF::Insertion::element):
+        (WTF::Insertion::operator<):
+        (WTF::executeInsertions):
+        * wtf/ListDump.h: Added.
+        (WTF):
+        (ListDump):
+        (WTF::ListDump::ListDump):
+        (WTF::ListDump::dump):
+        (MapDump):
+        (WTF::MapDump::MapDump):
+        (WTF::MapDump::dump):
+        (WTF::listDump):
+        (WTF::sortedListDump):
+        (WTF::lessThan):
+        (WTF::mapDump):
+        (WTF::sortedMapDump):
+        * wtf/PrintStream.h:
+        (PrintStream):
+        (WTF::PrintStream::print):
+
+2013-07-02  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix 32-bit build.
+
+        * wtf/Platform.h:
+
+2013-07-02  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: FTL should use the equivalent of llvm opt -O2 by default
+        https://bugs.webkit.org/show_bug.cgi?id=118311
+
+        Reviewed by Mark Hahnenberg.
+        
+        * wtf/LLVMHeaders.h:
+
+2013-06-27  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: JSC's disassembly infrastructure should be able to disassemble the code that LLVM generates
+        https://bugs.webkit.org/show_bug.cgi?id=118148
+
+        Reviewed by Anders Carlsson.
+        
+        We now use LLVM for two things: disassembler and FTL. Separate out the question
+        of whether we have LLVM (HAVE(LLVM)) from whether we want to use the LLVM
+        disassembler (USE(LLVM_DISASSEMBLER)) and whether we enable the FTL
+        (ENABLE(FTL_JIT)).
+        
+        Also move the cruft for including LLVM headers into WTF since now we use it in
+        a bunch of places, not all related to FTL. There's no obvious place to put that
+        file in JSC so I put it in WTF.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/LLVMHeaders.h: Copied from Source/JavaScriptCore/ftl/FTLLLVMHeaders.h.
+        * wtf/Platform.h:
+
+2013-06-25  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG should support switch_string
+        https://bugs.webkit.org/show_bug.cgi?id=117967
+
+        Reviewed by Sam Weinig.
+        
+        Make it possible to compare a RefPtr<StringImpl> and a StringImpl* without
+        having to ref the StringImpl.
+
+        * wtf/text/StringHash.h:
+        (WTF::StringHash::equal):
+
+2013-06-24  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: Count external memory usage towards heap footprint
+        https://bugs.webkit.org/show_bug.cgi?id=117948
+
+        Reviewed by Geoffrey Garen.
+
+        Expose some functionality needed for properly measuring StringImpl footprint.
+
+        * wtf/Atomics.h:
+        (WTF::weakCompareAndSwapSize):
+        (WTF):
+        * wtf/MathExtras.h:
+        (divideRoundedUp):
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::cost):
+        (StringImpl):
+        (WTF::StringImpl::costDuringGC):
+        (WTF::StringImpl::refCount):
+
+2013-06-23  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG should optimize identifier string equality
+        https://bugs.webkit.org/show_bug.cgi?id=117920
+
+        Reviewed by Sam Weinig.
+
+        Note that this ChangeLog was supposed to be committed in r151890.
+        
+        Expose the IsIdentifier bit to the JIT.
+        
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::flagIsIdentifier):
+
+2013-06-18  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG should have switch_char
+        https://bugs.webkit.org/show_bug.cgi?id=117710
+
+        Reviewed by Michael Saboff.
+        
+        I wanted to be able to say stringImpl->at(index), and now I can!
+
+        Also made it possible to convert a UChar to a utf8 CString without
+        allocating a StringImpl.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::utf8Impl):
+        (WTF):
+        (WTF::StringImpl::utf8ForCharacters):
+        (WTF::StringImpl::utf8ForRange):
+        * wtf/text/StringImpl.h:
+        (StringImpl):
+        (WTF::StringImpl::at):
+        (WTF::StringImpl::operator[]):
+
+2013-06-15  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: Add CFG simplification for Switch
+        https://bugs.webkit.org/show_bug.cgi?id=117677
+
+        Reviewed by Mark Hahnenberg.
+
+        * wtf/TriState.h:
+        * wtf/text/StringImpl.h:
+
+2013-06-15  Filip Pizlo  <fpizlo@apple.com>
+
+        Printing a StringImpl* should really guard against NULL
+        https://bugs.webkit.org/show_bug.cgi?id=117675
+
+        Reviewed by Mark Hahnenberg.
+
+        * wtf/PrintStream.cpp:
+        (WTF::printInternal):
+
+2013-06-11  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG should support op_in and it should use patching to make it fast
+        https://bugs.webkit.org/show_bug.cgi?id=117385
+
+        Reviewed by Geoffrey Garen.
+        
+        Now if you pass a null StringImpl* then something will still get printed instead
+        of crashing. I figure that this is broadly useful for debug code, and I make use
+        of it in the JSC portion of this patch.
+
+        * wtf/PrintStream.cpp:
+        (WTF::printInternal):
+
+2013-06-09  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix build. On some compilers the automatic coercion from WTF::String to NSString*
+        causes operator[] to appear ambiguous. One way around this is to make WTF::String behave like
+        most of our other classes: at(unsigned) is always a valid synonym for operator[](unsigned).
+
+        * wtf/text/WTFString.h:
+        (WTF::String::at):
+        (WTF::String::operator[]):
+
+2013-06-08  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: Recursive deadlock in DFG::ByteCodeParser
+        https://bugs.webkit.org/show_bug.cgi?id=117376
+
+        Reviewed by Mark Hahnenberg.
+        
+        I've often wanted to leave a lock early. Now I have that power!
+
+        * wtf/Locker.h:
+        (WTF::Locker::Locker):
+        (WTF::Locker::~Locker):
+        (Locker):
+        (WTF::Locker::unlockEarly):
+        (WTF::Locker::lock):
+
+2013-05-27  Filip Pizlo  <fpizlo@apple.com>
+
+        It should be possible to record heap operations (both FastMalloc and JSC GC)
+        https://bugs.webkit.org/show_bug.cgi?id=116848
+
+        Reviewed by Mark Hahnenberg.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/DataLog.cpp:
+        (WTF):
+        (WTF::initializeLogFileOnce):
+        * wtf/FastMalloc.cpp:
+        (WTF::TCMalloc_ThreadCache::CreateCacheIfNecessary):
+        * wtf/Platform.h:
+
+2013-05-21  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG should be able to run on a separate thread
+        https://bugs.webkit.org/show_bug.cgi?id=112839
+
+        Reviewed by Geoffrey Garen.
+        
+        * wtf/ByteSpinLock.h:
+        Make it non-copyable. We previously had bugs where we used ByteSpinLock as a locker.
+        Clearly that's bad.
+
+        * wtf/MetaAllocatorHandle.h:
+        Make it thread-safe ref-counted, since we may now be passing them between the
+        concurrent JIT thread and the main thread.
+
+        * wtf/Vector.h:
+        (WTF::Vector::takeLast):
+        I've wanted this method for ages, and now I finally added.
+
+2013-04-30  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: DFG tries to ref/deref StringImpls in a ton of places
+        https://bugs.webkit.org/show_bug.cgi?id=115300
+
+        Reviewed by Geoffrey Garen.
+        
+        Make it possible to do more things directly to StringImpl*'s, including being
+        able to directly do utf8 conversion on a substring without creating the
+        substring first.
+        
+        Add assertions to StringImpl that it isn't being ref/deref'd from the
+        compilation thread.
+
+        * wtf/PrintStream.cpp:
+        (WTF::printInternal):
+        (WTF):
+        * wtf/PrintStream.h:
+        (WTF):
+        (WTF::printInternal):
+        * wtf/StringPrintStream.h:
+        (WTF):
+        (WTF::toCString):
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::utf8ForRange):
+        (WTF::StringImpl::utf8):
+        (WTF):
+        * wtf/text/StringImpl.h:
+        (StringImpl):
+        (WTF::StringImpl::hasAtLeastOneRef):
+        (WTF::StringImpl::ref):
+        (WTF::StringImpl::deref):
+
+2013-04-29  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: String::utf8() should also be available as StringImpl::utf8() so that you don't have to ref() a StringImpl just to get its utf8()
+        https://bugs.webkit.org/show_bug.cgi?id=115393
+
+        Reviewed by Geoffrey Garen.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/text/ConversionMode.h: Added.
+        (WTF):
+        * wtf/text/StringImpl.cpp:
+        (WTF):
+        (WTF::putUTF8Triple):
+        (WTF::StringImpl::utf8):
+        * wtf/text/StringImpl.h:
+        (StringImpl):
+        * wtf/text/WTFString.cpp:
+        (WTF):
+        (WTF::String::utf8):
+        * wtf/text/WTFString.h:
+        (String):
+
+2013-07-16  Oliver Hunt <oliver@apple.com>
+
+        Merge dfgFourthTier r149301
+
+    2013-04-28  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: ASSERT that commonly used not-thread-safe methods in the runtime are not being called during compilation
+        https://bugs.webkit.org/show_bug.cgi?id=115297
+
+        Reviewed by Geoffrey Garen.
+        
+        Taught WTF the notion of compilation threads. This allows all parts of our stack
+        to assert that we're not being called from a JSC compilation thread. This is in
+        WTF because it will probably end up being used in StringImpl and WTFString.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CompilationThread.cpp: Added.
+        (WTF):
+        (WTF::initializeCompilationThreadsOnce):
+        (WTF::initializeCompilationThreads):
+        (WTF::isCompilationThread):
+        (WTF::exchangeIsCompilationThread):
+        * wtf/CompilationThread.h: Added.
+        (WTF):
+        (CompilationScope):
+        (WTF::CompilationScope::CompilationScope):
+        (WTF::CompilationScope::~CompilationScope):
+        (WTF::CompilationScope::leaveEarly):
+
+2013-07-16  Oliver Hunt <oliver@apple.com>
+
+        Merge dfgFourthTier r148836
+
+    2013-04-21  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: It should be possible to query WatchpointSets, and add Watchpoints, even if the compiler is running in another thread
+        https://bugs.webkit.org/show_bug.cgi?id=114909
+
+        Reviewed by Oliver Hunt.
+        
+        Harden our notions of memory fences, now that we're doing racy algorithms.
+
+        * wtf/Atomics.h:
+        (WTF):
+        (WTF::compilerFence):
+        (WTF::armV7_dmb):
+        (WTF::armV7_dmb_st):
+        (WTF::loadLoadFence):
+        (WTF::loadStoreFence):
+        (WTF::storeLoadFence):
+        (WTF::storeStoreFence):
+        (WTF::memoryBarrierAfterLock):
+        (WTF::memoryBarrierBeforeUnlock):
+        (WTF::x86_mfence):
+
+2013-07-16  Oliver Hunt <oliver@apple.com>
+
+        Merge dfgFourthTier r148804
+
+    2013-04-20  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: value profiles and array profiles should be thread-safe enough to be accessible in a concurrent compilation thread
+        https://bugs.webkit.org/show_bug.cgi?id=114906
+
+        Reviewed by Oliver Hunt.
+        
+        Add ability to abstract whether or not the CodeBlock requires locking at all,
+        since some platforms may not support the byte spin-locking and/or may not want
+        to, if they turn off concurrent JIT.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/ByteSpinLock.h:
+        * wtf/NoLock.h: Added.
+        (WTF):
+        (NoLock):
+        (WTF::NoLock::lock):
+        (WTF::NoLock::unlock):
+        (WTF::NoLock::isHeld):
+        * wtf/Platform.h:
+
+2013-04-17  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: all inline caches should thread-safe enough to allow a concurrent compilation thread to read them safely
+        https://bugs.webkit.org/show_bug.cgi?id=114762
+
+        Reviewed by Mark Hahnenberg.
+        
+        Implemented a new spinlock that is optimized for compactness, by using just a byte.
+        This will be useful as we start using fine-grained locking on a bunch of places.
+        
+        At some point I'll make these byte-sized spinlocks into adaptive mutexes, but for
+        now I think it's fine to do the evil thing and use spinning particularly since we
+        only use them for short critical sections.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/Atomics.h:
+        (WTF):
+        (WTF::weakCompareAndSwap):
+        * wtf/ByteSpinLock.h: Added.
+        (WTF):
+        (ByteSpinLock):
+        (WTF::ByteSpinLock::ByteSpinLock):
+        (WTF::ByteSpinLock::lock):
+        (WTF::ByteSpinLock::unlock):
+        (WTF::ByteSpinLock::isHeld):
+        * wtf/ThreadingPrimitives.h:
+        (WTF::pauseBriefly):
+        (WTF):
+
+2013-04-12  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: FTL should have OSR exit
+        https://bugs.webkit.org/show_bug.cgi?id=113623
+
+        Reviewed by Oliver Hunt.
+        
+        Finally make toCString() somewhat variadic.
+
+        * wtf/StringPrintStream.h:
+        (WTF):
+        (WTF::toCString):
+
+2013-03-31  Filip Pizlo  <fpizlo@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=113656
+        Fix Sam's nits.
+
+        Unreviewed.
+        
+        Forgot to land these as part of http://trac.webkit.org/changeset/147299.
+
+        * wtf/MathExtras.h:
+        (isGreaterThanNonZeroPowerOfTwo):
+
+2013-03-29  Filip Pizlo  <fpizlo@apple.com>
+
+        fourthTier: FTL JIT should be able run some simple function
+        https://bugs.webkit.org/show_bug.cgi?id=113481
+
+        Reviewed by Geoffrey Garen.
+
+        * wtf/Platform.h:
+
+2013-07-22  Benjamin Poulain  <benjamin@webkit.org>
+
+        String::lower() - Skip to slow path on the first failure
+        https://bugs.webkit.org/show_bug.cgi?id=118885
+
+        Reviewed by Andreas Kling.
+
+        In the 8 bits case, we don't need to know the state of the full string before changing characters
+        to their lowercase variant.
+        Just fail immediately and start transforming characters from the point of failure.
+
+        This avoid reading the string twice when the uppercase character is not at the end of the string.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::lower):
+
+2013-07-22  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build fix.
+
+        * WTF.vcxproj/WTFGenerated.make: Stop triggering a "Build All" when things have not changed.
+
+2013-07-19  Alex Christensen  <achristensen@apple.com>
+
+        Added x64 configuration to Visual Studio build.
+        https://bugs.webkit.org/show_bug.cgi?id=118888
+
+        Reviewed by Brent Fulgham.
+
+        * WTF.vcxproj/WTF.vcxproj:
+        * WTF.vcxproj/WTF.vcxproj.filters:
+        * WTF.vcxproj/WTFGenerated.vcxproj:
+
+2013-07-18  Benjamin Poulain  <benjamin@webkit.org>
+
+        Fix the build after r152881
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::lower):
+
+2013-07-18  Benjamin Poulain  <benjamin@webkit.org>
+
+        Little cleaning of StringImpl::lower() and StringImpl::upper() for ARM
+        https://bugs.webkit.org/show_bug.cgi?id=118831
+
+        Reviewed by Gavin Barraclough.
+
+        Clean lower() and upper() before trying some optimizations:
+        -Prefix the code with the empty() case. Otherwise, each descending loop starts with
+         a check for length == 0.
+        -Change ored to a 32 bits registers. ARM only has 32 bits registers and access to full word.
+         To keep the value a UChar, the compiler is adding a bunch of useless value & 0xffff in the loops.
+        -Change the pointer based loops for index based loops. The compiler does a mighty job at optimizing
+         those for each architecture. No need to make the code more complex.
+        -Don't perform the check for int32 unless we need to. The only code limited to int is Unicode::toLower.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::lower):
+        (WTF::StringImpl::upper):
+
+2013-07-18  Andreas Kling  <akling@apple.com>
+
+        CodeBlock::m_argumentValueProfiles wastes a lot of memory.
+        <http://webkit.org/b/118852>
+        <rdar://problem/14481659>
+
+        Reviewed by Anders Carlsson.
+
+        Add Vector::resizeToFit(size), like resize() but without growth padding.
+
+        * wtf/Vector.h:
+        (WTF::::resizeToFit):
+
+2013-07-17  Benjamin Poulain  <benjamin@webkit.org>
+
+        Add a thread safety assertion when creating an AtomicString from a StringImpl
+        https://bugs.webkit.org/show_bug.cgi?id=118637
+
+        Reviewed by Sam Weinig.
+
+        The goal is to prevent this kind of use:
+        -Someone create a String from a StringImpl.
+        -At some point, the string becomes atomic.
+        -Later, when the string only has one ref, its ownership is 'passed' to an other thread
+         without checking String::isSafeToSendToAnotherThread().
+        -In the thread B, an AtomicString is created from the String.
+        ->The AtomicString's StringImpl returned is not in the current thread string table.
+
+        * wtf/text/AtomicString.cpp:
+        (WTF::AtomicString::isInAtomicStringTable):
+        * wtf/text/AtomicString.h:
+        (WTF::AtomicString::add):
+
+2013-07-17  Benjamin Poulain  <benjamin@webkit.org>
+
+        Simplify AtomicString::lower()
+        https://bugs.webkit.org/show_bug.cgi?id=118719
+        <rdar://problem/14452883>
+
+        Reviewed by Gavin Barraclough.
+
+        * wtf/text/AtomicString.cpp:
+        (WTF::AtomicString::lower): Previously, the code was using a copy constructor for two path
+        and one regular construction in another path.
+        Just put the StringImpl where it needs to be instead.
+
+2013-07-15  Benjamin Poulain  <benjamin@webkit.org>
+
+        Add a threading assertion to AtomicString::remove
+        https://bugs.webkit.org/show_bug.cgi?id=118695
+
+        Reviewed by Sam Weinig.
+
+        * wtf/text/AtomicString.cpp:
+        (WTF::AtomicString::remove): The destructor of StringImpl remove
+        the string from the string table if it is atomic. This needs to be done
+        on the same thread as the one on which the string was added (otherwise the original
+        table would keep a dangling pointer to a dead string).
+
+2013-07-15  Benjamin Poulain  <benjamin@webkit.org>
+
+        Minor cleaning of AtomicString::addSlowCase
+        https://bugs.webkit.org/show_bug.cgi?id=118615
+
+        Reviewed by Geoffrey Garen.
+
+        Give the variable a proper name.
+        Add assertions to clarify the in and out states.
+
+        * wtf/text/AtomicString.cpp:
+        (WTF::AtomicString::addSlowCase):
+
+2013-07-12  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Improve StringImpl::constructInternal() method
+        https://bugs.webkit.org/show_bug.cgi?id=118503
+
+        Reviewed by Benjamin Poulain.
+
+        StringImpl::constructInternal used 'if ()' statement to decide which constructor
+        to invoke hence compiler had to compile both branches even though optimizer would
+        have then removed one of those, and as the function is inline it could affect
+        slightly the compilation time.
+
+        The problem is solved via template specialization.
+
+        * wtf/text/StringImpl.h:
+        (WTF::LChar):
+        (WTF::UChar):
+
+2013-07-11  Patrick Gansterer  <paroga@webkit.org>
+
+        Remove unused Windows CE files
+        https://bugs.webkit.org/show_bug.cgi?id=118557
+
+        Reviewed by Andreas Kling.
+
+        * wtf/wince/FastMallocWinCE.h: Removed.
+        * wtf/wince/MemoryManager.cpp: Removed.
+        * wtf/wince/MemoryManager.h: Removed.
+
+2013-07-10  Michael Brüning  <michael.bruning@digia.com>
+
+        Workaround for x86 optimizer bug in MSVC 2012.
+        https://bugs.webkit.org/show_bug.cgi?id=118478
+
+        Reviewed by Benjamin Poulain.
+
+        This is a workaround for a bug in the x86 MSVC 2012 optimizer.
+
+        The problem is that the range comparison gets optimized out when
+        the templated inline function toASCIIUpper. Copying the methods 
+        content fixes the problem. 
+
+        This is unfortunately not the nicest fix, but the alternative would
+        be to turn off optimization for StringImpl::upper on the x86 MSVC 2012
+        build, which might impact overall performance negatively.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::upper):
+
+2013-07-08  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix make distcheck.
+
+        * GNUmakefile.list.am: Add missing header files.
+
+2013-07-08  Antti Koivisto  <antti@apple.com>
+
+        Add Deque::removeLast
+        https://bugs.webkit.org/show_bug.cgi?id=118466
+
+        Reviewed by Andreas Kling.
+        
+        Deque can remove both the first and the last element efficiently.
+        
+        Test: TestWebKitAPI/Tests/WTF/Deque.cpp
+
+        * wtf/Deque.h:
+        (WTF::::takeLast):
+        (WTF::::removeLast):
+
+2013-07-08  Zoltan Arvai  <zarvai@inf.u-szeged.hu>
+
+        [Qt][Windows] Buildfix after r152426.
+
+        Reviewed by Csaba Osztrogonác.
+
+        * wtf/Platform.h: Do not include WTFHeaderDetection.h on Qt build.
+
+2013-07-06  Benjamin Poulain  <benjamin@webkit.org>
+
+        Fix the performance regressions introduced by r152418
+        https://bugs.webkit.org/show_bug.cgi?id=118438
+
+        Reviewed by Sam Weinig.
+
+        * wtf/text/StringImpl.h:
+        (WTF::equal):
+        Looping between two arbitrary pointers prevents important loop
+        optimizations.
+
+2013-07-05  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build correction.
+
+        * WTF.vcxproj/WTFGenerated.make: Avoid syntax error in generated
+        file in cases where Legible Output support is not present.
+
+2013-07-05  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build correction.
+
+        * WTF.vcxproj/WTFGenerated.make: Use space (rather than double
+        quotes) when handling the no-Legible-Output case.
+
+2013-07-05  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Identify OS-level at build-time.
+        https://bugs.webkit.org/show_bug.cgi?id=118428
+
+        Reviewed by Anders Carlsson.
+
+        * WTF.vcxproj/WTFGenerated.make: Check for Legible Output featurs
+        and set build environment as appropriate.
+        * wtf/Platform.h: Activate Legible Output features if present.
+
+2013-07-05  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        A lot of code duplication within StringImpl 'equal' functions
+        https://bugs.webkit.org/show_bug.cgi?id=118415
+
+        Reviewed by Anders Carlsson.
+
+        There has been a lot of code duplication within StringImpl 'equal' functions:
+        the whole logic was copied to every overloaded 'equal' function.
+        Fixed now using templates and std::equal.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::equalInternal):
+        (WTF::equal):
+        * wtf/text/StringImpl.h:
+        (WTF::arraysEqual):
+        (WTF::equal):
+
+2013-07-05  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Remove code duplication from StringImpl create()/reallocate() methods
+        https://bugs.webkit.org/show_bug.cgi?id=118355
+
+        Reviewed by Andreas Kling.
+
+        StringImpl create()/reallocate() methods accepting LChar and UChar used to have
+        duplicated code. The code duplication is removed now via used templates.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::constructInternal):
+        (WTF::LChar):
+        (WTF::StringImpl::createUninitializedInternal):
+        (WTF::StringImpl::createUninitialized):
+        (WTF::StringImpl::reallocateInternal):
+        (WTF::StringImpl::reallocate):
+        (WTF::StringImpl::createInternal):
+        (WTF::StringImpl::create):
+        * wtf/text/StringImpl.h:
+
+2013-07-03  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build correction.
+
+        * WTF.vcxproj/copy-files.cmd: Limit path (for this file) to DOS-only to avoid
+        the Cygwin variant of rmdir from being used.
+
+2013-07-03  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r152356.
+        http://trac.webkit.org/changeset/152356
+        https://bugs.webkit.org/show_bug.cgi?id=118361
+
+        Broke JSCore tests (Requested by andersca on #webkit).
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::createUninitialized):
+        (WTF::StringImpl::reallocate):
+        (WTF::StringImpl::create):
+        * wtf/text/StringImpl.h:
+
+2013-07-03  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Remove code duplication from StringImpl create()/reallocate() methods
+        https://bugs.webkit.org/show_bug.cgi?id=118355
+
+        Reviewed by Anders Carlsson.
+
+        StringImpl create()/reallocate() methods accepting LChar and UChar used to have
+        duplicated code. The code duplication is removed now via used templates.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::constructInternal):
+        (WTF::LChar):
+        (WTF::StringImpl::createUninitializedInternal):
+        (WTF::StringImpl::createUninitialized):
+        (WTF::StringImpl::reallocateInternal):
+        (WTF::StringImpl::reallocate):
+        (WTF::StringImpl::createInternal):
+        (WTF::StringImpl::create):
+        * wtf/text/StringImpl.h:
+
+2013-07-03  Csaba Osztrogonác  <ossy@webkit.org>
+
+        Fix cast-align warnings in FastMalloc.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=117991
+
+        Reviewed by Mark Hahnenberg.
+
+        * wtf/FastMalloc.cpp:
+
+2013-07-02  Geoffrey Garen  <ggaren@apple.com>
+
+        plainText() is O(N^2)
+        https://bugs.webkit.org/show_bug.cgi?id=118282
+        <rdar://problem/14284360>
+
+        Reviewed by Alexey Proskuryakov.
+
+        * wtf/text/StringBuilder.cpp:
+        (WTF::expandCapacity): Factored out this helper function to simplify
+        some code that was duplicated in four places.
+
+        (WTF::StringBuilder::appendUninitializedSlow):
+        (WTF::StringBuilder::append): Use expandCapacity(). One of the cases
+        was not doing anything special, and so was O(N^2).
+
+        Also, always call expandCapacity() it in a standard way, calling
+        capacity() first, so it's easy to tell at a glance that you got it right.
+
+2013-07-02  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Avoid code duplication inside String::append()
+        https://bugs.webkit.org/show_bug.cgi?id=118290
+
+        Reviewed by Anders Carlsson.
+
+        The implementation of 'append(UChar)' had been repeated inside 'append(LChar)',
+        this duplication is obviated now.
+
+        * wtf/text/WTFString.cpp:
+        (WTF::String::appendInternal):
+        (WTF::String::append):
+        * wtf/text/WTFString.h:
+
+2013-06-28  Anders Carlsson  <andersca@apple.com>
+
+        Remove String::deprecatedCharactersWithNullTermination() and related code
+        https://bugs.webkit.org/show_bug.cgi?id=118211
+
+        Reviewed by Benjamin Poulain.
+
+        Remove String::deprecatedCharactersWithNullTermination, StringImpl::createWithTerminatingNullCharacter
+        and the s_hashFlagHasTerminatingNullCharacter flag. We no longer care about whether strings have a
+        terminating null character.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::createFromLiteral):
+        (WTF::StringImpl::createWithoutCopying):
+        (WTF::StringImpl::getData16SlowCase):
+        (WTF::StringImpl::sizeInBytes):
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::StringImpl):
+        (WTF::StringImpl::createFromLiteral):
+        (WTF::StringImpl::isolatedCopy):
+        * wtf/text/WTFString.cpp:
+        * wtf/text/WTFString.h:
+
+2013-06-27  Anders Carlsson  <andersca@apple.com>
+
+        Add a new String::charactersWithNullTermination() function that returns a vector
+        https://bugs.webkit.org/show_bug.cgi?id=118155
+
+        Reviewed by Andreas Kling.
+
+        This new String::charactersWithNullTermination() function returns a new Vector<UChar>
+        and does not modify the underlying string data.
+
+        * wtf/text/WTFString.cpp:
+        (WTF::String::charactersWithNullTermination):
+        * wtf/text/WTFString.h:
+
+2013-06-26  Anders Carlsson  <andersca@apple.com>
+
+        Deprecate StringImpl::charactersWithNullTermination
+        https://bugs.webkit.org/show_bug.cgi?id=118108
+
+        Reviewed by Beth Dakin.
+
+        The optimization in String and StringImpl to keep track of whether a string
+        has a null terminator isn't worth it; in most cases we call charactersWithNullTermination() on
+        temporary strings which ends up copying strings anyway.
+        
+        A better solution is to have a charactersWithNullTermination() function that returns a Vector<UChar>,
+        which is similar to what we have for String::utf8() and String::ascii(). This will be done in a follow-up patch.
+
+        * wtf/text/WTFString.cpp:
+        (WTF::String::deprecatedCharactersWithNullTermination):
+        * wtf/text/WTFString.h:
+
+2013-06-26  Anders Carlsson  <andersca@apple.com>
+
+        Add JSStringCreateWithCharactersNoCopy SPI
+        https://bugs.webkit.org/show_bug.cgi?id=118074
+        <rdar://problem/14279905>
+
+        Reviewed by Geoffrey Garen.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::createFromLiteral):
+        Use the new ConstructWithoutCopying constructor, passing DoesHaveTerminatingNullCharacter to it.
+        Change the other createFromLiteral overload to just call the first.
+
+        (WTF::StringImpl::createWithoutCopying):
+        Add helper functions for creating strings that shouldn't copy their underlying data.
+
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::StringImpl):
+        Rename the ConstructFromLiteralTag constructor enum to ConstructWithoutCopyingTag. Change the constructor
+        to take an enum that states whether the string has a terminating null character or not.
+
+        (WTF::StringImpl::createFromLiteral):
+        Call createWithoutCopying.
+
+        (WTF::StringImpl::requiresCopy):
+        Rename this from isASCIILiteral() and make it more generic so it can handle 16-bit strings as well.
+
+        (WTF::StringImpl::isolatedCopy):
+        If this string doesn't have to be copied, just create a new StringImpl object that references the current data.
+
+2013-06-26  Jer Noble  <jer.noble@apple.com>
+
+        Potential use-after-free after neutering AudioBuffer's underlying ArrayBuffer.
+        https://bugs.webkit.org/show_bug.cgi?id=118040
+
+        Reviewed by Filip Pizlo.
+
+        Add support for 'unneuterable' ArrayBufferViews. Views marked as such will have their underlying
+        ArrayBuffer objects copied rather than transferred to a new view.
+
+        * wtf/ArrayBuffer.cpp:
+        (WTF::ArrayBuffer::transfer): Check whether the associated views are neuterable, and if not
+                clone the ArrayBuffer rather than transferring it.
+        * wtf/ArrayBuffer.h:
+        (WTF::ArrayBufferContents::copyTo): Added. Utility function.
+        * wtf/ArrayBufferView.cpp:
+        (WTF::ArrayBufferView::ArrayBufferView):
+        (WTF::ArrayBufferView::neuter):
+        * wtf/ArrayBufferView.h:
+        (WTF::ArrayBufferView::setNeuterable):
+        (WTF::ArrayBufferView::isNeuterable):
+
+2013-06-26  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Enable CaptionUserPreferenceMediaAF on Windows.
+        https://bugs.webkit.org/show_bug.cgi?id=118076
+
+        Reviewed by Eric Carlson.
+
+        * wtf/Platform.h: Enable Media Accessibility Framework in Windows build environments
+          that support it.
+
+2013-06-24  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. AppleWin build fix, followup to r151915.
+
+        * WTF.vcxproj/WTFProduction.props:
+
+2013-06-24  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        HashMap: reverse the order of the template arguments at alternate 'find', 'contains' and 'add' methods
+        https://bugs.webkit.org/show_bug.cgi?id=117911
+
+        Reviewed by Anders Carlsson.
+
+        The order of the template arguments at HashMap alternate 'find', 'contains' and
+        'add' methods is reversed so that callers can just pass the translator
+        and let the compiler deduce input argument type.
+
+        Another rational is consistency with HashSet class.
+
+        * wtf/HashMap.h:
+
+2013-06-24  peavo@outlook.com  <peavo@outlook.com>
+
+        [WinCairo] WTF.dll is linking with CoreFoundation.lib in VS2010.
+        https://bugs.webkit.org/show_bug.cgi?id=117294
+
+        Reviewed by Brent Fulgham.
+
+        WinCairo build should not use CoreFoundation.
+
+        * WTF.vcxproj/WTFCFLite.props: Added.
+        * WTF.vcxproj/WTFCommon.props: Remove CoreFoundation.lib from depencency list.
+        * WTF.vcxproj/WTFCoreFoundation.props: Added.
+        * WTF.vcxproj/WTFDebug.props: Import WTFCoreFoundation.props for WinApple.
+        * WTF.vcxproj/WTFDebugWinCairo.props: Import WTFCFLite.props for WinCairo.
+        * WTF.vcxproj/WTFRelease.props: Import WTFCoreFoundation.props for WinApple.
+        * WTF.vcxproj/WTFReleaseWinCairo.props: Import WTFCFLite.props for WinCairo.
+
+2013-06-17  Darin Adler  <darin@apple.com>
+
+        Sort all the Xcode project files
+        https://bugs.webkit.org/show_bug.cgi?id=117696
+
+        Reviewed by Anders Carlsson.
+
+        * WTF.xcodeproj/project.pbxproj: Ran the sort-Xcode-project-file script.
+
+2013-06-20  Sergio Correia  <sergio.correia@openbossa.org>
+
+        [WK2] Looping for EINTR on close() is incorrect for Linux, at least
+        https://bugs.webkit.org/show_bug.cgi?id=117266
+
+        Reviewed by Darin Adler.
+
+        Added file UniStdExtras with a closeWithRetry() function that works around
+        the EINTR behavior on Linux during a close() call: it closes the descriptor
+        unconditionally even when the call is interrupted.
+
+        * wtf/UniStdExtras.h: Added.
+        (WTF::closeWithRetry): Wrapper around POSIX close() that handles EINTR
+        correctly.
+
+2013-06-20  Mark Lam  <mark.lam@apple.com>
+
+        Refine the StackBounds computation for Windows.
+        https://bugs.webkit.org/show_bug.cgi?id=117854.
+
+        Reviewed by Brent Fulgham.
+
+        * wtf/StackBounds.cpp:
+        (WTF::StackBounds::initialize):
+
+2013-06-20  Mark Lam  <mark.lam@apple.com>
+
+        [Windows] Undoing r150621 to roll r150600 back in as the jsc test
+        failures have been fixed in r151808.
+        https://bugs.webkit.org/show_bug.cgi?id=116661.
+
+        Reviewed by Brent Fulgham.
+
+        * wtf/StackBounds.cpp:
+        (WTF::StackBounds::initialize):
+
+2013-06-20  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        HashSet: reverse the order of the template arguments at alternate 'find', 'contains' and 'add' methods
+        https://bugs.webkit.org/show_bug.cgi?id=117830
+
+        Reviewed by Anders Carlsson.
+
+        The order of the template arguments at HashSet alternate 'find', 'contains' and
+        'add' methods is reversed so that callers can just pass the translator
+        and let the compiler deduce input argument type.
+
+        * wtf/HashSet.h:
+        * wtf/text/AtomicString.cpp:
+        (WTF::addToStringTable):
+        (WTF::findString):
+
+2013-06-20  Roger Fong  <roger_fong@apple.com>
+
+        Make Windows makefile copy build output to a different folder.
+        <rdar://problem/14219184>.
+
+        * WTF.vcxproj/WTF.make:
+
+2013-06-19  Geoffrey Garen  <ggaren@apple.com>
+
+        Remove the SegmentedVector inline segment to shrink CodeBlock by 6X
+        https://bugs.webkit.org/show_bug.cgi?id=117808
+
+        Reviewed by Oliver Hunt.
+
+        SegmentedVector allocation isn't super hot, but we do tend to have many
+        live SegmentedVectors at runtime, particularly in CodeBlocks, so the
+        right tradeoff is to allocate segments out-of-line as needed.
+
+        This reduces startup memory usage @ google.com by about 6MB.
+
+        No regression on SunSpider.
+
+        * wtf/SegmentedVector.h:
+        (WTF::SegmentedVector::SegmentedVector):
+        (WTF::SegmentedVector::at):
+        (WTF::SegmentedVector::append):
+        (WTF::SegmentedVector::removeLast):
+        (WTF::SegmentedVector::clear):
+        (WTF::SegmentedVector::deleteAllSegments): No more inline segment.
+
+        (WTF::SegmentedVector::ensureSegmentsFor): This code used to assume
+        that there was always a 0 segment, so the math would underflow if there
+        were no 0 segment. I udpated the math to account for having no segments.
+
+2013-06-19  David Kilzer  <ddkilzer@apple.com>
+
+        BUILD FIX (r151663): Fix build for iOS WebKit
+
+        * wtf/text/AtomicStringTable.cpp: Include MainThread.h.
+        (WTF::AtomicStringTable::create): Use AtomicStringTable::destroy
+        instead of non-existent destroyAtomicStringTable function.
+
+2013-06-18  Roger Fong  <roger_fong@apple.com>
+
+        Replace tools32 folder with tools and update WebKit Windows solution accordingly.
+        <rdar://problem/14118143>.
+
+        Rubberstamped by Brent Fulgham.
+
+        * WTF.vcxproj/WTF.vcxproj:
+        * WTF.vcxproj/WTFDebug.props:
+        * WTF.vcxproj/WTFDebugWinCairo.props:
+        * WTF.vcxproj/WTFGenerated.vcxproj:
+        * WTF.vcxproj/WTFGeneratedDebug.props:
+        * WTF.vcxproj/WTFGeneratedProduction.props:
+        * WTF.vcxproj/WTFGeneratedRelease.props:
+        * WTF.vcxproj/WTFProduction.props:
+        * WTF.vcxproj/WTFRelease.props:
+        * WTF.vcxproj/WTFReleaseWinCairo.props:
+        * WTF.vcxproj/work-around-vs-dependency-tracking-bugs.py:
+        (react_to_vsprops_changes):
+
+2013-06-18  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        PackedIntVector: check template arguments at compile time
+        https://bugs.webkit.org/show_bug.cgi?id=117737
+
+        Use 'COMPILE_ASSERT' instead of 'ASSERT' in PackedIntVector class
+        constructor.
+
+        Reviewed by Sam Weinig.
+
+        * wtf/PackedIntVector.h:
+        (WTF::PackedIntVector::PackedIntVector):
+
+2013-06-17  Andy Estes  <aestes@apple.com>
+
+        A static_assert() in RetainPtr.h sometimes causes the build to fail.
+
+        Wrap the first argument to a static_assert() in parentheses since it
+        contains a comma, which sometimes tricks the preprocessor into thinking
+        the macro is being passed three arguments rather than two.
+
+        Reviewed by Brian Weinstein.
+
+        * wtf/RetainPtr.h:
+        (WTF::RetainPtr::RetainPtr):
+
+2013-06-17  Zan Dobersek  <zdobersek@igalia.com>
+
+        REGRESSION (r149184): Build errors in RefPtr.h when building with Clang, C++98 standard
+        https://bugs.webkit.org/show_bug.cgi?id=116352
+
+        Reviewed by Anders Carlsson.
+
+        Use the __has_feature macro instead of the __has_extension one when detecting what features the Clang compiler
+        that's being used is capable to provide. With the project moving onto using C++11 throughout its components,
+        there currently exist cases where C++11-specific functionality (for instance std::move) is used despite being
+        guarded by compiler-specific feature guards that still get enabled even when compiling in C++98 with Clang.
+        The problematic features are enabled because they're available as C++98 language extensions by Clang.
+
+        Using __has_feature instead enables the feature guard only if the tested feature is actually standardized in
+        the currently used language standard.
+
+        * wtf/Compiler.h:
+
+2013-06-17  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Initialize AtomicStringTable in WTFThreadData's constructor
+        https://bugs.webkit.org/show_bug.cgi?id=117671
+
+        Reviewed by Geoffrey Garen.
+
+        Extracted AtomicStringTable from AtomicString.cpp into AtomicStringTable.h/cpp
+        and made WTFThreadDada::WTFThreadData create the atomic string table for the thread.
+
+        This eliminates a branch from stringTable() in AtomicString.cpp.
+
+        * GNUmakefile.list.am:
+        * WTF.pro:
+        * WTF.vcxproj/WTF.vcxproj:
+        * WTF.vcxproj/WTF.vcxproj.filters:
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CMakeLists.txt:
+        * wtf/WTFThreadData.cpp:
+        (WTF::WTFThreadData::WTFThreadData):
+        * wtf/text/AtomicString.cpp:
+        (WTF::stringTable):
+        * wtf/text/AtomicStringTable.cpp: Added.
+        (WTF::AtomicStringTable::create):
+        (WTF::AtomicStringTable::destroy):
+        * wtf/text/AtomicStringTable.h: Added.
+        (WTF::AtomicStringTable::table):
+
+2013-06-17  Roger Fong  <roger_fong@apple.com>
+
+        Modify Windows makefiles to copy some bin output into Program Files.
+        https://bugs.webkit.org/show_bug.cgi?id=117714.
+        <rdar://problem/14179054>
+
+        Reviewed by Brent Fulgham.
+
+        * WTF.vcxproj/WTF.make:
+
+2013-06-17  Grzegorz Czajkowski  <g.czajkowski@samsung.com>
+
+        Unreviewed, rolling out r151632.
+        http://trac.webkit.org/changeset/151632
+        https://bugs.webkit.org/show_bug.cgi?id=117585
+
+        Debug build error ASSERT(WTF_USE_GRAMMAR_CHECKING) for non MAC
+        platforms
+
+        * wtf/Platform.h:
+
+2013-06-14  Grzegorz Czajkowski  <g.czajkowski@samsung.com>
+
+        Context menu grammar checking items are available when GRAMMAR_CHECKING macro is off
+        https://bugs.webkit.org/show_bug.cgi?id=117585
+
+        Reviewed by Anders Carlsson.
+
+        Enable GRAMMAR_CHECKING for WebKit ports that use/implement it.
+
+        * wtf/Platform.h:
+
+2013-06-14  Patrick Gansterer  <paroga@webkit.org>
+
+        Introduce USE(WINGDI) for the Windows port
+        https://bugs.webkit.org/show_bug.cgi?id=116138
+
+        Reviewed by Ryosuke Niwa.
+
+        Using USE(WINGDI) instead of OS(WINCE) will allow us to
+        compile the GDI based Windows port on WinNT too.
+
+        * wtf/Platform.h:
+
+2013-06-13  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Remove LiteralIdentifierTable
+        https://bugs.webkit.org/show_bug.cgi?id=117613
+
+        Reviewed by Geoffrey Garen.
+
+        Removed LiteralIdentifierTable since it doesn't seem to have any perf. impact now.
+
+        * wtf/WTFThreadData.h:
+
+2013-06-13  Brent Fulgham  <bfulgham@apple.com>
+
+        [WinCairo] Correct FeatureDefines.h Default for ENABLE_VIEW_MODE_CSS_MEDIA
+        https://bugs.webkit.org/show_bug.cgi?id=114396
+
+        Reviewed by Dean Jackson.
+
+        * wtf/FeatureDefines.h: The WinCairo port does not (currently) support Media elements,
+        so make sure we do not enable this feature by default for that port.
+
+2013-06-13  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed gardening.
+
+        * WTF.vcxproj/WTF.vcxproj: Add FeatureDefines.h to visible files.
+        * WTF.vcxproj/WTF.vcxproj.filters: Ditto.
+
+2013-06-13  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Optimize String::fromUTF8 for ASCII
+        https://bugs.webkit.org/show_bug.cgi?id=117586
+
+        Reviewed by Brent Fulgham.
+
+        From Blink r152243 by <abarth@chromium.org>
+
+        Current String::fromUTF8() implementation converts 8 bit ASCII character into 16 bit.
+        Instead of always trying to convert into a 16 bit buffer, we can add a call to charactersAreAllASCII.
+        In the common case when characters are ASCII, we directly copy it into an 8 bit string buffer.
+
+        * wtf/text/WTFString.cpp:
+        (WTF::String::fromUTF8):
+
+2013-06-12  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Activate supported C++11 Features for VS2010
+        https://bugs.webkit.org/show_bug.cgi?id=117569
+
+        Reviewed by Anders Carlsson.
+
+        * wtf/Compiler.h: Turn on rvalue references and static_assert
+        when compiling with VS2010 (or newer)
+
 2013-06-07  Roger Fong  <roger_fong@apple.com>
 
         Unreviewed. Makefile fix. Copy WTF.dll over as well.

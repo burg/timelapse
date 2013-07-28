@@ -44,6 +44,7 @@
 #include "Nodes.h"
 #include "StaticPropertyAnalyzer.h"
 #include "UnlinkedCodeBlock.h"
+#include "VMStackBounds.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/SegmentedVector.h>
 #include <wtf/Vector.h>
@@ -52,7 +53,6 @@ namespace JSC {
 
     class Identifier;
     class Label;
-    class JSScope;
 
     enum ExpectedFunction {
         NoExpectedFunction,
@@ -112,130 +112,35 @@ namespace JSC {
         TryData* tryData;
     };
 
+    class Local {
+    public:
+        Local()
+            : m_local(0)
+            , m_attributes(0)
+        {
+        }
+
+        Local(RegisterID* local, unsigned attributes)
+            : m_local(local)
+            , m_attributes(attributes)
+        {
+        }
+
+        operator bool() { return m_local; }
+
+        RegisterID* get() { return m_local; }
+
+        bool isReadOnly() { return m_attributes & ReadOnly; }
+
+    private:
+        RegisterID* m_local;
+        unsigned m_attributes;
+    };
+
     struct TryRange {
         RefPtr<Label> start;
         RefPtr<Label> end;
         TryData* tryData;
-    };
-
-    class ResolveResult {
-    public:
-        enum Flags {
-            // The property is locally bound, in a register.
-            RegisterFlag = 0x1,
-            // We need to traverse the scope chain at runtime, checking for
-            // non-strict eval and/or `with' nodes.
-            DynamicFlag = 0x2,
-            // The resolved binding is immutable.
-            ReadOnlyFlag = 0x4,
-            // The property has a static location
-            StaticFlag = 0x8,
-            // Entry at scope distance "m_depth" and located at "m_index"
-            ScopedFlag = 0x10
-        };
-
-        enum Type {
-            // The property is local, and stored in a register.
-            Register = RegisterFlag | StaticFlag,
-            // A read-only local, created by "const".
-            ReadOnlyRegister = RegisterFlag | ReadOnlyFlag | StaticFlag,
-            // Lexically fixed location in the scope chain
-            Lexical = ScopedFlag | StaticFlag,
-            // A read-only Lexical, created by "const".
-            ReadOnlyLexical = ScopedFlag | ReadOnlyFlag | StaticFlag,
-            // Any other form of lookup
-            Dynamic = DynamicFlag,
-        };
-
-        static ResolveResult registerResolve(RegisterID *local, unsigned flags)
-        {
-            return ResolveResult(Register | flags, local);
-        }
-        static ResolveResult dynamicResolve()
-        {
-            return ResolveResult(Dynamic, 0);
-        }
-        static ResolveResult lexicalResolve(int index, size_t depth, unsigned flags)
-        {
-            if (flags & DynamicFlag)
-                return dynamicResolve();
-            return ResolveResult(Lexical | flags, index, depth);
-        }
-        unsigned type() const { return m_type; }
-
-        // Returns the register corresponding to a local variable, or 0 if no
-        // such register exists. Registers returned by ResolveResult::local() do
-        // not require explicit reference counting.
-        RegisterID* local() const { return m_local; }
-
-        bool isRegister() const { return m_type & RegisterFlag; }
-        bool isStatic() const { return (m_type & StaticFlag) && !isDynamic(); }
-        bool isDynamic() const { return m_type & DynamicFlag; }
-        bool isReadOnly() const { return (m_type & ReadOnlyFlag) && !isDynamic(); }
-
-        unsigned depth() const { ASSERT(isStatic()); return m_depth; }
-        int32_t index() const { ASSERT(isStatic()); return m_index; }
-
-    private:
-        ResolveResult(unsigned type, RegisterID* local)
-            : m_type(type)
-            , m_local(local)
-            , m_index(0)
-            , m_depth(0)
-        {
-#ifndef NDEBUG
-            checkValidity();
-#endif
-        }
-
-        ResolveResult(unsigned type, int index, unsigned depth)
-            : m_type(type)
-            , m_local(0)
-            , m_index(index)
-            , m_depth(depth)
-        {
-#ifndef NDEBUG
-            checkValidity();
-#endif
-        }
-
-#ifndef NDEBUG
-        void checkValidity();
-#endif
-
-        unsigned m_type;
-        RegisterID* m_local; // Local register, if RegisterFlag is set
-        int m_index;
-        unsigned m_depth;
-    };
-
-    struct NonlocalResolveInfo {
-        friend class BytecodeGenerator;
-        NonlocalResolveInfo()
-            : m_state(Unused)
-        {
-        }
-        ~NonlocalResolveInfo()
-        {
-            ASSERT(m_state == Put);
-        }
-    private:
-        void resolved(uint32_t putToBaseIndex)
-        {
-            ASSERT(putToBaseIndex);
-            ASSERT(m_state == Unused);
-            m_state = Resolved;
-            m_putToBaseIndex = putToBaseIndex;
-        }
-        uint32_t put()
-        {
-            ASSERT(m_state == Resolved);
-            m_state = Put;
-            return m_putToBaseIndex;
-        }
-        enum State { Unused, Resolved, Put };
-        State m_state;
-        uint32_t m_putToBaseIndex;
     };
 
     class BytecodeGenerator {
@@ -244,9 +149,9 @@ namespace JSC {
         typedef DeclarationStacks::VarStack VarStack;
         typedef DeclarationStacks::FunctionStack FunctionStack;
 
-        BytecodeGenerator(VM&, JSScope*, ProgramNode*, UnlinkedProgramCodeBlock*, DebuggerMode, ProfilerMode);
-        BytecodeGenerator(VM&, JSScope*, FunctionBodyNode*, UnlinkedFunctionCodeBlock*, DebuggerMode, ProfilerMode);
-        BytecodeGenerator(VM&, JSScope*, EvalNode*, UnlinkedEvalCodeBlock*, DebuggerMode, ProfilerMode);
+        BytecodeGenerator(VM&, ProgramNode*, UnlinkedProgramCodeBlock*, DebuggerMode, ProfilerMode);
+        BytecodeGenerator(VM&, FunctionBodyNode*, UnlinkedFunctionCodeBlock*, DebuggerMode, ProfilerMode);
+        BytecodeGenerator(VM&, EvalNode*, UnlinkedEvalCodeBlock*, DebuggerMode, ProfilerMode);
 
         ~BytecodeGenerator();
         
@@ -264,11 +169,8 @@ namespace JSC {
         bool willResolveToArguments(const Identifier&);
         RegisterID* uncheckedRegisterForArguments();
 
-        // Resolve an identifier, given the current compile-time scope chain.
-        ResolveResult resolve(const Identifier&);
-        // Behaves as resolve does, but ignores dynamic scope as
-        // dynamic scope should not interfere with const initialisation
-        ResolveResult resolveConstDecl(const Identifier&);
+        Local local(const Identifier&);
+        Local constLocal(const Identifier&);
 
         // Returns the register storing "this"
         RegisterID* thisRegister() { return &m_thisRegister; }
@@ -307,17 +209,6 @@ namespace JSC {
             return newTemporary();
         }
 
-        // Returns the place to write the final output of an operation.
-        RegisterID* finalDestinationOrIgnored(RegisterID* originalDst, RegisterID* tempDst = 0)
-        {
-            if (originalDst)
-                return originalDst;
-            ASSERT(tempDst != ignoredResult());
-            if (tempDst && tempDst->isTemporary())
-                return tempDst;
-            return newTemporary();
-        }
-
         RegisterID* destinationForAssignResult(RegisterID* dst)
         {
             if (dst && dst != ignoredResult() && m_codeBlock->needsFullScopeChain())
@@ -338,7 +229,6 @@ namespace JSC {
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
             ASSERT(!dst || dst == ignoredResult() || !dst->isTemporary() || dst->refCount());
-            addLineInfo(n->lineNo());
             if (!m_stack.isSafeToRecurse()) {
                 emitThrowExpressionTooDeepException();
                 return;
@@ -355,7 +245,6 @@ namespace JSC {
         {
             // Node::emitCode assumes that dst, if provided, is either a local or a referenced temporary.
             ASSERT(!dst || dst == ignoredResult() || !dst->isTemporary() || dst->refCount());
-            addLineInfo(n->lineNo());
             if (!m_stack.isSafeToRecurse())
                 return emitThrowExpressionTooDeepException();
             return n->emitBytecode(*this, dst);
@@ -368,7 +257,6 @@ namespace JSC {
 
         void emitNodeInConditionContext(ExpressionNode* n, Label* trueTarget, Label* falseTarget, FallThroughMode fallThroughMode)
         {
-            addLineInfo(n->lineNo());
             if (!m_stack.isSafeToRecurse()) {
                 emitThrowExpressionTooDeepException();
                 return;
@@ -377,33 +265,27 @@ namespace JSC {
             n->emitBytecodeInConditionContext(*this, trueTarget, falseTarget, fallThroughMode);
         }
 
-        void emitExpressionInfo(unsigned divot, unsigned startOffset, unsigned endOffset)
+        void emitExpressionInfo(int divot, int startOffset, int endOffset, unsigned line, int lineStart)
         {
-            divot -= m_scopeNode->source().startOffset();
-            if (divot > ExpressionRangeInfo::MaxDivot) {
-                // Overflow has occurred, we can only give line number info for errors for this region
-                divot = 0;
-                startOffset = 0;
-                endOffset = 0;
-            } else if (startOffset > ExpressionRangeInfo::MaxOffset) {
-                // If the start offset is out of bounds we clear both offsets
-                // so we only get the divot marker.  Error message will have to be reduced
-                // to line and charPosition number.
-                startOffset = 0;
-                endOffset = 0;
-            } else if (endOffset > ExpressionRangeInfo::MaxOffset) {
-                // The end offset is only used for additional context, and is much more likely
-                // to overflow (eg. function call arguments) so we are willing to drop it without
-                // dropping the rest of the range.
-                endOffset = 0;
-            }
-            
-            ExpressionRangeInfo info;
-            info.instructionOffset = instructions().size();
-            info.divotPoint = divot;
-            info.startOffset = startOffset;
-            info.endOffset = endOffset;
-            m_codeBlock->addExpressionInfo(info);
+            int sourceOffset = m_scopeNode->source().startOffset();
+            unsigned firstLine = m_scopeNode->source().firstLine();
+
+            ASSERT(divot >= lineStart);
+            ASSERT(divot >= sourceOffset);
+            divot -= sourceOffset;
+
+            if (lineStart > sourceOffset)
+                lineStart -= sourceOffset;
+            else
+                lineStart = 0;
+
+            ASSERT(line >= firstLine);
+            line -= firstLine;
+
+            unsigned instructionOffset = instructions().size();
+            ASSERT(divot >= lineStart);
+            unsigned column = divot - lineStart;
+            m_codeBlock->addExpressionInfo(instructionOffset, divot, startOffset, endOffset, line, column);
         }
 
         ALWAYS_INLINE bool leftHandSideNeedsCopy(bool rightHasAssignments, bool rightIsPure)
@@ -454,17 +336,7 @@ namespace JSC {
         RegisterID* emitTypeOf(RegisterID* dst, RegisterID* src) { return emitUnaryOp(op_typeof, dst, src); }
         RegisterID* emitIn(RegisterID* dst, RegisterID* property, RegisterID* base) { return emitBinaryOp(op_in, dst, property, base, OperandTypes()); }
 
-        RegisterID* emitGetStaticVar(RegisterID* dst, const ResolveResult&, const Identifier&);
-        RegisterID* emitPutStaticVar(const ResolveResult&, const Identifier&, RegisterID* value);
         RegisterID* emitInitGlobalConst(const Identifier&, RegisterID* value);
-
-        RegisterID* emitResolve(RegisterID* dst, const ResolveResult&, const Identifier& property);
-        RegisterID* emitResolveBase(RegisterID* dst, const ResolveResult&, const Identifier& property);
-        RegisterID* emitResolveBaseForPut(RegisterID* dst, const ResolveResult&, const Identifier& property, NonlocalResolveInfo&);
-        RegisterID* emitResolveWithBaseForPut(RegisterID* baseDst, RegisterID* propDst, const ResolveResult&, const Identifier& property, NonlocalResolveInfo&);
-        RegisterID* emitResolveWithThis(RegisterID* baseDst, RegisterID* propDst, const ResolveResult&, const Identifier& property);
-
-        RegisterID* emitPutToBase(RegisterID* base, const Identifier&, RegisterID* value, NonlocalResolveInfo&);
 
         RegisterID* emitGetById(RegisterID* dst, RegisterID* base, const Identifier& property);
         RegisterID* emitGetArgumentsLength(RegisterID* dst, RegisterID* base);
@@ -479,17 +351,22 @@ namespace JSC {
         void emitPutGetterSetter(RegisterID* base, const Identifier& property, RegisterID* getter, RegisterID* setter);
         
         ExpectedFunction expectedFunctionForIdentifier(const Identifier&);
-        RegisterID* emitCall(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset);
-        RegisterID* emitCallEval(RegisterID* dst, RegisterID* func, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset);
-        RegisterID* emitCallVarargs(RegisterID* dst, RegisterID* func, RegisterID* thisRegister, RegisterID* arguments, RegisterID* firstFreeRegister, RegisterID* profileHookRegister, unsigned divot, unsigned startOffset, unsigned endOffset);
+        RegisterID* emitCall(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset, unsigned line, unsigned lineStart);
+        RegisterID* emitCallEval(RegisterID* dst, RegisterID* func, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset, unsigned line, unsigned lineStart);
+        RegisterID* emitCallVarargs(RegisterID* dst, RegisterID* func, RegisterID* thisRegister, RegisterID* arguments, RegisterID* firstFreeRegister, RegisterID* profileHookRegister, unsigned divot, unsigned startOffset, unsigned endOffset, unsigned line, unsigned lineStart);
         RegisterID* emitLoadVarargs(RegisterID* argCountDst, RegisterID* thisRegister, RegisterID* args);
 
         RegisterID* emitReturn(RegisterID* src);
         RegisterID* emitEnd(RegisterID* src) { return emitUnaryNoDstOp(op_end, src); }
 
-        RegisterID* emitConstruct(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset);
+        RegisterID* emitConstruct(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset, unsigned line, unsigned lineStart);
         RegisterID* emitStrcat(RegisterID* dst, RegisterID* src, int count);
         void emitToPrimitive(RegisterID* dst, RegisterID* src);
+
+        ResolveType resolveType();
+        RegisterID* emitResolveScope(RegisterID* dst, const Identifier&);
+        RegisterID* emitGetFromScope(RegisterID* dst, RegisterID* scope, const Identifier&, ResolveMode);
+        RegisterID* emitPutToScope(RegisterID* scope, const Identifier&, RegisterID* value, ResolveMode);
 
         PassRefPtr<Label> emitLabel(Label*);
         void emitLoopHint();
@@ -523,9 +400,9 @@ namespace JSC {
         RegisterID* emitPushWithScope(RegisterID* scope);
         void emitPopScope();
 
-        void emitDebugHook(DebugHookID, int firstLine, int lastLine, int charPosition);
+        void emitDebugHook(DebugHookID, unsigned firstLine, unsigned lastLine, unsigned charOffset, unsigned lineStart);
 
-        int scopeDepth() { return m_dynamicScopeDepth + m_finallyDepth; }
+        int scopeDepth() { return m_localScopeDepth + m_finallyDepth; }
         bool hasFinaliser() { return m_finallyDepth != 0; }
 
         void pushFinallyContext(StatementNode* finallyBlock);
@@ -579,19 +456,13 @@ namespace JSC {
 
         typedef HashMap<double, JSValue> NumberMap;
         typedef HashMap<StringImpl*, JSString*, IdentifierRepHash> IdentifierStringMap;
-        typedef struct {
-            int resolveOperations;
-            int putOperations;
-        } ResolveCacheEntry;
-        typedef HashMap<StringImpl*, ResolveCacheEntry, IdentifierRepHash> IdentifierResolvePutMap;
-        typedef HashMap<StringImpl*, uint32_t, IdentifierRepHash> IdentifierResolveMap;
         
         // Helper for emitCall() and emitConstruct(). This works because the set of
         // expected functions have identical behavior for both call and construct
         // (i.e. "Object()" is identical to "new Object()").
         ExpectedFunction emitExpectedFunctionSnippet(RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, Label* done);
         
-        RegisterID* emitCall(OpcodeID, RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset);
+        RegisterID* emitCall(OpcodeID, RegisterID* dst, RegisterID* func, ExpectedFunction, CallArguments&, unsigned divot, unsigned startOffset, unsigned endOffset, unsigned line, unsigned lineStart);
 
         RegisterID* newRegister();
 
@@ -619,7 +490,6 @@ namespace JSC {
         void addCallee(FunctionBodyNode*, RegisterID*);
 
         void preserveLastVar();
-        bool shouldAvoidResolveGlobal();
 
         RegisterID& registerFor(int index)
         {
@@ -645,11 +515,6 @@ namespace JSC {
             return UnlinkedFunctionExecutable::create(m_vm, m_scopeNode->source(), body);
         }
 
-        void addLineInfo(unsigned lineNo)
-        {
-            m_codeBlock->addLineInfo(instructions().size(), lineNo - m_scopeNode->firstLine());
-        }
-
         RegisterID* emitInitLazyRegister(RegisterID*);
 
     public:
@@ -661,10 +526,10 @@ namespace JSC {
 
         bool shouldOptimizeLocals()
         {
-            if (m_dynamicScopeDepth)
+            if (m_codeType != FunctionCode)
                 return false;
 
-            if (m_codeType != FunctionCode)
+            if (m_localScopeDepth)
                 return false;
 
             return true;
@@ -672,7 +537,7 @@ namespace JSC {
 
         bool canOptimizeNonLocals()
         {
-            if (m_dynamicScopeDepth)
+            if (m_localScopeDepth)
                 return false;
 
             if (m_codeType == EvalCode)
@@ -698,7 +563,6 @@ namespace JSC {
         SharedSymbolTable* m_symbolTable;
 
         ScopeNode* m_scopeNode;
-        Strong<JSScope> m_scope;
         Strong<UnlinkedCodeBlock> m_codeBlock;
 
         // Some of these objects keep pointers to one another. They are arranged
@@ -717,7 +581,7 @@ namespace JSC {
         LabelScopeStore m_labelScopes;
         RefPtr<RegisterID> m_lastVar;
         int m_finallyDepth;
-        int m_dynamicScopeDepth;
+        int m_localScopeDepth;
         CodeType m_codeType;
 
         Vector<ControlFlowContext, 0, UnsafeVectorOverflow> m_scopeContextStack;
@@ -747,75 +611,6 @@ namespace JSC {
         NumberMap m_numberMap;
         IdentifierStringMap m_stringMap;
 
-        uint32_t getResolveOperations(const Identifier& property)
-        {
-            if (m_dynamicScopeDepth)
-                return m_codeBlock->addResolve();
-            IdentifierResolveMap::AddResult result = m_resolveCacheMap.add(property.impl(), 0);
-            if (result.isNewEntry)
-                result.iterator->value = m_codeBlock->addResolve();
-            return result.iterator->value;
-        }
-
-        uint32_t getResolveWithThisOperations(const Identifier& property)
-        {
-            if (m_dynamicScopeDepth)
-                return m_codeBlock->addResolve();
-            IdentifierResolveMap::AddResult result = m_resolveWithThisCacheMap.add(property.impl(), 0);
-            if (result.isNewEntry)
-                result.iterator->value = m_codeBlock->addResolve();
-            return result.iterator->value;
-        }
-
-        uint32_t getResolveBaseOperations(IdentifierResolvePutMap& map, const Identifier& property, uint32_t& putToBaseOperation)
-        {
-            if (m_dynamicScopeDepth) {
-                putToBaseOperation = m_codeBlock->addPutToBase();
-                return m_codeBlock->addResolve();
-            }
-            ResolveCacheEntry entry = {-1, -1};
-            IdentifierResolvePutMap::AddResult result = map.add(property.impl(), entry);
-            if (result.isNewEntry)
-                result.iterator->value.resolveOperations = m_codeBlock->addResolve();
-            if (result.iterator->value.putOperations == -1)
-                result.iterator->value.putOperations = getPutToBaseOperation(property);
-            putToBaseOperation = result.iterator->value.putOperations;
-            return result.iterator->value.resolveOperations;
-        }
-
-        uint32_t getResolveBaseOperations(const Identifier& property)
-        {
-            uint32_t scratch;
-            return getResolveBaseOperations(m_resolveBaseMap, property, scratch);
-        }
-
-        uint32_t getResolveBaseForPutOperations(const Identifier& property, uint32_t& putToBaseOperation)
-        {
-            return getResolveBaseOperations(m_resolveBaseForPutMap, property, putToBaseOperation);
-        }
-
-        uint32_t getResolveWithBaseForPutOperations(const Identifier& property, uint32_t& putToBaseOperation)
-        {
-            return getResolveBaseOperations(m_resolveWithBaseForPutMap, property, putToBaseOperation);
-        }
-
-        uint32_t getPutToBaseOperation(const Identifier& property)
-        {
-            if (m_dynamicScopeDepth)
-                return m_codeBlock->addPutToBase();
-            IdentifierResolveMap::AddResult result = m_putToBaseMap.add(property.impl(), 0);
-            if (result.isNewEntry)
-                result.iterator->value = m_codeBlock->addPutToBase();
-            return result.iterator->value;
-        }
-
-        IdentifierResolveMap m_putToBaseMap;
-        IdentifierResolveMap m_resolveCacheMap;
-        IdentifierResolveMap m_resolveWithThisCacheMap;
-        IdentifierResolvePutMap m_resolveBaseMap;
-        IdentifierResolvePutMap m_resolveBaseForPutMap;
-        IdentifierResolvePutMap m_resolveWithBaseForPutMap;
-
         StaticPropertyAnalyzer m_staticPropertyAnalyzer;
 
         VM* m_vm;
@@ -825,7 +620,7 @@ namespace JSC {
         size_t m_lastOpcodePosition;
 #endif
 
-        StackBounds m_stack;
+        VMStackBounds m_stack;
 
         bool m_usesExceptions;
         bool m_expressionTooDeep;

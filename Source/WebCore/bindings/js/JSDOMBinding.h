@@ -77,7 +77,7 @@ class DOMStringList;
     };
 
     // Constructors using this base class depend on being in a Document and
-    // can never be used from a WorkerContext.
+    // can never be used from a WorkerGlobalScope.
     class DOMConstructorWithDocument : public DOMConstructorObject {
         typedef DOMConstructorObject Base;
     public:
@@ -266,6 +266,9 @@ class DOMStringList;
 
     int32_t toInt32EnforceRange(JSC::ExecState*, JSC::JSValue);
     uint32_t toUInt32EnforceRange(JSC::ExecState*, JSC::JSValue);
+
+    int8_t toInt8(JSC::ExecState*, JSC::JSValue, IntegerConversionConfiguration);
+    uint8_t toUInt8(JSC::ExecState*, JSC::JSValue, IntegerConversionConfiguration);
 
     /*
         Convert a value to an integer as per <http://www.w3.org/TR/WebIDL/>.
@@ -487,7 +490,7 @@ class DOMStringList;
             UChar singleCharacter = (*stringImpl)[0u];
             if (singleCharacter <= JSC::maxSingleCharacterString) {
                 JSC::VM* vm = &exec->vm();
-                return vm->smallStrings.singleCharacterString(vm, static_cast<unsigned char>(singleCharacter));
+                return vm->smallStrings.singleCharacterString(static_cast<unsigned char>(singleCharacter));
             }
         }
 

@@ -263,11 +263,9 @@ messages -> WebPage LegacyReceiver {
     # Complex text input support for plug-ins.
     SendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdentifier, String textInput)
 
-    ContainsPluginViewsWithPluginProcessToken(uint64_t plugInProcessToken, uint64_t callbackID)
-
     SetWindowIsVisible(bool windowIsVisible)
     WindowAndViewFramesChanged(WebCore::FloatRect windowFrameInScreenCoordinates, WebCore::FloatRect windowFrameInUnflippedScreenCoordinates, WebCore::FloatRect viewFrameInWindowCoordinates, WebCore::FloatPoint accessibilityViewCoordinates)
-    ViewExposedRectChanged(WebCore::FloatRect exposedRect)
+    ViewExposedRectChanged(WebCore::FloatRect exposedRect, bool clipsToExposedRect)
     SetMainFrameIsScrollable(bool isScrollable)
     RegisterUIProcessAccessibilityTokens(CoreIPC::DataReference elemenToken, CoreIPC::DataReference windowToken)
     GetStringSelectionForPasteboard() -> (WTF::String stringValue)
@@ -290,14 +288,15 @@ messages -> WebPage LegacyReceiver {
     InsertDictatedText(WTF::String text, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, WTF::Vector<WebCore::DictationAlternative> dictationAlternatives) -> (bool handled, WebKit::EditorState newState)
 #endif
 
-    SetMinimumLayoutWidth(double minimumLayoutWidth)
+    SetMinimumLayoutSize(WebCore::IntSize minimumLayoutSize)
+    SetAutoSizingShouldExpandToViewHeight(bool shouldExpand)
 
 #if PLATFORM(EFL)
     ConfirmComposition(WTF::String compositionString)
     SetComposition(WTF::String compositionString, WTF::Vector<WebCore::CompositionUnderline> underlines, uint64_t cursorPosition)
     CancelComposition()
 #endif
-#if PLATFORM(QT)
+#if USE(COORDINATED_GRAPHICS)
     FindZoomableAreaForPoint(WebCore::IntPoint point, WebCore::IntSize area)
 #endif
 
@@ -314,4 +313,6 @@ messages -> WebPage LegacyReceiver {
 #endif
 
     SetMainFrameInViewSourceMode(bool inViewSourceMode)
+    
+    SetScrollPinningBehavior(uint32_t pinning)
 }

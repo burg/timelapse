@@ -142,6 +142,9 @@ fast/js/dfg-float32array
 fast/js/dfg-float64array
 fast/js/dfg-flush-get-local
 fast/js/dfg-force-exit-then-sparse-conditional-constant-prop-in-loop
+fast/js/dfg-get-by-id-unset-then-proto
+fast/js/dfg-get-by-id-unset-then-proto-less-warmup
+fast/js/dfg-get-by-id-unset-then-proto-more-warmup
 fast/js/dfg-get-by-val-clobber
 fast/js/dfg-get-by-val-getter-cse
 fast/js/dfg-getter
@@ -181,6 +184,7 @@ fast/js/dfg-intrinsic-osr-exit
 fast/js/dfg-intrinsic-side-effect-assignment-osr-exit
 fast/js/dfg-intrinsic-unused-this
 fast/js/dfg-intrinsic-unused-this-method-check
+fast/js/dfg-make-rope-all-empty-strings
 fast/js/dfg-max-backwards-propagation
 fast/js/dfg-min-backwards-propagation
 fast/js/dfg-min-max
@@ -189,6 +193,9 @@ fast/js/dfg-mul-big-integer-with-small-integer
 fast/js/dfg-mul-big-integer-with-small-integer-and-bitor
 fast/js/dfg-mul-big-integer-with-small-integer-and-detect-overflow
 fast/js/dfg-mul-big-integers
+fast/js/dfg-mod-by-zero-and-then-or-zero-interesting-reg-alloc
+fast/js/dfg-mod-by-neg1-and-then-or-zero-interesting-reg-alloc
+fast/js/dfg-mod-neg2tothe31-by-one-and-then-or-zero-with-interesting-reg-alloc
 fast/js/dfg-multi-basic-block-structure-clobber
 fast/js/dfg-multiply
 fast/js/dfg-negative-array-index
@@ -208,6 +215,10 @@ fast/js/dfg-resolve-global-polymorphic-non-dictionary
 fast/js/dfg-resolve-global-specific-dictionary
 fast/js/dfg-side-effect-assignment-osr-exit
 fast/js/dfg-sqrt-backwards-propagation
+fast/js/dfg-string-out-of-bounds-check-structure
+fast/js/dfg-string-out-of-bounds-cse
+fast/js/dfg-string-out-of-bounds-negative-check-structure
+fast/js/dfg-string-out-of-bounds-negative-proto-value
 fast/js/dfg-string-stricteq
 fast/js/dfg-tear-off-arguments-not-activation
 fast/js/dfg-tear-off-function-dot-arguments
@@ -236,6 +247,10 @@ fast/js/dfg-uint32array-overflow-values
 fast/js/dfg-uint8array
 fast/js/dfg-uint8clampedarray
 fast/js/dfg-uint8clampedarray-out-of-bounds-put-by-val-alias
+fast/js/dfg-use-function-as-variable
+fast/js/dfg-use-function-as-variable-merge-structure
+fast/js/dfg-use-function-as-variable-not-constant
+fast/js/dfg-use-function-as-variable-with-closure
 fast/js/dfg-value-to-int32-with-side-effect
 fast/js/dfg-weak-js-constant-silent-fill
 fast/js/dictionary-no-cache

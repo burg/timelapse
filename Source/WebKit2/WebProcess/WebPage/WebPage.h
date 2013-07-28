@@ -368,8 +368,6 @@ public:
     void setBottomOverhangImage(PassRefPtr<WebImage>);
 
     void updateHeaderAndFooterLayersForDeviceScaleChange(float scaleFactor);
-
-    void containsPluginViewsWithPluginProcessToken(uint64_t plugInProcessToken, uint64_t callbackID);
 #endif // PLATFORM(MAC)
 
     bool windowIsFocused() const;
@@ -384,6 +382,8 @@ public:
     void setFooterPageBanner(PassRefPtr<PageBanner>);
     PageBanner* footerPageBanner();
 
+    void hidePageBanners();
+    void showPageBanners();
 
     WebCore::IntPoint screenToWindow(const WebCore::IntPoint&);
     WebCore::IntRect windowToScreen(const WebCore::IntRect&);
@@ -550,8 +550,6 @@ public:
     void setMediaVolume(float);
     void setMayStartMediaWhenInWindow(bool);
 
-    bool mainFrameHasCustomRepresentation() const;
-
     void didChangeScrollOffsetForMainFrame();
 
     void mainFrameDidLayout();
@@ -611,7 +609,6 @@ public:
     uint64_t nativeWindowHandle() { return m_nativeWindowHandle; }
 #endif
 
-    bool shouldUseCustomRepresentationForResponse(const WebCore::ResourceResponse&);
     bool canPluginHandleResponse(const WebCore::ResourceResponse& response);
 
     bool asynchronousPluginInitializationEnabled() const { return m_asynchronousPluginInitializationEnabled; }
@@ -639,8 +636,11 @@ public:
 
     bool mainFrameIsScrollable() const { return m_mainFrameIsScrollable; }
 
-    void setMinimumLayoutWidth(double);
-    double minimumLayoutWidth() const { return m_minimumLayoutWidth; }
+    void setMinimumLayoutSize(const WebCore::IntSize&);
+    WebCore::IntSize minimumLayoutSize() const { return m_minimumLayoutSize; }
+
+    void setAutoSizingShouldExpandToViewHeight(bool shouldExpand);
+    bool autoSizingShouldExpandToViewHeight() { return m_autoSizingShouldExpandToViewHeight; }
 
     bool canShowMIMEType(const String& MIMEType) const;
 
@@ -658,6 +658,9 @@ public:
     unsigned extendIncrementalRenderingSuppression();
     void stopExtendingIncrementalRenderingSuppression(unsigned token);
     bool shouldExtendIncrementalRenderingSuppression() { return !m_activeRenderingSuppressionTokens.isEmpty(); }
+
+    WebCore::ScrollPinningBehavior scrollPinningBehavior() { return m_scrollPinningBehavior; }
+    void setScrollPinningBehavior(uint32_t /* WebCore::ScrollPinningBehavior */ pinning);
 
 private:
     WebPage(uint64_t pageID, const WebPageCreationParameters&);
@@ -778,7 +781,7 @@ private:
     void drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, uint32_t first, uint32_t count);
 #endif
 
-    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect);
+    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect, bool clipsToExposedRect);
     void setMainFrameIsScrollable(bool);
 
     void unapplyEditCommand(uint64_t commandID);
@@ -792,7 +795,7 @@ private:
     void hideFindUI();
     void countStringMatches(const String&, uint32_t findOptions, uint32_t maxMatchCount);
 
-#if PLATFORM(QT)
+#if USE(COORDINATED_GRAPHICS)
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize& area);
 #endif
 
@@ -1002,7 +1005,8 @@ private:
 
     unsigned m_cachedPageCount;
 
-    double m_minimumLayoutWidth;
+    WebCore::IntSize m_minimumLayoutSize;
+    bool m_autoSizingShouldExpandToViewHeight;
 
 #if ENABLE(CONTEXT_MENUS)
     bool m_isShowingContextMenu;
@@ -1018,11 +1022,12 @@ private:
 #endif
     WebInspectorClient* m_inspectorClient;
 
-    HashSet<String, CaseFoldingHash> m_mimeTypesWithCustomRepresentations;
     WebCore::Color m_backgroundColor;
 
     HashSet<unsigned> m_activeRenderingSuppressionTokens;
     unsigned m_maximumRenderingSuppressionToken;
+    
+    WebCore::ScrollPinningBehavior m_scrollPinningBehavior;
 };
 
 } // namespace WebKit

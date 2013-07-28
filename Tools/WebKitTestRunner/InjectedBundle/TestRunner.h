@@ -166,6 +166,8 @@ public:
     // Audio testing.
     void setAudioResult(JSContextRef, JSValueRef data);
 
+    void setBlockAllPlugins(bool shouldBlock);
+
     enum WhatToDump { RenderTree, MainFrameText, AllFramesText, Audio, DOMAsWebArchive };
     WhatToDump whatToDump() const { return m_whatToDump; }
 
@@ -274,6 +276,9 @@ public:
     void queueNonLoadingScript(JSStringRef script);
 
     bool secureEventInputIsEnabled() const;
+    
+    JSValueRef numberOfDFGCompiles(JSValueRef theFunction);
+    JSValueRef neverInlineFunction(JSValueRef theFunction);
 
 private:
     static const double waitToDumpWatchdogTimerInterval;

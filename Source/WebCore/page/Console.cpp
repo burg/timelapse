@@ -179,11 +179,6 @@ void Console::count(ScriptState* state, PassRefPtr<ScriptArguments> arguments)
     InspectorInstrumentation::consoleCount(page(), state, arguments);
 }
 
-void Console::markTimeline(PassRefPtr<ScriptArguments> arguments)
-{
-    InspectorInstrumentation::consoleTimeStamp(m_frame, arguments);
-}
-
 #if ENABLE(WEB_REPLAY)
 void Console::probe(ScriptState* state, int probeId)
 {

@@ -75,7 +75,6 @@
 #include "RenderView.h"
 #include "ScriptController.h"
 #include "ScriptEventListener.h"
-#include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -299,6 +298,7 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* docum
     , m_sendProgressEvents(true)
     , m_isFullscreen(false)
     , m_closedCaptionsVisible(false)
+    , m_webkitLegacyClosedCaptionOverride(false)
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
     , m_needWidgetUpdate(false)
 #endif
@@ -324,6 +324,7 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* docum
 #if USE(AUDIO_SESSION)
     , m_audioSessionManagerToken(AudioSessionManagerToken::create(tagName == videoTag ? AudioSessionManager::Video : AudioSessionManager::Audio))
 #endif
+    , m_reportedExtraMemoryCost(0)
 {
     LOG(Media, "HTMLMediaElement::HTMLMediaElement");
     document->registerForMediaVolumeCallbacks(this);
@@ -345,6 +346,8 @@ HTMLMediaElement::HTMLMediaElement(const QualifiedName& tagName, Document* docum
 HTMLMediaElement::~HTMLMediaElement()
 {
     LOG(Media, "HTMLMediaElement::~HTMLMediaElement");
+
+    m_asyncEventQueue->close();
 
     if (m_isWaitingUntilMediaCanStart)
         document()->removeMediaCanStartListener(this);
@@ -611,6 +614,18 @@ void HTMLMediaElement::removedFrom(ContainerNode* insertionPoint)
             pause();
         if (m_isFullscreen)
             exitFullscreen();
+
+        if (m_player) {
+            JSC::VM* vm = JSDOMWindowBase::commonVM();
+            JSC::JSLockHolder lock(vm);
+
+            size_t extraMemoryCost = m_player->extraMemoryCost();
+            size_t extraMemoryCostDelta = extraMemoryCost - m_reportedExtraMemoryCost;
+            m_reportedExtraMemoryCost = extraMemoryCost;
+
+            if (extraMemoryCostDelta > 0)
+                vm->heap.reportExtraMemoryCost(extraMemoryCostDelta);
+        }
     }
 
     HTMLElement::removedFrom(insertionPoint);
@@ -681,7 +696,9 @@ void HTMLMediaElement::scheduleEvent(const AtomicString& eventName)
     LOG(Media, "HTMLMediaElement::scheduleEvent - scheduling '%s'", eventName.string().ascii().data());
 #endif
     RefPtr<Event> event = Event::create(eventName, false, true);
-    event->setTarget(this);
+    
+    // Don't set the event target, the event queue will set it in GenericEventQueue::timerFired and setting it here
+    // will trigger an ASSERT if this element has been marked for deletion.
 
     m_asyncEventQueue->enqueueEvent(event.release());
 }
@@ -846,7 +863,8 @@ void HTMLMediaElement::prepareForLoad()
     // The spec doesn't say to block the load event until we actually run the asynchronous section
     // algorithm, but do it now because we won't start that until after the timer fires and the 
     // event may have already fired by then.
-    setShouldDelayLoadEvent(true);
+    if (m_preload != MediaPlayer::None)
+        setShouldDelayLoadEvent(true);
 
     configureMediaControls();
 }
@@ -1469,11 +1487,14 @@ void HTMLMediaElement::endIgnoringTrackDisplayUpdateRequests()
         updateActiveTextTrackCues(currentTime());
 }
 
-void HTMLMediaElement::textTrackAddCues(TextTrack*, const TextTrackCueList* cues) 
+void HTMLMediaElement::textTrackAddCues(TextTrack* track, const TextTrackCueList* cues) 
 {
+    if (track->mode() == TextTrack::disabledKeyword())
+        return;
+
     TrackDisplayUpdateScope scope(this);
     for (size_t i = 0; i < cues->length(); ++i)
-        textTrackAddCue(cues->item(i)->track(), cues->item(i));
+        textTrackAddCue(track, cues->item(i));
 }
 
 void HTMLMediaElement::textTrackRemoveCues(TextTrack*, const TextTrackCueList* cues) 
@@ -1483,8 +1504,11 @@ void HTMLMediaElement::textTrackRemoveCues(TextTrack*, const TextTrackCueList* c
         textTrackRemoveCue(cues->item(i)->track(), cues->item(i));
 }
 
-void HTMLMediaElement::textTrackAddCue(TextTrack*, PassRefPtr<TextTrackCue> cue)
+void HTMLMediaElement::textTrackAddCue(TextTrack* track, PassRefPtr<TextTrackCue> cue)
 {
+    if (track->mode() == TextTrack::disabledKeyword())
+        return;
+
     // Negative duration cues need be treated in the interval tree as
     // zero-length cues.
     double endTime = max(cue->startTime(), cue->endTime());
@@ -2930,21 +2954,27 @@ void HTMLMediaElement::setSelectedTextTrack(PassRefPtr<PlatformTextTrack> platfo
     TrackDisplayUpdateScope scope(this);
 
     if (!platformTrack) {
-        setSelectedTextTrack(0);
+        setSelectedTextTrack(TextTrack::captionMenuOffItem());
         return;
     }
 
     TextTrack* textTrack;
-    size_t i;
-    for (i = 0; i < m_textTracks->length(); ++i) {
-        textTrack = m_textTracks->item(i);
-        
-        if (textTrack->platformTextTrack() == platformTrack)
-            break;
+    if (platformTrack == PlatformTextTrack::captionMenuOffItem())
+        textTrack = TextTrack::captionMenuOffItem();
+    else if (platformTrack == PlatformTextTrack::captionMenuAutomaticItem())
+        textTrack = TextTrack::captionMenuAutomaticItem();
+    else {
+        size_t i;
+        for (i = 0; i < m_textTracks->length(); ++i) {
+            textTrack = m_textTracks->item(i);
+            
+            if (textTrack->platformTextTrack() == platformTrack)
+                break;
+        }
+        if (i == m_textTracks->length())
+            return;
     }
 
-    if (i == m_textTracks->length())
-        return;
     setSelectedTextTrack(textTrack);
 }
 
@@ -4155,6 +4185,8 @@ void HTMLMediaElement::stop()
     
     stopPeriodicTimers();
     cancelPendingEventsAndCallbacks();
+
+    m_asyncEventQueue->close();
 }
 
 void HTMLMediaElement::suspend(ReasonForSuspension why)
@@ -4282,7 +4314,7 @@ void HTMLMediaElement::getPluginProxyParams(KURL& url, Vector<String>& names, Ve
     Frame* frame = document()->frame();
 
     if (isVideo()) {
-        HTMLVideoElement* video = static_cast<HTMLVideoElement*>(this);
+        HTMLVideoElement* video = toHTMLVideoElement(this);
         KURL posterURL = video->posterImageURL();
         if (!posterURL.isEmpty() && frame && frame->loader()->willLoadMediaElementURL(posterURL)) {
             names.append(ASCIILiteral("_media_element_poster_"));
@@ -4360,6 +4392,16 @@ bool HTMLMediaElement::isFullscreen() const
 #endif
     
     return false;
+}
+
+void HTMLMediaElement::toggleFullscreenState()
+{
+    LOG(Media, "HTMLMediaElement::toggleFullscreenState - isFullscreen() is %s", boolString(isFullscreen()));
+    
+    if (isFullscreen())
+        exitFullscreen();
+    else
+        enterFullscreen();
 }
 
 void HTMLMediaElement::enterFullscreen()
@@ -4491,12 +4533,13 @@ void HTMLMediaElement::setClosedCaptionsVisible(bool closedCaptionVisible)
 
 void HTMLMediaElement::setWebkitClosedCaptionsVisible(bool visible)
 {
+    m_webkitLegacyClosedCaptionOverride = visible;
     setClosedCaptionsVisible(visible);
 }
 
 bool HTMLMediaElement::webkitClosedCaptionsVisible() const
 {
-    return m_closedCaptionsVisible;
+    return m_webkitLegacyClosedCaptionOverride && m_closedCaptionsVisible;
 }
 
 

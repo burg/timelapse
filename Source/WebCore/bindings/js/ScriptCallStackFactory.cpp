@@ -40,7 +40,8 @@
 #include "ScriptCallStack.h"
 #include "ScriptValue.h"
 #include <interpreter/CallFrame.h>
-#include <interpreter/Interpreter.h>
+#include <interpreter/CallFrameInlines.h>
+#include <interpreter/StackIterator.h>
 #include <runtime/ArgList.h>
 #include <runtime/JSCJSValue.h>
 #include <runtime/JSFunction.h>
@@ -57,10 +58,13 @@ PassRefPtr<ScriptCallStack> createScriptCallStack(size_t maxStackSize, bool empt
 {
     Vector<ScriptCallFrame> frames;
     if (JSC::ExecState* exec = JSMainThreadExecState::currentState()) {
-        Vector<StackFrame> stackTrace;
-        Interpreter::getStackTrace(&exec->vm(), stackTrace, maxStackSize);
-        for (size_t i = 0; i < stackTrace.size(); i++)
-            frames.append(ScriptCallFrame(stackTrace[i].friendlyFunctionName(exec), stackTrace[i].friendlySourceURL(), stackTrace[i].line(), stackTrace[i].column()));
+        CallFrame* frame = exec->vm().topCallFrame;
+        for (StackIterator iter = frame->begin(); iter != frame->end() && maxStackSize--; ++iter) {
+            unsigned line;
+            unsigned column;
+            iter->computeLineAndColumn(line, column);
+            frames.append(ScriptCallFrame(iter->functionName(), iter->sourceURL(), line, column));
+        }
     }
     if (frames.isEmpty() && !emptyIsAllowed) {
         // No frames found. It may happen in the case where
@@ -75,7 +79,7 @@ PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t m
 {
     Vector<ScriptCallFrame> frames;
     Vector<StackFrame> stackTrace;
-    Interpreter::getStackTrace(&exec->vm(), stackTrace, maxStackSize + 1);
+    exec->vm().interpreter->getStackTrace(stackTrace, maxStackSize + 1);
     for (size_t i = stackTrace.size() == 1 ? 0 : 1; i < stackTrace.size(); i++) {
         // This early exit is necessary to maintain our old behaviour
         // but the stack trace we produce now is complete and handles all
@@ -84,9 +88,12 @@ PassRefPtr<ScriptCallStack> createScriptCallStack(JSC::ExecState* exec, size_t m
             break;
 
         String functionName = stackTrace[i].friendlyFunctionName(exec);
-        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, stackTrace[i].line(), stackTrace[i].column()));
+        unsigned line;
+        unsigned column;
+        stackTrace[i].computeLineAndColumn(line, column);
+        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, line, column));
     }
-
+    
     return ScriptCallStack::create(frames);
 }
 
@@ -99,7 +106,10 @@ PassRefPtr<ScriptCallStack> createScriptCallStackFromException(JSC::ExecState* e
             break;
 
         String functionName = stackTrace[i].friendlyFunctionName(exec);
-        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, stackTrace[i].line(), stackTrace[i].column()));
+        unsigned line;
+        unsigned column;
+        stackTrace[i].computeLineAndColumn(line, column);
+        frames.append(ScriptCallFrame(functionName, stackTrace[i].sourceURL, line, column));
     }
 
     // FIXME: <http://webkit.org/b/115087> Web Inspector: WebCore::reportException should not evaluate JavaScript handling exceptions

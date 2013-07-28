@@ -73,8 +73,11 @@ private:
 #endif
     virtual void releaseResources() OVERRIDE;
 
+#if USE(SOUP)
+    virtual char* getOrCreateReadBuffer(size_t requestedSize, size_t& actualSize) OVERRIDE;
+#endif
+
     bool checkForHTTPStatusCodeError();
-    void sendDataToResource(const char*, int);
 
     void didReceiveDataOrBuffer(const char*, int, PassRefPtr<SharedBuffer>, long long encodedDataLength, DataPayloadType);
 

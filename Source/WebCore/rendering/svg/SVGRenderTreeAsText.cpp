@@ -366,7 +366,7 @@ static TextStream& operator<<(TextStream& ts, const RenderSVGShape& shape)
         SVGPolyElement* element = static_cast<SVGPolyElement*>(svgElement);
         writeNameAndQuotedValue(ts, "points", element->pointList().valueAsString());
     } else if (svgElement->hasTagName(SVGNames::pathTag)) {
-        SVGPathElement* element = static_cast<SVGPathElement*>(svgElement);
+        SVGPathElement* element = toSVGPathElement(svgElement);
         String pathString;
         // FIXME: We should switch to UnalteredParsing here - this will affect the path dumping output of dozens of tests.
         buildStringFromByteStream(element->pathByteStream(), pathString, NormalizedParsing);
@@ -459,7 +459,7 @@ static inline void writeSVGInlineTextBoxes(TextStream& ts, const RenderText& tex
         if (!box->isSVGInlineTextBox())
             continue;
 
-        writeSVGInlineTextBox(ts, static_cast<SVGInlineTextBox*>(box), indent);
+        writeSVGInlineTextBox(ts, toSVGInlineTextBox(box), indent);
     }
 }
 
@@ -538,7 +538,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderObject& object, int i
         // Dump final results that are used for rendering. No use in asking SVGPatternElement for its patternUnits(), as it may
         // link to other patterns using xlink:href, we need to build the full inheritance chain, aka. collectPatternProperties()
         PatternAttributes attributes;
-        static_cast<SVGPatternElement*>(pattern->node())->collectPatternAttributes(attributes);
+        toSVGPatternElement(pattern->node())->collectPatternAttributes(attributes);
 
         writeNameValuePair(ts, "patternUnits", attributes.patternUnits());
         writeNameValuePair(ts, "patternContentUnits", attributes.patternContentUnits());

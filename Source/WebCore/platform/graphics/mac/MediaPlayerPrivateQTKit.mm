@@ -519,7 +519,7 @@ void MediaPlayerPrivateQTKit::destroyQTVideoRenderer()
 void MediaPlayerPrivateQTKit::createQTMovieLayer()
 {
     LOG(Media, "MediaPlayerPrivateQTKit::createQTMovieLayer(%p)", this);
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
+#if USE(ACCELERATED_COMPOSITING)
     if (!m_qtMovie)
         return;
 
@@ -571,7 +571,7 @@ MediaPlayerPrivateQTKit::MediaRenderingMode MediaPlayerPrivateQTKit::preferredRe
     if (!m_player->frameView() || !m_qtMovie)
         return MediaRenderingNone;
 
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
+#if USE(ACCELERATED_COMPOSITING)
     if (supportsAcceleratedRendering() && m_player->mediaPlayerClient()->mediaPlayerRenderingCanBeAccelerated(m_player))
         return MediaRenderingMovieLayer;
 #endif
@@ -693,7 +693,7 @@ PlatformMedia MediaPlayerPrivateQTKit::platformMedia() const
     return pm;
 }
 
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
+#if USE(ACCELERATED_COMPOSITING)
 PlatformLayer* MediaPlayerPrivateQTKit::platformLayer() const
 {
     return m_qtVideoLayer.get();
@@ -1227,7 +1227,7 @@ void MediaPlayerPrivateQTKit::didEnd()
     m_player->timeChanged();
 }
 
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
+#if USE(ACCELERATED_COMPOSITING)
 #if __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
 static bool layerIsDescendentOf(PlatformLayer* child, PlatformLayer* descendent)
 {
@@ -1331,18 +1331,6 @@ void MediaPlayerPrivateQTKit::paintCurrentFrameInContext(GraphicsContext* contex
     paint(context, r);
 }
 
-#if PLATFORM(QT) && USE(QTKIT)
-static inline void swapBgrToRgb(uint32_t* pixel, uint32_t width, uint32_t height)
-{
-    uint32_t* end = pixel + (width * height);
-
-    while (pixel < end) {
-        *pixel = ((*pixel << 16) & 0xff0000) | ((*pixel >> 16) & 0xff) | (*pixel & 0xff00ff00);
-        ++pixel;
-    }
-}
-#endif
-
 void MediaPlayerPrivateQTKit::paint(GraphicsContext* context, const IntRect& r)
 {
     if (context->paintingDisabled() || m_hasUnsupportedTracks)
@@ -1358,26 +1346,13 @@ void MediaPlayerPrivateQTKit::paint(GraphicsContext* context, const IntRect& r)
     FloatSize scaleFactor(1.0f, -1.0f);
     IntRect paintRect(IntPoint(0, 0), IntSize(r.width(), r.height()));
 
-#if PLATFORM(QT) && USE(QTKIT)
-    NSBitmapImageRep *imageRep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes: NULL
-                                                            pixelsWide: paintRect.width()
-                                                            pixelsHigh: paintRect.height()
-                                                            bitsPerSample: 8
-                                                            samplesPerPixel: 4
-                                                            hasAlpha: YES
-                                                            isPlanar: NO
-                                                            colorSpaceName: NSCalibratedRGBColorSpace
-                                                            bytesPerRow: 4 * paintRect.width() // 32 bit per pixel.
-                                                            bitsPerPixel: 32];
-    newContext = [NSGraphicsContext graphicsContextWithBitmapImageRep: imageRep];
-#else
     GraphicsContextStateSaver stateSaver(*context);
     context->translate(r.x(), r.y() + r.height());
     context->scale(scaleFactor);
     context->setImageInterpolationQuality(InterpolationLow);
 
     newContext = [NSGraphicsContext graphicsContextWithGraphicsPort:context->platformContext() flipped:NO];
-#endif
+
     // draw the current video frame
     if (qtVideoRenderer) {
         [NSGraphicsContext saveGraphicsState];
@@ -1431,16 +1406,15 @@ void MediaPlayerPrivateQTKit::paint(GraphicsContext* context, const IntRect& r)
         }
     }
 #endif
-#if PLATFORM(QT) && USE(QTKIT)
-    unsigned char* bitmap = [imageRep bitmapData];
-    swapBgrToRgb(reinterpret_cast<uint32_t*>(bitmap), paintRect.width(), paintRect.height());
-    QImage videoFrame(bitmap, paintRect.width(), paintRect.height(), QImage::Format_ARGB32);
-    QPainter* painter = context->platformContext();
-    painter->drawImage(QRect(r), videoFrame);
-    [imageRep release];
-#endif
     END_BLOCK_OBJC_EXCEPTIONS;
     [m_objcObserver.get() setDelayCallbacks:NO];
+}
+
+static bool shouldRejectMIMEType(const String& type)
+{
+    // QTKit will return non-video MIME types which it claims to support, but which we
+    // do not support in the <video> element. Disclaim all non video/ or audio/ types.
+    return !type.startsWith("video/") && !type.startsWith("audio/");
 }
 
 static void addFileTypesToCache(NSArray * fileTypes, HashSet<String> &cache)
@@ -1452,6 +1426,8 @@ static void addFileTypesToCache(NSArray * fileTypes, HashSet<String> &cache)
         if (!uti)
             continue;
         RetainPtr<CFStringRef> mime = adoptCF(UTTypeCopyPreferredTagWithClass(uti.get(), kUTTagClassMIMEType));
+        if (shouldRejectMIMEType(mime.get()))
+            continue;
         if (mime)
             cache.add(mime.get());
 
@@ -1466,9 +1442,7 @@ static void addFileTypesToCache(NSArray * fileTypes, HashSet<String> &cache)
             for (unsigned ndx = 0; ndx < count; ++ndx) {
                 String& type = typesForExtension[ndx];
 
-                // QTKit will return non-video MIME types which it claims to support, but which we
-                // do not support in the <video> element. Disclaim all non video/ or audio/ types.
-                if (!type.startsWith("video/") && !type.startsWith("audio/"))
+                if (shouldRejectMIMEType(type))
                     continue;
 
                 if (!cache.contains(type))
@@ -1530,7 +1504,7 @@ MediaPlayer::SupportsType MediaPlayerPrivateQTKit::supportsType(const String& ty
 
     // Due to <rdar://problem/10777059>, avoid calling the mime types cache functions if at
     // all possible:
-    if (!type.startsWith("video/") && !type.startsWith("audio/"))
+    if (shouldRejectMIMEType(type))
         return MediaPlayer::IsNotSupported;
 
     // We check the "modern" type cache first, as it doesn't require QTKitServer to start.
@@ -1674,7 +1648,7 @@ void MediaPlayerPrivateQTKit::sawUnsupportedTracks()
     m_player->mediaPlayerClient()->mediaPlayerSawUnsupportedTracks(m_player);
 }
 
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
+#if USE(ACCELERATED_COMPOSITING)
 bool MediaPlayerPrivateQTKit::supportsAcceleratedRendering() const
 {
     return isReadyForVideoSetup() && getQTMovieLayerClass() != Nil;
@@ -1837,7 +1811,7 @@ void MediaPlayerPrivateQTKit::setPrivateBrowsingMode(bool privateBrowsing)
 
 - (void)layerHostChanged:(NSNotification *)notification
 {
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
+#if USE(ACCELERATED_COMPOSITING)
     CALayer* rootLayer = static_cast<CALayer*>([notification object]);
     m_callback->layerHostChanged(rootLayer);
 #else

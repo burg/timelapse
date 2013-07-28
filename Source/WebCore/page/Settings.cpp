@@ -77,7 +77,7 @@ bool Settings::gShouldPaintNativeControls = true;
 bool Settings::gAVFoundationEnabled = false;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 bool Settings::gQTKitEnabled = true;
 #endif
 
@@ -89,6 +89,7 @@ bool Settings::gShouldUseHighResolutionTimers = true;
 #endif
     
 bool Settings::gShouldRespectPriorityInCSSAttributeSetters = false;
+bool Settings::gLowPowerVideoAudioBufferSizeEnabled = false;
 
 // NOTEs
 //  1) EditingMacBehavior comprises Tiger, Leopard, SnowLeopard and iOS builds, as well as QtWebKit when built on Mac;
@@ -537,7 +538,7 @@ void Settings::setAVFoundationEnabled(bool enabled)
 }
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 void Settings::setQTKitEnabled(bool enabled)
 {
     if (gQTKitEnabled == enabled)
@@ -610,5 +611,10 @@ void Settings::setHiddenPageCSSAnimationSuspensionEnabled(bool flag)
     m_page->hiddenPageCSSAnimationSuspensionStateChanged();
 }
 #endif
+
+void Settings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
+{
+    gLowPowerVideoAudioBufferSizeEnabled = flag;
+}
 
 } // namespace WebCore

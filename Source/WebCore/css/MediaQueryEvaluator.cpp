@@ -243,10 +243,13 @@ static bool monochromeMediaFeatureEval(CSSValue* value, RenderStyle* style, Fram
 static bool orientationMediaFeatureEval(CSSValue* value, RenderStyle*, Frame* frame, MediaFeaturePrefix)
 {
     FrameView* view = frame->view();
+    if (!view)
+        return false;
+
     int width = view->layoutWidth();
     int height = view->layoutHeight();
     if (value && value->isPrimitiveValue()) {
-        const int id = static_cast<CSSPrimitiveValue*>(value)->getIdent();
+        const CSSValueID id = static_cast<CSSPrimitiveValue*>(value)->getValueID();
         if (width > height) // Square viewport is portrait.
             return CSSValueLandscape == id;
         return CSSValuePortrait == id;
@@ -258,10 +261,12 @@ static bool orientationMediaFeatureEval(CSSValue* value, RenderStyle*, Frame* fr
 
 static bool aspect_ratioMediaFeatureEval(CSSValue* value, RenderStyle*, Frame* frame, MediaFeaturePrefix op)
 {
-    if (value) {
-        FrameView* view = frame->view();
+    FrameView* view = frame->view();
+    if (!view)
+        return true;
+
+    if (value)
         return compareAspectRatioValue(value, view->layoutWidth(), view->layoutHeight(), op);
-    }
 
     // ({,min-,max-}aspect-ratio)
     // assume if we have a device, its aspect ratio is non-zero
@@ -283,13 +288,16 @@ static bool device_aspect_ratioMediaFeatureEval(CSSValue* value, RenderStyle*, F
 static bool evalResolution(CSSValue* value, Frame* frame, MediaFeaturePrefix op)
 {
     // FIXME: Possible handle other media types than 'screen' and 'print'.
-    float deviceScaleFactor = 0;
+    FrameView* view = frame->view();
+    if (!view)
+        return false;
 
+    float deviceScaleFactor = 0;
     // This checks the actual media type applied to the document, and we know
     // this method only got called if this media type matches the one defined
     // in the query. Thus, if if the document's media type is "print", the
     // media type of the query will either be "print" or "all".
-    String mediaType = frame->view()->mediaType();
+    String mediaType = view->mediaType();
     if (equalIgnoringCase(mediaType, "screen"))
         deviceScaleFactor = frame->page()->deviceScaleFactor();
     else if (equalIgnoringCase(mediaType, "print")) {
@@ -389,6 +397,8 @@ static bool device_widthMediaFeatureEval(CSSValue* value, RenderStyle* style, Fr
 static bool heightMediaFeatureEval(CSSValue* value, RenderStyle* style, Frame* frame, MediaFeaturePrefix op)
 {
     FrameView* view = frame->view();
+    if (!view)
+        return false;
 
     if (value) {
         int height = view->layoutHeight();
@@ -405,6 +415,8 @@ static bool heightMediaFeatureEval(CSSValue* value, RenderStyle* style, Frame* f
 static bool widthMediaFeatureEval(CSSValue* value, RenderStyle* style, Frame* frame, MediaFeaturePrefix op)
 {
     FrameView* view = frame->view();
+    if (!view)
+        return false;
 
     if (value) {
         int width = view->layoutWidth();
@@ -591,7 +603,7 @@ static bool view_modeMediaFeatureEval(CSSValue* value, RenderStyle*, Frame* fram
     if (!value)
         return true;
 
-    const int viewModeCSSKeywordID = static_cast<CSSPrimitiveValue*>(value)->getIdent();
+    const int viewModeCSSKeywordID = static_cast<CSSPrimitiveValue*>(value)->getValueID();
     const Page::ViewMode viewMode = frame->page()->viewMode();
     bool result = false;
     switch (viewMode) {
@@ -673,7 +685,7 @@ static bool pointerMediaFeatureEval(CSSValue* value, RenderStyle*, Frame* frame,
     if (!value->isPrimitiveValue())
         return false;
 
-    const int id = static_cast<CSSPrimitiveValue*>(value)->getIdent();
+    const CSSValueID id = static_cast<CSSPrimitiveValue*>(value)->getValueID();
     return (pointer == NoPointer && id == CSSValueNone)
         || (pointer == TouchPointer && id == CSSValueCoarse)
         || (pointer == MousePointer && id == CSSValueFine);
@@ -691,7 +703,7 @@ static void createFunctionMap()
 
 bool MediaQueryEvaluator::eval(const MediaQueryExp* expr) const
 {
-    if (!m_frame || !m_style)
+    if (!m_frame || !m_frame->view() || !m_style)
         return m_expResult;
 
     if (!expr->isValid())

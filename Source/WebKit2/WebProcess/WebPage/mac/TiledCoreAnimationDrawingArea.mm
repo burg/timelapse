@@ -70,6 +70,7 @@ TiledCoreAnimationDrawingArea::TiledCoreAnimationDrawingArea(WebPage* webPage, c
     , m_layerTreeStateIsFrozen(false)
     , m_layerFlushScheduler(this)
     , m_isPaintingSuspended(!parameters.isVisible)
+    , m_clipsToExposedRect(false)
     , m_updateIntrinsicContentSizeTimer(this, &TiledCoreAnimationDrawingArea::updateIntrinsicContentSizeTimerFired)
 {
     Page* page = m_webPage->corePage();
@@ -111,6 +112,7 @@ void TiledCoreAnimationDrawingArea::setNeedsDisplayInRect(const IntRect& rect)
 
 void TiledCoreAnimationDrawingArea::scroll(const IntRect& scrollRect, const IntSize& scrollDelta)
 {
+    updateScrolledExposedRect();
 }
 
 void TiledCoreAnimationDrawingArea::invalidateAllPageOverlays()
@@ -253,7 +255,7 @@ void TiledCoreAnimationDrawingArea::updatePreferences(const WebPreferencesStore&
 
 void TiledCoreAnimationDrawingArea::mainFrameContentSizeChanged(const IntSize&)
 {
-    if (!m_webPage->minimumLayoutWidth())
+    if (!m_webPage->minimumLayoutSize().width())
         return;
 
     if (m_inUpdateGeometry)
@@ -273,7 +275,7 @@ void TiledCoreAnimationDrawingArea::updateIntrinsicContentSizeTimerFired(Timer<T
     if (!frameView)
         return;
 
-    IntSize contentSize = frameView->contentsSize();
+    IntSize contentSize = frameView->autoSizingIntrinsicContentSize();
 
     if (m_lastSentIntrinsicContentSize == contentSize)
         return;
@@ -349,8 +351,9 @@ bool TiledCoreAnimationDrawingArea::flushLayers()
     }
 
     IntRect visibleRect = enclosingIntRect(m_rootLayer.get().frame);
-    if (!m_webPage->mainFrameIsScrollable())
-        visibleRect.intersect(enclosingIntRect(m_exposedRect));
+    if (m_clipsToExposedRect)
+        visibleRect.intersect(enclosingIntRect(m_scrolledExposedRect));
+
     for (PageOverlayLayerMap::iterator it = m_pageOverlayLayers.begin(), end = m_pageOverlayLayers.end(); it != end; ++it) {
         GraphicsLayer* layer = it->value.get();
         layer->flushCompositingState(visibleRect);
@@ -402,19 +405,41 @@ void TiledCoreAnimationDrawingArea::resumePainting()
 
 void TiledCoreAnimationDrawingArea::setExposedRect(const FloatRect& exposedRect)
 {
-    // FIXME: This should be mapped through the scroll offset, but we need to keep it up to date.
     m_exposedRect = exposedRect;
-
-    mainFrameTiledBacking()->setExposedRect(exposedRect);
-
-    for (PageOverlayLayerMap::iterator it = m_pageOverlayLayers.begin(), end = m_pageOverlayLayers.end(); it != end; ++it)
-        if (TiledBacking* tiledBacking = it->value->tiledBacking())
-            tiledBacking->setExposedRect(exposedRect);
+    updateScrolledExposedRect();
 }
 
-void TiledCoreAnimationDrawingArea::mainFrameScrollabilityChanged(bool)
+void TiledCoreAnimationDrawingArea::setClipsToExposedRect(bool clipsToExposedRect)
 {
+    m_clipsToExposedRect = clipsToExposedRect;
+    updateScrolledExposedRect();
     updateMainFrameClipsToExposedRect();
+}
+
+void TiledCoreAnimationDrawingArea::updateScrolledExposedRect()
+{
+    if (!m_clipsToExposedRect)
+        return;
+
+    Frame* frame = m_webPage->corePage()->mainFrame();
+    if (!frame)
+        return;
+
+    FrameView* frameView = frame->view();
+    if (!frameView)
+        return;
+
+    IntPoint scrollPositionWithOrigin = frameView->scrollPosition() + toIntSize(frameView->scrollOrigin());
+
+    m_scrolledExposedRect = m_exposedRect;
+    m_scrolledExposedRect.moveBy(scrollPositionWithOrigin);
+
+    mainFrameTiledBacking()->setExposedRect(m_scrolledExposedRect);
+
+    for (PageOverlayLayerMap::iterator it = m_pageOverlayLayers.begin(), end = m_pageOverlayLayers.end(); it != end; ++it) {
+        if (TiledBacking* tiledBacking = it->value->tiledBacking())
+            tiledBacking->setExposedRect(m_scrolledExposedRect);
+    }
 }
 
 void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize, const IntSize& layerPosition)
@@ -424,13 +449,18 @@ void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize, cons
     IntSize size = viewSize;
     IntSize contentSize = IntSize(-1, -1);
 
-    if (!m_webPage->minimumLayoutWidth())
+    if (!m_webPage->minimumLayoutSize().width() || m_webPage->autoSizingShouldExpandToViewHeight())
         m_webPage->setSize(size);
+
+    FrameView* frameView = m_webPage->mainFrameView();
+
+    if (m_webPage->autoSizingShouldExpandToViewHeight() && frameView)
+        frameView->setAutoSizeFixedMinimumHeight(viewSize.height());
 
     m_webPage->layoutIfNeeded();
 
-    if (m_webPage->minimumLayoutWidth()) {
-        contentSize = m_webPage->mainWebFrame()->contentBounds().size();
+    if (m_webPage->minimumLayoutSize().width() && frameView) {
+        contentSize = frameView->autoSizingIntrinsicContentSize();
         size = contentSize;
     }
 
@@ -457,7 +487,7 @@ void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize, cons
 
     m_webPage->send(Messages::DrawingAreaProxy::DidUpdateGeometry());
 
-    if (m_webPage->minimumLayoutWidth() && !m_updateIntrinsicContentSizeTimer.isActive())
+    if (m_webPage->minimumLayoutSize().width() && !m_updateIntrinsicContentSizeTimer.isActive())
         m_updateIntrinsicContentSizeTimer.startOneShot(0);
 
     m_inUpdateGeometry = false;
@@ -524,14 +554,12 @@ void TiledCoreAnimationDrawingArea::updateLayerHostingContext()
 
 void TiledCoreAnimationDrawingArea::updateMainFrameClipsToExposedRect()
 {
-    bool isScrollable = m_webPage->mainFrameIsScrollable();
-
     if (TiledBacking* tiledBacking = mainFrameTiledBacking())
-        tiledBacking->setClipsToExposedRect(!isScrollable);
+        tiledBacking->setClipsToExposedRect(m_clipsToExposedRect);
 
     for (PageOverlayLayerMap::iterator it = m_pageOverlayLayers.begin(), end = m_pageOverlayLayers.end(); it != end; ++it)
         if (TiledBacking* tiledBacking = it->value->tiledBacking())
-            tiledBacking->setClipsToExposedRect(!isScrollable);
+            tiledBacking->setClipsToExposedRect(m_clipsToExposedRect);
 
     Frame* frame = m_webPage->corePage()->mainFrame();
     if (!frame)
@@ -564,7 +592,7 @@ void TiledCoreAnimationDrawingArea::setRootCompositingLayer(CALayer *layer)
 
     if (TiledBacking* tiledBacking = mainFrameTiledBacking()) {
         tiledBacking->setAggressivelyRetainsTiles(m_webPage->corePage()->settings()->aggressiveTileRetentionEnabled());
-        tiledBacking->setExposedRect(m_exposedRect);
+        tiledBacking->setExposedRect(m_scrolledExposedRect);
     }
 
     updateMainFrameClipsToExposedRect();
@@ -588,8 +616,8 @@ void TiledCoreAnimationDrawingArea::createPageOverlayLayer(PageOverlay* pageOver
     m_pageOverlayPlatformLayers.set(layer.get(), layer->platformLayer());
 
     if (TiledBacking* tiledBacking = layer->tiledBacking()) {
-        tiledBacking->setExposedRect(m_exposedRect);
-        tiledBacking->setClipsToExposedRect(!m_webPage->mainFrameIsScrollable());
+        tiledBacking->setExposedRect(m_scrolledExposedRect);
+        tiledBacking->setClipsToExposedRect(m_clipsToExposedRect);
     }
 
     [CATransaction begin];
@@ -636,8 +664,8 @@ void TiledCoreAnimationDrawingArea::didCommitChangesForLayer(const GraphicsLayer
     [CATransaction commit];
 
     if (TiledBacking* tiledBacking = layer->tiledBacking()) {
-        tiledBacking->setExposedRect(m_exposedRect);
-        tiledBacking->setClipsToExposedRect(!m_webPage->mainFrameIsScrollable());
+        tiledBacking->setExposedRect(m_scrolledExposedRect);
+        tiledBacking->setClipsToExposedRect(m_clipsToExposedRect);
     }
 
     m_pageOverlayPlatformLayers.set(layer, layer->platformLayer());

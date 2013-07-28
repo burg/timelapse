@@ -65,6 +65,8 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
         return;
     }
 
+    childFrameView->setResizeEventAllowed(false);
+
     // need to update to calculate min/max correctly
     updateWidgetPosition();
 
@@ -72,8 +74,7 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
     // we obey them and do not expand. With frame flattening
     // no subframe much ever become scrollable.
 
-    HTMLFrameElementBase* element = static_cast<HTMLFrameElementBase*>(node());
-    bool isScrollable = element->scrollingMode() != ScrollbarAlwaysOff;
+    bool isScrollable = toHTMLFrameElementBase(node())->scrollingMode() != ScrollbarAlwaysOff;
 
     // consider iframe inset border
     int hBorder = borderLeft() + borderRight();
@@ -94,6 +95,7 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
         setWidth(max<LayoutUnit>(width(), childFrameView->contentsWidth() + hBorder));
 
     updateWidgetPosition();
+    childFrameView->setResizeEventAllowed(true);
 
     ASSERT(!childFrameView->layoutPending());
     ASSERT(!childRoot->needsLayout());

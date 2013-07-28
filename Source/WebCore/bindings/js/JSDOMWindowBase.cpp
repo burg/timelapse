@@ -65,8 +65,8 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSDOMWindowShell* shell)
     ASSERT(inherits(&s_info));
 
     GlobalPropertyInfo staticGlobals[] = {
-        GlobalPropertyInfo(Identifier(globalExec(), "document"), jsNull(), DontDelete | ReadOnly),
-        GlobalPropertyInfo(Identifier(globalExec(), "window"), m_shell, DontDelete | ReadOnly)
+        GlobalPropertyInfo(vm.propertyNames->document, jsNull(), DontDelete | ReadOnly),
+        GlobalPropertyInfo(vm.propertyNames->window, m_shell, DontDelete | ReadOnly)
     };
     
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
@@ -81,7 +81,7 @@ void JSDOMWindowBase::updateDocument()
 {
     ASSERT(m_impl->document());
     ExecState* exec = globalExec();
-    symbolTablePutWithAttributes(this, exec->vm(), Identifier(exec, "document"), toJS(exec, this, m_impl->document()), DontDelete | ReadOnly);
+    symbolTablePutWithAttributes(this, exec->vm(), exec->vm().propertyNames->document, toJS(exec, this, m_impl->document()), DontDelete | ReadOnly);
 }
 
 ScriptExecutionContext* JSDOMWindowBase::scriptExecutionContext() const
@@ -184,9 +184,7 @@ VM* JSDOMWindowBase::commonVM()
     if (!vm) {
         ScriptController::initializeThreading();
         vm = VM::createLeaked(LargeHeap).leakRef();
-#ifndef NDEBUG
         vm->exclusiveThread = currentThread();
-#endif
         initNormalWorldClientData(vm);
     }
 

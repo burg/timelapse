@@ -328,7 +328,7 @@ private:
     virtual bool isEnumeratable() const;
     virtual bool supportLabels() const OVERRIDE;
     virtual void updateFocusAppearance(bool restorePreviousSelection);
-    virtual bool shouldUseInputMethod();
+    virtual bool shouldUseInputMethod() OVERRIDE FINAL;
 
     virtual bool isTextFormControl() const { return isTextField(); }
 
@@ -438,6 +438,22 @@ private:
     OwnPtr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
 #endif
 };
+
+inline bool isHTMLInputElement(Node* node)
+{
+    return node->hasTagName(HTMLNames::inputTag);
+}
+
+inline bool isHTMLInputElement(Element* element)
+{
+    return element->hasTagName(HTMLNames::inputTag);
+}
+
+inline HTMLInputElement* toHTMLInputElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLInputElement(node));
+    return static_cast<HTMLInputElement*>(node);
+}
 
 } //namespace
 #endif

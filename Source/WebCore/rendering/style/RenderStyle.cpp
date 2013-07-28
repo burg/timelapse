@@ -28,6 +28,7 @@
 #include "CSSPropertyNames.h"
 #include "Font.h"
 #include "FontSelector.h"
+#include "Pagination.h"
 #include "QuotesData.h"
 #include "RenderArena.h"
 #include "RenderObject.h"
@@ -401,10 +402,14 @@ bool RenderStyle::changeRequiresLayout(const RenderStyle* other, unsigned& chang
             return true;
 
         if (rareNonInheritedData->m_wrapFlow != other->rareNonInheritedData->m_wrapFlow
-            || rareNonInheritedData->m_wrapThrough != other->rareNonInheritedData->m_wrapThrough
-            || rareNonInheritedData->m_shapeMargin != other->rareNonInheritedData->m_shapeMargin
+            || rareNonInheritedData->m_wrapThrough != other->rareNonInheritedData->m_wrapThrough)
+            return true;
+
+#if ENABLE(CSS_SHAPES)
+        if (rareNonInheritedData->m_shapeMargin != other->rareNonInheritedData->m_shapeMargin
             || rareNonInheritedData->m_shapePadding != other->rareNonInheritedData->m_shapePadding)
             return true;
+#endif
 
         if (rareNonInheritedData->m_deprecatedFlexibleBox.get() != other->rareNonInheritedData->m_deprecatedFlexibleBox.get()
             && *rareNonInheritedData->m_deprecatedFlexibleBox.get() != *other->rareNonInheritedData->m_deprecatedFlexibleBox.get())
@@ -694,7 +699,8 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle* other, unsigned&) con
         || rareNonInheritedData->m_borderFit != other->rareNonInheritedData->m_borderFit
         || rareInheritedData->m_imageRendering != other->rareInheritedData->m_imageRendering)
         return true;
-        
+
+#if ENABLE(CSS_SHAPES)
     // FIXME: The current spec is being reworked to remove dependencies between exclusions and affected 
     // content. There's a proposal to use floats instead. In that case, wrap-shape should actually relayout 
     // the parent container. For sure, I will have to revisit this code, but for now I've added this in order 
@@ -702,6 +708,7 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle* other, unsigned&) con
     // Tracking bug: https://bugs.webkit.org/show_bug.cgi?id=62991
     if (rareNonInheritedData->m_shapeOutside != other->rareNonInheritedData->m_shapeOutside)
         return true;
+#endif
 
     if (rareNonInheritedData->m_clipPath != other->rareNonInheritedData->m_clipPath)
         return true;
@@ -767,8 +774,6 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
         return svgChange;
 #endif
 
-    // FIXME: we need to also check for repaint changes after a PositionedMovementOnly change
-    // on a composited layer: https://bugs.webkit.org/show_bug.cgi?id=116319
     if (changeRequiresPositionedLayoutOnly(other, changedContextSensitiveProperties))
         return StyleDifferenceLayoutPositionedMovementOnly;
 
@@ -792,6 +797,12 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
     // Animations don't need to be checked either.  We always set the new style on the RenderObject, so we will get a chance to fire off
     // the resulting transition properly.
     return StyleDifferenceEqual;
+}
+
+bool RenderStyle::diffRequiresRepaint(const RenderStyle* style) const
+{
+    unsigned changedContextSensitiveProperties = 0;
+    return changeRequiresRepaint(style, changedContextSensitiveProperties);
 }
 
 void RenderStyle::setClip(Length top, Length right, Length bottom, Length left)
@@ -1733,10 +1744,52 @@ void RenderStyle::setBorderImageOutset(LengthBox outset)
     surround.access()->border.m_image.setOutset(outset);
 }
 
+#if ENABLE(CSS_SHAPES)
 ShapeValue* RenderStyle::initialShapeInside()
 {
     DEFINE_STATIC_LOCAL(RefPtr<ShapeValue>, sOutsideValue, (ShapeValue::createOutsideValue()));
     return sOutsideValue.get();
+}
+#endif
+
+void RenderStyle::setColumnStylesFromPaginationMode(const Pagination::Mode& paginationMode)
+{
+    if (paginationMode == Pagination::Unpaginated)
+        return;
+        
+    switch (paginationMode) {
+    case Pagination::LeftToRightPaginated:
+        setColumnAxis(HorizontalColumnAxis);
+        if (isHorizontalWritingMode())
+            setColumnProgression(isLeftToRightDirection() ? NormalColumnProgression : ReverseColumnProgression);
+        else
+            setColumnProgression(isFlippedBlocksWritingMode() ? ReverseColumnProgression : NormalColumnProgression);
+        break;
+    case Pagination::RightToLeftPaginated:
+        setColumnAxis(HorizontalColumnAxis);
+        if (isHorizontalWritingMode())
+            setColumnProgression(isLeftToRightDirection() ? ReverseColumnProgression : NormalColumnProgression);
+        else
+            setColumnProgression(isFlippedBlocksWritingMode() ? NormalColumnProgression : ReverseColumnProgression);
+        break;
+    case Pagination::TopToBottomPaginated:
+        setColumnAxis(VerticalColumnAxis);
+        if (isHorizontalWritingMode())
+            setColumnProgression(isFlippedBlocksWritingMode() ? ReverseColumnProgression : NormalColumnProgression);
+        else
+            setColumnProgression(isLeftToRightDirection() ? NormalColumnProgression : ReverseColumnProgression);
+        break;
+    case Pagination::BottomToTopPaginated:
+        setColumnAxis(VerticalColumnAxis);
+        if (isHorizontalWritingMode())
+            setColumnProgression(isFlippedBlocksWritingMode() ? NormalColumnProgression : ReverseColumnProgression);
+        else
+            setColumnProgression(isLeftToRightDirection() ? ReverseColumnProgression : NormalColumnProgression);
+        break;
+    case Pagination::Unpaginated:
+        ASSERT_NOT_REACHED();
+        break;
+    }
 }
 
 } // namespace WebCore

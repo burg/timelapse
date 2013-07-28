@@ -89,6 +89,10 @@ class TagNodeList;
 class PlatformGestureEvent;
 #endif
 
+#if ENABLE(INDIE_UI)
+class UIRequestEvent;
+#endif
+    
 #if ENABLE(TOUCH_EVENTS)
 class TouchEvent;
 #endif
@@ -272,6 +276,8 @@ public:
     bool inNamedFlow() const { return getFlag(InNamedFlowFlag); }
     bool hasCustomStyleCallbacks() const { return getFlag(HasCustomStyleCallbacksFlag); }
 
+    bool isRegisteredWithNamedFlow() const;
+
     bool hasSyntheticAttrChildNodes() const { return getFlag(HasSyntheticAttrChildNodesFlag); }
     void setHasSyntheticAttrChildNodes(bool flag) { setFlag(flag, HasSyntheticAttrChildNodesFlag); }
 
@@ -398,7 +404,6 @@ public:
         return false;
     }
 
-    virtual bool shouldUseInputMethod();
     virtual LayoutRect boundingBox() const;
     IntRect pixelSnappedBoundingBox() const { return pixelSnappedIntRect(boundingBox()); }
     LayoutRect renderRect(bool* isReplaced);
@@ -597,6 +602,9 @@ public:
 #endif
 #if ENABLE(TOUCH_EVENTS)
     bool dispatchTouchEvent(PassRefPtr<TouchEvent>);
+#endif
+#if ENABLE(INDIE_UI)
+    bool dispatchUIRequestEvent(PassRefPtr<UIRequestEvent>);
 #endif
 
     bool dispatchBeforeLoadEvent(const String& sourceURL);
@@ -832,8 +840,11 @@ inline void Node::reattachIfAttached(const AttachContext& context)
 
 inline void Node::lazyReattach(ShouldSetAttached shouldSetAttached)
 {
+    AttachContext context;
+    context.performingReattach = true;
+
     if (attached())
-        detach();
+        detach(context);
     lazyAttach(shouldSetAttached);
 }
 

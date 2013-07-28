@@ -35,6 +35,7 @@
 #include <WebCore/AccessibilityObjectWrapperWin.h>
 #include <WebCore/COMPtr.h>
 #include <WebKit/WebKit.h>
+#include <comutil.h>
 #include <oleacc.h>
 #include <string>
 #include <wtf/Assertions.h>
@@ -89,14 +90,18 @@ static COMPtr<IAccessible> findAccessibleObjectById(AccessibilityUIElement paren
     if (!comparable)
         return 0;
 
-    BSTR value;
-    if (SUCCEEDED(comparable->attributeValue(L"AXDRTElementIdAttribute", &value))) {
-        if (VARCMP_EQ == ::VarBstrCmp(value, idAttribute, LOCALE_USER_DEFAULT, 0)) {
-            ::SysFreeString(value);
+    VARIANT value;
+    ::VariantInit(&value);
+
+    _bstr_t elementIdAttributeKey(L"AXDRTElementIdAttribute");
+    if (SUCCEEDED(comparable->get_attribute(elementIdAttributeKey, &value))) {
+        ASSERT(V_VT(&value) == VT_BSTR);
+        if (VARCMP_EQ == ::VarBstrCmp(value.bstrVal, idAttribute, LOCALE_USER_DEFAULT, 0)) {
+            ::VariantClear(&value);
             return parentIAccessible;
         }
     }
-    ::SysFreeString(value);
+    ::VariantClear(&value);
 
     long childCount = parentObject.childrenCount();
     if (!childCount)

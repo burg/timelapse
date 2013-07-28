@@ -144,6 +144,7 @@ HEADERS += \
     text/AtomicString.h \
     text/AtomicStringHash.h \
     text/AtomicStringImpl.h \
+    text/AtomicStringTable.h \
     text/Base64.h \
     text/CString.h \
     text/IntegerToStringConversion.h \
@@ -188,6 +189,7 @@ SOURCES += \
     Assertions.cpp \
     Atomics.cpp \
     BitVector.cpp \
+    CompilationThread.cpp \
     CryptographicallyRandomNumber.cpp \
     CurrentTime.cpp \
     DateMath.cpp \
@@ -226,6 +228,7 @@ SOURCES += \
     RandomNumber.cpp \
     RefCountedLeakCounter.cpp \
     SHA1.cpp \
+    SixCharacterHash.cpp \
     StackBounds.cpp \
     StringPrintStream.cpp \
     TCSystemAlloc.cpp \
@@ -233,6 +236,7 @@ SOURCES += \
     TypeTraits.cpp \
     WTFThreadData.cpp \
     text/AtomicString.cpp \
+    text/AtomicStringTable.cpp \
     text/Base64.cpp \
     text/CString.cpp \
     text/StringBuilder.cpp \

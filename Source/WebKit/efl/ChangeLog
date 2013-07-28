@@ -1,3 +1,144 @@
+2013-07-25  Andreas Kling  <akling@apple.com>
+
+        ChromeClient::focusedNodeChanged() should be focusedElementChanged().
+        <http://webkit.org/b/119110>
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::focusedElementChanged):
+        * WebCoreSupport/ChromeClientEfl.h:
+
+2013-07-15  Kwang Yul Seo  <skyul@company100.net>
+
+        NetworkStorageSession::createDefaultSession is only implemented by Soup
+        https://bugs.webkit.org/show_bug.cgi?id=118679
+
+        Reviewed by Alexey Proskuryakov.
+
+        Replace NetworkStorageSession::createDefaultSession() with
+        NetworkStorageSession::defaultStorageSession().
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+        (EWKPrivate::storageSession):
+
+2013-07-09  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Add ewk_view_device_pixel_ratio_set
+        https://bugs.webkit.org/show_bug.cgi?id=118521
+
+        Reviewed by Gyuyoung Kim.
+
+        ewebkit and ewebkit2 have different approach about getting device pixel ratio.
+        ewebkit depends on deprecatedTargetDPI and ecore_x_dpi_get,
+        but ewebkit2 use Page::deviceScaleFactor.
+
+        This patch will add ewk_view_device_pixel_ratio_set and use Page::deviceScaleFactor()
+        instead of ViewportArguments::deprecatedTargetDPI like ewebkit2.
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+        (_ewk_view_viewport_attributes_compute): Use Page::deviceScaleFactor().
+        (ewk_view_viewport_attributes_get): Ditto.
+        (ewk_view_device_pixel_ratio_set): Added.
+        (ewk_view_device_pixel_ratio_get):
+        * ewk/ewk_view.h:
+        Update document of ewk_view_device_pixel_ratio_get (from ewebkit2) and
+        added ewk_view_device_pixel_ratio_set.
+
+2013-06-27  Kangil Han  <kangil.han@samsung.com>
+
+        Adopt is/toHTMLInputElement for code cleanup
+        https://bugs.webkit.org/show_bug.cgi?id=118130
+
+        Reviewed by Antti Koivisto.
+
+        To enhance readability, this patch adopts is/toHTMLInputElement.
+        This also helps out to reduce duplicated use of static_cast.
+
+        * ewk/ewk_view.cpp:
+        (ewk_view_input_method_state_set):
+
+2013-06-26  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL][REGRESSION] Crash after r151540 with debug build
+        https://bugs.webkit.org/show_bug.cgi?id=118111
+
+        Reviewed by Gyuyoung Kim.
+
+        * ewk/ewk_view.cpp:
+        (ewk_view_scroll): Fixed ASSERT conditions wrongly refactored.
+
+2013-06-21  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        REGRESSION (r150663): Using webkitAudioContext in Inspector makes it undefined everywhere
+        https://bugs.webkit.org/show_bug.cgi?id=117825
+
+        Reviewed by Kentaro Hara.
+
+        Use Settings to enable Web Audio instead of RuntimeEnabledFeatures.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::setWebAudioEnabled):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+
+2013-06-17  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        [EFL] Remove unneeded WebCore namespace in FrameLoaderClientEfl
+        https://bugs.webkit.org/show_bug.cgi?id=117718
+
+        Reviewed by Christophe Dumez.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp: Remove 'using namespace WebCore'.
+
+2013-06-17  Ruth Fong  <ruth_fong@apple.com>
+
+        REGRESSION: Important controls are missing from <video> element UI, when compared to QuickTime
+        https://bugs.webkit.org/show_bug.cgi?id=20599
+
+        Add a "Download Video"/"Download Audio" context menu item to download media
+        elements.
+
+        Reviewed by Beth Dakin.
+
+        * WebCoreSupport/AssertMatchingEnums.cpp:
+        * ewk/ewk_contextmenu.h:
+        Updated to include new EWK enum type for "Download Video/Audio" context menu item.
+
+2013-06-13  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Refactor ewk_view_scroll to remove internal structure.
+        https://bugs.webkit.org/show_bug.cgi?id=115713
+
+        Reviewed by Gyuyoung Kim.
+
+        After removed c-ism from WebKit/Efl, There is no reason to keep internal
+        structures like Ewk_Scroll_Request.
+        This patch refactored ewk_view_scroll to use WTF instead of Ewk_Scroll_Request
+        and scrolls of SmartData.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::scroll):
+        * ewk/ewk_view.cpp: Removed functions to manage Ewk_Scroll_Request.
+        (_Ewk_View_Private_Data):
+        (_ewk_view_scrolls_flush):
+        (_ewk_view_priv_del):
+        (_ewk_view_smart_calculate):
+        (ewk_view_scroll_offsets_get):
+        (ewk_view_scroll_rects_get):
+        (ewk_view_scroll):
+        * ewk/ewk_view.h: Removed Ewk_Scroll_Request which is private structure.
+        * ewk/ewk_view_private.h:
+        (WebCore):
+        * ewk/ewk_view_single.cpp:
+        (_ewk_view_single_scroll_process_single):
+        (_ewk_view_single_smart_scrolls_process):
+        * ewk/ewk_view_tiled.cpp:
+        (_ewk_view_tiled_smart_scrolls_process):
+
 2013-05-28  Andreas Kling  <akling@apple.com>
 
         Document::setFocusedNode() should be setFocusedElement().

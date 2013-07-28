@@ -103,7 +103,7 @@ static HashSet<Page*>* allPages;
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 
-static void networkStateChanged()
+static void networkStateChanged(bool isOnLine)
 {
     Vector<RefPtr<Frame> > frames;
 
@@ -115,7 +115,7 @@ static void networkStateChanged()
         InspectorInstrumentation::networkStateChanged(*it);
     }
 
-    AtomicString eventName = networkStateNotifier().onLine() ? eventNames().onlineEvent : eventNames().offlineEvent;
+    AtomicString eventName = isOnLine ? eventNames().onlineEvent : eventNames().offlineEvent;
     for (unsigned i = 0; i < frames.size(); i++)
         frames[i]->document()->dispatchWindowEvent(Event::create(eventName, false, false));
 }
@@ -189,7 +189,6 @@ Page::Page(PageClients& pageClients)
 #if ENABLE(PAGE_VISIBILITY_API)
     , m_visibilityState(PageVisibilityStateVisible)
 #endif
-    , m_displayID(0)
     , m_requestedLayoutMilestones(0)
     , m_headerHeight(0)
     , m_footerHeight(0)
@@ -201,13 +200,14 @@ Page::Page(PageClients& pageClients)
     , m_scriptedAnimationsSuspended(false)
     , m_pageThrottler(PageThrottler::create(this))
     , m_console(PageConsole::create(this))
+    , m_framesHandlingBeforeUnloadEvent(0)
 {
     ASSERT(m_editorClient);
 
     if (!allPages) {
         allPages = new HashSet<Page*>;
-
-        networkStateNotifier().setNetworkStateChangedFunction(networkStateChanged);
+        
+        networkStateNotifier().addNetworkStateChangeListener(networkStateChanged);
     }
 
     ASSERT(!allPages->contains(this));
@@ -247,8 +247,8 @@ Page::~Page()
 #ifndef NDEBUG
     pageCounter.decrement();
 #endif
-    m_pageThrottler->clearPage();
 
+    m_pageThrottler.clear();
 }
 
 ArenaSize Page::renderTreeSize() const
@@ -622,14 +622,28 @@ void Page::findStringMatchingRanges(const String& target, FindOptions options, i
         return;
 
     if (frameWithSelection) {
-        indexForSelection = NoMatchBeforeUserSelection;
+        indexForSelection = NoMatchAfterUserSelection;
         RefPtr<Range> selectedRange = frameWithSelection->selection()->selection().firstRange();
-        for (size_t i = 0; i < matchRanges->size(); ++i) {
-            if (selectedRange->compareBoundaryPoints(Range::START_TO_END, matchRanges->at(i).get(), IGNORE_EXCEPTION) < 0) {
-                indexForSelection = i;
-                break;
+        if (options & Backwards) {
+            for (size_t i = matchRanges->size(); i > 0; --i) {
+                if (selectedRange->compareBoundaryPoints(Range::END_TO_START, matchRanges->at(i - 1).get(), IGNORE_EXCEPTION) > 0) {
+                    indexForSelection = i - 1;
+                    break;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < matchRanges->size(); ++i) {
+                if (selectedRange->compareBoundaryPoints(Range::START_TO_END, matchRanges->at(i).get(), IGNORE_EXCEPTION) < 0) {
+                    indexForSelection = i;
+                    break;
+                }
             }
         }
+    } else {
+        if (options & Backwards)
+            indexForSelection = matchRanges->size() - 1;
+        else
+            indexForSelection = 0;
     }
 }
 
@@ -809,6 +823,8 @@ void Page::setDeviceScaleFactor(float scaleFactor)
 #if USE(ACCELERATED_COMPOSITING)
     if (mainFrame())
         mainFrame()->deviceOrPageScaleFactorChanged();
+
+    pageCache()->markPagesForDeviceScaleChanged(this);
 #endif
 
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext())
@@ -943,16 +959,6 @@ void Page::setIsInWindow(bool isInWindow)
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (FrameView* frameView = frame->view())
             frameView->setIsInWindow(isInWindow);
-    }
-}
-
-void Page::windowScreenDidChange(PlatformDisplayID displayID)
-{
-    m_displayID = displayID;
-
-    for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-        if (frame->document())
-            frame->document()->windowScreenDidChange(displayID);
     }
 }
 
@@ -1576,6 +1582,22 @@ void Page::captionPreferencesChanged()
         frame->document()->captionPreferencesChanged();
 }
 #endif
+
+void Page::incrementFrameHandlingBeforeUnloadEventCount()
+{
+    ++m_framesHandlingBeforeUnloadEvent;
+}
+
+void Page::decrementFrameHandlingBeforeUnloadEventCount()
+{
+    ASSERT(m_framesHandlingBeforeUnloadEvent);
+    --m_framesHandlingBeforeUnloadEvent;
+}
+
+bool Page::isAnyFrameHandlingBeforeUnloadEvent()
+{
+    return m_framesHandlingBeforeUnloadEvent;
+}
 
 Page::PageClients::PageClients()
     : alternativeTextClient(0)

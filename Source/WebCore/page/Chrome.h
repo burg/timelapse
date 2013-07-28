@@ -44,12 +44,12 @@ class DateTimeChooserClient;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
+class Element;
 class Frame;
 class Geolocation;
 class HitTestResult;
 class IntRect;
 class NavigationAction;
-class Node;
 class Page;
 class PopupMenu;
 class PopupMenuClient;
@@ -88,6 +88,9 @@ public:
     virtual void scheduleAnimation() OVERRIDE;
 #endif
 
+    virtual PlatformDisplayID displayID() const OVERRIDE;
+    virtual void windowScreenDidChange(PlatformDisplayID) OVERRIDE;
+
     void scrollRectIntoView(const IntRect&) const;
 
     void contentsSizeChanged(Frame*, const IntSize&) const;
@@ -104,7 +107,7 @@ public:
     bool canTakeFocus(FocusDirection) const;
     void takeFocus(FocusDirection) const;
 
-    void focusedNodeChanged(Node*) const;
+    void focusedElementChanged(Element*) const;
     void focusedFrameChanged(Frame*) const;
 
     Page* createWindow(Frame*, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) const;
@@ -186,6 +189,7 @@ private:
 
     Page* m_page;
     ChromeClient* m_client;
+    PlatformDisplayID m_displayID;
     Vector<PopupOpeningObserver*> m_popupOpeningObservers;
 };
 

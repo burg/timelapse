@@ -66,13 +66,19 @@ const JSObject* JSCell::getObject() const
     return isObject() ? static_cast<const JSObject*>(this) : 0;
 }
 
-CallType JSCell::getCallData(JSCell*, CallData&)
+CallType JSCell::getCallData(JSCell*, CallData& callData)
 {
+    callData.js.functionExecutable = 0;
+    callData.js.scope = 0;
+    callData.native.function = 0;
     return CallTypeNone;
 }
 
-ConstructType JSCell::getConstructData(JSCell*, ConstructData&)
+ConstructType JSCell::getConstructData(JSCell*, ConstructData& constructData)
 {
+    constructData.js.functionExecutable = 0;
+    constructData.js.scope = 0;
+    constructData.native.function = 0;
     return ConstructTypeNone;
 }
 
@@ -133,8 +139,10 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned ident
     return thisObject->methodTable()->deletePropertyByIndex(thisObject, exec, identifier);
 }
 
-JSObject* JSCell::toThisObject(JSCell* cell, ExecState* exec)
+JSValue JSCell::toThis(JSCell* cell, ExecState* exec, ECMAMode ecmaMode)
 {
+    if (ecmaMode == StrictMode)
+        return cell;
     return cell->toObject(exec, exec->lexicalGlobalObject());
 }
 

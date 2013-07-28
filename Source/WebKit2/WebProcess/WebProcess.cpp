@@ -453,7 +453,7 @@ void WebProcess::fullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled)
 
 void WebProcess::ensurePrivateBrowsingSession()
 {
-#if PLATFORM(MAC) || USE(CFNETWORK)
+#if PLATFORM(MAC) || USE(CFNETWORK) || USE(SOUP)
     WebFrameNetworkingContext::ensurePrivateBrowsingSession();
 #endif
 }
@@ -616,6 +616,7 @@ void WebProcess::terminate()
 {
 #ifndef NDEBUG
     gcController().garbageCollectNow();
+    fontCache()->invalidate();
     memoryCache()->setDisabled(true);
 #endif
 
@@ -668,6 +669,7 @@ void WebProcess::didClose(CoreIPC::Connection*)
     pages.clear();
 
     gcController().garbageCollectSoon();
+    fontCache()->invalidate();
     memoryCache()->setDisabled(true);
 #endif    
 

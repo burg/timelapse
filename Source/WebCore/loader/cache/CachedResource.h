@@ -101,7 +101,9 @@ public:
 
     virtual void setEncoding(const String&) { }
     virtual String encoding() const { return String(); }
-    virtual void data(ResourceBuffer*, bool allDataReceived);
+    virtual void addDataBuffer(ResourceBuffer*);
+    virtual void addData(const char* data, unsigned length);
+    virtual void finishLoading(ResourceBuffer*);
     virtual void error(CachedResource::Status);
 
     void setResourceError(const ResourceError& error) { m_error = error; }
@@ -253,6 +255,10 @@ public:
     void tryReplaceEncodedData(PassRefPtr<SharedBuffer>);
 #endif
 
+#if USE(SOUP)
+    virtual char* getOrCreateReadBuffer(size_t /* requestedSize */, size_t& /* actualSize */) { return 0; }
+#endif
+
 protected:
     virtual void checkNotify();
 
@@ -289,11 +295,12 @@ protected:
 
     RefPtr<ResourceBuffer> m_data;
     OwnPtr<PurgeableBuffer> m_purgeableData;
-    Timer<CachedResource> m_decodedDataDeletionTimer;
+    DeferrableOneShotTimer<CachedResource> m_decodedDataDeletionTimer;
 
 private:
     bool addClientToSet(CachedResourceClient*);
-    void decodedDataDeletionTimerFired(Timer<CachedResource>*);
+
+    void decodedDataDeletionTimerFired(DeferrableOneShotTimer<CachedResource>*);
 
     virtual PurgePriority purgePriority() const { return PurgeDefault; }
     virtual bool mayTryReplaceEncodedData() const { return false; }

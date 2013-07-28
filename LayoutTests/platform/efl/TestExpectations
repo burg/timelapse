@@ -336,9 +336,6 @@ webkit.org/b/65709 canvas/philip/tests/2d.drawImage.outsidesource.html [ Failure
 # Bug in the test itself, as the input box can be big enough for the given coordinates to be inside it.
 Bug(EFL) fast/forms/input-text-click-outside.html
 
-# Exclusions implementation not complete yet.
-webkit.org/b/83898 fast/exclusions
-
 # CSS Filters support not yet enabled (needs ENABLE_CSS_FILTERS).
 webkit.org/b/85465 css3/filters [ Skip ]
 webkit.org/b/85465 compositing/filters [ Skip ]
@@ -463,60 +460,14 @@ webkit.org/b/102486 editing/pasteboard/line-feed-between-br-and-b-should-not-reo
 webkit.org/b/102486 editing/pasteboard/paste-table-cells.html [ Failure ]
 
 # Needs baselines
-editing/deleting/smart-delete-003.html [ Missing ]
-editing/deleting/smart-delete-004.html [ Missing ]
 editing/inserting/before-after-input-element.html [ Missing ]
 editing/inserting/break-blockquote-after-delete.html [ Missing ]
-editing/selection/3690703-2.html [ Missing ]
-editing/selection/3690703.html [ Missing ]
-editing/selection/3690719.html [ Missing ]
-editing/selection/4397952.html [ Missing ]
-editing/selection/4895428-3.html [ Missing ]
-editing/selection/4975120.html [ Missing ]
-editing/selection/5007143-2.html [ Missing ]
-editing/selection/5007143.html [ Missing ]
-editing/selection/5057506.html [ Missing ]
-editing/selection/5195166-1.html [ Missing ]
-editing/selection/7152-2.html [ Missing ]
-editing/selection/caret-and-focus-ring.html [ Missing ]
-editing/selection/caret-before-select.html [ Missing ]
-editing/selection/caret-ltr-right.html [ Missing ]
-editing/selection/caret-rtl-2-left.html [ Missing ]
-editing/selection/caret-rtl-right.html [ Missing ]
 editing/selection/contains-boundaries.html [ Missing ]
 editing/selection/designmode-no-caret.html [ Missing ]
-editing/selection/drag-select-1.html [ Missing ]
-editing/selection/extend-by-character-002.html [ Missing ]
-editing/selection/extend-by-character-003.html [ Missing ]
-editing/selection/extend-by-word-002.html [ Missing ]
-editing/selection/mixed-editability-6.html [ Missing ]
-editing/selection/mixed-editability-7.html [ Missing ]
-editing/selection/node-removal-2.html [ Missing ]
 editing/selection/paragraph-granularity.html [ Missing ]
-editing/selection/range-between-block-and-inline.html [ Missing ]
 editing/selection/replaced-boundaries-3.html [ Missing ]
-editing/selection/select-across-readonly-input-1.html [ Missing ]
-editing/selection/select-across-readonly-input-2.html [ Missing ]
-editing/selection/select-across-readonly-input-3.html [ Missing ]
-editing/selection/select-across-readonly-input-4.html [ Missing ]
-editing/selection/select-across-readonly-input-5.html [ Missing ]
-editing/selection/select-all-002.html [ Missing ]
-editing/selection/select-all-003.html [ Missing ]
-editing/selection/select-all-004.html [ Missing ]
-editing/selection/select-all-005.html [ Missing ]
-editing/selection/select-all-006.html [ Missing ]
-editing/selection/select-box.html [ Missing ]
-editing/selection/select-element-paragraph-boundary.html [ Missing ]
-editing/selection/select-from-textfield-outwards.html [ Missing ]
-editing/selection/selection-actions.html [ Missing ]
 editing/selection/selection-background.html [ Missing ]
-editing/selection/selection-button-text.html [ Missing ]
-editing/selection/vertical-lr-ltr-extend-line-backward-br.html [ Missing ]
-editing/style/5017613-1.html [ Missing ]
-editing/style/5046875-1.html [ Missing ]
 editing/style/5065910.html [ Missing ]
-editing/style/5228141.html [ Missing ]
-editing/style/5279521.html [ Missing ]
 editing/style/font-family-with-space.html [ Missing ]
 editing/style/smoosh-styles-001.html [ Missing ]
 editing/style/style-boundary-005.html [ Missing ]
@@ -626,7 +577,6 @@ webkit.org/b/105879 editing/pasteboard/4806874.html [ Pass Crash ]
 webkit.org/b/105879 editing/spelling/spelling-insert-html.html [ Pass Crash ]
 
 # Media regressions after updating to gstreamer 1.0.
-webkit.org/b/104809 media/adopt-node-crash.html [ Crash ]
 webkit.org/b/104809 media/video-src.html [ Crash Pass ]
 webkit.org/b/104809 media/video-src-blob.html [ Crash Failure ]
 webkit.org/b/104809 media/video-src-change.html [ Crash Pass ]
@@ -1071,7 +1021,6 @@ Bug(EFL) editing/pasteboard/pasting-empty-html-falls-back-to-text.html [ Failure
 # MathML: Absolute and Integral operators are not stacked properly
 webkit.org/b/47744 mathml/presentation/mo.xhtml
 webkit.org/b/47744 mathml/presentation/row.xhtml
-webkit.org/b/47744 mathml/presentation/over.xhtml
 
 # EFL has not fully implemented about some SVG attributes
 Bug(EFL) svg/custom
@@ -1139,6 +1088,7 @@ webkit.org/b/79766 compositing/iframes/iframe-size-from-zero.html [ Failure ]
 webkit.org/b/79766 compositing/iframes/iframe-size-to-zero.html [ Failure ]
 webkit.org/b/79766 compositing/iframes/iframe-src-change.html [ Failure ]
 webkit.org/b/79766 compositing/iframes/resizer.html [ Missing ]
+webkit.org/b/79766 compositing/iframes/iframe-position-absolute-with-padding-percentage-crash.html [ Failure ]
 webkit.org/b/79766 compositing/layer-creation/spanOverlapsCanvas.html [ Failure ]
 webkit.org/b/79766 compositing/overflow/clipping-ancestor-with-accelerated-scrolling-ancestor.html [ Skip ]
 webkit.org/b/79766 compositing/overflow/nested-scrolling.html [ Skip ]
@@ -1210,13 +1160,8 @@ webkit.org/b/87662 fast/events/constructors/media-stream-event-constructor.html 
 webkit.org/b/95302 fast/speech [ Skip ]
 webkit.org/b/95302 fast/events/constructors/speech-recognition-event-constructor.html [ Skip ]
 
-# DOM4_EVENTS_CONSTRUCTOR is not yet enabled.
-webkit.org/b/107428 fast/events/constructors/ui-event-constructor.html [ Skip ]
-webkit.org/b/107428 fast/events/constructors/mouse-event-constructor.html [ Skip ]
-webkit.org/b/107428 fast/events/constructors/wheel-event-constructor.html [ Skip ]
-webkit.org/b/107428 fast/events/constructors/keyboard-event-constructor.html [ Skip ]
-webkit.org/b/107428 fast/events/constructors/composition-event-constructor.html [ Skip ]
-webkit.org/b/107428 fast/events/constructors/focus-event-constructor.html [ Skip ]
+# Requires INDIE_UI support
+webkit.org/b/111446 indieui [ Skip ]
 
 # Requires support for Web notifications
 webkit.org/b/73544 fast/notifications [ Skip ]
@@ -1587,6 +1532,7 @@ webkit.org/b/101670 media/video-controls-captions-trackmenu-localized.html [ Ski
 webkit.org/b/101670 media/video-controls-captions-trackmenu-hide-on-click.html [ Skip ]
 webkit.org/b/101670 media/video-controls-captions-trackmenu-hide-on-click-outside.html [ Skip ]
 webkit.org/b/101670 media/track/track-user-preferences.html [ Skip ]
+webkit.org/b/101670 media/video-controls-captions-trackmenu-includes-enabled-track.html [ Skip ]
 
 # Fails until we enable the Resource Timing API.
 webkit.org/b/61138 http/tests/w3c/webperf/submission/Google/resource-timing [ Skip ]
@@ -1797,20 +1743,10 @@ webkit.org/b/114877 accessibility/link-inside-button-accessible-text.html [ Fail
 webkit.org/b/114612 editing/style/block-style-005.html [ Failure ]
 
 # Unidentified failing media tests
-webkit.org/b/115419 http/tests/media/reload-after-dialog.html [ Failure ]
-webkit.org/b/115419 http/tests/media/remove-while-loading.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-cancel-load.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-error-abort.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-load-suspend.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-load-twice.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-play-progress.html [ Failure ]
 webkit.org/b/115419 http/tests/media/video-redirect.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-served-as-text.html [ Failure ]
-webkit.org/b/115419 http/tests/media/video-throttled-load-metadata.html [ Failure ]
 webkit.org/b/115419 media/media-can-play-ogg.html [ Failure ]
 webkit.org/b/115419 media/track/track-automatic-subtitles.html [ Failure ]
 webkit.org/b/115419 media/video-poster-background.html [ ImageOnlyFailure ]
-webkit.org/b/115419 media/track/track-text-track-cue-list.html [ Crash Failure ]
 
 webkit.org/b/115439 fast/text/complex-initial-advance.html [ ImageOnlyFailure ]
 webkit.org/b/115440 svg/stroke/animated-non-scaling-stroke.html [ ImageOnlyFailure ]
@@ -1822,3 +1758,9 @@ webkit.org/b/116587 http/tests/websocket/tests/hybi/close.html [ Skip ]
 webkit.org/b/116587 http/tests/websocket/tests/hybi/close-on-navigate-new-location.html [ Skip ]
 webkit.org/b/116587 http/tests/websocket/tests/hybi/multiple-subprotocols.html [ Skip ]
 webkit.org/b/116587 http/tests/websocket/tests/hybi/reload-crash.html [ Skip ]
+
+# Synthesized italics not supported
+fast/text/international/synthesized-italic-vertical-latin.html [ Skip ]
+
+# vibration api doesn't support visibilitychange event.
+webkit.org/b/118378 vibration/cancelVibration-after-pagevisibility-changed-to-hidden.html [ Skip ]

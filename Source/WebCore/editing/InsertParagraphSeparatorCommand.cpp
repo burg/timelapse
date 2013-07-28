@@ -30,6 +30,7 @@
 #include "Document.h"
 #include "EditingStyle.h"
 #include "HTMLElement.h"
+#include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "InsertLineBreakCommand.h"
 #include "NodeTraversal.h"
@@ -81,7 +82,7 @@ void InsertParagraphSeparatorCommand::calculateStyleBeforeInsertion(const Positi
         return;
 
     ASSERT(pos.isNotNull());
-    m_style = EditingStyle::create(pos);
+    m_style = EditingStyle::create(pos, EditingStyle::EditingPropertiesInEffect);
     m_style->mergeTypingStyle(pos.anchorNode()->document());
 }
 
@@ -169,7 +170,7 @@ void InsertParagraphSeparatorCommand::doApply()
     if (!startBlock
         || !startBlock->nonShadowBoundaryParentNode()
         || isTableCell(startBlock.get())
-        || startBlock->hasTagName(formTag)
+        || isHTMLFormElement(startBlock.get())
         // FIXME: If the node is hidden, we don't have a canonical position so we will do the wrong thing for tables and <hr>. https://bugs.webkit.org/show_bug.cgi?id=40342
         || (!canonicalPos.isNull() && canonicalPos.deprecatedNode()->renderer() && canonicalPos.deprecatedNode()->renderer()->isTable())
         || (!canonicalPos.isNull() && canonicalPos.deprecatedNode()->hasTagName(hrTag))) {
@@ -316,6 +317,15 @@ void InsertParagraphSeparatorCommand::doApply()
     // all of the correct nodes when building the ancestor list.  So this needs to be the deepest representation of the position
     // before we walk the DOM tree.
     insertionPosition = positionOutsideTabSpan(VisiblePosition(insertionPosition).deepEquivalent());
+
+    // If the returned position lies either at the end or at the start of an element that is ignored by editing
+    // we should move to its upstream or downstream position.
+    if (editingIgnoresContent(insertionPosition.deprecatedNode())) {
+        if (insertionPosition.atLastEditingPositionForNode())
+            insertionPosition = insertionPosition.downstream();
+        else if (insertionPosition.atFirstEditingPositionForNode())
+            insertionPosition = insertionPosition.upstream();
+    }
 
     // Make sure we do not cause a rendered space to become unrendered.
     // FIXME: We need the affinity for pos, but pos.downstream() does not give it

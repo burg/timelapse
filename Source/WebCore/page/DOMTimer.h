@@ -28,7 +28,6 @@
 #define DOMTimer_h
 
 #include "SuspendableTimer.h"
-#include "UserGestureIndicator.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -55,7 +54,7 @@ namespace WebCore {
         virtual void fired();
 
     protected:
-        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>);
+        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
         // add to list of active context objects, start initial timer.
         virtual void start(int timeout, bool singleShot);
 
@@ -67,11 +66,11 @@ namespace WebCore {
 
         // Retuns timer fire time rounded to the next multiple of timer alignment interval.
         virtual double alignedFireTime(double) const;
-        
+
         int m_nestingLevel;
         OwnPtr<ScheduledAction> m_action;
         int m_originalInterval;
-        RefPtr<UserGestureToken> m_userGestureToken;
+        bool m_shouldForwardUserGesture;
     };
 
 } // namespace WebCore

@@ -1012,6 +1012,12 @@ void DOMWindow::print()
     if (!page)
         return;
 
+    // Pages are not allowed to bring up a modal print dialog during BeforeUnload dispatch.
+    if (page->isAnyFrameHandlingBeforeUnloadEvent()) {
+        printErrorMessage("Use of window.print is not allowed during beforeunload event dispatch.");
+        return;
+    }
+
     if (m_frame->loader()->activeDocumentLoader()->isLoading()) {
         m_shouldPrintWhenFinishedLoading = true;
         return;
@@ -1035,6 +1041,12 @@ void DOMWindow::alert(const String& message)
     if (!m_frame)
         return;
 
+    // Pages are not allowed to cause modal alerts during BeforeUnload dispatch.
+    if (page() && page()->isAnyFrameHandlingBeforeUnloadEvent()) {
+        printErrorMessage("Use of window.alert is not allowed during beforeunload event dispatch.");
+        return;
+    }
+
     m_frame->document()->updateStyleIfNeeded();
 
     Page* page = m_frame->page();
@@ -1048,6 +1060,12 @@ bool DOMWindow::confirm(const String& message)
 {
     if (!m_frame)
         return false;
+    
+    // Pages are not allowed to cause modal alerts during BeforeUnload dispatch.
+    if (page() && page()->isAnyFrameHandlingBeforeUnloadEvent()) {
+        printErrorMessage("Use of window.confirm is not allowed during beforeunload event dispatch.");
+        return false;
+    }
 
     m_frame->document()->updateStyleIfNeeded();
 
@@ -1062,6 +1080,12 @@ String DOMWindow::prompt(const String& message, const String& defaultValue)
 {
     if (!m_frame)
         return String();
+
+    // Pages are not allowed to cause modal alerts during BeforeUnload dispatch.
+    if (page() && page()->isAnyFrameHandlingBeforeUnloadEvent()) {
+        printErrorMessage("Use of window.prompt is not allowed during beforeunload event dispatch.");
+        return String();
+    }
 
     m_frame->document()->updateStyleIfNeeded();
 
@@ -2008,6 +2032,12 @@ void DOMWindow::showModalDialog(const String& urlString, const String& dialogFea
     if (!firstFrame)
         return;
 
+    // Pages are not allowed to cause modal alerts during BeforeUnload dispatch.
+    if (page() && page()->isAnyFrameHandlingBeforeUnloadEvent()) {
+        printErrorMessage("Use of window.showModalDialog is not allowed during beforeunload event dispatch.");
+        return;
+    }
+
     if (!canShowModalDialogNow(m_frame) || !firstWindow->allowPopUp())
         return;
 
@@ -2016,7 +2046,6 @@ void DOMWindow::showModalDialog(const String& urlString, const String& dialogFea
         activeWindow, firstFrame, m_frame, function, functionContext);
     if (!dialogFrame)
         return;
-    UserGestureIndicatorDisabler disabler;
     dialogFrame->page()->chrome().runModal();
 }
 

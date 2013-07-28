@@ -53,29 +53,37 @@ static String coreAttributeToAtkAttribute(JSStringRef attribute)
     return attributeString == "AXPlaceholderValue" ? "placeholder-text" : String();
 }
 
-static void attributesClear(AtkAttributeSet* attributesSet)
+static String getAttributeSetValueForId(AtkObject* accessible, const char* id)
 {
-    for (GSList* attributes = attributesSet; attributes; attributes = attributes->next) {
+    const char* attributeValue = 0;
+    AtkAttributeSet* attributeSet = atk_object_get_attributes(accessible);
+    for (AtkAttributeSet* attributes = attributeSet; attributes; attributes = attributes->next) {
         AtkAttribute* atkAttribute = static_cast<AtkAttribute*>(attributes->data);
-        g_free(atkAttribute->name);
-        g_free(atkAttribute->value);
-        g_free(atkAttribute);
+        if (!strcmp(atkAttribute->name, id)) {
+            attributeValue = atkAttribute->value;
+            break;
+        }
     }
+
+    String atkAttributeValue = String::fromUTF8(attributeValue);
+    atk_attribute_set_free(attributeSet);
+
+    return atkAttributeValue;
 }
 
-static gchar* attributeSetToString(AtkAttributeSet* attributeSet)
+static char* getAtkAttributeSetAsString(AtkObject* accessible)
 {
-    GOwnPtr<GSList> atkAttributes(attributeSet);
     GString* str = g_string_new(0);
-    for (GSList* attributes = atkAttributes.get(); attributes; attributes = attributes->next) {
+
+    AtkAttributeSet* attributeSet = atk_object_get_attributes(accessible);
+    for (AtkAttributeSet* attributes = attributeSet; attributes; attributes = attributes->next) {
         AtkAttribute* attribute = static_cast<AtkAttribute*>(attributes->data);
         GOwnPtr<gchar> attributeData(g_strconcat(attribute->name, ":", attribute->value, NULL));
         g_string_append(str, attributeData.get());
         if (attributes->next)
             g_string_append(str, ", ");
     }
-
-    attributesClear(atkAttributes.get());
+    atk_attribute_set_free(attributeSet);
 
     return g_string_free(str, FALSE);
 }
@@ -470,7 +478,7 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::allAttributes()
     if (!m_element || !ATK_IS_OBJECT(m_element.get()))
         return JSStringCreateWithCharacters(0, 0);
 
-    GOwnPtr<gchar> attributeData(attributeSetToString(atk_object_get_attributes(ATK_OBJECT(m_element.get()))));
+    GOwnPtr<char> attributeData(getAtkAttributeSetAsString(ATK_OBJECT(m_element.get())));
     return JSStringCreateWithUTF8CString(attributeData.get());
 }
 
@@ -483,19 +491,8 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringAttributeValue(JSStringRe
     if (atkAttributeName.isNull())
         return JSStringCreateWithCharacters(0, 0);
 
-    GOwnPtr<gchar> attributeValue;
-    GOwnPtr<GSList> objectAttributes(atk_object_get_attributes(ATK_OBJECT(m_element.get())));
-    for (GSList* attributes =  objectAttributes.get(); attributes; attributes = attributes->next) {
-        AtkAttribute* atkAttribute = static_cast<AtkAttribute*>(attributes->data);
-        if (!strcmp(atkAttribute->name, atkAttributeName.utf8().data())) {
-            attributeValue.set(g_strdup(atkAttribute->value));
-            break;
-        }
-    }
-
-    attributesClear(objectAttributes.get());
-
-    return JSStringCreateWithUTF8CString(attributeValue.get());
+    String attributeValue = getAttributeSetValueForId(ATK_OBJECT(m_element.get()), atkAttributeName.utf8().data());
+    return JSStringCreateWithUTF8CString(attributeValue.utf8().data());
 }
 
 double AccessibilityUIElement::numberAttributeValue(JSStringRef attribute)
@@ -618,29 +615,12 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::language()
     if (!m_element || !ATK_IS_OBJECT(m_element.get()))
         return JSStringCreateWithCharacters(0, 0);
 
-    GOwnPtr<gchar> language;
-    // In ATK, the document language is exposed as the document's locale.
-    if (atk_object_get_role(ATK_OBJECT(m_element.get())) == ATK_ROLE_DOCUMENT_FRAME) {
-        language.set(g_strdup_printf("AXLanguage: %s", atk_document_get_locale(ATK_DOCUMENT(m_element.get()))));
-        return JSStringCreateWithUTF8CString(language.get());
-    }
-
-    // For all other objects, the language is exposed as an AtkText attribute.
-    if (!ATK_IS_TEXT(m_element.get()))
+    const gchar* locale = atk_object_get_object_locale(ATK_OBJECT(m_element.get()));
+    if (!locale)
         return JSStringCreateWithCharacters(0, 0);
 
-    GOwnPtr<GSList> textAttributes(atk_text_get_default_attributes(ATK_TEXT(m_element.get())));
-    for (GSList* attributes = textAttributes.get(); attributes; attributes = attributes->next) {
-        AtkAttribute* atkAttribute = static_cast<AtkAttribute*>(attributes->data);
-        if (!strcmp(atkAttribute->name, atk_text_attribute_get_name(ATK_TEXT_ATTR_LANGUAGE))) {
-            language.set(g_strdup_printf("AXLanguage: %s", atkAttribute->value));
-            break;
-        }
-    }
-
-    attributesClear(textAttributes.get());
-
-    return JSStringCreateWithUTF8CString(language.get());
+    GOwnPtr<char> axValue(g_strdup_printf("AXLanguage: %s", locale));
+    return JSStringCreateWithUTF8CString(axValue.get());
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
@@ -779,8 +759,7 @@ bool AccessibilityUIElement::isEnabled()
 
 bool AccessibilityUIElement::isRequired() const
 {
-    // FIXME: implement
-    return false;
+    return checkElementState(m_element.get(), ATK_STATE_REQUIRED);
 }
 
 bool AccessibilityUIElement::isFocused() const
@@ -1100,8 +1079,10 @@ bool AccessibilityUIElement::isIgnored() const
 
 bool AccessibilityUIElement::hasPopup() const
 {
-    // FIXME: implement
-    return false;
+    if (!m_element || !ATK_IS_OBJECT(m_element.get()))
+        return false;
+
+    return equalIgnoringCase(getAttributeSetValueForId(ATK_OBJECT(m_element.get()), "aria-haspopup"), "true");
 }
 
 void AccessibilityUIElement::takeFocus()
