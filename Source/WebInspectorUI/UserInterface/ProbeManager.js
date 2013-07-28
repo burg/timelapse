@@ -36,7 +36,8 @@ WebInspector.ProbeManager.Event = {
     ProbeRemoved: "probe-manager-probe-removed",
     ProbeDisabled: "probe-manager-probe-disabled",
     ProbeEnabled: "probe-manager-probe-enabled",
-    ProbeGroupAdded: "probe-manager-group-added",
+    ProbeGroupAdded: "probe-manager-probe-group-added",
+    ProbeGroupRemoved: "probe-manager-probe-group-removed",
     SamplesChanged: "probe-manage-samples-changed"
 };
 
