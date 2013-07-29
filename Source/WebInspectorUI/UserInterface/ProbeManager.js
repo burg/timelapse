@@ -38,7 +38,6 @@ WebInspector.ProbeManager.Event = {
     ProbeEnabled: "probe-manager-probe-enabled",
     ProbeGroupAdded: "probe-manager-probe-group-added",
     ProbeGroupRemoved: "probe-manager-probe-group-removed",
-    SamplesChanged: "probe-manage-samples-changed"
 };
 
 WebInspector.ProbeManager.prototype = {
@@ -86,7 +85,6 @@ WebInspector.ProbeManager.prototype = {
         console.assert(sample.probeId in this._probes, "Unknown probe id specified for sample: ", sample);
         var probe = this._probes[sample.probeId];
         probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.timestamp, sample.payload.value));
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.SamplesChanged, probe);
     },
 
     probeEnabled: function(probeId)

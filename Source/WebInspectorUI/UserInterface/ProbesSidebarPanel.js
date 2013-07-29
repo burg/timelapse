@@ -27,9 +27,6 @@ WebInspector.ProbesSidebarPanel = function()
 {
 	WebInspector.NavigationSidebarPanel.call(this, "probes", WebInspector.UIString("Probes"), "Images/NavigationItemProbes.pdf", "4", true);
 
-    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._mainResourceChanged, this);
-    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.ResourceWasAdded, this._resourceAdded, this);
-
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
 
@@ -55,8 +52,6 @@ WebInspector.ProbesSidebarPanel.ProbeToggleStyleClassName = "probe-toggle";
 WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName = "probe-remove";
 WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName = "enabled";
-WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName = "table-container";
-WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName = "main-column";
 WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName = "probe-popover";
 WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName = "color-container";
 WebInspector.ProbesSidebarPanel.ColorStyleClassName = "color";

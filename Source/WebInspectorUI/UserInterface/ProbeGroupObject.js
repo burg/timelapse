@@ -34,14 +34,16 @@ WebInspector.ProbeGroupObject = function(url, lineNumber)
 
     // FIXME: the probe group object shouldn't store view objects.
     // It should be managed by a coordinator class.
-	this._gutterElement = document.createElement("div");
+    this._gutterElement = document.createElement("div");
 	this._gutterElement.classList.add(WebInspector.ProbeGroupObject.ProbeGutterStyleClassName);
 	this._gutterElement.style.backgroundColor = this._color;
 	this._gutterElement.textContent = this._lineNumber + 1;
 }
 
 WebInspector.ProbeGroupObject.Event = {
-    ProbesChanged: "probe-group-probes-changed"
+    ProbeAdded: "probe-group-probe-added",
+    ProbeRemoved: "probe-group-probe-removed",
+    PropertiesChanged: "probe-group-properties-changed"
 };
 
 WebInspector.ProbeGroupObject.ProbeGutterStyleClassName = "probe-gutter";
@@ -82,6 +84,8 @@ WebInspector.ProbeGroupObject.prototype = {
     set color(value)
     {
         this._color = value;
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.PropertiesChanged, this);
+
 		this._gutterElement.style.backgroundColor = this._color;
 		WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._lineNumber, "CodeMirror-linenumbers", this._gutterElement);
     },
@@ -93,5 +97,5 @@ WebInspector.ProbeGroupObject.prototype = {
     	this._probes.push(probe);
         this._probesByUid[probe.uid] = probe;
 		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbesChanged, this)
-    }
+    },
 };

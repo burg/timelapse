@@ -43,6 +43,10 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     this._samples = [];
 }
 
+WebInspector.ProbeObject.Event = {
+    SampleAdded: "probe-object-sample-added"
+};
+
 WebInspector.ProbeObject.prototype = {
     constructor: WebInspector.ProbeObject,
     __proto__: WebInspector.Object.prototype,
@@ -69,6 +73,11 @@ WebInspector.ProbeObject.prototype = {
         return this._columnNumber;
     },
 
+    get expression()
+    {
+        return this._expression;
+    },
+
     get samples()
     {
         return this._samples.slice();
@@ -90,6 +99,7 @@ WebInspector.ProbeObject.prototype = {
     {
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Wrong object type passed as probe sample.");
         this._samples.push(sample);
+        this.dispatchEventToListeners(WebInspector.ProbeObject.Event.SampleAdded, sample);
     },
 
     set enabled(value)

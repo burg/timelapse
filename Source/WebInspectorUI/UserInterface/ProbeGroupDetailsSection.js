@@ -28,6 +28,7 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Tried to create details section for non-probe group", probeGroup);
 
     this._listeners = new WebInspector.EventListenerGroup(this, "Static per-probe group section event listeners.");
+    this._probeGroup = probeGroup;
 
     var shortUrl = parseURL(probeGroup.url).lastPathComponent || WebInspector.UIString("(unknown)");
     var title = WebInspector.UIString("Probe %s:%d").format(shortUrl, probeGroup.lineNumber + 1);
@@ -36,48 +37,48 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     optionsElement.classList.add(WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName);
 
     var removeProbeButton = optionsElement.createChild("img");
-    removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName);
-    removeProbeButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
+    removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName);
+    removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(removeProbeButton, "click", this._removeButtonClicked);
 
-    var probeToggleElement = optionsElement.createChild("img");
-    probeToggleElement.classList.add(WebInspector.ProbesSidebarPanel.ProbeToggleStyleClassName);
-    probeToggleElement.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
-    this._listeners.register(probeToggleElement, "click", this._probesToggleButtonClicked);
+    var toggleButton = optionsElement.createChild("img");
+    toggleButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeToggleStyleClassName);
+    toggleButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
+    this._listeners.register(toggleButton, "click", this._toggleButtonClicked);
 
-    var probeColorButton = optionsElement.createChild("div");
-    probeColorButton.style.backgroundColor = WebInspector.ProbesSidebarPanel.DefaultProbeColor;
-    probeColorButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeColorStyleClassName);
-    probeColorButton.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
-    this._listeners.register(probeColorButton, "click", this._probeColorButtonClicked);
+    this._colorSelectorElement = optionsElement.createChild("div");
+    this._colorSelectorElement.style.backgroundColor = WebInspector.ProbeGroupDetailsSection.DefaultProbeColor;
+    this._colorSelectorElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeColorStyleClassName);
+    this._colorSelectorElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
+    this._listeners.register(this._colorSelectorElement, "click", this._colorSelectorElementClicked);
 
-    var addProbeValue = optionsElement.createChild("img");
-    addProbeValue.classList.add(WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName);
-    this._listeners.register(addProbeValue, "click", this._addProbeButtonClicked);
+    var addProbeButton = optionsElement.createChild("img");
+    addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeButtonStyleClassName);
+    this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
 
-    // FIXME: extract to ProbeGroupDataTable
-    var container = document.createElement("div");
-    container.classList.add(WebInspector.ProbesSidebarPanel.ProbeTableContainerColumnStyleClassName);
-    var dataTable = container.createChild("table");
-    var tableHeader = dataTable.createChild("tr");
-    var initialExpression = tableHeader.createChild("th");
-    initialExpression.textContent = probeGroup.probes.lastValue._expression;
-    initialExpression.addEventListener("click", this._changeProbeValue.bind(this));
-    initialExpression.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
-
-    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.SamplesChanged, this._addSampleToTable.bind(this, dataTable));
-
+    var dataTable = new WebInspector.ProbeGroupDataTable(probeGroup);
     var singletonRow = new WebInspector.DetailsSectionRow;
-    singletonRow.element.appendChild(container);
-
+    singletonRow.element.appendChild(dataTable.element);
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
     WebInspector.DetailsSection.call(this, "probe", title, [probeSectionGroup], optionsElement);
 
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.PropertiesChanged, this.refresh);
     this._listeners.install();
 };
 
 WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
+WebInspector.ProbeGroupDetailsSection.ProbeColorStyleClassName = "probe-color";
+WebInspector.ProbeGroupDetailsSection.ProbeToggleStyleClassName = "probe-toggle";
+WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
+WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
+WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
+WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
+WebInspector.ProbeGroupDetailsSection.ColorContainerStyleClassName = "color-container";
+WebInspector.ProbeGroupDetailsSection.ColorStyleClassName = "color";
+WebInspector.ProbeGroupDetailsSection.ProbeColorValues = ["Yellow", "Red", "Blue", "Green", "Pink", "Orange", "Purple"];
+WebInspector.ProbeGroupDetailsSection.DefaultProbeColor = "Yellow";
+
 
 WebInspector.ProbeGroupDetailsSection.prototype = {
     __proto__: WebInspector.DetailsSection.prototype,
@@ -88,6 +89,12 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     closed: function()
     {
         this._listeners.uninstall(true);
+    },
+
+    refresh: function()
+    {
+        // FIXME: this should use WebInspector.Color.
+        this._colorSelectorElement.style.backgroundColor = this._probeGroup.color;
     },
 
     // Private
@@ -105,7 +112,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
         var popover = new WebInspector.Popover;
         var content = document.createElement("div");
-        content.classList.add(WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName);
+        content.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
         content.createChild("div").textContent = "Add Another Value?";
         var textBox = content.createChild("input");
         textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
@@ -115,29 +122,27 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         popover.content = content;
         var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
         popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
-
     },
 
     _removeButtonClicked: function(event)
     {
-        var section = event.target.parentElement.parentElement.parentElement;
-        section.parentElement.removeChild(section);
-        //this._removeProbe(probe);
+        console.log("TODO: probe group remove button clicked.");
     },
 
-    _probeColorButtonClicked: function(probeGroup, event)
+    _colorSelectorElementClicked: function(event)
     {
         var popover = new WebInspector.Popover;
 
+        // TODO: Port to use upstream color picker widget.
         var colorContainer = document.createElement("div");
-        colorContainer.classList.add(WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName);
-        colorContainer.classList.add(WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName);
-        var colors = WebInspector.ProbesSidebarPanel.ProbeColorValues;
+        colorContainer.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
+        colorContainer.classList.add(WebInspector.ProbeGroupDetailsSection.ColorContainerStyleClassName);
+        var colors = WebInspector.ProbeGroupDetailsSection.ProbeColorValues;
         for (var i = 0; i <= colors.length - 1; i++) {
             var color = colorContainer.createChild("div");
             color.textContent = colors[i];
-            color.classList.add(WebInspector.ProbesSidebarPanel.ColorStyleClassName);
-            color.addEventListener("click", this._updateColor.bind(this, colors[i], probeGroup, event.target, popover));
+            color.classList.add(WebInspector.ProbeGroupDetailsSection.ColorStyleClassName);
+            color.addEventListener("click", this._updateColor.bind(this, colors[i], popover));
         };
 
         popover.content = colorContainer;
@@ -145,52 +150,14 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
     },
 
-    _probesToggleButtonClicked: function(event)
+    _toggleButtonClicked: function(event)
     {
-        if (event.target.classList.contains(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName)) {
-            console.log("Probe toggle clicked to disable");
-            event.target.classList.remove(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
-            //probeManager.disableProbe(probe);
-        } else {
-            console.log("Probe toggle clicked to enable");
-            event.target.classList.add(WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName);
-            //probeManager.enableProbe(probe);
-        }
-        //WebInspector.probeManager.probesEnabled = this._probesToggleElement.classList.toggle(WebInspector.ProbesSidebarPanel.ProbeToggleEnabledStyleClassName);
+        console.log("TODO: probe group section toggle button clicked.");
     },
 
-    // FIXME: extract to ProbeGroupDataTable
-    _addSampleToTable: function(table, event)
+    _updateColor: function(color, popover)
     {
-        var newRow = table.createChild("tr");
-        var newCell = newRow.createChild("td");
-        newCell.classList.add(WebInspector.ProbesSidebarPanel.MainProbeColumnStyleClassName);
-        newCell.textContent = event.data.samples.lastValue.value;
-    },
-
-    _changeProbeValue: function(event)
-    {
-        var textBox = document.createElement("input");
-        textBox.addEventListener("keypress", this._updateProbe.bind(this));
-        textBox.addEventListener("click", (function (event) {event.target.select()}));
-        textBox.type = "text";
-        textBox.value = "Enter Expression";
-        event.target.innerHTML = "";
-        event.target.appendChild(textBox);
-    },
-
-    _updateColor: function(color, probeGroup, colorButton, popover, event)
-    {
-        probeGroup.color = color;
-        colorButton.style.backgroundColor = color;
+        this._probeGroup.color = color;
         popover.dismiss();
-    },
-
-    _updateProbe: function(event)
-    {
-        if (event.keyCode !== 13)
-            return;
-        event.target.parentElement.textContent = event.target.value;
-        // Use event.target.value to modify probes! Or delete if == "".
     },
 };
