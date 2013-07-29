@@ -32,6 +32,9 @@ WebInspector.ProbeGroupDataTable = function(probeGroup)
 
     this._probeGroup = probeGroup;
     this._probeListenersByUid = {};
+    this._probeColumnMap = {};
+    this._columnCount = -1;
+    this._data = [];
 
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._addProbeToTable);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
@@ -101,12 +104,16 @@ WebInspector.ProbeGroupDataTable.prototype = {
     _setupProbe: function(probe)
     {
         console.assert(!(probe.probeId in this._probeListenersByUid), "Probe ", probe, " already exists in table ", this);
+        ++this._columnCount;
+        this._probeColumnMap[probe.probeId] = this._columnCount;
+
         probe.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleToTable, this);
 
         var initialExpression = this._tableHeaderRowElement.createChild("th");
         initialExpression.textContent = probe.expression;
         initialExpression.addEventListener("click", this._displayChangeProbeExpressionPrompt.bind(this));
-        initialExpression.classList.add(WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName);
+        if (this._probeColumnMap[probe.probeId] === 0)
+            initialExpression.classList.add(WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName);
     },
 
     _teardownProbe: function(probe)
@@ -120,11 +127,25 @@ WebInspector.ProbeGroupDataTable.prototype = {
     {
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
+        var id = event.target.probeId;
 
-        var newRow = this._tableBodyElement.createChild("tr");
-        var newCell = newRow.createChild("td");
-        newCell.classList.add(WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName);
-        newCell.textContent = sample.value;
+        if (!this._data.lastValue || this._data.lastValue.hasOwnProperty(id)) {
+            var newDataRow = new Object();
+            newDataRow[id] = sample;
+            this._data.push(newDataRow);
+            var row = this._tableBodyElement.createChild("tr");
+            for (var i = 0; i <= this._columnCount; i++) {
+                row.createChild("td");
+            }
+        } else {
+            this._data.lastValue[id] = sample;
+            var row = this._tableBodyElement.lastChild;
+        }
+
+        var cell = row.childNodes[this._probeColumnMap[id]];
+        if (this._probeColumnMap[id] === 0)
+            cell.classList.add(WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName);
+        cell.textContent = sample.value;
     },
 
     _changeProbeExpression: function(event)
