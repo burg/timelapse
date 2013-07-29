@@ -47,7 +47,7 @@ WebInspector.ProbeGroupObject.Event = {
 };
 
 WebInspector.ProbeGroupObject.ProbeGutterStyleClassName = "probe-gutter";
-WebInspector.ProbeGroupObject.DefaultProbeColor = "Yellow";
+WebInspector.ProbeGroupObject.DefaultProbeColor = new WebInspector.Color("yellow");
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
 
 WebInspector.ProbeGroupObject.prototype = {
@@ -96,6 +96,6 @@ WebInspector.ProbeGroupObject.prototype = {
 
     	this._probes.push(probe);
         this._probesByUid[probe.uid] = probe;
-		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbesChanged, this)
+		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe)
     },
 };

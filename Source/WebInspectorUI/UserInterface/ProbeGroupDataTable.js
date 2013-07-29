@@ -33,7 +33,7 @@ WebInspector.ProbeGroupDataTable = function(probeGroup)
     this._probeGroup = probeGroup;
     this._probeListenersByUid = {};
 
-    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._addProbeToTable);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
 
     this.element = document.createElement("div");
@@ -92,6 +92,11 @@ WebInspector.ProbeGroupDataTable.prototype = {
     },
 
     // Private
+
+    _addProbeToTable: function(event)
+    {
+        this._setupProbe(event.data);
+    },
 
     _setupProbe: function(probe)
     {

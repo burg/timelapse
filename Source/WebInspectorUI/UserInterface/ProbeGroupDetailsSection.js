@@ -53,8 +53,8 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     this._listeners.register(this._colorSelectorElement, "click", this._colorSelectorElementClicked);
 
     var addProbeButton = optionsElement.createChild("img");
-    addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeButtonStyleClassName);
-    this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
+    addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
+    this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked.bind(this, this._probeGroup.lineNumber));
 
     var dataTable = new WebInspector.ProbeGroupDataTable(probeGroup);
     var singletonRow = new WebInspector.DetailsSectionRow;
@@ -62,6 +62,8 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
     WebInspector.DetailsSection.call(this, "probe", title, [probeSectionGroup], optionsElement);
+
+    this._updateColor(this._probeGroup.color);
 
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.PropertiesChanged, this.refresh);
     this._listeners.install();
@@ -76,8 +78,8 @@ WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enable
 WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
 WebInspector.ProbeGroupDetailsSection.ColorContainerStyleClassName = "color-container";
 WebInspector.ProbeGroupDetailsSection.ColorStyleClassName = "color";
-WebInspector.ProbeGroupDetailsSection.ProbeColorValues = ["Yellow", "Red", "Blue", "Green", "Pink", "Orange", "Purple"];
-WebInspector.ProbeGroupDetailsSection.DefaultProbeColor = "Yellow";
+WebInspector.ProbeGroupDetailsSection.ProbeColorValues = [new WebInspector.Color("yellow"), new WebInspector.Color("red"), new WebInspector.Color("blue"), new WebInspector.Color("green"), new WebInspector.Color("pink"), new WebInspector.Color("orange"), new WebInspector.Color("purple")];
+WebInspector.ProbeGroupDetailsSection.DefaultProbeColor = new WebInspector.Color("yellow");
 
 
 WebInspector.ProbeGroupDetailsSection.prototype = {
@@ -93,7 +95,6 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     refresh: function()
     {
-        // FIXME: this should use WebInspector.Color.
         this._colorSelectorElement.style.backgroundColor = this._probeGroup.color;
     },
 
@@ -140,7 +141,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         var colors = WebInspector.ProbeGroupDetailsSection.ProbeColorValues;
         for (var i = 0; i <= colors.length - 1; i++) {
             var color = colorContainer.createChild("div");
-            color.textContent = colors[i];
+            color.textContent = colors[i].toString();
             color.classList.add(WebInspector.ProbeGroupDetailsSection.ColorStyleClassName);
             color.addEventListener("click", this._updateColor.bind(this, colors[i], popover));
         };
@@ -158,6 +159,8 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     _updateColor: function(color, popover)
     {
         this._probeGroup.color = color;
-        popover.dismiss();
+        if (popover)
+            popover.dismiss();
+        this.refresh();
     },
 };
