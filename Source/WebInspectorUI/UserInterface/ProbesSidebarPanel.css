@@ -95,7 +95,7 @@
 .panel.probes .table-container {
 	overflow-x: scroll;
 	overflow-y: scroll;
-	max-height: 200px;
+	height: 200px;
 	/*margin-left: 60px;*/
 }
 
@@ -122,6 +122,10 @@
 
 .sidebar > .panel.probes > .content > .details-section > .content > .group > .row {
 	padding: 5px;
+}
+
+.sidebar > .panel.probes > .content > .details-section .data-grid {
+	height: 100%;
 }
 
 .panel.probes ::-webkit-scrollbar {

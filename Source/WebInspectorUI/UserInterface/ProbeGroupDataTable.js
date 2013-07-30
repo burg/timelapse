@@ -32,32 +32,32 @@ WebInspector.ProbeGroupDataTable = function(probeGroup)
 
     this._probeGroup = probeGroup;
     this._probeListenersByUid = {};
-    this._probeColumnMap = {};
-    this._columnCount = -1;
-    this._data = [];
+    this._dataEntries = 0;
+    this._currentData = {};
 
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._addProbeToTable);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
 
     this.element = document.createElement("div");
     this.element.classList.add(WebInspector.ProbeGroupDataTable.ProbeTableContainerColumnStyleClassName);
-    this._tableElement = this.element.createChild("table");
-    var tableHeader = this._tableElement.createChild("thead");
-    this._tableHeaderRowElement = tableHeader.createChild("tr");
-    this._tableBodyElement = this._tableElement.createChild("tbody");
 
     this._listeners.install();
 
     this._animateFrameCallback = this.animateFrame.bind(this);
 
     // Set up probes that already exist in the group.
+    this.tableElement = new WebInspector.ProbesDataGrid();
     var probes = probeGroup.probes;
-    for (var i = 0; i < probes.length; ++i)
+    for (var i = 0; i < probes.length; ++i) {
         this._setupProbe(probes[i]);
+    }
+    this.element.appendChild(this.tableElement.element);
 };
 
 WebInspector.ProbeGroupDataTable.ProbeTableContainerColumnStyleClassName = "table-container";
 WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName = "main-column";
+WebInspector.ProbeGroupDataTable.ProbeColumnGroup = "probe";
+WebInspector.ProbeGroupDataTable.MinimumColumnWidth = "20%";
 
 
 WebInspector.ProbeGroupDataTable.prototype = {
@@ -104,16 +104,12 @@ WebInspector.ProbeGroupDataTable.prototype = {
     _setupProbe: function(probe)
     {
         console.assert(!(probe.probeId in this._probeListenersByUid), "Probe ", probe, " already exists in table ", this);
-        ++this._columnCount;
-        this._probeColumnMap[probe.probeId] = this._columnCount;
 
-        probe.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleToTable, this);
+        probe.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
 
-        var initialExpression = this._tableHeaderRowElement.createChild("th");
-        initialExpression.textContent = probe.expression;
-        initialExpression.addEventListener("click", this._displayChangeProbeExpressionPrompt.bind(this));
-        if (this._probeColumnMap[probe.probeId] === 0)
-            initialExpression.classList.add(WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName);
+        this.tableElement.addColumn(probe.probeId, { title: probe.expression, width: WebInspector.ProbeGroupDataTable.MinimumColumnWidth, group: WebInspector.ProbeGroupDataTable.ProbeColumnGroup });
+
+        //initialExpression.addEventListener("click", this._displayChangeProbeExpressionPrompt.bind(this));
     },
 
     _teardownProbe: function(probe)
@@ -123,29 +119,29 @@ WebInspector.ProbeGroupDataTable.prototype = {
         this.refreshSoon();
     },
 
-    _addSampleToTable: function(event)
+    _addSampleData: function(event)
     {
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
         var id = event.target.probeId;
 
-        if (!this._data.lastValue || this._data.lastValue.hasOwnProperty(id)) {
-            var newDataRow = new Object();
-            newDataRow[id] = sample;
-            this._data.push(newDataRow);
-            var row = this._tableBodyElement.createChild("tr");
-            for (var i = 0; i <= this._columnCount; i++) {
-                row.createChild("td");
-            }
-        } else {
-            this._data.lastValue[id] = sample;
-            var row = this._tableBodyElement.lastChild;
+        this._currentData[id] = sample.value;
+        ++this._dataEntries;
+
+        if (this._dataEntries === this._probeGroup.probes.length) {
+            this._addRow();
+            this._dataEntries = 0;
+            this._currentData = {};
         }
 
-        var cell = row.childNodes[this._probeColumnMap[id]];
-        if (this._probeColumnMap[id] === 0)
-            cell.classList.add(WebInspector.ProbeGroupDataTable.MainProbeColumnStyleClassName);
-        cell.textContent = sample.value;
+    },
+
+    _addRow: function()
+    {
+        var row = new WebInspector.ProbesDataGridNode(this._currentData);
+        row.dataGrid = this.tableElement;
+        row.createCells();
+        this.tableElement.appendChild(row);
     },
 
     _changeProbeExpression: function(event)
