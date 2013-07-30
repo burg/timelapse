@@ -47,16 +47,6 @@ WebInspector.ProbesSidebarPanel = function()
 };
 
 WebInspector.ProbesSidebarPanel.OffsetSectionsStyleClassName  = "offset-sections";
-WebInspector.ProbesSidebarPanel.ProbeColorStyleClassName = "probe-color";
-WebInspector.ProbesSidebarPanel.ProbeToggleStyleClassName = "probe-toggle";
-WebInspector.ProbesSidebarPanel.ProbeRemoveStyleClassName = "probe-remove";
-WebInspector.ProbesSidebarPanel.AddProbeValueStyleClassName = "probe-add";
-WebInspector.ProbesSidebarPanel.ProbeButtonEnabledStyleClassName = "enabled";
-WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName = "probe-popover";
-WebInspector.ProbesSidebarPanel.ColorContainerStyleClassName = "color-container";
-WebInspector.ProbesSidebarPanel.ColorStyleClassName = "color";
-WebInspector.ProbesSidebarPanel.ProbeColorValues = ["Yellow", "Red", "Blue", "Green", "Pink", "Orange", "Purple"];
-WebInspector.ProbesSidebarPanel.DefaultProbeColor = "Yellow";
 
 WebInspector.ProbesSidebarPanel.prototype = {
     constructor: WebInspector.ProbesSidebarPanel,
