@@ -52,6 +52,7 @@
 namespace WebCore {
 
 class Frame;
+class InjectedScriptManager;
 class InspectorController;
 class InspectorCompositeState;
 class InspectorProbeAgent;
@@ -106,9 +107,9 @@ class InspectorProbeAgent
 , public InspectorBackendDispatcher::ProbeCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorProbeAgent);
 public:
-    static PassOwnPtr<InspectorProbeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page)
+    static PassOwnPtr<InspectorProbeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page, InjectedScriptManager* InjectedScriptManager)
     {
-        return adoptPtr(new InspectorProbeAgent(instrumentingAgents, state, page));
+        return adoptPtr(new InspectorProbeAgent(instrumentingAgents, state, page, InjectedScriptManager));
     }
 
     ~InspectorProbeAgent();
@@ -117,7 +118,7 @@ public:
     void clearFrontend();
 
     // Callbacks from ScriptProbeResolver
-    void scriptProbeSampleAdded(PassRefPtr<TypeBuilder::Probe::ScriptProbeSample>);
+    void scriptProbeSampleAdded(int probeId, int sampleId, ScriptState*, const ScriptValue&);
     bool enabled();
 
     // ProbeCommandHandler API
@@ -134,7 +135,8 @@ public:
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
 private:
-    InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
+    InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*, InjectedScriptManager*);
+    const AtomicString& objectGroupName() const;
 
     typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
 
@@ -143,6 +145,7 @@ private:
     InspectorFrontend::Probe* m_frontend;
     Page* m_inspectedPage;
     ProbeMap m_probeMap;
+    InjectedScriptManager* m_injectedScriptManager;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     OwnPtr<ScriptProbeResolver> m_scriptProbeResolver;
 #endif

@@ -123,9 +123,14 @@ WebInspector.ProbeGroupDataTable.prototype = {
     {
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
-        var id = event.target.probeId;
 
-        this._currentData[id] = sample.value;
+        if (sample.object.type === "array" || sample.object.type === "object") {
+            console.log("TODO: display probe with type=(array|object): ", sample.object);
+            return;
+        }
+
+        var id = event.target.probeId;
+        this._currentData[id] = sample.object.value;
         ++this._dataEntries;
 
         if (this._dataEntries === this._probeGroup.probes.length) {

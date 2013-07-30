@@ -23,11 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeSampleObject = function(sampleId, timestamp, value)
+WebInspector.ProbeSampleObject = function(sampleId, timestamp, payload)
 {
     this.sampleId = sampleId;
     this.timestamp = timestamp;
-    this.value = value;
+    this.object = WebInspector.RemoteObject.fromPayload(payload);
 };
 
 WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expression)

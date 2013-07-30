@@ -34,6 +34,8 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
+#include "InjectedScript.h"
+#include "InjectedScriptManager.h"
 #include "InspectorState.h"
 #include "InstrumentingAgents.h"
 #include "Logging.h"
@@ -139,30 +141,28 @@ void ScriptProbeResolver::didContinue()
 
 void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState* state, const ScriptValue& value)
 {
-    // TODO: (Issue #316): Implement some sort of storage for probe samples.
-    // TODO: (Issue #317): Send RemoteObject references to the frontend instead of InspectorValues.
-    RefPtr<InspectorObject> payload = InspectorObject::create();
-    payload->setValue("value", value.toInspectorValue(state));
-
-    RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
-                                                            .setProbeId(probeId)
-                                                            .setSampleId(m_nextSampleId++)
-                                                            .setTimestamp(WTF::currentTimeMS())
-                                                            .setPayload(payload.release());
-    m_probeAgent->scriptProbeSampleAdded(result.release());
+    m_probeAgent->scriptProbeSampleAdded(probeId, m_nextSampleId++, state, value);
 }
 #endif
 
-InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
+InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage, InjectedScriptManager* injectedScriptManager)
 : InspectorBaseAgent<InspectorProbeAgent>("Probe", instrumentingAgents, state)
 , m_nextProbeId(1)
 , m_instrumentingAgents(instrumentingAgents)
-, m_inspectedPage(inspectedPage) {}
+, m_inspectedPage(inspectedPage)
+, m_injectedScriptManager(injectedScriptManager) {}
 
 InspectorProbeAgent::~InspectorProbeAgent()
 {
     ASSERT(!m_instrumentingAgents->inspectorProbeAgent());
 }
+
+const AtomicString& InspectorProbeAgent::objectGroupName() const
+{
+    DEFINE_STATIC_LOCAL(const AtomicString, objectGroup, ("script-probe-sample", AtomicString::ConstructFromLiteral));
+    return objectGroup;
+}
+
 
 void InspectorProbeAgent::setFrontend(InspectorFrontend* frontend)
 {
@@ -179,10 +179,19 @@ void InspectorProbeAgent::clearFrontend()
     m_frontend = 0;
 }
 
-void InspectorProbeAgent::scriptProbeSampleAdded(PassRefPtr<TypeBuilder::Probe::ScriptProbeSample> sample)
+void InspectorProbeAgent::scriptProbeSampleAdded(int probeId, int sampleId, ScriptState* state, const ScriptValue& value)
 {
+    // TODO: (Issue #316): Implement some sort of storage for probe samples.
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(value, objectGroupName());
+    RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
+                                                            .setProbeId(probeId)
+                                                            .setSampleId(sampleId)
+                                                            .setTimestamp(WTF::currentTimeMS())
+                                                            .setPayload(payload.release());
+
     if (m_frontend)
-        m_frontend->probeSampleReceived(sample);
+        m_frontend->probeSampleReceived(result.release());
 }
 
 bool InspectorProbeAgent::enabled()
@@ -204,6 +213,10 @@ void InspectorProbeAgent::disable(ErrorString*)
     m_state->setBoolean(ProbeAgentState::probesEnabled, false);
     m_instrumentingAgents->setInspectorProbeAgent(0);
     m_scriptProbeResolver = 0;
+
+    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    injectedScript.releaseObjectGroup(objectGroupName());
 }
 
 void InspectorProbeAgent::isEnabled(ErrorString*, bool* out_state)
@@ -219,6 +232,9 @@ void InspectorProbeAgent::clearAllProbes(ErrorString* errorString)
         return;
     }
     m_scriptProbeResolver->clearProbes();
+    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    injectedScript.releaseObjectGroup(objectGroupName());
 #endif
 
     m_probeMap.clear();
