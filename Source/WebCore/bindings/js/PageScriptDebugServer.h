@@ -59,7 +59,7 @@ public:
 
 #if ENABLE(WEB_REPLAY)
     ScriptProbeServer* probeServer() const { return m_probeServer.get(); }
-    void addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&);
+    void dispatchCaptureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 #endif
 
 private:

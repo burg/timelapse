@@ -23,9 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeSampleObject = function(sampleId, timestamp, payload)
+WebInspector.ProbeSampleObject = function(sampleId, batchId, timestamp, payload)
 {
     this.sampleId = sampleId;
+    this.batchId = batchId;
     this.timestamp = timestamp;
     this.object = WebInspector.RemoteObject.fromPayload(payload);
 };

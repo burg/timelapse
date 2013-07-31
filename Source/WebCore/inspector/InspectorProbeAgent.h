@@ -88,7 +88,7 @@ private:
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-    void addScriptProbeSample(int probeId, ScriptState*, const ScriptValue&);
+    void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 #endif
 
     Page* m_page;
@@ -118,7 +118,7 @@ public:
     void clearFrontend();
 
     // Callbacks from ScriptProbeResolver
-    void scriptProbeSampleAdded(int probeId, int sampleId, ScriptState*, const ScriptValue&);
+    void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, int sampleId, const ScriptValue&);
     bool enabled();
 
     // ProbeCommandHandler API

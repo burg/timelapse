@@ -49,7 +49,8 @@ PassOwnPtr<ScriptProbeServer> ScriptProbeServer::create()
 }
 
 ScriptProbeServer::ScriptProbeServer()
-: m_isActive(true) {}
+: m_isActive(true)
+, m_nextBatchId(1) {}
 
 ScriptProbeServer::~ScriptProbeServer()
 {
@@ -112,7 +113,7 @@ void ScriptProbeServer::addSampleFromConsole(int probeId, ScriptState* exec)
         return;
 
     ScriptValue wrappedResult = ScriptValue(exec->vm(), result);
-    PageScriptDebugServer::shared().addScriptProbeSample(probeId, exec, wrappedResult);
+    PageScriptDebugServer::shared().dispatchCaptureProbeSample(exec, foundProbe->value, m_nextBatchId++, wrappedResult);
 }
 
 void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFrame, intptr_t scriptId, int lineNumber, int columnNumber)
@@ -129,6 +130,8 @@ void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& deb
     ProbeSet foundProbes;
     if (!findProbesForPosition(scriptId, position, foundProbes))
         return;
+
+    int batchId = m_nextBatchId++;
 
     ProbeSet::iterator probesIt = foundProbes.begin();
     for (; probesIt != foundProbes.end(); ++probesIt) {
@@ -147,7 +150,7 @@ void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& deb
                 continue;
 
             ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
-            PageScriptDebugServer::shared().addScriptProbeSample(probe->uid(), debuggerCallFrame.callFrame(), wrappedResult);
+            PageScriptDebugServer::shared().dispatchCaptureProbeSample(debuggerCallFrame.callFrame(), probe, batchId, wrappedResult);
         }
     }
 }

@@ -140,9 +140,9 @@ void ScriptProbeResolver::didContinue()
 {
 }
 
-void ScriptProbeResolver::addScriptProbeSample(int probeId, ScriptState* state, const ScriptValue& value)
+void ScriptProbeResolver::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
 {
-    m_probeAgent->scriptProbeSampleAdded(probeId, m_nextSampleId++, state, value);
+    m_probeAgent->captureProbeSample(state, prpProbe, batchId, m_nextSampleId++, sample);
 }
 #endif
 
@@ -164,7 +164,6 @@ String InspectorProbeAgent::objectGroupForProbeId(int probeId) const
     return makeString(objectGroup, String::number(probeId));
 }
 
-
 void InspectorProbeAgent::setFrontend(InspectorFrontend* frontend)
 {
     m_frontend = frontend->probe();
@@ -180,14 +179,18 @@ void InspectorProbeAgent::clearFrontend()
     m_frontend = 0;
 }
 
-void InspectorProbeAgent::scriptProbeSampleAdded(int probeId, int sampleId, ScriptState* state, const ScriptValue& value)
+void InspectorProbeAgent::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, int sampleId, const ScriptValue& sample)
 {
+    RefPtr<ScriptProbe> probe = prpProbe;
+    ASSERT(probe == *m_probeMap.find(probe->uid()));
+
     // TODO: (Issue #316): Implement some sort of storage for probe samples.
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(value, objectGroupForProbeId(probeId));
+    RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(sample, objectGroupForProbeId(probe->uid()));
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
-                                                            .setProbeId(probeId)
+                                                            .setProbeId(probe->uid())
                                                             .setSampleId(sampleId)
+                                                            .setBatchId(batchId)
                                                             .setTimestamp(WTF::currentTimeMS())
                                                             .setPayload(payload.release());
 

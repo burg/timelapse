@@ -2582,6 +2582,7 @@
                 "properties": [
                     { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
                     { "name": "sampleId", "$ref": "ScriptProbeSampleId", "description": "Sample unique id." },
+                    { "name": "batchId", "type": "integer", "description": "Sample batch number." },
                     { "name": "timestamp", "type": "number", "description": "Sample timestamp." },
                     { "name": "payload", "$ref": "Runtime.RemoteObject", "description": "Contents of the sample." }
                 ]

@@ -51,6 +51,7 @@
 #include <wtf/StdLibExtras.h>
 
 #if ENABLE(WEB_REPLAY)
+#include "ScriptProbe.h"
 #include "ScriptProbeServer.h"
 #include <debugger/DebuggerCallFrame.h>
 #include <wtf/replay/InputIterator.h>
@@ -189,17 +190,17 @@ void PageScriptDebugServer::atStatement(const JSC::DebuggerCallFrame& callFrame,
 
     if (!m_probeServer->isActive())
         return;
-    
+
     // if web replay is active, only generate probe samples during replay.
     JSC::JSGlobalObject* globalObject = callFrame.dynamicGlobalObject();
     InputIterator* it = globalObject->inputIterator();
     if (it && !it->isReplaying())
         return;
-    
+
     m_probeServer->atStatement(callFrame, sourceID, firstLine, columnNumber);
 }
 
-void PageScriptDebugServer::addScriptProbeSample(int probeId, ScriptState* exec, const ScriptValue& value)
+void PageScriptDebugServer::dispatchCaptureProbeSample(ScriptState* exec, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
 {
     if (m_callingListeners)
         return;
@@ -208,12 +209,14 @@ void PageScriptDebugServer::addScriptProbeSample(int probeId, ScriptState* exec,
     if (!listeners)
         return;
 
+    RefPtr<ScriptProbe> probe = prpProbe;
+
     ASSERT(!listeners->isEmpty());
     TemporaryChange<bool> change(m_callingListeners, true);
     Vector<ScriptDebugListener*> copy;
     copyToVector(*listeners, copy);
     for (size_t i = 0; i < copy.size(); ++i)
-        copy[i]->addScriptProbeSample(probeId, exec, value);
+        copy[i]->captureProbeSample(exec, probe, batchId, sample);
 }
 #endif
 

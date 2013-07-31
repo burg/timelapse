@@ -147,7 +147,7 @@ protected:
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();
 #if ENABLE(WEB_REPLAY)
-    virtual void addScriptProbeSample(int /*probeId*/, ScriptState*, const ScriptValue&) {}
+    virtual void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int /* batchId */, const ScriptValue&) {}
 #endif
     void reset();
 

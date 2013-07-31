@@ -83,6 +83,7 @@ private:
     bool m_isActive;
     ScriptIdToLinesMap m_probeRegistry;
     ProbeMap m_probesById;
+    int m_nextBatchId;
 };
 
 } // namespace WebCore
