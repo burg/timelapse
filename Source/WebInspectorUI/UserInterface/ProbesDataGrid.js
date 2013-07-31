@@ -143,7 +143,7 @@ WebInspector.ProbesDataGrid.prototype = {
     	this.dataTableBody.lastChild.appendChild(td); // fillerRow
 
     	this._dataTableColumnGroup.span = this._columnCount;
-    	this._dataTableColumnGroup.appendChild(col);
+		this._dataTableColumnGroup.appendChild(col.cloneNode(true));
 
     	this.columns[columnIdentifier] = column;
     	this.columns[columnIdentifier].ordinal = this._columnsArray.length;
@@ -156,12 +156,28 @@ WebInspector.ProbesDataGrid.prototype = {
     removeColumn: function(columnIdentifier)
     {
     	var column = this.columns[columnIdentifier];
+        if (!column)
+			return;
+
     	var columnIndex = column.ordinal;
 
-    	//console.log(this._headerTableColumnGroup.childNodes);
+		var headerElement = this._headerTableColumnGroup.children[columnIndex];
+		headerElement.parentElement.removeChild(headerElement);
 
-    	//this._headerTableColumnGroup.removeChild(column.bodyElement);
-    	//this._dataTableColumnGroup.removeChild(column.bodyElement);
+		var headerCells = this._headerTableBody.children;
+		for (var i = 0; i < headerCells.length; ++i) {
+			var element = headerCells[i].children[columnIndex];
+			element.parentElement.removeChild(element);
+		}
+
+		var dataElement = this._dataTableColumnGroup.children[columnIndex];
+		dataElement.parentElement.removeChild(dataElement);
+
+		var dataCells = this._dataTableBody.children;
+		for (var i = 0; i < dataCells.length; ++i) {
+			var element = dataCells[i].children[columnIndex];
+			element.parentElement.removeChild(element);
+		}
 
     	delete this.columns[columnIdentifier];
     	this._columnsArray.splice(columnIndex, columnIndex);
@@ -169,6 +185,9 @@ WebInspector.ProbesDataGrid.prototype = {
     	--this._columnCount;
     	this._headerTableColumnGroup.span = this._columnCount;
     	this._dataTableColumnGroup.span = this._columnCount;
+
+		for (var i = columnIndex; i < this._columnsArray.length; ++i)
+		--this._columnsArray[i].ordinal;
     }
 
     /*get currentCalculator()

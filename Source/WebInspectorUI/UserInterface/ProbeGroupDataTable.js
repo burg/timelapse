@@ -134,19 +134,19 @@ WebInspector.ProbeGroupDataTable.prototype = {
         ++this._dataEntries;
 
         if (this._dataEntries === this._probeGroup.probes.length) {
-            this._addRow();
+            this._addNode();
             this._dataEntries = 0;
             this._currentData = {};
         }
 
     },
 
-    _addRow: function()
+    _addNode: function()
     {
-        var row = new WebInspector.ProbesDataGridNode(this._currentData);
-        row.dataGrid = this.tableElement;
-        row.createCells();
-        this.tableElement.appendChild(row);
+        var node = new WebInspector.ProbesDataGridNode(this._currentData);
+        node.dataGrid = this.tableElement;
+        node.createCells();
+        this.tableElement.appendChild(node);
     },
 
     _changeProbeExpression: function(event)
