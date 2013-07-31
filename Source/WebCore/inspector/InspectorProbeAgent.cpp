@@ -39,6 +39,7 @@
 #include "InspectorState.h"
 #include "InstrumentingAgents.h"
 #include "Logging.h"
+#include <wtf/text/StringConcatenate.h>
 #include <inttypes.h>
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -157,10 +158,10 @@ InspectorProbeAgent::~InspectorProbeAgent()
     ASSERT(!m_instrumentingAgents->inspectorProbeAgent());
 }
 
-const AtomicString& InspectorProbeAgent::objectGroupName() const
+String InspectorProbeAgent::objectGroupForProbeId(int probeId) const
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, objectGroup, ("script-probe-sample", AtomicString::ConstructFromLiteral));
-    return objectGroup;
+    DEFINE_STATIC_LOCAL(const AtomicString, objectGroup, ("script-probe-group-", AtomicString::ConstructFromLiteral));
+    return makeString(objectGroup, String::number(probeId));
 }
 
 
@@ -183,7 +184,7 @@ void InspectorProbeAgent::scriptProbeSampleAdded(int probeId, int sampleId, Scri
 {
     // TODO: (Issue #316): Implement some sort of storage for probe samples.
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(value, objectGroupName());
+    RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(value, objectGroupForProbeId(probeId));
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
                                                             .setProbeId(probeId)
                                                             .setSampleId(sampleId)
@@ -216,7 +217,8 @@ void InspectorProbeAgent::disable(ErrorString*)
 
     ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    injectedScript.releaseObjectGroup(objectGroupName());
+    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
+        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
 }
 
 void InspectorProbeAgent::isEnabled(ErrorString*, bool* out_state)
@@ -234,7 +236,8 @@ void InspectorProbeAgent::clearAllProbes(ErrorString* errorString)
     m_scriptProbeResolver->clearProbes();
     ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    injectedScript.releaseObjectGroup(objectGroupName());
+    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
+        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
 #endif
 
     m_probeMap.clear();

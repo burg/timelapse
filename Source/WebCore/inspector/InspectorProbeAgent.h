@@ -136,7 +136,7 @@ public:
 
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*, InjectedScriptManager*);
-    const AtomicString& objectGroupName() const;
+    String objectGroupForProbeId(int probeId) const;
 
     typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
 
