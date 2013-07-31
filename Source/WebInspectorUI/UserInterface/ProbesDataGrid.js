@@ -59,9 +59,9 @@ WebInspector.ProbesDataGrid.prototype = {
 
     // Public
 
-    addColumn: function(columnIdentifier, column)
+    addColumn: function(columnIdentifier, column, index)
     {
-    	if (column.disclosure)
+        if (column.disclosure)
             this.disclosureColumnIdentifier = columnIdentifier;
 
         var col = document.createElement("col");
@@ -102,92 +102,139 @@ WebInspector.ProbesDataGrid.prototype = {
         if (column.collapsesGroup) {
             console.assert(column.group !== column.collapsesGroup);
 
-        	var divider = document.createElement("div");
-        	divider.className = "divider";
-        	cell.appendChild(divider);
+            var divider = document.createElement("div");
+            divider.className = "divider";
+            cell.appendChild(divider);
 
-        	var collapseDiv = document.createElement("div");
-        	collapseDiv.className = "collapser-button";
-        	collapseDiv.title = this._collapserButtonCollapseColumnsToolTip();
-        	collapseDiv.addEventListener("mouseover", this._mouseoverColumnCollapser.bind(this));
-        	collapseDiv.addEventListener("mouseout", this._mouseoutColumnCollapser.bind(this));
-        	collapseDiv.addEventListener("click", this._clickInColumnCollapser.bind(this));
-        	cell.appendChild(collapseDiv);
+            var collapseDiv = document.createElement("div");
+            collapseDiv.className = "collapser-button";
+            collapseDiv.title = this._collapserButtonCollapseColumnsToolTip();
+            collapseDiv.addEventListener("mouseover", this._mouseoverColumnCollapser.bind(this));
+            collapseDiv.addEventListener("mouseout", this._mouseoutColumnCollapser.bind(this));
+            collapseDiv.addEventListener("click", this._clickInColumnCollapser.bind(this));
+            cell.appendChild(collapseDiv);
 
-        	cell.collapsesGroup = column.collapsesGroup;
-        	cell.classList.add("collapser");
-    	}
-
-        this.headerTableBody.firstChild.appendChild(cell); // headerRow
+            cell.collapsesGroup = column.collapsesGroup;
+            cell.classList.add("collapser");
+        }
 
         ++this._columnCount;
+        if (!index) {
+            this._headerTableBody.firstChild.appendChild(cell); // headerRow
 
-    	this._headerTableColumnGroup.span = this._columnCount;
-    	this._headerTableColumnGroup.appendChild(col);
+            this._headerTableColumnGroup.appendChild(col);
 
-    	if (this.dataTableBody.childNodes) {
-    		for (var i = 0; i < this.dataTableBody.childNodes.length - 1; ++i) {
-    			var data = new Object();
-    			data[columnIdentifier] = "?";
-    			var node = new WebInspector.ProbesDataGridNode(data);
-    			node.dataGrid = this;
-    			this.dataTableBody.childNodes[i].appendChild(node.createCell(columnIdentifier));
-    		}
-    	}
+            if (this._dataTableBody.childNodes) {
+                for (var i = 0; i < this._dataTableBody.childNodes.length - 1; ++i) {
+                    var data = new Object();
+                    data[columnIdentifier] = "?";
+                    var node = new WebInspector.ProbesDataGridNode(data);
+                    node.dataGrid = this;
+                    this._dataTableBody.childNodes[i].appendChild(node.createCell(columnIdentifier));
+                }
+            }
 
-    	var td = document.createElement("td");
-    	td.className = columnIdentifier + "-column";
-    	var group = column.group;
-    	if (group)
-    	    td.classList.add("column-group-" + group);
-    	this.dataTableBody.lastChild.appendChild(td); // fillerRow
+            var td = document.createElement("td");
+            td.className = columnIdentifier + "-column";
+            var group = column.group;
+            if (group)
+                td.classList.add("column-group-" + group);
+            this._dataTableBody.lastChild.appendChild(td); // fillerRow
 
-    	this._dataTableColumnGroup.span = this._columnCount;
-		this._dataTableColumnGroup.appendChild(col.cloneNode(true));
+            this._dataTableColumnGroup.appendChild(col.cloneNode(true));
 
-    	this.columns[columnIdentifier] = column;
-    	this.columns[columnIdentifier].ordinal = this._columnsArray.length;
-    	this.columns[columnIdentifier].identifier = columnIdentifier;
-    	this._columnsArray.push(column);
+            this.columns[columnIdentifier] = column;
+            this.columns[columnIdentifier].ordinal = this._columnsArray.length;
+            this.columns[columnIdentifier].identifier = columnIdentifier;
+            this._columnsArray.push(column);
 
-   	    this._columnsArray.lastValue.bodyElement = this._dataTableColumnGroup.lastChild;
+               this._columnsArray.lastValue.bodyElement = this._dataTableColumnGroup.lastChild;
+        } else {
+            this._headerTableBody.firstChild.insertBefore(cell, this._headerTableBody.firstChild.children[index]); // headerRow
+
+            this._headerTableColumnGroup.insertBefore(col, this._headerTableColumnGroup.children[index]);
+
+            if (this._dataTableBody.childNodes) {
+                for (var i = 0; i < this._dataTableBody.childNodes.length - 1; ++i) {
+                    var data = new Object();
+                    data[columnIdentifier] = "?";
+                    var node = new WebInspector.ProbesDataGridNode(data);
+                    node.dataGrid = this;
+                    var currentElement = this._dataTableBody.childNodes[i].children[index];
+                    this._dataTableBody.childNodes[i].insertBefore(node.createCell(columnIdentifier), currentElement);
+                }
+            }
+
+            var td = document.createElement("td");
+            td.className = columnIdentifier + "-column";
+            var group = column.group;
+            if (group)
+                td.classList.add("column-group-" + group);
+            this._dataTableBody.lastChild.insertBefore(td, this._dataTableBody.lastChild.children[index]); // fillerRow
+
+            this._dataTableColumnGroup.insertBefore(col.cloneNode(true), this._dataTableColumnGroup.children[index]);
+
+            this.columns[columnIdentifier] = column;
+            this.columns[columnIdentifier].ordinal = index;
+            this.columns[columnIdentifier].identifier = columnIdentifier;
+            this._columnsArray.splice(index, 1, column);
+
+               this._columnsArray[index].bodyElement = this._dataTableColumnGroup.children[index];
+        }
+
+        this._headerTableColumnGroup.span = this._columnCount;
+        this._dataTableColumnGroup.span = this._columnCount;
     },
 
-    removeColumn: function(columnIdentifier)
+    removeColumn: function(columnIdentifier, willReplace)
     {
-    	var column = this.columns[columnIdentifier];
+        var column = this.columns[columnIdentifier];
         if (!column)
-			return;
+            return;
 
-    	var columnIndex = column.ordinal;
+        var columnIndex = column.ordinal;
 
-		var headerElement = this._headerTableColumnGroup.children[columnIndex];
-		headerElement.parentElement.removeChild(headerElement);
+        var headerElement = this._headerTableColumnGroup.children[columnIndex];
+        headerElement.parentElement.removeChild(headerElement);
 
-		var headerCells = this._headerTableBody.children;
-		for (var i = 0; i < headerCells.length; ++i) {
-			var element = headerCells[i].children[columnIndex];
-			element.parentElement.removeChild(element);
-		}
+        var headerCells = this._headerTableBody.children;
+        for (var i = 0; i < headerCells.length; ++i) {
+            var element = headerCells[i].children[columnIndex];
+            element.parentElement.removeChild(element);
+        }
 
-		var dataElement = this._dataTableColumnGroup.children[columnIndex];
-		dataElement.parentElement.removeChild(dataElement);
+        var dataElement = this._dataTableColumnGroup.children[columnIndex];
+        dataElement.parentElement.removeChild(dataElement);
 
-		var dataCells = this._dataTableBody.children;
-		for (var i = 0; i < dataCells.length; ++i) {
-			var element = dataCells[i].children[columnIndex];
-			element.parentElement.removeChild(element);
-		}
+        var dataCells = this._dataTableBody.children;
+        for (var i = 0; i < dataCells.length; ++i) {
+            var element = dataCells[i].children[columnIndex];
+            element.parentElement.removeChild(element);
+        }
 
-    	delete this.columns[columnIdentifier];
-    	this._columnsArray.splice(columnIndex, columnIndex);
+        delete this.columns[columnIdentifier];
+        this._columnsArray.splice(columnIndex, 1);
 
-    	--this._columnCount;
-    	this._headerTableColumnGroup.span = this._columnCount;
-    	this._dataTableColumnGroup.span = this._columnCount;
+        --this._columnCount;
+        this._headerTableColumnGroup.span = this._columnCount;
+        this._dataTableColumnGroup.span = this._columnCount;
 
-		for (var i = columnIndex; i < this._columnsArray.length; ++i)
-		--this._columnsArray[i].ordinal;
+        if (!willReplace) {
+            for (var i = columnIndex; i < this._columnsArray.length; ++i)
+                --this._columnsArray[i].ordinal;
+        }
+    },
+
+    changeColumn: function(oldIdentifier, newIdentifier, newColumn)
+    {
+        var oldColumn = this.columns[oldIdentifier];
+        if (!oldColumn)
+            return;
+
+        var index = oldColumn.ordinal;
+
+        this.removeColumn(oldIdentifier, true);
+        this.addColumn(newIdentifier, newColumn, index);
     }
 
     /*get currentCalculator()
