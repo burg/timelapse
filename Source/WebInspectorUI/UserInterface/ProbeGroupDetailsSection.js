@@ -56,7 +56,7 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
     this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked.bind(this, this._probeGroup.lineNumber));
 
-    var dataTable = new WebInspector.ProbeGroupDataTable(probeGroup);
+    var dataTable = new WebInspector.ProbesDataGrid(probeGroup);
     var singletonRow = new WebInspector.DetailsSectionRow;
     singletonRow.element.appendChild(dataTable.element);
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);

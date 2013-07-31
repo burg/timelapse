@@ -23,41 +23,41 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbesDataGrid = function(columns, editCallback, deleteCallback)
+WebInspector.ProbesDataGrid = function(probeGroup)
 {
-    WebInspector.DataGrid.call(this, columns, editCallback, deleteCallback);
+    this._probeGroup = probeGroup;
 
-    /*this.filterableColumns = [];
-
-    // Check if any of the cells can be filtered.
-    for (var identifier in columns) {
-        var scopeBar = columns[identifier].scopeBar;
-        if (!scopeBar)
-            continue;
-        this.filterableColumns.push(identifier);
-        scopeBar.columnIdenfifier = identifier;
-        scopeBar.addEventListener(WebInspector.ScopeBar.Event.SelectionChanged, this._scopeBarSelectedItemsDidChange, this);
+    var columns = {};
+    for (var i = 0; i < this._probeGroup.probes.length; ++i) {
+        var probe = this._probeGroup.probes[i];
+        var columnIdentifier = probe.probeId;
+        columns[columnIdentifier] = { title: probe.expression };
     }
+    WebInspector.DataGrid.call(this, columns);
 
-    if (this.filterableColumns.length > 1) {
-        console.error("Creating a ProbesDataGrid with more than one filterable column is not yet supported.");
-        return;
-    }
+    this._gridNodes = {};
 
-    var items = [new WebInspector.FlexibleSpaceNavigationItem, this.columns[this.filterableColumns[0]].scopeBar];
-    this._navigationBar = new WebInspector.NavigationBar(null, items);
-    var container = this.element.appendChild(document.createElement("div"));
-    container.className = "navigation-bar-container";
-    container.appendChild(this._navigationBar.element);
-
-    this.addEventListener(WebInspector.DataGrid.Event.SelectedNodeChanged, this._dataGridSelectedNodeChanged, this);
-    window.addEventListener("resize", this._windowResized.bind(this));*/
+    this._listeners = new WebInspector.EventListenerGroup(this, "Static probe group data grid listeners");
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.RowUpdated, this._updateGridNode);
+    this._listeners.install();
 }
 
 WebInspector.ProbesDataGrid.prototype = {
     constructor: WebInspector.ProbesDataGrid,
+    __proto__: WebInspector.DataGrid.prototype,
 
     // Public
+
+    closed: function()
+    {
+        var probes = this._probeGroup.probes;
+        for (var i = 0; i < probes.length; ++i)
+            this._teardownProbe(probes[i]);
+
+        this._listeners.uninstall(true);
+    },
 
     addColumn: function(columnIdentifier, column, index)
     {
@@ -235,90 +235,34 @@ WebInspector.ProbesDataGrid.prototype = {
 
         this.removeColumn(oldIdentifier, true);
         this.addColumn(newIdentifier, newColumn, index);
-    }
-
-    /*get currentCalculator()
-    {
-        // Implemented by subclasses if they have a graph.
-        return null;
-    },
-
-    updateCalculatorBoundariesWithRecord: function(record)
-    {
-        // Implemented by subclasses if they have a graph.
-    },
-
-    updateCalculatorBoundariesWithDataGridNode: function(node)
-    {
-        // Implemented by subclasses if they have a graph.
-    },
-
-    updateCalculatorBoundariesWithEventMarker: function(eventMarker)
-    {
-        // Implemented by subclasses if they have a graph.
-    },
-
-    reset: function()
-    {
-        // May be overridden by subclasses. If so, they should call the superclass.
-
-        this._hidePopover();
-    },
-
-    shown: function()
-    {
-        // Implemented by subclasses.
-    },
-
-    hidden: function()
-    {
-        // May be overridden by subclasses. If so, they should call the superclass.
-
-        this._hidePopover();
-    },
-
-    update: function()
-    {
-        // Implemented by subclasses.
-    },
-
-
-    updateLayout: function()
-    {
-        WebInspector.DataGrid.prototype.updateLayout.call(this);
-
-        this._navigationBar.updateLayout();
     },
 
     // Private
 
-    _scopeBarSelectedItemsDidChange: function(event)
+    _setupProbe: function(event)
     {
-        var columnIdentifier = event.target.columnIdenfifier;
-        this.dispatchEventToListeners(WebInspector.ProbesDataGrid.Event.FiltersDidChange, {columnIdentifier: columnIdentifier});
+        var probe = event.data;
+        this.addColumn(probe.probeId, { title: probe.expression });
     },
 
-    _dataGridSelectedNodeChanged: function(event)
+    _teardownProbe: function(event)
     {
-        if (!this.selectedNode) {
-            this._hidePopover();
-            return;
-        }
-
-        var record = this.selectedNode.record;
-        if (!record || !record.callFrames || !record.callFrames.length) {
-            this._hidePopover();
-            return;
-        }
-
-        this._showPopoverForSelectedNodeSoon();
+        var probe = event.data;
+        this.removeColumn(probe.probeId);
     },
 
-    _windowResized: function(event)
+    _updateGridNode: function(event)
     {
-        if (this._popover && this._popover.visible)
-            this._updatePopoverForSelectedNode(false);
-    }*/
+        var data = event.data;
+        if (!this._gridNodes[data.index]) {
+            var node = new WebInspector.ProbesDataGridNode(data.row);
+            node.dataGrid = this;
+            node.createCells();
+            this._gridNodes[data.index] = node;
+            this._tableBodyElement.appendChild(node);
+        } else {
+            var node = this._gridNodes[data.index];
+            node.data = data.row;
+        }
+    }
 }
-
-WebInspector.ProbesDataGrid.prototype.__proto__ = WebInspector.DataGrid.prototype;

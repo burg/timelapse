@@ -31,6 +31,10 @@ WebInspector.ProbeGroupObject = function(url, lineNumber)
 	this._probes = [];
     this._probesByUid = {};
 	this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
+    this._dataEntries = 0;
+    this._dataTable = [{}];
+
+    WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData)
 
     // FIXME: the probe group object shouldn't store view objects.
     // It should be managed by a coordinator class.
@@ -43,7 +47,8 @@ WebInspector.ProbeGroupObject = function(url, lineNumber)
 WebInspector.ProbeGroupObject.Event = {
     ProbeAdded: "probe-group-probe-added",
     ProbeRemoved: "probe-group-probe-removed",
-    PropertiesChanged: "probe-group-properties-changed"
+    PropertiesChanged: "probe-group-properties-changed",
+    RowUpdated: "probe-group-row-updated"
 };
 
 WebInspector.ProbeGroupObject.ProbeGutterStyleClassName = "probe-gutter";
@@ -98,4 +103,33 @@ WebInspector.ProbeGroupObject.prototype = {
         this._probesByUid[probe.uid] = probe;
 		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe)
     },
+
+    // Private
+
+    _addSampleData: function(event)
+    {
+        var sample = event.data;
+        console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
+
+        if (sample.object.type === "array" || sample.object.type === "object") {
+            console.log("TODO: display probe with type=(array|object): ", sample.object);
+            return;
+        }
+
+        var columnIdentifier = event.target.probeId;
+        this._dataTable.lastValue[columnIdentifier] = sample.object.value;
+        ++this._dataEntries;
+
+        var data = {
+            row: this._dataTable.lastValue,
+            index: this._dataTable.length - 1
+        };
+
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
+
+        if (this._dataEntries === this.probes.length) {
+            this._dataEntries = 0;
+            this._dataTable.push({});
+        }
+    }
 };
