@@ -47,21 +47,23 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     this._listeners.register(toggleButton, "click", this._toggleButtonClicked);
 
     this._colorSelectorElement = optionsElement.createChild("div");
-    this._colorSelectorElement.style.backgroundColor = WebInspector.ProbeGroupDetailsSection.DefaultProbeColor;
     this._colorSelectorElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeColorStyleClassName);
     this._colorSelectorElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(this._colorSelectorElement, "click", this._colorSelectorElementClicked);
 
     var addProbeButton = optionsElement.createChild("img");
     addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
-    this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked.bind(this, this._probeGroup.lineNumber));
+    this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
 
-    var dataTable = new WebInspector.ProbeGroupDataGrid(probeGroup);
+    this._dataGrid = new WebInspector.ProbeGroupDataGrid(probeGroup);
+    this._dataGrid.element.classList.add("inline");
     var singletonRow = new WebInspector.DetailsSectionRow;
-    singletonRow.element.appendChild(dataTable.element);
+    singletonRow.element.appendChild(this._dataGrid.element);
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
     WebInspector.DetailsSection.call(this, "probe", title, [probeSectionGroup], optionsElement);
+
+    this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
     this._gutterElement = document.createElement("div");
     this._gutterElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName);
@@ -69,12 +71,14 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
 
     this._updateColor();
     // FIXME: this will not work if the current view does not contain the probe.
-    WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._probeGroup.lineNumber, "CodeMirror-linenumbers", this._gutterElement);
+    if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
+        WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._probeGroup.lineNumber, "CodeMirror-linenumbers", this._gutterElement);
 
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.PropertiesChanged, this._updateColor);
     this._listeners.install();
 };
 
+WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
 WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
 WebInspector.ProbeGroupDetailsSection.ProbeColorStyleClassName = "probe-color";
 WebInspector.ProbeGroupDetailsSection.ProbeToggleStyleClassName = "probe-toggle";
@@ -83,7 +87,7 @@ WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
 WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
 WebInspector.ProbeGroupDetailsSection.ColorContainerStyleClassName = "color-container";
-WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName = "probe-gutter";
+WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName = "probe-gutter-marker";
 WebInspector.ProbeGroupDetailsSection.ColorStyleClassName = "color";
 WebInspector.ProbeGroupDetailsSection.ProbeColorValues = [new WebInspector.Color("yellow"), new WebInspector.Color("red"), new WebInspector.Color("blue"), new WebInspector.Color("green"), new WebInspector.Color("pink"), new WebInspector.Color("orange"), new WebInspector.Color("purple")];
 WebInspector.ProbeGroupDetailsSection.DefaultProbeColor = new WebInspector.Color("yellow");
@@ -97,21 +101,23 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     closed: function()
     {
         // FIXME: this will not work if the current view does not contain the probe.
-        WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._probeGroup.lineNumber, "CodeMirror-linenumbers", null);
+        if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
+            WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._probeGroup.lineNumber, "CodeMirror-linenumbers", null);
         this._listeners.uninstall(true);
     },
 
     // Private
 
-    _addProbeButtonClicked: function(lineNumber, event)
+    _addProbeButtonClicked: function(event)
     {
-        function getInitialProbeExpression(popover, event)
+        function createProbeFromEnteredExpression(visiblePopover, event)
         {
             if (event.keyCode !== 13)
                 return;
             var url = WebInspector.contentBrowser.currentContentView.resource.url;
-            ProbeAgent.createScriptProbe(url, lineNumber, 0, event.target.value);
-            popover.dismiss();
+            var expression = event.target.value;
+            ProbeAgent.createScriptProbe(url, this._probeGroup.lineNumber, 0, expression);
+            visiblePopover.dismiss();
         }
 
         var popover = new WebInspector.Popover;
@@ -119,7 +125,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         content.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
         content.createChild("div").textContent = "Add Another Value?";
         var textBox = content.createChild("input");
-        textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
+        textBox.addEventListener("keypress", createProbeFromEnteredExpression.bind(this, popover));
         textBox.addEventListener("click", function (event) {event.target.select()});
         textBox.type = "text";
         textBox.value = "Enter Expression";

@@ -35,18 +35,14 @@
 	top: 22px;
 }
 
-.sidebar > .panel.probes > .content > .details-section {
-	width: 100%;
-}
-
-.sidebar > .panel.probes > .content > .details-section > .header > .options {
+.details-section.probe-group > .header > .options {
 	float: right;
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-remove,
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-color,
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-add,
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle {
+.details-section.probe-group .options > .probe-remove,
+.details-section.probe-group .options > .probe-color,
+.details-section.probe-group .options > .probe-add,
+.details-section.probe-group .options > .probe-toggle {
 	float: right;
 	height: 11px;
 	margin-top: 1px;
@@ -54,78 +50,33 @@
 	cursor: pointer;
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle {
+.details-section.probe-group .options > .probe-toggle {
 	content: url(Images/BreakpointInactive.png);
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-toggle.enabled {
+.details-section.probe-group .options > .probe-toggle.enabled {
 	content: url(Images/Breakpoint.png);
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-remove {
+.details-section.probe-group .options > .probe-remove {
 	content: url(Images/Close.pdf);
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-color {
+.details-section.probe-group .options > .probe-color {
 	margin-top: 0px;
-}
-
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-color {
 	height: 13px;
 	width: 13px;
 	border: 1px solid #666;
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > .probe-add {
+.details-section.probe-group .options > .probe-add {
 	content: url(Images/Plus.pdf);
 }
 
-.sidebar > .panel.probes > .content > .details-section > .header > .options > input {
+.details-section.probe-group .options > input {
 	height: 12px;
 	width: 40px;
 	font-size: 10px;
-}
-
-/*.panel.probes .table-container .main-column {
-	position: absolute;
-	width: 56px;
-	left: 5px;
-}*/
-
-.panel.probes .table-container {
-	overflow-x: scroll;
-	overflow-y: scroll;
-	height: 200px;
-	/*margin-left: 60px;*/
-}
-
-.panel.probes table {
-	border-collapse: collapse;
-	margin-bottom: 3px
-}
-
-.panel.probes table td {
-	margin: 0;
-	white-space: nowrap;
-}
-
-.panel.probes table th, td {
-	padding: 3px;
-	background-color: rgba(255,255,255,0.7);
-	border: 1px solid gray;
-}
-
-.panel.probes table input {
-	height: 16px;
-	width: 95px;
-}
-
-.sidebar > .panel.probes > .content > .details-section > .content > .group > .row {
-	padding: 5px;
-}
-
-.sidebar > .panel.probes > .content > .details-section .data-grid {
-	height: 100%;
 }
 
 .panel.probes ::-webkit-scrollbar {
@@ -148,7 +99,7 @@
 	opacity: 0;
 }
 
-.probe-gutter {
+.probe-gutter-marker {
 	color: #999;
 	font-family: 'Lucida Grande', Helvetica, sans-serif;
 	font-size:  9px;
