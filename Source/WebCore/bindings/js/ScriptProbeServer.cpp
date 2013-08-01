@@ -75,6 +75,29 @@ void ScriptProbeServer::addProbeForScriptId(ScriptId scriptId, PassRefPtr<Script
     linesMap.iterator->value.add(probe);
 }
 
+void ScriptProbeServer::removeProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe> prpProbe)
+{
+    RefPtr<ScriptProbe> probe = prpProbe;
+
+    ProbeMap::iterator foundProbe = m_probesById.find(probe->uid());
+    if (foundProbe == m_probesById.end())
+        return;
+    m_probesById.remove(foundProbe);
+
+    ScriptIdToLinesMap::iterator linesForScript = m_probeRegistry.find(scriptId);
+    if (linesForScript == m_probeRegistry.end())
+        return;
+    LineToScriptProbeMap::iterator probeSet = linesForScript->value.find(probe->position().m_line);
+    if (probeSet == linesForScript->value.end())
+        return;
+    ProbeSet::iterator probeElement = probeSet->value.find(probe);
+    if (probeElement == probeSet->value.end())
+        return;
+    probeSet->value.remove(probeElement);
+
+    LOG(DeterministicReplay, "ScriptProbeServer: removed probe uid=%d (script id=%" PRIiPTR ", url=%s, line=%d, col=%d)", probe->uid(), scriptId, probe->url().utf8().data(), probe->position().m_line.zeroBasedInt(), probe->position().m_column.zeroBasedInt());
+}
+
 void ScriptProbeServer::clearProbesForScriptId(ScriptId scriptId)
 {
     if (!m_probeRegistry.contains(scriptId))

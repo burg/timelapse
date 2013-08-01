@@ -26,32 +26,26 @@
 WebInspector.ProbeGroupObject = function(url, lineNumber)
 {
     WebInspector.Object.call(this);
-	this._url = url;
-	this._lineNumber = lineNumber;
-	this._probes = [];
+    this._url = url;
+    this._lineNumber = lineNumber;
+    this._probes = [];
     this._probesByUid = {};
-	this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
+    this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
     this._dataEntries = 0;
     this._dataTable = [{}];
+    this._enabled = true;
 
-    WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData)
-
-    // FIXME: the probe group object shouldn't store view objects.
-    // It should be managed by a coordinator class.
-    this._gutterElement = document.createElement("div");
-	this._gutterElement.classList.add(WebInspector.ProbeGroupObject.ProbeGutterStyleClassName);
-	this._gutterElement.style.backgroundColor = this._color;
-	this._gutterElement.textContent = this._lineNumber + 1;
+    WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
 }
 
 WebInspector.ProbeGroupObject.Event = {
     ProbeAdded: "probe-group-probe-added",
     ProbeRemoved: "probe-group-probe-removed",
     PropertiesChanged: "probe-group-properties-changed",
-    RowUpdated: "probe-group-row-updated"
+    RowUpdated: "probe-group-row-updated",
+    WillRemove: "probe-group-will-remove"
 };
 
-WebInspector.ProbeGroupObject.ProbeGutterStyleClassName = "probe-gutter";
 WebInspector.ProbeGroupObject.DefaultProbeColor = new WebInspector.Color("yellow");
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
 
@@ -60,6 +54,11 @@ WebInspector.ProbeGroupObject.prototype = {
     __proto__: WebInspector.Object.prototype,
 
     // Public
+
+    get isEnabled()
+    {
+        return this._enabled;
+    },
 
     get url()
     {
@@ -81,27 +80,86 @@ WebInspector.ProbeGroupObject.prototype = {
     	return this._color;
     },
 
+    // Group key is set when the first probe is added to the group. It is saved separately
+    // so that the group key persists even after all of the probes have been removed.
     get groupKey()
     {
-        return (this._probes.length) ? this._probes[0].groupKey : WebInspector.ProbeGroupObject.DefaultGroupKey;
+        return this._groupKey || WebInspector.ProbeGroupObject.DefaultGroupKey;
     },
 
     set color(value)
     {
         this._color = value;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.PropertiesChanged, this);
-
-		this._gutterElement.style.backgroundColor = this._color;
-		WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._lineNumber, "CodeMirror-linenumbers", this._gutterElement);
     },
+
+    clear: function()
+    {
+        for (var i = 0; i < this._probes.length; ++i)
+            WebInspector.probeManager.removeProbe(this._probes[i]);
+    },
+
+    enable: function()
+    {
+        if (this.isEnabled)
+            return;
+
+        this._enabled = true;
+        for (var i = 0; i < this._probes.length; ++i)
+            if (!this._probes[i].enabled)
+                WebInspector.probeManager.enableProbe(this._probes[i]);
+    },
+
+    disable: function()
+    {
+        if (!this.isEnabled)
+            return;
+
+        this._enabled = false;
+        for (var i = 0; i < this._probes.length; ++i)
+            if (this._probes[i].enabled)
+                WebInspector.probeManager.disableProbe(this._probes[i]);
+    },
+
+    // Protected (called by ProbeManager.js)
 
     addProbe: function(probe)
     {
         console.assert(probe instanceof WebInspector.ProbeObject, "Tried to add non-probe ", probe, " to probe group", this);
 
-    	this._probes.push(probe);
-        this._probesByUid[probe.uid] = probe;
-		this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe)
+        this._probes.push(probe);
+        this._probesByUid[probe.probeId] = probe;
+        if (!this._groupKey)
+            this._groupKey = probe.groupKey;
+
+        console.assert(probe.groupKey === this.groupKey, "New probe ", probe, " added to group ", this, " with inconsistent group key.");
+
+        if (this.isEnabled)
+            WebInspector.probeManager.enableProbe(probe);
+        else
+            WebInspector.probeManager.disableProbe(probe);
+
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe)
+    },
+
+    removeProbe: function(probe)
+    {
+        console.assert(probe instanceof WebInspector.ProbeObject, "Tried to remove non-probe ", probe, " to probe group", this);
+        console.assert(this._probes.indexOf(probe) != -1, "Tried to remove probe", probe, " not in group ", this);
+        console.assert(probe.probeId in this._probesByUid, "Tried to remove probe", probe, " not in group ", this);
+
+        this._probes.splice(this._probes.indexOf(probe), 1);
+        delete this._probesByUid[probe.probeId];
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeRemoved, probe);
+        // TODO: adjust data table model to remove column and cells for this removed probe.
+    },
+
+    willRemove: function()
+    {
+        console.assert(!this._probes.length, "ProbeGroupObject.willRemove called, but probes still associated with group: ", this._probes);
+
+        WebInspector.ProbeObject.removeEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.WillRemove);
     },
 
     // Private
@@ -116,12 +174,15 @@ WebInspector.ProbeGroupObject.prototype = {
             return;
         }
 
+        console.assert(this._dataTable.length, "Not allowed to have an empty data table for probe group", this);
+
         var columnIdentifier = event.target.probeId;
-        this._dataTable.lastValue[columnIdentifier] = sample.object.value;
+        var currentRow = this._dataTable[this._dataTable.length - 1];
+        currentRow[columnIdentifier] = sample.object.value;
         ++this._dataEntries;
 
         var data = {
-            row: this._dataTable.lastValue,
+            row: currentRow,
             index: this._dataTable.length - 1
         };
 

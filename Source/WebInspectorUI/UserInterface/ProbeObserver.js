@@ -44,6 +44,11 @@ WebInspector.ProbeObserver.prototype = {
         WebInspector.probeManager.probeAdded(probe);
     },
 
+    probeRemoved: function(probe)
+    {
+        WebInspector.probeManager.probeRemoved(probe);
+    },
+
     probeEnabled: function(probeId)
     {
         WebInspector.probeManager.probeEnabled(probeId);

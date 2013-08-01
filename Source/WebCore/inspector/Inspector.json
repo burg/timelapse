@@ -2633,6 +2633,12 @@
                 ]
             },
             {
+                "name": "removeProbe",
+                "parameters": [
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the requested probe." }
+                ]
+            },
+            {
                 "name": "createScriptProbe",
                 "parameters": [
                     { "name": "url", "type": "string", "description": "Script URL." },
@@ -2658,6 +2664,13 @@
                     { "name": "probe", "$ref": "ScriptProbe", "description": "Information for newly-created probe." }
                 ],
                 "description": "A new probe was added."
+            },
+            {
+                "name": "probeRemoved",
+                "parameters": [
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Id of the removed probe." }
+                ],
+                "description": "A probe was deleted."
             },
             {
                 "name": "probeEnabled",

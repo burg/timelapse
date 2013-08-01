@@ -103,18 +103,13 @@ WebInspector.ProbeGroupDataTable.prototype = {
 
     _setupProbe: function(probe)
     {
-        console.assert(!(probe.probeId in this._probeListenersByUid), "Probe ", probe, " already exists in table ", this);
-
         probe.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
-
         this.tableElement.addColumn(probe.probeId, { title: probe.expression, width: WebInspector.ProbeGroupDataTable.MinimumColumnWidth, group: WebInspector.ProbeGroupDataTable.ProbeColumnGroup });
-
-        //initialExpression.addEventListener("click", this._displayChangeProbeExpressionPrompt.bind(this));
     },
 
-    _teardownProbe: function(probe)
+    _teardownProbe: function(event)
     {
-        console.assert(probe.probeId in this._probeListenersByUid, "Probe ", probe, " doesn't exist in table ", this);
+        var probe = event.data;
         probe.removeEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleToTable, this);
         this.refreshSoon();
     },

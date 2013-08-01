@@ -59,8 +59,9 @@ public:
     static PassOwnPtr<ScriptProbeServer> create();
     virtual ~ScriptProbeServer();
 
-    void addProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe>);
-    void clearProbesForScriptId(ScriptId scriptId);
+    void addProbeForScriptId(ScriptId, PassRefPtr<ScriptProbe>);
+    void removeProbeForScriptId(ScriptId, PassRefPtr<ScriptProbe>);
+    void clearProbesForScriptId(ScriptId);
     void setIsActive(bool active) { m_isActive = active; }
     bool isActive() const { return m_isActive; }
 

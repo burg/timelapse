@@ -76,8 +76,8 @@ public:
     virtual ~ScriptProbeResolver();
 
     void clearScriptMapping();
-    void clearProbes();
     void addProbe(PassRefPtr<ScriptProbe>);
+    void removeProbe(PassRefPtr<ScriptProbe>);
 
 private:
     ScriptProbeResolver(Page*, InspectorProbeAgent*);
@@ -129,6 +129,7 @@ public:
     virtual void clearAllProbes(ErrorString*);
     virtual void getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& result);
     virtual void getProbeSamples(ErrorString*, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result);
+    virtual void removeProbe(ErrorString*, int probeId);
     virtual void enableProbe(ErrorString*, int probeId);
     virtual void disableProbe(ErrorString*, int probeId);
     // Line and column numbers start counting from 0.
@@ -147,7 +148,7 @@ private:
     ProbeMap m_probeMap;
     InjectedScriptManager* m_injectedScriptManager;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-    OwnPtr<ScriptProbeResolver> m_scriptProbeResolver;
+    OwnPtr<ScriptProbeResolver> m_probeResolver;
 #endif
 };
 

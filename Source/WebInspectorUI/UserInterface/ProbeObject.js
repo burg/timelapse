@@ -44,6 +44,8 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     this._samples = [];
 }
 
+WebInspector.Object.addConstructorFunctions(WebInspector.ProbeObject);
+
 WebInspector.ProbeObject.Event = {
     SampleAdded: "probe-object-sample-added"
 };

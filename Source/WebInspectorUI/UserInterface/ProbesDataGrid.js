@@ -256,10 +256,10 @@ WebInspector.ProbesDataGrid.prototype = {
         var data = event.data;
         if (!this._gridNodes[data.index]) {
             var node = new WebInspector.ProbesDataGridNode(data.row);
+            this._gridNodes[data.index] = node;
             node.dataGrid = this;
             node.createCells();
-            this._gridNodes[data.index] = node;
-            this._tableBodyElement.appendChild(node);
+            this.appendChild(node);
         } else {
             var node = this._gridNodes[data.index];
             node.data = data.row;

@@ -49,16 +49,35 @@ WebInspector.ProbeManager.prototype = {
     enableProbe: function(probe)
     {
         console.assert(probe === this._probes[probe.probeId], "Can't enable unknown probe: ", probe);
+        if (probe.enabled)
+            return;
+
         ProbeAgent.enableProbe(probe.probeId);
     },
 
     disableProbe: function(probe)
     {
         console.assert(probe === this._probes[probe.probeId], "Can't disable unknown probe: ", probe);
+        if (!probe.enabled)
+            return;
+
         ProbeAgent.disableProbe(probe.probeId);
     },
 
+    removeProbe: function(probe)
+    {
+        console.assert(probe === this._probes[probe.probeId], "Can't remove unknown probe: ", probe);
+        ProbeAgent.removeProbe(probe.probeId);
+    },
+
     // Protected (called by WebInspector.ProbeObserver)
+
+    addProbeSample: function(sample)
+    {
+        console.assert(sample.probeId in this._probes, "Unknown probe id specified for sample: ", sample);
+        var probe = this._probes[sample.probeId];
+        probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.batchId, sample.timestamp, sample.payload));
+    },
 
     probeAdded: function(probe)
     {
@@ -80,11 +99,24 @@ WebInspector.ProbeManager.prototype = {
         ProbeAgent.getProbeSamples(probeObject.probeId, this._didReceiveSamples.bind(this));
     },
 
-    addProbeSample: function(sample)
+    probeRemoved: function(probeId)
     {
-        console.assert(sample.probeId in this._probes, "Unknown probe id specified for sample: ", sample);
-        var probe = this._probes[sample.probeId];
-        probe.addSample(new WebInspector.ProbeSampleObject(sample.sampleId, sample.batchId, sample.timestamp, sample.payload));
+        console.assert(probeId in this._probes, "Unknown probe id requseted: ", probeId);
+        var probe = this._probes[probeId];
+        delete this._probes[probeId];
+
+        if (this._probeGroups[probe.groupKey]) {
+            var probeGroup = this._probeGroups[probe.groupKey];
+            probeGroup.removeProbe(probe);
+
+            if (!probeGroup.probes.length) {
+                probeGroup.willRemove();
+                delete this._probeGroups[probe.groupKey];
+                this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeGroupRemoved, probeGroup);
+            }
+        }
+
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeRemoved, probe);
     },
 
     probeEnabled: function(probeId)
