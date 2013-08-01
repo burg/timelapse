@@ -56,14 +56,13 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
     this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked.bind(this, this._probeGroup.lineNumber));
 
-    var dataTable = new WebInspector.ProbesDataGrid(probeGroup);
+    var dataTable = new WebInspector.ProbeGroupDataGrid(probeGroup);
     var singletonRow = new WebInspector.DetailsSectionRow;
     singletonRow.element.appendChild(dataTable.element);
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
     WebInspector.DetailsSection.call(this, "probe", title, [probeSectionGroup], optionsElement);
 
-    // FIXME: the gutter should be managed and set by a view controller, not the model.
     this._gutterElement = document.createElement("div");
     this._gutterElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName);
     this._gutterElement.textContent = probeGroup.lineNumber + 1;
@@ -88,7 +87,6 @@ WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName = "probe-gutter"
 WebInspector.ProbeGroupDetailsSection.ColorStyleClassName = "color";
 WebInspector.ProbeGroupDetailsSection.ProbeColorValues = [new WebInspector.Color("yellow"), new WebInspector.Color("red"), new WebInspector.Color("blue"), new WebInspector.Color("green"), new WebInspector.Color("pink"), new WebInspector.Color("orange"), new WebInspector.Color("purple")];
 WebInspector.ProbeGroupDetailsSection.DefaultProbeColor = new WebInspector.Color("yellow");
-
 
 WebInspector.ProbeGroupDetailsSection.prototype = {
     __proto__: WebInspector.DetailsSection.prototype,

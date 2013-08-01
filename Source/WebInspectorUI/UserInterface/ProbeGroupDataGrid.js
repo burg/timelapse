@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbesDataGrid = function(probeGroup)
+WebInspector.ProbeGroupDataGrid = function(probeGroup)
 {
     this._probeGroup = probeGroup;
 
@@ -44,8 +44,8 @@ WebInspector.ProbesDataGrid = function(probeGroup)
     this._listeners.install();
 }
 
-WebInspector.ProbesDataGrid.prototype = {
-    constructor: WebInspector.ProbesDataGrid,
+WebInspector.ProbeGroupDataGrid.prototype = {
+    constructor: WebInspector.ProbeGroupDataGrid,
     __proto__: WebInspector.DataGrid.prototype,
 
     // Public
@@ -128,7 +128,7 @@ WebInspector.ProbesDataGrid.prototype = {
                 for (var i = 0; i < this._dataTableBody.childNodes.length - 1; ++i) {
                     var data = new Object();
                     data[columnIdentifier] = "?";
-                    var node = new WebInspector.ProbesDataGridNode(data);
+                    var node = new WebInspector.ProbeGroupDataGridNode(data);
                     node.dataGrid = this;
                     this._dataTableBody.childNodes[i].appendChild(node.createCell(columnIdentifier));
                 }
@@ -158,7 +158,7 @@ WebInspector.ProbesDataGrid.prototype = {
                 for (var i = 0; i < this._dataTableBody.childNodes.length - 1; ++i) {
                     var data = new Object();
                     data[columnIdentifier] = "?";
-                    var node = new WebInspector.ProbesDataGridNode(data);
+                    var node = new WebInspector.ProbeGroupDataGridNode(data);
                     node.dataGrid = this;
                     var currentElement = this._dataTableBody.childNodes[i].children[index];
                     this._dataTableBody.childNodes[i].insertBefore(node.createCell(columnIdentifier), currentElement);
@@ -255,7 +255,7 @@ WebInspector.ProbesDataGrid.prototype = {
     {
         var data = event.data;
         if (!this._gridNodes[data.index]) {
-            var node = new WebInspector.ProbesDataGridNode(data.row);
+            var node = new WebInspector.ProbeGroupDataGridNode(data.row);
             this._gridNodes[data.index] = node;
             node.dataGrid = this;
             node.createCells();

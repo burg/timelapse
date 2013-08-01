@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbesDataGridNode = function(samples)
+WebInspector.ProbeGroupDataGridNode = function(samples)
 {
     WebInspector.DataGridNode.call(this, samples);
     this._element = document.createElement("tr");
@@ -33,8 +33,8 @@ WebInspector.ProbesDataGridNode = function(samples)
 
 //WebInspector.Object.addConstructorFunctions(WebInspector.ProbesTimelineDataGridNode);
 
-WebInspector.ProbesDataGridNode.prototype = {
-    constructor: WebInspector.ProbesDataGridNode,
+WebInspector.ProbeGroupDataGridNode.prototype = {
+    constructor: WebInspector.ProbeGroupDataGridNode,
 
     // Public
 
@@ -287,4 +287,4 @@ WebInspector.ProbesDataGridNode.prototype = {
     }*/
 }
 
-WebInspector.ProbesDataGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
+WebInspector.ProbeGroupDataGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
