@@ -2571,7 +2571,7 @@
                     { "name": "probeId", "$ref": "ScriptProbeId", "description": "Probe unique id." },
                     { "name": "url", "type": "string", "optional": true, "description": "Script URL, if any." },
                     { "name": "lineNumber", "type": "integer", "description": "Line number where the probe is located (0-based)." },
-                    { "name": "columnNumber", "type": "integer", "optional": true, "description": "Column number where the probe is located, if any (0-based)." },
+                    { "name": "columnNumber", "type": "integer", "description": "Column number where the probe is located (0-based)." },
                     { "name": "expression", "type": "string", "description": "Expression evaluated by the probe." },
                     { "name": "isEnabled", "type": "boolean", "description": "Whether the probe is enabled." }
                 ]

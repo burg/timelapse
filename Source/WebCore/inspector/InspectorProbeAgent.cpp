@@ -246,11 +246,10 @@ void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::A
         RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
                                                                .setProbeId(it->key)
                                                                .setLineNumber(it->value->position().m_line.zeroBasedInt())
+                                                               .setColumnNumber(it->value->position().m_column.zeroBasedInt())
                                                                .setExpression(it->value->expression())
                                                                .setIsEnabled(false);
         probeObject->setUrl(it->value->url());
-        probeObject->setColumnNumber(it->value->position().m_column.zeroBasedInt());
-
         resultArray->addItem(probeObject.release());
     }
 }
@@ -341,11 +340,10 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
                                                            .setProbeId(probe->uid())
                                                            .setLineNumber(probe->position().m_line.zeroBasedInt())
+                                                           .setColumnNumber(probe->position().m_column.zeroBasedInt())
                                                            .setExpression(probe->expression())
                                                            .setIsEnabled(probe->isEnabled());
     probeObject->setUrl(probe->url());
-    probeObject->setColumnNumber(probe->position().m_column.zeroBasedInt());
-
     m_frontend->probeAdded(probeObject.release());
     // Probes are not enabled when they are created, but the backend enables them immediately.
     enableProbe(errorString, probe->uid());
