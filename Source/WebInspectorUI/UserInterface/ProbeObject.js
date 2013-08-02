@@ -36,9 +36,9 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     WebInspector.Object.call(this);
     this._probeId = probeId;
     this._url = url;
-    // Line and column numbers are 0-based.
-    this._lineNumber = lineNumber;
-    this._columnNumber = columnNumber;
+    // Line and column numbers are raw, unresolved, and 0-based. For a resolved source
+    // location which matches any user-facing formatting, use ProbeObject.sourceCodeLocation.
+    this._position = new WebInspector.SourceCodePosition(lineNumber, columnNumber);
     this._expression = expression;
     this._enabled = false;
     this._samples = [];
@@ -66,14 +66,15 @@ WebInspector.ProbeObject.prototype = {
         return this._url;
     },
 
-    get lineNumber()
+    get position()
     {
-        return this._lineNumber;
+        return this._position;
     },
 
-    get columnNumber()
+    get sourceCodeLocation()
     {
-        return this._columnNumber;
+        var sourceCode = WebInspector.frameResourceManager.resourceForURL(this.url);
+        return (sourceCode) ? sourceCode.createSourceCodeLocation(this.position.lineNumber, this.position.columnNumber) : null;
     },
 
     get expression()
@@ -93,7 +94,7 @@ WebInspector.ProbeObject.prototype = {
 
     get groupKey()
     {
-        return [this.url, this.lineNumber].join(":");
+        return [this.url, this.position.lineNumber, this.position.columnNumber].join(":");
     },
 
     // Protected (Called by ProbeManager)

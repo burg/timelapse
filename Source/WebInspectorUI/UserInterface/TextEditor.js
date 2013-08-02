@@ -924,6 +924,7 @@ WebInspector.TextEditor.prototype = {
         if (event.button !== 0 || event.ctrlKey)
             return;
 
+        // FIXME: this should be located in SourceCodeTextEditor.
         if (event.shiftKey) {
             if(!ProbeAgent.isEnabled)
                 return;
@@ -933,7 +934,12 @@ WebInspector.TextEditor.prototype = {
                 if (event.keyCode !== 13)
                     return;
                 var url = WebInspector.contentBrowser.currentContentView.resource.url;
-                ProbeAgent.createScriptProbe(url, lineNumber, 0, event.target.value);
+                var lineInfo = { lineNumber: lineNumber, columnNumber: 0 };
+                if (this.formatterSourceMap)
+                    lineInfo = this.formatterSourceMap.formattedToOriginal(lineInfo.lineNumber, lineInfo.columnNumber);
+                var sourceLocation = this.sourceCode.createSourceCodeLocation(lineInfo.lineNumber, lineInfo.columnNumber);
+                var expression = event.target.value;
+                ProbeAgent.createScriptProbe(url, sourceLocation.lineNumber, sourceLocation.columnNumber, expression);
                 popover.dismiss();
             }
 

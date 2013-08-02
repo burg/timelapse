@@ -30,11 +30,11 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     this._listeners = new WebInspector.EventListenerGroup(this, "Static per-probe group section event listeners.");
     this._probeGroup = probeGroup;
 
-    var shortUrl = parseURL(probeGroup.url).lastPathComponent || WebInspector.UIString("(unknown)");
-    var title = WebInspector.UIString("Probe %s:%d").format(shortUrl, probeGroup.lineNumber + 1);
+    var dummyTitle = "";
 
     var optionsElement = document.createElement("div");
     optionsElement.classList.add(WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName);
+    optionsElement.appendChild(this._probeGroupPositionTextOrLink());
 
     var removeProbeButton = optionsElement.createChild("img");
     removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName);
@@ -61,18 +61,21 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     singletonRow.element.appendChild(this._dataGrid.element);
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
-    WebInspector.DetailsSection.call(this, "probe", title, [probeSectionGroup], optionsElement);
+    WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
 
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
+    var sourceCodeLocation = probeGroup.sourceCodeLocation;
+    var editorLineNumber = sourceCodeLocation.displayLineNumber || probeGroup.position.lineNumber;
+
     this._gutterElement = document.createElement("div");
     this._gutterElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName);
-    this._gutterElement.textContent = probeGroup.lineNumber + 1;
+    this._gutterElement.textContent = editorLineNumber + 1;
 
     this._updateColor();
     // FIXME: this will not work if the current view does not contain the probe.
     if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
-        WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._probeGroup.lineNumber, "CodeMirror-linenumbers", this._gutterElement);
+        WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(editorLineNumber, "CodeMirror-linenumbers", this._gutterElement);
 
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.PropertiesChanged, this._updateColor);
     this._listeners.install();
@@ -100,13 +103,26 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     closed: function()
     {
+        var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
+        var editorLineNumber = sourceCodeLocation.displayLineNumber || this._probeGroup.position.lineNumber;
+
         // FIXME: this will not work if the current view does not contain the probe.
         if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
-            WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(this._probeGroup.lineNumber, "CodeMirror-linenumbers", null);
+            WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(editorLineNumber, "CodeMirror-linenumbers", null);
         this._listeners.uninstall(true);
     },
 
     // Private
+
+    _probeGroupPositionTextOrLink: function()
+    {
+        var shortUrl = parseURL(this._probeGroup.url).lastPathComponent || WebInspector.UIString("(unknown)");
+        var title = WebInspector.UIString("%s:%d").format(shortUrl, this._probeGroup.position.lineNumber + 1);
+        var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
+        if (!sourceCodeLocation)
+            return document.createTextNode(title);
+        return WebInspector.createSourceCodeLocationLink(sourceCodeLocation);
+    },
 
     _addProbeButtonClicked: function(event)
     {
@@ -116,7 +132,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
                 return;
             var url = WebInspector.contentBrowser.currentContentView.resource.url;
             var expression = event.target.value;
-            ProbeAgent.createScriptProbe(url, this._probeGroup.lineNumber, 0, expression);
+            ProbeAgent.createScriptProbe(url, this._probeGroup.position.lineNumber, this._probeGroup.position.columnNumber, expression);
             visiblePopover.dismiss();
         }
 

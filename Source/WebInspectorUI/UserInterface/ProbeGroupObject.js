@@ -23,11 +23,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupObject = function(url, lineNumber)
+// A ProbeGroupObject clusters several ProbeObjects which are located at the
+// same statement (i.e., url + raw source position).
+WebInspector.ProbeGroupObject = function(url, position)
 {
+    console.assert(position instanceof WebInspector.SourceCodePosition, "Unknown position argument: ", position);
+
     WebInspector.Object.call(this);
     this._url = url;
-    this._lineNumber = lineNumber;
+    this._position = position;
     this._probes = [];
     this._probesByUid = {};
     this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
@@ -65,9 +69,15 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._url;
     },
 
-    get lineNumber()
+    get position()
     {
-        return this._lineNumber;
+        return this._position;
+    },
+
+    get sourceCodeLocation()
+    {
+        var sourceCode = WebInspector.frameResourceManager.resourceForURL(this.url);
+        return (sourceCode) ? sourceCode.createSourceCodeLocation(this.position.lineNumber, this.position.columnNumber) : null;
     },
 
     get probes()

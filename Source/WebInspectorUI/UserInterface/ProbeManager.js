@@ -89,7 +89,7 @@ WebInspector.ProbeManager.prototype = {
         if (this._probeGroups[probeObject.groupKey])
             this._probeGroups[probeObject.groupKey].addProbe(probeObject);
         else {
-            var probeGroup = new WebInspector.ProbeGroupObject(probeObject.url, probeObject.lineNumber);
+            var probeGroup = new WebInspector.ProbeGroupObject(probeObject.url, probeObject.position);
             probeGroup.addProbe(probeObject);
             this._probeGroups[probeObject.groupKey] = probeGroup;
             this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeGroupAdded, probeGroup);
