@@ -72,9 +72,8 @@ public:
 private:
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
     typedef HashMap<int, RefPtr<ScriptProbe> > ProbeMap;
-    typedef OrdinalNumber LineNumber;
-    typedef HashMap<LineNumber, ProbeSet> LineToScriptProbeMap;
-    typedef HashMap<ScriptId, LineToScriptProbeMap> ScriptIdToLinesMap;
+    typedef HashMap<TextPosition, ProbeSet> PositionToScriptProbeMap;
+    typedef HashMap<ScriptId, PositionToScriptProbeMap> ScriptIdToPositionsMap;
 
     ScriptProbeServer();
 
@@ -82,7 +81,7 @@ private:
     bool findProbesForPosition(ScriptId scriptId, const TextPosition&, ProbeSet& result);
 
     bool m_isActive;
-    ScriptIdToLinesMap m_probeRegistry;
+    ScriptIdToPositionsMap m_probeRegistry;
     ProbeMap m_probesById;
     int m_nextBatchId;
 };

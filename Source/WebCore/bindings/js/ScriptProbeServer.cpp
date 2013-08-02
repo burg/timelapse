@@ -54,7 +54,7 @@ ScriptProbeServer::ScriptProbeServer()
 
 ScriptProbeServer::~ScriptProbeServer()
 {
-    ScriptIdToLinesMap::iterator scriptsIt = m_probeRegistry.begin();
+    ScriptIdToPositionsMap::iterator scriptsIt = m_probeRegistry.begin();
     for (; scriptsIt != m_probeRegistry.end(); ++scriptsIt)
         clearProbesForScriptId(scriptsIt->key);
 
@@ -70,9 +70,9 @@ void ScriptProbeServer::addProbeForScriptId(ScriptId scriptId, PassRefPtr<Script
     m_probesById.add(probe->uid(), probe);
 
     // Each of these calls will only actually add key/value pairs if they don't already exist.
-    ScriptIdToLinesMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, LineToScriptProbeMap());
-    LineToScriptProbeMap::AddResult linesMap = scriptsMap.iterator->value.add(probe->position().m_line, ProbeSet());
-    linesMap.iterator->value.add(probe);
+    ScriptIdToPositionsMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, PositionToScriptProbeMap());
+    PositionToScriptProbeMap::AddResult positionsMap = scriptsMap.iterator->value.add(probe->position(), ProbeSet());
+    positionsMap.iterator->value.add(probe);
 }
 
 void ScriptProbeServer::removeProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe> prpProbe)
@@ -84,11 +84,11 @@ void ScriptProbeServer::removeProbeForScriptId(ScriptId scriptId, PassRefPtr<Scr
         return;
     m_probesById.remove(foundProbe);
 
-    ScriptIdToLinesMap::iterator linesForScript = m_probeRegistry.find(scriptId);
-    if (linesForScript == m_probeRegistry.end())
+    ScriptIdToPositionsMap::iterator positionsForScript = m_probeRegistry.find(scriptId);
+    if (positionsForScript == m_probeRegistry.end())
         return;
-    LineToScriptProbeMap::iterator probeSet = linesForScript->value.find(probe->position().m_line);
-    if (probeSet == linesForScript->value.end())
+    PositionToScriptProbeMap::iterator probeSet = positionsForScript->value.find(probe->position());
+    if (probeSet == positionsForScript->value.end())
         return;
     ProbeSet::iterator probeElement = probeSet->value.find(probe);
     if (probeElement == probeSet->value.end())
@@ -103,19 +103,19 @@ void ScriptProbeServer::clearProbesForScriptId(ScriptId scriptId)
     if (!m_probeRegistry.contains(scriptId))
         return;
 
-    LineToScriptProbeMap linesForScript = m_probeRegistry.take(scriptId);
-    LineToScriptProbeMap::iterator lineIterator = linesForScript.begin();
+    PositionToScriptProbeMap positionsForScript = m_probeRegistry.take(scriptId);
+    PositionToScriptProbeMap::iterator positionIterator = positionsForScript.begin();
     // Clear probe sets for each line, then clear the lines map.
-    for (; lineIterator != linesForScript.end(); ++lineIterator) {
-        ProbeSet::iterator probeIterator = lineIterator->value.begin();
-        for (; probeIterator != lineIterator->value.end(); ++probeIterator) {
+    for (; positionIterator != positionsForScript.end(); ++positionIterator) {
+        ProbeSet::iterator probeIterator = positionIterator->value.begin();
+        for (; probeIterator != positionIterator->value.end(); ++probeIterator) {
             LOG(DeterministicReplay, "ScriptProbeServer: cleared probe id=%d (script id=%" PRIiPTR ")", (*probeIterator)->uid(), scriptId);
             m_probesById.remove((*probeIterator)->uid());
         }
-        lineIterator->value.clear();
+        positionIterator->value.clear();
     }
 
-    linesForScript.clear();
+    positionsForScript.clear();
 }
 
 void ScriptProbeServer::addSampleFromConsole(int probeId, ScriptState* exec)
@@ -162,35 +162,31 @@ void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& deb
         if (!probe->isEnabled())
             continue;
 
-        // TODO: (Issue #315): The column number is not checked here, but should be.
-        // See the logic in ScriptDebugServer::hasBreakpoint for an exposition of cases and concerns.
-        if (position.m_line == probe->position().m_line) {
-            LOG(DeterministicReplay, "ScriptProbeServer: adding sample for probe uid=%d", probe->uid());
-            JSC::JSValue exception;
-            JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
-            // TODO: (Issue #314): Propagate exception to the frontend instead of silently dropping it.
-            if (exception)
-                continue;
+        LOG(DeterministicReplay, "ScriptProbeServer: adding sample for probe uid=%d", probe->uid());
+        JSC::JSValue exception;
+        JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
+        // TODO: (Issue #314): Propagate exception to the frontend instead of silently dropping it.
+        if (exception)
+            continue;
 
-            ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
-            PageScriptDebugServer::shared().dispatchCaptureProbeSample(debuggerCallFrame.callFrame(), probe, batchId, wrappedResult);
-        }
+        ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
+        PageScriptDebugServer::shared().dispatchCaptureProbeSample(debuggerCallFrame.callFrame(), probe, batchId, wrappedResult);
     }
 }
 
 bool ScriptProbeServer::findProbesForPosition(ScriptId scriptId, const TextPosition& position, ProbeSet& result)
 {
-    ScriptIdToLinesMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
+    ScriptIdToPositionsMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
     if (entryForScript == m_probeRegistry.end())
         return false;
 
-    LineToScriptProbeMap::const_iterator entryForLine = entryForScript->value.find(position.m_line);
-    if (entryForLine == entryForScript->value.end())
+    PositionToScriptProbeMap::const_iterator entryForPosition = entryForScript->value.find(position);
+    if (entryForPosition == entryForScript->value.end())
         return false;
 
     LOG(DeterministicReplay, "ScriptProbeServer: maybe adding sample for line+col %d,%d (script id: %" PRIiPTR ")", position.m_line.zeroBasedInt(), position.m_column.zeroBasedInt(), scriptId);
 
-    result = entryForLine->value;
+    result = entryForPosition->value;
     return true;
 
 }
