@@ -111,6 +111,19 @@ WebInspector.DebuggerSidebarPanel = function()
     var callStackGroup = new WebInspector.DetailsSectionGroup([this._callStackRow]);
     this._callStackSection = new WebInspector.DetailsSection("call-stack", WebInspector.UIString("Call Stack"), [callStackGroup]);
 
+    // TODO: create the content tree outline for probes.
+    var probesRow = new WebInspector.DetailsSectionRow;
+    //probesRow.element.appendChild(this._probesContentTreeOutline.element);
+    this._probesToggleElement = document.createElement("img");
+    this._probesToggleElement.className = WebInspector.DebuggerSidebarPanel.ProbeToggleStyleClassName;
+    if (WebInspector.probeManager.probesEnabled)
+        this._probesToggleElement.classList.add(WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName);
+    this._probesToggleElement.addEventListener("click", this._probesToggleButtonClicked.bind(this));
+
+    var probesGroup = new WebInspector.DetailsSectionGroup([probesRow]);
+    var probesSection = new WebInspector.DetailsSection("probes", WebInspector.UIString("Probes"), [probesGroup], this._probesToggleElement);
+    this.contentElement.appendChild(probesSection.element);
+
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
 };
 
@@ -118,6 +131,8 @@ WebInspector.DebuggerSidebarPanel.OffsetSectionsStyleClassName = "offset-section
 WebInspector.DebuggerSidebarPanel.ExceptionIconStyleClassName = "breakpoint-exception-icon";
 WebInspector.DebuggerSidebarPanel.BreakpointToggleStyleClassName = "breakpoint-toggle";
 WebInspector.DebuggerSidebarPanel.BreakpointToggleEnabledStyleClassName = "enabled";
+WebInspector.DebuggerSidebarPanel.ProbeToggleStyleClassName = "probe-toggle";
+WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName = "enabled";
 
 WebInspector.DebuggerSidebarPanel.prototype = {
     constructor: WebInspector.DebuggerSidebarPanel,
@@ -174,6 +189,11 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     _breakpointsToggleButtonClicked: function(event)
     {
         WebInspector.debuggerManager.breakpointsEnabled = this._breakpointsToggleElement.classList.toggle(WebInspector.DebuggerSidebarPanel.BreakpointToggleEnabledStyleClassName);
+    },
+
+    _probesToggleButtonClicked: function(event)
+    {
+        WebInspector.probeManager.probesEnabled = this._probesToggleElement.classList.toggle(WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName);
     },
 
     _addBreakpoint: function(breakpoint, sourceCode)

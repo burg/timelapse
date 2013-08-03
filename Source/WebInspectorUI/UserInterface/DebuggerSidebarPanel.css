@@ -45,3 +45,15 @@
 .sidebar > .panel.debugger .breakpoint-toggle.enabled {
     content: url(Images/BreakpointButton.pdf);
 }
+
+.sidebar > .panel.debugger .probe-toggle {
+    width: 21px;
+    height: 12px;
+    content: url(Images/BreakpointInactiveButton.pdf);
+    margin-top: 1px;
+    float: right;
+}
+
+.sidebar > .panel.debugger .probe-toggle.enabled {
+    content: url(Images/BreakpointButton.pdf);
+}
