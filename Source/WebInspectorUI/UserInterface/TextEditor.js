@@ -926,8 +926,6 @@ WebInspector.TextEditor.prototype = {
 
         // FIXME: this should be located in SourceCodeTextEditor.
         if (event.shiftKey) {
-            if(!ProbeAgent.isEnabled)
-                return;
 
             function getInitialProbeExpression(popover, event)
             {

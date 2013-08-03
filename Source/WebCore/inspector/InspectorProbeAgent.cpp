@@ -169,17 +169,46 @@ String InspectorProbeAgent::objectGroupForProbeId(int probeId) const
 void InspectorProbeAgent::setFrontend(InspectorFrontend* frontend)
 {
     m_frontend = frontend->probe();
-    if (m_state->getBoolean(ProbeAgentState::probesEnabled)) {
-        ErrorString error;
-        enable(&error);
-    }
 }
 
-// ProbeCommandHandler API
 void InspectorProbeAgent::clearFrontend()
 {
     m_frontend = 0;
+
+    if (!enabled())
+        return;
+
+    disable();
+    m_state->setBoolean(ProbeAgentState::probesEnabled, false);
 }
+
+void InspectorProbeAgent::enable()
+{
+    m_instrumentingAgents->setInspectorProbeAgent(this);
+
+    probeServer()->setIsActive(true);
+    m_probeResolver = ScriptProbeResolver::create(m_inspectedPage, this);
+}
+
+void InspectorProbeAgent::disable()
+{
+    m_probeResolver = 0;
+    m_instrumentingAgents->setInspectorProbeAgent(0);
+
+    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
+        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
+
+    m_probeMap.clear();
+}
+
+bool InspectorProbeAgent::enabled()
+{
+    return m_state->getBoolean(ProbeAgentState::probesEnabled);
+}
+
+// ProbeCommandHandler API
 
 void InspectorProbeAgent::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, int sampleId, const ScriptValue& sample)
 {
@@ -199,44 +228,27 @@ void InspectorProbeAgent::captureProbeSample(ScriptState* state, PassRefPtr<Scri
         m_frontend->probeSampleReceived(result.release());
 }
 
-bool InspectorProbeAgent::enabled()
-{
-    return m_state->getBoolean(ProbeAgentState::probesEnabled);
-}
-
 void InspectorProbeAgent::enable(ErrorString*)
 {
+    if (enabled())
+        return;
+
+    enable();
     m_state->setBoolean(ProbeAgentState::probesEnabled, true);
-    m_instrumentingAgents->setInspectorProbeAgent(this);
-    m_probeResolver = ScriptProbeResolver::create(m_inspectedPage, this);
 }
 
 void InspectorProbeAgent::disable(ErrorString*)
 {
+    if (!enabled())
+        return;
+
+    disable();
     m_state->setBoolean(ProbeAgentState::probesEnabled, false);
-    m_instrumentingAgents->setInspectorProbeAgent(0);
-    m_probeResolver = 0;
-
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
-    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
-        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
 }
 
-void InspectorProbeAgent::isEnabled(ErrorString*, bool* out_state)
+void InspectorProbeAgent::setProbesActive(ErrorString*, bool state)
 {
-   *out_state = enabled();
-}
-
-void InspectorProbeAgent::clearAllProbes(ErrorString*)
-{
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
-    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
-        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
-        m_probeMap.remove(it);
-        m_probeResolver->removeProbe(it->value);
-    }
+    probeServer()->setIsActive(state);
 }
 
 void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& resultArray)

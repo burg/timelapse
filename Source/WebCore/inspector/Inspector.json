@@ -2596,14 +2596,13 @@
                 "name": "disable"
             },
             {
-                "name": "isEnabled",
-                "returns": [
-                    { "name": "state", "type": "boolean" }
-                ]
+                "name": "setProbesActive",
+                "parameters": [
+                    { "name": "active", "type": "boolean", "description": "New value for probes active state." }
+                ],
+                "description": "Activates / deactivates all probes on the page."
             },
-            {
-                "name": "clearAllProbes"
-            },
+
             {
                 "name": "getAvailableProbes",
                 "returns": [

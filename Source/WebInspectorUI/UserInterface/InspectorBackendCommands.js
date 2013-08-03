@@ -412,7 +412,7 @@ InspectorBackend.registerEvent("Probe.probeDisabled", ["probeId"]);
 InspectorBackend.registerEvent("Probe.allProbesCleared", []);
 InspectorBackend.registerCommand("Probe.enable", [], []);
 InspectorBackend.registerCommand("Probe.disable", [], []);
-InspectorBackend.registerCommand("Probe.isEnabled", [], ["state"]);
+InspectorBackend.registerCommand("Probe.setProbesActive", [{"name": "active", "type": "boolean", "optional": false}], []);
 InspectorBackend.registerCommand("Probe.clearAllProbes", [], []);
 InspectorBackend.registerCommand("Probe.getAvailableProbes", [], ["probes"]);
 InspectorBackend.registerCommand("Probe.getProbeSamples", [{"name": "probeId", "type": "number", "optional": false}], ["samples"]);

@@ -59,6 +59,7 @@ class InspectorProbeAgent;
 class InstrumentingAgents;
 class Page;
 class ScriptProbe;
+class ScriptProbeServer;
 
 typedef String ErrorString;
 
@@ -105,6 +106,8 @@ private:
 class InspectorProbeAgent
 : public InspectorBaseAgent<InspectorProbeAgent>
 , public InspectorBackendDispatcher::ProbeCommandHandler {
+    friend class ScriptProbeResolver;
+
     WTF_MAKE_NONCOPYABLE(InspectorProbeAgent);
 public:
     static PassOwnPtr<InspectorProbeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page, InjectedScriptManager* InjectedScriptManager)
@@ -117,16 +120,11 @@ public:
     void setFrontend(InspectorFrontend*);
     void clearFrontend();
 
-    // Callbacks from ScriptProbeResolver
-    void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, int sampleId, const ScriptValue&);
-    bool enabled();
-
     // ProbeCommandHandler API
     virtual void enable(ErrorString*);
     virtual void disable(ErrorString*);
-    virtual void isEnabled(ErrorString*, bool* out_state);
+    virtual void setProbesActive(ErrorString*, bool active);
 
-    virtual void clearAllProbes(ErrorString*);
     virtual void getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& result);
     virtual void getProbeSamples(ErrorString*, int probeId, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbeSample> >& result);
     virtual void removeProbe(ErrorString*, int probeId);
@@ -135,9 +133,16 @@ public:
     // Line and column numbers start counting from 0.
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
+protected:
+    // Callbacks from ScriptProbeResolver
+    void enable();
+    void disable();
+    void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, int sampleId, const ScriptValue&);
+
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*, InjectedScriptManager*);
     String objectGroupForProbeId(int probeId) const;
+    bool enabled();
 
     typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
 

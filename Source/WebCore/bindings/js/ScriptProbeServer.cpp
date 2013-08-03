@@ -147,9 +147,6 @@ void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFr
 
 void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& debuggerCallFrame, ScriptId scriptId, const TextPosition& position)
 {
-    if (!m_isActive)
-        return;
-
     ProbeSet foundProbes;
     if (!findProbesForPosition(scriptId, position, foundProbes))
         return;
@@ -176,6 +173,9 @@ void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& deb
 
 bool ScriptProbeServer::findProbesForPosition(ScriptId scriptId, const TextPosition& position, ProbeSet& result)
 {
+    if (!m_isActive)
+        return false;
+
     ScriptIdToPositionsMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
     if (entryForScript == m_probeRegistry.end())
         return false;

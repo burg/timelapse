@@ -27,6 +27,11 @@ WebInspector.ProbeManager = function()
 {
     WebInspector.Object.call(this);
 
+    ProbeAgent.enable();
+
+    this._probesEnabledSetting = new WebInspector.Setting("probes-enabled", true);
+    ProbeAgent.setProbesActive(this._probesEnabledSetting.value);
+
     this._probes = {};
     this._probeGroups = {};
 }
@@ -45,6 +50,20 @@ WebInspector.ProbeManager.prototype = {
     __proto__: WebInspector.Object.prototype,
 
     // Public
+
+    get probesEnabled()
+    {
+        return this._probesEnabledSetting.value;
+    },
+
+    set probesEnabled(enabled)
+    {
+        if (this._probesEnabledSetting.value === enabled)
+            return;
+
+        this._probesEnabledSetting.value = enabled;
+        ProbeAgent.setProbesActive(enabled);
+    },
 
     enableProbe: function(probe)
     {
