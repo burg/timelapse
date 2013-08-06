@@ -50,7 +50,10 @@ PassOwnPtr<ScriptProbeServer> ScriptProbeServer::create()
 
 ScriptProbeServer::ScriptProbeServer()
 : m_isActive(true)
-, m_nextBatchId(1) {}
+, m_nextBatchId(1)
+{
+    clearPauseTrigger();
+}
 
 ScriptProbeServer::~ScriptProbeServer()
 {
@@ -142,19 +145,22 @@ void ScriptProbeServer::addSampleFromConsole(int probeId, ScriptState* exec)
 void ScriptProbeServer::atStatement(const JSC::DebuggerCallFrame& debuggerCallFrame, intptr_t scriptId, int lineNumber, int columnNumber)
 {
     TextPosition textPosition(OrdinalNumber::fromOneBasedInt(lineNumber), OrdinalNumber::fromOneBasedInt(columnNumber));
-    captureSamplesIfNeeded(debuggerCallFrame, scriptId, textPosition);
+
+    ProbeSet foundProbes;
+    if (!findProbesForPosition(scriptId, textPosition, foundProbes))
+        return;
+
+    captureSamplesIfNeeded(debuggerCallFrame, foundProbes);
+    pauseIfNeeded(debuggerCallFrame, foundProbes);
 }
 
-void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& debuggerCallFrame, ScriptId scriptId, const TextPosition& position)
+void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& debuggerCallFrame, const ProbeSet& probeSet)
 {
-    ProbeSet foundProbes;
-    if (!findProbesForPosition(scriptId, position, foundProbes))
-        return;
 
     int batchId = m_nextBatchId++;
 
-    ProbeSet::iterator probesIt = foundProbes.begin();
-    for (; probesIt != foundProbes.end(); ++probesIt) {
+    ProbeSet::const_iterator probesIt = probeSet.begin();
+    for (; probesIt != probeSet.end(); ++probesIt) {
         RefPtr<ScriptProbe> probe = *probesIt;
         if (!probe->isEnabled())
             continue;
@@ -169,6 +175,28 @@ void ScriptProbeServer::captureSamplesIfNeeded(const JSC::DebuggerCallFrame& deb
         ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
         PageScriptDebugServer::shared().dispatchCaptureProbeSample(debuggerCallFrame.callFrame(), probe, batchId, wrappedResult);
     }
+}
+
+void ScriptProbeServer::pauseIfNeeded(const JSC::DebuggerCallFrame&, const ProbeSet& probeSet)
+{
+    bool shouldStop = false;
+    ProbeSet::const_iterator probesIt = probeSet.begin();
+    for (; probesIt != probeSet.end(); ++probesIt) {
+        RefPtr<ScriptProbe> probe = *probesIt;
+        if (!probe->isEnabled() || probe->uid() != m_triggerPauseData.probeId)
+            continue;
+
+        if (m_triggerPauseData.counter == 0) {
+            shouldStop |= true;
+            clearPauseTrigger();
+            continue;
+        }
+
+        m_triggerPauseData.counter--;
+    }
+
+    if (shouldStop)
+        PageScriptDebugServer::shared().breakProgram();
 }
 
 bool ScriptProbeServer::findProbesForPosition(ScriptId scriptId, const TextPosition& position, ProbeSet& result)
