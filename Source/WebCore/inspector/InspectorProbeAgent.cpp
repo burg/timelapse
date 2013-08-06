@@ -59,101 +59,16 @@ static ScriptProbeServer* probeServer()
     return PageScriptDebugServer::shared().probeServer();
 }
 
-PassOwnPtr<ScriptProbeResolver> ScriptProbeResolver::create(Page* page, InspectorProbeAgent* probeAgent)
-{
-    return adoptPtr(new ScriptProbeResolver(page, probeAgent));
-}
-
-ScriptProbeResolver::ScriptProbeResolver(Page* page, InspectorProbeAgent* probeAgent)
-: m_page(page)
-, m_nextSampleId(1)
-, m_probeAgent(probeAgent)
-{
-    PageScriptDebugServer::shared().addListener(this, m_page);
-}
-
-ScriptProbeResolver::~ScriptProbeResolver()
-{
-    clearScriptMapping();
-    m_probes.clear();
-    PageScriptDebugServer::shared().removeListener(this, m_page);
-}
-
-void ScriptProbeResolver::clearScriptMapping()
-{
-    for (UrlToScriptIdMap::iterator it = m_urlToScriptIdMap.begin(); it != m_urlToScriptIdMap.end(); ++it)
-        probeServer()->clearProbesForScriptId(it->value);
-
-    m_urlToScriptIdMap.clear();
-}
-
-void ScriptProbeResolver::addProbe(PassRefPtr<ScriptProbe> prpProbe)
-{
-    RefPtr<ScriptProbe> probe = prpProbe;
-    m_probes.add(probe);
-
-    LOG(DeterministicReplay, "ScriptProbeResolver::addProbe id=%d, expression=%s", probe->uid(), probe->expression().utf8().data());
-
-    // If probe matches url with known script id, resolve immediately.
-    UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
-    if (findResult == m_urlToScriptIdMap.end())
-        return;
-
-    probeServer()->addProbeForScriptId(findResult->value, probe);
-}
-
-void ScriptProbeResolver::removeProbe(PassRefPtr<ScriptProbe> prpProbe)
-{
-    RefPtr<ScriptProbe> probe = prpProbe;
-    UrlToScriptIdMap::iterator findResult = m_urlToScriptIdMap.find(probe->url());
-    if (findResult == m_urlToScriptIdMap.end())
-        return;
-
-    probeServer()->removeProbeForScriptId(findResult->value, probe);
-    m_urlToScriptIdMap.remove(findResult);
-}
-
-void ScriptProbeResolver::didParseSource(const String& stringId, const Script& script)
-{
-    intptr_t scriptId = stringId.toInt();
-    const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
-    m_urlToScriptIdMap.add(nonNullUrl, scriptId);
-
-    LOG(DeterministicReplay, "ScriptProbeResolver::didParseSource id=%" PRIiPTR ", url=%s", scriptId, nonNullUrl.utf8().data());
-
-    // Find any probes that should resolve within that file, add them.
-    for (ProbeSet::const_iterator it = m_probes.begin(); it != m_probes.end(); ++it) {
-        if ((*it)->url() == nonNullUrl)
-            probeServer()->addProbeForScriptId(scriptId, *it);
-    }
-}
-
-void ScriptProbeResolver::failedToParseSource(const String&, const String&, int, int, const String&)
-{
-}
-
-void ScriptProbeResolver::didPause(ScriptState*, const ScriptValue&, const ScriptValue&)
-{
-}
-
-void ScriptProbeResolver::didContinue()
-{
-}
-
-void ScriptProbeResolver::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
-{
-    m_probeAgent->captureProbeSample(state, prpProbe, batchId, m_nextSampleId++, sample);
-}
-
 InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage, InjectedScriptManager* injectedScriptManager)
 : InspectorBaseAgent<InspectorProbeAgent>("Probe", instrumentingAgents, state)
 , m_nextProbeId(1)
+, m_nextSampleId(1)
 , m_instrumentingAgents(instrumentingAgents)
 , m_frontend(0)
 , m_inspectedPage(inspectedPage)
-, m_probeMap(ProbeMap())
 , m_injectedScriptManager(injectedScriptManager)
-, m_probeResolver(0) {}
+, m_probeMap(ProbeMap())
+, m_urlToScriptIdMap(UrlToScriptIdMap()) {}
 
 InspectorProbeAgent::~InspectorProbeAgent()
 {
@@ -187,12 +102,17 @@ void InspectorProbeAgent::enable()
     m_instrumentingAgents->setInspectorProbeAgent(this);
 
     probeServer()->setIsActive(true);
-    m_probeResolver = ScriptProbeResolver::create(m_inspectedPage, this);
+    PageScriptDebugServer::shared().addListener(this, m_inspectedPage);
 }
 
 void InspectorProbeAgent::disable()
 {
-    m_probeResolver = 0;
+    for (UrlToScriptIdMap::iterator it = m_urlToScriptIdMap.begin(); it != m_urlToScriptIdMap.end(); ++it)
+        probeServer()->clearProbesForScriptId(it->value);
+
+    m_urlToScriptIdMap.clear();
+
+    PageScriptDebugServer::shared().removeListener(this, m_inspectedPage);
     m_instrumentingAgents->setInspectorProbeAgent(0);
 
     ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
@@ -210,9 +130,10 @@ bool InspectorProbeAgent::enabled()
 
 // ProbeCommandHandler API
 
-void InspectorProbeAgent::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, int sampleId, const ScriptValue& sample)
+void InspectorProbeAgent::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
 {
     RefPtr<ScriptProbe> probe = prpProbe;
+    int sampleId = m_nextSampleId++;
 
     // TODO: (Issue #316): Implement some sort of storage for probe samples.
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
@@ -285,22 +206,28 @@ void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
         return;
     }
 
-    ProbeMap::iterator foundProbe = m_probeMap.find(probeId);
-    if (foundProbe == m_probeMap.end()) {
+    ProbeMap::iterator findProbeResult = m_probeMap.find(probeId);
+    if (findProbeResult == m_probeMap.end()) {
         *errorString = "Couldn't find probe with specified probeId";
         return;
     }
 
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
-    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
-    injectedScript.releaseObjectGroup(objectGroupForProbeId(foundProbe->key));
-
-    // Remove from maps last, because it invalidates the iterator returned by find().
-    m_probeResolver->removeProbe(foundProbe->value);
-    m_probeMap.remove(foundProbe);
-
+    RefPtr<ScriptProbe> probe = findProbeResult->value;
+    m_probeMap.remove(findProbeResult);
     if (m_frontend)
         m_frontend->probeRemoved(probeId);
+
+    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    injectedScript.releaseObjectGroup(objectGroupForProbeId(probe->uid()));
+
+    UrlToScriptIdMap::iterator findScriptIdResult = m_urlToScriptIdMap.find(probe->url());
+    if (findScriptIdResult == m_urlToScriptIdMap.end())
+        return;
+
+    ScriptId scriptId = findScriptIdResult->value;
+    probeServer()->removeProbeForScriptId(scriptId, probe);
+    m_urlToScriptIdMap.remove(findScriptIdResult);
 }
 
 void InspectorProbeAgent::enableProbe(ErrorString* errorString, int probeId)
@@ -345,7 +272,14 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextProbeId++, nonNullUrl, position, expression);
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
-    m_probeResolver->addProbe(probe);
+    LOG(DeterministicReplay, "InspectorProbeAgent::createScriptProbe id=%d, expression=%s", probe->uid(), probe->expression().utf8().data());
+
+    // If probe matches url with known script id, resolve immediately.
+    UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
+    if (findResult == m_urlToScriptIdMap.end())
+        return;
+
+    probeServer()->addProbeForScriptId(findResult->value, probe);
     if (!m_frontend)
         return;
 
@@ -360,6 +294,35 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     // Probes are not enabled when they are created, but the backend enables them immediately.
     enableProbe(errorString, probe->uid());
     UNUSED_PARAM(errorString);
+}
+
+// ScriptDebugListener API
+
+void InspectorProbeAgent::didParseSource(const String& stringId, const Script& script)
+{
+    intptr_t scriptId = stringId.toInt();
+    const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
+    m_urlToScriptIdMap.add(nonNullUrl, scriptId);
+
+    LOG(DeterministicReplay, "InspectorProbeAgent::didParseSource id=%" PRIiPTR ", url=%s", scriptId, nonNullUrl.utf8().data());
+
+    // Find any probes that should resolve within that file, add them.
+    for (ProbeMap::const_iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
+        if (it->value->url() == nonNullUrl)
+            probeServer()->addProbeForScriptId(scriptId, it->value);
+    }
+}
+
+void InspectorProbeAgent::failedToParseSource(const String&, const String&, int, int, const String&)
+{
+}
+
+void InspectorProbeAgent::didPause(ScriptState*, const ScriptValue&, const ScriptValue&)
+{
+}
+
+void InspectorProbeAgent::didContinue()
+{
 }
 
 }; // namespace WebCore

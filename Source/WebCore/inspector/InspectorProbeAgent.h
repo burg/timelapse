@@ -63,48 +63,12 @@ class ScriptProbeServer;
 
 typedef String ErrorString;
 
-#if ENABLE(JAVASCRIPT_DEBUGGER)
 class ScriptArguments;
-class ScriptProbe;
 class ScriptValue;
-
-// This helper class encapsulates the logic to add/remove probes from the probe
-// server's list as scripts are parsed.
-class ScriptProbeResolver : public ScriptDebugListener {
-    WTF_MAKE_NONCOPYABLE(ScriptProbeResolver);
-public:
-    static PassOwnPtr<ScriptProbeResolver> create(Page*, InspectorProbeAgent*);
-    virtual ~ScriptProbeResolver();
-
-    void clearScriptMapping();
-    void addProbe(PassRefPtr<ScriptProbe>);
-    void removeProbe(PassRefPtr<ScriptProbe>);
-
-private:
-    ScriptProbeResolver(Page*, InspectorProbeAgent*);
-
-    // ScriptDebugListener API
-    virtual void didParseSource(const String& scriptId, const Script&);
-    virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
-    virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
-    virtual void didContinue();
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
-#endif
-
-    Page* m_page;
-    int m_nextSampleId;
-    InspectorProbeAgent* m_probeAgent;
-    typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
-    ProbeSet m_probes;
-    typedef intptr_t ScriptId;
-    typedef HashMap<String, ScriptId> UrlToScriptIdMap;
-    UrlToScriptIdMap m_urlToScriptIdMap;
-};
-#endif
 
 class InspectorProbeAgent
 : public InspectorBaseAgent<InspectorProbeAgent>
+, public ScriptDebugListener
 , public InspectorBackendDispatcher::ProbeCommandHandler {
     friend class ScriptProbeResolver;
 
@@ -133,28 +97,35 @@ public:
     // Line and column numbers start counting from 0.
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
-protected:
-    // Callbacks from ScriptProbeResolver
-    void enable();
-    void disable();
-    void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, int sampleId, const ScriptValue&);
+    // ScriptDebugListener API
+    virtual void didParseSource(const String& scriptId, const Script&);
+    virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
+    virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
+    virtual void didContinue();
+    virtual void captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 
 private:
     InspectorProbeAgent(InstrumentingAgents*, InspectorCompositeState*, Page*, InjectedScriptManager*);
     String objectGroupForProbeId(int probeId) const;
     bool enabled();
+    void enable();
+    void disable();
 
     typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
+    typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
+    typedef intptr_t ScriptId;
+    typedef HashMap<String, ScriptId> UrlToScriptIdMap;
 
     int m_nextProbeId;
+    int m_nextSampleId;
+
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Probe* m_frontend;
     Page* m_inspectedPage;
-    ProbeMap m_probeMap;
     InjectedScriptManager* m_injectedScriptManager;
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    OwnPtr<ScriptProbeResolver> m_probeResolver;
-#endif
+
+    ProbeMap m_probeMap;
+    UrlToScriptIdMap m_urlToScriptIdMap;
 };
 
 } // namespace WebCore
