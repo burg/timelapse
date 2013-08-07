@@ -73,6 +73,7 @@ WebInspector.Object.addConstructorFunctions(WebInspector.TextEditor);
 
 WebInspector.TextEditor.StyleClassName = "text-editor";
 WebInspector.TextEditor.HighlightedStyleClassName = "highlighted";
+WebInspector.TextEditor.ProbeHighlightedStyleClassName = "probe-highlighted";
 WebInspector.TextEditor.SearchResultStyleClassName = "search-result";
 WebInspector.TextEditor.HasBreakpointStyleClassName = "has-breakpoint";
 WebInspector.TextEditor.BreakpointResolvedStyleClassName = "breakpoint-resolved";
@@ -486,7 +487,11 @@ WebInspector.TextEditor.prototype = {
 
             this.selectedTextRange = textRangeToSelect;
 
-            this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HighlightedStyleClassName);
+            var lineKey = [WebInspector.contentBrowser.currentContentView.resource.url, position.start.line, position.start.ch].join(":");
+            if (WebInspector.probeManager.probeGroups[lineKey])
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeHighlightedStyleClassName);
+            else
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HighlightedStyleClassName);
 
             // Use a timeout instead of a webkitAnimationEnd event listener because the line element might
             // be removed if the user scrolls during the animation. In that case webkitAnimationEnd isn't
@@ -943,7 +948,7 @@ WebInspector.TextEditor.prototype = {
 
             var popover = new WebInspector.Popover;
             var content = document.createElement("div");
-            content.classList.add(WebInspector.ProbesSidebarPanel.ProbePopoverElementStyleClassName);
+            content.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
             content.createChild("div").textContent = "Add Probe?";
             var textBox = content.createChild("input");
             textBox.addEventListener("keypress", getInitialProbeExpression.bind(this, popover));
@@ -953,9 +958,6 @@ WebInspector.TextEditor.prototype = {
             popover.content = content;
             var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
             popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
-            //console.log(WebInspector.contentBrowser.currentContentView.resource.urlComponents.lastPathComponent);
-            //console.log(event.target);
-            //console.log(document.getElementsByClassName("CodeMirror-linenumber CodeMirror-gutter-elt"));
             return;
         }
 

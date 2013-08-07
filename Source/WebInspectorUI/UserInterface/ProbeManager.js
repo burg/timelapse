@@ -51,6 +51,11 @@ WebInspector.ProbeManager.prototype = {
 
     // Public
 
+    get probeGroups()
+    {
+        return this._probeGroups;
+    },
+
     get probesEnabled()
     {
         return this._probesEnabledSetting.value;
@@ -62,6 +67,14 @@ WebInspector.ProbeManager.prototype = {
             return;
 
         this._probesEnabledSetting.value = enabled;
+
+        if (enabled) {
+            for (var probeGroup in this._probeGroups)
+                this._probeGroups[probeGroup].enable();
+        } else {
+            for (var probeGroup in this._probeGroups)
+                this._probeGroups[probeGroup].disable();
+        }
         ProbeAgent.setProbesActive(enabled);
     },
 

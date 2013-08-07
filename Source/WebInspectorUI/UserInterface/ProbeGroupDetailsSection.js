@@ -161,6 +161,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
         var updateProbeGroupColor = function(group, color, usedPopover) {
             group.color = color;
+            this._updateColor();
             usedPopover.dismiss();
         };
 

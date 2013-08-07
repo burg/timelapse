@@ -38,6 +38,9 @@ WebInspector.DebuggerSidebarPanel = function()
     WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.Paused, this._debuggerDidPause, this);
     WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.Resumed, this._debuggerDidResume, this);
 
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
+
     this._pauseOrResumeKeyboardShortcut = new WebInspector.KeyboardShortcut(WebInspector.KeyboardShortcut.Modifier.Control | WebInspector.KeyboardShortcut.Modifier.Command, "Y", this._debuggerPauseResumeButtonClicked.bind(this));
     this._stepOverKeyboardShortcut = new WebInspector.KeyboardShortcut(null, WebInspector.KeyboardShortcut.Key.F6, this._debuggerStepOverButtonClicked.bind(this));
     this._stepIntoKeyboardShortcut = new WebInspector.KeyboardShortcut(null, WebInspector.KeyboardShortcut.Key.F7, this._debuggerStepIntoButtonClicked.bind(this));
@@ -111,9 +114,15 @@ WebInspector.DebuggerSidebarPanel = function()
     var callStackGroup = new WebInspector.DetailsSectionGroup([this._callStackRow]);
     this._callStackSection = new WebInspector.DetailsSection("call-stack", WebInspector.UIString("Call Stack"), [callStackGroup]);
 
-    // TODO: create the content tree outline for probes.
+    var probeTreeOutlineElement = document.createElement("ol");
+    probeTreeOutlineElement.className = WebInspector.DebuggerSidebarPanel.ProbesTreeOutlineStyleClassName;
+
+    this._probesContentTreeOutline = new TreeOutline(probeTreeOutlineElement);
+    this._probesContentTreeOutline.onselect = this._treeElementSelected.bind(this);
+    this._probesContentTreeOutline.ondelete = this._probesTreeOutlineDeleteTreeElement.bind(this);
+
     var probesRow = new WebInspector.DetailsSectionRow;
-    //probesRow.element.appendChild(this._probesContentTreeOutline.element);
+    probesRow.element.appendChild(this._probesContentTreeOutline.element);
     this._probesToggleElement = document.createElement("img");
     this._probesToggleElement.className = WebInspector.DebuggerSidebarPanel.ProbeToggleStyleClassName;
     if (WebInspector.probeManager.probesEnabled)
@@ -133,6 +142,7 @@ WebInspector.DebuggerSidebarPanel.BreakpointToggleStyleClassName = "breakpoint-t
 WebInspector.DebuggerSidebarPanel.BreakpointToggleEnabledStyleClassName = "enabled";
 WebInspector.DebuggerSidebarPanel.ProbeToggleStyleClassName = "probe-toggle";
 WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName = "enabled";
+WebInspector.DebuggerSidebarPanel.ProbesTreeOutlineStyleClassName = "navigation-sidebar-panel-content-tree-outline";
 
 WebInspector.DebuggerSidebarPanel.prototype = {
     constructor: WebInspector.DebuggerSidebarPanel,
@@ -231,6 +241,34 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         return breakpointTreeElement;
     },
 
+    _addProbeGroup: function(probeGroup)
+    {
+        var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
+        if (!sourceCode)
+            return null;
+
+        var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(sourceCode);
+        if (!parentTreeElement) {
+            if (sourceCode instanceof WebInspector.SourceMapResource)
+                parentTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
+            else if (sourceCode instanceof WebInspector.Resource)
+                parentTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
+            else if (sourceCode instanceof WebInspector.Script)
+                parentTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
+        }
+
+        if (!parentTreeElement.parent) {
+            parentTreeElement.hasChildren = true;
+            parentTreeElement.expand();
+
+            this._probesContentTreeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, this._probesContentTreeOutline.children, this._compareTopLevelTreeElements.bind(this)));
+        }
+
+        var probeGroupTreeElement = new WebInspector.ProbeGroupTreeElement(probeGroup);
+        parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements));
+        return probeGroupTreeElement;
+    },
+
     _addBreakpointsForSourceCode: function(sourceCode)
     {
         var breakpoints = WebInspector.debuggerManager.breakpointsForSourceCode(sourceCode);
@@ -291,6 +329,25 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         this._removeBreakpointTreeElement(breakpointTreeElement);
     },
 
+    _probeGroupAdded: function(event)
+    {
+        var probeGroup = event.data;
+        this._addProbeGroup(probeGroup);
+    },
+
+    _probeGroupRemoved: function(event)
+    {
+        var probeGroup = event.data;
+
+        var probeGroupTreeElement = this._probesContentTreeOutline.getCachedTreeElement(probeGroup);
+        console.assert(probeGroupTreeElement);
+        if (!probeGroupTreeElement)
+            return;
+
+        this._removeProbeGroupTreeElement(probeGroupTreeElement);
+    },
+
+
     _breakpointDisplayLocationDidChange: function(event)
     {
         var breakpoint = event.target;
@@ -322,6 +379,17 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
         if (!parentTreeElement.children.length)
             this._breakpointsContentTreeOutline.removeChild(parentTreeElement);
+    },
+
+    _removeProbeGroupTreeElement: function(probeGroupTreeElement)
+    {
+        var parentTreeElement = probeGroupTreeElement.parent;
+        parentTreeElement.removeChild(probeGroupTreeElement);
+
+        console.assert(parentTreeElement.parent === this._probesContentTreeOutline);
+
+        if (!parentTreeElement.children.length)
+            this._probesContentTreeOutline.removeChild(parentTreeElement);
     },
 
     _debuggerCallFramesDidChange: function()
@@ -438,6 +506,50 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         contextMenu.show();
     },
 
+    _probeGroupsBeneathTreeElement: function(treeElement)
+    {
+        console.assert(treeElement instanceof WebInspector.ResourceTreeElement || treeElement instanceof WebInspector.ScriptTreeElement);
+        if (!(treeElement instanceof WebInspector.ResourceTreeElement) && !(treeElement instanceof WebInspector.ScriptTreeElement))
+            return [];
+
+        var probeGroups = [];
+        var probeGroupTreeElements = treeElement.children;
+        for (var i = 0; i < probeGroupTreeElements.length; ++i) {
+            console.assert(probeTreeElements[i] instanceof WebInspector.ProbeGroupTreeElement);
+            console.assert(probeGroupTreeElements[i].probeGroup);
+            var probeGroup = probeGroupTreeElements[i].probeGroup;
+            if (probeGroup)
+                probeGroups.push(probeGroup);
+        }
+
+        return probeGroups;
+    },
+
+    _removeAllProbeGroups: function(probeGroups)
+    {
+        for (var i = 0; i < probeGroups.length; ++i)
+            probeGroups[i].clear();
+    },
+
+    _probesTreeOutlineDeleteTreeElement: function(treeElement)
+    {
+        console.assert(treeElement.selected);
+        console.assert(treeElement instanceof WebInspector.ResourceTreeElement || treeElement instanceof WebInspector.ScriptTreeElement);
+        if (!(treeElement instanceof WebInspector.ResourceTreeElement) && !(treeElement instanceof WebInspector.ScriptTreeElement))
+            return false;
+
+        var wasTopResourceTreeElement = !treeElement.previousSibling;
+        var nextSibling = treeElement.nextSibling;
+
+        var probeGroups = this._probeGroupsBeneathTreeElement(treeElement);
+        this._removeAllProbes(probeGroups);
+
+        if (wasTopResourceTreeElement && nextSibling)
+            nextSibling.select(true, true);
+
+        return true;
+    },
+
     _treeElementSelected: function(treeElement, selectedByUser)
     {
         function deselectCallStackContentTreeElements()
@@ -448,24 +560,55 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 selectedTreeElement.deselect();
         }
 
+        function deselectProbesContentTreeElements()
+        {
+            // Deselect any tree element in the probes content tree outline to prevent two selections in the sidebar.
+            var selectedTreeElement = this._probesContentTreeOutline.selectedTreeElement;
+            if (selectedTreeElement)
+                selectedTreeElement.deselect();
+        }
+
+        function deselectBreakpointsContentTreeElements()
+        {
+            // Deselect any tree element in the breakpoint content tree outline to prevent two selections in the sidebar.
+            var selectedTreeElement = this._breakpointsContentTreeOutline.selectedTreeElement;
+            if (selectedTreeElement)
+                selectedTreeElement.deselect();
+        }
+
         if (treeElement instanceof WebInspector.ResourceTreeElement || treeElement instanceof WebInspector.ScriptTreeElement) {
             // If the resource is being selected when it has no children it is in the process of being deleted, don't do anything.
             if (!treeElement.children.length)
                 return;
             deselectCallStackContentTreeElements.call(this);
+            if (treeElement.parent === this._breakpointsContentTreeOutline)
+                deselectProbesContentTreeElements.call(this);
+            else
+                deselectBreakpointsContentTreeElements.call(this);
             WebInspector.resourceSidebarPanel.showSourceCode(treeElement.representedObject);
             return;
         }
 
         if (treeElement instanceof WebInspector.CallFrameTreeElement) {
-            // Deselect any tree element in the breakpoints content tree outline to prevent two selections in the sidebar.
-            var selectedTreeElement = this._breakpointsContentTreeOutline.selectedTreeElement;
-            if (selectedTreeElement)
-                selectedTreeElement.deselect();
-
+            deselectBreakpointsContentTreeElements.call(this);
+            deselectProbesContentTreeElements.call(this);
             var callFrame = treeElement.callFrame;
             WebInspector.debuggerManager.activeCallFrame = callFrame;
             WebInspector.resourceSidebarPanel.showSourceCodeLocation(callFrame.sourceCodeLocation);
+            return;
+        }
+
+        if (treeElement instanceof WebInspector.ProbeGroupTreeElement) {
+            deselectBreakpointsContentTreeElements.call(this);
+            deselectCallStackContentTreeElements.call(this);
+            var probeGroup = treeElement.probeGroup;
+            WebInspector.probeDetailsSidebarPanel.currentProbeGroup = probeGroup;
+            if (WebInspector.detailsSidebar.sidebarPanels.indexOf(WebInspector.probeDetailsSidebarPanel) == -1) {
+                WebInspector.detailsSidebar.addSidebarPanel(WebInspector.probeDetailsSidebarPanel);
+                WebInspector.probeDetailsSidebarPanel.toolbarItem.hidden = false;
+            }
+            WebInspector.detailsSidebar.selectedSidebarPanel = WebInspector.probeDetailsSidebarPanel;
+            WebInspector.resourceSidebarPanel.showSourceCodeLocation(probeGroup.sourceCodeLocation);
             return;
         }
 
@@ -473,6 +616,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
             return;
 
         deselectCallStackContentTreeElements.call(this);
+        deselectProbesContentTreeElements.call(this);
 
         if (!treeElement.parent.representedObject)
             return;
@@ -504,6 +648,18 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     {
         var aLocation = a.breakpoint.sourceCodeLocation;
         var bLocation = b.breakpoint.sourceCodeLocation;
+
+        var comparisonResult = aLocation.displayLineNumber - bLocation.displayLineNumber
+        if (comparisonResult !== 0)
+            return comparisonResult;
+
+        return aLocation.displayColumnNumber - bLocation.displayColumnNumber;
+    },
+
+    _compareProbeGroupTreeElements: function(a, b)
+    {
+        var aLocation = a.probeGroup.sourceCodeLocation;
+        var bLocation = b.probeGroup.sourceCodeLocation;
 
         var comparisonResult = aLocation.displayLineNumber - bLocation.displayLineNumber
         if (comparisonResult !== 0)

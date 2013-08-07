@@ -23,16 +23,25 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDataGridNode = function(samples)
-{
-    WebInspector.DataGridNode.call(this, samples);
-    this._element = document.createElement("tr");
-    this._element._dataGridNode = this;
-    this._element.classList.add("revealed");
-};
+.item.probe-group .status > .status-image {
+    width: 21px;
+    height: 12px;
+    content: url(Images/BreakpointInactiveButton.pdf);
+    margin-top: 3px;
+}
 
-WebInspector.ProbeGroupDataGridNode.prototype = {
-    constructor: WebInspector.ProbeGroupDataGridNode,
-    __proto__: WebInspector.DataGridNode.prototype
+.item.probe-group .status > .status-image.enabled {
+    content: url(Images/ProbeButton.pdf);
+}
 
+.item.probe-group .status > .status-image.disabled {
+    opacity: 0.45;
+}
+
+.item.probe-group .subtitle.formatted-location {
+    font-style: italic;
+}
+
+.probe-group-generic-line-icon .icon {
+	content: url(Images/ResultLine.pdf);
 }

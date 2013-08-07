@@ -201,17 +201,14 @@ WebInspector.contentLoaded = function()
     this.resourceSidebarPanel = new WebInspector.ResourceSidebarPanel;
     this.instrumentSidebarPanel = new WebInspector.InstrumentSidebarPanel;
     this.debuggerSidebarPanel = new WebInspector.DebuggerSidebarPanel;
-    this.probesSidebarPanel = new WebInspector.ProbesSidebarPanel;
 
     this.navigationSidebar.addSidebarPanel(this.resourceSidebarPanel);
     this.navigationSidebar.addSidebarPanel(this.instrumentSidebarPanel);
     this.navigationSidebar.addSidebarPanel(this.debuggerSidebarPanel);
-    this.navigationSidebar.addSidebarPanel(this.probesSidebarPanel);
 
     this.toolbar.addToolbarItem(this.resourceSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
     this.toolbar.addToolbarItem(this.instrumentSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
     this.toolbar.addToolbarItem(this.debuggerSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
-    this.toolbar.addToolbarItem(this.probesSidebarPanel.toolbarItem, WebInspector.Toolbar.Section.Left);
 
     // The toolbar button for the console.
     const consoleKeyboardShortcut = "\u2325\u2318C"; // Option-Command-C
@@ -237,9 +234,10 @@ WebInspector.contentLoaded = function()
     this.cssStyleDetailsSidebarPanel = new WebInspector.CSSStyleDetailsSidebarPanel;
     this.applicationCacheDetailsSidebarPanel = new WebInspector.ApplicationCacheDetailsSidebarPanel;
     this.scopeChainDetailsSidebarPanel = new WebInspector.ScopeChainDetailsSidebarPanel;
+    this.probeDetailsSidebarPanel = new WebInspector.ProbeDetailsSidebarPanel;
 
     this.detailsSidebarPanels = [this.resourceDetailsSidebarPanel, this.applicationCacheDetailsSidebarPanel, this.scopeChainDetailsSidebarPanel,
-        this.domNodeDetailsSidebarPanel, this.cssStyleDetailsSidebarPanel];
+        this.domNodeDetailsSidebarPanel, this.cssStyleDetailsSidebarPanel, this.probeDetailsSidebarPanel];
 
     if (window.LayerTreeAgent) {
         this.layerTreeSidebarPanel = new WebInspector.LayerTreeSidebarPanel;

@@ -55,5 +55,5 @@
 }
 
 .sidebar > .panel.debugger .probe-toggle.enabled {
-    content: url(Images/BreakpointButton.pdf);
+    content: url(Images/ProbeButton.pdf);
 }
