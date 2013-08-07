@@ -114,7 +114,6 @@ WebInspector.DebuggerSidebarPanel = function()
     var callStackGroup = new WebInspector.DetailsSectionGroup([this._callStackRow]);
     this._callStackSection = new WebInspector.DetailsSection("call-stack", WebInspector.UIString("Call Stack"), [callStackGroup]);
 
-    // TODO: create the content tree outline for probes.
     var probeTreeOutlineElement = document.createElement("ol");
     probeTreeOutlineElement.className = WebInspector.DebuggerSidebarPanel.ProbesTreeOutlineStyleClassName;
 
