@@ -67,7 +67,7 @@ InspectorDebuggerAgent::InspectorDebuggerAgent(InstrumentingAgents* instrumentin
     , m_frontend(0)
     , m_pausedScriptState(0)
     , m_javaScriptPauseScheduled(false)
-    , m_listener(0)
+    , m_listeners(ListenerSet())
 {
     // FIXME: make breakReason optional so that there was no need to init it with "other".
     clearBreakDetails();
@@ -87,8 +87,10 @@ void InspectorDebuggerAgent::enable()
     scriptDebugServer().setBreakpointsActivated(true);
     startListeningScriptDebugServer();
 
-    if (m_listener)
-        m_listener->debuggerWasEnabled();
+    Vector<DebuggerAgentListener*> copy;
+    copyToVector(m_listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->debuggerWasEnabled();
 }
 
 void InspectorDebuggerAgent::disable()
@@ -103,8 +105,10 @@ void InspectorDebuggerAgent::disable()
     scriptDebugServer().continueProgram();
     clear();
 
-    if (m_listener)
-        m_listener->debuggerWasDisabled();
+    Vector<DebuggerAgentListener*> copy;
+    copyToVector(m_listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->debuggerWasDisabled();
 }
 
 bool InspectorDebuggerAgent::enabled()
@@ -176,6 +180,16 @@ void InspectorDebuggerAgent::clearFrontend()
     // in InspectorState, but not in cookie. That's why after navigation debuggerEnabled will be true,
     // but after front-end re-open it will still be false.
     m_state->setBoolean(DebuggerAgentState::debuggerEnabled, false);
+}
+
+void InspectorDebuggerAgent::addListener(DebuggerAgentListener* listener)
+{
+    m_listeners.add(listener);
+}
+
+void InspectorDebuggerAgent::removeListener(DebuggerAgentListener* listener)
+{
+    m_listeners.remove(listener);
 }
 
 void InspectorDebuggerAgent::setBreakpointsActive(ErrorString*, bool active)
@@ -457,6 +471,11 @@ void InspectorDebuggerAgent::stepOver(ErrorString* errorString)
         return;
     m_injectedScriptManager->releaseObjectGroup(InspectorDebuggerAgent::backtraceObjectGroup);
     scriptDebugServer().stepOverStatement();
+
+    Vector<DebuggerAgentListener*> copy;
+    copyToVector(m_listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->stepOver();
 }
 
 void InspectorDebuggerAgent::stepInto(ErrorString* errorString)
@@ -465,7 +484,11 @@ void InspectorDebuggerAgent::stepInto(ErrorString* errorString)
         return;
     m_injectedScriptManager->releaseObjectGroup(InspectorDebuggerAgent::backtraceObjectGroup);
     scriptDebugServer().stepIntoStatement();
-    m_listener->stepInto();
+
+    Vector<DebuggerAgentListener*> copy;
+    copyToVector(m_listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->stepInto();
 }
 
 void InspectorDebuggerAgent::stepOut(ErrorString* errorString)
@@ -474,6 +497,11 @@ void InspectorDebuggerAgent::stepOut(ErrorString* errorString)
         return;
     m_injectedScriptManager->releaseObjectGroup(InspectorDebuggerAgent::backtraceObjectGroup);
     scriptDebugServer().stepOutOfFunction();
+
+    Vector<DebuggerAgentListener*> copy;
+    copyToVector(m_listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->stepOut();
 }
 
 void InspectorDebuggerAgent::setPauseOnExceptions(ErrorString* errorString, const String& stringPauseState)
@@ -643,7 +671,7 @@ String InspectorDebuggerAgent::sourceMapURLForScript(const Script& script)
 
                 sourceMapHeader = resource->response().httpHeaderField(sourceMapHTTPHeaderDeprecated);
                 if (!sourceMapHeader.isEmpty())
-                    return sourceMapHeader;                
+                    return sourceMapHeader;
             }
         }
     }
@@ -718,8 +746,11 @@ void InspectorDebuggerAgent::didPause(ScriptState* scriptState, const ScriptValu
         scriptDebugServer().removeBreakpoint(m_continueToLocationBreakpointId);
         m_continueToLocationBreakpointId = "";
     }
-    if (m_listener)
-        m_listener->didPause();
+
+    Vector<DebuggerAgentListener*> copy;
+    copyToVector(m_listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->didPause();
 }
 
 void InspectorDebuggerAgent::didContinue()

@@ -120,15 +120,18 @@ public:
     void breakProgram(InspectorFrontend::Debugger::Reason::Enum breakReason, PassRefPtr<InspectorObject> data);
     virtual void scriptExecutionBlockedByCSP(const String& directiveText);
 
-    class Listener {
+    class DebuggerAgentListener {
     public:
-        virtual ~Listener() { }
-        virtual void debuggerWasEnabled() = 0;
-        virtual void debuggerWasDisabled() = 0;
-        virtual void stepInto() = 0;
-        virtual void didPause() = 0;
+        virtual ~DebuggerAgentListener() { }
+        virtual void debuggerWasEnabled() { };
+        virtual void debuggerWasDisabled() { };
+        virtual void stepInto() { };
+        virtual void stepOver() { };
+        virtual void stepOut() { };
+        virtual void didPause() { };
     };
-    void setListener(Listener* listener) { m_listener = listener; }
+    void addListener(DebuggerAgentListener*);
+    void removeListener(DebuggerAgentListener*);
 
     virtual ScriptDebugServer& scriptDebugServer() = 0;
 
@@ -170,6 +173,7 @@ private:
 
     typedef HashMap<String, Script> ScriptsMap;
     typedef HashMap<String, Vector<String> > BreakpointIdToDebugServerBreakpointIdsMap;
+    typedef HashSet<DebuggerAgentListener*> ListenerSet;
 
     InjectedScriptManager* m_injectedScriptManager;
     InspectorFrontend::Debugger* m_frontend;
@@ -181,7 +185,7 @@ private:
     InspectorFrontend::Debugger::Reason::Enum m_breakReason;
     RefPtr<InspectorObject> m_breakAuxData;
     bool m_javaScriptPauseScheduled;
-    Listener* m_listener;
+    ListenerSet m_listeners;
 };
 
 } // namespace WebCore

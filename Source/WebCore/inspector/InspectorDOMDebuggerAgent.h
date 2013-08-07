@@ -54,7 +54,7 @@ class Node;
 
 typedef String ErrorString;
 
-class InspectorDOMDebuggerAgent : public InspectorBaseAgent<InspectorDOMDebuggerAgent>, public InspectorDebuggerAgent::Listener, public InspectorBackendDispatcher::DOMDebuggerCommandHandler {
+class InspectorDOMDebuggerAgent : public InspectorBaseAgent<InspectorDOMDebuggerAgent>, public InspectorDebuggerAgent::DebuggerAgentListener, public InspectorBackendDispatcher::DOMDebuggerCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorDOMDebuggerAgent);
 public:
     static PassOwnPtr<InspectorDOMDebuggerAgent> create(InstrumentingAgents*, InspectorCompositeState*, InspectorDOMAgent*, InspectorDebuggerAgent*, InspectorAgent*);
@@ -89,11 +89,11 @@ public:
 private:
     InspectorDOMDebuggerAgent(InstrumentingAgents*, InspectorCompositeState*, InspectorDOMAgent*, InspectorDebuggerAgent*, InspectorAgent*);
 
-    // InspectorDebuggerAgent::Listener implementation.
-    virtual void debuggerWasEnabled();
-    virtual void debuggerWasDisabled();
-    virtual void stepInto();
-    virtual void didPause();
+    // InspectorDebuggerAgent::DebuggerAgentListener implementation.
+    virtual void debuggerWasEnabled() OVERRIDE;
+    virtual void debuggerWasDisabled() OVERRIDE;
+    virtual void stepInto() OVERRIDE;
+    virtual void didPause() OVERRIDE;
     void disable();
 
     void descriptionForDOMEvent(Node* target, int breakpointType, bool insertion, InspectorObject* description);

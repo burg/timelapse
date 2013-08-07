@@ -81,7 +81,7 @@ InspectorDOMDebuggerAgent::InspectorDOMDebuggerAgent(InstrumentingAgents* instru
     , m_debuggerAgent(debuggerAgent)
     , m_pauseInNextEventListener(false)
 {
-    m_debuggerAgent->setListener(this);
+    m_debuggerAgent->addListener(this);
 }
 
 InspectorDOMDebuggerAgent::~InspectorDOMDebuggerAgent()
@@ -133,7 +133,7 @@ void InspectorDOMDebuggerAgent::clearFrontend()
 
 void InspectorDOMDebuggerAgent::discardAgent()
 {
-    m_debuggerAgent->setListener(0);
+    m_debuggerAgent->removeListener(this);
     m_debuggerAgent = 0;
 }
 
