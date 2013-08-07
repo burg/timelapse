@@ -47,7 +47,9 @@ WebInspector.ProbeGroupObject.Event = {
     ProbeRemoved: "probe-group-probe-removed",
     PropertiesChanged: "probe-group-properties-changed",
     RowUpdated: "probe-group-row-updated",
-    WillRemove: "probe-group-will-remove"
+    WillRemove: "probe-group-will-remove",
+    Enabled: "probe-group-enabled",
+    Disabled: "probe-group-disabled"
 };
 
 WebInspector.ProbeGroupObject.DefaultProbeColor = new WebInspector.Color("yellow");
@@ -100,7 +102,7 @@ WebInspector.ProbeGroupObject.prototype = {
     set color(value)
     {
         this._color = value;
-        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.PropertiesChanged, this);
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.PropertiesChanged, this);
     },
 
     clear: function()
@@ -118,6 +120,7 @@ WebInspector.ProbeGroupObject.prototype = {
         for (var i = 0; i < this._probes.length; ++i)
             if (!this._probes[i].enabled)
                 WebInspector.probeManager.enableProbe(this._probes[i]);
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.Enabled, this);
     },
 
     disable: function()
@@ -129,6 +132,7 @@ WebInspector.ProbeGroupObject.prototype = {
         for (var i = 0; i < this._probes.length; ++i)
             if (this._probes[i].enabled)
                 WebInspector.probeManager.disableProbe(this._probes[i]);
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.Disabled, this);
     },
 
     // Protected (called by ProbeManager.js)
@@ -176,6 +180,9 @@ WebInspector.ProbeGroupObject.prototype = {
 
     _addSampleData: function(event)
     {
+        var probe = event.target;
+        if (!this._probesByUid[probe.probeId])
+            return;
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
 

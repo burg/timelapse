@@ -78,6 +78,23 @@
     text-indent: -1px;
 }
 
+.text-editor > .CodeMirror .has-probe .CodeMirror-linenumber::before {
+    color: white;
+    position: absolute;
+    top: 0;
+    left: 1px;
+    bottom: 0;
+    right: -7px;
+
+    content: "";
+
+    z-index: -2;
+
+    border-image-source: -webkit-image-set(url(Images/Probe.png) 1x, url(Images/Probe@2x.png) 2x);
+    border-image-slice: 3 7 3 3 fill;
+    border-width: 3px 7px 3px 3px;
+}
+
 .text-editor > .CodeMirror .execution-line .CodeMirror-linenumber::after {
     position: absolute;
     top: 0;
@@ -162,4 +179,12 @@
 @-webkit-keyframes text-editor-hovered-expression-highlight-fadeout {
     from { background-color: highlight; }
     to { background-color: rgba(0, 0, 0, 0.1); }
+}
+
+.text-editor > .CodeMirror .probe-highlighted {
+    -webkit-animation: "text-editor-probe-highlight-fadeout" 2s;
+}
+
+@-webkit-keyframes text-editor-probe-highlight-fadeout {
+    from { background-color: BlueViolet; }
 }

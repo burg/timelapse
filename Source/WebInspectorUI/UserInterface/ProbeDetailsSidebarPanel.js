@@ -23,34 +23,71 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbesSidebarPanel = function()
+WebInspector.ProbeDetailsSidebarPanel = function()
 {
-	WebInspector.NavigationSidebarPanel.call(this, "probes", WebInspector.UIString("Probes"), "Images/NavigationItemProbes.pdf", "4", true);
+	WebInspector.DetailsSidebarPanel.call(this, "probe", WebInspector.UIString("Probe"), WebInspector.UIString("Probe"), "Images/NavigationItemProbes.pdf", "6");
 
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
 
     this._probeGroupSectionsByKey = {};
     this._probeGroupSections = [];
-    this._navigationBar = new WebInspector.NavigationBar;
-    this.element.appendChild(this._navigationBar.element);
-
-    this._probesRecordStopButtonItem = new WebInspector.ToggleButtonNavigationItem("probes-record-stop", WebInspector.UIString("Click to play"), WebInspector.UIString("Click to pause"), "Images/Resume.pdf", "Images/Pause.pdf", 16, 16);
-    this._probesRecordStopButtonItem.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this._probesRecordStopButtonClicked, this);
-    this._navigationBar.addNavigationItem(this._probesRecordStopButtonItem);
-
-    // Add this offset-sections class name so the sticky headers don't overlap the navigation bar.
-    this.element.classList.add(WebInspector.ProbesSidebarPanel.OffsetSectionsStyleClassName);
-
-    // TODO: (Issue #313): Implement filter/search capabilities for the probes sidebar panel.
-    this.filterBar.placeholder = WebInspector.UIString("Filter Probes List");
 };
 
-WebInspector.ProbesSidebarPanel.OffsetSectionsStyleClassName  = "offset-sections";
+WebInspector.ProbeDetailsSidebarPanel.OffsetSectionsStyleClassName  = "offset-sections";
 
-WebInspector.ProbesSidebarPanel.prototype = {
-    constructor: WebInspector.ProbesSidebarPanel,
-    __proto__: WebInspector.NavigationSidebarPanel.prototype,
+WebInspector.ProbeDetailsSidebarPanel.prototype = {
+    constructor: WebInspector.ProbeDetailsSidebarPanel,
+    __proto__: WebInspector.DetailsSidebarPanel.prototype,
+
+    // Public
+
+    get currentProbeGroup()
+    {
+        return this._currentProbeGroup;
+    },
+
+    set currentProbeGroup(probeGroup)
+    {
+        this._oldProbeGroup = this._currentProbeGroup;
+        if (this._oldProbeGroup)
+            this._oldProbeGroupSection = this._probeGroupSectionsByKey[this._oldProbeGroup.groupKey];
+        this._currentProbeGroup = probeGroup;
+        this._currentProbeGroupSection = this._probeGroupSectionsByKey[probeGroup.groupKey];
+        this.needsRefresh()
+    },
+
+    inspect: function(objects)
+    {
+        // Convert to a single item array if needed.
+        if (!(objects instanceof Array))
+            objects = [objects];
+
+        var probeGroupToInspect = null;
+
+        // Iterate over the objects to find a WebInspector.ProbeGroupObject to inspect.
+        for (var i = 0; i < objects.length; ++i) {
+            if (!(objects[i] instanceof WebInspector.ProbeGroupObject))
+                continue;
+            probeGroupToInspect = objects[i];
+            break;
+        }
+
+        this.probeGroup = probeGroupToInspect;
+
+        return !!this.probeGroup;
+    },
+
+    refresh: function()
+    {
+        if (this._oldProbeGroupSection) {
+            this.element.removeChild(this._oldProbeGroupSection.element);
+        }
+        if (this._currentProbeGroupSection) {
+            this.element.appendChild(this._currentProbeGroupSection.element);
+        }
+
+    },
 
     // Private
 
@@ -59,10 +96,9 @@ WebInspector.ProbesSidebarPanel.prototype = {
         var probeGroup = event.data;
         console.assert(!(probeGroup.groupKey in this._probeGroupSectionsByKey), "New probe group ", probeGroup, " already has its own sidebar.");
 
-        var probesSection = new WebInspector.ProbeGroupDetailsSection(probeGroup);
-        this._probeGroupSectionsByKey[probeGroup.groupKey] = probesSection;
-        this._probeGroupSections.push(probesSection);
-        this.contentElement.appendChild(probesSection.element);
+        var probeSection = new WebInspector.ProbeGroupDetailsSection(probeGroup);
+        this._probeGroupSectionsByKey[probeGroup.groupKey] = probeSection;
+        this._probeGroupSections.push(probeSection);
     },
 
 
@@ -74,15 +110,7 @@ WebInspector.ProbesSidebarPanel.prototype = {
         var probeGroupSection = this._probeGroupSectionsByKey[probeGroup.groupKey];
         delete this._probeGroupSectionsByKey[probeGroup.groupKey];
         this._probeGroupSections.splice(this._probeGroupSections.indexOf(probeGroupSection), 1);
-        this.contentElement.removeChild(probeGroupSection.element);
+        this.element.removeChild(probeGroupSection.element);
         probeGroupSection.closed();
-    },
-
-    _probesRecordStopButtonClicked: function(event)
-    {
-    	if (WebInspector.replayManager.replayState === WebInspector.ReplayManager.ReplayState.CanReplay)
-    		WebInspector.replayManager.replayToCompletionSoon(true, WebInspector.replayManager.replayState);
-    	else
-    		WebInspector.replayManager.pausePlaybackSoon();
     }
 };
