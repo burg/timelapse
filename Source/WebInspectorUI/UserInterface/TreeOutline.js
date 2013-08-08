@@ -1072,6 +1072,66 @@ TreeElement.prototype.traversePreviousTreeElement = function(skipUnrevealed, don
     return this.parent;
 }
 
+TreeElement.prototype.applyFilter = function(filterRegex)
+{
+    console.assert(!filterRegex || (filterRegex instanceof RegExp));
+
+    if (!filterRegex) {
+        // No filters, so make everything visible.
+        this.hidden = false;
+
+        // If this tree element was expanded during filtering, collapse it again.
+        if (this.expanded && this._wasExpandedDuringFiltering) {
+            delete this._wasExpandedDuringFiltering;
+            this.collapse();
+        }
+
+        return;
+    }
+
+    if (!this.filterableData)
+
+    function matchTextFilter(regex, input)
+    {
+        // Convert to a single item array if needed.
+        if (!(input instanceof Array))
+            input = [input];
+
+        // Loop over all the inputs and try to match them.
+        for (var i = 0; i < input.length; ++i) {
+            if (!input[i])
+                continue;
+            if (regex.test(input[i]))
+                return true;
+        }
+
+        // No inputs matched.
+        return false;
+    }
+
+    if (matchTextFilter(filterRegex, this.filterableData.text)) {
+        // Make this element visible since it matches.
+        this.hidden = false;
+
+        // Make the ancestors visible and expand them.
+        var currentAncestor = this.parent;
+        while (currentAncestor && !currentAncestor.root) {
+            currentAncestor.hidden = false;
+
+            if (!currentAncestor.expanded) {
+                currentAncestor._wasExpandedDuringFiltering = true;
+                currentAncestor.expand();
+            }
+
+            currentAncestor = currentAncestor.parent;
+        }
+        return;
+    }
+
+    // Make this element invisible since it does not match.
+    this.hidden = true;
+}
+
 TreeElement.prototype.isEventWithinDisclosureTriangle = function(event)
 {
     // FIXME: We should not use getComputedStyle(). For that we need to get rid of using ::before for disclosure triangle. (http://webk.it/74446) 

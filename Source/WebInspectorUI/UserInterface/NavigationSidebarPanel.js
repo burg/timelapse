@@ -227,77 +227,6 @@ WebInspector.NavigationSidebarPanel.prototype = {
         }
     },
 
-    applyFiltersToTreeElement: function(treeElement)
-    {
-        if (!this._filterBar.hasActiveFilters()) {
-            // No filters, so make everything visible.
-            treeElement.hidden = false;
-
-            // If this tree element was expanded during filtering, collapse it again.
-            if (treeElement.expanded && treeElement.__wasExpandedDuringFiltering) {
-                delete treeElement.__wasExpandedDuringFiltering;
-                treeElement.collapse();
-            }
-
-            return;
-        }
-
-        // Get the filterable data from the tree element.
-        var filterableData = treeElement.filterableData;
-        if (!filterableData)
-            return;
-
-        var self = this;
-        function matchTextFilter(input)
-        {
-            if (!self._textFilterRegex)
-                return true;
-
-            // Convert to a single item array if needed.
-            if (!(input instanceof Array))
-                input = [input];
-
-            // Loop over all the inputs and try to match them.
-            for (var i = 0; i < input.length; ++i) {
-                if (!input[i])
-                    continue;
-                if (self._textFilterRegex.test(input[i]))
-                    return true;
-            }
-
-            // No inputs matched.
-            return false;
-        }
-
-        function makeVisible()
-        {
-            // Make this element visible.
-            treeElement.hidden = false;
-
-            // Make the ancestors visible and expand them.
-            var currentAncestor = treeElement.parent;
-            while (currentAncestor && !currentAncestor.root) {
-                currentAncestor.hidden = false;
-
-                if (!currentAncestor.expanded) {
-                    currentAncestor.__wasExpandedDuringFiltering = true;
-                    currentAncestor.expand();
-                }
-
-                currentAncestor = currentAncestor.parent;
-            }
-        }
-
-        if (matchTextFilter(filterableData.text)) {
-            // Make this element visible since it matches.
-            makeVisible();
-            return;
-        }
-
-        // Make this element invisible since it does not match.
-        treeElement.hidden = true;
-    },
-
     show: function()
     {
         if (!this.parentSidebar)
@@ -384,14 +313,13 @@ WebInspector.NavigationSidebarPanel.prototype = {
 
     _updateFilter: function()
     {
-        var filters = this._filterBar.filters;
-        this._textFilterRegex = simpleGlobStringToRegExp(filters.text, "i");
-        this._filtersSetting.value = filters;
+        this._filtersSetting.value = this._filterBar.filters;
+        var filterRegex = this._filterBar.activeFiltersAsRegex();
 
         // Update the whole tree.
         var currentTreeElement = this._defaultContentTreeOutline.children[0];
         while (currentTreeElement && !currentTreeElement.root) {
-            this.applyFiltersToTreeElement(currentTreeElement);
+            currentTreeElement.applyFilter(filterRegex);
             currentTreeElement = currentTreeElement.traverseNextTreeElement(false, null, false);
         }
 
@@ -401,10 +329,12 @@ WebInspector.NavigationSidebarPanel.prototype = {
 
     _treeElementAddedOrChanged: function(treeElement)
     {
+        var filterRegex = this._filterBar.activeFiltersAsRegex();
+
         // Apply the filters to the tree element and its descendants.
         var currentTreeElement = treeElement;
         while (currentTreeElement && !currentTreeElement.root) {
-            this.applyFiltersToTreeElement(currentTreeElement);
+            currentTreeElement.applyFilter(filterRegex);
             currentTreeElement = currentTreeElement.traverseNextTreeElement(false, treeElement, false);
         }
 

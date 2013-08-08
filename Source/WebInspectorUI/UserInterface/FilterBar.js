@@ -93,6 +93,11 @@ WebInspector.FilterBar.prototype = {
         return false;
     },
 
+    activeFiltersAsRegex: function()
+    {
+        return (this.hasActiveFilters()) ? simpleGlobStringToRegExp(this.filters.text, "i") : null;       
+    },
+
     // Private
 
     _inputFieldChanged: function(event)
