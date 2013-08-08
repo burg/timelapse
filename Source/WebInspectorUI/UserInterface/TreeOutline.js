@@ -493,6 +493,24 @@ TreeOutline.prototype.revealAndSelect = function(omitFocus)
     // this is the root, do nothing
 }
 
+TreeOutline.prototype.anyElementMatchesFilter = function()
+{
+    for (var i = 0; i < this.children.length; ++i)
+        if (!this.children[i].hidden)
+            return true;
+
+    return false;
+}
+
+TreeOutline.prototype.applyFilter = function(filterRegex)
+{
+    var currentChild = this.children[0];
+    while (currentChild && !currentChild.root) {
+        currentChild.applyFilter(filterRegex);
+        currentChild = currentChild.traverseNextTreeElement(false, null, false);
+    }
+}
+
 TreeOutline.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
@@ -1130,6 +1148,15 @@ TreeElement.prototype.applyFilter = function(filterRegex)
 
     // Make this element invisible since it does not match.
     this.hidden = true;
+}
+
+TreeElement.prototype.applyFilterRecursively = function(filterRegex)
+{
+    var currentChild = this;
+    while (currentChild && !currentChild.root) {
+        currentChild.applyFilter(filterRegex);
+        currentChild = currentChild.traverseNextTreeElement(false, this, false);
+    }  
 }
 
 TreeElement.prototype.isEventWithinDisclosureTriangle = function(event)
