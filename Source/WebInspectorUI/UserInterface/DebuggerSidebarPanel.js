@@ -84,7 +84,7 @@ WebInspector.DebuggerSidebarPanel = function()
 
     this.filterBar.placeholder = WebInspector.UIString("Filter Breakpoint List");
 
-    this._breakpointsContentTreeOutline = this.contentTreeOutline;
+    this._breakpointsContentTreeOutline = this.createContentTreeOutline(true);
     this._breakpointsContentTreeOutline.onselect = this._treeElementSelected.bind(this);
     this._breakpointsContentTreeOutline.ondelete = this._breakpointTreeOutlineDeleteTreeElement.bind(this);
     this._breakpointsContentTreeOutline.oncontextmenu = this._breakpointTreeOutlineContextMenuTreeElement.bind(this);
@@ -92,8 +92,7 @@ WebInspector.DebuggerSidebarPanel = function()
     this._breakpointsContentTreeOutline.appendChild(this._allExceptionsBreakpointTreeElement);
     this._breakpointsContentTreeOutline.appendChild(this._allUncaughtExceptionsBreakpointTreeElement);
 
-    var breakpointsRow = new WebInspector.DetailsSectionRow;
-    breakpointsRow.element.appendChild(this._breakpointsContentTreeOutline.element);
+    var breakpointsRow = new WebInspector.DetailsSectionTreeOutlineRow(this._breakpointsContentTreeOutline);
 
     this._breakpointsToggleElement = document.createElement("img");
     this._breakpointsToggleElement.className = WebInspector.DebuggerSidebarPanel.BreakpointToggleStyleClassName;
@@ -108,7 +107,7 @@ WebInspector.DebuggerSidebarPanel = function()
     this._callStackContentTreeOutline = this.createContentTreeOutline(true);
     this._callStackContentTreeOutline.onselect = this._treeElementSelected.bind(this);
 
-    this._callStackRow = new WebInspector.DetailsSectionRow(WebInspector.UIString("No Call Frames"));
+    this._callStackRow = new WebInspector.DetailsSectionTreeOutlineRow(this._callStackContentTreeOutline, WebInspector.UIString("No Call Frames"));
     this._callStackRow.showEmptyMessage();
 
     var callStackGroup = new WebInspector.DetailsSectionGroup([this._callStackRow]);
@@ -119,9 +118,8 @@ WebInspector.DebuggerSidebarPanel = function()
     this._probesContentTreeOutline.ondelete = this._probesTreeOutlineDeleteTreeElement.bind(this);
     this._probesContentTreeOutline.element.classList.add(WebInspector.DebuggerSidebarPanel.ProbesTreeOutlineStyleClassName);
 
-    this._probesRow = new WebInspector.DetailsSectionRow(WebInspector.UIString("No Probes"));
+    this._probesRow = new WebInspector.DetailsSectionTreeOutlineRow(this._probesContentTreeOutline, WebInspector.UIString("No Probes"));
     this._probesRow.showEmptyMessage();
-    this._probesRow.element.appendChild(this._probesContentTreeOutline.element);
 
     this._probesToggleElement = document.createElement("img");
     this._probesToggleElement.className = WebInspector.DebuggerSidebarPanel.ProbeToggleStyleClassName;
@@ -265,7 +263,6 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         }
 
         this._probesRow.hideEmptyMessage();
-        this._probesRow.element.appendChild(this._probesContentTreeOutline.element);
 
         var probeGroupTreeElement = new WebInspector.ProbeGroupTreeElement(probeGroup);
         parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements));
@@ -409,7 +406,6 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         }
 
         this._callStackRow.hideEmptyMessage();
-        this._callStackRow.element.appendChild(this._callStackContentTreeOutline.element);
 
         var treeElementToSelect = null;
 

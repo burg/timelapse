@@ -81,6 +81,7 @@ WebInspector.ResourceSidebarPanel = function() {
 
     this._resourcesContentTreeOutline = this.contentTreeOutline;
     this._searchContentTreeOutline = this.createContentTreeOutline();
+    this.contentElement.appendChild(this._searchContentTreeOutline.element);
 
     this._resourcesContentTreeOutline.onselect = this._treeElementSelected.bind(this);
     this._searchContentTreeOutline.onselect = this._treeElementSelected.bind(this);

@@ -49,7 +49,8 @@ WebInspector.NavigationSidebarPanel = function(identifier, displayName, image, k
     this._contentElement.addEventListener("scroll", this._updateContentOverflowShadowVisibility.bind(this));
     this.element.appendChild(this._contentElement);
 
-    this._contentTreeOutline = this.createContentTreeOutline(true);
+    this._defaultContentTreeOutline = this.createContentTreeOutline(true);
+    this._contentElement.appendChild(this._defaultContentTreeOutline.element);
 
     this._filterBar = new WebInspector.FilterBar();
     this._filterBar.addEventListener(WebInspector.FilterBar.Event.TextFilterDidChange, this._updateFilter, this);
@@ -115,12 +116,12 @@ WebInspector.NavigationSidebarPanel.prototype = {
 
     get contentTreeOutlineElement()
     {
-        return this._contentTreeOutline.element;
+        return this._defaultContentTreeOutline.element;
     },
 
     get contentTreeOutline()
     {
-        return this._contentTreeOutline;
+        return this._defaultContentTreeOutline;
     },
 
     set contentTreeOutline(newTreeOutline)
@@ -129,18 +130,18 @@ WebInspector.NavigationSidebarPanel.prototype = {
         if (!newTreeOutline)
             return;
 
-        if (this._contentTreeOutline)
-            this._contentTreeOutline.element.classList.add(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
+        if (this._defaultContentTreeOutline)
+            this._defaultContentTreeOutline.element.classList.add(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
 
-        this._contentTreeOutline = newTreeOutline;
-        this._contentTreeOutline.element.classList.remove(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
+        this._defaultContentTreeOutline = newTreeOutline;
+        this._defaultContentTreeOutline.element.classList.remove(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
 
         this._updateFilter();
     },
 
     get contentTreeOutlineToAutoPrune()
     {
-        return this._contentTreeOutline;
+        return this._defaultContentTreeOutline;
     },
 
     get filterBar()
@@ -154,7 +155,6 @@ WebInspector.NavigationSidebarPanel.prototype = {
         contentTreeOutlineElement.className = WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementStyleClassName;
         if (!dontHideByDefault)
             contentTreeOutlineElement.classList.add(WebInspector.NavigationSidebarPanel.ContentTreeOutlineElementHiddenStyleClassName);
-        this._contentElement.appendChild(contentTreeOutlineElement);
 
         var contentTreeOutline = new TreeOutline(contentTreeOutlineElement);
         contentTreeOutline.onadd = this._treeElementAddedOrChanged.bind(this);
@@ -168,7 +168,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
 
     treeElementForRepresentedObject: function(representedObject)
     {
-        return this._contentTreeOutline.getCachedTreeElement(representedObject);
+        return this._defaultContentTreeOutline.getCachedTreeElement(representedObject);
     },
 
     cookieForContentView: function(contentView)
@@ -185,7 +185,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
     showContentViewForCurrentSelection: function()
     {
         // Reselect the selected tree element to cause the content view to be shown as well. <rdar://problem/10854727>
-        var selectedTreeElement = this._contentTreeOutline.selectedTreeElement;
+        var selectedTreeElement = this._defaultContentTreeOutline.selectedTreeElement;
         if (selectedTreeElement)
             selectedTreeElement.select();
     },
@@ -218,7 +218,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
     {
         this._updateToolbarItemVisibility();
 
-        if (!this._contentTreeOutline.children.length) {
+        if (!this._defaultContentTreeOutline.children.length) {
             // No tree elements, so no results.
             this.showEmptyContentPlaceholder(message);
         } else if (!this._emptyFilterResults) {
@@ -354,18 +354,18 @@ WebInspector.NavigationSidebarPanel.prototype = {
     _updateToolbarItemVisibility: function()
     {
         // Hide the navigation item if requested or auto-hiding and we are not visible and we are empty.
-        var shouldHide = ((this._hideToolbarItemWhenEmpty || this._autoHideToolbarItemWhenEmpty) && !this.selected && !this._contentTreeOutline.children.length);
+        var shouldHide = ((this._hideToolbarItemWhenEmpty || this._autoHideToolbarItemWhenEmpty) && !this.selected && !this._defaultContentTreeOutline.children.length);
         this.toolbarItem.hidden = shouldHide;
     },
 
     _checkForEmptyFilterResults: function()
     {
         // No tree elements, so don't touch the empty content placeholder.
-        if (!this._contentTreeOutline.children.length)
+        if (!this._defaultContentTreeOutline.children.length)
             return;
 
         // Iterate over all the top level tree elements. If any are visible, return early.
-        var currentTreeElement = this._contentTreeOutline.children[0];
+        var currentTreeElement = this._defaultContentTreeOutline.children[0];
         while (currentTreeElement) {
             if (!currentTreeElement.hidden) {
                 // Not hidden, so hide any empty content message.
@@ -389,7 +389,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
         this._filtersSetting.value = filters;
 
         // Update the whole tree.
-        var currentTreeElement = this._contentTreeOutline.children[0];
+        var currentTreeElement = this._defaultContentTreeOutline.children[0];
         while (currentTreeElement && !currentTreeElement.root) {
             this.applyFiltersToTreeElement(currentTreeElement);
             currentTreeElement = currentTreeElement.traverseNextTreeElement(false, null, false);
