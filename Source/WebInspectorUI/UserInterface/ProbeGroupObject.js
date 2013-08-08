@@ -42,6 +42,8 @@ WebInspector.ProbeGroupObject = function(url, position)
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
 }
 
+WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
+
 WebInspector.ProbeGroupObject.Event = {
     ProbeAdded: "probe-group-probe-added",
     ProbeRemoved: "probe-group-probe-removed",
@@ -65,6 +67,17 @@ WebInspector.ProbeGroupObject.prototype = {
     get isEnabled()
     {
         return this._enabled;
+    },
+
+    get disabled()
+    {
+        return !this._enabled;
+    },
+
+    // FIXME: Should actually keep track of and return resolved state.
+    get resolved()
+    {
+        return true;
     },
 
     get url()
