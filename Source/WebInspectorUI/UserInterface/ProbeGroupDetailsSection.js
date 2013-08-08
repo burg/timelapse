@@ -68,9 +68,9 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     var sourceCodeLocation = probeGroup.sourceCodeLocation;
     var editorLineNumber = sourceCodeLocation.displayLineNumber || probeGroup.position.lineNumber;
 
-    this._gutterElement = document.createElement("div");
-    this._gutterElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName);
-    this._gutterElement.textContent = editorLineNumber + 1;
+    //this._gutterElement = document.createElement("div");
+    //this._gutterElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName);
+    //this._gutterElement.textContent = editorLineNumber + 1;
 
     this._updateColor();
     // FIXME: this will not work if the current view does not contain the probe.
@@ -190,6 +190,6 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     _updateColor: function()
     {
         this._colorSelectorElement.style.backgroundColor = this._probeGroup.color;
-        this._gutterElement.style.backgroundColor = this._probeGroup.color;
+        //this._gutterElement.style.backgroundColor = this._probeGroup.color;
     }
 };

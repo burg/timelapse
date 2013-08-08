@@ -34,6 +34,7 @@ WebInspector.ProbeGroupTreeElement = function(probeGroup, className, title)
 
     this._probeGroup = probeGroup;
 
+    // FIXME: Will need to listen for resolved state change as well.
     this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.Enabled, this._updateStatus.bind(this));
     this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.Disabled, this._updateStatus.bind(this));
 
@@ -59,7 +60,7 @@ WebInspector.ProbeGroupTreeElement = function(probeGroup, className, title)
 WebInspector.ProbeGroupTreeElement.GenericLineIconStyleClassName = "probe-group-generic-line-icon";
 WebInspector.ProbeGroupTreeElement.StyleClassName = "probe-group";
 WebInspector.ProbeGroupTreeElement.StatusImageElementStyleClassName = "status-image";
-WebInspector.ProbeGroupTreeElement.StatusImageEnabledStyleClassName = "enabled";
+WebInspector.ProbeGroupTreeElement.StatusImageResolvedStyleClassName = "resolved";
 WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName = "disabled";
 WebInspector.ProbeGroupTreeElement.FormattedLocationStyleClassName = "formatted-location";
 
@@ -125,13 +126,15 @@ WebInspector.ProbeGroupTreeElement.prototype = {
 
     _updateStatus: function()
     {
-        if (this._probeGroup.isEnabled) {
-        	this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageEnabledStyleClassName);
-            this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
-        } else {
+        if (this._probeGroup.disabled)
             this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
-        	this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageEnabledStyleClassName);
-    	}
+        else
+            this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
+
+        if (this._probeGroup.resolved)
+            this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageResolvedStyleClassName);
+        else
+            this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageResolvedStyleClassName);
     },
 
     _statusImageElementMouseDown: function(event)

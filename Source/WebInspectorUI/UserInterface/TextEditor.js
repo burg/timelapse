@@ -56,6 +56,7 @@ WebInspector.TextEditor = function(element, mimeType, delegate)
     this.mimeType = mimeType;
 
     this._breakpoints = {};
+    this._probeGroups = {};
     this._executionLineNumber = NaN;
     this._executionColumnNumber = NaN;
 
@@ -79,6 +80,10 @@ WebInspector.TextEditor.HasBreakpointStyleClassName = "has-breakpoint";
 WebInspector.TextEditor.BreakpointResolvedStyleClassName = "breakpoint-resolved";
 WebInspector.TextEditor.BreakpointDisabledStyleClassName = "breakpoint-disabled";
 WebInspector.TextEditor.MultipleBreakpointsStyleClassName = "multiple-breakpoints";
+WebInspector.TextEditor.HasProbeGroupStyleClassName = "has-probe-group";
+WebInspector.TextEditor.ProbeGroupResolvedStyleClassName = "probe-group-resolved";
+WebInspector.TextEditor.ProbeGroupDisabledStyleClassName = "probe-group-disabled";
+WebInspector.TextEditor.MultipleProbeGroupsStyleClassName = "multiple-probe-groups";
 WebInspector.TextEditor.ExecutionLineStyleClassName = "execution-line";
 WebInspector.TextEditor.BouncyHighlightStyleClassName = "bouncy-highlight";
 WebInspector.TextEditor.NumberOfFindsPerSearchBatch = 10;
@@ -536,6 +541,14 @@ WebInspector.TextEditor.prototype = {
             this._removeBreakpointFromLineAndColumn(lineNumber, columnNumber);
     },
 
+    setProbeGroupInfoForLineAndColumn: function(lineNumber, columnNumber, probeGroupInfo)
+    {
+        if (probeGroupInfo)
+            this._addProbeGroupToLineAndColumnWithInfo(lineNumber, columnNumber, probeGroupInfo);
+        else
+            this._removeProbeGroupFromLineAndColumn(lineNumber, columnNumber);
+    },
+
     updateBreakpointLineAndColumn: function(oldLineNumber, oldColumnNumber, newLineNumber, newColumnNumber)
     {
         console.assert(this._breakpoints[oldLineNumber]);
@@ -907,6 +920,90 @@ WebInspector.TextEditor.prototype = {
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointResolvedStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.BreakpointDisabledStyleClassName);
             this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleBreakpointsStyleClassName);
+        }
+
+        this._codeMirror.operation(updateStyles.bind(this));
+    },
+
+    _setProbeGroupStylesOnLine: function(lineNumber)
+    {
+        var columnProbeGroups = this._probeGroups[lineNumber];
+        console.assert(columnProbeGroups);
+        if (!columnProbeGroups)
+            return;
+
+        var allDisabled = true;
+        var allResolved = true;
+        var multiple = Object.keys(columnProbeGroups).length > 1;
+        for (var columnNumber in columnProbeGroups) {
+            var probeGroupInfo = columnProbeGroups[columnNumber];
+            if (!probeGroupInfo.disabled)
+                allDisabled = false;
+            if (!probeGroupInfo.resolved)
+                allResolved = false;
+        }
+
+        function updateStyles()
+        {
+            // We might not have a line if the content isn't fully populated yet.
+            // This will be called again when the content is available.
+            var lineHandle = this._codeMirror.getLineHandle(lineNumber);
+            if (!lineHandle)
+                return;
+
+            this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.HasProbeGroupStyleClassName);
+
+            if (allResolved)
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupResolvedStyleClassName);
+            else
+                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupResolvedStyleClassName);
+
+            if (allDisabled)
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupDisabledStyleClassName);
+            else
+                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupDisabledStyleClassName);
+
+            if (multiple)
+                this._codeMirror.addLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleProbeGroupsStyleClassName);
+            else
+                this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleProbeGroupsStyleClassName);
+        }
+
+        this._codeMirror.operation(updateStyles.bind(this));
+    },
+
+    _addProbeGroupToLineAndColumnWithInfo: function(lineNumber, columnNumber, probeGroupInfo)
+    {
+        if (!this._probeGroups[lineNumber])
+            this._probeGroups[lineNumber] = {};
+        this._probeGroups[lineNumber][columnNumber] = probeGroupInfo;
+
+        this._setProbeGroupStylesOnLine(lineNumber);
+    },
+
+    _removeProbeGroupFromLineAndColumn: function(lineNumber, columnNumber)
+    {
+        console.assert(columnNumber in this._probeGroups[lineNumber]);
+        delete this._probeGroups[lineNumber][columnNumber];
+
+        // There are still probe groups on the line. Update the probe group style.
+        if (!isEmptyObject(this._probeGroups[lineNumber])) {
+            this._setProbeGroupStylesOnLine(lineNumber);
+            return;
+        }
+
+        delete this._probeGroups[lineNumber];
+
+        function updateStyles()
+        {
+            var lineHandle = this._codeMirror.getLineHandle(lineNumber);
+            if (!lineHandle)
+                return;
+
+            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.HasProbeGroupStyleClassName);
+            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupDisabledStyleClassName);
+            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.ProbeGroupResolvedStyleClassName);
+            this._codeMirror.removeLineClass(lineHandle, "wrap", WebInspector.TextEditor.MultipleProbeGroupsStyleClassName);
         }
 
         this._codeMirror.operation(updateStyles.bind(this));

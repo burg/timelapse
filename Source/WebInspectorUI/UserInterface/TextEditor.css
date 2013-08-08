@@ -78,8 +78,16 @@
     text-indent: -1px;
 }
 
-.text-editor > .CodeMirror .has-probe .CodeMirror-linenumber::before {
+/* PROBE STYLES START HERE */
+.text-editor > .CodeMirror .has-probe-group:not(.probe-group-disabled) .CodeMirror-linenumber {
     color: white;
+}
+
+.text-editor > .CodeMirror .has-probe-group.multiple-probe-groups .CodeMirror-linenumber {
+    color: transparent;
+}
+
+.text-editor > .CodeMirror .has-probe-group .CodeMirror-linenumber::before {
     position: absolute;
     top: 0;
     left: 1px;
@@ -90,10 +98,27 @@
 
     z-index: -2;
 
-    border-image-source: -webkit-image-set(url(Images/Probe.png) 1x, url(Images/Probe@2x.png) 2x);
+    border-image-source: -webkit-image-set(url(Images/BreakpointInactive.png) 1x, url(Images/BreakpointInactive@2x.png) 2x);
     border-image-slice: 3 7 3 3 fill;
     border-width: 3px 7px 3px 3px;
 }
+
+.text-editor > .CodeMirror .probe-group-resolved .CodeMirror-linenumber::before {
+    border-image-source: -webkit-image-set(url(Images/Probe.png) 1x, url(Images/Probe@2x.png) 2x);
+}
+
+.text-editor > .CodeMirror .probe-group-disabled .CodeMirror-linenumber::before {
+    opacity: 0.35;
+}
+
+.text-editor > .CodeMirror .has-probe-group.multiple-probe-groups .CodeMirror-linenumber::before {
+    content: "•••";
+    color: white;
+    line-height: 6px;
+    text-align: center;
+    text-indent: -1px;
+}
+/* AND END HERE */
 
 .text-editor > .CodeMirror .execution-line .CodeMirror-linenumber::after {
     position: absolute;
