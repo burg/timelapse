@@ -64,7 +64,11 @@ public:
     void clearProbesForScriptId(ScriptId);
     void setIsActive(bool active) { m_isActive = active; }
     bool isActive() const { return m_isActive; }
-
+    void setPauseTrigger(uint probeId, uint counter)
+    {
+        m_triggerPauseData.probeId = probeId;
+        m_triggerPauseData.counter = counter;
+    }
     void addSampleFromConsole(int probeId, ScriptState*);
 
     // Callback from ScriptDebugServer.
@@ -77,13 +81,24 @@ private:
 
     ScriptProbeServer();
 
-    void captureSamplesIfNeeded(const JSC::DebuggerCallFrame&, ScriptId scriptId, const TextPosition&);
+    void captureSamplesIfNeeded(const JSC::DebuggerCallFrame&, const ProbeSet&);
+    void pauseIfNeeded(const JSC::DebuggerCallFrame&, const ProbeSet&);
     bool findProbesForPosition(ScriptId scriptId, const TextPosition&, ProbeSet& result);
+
+    void clearPauseTrigger()
+    {
+        m_triggerPauseData.probeId = 0;
+        m_triggerPauseData.counter = 0;
+    }
 
     bool m_isActive;
     ScriptIdToPositionsMap m_probeRegistry;
     ProbeMap m_probesById;
     int m_nextBatchId;
+    struct {
+        unsigned probeId;
+        unsigned counter;
+    } m_triggerPauseData;
 };
 
 } // namespace WebCore
