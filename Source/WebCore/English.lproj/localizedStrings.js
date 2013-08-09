@@ -285,7 +285,6 @@ localizedStrings["No Application Cache information available."] = "No Applicatio
 localizedStrings["No Breakpoints"] = "No Breakpoints";
 localizedStrings["No CSS Named Flows"] = "No CSS Named Flows";
 localizedStrings["No Event Listeners"] = "No Event Listeners";
-localizedStrings["No Probes"] = "No Probes";
 localizedStrings["No Properties"] = "No Properties";
 localizedStrings["No Variables"] = "No Variables";
 localizedStrings["No audits to run"] = "No audits to run";

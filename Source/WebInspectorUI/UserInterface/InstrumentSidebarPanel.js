@@ -128,8 +128,8 @@ WebInspector.InstrumentSidebarPanel = function()
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingEnded, this._profilingEnded, this);
     WebInspector.profileManager.addEventListener(WebInspector.ProfileManager.Event.ProfilingInterrupted, this._profilingInterrupted, this);
 
-    this.updateEmptyContentPlaceholder(WebInspector.UIString("No Recorded Profiles"));
-    
+    this.emptyContentPlaceholder = WebInspector.UIString("No Recorded Profiles");
+
     // Maps from profile titles -> tree elements.
     this._profileTreeElementMap = {};
 

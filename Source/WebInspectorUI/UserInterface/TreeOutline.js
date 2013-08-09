@@ -1094,22 +1094,7 @@ TreeElement.prototype.applyFilter = function(filterRegex)
 {
     console.assert(!filterRegex || (filterRegex instanceof RegExp));
 
-    if (!filterRegex) {
-        // No filters, so make everything visible.
-        this.hidden = false;
-
-        // If this tree element was expanded during filtering, collapse it again.
-        if (this.expanded && this._wasExpandedDuringFiltering) {
-            delete this._wasExpandedDuringFiltering;
-            this.collapse();
-        }
-
-        return;
-    }
-
-    if (!this.filterableData)
-
-    function matchTextFilter(regex, input)
+    function matchInputAgainstRegex(regex, input)
     {
         // Convert to a single item array if needed.
         if (!(input instanceof Array))
@@ -1127,27 +1112,50 @@ TreeElement.prototype.applyFilter = function(filterRegex)
         return false;
     }
 
-    if (matchTextFilter(filterRegex, this.filterableData.text)) {
-        // Make this element visible since it matches.
-        this.hidden = false;
+    function tryMatchFilter(regex) {
+        if (!this.filterableData)
+            return;
 
-        // Make the ancestors visible and expand them.
-        var currentAncestor = this.parent;
-        while (currentAncestor && !currentAncestor.root) {
-            currentAncestor.hidden = false;
+        if (!regex) {
+            // No filters, so make everything visible.
+            this.hidden = false;
 
-            if (!currentAncestor.expanded) {
-                currentAncestor._wasExpandedDuringFiltering = true;
-                currentAncestor.expand();
+            // If this tree element was expanded during filtering, collapse it again.
+            if (this.expanded && this._wasExpandedDuringFiltering) {
+                delete this._wasExpandedDuringFiltering;
+                this.collapse();
             }
 
-            currentAncestor = currentAncestor.parent;
+            return;
         }
-        return;
+
+        if (matchInputAgainstRegex(regex, this.filterableData.text)) {
+            // Make this element visible since it matches.
+            this.hidden = false;
+
+            // Make the ancestors visible and expand them.
+            var currentAncestor = this.parent;
+            while (currentAncestor && !currentAncestor.root) {
+                currentAncestor.hidden = false;
+
+                if (!currentAncestor.expanded) {
+                    currentAncestor._wasExpandedDuringFiltering = true;
+                    currentAncestor.expand();
+                }
+
+                currentAncestor = currentAncestor.parent;
+            }
+            return;
+        }
+
+        // Make this element invisible since it does not match.
+        this.hidden = true;
     }
 
-    // Make this element invisible since it does not match.
-    this.hidden = true;
+    tryMatchFilter.call(this, filterRegex);
+
+    if (this.treeOutline.onfilter)
+        this.treeOutline.onfilter(this);
 }
 
 TreeElement.prototype.applyFilterRecursively = function(filterRegex)
