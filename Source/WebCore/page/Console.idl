@@ -44,8 +44,6 @@
     [CallWith=ScriptArguments|ScriptState] void count();
     [CallWith=ScriptArguments] void markTimeline();
 
-    [Conditional=WEB_REPLAY, CallWith=ScriptState] void probe(in long probeId);
-
     // As per spec: http://www.w3.org/TR/WebIDL/#idl-sequence
     // "Sequences must not be used as the type of an attribute, constant or exception field."
     // FIXME: this will lead to BUG console.profiles !== console.profiles as profile will always returns new array.
