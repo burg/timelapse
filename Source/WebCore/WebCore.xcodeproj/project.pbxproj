@@ -5203,7 +5203,6 @@
 		C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA71517178087001A8BB4 /* FunctorInputIterator.h */; };
 		C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */; };
 		C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */; };
-		C4954A9F1720807C00344F9E /* ScriptProbeServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4954A9D1720807C00344F9E /* ScriptProbeServer.cpp */; };
 		C49826F7172E16630050DD62 /* ScriptProbe.h in Headers */ = {isa = PBXBuildFile; fileRef = C49826F6172E16630050DD62 /* ScriptProbe.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905EA17163821000AEC13 /* ReplayUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C49905ED1716389E000AEC13 /* ReplayUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49905EC1716389D000AEC13 /* ReplayUtilities.cpp */; };
@@ -12040,7 +12039,6 @@
 		C48EA71517178087001A8BB4 /* FunctorInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FunctorInputIterator.h; path = replay/FunctorInputIterator.h; sourceTree = "<group>"; };
 		C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorRecordingsAgent.cpp; sourceTree = "<group>"; };
 		C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorRecordingsAgent.h; sourceTree = "<group>"; };
-		C4954A9D1720807C00344F9E /* ScriptProbeServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ScriptProbeServer.cpp; sourceTree = "<group>"; };
 		C49826F6172E16630050DD62 /* ScriptProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScriptProbe.h; sourceTree = "<group>"; };
 		C49905EA17163821000AEC13 /* ReplayUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayUtilities.h; path = replay/ReplayUtilities.h; sourceTree = "<group>"; };
 		C49905EC1716389D000AEC13 /* ReplayUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayUtilities.cpp; path = replay/ReplayUtilities.cpp; sourceTree = "<group>"; };
@@ -18964,7 +18962,6 @@
 				9F3B947D12241758005304E7 /* ScriptHeapSnapshot.h */,
 				41F066E30F64BCF600A07EAC /* ScriptObject.cpp */,
 				41F066E20F64BCF600A07EAC /* ScriptObject.h */,
-				C4954A9D1720807C00344F9E /* ScriptProbeServer.cpp */,
 				F33F0281120947F200E5743A /* ScriptProfile.cpp */,
 				9F72304C11184B4100AD0126 /* ScriptProfile.h */,
 				9FA37EE31172FC8000C4CD55 /* ScriptProfileNode.h */,
@@ -27503,7 +27500,6 @@
 				E180811616FCF9CB00B80D07 /* SynchronousLoaderClient.mm in Sources */,
 				E152551616FD2350003D7ADB /* WebCoreResourceHandleAsOperationQueueDelegate.mm in Sources */,
 				C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */,
-				C4954A9F1720807C00344F9E /* ScriptProbeServer.cpp in Sources */,
 				E1B533471717D0A100F205F9 /* CachedSVGDocumentReference.cpp in Sources */,
 				BE88E0C11715CE2600658D98 /* TrackListBase.cpp in Sources */,
 				FB484F4C171F821E00040755 /* TransformFunctions.cpp in Sources */,

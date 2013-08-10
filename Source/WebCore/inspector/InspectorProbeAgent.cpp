@@ -32,7 +32,7 @@
 #include "config.h"
 #include "InspectorProbeAgent.h"
 
-#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
+#if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
@@ -42,7 +42,6 @@
 #include "Page.h"
 #include "PageScriptDebugServer.h"
 #include "ScriptProbe.h"
-#include "ScriptProbeServer.h"
 #include <wtf/text/StringConcatenate.h>
 #include <inttypes.h>
 
@@ -52,11 +51,6 @@ namespace WebCore {
 
 namespace ProbeAgentState {
 static const char probesEnabled[] = "probesEnabled";
-}
-
-static ScriptProbeServer* probeServer()
-{
-    return PageScriptDebugServer::shared().probeServer();
 }
 
 InspectorProbeAgent::InspectorProbeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage, InjectedScriptManager* injectedScriptManager)
@@ -101,14 +95,14 @@ void InspectorProbeAgent::enable()
 {
     m_instrumentingAgents->setInspectorProbeAgent(this);
 
-    probeServer()->setIsActive(true);
+    PageScriptDebugServer::shared().setProbesActivated(true);
     PageScriptDebugServer::shared().addListener(this, m_inspectedPage);
 }
 
 void InspectorProbeAgent::disable()
 {
     for (UrlToScriptIdMap::iterator it = m_urlToScriptIdMap.begin(); it != m_urlToScriptIdMap.end(); ++it)
-        probeServer()->clearProbesForScriptId(it->value);
+        PageScriptDebugServer::shared().clearProbesForScriptId(it->value);
 
     m_urlToScriptIdMap.clear();
 
@@ -169,7 +163,7 @@ void InspectorProbeAgent::disable(ErrorString*)
 
 void InspectorProbeAgent::setProbesActive(ErrorString*, bool state)
 {
-    probeServer()->setIsActive(state);
+    PageScriptDebugServer::shared().setProbesActivated(state);
 }
 
 void InspectorProbeAgent::getAvailableProbes(ErrorString*, RefPtr<TypeBuilder::Array<TypeBuilder::Probe::ScriptProbe> >& resultArray)
@@ -226,7 +220,7 @@ void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
         return;
 
     ScriptId scriptId = findScriptIdResult->value;
-    probeServer()->removeProbeForScriptId(scriptId, probe);
+    PageScriptDebugServer::shared().removeProbeForScriptId(scriptId, probe);
     m_urlToScriptIdMap.remove(findScriptIdResult);
 }
 
@@ -279,7 +273,7 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     if (findResult == m_urlToScriptIdMap.end())
         return;
 
-    probeServer()->addProbeForScriptId(findResult->value, probe);
+    PageScriptDebugServer::shared().addProbeForScriptId(findResult->value, probe);
     if (!m_frontend)
         return;
 
@@ -309,7 +303,7 @@ void InspectorProbeAgent::didParseSource(const String& stringId, const Script& s
     // Find any probes that should resolve within that file, add them.
     for (ProbeMap::const_iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
         if (it->value->url() == nonNullUrl)
-            probeServer()->addProbeForScriptId(scriptId, it->value);
+            PageScriptDebugServer::shared().addProbeForScriptId(scriptId, it->value);
     }
 }
 
@@ -327,4 +321,4 @@ void InspectorProbeAgent::didContinue()
 
 }; // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
+#endif // ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)

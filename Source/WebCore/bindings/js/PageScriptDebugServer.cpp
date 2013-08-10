@@ -50,14 +50,6 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/StdLibExtras.h>
 
-#if ENABLE(WEB_REPLAY)
-#include "ScriptProbe.h"
-#include "ScriptProbeServer.h"
-#include <debugger/DebuggerCallFrame.h>
-#include <wtf/replay/InputIterator.h>
-#include <wtf/TemporaryChange.h>
-#endif
-
 using namespace JSC;
 
 namespace WebCore {
@@ -80,9 +72,6 @@ PageScriptDebugServer& PageScriptDebugServer::shared()
 PageScriptDebugServer::PageScriptDebugServer()
     : ScriptDebugServer()
     , m_pausedPage(0)
-#if ENABLE(WEB_REPLAY)
-    , m_probeServer(ScriptProbeServer::create())
-#endif
 {
 }
 
@@ -182,43 +171,6 @@ void PageScriptDebugServer::runEventLoopWhilePaused()
     while (!m_doneProcessingDebuggerEvents && !loop.ended())
         loop.cycle();
 }
-
-#if ENABLE(WEB_REPLAY)
-void PageScriptDebugServer::atStatement(const JSC::DebuggerCallFrame& callFrame, intptr_t sourceID, int firstLine, int columnNumber)
-{
-    ScriptDebugServer::atStatement(callFrame, sourceID, firstLine, columnNumber);
-
-    if (!m_probeServer->isActive())
-        return;
-
-    // if web replay is active, only generate probe samples during replay.
-    JSC::JSGlobalObject* globalObject = callFrame.dynamicGlobalObject();
-    InputIterator* it = globalObject->inputIterator();
-    if (it && !it->isReplaying())
-        return;
-
-    m_probeServer->atStatement(callFrame, sourceID, firstLine, columnNumber);
-}
-
-void PageScriptDebugServer::dispatchCaptureProbeSample(ScriptState* exec, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
-{
-    if (m_callingListeners)
-        return;
-
-    ListenerSet* listeners = getListenersForGlobalObject(exec->lexicalGlobalObject());
-    if (!listeners)
-        return;
-
-    RefPtr<ScriptProbe> probe = prpProbe;
-
-    ASSERT(!listeners->isEmpty());
-    TemporaryChange<bool> change(m_callingListeners, true);
-    Vector<ScriptDebugListener*> copy;
-    copyToVector(*listeners, copy);
-    for (size_t i = 0; i < copy.size(); ++i)
-        copy[i]->captureProbeSample(exec, probe, batchId, sample);
-}
-#endif
 
 void PageScriptDebugServer::setJavaScriptPaused(const PageGroup& pageGroup, bool paused)
 {

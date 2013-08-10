@@ -43,10 +43,6 @@ class FrameView;
 class Page;
 class PageGroup;
 
-#if ENABLE(WEB_REPLAY)
-class ScriptProbeServer;
-#endif
-
 class PageScriptDebugServer : public ScriptDebugServer {
     WTF_MAKE_NONCOPYABLE(PageScriptDebugServer);
 public:
@@ -56,11 +52,6 @@ public:
     void removeListener(ScriptDebugListener*, Page*);
 
     virtual void recompileAllJSFunctions(Timer<ScriptDebugServer>*);
-
-#if ENABLE(WEB_REPLAY)
-    ScriptProbeServer* probeServer() const { return m_probeServer.get(); }
-    void dispatchCaptureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
-#endif
 
 private:
     typedef HashMap<Page*, OwnPtr<ListenerSet> > PageListenersMap;
@@ -74,10 +65,6 @@ private:
 
     virtual void runEventLoopWhilePaused();
 
-#if ENABLE(WEB_REPLAY)
-    virtual void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int firstLine, int columnNumber) OVERRIDE;
-#endif
-
     void didRemoveLastListener(Page*);
 
     void setJavaScriptPaused(const PageGroup&, bool paused);
@@ -87,9 +74,6 @@ private:
 
     PageListenersMap m_pageListenersMap;
     Page* m_pausedPage;
-#if ENABLE(WEB_REPLAY)
-    OwnPtr<ScriptProbeServer> m_probeServer;
-#endif
 };
 
 } // namespace WebCore

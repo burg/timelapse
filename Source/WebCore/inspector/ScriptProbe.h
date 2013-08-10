@@ -32,7 +32,7 @@
 #ifndef ScriptProbe_h
 #define ScriptProbe_h
 
-#if ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
+#if ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include <wtf/text/WTFString.h>
 #include <wtf/text/TextPosition.h>
@@ -84,6 +84,6 @@ inline ScriptProbe::ScriptProbe(unsigned uid, const String& url, const TextPosit
 
 } // namespace WebCore
 
-#endif // ENABLE(WEB_REPLAY) && ENABLE(JAVASCRIPT_DEBUGGER)
+#endif // ENABLE(JAVASCRIPT_DEBUGGER)
 
 #endif // ScriptProbe_h
