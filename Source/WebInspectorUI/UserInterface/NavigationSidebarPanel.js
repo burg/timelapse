@@ -53,7 +53,7 @@ WebInspector.NavigationSidebarPanel = function(identifier, displayName, image, k
     this._contentElement.appendChild(this._defaultContentTreeOutline.element);
 
     this.emptyContentPlaceholder = WebInspector.UIString("No Content");
-    this.emptyFilterPlaceholder = WebInspector.UIString("No Filter Results");    
+    this.emptyFilterPlaceholder = WebInspector.UIString("No Filter Results");
 
     this._emptyContentPlaceholderElement = document.createElement("div");
     this._emptyContentPlaceholderElement.className = WebInspector.NavigationSidebarPanel.EmptyContentPlaceholderElementStyleClassName;
@@ -253,6 +253,9 @@ WebInspector.NavigationSidebarPanel.prototype = {
     {
         WebInspector.SidebarPanel.prototype.shown.call(this);
 
+        // Force a filter refresh here, since the empty content or filter
+        // placeholders may not be visible yet.
+        this.filterAppliedToTreeOutline(this.contentTreeOutline);
         this._updateContentOverflowShadowVisibility();
 
         // Force the navigation item to be visible. This makes sure it is
@@ -413,8 +416,7 @@ WebInspector.NavigationSidebarPanel.prototype = {
                     contentTreeOutline.removeChildAtIndex(i, true, true);
             }
 
-            if (typeof this._updateEmptyContentPlaceholder === "function")
-                this.filterAppliedToTreeOutline(contentTreeOutline);
+            this.filterAppliedToTreeOutline(contentTreeOutline);
         }
 
         // Check on a delay to coalesce multiple calls to _checkForOldResources.
