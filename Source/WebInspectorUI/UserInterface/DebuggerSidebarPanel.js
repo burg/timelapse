@@ -284,19 +284,21 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     _addProbeGroup: function(probeGroup)
     {
         var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
-        if (!sourceCode)
-            return null;
-
-        var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(sourceCode);
-        if (!parentTreeElement) {
-            if (sourceCode instanceof WebInspector.SourceMapResource)
-                parentTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
-            else if (sourceCode instanceof WebInspector.Resource)
-                parentTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
-            else if (sourceCode instanceof WebInspector.Script)
-                parentTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
+        if (!sourceCode) {
+            var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(probeGroup.url);
+            if (!parentTreeElement)
+                parentTreeElement = new WebInspector.FutureScriptTreeElement(probeGroup.url)
+        } else {
+            var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(sourceCode);
+            if (!parentTreeElement) {
+                if (sourceCode instanceof WebInspector.SourceMapResource)
+                    parentTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
+                else if (sourceCode instanceof WebInspector.Resource)
+                    parentTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
+                else if (sourceCode instanceof WebInspector.Script)
+                    parentTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
+            }
         }
-
         if (!parentTreeElement.parent) {
             parentTreeElement.hasChildren = true;
             parentTreeElement.expand();
@@ -652,7 +654,8 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 WebInspector.probeDetailsSidebarPanel.toolbarItem.hidden = false;
             }
             WebInspector.detailsSidebar.selectedSidebarPanel = WebInspector.probeDetailsSidebarPanel;
-            WebInspector.resourceSidebarPanel.showSourceCodeLocation(probeGroup.sourceCodeLocation);
+            if (probeGroup.sourceCodeLocation)
+                WebInspector.resourceSidebarPanel.showSourceCodeLocation(probeGroup.sourceCodeLocation);
             return;
         }
 
