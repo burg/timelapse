@@ -285,8 +285,6 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
                                                            .setIsEnabled(probe->isEnabled());
     probeObject->setUrl(probe->url());
     m_frontend->probeAdded(probeObject.release());
-    // Probes are not enabled when they are created, but the backend enables them immediately.
-    enableProbe(errorString, probe->uid());
     UNUSED_PARAM(errorString);
 }
 

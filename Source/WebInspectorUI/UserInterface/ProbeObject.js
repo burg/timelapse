@@ -87,6 +87,7 @@ WebInspector.ProbeObject.prototype = {
         return this._samples.slice();
     },
 
+    // Whether or not this probe will cause the debugger to pause.
     get enabled()
     {
         return this._enabled;

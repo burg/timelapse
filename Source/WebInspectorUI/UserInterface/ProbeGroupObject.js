@@ -37,7 +37,7 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
     this._dataEntries = 0;
     this._dataTable = [{}];
-    this._enabled = true;
+    this._enabled = false;
 
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
 }
@@ -61,6 +61,7 @@ WebInspector.ProbeGroupObject.prototype = {
 
     // Public
 
+    // Whether or not probes in this group will cause the debugger to pause.
     get isEnabled()
     {
         return this._enabled;

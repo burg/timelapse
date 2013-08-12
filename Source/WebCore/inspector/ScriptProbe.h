@@ -46,6 +46,7 @@ public:
 
     virtual void enable() { setIsEnabled(true); }
     virtual void disable() { setIsEnabled(false); }
+    // Whether or not this probe will cause the debugger to pause.
     virtual bool isEnabled() const { return m_isEnabled; }
     unsigned uid() const { return m_uid; }
 
