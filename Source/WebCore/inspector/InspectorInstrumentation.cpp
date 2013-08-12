@@ -59,6 +59,7 @@
 #include "InspectorHeapProfilerAgent.h"
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorPageAgent.h"
+#include "InspectorProbeAgent.h"
 #include "InspectorProfilerAgent.h"
 #include "InspectorResourceAgent.h"
 #include "InspectorRecordingsAgent.h"
@@ -921,10 +922,11 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
     if (loader->frame() == mainFrame) {
         if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
             consoleAgent->reset();
-
         if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
             resourceAgent->mainFrameNavigated(loader);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
+        if (InspectorProbeAgent* probeAgent = instrumentingAgents->inspectorProbeAgent())
+            probeAgent->clearResources();       
         if (InspectorProfilerAgent* profilerAgent = instrumentingAgents->inspectorProfilerAgent())
             profilerAgent->resetState();
         if (InspectorHeapProfilerAgent* heapProfilerAgent = instrumentingAgents->inspectorHeapProfilerAgent())

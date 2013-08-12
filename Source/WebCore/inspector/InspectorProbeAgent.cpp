@@ -90,6 +90,14 @@ void InspectorProbeAgent::clearFrontend()
     m_state->setBoolean(ProbeAgentState::probesEnabled, false);
 }
 
+void InspectorProbeAgent::clearResources()
+{
+    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
+    for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
+        injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
+}
+
 void InspectorProbeAgent::enable()
 {
     m_instrumentingAgents->setInspectorProbeAgent(this);
@@ -283,7 +291,6 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
                                                            .setIsEnabled(probe->isEnabled());
     probeObject->setUrl(probe->url());
     m_frontend->probeAdded(probeObject.release());
-    UNUSED_PARAM(errorString);
 }
 
 // ScriptDebugListener API

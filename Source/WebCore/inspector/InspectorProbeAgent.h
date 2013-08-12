@@ -79,6 +79,8 @@ public:
 
     void setFrontend(InspectorFrontend*);
     void clearFrontend();
+    // Called when the main frame navigates.
+    void clearResources();
 
     // ProbeCommandHandler API
     virtual void enable(ErrorString*);
