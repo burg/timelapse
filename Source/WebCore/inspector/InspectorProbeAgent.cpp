@@ -123,12 +123,13 @@ bool InspectorProbeAgent::enabled()
 
 // ProbeCommandHandler API
 
-void InspectorProbeAgent::captureProbeSample(ScriptState* state, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
+void InspectorProbeAgent::captureProbeSample(ScriptState*, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
 {
     RefPtr<ScriptProbe> probe = prpProbe;
     int sampleId = m_nextSampleId++;
 
     // TODO: (Issue #316): Implement some sort of storage for probe samples.
+    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
     RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(sample, objectGroupForProbeId(probe->uid()));
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
