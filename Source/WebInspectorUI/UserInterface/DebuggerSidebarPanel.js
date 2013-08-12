@@ -559,7 +559,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         var probeGroups = [];
         var probeGroupTreeElements = treeElement.children;
         for (var i = 0; i < probeGroupTreeElements.length; ++i) {
-            console.assert(probeTreeElements[i] instanceof WebInspector.ProbeGroupTreeElement);
+            console.assert(probeGroupTreeElements[i] instanceof WebInspector.ProbeGroupTreeElement);
             console.assert(probeGroupTreeElements[i].probeGroup);
             var probeGroup = probeGroupTreeElements[i].probeGroup;
             if (probeGroup)
@@ -569,7 +569,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         return probeGroups;
     },
 
-    _removeAllProbeGroups: function(probeGroups)
+    _removeProbeGroups: function(probeGroups)
     {
         for (var i = 0; i < probeGroups.length; ++i)
             probeGroups[i].clear();
@@ -586,7 +586,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         var nextSibling = treeElement.nextSibling;
 
         var probeGroups = this._probeGroupsBeneathTreeElement(treeElement);
-        this._removeAllProbes(probeGroups);
+        this._removeProbeGroups(probeGroups);
 
         if (wasTopResourceTreeElement && nextSibling)
             nextSibling.select(true, true);
