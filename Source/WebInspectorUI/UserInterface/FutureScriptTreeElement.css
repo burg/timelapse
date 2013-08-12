@@ -23,28 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.FutureScriptTreeElement = function(futureScriptUrl)
-{
-    WebInspector.GeneralTreeElement.call(this, WebInspector.FutureScriptTreeElement.StyleClassName, parseURL(futureScriptUrl).lastPathComponent, null, futureScriptUrl, false);
+ .future-script {
+ 	font-style: italic;
+ 	color: #666;
+ }
 
-    this._url = futureScriptUrl;
-    this.mainTitle = parseURL(futureScriptUrl).lastPathComponent;
-
-    this.small = true;
-};
-
-WebInspector.FutureScriptTreeElement.AnonymousScriptIconStyleClassName = "anonymous-script-icon";
-WebInspector.FutureScriptTreeElement.StyleClassName = "future-script";
-
-WebInspector.FutureScriptTreeElement.prototype = {
-    constructor: WebInspector.FutureScriptTreeElement,
-    __proto__: WebInspector.GeneralTreeElement.prototype,
-
-    // Public
-
-    get url()
-    {
-        return this._url;
-    }
-};
-
+ .future-script .icon {
+ 	content: -webkit-image-set(url(Images/DocumentJS.png) 1x, url(Images/DocumentJS@2x.png) 2x);
+ }

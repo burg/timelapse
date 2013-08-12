@@ -336,6 +336,14 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     {
         var script = event.data.script;
 
+        var probeScripts = this._probesContentTreeOutline.children;
+        if (probeScripts) {
+            for (var i = 0; i < probeScripts.length; ++i) {
+                var oldScriptElement = probeScripts[i];
+                if (oldScriptElement.url === script.url)
+                    this._replacePlaceholderScriptElement(oldScriptElement, script);
+            }
+        }
         // Don't add breakpoints if the script is represented by a Resource. They were
         // already added by _resourceAdded.
         if (script.resource)
@@ -353,6 +361,19 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
             this._breakpointsContentTreeOutline.removeChildAtIndex(i, true, true);
         }
+    },
+
+    _replacePlaceholderScriptElement: function(oldScriptElement, newScript)
+    {
+        var index = this._probesContentTreeOutline.children.indexOf(oldScriptElement);
+        var newScriptElement = new WebInspector.ScriptTreeElement(newScript);
+        var children = oldScriptElement.children;
+        if (children) {
+            for (var i = 0; i < children.length; ++i)
+                newScriptElement.appendChild(children[i]);
+        }
+        this._probesContentTreeOutline.removeChildAtIndex(index);
+        this._probesContentTreeOutline.insertChild(newScriptElement, index);
     },
 
     _breakpointAdded: function(event)
@@ -654,7 +675,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 WebInspector.probeDetailsSidebarPanel.toolbarItem.hidden = false;
             }
             WebInspector.detailsSidebar.selectedSidebarPanel = WebInspector.probeDetailsSidebarPanel;
-            if (probeGroup.sourceCodeLocation)
+            if (probeGroup.resolved && probeGroup.sourceCodeLocation)
                 WebInspector.resourceSidebarPanel.showSourceCodeLocation(probeGroup.sourceCodeLocation);
             return;
         }
