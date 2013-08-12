@@ -41,6 +41,7 @@ WebInspector.ProbeManager.Event = {
     ProbeRemoved: "probe-manager-probe-removed",
     ProbeDisabled: "probe-manager-probe-disabled",
     ProbeEnabled: "probe-manager-probe-enabled",
+    ProbeResolved: "probe-manager-probe-resolved",
     ProbeGroupAdded: "probe-manager-probe-group-added",
     ProbeGroupRemoved: "probe-manager-probe-group-removed",
 };
@@ -158,6 +159,15 @@ WebInspector.ProbeManager.prototype = {
         var probe = this._probes[probeId];
         probe.enabled = false;
         this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeDisabled, probe);
+    },
+
+    probeResolved: function(probeId, scriptId)
+    {
+        console.assert(probeId in this._probes, "Unknown probe id requested: ", probeId);
+        var probe = this._probes[probeId];
+        probe.resolved = true;
+        probe.sourceCode = WebInspector.debuggerManager.scriptForIdentifier(scriptId);
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolved, probe);    
     },
 
     allProbesCleared: function()

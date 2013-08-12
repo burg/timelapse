@@ -42,12 +42,14 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     this._expression = expression;
     this._enabled = false;
     this._samples = [];
+
+    this.resolved = false;
 }
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeObject);
 
 WebInspector.ProbeObject.Event = {
-    SampleAdded: "probe-object-sample-added"
+    SampleAdded: "probe-object-sample-added",
 };
 
 WebInspector.ProbeObject.prototype = {
@@ -71,10 +73,23 @@ WebInspector.ProbeObject.prototype = {
         return this._position;
     },
 
+    set sourceCode(value)
+    {
+        console.assert(value instanceof WebInspector.SourceCode);
+        this._sourceCode = value;
+    },
+
+    get sourceCode()
+    {
+        return this._sourceCode;
+    },
+
     get sourceCodeLocation()
     {
-        var sourceCode = WebInspector.frameResourceManager.resourceForURL(this.url);
-        return (sourceCode) ? sourceCode.createSourceCodeLocation(this.position.lineNumber, this.position.columnNumber) : null;
+        if (!this.resolved || !this._sourceCode)
+            return null;
+
+        return this._sourceCode.createSourceCodeLocation(this.position.lineNumber, this.position.columnNumber);
     },
 
     get expression()

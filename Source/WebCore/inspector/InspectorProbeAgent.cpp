@@ -296,8 +296,12 @@ void InspectorProbeAgent::didParseSource(const String& stringId, const Script& s
 
     // Find any probes that should resolve within that file, add them.
     for (ProbeMap::const_iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
-        if (it->value->url() == nonNullUrl)
-            PageScriptDebugServer::shared().addProbeForScriptId(scriptId, it->value);
+        if (it->value->url() != nonNullUrl)
+            continue;
+
+        PageScriptDebugServer::shared().addProbeForScriptId(scriptId, it->value);
+        if (m_frontend)
+            m_frontend->probeResolved(it->value->uid(), stringId);
     }
 }
 

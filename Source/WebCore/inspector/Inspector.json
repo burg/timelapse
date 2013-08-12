@@ -2686,6 +2686,14 @@
                 "description": "A probe was disabled."
             },
             {
+                "name": "probeResolved",
+                "parameters": [
+                    { "name": "probeId", "$ref": "ScriptProbeId", "description": "Unique id of probe." },
+                    { "name": "scriptId", "$ref": "Debugger.ScriptId", "description": "Script id." }
+                ],
+                "description": "A probe was resolved within a parsed source file."
+            },
+            {
                 "name": "allProbesCleared",
                 "description": "All probes were destroyed."
             }

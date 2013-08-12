@@ -409,7 +409,7 @@ InspectorBackend.registerEvent("Probe.probeAdded", ["probe"]);
 InspectorBackend.registerEvent("Probe.probeRemoved", ["probeId"]);
 InspectorBackend.registerEvent("Probe.probeEnabled", ["probeId"]);
 InspectorBackend.registerEvent("Probe.probeDisabled", ["probeId"]);
-InspectorBackend.registerEvent("Probe.allProbesCleared", []);
+InspectorBackend.registerEvent("Probe.probeResolved", ["probeId", "scriptId"]);
 InspectorBackend.registerCommand("Probe.enable", [], []);
 InspectorBackend.registerCommand("Probe.disable", [], []);
 InspectorBackend.registerCommand("Probe.setProbesActive", [{"name": "active", "type": "boolean", "optional": false}], []);
