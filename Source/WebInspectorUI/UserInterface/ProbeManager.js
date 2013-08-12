@@ -68,13 +68,6 @@ WebInspector.ProbeManager.prototype = {
 
         this._probesEnabledSetting.value = enabled;
 
-        if (enabled) {
-            for (var probeGroup in this._probeGroups)
-                this._probeGroups[probeGroup].enable();
-        } else {
-            for (var probeGroup in this._probeGroups)
-                this._probeGroups[probeGroup].disable();
-        }
         ProbeAgent.setProbesActive(enabled);
     },
 

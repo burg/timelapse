@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2008, 2009 Apple Inc. All rights reserved.
  * Copyright (C) 2010-2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -39,12 +40,17 @@
 #include "JavaScriptCallFrame.h"
 #include "ScriptBreakpoint.h"
 #include "ScriptDebugListener.h"
+#include "ScriptProbe.h"
 #include "ScriptValue.h"
 #include <debugger/DebuggerCallFrame.h>
 #include <parser/SourceProvider.h>
 #include <runtime/JSLock.h>
 #include <wtf/MainThread.h>
 #include <wtf/text/WTFString.h>
+
+#if ENABLE(WEB_REPLAY)
+#include <wtf/replay/InputIterator.h>
+#endif
 
 using namespace JSC;
 
@@ -58,15 +64,23 @@ ScriptDebugServer::ScriptDebugServer()
     , m_runningNestedMessageLoop(false)
     , m_doneProcessingDebuggerEvents(true)
     , m_breakpointsActivated(true)
+    , m_probesActivated(true)
     , m_pauseOnCallFrame(0)
     , m_recompileTimer(this, &ScriptDebugServer::recompileAllJSFunctions)
     , m_lastExecutedLine(-1)
     , m_lastExecutedSourceId(-1)
+    , m_nextBatchId(1)
 {
+    clearPauseTrigger();
 }
 
 ScriptDebugServer::~ScriptDebugServer()
 {
+    ScriptIdToPositionsMap::iterator scriptsIt = m_probeRegistry.begin();
+    for (; scriptsIt != m_probeRegistry.end(); ++scriptsIt)
+        clearProbesForScriptId(scriptsIt->key);
+
+    m_probeRegistry.clear();
 }
 
 String ScriptDebugServer::setBreakpoint(const String& sourceID, const ScriptBreakpoint& scriptBreakpoint, int* actualLineNumber, int* actualColumnNumber)
@@ -186,6 +200,11 @@ void ScriptDebugServer::setBreakpointsActivated(bool activated)
     m_breakpointsActivated = activated;
 }
 
+void ScriptDebugServer::setProbesActivated(bool activated)
+{
+    m_probesActivated = activated;
+}
+
 void ScriptDebugServer::setPauseOnExceptionsState(PauseOnExceptionsState pause)
 {
     m_pauseOnExceptionsState = pause;
@@ -194,6 +213,60 @@ void ScriptDebugServer::setPauseOnExceptionsState(PauseOnExceptionsState pause)
 void ScriptDebugServer::setPauseOnNextStatement(bool pause)
 {
     m_pauseOnNextStatement = pause;
+}
+
+void ScriptDebugServer::addProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe> prpProbe)
+{
+    RefPtr<ScriptProbe> probe = prpProbe;
+    m_probesById.add(probe->uid(), probe);
+
+    // Each of these calls will only actually add key/value pairs if they don't already exist.
+    ScriptIdToPositionsMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, PositionToScriptProbeMap());
+    PositionToScriptProbeMap::AddResult positionsMap = scriptsMap.iterator->value.add(probe->position(), ProbeSet());
+    positionsMap.iterator->value.add(probe);
+}
+
+void ScriptDebugServer::removeProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe> prpProbe)
+{
+    RefPtr<ScriptProbe> probe = prpProbe;
+
+    ProbeMap::iterator foundProbe = m_probesById.find(probe->uid());
+    if (foundProbe == m_probesById.end())
+        return;
+    m_probesById.remove(foundProbe);
+
+    ScriptIdToPositionsMap::iterator positionsForScript = m_probeRegistry.find(scriptId);
+    if (positionsForScript == m_probeRegistry.end())
+        return;
+
+    PositionToScriptProbeMap::iterator probeSet = positionsForScript->value.find(probe->position());
+    if (probeSet == positionsForScript->value.end())
+        return;
+
+    ProbeSet::iterator probeElement = probeSet->value.find(probe);
+    if (probeElement == probeSet->value.end())
+        return;
+
+    probeSet->value.remove(probeElement);
+}
+
+void ScriptDebugServer::clearProbesForScriptId(ScriptId scriptId)
+{
+    if (!m_probeRegistry.contains(scriptId))
+        return;
+
+    PositionToScriptProbeMap positionsForScript = m_probeRegistry.take(scriptId);
+    PositionToScriptProbeMap::iterator positionIterator = positionsForScript.begin();
+    // Clear probe sets for each line, then clear the lines map.
+    for (; positionIterator != positionsForScript.end(); ++positionIterator) {
+        ProbeSet::iterator probeIterator = positionIterator->value.begin();
+        for (; probeIterator != positionIterator->value.end(); ++probeIterator)
+            m_probesById.remove((*probeIterator)->uid());
+
+        positionIterator->value.clear();
+    }
+
+    positionsForScript.clear();
 }
 
 void ScriptDebugServer::breakProgram()
@@ -326,6 +399,16 @@ void ScriptDebugServer::dispatchFailedToParseSource(const ListenerSet& listeners
         copy[i]->failedToParseSource(url, data, firstLine, errorLine, errorMessage);
 }
 
+void ScriptDebugServer::dispatchCaptureProbeSample(ScriptState* exec, PassRefPtr<ScriptProbe> prpProbe, int batchId, const ScriptValue& sample)
+{
+    RefPtr<ScriptProbe> probe = prpProbe;
+    ListenerSet* listeners = getListenersForGlobalObject(exec->dynamicGlobalObject());
+    Vector<ScriptDebugListener*> copy;
+    copyToVector(*listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->captureProbeSample(exec, probe, batchId, sample);
+}
+
 bool ScriptDebugServer::isContentScript(ExecState* exec)
 {
     return currentWorld(exec) != mainThreadNormalWorld();
@@ -413,13 +496,14 @@ void ScriptDebugServer::pauseIfNeeded(JSGlobalObject* dynamicGlobalObject)
 {
     if (m_paused)
         return;
- 
+
     if (!getListenersForGlobalObject(dynamicGlobalObject))
         return;
 
     bool pauseNow = m_pauseOnNextStatement;
     pauseNow |= (m_pauseOnCallFrame == m_currentCallFrame);
     pauseNow |= hasBreakpoint(m_currentCallFrame->sourceID(), m_currentCallFrame->position());
+    pauseNow |= hasActiveProbes(m_currentCallFrame->sourceID(), m_currentCallFrame->position());
     m_lastExecutedLine = m_currentCallFrame->position().m_line.zeroBasedInt();
     if (!pauseNow)
         return;
@@ -444,6 +528,71 @@ void ScriptDebugServer::pauseIfNeeded(JSGlobalObject* dynamicGlobalObject)
     m_paused = false;
 }
 
+bool ScriptDebugServer::findProbesForPosition(ScriptId scriptId, const TextPosition& position, ProbeSet& result) const
+{
+    if (!m_probesActivated)
+        return false;
+
+    ScriptIdToPositionsMap::const_iterator entryForScript = m_probeRegistry.find(scriptId);
+    if (entryForScript == m_probeRegistry.end())
+        return false;
+
+    PositionToScriptProbeMap::const_iterator entryForPosition = entryForScript->value.find(position);
+    if (entryForPosition == entryForScript->value.end())
+        return false;
+
+    result = entryForPosition->value;
+    return true;
+}
+
+bool ScriptDebugServer::hasActiveProbes(ScriptId scriptId, const TextPosition& position) const
+{
+    ProbeSet foundProbes;
+    if (!findProbesForPosition(scriptId, position, foundProbes))
+        return false;
+
+    ProbeSet::const_iterator probesIt = foundProbes.begin();
+    for (; probesIt != foundProbes.end(); ++probesIt) {
+        RefPtr<ScriptProbe> probe = *probesIt;
+        if (probe->isEnabled())
+            return true;
+    }
+
+    return false;
+}
+
+void ScriptDebugServer::captureProbeSamplesIfNeeded(const JSC::DebuggerCallFrame& debuggerCallFrame, intptr_t sourceID, int lineNumber, int columnNumber)
+{
+#if ENABLE(WEB_REPLAY)
+    // If web replay is active, only generate probe samples during replay.
+    JSC::JSGlobalObject* globalObject = debuggerCallFrame.dynamicGlobalObject();
+    InputIterator* it = globalObject->inputIterator();
+    if (it && !it->isReplaying())
+        return;
+#endif
+
+    TextPosition textPosition(OrdinalNumber::fromOneBasedInt(lineNumber), OrdinalNumber::fromOneBasedInt(columnNumber));
+
+    ProbeSet foundProbes;
+    if (!findProbesForPosition(sourceID, textPosition, foundProbes))
+        return;
+
+    int batchId = m_nextBatchId++;
+
+    ProbeSet::const_iterator probesIt = foundProbes.begin();
+    for (; probesIt != foundProbes.end(); ++probesIt) {
+        RefPtr<ScriptProbe> probe = *probesIt;
+        JSC::JSValue exception;
+        JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
+        // TODO: (Issue #314): Propagate exception to the frontend instead of silently dropping it.
+        if (exception)
+            continue;
+
+        ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
+        dispatchCaptureProbeSample(debuggerCallFrame.callFrame(), probe, batchId, wrappedResult);
+    }
+}
+
 void ScriptDebugServer::callEvent(const DebuggerCallFrame& debuggerCallFrame, intptr_t sourceID, int lineNumber, int columnNumber)
 {
     if (!m_paused) {
@@ -454,6 +603,8 @@ void ScriptDebugServer::callEvent(const DebuggerCallFrame& debuggerCallFrame, in
 
 void ScriptDebugServer::atStatement(const DebuggerCallFrame& debuggerCallFrame, intptr_t sourceID, int lineNumber, int columnNumber)
 {
+    captureProbeSamplesIfNeeded(debuggerCallFrame, sourceID, lineNumber, columnNumber);
+
     if (!m_paused)
         updateCallFrameAndPauseIfNeeded(debuggerCallFrame, sourceID, lineNumber, columnNumber);
 }

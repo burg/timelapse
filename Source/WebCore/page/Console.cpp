@@ -54,11 +54,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
-#if ENABLE(WEB_REPLAY)
-#include "PageScriptDebugServer.h"
-#include "ScriptProbeServer.h"
-#endif
-
 namespace WebCore {
 
 Console::Console(Frame* frame)
@@ -183,14 +178,6 @@ void Console::markTimeline(PassRefPtr<ScriptArguments> arguments)
 {
     InspectorInstrumentation::consoleTimeStamp(m_frame, arguments);
 }
-
-#if ENABLE(WEB_REPLAY)
-void Console::probe(ScriptState* state, int probeId)
-{
-    ScriptProbeServer* probeServer = PageScriptDebugServer::shared().probeServer();
-    probeServer->addSampleFromConsole(probeId, state);
-}
-#endif
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
 

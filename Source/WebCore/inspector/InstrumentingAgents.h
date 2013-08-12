@@ -103,9 +103,6 @@ public:
 
     InspectorReplayAgent* inspectorReplayAgent() const { return m_inspectorReplayAgent; }
     void setInspectorReplayAgent(InspectorReplayAgent* agent) { m_inspectorReplayAgent = agent; }
-
-    InspectorProbeAgent* inspectorProbeAgent() const { return m_inspectorProbeAgent; }
-    void setInspectorProbeAgent(InspectorProbeAgent* agent) { m_inspectorProbeAgent = agent; }
 #endif
 
     WorkerRuntimeAgent* workerRuntimeAgent() const { return m_workerRuntimeAgent; }
@@ -133,6 +130,9 @@ public:
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     InspectorDebuggerAgent* inspectorDebuggerAgent() const { return m_inspectorDebuggerAgent; }
     void setInspectorDebuggerAgent(InspectorDebuggerAgent* agent) { m_inspectorDebuggerAgent = agent; }
+
+    InspectorProbeAgent* inspectorProbeAgent() const { return m_inspectorProbeAgent; }
+    void setInspectorProbeAgent(InspectorProbeAgent* agent) { m_inspectorProbeAgent = agent; }
 
     PageDebuggerAgent* pageDebuggerAgent() const { return m_pageDebuggerAgent; }
     void setPageDebuggerAgent(PageDebuggerAgent* agent) { m_pageDebuggerAgent = agent; }
@@ -176,7 +176,6 @@ private:
 #if ENABLE(WEB_REPLAY)
     InspectorRecordingsAgent* m_inspectorRecordingsAgent;
     InspectorReplayAgent* m_inspectorReplayAgent;
-    InspectorProbeAgent* m_inspectorProbeAgent;
 #endif
     WorkerRuntimeAgent* m_workerRuntimeAgent;
     InspectorTimelineAgent* m_inspectorTimelineAgent;
@@ -190,6 +189,7 @@ private:
     InspectorApplicationCacheAgent* m_inspectorApplicationCacheAgent;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     InspectorDebuggerAgent* m_inspectorDebuggerAgent;
+    InspectorProbeAgent* m_inspectorProbeAgent;
     PageDebuggerAgent* m_pageDebuggerAgent;
     InspectorDOMDebuggerAgent* m_inspectorDOMDebuggerAgent;
     InspectorProfilerAgent* m_inspectorProfilerAgent;

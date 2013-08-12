@@ -66,10 +66,6 @@ public:
     void count(ScriptState*, PassRefPtr<ScriptArguments>);
     void markTimeline(PassRefPtr<ScriptArguments>);
 
-#if ENABLE(WEB_REPLAY)
-    void probe(ScriptState*, int probeId);
-#endif
-
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     const ProfilesArray& profiles() const { return m_profiles; }
     void profile(const String&, ScriptState*);

@@ -493,6 +493,24 @@ TreeOutline.prototype.revealAndSelect = function(omitFocus)
     // this is the root, do nothing
 }
 
+TreeOutline.prototype.anyElementMatchesFilter = function()
+{
+    for (var i = 0; i < this.children.length; ++i)
+        if (!this.children[i].hidden)
+            return true;
+
+    return false;
+}
+
+TreeOutline.prototype.applyFilter = function(filterRegex)
+{
+    var currentChild = this.children[0];
+    while (currentChild && !currentChild.root) {
+        currentChild.applyFilter(filterRegex);
+        currentChild = currentChild.traverseNextTreeElement(false, null, false);
+    }
+}
+
 TreeOutline.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
@@ -1070,6 +1088,83 @@ TreeElement.prototype.traversePreviousTreeElement = function(skipUnrevealed, don
         return null;
 
     return this.parent;
+}
+
+TreeElement.prototype.applyFilter = function(filterRegex)
+{
+    console.assert(!filterRegex || (filterRegex instanceof RegExp));
+
+    function matchInputAgainstRegex(regex, input)
+    {
+        // Convert to a single item array if needed.
+        if (!(input instanceof Array))
+            input = [input];
+
+        // Loop over all the inputs and try to match them.
+        for (var i = 0; i < input.length; ++i) {
+            if (!input[i])
+                continue;
+            if (regex.test(input[i]))
+                return true;
+        }
+
+        // No inputs matched.
+        return false;
+    }
+
+    function tryMatchFilter(regex) {
+        if (!this.filterableData)
+            return;
+
+        if (!regex) {
+            // No filters, so make everything visible.
+            this.hidden = false;
+
+            // If this tree element was expanded during filtering, collapse it again.
+            if (this.expanded && this._wasExpandedDuringFiltering) {
+                delete this._wasExpandedDuringFiltering;
+                this.collapse();
+            }
+
+            return;
+        }
+
+        if (matchInputAgainstRegex(regex, this.filterableData.text)) {
+            // Make this element visible since it matches.
+            this.hidden = false;
+
+            // Make the ancestors visible and expand them.
+            var currentAncestor = this.parent;
+            while (currentAncestor && !currentAncestor.root) {
+                currentAncestor.hidden = false;
+
+                if (!currentAncestor.expanded) {
+                    currentAncestor._wasExpandedDuringFiltering = true;
+                    currentAncestor.expand();
+                }
+
+                currentAncestor = currentAncestor.parent;
+            }
+            return;
+        }
+
+        // Make this element invisible since it does not match.
+        this.hidden = true;
+    }
+
+    tryMatchFilter.call(this, filterRegex);
+
+    if (this.treeOutline.onfilter)
+        this.treeOutline.onfilter(this);
+}
+
+TreeElement.prototype.applyFilterRecursively = function(filterRegex)
+{
+    var currentChild = this;
+    while (currentChild && !currentChild.root) {
+        currentChild.applyFilter(filterRegex);
+        currentChild = currentChild.traverseNextTreeElement(false, this, false);
+    }  
 }
 
 TreeElement.prototype.isEventWithinDisclosureTriangle = function(event)

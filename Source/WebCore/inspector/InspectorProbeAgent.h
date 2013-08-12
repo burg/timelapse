@@ -32,10 +32,12 @@
 #ifndef InspectorProbeAgent_h
 #define InspectorProbeAgent_h
 
-#if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
+#if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
 
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
+#include "ScriptDebugListener.h"
+#include "ScriptState.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
@@ -43,11 +45,6 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
-
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-#include "ScriptDebugListener.h"
-#include "ScriptState.h"
-#endif
 
 namespace WebCore {
 
@@ -59,7 +56,6 @@ class InspectorProbeAgent;
 class InstrumentingAgents;
 class Page;
 class ScriptProbe;
-class ScriptProbeServer;
 
 typedef String ErrorString;
 
@@ -130,5 +126,5 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
+#endif // ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
 #endif // InspectorProbeAgent_h
