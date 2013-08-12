@@ -110,7 +110,6 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         var probeGroupSection = this._probeGroupSectionsByKey[probeGroup.groupKey];
         delete this._probeGroupSectionsByKey[probeGroup.groupKey];
         this._probeGroupSections.splice(this._probeGroupSections.indexOf(probeGroupSection), 1);
-        this.element.removeChild(probeGroupSection.element);
         probeGroupSection.closed();
     }
 };

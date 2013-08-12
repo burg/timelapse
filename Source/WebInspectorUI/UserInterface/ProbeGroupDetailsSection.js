@@ -110,6 +110,8 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
             WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(editorLineNumber, "CodeMirror-linenumbers", null);
         this._listeners.uninstall(true);
+
+        this.element.remove();
     },
 
     // Private
