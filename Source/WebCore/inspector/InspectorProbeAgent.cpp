@@ -221,7 +221,6 @@ void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
 
     ScriptId scriptId = findScriptIdResult->value;
     PageScriptDebugServer::shared().removeProbeForScriptId(scriptId, probe);
-    m_urlToScriptIdMap.remove(findScriptIdResult);
 }
 
 void InspectorProbeAgent::enableProbe(ErrorString* errorString, int probeId)
@@ -268,7 +267,7 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     ASSERT_UNUSED(result, result.isNewEntry);
     LOG(DeterministicReplay, "InspectorProbeAgent::createScriptProbe id=%d, expression=%s", probe->uid(), probe->expression().utf8().data());
 
-    // If probe matches url with known script id, resolve immediately.
+    // Quit early if we don't know a ScriptId corresponding to the probe's url.
     UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
     if (findResult == m_urlToScriptIdMap.end())
         return;
