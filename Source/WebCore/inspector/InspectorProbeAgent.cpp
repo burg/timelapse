@@ -38,7 +38,6 @@
 #include "InjectedScriptManager.h"
 #include "InspectorState.h"
 #include "InstrumentingAgents.h"
-#include "Logging.h"
 #include "Page.h"
 #include "PageScriptDebugServer.h"
 #include "ScriptProbe.h"
@@ -265,7 +264,6 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     RefPtr<ScriptProbe> probe = ScriptProbe::create(m_nextProbeId++, nonNullUrl, position, expression);
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
-    LOG(DeterministicReplay, "InspectorProbeAgent::createScriptProbe id=%d, expression=%s", probe->uid(), probe->expression().utf8().data());
 
     // Quit early if we don't know a ScriptId corresponding to the probe's url.
     UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
@@ -294,8 +292,6 @@ void InspectorProbeAgent::didParseSource(const String& stringId, const Script& s
     intptr_t scriptId = stringId.toInt();
     const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
     m_urlToScriptIdMap.add(nonNullUrl, scriptId);
-
-    LOG(DeterministicReplay, "InspectorProbeAgent::didParseSource id=%" PRIiPTR ", url=%s", scriptId, nonNullUrl.utf8().data());
 
     // Find any probes that should resolve within that file, add them.
     for (ProbeMap::const_iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
