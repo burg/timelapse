@@ -291,6 +291,7 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
                                                            .setIsEnabled(probe->isEnabled());
     probeObject->setUrl(probe->url());
     m_frontend->probeAdded(probeObject.release());
+    m_frontend->probeResolved(probe->uid(), String::number(findResult->value));
 }
 
 // ScriptDebugListener API
