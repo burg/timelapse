@@ -171,7 +171,7 @@ WebInspector.ProbeManager.prototype = {
         var probe = this._probes[probeId];
         probe.resolved = true;
         probe.sourceCode = WebInspector.debuggerManager.scriptForIdentifier(scriptId);
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolved, probe);    
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolved, probe);
     },
 
     // Private

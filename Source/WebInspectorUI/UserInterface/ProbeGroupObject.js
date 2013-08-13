@@ -39,6 +39,7 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._enabled = false;
 
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolved, this._resolveGroup, this);
 }
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
@@ -49,7 +50,8 @@ WebInspector.ProbeGroupObject.Event = {
     RowUpdated: "probe-group-row-updated",
     WillRemove: "probe-group-will-remove",
     Enabled: "probe-group-enabled",
-    Disabled: "probe-group-disabled"
+    Disabled: "probe-group-disabled",
+    SamplesCleared: "probe-group-samples-cleared"
 };
 
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
@@ -136,6 +138,14 @@ WebInspector.ProbeGroupObject.prototype = {
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.Disabled, this);
     },
 
+    clearSamples: function()
+    {
+        for (var i = 0; i < this._probes.length; ++i)
+            WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
+        this._dataTable = [{}];
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
+    },
+
     // Protected (called by ProbeManager.js)
 
     addProbe: function(probe)
@@ -206,7 +216,6 @@ WebInspector.ProbeGroupObject.prototype = {
             row: currentRow,
             index: this._dataTable.length - 1
         };
-
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
 
         if (this._dataEntries === this.probes.length) {
