@@ -41,6 +41,7 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.RowUpdated, this._updateGridNode);
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this.removeChildren);
     this._listeners.install();
 }
 
@@ -235,6 +236,11 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
         this.removeColumn(oldIdentifier, true);
         this.addColumn(newIdentifier, newColumn, index);
+    },
+
+    clearGridNodes: function(event)
+    {
+        this._gridNodes = {};
     },
 
     // Private
