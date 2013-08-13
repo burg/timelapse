@@ -62,10 +62,5 @@ WebInspector.ProbeObserver.prototype = {
     probeResolved: function(probeId, scriptId)
     {
         WebInspector.probeManager.probeResolved(probeId, scriptId);
-    },
-
-    allProbesCleared: function()
-    {
-        WebInspector.probeManager.allProbesCleared();
-    },
+    }
 };

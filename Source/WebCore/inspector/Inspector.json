@@ -2693,10 +2693,6 @@
                 ],
                 "description": "A probe was resolved within a parsed source file."
             },
-            {
-                "name": "allProbesCleared",
-                "description": "All probes were destroyed."
-            }
         ]
     },
     {

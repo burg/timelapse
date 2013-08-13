@@ -174,15 +174,6 @@ WebInspector.ProbeManager.prototype = {
         this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolved, probe);    
     },
 
-    allProbesCleared: function()
-    {
-        for (var key in this._probes) {
-            var probe = this._probes[key];
-            delete this._probes[key];
-            this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeRemoved, probe);
-        }
-    },
-
     // Private
 
     _clearSamplesForProbe: function(probe)
