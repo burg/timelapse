@@ -2692,7 +2692,7 @@
                     { "name": "scriptId", "$ref": "Debugger.ScriptId", "description": "Script id." }
                 ],
                 "description": "A probe was resolved within a parsed source file."
-            },
+            }
         ]
     },
     {
