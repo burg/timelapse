@@ -41,11 +41,6 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(removeProbeButton, "click", this._removeButtonClicked);
 
-    var toggleButton = optionsElement.createChild("img");
-    toggleButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeToggleStyleClassName);
-    toggleButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
-    this._listeners.register(toggleButton, "click", this._toggleButtonClicked);
-
     var addProbeButton = optionsElement.createChild("img");
     addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
     this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
@@ -64,7 +59,6 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
 
 WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
 WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
-WebInspector.ProbeGroupDetailsSection.ProbeToggleStyleClassName = "probe-toggle";
 WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
 WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
@@ -123,10 +117,5 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     _removeButtonClicked: function(event)
     {
         this._probeGroup.clear();
-    },
-
-    _toggleButtonClicked: function(event)
-    {
-        console.log("TODO: probe group section toggle button clicked.");
     }
 };
