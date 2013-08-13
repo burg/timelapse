@@ -34,7 +34,9 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
 
     var optionsElement = document.createElement("div");
     optionsElement.classList.add(WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName);
-    optionsElement.appendChild(this._probeGroupPositionTextOrLink());
+    var titleElement = this._probeGroupPositionTextOrLink();
+    titleElement.classList.add(WebInspector.ProbeGroupDetailsSection.DontFloatLinkStyleClassName);
+    optionsElement.appendChild(titleElement);
 
     var removeProbeButton = optionsElement.createChild("img");
     removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName);
@@ -57,12 +59,13 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     this._listeners.install();
 };
 
-WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
-WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
-WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
 WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
+WebInspector.ProbeGroupDetailsSection.DontFloatLinkStyleClassName = "dont-float";
 WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
 WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
+WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
+WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
+WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
 
 WebInspector.ProbeGroupDetailsSection.prototype = {
     __proto__: WebInspector.DetailsSection.prototype,

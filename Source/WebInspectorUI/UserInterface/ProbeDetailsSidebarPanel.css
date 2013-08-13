@@ -35,10 +35,6 @@
 	top: 22px;
 }
 
-.details-section.probe-group > .header > .options {
-	float: right;
-}
-
 .details-section.probe-group .options > .probe-remove,
 .details-section.probe-group .options > .probe-add {
 	float: right;
