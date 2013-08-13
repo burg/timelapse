@@ -30,7 +30,7 @@
     margin-top: 3px;
 }
 
-.item.probe-group .status > .status-image.resolved {
+.item.probe-group .status > .status-image.active-probe {
     content: url(Images/ProbeButton.pdf);
 }
 

@@ -34,9 +34,12 @@ WebInspector.ProbeManager = function()
 
     this._probes = {};
     this._probeGroups = {};
+
+    this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._probesEnabledSetting.value);
 }
 
 WebInspector.ProbeManager.Event = {
+    ProbesEnablementChanged: "probe-manager-probes-active-state-changed",
     ProbeAdded: "probe-manager-probe-added",
     ProbeRemoved: "probe-manager-probe-removed",
     ProbeDisabled: "probe-manager-probe-disabled",
@@ -70,6 +73,7 @@ WebInspector.ProbeManager.prototype = {
         this._probesEnabledSetting.value = enabled;
 
         ProbeAgent.setProbesActive(enabled);
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbesEnablementChanged, enabled);
     },
 
     enableProbe: function(probe)
