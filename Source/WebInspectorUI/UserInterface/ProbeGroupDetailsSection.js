@@ -57,15 +57,7 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     var probeSectionGroup = new WebInspector.DetailsSectionGroup([singletonRow]);
 
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
-
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
-
-    var sourceCodeLocation = probeGroup.sourceCodeLocation;
-    var editorLineNumber = sourceCodeLocation.displayLineNumber || probeGroup.position.lineNumber;
-
-    // FIXME: this will not work if the current view does not contain the probe.
-    if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
-        WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(editorLineNumber, "CodeMirror-linenumbers", this._gutterElement);
 
     this._listeners.install();
 };
@@ -77,7 +69,6 @@ WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove"
 WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
 WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
-WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName = "probe-gutter-marker";
 
 WebInspector.ProbeGroupDetailsSection.prototype = {
     __proto__: WebInspector.DetailsSection.prototype,
@@ -87,14 +78,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     closed: function()
     {
-        var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
-        var editorLineNumber = sourceCodeLocation.displayLineNumber || this._probeGroup.position.lineNumber;
-
-        // FIXME: this will not work if the current view does not contain the probe.
-        if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
-            WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(editorLineNumber, "CodeMirror-linenumbers", null);
         this._listeners.uninstall(true);
-
         this.element.remove();
     },
 

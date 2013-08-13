@@ -91,14 +91,6 @@
 	opacity: 0;
 }
 
-.probe-gutter-marker {
-	color: #999;
-	font-family: 'Lucida Grande', Helvetica, sans-serif;
-	font-size:  9px;
-	padding: 2px;
-	text-align: right;
-}
-
 .popover .probe-popover {
 	padding: 2px;
 	font-family: 'Lucida Grande', Helvetica, sans-serif;
