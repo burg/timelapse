@@ -34,7 +34,6 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._position = position;
     this._probes = [];
     this._probesByUid = {};
-    this._color = WebInspector.ProbeGroupObject.DefaultProbeColor;
     this._dataEntries = 0;
     this._dataTable = [{}];
     this._enabled = false;
@@ -47,14 +46,12 @@ WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
 WebInspector.ProbeGroupObject.Event = {
     ProbeAdded: "probe-group-probe-added",
     ProbeRemoved: "probe-group-probe-removed",
-    PropertiesChanged: "probe-group-properties-changed",
     RowUpdated: "probe-group-row-updated",
     WillRemove: "probe-group-will-remove",
     Enabled: "probe-group-enabled",
     Disabled: "probe-group-disabled"
 };
 
-WebInspector.ProbeGroupObject.DefaultProbeColor = new WebInspector.Color("yellow");
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
 
 WebInspector.ProbeGroupObject.prototype = {
@@ -101,22 +98,11 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._probes.slice();
     },
 
-    get color()
-    {
-    	return this._color;
-    },
-
     // Group key is set when the first probe is added to the group. It is saved separately
     // so that the group key persists even after all of the probes have been removed.
     get groupKey()
     {
         return this._groupKey || WebInspector.ProbeGroupObject.DefaultGroupKey;
-    },
-
-    set color(value)
-    {
-        this._color = value;
-        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.PropertiesChanged, this);
     },
 
     clear: function()

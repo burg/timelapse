@@ -40,7 +40,6 @@
 }
 
 .details-section.probe-group .options > .probe-remove,
-.details-section.probe-group .options > .probe-color,
 .details-section.probe-group .options > .probe-add,
 .details-section.probe-group .options > .probe-toggle {
 	float: right;
@@ -60,13 +59,6 @@
 
 .details-section.probe-group .options > .probe-remove {
 	content: url(Images/Close.pdf);
-}
-
-.details-section.probe-group .options > .probe-color {
-	margin-top: 0px;
-	height: 13px;
-	width: 13px;
-	border: 1px solid #666;
 }
 
 .details-section.probe-group .options > .probe-add {
@@ -116,12 +108,4 @@
 
 .popover .probe-popover input {
 	margin: 5px 0 0 0;
-}
-
-.popover .color-container > .color {
-	cursor: pointer;
-}
-
-.popover .color-container > .color:hover {
-	color: #aaa;
 }

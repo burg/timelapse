@@ -46,11 +46,6 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     toggleButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(toggleButton, "click", this._toggleButtonClicked);
 
-    this._colorSelectorElement = optionsElement.createChild("div");
-    this._colorSelectorElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeColorStyleClassName);
-    this._colorSelectorElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
-    this._listeners.register(this._colorSelectorElement, "click", this._colorSelectorElementClicked);
-
     var addProbeButton = optionsElement.createChild("img");
     addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
     this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
@@ -68,32 +63,21 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     var sourceCodeLocation = probeGroup.sourceCodeLocation;
     var editorLineNumber = sourceCodeLocation.displayLineNumber || probeGroup.position.lineNumber;
 
-    //this._gutterElement = document.createElement("div");
-    //this._gutterElement.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName);
-    //this._gutterElement.textContent = editorLineNumber + 1;
-
-    this._updateColor();
     // FIXME: this will not work if the current view does not contain the probe.
     if (WebInspector.contentBrowser.currentContentView.responseContentView.textEditor)
         WebInspector.contentBrowser.currentContentView.responseContentView.textEditor._codeMirror.doc.cm.setGutterMarker(editorLineNumber, "CodeMirror-linenumbers", this._gutterElement);
 
-    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.PropertiesChanged, this._updateColor);
     this._listeners.install();
 };
 
 WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
 WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
-WebInspector.ProbeGroupDetailsSection.ProbeColorStyleClassName = "probe-color";
 WebInspector.ProbeGroupDetailsSection.ProbeToggleStyleClassName = "probe-toggle";
 WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
 WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
 WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
-WebInspector.ProbeGroupDetailsSection.ColorContainerStyleClassName = "color-container";
 WebInspector.ProbeGroupDetailsSection.ProbeGutterStyleClassName = "probe-gutter-marker";
-WebInspector.ProbeGroupDetailsSection.ColorStyleClassName = "color";
-WebInspector.ProbeGroupDetailsSection.ProbeColorValues = [new WebInspector.Color("yellow"), new WebInspector.Color("red"), new WebInspector.Color("blue"), new WebInspector.Color("green"), new WebInspector.Color("pink"), new WebInspector.Color("orange"), new WebInspector.Color("purple")];
-WebInspector.ProbeGroupDetailsSection.DefaultProbeColor = new WebInspector.Color("yellow");
 
 WebInspector.ProbeGroupDetailsSection.prototype = {
     __proto__: WebInspector.DetailsSection.prototype,
@@ -157,41 +141,8 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         this._probeGroup.clear();
     },
 
-    _colorSelectorElementClicked: function(event)
-    {
-        var popover = new WebInspector.Popover;
-
-        var updateProbeGroupColor = function(group, color, usedPopover) {
-            group.color = color;
-            this._updateColor();
-            usedPopover.dismiss();
-        };
-
-        // TODO: Port to use upstream color picker widget.
-        var colorContainer = document.createElement("div");
-        colorContainer.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
-        colorContainer.classList.add(WebInspector.ProbeGroupDetailsSection.ColorContainerStyleClassName);
-        var colors = WebInspector.ProbeGroupDetailsSection.ProbeColorValues;
-        for (var i = 0; i <= colors.length - 1; i++) {
-            var color = colorContainer.createChild("div");
-            color.textContent = colors[i].toString();
-            color.classList.add(WebInspector.ProbeGroupDetailsSection.ColorStyleClassName);
-            color.addEventListener("click", updateProbeGroupColor.bind(this, this._probeGroup, colors[i], popover));
-        };
-
-        popover.content = colorContainer;
-        var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
-        popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
-    },
-
     _toggleButtonClicked: function(event)
     {
         console.log("TODO: probe group section toggle button clicked.");
-    },
-
-    _updateColor: function()
-    {
-        this._colorSelectorElement.style.backgroundColor = this._probeGroup.color;
-        //this._gutterElement.style.backgroundColor = this._probeGroup.color;
     }
 };
