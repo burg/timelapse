@@ -49,12 +49,15 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
 
     set currentProbeGroup(probeGroup)
     {
-        this._oldProbeGroup = this._currentProbeGroup;
-        if (this._oldProbeGroup)
-            this._oldProbeGroupSection = this._probeGroupSectionsByKey[this._oldProbeGroup.groupKey];
+        if (this._currentProbeGroup) {
+            oldProbeGroupSection = this._probeGroupSectionsByKey[this._currentProbeGroup.groupKey];
+            if (oldProbeGroupSection)
+            oldProbeGroupSection.element.remove();
+        }
+
         this._currentProbeGroup = probeGroup;
         this._currentProbeGroupSection = this._probeGroupSectionsByKey[probeGroup.groupKey];
-        this.needsRefresh()
+        this.element.appendChild(this._currentProbeGroupSection.element);
     },
 
     inspect: function(objects)
@@ -76,17 +79,6 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         this.probeGroup = probeGroupToInspect;
 
         return !!this.probeGroup;
-    },
-
-    refresh: function()
-    {
-        if (this._oldProbeGroupSection) {
-            this.element.removeChild(this._oldProbeGroupSection.element);
-        }
-        if (this._currentProbeGroupSection) {
-            this.element.appendChild(this._currentProbeGroupSection.element);
-        }
-
     },
 
     // Private
