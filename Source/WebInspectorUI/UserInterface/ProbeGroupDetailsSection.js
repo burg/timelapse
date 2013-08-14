@@ -61,7 +61,7 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
-    this._listeners.register(WebInspector.frameResourceManager, WebInspector.FrameResourceManager.Event.MainFrameDidChange, this._clearSamples)
+    this._listeners.register(WebInspector.Frame, WebInspector.Frame.Event.MainResourceDidChange, this._clearSamples);
     this._listeners.install();
 };
 
