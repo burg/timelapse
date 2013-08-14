@@ -61,7 +61,7 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
-    this._listeners.register(WebInspector.Frame, WebInspector.Frame.Event.MainResourceDidChange, this._clearSamples);
+    this._listeners.register(WebInspector.Frame, WebInspector.Frame.Event.MainResourceDidChange, this._fadeSamples);
     this._listeners.install();
 };
 
@@ -131,8 +131,18 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     },
 
+    _fadeSamples: function(event)
+    {
+        if (!this._probeGroup.hasSamples)
+            return;
+        this._dataGrid.fadeGridNodes();
+        this._probeGroup.addDataSeparator();
+    },
+
     _clearSamples: function(event)
     {
+        if (!this._probeGroup.hasSamples)
+            return;
         this._probeGroup.clearSamples();
         this._dataGrid.clearGridNodes();
     },
