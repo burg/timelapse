@@ -274,24 +274,26 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
     ProbeMap::AddResult result = m_probeMap.add(probe->uid(), probe);
     ASSERT_UNUSED(result, result.isNewEntry);
 
-    // Quit early if we don't know a ScriptId corresponding to the probe's url.
+    if (m_frontend) {
+        RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
+                                                               .setProbeId(probe->uid())
+                                                               .setLineNumber(probe->position().m_line.zeroBasedInt())
+                                                               .setColumnNumber(probe->position().m_column.zeroBasedInt())
+                                                               .setExpression(probe->expression())
+                                                               .setIsEnabled(probe->isEnabled());
+        probeObject->setUrl(probe->url());
+        m_frontend->probeAdded(probeObject.release());
+    }
+
     UrlToScriptIdMap::const_iterator findResult = m_urlToScriptIdMap.find(probe->url());
     if (findResult == m_urlToScriptIdMap.end())
         return;
 
+    // Resolve immediately if we know a ScriptId corresponding to the probe's url.
     PageScriptDebugServer::shared().addProbeForScriptId(findResult->value, probe);
-    if (!m_frontend)
-        return;
 
-    RefPtr<TypeBuilder::Probe::ScriptProbe> probeObject = TypeBuilder::Probe::ScriptProbe::create()
-                                                           .setProbeId(probe->uid())
-                                                           .setLineNumber(probe->position().m_line.zeroBasedInt())
-                                                           .setColumnNumber(probe->position().m_column.zeroBasedInt())
-                                                           .setExpression(probe->expression())
-                                                           .setIsEnabled(probe->isEnabled());
-    probeObject->setUrl(probe->url());
-    m_frontend->probeAdded(probeObject.release());
-    m_frontend->probeResolved(probe->uid(), String::number(findResult->value));
+    if (m_frontend)
+        m_frontend->probeResolved(probe->uid(), String::number(findResult->value));
 }
 
 // ScriptDebugListener API
@@ -300,7 +302,7 @@ void InspectorProbeAgent::didParseSource(const String& stringId, const Script& s
 {
     intptr_t scriptId = stringId.toInt();
     const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
-    m_urlToScriptIdMap.add(nonNullUrl, scriptId);
+    m_urlToScriptIdMap.set(nonNullUrl, scriptId);
 
     // Find any probes that should resolve within that file, add them.
     for (ProbeMap::const_iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
