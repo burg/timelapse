@@ -47,12 +47,9 @@ WebInspector.SourceCodeTextEditor = function(sourceCode)
         WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.ResolvedStateDidChange, this._updateBreakpointStatus, this);
         WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.LocationDidChange, this._updateBreakpointLocation, this);
 
-        // FIXME: Also listen for resolved state change when event exists.
         WebInspector.ProbeGroupObject.addEventListener(WebInspector.ProbeGroupObject.Event.Disabled, this._updateProbeGroupStatus, this);
         WebInspector.ProbeGroupObject.addEventListener(WebInspector.ProbeGroupObject.Event.Enabled, this._updateProbeGroupStatus, this);
-
-        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
-        WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
+        WebInspector.ProbeGroupObject.addEventListener(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this._probeGroupResolvedStateChanged, this);
 
         WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.BreakpointAdded, this._breakpointAdded, this);
         WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.BreakpointRemoved, this._breakpointRemoved, this);
@@ -123,12 +120,9 @@ WebInspector.SourceCodeTextEditor.prototype = {
             WebInspector.debuggerManager.removeEventListener(WebInspector.DebuggerManager.Event.BreakpointRemoved, this._breakpointRemoved, this);
             WebInspector.debuggerManager.removeEventListener(WebInspector.DebuggerManager.Event.ActiveCallFrameDidChange, this._activeCallFrameDidChange, this);
 
-            // FIXME: Also remove resolved listener.
             WebInspector.ProbeGroupObject.removeEventListener(WebInspector.ProbeGroupObject.Event.Disabled, this._updateProbeGroupStatus, this);
             WebInspector.ProbeGroupObject.removeEventListener(WebInspector.ProbeGroupObject.Event.Enabled, this._updateProbeGroupStatus, this);
-
-            WebInspector.probeManager.removeEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
-            WebInspector.probeManager.removeEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
+            WebInspector.ProbeGroupObject.removeEventListener(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this._probeGroupResolvedStateChanged, this);
 
             if (this._activeCallFrameSourceCodeLocation) {
                 this._activeCallFrameSourceCodeLocation.removeEventListener(WebInspector.SourceCodeLocation.Event.LocationChanged, this._activeCallFrameSourceCodeLocationChanged, this);
@@ -277,7 +271,6 @@ WebInspector.SourceCodeTextEditor.prototype = {
 
         if (this._supportsDebugging) {
             this._breakpointMap = {};
-
             var breakpoints = WebInspector.debuggerManager.breakpointsForSourceCode(this._sourceCode);
             for (var i = 0; i < breakpoints.length; ++i) {
                 var breakpoint = breakpoints[i];
@@ -332,6 +325,19 @@ WebInspector.SourceCodeTextEditor.prototype = {
             var issue = issues[i];
             console.assert(this._matchesIssue(issue));
             this._addIssue(issue);
+        }
+
+        if (this._supportsDebugging) {
+            this._probeGroupMap = {};
+            for (var groupKey in WebInspector.probeManager.probeGroups) {
+                var probeGroup = WebInspector.probeManager.probeGroups[groupKey];
+                if (!probeGroup.resolved)
+                    continue;
+
+                console.assert(this._matchesProbeGroup(probeGroup));
+                var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
+                this._probeGroupAdded(probeGroup, lineInfo);
+            }
         }
 
         this._updateJumpToSymbolTrackingMode();
@@ -475,7 +481,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
         this.setProbeGroupInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, this._probeGroupInfoForProbeGroup(probeGroup));
     },
 
-    _probeGroupAdded: function(event)
+    _probeGroupResolvedStateChanged: function(event)
     {
         console.assert(this._supportsDebugging);
 
@@ -483,26 +489,31 @@ WebInspector.SourceCodeTextEditor.prototype = {
             return;
 
         var probeGroup = event.data;
+        var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
+
+        if (!probeGroup.resolved) {
+            if (this._probeGroupMap[probeGroup.position.lineNumber] && this._probeGroupMap[probeGroup.position.lineNumber][probeGroup.position.columnNumber]) {
+                this._probeGroupRemoved(probeGroup, lineInfo);
+            }
+            return;
+        }
+
         if (!this._matchesProbeGroup(probeGroup))
             return;
 
-        var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
+        if (probeGroup.resolved) {
+            this._probeGroupAdded(probeGroup, lineInfo);
+        }
+    },
+
+    _probeGroupAdded: function(probeGroup, lineInfo)
+    {
         this._addProbeGroupWithEditorLineInfo(probeGroup, lineInfo);
         this.setProbeGroupInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, this._probeGroupInfoForProbeGroup(probeGroup));
     },
 
-    _probeGroupRemoved: function(event)
+    _probeGroupRemoved: function(probeGroup, lineInfo)
     {
-        console.assert(this._supportsDebugging);
-
-        if (!this._contentPopulated)
-            return;
-
-        var probeGroup = event.data;
-        if (!this._matchesProbeGroup(probeGroup))
-            return;
-
-        var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
         this._removeProbeGroupWithEditorLineInfo(probeGroup, lineInfo);
         this.setProbeGroupInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, null);
     },

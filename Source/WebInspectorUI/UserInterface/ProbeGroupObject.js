@@ -37,8 +37,11 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._dataEntries = 0;
     this._dataTable = [{}];
     this._enabled = false;
+    this._resolved = false;
+    this._hasSamples = false;
 
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, this._resolveStateDidChange, this);
 }
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
@@ -49,7 +52,9 @@ WebInspector.ProbeGroupObject.Event = {
     RowUpdated: "probe-group-row-updated",
     WillRemove: "probe-group-will-remove",
     Enabled: "probe-group-enabled",
-    Disabled: "probe-group-disabled"
+    Disabled: "probe-group-disabled",
+    ResolveStateDidChange: "probe-group-resolve-state-did-change",
+    SamplesCleared: "probe-group-samples-cleared"
 };
 
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
@@ -71,10 +76,9 @@ WebInspector.ProbeGroupObject.prototype = {
         return !this._enabled;
     },
 
-    // FIXME: Should actually keep track of and return resolved state.
     get resolved()
     {
-        return true;
+        return this._resolved;
     },
 
     get url()
@@ -103,6 +107,11 @@ WebInspector.ProbeGroupObject.prototype = {
     get groupKey()
     {
         return this._groupKey || WebInspector.ProbeGroupObject.DefaultGroupKey;
+    },
+
+    get hasSamples()
+    {
+        return this._hasSamples;
     },
 
     clear: function()
@@ -135,6 +144,31 @@ WebInspector.ProbeGroupObject.prototype = {
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.Disabled, this);
     },
 
+    clearSamples: function()
+    {
+        for (var i = 0; i < this._probes.length; ++i)
+            WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
+        this._dataTable = [{}];
+        this._hasSamples = false;
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
+    },
+
+    addDataSeparator: function()
+    {
+        var currentRow = this._dataTable[this._dataTable.length - 1];
+        for (var i = 0; i < this._probes.length; ++i)
+            currentRow[this._probes[i].probeId] = "";
+
+        var data = {
+            row: currentRow,
+            index: this._dataTable.length - 1,
+            empty: true
+        };
+
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
+        this._dataTable.push({});
+    },
+
     // Protected (called by ProbeManager.js)
 
     addProbe: function(probe)
@@ -153,7 +187,12 @@ WebInspector.ProbeGroupObject.prototype = {
         else
             WebInspector.probeManager.disableProbe(probe);
 
-        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe)
+        if (this._hasSamples) {
+            for (var i = 0; i < this._dataTable.length - 1; ++i)
+                this._dataTable[i][probe.probeId] = "?";
+        }
+
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe);
     },
 
     removeProbe: function(probe)
@@ -193,6 +232,9 @@ WebInspector.ProbeGroupObject.prototype = {
 
         console.assert(this._dataTable.length, "Not allowed to have an empty data table for probe group", this);
 
+        if (!this._hasSamples)
+            this._hasSamples = true;
+
         var columnIdentifier = event.target.probeId;
         var currentRow = this._dataTable[this._dataTable.length - 1];
         currentRow[columnIdentifier] = sample.object.value;
@@ -202,12 +244,30 @@ WebInspector.ProbeGroupObject.prototype = {
             row: currentRow,
             index: this._dataTable.length - 1
         };
-
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
 
         if (this._dataEntries === this.probes.length) {
             this._dataEntries = 0;
             this._dataTable.push({});
         }
+    },
+
+    _resolveStateDidChange: function(event)
+    {
+        var probe = event.data;
+        if (!this._probesByUid[probe.probeId])
+            return;
+
+        // Only unresolve group when all probes are unresolved.
+        var anyProbeIsResolved = false;
+        for (var i = 0; i < this._probes.length; ++i)
+            if (this._probes[i].resolved)
+                anyProbeIsResolved = true;
+
+        if (this._resolved === anyProbeIsResolved)
+            return;
+
+        this._resolved = anyProbeIsResolved;
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this);
     }
 };

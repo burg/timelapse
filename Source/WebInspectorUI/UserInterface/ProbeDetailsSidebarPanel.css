@@ -36,12 +36,18 @@
 }
 
 .details-section.probe-group .options > .probe-remove,
+.details-section.probe-group .options > .probe-clear-samples,
 .details-section.probe-group .options > .probe-add {
 	float: right;
 	height: 11px;
 	margin-top: 1px;
 	margin-left: 5px;
 	cursor: pointer;
+}
+
+.details-section.probe-group .options > .probe-clear-samples {
+	content: url(Images/NavigationItemTrash.pdf);
+	height: 13px;
 }
 
 .details-section.probe-group .options > .probe-remove {
