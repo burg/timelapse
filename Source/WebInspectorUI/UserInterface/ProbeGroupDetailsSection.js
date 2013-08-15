@@ -122,6 +122,7 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         popover.content = content;
         var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
         popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
+        textBox.select();
     },
 
     _removeButtonClicked: function(event)

@@ -41,3 +41,11 @@
 	height: 2px;
 	line-height: 0px;
 }
+
+.details-section.probe-group .data-grid > .data-container .selected .section * {
+	color: white;
+}
+
+.details-section.probe-group .data-grid > .data-container .section {
+	left: -6px;
+}
