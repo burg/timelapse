@@ -53,6 +53,7 @@ WebInspector.ProbeGroupObject.Event = {
 };
 
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
+WebInspector.ProbeGroupObject.SampleObjectTitle = "Object";
 
 WebInspector.ProbeGroupObject.prototype = {
     constructor: WebInspector.ProbeGroupObject,
@@ -186,8 +187,8 @@ WebInspector.ProbeGroupObject.prototype = {
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
 
-        if (sample.object.type === "array" || sample.object.type === "object") {
-            console.log("TODO: display probe with type=(array|object): ", sample.object);
+        if (sample.object.type === "array") {
+            console.log("TODO: display probe with type=(array): ", sample.object);
             return;
         }
 
@@ -195,7 +196,10 @@ WebInspector.ProbeGroupObject.prototype = {
 
         var columnIdentifier = event.target.probeId;
         var currentRow = this._dataTable[this._dataTable.length - 1];
-        currentRow[columnIdentifier] = sample.object.value;
+        if (sample.object.type === "object")
+            currentRow[columnIdentifier] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
+        else
+            currentRow[columnIdentifier] = sample.object.value;
         ++this._dataEntries;
 
         var data = {
