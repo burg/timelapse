@@ -36,6 +36,7 @@ WebInspector.ProbeManager = function()
     this._probeGroups = {};
 
     this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._probesEnabledSetting.value);
+    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._unresolveAllProbes, this);
 }
 
 WebInspector.ProbeManager.Event = {
@@ -44,7 +45,7 @@ WebInspector.ProbeManager.Event = {
     ProbeRemoved: "probe-manager-probe-removed",
     ProbeDisabled: "probe-manager-probe-disabled",
     ProbeEnabled: "probe-manager-probe-enabled",
-    ProbeResolved: "probe-manager-probe-resolved",
+    ProbeResolveStateDidChange: "probe-manager-probe-resolve-state-did-change",
     ProbeGroupAdded: "probe-manager-probe-group-added",
     ProbeGroupRemoved: "probe-manager-probe-group-removed",
 };
@@ -133,6 +134,8 @@ WebInspector.ProbeManager.prototype = {
     {
         console.assert(probeId in this._probes, "Unknown probe id requseted: ", probeId);
         var probe = this._probes[probeId];
+        probe.resolved = false;
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
         delete this._probes[probeId];
 
         if (this._probeGroups[probe.groupKey]) {
@@ -171,7 +174,7 @@ WebInspector.ProbeManager.prototype = {
         var probe = this._probes[probeId];
         probe.resolved = true;
         probe.sourceCode = WebInspector.debuggerManager.scriptForIdentifier(scriptId);
-        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolved, probe);    
+        this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
     },
 
     // Private
@@ -179,6 +182,18 @@ WebInspector.ProbeManager.prototype = {
     _clearSamplesForProbe: function(probe)
     {
         probe.samples = [];
+    },
+
+    _unresolveAllProbes: function(event)
+    {
+        for (var key in this._probes) {
+            var probe = this._probes[key];
+            if (!probe.resolved)
+                continue;
+
+            probe.resolved = false;
+            this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
+        }
     },
 
     _didReceiveSamples: function(error, samples)

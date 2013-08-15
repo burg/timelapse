@@ -36,7 +36,8 @@ WebInspector.ProbeGroupTreeElement = function(probeGroup, className, title)
 
     this._probeGroup = probeGroup;
 
-    // FIXME: Will need to listen for resolved state change as well.
+    this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.RowUpdated, this._rowUpdated.bind(this));
+    this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this._updateStatus.bind(this));
     this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.Enabled, this._updateStatus.bind(this));
     this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.Disabled, this._updateStatus.bind(this));
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._updateStatus.bind(this));
@@ -66,6 +67,8 @@ WebInspector.ProbeGroupTreeElement.StatusImageElementStyleClassName = "status-im
 WebInspector.ProbeGroupTreeElement.StatusImageActiveStyleClassName = "active-probe";
 WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName = "disabled";
 WebInspector.ProbeGroupTreeElement.FormattedLocationStyleClassName = "formatted-location";
+WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName = "row-updated";
+WebInspector.ProbeGroupTreeElement.AddingSampleMessage = " Adding Sample";
 
 WebInspector.ProbeGroupTreeElement.prototype = {
     constructor: WebInspector.ProbeGroupTreeElement,
@@ -130,6 +133,19 @@ WebInspector.ProbeGroupTreeElement.prototype = {
 
             this.tooltip = this.mainTitle + " \u2014 " + WebInspector.UIString("originally %s").format(sourceCodeLocation.originalLocationString());
         }
+    },
+
+    _rowUpdated: function()
+    {
+        if (this.element.classList.contains(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName)) {
+            clearTimeout(this._currentTimeout);
+            this.element.classList.remove(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName);
+        }
+
+        this.element.classList.add(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName);
+        this._currentTimeout = setTimeout(function() {
+            this.element.classList.remove(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName);
+        }.bind(this), 300);
     },
 
     _updateStatus: function()

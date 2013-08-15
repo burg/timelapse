@@ -38,10 +38,36 @@
     opacity: 0.45;
 }
 
+.item.probe-group .title {
+    opacity: 1;
+    transition: opacity 0.25s ease;
+}
+
 .item.probe-group .subtitle.formatted-location {
     font-style: italic;
 }
 
 .probe-group-generic-line-icon .icon {
 	content: url(Images/ResultLine.pdf);
+}
+
+.row-updated.probe-group-generic-line-icon .icon {
+	content: url(Images/Plus.pdf);
+	-webkit-filter: invert(50%) sepia(100%) saturate(7) invert(100%) hue-rotate(47deg) brightness(85%);
+	-webkit-animation-duration: 0.3s;
+	-webkit-animation-name: blink-plus-icon;
+}
+
+@-webkit-keyframes blink-plus-icon {
+	0% {
+		opacity: 1;
+	}
+
+	50% {
+		opacity: 0.9;
+	}
+
+	100% {
+		opacity: 0;
+	}
 }
