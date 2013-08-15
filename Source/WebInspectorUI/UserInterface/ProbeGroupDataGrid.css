@@ -27,3 +27,25 @@
     /* This is a hack until a better auto-sizing strategy is implemented. */
     max-height: 500px;
 }
+
+.details-section.probe-group .data-grid > .data-container tr.faded {
+    color: #777;
+	font-style: italic;
+}
+
+.details-section.probe-group .data-grid > .data-container tr.empty {
+	background-color: #555;
+}
+
+.details-section.probe-group .data-grid > .data-container tr.empty td {
+	height: 2px;
+	line-height: 0px;
+}
+
+.details-section.probe-group .data-grid > .data-container .selected .section * {
+	color: white;
+}
+
+.details-section.probe-group .data-grid > .data-container .section {
+	left: -6px;
+}

@@ -41,8 +41,12 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
     this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.RowUpdated, this._updateGridNode);
+    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this.removeChildren);
     this._listeners.install();
 }
+
+WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName = "faded";
+WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName = "empty";
 
 WebInspector.ProbeGroupDataGrid.prototype = {
     constructor: WebInspector.ProbeGroupDataGrid,
@@ -237,6 +241,17 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         this.addColumn(newIdentifier, newColumn, index);
     },
 
+    fadeGridNodes: function(event)
+    {
+        for (var index in this._gridNodes)
+            this._gridNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
+    },
+
+    clearGridNodes: function(event)
+    {
+        this._gridNodes = {};
+    },
+
     // Private
 
     _setupProbe: function(event)
@@ -256,6 +271,8 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         var data = event.data;
         if (!this._gridNodes[data.index]) {
             var node = new WebInspector.ProbeGroupDataGridNode(data.row);
+            if (data.empty)
+                node.element.classList.add(WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName);
             this._gridNodes[data.index] = node;
             node.dataGrid = this;
             node.createCells();

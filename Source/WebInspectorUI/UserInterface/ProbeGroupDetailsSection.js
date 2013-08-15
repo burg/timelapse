@@ -43,6 +43,11 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     removeProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
     this._listeners.register(removeProbeButton, "click", this._removeButtonClicked);
 
+    var clearSamplesButton = optionsElement.createChild("img");
+    clearSamplesButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeClearSamplesStyleClassName);
+    clearSamplesButton.classList.add(WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName);
+    this._listeners.register(clearSamplesButton, "click", this._clearSamplesButtonClicked);
+
     var addProbeButton = optionsElement.createChild("img");
     addProbeButton.classList.add(WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName);
     this._listeners.register(addProbeButton, "click", this._addProbeButtonClicked);
@@ -56,6 +61,7 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
+    this._listeners.register(WebInspector.Frame, WebInspector.Frame.Event.MainResourceDidChange, this._fadeSamples);
     this._listeners.install();
 };
 
@@ -63,6 +69,7 @@ WebInspector.ProbeGroupDetailsSection.AddProbeValueStyleClassName = "probe-add";
 WebInspector.ProbeGroupDetailsSection.DontFloatLinkStyleClassName = "dont-float";
 WebInspector.ProbeGroupDetailsSection.ProbeButtonEnabledStyleClassName = "enabled";
 WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName = "probe-popover";
+WebInspector.ProbeGroupDetailsSection.ProbeClearSamplesStyleClassName = "probe-clear-samples";
 WebInspector.ProbeGroupDetailsSection.ProbeRemoveStyleClassName = "probe-remove";
 WebInspector.ProbeGroupDetailsSection.SectionOptionsStyleClassName = "options";
 WebInspector.ProbeGroupDetailsSection.StyleClassName = "probe-group";
@@ -115,10 +122,33 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         popover.content = content;
         var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
         popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
+        textBox.select();
     },
 
     _removeButtonClicked: function(event)
     {
         this._probeGroup.clear();
+
+    },
+
+    _fadeSamples: function(event)
+    {
+        if (!this._probeGroup.hasSamples)
+            return;
+        this._dataGrid.fadeGridNodes();
+        this._probeGroup.addDataSeparator();
+    },
+
+    _clearSamples: function(event)
+    {
+        if (!this._probeGroup.hasSamples)
+            return;
+        this._probeGroup.clearSamples();
+        this._dataGrid.clearGridNodes();
+    },
+
+    _clearSamplesButtonClicked: function(event)
+    {
+        this._clearSamples();
     }
 };
