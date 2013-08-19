@@ -196,8 +196,8 @@ protected:
     intptr_t m_lastExecutedSourceId;
 
     typedef HashMap<int, RefPtr<ScriptProbe> > ProbeMap;
-    typedef HashMap<TextPosition, ProbeSet> PositionToScriptProbeMap;
-    typedef HashMap<ScriptId, PositionToScriptProbeMap> ScriptIdToPositionsMap;
+    typedef HashMap<TextPosition, ProbeSet> PositionToScriptProbeSet;
+    typedef HashMap<ScriptId, PositionToScriptProbeSet> ScriptIdToPositionsMap;
 
     ScriptIdToPositionsMap m_probeRegistry;
     ProbeMap m_probesById;

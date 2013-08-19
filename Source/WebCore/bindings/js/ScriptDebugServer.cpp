@@ -221,8 +221,8 @@ void ScriptDebugServer::addProbeForScriptId(ScriptId scriptId, PassRefPtr<Script
     m_probesById.add(probe->uid(), probe);
 
     // Each of these calls will only actually add key/value pairs if they don't already exist.
-    ScriptIdToPositionsMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, PositionToScriptProbeMap());
-    PositionToScriptProbeMap::AddResult positionsMap = scriptsMap.iterator->value.add(probe->position(), ProbeSet());
+    ScriptIdToPositionsMap::AddResult scriptsMap = m_probeRegistry.add(scriptId, PositionToScriptProbeSet());
+    PositionToScriptProbeSet::AddResult positionsMap = scriptsMap.iterator->value.add(probe->position(), ProbeSet());
     positionsMap.iterator->value.add(probe);
 }
 
@@ -239,7 +239,7 @@ void ScriptDebugServer::removeProbeForScriptId(ScriptId scriptId, PassRefPtr<Scr
     if (positionsForScript == m_probeRegistry.end())
         return;
 
-    PositionToScriptProbeMap::iterator probeSet = positionsForScript->value.find(probe->position());
+    PositionToScriptProbeSet::iterator probeSet = positionsForScript->value.find(probe->position());
     if (probeSet == positionsForScript->value.end())
         return;
 
@@ -255,8 +255,8 @@ void ScriptDebugServer::clearProbesForScriptId(ScriptId scriptId)
     if (!m_probeRegistry.contains(scriptId))
         return;
 
-    PositionToScriptProbeMap positionsForScript = m_probeRegistry.take(scriptId);
-    PositionToScriptProbeMap::iterator positionIterator = positionsForScript.begin();
+    PositionToScriptProbeSet positionsForScript = m_probeRegistry.take(scriptId);
+    PositionToScriptProbeSet::iterator positionIterator = positionsForScript.begin();
     // Clear probe sets for each line, then clear the lines map.
     for (; positionIterator != positionsForScript.end(); ++positionIterator) {
         ProbeSet::iterator probeIterator = positionIterator->value.begin();
@@ -537,12 +537,27 @@ bool ScriptDebugServer::findProbesForPosition(ScriptId scriptId, const TextPosit
     if (entryForScript == m_probeRegistry.end())
         return false;
 
-    PositionToScriptProbeMap::const_iterator entryForPosition = entryForScript->value.find(position);
-    if (entryForPosition == entryForScript->value.end())
-        return false;
+    PositionToScriptProbeSet::const_iterator probesForPosition = entryForScript->value.find(position);
+    if (probesForPosition != entryForScript->value.end()) {
+        result = probesForPosition->value;
+        return true;
+    }
 
-    result = entryForPosition->value;
-    return true;
+    // Since frontend truncates the indent, the first statement in a line must match probes
+    // with the position (line,0).
+    
+    // N.B. the code currently assumes probes exist at either the exact location or first
+    // statement on a line, but not both. If probes exist at both locations, the exact one is used.
+    if (position.m_line.oneBasedInt() != m_lastExecutedLine && position.m_column != OrdinalNumber::first()) {
+        TextPosition beginningOfLine(position.m_line, OrdinalNumber::first());
+        PositionToScriptProbeSet::const_iterator probesForBeginningOfLine = entryForScript->value.find(beginningOfLine);
+        if (probesForBeginningOfLine != entryForScript->value.end()) {
+            result = probesForBeginningOfLine->value;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool ScriptDebugServer::hasActiveProbes(ScriptId scriptId, const TextPosition& position) const
