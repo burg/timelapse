@@ -763,7 +763,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
 
     _probeGroupInfoForProbeGroup: function(probeGroup)
     {
-        return {resolved: probeGroup.resolved, disabled: probeGroup.disabled};
+        return {resolved: probeGroup.resolved, disabled: !probeGroup.isEnabled};
     },
 
     get _supportsDebugging()

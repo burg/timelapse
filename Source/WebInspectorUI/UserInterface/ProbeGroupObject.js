@@ -71,11 +71,6 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._enabled;
     },
 
-    get disabled()
-    {
-        return !this._enabled;
-    },
-
     get resolved()
     {
         return this._resolved;

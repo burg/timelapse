@@ -150,7 +150,7 @@ WebInspector.ProbeGroupTreeElement.prototype = {
 
     _updateStatus: function()
     {
-        if (this._probeGroup.disabled)
+        if (!this._probeGroup.isEnabled)
             this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
         else
             this._statusImageElement.classList.remove(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
