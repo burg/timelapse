@@ -23,13 +23,15 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.FutureScriptTreeElement = function(futureScriptUrl)
+WebInspector.FutureScriptTreeElement = function(placeholderObject)
 {
-    WebInspector.GeneralTreeElement.call(this, WebInspector.FutureScriptTreeElement.StyleClassName, parseURL(futureScriptUrl).lastPathComponent, null, futureScriptUrl, false);
+    // This is a stand-in representedObject.
+    this._placeholderObject = placeholderObject;
+    var abbreviatedURL = parseURL(placeholderObject.url).lastPathComponent;
 
-    this._url = futureScriptUrl;
-    this.mainTitle = parseURL(futureScriptUrl).lastPathComponent;
+    WebInspector.GeneralTreeElement.call(this, WebInspector.FutureScriptTreeElement.StyleClassName, abbreviatedURL, null, placeholderObject, false);
 
+    this.mainTitle = abbreviatedURL;
     this.small = true;
 };
 
@@ -44,7 +46,7 @@ WebInspector.FutureScriptTreeElement.prototype = {
 
     get url()
     {
-        return this._url;
+        return this._placeholderObject.url;
     }
 };
 

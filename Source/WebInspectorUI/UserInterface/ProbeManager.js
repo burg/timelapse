@@ -35,6 +35,8 @@ WebInspector.ProbeManager = function()
     this._probes = {};
     this._probeGroups = {};
 
+    this._placeholderObjectsByURL = {};
+
     this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._probesEnabledSetting.value);
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._unresolveAllProbes, this);
 }
@@ -99,6 +101,18 @@ WebInspector.ProbeManager.prototype = {
     {
         console.assert(probe === this._probes[probe.probeId], "Can't remove unknown probe: ", probe);
         ProbeAgent.removeProbe(probe.probeId);
+    },
+
+    // This is a hack so that unresolved probes can be added to the same placeholder tree elements.
+    // Each tree element requires a representedObject; this method returns a canonical placeholder.
+
+    // N.B. the placeholders are reset when the page is reloaded.
+    getPlaceholderObjectForURL: function(url)
+    {
+        if (!(url in this._placeholderObjectsByURL))
+            this._placeholderObjectsByURL[url] = { url: url };
+
+        return this._placeholderObjectsByURL[url];
     },
 
     // Protected (called by WebInspector.ProbeObserver)
@@ -194,6 +208,8 @@ WebInspector.ProbeManager.prototype = {
             probe.resolved = false;
             this.dispatchEventToListeners(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, probe);
         }
+
+        this._placeholderObjectsByURL = {};
     },
 
     _didReceiveSamples: function(error, samples)

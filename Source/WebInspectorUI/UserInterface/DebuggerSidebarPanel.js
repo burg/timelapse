@@ -283,12 +283,17 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
     _addProbeGroup: function(probeGroup)
     {
-        var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
-        if (!sourceCode) {
-            var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(probeGroup.url);
+        // FIXME: this creates a placeholder tree element for the resource since the probe
+        // is not yet resolved and doesn't have a SourceCode reference.
+        // When probe is resolved, it will be stuck in the placeholder tree element even
+        // if the real resource has a corresponding tree element.
+        if (!probeGroup.resolved) {
+            var placeholderObject = WebInspector.probeManager.getPlaceholderObjectForURL(probeGroup.url);
+            var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(placeholderObject);
             if (!parentTreeElement)
-                parentTreeElement = new WebInspector.FutureScriptTreeElement(probeGroup.url)
+                parentTreeElement = new WebInspector.FutureScriptTreeElement(placeholderObject)
         } else {
+            var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
             var parentTreeElement = this._probesContentTreeOutline.getCachedTreeElement(sourceCode);
             if (!parentTreeElement) {
                 if (sourceCode instanceof WebInspector.SourceMapResource)
