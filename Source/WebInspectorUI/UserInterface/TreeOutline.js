@@ -196,6 +196,9 @@ TreeOutline.prototype.removeChildAtIndex = function(childIndex, suppressOnDesele
     child.parent = null;
     child.nextSibling = null;
     child.previousSibling = null;
+
+    if (!this.children.length)
+        this.hasChildren = false;
 }
 
 TreeOutline.prototype.removeChild = function(child, suppressOnDeselect, suppressSelectSibling)
@@ -1164,12 +1167,12 @@ TreeElement.prototype.applyFilterRecursively = function(filterRegex)
     while (currentChild && !currentChild.root) {
         currentChild.applyFilter(filterRegex);
         currentChild = currentChild.traverseNextTreeElement(false, this, false);
-    }  
+    }
 }
 
 TreeElement.prototype.isEventWithinDisclosureTriangle = function(event)
 {
-    // FIXME: We should not use getComputedStyle(). For that we need to get rid of using ::before for disclosure triangle. (http://webk.it/74446) 
+    // FIXME: We should not use getComputedStyle(). For that we need to get rid of using ::before for disclosure triangle. (http://webk.it/74446)
     var computedLeftPadding = window.getComputedStyle(this._listItemNode).getPropertyCSSValue("padding-left").getFloatValue(CSSPrimitiveValue.CSS_PX);
     var left = this._listItemNode.totalOffsetLeft + computedLeftPadding;
     return event.pageX >= left && event.pageX <= left + this.arrowToggleWidth && this.hasChildren;
