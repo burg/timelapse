@@ -38,7 +38,10 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._dataTable = [{}];
     this._enabled = false;
     this._resolved = false;
+    this._hasSamples = false;
+    this._hasNewSamples = false;
 
+    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this.addDataSeparator, this);
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, this._resolveStateDidChange, this);
 }
@@ -108,6 +111,16 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._groupKey || WebInspector.ProbeGroupObject.DefaultGroupKey;
     },
 
+    get hasSamples()
+    {
+        return this._hasSamples;
+    },
+
+    get hasNewSamples()
+    {
+        return this._hasNewSamples;
+    },
+
     clear: function()
     {
         for (var i = 0; i < this._probes.length; ++i)
@@ -142,12 +155,18 @@ WebInspector.ProbeGroupObject.prototype = {
     {
         for (var i = 0; i < this._probes.length; ++i)
             WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
-        this._dataTable = [{}];
+        this._dataTable = [];
+        this._hasSamples = false;
+        this._hasNewSamples = false;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
 
     addDataSeparator: function()
     {
+        if (!this._hasNewSamples)
+            return;
+        this._dataTable.push({});
+        this._hasNewSamples = false;
         var currentRow = this._dataTable[this._dataTable.length - 1];
         for (var i = 0; i < this._probes.length; ++i)
             currentRow[this._probes[i].probeId] = "";
@@ -159,7 +178,6 @@ WebInspector.ProbeGroupObject.prototype = {
         };
 
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
-        this._dataTable.push({});
     },
 
     // Protected (called by ProbeManager.js)
@@ -222,6 +240,11 @@ WebInspector.ProbeGroupObject.prototype = {
         }
 
         console.assert(this._dataTable.length, "Not allowed to have an empty data table for probe group", this);
+
+        if (!this._hasSamples || !this._hasNewSamples) {
+            this._hasSamples = true;
+            this._hasNewSamples = true;
+        }
 
         var columnIdentifier = event.target.probeId;
         var currentRow = this._dataTable[this._dataTable.length - 1];
