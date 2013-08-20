@@ -372,13 +372,16 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     {
         var index = this._probesContentTreeOutline.children.indexOf(oldScriptElement);
         var newScriptElement = new WebInspector.ScriptTreeElement(newScript);
-        var children = oldScriptElement.children;
-        if (children) {
-            for (var i = 0; i < children.length; ++i)
-                newScriptElement.appendChild(children[i]);
-        }
         this._probesContentTreeOutline.removeChildAtIndex(index);
         this._probesContentTreeOutline.insertChild(newScriptElement, index);
+
+        // We must reparent the child nodes after the parent has been attached to
+        // the tree, because TreeOutline is brittle and requires this ordering.
+        while (oldScriptElement.hasChildren) {
+            var child = oldScriptElement.children[0];
+            oldScriptElement.removeChildAtIndex(0, true, true);
+            newScriptElement.appendChild(child);
+        }
     },
 
     _breakpointAdded: function(event)
