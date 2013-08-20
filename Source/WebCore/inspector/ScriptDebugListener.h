@@ -55,6 +55,7 @@ public:
 
         String url;
         String source;
+        String sourceID;
         String sourceMappingURL;
         int startLine;
         int startColumn;
@@ -65,7 +66,8 @@ public:
 
     virtual ~ScriptDebugListener() { }
 
-    virtual void didParseSource(const String& scriptId, const Script&) = 0;
+    virtual void willParseSource(const Script&) = 0;
+    virtual void didParseSource(const Script&) = 0;
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage) = 0;
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception) = 0;
     virtual void didContinue() = 0;

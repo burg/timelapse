@@ -681,7 +681,7 @@ String InspectorDebuggerAgent::sourceMapURLForScript(const Script& script)
 
 // JavaScriptDebugListener functions
 
-void InspectorDebuggerAgent::didParseSource(const String& scriptId, const Script& script)
+void InspectorDebuggerAgent::willParseSource(const Script& script)
 {
     // Don't send script content to the front end until it's really needed.
     const bool* isContentScript = script.isContentScript ? &script.isContentScript : 0;
@@ -693,9 +693,17 @@ void InspectorDebuggerAgent::didParseSource(const String& scriptId, const Script
     bool hasSourceURL = !sourceURL.isEmpty();
     String scriptURL = hasSourceURL ? sourceURL : script.url;
     bool* hasSourceURLParam = hasSourceURL ? &hasSourceURL : 0;
-    m_frontend->scriptParsed(scriptId, scriptURL, script.startLine, script.startColumn, script.endLine, script.endColumn, isContentScript, sourceMapURLParam, hasSourceURLParam);
+    m_frontend->scriptParsed(script.sourceID, scriptURL, script.startLine, script.startColumn, script.endLine, script.endColumn, isContentScript, sourceMapURLParam, hasSourceURLParam);
+    m_scripts.set(script.sourceID, script);
+}
 
-    m_scripts.set(scriptId, script);
+void InspectorDebuggerAgent::didParseSource(const Script& script)
+{
+    String sourceURL;
+    if (!script.startLine && !script.startColumn)
+        sourceURL = ContentSearchUtils::findScriptSourceURL(script.source);
+    bool hasSourceURL = !sourceURL.isEmpty();
+    String scriptURL = hasSourceURL ? sourceURL : script.url;
 
     if (scriptURL.isEmpty())
         return;
@@ -713,7 +721,7 @@ void InspectorDebuggerAgent::didParseSource(const String& scriptId, const Script
         breakpointObject->getNumber("lineNumber", &breakpoint.lineNumber);
         breakpointObject->getNumber("columnNumber", &breakpoint.columnNumber);
         breakpointObject->getString("condition", &breakpoint.condition);
-        RefPtr<TypeBuilder::Debugger::Location> location = resolveBreakpoint(it->key, scriptId, breakpoint);
+        RefPtr<TypeBuilder::Debugger::Location> location = resolveBreakpoint(it->key, script.sourceID, breakpoint);
         if (location)
             m_frontend->breakpointResolved(it->key, location);
     }

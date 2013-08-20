@@ -157,7 +157,8 @@ private:
 
     PassRefPtr<TypeBuilder::Array<TypeBuilder::Debugger::CallFrame> > currentCallFrames();
 
-    virtual void didParseSource(const String& scriptId, const Script&);
+    virtual void willParseSource(const Script&);
+    virtual void didParseSource(const Script&);
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
 
     void setPauseOnExceptionsImpl(ErrorString*, int);

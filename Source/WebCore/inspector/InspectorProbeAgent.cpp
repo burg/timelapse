@@ -298,9 +298,13 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
 
 // ScriptDebugListener API
 
-void InspectorProbeAgent::didParseSource(const String& stringId, const Script& script)
+void InspectorProbeAgent::willParseSource(const Script&)
 {
-    intptr_t scriptId = stringId.toInt();
+}
+
+void InspectorProbeAgent::didParseSource(const Script& script)
+{
+    intptr_t scriptId = script.sourceID.toInt();
     const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
     m_urlToScriptIdMap.set(nonNullUrl, scriptId);
 
@@ -311,7 +315,7 @@ void InspectorProbeAgent::didParseSource(const String& stringId, const Script& s
 
         PageScriptDebugServer::shared().addProbeForScriptId(scriptId, it->value);
         if (m_frontend)
-            m_frontend->probeResolved(it->value->uid(), stringId);
+            m_frontend->probeResolved(it->value->uid(), script.sourceID);
     }
 }
 

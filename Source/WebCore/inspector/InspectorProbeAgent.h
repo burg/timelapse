@@ -96,7 +96,8 @@ public:
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
     // ScriptDebugListener API
-    virtual void didParseSource(const String& scriptId, const Script&);
+    virtual void willParseSource(const Script&);
+    virtual void didParseSource(const Script&);
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();

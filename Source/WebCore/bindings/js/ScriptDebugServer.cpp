@@ -355,37 +355,20 @@ void ScriptDebugServer::dispatchDidContinue(ScriptDebugListener* listener)
     listener->didContinue();
 }
 
-void ScriptDebugServer::dispatchDidParseSource(const ListenerSet& listeners, SourceProvider* sourceProvider, bool isContentScript)
+void ScriptDebugServer::dispatchWillParseSource(const ListenerSet& listeners, ScriptDebugListener::Script& script)
 {
-    String sourceID = String::number(sourceProvider->asID());
-
-    ScriptDebugListener::Script script;
-    script.url = sourceProvider->url();
-    script.source = sourceProvider->source();
-    script.startLine = sourceProvider->startPosition().m_line.zeroBasedInt();
-    script.startColumn = sourceProvider->startPosition().m_column.zeroBasedInt();
-    script.isContentScript = isContentScript;
-
-    int sourceLength = script.source.length();
-    int lineCount = 1;
-    int lastLineStart = 0;
-    for (int i = 0; i < sourceLength; ++i) {
-        if (script.source[i] == '\n') {
-            lineCount += 1;
-            lastLineStart = i + 1;
-        }
-    }
-
-    script.endLine = script.startLine + lineCount - 1;
-    if (lineCount == 1)
-        script.endColumn = script.startColumn + sourceLength;
-    else
-        script.endColumn = sourceLength - lastLineStart;
-
     Vector<ScriptDebugListener*> copy;
     copyToVector(listeners, copy);
     for (size_t i = 0; i < copy.size(); ++i)
-        copy[i]->didParseSource(sourceID, script);
+        copy[i]->willParseSource(script);
+}
+
+void ScriptDebugServer::dispatchDidParseSource(const ListenerSet& listeners, ScriptDebugListener::Script& script)
+{
+    Vector<ScriptDebugListener*> copy;
+    copyToVector(listeners, copy);
+    for (size_t i = 0; i < copy.size(); ++i)
+        copy[i]->didParseSource(script);
 }
 
 void ScriptDebugServer::dispatchFailedToParseSource(const ListenerSet& listeners, SourceProvider* sourceProvider, int errorLine, const String& errorMessage)
@@ -428,6 +411,32 @@ void ScriptDebugServer::detach(JSGlobalObject* globalObject)
     Debugger::detach(globalObject);
 }
 
+static void createDebugListenerScriptObject(SourceProvider* sourceProvider, bool isContentScript, ScriptDebugListener::Script& script)
+{
+    script.url = sourceProvider->url();
+    script.source = sourceProvider->source();
+    script.sourceID = String::number(sourceProvider->asID());
+    script.startLine = sourceProvider->startPosition().m_line.zeroBasedInt();
+    script.startColumn = sourceProvider->startPosition().m_column.zeroBasedInt();
+    script.isContentScript = isContentScript;
+
+    int sourceLength = script.source.length();
+    int lineCount = 1;
+    int lastLineStart = 0;
+    for (int i = 0; i < sourceLength; ++i) {
+        if (script.source[i] == '\n') {
+            lineCount += 1;
+            lastLineStart = i + 1;
+        }
+    }
+
+    script.endLine = script.startLine + lineCount - 1;
+    if (lineCount == 1)
+        script.endColumn = script.startColumn + sourceLength;
+    else
+        script.endColumn = sourceLength - lastLineStart;
+}
+
 void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProvider, int errorLine, const String& errorMessage)
 {
     if (m_callingListeners)
@@ -441,11 +450,27 @@ void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProv
     TemporaryChange<bool> change(m_callingListeners, true);
 
     bool isError = errorLine != -1;
-    if (isError)
+    if (isError) {
         dispatchFailedToParseSource(*listeners, sourceProvider, errorLine, errorMessage);
-    else
-        dispatchDidParseSource(*listeners, sourceProvider, isContentScript(exec));
+        return;
+    }
 
+    ScriptDebugListener::Script script;
+    createDebugListenerScriptObject(sourceProvider, isContentScript(exec), script);
+
+    // This fires two listeners because some actions (sending content to frontend)
+    // should not be coupled to other actions (resolving probes and breakpoints).
+    // FIXME: The names should be improved to clarify that script is already parsed
+    // before either event fires.
+    dispatchWillParseSource(*listeners, script);
+
+    // Recompute listeners, since they may have been modified.
+    listeners = getListenersForGlobalObject(exec->lexicalGlobalObject());
+    if (!listeners)
+        return;
+
+    ASSERT(!listeners->isEmpty());
+    dispatchDidParseSource(*listeners, script);
 }
 
 void ScriptDebugServer::dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback callback)
@@ -543,7 +568,7 @@ bool ScriptDebugServer::findProbesForPosition(ScriptId scriptId, const TextPosit
 
     // Since frontend truncates the indent, the first statement in a line must match probes
     // with the position (line,0).
-    
+
     // N.B. the code currently assumes probes exist at either the exact location or first
     // statement on a line, but not both. If probes exist at both locations, the exact one is used.
     if (position.m_line.oneBasedInt() != m_lastExecutedLine && position.m_column != OrdinalNumber::first()) {
