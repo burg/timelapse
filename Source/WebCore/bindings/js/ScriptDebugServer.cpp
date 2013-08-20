@@ -46,6 +46,7 @@
 #include <parser/SourceProvider.h>
 #include <runtime/JSLock.h>
 #include <wtf/MainThread.h>
+#include <wtf/TemporaryChange.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(WEB_REPLAY)
@@ -437,7 +438,7 @@ void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProv
         return;
     ASSERT(!listeners->isEmpty());
 
-    m_callingListeners = true;
+    TemporaryChange<bool> change(m_callingListeners, true);
 
     bool isError = errorLine != -1;
     if (isError)
@@ -445,7 +446,6 @@ void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProv
     else
         dispatchDidParseSource(*listeners, sourceProvider, isContentScript(exec));
 
-    m_callingListeners = false;
 }
 
 void ScriptDebugServer::dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback callback)
@@ -461,14 +461,12 @@ void ScriptDebugServer::dispatchFunctionToListeners(JavaScriptExecutionCallback 
     if (m_callingListeners)
         return;
 
-    m_callingListeners = true;
+    TemporaryChange<bool> change(m_callingListeners, true);
 
     if (ListenerSet* listeners = getListenersForGlobalObject(globalObject)) {
         ASSERT(!listeners->isEmpty());
         dispatchFunctionToListeners(*listeners, callback);
     }
-
-    m_callingListeners = false;
 }
 
 void ScriptDebugServer::createCallFrame(const DebuggerCallFrame& debuggerCallFrame, intptr_t sourceID, int lineNumber, int columnNumber)
