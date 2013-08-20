@@ -34,8 +34,8 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._position = position;
     this._probes = [];
     this._probesByUid = {};
-    this._dataEntries = 0;
-    this._dataTable = [{}];
+    this._dataTable = [];
+    this._prevBatchId = 0;
     this._enabled = false;
     this._resolved = false;
     this._hasSamples = false;
@@ -151,6 +151,7 @@ WebInspector.ProbeGroupObject.prototype = {
             WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
         this._dataTable = [{}];
         this._hasSamples = false;
+        delete this._prevBatchId;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
 
@@ -226,6 +227,15 @@ WebInspector.ProbeGroupObject.prototype = {
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
 
+        if (sample.batchId !== this._prevBatchId) {
+            this._dataTable.push({});
+            if (WebInspector.replayManager.isReplaying) {
+                this._dataTable[this._dataTable.length - 1].batchIdDelta = sample.batchId - this._prevBatchId;
+                this._dataTable[this._dataTable.length - 1].markIndex = WebInspector.replayManager.currentMarkIndex;
+            }
+            this._prevBatchId = sample.batchId;
+        }
+
         if (sample.object.type === "array") {
             console.log("TODO: display probe with type=(array): ", sample.object);
             return;
@@ -242,18 +252,12 @@ WebInspector.ProbeGroupObject.prototype = {
             currentRow[columnIdentifier] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
         else
             currentRow[columnIdentifier] = sample.object.value;
-        ++this._dataEntries;
 
         var data = {
             row: currentRow,
             index: this._dataTable.length - 1
         };
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
-
-        if (this._dataEntries === this.probes.length) {
-            this._dataEntries = 0;
-            this._dataTable.push({});
-        }
     },
 
     _resolveStateDidChange: function(event)
