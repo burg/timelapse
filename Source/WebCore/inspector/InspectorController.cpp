@@ -122,7 +122,6 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     InspectorDOMStorageAgent* domStorageAgent = domStorageAgentPtr.get();
     m_agents.append(domStorageAgentPtr.release());
 #if ENABLE(WEB_REPLAY)
-    m_agents.append(InspectorProbeAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get()));
     m_agents.append(InspectorRecordingsAgent::create(m_instrumentingAgents.get(), m_state.get()));
     m_agents.append(InspectorReplayAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
 #endif
@@ -150,6 +149,8 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     OwnPtr<InspectorDebuggerAgent> debuggerAgentPtr(PageDebuggerAgent::create(m_instrumentingAgents.get(), m_state.get(), pageAgent, m_injectedScriptManager.get(), m_overlay.get()));
     m_debuggerAgent = debuggerAgentPtr.get();
     m_agents.append(debuggerAgentPtr.release());
+
+    m_agents.append(InspectorProbeAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get()));
 
     OwnPtr<InspectorDOMDebuggerAgent> domDebuggerAgentPtr(InspectorDOMDebuggerAgent::create(m_instrumentingAgents.get(), m_state.get(), m_domAgent, m_debuggerAgent, m_inspectorAgent));
     m_domDebuggerAgent = domDebuggerAgentPtr.get();
