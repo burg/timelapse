@@ -86,8 +86,12 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._position;
     },
 
+    // FIXME: We should not create new source code locations every time this method is called.
+    // Instead, a source location should be created when the probe group is resolved and cleared when unresolved.
     get sourceCodeLocation()
     {
+        console.assert(this.resolved, "Tried to access ProbeGroupObject.sourceCodeLocation, but the group isn't resolved: ", this);
+
         var sourceCode = WebInspector.frameResourceManager.resourceForURL(this.url);
         return (sourceCode) ? sourceCode.createSourceCodeLocation(this.position.lineNumber, this.position.columnNumber) : null;
     },

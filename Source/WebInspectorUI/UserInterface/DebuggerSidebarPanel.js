@@ -734,14 +734,16 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
     _compareProbeGroupTreeElements: function(a, b)
     {
-        var aLocation = a.probeGroup.sourceCodeLocation;
-        var bLocation = b.probeGroup.sourceCodeLocation;
+        // This uses raw locations because the probes may not be resolved.
+        // Probe ordering should consistent whether probes are resolved or not.
+        var aLocation = a.probeGroup.location;
+        var bLocation = b.probeGroup.location;
 
-        var comparisonResult = aLocation.displayLineNumber - bLocation.displayLineNumber
+        var comparisonResult = aLocation.lineNumber - bLocation.lineNumber
         if (comparisonResult !== 0)
             return comparisonResult;
 
-        return aLocation.displayColumnNumber - bLocation.displayColumnNumber;
+        return aLocation.columnNumber - bLocation.columnNumber;
     }
 };
 

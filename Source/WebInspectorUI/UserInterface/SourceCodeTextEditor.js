@@ -477,6 +477,8 @@ WebInspector.SourceCodeTextEditor.prototype = {
         if (!this._matchesProbeGroup(probeGroup))
             return;
 
+        console.assert(probeGroup.resolved);
+
         var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
         this.setProbeGroupInfoForLineAndColumn(lineInfo.lineNumber, lineInfo.columnNumber, this._probeGroupInfoForProbeGroup(probeGroup));
     },
@@ -489,6 +491,8 @@ WebInspector.SourceCodeTextEditor.prototype = {
             return;
 
         var probeGroup = event.data;
+        console.assert(probeGroup.resolved);
+
         var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
 
         if (!probeGroup.resolved) {
@@ -710,6 +714,9 @@ WebInspector.SourceCodeTextEditor.prototype = {
     _matchesProbeGroup: function(probeGroup)
     {
         console.assert(this._supportsDebugging);
+
+        if (!probeGroup.resolved)
+            return false;
         if (this._sourceCode instanceof WebInspector.SourceMapResource)
             return probeGroup.sourceCodeLocation.displaySourceCode === this._sourceCode;
         if (this._sourceCode instanceof WebInspector.Resource)
@@ -913,6 +920,7 @@ WebInspector.SourceCodeTextEditor.prototype = {
         for (var lineNumber in oldProbeGroupMap) {
             for (var columnNumber in oldProbeGroupMap[lineNumber]) {
                 var probeGroup = oldProbeGroupMap[lineNumber][columnNumber];
+                console.assert(probeGroup.resolved);
                 var newLineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
                 this._addProbeGroupWithEditorLineInfo(probeGroup, newLineInfo);
                 this.setProbeGroupInfoForLineAndColumn(lineNumber, columnNumber, null);

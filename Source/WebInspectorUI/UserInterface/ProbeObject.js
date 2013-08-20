@@ -75,7 +75,7 @@ WebInspector.ProbeObject.prototype = {
 
     set sourceCode(value)
     {
-        console.assert(value instanceof WebInspector.SourceCode);
+        console.assert(value instanceof WebInspector.SourceCode, "Tried to set invalid source code ", value, " for probe: ", this);
         this._sourceCode = value;
     },
 

@@ -92,9 +92,13 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     {
         var shortUrl = parseURL(this._probeGroup.url).lastPathComponent || WebInspector.UIString("(unknown)");
         var title = WebInspector.UIString("%s:%d").format(shortUrl, this._probeGroup.position.lineNumber + 1);
+        if (!this._probeGroup.resolved) {
+            var unlinkedLabel = document.createElement("span");
+            unlinkedLabel.appendChild(document.createTextNode(title));
+            return unlinkedLabel;
+        }
+
         var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
-        if (!sourceCodeLocation)
-            return document.createTextNode(title);
         return WebInspector.createSourceCodeLocationLink(sourceCodeLocation);
     },
 

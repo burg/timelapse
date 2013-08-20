@@ -114,14 +114,23 @@ WebInspector.ProbeGroupTreeElement.prototype = {
 
     _updateTitles: function()
     {
-        var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
+        var displayLineNumber = this._probeGroup.position.lineNumber;
+        var displayColumnNumber = this._probeGroup.position.columnNumber;
+        var sourceCodeLocation = null;
 
-        var displayLineNumber = sourceCodeLocation.displayLineNumber;
-        var displayColumnNumber = sourceCodeLocation.displayColumnNumber;
+        if (this._probeGroup.resolved) {
+            sourceCodeLocation = this._probeGroup.sourceCodeLocation;
+            displayLineNumber = sourceCodeLocation.displayLineNumber;
+            displayColumnNumber = sourceCodeLocation.displayColumnNumber;
+        }
+
         if (displayColumnNumber > 0)
             this.mainTitle = WebInspector.UIString("Line %d:%d").format(displayLineNumber + 1, displayColumnNumber + 1); // The user visible line and column numbers are 1-based.
         else
             this.mainTitle = WebInspector.UIString("Line %d").format(displayLineNumber + 1); // The user visible line number is 1-based.
+
+        if (!sourceCodeLocation)
+            return;
 
         if (sourceCodeLocation.hasMappedLocation()) {
             this.subtitle = sourceCodeLocation.formattedLocationString();
