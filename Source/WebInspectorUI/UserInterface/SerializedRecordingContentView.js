@@ -54,7 +54,6 @@ WebInspector.SerializedRecordingContentView = function(recording)
 
     this._messagePanel = new WebInspector.HorizontalMessageSheet();
     this.element.appendChild(this._messagePanel.element);
-    this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackWillStart, this._showMessagePanel);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackStarted, this._showMessagePanel);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackPaused, this._hideMessagePanel);
     this._listeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.PlaybackFinished, this._hideMessagePanel);
@@ -214,7 +213,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
                     callback: function(event) {
                         var allowBreakpoints = WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal;
                         WebInspector.replayManager.replayToCompletionSoon(allowBreakpoints, WebInspector.replayManager.replaySpeed);
-                    } 
+                    }
                 },
 
                 {
@@ -224,7 +223,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
                         var allowBreakpoints = WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Normal;
                         ReplayAgent.setPauseOnError(false);
                         WebInspector.replayManager.replayToCompletionSoon(allowBreakpoints, WebInspector.replayManager.replaySpeed);
-                    } 
+                    }
                 },
 
                 {
@@ -233,7 +232,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
                     callback: function() {
                         WebInspector.replayManager.stopPlaybackSoon(true);
                     }
-                } 
+                }
             ];
             this._messagePanel.setOptions(options);
         }
@@ -249,7 +248,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
             if (WebInspector.replayManager.replaySpeed === WebInspector.ReplayManager.ReplaySpeed.Seeking) {
                 this._messagePanel.setMessage({ text: WebInspector.UIString("Seeking...") });
             } else {
-                this._messagePanel.setMessage({ 
+                this._messagePanel.setMessage({
                     text: WebInspector.UIString("Replaying... click to cancel."),
                     callback:  function() {
                         WebInspector.replayManager.pausePlaybackSoon()
@@ -262,7 +261,7 @@ WebInspector.SerializedRecordingContentView.prototype = {
     },
 
     _hideMessagePanel: function()
-    {   
+    {
         this._messagePanel.hidden();
     }
 };
