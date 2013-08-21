@@ -52,13 +52,14 @@ const AtomicString& InterpretedKeyCommands::type() const
 String InterpretedKeyCommands::toString() const
 {
     StringBuilder sb;
-    sb.append(String::format("InterpretedKeyCommands (n=%lu): [\n",
+    sb.append(String::format("InterpretedKeyCommands (n=%lu): [",
                              m_commands.size()));
     for (size_t i = 0; i < m_commands.size(); ++i) {
+        if (i > 0)
+            sb.append(",");
         sb.append(m_commands[i].commandName);
-        sb.append("\t --> ");
+        sb.append(" -> ");
         sb.append(m_commands[i].text);
-        sb.append("\n");
     }
     sb.append("]");
     return sb.toString();

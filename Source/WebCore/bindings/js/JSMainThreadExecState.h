@@ -55,8 +55,9 @@ public:
 
     static inline InspectorInstrumentationCookie instrumentFunctionCall(ScriptExecutionContext* context, JSC::CallType callType, const JSC::CallData& callData)
     {
-        if (!InspectorInstrumentation::timelineAgentEnabled(context))
+        if (!InspectorInstrumentation::timelineAgentEnabled(context) && !InspectorInstrumentation::replayAgentEnabled(context))
             return InspectorInstrumentationCookie();
+
         String resourceName;
         int lineNumber = 1;
         if (callType == JSC::CallTypeJS) {

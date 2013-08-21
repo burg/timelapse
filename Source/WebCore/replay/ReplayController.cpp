@@ -77,7 +77,7 @@ namespace WebCore {
 static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* node, bool wasIgnored)
 {
     if (node)
-        LOG(DeterministicReplay, "%-30s %s DOM event: type=%s, target=%d/node[%p] %s\n", "[ReplayController]",
+        LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/node[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? node->document() : node->ownerDocument()),
@@ -85,7 +85,7 @@ static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* n
             node->nodeName().utf8().data());
 
     else if (window)
-        LOG(DeterministicReplay, "%-30s %s event: type=%s, target=%d/window[%p] %s\n", "[ReplayController]",
+        LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/window[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument(window->document()),
@@ -218,7 +218,7 @@ bool ReplayController::endCapturing()
     // this protects against receiving stopRecording commands twice before
     // the UI is notified that recording is stopped (which disables that command).
     if (!capturing()) {
-        LOG(DeterministicReplay, "%-30sIgnored request to stop capturing; not in a valid state to do so.\n", "[ReplayController]");
+        LOG(DeterministicReplay, "%-20sIgnored request to stop capturing; not in a valid state to do so.\n", "ReplayController::endCapturing");
         return false;
     }
 
@@ -255,7 +255,7 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
 {
     ASSERT(m_status != CannotReplay);
 
-    LOG(DeterministicReplay, "%-30s About to begin replay to mark %d.\n", "[ReplayController]", index);
+    LOG(DeterministicReplay, "%-20s About to begin replay to mark %d.\n", "ReplayController", index);
 
     // only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
@@ -278,7 +278,7 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 {
     ASSERT(m_status != CannotReplay);
 
-    LOG(DeterministicReplay, "%-30s About to begin replay to completion.\n", "[ReplayController]");
+    LOG(DeterministicReplay, "%-20s About to begin replay to completion.\n", "ReplayController");
 
     // only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
@@ -399,21 +399,21 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
 {
     ASSERT(replaying());
 
-    LOG(DeterministicReplay, "%-30s %sPlayback error: %s", "[ReplayController]",
+    LOG(DeterministicReplay, "%-20s %sPlayback error: %s", "ReplayController",
         isFatal ? "FATAL " : "",
         errorMessage.utf8().data());
 
     if (isFatal) {
-        LOG(DeterministicReplay, "%-30s Terminating playback due to fatal error.", "[ReplayController]");
+        LOG(DeterministicReplay, "%-20s Terminating playback due to fatal error.", "ReplayController");
         cancelPlayback();
         InspectorInstrumentation::playbackError(m_page, true, errorMessage);
         return;
     }
 
     if (m_errorStrategy == ContinueOnError) {
-        LOG(DeterministicReplay, "%-30s Continuing past non-fatal error.", "[ReplayController]");
+        LOG(DeterministicReplay, "%-20s Continuing past non-fatal error.", "ReplayController");
     } else {
-        LOG(DeterministicReplay, "%-30s Reporting and pausing because of non-fatal error.", "[ReplayController]");
+        LOG(DeterministicReplay, "%-20s Reporting and pausing because of non-fatal error.", "ReplayController");
         pauseReplay();
         InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
     }
@@ -445,7 +445,7 @@ void ReplayController::imageCaptured(const String& imageDataUri)
 // Private methods
 void ReplayController::resetReplayState()
 {
-    LOG(DeterministicReplay, "%-30s Clearing input iterator for page: %p\n", "[ReplayController]", (void*)m_page);
+    LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)m_page);
 
     m_activeIterator = 0;
     for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
@@ -481,7 +481,7 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
         return false;
     }
 
-    LOG(DeterministicReplay, "%-30sUnloading recording: %p.\n", "[ReplayController]", (void*)m_loadedRecording.get());
+    LOG(DeterministicReplay, "%-20sUnloading recording: %p.\n", "ReplayController", (void*)m_loadedRecording.get());
 
     resetReplayState();
     m_loadedRecording = 0;
@@ -504,7 +504,7 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
         return false;
     }
 
-    LOG(DeterministicReplay, "%-30sLoading recording: %p.\n", "[ReplayController]", (void*)recording.get());
+    LOG(DeterministicReplay, "%-20sLoading recording: %p.\n", "ReplayController", (void*)recording.get());
 
     m_loadedRecording = recording;
     if (!suppressNotifications)

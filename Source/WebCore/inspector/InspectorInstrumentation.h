@@ -313,6 +313,7 @@ public:
     static bool canvasAgentEnabled(ScriptExecutionContext*);
     static bool consoleAgentEnabled(ScriptExecutionContext*);
     static bool timelineAgentEnabled(ScriptExecutionContext*);
+    static bool replayAgentEnabled(ScriptExecutionContext*);
     static bool collectingHTMLParseErrors(Page*);
 #else
     static bool hasFrontends() { return false; }
@@ -320,6 +321,7 @@ public:
     static bool consoleAgentEnabled(ScriptExecutionContext*) { return false; }
     static bool runtimeAgentEnabled(Frame*) { return false; }
     static bool timelineAgentEnabled(ScriptExecutionContext*) { return false; }
+    static bool replayAgentEnabled(ScriptExecutionContext*) { return false; }
     static bool collectingHTMLParseErrors(Page*) { return false; }
 #endif
 

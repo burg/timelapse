@@ -81,7 +81,7 @@ void EventLoopInputDispatcher::run()
 
     m_running = true;
 
-    LOG(DeterministicReplay, "%-30s Running...\n", "[EventLoopInputDispatcher]");
+    LOG(DeterministicReplay, "%-20s Running...\n", "ReplayEvents");
     maybeDispatchInput();
 }
 
@@ -92,7 +92,7 @@ void EventLoopInputDispatcher::pause()
 
     m_running = false;
 
-    LOG(DeterministicReplay, "%-30s Pausing...\n", "[EventLoopInputDispatcher]");
+    LOG(DeterministicReplay, "%-20s Pausing...\n", "ReplayEvents");
     if (m_timer.isActive())
         m_timer.stop();
 }
@@ -121,7 +121,7 @@ void EventLoopInputDispatcher::incrementDomEventCounter()
 void EventLoopInputDispatcher::didDispatch(EventLoopInput* input)
 {
     if (!m_runningInput) {
-        LOG(DeterministicReplay, "%-30s Clearing pending didDispatch flag, since it appears replay stopped while processing this event (i.e., inside a debugger's inner event loop, or because of a fatal replay error)\n", "EventLoopInputDispatcher");
+        LOG(DeterministicReplay, "%-20s Clearing pending didDispatch flag, since it appears replay stopped while processing this event (i.e., inside a debugger's inner event loop, or because of a fatal replay error)\n", "ReplayEvents");
         return;
     }
     ASSERT(m_dispatching);
@@ -189,8 +189,8 @@ void EventLoopInputDispatcher::maybeDispatchInput()
 
     //otherwise, it will be considered for dispatch after every future event.
     else
-        LOG(DeterministicReplay, "%-30s Waiting to dispatch next input (current: %d@; target: %d@).\n",
-            "[EventLoopInputDispatcher]", m_domEventDispatchCount, m_waitingInput->dispatchCount());
+        LOG(DeterministicReplay, "%-20s Waiting to dispatch next input (current: %d@; target: %d@).\n",
+            "ReplayEvents", m_domEventDispatchCount, m_waitingInput->dispatchCount());
 }
 
 void EventLoopInputDispatcher::timerFired(Timer<EventLoopInputDispatcher>*)
@@ -232,11 +232,11 @@ void EventLoopInputDispatcher::asyncDispatchInput()
         if (waitInterval < 0.0)
             waitInterval = (1.0 * 0.001);
 
-        LOG(DeterministicReplay, "%-30s WAIT: %.3f ms", "[EventLoopInputDispatcher]", waitInterval*1000.0);
+        LOG(DeterministicReplay, "%-20s (WAIT: %.3f ms)", "ReplayEvents", waitInterval*1000.0);
 
         if (waitInterval > 1000.0) {
-            LOG_ERROR("%-30s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
-                      "[EventLoopInputDispatcher]");
+            LOG_ERROR("%-20s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
+                      "ReplayEvents");
             waitInterval = 1.0 * 0.001;
         }
 
@@ -258,9 +258,9 @@ void EventLoopInputDispatcher::syncDispatchInput()
         m_previousMarkTime = m_runningInput->mark().time();
     }
     m_domEventRemainingQuota = m_runningInput->DOMEventQuota();
-    LOG(DeterministicReplay, "%-30s ----------------------------------------------",
-                   "[EventLoopInputDispatcher");
-    LOG(DeterministicReplay, "%-30s DISPATCH: %s\n", "[EventLoopInputDispatcher]",
+    LOG(DeterministicReplay, "%-20s ----------------------------------------------",
+                   "ReplayEvents");
+    LOG(DeterministicReplay, "%-20s >DISPATCH: %s\n", "ReplayEvents",
                    m_runningInput->toString().utf8().data());
     m_dispatching = true;
     m_runningInput->dispatch(m_page->replayController(), this);

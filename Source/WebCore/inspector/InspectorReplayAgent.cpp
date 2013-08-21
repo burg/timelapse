@@ -34,6 +34,8 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
+// For SerializedEventTarget::frameIndexFromDocument().
+#include "DispatchEventBase.h"
 #include "DocumentLoader.h"
 #include "DOMWindow.h"
 #include "Element.h"
@@ -136,6 +138,13 @@ void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController()->willFireTimer(timerId, frame->document());
+}
+
+void InspectorReplayAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
+{
+    LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
+    scriptName.utf8().data(), scriptLine, 
+    SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);   
 }
 
 void InspectorReplayAgent::recordingUnloaded()

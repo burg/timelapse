@@ -371,6 +371,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willCallFunctionImpl(In
         timelineAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
         timelineAgentId = timelineAgent->id();
     }
+#if ENABLE(WEB_REPLAY)
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
+#endif    
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -1362,6 +1366,17 @@ bool InspectorInstrumentation::timelineAgentEnabled(ScriptExecutionContext* scri
     return instrumentingAgents && instrumentingAgents->inspectorTimelineAgent();
 }
 
+bool InspectorInstrumentation::replayAgentEnabled(ScriptExecutionContext* scriptExecutionContext)
+{
+#if ENABLE(WEB_REPLAY)
+    InstrumentingAgents* instrumentingAgents = instrumentingAgentsForContext(scriptExecutionContext);
+    return instrumentingAgents && instrumentingAgents->inspectorReplayAgent();
+#else
+    UNUSED_PARAM(scriptExecutionContext);
+    return false;
+#endif
+}
+    
 void InspectorInstrumentation::pauseOnNativeEventIfNeeded(InstrumentingAgents* instrumentingAgents, bool isDOMEvent, const String& eventName, bool synchronous)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER)
