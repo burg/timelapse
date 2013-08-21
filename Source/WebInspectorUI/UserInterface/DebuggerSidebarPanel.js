@@ -38,6 +38,8 @@ WebInspector.DebuggerSidebarPanel = function()
     WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.Paused, this._debuggerDidPause, this);
     WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.Resumed, this._debuggerDidResume, this);
 
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this._showReplayProbes, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this._showLiveProbes, this);
     WebInspector.ProbeGroupObject.addEventListener(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this._probeGroupResolveStateDidChange, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupAdded, this._probeGroupAdded, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeGroupRemoved, this._probeGroupRemoved, this);
@@ -119,7 +121,7 @@ WebInspector.DebuggerSidebarPanel = function()
     this._liveProbesContentTreeOutline.ondelete = this._probesTreeOutlineDeleteTreeElement.bind(this);
     this._liveProbesContentTreeOutline.element.classList.add(WebInspector.DebuggerSidebarPanel.ProbesTreeOutlineStyleClassName);
 
-    this._liveProbesRow = new WebInspector.DetailsSectionTreeOutlineRow(this._liveProbesContentTreeOutline, WebInspector.UIString("No Live Probes"));
+    this._liveProbesRow = new WebInspector.DetailsSectionTreeOutlineRow(this._liveProbesContentTreeOutline, WebInspector.UIString("No Probes"));
     this._liveProbesRow.showEmptyMessage();
 
     this._replayProbesContentTreeOutline = this.createContentTreeOutline(true, false);
@@ -127,7 +129,7 @@ WebInspector.DebuggerSidebarPanel = function()
     this._replayProbesContentTreeOutline.ondelete = this._probesTreeOutlineDeleteTreeElement.bind(this);
     this._replayProbesContentTreeOutline.element.classList.add(WebInspector.DebuggerSidebarPanel.ProbesTreeOutlineStyleClassName);
 
-    this._replayProbesRow = new WebInspector.DetailsSectionTreeOutlineRow(this._replayProbesContentTreeOutline, WebInspector.UIString("No Replay Probes"));
+    this._replayProbesRow = new WebInspector.DetailsSectionTreeOutlineRow(this._replayProbesContentTreeOutline, WebInspector.UIString("No Probes"));
     this._replayProbesRow.showEmptyMessage();
 
     this._probesToggleElement = document.createElement("img");
@@ -136,10 +138,10 @@ WebInspector.DebuggerSidebarPanel = function()
         this._probesToggleElement.classList.add(WebInspector.DebuggerSidebarPanel.ProbeToggleEnabledStyleClassName);
     this._probesToggleElement.addEventListener("click", this._probesToggleButtonClicked.bind(this));
 
-    var liveProbesGroup = new WebInspector.DetailsSectionGroup([this._liveProbesRow]);
-    var replayProbesGroup = new WebInspector.DetailsSectionGroup([this._replayProbesRow]);
-    var probesSection = new WebInspector.DetailsSection("probes", WebInspector.UIString("Probes"), [liveProbesGroup, replayProbesGroup], this._probesToggleElement);
-    this.contentElement.appendChild(probesSection.element);
+    this._liveProbesGroup = new WebInspector.DetailsSectionGroup([this._liveProbesRow]);
+    this._replayProbesGroup = new WebInspector.DetailsSectionGroup([this._replayProbesRow]);
+    this._probesSection = new WebInspector.DetailsSection("probes", WebInspector.UIString("Probes"), [this._liveProbesGroup], this._probesToggleElement);
+    this.contentElement.appendChild(this._probesSection.element);
 
     WebInspector.Breakpoint.addEventListener(WebInspector.Breakpoint.Event.DisplayLocationDidChange, this._breakpointDisplayLocationDidChange, this);
 };
@@ -295,45 +297,68 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
     _addProbeGroup: function(probeGroup)
     {
-        if (!probeGroup.resolved && !WebInspector.replayManager.isReplaying)
-            return;
-
-        if (WebInspector.replayManager.isReplaying) {
-            var treeOutline = this._replayProbesContentTreeOutline;
-            var row = this._replayProbesRow;
-        } else {
-            var treeOutline = this._liveProbesContentTreeOutline;
-            var row = this._liveProbesRow;
-        }
-
         if (!probeGroup.resolved) {
             var placeholderObject = WebInspector.probeManager.getPlaceholderObjectForURL(probeGroup.url);
-            var parentTreeElement = treeOutline.getCachedTreeElement(placeholderObject);
+            var parentTreeElement = this._replayProbesContentTreeOutline.getCachedTreeElement(placeholderObject);
             if (!parentTreeElement)
-                parentTreeElement = new WebInspector.FutureScriptTreeElement(placeholderObject)
-        } else {
-            var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
-            var parentTreeElement = treeOutline.getCachedTreeElement(sourceCode);
-            if (!parentTreeElement) {
-                if (sourceCode instanceof WebInspector.SourceMapResource)
-                    parentTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
-                else if (sourceCode instanceof WebInspector.Resource)
-                    parentTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
-                else if (sourceCode instanceof WebInspector.Script)
-                    parentTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
+                parentTreeElement = new WebInspector.FutureScriptTreeElement(placeholderObject);
+            if (!parentTreeElement.parent) {
+                parentTreeElement.hasChildren = true;
+                parentTreeElement.expand();
+
+                this._replayProbesContentTreeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, this._replayProbesContentTreeOutline.children, this._compareTopLevelTreeElements.bind(this)));
             }
+            this._replayProbesRow.hideEmptyMessage();
+            var probeGroupTreeElement = new WebInspector.ProbeGroupTreeElement(probeGroup);
+            parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements));
+            return;
+        }
+        this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
+        this._addResolvedProbeGroup(probeGroup, this._replayProbesRow, this._replayProbesContentTreeOutline);
+    },
+
+    _addResolvedProbeGroup: function(probeGroup, row, treeOutline)
+    {
+        if (treeOutline.getCachedTreeElement(probeGroup))
+            return;
+        var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
+        var parentTreeElement = treeOutline.getCachedTreeElement(sourceCode);
+        if (!parentTreeElement) {
+            if (sourceCode instanceof WebInspector.SourceMapResource)
+                parentTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
+            else if (sourceCode instanceof WebInspector.Resource)
+                parentTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
+            else if (sourceCode instanceof WebInspector.Script)
+                parentTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
         }
         if (!parentTreeElement.parent) {
             parentTreeElement.hasChildren = true;
             parentTreeElement.expand();
-
-            treeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, this._replayProbesContentTreeOutline.children, this._compareTopLevelTreeElements.bind(this)));
+            treeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, treeOutline.children, this._compareTopLevelTreeElements.bind(this)));
         }
         row.hideEmptyMessage();
-
         var probeGroupTreeElement = new WebInspector.ProbeGroupTreeElement(probeGroup);
-        parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements));
-        return probeGroupTreeElement;
+        parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements.bind(this)));
+    },
+
+    _probeGroupResolveStateDidChange: function(event)
+    {
+        var probeGroup = event.data;
+        if (probeGroup.resolved) {
+            var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
+            var probeScripts = this._replayProbesContentTreeOutline.children;
+            if (probeScripts) {
+                for (var i = 0; i < probeScripts.length; ++i) {
+                    var oldScriptElement = probeScripts[i];
+                    if (oldScriptElement.url === probeGroup.url)
+                        this._replacePlaceholderScriptElement(oldScriptElement, sourceCode, this._replayProbesContentTreeOutline);
+                }
+            }
+            this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
+            return;
+        }
+        this._insertPlaceholderScriptElement(probeGroup, this._replayProbesContentTreeOutline);
+        this._removeProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
     },
 
     _probeGroupResolveStateDidChange: function(event)
@@ -382,6 +407,14 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     {
         var script = event.data.script;
 
+        var probeScripts = this._replayProbesContentTreeOutline.children;
+        if (probeScripts) {
+            for (var i = 0; i < probeScripts.length; ++i) {
+                var oldScriptElement = probeScripts[i];
+                if (oldScriptElement.url === script.url)
+                    this._replacePlaceholderScriptElement(oldScriptElement, script, this._replayProbesContentTreeOutline);
+            }
+        }
         // Don't add breakpoints if the script is represented by a Resource. They were
         // already added by _resourceAdded.
         if (script.resource)
@@ -401,12 +434,18 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         }
     },
 
-    _replacePlaceholderScriptElement: function(oldScriptElement, newScript, treeOutline)
+    _insertPlaceholderScriptElement: function(probeGroup, treeOutline)
     {
+        var placeholderObject = WebInspector.probeManager.getPlaceholderObjectForURL(probeGroup.url);
+        var scriptTreeElement = this._replayProbesContentTreeOutline.getCachedTreeElement(placeholderObject);
+        if (scriptTreeElement)
+            return;
+        var newScriptElement = new WebInspector.FutureScriptTreeElement(placeholderObject);
+        var oldScriptElement = this._replayProbesContentTreeOutline.getCachedTreeElement(probeGroup).parent;
         var index = treeOutline.children.indexOf(oldScriptElement);
-        var newScriptElement = new WebInspector.ScriptTreeElement(newScript);
-        this._probesContentTreeOutline.removeChildAtIndex(index);
-        this._probesContentTreeOutline.insertChild(newScriptElement, index);
+
+        treeOutline.removeChildAtIndex(index);
+        treeOutline.insertChild(newScriptElement, index);
 
         // We must reparent the child nodes after the parent has been attached to
         // the tree, because TreeOutline is brittle and requires this ordering.
@@ -415,6 +454,49 @@ WebInspector.DebuggerSidebarPanel.prototype = {
             oldScriptElement.removeChildAtIndex(0, true, true);
             newScriptElement.appendChild(child);
         }
+    },
+
+    _replacePlaceholderScriptElement: function(oldScriptElement, sourceCode, treeOutline)
+    {
+        var newTreeElement = null;
+        if (sourceCode instanceof WebInspector.SourceMapResource)
+            newTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
+        else if (sourceCode instanceof WebInspector.Resource)
+            newTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
+        else if (sourceCode instanceof WebInspector.Script)
+            newTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
+
+        console.assert(newTreeElement);
+
+        if (!treeOutline.children) {
+            treeOutline.appendChild(newTreeElement);
+            return;
+        }
+
+        var index = treeOutline.children.indexOf(oldScriptElement);
+
+        treeOutline.removeChildAtIndex(index);
+        treeOutline.insertChild(newTreeElement, index);
+
+        // We must reparent the child nodes after the parent has been attached to
+        // the tree, because TreeOutline is brittle and requires this ordering.
+        while (oldScriptElement.hasChildren) {
+            var child = oldScriptElement.children[0];
+            oldScriptElement.removeChildAtIndex(0, true, true);
+            newTreeElement.appendChild(child);
+        }
+    },
+
+    _removeProbeGroup: function(probeGroup, row, treeOutline)
+    {
+        var probeGroupTreeElement = treeOutline.getCachedTreeElement(probeGroup);
+        if (!probeGroupTreeElement)
+            return;
+
+        this._removeProbeGroupTreeElement(probeGroupTreeElement);
+
+        if (!treeOutline.element.children.length)
+           row.showEmptyMessage();
     },
 
     _breakpointAdded: function(event)
@@ -444,23 +526,8 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     _probeGroupRemoved: function(event)
     {
         var probeGroup = event.data;
-
-        if (WebInspector.replayManager.isReplaying) {
-            var treeOutline = this._replayProbesContentTreeOutline;
-            var row = this._replayProbesRow;
-        } else {
-            var treeOutline = this._liveProbesContentTreeOutline;
-            var row = this._replayProbesRow;
-        }
-        var probeGroupTreeElement = treeOutline.getCachedTreeElement(probeGroup);
-        console.assert(probeGroupTreeElement);
-        if (!probeGroupTreeElement)
-            return;
-
-        this._removeProbeGroupTreeElement(probeGroupTreeElement);
-
-        if (!treeOutline.element.children.length)
-           row.showEmptyMessage();
+        this._removeProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
+        this._removeProbeGroup(probeGroup, this._replayProbesRow, this._replayProbesContentTreeOutline);
     },
 
 
@@ -502,7 +569,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         var parentTreeElement = probeGroupTreeElement.parent;
         parentTreeElement.removeChild(probeGroupTreeElement);
 
-        console.assert(parentTreeElement.parent === this._replayProbesContentTreeOutline || parentTreeElement.parent === this._liveProbesContentTreeOutline);
+        console.assert(parentTreeElement.parent === this._liveProbesContentTreeOutline || parentTreeElement.parent === this._replayProbesContentTreeOutline);
 
         if (!parentTreeElement.children.length)
             parentTreeElement.parent.removeChild(parentTreeElement);
@@ -677,16 +744,13 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
         function deselectReplayProbesContentTreeElements()
         {
-            // Deselect any tree element in the probes content tree outline to prevent two selections in the sidebar.
-            var selectedTreeElement = this._replayProbesContentTreeOutline.selectedTreeElement;
+            // Deselect any tree element in either probes content tree outline to prevent two selections in the sidebar.
+            var selectedTreeElement = this._liveProbesContentTreeOutline.selectedTreeElement;
             if (selectedTreeElement)
                 selectedTreeElement.deselect();
-        }
 
-        function deselectLiveProbesContentTreeElements()
-        {
-            // Deselect any tree element in the probes content tree outline to prevent two selections in the sidebar.
-            var selectedTreeElement = this._liveProbesContentTreeOutline.selectedTreeElement;
+            // Deselect any tree element in either probes content tree outline to prevent two selections in the sidebar.
+            var selectedTreeElement = this._replayProbesContentTreeOutline.selectedTreeElement;
             if (selectedTreeElement)
                 selectedTreeElement.deselect();
         }
@@ -741,6 +805,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 WebInspector.detailsSidebar.addSidebarPanel(WebInspector.probeDetailsSidebarPanel);
                 WebInspector.probeDetailsSidebarPanel.toolbarItem.hidden = false;
             }
+            WebInspector.probeDetailsSidebarPanel.selected = true;
             WebInspector.detailsSidebar.selectedSidebarPanel = WebInspector.probeDetailsSidebarPanel;
             if (probeGroup.resolved && probeGroup.sourceCodeLocation)
                 WebInspector.resourceSidebarPanel.showSourceCodeLocation(probeGroup.sourceCodeLocation);
@@ -796,14 +861,24 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     {
         // This uses raw locations because the probes may not be resolved.
         // Probe ordering should consistent whether probes are resolved or not.
-        var aLocation = a.probeGroup.location;
-        var bLocation = b.probeGroup.location;
+        var aLocation = a.probeGroup.position;
+        var bLocation = b.probeGroup.position;
 
         var comparisonResult = aLocation.lineNumber - bLocation.lineNumber
         if (comparisonResult !== 0)
             return comparisonResult;
 
         return aLocation.columnNumber - bLocation.columnNumber;
+    },
+
+    _showLiveProbes: function(event)
+    {
+        this._probesSection.groups = [this._liveProbesGroup];
+    },
+
+    _showReplayProbes: function(event)
+    {
+        this._probesSection.groups = [this._replayProbesGroup];
     }
 };
 
