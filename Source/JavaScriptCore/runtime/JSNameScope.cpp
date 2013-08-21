@@ -36,7 +36,7 @@ const ClassInfo JSNameScope::s_info = { "NameScope", &Base::s_info, 0, 0, CREATE
 void JSNameScope::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSNameScope* thisObject = jsCast<JSNameScope*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 
@@ -61,7 +61,7 @@ void JSNameScope::put(JSCell* cell, ExecState* exec, PropertyName propertyName, 
         // (a) is unlikely, and (b) is an error.
         // Also with a single entry the symbol table lookup should simply be
         // a pointer compare.
-        PropertySlot slot;
+        PropertySlot slot(thisObject);
         bool isWritable = true;
         symbolTableGet(thisObject, propertyName, slot, isWritable);
         if (!isWritable) {
@@ -75,9 +75,9 @@ void JSNameScope::put(JSCell* cell, ExecState* exec, PropertyName propertyName, 
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-bool JSNameScope::getOwnPropertySlot(JSCell* cell, ExecState*, PropertyName propertyName, PropertySlot& slot)
+bool JSNameScope::getOwnPropertySlot(JSObject* object, ExecState*, PropertyName propertyName, PropertySlot& slot)
 {
-    return symbolTableGet(jsCast<JSNameScope*>(cell), propertyName, slot);
+    return symbolTableGet(jsCast<JSNameScope*>(object), propertyName, slot);
 }
 
 } // namespace JSC

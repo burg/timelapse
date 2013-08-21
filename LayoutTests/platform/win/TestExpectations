@@ -54,8 +54,6 @@ fast/canvas/canvas-path-constructors.html
 css3/masking/clip-path-circle-relative-overflow.html
 
 # CSS image-set support not yet enabled (needs ENABLE_CSS_IMAGE_SET).
-fast/css/image-set-parsing.html
-fast/css/image-set-parsing-invalid.html
 fast/css/cursor-parsing-image-set.html
 fast/events/mouse-cursor-image-set.html
 
@@ -257,9 +255,6 @@ svg/zoom/text/zoom-coords-viewattr-01-b.svg
 
 # https://bugs.webkit.org/show_bug.cgi?id=35013 (Impossible to test text-only-zoom from DRT on Windows)
 svg/zoom/text
-
-# https://bugs.webkit.org/show_bug.cgi?id=104054
-svg/custom/use-href-update-crash.svg
 
 # Crashes due to debug assert until we fix issues with style elements in SVG
 svg/custom/use-referencing-style-crash.svg
@@ -1459,9 +1454,6 @@ fast/html/details-remove-summary-6-and-click.html
 # https://bugs.webkit.org/show_bug.cgi?id=61633
 editing/pasteboard/smart-paste-004.html
 
-# https://bugs.webkit.org/show_bug.cgi?id=56496
-fast/js/array-sort-modifying-tostring.html
-
 # https://bugs.webkit.org/show_bug.cgi?id=57693
 plugins/windowless_plugin_paint_test.html
 
@@ -1590,9 +1582,6 @@ css3/selectors3
 webaudio/
 inspector-protocol/nmi-webaudio.html
 inspector-protocol/nmi-webaudio-leak-test.html
-
-# Microdata DOM API is not yet enabled.
-fast/dom/MicroData
 
 # ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
@@ -2453,15 +2442,8 @@ animations/3d/change-transform-in-end-event.html
 transitions/move-after-transition.html
 compositing/text-on-large-layer.html
 compositing/iframes/fixed-position-iframe.html
-compositing/tiling/backface-preserve-3d-tiled.html
-compositing/tiling/constrained-layer-size.html
-compositing/tiling/crash-huge-layer.html
-compositing/tiling/crash-reparent-tiled-layer.html
 compositing/tiling/huge-layer-add-remove-child.html
-compositing/tiling/huge-layer-img.html
-compositing/tiling/huge-layer-with-layer-children-resize.html
-compositing/tiling/huge-layer-with-layer-children.html
-compositing/tiling/preserve3d-tiled.html
+compositing/tiling/huge-layer-resize.html
 compositing/tiling/tile-cache-zoomed.html
 
 # Test added in r132901 is for chromium only
@@ -2640,10 +2622,6 @@ ietestcenter
 media/media-fragments
 media/W3C
 
-# Test fails because webkit-image-set is not implemented on Windows
-# The test unfortunately outputs system specific information on assertion failure
-cssom/cssvalue-comparison.html
-
 # CURSOR_VISIBILITY is not enabled on win
 webkit.org/b/107601 fullscreen/video-cursor-auto-hide.html [ Failure ]
 
@@ -2699,7 +2677,6 @@ webkit.org/b/116560 fast/workers
 webkit.org/b/116562 fast/css/font-face-data-uri-invalid.html
 webkit.org/b/116562 fast/dom/Window/window-postmessage-clone-deep-array.html
 webkit.org/b/116562 fast/js/callback-function-with-handle-event.html
-webkit.org/b/116562 fast/js/global-constructors-attributes-worker.html
 webkit.org/b/116562 fast/js/large-expressions.html
 webkit.org/b/116562 fast/js/string-replace-exception-crash.html
 webkit.org/b/116562 fast/text/custom-font-data-crash.html
@@ -2825,5 +2802,4 @@ fast/lists/inlineBoxWrapperNullCheck.html [ Failure ]
 fast/regex/cross-frame-callable.html [ Failure ]
 svg/dom/svgpath-out-of-bounds-getPathSeg.html [ Failure ]
 fast/js/global-constructors-attributes-dedicated-worker.html [ Failure ]
-fast/text/split-text-crash.xhtml [ Failure ]
 fast/frames/seamless/seamless-nested-crash.html [ Failure ]

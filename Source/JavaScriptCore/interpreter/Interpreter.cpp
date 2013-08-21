@@ -181,7 +181,7 @@ CallFrame* loadVarargs(CallFrame* callFrame, JSStack* stack, JSValue thisValue, 
         return 0;
     }
 
-    if (asObject(arguments)->classInfo() == &Arguments::s_info) {
+    if (asObject(arguments)->classInfo() == Arguments::info()) {
         Arguments* argsObject = asArguments(arguments);
         unsigned argCount = argsObject->length(callFrame);
         CallFrame* newCallFrame = CallFrame::create(callFrame->registers() + firstFreeRegister + CallFrame::offsetFor(argCount + 1));
@@ -398,7 +398,7 @@ NEVER_INLINE bool Interpreter::unwindCallFrame(StackIterator& iter, JSValue exce
     }
 
     CallFrame* callerFrame = callFrame->callerFrame();
-    callFrame->vm().topCallFrame = callerFrame;
+    callFrame->vm().topCallFrame = callerFrame->removeHostCallFrameFlag();
     return !callerFrame->hasHostCallFrameFlag();
 }
 
@@ -531,7 +531,8 @@ String StackFrame::toString(CallFrame* callFrame)
 void Interpreter::getStackTrace(Vector<StackFrame>& results, size_t maxStackSize)
 {
     VM& vm = m_vm;
-    CallFrame* callFrame = vm.topCallFrame->removeHostCallFrameFlag();
+    ASSERT(!vm.topCallFrame->hasHostCallFrameFlag());
+    CallFrame* callFrame = vm.topCallFrame;
     if (!callFrame)
         return;
     StackIterator iter = callFrame->begin();
@@ -557,39 +558,34 @@ void Interpreter::getStackTrace(Vector<StackFrame>& results, size_t maxStackSize
         }
     }
 }
-
+JSString* Interpreter:: stackTraceAsString(ExecState* exec, Vector<StackFrame> stackTrace)
+{
+    // FIXME: JSStringJoiner could be more efficient than StringBuilder here.
+    StringBuilder builder;
+    for (unsigned i = 0; i < stackTrace.size(); i++) {
+        builder.append(String(stackTrace[i].toString(exec)));
+        if (i != stackTrace.size() - 1)
+            builder.append('\n');
+    }
+    return jsString(&exec->vm(), builder.toString());
+}
+    
 void Interpreter::addStackTraceIfNecessary(CallFrame* callFrame, JSValue error)
 {
     VM* vm = &callFrame->vm();
     ASSERT(callFrame == vm->topCallFrame || callFrame == callFrame->lexicalGlobalObject()->globalExec() || callFrame == callFrame->dynamicGlobalObject()->globalExec());
 
-    if (error.isObject()) {
-        if (asObject(error)->hasProperty(callFrame, vm->propertyNames->stack))
-            return;
-    }
-    
     Vector<StackFrame> stackTrace;
     vm->interpreter->getStackTrace(stackTrace);
     vm->exceptionStack() = RefCountedArray<StackFrame>(stackTrace);
     if (stackTrace.isEmpty() || !error.isObject())
         return;
 
-    JSObject* errorObject = asObject(error);
-    JSGlobalObject* globalObject = 0;
-    if (isTerminatedExecutionException(error))
-        globalObject = vm->dynamicGlobalObject;
-    else
-        globalObject = errorObject->globalObject();
+    if (asObject(error)->hasProperty(callFrame, vm->propertyNames->stack))
+        return;
+    
+    asObject(error)->putDirect(*vm, vm->propertyNames->stack, vm->interpreter->stackTraceAsString(vm->topCallFrame, stackTrace), None);
 
-    // FIXME: JSStringJoiner could be more efficient than StringBuilder here.
-    StringBuilder builder;
-    for (unsigned i = 0; i < stackTrace.size(); i++) {
-        builder.append(String(stackTrace[i].toString(globalObject->globalExec()).impl()));
-        if (i != stackTrace.size() - 1)
-            builder.append('\n');
-    }
-
-    errorObject->putDirect(*vm, vm->propertyNames->stack, jsString(vm, builder.toString()), ReadOnly | DontDelete);
 }
 
 NEVER_INLINE HandlerInfo* Interpreter::throwException(CallFrame*& callFrame, JSValue& exceptionValue, unsigned bytecodeOffset)
@@ -1009,8 +1005,14 @@ JSObject* Interpreter::executeConstruct(CallFrame* callFrame, JSObject* construc
 #elif ENABLE(JIT)
             result = constructData.js.functionExecutable->generatedJITCodeForConstruct()->execute(&m_stack, newCallFrame, &vm);
 #endif // ENABLE(JIT)
-        } else
+        } else {
             result = JSValue::decode(constructData.native.function(newCallFrame));
+            if (!callFrame->hadException()) {
+                ASSERT_WITH_MESSAGE(result.isObject(), "Host constructor returned non object.");
+                if (!result.isObject())
+                    throwTypeError(newCallFrame);
+            }
+        }
     }
 
     if (LegacyProfiler* profiler = vm.enabledProfiler())

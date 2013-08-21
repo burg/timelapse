@@ -440,6 +440,16 @@ static bool webKitWebSrcStart(WebKitWebSrc* src)
     request.setAllowCookies(true);
     request.setHTTPReferrer(priv->player->referrer());
 
+#if USE(SOUP)
+    // Let's disable HTTP Accept-Encoding here as we don't want the received response to be
+    // encoded in any way as we need to rely on the proper size of the returned data on
+    // didReceiveResponse.
+    // If Accept-Encoding is used, the server may send the data in encoded format and
+    // request.expectedContentLength() will have the "wrong" size (the size of the
+    // compressed data), even though the data received in didReceiveData is uncompressed.
+    request.setAcceptEncoding(false);
+#endif
+
     // Let Apple web servers know we want to access their nice movie trailers.
     if (!g_ascii_strcasecmp("movies.apple.com", url.host().utf8().data())
         || !g_ascii_strcasecmp("trailers.apple.com", url.host().utf8().data()))
@@ -746,8 +756,6 @@ static gboolean webKitWebSrcSeekDataCb(GstAppSrc*, guint64 offset, gpointer user
         return TRUE;
 
     if (!priv->seekable)
-        return FALSE;
-    if (offset > priv->size)
         return FALSE;
 
     GST_DEBUG_OBJECT(src, "Doing range-request seek");

@@ -81,9 +81,6 @@ end
 macro prepareStateForCCall()
     leap [PB, PC, 8], PC
     move PB, t3
-    if X86_64
-        resetX87Stack
-    end
 end
 
 macro restoreStateAfterCCall()
@@ -1597,6 +1594,7 @@ _llint_throw_from_slow_path_trampoline:
     # the throw target is not necessarily interpreted code, we come to here.
     # This essentially emulates the JIT's throwing protocol.
     loadp JITStackFrame::vm[sp], t1
+    loadp VM::topCallFrame[t1], cfr
     loadp VM::callFrameForThrow[t1], t0
     jmp VM::targetMachinePCForThrow[t1]
 
@@ -1604,6 +1602,7 @@ _llint_throw_from_slow_path_trampoline:
 _llint_throw_during_call_trampoline:
     preserveReturnAddressAfterCall(t2)
     loadp JITStackFrame::vm[sp], t1
+    loadp VM::topCallFrame[t1], cfr
     loadp VM::callFrameForThrow[t1], t0
     jmp VM::targetMachinePCForThrow[t1]
 

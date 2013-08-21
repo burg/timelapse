@@ -636,7 +636,7 @@ public:
     // Returns the styled node that caused the generation of this renderer.
     // This is the same as node() except for renderers of :before and :after
     // pseudo elements for which their parent node is returned.
-    Node* generatingNode() const { return isPseudoElement() ? node()->parentOrShadowHostNode() : node(); }
+    Node* generatingNode() const { return isPseudoElement() ? generatingPseudoHostElement() : node(); }
 
     Document* document() const { return m_node->document(); }
     Frame* frame() const { return document()->frame(); }
@@ -694,6 +694,9 @@ public:
 
     void updateFillImages(const FillLayer*, const FillLayer*);
     void updateImage(StyleImage*, StyleImage*);
+#if ENABLE(CSS_SHAPES)
+    void updateShapeImage(const ShapeValue*, const ShapeValue*);
+#endif
 
     virtual void paint(PaintInfo&, const LayoutPoint&);
 
@@ -1025,6 +1028,12 @@ private:
     StyleDifference adjustStyleDifference(StyleDifference, unsigned contextSensitiveProperties) const;
 
     Color selectionColor(int colorProperty) const;
+
+    Node* generatingPseudoHostElement() const;
+
+#if ENABLE(CSS_SHAPES)
+    void removeShapeImageClient(ShapeValue*);
+#endif
 
 #ifndef NDEBUG
     void checkBlockPositionedObjectsNeedLayout();

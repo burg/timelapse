@@ -126,7 +126,7 @@ FrameLoader* DocumentLoader::frameLoader() const
 {
     if (!m_frame)
         return 0;
-    return m_frame->loader();
+    return &m_frame->loader();
 }
 
 ResourceLoader* DocumentLoader::mainResourceLoader() const
@@ -157,7 +157,7 @@ PassRefPtr<ResourceBuffer> DocumentLoader::mainResourceData() const
 
 Document* DocumentLoader::document() const
 {
-    if (m_frame && m_frame->loader()->documentLoader() == this)
+    if (m_frame && m_frame->loader().documentLoader() == this)
         return m_frame->document();
     return 0;
 }
@@ -262,7 +262,7 @@ void DocumentLoader::stopLoading()
         Document* doc = m_frame->document();
         
         if (loading || doc->parsing())
-            m_frame->loader()->stopLoading(UnloadEventPolicyNone);
+            m_frame->loader().stopLoading(UnloadEventPolicyNone);
     }
 
     // Always cancel multipart loaders
@@ -295,12 +295,6 @@ void DocumentLoader::stopLoading()
     if (isLoadingMainResource()) {
         // Stop the main resource loader and let it send the cancelled message.
         cancelMainResourceLoad(frameLoader->cancelledError(m_request));
-    
-        // When cancelling the main resource load, we need to also cancel the Document's parser.
-        // Otherwise cancelling the parser when starting the next page load might result
-        // in unexpected side effects such as erroneous event dispatch. ( http://webkit.org/b/117112 )
-        if (Document* doc = document())
-            doc->cancelParsing();
     } else if (!m_subresourceLoaders.isEmpty())
         // The main resource loader already finished loading. Set the cancelled error on the 
         // document and let the subresourceLoaders send individual cancelled messages below.
@@ -309,6 +303,12 @@ void DocumentLoader::stopLoading()
         // If there are no resource loaders, we need to manufacture a cancelled message.
         // (A back/forward navigation has no resource loaders because its resources are cached.)
         mainReceivedError(frameLoader->cancelledError(m_request));
+
+    // We always need to explicitly cancel the Document's parser when stopping the load.
+    // Otherwise cancelling the parser while starting the next page load might result
+    // in unexpected side effects such as erroneous event dispatch. ( http://webkit.org/b/117112 )
+    if (Document* document = this->document())
+        document->cancelParsing();
     
     stopLoadingSubresources();
     stopLoadingPlugIns();
@@ -364,8 +364,13 @@ void DocumentLoader::finishedLoading(double finishTime)
     RefPtr<DocumentLoader> protect(this);
 
     if (m_identifierForLoadWithoutResourceLoader) {
-        frameLoader()->notifier()->dispatchDidFinishLoading(this, m_identifierForLoadWithoutResourceLoader, finishTime);
+        // A didFinishLoading delegate might try to cancel the load (despite it
+        // being finished). Clear m_identifierForLoadWithoutResourceLoader
+        // before calling dispatchDidFinishLoading so that we don't later try to
+        // cancel the already-finished substitute load.
+        unsigned long identifier = m_identifierForLoadWithoutResourceLoader;
         m_identifierForLoadWithoutResourceLoader = 0;
+        frameLoader()->notifier()->dispatchDidFinishLoading(this, identifier, finishTime);
     }
 
 #if USE(CONTENT_FILTERING)
@@ -621,8 +626,7 @@ void DocumentLoader::responseReceived(CachedResource* resource, const ResourceRe
 
 #if ENABLE(FTPDIR)
     // Respect the hidden FTP Directory Listing pref so it can be tested even if the policy delegate might otherwise disallow it
-    Settings* settings = m_frame->settings();
-    if (settings && settings->forceFTPDirectoryListings() && m_response.mimeType() == "application/x-ftp-directory") {
+    if (m_frame->settings().forceFTPDirectoryListings() && m_response.mimeType() == "application/x-ftp-directory") {
         continueAfterContentPolicy(PolicyUse);
         return;
     }
@@ -782,16 +786,28 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
         if (!isMultipartReplacingLoad())
             frameLoader()->receivedFirstData();
 
-        bool userChosen = true;
-        String encoding = overrideEncoding();
-        if (encoding.isNull()) {
+        bool userChosen;
+        String encoding;
+#if USE(CONTENT_FILTERING)
+        // The content filter's replacement data has a known encoding that might
+        // differ from the response's encoding.
+        if (m_contentFilter && m_contentFilter->didBlockData()) {
+            ASSERT(!m_contentFilter->needsMoreData());
+            userChosen = false;
+        } else
+#endif
+        if (overrideEncoding().isNull()) {
             userChosen = false;
             encoding = response().textEncodingName();
 #if ENABLE(WEB_ARCHIVE)
             if (m_archive && m_archive->type() == Archive::WebArchive)
                 encoding = m_archive->mainResource()->textEncoding();
 #endif
+        } else {
+            userChosen = true;
+            encoding = overrideEncoding();
         }
+
         m_writer.setEncoding(encoding, userChosen);
     }
     ASSERT(m_frame->document()->parsing());
@@ -824,9 +840,8 @@ void DocumentLoader::dataReceived(CachedResource* resource, const char* data, in
 
         if (m_contentFilter->needsMoreData()) {
             // Since the filter still needs more data to make a decision,
-            // transition back to the committed state so that we don't partially
-            // load content that might later be blocked.
-            commitLoad(0, 0);
+            // avoid committing this data to prevent partial rendering of
+            // content that might later be blocked.
             return;
         }
 
@@ -924,7 +939,7 @@ bool DocumentLoader::isLoadingInAPISense() const
     // Once a frame has loaded, we no longer need to consider subresources,
     // but we still need to consider subframes.
     if (frameLoader()->state() != FrameStateComplete) {
-        if (m_frame->settings()->needsIsLoadingInAPISenseQuirk() && !m_subresourceLoaders.isEmpty())
+        if (m_frame->settings().needsIsLoadingInAPISenseQuirk() && !m_subresourceLoaders.isEmpty())
             return true;
     
         Document* doc = m_frame->document();
@@ -1160,7 +1175,7 @@ bool DocumentLoader::scheduleArchiveLoad(ResourceLoader* loader, const ResourceR
 #if ENABLE(WEB_ARCHIVE)
     case Archive::WebArchive:
         // WebArchiveDebugMode means we fail loads instead of trying to fetch them from the network if they're not in the archive.
-        return m_frame->settings() && m_frame->settings()->webArchiveDebugModeEnabled() && ArchiveFactory::isArchiveMimeType(responseMIMEType());
+        return m_frame->settings().webArchiveDebugModeEnabled() && ArchiveFactory::isArchiveMimeType(responseMIMEType());
 #endif
 #if ENABLE(MHTML)
     case Archive::MHTML:
@@ -1301,7 +1316,7 @@ void DocumentLoader::removeSubresourceLoader(ResourceLoader* loader)
     m_subresourceLoaders.remove(it);
     checkLoadComplete();
     if (Frame* frame = m_frame)
-        frame->loader()->checkLoadComplete();
+        frame->loader().checkLoadComplete();
 }
 
 void DocumentLoader::addPlugInStreamLoader(ResourceLoader* loader)
@@ -1363,7 +1378,7 @@ void DocumentLoader::startLoadingMainResource()
     m_applicationCacheHost->maybeLoadMainResource(m_request, m_substituteData);
 
     if (m_substituteData.isValid()) {
-        m_identifierForLoadWithoutResourceLoader = m_frame->page()->progress()->createUniqueIdentifier();
+        m_identifierForLoadWithoutResourceLoader = m_frame->page()->progress().createUniqueIdentifier();
         frameLoader()->notifier()->assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, m_request);
         frameLoader()->notifier()->dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, m_request, ResourceResponse());
         handleSubstituteDataLoadSoon();
@@ -1386,7 +1401,7 @@ void DocumentLoader::startLoadingMainResource()
     }
 
     if (!mainResourceLoader()) {
-        m_identifierForLoadWithoutResourceLoader = m_frame->page()->progress()->createUniqueIdentifier();
+        m_identifierForLoadWithoutResourceLoader = m_frame->page()->progress().createUniqueIdentifier();
         frameLoader()->notifier()->assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, request);
         frameLoader()->notifier()->dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, request, ResourceResponse());
     }
@@ -1436,7 +1451,7 @@ void DocumentLoader::subresourceLoaderFinishedLoadingOnePart(ResourceLoader* loa
     m_subresourceLoaders.remove(loader);
     checkLoadComplete();
     if (Frame* frame = m_frame)
-        frame->loader()->checkLoadComplete();    
+        frame->loader().checkLoadComplete();    
 }
 
 void DocumentLoader::maybeFinishLoadingMultipartContent()
@@ -1453,7 +1468,7 @@ void DocumentLoader::maybeFinishLoadingMultipartContent()
 void DocumentLoader::iconLoadDecisionAvailable()
 {
     if (m_frame)
-        m_frame->loader()->icon()->loadDecisionReceived(iconDatabase().synchronousLoadDecisionForIconURL(frameLoader()->icon()->url(), this));
+        m_frame->loader().icon()->loadDecisionReceived(iconDatabase().synchronousLoadDecisionForIconURL(frameLoader()->icon()->url(), this));
 }
 
 static void iconLoadDecisionCallback(IconLoadDecision decision, void* context)
@@ -1474,7 +1489,7 @@ void DocumentLoader::continueIconLoadWithDecision(IconLoadDecision decision)
     ASSERT(m_iconLoadDecisionCallback);
     m_iconLoadDecisionCallback = 0;
     if (m_frame)
-        m_frame->loader()->icon()->continueLoadWithDecision(decision);
+        m_frame->loader().icon()->continueLoadWithDecision(decision);
 }
 
 static void iconDataCallback(SharedBuffer*, void*)

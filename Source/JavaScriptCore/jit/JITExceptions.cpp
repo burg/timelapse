@@ -51,6 +51,22 @@ static unsigned getExceptionLocation(VM* vm, CallFrame* callFrame)
     return callFrame->locationAsBytecodeOffset();
 }
 
+#if USE(JSVALUE32_64)
+EncodedExceptionHandler encode(ExceptionHandler handler)
+{
+    ExceptionHandlerUnion u;
+    u.handler = handler;
+    return u.encodedHandler;
+}
+#endif
+
+ExceptionHandler uncaughtExceptionHandler()
+{
+    void* catchRoutine = FunctionPtr(LLInt::getCodePtr(ctiOpThrowNotCaught)).value();
+    ExceptionHandler exceptionHandler = { 0, catchRoutine};
+    return exceptionHandler;
+}
+
 ExceptionHandler genericThrow(VM* vm, ExecState* callFrame, JSValue exceptionValue, unsigned vPCIndex)
 {
     RELEASE_ASSERT(exceptionValue);

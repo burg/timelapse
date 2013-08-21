@@ -62,6 +62,7 @@ namespace JSC {
 #else
         static const RegisterID firstArgumentRegister = X86Registers::ecx;
         static const RegisterID secondArgumentRegister = X86Registers::edx;
+        static const RegisterID thirdArgumentRegister = X86Registers::r8;
 #endif
 
         static const RegisterID callFrameRegister = X86Registers::r13;
@@ -164,14 +165,12 @@ namespace JSC {
         static const RegisterID returnValueRegister = SH4Registers::r0;
         static const RegisterID cachedResultRegister = SH4Registers::r0;
 
-        static const FPRegisterID fpRegT0  = SH4Registers::fr0;
-        static const FPRegisterID fpRegT1  = SH4Registers::fr2;
-        static const FPRegisterID fpRegT2  = SH4Registers::fr4;
-        static const FPRegisterID fpRegT3  = SH4Registers::fr6;
-        static const FPRegisterID fpRegT4  = SH4Registers::fr8;
-        static const FPRegisterID fpRegT5  = SH4Registers::fr10;
-        static const FPRegisterID fpRegT6  = SH4Registers::fr12;
-        static const FPRegisterID fpRegT7  = SH4Registers::fr14;
+        static const FPRegisterID fpRegT0 = SH4Registers::dr0;
+        static const FPRegisterID fpRegT1 = SH4Registers::dr2;
+        static const FPRegisterID fpRegT2 = SH4Registers::dr4;
+        static const FPRegisterID fpRegT3 = SH4Registers::dr6;
+        static const FPRegisterID fpRegT4 = SH4Registers::dr8;
+        static const FPRegisterID fpRegT5 = SH4Registers::dr10;
 #else
 #error "JIT not supported on this platform."
 #endif

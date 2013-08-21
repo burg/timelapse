@@ -7,6 +7,7 @@
  * Copyright (C) 2008 Holger Hans Peter Freyther
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010 Patrick Gansterer <paroga@paroga.com>
+ * Copyright (C) 2013 Samsung Electronics. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -44,6 +45,7 @@
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "HTMLTemplateElement.h"
+#include "Page.h"
 #include "ProcessingInstruction.h"
 #include "ResourceError.h"
 #include "ResourceRequest.h"
@@ -52,6 +54,7 @@
 #include "ScriptSourceCode.h"
 #include "ScriptValue.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "TextResourceDecoder.h"
 #include "TransformSource.h"
 #include "XMLNSNames.h"
@@ -72,6 +75,26 @@
 using namespace std;
 
 namespace WebCore {
+
+static inline bool hasNoStyleInformation(Document* document)
+{
+    if (document->sawElementsInKnownNamespaces())
+        return false;
+#if ENABLE(XSLT)
+    if (document->transformSourceDocument())
+        return false;
+#endif
+    if (!document->frame() || !document->frame()->page())
+        return false;
+
+    if (!document->frame()->page()->settings().developerExtrasEnabled())
+        return false;
+
+    if (document->frame()->tree()->parent())
+        return false; // This document is not in a top frame
+
+    return true;
+}
 
 class PendingCallbacks {
     WTF_MAKE_NONCOPYABLE(PendingCallbacks); WTF_MAKE_FAST_ALLOCATED;
@@ -443,7 +466,7 @@ static void* openFunc(const char* uri)
         // FIXME: We should restore the original global error handler as well.
 
         if (cachedResourceLoader->frame())
-            cachedResourceLoader->frame()->loader()->loadResourceSynchronously(url, AllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, error, response, data);
+            cachedResourceLoader->frame()->loader().loadResourceSynchronously(url, AllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, error, response, data);
     }
 
     // We have to check the URL again after the load to catch redirects.
@@ -616,11 +639,11 @@ XMLDocumentParser::XMLDocumentParser(DocumentFragment* fragment, Element* parent
         Element* element = elemStack.last();
         if (element->hasAttributes()) {
             for (unsigned i = 0; i < element->attributeCount(); i++) {
-                const Attribute* attribute = element->attributeItem(i);
-                if (attribute->localName() == xmlnsAtom)
-                    m_defaultNamespaceURI = attribute->value();
-                else if (attribute->prefix() == xmlnsAtom)
-                    m_prefixToNamespaceMap.set(attribute->localName(), attribute->value());
+                const Attribute& attribute = element->attributeAt(i);
+                if (attribute.localName() == xmlnsAtom)
+                    m_defaultNamespaceURI = attribute.value();
+                else if (attribute.prefix() == xmlnsAtom)
+                    m_prefixToNamespaceMap.set(attribute.localName(), attribute.value());
             }
         }
     }
@@ -839,13 +862,13 @@ void XMLDocumentParser::startElementNs(const xmlChar* xmlLocalName, const xmlCha
 #endif
 
     if (m_view && currentNode->attached() && !newElement->attached())
-        newElement->attach();
+        Style::attachRenderTree(newElement.get());
 
     if (newElement->hasTagName(HTMLNames::htmlTag))
         static_cast<HTMLHtmlElement*>(newElement.get())->insertedByParser();
 
     if (!m_parsingFragment && isFirstElement && document()->frame())
-        document()->frame()->loader()->dispatchDocumentElementAvailable();
+        document()->frame()->loader().dispatchDocumentElementAvailable();
 }
 
 void XMLDocumentParser::endElementNs()
@@ -987,8 +1010,6 @@ void XMLDocumentParser::processingInstruction(const xmlChar* target, const xmlCh
     pi->setCreatedByParser(true);
 
     m_currentNode->parserAppendChild(pi.get());
-    if (m_view && !pi->attached())
-        pi->attach();
 
     pi->finishParsingChildren();
 
@@ -1016,7 +1037,7 @@ void XMLDocumentParser::cdataBlock(const xmlChar* s, int len)
     RefPtr<CDATASection> newNode = CDATASection::create(m_currentNode->document(), toString(s, len));
     m_currentNode->parserAppendChild(newNode.get());
     if (m_view && !newNode->attached())
-        newNode->attach();
+        newNode->attachText();
 }
 
 void XMLDocumentParser::comment(const xmlChar* s)
@@ -1033,8 +1054,6 @@ void XMLDocumentParser::comment(const xmlChar* s)
 
     RefPtr<Comment> newNode = Comment::create(m_currentNode->document(), toString(s));
     m_currentNode->parserAppendChild(newNode.get());
-    if (m_view && !newNode->attached())
-        newNode->attach();
 }
 
 enum StandaloneInfo {
@@ -1364,12 +1383,11 @@ void XMLDocumentParser::doEnd()
     }
 
 #if ENABLE(XSLT)
-    XMLTreeViewer xmlTreeViewer(document());
-    bool xmlViewerMode = !m_sawError && !m_sawCSS && !m_sawXSLTransform && xmlTreeViewer.hasNoStyleInformation();
-    if (xmlViewerMode)
+    bool xmlViewerMode = !m_sawError && !m_sawCSS && !m_sawXSLTransform && hasNoStyleInformation(document());
+    if (xmlViewerMode) {
+        XMLTreeViewer xmlTreeViewer(document());
         xmlTreeViewer.transformDocumentToTreeView();
-
-    if (m_sawXSLTransform) {
+    } else if (m_sawXSLTransform) {
         void* doc = xmlDocPtrForString(document()->cachedResourceLoader(), m_originalSourceForTransform.toString(), document()->url().string());
         document()->setTransformSource(adoptPtr(new TransformSource(doc)));
 

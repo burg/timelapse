@@ -154,6 +154,7 @@ namespace JSC { namespace DFG {
     macro(GetByOffset, NodeResultJS) \
     macro(PutByOffset, NodeMustGenerate) \
     macro(GetArrayLength, NodeResultInt32) \
+    macro(GetTypedArrayByteOffset, NodeResultInt32) \
     macro(GetScope, NodeResultJS) \
     macro(GetMyScope, NodeResultJS) \
     macro(SetMyScope, NodeMustGenerate) \
@@ -243,13 +244,16 @@ namespace JSC { namespace DFG {
     macro(NewFunction, NodeResultJS) \
     macro(NewFunctionExpression, NodeResultJS) \
     \
+    /* These aren't terminals but always exit */ \
+    macro(Throw, NodeMustGenerate) \
+    macro(ThrowReferenceError, NodeMustGenerate) \
+    \
     /* Block terminals. */\
     macro(Jump, NodeMustGenerate) \
     macro(Branch, NodeMustGenerate) \
     macro(Switch, NodeMustGenerate) \
     macro(Return, NodeMustGenerate) \
-    macro(Throw, NodeMustGenerate) \
-    macro(ThrowReferenceError, NodeMustGenerate) \
+    macro(Unreachable, NodeMustGenerate) \
     \
     /* Count execution. */\
     macro(CountExecution, NodeMustGenerate) \

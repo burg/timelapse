@@ -100,7 +100,10 @@ set(JavaScriptCore_SOURCES
     dfg/DFGDCEPhase.cpp
     dfg/DFGDesiredIdentifiers.cpp
     dfg/DFGDesiredStructureChains.cpp
+    dfg/DFGDesiredTransitions.cpp
     dfg/DFGDesiredWatchpoints.cpp
+    dfg/DFGDesiredWeakReferences.cpp
+    dfg/DFGDesiredWriteBarriers.cpp
     dfg/DFGDisassembler.cpp
     dfg/DFGDominators.cpp
     dfg/DFGDriver.cpp
@@ -167,6 +170,10 @@ set(JavaScriptCore_SOURCES
     heap/CopyVisitor.cpp
     heap/ConservativeRoots.cpp
     heap/DFGCodeBlocks.cpp
+    heap/GCIncomingRefCountedSet.h
+    heap/GCIncomingRefCounted.h
+    heap/GCIncomingRefCountedSetInlines.h
+    heap/GCIncomingRefCountedInlines.h
     heap/GCThread.cpp
     heap/GCThreadSharedData.cpp
     heap/HandleSet.cpp
@@ -266,6 +273,8 @@ set(JavaScriptCore_SOURCES
 
     runtime/ArgList.cpp
     runtime/Arguments.cpp
+    runtime/ArrayBuffer.cpp
+    runtime/ArrayBufferView.cpp
     runtime/ArrayConstructor.cpp
     runtime/ArrayPrototype.cpp
     runtime/BooleanConstructor.cpp
@@ -280,6 +289,8 @@ set(JavaScriptCore_SOURCES
     runtime/CompilationResult.cpp
     runtime/Completion.cpp
     runtime/ConstructData.cpp
+    runtime/DataView.cpp
+    runtime/DataView.h
     runtime/DateConstructor.cpp
     runtime/DateConversion.cpp
     runtime/DateInstance.cpp
@@ -304,10 +315,16 @@ set(JavaScriptCore_SOURCES
     runtime/JSAPIValueWrapper.cpp
     runtime/JSActivation.cpp
     runtime/JSArray.cpp
+    runtime/JSArrayBuffer.cpp
+    runtime/JSArrayBufferConstructor.cpp
+    runtime/JSArrayBufferPrototype.cpp
+    runtime/JSArrayBufferView.cpp
     runtime/JSBoundFunction.cpp
     runtime/JSCJSValue.cpp
     runtime/JSCell.cpp
     runtime/JSChunk.cpp
+    runtime/JSDataView.cpp
+    runtime/JSDataViewPrototype.cpp
     runtime/JSDateMath.cpp
     runtime/JSFunction.cpp
     runtime/JSGlobalObject.cpp
@@ -325,6 +342,9 @@ set(JavaScriptCore_SOURCES
     runtime/JSString.cpp
     runtime/JSStringJoiner.cpp
     runtime/JSSymbolTableObject.cpp
+    runtime/JSTypedArrayConstructors.cpp
+    runtime/JSTypedArrayPrototypes.cpp
+    runtime/JSTypedArrays.cpp
     runtime/JSVariableObject.cpp
     runtime/JSWithScope.cpp
     runtime/JSWrapperObject.cpp
@@ -357,6 +377,7 @@ set(JavaScriptCore_SOURCES
     runtime/RegExpObject.cpp
     runtime/RegExpPrototype.cpp
     runtime/SamplingCounter.cpp
+    runtime/SimpleTypedArrayController.cpp
     runtime/SmallStrings.cpp
     runtime/SparseArrayValueMap.cpp
     runtime/StrictEvalActivation.cpp
@@ -368,6 +389,8 @@ set(JavaScriptCore_SOURCES
     runtime/StructureChain.cpp
     runtime/StructureRareData.cpp
     runtime/SymbolTable.cpp
+    runtime/TypedArrayController.cpp
+    runtime/TypedArrayType.cpp
     runtime/VM.cpp
     runtime/Watchdog.cpp
     runtime/WatchdogNone.cpp
@@ -389,6 +412,7 @@ set(JavaScriptCore_LUT_FILES
     runtime/DateConstructor.cpp
     runtime/DatePrototype.cpp
     runtime/ErrorPrototype.cpp
+    runtime/JSDataViewPrototype.cpp
     runtime/JSGlobalObject.cpp
     runtime/JSONObject.cpp
     runtime/NamePrototype.cpp
@@ -536,6 +560,7 @@ set(JavaScriptCore_FORWARDING_HEADERS_FILES
     API/APIShims.h
     API/JavaScript.h
     API/JSBase.h
+    API/JSCTestRunnerUtils.h
     API/JSContextRef.h
     API/JSContextRefPrivate.h
     API/JSObjectRef.h
@@ -585,8 +610,9 @@ if (WTF_CPU_ARM)
         add_custom_command(
             OUTPUT ${DERIVED_SOURCES_DIR}/GeneratedJITStubs.asm
             MAIN_DEPENDENCY ${JAVASCRIPTCORE_DIR}/create_jit_stubs
+            DEPENDS ${JAVASCRIPTCORE_DIR}/jit/JITStubsARM.h
             DEPENDS ${JAVASCRIPTCORE_DIR}/jit/JITStubs.cpp
-            COMMAND ${PERL_EXECUTABLE} ${JAVASCRIPTCORE_DIR}/create_jit_stubs --prefix=MSVC ${JAVASCRIPTCORE_DIR}/jit/JITStubs.cpp > ${DERIVED_SOURCES_DIR}/GeneratedJITStubs.asm
+            COMMAND ${PERL_EXECUTABLE} ${JAVASCRIPTCORE_DIR}/create_jit_stubs --prefix=MSVC --header ${JAVASCRIPTCORE_DIR}/jit/JITStubsARM.h ${JAVASCRIPTCORE_DIR}/jit/JITStubs.cpp > ${DERIVED_SOURCES_DIR}/GeneratedJITStubs.asm
             VERBATIM)
 
         add_custom_command(

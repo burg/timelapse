@@ -32,6 +32,7 @@
 #include "Attribute.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ElementTraversal.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "ExceptionCodePlaceholder.h"
@@ -46,8 +47,6 @@
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
-#include "NodeRenderingContext.h"
-#include "NodeTraversal.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "RenderListBox.h"
@@ -295,7 +294,7 @@ void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomicSt
         String attrSize = String::number(size);
         if (attrSize != value) {
             // FIXME: This is horribly factored.
-            if (Attribute* sizeAttribute = ensureUniqueElementData()->getAttributeItem(sizeAttr))
+            if (Attribute* sizeAttribute = ensureUniqueElementData().findAttributeByName(sizeAttr))
                 sizeAttribute->setValue(attrSize);
         }
         size = max(size, 1);
@@ -307,7 +306,7 @@ void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomicSt
         m_size = size;
         setNeedsValidityCheck();
         if (m_size != oldSize && attached()) {
-            reattach();
+            Style::reattachRenderTree(this);
             setRecalcListItems();
         }
     } else if (name == multipleAttr)
@@ -345,13 +344,13 @@ RenderObject* HTMLSelectElement::createRenderer(RenderArena* arena, RenderStyle*
     return new (arena) RenderListBox(this);
 }
 
-bool HTMLSelectElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool HTMLSelectElement::childShouldCreateRenderer(const Node* child) const
 {
-    if (!HTMLFormControlElementWithState::childShouldCreateRenderer(childContext))
+    if (!HTMLFormControlElementWithState::childShouldCreateRenderer(child))
         return false;
     if (!usesMenuList())
-        return isHTMLOptionElement(childContext.node()) || isHTMLOptGroupElement(childContext.node()) || validationMessageShadowTreeContains(childContext.node());
-    return validationMessageShadowTreeContains(childContext.node());
+        return isHTMLOptionElement(child) || isHTMLOptGroupElement(child) || validationMessageShadowTreeContains(child);
+    return validationMessageShadowTreeContains(child);
 }
 
 PassRefPtr<HTMLCollection> HTMLSelectElement::selectedOptions()
@@ -1011,8 +1010,8 @@ void HTMLSelectElement::parseMultipleAttribute(const AtomicString& value)
     bool oldUsesMenuList = usesMenuList();
     m_multiple = !value.isNull();
     setNeedsValidityCheck();
-    if (oldUsesMenuList != usesMenuList())
-        reattachIfAttached();
+    if (oldUsesMenuList != usesMenuList() && attached())
+        Style::reattachRenderTree(this);
 }
 
 bool HTMLSelectElement::appendFormData(FormDataList& list, bool)
@@ -1131,7 +1130,7 @@ void HTMLSelectElement::menuListDefaultEventHandler(Event* event)
         // When using caret browsing, we want to be able to move the focus
         // out of the select element when user hits a left or right arrow key.
         const Frame* frame = document()->frame();
-        if (frame && frame->settings() && frame->settings()->caretBrowsingEnabled()) {
+        if (frame && frame->settings().caretBrowsingEnabled()) {
             if (keyIdentifier == "Left" || keyIdentifier == "Right")
                 return;
         }
@@ -1321,7 +1320,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event* event)
 #endif
             }
             if (Frame* frame = document()->frame())
-                frame->eventHandler()->setMouseDownMayStartAutoscroll();
+                frame->eventHandler().setMouseDownMayStartAutoscroll();
 
             event->setDefaultHandled();
         }
@@ -1349,7 +1348,7 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event* event)
             }
             event->setDefaultHandled();
         }
-    } else if (event->type() == eventNames().mouseupEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton && document()->frame()->eventHandler()->autoscrollRenderer() != renderer()) {
+    } else if (event->type() == eventNames().mouseupEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() == LeftButton && document()->frame()->eventHandler().autoscrollRenderer() != renderer()) {
         // This click or drag event was not over any of the options.
         if (m_lastOnChangeSelection.isEmpty())
             return;

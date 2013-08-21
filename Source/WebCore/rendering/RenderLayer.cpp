@@ -233,7 +233,7 @@ RenderLayer::~RenderLayer()
 {
     if (inResizeMode() && !renderer()->documentBeingDestroyed()) {
         if (Frame* frame = renderer()->frame())
-            frame->eventHandler()->resizeLayerDestroyed();
+            frame->eventHandler().resizeLayerDestroyed();
     }
 
     if (Frame* frame = renderer()->frame()) {
@@ -563,7 +563,7 @@ bool RenderLayer::acceleratedCompositingForOverflowScrollEnabled() const
 {
     return renderer()->frame()
         && renderer()->frame()->page()
-        && renderer()->frame()->page()->settings()->acceleratedCompositingForOverflowScrollEnabled();
+        && renderer()->frame()->page()->settings().acceleratedCompositingForOverflowScrollEnabled();
 }
 
 // If we are a stacking container, then this function will determine if our
@@ -1379,11 +1379,33 @@ RenderLayer* RenderLayer::enclosingPositionedAncestor() const
     return curr;
 }
 
+static RenderLayer* parentLayerCrossFrame(const RenderLayer* layer)
+{
+    ASSERT(layer);
+    if (layer->parent())
+        return layer->parent();
+
+    RenderObject* renderer = layer->renderer();
+    Document* document = renderer->document();
+    if (!document)
+        return 0;
+
+    HTMLFrameOwnerElement* ownerElement = document->ownerElement();
+    if (!ownerElement)
+        return 0;
+
+    RenderObject* ownerRenderer = ownerElement->renderer();
+    if (!ownerRenderer)
+        return 0;
+
+    return ownerRenderer->enclosingLayer();
+}
+
 RenderLayer* RenderLayer::enclosingScrollableLayer() const
 {
-    for (RenderObject* nextRenderer = renderer()->parent(); nextRenderer; nextRenderer = nextRenderer->parent()) {
-        if (nextRenderer->isBox() && toRenderBox(nextRenderer)->canBeScrolledAndHasScrollableArea())
-            return nextRenderer->enclosingLayer();
+    for (RenderLayer* nextLayer = parentLayerCrossFrame(this); nextLayer; nextLayer = parentLayerCrossFrame(nextLayer)) {
+        if (nextLayer->renderer()->isBox() && toRenderBox(nextLayer->renderer())->canBeScrolledAndHasScrollableArea())
+            return nextLayer;
     }
 
     return 0;
@@ -2108,7 +2130,7 @@ void RenderLayer::panScrollFromPoint(const IntPoint& sourcePoint)
     if (!frame)
         return;
     
-    IntPoint lastKnownMousePosition = frame->eventHandler()->lastKnownMousePosition();
+    IntPoint lastKnownMousePosition = frame->eventHandler().lastKnownMousePosition();
     
     // We need to check if the last known mouse position is out of the window. When the mouse is out of the window, the position is incoherent
     static IntPoint previousMousePosition;
@@ -2148,7 +2170,7 @@ void RenderLayer::scrollByRecursively(const IntSize& delta, ScrollOffsetClamping
 
             Frame* frame = renderer()->frame();
             if (frame)
-                frame->eventHandler()->updateAutoscrollRenderer();
+                frame->eventHandler().updateAutoscrollRenderer();
         }
     } else if (renderer()->view()->frameView()) {
         // If we are here, we were called on a renderer that can be programmatically scrolled, but doesn't
@@ -2236,12 +2258,12 @@ void RenderLayer::scrollTo(int x, int y)
     RenderLayerModelObject* repaintContainer = renderer()->containerForRepaint();
     if (frame) {
         // The caret rect needs to be invalidated after scrolling
-        frame->selection()->setCaretRectNeedsUpdate();
+        frame->selection().setCaretRectNeedsUpdate();
 
         FloatQuad quadForFakeMouseMoveEvent = FloatQuad(m_repaintRect);
         if (repaintContainer)
             quadForFakeMouseMoveEvent = repaintContainer->localToAbsoluteQuad(quadForFakeMouseMoveEvent);
-        frame->eventHandler()->dispatchFakeMouseMoveEventSoonInQuad(quadForFakeMouseMoveEvent);
+        frame->eventHandler().dispatchFakeMouseMoveEventSoonInQuad(quadForFakeMouseMoveEvent);
     }
 
     bool requiresRepaint = true;
@@ -2261,7 +2283,7 @@ void RenderLayer::scrollTo(int x, int y)
 
     InspectorInstrumentation::didScrollLayer(frame);
     if (scrollsOverflow())
-        frame->loader()->client()->didChangeScrollOffset(); 
+        frame->loader().client()->didChangeScrollOffset(); 
 }
 
 static inline bool frameElementAndViewPermitScroll(HTMLFrameElementBase* frameElementBase, FrameView* frameView) 
@@ -2276,7 +2298,7 @@ static inline bool frameElementAndViewPermitScroll(HTMLFrameElementBase* frameEl
 
     // Forbid autoscrolls when scrollbars are off, but permits other programmatic scrolls,
     // like navigation to an anchor.
-    return !frameView->frame()->eventHandler()->autoscrollInProgress();
+    return !frameView->frame().eventHandler().autoscrollInProgress();
 }
 
 void RenderLayer::scrollRectToVisible(const LayoutRect& rect, const ScrollAlignment& alignX, const ScrollAlignment& alignY)
@@ -2360,14 +2382,15 @@ void RenderLayer::scrollRectToVisible(const LayoutRect& rect, const ScrollAlignm
                 // This only has an effect on the Mac platform in applications
                 // that put web views into scrolling containers, such as Mac OS X Mail.
                 // The canAutoscroll function in EventHandler also knows about this.
-                if (Frame* frame = frameView->frame()) {
-                    if (Page* page = frame->page())
-                        page->chrome().scrollRectIntoView(pixelSnappedIntRect(rect));
-                }
+                if (Page* page = frameView->frame().page())
+                    page->chrome().scrollRectIntoView(pixelSnappedIntRect(rect));
             }
         }
     }
     
+    if (renderer()->frame()->eventHandler().autoscrollInProgress())
+        parentLayer = enclosingScrollableLayer();
+
     if (parentLayer)
         parentLayer->scrollRectToVisible(newRect, alignX, alignY);
 
@@ -2499,7 +2522,7 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
     RenderBox* renderer = toRenderBox(element->renderer());
 
     Document* document = element->document();
-    if (!document->frame()->eventHandler()->mousePressed())
+    if (!document->frame()->eventHandler().mousePressed())
         return;
 
     float zoomFactor = renderer->style()->effectiveZoom();
@@ -2528,23 +2551,23 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
     if (resize != RESIZE_VERTICAL && difference.width()) {
         if (element->isFormControlElement()) {
             // Make implicit margins from the theme explicit (see <http://bugs.webkit.org/show_bug.cgi?id=9547>).
-            styledElement->setInlineStyleProperty(CSSPropertyMarginLeft, String::number(renderer->marginLeft() / zoomFactor) + "px", false);
-            styledElement->setInlineStyleProperty(CSSPropertyMarginRight, String::number(renderer->marginRight() / zoomFactor) + "px", false);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginLeft, renderer->marginLeft() / zoomFactor, CSSPrimitiveValue::CSS_PX);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginRight, renderer->marginRight() / zoomFactor, CSSPrimitiveValue::CSS_PX);
         }
         LayoutUnit baseWidth = renderer->width() - (isBoxSizingBorder ? LayoutUnit() : renderer->borderAndPaddingWidth());
         baseWidth = baseWidth / zoomFactor;
-        styledElement->setInlineStyleProperty(CSSPropertyWidth, String::number(roundToInt(baseWidth + difference.width())) + "px", false);
+        styledElement->setInlineStyleProperty(CSSPropertyWidth, roundToInt(baseWidth + difference.width()), CSSPrimitiveValue::CSS_PX);
     }
 
     if (resize != RESIZE_HORIZONTAL && difference.height()) {
         if (element->isFormControlElement()) {
             // Make implicit margins from the theme explicit (see <http://bugs.webkit.org/show_bug.cgi?id=9547>).
-            styledElement->setInlineStyleProperty(CSSPropertyMarginTop, String::number(renderer->marginTop() / zoomFactor) + "px", false);
-            styledElement->setInlineStyleProperty(CSSPropertyMarginBottom, String::number(renderer->marginBottom() / zoomFactor) + "px", false);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginTop, renderer->marginTop() / zoomFactor, CSSPrimitiveValue::CSS_PX);
+            styledElement->setInlineStyleProperty(CSSPropertyMarginBottom, renderer->marginBottom() / zoomFactor, CSSPrimitiveValue::CSS_PX);
         }
         LayoutUnit baseHeight = renderer->height() - (isBoxSizingBorder ? LayoutUnit() : renderer->borderAndPaddingHeight());
         baseHeight = baseHeight / zoomFactor;
-        styledElement->setInlineStyleProperty(CSSPropertyHeight, String::number(roundToInt(baseHeight + difference.height())) + "px", false);
+        styledElement->setInlineStyleProperty(CSSPropertyHeight, roundToInt(baseHeight + difference.height()), CSSPrimitiveValue::CSS_PX);
     }
 
     document->updateLayout();
@@ -2610,7 +2633,7 @@ IntSize RenderLayer::overhangAmount() const
 bool RenderLayer::isActive() const
 {
     Page* page = renderer()->frame()->page();
-    return page && page->focusController()->isActive();
+    return page && page->focusController().isActive();
 }
 
 static int cornerStart(const RenderLayer* layer, int minX, int maxX, int thickness)
@@ -2762,12 +2785,12 @@ bool RenderLayer::scrollbarsCanBeActive() const
 
 IntPoint RenderLayer::lastKnownMousePosition() const
 {
-    return renderer()->frame() ? renderer()->frame()->eventHandler()->lastKnownMousePosition() : IntPoint();
+    return renderer()->frame() ? renderer()->frame()->eventHandler().lastKnownMousePosition() : IntPoint();
 }
 
 bool RenderLayer::isHandlingWheelEvent() const
 {
-    return renderer()->frame() ? renderer()->frame()->eventHandler()->isHandlingWheelEvent() : false;
+    return renderer()->frame() ? renderer()->frame()->eventHandler().isHandlingWheelEvent() : false;
 }
 
 IntRect RenderLayer::rectForHorizontalScrollbar(const IntRect& borderBoxRect) const
@@ -2879,7 +2902,7 @@ static inline RenderObject* rendererForScrollbar(RenderObject* renderer)
     if (Node* node = renderer->node()) {
         if (ShadowRoot* shadowRoot = node->containingShadowRoot()) {
             if (shadowRoot->type() == ShadowRoot::UserAgentShadowRoot)
-                return shadowRoot->host()->renderer();
+                return shadowRoot->hostElement()->renderer();
         }
     }
 
@@ -3622,6 +3645,7 @@ void RenderLayer::paintLayer(GraphicsContext* context, const LayerPaintingInfo& 
     } else if (viewportConstrainedNotCompositedReason() == NotCompositedForBoundsOutOfView) {
         // Don't paint out-of-view viewport constrained layers (when doing prepainting) because they will never be visible
         // unless their position or viewport size is changed.
+        ASSERT(renderer()->style()->position() == FixedPosition);
         return;
     }
 #endif
@@ -3730,7 +3754,7 @@ bool RenderLayer::setupFontSubpixelQuantization(GraphicsContext* context, bool& 
     return false;
 }
 
-bool RenderLayer::setupClipPath(GraphicsContext* context, const LayerPaintingInfo& paintingInfo, const LayoutPoint& offsetFromRoot, IntRect& rootRelativeBounds, bool& rootRelativeBoundsComputed)
+bool RenderLayer::setupClipPath(GraphicsContext* context, const LayerPaintingInfo& paintingInfo, const LayoutPoint& offsetFromRoot, LayoutRect& rootRelativeBounds, bool& rootRelativeBoundsComputed)
 {
     if (!renderer()->hasClipPath() || context->paintingDisabled())
         return false;
@@ -3773,7 +3797,7 @@ bool RenderLayer::setupClipPath(GraphicsContext* context, const LayerPaintingInf
 }
 
 #if ENABLE(CSS_FILTERS)
-PassOwnPtr<FilterEffectRendererHelper> RenderLayer::setupFilters(GraphicsContext* context, LayerPaintingInfo& paintingInfo, PaintLayerFlags paintFlags, const LayoutPoint& offsetFromRoot, IntRect& rootRelativeBounds, bool& rootRelativeBoundsComputed)
+PassOwnPtr<FilterEffectRendererHelper> RenderLayer::setupFilters(GraphicsContext* context, LayerPaintingInfo& paintingInfo, PaintLayerFlags paintFlags, const LayoutPoint& offsetFromRoot, LayoutRect& rootRelativeBounds, bool& rootRelativeBoundsComputed)
 {
     if (context->paintingDisabled())
         return nullptr;
@@ -3864,7 +3888,7 @@ void RenderLayer::paintLayerContents(GraphicsContext* context, const LayerPainti
     LayoutPoint offsetFromRoot;
     convertToLayerCoords(paintingInfo.rootLayer, offsetFromRoot);
 
-    IntRect rootRelativeBounds;
+    LayoutRect rootRelativeBounds;
     bool rootRelativeBoundsComputed = false;
 
     // FIXME: We shouldn't have to disable subpixel quantization for overflow clips or subframes once we scroll those
@@ -5381,14 +5405,14 @@ IntRect RenderLayer::absoluteBoundingBox() const
     return pixelSnappedIntRect(boundingBox(root()));
 }
 
-IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, const LayoutPoint* offsetFromRoot, CalculateLayerBoundsFlags flags) const
+LayoutRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, const LayoutPoint* offsetFromRoot, CalculateLayerBoundsFlags flags) const
 {
     if (!isSelfPaintingLayer())
-        return IntRect();
+        return LayoutRect();
 
     // FIXME: This could be improved to do a check like hasVisibleNonCompositingDescendantLayers() (bug 92580).
     if ((flags & ExcludeHiddenDescendants) && this != ancestorLayer && !hasVisibleContent() && !hasVisibleDescendant())
-        return IntRect();
+        return LayoutRect();
 
     RenderLayerModelObject* renderer = this->renderer();
 
@@ -5428,7 +5452,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
             LayoutPoint ancestorRelOffset;
             convertToLayerCoords(ancestorLayer, ancestorRelOffset);
             localClipRect.moveBy(ancestorRelOffset);
-            return pixelSnappedIntRect(localClipRect);
+            return localClipRect;
         }
     }
 
@@ -5439,7 +5463,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
 
     if (RenderLayer* reflection = reflectionLayer()) {
         if (!reflection->isComposited()) {
-            IntRect childUnionBounds = reflection->calculateLayerBounds(this, 0, descendantFlags);
+            LayoutRect childUnionBounds = reflection->calculateLayerBounds(this, 0, descendantFlags);
             unionBounds.unite(childUnionBounds);
         }
     }
@@ -5455,7 +5479,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
         for (size_t i = 0; i < listSize; ++i) {
             RenderLayer* curLayer = negZOrderList->at(i);
             if (flags & IncludeCompositedDescendants || !curLayer->isComposited()) {
-                IntRect childUnionBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
+                LayoutRect childUnionBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
                 unionBounds.unite(childUnionBounds);
             }
         }
@@ -5466,7 +5490,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
         for (size_t i = 0; i < listSize; ++i) {
             RenderLayer* curLayer = posZOrderList->at(i);
             if (flags & IncludeCompositedDescendants || !curLayer->isComposited()) {
-                IntRect childUnionBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
+                LayoutRect childUnionBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
                 unionBounds.unite(childUnionBounds);
             }
         }
@@ -5480,7 +5504,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
             // so there's no way we could hit a RenderNamedFlowThread here.
             ASSERT(!curLayer->isOutOfFlowRenderFlowThread());
             if (flags & IncludeCompositedDescendants || !curLayer->isComposited()) {
-                IntRect curAbsBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
+                LayoutRect curAbsBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
                 unionBounds.unite(curAbsBounds);
             }
         }
@@ -5507,7 +5531,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
         convertToLayerCoords(ancestorLayer, ancestorRelOffset);
     unionBounds.moveBy(ancestorRelOffset);
     
-    return pixelSnappedIntRect(unionBounds);
+    return unionBounds;
 }
 
 void RenderLayer::clearClipRectsIncludingDescendants(ClipRectsType typeToClear)
@@ -5705,6 +5729,8 @@ void RenderLayer::dirtyZOrderLists()
 
 #if USE(ACCELERATED_COMPOSITING)
     if (!renderer()->documentBeingDestroyed()) {
+        if (renderer()->isOutOfFlowRenderFlowThread())
+            toRenderFlowThread(renderer())->setNeedsLayerToRegionMappingsUpdate();
         compositor()->setCompositingLayersNeedRebuild();
         if (acceleratedCompositingForOverflowScrollEnabled())
             compositor()->setShouldReevaluateCompositingAfterLayout();
@@ -5729,6 +5755,8 @@ void RenderLayer::dirtyNormalFlowList()
 
 #if USE(ACCELERATED_COMPOSITING)
     if (!renderer()->documentBeingDestroyed()) {
+        if (renderer()->isOutOfFlowRenderFlowThread())
+            toRenderFlowThread(renderer())->setNeedsLayerToRegionMappingsUpdate();
         compositor()->setCompositingLayersNeedRebuild();
         if (acceleratedCompositingForOverflowScrollEnabled())
             compositor()->setShouldReevaluateCompositingAfterLayout();
@@ -5927,6 +5955,7 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
                 || renderer()->isVideo()
                 || renderer()->isEmbeddedObject()
                 || renderer()->isRenderIFrame()
+                || renderer()->isRenderRegion()
                 || (renderer()->style()->specifiesColumns() && !isRootLayer()))
             && !renderer()->isPositioned()
             && !renderer()->hasTransform()
@@ -5953,7 +5982,8 @@ bool RenderLayer::shouldBeSelfPaintingLayer() const
         || renderer()->isCanvas()
         || renderer()->isVideo()
         || renderer()->isEmbeddedObject()
-        || renderer()->isRenderIFrame();
+        || renderer()->isRenderIFrame()
+        || renderer()->isRenderRegion();
 }
 
 void RenderLayer::updateSelfPaintingLayer()
@@ -6446,7 +6476,7 @@ void RenderLayer::updateOrRemoveFilterEffectRenderer()
     RenderLayerFilterInfo* filterInfo = ensureFilterInfo();
     if (!filterInfo->renderer()) {
         RefPtr<FilterEffectRenderer> filterRenderer = FilterEffectRenderer::create();
-        RenderingMode renderingMode = renderer()->frame()->page()->settings()->acceleratedFiltersEnabled() ? Accelerated : Unaccelerated;
+        RenderingMode renderingMode = renderer()->frame()->page()->settings().acceleratedFiltersEnabled() ? Accelerated : Unaccelerated;
         filterRenderer->setRenderingMode(renderingMode);
         filterInfo->setRenderer(filterRenderer.release());
         

@@ -156,6 +156,8 @@ public:
 
     bool generatesLineBoxesForInlineChild(RenderObject*);
 
+    void updateFloatingObjectsPaintingContainer(RenderBox* floatToUpdate);
+
     void markAllDescendantsWithFloatsForLayout(RenderBox* floatToRemove = 0, bool inLayout = true);
     void markSiblingsWithFloatsForLayout(RenderBox* floatToRemove = 0);
     void markPositionedObjectsForLayout();
@@ -326,8 +328,8 @@ public:
 
     bool shouldBreakAtLineToAvoidWidow() const { return m_rareData && m_rareData->m_shouldBreakAtLineToAvoidWidow; }
     void clearShouldBreakAtLineToAvoidWidow() const;
-    RootInlineBox* lineBreakToAvoidWidow() const { return m_rareData ? m_rareData->m_lineBreakToAvoidWidow : 0; }
-    void setBreakAtLineToAvoidWidow(RootInlineBox*);
+    int lineBreakToAvoidWidow() const { return m_rareData ? m_rareData->m_lineBreakToAvoidWidow : -1; }
+    void setBreakAtLineToAvoidWidow(int);
 
     // The page logical offset is the object's offset from the top of the page in the page progression
     // direction (so an x-offset in vertical text and a y-offset for horizontal text).
@@ -347,9 +349,9 @@ public:
 
     // Accessors for logical width/height and margins in the containing block's block-flow direction.
     enum ApplyLayoutDeltaMode { ApplyLayoutDelta, DoNotApplyLayoutDelta };
-    LayoutUnit logicalWidthForChild(const RenderBox* child) { return isHorizontalWritingMode() ? child->width() : child->height(); }
-    LayoutUnit logicalHeightForChild(const RenderBox* child) { return isHorizontalWritingMode() ? child->height() : child->width(); }
-    LayoutUnit logicalTopForChild(const RenderBox* child) { return isHorizontalWritingMode() ? child->y() : child->x(); }
+    LayoutUnit logicalWidthForChild(const RenderBox* child) const { return isHorizontalWritingMode() ? child->width() : child->height(); }
+    LayoutUnit logicalHeightForChild(const RenderBox* child) const { return isHorizontalWritingMode() ? child->height() : child->width(); }
+    LayoutUnit logicalTopForChild(const RenderBox* child) const { return isHorizontalWritingMode() ? child->y() : child->x(); }
     void setLogicalLeftForChild(RenderBox* child, LayoutUnit logicalLeft, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
     void setLogicalTopForChild(RenderBox* child, LayoutUnit logicalTop, ApplyLayoutDeltaMode = DoNotApplyLayoutDelta);
     LayoutUnit marginBeforeForChild(const RenderBoxModelObject* child) const { return child->marginBefore(style()); }
@@ -470,6 +472,7 @@ public:
     void markShapeInsideDescendantsForLayout();
     ShapeInsideInfo* layoutShapeInsideInfo() const;
     bool allowsShapeInsideInfoSharing() const { return !isInline() && !isFloating(); }
+    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0) OVERRIDE;
 #endif
 
 protected:
@@ -592,9 +595,12 @@ protected:
     }
 #endif
 
-    bool updateRegionsAndShapesBeforeChildLayout(RenderFlowThread*);
-    void updateRegionsAndShapesAfterChildLayout(RenderFlowThread*, bool heightChanged = false);
-    void computeRegionRangeForBlock(RenderFlowThread*);
+    bool updateShapesBeforeBlockLayout();
+    void updateShapesAfterBlockLayout(bool heightChanged = false);
+    void computeRegionRangeForBoxChild(const RenderBox*) const;
+
+    void estimateRegionRangeForBoxChild(const RenderBox*) const;
+    bool updateRegionRangeForBoxChild(const RenderBox*) const;
 
     void updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, RenderBox*);
 
@@ -653,6 +659,8 @@ private:
     // Called to lay out the legend for a fieldset or the ruby text of a ruby run.
     virtual RenderObject* layoutSpecialExcludedChild(bool /*relayoutChildren*/) { return 0; }
 
+    bool relayoutToAvoidWidows(LayoutStateMaintainer&);
+
     void createFirstLetterRenderer(RenderObject* firstLetterBlock, RenderObject* currentChild);
     void updateFirstLetterStyle(RenderObject* firstLetterBlock, RenderObject* firstLetterContainer);
 
@@ -671,7 +679,7 @@ private:
         bool everHadLayout;
     };
 
-    struct FloatingObject {
+    class FloatingObject {
         WTF_MAKE_NONCOPYABLE(FloatingObject); WTF_MAKE_FAST_ALLOCATED;
     public:
         // Note that Type uses bits so you can use FloatLeftRight as a mask to query for both left and right.
@@ -743,6 +751,9 @@ private:
         const LayoutRect& frameRect() const { ASSERT(isPlaced()); return m_frameRect; }
         void setFrameRect(const LayoutRect& frameRect) { ASSERT(!isInPlacedTree()); m_frameRect = frameRect; }
 
+        int paginationStrut() const { return m_paginationStrut; }
+        void setPaginationStrut(int strut) { m_paginationStrut = strut; }
+
 #ifndef NDEBUG
         bool isInPlacedTree() const { return m_isInPlacedTree; }
         void setIsInPlacedTree(bool value) { m_isInPlacedTree = value; }
@@ -753,12 +764,17 @@ private:
         bool isDescendant() const { return m_isDescendant; }
         void setIsDescendant(bool isDescendant) { m_isDescendant = isDescendant; }
 
+        // FIXME: Callers of these methods are dangerous and should be whitelisted explicitly or removed.
+        void setRenderer(RenderBox* renderer) { m_renderer = renderer; }
+        RootInlineBox* originatingLine() const { return m_originatingLine; }
+        void setOriginatingLine(RootInlineBox* line) { m_originatingLine = line; }
+
+    private:
         RenderBox* m_renderer;
         RootInlineBox* m_originatingLine;
         LayoutRect m_frameRect;
-        int m_paginationStrut;
+        int m_paginationStrut; // FIXME: This should be a LayoutUnit, since it's a vertical offset.
 
-    private:
         unsigned m_type : 2; // Type (left or right aligned)
         unsigned m_shouldPaint : 1;
         unsigned m_isDescendant : 1;
@@ -919,6 +935,11 @@ private:
 
     LayoutUnit lowestFloatLogicalBottom(FloatingObject::Type = FloatingObject::FloatLeftRight) const; 
     LayoutUnit nextFloatLogicalBottomBelow(LayoutUnit) const;
+
+    void updateLocalFloatingObjectsForPaintingContainer(RenderBox* floatToUpdate, bool& didFindPaintContainer);
+    void updateFloatingObjectsPaintingContainer(RenderBox* floatToUpdate, bool& didFindPaintContainer);
+    void updateAllDescendantsFloatingObjectsPaintingContainer(RenderBox* floatToUpdate, bool& didFindPaintContainer);
+
     
     bool hitTestColumns(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
     virtual bool hitTestContents(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction);
@@ -1165,17 +1186,16 @@ protected:
 public:
     virtual LayoutUnit offsetFromLogicalTopOfFirstPage() const;
     RenderRegion* regionAtBlockOffset(LayoutUnit) const;
-    RenderRegion* clampToStartAndEndRegions(RenderRegion*) const;
 
 protected:
     struct FloatingObjectHashFunctions {
-        static unsigned hash(FloatingObject* key) { return DefaultHash<RenderBox*>::Hash::hash(key->m_renderer); }
-        static bool equal(FloatingObject* a, FloatingObject* b) { return a->m_renderer == b->m_renderer; }
+        static unsigned hash(FloatingObject* key) { return DefaultHash<RenderBox*>::Hash::hash(key->renderer()); }
+        static bool equal(FloatingObject* a, FloatingObject* b) { return a->renderer() == b->renderer(); }
         static const bool safeToCompareToEmptyOrDeleted = true;
     };
     struct FloatingObjectHashTranslator {
         static unsigned hash(RenderBox* key) { return DefaultHash<RenderBox*>::Hash::hash(key); }
-        static bool equal(FloatingObject* a, RenderBox* b) { return a->m_renderer == b; }
+        static bool equal(FloatingObject* a, RenderBox* b) { return a->renderer() == b; }
     };
     typedef ListHashSet<FloatingObject*, 4, FloatingObjectHashFunctions> FloatingObjectSet;
     typedef FloatingObjectSet::const_iterator FloatingObjectSetIterator;
@@ -1283,7 +1303,7 @@ public:
             , m_paginationStrut(0)
             , m_pageLogicalOffset(0)
             , m_lineGridBox(0)
-            , m_lineBreakToAvoidWidow(0)
+            , m_lineBreakToAvoidWidow(-1)
             , m_shouldBreakAtLineToAvoidWidow(false)
             , m_discardMarginBefore(false)
             , m_discardMarginAfter(false)
@@ -1313,7 +1333,7 @@ public:
         
         RootInlineBox* m_lineGridBox;
 
-        RootInlineBox* m_lineBreakToAvoidWidow;
+        int m_lineBreakToAvoidWidow;
 #if ENABLE(CSS_SHAPES)
         OwnPtr<ShapeInsideInfo> m_shapeInsideInfo;
 #endif

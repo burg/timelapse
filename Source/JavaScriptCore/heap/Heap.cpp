@@ -28,6 +28,7 @@
 #include "CopyVisitorInlines.h"
 #include "DFGWorklist.h"
 #include "GCActivityCallback.h"
+#include "GCIncomingRefCountedSetInlines.h"
 #include "HeapRootVisitor.h"
 #include "HeapStatistics.h"
 #include "IncrementalSweeper.h"
@@ -90,12 +91,12 @@ struct GCTimer {
 struct GCTimerScope {
     GCTimerScope(GCTimer* timer)
         : m_timer(timer)
-        , m_start(WTF::currentTime())
+        , m_start(WTF::monotonicallyIncreasingTime())
     {
     }
     ~GCTimerScope()
     {
-        double delta = WTF::currentTime() - m_start;
+        double delta = WTF::monotonicallyIncreasingTime() - m_start;
         if (delta < m_timer->m_min)
             m_timer->m_min = delta;
         if (delta > m_timer->m_max)
@@ -263,7 +264,7 @@ Heap::Heap(VM* vm, HeapType heapType)
     , m_isSafeToCollect(false)
     , m_vm(vm)
     , m_lastGCLength(0)
-    , m_lastCodeDiscardTime(WTF::currentTime())
+    , m_lastCodeDiscardTime(WTF::monotonicallyIncreasingTime())
     , m_activityCallback(DefaultGCActivityCallback::create(this))
     , m_sweeper(IncrementalSweeper::create(this))
     , m_deferralDepth(0)
@@ -358,6 +359,14 @@ void Heap::jettisonDFGCodeBlock(PassRefPtr<CodeBlock> codeBlock)
     m_dfgCodeBlocks.jettison(codeBlock);
 }
 
+void Heap::addReference(JSCell* cell, ArrayBuffer* buffer)
+{
+    if (m_arrayBuffers.addReference(cell, buffer)) {
+        collectIfNecessaryOrDefer();
+        didAllocate(buffer->gcSizeEstimateInBytes());
+    }
+}
+
 void Heap::markProtectedObjects(HeapRootVisitor& heapRootVisitor)
 {
     ProtectCountSet::iterator end = m_protectedValues.end();
@@ -433,7 +442,7 @@ void Heap::markRoots()
     ASSERT(isValidThreadState(m_vm));
 
 #if ENABLE(OBJECT_MARK_LOGGING)
-    double gcStartTime = WTF::currentTime();
+    double gcStartTime = WTF::monotonicallyIncreasingTime();
 #endif
 
     void* dummy;
@@ -590,7 +599,7 @@ void Heap::markRoots()
 #if ENABLE(PARALLEL_GC)
     visitCount += m_sharedData.childVisitCount();
 #endif
-    MARK_LOG_MESSAGE2("\nNumber of live Objects after full GC %lu, took %.6f secs\n", visitCount, WTF::currentTime() - gcStartTime);
+    MARK_LOG_MESSAGE2("\nNumber of live Objects after full GC %lu, took %.6f secs\n", visitCount, WTF::monotonicallyIncreasingTime() - gcStartTime);
 #endif
 
     visitor.reset();
@@ -621,14 +630,19 @@ size_t Heap::objectCount()
     return m_objectSpace.objectCount();
 }
 
+size_t Heap::extraSize()
+{
+    return m_extraMemoryUsage + m_arrayBuffers.size();
+}
+
 size_t Heap::size()
 {
-    return m_objectSpace.size() + m_storageSpace.size() + m_extraMemoryUsage;
+    return m_objectSpace.size() + m_storageSpace.size() + extraSize();
 }
 
 size_t Heap::capacity()
 {
-    return m_objectSpace.capacity() + m_storageSpace.capacity();
+    return m_objectSpace.capacity() + m_storageSpace.capacity() + extraSize();
 }
 
 size_t Heap::protectedGlobalObjectCount()
@@ -707,6 +721,12 @@ void Heap::collect(SweepToggle sweepToggle)
     dataLogF("JSC GC starting collection.\n");
 #endif
     
+    double before = 0;
+    if (Options::logGC()) {
+        dataLog("[GC", sweepToggle == DoSweep ? " (eager sweep)" : "", ": ");
+        before = currentTimeMS();
+    }
+    
     SamplingRegion samplingRegion("Garbage Collection");
     
     RELEASE_ASSERT(!m_deferralDepth);
@@ -726,10 +746,10 @@ void Heap::collect(SweepToggle sweepToggle)
 
     m_activityCallback->willCollect();
 
-    double lastGCStartTime = WTF::currentTime();
+    double lastGCStartTime = WTF::monotonicallyIncreasingTime();
     if (lastGCStartTime - m_lastCodeDiscardTime > minute) {
         deleteAllCompiledCode();
-        m_lastCodeDiscardTime = WTF::currentTime();
+        m_lastCodeDiscardTime = WTF::monotonicallyIncreasingTime();
     }
 
     {
@@ -745,6 +765,11 @@ void Heap::collect(SweepToggle sweepToggle)
     }
 
     JAVASCRIPTCORE_GC_MARKED();
+    
+    {
+        GCPHASE(SweepingArrayBuffers);
+        m_arrayBuffers.sweep();
+    }
 
     {
         m_blockSnapshot.resize(m_objectSpace.blocks().set().size());
@@ -797,7 +822,7 @@ void Heap::collect(SweepToggle sweepToggle)
     m_bytesAllocatedLimit = maxHeapSize - currentHeapSize;
 
     m_bytesAllocated = 0;
-    double lastGCEndTime = WTF::currentTime();
+    double lastGCEndTime = WTF::monotonicallyIncreasingTime();
     m_lastGCLength = lastGCEndTime - lastGCStartTime;
 
     if (Options::recordGCPauseTimes())
@@ -815,6 +840,11 @@ void Heap::collect(SweepToggle sweepToggle)
 
     if (Options::showObjectStatistics())
         HeapStatistics::showObjectStatistics(this);
+    
+    if (Options::logGC()) {
+        double after = currentTimeMS();
+        dataLog(after - before, " ms, ", currentHeapSize / 1024, " kb]\n");
+    }
 
 #if ENABLE(ALLOCATION_LOGGING)
     dataLogF("JSC GC finishing collection.\n");
@@ -924,12 +954,16 @@ void Heap::incrementDeferralDepth()
     m_deferralDepth++;
 }
 
-void Heap::decrementDeferralDepthAndGCIfNeeded()
+void Heap::decrementDeferralDepth()
 {
     RELEASE_ASSERT(m_deferralDepth >= 1);
     
     m_deferralDepth--;
-    
+}
+
+void Heap::decrementDeferralDepthAndGCIfNeeded()
+{
+    decrementDeferralDepth();
     collectIfNecessaryOrDefer();
 }
 

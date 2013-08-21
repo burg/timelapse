@@ -291,12 +291,12 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitGridAutoColumns,
     CSSPropertyWebkitGridAutoFlow,
     CSSPropertyWebkitGridAutoRows,
+    CSSPropertyWebkitGridColumnEnd,
+    CSSPropertyWebkitGridColumnStart,
     CSSPropertyWebkitGridDefinitionColumns,
     CSSPropertyWebkitGridDefinitionRows,
-    CSSPropertyWebkitGridStart,
-    CSSPropertyWebkitGridEnd,
-    CSSPropertyWebkitGridBefore,
-    CSSPropertyWebkitGridAfter,
+    CSSPropertyWebkitGridRowEnd,
+    CSSPropertyWebkitGridRowStart,
     CSSPropertyWebkitHighlight,
     CSSPropertyWebkitHyphenateCharacter,
     CSSPropertyWebkitHyphenateLimitAfter,
@@ -329,6 +329,7 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitMaskPosition,
     CSSPropertyWebkitMaskRepeat,
     CSSPropertyWebkitMaskSize,
+    CSSPropertyWebkitMaskSourceType,
     CSSPropertyWebkitNbspMode,
     CSSPropertyWebkitOrder,
 #if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
@@ -1083,15 +1084,39 @@ static PassRefPtr<CSSValue> valueForGridTrackSize(const GridTrackSize& trackSize
     return 0;
 }
 
-static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<GridTrackSize>& trackSizes, const RenderStyle* style, RenderView *renderView)
+static void addValuesForNamedGridLinesAtIndex(const NamedGridLinesMap& namedGridLines, size_t i, CSSValueList& list)
+{
+    // Note that this won't return the results in the order specified in the style sheet,
+    // which is probably fine as we still *do* return all the expected values.
+    NamedGridLinesMap::const_iterator it = namedGridLines.begin();
+    NamedGridLinesMap::const_iterator end = namedGridLines.end();
+    for (; it != end; ++it) {
+        const Vector<size_t>& linesIndexes = it->value;
+        for (size_t j = 0; j < linesIndexes.size(); ++j) {
+            if (linesIndexes[j] != i)
+                continue;
+
+            list.append(cssValuePool().createValue(it->key, CSSPrimitiveValue::CSS_STRING));
+            break;
+        }
+    }
+}
+
+static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<GridTrackSize>& trackSizes, const NamedGridLinesMap& namedGridLines, const RenderStyle* style, RenderView* renderView)
 {
     // Handle the 'none' case here.
-    if (!trackSizes.size())
+    if (!trackSizes.size()) {
+        ASSERT(namedGridLines.isEmpty());
         return cssValuePool().createIdentifierValue(CSSValueNone);
+    }
 
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    for (size_t i = 0; i < trackSizes.size(); ++i)
+    for (size_t i = 0; i < trackSizes.size(); ++i) {
+        addValuesForNamedGridLinesAtIndex(namedGridLines, i, *list);
         list->append(valueForGridTrackSize(trackSizes[i], style, renderView));
+    }
+    // Those are the trailing <string>* allowed in the syntax.
+    addValuesForNamedGridLinesAtIndex(namedGridLines, trackSizes.size(), *list);
     return list.release();
 }
 
@@ -1100,8 +1125,15 @@ static PassRefPtr<CSSValue> valueForGridPosition(const GridPosition& position)
     if (position.isAuto())
         return cssValuePool().createIdentifierValue(CSSValueAuto);
 
-    return cssValuePool().createValue(position.integerPosition(), CSSPrimitiveValue::CSS_NUMBER);
+    if (position.isInteger())
+        return cssValuePool().createValue(position.integerPosition(), CSSPrimitiveValue::CSS_NUMBER);
+
+    RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+    list->append(cssValuePool().createIdentifierValue(CSSValueSpan));
+    list->append(cssValuePool().createValue(position.spanPosition(), CSSPrimitiveValue::CSS_NUMBER));
+    return list.release();
 }
+
 static PassRefPtr<CSSValue> createTransitionPropertyValue(const Animation* animation)
 {
     RefPtr<CSSValue> propertyValue;
@@ -1392,6 +1424,19 @@ static PassRefPtr<CSSValue> fillRepeatToCSSValue(EFillRepeat xRepeat, EFillRepea
     return list.release();
 }
 
+static PassRefPtr<CSSValue> fillSourceTypeToCSSValue(EMaskSourceType type)
+{
+    switch (type) {
+    case MaskAlpha:
+        return cssValuePool().createValue(CSSValueAlpha);
+    case MaskLuminance:
+        return cssValuePool().createValue(CSSValueLuminance);
+    }
+
+    ASSERT_NOT_REACHED();
+
+    return 0;
+}
 static PassRefPtr<CSSValue> fillSizeToCSSValue(const FillSize& fillSize, const RenderStyle* style)
 {
     if (fillSize.type == Contain)
@@ -1734,6 +1779,21 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propert
 
             return list.release();
         }
+        case CSSPropertyWebkitMaskSourceType: {
+            const FillLayer* layers = style->maskLayers();
+
+            if (!layers)
+                return cssValuePool().createIdentifierValue(CSSValueNone);
+
+            if (!layers->next())
+                return fillSourceTypeToCSSValue(layers->maskSourceType());
+
+            RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
+            for (const FillLayer* currLayer = layers; currLayer; currLayer = currLayer->next())
+                list->append(fillSourceTypeToCSSValue(currLayer->maskSourceType()));
+
+            return list.release();
+        }
         case CSSPropertyWebkitBackgroundComposite:
         case CSSPropertyWebkitMaskComposite: {
             const FillLayer* layers = propertyID == CSSPropertyWebkitMaskComposite ? style->maskLayers() : style->backgroundLayers();
@@ -2037,18 +2097,18 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propert
         case CSSPropertyWebkitGridAutoRows:
             return valueForGridTrackSize(style->gridAutoRows(), style.get(), m_node->document()->renderView());
         case CSSPropertyWebkitGridDefinitionColumns:
-            return valueForGridTrackList(style->gridColumns(), style.get(), m_node->document()->renderView());
+            return valueForGridTrackList(style->gridColumns(), style->namedGridColumnLines(), style.get(), m_node->document()->renderView());
         case CSSPropertyWebkitGridDefinitionRows:
-            return valueForGridTrackList(style->gridRows(), style.get(), m_node->document()->renderView());
+            return valueForGridTrackList(style->gridRows(), style->namedGridRowLines(), style.get(), m_node->document()->renderView());
 
-        case CSSPropertyWebkitGridStart:
-            return valueForGridPosition(style->gridItemStart());
-        case CSSPropertyWebkitGridEnd:
-            return valueForGridPosition(style->gridItemEnd());
-        case CSSPropertyWebkitGridBefore:
-            return valueForGridPosition(style->gridItemBefore());
-        case CSSPropertyWebkitGridAfter:
-            return valueForGridPosition(style->gridItemAfter());
+        case CSSPropertyWebkitGridColumnStart:
+            return valueForGridPosition(style->gridItemColumnStart());
+        case CSSPropertyWebkitGridColumnEnd:
+            return valueForGridPosition(style->gridItemColumnEnd());
+        case CSSPropertyWebkitGridRowStart:
+            return valueForGridPosition(style->gridItemRowStart());
+        case CSSPropertyWebkitGridRowEnd:
+            return valueForGridPosition(style->gridItemRowEnd());
         case CSSPropertyWebkitGridColumn:
             return getCSSPropertyValuesForGridShorthand(webkitGridColumnShorthand());
         case CSSPropertyWebkitGridRow:
@@ -2233,6 +2293,8 @@ PassRefPtr<CSSValue> ComputedStyleExtractor::propertyValue(CSSPropertyID propert
         case CSSPropertyTextDecoration:
             return renderTextDecorationFlagsToCSSValue(style->textDecoration());
 #if ENABLE(CSS3_TEXT)
+        case CSSPropertyWebkitTextDecoration:
+            return getCSSPropertyValuesForShorthandProperties(webkitTextDecorationShorthand());
         case CSSPropertyWebkitTextDecorationLine:
             return renderTextDecorationFlagsToCSSValue(style->textDecoration());
         case CSSPropertyWebkitTextDecorationStyle:
@@ -3159,8 +3221,8 @@ PassRefPtr<CSSValueList> ComputedStyleExtractor::getBackgroundShorthandValue() c
                                                                     CSSPropertyBackgroundClip };
 
     RefPtr<CSSValueList> list = CSSValueList::createSlashSeparated();
-    list->append(getCSSPropertyValuesForShorthandProperties(StylePropertyShorthand(propertiesBeforeSlashSeperator, WTF_ARRAY_LENGTH(propertiesBeforeSlashSeperator))));
-    list->append(getCSSPropertyValuesForShorthandProperties(StylePropertyShorthand(propertiesAfterSlashSeperator, WTF_ARRAY_LENGTH(propertiesAfterSlashSeperator))));
+    list->append(getCSSPropertyValuesForShorthandProperties(StylePropertyShorthand(CSSPropertyBackground, propertiesBeforeSlashSeperator, WTF_ARRAY_LENGTH(propertiesBeforeSlashSeperator))));
+    list->append(getCSSPropertyValuesForShorthandProperties(StylePropertyShorthand(CSSPropertyBackground, propertiesAfterSlashSeperator, WTF_ARRAY_LENGTH(propertiesAfterSlashSeperator))));
     return list.release();
 }
 

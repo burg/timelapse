@@ -55,7 +55,7 @@ inline bool shouldExpandFrame(LayoutUnit width, LayoutUnit height, bool hasFixed
 void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeight)
 {
     FrameView* childFrameView = toFrameView(widget());
-    RenderView* childRoot = childFrameView ? childFrameView->frame()->contentRenderer() : 0;
+    RenderView* childRoot = childFrameView ? childFrameView->frame().contentRenderer() : 0;
 
     if (!childRoot || !shouldExpandFrame(width(), height(), hasFixedWidth, hasFixedHeight)) {
         updateWidgetPosition();
@@ -64,8 +64,6 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
         setNeedsLayout(false);
         return;
     }
-
-    childFrameView->setResizeEventAllowed(false);
 
     // need to update to calculate min/max correctly
     updateWidgetPosition();
@@ -95,7 +93,6 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
         setWidth(max<LayoutUnit>(width(), childFrameView->contentsWidth() + hBorder));
 
     updateWidgetPosition();
-    childFrameView->setResizeEventAllowed(true);
 
     ASSERT(!childFrameView->layoutPending());
     ASSERT(!childRoot->needsLayout());

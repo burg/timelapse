@@ -88,7 +88,7 @@ void* allocateCell(Heap& heap, size_t size)
     ASSERT(size >= sizeof(T));
 #if ENABLE(GC_VALIDATION)
     ASSERT(!heap.vm()->isInitializingObject());
-    heap.vm()->setInitializingObjectClass(&T::s_info);
+    heap.vm()->setInitializingObjectClass(T::info());
 #endif
     JSCell* result = 0;
     if (T::needsDestruction && T::hasImmortalStructure)
@@ -163,13 +163,6 @@ inline const MethodTable* JSCell::methodTable() const
 inline bool JSCell::inherits(const ClassInfo* info) const
 {
     return classInfo()->isSubClassOf(info);
-}
-
-ALWAYS_INLINE bool JSCell::fastGetOwnPropertySlot(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    if (!structure()->typeInfo().overridesGetOwnPropertySlot())
-        return asObject(this)->inlineGetOwnPropertySlot(exec, propertyName, slot);
-    return methodTable()->getOwnPropertySlot(this, exec, propertyName, slot);
 }
 
 // Fast call to get a property where we may not yet have converted the string to an

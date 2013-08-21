@@ -106,8 +106,6 @@ public:
 
     void cloneChildNodes(ContainerNode* clone);
 
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
-    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
     virtual LayoutRect boundingBox() const OVERRIDE;
     virtual void scheduleSetNeedsStyleRecalc(StyleChangeType = FullStyleChange) OVERRIDE FINAL;
 
@@ -120,7 +118,7 @@ public:
 
     void disconnectDescendantFrames();
 
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const { return true; }
+    virtual bool childShouldCreateRenderer(const Node*) const { return true; }
 
 protected:
     ContainerNode(Document*, ConstructionType = CreateContainer);
@@ -142,9 +140,6 @@ private:
     void removeBetween(Node* previousChild, Node* nextChild, Node* oldChild);
     void insertBeforeCommon(Node* nextChild, Node* oldChild);
 
-    void attachChildren(const AttachContext& = AttachContext());
-    void detachChildren(const AttachContext& = AttachContext());
-
     static void dispatchPostAttachCallbacks();
     void suspendPostAttachCallbacks();
     void resumePostAttachCallbacks();
@@ -155,10 +150,6 @@ private:
     Node* m_firstChild;
     Node* m_lastChild;
 };
-
-#ifndef NDEBUG
-bool childAttachedAllowedWhenAttachingChildren(ContainerNode*);
-#endif
 
 inline ContainerNode* toContainerNode(Node* node)
 {
@@ -180,27 +171,6 @@ inline ContainerNode::ContainerNode(Document* document, ConstructionType type)
     , m_firstChild(0)
     , m_lastChild(0)
 {
-}
-
-inline void ContainerNode::attachChildren(const AttachContext& context)
-{
-    AttachContext childrenContext(context);
-    childrenContext.resolvedStyle = 0;
-
-    for (Node* child = firstChild(); child; child = child->nextSibling()) {
-        ASSERT(!child->attached() || childAttachedAllowedWhenAttachingChildren(this));
-        if (!child->attached())
-            child->attach(childrenContext);
-    }
-}
-
-inline void ContainerNode::detachChildren(const AttachContext& context)
-{
-    AttachContext childrenContext(context);
-    childrenContext.resolvedStyle = 0;
-
-    for (Node* child = firstChild(); child; child = child->nextSibling())
-        child->detach(childrenContext);
 }
 
 inline unsigned Node::childNodeCount() const

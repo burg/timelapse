@@ -108,11 +108,54 @@ RenderBox::~RenderBox()
 {
 }
 
+RenderRegion* RenderBox::clampToStartAndEndRegions(RenderRegion* region) const
+{
+    RenderFlowThread* flowThread = flowThreadContainingBlock();
+
+    ASSERT(isRenderView() || (region && flowThread));
+    if (isRenderView())
+        return region;
+
+    // We need to clamp to the block, since we want any lines or blocks that overflow out of the
+    // logical top or logical bottom of the block to size as though the border box in the first and
+    // last regions extended infinitely. Otherwise the lines are going to size according to the regions
+    // they overflow into, which makes no sense when this block doesn't exist in |region| at all.
+    RenderRegion* startRegion = 0;
+    RenderRegion* endRegion = 0;
+    flowThread->getRegionRangeForBox(this, startRegion, endRegion);
+
+    if (startRegion && region->logicalTopForFlowThreadContent() < startRegion->logicalTopForFlowThreadContent())
+        return startRegion;
+    if (endRegion && region->logicalTopForFlowThreadContent() > endRegion->logicalTopForFlowThreadContent())
+        return endRegion;
+
+    return region;
+}
+
 LayoutRect RenderBox::borderBoxRectInRegion(RenderRegion* region, RenderBoxRegionInfoFlags cacheFlag) const
 {
     if (!region)
         return borderBoxRect();
-    
+
+    RenderFlowThread* flowThread = flowThreadContainingBlock();
+    if (!flowThread)
+        return borderBoxRect();
+
+    RenderRegion* startRegion = 0;
+    RenderRegion* endRegion = 0;
+    flowThread->getRegionRangeForBox(this, startRegion, endRegion);
+
+    // FIXME: In a perfect world this condition should never happen.
+    if (!startRegion || !endRegion)
+        return borderBoxRect();
+
+    // FIXME: Once overflow is implemented this assertion needs to be enabled. Right now the overflow content is painted
+    // in regions outside the box range so the assert is disabled.
+    // ASSERT(clampToStartAndEndRegions(region) == region);
+
+    // FIXME: Remove once boxes are painted inside their region range.
+    region = clampToStartAndEndRegions(region);
+
     // Compute the logical width and placement in this region.
     RenderBoxRegionInfo* boxInfo = renderBoxRegionInfo(region, cacheFlag);
     if (!boxInfo)
@@ -168,6 +211,25 @@ void RenderBox::willBeDestroyed()
     RenderBoxModelObject::willBeDestroyed();
 }
 
+RenderBlock* RenderBox::outermostBlockContainingFloatingObject()
+{
+    ASSERT(isFloating());
+    RenderBlock* parentBlock = 0;
+    for (RenderObject* curr = parent(); curr && !curr->isRenderView(); curr = curr->parent()) {
+        if (curr->isRenderBlock()) {
+            RenderBlock* currBlock = toRenderBlock(curr);
+            if (!parentBlock || currBlock->containsFloat(this))
+                parentBlock = currBlock;
+        }
+    }
+    if (parentBlock) {
+        RenderObject* parent = parentBlock->parent();
+        if (parent && parent->isFlexibleBoxIncludingDeprecated())
+            parentBlock = toRenderBlock(parent);
+    }
+    return parentBlock;
+}
+
 void RenderBox::removeFloatingOrPositionedChildFromBlockLists()
 {
     ASSERT(isFloatingOrOutOfFlowPositioned());
@@ -176,20 +238,7 @@ void RenderBox::removeFloatingOrPositionedChildFromBlockLists()
         return;
 
     if (isFloating()) {
-        RenderBlock* parentBlock = 0;
-        for (RenderObject* curr = parent(); curr && !curr->isRenderView(); curr = curr->parent()) {
-            if (curr->isRenderBlock()) {
-                RenderBlock* currBlock = toRenderBlock(curr);
-                if (!parentBlock || currBlock->containsFloat(this))
-                    parentBlock = currBlock;
-            }
-        }
-
-        if (parentBlock) {
-            RenderObject* parent = parentBlock->parent();
-            if (parent && parent->isFlexibleBoxIncludingDeprecated())
-                parentBlock = toRenderBlock(parent);
-
+        if (RenderBlock* parentBlock = outermostBlockContainingFloatingObject()) {
             parentBlock->markSiblingsWithFloatsForLayout(this);
             parentBlock->markAllDescendantsWithFloatsForLayout(this, false);
         }
@@ -199,6 +248,21 @@ void RenderBox::removeFloatingOrPositionedChildFromBlockLists()
         RenderBlock::removePositionedObject(this);
 }
 
+void RenderBox::updatePaintingContainerForFloatingObject()
+{
+    ASSERT(isFloating());
+    if (RenderBlock* parentBlock = outermostBlockContainingFloatingObject())
+        parentBlock->updateFloatingObjectsPaintingContainer(this);
+}
+
+bool RenderBox::updateLayerIfNeeded()
+{
+    bool didUpdateLayer = RenderBoxModelObject::updateLayerIfNeeded();
+    if (didUpdateLayer && isFloating())
+        updatePaintingContainerForFloatingObject();
+    return didUpdateLayer;
+}
+
 void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
 {
     s_hadOverflowClip = hasOverflowClip();
@@ -206,11 +270,9 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle* newStyl
     RenderStyle* oldStyle = style();
     if (oldStyle) {
         // The background of the root element or the body element could propagate up to
-        // the canvas.  Just dirty the entire canvas when our style changes substantially.
-        if (diff >= StyleDifferenceRepaint && node() &&
-            (node()->hasTagName(htmlTag) || node()->hasTagName(bodyTag))) {
-            view()->repaint();
-            
+        // the canvas. Issue full repaint, when our style changes substantially.
+        if (diff >= StyleDifferenceRepaint && (isRoot() || isBody())) {
+            view()->repaintRootContents();
 #if USE(ACCELERATED_COMPOSITING)
             if (oldStyle->hasEntirelyFixedBackground() != newStyle->hasEntirelyFixedBackground())
                 view()->compositor()->rootFixedBackgroundsChanged();
@@ -229,7 +291,7 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle* newStyl
                 removeFloatingOrPositionedChildFromBlockLists();
         }
     } else if (newStyle && isBody())
-        view()->repaint();
+        view()->repaintRootContents();
 
     RenderBoxModelObject::styleWillChange(diff, newStyle);
 }
@@ -728,7 +790,18 @@ bool RenderBox::canBeScrolledAndHasScrollableArea() const
     
 bool RenderBox::canBeProgramaticallyScrolled() const
 {
-    return (hasOverflowClip() && (scrollsOverflow() || (node() && node()->rendererIsEditable()))) || (node() && node()->isDocumentNode());
+    Node* node = this->node();
+    if (node && node->isDocumentNode())
+        return true;
+
+    if (!hasOverflowClip())
+        return false;
+
+    bool hasScrollableOverflow = hasScrollableOverflowX() || hasScrollableOverflowY();
+    if (scrollsOverflow() && hasScrollableOverflow)
+        return true;
+
+    return node && node->rendererIsEditable();
 }
 
 bool RenderBox::usesCompositedScrolling() const
@@ -1535,10 +1608,10 @@ void RenderBox::paintCustomHighlight(const LayoutPoint& paintOffset, const Atomi
     if (r) {
         FloatRect rootRect(paintOffset.x() + r->x(), paintOffset.y() + r->selectionTop(), r->logicalWidth(), r->selectionHeight());
         FloatRect imageRect(paintOffset.x() + x(), rootRect.y(), width(), rootRect.height());
-        page->chrome().client()->paintCustomHighlight(node(), type, imageRect, rootRect, behindText, false);
+        page->chrome().client().paintCustomHighlight(node(), type, imageRect, rootRect, behindText, false);
     } else {
         FloatRect imageRect(paintOffset.x() + x(), paintOffset.y() + y(), width(), height());
-        page->chrome().client()->paintCustomHighlight(node(), type, imageRect, imageRect, behindText, false);
+        page->chrome().client().paintCustomHighlight(node(), type, imageRect, imageRect, behindText, false);
     }
 }
 
@@ -2941,10 +3014,8 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
             if (isWritingModeRoot()) {
                 LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage();
                 RenderRegion* cbRegion = cb->regionAtBlockOffset(cbPageOffset);
-                if (cbRegion) {
-                    cbRegion = cb->clampToStartAndEndRegions(cbRegion);
+                if (cbRegion)
                     boxInfo = cb->renderBoxRegionInfo(cbRegion);
-                }
             }
         } else if (region && flowThread->isHorizontalWritingMode() == containingBlock->isHorizontalWritingMode()) {
             RenderRegion* containingBlockRegion = cb->clampToStartAndEndRegions(region);
@@ -3188,7 +3259,6 @@ void RenderBox::computePositionedLogicalWidth(LogicalExtentComputedValues& compu
         LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage();
         RenderRegion* cbRegion = cb->regionAtBlockOffset(cbPageOffset);
         if (cbRegion) {
-            cbRegion = cb->clampToStartAndEndRegions(cbRegion);
             RenderBoxRegionInfo* boxInfo = cb->renderBoxRegionInfo(cbRegion);
             if (boxInfo) {
                 logicalLeftPos += boxInfo->logicalLeft();
@@ -3507,7 +3577,6 @@ void RenderBox::computePositionedLogicalHeight(LogicalExtentComputedValues& comp
         LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage() - logicalLeft();
         RenderRegion* cbRegion = cb->regionAtBlockOffset(cbPageOffset);
         if (cbRegion) {
-            cbRegion = cb->clampToStartAndEndRegions(cbRegion);
             RenderBoxRegionInfo* boxInfo = cb->renderBoxRegionInfo(cbRegion);
             if (boxInfo) {
                 logicalTopPos += boxInfo->logicalLeft();

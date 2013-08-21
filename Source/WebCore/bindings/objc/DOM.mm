@@ -198,7 +198,7 @@ static NSArray *kit(const Vector<IntRect>& rects)
     WebCore::Frame* frame = core(self)->document()->frame();
     if (!frame)
         return 0;
-    return frame->script()->bindingRootObject();
+    return frame->script().bindingRootObject();
 }
 
 @end
@@ -305,7 +305,7 @@ id <DOMEventTarget> kit(WebCore::EventTarget* eventTarget)
 {
     JSObject* object = toJS(jsWrapper);
 
-    if (!object->inherits(&JSNode::s_info))
+    if (!object->inherits(JSNode::info()))
         return nil;
 
     WebCore::Node* node = jsCast<JSNode*>(object)->impl();

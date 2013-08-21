@@ -59,7 +59,7 @@ void InitializeFocus::dispatch(ReplayController* controller,
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
     controller->page()->userInputProxy()->focusSetActive(m_active, true);
     controller->page()->userInputProxy()->focusSetFocused(m_focus, true);
-    controller->page()->focusController()->setFocusedFrame(framePtr);
+    controller->page()->focusController().setFocusedFrame(framePtr);
     dispatcher->didDispatch(this);
 }
 
@@ -77,9 +77,9 @@ String InitializeFocus::toString() const
 
 PassOwnPtr<InitializeFocus> InitializeFocus::createFromPage(Page* page)
 {
-    int focusedFrameIndex = SerializedEventTarget::frameIndexFromDocument(page->focusController()->focusedFrame()->document());
-    bool isFocused = page->focusController()->isFocused();
-    bool isActive = page->focusController()->isActive();
+    int focusedFrameIndex = SerializedEventTarget::frameIndexFromDocument(page->focusController().focusedFrame()->document());
+    bool isFocused = page->focusController().isFocused();
+    bool isActive = page->focusController().isActive();
     return adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));
 }
 

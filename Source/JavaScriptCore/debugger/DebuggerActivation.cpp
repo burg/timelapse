@@ -51,7 +51,7 @@ void DebuggerActivation::finishCreation(VM& vm, JSObject* activation)
 void DebuggerActivation::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 
@@ -65,9 +65,9 @@ String DebuggerActivation::className(const JSObject* object)
     return thisObject->m_activation->methodTable()->className(thisObject->m_activation.get());
 }
 
-bool DebuggerActivation::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool DebuggerActivation::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(cell);
+    DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(object);
     return thisObject->m_activation->methodTable()->getOwnPropertySlot(thisObject->m_activation.get(), exec, propertyName, slot);
 }
 
@@ -93,12 +93,6 @@ void DebuggerActivation::getOwnPropertyNames(JSObject* object, ExecState* exec, 
 {
     DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(object);
     thisObject->m_activation->methodTable()->getPropertyNames(thisObject->m_activation.get(), exec, propertyNames, mode);
-}
-
-bool DebuggerActivation::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(object);
-    return thisObject->m_activation->methodTable()->getOwnPropertyDescriptor(thisObject->m_activation.get(), exec, propertyName, descriptor);
 }
 
 bool DebuggerActivation::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor, bool shouldThrow)

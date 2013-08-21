@@ -28,8 +28,10 @@
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "GraphicsContext.h"
+#include "HTMLMeterElement.h"
 #include "LocalWindowsContext.h"
 #include "PaintInfo.h"
+#include "RenderMeter.h"
 #include "RenderSlider.h"
 #include "Settings.h"
 #include "SoftLinking.h"
@@ -694,23 +696,21 @@ static void drawControl(GraphicsContext* context, RenderObject* o, HANDLE theme,
             ::DrawEdge(hdc, &widgetRect, EDGE_RAISED, BF_RECT | BF_SOFT | BF_MIDDLE | BF_ADJUST);
             if (themeData.m_state == TUS_DISABLED) {
                 static WORD patternBits[8] = {0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55, 0xaa, 0x55};
-                HBITMAP patternBmp = ::CreateBitmap(8, 8, 1, 1, patternBits);
+                OwnPtr<HBITMAP> patternBmp = adoptPtr(::CreateBitmap(8, 8, 1, 1, patternBits));
                 if (patternBmp) {
-                    HBRUSH brush = (HBRUSH) ::CreatePatternBrush(patternBmp);
+                    OwnPtr<HBRUSH> brush = adoptPtr(::CreatePatternBrush(patternBmp.get()));
                     COLORREF oldForeColor = ::SetTextColor(hdc, ::GetSysColor(COLOR_3DFACE));
                     COLORREF oldBackColor = ::SetBkColor(hdc, ::GetSysColor(COLOR_3DHILIGHT));
                     POINT p;
                     ::GetViewportOrgEx(hdc, &p);
                     ::SetBrushOrgEx(hdc, p.x + widgetRect.left, p.y + widgetRect.top, NULL);
-                    HBRUSH oldBrush = (HBRUSH) ::SelectObject(hdc, brush);
-                    ::FillRect(hdc, &widgetRect, brush);
+                    HGDIOBJ oldBrush = ::SelectObject(hdc, brush.get());
+                    ::FillRect(hdc, &widgetRect, brush.get());
                     ::SetTextColor(hdc, oldForeColor);
                     ::SetBkColor(hdc, oldBackColor);
                     ::SelectObject(hdc, oldBrush);
-                    ::DeleteObject(brush); 
                 } else
                     ::FillRect(hdc, &widgetRect, (HBRUSH)COLOR_3DHILIGHT);
-                ::DeleteObject(patternBmp);
             }
         } else {
             // Push buttons, buttons, checkboxes and radios, and the dropdown arrow in menulists.
@@ -919,7 +919,7 @@ void RenderThemeWin::adjustSearchFieldStyle(StyleResolver* styleResolver, Render
     style->setPaddingRight(Length(padding, Fixed));
     style->setPaddingTop(Length(padding, Fixed));
     style->setPaddingBottom(Length(padding, Fixed));
-    if (e && e->focused() && e->document()->frame()->selection()->isFocusedAndActive())
+    if (e && e->focused() && e->document()->frame()->selection().isFocusedAndActive())
         style->setOutlineOffset(-2);
 }
 
@@ -1136,11 +1136,6 @@ bool RenderThemeWin::paintMediaSliderTrack(RenderObject* o, const PaintInfo& pai
 bool RenderThemeWin::paintMediaSliderThumb(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
 {
     return RenderMediaControls::paintMediaControlsPart(MediaSliderThumb, o, paintInfo, r);
-}
-
-bool RenderThemeWin::paintMediaToggleClosedCaptionsButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
-{
-    return RenderMediaControls::paintMediaControlsPart(MediaShowClosedCaptionsButton, o, paintInfo, r);
 }
 
 bool RenderThemeWin::paintMediaControlsBackground(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)

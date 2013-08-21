@@ -115,9 +115,9 @@ void HTMLEmbedElement::parametersForPlugin(Vector<String>& paramNames, Vector<St
         return;
 
     for (unsigned i = 0; i < attributeCount(); ++i) {
-        const Attribute* attribute = attributeItem(i);
-        paramNames.append(attribute->localName().string());
-        paramValues.append(attribute->value().string());
+        const Attribute& attribute = attributeAt(i);
+        paramNames.append(attribute.localName().string());
+        paramValues.append(attribute.value().string());
     }
 }
 
@@ -165,15 +165,15 @@ void HTMLEmbedElement::updateWidget(PluginCreationOption pluginCreationOption)
     if (!renderer()) // Do not load the plugin if beforeload removed this element or its renderer.
         return;
 
-    SubframeLoader* loader = document()->frame()->loader()->subframeLoader();
+    SubframeLoader* loader = document()->frame()->loader().subframeLoader();
     // FIXME: beforeLoad could have detached the renderer!  Just like in the <object> case above.
     loader->requestObject(this, m_url, getNameAttribute(), m_serviceType, paramNames, paramValues);
 }
 
-bool HTMLEmbedElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool HTMLEmbedElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (isImageType())
-        return HTMLPlugInImageElement::rendererIsNeeded(context);
+        return HTMLPlugInImageElement::rendererIsNeeded(style);
 
     Frame* frame = document()->frame();
     if (!frame)
@@ -191,14 +191,12 @@ bool HTMLEmbedElement::rendererIsNeeded(const NodeRenderingContext& context)
     }
 
 #if ENABLE(DASHBOARD_SUPPORT)
-    // Workaround for <rdar://problem/6642221>. 
-    if (Settings* settings = frame->settings()) {
-        if (settings->usesDashboardBackwardCompatibilityMode())
-            return true;
-    }
+    // Workaround for <rdar://problem/6642221>.
+    if (frame->settings().usesDashboardBackwardCompatibilityMode())
+        return true;
 #endif
 
-    return HTMLPlugInImageElement::rendererIsNeeded(context);
+    return HTMLPlugInImageElement::rendererIsNeeded(style);
 }
 
 bool HTMLEmbedElement::isURLAttribute(const Attribute& attribute) const
@@ -217,17 +215,5 @@ void HTMLEmbedElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) cons
 
     addSubresourceURL(urls, document()->completeURL(getAttribute(srcAttr)));
 }
-
-#if ENABLE(MICRODATA)
-String HTMLEmbedElement::itemValueText() const
-{
-    return getURLAttribute(srcAttr);
-}
-
-void HTMLEmbedElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(srcAttr, value);
-}
-#endif
 
 }

@@ -184,7 +184,7 @@ const ClassInfo Structure::s_info = { "Structure", 0, 0, 0, CREATE_METHOD_TABLE(
 Structure::Structure(VM& vm)
     : JSCell(CreatingEarlyCell)
     , m_prototype(vm, this, jsNull())
-    , m_classInfo(&s_info)
+    , m_classInfo(info())
     , m_transitionWatchpointSet(InitializedWatching)
     , m_offset(invalidOffset)
     , m_typeInfo(CompoundType, OverridesVisitChildren)
@@ -263,7 +263,7 @@ void Structure::findStructuresAndMapForMaterialization(Vector<Structure*, 8>& st
 
 void Structure::materializePropertyMap(VM& vm)
 {
-    ASSERT(structure()->classInfo() == &s_info);
+    ASSERT(structure()->classInfo() == info());
     ASSERT(!propertyTable());
 
     Vector<Structure*, 8> structures;
@@ -380,7 +380,7 @@ NonPropertyTransition Structure::suggestedArrayStorageTransition() const
     return AllocateArrayStorage;
 }
 
-Structure* Structure::addPropertyTransition(VM& vm, Structure* structure, PropertyName propertyName, unsigned attributes, JSCell* specificValue, PropertyOffset& offset)
+Structure* Structure::addPropertyTransition(VM& vm, Structure* structure, PropertyName propertyName, unsigned attributes, JSCell* specificValue, PropertyOffset& offset, PutPropertySlot::Context context)
 {
     // If we have a specific function, we may have got to this point if there is
     // already a transition with the correct property name and attributes, but
@@ -399,7 +399,12 @@ Structure* Structure::addPropertyTransition(VM& vm, Structure* structure, Proper
     if (structure->m_specificFunctionThrashCount == maxSpecificFunctionThrashCount)
         specificValue = 0;
 
-    if (structure->transitionCount() > s_maxTransitionLength) {
+    int maxTransitionLength;
+    if (context == PutPropertySlot::PutById)
+        maxTransitionLength = s_maxTransitionLengthForNonEvalPutById;
+    else
+        maxTransitionLength = s_maxTransitionLength;
+    if (structure->transitionCount() > maxTransitionLength) {
         Structure* transition = toCacheableDictionaryTransition(vm, structure);
         ASSERT(structure != transition);
         offset = transition->putSpecificValue(vm, propertyName, attributes, specificValue);
@@ -697,6 +702,12 @@ Structure* Structure::flattenDictionaryStructure(VM& vm, JSObject* object)
     }
 
     m_dictionaryKind = NoneDictionaryKind;
+
+    // If the object had a Butterfly but after flattening/compacting we no longer have need of it,
+    // we need to zero it out because the collector depends on the Structure to know the size for copying.
+    if (object->butterfly() && !this->outOfLineCapacity() && !this->hasIndexingHeader(object))
+        object->setButterfly(vm, 0, this);
+
     return this;
 }
 
@@ -827,7 +838,7 @@ PropertyOffset Structure::getConcurrently(VM&, StringImpl* uid, unsigned& attrib
 PropertyOffset Structure::get(VM& vm, PropertyName propertyName, unsigned& attributes, JSCell*& specificValue)
 {
     ASSERT(!isCompilationThread());
-    ASSERT(structure()->classInfo() == &s_info);
+    ASSERT(structure()->classInfo() == info());
 
     materializePropertyMapIfNecessary(vm);
     if (!propertyTable())
@@ -951,7 +962,7 @@ JSValue Structure::prototypeForLookup(CodeBlock* codeBlock) const
 void Structure::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     Structure* thisObject = jsCast<Structure*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 
     JSCell::visitChildren(thisObject, visitor);

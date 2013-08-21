@@ -171,7 +171,7 @@ void WebChromeClient::focusedElementChanged(Element* element)
     if (!inputElement->isText())
         return;
 
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(element->document()->frame()->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(element->document()->frame()->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
     m_page->injectedBundleFormClient().didFocusTextField(m_page, inputElement, webFrame);
@@ -179,7 +179,7 @@ void WebChromeClient::focusedElementChanged(Element* element)
 
 void WebChromeClient::focusedFrameChanged(Frame* frame)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = frame ? toWebFrameLoaderClient(frame->loader()->client()) : 0;
+    WebFrameLoaderClient* webFrameLoaderClient = frame ? toWebFrameLoaderClient(frame->loader().client()) : 0;
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
 
     WebProcess::shared().parentProcessConnection()->send(Messages::WebPageProxy::FocusedFrameChanged(webFrame ? webFrame->frameID() : 0), m_page->pageID());
@@ -302,7 +302,7 @@ bool WebChromeClient::canRunBeforeUnloadConfirmPanel()
 
 bool WebChromeClient::runBeforeUnloadConfirmPanel(const String& message, Frame* frame)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
 
@@ -326,7 +326,7 @@ void WebChromeClient::closeWindowSoon()
 
     if (WebFrame* frame = m_page->mainWebFrame()) {
         if (Frame* coreFrame = frame->coreFrame())
-            coreFrame->loader()->stopForUserCancel();
+            coreFrame->loader().stopForUserCancel();
     }
 
     m_page->sendClose();
@@ -334,7 +334,7 @@ void WebChromeClient::closeWindowSoon()
 
 void WebChromeClient::runJavaScriptAlert(Frame* frame, const String& alertText)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
 
@@ -347,7 +347,7 @@ void WebChromeClient::runJavaScriptAlert(Frame* frame, const String& alertText)
 
 bool WebChromeClient::runJavaScriptConfirm(Frame* frame, const String& message)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
 
@@ -364,7 +364,7 @@ bool WebChromeClient::runJavaScriptConfirm(Frame* frame, const String& message)
 
 bool WebChromeClient::runJavaScriptPrompt(Frame* frame, const String& message, const String& defaultValue, String& result)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
 
@@ -466,7 +466,7 @@ PlatformPageClient WebChromeClient::platformPageClient() const
 
 void WebChromeClient::contentsSizeChanged(Frame* frame, const IntSize& size) const
 {
-    if (!m_page->corePage()->settings()->frameFlatteningEnabled()) {
+    if (!m_page->corePage()->settings().frameFlatteningEnabled()) {
         WebFrame* largestFrame = findLargestFrameInFrameSet(m_page);
         if (largestFrame != m_cachedFrameSetLargestFrame.get()) {
             m_cachedFrameSetLargestFrame = largestFrame;
@@ -531,8 +531,8 @@ void WebChromeClient::unavailablePluginButtonClicked(Element* element, RenderEmb
 
     HTMLPlugInImageElement* pluginElement = static_cast<HTMLPlugInImageElement*>(element);
 
-    String frameURLString = pluginElement->document()->frame()->loader()->documentLoader()->responseURL().string();
-    String pageURLString = m_page->mainFrame()->loader()->documentLoader()->responseURL().string();
+    String frameURLString = pluginElement->document()->frame()->loader().documentLoader()->responseURL().string();
+    String pageURLString = m_page->mainFrame()->loader().documentLoader()->responseURL().string();
     String pluginURLString = pluginElement->document()->completeURL(pluginElement->url()).string();
     KURL pluginspageAttributeURL = element->document()->completeURL(stripLeadingAndTrailingHTMLSpaces(pluginElement->getAttribute(pluginspageAttr)));
     if (!pluginspageAttributeURL.protocolIsInHTTPFamily())
@@ -570,7 +570,7 @@ void WebChromeClient::setToolTip(const String& toolTip, TextDirection)
 
 void WebChromeClient::print(Frame* frame)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
 
@@ -580,7 +580,7 @@ void WebChromeClient::print(Frame* frame)
 #if ENABLE(SQL_DATABASE)
 void WebChromeClient::exceededDatabaseQuota(Frame* frame, const String& databaseName, DatabaseDetails details)
 {
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
     
@@ -661,9 +661,6 @@ bool WebChromeClient::paintCustomOverhangArea(GraphicsContext* context, const In
 #if ENABLE(INPUT_TYPE_COLOR)
 PassOwnPtr<ColorChooser> WebChromeClient::createColorChooser(ColorChooserClient* client, const Color& initialColor)
 {
-    if (m_page->activeColorChooser())
-        return nullptr;
-
     return adoptPtr(new WebColorChooser(m_page, client, initialColor));
 }
 #endif
@@ -677,7 +674,7 @@ void WebChromeClient::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> prpFile
 
     m_page->setActiveOpenPanelResultListener(WebOpenPanelResultListener::create(m_page, fileChooser.get()));
 
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
     ASSERT(webFrame);
 
@@ -859,7 +856,7 @@ void WebChromeClient::numWheelEventHandlersChanged(unsigned count)
 
 void WebChromeClient::logDiagnosticMessage(const String& message, const String& description, const String& success)
 {
-    if (!m_page->corePage()->settings()->diagnosticLoggingEnabled())
+    if (!m_page->corePage()->settings().diagnosticLoggingEnabled())
         return;
 
     m_page->injectedBundleDiagnosticLoggingClient().logDiagnosticMessage(m_page, message, description, success);

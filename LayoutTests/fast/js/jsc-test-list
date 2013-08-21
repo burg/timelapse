@@ -86,6 +86,7 @@ fast/js/dfg-arguments-osr-exit
 fast/js/dfg-arguments-osr-exit-multiple-blocks
 fast/js/dfg-arguments-osr-exit-multiple-blocks-before-exit
 fast/js/dfg-arguments-out-of-bounds
+fast/js/dfg-arguments-strict-mode
 fast/js/dfg-arguments-unexpected-escape
 fast/js/dfg-arith-add-overflow-check-elimination-predicted-but-not-proven-int
 fast/js/dfg-arith-add-overflow-check-elimination-tower-of-large-numbers
@@ -142,6 +143,7 @@ fast/js/dfg-float32array
 fast/js/dfg-float64array
 fast/js/dfg-flush-get-local
 fast/js/dfg-force-exit-then-sparse-conditional-constant-prop-in-loop
+fast/js/dfg-get-closure-var-put-closure-var-interference
 fast/js/dfg-get-by-id-unset-then-proto
 fast/js/dfg-get-by-id-unset-then-proto-less-warmup
 fast/js/dfg-get-by-id-unset-then-proto-more-warmup
@@ -199,6 +201,7 @@ fast/js/dfg-mod-neg2tothe31-by-one-and-then-or-zero-with-interesting-reg-alloc
 fast/js/dfg-multi-basic-block-structure-clobber
 fast/js/dfg-multiply
 fast/js/dfg-negative-array-index
+fast/js/dfg-new-array-double-const-then-int-const
 fast/js/dfg-obvious-constant-cfa
 fast/js/dfg-osr-entry-hoisted-clobbered-structure-check
 fast/js/dfg-other-branch

@@ -36,6 +36,7 @@
 #include "PropertyNameArray.h"
 #include "PropertyOffset.h"
 #include "Protect.h"
+#include "PutPropertySlot.h"
 #include "StructureRareData.h"
 #include "StructureTransitionTable.h"
 #include "JSTypeInfo.h"
@@ -95,7 +96,7 @@ protected:
 public:
     static void dumpStatistics();
 
-    JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, JSCell* specificValue, PropertyOffset&);
+    JS_EXPORT_PRIVATE static Structure* addPropertyTransition(VM&, Structure*, PropertyName, unsigned attributes, JSCell* specificValue, PropertyOffset&, PutPropertySlot::Context = PutPropertySlot::UnknownContext);
     static Structure* addPropertyTransitionToExistingStructureConcurrently(Structure*, StringImpl* uid, unsigned attributes, JSCell* specificValue, PropertyOffset&);
     JS_EXPORT_PRIVATE static Structure* addPropertyTransitionToExistingStructure(Structure*, PropertyName, unsigned attributes, JSCell* specificValue, PropertyOffset&);
     static Structure* removePropertyTransition(VM&, Structure*, PropertyName, PropertyOffset&);
@@ -133,7 +134,7 @@ public:
     bool propertyAccessesAreCacheable() { return m_dictionaryKind != UncachedDictionaryKind && !typeInfo().prohibitsPropertyCaching(); }
 
     // Type accessors.
-    const TypeInfo& typeInfo() const { ASSERT(structure()->classInfo() == &s_info); return m_typeInfo; }
+    const TypeInfo& typeInfo() const { ASSERT(structure()->classInfo() == info()); return m_typeInfo; }
     bool isObject() const { return typeInfo().isObject(); }
 
     IndexingType indexingType() const { return m_indexingType & AllArrayTypes; }
@@ -169,7 +170,7 @@ public:
         
     Structure* previousID() const
     {
-        ASSERT(structure()->classInfo() == &s_info);
+        ASSERT(structure()->classInfo() == info());
         if (typeInfo().structureHasRareData())
             return rareData()->previousID();
         return previous();
@@ -195,7 +196,7 @@ public:
     unsigned outOfLineSize() const
     {
         ASSERT(checkOffsetConsistency());
-        ASSERT(structure()->classInfo() == &s_info);
+        ASSERT(structure()->classInfo() == info());
             
         return numberOfOutOfLineSlotsForLastOffset(m_offset);
     }
@@ -217,7 +218,7 @@ public:
     }
     unsigned totalStorageCapacity() const
     {
-        ASSERT(structure()->classInfo() == &s_info);
+        ASSERT(structure()->classInfo() == info());
         return outOfLineCapacity() + inlineCapacity();
     }
 
@@ -227,7 +228,15 @@ public:
             && offset <= m_offset
             && (offset < m_inlineCapacity || offset >= firstOutOfLineOffset);
     }
-
+    
+    bool couldHaveIndexingHeader() const
+    {
+        return hasIndexedProperties(indexingType())
+            || isTypedView(m_classInfo->typedArrayStorageType);
+    }
+    
+    bool hasIndexingHeader(const JSCell*) const;
+    
     bool masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject);
 
     PropertyOffset get(VM&, PropertyName);
@@ -355,7 +364,7 @@ public:
     
     static void dumpContextHeader(PrintStream&);
     
-    static JS_EXPORTDATA const ClassInfo s_info;
+    DECLARE_EXPORT_INFO;
 
 private:
     friend class LLIntOffsetsExtractor;
@@ -398,14 +407,14 @@ private:
     void materializePropertyMapIfNecessary(VM& vm)
     {
         ASSERT(!isCompilationThread());
-        ASSERT(structure()->classInfo() == &s_info);
+        ASSERT(structure()->classInfo() == info());
         ASSERT(checkOffsetConsistency());
         if (!propertyTable() && previousID())
             materializePropertyMap(vm);
     }
     void materializePropertyMapIfNecessaryForPinning(VM& vm)
     {
-        ASSERT(structure()->classInfo() == &s_info);
+        ASSERT(structure()->classInfo() == info());
         checkOffsetConsistency();
         if (!propertyTable())
             materializePropertyMap(vm);
@@ -456,6 +465,7 @@ private:
     void cloneRareDataFrom(VM&, const Structure*);
 
     static const int s_maxTransitionLength = 64;
+    static const int s_maxTransitionLengthForNonEvalPutById = 512;
 
     static const unsigned maxSpecificFunctionThrashCount = 3;
         

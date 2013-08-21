@@ -251,47 +251,45 @@ void dumpSpeculationAbbreviated(PrintStream& out, SpeculatedType value)
 
 SpeculatedType speculationFromClassInfo(const ClassInfo* classInfo)
 {
-    if (classInfo == &JSFinalObject::s_info)
+    if (classInfo == JSFinalObject::info())
         return SpecFinalObject;
     
-    if (classInfo == &JSArray::s_info)
+    if (classInfo == JSArray::info())
         return SpecArray;
     
-    if (classInfo == &Arguments::s_info)
+    if (classInfo == Arguments::info())
         return SpecArguments;
     
-    if (classInfo == &StringObject::s_info)
+    if (classInfo == StringObject::info())
         return SpecStringObject;
     
-    if (classInfo->isSubClassOf(&JSFunction::s_info))
+    if (classInfo->isSubClassOf(JSFunction::info()))
         return SpecFunction;
     
-    if (classInfo->typedArrayStorageType != TypedArrayNone) {
-        switch (classInfo->typedArrayStorageType) {
-        case TypedArrayInt8:
-            return SpecInt8Array;
-        case TypedArrayInt16:
-            return SpecInt16Array;
-        case TypedArrayInt32:
-            return SpecInt32Array;
-        case TypedArrayUint8:
-            return SpecUint8Array;
-        case TypedArrayUint8Clamped:
-            return SpecUint8ClampedArray;
-        case TypedArrayUint16:
-            return SpecUint16Array;
-        case TypedArrayUint32:
-            return SpecUint32Array;
-        case TypedArrayFloat32:
-            return SpecFloat32Array;
-        case TypedArrayFloat64:
-            return SpecFloat64Array;
-        default:
-            break;
-        }
+    switch (classInfo->typedArrayStorageType) {
+    case TypeInt8:
+        return SpecInt8Array;
+    case TypeInt16:
+        return SpecInt16Array;
+    case TypeInt32:
+        return SpecInt32Array;
+    case TypeUint8:
+        return SpecUint8Array;
+    case TypeUint8Clamped:
+        return SpecUint8ClampedArray;
+    case TypeUint16:
+        return SpecUint16Array;
+    case TypeUint32:
+        return SpecUint32Array;
+    case TypeFloat32:
+        return SpecFloat32Array;
+    case TypeFloat64:
+        return SpecFloat64Array;
+    default:
+        break;
     }
     
-    if (classInfo->isSubClassOf(&JSObject::s_info))
+    if (classInfo->isSubClassOf(JSObject::info()))
         return SpecObjectOther;
     
     return SpecCellOther;
@@ -334,6 +332,38 @@ SpeculatedType speculationFromValue(JSValue value)
         return SpecBoolean;
     ASSERT(value.isUndefinedOrNull());
     return SpecOther;
+}
+
+TypedArrayType typedArrayTypeFromSpeculation(SpeculatedType type)
+{
+    if (isInt8ArraySpeculation(type))
+        return TypeInt8;
+        
+    if (isInt16ArraySpeculation(type))
+        return TypeInt16;
+        
+    if (isInt32ArraySpeculation(type))
+        return TypeInt32;
+        
+    if (isUint8ArraySpeculation(type))
+        return TypeUint8;
+        
+    if (isUint8ClampedArraySpeculation(type))
+        return TypeUint8Clamped;
+        
+    if (isUint16ArraySpeculation(type))
+        return TypeUint16;
+        
+    if (isUint32ArraySpeculation(type))
+        return TypeUint32;
+        
+    if (isFloat32ArraySpeculation(type))
+        return TypeFloat32;
+        
+    if (isFloat64ArraySpeculation(type))
+        return TypeFloat64;
+    
+    return NotTypedArray;
 }
 
 } // namespace JSC

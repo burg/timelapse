@@ -76,6 +76,7 @@ public:
 
     virtual LayoutRect visualOverflowRect() const OVERRIDE;
     virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
+    void repaintRootContents();
     void repaintViewRectangle(const LayoutRect&, bool immediate = false) const;
     // Repaint the view, and all composited layers that intersect the given absolute rectangle.
     // FIXME: ideally we'd never have to do this, if all repaints are container-relative.
@@ -280,6 +281,7 @@ private:
 
     void layoutContent(const LayoutState&);
     void layoutContentInAutoLogicalHeightRegions(const LayoutState&);
+    void layoutContentToComputeOverflowInRegions(const LayoutState&);
 #ifndef NDEBUG
     void checkLayoutState(const LayoutState&);
 #endif

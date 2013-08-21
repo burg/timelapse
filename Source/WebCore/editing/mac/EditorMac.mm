@@ -77,33 +77,17 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText)
     RefPtr<Range> range = selectedRange();
     bool choosePlainText;
     
-    m_frame->editor().client()->setInsertionPasteboard(NSGeneralPboard);
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
-    RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(m_frame, range, allowPlainText, choosePlainText);
+    m_frame.editor().client()->setInsertionPasteboard(NSGeneralPboard);
+    RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(&m_frame, range, allowPlainText, choosePlainText);
     if (fragment && shouldInsertFragment(fragment, range, EditorInsertActionPasted))
         pasteAsFragment(fragment, canSmartReplaceWithPasteboard(pasteboard), false);
-#else
-    // Mail is ignoring the frament passed to the delegate and creates a new one.
-    // We want to avoid creating the fragment twice.
-    if (applicationIsAppleMail()) {
-        if (shouldInsertFragment(NULL, range, EditorInsertActionPasted)) {
-            RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(m_frame, range, allowPlainText, choosePlainText);
-            if (fragment)
-                pasteAsFragment(fragment, canSmartReplaceWithPasteboard(pasteboard), false);
-        }        
-    } else {
-        RefPtr<DocumentFragment>fragment = pasteboard->documentFragment(m_frame, range, allowPlainText, choosePlainText);
-        if (fragment && shouldInsertFragment(fragment, range, EditorInsertActionPasted))
-            pasteAsFragment(fragment, canSmartReplaceWithPasteboard(pasteboard), false);
-    }
-#endif
-    m_frame->editor().client()->setInsertionPasteboard(String());
+    m_frame.editor().client()->setInsertionPasteboard(String());
 }
 
 bool Editor::insertParagraphSeparatorInQuotedContent()
 {
     // FIXME: Why is this missing calls to canEdit, canEditRichly, etc...
-    TypingCommand::insertParagraphSeparatorInQuotedContent(m_frame->document());
+    TypingCommand::insertParagraphSeparatorInQuotedContent(m_frame.document());
     revealSelectionAfterEditingOperation();
     return true;
 }
@@ -112,14 +96,14 @@ static RenderStyle* styleForSelectionStart(Frame* frame, Node *&nodeToRemove)
 {
     nodeToRemove = 0;
 
-    if (frame->selection()->isNone())
+    if (frame->selection().isNone())
         return 0;
 
-    Position position = frame->selection()->selection().visibleStart().deepEquivalent();
+    Position position = frame->selection().selection().visibleStart().deepEquivalent();
     if (!position.isCandidate() || position.isNull())
         return 0;
 
-    RefPtr<EditingStyle> typingStyle = frame->selection()->typingStyle();
+    RefPtr<EditingStyle> typingStyle = frame->selection().typingStyle();
     if (!typingStyle || !typingStyle->style())
         return position.deprecatedNode()->renderer()->style();
 
@@ -140,9 +124,9 @@ const SimpleFontData* Editor::fontForSelection(bool& hasMultipleFonts) const
 {
     hasMultipleFonts = false;
 
-    if (!m_frame->selection()->isRange()) {
+    if (!m_frame.selection().isRange()) {
         Node* nodeToRemove;
-        RenderStyle* style = styleForSelectionStart(m_frame, nodeToRemove); // sets nodeToRemove
+        RenderStyle* style = styleForSelectionStart(&m_frame, nodeToRemove); // sets nodeToRemove
 
         const SimpleFontData* result = 0;
         if (style)
@@ -155,8 +139,8 @@ const SimpleFontData* Editor::fontForSelection(bool& hasMultipleFonts) const
     }
 
     const SimpleFontData* font = 0;
-    RefPtr<Range> range = m_frame->selection()->toNormalizedRange();
-    Node* startNode = adjustedSelectionStartForStyleComputation(m_frame->selection()->selection()).deprecatedNode();
+    RefPtr<Range> range = m_frame.selection().toNormalizedRange();
+    Node* startNode = adjustedSelectionStartForStyleComputation(m_frame.selection().selection()).deprecatedNode();
     if (range && startNode) {
         Node* pastEnd = range->pastLastNode();
         // In the loop below, n should eventually match pastEnd and not become nil, but we've seen at least one
@@ -182,7 +166,7 @@ const SimpleFontData* Editor::fontForSelection(bool& hasMultipleFonts) const
 NSDictionary* Editor::fontAttributesForSelectionStart() const
 {
     Node* nodeToRemove;
-    RenderStyle* style = styleForSelectionStart(m_frame, nodeToRemove);
+    RenderStyle* style = styleForSelectionStart(&m_frame, nodeToRemove);
     if (!style)
         return nil;
 
@@ -242,8 +226,8 @@ NSDictionary* Editor::fontAttributesForSelectionStart() const
 
 bool Editor::canCopyExcludingStandaloneImages()
 {
-    FrameSelection* selection = m_frame->selection();
-    return selection->isRange() && !selection->isInPasswordField();
+    FrameSelection& selection = m_frame.selection();
+    return selection.isRange() && !selection.isInPasswordField();
 }
 
 void Editor::takeFindStringFromSelection()
@@ -256,19 +240,19 @@ void Editor::takeFindStringFromSelection()
     Vector<String> types;
     types.append(String(NSStringPboardType));
     platformStrategies()->pasteboardStrategy()->setTypes(types, NSFindPboard);
-    platformStrategies()->pasteboardStrategy()->setStringForType(m_frame->displayStringModifiedByEncoding(selectedTextForClipboard()), NSStringPboardType, NSFindPboard);
+    platformStrategies()->pasteboardStrategy()->setStringForType(m_frame.displayStringModifiedByEncoding(selectedTextForClipboard()), NSStringPboardType, NSFindPboard);
 }
 
 void Editor::writeSelectionToPasteboard(const String& pasteboardName, const Vector<String>& pasteboardTypes)
 {
     Pasteboard pasteboard(pasteboardName);
-    pasteboard.writeSelectionForTypes(pasteboardTypes, true, m_frame, DefaultSelectedTextType);
+    pasteboard.writeSelectionForTypes(pasteboardTypes, true, &m_frame, DefaultSelectedTextType);
 }
     
 void Editor::readSelectionFromPasteboard(const String& pasteboardName)
 {
     Pasteboard pasteboard(pasteboardName);
-    if (m_frame->selection()->isContentRichlyEditable())
+    if (m_frame.selection().isContentRichlyEditable())
         pasteWithPasteboard(&pasteboard, true);
     else
         pasteAsPlainTextWithPasteboard(&pasteboard);   
@@ -292,7 +276,7 @@ String Editor::stringSelectionForPasteboardWithImageAltText()
 
 PassRefPtr<SharedBuffer> Editor::dataSelectionForPasteboard(const String& pasteboardType)
 {
-    return Pasteboard::getDataSelection(m_frame, pasteboardType);
+    return Pasteboard::getDataSelection(&m_frame, pasteboardType);
 }
 
 } // namespace WebCore

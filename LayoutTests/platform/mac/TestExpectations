@@ -85,7 +85,6 @@ fast/media/media-query-list-03.html [ Failure ]
 fast/media/media-query-list-04.html [ Failure ]
 fast/media/media-query-list-05.html [ Failure ]
 fast/media/media-query-list-06.html [ Failure ]
-fast/media/media-query-list-07.html [ Failure ]
 
 # Needs layoutTestController.enableAutoResizeMode()
 fast/autoresize
@@ -156,9 +155,6 @@ webkit.org/b/61827 fast/events/drag-image-filename.html
 
 # Datalist is not yet enabled.
 fast/forms/datalist
-
-# Color input is not yet enabled.
-fast/forms/color
 
 # Times out only in non-wk2 Mac, possibly because of platform-specific behavior
 # interfering with how the test is executed.
@@ -426,9 +422,6 @@ webaudio/
 inspector-protocol/nmi-webaudio.html
 inspector-protocol/nmi-webaudio-leak-test.html
 
-# Microdata DOM API is not yet enabled.
-fast/dom/MicroData
-
 # ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
 
@@ -571,8 +564,6 @@ webkit.org/b/82671 http/tests/inspector/resource-har-conversion.html [ Failure ]
 
 webkit.org/b/82672 http/tests/xmlhttprequest/range-test.html [ Failure ]
 
-webkit.org/b/82747 fast/events/scroll-div-with-prevent-default-in-subframe.html [ Failure ]
-
 webkit.org/b/82762 fast/animation/request-animation-frame-during-modal.html
 
 webkit.org/b/82805 fast/canvas/webgl/framebuffer-object-attachment.html [ Failure ]
@@ -629,8 +620,6 @@ webkit.org/b/84357 media/audio-repaint.html [ Failure ]
 # Requires ENABLE(MEDIA_CAPTURE)
 fast/forms/file/file-input-capture.html
 
-webkit.org/b/85522 http/tests/security/sandboxed-iframe-form-top.html [ Pass Failure ]
-
 webkit.org/b/85523 fullscreen/full-screen-iframe-legacy.html [ Pass Failure ]
 
 webkit.org/b/85525 media/video-played-reset.html [ Pass Failure ]
@@ -665,8 +654,6 @@ webkit.org/b/89528 [ Lion ] svg/filters/feSpecularLight-premultiplied.svg [ Imag
 webkit.org/b/89845 fast/forms/input-set-composition-scroll.html [ Failure ]
 
 webkit.org/b/90707 inspector/timeline/timeline-receive-response-event.html [ Pass Failure ]
-
-webkit.org/b/90708 fullscreen/exit-full-screen-iframe.html [ Failure ]
 
 webkit.org/b/90724 compositing/iframes/iframe-size-from-zero.html [ Pass Failure ]
 
@@ -742,9 +729,6 @@ fast/block/float/016.html
 # Due to JSC::Bindings::Instance::createRuntimeObject(JSC::ExecState*) crashes:
 editing/pasteboard/paste-TIFF.html
 platform/mac/editing/pasteboard/dataTransfer-set-data-file-url.html
-
-# https://bugs.webkit.org/show_bug.cgi?id=93878 (yes, same bug as the previous)
-# Due to WebCore::JSEventListener::jsFunction(WebCore::ScriptExecutionContext*) crashes:
 
 # https://bugs.webkit.org/show_bug.cgi?id=94458
 # Assertion failure in MessagePort::contextDestroyed, usually attributed to later tests
@@ -896,10 +880,8 @@ plugins/npruntime/invoke-failure.html
 # Very flaky, often failing on retry, too.
 svg/dom/SVGScriptElement/script-change-externalResourcesRequired-while-loading.svg
 
-# Unknown failures.
-http/tests/multipart/invalid-image-data-standalone.html
-webkit.org/b/76478 compositing/iframes/repaint-after-losing-scrollbars.html [ ImageOnlyFailure ]
-webkit.org/b/76489 compositing/webgl/webgl-reflection.html [ ImageOnlyFailure ]
+# Unknown failures
+http/tests/multipart/invalid-image-data-standalone.html [ Skip ]
 
 # Needs ENABLE_SHADOW_DOM
 webkit.org/b/76439 [ Debug ] fast/dom/shadow/content-element-api.html [ Failure ]
@@ -952,9 +934,6 @@ webkit.org/b/112616 plugins/plugin-clip-subframe.html [ Failure Pass ]
 # Occasional assertion in JSNPObject::invalidate()
 webkit.org/b/112518 [ Debug ] plugins/object-onfocus-mutation-crash.html [ Crash Pass ]
 webkit.org/b/112518 [ Debug ] plugins/npruntime/evaluate.html [ Crash Pass ]
-
-# https://bugs.webkit.org/show_bug.cgi?id=104054
-webkit.org/b/104054 svg/custom/use-href-update-crash.svg [ Failure Pass ]
 
 # Flakey plugin tests
 webkit.org/b/82752 plugins/netscape-dom-access-and-reload.html [ Failure Pass ]
@@ -1046,9 +1025,6 @@ webkit.org/b/84186 fast/text-autosizing
 # Dialog element is not yet enabled.
 webkit.org/b/84635 fast/dom/HTMLDialogElement [ Skip ]
 
-# INPUT_TYPE_DATE is not enabled on the Mac
-webkit.org/b/90987 fast/forms/input-in-table-cell-no-value.html [ ImageOnlyFailure ]
-
 # Skip tests in fast/text/shaping
 webkit.org/b/90951 fast/text/shaping
 
@@ -1090,7 +1066,15 @@ webkit.org/b/98837 http/tests/security/svg-image-leak.html [ Skip ]
 # Should never have been a ref test.
 webkit.org/b/98456 compositing/images/truncated-direct-png-image.html [ ImageOnlyFailure ]
 
-webkit.org/b/99096 fast/canvas/webgl/arraybuffer-transfer-of-control.html [ Failure ]
+# Ref tests suffering from colorspace issues
+compositing/images/positioned-image-content-rect.html [ ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing-add-text.html [ Pass ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing-contain.html [ Pass ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing-cover.html [ Pass ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing-padding.html [ Pass ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing-position.html [ Pass ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing-size.html [ Pass ImageOnlyFailure ]
+compositing/patterns/direct-pattern-compositing.html [ Pass ImageOnlyFailure ]
 
 # Timing out on Mountain Lion WK1 release sometimes
 webkit.org/b/99221 fast/js/random-array-gc-stress.html [ Pass Timeout ]
@@ -1131,16 +1115,15 @@ webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-forced-subtitles-in-band.html
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-mode.html
 
-# These two tests sometimes timeout
-webkit.org/b/112492 media/track/track-language-preference.html [ Failure Pass ]
-webkit.org/b/112492 media/track/track-prefer-captions.html [ Failure Pass ]
+# These two tests often timeout
+webkit.org/b/112492 media/track/track-language-preference.html [ Skip ]
+webkit.org/b/112492 media/track/track-prefer-captions.html [ Skip ]
 
 # The logic in this test is no longer correct for Apple ports
 webkit.org/b/112492 media/track/track-user-preferences.html [ Skip ]
 
+# Only failing on WK1
 webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Failure ]
-
-webkit.org/b/104949 fast/spatial-navigation/snav-unit-overflow-and-scroll-in-direction.html [ Failure ]
 
 webkit.org/b/104954 http/tests/canvas/canvas-slow-font-loading.html [ ImageOnlyFailure ]
 
@@ -1164,6 +1147,9 @@ webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ]
 webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ] 
 webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
 
+webkit.org/b/119374 fast/workers/termination-early.html [ Pass Crash ]
+webkit.org/b/119375 fast/workers/worker-call.html [ Failure ]
+ 
 webkit.org/b/108370 editing/spelling/spelling-changed-text.html [ Skip ]
 webkit.org/b/114470 editing/spelling/spelling-exactly-selected-multiple-words.html [ Skip ]
 webkit.org/b/114470 editing/spelling/spelling-should-select-multiple-words.html [ Skip ]
@@ -1235,13 +1221,18 @@ webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]
 # Snapshotted plugins not enabled on WK1
 plugins/snapshotting [ Skip ]
 
-webkit.org/b/113094 editing/pasteboard/can-read-in-copy-and-cut-events.html [ Failure ]
+# Fails in WebKit1, but passes in WebKit2 (re-enabled in mac-wk2 TestExpectations).
+webkit.org/b/113094 editing/pasteboard/can-read-in-copy-and-cut-events.html [ Failure ] 
+
 webkit.org/b/113094 editing/pasteboard/can-read-in-dragstart-event.html [ Failure ]
 
 webkit.org/b/113227 transitions/cross-fade-background-image.html [ Pass Failure ]
 webkit.org/b/113227 transitions/cross-fade-border-image.html [ Pass Failure ]
 webkit.org/b/113227 transitions/default-timing-function.html [ Pass Failure ]
 webkit.org/b/113227 transitions/svg-text-shadow-transition.html [ Pass Failure ]
+
+# Color input is not yet enabled on Mac WK1.
+fast/forms/color/input-color-onchange-event.html [ Skip ]
 
 # New test failing, needs investigation.
 webkit.org/b/103857 fast/events/mouse-cursor-change.html
@@ -1279,10 +1270,16 @@ webkit.org/b/115292 fast/writing-mode/japanese-ruby-vertical-rl.html
 webkit.org/b/115292 fast/writing-mode/vertical-baseline-alignment.html
 webkit.org/b/115292 fast/writing-mode/vertical-font-fallback.html
 
+webkit.org/b/105988 [ Debug ] inspector/debugger/pause-in-internal-script.html [ Pass Crash ]
+webkit.org/b/105988 [ Debug ] inspector/debugger/watch-expressions-panel-switch.html [ Pass Crash ]
+webkit.org/b/105988 [ Debug ] inspector/debugger/properties-special.html [ Pass Crash ]
+webkit.org/b/105988 [ Debug ] inspector/debugger/reveal-execution-line.html [ Pass Crash ]
+webkit.org/b/105988 [ Debug ] inspector/debugger/watch-expressions-preserve-expansion.html [ Pass Crash ]
+
 # Fails with WebKit1 only.
 editing/secure-input/reset-state-on-navigation.html [ Failure ]
 
-webkit.org/b/116238 css3/filters/custom/filter-fallback-to-software.html [ ImageOnlyFailure ]
+webkit.org/b/116238 css3/filters/custom/filter-fallback-to-software.html [ Pass ImageOnlyFailure ]
 
 webkit.org/b/116241 inspector/storage-panel-dom-storage-update.html [ Failure ]
 
@@ -1306,3 +1303,11 @@ webkit.org/b/118856 mathml/presentation/fenced-mi.html [ ImageOnlyFailure ]
 
 # Plug-in blocking callback doesn't exist in WebKit1, so skip and re-enable for WebKit2.
 plugins/unavailable-plugin-indicator-obscurity.html
+
+webkit.org/b/82747 fast/events/scroll-div-with-prevent-default-in-subframe.html [ Pass Failure ]
+
+webkit.org/b/90708 fullscreen/exit-full-screen-iframe.html [ Pass Failure ]
+
+webkit.org/b/120085 [ Lion ] http/tests/inspector/resource-tree/resource-tree-document-url.html [ Pass Failure ]
+
+webkit.org/b/120087 [ Lion ] fast/forms/submit-to-url-fragment.html [ Pass Crash ]

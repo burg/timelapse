@@ -69,6 +69,9 @@ WebInspector.ContentView = function(representedObject)
         if (representedObject instanceof WebInspector.CSSSelectorProfileObject)
             return new WebInspector.CSSSelectorProfileView(representedObject);
 
+        if (representedObject instanceof WebInspector.CanvasProfileObject)
+            return new WebInspector.CanvasProfileView(representedObject);
+
         if (representedObject instanceof WebInspector.LiveRecordingObject)
             return new WebInspector.LiveRecordingContentView(representedObject);
 
@@ -126,6 +129,8 @@ WebInspector.ContentView.isViewable = function(representedObject)
     if (representedObject instanceof WebInspector.JavaScriptProfileObject)
         return true;
     if (representedObject instanceof WebInspector.CSSSelectorProfileObject)
+        return true;
+    if (representedObject instanceof WebInspector.CanvasProfileObject)
         return true;
     if (representedObject instanceof WebInspector.SerializedRecordingObject)
         return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,43 +32,37 @@
 #include "File.h"
 #include "FileList.h"
 #include "ImageData.h"
-#include "JSArrayBuffer.h"
-#include "JSArrayBufferView.h"
 #include "JSBlob.h"
-#include "JSDataView.h"
 #include "JSDOMGlobalObject.h"
 #include "JSFile.h"
 #include "JSFileList.h"
-#include "JSFloat32Array.h"
-#include "JSFloat64Array.h"
 #include "JSImageData.h"
-#include "JSInt16Array.h"
-#include "JSInt32Array.h"
-#include "JSInt8Array.h"
 #include "JSMessagePort.h"
 #include "JSNavigator.h"
-#include "JSUint16Array.h"
-#include "JSUint32Array.h"
-#include "JSUint8Array.h"
-#include "JSUint8ClampedArray.h"
 #include "NotImplemented.h"
 #include "ScriptValue.h"
 #include "SharedBuffer.h"
+#include "WebCoreJSClientData.h"
 #include <limits>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/APIShims.h>
+#include <runtime/ArrayBuffer.h>
 #include <runtime/BooleanObject.h>
 #include <runtime/DateInstance.h>
 #include <runtime/Error.h>
 #include <runtime/ExceptionHelpers.h>
+#include <runtime/JSArrayBuffer.h>
+#include <runtime/JSArrayBufferView.h>
+#include <runtime/JSDataView.h>
+#include <runtime/JSTypedArrays.h>
 #include <runtime/ObjectConstructor.h>
 #include <runtime/Operations.h>
 #include <runtime/PropertyNameArray.h>
 #include <runtime/RegExp.h>
 #include <runtime/RegExpObject.h>
-#include <wtf/ArrayBuffer.h>
+#include <runtime/TypedArrayInlines.h>
+#include <runtime/TypedArrays.h>
 #include <wtf/HashTraits.h>
-#include <wtf/Uint8ClampedArray.h>
 #include <wtf/Vector.h>
 
 using namespace JSC;
@@ -402,7 +396,7 @@ private:
         if (!value.isObject())
             return false;
         JSObject* object = asObject(value);
-        return isJSArray(object) || object->inherits(&JSArray::s_info);
+        return isJSArray(object) || object->inherits(JSArray::info());
     }
 
     bool checkForDuplicate(JSObject* object)
@@ -518,25 +512,25 @@ private:
     bool dumpArrayBufferView(JSObject* obj, SerializationReturnCode& code)
     {
         write(ArrayBufferViewTag);
-        if (obj->inherits(&JSDataView::s_info))
+        if (obj->inherits(JSDataView::info()))
             write(DataViewTag);
-        else if (obj->inherits(&JSUint8ClampedArray::s_info))
+        else if (obj->inherits(JSUint8ClampedArray::info()))
             write(Uint8ClampedArrayTag);
-        else if (obj->inherits(&JSInt8Array::s_info))
+        else if (obj->inherits(JSInt8Array::info()))
             write(Int8ArrayTag);
-        else if (obj->inherits(&JSUint8Array::s_info))
+        else if (obj->inherits(JSUint8Array::info()))
             write(Uint8ArrayTag);
-        else if (obj->inherits(&JSInt16Array::s_info))
+        else if (obj->inherits(JSInt16Array::info()))
             write(Int16ArrayTag);
-        else if (obj->inherits(&JSUint16Array::s_info))
+        else if (obj->inherits(JSUint16Array::info()))
             write(Uint16ArrayTag);
-        else if (obj->inherits(&JSInt32Array::s_info))
+        else if (obj->inherits(JSInt32Array::info()))
             write(Int32ArrayTag);
-        else if (obj->inherits(&JSUint32Array::s_info))
+        else if (obj->inherits(JSUint32Array::info()))
             write(Uint32ArrayTag);
-        else if (obj->inherits(&JSFloat32Array::s_info))
+        else if (obj->inherits(JSFloat32Array::info()))
             write(Float32ArrayTag);
-        else if (obj->inherits(&JSFloat64Array::s_info))
+        else if (obj->inherits(JSFloat64Array::info()))
             write(Float64ArrayTag);
         else
             return false;
@@ -572,7 +566,7 @@ private:
             return true;
         }
 
-        if (value.isObject() && asObject(value)->inherits(&DateInstance::s_info)) {
+        if (value.isObject() && asObject(value)->inherits(DateInstance::info())) {
             write(DateTag);
             write(asDateInstance(value)->internalNumber());
             return true;
@@ -583,20 +577,20 @@ private:
 
         if (value.isObject()) {
             JSObject* obj = asObject(value);
-            if (obj->inherits(&BooleanObject::s_info)) {
+            if (obj->inherits(BooleanObject::info())) {
                 if (!startObjectInternal(obj)) // handle duplicates
                     return true;
                 write(asBooleanObject(value)->internalValue().toBoolean(m_exec) ? TrueObjectTag : FalseObjectTag);
                 return true;
             }
-            if (obj->inherits(&StringObject::s_info)) {
+            if (obj->inherits(StringObject::info())) {
                 if (!startObjectInternal(obj)) // handle duplicates
                     return true;
                 String str = asString(asStringObject(value)->internalValue())->value(m_exec);
                 dumpStringObject(str);
                 return true;
             }
-            if (obj->inherits(&NumberObject::s_info)) {
+            if (obj->inherits(NumberObject::info())) {
                 if (!startObjectInternal(obj)) // handle duplicates
                     return true;
                 write(NumberObjectTag);
@@ -604,12 +598,12 @@ private:
                 write(obj->internalValue().asNumber());
                 return true;
             }
-            if (obj->inherits(&JSFile::s_info)) {
+            if (obj->inherits(JSFile::info())) {
                 write(FileTag);
                 write(toFile(obj));
                 return true;
             }
-            if (obj->inherits(&JSFileList::s_info)) {
+            if (obj->inherits(JSFileList::info())) {
                 FileList* list = toFileList(obj);
                 write(FileListTag);
                 unsigned length = list->length();
@@ -618,7 +612,7 @@ private:
                     write(list->item(i));
                 return true;
             }
-            if (obj->inherits(&JSBlob::s_info)) {
+            if (obj->inherits(JSBlob::info())) {
                 write(BlobTag);
                 Blob* blob = toBlob(obj);
                 m_blobURLs.append(blob->url());
@@ -627,7 +621,7 @@ private:
                 write(blob->size());
                 return true;
             }
-            if (obj->inherits(&JSImageData::s_info)) {
+            if (obj->inherits(JSImageData::info())) {
                 ImageData* data = toImageData(obj);
                 write(ImageDataTag);
                 write(data->width());
@@ -636,7 +630,7 @@ private:
                 write(data->data()->data(), data->data()->length());
                 return true;
             }
-            if (obj->inherits(&RegExpObject::s_info)) {
+            if (obj->inherits(RegExpObject::info())) {
                 RegExpObject* regExp = asRegExpObject(obj);
                 char flags[3];
                 int flagCount = 0;
@@ -651,7 +645,7 @@ private:
                 write(String(flags, flagCount));
                 return true;
             }
-            if (obj->inherits(&JSMessagePort::s_info)) {
+            if (obj->inherits(JSMessagePort::info())) {
                 ObjectPool::iterator index = m_transferredMessagePorts.find(obj);
                 if (index != m_transferredMessagePorts.end()) {
                     write(MessagePortReferenceTag);
@@ -662,7 +656,7 @@ private:
                 code = ValidationError;
                 return true;
             }
-            if (obj->inherits(&JSArrayBuffer::s_info)) {
+            if (obj->inherits(JSArrayBuffer::info())) {
                 RefPtr<ArrayBuffer> arrayBuffer = toArrayBuffer(obj);
                 if (arrayBuffer->isNeutered()) {
                     code = ValidationError;
@@ -681,7 +675,7 @@ private:
                 write(static_cast<const uint8_t *>(arrayBuffer->data()), arrayBuffer->byteLength());
                 return true;
             }
-            if (obj->inherits(&JSArrayBufferView::s_info)) {
+            if (obj->inherits(JSArrayBufferView::info())) {
                 if (checkForDuplicate(obj))
                     return true;
                 bool success = dumpArrayBufferView(obj, code);
@@ -901,7 +895,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
                 // objects have been handled. If we reach this point and
                 // the input is not an Object object then we should throw
                 // a DataCloneError.
-                if (inObject->classInfo() != &JSFinalObject::s_info)
+                if (inObject->classInfo() != JSFinalObject::info())
                     return DataCloneError;
                 inputObjectStack.append(inObject);
                 indexStack.append(0);
@@ -977,7 +971,7 @@ SerializationReturnCode CloneSerializer::serialize(JSValue in)
     return SuccessfullyCompleted;
 }
 
-typedef Vector<WTF::ArrayBufferContents> ArrayBufferContentsArray;
+typedef Vector<JSC::ArrayBufferContents> ArrayBufferContentsArray;
 
 class CloneDeserializer : CloneBase {
 public:
@@ -1056,7 +1050,7 @@ private:
                       const Vector<uint8_t>& buffer)
         : CloneBase(exec)
         , m_globalObject(globalObject)
-        , m_isDOMGlobalObject(globalObject->inherits(&JSDOMGlobalObject::s_info))
+        , m_isDOMGlobalObject(globalObject->inherits(JSDOMGlobalObject::info()))
         , m_ptr(buffer.data())
         , m_end(buffer.data() + buffer.size())
         , m_version(0xFFFFFFFF)
@@ -1307,7 +1301,7 @@ private:
         if (!read(byteLength))
             return false;
         JSObject* arrayBufferObj = asObject(readTerminal());
-        if (!arrayBufferObj || !arrayBufferObj->inherits(&JSArrayBuffer::s_info))
+        if (!arrayBufferObj || !arrayBufferObj->inherits(JSArrayBuffer::info()))
             return false;
 
         unsigned elementSize = typedArrayElementSize(arrayBufferViewSubtag);
@@ -1722,7 +1716,7 @@ SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<Str
 }
 
 PassOwnPtr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValue::transferArrayBuffers(
-    ArrayBufferArray& arrayBuffers, SerializationReturnCode& code)
+    ExecState* exec, ArrayBufferArray& arrayBuffers, SerializationReturnCode& code)
 {
     for (size_t i = 0; i < arrayBuffers.size(); i++) {
         if (arrayBuffers[i]->isNeutered()) {
@@ -1732,16 +1726,16 @@ PassOwnPtr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValu
     }
 
     OwnPtr<ArrayBufferContentsArray> contents = adoptPtr(new ArrayBufferContentsArray(arrayBuffers.size()));
+    Vector<RefPtr<DOMWrapperWorld> > worlds;
+    static_cast<WebCoreJSClientData*>(exec->vm().clientData)->getAllWorlds(worlds);
 
-    HashSet<WTF::ArrayBuffer*> visited;
-    for (size_t i = 0; i < arrayBuffers.size(); i++) {
-        Vector<RefPtr<ArrayBufferView> > neuteredViews;
-
-        if (visited.contains(arrayBuffers[i].get()))
+    HashSet<JSC::ArrayBuffer*> visited;
+    for (size_t arrayBufferIndex = 0; arrayBufferIndex < arrayBuffers.size(); arrayBufferIndex++) {
+        if (visited.contains(arrayBuffers[arrayBufferIndex].get()))
             continue;
-        visited.add(arrayBuffers[i].get());
+        visited.add(arrayBuffers[arrayBufferIndex].get());
 
-        bool result = arrayBuffers[i]->transfer(contents->at(i), neuteredViews);
+        bool result = arrayBuffers[arrayBufferIndex]->transfer(contents->at(arrayBufferIndex));
         if (!result) {
             code = ValidationError;
             return nullptr;
@@ -1762,7 +1756,7 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec,
     OwnPtr<ArrayBufferContentsArray> arrayBufferContentsArray;
 
     if (arrayBuffers && serializationDidCompleteSuccessfully(code))
-        arrayBufferContentsArray = transferArrayBuffers(*arrayBuffers, code);
+        arrayBufferContentsArray = transferArrayBuffers(exec, *arrayBuffers, code);
 
     if (throwExceptions == Throwing)
         maybeThrowExceptionIfSerializationFailed(exec, code);

@@ -53,8 +53,8 @@ namespace WebCore {
 static void setImageLoadingSettings(Page* page)
 {
     for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-        frame->document()->cachedResourceLoader()->setImagesEnabled(page->settings()->areImagesEnabled());
-        frame->document()->cachedResourceLoader()->setAutoLoadImages(page->settings()->loadsImagesAutomatically());
+        frame->document()->cachedResourceLoader()->setImagesEnabled(page->settings().areImagesEnabled());
+        frame->document()->cachedResourceLoader()->setAutoLoadImages(page->settings().loadsImagesAutomatically());
     }
 }
 
@@ -136,6 +136,7 @@ Settings::Settings(Page* page)
 #endif
 #endif
     SETTINGS_INITIALIZER_LIST
+    , m_screenFontSubstitutionEnabled(shouldEnableScreenFontSubstitutionByDefault())
     , m_isJavaEnabled(false)
     , m_isJavaEnabledForLocalFiles(true)
     , m_loadsImagesAutomatically(false)
@@ -181,9 +182,9 @@ Settings::~Settings()
 {
 }
 
-PassOwnPtr<Settings> Settings::create(Page* page)
+PassRefPtr<Settings> Settings::create(Page* page)
 {
-    return adoptPtr(new Settings(page));
+    return adoptRef(new Settings(page));
 }
 
 SETTINGS_SETTER_BODIES
@@ -197,6 +198,13 @@ double Settings::hiddenPageDOMTimerAlignmentInterval()
 {
     return gHiddenPageDOMTimerAlignmentInterval;
 }
+
+#if !PLATFORM(MAC)
+bool Settings::shouldEnableScreenFontSubstitutionByDefault()
+{
+    return true;
+}
+#endif
 
 #if !PLATFORM(MAC) && !PLATFORM(BLACKBERRY)
 void Settings::initializeDefaultFontFamilies()
@@ -382,7 +390,11 @@ void Settings::setImagesEnabled(bool areImagesEnabled)
 
 void Settings::setPluginsEnabled(bool arePluginsEnabled)
 {
+    if (m_arePluginsEnabled == arePluginsEnabled)
+        return;
+
     m_arePluginsEnabled = arePluginsEnabled;
+    Page::refreshPlugins(false);
 }
 
 void Settings::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
@@ -463,6 +475,14 @@ void Settings::setUsesPageCache(bool usesPageCache)
         for (int i = first; i <= last; i++)
             pageCache()->remove(m_page->backForward()->itemAtIndex(i));
     }
+}
+
+void Settings::setScreenFontSubstitutionEnabled(bool enabled)
+{
+    if (m_screenFontSubstitutionEnabled == enabled)
+        return;
+    m_screenFontSubstitutionEnabled = enabled;
+    m_page->setNeedsRecalcStyleInAllFrames();
 }
 
 void Settings::setFontRenderingMode(FontRenderingMode mode)

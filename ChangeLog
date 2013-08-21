@@ -1,3 +1,214 @@
+2013-08-15  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed GTK build fix after r154106.
+
+        * Source/autotools/symbols.filter: Export the proper Element::shadowRoot() symbol.
+
+2013-08-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Typed arrays should be rewritten
+        https://bugs.webkit.org/show_bug.cgi?id=119064
+
+        Reviewed by Oliver Hunt.
+
+        Automake work courtesy of Zan Dobersek <zdobersek@igalia.com>.
+
+        * Source/autotools/symbols.filter:
+
+2013-08-14  Tim Horton  <timothy_horton@apple.com>
+
+        Un-inline dataLog dumpers for IntSize and IntPoint
+        https://bugs.webkit.org/show_bug.cgi?id=119697
+
+        Reviewed by Sam Weinig.
+
+        Avoid regressing build performance by moving IntSize::dump and IntPoint::dump elsewhere.
+
+        * Source/autotools/symbols.filter:
+
+2013-08-14  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] [CMake] Add support for building TestWebKitAPI
+        https://bugs.webkit.org/show_bug.cgi?id=116987
+
+        Reviewed by Philippe Normand.
+
+        * Source/cmake/OptionsGTK.cmake: Turn on the API tests in the settings.
+
+2013-08-13  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Autotools] Unicode's CFLAGS enforce -D_FORTIFY_SOURCE=2, -D_REENTRANT=1, causing faulty Clang builds
+        https://bugs.webkit.org/show_bug.cgi?id=119685
+
+        Reviewed by Gustavo Noronha Silva.
+
+        icu-config includes '-D_FORTIFY_SOURCE=2 -D_REENTRANT=1' when printing out C preprocessor flags that are used
+        as the C compiler flags to avoid other unwanted compiler options. This causes problems when building optimized
+        builds with Clang because of a bug in that compiler:
+        http://llvm.org/bugs/show_bug.cgi?id=16821
+
+        To avoid that, the C preprocessor search flags, as printed by `icu-config --cppflags-searchpath` are now used
+        the Unicode dependency's C compiler flags, avoiding unconditionally specifying the two macros.
+
+        To adjust for that, the `-pthread` flag is added to the global CFLAGS and CXXFLAGS variables, ensuring
+        the _REENTRANT define is set to 1 and declaring the flag globally instead of relying on Glib dependency's
+        C compiler flags to do so for us. -D_FORTIFY_SOURCE=2 is only added to the CFLAGS and CXXFLAGS variables if
+        the compiler in use is gcc or g++, preventing the Clang builds to malfunction.
+
+        * Source/autotools/FindDependencies.m4:
+        * Source/autotools/SetupCompilerFlags.m4:
+
+2013-08-13  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Autotools] Don't compare $CC, $CXX to exact compiler names
+        https://bugs.webkit.org/show_bug.cgi?id=119683
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Instead of comparing $CC and $CXX to exact compiler names (like 'gcc', 'clang++' etc.),
+        use the compiler version checks to also specify the broader compiler collection of which
+        the used compiler is a member of. This avoids failures in some border-line cases where
+        the user would still use either a GCC or a Clang compiler but provide it through a symbolic
+        link that was specified via the CC/CXX environment variables.
+
+        * Source/autotools/CheckSystemAndBasicDependencies.m4: Store the detected C/C++ compiler collection
+        in c_compiler/cxx_compiler. Throw an error if no supported compiler was found.
+        * Source/autotools/SetupCompilerFlags.m4: Test for a specific compiler by checking against
+        c_compiler/cxx_compiler rather than CC/CXX values.
+
+2013-08-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Autotools] Adjust the help string for the configure's --enable-optimizations flag
+        https://bugs.webkit.org/show_bug.cgi?id=119682
+
+        Reviewed by Martin Robinson.
+
+        * Source/autotools/ReadCommandLineArguments.m4: Remove the 'GCC only' part of the help
+        string for the --enable-optimizations flag. This is not true and can lead to confusion
+        since the optimizations can be applied when compiling with Clang as well.
+
+2013-08-11  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Update NEWS and Versions.m4 for 2.1.4 release.
+
+        * Source/autotools/Versions.m4: Update version numbers.
+
+2013-08-09  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Automake] Clean up OpenGL graphics configuration sections
+        https://bugs.webkit.org/show_bug.cgi?id=119554
+
+        Reviewed by Martin Robinson.
+
+        Clean up sections in the Automake configuration process that are configuring the OpenGL graphics
+        features and dependencies. Remove unnecessary variable assignments, merge similar code paths,
+        clarify a couple of comments and error messages and fix a few whitespace problems.
+
+        * Source/autotools/FindDependencies.m4:
+        * Source/autotools/ReadCommandLineArguments.m4:
+        * Source/autotools/SetupAutomake.m4:
+
+2013-08-04  Sam Weinig  <sam@webkit.org>
+
+        Remove support for HTML5 MicroData
+        https://bugs.webkit.org/show_bug.cgi?id=119480
+
+        Reviewed by Anders Carlsson.
+
+        * Source/autotools/SetupWebKitFeatures.m4:
+        * Source/cmake/OptionsBlackBerry.cmake:
+        * Source/cmake/OptionsEfl.cmake:
+        * Source/cmake/OptionsGTK.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-08-06  Simon Pena  <simon.pena@samsung.com>
+
+        Build fix for GTK 32-bit after r153736
+
+        * Source/autotools/symbols.filter: expose WebCore::SerializedScriptValue::create.
+
+2013-08-06  Simon Pena  <simon.pena@samsung.com>
+
+        Build fix for GTK after r153736
+
+        * Source/autotools/symbols.filter: expose missing symbols
+        WebCore::SerializedScriptValue::create and WebCore::toJS to Internals.
+
+2013-08-05  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Automake] Define ENABLE_JIT through the Autoconf header
+        https://bugs.webkit.org/show_bug.cgi?id=119445
+
+        Reviewed by Martin Robinson.
+
+        Instead of defining the ENABLE_JIT value through JSC_CPPFLAGS, the feature define is
+        set to be either enabled or disabled through the Autoconf header, based on the value
+        passed through the configuration flag. The 'auto' value is used as default, meaning
+        that the feature is enabled or disabled in the Platform.h header based on the platform
+        configuration (OS, architecture etc.).
+
+        * Source/autotools/FindDependencies.m4: Remove the JSC_CPPFLAGS definition.
+        * Source/autotools/ReadCommandLineArguments.m4: Change the default value to 'auto' instead
+        of 'autodetect', as used by other configuration options that take a similar approach to enabling
+        a specific feature.
+        * Source/autotools/SetupAutoconfHeader.m4: Set a strict value for the ENABLE_JIT define through
+        the Autoconf header if the feature was specifically enabled or disabled.
+
+2013-08-04  Zalan Bujtas  <zalan@apple.com>
+
+        Background doesn't fully repaint when body has margins.
+        https://bugs.webkit.org/show_bug.cgi?id=119033
+
+        Reviewed by Simon Fraser.
+
+        Ensure that background-color changes do not leave unpainted areas when
+        body has margins.
+
+        Both <body> and <html> background-color get propagated up to the viewport.
+        If <body> has background-color attribute set, while <html> doesn't, the color is
+        applied not only on the <body> but on both the <html> and the viewport. However,
+        it's not enough to mark the RenderView dirty because with tiles backing on,
+        there could be areas outside of the viewport that need repaint. By marking
+        the RenderView's graphics layer dirty instead, we ensure that all the related
+        tiles get marked dirty too and the new background color covers all areas.
+
+        Manual test added. When forcing top-level composition on (even with embedded iframe to
+        make sure we don't do paintsIntoWindow rendering), the test case execution changes so much,
+        that the repaint rects don't reflect the functionality difference anymore.
+
+        Reviewed by Simon Fraser.
+
+        * ManualTests/compositing/background-color-change-on-body-with-margin.html: Added.
+
+2013-07-30  Ádám Kallai  <kadam@inf.u-szeged.hu>
+
+        [Qt] Workaround to make syncqt run and generate forwarding headers in SVN repositories too.
+        https://bugs.webkit.org/show_bug.cgi?id=118725.
+
+        Reviewed by Tor Arne Vestbø.
+
+        * .qmake.conf:
+
+2013-07-30  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Update NEWS and Versions.m4 for 2.1.4 release.
+
+        * Source/autotools/Versions.m4: Bump version numbers.
+
+2013-07-27  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Bump required version of EFL to 1.7
+        https://bugs.webkit.org/show_bug.cgi?id=119144
+
+        Reviewed by Christophe Dumez.
+
+        We have supported 1.6 for Tizen build since r137203.
+        But Tizen now supports 1.7+ after Tizen released 2.0.
+
+        * Source/cmake/OptionsEfl.cmake:
+        Bumped EFL to 1.7 and removed promotion.
+
 2013-07-25  Christophe Dumez  <ch.dumez@sisa.samsung.com>
 
         Unreviewed EFL build fix after r153315.

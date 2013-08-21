@@ -127,7 +127,10 @@ public:
 
     void add32(TrustedImm32 imm, RegisterID dest)
     {
-        m_assembler.addl_ir(imm.m_value, dest);
+        if (imm.m_value == 1)
+            m_assembler.inc_r(dest);
+        else
+            m_assembler.addl_ir(imm.m_value, dest);
     }
     
     void add32(Address src, RegisterID dest)
@@ -374,7 +377,10 @@ public:
     
     void sub32(TrustedImm32 imm, RegisterID dest)
     {
-        m_assembler.subl_ir(imm.m_value, dest);
+        if (imm.m_value == 1)
+            m_assembler.dec_r(dest);
+        else
+            m_assembler.subl_ir(imm.m_value, dest);
     }
     
     void sub32(TrustedImm32 imm, Address address)
@@ -1132,9 +1138,10 @@ public:
 
     Jump branchTest32(ResultCondition cond, RegisterID reg, TrustedImm32 mask = TrustedImm32(-1))
     {
-        // if we are only interested in the low seven bits, this can be tested with a testb
         if (mask.m_value == -1)
             m_assembler.testl_rr(reg, reg);
+        else if (!(mask.m_value & ~0xff) && reg < X86Registers::esp) // Using esp and greater as a byte register yields the upper half of the 16 bit registers ax, cx, dx and bx, e.g. esp, register 4, is actually ah.
+            m_assembler.testb_i8r(mask.m_value, reg);
         else
             m_assembler.testl_i32r(mask.m_value, reg);
         return Jump(m_assembler.jCC(x86Condition(cond)));
@@ -1142,10 +1149,7 @@ public:
 
     Jump branchTest32(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
     {
-        if (mask.m_value == -1)
-            m_assembler.cmpl_im(0, address.offset, address.base);
-        else
-            m_assembler.testl_i32m(mask.m_value, address.offset, address.base);
+        generateTest32(address, mask);
         return Jump(m_assembler.jCC(x86Condition(cond)));
     }
 
@@ -1413,10 +1417,7 @@ public:
 
     void test32(ResultCondition cond, Address address, TrustedImm32 mask, RegisterID dest)
     {
-        if (mask.m_value == -1)
-            m_assembler.cmpl_im(0, address.offset, address.base);
-        else
-            m_assembler.testl_i32m(mask.m_value, address.offset, address.base);
+        generateTest32(address, mask);
         set32(x86Condition(cond), dest);
     }
 
@@ -1497,6 +1498,22 @@ private:
     // Only MacroAssemblerX86 should be using the following method; SSE2 is always available on
     // x86_64, and clients & subclasses of MacroAssembler should be using 'supportsFloatingPoint()'.
     friend class MacroAssemblerX86;
+
+    ALWAYS_INLINE void generateTest32(Address address, TrustedImm32 mask = TrustedImm32(-1))
+    {
+        if (mask.m_value == -1)
+            m_assembler.cmpl_im(0, address.offset, address.base);
+        else if (!(mask.m_value & ~0xff))
+            m_assembler.testb_im(mask.m_value, address.offset, address.base);
+        else if (!(mask.m_value & ~0xff00))
+            m_assembler.testb_im(mask.m_value >> 8, address.offset + 1, address.base);
+        else if (!(mask.m_value & ~0xff0000))
+            m_assembler.testb_im(mask.m_value >> 16, address.offset + 2, address.base);
+        else if (!(mask.m_value & ~0xff000000))
+            m_assembler.testb_im(mask.m_value >> 24, address.offset + 3, address.base);
+        else
+            m_assembler.testl_i32m(mask.m_value, address.offset, address.base);
+    }
 
 #if CPU(X86)
 #if OS(MAC_OS_X)

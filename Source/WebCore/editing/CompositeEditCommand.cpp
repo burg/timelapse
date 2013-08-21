@@ -35,6 +35,7 @@
 #include "DocumentMarkerController.h"
 #include "Editor.h"
 #include "EditorInsertAction.h"
+#include "ElementTraversal.h"
 #include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "HTMLElement.h"
@@ -533,13 +534,13 @@ static void copyMarkers(const Vector<DocumentMarker*>& markerPointers, Vector<Do
 void CompositeEditCommand::replaceTextInNodePreservingMarkers(PassRefPtr<Text> prpNode, unsigned offset, unsigned count, const String& replacementText)
 {
     RefPtr<Text> node(prpNode);
-    DocumentMarkerController* markerController = document()->markers();
+    DocumentMarkerController& markerController = document()->markers();
     Vector<DocumentMarker> markers;
-    copyMarkers(markerController->markersInRange(Range::create(document(), node, offset, node, offset + count).get(), DocumentMarker::AllMarkers()), markers);
+    copyMarkers(markerController.markersInRange(Range::create(document(), node, offset, node, offset + count).get(), DocumentMarker::AllMarkers()), markers);
     replaceTextInNode(node, offset, count, replacementText);
     RefPtr<Range> newRange = Range::create(document(), node, offset, node, offset + replacementText.length());
     for (size_t i = 0; i < markers.size(); ++i)
-        markerController->addMarker(newRange.get(), markers[i].type(), markers[i].description());
+        markerController.addMarker(newRange.get(), markers[i].type(), markers[i].description());
 }
 
 Position CompositeEditCommand::positionOutsideTabSpan(const Position& pos)
@@ -1306,8 +1307,8 @@ bool CompositeEditCommand::breakOutOfEmptyListItem()
     if (!newBlock)
         newBlock = createDefaultParagraphElement(document());
 
-    RefPtr<Node> previousListNode = emptyListItem->isElementNode() ? toElement(emptyListItem.get())->previousElementSibling(): emptyListItem->previousSibling();
-    RefPtr<Node> nextListNode = emptyListItem->isElementNode() ? toElement(emptyListItem.get())->nextElementSibling(): emptyListItem->nextSibling();
+    RefPtr<Node> previousListNode = emptyListItem->isElementNode() ? ElementTraversal::previousSibling(emptyListItem.get()): emptyListItem->previousSibling();
+    RefPtr<Node> nextListNode = emptyListItem->isElementNode() ? ElementTraversal::nextSibling(emptyListItem.get()): emptyListItem->nextSibling();
     if (isListItem(nextListNode.get()) || isListElement(nextListNode.get())) {
         // If emptyListItem follows another list item or nested list, split the list node.
         if (isListItem(previousListNode.get()) || isListElement(previousListNode.get()))

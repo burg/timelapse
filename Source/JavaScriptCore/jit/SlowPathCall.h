@@ -53,6 +53,11 @@ public:
         m_jit->addPtr(MacroAssembler::TrustedImm32(-8), MacroAssembler::stackPointerRegister);
         m_jit->push(JIT::TrustedImm32(JIT::TrustedImmPtr(m_pc)));
         m_jit->push(JIT::callFrameRegister);
+#elif CPU(X86_64) && OS(WINDOWS)
+        m_jit->addPtr(MacroAssembler::TrustedImm32(-16), MacroAssembler::stackPointerRegister);
+        m_jit->move(MacroAssembler::stackPointerRegister, JIT::firstArgumentRegister);
+        m_jit->move(JIT::callFrameRegister, JIT::secondArgumentRegister);
+        m_jit->move(JIT::TrustedImmPtr(m_pc), JIT::thirdArgumentRegister);
 #else
         m_jit->move(JIT::callFrameRegister, JIT::firstArgumentRegister);
         m_jit->move(JIT::TrustedImmPtr(m_pc), JIT::secondArgumentRegister);
@@ -62,6 +67,9 @@ public:
 
 #if CPU(X86) && USE(JSVALUE32_64)
         m_jit->addPtr(MacroAssembler::TrustedImm32(16), MacroAssembler::stackPointerRegister);
+#elif CPU(X86_64) && OS(WINDOWS)
+        m_jit->pop(JIT::regT0); // vPC
+        m_jit->pop(JIT::regT1); // callFrame register
 #endif
 
 #if ENABLE(OPCODE_SAMPLING)
@@ -80,7 +88,8 @@ public:
 #else
         JIT::Jump noException = m_jit->branchTest64(JIT::Zero, JIT::AbsoluteAddress(&m_jit->m_codeBlock->vm()->exception));
 #endif
-        m_jit->move(JIT::TrustedImmPtr(FunctionPtr(ctiVMThrowTrampolineSlowpath).value()), JIT::regT1);
+        m_jit->reloadCallFrameFromTopCallFrame();
+        m_jit->move(JIT::TrustedImmPtr(FunctionPtr(ctiVMHandleException).value()), JIT::regT1);
         m_jit->jump(JIT::regT1);
         noException.link(m_jit);
         

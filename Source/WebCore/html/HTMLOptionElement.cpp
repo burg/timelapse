@@ -36,7 +36,6 @@
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
 #include "NodeRenderStyle.h"
-#include "NodeRenderingContext.h"
 #include "NodeTraversal.h"
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
@@ -56,7 +55,7 @@ HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document* doc
     , m_isSelected(false)
 {
     ASSERT(hasTagName(optionTag));
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
 PassRefPtr<HTMLOptionElement> HTMLOptionElement::create(Document* document)
@@ -90,9 +89,8 @@ PassRefPtr<HTMLOptionElement> HTMLOptionElement::createForJSConstructor(Document
     return element.release();
 }
 
-void HTMLOptionElement::attach(const AttachContext& context)
+void HTMLOptionElement::didAttachRenderers()
 {
-    HTMLElement::attach(context);
     // If after attaching nothing called styleForRenderer() on this node we
     // manually cache the value. This happens if our parent doesn't have a
     // renderer like <optgroup> or if it doesn't allow children like <select>.
@@ -100,10 +98,9 @@ void HTMLOptionElement::attach(const AttachContext& context)
         updateNonRenderStyle();
 }
 
-void HTMLOptionElement::detach(const AttachContext& context)
+void HTMLOptionElement::willDetachRenderers()
 {
     m_style.clear();
-    HTMLElement::detach(context);
 }
 
 bool HTMLOptionElement::isFocusable() const
@@ -307,7 +304,7 @@ void HTMLOptionElement::setLabel(const String& label)
 
 void HTMLOptionElement::updateNonRenderStyle()
 {
-    m_style = document()->ensureStyleResolver()->styleForElement(this);
+    m_style = document()->ensureStyleResolver().styleForElement(this);
 }
 
 RenderStyle* HTMLOptionElement::nonRendererStyle() const
@@ -323,7 +320,7 @@ PassRefPtr<RenderStyle> HTMLOptionElement::customStyleForRenderer()
     return m_style;
 }
 
-void HTMLOptionElement::didRecalcStyle(StyleChange)
+void HTMLOptionElement::didRecalcStyle(Style::Change)
 {
     // FIXME: This is nasty, we ask our owner select to repaint even if the new
     // style is exactly the same.

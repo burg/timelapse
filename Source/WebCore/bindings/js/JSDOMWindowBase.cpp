@@ -62,7 +62,7 @@ JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, PassRefPtr<DOMWin
 void JSDOMWindowBase::finishCreation(VM& vm, JSDOMWindowShell* shell)
 {
     Base::finishCreation(vm, shell);
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
 
     GlobalPropertyInfo staticGlobals[] = {
         GlobalPropertyInfo(vm.propertyNames->document, jsNull(), DontDelete | ReadOnly),
@@ -160,10 +160,7 @@ bool JSDOMWindowBase::javaScriptExperimentsEnabled(const JSGlobalObject* object)
     Frame* frame = thisObject->impl()->frame();
     if (!frame)
         return false;
-    Settings* settings = frame->settings();
-    if (!settings)
-        return false;
-    return settings->javaScriptExperimentsEnabled();
+    return frame->settings().javaScriptExperimentsEnabled();
 }
 
 void JSDOMWindowBase::willRemoveFromWindowShell()
@@ -205,14 +202,14 @@ JSValue toJS(ExecState* exec, DOMWindow* domWindow)
     Frame* frame = domWindow->frame();
     if (!frame)
         return jsNull();
-    return frame->script()->windowShell(currentWorld(exec));
+    return frame->script().windowShell(currentWorld(exec));
 }
 
 JSDOMWindow* toJSDOMWindow(Frame* frame, DOMWrapperWorld* world)
 {
     if (!frame)
         return 0;
-    return frame->script()->windowShell(world)->window();
+    return frame->script().windowShell(world)->window();
 }
 
 JSDOMWindow* toJSDOMWindow(JSValue value)
@@ -220,9 +217,9 @@ JSDOMWindow* toJSDOMWindow(JSValue value)
     if (!value.isObject())
         return 0;
     const ClassInfo* classInfo = asObject(value)->classInfo();
-    if (classInfo == &JSDOMWindow::s_info)
+    if (classInfo == JSDOMWindow::info())
         return jsCast<JSDOMWindow*>(asObject(value));
-    if (classInfo == &JSDOMWindowShell::s_info)
+    if (classInfo == JSDOMWindowShell::info())
         return jsCast<JSDOMWindowShell*>(asObject(value))->window();
     return 0;
 }

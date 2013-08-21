@@ -45,7 +45,7 @@ public:
 
     virtual ~SVGElementInstance();
 
-    void setParentOrShadowHostNode(SVGElementInstance* instance) { m_parentInstance = instance; }
+    void setParentNode(SVGElementInstance* instance) { m_parentInstance = instance; }
 
     virtual const AtomicString& interfaceName() const;
     virtual ScriptExecutionContext* scriptExecutionContext() const;
@@ -174,10 +174,10 @@ private:
     void setNextSibling(SVGElementInstance* sibling) { m_nextSibling = sibling; }
     void setPreviousSibling(SVGElementInstance* sibling) { m_previousSibling = sibling; }    
 
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
-    virtual EventTargetData* eventTargetData();
-    virtual EventTargetData* ensureEventTargetData();
+    virtual void refEventTarget() OVERRIDE { ref(); }
+    virtual void derefEventTarget() OVERRIDE { deref(); }
+    virtual EventTargetData* eventTargetData() OVERRIDE;
+    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
 
     SVGElementInstance* m_parentInstance;
 

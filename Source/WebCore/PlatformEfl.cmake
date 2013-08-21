@@ -55,7 +55,6 @@ list(APPEND WebCore_SOURCES
 
     platform/efl/AsyncFileSystemEfl.cpp
     platform/efl/BatteryProviderEfl.cpp
-    platform/efl/ClipboardEfl.cpp
     platform/ContextMenuNone.cpp
     platform/ContextMenuItemNone.cpp
     platform/efl/CursorEfl.cpp
@@ -299,7 +298,7 @@ if (WTF_USE_3D_GRAPHICS)
         platform/graphics/opengl/GLPlatformSurface.cpp
         platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
         platform/graphics/surfaces/GraphicsSurface.cpp
-        platform/graphics/surfaces/efl/GLTransportSurface.cpp
+        platform/graphics/surfaces/GLTransportSurface.cpp
         platform/graphics/surfaces/efl/GraphicsSurfaceCommon.cpp
         platform/graphics/surfaces/glx/X11Helper.cpp
         platform/graphics/texmap/TextureMapperGL.cpp

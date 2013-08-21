@@ -54,8 +54,8 @@
 #include "SecurityOrigin.h"
 #include "ThreadableWebSocketChannel.h"
 #include "WebSocketChannel.h"
-#include <wtf/ArrayBuffer.h>
-#include <wtf/ArrayBufferView.h>
+#include <runtime/ArrayBuffer.h>
+#include <runtime/ArrayBufferView.h>
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
@@ -245,7 +245,7 @@ void WebSocket::connect(const String& url, const Vector<String>& protocols, Exce
     bool shouldBypassMainWorldContentSecurityPolicy = false;
     if (scriptExecutionContext()->isDocument()) {
         Document* document = toDocument(scriptExecutionContext());
-        shouldBypassMainWorldContentSecurityPolicy = document->frame()->script()->shouldBypassMainWorldContentSecurityPolicy();
+        shouldBypassMainWorldContentSecurityPolicy = document->frame()->script().shouldBypassMainWorldContentSecurityPolicy();
     }
     if (!shouldBypassMainWorldContentSecurityPolicy && !scriptExecutionContext()->contentSecurityPolicy()->allowConnectToSource(m_url)) {
         m_state = CLOSED;
@@ -584,9 +584,9 @@ EventTargetData* WebSocket::eventTargetData()
     return &m_eventTargetData;
 }
 
-EventTargetData* WebSocket::ensureEventTargetData()
+EventTargetData& WebSocket::ensureEventTargetData()
 {
-    return &m_eventTargetData;
+    return m_eventTargetData;
 }
 
 size_t WebSocket::getFramingOverhead(size_t payloadSize)

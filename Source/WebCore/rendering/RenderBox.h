@@ -368,6 +368,7 @@ public:
 
     enum RenderBoxRegionInfoFlags { CacheRenderBoxRegionInfo, DoNotCacheRenderBoxRegionInfo };
     LayoutRect borderBoxRectInRegion(RenderRegion*, RenderBoxRegionInfoFlags = CacheRenderBoxRegionInfo) const;
+    RenderRegion* clampToStartAndEndRegions(RenderRegion*) const;
     void clearRenderBoxRegionInfo();
     virtual LayoutUnit offsetFromLogicalTopOfFirstPage() const;
     
@@ -462,6 +463,9 @@ public:
     bool scrollsOverflow() const { return scrollsOverflowX() || scrollsOverflowY(); }
     bool scrollsOverflowX() const { return hasOverflowClip() && (style()->overflowX() == OSCROLL || hasAutoHorizontalScrollbar()); }
     bool scrollsOverflowY() const { return hasOverflowClip() && (style()->overflowY() == OSCROLL || hasAutoVerticalScrollbar()); }
+    bool hasScrollableOverflowX() const { return scrollsOverflowX() && scrollWidth() != clientWidth(); }
+    bool hasScrollableOverflowY() const { return scrollsOverflowY() && scrollHeight() != clientHeight(); }
+
     bool usesCompositedScrolling() const;
     
     bool hasUnsplittableScrollingOverflow() const;
@@ -498,6 +502,10 @@ public:
     LayoutRect maskClipRect();
 
     virtual VisiblePosition positionForPoint(const LayoutPoint&);
+
+    RenderBlock* outermostBlockContainingFloatingObject();
+    void updatePaintingContainerForFloatingObject();
+    virtual bool updateLayerIfNeeded();
 
     void removeFloatingOrPositionedChildFromBlockLists();
     

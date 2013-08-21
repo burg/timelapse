@@ -43,7 +43,7 @@ const ClassInfo JSActivation::s_info = { "JSActivation", &Base::s_info, 0, 0, CR
 void JSActivation::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSActivation* thisObject = jsCast<JSActivation*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
@@ -66,7 +66,7 @@ inline bool JSActivation::symbolTableGet(PropertyName propertyName, PropertySlot
     if (isTornOff() && !isValid(entry))
         return false;
 
-    slot.setValue(registerAt(entry.getIndex()).get());
+    slot.setValue(this, DontEnum, registerAt(entry.getIndex()).get());
     return true;
 }
 
@@ -150,14 +150,14 @@ inline bool JSActivation::symbolTablePutWithAttributes(VM& vm, PropertyName prop
     return true;
 }
 
-bool JSActivation::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool JSActivation::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    JSActivation* thisObject = jsCast<JSActivation*>(cell);
+    JSActivation* thisObject = jsCast<JSActivation*>(object);
 
     if (propertyName == exec->propertyNames().arguments) {
         // Defend against the inspector asking for the arguments object after it has been optimized out.
         if (!thisObject->isTornOff()) {
-            slot.setCustom(thisObject, thisObject->getArgumentsGetter());
+            slot.setCustom(thisObject, DontEnum, thisObject->getArgumentsGetter());
             return true;
         }
     }
@@ -165,8 +165,9 @@ bool JSActivation::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyNam
     if (thisObject->symbolTableGet(propertyName, slot))
         return true;
 
-    if (JSValue value = thisObject->getDirect(exec->vm(), propertyName)) {
-        slot.setValue(value);
+    unsigned attributes;
+    if (JSValue value = thisObject->getDirect(exec->vm(), propertyName, attributes)) {
+        slot.setValue(thisObject, attributes, value);
         return true;
     }
 
@@ -175,26 +176,6 @@ bool JSActivation::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyNam
     ASSERT(!thisObject->hasGetterSetterProperties());
     ASSERT(thisObject->prototype().isNull());
     return false;
-}
-
-bool JSActivation::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    JSActivation* thisObject = jsCast<JSActivation*>(object);
-
-    if (propertyName == exec->propertyNames().arguments) {
-        // Defend against the inspector asking for the arguments object after it has been optimized out.
-        if (!thisObject->isTornOff()) {
-            PropertySlot slot;
-            JSActivation::getOwnPropertySlot(thisObject, exec, propertyName, slot);
-            descriptor.setDescriptor(slot.getValue(exec, propertyName), DontEnum);
-            return true;
-        }
-    }
-
-    if (thisObject->symbolTableGet(propertyName, descriptor))
-        return true;
-
-    return Base::getOwnPropertyDescriptor(object, exec, propertyName, descriptor);
 }
 
 void JSActivation::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
@@ -259,7 +240,7 @@ JSValue JSActivation::argumentsGetter(ExecState*, JSValue slotBase, PropertyName
     callFrame->uncheckedR(argumentsRegister) = arguments;
     callFrame->uncheckedR(realArgumentsRegister) = arguments;
     
-    ASSERT(callFrame->uncheckedR(realArgumentsRegister).jsValue().inherits(&Arguments::s_info));
+    ASSERT(callFrame->uncheckedR(realArgumentsRegister).jsValue().inherits(Arguments::info()));
     return callFrame->uncheckedR(realArgumentsRegister).jsValue();
 }
 

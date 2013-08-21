@@ -104,6 +104,9 @@ const char* arrayClassToString(Array::Class);
 const char* arraySpeculationToString(Array::Speculation);
 const char* arrayConversionToString(Array::Conversion);
 
+TypedArrayType toTypedArrayType(Array::Type);
+Array::Type toArrayType(TypedArrayType);
+
 class ArrayMode {
 public:
     ArrayMode()
@@ -380,6 +383,11 @@ public:
         return type() == Array::String;
     }
     
+    TypedArrayType typedArrayType() const
+    {
+        return toTypedArrayType(type());
+    }
+    
     bool operator==(const ArrayMode& other) const
     {
         return type() == other.type()
@@ -435,6 +443,11 @@ static inline bool canCSEStorage(const ArrayMode& arrayMode)
 static inline bool lengthNeedsStorage(const ArrayMode& arrayMode)
 {
     return arrayMode.lengthNeedsStorage();
+}
+
+static inline bool neverNeedsStorage(const ArrayMode&)
+{
+    return false;
 }
 
 } } // namespace JSC::DFG

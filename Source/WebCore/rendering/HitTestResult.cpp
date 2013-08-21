@@ -40,10 +40,12 @@
 #include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
 #include "HitTestLocation.h"
+#include "PseudoElement.h"
 #include "RenderBlock.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "Scrollbar.h"
+#include "ShadowRoot.h"
 #include "UserGestureIndicator.h"
 
 #if ENABLE(SVG)
@@ -132,14 +134,14 @@ void HitTestResult::setToNonShadowAncestor()
 void HitTestResult::setInnerNode(Node* n)
 {
     if (n && n->isPseudoElement())
-        n = n->parentOrShadowHostNode();
+        n = toPseudoElement(n)->hostElement();
     m_innerNode = n;
 }
     
 void HitTestResult::setInnerNonSharedNode(Node* n)
 {
     if (n && n->isPseudoElement())
-        n = n->parentOrShadowHostNode();
+        n = toPseudoElement(n)->hostElement();
     m_innerNonSharedNode = n;
 }
 
@@ -183,7 +185,7 @@ bool HitTestResult::isSelected() const
     if (!frame)
         return false;
 
-    return frame->selection()->contains(m_hitTestLocation.point());
+    return frame->selection().contains(m_hitTestLocation.point());
 }
 
 String HitTestResult::spellingToolTip(TextDirection& dir) const
@@ -194,7 +196,7 @@ String HitTestResult::spellingToolTip(TextDirection& dir) const
     if (!m_innerNonSharedNode)
         return String();
     
-    DocumentMarker* marker = m_innerNonSharedNode->document()->markers()->markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Grammar);
+    DocumentMarker* marker = m_innerNonSharedNode->document()->markers().markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Grammar);
     if (!marker)
         return String();
 
@@ -210,7 +212,7 @@ String HitTestResult::replacedString() const
     if (!m_innerNonSharedNode)
         return String();
     
-    DocumentMarker* marker = m_innerNonSharedNode->document()->markers()->markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Replacement);
+    DocumentMarker* marker = m_innerNonSharedNode->document()->markers().markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Replacement);
     if (!marker)
         return String();
     
@@ -660,7 +662,7 @@ Vector<String> HitTestResult::dictationAlternatives() const
     if (!m_innerNonSharedNode)
         return Vector<String>();
 
-    DocumentMarker* marker = m_innerNonSharedNode->document()->markers()->markerContainingPoint(pointInInnerNodeFrame(), DocumentMarker::DictationAlternatives);
+    DocumentMarker* marker = m_innerNonSharedNode->document()->markers().markerContainingPoint(pointInInnerNodeFrame(), DocumentMarker::DictationAlternatives);
     if (!marker)
         return Vector<String>();
 

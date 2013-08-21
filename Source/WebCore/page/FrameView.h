@@ -76,10 +76,9 @@ public:
     virtual bool scheduleAnimation();
 #endif
 
-    Frame* frame() const { return m_frame.get(); }
-    void clearFrame();
+    Frame& frame() const { return *m_frame; }
 
-    RenderView* renderView() const { return m_frame ? m_frame->contentRenderer() : 0; }
+    RenderView* renderView() const { return frame().contentRenderer(); }
 
     int mapFromLayoutToCSSUnits(LayoutUnit);
     LayoutUnit mapFromCSSToLayoutUnits(int);
@@ -115,7 +114,7 @@ public:
     void setNeedsLayout();
     void setViewportConstrainedObjectsNeedLayout();
 
-    bool needsFullRepaint() const { return m_doFullRepaint; }
+    bool needsFullRepaint() const { return m_needsFullRepaint; }
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     void serviceScriptedAnimations(double monotonicAnimationStartTime);
@@ -277,9 +276,9 @@ public:
     void setLastPaintTime(double lastPaintTime) { m_lastPaintTime = lastPaintTime; }
     void setNodeToDraw(Node*);
 
-    enum SelectionInSnaphot { IncludeSelection, ExcludeSelection };
+    enum SelectionInSnapshot { IncludeSelection, ExcludeSelection };
     enum CoordinateSpaceForSnapshot { DocumentCoordinates, ViewCoordinates };
-    void paintContentsForSnapshot(GraphicsContext*, const IntRect& imageRect, SelectionInSnaphot shouldPaintSelection, CoordinateSpaceForSnapshot);
+    void paintContentsForSnapshot(GraphicsContext*, const IntRect& imageRect, SelectionInSnapshot shouldPaintSelection, CoordinateSpaceForSnapshot);
 
     virtual void paintOverhangAreas(GraphicsContext*, const IntRect& horizontalOverhangArea, const IntRect& verticalOverhangArea, const IntRect& dirtyRect);
     virtual void paintScrollCorner(GraphicsContext*, const IntRect& cornerRect);
@@ -439,9 +438,6 @@ public:
     
     void setScrollPinningBehavior(ScrollPinningBehavior);
 
-    void setResizeEventAllowed(bool resizeEventAllowed) { m_resizeEventAllowed = resizeEventAllowed; }
-    bool resizeEventAllowed() const { return m_resizeEventAllowed; }
-
 protected:
     virtual bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect);
     virtual void scrollContentsSlowPath(const IntRect& updateRect);
@@ -458,6 +454,8 @@ private:
     void init();
 
     virtual bool isFrameView() const OVERRIDE { return true; }
+
+    bool isMainFrameView() const;
 
     friend class RenderWidget;
     bool useSlowRepaints(bool considerOverlap = true) const;
@@ -481,6 +479,7 @@ private:
     virtual void repaintContentRectangle(const IntRect&, bool immediate);
     virtual void contentsResized() OVERRIDE;
     virtual void visibleContentsResized();
+    virtual void fixedLayoutSizeChanged() OVERRIDE;
 
     virtual void delegatesScrollingDidChange();
 
@@ -538,6 +537,8 @@ private:
     FrameView* parentFrameView() const;
 
     bool doLayoutWithFrameFlattening(bool allowSubtree);
+    bool frameFlatteningEnabled() const;
+    bool isFrameFlatteningValidForThisFrame() const;
 
     bool qualifiesAsVisuallyNonEmpty() const;
 
@@ -552,11 +553,11 @@ private:
     
     typedef HashSet<RenderObject*> RenderObjectSet;
     OwnPtr<RenderObjectSet> m_widgetUpdateSet;
-    RefPtr<Frame> m_frame;
+    const RefPtr<Frame> m_frame;
 
     OwnPtr<RenderObjectSet> m_slowRepaintObjects;
 
-    bool m_doFullRepaint;
+    bool m_needsFullRepaint;
     
     bool m_canHaveScrollbars;
     bool m_cannotBlitToWindow;
@@ -674,7 +675,6 @@ private:
     bool m_visualUpdatesAllowedByClient;
     
     ScrollPinningBehavior m_scrollPinningBehavior;
-    bool m_resizeEventAllowed;
 };
 
 inline void FrameView::incrementVisuallyNonEmptyCharacterCount(unsigned count)
@@ -699,12 +699,12 @@ inline void FrameView::incrementVisuallyNonEmptyPixelCount(const IntSize& size)
 
 inline int FrameView::mapFromLayoutToCSSUnits(LayoutUnit value)
 {
-    return value / (m_frame->pageZoomFactor() * m_frame->frameScaleFactor());
+    return value / (frame().pageZoomFactor() * frame().frameScaleFactor());
 }
 
 inline LayoutUnit FrameView::mapFromCSSToLayoutUnits(int value)
 {
-    return value * m_frame->pageZoomFactor() * m_frame->frameScaleFactor();
+    return value * frame().pageZoomFactor() * frame().frameScaleFactor();
 }
 
 inline FrameView* toFrameView(Widget* widget)

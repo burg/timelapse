@@ -24,7 +24,6 @@
 #include "SVGTextPathElement.h"
 
 #include "Attribute.h"
-#include "NodeRenderingContext.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGTextPath.h"
 #include "SVGElementInstance.h"
@@ -134,23 +133,23 @@ RenderObject* SVGTextPathElement::createRenderer(RenderArena* arena, RenderStyle
     return new (arena) RenderSVGTextPath(this);
 }
 
-bool SVGTextPathElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool SVGTextPathElement::childShouldCreateRenderer(const Node* child) const
 {
-    if (childContext.node()->isTextNode()
-        || childContext.node()->hasTagName(SVGNames::aTag)
-        || childContext.node()->hasTagName(SVGNames::trefTag)
-        || childContext.node()->hasTagName(SVGNames::tspanTag))
+    if (child->isTextNode()
+        || child->hasTagName(SVGNames::aTag)
+        || child->hasTagName(SVGNames::trefTag)
+        || child->hasTagName(SVGNames::tspanTag))
         return true;
 
     return false;
 }
 
-bool SVGTextPathElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool SVGTextPathElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (parentNode()
         && (parentNode()->hasTagName(SVGNames::aTag)
             || parentNode()->hasTagName(SVGNames::textTag)))
-        return StyledElement::rendererIsNeeded(context);
+        return StyledElement::rendererIsNeeded(style);
 
     return false;
 }

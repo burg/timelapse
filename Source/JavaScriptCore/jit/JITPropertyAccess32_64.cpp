@@ -460,7 +460,7 @@ void JIT::emit_op_get_by_id(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int base = currentInstruction[2].u.operand;
-    Identifier* ident = &(m_codeBlock->identifier(currentInstruction[3].u.operand));
+    const Identifier* ident = &(m_codeBlock->identifier(currentInstruction[3].u.operand));
     
     emitLoad(base, regT1, regT0);
     emitJumpSlowCaseIfNotJSCell(base, regT1);
@@ -470,7 +470,7 @@ void JIT::emit_op_get_by_id(Instruction* currentInstruction)
     map(m_bytecodeOffset + OPCODE_LENGTH(op_get_by_id), dst, regT1, regT0);
 }
 
-void JIT::compileGetByIdHotPath(Identifier* ident)
+void JIT::compileGetByIdHotPath(const Identifier* ident)
 {
     // As for put_by_id, get_by_id requires the offset of the Structure and the offset of the access to be patched.
     // Additionally, for get_by_id we need patch the offset of the branch to the slow case (we patch this to jump
@@ -511,7 +511,7 @@ void JIT::emitSlow_op_get_by_id(Instruction* currentInstruction, Vector<SlowCase
     emitValueProfilingSite(regT4);
 }
 
-void JIT::compileGetByIdSlowCase(int dst, int base, Identifier* ident, Vector<SlowCaseEntry>::iterator& iter)
+void JIT::compileGetByIdSlowCase(int dst, int base, const Identifier* ident, Vector<SlowCaseEntry>::iterator& iter)
 {
     // As for the hot path of get_by_id, above, we ensure that we can use an architecture specific offset
     // so that we only need track one pointer into the slow case code - we track a pointer to the location
@@ -818,7 +818,7 @@ void JIT::privateCompileGetByIdProto(StructureStubInfo* stubInfo, Structure* str
 
     bool needsStubLink = false;
     // Checks out okay!
-    if (slot.cachedPropertyType() == PropertySlot::Getter) {
+    if (slot.isCacheableGetter()) {
         needsStubLink = true;
         compileGetDirectOffset(protoObject, regT2, regT1, cachedOffset);
         JITStubCall stubCall(this, cti_op_get_by_id_getter_stub);
@@ -826,7 +826,7 @@ void JIT::privateCompileGetByIdProto(StructureStubInfo* stubInfo, Structure* str
         stubCall.addArgument(regT0);
         stubCall.addArgument(TrustedImmPtr(stubInfo->callReturnLocation.executableAddress()));
         stubCall.call();
-    } else if (slot.cachedPropertyType() == PropertySlot::Custom) {
+    } else if (slot.isCacheableCustom()) {
         needsStubLink = true;
         JITStubCall stubCall(this, cti_op_get_by_id_custom_stub);
         stubCall.addArgument(TrustedImmPtr(protoObject));
@@ -884,7 +884,7 @@ void JIT::privateCompileGetByIdSelfList(StructureStubInfo* stubInfo, Polymorphic
     Jump failureCase = checkStructure(regT0, structure);
     bool needsStubLink = false;
     bool isDirect = false;
-    if (slot.cachedPropertyType() == PropertySlot::Getter) {
+    if (slot.isCacheableGetter()) {
         needsStubLink = true;
         compileGetDirectOffset(regT0, regT2, regT1, cachedOffset);
         JITStubCall stubCall(this, cti_op_get_by_id_getter_stub);
@@ -892,7 +892,7 @@ void JIT::privateCompileGetByIdSelfList(StructureStubInfo* stubInfo, Polymorphic
         stubCall.addArgument(regT0);
         stubCall.addArgument(TrustedImmPtr(stubInfo->callReturnLocation.executableAddress()));
         stubCall.call();
-    } else if (slot.cachedPropertyType() == PropertySlot::Custom) {
+    } else if (slot.isCacheableCustom()) {
         needsStubLink = true;
         JITStubCall stubCall(this, cti_op_get_by_id_custom_stub);
         stubCall.addArgument(regT0);
@@ -958,7 +958,7 @@ void JIT::privateCompileGetByIdProtoList(StructureStubInfo* stubInfo, Polymorphi
     
     bool needsStubLink = false;
     bool isDirect = false;
-    if (slot.cachedPropertyType() == PropertySlot::Getter) {
+    if (slot.isCacheableGetter()) {
         needsStubLink = true;
         compileGetDirectOffset(protoObject, regT2, regT1, cachedOffset);
         JITStubCall stubCall(this, cti_op_get_by_id_getter_stub);
@@ -966,7 +966,7 @@ void JIT::privateCompileGetByIdProtoList(StructureStubInfo* stubInfo, Polymorphi
         stubCall.addArgument(regT0);
         stubCall.addArgument(TrustedImmPtr(stubInfo->callReturnLocation.executableAddress()));
         stubCall.call();
-    } else if (slot.cachedPropertyType() == PropertySlot::Custom) {
+    } else if (slot.isCacheableCustom()) {
         needsStubLink = true;
         JITStubCall stubCall(this, cti_op_get_by_id_custom_stub);
         stubCall.addArgument(TrustedImmPtr(protoObject));
@@ -1037,7 +1037,7 @@ void JIT::privateCompileGetByIdChainList(StructureStubInfo* stubInfo, Polymorphi
     
     bool needsStubLink = false;
     bool isDirect = false;
-    if (slot.cachedPropertyType() == PropertySlot::Getter) {
+    if (slot.isCacheableGetter()) {
         needsStubLink = true;
         compileGetDirectOffset(protoObject, regT2, regT1, cachedOffset);
         JITStubCall stubCall(this, cti_op_get_by_id_getter_stub);
@@ -1045,7 +1045,7 @@ void JIT::privateCompileGetByIdChainList(StructureStubInfo* stubInfo, Polymorphi
         stubCall.addArgument(regT0);
         stubCall.addArgument(TrustedImmPtr(stubInfo->callReturnLocation.executableAddress()));
         stubCall.call();
-    } else if (slot.cachedPropertyType() == PropertySlot::Custom) {
+    } else if (slot.isCacheableCustom()) {
         needsStubLink = true;
         JITStubCall stubCall(this, cti_op_get_by_id_custom_stub);
         stubCall.addArgument(TrustedImmPtr(protoObject));
@@ -1115,7 +1115,7 @@ void JIT::privateCompileGetByIdChain(StructureStubInfo* stubInfo, Structure* str
     ASSERT(protoObject);
     
     bool needsStubLink = false;
-    if (slot.cachedPropertyType() == PropertySlot::Getter) {
+    if (slot.isCacheableGetter()) {
         needsStubLink = true;
         compileGetDirectOffset(protoObject, regT2, regT1, cachedOffset);
         JITStubCall stubCall(this, cti_op_get_by_id_getter_stub);
@@ -1123,7 +1123,7 @@ void JIT::privateCompileGetByIdChain(StructureStubInfo* stubInfo, Structure* str
         stubCall.addArgument(regT0);
         stubCall.addArgument(TrustedImmPtr(stubInfo->callReturnLocation.executableAddress()));
         stubCall.call();
-    } else if (slot.cachedPropertyType() == PropertySlot::Custom) {
+    } else if (slot.isCacheableCustom()) {
         needsStubLink = true;
         JITStubCall stubCall(this, cti_op_get_by_id_custom_stub);
         stubCall.addArgument(TrustedImmPtr(protoObject));

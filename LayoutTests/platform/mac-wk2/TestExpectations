@@ -235,12 +235,6 @@ webkit.org/b/105956 inspector/geolocation-watchPosition.html [ Pass Failure ]
 
 webkit.org/b/105960 plugins/navigator-plugins.html [ Failure ]
 
-webkit.org/b/105988 [ Debug ] inspector/debugger/pause-in-internal-script.html [ Pass Crash ]
-webkit.org/b/105988 [ Debug ] inspector/debugger/watch-expressions-panel-switch.html [ Pass Crash ]
-webkit.org/b/105988 [ Debug ] inspector/debugger/properties-special.html [ Pass Crash ]
-webkit.org/b/105988 [ Debug ] inspector/debugger/reveal-execution-line.html [ Pass Crash ]
-webkit.org/b/105988 [ Debug ] inspector/debugger/watch-expressions-preserve-expansion.html [ Pass Crash ]
-
 webkit.org/b/105998 [ Lion Release ] fast/css/sticky/inline-sticky.html [ ImageOnlyFailure ]
 webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/inline-sticky.html [ ImageOnlyFailure Pass ]
 webkit.org/b/105998 [ MountainLion Debug ] fast/css/sticky/sticky-both-sides.html [ ImageOnlyFailure Pass ]
@@ -318,16 +312,6 @@ webkit.org/b/117767 media/event-attributes.html [ Failure ]
 
 webkit.org/b/117962 [ MountainLion ] media/video-played-collapse.html [ Skip ]
 
-# Minor pixel differences with reftest.
-# Sometimes, the expected result fails to paint completely, <rdar://problem/14382142>.
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing-add-text.html [ ImageOnlyFailure ]
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing-contain.html [ ImageOnlyFailure ]
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing-cover.html [ ImageOnlyFailure ]
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing-padding.html [ ImageOnlyFailure ]
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing-position.html [ ImageOnlyFailure ]
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing-size.html [ ImageOnlyFailure ]
-webkit.org/b/118490 compositing/patterns/direct-pattern-compositing.html [ ImageOnlyFailure ]
-
 webkit.org/b/118925 [ Debug ] compositing/background-color/background-color-alpha.html  [ ImageOnlyFailure ]  
 webkit.org/b/118925 [ Debug ] compositing/background-color/background-color-change-to-text.html  [ ImageOnlyFailure ]
 webkit.org/b/118925 [ Debug ] compositing/background-color/background-color-composite.html [ ImageOnlyFailure ]
@@ -347,6 +331,9 @@ webkit.org/b/118925 [ Debug ] fast/multicol/mixed-opacity-fixed-test.html  [ Ima
 webkit.org/b/118925 [ Debug ] fast/regions/fixed-pos-elem-in-region.html  [ ImageOnlyFailure ]
 webkit.org/b/118925 [ Debug ] fast/repaint/region-painting-in-composited-view.html  [ ImageOnlyFailure ]
 webkit.org/b/118925 [ Debug ] svg/repaint/buffered-rendering-static-image.html  [ ImageOnlyFailure ]
+
+# Only failing on WK1
+webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Pass ]
 
 ### END OF (1) Classified failures with bug reports
 ########################################
@@ -427,12 +414,20 @@ webaudio/ [ Pass ]
 webaudio/mediastreamaudiodestinationnode.html
 webaudio/mediastreamaudiosourcenode.html
 webaudio/codec-tests/vorbis/
+webkit.org/b/119459 [ Debug ] webaudio/javascriptaudionode-downmix8-2channel-input.html [ Pass Crash ]
+webkit.org/b/119467 webaudio/audiobuffersource-loop-points.html [ Skip ]
 
 # Asserts in WebKit1-debug only, so reenabling.
 compositing/geometry/fixed-position-flipped-writing-mode.html [ Pass ]
 
 # Plug-in blocking callback doesn't exist in WebKit1, so reenabling.
 plugins/unavailable-plugin-indicator-obscurity.html [ Pass ]
+
+# Fails in WebKit1 only, so re-enabling.
+editing/pasteboard/can-read-in-copy-and-cut-events.html [ Pass ] 
+
+# Color input is enabled on Mac WK2 but not on WK1.
+fast/forms/color/input-color-onchange-event.html [ Pass ]
 
 ### END OF (5) Features that are not supported in WebKit1, so skipped in mac/TestExpectations then re-enabled here
 ########################################

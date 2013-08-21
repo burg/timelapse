@@ -215,7 +215,7 @@ bool InspectorPageAgent::cachedResourceContent(CachedResource* cachedResource, S
 
 bool InspectorPageAgent::mainResourceContent(Frame* frame, bool withBase64Encode, String* result)
 {
-    RefPtr<ResourceBuffer> buffer = frame->loader()->documentLoader()->mainResourceData();
+    RefPtr<ResourceBuffer> buffer = frame->loader().documentLoader()->mainResourceData();
     if (!buffer)
         return false;
     String textEncodingName = frame->document()->inputEncoding();
@@ -434,10 +434,8 @@ void InspectorPageAgent::enable(ErrorString*)
     m_state->setBoolean(PageAgentState::pageAgentEnabled, true);
     m_instrumentingAgents->setInspectorPageAgent(this);
 
-    if (Frame* frame = mainFrame()) {
-        if (Settings* settings = frame->settings())
-            m_originalScriptExecutionDisabled = !settings->isScriptEnabled();
-    }
+    if (Frame* frame = mainFrame())
+        m_originalScriptExecutionDisabled = !frame->settings().isScriptEnabled();
 }
 
 void InspectorPageAgent::disable(ErrorString*)
@@ -494,14 +492,14 @@ void InspectorPageAgent::reload(ErrorString*, const bool* const optionalIgnoreCa
 {
     m_pendingScriptToEvaluateOnLoadOnce = optionalScriptToEvaluateOnLoad ? *optionalScriptToEvaluateOnLoad : "";
     m_pendingScriptPreprocessor = optionalScriptPreprocessor ? *optionalScriptPreprocessor : "";
-    m_page->mainFrame()->loader()->reload(optionalIgnoreCache ? *optionalIgnoreCache : false);
+    m_page->mainFrame()->loader().reload(optionalIgnoreCache ? *optionalIgnoreCache : false);
 }
 
 void InspectorPageAgent::navigate(ErrorString*, const String& url)
 {
     UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
     Frame* frame = m_page->mainFrame();
-    frame->loader()->changeLocation(frame->document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
+    frame->loader().changeLocation(frame->document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
 }
 
 static PassRefPtr<TypeBuilder::Page::Cookie> buildObjectForCookie(const Cookie& cookie)
@@ -563,7 +561,7 @@ static Vector<KURL> allResourcesURLsForFrame(Frame* frame)
 {
     Vector<KURL> result;
 
-    result.append(frame->loader()->documentLoader()->url());
+    result.append(frame->loader().documentLoader()->url());
 
     Vector<CachedResource*> allResources = cachedResourcesForFrame(frame);
     for (Vector<CachedResource*>::const_iterator it = allResources.begin(); it != allResources.end(); ++it)
@@ -659,12 +657,14 @@ void InspectorPageAgent::searchInResource(ErrorString*, const String& frameId, c
     bool caseSensitive = optionalCaseSensitive ? *optionalCaseSensitive : false;
 
     Frame* frame = frameForId(frameId);
-    KURL kurl(ParsedURLString, url);
+    if (!frame)
+        return;
 
-    FrameLoader* frameLoader = frame ? frame->loader() : 0;
-    DocumentLoader* loader = frameLoader ? frameLoader->documentLoader() : 0;
+    DocumentLoader* loader = frame->loader().documentLoader();
     if (!loader)
         return;
+
+    KURL kurl(ParsedURLString, url);
 
     String content;
     bool success = false;
@@ -837,9 +837,8 @@ void InspectorPageAgent::getScriptExecutionStatus(ErrorString*, PageCommandHandl
     bool disabledInSettings = false;
     Frame* frame = mainFrame();
     if (frame) {
-        disabledByScriptController = !frame->script()->canExecuteScripts(NotAboutToExecuteScript);
-        if (frame->settings())
-            disabledInSettings = !frame->settings()->isScriptEnabled();
+        disabledByScriptController = !frame->script().canExecuteScripts(NotAboutToExecuteScript);
+        disabledInSettings = !frame->settings().isScriptEnabled();
     }
 
     if (!disabledByScriptController) {
@@ -859,12 +858,9 @@ void InspectorPageAgent::setScriptExecutionDisabled(ErrorString*, bool value)
     if (!mainFrame())
         return;
 
-    Settings* settings = mainFrame()->settings();
-    if (settings) {
-        m_ignoreScriptsEnabledNotification = true;
-        settings->setScriptEnabled(!value);
-        m_ignoreScriptsEnabledNotification = false;
-    }
+    m_ignoreScriptsEnabledNotification = true;
+    mainFrame()->settings().setScriptEnabled(!value);
+    m_ignoreScriptsEnabledNotification = false;
 }
 
 void InspectorPageAgent::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWorld* world)
@@ -884,11 +880,11 @@ void InspectorPageAgent::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWor
         for (InspectorObject::const_iterator it = scripts->begin(); it != end; ++it) {
             String scriptText;
             if (it->value->asString(&scriptText))
-                frame->script()->executeScript(scriptText);
+                frame->script().executeScript(scriptText);
         }
     }
     if (!m_scriptToEvaluateOnLoadOnce.isEmpty())
-        frame->script()->executeScript(m_scriptToEvaluateOnLoadOnce);
+        frame->script().executeScript(m_scriptToEvaluateOnLoadOnce);
 }
 
 void InspectorPageAgent::domContentEventFired()
@@ -984,8 +980,8 @@ Frame* InspectorPageAgent::assertFrame(ErrorString* errorString, const String& f
 // static
 DocumentLoader* InspectorPageAgent::assertDocumentLoader(ErrorString* errorString, Frame* frame)
 {
-    FrameLoader* frameLoader = frame->loader();
-    DocumentLoader* documentLoader = frameLoader ? frameLoader->documentLoader() : 0;
+    FrameLoader& frameLoader = frame->loader();
+    DocumentLoader* documentLoader = frameLoader.documentLoader();
     if (!documentLoader)
         *errorString = "No documentLoader for given frame found";
     return documentLoader;
@@ -1102,9 +1098,9 @@ PassRefPtr<TypeBuilder::Page::Frame> InspectorPageAgent::buildObjectForFrame(Fra
 {
     RefPtr<TypeBuilder::Page::Frame> frameObject = TypeBuilder::Page::Frame::create()
         .setId(frameId(frame))
-        .setLoaderId(loaderId(frame->loader()->documentLoader()))
+        .setLoaderId(loaderId(frame->loader().documentLoader()))
         .setUrl(frame->document()->url().string())
-        .setMimeType(frame->loader()->documentLoader()->responseMIMEType())
+        .setMimeType(frame->loader().documentLoader()->responseMIMEType())
         .setSecurityOrigin(frame->document()->securityOrigin()->toRawString());
     if (frame->tree()->parent())
         frameObject->setParentId(frameId(frame->tree()->parent()));
@@ -1169,8 +1165,8 @@ void InspectorPageAgent::updateViewMetrics(int width, int height, double fontSca
 void InspectorPageAgent::updateTouchEventEmulationInPage(bool enabled)
 {
     m_state->setBoolean(PageAgentState::touchEventEmulationEnabled, enabled);
-    if (mainFrame() && mainFrame()->settings())
-        mainFrame()->settings()->setTouchEventEmulationEnabled(enabled);
+    if (mainFrame())
+        mainFrame()->settings().setTouchEventEmulationEnabled(enabled);
 }
 #endif
 
@@ -1310,25 +1306,15 @@ void InspectorPageAgent::applyEmulatedMedia(String* media)
         *media = emulatedMedia;
 }
 
-void InspectorPageAgent::getCompositingBordersVisible(ErrorString* error, bool* outParam)
+void InspectorPageAgent::getCompositingBordersVisible(ErrorString*, bool* outParam)
 {
-    Settings* settings = m_page->settings();
-    if (!settings) {
-        *error = "Internal error: unable to read settings";
-        return;
-    }
-
-    *outParam = settings->showDebugBorders() || settings->showRepaintCounter();
+    *outParam = m_page->settings().showDebugBorders() || m_page->settings().showRepaintCounter();
 }
 
 void InspectorPageAgent::setCompositingBordersVisible(ErrorString*, bool visible)
 {
-    Settings* settings = m_page->settings();
-    if (!settings)
-        return;
-
-    settings->setShowDebugBorders(visible);
-    settings->setShowRepaintCounter(visible);
+    m_page->settings().setShowDebugBorders(visible);
+    m_page->settings().setShowRepaintCounter(visible);
 }
 
 void InspectorPageAgent::captureScreenshot(ErrorString* errorString, String* data)

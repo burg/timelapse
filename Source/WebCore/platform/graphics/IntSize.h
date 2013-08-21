@@ -26,6 +26,8 @@
 #ifndef IntSize_h
 #define IntSize_h
 
+#include <wtf/PrintStream.h>
+
 #if USE(CG)
 typedef struct CGSize CGSize;
 #endif
@@ -152,6 +154,8 @@ public:
     IntSize(const BlackBerry::Platform::IntSize&);
     operator BlackBerry::Platform::IntSize() const;
 #endif
+
+    void dump(PrintStream& out) const;
 
 private:
     int m_width, m_height;

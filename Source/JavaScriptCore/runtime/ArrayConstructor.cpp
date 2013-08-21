@@ -66,14 +66,9 @@ void ArrayConstructor::finishCreation(ExecState* exec, ArrayPrototype* arrayProt
     putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(1), ReadOnly | DontEnum | DontDelete);
 }
 
-bool ArrayConstructor::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
+bool ArrayConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::arrayConstructorTable(exec), jsCast<ArrayConstructor*>(cell), propertyName, slot);
-}
-
-bool ArrayConstructor::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticFunctionDescriptor<InternalFunction>(exec, ExecState::arrayConstructorTable(exec), jsCast<ArrayConstructor*>(object), propertyName, descriptor);
+    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::arrayConstructorTable(exec), jsCast<ArrayConstructor*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -128,7 +123,7 @@ CallType ArrayConstructor::getCallData(JSCell*, CallData& callData)
 
 EncodedJSValue JSC_HOST_CALL arrayConstructorIsArray(ExecState* exec)
 {
-    return JSValue::encode(jsBoolean(exec->argument(0).inherits(&JSArray::s_info)));
+    return JSValue::encode(jsBoolean(exec->argument(0).inherits(JSArray::info())));
 }
 
 } // namespace JSC

@@ -44,10 +44,12 @@
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
 #include "Page.h"
+#include "RenderStyle.h"
 #include "ScriptEventListener.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
-#include "StyleResolver.h"
+#include "StyleInheritedData.h"
+#include "StyleResolveForDocument.h"
 #include "StyleSheetContents.h"
 #include <wtf/StdLibExtras.h>
 
@@ -71,7 +73,7 @@ inline HTMLLinkElement::HTMLLinkElement(const QualifiedName& tagName, Document* 
     , m_isInShadowTree(false)
     , m_firedLoad(false)
     , m_loadedSheet(false)
-    , m_pendingSheetType(None)
+    , m_pendingSheetType(Unknown)
 {
     ASSERT(hasTagName(linkTag));
 }
@@ -109,7 +111,7 @@ void HTMLLinkElement::setDisabledState(bool disabled)
 
             // Check #2: An alternate sheet becomes enabled while it is still loading.
             if (m_relAttribute.m_isAlternate && m_disabledState == EnabledViaScript)
-                addPendingSheet(Blocking);
+                addPendingSheet(ActiveSheet);
 
             // Check #3: A main sheet becomes enabled while it was still loading and
             // after it was disabled via script. It takes really terrible code to make this
@@ -117,7 +119,7 @@ void HTMLLinkElement::setDisabledState(bool disabled)
             // virtualplastic.net, which manages to do about 12 enable/disables on only 3
             // sheets. :)
             if (!m_relAttribute.m_isAlternate && m_disabledState == EnabledViaScript && oldDisabledState == Disabled)
-                addPendingSheet(Blocking);
+                addPendingSheet(ActiveSheet);
 
             // If the sheet is already loading just bail.
             return;
@@ -182,7 +184,7 @@ void HTMLLinkElement::process()
     if (!m_linkLoader.loadLink(m_relAttribute, type, m_sizes->toString(), url, document()))
         return;
 
-    bool acceptIfTypeContainsTextCSS = document()->page() && document()->page()->settings() && document()->page()->settings()->treatsAnyTextCSSLinkAsStylesheet();
+    bool acceptIfTypeContainsTextCSS = document()->page() && document()->page()->settings().treatsAnyTextCSSLinkAsStylesheet();
 
     if (m_disabledState != Disabled && (m_relAttribute.m_isStyleSheet || (acceptIfTypeContainsTextCSS && type.contains("text/css")))
         && document()->frame() && url.isValid()) {
@@ -204,7 +206,7 @@ void HTMLLinkElement::process()
 
         bool mediaQueryMatches = true;
         if (!m_media.isEmpty()) {
-            RefPtr<RenderStyle> documentStyle = StyleResolver::styleForDocument(document());
+            RefPtr<RenderStyle> documentStyle = Style::resolveForDocument(document());
             RefPtr<MediaQuerySet> media = MediaQuerySet::createAllowingDescriptionSyntax(m_media);
             MediaQueryEvaluator evaluator(document()->frame()->view()->mediaType(), document()->frame(), documentStyle.get());
             mediaQueryMatches = evaluator.eval(media.get());
@@ -212,11 +214,11 @@ void HTMLLinkElement::process()
 
         // Don't hold up render tree construction and script execution on stylesheets
         // that are not needed for the rendering at the moment.
-        bool blocking = mediaQueryMatches && !isAlternate();
-        addPendingSheet(blocking ? Blocking : NonBlocking);
+        bool isActive = mediaQueryMatches && !isAlternate();
+        addPendingSheet(isActive ? ActiveSheet : InactiveSheet);
 
         // Load stylesheets that are not needed for the rendering immediately with low priority.
-        ResourceLoadPriority priority = blocking ? ResourceLoadPriorityUnresolved : ResourceLoadPriorityVeryLow;
+        ResourceLoadPriority priority = isActive ? ResourceLoadPriorityUnresolved : ResourceLoadPriorityVeryLow;
         CachedResourceRequest request(ResourceRequest(document()->completeURL(url)), charset, priority);
         request.setInitiator(this);
         m_cachedSheet = document()->cachedResourceLoader()->requestCSSStyleSheet(request);
@@ -280,7 +282,7 @@ void HTMLLinkElement::removedFrom(ContainerNode* insertionPoint)
         removePendingSheet(RemovePendingSheetNotifyLater);
 
     if (document()->renderer())
-        document()->styleResolverChanged(DeferRecalcStyle);
+        document()->styleResolverChanged(DeferRecalcStyleIfNeeded);
 }
 
 void HTMLLinkElement::finishParsingChildren()
@@ -304,7 +306,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const KURL& baseURL, 
         ASSERT(restoredSheet->isCacheable());
         ASSERT(!restoredSheet->isLoading());
 
-        m_sheet = CSSStyleSheet::create(restoredSheet, this);
+        m_sheet = CSSStyleSheet::create(restoredSheet.release(), this);
         m_sheet->setMediaQueries(MediaQuerySet::createAllowingDescriptionSyntax(m_media));
         m_sheet->setTitle(title());
 
@@ -327,7 +329,7 @@ void HTMLLinkElement::setCSSStyleSheet(const String& href, const KURL& baseURL, 
     styleSheet->checkLoaded();
 
     if (styleSheet->isCacheable())
-        const_cast<CachedCSSStyleSheet*>(cachedStyleSheet)->saveParsedStyleSheet(styleSheet);
+        const_cast<CachedCSSStyleSheet*>(cachedStyleSheet)->saveParsedStyleSheet(styleSheet.release());
 }
 
 bool HTMLLinkElement::styleSheetIsLoading() const
@@ -383,9 +385,9 @@ void HTMLLinkElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccu
 
 void HTMLLinkElement::startLoadingDynamicSheet()
 {
-    // We don't support multiple blocking sheets.
-    ASSERT(m_pendingSheetType < Blocking);
-    addPendingSheet(Blocking);
+    // We don't support multiple active sheets.
+    ASSERT(m_pendingSheetType < ActiveSheet);
+    addPendingSheet(ActiveSheet);
 }
 
 bool HTMLLinkElement::isURLAttribute(const Attribute& attribute) const
@@ -448,7 +450,7 @@ void HTMLLinkElement::addPendingSheet(PendingSheetType type)
         return;
     m_pendingSheetType = type;
 
-    if (m_pendingSheetType == NonBlocking)
+    if (m_pendingSheetType == InactiveSheet)
         return;
     document()->styleSheetCollection()->addPendingSheet();
 }
@@ -456,13 +458,14 @@ void HTMLLinkElement::addPendingSheet(PendingSheetType type)
 void HTMLLinkElement::removePendingSheet(RemovePendingSheetNotificationType notification)
 {
     PendingSheetType type = m_pendingSheetType;
-    m_pendingSheetType = None;
+    m_pendingSheetType = Unknown;
 
-    if (type == None)
+    if (type == Unknown)
         return;
-    if (type == NonBlocking) {
-        // Document::removePendingSheet() triggers the style selector recalc for blocking sheets.
-        document()->styleResolverChanged(RecalcStyleImmediately);
+
+    if (type == InactiveSheet) {
+        // Document just needs to know about the sheet for exposure through document.styleSheets
+        document()->styleSheetCollection()->updateActiveStyleSheets(DocumentStyleSheetCollection::OptimizedUpdate);
         return;
     }
 
@@ -481,17 +484,5 @@ void HTMLLinkElement::setSizes(const String& value)
 {
     m_sizes->setValue(value);
 }
-
-#if ENABLE(MICRODATA)
-String HTMLLinkElement::itemValueText() const
-{
-    return getURLAttribute(hrefAttr);
-}
-
-void HTMLLinkElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(hrefAttr, value);
-}
-#endif
 
 } // namespace WebCore

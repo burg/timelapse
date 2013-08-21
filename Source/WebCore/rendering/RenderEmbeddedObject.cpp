@@ -66,29 +66,36 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static const float replacementTextRoundedRectHeight = 18;
-static const float replacementTextRoundedRectLeftRightTextMargin = 6;
-static const float replacementTextRoundedRectBottomTextPadding = 1;
-static const float replacementTextRoundedRectOpacity = 0.8f;
-static const float replacementTextRoundedRectRadius = 5;
-static const float replacementArrowLeftMargin = 5;
+static const float replacementTextRoundedRectHeight = 22;
+static const float replacementTextRoundedRectLeftTextMargin = 10;
+static const float replacementTextRoundedRectRightTextMargin = 10;
+static const float replacementTextRoundedRectRightTextMarginWithArrow = 5;
+static const float replacementTextRoundedRectRadius = 11;
+static const float replacementArrowLeftMargin = -4;
 static const float replacementArrowPadding = 4;
+static const float replacementArrowCirclePadding = 3;
 
 static const Color& replacementTextRoundedRectPressedColor()
 {
-    static const Color pressed(205, 205, 205);
+    static const Color pressed(105, 105, 105, 242);
     return pressed;
 }
 
 static const Color& replacementTextRoundedRectColor()
 {
-    static const Color standard(221, 221, 221);
+    static const Color standard(125, 125, 125, 242);
     return standard;
 }
 
 static const Color& replacementTextColor()
 {
-    static const Color standard(102, 102, 102);
+    static const Color standard(240, 240, 240, 255);
+    return standard;
+}
+
+static const Color& unavailablePluginBorderColor()
+{
+    static const Color standard(255, 255, 255, 216);
     return standard;
 }
 
@@ -145,7 +152,7 @@ static String unavailablePluginReplacementText(RenderEmbeddedObject::PluginUnava
 static bool shouldUnavailablePluginMessageBeButton(Document* document, RenderEmbeddedObject::PluginUnavailabilityReason pluginUnavailabilityReason)
 {
     Page* page = document->page();
-    return page && page->chrome().client()->shouldUnavailablePluginMessageBeButton(pluginUnavailabilityReason);
+    return page && page->chrome().client().shouldUnavailablePluginMessageBeButton(pluginUnavailabilityReason);
 }
 
 void RenderEmbeddedObject::setPluginUnavailabilityReason(PluginUnavailabilityReason pluginUnavailabilityReason)
@@ -192,7 +199,7 @@ void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const Layout
         return;
 
     bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, alignedRect.size());
-    context->drawImage(image, style()->colorSpace(), alignedRect, CompositeSourceOver, shouldRespectImageOrientation(), useLowQualityScaling);
+    context->drawImage(image, style()->colorSpace(), alignedRect, CompositeSourceOver, ImageOrientationDescription(shouldRespectImageOrientation()), useLowQualityScaling);
 }
 
 void RenderEmbeddedObject::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -236,6 +243,29 @@ void RenderEmbeddedObject::paint(PaintInfo& paintInfo, const LayoutPoint& paintO
     RenderPart::paint(paintInfo, paintOffset);
 }
 
+static void drawReplacementArrow(GraphicsContext* context, const FloatRect& insideRect)
+{
+    GraphicsContextStateSaver stateSaver(*context);
+
+    FloatRect rect(insideRect);
+    rect.inflate(-replacementArrowPadding);
+
+    FloatPoint center(rect.center());
+    FloatPoint arrowTip(rect.maxX(), center.y());
+
+    context->setStrokeThickness(2);
+    context->setLineCap(RoundCap);
+    context->setLineJoin(RoundJoin);
+
+    Path path;
+    path.moveTo(FloatPoint(rect.x(), center.y()));
+    path.addLineTo(arrowTip);
+    path.addLineTo(FloatPoint(center.x(), rect.y()));
+    path.moveTo(arrowTip);
+    path.addLineTo(FloatPoint(center.x(), rect.maxY()));
+    context->strokePath(path);
+}
+
 void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     if (!showsUnavailablePluginIndicator())
@@ -249,26 +279,49 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
         return;
 
     FloatRect contentRect;
-    Path path;
+    FloatRect indicatorRect;
     FloatRect replacementTextRect;
     FloatRect arrowRect;
     Font font;
     TextRun run("");
     float textWidth;
-    if (!getReplacementTextGeometry(paintOffset, contentRect, path, replacementTextRect, arrowRect, font, run, textWidth))
+    if (!getReplacementTextGeometry(paintOffset, contentRect, indicatorRect, replacementTextRect, arrowRect, font, run, textWidth))
         return;
+
+    Path background;
+    background.addRoundedRect(indicatorRect, FloatSize(replacementTextRoundedRectRadius, replacementTextRoundedRectRadius));
 
     GraphicsContextStateSaver stateSaver(*context);
     context->clip(contentRect);
-    context->setAlpha(replacementTextRoundedRectOpacity);
     context->setFillColor(m_unavailablePluginIndicatorIsPressed ? replacementTextRoundedRectPressedColor() : replacementTextRoundedRectColor(), style()->colorSpace());
-    context->fillPath(path);
+    context->fillPath(background);
+
+    Path strokePath;
+    FloatRect strokeRect(indicatorRect);
+    strokeRect.inflate(1);
+    strokePath.addRoundedRect(strokeRect, FloatSize(replacementTextRoundedRectRadius + 1, replacementTextRoundedRectRadius + 1));
+
+    context->setStrokeColor(unavailablePluginBorderColor(), style()->colorSpace());
+    context->setStrokeThickness(2);
+    context->strokePath(strokePath);
 
     const FontMetrics& fontMetrics = font.fontMetrics();
-    float labelX = roundf(replacementTextRect.location().x() + (replacementTextRect.size().width() - textWidth) / 2);
+    float labelX = roundf(replacementTextRect.location().x() + replacementTextRoundedRectLeftTextMargin);
     float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.height()) / 2 + fontMetrics.ascent());
     context->setFillColor(replacementTextColor(), style()->colorSpace());
     context->drawBidiText(font, run, FloatPoint(labelX, labelY));
+
+    if (shouldUnavailablePluginMessageBeButton(document(), m_pluginUnavailabilityReason)) {
+        arrowRect.inflate(-replacementArrowCirclePadding);
+
+        context->beginTransparencyLayer(1.0);
+        context->setFillColor(replacementTextColor(), style()->colorSpace());
+        context->fillEllipse(arrowRect);
+
+        context->setCompositeOperation(CompositeClear);
+        drawReplacementArrow(context, arrowRect);
+        context->endTransparencyLayer();
+    }
 }
 
 void RenderEmbeddedObject::setUnavailablePluginIndicatorIsHidden(bool hidden)
@@ -278,28 +331,10 @@ void RenderEmbeddedObject::setUnavailablePluginIndicatorIsHidden(bool hidden)
     repaint();
 }
 
-static void addReplacementArrowPath(Path& path, const FloatRect& insideRect)
+bool RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, FloatRect& indicatorRect, FloatRect& replacementTextRect, FloatRect& arrowRect, Font& font, TextRun& run, float& textWidth) const
 {
-    FloatRect rect(insideRect);
-    rect.inflate(-replacementArrowPadding);
+    bool includesArrow = shouldUnavailablePluginMessageBeButton(document(), m_pluginUnavailabilityReason);
 
-    FloatPoint center = rect.center();
-    FloatSize arrowEdge(rect.width() / 2, rect.height() / 3);
-    FloatSize arrowHorizontalEdge(arrowEdge.width(), 0);
-    FloatSize arrowVerticalEdge(0, arrowEdge.height());
-
-    path.moveTo(FloatPoint(floorf(center.x()), floorf(rect.y())));
-    path.addLineTo(FloatPoint(floorf(center.x()), floorf(rect.y() + arrowEdge.height())));
-    path.addLineTo(FloatPoint(ceilf(center.x() - arrowEdge.width()), floorf(rect.y() + arrowEdge.height())));
-    path.addLineTo(FloatPoint(ceilf(center.x() - arrowEdge.width()), ceilf(rect.y() + arrowEdge.height() + arrowEdge.height())));
-    path.addLineTo(FloatPoint(floorf(center.x()), ceilf(rect.y() + arrowEdge.height() + arrowEdge.height())));
-    path.addLineTo(FloatPoint(floorf(center.x()), ceilf(rect.y() + arrowEdge.height() + arrowEdge.height() + arrowEdge.height())));
-    path.addLineTo(FloatPoint(ceilf(center.x() + arrowEdge.width()), center.y()));
-    path.closeSubpath();
-}
-
-bool RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumulatedOffset, FloatRect& contentRect, Path& path, FloatRect& replacementTextRect, FloatRect& arrowRect, Font& font, TextRun& run, float& textWidth) const
-{
     contentRect = contentBoxRect();
     contentRect.moveBy(roundedIntPoint(accumulatedOffset));
 
@@ -311,29 +346,26 @@ bool RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
     if (!settings)
         return false;
     fontDescription.setRenderingMode(settings->fontRenderingMode());
-    fontDescription.setComputedSize(fontDescription.specifiedSize());
+    fontDescription.setComputedSize(12);
     font = Font(fontDescription, 0, 0);
     font.update(0);
 
     run = TextRun(m_unavailablePluginReplacementText);
     textWidth = font.width(run);
 
-    replacementTextRect.setSize(FloatSize(textWidth + replacementTextRoundedRectLeftRightTextMargin * 2, replacementTextRoundedRectHeight));
+    replacementTextRect.setSize(FloatSize(textWidth + replacementTextRoundedRectLeftTextMargin + (includesArrow ? replacementTextRoundedRectRightTextMarginWithArrow : replacementTextRoundedRectRightTextMargin), replacementTextRoundedRectHeight));
     float x = (contentRect.size().width() / 2 - replacementTextRect.size().width() / 2) + contentRect.location().x();
     float y = (contentRect.size().height() / 2 - replacementTextRect.size().height() / 2) + contentRect.location().y();
     replacementTextRect.setLocation(FloatPoint(x, y));
 
-    replacementTextRect.setHeight(replacementTextRect.height() + replacementTextRoundedRectBottomTextPadding);
+    indicatorRect = replacementTextRect;
 
-    path.addRoundedRect(replacementTextRect, FloatSize(replacementTextRoundedRectRadius, replacementTextRoundedRectRadius));
-
-    if (shouldUnavailablePluginMessageBeButton(document(), m_pluginUnavailabilityReason)) {
-        arrowRect = path.boundingRect();
+    // Expand the background rect to include the arrow, if it will be used.
+    if (includesArrow) {
+        arrowRect = indicatorRect;
         arrowRect.setX(ceilf(arrowRect.maxX() + replacementArrowLeftMargin));
         arrowRect.setWidth(arrowRect.height());
-        arrowRect.inflate(-0.5);
-        path.addEllipse(arrowRect);
-        addReplacementArrowPath(path, arrowRect);
+        indicatorRect.unite(arrowRect);
     }
 
     return true;
@@ -342,14 +374,14 @@ bool RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
 LayoutRect RenderEmbeddedObject::unavailablePluginIndicatorBounds(const LayoutPoint& accumulatedOffset) const
 {
     FloatRect contentRect;
-    Path path;
+    FloatRect indicatorRect;
     FloatRect replacementTextRect;
     FloatRect arrowRect;
     Font font;
     TextRun run("", 0);
     float textWidth;
-    if (getReplacementTextGeometry(accumulatedOffset, contentRect, path, replacementTextRect, arrowRect, font, run, textWidth))
-        return LayoutRect(path.boundingRect());
+    if (getReplacementTextGeometry(accumulatedOffset, contentRect, indicatorRect, replacementTextRect, arrowRect, font, run, textWidth))
+        return LayoutRect(indicatorRect);
 
     return LayoutRect();
 }
@@ -555,14 +587,14 @@ bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, Scrol
 bool RenderEmbeddedObject::isInUnavailablePluginIndicator(const LayoutPoint& point) const
 {
     FloatRect contentRect;
-    Path path;
+    FloatRect indicatorRect;
     FloatRect replacementTextRect;
     FloatRect arrowRect;
     Font font;
     TextRun run("");
     float textWidth;
-    return getReplacementTextGeometry(IntPoint(), contentRect, path, replacementTextRect, arrowRect, font, run, textWidth)
-        && (path.contains(point) || arrowRect.contains(point));
+    return getReplacementTextGeometry(IntPoint(), contentRect, indicatorRect, replacementTextRect, arrowRect, font, run, textWidth)
+        && indicatorRect.contains(point);
 }
 
 bool RenderEmbeddedObject::isInUnavailablePluginIndicator(MouseEvent* event) const
@@ -584,7 +616,7 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
         m_mouseDownWasInUnavailablePluginIndicator = isInUnavailablePluginIndicator(mouseEvent);
         if (m_mouseDownWasInUnavailablePluginIndicator) {
             if (Frame* frame = document()->frame()) {
-                frame->eventHandler()->setCapturingMouseEventsNode(element);
+                frame->eventHandler().setCapturingMouseEventsNode(element);
                 element->setIsCapturingMouseEvents(true);
             }
             setUnavailablePluginIndicatorIsPressed(true);
@@ -594,14 +626,14 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
     if (event->type() == eventNames().mouseupEvent && static_cast<MouseEvent*>(event)->button() == LeftButton) {
         if (m_unavailablePluginIndicatorIsPressed) {
             if (Frame* frame = document()->frame()) {
-                frame->eventHandler()->setCapturingMouseEventsNode(0);
+                frame->eventHandler().setCapturingMouseEventsNode(0);
                 element->setIsCapturingMouseEvents(false);
             }
             setUnavailablePluginIndicatorIsPressed(false);
         }
         if (m_mouseDownWasInUnavailablePluginIndicator && isInUnavailablePluginIndicator(mouseEvent)) {
             if (Page* page = document()->page())
-                page->chrome().client()->unavailablePluginButtonClicked(element, m_pluginUnavailabilityReason);
+                page->chrome().client().unavailablePluginButtonClicked(element, m_pluginUnavailabilityReason);
         }
         m_mouseDownWasInUnavailablePluginIndicator = false;
         event->setDefaultHandled();

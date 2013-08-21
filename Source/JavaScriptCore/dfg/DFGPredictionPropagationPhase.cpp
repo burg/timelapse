@@ -392,7 +392,7 @@ private:
         case GetMyScope:
         case SkipTopScope:
         case SkipScope: {
-            changed |= setPrediction(SpecCellOther);
+            changed |= setPrediction(SpecObjectOther);
             break;
         }
             
@@ -466,6 +466,7 @@ private:
             
         case PutByValAlias:
         case GetArrayLength:
+        case GetTypedArrayByteOffset:
         case Int32ToDouble:
         case DoubleAsInt32:
         case GetLocalUnlinked:
@@ -498,7 +499,7 @@ private:
             break;
 
         case GetScope:
-            changed |= setPrediction(SpecCellOther);
+            changed |= setPrediction(SpecObjectOther);
             break;
             
         case In:
@@ -542,6 +543,7 @@ private:
         case Phantom:
         case PutGlobalVar:
         case CheckWatchdogTimer:
+        case Unreachable:
             break;
             
         // These gets ignored because it doesn't do anything.

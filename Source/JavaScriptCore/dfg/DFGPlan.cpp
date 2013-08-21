@@ -53,14 +53,17 @@
 #include "DFGUnificationPhase.h"
 #include "DFGValidate.h"
 #include "DFGVirtualRegisterAllocationPhase.h"
+#include "Operations.h"
+#include <wtf/CurrentTime.h>
+
+#if ENABLE(FTL_JIT)
 #include "FTLCapabilities.h"
 #include "FTLCompile.h"
 #include "FTLFail.h"
 #include "FTLLink.h"
 #include "FTLLowerDFGToLLVM.h"
 #include "FTLState.h"
-#include "Operations.h"
-#include <wtf/CurrentTime.h>
+#endif
 
 namespace JSC { namespace DFG {
 
@@ -87,6 +90,7 @@ Plan::Plan(
     , mustHandleValues(codeBlock->numParameters(), numVarsWithValues)
     , compilation(codeBlock->vm()->m_perBytecodeProfiler ? adoptRef(new Profiler::Compilation(codeBlock->vm()->m_perBytecodeProfiler->ensureBytecodesFor(codeBlock.get()), Profiler::DFG)) : 0)
     , identifiers(codeBlock.get())
+    , weakReferences(codeBlock.get())
     , isCompiled(false)
 {
 }
@@ -268,10 +272,13 @@ bool Plan::isStillValid()
         && chains.areStillValid();
 }
 
-void Plan::reallyAdd()
+void Plan::reallyAdd(CommonData* commonData)
 {
     watchpoints.reallyAdd();
-    identifiers.reallyAdd(vm);
+    identifiers.reallyAdd(vm, commonData);
+    weakReferences.reallyAdd(vm, commonData);
+    transitions.reallyAdd(vm, commonData);
+    writeBarriers.trigger(vm);
 }
 
 CompilationResult Plan::finalize(RefPtr<JSC::JITCode>& jitCode, MacroAssemblerCodePtr* jitCodeWithArityCheck)
@@ -288,7 +295,7 @@ CompilationResult Plan::finalize(RefPtr<JSC::JITCode>& jitCode, MacroAssemblerCo
     if (!result)
         return CompilationFailed;
     
-    reallyAdd();
+    reallyAdd(jitCode->dfgCommon());
     
     return CompilationSuccessful;
 }

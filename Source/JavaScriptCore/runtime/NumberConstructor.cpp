@@ -62,8 +62,8 @@ NumberConstructor::NumberConstructor(JSGlobalObject* globalObject, Structure* st
 
 void NumberConstructor::finishCreation(ExecState* exec, NumberPrototype* numberPrototype)
 {
-    Base::finishCreation(exec->vm(), numberPrototype->s_info.className);
-    ASSERT(inherits(&s_info));
+    Base::finishCreation(exec->vm(), NumberPrototype::info()->className);
+    ASSERT(inherits(info()));
 
     // Number.Prototype
     putDirectWithoutTransition(exec->vm(), exec->propertyNames().prototype, numberPrototype, DontEnum | DontDelete | ReadOnly);
@@ -72,14 +72,9 @@ void NumberConstructor::finishCreation(ExecState* exec, NumberPrototype* numberP
     putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(1), ReadOnly | DontEnum | DontDelete);
 }
 
-bool NumberConstructor::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool NumberConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    return getStaticValueSlot<NumberConstructor, InternalFunction>(exec, ExecState::numberConstructorTable(exec), jsCast<NumberConstructor*>(cell), propertyName, slot);
-}
-
-bool NumberConstructor::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticValueDescriptor<NumberConstructor, InternalFunction>(exec, ExecState::numberConstructorTable(exec), jsCast<NumberConstructor*>(object), propertyName, descriptor);
+    return getStaticValueSlot<NumberConstructor, InternalFunction>(exec, ExecState::numberConstructorTable(exec), jsCast<NumberConstructor*>(object), propertyName, slot);
 }
 
 void NumberConstructor::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)

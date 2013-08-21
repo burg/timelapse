@@ -57,7 +57,7 @@ FlowThreadController::~FlowThreadController()
 {
 }
 
-RenderNamedFlowThread* FlowThreadController::ensureRenderFlowThreadWithName(const AtomicString& name)
+RenderNamedFlowThread& FlowThreadController::ensureRenderFlowThreadWithName(const AtomicString& name)
 {
     if (!m_renderNamedFlowThreadList)
         m_renderNamedFlowThreadList = adoptPtr(new RenderNamedFlowThreadList());
@@ -65,7 +65,7 @@ RenderNamedFlowThread* FlowThreadController::ensureRenderFlowThreadWithName(cons
         for (RenderNamedFlowThreadList::iterator iter = m_renderNamedFlowThreadList->begin(); iter != m_renderNamedFlowThreadList->end(); ++iter) {
             RenderNamedFlowThread* flowRenderer = *iter;
             if (flowRenderer->flowThreadName() == name)
-                return flowRenderer;
+                return *flowRenderer;
         }
     }
 
@@ -83,7 +83,7 @@ RenderNamedFlowThread* FlowThreadController::ensureRenderFlowThreadWithName(cons
 
     setIsRenderNamedFlowThreadOrderDirty(true);
 
-    return flowRenderer;
+    return *flowRenderer;
 }
 
 void FlowThreadController::styleDidChange()
@@ -170,7 +170,7 @@ bool FlowThreadController::updateFlowThreadsNeedingLayout()
     for (RenderNamedFlowThreadList::iterator iter = m_renderNamedFlowThreadList->begin(); iter != m_renderNamedFlowThreadList->end(); ++iter) {
         RenderNamedFlowThread* flowRenderer = *iter;
         ASSERT(!flowRenderer->needsTwoPhasesLayout());
-        flowRenderer->setInConstrainedLayoutPhase(false);
+        ASSERT(flowRenderer->inMeasureContentLayoutPhase());
         if (flowRenderer->needsLayout() && flowRenderer->hasAutoLogicalHeightRegions())
             needsTwoPassLayout = true;
     }
@@ -222,10 +222,60 @@ void FlowThreadController::updateFlowThreadsIntoConstrainedPhase()
             ASSERT(flowRenderer->needsTwoPhasesLayout());
             flowRenderer->markAutoLogicalHeightRegionsForLayout();
         }
-        flowRenderer->setInConstrainedLayoutPhase(true);
+        flowRenderer->setLayoutPhase(RenderFlowThread::LayoutPhaseConstrained);
         flowRenderer->clearNeedsTwoPhasesLayout();
     }
 }
+
+void FlowThreadController::updateFlowThreadsIntoOverflowPhase()
+{
+    for (RenderNamedFlowThreadList::reverse_iterator iter = m_renderNamedFlowThreadList->rbegin(); iter != m_renderNamedFlowThreadList->rend(); ++iter) {
+        RenderNamedFlowThread* flowRenderer = *iter;
+        ASSERT(!flowRenderer->hasRegions() || flowRenderer->hasValidRegionInfo());
+        ASSERT(!flowRenderer->needsTwoPhasesLayout());
+
+        // In the overflow computation phase the flow threads start in the constrained phase even though optimizations didn't set the state before.
+        flowRenderer->setLayoutPhase(RenderFlowThread::LayoutPhaseConstrained);
+
+        flowRenderer->layoutIfNeeded();
+        flowRenderer->markRegionsForOverflowLayoutIfNeeded();
+        flowRenderer->setLayoutPhase(RenderFlowThread::LayoutPhaseOverflow);
+    }
+}
+
+void FlowThreadController::updateFlowThreadsIntoMeasureContentPhase()
+{
+    for (RenderNamedFlowThreadList::iterator iter = m_renderNamedFlowThreadList->begin(); iter != m_renderNamedFlowThreadList->end(); ++iter) {
+        RenderNamedFlowThread* flowRenderer = *iter;
+        ASSERT(flowRenderer->inFinalLayoutPhase());
+
+        flowRenderer->setLayoutPhase(RenderFlowThread::LayoutPhaseMeasureContent);
+    }
+}
+
+void FlowThreadController::updateFlowThreadsIntoFinalPhase()
+{
+    for (RenderNamedFlowThreadList::reverse_iterator iter = m_renderNamedFlowThreadList->rbegin(); iter != m_renderNamedFlowThreadList->rend(); ++iter) {
+        RenderNamedFlowThread* flowRenderer = *iter;
+        flowRenderer->layoutIfNeeded();
+        if (flowRenderer->needsTwoPhasesLayout()) {
+            flowRenderer->markRegionsForOverflowLayoutIfNeeded();
+            flowRenderer->clearNeedsTwoPhasesLayout();
+        }
+        flowRenderer->setLayoutPhase(RenderFlowThread::LayoutPhaseFinal);
+    }
+}
+
+#if USE(ACCELERATED_COMPOSITING)
+void FlowThreadController::updateRenderFlowThreadLayersIfNeeded()
+{
+    // Walk the flow chain in reverse order because RenderRegions might become RenderLayers for the following flow threads.
+    for (RenderNamedFlowThreadList::reverse_iterator iter = m_renderNamedFlowThreadList->rbegin(); iter != m_renderNamedFlowThreadList->rend(); ++iter) {
+        RenderNamedFlowThread* flowRenderer = *iter;
+        flowRenderer->updateLayerToRegionMappingsIfNeeded();
+    }
+}
+#endif
 
 bool FlowThreadController::isContentNodeRegisteredWithAnyNamedFlow(const Node* contentNode) const
 {

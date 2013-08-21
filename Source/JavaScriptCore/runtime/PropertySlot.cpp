@@ -28,7 +28,8 @@ namespace JSC {
 
 JSValue PropertySlot::functionGetter(ExecState* exec) const
 {
-    return callGetter(exec, m_thisValue, m_data.getterSetter);
+    ASSERT(m_thisValue);
+    return callGetter(exec, m_thisValue, m_data.getter.getterSetter);
 }
 
 } // namespace JSC

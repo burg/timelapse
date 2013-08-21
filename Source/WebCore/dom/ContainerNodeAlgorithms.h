@@ -27,6 +27,7 @@
 #include "HTMLFrameOwnerElement.h"
 #include "InspectorInstrumentation.h"
 #include "NodeTraversal.h"
+#include "ShadowRoot.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
@@ -108,7 +109,7 @@ inline void removeDetachedChildrenInContainer(GenericNodeContainer* container)
 template<class GenericNode, class GenericNodeContainer>
 inline void appendChildToContainer(GenericNode* child, GenericNodeContainer* container)
 {
-    child->setParentOrShadowHostNode(container);
+    child->setParentNode(container);
 
     GenericNode* lastChild = container->lastChild();
     if (lastChild) {
@@ -163,7 +164,7 @@ namespace Private {
 
             next = n->nextSibling();
             n->setNextSibling(0);
-            n->setParentOrShadowHostNode(0);
+            n->setParentNode(0);
             container->setFirstChild(next);
             if (next)
                 next->setPreviousSibling(0);
@@ -275,7 +276,6 @@ public:
 
 private:
     void collectFrameOwners(Node* root);
-    void collectFrameOwners(ElementShadow*);
     void disconnectCollectedFrameOwners();
 
     Vector<RefPtr<HTMLFrameOwnerElement>, 10> m_frameOwners;
@@ -297,7 +297,7 @@ inline void ChildFrameDisconnector::collectFrameOwners(Node* root)
     for (Node* child = root->firstChild(); child; child = child->nextSibling())
         collectFrameOwners(child);
 
-    ElementShadow* shadow = root->isElementNode() ? toElement(root)->shadow() : 0;
+    ShadowRoot* shadow = root->isElementNode() ? toElement(root)->shadowRoot() : 0;
     if (shadow)
         collectFrameOwners(shadow);
 }

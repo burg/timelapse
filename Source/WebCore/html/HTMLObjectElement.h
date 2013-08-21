@@ -73,7 +73,7 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
+    virtual bool rendererIsNeeded(const RenderStyle&);
     virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
 
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
@@ -100,11 +100,6 @@ private:
     virtual void refFormAssociatedElement() { ref(); }
     virtual void derefFormAssociatedElement() { deref(); }
     virtual HTMLFormElement* virtualForm() const;
-
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
-#endif
 
     String m_classId;
     bool m_docNamedItem : 1;

@@ -71,7 +71,7 @@ static ContinuationMap* continuationMap = 0;
 
 // This HashMap is similar to the continuation map, but connects first-letter
 // renderers to their remaining text fragments.
-typedef HashMap<const RenderBoxModelObject*, RenderObject*> FirstLetterRemainingTextMap;
+typedef HashMap<const RenderBoxModelObject*, RenderTextFragment*> FirstLetterRemainingTextMap;
 static FirstLetterRemainingTextMap* firstLetterRemainingTextMap = 0;
 
 class ImageQualityController {
@@ -621,10 +621,7 @@ LayoutSize RenderBoxModelObject::stickyPositionOffset() const
         constrainingRect.setLocation(scrollOffset);
     } else {
         LayoutRect viewportRect = view()->frameView()->viewportConstrainedVisibleContentRect();
-        float scale = 1;
-        if (Frame* frame = view()->frameView()->frame())
-            scale = frame->frameScaleFactor();
-        
+        float scale = view()->frameView()->frame().frameScaleFactor();
         viewportRect.scale(1 / scale);
         constrainingRect = viewportRect;
     }
@@ -1309,16 +1306,39 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const RenderLayerMod
     int availableHeight = positioningAreaSize.height() - geometry.tileSize().height();
 
     LayoutUnit computedXPosition = minimumValueForLength(fillLayer->xPosition(), availableWidth, renderView, true);
+    if (backgroundRepeatX == RoundFill && positioningAreaSize.width() > 0 && fillTileSize.width() > 0) {
+        int nrTiles = ceil((double)positioningAreaSize.width() / fillTileSize.width());
+
+        if (fillLayer->size().size.height().isAuto() && backgroundRepeatY != RoundFill)
+            fillTileSize.setHeight(fillTileSize.height() * positioningAreaSize.width() / (nrTiles * fillTileSize.width()));
+
+        fillTileSize.setWidth(positioningAreaSize.width() / nrTiles);
+        geometry.setTileSize(fillTileSize);
+        geometry.setPhaseX(geometry.tileSize().width() ? geometry.tileSize().width() - roundToInt(computedXPosition + left) % geometry.tileSize().width() : 0);
+    }
+
+    LayoutUnit computedYPosition = minimumValueForLength(fillLayer->yPosition(), availableHeight, renderView, true);
+    if (backgroundRepeatY == RoundFill && positioningAreaSize.height() > 0 && fillTileSize.height() > 0) {
+        int nrTiles = ceil((double)positioningAreaSize.height() / fillTileSize.height());
+
+        if (fillLayer->size().size.width().isAuto() && backgroundRepeatX != RoundFill)
+            fillTileSize.setWidth(fillTileSize.width() * positioningAreaSize.height() / (nrTiles * fillTileSize.height()));
+
+        fillTileSize.setHeight(positioningAreaSize.height() / nrTiles);
+        geometry.setTileSize(fillTileSize);
+        geometry.setPhaseY(geometry.tileSize().height() ? geometry.tileSize().height() - roundToInt(computedYPosition + top) % geometry.tileSize().height() : 0);
+    }
+
     if (backgroundRepeatX == RepeatFill)
         geometry.setPhaseX(geometry.tileSize().width() ? geometry.tileSize().width() - roundToInt(computedXPosition + left) % geometry.tileSize().width() : 0);
-    else {
+    else if (backgroundRepeatX == NoRepeatFill) {
         int xOffset = fillLayer->backgroundXOrigin() == RightEdge ? availableWidth - computedXPosition : computedXPosition;
         geometry.setNoRepeatX(left + xOffset);
     }
-    LayoutUnit computedYPosition = minimumValueForLength(fillLayer->yPosition(), availableHeight, renderView, true);
+
     if (backgroundRepeatY == RepeatFill)
         geometry.setPhaseY(geometry.tileSize().height() ? geometry.tileSize().height() - roundToInt(computedYPosition + top) % geometry.tileSize().height() : 0);
-    else {
+    else if (backgroundRepeatY == NoRepeatFill) {
         int yOffset = fillLayer->backgroundYOrigin() == BottomEdge ? availableHeight - computedYPosition : computedYPosition;
         geometry.setNoRepeatY(top + yOffset);
     }
@@ -1433,13 +1453,13 @@ bool RenderBoxModelObject::paintNinePieceImage(GraphicsContext* graphicsContext,
         // The rect to use from within the image is obtained from our slice, and is (0, 0, leftSlice, topSlice)
         if (drawTop)
             graphicsContext->drawImage(image.get(), colorSpace, IntRect(borderImageRect.location(), IntSize(leftWidth, topWidth)),
-                                       LayoutRect(0, 0, leftSlice, topSlice), op);
+                LayoutRect(0, 0, leftSlice, topSlice), op, ImageOrientationDescription());
 
         // The bottom left corner rect is (tx, ty + h - bottomWidth, leftWidth, bottomWidth)
         // The rect to use from within the image is (0, imageHeight - bottomSlice, leftSlice, botomSlice)
         if (drawBottom)
             graphicsContext->drawImage(image.get(), colorSpace, IntRect(borderImageRect.x(), borderImageRect.maxY() - bottomWidth, leftWidth, bottomWidth),
-                                       LayoutRect(0, imageHeight - bottomSlice, leftSlice, bottomSlice), op);
+                LayoutRect(0, imageHeight - bottomSlice, leftSlice, bottomSlice), op, ImageOrientationDescription());
 
         // Paint the left edge.
         // Have to scale and tile into the border rect.
@@ -1456,13 +1476,13 @@ bool RenderBoxModelObject::paintNinePieceImage(GraphicsContext* graphicsContext,
         // The rect to use from within the image is obtained from our slice, and is (imageWidth - rightSlice, 0, rightSlice, topSlice)
         if (drawTop)
             graphicsContext->drawImage(image.get(), colorSpace, IntRect(borderImageRect.maxX() - rightWidth, borderImageRect.y(), rightWidth, topWidth),
-                                       LayoutRect(imageWidth - rightSlice, 0, rightSlice, topSlice), op);
+                LayoutRect(imageWidth - rightSlice, 0, rightSlice, topSlice), op, ImageOrientationDescription());
 
         // The bottom right corner rect is (tx + w - rightWidth, ty + h - bottomWidth, rightWidth, bottomWidth)
         // The rect to use from within the image is (imageWidth - rightSlice, imageHeight - bottomSlice, rightSlice, bottomSlice)
         if (drawBottom)
             graphicsContext->drawImage(image.get(), colorSpace, IntRect(borderImageRect.maxX() - rightWidth, borderImageRect.maxY() - bottomWidth, rightWidth, bottomWidth),
-                                       LayoutRect(imageWidth - rightSlice, imageHeight - bottomSlice, rightSlice, bottomSlice), op);
+                LayoutRect(imageWidth - rightSlice, imageHeight - bottomSlice, rightSlice, bottomSlice), op, ImageOrientationDescription());
 
         // Paint the right edge.
         if (sourceHeight > 0)
@@ -2778,14 +2798,14 @@ void RenderBoxModelObject::setContinuation(RenderBoxModelObject* continuation)
     }
 }
 
-RenderObject* RenderBoxModelObject::firstLetterRemainingText() const
+RenderTextFragment* RenderBoxModelObject::firstLetterRemainingText() const
 {
     if (!firstLetterRemainingTextMap)
         return 0;
     return firstLetterRemainingTextMap->get(this);
 }
 
-void RenderBoxModelObject::setFirstLetterRemainingText(RenderObject* remainingText)
+void RenderBoxModelObject::setFirstLetterRemainingText(RenderTextFragment* remainingText)
 {
     if (remainingText) {
         if (!firstLetterRemainingTextMap)

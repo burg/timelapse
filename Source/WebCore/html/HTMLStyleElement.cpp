@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2003, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2010, 2013 Apple Inc. All rights reserved.
  *           (C) 2007 Rob Buis (buis@kde.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -48,7 +48,7 @@ static StyleEventSender& styleLoadEventSender()
 
 inline HTMLStyleElement::HTMLStyleElement(const QualifiedName& tagName, Document* document, bool createdByParser)
     : HTMLElement(tagName, document)
-    , StyleElement(document, createdByParser)
+    , m_styleSheetOwner(document, createdByParser)
     , m_firedLoad(false)
     , m_loadedSheet(false)
     , m_scopedStyleRegistrationState(NotRegistered)
@@ -60,7 +60,7 @@ HTMLStyleElement::~HTMLStyleElement()
 {
     // During tear-down, willRemove isn't called, so m_scopedStyleRegistrationState may still be RegisteredAsScoped or RegisteredInShadowRoot here.
     // Therefore we can't ASSERT(m_scopedStyleRegistrationState == NotRegistered).
-    StyleElement::clearDocumentData(document(), this);
+    m_styleSheetOwner.clearDocumentData(document(), this);
 
     styleLoadEventSender().cancelEvent(this);
 }
@@ -72,14 +72,20 @@ PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagNa
 
 void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (name == titleAttr && m_sheet)
-        m_sheet->setTitle(value);
+    if (name == titleAttr && sheet())
+        sheet()->setTitle(value);
     else if (name == scopedAttr && ContextFeatures::styleScopedEnabled(document()))
         scopedAttributeChanged(!value.isNull());
-    else if (name == mediaAttr && inDocument() && document()->renderer() && m_sheet) {
-        m_sheet->setMediaQueries(MediaQuerySet::createAllowingDescriptionSyntax(value));
-        document()->styleResolverChanged(RecalcStyleImmediately);
-    } else
+    else if (name == mediaAttr) {
+        m_styleSheetOwner.setMedia(value);
+        if (sheet()) {
+            sheet()->setMediaQueries(MediaQuerySet::createAllowingDescriptionSyntax(value));
+            if (inDocument() && document()->renderer())
+                document()->styleResolverChanged(RecalcStyleImmediately);
+        }
+    } else if (name == typeAttr)
+        m_styleSheetOwner.setContentType(value);
+    else
         HTMLElement::parseAttribute(name, value);
 }
 
@@ -114,7 +120,7 @@ void HTMLStyleElement::scopedAttributeChanged(bool scoped)
 
 void HTMLStyleElement::finishParsingChildren()
 {
-    StyleElement::finishParsingChildren(this);
+    m_styleSheetOwner.finishParsingChildren(this);
     HTMLElement::finishParsingChildren();
 }
 
@@ -169,7 +175,7 @@ Node::InsertionNotificationRequest HTMLStyleElement::insertedInto(ContainerNode*
 {
     HTMLElement::insertedInto(insertionPoint);
     if (insertionPoint->inDocument()) {
-        StyleElement::insertedIntoDocument(document(), this);
+        m_styleSheetOwner.insertedIntoDocument(document(), this);
         if (m_scopedStyleRegistrationState == NotRegistered && (scoped() || isInShadowTree()))
             registerWithScopingNode(scoped());
     }
@@ -197,23 +203,13 @@ void HTMLStyleElement::removedFrom(ContainerNode* insertionPoint)
     }
 
     if (insertionPoint->inDocument())
-        StyleElement::removedFromDocument(document(), this);
+        m_styleSheetOwner.removedFromDocument(document(), this);
 }
 
 void HTMLStyleElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
 {
     HTMLElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
-    StyleElement::childrenChanged(this);
-}
-
-const AtomicString& HTMLStyleElement::media() const
-{
-    return getAttribute(mediaAttr);
-}
-
-const AtomicString& HTMLStyleElement::type() const
-{
-    return getAttribute(typeAttr);
+    m_styleSheetOwner.childrenChanged(this);
 }
 
 bool HTMLStyleElement::scoped() const
@@ -274,10 +270,10 @@ void HTMLStyleElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) cons
 
 bool HTMLStyleElement::disabled() const
 {
-    if (!m_sheet)
+    if (!sheet())
         return false;
 
-    return m_sheet->disabled();
+    return sheet()->disabled();
 }
 
 void HTMLStyleElement::setDisabled(bool setDisabled)

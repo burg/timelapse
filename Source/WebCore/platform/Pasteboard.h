@@ -49,9 +49,8 @@ typedef struct _GtkClipboard GtkClipboard;
 typedef struct HWND__* HWND;
 #endif
 
-// FIXME: This class is too high-level to be in the platform directory, since it
-// uses the DOM and makes calls to Editor. It should either be divested of its
-// knowledge of the frame and editor or moved into the editing directory.
+// FIXME: This class uses the DOM and makes calls to Editor.
+// It should be divested of its knowledge of the frame and editor.
 
 namespace WebCore {
 
@@ -131,6 +130,7 @@ public:
 
     bool writeString(const String& type, const String& data);
     void writeSelection(Range*, bool canSmartCopyOrDelete, Frame*, ShouldSerializeSelectedTextForClipboard = DefaultSelectedTextType);
+    void writeMarkup(const String& markup);
     void writePlainText(const String&, SmartReplaceOption);
 #if !PLATFORM(IOS)
     void writeURL(const KURL&, const String&, Frame* = 0);
@@ -141,7 +141,6 @@ public:
     static NSArray* supportedPasteboardTypes();
 #endif
     void writePasteboard(const Pasteboard& sourcePasteboard);
-    void writeClipboard(Clipboard*);
 
     void clear();
     void clear(const String& type);
@@ -156,7 +155,12 @@ public:
     // These functions need to move to the editing directory even if they have platform-specific aspects.
     PassRefPtr<DocumentFragment> documentFragment(Frame*, PassRefPtr<Range>, bool allowPlainText, bool& chosePlainText);
     String plainText(Frame* = 0);
-    
+
+#if PLATFORM(IOS)
+    // FIXME: Remove this once we switch to platform strategies instead of the editor client.
+    void setFrame(Frame*);
+#endif
+
 #if PLATFORM(QT) || PLATFORM(GTK)
     bool isSelectionMode() const;
     void setSelectionMode(bool);
@@ -202,6 +206,9 @@ private:
 
 #if PLATFORM(IOS)
     PassRefPtr<DocumentFragment> documentFragmentForPasteboardItemAtIndex(Frame*, int index, bool allowPlainText, bool& chosePlainText);
+
+    Frame* m_frame;
+    long m_changeCount;
 #endif
 
 #if PLATFORM(WIN)

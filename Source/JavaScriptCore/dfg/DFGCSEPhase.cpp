@@ -256,9 +256,11 @@ private:
                 break;
             } 
             case PutClosureVar: {
-                if (node->child2() == registers && node->varNumber() == varNumber)
+                if (node->varNumber() != varNumber)
+                    break;
+                if (node->child2() == registers)
                     return node->child3().node();
-                break;
+                return 0;
             }
             case SetLocal: {
                 VariableAccessData* variableAccessData = node->variableAccessData();
@@ -340,9 +342,11 @@ private:
             Node* node = m_currentBlock->at(i);
             switch (node->op()) {
             case PutClosureVar: {
-                if (node->child1() == scope && node->child2() == registers && node->varNumber() == varNumber)
+                if (node->varNumber() != varNumber)
+                    break;
+                if (node->child1() == scope && node->child2() == registers)
                     return node;
-                break;
+                return 0;
             }
                 
             case GetClosureVar: {
@@ -396,13 +400,6 @@ private:
                 // typed arrays!  An Int32Array can alias a Float64Array for example, and so on.
                 return 0;
             }
-            case PutStructure:
-            case PutByOffset:
-                // GetByVal currently always speculates that it's accessing an
-                // array with an integer index, which means that it's impossible
-                // for a structure change or a put to property storage to affect
-                // the GetByVal.
-                break;
             default:
                 if (m_graph.clobbersWorld(node))
                     return 0;
@@ -634,10 +631,6 @@ private:
                 }
                 break;
                 
-            case PutStructure:
-                // Changing the structure cannot change the outcome of a property get.
-                break;
-                
             case PutByVal:
             case PutByValAlias:
                 if (m_graph.byValIsPure(node)) {
@@ -724,12 +717,6 @@ private:
                 // pointer of any object, including ours.
                 return 0;
                 
-            case PutByOffset:
-            case PutStructure:
-                // Changing the structure or putting to the storage cannot
-                // change the property storage pointer.
-                break;
-                
             case PutByVal:
             case PutByValAlias:
                 if (m_graph.byValIsPure(node)) {
@@ -763,12 +750,6 @@ private:
                 break;
 
             switch (node->op()) {
-            case PutByOffset:
-            case PutStructure:
-                // Changing the structure or putting to the storage cannot
-                // change the property storage pointer.
-                break;
-                
             case CheckArray:
                 if (node->child1() == child1 && node->arrayMode() == arrayMode)
                     return true;
@@ -803,12 +784,29 @@ private:
                 break;
             }
 
-            case PutByOffset:
-            case PutStructure:
-                // Changing the structure or putting to the storage cannot
-                // change the property storage pointer.
+            default:
+                if (m_graph.clobbersWorld(node))
+                    return 0;
                 break;
-                
+            }
+        }
+        return 0;
+    }
+    
+    Node* getTypedArrayByteOffsetLoadElimination(Node* child1)
+    {
+        for (unsigned i = m_indexInBlock; i--;) {
+            Node* node = m_currentBlock->at(i);
+            if (node == child1) 
+                break;
+
+            switch (node->op()) {
+            case GetTypedArrayByteOffset: {
+                if (node->child1() == child1)
+                    return node;
+                break;
+            }
+
             default:
                 if (m_graph.clobbersWorld(node))
                     return 0;
@@ -1341,6 +1339,13 @@ private:
             if (cseMode == StoreElimination)
                 break;
             setReplacement(getIndexedPropertyStorageLoadElimination(node->child1().node(), node->arrayMode()));
+            break;
+        }
+            
+        case GetTypedArrayByteOffset: {
+            if (cseMode == StoreElimination)
+                break;
+            setReplacement(getTypedArrayByteOffsetLoadElimination(node->child1().node()));
             break;
         }
 

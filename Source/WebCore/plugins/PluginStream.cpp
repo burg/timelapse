@@ -77,6 +77,7 @@ PluginStream::PluginStream(PluginStreamClient* client, Frame* frame, const Resou
     m_stream.end = 0;
     m_stream.notifyData = 0;
     m_stream.lastmodified = 0;
+    m_stream.headers = 0;
 
     streams().add(&m_stream, m_instance);
 }
@@ -104,11 +105,11 @@ void PluginStream::stop()
     if (m_loadManually) {
         ASSERT(!m_loader);
 
-        DocumentLoader* documentLoader = m_frame->loader()->activeDocumentLoader();
+        DocumentLoader* documentLoader = m_frame->loader().activeDocumentLoader();
         ASSERT(documentLoader);
 
         if (documentLoader->isLoadingMainResource())
-            documentLoader->cancelMainResourceLoad(m_frame->loader()->cancelledError(m_resourceRequest));
+            documentLoader->cancelMainResourceLoad(m_frame->loader().cancelledError(m_resourceRequest));
 
         return;
     }

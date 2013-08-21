@@ -45,9 +45,9 @@ private:
     virtual const AtomicString& formControlType() const;
     virtual bool isFocusable() const OVERRIDE;
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
-    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
+    virtual void didAttachRenderers() OVERRIDE;
+    virtual void willDetachRenderers() OVERRIDE;
 
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
 
@@ -63,12 +63,12 @@ private:
     RefPtr<RenderStyle> m_style;
 };
 
-inline bool isHTMLOptGroupElement(Node* node)
+inline bool isHTMLOptGroupElement(const Node* node)
 {
     return node->hasTagName(HTMLNames::optgroupTag);
 }
 
-inline bool isHTMLOptGroupElement(Element* element)
+inline bool isHTMLOptGroupElement(const Element* element)
 {
     return element->hasTagName(HTMLNames::optgroupTag);
 }

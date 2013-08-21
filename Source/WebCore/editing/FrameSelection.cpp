@@ -32,6 +32,7 @@
 #include "Editor.h"
 #include "EditorClient.h"
 #include "Element.h"
+#include "ElementTraversal.h"
 #include "EventHandler.h"
 #include "ExceptionCode.h"
 #include "FloatQuad.h"
@@ -48,7 +49,6 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "InlineTextBox.h"
-#include "NodeTraversal.h"
 #include "Page.h"
 #include "Range.h"
 #include "RenderText.h"
@@ -112,7 +112,7 @@ FrameSelection::FrameSelection(Frame* frame)
     , m_absCaretBoundsDirty(true)
     , m_caretPaint(true)
     , m_isCaretBlinkingSuspended(false)
-    , m_focused(frame && frame->page() && frame->page()->focusController()->focusedFrame() == frame)
+    , m_focused(frame && frame->page() && frame->page()->focusController().focusedFrame() == frame)
     , m_shouldShowBlockCursor(false)
 {
     if (shouldAlwaysUseDirectionalSelection(m_frame))
@@ -280,7 +280,7 @@ void FrameSelection::setSelection(const VisibleSelection& newSelection, SetSelec
         Document* document = s.base().anchorNode()->document();
         if (document && document->frame() && document->frame() != m_frame && document != m_frame->document()) {
             RefPtr<Frame> guard = document->frame();
-            document->frame()->selection()->setSelection(s, options, align, granularity);
+            document->frame()->selection().setSelection(s, options, align, granularity);
             // It's possible that during the above set selection, this FrameSelection has been modified by
             // selectFrameElementInParentIfFullySelected, but that the selection is no longer valid since
             // the frame is about to be destroyed. If this is the case, clear our selection.
@@ -560,8 +560,7 @@ void FrameSelection::willBeModified(EAlteration alter, SelectionDirection direct
 
 VisiblePosition FrameSelection::positionForPlatform(bool isGetStart) const
 {
-    Settings* settings = m_frame ? m_frame->settings() : 0;
-    if (settings && settings->editingBehaviorType() == EditingMacBehavior)
+    if (m_frame && m_frame->settings().editingBehaviorType() == EditingMacBehavior)
         return isGetStart ? m_selection.visibleStart() : m_selection.visibleEnd();
     // Linux and Windows always extend selections from the extent endpoint.
     // FIXME: VisibleSelection should be fixed to ensure as an invariant that
@@ -1380,27 +1379,29 @@ bool FrameSelection::recomputeCaretRect()
     if (!v)
         return false;
 
+    Node* caretNode = m_selection.start().deprecatedNode();
+
     LayoutRect oldRect = localCaretRectWithoutUpdate();
     LayoutRect newRect = localCaretRect();
-    if (oldRect == newRect && !m_absCaretBoundsDirty)
+
+    if (caretNode == m_previousCaretNode && oldRect == newRect && !m_absCaretBoundsDirty)
         return false;
 
     IntRect oldAbsCaretBounds = m_absCaretBounds;
-    m_absCaretBounds = absoluteBoundsForLocalRect(m_selection.start().deprecatedNode(), localCaretRectWithoutUpdate());
+    m_absCaretBounds = absoluteBoundsForLocalRect(caretNode, localCaretRectWithoutUpdate());
     m_absCaretBoundsDirty = false;
-    
-    if (oldAbsCaretBounds == m_absCaretBounds)
+
+    if (caretNode == m_previousCaretNode && oldAbsCaretBounds == m_absCaretBounds)
         return false;
 
 #if ENABLE(TEXT_CARET)
     if (RenderView* view = m_frame->document()->renderView()) {
         bool previousOrNewCaretNodeIsContentEditable = isContentEditable() || (m_previousCaretNode && m_previousCaretNode->isContentEditable());
         if (shouldRepaintCaret(view, previousOrNewCaretNodeIsContentEditable)) {
-            Node* node = m_selection.start().deprecatedNode();
             if (m_previousCaretNode)
                 repaintCaretForLocalRect(m_previousCaretNode.get(), oldRect);
-            m_previousCaretNode = node;
-            repaintCaretForLocalRect(node, newRect);
+            m_previousCaretNode = caretNode;
+            repaintCaretForLocalRect(caretNode, newRect);
         }
     }
 #endif
@@ -1410,8 +1411,8 @@ bool FrameSelection::recomputeCaretRect()
 bool CaretBase::shouldRepaintCaret(const RenderView* view, bool isContentEditable) const
 {
     ASSERT(view);
-    Frame* frame = view->frameView() ? view->frameView()->frame() : 0; // The frame where the selection started.
-    bool caretBrowsing = frame && frame->settings() && frame->settings()->caretBrowsingEnabled();
+    Frame* frame = view->frameView() ? &view->frameView()->frame() : 0; // The frame where the selection started.
+    bool caretBrowsing = frame && frame->settings().caretBrowsingEnabled();
     return (caretBrowsing || isContentEditable);
 }
 
@@ -1624,9 +1625,9 @@ void FrameSelection::selectFrameElementInParentIfFullySelected()
 
     // Focus on the parent frame, and then select from before this element to after.
     VisibleSelection newSelection(beforeOwnerElement, afterOwnerElement);
-    if (parent->selection()->shouldChangeSelection(newSelection)) {
-        page->focusController()->setFocusedFrame(parent);
-        parent->selection()->setSelection(newSelection);
+    if (parent->selection().shouldChangeSelection(newSelection)) {
+        page->focusController().setFocusedFrame(parent);
+        parent->selection().setSelection(newSelection);
     }
 }
 
@@ -1718,7 +1719,7 @@ void FrameSelection::focusedOrActiveStateChanged()
     setCaretVisibility(activeAndFocused ? Visible : Hidden);
 
     // Update for caps lock state
-    m_frame->eventHandler()->capsLockStateMayHaveChanged();
+    m_frame->eventHandler().capsLockStateMayHaveChanged();
 
     // Because StyleResolver::checkOneSelector() and
     // RenderTheme::isFocused() check if the frame is active, we have to
@@ -1747,7 +1748,7 @@ void FrameSelection::setFocused(bool flag)
 
 bool FrameSelection::isFocusedAndActive() const
 {
-    return m_focused && m_frame->page() && m_frame->page()->focusController()->isActive();
+    return m_focused && m_frame->page() && m_frame->page()->focusController().isActive();
 }
 
 inline static bool shouldStopBlinkingDueToTypingCommand(Frame* frame)
@@ -1768,7 +1769,7 @@ void FrameSelection::updateAppearance()
 #if ENABLE(TEXT_CARET)
     bool caretRectChangedOrCleared = recomputeCaretRect();
 
-    bool caretBrowsing = m_frame->settings() && m_frame->settings()->caretBrowsingEnabled();
+    bool caretBrowsing = m_frame->settings().caretBrowsingEnabled();
     bool shouldBlink = caretIsVisible() && isCaret() && (isContentEditable() || caretBrowsing) && forwardPosition.isNull();
 
     // If the caret moved, stop the blink timer so we can restart with a
@@ -1882,10 +1883,10 @@ void FrameSelection::setFocusedElementIfNeeded()
     if (isNone() || !isFocused())
         return;
 
-    bool caretBrowsing = m_frame->settings() && m_frame->settings()->caretBrowsingEnabled();
+    bool caretBrowsing = m_frame->settings().caretBrowsingEnabled();
     if (caretBrowsing) {
         if (Element* anchor = enclosingAnchorElement(base())) {
-            m_frame->page()->focusController()->setFocusedElement(anchor, m_frame);
+            m_frame->page()->focusController().setFocusedElement(anchor, m_frame);
             return;
         }
     }
@@ -1897,7 +1898,7 @@ void FrameSelection::setFocusedElementIfNeeded()
             // so add the !isFrameElement check here. There's probably a better way to make this
             // work in the long term, but this is the safest fix at this time.
             if (target->isMouseFocusable() && !isFrameElement(target)) {
-                m_frame->page()->focusController()->setFocusedElement(target, m_frame);
+                m_frame->page()->focusController().setFocusedElement(target, m_frame);
                 return;
             }
             target = target->parentOrShadowHostElement();
@@ -1906,7 +1907,7 @@ void FrameSelection::setFocusedElementIfNeeded()
     }
 
     if (caretBrowsing)
-        m_frame->page()->focusController()->setFocusedElement(0, m_frame);
+        m_frame->page()->focusController().setFocusedElement(0, m_frame);
 }
 
 void DragCaretController::paintDragCaret(Frame* frame, GraphicsContext* p, const LayoutPoint& paintOffset, const LayoutRect& clipRect) const
@@ -2035,7 +2036,7 @@ void FrameSelection::setSelectionFromNone()
     // entire WebView is editable or designMode is on for this document).
 
     Document* document = m_frame->document();
-    bool caretBrowsing = m_frame->settings() && m_frame->settings()->caretBrowsingEnabled();
+    bool caretBrowsing = m_frame->settings().caretBrowsingEnabled();
     if (!isNone() || !(document->rendererIsEditable() || caretBrowsing))
         return;
 
@@ -2062,8 +2063,9 @@ bool FrameSelection::dispatchSelectStart()
 
 inline bool FrameSelection::visualWordMovementEnabled() const
 {
-    Settings* settings = m_frame ? m_frame->settings() : 0;
-    return settings && settings->visualWordMovementEnabled();
+    if (!m_frame)
+        return false;
+    return m_frame->settings().visualWordMovementEnabled();
 }
 
 void FrameSelection::setShouldShowBlockCursor(bool shouldShowBlockCursor)

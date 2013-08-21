@@ -112,7 +112,7 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEve
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(WEB_REPLAY)
 
-    frame->eventHandler()->mouseMoved(fakeMouseMove);
+    frame->eventHandler().mouseMoved(fakeMouseMove);
 }
 
 bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpEventTarget, bool fromReplay)

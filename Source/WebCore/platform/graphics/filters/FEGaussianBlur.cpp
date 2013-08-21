@@ -33,9 +33,11 @@
 #include "RenderTreeAsText.h"
 #include "TextStream.h"
 
+#include <runtime/Operations.h>
+#include <runtime/TypedArrayInlines.h>
+#include <runtime/Uint8ClampedArray.h>
 #include <wtf/MathExtras.h>
 #include <wtf/ParallelJobs.h>
-#include <wtf/Uint8ClampedArray.h>
 
 using namespace std;
 

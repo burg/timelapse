@@ -360,7 +360,7 @@ void DumpRenderTree::resetToConsistentStateBeforeTesting(const String& url, cons
             mainFrame->tree()->clearName();
             mainFrame->loader()->setOpener(0);
             // [WebKit bug #86899] Reset JS state settings.
-            JSGlobalContextRef jsContext = toGlobalRef(mainFrame->script()->globalObject(WebCore::mainThreadNormalWorld())->globalExec());
+            JSGlobalContextRef jsContext = toGlobalRef(mainFrame->script().globalObject(WebCore::mainThreadNormalWorld())->globalExec());
             WebCoreTestSupport::resetInternalsObject(jsContext);
         }
     }
@@ -913,7 +913,7 @@ void DumpRenderTree::didDecidePolicyForNavigationAction(const WebCore::Navigatio
     for (const WebCore::Event* event = action.event(); event; event = event->underlyingEvent()) {
         if (event->isMouseEvent()) {
             const WebCore::MouseEvent* mouseEvent = static_cast<const WebCore::MouseEvent*>(event);
-            node = frame->eventHandler()->hitTestResultAtPoint(mouseEvent->absoluteLocation(), false).innerNonSharedNode();
+            node = frame->eventHandler().hitTestResultAtPoint(mouseEvent->absoluteLocation(), false).innerNonSharedNode();
             break;
         }
     }

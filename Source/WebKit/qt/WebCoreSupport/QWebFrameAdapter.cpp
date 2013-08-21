@@ -167,7 +167,7 @@ void QWebFrameAdapter::load(const QNetworkRequest& req, QNetworkAccessManager::O
     if (!body.isEmpty())
         request.setHTTPBody(WebCore::FormData::create(body.constData(), body.size()));
 
-    frame->loader()->load(WebCore::FrameLoadRequest(frame, request));
+    frame->loader().load(WebCore::FrameLoadRequest(frame, request));
 
     if (frame->tree()->parent())
         pageAdapter->insideOpenCall = false;
@@ -184,10 +184,10 @@ void QWebFrameAdapter::handleGestureEvent(QGestureEventFacade* gestureEvent)
     ASSERT(frame && frame->view());
     switch (gestureEvent->type) {
     case Qt::TapGesture:
-        frame->eventHandler()->handleGestureEvent(convertGesture(gestureEvent));
+        frame->eventHandler().handleGestureEvent(convertGesture(gestureEvent));
         break;
     case Qt::TapAndHoldGesture:
-        frame->eventHandler()->sendContextMenuEventForGesture(convertGesture(gestureEvent));
+        frame->eventHandler().sendContextMenuEventForGesture(convertGesture(gestureEvent));
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -197,18 +197,16 @@ void QWebFrameAdapter::handleGestureEvent(QGestureEventFacade* gestureEvent)
 
 QVariant QWebFrameAdapter::evaluateJavaScript(const QString &scriptSource)
 {
-    ScriptController* scriptController = frame->script();
+    ScriptController& scriptController = frame->script();
     QVariant rc;
-    if (scriptController) {
-        int distance = 0;
-        ScriptValue value = scriptController->executeScript(ScriptSourceCode(scriptSource));
-        JSC::ExecState* exec = scriptController->globalObject(mainThreadNormalWorld())->globalExec();
-        JSValueRef* ignoredException = 0;
-        exec->vm().apiLock().lock();
-        JSValueRef valueRef = toRef(exec, value.jsValue());
-        exec->vm().apiLock().unlock();
-        rc = JSC::Bindings::convertValueToQVariant(toRef(exec), valueRef, QMetaType::Void, &distance, ignoredException);
-    }
+    int distance = 0;
+    ScriptValue value = scriptController.executeScript(ScriptSourceCode(scriptSource));
+    JSC::ExecState* exec = scriptController.globalObject(mainThreadNormalWorld())->globalExec();
+    JSValueRef* ignoredException = 0;
+    exec->vm().apiLock().lock();
+    JSValueRef valueRef = toRef(exec, value.jsValue());
+    exec->vm().apiLock().unlock();
+    rc = JSC::Bindings::convertValueToQVariant(toRef(exec), valueRef, QMetaType::Void, &distance, ignoredException);
     return rc;
 }
 
@@ -220,9 +218,9 @@ void QWebFrameAdapter::addToJavaScriptWindowObject(const QString& name, QObject*
     JSDOMWindow* window = toJSDOMWindow(frame, mainThreadNormalWorld());
     JSC::Bindings::RootObject* root;
     if (valueOwnership == JSC::Bindings::QtInstance::QtOwnership)
-        root = frame->script()->cacheableBindingRootObject();
+        root = frame->script().cacheableBindingRootObject();
     else
-        root = frame->script()->bindingRootObject();
+        root = frame->script().bindingRootObject();
 
     if (!window) {
         qDebug() << "Warning: couldn't get window object";
@@ -274,7 +272,7 @@ void QWebFrameAdapter::setContent(const QByteArray &data, const QString &mimeTyp
         encoding = extractCharsetFromMediaType(mimeType);
     }
     WebCore::SubstituteData substituteData(buffer, WTF::String(actualMimeType), encoding, KURL());
-    frame->loader()->load(WebCore::FrameLoadRequest(frame, request, substituteData));
+    frame->loader().load(WebCore::FrameLoadRequest(frame, request, substituteData));
 }
 
 void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
@@ -284,7 +282,7 @@ void QWebFrameAdapter::setHtml(const QString &html, const QUrl &baseUrl)
     const QByteArray utf8 = html.toUtf8();
     WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(utf8.constData(), utf8.length());
     WebCore::SubstituteData substituteData(data, WTF::String("text/html"), WTF::String("utf-8"), KURL());
-    frame->loader()->load(WebCore::FrameLoadRequest(frame, request, substituteData));
+    frame->loader().load(WebCore::FrameLoadRequest(frame, request, substituteData));
 }
 
 QMultiMap<QString, QString> QWebFrameAdapter::metaData() const
@@ -366,7 +364,7 @@ void QWebFrameAdapter::init(QWebPageAdapter* pageAdapter, QWebFrameData* frameDa
 
 QWebFrameAdapter* QWebFrameAdapter::kit(const Frame* frame)
 {
-    return static_cast<FrameLoaderClientQt*>(frame->loader()->client())->webFrame();
+    return static_cast<FrameLoaderClientQt*>(frame->loader().client())->webFrame();
 }
 
 QUrl QWebFrameAdapter::ensureAbsoluteUrl(const QUrl& url)
@@ -394,7 +392,7 @@ QWebHitTestResultPrivate* QWebFrameAdapter::hitTestContent(const QPoint& pos) co
     if (!frame->view() || !frame->contentRenderer())
         return 0;
 
-    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(pos), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
+    HitTestResult result = frame->eventHandler().hitTestResultAtPoint(frame->view()->windowToContents(pos), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping | HitTestRequest::DisallowShadowContent);
 
     if (result.scrollbar())
         return 0;
@@ -412,13 +410,13 @@ QWebElement QWebFrameAdapter::documentElement() const
 QString QWebFrameAdapter::title() const
 {
     if (frame->document())
-        return frame->loader()->documentLoader()->title().string();
+        return frame->loader().documentLoader()->title().string();
     return QString();
 }
 
 void QWebFrameAdapter::clearCoreFrame()
 {
-    DocumentLoader* documentLoader = frame->loader()->activeDocumentLoader();
+    DocumentLoader* documentLoader = frame->loader().activeDocumentLoader();
     Q_ASSERT(documentLoader);
     documentLoader->writer()->begin();
     documentLoader->writer()->end();
@@ -443,7 +441,7 @@ void QWebFrameAdapter::renderCompositedLayers(WebCore::GraphicsContext* context,
     WebCore::Page* page = frame->page();
     if (!page)
         return;
-    if (TextureMapperLayerClientQt* client = static_cast<ChromeClientQt*>(page->chrome().client())->m_textureMapperLayerClient.get())
+    if (TextureMapperLayerClientQt* client = static_cast<ChromeClientQt&>(page->chrome().client()).m_textureMapperLayerClient.get())
         client->renderCompositedLayers(context, clip);
 }
 #endif
@@ -694,8 +692,8 @@ QList<QObject*> QWebFrameAdapter::childFrames() const
     if (frame) {
         FrameTree* tree = frame->tree();
         for (Frame* child = tree->firstChild(); child; child = child->tree()->nextSibling()) {
-            FrameLoader* loader = child->loader();
-            originatingObjects.append(loader->networkingContext()->originatingObject());
+            FrameLoader& loader = child->loader();
+            originatingObjects.append(loader.networkingContext()->originatingObject());
         }
     }
     return originatingObjects;
@@ -703,13 +701,13 @@ QList<QObject*> QWebFrameAdapter::childFrames() const
 
 bool QWebFrameAdapter::hasFocus() const
 {
-    Frame* ff = frame->page()->focusController()->focusedFrame();
+    Frame* ff = frame->page()->focusController().focusedFrame();
     return ff && QWebFrameAdapter::kit(ff) == this;
 }
 
 void QWebFrameAdapter::setFocus()
 {
-    frame->page()->focusController()->setFocusedFrame(frame);
+    frame->page()->focusController().setFocusedFrame(frame);
 }
 
 void QWebFrameAdapter::setScrollBarPolicy(Qt::Orientation orientation, Qt::ScrollBarPolicy policy)

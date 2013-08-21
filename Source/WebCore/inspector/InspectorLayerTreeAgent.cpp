@@ -180,7 +180,7 @@ PassRefPtr<TypeBuilder::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectFo
         .setNodeId(idForNode(errorString, node))
         .setBounds(buildObjectForIntRect(renderer->absoluteBoundingBoxRect()))
         .setMemory(backing->backingStoreMemoryEstimate())
-        .setCompositedBounds(buildObjectForIntRect(backing->compositedBounds()))
+        .setCompositedBounds(buildObjectForIntRect(enclosingIntRect(backing->compositedBounds())))
         .setPaintCount(backing->graphicsLayer()->repaintCount());
 
     if (node && node->shadowHost())
@@ -193,7 +193,7 @@ PassRefPtr<TypeBuilder::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectFo
         if (isReflection)
             renderer = renderer->parent();
         layerObject->setIsGeneratedContent(true);
-        layerObject->setPseudoElementId(bindPseudoElement(static_cast<PseudoElement*>(renderer->node())));
+        layerObject->setPseudoElementId(bindPseudoElement(toPseudoElement(renderer->node())));
         if (renderer->isBeforeContent())
             layerObject->setPseudoElement("before");
         else if (renderer->isAfterContent())

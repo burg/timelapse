@@ -62,9 +62,8 @@ namespace JSC {
 
         static void visitChildren(JSCell*, SlotVisitor&);
 
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
+        static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
         static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
-        JS_EXPORT_PRIVATE static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
 
         static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
 
@@ -75,9 +74,9 @@ namespace JSC {
 
         void tearOff(VM&);
         
-        static const ClassInfo s_info;
+        DECLARE_INFO;
 
-        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) { return Structure::create(vm, globalObject, proto, TypeInfo(ActivationObjectType, StructureFlags), &s_info); }
+        static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) { return Structure::create(vm, globalObject, proto, TypeInfo(ActivationObjectType, StructureFlags), info()); }
 
         WriteBarrierBase<Unknown>& registerAt(int) const;
         bool isValidIndex(int) const;
@@ -127,7 +126,7 @@ namespace JSC {
 
     inline JSActivation* asActivation(JSValue value)
     {
-        ASSERT(asObject(value)->inherits(&JSActivation::s_info));
+        ASSERT(asObject(value)->inherits(JSActivation::info()));
         return jsCast<JSActivation*>(asObject(value));
     }
     

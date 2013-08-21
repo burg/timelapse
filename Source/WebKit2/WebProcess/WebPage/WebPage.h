@@ -190,7 +190,7 @@ public:
 
     void scrollMainFrameIfNotAtMaxScrollPosition(const WebCore::IntSize& scrollOffset);
 
-    void scrollBy(uint32_t scrollDirection, uint32_t scrollGranularity);
+    bool scrollBy(uint32_t scrollDirection, uint32_t scrollGranularity);
 
     void centerSelectionInVisibleArea();
 
@@ -235,7 +235,7 @@ public:
     WebColorChooser* activeColorChooser() const { return m_activeColorChooser; }
     void setActiveColorChooser(WebColorChooser*);
     void didChooseColor(const WebCore::Color&);
-    void didEndColorChooser();
+    void didEndColorPicker();
 #endif
 
     WebOpenPanelResultListener* activeOpenPanelResultListener() const { return m_activeOpenPanelResultListener.get(); }
@@ -272,8 +272,6 @@ public:
 #if ENABLE(FULLSCREEN_API)
     InjectedBundlePageFullScreenClient& injectedBundleFullScreenClient() { return m_fullScreenClient; }
 #endif
-
-    void setUnderlayPage(PassRefPtr<WebPage> underlayPage) { m_underlayPage = underlayPage; }
 
     bool findStringFromInjectedBundle(const String&, FindOptions);
 
@@ -483,7 +481,7 @@ public:
     void getDataSelectionForPasteboard(const WTF::String pasteboardType, SharedMemory::Handle& handle, uint64_t& size);
     void shouldDelayWindowOrderingEvent(const WebKit::WebMouseEvent&, bool& result);
     void acceptsFirstMouse(int eventNumber, const WebKit::WebMouseEvent&, bool& result);
-    bool performNonEditingBehaviorForSelector(const String&);
+    bool performNonEditingBehaviorForSelector(const String&, WebCore::KeyboardEvent*);
     void insertDictatedText(const String& text, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, const Vector<WebCore::DictationAlternative>& dictationAlternativeLocations, bool& handled, EditorState& newState);
 #elif PLATFORM(EFL)
     void confirmComposition(const String& compositionString);
@@ -662,6 +660,9 @@ public:
     WebCore::ScrollPinningBehavior scrollPinningBehavior() { return m_scrollPinningBehavior; }
     void setScrollPinningBehavior(uint32_t /* WebCore::ScrollPinningBehavior */ pinning);
 
+    WKTypeRef pageOverlayCopyAccessibilityAttributeValue(WKStringRef attribute, WKTypeRef parameter);
+    WKArrayRef pageOverlayCopyAccessibilityAttributesNames(bool parameterizedNames);
+    
 private:
     WebPage(uint64_t pageID, const WebPageCreationParameters&);
 
@@ -708,7 +709,7 @@ private:
     void setFocused(bool);
     void setInitialFocus(bool forward, bool isKeyboardEventValid, const WebKeyboardEvent&);
     void setWindowResizerSize(const WebCore::IntSize&);
-    void setIsInWindow(bool);
+    void setIsInWindow(bool isInWindow, bool wantsDidUpdateViewInWindowState = false);
     void validateCommand(const String&, uint64_t);
     void executeEditCommand(const String&);
 
@@ -728,8 +729,8 @@ private:
     void contextMenuHidden() { m_isShowingContextMenu = false; }
 #endif
 
-    static void scroll(WebCore::Page*, WebCore::ScrollDirection, WebCore::ScrollGranularity);
-    static void logicalScroll(WebCore::Page*, WebCore::ScrollLogicalDirection, WebCore::ScrollGranularity);
+    static bool scroll(WebCore::Page*, WebCore::ScrollDirection, WebCore::ScrollGranularity);
+    static bool logicalScroll(WebCore::Page*, WebCore::ScrollLogicalDirection, WebCore::ScrollGranularity);
 
     uint64_t restoreSession(const SessionState&);
     void restoreSessionAndNavigateToCurrentItem(const SessionState&);
@@ -859,6 +860,7 @@ private:
     OwnPtr<DrawingArea> m_drawingArea;
 
     HashSet<PluginView*> m_pluginViews;
+    bool m_hasSeenPlugin;
 
     HashMap<uint64_t, RefPtr<WebCore::TextCheckingRequest>> m_pendingTextCheckingRequestMap;
 
@@ -885,6 +887,7 @@ private:
 #if ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
     bool m_readyToFindPrimarySnapshottedPlugin;
     bool m_didFindPrimarySnapshottedPlugin;
+    unsigned m_numberOfPrimarySnapshotDetectionAttempts;
     String m_primaryPlugInPageOrigin;
     String m_primaryPlugInOrigin;
     String m_primaryPlugInMimeType;
@@ -957,8 +960,6 @@ private:
     TapHighlightController m_tapHighlightController;
 #endif
     PageOverlayList m_pageOverlays;
-
-    RefPtr<WebPage> m_underlayPage;
 
 #if ENABLE(INSPECTOR)
     RefPtr<WebInspector> m_inspector;

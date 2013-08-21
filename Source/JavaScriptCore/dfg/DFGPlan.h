@@ -31,7 +31,10 @@
 #include "CompilationResult.h"
 #include "DFGDesiredIdentifiers.h"
 #include "DFGDesiredStructureChains.h"
+#include "DFGDesiredTransitions.h"
 #include "DFGDesiredWatchpoints.h"
+#include "DFGDesiredWeakReferences.h"
+#include "DFGDesiredWriteBarriers.h"
 #include "DFGFinalizer.h"
 #include "Operands.h"
 #include "ProfilerCompilation.h"
@@ -75,7 +78,10 @@ struct Plan : public ThreadSafeRefCounted<Plan> {
     DesiredWatchpoints watchpoints;
     DesiredIdentifiers identifiers;
     DesiredStructureChains chains;
-    
+    DesiredWeakReferences weakReferences;
+    DesiredWriteBarriers writeBarriers;
+    DesiredTransitions transitions;
+
     double beforeFTL;
     
     bool isCompiled;
@@ -85,7 +91,7 @@ private:
     CompilationPath compileInThreadImpl(LongLivedState&);
     
     bool isStillValid();
-    void reallyAdd();
+    void reallyAdd(CommonData*);
 };
 
 #else // ENABLE(DFG_JIT)

@@ -32,6 +32,7 @@
 #include "DOMWindow.h"
 #include "Document.h"
 #include "Element.h"
+#include "ElementTraversal.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -42,7 +43,6 @@
 #include "HTMLNames.h"
 #include "HitTestResult.h"
 #include "IdTargetObserverRegistry.h"
-#include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
@@ -395,12 +395,12 @@ Element* TreeScope::focusedElement()
     Element* element = document->focusedElement();
 
     if (!element && document->page())
-        element = focusedFrameOwnerElement(document->page()->focusController()->focusedFrame(), document->frame());
+        element = focusedFrameOwnerElement(document->page()->focusController().focusedFrame(), document->frame());
     if (!element)
         return 0;
     TreeScope* treeScope = element->treeScope();
     while (treeScope != this && treeScope != document) {
-        element = toShadowRoot(treeScope->rootNode())->host();
+        element = toShadowRoot(treeScope->rootNode())->hostElement();
         treeScope = element->treeScope();
     }
     if (this != treeScope)

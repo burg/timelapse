@@ -151,9 +151,25 @@ public:
         node->convertToConstant(constantNumber);
     }
     
+    unsigned constantRegisterForConstant(JSValue value)
+    {
+        unsigned constantRegister;
+        if (!m_codeBlock->findConstant(value, constantRegister)) {
+            constantRegister = m_codeBlock->addConstantLazily();
+            initializeLazyWriteBarrierForConstant(
+                m_plan.writeBarriers,
+                m_codeBlock->constants()[constantRegister],
+                m_codeBlock,
+                constantRegister,
+                m_codeBlock->ownerExecutable(),
+                value);
+        }
+        return constantRegister;
+    }
+    
     void convertToConstant(Node* node, JSValue value)
     {
-        convertToConstant(node, m_codeBlock->addOrFindConstant(value));
+        convertToConstant(node, constantRegisterForConstant(value));
     }
 
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
@@ -276,7 +292,7 @@ public:
         if (!value.isCell() || !value)
             return false;
         JSCell* cell = value.asCell();
-        if (!cell->inherits(&InternalFunction::s_info))
+        if (!cell->inherits(InternalFunction::info()))
             return false;
         return true;
     }

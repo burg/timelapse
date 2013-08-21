@@ -982,10 +982,9 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         clobberWorld(node->codeOrigin, clobberLimit);
         
         SpeculatedType type = source.m_type;
-        if (type & ~(SpecNumber | SpecString | SpecBoolean)) {
-            type &= (SpecNumber | SpecString | SpecBoolean);
-            type |= SpecString;
-        }
+        if (type & ~(SpecNumber | SpecString | SpecBoolean))
+            type = (SpecTop & ~SpecCell) | SpecString;
+
         destination.setType(type);
         if (destination.isClear())
             m_state.setIsValid(false);
@@ -1018,7 +1017,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     }
         
     case NewStringObject: {
-        ASSERT(node->structure()->classInfo() == &StringObject::s_info);
+        ASSERT(node->structure()->classInfo() == StringObject::info());
         forNode(node).set(m_graph, node->structure());
         break;
     }
@@ -1171,7 +1170,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case GetScope: // FIXME: We could get rid of these if we know that the JSFunction is a constant. https://bugs.webkit.org/show_bug.cgi?id=106202
     case GetMyScope:
     case SkipTopScope:
-        forNode(node).setType(SpecCellOther);
+        forNode(node).setType(SpecObjectOther);
         break;
 
     case SkipScope: {
@@ -1180,7 +1179,7 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
             m_state.setFoundConstants(true);
             break;
         }
-        forNode(node).setType(SpecCellOther);
+        forNode(node).setType(SpecObjectOther);
         break;
     }
 
@@ -1275,16 +1274,6 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case StructureTransitionWatchpoint: {
         AbstractValue& value = forNode(node->child1());
 
-        // It's only valid to issue a structure transition watchpoint if we already
-        // know that the watchpoint covers a superset of the structures known to
-        // belong to the set of future structures that this value may have.
-        // Currently, we only issue singleton watchpoints (that check one structure)
-        // and our futurePossibleStructure set can only contain zero, one, or an
-        // infinity of structures.
-        ASSERT(
-            value.m_futurePossibleStructure.isSubsetOf(StructureSet(node->structure()))
-            || m_graph.watchpoints().shouldAssumeMixedState(node->structure()->transitionWatchpointSet()));
-        
         filter(value, node->structure());
         m_state.setHaveStructures(true);
         node->setCanExit(true);
@@ -1387,6 +1376,12 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
         forNode(node).clear();
         break; 
     }
+        
+    case GetTypedArrayByteOffset: {
+        forNode(node).setType(SpecInt32);
+        break;
+    }
+        
     case GetByOffset: {
         forNode(node).makeTop();
         break;
@@ -1503,7 +1498,11 @@ bool AbstractInterpreter<AbstractStateType>::executeEffects(unsigned clobberLimi
     case InlineStart:
     case CountExecution:
         break;
-        
+
+    case Unreachable:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();
         break;

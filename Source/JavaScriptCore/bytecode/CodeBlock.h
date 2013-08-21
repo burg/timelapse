@@ -55,6 +55,7 @@
 #include "ObjectAllocationProfile.h"
 #include "Options.h"
 #include "Operations.h"
+#include "PutPropertySlot.h"
 #include "Instruction.h"
 #include "JITCode.h"
 #include "JITWriteBarrier.h"
@@ -111,6 +112,8 @@ public:
 
     CString inferredName() const;
     CodeBlockHash hash() const;
+    bool hasHash() const;
+    bool isSafeToComputeHash() const;
     CString sourceCodeForTools() const; // Not quite the actual source we parsed; this will do things like prefix the source for a function with a reified signature.
     CString sourceCodeOnOneLine() const; // As sourceCodeForTools(), but replaces all whitespace runs with a single space.
     void dumpAssumingJITType(PrintStream&, JITCode::JITType) const;
@@ -396,6 +399,12 @@ public:
     }
 
     CodeType codeType() const { return m_unlinkedCode->codeType(); }
+    PutPropertySlot::Context putByIdContext() const
+    {
+        if (codeType() == EvalCode)
+            return PutPropertySlot::PutByIdEval;
+        return PutPropertySlot::PutById;
+    }
 
     SourceProvider* source() const { return m_source.get(); }
     unsigned sourceOffset() const { return m_sourceOffset; }
@@ -652,11 +661,30 @@ public:
 #endif
 
     // Constant Pool
+#if ENABLE(DFG_JIT)
+    size_t numberOfIdentifiers() const { return m_unlinkedCode->numberOfIdentifiers() + numberOfDFGIdentifiers(); }
+    size_t numberOfDFGIdentifiers() const
+    {
+        if (!JITCode::isOptimizingJIT(jitType()))
+            return 0;
 
-    size_t numberOfIdentifiers() const { return m_identifiers.size(); }
-    void addIdentifier(const Identifier& i) { return m_identifiers.append(i); }
-    Identifier& identifier(int index) { return m_identifiers[index]; }
+        return m_jitCode->dfgCommon()->dfgIdentifiers.size();
+    }
 
+    const Identifier& identifier(int index) const
+    {
+        size_t unlinkedIdentifiers = m_unlinkedCode->numberOfIdentifiers();
+        if (static_cast<unsigned>(index) < unlinkedIdentifiers)
+            return m_unlinkedCode->identifier(index);
+        ASSERT(JITCode::isOptimizingJIT(jitType()));
+        return m_jitCode->dfgCommon()->dfgIdentifiers[index - unlinkedIdentifiers];
+    }
+#else
+    size_t numberOfIdentifiers() const { return m_unlinkedCode->numberOfIdentifiers(); }
+    const Identifier& identifier(int index) const { return m_unlinkedCode->identifier(index); }
+#endif
+
+    Vector<WriteBarrier<Unknown> >& constants() { return m_constantRegisters; }
     size_t numberOfConstantRegisters() const { return m_constantRegisters.size(); }
     unsigned addConstant(JSValue v)
     {
@@ -666,7 +694,14 @@ public:
         return result;
     }
 
+    unsigned addConstantLazily()
+    {
+        unsigned result = m_constantRegisters.size();
+        m_constantRegisters.append(WriteBarrier<Unknown>());
+        return result;
+    }
 
+    bool findConstant(JSValue, unsigned& result);
     unsigned addOrFindConstant(JSValue);
     WriteBarrier<Unknown>& constantRegister(int index) { return m_constantRegisters[index - FirstConstantRegisterIndex]; }
     ALWAYS_INLINE bool isConstantRegisterIndex(int index) const { return index >= FirstConstantRegisterIndex; }
@@ -961,12 +996,6 @@ private:
     void updateAllPredictionsAndCountLiveness(OperationInProgress, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 #endif
 
-    void setIdentifiers(const Vector<Identifier>& identifiers)
-    {
-        RELEASE_ASSERT(m_identifiers.isEmpty());
-        m_identifiers.appendVector(identifiers);
-    }
-
     void setConstantRegisters(const Vector<WriteBarrier<Unknown> >& constants)
     {
         size_t count = constants.size();
@@ -1084,7 +1113,7 @@ private:
     SegmentedVector<ObjectAllocationProfile, 8> m_objectAllocationProfiles;
 
     // Constant Pool
-    Vector<Identifier> m_identifiers;
+    Vector<Identifier> m_additionalIdentifiers;
     COMPILE_ASSERT(sizeof(Register) == sizeof(WriteBarrier<Unknown>), Register_must_be_same_size_as_WriteBarrier_Unknown);
     // TODO: This could just be a pointer to m_unlinkedCodeBlock's data, but the DFG mutates
     // it, so we're stuck with it for now.
@@ -1239,7 +1268,7 @@ inline CodeBlock* baselineCodeBlockForInlineCallFrame(InlineCallFrame* inlineCal
 {
     RELEASE_ASSERT(inlineCallFrame);
     ExecutableBase* executable = inlineCallFrame->executable.get();
-    RELEASE_ASSERT(executable->structure()->classInfo() == &FunctionExecutable::s_info);
+    RELEASE_ASSERT(executable->structure()->classInfo() == FunctionExecutable::info());
     return static_cast<FunctionExecutable*>(executable)->baselineCodeBlockFor(inlineCallFrame->isCall ? CodeForCall : CodeForConstruct);
 }
 

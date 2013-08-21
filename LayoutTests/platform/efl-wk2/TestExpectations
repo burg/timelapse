@@ -242,8 +242,8 @@ webkit.org/b/112015 accessibility/textarea-line-for-index.html [ Failure ]
 webkit.org/b/112016 accessibility/textarea-selected-text-range.html [ Failure ]
 webkit.org/b/112017 accessibility/textbox-role-reports-selection.html [ Failure ]
 webkit.org/b/112018 accessibility/th-as-title-ui.html [ Failure ]
-webkit.org/b/112020 accessibility/transformed-element.html [ Failure ]
-webkit.org/b/112021 accessibility/visible-elements.html [ Failure ]
+webkit.org/b/112020 accessibility/transformed-element.html [ Failure Crash ]
+webkit.org/b/112021 accessibility/visible-elements.html [ Failure Crash ]
 
 # New accessibility test added in r149858 that is failing for EFL.
 webkit.org/b/115901 accessibility/poorly-formed-aria-table.html [ Failure ]
@@ -591,3 +591,10 @@ webkit.org/b/117460 fast/repaint/selection-gap-transformed-fixed-child.html [ Fa
 webkit.org/b/117460 fast/repaint/transform-table-layout.html [ Failure ]
 webkit.org/b/117460 svg/repaint/repaint-webkit-svg-shadow-container.html [ Failure ]
 
+webkit.org/b/119789 fast/events/touch/frame-hover-update.html [ Crash ]
+webkit.org/b/119789 fast/events/touch/multi-touch-inside-iframes.html [ Crash ]
+webkit.org/b/119789 fast/events/touch/multi-touch-inside-nested-iframes.html [ Crash ]
+webkit.org/b/119789 fast/events/touch/touch-before-pressing-spin-button.html [ Crash ]
+webkit.org/b/119789 fast/events/touch/touch-coords-in-zoom-and-scroll.html [ Crash ]
+webkit.org/b/119789 fast/events/touch/touch-inside-iframe.html [ Crash ]
+webkit.org/b/119789 fast/events/touch/touch-slider-no-js-touch-listener.html [ Crash ]

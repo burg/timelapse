@@ -41,6 +41,9 @@
 
 namespace JSC {
 
+#define THUNK_RETURN_ADDRESS_OFFSET 56
+#define SAVED_R8_OFFSET 60
+
 #define SYMBOL_STRING(name) #name
 /* code (r4), JSStack* (r5), CallFrame* (r6), void* unused1 (r7), void* unused2(sp), VM (sp)*/
 
@@ -57,11 +60,15 @@ SYMBOL_STRING(ctiTrampoline) ":" "\n"
     "mov.l r13, @-r15" "\n"
     "mov.l r11, @-r15" "\n"
     "mov.l r10, @-r15" "\n"
-    "add #-60, r15" "\n"
+    "mov.l r9, @-r15" "\n"
+    "mov.l r8, @-r15" "\n"
+    "add #-" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
     "mov r6, r14" "\n"
     "jsr @r4" "\n"
     "nop" "\n"
-    "add #60, r15" "\n"
+    "add #" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
+    "mov.l @r15+,r8" "\n"
+    "mov.l @r15+,r9" "\n"
     "mov.l @r15+,r10" "\n"
     "mov.l @r15+,r11" "\n"
     "mov.l @r15+,r13" "\n"
@@ -84,7 +91,9 @@ SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
     "mov.l @(r0,r12),r11" "\n"
     "jsr @r11" "\n"
     "nop" "\n"
-    "add #60, r15" "\n"
+    "add #" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
+    "mov.l @r15+,r8" "\n"
+    "mov.l @r15+,r9" "\n"
     "mov.l @r15+,r10" "\n"
     "mov.l @r15+,r11" "\n"
     "mov.l @r15+,r13" "\n"
@@ -98,34 +107,30 @@ SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
 );
 
 asm volatile (
-".globl " SYMBOL_STRING(ctiVMThrowTrampolineSlowpath) "\n"
-HIDE_SYMBOL(ctiVMThrowTrampolineSlowpath) "\n"
-SYMBOL_STRING(ctiVMThrowTrampolineSlowpath) ":" "\n"
-    "mov.l .L2"SYMBOL_STRING(cti_vm_throw_slowpath)",r0" "\n"
-    "mov r15, r4" "\n"
+".globl " SYMBOL_STRING(ctiVMHandleException) "\n"
+HIDE_SYMBOL(ctiVMHandleException) "\n"
+SYMBOL_STRING(ctiVMHandleException) ":" "\n"
+    "mov.l .L2"SYMBOL_STRING(cti_vm_handle_exception)",r0" "\n"
+    "mov r14, r4" "\n"
     "mov.l @(r0,r12),r11" "\n"
     "jsr @r11" "\n"
-    // When cti_vm_throw_slowpath returns, r0 has callFrame and r1 has handler address
+    // When cti_vm_handle_exception returns, r0 has callFrame and r1 has handler address
     "nop" "\n"
-    "add #60, r15" "\n"
-    "mov.l @r15+,r10" "\n"
-    "mov.l @r15+,r11" "\n"
-    "mov.l @r15+,r13" "\n"
-    "lds.l @r15+,pr" "\n"
-    "mov.l @r15+,r14" "\n"
-    "add #12, r15" "\n"
-    "mov r0, r4" "\n"
-    "jmp @r1" "\n"
+    "mov r0, r14" "\n"
+    "lds r1, pr" "\n"
+    "rts" "\n"
     "nop" "\n"
     ".align 2" "\n"
-    ".L2"SYMBOL_STRING(cti_vm_throw_slowpath)":.long " SYMBOL_STRING(cti_vm_throw_slowpath)"@GOT \n"
+    ".L2"SYMBOL_STRING(cti_vm_handle_exception)":.long " SYMBOL_STRING(cti_vm_handle_exception)"@GOT \n"
 );
 
 asm volatile (
 ".globl " SYMBOL_STRING(ctiOpThrowNotCaught) "\n"
 HIDE_SYMBOL(ctiOpThrowNotCaught) "\n"
 SYMBOL_STRING(ctiOpThrowNotCaught) ":" "\n"
-    "add #60, r15" "\n"
+    "add #" STRINGIZE_VALUE_OF(SAVED_R8_OFFSET) ", r15" "\n"
+    "mov.l @r15+,r8" "\n"
+    "mov.l @r15+,r9" "\n"
     "mov.l @r15+,r10" "\n"
     "mov.l @r15+,r11" "\n"
     "mov.l @r15+,r13" "\n"
@@ -146,12 +151,12 @@ SYMBOL_STRING(ctiOpThrowNotCaught) ":" "\n"
     ".globl " SYMBOL_STRING(cti_##op) "\n" \
     SYMBOL_STRING(cti_##op) ":" "\n" \
     "sts pr, r11" "\n" \
-    "mov.l r11, @(0x38, r15)" "\n" \
+    "mov.l r11, @(" STRINGIZE_VALUE_OF(THUNK_RETURN_ADDRESS_OFFSET) ", r15)" "\n" \
     "mov.l .L2"SYMBOL_STRING(JITStubThunked_##op)",r0" "\n" \
     "mov.l @(r0,r12),r11" "\n" \
     "jsr @r11" "\n" \
     "nop" "\n" \
-    "mov.l @(0x38, r15), r11 " "\n" \
+    "mov.l @(" STRINGIZE_VALUE_OF(THUNK_RETURN_ADDRESS_OFFSET) ", r15), r11 " "\n" \
     "lds r11, pr " "\n" \
     "rts" "\n" \
     "nop" "\n" \
@@ -159,6 +164,12 @@ SYMBOL_STRING(ctiOpThrowNotCaught) ":" "\n"
     ".L2"SYMBOL_STRING(JITStubThunked_##op)":.long " SYMBOL_STRING(JITStubThunked_##op)"@GOT \n" \
     ); \
     rtype JITStubThunked_##op(STUB_ARGS_DECLARATION)
+
+static void performSH4JITAssertions()
+{
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, thunkReturnAddress) == THUNK_RETURN_ADDRESS_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, savedR8) == SAVED_R8_OFFSET);
+}
 
 } // namespace JSC
 

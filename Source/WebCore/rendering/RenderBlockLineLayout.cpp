@@ -1281,8 +1281,8 @@ inline BidiRun* RenderBlock::handleTrailingSpaces(BidiRunList<BidiRun>& bidiRuns
 
 void RenderBlock::appendFloatingObjectToLastLine(FloatingObject* floatingObject)
 {
-    ASSERT(!floatingObject->m_originatingLine);
-    floatingObject->m_originatingLine = lastRootBox();
+    ASSERT(!floatingObject->originatingLine());
+    floatingObject->setOriginatingLine(lastRootBox());
     lastRootBox()->appendFloat(floatingObject->renderer());
 }
 
@@ -1946,7 +1946,7 @@ void RenderBlock::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, Inlin
             for (; it != end; ++it) {
                 FloatingObject* f = *it;
                 appendFloatingObjectToLastLine(f);
-                ASSERT(f->m_renderer == layoutState.floats()[layoutState.floatIndex()].object);
+                ASSERT(f->renderer() == layoutState.floats()[layoutState.floatIndex()].object);
                 // If a float's geometry has changed, give up on syncing with clean lines.
                 if (layoutState.floats()[layoutState.floatIndex()].rect != f->frameRect())
                     checkForEndLineMatch = false;
@@ -2011,7 +2011,7 @@ void RenderBlock::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, Inlin
                 lineBox = lineBox->prevRootBox();
 
             // We now want to break at this line. Remember for next layout and trigger relayout.
-            setBreakAtLineToAvoidWidow(lineBox);
+            setBreakAtLineToAvoidWidow(lineCount(lineBox));
             markLinesDirtyInBlockRange(lastRootBox()->lineBottomWithLeading(), lineBox->lineBottomWithLeading(), lineBox);
         }
     }
@@ -2040,8 +2040,8 @@ void RenderBlock::linkToEndLineIfNeeded(LineLayoutState& layoutState)
                     Vector<RenderBox*>::iterator end = cleanLineFloats->end();
                     for (Vector<RenderBox*>::iterator f = cleanLineFloats->begin(); f != end; ++f) {
                         FloatingObject* floatingObject = insertFloatingObject(*f);
-                        ASSERT(!floatingObject->m_originatingLine);
-                        floatingObject->m_originatingLine = line;
+                        ASSERT(!floatingObject->originatingLine());
+                        floatingObject->setOriginatingLine(line);
                         setLogicalHeight(logicalTopForChild(*f) - marginBeforeForChild(*f) + delta);
                         positionNewFloats();
                     }
@@ -2149,6 +2149,7 @@ void RenderBlock::layoutInlineChildren(bool relayoutChildren, LayoutUnit& repain
         Vector<RenderBox*> replacedChildren;
         for (InlineWalker walker(this); !walker.atEnd(); walker.advance()) {
             RenderObject* o = walker.current();
+
             if (!hasInlineChild && o->isInline())
                 hasInlineChild = true;
 
@@ -2326,8 +2327,8 @@ RootInlineBox* RenderBlock::determineStartPosition(LineLayoutState& layoutState,
                 Vector<RenderBox*>::iterator end = cleanLineFloats->end();
                 for (Vector<RenderBox*>::iterator f = cleanLineFloats->begin(); f != end; ++f) {
                     FloatingObject* floatingObject = insertFloatingObject(*f);
-                    ASSERT(!floatingObject->m_originatingLine);
-                    floatingObject->m_originatingLine = line;
+                    ASSERT(!floatingObject->originatingLine());
+                    floatingObject->setOriginatingLine(line);
                     setLogicalHeight(logicalTopForChild(*f) - marginBeforeForChild(*f));
                     positionNewFloats();
                     ASSERT(layoutState.floats()[numCleanFloats].object == *f);
@@ -3636,14 +3637,14 @@ bool RenderBlock::positionNewFloatOnLine(FloatingObject* newFloat, FloatingObjec
     // We only connect floats to lines for pagination purposes if the floats occur at the start of
     // the line and the previous line had a hard break (so this line is either the first in the block
     // or follows a <br>).
-    if (!newFloat->m_paginationStrut || !lineInfo.previousLineBrokeCleanly() || !lineInfo.isEmpty())
+    if (!newFloat->paginationStrut() || !lineInfo.previousLineBrokeCleanly() || !lineInfo.isEmpty())
         return true;
 
     const FloatingObjectSet& floatingObjectSet = m_floatingObjects->set();
     ASSERT(floatingObjectSet.last() == newFloat);
 
     LayoutUnit floatLogicalTop = logicalTopForFloat(newFloat);
-    int paginationStrut = newFloat->m_paginationStrut;
+    int paginationStrut = newFloat->paginationStrut();
 
     if (floatLogicalTop - paginationStrut != logicalHeight() + lineInfo.floatPaginationStrut())
         return true;
@@ -3657,8 +3658,8 @@ bool RenderBlock::positionNewFloatOnLine(FloatingObject* newFloat, FloatingObjec
         if (f == lastFloatFromPreviousLine)
             break;
         if (logicalTopForFloat(f) == logicalHeight() + lineInfo.floatPaginationStrut()) {
-            f->m_paginationStrut += paginationStrut;
-            RenderBox* o = f->m_renderer;
+            f->setPaginationStrut(paginationStrut + f->paginationStrut());
+            RenderBox* o = f->renderer();
             setLogicalTopForChild(o, logicalTopForChild(o) + marginBeforeForChild(o) + paginationStrut);
             if (o->isRenderBlock())
                 toRenderBlock(o)->setChildNeedsLayout(true, MarkOnlyThis);

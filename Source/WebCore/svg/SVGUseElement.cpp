@@ -32,12 +32,11 @@
 #include "CachedResourceRequest.h"
 #include "CachedSVGDocument.h"
 #include "Document.h"
-#include "ElementShadow.h"
+#include "ElementTraversal.h"
 #include "Event.h"
 #include "EventListener.h"
 #include "HTMLNames.h"
 #include "NodeRenderStyle.h"
-#include "NodeTraversal.h"
 #include "RegisteredEventListener.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGTransformableContainer.h"
@@ -93,7 +92,7 @@ inline SVGUseElement::SVGUseElement(const QualifiedName& tagName, Document* docu
     , m_needsShadowTreeRecreation(false)
     , m_svgLoadEventTimer(this, &SVGElement::svgLoadEventTimerFired)
 {
-    ASSERT(hasCustomStyleCallbacks());
+    ASSERT(hasCustomStyleResolveCallbacks());
     ASSERT(hasTagName(SVGNames::useTag));
     registerAnimatedPropertiesForSVGUseElement();
 }
@@ -269,7 +268,7 @@ void SVGUseElement::svgAttributeChanged(const QualifiedName& attrName)
     ASSERT_NOT_REACHED();
 }
 
-bool SVGUseElement::willRecalcStyle(StyleChange)
+bool SVGUseElement::willRecalcStyle(Style::Change)
 {
     if (!m_wasInsertedByParser && m_needsShadowTreeRecreation && renderer() && needsStyleRecalc())
         buildPendingResource();
@@ -388,7 +387,7 @@ static bool subtreeContainsDisallowedElement(Node* start)
 void SVGUseElement::clearResourceReferences()
 {
     // FIXME: We should try to optimize this, to at least allow partial reclones.
-    if (ShadowRoot* shadowTreeRootElement = shadow()->shadowRoot())
+    if (ShadowRoot* shadowTreeRootElement = shadowRoot())
         shadowTreeRootElement->removeChildren();
 
     if (m_targetElementInstance) {
@@ -480,7 +479,7 @@ void SVGUseElement::buildShadowAndInstanceTree(SVGElement* target)
     ASSERT(m_targetElementInstance->directUseElement() == this);
     ASSERT(m_targetElementInstance->correspondingElement() == target);
 
-    ShadowRoot* shadowTreeRootElement = shadow()->shadowRoot();
+    ShadowRoot* shadowTreeRootElement = shadowRoot();
     ASSERT(shadowTreeRootElement);
 
     // Build shadow tree from instance tree
@@ -702,7 +701,7 @@ void SVGUseElement::buildShadowTree(SVGElement* target, SVGElementInstance* targ
     if (subtreeContainsDisallowedElement(newChild.get()))
         removeDisallowedElementsFromSubtree(newChild.get());
 
-    shadow()->shadowRoot()->appendChild(newChild.release());
+    shadowRoot()->appendChild(newChild.release());
 }
 
 void SVGUseElement::expandUseElementsInShadowTree(Node* element)

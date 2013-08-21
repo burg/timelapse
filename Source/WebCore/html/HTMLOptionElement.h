@@ -70,9 +70,9 @@ private:
     HTMLOptionElement(const QualifiedName&, Document*);
 
     virtual bool isFocusable() const OVERRIDE;
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
-    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
+    virtual void didAttachRenderers() OVERRIDE;
+    virtual void willDetachRenderers() OVERRIDE;
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
@@ -86,7 +86,7 @@ private:
     virtual RenderStyle* nonRendererStyle() const OVERRIDE;
     virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
 
-    void didRecalcStyle(StyleChange) OVERRIDE;
+    void didRecalcStyle(Style::Change) OVERRIDE;
 
     String collectOptionInnerText() const;
 
@@ -95,12 +95,12 @@ private:
     RefPtr<RenderStyle> m_style;
 };
 
-inline bool isHTMLOptionElement(Node* node)
+inline bool isHTMLOptionElement(const Node* node)
 {
     return node->hasTagName(HTMLNames::optionTag);
 }
 
-inline bool isHTMLOptionElement(Element* element)
+inline bool isHTMLOptionElement(const Element* element)
 {
     return element->hasTagName(HTMLNames::optionTag);
 }

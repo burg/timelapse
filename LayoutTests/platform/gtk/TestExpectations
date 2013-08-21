@@ -78,12 +78,7 @@ fast/dom/Window/slow-unload-handler-only-frame-is-stopped.html [ WontFix Timeout
 webkit.org/b/98348 accessibility/internal-link-anchors2.html [ WontFix Missing ]
 webkit.org/b/98348 accessibility/radio-button-group-members.html [ WontFix Missing ]
 webkit.org/b/98348 accessibility/table-attributes.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/table-detection.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/table-one-cell.html [ WontFix Missing ]
 webkit.org/b/98348 accessibility/table-sections.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/table-with-aria-role.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/table-with-rules.html [ WontFix Missing ]
-webkit.org/b/98348 accessibility/plugin.html [ WontFix Missing ]
 
 # Feature disabled, see: https://bugs.webkit.org/show_bug.cgi?id=85425
 webkit.org/b/98925 fast/viewport/viewport-legacy-handheldfriendly.html [ Skip ]
@@ -256,6 +251,8 @@ webkit.org/b/99025 fast/dom/HTMLAnchorElement/anchor-download-unset.html [ Pass 
 
 # CSS Filters is disabled
 webkit.org/b/99026 css3/filters [ Skip ]
+webkit.org/b/99026 fast/filter-image/filter-image.html [ Skip ]
+webkit.org/b/99026 fast/filter-image/parse-filter-image.html [ Skip ]
 
 # Needs testRunner.enableAutoResizeMode()
 webkit.org/b/99028 fast/autoresize [ Failure ]
@@ -440,16 +437,7 @@ webkit.org/b/93812 [ Debug ] svg/custom/use-instanceRoot-as-event-target.xhtml [
 
 webkit.org/b/90957 [ Release ] fast/js/random-array-gc-stress.html [ Crash Pass ]
 
-webkit.org/b/94458 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-allowall.html [ Crash Failure ]
-webkit.org/b/94458 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html [ Crash Failure ]
 webkit.org/b/94458 [ Debug ] fast/events/message-port-context-destroyed.html [ Crash Pass ]
-
-webkit.org/b/100688 fast/css-generated-content/first-letter-table-cell-format-block-crash.html [ Crash Pass ]
-webkit.org/b/100688 fast/text/text-fragment-first-letter-update-crash.html [ Crash Pass ]
-webkit.org/b/100688 fast/text/custom-font-data-crash2.html [ Crash Pass ]
-webkit.org/b/100688 fast/css/first-letter-text-fragment-crash.html [ Crash Pass ]
-webkit.org/b/100688 editing/selection/first-letter-selection-crash.html [ Crash Pass ]
-webkit.org/b/100688 editing/text-iterator/backward-textiterator-first-letter-crash.html [ Crash Pass ]
 
 webkit.org/b/104684 fast/xmlhttprequest/xmlhttprequest-recursive-sync-event.html [ Crash Pass ]
 
@@ -466,7 +454,6 @@ webkit.org/b/107377 storage/indexeddb/mozilla/create-index-unique.html [ Crash P
 webkit.org/b/107377 storage/indexeddb/objectstore-basics.html [ Crash Pass ]
 webkit.org/b/107194 storage/indexeddb/objectstore-basics-workers.html [ Crash Failure ]
 
-webkit.org/b/108682 [ Debug ] media/video-controls-fullscreen-volume.html [ Crash ]
 webkit.org/b/108682 [ Debug ] media/video-controls-visible-exiting-fullscreen.html [ Crash Pass ]
 webkit.org/b/108682 [ Debug ] media/video-src.html [ Crash Pass ] 
 
@@ -494,6 +481,9 @@ webkit.org/b/118422 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-
 webkit.org/b/118423 http/tests/misc/iframe-reparenting-id-collision.html [ Crash Pass ]
 
 webkit.org/b/118902 svg/animations/svgenum-animation-6.html [ Crash Pass ]
+
+# Crashing after the FTL merge
+webkit.org/b/119255 [ Debug ] fast/workers/stress-js-execution.html [ Crash Pass ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Crashing tests
@@ -599,9 +589,8 @@ webkit.org/b/104809 media/W3C/video/events/event_loadstart_manual.html [ Crash P
 webkit.org/b/104809 media/W3C/audio/events/event_pause_manual.html [ Crash Pass ]
 webkit.org/b/104809 fast/dom/beforeload/remove-video-in-beforeload-listener.html [ Crash Pass ]
 
-webkit.org/b/106415 fast/workers/worker-close-more.html [ Timeout Pass ]
-
-webkit.org/b/106592 fast/regions/firstletter-inside-flowthread.html [ ImageOnlyFailure Pass ]
+# This test also crashes after the FTL merge
+webkit.org/b/106415 webkit.org/b/119255 fast/workers/worker-close-more.html [ Timeout Crash Pass ]
 
 webkit.org/b/107258 fast/canvas/2d.text.draw.fill.maxWidth.gradient.html [ Failure Pass ]
 
@@ -669,8 +658,6 @@ webkit.org/b/105191 media/video-playing-and-pause.html [ Failure Pass ]
 
 webkit.org/b/105280 [ Debug ] http/tests/xmlhttprequest/access-control-preflight-async-not-supported.html [ Failure Pass ]
 
-webkit.org/b/105280 [ Debug ] http/tests/xmlhttprequest/access-control-preflight-async-not-supported.html [ Failure Pass ]
-
 webkit.org/b/82020 plugins/netscape-dom-access-and-reload.html [ Failure Pass ]
 
 webkit.org/b/118460 media/media-element-play-after-eos.html [ Timeout Pass ]
@@ -684,6 +671,14 @@ webkit.org/b/119040 perf/nested-combined-selectors.html [ Failure Pass ]
 webkit.org/b/119041 css3/calc/img-size.html [ ImageOnlyFailure Pass ]
 
 webkit.org/b/119042 animations/resume-after-page-cache.html [ Failure Pass ]
+
+# These tests started to time out (or time out more often) since the FTL merge
+webkit.org/b/119253 [ Release ] css3/autoclose-braces-and-parentheses.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] fast/js/dfg-osr-entry-hoisted-clobbered-structure-check.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] fast/js/regress/nested-function-parsing.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] fast/js/regress/new-array-buffer-dead.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] fast/media/update-media-query-css-parser.html [ Timeout Pass ]
+webkit.org/b/119253 fast/workers/dedicated-worker-lifecycle.html [ Timeout Pass ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Flaky tests
@@ -714,7 +709,6 @@ Bug(GTK) css3/flexbox/position-absolute-child.html [ Pass Slow ]
 Bug(GTK) css3/flexbox/multiline-justify-content.html [ Pass Slow ]
 Bug(GTK) [ Debug ] editing/selection/move-by-word-visually-crash-test-5.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/css/visited-link-hang.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/array-sort-modifying-tostring.html [ Pass Slow ]
 Bug(GTK) fast/js/create-lots-of-workers.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/js/dfg-double-vote-fuzz.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/js/dfg-float32array.html [ Pass Slow ]
@@ -764,6 +758,8 @@ Bug(GTK) http/tests/media/video-preload.html [ Pass Slow ]
 
 webkit.org/b/116958 http/tests/navigation/slowmetaredirect-basic.html [ Pass Slow ]
 webkit.org/b/116958 http/tests/navigation/slowtimerredirect-basic.html [ Pass Slow ]
+
+webkit.org/b/119264 transitions/created-while-suspended.html [ Pass Slow ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of slow tests
@@ -815,6 +811,10 @@ webkit.org/b/116958 http/tests/navigation/redirect-to-random-url-versus-memory-c
 webkit.org/b/116958 http/tests/navigation/scrollstate-after-http-equiv-refresh.html [ Timeout ]
 webkit.org/b/116958 http/tests/navigation/scrollstate-after-location-reload.html [ Timeout ]
 
+# These tests time out after the FTL merge
+webkit.org/b/119254 fast/js/regress/marsaglia.html [ Timeout ]
+webkit.org/b/119254 fast/workers/worker-call.html [ Timeout ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests timing out
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -865,11 +865,7 @@ webkit.org/b/98377 accessibility/textarea-insertion-point-line-number.html [ Fai
 webkit.org/b/98378 accessibility/textarea-line-for-index.html [ Failure ]
 webkit.org/b/98379 accessibility/textarea-selected-text-range.html [ Failure ]
 webkit.org/b/98380 accessibility/th-as-title-ui.html [ Failure ]
-webkit.org/b/98381 accessibility/transformed-element.html [ Failure ]
 webkit.org/b/98382 accessibility/visible-elements.html [ Failure ]
-
-# No platform-specific expectations available until we implement attributesOfChildren().
-webkit.org/b/118967 accessibility/lists.html [ Failure Missing ]
 
 # Blur and focus events are not received for the following tests.
 Bug(GTK) fast/events/blur-focus-window-should-blur-focus-element.html [ Failure ]
@@ -1174,9 +1170,6 @@ webkit.org/b/86443 plugins/npruntime/delete-plugin-within-hasProperty-return-fal
 webkit.org/b/86443 plugins/npruntime/delete-plugin-within-hasProperty-return-true.html [ Failure ]
 webkit.org/b/86443 plugins/npruntime/delete-plugin-within-setProperty.html [ Failure ]
 
-# This test is affecting other tests and seems to be behaving incorrectly itself
-webkit.org/b/86771 fast/dom/gc-10.html [ Skip ]
-
 webkit.org/b/86971 svg/hittest/svg-shapes-non-scale-stroke.html [ Failure ]
 
 Bug(GTK) http/tests/misc/favicon-loads-with-icon-loading-override.html [ Failure ]
@@ -1264,8 +1257,6 @@ webkit.org/b/102776 webkit.org/b/102993 media/media-document-audio-repaint.html 
 webkit.org/b/102776 media/track/track-cue-rendering-horizontal.html [ Failure ]
 webkit.org/b/102776 media/track/track-cue-rendering-vertical.html [ Failure ]
 
-webkit.org/b/104054 svg/custom/use-href-update-crash.svg [ Failure ]
-
 webkit.org/b/104686 http/tests/xmlhttprequest/redirect-cross-origin-tripmine.html [ Failure ]
 
 webkit.org/b/98146 accessibility/svg-bounds.html [ Failure ]
@@ -1287,7 +1278,6 @@ webkit.org/b/103927 http/tests/w3c/webperf/submission/Google/resource-timing/htm
 webkit.org/b/103927 http/tests/w3c/webperf/submission/Google/resource-timing/html/test_resource_redirects.html [ Failure ]
 
 webkit.org/b/107257 [ Debug ] fast/dom/Window/window-postmessage-clone-deep-array.html [ Failure ]
-webkit.org/b/107257 [ Debug ] fast/js/large-expressions.html [ Failure ]
 
 # Test fails on JSC platforms due to GC timing issues
 webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
@@ -1415,10 +1405,6 @@ webkit.org/b/117581 accessibility/text-role-with-aria-hidden-inside.html [ Failu
 
 webkit.org/b/117582 fast/flexbox/clear-overflow-before-scroll-update.html [ Failure ]
 
-webkit.org/b/113168 fast/dom/Window/window-postmessage-clone-deep-array.html [ Failure ]
-webkit.org/b/113168 fast/js/large-expressions.html [ Failure ]
-webkit.org/b/113168 fast/js/toString-stack-overflow.html [ Failure ]
-
 webkit.org/b/118126 css3/flexbox/image-percent-max-height.html [ ImageOnlyFailure ]
 
 webkit.org/b/118220 http/tests/cache/partitioned-cache.html [ Failure ]
@@ -1441,6 +1427,20 @@ webkit.org/b/118595 fast/regions/autoheight-correct-region-for-lines-2.html [ Im
 # MathML tests failing after MathML pixel tests were replaced with ref tests
 webkit.org/b/118904 mathml/presentation/bug95404.html [ ImageOnlyFailure ]
 webkit.org/b/119004 mathml/presentation/fenced-mi.html [ ImageOnlyFailure ]
+
+webkit.org/b/119730 fast/dom/Window/open-zero-size-as-default.html [ Failure ]
+
+webkit.org/b/119731 fast/images/exif-orientation-composited.html [ Failure ]
+
+webkit.org/b/119733 fast/regions/overflow-scrollable-2.html [ ImageOnlyFailure ]
+
+webkit.org/b/119734 plugins/navigator-plugins-disabled.html [ Failure ]
+
+webkit.org/b/119735 plugins/unavailable-plugin-indicator-obscurity.html [ Failure ]
+
+webkit.org/b/119840 http/tests/loading/authentication-after-redirect-stores-wrong-credentials/authentication-after-redirect-stores-wrong-credentials.html [ Failure ]
+
+webkit.org/b/119841 fast/sub-pixel/sub-pixel-composited-layers.html [ ImageOnlyFailure ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests failing

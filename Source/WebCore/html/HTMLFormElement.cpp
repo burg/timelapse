@@ -27,6 +27,7 @@
 
 #include "Attribute.h"
 #include "Document.h"
+#include "ElementTraversal.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FormController.h"
@@ -40,8 +41,6 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLTableElement.h"
-#include "NodeRenderingContext.h"
-#include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderTextControl.h"
 #include "ScriptController.h"
@@ -95,10 +94,10 @@ bool HTMLFormElement::formWouldHaveSecureSubmission(const String& url)
     return document()->completeURL(url).protocolIs("https");
 }
 
-bool HTMLFormElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool HTMLFormElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (!m_wasDemoted)
-        return HTMLElement::rendererIsNeeded(context);
+        return HTMLElement::rendererIsNeeded(style);
 
     ContainerNode* node = parentNode();
     RenderObject* parentRenderer = node->renderer();
@@ -112,7 +111,7 @@ bool HTMLFormElement::rendererIsNeeded(const NodeRenderingContext& context)
     if (!parentIsTableElementPart)
         return true;
 
-    EDisplay display = context.style()->display();
+    EDisplay display = style.display();
     bool formIsTablePart = display == TABLE || display == INLINE_TABLE || display == TABLE_ROW_GROUP
         || display == TABLE_HEADER_GROUP || display == TABLE_FOOTER_GROUP || display == TABLE_ROW
         || display == TABLE_COLUMN_GROUP || display == TABLE_COLUMN || display == TABLE_CELL
@@ -202,7 +201,7 @@ static inline HTMLFormControlElement* submitElementFromEvent(const Event* event)
 bool HTMLFormElement::validateInteractively(Event* event)
 {
     ASSERT(event);
-    if (!document()->page() || !document()->page()->settings()->interactiveFormValidationEnabled() || noValidate())
+    if (!document()->page() || !document()->page()->settings().interactiveFormValidationEnabled() || noValidate())
         return true;
 
     HTMLFormControlElement* submitElement = submitElementFromEvent(event);
@@ -270,7 +269,7 @@ bool HTMLFormElement::prepareForSubmission(Event* event)
     StringPairVector controlNamesAndValues;
     getTextFieldValues(controlNamesAndValues);
     RefPtr<FormState> formState = FormState::create(this, controlNamesAndValues, document(), NotSubmittedByJavaScript);
-    frame->loader()->client()->dispatchWillSendSubmitEvent(formState.release());
+    frame->loader().client()->dispatchWillSendSubmitEvent(formState.release());
 
     if (dispatchEvent(Event::create(eventNames().submitEvent, true, true)))
         m_shouldSubmit = true;
@@ -347,7 +346,7 @@ void HTMLFormElement::submit(Event* event, bool activateSubmitButton, bool proce
         firstSuccessfulSubmitButton->setActivatedSubmit(true);
 
     bool lockHistory = !processingUserGesture;
-    frame->loader()->submitForm(FormSubmission::create(this, m_attributes, event, lockHistory, formSubmissionTrigger));
+    frame->loader().submitForm(FormSubmission::create(this, m_attributes, event, lockHistory, formSubmissionTrigger));
 
     if (needButtonActivation && firstSuccessfulSubmitButton)
         firstSuccessfulSubmitButton->setActivatedSubmit(false);

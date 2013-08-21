@@ -71,7 +71,7 @@ NPRuntimeObjectMap::PluginProtector::~PluginProtector()
 NPObject* NPRuntimeObjectMap::getOrCreateNPObject(VM& vm, JSObject* jsObject)
 {
     // If this is a JSNPObject, we can just get its underlying NPObject.
-    if (jsObject->classInfo() == &JSNPObject::s_info) {
+    if (jsObject->classInfo() == JSNPObject::info()) {
         JSNPObject* jsNPObject = static_cast<JSNPObject*>(jsObject);
         NPObject* npObject = jsNPObject->npObject();
         
@@ -244,7 +244,7 @@ JSGlobalObject* NPRuntimeObjectMap::globalObject() const
     if (!frame)
         return 0;
 
-    return frame->script()->globalObject(pluginWorld());
+    return frame->script().globalObject(pluginWorld());
 }
 
 ExecState* NPRuntimeObjectMap::globalExec() const

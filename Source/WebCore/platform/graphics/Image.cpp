@@ -57,8 +57,8 @@ Image::~Image()
 Image* Image::nullImage()
 {
     ASSERT(isMainThread());
-    DEFINE_STATIC_LOCAL(RefPtr<Image>, nullImage, (BitmapImage::create()));;
-    return nullImage.get();
+    static Image* nullImage = BitmapImage::create().leakRef();
+    return nullImage;
 }
 
 bool Image::supportsType(const String& type)
@@ -90,7 +90,7 @@ void Image::fillWithSolidColor(GraphicsContext* ctxt, const FloatRect& dstRect, 
     ctxt->setCompositeOperation(previousOperator);
 }
 
-void Image::draw(GraphicsContext* ctx, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode, RespectImageOrientationEnum)
+void Image::draw(GraphicsContext* ctx, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode, ImageOrientationDescription)
 {
     draw(ctx, dstRect, srcRect, styleColorSpace, op, blendMode);
 }

@@ -34,6 +34,7 @@
 #include "Document.h"
 #include "EditingStyle.h"
 #include "Editor.h"
+#include "ElementTraversal.h"
 #include "Frame.h"
 #include "HTMLFontElement.h"
 #include "HTMLInterchange.h"
@@ -47,6 +48,7 @@
 #include "StyleResolver.h"
 #include "Text.h"
 #include "TextIterator.h"
+#include "TextNodeTraversal.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
 #include <wtf/StdLibExtras.h>
@@ -99,11 +101,11 @@ bool isStyleSpanOrSpanWithOnlyStyleAttribute(const Element* element)
     return hasNoAttributeOrOnlyStyleAttribute(toHTMLElement(element), AllowNonEmptyStyleAttribute);
 }
 
-static inline bool isSpanWithoutAttributesOrUnstyledStyleSpan(const Node* node)
+static inline bool isSpanWithoutAttributesOrUnstyledStyleSpan(const Element* element)
 {
-    if (!node || !node->isHTMLElement() || !node->hasTagName(spanTag))
+    if (!element || !element->isHTMLElement() || !element->hasTagName(spanTag))
         return false;
-    return hasNoAttributeOrOnlyStyleAttribute(toHTMLElement(node), StyleAttributeShouldBeEmpty);
+    return hasNoAttributeOrOnlyStyleAttribute(toHTMLElement(element), StyleAttributeShouldBeEmpty);
 }
 
 bool isEmptyFontTag(const Element* element, ShouldStyleAttributeBeEmpty shouldStyleAttributeBeEmpty)
@@ -440,12 +442,11 @@ void ApplyStyleCommand::cleanupUnstyledAppleStyleSpans(Node* dummySpanAncestor)
     // can be propagated, which can result in more splitting. If a dummy span gets
     // cloned/split, the new node is always a sibling of it. Therefore, we scan
     // all the children of the dummy's parent
-    Node* next;
-    for (Node* node = dummySpanAncestor->firstChild(); node; node = next) {
-        next = node->nextSibling();
-        if (isSpanWithoutAttributesOrUnstyledStyleSpan(node))
-            removeNodePreservingChildren(node);
-        node = next;
+    Element* next;
+    for (Element* element = ElementTraversal::firstWithin(dummySpanAncestor); element; element = next) {
+        next = ElementTraversal::nextSibling(element);
+        if (isSpanWithoutAttributesOrUnstyledStyleSpan(element))
+            removeNodePreservingChildren(element);
     }
 }
 
@@ -771,7 +772,8 @@ void ApplyStyleCommand::applyInlineStyleToNodeRange(EditingStyle* style, PassRef
             // Add to this element's inline style and skip over its contents.
             HTMLElement* element = toHTMLElement(node.get());
             RefPtr<MutableStylePropertySet> inlineStyle = copyStyleOrCreateEmpty(element->inlineStyle());
-            inlineStyle->mergeAndOverrideOnConflict(style->style());
+            if (MutableStylePropertySet* otherStyle = style->style())
+                inlineStyle->mergeAndOverrideOnConflict(*otherStyle);
             setNodeAttribute(element, styleAttr, inlineStyle->asText());
             next = NodeTraversal::nextSkippingChildren(node.get());
             continue;
@@ -1520,13 +1522,9 @@ void ApplyStyleCommand::joinChildTextNodes(Node* node, const Position& start, co
     Position newStart = start;
     Position newEnd = end;
 
-    Vector<RefPtr<Text> > textNodes;
-    for (Node* curr = node->firstChild(); curr; curr = curr->nextSibling()) {
-        if (!curr->isTextNode())
-            continue;
-        
-        textNodes.append(toText(curr));
-    }
+    Vector<RefPtr<Text>> textNodes;
+    for (Text* textNode = TextNodeTraversal::firstChild(node); textNode; textNode = TextNodeTraversal::nextSibling(textNode))
+        textNodes.append(textNode);
 
     for (size_t i = 0; i < textNodes.size(); ++i) {
         Text* childText = textNodes[i].get();

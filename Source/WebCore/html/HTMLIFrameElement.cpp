@@ -30,7 +30,6 @@
 #include "Frame.h"
 #include "HTMLDocument.h"
 #include "HTMLNames.h"
-#include "NodeRenderingContext.h"
 #include "RenderIFrame.h"
 #include "ScriptableDocumentParser.h"
 
@@ -42,7 +41,7 @@ inline HTMLIFrameElement::HTMLIFrameElement(const QualifiedName& tagName, Docume
     : HTMLFrameElementBase(tagName, document)
 {
     ASSERT(hasTagName(iframeTag));
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
 PassRefPtr<HTMLIFrameElement> HTMLIFrameElement::create(const QualifiedName& tagName, Document* document)
@@ -91,9 +90,9 @@ void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicSt
         HTMLFrameElementBase::parseAttribute(name, value);
 }
 
-bool HTMLIFrameElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool HTMLIFrameElement::rendererIsNeeded(const RenderStyle& style)
 {
-    return isURLAllowed() && context.style()->display() != NONE;
+    return isURLAllowed() && style.display() != NONE;
 }
 
 RenderObject* HTMLIFrameElement::createRenderer(RenderArena* arena, RenderStyle*)
@@ -106,25 +105,13 @@ bool HTMLIFrameElement::shouldDisplaySeamlessly() const
     return contentDocument() && contentDocument()->shouldDisplaySeamlesslyWithParent();
 }
 
-void HTMLIFrameElement::didRecalcStyle(StyleChange styleChange)
+void HTMLIFrameElement::didRecalcStyle(Style::Change styleChange)
 {
     if (!shouldDisplaySeamlessly())
         return;
     Document* childDocument = contentDocument();
-    if (styleChange >= Inherit || childDocument->childNeedsStyleRecalc() || childDocument->needsStyleRecalc())
-        contentDocument()->recalcStyle(styleChange);
+    if (styleChange >= Style::Inherit || childDocument->childNeedsStyleRecalc() || childDocument->needsStyleRecalc())
+        contentDocument()->recalcStyle(styleChange == Style::Detach ? Style::Force : styleChange);
 }
-
-#if ENABLE(MICRODATA)
-String HTMLIFrameElement::itemValueText() const
-{
-    return getURLAttribute(srcAttr);
-}
-
-void HTMLIFrameElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(srcAttr, value);
-}
-#endif
 
 }

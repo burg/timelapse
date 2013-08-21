@@ -102,7 +102,6 @@ macro cCall2(function, arg1, arg2)
         move arg2, t1
         call function
     elsif X86
-        resetX87Stack
         poke arg1, 0
         poke arg2, 1
         call function
@@ -126,7 +125,6 @@ macro cCall4(function, arg1, arg2, arg3, arg4)
         move arg4, t3
         call function
     elsif X86
-        resetX87Stack
         poke arg1, 0
         poke arg2, 1
         poke arg3, 2
@@ -1782,6 +1780,7 @@ _llint_throw_from_slow_path_trampoline:
     # the throw target is not necessarily interpreted code, we come to here.
     # This essentially emulates the JIT's throwing protocol.
     loadp JITStackFrame::vm[sp], t1
+    loadp VM::topCallFrame[t1], cfr
     loadp VM::callFrameForThrow[t1], t0
     jmp VM::targetMachinePCForThrow[t1]
 
@@ -1789,6 +1788,7 @@ _llint_throw_from_slow_path_trampoline:
 _llint_throw_during_call_trampoline:
     preserveReturnAddressAfterCall(t2)
     loadp JITStackFrame::vm[sp], t1
+    loadp VM::topCallFrame[t1], cfr
     loadp VM::callFrameForThrow[t1], t0
     jmp VM::targetMachinePCForThrow[t1]
 

@@ -56,7 +56,7 @@
 #include "WebSocketChannelClient.h"
 #include "WebSocketHandshake.h"
 
-#include <wtf/ArrayBuffer.h>
+#include <runtime/ArrayBuffer.h>
 #include <wtf/Deque.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
@@ -92,7 +92,7 @@ WebSocketChannel::WebSocketChannel(Document* document, WebSocketChannelClient* c
 #endif
 {
     if (Page* page = m_document->page())
-        m_identifier = page->progress()->createUniqueIdentifier();
+        m_identifier = page->progress().createUniqueIdentifier();
 }
 
 WebSocketChannel::~WebSocketChannel()
@@ -248,7 +248,7 @@ void WebSocketChannel::willOpenSocketStream(SocketStreamHandle* handle)
     LOG(Network, "WebSocketChannel %p willOpenSocketStream()", this);
     ASSERT(handle);
     if (m_document->frame())
-        m_document->frame()->loader()->client()->dispatchWillOpenSocketStream(handle);
+        m_document->frame()->loader().client()->dispatchWillOpenSocketStream(handle);
 }
 
 void WebSocketChannel::didOpenSocketStream(SocketStreamHandle* handle)

@@ -400,6 +400,18 @@ private:
             return findArgumentPositionForArgument(operandToArgument(operand));
         return findArgumentPositionForLocal(operand);
     }
+
+    void addConstant(JSValue value)
+    {
+        unsigned constantIndex = m_codeBlock->addConstantLazily();
+        initializeLazyWriteBarrierForConstant(
+            m_graph.m_plan.writeBarriers,
+            m_codeBlock->constants()[constantIndex],
+            m_codeBlock,
+            constantIndex,
+            m_codeBlock->ownerExecutable(), 
+            value);
+    }
     
     void flush(int operand)
     {
@@ -496,9 +508,11 @@ private:
     // doesn't handle liveness preservation.
     Node* getJSConstantForValue(JSValue constantValue)
     {
-        unsigned constantIndex = m_codeBlock->addOrFindConstant(constantValue);
-        if (constantIndex >= m_constants.size())
+        unsigned constantIndex;
+        if (!m_codeBlock->findConstant(constantValue, constantIndex)) {
+            addConstant(constantValue);
             m_constants.append(ConstantRecord());
+        }
         
         ASSERT(m_constants.size() == m_codeBlock->numberOfConstantRegisters());
         
@@ -567,7 +581,7 @@ private:
 
             // Add undefined to the CodeBlock's constants, and add a corresponding slot in m_constants.
             ASSERT(m_constants.size() == numberOfConstants);
-            m_codeBlock->addConstant(jsUndefined());
+            addConstant(jsUndefined());
             m_constants.append(ConstantRecord());
             ASSERT(m_constants.size() == m_codeBlock->numberOfConstantRegisters());
         }
@@ -592,7 +606,7 @@ private:
 
             // Add null to the CodeBlock's constants, and add a corresponding slot in m_constants.
             ASSERT(m_constants.size() == numberOfConstants);
-            m_codeBlock->addConstant(jsNull());
+            addConstant(jsNull());
             m_constants.append(ConstantRecord());
             ASSERT(m_constants.size() == m_codeBlock->numberOfConstantRegisters());
         }
@@ -617,7 +631,7 @@ private:
 
             // Add the value 1 to the CodeBlock's constants, and add a corresponding slot in m_constants.
             ASSERT(m_constants.size() == numberOfConstants);
-            m_codeBlock->addConstant(jsNumber(1));
+            addConstant(jsNumber(1));
             m_constants.append(ConstantRecord());
             ASSERT(m_constants.size() == m_codeBlock->numberOfConstantRegisters());
         }
@@ -645,7 +659,7 @@ private:
 
             // Add the value nan to the CodeBlock's constants, and add a corresponding slot in m_constants.
             ASSERT(m_constants.size() == numberOfConstants);
-            m_codeBlock->addConstant(nan);
+            addConstant(nan);
             m_constants.append(ConstantRecord());
             ASSERT(m_constants.size() == m_codeBlock->numberOfConstantRegisters());
         }
@@ -1587,7 +1601,10 @@ bool ByteCodeParser::handleConstantInternalFunction(
     
     UNUSED_PARAM(prediction); // Remove this once we do more things.
     
-    if (function->classInfo() == &ArrayConstructor::s_info) {
+    if (function->classInfo() == ArrayConstructor::info()) {
+        if (function->globalObject() != m_inlineStackTop->m_codeBlock->globalObject())
+            return false;
+        
         if (argumentCountIncludingThis == 2) {
             set(resultOperand,
                 addToGraph(NewArrayWithSize, OpInfo(ArrayWithUndecided), get(registerOffset + argumentToOperand(1))));
@@ -1599,7 +1616,7 @@ bool ByteCodeParser::handleConstantInternalFunction(
         set(resultOperand,
             addToGraph(Node::VarArg, NewArray, OpInfo(ArrayWithUndecided), OpInfo(0)));
         return true;
-    } else if (function->classInfo() == &StringConstructor::s_info) {
+    } else if (function->classInfo() == StringConstructor::info()) {
         Node* result;
         
         if (argumentCountIncludingThis <= 1)
@@ -1822,7 +1839,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                 if (profile->m_singletonValueIsTop
                     || !profile->m_singletonValue
                     || !profile->m_singletonValue.isCell()
-                    || profile->m_singletonValue.asCell()->classInfo() != &Structure::s_info)
+                    || profile->m_singletonValue.asCell()->classInfo() != Structure::info())
                     setThis(addToGraph(ToThis, op1));
                 else {
                     addToGraph(
@@ -1840,7 +1857,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             bool alreadyEmitted = false;
             if (callee->op() == WeakJSConstant) {
                 JSCell* cell = callee->weakConstant();
-                ASSERT(cell->inherits(&JSFunction::s_info));
+                ASSERT(cell->inherits(JSFunction::info()));
                 
                 JSFunction* function = jsCast<JSFunction*>(cell);
                 ObjectAllocationProfile* allocationProfile = function->tryGetAllocationProfile();
@@ -1919,7 +1936,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                 || !profile->m_singletonValue.isCell())
                 set(currentInstruction[1].u.operand, get(JSStack::Callee));
             else {
-                ASSERT(profile->m_singletonValue.asCell()->inherits(&JSFunction::s_info));
+                ASSERT(profile->m_singletonValue.asCell()->inherits(JSFunction::info()));
                 Node* actualCallee = get(JSStack::Callee);
                 addToGraph(CheckFunction, OpInfo(profile->m_singletonValue.asCell()), actualCallee);
                 set(currentInstruction[1].u.operand, addToGraph(WeakJSConstant, OpInfo(profile->m_singletonValue.asCell())));
@@ -2148,11 +2165,18 @@ bool ByteCodeParser::parseBlock(unsigned limit)
 #else
             const unsigned maxRopeArguments = 3;
 #endif
+            OwnArrayPtr<Node*> toStringNodes = adoptArrayPtr(new Node*[numOperands]);
+            for (int i = 0; i < numOperands; i++)
+                toStringNodes[i] = addToGraph(ToString, get(startOperand + i));
+
+            for (int i = 0; i < numOperands; i++)
+                addToGraph(Phantom, toStringNodes[i]);
+
             Node* operands[AdjacencyList::Size];
             unsigned indexInOperands = 0;
             for (unsigned i = 0; i < AdjacencyList::Size; ++i)
                 operands[i] = 0;
-            for (int operandIdx = startOperand; operandIdx < startOperand + numOperands; ++operandIdx) {
+            for (int operandIdx = 0; operandIdx < numOperands; ++operandIdx) {
                 if (indexInOperands == maxRopeArguments) {
                     operands[0] = addToGraph(MakeRope, operands[0], operands[1], operands[2]);
                     for (unsigned i = 1; i < AdjacencyList::Size; ++i)
@@ -2162,7 +2186,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                 
                 ASSERT(indexInOperands < AdjacencyList::Size);
                 ASSERT(indexInOperands < maxRopeArguments);
-                operands[indexInOperands++] = addToGraph(ToString, get(operandIdx));
+                operands[indexInOperands++] = toStringNodes[operandIdx];
             }
             set(currentInstruction[1].u.operand,
                 addToGraph(MakeRope, operands[0], operands[1], operands[2]));
@@ -2846,13 +2870,15 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             LAST_OPCODE(op_end);
 
         case op_throw:
-            flushAllArgumentsAndCapturedVariablesInInlineStack();
             addToGraph(Throw, get(currentInstruction[1].u.operand));
+            flushAllArgumentsAndCapturedVariablesInInlineStack();
+            addToGraph(Unreachable);
             LAST_OPCODE(op_throw);
             
         case op_throw_static_error:
-            flushAllArgumentsAndCapturedVariablesInInlineStack();
             addToGraph(ThrowReferenceError);
+            flushAllArgumentsAndCapturedVariablesInInlineStack();
+            addToGraph(Unreachable);
             LAST_OPCODE(op_throw_static_error);
             
         case op_call:
@@ -3267,10 +3293,23 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
         ASSERT(callsiteBlockHead);
         
         InlineCallFrame inlineCallFrame;
-        inlineCallFrame.executable.set(*byteCodeParser->m_vm, byteCodeParser->m_codeBlock->ownerExecutable(), codeBlock->ownerExecutable());
+        initializeLazyWriteBarrierForInlineCallFrameExecutable(
+            byteCodeParser->m_graph.m_plan.writeBarriers,
+            inlineCallFrame.executable,
+            byteCodeParser->m_codeBlock,
+            byteCodeParser->m_codeBlock->inlineCallFrames().size(),
+            byteCodeParser->m_codeBlock->ownerExecutable(), 
+            codeBlock->ownerExecutable());
         inlineCallFrame.stackOffset = inlineCallFrameStart + JSStack::CallFrameHeaderSize;
-        if (callee)
-            inlineCallFrame.callee.set(*byteCodeParser->m_vm, byteCodeParser->m_codeBlock->ownerExecutable(), callee);
+        if (callee) {
+            initializeLazyWriteBarrierForInlineCallFrameCallee(
+                byteCodeParser->m_graph.m_plan.writeBarriers,
+                inlineCallFrame.callee,
+                byteCodeParser->m_codeBlock,
+                byteCodeParser->m_codeBlock->inlineCallFrames().size(),
+                byteCodeParser->m_codeBlock->ownerExecutable(), 
+                callee);
+        }
         inlineCallFrame.caller = byteCodeParser->currentCodeOrigin();
         inlineCallFrame.arguments.resize(argumentCountIncludingThis); // Set the number of arguments including this, but don't configure the value recoveries, yet.
         inlineCallFrame.isCall = isCall(kind);
@@ -3321,7 +3360,7 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
             if (!value) {
                 if (byteCodeParser->m_emptyJSValueIndex == UINT_MAX) {
                     byteCodeParser->m_emptyJSValueIndex = byteCodeParser->m_codeBlock->numberOfConstantRegisters() + FirstConstantRegisterIndex;
-                    byteCodeParser->m_codeBlock->addConstant(JSValue());
+                    byteCodeParser->addConstant(JSValue());
                     byteCodeParser->m_constants.append(ConstantRecord());
                 }
                 m_constantRemap[i] = byteCodeParser->m_emptyJSValueIndex;
@@ -3329,7 +3368,7 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
             }
             JSValueMap::AddResult result = byteCodeParser->m_jsValueMap.add(JSValue::encode(value), byteCodeParser->m_codeBlock->numberOfConstantRegisters() + FirstConstantRegisterIndex);
             if (result.isNewEntry) {
-                byteCodeParser->m_codeBlock->addConstant(value);
+                byteCodeParser->addConstant(value);
                 byteCodeParser->m_constants.append(ConstantRecord());
             }
             m_constantRemap[i] = result.iterator->value;

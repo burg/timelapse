@@ -171,8 +171,7 @@ void ChromeClient::setWindowRect(const FloatRect& rect)
     GtkWidget* window = gtk_widget_get_toplevel(GTK_WIDGET(m_webView));
     if (widgetIsOnscreenToplevelWindow(window)) {
         gtk_window_move(GTK_WINDOW(window), intrect.x(), intrect.y());
-        if (!intrect.isEmpty())
-            gtk_window_resize(GTK_WINDOW(window), intrect.width(), intrect.height());
+        gtk_window_resize(GTK_WINDOW(window), intrect.width(), intrect.height());
     }
 }
 
@@ -589,7 +588,7 @@ void ChromeClient::performAllPendingScrolls()
 void ChromeClient::paint(WebCore::Timer<ChromeClient>*)
 {
     static const double minimumFrameInterval = 1.0 / 60.0; // No more than 60 frames a second.
-    double timeSinceLastDisplay = currentTime() - m_lastDisplayTime;
+    double timeSinceLastDisplay = monotonicallyIncreasingTime() - m_lastDisplayTime;
     double timeUntilNextDisplay = minimumFrameInterval - timeSinceLastDisplay;
 
     if (timeUntilNextDisplay > 0 && !m_forcePaint) {
@@ -618,15 +617,15 @@ void ChromeClient::paint(WebCore::Timer<ChromeClient>*)
     gtk_widget_queue_draw_area(GTK_WIDGET(m_webView), rect.x(), rect.y(), rect.width(), rect.height());
 
     m_dirtyRegion = Region();
-    m_lastDisplayTime = currentTime();
+    m_lastDisplayTime = monotonicallyIncreasingTime();
     m_repaintSoonSourceId = 0;
 
     // We update the IM context window location here, because we want it to be
     // synced with cursor movement. For instance, a text field can move without
     // the selection changing.
-    Frame* focusedFrame = core(m_webView)->focusController()->focusedOrMainFrame();
+    Frame* focusedFrame = core(m_webView)->focusController().focusedOrMainFrame();
     if (focusedFrame && focusedFrame->editor().canEdit())
-        m_webView->priv->imFilter.setCursorRect(frame->selection()->absoluteCaretBounds());
+        m_webView->priv->imFilter.setCursorRect(frame->selection().absoluteCaretBounds());
 }
 
 void ChromeClient::forcePaint()

@@ -270,24 +270,15 @@ SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
 asm (
 ".text" "\n"
 ".align 2" "\n"
-".globl " SYMBOL_STRING(ctiVMThrowTrampolineSlowpath) "\n"
-HIDE_SYMBOL(ctiVMThrowTrampolineSlowpath) "\n"
+".globl " SYMBOL_STRING(ctiVMHandleException) "\n"
+HIDE_SYMBOL(ctiVMHandleException) "\n"
 ".thumb" "\n"
-".thumb_func " THUMB_FUNC_PARAM(ctiVMThrowTrampolineSlowpath) "\n"
-SYMBOL_STRING(ctiVMThrowTrampolineSlowpath) ":" "\n"
+".thumb_func " THUMB_FUNC_PARAM(ctiVMHandleException) "\n"
+SYMBOL_STRING(ctiVMHandleException) ":" "\n"
     "mov r0, r5" "\n"
-    "bl " LOCAL_REFERENCE(cti_vm_throw_slowpath) "\n"
-     // When cti_vm_throw_slowpath returns, r0 has callFrame and r1 has handler address
-    "ldr r11, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R11_OFFSET) "]" "\n"
-    "ldr r10, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R10_OFFSET) "]" "\n"
-    "ldr r9, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R9_OFFSET) "]" "\n"
-    "ldr r8, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R8_OFFSET) "]" "\n"
-    "ldr r7, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R7_OFFSET) "]" "\n"
-    "ldr r6, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R6_OFFSET) "]" "\n"
-    "ldr r5, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R5_OFFSET) "]" "\n"
-    "ldr r4, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_R4_OFFSET) "]" "\n"
-    "ldr lr, [sp, #" STRINGIZE_VALUE_OF(PRESERVED_RETURN_ADDRESS_OFFSET) "]" "\n"
-    "add sp, sp, #" STRINGIZE_VALUE_OF(FIRST_STACK_ARGUMENT) "\n"
+    "bl " LOCAL_REFERENCE(cti_vm_handle_exception) "\n"
+    // When cti_vm_handle_exception returns, r0 has callFrame and r1 has handler address
+    "mov r5, r0" "\n"
     "bx r1" "\n"
 );
 
@@ -538,7 +529,6 @@ __asm void ctiVMThrowTrampoline()
     ldr r8, [sp, # PRESERVED_R8_OFFSET ]
     ldr r7, [sp, # PRESERVED_R7_OFFSET ]
     ldr r6, [sp, # PRESERVED_R6_OFFSET ]
-    ldr r6, [sp, # PRESERVED_R6_OFFSET ]
     ldr r5, [sp, # PRESERVED_R5_OFFSET ]
     ldr r4, [sp, # PRESERVED_R4_OFFSET ]
     ldr lr, [sp, # PRESERVED_RETURN_ADDRESS_OFFSET ]
@@ -554,7 +544,6 @@ __asm void ctiOpThrowNotCaught()
     ldr r9, [sp, # PRESERVED_R9_OFFSET ]
     ldr r8, [sp, # PRESERVED_R8_OFFSET ]
     ldr r7, [sp, # PRESERVED_R7_OFFSET ]
-    ldr r6, [sp, # PRESERVED_R6_OFFSET ]
     ldr r6, [sp, # PRESERVED_R6_OFFSET ]
     ldr r5, [sp, # PRESERVED_R5_OFFSET ]
     ldr r4, [sp, # PRESERVED_R4_OFFSET ]

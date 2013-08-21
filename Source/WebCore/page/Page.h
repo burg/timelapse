@@ -189,13 +189,13 @@ public:
     int subframeCount() const { checkSubframeCountConsistency(); return m_subframeCount; }
 
     Chrome& chrome() const { return *m_chrome; }
-    DragCaretController* dragCaretController() const { return m_dragCaretController.get(); }
+    DragCaretController& dragCaretController() const { return *m_dragCaretController; }
 #if ENABLE(DRAG_SUPPORT)
-    DragController* dragController() const { return m_dragController.get(); }
+    DragController& dragController() const { return *m_dragController; }
 #endif
-    FocusController* focusController() const { return m_focusController.get(); }
+    FocusController& focusController() const { return *m_focusController; }
 #if ENABLE(CONTEXT_MENUS)
-    ContextMenuController* contextMenuController() const { return m_contextMenuController.get(); }
+    ContextMenuController& contextMenuController() const { return *m_contextMenuController; }
 #endif
         NetworkProxy* networkProxy() const { return m_networkProxy.get(); }
         AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
@@ -217,8 +217,8 @@ public:
     String mainThreadScrollingReasonsAsText();
     PassRefPtr<ClientRectList> nonFastScrollableRects(const Frame*);
 
-    Settings* settings() const { return m_settings.get(); }
-    ProgressTracker* progress() const { return m_progress.get(); }
+    Settings& settings() const { return *m_settings; }
+    ProgressTracker& progress() const { return *m_progress; }
     BackForwardController* backForward() const { return m_backForwardController.get(); }
 
     FeatureObserver* featureObserver() { return &m_featureObserver; }
@@ -419,6 +419,8 @@ public:
     void incrementFrameHandlingBeforeUnloadEventCount();
     void decrementFrameHandlingBeforeUnloadEventCount();
     bool isAnyFrameHandlingBeforeUnloadEvent();
+    void setLastSpatialNavigationCandidateCount(unsigned count) { m_lastSpatialNavigationCandidatesCount = count; }
+    unsigned lastSpatialNavigationCandidateCount() const { return m_lastSpatialNavigationCandidatesCount; }
 
 private:
     void initGroup();
@@ -448,14 +450,14 @@ private:
     void unthrottleTimers();
 
     const OwnPtr<Chrome> m_chrome;
-    OwnPtr<DragCaretController> m_dragCaretController;
+    const OwnPtr<DragCaretController> m_dragCaretController;
 
 #if ENABLE(DRAG_SUPPORT)
-    OwnPtr<DragController> m_dragController;
+    const OwnPtr<DragController> m_dragController;
 #endif
-    OwnPtr<FocusController> m_focusController;
+    const OwnPtr<FocusController> m_focusController;
 #if ENABLE(CONTEXT_MENUS)
-    OwnPtr<ContextMenuController> m_contextMenuController;
+    const OwnPtr<ContextMenuController> m_contextMenuController;
 #endif
         OwnPtr<NetworkProxy> m_networkProxy;
         OwnPtr<AsyncEventProxy> m_asyncEventProxy;
@@ -471,8 +473,8 @@ private:
 #endif
     RefPtr<ScrollingCoordinator> m_scrollingCoordinator;
 
-    OwnPtr<Settings> m_settings;
-    OwnPtr<ProgressTracker> m_progress;
+    const RefPtr<Settings> m_settings;
+    const OwnPtr<ProgressTracker> m_progress;
 
     OwnPtr<BackForwardController> m_backForwardController;
     RefPtr<Frame> m_mainFrame;
@@ -562,7 +564,8 @@ private:
 
     HashSet<String> m_seenPlugins;
     HashSet<String> m_seenMediaEngines;
-    
+
+    unsigned m_lastSpatialNavigationCandidatesCount;
     unsigned m_framesHandlingBeforeUnloadEvent;
 };
 

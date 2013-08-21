@@ -145,7 +145,7 @@ void WebDragClient::startDrag(DragImageRef image, const IntPoint& imageOrigin, c
             }
         }
 
-        DWORD okEffect = draggingSourceOperationMaskToDragCursors(m_webView->page()->dragController()->sourceDragOperation());
+        DWORD okEffect = draggingSourceOperationMaskToDragCursors(m_webView->page()->dragController().sourceDragOperation());
         DWORD effect = DROPEFFECT_NONE;
         COMPtr<IWebUIDelegate> ui;
         HRESULT hr = E_NOTIMPL;
@@ -166,7 +166,7 @@ void WebDragClient::startDrag(DragImageRef image, const IntPoint& imageOrigin, c
             else if (effect & DROPEFFECT_MOVE)
                 operation = DragOperationMove;
         }
-        frame->eventHandler()->dragSourceEndedAt(generateMouseEvent(m_webView, false), operation);
+        frame->eventHandler().dragSourceEndedAt(generateMouseEvent(m_webView, false), operation);
     }
 }
 

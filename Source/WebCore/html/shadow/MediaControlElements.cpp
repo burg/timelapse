@@ -54,6 +54,7 @@
 #include "RenderVideo.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "ShadowRoot.h"
 #if ENABLE(VIDEO_TRACK)
 #include "TextTrack.h"
 #include "TextTrackList.h"
@@ -109,7 +110,7 @@ void MediaControlPanelElement::startDrag(const LayoutPoint& eventLocation)
 
     m_lastDragEventLocation = eventLocation;
 
-    frame->eventHandler()->setCapturingMouseEventsNode(this);
+    frame->eventHandler().setCapturingMouseEventsNode(this);
 
     m_isBeingDragged = true;
 }
@@ -136,7 +137,7 @@ void MediaControlPanelElement::endDrag()
     if (!frame)
         return;
 
-    frame->eventHandler()->setCapturingMouseEventsNode(0);
+    frame->eventHandler().setCapturingMouseEventsNode(0);
 }
 
 void MediaControlPanelElement::startTimer()
@@ -1302,8 +1303,8 @@ void MediaControlTextTrackContainerElement::updateDisplay()
                 m_textTrackRepresentation->setContentScale(page->deviceScaleFactor());
 
             m_textTrackRepresentation->update();
-            setInlineStyleProperty(CSSPropertyWidth, String::number(m_videoDisplaySize.size().width()) + "px");
-            setInlineStyleProperty(CSSPropertyHeight, String::number(m_videoDisplaySize.size().height()) + "px");
+            setInlineStyleProperty(CSSPropertyWidth, m_videoDisplaySize.size().width(), CSSPrimitiveValue::CSS_PX);
+            setInlineStyleProperty(CSSPropertyHeight, m_videoDisplaySize.size().height(), CSSPrimitiveValue::CSS_PX);
         }
     } else {
         hide();
@@ -1317,8 +1318,8 @@ void MediaControlTextTrackContainerElement::updateTimerFired(Timer<MediaControlT
         return;
 
     if (m_textTrackRepresentation) {
-        setInlineStyleProperty(CSSPropertyWidth, String::number(m_videoDisplaySize.size().width()) + "px");
-        setInlineStyleProperty(CSSPropertyHeight, String::number(m_videoDisplaySize.size().height()) + "px");
+        setInlineStyleProperty(CSSPropertyWidth, m_videoDisplaySize.size().width(), CSSPrimitiveValue::CSS_PX);
+        setInlineStyleProperty(CSSPropertyHeight, m_videoDisplaySize.size().height(), CSSPrimitiveValue::CSS_PX);
     }
     
     HTMLMediaElement* mediaElement = toParentMediaElement(this);

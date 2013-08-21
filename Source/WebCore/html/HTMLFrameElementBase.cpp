@@ -51,6 +51,7 @@ HTMLFrameElementBase::HTMLFrameElementBase(const QualifiedName& tagName, Documen
     , m_marginHeight(-1)
     , m_viewSource(false)
 {
+    setHasCustomStyleResolveCallbacks();
 }
 
 bool HTMLFrameElementBase::isURLAllowed() const
@@ -85,7 +86,7 @@ void HTMLFrameElementBase::openURL(bool lockHistory, bool lockBackForwardList)
     if (!parentFrame)
         return;
 
-    parentFrame->loader()->subframeLoader()->requestFrame(this, m_URL, m_frameName, lockHistory, lockBackForwardList);
+    parentFrame->loader().subframeLoader()->requestFrame(this, m_URL, m_frameName, lockHistory, lockBackForwardList);
     if (contentFrame())
         contentFrame()->setInViewSourceMode(viewSourceMode());
 }
@@ -172,10 +173,8 @@ void HTMLFrameElementBase::didNotifySubtreeInsertions(ContainerNode*)
     setNameAndOpenURL();
 }
 
-void HTMLFrameElementBase::attach(const AttachContext& context)
+void HTMLFrameElementBase::didAttachRenderers()
 {
-    HTMLFrameOwnerElement::attach(context);
-
     if (RenderPart* part = renderPart()) {
         if (Frame* frame = contentFrame())
             part->setWidget(frame->view());
@@ -211,9 +210,9 @@ void HTMLFrameElementBase::setFocus(bool received)
     HTMLFrameOwnerElement::setFocus(received);
     if (Page* page = document()->page()) {
         if (received)
-            page->focusController()->setFocusedFrame(contentFrame());
-        else if (page->focusController()->focusedFrame() == contentFrame()) // Focus may have already been given to another frame, don't take it away.
-            page->focusController()->setFocusedFrame(0);
+            page->focusController().setFocusedFrame(contentFrame());
+        else if (page->focusController().focusedFrame() == contentFrame()) // Focus may have already been given to another frame, don't take it away.
+            page->focusController().setFocusedFrame(0);
     }
 }
 

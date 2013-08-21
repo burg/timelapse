@@ -31,6 +31,7 @@
 /* Include compiler specific macros */
 #include <wtf/Compiler.h>
 
+
 /* ==== PLATFORM handles OS, operating environment, graphics API, and
    CPU. This macro will be phased out in favor of platform adaptation
    macros, policy decision macros, and top-level port definitions. ==== */
@@ -758,16 +759,12 @@
 #if (CPU(X86) || CPU(X86_64)) && (OS(DARWIN) || OS(LINUX))
 #define ENABLE_DFG_JIT 1
 #endif
-/* Enable the DFG JIT on ARMv7.  Only tested on iOS and Qt Linux. */
-#if CPU(ARM_THUMB2) && (PLATFORM(IOS) || PLATFORM(BLACKBERRY) || PLATFORM(QT))
+/* Enable the DFG JIT on ARMv7.  Only tested on iOS and Qt/GTK+ Linux. */
+#if CPU(ARM_THUMB2) && (PLATFORM(IOS) || PLATFORM(BLACKBERRY) || PLATFORM(QT) || PLATFORM(GTK))
 #define ENABLE_DFG_JIT 1
 #endif
-/* Enable the DFG JIT on ARM. */
-#if CPU(ARM_TRADITIONAL)
-#define ENABLE_DFG_JIT 1
-#endif
-/* Enable the DFG JIT on MIPS. */
-#if CPU(MIPS)
+/* Enable the DFG JIT on ARM, MIPS and SH4. */
+#if CPU(ARM_TRADITIONAL) || CPU(MIPS) || CPU(SH4)
 #define ENABLE_DFG_JIT 1
 #endif
 #endif
@@ -907,6 +904,13 @@
 #define WTF_USE_3D_GRAPHICS 1
 #endif
 
+#if ENABLE(WEBGL) && PLATFORM(WIN)
+#define WTF_USE_OPENGL 1
+#define WTF_USE_OPENGL_ES_2 1
+#define WTF_USE_EGL 1
+#define WTF_USE_GRAPHICS_SURFACE 1
+#endif
+
 /* Qt always uses Texture Mapper */
 #if PLATFORM(QT)
 #define WTF_USE_TEXTURE_MAPPER 1
@@ -1006,7 +1010,7 @@
 #define HAVE_AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT 1
 #endif
 
-#if (PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 70000) || ((PLATFORM(MAC) || (OS(WINDOWS) && USE(CG))) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090)
 #define HAVE_MEDIA_ACCESSIBILITY_FRAMEWORK 1
 #endif
 
@@ -1022,7 +1026,7 @@
 #define HAVE_INVERTED_WHEEL_EVENTS 1
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && !PLATFORM(IOS)
 #define WTF_USE_COREAUDIO 1
 #endif
 
@@ -1037,26 +1041,32 @@
 #endif
 #endif
 
-#if !PLATFORM(IOS) && PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #define WTF_USE_CONTENT_FILTERING 1
 #endif
 
 
 #define WTF_USE_GRAMMAR_CHECKING 1
 
-#if PLATFORM(MAC) || PLATFORM(BLACKBERRY) || PLATFORM(EFL)
+#if PLATFORM(IOS) || PLATFORM(MAC) || PLATFORM(BLACKBERRY) || PLATFORM(EFL)
 #define WTF_USE_UNIFIED_TEXT_CHECKING 1
 #endif
-#if PLATFORM(MAC)
+#if !PLATFORM(IOS) && PLATFORM(MAC)
 #define WTF_USE_AUTOMATIC_TEXT_REPLACEMENT 1
 #endif
 
-#if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
+#if !PLATFORM(IOS) && (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 /* Some platforms provide UI for suggesting autocorrection. */
 #define WTF_USE_AUTOCORRECTION_PANEL 1
+#endif
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 /* Some platforms use spelling and autocorrection markers to provide visual cue. On such platform, if word with marker is edited, we need to remove the marker. */
 #define WTF_USE_MARKER_REMOVAL_UPON_EDITING 1
-#endif /* #if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070) */
+#endif
+
+#if PLATFORM(IOS)
+#define WTF_USE_PLATFORM_TEXT_TRACK_MENU 1
+#endif
 
 #if PLATFORM(MAC) || PLATFORM(IOS)
 #define WTF_USE_AUDIO_SESSION 1

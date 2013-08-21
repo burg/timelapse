@@ -503,7 +503,7 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id)
 {
     LLINT_BEGIN();
     CodeBlock* codeBlock = exec->codeBlock();
-    Identifier& ident = codeBlock->identifier(pc[3].u.operand);
+    const Identifier& ident = codeBlock->identifier(pc[3].u.operand);
     JSValue baseValue = LLINT_OP_C(2).jsValue();
     PropertySlot slot(baseValue);
 
@@ -515,7 +515,7 @@ LLINT_SLOW_PATH_DECL(slow_path_get_by_id)
         && baseValue.isCell()
         && slot.isCacheable()
         && slot.slotBase() == baseValue
-        && slot.cachedPropertyType() == PropertySlot::Value) {
+        && slot.isCacheableValue()) {
         
         JSCell* baseCell = baseValue.asCell();
         Structure* structure = baseCell->structure();
@@ -557,7 +557,7 @@ LLINT_SLOW_PATH_DECL(slow_path_get_arguments_length)
 {
     LLINT_BEGIN();
     CodeBlock* codeBlock = exec->codeBlock();
-    Identifier& ident = codeBlock->identifier(pc[3].u.operand);
+    const Identifier& ident = codeBlock->identifier(pc[3].u.operand);
     JSValue baseValue = LLINT_OP(2).jsValue();
     PropertySlot slot(baseValue);
     LLINT_RETURN(baseValue.get(exec, ident, slot));
@@ -567,10 +567,10 @@ LLINT_SLOW_PATH_DECL(slow_path_put_by_id)
 {
     LLINT_BEGIN();
     CodeBlock* codeBlock = exec->codeBlock();
-    Identifier& ident = codeBlock->identifier(pc[2].u.operand);
+    const Identifier& ident = codeBlock->identifier(pc[2].u.operand);
     
     JSValue baseValue = LLINT_OP_C(1).jsValue();
-    PutPropertySlot slot(codeBlock->isStrictMode());
+    PutPropertySlot slot(codeBlock->isStrictMode(), codeBlock->putByIdContext());
     if (pc[8].u.operand)
         asObject(baseValue)->putDirect(vm, ident, LLINT_OP_C(3).jsValue(), slot);
     else
@@ -1268,14 +1268,14 @@ LLINT_SLOW_PATH_DECL(throw_from_native_call)
 LLINT_SLOW_PATH_DECL(slow_path_resolve_scope)
 {
     LLINT_BEGIN();
-    Identifier& ident = exec->codeBlock()->identifier(pc[2].u.operand);
+    const Identifier& ident = exec->codeBlock()->identifier(pc[2].u.operand);
     LLINT_RETURN(JSScope::resolve(exec, exec->scope(), ident));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_get_from_scope)
 {
     LLINT_BEGIN();
-    Identifier& ident = exec->codeBlock()->identifier(pc[3].u.operand);
+    const Identifier& ident = exec->codeBlock()->identifier(pc[3].u.operand);
     JSObject* scope = jsCast<JSObject*>(LLINT_OP(2).jsValue());
     ResolveModeAndType modeAndType(pc[4].u.operand);
 
@@ -1303,7 +1303,7 @@ LLINT_SLOW_PATH_DECL(slow_path_put_to_scope)
 {
     LLINT_BEGIN();
     CodeBlock* codeBlock = exec->codeBlock();
-    Identifier& ident = codeBlock->identifier(pc[2].u.operand);
+    const Identifier& ident = codeBlock->identifier(pc[2].u.operand);
     JSObject* scope = jsCast<JSObject*>(LLINT_OP(1).jsValue());
     JSValue value = LLINT_OP_C(3).jsValue();
     ResolveModeAndType modeAndType = ResolveModeAndType(pc[4].u.operand);

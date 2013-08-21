@@ -38,8 +38,6 @@
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "InspectorInstrumentation.h"
-#include "JSArrayBuffer.h"
-#include "JSArrayBufferView.h"
 #include "JSBlob.h"
 #include "JSDOMFormData.h"
 #include "JSDOMWindowCustom.h"
@@ -48,8 +46,10 @@
 #include "JSEventListener.h"
 #include "XMLHttpRequest.h"
 #include <interpreter/StackIterator.h>
+#include <runtime/ArrayBuffer.h>
 #include <runtime/Error.h>
-#include <wtf/ArrayBuffer.h>
+#include <runtime/JSArrayBuffer.h>
+#include <runtime/JSArrayBufferView.h>
 
 using namespace JSC;
 
@@ -58,7 +58,7 @@ namespace WebCore {
 void JSXMLHttpRequest::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSXMLHttpRequest* thisObject = jsCast<JSXMLHttpRequest*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
@@ -119,17 +119,18 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
         JSValue val = exec->argument(0);
         if (val.isUndefinedOrNull())
             impl()->send(ec);
-        else if (val.inherits(&JSDocument::s_info))
+        else if (val.inherits(JSDocument::info()))
             impl()->send(toDocument(val), ec);
-        else if (val.inherits(&JSBlob::s_info))
+        else if (val.inherits(JSBlob::info()))
             impl()->send(toBlob(val), ec);
-        else if (val.inherits(&JSDOMFormData::s_info))
+        else if (val.inherits(JSDOMFormData::info()))
             impl()->send(toDOMFormData(val), ec);
-        else if (val.inherits(&JSArrayBuffer::s_info))
+        else if (val.inherits(JSArrayBuffer::info()))
             impl()->send(toArrayBuffer(val), ec);
-        else if (val.inherits(&JSArrayBufferView::s_info))
-            impl()->send(toArrayBufferView(val), ec);
-        else
+        else if (val.inherits(JSArrayBufferView::info())) {
+            RefPtr<ArrayBufferView> view = toArrayBufferView(val);
+            impl()->send(view.get(), ec);
+        } else
             impl()->send(val.toString(exec)->value(exec), ec);
     }
 

@@ -91,14 +91,6 @@ MediaQueryEvaluator::MediaQueryEvaluator(const String& acceptedMediaType, bool m
 {
 }
 
-MediaQueryEvaluator::MediaQueryEvaluator(const char* acceptedMediaType, bool mediaFeatureResult)
-    : m_mediaType(acceptedMediaType)
-    , m_frame(0)
-    , m_style(0)
-    , m_expResult(mediaFeatureResult)
-{
-}
-
 MediaQueryEvaluator::MediaQueryEvaluator(const String& acceptedMediaType, Frame* frame, RenderStyle* style)
     : m_mediaType(acceptedMediaType)
     , m_frame(frame)
@@ -635,7 +627,7 @@ enum PointerDeviceType { TouchPointer, MousePointer, NoPointer, UnknownPointer }
 
 static PointerDeviceType leastCapablePrimaryPointerDeviceType(Frame* frame)
 {
-    if (frame->settings()->deviceSupportsTouch())
+    if (frame->settings().deviceSupportsTouch())
         return TouchPointer;
 
     // FIXME: We should also try to determine if we know we have a mouse.

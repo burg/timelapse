@@ -38,7 +38,7 @@ const ClassInfo JSProxy::s_info = { "JSProxy", &Base::s_info, 0, 0, CREATE_METHO
 void JSProxy::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
 
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
@@ -70,22 +70,16 @@ String JSProxy::className(const JSObject* object)
     return thisObject->target()->methodTable()->className(thisObject->target());
 }
 
-bool JSProxy::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
+bool JSProxy::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    JSProxy* thisObject = jsCast<JSProxy*>(cell);
+    JSProxy* thisObject = jsCast<JSProxy*>(object);
     return thisObject->target()->methodTable()->getOwnPropertySlot(thisObject->target(), exec, propertyName, slot);
 }
 
-bool JSProxy::getOwnPropertySlotByIndex(JSCell* cell, ExecState* exec, unsigned propertyName, PropertySlot& slot)
-{
-    JSProxy* thisObject = jsCast<JSProxy*>(cell);
-    return thisObject->target()->methodTable()->getOwnPropertySlotByIndex(thisObject->target(), exec, propertyName, slot);
-}
-
-bool JSProxy::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
+bool JSProxy::getOwnPropertySlotByIndex(JSObject* object, ExecState* exec, unsigned propertyName, PropertySlot& slot)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
-    return thisObject->target()->methodTable()->getOwnPropertyDescriptor(thisObject->target(), exec, propertyName, descriptor);
+    return thisObject->target()->methodTable()->getOwnPropertySlotByIndex(thisObject->target(), exec, propertyName, slot);
 }
 
 void JSProxy::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)

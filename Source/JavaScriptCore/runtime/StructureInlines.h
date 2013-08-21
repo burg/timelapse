@@ -26,6 +26,7 @@
 #ifndef StructureInlines_h
 #define StructureInlines_h
 
+#include "JSArrayBufferView.h"
 #include "PropertyMapHashTable.h"
 #include "Structure.h"
 
@@ -75,7 +76,7 @@ inline Structure* Structure::storedPrototypeStructure() const
 inline PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
 {
     ASSERT(!isCompilationThread());
-    ASSERT(structure()->classInfo() == &s_info);
+    ASSERT(structure()->classInfo() == info());
     materializePropertyMapIfNecessary(vm);
     if (!propertyTable())
         return invalidOffset;
@@ -87,7 +88,7 @@ inline PropertyOffset Structure::get(VM& vm, PropertyName propertyName)
 inline PropertyOffset Structure::get(VM& vm, const WTF::String& name)
 {
     ASSERT(!isCompilationThread());
-    ASSERT(structure()->classInfo() == &s_info);
+    ASSERT(structure()->classInfo() == info());
     materializePropertyMapIfNecessary(vm);
     if (!propertyTable())
         return invalidOffset;
@@ -102,6 +103,17 @@ inline PropertyOffset Structure::getConcurrently(VM& vm, StringImpl* uid)
     JSCell* specificValueIgnored;
     return getConcurrently(
         vm, uid, attributesIgnored, specificValueIgnored);
+}
+
+inline bool Structure::hasIndexingHeader(const JSCell* cell) const
+{
+    if (hasIndexedProperties(indexingType()))
+        return true;
+    
+    if (!isTypedView(m_classInfo->typedArrayStorageType))
+        return false;
+    
+    return jsCast<const JSArrayBufferView*>(cell)->mode() == WastefulTypedArray;
 }
 
 inline bool Structure::masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject)

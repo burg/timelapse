@@ -44,6 +44,20 @@ struct ExceptionHandler {
     void* catchRoutine;
 };
 
+#if USE(JSVALUE32_64)
+// EncodedExceptionHandler is used to convince the compiler to return an ExceptionHander
+// struct in two registers for 32 bit builds.
+typedef int64_t EncodedExceptionHandler;
+
+union ExceptionHandlerUnion {
+    ExceptionHandler handler;
+    EncodedExceptionHandler encodedHandler;
+};
+
+EncodedExceptionHandler encode(ExceptionHandler);
+#endif
+
+ExceptionHandler uncaughtExceptionHandler();
 ExceptionHandler genericThrow(VM*, ExecState*, JSValue exceptionValue, unsigned vPCIndex);
 
 ExceptionHandler jitThrowNew(VM*, ExecState*, JSValue exceptionValue);

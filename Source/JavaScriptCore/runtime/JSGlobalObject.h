@@ -25,7 +25,7 @@
 #include "ArrayAllocationProfile.h"
 #include "JSArray.h"
 #include "JSClassRef.h"
-#include "VM.h"
+#include "JSArrayBufferPrototype.h"
 #include "JSSegmentedVariableObject.h"
 #include "JSWeakObjectMapRefInternal.h"
 #include "NumberPrototype.h"
@@ -33,6 +33,7 @@
 #include "StringPrototype.h"
 #include "StructureChain.h"
 #include "StructureRareDataInlines.h"
+#include "VM.h"
 #include "Watchpoint.h"
 #include <JavaScriptCore/JSBase.h>
 #include <wtf/HashSet.h>
@@ -169,7 +170,17 @@ protected:
     WriteBarrier<Structure> m_regExpStructure;
     WriteBarrier<Structure> m_stringObjectStructure;
     WriteBarrier<Structure> m_internalFunctionStructure;
-
+    
+    WriteBarrier<JSArrayBufferPrototype> m_arrayBufferPrototype;
+    WriteBarrier<Structure> m_arrayBufferStructure;
+    
+    struct TypedArrayData {
+        WriteBarrier<JSObject> prototype;
+        WriteBarrier<Structure> structure;
+    };
+    
+    FixedArray<TypedArrayData, NUMBER_OF_TYPED_ARRAY_TYPES> m_typedArrays;
+        
     void* m_specialPointers[Special::TableSize]; // Special pointers used by the LLInt and JIT.
 
     Debugger* m_debugger;
@@ -207,7 +218,7 @@ public:
         return globalObject;
     }
 
-    static JS_EXPORTDATA const ClassInfo s_info;
+    DECLARE_EXPORT_INFO;
 
     bool hasDebugger() const { return m_debugger; }
     bool hasProfiler() const { return globalObjectMethodTable()->supportsProfiling(this); }
@@ -239,8 +250,7 @@ public:
 
     JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
 
-    JS_EXPORT_PRIVATE static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-    JS_EXPORT_PRIVATE static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
+    JS_EXPORT_PRIVATE static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     bool hasOwnPropertyForWrite(ExecState*, PropertyName);
     JS_EXPORT_PRIVATE static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
 
@@ -333,6 +343,14 @@ public:
     Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
     Structure* regExpStructure() const { return m_regExpStructure.get(); }
     Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
+    
+    JSArrayBufferPrototype* arrayBufferPrototype() const { return m_arrayBufferPrototype.get(); }
+    Structure* arrayBufferStructure() const { return m_arrayBufferStructure.get(); }
+    
+    Structure* typedArrayStructure(TypedArrayType type) const
+    {
+        return m_typedArrays[toIndex(type)].structure.get();
+    }
 
     void* actualPointerFor(Special::Pointer pointer)
     {
@@ -398,7 +416,7 @@ public:
 
     static Structure* createStructure(VM& vm, JSValue prototype)
     {
-        return Structure::create(vm, 0, prototype, TypeInfo(GlobalObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, 0, prototype, TypeInfo(GlobalObjectType, StructureFlags), info());
     }
 
     void registerWeakMap(OpaqueJSWeakObjectMap* map)
@@ -467,7 +485,7 @@ inline JSGlobalObject* asGlobalObject(JSValue value)
 
 inline bool JSGlobalObject::hasOwnPropertyForWrite(ExecState* exec, PropertyName propertyName)
 {
-    PropertySlot slot;
+    PropertySlot slot(this);
     if (Base::getOwnPropertySlot(this, exec, propertyName, slot))
         return true;
     bool slotIsWriteable;

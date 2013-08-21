@@ -69,7 +69,7 @@ void SparseArrayValueMap::destroy(JSCell* cell)
 
 Structure* SparseArrayValueMap::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
-    return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, StructureFlags), &s_info);
+    return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, StructureFlags), info());
 }
 
 SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSObject* array, unsigned i)
@@ -122,17 +122,17 @@ bool SparseArrayValueMap::putDirect(ExecState* exec, JSObject* array, unsigned i
     return true;
 }
 
-void SparseArrayEntry::get(PropertySlot& slot) const
+void SparseArrayEntry::get(JSObject* thisObject, PropertySlot& slot) const
 {
     JSValue value = Base::get();
     ASSERT(value);
 
     if (LIKELY(!value.isGetterSetter())) {
-        slot.setValue(value);
+        slot.setValue(thisObject, attributes, value);
         return;
     }
 
-    slot.setGetterSlot(jsCast<GetterSetter*>(value));
+    slot.setGetterSlot(thisObject, attributes, jsCast<GetterSetter*>(value));
 }
 
 void SparseArrayEntry::get(PropertyDescriptor& descriptor) const

@@ -139,7 +139,7 @@ enum {
     WebDynamicScrollBarsView *sv = [self _scrollView];
     
 #if ENABLE(DRAG_SUPPORT)
-    core([self _webView])->dragController()->setDidInitiateDrag(false);
+    core([self _webView])->dragController().setDidInitiateDrag(false);
 #endif
     
     [sv setSuppressLayout:YES];
@@ -338,11 +338,6 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
             setDefaultThreadViolationBehavior(LogOnFirstThreadViolation, ThreadViolationRoundOne);
 
         bool throwExceptionsForRoundTwo = WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITH_ROUND_TWO_MAIN_THREAD_EXCEPTIONS);
-#ifdef MAIL_THREAD_WORKAROUND
-        // Even if old Mail is linked with new WebKit, don't throw exceptions.
-        if ([WebResource _needMailThreadWorkaroundIfCalledOffMainThread])
-            throwExceptionsForRoundTwo = false;
-#endif
         if (!throwExceptionsForRoundTwo)
             setDefaultThreadViolationBehavior(LogOnFirstThreadViolation, ThreadViolationRoundTwo);
     }
@@ -564,7 +559,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
     Frame* frame = core([self webFrame]);
     if (!frame)
         return NO;
-    return frame->eventHandler()->scrollOverflow(direction, granularity);
+    return frame->eventHandler().scrollOverflow(direction, granularity);
 }
 
 

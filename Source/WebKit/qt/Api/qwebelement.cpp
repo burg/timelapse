@@ -503,9 +503,9 @@ QStringList QWebElement::attributeNames(const QString& namespaceUri) const
         const String namespaceUriString(namespaceUri); // convert QString -> String once
         const unsigned attrsCount = m_element->attributeCount();
         for (unsigned i = 0; i < attrsCount; ++i) {
-            const Attribute* const attribute = m_element->attributeItem(i);
-            if (namespaceUriString == attribute->namespaceURI())
-                attributeNameList.append(attribute->localName());
+            const Attribute& attribute = m_element->attributeAt(i);
+            if (namespaceUriString == attribute.namespaceURI())
+                attributeNameList.append(attribute.localName());
         }
     }
     return attributeNameList;
@@ -711,7 +711,7 @@ QWebFrame *QWebElement::webFrame() const
     return frameAdapter->apiHandle();
 }
 
-static bool setupScriptContext(WebCore::Element* element, ScriptState*& state, ScriptController*& scriptController)
+static bool setupScriptContext(WebCore::Element* element, ScriptState*& state)
 {
     if (!element)
         return false;
@@ -724,11 +724,7 @@ static bool setupScriptContext(WebCore::Element* element, ScriptState*& state, S
     if (!frame)
         return false;
 
-    scriptController = frame->script();
-    if (!scriptController)
-        return false;
-
-    state = scriptController->globalObject(mainThreadNormalWorld())->globalExec();
+    state = frame->script().globalObject(mainThreadNormalWorld())->globalExec();
     if (!state)
         return false;
 
@@ -744,9 +740,8 @@ QVariant QWebElement::evaluateJavaScript(const QString& scriptSource)
         return QVariant();
 
     ScriptState* state = 0;
-    ScriptController* scriptController = 0;
 
-    if (!setupScriptContext(m_element, state, scriptController))
+    if (!setupScriptContext(m_element, state))
         return QVariant();
 
     JSC::JSLockHolder lock(state);
@@ -834,17 +829,17 @@ QString QWebElement::styleProperty(const QString &name, StyleResolveStrategy str
         // declarations, as well as embedded and inline style declarations.
 
         Document* doc = m_element->document();
-        Vector<RefPtr<StyleRuleBase> > rules = doc->ensureStyleResolver()->styleRulesForElement(m_element, StyleResolver::AuthorCSSRules | StyleResolver::CrossOriginCSSRules);
+        Vector<RefPtr<StyleRuleBase> > rules = doc->ensureStyleResolver().styleRulesForElement(m_element, StyleResolver::AuthorCSSRules | StyleResolver::CrossOriginCSSRules);
         for (int i = rules.size(); i > 0; --i) {
             if (!rules[i - 1]->isStyleRule())
                 continue;
             StyleRule* styleRule = static_cast<StyleRule*>(rules[i - 1].get());
 
-            if (styleRule->properties()->propertyIsImportant(propID))
-                return styleRule->properties()->getPropertyValue(propID);
+            if (styleRule->properties().propertyIsImportant(propID))
+                return styleRule->properties().getPropertyValue(propID);
 
             if (!style || style->getPropertyValue(propID).isEmpty())
-                style = styleRule->properties();
+                style = &styleRule->properties();
         }
 
         if (!style)
@@ -2073,13 +2068,13 @@ static QVariant convertJSValueToWebElementVariant(JSC::JSObject* object, int *di
 {
     Element* element = 0;
     QVariant ret;
-    if (object && object->inherits(&JSElement::s_info)) {
+    if (object && object->inherits(JSElement::info())) {
         element =(static_cast<JSElement*>(object))->impl();
         *distance = 0;
         // Allow other objects to reach this one. This won't cause our algorithm to
         // loop since when we find an Element we do not recurse.
         visitedObjects->remove(toRef(object));
-    } else if (object && object->inherits(&JSDocument::s_info)) {
+    } else if (object && object->inherits(JSDocument::info())) {
         // To support TestRunnerQt::nodesFromRect(), used in DRT, we do an implicit
         // conversion from 'document' to the QWebElement representing the 'document.documentElement'.
         // We can't simply use a QVariantMap in nodesFromRect() because it currently times out

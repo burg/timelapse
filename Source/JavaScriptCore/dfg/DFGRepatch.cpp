@@ -324,7 +324,7 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
 
     // Optimize self access.
     if (slot.slotBase() == baseValue) {
-        if ((slot.cachedPropertyType() != PropertySlot::Value)
+        if (!slot.isCacheableValue()
             || !MacroAssembler::isCompactPtrAlignedAddressOffset(maxOffsetRelativeToPatchedStorage(slot.cachedOffset()))) {
             dfgRepatchCall(codeBlock, stubInfo.callReturnLocation, operationGetByIdBuildList);
             return true;
@@ -339,7 +339,7 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
         return false;
     
     // FIXME: optimize getters and setters
-    if (slot.cachedPropertyType() != PropertySlot::Value)
+    if (!slot.isCacheableValue())
         return false;
     
     PropertyOffset offset = slot.cachedOffset();
@@ -348,8 +348,6 @@ static bool tryCacheGetByID(ExecState* exec, JSValue baseValue, const Identifier
         return false;
 
     StructureChain* prototypeChain = structure->prototypeChain(exec);
-    
-    ASSERT(slot.slotBase().isObject());
     
     generateProtoChainAccessStub(exec, stubInfo, prototypeChain, count, offset, structure, stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.dfg.deltaCallToDone), stubInfo.callReturnLocation.labelAtOffset(stubInfo.patch.dfg.deltaCallToSlowCase), stubInfo.stubRoutine);
     
@@ -438,11 +436,9 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
             // We cannot do as much inline caching if the registers were not flushed prior to this GetById. In particular,
             // non-Value cached properties require planting calls, which requires registers to have been flushed. Thus,
             // if registers were not flushed, don't do non-Value caching.
-            if (slot.cachedPropertyType() != PropertySlot::Value)
+            if (!slot.isCacheableValue())
                 return false;
         }
-    
-        ASSERT(slot.slotBase().isObject());
     
         PolymorphicAccessStructureList* polymorphicStructureList;
         int listIndex;
@@ -475,9 +471,8 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
         FunctionPtr operationFunction;
         MacroAssembler::Jump success;
         
-        if (slot.cachedPropertyType() == PropertySlot::Getter
-            || slot.cachedPropertyType() == PropertySlot::Custom) {
-            if (slot.cachedPropertyType() == PropertySlot::Getter) {
+        if (slot.isCacheableGetter() || slot.isCacheableCustom()) {
+            if (slot.isCacheableGetter()) {
                 ASSERT(scratchGPR != InvalidGPRReg);
                 ASSERT(baseGPR != scratchGPR);
                 if (isInlineOffset(slot.cachedOffset())) {
@@ -567,8 +562,7 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
                          stubInfo.patch.dfg.deltaCallToDone).executableAddress())),
                 *vm,
                 codeBlock->ownerExecutable(),
-                slot.cachedPropertyType() == PropertySlot::Getter
-                || slot.cachedPropertyType() == PropertySlot::Custom);
+                slot.isCacheableGetter() || slot.isCacheableCustom());
         
         polymorphicStructureList->list[listIndex].set(*vm, codeBlock->ownerExecutable(), stubRoutine, structure, isDirect);
         
@@ -576,12 +570,9 @@ static bool tryBuildGetByIDList(ExecState* exec, JSValue baseValue, const Identi
         return listIndex < (POLYMORPHIC_LIST_CACHE_SIZE - 1);
     }
     
-    if (baseValue.asCell()->structure()->typeInfo().prohibitsPropertyCaching()
-        || slot.cachedPropertyType() != PropertySlot::Value)
+    if (baseValue.asCell()->structure()->typeInfo().prohibitsPropertyCaching() || !slot.isCacheableValue())
         return false;
 
-    ASSERT(slot.slotBase().isObject());
-    
     PropertyOffset offset = slot.cachedOffset();
     size_t count = normalizePrototypeChainForChainAccess(exec, baseValue, slot.slotBase(), ident, offset);
     if (count == InvalidPrototypeChain)
@@ -974,7 +965,7 @@ static bool tryCachePutByID(ExecState* exec, JSValue baseValue, const Identifier
             
             // Skip optimizing the case where we need realloc, and the structure has
             // indexing storage.
-            if (hasIndexingHeader(oldStructure->indexingType()))
+            if (oldStructure->couldHaveIndexingHeader())
                 return false;
             
             if (normalizePrototypeChain(exec, baseCell) == InvalidPrototypeChain)
@@ -1049,7 +1040,7 @@ static bool tryBuildPutByIdList(ExecState* exec, JSValue baseValue, const Identi
             
             // Skip optimizing the case where we need realloc, and the structure has
             // indexing storage.
-            if (hasIndexingHeader(oldStructure->indexingType()))
+            if (oldStructure->couldHaveIndexingHeader())
                 return false;
             
             if (normalizePrototypeChain(exec, baseCell) == InvalidPrototypeChain)

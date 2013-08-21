@@ -35,7 +35,6 @@
 #include "BeforeTextInsertedEvent.h"
 #include "Chrome.h"
 #include "Editor.h"
-#include "ElementShadow.h"
 #include "FormDataList.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -225,7 +224,7 @@ bool TextFieldInputType::shouldHaveSpinButton() const
 
 void TextFieldInputType::createShadowSubtree()
 {
-    ASSERT(element()->shadow());
+    ASSERT(element()->shadowRoot());
 
     ASSERT(!m_innerText);
     ASSERT(!m_innerBlock);
@@ -378,7 +377,7 @@ void TextFieldInputType::handleBeforeTextInsertedEvent(BeforeTextInsertedEvent* 
     // If the text field has no focus, we don't need to take account of the
     // selection length. The selection is the source of text drag-and-drop in
     // that case, and nothing in the text field will be removed.
-    unsigned selectionLength = element()->focused() ? numGraphemeClusters(plainText(element()->document()->frame()->selection()->selection().toNormalizedRange().get())) : 0;
+    unsigned selectionLength = element()->focused() ? numGraphemeClusters(plainText(element()->document()->frame()->selection().selection().toNormalizedRange().get())) : 0;
     ASSERT(oldLength >= selectionLength);
 
     // Selected characters will be removed by the next text event.

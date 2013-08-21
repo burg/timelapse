@@ -270,11 +270,6 @@ PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, G
     return factory->createGraphicsLayer(client);
 }
 
-PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerClient* client)
-{
-    return adoptPtr(new GraphicsLayerCA(client));
-}
-
 GraphicsLayerCA::GraphicsLayerCA(GraphicsLayerClient* client)
     : GraphicsLayer(client)
     , m_contentsLayerPurpose(NoContentsLayer)
@@ -1732,37 +1727,40 @@ void GraphicsLayerCA::updateContentsImage()
 
 void GraphicsLayerCA::updateContentsMediaLayer()
 {
+    if (!m_contentsLayer || m_contentsLayerPurpose != ContentsLayerForMedia)
+        return;
+
     // Video layer was set as m_contentsLayer, and will get parented in updateSublayerList().
-    if (m_contentsLayer) {
-        setupContentsLayer(m_contentsLayer.get());
-        updateContentsRect();
-    }
+    setupContentsLayer(m_contentsLayer.get());
+    updateContentsRect();
 }
 
 void GraphicsLayerCA::updateContentsCanvasLayer()
 {
+    if (!m_contentsLayer || m_contentsLayerPurpose != ContentsLayerForCanvas)
+        return;
+
     // CanvasLayer was set as m_contentsLayer, and will get parented in updateSublayerList().
-    if (m_contentsLayer) {
-        setupContentsLayer(m_contentsLayer.get());
-        m_contentsLayer->setNeedsDisplay();
-        updateContentsRect();
-    }
+    setupContentsLayer(m_contentsLayer.get());
+    m_contentsLayer->setNeedsDisplay();
+    updateContentsRect();
 }
 
 void GraphicsLayerCA::updateContentsColorLayer()
 {
     // Color layer was set as m_contentsLayer, and will get parented in updateSublayerList().
-    if (m_contentsLayer) {
-        setupContentsLayer(m_contentsLayer.get());
-        updateContentsRect();
-        ASSERT(m_contentsSolidColor.isValid()); // An invalid color should have removed the contents layer.
-        m_contentsLayer->setBackgroundColor(m_contentsSolidColor);
+    if (!m_contentsLayer || m_contentsLayerPurpose != ContentsLayerForBackgroundColor)
+        return;
 
-        if (m_contentsLayerClones) {
-            LayerMap::const_iterator end = m_contentsLayerClones->end();
-            for (LayerMap::const_iterator it = m_contentsLayerClones->begin(); it != end; ++it)
-                it->value->setBackgroundColor(m_contentsSolidColor);
-        }
+    setupContentsLayer(m_contentsLayer.get());
+    updateContentsRect();
+    ASSERT(m_contentsSolidColor.isValid());
+    m_contentsLayer->setBackgroundColor(m_contentsSolidColor);
+
+    if (m_contentsLayerClones) {
+        LayerMap::const_iterator end = m_contentsLayerClones->end();
+        for (LayerMap::const_iterator it = m_contentsLayerClones->begin(); it != end; ++it)
+            it->value->setBackgroundColor(m_contentsSolidColor);
     }
 }
 
@@ -2108,7 +2106,7 @@ bool GraphicsLayerCA::createTransformAnimationsFromKeyframes(const KeyframeValue
     int numAnimations = isMatrixAnimation ? 1 : operations->size();
 
     bool reverseAnimationList = true;
-#if !PLATFORM(IOS) && !PLATFORM(WIN) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if !PLATFORM(IOS) && !PLATFORM(WIN)
         // Old versions of Core Animation apply animations in reverse order (<rdar://problem/7095638>) so we need to flip the list.
         // to be non-additive. For binary compatibility, the current version of Core Animation preserves this behavior for applications linked
         // on or before Snow Leopard.
@@ -2684,8 +2682,15 @@ void GraphicsLayerCA::swapFromOrToTiledLayer(bool useTiledLayer)
     ASSERT(m_layer->layerType() != PlatformCALayer::LayerTypePageTiledBackingLayer);
     ASSERT(useTiledLayer != m_usingTiledBacking);
     RefPtr<PlatformCALayer> oldLayer = m_layer;
-    
-    m_layer = PlatformCALayer::create(useTiledLayer ? PlatformCALayer::LayerTypeTiledBackingLayer : PlatformCALayer::LayerTypeWebLayer, this);
+
+#if PLATFORM(WIN)
+    PlatformCALayer::LayerType layerType = useTiledLayer ? PlatformCALayer::LayerTypeWebTiledLayer : PlatformCALayer::LayerTypeWebLayer;
+#else
+    PlatformCALayer::LayerType layerType = useTiledLayer ? PlatformCALayer::LayerTypeTiledBackingLayer : PlatformCALayer::LayerTypeWebLayer;
+#endif
+
+    m_layer = PlatformCALayer::create(layerType, this);
+
     m_usingTiledBacking = useTiledLayer;
     
     m_layer->adoptSublayers(oldLayer.get());

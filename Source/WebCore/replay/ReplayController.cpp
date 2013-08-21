@@ -200,7 +200,7 @@ void ReplayController::beginCapturing()
     Frame* mainFrame = m_page->mainFrame();
     NavigateToPage* reloadInput = new NavigateToPage(mainFrame->document()->securityOrigin(),
                                                      mainFrame->document()->url().string(),
-                                                     mainFrame->loader()->referrer());
+                                                     mainFrame->loader().referrer());
     m_activeIterator->storeInput(adoptPtr(reloadInput));
 
     //The call to scheduleLocationChange should be the same on capture and replay.
@@ -371,7 +371,7 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
         return;
 
     page()->networkProxy()->setExpectsPageLoad(false);
-    loader->frame()->script()->globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
+    loader->frame()->script().globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
 
 void ReplayController::willFireTimer(int timerId, Document* document)
@@ -449,7 +449,7 @@ void ReplayController::resetReplayState()
 
     m_activeIterator = 0;
     for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
-        frame->script()->globalObject(mainThreadNormalWorld())->setInputIterator(0);
+        frame->script().globalObject(mainThreadNormalWorld())->setInputIterator(0);
 }
 
 void ReplayController::pauseReplay()

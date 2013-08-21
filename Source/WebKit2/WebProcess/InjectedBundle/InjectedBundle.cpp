@@ -59,7 +59,6 @@
 #include <WebCore/GeolocationPosition.h>
 #include <WebCore/JSDOMWindow.h>
 #include <WebCore/JSNotification.h>
-#include <WebCore/JSUint8Array.h>
 #include <WebCore/Page.h>
 #include <WebCore/PageGroup.h>
 #include <WebCore/PrintContext.h>
@@ -75,10 +74,6 @@
 
 #if ENABLE(SHADOW_DOM) || ENABLE(CSS_REGIONS) || ENABLE(IFRAME_SEAMLESS) || ENABLE(CSS_COMPOSITING)
 #include <WebCore/RuntimeEnabledFeatures.h>
-#endif
-
-#if PLATFORM(MAC)
-#include "WebSystemInterface.h"
 #endif
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
@@ -163,7 +158,7 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
     if (preference == "WebKitTabToLinksPreferenceKey") {
         WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::tabsToLinksKey(), enabled);
         for (HashSet<Page*>::iterator i = pages.begin(); i != pages.end(); ++i) {
-            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader()->client());
+            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader().client());
             ASSERT(webFrameLoaderClient);
             webFrameLoaderClient->webFrame()->page()->setTabToLinksEnabled(enabled);
         }
@@ -172,7 +167,7 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
     if (preference == "WebKit2AsynchronousPluginInitializationEnabled") {
         WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::asynchronousPluginInitializationEnabledKey(), enabled);
         for (HashSet<Page*>::iterator i = pages.begin(); i != pages.end(); ++i) {
-            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader()->client());
+            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader().client());
             ASSERT(webFrameLoaderClient);
             webFrameLoaderClient->webFrame()->page()->setAsynchronousPluginInitializationEnabled(enabled);
         }
@@ -181,7 +176,7 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
     if (preference == "WebKit2AsynchronousPluginInitializationEnabledForAllPlugins") {
         WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::asynchronousPluginInitializationEnabledForAllPluginsKey(), enabled);
         for (HashSet<Page*>::iterator i = pages.begin(); i != pages.end(); ++i) {
-            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader()->client());
+            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader().client());
             ASSERT(webFrameLoaderClient);
             webFrameLoaderClient->webFrame()->page()->setAsynchronousPluginInitializationEnabledForAllPlugins(enabled);
         }
@@ -190,7 +185,7 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
     if (preference == "WebKit2ArtificialPluginInitializationDelayEnabled") {
         WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::artificialPluginInitializationDelayEnabledKey(), enabled);
         for (HashSet<Page*>::iterator i = pages.begin(); i != pages.end(); ++i) {
-            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader()->client());
+            WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient((*i)->mainFrame()->loader().client());
             ASSERT(webFrameLoaderClient);
             webFrameLoaderClient->webFrame()->page()->setArtificialPluginInitializationDelayEnabled(enabled);
         }
@@ -234,7 +229,7 @@ void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* page
     if (preference == #TestRunnerName) { \
         WebPreferencesStore::overrideBoolValueForKey(WebPreferencesKey::WebPreferencesName##Key(), enabled); \
         for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter) \
-            (*iter)->settings()->set##SettingsName(enabled); \
+            (*iter)->settings().set##SettingsName(enabled); \
         return; \
     }
 
@@ -256,49 +251,49 @@ void InjectedBundle::overrideXSSAuditorEnabledForTestRunner(WebPageGroupProxy* p
     // Change the setting for existing ones.
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setXSSAuditorEnabled(enabled);
+        (*iter)->settings().setXSSAuditorEnabled(enabled);
 }
 
 void InjectedBundle::setAllowUniversalAccessFromFileURLs(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setAllowUniversalAccessFromFileURLs(enabled);
+        (*iter)->settings().setAllowUniversalAccessFromFileURLs(enabled);
 }
 
 void InjectedBundle::setAllowFileAccessFromFileURLs(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setAllowFileAccessFromFileURLs(enabled);
+        (*iter)->settings().setAllowFileAccessFromFileURLs(enabled);
 }
 
 void InjectedBundle::setMinimumLogicalFontSize(WebPageGroupProxy* pageGroup, int size)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setMinimumLogicalFontSize(size);
+        (*iter)->settings().setMinimumLogicalFontSize(size);
 }
 
 void InjectedBundle::setFrameFlatteningEnabled(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setFrameFlatteningEnabled(enabled);
+        (*iter)->settings().setFrameFlatteningEnabled(enabled);
 }
 
 void InjectedBundle::setPluginsEnabled(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setPluginsEnabled(enabled);
+        (*iter)->settings().setPluginsEnabled(enabled);
 }
 
 void InjectedBundle::setJavaScriptCanAccessClipboard(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setJavaScriptCanAccessClipboard(enabled);
+        (*iter)->settings().setJavaScriptCanAccessClipboard(enabled);
 }
 
 void InjectedBundle::setPrivateBrowsingEnabled(WebPageGroupProxy* pageGroup, bool enabled)
@@ -312,7 +307,7 @@ void InjectedBundle::setPrivateBrowsingEnabled(WebPageGroupProxy* pageGroup, boo
 #endif
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setPrivateBrowsingEnabled(enabled);
+        (*iter)->settings().setPrivateBrowsingEnabled(enabled);
 }
 
 void InjectedBundle::setPopupBlockingEnabled(WebPageGroupProxy* pageGroup, bool enabled)
@@ -320,30 +315,21 @@ void InjectedBundle::setPopupBlockingEnabled(WebPageGroupProxy* pageGroup, bool 
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     HashSet<Page*>::const_iterator end = pages.end();
     for (HashSet<Page*>::const_iterator iter = pages.begin(); iter != end; ++iter)
-        (*iter)->settings()->setJavaScriptCanOpenWindowsAutomatically(!enabled);
-}
-
-void InjectedBundle::switchNetworkLoaderToNewTestingSession()
-{
-#if PLATFORM(MAC) || USE(CFNETWORK)
-    // FIXME (NetworkProcess): Do this in network process, too.
-    InitWebCoreSystemInterface();
-    NetworkStorageSession::switchToNewTestingSession();
-#endif
+        (*iter)->settings().setJavaScriptCanOpenWindowsAutomatically(!enabled);
 }
 
 void InjectedBundle::setAuthorAndUserStylesEnabled(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setAuthorAndUserStylesEnabled(enabled);
+        (*iter)->settings().setAuthorAndUserStylesEnabled(enabled);
 }
 
 void InjectedBundle::setSpatialNavigationEnabled(WebPageGroupProxy* pageGroup, bool enabled)
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setSpatialNavigationEnabled(enabled);
+        (*iter)->settings().setSpatialNavigationEnabled(enabled);
 }
 
 void InjectedBundle::addOriginAccessWhitelistEntry(const String& sourceOrigin, const String& destinationProtocol, const String& destinationHost, bool allowDestinationSubdomains)
@@ -365,7 +351,7 @@ void InjectedBundle::setAsynchronousSpellCheckingEnabled(WebPageGroupProxy* page
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setAsynchronousSpellCheckingEnabled(enabled);
+        (*iter)->settings().setAsynchronousSpellCheckingEnabled(enabled);
 }
 
 void InjectedBundle::clearAllDatabases()
@@ -605,7 +591,7 @@ void InjectedBundle::setUserStyleSheetLocation(WebPageGroupProxy* pageGroup, con
 {
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
-        (*iter)->settings()->setUserStyleSheetLocation(KURL(KURL(), location));
+        (*iter)->settings().setUserStyleSheetLocation(KURL(KURL(), location));
 }
 
 void InjectedBundle::setWebNotificationPermission(WebPage* page, const String& originString, bool allowed)

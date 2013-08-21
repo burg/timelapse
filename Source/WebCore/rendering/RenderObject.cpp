@@ -46,6 +46,7 @@
 #include "HitTestResult.h"
 #include "LogicalSelectionOffsetCaches.h"
 #include "Page.h"
+#include "PseudoElement.h"
 #include "RenderArena.h"
 #include "RenderCounter.h"
 #include "RenderDeprecatedFlexibleBox.h"
@@ -126,7 +127,7 @@ COMPILE_ASSERT(sizeof(RenderObject) == sizeof(SameSizeAsRenderObject), RenderObj
 // ignore the CSS property "background-attachment: fixed".
 static bool shouldRepaintFixedBackgroundsOnScroll(FrameView* frameView)
 {
-#if !ENABLE(FAST_MOBILE_SCROLLING) && !PLATFORM(QT)
+#if !ENABLE(FAST_MOBILE_SCROLLING) || !PLATFORM(QT)
     UNUSED_PARAM(frameView);
 #endif
 
@@ -1243,9 +1244,12 @@ FloatRect RenderObject::absoluteBoundingBoxRectForRange(const Range* range)
     Vector<FloatQuad> quads;
     range->textQuads(quads);
 
-    FloatRect result;
-    for (size_t i = 0; i < quads.size(); ++i)
-        result.unite(quads[i].boundingBox());
+    if (quads.isEmpty())
+        return FloatRect();
+
+    FloatRect result = quads[0].boundingBox();
+    for (size_t i = 1; i < quads.size(); ++i)
+        result.uniteEvenIfEmpty(quads[i].boundingBox());
 
     return result;
 }
@@ -1628,14 +1632,14 @@ Color RenderObject::selectionBackgroundColor() const
 {
     Color color;
     if (style()->userSelect() != SELECT_NONE) {
-        if (frame()->selection()->shouldShowBlockCursor() && frame()->selection()->isCaret())
+        if (frame()->selection().shouldShowBlockCursor() && frame()->selection().isCaret())
             color = style()->visitedDependentColor(CSSPropertyColor).blendWithWhite();
         else {
             RefPtr<RenderStyle> pseudoStyle = getUncachedPseudoStyle(PseudoStyleRequest(SELECTION));
             if (pseudoStyle && pseudoStyle->visitedDependentColor(CSSPropertyBackgroundColor).isValid())
                 color = pseudoStyle->visitedDependentColor(CSSPropertyBackgroundColor).blendWithWhite();
             else
-                color = frame()->selection()->isFocusedAndActive() ? theme()->activeSelectionBackgroundColor() : theme()->inactiveSelectionBackgroundColor();
+                color = frame()->selection().isFocusedAndActive() ? theme()->activeSelectionBackgroundColor() : theme()->inactiveSelectionBackgroundColor();
         }
     }
 
@@ -1656,7 +1660,7 @@ Color RenderObject::selectionColor(int colorProperty) const
         if (!color.isValid())
             color = pseudoStyle->visitedDependentColor(CSSPropertyColor);
     } else
-        color = frame()->selection()->isFocusedAndActive() ?
+        color = frame()->selection().isFocusedAndActive() ?
                 theme()->activeSelectionForegroundColor() :
                 theme()->inactiveSelectionForegroundColor();
 
@@ -1847,6 +1851,10 @@ void RenderObject::setStyle(PassRefPtr<RenderStyle> style)
     updateImage(oldStyle ? oldStyle->borderImage().image() : 0, m_style ? m_style->borderImage().image() : 0);
     updateImage(oldStyle ? oldStyle->maskBoxImage().image() : 0, m_style ? m_style->maskBoxImage().image() : 0);
 
+#if ENABLE(CSS_SHAPES)
+    updateShapeImage(oldStyle ? oldStyle->shapeInside() : 0, m_style ? m_style->shapeInside() : 0);
+#endif
+
     // We need to ensure that view->maximalOutlineSize() is valid for any repaints that happen
     // during styleDidChange (it's used by clippedOverflowRectForRepaint()).
     if (m_style->outlineWidth() > 0 && m_style->outlineSize() > maximalOutlineSize(PaintPhaseOutline))
@@ -2035,7 +2043,7 @@ void RenderObject::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
     if (oldStyle && !areCursorsEqual(oldStyle, style())) {
         if (Frame* frame = this->frame())
-            frame->eventHandler()->scheduleCursorUpdate();
+            frame->eventHandler().scheduleCursorUpdate();
     }
 }
 
@@ -2098,6 +2106,14 @@ void RenderObject::updateImage(StyleImage* oldImage, StyleImage* newImage)
             newImage->addClient(this);
     }
 }
+
+#if ENABLE(CSS_SHAPES)
+void RenderObject::updateShapeImage(const ShapeValue* oldShapeValue, const ShapeValue* newShapeValue)
+{
+    if (oldShapeValue || newShapeValue)
+        updateImage(oldShapeValue ? oldShapeValue->image() : 0, newShapeValue ? newShapeValue->image() : 0);
+}
+#endif
 
 LayoutRect RenderObject::viewRect() const
 {
@@ -2441,8 +2457,8 @@ void RenderObject::willBeDestroyed()
     // has a null frame, so we assert this. However, we don't want release builds to crash which is why we
     // check that the frame is not null.
     ASSERT(frame());
-    if (frame() && frame()->eventHandler()->autoscrollRenderer() == this)
-        frame()->eventHandler()->stopAutoscrollTimer(true);
+    if (frame() && frame()->eventHandler().autoscrollRenderer() == this)
+        frame()->eventHandler().stopAutoscrollTimer(true);
 
     animation()->cancelAnimations(this);
 
@@ -2617,6 +2633,16 @@ void RenderObject::destroy()
     arenaDelete(renderArena(), this);
 }
 
+#if ENABLE(CSS_SHAPES)
+void RenderObject::removeShapeImageClient(ShapeValue* shapeValue)
+{
+    if (!shapeValue)
+        return;
+    if (StyleImage* shapeImage = shapeValue->image())
+        shapeImage->removeClient(this);
+}
+#endif
+
 void RenderObject::arenaDelete(RenderArena* arena, void* base)
 {
     if (m_style) {
@@ -2635,6 +2661,10 @@ void RenderObject::arenaDelete(RenderArena* arena, void* base)
 
         if (StyleImage* maskBoxImage = m_style->maskBoxImage().image())
             maskBoxImage->removeClient(this);
+
+#if ENABLE(CSS_SHAPES)
+        removeShapeImageClient(m_style->shapeInside());
+#endif
     }
 
 #ifndef NDEBUG
@@ -2834,12 +2864,12 @@ PassRefPtr<RenderStyle> RenderObject::getUncachedPseudoStyle(const PseudoStyleRe
     Element* element = toElement(n);
 
     if (pseudoStyleRequest.pseudoId == FIRST_LINE_INHERITED) {
-        RefPtr<RenderStyle> result = document()->ensureStyleResolver()->styleForElement(element, parentStyle, DisallowStyleSharing);
+        RefPtr<RenderStyle> result = document()->ensureStyleResolver().styleForElement(element, parentStyle, DisallowStyleSharing);
         result->setStyleType(FIRST_LINE_INHERITED);
         return result.release();
     }
 
-    return document()->ensureStyleResolver()->pseudoStyleForElement(element, pseudoStyleRequest, parentStyle);
+    return document()->ensureStyleResolver().pseudoStyleForElement(element, pseudoStyleRequest, parentStyle);
 }
 
 static Color decorationColor(RenderStyle* style)
@@ -3196,6 +3226,11 @@ bool RenderObject::canUpdateSelectionOnRootLineBoxes()
 bool RenderObject::canHaveGeneratedChildren() const
 {
     return canHaveChildren();
+}
+
+Node* RenderObject::generatingPseudoHostElement() const
+{
+    return toPseudoElement(node())->hostElement();
 }
 
 bool RenderObject::canBeReplacedWithInlineRunIn() const

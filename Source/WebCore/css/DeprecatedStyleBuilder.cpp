@@ -44,6 +44,7 @@
 #include "RenderStyle.h"
 #include "RenderView.h"
 #include "Settings.h"
+#include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 #include <wtf/StdLibExtras.h>
 
@@ -678,7 +679,7 @@ public:
         
         // We need to adjust the size to account for the generic family change from monospace to non-monospace.
         if (fontDescription.keywordSize() && fontDescription.useFixedDefaultSize())
-            styleResolver->setFontSize(fontDescription, styleResolver->fontSizeForKeyword(styleResolver->document(), CSSValueXxSmall + fontDescription.keywordSize() - 1, false));
+            styleResolver->setFontSize(fontDescription, Style::fontSizeForKeyword(CSSValueXxSmall + fontDescription.keywordSize() - 1, false, styleResolver->document()));
         fontDescription.setGenericFamily(initialDesc.genericFamily());
         if (!initialDesc.firstFamily().isEmpty())
             fontDescription.setFamilies(initialDesc.families());
@@ -752,7 +753,7 @@ public:
         fontDescription.adoptFamilies(families);
 
         if (fontDescription.keywordSize() && fontDescription.useFixedDefaultSize() != oldFamilyUsedFixedDefaultSize)
-            styleResolver->setFontSize(fontDescription, styleResolver->fontSizeForKeyword(styleResolver->document(), CSSValueXxSmall + fontDescription.keywordSize() - 1, !oldFamilyUsedFixedDefaultSize));
+            styleResolver->setFontSize(fontDescription, Style::fontSizeForKeyword(CSSValueXxSmall + fontDescription.keywordSize() - 1, !oldFamilyUsedFixedDefaultSize, styleResolver->document()));
 
         styleResolver->setFontDescription(fontDescription);
     }
@@ -796,7 +797,7 @@ public:
     static void applyInitialValue(CSSPropertyID, StyleResolver* styleResolver)
     {
         FontDescription fontDescription = styleResolver->style()->fontDescription();
-        float size = styleResolver->fontSizeForKeyword(styleResolver->document(), CSSValueMedium, fontDescription.useFixedDefaultSize());
+        float size = Style::fontSizeForKeyword(CSSValueMedium, fontDescription.useFixedDefaultSize(), styleResolver->document());
 
         if (size < 0)
             return;
@@ -836,7 +837,7 @@ public:
             case CSSValueXLarge:
             case CSSValueXxLarge:
             case CSSValueWebkitXxxLarge:
-                size = styleResolver->fontSizeForKeyword(styleResolver->document(), ident, fontDescription.useFixedDefaultSize());
+                size = Style::fontSizeForKeyword(ident, fontDescription.useFixedDefaultSize(), styleResolver->document());
                 fontDescription.setKeywordSize(ident - CSSValueXxSmall + 1);
                 break;
             case CSSValueLarger:
@@ -1220,6 +1221,7 @@ public:
             return;
 
         CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        ASSERT(primitiveValue->isValueID());
 
         if (primitiveValue->getValueID() != CSSValueWebkitMatchParent)
             styleResolver->style()->setTextAlign(*primitiveValue);
@@ -2309,6 +2311,7 @@ DeprecatedStyleBuilder::DeprecatedStyleBuilder()
     setPropertyHandler(CSSPropertyWebkitMaskRepeatX, ApplyPropertyFillLayer<EFillRepeat, CSSPropertyWebkitMaskRepeatX, MaskFillLayer, &RenderStyle::accessMaskLayers, &RenderStyle::maskLayers, &FillLayer::isRepeatXSet, &FillLayer::repeatX, &FillLayer::setRepeatX, &FillLayer::clearRepeatX, &FillLayer::initialFillRepeatX, &CSSToStyleMap::mapFillRepeatX>::createHandler());
     setPropertyHandler(CSSPropertyWebkitMaskRepeatY, ApplyPropertyFillLayer<EFillRepeat, CSSPropertyWebkitMaskRepeatY, MaskFillLayer, &RenderStyle::accessMaskLayers, &RenderStyle::maskLayers, &FillLayer::isRepeatYSet, &FillLayer::repeatY, &FillLayer::setRepeatY, &FillLayer::clearRepeatY, &FillLayer::initialFillRepeatY, &CSSToStyleMap::mapFillRepeatY>::createHandler());
     setPropertyHandler(CSSPropertyWebkitMaskSize, ApplyPropertyFillLayer<FillSize, CSSPropertyWebkitMaskSize, MaskFillLayer, &RenderStyle::accessMaskLayers, &RenderStyle::maskLayers, &FillLayer::isSizeSet, &FillLayer::size, &FillLayer::setSize, &FillLayer::clearSize, &FillLayer::initialFillSize, &CSSToStyleMap::mapFillSize>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitMaskSourceType, ApplyPropertyFillLayer<EMaskSourceType, CSSPropertyWebkitMaskSourceType, MaskFillLayer, &RenderStyle::accessMaskLayers, &RenderStyle::maskLayers, &FillLayer::isMaskSourceTypeSet, &FillLayer::maskSourceType, &FillLayer::setMaskSourceType, &FillLayer::clearMaskSourceType, &FillLayer::initialMaskSourceType, &CSSToStyleMap::mapFillMaskSourceType>::createHandler());
     setPropertyHandler(CSSPropertyWebkitNbspMode, ApplyPropertyDefault<ENBSPMode, &RenderStyle::nbspMode, ENBSPMode, &RenderStyle::setNBSPMode, ENBSPMode, &RenderStyle::initialNBSPMode>::createHandler());
     setPropertyHandler(CSSPropertyWebkitPerspectiveOrigin, ApplyPropertyExpanding<SuppressValue, CSSPropertyWebkitPerspectiveOriginX, CSSPropertyWebkitPerspectiveOriginY>::createHandler());
     setPropertyHandler(CSSPropertyWebkitPerspectiveOriginX, ApplyPropertyLength<&RenderStyle::perspectiveOriginX, &RenderStyle::setPerspectiveOriginX, &RenderStyle::initialPerspectiveOriginX>::createHandler());

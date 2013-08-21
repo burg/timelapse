@@ -209,7 +209,7 @@ void InspectorOverlay::paint(GraphicsContext& context)
         return;
     GraphicsContextStateSaver stateSaver(context);
     FrameView* view = overlayPage()->mainFrame()->view();
-    ASSERT(!view->needsLayout());
+    view->updateLayoutAndStyleIfNeededRecursive();
     view->paint(&context, IntRect(0, 0, view->width(), view->height()));
 }
 
@@ -301,7 +301,7 @@ void InspectorOverlay::update()
     drawPausedInDebuggerMessage();
 
     // Position DOM elements.
-    overlayPage()->mainFrame()->document()->recalcStyle(Node::Force);
+    overlayPage()->mainFrame()->document()->recalcStyle(Style::Force);
     if (overlayView->needsLayout())
         overlayView->layout();
 
@@ -436,32 +436,32 @@ Page* InspectorOverlay::overlayPage()
     fillWithEmptyClients(pageClients);
     m_overlayPage = adoptPtr(new Page(pageClients));
 
-    Settings* settings = m_page->settings();
-    Settings* overlaySettings = m_overlayPage->settings();
+    Settings& settings = m_page->settings();
+    Settings& overlaySettings = m_overlayPage->settings();
 
-    overlaySettings->setStandardFontFamily(settings->standardFontFamily());
-    overlaySettings->setSerifFontFamily(settings->serifFontFamily());
-    overlaySettings->setSansSerifFontFamily(settings->sansSerifFontFamily());
-    overlaySettings->setCursiveFontFamily(settings->cursiveFontFamily());
-    overlaySettings->setFantasyFontFamily(settings->fantasyFontFamily());
-    overlaySettings->setPictographFontFamily(settings->pictographFontFamily());
-    overlaySettings->setMinimumFontSize(settings->minimumFontSize());
-    overlaySettings->setMinimumLogicalFontSize(settings->minimumLogicalFontSize());
-    overlaySettings->setMediaEnabled(false);
-    overlaySettings->setScriptEnabled(true);
-    overlaySettings->setPluginsEnabled(false);
+    overlaySettings.setStandardFontFamily(settings.standardFontFamily());
+    overlaySettings.setSerifFontFamily(settings.serifFontFamily());
+    overlaySettings.setSansSerifFontFamily(settings.sansSerifFontFamily());
+    overlaySettings.setCursiveFontFamily(settings.cursiveFontFamily());
+    overlaySettings.setFantasyFontFamily(settings.fantasyFontFamily());
+    overlaySettings.setPictographFontFamily(settings.pictographFontFamily());
+    overlaySettings.setMinimumFontSize(settings.minimumFontSize());
+    overlaySettings.setMinimumLogicalFontSize(settings.minimumLogicalFontSize());
+    overlaySettings.setMediaEnabled(false);
+    overlaySettings.setScriptEnabled(true);
+    overlaySettings.setPluginsEnabled(false);
 
     RefPtr<Frame> frame = Frame::create(m_overlayPage.get(), 0, dummyFrameLoaderClient);
     frame->setView(FrameView::create(frame.get()));
     frame->init();
-    FrameLoader* loader = frame->loader();
+    FrameLoader& loader = frame->loader();
     frame->view()->setCanHaveScrollbars(false);
     frame->view()->setTransparent(true);
-    ASSERT(loader->activeDocumentLoader());
-    loader->activeDocumentLoader()->writer()->setMIMEType("text/html");
-    loader->activeDocumentLoader()->writer()->begin();
-    loader->activeDocumentLoader()->writer()->addData(reinterpret_cast<const char*>(InspectorOverlayPage_html), sizeof(InspectorOverlayPage_html));
-    loader->activeDocumentLoader()->writer()->end();
+    ASSERT(loader.activeDocumentLoader());
+    loader.activeDocumentLoader()->writer()->setMIMEType("text/html");
+    loader.activeDocumentLoader()->writer()->begin();
+    loader.activeDocumentLoader()->writer()->addData(reinterpret_cast<const char*>(InspectorOverlayPage_html), sizeof(InspectorOverlayPage_html));
+    loader.activeDocumentLoader()->writer()->end();
 
 #if OS(WINDOWS)
     evaluateInOverlay("setPlatform", "windows");
@@ -488,7 +488,7 @@ void InspectorOverlay::evaluateInOverlay(const String& method, const String& arg
     RefPtr<InspectorArray> command = InspectorArray::create();
     command->pushString(method);
     command->pushString(argument);
-    overlayPage()->mainFrame()->script()->evaluate(ScriptSourceCode(makeString("dispatch(", command->toJSONString(), ")")));
+    overlayPage()->mainFrame()->script().evaluate(ScriptSourceCode(makeString("dispatch(", command->toJSONString(), ")")));
 }
 
 void InspectorOverlay::evaluateInOverlay(const String& method, PassRefPtr<InspectorValue> argument)
@@ -496,7 +496,7 @@ void InspectorOverlay::evaluateInOverlay(const String& method, PassRefPtr<Inspec
     RefPtr<InspectorArray> command = InspectorArray::create();
     command->pushString(method);
     command->pushValue(argument);
-    overlayPage()->mainFrame()->script()->evaluate(ScriptSourceCode(makeString("dispatch(", command->toJSONString(), ")")));
+    overlayPage()->mainFrame()->script().evaluate(ScriptSourceCode(makeString("dispatch(", command->toJSONString(), ")")));
 }
 
 void InspectorOverlay::freePage()

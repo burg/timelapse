@@ -75,7 +75,7 @@ static const String titleText(Page* page, String mimeType)
     if (!titleText.isEmpty())
         return titleText;
 
-    titleText = page->chrome().client()->plugInStartLabelTitle(mimeType);
+    titleText = page->chrome().client().plugInStartLabelTitle(mimeType);
     if (titleText.isEmpty())
         titleText = snapshottedPlugInLabelTitle();
     mimeTypeToLabelTitleMap.set(mimeType, titleText);
@@ -89,7 +89,7 @@ static const String subtitleText(Page* page, String mimeType)
     if (!subtitleText.isEmpty())
         return subtitleText;
 
-    subtitleText = page->chrome().client()->plugInStartLabelSubtitle(mimeType);
+    subtitleText = page->chrome().client().plugInStartLabelSubtitle(mimeType);
     if (subtitleText.isEmpty())
         subtitleText = snapshottedPlugInLabelSubtitle();
     mimeTypeToLabelSubtitleMap.set(mimeType, subtitleText);
@@ -115,7 +115,7 @@ HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Doc
     , m_deferredPromotionToPrimaryPlugIn(false)
     , m_snapshotDecision(SnapshotNotYetDecided)
 {
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
 HTMLPlugInImageElement::~HTMLPlugInImageElement()
@@ -158,7 +158,7 @@ bool HTMLPlugInImageElement::isImageType()
 
     if (Frame* frame = document()->frame()) {
         KURL completedURL = document()->completeURL(m_url);
-        return frame->loader()->client()->objectContentType(completedURL, m_serviceType, shouldPreferPlugInsForImages()) == ObjectContentImage;
+        return frame->loader().client()->objectContentType(completedURL, m_serviceType, shouldPreferPlugInsForImages()) == ObjectContentImage;
     }
 
     return Image::supportsType(m_serviceType);
@@ -187,9 +187,8 @@ bool HTMLPlugInImageElement::wouldLoadAsNetscapePlugin(const String& url, const 
     if (!url.isEmpty())
         completedURL = document()->completeURL(url);
 
-    FrameLoader* frameLoader = document()->frame()->loader();
-    ASSERT(frameLoader);
-    if (frameLoader->client()->objectContentType(completedURL, serviceType, shouldPreferPlugInsForImages()) == ObjectContentNetscapePlugin)
+    FrameLoader& frameLoader = document()->frame()->loader();
+    if (frameLoader.client()->objectContentType(completedURL, serviceType, shouldPreferPlugInsForImages()) == ObjectContentNetscapePlugin)
         return true;
     return false;
 }
@@ -224,41 +223,37 @@ RenderObject* HTMLPlugInImageElement::createRenderer(RenderArena* arena, RenderS
     return new (arena) RenderEmbeddedObject(this);
 }
 
-bool HTMLPlugInImageElement::willRecalcStyle(StyleChange)
+bool HTMLPlugInImageElement::willRecalcStyle(Style::Change)
 {
     // FIXME: Why is this necessary?  Manual re-attach is almost always wrong.
     if (!useFallbackContent() && needsWidgetUpdate() && renderer() && !isImageType() && (displayState() != DisplayingSnapshot))
-        reattach();
+        Style::reattachRenderTree(this);
     return true;
 }
 
-void HTMLPlugInImageElement::attach(const AttachContext& context)
+void HTMLPlugInImageElement::didAttachRenderers()
 {
-    PostAttachCallbackDisabler disabler(this);
-
-    bool isImage = isImageType();
-
-    if (!isImage)
+    if (!isImageType()) {
         queuePostAttachCallback(&HTMLPlugInImageElement::updateWidgetCallback, this);
-
-    HTMLPlugInElement::attach(context);
-
-    if (isImage && renderer() && !useFallbackContent()) {
-        if (!m_imageLoader)
-            m_imageLoader = adoptPtr(new HTMLImageLoader(this));
-        m_imageLoader->updateFromElement();
+        return;
     }
+    if (!renderer() || useFallbackContent())
+        return;
+    if (!m_imageLoader)
+        m_imageLoader = adoptPtr(new HTMLImageLoader(this));
+    m_imageLoader->updateFromElement();
 }
 
-void HTMLPlugInImageElement::detach(const AttachContext& context)
+void HTMLPlugInImageElement::willDetachRenderers()
 {
-    // FIXME: Because of the insanity that is HTMLPlugInImageElement::recalcStyle,
+    // FIXME: Because of the insanity that is HTMLPlugInImageElement::willRecalcStyle,
     // we can end up detaching during an attach() call, before we even have a
     // renderer.  In that case, don't mark the widget for update.
-    if (attached() && renderer() && !useFallbackContent())
+    if (attached() && renderer() && !useFallbackContent()) {
         // Update the widget the next time we attach (detaching destroys the plugin).
         setNeedsWidgetUpdate(true);
-    HTMLPlugInElement::detach(context);
+    }
+    HTMLPlugInElement::willDetachRenderers();
 }
 
 void HTMLPlugInImageElement::updateWidgetIfNecessary()
@@ -303,7 +298,7 @@ void HTMLPlugInImageElement::documentWillSuspendForPageCache()
     if (RenderStyle* renderStyle = this->renderStyle()) {
         m_customStyleForPageCache = RenderStyle::clone(renderStyle);
         m_customStyleForPageCache->setDisplay(NONE);
-        recalcStyle(Force);
+        Style::resolveTree(this, Style::Force);
     }
 
     HTMLPlugInElement::documentWillSuspendForPageCache();
@@ -313,7 +308,7 @@ void HTMLPlugInImageElement::documentDidResumeFromPageCache()
 {
     if (m_customStyleForPageCache) {
         m_customStyleForPageCache = 0;
-        recalcStyle(Force);
+        Style::resolveTree(this, Style::Force);
     }
 
     HTMLPlugInElement::documentDidResumeFromPageCache();
@@ -322,7 +317,7 @@ void HTMLPlugInImageElement::documentDidResumeFromPageCache()
 PassRefPtr<RenderStyle> HTMLPlugInImageElement::customStyleForRenderer()
 {
     if (!m_customStyleForPageCache)
-        return document()->ensureStyleResolver()->styleForElement(this);
+        return document()->ensureStyleResolver().styleForElement(this);
     return m_customStyleForPageCache;
 }
 
@@ -356,7 +351,7 @@ void HTMLPlugInImageElement::checkSnapshotStatus()
     }
 
     // Notify the shadow root that the size changed so that we may update the overlay layout.
-    ensureUserAgentShadowRoot()->dispatchEvent(Event::create(eventNames().resizeEvent, true, false));
+    ensureUserAgentShadowRoot().dispatchEvent(Event::create(eventNames().resizeEvent, true, false));
 }
 
 void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
@@ -372,11 +367,11 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
     
     String mimeType = loadedMimeType();
 
-    DEFINE_STATIC_LOCAL(RefPtr<DOMWrapperWorld>, isolatedWorld, (DOMWrapperWorld::create(JSDOMWindow::commonVM())));
-    document()->ensurePlugInsInjectedScript(isolatedWorld.get());
+    static DOMWrapperWorld* isolatedWorld = DOMWrapperWorld::create(JSDOMWindow::commonVM()).leakRef();
+    document()->ensurePlugInsInjectedScript(isolatedWorld);
 
-    ScriptController* scriptController = page->mainFrame()->script();
-    JSDOMGlobalObject* globalObject = JSC::jsCast<JSDOMGlobalObject*>(scriptController->globalObject(isolatedWorld.get()));
+    ScriptController& scriptController = page->mainFrame()->script();
+    JSDOMGlobalObject* globalObject = JSC::jsCast<JSDOMGlobalObject*>(scriptController.globalObject(isolatedWorld));
     JSC::ExecState* exec = globalObject->globalExec();
 
     JSC::JSLockHolder lock(exec);
@@ -403,7 +398,7 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 bool HTMLPlugInImageElement::partOfSnapshotOverlay(Node* node)
 {
     DEFINE_STATIC_LOCAL(AtomicString, selector, (".snapshot-overlay", AtomicString::ConstructFromLiteral));
-    RefPtr<Element> snapshotLabel = ensureUserAgentShadowRoot()->querySelector(selector, ASSERT_NO_EXCEPTION);
+    RefPtr<Element> snapshotLabel = ensureUserAgentShadowRoot().querySelector(selector, ASSERT_NO_EXCEPTION);
     return node && snapshotLabel && (node == snapshotLabel.get() || node->isDescendantOf(snapshotLabel.get()));
 }
 
@@ -457,7 +452,7 @@ void HTMLPlugInImageElement::restartSimilarPlugIns()
         return;
 
     for (Frame* frame = document()->page()->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-        if (!frame->loader()->subframeLoader()->containsPlugins())
+        if (!frame->loader().subframeLoader()->containsPlugins())
             continue;
         
         if (!frame->document())
@@ -488,7 +483,7 @@ void HTMLPlugInImageElement::userDidClickSnapshot(PassRefPtr<MouseEvent> event, 
         m_pendingClickEventFromSnapshot = event;
 
     String plugInOrigin = m_loadedUrl.host();
-    if (document()->page() && !SchemeRegistry::shouldTreatURLSchemeAsLocal(document()->page()->mainFrame()->document()->baseURL().protocol()) && document()->page()->settings()->autostartOriginPlugInSnapshottingEnabled())
+    if (document()->page() && !SchemeRegistry::shouldTreatURLSchemeAsLocal(document()->page()->mainFrame()->document()->baseURL().protocol()) && document()->page()->settings().autostartOriginPlugInSnapshottingEnabled())
         document()->page()->plugInClient()->didStartFromOrigin(document()->page()->mainFrame()->document()->baseURL().host(), plugInOrigin, loadedMimeType());
 
     LOG(Plugins, "%p User clicked on snapshotted plug-in. Restart.", this);
@@ -500,7 +495,7 @@ void HTMLPlugInImageElement::userDidClickSnapshot(PassRefPtr<MouseEvent> event, 
 
 void HTMLPlugInImageElement::setIsPrimarySnapshottedPlugIn(bool isPrimarySnapshottedPlugIn)
 {
-    if (!document()->page() || !document()->page()->settings()->primaryPlugInSnapshotDetectionEnabled() || document()->page()->settings()->snapshotAllPlugIns())
+    if (!document()->page() || !document()->page()->settings().primaryPlugInSnapshotDetectionEnabled() || document()->page()->settings().snapshotAllPlugIns())
         return;
 
     if (isPrimarySnapshottedPlugIn) {
@@ -521,7 +516,7 @@ void HTMLPlugInImageElement::restartSnapshottedPlugIn()
         return;
 
     setDisplayState(Restarting);
-    reattach();
+    Style::reattachRenderTree(this);
 }
 
 void HTMLPlugInImageElement::dispatchPendingMouseClick()
@@ -548,7 +543,7 @@ static bool documentHadRecentUserGesture(Document* document)
     if (document->frame() != document->page()->mainFrame() && document->page()->mainFrame() && document->page()->mainFrame()->document())
         lastKnownUserGestureTimestamp = std::max(lastKnownUserGestureTimestamp, document->page()->mainFrame()->document()->lastHandledUserGestureTimestamp());
 
-    if (currentTime() - lastKnownUserGestureTimestamp < autostartSoonAfterUserGestureThreshold)
+    if (monotonicallyIncreasingTime() - lastKnownUserGestureTimestamp < autostartSoonAfterUserGestureThreshold)
         return true;
 
     return false;
@@ -585,7 +580,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
     m_plugInWasCreated = false;
     m_deferredPromotionToPrimaryPlugIn = false;
 
-    if (!document()->page() || !document()->page()->settings()->plugInSnapshottingEnabled()) {
+    if (!document()->page() || !document()->page()->settings().plugInSnapshottingEnabled()) {
         m_snapshotDecision = NeverSnapshot;
         return;
     }
@@ -634,14 +629,14 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
         return;
     }
 
-    if (document()->page()->settings()->snapshotAllPlugIns()) {
+    if (document()->page()->settings().snapshotAllPlugIns()) {
         LOG(Plugins, "%p Plug-in forced to snapshot by user preference", this);
         m_snapshotDecision = Snapshotted;
         setDisplayState(WaitingForSnapshot);
         return;
     }
 
-    if (document()->page()->settings()->autostartOriginPlugInSnapshottingEnabled() && document()->page()->plugInClient() && document()->page()->plugInClient()->shouldAutoStartFromOrigin(document()->page()->mainFrame()->document()->baseURL().host(), url.host(), loadedMimeType())) {
+    if (document()->page()->settings().autostartOriginPlugInSnapshottingEnabled() && document()->page()->plugInClient() && document()->page()->plugInClient()->shouldAutoStartFromOrigin(document()->page()->mainFrame()->document()->baseURL().host(), url.host(), loadedMimeType())) {
         LOG(Plugins, "%p Plug-in from (%s, %s) is marked to auto-start, set to play", this, document()->page()->mainFrame()->document()->baseURL().host().utf8().data(), url.host().utf8().data());
         m_snapshotDecision = NeverSnapshot;
         return;

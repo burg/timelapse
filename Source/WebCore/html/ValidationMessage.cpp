@@ -33,7 +33,6 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
-#include "ElementShadow.h"
 #include "ExceptionCodePlaceholder.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
@@ -139,7 +138,7 @@ void ValidationMessage::setMessageDOMAndStartTimer(Timer<ValidationMessage>*)
             m_messageHeading->setInnerText(lines[i], ASSERT_NO_EXCEPTION);
     }
 
-    int magnification = doc->page() ? doc->page()->settings()->validationMessageTimerMagnification() : -1;
+    int magnification = doc->page() ? doc->page()->settings().validationMessageTimerMagnification() : -1;
     if (magnification <= 0)
         m_timer.clear();
     else {
@@ -175,7 +174,7 @@ static void adjustBubblePosition(const LayoutRect& hostRect, HTMLElement* bubble
 void ValidationMessage::buildBubbleTree(Timer<ValidationMessage>*)
 {
     ASSERT(!validationMessageClient());
-    ShadowRoot* shadowRoot = m_element->ensureUserAgentShadowRoot();
+    ShadowRoot& shadowRoot = m_element->ensureUserAgentShadowRoot();
 
     Document* doc = m_element->document();
     m_bubble = HTMLDivElement::create(doc);
@@ -183,7 +182,7 @@ void ValidationMessage::buildBubbleTree(Timer<ValidationMessage>*)
     // Need to force position:absolute because RenderMenuList doesn't assume it
     // contains non-absolute or non-fixed renderers as children.
     m_bubble->setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
-    shadowRoot->appendChild(m_bubble.get(), ASSERT_NO_EXCEPTION);
+    shadowRoot.appendChild(m_bubble.get(), ASSERT_NO_EXCEPTION);
     m_element->document()->updateLayout();
     adjustBubblePosition(m_element->boundingBox(), m_bubble.get());
 
@@ -227,7 +226,7 @@ void ValidationMessage::requestToHideMessage()
     m_timer->startOneShot(0);
 }
 
-bool ValidationMessage::shadowTreeContains(Node* node) const
+bool ValidationMessage::shadowTreeContains(const Node* node) const
 {
     if (validationMessageClient() || !m_bubble)
         return false;

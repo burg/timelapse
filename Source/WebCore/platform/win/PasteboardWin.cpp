@@ -48,8 +48,8 @@
 #include "SharedBuffer.h"
 #include "TextEncoding.h"
 #include "WebCoreInstanceHandle.h"
-#include "WindowsExtras.h"
 #include "markup.h"
+#include <wtf/WindowsExtras.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -504,8 +504,6 @@ void Pasteboard::writePlainTextToDataObject(const String& text, SmartReplaceOpti
     medium.hGlobal = createGlobalData(str);
     if (medium.hGlobal && FAILED(m_writableDataObject->SetData(plainTextWFormat(), &medium, TRUE)))
         ::GlobalFree(medium.hGlobal);        
-
-    medium.hGlobal = 0;
 }
 
 void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartReplaceOption)
@@ -774,11 +772,6 @@ void Pasteboard::writeImage(Node* node, const KURL&, const String&)
 }
 
 void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
-{
-    notImplemented();
-}
-
-void Pasteboard::writeClipboard(Clipboard*)
 {
     notImplemented();
 }
@@ -1054,6 +1047,19 @@ void Pasteboard::writeImageToDataObject(Element* element, const KURL& url)
 void Pasteboard::writeURLToWritableDataObject(const KURL& url, const String& title)
 {
     WebCore::writeURL(m_writableDataObject.get(), url, title, true, false);
+}
+
+void Pasteboard::writeMarkup(const String& markup)
+{
+    Vector<char> data;
+    markupToCFHTML(markup, "", data);
+
+    STGMEDIUM medium = {0};
+    medium.tymed = TYMED_HGLOBAL;
+
+    medium.hGlobal = createGlobalData(data);
+    if (medium.hGlobal && FAILED(m_writableDataObject->SetData(htmlFormat(), &medium, TRUE)))
+        GlobalFree(medium.hGlobal);
 }
 
 } // namespace WebCore

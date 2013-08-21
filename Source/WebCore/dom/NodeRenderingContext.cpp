@@ -28,7 +28,6 @@
 
 #include "ContainerNode.h"
 #include "ContentDistributor.h"
-#include "ElementShadow.h"
 #include "FlowThreadController.h"
 #include "HTMLContentElement.h"
 #include "HTMLInputElement.h"
@@ -57,7 +56,7 @@ NodeRenderingContext::NodeRenderingContext(Node* node)
     : m_node(node)
     , m_parentFlowRenderer(0)
 {
-    m_renderingParent = NodeRenderingTraversal::parent(node, &m_parentDetails);
+    m_renderingParent = NodeRenderingTraversal::parent(node);
 }
 
 NodeRenderingContext::NodeRenderingContext(Node* node, RenderStyle* style)
@@ -68,12 +67,12 @@ NodeRenderingContext::NodeRenderingContext(Node* node, RenderStyle* style)
 {
 }
 
-NodeRenderingContext::NodeRenderingContext(Node* node, const Node::AttachContext& context)
+NodeRenderingContext::NodeRenderingContext(Node* node, const Style::AttachContext& context)
     : m_node(node)
     , m_style(context.resolvedStyle)
     , m_parentFlowRenderer(0)
 {
-    m_renderingParent = NodeRenderingTraversal::parent(node, &m_parentDetails);
+    m_renderingParent = NodeRenderingTraversal::parent(node);
 }
 
 NodeRenderingContext::~NodeRenderingContext()
@@ -191,7 +190,7 @@ bool NodeRenderingContext::shouldCreateRenderer() const
         return false;
     if (!parentRenderer->canHaveChildren() && !(m_node->isPseudoElement() && parentRenderer->canHaveGeneratedChildren()))
         return false;
-    if (!m_renderingParent->childShouldCreateRenderer(*this))
+    if (!m_renderingParent->childShouldCreateRenderer(m_node))
         return false;
     return true;
 }
@@ -213,7 +212,7 @@ bool NodeRenderingContext::elementInsideRegionNeedsRenderer()
         elementInsideRegionNeedsRenderer = element->shouldMoveToFlowThread(m_style.get());
 
         // Children of this element will only be allowed to be flowed into other flow-threads if display is NOT none.
-        if (element->rendererIsNeeded(*this))
+        if (element->rendererIsNeeded(*m_style))
             element->setIsInsideRegion(true);
     }
 #endif
@@ -231,19 +230,9 @@ void NodeRenderingContext::moveToFlowThreadIfNeeded()
 
     ASSERT(m_node->document()->renderView());
     FlowThreadController* flowThreadController = m_node->document()->renderView()->flowThreadController();
-    m_parentFlowRenderer = flowThreadController->ensureRenderFlowThreadWithName(m_style->flowThread());
+    m_parentFlowRenderer = &flowThreadController->ensureRenderFlowThreadWithName(m_style->flowThread());
     flowThreadController->registerNamedFlowContentNode(m_node, m_parentFlowRenderer);
 #endif
-}
-
-bool NodeRenderingContext::isOnEncapsulationBoundary() const
-{
-    return isOnUpperEncapsulationBoundary() || isLowerEncapsulationBoundary(m_parentDetails.insertionPoint()) || isLowerEncapsulationBoundary(m_node->parentNode());
-}
-
-bool NodeRenderingContext::isOnUpperEncapsulationBoundary() const
-{
-    return m_node->parentNode() && m_node->parentNode()->isShadowRoot();
 }
 
 void NodeRenderingContext::createRendererForElementIfNeeded()
@@ -263,7 +252,7 @@ void NodeRenderingContext::createRendererForElementIfNeeded()
 
     moveToFlowThreadIfNeeded();
 
-    if (!element->rendererIsNeeded(*this))
+    if (!element->rendererIsNeeded(*m_style))
         return;
 
     RenderObject* parentRenderer = this->parentRenderer();
@@ -310,7 +299,7 @@ void NodeRenderingContext::createRendererForTextIfNeeded()
     Document* document = textNode->document();
 
     if (resetStyleInheritance())
-        m_style = document->ensureStyleResolver()->defaultStyleForElement();
+        m_style = document->ensureStyleResolver().defaultStyleForElement();
     else
         m_style = parentRenderer->style();
 
@@ -333,6 +322,12 @@ void NodeRenderingContext::createRendererForTextIfNeeded()
     // Parent takes care of the animations, no need to call setAnimatableStyle.
     newRenderer->setStyle(m_style.release());
     parentRenderer->addChild(newRenderer, nextRenderer);
+}
+
+bool NodeRenderingContext::resetStyleInheritance() const
+{
+    ContainerNode* parent = m_node->parentNode();
+    return parent && parent->isShadowRoot() && toShadowRoot(parent)->resetStyleInheritance();
 }
 
 }

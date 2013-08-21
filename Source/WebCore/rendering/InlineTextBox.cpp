@@ -952,7 +952,7 @@ void InlineTextBox::paintCustomHighlight(const LayoutPoint& paintOffset, const A
     FloatRect rootRect(paintOffset.x() + r->x(), paintOffset.y() + selectionTop(), r->logicalWidth(), selectionHeight());
     FloatRect textRect(paintOffset.x() + x(), rootRect.y(), logicalWidth(), rootRect.height());
 
-    page->chrome().client()->paintCustomHighlight(renderer()->node(), type, textRect, rootRect, true, false);
+    page->chrome().client().paintCustomHighlight(renderer()->node(), type, textRect, rootRect, true, false);
 }
 
 #endif
@@ -1415,7 +1415,7 @@ void InlineTextBox::paintDocumentMarkers(GraphicsContext* pt, const FloatPoint& 
     if (!renderer()->node())
         return;
 
-    Vector<DocumentMarker*> markers = renderer()->document()->markers()->markersFor(renderer()->node());
+    Vector<DocumentMarker*> markers = renderer()->document()->markers().markersFor(renderer()->node());
     Vector<DocumentMarker*>::const_iterator markerIt = markers.begin();
 
     // Give any document markers that touch this run a chance to draw before the text has been drawn.

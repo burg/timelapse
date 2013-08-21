@@ -205,20 +205,13 @@ void ObjcFallbackObjectImp::destroy(JSCell* cell)
 void ObjcFallbackObjectImp::finishCreation(JSGlobalObject* globalObject)
 {
     Base::finishCreation(globalObject->vm());
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
 }
 
-bool ObjcFallbackObjectImp::getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot& slot)
+bool ObjcFallbackObjectImp::getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot& slot)
 {
     // keep the prototype from getting called instead of just returning false
     slot.setUndefined();
-    return true;
-}
-
-bool ObjcFallbackObjectImp::getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor& descriptor)
-{
-    // keep the prototype from getting called instead of just returning false
-    descriptor.setUndefined();
     return true;
 }
 
@@ -229,7 +222,7 @@ void ObjcFallbackObjectImp::put(JSCell*, ExecState*, PropertyName, JSValue, PutP
 static EncodedJSValue JSC_HOST_CALL callObjCFallbackObject(ExecState* exec)
 {
     JSValue thisValue = exec->hostThisValue();
-    if (!thisValue.inherits(&ObjCRuntimeObject::s_info))
+    if (!thisValue.inherits(ObjCRuntimeObject::info()))
         return throwVMTypeError(exec);
 
     JSValue result = jsUndefined();

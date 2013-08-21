@@ -42,6 +42,7 @@ all : \
     DateConstructor.lut.h \
     DatePrototype.lut.h \
     ErrorPrototype.lut.h \
+    JSDataViewPrototype.lut.h \
     JSONObject.lut.h \
     JSGlobalObject.lut.h \
     KeywordLookup.h \

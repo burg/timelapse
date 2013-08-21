@@ -38,7 +38,6 @@
 #include "DFGRepatch.h"
 #include "DFGWorklist.h"
 #include "Debugger.h"
-#include "FTLJITCode.h"
 #include "Interpreter.h"
 #include "JIT.h"
 #include "JITStubs.h"
@@ -61,6 +60,10 @@
 #include "DFGOperations.h"
 #endif
 
+#if ENABLE(FTL_JIT)
+#include "FTLJITCode.h"
+#endif
+
 #define DUMP_CODE_BLOCK_STATISTICS 0
 
 namespace JSC {
@@ -80,10 +83,20 @@ CString CodeBlock::inferredName() const
     }
 }
 
+bool CodeBlock::hasHash() const
+{
+    return !!m_hash;
+}
+
+bool CodeBlock::isSafeToComputeHash() const
+{
+    return !isCompilationThread();
+}
+
 CodeBlockHash CodeBlock::hash() const
 {
     if (!m_hash) {
-        RELEASE_ASSERT(!isCompilationThread());
+        RELEASE_ASSERT(isSafeToComputeHash());
         m_hash = CodeBlockHash(ownerExecutable()->source(), specializationKind());
     }
     return m_hash;
@@ -114,7 +127,11 @@ CString CodeBlock::sourceCodeOnOneLine() const
 
 void CodeBlock::dumpAssumingJITType(PrintStream& out, JITCode::JITType jitType) const
 {
-    out.print(inferredName(), "#", hash(), ":[", RawPointer(this), "->", RawPointer(ownerExecutable()), ", ", jitType, codeType());
+    if (hasHash() || isSafeToComputeHash())
+        out.print(inferredName(), "#", hash(), ":[", RawPointer(this), "->", RawPointer(ownerExecutable()), ", ", jitType, codeType());
+    else
+        out.print(inferredName(), "#<no-hash>:[", RawPointer(this), "->", RawPointer(ownerExecutable()), ", ", jitType, codeType());
+
     if (codeType() == FunctionCode)
         out.print(specializationKind());
     if (this->jitType() == JITCode::BaselineJIT && m_shouldAlwaysBeInlined)
@@ -266,12 +283,12 @@ void CodeBlock::printGetByIdOp(PrintStream& out, ExecState* exec, int location, 
     int r0 = (++it)->u.operand;
     int r1 = (++it)->u.operand;
     int id0 = (++it)->u.operand;
-    out.printf("[%4d] %s\t %s, %s, %s", location, op, registerName(r0).data(), registerName(r1).data(), idName(id0, m_identifiers[id0]).data());
+    out.printf("[%4d] %s\t %s, %s, %s", location, op, registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
     it += 4; // Increment up to the value profiler.
 }
 
 #if ENABLE(JIT) || ENABLE(LLINT) // unused in some configurations
-static void dumpStructure(PrintStream& out, const char* name, ExecState* exec, Structure* structure, Identifier& ident)
+static void dumpStructure(PrintStream& out, const char* name, ExecState* exec, Structure* structure, const Identifier& ident)
 {
     if (!structure)
         return;
@@ -285,7 +302,7 @@ static void dumpStructure(PrintStream& out, const char* name, ExecState* exec, S
 #endif
 
 #if ENABLE(JIT) // unused when not ENABLE(JIT), leading to silly warnings
-static void dumpChain(PrintStream& out, ExecState* exec, StructureChain* chain, Identifier& ident)
+static void dumpChain(PrintStream& out, ExecState* exec, StructureChain* chain, const Identifier& ident)
 {
     out.printf("chain = %p: [", chain);
     bool first = true;
@@ -306,7 +323,7 @@ void CodeBlock::printGetByIdCacheStatus(PrintStream& out, ExecState* exec, int l
 {
     Instruction* instruction = instructions().begin() + location;
 
-    Identifier& ident = identifier(instruction[3].u.operand);
+    const Identifier& ident = identifier(instruction[3].u.operand);
     
     UNUSED_PARAM(ident); // tell the compiler to shut up in certain platform configurations.
     
@@ -453,7 +470,7 @@ void CodeBlock::printPutByIdOp(PrintStream& out, ExecState*, int location, const
     int r0 = (++it)->u.operand;
     int id0 = (++it)->u.operand;
     int r1 = (++it)->u.operand;
-    out.printf("[%4d] %s\t %s, %s, %s", location, op, registerName(r0).data(), idName(id0, m_identifiers[id0]).data(), registerName(r1).data());
+    out.printf("[%4d] %s\t %s, %s, %s", location, op, registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data());
     it += 5;
 }
 
@@ -493,13 +510,13 @@ void CodeBlock::dumpBytecode(PrintStream& out)
     for (const Instruction* it = begin; it != end; ++it)
         dumpBytecode(out, exec, begin, it);
 
-    if (!m_identifiers.isEmpty()) {
+    if (numberOfIdentifiers()) {
         out.printf("\nIdentifiers:\n");
         size_t i = 0;
         do {
-            out.printf("  id%u = %s\n", static_cast<unsigned>(i), m_identifiers[i].string().utf8().data());
+            out.printf("  id%u = %s\n", static_cast<unsigned>(i), identifier(i).string().utf8().data());
             ++i;
-        } while (i != m_identifiers.size());
+        } while (i != numberOfIdentifiers());
     }
 
     if (!m_constantRegisters.isEmpty()) {
@@ -955,14 +972,14 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int id0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] put_getter_setter\t %s, %s, %s, %s", location, registerName(r0).data(), idName(id0, m_identifiers[id0]).data(), registerName(r1).data(), registerName(r2).data());
+            out.printf("[%4d] put_getter_setter\t %s, %s, %s, %s", location, registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data(), registerName(r2).data());
             break;
         }
         case op_del_by_id: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int id0 = (++it)->u.operand;
-            out.printf("[%4d] del_by_id\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), idName(id0, m_identifiers[id0]).data());
+            out.printf("[%4d] del_by_id\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
             break;
         }
         case op_get_by_val: {
@@ -1229,7 +1246,7 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int id0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             unsigned attributes = (++it)->u.operand;
-            out.printf("[%4d] push_name_scope \t%s, %s, %u", location, idName(id0, m_identifiers[id0]).data(), registerName(r1).data(), attributes);
+            out.printf("[%4d] push_name_scope \t%s, %s, %u", location, idName(id0, identifier(id0)).data(), registerName(r1).data(), attributes);
             break;
         }
         case op_catch: {
@@ -1274,9 +1291,9 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
         case op_resolve_scope: {
             int r0 = (++it)->u.operand;
             int id0 = (++it)->u.operand;
-            ++it; // ResolveType
+            int resolveModeAndType = (++it)->u.operand;
             ++it; // depth
-            out.printf("[%4d] resolve_scope\t %s, %s", location, registerName(r0).data(), idName(id0, m_identifiers[id0]).data());
+            out.printf("[%4d] resolve_scope\t %s, %s, %d", location, registerName(r0).data(), idName(id0, identifier(id0)).data(), resolveModeAndType);
             break;
         }
         case op_get_from_scope: {
@@ -1287,7 +1304,7 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             ++it; // Structure
             ++it; // Operand
             ++it; // Skip value profile.
-            out.printf("[%4d] get_from_scope\t %s, %s, %s, %d", location, registerName(r0).data(), registerName(r1).data(), idName(id0, m_identifiers[id0]).data(), resolveModeAndType);
+            out.printf("[%4d] get_from_scope\t %s, %s, %s, %d", location, registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data(), resolveModeAndType);
             break;
         }
         case op_put_to_scope: {
@@ -1297,7 +1314,7 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int resolveModeAndType = (++it)->u.operand;
             ++it; // Structure
             ++it; // Operand
-            out.printf("[%4d] put_to_scope\t %s, %s, %s, %d", location, registerName(r0).data(), idName(id0, m_identifiers[id0]).data(), registerName(r1).data(), resolveModeAndType);
+            out.printf("[%4d] put_to_scope\t %s, %s, %s, %d", location, registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data(), resolveModeAndType);
             break;
         }
 #if ENABLE(LLINT_C_LOOP)
@@ -1474,7 +1491,7 @@ CodeBlock::CodeBlock(CopyParsedBlockTag, CodeBlock& other)
     , m_sourceOffset(other.m_sourceOffset)
     , m_firstLineColumnOffset(other.m_firstLineColumnOffset)
     , m_codeType(other.m_codeType)
-    , m_identifiers(other.m_identifiers)
+    , m_additionalIdentifiers(other.m_additionalIdentifiers)
     , m_constantRegisters(other.m_constantRegisters)
     , m_functionDecls(other.m_functionDecls)
     , m_functionExprs(other.m_functionExprs)
@@ -1534,7 +1551,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 #if DUMP_CODE_BLOCK_STATISTICS
     liveCodeBlockSet.add(this);
 #endif
-    setIdentifiers(unlinkedCodeBlock->identifiers());
+
     setConstantRegisters(unlinkedCodeBlock->constantRegisters());
     if (unlinkedCodeBlock->usesGlobalObject())
         m_constantRegisters[unlinkedCodeBlock->globalObjectRegister()].set(*m_vm, ownerExecutable, m_globalObject.get());
@@ -1747,7 +1764,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
         }
 
         case op_resolve_scope: {
-            Identifier& ident = identifier(pc[i + 2].u.operand);
+            const Identifier& ident = identifier(pc[i + 2].u.operand);
             ResolveType type = static_cast<ResolveType>(pc[i + 3].u.operand);
 
             ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), scope, ident, Get, type);
@@ -1765,7 +1782,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 #endif
 
             // get_from_scope dst, scope, id, ResolveModeAndType, Structure, Operand
-            Identifier& ident = identifier(pc[i + 3].u.operand);
+            const Identifier& ident = identifier(pc[i + 3].u.operand);
             ResolveModeAndType modeAndType = ResolveModeAndType(pc[i + 4].u.operand);
             ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), scope, ident, Get, modeAndType.type());
 
@@ -1778,7 +1795,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 
         case op_put_to_scope: {
             // put_to_scope scope, id, value, ResolveModeAndType, Structure, Operand
-            Identifier& ident = identifier(pc[i + 2].u.operand);
+            const Identifier& ident = identifier(pc[i + 2].u.operand);
             ResolveModeAndType modeAndType = ResolveModeAndType(pc[i + 4].u.operand);
             ResolveOp op = JSScope::abstractResolve(m_globalObject->globalExec(), scope, ident, Put, modeAndType.type());
 
@@ -2189,13 +2206,13 @@ void CodeBlock::finalizeUnconditionally()
                 JSCell* to = transition.m_to.get();
                 if ((!origin || Heap::isMarked(origin)) && Heap::isMarked(from))
                     continue;
-                dataLog("    Transition under ", JSValue(origin), ", ", JSValue(from), " -> ", JSValue(to), ".\n");
+                dataLog("    Transition under ", RawPointer(origin), ", ", RawPointer(from), " -> ", RawPointer(to), ".\n");
             }
             for (unsigned i = 0; i < dfgCommon->weakReferences.size(); ++i) {
                 JSCell* weak = dfgCommon->weakReferences[i].get();
                 if (Heap::isMarked(weak))
                     continue;
-                dataLog("    Weak reference ", JSValue(weak), ".\n");
+                dataLog("    Weak reference ", RawPointer(weak), ".\n");
             }
         }
         
@@ -2437,7 +2454,7 @@ void CodeBlock::shrinkToFit(ShrinkMode shrinkMode)
 #endif
     
     if (shrinkMode == EarlyShrink) {
-        m_identifiers.shrinkToFit();
+        m_additionalIdentifiers.shrinkToFit();
         m_functionDecls.shrinkToFit();
         m_functionExprs.shrinkToFit();
         m_constantRegisters.shrinkToFit();
@@ -2472,12 +2489,23 @@ void CodeBlock::createActivation(CallFrame* callFrame)
 
 unsigned CodeBlock::addOrFindConstant(JSValue v)
 {
+    unsigned result;
+    if (findConstant(v, result))
+        return result;
+    return addConstant(v);
+}
+
+bool CodeBlock::findConstant(JSValue v, unsigned& index)
+{
     unsigned numberOfConstants = numberOfConstantRegisters();
     for (unsigned i = 0; i < numberOfConstants; ++i) {
-        if (getConstant(FirstConstantRegisterIndex + i) == v)
-            return i;
+        if (getConstant(FirstConstantRegisterIndex + i) == v) {
+            index = i;
+            return true;
+        }
     }
-    return addConstant(v);
+    index = numberOfConstants;
+    return false;
 }
 
 #if ENABLE(JIT)

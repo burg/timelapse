@@ -276,7 +276,7 @@ void DumpRenderTreeSupportGtk::executeCoreCommandByName(WebKitWebView* webView, 
     g_return_if_fail(name);
     g_return_if_fail(value);
 
-    core(webView)->focusController()->focusedOrMainFrame()->editor().command(name).execute(value);
+    core(webView)->focusController().focusedOrMainFrame()->editor().command(name).execute(value);
 }
 
 bool DumpRenderTreeSupportGtk::isCommandEnabled(WebKitWebView* webView, const gchar* name)
@@ -284,7 +284,7 @@ bool DumpRenderTreeSupportGtk::isCommandEnabled(WebKitWebView* webView, const gc
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), FALSE);
     g_return_val_if_fail(name, FALSE);
 
-    return core(webView)->focusController()->focusedOrMainFrame()->editor().command(name).isEnabled();
+    return core(webView)->focusController().focusedOrMainFrame()->editor().command(name).isEnabled();
 }
 
 void DumpRenderTreeSupportGtk::setComposition(WebKitWebView* webView, const char* text, int start, int length)
@@ -292,7 +292,7 @@ void DumpRenderTreeSupportGtk::setComposition(WebKitWebView* webView, const char
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
     g_return_if_fail(text);
 
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -309,7 +309,7 @@ void DumpRenderTreeSupportGtk::setComposition(WebKitWebView* webView, const char
 bool DumpRenderTreeSupportGtk::hasComposition(WebKitWebView* webView)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), false);
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return false;
 
@@ -322,7 +322,7 @@ bool DumpRenderTreeSupportGtk::compositionRange(WebKitWebView* webView, int* sta
     *start = *length = 0;
 
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), false);
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return false;
 
@@ -339,7 +339,7 @@ void DumpRenderTreeSupportGtk::confirmComposition(WebKitWebView* webView, const 
 {
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
 
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -359,7 +359,7 @@ void DumpRenderTreeSupportGtk::confirmComposition(WebKitWebView* webView, const 
 void DumpRenderTreeSupportGtk::doCommand(WebKitWebView* webView, const char* command)
 {
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -387,13 +387,13 @@ bool DumpRenderTreeSupportGtk::firstRectForCharacterRange(WebKitWebView* webView
     if ((location + length < location) && (location + length))
         length = 0;
 
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return false;
 
     Editor& editor = frame->editor();
 
-    RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(frame->selection()->rootEditableElementOrDocumentElement(), location, length);
+    RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(frame->selection().rootEditableElementOrDocumentElement(), location, length);
     if (!range)
         return false;
 
@@ -406,15 +406,15 @@ bool DumpRenderTreeSupportGtk::selectedRange(WebKitWebView* webView, int* start,
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), false);
     g_return_val_if_fail(start && length, false);
 
-    Frame* frame = core(webView)->focusController()->focusedOrMainFrame();
+    Frame* frame = core(webView)->focusController().focusedOrMainFrame();
     if (!frame)
         return false;
 
-    RefPtr<Range> range = frame->selection()->toNormalizedRange().get();
+    RefPtr<Range> range = frame->selection().toNormalizedRange().get();
     if (!range)
         return false;
 
-    Element* selectionRoot = frame->selection()->rootEditableElement();
+    Element* selectionRoot = frame->selection().rootEditableElement();
     Element* scope = selectionRoot ? selectionRoot : frame->document()->documentElement();
 
     RefPtr<Range> testRange = Range::create(scope->document(), scope, 0, range->startContainer(), range->startOffset());
@@ -438,7 +438,7 @@ void DumpRenderTreeSupportGtk::forceWebViewPaint(WebKitWebView* webView)
 {
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
 
-    static_cast<WebKit::ChromeClient*>(core(webView)->chrome().client())->forcePaint();
+    static_cast<WebKit::ChromeClient&>(core(webView)->chrome().client()).forcePaint();
 }
 
 void DumpRenderTreeSupportGtk::whiteListAccessFromOrigin(const gchar* sourceOrigin, const gchar* destinationProtocol, const gchar* destinationHost, bool allowDestinationSubdomains)
@@ -489,7 +489,7 @@ void DumpRenderTreeSupportGtk::clearOpener(WebKitWebFrame* frame)
 {
     Frame* coreFrame = core(frame);
     if (coreFrame)
-        coreFrame->loader()->setOpener(0);
+        coreFrame->loader().setOpener(0);
 }
 
 bool DumpRenderTreeSupportGtk::findString(WebKitWebView* webView, const gchar* targetString, WebKitFindOptions findOptions)
@@ -531,7 +531,7 @@ void DumpRenderTreeSupportGtk::rectangleForSelection(WebKitWebFrame* frame, cair
     if (!coreFrame)
         return;
 
-    IntRect bounds = enclosingIntRect(coreFrame->selection()->bounds());
+    IntRect bounds = enclosingIntRect(coreFrame->selection().bounds());
     rectangle->x = bounds.x();
     rectangle->y = bounds.y();
     rectangle->width = bounds.width();
@@ -543,7 +543,7 @@ bool DumpRenderTreeSupportGtk::shouldClose(WebKitWebFrame* frame)
     Frame* coreFrame = core(frame);
     if (!coreFrame)
         return true;
-    return coreFrame->loader()->shouldClose();
+    return coreFrame->loader().shouldClose();
 }
 
 void DumpRenderTreeSupportGtk::scalePageBy(WebKitWebView* webView, float scaleFactor, float x, float y)
@@ -597,12 +597,12 @@ int DumpRenderTreeSupportGtk::numberOfPendingGeolocationPermissionRequests(WebKi
 
 void DumpRenderTreeSupportGtk::setPageCacheSupportsPlugins(WebKitWebView* webView, bool enabled)
 {
-    core(webView)->settings()->setPageCacheSupportsPlugins(enabled);
+    core(webView)->settings().setPageCacheSupportsPlugins(enabled);
 }
 
 void DumpRenderTreeSupportGtk::setCSSGridLayoutEnabled(WebKitWebView* webView, bool enabled)
 {
-    core(webView)->settings()->setCSSGridLayoutEnabled(enabled);
+    core(webView)->settings().setCSSGridLayoutEnabled(enabled);
 }
 
 void DumpRenderTreeSupportGtk::setCSSRegionsEnabled(WebKitWebView* webView, bool enabled)
@@ -613,7 +613,7 @@ void DumpRenderTreeSupportGtk::setCSSRegionsEnabled(WebKitWebView* webView, bool
 void DumpRenderTreeSupportGtk::setCSSCustomFilterEnabled(WebKitWebView* webView, bool enabled)
 {
 #if ENABLE(CSS_SHADERS)
-    core(webView)->settings()->setCSSCustomFilterEnabled(enabled);
+    core(webView)->settings().setCSSCustomFilterEnabled(enabled);
 #endif
 }
 

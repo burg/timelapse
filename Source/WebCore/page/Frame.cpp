@@ -89,6 +89,7 @@
 #include "Settings.h"
 #include "StylePropertySet.h"
 #include "TextIterator.h"
+#include "TextNodeTraversal.h"
 #include "TextResourceDecoder.h"
 #include "UserContentURLPattern.h"
 #include "UserTypingGestureIndicator.h"
@@ -151,12 +152,13 @@ static inline float parentTextZoomFactor(Frame* frame)
 
 inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* frameLoaderClient)
     : m_page(page)
+    , m_settings(&page->settings())
     , m_treeNode(this, parentFromOwnerElement(ownerElement))
     , m_loader(this, frameLoaderClient)
     , m_navigationScheduler(this)
     , m_ownerElement(ownerElement)
     , m_script(adoptPtr(new ScriptController(this)))
-    , m_editor(adoptPtr(new Editor(this)))
+    , m_editor(Editor::create(*this))
     , m_selection(adoptPtr(new FrameSelection(this)))
     , m_eventHandler(adoptPtr(new EventHandler(this)))
     , m_animationController(adoptPtr(new AnimationController(this)))
@@ -183,7 +185,7 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
     if (!ownerElement) {
 #if USE(TILED_BACKING_STORE)
         // Top level frame only for now.
-        setTiledBackingStoreEnabled(page->settings()->tiledBackingStoreEnabled());
+        setTiledBackingStoreEnabled(settings().tiledBackingStoreEnabled());
 #endif
     } else {
         page->incrementSubframeCount();
@@ -211,7 +213,7 @@ PassRefPtr<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement,
 Frame::~Frame()
 {
     setView(0);
-    loader()->cancelAndClear();
+    loader().cancelAndClear();
 
     // FIXME: We should not be doing all this work inside the destructor
 
@@ -267,14 +269,14 @@ void Frame::setView(PassRefPtr<FrameView> view)
     if (m_view)
         m_view->unscheduleRelayout();
     
-    eventHandler()->clear();
+    eventHandler().clear();
 
     m_view = view;
 
     // Only one form submission is allowed per view of a part.
     // Since this part may be getting reused as a result of being
     // pulled from the back/forward cache, reset this flag.
-    loader()->resetMultipleFormSubmissionProtection();
+    loader().resetMultipleFormSubmissionProtection();
     
 #if USE(TILED_BACKING_STORE)
     if (m_view && tiledBackingStore())
@@ -306,7 +308,7 @@ void Frame::setDocument(PassRefPtr<Document> newDoc)
         notifyChromeClientWheelEventHandlerCountChanged();
 #if ENABLE(TOUCH_EVENTS)
         if (m_doc && m_doc->hasTouchEventHandlers())
-            m_page->chrome().client()->needTouchEvents(true);
+            m_page->chrome().client().needTouchEvents(true);
 #endif
     }
 
@@ -326,11 +328,6 @@ void Frame::sendOrientationChangeEvent(int orientation)
         doc->dispatchWindowEvent(Event::create(eventNames().orientationchangeEvent, false, false));
 }
 #endif // ENABLE(ORIENTATION_EVENTS)
-    
-Settings* Frame::settings() const
-{
-    return m_page ? m_page->settings() : 0;
-}
 
 static PassOwnPtr<RegularExpression> createRegExpForLabels(const Vector<String>& labels)
 {
@@ -372,18 +369,18 @@ String Frame::searchForLabelsAboveCell(RegularExpression* regExp, HTMLTableCellE
     if (aboveCell) {
         // search within the above cell we found for a match
         size_t lengthSearched = 0;    
-        for (Node* n = aboveCell->firstChild(); n; n = NodeTraversal::next(n, aboveCell)) {
-            if (n->isTextNode() && n->renderer() && n->renderer()->style()->visibility() == VISIBLE) {
-                // For each text chunk, run the regexp
-                String nodeString = n->nodeValue();
-                int pos = regExp->searchRev(nodeString);
-                if (pos >= 0) {
-                    if (resultDistanceFromStartOfCell)
-                        *resultDistanceFromStartOfCell = lengthSearched;
-                    return nodeString.substring(pos, regExp->matchedLength());
-                }
-                lengthSearched += nodeString.length();
+        for (Text* textNode = TextNodeTraversal::firstWithin(aboveCell); textNode; textNode = TextNodeTraversal::next(textNode, aboveCell)) {
+            if (!textNode->renderer() || textNode->renderer()->style()->visibility() != VISIBLE)
+                continue;
+            // For each text chunk, run the regexp
+            String nodeString = textNode->data();
+            int pos = regExp->searchRev(nodeString);
+            if (pos >= 0) {
+                if (resultDistanceFromStartOfCell)
+                    *resultDistanceFromStartOfCell = lengthSearched;
+                return nodeString.substring(pos, regExp->matchedLength());
             }
+            lengthSearched += nodeString.length();
         }
     }
 
@@ -560,7 +557,7 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
     if (!m_page)
         return;
 
-    if (loader()->stateMachine()->creatingInitialEmptyDocument() && !settings()->shouldInjectUserScriptsInInitialEmptyDocument())
+    if (loader().stateMachine()->creatingInitialEmptyDocument() && !settings().shouldInjectUserScriptsInInitialEmptyDocument())
         return;
 
     // Walk the hashtable. Inject by world.
@@ -626,17 +623,15 @@ Frame* Frame::frameForWidget(const Widget* widget)
     // Assume all widgets are either a FrameView or owned by a RenderWidget.
     // FIXME: That assumption is not right for scroll bars!
     ASSERT_WITH_SECURITY_IMPLICATION(widget->isFrameView());
-    return toFrameView(widget)->frame();
+    return &toFrameView(widget)->frame();
 }
 
 void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
         view->unscheduleRelayout();
-        if (view->frame()) {
-            view->frame()->animation()->suspendAnimationsForDocument(document);
-            view->frame()->eventHandler()->stopAutoscrollTimer();
-        }
+        view->frame().animation()->suspendAnimationsForDocument(document);
+        view->frame().eventHandler().stopAutoscrollTimer();
     }
 }
 
@@ -663,7 +658,7 @@ void Frame::dispatchVisibilityStateChangeEvent()
 void Frame::willDetachPage()
 {
     if (Frame* parent = tree()->parent())
-        parent->loader()->checkLoadComplete();
+        parent->loader().checkLoadComplete();
 
     HashSet<FrameDestructionObserver*>::iterator stop = m_destructionObservers.end();
     for (HashSet<FrameDestructionObserver*>::iterator it = m_destructionObservers.begin(); it != stop; ++it)
@@ -671,14 +666,14 @@ void Frame::willDetachPage()
 
     // FIXME: It's unclear as to why this is called more than once, but it is,
     // so page() could be NULL.
-    if (page() && page()->focusController()->focusedFrame() == this)
-        page()->focusController()->setFocusedFrame(0);
+    if (page() && page()->focusController().focusedFrame() == this)
+        page()->focusController().setFocusedFrame(0);
 
     if (page() && page()->scrollingCoordinator() && m_view)
         page()->scrollingCoordinator()->willDestroyScrollableArea(m_view.get());
 
-    script()->clearScriptObjects();
-    script()->updatePlatformScriptObjects();
+    script().clearScriptObjects();
+    script().updatePlatformScriptObjects();
 }
 
 void Frame::disconnectOwnerElement()
@@ -708,7 +703,7 @@ String Frame::displayStringModifiedByEncoding(const String& str) const
 
 VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint)
 {
-    HitTestResult result = eventHandler()->hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active);
+    HitTestResult result = eventHandler().hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active);
     Node* node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
@@ -730,7 +725,7 @@ Document* Frame::documentAtPoint(const IntPoint& point)
     HitTestResult result = HitTestResult(pt);
 
     if (contentRenderer())
-        result = eventHandler()->hitTestResultAtPoint(pt);
+        result = eventHandler().hitTestResultAtPoint(pt);
     return result.innerNode() ? result.innerNode()->document() : 0;
 }
 
@@ -850,7 +845,7 @@ IntRect Frame::tiledBackingStoreVisibleRect()
 {
     if (!m_page)
         return IntRect();
-    return m_page->chrome().client()->visibleRectForTiledBackingStore();
+    return m_page->chrome().client().visibleRectForTiledBackingStore();
 }
 
 Color Frame::tiledBackingStoreBackgroundColor() const
@@ -929,7 +924,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     m_pageZoomFactor = pageZoomFactor;
     m_textZoomFactor = textZoomFactor;
 
-    document->recalcStyle(Node::Force);
+    document->recalcStyle(Style::Force);
 
     for (RefPtr<Frame> child = tree()->firstChild(); child; child = child->tree()->nextSibling())
         child->setPageAndTextZoomFactors(m_pageZoomFactor, m_textZoomFactor);
@@ -948,7 +943,7 @@ float Frame::frameScaleFactor() const
     Page* page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
-    if (!page || page->mainFrame() != this || page->settings()->applyPageScaleFactorInCompositor())
+    if (!page || page->mainFrame() != this || settings().applyPageScaleFactorInCompositor())
         return 1;
 
     return page->pageScaleFactor();
@@ -963,6 +958,7 @@ void Frame::suspendActiveDOMObjectsAndAnimations()
     if (wasSuspended)
         return;
 
+    // FIXME: Suspend/resume calls will not match if the frame is navigated, and gets a new document.
     if (document()) {
         document()->suspendScriptedAnimationControllerCallbacks();
         animation()->suspendAnimationsForDocument(document());
@@ -984,6 +980,9 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
         animation()->resumeAnimationsForDocument(document());
         document()->resumeScriptedAnimationControllerCallbacks();
     }
+
+    if (m_view)
+        m_view->resumeAnimatingImages();
 }
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -1008,7 +1007,7 @@ void Frame::notifyChromeClientWheelEventHandlerCountChanged() const
             count += frame->document()->wheelEventHandlerCount();
     }
 
-    m_page->chrome().client()->numWheelEventHandlersChanged(count);
+    m_page->chrome().client().numWheelEventHandlersChanged(count);
 }
 
 bool Frame::isURLAllowed(const KURL& url) const
@@ -1093,19 +1092,19 @@ DragImageRef Frame::nodeImage(Node* node)
     m_view->paintContents(buffer->context(), paintingRect);
 
     RefPtr<Image> image = buffer->copyImage();
-    return createDragImageFromImage(image.get(), renderer->shouldRespectImageOrientation());
+    return createDragImageFromImage(image.get(), ImageOrientationDescription(renderer->shouldRespectImageOrientation()));
 }
 
 DragImageRef Frame::dragImageForSelection()
 {
-    if (!selection()->isRange())
+    if (!selection().isRange())
         return 0;
 
     const ScopedFramePaintingState state(this, 0);
     m_view->setPaintBehavior(PaintBehaviorSelectionOnly);
     m_doc->updateLayout();
 
-    IntRect paintingRect = enclosingIntRect(selection()->bounds());
+    IntRect paintingRect = enclosingIntRect(selection().bounds());
 
     float deviceScaleFactor = 1;
     if (m_page)
@@ -1122,7 +1121,7 @@ DragImageRef Frame::dragImageForSelection()
     m_view->paintContents(buffer->context(), paintingRect);
 
     RefPtr<Image> image = buffer->copyImage();
-    return createDragImageFromImage(image.get());
+    return createDragImageFromImage(image.get(), ImageOrientationDescription());
 }
 
 #endif

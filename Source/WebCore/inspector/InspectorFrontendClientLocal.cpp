@@ -121,7 +121,7 @@ InspectorFrontendClientLocal::InspectorFrontendClientLocal(InspectorController* 
     , m_frontendLoaded(false)
     , m_dockSide(UNDOCKED)
 {
-    m_frontendPage->settings()->setAllowFileAccessFromFileURLs(true);
+    m_frontendPage->settings().setAllowFileAccessFromFileURLs(true);
     m_dispatchTask = adoptPtr(new InspectorBackendDispatchTask(inspectorController));
 }
 
@@ -219,11 +219,11 @@ void InspectorFrontendClientLocal::openInNewTab(const String& url)
     if (!frame)
         return;
 
-    frame->loader()->setOpener(mainFrame);
+    frame->loader().setOpener(mainFrame);
     frame->page()->setOpenedByDOM();
 
     // FIXME: Why does one use mainFrame and the other frame?
-    frame->loader()->changeLocation(mainFrame->document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
+    frame->loader().changeLocation(mainFrame->document()->securityOrigin(), frame->document()->completeURL(url), "", false, false);
 }
 
 void InspectorFrontendClientLocal::moveWindowBy(float x, float y)
@@ -346,14 +346,14 @@ bool InspectorFrontendClientLocal::evaluateAsBoolean(const String& expression)
 {
     if (!m_frontendPage->mainFrame())
         return false;
-    ScriptValue value = m_frontendPage->mainFrame()->script()->executeScript(expression);
+    ScriptValue value = m_frontendPage->mainFrame()->script().executeScript(expression);
     return value.toString(mainWorldScriptState(m_frontendPage->mainFrame())) == "true";
 }
 
 void InspectorFrontendClientLocal::evaluateOnLoad(const String& expression)
 {
     if (m_frontendLoaded)
-        m_frontendPage->mainFrame()->script()->executeScript("InspectorFrontendAPI.dispatch(" + expression + ")");
+        m_frontendPage->mainFrame()->script().executeScript("InspectorFrontendAPI.dispatch(" + expression + ")");
     else
         m_evaluateOnLoad.append(expression);
 }

@@ -482,8 +482,8 @@ namespace JSC {
         JumpList emitDoubleGetByVal(Instruction*, PatchableJump& badType);
         JumpList emitContiguousGetByVal(Instruction*, PatchableJump& badType, IndexingType expectedShape = ContiguousShape);
         JumpList emitArrayStorageGetByVal(Instruction*, PatchableJump& badType);
-        JumpList emitIntTypedArrayGetByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize, TypedArraySignedness);
-        JumpList emitFloatTypedArrayGetByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize);
+        JumpList emitIntTypedArrayGetByVal(Instruction*, PatchableJump& badType, TypedArrayType);
+        JumpList emitFloatTypedArrayGetByVal(Instruction*, PatchableJump& badType, TypedArrayType);
         
         // Property is in regT0, base is in regT0. regT2 contains indecing type.
         // The value to store is not yet loaded. Property is int-checked and
@@ -503,8 +503,8 @@ namespace JSC {
         }
         JumpList emitGenericContiguousPutByVal(Instruction*, PatchableJump& badType, IndexingType indexingShape = ContiguousShape);
         JumpList emitArrayStoragePutByVal(Instruction*, PatchableJump& badType);
-        JumpList emitIntTypedArrayPutByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize, TypedArraySignedness, TypedArrayRounding);
-        JumpList emitFloatTypedArrayPutByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize);
+        JumpList emitIntTypedArrayPutByVal(Instruction*, PatchableJump& badType, TypedArrayType);
+        JumpList emitFloatTypedArrayPutByVal(Instruction*, PatchableJump& badType, TypedArrayType);
         
         enum FinalObjectMode { MayBeFinal, KnownNotFinal };
 
@@ -538,8 +538,8 @@ namespace JSC {
         void emitJumpSlowCaseIfNotJSCell(int virtualRegisterIndex);
         void emitJumpSlowCaseIfNotJSCell(int virtualRegisterIndex, RegisterID tag);
 
-        void compileGetByIdHotPath(Identifier*);
-        void compileGetByIdSlowCase(int resultVReg, int baseVReg, Identifier*, Vector<SlowCaseEntry>::iterator&);
+        void compileGetByIdHotPath(const Identifier*);
+        void compileGetByIdSlowCase(int resultVReg, int baseVReg, const Identifier*, Vector<SlowCaseEntry>::iterator&);
         void compileGetDirectOffset(RegisterID base, RegisterID resultTag, RegisterID resultPayload, PropertyOffset cachedOffset);
         void compileGetDirectOffset(JSObject* base, RegisterID resultTag, RegisterID resultPayload, PropertyOffset cachedOffset);
         void compileGetDirectOffset(RegisterID base, RegisterID resultTag, RegisterID resultPayload, RegisterID offset, FinalObjectMode = MayBeFinal);
@@ -612,8 +612,8 @@ namespace JSC {
         void compileBinaryArithOp(OpcodeID, unsigned dst, unsigned src1, unsigned src2, OperandTypes opi);
         void compileBinaryArithOpSlowCase(Instruction*, OpcodeID, Vector<SlowCaseEntry>::iterator&, unsigned dst, unsigned src1, unsigned src2, OperandTypes, bool op1HasImmediateIntFastCase, bool op2HasImmediateIntFastCase);
 
-        void compileGetByIdHotPath(int baseVReg, Identifier*);
-        void compileGetByIdSlowCase(int resultVReg, int baseVReg, Identifier*, Vector<SlowCaseEntry>::iterator&);
+        void compileGetByIdHotPath(int baseVReg, const Identifier*);
+        void compileGetByIdSlowCase(int resultVReg, int baseVReg, const Identifier*, Vector<SlowCaseEntry>::iterator&);
         void compileGetDirectOffset(RegisterID base, RegisterID result, PropertyOffset cachedOffset);
         void compileGetDirectOffset(JSObject* base, RegisterID result, PropertyOffset cachedOffset);
         void compileGetDirectOffset(RegisterID base, RegisterID result, RegisterID offset, RegisterID scratch, FinalObjectMode = MayBeFinal);
@@ -838,6 +838,7 @@ namespace JSC {
 
         void restoreArgumentReferenceForTrampoline();
         void updateTopCallFrame();
+        void reloadCallFrameFromTopCallFrame();
 
         Call emitNakedCall(CodePtr function = CodePtr());
 

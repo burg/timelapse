@@ -38,12 +38,12 @@
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
-#include "NodeRenderingContext.h"
 #include "NodeTraversal.h"
 #include "RenderBox.h"
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
 #include "ScriptEventListener.h"
+#include "ShadowRoot.h"
 #include "Text.h"
 #include "TextIterator.h"
 #include <wtf/text/StringBuilder.h>
@@ -66,13 +66,13 @@ HTMLTextFormControlElement::~HTMLTextFormControlElement()
 {
 }
 
-bool HTMLTextFormControlElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool HTMLTextFormControlElement::childShouldCreateRenderer(const Node* child) const
 {
     // FIXME: We shouldn't force the pseudo elements down into the shadow, but
     // this perserves the current behavior of WebKit.
-    if (childContext.node()->isPseudoElement())
-        return HTMLFormControlElementWithState::childShouldCreateRenderer(childContext);
-    return childContext.isOnEncapsulationBoundary() && HTMLFormControlElementWithState::childShouldCreateRenderer(childContext);
+    if (child->isPseudoElement())
+        return HTMLFormControlElementWithState::childShouldCreateRenderer(child);
+    return hasShadowRootParent(child) && HTMLFormControlElementWithState::childShouldCreateRenderer(child);
 }
 
 Node::InsertionNotificationRequest HTMLTextFormControlElement::insertedInto(ContainerNode* insertionPoint)
@@ -166,7 +166,7 @@ void HTMLTextFormControlElement::updatePlaceholderVisibility(bool placeholderVal
     HTMLElement* placeholder = placeholderElement();
     if (!placeholder)
         return;
-    placeholder->setInlineStyleProperty(CSSPropertyVisibility, placeholderShouldBeVisible() ? ASCIILiteral("visible") : ASCIILiteral("hidden"));
+    placeholder->setInlineStyleProperty(CSSPropertyVisibility, placeholderShouldBeVisible() ? CSSValueVisible : CSSValueHidden);
 }
 
 void HTMLTextFormControlElement::fixPlaceholderRenderer(HTMLElement* placeholder, HTMLElement* siblingElement)
@@ -336,7 +336,7 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     newSelection.setIsDirectional(direction != SelectionHasNoDirection);
 
     if (Frame* frame = document()->frame())
-        frame->selection()->setSelection(newSelection);
+        frame->selection().setSelection(newSelection);
 }
 
 int HTMLTextFormControlElement::indexForVisiblePosition(const VisiblePosition& pos) const
@@ -367,7 +367,7 @@ int HTMLTextFormControlElement::computeSelectionStart() const
     if (!frame)
         return 0;
 
-    return indexForVisiblePosition(frame->selection()->start());
+    return indexForVisiblePosition(frame->selection().start());
 }
 
 int HTMLTextFormControlElement::selectionEnd() const
@@ -386,7 +386,7 @@ int HTMLTextFormControlElement::computeSelectionEnd() const
     if (!frame)
         return 0;
 
-    return indexForVisiblePosition(frame->selection()->end());
+    return indexForVisiblePosition(frame->selection().end());
 }
 
 static const AtomicString& directionString(TextFieldSelectionDirection direction)
@@ -425,7 +425,7 @@ TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirectio
     if (!frame)
         return SelectionHasNoDirection;
 
-    const VisibleSelection& selection = frame->selection()->selection();
+    const VisibleSelection& selection = frame->selection().selection();
     return selection.isDirectional() ? (selection.isBaseFirst() ? SelectionHasForwardDirection : SelectionHasBackwardDirection) : SelectionHasNoDirection;
 }
 
@@ -495,7 +495,7 @@ void HTMLTextFormControlElement::selectionChanged(bool userTriggered)
     cacheSelection(computeSelectionStart(), computeSelectionEnd(), computeSelectionDirection());
 
     if (Frame* frame = document()->frame()) {
-        if (frame->selection()->isRange() && userTriggered)
+        if (frame->selection().isRange() && userTriggered)
             dispatchEvent(Event::create(eventNames().selectEvent, true, false));
     }
 }
@@ -626,7 +626,7 @@ HTMLTextFormControlElement* enclosingTextFormControl(const Position& position)
 {
     ASSERT(position.isNull() || position.anchorType() == Position::PositionIsOffsetInAnchor
         || position.containerNode() || !position.anchorNode()->shadowHost()
-        || (position.anchorNode()->parentNode() && position.anchorNode()->parentNode()->isShadowRoot()));
+        || hasShadowRootParent(position.anchorNode()));
         
     Node* container = position.containerNode();
     if (!container)

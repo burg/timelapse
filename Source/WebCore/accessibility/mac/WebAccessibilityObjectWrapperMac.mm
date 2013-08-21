@@ -1127,6 +1127,7 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
                       NSAccessibilitySelectedAttribute,
                       NSAccessibilityBlockQuoteLevelAttribute,
                       NSAccessibilityTopLevelUIElementAttribute,
+                      NSAccessibilityLanguageAttribute,
                       nil];
     }
     if (commonMenuAttrs == nil) {
@@ -1467,7 +1468,7 @@ static id textMarkerRangeFromVisiblePositions(AXObjectCache *cache, VisiblePosit
     if (!frame)
         return nil;
     
-    return frame->loader()->client()->accessibilityRemoteObject();
+    return frame->loader().client()->accessibilityRemoteObject();
 }
 
 static void convertToVector(NSArray* array, AccessibilityObject::AccessibilityChildrenVector& vector)
@@ -1540,7 +1541,7 @@ static NSMutableArray* convertToNSArray(const AccessibilityObject::Accessibility
         
         // If we have an empty chrome client (like SVG) then we should use the page
         // of the scroll view parent to help us get to the screen rect.
-        if (parent && page && page->chrome().client()->isEmptyChromeClient())
+        if (parent && page && page->chrome().client().isEmptyChromeClient())
             page = parent->page();
         
         if (page) {
@@ -3019,7 +3020,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         }
     }
     
-    page->contextMenuController()->showContextMenuAt(page->mainFrame(), rect.center());
+    page->contextMenuController().showContextMenuAt(page->mainFrame(), rect.center());
 }
 
 - (void)accessibilityScrollToVisible
@@ -3085,16 +3086,16 @@ static NSString* roleValueToNSString(AccessibilityRole value)
         bool focus = [number boolValue];
         
         // If focus is just set without making the view the first responder, then keyboard focus won't move to the right place.
-        if (focus && m_object->isWebArea() && !m_object->document()->frame()->selection()->isFocusedAndActive()) {
+        if (focus && m_object->isWebArea() && !m_object->document()->frame()->selection().isFocusedAndActive()) {
             FrameView* frameView = m_object->documentFrameView();
             Page* page = m_object->page();
             if (page && frameView) {
-                ChromeClient* client = page->chrome().client();
-                client->focus();
+                ChromeClient& chromeClient = page->chrome().client();
+                chromeClient.focus();
                 if (frameView->platformWidget())
-                    client->makeFirstResponder(frameView->platformWidget());
+                    chromeClient.makeFirstResponder(frameView->platformWidget());
                 else
-                    client->makeFirstResponder();
+                    chromeClient.makeFirstResponder();
             }
         }
         

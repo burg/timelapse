@@ -26,9 +26,9 @@
 #include "Attr.h"
 #include "CSSParser.h"
 #include "Document.h"
+#include "ElementTraversal.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
-#include "NodeTraversal.h"
 #include "RenderObject.h"
 #include "RenderSVGResource.h"
 #include "RenderSVGResourceClipper.h"
@@ -84,7 +84,7 @@ String SVGStyledElement::title() const
 
     // Walk up the tree, to find out whether we're inside a <use> shadow tree, to find the right title.
     if (isInShadowTree()) {
-        Element* shadowHostElement = toShadowRoot(treeScope()->rootNode())->host();
+        Element* shadowHostElement = toShadowRoot(treeScope()->rootNode())->hostElement();
         // At this time, SVG nodes are not allowed in non-<use> shadow trees, so any shadow root we do
         // have should be a use. The assert and following test is here to catch future shadow DOM changes
         // that do enable SVG in a shadow tree.
@@ -102,7 +102,7 @@ String SVGStyledElement::title() const
     // If we aren't an instance in a <use> or the <use> title was not found, then find the first
     // <title> child of this element.
     Element* titleElement = ElementTraversal::firstWithin(this);
-    for (; titleElement; titleElement = ElementTraversal::nextSkippingChildren(titleElement, this)) {
+    for (; titleElement; titleElement = ElementTraversal::nextSibling(titleElement)) {
         if (titleElement->hasTagName(SVGNames::titleTag) && titleElement->isSVGElement())
             break;
     }
@@ -115,7 +115,7 @@ String SVGStyledElement::title() const
     return String();
 }
 
-bool SVGStyledElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool SVGStyledElement::rendererIsNeeded(const RenderStyle& style)
 {
     // http://www.w3.org/TR/SVG/extend.html#PrivateData
     // Prevent anything other than SVG renderers from appearing in our render tree
@@ -123,7 +123,7 @@ bool SVGStyledElement::rendererIsNeeded(const NodeRenderingContext& context)
     // with the SVG content. In general, the SVG user agent will include the unknown
     // elements in the DOM but will otherwise ignore unknown elements. 
     if (!parentOrShadowHostElement() || parentOrShadowHostElement()->isSVGElement())
-        return StyledElement::rendererIsNeeded(context);
+        return StyledElement::rendererIsNeeded(style);
 
     return false;
 }
@@ -402,13 +402,13 @@ PassRefPtr<CSSValue> SVGStyledElement::getPresentationAttribute(const String& na
         return 0;
 
     QualifiedName attributeName(nullAtom, name, nullAtom);
-    const Attribute* attr = getAttributeItem(attributeName);
-    if (!attr)
+    const Attribute* attribute = findAttributeByName(attributeName);
+    if (!attribute)
         return 0;
 
     RefPtr<MutableStylePropertySet> style = MutableStylePropertySet::create(SVGAttributeMode);
-    CSSPropertyID propertyID = SVGStyledElement::cssPropertyIdForSVGAttributeName(attr->name());
-    style->setProperty(propertyID, attr->value());
+    CSSPropertyID propertyID = SVGStyledElement::cssPropertyIdForSVGAttributeName(attribute->name());
+    style->setProperty(propertyID, attribute->value());
     RefPtr<CSSValue> cssValue = style->getPropertyCSSValue(propertyID);
     return cssValue ? cssValue->cloneForCSSOM() : 0;
 }

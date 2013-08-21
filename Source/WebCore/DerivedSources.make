@@ -269,7 +269,6 @@ BINDING_IDLS = \
     $(WebCore)/dom/ProcessingInstruction.idl \
     $(WebCore)/dom/ProgressEvent.idl \
     $(WebCore)/dom/ProgressEvent.idl \
-    $(WebCore)/dom/PropertyNodeList.idl \
     $(WebCore)/dom/Range.idl \
     $(WebCore)/dom/RangeException.idl \
     $(WebCore)/dom/RequestAnimationFrameCallback.idl \
@@ -354,7 +353,6 @@ BINDING_IDLS = \
     $(WebCore)/html/HTMLParamElement.idl \
     $(WebCore)/html/HTMLPreElement.idl \
     $(WebCore)/html/HTMLProgressElement.idl \
-    $(WebCore)/html/HTMLPropertiesCollection.idl \
     $(WebCore)/html/HTMLQuoteElement.idl \
     $(WebCore)/html/HTMLScriptElement.idl \
     $(WebCore)/html/HTMLSelectElement.idl \
@@ -379,37 +377,24 @@ BINDING_IDLS = \
     $(WebCore)/html/MediaError.idl \
     $(WebCore)/html/MediaKeyError.idl \
     $(WebCore)/html/MediaKeyEvent.idl \
-    $(WebCore)/html/MicroDataItemValue.idl \
     $(WebCore)/html/RadioNodeList.idl \
     $(WebCore)/html/TextMetrics.idl \
     $(WebCore)/html/TimeRanges.idl \
     $(WebCore)/html/ValidityState.idl \
     $(WebCore)/html/VoidCallback.idl \
-    $(WebCore)/html/canvas/ArrayBuffer.idl \
-    $(WebCore)/html/canvas/ArrayBufferView.idl \
     $(WebCore)/html/canvas/CanvasGradient.idl \
     $(WebCore)/html/canvas/CanvasPattern.idl \
     $(WebCore)/html/canvas/CanvasProxy.idl \
     $(WebCore)/html/canvas/CanvasRenderingContext.idl \
     $(WebCore)/html/canvas/CanvasRenderingContext2D.idl \
-    $(WebCore)/html/canvas/DataView.idl \
     $(WebCore)/html/canvas/DOMPath.idl \
     $(WebCore)/html/canvas/EXTDrawBuffers.idl \
     $(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
-    $(WebCore)/html/canvas/Float32Array.idl \
-    $(WebCore)/html/canvas/Float64Array.idl \
-    $(WebCore)/html/canvas/Int16Array.idl \
-    $(WebCore)/html/canvas/Int32Array.idl \
-    $(WebCore)/html/canvas/Int8Array.idl \
     $(WebCore)/html/canvas/OESElementIndexUint.idl \
     $(WebCore)/html/canvas/OESStandardDerivatives.idl \
     $(WebCore)/html/canvas/OESTextureFloat.idl \
     $(WebCore)/html/canvas/OESTextureHalfFloat.idl \
     $(WebCore)/html/canvas/OESVertexArrayObject.idl \
-    $(WebCore)/html/canvas/Uint16Array.idl \
-    $(WebCore)/html/canvas/Uint32Array.idl \
-    $(WebCore)/html/canvas/Uint8Array.idl \
-    $(WebCore)/html/canvas/Uint8ClampedArray.idl \
     $(WebCore)/html/canvas/WebGLActiveInfo.idl \
     $(WebCore)/html/canvas/WebGLBuffer.idl \
     $(WebCore)/html/canvas/WebGLCompressedTextureATC.idl \
@@ -654,7 +639,7 @@ BINDING_IDLS = \
 
 DOM_CLASSES=$(basename $(notdir $(BINDING_IDLS)))
 
-JS_DOM_HEADERS=$(filter-out JSMediaQueryListListener.h JSEventListener.h, $(DOM_CLASSES:%=JS%.h))
+JS_DOM_HEADERS=$(filter-out JSEventListener.h, $(DOM_CLASSES:%=JS%.h))
 
 WEB_DOM_HEADERS :=
 
@@ -862,10 +847,6 @@ endif
 
 ifeq ($(findstring ENABLE_METER_ELEMENT,$(FEATURE_DEFINES)), ENABLE_METER_ELEMENT)
     HTML_FLAGS := $(HTML_FLAGS) ENABLE_METER_ELEMENT=1
-endif
-
-ifeq ($(findstring ENABLE_MICRODATA,$(FEATURE_DEFINES)), ENABLE_MICRODATA)
-    HTML_FLAGS := $(HTML_FLAGS) ENABLE_MICRODATA=1
 endif
 
 ifeq ($(findstring ENABLE_PROGRESS_ELEMENT,$(FEATURE_DEFINES)), ENABLE_PROGRESS_ELEMENT)

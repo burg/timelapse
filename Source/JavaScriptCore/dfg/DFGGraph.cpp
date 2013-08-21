@@ -198,7 +198,7 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         out.print(comma, inContext(*node->structureTransitionData().previousStructure, context), " -> ", inContext(*node->structureTransitionData().newStructure, context));
     if (node->hasFunction()) {
         out.print(comma, "function(", RawPointer(node->function()), ", ");
-        if (node->function()->inherits(&JSFunction::s_info)) {
+        if (node->function()->inherits(JSFunction::info())) {
             JSFunction* function = jsCast<JSFunction*>(node->function());
             if (function->isHostFunction())
                 out.print("<host function>");
@@ -209,18 +209,18 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         out.print(")");
     }
     if (node->hasExecutable()) {
-        if (node->executable()->inherits(&FunctionExecutable::s_info))
+        if (node->executable()->inherits(FunctionExecutable::info()))
             out.print(comma, "executable(", FunctionExecutableDump(jsCast<FunctionExecutable*>(node->executable())), ")");
         else
             out.print(comma, "executable(not function: ", RawPointer(node->executable()), ")");
     }
     if (node->hasFunctionDeclIndex()) {
         FunctionExecutable* executable = m_codeBlock->functionDecl(node->functionDeclIndex());
-        out.print(comma, executable->inferredName().string(), "#", executable->hashFor(CodeForCall));
+        out.print(comma, FunctionExecutableDump(executable));
     }
     if (node->hasFunctionExprIndex()) {
         FunctionExecutable* executable = m_codeBlock->functionExpr(node->functionExprIndex());
-        out.print(comma, executable->inferredName().string(), "#", executable->hashFor(CodeForCall));
+        out.print(comma, FunctionExecutableDump(executable));
     }
     if (node->hasStorageAccessData()) {
         StorageAccessData& storageAccessData = m_storageAccessData[node->storageAccessDataIndex()];

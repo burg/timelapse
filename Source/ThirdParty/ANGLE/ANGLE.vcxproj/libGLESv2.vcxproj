@@ -87,45 +87,61 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Production|x64'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libGLESv2Common.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemGroup>
@@ -222,6 +238,7 @@
     <ClCompile Include="..\src\libGLESv2\utilities.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\GLES2\gl2softlinking.h" />
     <ClInclude Include="..\src\common\debug.h" />
     <ClInclude Include="..\src\common\system.h" />
     <ClInclude Include="..\src\third_party\murmurhash\MurmurHash3.h" />
@@ -319,11 +336,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\libGLESv2\libGLESv2.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="translator.vcxproj">
-      <Project>{5b3a6db8-1e7e-40d7-92b9-da8aae619fad}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

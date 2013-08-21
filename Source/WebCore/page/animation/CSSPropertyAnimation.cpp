@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2009, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Adobe Systems Incorporated. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,7 @@
 #include "StylePropertyShorthand.h"
 #include "StyleResolver.h"
 #include <algorithm>
+#include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
 
@@ -229,6 +230,26 @@ static inline LengthBox blendFunc(const AnimationBase* anim, const LengthBox& fr
 static inline SVGLength blendFunc(const AnimationBase*, const SVGLength& from, const SVGLength& to, double progress)
 {
     return to.blend(from, narrowPrecisionToFloat(progress));
+}
+static inline Vector<SVGLength> blendFunc(const AnimationBase*, const Vector<SVGLength>& from, const Vector<SVGLength>& to, double progress)
+{
+    size_t fromLength = from.size();
+    size_t toLength = to.size();
+    if (!fromLength)
+        return !progress ? from : to;
+    if (!toLength)
+        return progress == 1 ? from : to;
+    size_t resultLength = fromLength;
+    if (fromLength != toLength) {
+        if (!remainder(std::max(fromLength, toLength), std::min(fromLength, toLength)))
+            resultLength = std::max(fromLength, toLength);
+        else
+            resultLength = fromLength * toLength;
+    }
+    Vector<SVGLength> result(resultLength);
+    for (size_t i = 0; i < resultLength; ++i)
+        result[i] = to[i % toLength].blend(from[i % fromLength], narrowPrecisionToFloat(progress));
+    return result;
 }
 #endif
 
@@ -1188,6 +1209,7 @@ void CSSPropertyAnimation::ensurePropertyMap()
     gPropertyWrappers->append(new PropertyWrapperSVGPaint(CSSPropertyStroke, &RenderStyle::strokePaintType, &RenderStyle::strokePaintColor, &RenderStyle::setStrokePaintColor));
     gPropertyWrappers->append(new PropertyWrapper<float>(CSSPropertyStrokeOpacity, &RenderStyle::strokeOpacity, &RenderStyle::setStrokeOpacity));
     gPropertyWrappers->append(new PropertyWrapper<SVGLength>(CSSPropertyStrokeWidth, &RenderStyle::strokeWidth, &RenderStyle::setStrokeWidth));
+    gPropertyWrappers->append(new PropertyWrapper< Vector<SVGLength> >(CSSPropertyStrokeDasharray, &RenderStyle::strokeDashArray, &RenderStyle::setStrokeDashArray));
     gPropertyWrappers->append(new PropertyWrapper<SVGLength>(CSSPropertyStrokeDashoffset, &RenderStyle::strokeDashOffset, &RenderStyle::setStrokeDashOffset));
     gPropertyWrappers->append(new PropertyWrapper<float>(CSSPropertyStrokeMiterlimit, &RenderStyle::strokeMiterLimit, &RenderStyle::setStrokeMiterLimit));
 

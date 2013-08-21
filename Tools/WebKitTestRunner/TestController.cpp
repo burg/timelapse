@@ -375,6 +375,9 @@ void TestController::initialize(int argc, const char* argv[])
         WKContextSetIconDatabasePath(m_context.get(), toWK(temporaryFolder + separator + "IconDatabase" + separator + "WebpageIcons.db").get());
     }
 
+    WKContextUseTestingNetworkSession(m_context.get());
+    WKContextSetCacheModel(m_context.get(), kWKCacheModelDocumentBrowser);
+
     platformInitializeContext();
 
     WKContextInjectedBundleClient injectedBundleClient = {
@@ -480,7 +483,7 @@ void TestController::createWebViewWithOptions(WKDictionaryRef options)
         0, // shouldGoToBackForwardListItem
         0, // didRunInsecureContentForFrame
         0, // didDetectXSSForFrame
-        0, // didNewFirstVisuallyNonEmptyLayout
+        0, // didNewFirstVisuallyNonEmptyLayout_unavailable
         0, // willGoToBackForwardListItem
         0, // interactionOccurredWhileProcessUnresponsive
         0, // pluginDidFail_deprecatedForUseWithV1

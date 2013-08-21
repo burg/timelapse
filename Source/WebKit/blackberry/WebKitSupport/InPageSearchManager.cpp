@@ -128,10 +128,10 @@ bool InPageSearchManager::findNextString(const String& text, FindOptions findOpt
 
     // If there is any active selection, new search should start from the beginning of it.
     bool startFromSelection = false;
-    VisibleSelection selection = m_webPage->focusedOrMainFrame()->selection()->selection();
+    VisibleSelection selection = m_webPage->focusedOrMainFrame()->selection().selection();
     if (!selection.isNone()) {
         searchStartingPoint = selection.firstRange().get();
-        m_webPage->focusedOrMainFrame()->selection()->clear();
+        m_webPage->focusedOrMainFrame()->selection().clear();
         startFromSelection = true;
     }
 
@@ -189,7 +189,7 @@ bool InPageSearchManager::findAndMarkText(const String& text, Range* range, Fram
                 // Not highlighting all matches, we need to add the marker here,
                 // because scopeStringMatches does not add any markers, it only counts the number.
                 // No need to unmarkAllTextMatches, it is already done from the caller because of newSearch
-                m_activeMatch->ownerDocument()->markers()->addTextMatchMarker(m_activeMatch.get(), true);
+                m_activeMatch->ownerDocument()->markers().addTextMatchMarker(m_activeMatch.get(), true);
                 frame->editor().setMarkedTextMatchesAreHighlighted(true /* highlight */);
             }
             return true;
@@ -222,7 +222,7 @@ bool InPageSearchManager::findAndMarkText(const String& text, Range* range, Fram
             // When only showing single matches, the scoping effort won't highlight
             // all matches but count them.
             m_webPage->m_page->unmarkAllTextMatches();
-            m_activeMatch->ownerDocument()->markers()->addTextMatchMarker(m_activeMatch.get(), true);
+            m_activeMatch->ownerDocument()->markers().addTextMatchMarker(m_activeMatch.get(), true);
             frame->editor().setMarkedTextMatchesAreHighlighted(true /* highlight */);
         }
 
@@ -235,7 +235,7 @@ void InPageSearchManager::clearTextMatches(bool selectActiveMatchOnClear)
 {
     if (selectActiveMatchOnClear && m_activeMatch.get()) {
         VisibleSelection selection(m_activeMatch.get());
-        m_activeMatch->ownerDocument()->frame()->selection()->setSelection(selection);
+        m_activeMatch->ownerDocument()->frame()->selection().setSelection(selection);
     }
     m_webPage->m_page->unmarkAllTextMatches();
     m_activeMatch = 0;
@@ -248,13 +248,13 @@ void InPageSearchManager::setActiveMatchAndMarker(PassRefPtr<Range> range)
     // Clear the old marker, update our range, and highlight the new range.
     if (m_activeMatch.get()) {
         if (Document* doc = m_activeMatch->ownerDocument())
-            doc->markers()->setMarkersActive(m_activeMatch.get(), false);
+            doc->markers().setMarkersActive(m_activeMatch.get(), false);
     }
 
     m_activeMatch = range;
     if (m_activeMatch.get()) {
         if (Document* doc = m_activeMatch->ownerDocument())
-            doc->markers()->setMarkersActive(m_activeMatch.get(), true);
+            doc->markers().setMarkersActive(m_activeMatch.get(), true);
     }
 }
 
@@ -343,7 +343,7 @@ void InPageSearchManager::scopeStringMatches(const String& text, bool reset, boo
             m_activeMatchIndex = m_activeMatchCount + matchCount;
         }
         if (!locateActiveMatchOnly && m_highlightAllMatches)
-            resultRange->ownerDocument()->markers()->addTextMatchMarker(resultRange.get(), foundActiveMatch);
+            resultRange->ownerDocument()->markers().addTextMatchMarker(resultRange.get(), foundActiveMatch);
 
         searchRange->setStart(resultRange->endContainer(ec), resultRange->endOffset(ec), ec);
         ShadowRoot* shadowTreeRoot = searchRange->shadowRoot();

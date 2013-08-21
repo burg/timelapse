@@ -91,45 +91,61 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Production|x64'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX32.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">
     <Import Project="..\..\..\..\WebKitLibraries\win\tools\vsprops\common.props" />
     <Import Project="libEGLCommon.props" />
+    <Import Project="ANGLERelease.props" />
+    <Import Project="DirectX64.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <ItemGroup>
@@ -147,6 +163,7 @@
     <ClInclude Include="..\include\EGL\egl.h" />
     <ClInclude Include="..\include\EGL\eglext.h" />
     <ClInclude Include="..\include\EGL\eglplatform.h" />
+    <ClInclude Include="..\include\EGL\eglsoftlinking.h" />
     <ClInclude Include="..\src\common\version.h" />
     <ClInclude Include="..\src\libEGL\Config.h" />
     <ClInclude Include="..\src\libEGL\Display.h" />
@@ -161,11 +178,6 @@
     <ClCompile Include="..\src\libEGL\libEGL.cpp" />
     <ClCompile Include="..\src\libEGL\main.cpp" />
     <ClCompile Include="..\src\libEGL\Surface.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="translator.vcxproj">
-      <Project>{5b3a6db8-1e7e-40d7-92b9-da8aae619fad}</Project>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

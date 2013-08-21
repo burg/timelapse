@@ -36,11 +36,9 @@ class HTMLAreaElement;
 class IntRect;
 class RenderObject;
 
-using namespace std;
-
 inline long long maxDistance()
 {
-    return numeric_limits<long long>::max();
+    return std::numeric_limits<long long>::max();
 }
 
 inline int fudgeFactor()
@@ -138,6 +136,7 @@ bool canScrollInDirection(const Node* container, FocusDirection);
 bool canScrollInDirection(const Frame*, FocusDirection);
 bool canBeScrolledIntoView(FocusDirection, const FocusCandidate&);
 bool areElementsOnSameLine(const FocusCandidate& firstCandidate, const FocusCandidate& secondCandidate);
+bool isValidCandidate(FocusDirection, const FocusCandidate&, FocusCandidate&);
 void distanceDataForNode(FocusDirection, const FocusCandidate& current, FocusCandidate& candidate);
 Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection, Node*);
 LayoutRect nodeRectInAbsoluteCoordinates(Node*, bool ignoreBorder = false);

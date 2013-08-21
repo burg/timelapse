@@ -154,7 +154,7 @@ WebFrame* kit(Frame* frame)
     if (!frame)
         return 0;
 
-    FrameLoaderClient* frameLoaderClient = frame->loader()->client();
+    FrameLoaderClient* frameLoaderClient = frame->loader().client();
     if (frameLoaderClient)
         return static_cast<WebFrame*>(frameLoaderClient);  // eek, is there a better way than static cast?
     return 0;
@@ -316,7 +316,7 @@ HRESULT WebFrame::reloadFromOrigin()
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->reload(true);
+    coreFrame->loader().reload(true);
     return S_OK;
 }
 
@@ -518,7 +518,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::currentForm(
     *currentForm = 0;
 
     if (Frame* coreFrame = core(this)) {
-        if (HTMLFormElement* formElement = coreFrame->selection()->currentForm())
+        if (HTMLFormElement* formElement = coreFrame->selection().currentForm())
             *currentForm = DOMElement::createInstance(formElement);
     }
 
@@ -531,7 +531,7 @@ JSGlobalContextRef STDMETHODCALLTYPE WebFrame::globalContext()
     if (!coreFrame)
         return 0;
 
-    return toGlobalRef(coreFrame->script()->globalObject(mainThreadNormalWorld())->globalExec());
+    return toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
 }
 
 JSGlobalContextRef WebFrame::globalContextForScriptWorld(IWebScriptWorld* iWorld)
@@ -544,7 +544,7 @@ JSGlobalContextRef WebFrame::globalContextForScriptWorld(IWebScriptWorld* iWorld
     if (!world)
         return 0;
 
-    return toGlobalRef(coreFrame->script()->globalObject(world->world())->globalExec());
+    return toGlobalRef(coreFrame->script().globalObject(world->world())->globalExec());
 }
 
 HRESULT STDMETHODCALLTYPE WebFrame::loadRequest( 
@@ -560,7 +560,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadRequest(
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->load(FrameLoadRequest(coreFrame, requestImpl->resourceRequest()));
+    coreFrame->loader().load(FrameLoadRequest(coreFrame, requestImpl->resourceRequest()));
     return S_OK;
 }
 
@@ -584,7 +584,7 @@ void WebFrame::loadData(PassRefPtr<WebCore::SharedBuffer> data, BSTR mimeType, B
 
     // This method is only called from IWebFrame methods, so don't ASSERT that the Frame pointer isn't null.
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->load(FrameLoadRequest(coreFrame, request, substituteData));
+        coreFrame->loader().load(FrameLoadRequest(coreFrame, request, substituteData));
 }
 
 
@@ -673,7 +673,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::dataSource(
     if (!coreFrame)
         return E_FAIL;
 
-    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader()->documentLoader());
+    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader().documentLoader());
 
     *source = webDataSource;
 
@@ -697,7 +697,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::provisionalDataSource(
     if (!coreFrame)
         return E_FAIL;
 
-    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader()->provisionalDocumentLoader());
+    WebDataSource* webDataSource = getWebDataSource(coreFrame->loader().provisionalDocumentLoader());
 
     *source = webDataSource;
 
@@ -719,7 +719,7 @@ KURL WebFrame::url() const
 HRESULT STDMETHODCALLTYPE WebFrame::stopLoading( void)
 {
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->stopAllLoaders();
+        coreFrame->loader().stopAllLoaders();
     return S_OK;
 }
 
@@ -729,7 +729,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::reload( void)
     if (!coreFrame)
         return E_FAIL;
 
-    coreFrame->loader()->reload();
+    coreFrame->loader().reload();
     return S_OK;
 }
 
@@ -952,7 +952,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::firstLayoutDone(
     if (!coreFrame)
         return E_FAIL;
 
-    *result = coreFrame->loader()->stateMachine()->firstLayoutDone();
+    *result = coreFrame->loader().stateMachine()->firstLayoutDone();
     return S_OK;
 }
 
@@ -970,7 +970,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::loadType(
     if (!coreFrame)
         return E_FAIL;
 
-    *type = (WebFrameLoadType)coreFrame->loader()->loadType();
+    *type = (WebFrameLoadType)coreFrame->loader().loadType();
     return S_OK;
 }
 
@@ -1013,7 +1013,7 @@ HRESULT STDMETHODCALLTYPE WebFrame::clearOpener()
 {
     HRESULT hr = S_OK;
     if (Frame* coreFrame = core(this))
-        coreFrame->loader()->setOpener(0);
+        coreFrame->loader().setOpener(0);
 
     return hr;
 }
@@ -1102,7 +1102,7 @@ void WebFrame::invalidate()
     ASSERT(coreFrame);
 
     if (Document* document = coreFrame->document())
-        document->recalcStyle(Node::Force);
+        document->recalcStyle(Style::Force);
 }
 
 HRESULT WebFrame::inViewSourceMode(BOOL* flag)
@@ -1526,7 +1526,7 @@ void WebFrame::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<F
     COMPtr<IWebFormDelegate> formDelegate;
 
     if (FAILED(d->webView->formDelegate(&formDelegate))) {
-        (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
+        (coreFrame->loader().policyChecker()->*function)(PolicyUse);
         return;
     }
 
@@ -1545,7 +1545,7 @@ void WebFrame::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<F
         return;
 
     // FIXME: Add a sane default implementation
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
+    (coreFrame->loader().policyChecker()->*function)(PolicyUse);
 }
 
 void WebFrame::revertToProvisionalState(DocumentLoader*)
@@ -1728,7 +1728,7 @@ void WebFrame::receivedPolicyDecision(PolicyAction action)
     Frame* coreFrame = core(this);
     ASSERT(coreFrame);
 
-    (coreFrame->loader()->policyChecker()->*function)(action);
+    (coreFrame->loader().policyChecker()->*function)(action);
 }
 
 void WebFrame::dispatchDecidePolicyForResponse(FramePolicyFunction function, const ResourceResponse& response, const ResourceRequest& request)
@@ -1745,7 +1745,7 @@ void WebFrame::dispatchDecidePolicyForResponse(FramePolicyFunction function, con
     if (SUCCEEDED(policyDelegate->decidePolicyForMIMEType(d->webView, BString(response.mimeType()), urlRequest.get(), this, setUpPolicyListener(function).get())))
         return;
 
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
+    (coreFrame->loader().policyChecker()->*function)(PolicyUse);
 }
 
 void WebFrame::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function, const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName)
@@ -1763,7 +1763,7 @@ void WebFrame::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction functi
     if (SUCCEEDED(policyDelegate->decidePolicyForNewWindowAction(d->webView, actionInformation.get(), urlRequest.get(), BString(frameName), setUpPolicyListener(function).get())))
         return;
 
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
+    (coreFrame->loader().policyChecker()->*function)(PolicyUse);
 }
 
 void WebFrame::dispatchDecidePolicyForNavigationAction(FramePolicyFunction function, const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState)
@@ -1781,7 +1781,7 @@ void WebFrame::dispatchDecidePolicyForNavigationAction(FramePolicyFunction funct
     if (SUCCEEDED(policyDelegate->decidePolicyForNavigationAction(d->webView, actionInformation.get(), urlRequest.get(), this, setUpPolicyListener(function).get())))
         return;
 
-    (coreFrame->loader()->policyChecker()->*function)(PolicyUse);
+    (coreFrame->loader().policyChecker()->*function)(PolicyUse);
 }
 
 void WebFrame::dispatchUnableToImplementPolicy(const ResourceError& error)
@@ -1861,7 +1861,7 @@ PassRefPtr<Widget> WebFrame::createJavaAppletWidget(const IntSize& pluginSize, H
     ResourceError resourceError(String(WebKitErrorDomain), WebKitErrorJavaUnavailable, String(), String());
     COMPtr<IWebError> error(AdoptCOM, WebError::createInstance(resourceError, userInfoBag.get()));
      
-    resourceLoadDelegate->plugInFailedWithError(d->webView, error.get(), getWebDataSource(d->frame->loader()->documentLoader()));
+    resourceLoadDelegate->plugInFailedWithError(d->webView, error.get(), getWebDataSource(d->frame->loader().documentLoader()));
 
     return pluginView;
 }
@@ -1882,8 +1882,7 @@ void WebFrame::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
     Frame* coreFrame = core(this);
     ASSERT(coreFrame);
 
-    Settings* settings = coreFrame->settings();
-    if (!settings || !settings->isScriptEnabled())
+    if (!coreFrame->settings().isScriptEnabled())
         return;
 
     COMPtr<IWebFrameLoadDelegate> frameLoadDelegate;
@@ -1897,8 +1896,8 @@ void WebFrame::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
     if (world != mainThreadNormalWorld())
         return;
 
-    JSContextRef context = toRef(coreFrame->script()->globalObject(world)->globalExec());
-    JSObjectRef windowObject = toRef(coreFrame->script()->globalObject(world));
+    JSContextRef context = toRef(coreFrame->script().globalObject(world)->globalExec());
+    JSObjectRef windowObject = toRef(coreFrame->script().globalObject(world));
     ASSERT(windowObject);
 
     if (FAILED(frameLoadDelegate->didClearWindowObject(d->webView, context, windowObject, this)))
@@ -2514,7 +2513,7 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
     String string = String(script, SysStringLen(script));
 
     // Start off with some guess at a frame and a global object, we'll try to do better...!
-    JSDOMWindow* anyWorldGlobalObject = coreFrame->script()->globalObject(mainThreadNormalWorld());
+    JSDOMWindow* anyWorldGlobalObject = coreFrame->script().globalObject(mainThreadNormalWorld());
 
     // The global object is probably a shell object? - if so, we know how to use this!
     JSC::JSObject* globalObjectObj = toJS(globalObjectRef);
@@ -2524,7 +2523,7 @@ HRESULT WebFrame::stringByEvaluatingJavaScriptInScriptWorld(IWebScriptWorld* iWo
     // Get the frame frome the global object we've settled on.
     Frame* frame = anyWorldGlobalObject->impl()->frame();
     ASSERT(frame->document());
-    JSValue result = frame->script()->executeScriptInWorld(world->world(), string, true).jsValue();
+    JSValue result = frame->script().executeScriptInWorld(world->world(), string, true).jsValue();
 
     if (!frame) // In case the script removed our frame from the page.
         return S_OK;
@@ -2551,7 +2550,7 @@ void WebFrame::unmarkAllMisspellings()
         if (!doc)
             return;
 
-        doc->markers()->removeMarkers(DocumentMarker::Spelling);
+        doc->markers().removeMarkers(DocumentMarker::Spelling);
     }
 }
 
@@ -2563,7 +2562,7 @@ void WebFrame::unmarkAllBadGrammar()
         if (!doc)
             return;
 
-        doc->markers()->removeMarkers(DocumentMarker::Grammar);
+        doc->markers().removeMarkers(DocumentMarker::Grammar);
     }
 }
 

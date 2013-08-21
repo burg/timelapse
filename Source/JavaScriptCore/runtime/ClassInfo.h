@@ -25,11 +25,13 @@
 
 #include "CallFrame.h"
 #include "ConstructData.h"
+#include "CopyToken.h"
 #include "JSCell.h"
 
 namespace JSC {
 
 class HashEntry;
+class JSArrayBufferView;
 struct HashTable;
 
 struct MethodTable {
@@ -39,7 +41,7 @@ struct MethodTable {
     typedef void (*VisitChildrenFunctionPtr)(JSCell*, SlotVisitor&);
     VisitChildrenFunctionPtr visitChildren;
 
-    typedef void (*CopyBackingStoreFunctionPtr)(JSCell*, CopyVisitor&);
+    typedef void (*CopyBackingStoreFunctionPtr)(JSCell*, CopyVisitor&, CopyToken);
     CopyBackingStoreFunctionPtr copyBackingStore;
 
     typedef CallType (*GetCallDataFunctionPtr)(JSCell*, CallData&);
@@ -60,10 +62,10 @@ struct MethodTable {
     typedef bool (*DeletePropertyByIndexFunctionPtr)(JSCell*, ExecState*, unsigned);
     DeletePropertyByIndexFunctionPtr deletePropertyByIndex;
 
-    typedef bool (*GetOwnPropertySlotFunctionPtr)(JSCell*, ExecState*, PropertyName, PropertySlot&);
+    typedef bool (*GetOwnPropertySlotFunctionPtr)(JSObject*, ExecState*, PropertyName, PropertySlot&);
     GetOwnPropertySlotFunctionPtr getOwnPropertySlot;
 
-    typedef bool (*GetOwnPropertySlotByIndexFunctionPtr)(JSCell*, ExecState*, unsigned, PropertySlot&);
+    typedef bool (*GetOwnPropertySlotByIndexFunctionPtr)(JSObject*, ExecState*, unsigned, PropertySlot&);
     GetOwnPropertySlotByIndexFunctionPtr getOwnPropertySlotByIndex;
 
     typedef JSValue (*ToThisFunctionPtr)(JSCell*, ExecState*, ECMAMode);
@@ -93,8 +95,11 @@ struct MethodTable {
     typedef bool (*DefineOwnPropertyFunctionPtr)(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool);
     DefineOwnPropertyFunctionPtr defineOwnProperty;
 
-    typedef bool (*GetOwnPropertyDescriptorFunctionPtr)(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
-    GetOwnPropertyDescriptorFunctionPtr getOwnPropertyDescriptor;
+    typedef void (*SlowDownAndWasteMemory)(JSArrayBufferView*);
+    SlowDownAndWasteMemory slowDownAndWasteMemory;
+    
+    typedef PassRefPtr<ArrayBufferView> (*GetTypedArrayImpl)(JSArrayBufferView*);
+    GetTypedArrayImpl getTypedArrayImpl;
 };
 
 #define CREATE_MEMBER_CHECKER(member) \
@@ -137,7 +142,8 @@ struct MethodTable {
         &ClassName::customHasInstance, \
         &ClassName::putDirectVirtual, \
         &ClassName::defineOwnProperty, \
-        &ClassName::getOwnPropertyDescriptor, \
+        &ClassName::slowDownAndWasteMemory, \
+        &ClassName::getTypedArrayImpl \
     }, \
     ClassName::TypedArrayStorageType
 
