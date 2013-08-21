@@ -61,7 +61,6 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
-    this._listeners.register(WebInspector.Frame, WebInspector.Frame.Event.MainResourceDidChange, this._fadeSamples);
     this._listeners.install();
 };
 
@@ -136,7 +135,6 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     _fadeSamples: function(event)
     {
-        this._probeGroup.addDataSeparator();
         this._dataGrid.fadeGridNodes();
     },
 

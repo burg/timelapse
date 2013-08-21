@@ -34,11 +34,13 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._position = position;
     this._probes = [];
     this._probesByUid = {};
-    this._dataEntries = 0;
-    this._dataTable = [{}];
+    this._dataTable = [];
+    this._prevBatchId = 0;
     this._enabled = false;
     this._resolved = false;
+    this._hasNewSamples = false;
 
+    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this.addDataSeparator, this);
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, this._resolveStateDidChange, this);
 }
@@ -108,6 +110,12 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._groupKey || WebInspector.ProbeGroupObject.DefaultGroupKey;
     },
 
+
+    get hasNewSamples()
+    {
+        return this._hasNewSamples;
+    },
+
     clear: function()
     {
         for (var i = 0; i < this._probes.length; ++i)
@@ -142,12 +150,19 @@ WebInspector.ProbeGroupObject.prototype = {
     {
         for (var i = 0; i < this._probes.length; ++i)
             WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
-        this._dataTable = [{}];
+
+        this._dataTable = [];
+        this._hasNewSamples = false;
+        delete this._prevBatchId;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
 
     addDataSeparator: function()
     {
+        if (!this._hasNewSamples)
+            return;
+        this._dataTable.push({});
+        this._hasNewSamples = false;
         var currentRow = this._dataTable[this._dataTable.length - 1];
         for (var i = 0; i < this._probes.length; ++i)
             currentRow[this._probes[i].probeId] = "";
@@ -159,7 +174,6 @@ WebInspector.ProbeGroupObject.prototype = {
         };
 
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
-        this._dataTable.push({});
     },
 
     // Protected (called by ProbeManager.js)
@@ -216,6 +230,15 @@ WebInspector.ProbeGroupObject.prototype = {
         var sample = event.data;
         console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
 
+        if (sample.batchId !== this._prevBatchId) {
+            this._dataTable.push({});
+            if (WebInspector.replayManager.isReplaying) {
+                this._dataTable[this._dataTable.length - 1].batchIdDelta = sample.batchId - this._prevBatchId;
+                this._dataTable[this._dataTable.length - 1].markIndex = WebInspector.replayManager.currentMarkIndex;
+            }
+            this._prevBatchId = sample.batchId;
+        }
+
         if (sample.object.type === "array") {
             console.log("TODO: display probe with type=(array): ", sample.object);
             return;
@@ -223,24 +246,22 @@ WebInspector.ProbeGroupObject.prototype = {
 
         console.assert(this._dataTable.length, "Not allowed to have an empty data table for probe group", this);
 
+        if (!this._hasNewSamples) {
+            this._hasNewSamples = true;
+        }
+
         var columnIdentifier = event.target.probeId;
         var currentRow = this._dataTable[this._dataTable.length - 1];
         if (sample.object.type === "object")
             currentRow[columnIdentifier] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
         else
             currentRow[columnIdentifier] = sample.object.value;
-        ++this._dataEntries;
 
         var data = {
             row: currentRow,
             index: this._dataTable.length - 1
         };
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
-
-        if (this._dataEntries === this.probes.length) {
-            this._dataEntries = 0;
-            this._dataTable.push({});
-        }
     },
 
     _resolveStateDidChange: function(event)
