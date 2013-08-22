@@ -763,7 +763,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         }
 
         if (treeElement instanceof WebInspector.ProbeGroupTreeElement) {
-            if (treeElement.parent === this._replayProbesContentTreeOutline)
+            if (treeElement.parent.parent === this._replayProbesContentTreeOutline)
                 deselectLiveProbesContentTreeElements.call(this);
             else
                 deselectReplayProbesContentTreeElements.call(this);
