@@ -36,7 +36,8 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._probesByUid = {};
     this._dataTable = [];
     this._prevBatchId = 0;
-    this._rowCount = 0;
+    this._lastMarkIndex = 0;
+    this._hitCount = 0;
     this._enabled = false;
     this._resolved = false;
     this._hasSamples = false;
@@ -161,7 +162,8 @@ WebInspector.ProbeGroupObject.prototype = {
         this._dataTable = [];
         this._hasNewSamples = false;
         this._prevBatchId = 0;
-        this._rowCount = 0;
+        this._lastMarkIndex = 0;
+        this._hitCount = 0;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
 
@@ -240,10 +242,12 @@ WebInspector.ProbeGroupObject.prototype = {
 
         if (sample.batchId !== this._prevBatchId) {
             this._dataTable.push({});
-            ++this._rowCount;
             if (WebInspector.replayManager.isReplaying) {
-                this._dataTable[this._dataTable.length - 1].rowCount = this._rowCount;
+                if (this._lastMarkIndex !== WebInspector.replayManager.currentMarkIndex)
+                    this._hitCount = 0;
+                ++this._hitCount;
                 this._dataTable[this._dataTable.length - 1].markIndex = WebInspector.replayManager.currentMarkIndex;
+                this._dataTable[this._dataTable.length - 1].hitCount = this._hitCount;
             }
             this._prevBatchId = sample.batchId;
         }

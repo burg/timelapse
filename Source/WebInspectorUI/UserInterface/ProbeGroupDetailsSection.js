@@ -96,7 +96,6 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
             unlinkedLabel.appendChild(document.createTextNode(title));
             return unlinkedLabel;
         }
-
         var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
         return WebInspector.createSourceCodeLocationLink(sourceCodeLocation);
     },

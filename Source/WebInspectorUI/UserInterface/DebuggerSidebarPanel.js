@@ -742,14 +742,17 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 selectedTreeElement.deselect();
         }
 
-        function deselectReplayProbesContentTreeElements()
+        function deselectLiveProbesContentTreeElements()
         {
-            // Deselect any tree element in either probes content tree outline to prevent two selections in the sidebar.
+            // Deselect any tree element in live probes content tree outline to prevent two selections in the sidebar.
             var selectedTreeElement = this._liveProbesContentTreeOutline.selectedTreeElement;
             if (selectedTreeElement)
                 selectedTreeElement.deselect();
+        }
 
-            // Deselect any tree element in either probes content tree outline to prevent two selections in the sidebar.
+        function deselectReplayProbesContentTreeElements()
+        {
+            // Deselect any tree element in replay probes content tree outline to prevent two selections in the sidebar.
             var selectedTreeElement = this._replayProbesContentTreeOutline.selectedTreeElement;
             if (selectedTreeElement)
                 selectedTreeElement.deselect();
@@ -769,12 +772,10 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 return;
             deselectCallStackContentTreeElements.call(this);
             if (treeElement.parent === this._breakpointsContentTreeOutline) {
+                deselectLiveProbesContentTreeElements.call(this);
                 deselectReplayProbesContentTreeElements.call(this);
-                deselectLiveProbesContentTreeElements.call(this);
-            } else if (treeElement.parent === this._replayProbesContentTreeOutline) {
-                deselectLiveProbesContentTreeElements.call(this);
-                deselectBreakpointsContentTreeElements.call(this);
-            } else {
+            }
+            else
                 deselectBreakpointsContentTreeElements.call(this);
                 deselectReplayProbesContentTreeElements.call(this);
             }
@@ -784,8 +785,8 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
         if (treeElement instanceof WebInspector.CallFrameTreeElement) {
             deselectBreakpointsContentTreeElements.call(this);
-            deselectReplayProbesContentTreeElements.call(this);
             deselectLiveProbesContentTreeElements.call(this);
+            deselectReplayProbesContentTreeElements.call(this);
             var callFrame = treeElement.callFrame;
             WebInspector.debuggerManager.activeCallFrame = callFrame;
             WebInspector.resourceSidebarPanel.showSourceCodeLocation(callFrame.sourceCodeLocation);
@@ -793,7 +794,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         }
 
         if (treeElement instanceof WebInspector.ProbeGroupTreeElement) {
-            if (treeElement.parent === this._replayProbesContentTreeOutline)
+            if (treeElement.parent.parent === this._replayProbesContentTreeOutline)
                 deselectLiveProbesContentTreeElements.call(this);
             else
                 deselectReplayProbesContentTreeElements.call(this);
@@ -817,8 +818,8 @@ WebInspector.DebuggerSidebarPanel.prototype = {
             return;
 
         deselectCallStackContentTreeElements.call(this);
-        deselectReplayProbesContentTreeElements.call(this);
         deselectLiveProbesContentTreeElements.call(this);
+        deselectReplayProbesContentTreeElements.call(this);
 
         if (!treeElement.parent.representedObject)
             return;

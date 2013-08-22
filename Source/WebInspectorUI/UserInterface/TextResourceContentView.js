@@ -70,6 +70,8 @@ WebInspector.TextResourceContentView.prototype = {
     get supplementalRepresentedObjects()
     {
         for (var groupKey in WebInspector.probeManager.probeGroups) {
+            if (!WebInspector.probeDetailsSidebarPanel.currentProbeGroup)
+                break;
             if (WebInspector.probeManager.probeGroups[groupKey].probes[0].sourceCode.url === this._resource.url)
                 return [WebInspector.probeManager.probeGroups[groupKey]]
         }
