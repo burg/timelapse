@@ -36,6 +36,7 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._probesByUid = {};
     this._dataTable = [];
     this._prevBatchId = 0;
+    this._rowCount = 0;
     this._enabled = false;
     this._resolved = false;
     this._hasNewSamples = false;
@@ -43,6 +44,8 @@ WebInspector.ProbeGroupObject = function(url, position)
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this.addDataSeparator, this);
     WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, this._resolveStateDidChange, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this.clearSamples, this);
+    WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this.clearSamples, this);
 }
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
@@ -153,7 +156,8 @@ WebInspector.ProbeGroupObject.prototype = {
 
         this._dataTable = [];
         this._hasNewSamples = false;
-        delete this._prevBatchId;
+        this._prevBatchId = 0;
+        this._rowCount = 0;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
 
@@ -232,8 +236,9 @@ WebInspector.ProbeGroupObject.prototype = {
 
         if (sample.batchId !== this._prevBatchId) {
             this._dataTable.push({});
+            ++this._rowCount;
             if (WebInspector.replayManager.isReplaying) {
-                this._dataTable[this._dataTable.length - 1].batchIdDelta = sample.batchId - this._prevBatchId;
+                this._dataTable[this._dataTable.length - 1].rowCount = this._rowCount;
                 this._dataTable[this._dataTable.length - 1].markIndex = WebInspector.replayManager.currentMarkIndex;
             }
             this._prevBatchId = sample.batchId;

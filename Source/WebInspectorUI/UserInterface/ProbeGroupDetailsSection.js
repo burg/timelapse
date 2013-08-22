@@ -138,14 +138,8 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         this._dataGrid.fadeGridNodes();
     },
 
-    _clearSamples: function(event)
-    {
-        this._probeGroup.clearSamples();
-        this._dataGrid.clearGridNodes();
-    },
-
     _clearSamplesButtonClicked: function(event)
     {
-        this._clearSamples();
+        this._probeGroup.clearSamples();
     }
 };
