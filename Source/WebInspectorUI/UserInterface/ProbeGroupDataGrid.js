@@ -247,11 +247,6 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             this._gridNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
     },
 
-    clearGridNodes: function(event)
-    {
-        this._gridNodes = {};
-    },
-
     // Private
 
     _setupProbe: function(event)

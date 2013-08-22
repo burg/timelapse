@@ -351,13 +351,13 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 for (var i = 0; i < probeScripts.length; ++i) {
                     var oldScriptElement = probeScripts[i];
                     if (oldScriptElement.url === probeGroup.url)
-                        this._replacePlaceholderScriptElement(oldScriptElement, sourceCode, this._replayProbesContentTreeOutline);
+                        this._replacePlaceholderElement(oldScriptElement, sourceCode, this._replayProbesContentTreeOutline);
                 }
             }
             this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
             return;
         }
-        this._insertPlaceholderScriptElement(probeGroup, this._replayProbesContentTreeOutline);
+        this._insertPlaceholderElement(probeGroup, this._replayProbesContentTreeOutline);
         this._removeProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
     },
 
@@ -412,7 +412,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
             for (var i = 0; i < probeScripts.length; ++i) {
                 var oldScriptElement = probeScripts[i];
                 if (oldScriptElement.url === script.url)
-                    this._replacePlaceholderScriptElement(oldScriptElement, script, this._replayProbesContentTreeOutline);
+                    this._replacePlaceholderElement(oldScriptElement, script, this._replayProbesContentTreeOutline);
             }
         }
         // Don't add breakpoints if the script is represented by a Resource. They were
@@ -434,56 +434,56 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         }
     },
 
-    _insertPlaceholderScriptElement: function(probeGroup, treeOutline)
+    _insertPlaceholderElement: function(probeGroup, treeOutline)
     {
         var placeholderObject = WebInspector.probeManager.getPlaceholderObjectForURL(probeGroup.url);
-        var scriptTreeElement = this._replayProbesContentTreeOutline.getCachedTreeElement(placeholderObject);
-        if (scriptTreeElement)
+        var treeElement = this._replayProbesContentTreeOutline.getCachedTreeElement(placeholderObject);
+        if (treeElement)
             return;
-        var newScriptElement = new WebInspector.FutureScriptTreeElement(placeholderObject);
-        var oldScriptElement = this._replayProbesContentTreeOutline.getCachedTreeElement(probeGroup).parent;
-        var index = treeOutline.children.indexOf(oldScriptElement);
+        var futureScriptElement = new WebInspector.FutureScriptTreeElement(placeholderObject);
+        var oldElement = this._replayProbesContentTreeOutline.getCachedTreeElement(probeGroup).parent;
+        var index = treeOutline.children.indexOf(oldElement);
 
         treeOutline.removeChildAtIndex(index);
-        treeOutline.insertChild(newScriptElement, index);
+        treeOutline.insertChild(futureScriptElement, index);
 
         // We must reparent the child nodes after the parent has been attached to
         // the tree, because TreeOutline is brittle and requires this ordering.
-        while (oldScriptElement.hasChildren) {
-            var child = oldScriptElement.children[0];
-            oldScriptElement.removeChildAtIndex(0, true, true);
-            newScriptElement.appendChild(child);
+        while (oldElement.hasChildren) {
+            var child = oldElement.children[0];
+            oldElement.removeChildAtIndex(0, true, true);
+            futureScriptElement.appendChild(child);
+            if (!futureScriptElement.expanded) {
+               futureScriptElement.expand();
+            }
         }
     },
 
-    _replacePlaceholderScriptElement: function(oldScriptElement, sourceCode, treeOutline)
+    _replacePlaceholderElement: function(oldElement, sourceCode, treeOutline)
     {
-        var newTreeElement = null;
+        var newElement = null;
         if (sourceCode instanceof WebInspector.SourceMapResource)
-            newTreeElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
+            newElement = new WebInspector.SourceMapResourceTreeElement(sourceCode);
         else if (sourceCode instanceof WebInspector.Resource)
-            newTreeElement = new WebInspector.ResourceTreeElement(sourceCode);
+            newElement = new WebInspector.ResourceTreeElement(sourceCode);
         else if (sourceCode instanceof WebInspector.Script)
-            newTreeElement = new WebInspector.ScriptTreeElement(sourceCode);
+            newElement = new WebInspector.ScriptTreeElement(sourceCode);
 
-        console.assert(newTreeElement);
+        console.assert(newElement);
 
-        if (!treeOutline.children) {
-            treeOutline.appendChild(newTreeElement);
-            return;
-        }
-
-        var index = treeOutline.children.indexOf(oldScriptElement);
-
+        var index = treeOutline.children.indexOf(oldElement);
         treeOutline.removeChildAtIndex(index);
-        treeOutline.insertChild(newTreeElement, index);
+        treeOutline.insertChild(newElement, index);
 
         // We must reparent the child nodes after the parent has been attached to
         // the tree, because TreeOutline is brittle and requires this ordering.
-        while (oldScriptElement.hasChildren) {
-            var child = oldScriptElement.children[0];
-            oldScriptElement.removeChildAtIndex(0, true, true);
-            newTreeElement.appendChild(child);
+        while (oldElement.hasChildren) {
+            var child = oldElement.children[0];
+            oldElement.removeChildAtIndex(0, true, true);
+            newElement.appendChild(child);
+            if (!newElement.exanded) {
+               newElement.expand();
+            }
         }
     },
 
@@ -807,6 +807,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
             }
             WebInspector.probeDetailsSidebarPanel.selected = true;
             WebInspector.detailsSidebar.selectedSidebarPanel = WebInspector.probeDetailsSidebarPanel;
+
             if (probeGroup.resolved && probeGroup.sourceCodeLocation)
                 WebInspector.resourceSidebarPanel.showSourceCodeLocation(probeGroup.sourceCodeLocation);
             return;

@@ -79,6 +79,11 @@ WebInspector.ScriptContentView.prototype = {
 
     get supplementalRepresentedObjects()
     {
+        for (var groupKey in WebInspector.probeManager.probeGroups) {
+            if (WebInspector.probeManager.probeGroups[groupKey].sourceCode === this._script)
+                return [WebInspector.probeManager.probeGroups[groupKey]]
+        }
+
         if (isNaN(this._textEditor.executionLineNumber))
             return [];
 
