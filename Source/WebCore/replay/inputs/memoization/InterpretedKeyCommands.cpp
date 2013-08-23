@@ -31,6 +31,8 @@
 
 #include "config.h"
 
+#if ENABLE(WEB_REPLAY)
+
 #include "InputEncoder.h"
 #include "InterpretedKeyCommands.h"
 #include "KeyboardEvent.h"
@@ -97,5 +99,7 @@ bool InputCoder<InterpretedKeyCommands>::decode(InputDecoder&, OwnPtr<Interprete
     // TODO: implement
     return false;
 }
-
+   
 } //namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY) && PLATFORM(MAC)
