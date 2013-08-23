@@ -297,28 +297,31 @@ WebInspector.DebuggerSidebarPanel.prototype = {
 
     _addProbeGroup: function(probeGroup)
     {
-        if (!probeGroup.resolved) {
-            var placeholderObject = WebInspector.probeManager.getPlaceholderObjectForURL(probeGroup.url);
-            var parentTreeElement = this._replayProbesContentTreeOutline.getCachedTreeElement(placeholderObject);
-            if (!parentTreeElement)
-                parentTreeElement = new WebInspector.FutureScriptTreeElement(placeholderObject);
-            if (!parentTreeElement.parent) {
-                parentTreeElement.hasChildren = true;
-                parentTreeElement.expand();
-
-                this._replayProbesContentTreeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, this._replayProbesContentTreeOutline.children, this._compareTopLevelTreeElements.bind(this)));
-            }
-            this._replayProbesRow.hideEmptyMessage();
-            var probeGroupTreeElement = new WebInspector.ProbeGroupTreeElement(probeGroup);
-            parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements));
+        if (probeGroup.resolved) {
+            this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
+            this._addResolvedProbeGroup(probeGroup, this._replayProbesRow, this._replayProbesContentTreeOutline);
             return;
         }
-        this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
-        this._addResolvedProbeGroup(probeGroup, this._replayProbesRow, this._replayProbesContentTreeOutline);
+
+        var placeholderObject = WebInspector.probeManager.getPlaceholderObjectForURL(probeGroup.url);
+        var parentTreeElement = this._replayProbesContentTreeOutline.getCachedTreeElement(placeholderObject);
+        if (!parentTreeElement)
+            parentTreeElement = new WebInspector.FutureScriptTreeElement(placeholderObject);
+        if (!parentTreeElement.parent) {
+            parentTreeElement.hasChildren = true;
+            parentTreeElement.expand();
+
+            this._replayProbesContentTreeOutline.insertChild(parentTreeElement, insertionIndexForObjectInListSortedByFunction(parentTreeElement, this._replayProbesContentTreeOutline.children, this._compareTopLevelTreeElements.bind(this)));
+        }
+        this._replayProbesRow.hideEmptyMessage();
+        var probeGroupTreeElement = new WebInspector.ProbeGroupTreeElement(probeGroup);
+        parentTreeElement.insertChild(probeGroupTreeElement, insertionIndexForObjectInListSortedByFunction(probeGroupTreeElement, parentTreeElement.children, this._compareProbeGroupTreeElements));
     },
 
     _addResolvedProbeGroup: function(probeGroup, row, treeOutline)
     {
+        console.assert(probeGroup.resolved);
+
         if (treeOutline.getCachedTreeElement(probeGroup))
             return;
         var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
@@ -344,44 +347,23 @@ WebInspector.DebuggerSidebarPanel.prototype = {
     _probeGroupResolveStateDidChange: function(event)
     {
         var probeGroup = event.data;
-        if (probeGroup.resolved) {
-            var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
-            var probeScripts = this._replayProbesContentTreeOutline.children;
-            if (probeScripts) {
-                for (var i = 0; i < probeScripts.length; ++i) {
-                    var oldScriptElement = probeScripts[i];
-                    if (oldScriptElement.url === probeGroup.url)
-                        this._replacePlaceholderElement(oldScriptElement, sourceCode, this._replayProbesContentTreeOutline);
-                }
-            }
-            this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
-            return;
-        }
-        this._insertPlaceholderElement(probeGroup, this._replayProbesContentTreeOutline);
-        this._removeProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
-    },
 
-    _probeGroupResolveStateDidChange: function(event)
-    {
-        var probeGroup = event.data;
+        if (!probeGroup.resolved) {
+            this._insertPlaceholderElement(probeGroup, this._replayProbesContentTreeOutline);
+            this._removeProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
+            return;
+        }
+
         var sourceCode = probeGroup.sourceCodeLocation.displaySourceCode;
-        if (WebInspector.replayManager.isReplaying) {
-            var probeScripts = this._replayProbesContentTreeOutline.children;
-            if (probeScripts) {
-                for (var i = 0; i < probeScripts.length; ++i) {
-                    var oldScriptElement = probeScripts[i];
-                    if (oldScriptElement.url === probeGroup.url)
-                        this._replacePlaceholderScriptElement(oldScriptElement, sourceCode, this._replayProbesContentTreeOutline);
-                }
+        var probeScripts = this._replayProbesContentTreeOutline.children;
+        if (probeScripts) {
+            for (var i = 0; i < probeScripts.length; ++i) {
+                var oldScriptElement = probeScripts[i];
+                if (oldScriptElement.url === probeGroup.url)
+                    this._replacePlaceholderElement(oldScriptElement, sourceCode, this._replayProbesContentTreeOutline);
             }
-            return;
         }
-        // CHECKME: Does anything need to be done if we aren't replaying and a probe group is unresolved?
-        if (!sourceCode) {
-            this._probeGroupRemoved({ data: probeGroup });
-            return;
-        }
-        this._addProbeGroup(probeGroup);
+        this._addResolvedProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
     },
 
     _addBreakpointsForSourceCode: function(sourceCode)
@@ -529,7 +511,6 @@ WebInspector.DebuggerSidebarPanel.prototype = {
         this._removeProbeGroup(probeGroup, this._liveProbesRow, this._liveProbesContentTreeOutline);
         this._removeProbeGroup(probeGroup, this._replayProbesRow, this._replayProbesContentTreeOutline);
     },
-
 
     _breakpointDisplayLocationDidChange: function(event)
     {
@@ -775,7 +756,7 @@ WebInspector.DebuggerSidebarPanel.prototype = {
                 deselectLiveProbesContentTreeElements.call(this);
                 deselectReplayProbesContentTreeElements.call(this);
             }
-            else
+            else {
                 deselectBreakpointsContentTreeElements.call(this);
                 deselectReplayProbesContentTreeElements.call(this);
             }
