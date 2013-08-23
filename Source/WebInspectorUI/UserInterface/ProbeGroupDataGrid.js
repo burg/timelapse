@@ -247,11 +247,6 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             this._gridNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
     },
 
-    clearGridNodes: function(event)
-    {
-        this._gridNodes = {};
-    },
-
     // Private
 
     _setupProbe: function(event)
@@ -271,8 +266,10 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         var data = event.data;
         if (!this._gridNodes[data.index]) {
             var node = new WebInspector.ProbeGroupDataGridNode(data.row);
-            if (data.empty)
+            if (data.empty) {
+                this.fadeGridNodes();
                 node.element.classList.add(WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName);
+            }
             this._gridNodes[data.index] = node;
             node.dataGrid = this;
             node.createCells();

@@ -61,7 +61,6 @@ WebInspector.ProbeGroupDetailsSection = function(probeGroup)
     WebInspector.DetailsSection.call(this, "probe", dummyTitle, [probeSectionGroup], optionsElement);
     this.element.classList.add(WebInspector.ProbeGroupDetailsSection.StyleClassName);
 
-    this._listeners.register(WebInspector.Frame, WebInspector.Frame.Event.MainResourceDidChange, this._fadeSamples);
     this._listeners.install();
 };
 
@@ -97,7 +96,6 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
             unlinkedLabel.appendChild(document.createTextNode(title));
             return unlinkedLabel;
         }
-
         var sourceCodeLocation = this._probeGroup.sourceCodeLocation;
         return WebInspector.createSourceCodeLocationLink(sourceCodeLocation);
     },
@@ -136,18 +134,11 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
 
     _fadeSamples: function(event)
     {
-        this._probeGroup.addDataSeparator();
         this._dataGrid.fadeGridNodes();
-    },
-
-    _clearSamples: function(event)
-    {
-        this._probeGroup.clearSamples();
-        this._dataGrid.clearGridNodes();
     },
 
     _clearSamplesButtonClicked: function(event)
     {
-        this._clearSamples();
+        this._probeGroup.clearSamples();
     }
 };

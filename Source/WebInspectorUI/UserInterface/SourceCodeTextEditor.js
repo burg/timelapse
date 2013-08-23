@@ -334,6 +334,9 @@ WebInspector.SourceCodeTextEditor.prototype = {
                 if (!probeGroup.resolved)
                     continue;
 
+                if (probeGroup.sourceCodeLocation.displaySourceCode !== this._sourceCode)
+                    continue;
+
                 console.assert(this._matchesProbeGroup(probeGroup));
                 var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
                 this._probeGroupAdded(probeGroup, lineInfo);
@@ -491,6 +494,9 @@ WebInspector.SourceCodeTextEditor.prototype = {
             return;
 
         var probeGroup = event.data;
+
+        //FIXME: Removing a probe group from the ProbeDetailsSidebarPanel will make it unresolved, and cause this
+        // assert to fail, then lineInfo should not access the sourceCode.
         console.assert(probeGroup.resolved);
 
         var lineInfo = this._editorLineInfoForSourceCodeLocation(probeGroup.sourceCodeLocation);
