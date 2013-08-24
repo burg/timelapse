@@ -51,7 +51,7 @@
 	content: url(Images/ResultLine.pdf);
 }
 
-.row-updated.probe-group-generic-line-icon .icon {
+.data-updated.probe-group-generic-line-icon .icon {
 	content: url(Images/Plus.pdf);
 	-webkit-filter: invert(50%) sepia(100%) saturate(7) invert(100%) hue-rotate(47deg) brightness(85%);
 	-webkit-animation-duration: 0.3s;
@@ -64,7 +64,7 @@
 	}
 
 	50% {
-		opacity: 0.9;
+		opacity: 0.3;
 	}
 
 	100% {

@@ -106,21 +106,20 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
         {
             if (event.keyCode !== 13)
                 return;
-            var url = WebInspector.contentBrowser.currentContentView.resource.url;
             var expression = event.target.value;
-            ProbeAgent.createScriptProbe(url, this._probeGroup.position.lineNumber, this._probeGroup.position.columnNumber, expression);
+            ProbeAgent.createScriptProbe(this._probeGroup.url, this._probeGroup.position.lineNumber, this._probeGroup.position.columnNumber, expression);
             visiblePopover.dismiss();
         }
 
         var popover = new WebInspector.Popover;
         var content = document.createElement("div");
         content.classList.add(WebInspector.ProbeGroupDetailsSection.ProbePopoverElementStyleClassName);
-        content.createChild("div").textContent = "Add Another Value?";
+        content.createChild("div").textContent = WebInspector.UIString("Add Another Value?");
         var textBox = content.createChild("input");
         textBox.addEventListener("keypress", createProbeFromEnteredExpression.bind(this, popover));
         textBox.addEventListener("click", function (event) {event.target.select()});
         textBox.type = "text";
-        textBox.value = "Enter Expression";
+        textBox.value = WebInspector.UIString("Enter Expression");
         popover.content = content;
         var target = WebInspector.Rect.rectFromClientRect(event.target.getBoundingClientRect());
         popover.present(target, [WebInspector.RectEdge.MAX_Y, WebInspector.RectEdge.MIN_Y, WebInspector.RectEdge.MAX_X]);
@@ -130,13 +129,6 @@ WebInspector.ProbeGroupDetailsSection.prototype = {
     _removeButtonClicked: function(event)
     {
         this._probeGroup.clear();
-    },
-
-    _fadeSamples: function(event)
-    {
-        if (!this._probeGroup.hasNewSamples)
-            return;
-        this._dataGrid.fadeGridNodes();
     },
 
     _clearSamplesButtonClicked: function(event)

@@ -44,7 +44,7 @@ WebInspector.ProbeObject = function(probeId, url, lineNumber, columnNumber, expr
     this._samples = [];
 
     this.resolved = false;
-}
+};
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeObject);
 

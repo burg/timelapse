@@ -27,7 +27,7 @@
 
 WebInspector.ProbeGroupTreeElement = function(probeGroup, className, title)
 {
-    console.assert(probeGroup instanceof WebInspector.ProbeGroupObject);
+    console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Unknown object supplied as probe group: ", probeGroup);
 
     if (!className)
         className = WebInspector.ProbeGroupTreeElement.GenericLineIconStyleClassName;
@@ -36,20 +36,20 @@ WebInspector.ProbeGroupTreeElement = function(probeGroup, className, title)
 
     this._probeGroup = probeGroup;
 
-    this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.RowUpdated, this._rowUpdated.bind(this));
-    this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this._updateStatus.bind(this));
-    this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.Enabled, this._updateStatus.bind(this));
-    this._probeGroup.addEventListener(WebInspector.ProbeGroupObject.Event.Disabled, this._updateStatus.bind(this));
-    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._updateStatus.bind(this));
+    this._groupListeners = new WebInspector.EventListenerGroup(this, "Probe group listeners");
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.WillRemove, this._teardownProbeGroup);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this._updateStatus);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Enabled, this._updateStatus);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Disabled, this._updateStatus);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this._setupData);
+    this._groupListeners.install();
+
+    this._setupData();
+
+    WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbesEnablementChanged, this._updateStatus);
 
     this._statusImageElement = document.createElement("img");
     this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageElementStyleClassName);
-
-    if (probeGroup.isEnabled)
-    	this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageEnabledStyleClassName);
-    else
-    	this._statusImageElement.classList.add(WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName);
-
     this._statusImageElement.addEventListener("mousedown", this._statusImageElementMouseDown.bind(this));
     this._statusImageElement.addEventListener("click", this._statusImageElementClicked.bind(this));
 
@@ -67,8 +67,9 @@ WebInspector.ProbeGroupTreeElement.StatusImageElementStyleClassName = "status-im
 WebInspector.ProbeGroupTreeElement.StatusImageActiveStyleClassName = "active-probe";
 WebInspector.ProbeGroupTreeElement.StatusImageDisabledStyleClassName = "disabled";
 WebInspector.ProbeGroupTreeElement.FormattedLocationStyleClassName = "formatted-location";
-WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName = "row-updated";
-WebInspector.ProbeGroupTreeElement.AddingSampleMessage = " Adding Sample";
+WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName = "data-updated";
+
+WebInspector.ProbeGroupTreeElement.DataUpdatedAnimationDuration = 300; // milliseconds
 
 WebInspector.ProbeGroupTreeElement.prototype = {
     constructor: WebInspector.ProbeGroupTreeElement,
@@ -112,6 +113,27 @@ WebInspector.ProbeGroupTreeElement.prototype = {
 
     // Private
 
+    _setupData: function()
+    {
+        this._dataListeners = new WebInspector.EventListenerGroup(this, "Data table event listeners");
+        this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.WillRemove, this._teardownData);
+        this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.FrameAppended, this._dataUpdated);
+        this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.FrameReplaced, this._dataUpdated);
+        this._dataListeners.install();        
+    },
+
+    _teardownData: function()
+    {
+        this._dataListeners.uninstall(true);
+        delete this._dataListeners;
+    },
+
+    _teardownProbeGroup: function()
+    {
+        this._groupListeners.uninstall(true);
+        delete this._groupListeners;
+    },
+
     _updateTitles: function()
     {
         var displayLineNumber = this._probeGroup.position.lineNumber;
@@ -144,17 +166,17 @@ WebInspector.ProbeGroupTreeElement.prototype = {
         }
     },
 
-    _rowUpdated: function()
+    _dataUpdated: function()
     {
-        if (this.element.classList.contains(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName)) {
+        if (this.element.classList.contains(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName)) {
             clearTimeout(this._currentTimeout);
-            this.element.classList.remove(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName);
+            this.element.classList.remove(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName);
         }
 
-        this.element.classList.add(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName);
+        this.element.classList.add(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName);
         this._currentTimeout = setTimeout(function() {
-            this.element.classList.remove(WebInspector.ProbeGroupTreeElement.RowUpdatedStyleClassName);
-        }.bind(this), 300);
+            this.element.classList.remove(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName);
+        }.bind(this), WebInspector.ProbeGroupTreeElement.DataUpdatedAnimationDuration);
     },
 
     _updateStatus: function()

@@ -52,7 +52,7 @@ WebInspector.ProbeDetailsSidebarPanel.prototype = {
         if (this._currentProbeGroup) {
             oldProbeGroupSection = this._probeGroupSectionsByKey[this._currentProbeGroup.groupKey];
             if (oldProbeGroupSection)
-            oldProbeGroupSection.element.remove();
+                oldProbeGroupSection.element.remove();
         }
 
         this._currentProbeGroup = probeGroup;

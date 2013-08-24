@@ -25,6 +25,7 @@
 
 WebInspector.ProbeGroupDataGrid = function(probeGroup)
 {
+    console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Wrong object passed as probe group: ", probeGroup);
     this._probeGroup = probeGroup;
 
     var columns = {};
@@ -37,12 +38,13 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
 
     this._gridNodes = {};
 
-    this._listeners = new WebInspector.EventListenerGroup(this, "Static probe group data grid listeners");
-    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
-    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
-    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.RowUpdated, this._updateGridNode);
-    this._listeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this.removeChildren);
-    this._listeners.install();
+    this._groupListeners = new WebInspector.EventListenerGroup(this, "Static probe group data grid listeners");
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this._setupData);
+    this._groupListeners.install();
+
+    this._setupData();
 }
 
 WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName = "faded";
@@ -60,7 +62,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         for (var i = 0; i < probes.length; ++i)
             this._teardownProbe(probes[i]);
 
-        this._listeners.uninstall(true);
+        this._groupListeners.uninstall(true);
     },
 
     addColumn: function(columnIdentifier, column, index)
@@ -125,18 +127,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         ++this._columnCount;
         if (!index) {
             this._headerTableBody.firstChild.appendChild(cell); // headerRow
-
             this._headerTableColumnGroup.appendChild(col);
-
-            if (this._dataTableBody.childNodes) {
-                for (var i = 0; i < this._dataTableBody.childNodes.length - 1; ++i) {
-                    var data = new Object();
-                    data[columnIdentifier] = "?";
-                    var node = new WebInspector.ProbeGroupDataGridNode(data);
-                    node.dataGrid = this;
-                    this._dataTableBody.childNodes[i].appendChild(node.createCell(columnIdentifier));
-                }
-            }
 
             var td = document.createElement("td");
             td.className = columnIdentifier + "-column";
@@ -155,19 +146,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
                this._columnsArray.lastValue.bodyElement = this._dataTableColumnGroup.lastChild;
         } else {
             this._headerTableBody.firstChild.insertBefore(cell, this._headerTableBody.firstChild.children[index]); // headerRow
-
             this._headerTableColumnGroup.insertBefore(col, this._headerTableColumnGroup.children[index]);
-
-            if (this._dataTableBody.childNodes) {
-                for (var i = 0; i < this._dataTableBody.childNodes.length - 1; ++i) {
-                    var data = new Object();
-                    data[columnIdentifier] = "?";
-                    var node = new WebInspector.ProbeGroupDataGridNode(data);
-                    node.dataGrid = this;
-                    var currentElement = this._dataTableBody.childNodes[i].children[index];
-                    this._dataTableBody.childNodes[i].insertBefore(node.createCell(columnIdentifier), currentElement);
-                }
-            }
 
             var td = document.createElement("td");
             td.className = columnIdentifier + "-column";
@@ -239,6 +218,10 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
         this.removeColumn(oldIdentifier, true);
         this.addColumn(newIdentifier, newColumn, index);
+
+        var frames = this._data.frames;
+        for (var i = 0; i < this._data.frames.length; ++i)
+            this._updateGridNodeForFrame(frames[i]);
     },
 
     fadeGridNodes: function(event)
@@ -253,30 +236,79 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     {
         var probe = event.data;
         this.addColumn(probe.probeId, { title: probe.expression });
+
+        var frames = this._data.frames;
+        for (var i = 0; i < frames.length; ++i)
+            this._updateGridNodeForFrame(frames[i]);
     },
 
     _teardownProbe: function(event)
     {
         var probe = event.data;
         this.removeColumn(probe.probeId);
+
+        var frames = this._data.frames;
+        for (var i = 0; i < frames.length; ++i)
+            this._updateGridNodeForFrame(frames[i]);
     },
 
-    _updateGridNode: function(event)
+    _setupData: function()
     {
-        var data = event.data;
-        if (!this._gridNodes[data.index]) {
-            var node = new WebInspector.ProbeGroupDataGridNode(data.row);
-            if (data.empty) {
-                this.fadeGridNodes();
-                node.element.classList.add(WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName);
-            }
-            this._gridNodes[data.index] = node;
-            node.dataGrid = this;
-            node.createCells();
-            this.appendChild(node);
-        } else {
-            var node = this._gridNodes[data.index];
-            node.data = data.row;
+        this._data = this._probeGroup.dataTable;
+        var frames = this._data.frames;
+        for (var i = 0; i < frames.length; ++i)
+            this._updateGridNodeForFrame(frames[i]);
+
+        this._dataListeners = new WebInspector.EventListenerGroup(this, "Data table event listeners");
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameAppended, this._dataFrameAppended);
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameReplaced, this._dataFrameReplaced);
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorAppended, this._dataSeparatorAppended);
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.WillRemove, this._teardownData);
+        this._dataListeners.install();
+    },
+
+    _teardownData: function()
+    {
+        this._dataListeners.uninstall(true);
+        this.removeChildren();
+        this._gridNodes = {};
+    },
+
+    _updateGridNodeForFrame: function(frame)
+    {
+        console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Tried to update probe group data grid with non-frame: ", frame);
+        if (this._gridNodes[frame.index]) {
+            this._gridNodes[frame.index].updateCellsFromFrame(frame, this._probeGroup);
+            return;
         }
+
+        var node = new WebInspector.ProbeGroupDataGridNode(frame, this._probeGroup);
+        this._gridNodes[frame.index] = node;
+        node.dataGrid = this;
+        node.createCells();
+        this.appendChild(node);
+/*
+        if (data.empty) {
+            this.fadeGridNodes();
+            node.element.classList.add(WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName);
+        }
+*/
+    },
+
+    _dataFrameAppended: function(event)
+    {
+        var frame = event.data;
+        this._updateGridNodeForFrame(frame);
+    },
+
+    _dataFrameReplaced: function(event)
+    {
+        var frame = event.data;
+        this._updateGridNodeForFrame(frame);
+    },
+
+    _dataSeparatorAppended: function(event)
+    {
+        console.log("TODO: ProbeGroupDataGrid._dataSeparatorAppended()");       
     }
 }

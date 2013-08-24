@@ -23,9 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDataGridNode = function(samples)
+WebInspector.ProbeGroupDataGridNode = function(frame, probeGroup)
 {
-    WebInspector.DataGridNode.call(this, samples);
+	console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Wrong object passed as probe group data frame: ", frame);
+	console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Wrong object passed as probe group: ", probeGroup);
+
+    WebInspector.DataGridNode.call(this, this._cellDataFromFrame(frame, probeGroup));
     this._element = document.createElement("tr");
     this._element._dataGridNode = this;
     this._element.classList.add("revealed");
@@ -33,6 +36,41 @@ WebInspector.ProbeGroupDataGridNode = function(samples)
 
 WebInspector.ProbeGroupDataGridNode.prototype = {
     constructor: WebInspector.ProbeGroupDataGridNode,
-    __proto__: WebInspector.DataGridNode.prototype
+    __proto__: WebInspector.DataGridNode.prototype,
 
-}
+    // Public
+
+    updateCellsFromFrame: function(frame, probeGroup)
+    {
+    	this.data = this._cellDataFromFrame(frame, probeGroup);
+    },
+
+    // Private
+
+    _cellDataFromFrame: function(frame, probeGroup)
+    {
+		var probes = probeGroup.probes;
+		var cellData = {};
+		for (var i = 0; i < probes.length; ++i) {
+			var probeId = probes[i].probeId;
+			var sample = frame[probeId];
+			if (!sample.object) {
+				cellData[probeId] = sample;
+				continue;
+			}
+
+			switch (sample.object.type) {
+			case "array":
+	            console.log("TODO: display probe with type=(array): ", sample.object);
+	            cellData[probeId] = "[Array]";
+	            break;
+	        case "object":
+				cellData[probeId] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
+				break;
+			default:			
+				cellData[probeId] = sample.object.value;
+			}
+		}
+		return cellData;
+    },
+};

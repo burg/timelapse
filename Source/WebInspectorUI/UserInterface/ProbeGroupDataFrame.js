@@ -23,24 +23,44 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-.details-section.probe-group .data-grid > .data-container tr.faded {
-    color: #777;
-	font-style: italic;
-}
+WebInspector.ProbeGroupDataFrame = function()
+{
+	this.count = 0;
+};
 
-.details-section.probe-group .data-grid > .data-container tr.empty {
-	background-color: #555;
-}
+WebInspector.ProbeGroupDataFrame.MissingValue = "?";
 
-.details-section.probe-group .data-grid > .data-container tr.empty td {
-	height: 2px;
-	line-height: 0px;
-}
+WebInspector.ProbeGroupDataFrame.prototype = {
 
-.details-section.probe-group .data-grid > .data-container .selected .section * {
-	color: white;
-}
+	// Public
 
-.details-section.probe-group .data-grid > .data-container .section {
-	left: -6px;
-}
+	addSampleForProbe: function(probe, sample)
+	{
+		this[probe.probeId] = sample;
+		this.count++;
+	},
+
+	missingKeys: function(probeGroup)
+	{
+		var keys = [];
+		var probes = probeGroup.probes;
+		for (var i = 0; i < probes.length; ++i) {
+			if (!this.hasOwnProperty(probes[i].probeId))
+				keys.push(probes[i].probeId);
+		}
+
+		return keys;
+	},
+
+	isComplete: function(probeGroup)
+	{
+		return !this.missingKeys(probeGroup).length;
+	},
+
+	fillMissingValues: function(probeGroup)
+	{
+		var keys = this.missingKeys(probeGroup);
+		for (var i = 0; i < keys.length; ++i)
+			this[keys[i]] = WebInspector.ProbeGroupDataFrame.MissingValue;
+	}
+};

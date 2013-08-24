@@ -34,17 +34,13 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._position = position;
     this._probes = [];
     this._probesByUid = {};
-    this._dataTable = [];
-    this._prevBatchId = 0;
-    this._lastMarkIndex = 0;
-    this._hitCount = 0;
     this._enabled = false;
     this._resolved = false;
-    this._hasSamples = false;
-    this._hasNewSamples = false;
 
-    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this.addDataSeparator, this);
-    WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
+    this._createDataTable();
+
+    WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._mainResourceChanged, this);
+    WebInspector.ProbeObject.addEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._sampleCollected, this);
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, this._resolveStateDidChange, this);
     WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this.clearSamples, this);
     WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this.clearSamples, this);
@@ -53,14 +49,13 @@ WebInspector.ProbeGroupObject = function(url, position)
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
 
 WebInspector.ProbeGroupObject.Event = {
+    Disabled: "probe-group-disabled",
+    Enabled: "probe-group-enabled",
     ProbeAdded: "probe-group-probe-added",
     ProbeRemoved: "probe-group-probe-removed",
-    RowUpdated: "probe-group-row-updated",
-    WillRemove: "probe-group-will-remove",
-    Enabled: "probe-group-enabled",
-    Disabled: "probe-group-disabled",
     ResolveStateDidChange: "probe-group-resolve-state-did-change",
-    SamplesCleared: "probe-group-samples-cleared"
+    SamplesCleared: "probe-group-samples-cleared",
+    WillRemove: "probe-group-will-remove",
 };
 
 WebInspector.ProbeGroupObject.DefaultGroupKey = "indeterminate-group";
@@ -93,6 +88,11 @@ WebInspector.ProbeGroupObject.prototype = {
         return this._position;
     },
 
+    get dataTable()
+    {
+        return this._dataTable;
+    },
+
     // FIXME: We should not create new source code locations every time this method is called.
     // Instead, a source location should be created when the probe group is resolved and cleared when unresolved.
     get sourceCodeLocation()
@@ -113,16 +113,6 @@ WebInspector.ProbeGroupObject.prototype = {
     get groupKey()
     {
         return this._groupKey || WebInspector.ProbeGroupObject.DefaultGroupKey;
-    },
-
-    get hasSamples()
-    {
-        return this._hasSamples;
-    },
-
-    get hasNewSamples()
-    {
-        return this._hasNewSamples;
     },
 
     clear: function()
@@ -159,31 +149,14 @@ WebInspector.ProbeGroupObject.prototype = {
     {
         for (var i = 0; i < this._probes.length; ++i)
             WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
-        this._dataTable = [];
-        this._hasNewSamples = false;
-        this._prevBatchId = 0;
-        this._lastMarkIndex = 0;
-        this._hitCount = 0;
+        
+        this._createDataTable();
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
 
-    addDataSeparator: function()
+    _mainResourceChanged: function()
     {
-        if (!this._hasNewSamples)
-            return;
-        this._dataTable.push({});
-        this._hasNewSamples = false;
-        var currentRow = this._dataTable[this._dataTable.length - 1];
-        for (var i = 0; i < this._probes.length; ++i)
-            currentRow[this._probes[i].probeId] = "";
-
-        var data = {
-            row: currentRow,
-            index: this._dataTable.length - 1,
-            empty: true
-        };
-
-        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
+        this.dataTable.mainResourceChanged();
     },
 
     // Protected (called by ProbeManager.js)
@@ -204,9 +177,7 @@ WebInspector.ProbeGroupObject.prototype = {
         else
             WebInspector.probeManager.disableProbe(probe);
 
-        for (var i = 0; i < this._dataTable.length - 1; ++i)
-            this._dataTable[i][probe.probeId] = "?";
-
+        this._dataTable.addProbe(probe);
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeAdded, probe);
     },
 
@@ -218,64 +189,41 @@ WebInspector.ProbeGroupObject.prototype = {
 
         this._probes.splice(this._probes.indexOf(probe), 1);
         delete this._probesByUid[probe.probeId];
+        this._dataTable.removeProbe(probe);
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ProbeRemoved, probe);
-        // TODO: adjust data table model to remove column and cells for this removed probe.
     },
 
     willRemove: function()
     {
         console.assert(!this._probes.length, "ProbeGroupObject.willRemove called, but probes still associated with group: ", this._probes);
 
-        WebInspector.ProbeObject.removeEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._addSampleData, this);
+        WebInspector.ProbeObject.removeEventListener(WebInspector.ProbeObject.Event.SampleAdded, this._sampleCollected, this);
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.WillRemove);
     },
 
     // Private
 
-    _addSampleData: function(event)
+    _createDataTable: function()
+    {
+        if (this._dataTable)
+            this._dataTable.willRemove();
+
+        if (WebInspector.replayManager.isReplaying || WebInspector.replayManager.canReplay)
+            this._dataTable = new WebInspector.ProbeGroupReplayDataTable(this);
+        else
+            this._dataTable = new WebInspector.ProbeGroupDataTable(this);
+    },
+
+    _sampleCollected: function(event)
     {
         var probe = event.target;
         if (!this._probesByUid[probe.probeId])
             return;
+
         var sample = event.data;
-        console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group data table", sample);
+        console.assert(sample instanceof WebInspector.ProbeSampleObject, "Tried to add non-sample to probe group: ", sample);
 
-        if (sample.batchId !== this._prevBatchId) {
-            this._dataTable.push({});
-            if (WebInspector.replayManager.isReplaying) {
-                if (this._lastMarkIndex !== WebInspector.replayManager.currentMarkIndex)
-                    this._hitCount = 0;
-                ++this._hitCount;
-                this._dataTable[this._dataTable.length - 1].markIndex = WebInspector.replayManager.currentMarkIndex;
-                this._dataTable[this._dataTable.length - 1].hitCount = this._hitCount;
-            }
-            this._prevBatchId = sample.batchId;
-        }
-
-        if (sample.object.type === "array") {
-            console.log("TODO: display probe with type=(array): ", sample.object);
-            return;
-        }
-
-        console.assert(this._dataTable.length, "Not allowed to have an empty data table for probe group", this);
-
-        if (!this._hasSamples || !this._hasNewSamples) {
-            this._hasSamples = true;
-            this._hasNewSamples = true;
-        }
-
-        var columnIdentifier = event.target.probeId;
-        var currentRow = this._dataTable[this._dataTable.length - 1];
-        if (sample.object.type === "object")
-            currentRow[columnIdentifier] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
-        else
-            currentRow[columnIdentifier] = sample.object.value;
-
-        var data = {
-            row: currentRow,
-            index: this._dataTable.length - 1
-        };
-        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.RowUpdated, data);
+        this._dataTable.addSampleForProbe(probe, sample);
     },
 
     _resolveStateDidChange: function(event)
