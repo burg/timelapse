@@ -23,16 +23,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDataFrame = function()
+WebInspector.ProbeGroupDataFrame = function(count)
 {
-	this.count = 0;
+	this.count = count;
 };
+
+Object.defineProperty(WebInspector.ProbeGroupDataFrame, "compare",
+{
+	value: function(a, b) {
+		console.assert(a instanceof WebInspector.ProbeGroupDataFrame, a);
+		console.assert(b instanceof WebInspector.ProbeGroupDataFrame, b);
+
+		return a.count - b.count;
+	}
+});
 
 WebInspector.ProbeGroupDataFrame.MissingValue = "?";
 
 WebInspector.ProbeGroupDataFrame.prototype = {
+	constructor: WebInspector.ProbeGroupDataFrame,
 
 	// Public
+
+	get key()
+	{
+		return "%d".format(this.count);
+	},
 
 	addSampleForProbe: function(probe, sample)
 	{
@@ -62,5 +78,41 @@ WebInspector.ProbeGroupDataFrame.prototype = {
 		var keys = this.missingKeys(probeGroup);
 		for (var i = 0; i < keys.length; ++i)
 			this[keys[i]] = WebInspector.ProbeGroupDataFrame.MissingValue;
+	}
+};
+
+WebInspector.ProbeGroupReplayDataFrame = function(markIndex, hitCount)
+{
+	this.markIndex = markIndex;
+	this.hitCount = hitCount;
+};
+
+Object.defineProperty(WebInspector.ProbeGroupReplayDataFrame, "compare",
+{
+	value: function(a, b) {
+		console.assert(a instanceof WebInspector.ProbeGroupReplayDataFrame, a);
+		console.assert(b instanceof WebInspector.ProbeGroupReplayDataFrame, b);
+
+		if (a.markIndex !== b.markIndex)
+			return a.markIndex - b.markIndex;
+
+		return a.hitCount - b.hitCount;
+	}
+});
+
+WebInspector.ProbeGroupReplayDataFrame.prototype = {
+	constructor: WebInspector.ProbeGroupReplayDataFrame,
+	__proto__: WebInspector.ProbeGroupDataFrame.prototype,
+
+	// Public
+
+	get key()
+	{
+		return "%d,%d".format(this.markIndex, this.hitCount);
+	},
+
+	get compareFunction()
+	{
+		return WebInspector.ProbeGroupReplayDataFrame.compare;
 	}
 };

@@ -33,41 +33,42 @@ WebInspector.ProbeGroupReplayDataTable = function(probeGroup)
 
 WebInspector.ProbeGroupReplayDataTable.prototype = {
 	constructor: WebInspector.ProbeGroupReplayDataTable,
-	__proto__: WebInspector.Object.prototype,
+	__proto__: WebInspector.ProbeGroupDataTable.prototype,
 
-	// Protected 
+	// Protected
 
 	createFrame: function()
 	{
-		var frame = new WebInspector.ProbeGroupDataFrame;
-		var markIndex = WebInspector.replayManager.currentMarkIndex;		
+		var markIndex = WebInspector.replayManager.currentMarkIndex;
 		if (this._previousMarkIndex !== markIndex)
 			this._hitCount = 0;
 
 		this._hitCount++;
-		frame.markIndex = markIndex;
-		frame.hitCount = this._hitCount;
-		return frame;
+		return new WebInspector.ProbeGroupReplayDataFrame(markIndex, this._hitCount);
 	},
 
 	addFrame: function(frame)
 	{
-		// TODO: figure out whether we are prepending, appending, or replacing.
-
-		this._frames.push(frame);
-		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameAppended, frame);
+		var insertionIndex = insertionIndexForObjectInListSortedByFunction(frame, this._frames, WebInspector.ProbeGroupReplayDataFrame.compare);
+		if (this._frames.hasOwnProperty(insertionIndex)) {
+			this._frames.splice(insertionIndex, 1, frame);
+			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameReplaced, frame);
+		} else {
+			this._frames.splice(insertionIndex, 0, frame);
+			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameAppended, frame);
+		}
 	},
 
 	addSeparator: function()
 	{
 		// TODO: figure out whether we are prepending, appending, or replacing.
-
 		var index = this._frames.length - 1;
+
 		// Don't add duplicate separators.
 		if (this._separatorIndices.length && this._separatorIndices[this._separatorIndices.length - 1] === index)
 			return;
 
 		this._separatorIndices.push(index);
-		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorAppended);	
+		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorAppended);
 	}
 };

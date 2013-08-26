@@ -29,6 +29,7 @@ WebInspector.ProbeGroupDataGridNode = function(frame, probeGroup)
 	console.assert(probeGroup instanceof WebInspector.ProbeGroupObject, "Wrong object passed as probe group: ", probeGroup);
 
     WebInspector.DataGridNode.call(this, this._cellDataFromFrame(frame, probeGroup));
+    this.frame = frame;
     this._element = document.createElement("tr");
     this._element._dataGridNode = this;
     this._element.classList.add("revealed");
@@ -67,7 +68,7 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 	        case "object":
 				cellData[probeId] = new WebInspector.ObjectPropertiesSection(sample.object, WebInspector.ProbeGroupObject.SampleObjectTitle).element;
 				break;
-			default:			
+			default:
 				cellData[probeId] = sample.object.value;
 			}
 		}

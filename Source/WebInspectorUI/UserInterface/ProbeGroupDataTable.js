@@ -101,7 +101,7 @@ WebInspector.ProbeGroupDataTable.prototype = {
 				frames[i][probe.probeId] = WebInspector.ProbeGroupDataTable.UnknownValue;
 	},
 
-	removeProbe: function()
+	removeProbe: function(probe)
 	{
 		var frames = this.frames;
 		for (var i = 0; i < frames.length; ++i)
@@ -113,12 +113,11 @@ WebInspector.ProbeGroupDataTable.prototype = {
 
 	createFrame: function()
 	{
-		return new WebInspector.ProbeGroupDataFrame;
+		return new WebInspector.ProbeGroupDataFrame(this._frames.length);
 	},
 
 	addFrame: function(frame)
 	{
-		frame.index = this._frames.length;
 		this._frames.push(frame);
 		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameAppended, frame);
 	},
@@ -131,6 +130,6 @@ WebInspector.ProbeGroupDataTable.prototype = {
 			return;
 
 		this._separatorIndices.push(index);
-		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorAppended);	
+		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorAppended);
 	}
 };

@@ -277,16 +277,30 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     _updateGridNodeForFrame: function(frame)
     {
         console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Tried to update probe group data grid with non-frame: ", frame);
-        if (this._gridNodes[frame.index]) {
-            this._gridNodes[frame.index].updateCellsFromFrame(frame, this._probeGroup);
+        if (this._gridNodes[frame.key]) {
+            this._gridNodes[frame.key].updateCellsFromFrame(frame, this._probeGroup);
             return;
         }
 
         var node = new WebInspector.ProbeGroupDataGridNode(frame, this._probeGroup);
-        this._gridNodes[frame.index] = node;
+        this._gridNodes[frame.key] = node;
         node.dataGrid = this;
         node.createCells();
-        this.appendChild(node);
+        var sortFunction = function(a, b) {
+            return a.frame.constructor.compare(a.frame, b.frame);
+        };
+        var insertionIndex = insertionIndexForObjectInListSortedByFunction(node, this.children, sortFunction);
+        if (insertionIndex === this.children.length) {
+            console.log("appending node ", node);
+            this.appendChild(node);
+        } else if (this.children[insertionIndex].frame.key === frame.key) {
+            console.log("replacing node at index ", insertionIndex);
+            this.removeChild(this.children[insertionIndex]);
+            this.insertChild(node, insertionIndex);
+        } else {
+            console.log("inserting node at index ", insertionIndex);
+            this.insertChild(node, insertionIndex);
+        }
 /*
         if (data.empty) {
             this.fadeGridNodes();
@@ -309,6 +323,6 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
     _dataSeparatorAppended: function(event)
     {
-        console.log("TODO: ProbeGroupDataGrid._dataSeparatorAppended()");       
+        console.log("TODO: ProbeGroupDataGrid._dataSeparatorAppended()");
     }
 }
