@@ -112,9 +112,10 @@ void HandleKeyPress::dispatch(ReplayController* controller,
     ASSERT(controller->page());
     ASSERT(sealed());
 
+/*
     const String& screenshotDataUri = FrameCamera::dataUriImageFromFrame(controller->page()->mainFrame());
     controller->imageCaptured(screenshotDataUri);
-
+*/
     controller->page()->userInputProxy()->handleKeyPressEvent(platformEvent(), true);
     dispatcher->didDispatch(this);
 }
