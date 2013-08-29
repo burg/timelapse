@@ -50,7 +50,7 @@ namespace WebCore {
         virtual void fired() OVERRIDE;
 
     protected:
-        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
+        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval);
         // add to list of active context objects, start initial timer.
         virtual void start(int timeout, bool singleShot);
 
