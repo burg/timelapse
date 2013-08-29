@@ -215,7 +215,7 @@ void ReplayController::beginCapturing()
 
 bool ReplayController::endCapturing()
 {
-    // this protects against receiving stopRecording commands twice before
+    // This guard protects against receiving stopRecording commands twice before
     // the UI is notified that recording is stopped (which disables that command).
     if (!capturing()) {
         LOG(DeterministicReplay, "%-20sIgnored request to stop capturing; not in a valid state to do so.\n", "ReplayController::endCapturing");
@@ -226,17 +226,21 @@ bool ReplayController::endCapturing()
     m_activeIterator->storeInput(adoptPtr(new EndSentinel()));
     m_activeIterator = 0;
 
-    // hold on to a reference so unloading the recording doesn't deallocate it
+    // Hold on to a reference so unloading the recording doesn't deallocate it.
     RefPtr<ReplayRecording> recording = m_loadedRecording;
-
     unloadRecording(true);
     m_cacheController->enableCache();
     changeProxyMode(ReplayProxy::Open);
 
-    //now replay is possible, but requires a reset.
+    // Now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
     InspectorInstrumentation::captureFinished(m_page);
     InspectorInstrumentation::recordingCreated(m_page, recording);
+
+    // Permanently "suspend" active objects, such as timers, marquees, loaders, etc.
+    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+        frame->document()->suspendActiveDOMObjects(ActiveDOMObject::DocumentWillBecomeInactive);
+
     return true;
 }
 
