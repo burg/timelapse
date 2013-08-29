@@ -157,8 +157,10 @@ void InspectorReplayAgent::recordingUnloaded()
 {
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
 
-    if (m_frontend)
+    if (m_frontend) {
         m_frontend->recordingUnloaded();
+        m_frontend->inputUnlocked();
+    }
 }
 
 void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecording)

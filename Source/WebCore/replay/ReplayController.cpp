@@ -485,6 +485,7 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
 
     resetReplayState();
     m_loadedRecording = 0;
+    changeProxyMode(ReplayProxy::Open);
 
     if (!suppressNotifications)
         InspectorInstrumentation::recordingUnloaded(m_page);
