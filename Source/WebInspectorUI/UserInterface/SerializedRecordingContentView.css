@@ -56,7 +56,6 @@
 .serialized-recording .horizontal-point-marker.adjustable,
 .serialized-recording .horizontal-range-marker.adjustable {
     -webkit-user-drag: element;
-    z-index: 10;
 }
 
 .serialized-recording .horizontal-point-marker-dragging,
@@ -85,7 +84,7 @@
 .line-graph > .playback-slider {
     width: 3px;
     z-index: 15;
-    background-color: rgba(200, 50, 50, 1);
+    background-color: rgba(200, 50, 50, 0.8);
 }
 
 .line-graph > .zoom-selector {
@@ -98,6 +97,7 @@
     border-left: 1px solid #66c;
     border-right: 1px solid #66c;
     cursor: ew-resize;
+    z-index: 10;
 }
 
 .line-graph > .smokescreen {
@@ -137,15 +137,21 @@
 }
 
 .serialized-recording > .message-sheet {
+/* this matches the background style of the main Dashboard. */ 
+    background-image: -webkit-linear-gradient(bottom, rgba(0, 128, 255, 0.075), rgba(0, 128, 255, 0)),
+        -webkit-linear-gradient(left, rgba(0, 0, 0, 0.09), transparent, rgba(0, 0, 0, 0.09)),
+        -webkit-linear-gradient(top, rgb(240, 244, 251), rgb(250, 253, 255));
+    background-size: 100% 6px, auto, auto;
+    background-position: bottom, center, center;
+    background-repeat: no-repeat;
+
     overflow: hidden;
-    background-color: rgba(255, 255, 255, 0.6);
     z-index: 15;
-    line-height: 25px;
+    line-height: 35px;
     transition: opacity ease 0.5s;
-    opacity: 1;
-    color: #999;
+    opacity: 0.5;
+    color: #000;
     text-shadow: 0px 0px 10px #fff;
-    border: 1px solid #ccc;
 }
 
 .serialized-recording > .message-sheet.hidden {

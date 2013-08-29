@@ -110,6 +110,7 @@ body.window-inactive .toolbar .replay-dashboard {
 
 .toolbar .replay-dashboard > .eject-container {
     -webkit-order: 3;
+    cursor: pointer;
     margin: 2px 5px 0px;
 }
 
@@ -174,11 +175,11 @@ body.window-inactive .toolbar .replay-dashboard {
     z-index: 1;
     line-height: 25px;
     transition: opacity ease 0.5s;
+    border: 1px solid #ccc;
 }
 
 .toolbar .replay-dashboard > .recording-container > .live-recording > .stop:hover {
     opacity: 1;
     color: #933;
     text-shadow: 0px 0px 10px #fff;
-    border: 1px solid #ccc;
 }

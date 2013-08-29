@@ -51,11 +51,11 @@ WebInspector.ReplayDashboardView = function(replayManager)
     promptElement.addEventListener("click", this._promptClicked.bind(this));
 
     var ejectContainer = this._element.createChild("div");
+    ejectContainer.addEventListener("click", this._ejectButtonClicked.bind(this));
     ejectContainer.className = WebInspector.ReplayDashboardView.EjectContainerStyleClassName;
     var ejectButton = ejectContainer.createChild("img");
     ejectButton.className = WebInspector.ReplayDashboardView.EjectButtonStyleClassName;
     ejectButton.title = WebInspector.UIString("Click to eject recording");
-    ejectButton.addEventListener("click", this._ejectButtonClicked.bind(this));
 
     var recordingContainer = this._element.createChild("div");
     recordingContainer.className = WebInspector.ReplayDashboardView.RecordingContainerStyleClassName;
