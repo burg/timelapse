@@ -142,9 +142,15 @@ void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
 
 void InspectorReplayAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
 {
+#ifndef NDEBUG
     LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
     scriptName.utf8().data(), scriptLine, 
     SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);   
+#else
+    UNUSED_PARAM(scriptName);
+    UNUSED_PARAM(scriptLine);
+    UNUSED_PARAM(frame);
+#endif
 }
 
 void InspectorReplayAgent::recordingUnloaded()
