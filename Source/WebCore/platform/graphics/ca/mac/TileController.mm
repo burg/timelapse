@@ -40,11 +40,9 @@
 
 using namespace std;
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 @interface CALayer (WebCALayerDetails)
 - (void)setAcceleratesDrawing:(BOOL)flag;
 @end
-#endif
 
 @interface WebTiledScrollingIndicatorLayer : CALayer {
     WebCore::TileController* _tileController;
@@ -63,7 +61,7 @@ using namespace std;
         [self setStyle:[NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObjectsAndKeys:[NSNull null], @"bounds", [NSNull null], @"position", [NSNull null], @"contents", nil] forKey:@"actions"]];
 
         _visibleRectFrameLayer = [CALayer layer];
-        [_visibleRectFrameLayer setStyle:[NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObjectsAndKeys:[NSNull null], @"bounds", [NSNull null], @"position", nil] forKey:@"actions"]];
+        [_visibleRectFrameLayer setStyle:[NSDictionary dictionaryWithObject:[NSDictionary dictionaryWithObjectsAndKeys:[NSNull null], @"bounds", [NSNull null], @"position", [NSNull null], @"borderColor", nil] forKey:@"actions"]];
         [self addSublayer:_visibleRectFrameLayer];
         [_visibleRectFrameLayer setBorderColor:WebCore::cachedCGColor(WebCore::Color(255, 0, 0), WebCore::ColorSpaceDeviceRGB)];
         [_visibleRectFrameLayer setBorderWidth:2];
@@ -243,7 +241,6 @@ void TileController::setScale(CGFloat scale)
     if (m_scale == scale && m_deviceScaleFactor == deviceScaleFactor)
         return;
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     Vector<FloatRect> dirtyRects;
 
     m_deviceScaleFactor = deviceScaleFactor;
@@ -264,12 +261,10 @@ void TileController::setScale(CGFloat scale)
     }
 
     platformLayer->owner()->platformCALayerDidCreateTiles(dirtyRects);
-#endif
 }
 
 void TileController::setAcceleratesDrawing(bool acceleratesDrawing)
 {
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if (m_acceleratesDrawing == acceleratesDrawing)
         return;
 
@@ -279,9 +274,6 @@ void TileController::setAcceleratesDrawing(bool acceleratesDrawing)
         const TileInfo& tileInfo = it->value;
         [tileInfo.layer.get() setAcceleratesDrawing:m_acceleratesDrawing];
     }
-#else
-    UNUSED_PARAM(acceleratesDrawing);
-#endif
 }
 
 void TileController::setTilesOpaque(bool opaque)
@@ -686,26 +678,30 @@ void TileController::revalidateTiles(TileValidationPolicyFlags foregroundValidat
             IntRect tileRect = rectForTileIndex(tileIndex);
             m_primaryTileCoverageRect.unite(tileRect);
 
-            TileInfo& tileInfo = m_tiles.add(tileIndex, TileInfo()).iterator->value;
-            if (!tileInfo.layer) {
-                tileInfo.layer = createTileLayer(tileRect);
-                if (!m_unparentsOffscreenTiles || m_isInWindow)
-                    [m_tileContainerLayer.get() addSublayer:tileInfo.layer.get()];
-            } else {
-                if ((!m_unparentsOffscreenTiles || m_isInWindow) && ![tileInfo.layer.get() superlayer])
-                    [m_tileContainerLayer.get() addSublayer:tileInfo.layer.get()];
+            bool shouldChangeTileLayerFrame = false;
 
+            TileInfo& tileInfo = m_tiles.add(tileIndex, TileInfo()).iterator->value;
+            if (!tileInfo.layer)
+                tileInfo.layer = createTileLayer(tileRect);
+            else {
                 // We already have a layer for this tile. Ensure that its size is correct.
                 FloatSize tileLayerSize([tileInfo.layer.get() frame].size);
-                if (tileLayerSize == FloatSize(tileRect.size()))
-                    continue;
+                shouldChangeTileLayerFrame = tileLayerSize != FloatSize(tileRect.size());
 
-                [tileInfo.layer.get() setFrame:tileRect];
+                if (shouldChangeTileLayerFrame)
+                    [tileInfo.layer.get() setFrame:tileRect];
             }
-            
-            FloatRect scaledTileRect = tileRect;
-            scaledTileRect.scale(1 / m_scale);
-            dirtyRects.append(scaledTileRect);
+
+            bool shouldParentTileLayer = (!m_unparentsOffscreenTiles || m_isInWindow) && ![tileInfo.layer.get() superlayer];
+
+            if (shouldParentTileLayer)
+                [m_tileContainerLayer.get() addSublayer:tileInfo.layer.get()];
+
+            if ((shouldParentTileLayer && [tileInfo.layer.get() needsDisplay]) || shouldChangeTileLayerFrame) {
+                FloatRect scaledTileRect = tileRect;
+                scaledTileRect.scale(1 / m_scale);
+                dirtyRects.append(scaledTileRect);
+            }
         }
     }
 
@@ -752,6 +748,8 @@ void TileController::revalidateTiles(TileValidationPolicyFlags foregroundValidat
 
     if (dirtyRects.isEmpty())
         return;
+
+    // This will ensure we flush compositing state and do layout in this run loop iteration.
     platformLayer->owner()->platformCALayerDidCreateTiles(dirtyRects);
 }
 
@@ -836,18 +834,18 @@ void TileController::ensureTilesForRect(const FloatRect& rect)
 
             IntRect tileRect = rectForTileIndex(tileIndex);
             TileInfo& tileInfo = m_tiles.add(tileIndex, TileInfo()).iterator->value;
-            if (!tileInfo.layer) {
-                tileInfo.layer = createTileLayer(tileRect);
-                [m_tileContainerLayer.get() addSublayer:tileInfo.layer.get()];
-            } else {
-                if (![tileInfo.layer.get() superlayer])
-                    [m_tileContainerLayer.get() addSublayer:tileInfo.layer.get()];
 
+            bool shouldChangeTileLayerFrame = false;
+
+            if (!tileInfo.layer)
+                tileInfo.layer = createTileLayer(tileRect);
+            else {
                 // We already have a layer for this tile. Ensure that its size is correct.
                 CGSize tileLayerSize = [tileInfo.layer.get() frame].size;
-                if (tileLayerSize.width >= tileRect.width() && tileLayerSize.height >= tileRect.height())
-                    continue;
-                [tileInfo.layer.get() setFrame:tileRect];
+                shouldChangeTileLayerFrame = tileLayerSize.width < tileRect.width() || tileLayerSize.height < tileRect.height();
+
+                if (shouldChangeTileLayerFrame)
+                    [tileInfo.layer.get() setFrame:tileRect];
             }
 
             if (!tileRect.intersects(m_primaryTileCoverageRect)) {
@@ -855,9 +853,16 @@ void TileController::ensureTilesForRect(const FloatRect& rect)
                 ++tilesInCohort;
             }
 
-            FloatRect scaledTileRect = tileRect;
-            scaledTileRect.scale(1 / m_scale);
-            dirtyRects.append(scaledTileRect);
+            bool shouldParentTileLayer = ![tileInfo.layer.get() superlayer];
+
+            if (shouldParentTileLayer)
+                [m_tileContainerLayer.get() addSublayer:tileInfo.layer.get()];
+
+            if ((shouldParentTileLayer && [tileInfo.layer.get() needsDisplay]) || shouldChangeTileLayerFrame) {
+                FloatRect scaledTileRect = tileRect;
+                scaledTileRect.scale(1 / m_scale);
+                dirtyRects.append(scaledTileRect);
+            }
         }
     }
     
@@ -867,6 +872,7 @@ void TileController::ensureTilesForRect(const FloatRect& rect)
     if (m_tiledScrollingIndicatorLayer)
         updateTileCoverageMap();
 
+    // This will ensure we flush compositing state and do layout in this run loop iteration.
     if (!dirtyRects.isEmpty())
         platformLayer->owner()->platformCALayerDidCreateTiles(dirtyRects);
 }
@@ -993,12 +999,9 @@ WebTileLayer* TileController::tileLayerAtIndex(const TileIndex& index) const
 RetainPtr<WebTileLayer> TileController::createTileLayer(const IntRect& tileRect)
 {
     RetainPtr<WebTileLayer> layer = LayerPool::sharedPool()->takeLayerWithSize(tileRect.size());
-    if (layer) {
-        // If we were able to restore a layer from the LayerPool, we should call setNeedsDisplay to
-        // ensure we avoid stale content.
+    if (layer)
         [layer resetPaintCount];
-        [layer setNeedsDisplay];
-    } else
+    else
         layer = adoptNS([[WebTileLayer alloc] init]);
     [layer.get() setAnchorPoint:CGPointZero];
     [layer.get() setFrame:tileRect];
@@ -1011,10 +1014,10 @@ RetainPtr<WebTileLayer> TileController::createTileLayer(const IntRect& tileRect)
     [layer.get() setName:@"Tile"];
 #endif
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     [layer.get() setContentsScale:m_deviceScaleFactor];
     [layer.get() setAcceleratesDrawing:m_acceleratesDrawing];
-#endif
+
+    [layer setNeedsDisplay];
 
     return layer;
 }

@@ -251,28 +251,7 @@ namespace JSC {
         if (entry->attributes() & Function)
             return setUpStaticFunctionSlot(exec, entry, thisObj, propertyName, slot);
 
-        slot.setCacheableCustom(thisObj, entry->propertyGetter());
-        return true;
-    }
-
-    template <class ThisImp, class ParentImp>
-    inline bool getStaticPropertyDescriptor(ExecState* exec, const HashTable* table, ThisImp* thisObj, PropertyName propertyName, PropertyDescriptor& descriptor)
-    {
-        const HashEntry* entry = table->entry(exec, propertyName);
-        
-        if (!entry) // not found, forward to parent
-            return ParentImp::getOwnPropertyDescriptor(thisObj, exec, propertyName, descriptor);
- 
-        PropertySlot slot;
-        if (entry->attributes() & Function) {
-            bool present = setUpStaticFunctionSlot(exec, entry, thisObj, propertyName, slot);
-            if (present)
-                descriptor.setDescriptor(slot.getValue(exec, propertyName), entry->attributes());
-            return present;
-        }
-
-        slot.setCustom(thisObj, entry->propertyGetter());
-        descriptor.setDescriptor(slot.getValue(exec, propertyName), entry->attributes());
+        slot.setCacheableCustom(thisObj, entry->attributes(), entry->propertyGetter());
         return true;
     }
 
@@ -293,28 +272,6 @@ namespace JSC {
 
         return setUpStaticFunctionSlot(exec, entry, thisObj, propertyName, slot);
     }
-    
-    /**
-     * Simplified version of getStaticPropertyDescriptor in case there are only functions.
-     * Using this instead of getStaticPropertyDescriptor allows 'this' to avoid implementing
-     * a dummy getValueProperty.
-     */
-    template <class ParentImp>
-    inline bool getStaticFunctionDescriptor(ExecState* exec, const HashTable* table, JSObject* thisObj, PropertyName propertyName, PropertyDescriptor& descriptor)
-    {
-        if (ParentImp::getOwnPropertyDescriptor(static_cast<ParentImp*>(thisObj), exec, propertyName, descriptor))
-            return true;
-        
-        const HashEntry* entry = table->entry(exec, propertyName);
-        if (!entry)
-            return false;
-        
-        PropertySlot slot;
-        bool present = setUpStaticFunctionSlot(exec, entry, thisObj, propertyName, slot);
-        if (present)
-            descriptor.setDescriptor(slot.getValue(exec, propertyName), entry->attributes());
-        return present;
-    }
 
     /**
      * Simplified version of getStaticPropertySlot in case there are no functions, only "values".
@@ -330,26 +287,7 @@ namespace JSC {
 
         ASSERT(!(entry->attributes() & Function));
 
-        slot.setCacheableCustom(thisObj, entry->propertyGetter());
-        return true;
-    }
-
-    /**
-     * Simplified version of getStaticPropertyDescriptor in case there are no functions, only "values".
-     * Using this instead of getStaticPropertyDescriptor removes the need for a FuncImp class.
-     */
-    template <class ThisImp, class ParentImp>
-    inline bool getStaticValueDescriptor(ExecState* exec, const HashTable* table, ThisImp* thisObj, PropertyName propertyName, PropertyDescriptor& descriptor)
-    {
-        const HashEntry* entry = table->entry(exec, propertyName);
-        
-        if (!entry) // not found, forward to parent
-            return ParentImp::getOwnPropertyDescriptor(thisObj, exec, propertyName, descriptor);
-        
-        ASSERT(!(entry->attributes() & Function));
-        PropertySlot slot;
-        slot.setCustom(thisObj, entry->propertyGetter());
-        descriptor.setDescriptor(slot.getValue(exec, propertyName), entry->attributes());
+        slot.setCacheableCustom(thisObj, entry->attributes(), entry->propertyGetter());
         return true;
     }
 

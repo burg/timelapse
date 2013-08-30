@@ -163,7 +163,7 @@ WebCore::Node* QtDRTNodeRuntime::get(const QDRTNode& node)
 
 static QVariant convertJSValueToNodeVariant(JSC::JSObject* object, int *distance, HashSet<JSObjectRef>*)
 {
-    if (!object || !object->inherits(&JSNode::s_info))
+    if (!object || !object->inherits(JSNode::info()))
         return QVariant();
     return QVariant::fromValue<QDRTNode>(QtDRTNodeRuntime::create((static_cast<JSNode*>(object))->impl()));
 }
@@ -219,7 +219,7 @@ void DumpRenderTreeSupportQt::setDumpRenderTreeModeEnabled(bool b)
 
 void DumpRenderTreeSupportQt::setFrameFlatteningEnabled(QWebPageAdapter* adapter, bool enabled)
 {
-    adapter->page->settings()->setFrameFlatteningEnabled(enabled);
+    adapter->page->settings().setFrameFlatteningEnabled(enabled);
 }
 
 void DumpRenderTreeSupportQt::webPageSetGroupName(QWebPageAdapter *adapter, const QString& groupName)
@@ -319,31 +319,31 @@ void DumpRenderTreeSupportQt::setDomainRelaxationForbiddenForURLScheme(bool forb
 
 void DumpRenderTreeSupportQt::setCaretBrowsingEnabled(QWebPageAdapter* adapter, bool value)
 {
-    adapter->page->settings()->setCaretBrowsingEnabled(value);
+    adapter->page->settings().setCaretBrowsingEnabled(value);
 }
 
 void DumpRenderTreeSupportQt::setAuthorAndUserStylesEnabled(QWebPageAdapter* adapter, bool value)
 {
-    adapter->page->settings()->setAuthorAndUserStylesEnabled(value);
+    adapter->page->settings().setAuthorAndUserStylesEnabled(value);
 }
 
 void DumpRenderTreeSupportQt::executeCoreCommandByName(QWebPageAdapter* adapter, const QString& name, const QString& value)
 {
-    adapter->page->focusController()->focusedOrMainFrame()->editor().command(name).execute(value);
+    adapter->page->focusController().focusedOrMainFrame()->editor().command(name).execute(value);
 }
 
 bool DumpRenderTreeSupportQt::isCommandEnabled(QWebPageAdapter *adapter, const QString& name)
 {
-    return adapter->page->focusController()->focusedOrMainFrame()->editor().command(name).isEnabled();
+    return adapter->page->focusController().focusedOrMainFrame()->editor().command(name).isEnabled();
 }
 
 QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
 {
-    WebCore::Frame* frame = adapter->page->focusController()->focusedOrMainFrame();
+    WebCore::Frame* frame = adapter->page->focusController().focusedOrMainFrame();
     QVariantList selectedRange;
-    RefPtr<Range> range = frame->selection()->toNormalizedRange().get();
+    RefPtr<Range> range = frame->selection().toNormalizedRange().get();
 
-    Element* selectionRoot = frame->selection()->rootEditableElement();
+    Element* selectionRoot = frame->selection().rootEditableElement();
     Element* scope = selectionRoot ? selectionRoot : frame->document()->documentElement();
 
     RefPtr<Range> testRange = Range::create(scope->document(), scope, 0, range->startContainer(), range->startOffset());
@@ -363,13 +363,13 @@ QVariantList DumpRenderTreeSupportQt::selectedRange(QWebPageAdapter *adapter)
 
 QVariantList DumpRenderTreeSupportQt::firstRectForCharacterRange(QWebPageAdapter *adapter, int location, int length)
 {
-    WebCore::Frame* frame = adapter->page->focusController()->focusedOrMainFrame();
+    WebCore::Frame* frame = adapter->page->focusController().focusedOrMainFrame();
     QVariantList rect;
 
     if ((location + length < location) && (location + length))
         length = 0;
 
-    RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(frame->selection()->rootEditableElementOrDocumentElement(), location, length);
+    RefPtr<Range> range = TextIterator::rangeFromLocationAndLength(frame->selection().rootEditableElementOrDocumentElement(), location, length);
 
     if (!range)
         return QVariantList();
@@ -384,7 +384,7 @@ void DumpRenderTreeSupportQt::setWindowsBehaviorAsEditingBehavior(QWebPageAdapte
     Page* corePage = adapter->page;
     if (!corePage)
         return;
-    corePage->settings()->setEditingBehaviorType(EditingWindowsBehavior);
+    corePage->settings().setEditingBehaviorType(EditingWindowsBehavior);
 }
 
 void DumpRenderTreeSupportQt::clearAllApplicationCaches()
@@ -602,7 +602,7 @@ QMap<QString, QWebHistoryItem> DumpRenderTreeSupportQt::getChildHistoryItems(con
 bool DumpRenderTreeSupportQt::shouldClose(QWebFrameAdapter *adapter)
 {
     WebCore::Frame* coreFrame = adapter->frame;
-    return coreFrame->loader()->shouldClose();
+    return coreFrame->loader().shouldClose();
 }
 
 void DumpRenderTreeSupportQt::clearScriptWorlds()
@@ -623,11 +623,8 @@ void DumpRenderTreeSupportQt::evaluateScriptInIsolatedWorld(QWebFrameAdapter *ad
 
     WebCore::Frame* coreFrame = adapter->frame;
 
-    ScriptController* proxy = coreFrame->script();
-
-    if (!proxy)
-        return;
-    proxy->executeScriptInWorld(scriptWorld->world(), script, true);
+    ScriptController& proxy = coreFrame->script();
+    proxy.executeScriptInWorld(scriptWorld->world(), script, true);
 }
 
 void DumpRenderTreeSupportQt::addUserStyleSheet(QWebPageAdapter* adapter, const QString& sourceCode)
@@ -665,14 +662,14 @@ void DumpRenderTreeSupportQt::goBack(QWebPageAdapter* adapter)
 QString DumpRenderTreeSupportQt::responseMimeType(QWebFrameAdapter* adapter)
 {
     WebCore::Frame* coreFrame = adapter->frame;
-    WebCore::DocumentLoader* docLoader = coreFrame->loader()->documentLoader();
+    WebCore::DocumentLoader* docLoader = coreFrame->loader().documentLoader();
     return docLoader->responseMIMEType();
 }
 
 void DumpRenderTreeSupportQt::clearOpener(QWebFrameAdapter* adapter)
 {
     WebCore::Frame* coreFrame = adapter->frame;
-    coreFrame->loader()->setOpener(0);
+    coreFrame->loader().setOpener(0);
 }
 
 void DumpRenderTreeSupportQt::addURLToRedirect(const QString& origin, const QString& destination)
@@ -684,7 +681,7 @@ void DumpRenderTreeSupportQt::setInteractiveFormValidationEnabled(QWebPageAdapte
 {
     Page* corePage = adapter->page;
     if (corePage)
-        corePage->settings()->setInteractiveFormValidationEnabled(enable);
+        corePage->settings().setInteractiveFormValidationEnabled(enable);
 }
 
 QStringList DumpRenderTreeSupportQt::contextMenu(QWebPageAdapter* page)
@@ -695,7 +692,7 @@ QStringList DumpRenderTreeSupportQt::contextMenu(QWebPageAdapter* page)
 bool DumpRenderTreeSupportQt::thirdPartyCookiePolicyAllows(QWebPageAdapter *adapter, const QUrl& url, const QUrl& firstPartyUrl)
 {
     Page* corePage = adapter->page;
-    return thirdPartyCookiePolicyPermits(corePage->mainFrame()->loader()->networkingContext(), url, firstPartyUrl);
+    return thirdPartyCookiePolicyPermits(corePage->mainFrame()->loader().networkingContext(), url, firstPartyUrl);
 }
 
 void DumpRenderTreeSupportQt::enableMockScrollbars()
@@ -720,7 +717,7 @@ QUrl DumpRenderTreeSupportQt::mediaContentUrlByElementId(QWebFrameAdapter* adapt
     if (!coreNode)
         return res;
 
-    HTMLVideoElement* videoElement = static_cast<HTMLVideoElement*>(coreNode);
+    HTMLVideoElement* videoElement = toHTMLVideoElement(coreNode);
     PlatformMedia platformMedia = videoElement->platformMedia();
     if (platformMedia.type != PlatformMedia::QtMediaPlayerType)
         return res;
@@ -742,12 +739,12 @@ void DumpRenderTreeSupportQt::setAlternateHtml(QWebFrameAdapter* adapter, const 
     const QByteArray utf8 = html.toUtf8();
     WTF::RefPtr<WebCore::SharedBuffer> data = WebCore::SharedBuffer::create(utf8.constData(), utf8.length());
     WebCore::SubstituteData substituteData(data, WTF::String("text/html"), WTF::String("utf-8"), failingUrl);
-    coreFrame->loader()->load(WebCore::FrameLoadRequest(coreFrame, request, substituteData));
+    coreFrame->loader().load(WebCore::FrameLoadRequest(coreFrame, request, substituteData));
 }
 
 void DumpRenderTreeSupportQt::confirmComposition(QWebPageAdapter *adapter, const char* text)
 {
-    Frame* frame = adapter->page->focusController()->focusedOrMainFrame();
+    Frame* frame = adapter->page->focusController().focusedOrMainFrame();
     if (!frame)
         return;
 

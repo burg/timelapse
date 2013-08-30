@@ -125,17 +125,11 @@
 static const float zoomMinimum = 0.05;
 static const float zoomMaximum = 4.0;
 
-static const float devicePixelRatio = 1.0;
-
 static const char ewkViewTypeString[] = "EWK_View";
 
 static const size_t ewkViewRepaintsSizeInitial = 32;
 static const size_t ewkViewRepaintsSizeStep = 8;
 static const size_t ewkViewRepaintsSizeMaximumFree = 64;
-
-static const size_t ewkViewScrollsSizeInitial = 8;
-static const size_t ewkViewScrollsSizeStep = 2;
-static const size_t ewkViewScrollsSizeMaximumFree = 32;
 
 static const Evas_Smart_Cb_Description _ewk_view_callback_names[] = {
     { "colorchooser,create", "(yyyy)" },
@@ -275,7 +269,7 @@ struct _Ewk_View_Private_Data {
 #if ENABLE(NAVIGATOR_CONTENT_UTILS) || ENABLE(CUSTOM_SCHEME_HANDLER)
     OwnPtr<WebCore::NavigatorContentUtilsClientEfl> navigatorContentUtilsClient;
 #endif
-    OwnPtr<WebCore::NetworkStorageSession> storageSession;
+    WebCore::NetworkStorageSession* storageSession;
     struct {
         Ewk_Menu menu;
         WebCore::PopupMenuClient* menuClient;
@@ -285,11 +279,8 @@ struct _Ewk_View_Private_Data {
         size_t count;
         size_t allocated;
     } repaints;
-    struct {
-        Ewk_Scroll_Request* array;
-        size_t count;
-        size_t allocated;
-    } scrolls;
+    WTF::Vector<WebCore::IntRect> m_rectsToScroll;
+    WTF::Vector<WebCore::IntSize> m_scrollOffsets;
     unsigned int imh; /**< input method hints */
     struct {
         bool viewCleared : 1;
@@ -349,7 +340,6 @@ struct _Ewk_View_Private_Data {
             float maxScale;
             Eina_Bool userScalable : 1;
         } zoomRange;
-        float devicePixelRatio;
         double domTimerInterval;
         bool allowUniversalAccessFromFileURLs : 1;
         bool allowFileAccessFromFileURLs : 1;
@@ -489,94 +479,18 @@ static void _ewk_view_repaints_flush(Ewk_View_Private_Data* priv)
     _ewk_view_repaints_resize(priv, ewkViewRepaintsSizeMaximumFree);
 }
 
-static Eina_Bool _ewk_view_scrolls_resize(Ewk_View_Private_Data* priv, size_t size)
-{
-    void* tmp = realloc(priv->scrolls.array, size * sizeof(Ewk_Scroll_Request));
-    if (!tmp) {
-        CRITICAL("could not realloc scrolls array to %zu elements.", size);
-        return false;
-    }
-    priv->scrolls.allocated = size;
-    priv->scrolls.array = static_cast<Ewk_Scroll_Request*>(tmp);
-    return true;
-}
-
-static void _ewk_view_scroll_add(Ewk_View_Private_Data* priv, Evas_Coord deltaX, Evas_Coord deltaY, Evas_Coord x, Evas_Coord y, Evas_Coord width, Evas_Coord height)
-{
-    Ewk_Scroll_Request* rect;
-    Ewk_Scroll_Request* rect_end;
-    Evas_Coord x2 = x + width, y2 = y + height;
-
-    rect = priv->scrolls.array;
-    rect_end = rect + priv->scrolls.count;
-    for (; rect < rect_end; rect++) {
-        if (rect->x == x && rect->y == y && rect->w == width && rect->h == height) {
-            DBG("region already scrolled %d,%d+%dx%d %+03d,%+03d add "
-                "%+03d,%+03d",
-                rect->x, rect->y, rect->w, rect->h, rect->dx, rect->dy, deltaX, deltaY);
-            rect->dx += deltaX;
-            rect->dy += deltaY;
-            return;
-        }
-        if ((x <= rect->x && x2 >= rect->x2) && (y <= rect->y && y2 >= rect->y2)) {
-            DBG("old viewport (%d,%d+%dx%d %+03d,%+03d) was scrolled itself, "
-                "add %+03d,%+03d",
-                rect->x, rect->y, rect->w, rect->h, rect->dx, rect->dy, deltaX, deltaY);
-            rect->x += deltaX;
-            rect->y += deltaY;
-        }
-    }
-
-    if (priv->scrolls.allocated == priv->scrolls.count) {
-        size_t size;
-        if (!priv->scrolls.allocated)
-            size = ewkViewScrollsSizeInitial;
-        else
-            size = priv->scrolls.allocated + ewkViewScrollsSizeStep;
-        if (!_ewk_view_scrolls_resize(priv, size))
-            return;
-    }
-
-    rect = priv->scrolls.array + priv->scrolls.count;
-    priv->scrolls.count++;
-
-    rect->x = x;
-    rect->y = y;
-    rect->w = width;
-    rect->h = height;
-    rect->x2 = x2;
-    rect->y2 = y2;
-    rect->dx = deltaX;
-    rect->dy = deltaY;
-    DBG("add scroll in region: %d, %d+%dx%d %+03d, %+03d", x, y, width, height, deltaX, deltaY);
-
-    Eina_Rectangle* pr;
-    Eina_Rectangle* pr_end;
-    size_t count;
-    pr = priv->repaints.array;
-    count = priv->repaints.count;
-    pr_end = pr + count;
-    for (; pr < pr_end; pr++) {
-        pr->x += deltaX;
-        pr->y += deltaY;
-    }
-}
-
 static void _ewk_view_scrolls_flush(Ewk_View_Private_Data* priv)
 {
-    priv->scrolls.count = 0;
-    if (priv->scrolls.allocated <= ewkViewScrollsSizeMaximumFree)
-        return;
-    _ewk_view_scrolls_resize(priv, ewkViewScrollsSizeMaximumFree);
+    priv->m_scrollOffsets.clear();
+    priv->m_rectsToScroll.clear();
 }
 
 // Default Event Handling //////////////////////////////////////////////
 static Eina_Bool _ewk_view_smart_focus_in(Ewk_View_Smart_Data* smartData)
 {
     EWK_VIEW_PRIV_GET(smartData, priv);
-    WebCore::FocusController* focusController = priv->page->focusController();
+    WebCore::FocusController* focusController = &priv->page->focusController();
     DBG("ewkView=%p, focusController=%p", smartData->self, focusController);
-    EINA_SAFETY_ON_NULL_RETURN_VAL(focusController, false);
 
     focusController->setActive(true);
     focusController->setFocused(true);
@@ -586,9 +500,8 @@ static Eina_Bool _ewk_view_smart_focus_in(Ewk_View_Smart_Data* smartData)
 static Eina_Bool _ewk_view_smart_focus_out(Ewk_View_Smart_Data* smartData)
 {
     EWK_VIEW_PRIV_GET(smartData, priv);
-    WebCore::FocusController* focusController = priv->page->focusController();
+    WebCore::FocusController* focusController = &priv->page->focusController();
     DBG("ewkView=%p, fc=%p", smartData->self, focusController);
-    EINA_SAFETY_ON_NULL_RETURN_VAL(focusController, false);
 
     focusController->setActive(false);
     focusController->setFocused(false);
@@ -808,7 +721,7 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
     }
 #endif
 
-    priv->pageSettings = priv->page->settings();
+    priv->pageSettings = &priv->page->settings();
 
     WebCore::LayoutMilestones layoutMilestones = WebCore::DidFirstLayout | WebCore::DidFirstVisuallyNonEmptyLayout;
     priv->page->addLayoutMilestones(layoutMilestones);
@@ -841,7 +754,7 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
     priv->pageSettings->setUsesPageCache(true);
     priv->pageSettings->setUsesEncodingDetector(false);
 #if ENABLE(WEB_AUDIO)
-    WebCore::RuntimeEnabledFeatures::setWebAudioEnabled(false);
+    priv->pageSettings->setWebAudioEnabled(false);
 #endif
     priv->pageSettings->setWebGLEnabled(true);
     priv->pageSettings->setXSSAuditorEnabled(true);
@@ -924,7 +837,6 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
     priv->settings.zoomRange.minScale = zoomMinimum;
     priv->settings.zoomRange.maxScale = zoomMaximum;
     priv->settings.zoomRange.userScalable = true;
-    priv->settings.devicePixelRatio = devicePixelRatio;
 
     priv->settings.domTimerInterval = priv->pageSettings->defaultMinDOMTimerInterval();
 
@@ -935,7 +847,7 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
 
     priv->history = ewk_history_new(static_cast<WebCore::BackForwardListImpl*>(priv->page->backForwardList()));
 
-    priv->storageSession = WebCore::NetworkStorageSession::createDefaultSession();
+    priv->storageSession = &WebCore::NetworkStorageSession::defaultStorageSession();
 
     priv->pageClient = adoptPtr(new PageClientEfl(smartData->self));
 
@@ -962,7 +874,6 @@ static void _ewk_view_priv_del(Ewk_View_Private_Data* priv)
     /* do not delete priv->main_frame */
 
     free(priv->repaints.array);
-    free(priv->scrolls.array);
 
     eina_stringshare_del(priv->settings.userAgent);
     eina_stringshare_del(priv->settings.userStylesheet);
@@ -1120,10 +1031,8 @@ static void _ewk_view_smart_calculate(Evas_Object* ewkView)
 
     evas_object_geometry_get(ewkView, &x, &y, &width, &height);
 
-    DBG("ewkView=%p geo=[%d, %d + %dx%d], changed: size=%hhu, "
-        "scrolls=%zu, repaints=%zu",
-        ewkView, x, y, width, height, smartData->changed.size,
-        priv->scrolls.count, priv->repaints.count);
+    DBG("ewkView=%p geo=[%d, %d + %dx%d], changed: size=%huu",
+        ewkView, x, y, width, height, smartData->changed.size);
 
     if (smartData->changed.size && ((width != smartData->view.w) || (height != smartData->view.h))) {
         WebCore::FrameView* view = priv->mainFrame->view();
@@ -1324,14 +1233,11 @@ static void _ewk_view_zoom_animation_start(Ewk_View_Smart_Data* smartData)
 static WebCore::ViewportAttributes _ewk_view_viewport_attributes_compute(Ewk_View_Private_Data* priv)
 {
     int desktopWidth = 980;
-    int deviceDPI = WebCore::getDPI();
-    priv->settings.devicePixelRatio = deviceDPI / WebCore::ViewportArguments::deprecatedTargetDPI;
+    WebCore::IntRect availableRect = enclosingIntRect(priv->page->chrome().client().pageRect());
+    WebCore::IntRect deviceRect = enclosingIntRect(priv->page->chrome().client().windowRect());
 
-    WebCore::IntRect availableRect = enclosingIntRect(priv->page->chrome().client()->pageRect());
-    WebCore::IntRect deviceRect = enclosingIntRect(priv->page->chrome().client()->windowRect());
-
-    WebCore::ViewportAttributes attributes = WebCore::computeViewportAttributes(priv->viewportArguments, desktopWidth, deviceRect.width(), deviceRect.height(), priv->settings.devicePixelRatio, availableRect.size());
-    WebCore::restrictMinimumScaleFactorToViewportSize(attributes, availableRect.size(), priv->settings.devicePixelRatio);
+    WebCore::ViewportAttributes attributes = WebCore::computeViewportAttributes(priv->viewportArguments, desktopWidth, deviceRect.width(), deviceRect.height(), priv->page->deviceScaleFactor(), availableRect.size());
+    WebCore::restrictMinimumScaleFactorToViewportSize(attributes, availableRect.size(), priv->page->deviceScaleFactor());
     WebCore::restrictScaleFactorToInitialScaleIfNotUserScalable(attributes);
 
     return attributes;
@@ -1487,11 +1393,11 @@ Evas_Object* ewk_view_frame_focused_get(const Evas_Object* ewkView)
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, 0);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, 0);
 
-    WebCore::Frame* core = priv->page->focusController()->focusedFrame();
+    WebCore::Frame* core = priv->page->focusController().focusedFrame();
     if (!core)
         return 0;
 
-    WebCore::FrameLoaderClientEfl* client = static_cast<WebCore::FrameLoaderClientEfl*>(core->loader()->client());
+    WebCore::FrameLoaderClientEfl* client = static_cast<WebCore::FrameLoaderClientEfl*>(core->loader().client());
     if (!client)
         return 0;
     return client->webFrame();
@@ -1669,7 +1575,7 @@ const char* ewk_view_selection_get(const Evas_Object* ewkView)
 {
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, 0);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, 0);
-    CString selectedString = priv->page->focusController()->focusedOrMainFrame()->editor().selectedText().utf8();
+    CString selectedString = priv->page->focusController().focusedOrMainFrame()->editor().selectedText().utf8();
     if (selectedString.isNull())
         return 0;
     return eina_stringshare_add(selectedString.data());
@@ -1684,7 +1590,7 @@ Eina_Bool ewk_view_editor_command_execute(const Evas_Object* ewkView, const Ewk_
     if (!commandString)
         return false;
 
-    return priv->page->focusController()->focusedOrMainFrame()->editor().command(commandString).execute(WTF::String::fromUTF8(value));
+    return priv->page->focusController().focusedOrMainFrame()->editor().command(commandString).execute(WTF::String::fromUTF8(value));
 }
 
 Eina_Bool ewk_view_context_menu_forward_event(Evas_Object* ewkView, const Evas_Event_Mouse_Down* downEvent)
@@ -1694,7 +1600,7 @@ Eina_Bool ewk_view_context_menu_forward_event(Evas_Object* ewkView, const Evas_E
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
     Eina_Bool mouse_press_handled = false;
 
-    priv->page->contextMenuController()->clearContextMenu();
+    priv->page->contextMenuController().clearContextMenu();
     if (priv->contextMenu)
         ewk_context_menu_free(priv->contextMenu);
 
@@ -1706,21 +1612,21 @@ Eina_Bool ewk_view_context_menu_forward_event(Evas_Object* ewkView, const Evas_E
 
     if (mainFrame->view()) {
         mouse_press_handled =
-            mainFrame->eventHandler()->handleMousePressEvent(event);
+            mainFrame->eventHandler().handleMousePressEvent(event);
     }
 
-    if (!mainFrame->eventHandler()->sendContextMenuEvent(event))
+    if (!mainFrame->eventHandler().sendContextMenuEvent(event))
         return false;
 
     WebCore::ContextMenu* coreMenu =
-        priv->page->contextMenuController()->contextMenu();
+        priv->page->contextMenuController().contextMenu();
     if (!coreMenu) {
         // WebCore decided not to create a context menu, return true if event
         // was handled by handleMouseReleaseEvent
         return mouse_press_handled;
     }
 
-    priv->contextMenu = ewk_context_menu_new(ewkView, priv->page->contextMenuController(), coreMenu);
+    priv->contextMenu = ewk_context_menu_new(ewkView, &priv->page->contextMenuController(), coreMenu);
     if (!priv->contextMenu)
         return false;
 
@@ -1738,7 +1644,7 @@ double ewk_view_load_progress_get(const Evas_Object* ewkView)
 {
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, -1.0);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, -1.0);
-    return priv->page->progress()->estimatedProgress();
+    return priv->page->progress().estimatedProgress();
 }
 
 Eina_Bool ewk_view_stop(Evas_Object* ewkView)
@@ -2138,7 +2044,7 @@ Eina_Bool ewk_view_setting_user_agent_set(Evas_Object* ewkView, const char* user
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
     if (eina_stringshare_replace(&priv->settings.userAgent, userAgent)) {
-        WebCore::FrameLoaderClientEfl* client = static_cast<WebCore::FrameLoaderClientEfl*>(priv->mainFrame->loader()->client());
+        WebCore::FrameLoaderClientEfl* client = static_cast<WebCore::FrameLoaderClientEfl*>(priv->mainFrame->loader().client());
         client->setCustomUserAgent(String::fromUTF8(userAgent));
     }
     return true;
@@ -2413,7 +2319,7 @@ const char* ewk_view_setting_encoding_custom_get(const Evas_Object* ewkView)
     Evas_Object* main_frame = ewk_view_frame_main_get(ewkView);
     WebCore::Frame* core_frame = EWKPrivate::coreFrame(main_frame);
 
-    String overrideEncoding = core_frame->loader()->documentLoader()->overrideEncoding();
+    String overrideEncoding = core_frame->loader().documentLoader()->overrideEncoding();
 
     if (overrideEncoding.isEmpty())
         return 0;
@@ -2430,7 +2336,7 @@ Eina_Bool ewk_view_setting_encoding_custom_set(Evas_Object* ewkView, const char*
     WebCore::Frame* coreFrame = EWKPrivate::coreFrame(main_frame);
     DBG("%s", encoding);
     if (eina_stringshare_replace(&priv->settings.encodingCustom, encoding))
-        coreFrame->loader()->reloadWithOverrideEncoding(String::fromUTF8(encoding));
+        coreFrame->loader().reloadWithOverrideEncoding(String::fromUTF8(encoding));
     return true;
 }
 
@@ -2838,31 +2744,16 @@ const Eina_Rectangle* ewk_view_repaints_pop(Ewk_View_Private_Data* priv, size_t*
     return priv->repaints.array;
 }
 
-/**
- * Gets the internal array of scroll requests.
- *
- * This array should not be modified anyhow. It should be processed
- * immediately as any further ewk_view call might change it, like
- * those that add scrolls or flush them, so be sure that your code
- * does not call any of those while you process the scrolls,
- * otherwise copy the array.
- *
- * @param priv private handle pointer of the view to get scrolls.
- * @param count where to return the number of elements of returned array, may be @c 0.
- *
- * @return reference to array of requested scrolls.
- *
- * @note this is not for general use but just for subclasses that want
- *       to define their own backing store.
- */
-const Ewk_Scroll_Request* ewk_view_scroll_requests_get(const Ewk_View_Private_Data* priv, size_t* count)
+const Vector<WebCore::IntSize>& ewk_view_scroll_offsets_get(const Ewk_View_Private_Data* priv)
 {
-    if (count)
-        *count = 0;
-    EINA_SAFETY_ON_NULL_RETURN_VAL(priv, 0);
-    if (count)
-        *count = priv->scrolls.count;
-    return priv->scrolls.array;
+    ASSERT(priv);
+    return priv->m_scrollOffsets;
+}
+
+const Vector<WebCore::IntRect>& ewk_view_scroll_rects_get(const Ewk_View_Private_Data* priv)
+{
+    ASSERT(priv);
+    return priv->m_rectsToScroll;
 }
 
 /**
@@ -3056,13 +2947,13 @@ void ewk_view_input_method_state_set(Evas_Object* ewkView, bool active)
 {
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
     EWK_VIEW_PRIV_GET(smartData, priv);
-    WebCore::Frame* focusedFrame = priv->page->focusController()->focusedOrMainFrame();
+    WebCore::Frame* focusedFrame = priv->page->focusController().focusedOrMainFrame();
 
     priv->imh = 0;
     if (focusedFrame
         && focusedFrame->document()
         && focusedFrame->document()->focusedElement()
-        && focusedFrame->document()->focusedElement()->hasTagName(WebCore::HTMLNames::inputTag)) {
+        && isHTMLInputElement(focusedFrame->document()->focusedElement())) {
         WebCore::HTMLInputElement* inputElement;
 
         inputElement = static_cast<WebCore::HTMLInputElement*>(focusedFrame->document()->focusedElement());
@@ -3282,7 +3173,7 @@ void ewk_view_load_progress_changed(Evas_Object* ewkView)
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
 
     // Evas_Coord width, height;
-    double progress = priv->page->progress()->estimatedProgress();
+    double progress = priv->page->progress().estimatedProgress();
 
     DBG("ewkView=%p (p=%0.3f)", ewkView, progress);
 
@@ -3747,20 +3638,21 @@ void ewk_view_repaint(Evas_Object* ewkView, Evas_Coord x, Evas_Coord y, Evas_Coo
     _ewk_view_smart_changed(smartData);
 }
 
-void ewk_view_scroll(Evas_Object* ewkView, Evas_Coord deltaX, Evas_Coord deltaY, Evas_Coord scrollX, Evas_Coord scrollY, Evas_Coord scrollWidth, Evas_Coord scrollHeight, Evas_Coord centerX, Evas_Coord centerY, Evas_Coord centerWidth, Evas_Coord centerHeight)
+void ewk_view_scroll(Evas_Object* ewkView, const WebCore::IntSize& delta, const WebCore::IntRect& rectToScroll, const WebCore::IntRect&)
 {
-    DBG("ewkView=%p, delta: %d,%d, scroll: %d,%d+%dx%d, clip: %d,%d+%dx%d",
-        ewkView, deltaX, deltaY, scrollX, scrollY, scrollWidth, scrollHeight, centerX, centerY, centerWidth, centerHeight);
-
-    if ((scrollX != centerX) || (scrollY != centerY) || (scrollWidth != centerWidth) || (scrollHeight != centerHeight))
-        WARN("scroll region and clip are different! %d,%d+%dx%d and %d,%d+%dx%d",
-            scrollX, scrollY, scrollWidth, scrollHeight, centerX, centerY, centerWidth, centerHeight);
+    ASSERT(!rectToScroll.isEmpty());
+    ASSERT(delta.width() || delta.height());
 
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
-    EINA_SAFETY_ON_TRUE_RETURN(!deltaX && !deltaY);
 
-    _ewk_view_scroll_add(priv, deltaX, deltaY, scrollX, scrollY, scrollWidth, scrollHeight);
+    priv->m_rectsToScroll.append(rectToScroll);
+    priv->m_scrollOffsets.append(delta);
+
+    for (size_t i = 0; i < priv->repaints.count; ++i) {
+        priv->repaints.array[i].x = delta.width();
+        priv->repaints.array[i].y = delta.height();
+    }
 
     _ewk_view_smart_changed(smartData);
 }
@@ -4039,7 +3931,7 @@ void ewk_view_viewport_attributes_get(const Evas_Object* ewkView, int* width, in
     if (minScale)
         *minScale = attributes.minimumScale;
     if (devicePixelRatio)
-        *devicePixelRatio = priv->settings.devicePixelRatio;
+        *devicePixelRatio = priv->page->deviceScaleFactor();
     if (userScalable)
         *userScalable = static_cast<bool>(attributes.userScalable);
 }
@@ -4094,12 +3986,22 @@ Eina_Bool ewk_view_user_scalable_get(const Evas_Object* ewkView)
     return priv->settings.zoomRange.userScalable;
 }
 
+Eina_Bool ewk_view_device_pixel_ratio_set(Evas_Object* ewkView, float ratio)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
+
+    priv->page->setDeviceScaleFactor(ratio);
+
+    return true;
+}
+
 float ewk_view_device_pixel_ratio_get(const Evas_Object* ewkView)
 {
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, -1.0);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, -1.0);
 
-    return priv->settings.devicePixelRatio;
+    return priv->page->deviceScaleFactor();
 }
 
 void ewk_view_text_direction_set(Evas_Object* ewkView, Ewk_Text_Direction direction)
@@ -4111,7 +4013,7 @@ void ewk_view_text_direction_set(Evas_Object* ewkView, Ewk_Text_Direction direct
     // the text direction of the selected node and updates its DOM "dir"
     // attribute and its CSS "direction" property.
     // So, we just call the function as Safari does.
-    WebCore::Frame* focusedFrame = priv->page->focusController()->focusedOrMainFrame();
+    WebCore::Frame* focusedFrame = priv->page->focusController().focusedOrMainFrame();
     if (!focusedFrame)
         return;
 
@@ -4195,7 +4097,7 @@ Eina_Bool ewk_view_js_object_add(Evas_Object* ewkView, Ewk_JS_Object* object, co
     WebCore::JSDOMWindow* window = toJSDOMWindow(priv->mainFrame, WebCore::mainThreadNormalWorld());
     JSC::JSLockHolder lock(window->globalExec());
     JSC::Bindings::RootObject* root;
-    root = priv->mainFrame->script()->bindingRootObject();
+    root = priv->mainFrame->script().bindingRootObject();
 
     if (!window) {
         ERR("Warning: couldn't get window object");
@@ -4868,7 +4770,7 @@ WebCore::NetworkStorageSession* storageSession(const Evas_Object* ewkView)
 {
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, 0);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, 0);
-    return priv->storageSession.get();
+    return priv->storageSession;
 }
 
 } // namespace EWKPrivate

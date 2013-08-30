@@ -31,13 +31,16 @@
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "Document.h"
+#include "ElementTraversal.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameSelection.h"
+#include "HTMLAnchorElement.h"
 #include "HTMLDocument.h"
 #include "HTMLFrameElementBase.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLProgressElement.h"
 #include "HTMLStyleElement.h"
@@ -64,17 +67,17 @@ using namespace HTMLNames;
     
 static inline bool isFirstChildElement(const Element* element)
 {
-    return !element->previousElementSibling();
+    return !ElementTraversal::previousSibling(element);
 }
 
 static inline bool isLastChildElement(const Element* element)
 {
-    return !element->nextElementSibling();
+    return !ElementTraversal::nextSibling(element);
 }
 
 static inline bool isFirstOfType(const Element* element, const QualifiedName& type)
 {
-    for (const Element* sibling = element->previousElementSibling(); sibling; sibling = sibling->previousElementSibling()) {
+    for (const Element* sibling = ElementTraversal::previousSibling(element); sibling; sibling = ElementTraversal::previousSibling(sibling)) {
         if (sibling->hasTagName(type))
             return false;
     }
@@ -83,7 +86,7 @@ static inline bool isFirstOfType(const Element* element, const QualifiedName& ty
 
 static inline bool isLastOfType(const Element* element, const QualifiedName& type)
 {
-    for (const Element* sibling = element->nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
+    for (const Element* sibling = ElementTraversal::nextSibling(element); sibling; sibling = ElementTraversal::nextSibling(sibling)) {
         if (sibling->hasTagName(type))
             return false;
     }
@@ -93,7 +96,7 @@ static inline bool isLastOfType(const Element* element, const QualifiedName& typ
 static inline int countElementsBefore(const Element* element)
 {
     int count = 0;
-    for (const Element* sibling = element->previousElementSibling(); sibling; sibling = sibling->previousElementSibling()) {
+    for (const Element* sibling = ElementTraversal::previousSibling(element); sibling; sibling = ElementTraversal::previousSibling(sibling)) {
         unsigned index = sibling->childIndex();
         if (index) {
             count += index;
@@ -107,7 +110,7 @@ static inline int countElementsBefore(const Element* element)
 static inline int countElementsOfTypeBefore(const Element* element, const QualifiedName& type)
 {
     int count = 0;
-    for (const Element* sibling = element->previousElementSibling(); sibling; sibling = sibling->previousElementSibling()) {
+    for (const Element* sibling = ElementTraversal::previousSibling(element); sibling; sibling = ElementTraversal::previousSibling(sibling)) {
         if (sibling->hasTagName(type))
             ++count;
     }
@@ -117,7 +120,7 @@ static inline int countElementsOfTypeBefore(const Element* element, const Qualif
 static inline int countElementsAfter(const Element* element)
 {
     int count = 0;
-    for (const Element* sibling = element->nextElementSibling(); sibling; sibling = sibling->nextElementSibling())
+    for (const Element* sibling = ElementTraversal::nextSibling(element); sibling; sibling = ElementTraversal::nextSibling(sibling))
         ++count;
     return count;
 }
@@ -125,7 +128,7 @@ static inline int countElementsAfter(const Element* element)
 static inline int countElementsOfTypeAfter(const Element* element, const QualifiedName& type)
 {
     int count = 0;
-    for (const Element* sibling = element->nextElementSibling(); sibling; sibling = sibling->nextElementSibling()) {
+    for (const Element* sibling = ElementTraversal::nextSibling(element); sibling; sibling = ElementTraversal::nextSibling(sibling)) {
         if (sibling->hasTagName(type))
             ++count;
     }
@@ -289,9 +292,9 @@ SelectorChecker::Match SelectorChecker::match(const SelectorCheckingContext& con
     return SelectorFailsCompletely;
 }
 
-static bool attributeValueMatches(const Attribute* attributeItem, CSSSelector::Match match, const AtomicString& selectorValue, bool caseSensitive)
+static bool attributeValueMatches(const Attribute& attribute, CSSSelector::Match match, const AtomicString& selectorValue, bool caseSensitive)
 {
-    const AtomicString& value = attributeItem->value();
+    const AtomicString& value = attribute.value();
     if (value.isNull())
         return false;
 
@@ -352,16 +355,16 @@ static bool attributeValueMatches(const Attribute* attributeItem, CSSSelector::M
     return true;
 }
 
-static bool anyAttributeMatches(Element* element, CSSSelector::Match match, const QualifiedName& selectorAttr, const AtomicString& selectorValue, bool caseSensitive)
+static bool anyAttributeMatches(Element* element, const CSSSelector* selector, const QualifiedName& selectorAttr, bool caseSensitive)
 {
     ASSERT(element->hasAttributesWithoutUpdate());
-    for (size_t i = 0; i < element->attributeCount(); ++i) {
-        const Attribute* attributeItem = element->attributeItem(i);
+    for (size_t i = 0, count = element->attributeCount(); i < count; ++i) {
+        const Attribute& attribute = element->attributeAt(i);
 
-        if (!attributeItem->matches(selectorAttr))
+        if (!attribute.matches(selectorAttr.prefix(), element->isHTMLElement() ? selector->attributeCanonicalLocalName() : selectorAttr.localName(), selectorAttr.namespaceURI()))
             continue;
 
-        if (attributeValueMatches(attributeItem, match, selectorValue, caseSensitive))
+        if (attributeValueMatches(attribute, static_cast<CSSSelector::Match>(selector->m_match), selector->value(), caseSensitive))
             return true;
     }
 
@@ -379,20 +382,19 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
         return SelectorChecker::tagMatches(element, selector->tagQName());
 
     if (selector->m_match == CSSSelector::Class)
-        return element->hasClass() && static_cast<StyledElement*>(element)->classNames().contains(selector->value());
+        return element->hasClass() && element->classNames().contains(selector->value());
 
     if (selector->m_match == CSSSelector::Id)
         return element->hasID() && element->idForStyleResolution() == selector->value();
 
     if (selector->isAttributeSelector()) {
-        const QualifiedName& attr = selector->attribute();
-
         if (!element->hasAttributes())
             return false;
 
+        const QualifiedName& attr = selector->attribute();
         bool caseSensitive = !m_documentIsHTML || HTMLDocument::isCaseSensitiveAttribute(attr);
 
-        if (!anyAttributeMatches(element, static_cast<CSSSelector::Match>(selector->m_match), attr, selector->value(), caseSensitive))
+        if (!anyAttributeMatches(element, selector, attr, caseSensitive))
             return false;
     }
 
@@ -424,7 +426,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
             return checkScrollbarPseudoClass(context, element->document(), selector);
         } else if (context.hasSelectionPseudo) {
             if (selector->pseudoType() == CSSSelector::PseudoWindowInactive)
-                return !element->document()->page()->focusController()->isActive();
+                return !element->document()->page()->focusController().isActive();
         }
 
         // Normal element pseudo class checking.
@@ -629,7 +631,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
         case CSSSelector::PseudoHover:
             // If we're in quirks mode, then hover should never match anchors with no
             // href and *:hover should not match anything. This is important for sites like wsj.com.
-            if (m_strictParsing || context.isSubSelector || (selector->m_match == CSSSelector::Tag && selector->tagQName() != anyQName() && !element->hasTagName(aTag)) || element->isLink()) {
+            if (m_strictParsing || context.isSubSelector || (selector->m_match == CSSSelector::Tag && selector->tagQName() != anyQName() && !isHTMLAnchorElement(element)) || element->isLink()) {
                 if (m_mode == ResolvingStyle) {
                     if (context.elementStyle)
                         context.elementStyle->setAffectedByHover();
@@ -643,7 +645,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
         case CSSSelector::PseudoActive:
             // If we're in quirks mode, then :active should never match anchors with no
             // href and *:active should not match anything.
-            if (m_strictParsing || context.isSubSelector || (selector->m_match == CSSSelector::Tag && selector->tagQName() != anyQName() && !element->hasTagName(aTag)) || element->isLink()) {
+            if (m_strictParsing || context.isSubSelector || (selector->m_match == CSSSelector::Tag && selector->tagQName() != anyQName() && !isHTMLAnchorElement(element)) || element->isLink()) {
                 if (m_mode == ResolvingStyle) {
                     if (context.elementStyle)
                         context.elementStyle->setAffectedByActive();
@@ -655,7 +657,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
             }
             break;
         case CSSSelector::PseudoEnabled:
-            if (element->isFormControlElement() || element->hasTagName(optionTag) || element->hasTagName(optgroupTag))
+            if (element->isFormControlElement() || isHTMLOptionElement(element) || isHTMLOptGroupElement(element))
                 return !element->isDisabledFormControl();
             break;
         case CSSSelector::PseudoFullPageMedia:
@@ -664,7 +666,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
         case CSSSelector::PseudoDefault:
             return element->isDefaultButtonForForm();
         case CSSSelector::PseudoDisabled:
-            if (element->isFormControlElement() || element->hasTagName(optionTag) || element->hasTagName(optgroupTag))
+            if (element->isFormControlElement() || isHTMLOptionElement(element) || isHTMLOptGroupElement(element))
                 return element->isDisabledFormControl();
             break;
         case CSSSelector::PseudoReadOnly:
@@ -689,7 +691,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
                 HTMLInputElement* inputElement = element->toInputElement();
                 if (inputElement && inputElement->shouldAppearChecked() && !inputElement->shouldAppearIndeterminate())
                     return true;
-                if (element->hasTagName(optionTag) && toHTMLOptionElement(element)->selected())
+                if (isHTMLOptionElement(element) && toHTMLOptionElement(element)->selected())
                     return true;
                 break;
             }
@@ -721,7 +723,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
             // element is an element in the document, the 'full-screen' pseudoclass applies to
             // that element. Also, an <iframe>, <object> or <embed> element whose child browsing
             // context's Document is in the fullscreen state has the 'full-screen' pseudoclass applied.
-            if (element->isFrameElementBase() && static_cast<HTMLFrameElementBase*>(element)->containsFullScreenElement())
+            if (element->isFrameElementBase() && element->containsFullScreenElement())
                 return true;
             if (!element->document()->webkitIsFullScreen())
                 return false;
@@ -812,7 +814,7 @@ bool SelectorChecker::checkScrollbarPseudoClass(const SelectorCheckingContext& c
     // FIXME: This is a temporary hack for resizers and scrollbar corners. Eventually :window-inactive should become a real
     // pseudo class and just apply to everything.
     if (selector->pseudoType() == CSSSelector::PseudoWindowInactive)
-        return !document->page()->focusController()->isActive();
+        return !document->page()->focusController().isActive();
 
     if (!scrollbar)
         return false;
@@ -932,7 +934,7 @@ unsigned SelectorChecker::determineLinkMatchType(const CSSSelector* selector)
 
 bool SelectorChecker::isFrameFocused(const Element* element)
 {
-    return element->document()->frame() && element->document()->frame()->selection()->isFocusedAndActive();
+    return element->document()->frame() && element->document()->frame()->selection().isFocusedAndActive();
 }
 
 bool SelectorChecker::matchesFocusPseudoClass(const Element* element)

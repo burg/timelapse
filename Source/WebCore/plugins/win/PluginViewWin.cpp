@@ -592,7 +592,7 @@ void PluginView::paintIntoTransformedContext(HDC hdc)
 
 void PluginView::paintWindowedPluginIntoContext(GraphicsContext* context, const IntRect& rect)
 {
-#if !OS(WINCE)
+#if !USE(WINGDI)
     ASSERT(m_isWindowed);
     ASSERT(context->shouldIncludeChildWindows());
 
@@ -642,7 +642,7 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
         setNPWindowRect(frameRect());
 
     if (m_isWindowed) {
-#if !OS(WINCE)
+#if !USE(WINGDI)
         if (context->shouldIncludeChildWindows())
             paintWindowedPluginIntoContext(context, rect);
 #endif
@@ -778,7 +778,7 @@ void PluginView::handleMouseEvent(MouseEvent* event)
     // and since we don't want that we set ignoreNextSetCursor to true here to prevent that.
     ignoreNextSetCursor = true;
     if (Page* page = m_parentFrame->page())
-        page->chrome().client()->setLastSetCursorToCurrentCursor();
+        page->chrome().client().setLastSetCursorToCurrentCursor();
 #endif
 }
 
@@ -897,13 +897,13 @@ NPError PluginView::handlePostReadFile(Vector<char>& buffer, uint32_t len, const
 
     // Get file info
     WIN32_FILE_ATTRIBUTE_DATA attrs;
-    if (GetFileAttributesExW(filename.charactersWithNullTermination(), GetFileExInfoStandard, &attrs) == 0)
+    if (GetFileAttributesExW(filename.charactersWithNullTermination().data(), GetFileExInfoStandard, &attrs) == 0)
         return NPERR_FILE_NOT_FOUND;
 
     if (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         return NPERR_FILE_NOT_FOUND;
 
-    HANDLE fileHandle = CreateFileW(filename.charactersWithNullTermination(), FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    HANDLE fileHandle = CreateFileW(filename.charactersWithNullTermination().data(), FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
     
     if (fileHandle == INVALID_HANDLE_VALUE)
         return NPERR_FILE_NOT_FOUND;
@@ -1067,7 +1067,7 @@ void PluginView::platformDestroy()
 
 PassRefPtr<Image> PluginView::snapshot()
 {
-#if !PLATFORM(GTK) && !OS(WINCE)
+#if !PLATFORM(GTK) && !USE(WINGDI)
     OwnPtr<HDC> hdc = adoptPtr(CreateCompatibleDC(0));
 
     if (!m_isWindowed) {

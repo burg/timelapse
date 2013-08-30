@@ -5655,7 +5655,6 @@ svg/as-image/image-respects-pageScaleFactor.html
 # new crashing tests
 canvas/philip/tests/2d.pattern.basic.zerocanvas.html
 fast/css-generated-content/reset-content-to-initial.html
-fast/css/giant-stylesheet-crash.html
 
 # new failing tests
 css1/box_properties/acid_test.html
@@ -5689,7 +5688,6 @@ webkit.org/b/64526 [ Debug ] svg/animations/svgtransform-animation-1.html [ Cras
 # FIXME: File bugs.
 Bug(_qt_slow) [ Debug ] editing/selection/empty-cell-right-click.html [ Pass Slow ]
 Bug(_qt_slow) [ Debug ] editing/selection/dump-as-markup.html [ Pass Slow ]
-Bug(_qt_slow) [ Debug ] fast/js/array-sort-modifying-tostring.html [ Pass Timeout ]
 Bug(_qt_slow) [ Debug ] fast/overflow/lots-of-sibling-inline-boxes.html [ Pass Slow ]
 Bug(_qt_slow) [ Debug ] fast/js/dfg-inline-function-dot-caller.html [ Pass Slow ]
 
@@ -5858,5 +5856,10 @@ webkit.org/b/94005 css2.1/20110323/word-spacing-remove-space-003.htm [ ImageOnly
 webkit.org/b/94005 css2.1/20110323/word-spacing-remove-space-006.htm [ ImageOnlyFailure ]
 webkit.org/b/94006 fast/css/word-spacing-characters-complex-text.html [ ImageOnlyFailure ]
 
+# [CSS Shapes] New tests added in r152122 are failing on Qt Mountain Lion
+webkit.org/b/118502 csswg/submitted/shapes/shape-outside/shape-outside-floats-horizontal-rectangle-000.html [ Skip ]
+webkit.org/b/118502 csswg/submitted/shapes/shape-outside/shape-outside-floats-square-000.html [ Skip ]
+webkit.org/b/118502 csswg/submitted/shapes/shape-outside/shape-outside-floats-vertical-rectangle-000.html [ Skip ]
 
-
+# [Qt][Mountain Lion] REGRESSION(r151546): fast/canvas/webgl/oes-texture-half-float-not-supported.html fails
+webkit.org/b/118508 fast/canvas/webgl/oes-texture-half-float-not-supported.html [ Skip ]

@@ -78,7 +78,7 @@ public:
     virtual bool canTakeFocus(FocusDirection) { return false; }
     virtual void takeFocus(FocusDirection) { }
 
-    virtual void focusedNodeChanged(Node*) { }
+    virtual void focusedElementChanged(Element*) { }
     virtual void focusedFrameChanged(Frame*) { }
 
     virtual Page* createWindow(Frame*, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) { return 0; }
@@ -188,6 +188,8 @@ public:
 
 #if PLATFORM(WIN)
     virtual void setLastSetCursorToCurrentCursor() { }
+    virtual void AXStartFrameLoad() { }
+    virtual void AXFinishFrameLoad() { }
 #endif
 #if ENABLE(TOUCH_EVENTS)
     virtual void needTouchEvents(bool) { }
@@ -396,7 +398,6 @@ public:
     EmptyEditorClient() { }
     virtual ~EmptyEditorClient() { }
     virtual void pageDestroyed() { }
-    virtual void frameWillDetachPage(Frame*) { }
 
     virtual bool shouldDeleteRange(Range*) { return false; }
     virtual bool smartInsertDeleteEnabled() { return false; }

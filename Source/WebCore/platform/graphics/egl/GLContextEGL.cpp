@@ -22,8 +22,11 @@
 #if USE(EGL)
 
 #include "GraphicsContext3D.h"
-#include <cairo.h>
 #include <wtf/OwnPtr.h>
+
+#if USE(CAIRO)
+#include <cairo.h>
+#endif
 
 #if USE(OPENGL_ES_2)
 #include <GLES2/gl2.h>
@@ -173,13 +176,14 @@ PassOwnPtr<GLContextEGL> GLContextEGL::createPixmapContext(EGLContext sharingCon
         return nullptr;
 
     EGLSurface surface = eglCreatePixmapSurface(display, config, pixmap, 0);
-#else
-    EGLSurface surface = EGL_NO_SURFACE;
-#endif
+
     if (surface == EGL_NO_SURFACE)
         return nullptr;
 
     return adoptPtr(new GLContextEGL(context, surface, PixmapSurface));
+#else
+    return nullptr;
+#endif
 }
 
 PassOwnPtr<GLContextEGL> GLContextEGL::createContext(EGLNativeWindowType window, GLContext* sharingContext)
@@ -213,14 +217,18 @@ GLContextEGL::GLContextEGL(EGLContext context, EGLSurface surface, EGLSurfaceTyp
     : m_context(context)
     , m_surface(surface)
     , m_type(type)
+#if USE(CAIRO)
     , m_cairoDevice(0)
+#endif
 {
 }
 
 GLContextEGL::~GLContextEGL()
 {
+#if USE(CAIRO)
     if (m_cairoDevice)
         cairo_device_destroy(m_cairoDevice);
+#endif
 
     EGLDisplay display = sharedEGLDisplay();
     if (m_context) {
@@ -273,6 +281,7 @@ void GLContextEGL::waitNative()
     eglWaitNative(EGL_CORE_NATIVE_ENGINE);
 }
 
+#if USE(CAIRO)
 cairo_device_t* GLContextEGL::cairoDevice()
 {
     if (m_cairoDevice)
@@ -284,6 +293,7 @@ cairo_device_t* GLContextEGL::cairoDevice()
 
     return m_cairoDevice;
 }
+#endif
 
 #if ENABLE(WEBGL)
 PlatformGraphicsContext3D GLContextEGL::platformContext()

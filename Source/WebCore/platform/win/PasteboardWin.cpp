@@ -48,8 +48,8 @@
 #include "SharedBuffer.h"
 #include "TextEncoding.h"
 #include "WebCoreInstanceHandle.h"
-#include "WindowsExtras.h"
 #include "markup.h"
+#include <wtf/WindowsExtras.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -504,8 +504,6 @@ void Pasteboard::writePlainTextToDataObject(const String& text, SmartReplaceOpti
     medium.hGlobal = createGlobalData(str);
     if (medium.hGlobal && FAILED(m_writableDataObject->SetData(plainTextWFormat(), &medium, TRUE)))
         ::GlobalFree(medium.hGlobal);        
-
-    medium.hGlobal = 0;
 }
 
 void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartReplaceOption)
@@ -677,7 +675,7 @@ void Pasteboard::writeURLToDataObject(const KURL& kurl, const String& titleStr, 
     fgd->fgd[0].dwFlags = FD_FILESIZE;
     fgd->fgd[0].nFileSizeLow = content.length();
 
-    unsigned maxSize = std::min(fsPath.length(), WTF_ARRAY_LENGTH(fgd->fgd[0].cFileName));
+    unsigned maxSize = std::min<unsigned>(fsPath.length(), WTF_ARRAY_LENGTH(fgd->fgd[0].cFileName));
     CopyMemory(fgd->fgd[0].cFileName, fsPath.characters(), maxSize * sizeof(UChar));
     GlobalUnlock(urlFileDescriptor);
 
@@ -774,11 +772,6 @@ void Pasteboard::writeImage(Node* node, const KURL&, const String&)
 }
 
 void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
-{
-    notImplemented();
-}
-
-void Pasteboard::writeClipboard(Clipboard*)
 {
     notImplemented();
 }
@@ -921,7 +914,7 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
         return 0;
     }
     extension.insert(".", 0);
-    fsPath = filesystemPathFromUrlOrTitle(url, preferredTitle, extension.charactersWithNullTermination(), false);
+    fsPath = filesystemPathFromUrlOrTitle(url, preferredTitle, extension.charactersWithNullTermination().data(), false);
 
     if (fsPath.length() <= 0) {
         GlobalUnlock(memObj);
@@ -929,7 +922,7 @@ static HGLOBAL createGlobalImageFileDescriptor(const String& url, const String& 
         return 0;
     }
 
-    int maxSize = std::min(fsPath.length(), WTF_ARRAY_LENGTH(fgd->fgd[0].cFileName));
+    int maxSize = std::min<int>(fsPath.length(), WTF_ARRAY_LENGTH(fgd->fgd[0].cFileName));
     CopyMemory(fgd->fgd[0].cFileName, (LPCWSTR)fsPath.characters(), maxSize * sizeof(UChar));
     GlobalUnlock(memObj);
 
@@ -963,7 +956,8 @@ static HGLOBAL createGlobalHDropContent(const KURL& url, String& fileName, Share
         // windows does not enjoy a leading slash on paths
         if (localPath[0] == '/')
             localPath = localPath.substring(1);
-        LPCWSTR localPathStr = localPath.charactersWithNullTermination();
+        const Vector<UChar>& localPathWide = localPath.charactersWithNullTermination();
+        LPCWSTR localPathStr = localPathWide.data();
         if (wcslen(localPathStr) + 1 < MAX_PATH)
             wcscpy_s(filePath, MAX_PATH, localPathStr);
         else
@@ -977,7 +971,7 @@ static HGLOBAL createGlobalHDropContent(const KURL& url, String& fileName, Share
         WCHAR extension[MAX_PATH];
         if (!::GetTempPath(WTF_ARRAY_LENGTH(tempPath), tempPath))
             return 0;
-        if (!::PathAppend(tempPath, fileName.charactersWithNullTermination()))
+        if (!::PathAppend(tempPath, fileName.charactersWithNullTermination().data()))
             return 0;
         LPCWSTR foundExtension = ::PathFindExtension(tempPath);
         if (foundExtension) {
@@ -1053,6 +1047,19 @@ void Pasteboard::writeImageToDataObject(Element* element, const KURL& url)
 void Pasteboard::writeURLToWritableDataObject(const KURL& url, const String& title)
 {
     WebCore::writeURL(m_writableDataObject.get(), url, title, true, false);
+}
+
+void Pasteboard::writeMarkup(const String& markup)
+{
+    Vector<char> data;
+    markupToCFHTML(markup, "", data);
+
+    STGMEDIUM medium = {0};
+    medium.tymed = TYMED_HGLOBAL;
+
+    medium.hGlobal = createGlobalData(data);
+    if (medium.hGlobal && FAILED(m_writableDataObject->SetData(htmlFormat(), &medium, TRUE)))
+        GlobalFree(medium.hGlobal);
 }
 
 } // namespace WebCore

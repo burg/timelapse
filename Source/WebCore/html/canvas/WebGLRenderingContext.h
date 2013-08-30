@@ -34,10 +34,9 @@
 #include "Timer.h"
 #include "WebGLGetInfo.h"
 
-#include <wtf/Float32Array.h>
-#include <wtf/Int32Array.h>
+#include <runtime/Float32Array.h>
+#include <runtime/Int32Array.h>
 #include <wtf/OwnArrayPtr.h>
-#include <wtf/Uint8Array.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -322,11 +321,7 @@ public:
     
     unsigned getMaxVertexAttribs() const { return m_maxVertexAttribs; }
 
-    // ActiveDOMObject notifications
-    virtual bool hasPendingActivity() const;
-    virtual void stop();
-
-  private:
+private:
     friend class EXTDrawBuffers;
     friend class WebGLFramebuffer;
     friend class WebGLObject;
@@ -341,6 +336,10 @@ public:
     WebGLRenderingContext(HTMLCanvasElement*, PassRefPtr<GraphicsContext3D>, GraphicsContext3D::Attributes);
     void initializeNewContext();
     void setupFlags();
+
+    // ActiveDOMObject
+    virtual bool hasPendingActivity() const OVERRIDE;
+    virtual void stop() OVERRIDE;
 
     void addSharedObject(WebGLSharedObject*);
     void addContextObject(WebGLContextObject*);
@@ -378,7 +377,7 @@ public:
     // Precise but slow index validation -- only done if conservative checks fail
     bool validateIndexArrayPrecise(GC3Dsizei count, GC3Denum type, GC3Dintptr offset, unsigned& numElementsRequired);
     // If numElements <= 0, we only check if each enabled vertex attribute is bound to a buffer.
-    bool validateRenderingState(unsigned numElements);
+    bool validateVertexAttributes(unsigned numElements);
 
     bool validateWebGLObject(const char*, WebGLObject*);
 
@@ -450,10 +449,8 @@ public:
     RefPtr<WebGLProgram> m_currentProgram;
     RefPtr<WebGLFramebuffer> m_framebufferBinding;
     RefPtr<WebGLRenderbuffer> m_renderbufferBinding;
-    class TextureUnitState {
-    public:
-        RefPtr<WebGLTexture> m_texture2DBinding;
-        RefPtr<WebGLTexture> m_textureCubeMapBinding;
+    struct TextureUnitState {
+        RefPtr<WebGLTexture> m_textureBinding;
     };
     Vector<TextureUnitState> m_textureUnits;
     unsigned long m_activeTextureUnit;

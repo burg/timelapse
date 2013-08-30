@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#include "JSHTMLEmbedElementCustom.h"
+#include "JSHTMLEmbedElement.h"
 
 #include "HTMLEmbedElement.h"
 #include "JSPluginElementFunctions.h"
@@ -36,11 +36,6 @@ using namespace JSC;
 bool JSHTMLEmbedElement::getOwnPropertySlotDelegate(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     return pluginElementCustomGetOwnPropertySlot<JSHTMLEmbedElement, Base>(exec, propertyName, slot, this);
-}
-
-bool JSHTMLEmbedElement::getOwnPropertyDescriptorDelegate(ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return pluginElementCustomGetOwnPropertyDescriptor<JSHTMLEmbedElement, Base>(exec, propertyName, descriptor, this);
 }
 
 bool JSHTMLEmbedElement::putDelegate(ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)

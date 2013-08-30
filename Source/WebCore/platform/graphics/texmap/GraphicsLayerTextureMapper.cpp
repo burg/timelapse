@@ -43,11 +43,6 @@ PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, G
     return factory->createGraphicsLayer(client);
 }
 
-PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerClient* client)
-{
-    return adoptPtr(new GraphicsLayerTextureMapper(client));
-}
-
 GraphicsLayerTextureMapper::GraphicsLayerTextureMapper(GraphicsLayerClient* client)
     : GraphicsLayer(client)
     , m_layer(adoptPtr(new TextureMapperLayer()))
@@ -77,6 +72,9 @@ void GraphicsLayerTextureMapper::setName(const String& name)
 
 GraphicsLayerTextureMapper::~GraphicsLayerTextureMapper()
 {
+    if (m_contentsLayer)
+        m_contentsLayer->setClient(0);
+
     willBeDestroyed();
 }
 
@@ -384,9 +382,14 @@ void GraphicsLayerTextureMapper::setContentsToMedia(TextureMapperPlatformLayer* 
 
     GraphicsLayer::setContentsToMedia(media);
     notifyChange(ContentChange);
+
+    if (m_contentsLayer)
+        m_contentsLayer->setClient(0);
+
     m_contentsLayer = media;
 
-    m_contentsLayer->setClient(this);
+    if (m_contentsLayer)
+        m_contentsLayer->setClient(this);
 }
 
 void GraphicsLayerTextureMapper::setShowDebugBorder(bool show)

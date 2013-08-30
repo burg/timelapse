@@ -43,7 +43,7 @@ typedef ListHashSet<RenderNamedFlowThread*> RenderNamedFlowThreadList;
 typedef HashCountedSet<RenderNamedFlowThread*> RenderNamedFlowThreadCountedSet;
 typedef ListHashSet<Node*> NamedFlowContentNodes;
 
-class RenderNamedFlowThread : public RenderFlowThread {
+class RenderNamedFlowThread FINAL : public RenderFlowThread {
 public:
     virtual ~RenderNamedFlowThread();
 
@@ -68,6 +68,11 @@ public:
     virtual void addRegionToThread(RenderRegion*) OVERRIDE;
     virtual void removeRegionFromThread(RenderRegion*) OVERRIDE;
 
+    virtual void regionChangedWritingMode(RenderRegion*) OVERRIDE;
+
+    bool overset() const { return m_overset; }
+    void computeOversetStateForRegions(LayoutUnit oldClientAfterEdge);
+
     void registerNamedFlowContentNode(Node*);
     void unregisterNamedFlowContentNode(Node*);
     const NamedFlowContentNodes& contentNodes() const { return m_contentNodes; }
@@ -87,6 +92,7 @@ private:
     virtual bool isChildAllowed(RenderObject*, RenderStyle*) const OVERRIDE;
 
     virtual void dispatchRegionLayoutUpdateEvent() OVERRIDE;
+    virtual void dispatchRegionOversetChangeEvent() OVERRIDE;
 
     bool dependsOn(RenderNamedFlowThread* otherRenderFlowThread) const;
     void addDependencyOnFlowThread(RenderNamedFlowThread*);
@@ -98,7 +104,9 @@ private:
 
     bool canBeDestroyed() const { return m_invalidRegionList.isEmpty() && m_regionList.isEmpty() && m_contentNodes.isEmpty(); }
     void regionLayoutUpdateEventTimerFired(Timer<RenderNamedFlowThread>*);
+    void regionOversetChangeEventTimerFired(Timer<RenderNamedFlowThread>*);
     void clearContentNodes();
+    void updateWritingMode();
 
 private:
     // Observer flow threads have invalid regions that depend on the state of this thread
@@ -119,10 +127,13 @@ private:
 
     RenderRegionList m_invalidRegionList;
 
+    bool m_overset : 1;
+
     // The DOM Object that represents a named flow.
     RefPtr<WebKitNamedFlow> m_namedFlow;
 
     Timer<RenderNamedFlowThread> m_regionLayoutUpdateEventTimer;
+    Timer<RenderNamedFlowThread> m_regionOversetChangeEventTimer;
 };
 
 inline RenderNamedFlowThread* toRenderNamedFlowThread(RenderObject* object)

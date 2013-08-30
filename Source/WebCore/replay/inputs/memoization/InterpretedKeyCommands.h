@@ -66,8 +66,8 @@ template<> struct InputCoder<InterpretedKeyCommands> {
     static bool decode(InputDecoder& decoder, OwnPtr<InterpretedKeyCommands>& input);
 };
 
-#endif // ENABLE(WEB_REPLAY) && PLATFORM(MAC)
-
 } // namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY) && PLATFORM(MAC)
 
 #endif //  InterpretedKeyCommands_h

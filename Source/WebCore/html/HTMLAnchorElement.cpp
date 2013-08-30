@@ -42,6 +42,7 @@
 #include "PlatformMouseEvent.h"
 #include "RenderImage.h"
 #include "ResourceRequest.h"
+#include "SVGImage.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include "Settings.h"
@@ -139,7 +140,7 @@ bool HTMLAnchorElement::isKeyboardFocusable(KeyboardEvent* event) const
     if (!document()->frame())
         return false;
 
-    if (!document()->frame()->eventHandler()->tabsToLinks(event))
+    if (!document()->frame()->eventHandler().tabsToLinks(event))
         return false;
 
     if (isInCanvasSubtree())
@@ -156,10 +157,10 @@ static void appendServerMapMousePosition(StringBuilder& url, Event* event)
     ASSERT(event->target());
     Node* target = event->target()->toNode();
     ASSERT(target);
-    if (!target->hasTagName(imgTag))
+    if (!isHTMLImageElement(target))
         return;
 
-    HTMLImageElement* imageElement = static_cast<HTMLImageElement*>(event->target()->toNode());
+    HTMLImageElement* imageElement = toHTMLImageElement(target);
     if (!imageElement || !imageElement->isServerMap())
         return;
 
@@ -194,8 +195,8 @@ void HTMLAnchorElement::defaultEventHandler(Event* event)
         if (rendererIsEditable()) {
             // This keeps track of the editable block that the selection was in (if it was in one) just before the link was clicked
             // for the LiveWhenNotFocused editable link behavior
-            if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() != RightButton && document()->frame() && document()->frame()->selection()) {
-                setRootEditableElementForSelectionOnMouseDown(document()->frame()->selection()->rootEditableElement());
+            if (event->type() == eventNames().mousedownEvent && event->isMouseEvent() && static_cast<MouseEvent*>(event)->button() != RightButton && document()->frame()) {
+                setRootEditableElementForSelectionOnMouseDown(document()->frame()->selection().rootEditableElement());
                 m_wasShiftKeyDownOnMouseDown = static_cast<MouseEvent*>(event)->shiftKey();
             } else if (event->type() == eventNames().mouseoverEvent) {
                 // These are cleared on mouseover and not mouseout because their values are needed for drag events,
@@ -228,7 +229,7 @@ void HTMLAnchorElement::setActive(bool down, bool pause)
             // Don't set the link to be active if the current selection is in the same editable block as
             // this link
             case EditableLinkLiveWhenNotFocused:
-                if (down && document()->frame() && document()->frame()->selection()->rootEditableElement() == rootEditableElement())
+                if (down && document()->frame() && document()->frame()->selection().rootEditableElement() == rootEditableElement())
                     return;
                 break;
             
@@ -245,7 +246,7 @@ void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomicSt
 {
     if (name == hrefAttr) {
         bool wasLink = isLink();
-        setIsLink(!value.isNull());
+        setIsLink(!value.isNull() && !shouldProhibitLinks(this));
         if (wasLink != isLink())
             didAffectSelector(AffectedSelectorLink | AffectedSelectorVisited | AffectedSelectorEnabled);
         if (isLink()) {
@@ -310,10 +311,7 @@ bool HTMLAnchorElement::hasRel(uint32_t relation) const
 
 void HTMLAnchorElement::setRel(const String& value)
 {
-    m_linkRelations = 0;
-    SpaceSplitString newLinkRelations(value, true);
-    // FIXME: Add link relations as they are implemented
-    if (newLinkRelations.contains("noreferrer"))
+    if (SpaceSplitString::spaceSplitStringContainsValue(value, "noreferrer", true))
         m_linkRelations |= RelationNoReferrer;
 }
 
@@ -336,7 +334,9 @@ String HTMLAnchorElement::target() const
 String HTMLAnchorElement::hash() const
 {
     String fragmentIdentifier = href().fragmentIdentifier();
-    return fragmentIdentifier.isEmpty() ? emptyString() : "#" + fragmentIdentifier;
+    if (fragmentIdentifier.isEmpty())
+        return emptyString();
+    return AtomicString(String("#" + fragmentIdentifier));
 }
 
 void HTMLAnchorElement::setHash(const String& value)
@@ -512,7 +512,7 @@ bool HTMLAnchorElement::isLiveLink() const
 
 void HTMLAnchorElement::sendPings(const KURL& destinationURL)
 {
-    if (!hasAttribute(pingAttr) || !document()->settings()->hyperlinkAuditingEnabled())
+    if (!hasAttribute(pingAttr) || !document()->settings() || !document()->settings()->hyperlinkAuditingEnabled())
         return;
 
     SpaceSplitString pingURLs(getAttribute(pingAttr), false);
@@ -539,16 +539,16 @@ void HTMLAnchorElement::handleClick(Event* event)
 
         // FIXME: Why are we not calling addExtraFieldsToMainResourceRequest() if this check fails? It sets many important header fields.
         if (!hasRel(RelationNoReferrer)) {
-            String referrer = SecurityPolicy::generateReferrerHeader(document()->referrerPolicy(), kurl, frame->loader()->outgoingReferrer());
+            String referrer = SecurityPolicy::generateReferrerHeader(document()->referrerPolicy(), kurl, frame->loader().outgoingReferrer());
             if (!referrer.isEmpty())
                 request.setHTTPReferrer(referrer);
-            frame->loader()->addExtraFieldsToMainResourceRequest(request);
+            frame->loader().addExtraFieldsToMainResourceRequest(request);
         }
 
-        frame->loader()->client()->startDownload(request, fastGetAttribute(downloadAttr));
+        frame->loader().client()->startDownload(request, fastGetAttribute(downloadAttr));
     } else
 #endif
-        frame->loader()->urlSelected(kurl, target(), event, false, false, hasRel(RelationNoReferrer) ? NeverSendReferrer : MaybeSendReferrer);
+        frame->loader().urlSelected(kurl, target(), event, false, false, hasRel(RelationNoReferrer) ? NeverSendReferrer : MaybeSendReferrer);
 
     sendPings(kurl);
 }
@@ -600,22 +600,19 @@ bool isLinkClick(Event* event)
     return event->type() == eventNames().clickEvent && (!event->isMouseEvent() || static_cast<MouseEvent*>(event)->button() != RightButton);
 }
 
+bool shouldProhibitLinks(Element* element)
+{
+#if ENABLE(SVG)
+    return isInSVGImage(element);
+#else
+    return false;
+#endif
+}
+
 bool HTMLAnchorElement::willRespondToMouseClickEvents()
 {
     return isLink() || HTMLElement::willRespondToMouseClickEvents();
 }
-
-#if ENABLE(MICRODATA)
-String HTMLAnchorElement::itemValueText() const
-{
-    return getURLAttribute(hrefAttr);
-}
-
-void HTMLAnchorElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(hrefAttr, value);
-}
-#endif
 
 typedef HashMap<const HTMLAnchorElement*, RefPtr<Element> > RootEditableElementMap;
 

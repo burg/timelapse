@@ -21,12 +21,8 @@
 #define SVGVKernElement_h
 
 #if ENABLE(SVG_FONTS)
+#include "SVGElement.h"
 #include "SVGFontElement.h"
-#include "SVGParserUtilities.h"
-#include "SVGStyledElement.h"
-
-#include <limits>
-#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -42,7 +38,7 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
+    virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
 };
 
 } // namespace WebCore

@@ -36,6 +36,7 @@
 #include "SVGInlineTextBox.h"
 #include "SVGRenderingContext.h"
 #include "SVGRootInlineBox.h"
+#include "StyleFontSizeFunctions.h"
 #include "StyleResolver.h"
 #include "VisiblePosition.h"
 
@@ -185,7 +186,7 @@ VisiblePosition RenderSVGInlineText::positionForPoint(const LayoutPoint& point)
         if (!box->isSVGInlineTextBox())
             continue;
 
-        SVGInlineTextBox* textBox = static_cast<SVGInlineTextBox*>(box);
+        SVGInlineTextBox* textBox = toSVGInlineTextBox(box);
         Vector<SVGTextFragment>& fragments = textBox->textFragments();
 
         unsigned textFragmentsSize = fragments.size();
@@ -228,8 +229,6 @@ void RenderSVGInlineText::computeNewScaledFontForStyle(RenderObject* renderer, c
     Document* document = renderer->document();
     ASSERT(document);
     
-    StyleResolver* styleResolver = document->ensureStyleResolver();
-
     // Alter font-size to the right on-screen value to avoid scaling the glyphs themselves, except when GeometricPrecision is specified
     scalingFactor = SVGRenderingContext::calculateScreenFontSizeScalingFactor(renderer);
     if (scalingFactor == 1 || !scalingFactor || style->fontDescription().textRenderingMode() == GeometricPrecision) {
@@ -241,10 +240,10 @@ void RenderSVGInlineText::computeNewScaledFontForStyle(RenderObject* renderer, c
     FontDescription fontDescription(style->fontDescription());
 
     // FIXME: We need to better handle the case when we compute very small fonts below (below 1pt).
-    fontDescription.setComputedSize(StyleResolver::getComputedSizeFromSpecifiedSize(document, scalingFactor, fontDescription.isAbsoluteSize(), fontDescription.computedSize(), DoNotUseSmartMinimumForFontSize));
+    fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSizeForSVGInlineText(fontDescription.computedSize(), fontDescription.isAbsoluteSize(), scalingFactor, document));
 
     scaledFont = Font(fontDescription, 0, 0);
-    scaledFont.update(styleResolver->fontSelector());
+    scaledFont.update(document->ensureStyleResolver().fontSelector());
 }
 
 }

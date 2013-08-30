@@ -45,13 +45,22 @@
 
 
 #if !defined(NDEBUG)
-static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue) {
-    switch (queue) {
-        case NondeterministicInput::EventLoopInputQueue:     return "DSPTCH";
-        case NondeterministicInput::LoaderMemoizedDataQueue: return "LDMEMO";
-        case NondeterministicInput::ScriptMemoizedDataQueue: return "JSMEMO";
-        case NondeterministicInput::QueueTypeLength:         return "ERROR!";
-    }
+static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue, bool isLoad) {
+    if (isLoad)
+        switch (queue) {
+            case NondeterministicInput::EventLoopInputQueue:     return "(DSPTCH-LOAD)";
+            case NondeterministicInput::LoaderMemoizedDataQueue: return "<LDMEMO-LOAD";
+            case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-LOAD";
+            case NondeterministicInput::QueueTypeLength:         return "ERROR!";
+        }
+        
+    else
+        switch (queue) {
+            case NondeterministicInput::EventLoopInputQueue:     return ">DSPTCH-STORE";
+            case NondeterministicInput::LoaderMemoizedDataQueue: return "<LDMEMO-STORE";
+            case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-STORE";
+            case NondeterministicInput::QueueTypeLength:         return "ERROR!";
+        }
 }
 #endif
 
@@ -83,8 +92,8 @@ NondeterministicInput* InputStorage::load(NondeterministicInput::QueueType queue
 
     NondeterministicInput* input = m_queues.at(queue)->at(offset).get();
 
-    LOG(DeterministicReplay, "%-25s %s-LOAD: %s\n", "[InputStorage]",
-        queueTypeToMiniString(queue), input->toString().utf8().data());
+    LOG(DeterministicReplay, "%-20s %s: %s\n", "ReplayEvents",
+        queueTypeToMiniString(queue, true), input->toString().utf8().data());
 
     return input;
 }
@@ -94,8 +103,8 @@ void InputStorage::store(PassOwnPtr<NondeterministicInput> input)
     ASSERT(input);
     ASSERT(input->queue() < NondeterministicInput::QueueTypeLength);
 
-    LOG(DeterministicReplay, "%-25s#%-5u %s-STORE: %s \n", "[InputStorage]",
-        m_inputCount++, queueTypeToMiniString(input->queue()),
+    LOG(DeterministicReplay, "%-14s#%-5u %s: %s \n", "ReplayEvents",
+        m_inputCount++, queueTypeToMiniString(input->queue(), false),
         input->toString().utf8().data());
 
     m_queues.at(input->queue())->append(input);

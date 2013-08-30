@@ -2,7 +2,7 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003, 2005, 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2005, 2006, 2007, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -74,26 +74,26 @@ static inline int windowsVirtualKeyCodeWithoutLocation(int keycode)
 static inline KeyboardEvent::KeyLocationCode keyLocationCode(const PlatformKeyboardEvent& key)
 {
     if (key.isKeypad())
-        return KeyboardEvent::DOMKeyLocationNumpad;
+        return KeyboardEvent::DOM_KEY_LOCATION_NUMPAD;
 
     switch (key.windowsVirtualKeyCode()) {
     case VK_LCONTROL:
     case VK_LSHIFT:
     case VK_LMENU:
     case VK_LWIN:
-        return KeyboardEvent::DOMKeyLocationLeft;
+        return KeyboardEvent::DOM_KEY_LOCATION_LEFT;
     case VK_RCONTROL:
     case VK_RSHIFT:
     case VK_RMENU:
     case VK_RWIN:
-        return KeyboardEvent::DOMKeyLocationRight;
+        return KeyboardEvent::DOM_KEY_LOCATION_RIGHT;
     default:
-        return KeyboardEvent::DOMKeyLocationStandard;
+        return KeyboardEvent::DOM_KEY_LOCATION_STANDARD;
     }
 }
 
 KeyboardEventInit::KeyboardEventInit()
-    : keyLocation(0)
+    : location(0)
     , ctrlKey(false)
     , altKey(false)
     , shiftKey(false)
@@ -102,17 +102,17 @@ KeyboardEventInit::KeyboardEventInit()
 }
 
 KeyboardEvent::KeyboardEvent()
-    : m_keyLocation(DOMKeyLocationStandard)
+    : m_location(DOM_KEY_LOCATION_STANDARD)
     , m_altGraphKey(false)
 {
 }
 
 KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, AbstractView* view)
     : UIEventWithKeyState(eventTypeForKeyboardEventType(key.type()),
-                          true, true, view, 0, key.ctrlKey(), key.altKey(), key.shiftKey(), key.metaKey())
+                          true, true, key.timestamp(), view, 0, key.ctrlKey(), key.altKey(), key.shiftKey(), key.metaKey())
     , m_keyEvent(adoptPtr(new PlatformKeyboardEvent(key)))
     , m_keyIdentifier(key.keyIdentifier())
-    , m_keyLocation(keyLocationCode(key))
+    , m_location(keyLocationCode(key))
     , m_altGraphKey(false)
 {
 }
@@ -120,18 +120,8 @@ KeyboardEvent::KeyboardEvent(const PlatformKeyboardEvent& key, AbstractView* vie
 KeyboardEvent::KeyboardEvent(const AtomicString& eventType, const KeyboardEventInit& initializer)
     : UIEventWithKeyState(eventType, initializer.bubbles, initializer.cancelable, initializer.view, initializer.detail, initializer.ctrlKey, initializer.altKey, initializer.shiftKey, initializer.metaKey)
     , m_keyIdentifier(initializer.keyIdentifier)
-    , m_keyLocation(initializer.keyLocation)
+    , m_location(initializer.location)
     , m_altGraphKey(false)
-{
-}
-
-KeyboardEvent::KeyboardEvent(const AtomicString& eventType, bool canBubble, bool cancelable, AbstractView *view,
-                             const String &keyIdentifier,  unsigned keyLocation,
-                             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
-    : UIEventWithKeyState(eventType, canBubble, cancelable, view, 0, ctrlKey, altKey, shiftKey, metaKey)
-    , m_keyIdentifier(keyIdentifier)
-    , m_keyLocation(keyLocation)
-    , m_altGraphKey(altGraphKey)
 {
 }
 
@@ -140,7 +130,7 @@ KeyboardEvent::~KeyboardEvent()
 }
 
 void KeyboardEvent::initKeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView* view,
-                                      const String &keyIdentifier, unsigned keyLocation,
+                                      const String &keyIdentifier, unsigned location,
                                       bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
 {
     if (dispatched())
@@ -149,7 +139,7 @@ void KeyboardEvent::initKeyboardEvent(const AtomicString& type, bool canBubble, 
     initUIEvent(type, canBubble, cancelable, view, 0);
 
     m_keyIdentifier = keyIdentifier;
-    m_keyLocation = keyLocation;
+    m_location = location;
     m_ctrlKey = ctrlKey;
     m_shiftKey = shiftKey;
     m_altKey = altKey;
@@ -190,7 +180,7 @@ int KeyboardEvent::charCode() const
     // We match Firefox, unless in backward compatibility mode, where we always return the character code.
     bool backwardCompatibilityMode = false;
     if (view() && view()->frame())
-        backwardCompatibilityMode = view()->frame()->eventHandler()->needsKeyboardEventDisambiguationQuirks();
+        backwardCompatibilityMode = view()->frame()->eventHandler().needsKeyboardEventDisambiguationQuirks();
 
     if (!m_keyEvent || (type() != eventNames().keypressEvent && !backwardCompatibilityMode))
         return 0;

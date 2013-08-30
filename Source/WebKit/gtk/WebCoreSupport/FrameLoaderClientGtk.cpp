@@ -155,7 +155,7 @@ void FrameLoaderClient::dispatchWillSubmitForm(FramePolicyFunction policyFunctio
     ASSERT(policyFunction);
     if (!policyFunction)
         return;
-    (core(m_frame)->loader()->policyChecker()->*policyFunction)(PolicyUse);
+    (core(m_frame)->loader().policyChecker()->*policyFunction)(PolicyUse);
 }
 
 void FrameLoaderClient::committedLoad(WebCore::DocumentLoader* loader, const char* data, int length)
@@ -166,7 +166,7 @@ void FrameLoaderClient::committedLoad(WebCore::DocumentLoader* loader, const cha
 
         Frame* coreFrame = loader->frame();
         if (coreFrame && coreFrame->document()->isMediaDocument())
-            loader->cancelMainResourceLoad(coreFrame->loader()->client()->pluginWillHandleLoadError(loader->response()));
+            loader->cancelMainResourceLoad(coreFrame->loader().client()->pluginWillHandleLoadError(loader->response()));
     }
 
     if (m_pluginView) {
@@ -190,12 +190,23 @@ bool FrameLoaderClient::shouldUseCredentialStorage(WebCore::DocumentLoader*, uns
     return true;
 }
 
+// We convert this to string because it's easier to use strings as
+// keys in a GHashTable.
+static char* toString(unsigned long identifier)
+{
+    return g_strdup_printf("%ld", identifier);
+}
+
 void FrameLoaderClient::dispatchDidReceiveAuthenticationChallenge(WebCore::DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge& challenge)
 {
+    WebKitWebView* view = webkit_web_frame_get_web_view(m_frame);
+
     if (DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled()) {
         CString username;
         CString password;
-        if (!DumpRenderTreeSupportGtk::s_authenticationCallback || !DumpRenderTreeSupportGtk::s_authenticationCallback(username, password)) {
+        GOwnPtr<gchar> identifierString(toString(identifier));
+        WebKitWebResource* webResource = webkit_web_view_get_resource(view, identifierString.get());
+        if (!DumpRenderTreeSupportGtk::s_authenticationCallback || !DumpRenderTreeSupportGtk::s_authenticationCallback(username, password, webResource)) {
             challenge.authenticationClient()->receivedRequestToContinueWithoutCredential(challenge);
             return;
         }
@@ -204,10 +215,9 @@ void FrameLoaderClient::dispatchDidReceiveAuthenticationChallenge(WebCore::Docum
         return;
     }
 
-    WebKitWebView* view = webkit_web_frame_get_web_view(m_frame);
 
     CredentialStorageMode credentialStorageMode;
-    if (core(view)->settings()->privateBrowsingEnabled())
+    if (core(view)->settings().privateBrowsingEnabled())
         credentialStorageMode = DisallowPersistentStorage;
     else
         credentialStorageMode = AllowPersistentStorage;
@@ -220,13 +230,6 @@ void FrameLoaderClient::dispatchDidReceiveAuthenticationChallenge(WebCore::Docum
 void FrameLoaderClient::dispatchDidCancelAuthenticationChallenge(WebCore::DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&)
 {
     notImplemented();
-}
-
-// We convert this to string because it's easier to use strings as
-// keys in a GHashTable.
-static char* toString(unsigned long identifier)
-{
-    return g_strdup_printf("%ld", identifier);
 }
 
 void FrameLoaderClient::dispatchWillSendRequest(WebCore::DocumentLoader* loader, unsigned long identifier, ResourceRequest& request, const ResourceResponse& redirectResponse)
@@ -293,7 +296,7 @@ void FrameLoaderClient::postProgressEstimateChangedNotification()
     WebKitWebView* webView = getViewFromFrame(m_frame);
     Page* corePage = core(webView);
 
-    g_signal_emit_by_name(webView, "load-progress-changed", lround(corePage->progress()->estimatedProgress()*100));
+    g_signal_emit_by_name(webView, "load-progress-changed", lround(corePage->progress().estimatedProgress()*100));
 
     g_object_notify(G_OBJECT(webView), "progress");
 }
@@ -342,7 +345,7 @@ void FrameLoaderClient::dispatchDecidePolicyForResponse(FramePolicyFunction poli
         return;
 
     if (resourceRequest.isNull()) {
-        (core(m_frame)->loader()->policyChecker()->*policyFunction)(PolicyIgnore);
+        (core(m_frame)->loader().policyChecker()->*policyFunction)(PolicyIgnore);
         return;
     }
 
@@ -418,7 +421,7 @@ void FrameLoaderClient::dispatchDecidePolicyForNewWindowAction(FramePolicyFuncti
         return;
 
     if (resourceRequest.isNull()) {
-        (core(m_frame)->loader()->policyChecker()->*policyFunction)(PolicyIgnore);
+        (core(m_frame)->loader().policyChecker()->*policyFunction)(PolicyIgnore);
         return;
     }
 
@@ -438,7 +441,7 @@ void FrameLoaderClient::dispatchDecidePolicyForNewWindowAction(FramePolicyFuncti
     // FIXME: I think Qt version marshals this to another thread so when we
     // have multi-threaded download, we might need to do the same
     if (!isHandled)
-        (core(m_frame)->loader()->policyChecker()->*policyFunction)(PolicyUse);
+        (core(m_frame)->loader().policyChecker()->*policyFunction)(PolicyUse);
 }
 
 void FrameLoaderClient::dispatchDecidePolicyForNavigationAction(FramePolicyFunction policyFunction, const NavigationAction& action, const ResourceRequest& resourceRequest, PassRefPtr<FormState>)
@@ -448,7 +451,7 @@ void FrameLoaderClient::dispatchDecidePolicyForNavigationAction(FramePolicyFunct
         return;
 
     if (resourceRequest.isNull()) {
-        (core(m_frame)->loader()->policyChecker()->*policyFunction)(PolicyIgnore);
+        (core(m_frame)->loader().policyChecker()->*policyFunction)(PolicyIgnore);
         return;
     }
 
@@ -465,7 +468,7 @@ void FrameLoaderClient::dispatchDecidePolicyForNavigationAction(FramePolicyFunct
     g_signal_emit_by_name(webView, "navigation-requested", m_frame, request.get(), &response);
 
     if (response == WEBKIT_NAVIGATION_RESPONSE_IGNORE) {
-        (core(m_frame)->loader()->policyChecker()->*policyFunction)(PolicyIgnore);
+        (core(m_frame)->loader().policyChecker()->*policyFunction)(PolicyIgnore);
         return;
     }
 
@@ -539,7 +542,7 @@ PassRefPtr<Frame> FrameLoaderClient::createFrame(const KURL& url, const String& 
 
     g_signal_emit_by_name(webView, "frame-created", kitFrame);
 
-    parentFrame->loader()->loadURLIntoChildFrame(url, referrer, childFrame.get());
+    parentFrame->loader().loadURLIntoChildFrame(url, referrer, childFrame.get());
 
     // The frame's onload handler may have removed it from the document.
     if (!childFrame->tree()->parent())
@@ -582,14 +585,13 @@ void FrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* wor
     Frame* coreFrame = core(m_frame);
     ASSERT(coreFrame);
 
-    Settings* settings = coreFrame->settings();
-    if (!settings || !settings->isScriptEnabled())
+    if (!coreFrame->settings().isScriptEnabled())
         return;
 
     // TODO: Consider using g_signal_has_handler_pending() to avoid the overhead
     // when there are no handlers.
-    JSGlobalContextRef context = toGlobalRef(coreFrame->script()->globalObject(mainThreadNormalWorld())->globalExec());
-    JSObjectRef windowObject = toRef(coreFrame->script()->globalObject(mainThreadNormalWorld()));
+    JSGlobalContextRef context = toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
+    JSObjectRef windowObject = toRef(coreFrame->script().globalObject(mainThreadNormalWorld()));
     ASSERT(windowObject);
 
     WebKitWebView* webView = getViewFromFrame(m_frame);
@@ -854,7 +856,7 @@ void FrameLoaderClient::dispatchDidCommitLoad(bool isNavigatingWithinPage)
 
     WebKitWebFramePrivate* priv = m_frame->priv;
     g_free(priv->uri);
-    priv->uri = g_strdup(core(m_frame)->loader()->activeDocumentLoader()->url().string().utf8().data());
+    priv->uri = g_strdup(core(m_frame)->loader().activeDocumentLoader()->url().string().utf8().data());
     g_object_notify(G_OBJECT(m_frame), "uri");
     if (!isNavigatingWithinPage) {
         g_free(priv->title);
@@ -1065,50 +1067,33 @@ void FrameLoaderClient::dispatchDidFailLoad(const ResourceError& error)
     notifyStatus(m_frame, WEBKIT_LOAD_FAILED);
 
     WebKitWebView* webView = getViewFromFrame(m_frame);
-    GError* webError = g_error_new_literal(g_quark_from_string(error.domain().utf8().data()),
-                                           error.errorCode(),
-                                           error.localizedDescription().utf8().data());
+    GOwnPtr<GError> webError(g_error_new_literal(
+        g_quark_from_string(error.domain().utf8().data()),
+        error.errorCode(),
+        error.localizedDescription().utf8().data()));
     gboolean isHandled = false;
-    g_signal_emit_by_name(webView, "load-error", m_frame, error.failingURL().utf8().data(), webError, &isHandled);
+    g_signal_emit_by_name(webView, "load-error", m_frame, error.failingURL().utf8().data(), webError.get(), &isHandled);
 
-    if (isHandled) {
-        g_error_free(webError);
+    if (isHandled || !shouldFallBack(error))
         return;
-    }
-
-    if (!shouldFallBack(error)) {
-        g_error_free(webError);
-        return;
-    }
 
     m_loadingErrorPage = true;
 
     String content;
-    gchar* fileContent = 0;
     GOwnPtr<gchar> errorPath(g_build_filename(sharedResourcesPath().data(), "resources", "error.html", NULL));
-    gchar* errorURI = g_filename_to_uri(errorPath.get(), 0, 0);
-
-    GFile* errorFile = g_file_new_for_uri(errorURI);
-    g_free(errorURI);
+    GRefPtr<GFile> errorFile = adoptGRef(g_file_new_for_path(errorPath.get()));
 
     if (!errorFile)
         content = makeString("<html><body>", webError->message, "</body></html>");
     else {
-        gboolean loaded = g_file_load_contents(errorFile, 0, &fileContent, 0, 0, 0);
-        if (!loaded)
+        GOwnPtr<gchar> fileContent;
+        if (!g_file_load_contents(errorFile.get(), 0, &fileContent.outPtr(), 0, 0, 0))
             content = makeString("<html><body>", webError->message, "</body></html>");
         else
-            content = String::format(fileContent, error.failingURL().utf8().data(), webError->message);
+            content = String::format(fileContent.get(), error.failingURL().utf8().data(), webError->message);
     }
 
     webkit_web_frame_load_alternate_string(m_frame, content.utf8().data(), 0, error.failingURL().utf8().data());
-
-    g_free(fileContent);
-
-    if (errorFile)
-        g_object_unref(errorFile);
-
-    g_error_free(webError);
 }
 
 void FrameLoaderClient::convertMainResourceLoadToDownload(WebCore::DocumentLoader* documentLoader, const ResourceRequest& request, const ResourceResponse& response)

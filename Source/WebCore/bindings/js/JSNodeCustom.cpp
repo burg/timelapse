@@ -105,13 +105,13 @@ static inline bool isReachableFromDOM(JSNode* jsNode, Node* node, SlotVisitor& v
         // because it is the only thing keeping the image element alive, and if
         // the element is destroyed, its load event will not fire.
         // FIXME: The DOM should manage this issue without the help of JavaScript wrappers.
-        if (node->hasTagName(imgTag)) {
-            if (static_cast<HTMLImageElement*>(node)->hasPendingActivity())
+        if (isHTMLImageElement(node)) {
+            if (toHTMLImageElement(node)->hasPendingActivity())
                 return true;
         }
     #if ENABLE(VIDEO)
-        else if (node->hasTagName(audioTag)) {
-            if (!static_cast<HTMLAudioElement*>(node)->paused())
+        else if (isHTMLAudioElement(node)) {
+            if (!toHTMLAudioElement(node)->paused())
                 return true;
         }
     #endif
@@ -185,7 +185,7 @@ JSValue JSNode::appendChild(ExecState* exec)
 
 JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
 {
-    if (inherits(&JSHTMLElement::s_info))
+    if (inherits(JSHTMLElement::info()))
         return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(exec, node);
     return node;
 }
@@ -193,7 +193,7 @@ JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
 void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSNode* thisObject = jsCast<JSNode*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);

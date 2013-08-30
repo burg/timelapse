@@ -144,7 +144,6 @@ bool WebFrameLoaderClient::shouldUseCredentialStorage(DocumentLoader* loader, un
 
 void WebFrameLoaderClient::dispatchDidReceiveAuthenticationChallenge(DocumentLoader* loader, unsigned long identifier, const AuthenticationChallenge& challenge)
 {
-#if USE(CFNETWORK)
     ASSERT(challenge.authenticationClient());
 
     WebView* webView = m_webFrame->webView();
@@ -158,9 +157,6 @@ void WebFrameLoaderClient::dispatchDidReceiveAuthenticationChallenge(DocumentLoa
     // If the ResourceLoadDelegate doesn't exist or fails to handle the call, we tell the ResourceHandle
     // to continue without credential - this is the best approximation of Mac behavior
     challenge.authenticationClient()->receivedRequestToContinueWithoutCredential(challenge);
-#else
-   notImplemented();
-#endif
 }
 
 void WebFrameLoaderClient::dispatchDidCancelAuthenticationChallenge(DocumentLoader* loader, unsigned long identifier, const AuthenticationChallenge& challenge)
@@ -530,7 +526,7 @@ void WebFrameLoaderClient::finishedLoading(DocumentLoader*)
 
 void WebFrameLoaderClient::updateGlobalHistory()
 {
-    DocumentLoader* loader = core(m_webFrame)->loader()->documentLoader();
+    DocumentLoader* loader = core(m_webFrame)->loader().documentLoader();
     WebView* webView = m_webFrame->webView();
     COMPtr<IWebHistoryDelegate> historyDelegate;
     webView->historyDelegate(&historyDelegate);
@@ -561,7 +557,7 @@ void WebFrameLoaderClient::updateGlobalHistoryRedirectLinks()
 
     WebHistory* history = WebHistory::sharedHistory();
 
-    DocumentLoader* loader = core(m_webFrame)->loader()->documentLoader();
+    DocumentLoader* loader = core(m_webFrame)->loader().documentLoader();
     ASSERT(loader->unreachableURL().isEmpty());
 
     if (!loader->clientRedirectSourceForHistory().isNull()) {
@@ -611,7 +607,7 @@ void WebFrameLoaderClient::updateGlobalHistoryItemForPage()
     WebView* webView = m_webFrame->webView();
 
     if (Page* page = webView->page()) {
-        if (!page->settings()->privateBrowsingEnabled())
+        if (!page->settings().privateBrowsingEnabled())
             historyItem = page->backForward()->currentItem();
     }
 
@@ -705,9 +701,9 @@ void WebFrameLoaderClient::savePlatformDataToCachedFrame(CachedFrame* cachedFram
     if (!coreFrame)
         return;
 
-    ASSERT(coreFrame->loader()->documentLoader() == cachedFrame->documentLoader());
+    ASSERT(coreFrame->loader().documentLoader() == cachedFrame->documentLoader());
 
-    cachedFrame->setCachedFramePlatformData(adoptPtr(new WebCachedFramePlatformData(static_cast<IWebDataSource*>(getWebDataSource(coreFrame->loader()->documentLoader())))));
+    cachedFrame->setCachedFramePlatformData(adoptPtr(new WebCachedFramePlatformData(static_cast<IWebDataSource*>(getWebDataSource(coreFrame->loader().documentLoader())))));
 #else
     notImplemented();
 #endif
@@ -767,7 +763,7 @@ PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const KURL& URL, const Strin
     coreFrame->tree()->appendChild(childFrame);
     childFrame->init();
 
-    coreFrame->loader()->loadURLIntoChildFrame(URL, referrer, childFrame.get());
+    coreFrame->loader().loadURLIntoChildFrame(URL, referrer, childFrame.get());
 
     // The frame's onload handler may have removed it from the document.
     if (!childFrame->tree()->parent())
@@ -828,7 +824,7 @@ void WebFrameLoaderClient::dispatchDidFailToStartPlugin(const PluginView* plugin
     ResourceError resourceError(String(WebKitErrorDomain), errorCode, pluginView->url().string(), String());
     COMPtr<IWebError> error(AdoptCOM, WebError::createInstance(resourceError, userInfoBag.get()));
      
-    resourceLoadDelegate->plugInFailedWithError(webView, error.get(), getWebDataSource(frame->loader()->documentLoader()));
+    resourceLoadDelegate->plugInFailedWithError(webView, error.get(), getWebDataSource(frame->loader().documentLoader()));
 }
 
 PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize& pluginSize, HTMLPlugInElement* element, const KURL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)

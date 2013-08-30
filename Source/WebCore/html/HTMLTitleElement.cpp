@@ -25,10 +25,10 @@
 
 #include "Document.h"
 #include "HTMLNames.h"
-#include "NodeRenderingContext.h"
 #include "RenderStyle.h"
 #include "StyleInheritedData.h"
 #include "Text.h"
+#include "TextNodeTraversal.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -75,14 +75,7 @@ void HTMLTitleElement::childrenChanged(bool changedByParser, Node* beforeChange,
 
 String HTMLTitleElement::text() const
 {
-    StringBuilder result;
-
-    for (Node *n = firstChild(); n; n = n->nextSibling()) {
-        if (n->isTextNode())
-            result.append(toText(n)->data());
-    }
-
-    return result.toString();
+    return TextNodeTraversal::contentsAsString(this);
 }
 
 StringWithDirection HTMLTitleElement::textWithDirection()

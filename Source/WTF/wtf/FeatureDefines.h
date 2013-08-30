@@ -68,6 +68,10 @@
 #define ENABLE_CSS_IMAGE_SET 1
 #endif
 
+#if !defined(ENABLE_DISK_IMAGE_CACHE)
+#define ENABLE_DISK_IMAGE_CACHE 1
+#endif
+
 #if !defined(ENABLE_DRAG_SUPPORT)
 #define ENABLE_DRAG_SUPPORT 0
 #endif
@@ -80,20 +84,44 @@
 #define ENABLE_ICONDATABASE 0
 #endif
 
+#if !defined(ENABLE_IOS_GESTURE_EVENTS)
+#define ENABLE_IOS_GESTURE_EVENTS 1
+#endif
+
+#if !defined(ENABLE_LETTERPRESS)
+#define ENABLE_LETTERPRESS 1
+#endif
+
+#if !defined(ENABLE_METER_ELEMENT)
+#define ENABLE_METER_ELEMENT 0
+#endif
+
 #if !defined(ENABLE_NETSCAPE_PLUGIN_API)
 #define ENABLE_NETSCAPE_PLUGIN_API 0
 #endif
 
 #if !defined(ENABLE_ORIENTATION_EVENTS)
-#define ENABLE_ORIENTATION_EVENTS 1 
+#define ENABLE_ORIENTATION_EVENTS 1
+#endif
+
+#if !defined(ENABLE_POINTER_LOCK)
+#define ENABLE_POINTER_LOCK 0
 #endif
 
 #if !defined(ENABLE_REPAINT_THROTTLING)
-#define ENABLE_REPAINT_THROTTLING 1 
+#define ENABLE_REPAINT_THROTTLING 0
+#endif
+
+#if !defined(ENABLE_RESPECT_EXIF_ORIENTATION)
+#define ENABLE_RESPECT_EXIF_ORIENTATION 1
 #endif
 
 #if !defined(ENABLE_TEXT_CARET)
 #define ENABLE_TEXT_CARET 0
+#endif
+
+#if !defined(ENABLE_TOUCH_EVENTS)
+#define ENABLE_TOUCH_EVENTS 1
 #endif
 
 #if !defined(ENABLE_WEB_ARCHIVE)
@@ -142,16 +170,12 @@
 #define ENABLE_FULLSCREEN_API 1
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #if !defined(ENABLE_GESTURE_EVENTS)
 #define ENABLE_GESTURE_EVENTS 1
 #endif
-#endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #if !defined(ENABLE_RUBBER_BANDING)
 #define ENABLE_RUBBER_BANDING 1
-#endif
 #endif
 
 #if !defined(ENABLE_SMOOTH_SCROLLING)
@@ -184,6 +208,14 @@
 
 #if !defined(ENABLE_CURSOR_VISIBILITY)
 #define ENABLE_CURSOR_VISIBILITY 1
+#endif
+
+#if !defined(ENABLE_INPUT_TYPE_COLOR)
+#define ENABLE_INPUT_TYPE_COLOR 1
+#endif
+
+#if !defined(ENABLE_INPUT_TYPE_COLOR_POPOVER)
+#define ENABLE_INPUT_TYPE_COLOR_POPOVER 1
 #endif
 
 #endif /* PLATFORM(MAC) && !PLATFORM(IOS) */
@@ -227,6 +259,14 @@
 
 #if !defined(ENABLE_WEB_ARCHIVE)
 #define ENABLE_WEB_ARCHIVE 1
+#endif
+
+#if !defined(ENABLE_VIEW_MODE_CSS_MEDIA)
+#define ENABLE_VIEW_MODE_CSS_MEDIA 0
+#endif
+
+#if !defined(ENABLE_WEBGL)
+#define ENABLE_WEBGL 1
 #endif
 
 #endif /* PLATFORM(WIN_CAIRO) */
@@ -502,6 +542,10 @@
 #define ENABLE_INPUT_TYPE_COLOR 0
 #endif
 
+#if !defined(ENABLE_INPUT_TYPE_COLOR_POPOVER)
+#define ENABLE_INPUT_TYPE_COLOR_POPOVER 0
+#endif
+
 #if !defined(ENABLE_INPUT_TYPE_DATE)
 #define ENABLE_INPUT_TYPE_DATE 0
 #endif
@@ -590,10 +634,6 @@
 
 #if !defined(ENABLE_MHTML)
 #define ENABLE_MHTML 0
-#endif
-
-#if !defined(ENABLE_MICRODATA)
-#define ENABLE_MICRODATA 0
 #endif
 
 #if !defined(ENABLE_MOUSE_CURSOR_SCALE)
@@ -828,6 +868,10 @@
 
 #if ENABLE(VIDEO_TRACK) && !ENABLE(VIDEO)
 #error "ENABLE(VIDEO_TRACK) requires ENABLE(VIDEO)"
+#endif
+
+#if ENABLE(CSS_SHADERS) && !ENABLE(WEBGL)
+#error "ENABLE(CSS_SHADERS) requires ENABLE(WEBGL)"
 #endif
 
 #endif /* WTF_FeatureDefines_h */

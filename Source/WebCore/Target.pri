@@ -38,7 +38,7 @@ SOURCES += \
     Modules/webdatabase/DatabaseContext.cpp \
     Modules/webdatabase/DatabaseServer.cpp \
     Modules/webdatabase/DatabaseSync.cpp \
-    Modules/webdatabase/WorkerContextWebDatabase.cpp \
+    Modules/webdatabase/WorkerGlobalScopeWebDatabase.cpp \
     accessibility/AccessibilityImageMapLink.cpp \
     accessibility/AccessibilityMediaControls.cpp \
     accessibility/AccessibilityMenuList.cpp \
@@ -78,7 +78,6 @@ SOURCES += \
      bindings/js/DOMWrapperWorld.cpp \
      bindings/js/Dictionary.cpp \
      bindings/js/GCController.cpp \
-     bindings/js/JSArrayBufferCustom.cpp \
      bindings/js/JSAudioBufferCustom.cpp \
      bindings/js/JSAttrCustom.cpp \
      bindings/js/JSBlobCustom.cpp \
@@ -114,7 +113,6 @@ SOURCES += \
      bindings/js/JSDOMWindowCustom.cpp \
      bindings/js/JSDOMWindowShell.cpp \
      bindings/js/JSDOMWrapper.cpp \
-     bindings/js/JSDataViewCustom.cpp \
      bindings/js/JSDeviceMotionEventCustom.cpp \
      bindings/js/JSDeviceOrientationEventCustom.cpp \
      bindings/js/JSDocumentCustom.cpp \
@@ -159,7 +157,6 @@ SOURCES += \
      bindings/js/JSMessageEventCustom.cpp \
      bindings/js/JSMessagePortCustom.cpp \
      bindings/js/JSMessagePortCustom.h \
-     bindings/js/JSMicroDataItemValueCustom.cpp \
      bindings/js/JSMutationCallback.cpp \
      bindings/js/JSMutationObserverCustom.cpp \
      bindings/js/JSNamedNodeMapCustom.cpp \
@@ -201,6 +198,7 @@ SOURCES += \
      bindings/js/ScriptState.cpp \
      bindings/js/ScriptValue.cpp \
      bindings/js/SerializedScriptValue.cpp \
+     bindings/js/WebCoreTypedArrayController.cpp \
      bridge/IdentifierRep.cpp \
      bridge/NP_jsobject.cpp \
      bridge/c/CRuntimeObject.cpp \
@@ -242,13 +240,13 @@ SOURCES += \
     Modules/filesystem/FileWriterBase.cpp \
     Modules/filesystem/FileWriterSync.cpp \
     Modules/filesystem/LocalFileSystem.cpp \
-    Modules/filesystem/WorkerContextFileSystem.cpp \
+    Modules/filesystem/WorkerGlobalScopeFileSystem.cpp \
     Modules/navigatorcontentutils/NavigatorContentUtils.cpp \
     Modules/notifications/DOMWindowNotifications.cpp \
     Modules/notifications/Notification.cpp \
     Modules/notifications/NotificationCenter.cpp \
     Modules/notifications/NotificationController.cpp \
-    Modules/notifications/WorkerContextNotifications.cpp \
+    Modules/notifications/WorkerGlobalScopeNotifications.cpp \
     Modules/proximity/DeviceProximityController.cpp \
     Modules/proximity/DeviceProximityEvent.cpp \
     css/BasicShapeFunctions.cpp \
@@ -262,6 +260,7 @@ SOURCES += \
     css/CSSComputedStyleDeclaration.cpp \
     css/CSSCrossfadeValue.cpp \
     css/CSSCursorImageValue.cpp \
+    css/CSSFilterImageValue.cpp \
     css/CSSFontFace.cpp \
     css/CSSDefaultStyleSheets.cpp \
     css/CSSFontFaceLoadEvent.cpp \
@@ -318,7 +317,6 @@ SOURCES += \
     css/MediaQueryEvaluator.cpp \
     css/MediaQueryExp.cpp \
     css/MediaQueryList.cpp \
-    css/MediaQueryListListener.cpp \
     css/MediaQueryMatcher.cpp \
     css/PageRuleCollector.cpp \
     css/PropertySetCSSStyleDeclaration.cpp \
@@ -402,8 +400,8 @@ SOURCES += \
     dom/DOMStringMap.cpp \
     dom/DatasetDOMStringMap.cpp \
     dom/Element.cpp \
+    dom/ElementData.cpp \
     dom/ElementRareData.cpp \
-    dom/ElementShadow.cpp \
     dom/EntityReference.cpp \
     dom/ErrorEvent.cpp \
     dom/Event.cpp \
@@ -424,13 +422,13 @@ SOURCES += \
     dom/IconURL.cpp \
     dom/IdTargetObserver.cpp \
     dom/IdTargetObserverRegistry.cpp \
+    dom/InlineStyleSheetOwner.cpp \
     dom/LiveNodeList.cpp \
     dom/KeyboardEvent.cpp \
     dom/MessageChannel.cpp \
     dom/MessageEvent.cpp \
     dom/MessagePort.cpp \
     dom/MessagePortChannel.cpp \
-    dom/MicroDataItemList.cpp \
     dom/MouseEvent.cpp \
     dom/MouseRelatedEvent.cpp \
     dom/MutationEvent.cpp \
@@ -459,7 +457,6 @@ SOURCES += \
     dom/PositionIterator.cpp \
     dom/ProcessingInstruction.cpp \
     dom/ProgressEvent.cpp \
-    dom/PropertyNodeList.cpp \
     dom/PseudoElement.cpp \
     dom/QualifiedName.cpp \
     dom/Range.cpp \
@@ -478,10 +475,10 @@ SOURCES += \
     dom/SpaceSplitString.cpp \
     dom/StaticNodeList.cpp \
     dom/StyledElement.cpp \
-    dom/StyleElement.cpp \
     dom/TagNodeList.cpp \
     dom/Text.cpp \
     dom/TextEvent.cpp \
+    dom/TextNodeTraversal.cpp \
     dom/Touch.cpp \
     dom/TouchEvent.cpp \
     dom/TouchList.cpp \
@@ -665,7 +662,6 @@ SOURCES += \
     html/HTMLPlugInImageElement.cpp \
     html/HTMLPreElement.cpp \
     html/HTMLProgressElement.cpp \
-    html/HTMLPropertiesCollection.cpp \
     html/HTMLQuoteElement.cpp \
     html/HTMLScriptElement.cpp \
     html/HTMLSelectElement.cpp \
@@ -696,8 +692,6 @@ SOURCES += \
     html/LabelsNodeList.cpp \
     html/LinkRelAttribute.cpp \
     html/MediaDocument.cpp \
-    html/MicroDataAttributeTokenList.cpp \
-    html/MicroDataItemValue.cpp \
     html/MonthInputType.cpp \
     html/NumberInputType.cpp \
     html/PasswordInputType.cpp \
@@ -726,7 +720,6 @@ SOURCES += \
     html/canvas/CanvasRenderingContext.cpp \
     html/canvas/CanvasRenderingContext2D.cpp \
     html/canvas/CanvasStyle.cpp \
-    html/canvas/DataView.cpp \
     html/forms/FileIconLoader.cpp \
     html/parser/BackgroundHTMLInputStream.cpp \
     html/parser/BackgroundHTMLParser.cpp \
@@ -1017,7 +1010,9 @@ SOURCES += \
     platform/graphics/ImageBuffer.cpp \
     platform/graphics/ImageOrientation.cpp \
     platform/graphics/ImageSource.cpp \
+    platform/graphics/IntPoint.cpp \
     platform/graphics/IntRect.cpp \
+    platform/graphics/IntSize.cpp \
     platform/graphics/Path.cpp \
     platform/graphics/PathTraversalState.cpp \
     platform/graphics/Pattern.cpp \
@@ -1239,6 +1234,7 @@ SOURCES += \
     rendering/RootInlineBox.cpp \
     rendering/ScrollBehavior.cpp \
     rendering/shapes/PolygonShape.cpp \
+    rendering/shapes/RasterShape.cpp \
     rendering/shapes/RectangleShape.cpp \
     rendering/shapes/Shape.cpp \
     rendering/shapes/ShapeInfo.cpp \
@@ -1287,6 +1283,9 @@ SOURCES += \
     storage/StorageSyncManager.cpp \
     storage/StorageStrategy.cpp \
     storage/StorageTracker.cpp \
+    style/StyleFontSizeFunctions.cpp \
+    style/StyleResolveForDocument.cpp \
+    style/StyleResolveTree.cpp \
     testing/Internals.cpp \
     testing/InternalSettings.cpp \
     xml/DOMParser.cpp \
@@ -1348,35 +1347,27 @@ HEADERS += \
     bindings/js/GCController.h \
     bindings/js/DOMObjectHashTableMap.h \
     bindings/js/DOMWrapperWorld.h \
-    bindings/js/JSArrayBufferViewHelper.h \
     bindings/js/JSCSSStyleDeclarationCustom.h \
     bindings/js/JSCallbackData.h \
     bindings/js/JSCustomXPathNSResolver.h \
     bindings/js/JSDictionary.h \
     bindings/js/JSDOMBinding.h \
     bindings/js/JSDOMGlobalObject.h \
-    bindings/js/JSDOMStringMapCustom.h \
     bindings/js/JSDOMWindowBase.h \
     bindings/js/JSDOMWindowCustom.h \
     bindings/js/JSDOMWindowShell.h \
     bindings/js/JSDOMWrapper.h \
     bindings/js/JSErrorHandler.h \
     bindings/js/JSEventListener.h \
-    bindings/js/JSHTMLAppletElementCustom.h \
-    bindings/js/JSHTMLEmbedElementCustom.h \
     bindings/js/JSHTMLInputElementCustom.h \
-    bindings/js/JSHTMLObjectElementCustom.h \
     bindings/js/JSHTMLSelectElementCustom.h \
-    bindings/js/JSHistoryCustom.h \
     bindings/js/JSImageConstructor.h \
     bindings/js/JSLazyEventListener.h \
-    bindings/js/JSLocationCustom.h \
     bindings/js/JSMutationCallback.h \
     bindings/js/JSNodeCustom.h \
     bindings/js/JSNodeFilterCondition.h \
     bindings/js/JSPluginElementFunctions.h \
-    bindings/js/JSStorageCustom.h \
-    bindings/js/JSWorkerContextBase.h \
+    bindings/js/JSWorkerGlobalScopeBase.h \
     bindings/js/JavaScriptCallFrame.h \
     bindings/js/PageScriptDebugServer.h \
     bindings/js/ScheduledAction.h \
@@ -1435,7 +1426,7 @@ HEADERS += \
     Modules/notifications/NotificationCenter.h \
     Modules/notifications/NotificationClient.h \
     Modules/notifications/NotificationController.h \
-    Modules/notifications/WorkerContextNotifications.h \
+    Modules/notifications/WorkerGlobalScopeNotifications.h \
     \
     Modules/proximity/DeviceProximityClient.h \
     Modules/proximity/DeviceProximityController.h \
@@ -1479,7 +1470,7 @@ HEADERS += \
     Modules/webdatabase/SQLTransactionStateMachine.h \
     Modules/webdatabase/SQLTransactionSync.h \
     Modules/webdatabase/SQLTransactionSyncCallback.h \
-    Modules/webdatabase/WorkerContextWebDatabase.h \
+    Modules/webdatabase/WorkerGlobalScopeWebDatabase.h \
     \
     css/BasicShapeFunctions.h \
     css/CSSAspectRatioValue.h \
@@ -1492,6 +1483,7 @@ HEADERS += \
     css/CSSComputedStyleDeclaration.h \
     css/CSSCrossfadeValue.h \
     css/CSSCursorImageValue.h \
+    css/CSSFilterImageValue.h \
     css/CSSFontFace.h \
     css/CSSFontFaceLoadEvent.h \
     css/CSSFontFaceRule.h \
@@ -1619,7 +1611,8 @@ HEADERS += \
     dom/DOMTimeStamp.h \
     dom/DatasetDOMStringMap.h \
     dom/Element.h \
-    dom/ElementShadow.h \
+    dom/ElementData.h \
+    dom/ElementTravesal.h \
     dom/Entity.h \
     dom/EntityReference.h \
     dom/Event.h \
@@ -1637,13 +1630,13 @@ HEADERS += \
     dom/GestureEvent.h \
     dom/IdTargetObserver.h \
     dom/IdTargetObserverRegistry.h \
+    dom/InlineStyleSheetOwner.h \
     dom/LiveNodeList.h \
     dom/KeyboardEvent.h \
     dom/MessageChannel.h \
     dom/MessageEvent.h \
     dom/MessagePortChannel.h \
     dom/MessagePort.h \
-    dom/MicroDataItemList.h \
     dom/MouseEvent.h \
     dom/MouseRelatedEvent.h \
     dom/MutationCallback.h \
@@ -1669,7 +1662,6 @@ HEADERS += \
     dom/PositionIterator.h \
     dom/ProcessingInstruction.h \
     dom/ProgressEvent.h \
-    dom/PropertyNodeList.h \
     dom/PseudoElement.h \
     dom/QualifiedName.h \
     dom/Range.h \
@@ -1685,10 +1677,10 @@ HEADERS += \
     dom/SpaceSplitString.h \
     dom/StaticNodeList.h \
     dom/StyledElement.h \
-    dom/StyleElement.h \
     dom/TagNodeList.h \
     dom/TemplateContentDocumentFragment.h \
     dom/TextEvent.h \
+    dom/TextNodeTraversal.h \
     dom/TextEventInputType.h \
     dom/Text.h \
     dom/Touch.h \
@@ -1793,7 +1785,6 @@ HEADERS += \
     html/canvas/CanvasRenderingContext.h \
     html/canvas/CanvasRenderingContext2D.h \
     html/canvas/CanvasStyle.h \
-    html/canvas/DataView.h \
     html/canvas/DOMPath.h \
     html/ClassList.h \
     html/DOMFormData.h \
@@ -1869,7 +1860,6 @@ HEADERS += \
     html/HTMLPlugInImageElement.h \
     html/HTMLPreElement.h \
     html/HTMLProgressElement.h \
-    html/HTMLPropertiesCollection.h \
     html/HTMLQuoteElement.h \
     html/HTMLScriptElement.h \
     html/HTMLSelectElement.h \
@@ -1900,8 +1890,6 @@ HEADERS += \
     html/MediaController.h \
     html/MediaDocument.h \
     html/MediaFragmentURIParser.h \
-    html/MicroDataAttributeTokenList.h \
-    html/MicroDataItemValue.h \
     html/PluginDocument.h \
     html/PublicURLManager.h \
     html/RadioNodeList.h \
@@ -2141,7 +2129,6 @@ HEADERS += \
     platform/FileStreamClient.h \
     platform/FileSystem.h \
     platform/HistogramSupport.h \
-    platform/InitializeLogging.h \
     platform/image-decoders/ImageDecoder.h \
     platform/mock/DeviceMotionClientMock.h \
     platform/mock/DeviceOrientationClientMock.h \
@@ -2421,6 +2408,7 @@ HEADERS += \
     rendering/mathml/RenderMathMLOperator.h \
     rendering/mathml/RenderMathMLRoot.h \
     rendering/mathml/RenderMathMLRow.h \
+    rendering/mathml/RenderMathMLSpace.h \
     rendering/mathml/RenderMathMLSquareRoot.h \
     rendering/mathml/RenderMathMLSubSup.h \
     rendering/mathml/RenderMathMLUnderOver.h \
@@ -2428,6 +2416,7 @@ HEADERS += \
     rendering/PaintInfo.h \
     rendering/PaintPhase.h \
     rendering/PointerEventsHitRules.h \
+    rendering/RegionOversetState.h \
     rendering/RenderApplet.h \
     rendering/RenderArena.h \
     rendering/RenderBlock.h \
@@ -2507,6 +2496,7 @@ HEADERS += \
     rendering/RootInlineBox.h \
     rendering/ScrollBehavior.h \
     rendering/shapes/PolygonShape.h \
+    rendering/shapes/RasterShape.h \
     rendering/shapes/RectangleShape.h \
     rendering/shapes/Shape.h \
     rendering/shapes/ShapeInfo.h \
@@ -2617,6 +2607,9 @@ HEADERS += \
     storage/StorageThread.h \
     storage/StorageTracker.h \
     storage/StorageTrackerClient.h \
+    style/StyleFontSizeFunctions.h \
+    style/StyleResolveForDocument.h \
+    style/StyleResolveTree.h \
     svg/animation/SMILTimeContainer.h \
     svg/animation/SMILTime.h \
     svg/animation/SVGSMILElement.h \
@@ -2627,6 +2620,7 @@ HEADERS += \
     svg/graphics/SVGImage.h \
     svg/graphics/SVGImageCache.h \
     svg/graphics/SVGImageForContainer.h \
+    svg/properties/SVGAnimatedProperty.h \
     svg/properties/SVGAttributeToPropertyMap.h \
     svg/properties/SVGAnimatedEnumerationPropertyTearOff.h \
     svg/properties/SVGAnimatedListPropertyTearOff.h \
@@ -2734,6 +2728,7 @@ HEADERS += \
     svg/SVGGlyphElement.h \
     svg/SVGGlyphRefElement.h \
     svg/SVGGradientElement.h \
+    svg/SVGGraphicsElement.h \
     svg/SVGHKernElement.h \
     svg/SVGImageElement.h \
     svg/SVGImageLoader.h \
@@ -2759,17 +2754,32 @@ HEADERS += \
     svg/SVGPathElement.h \
     svg/SVGPathParser.h \
     svg/SVGPathSegArc.h \
+    svg/SVGPathSegArcAbs.h \
+    svg/SVGPathSegArcRel.h \
     svg/SVGPathSegClosePath.h \
     svg/SVGPathSegCurvetoCubic.h \
+    svg/SVGPathSegCurvetoCubicAbs.h \
+    svg/SVGPathSegCurvetoCubicRel.h \
     svg/SVGPathSegCurvetoCubicSmooth.h \
+    svg/SVGPathSegCurvetoCubicSmoothAbs.h \
+    svg/SVGPathSegCurvetoCubicSmoothRel.h \
     svg/SVGPathSegCurvetoQuadratic.h \
-    svg/SVGPathSegCurvetoQuadraticSmooth.h \
-    svg/SVGPathSegLineto.h \
+    svg/SVGPathSegCurvetoQuadraticAbs.h \
+    svg/SVGPathSegCurvetoQuadraticRel.h \
+    svg/SVGPathSegCurvetoQuadraticSmoothAbs.h \
+    svg/SVGPathSegCurvetoQuadraticSmoothRel.h \
+    svg/SVGPathSegLinetoAbs.h \
+    svg/SVGPathSegLinetoRel.h \
     svg/SVGPathSegLinetoHorizontal.h \
+    svg/SVGPathSegLinetoHorizontalAbs.h \
+    svg/SVGPathSegLinetoHorizontalRel.h \
     svg/SVGPathSegLinetoVertical.h \
+    svg/SVGPathSegLinetoVerticalAbs.h \
+    svg/SVGPathSegLinetoVerticalRel.h \
     svg/SVGPathSegList.h \
     svg/SVGPathSegListBuilder.h \
-    svg/SVGPathSegMoveto.h \
+    svg/SVGPathSegMovetoAbs.h \
+    svg/SVGPathSegMovetoRel.h \
     svg/SVGPatternElement.h \
     svg/SVGPointList.h \
     svg/SVGPolyElement.h \
@@ -2785,8 +2795,6 @@ HEADERS += \
     svg/SVGStringList.h \
     svg/SVGStyleElement.h \
     svg/SVGStyledElement.h \
-    svg/SVGStyledLocatableElement.h \
-    svg/SVGStyledTransformableElement.h \
     svg/SVGSVGElement.h \
     svg/SVGSwitchElement.h \
     svg/SVGSymbolElement.h \
@@ -2815,10 +2823,10 @@ HEADERS += \
     testing/MemoryInfo.h \
     testing/TypeConversions.h \
     workers/AbstractWorker.h \
-    workers/DedicatedWorkerContext.h \
+    workers/DedicatedWorkerGlobalScope.h \
     workers/DedicatedWorkerThread.h \
     workers/SharedWorker.h \
-    workers/WorkerContext.h \
+    workers/WorkerGlobalScope.h \
     workers/WorkerEventQueue.h \
     workers/Worker.h \
     workers/WorkerLocation.h \
@@ -2865,9 +2873,6 @@ SOURCES += \
     platform/graphics/qt/FloatPointQt.cpp \
     platform/graphics/qt/FloatRectQt.cpp \
     platform/graphics/qt/FloatSizeQt.cpp \
-    platform/graphics/qt/LayoutPointQt.cpp \
-    platform/graphics/qt/LayoutRectQt.cpp \
-    platform/graphics/qt/LayoutSizeQt.cpp \
     platform/graphics/qt/GradientQt.cpp \
     platform/graphics/qt/GraphicsContextQt.cpp \
     platform/graphics/qt/IconQt.cpp \
@@ -2903,7 +2908,6 @@ SOURCES += \
     platform/Cursor.cpp \
     platform/ContextMenu.cpp \
     platform/ContextMenuItem.cpp \
-    platform/qt/ClipboardQt.cpp \
     platform/ContextMenuItemNone.cpp \
     platform/ContextMenuNone.cpp \
     platform/qt/CursorQt.cpp \
@@ -3108,7 +3112,7 @@ enable?(INDEXED_DATABASE) {
         Modules/indexeddb/IDBRequest.cpp \
         Modules/indexeddb/IDBTransaction.cpp \
         Modules/indexeddb/PageGroupIndexedDatabase.cpp \
-        Modules/indexeddb/WorkerContextIndexedDatabase.cpp
+        Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.cpp
 }
 
 enable?(DATA_TRANSFER_ITEMS) {
@@ -3192,9 +3196,9 @@ enable?(ICONDATABASE) {
 
 enable?(WORKERS) {
     SOURCES += \
-        bindings/js/JSDedicatedWorkerContextCustom.cpp \
-        bindings/js/JSWorkerContextBase.cpp \
-        bindings/js/JSWorkerContextCustom.cpp \
+        bindings/js/JSDedicatedWorkerGlobalScopeCustom.cpp \
+        bindings/js/JSWorkerGlobalScopeBase.cpp \
+        bindings/js/JSWorkerGlobalScopeCustom.cpp \
         bindings/js/JSWorkerCustom.cpp \
         bindings/js/WorkerScriptController.cpp \
         bindings/js/WorkerScriptDebugServer.cpp
@@ -3203,10 +3207,10 @@ enable?(WORKERS) {
         loader/WorkerThreadableLoader.cpp \
         page/WorkerNavigator.cpp \
         workers/AbstractWorker.cpp \
-        workers/DedicatedWorkerContext.cpp \
+        workers/DedicatedWorkerGlobalScope.cpp \
         workers/DedicatedWorkerThread.cpp \
         workers/Worker.cpp \
-        workers/WorkerContext.cpp \
+        workers/WorkerGlobalScope.cpp \
         workers/WorkerEventQueue.cpp \
         workers/WorkerLocation.cpp \
         workers/WorkerMessagingProxy.cpp \
@@ -3222,7 +3226,7 @@ enable?(SHARED_WORKERS) {
     SOURCES += \
         workers/DefaultSharedWorkerRepository.cpp \
         workers/SharedWorker.cpp \
-        workers/SharedWorkerContext.cpp \
+        workers/SharedWorkerGlobalScope.cpp \
         workers/SharedWorkerRepository.cpp \
         workers/SharedWorkerThread.cpp
 }
@@ -3310,52 +3314,7 @@ enable?(VIDEO) {
         rendering/RenderMediaControls.cpp \
         rendering/RenderMediaControlElements.cpp
 
-    use?(QTKIT) {
-        INCLUDEPATH += \
-            $$SOURCE_DIR/../WebKitLibraries/ \
-            $$PWD/platform/mac \
-            $$PWD/platform/cf
-
-
-        HEADERS += \
-            platform/graphics/mac/MediaPlayerPrivateQTKit.h \
-            platform/mac/WebCoreObjCExtras.h \
-            platform/qt/WebCoreSystemInterface.h \
-            platform/mac/BlockExceptions.h \
-            platform/mac/WebCoreObjCExtras.h \
-            platform/mac/WebVideoFullscreenController.h \
-            platform/mac/WebVideoFullscreenHUDWindowController.h \
-            platform/mac/WebWindowAnimation.h \
-            platform/cf/CFURLExtras.h
-
-        SOURCES += \
-            platform/mac/DisplaySleepDisabler.cpp \
-            platform/graphics/cg/IntRectCG.cpp \
-            platform/graphics/cg/FloatSizeCG.cpp \
-            platform/cf/KURLCFNet.cpp \
-            platform/cf/CFURLExtras.cpp
-
-         OBJECTIVE_SOURCES += \
-            platform/qt/WebCoreSystemInterface.mm \
-            platform/mac/BlockExceptions.mm \
-            platform/mac/WebCoreObjCExtras.mm \
-            platform/graphics/mac/MediaPlayerPrivateQTKit.mm \
-            platform/mac/SharedBufferMac.mm \
-            platform/mac/KURLMac.mm \
-            platform/text/mac/StringMac.mm \
-            platform/text/mac/StringImplMac.mm \
-            platform/graphics/mac/FloatSizeMac.mm \
-            platform/graphics/mac/IntRectMac.mm \
-            platform/mac/WebVideoFullscreenController.mm \
-            platform/mac/WebVideoFullscreenHUDWindowController.mm \
-            platform/mac/WebWindowAnimation.mm
-
-        DEFINES+=NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
-        isEqual(QT_ARCH, "i386") {
-            DEFINES+=NS_BUILD_32_LIKE_64
-        }
-
-    } else: use?(GSTREAMER) {
+    use?(GSTREAMER) {
         HEADERS += \
             platform/graphics/gstreamer/GStreamerGWorld.h \
             platform/graphics/gstreamer/MediaPlayerPrivateGStreamerBase.h \
@@ -3427,7 +3386,7 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/WaveShaperDSPKernel.h \
         Modules/webaudio/WaveShaperNode.h \
         Modules/webaudio/WaveShaperProcessor.h \
-        Modules/webaudio/WaveTable.h \
+        Modules/webaudio/PeriodicWave.h \
         platform/audio/AudioArray.h \
         platform/audio/AudioBus.h \
         platform/audio/AudioChannel.h \
@@ -3449,6 +3408,7 @@ enable?(WEB_AUDIO) {
         platform/audio/DenormalDisabler.h \
         platform/audio/DirectConvolver.h \
         platform/audio/Distance.h \
+        platform/audio/DownSampler.h \
         platform/audio/DynamicsCompressor.h \
         platform/audio/DynamicsCompressorKernel.h \
         platform/audio/EqualPowerPanner.h \
@@ -3467,6 +3427,7 @@ enable?(WEB_AUDIO) {
         platform/audio/Reverb.h \
         platform/audio/ReverbInputBuffer.h \
         platform/audio/SincResampler.h \
+        platform/audio/UpSampler.h \
         platform/audio/VectorMath.h \
         platform/audio/ZeroPole.h
 
@@ -3517,7 +3478,7 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/WaveShaperDSPKernel.cpp \
         Modules/webaudio/WaveShaperNode.cpp \
         Modules/webaudio/WaveShaperProcessor.cpp \
-        Modules/webaudio/WaveTable.cpp \
+        Modules/webaudio/PeriodicWave.cpp \
         platform/audio/AudioBus.cpp \
         platform/audio/AudioChannel.cpp \
         platform/audio/AudioDSPKernelProcessor.cpp \
@@ -3530,6 +3491,7 @@ enable?(WEB_AUDIO) {
         platform/audio/Cone.cpp \
         platform/audio/DirectConvolver.cpp \
         platform/audio/Distance.cpp \
+        platform/audio/DownSampler.cpp \
         platform/audio/DynamicsCompressor.cpp \
         platform/audio/DynamicsCompressorKernel.cpp \
         platform/audio/EqualPowerPanner.cpp \
@@ -3550,6 +3512,7 @@ enable?(WEB_AUDIO) {
         platform/audio/Reverb.cpp \
         platform/audio/ReverbInputBuffer.cpp \
         platform/audio/SincResampler.cpp \
+        platform/audio/UpSampler.cpp \
         platform/audio/VectorMath.cpp \
         platform/audio/ZeroPole.cpp
 
@@ -3661,6 +3624,7 @@ enable?(MATHML) {
         rendering/mathml/RenderMathMLOperator.cpp \
         rendering/mathml/RenderMathMLRoot.cpp \
         rendering/mathml/RenderMathMLRow.cpp \
+        rendering/mathml/RenderMathMLSpace.cpp \
         rendering/mathml/RenderMathMLSquareRoot.cpp \
         rendering/mathml/RenderMathMLSubSup.cpp \
         rendering/mathml/RenderMathMLUnderOver.cpp
@@ -3761,6 +3725,7 @@ enable?(SVG) {
         svg/graphics/SVGImage.cpp \
         svg/graphics/SVGImageCache.cpp \
         svg/graphics/SVGImageForContainer.cpp \
+        svg/properties/SVGAnimatedProperty.cpp \
         svg/properties/SVGAttributeToPropertyMap.cpp \
         svg/properties/SVGPathSegListPropertyTearOff.cpp \
         svg/SVGDocumentExtensions.cpp \
@@ -3789,6 +3754,7 @@ enable?(SVG) {
         svg/SVGAnimatedString.cpp \
         svg/SVGAnimatedTransformList.cpp \
         svg/SVGAnimatedType.cpp \
+        svg/SVGAnimatedTypeAnimator.cpp \
         svg/SVGAnimateElement.cpp \
         svg/SVGAnimateMotionElement.cpp \
         svg/SVGAnimateTransformElement.cpp \
@@ -3848,6 +3814,7 @@ enable?(SVG) {
         svg/SVGGlyphElement.cpp \
         svg/SVGGlyphRefElement.cpp \
         svg/SVGGradientElement.cpp \
+        svg/SVGGraphicsElement.cpp \
         svg/SVGHKernElement.cpp \
         svg/SVGImageElement.cpp \
         svg/SVGImageLoader.cpp \
@@ -3894,8 +3861,6 @@ enable?(SVG) {
         svg/SVGStringList.cpp \
         svg/SVGStyleElement.cpp \
         svg/SVGStyledElement.cpp \
-        svg/SVGStyledLocatableElement.cpp \
-        svg/SVGStyledTransformableElement.cpp \
         svg/SVGSwitchElement.cpp \
         svg/SVGSymbolElement.cpp \
         svg/SVGTRefElement.cpp \
@@ -4140,6 +4105,7 @@ use?(3D_GRAPHICS) {
         platform/graphics/texmap/TextureMapperGL.h \
         platform/graphics/texmap/TextureMapperShaderProgram.h \
         platform/graphics/texmap/coordinated/AreaAllocator.h \
+        platform/graphics/texmap/coordinated/CompositingCoordinator.h \
         platform/graphics/texmap/coordinated/CoordinatedBackingStore.h \
         platform/graphics/texmap/coordinated/CoordinatedCustomFilterOperation.h \
         platform/graphics/texmap/coordinated/CoordinatedCustomFilterProgram.h \
@@ -4175,6 +4141,7 @@ use?(3D_GRAPHICS) {
         platform/graphics/texmap/TextureMapperGL.cpp \
         platform/graphics/texmap/TextureMapperShaderProgram.cpp \
         platform/graphics/texmap/coordinated/AreaAllocator.cpp \
+        platform/graphics/texmap/coordinated/CompositingCoordinator.cpp \
         platform/graphics/texmap/coordinated/CoordinatedBackingStore.cpp \
         platform/graphics/texmap/coordinated/CoordinatedGraphicsLayer.cpp \
         platform/graphics/texmap/coordinated/CoordinatedGraphicsScene.cpp \
@@ -4299,7 +4266,7 @@ use?(GRAPHICS_SURFACE) {
     win32 {
         SOURCES += platform/graphics/surfaces/win/GraphicsSurfaceWin.cpp
     }
-    have?(XCOMPOSITE) {
+    use?(glx) {
         HEADERS += \
             platform/graphics/surfaces/glx/X11Helper.h \
             platform/graphics/surfaces/glx/GLXConfigSelector.h

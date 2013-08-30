@@ -32,8 +32,8 @@
 #include "JSEventListener.h"
 
 #if ENABLE(WORKERS)
-#include "JSWorkerContext.h"
-#include "WorkerContext.h"
+#include "JSWorkerGlobalScope.h"
+#include "WorkerGlobalScope.h"
 #endif
 
 using namespace JSC;
@@ -57,22 +57,22 @@ void JSDOMGlobalObject::destroy(JSCell* cell)
 void JSDOMGlobalObject::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
 }
 
 void JSDOMGlobalObject::finishCreation(VM& vm, JSObject* thisValue)
 {
     Base::finishCreation(vm, thisValue);
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
 }
 
 ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
 {
-    if (inherits(&JSDOMWindowBase::s_info))
+    if (inherits(JSDOMWindowBase::info()))
         return jsCast<const JSDOMWindowBase*>(this)->scriptExecutionContext();
 #if ENABLE(WORKERS)
-    if (inherits(&JSWorkerContextBase::s_info))
-        return jsCast<const JSWorkerContextBase*>(this)->scriptExecutionContext();
+    if (inherits(JSWorkerGlobalScopeBase::info()))
+        return jsCast<const JSWorkerGlobalScopeBase*>(this)->scriptExecutionContext();
 #endif
     ASSERT_NOT_REACHED();
     return 0;
@@ -81,7 +81,7 @@ ScriptExecutionContext* JSDOMGlobalObject::scriptExecutionContext() const
 void JSDOMGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSDOMGlobalObject* thisObject = jsCast<JSDOMGlobalObject*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
@@ -116,8 +116,8 @@ JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext* scriptExecutionCo
         return toJSDOMGlobalObject(toDocument(scriptExecutionContext), exec);
 
 #if ENABLE(WORKERS)
-    if (scriptExecutionContext->isWorkerContext())
-        return static_cast<WorkerContext*>(scriptExecutionContext)->script()->workerContextWrapper();
+    if (scriptExecutionContext->isWorkerGlobalScope())
+        return static_cast<WorkerGlobalScope*>(scriptExecutionContext)->script()->workerGlobalScopeWrapper();
 #endif
 
     ASSERT_NOT_REACHED();
@@ -135,8 +135,8 @@ JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext* scriptExecutionCo
         return toJSDOMGlobalObject(toDocument(scriptExecutionContext), world);
 
 #if ENABLE(WORKERS)
-    if (scriptExecutionContext->isWorkerContext())
-        return static_cast<WorkerContext*>(scriptExecutionContext)->script()->workerContextWrapper();
+    if (scriptExecutionContext->isWorkerGlobalScope())
+        return static_cast<WorkerGlobalScope*>(scriptExecutionContext)->script()->workerGlobalScopeWrapper();
 #endif
 
     ASSERT_NOT_REACHED();

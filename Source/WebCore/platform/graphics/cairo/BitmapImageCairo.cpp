@@ -66,11 +66,11 @@ BitmapImage::BitmapImage(PassRefPtr<cairo_surface_t> nativeImage, ImageObserver*
 
 void BitmapImage::draw(GraphicsContext* context, const FloatRect& dst, const FloatRect& src, ColorSpace styleColorSpace, CompositeOperator op, BlendMode blendMode)
 {
-    draw(context, dst, src, styleColorSpace, op, blendMode, DoNotRespectImageOrientation);
+    draw(context, dst, src, styleColorSpace, op, blendMode, ImageOrientationDescription());
 }
 
 void BitmapImage::draw(GraphicsContext* context, const FloatRect& dst, const FloatRect& src, ColorSpace styleColorSpace, CompositeOperator op,
-    BlendMode blendMode, RespectImageOrientationEnum shouldRespectImageOrientation)
+    BlendMode blendMode, ImageOrientationDescription description)
 {
     if (!dst.width() || !dst.height() || !src.width() || !src.height())
         return;
@@ -101,8 +101,8 @@ void BitmapImage::draw(GraphicsContext* context, const FloatRect& dst, const Flo
     FloatRect adjustedSrcRect(src);
 #endif
 
-    ImageOrientation orientation = DefaultImageOrientation;
-    if (shouldRespectImageOrientation == RespectImageOrientation)
+    ImageOrientation orientation;
+    if (description.respectImageOrientation() == RespectImageOrientation)
         orientation = frameOrientationAtIndex(m_currentFrame);
 
     FloatRect dstRect = dst;
@@ -147,7 +147,7 @@ void BitmapImage::checkForSolidColor()
     if (width != 1 || height != 1)
         return;
 
-    unsigned* pixelColor = reinterpret_cast<unsigned*>(cairo_image_surface_get_data(surface.get()));
+    unsigned* pixelColor = reinterpret_cast_ptr<unsigned*>(cairo_image_surface_get_data(surface.get()));
     m_solidColor = colorFromPremultipliedARGB(*pixelColor);
 
     m_isSolidColor = true;

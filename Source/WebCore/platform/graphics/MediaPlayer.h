@@ -39,6 +39,7 @@
 #include "LayoutRect.h"
 #include "Timer.h"
 #include "VideoTrackPrivate.h"
+#include <runtime/Uint8Array.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
@@ -228,7 +229,6 @@ public:
     virtual void mediaPlayerDidRemoveVideoTrack(PassRefPtr<VideoTrackPrivate>) { }
 
     virtual void textTrackRepresentationBoundsChanged(const IntRect&) { }
-    virtual void paintTextTrackRepresentation(GraphicsContext*, const IntRect&) { }
 #endif
 };
 
@@ -479,6 +479,8 @@ public:
 #endif
 
     String languageOfPrimaryAudioTrack() const;
+
+    size_t extraMemoryCost() const;
 
 private:
     MediaPlayer(MediaPlayerClient*);

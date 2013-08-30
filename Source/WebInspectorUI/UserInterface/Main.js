@@ -32,9 +32,14 @@ WebInspector.loaded = function()
     // Tell the InspectorFrontendHost we loaded first to establish communication with InspectorBackend.
     InspectorFrontendHost.loaded();
 
+    // Initialize WebSocket to communication
+    this._initializeWebSocketIfNeeded();
+
     // Register observers for events from the InspectorBackend.
     InspectorBackend.registerInspectorDispatcher(new WebInspector.InspectorObserver);
     InspectorBackend.registerPageDispatcher(new WebInspector.PageObserver);
+    if (InspectorBackend.registerCanvasDispatcher)
+        InspectorBackend.registerCanvasDispatcher(new WebInspector.CanvasObserver);
     InspectorBackend.registerConsoleDispatcher(new WebInspector.ConsoleObserver);
     InspectorBackend.registerNetworkDispatcher(new WebInspector.NetworkObserver);
     InspectorBackend.registerDOMDispatcher(new WebInspector.DOMObserver);
@@ -116,7 +121,7 @@ WebInspector.loaded = function()
 
     // Create settings.
     this._lastSelectedNavigationSidebarPanelSetting = new WebInspector.Setting("last-selected-navigation-sidebar-panel", "resource");
-    this._navigationSidebarCollapsedSetting = new WebInspector.Setting("navigation-sidebar-collasped", false);
+    this._navigationSidebarCollapsedSetting = new WebInspector.Setting("navigation-sidebar-collapsed", false);
     this._navigationSidebarWidthSetting = new WebInspector.Setting("navigation-sidebar-width", null);
 
     this._lastSelectedDetailsSidebarPanelSetting = new WebInspector.Setting("last-selected-details-sidebar-panel", null);
@@ -154,6 +159,10 @@ WebInspector.contentLoaded = function()
     this.toolbar = new WebInspector.Toolbar(document.getElementById("toolbar"));
     this.toolbar.addEventListener(WebInspector.Toolbar.Event.DisplayModeDidChange, this._toolbarDisplayModeDidChange, this);
     this.toolbar.addEventListener(WebInspector.Toolbar.Event.SizeModeDidChange, this._toolbarSizeModeDidChange, this);
+    
+    var contentElement = document.getElementById("content");
+    contentElement.setAttribute("role", "main");
+    contentElement.setAttribute("aria-label", WebInspector.UIString("Content"));
 
     this.contentBrowser = new WebInspector.ContentBrowser(document.getElementById("content-browser"), this);
     this.contentBrowser.addEventListener(WebInspector.ContentBrowser.Event.CurrentRepresentedObjectsDidChange, this._contentBrowserRepresentedObjectsDidChange, this);
@@ -175,7 +184,7 @@ WebInspector.contentLoaded = function()
     this.navigationSidebar.addEventListener(WebInspector.Sidebar.Event.WidthDidChange, this._sidebarWidthDidChange, this);
     this.navigationSidebar.addEventListener(WebInspector.Sidebar.Event.SidebarPanelSelected, this._navigationSidebarPanelSelected, this);
 
-    this.rightSidebar = this.detailsSidebar = new WebInspector.Sidebar(document.getElementById("details-sidebar"), WebInspector.Sidebar.Sides.Right);
+    this.rightSidebar = this.detailsSidebar = new WebInspector.Sidebar(document.getElementById("details-sidebar"), WebInspector.Sidebar.Sides.Right, null, null, WebInspector.UIString("Details"));
     this.detailsSidebar.addEventListener(WebInspector.Sidebar.Event.CollapsedStateDidChange, this._sidebarCollapsedStateDidChange, this);
     this.detailsSidebar.addEventListener(WebInspector.Sidebar.Event.WidthDidChange, this._sidebarWidthDidChange, this);
     this.detailsSidebar.addEventListener(WebInspector.Sidebar.Event.SidebarPanelSelected, this._detailsSidebarPanelSelected, this);
@@ -189,10 +198,10 @@ WebInspector.contentLoaded = function()
     this._redoKeyboardShortcut = new WebInspector.KeyboardShortcut(WebInspector.KeyboardShortcut.Modifier.Command | WebInspector.KeyboardShortcut.Modifier.Shift, "Z", this._redoKeyboardShortcut.bind(this));
     this._undoKeyboardShortcut.implicitlyPreventsDefault = this._redoKeyboardShortcut.implicitlyPreventsDefault = false;
 
-    this.undockButtonNavigationItem = new WebInspector.ToggleControlToolbarItem("undock", WebInspector.UIString("Detach into separate window"), "", "Images/Undock.pdf", "", 16, 14);
+    this.undockButtonNavigationItem = new WebInspector.ToggleControlToolbarItem("undock", WebInspector.UIString("Detach into separate window"), "", "Images/Undock.svg", "", 16, 14);
     this.undockButtonNavigationItem.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this._undock, this);
 
-    this.closeButtonNavigationItem = new WebInspector.ControlToolbarItem("dock-close", WebInspector.UIString("Close"), "Images/Close.pdf", 16, 14);
+    this.closeButtonNavigationItem = new WebInspector.ControlToolbarItem("dock-close", WebInspector.UIString("Close"), "Images/Close.svg", 16, 14);
     this.closeButtonNavigationItem.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this.close, this);
 
     this.toolbar.addToolbarItem(this.closeButtonNavigationItem, WebInspector.Toolbar.Section.Control);
@@ -214,7 +223,7 @@ WebInspector.contentLoaded = function()
     const consoleKeyboardShortcut = "\u2325\u2318C"; // Option-Command-C
     var toolTip = WebInspector.UIString("Show console (%s)").format(consoleKeyboardShortcut);
     var activatedToolTip = WebInspector.UIString("Hide console");
-    this._consoleToolbarButton = new WebInspector.ActivateButtonToolbarItem("console", toolTip, activatedToolTip, WebInspector.UIString("Console"), "Images/NavigationItemLog.pdf");
+    this._consoleToolbarButton = new WebInspector.ActivateButtonToolbarItem("console", toolTip, activatedToolTip, WebInspector.UIString("Console"), "Images/NavigationItemLog.svg");
     this._consoleToolbarButton.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this.toggleConsoleView, this);
     this.toolbar.addToolbarItem(this._consoleToolbarButton, WebInspector.Toolbar.Section.Center);
 
@@ -225,7 +234,7 @@ WebInspector.contentLoaded = function()
     // The toolbar button for node inspection.
     var toolTip = WebInspector.UIString("Enable point to inspect mode (%s)").format(WebInspector._inspectModeKeyboardShortcut.displayName);
     var activatedToolTip = WebInspector.UIString("Disable point to inspect mode (%s)").format(WebInspector._inspectModeKeyboardShortcut.displayName);
-    this._inspectModeToolbarButton = new WebInspector.ActivateButtonToolbarItem("inspect", toolTip, activatedToolTip, WebInspector.UIString("Inspect"), "Images/Crosshair.pdf");
+    this._inspectModeToolbarButton = new WebInspector.ActivateButtonToolbarItem("inspect", toolTip, activatedToolTip, WebInspector.UIString("Inspect"), "Images/Crosshair.svg");
     this._inspectModeToolbarButton.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this._toggleInspectMode, this);
     this.toolbar.addToolbarItem(this._inspectModeToolbarButton, WebInspector.Toolbar.Section.Center);
 
@@ -366,7 +375,15 @@ WebInspector.displayNameForURL = function(url, urlComponents)
 {
     if (!urlComponents)
         urlComponents = parseURL(url);
-    return decodeURIComponent(urlComponents.lastPathComponent || "") || WebInspector.displayNameForHost(urlComponents.host) || url;
+
+    var displayName;
+    try {
+        displayName = decodeURIComponent(urlComponents.lastPathComponent || "");
+    } catch (e) {
+        displayName = urlComponents.lastPathComponent;
+    }
+
+    return displayName || WebInspector.displayNameForHost(urlComponents.host) || url;
 }
 
 WebInspector.displayNameForHost = function(host)
@@ -380,14 +397,22 @@ WebInspector.updateWindowTitle = function()
     var mainFrame = this.frameResourceManager.mainFrame;
     console.assert(mainFrame);
 
-    // Build a title based on the URL components.
     var urlComponents = mainFrame.mainResource.urlComponents;
-    if (urlComponents.host && urlComponents.lastPathComponent)
-        var title = this.displayNameForHost(urlComponents.host) + " \u2014 " + decodeURIComponent(urlComponents.lastPathComponent);
+
+    var lastPathComponent;
+    try {
+        lastPathComponent = decodeURIComponent(urlComponents.lastPathComponent || "");
+    } catch (e) {
+        lastPathComponent = urlComponents.lastPathComponent;
+    }
+
+    // Build a title based on the URL components.
+    if (urlComponents.host && lastPathComponent)
+        var title = this.displayNameForHost(urlComponents.host) + " \u2014 " + lastPathComponent;
     else if (urlComponents.host)
         var title = this.displayNameForHost(urlComponents.host);
-    else if (urlComponents.lastPathComponent)
-        var title = decodeURIComponent(urlComponents.lastPathComponent);
+    else if (lastPathComponent)
+        var title = lastPathComponent;
     else
         var title = mainFrame.url;
 
@@ -645,6 +670,9 @@ WebInspector.toggleConsoleView = function()
 
 WebInspector.UIString = function(string, vararg)
 {
+    if (WebInspector.dontLocalizeUserInterface)
+        return string;
+
     if (window.localizedStrings && string in window.localizedStrings)
         return window.localizedStrings[string];
 
@@ -808,7 +836,7 @@ WebInspector._updateDockNavigationItems = function()
     this.undockButtonNavigationItem.hidden = !docked;
 
     if (docked) {
-        this.undockButtonNavigationItem.alternateImage = this._dockSide === "bottom" ? "Images/DockRight.pdf" : "Images/DockBottom.pdf";
+        this.undockButtonNavigationItem.alternateImage = this._dockSide === "bottom" ? "Images/DockRight.svg" : "Images/DockBottom.svg";
         this.undockButtonNavigationItem.alternateToolTip = this._dockSide === "bottom" ? WebInspector.UIString("Dock to right of window") : WebInspector.UIString("Dock to bottom of window");
     }
 
@@ -840,6 +868,13 @@ WebInspector._revealAndSelectRepresentedObjectInNavigationSidebar = function(rep
         return;
 
     var selectedSidebarPanel = this.navigationSidebar.selectedSidebarPanel;
+
+    // If the tree outline is processing a selection currently then we can assume the selection does not
+    // need to be changed. This is needed to allow breakpoints tree elements to be selected without jumping
+    // back to selecting the resource tree element.
+    if (selectedSidebarPanel.contentTreeOutline.processingSelectionChange)
+        return;
+
     var treeElement = selectedSidebarPanel.treeElementForRepresentedObject(representedObject);
     if (treeElement)
         treeElement.revealAndSelect(true, false, true, true);
@@ -1069,6 +1104,33 @@ WebInspector._contentBrowserRepresentedObjectsDidChange = function(event)
     delete this._ignoreDetailsSidebarPanelSelectedEvent;
 
     this._updateCurrentContentViewCookie(event);
+}
+
+WebInspector._initializeWebSocketIfNeeded = function()
+{
+    var ws;
+    var queryParams = parseLocationQueryParameters();
+
+    if ("ws" in queryParams)
+        ws = "ws://" + queryParams.ws;
+    else if ("page" in queryParams) {
+        var page = queryParams.page;
+        var host = "host" in queryParams ? queryParams.host : window.location.host;
+        ws = "ws://" + host + "/devtools/page/" + page;
+    }
+
+    if (!ws)
+        return;
+
+    var socket = new WebSocket(ws);
+    socket.addEventListener("open", createSocket);
+
+    function createSocket()
+    {
+        WebInspector.socket = socket;
+        WebInspector.socket.addEventListener("message", function(message) { InspectorBackend.dispatch(message.data); });
+        WebInspector.socket.addEventListener("error", function(error) { console.error(error); });
+    }
 }
 
 WebInspector._updateSplitConsoleHeight = function(height)
@@ -1318,14 +1380,14 @@ WebInspector._generateDisclosureTriangleImages = function()
     specifications["selected"] = {fillColor: [255, 255, 255, 0.8]};
     specifications["selected-active"] = {fillColor: [255, 255, 255, 1]};
 
-    generateColoredImagesForCSS("Images/DisclosureTriangleSmallOpen.pdf", specifications, 13, 13, "disclosure-triangle-small-open-");
-    generateColoredImagesForCSS("Images/DisclosureTriangleSmallClosed.pdf", specifications, 13, 13, "disclosure-triangle-small-closed-");
+    generateColoredImagesForCSS("Images/DisclosureTriangleSmallOpen.svg", specifications, 13, 13, "disclosure-triangle-small-open-");
+    generateColoredImagesForCSS("Images/DisclosureTriangleSmallClosed.svg", specifications, 13, 13, "disclosure-triangle-small-closed-");
 
-    generateColoredImagesForCSS("Images/DisclosureTriangleTinyOpen.pdf", specifications, 8, 8, "disclosure-triangle-tiny-open-");
-    generateColoredImagesForCSS("Images/DisclosureTriangleTinyClosed.pdf", specifications, 8, 8, "disclosure-triangle-tiny-closed-");
+    generateColoredImagesForCSS("Images/DisclosureTriangleTinyOpen.svg", specifications, 8, 8, "disclosure-triangle-tiny-open-");
+    generateColoredImagesForCSS("Images/DisclosureTriangleTinyClosed.svg", specifications, 8, 8, "disclosure-triangle-tiny-closed-");
 }
 
-WebInspector.elementDragStart = function(element, dividerDrag, elementDragEnd, event, cursor)
+WebInspector.elementDragStart = function(element, dividerDrag, elementDragEnd, event, cursor, eventTarget)
 {
     if (WebInspector._elementDraggingEventListener || WebInspector._elementEndDraggingEventListener)
         WebInspector.elementDragEnd(event);
@@ -1346,9 +1408,11 @@ WebInspector.elementDragStart = function(element, dividerDrag, elementDragEnd, e
     WebInspector._elementEndDraggingEventListener = elementDragEnd;
 
     var targetDocument = event.target.ownerDocument;
-    targetDocument.addEventListener("mousemove", dividerDrag, true);
-    targetDocument.addEventListener("mouseup", elementDragEnd, true);
 
+    WebInspector._elementDraggingEventTarget = eventTarget || targetDocument;
+    WebInspector._elementDraggingEventTarget.addEventListener("mousemove", dividerDrag, true);
+    WebInspector._elementDraggingEventTarget.addEventListener("mouseup", elementDragEnd, true);
+    
     targetDocument.body.style.cursor = cursor;
 
     event.preventDefault();
@@ -1356,16 +1420,16 @@ WebInspector.elementDragStart = function(element, dividerDrag, elementDragEnd, e
 
 WebInspector.elementDragEnd = function(event)
 {
-    var targetDocument = event.target.ownerDocument;
-    targetDocument.removeEventListener("mousemove", WebInspector._elementDraggingEventListener, true);
-    targetDocument.removeEventListener("mouseup", WebInspector._elementEndDraggingEventListener, true);
-
-    targetDocument.body.style.removeProperty("cursor");
-
+    WebInspector._elementDraggingEventTarget.removeEventListener("mousemove", WebInspector._elementDraggingEventListener, true);
+    WebInspector._elementDraggingEventTarget.removeEventListener("mouseup", WebInspector._elementEndDraggingEventListener, true);
+    
+    event.target.ownerDocument.body.style.removeProperty("cursor");
+    
     if (WebInspector._elementDraggingGlassPane)
         WebInspector._elementDraggingGlassPane.parentElement.removeChild(WebInspector._elementDraggingGlassPane);
 
     delete WebInspector._elementDraggingGlassPane;
+    delete WebInspector._elementDraggingEventTarget;
     delete WebInspector._elementDraggingEventListener;
     delete WebInspector._elementEndDraggingEventListener;
 
@@ -1395,7 +1459,7 @@ WebInspector.createGoToArrowButton = function()
         specifications["go-to-arrow-selected"] = {fillColor: [255, 255, 255, 0.8]};
         specifications["go-to-arrow-selected-active"] = {fillColor: [255, 255, 255, 1]};
 
-        generateColoredImagesForCSS("Images/GoToArrow.pdf", specifications, 10, 10);
+        generateColoredImagesForCSS("Images/GoToArrow.svg", specifications, 10, 10);
     }
 
     function stopPropagation(event)

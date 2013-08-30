@@ -65,7 +65,7 @@ void ViewportStyleResolver::addViewportRule(StyleRuleViewport* viewportRule)
         return;
     }
 
-    m_propertySet->mergeAndOverrideOnConflict(propertySet);
+    m_propertySet->mergeAndOverrideOnConflict(*propertySet);
 }
 
 void ViewportStyleResolver::clearDocument()
@@ -139,7 +139,7 @@ float ViewportStyleResolver::getViewportArgumentValue(CSSPropertyID id) const
         }
     }
 
-    switch (primitiveValue->getIdent()) {
+    switch (primitiveValue->getValueID()) {
     case CSSValueAuto:
         return defaultValue;
     case CSSValueDeviceHeight:

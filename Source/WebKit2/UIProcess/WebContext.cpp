@@ -50,14 +50,15 @@
 #include "WebNotificationManagerProxy.h"
 #include "WebPluginSiteDataManager.h"
 #include "WebPageGroup.h"
+#include "WebPreferences.h"
 #include "WebMemorySampler.h"
 #include "WebProcessCreationParameters.h"
 #include "WebProcessMessages.h"
 #include "WebProcessProxy.h"
 #include "WebResourceCacheManagerProxy.h"
-#include <WebCore/InitializeLogging.h>
 #include <WebCore/Language.h>
 #include <WebCore/LinkHash.h>
+#include <WebCore/Logging.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/RunLoop.h>
 #include <runtime/InitializeThreading.h>
@@ -96,8 +97,6 @@ using namespace WebCore;
 namespace WebKit {
 
 static const double sharedSecondaryProcessShutdownTimeout = 60;
-
-unsigned WebContext::m_privateBrowsingEnterCount;
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, webContextCounter, ("WebContext"));
 
@@ -139,6 +138,7 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
 #if USE(SOUP)
     , m_initialHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyOnlyFromMainDocumentDomain)
 #endif
+    , m_shouldUseTestingNetworkSession(false)
     , m_processTerminationEnabled(true)
 #if ENABLE(NETWORK_PROCESS)
     , m_usesNetworkProcess(false)
@@ -369,16 +369,15 @@ void WebContext::ensureNetworkProcess()
 
     NetworkProcessCreationParameters parameters;
 
+    parameters.privateBrowsingEnabled = WebPreferences::anyPageGroupsAreUsingPrivateBrowsing();
+
+    parameters.cacheModel = m_cacheModel;
+
     parameters.diskCacheDirectory = diskCacheDirectory();
     if (!parameters.diskCacheDirectory.isEmpty())
         SandboxExtension::createHandleForReadWriteDirectory(parameters.diskCacheDirectory, parameters.diskCacheDirectoryExtensionHandle);
 
-    // FIXME: We don't account for private browsing mode being enabled due to a persistent preference in any of active page groups.
-    // This means that clients must re-enable private browsing mode through API on each launch, not relying on preferences.
-    // If the client does not re-enable private browsing on next launch, NetworkProcess will crash.
-    parameters.privateBrowsingEnabled = m_privateBrowsingEnterCount;
-
-    parameters.cacheModel = m_cacheModel;
+    parameters.shouldUseTestingNetworkSession = m_shouldUseTestingNetworkSession;
 
     // Add any platform specific parameters
     platformInitializeNetworkProcess(parameters);
@@ -416,9 +415,6 @@ void WebContext::getNetworkProcessConnection(PassRefPtr<Messages::WebProcessProx
 
 void WebContext::willStartUsingPrivateBrowsing()
 {
-    if (m_privateBrowsingEnterCount++)
-        return;
-
     const Vector<WebContext*>& contexts = allContexts();
     for (size_t i = 0, count = contexts.size(); i < count; ++i) {
 #if ENABLE(NETWORK_PROCESS)
@@ -431,11 +427,6 @@ void WebContext::willStartUsingPrivateBrowsing()
 
 void WebContext::willStopUsingPrivateBrowsing()
 {
-    // If the client asks to disable private browsing without enabling it first, it may be resetting a persistent preference,
-    // so it is still necessary to destroy any existing private browsing session.
-    if (m_privateBrowsingEnterCount && --m_privateBrowsingEnterCount)
-        return;
-
     const Vector<WebContext*>& contexts = allContexts();
     for (size_t i = 0, count = contexts.size(); i < count; ++i) {
 #if ENABLE(NETWORK_PROCESS)
@@ -517,6 +508,8 @@ WebProcessProxy* WebContext::createNewWebProcess()
     if (!parameters.cookieStorageDirectory.isEmpty())
         SandboxExtension::createHandleForReadWriteDirectory(parameters.cookieStorageDirectory, parameters.cookieStorageDirectoryExtensionHandle);
 
+    parameters.shouldUseTestingNetworkSession = m_shouldUseTestingNetworkSession;
+
     parameters.shouldTrackVisitedLinks = m_historyClient.shouldTrackVisitedLinks();
     parameters.cacheModel = m_cacheModel;
     parameters.languages = userPreferredLanguages();
@@ -561,6 +554,9 @@ WebProcessProxy* WebContext::createNewWebProcess()
     if (!injectedBundleInitializationUserData)
         injectedBundleInitializationUserData = m_injectedBundleInitializationUserData;
     process->send(Messages::WebProcess::InitializeWebProcess(parameters, WebContextUserMessageEncoder(injectedBundleInitializationUserData.get())), 0);
+
+    if (WebPreferences::anyPageGroupsAreUsingPrivateBrowsing())
+        process->send(Messages::WebProcess::EnsurePrivateBrowsingSession(), 0);
 
     m_processes.append(process);
 
@@ -1076,6 +1072,22 @@ String WebContext::cookieStorageDirectory() const
     return platformDefaultCookieStorageDirectory();
 }
 
+void WebContext::useTestingNetworkSession()
+{
+    ASSERT(m_processes.isEmpty());
+#if ENABLE(NETWORK_PROCESS)
+    ASSERT(!m_networkProcess);
+
+    if (m_networkProcess)
+        return;
+#endif
+
+    if (!m_processes.isEmpty())
+        return;
+
+    m_shouldUseTestingNetworkSession = true;
+}
+
 void WebContext::allowSpecificHTTPSCertificateForHost(const WebCertificateInfo* certificate, const String& host)
 {
 #if ENABLE(NETWORK_PROCESS)
@@ -1257,7 +1269,7 @@ void WebContext::pluginInfoStoreDidLoadPlugins(PluginInfoStore* store)
         pluginArray.append(ImmutableDictionary::adopt(map));
     }
 
-    m_client.plugInInformationBecameAvailable(this, ImmutableArray::adopt(pluginArray).leakRef());
+    m_client.plugInInformationBecameAvailable(this, ImmutableArray::adopt(pluginArray).get());
 }
 #endif
 

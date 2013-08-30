@@ -55,7 +55,6 @@
 #endif
 
 #if ENABLE(DATALIST_ELEMENT)
-#include "ElementShadow.h"
 #include "HTMLCollection.h"
 #include "HTMLDataListElement.h"
 #include "HTMLOptionElement.h"
@@ -756,7 +755,7 @@ bool RenderTheme::isActive(const RenderObject* o) const
     if (!page)
         return false;
 
-    return page->focusController()->isActive();
+    return page->focusController().isActive();
 }
 
 bool RenderTheme::isChecked(const RenderObject* o) const
@@ -800,7 +799,7 @@ bool RenderTheme::isFocused(const RenderObject* o) const
     Element* focusDelegate = toElement(node)->focusDelegate();
     Document* document = focusDelegate->document();
     Frame* frame = document->frame();
-    return focusDelegate == document->focusedElement() && frame && frame->selection()->isFocusedAndActive();
+    return focusDelegate == document->focusedElement() && frame && frame->selection().isFocusedAndActive();
 }
 
 bool RenderTheme::isPressed(const RenderObject* o) const
@@ -1032,7 +1031,7 @@ void RenderTheme::paintSliderTicks(RenderObject* o, const PaintInfo& paintInfo, 
     GraphicsContextStateSaver stateSaver(*paintInfo.context);
     paintInfo.context->setFillColor(o->style()->visitedDependentColor(CSSPropertyColor), ColorSpaceDeviceRGB);
     for (unsigned i = 0; Node* node = options->item(i); i++) {
-        ASSERT(node->hasTagName(optionTag));
+        ASSERT(isHTMLOptionElement(node));
         HTMLOptionElement* optionElement = toHTMLOptionElement(node);
         String value = optionElement->value();
         if (!input->isValidValue(value))
@@ -1127,7 +1126,7 @@ void RenderTheme::platformColorsDidChange()
     Page::updateStyleForAllPagesAfterGlobalChangeInEnvironment();
 }
 
-Color RenderTheme::systemColor(int cssValueId) const
+Color RenderTheme::systemColor(CSSValueID cssValueId) const
 {
     switch (cssValueId) {
     case CSSValueActiveborder:
@@ -1188,6 +1187,8 @@ Color RenderTheme::systemColor(int cssValueId) const
         return 0xFFCCCCCC;
     case CSSValueWindowtext:
         return 0xFF000000;
+    default:
+        break;
     }
     return Color();
 }

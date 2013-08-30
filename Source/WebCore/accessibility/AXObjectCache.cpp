@@ -161,10 +161,10 @@ AccessibilityObject* AXObjectCache::focusedUIElementForPage(const Page* page)
         return 0;
 
     // get the focused node in the page
-    Document* focusedDocument = page->focusController()->focusedOrMainFrame()->document();
+    Document* focusedDocument = page->focusController().focusedOrMainFrame()->document();
     Element* focusedElement = focusedDocument->focusedElement();
-    if (focusedElement && focusedElement->hasTagName(areaTag))
-        return focusedImageMapUIElement(static_cast<HTMLAreaElement*>(focusedElement));
+    if (focusedElement && isHTMLAreaElement(focusedElement))
+        return focusedImageMapUIElement(toHTMLAreaElement(focusedElement));
 
     AccessibilityObject* obj = focusedDocument->axObjectCache()->getOrCreate(focusedElement ? static_cast<Node*>(focusedElement) : focusedDocument);
     if (!obj)
@@ -640,6 +640,9 @@ void AXObjectCache::notificationPostTimerFired(Timer<AXObjectCache>*)
         if (!obj->axObjectID())
             continue;
 
+        if (!obj->axObjectCache())
+            continue;
+        
 #ifndef NDEBUG
         // Make sure none of the render views are in the process of being layed out.
         // Notifications should only be sent after the renderer has finished
@@ -809,7 +812,7 @@ void AXObjectCache::handleAttributeChanged(const QualifiedName& attrName, Elemen
         handleAriaRoleChanged(element);
     else if (attrName == altAttr || attrName == titleAttr)
         textChanged(element);
-    else if (attrName == forAttr && element->hasTagName(labelTag))
+    else if (attrName == forAttr && isHTMLLabelElement(element))
         labelChanged(element);
 
     if (!attrName.localName().string().startsWith("aria-"))
@@ -837,8 +840,8 @@ void AXObjectCache::handleAttributeChanged(const QualifiedName& attrName, Elemen
 
 void AXObjectCache::labelChanged(Element* element)
 {
-    ASSERT(element->hasTagName(labelTag));
-    HTMLElement* correspondingControl = static_cast<HTMLLabelElement*>(element)->control();
+    ASSERT(isHTMLLabelElement(element));
+    HTMLElement* correspondingControl = toHTMLLabelElement(element)->control();
     textChanged(correspondingControl);
 }
 

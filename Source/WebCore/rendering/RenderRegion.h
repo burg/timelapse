@@ -46,7 +46,7 @@ class RenderRegion : public RenderBlock {
 public:
     explicit RenderRegion(Element*, RenderFlowThread*);
 
-    virtual bool isRenderRegion() const { return true; }
+    virtual bool isRenderRegion() const OVERRIDE FINAL { return true; }
 
     virtual bool hitTestContents(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
@@ -82,16 +82,9 @@ public:
 
     void clearObjectStyleInRegion(const RenderObject*);
 
-    enum RegionState {
-        RegionUndefined,
-        RegionEmpty,
-        RegionFit,
-        RegionOverset
-    };
+    RegionOversetState regionOversetState() const;
+    void setRegionOversetState(RegionOversetState);
 
-    RegionState regionState() const { return isValid() ? m_regionState : RegionUndefined; }
-    void setRegionState(RegionState regionState) { m_regionState = regionState; }
-    
     // These methods represent the width and height of a "page" and for a RenderRegion they are just the
     // content width and content height of a region. For RenderRegionSets, however, they will be the width and
     // height of a single column or page in the set.
@@ -113,6 +106,22 @@ public:
 
     bool hasAutoLogicalHeight() const { return m_hasAutoLogicalHeight; }
 
+    LayoutUnit computedAutoHeight() const { return m_computedAutoHeight; }
+
+    void setComputedAutoHeight(LayoutUnit computedAutoHeight)
+    {
+        m_hasComputedAutoHeight = true;
+        m_computedAutoHeight = computedAutoHeight;
+    }
+
+    void clearComputedAutoHeight()
+    {
+        m_hasComputedAutoHeight = false;
+        m_computedAutoHeight = 0;
+    }
+
+    bool hasComputedAutoHeight() const { return m_hasComputedAutoHeight; }
+
     virtual void updateLogicalHeight() OVERRIDE;
 
     // The top of the nearest page inside the region. For RenderRegions, this is just the logical top of the
@@ -129,6 +138,11 @@ public:
 
     virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) { }
 
+#if USE(ACCELERATED_COMPOSITING)
+    void setRequiresLayerForCompositing(bool);
+    virtual bool requiresLayer() const { return m_requiresLayerForCompositing || RenderBlock::requiresLayer(); }
+#endif
+
 protected:
     void setRegionObjectsRegionStyle();
     void restoreRegionObjectsOriginalStyle();
@@ -136,17 +150,24 @@ protected:
     virtual void computePreferredLogicalWidths() OVERRIDE;
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
 
-    LayoutRect overflowRectForFlowThreadPortion(const LayoutRect& flowThreadPortionRect, bool isFirstPortion, bool isLastPortion) const;
+    enum OverflowType {
+        LayoutOverflow = 0,
+        VisualOverflow
+    };
+    LayoutRect overflowRectForFlowThreadPortion(const LayoutRect& flowThreadPortionRect, bool isFirstPortion, bool isLastPortion, OverflowType) const;
+
     void repaintFlowThreadContentRectangle(const LayoutRect& repaintRect, bool immediate, const LayoutRect& flowThreadPortionRect,
         const LayoutRect& flowThreadPortionOverflowRect, const LayoutPoint& regionLocation) const;
 
     virtual bool shouldHaveAutoLogicalHeight() const;
 
+    void computeOverflowFromFlowThread();
+
 private:
     virtual const char* renderName() const { return "RenderRegion"; }
 
     virtual bool canHaveChildren() const OVERRIDE { return false; }
-    virtual bool canDOMChildrenHaveRenderParent() const OVERRIDE { return true; }
+    virtual bool canHaveGeneratedChildren() const OVERRIDE { return true; }
 
     virtual void insertedIntoTree() OVERRIDE;
     virtual void willBeRemovedFromTree() OVERRIDE;
@@ -199,7 +220,12 @@ private:
     bool m_isValid : 1;
     bool m_hasCustomRegionStyle : 1;
     bool m_hasAutoLogicalHeight : 1;
-    RegionState m_regionState;
+#if USE(ACCELERATED_COMPOSITING)
+    bool m_requiresLayerForCompositing : 1;
+#endif
+    bool m_hasComputedAutoHeight : 1;
+
+    LayoutUnit m_computedAutoHeight;
 };
 
 inline RenderRegion* toRenderRegion(RenderObject* object)

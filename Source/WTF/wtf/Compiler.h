@@ -41,30 +41,36 @@
 #if defined(__clang__)
 #define WTF_COMPILER_CLANG 1
 
-#ifndef __has_extension
-#define __has_extension __has_feature /* Compatibility with older versions of clang */
-#endif
-
 #define CLANG_PRAGMA(PRAGMA) _Pragma(PRAGMA)
 
 /* Specific compiler features */
-#define WTF_COMPILER_SUPPORTS_CXX_VARIADIC_TEMPLATES __has_extension(cxx_variadic_templates)
+#define WTF_COMPILER_SUPPORTS_CXX_VARIADIC_TEMPLATES __has_feature(cxx_variadic_templates)
 
 /* There is a bug in clang that comes with Xcode 4.2 where AtomicStrings can't be implicitly converted to Strings
    in the presence of move constructors and/or move assignment operators. This bug has been fixed in Xcode 4.3 clang, so we
    check for both cxx_rvalue_references as well as the unrelated cxx_nonstatic_member_init feature which we know was added in 4.3 */
-#define WTF_COMPILER_SUPPORTS_CXX_RVALUE_REFERENCES __has_extension(cxx_rvalue_references) && __has_extension(cxx_nonstatic_member_init)
+#define WTF_COMPILER_SUPPORTS_CXX_RVALUE_REFERENCES __has_feature(cxx_rvalue_references) && __has_feature(cxx_nonstatic_member_init)
 
-#define WTF_COMPILER_SUPPORTS_CXX_DELETED_FUNCTIONS __has_extension(cxx_deleted_functions)
+#define WTF_COMPILER_SUPPORTS_CXX_DELETED_FUNCTIONS __has_feature(cxx_deleted_functions)
 #define WTF_COMPILER_SUPPORTS_CXX_NULLPTR __has_feature(cxx_nullptr)
 #define WTF_COMPILER_SUPPORTS_CXX_EXPLICIT_CONVERSIONS __has_feature(cxx_explicit_conversions)
 #define WTF_COMPILER_SUPPORTS_BLOCKS __has_feature(blocks)
-#define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT __has_extension(c_static_assert)
-#define WTF_COMPILER_SUPPORTS_CXX_STATIC_ASSERT __has_extension(cxx_static_assert)
-#define WTF_COMPILER_SUPPORTS_CXX_OVERRIDE_CONTROL __has_extension(cxx_override_control)
-#define WTF_COMPILER_SUPPORTS_HAS_TRIVIAL_DESTRUCTOR __has_extension(has_trivial_destructor)
-#define WTF_COMPILER_SUPPORTS_CXX_STRONG_ENUMS __has_extension(cxx_strong_enums)
-#define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS __has_extension(cxx_reference_qualified_functions)
+#define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT __has_feature(c_static_assert)
+#define WTF_COMPILER_SUPPORTS_CXX_STATIC_ASSERT __has_feature(cxx_static_assert)
+#define WTF_COMPILER_SUPPORTS_CXX_OVERRIDE_CONTROL __has_feature(cxx_override_control)
+
+#ifdef __APPLE__
+/* Enable final only on clang 4.2 and later to avoid bugs like http://webkit.org/b/119165 */
+#define APPLE_CLANG_VERSION_AT_LEAST(major, minor) (defined(__clang_major__) && __clang_major__ >= major && __clang_minor__ >= minor)
+#define WTF_COMPILER_SUPPORTS_CXX_FINAL_CONTROL WTF_COMPILER_SUPPORTS_CXX_OVERRIDE_CONTROL && APPLE_CLANG_VERSION_AT_LEAST(4, 2)
+#else
+/* We don't know which versions of clang has the bug mentioned above since __clang_major__ and __clang_minor__ are vendor dependent */
+#define WTF_COMPILER_SUPPORTS_CXX_FINAL_CONTROL WTF_COMPILER_SUPPORTS_CXX_OVERRIDE_CONTROL
+#endif
+
+#define WTF_COMPILER_SUPPORTS_HAS_TRIVIAL_DESTRUCTOR __has_feature(has_trivial_destructor)
+#define WTF_COMPILER_SUPPORTS_CXX_STRONG_ENUMS __has_feature(cxx_strong_enums)
+#define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS __has_feature(cxx_reference_qualified_functions)
 #endif
 
 #ifndef CLANG_PRAGMA
@@ -86,10 +92,17 @@
 
 #if !COMPILER(CLANG)
 #define WTF_COMPILER_SUPPORTS_CXX_OVERRIDE_CONTROL 1
+#define WTF_COMPILER_SUPPORTS_CXX_FINAL_CONTROL 1
 #define WTF_COMPILER_QUIRK_FINAL_IS_CALLED_SEALED 1
 #endif
 
+/* Check for VS2010 or newer */
+#if _MSC_VER >= 1600
+#define WTF_COMPILER_SUPPORTS_CXX_RVALUE_REFERENCES 1
+#define WTF_COMPILER_SUPPORTS_CXX_STATIC_ASSERT 1
 #endif
+
+#endif /* defined(_MSC_VER) */
 
 /* COMPILER(RVCT) - ARM RealView Compilation Tools */
 #if defined(__CC_ARM) || defined(__ARMCC__)
@@ -122,6 +135,7 @@
 #if COMPILER(GCC) && !COMPILER(CLANG)
 #if GCC_VERSION_AT_LEAST(4, 8, 0)
 #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 /* C11 support */
@@ -147,6 +161,7 @@
 #endif
 #if GCC_VERSION_AT_LEAST(4, 7, 0)
 #define WTF_COMPILER_SUPPORTS_CXX_OVERRIDE_CONTROL 1
+#define WTF_COMPILER_SUPPORTS_CXX_FINAL_CONTROL 1
 #endif
 #endif /* defined(__GXX_EXPERIMENTAL_CXX0X__) || (defined(__cplusplus) && __cplusplus >= 201103L) */
 #endif /* COMPILER(GCC) */
@@ -263,15 +278,17 @@
 
 #if COMPILER_SUPPORTS(CXX_OVERRIDE_CONTROL)
 #define OVERRIDE override
+#else
+#define OVERRIDE
+#endif
 
+#if COMPILER_SUPPORTS(CXX_FINAL_CONTROL)
 #if COMPILER_QUIRK(FINAL_IS_CALLED_SEALED)
 #define FINAL sealed
 #else
 #define FINAL final
 #endif
-
 #else
-#define OVERRIDE
 #define FINAL
 #endif
 

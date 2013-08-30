@@ -85,18 +85,22 @@ public:
 
     String findFirstMisspelling(int& firstMisspellingOffset, bool markAll, RefPtr<Range>& firstMisspellingRange);
     String findFirstMisspellingOrBadGrammar(bool checkGrammar, bool& outIsSpelling, int& outFirstFoundOffset, GrammarDetail& outGrammarDetail);
-    String findFirstBadGrammar(GrammarDetail& outGrammarDetail, int& outGrammarPhraseOffset, bool markAll);
-    int findFirstGrammarDetail(const Vector<GrammarDetail>& grammarDetails, int badGrammarPhraseLocation, int badGrammarPhraseLength, int startOffset, int endOffset, bool markAll);
     void markAllMisspellings(RefPtr<Range>& firstMisspellingRange);
+#if USE(GRAMMAR_CHECKING)
+    String findFirstBadGrammar(GrammarDetail& outGrammarDetail, int& outGrammarPhraseOffset, bool markAll) const;
     void markAllBadGrammar();
-
-    bool isUngrammatical(Vector<String>& guessesVector) const;
+    bool isUngrammatical() const;
+#endif
     Vector<String> guessesForMisspelledOrUngrammaticalRange(bool checkGrammar, bool& misspelled, bool& ungrammatical) const;
+
 private:
     EditorClient* m_client;
     RefPtr<Range> m_range;
 
     bool unifiedTextCheckerEnabled() const;
+#if USE(GRAMMAR_CHECKING)
+    int findFirstGrammarDetail(const Vector<GrammarDetail>&, int badGrammarPhraseLocation, int startOffset, int endOffset, bool markAll) const;
+#endif
 };
 
 void checkTextOfParagraph(TextCheckerClient*, const UChar* text, int length,

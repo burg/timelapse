@@ -31,9 +31,12 @@
 #include "Shape.h"
 
 #include "BasicShapeFunctions.h"
+#include "CachedImage.h"
 #include "FloatSize.h"
+#include "ImageBuffer.h"
 #include "LengthFunctions.h"
 #include "PolygonShape.h"
+#include "RasterShape.h"
 #include "RectangleShape.h"
 #include "WindRule.h"
 #include <wtf/MathExtras.h>
@@ -90,6 +93,17 @@ static inline FloatSize physicalSizeToLogical(const FloatSize& size, WritingMode
     return size.transposedSize();
 }
 
+static inline void ensureRadiiDoNotOverlap(FloatRect &bounds, FloatSize &radii)
+{
+    float widthRatio = bounds.width() / (2 * radii.width());
+    float heightRatio = bounds.height() / (2 * radii.height());
+    float reductionRatio = std::min<float>(widthRatio, heightRatio);
+    if (reductionRatio < 1) {
+        radii.setWidth(reductionRatio * radii.width());
+        radii.setHeight(reductionRatio * radii.height());
+    }
+}
+
 PassOwnPtr<Shape> Shape::createShape(const BasicShape* basicShape, const LayoutSize& logicalBoxSize, WritingMode writingMode, Length margin, Length padding)
 {
     ASSERT(basicShape);
@@ -108,11 +122,10 @@ PassOwnPtr<Shape> Shape::createShape(const BasicShape* basicShape, const LayoutS
             floatValueForLength(rectangle->y(), boxHeight),
             floatValueForLength(rectangle->width(), boxWidth),
             floatValueForLength(rectangle->height(), boxHeight));
-        Length radiusXLength = rectangle->cornerRadiusX();
-        Length radiusYLength = rectangle->cornerRadiusY();
         FloatSize cornerRadii(
-            radiusXLength.isUndefined() ? 0 : floatValueForLength(radiusXLength, boxWidth),
-            radiusYLength.isUndefined() ? 0 : floatValueForLength(radiusYLength, boxHeight));
+            floatValueForLength(rectangle->cornerRadiusX(), boxWidth),
+            floatValueForLength(rectangle->cornerRadiusY(), boxHeight));
+        ensureRadiiDoNotOverlap(bounds, cornerRadii);
         FloatRect logicalBounds = physicalRectToLogical(bounds, logicalBoxSize.height(), writingMode);
 
         shape = createRectangleShape(logicalBounds, physicalSizeToLogical(cornerRadii, writingMode));
@@ -169,11 +182,10 @@ PassOwnPtr<Shape> Shape::createShape(const BasicShape* basicShape, const LayoutS
             top,
             boxWidth - left - floatValueForLength(rectangle->right(), boxWidth),
             boxHeight - top - floatValueForLength(rectangle->bottom(), boxHeight));
-        Length radiusXLength = rectangle->cornerRadiusX();
-        Length radiusYLength = rectangle->cornerRadiusY();
         FloatSize cornerRadii(
-            radiusXLength.isUndefined() ? 0 : floatValueForLength(radiusXLength, boxWidth),
-            radiusYLength.isUndefined() ? 0 : floatValueForLength(radiusYLength, boxHeight));
+            floatValueForLength(rectangle->cornerRadiusX(), boxWidth),
+            floatValueForLength(rectangle->cornerRadiusY(), boxHeight));
+        ensureRadiiDoNotOverlap(bounds, cornerRadii);
         FloatRect logicalBounds = physicalRectToLogical(bounds, logicalBoxSize.height(), writingMode);
 
         shape = createRectangleShape(logicalBounds, physicalSizeToLogical(cornerRadii, writingMode));
@@ -189,6 +201,48 @@ PassOwnPtr<Shape> Shape::createShape(const BasicShape* basicShape, const LayoutS
     shape->m_padding = floatValueForLength(padding, 0);
 
     return shape.release();
+}
+
+PassOwnPtr<Shape> Shape::createShape(const StyleImage* styleImage, float threshold, const LayoutSize&, WritingMode writingMode, Length margin, Length padding)
+{
+    ASSERT(styleImage && styleImage->isCachedImage() && styleImage->cachedImage() && styleImage->cachedImage()->image());
+
+    OwnPtr<RasterShapeIntervals> intervals = adoptPtr(new RasterShapeIntervals());
+
+    Image* image = styleImage->cachedImage()->image();
+    const IntSize& imageSize = image->size();
+    OwnPtr<ImageBuffer> imageBuffer = ImageBuffer::create(imageSize);
+    if (imageBuffer) {
+        GraphicsContext* graphicsContext = imageBuffer->context();
+        graphicsContext->drawImage(image, ColorSpaceDeviceRGB, IntPoint());
+
+        RefPtr<Uint8ClampedArray> pixelArray = imageBuffer->getUnmultipliedImageData(IntRect(IntPoint(), imageSize));
+        unsigned pixelArrayLength = pixelArray->length();
+        unsigned pixelArrayOffset = 3; // Each pixel is four bytes: RGBA.
+        uint8_t alphaPixelThreshold = threshold * 255;
+
+        if (static_cast<unsigned>(imageSize.width() * imageSize.height() * 4) == pixelArrayLength) { // sanity check
+            for (int y = 0; y < imageSize.height(); ++y) {
+                int startX = -1;
+                for (int x = 0; x < imageSize.width(); ++x, pixelArrayOffset += 4) {
+                    uint8_t alpha = pixelArray->item(pixelArrayOffset);
+                    bool alphaAboveThreshold = alpha > alphaPixelThreshold;
+                    if (startX == -1 && alphaAboveThreshold) {
+                        startX = x;
+                    } else if (startX != -1 && (!alphaAboveThreshold || x == imageSize.width() - 1)) {
+                        intervals->addInterval(y, startX, x);
+                        startX = -1;
+                    }
+                }
+            }
+        }
+    }
+
+    OwnPtr<RasterShape> rasterShape = adoptPtr(new RasterShape(intervals.release()));
+    rasterShape->m_writingMode = writingMode;
+    rasterShape->m_margin = floatValueForLength(margin, 0);
+    rasterShape->m_padding = floatValueForLength(padding, 0);
+    return rasterShape.release();
 }
 
 } // namespace WebCore

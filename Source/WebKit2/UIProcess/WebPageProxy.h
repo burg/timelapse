@@ -39,7 +39,7 @@
 #include "ShareableBitmap.h"
 #include "WKBase.h"
 #include "WKPagePrivate.h"
-#include "WebColorChooserProxy.h"
+#include "WebColorPicker.h"
 #include "WebContextMenuItemData.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebFindClient.h"
@@ -166,7 +166,6 @@ class WebGestureEvent;
 class WebVibrationProxy;
 #endif
 
-typedef GenericCallback<WKDictionaryRef> DictionaryCallback;
 typedef GenericCallback<WKStringRef, StringImpl*> StringCallback;
 typedef GenericCallback<WKSerializedScriptValueRef, WebSerializedScriptValue*> ScriptValueCallback;
 
@@ -233,7 +232,7 @@ private:
 class WebPageProxy
     : public TypedAPIObject<APIObject::TypePage>
 #if ENABLE(INPUT_TYPE_COLOR)
-    , public WebColorChooserProxy::Client
+    , public WebColorPicker::Client
 #endif
     , public WebPopupMenuProxy::Client
     , public CoreIPC::MessageReceiver {
@@ -344,6 +343,8 @@ public:
     };
     typedef unsigned ViewStateFlags;
     void viewStateDidChange(ViewStateFlags flags);
+    enum class WantsReplyOrNot { DoesNotWantReply, DoesWantReply };
+    void viewInWindowStateDidChange(WantsReplyOrNot = WantsReplyOrNot::DoesNotWantReply);
     bool isInWindow() const { return m_isInWindow; }
     void waitForDidUpdateInWindowState();
 
@@ -389,7 +390,7 @@ public:
 #if PLATFORM(MAC)
     void updateWindowIsVisible(bool windowIsVisible);
     void windowAndViewFramesChanged(const WebCore::FloatRect& viewFrameInWindowCoordinates, const WebCore::FloatPoint& accessibilityViewCoordinates);
-    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect);
+    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect, bool);
     void exposedRectChangedTimerFired(WebCore::Timer<WebPageProxy>*);
     void setMainFrameIsScrollable(bool);
 
@@ -474,9 +475,9 @@ public:
     void restoreFromSessionStateData(WebData*);
 
     bool supportsTextZoom() const;
-    double textZoomFactor() const { return m_mainFrameHasCustomRepresentation ? 1 : m_textZoomFactor; }
+    double textZoomFactor() const { return m_textZoomFactor; }
     void setTextZoomFactor(double);
-    double pageZoomFactor() const;
+    double pageZoomFactor() const { return m_pageZoomFactor; }
     void setPageZoomFactor(double);
     void setPageAndTextZoomFactors(double pageZoomFactor, double textZoomFactor);
 
@@ -537,9 +538,6 @@ public:
     void makeFirstResponder();
 
     ColorSpaceData colorSpace();
-
-    void getPlugInInformation(pid_t plugInProcessID, PassRefPtr<DictionaryCallback>);
-    void containsPlugInCallback(bool containsPlugIn, uint64_t plugInToken, uint64_t callbackID);
 #endif
 
     void pageScaleFactorDidChange(double);
@@ -637,7 +635,7 @@ public:
 
     WebPageGroup* pageGroup() const { return m_pageGroup.get(); }
 
-    bool isValid();
+    bool isValid() const;
 
     PassRefPtr<ImmutableArray> relatedPages() const;
 
@@ -662,7 +660,7 @@ public:
 
     WebPageCreationParameters creationParameters() const;
 
-#if PLATFORM(QT)
+#if USE(COORDINATED_GRAPHICS)
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize&);
 #endif
 
@@ -751,14 +749,17 @@ public:
     void postMessageToInjectedBundle(const String& messageName, APIObject* messageBody);
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    void setColorChooserColor(const WebCore::Color&);
-    void endColorChooser();
+    void setColorPickerColor(const WebCore::Color&);
+    void endColorPicker();
 #endif
 
     const WebLoaderClient& loaderClient() { return m_loaderClient; }
 
-    double minimumLayoutWidth() const { return m_minimumLayoutWidth; }
-    void setMinimumLayoutWidth(double);
+    WebCore::IntSize minimumLayoutSize() const { return m_minimumLayoutSize; }
+    void setMinimumLayoutSize(const WebCore::IntSize&);
+
+    bool autoSizingShouldExpandToViewHeight() const { return m_autoSizingShouldExpandToViewHeight; }
+    void setAutoSizingShouldExpandToViewHeight(bool);
 
     bool mainFrameInViewSourceMode() const { return m_mainFrameInViewSourceMode; }
     void setMainFrameInViewSourceMode(bool);
@@ -773,7 +774,10 @@ public:
     void connectionWillClose(CoreIPC::Connection*);
 
     void didSaveToPageCache();
-
+        
+    void setScrollPinningBehavior(WebCore::ScrollPinningBehavior);
+    WebCore::ScrollPinningBehavior scrollPinningBehavior() { return m_scrollPinningBehavior; }
+        
 private:
     WebPageProxy(PageClient*, PassRefPtr<WebProcessProxy>, WebPageGroup*, uint64_t pageID);
 
@@ -804,7 +808,7 @@ private:
     void didStartProvisionalLoadForFrame(uint64_t frameID, const String& url, const String& unreachableURL, CoreIPC::MessageDecoder&);
     void didReceiveServerRedirectForProvisionalLoadForFrame(uint64_t frameID, const String&, CoreIPC::MessageDecoder&);
     void didFailProvisionalLoadForFrame(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::MessageDecoder&);
-    void didCommitLoadForFrame(uint64_t frameID, const String& mimeType, bool frameHasCustomRepresentation, uint32_t frameLoadType, const PlatformCertificateInfo&, CoreIPC::MessageDecoder&);
+    void didCommitLoadForFrame(uint64_t frameID, const String& mimeType, uint32_t frameLoadType, const PlatformCertificateInfo&, CoreIPC::MessageDecoder&);
     void didFinishDocumentLoadForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
     void didFinishLoadForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
     void didFailLoadForFrame(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::MessageDecoder&);
@@ -812,7 +816,6 @@ private:
     void didReceiveTitleForFrame(uint64_t frameID, const String&, CoreIPC::MessageDecoder&);
     void didFirstLayoutForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
     void didFirstVisuallyNonEmptyLayoutForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
-    void didNewFirstVisuallyNonEmptyLayout(CoreIPC::MessageDecoder&);
     void didLayout(uint32_t layoutMilestones, CoreIPC::MessageDecoder&);
     void didRemoveFrameFromHierarchy(uint64_t frameID, CoreIPC::MessageDecoder&);
     void didDisplayInsecureContentForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
@@ -868,7 +871,7 @@ private:
     void didChangeScrollOffsetPinningForMainFrame(bool pinnedToLeftSide, bool pinnedToRightSide, bool pinnedToTopSide, bool pinnedToBottomSide);
     void didChangePageCount(unsigned);
     void didFailToInitializePlugin(const String& mimeType, const String& frameURLString, const String& pageURLString);
-    void didBlockInsecurePluginVersion(const String& mimeType, const String& pluginURLString, const String& frameURLString, const String& pageURLString);
+    void didBlockInsecurePluginVersion(const String& mimeType, const String& pluginURLString, const String& frameURLString, const String& pageURLString, bool replacementObscured);
     void setCanShortCircuitHorizontalWheelEvents(bool canShortCircuitHorizontalWheelEvents) { m_canShortCircuitHorizontalWheelEvents = canShortCircuitHorizontalWheelEvents; }
 
     void reattachToWebProcess();
@@ -884,10 +887,9 @@ private:
     void pageDidRequestScroll(const WebCore::IntPoint&);
     void pageTransitionViewportReady();
 #endif
-#if PLATFORM(QT)
+#if USE(COORDINATED_GRAPHICS)
     void didFindZoomableArea(const WebCore::IntPoint&, const WebCore::IntRect&);
 #endif
-
 #if PLATFORM(QT) || PLATFORM(EFL)
     void didChangeContentsSize(const WebCore::IntSize&);
 #endif
@@ -897,9 +899,9 @@ private:
 #endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    void showColorChooser(const WebCore::Color& initialColor, const WebCore::IntRect&);
+    void showColorPicker(const WebCore::Color& initialColor, const WebCore::IntRect&);
     void didChooseColor(const WebCore::Color&);
-    void didEndColorChooser();
+    void didEndColorPicker();
 #endif
 
     void editorStateChanged(const EditorState&);
@@ -1004,8 +1006,6 @@ private:
     void canAuthenticateAgainstProtectionSpaceInFrame(uint64_t frameID, const WebCore::ProtectionSpace&, bool& canAuthenticate);
     void didReceiveAuthenticationChallenge(uint64_t frameID, const WebCore::AuthenticationChallenge&, uint64_t challengeID);
 
-    void didFinishLoadingDataForCustomRepresentation(const String& suggestedFilename, const CoreIPC::DataReference&);
-
 #if PLATFORM(MAC)
     void pluginFocusOrWindowFocusChanged(uint64_t pluginComplexTextInputIdentifier, bool pluginHasFocusAndWindowHasFocus);
     void setPluginComplexTextInputState(uint64_t pluginComplexTextInputIdentifier, uint64_t complexTextInputState);
@@ -1051,7 +1051,7 @@ private:
     void sendWheelEvent(const WebWheelEvent&);
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
-    void findPlugin(const String& mimeType, uint32_t processType, const String& urlString, const String& frameURLString, const String& pageURLString, bool allowOnlyApplicationPlugins, uint64_t& pluginProcessToken, String& newMIMEType, uint32_t& pluginLoadPolicy);
+    void findPlugin(const String& mimeType, uint32_t processType, const String& urlString, const String& frameURLString, const String& pageURLString, bool allowOnlyApplicationPlugins, uint64_t& pluginProcessToken, String& newMIMEType, uint32_t& pluginLoadPolicy, String& unavailabilityDescription);
 #endif
 
     PageClient* m_pageClient;
@@ -1102,9 +1102,6 @@ private:
     HashMap<uint64_t, RefPtr<ValidateCommandCallback>> m_validateCommandCallbacks;
 #if PLATFORM(GTK)
     HashMap<uint64_t, RefPtr<PrintFinishedCallback>> m_printFinishedCallbacks;
-#endif
-#if PLATFORM(MAC)
-    HashMap<uint64_t, RefPtr<DictionaryCallback>> m_plugInInformationCallbacks;
 #endif
 
     HashSet<WebEditCommandProxy*> m_editCommandSet;
@@ -1206,7 +1203,7 @@ private:
     Deque<QueuedTouchEvents> m_touchEventQueue;
 #endif
 #if ENABLE(INPUT_TYPE_COLOR)
-    RefPtr<WebColorChooserProxy> m_colorChooser;
+    RefPtr<WebColorPicker> m_colorPicker;
     RefPtr<WebColorPickerResultListenerProxy> m_colorPickerResultListener;
 #endif
 
@@ -1225,8 +1222,6 @@ private:
     int64_t m_spellDocumentTag;
     bool m_hasSpellDocumentTag;
     unsigned m_pendingLearnOrIgnoreWordMessageCount;
-
-    bool m_mainFrameHasCustomRepresentation;
 
 #if ENABLE(DRAG_SUPPORT)
     WebCore::DragSession m_currentDragSession;
@@ -1261,7 +1256,8 @@ private:
     bool m_shouldSendEventsSynchronously;
 
     bool m_suppressVisibilityUpdates;
-    float m_minimumLayoutWidth;
+    bool m_autoSizingShouldExpandToViewHeight;
+    WebCore::IntSize m_minimumLayoutSize;
 
     float m_mediaVolume;
     bool m_mayStartMediaWhenInWindow;
@@ -1272,6 +1268,8 @@ private:
     WebCore::Timer<WebPageProxy> m_exposedRectChangedTimer;
     WebCore::FloatRect m_exposedRect;
     WebCore::FloatRect m_lastSentExposedRect;
+    bool m_clipsToExposedRect;
+    bool m_lastSentClipsToExposedRect;
 #endif
 
 #if PLATFORM(QT)
@@ -1285,6 +1283,8 @@ private:
 #if PLATFORM(MAC)
     HashMap<String, String> m_temporaryPDFFiles;
 #endif
+        
+    WebCore::ScrollPinningBehavior m_scrollPinningBehavior;
 };
 
 } // namespace WebKit

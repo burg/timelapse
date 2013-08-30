@@ -48,6 +48,9 @@ WebInspector.ConsoleMessageImpl = function(source, level, message, linkifier, ty
 }
 
 WebInspector.ConsoleMessageImpl.prototype = {
+
+    enforcesClipboardPrefixString: true,
+
     _formatMessage: function()
     {
         this._formattedMessage = document.createElement("span");
@@ -480,18 +483,23 @@ WebInspector.ConsoleMessageImpl.prototype = {
         switch (this.level) {
             case WebInspector.ConsoleMessage.MessageLevel.Tip:
                 element.classList.add("console-tip-level");
+                element.setAttribute("data-labelprefix", WebInspector.UIString("Tip: "));
                 break;
             case WebInspector.ConsoleMessage.MessageLevel.Log:
                 element.classList.add("console-log-level");
+                element.setAttribute("data-labelprefix", WebInspector.UIString("Log: "));
                 break;
             case WebInspector.ConsoleMessage.MessageLevel.Debug:
                 element.classList.add("console-debug-level");
+                element.setAttribute("data-labelprefix", WebInspector.UIString("Debug: "));
                 break;
             case WebInspector.ConsoleMessage.MessageLevel.Warning:
                 element.classList.add("console-warning-level");
+                element.setAttribute("data-labelprefix", WebInspector.UIString("Warning: "));
                 break;
             case WebInspector.ConsoleMessage.MessageLevel.Error:
                 element.classList.add("console-error-level");
+                element.setAttribute("data-labelprefix", WebInspector.UIString("Error: "));
                 break;
         }
 
@@ -656,7 +664,12 @@ WebInspector.ConsoleMessageImpl.prototype = {
         }
     },
 
-    toClipboardString: function()
+    get clipboarPrefixString ()
+    {
+        return "[" + this.levelString + "] ";
+    },
+
+    toClipboardString: function(isPrefixOptional)
     {
         var isTrace = this._shouldDumpStackTrace();
         
@@ -666,7 +679,8 @@ WebInspector.ConsoleMessageImpl.prototype = {
         else
             clipboardString = this.type === WebInspector.ConsoleMessage.MessageType.Trace ? "console.trace()" : this._message || this._messageText;
 
-        clipboardString = "[" + this.levelString + "] " + clipboardString;
+        if (!isPrefixOptional || this.enforcesClipboardPrefixString)
+            clipboardString = this.clipboarPrefixString + clipboardString;
 
         if (isTrace) {
             this._stackTrace.forEach(function(frame) {

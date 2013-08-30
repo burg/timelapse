@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004, 2005, 2006, 2007, 2008, 2012 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004, 2005, 2006, 2007, 2008, 2012, 2013 Apple Inc. All rights reserved.
  *  Copyright (C) 2006 Bjoern Graf (bjoern.graf@gmail.com)
  *
  *  This library is free software; you can redistribute it and/or
@@ -25,6 +25,7 @@
 #include "APIShims.h"
 #include "ButterflyInlines.h"
 #include "BytecodeGenerator.h"
+#include "CallFrameInlines.h"
 #include "Completion.h"
 #include "CopiedSpaceInlines.h"
 #include "ExceptionHelpers.h"
@@ -32,13 +33,13 @@
 #include "InitializeThreading.h"
 #include "Interpreter.h"
 #include "JSArray.h"
-#include "JSCTypedArrayStubs.h"
 #include "JSFunction.h"
 #include "JSLock.h"
 #include "JSProxy.h"
 #include "JSString.h"
 #include "Operations.h"
 #include "SamplingTool.h"
+#include "StackIterator.h"
 #include "StructureRareDataInlines.h"
 #include <math.h>
 #include <stdio.h>
@@ -169,12 +170,12 @@ private:
 
 void StopWatch::start()
 {
-    m_startTime = currentTime();
+    m_startTime = monotonicallyIncreasingTime();
 }
 
 void StopWatch::stop()
 {
-    m_stopTime = currentTime();
+    m_stopTime = monotonicallyIncreasingTime();
 }
 
 long StopWatch::getElapsedMS()
@@ -200,12 +201,12 @@ public:
 
     static const bool needsDestruction = false;
 
-    static const ClassInfo s_info;
+    DECLARE_INFO;
     static const GlobalObjectMethodTable s_globalObjectMethodTable;
 
     static Structure* createStructure(VM& vm, JSValue prototype)
     {
-        return Structure::create(vm, 0, prototype, TypeInfo(GlobalObjectType, StructureFlags), &s_info);
+        return Structure::create(vm, 0, prototype, TypeInfo(GlobalObjectType, StructureFlags), info());
     }
 
     static bool javaScriptExperimentsEnabled(const JSGlobalObject*) { return true; }
@@ -236,16 +237,6 @@ protected:
         addFunction(vm, "clearSamplingFlags", functionClearSamplingFlags, 1);
 #endif
         
-        addConstructableFunction(vm, "Uint8Array", constructJSUint8Array, 1);
-        addConstructableFunction(vm, "Uint8ClampedArray", constructJSUint8ClampedArray, 1);
-        addConstructableFunction(vm, "Uint16Array", constructJSUint16Array, 1);
-        addConstructableFunction(vm, "Uint32Array", constructJSUint32Array, 1);
-        addConstructableFunction(vm, "Int8Array", constructJSInt8Array, 1);
-        addConstructableFunction(vm, "Int16Array", constructJSInt16Array, 1);
-        addConstructableFunction(vm, "Int32Array", constructJSInt32Array, 1);
-        addConstructableFunction(vm, "Float32Array", constructJSFloat32Array, 1);
-        addConstructableFunction(vm, "Float64Array", constructJSFloat64Array, 1);
-
         JSArray* array = constructEmptyArray(globalExec(), 0);
         for (size_t i = 0; i < arguments.size(); ++i)
             array->putDirectIndex(globalExec(), i, jsString(globalExec(), arguments[i]));
@@ -340,15 +331,9 @@ EncodedJSValue JSC_HOST_CALL functionJSCStack(ExecState* exec)
     StringBuilder trace;
     trace.appendLiteral("--> Stack trace:\n");
 
-    Vector<StackFrame> stackTrace;
-    Interpreter::getStackTrace(&exec->vm(), stackTrace);
     int i = 0;
-
-    for (Vector<StackFrame>::iterator iter = stackTrace.begin(); iter < stackTrace.end(); iter++) {
-        StackFrame level = *iter;
-        trace.append(String::format("    %i   %s\n", i, level.toString(exec).utf8().data()));
-        i++;
-    }
+    for (StackIterator iter = exec->begin(); iter != exec->end(); ++iter, ++i)
+        trace.append(String::format("    %i   %s\n", i, iter->toString().utf8().data()));
     fprintf(stderr, "%s", trace.toString().utf8().data());
     return JSValue::encode(jsUndefined());
 }

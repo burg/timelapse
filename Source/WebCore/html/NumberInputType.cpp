@@ -32,7 +32,6 @@
 #include "config.h"
 #include "NumberInputType.h"
 
-#include "BeforeTextInsertedEvent.h"
 #include "ExceptionCode.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
@@ -201,6 +200,19 @@ bool NumberInputType::sizeShouldIncludeDecoration(int defaultSize, int& preferre
     preferredSize = size.sizeBeforeDecimalPoint + size.sizeAfteDecimalPoint + (size.sizeAfteDecimalPoint ? 1 : 0);
 
     return true;
+}
+
+float NumberInputType::decorationWidth() const
+{
+    float width = 0;
+    HTMLElement* spinButton = element()->innerSpinButtonElement();
+    if (RenderBox* spinRenderer = spinButton ? spinButton->renderBox() : 0) {
+        width += spinRenderer->borderAndPaddingLogicalWidth();
+        // Since the width of spinRenderer is not calculated yet, spinRenderer->logicalWidth() returns 0.
+        // So computedStyle()->logicalWidth() is used instead.
+        width += spinButton->computedStyle()->logicalWidth().value();
+    }
+    return width;
 }
 
 bool NumberInputType::isSteppable() const

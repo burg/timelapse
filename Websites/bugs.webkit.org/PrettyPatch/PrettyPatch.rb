@@ -160,6 +160,7 @@ private
     HEADER =<<EOF
 <html>
 <head>
+<meta charset='utf-8'>
 <style>
 :link, :visited {
     text-decoration: none;
@@ -268,7 +269,7 @@ h1 :hover {
   background-color: #eee;
 }
 
-.text {
+pre, .text {
     padding-left: 5px;
     white-space: pre-wrap;
     word-wrap: break-word;

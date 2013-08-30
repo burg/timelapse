@@ -49,8 +49,8 @@
 #include "Settings.h"
 #include "WebCoreSystemInterface.h"
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/ObjcRuntimeExtras.h>
-#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -60,7 +60,7 @@ const double EventHandler::TextDragDelay = 0.15;
 
 static RetainPtr<NSEvent>& currentNSEventSlot()
 {
-    DEFINE_STATIC_LOCAL(RetainPtr<NSEvent>, event, ());
+    static NeverDestroyed<RetainPtr<NSEvent>> event;
     return event;
 }
 
@@ -132,7 +132,7 @@ void EventHandler::focusDocumentView()
             page->chrome().focusNSView(documentView);
     }
 
-    page->focusController()->setFocusedFrame(m_frame);
+    page->focusController().setFocusedFrame(m_frame);
 }
 
 bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults& event)
@@ -203,11 +203,11 @@ bool EventHandler::passMouseDownEventToWidget(Widget* pWidget)
     if (!page)
         return true;
 
-    if (page->chrome().client()->firstResponder() != view) {
+    if (page->chrome().client().firstResponder() != view) {
         // Normally [NSWindow sendEvent:] handles setting the first responder.
         // But in our case, the event was sent to the view representing the entire web page.
         if ([currentNSEvent() clickCount] <= 1 && [view acceptsFirstResponder] && [view needsPanelToBecomeKey])
-            page->chrome().client()->makeFirstResponder(view);
+            page->chrome().client().makeFirstResponder(view);
     }
 
     // We need to "defer loading" while tracking the mouse, because tearing down the
@@ -339,7 +339,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
             if (!m_mouseDownWasInSubframe)
                 return false;
 #if ENABLE(DRAG_SUPPORT)
-            if (subframe->page()->dragController()->didInitiateDrag())
+            if (subframe->page()->dragController().didInitiateDrag())
                 return false;
 #endif
         case NSMouseMoved:
@@ -348,7 +348,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
             // currentNSEvent() that mouseMoved() does would have no effect.
             ASSERT(!m_sendingEventToSubview);
             m_sendingEventToSubview = true;
-            subframe->eventHandler()->handleMouseMoveEvent(currentPlatformMouseEvent(), hoveredNode);
+            subframe->eventHandler().handleMouseMoveEvent(currentPlatformMouseEvent(), hoveredNode);
             m_sendingEventToSubview = false;
             return true;
         
@@ -372,7 +372,7 @@ bool EventHandler::passSubframeEventToSubframe(MouseEventWithHitTestResults& eve
                 return false;
             ASSERT(!m_sendingEventToSubview);
             m_sendingEventToSubview = true;
-            subframe->eventHandler()->handleMouseReleaseEvent(currentPlatformMouseEvent());
+            subframe->eventHandler().handleMouseReleaseEvent(currentPlatformMouseEvent());
             m_sendingEventToSubview = false;
             return true;
         }
@@ -431,7 +431,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& wheelEvent, 
         if (!widget->isFrameView())
             return false;
 
-        return toFrameView(widget)->frame()->eventHandler()->handleWheelEvent(wheelEvent);
+        return toFrameView(widget)->frame().eventHandler().handleWheelEvent(wheelEvent);
     }
 
     if ([currentNSEvent() type] != NSScrollWheel || m_sendingEventToSubview) 
@@ -625,7 +625,7 @@ bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& m
         return passSubframeEventToSubframe(mev, subframe);
 
     // WebKit2 code path.
-    subframe->eventHandler()->handleMousePressEvent(mev.event());
+    subframe->eventHandler().handleMousePressEvent(mev.event());
     return true;
 }
 
@@ -641,7 +641,7 @@ bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& me
         return false;
 #endif
 
-    subframe->eventHandler()->handleMouseMoveEvent(mev.event(), hoveredNode);
+    subframe->eventHandler().handleMouseMoveEvent(mev.event(), hoveredNode);
     return true;
 }
 
@@ -652,7 +652,7 @@ bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&
         return passSubframeEventToSubframe(mev, subframe);
 
     // WebKit2 code path.
-    subframe->eventHandler()->handleMouseReleaseEvent(mev.event());
+    subframe->eventHandler().handleMouseReleaseEvent(mev.event());
     return true;
 }
 
@@ -688,7 +688,7 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
     if (!page)
         return false;
 
-    KeyboardUIMode keyboardUIMode = page->chrome().client()->keyboardUIMode();
+    KeyboardUIMode keyboardUIMode = page->chrome().client().keyboardUIMode();
     bool handlingOptionTab = isKeyboardOptionTab(event);
 
     // If tab-to-links is off, option-tab always highlights all controls
@@ -708,16 +708,12 @@ bool EventHandler::tabsToAllFormControls(KeyboardEvent* event) const
 
 bool EventHandler::needsKeyboardEventDisambiguationQuirks() const
 {
-    Settings* settings = m_frame->settings();
-    if (!settings)
-        return false;
-
 #if ENABLE(DASHBOARD_SUPPORT)
-    if (settings->usesDashboardBackwardCompatibilityMode())
+    if (m_frame->settings().usesDashboardBackwardCompatibilityMode())
         return true;
 #endif
         
-    if (settings->needsKeyboardEventDisambiguationQuirks())
+    if (m_frame->settings().needsKeyboardEventDisambiguationQuirks())
         return true;
 
     return false;

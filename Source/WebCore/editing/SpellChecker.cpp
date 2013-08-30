@@ -141,7 +141,7 @@ void SpellChecker::timerFiredToProcessQueuedRequest(Timer<SpellChecker>*)
 
 bool SpellChecker::isAsynchronousEnabled() const
 {
-    return m_frame->settings() && m_frame->settings()->asynchronousSpellCheckingEnabled();
+    return m_frame->settings().asynchronousSpellCheckingEnabled();
 }
 
 bool SpellChecker::canCheckAsynchronously(Range* range) const
@@ -232,7 +232,7 @@ void SpellChecker::didCheckSucceed(int sequence, const Vector<TextCheckingResult
         if (requestData.mask() & TextCheckingTypeGrammar)
             markers |= DocumentMarker::Grammar;
         if (markers)
-            m_frame->document()->markers()->removeMarkers(m_processingRequest->checkingRange().get(), markers);
+            m_frame->document()->markers().removeMarkers(m_processingRequest->checkingRange().get(), markers);
     }
     didCheck(sequence, results);
 }

@@ -24,10 +24,10 @@
 
 #include "ClassList.h"
 #include "DatasetDOMStringMap.h"
-#include "ElementShadow.h"
 #include "NamedNodeMap.h"
 #include "NodeRareData.h"
 #include "PseudoElement.h"
+#include "ShadowRoot.h"
 #include "StyleInheritedData.h"
 #include <wtf/OwnPtr.h>
 
@@ -60,6 +60,12 @@ public:
     bool isInCanvasSubtree() const { return m_isInCanvasSubtree; }
     void setIsInCanvasSubtree(bool value) { m_isInCanvasSubtree = value; }
 
+    bool isInsideRegion() const { return m_isInsideRegion; }
+    void setIsInsideRegion(bool value) { m_isInsideRegion = value; }
+
+    RegionOversetState regionOversetState() const { return m_regionOversetState; }
+    void setRegionOversetState(RegionOversetState state) { m_regionOversetState = state; }
+
 #if ENABLE(FULLSCREEN_API)
     bool containsFullScreenElement() { return m_containsFullScreenElement; }
     void setContainsFullScreenElement(bool value) { m_containsFullScreenElement = value; }
@@ -90,14 +96,9 @@ public:
     unsigned childIndex() const { return m_childIndex; }
     void setChildIndex(unsigned index) { m_childIndex = index; }
 
-    void clearShadow() { m_shadow = nullptr; }
-    ElementShadow* shadow() const { return m_shadow.get(); }
-    ElementShadow* ensureShadow()
-    {
-        if (!m_shadow)
-            m_shadow = ElementShadow::create();
-        return m_shadow.get();
-    }
+    void clearShadowRoot() { m_shadowRoot = nullptr; }
+    ShadowRoot* shadowRoot() const { return m_shadowRoot.get(); }
+    void setShadowRoot(PassRefPtr<ShadowRoot> shadowRoot) { m_shadowRoot = shadowRoot; }
 
     NamedNodeMap* attributeMap() const { return m_attributeMap.get(); }
     void setAttributeMap(PassOwnPtr<NamedNodeMap> attributeMap) { m_attributeMap = attributeMap; }
@@ -156,13 +157,16 @@ private:
     unsigned m_childrenAffectedByForwardPositionalRules : 1;
     unsigned m_childrenAffectedByBackwardPositionalRules : 1;
 
+    unsigned m_isInsideRegion : 1;
+    RegionOversetState m_regionOversetState;
+
     LayoutSize m_minimumSizeForResizing;
     IntSize m_savedLayerScrollOffset;
     RefPtr<RenderStyle> m_computedStyle;
 
     OwnPtr<DatasetDOMStringMap> m_dataset;
     OwnPtr<ClassList> m_classList;
-    OwnPtr<ElementShadow> m_shadow;
+    RefPtr<ShadowRoot> m_shadowRoot;
     OwnPtr<NamedNodeMap> m_attributeMap;
 
     RefPtr<PseudoElement> m_generatedBefore;
@@ -202,13 +206,15 @@ inline ElementRareData::ElementRareData(RenderObject* renderer)
     , m_childrenAffectedByDirectAdjacentRules(false)
     , m_childrenAffectedByForwardPositionalRules(false)
     , m_childrenAffectedByBackwardPositionalRules(false)
+    , m_isInsideRegion(false)
+    , m_regionOversetState(RegionUndefined)
     , m_minimumSizeForResizing(defaultMinimumSizeForResizing())
 {
 }
 
 inline ElementRareData::~ElementRareData()
 {
-    ASSERT(!m_shadow);
+    ASSERT(!m_shadowRoot);
     ASSERT(!m_generatedBefore);
     ASSERT(!m_generatedAfter);
 }
@@ -245,14 +251,13 @@ inline void ElementRareData::releasePseudoElement(PseudoElement* element)
 {
     if (!element)
         return;
-
     if (element->attached())
-        element->detach();
+        Style::detachRenderTree(element);
+    element->clearHostElement();
 
     ASSERT(!element->nextSibling());
     ASSERT(!element->previousSibling());
-
-    element->setParentOrShadowHostNode(0);
+    ASSERT(!element->parentNode());
 }
 
 inline void ElementRareData::resetComputedStyle()

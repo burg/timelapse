@@ -1,4 +1,78 @@
 =================
+WebKitGTK+  2.1.4
+=================
+
+What's new in WebKitGTK+ 2.1.4?
+
+  - Add WebKitWebView::authenticate signal to WebKit2 GTK API.
+  - Expose KeyboardEvent in GObject DOM bindings.
+  - Implement attributesOfChildren() for AccessibilityUIElement.
+  - Implement allAttributes() for AccessibilityUIElement.
+  - Fix issues with edge cases when getting offsets for a text range
+    in AtkText.
+  - Remote inspector server now notifies about errors when loading
+    resurces.
+  - Disable HTTP request "Accept-Encoding:" header field on gstreamer
+    source element to avoid receiving the wrong size when retrieving
+    data.
+  - Fix the final position when receiving several seek calls in a row,
+    in GStreamer media backend.
+  - When rendering accelerated video, upload onto the texture only the
+    buffer to be painted.
+  - Fix response property definition of WebKitResponsePolicyDecision.
+  - Fix a crash in WebKit1 when the WebView is created and destroyed
+    too fast.
+  - Fix a crash in UI process when the web process crashes.
+  - Fix a crash in WebKit2 when a context menu item is selected after
+    the page has been closed.
+  - Fix a crash when getting the editor command for a key event
+    initiated by the web inspector.
+  - Fix the build when building with GTK+ 2.
+  - Fix several memory leaks.
+
+=================
+WebKitGTK+  2.1.3
+=================
+
+What's new in WebKitGTK+ 2.1.3?
+
+  - Add support for preload="metadata" to GStreamer media backend.
+  - Do not expose '\n' for wrapped lines with ATK_TEXT_BOUNDARY_CHAR.
+  - Fix potential race condition in GStreamer media backend when
+    getting the video sink caps.
+  - Fix performance issues rendering a page with animations.
+  - Several fixes and improvements in GStreamer video accelerated
+    compositing support.
+  - Adjust internal size on GStreamer HTTP source element when
+    receiving data if necessary.
+  - Actually disable the memory cache when DOCUMENT_VIEWER cache model
+    is used in WebKit1.
+  - Fix runtime critical warning in WebKit2 when unloading a module
+    that failed to load.
+  - Fix several memory leaks.
+
+=================
+WebKitGTK+  2.1.2
+=================
+
+What's new in WebKitGTK+ 2.1.2?
+
+  - Set the subresources load priority using new libsoup API available
+    in 2.43.
+  - Do not use X11 WidgetBackingStore implementation in Wayland.
+  - Support using GLContext from multiple threads.
+  - Make sure gstreamer source element is thread-safe.
+  - Prevent race condition when pad caps is set on gstreamer player.
+  - Invalidate the ProcessLauncher when the process is terminated
+    before it has finished launching
+  - Use custom cairo code instead of Pango API for highlighting
+    misspelled words.
+  - Respect PKG_CONFIG env variable when generating gtk-doc.
+  - Fix a crash due to an assert in gstreamer backend when seeking.
+  - Fix memory leak when web process is terminated.
+  - Translation updates: Telugu, Hindi, Kannada, Odia.
+
+=================
 WebKitGTK+  2.1.1
 =================
 

@@ -1,3 +1,303 @@
+2013-08-20  Pratik Solanki  <psolanki@apple.com>
+
+        <https://webkit.org/b/120029> Document::markers() should return a reference
+
+        Reviewed by Andreas Kling.
+
+        Document::m_markers is never NULL so return a reference from Document::markers(). Also mark
+        m_markers as const and initialize it in member initialization.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_text_matches_unmark_all):
+        (ewk_frame_text_matches_nth_pos_get):
+
+2013-08-19  Pratik Solanki  <psolanki@apple.com>
+
+        <https://webkit.org/b/119918> Frame::selection() should return a reference
+
+        Reviewed by Darin Adler.
+
+        m_selection is never NULL so return a reference from Frame::selection(). Also removed some
+        unnecessary null checks and assert diff ts exposed as a result.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::selectionRectangle):
+        (DumpRenderTreeSupportEfl::firstRectForCharacterRange):
+        (DumpRenderTreeSupportEfl::selectedRange):
+        * WebCoreSupport/EditorClientEfl.cpp:
+        (WebCore::EditorClientEfl::handleEditingKeyboardEvent):
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_text_selection_type_get):
+
+2013-08-16  Jaehun Lim  <ljaehun.lim@samsung.com>
+
+        [EFL] Unreviewed build fix after r154192
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::evaluateScriptInIsolatedWorld):
+
+2013-08-16  Pratik Solanki  <psolanki@apple.com>
+
+        <https://webkit.org/b/119852> Frame::scriptController() should return a reference
+
+        Reviewed by Andreas Kling.
+
+        m_script is never NULL so we can just return a reference. Also remove some pointless null
+        checks as a result of doing this.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::evaluateScriptInIsolatedWorld):
+        (DumpRenderTreeSupportEfl::globalContextRefForFrame):
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::dispatchDidClearWindowObjectInWorld):
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_script_execute):
+        * ewk/ewk_view.cpp:
+        (ewk_view_js_object_add):
+
+2013-08-15  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Unreviewed build fix after r154142 and r154144.
+
+        * ewk/ewk_frame.cpp: Follow the changes of r154142.
+        (ewk_frame_uri_set):
+        (ewk_frame_certificate_status_get):
+
+2013-08-15  Anders Carlsson  <andersca@apple.com>
+
+        <https://webkit.org/b/119859> Frame::loader() should return a reference
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (kit):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::callShouldCloseOnWebView):
+        (DumpRenderTreeSupportEfl::clearOpener):
+        (DumpRenderTreeSupportEfl::frameChildren):
+        (DumpRenderTreeSupportEfl::responseMimeType):
+        (DumpRenderTreeSupportEfl::provisionalURL):
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::callPolicyFunction):
+        (WebCore::FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction):
+        (WebCore::FrameLoaderClientEfl::dispatchDecidePolicyForNavigationAction):
+        (WebCore::FrameLoaderClientEfl::updateGlobalHistoryRedirectLinks):
+        (WebCore::FrameLoaderClientEfl::updateGlobalHistory):
+        * ewk/ewk_frame.cpp:
+        (_ewk_frame_loader_efl_get):
+        (_ewk_frame_smart_del):
+        (_ewk_frame_contents_set_internal):
+        (ewk_frame_stop):
+        (ewk_frame_reload):
+        (ewk_frame_reload_full):
+        (ewk_frame_child_add):
+        * ewk/ewk_view.cpp:
+        (ewk_view_frame_focused_get):
+        (ewk_view_setting_user_agent_set):
+        (ewk_view_setting_encoding_custom_get):
+        (ewk_view_setting_encoding_custom_set):
+
+2013-08-12  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL][WK1] URL printing code in DumpRenderTree doesn't match WTR or Mac DRT
+        https://bugs.webkit.org/show_bug.cgi?id=119585
+
+        Reviewed by Gyuyoung Kim.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::provisionalURL):
+        Implemented to pass provisionalURL of main frame to DumpRenderTreeChrome.
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-08-09  Alexey Proskuryakov  <ap@apple.com>
+
+        REGRESSION (r142755): window.open creates an invisible window when width and height are 0
+        https://bugs.webkit.org/show_bug.cgi?id=119633
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/ChromeClientEfl.cpp: (WebCore::ChromeClientEfl::setWindowRect):
+        Once again, the passed rect cannot be empty.
+
+2013-07-27  Mark Rowe  <mrowe@apple.com>
+
+        Logging should be configurable using human-readable channel names rather than crazy bitmasks
+        <http://webkit.org/b/119031>
+
+        Implement shared logic for initializing logging channels based on human-readable channel names in WTF,
+        and rework the WebCore, WebKit and WebKit2 logging initialization on top of it.
+
+        Logging channels may now be enabled by providing a comma-separated list of channel names, with the special
+        "all" name enabling all channels. Channel names prefixed with a leading "-" will result in the named channel
+        being disabled. For instance, specifying "all,-history,-loading" will result in all logging channels except
+        for history and loading being enabled.
+
+        For OS X developers, this also changes the name of the user defaults used to enable logging. This is done to allow
+        the old user defaults to remain set for those people that need to switch between version of WebKit before and
+        after this change. Where the old user default keys were WebCoreLogLevel, WebKitLogLevel and WebKit2LogLevel,
+        the new user default keys are WebCoreLogging, WebKitLogging and WebKit2Logging.
+
+        For GTK developers, this changes the separator used in the WEBKIT_DEBUG environment variable to a comma for
+        consistency with the other platforms and to enable more code sharing.
+
+        While doing this work I've also taken the opportunity to eliminate the need to touch multiple files when
+        adding a new logging channel. Now only the header in the relevant project needs to be updated.
+
+        Reviewed by Sam Weinig.
+
+        * ewk/ewk_main.cpp: Switch from WebCore's InitializeLogging.h to Logging.h.
+
+2013-07-27  Jacky Jiang  <zhajiang@blackberry.com>
+
+        Replace all uses of GraphicsLayer::create function with the one that takes a GraphicsLayerFactory
+        https://bugs.webkit.org/show_bug.cgi?id=119186
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/AcceleratedCompositingContextEfl.cpp:
+        (WebCore::AcceleratedCompositingContext::attachRootGraphicsLayer):
+
+2013-07-25  Andreas Kling  <akling@apple.com>
+
+        ChromeClient::focusedNodeChanged() should be focusedElementChanged().
+        <http://webkit.org/b/119110>
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::focusedElementChanged):
+        * WebCoreSupport/ChromeClientEfl.h:
+
+2013-07-15  Kwang Yul Seo  <skyul@company100.net>
+
+        NetworkStorageSession::createDefaultSession is only implemented by Soup
+        https://bugs.webkit.org/show_bug.cgi?id=118679
+
+        Reviewed by Alexey Proskuryakov.
+
+        Replace NetworkStorageSession::createDefaultSession() with
+        NetworkStorageSession::defaultStorageSession().
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+        (EWKPrivate::storageSession):
+
+2013-07-09  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Add ewk_view_device_pixel_ratio_set
+        https://bugs.webkit.org/show_bug.cgi?id=118521
+
+        Reviewed by Gyuyoung Kim.
+
+        ewebkit and ewebkit2 have different approach about getting device pixel ratio.
+        ewebkit depends on deprecatedTargetDPI and ecore_x_dpi_get,
+        but ewebkit2 use Page::deviceScaleFactor.
+
+        This patch will add ewk_view_device_pixel_ratio_set and use Page::deviceScaleFactor()
+        instead of ViewportArguments::deprecatedTargetDPI like ewebkit2.
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+        (_ewk_view_viewport_attributes_compute): Use Page::deviceScaleFactor().
+        (ewk_view_viewport_attributes_get): Ditto.
+        (ewk_view_device_pixel_ratio_set): Added.
+        (ewk_view_device_pixel_ratio_get):
+        * ewk/ewk_view.h:
+        Update document of ewk_view_device_pixel_ratio_get (from ewebkit2) and
+        added ewk_view_device_pixel_ratio_set.
+
+2013-06-27  Kangil Han  <kangil.han@samsung.com>
+
+        Adopt is/toHTMLInputElement for code cleanup
+        https://bugs.webkit.org/show_bug.cgi?id=118130
+
+        Reviewed by Antti Koivisto.
+
+        To enhance readability, this patch adopts is/toHTMLInputElement.
+        This also helps out to reduce duplicated use of static_cast.
+
+        * ewk/ewk_view.cpp:
+        (ewk_view_input_method_state_set):
+
+2013-06-26  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL][REGRESSION] Crash after r151540 with debug build
+        https://bugs.webkit.org/show_bug.cgi?id=118111
+
+        Reviewed by Gyuyoung Kim.
+
+        * ewk/ewk_view.cpp:
+        (ewk_view_scroll): Fixed ASSERT conditions wrongly refactored.
+
+2013-06-21  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        REGRESSION (r150663): Using webkitAudioContext in Inspector makes it undefined everywhere
+        https://bugs.webkit.org/show_bug.cgi?id=117825
+
+        Reviewed by Kentaro Hara.
+
+        Use Settings to enable Web Audio instead of RuntimeEnabledFeatures.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::setWebAudioEnabled):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+
+2013-06-17  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        [EFL] Remove unneeded WebCore namespace in FrameLoaderClientEfl
+        https://bugs.webkit.org/show_bug.cgi?id=117718
+
+        Reviewed by Christophe Dumez.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp: Remove 'using namespace WebCore'.
+
+2013-06-17  Ruth Fong  <ruth_fong@apple.com>
+
+        REGRESSION: Important controls are missing from <video> element UI, when compared to QuickTime
+        https://bugs.webkit.org/show_bug.cgi?id=20599
+
+        Add a "Download Video"/"Download Audio" context menu item to download media
+        elements.
+
+        Reviewed by Beth Dakin.
+
+        * WebCoreSupport/AssertMatchingEnums.cpp:
+        * ewk/ewk_contextmenu.h:
+        Updated to include new EWK enum type for "Download Video/Audio" context menu item.
+
+2013-06-13  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Refactor ewk_view_scroll to remove internal structure.
+        https://bugs.webkit.org/show_bug.cgi?id=115713
+
+        Reviewed by Gyuyoung Kim.
+
+        After removed c-ism from WebKit/Efl, There is no reason to keep internal
+        structures like Ewk_Scroll_Request.
+        This patch refactored ewk_view_scroll to use WTF instead of Ewk_Scroll_Request
+        and scrolls of SmartData.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::scroll):
+        * ewk/ewk_view.cpp: Removed functions to manage Ewk_Scroll_Request.
+        (_Ewk_View_Private_Data):
+        (_ewk_view_scrolls_flush):
+        (_ewk_view_priv_del):
+        (_ewk_view_smart_calculate):
+        (ewk_view_scroll_offsets_get):
+        (ewk_view_scroll_rects_get):
+        (ewk_view_scroll):
+        * ewk/ewk_view.h: Removed Ewk_Scroll_Request which is private structure.
+        * ewk/ewk_view_private.h:
+        (WebCore):
+        * ewk/ewk_view_single.cpp:
+        (_ewk_view_single_scroll_process_single):
+        (_ewk_view_single_smart_scrolls_process):
+        * ewk/ewk_view_tiled.cpp:
+        (_ewk_view_tiled_smart_scrolls_process):
+
 2013-05-28  Andreas Kling  <akling@apple.com>
 
         Document::setFocusedNode() should be setFocusedElement().

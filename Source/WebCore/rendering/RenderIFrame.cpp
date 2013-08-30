@@ -81,7 +81,7 @@ LayoutUnit RenderIFrame::maxPreferredLogicalWidth() const
 
 bool RenderIFrame::isSeamless() const
 {
-    return node() && node()->hasTagName(iframeTag) && static_cast<HTMLIFrameElement*>(node())->shouldDisplaySeamlessly();
+    return node() && node()->hasTagName(iframeTag) && toHTMLIFrameElement(node())->shouldDisplaySeamlessly();
 }
 
 bool RenderIFrame::requiresLayer() const
@@ -94,7 +94,7 @@ RenderView* RenderIFrame::contentRootRenderer() const
     // FIXME: Is this always a valid cast? What about plugins?
     ASSERT(!widget() || widget()->isFrameView());
     FrameView* childFrameView = toFrameView(widget());
-    return childFrameView ? childFrameView->frame()->contentRenderer() : 0;
+    return childFrameView ? childFrameView->frame().contentRenderer() : 0;
 }
 
 bool RenderIFrame::flattenFrame() const
@@ -102,13 +102,13 @@ bool RenderIFrame::flattenFrame() const
     if (!node() || !node()->hasTagName(iframeTag))
         return false;
 
-    HTMLIFrameElement* element = static_cast<HTMLIFrameElement*>(node());
+    HTMLIFrameElement* element = toHTMLIFrameElement(node());
     Frame* frame = element->document()->frame();
 
     if (isSeamless())
         return false; // Seamless iframes are already "flat", don't try to flatten them.
 
-    bool enabled = frame && frame->settings() && frame->settings()->frameFlatteningEnabled();
+    bool enabled = frame && frame->settings().frameFlatteningEnabled();
 
     if (!enabled || !frame->page())
         return false;
@@ -146,7 +146,7 @@ void RenderIFrame::layoutSeamlessly()
     updateWidgetPosition(); // Notify the Widget of our final height.
 
     // Assert that the child document did a complete layout.
-    RenderView* childRoot = childFrameView ? childFrameView->frame()->contentRenderer() : 0;
+    RenderView* childRoot = childFrameView ? childFrameView->frame().contentRenderer() : 0;
     ASSERT(!childFrameView || !childFrameView->layoutPending());
     ASSERT_UNUSED(childRoot, !childRoot || !childRoot->needsLayout());
 }

@@ -27,6 +27,7 @@
 #include "JITExceptions.h"
 
 #include "CallFrame.h"
+#include "CallFrameInlines.h"
 #include "CodeBlock.h"
 #include "Interpreter.h"
 #include "JSCJSValue.h"
@@ -36,6 +37,35 @@
 #if ENABLE(JIT) || ENABLE(LLINT)
 
 namespace JSC {
+
+static unsigned getExceptionLocation(VM* vm, CallFrame* callFrame)
+{
+    UNUSED_PARAM(vm);
+    ASSERT(!callFrame->hasHostCallFrameFlag());
+
+#if ENABLE(DFG_JIT)
+    if (callFrame->hasLocationAsCodeOriginIndex())
+        return callFrame->bytecodeOffsetFromCodeOriginIndex();
+#endif
+
+    return callFrame->locationAsBytecodeOffset();
+}
+
+#if USE(JSVALUE32_64)
+EncodedExceptionHandler encode(ExceptionHandler handler)
+{
+    ExceptionHandlerUnion u;
+    u.handler = handler;
+    return u.encodedHandler;
+}
+#endif
+
+ExceptionHandler uncaughtExceptionHandler()
+{
+    void* catchRoutine = FunctionPtr(LLInt::getCodePtr(ctiOpThrowNotCaught)).value();
+    ExceptionHandler exceptionHandler = { 0, catchRoutine};
+    return exceptionHandler;
+}
 
 ExceptionHandler genericThrow(VM* vm, ExecState* callFrame, JSValue exceptionValue, unsigned vPCIndex)
 {
@@ -58,8 +88,15 @@ ExceptionHandler genericThrow(VM* vm, ExecState* callFrame, JSValue exceptionVal
     vm->targetInterpreterPCForThrow = catchPCForInterpreter;
     
     RELEASE_ASSERT(catchRoutine);
-    ExceptionHandler exceptionHandler = { catchRoutine, callFrame };
+    ExceptionHandler exceptionHandler = { callFrame, catchRoutine};
     return exceptionHandler;
+}
+
+ExceptionHandler jitThrowNew(VM* vm, ExecState* callFrame, JSValue exceptionValue)
+{
+    unsigned bytecodeOffset = getExceptionLocation(vm, callFrame);
+    
+    return genericThrow(vm, callFrame, exceptionValue, bytecodeOffset);
 }
 
 ExceptionHandler jitThrow(VM* vm, ExecState* callFrame, JSValue exceptionValue, ReturnAddressPtr faultLocation)

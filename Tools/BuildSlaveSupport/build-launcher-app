@@ -159,7 +159,7 @@ sub copyNightlyLauncher
         symlink("../Sparkle.framework", "$frameworksPath/Sparkle.framework");
     }
 
-    my @frameworks = ("JavaScriptCore", "WebCore", "WebKit", "WebKit2", "WebInspector");
+    my @frameworks = ("JavaScriptCore", "WebCore", "WebKit", "WebKit2", "WebInspectorUI");
     for my $framework (@frameworks) {
         for my $systemVersion (@systemVersions) { 
             if ($systemVersion eq "10.5") {

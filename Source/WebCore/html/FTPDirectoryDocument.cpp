@@ -289,7 +289,7 @@ static inline PassRefPtr<SharedBuffer> createTemplateDocumentData(Settings* sett
     
 bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 {
-    DEFINE_STATIC_LOCAL(RefPtr<SharedBuffer>, templateDocumentData, (createTemplateDocumentData(document()->settings())));
+    static SharedBuffer* templateDocumentData = createTemplateDocumentData(document()->settings()).leakRef();
     // FIXME: Instead of storing the data, we'd rather actually parse the template data into the template Document once,
     // store that document, then "copy" it whenever we get an FTP directory listing.  There are complexities with this 
     // approach that make it worth putting this off.
@@ -304,10 +304,10 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
     RefPtr<Element> tableElement = document()->getElementById("ftpDirectoryTable");
     if (!tableElement)
         LOG_ERROR("Unable to find element by id \"ftpDirectoryTable\" in the template document.");
-    else if (!tableElement->hasTagName(tableTag))
+    else if (!isHTMLTableElement(tableElement.get()))
         LOG_ERROR("Element of id \"ftpDirectoryTable\" is not a table element");
     else 
-        m_tableElement = static_cast<HTMLTableElement*>(tableElement.get());
+        m_tableElement = toHTMLTableElement(tableElement.get());
 
     // Bail if we found the table element
     if (m_tableElement)
@@ -315,7 +315,7 @@ bool FTPDirectoryDocumentParser::loadDocumentTemplate()
 
     // Otherwise create one manually
     tableElement = document()->createElement(tableTag, false);
-    m_tableElement = static_cast<HTMLTableElement*>(tableElement.get());
+    m_tableElement = toHTMLTableElement(tableElement.get());
     m_tableElement->setAttribute("id", "ftpDirectoryTable", IGNORE_EXCEPTION);
 
     // If we didn't find the table element, lets try to append our own to the body
@@ -340,7 +340,7 @@ void FTPDirectoryDocumentParser::createBasicDocument()
     document()->appendChild(bodyElement, IGNORE_EXCEPTION);
 
     RefPtr<Element> tableElement = document()->createElement(tableTag, false);
-    m_tableElement = static_cast<HTMLTableElement*>(tableElement.get());
+    m_tableElement = toHTMLTableElement(tableElement.get());
     m_tableElement->setAttribute("id", "ftpDirectoryTable", IGNORE_EXCEPTION);
 
     bodyElement->appendChild(m_tableElement, IGNORE_EXCEPTION);

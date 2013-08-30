@@ -25,7 +25,7 @@
 #include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedLength.h"
 #include "SVGExternalResourcesRequired.h"
-#include "SVGLangSpace.h"
+#include "SVGNames.h"
 #include "SVGStyledElement.h"
 #include "SVGTests.h"
 #include "SVGUnitTypes.h"
@@ -34,7 +34,6 @@ namespace WebCore {
 
 class SVGMaskElement FINAL : public SVGStyledElement,
                              public SVGTests,
-                             public SVGLangSpace,
                              public SVGExternalResourcesRequired {
 public:
     static PassRefPtr<SVGMaskElement> create(const QualifiedName&, Document*);
@@ -69,6 +68,12 @@ private:
     virtual void synchronizeRequiredExtensions() { SVGTests::synchronizeRequiredExtensions(this); }
     virtual void synchronizeSystemLanguage() { SVGTests::synchronizeSystemLanguage(this); }
 };
+
+inline SVGMaskElement* toSVGMaskElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(SVGNames::maskTag));
+    return static_cast<SVGMaskElement*>(node);
+}
 
 }
 

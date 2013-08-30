@@ -156,9 +156,6 @@ public:
     TransformationMatrix sublayerTransform() const;
     void setSublayerTransform(const TransformationMatrix&);
 
-    TransformationMatrix contentsTransform() const;
-    void setContentsTransform(const TransformationMatrix&);
-
     bool isHidden() const;
     void setHidden(bool);
 
@@ -226,7 +223,7 @@ public:
     void printTree() const;
 #endif
 
-#if PLATFORM(MAC) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
+#if PLATFORM(MAC)
     void synchronouslyDisplayTilesInRect(const FloatRect&);
 #endif
 

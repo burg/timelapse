@@ -51,7 +51,6 @@ enum FormType { // KEEP IN SYNC WITH edjeGroupFromFormType()
     ProgressBar,
 #endif
     SearchField,
-    SearchFieldDecoration,
     SearchFieldResultsButton,
     SearchFieldResultsDecoration,
     SearchFieldCancelButton,
@@ -118,7 +117,7 @@ public:
     void adjustSizeConstraints(RenderStyle*, FormType) const;
 
     // System fonts.
-    virtual void systemFont(int propId, FontDescription&) const;
+    virtual void systemFont(CSSValueID, FontDescription&) const;
 
     virtual void adjustCheckboxStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintCheckbox(RenderObject*, const PaintInfo&, const IntRect&);
@@ -143,9 +142,6 @@ public:
 
     virtual void adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintSearchFieldResultsDecoration(RenderObject*, const PaintInfo&, const IntRect&);
-
-    virtual void adjustSearchFieldDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintSearchFieldDecoration(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustSearchFieldStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintSearchField(RenderObject*, const PaintInfo&, const IntRect&);

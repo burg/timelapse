@@ -353,7 +353,13 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 if (centerY < 0)
                     centerY = 0;
                 imageOffset = LayoutSize(leftBorder + leftPad + centerX + borderWidth, topBorder + topPad + centerY + borderWidth);
-                context->drawImage(image.get(), style()->colorSpace(), pixelSnappedIntRect(LayoutRect(paintOffset + imageOffset, imageSize)), CompositeSourceOver, shouldRespectImageOrientation());
+
+                ImageOrientationDescription orientationDescription;
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+                orientationDescription.setImageOrientationEnum(style()->imageOrientation());
+                orientationDescription.setRespectImageOrientation(shouldRespectImageOrientation());
+#endif
+                context->drawImage(image.get(), style()->colorSpace(), pixelSnappedIntRect(LayoutRect(paintOffset + imageOffset, imageSize)), CompositeSourceOver, orientationDescription);
                 errorPictureDrawn = true;
             }
 
@@ -418,17 +424,17 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo)
 {
     Document* document = this->document();
     
-    if (document->printing() || !document->frame()->selection()->isFocusedAndActive())
+    if (document->printing() || !document->frame()->selection().isFocusedAndActive())
         return;
     
     if (paintInfo.context->paintingDisabled() && !paintInfo.context->updatingControlTints())
         return;
 
     Element* focusedElement = document->focusedElement();
-    if (!focusedElement || !focusedElement->hasTagName(areaTag))
+    if (!focusedElement || !isHTMLAreaElement(focusedElement))
         return;
 
-    HTMLAreaElement* areaElement = static_cast<HTMLAreaElement*>(focusedElement);
+    HTMLAreaElement* areaElement = toHTMLAreaElement(focusedElement);
     if (areaElement->imageElement() != node())
         return;
 
@@ -471,11 +477,16 @@ void RenderImage::paintIntoRect(GraphicsContext* context, const LayoutRect& rect
     if (!img || img->isNull())
         return;
 
-    HTMLImageElement* imageElt = (node() && node()->hasTagName(imgTag)) ? static_cast<HTMLImageElement*>(node()) : 0;
+    HTMLImageElement* imageElt = (node() && isHTMLImageElement(node())) ? toHTMLImageElement(node()) : 0;
     CompositeOperator compositeOperator = imageElt ? imageElt->compositeOperator() : CompositeSourceOver;
     Image* image = m_imageResource->image().get();
     bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, alignedRect.size());
-    context->drawImage(m_imageResource->image(alignedRect.width(), alignedRect.height()).get(), style()->colorSpace(), alignedRect, compositeOperator, shouldRespectImageOrientation(), useLowQualityScaling);
+    ImageOrientationDescription orientationDescription;
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+    orientationDescription.setImageOrientationEnum(style()->imageOrientation());
+    orientationDescription.setRespectImageOrientation(shouldRespectImageOrientation());
+#endif
+    context->drawImage(m_imageResource->image(alignedRect.width(), alignedRect.height()).get(), style()->colorSpace(), alignedRect, compositeOperator, orientationDescription, useLowQualityScaling);
 }
 
 bool RenderImage::boxShadowShouldBeAppliedToBackground(BackgroundBleedAvoidance bleedAvoidance, InlineFlowBox*) const
@@ -510,7 +521,11 @@ bool RenderImage::computeBackgroundIsKnownToBeObscured()
 {
     if (!hasBackground())
         return false;
-    return foregroundIsKnownToBeOpaqueInRect(backgroundPaintedExtent(), 0);
+    
+    LayoutRect paintedExtent;
+    if (!getBackgroundPaintedExtent(paintedExtent))
+        return false;
+    return foregroundIsKnownToBeOpaqueInRect(paintedExtent, 0);
 }
 
 LayoutUnit RenderImage::minimumReplacedHeight() const
@@ -520,7 +535,7 @@ LayoutUnit RenderImage::minimumReplacedHeight() const
 
 HTMLMapElement* RenderImage::imageMap() const
 {
-    HTMLImageElement* i = node() && node()->hasTagName(imgTag) ? static_cast<HTMLImageElement*>(node()) : 0;
+    HTMLImageElement* i = node() && isHTMLImageElement(node()) ? toHTMLImageElement(node()) : 0;
     return i ? i->treeScope()->getImageMap(i->fastGetAttribute(usemapAttr)) : 0;
 }
 
@@ -553,10 +568,10 @@ void RenderImage::updateAltText()
     if (!node())
         return;
 
-    if (node()->hasTagName(inputTag))
-        m_altText = static_cast<HTMLInputElement*>(node())->altText();
-    else if (node()->hasTagName(imgTag))
-        m_altText = static_cast<HTMLImageElement*>(node())->altText();
+    if (isHTMLInputElement(node()))
+        m_altText = toHTMLInputElement(node())->altText();
+    else if (isHTMLImageElement(node()))
+        m_altText = toHTMLImageElement(node())->altText();
 }
 
 void RenderImage::layout()

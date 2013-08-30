@@ -36,6 +36,7 @@
 #include "SVGElementInstance.h"
 #include "SVGNames.h"
 #include "SVGPreserveAspectRatio.h"
+#include "XLinkNames.h"
 
 namespace WebCore {
 
@@ -81,7 +82,7 @@ void SVGFEImageElement::clearResourceReferences()
 
 void SVGFEImageElement::requestImageResource()
 {
-    CachedResourceRequest request(ResourceRequest(ownerDocument()->completeURL(href())));
+    CachedResourceRequest request(ResourceRequest(document()->completeURL(href())));
     request.setInitiator(this);
     m_cachedImage = document()->cachedResourceLoader()->requestImage(request);
 
@@ -122,7 +123,7 @@ bool SVGFEImageElement::isSupportedAttribute(const QualifiedName& attrName)
         SVGExternalResourcesRequired::addSupportedAttributes(supportedAttributes);
         supportedAttributes.add(SVGNames::preserveAspectRatioAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFEImageElement::parseAttribute(const QualifiedName& name, const AtomicString& value)

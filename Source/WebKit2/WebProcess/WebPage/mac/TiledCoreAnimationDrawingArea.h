@@ -72,11 +72,12 @@ private:
     virtual void didInstallPageOverlay(PageOverlay*) OVERRIDE;
     virtual void didUninstallPageOverlay(PageOverlay*) OVERRIDE;
     virtual void setPageOverlayNeedsDisplay(PageOverlay*, const WebCore::IntRect&) OVERRIDE;
+    virtual void setPageOverlayOpacity(PageOverlay*, float) OVERRIDE;
     virtual void updatePreferences(const WebPreferencesStore&) OVERRIDE;
     virtual void mainFrameContentSizeChanged(const WebCore::IntSize&) OVERRIDE;
 
     virtual void setExposedRect(const WebCore::FloatRect&) OVERRIDE;
-    virtual void mainFrameScrollabilityChanged(bool) OVERRIDE;
+    virtual void setClipsToExposedRect(bool) OVERRIDE;
 
     virtual void didChangeScrollOffsetForAnyFrame() OVERRIDE;
 
@@ -111,6 +112,7 @@ private:
 
     void updateIntrinsicContentSizeTimerFired(WebCore::Timer<TiledCoreAnimationDrawingArea>*);
     void updateMainFrameClipsToExposedRect();
+    void updateScrolledExposedRect();
     
     void invalidateAllPageOverlays();
 
@@ -132,6 +134,8 @@ private:
     bool m_hasRootCompositingLayer;
 
     WebCore::FloatRect m_exposedRect;
+    WebCore::FloatRect m_scrolledExposedRect;
+    bool m_clipsToExposedRect;
 
     WebCore::IntSize m_lastSentIntrinsicContentSize;
     WebCore::Timer<TiledCoreAnimationDrawingArea> m_updateIntrinsicContentSizeTimer;

@@ -22,13 +22,11 @@
 #define SVGDescElement_h
 
 #if ENABLE(SVG)
-#include "SVGLangSpace.h"
 #include "SVGStyledElement.h"
 
 namespace WebCore {
 
-class SVGDescElement FINAL : public SVGStyledElement,
-                             public SVGLangSpace {
+class SVGDescElement FINAL : public SVGStyledElement {
 public:
     static PassRefPtr<SVGDescElement> create(const QualifiedName&, Document*);
 
@@ -37,7 +35,7 @@ public:
 private:
     SVGDescElement(const QualifiedName&, Document*);
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
+    virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
 };
 
 } // namespace WebCore

@@ -1,4 +1,4 @@
-# Copyright (C) 2005, 2006, 2007, 2010, 2011, 2012 Apple Inc. All rights reserved.
+# Copyright (C) 2005, 2006, 2007, 2010, 2011, 2012, 2013 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
 #
@@ -183,12 +183,7 @@ sub determineBaseProductDir
     determineSourceDir();
 
     my $setSharedPrecompsDir;
-
-    # FIXME: See https://bugs.webkit.org/show_bug.cgi?id=117249.
-    #        Once all ports have migrated to WEBKIT_OUTPUTDIR, we can stop
-    #        reading the WEBKITOUTPUTDIR environment variable.
     $baseProductDir = $ENV{"WEBKIT_OUTPUTDIR"};
-    $baseProductDir = $ENV{"WEBKITOUTPUTDIR"} if not $baseProductDir;
 
     if (!defined($baseProductDir) and isAppleMacWebKit()) {
         # Silently remove ~/Library/Preferences/xcodebuild.plist which can
@@ -299,7 +294,7 @@ sub determineArchitecture
 
     if (isGtk()) {
         determineConfigurationProductDir();
-        my $host_triple = `grep -E '^host = ' $configurationProductDir/GNUmakefile`;
+        my $host_triple = `grep -E '^host = ' $configurationProductDir/GNUmakefile 2> /dev/null`;
         if ($host_triple =~ m/^host = ([^-]+)-/) {
             # We have a configured build tree; use it.
             $architecture = $1;
@@ -418,6 +413,16 @@ sub xcodeSDK
     return $xcodeSDK;
 }
 
+sub xcodeSDKPlatformName()
+{
+    determineXcodeSDK();
+    return "" if !defined $xcodeSDK;
+    return "iphoneos" if $xcodeSDK =~ /iphoneos/i;
+    return "iphonesimulator" if $xcodeSDK =~ /iphonesimulator/i;
+    return "macosx" if $xcodeSDK =~ /macosx/i;
+    die "Couldn't determine platform name from Xcode SDK";
+}
+
 sub programFilesPath
 {
     return $programFilesPath if defined $programFilesPath;
@@ -465,9 +470,9 @@ sub usesPerConfigurationBuildDirectory
 {
     # [Gtk] We don't have Release/Debug configurations in straight
     # autotool builds (non build-webkit). In this case and if
-    # WEBKITOUTPUTDIR exist, use that as our configuration dir. This will
+    # WEBKIT_OUTPUTDIR exist, use that as our configuration dir. This will
     # allows us to run run-webkit-tests without using build-webkit.
-    return ($ENV{"WEBKITOUTPUTDIR"} && isGtk()) || isAppleWinWebKit();
+    return ($ENV{"WEBKIT_OUTPUTDIR"} && isGtk()) || isAppleWinWebKit();
 }
 
 sub determineConfigurationProductDir
@@ -483,6 +488,7 @@ sub determineConfigurationProductDir
             $configurationProductDir = "$baseProductDir";
         } else {
             $configurationProductDir = "$baseProductDir/$configuration";
+            $configurationProductDir .= "-" . xcodeSDKPlatformName() if isIOSWebKit();
         }
     }
 }
@@ -848,6 +854,9 @@ sub builtDylibPathForName
     }
     if (isWinCE()) {
         return "$configurationProductDir/$libraryName";
+    }
+    if (isIOSWebKit()) {
+        return "$configurationProductDir/$libraryName.framework/$libraryName";
     }
     if (isAppleMacWebKit()) {
         return "$configurationProductDir/$libraryName.framework/Versions/A/$libraryName";
@@ -1292,6 +1301,22 @@ sub isAppleWinWebKit()
     return isAppleWebKit() && (isCygwin() || isWindows());
 }
 
+sub willUseIOSDeviceSDKWhenBuilding()
+{
+    return xcodeSDKPlatformName() eq "iphoneos";
+}
+
+sub willUseIOSSimulatorSDKWhenBuilding()
+{
+    return xcodeSDKPlatformName() eq "iphonesimulator";
+}
+
+sub isIOSWebKit()
+{
+    determineXcodeSDK();
+    return isAppleMacWebKit() && (willUseIOSDeviceSDKWhenBuilding() || willUseIOSSimulatorSDKWhenBuilding());
+}
+
 sub isPerianInstalled()
 {
     if (!isAppleWebKit()) {
@@ -1691,7 +1716,11 @@ sub copyInspectorFrontendFiles
     }
 
     if (isAppleMacWebKit()) {
-        $inspectorResourcesDirPath = $productDir . "/WebCore.framework/Resources/inspector";
+        if (isIOSWebKit()) {
+            $inspectorResourcesDirPath = $productDir . "/WebCore.framework/inspector";
+        } else {
+            $inspectorResourcesDirPath = $productDir . "/WebCore.framework/Resources/inspector";
+        }
     } elsif (isAppleWinWebKit()) {
         $inspectorResourcesDirPath = $productDir . "/WebKit.resources/inspector";
     } elsif (isQt() || isGtk()) {
@@ -1717,11 +1746,24 @@ sub copyInspectorFrontendFiles
 
     if (isAppleMacWebKit()) {
         my $sourceLocalizedStrings = sourceDir() . "/Source/WebCore/English.lproj/localizedStrings.js";
-        my $destinationLocalizedStrings = $productDir . "/WebCore.framework/Resources/English.lproj/localizedStrings.js";
+        my $destinationLocalizedStrings;
+        if (isIOSWebKit()) {
+            $destinationLocalizedStrings = $productDir . "/WebCore.framework/English.lproj/localizedStrings.js";
+        } else {
+            $destinationLocalizedStrings = $productDir . "/WebCore.framework/Resources/English.lproj/localizedStrings.js";
+        }
         system "ditto", $sourceLocalizedStrings, $destinationLocalizedStrings;
     }
 
-    return system "rsync", "-aut", "--exclude=/.DS_Store", "--exclude=*.re2js", "--exclude=.svn/", !isQt() ? "--exclude=/WebKit.qrc" : "", $sourceInspectorPath, $inspectorResourcesDirPath;
+    my $exitStatus = system "rsync", "-aut", "--exclude=/.DS_Store", "--exclude=*.re2js", "--exclude=.svn/", !isQt() ? "--exclude=/WebKit.qrc" : "", $sourceInspectorPath, $inspectorResourcesDirPath;
+    return $exitStatus if $exitStatus;
+
+    if (isIOSWebKit()) {
+        chdir($productDir . "/WebCore.framework");
+        return system "zip", "--quiet", "--exclude=*.qrc", "-r", "inspector-remote.zip", "inspector";
+    }
+
+    return 0; # Success; did copy files.
 }
 
 sub streamlineInspectorFrontendFiles
@@ -1922,7 +1964,12 @@ sub runAutogenForAutotoolsProjectIfNecessary($@)
 
 sub getJhbuildPath()
 {
-    return join('/', baseProductDir(), "Dependencies");
+    my @jhbuildPath = File::Spec->splitdir(baseProductDir());
+    if (isGit() && isGitBranchBuild() && gitBranch()) {
+        pop(@jhbuildPath);
+    }
+    push(@jhbuildPath, "Dependencies");
+    return File::Spec->catdir(@jhbuildPath);
 }
 
 sub mustReRunAutogen($@)
@@ -2237,7 +2284,7 @@ sub buildQMakeProjects
     }
 
     # Automatically determine the number of CPUs for make only if this make argument haven't already been specified.
-    if ($make eq "make" && $makeargs !~ /-j\s*\d+/i && (!defined $ENV{"MAKEFLAGS"} || ($ENV{"MAKEFLAGS"} !~ /-j\s*\d+/i ))) {
+    if ($make eq "make" && $makeargs !~ /-[^\s]*?j\s*\d+/i && (!defined $ENV{"MAKEFLAGS"} || ($ENV{"MAKEFLAGS"} !~ /-[^\s]*?j\s*\d+/i ))) {
         $makeargs .= " -j" . numberOfCPUs();
     }
 

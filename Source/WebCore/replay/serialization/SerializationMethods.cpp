@@ -220,7 +220,7 @@ void InputCoder<ResourceResponse>::encode(InputEncoder& encoder, const ResourceR
     InputCoder<HTTPHeaderMap>::encode(encoder, response.httpHeaderFields());
     encoder.popObjectAsProperty("httpHeaders");
 
-    encoder.put("lastModifiedDate", (uint64_t)response.lastModifiedDate());
+    encoder.put("lastModifiedDate", (uint64_t)response.lastModified());
 
     if (ResourceLoadTiming* data = response.resourceLoadTiming()) {
         encoder.pushObject();

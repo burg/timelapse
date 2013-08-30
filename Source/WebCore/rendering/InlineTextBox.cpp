@@ -372,13 +372,29 @@ bool InlineTextBox::isLineBreak() const
 
 bool InlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit /* lineTop */, LayoutUnit /*lineBottom*/)
 {
+    if (!visibleToHitTesting())
+        return false;
+
     if (isLineBreak())
         return false;
 
-    FloatPoint boxOrigin = locationIncludingFlipping();
-    boxOrigin.moveBy(accumulatedOffset);
-    FloatRect rect(boxOrigin, size());
-    if (m_truncation != cFullTruncation && visibleToHitTesting() && locationInContainer.intersects(rect)) {
+    if (m_truncation == cFullTruncation)
+        return false;
+
+    FloatRect rect(locationIncludingFlipping(), size());
+    // Make sure truncated text is ignored while hittesting.
+    if (m_truncation != cNoTruncation) {
+        LayoutUnit widthOfVisibleText = toRenderText(renderer())->width(m_start, m_truncation, textPos(), isFirstLineStyle());
+
+        if (isHorizontal())
+            renderer()->style()->isLeftToRightDirection() ? rect.setWidth(widthOfVisibleText) : rect.shiftXEdgeTo(right() - widthOfVisibleText);
+        else
+            rect.setHeight(widthOfVisibleText);
+    }
+
+    rect.moveBy(accumulatedOffset);
+
+    if (locationInContainer.intersects(rect)) {
         renderer()->updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(accumulatedOffset)));
         if (!result.addNodeToRectBasedTestResult(renderer()->node(), request, locationInContainer, rect))
             return true;
@@ -533,7 +549,6 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
             // truncated string i.e.  |Hello|CBA| -> |...lo|CBA|
             LayoutUnit widthOfVisibleText = toRenderText(renderer())->width(m_start, m_truncation, textPos(), isFirstLineStyle());
             LayoutUnit widthOfHiddenText = m_logicalWidth - widthOfVisibleText;
-            // FIXME: The hit testing logic also needs to take this translation into account.
             LayoutSize truncationOffset(isLeftToRightDirection() ? widthOfHiddenText : -widthOfHiddenText, 0);
             adjustedPaintOffset.move(isHorizontal() ? truncationOffset : truncationOffset.transposedSize());
         }
@@ -937,7 +952,7 @@ void InlineTextBox::paintCustomHighlight(const LayoutPoint& paintOffset, const A
     FloatRect rootRect(paintOffset.x() + r->x(), paintOffset.y() + selectionTop(), r->logicalWidth(), selectionHeight());
     FloatRect textRect(paintOffset.x() + x(), rootRect.y(), logicalWidth(), rootRect.height());
 
-    page->chrome().client()->paintCustomHighlight(renderer()->node(), type, textRect, rootRect, true, false);
+    page->chrome().client().paintCustomHighlight(renderer()->node(), type, textRect, rootRect, true, false);
 }
 
 #endif
@@ -1400,7 +1415,7 @@ void InlineTextBox::paintDocumentMarkers(GraphicsContext* pt, const FloatPoint& 
     if (!renderer()->node())
         return;
 
-    Vector<DocumentMarker*> markers = renderer()->document()->markers()->markersFor(renderer()->node());
+    Vector<DocumentMarker*> markers = renderer()->document()->markers().markersFor(renderer()->node());
     Vector<DocumentMarker*>::const_iterator markerIt = markers.begin();
 
     // Give any document markers that touch this run a chance to draw before the text has been drawn.

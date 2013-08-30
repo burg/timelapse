@@ -111,7 +111,7 @@ public:
 private:
     HTMLFormElement(const QualifiedName&, Document*);
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
+    virtual bool rendererIsNeeded(const RenderStyle&);
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
     virtual void finishParsingChildren() OVERRIDE;
@@ -160,6 +160,22 @@ private:
 
     bool m_wasDemoted;
 };
+
+inline bool isHTMLFormElement(Node* node)
+{
+    return node->hasTagName(HTMLNames::formTag);
+}
+
+inline bool isHTMLFormElement(Element* element)
+{
+    return element->hasTagName(HTMLNames::formTag);
+}
+
+inline HTMLFormElement* toHTMLFormElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLFormElement(node));
+    return static_cast<HTMLFormElement*>(node);
+}
 
 } // namespace WebCore
 

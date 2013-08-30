@@ -33,7 +33,6 @@
 #include "HTMLNames.h"
 #include "Logging.h"
 #include "RuntimeEnabledFeatures.h"
-#include "ScriptCallStack.h"
 #include "ScriptEventListener.h"
 
 using namespace std;
@@ -79,15 +78,17 @@ Node::InsertionNotificationRequest HTMLTrackElement::insertedInto(ContainerNode*
 
     HTMLElement::insertedInto(insertionPoint);
     HTMLMediaElement* parent = mediaElement();
-    if (insertionPoint == parent)
+    if (insertionPoint == parent) {
+        ensureTrack();
         parent->didAddTextTrack(this);
+    }
     return InsertionDone;
 }
 
 void HTMLTrackElement::removedFrom(ContainerNode* insertionPoint)
 {
     if (!parentNode() && WebCore::isMediaElement(insertionPoint))
-        toMediaElement(insertionPoint)->didRemoveTextTrack(this);
+        toHTMLMediaElement(insertionPoint)->didRemoveTextTrack(this);
     HTMLElement::removedFrom(insertionPoint);
 }
 
@@ -165,7 +166,7 @@ void HTMLTrackElement::setIsDefault(bool isDefault)
     setBooleanAttribute(defaultAttr, isDefault);
 }
 
-LoadableTextTrack* HTMLTrackElement::ensureTrack()
+LoadableTextTrack& HTMLTrackElement::ensureTrack()
 {
     if (!m_track) {
         // The kind attribute is an enumerated attribute, limited only to know values. It defaults to 'subtitles' if missing or invalid.
@@ -173,13 +174,15 @@ LoadableTextTrack* HTMLTrackElement::ensureTrack()
         if (!TextTrack::isValidKindKeyword(kind))
             kind = TextTrack::subtitlesKeyword();
         m_track = LoadableTextTrack::create(this, kind, label(), srclang());
-    }
-    return m_track.get();
+    } else
+        m_track->setTrackElement(this);
+
+    return *m_track;
 }
 
 TextTrack* HTMLTrackElement::track()
 {
-    return ensureTrack();
+    return &ensureTrack();
 }
 
 bool HTMLTrackElement::isURLAttribute(const Attribute& attribute) const
@@ -198,7 +201,7 @@ void HTMLTrackElement::scheduleLoad()
         return;
 
     // 2. If the text track's text track mode is not set to one of hidden or showing, abort these steps.
-    if (ensureTrack()->mode() != TextTrack::hiddenKeyword() && ensureTrack()->mode() != TextTrack::showingKeyword())
+    if (ensureTrack().mode() != TextTrack::hiddenKeyword() && ensureTrack().mode() != TextTrack::showingKeyword())
         return;
 
     // 3. If the text track's track element does not have a media element as a parent, abort these steps.
@@ -223,11 +226,11 @@ void HTMLTrackElement::loadTimerFired(Timer<HTMLTrackElement>*)
     // 8. If the track element's parent is a media element then let CORS mode be the state of the parent media
     // element's crossorigin content attribute. Otherwise, let CORS mode be No CORS.
     if (!canLoadUrl(url)) {
-        didCompleteLoad(ensureTrack(), HTMLTrackElement::Failure);
+        didCompleteLoad(&ensureTrack(), HTMLTrackElement::Failure);
         return;
     }
 
-    ensureTrack()->scheduleLoad(url);
+    ensureTrack().scheduleLoad(url);
 }
 
 bool HTMLTrackElement::canLoadUrl(const KURL& url)
@@ -291,14 +294,14 @@ COMPILE_ASSERT(HTMLTrackElement::TRACK_ERROR == static_cast<HTMLTrackElement::Re
 
 void HTMLTrackElement::setReadyState(ReadyState state)
 {
-    ensureTrack()->setReadinessState(static_cast<TextTrack::ReadinessState>(state));
+    ensureTrack().setReadinessState(static_cast<TextTrack::ReadinessState>(state));
     if (HTMLMediaElement* parent = mediaElement())
         return parent->textTrackReadyStateChanged(m_track.get());
 }
 
 HTMLTrackElement::ReadyState HTMLTrackElement::readyState() 
 {
-    return static_cast<ReadyState>(ensureTrack()->readinessState());
+    return static_cast<ReadyState>(ensureTrack().readinessState());
 }
 
 const AtomicString& HTMLTrackElement::mediaElementCrossOriginAttribute() const
@@ -353,22 +356,10 @@ HTMLMediaElement* HTMLTrackElement::mediaElement() const
 {
     Element* parent = parentElement();
     if (parent && parent->isMediaElement())
-        return static_cast<HTMLMediaElement*>(parentNode());
+        return toHTMLMediaElement(parentNode());
 
     return 0;
 }
-
-#if ENABLE(MICRODATA)
-String HTMLTrackElement::itemValueText() const
-{
-    return getURLAttribute(srcAttr);
-}
-
-void HTMLTrackElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(srcAttr, value);
-}
-#endif
 
 }
 

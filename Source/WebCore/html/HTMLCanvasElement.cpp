@@ -47,7 +47,6 @@
 #include "ScriptController.h"
 #include "Settings.h"
 #include <math.h>
-#include <stdio.h>
 
 #include <runtime/JSLock.h>
 #include <runtime/Operations.h>
@@ -81,6 +80,7 @@ HTMLCanvasElement::HTMLCanvasElement(const QualifiedName& tagName, Document* doc
     , m_didClearImageBuffer(false)
 {
     ASSERT(hasTagName(canvasTag));
+    setHasCustomStyleResolveCallbacks();
 }
 
 PassRefPtr<HTMLCanvasElement> HTMLCanvasElement::create(Document* document)
@@ -112,7 +112,7 @@ void HTMLCanvasElement::parseAttribute(const QualifiedName& name, const AtomicSt
 RenderObject* HTMLCanvasElement::createRenderer(RenderArena* arena, RenderStyle* style)
 {
     Frame* frame = document()->frame();
-    if (frame && frame->script()->canExecuteScripts(NotAboutToExecuteScript)) {
+    if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript)) {
         m_rendererIsCanvas = true;
         return new (arena) RenderHTMLCanvas(this);
     }
@@ -121,10 +121,24 @@ RenderObject* HTMLCanvasElement::createRenderer(RenderArena* arena, RenderStyle*
     return HTMLElement::createRenderer(arena, style);
 }
 
-void HTMLCanvasElement::attach(const AttachContext& context)
+void HTMLCanvasElement::willAttachRenderers()
 {
     setIsInCanvasSubtree(true);
-    HTMLElement::attach(context);
+}
+
+bool HTMLCanvasElement::areAuthorShadowsAllowed() const
+{
+    return false;
+}
+
+bool HTMLCanvasElement::canContainRangeEndPoint() const
+{
+    return false;
+}
+
+bool HTMLCanvasElement::canStartSelection() const
+{
+    return false;
 }
 
 void HTMLCanvasElement::addObserver(CanvasObserver* observer)
@@ -390,9 +404,13 @@ void HTMLCanvasElement::paint(GraphicsContext* context, const LayoutRect& r, boo
     if (hasCreatedImageBuffer()) {
         ImageBuffer* imageBuffer = buffer();
         if (imageBuffer) {
-            if (m_presentedImage)
-                context->drawImage(m_presentedImage.get(), ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, DoNotRespectImageOrientation, useLowQualityScale);
-            else
+            if (m_presentedImage) {
+                ImageOrientationDescription orientationDescription;
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+                orientationDescription.setImageOrientationEnum(renderer()->style()->imageOrientation());
+#endif 
+                context->drawImage(m_presentedImage.get(), ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, orientationDescription, useLowQualityScale);
+            } else
                 context->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, BlendModeNormal, useLowQualityScale);
         }
     }

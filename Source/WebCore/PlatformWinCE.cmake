@@ -23,7 +23,8 @@ list(APPEND WebCore_SOURCES
 
     page/win/DragControllerWin.cpp
     page/win/EventHandlerWin.cpp
-    page/wince/FrameWinCE.cpp
+    page/win/FrameGdiWin.cpp
+    page/win/FrameWin.cpp
 
     rendering/RenderThemeWince.cpp
 
@@ -35,14 +36,13 @@ list(APPEND WebCore_SOURCES
 
     platform/win/BitmapInfo.cpp
     platform/win/ClipboardUtilitiesWin.cpp
-    platform/win/ClipboardWin.cpp
     platform/win/ContextMenuItemWin.cpp
     platform/win/ContextMenuWin.cpp
     platform/win/CursorWin.cpp
     platform/win/DragDataWin.cpp
     platform/win/DragImageWin.cpp
-    platform/win/EditorWin.cpp
     platform/win/EventLoopWin.cpp
+    platform/win/FileSystemWin.cpp
     platform/win/KeyEventWin.cpp
     platform/win/LanguageWin.cpp
     platform/win/LocalizedStringsWin.cpp
@@ -63,8 +63,6 @@ list(APPEND WebCore_SOURCES
     platform/win/WebCoreInstanceHandle.cpp
     platform/win/WidgetWin.cpp
     platform/win/WheelEventWin.cpp
-
-    platform/wince/FileSystemWince.cpp
 
     platform/network/NetworkStorageSessionStub.cpp
 

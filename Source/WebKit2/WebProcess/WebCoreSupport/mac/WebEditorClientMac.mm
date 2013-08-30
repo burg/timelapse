@@ -110,8 +110,7 @@ DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttrib
 {
     static NSArray *excludedElements = createExcludedElementsForAttributedStringConversion();
     
-    NSDictionary *dictionary = [[NSDictionary alloc] initWithObjectsAndKeys: excludedElements,
-        NSExcludedElementsDocumentAttribute, nil, @"WebResourceHandler", nil];
+    NSDictionary *dictionary = [NSDictionary dictionaryWithObject:excludedElements forKey:NSExcludedElementsDocumentAttribute];
     
     NSArray *subResources;
     Document* document = m_page->mainFrame() ? m_page->mainFrame()->document() : 0;
@@ -121,8 +120,7 @@ DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttrib
                                                   subresources:&subResources];
     for (WebResource* resource in subResources)
         resources.append([resource _coreResource]);
-    
-    [dictionary release];
+
     return core(fragment);
 }
 
@@ -135,7 +133,7 @@ void WebEditorClient::setInsertionPasteboard(const String&)
 
 static void changeWordCase(WebPage* page, SEL selector)
 {
-    Frame* frame = page->corePage()->focusController()->focusedOrMainFrame();
+    Frame* frame = page->corePage()->focusController().focusedOrMainFrame();
     if (!frame->editor().canEdit())
         return;
 
@@ -235,11 +233,5 @@ void WebEditorClient::toggleAutomaticSpellingCorrection()
     notImplemented();
 }
 #endif // USE(AUTOMATIC_TEXT_REPLACEMENT)
-
-void WebEditorClient::checkTextOfParagraph(const UChar* text, int length, WebCore::TextCheckingTypeMask checkingTypes, Vector<TextCheckingResult>& results)
-{
-    // FIXME: It would be nice if we wouldn't have to copy the text here.
-    m_page->sendSync(Messages::WebPageProxy::CheckTextOfParagraph(String(text, length), checkingTypes), Messages::WebPageProxy::CheckTextOfParagraph::Reply(results));
-}
 
 } // namespace WebKit

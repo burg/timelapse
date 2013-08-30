@@ -24,6 +24,10 @@
 #include <WebKit2/WKBase.h>
 #include <WebKit2/WKGeometry.h>
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,6 +40,8 @@ typedef void (*WKViewPageDidChangeContentsPositionCallback)(WKViewRef view, WKPo
 typedef void (*WKViewPageDidRenderFrameCallback)(WKViewRef view, WKSize contentsSize, WKRect coveredRect, const void* clientInfo);
 typedef void (*WKViewPageDidChangeViewportAttributesCallback)(WKViewRef view, WKViewportAttributesRef, const void* clientInfo);
 typedef void (*WKViewPageDidChangeTooltipCallback)(WKViewRef view, WKStringRef newTooltip, const void* clientInfo);
+typedef void (*WKViewDidFindZoomableAreaCallback)(WKViewRef view, WKPoint point, WKRect area, const void* clientInfo);
+typedef void (*WKViewDoneWithTouchEventCallback)(WKViewRef view, WKTouchEventRef touchEvent, bool wasEventHandled, const void* clientInfo);
 
 struct WKViewClient {
     int                                              version;
@@ -51,6 +57,8 @@ struct WKViewClient {
     WKViewCallback                                   didCompletePageTransition;
     WKViewPageDidChangeViewportAttributesCallback    didChangeViewportAttributes;
     WKViewPageDidChangeTooltipCallback               didChangeTooltip;
+    WKViewDidFindZoomableAreaCallback                didFindZoomableArea;
+    WKViewDoneWithTouchEventCallback                 doneWithTouchEvent;
 };
 typedef struct WKViewClient WKViewClient;
 
@@ -64,6 +72,9 @@ WK_EXPORT WKSize WKViewGetSize(WKViewRef);
 WK_EXPORT void WKViewSetSize(WKViewRef, WKSize size);
 
 WK_EXPORT void WKViewSetViewClient(WKViewRef, const WKViewClient*);
+
+WK_EXPORT bool WKViewIsActive(WKViewRef);
+WK_EXPORT void WKViewSetIsActive(WKViewRef, bool);
 
 WK_EXPORT bool WKViewIsFocused(WKViewRef);
 WK_EXPORT void WKViewSetIsFocused(WKViewRef, bool);
@@ -80,6 +91,7 @@ WK_EXPORT void WKViewSetContentPosition(WKViewRef, WKPoint);
 WK_EXPORT void WKViewSetUserViewportTranslation(WKViewRef, double tx, double ty);
 WK_EXPORT WKPoint WKViewUserViewportToContents(WKViewRef, WKPoint);
 WK_EXPORT WKPoint WKViewUserViewportToScene(WKViewRef, WKPoint);
+WK_EXPORT WKPoint WKViewContentsToUserViewport(WKViewRef, WKPoint);
 
 WK_EXPORT void WKViewPaintToCurrentGLContext(WKViewRef);
 
@@ -101,6 +113,8 @@ WK_EXPORT bool WKViewExitFullScreen(WKViewRef);
 
 WK_EXPORT void WKViewSetOpacity(WKViewRef view, double opacity);
 WK_EXPORT double WKViewOpacity(WKViewRef view);
+
+WK_EXPORT void WKViewFindZoomableAreaForRect(WKViewRef, WKRect);
 
 #ifdef __cplusplus
 }

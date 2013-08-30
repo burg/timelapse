@@ -26,14 +26,18 @@
 #include "config.h"
 #include "PlaceholderDocument.h"
 
+#include "ElementTraversal.h"
+
 namespace WebCore {
 
-void PlaceholderDocument::attach(const AttachContext& context)
+void PlaceholderDocument::attach()
 {
     ASSERT(!attached());
 
-    // Skipping Document::attach().
-    ContainerNode::attach(context);
+    for (Element* child = ElementTraversal::firstWithin(this); child; child = ElementTraversal::nextSibling(child))
+        Style::attachRenderTree(child);
+
+    setAttached(true);
 }
 
 } // namespace WebCore

@@ -29,10 +29,10 @@
 
 #include "FloatConversion.h"
 #include "IntRect.h"
-#include "LayoutRect.h"
 #include <algorithm>
 #include <math.h>
 #include <wtf/MathExtras.h>
+#include <wtf/PrintStream.h>
 
 using std::max;
 using std::min;
@@ -40,10 +40,6 @@ using std::min;
 namespace WebCore {
 
 FloatRect::FloatRect(const IntRect& r) : m_location(r.location()), m_size(r.size())
-{
-}
-
-FloatRect::FloatRect(const LayoutRect& r) : m_location(r.location()), m_size(r.size())
 {
 }
 
@@ -255,6 +251,11 @@ FloatRect mapRect(const FloatRect& r, const FloatRect& srcRect, const FloatRect&
     return FloatRect(destRect.x() + (r.x() - srcRect.x()) * widthScale,
                      destRect.y() + (r.y() - srcRect.y()) * heightScale,
                      r.width() * widthScale, r.height() * heightScale);
+}
+
+void FloatRect::dump(PrintStream& out) const
+{
+    out.print(location(), " ", size());
 }
 
 }

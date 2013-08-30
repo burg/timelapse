@@ -247,6 +247,12 @@ public:
     // Various scale factors.
     double currentScale() const { return m_transformationMatrix->m11(); }
     double zoomToFitScale() const;
+
+    // When layoutSize is rounded from FloatSize to IntSize, it happens that contents
+    // can not be zoomed to fit the visible viewport both horizontally and vertically
+    // due to rounding error only and causes unexpected scroll.
+    bool hasFloatLayoutSizeRoundingError() const;
+
     bool respectViewport() const;
     double initialScale() const;
     void setInitialScale(double scale) { m_initialScale = scale; }
@@ -376,6 +382,7 @@ public:
     void rootLayerCommitTimerFired(WebCore::Timer<WebPagePrivate>*);
     bool commitRootLayerIfNeeded();
     WebCore::LayerRenderingResults lastCompositingResults() const;
+    WebCore::GraphicsLayerFactory* graphicsLayerFactory() const;
     WebCore::GraphicsLayer* overlayLayer();
 
     // Fallback GraphicsLayerClient implementation, used for various overlay layers.
@@ -401,8 +408,7 @@ public:
     void syncDestroyCompositorOnCompositingThread();
     void releaseLayerResources();
     void releaseLayerResourcesCompositingThread();
-    void suspendRootLayerCommit();
-    void resumeRootLayerCommit();
+    void updateRootLayerCommitEnabled();
 
     void scheduleCompositingRun();
 #endif
@@ -530,6 +536,7 @@ public:
 
 #if ENABLE(FULLSCREEN_API)
 #if ENABLE(VIDEO)
+    bool m_atInitialScaleBeforeFullScreen;
     double m_scaleBeforeFullScreen;
     WebCore::IntPoint m_scrollPositionBeforeFullScreen;
     int m_orientationBeforeFullScreen;

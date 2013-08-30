@@ -601,7 +601,15 @@ bool NetworkJob::shouldReleaseClientResource()
 
 bool NetworkJob::shouldNotifyClientFailed() const
 {
-    return m_extendedStatusCode < 0 || (isError(m_extendedStatusCode) && !m_dataReceived && !m_isHeadMethod && m_handle->firstRequest().targetType() != ResourceRequest::TargetIsXHR);
+    ResourceRequest request = m_handle->firstRequest();
+    if (request.forceDownload())
+        return false;
+    if (m_extendedStatusCode < 0)
+        return true;
+    if (isError(m_extendedStatusCode) && !m_dataReceived && !m_isHeadMethod && request.targetType() != ResourceRequest::TargetIsXHR)
+        return true;
+
+    return false;
 }
 
 bool NetworkJob::retryAsFTPDirectory()
@@ -898,7 +906,7 @@ NetworkJob::SendRequestResult NetworkJob::sendRequestWithCredentials(ProtectionS
             updateDeferLoadingCount(1);
 
             AuthenticationChallengeManager::instance()->authenticationChallenge(newURL, protectionSpace,
-                Credential(), this, m_frame->page()->chrome().client()->platformPageClient());
+                Credential(), this, m_frame->page()->chrome().client().platformPageClient());
             return SendRequestWaiting;
         }
 
@@ -954,7 +962,7 @@ void NetworkJob::storeCredentials(AuthenticationChallenge& challenge)
 
         BlackBerry::Platform::Settings::instance()->storeProxyCredentials(proxyInfo);
         if (m_frame && m_frame->page())
-            m_frame->page()->chrome().client()->platformPageClient()->syncProxyCredential(challenge.proposedCredential());
+            m_frame->page()->chrome().client().platformPageClient()->syncProxyCredential(challenge.proposedCredential());
     }
 }
 

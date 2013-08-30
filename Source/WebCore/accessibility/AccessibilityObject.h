@@ -239,6 +239,21 @@ struct AccessibilityText {
         textElements.append(element);
     }
 };
+
+struct AccessibilityTextUnderElementMode {
+    enum ChildrenInclusion {
+        TextUnderElementModeSkipIgnoredChildren,
+        TextUnderElementModeIncludeAllChildren,
+    };
+    
+    ChildrenInclusion childrenInclusion;
+    bool includeFocusableContent;
+    
+    AccessibilityTextUnderElementMode(ChildrenInclusion c = TextUnderElementModeSkipIgnoredChildren, bool i = false)
+    : childrenInclusion(c)
+    , includeFocusableContent(i)
+    { }
+};
     
 enum AccessibilityOrientation {
     AccessibilityOrientationVertical,
@@ -467,6 +482,7 @@ public:
     virtual bool isUnvisited() const { return false; }
     virtual bool isVisited() const { return false; }
     virtual bool isRequired() const { return false; }
+    virtual bool supportsRequiredAttribute() const { return false; }
     virtual bool isLinked() const { return false; }
     virtual bool isExpanded() const;
     virtual bool isVisible() const { return true; }
@@ -584,7 +600,7 @@ public:
 
     // Methods for determining accessibility text.
     virtual String stringValue() const { return String(); }
-    virtual String textUnderElement() const { return String(); }
+    virtual String textUnderElement(AccessibilityTextUnderElementMode = AccessibilityTextUnderElementMode()) const { return String(); }
     virtual String text() const { return String(); }
     virtual int textLength() const { return 0; }
     virtual String ariaLabeledByAttribute() const { return String(); }
@@ -601,6 +617,7 @@ public:
     AXID axObjectID() const { return m_id; }
     
     static AccessibilityObject* anchorElementForNode(Node*);
+    static AccessibilityObject* headingElementForNode(Node*);
     virtual Element* anchorElement() const { return 0; }
     virtual Element* actionElement() const { return 0; }
     virtual LayoutRect boundingBoxRect() const { return LayoutRect(); }
@@ -852,6 +869,10 @@ public:
     AccessibilityObjectInclusion accessibilityPlatformIncludesObject() const { return DefaultBehavior; }
 #endif
 
+#if PLATFORM(IOS)
+    int accessibilityPasswordFieldLength();
+#endif
+    
     // allows for an AccessibilityObject to update its render tree or perform
     // other operations update type operations
     void updateBackingStore();

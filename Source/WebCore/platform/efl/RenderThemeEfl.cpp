@@ -97,36 +97,33 @@ static const int mediaSliderThumbHeight = 12;
 static const char* toEdjeGroup(FormType type)
 {
     static const char* groups[] = {
-#define W(n) "webkit/widget/"n
-        W("button"),
-        W("radio"),
-        W("entry"),
-        W("checkbox"),
-        W("combo"),
+        "webkit/widget/button",
+        "webkit/widget/radio",
+        "webkit/widget/entry",
+        "webkit/widget/checkbox",
+        "webkit/widget/combo",
 #if ENABLE(PROGRESS_ELEMENT)
-        W("progressbar"),
+        "webkit/widget/progressbar",
 #endif
-        W("search/field"),
-        W("search/decoration"),
-        W("search/results_button"),
-        W("search/results_decoration"),
-        W("search/cancel_button"),
-        W("slider/vertical"),
-        W("slider/horizontal"),
-        W("slider/thumb_vertical"),
-        W("slider/thumb_horizontal"),
+        "webkit/widget/search/field",
+        "webkit/widget/search/results_button",
+        "webkit/widget/search/results_decoration",
+        "webkit/widget/search/cancel_button",
+        "webkit/widget/slider/vertical",
+        "webkit/widget/slider/horizontal",
+        "webkit/widget/slider/thumb_vertical",
+        "webkit/widget/slider/thumb_horizontal",
 #if ENABLE(VIDEO)
-        W("mediacontrol/playpause_button"),
-        W("mediacontrol/mute_button"),
-        W("mediacontrol/seekforward_button"),
-        W("mediacontrol/seekbackward_button"),
-        W("mediacontrol/fullscreen_button"),
+        "webkit/widget/mediacontrol/playpause_button",
+        "webkit/widget/mediacontrol/mute_button",
+        "webkit/widget/mediacontrol/seekforward_button",
+        "webkit/widget/mediacontrol/seekbackward_button",
+        "webkit/widget/mediacontrol/fullscreen_button",
 #endif
 #if ENABLE(VIDEO_TRACK)
-        W("mediacontrol/toggle_captions_button"),
+        "webkit/widget/mediacontrol/toggle_captions_button",
 #endif
-        W("spinner"),
-#undef W
+        "webkit/widget/spinner",
         0
     };
     ASSERT(type >= 0);
@@ -909,28 +906,6 @@ bool RenderThemeEfl::paintTextArea(RenderObject* object, const PaintInfo& info, 
     return paintTextField(object, info, rect);
 }
 
-void RenderThemeEfl::adjustSearchFieldDecorationStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
-{
-    if (!m_page && element && element->document()->page()) {
-        static_cast<RenderThemeEfl*>(element->document()->page()->theme())->adjustSearchFieldDecorationStyle(styleResolver, style, element);
-        return;
-    }
-    adjustSizeConstraints(style, SearchFieldDecoration);
-    style->resetBorder();
-    style->setWhiteSpace(PRE);
-
-    float fontScale = style->fontSize() / defaultFontSize;
-    int decorationSize = lroundf(std::min(std::max(minSearchDecorationButtonSize, defaultFontSize * fontScale), maxSearchDecorationButtonSize));
-
-    style->setWidth(Length(decorationSize + searchFieldDecorationButtonOffset, Fixed));
-    style->setHeight(Length(decorationSize, Fixed));
-}
-
-bool RenderThemeEfl::paintSearchFieldDecoration(RenderObject* object, const PaintInfo& info, const IntRect& rect)
-{
-    return paintThemePart(object, SearchFieldDecoration, info, rect);
-}
-
 void RenderThemeEfl::adjustSearchFieldResultsButtonStyle(StyleResolver* styleResolver, RenderStyle* style, Element* element) const
 {
     if (!m_page && element && element->document()->page()) {
@@ -940,6 +915,12 @@ void RenderThemeEfl::adjustSearchFieldResultsButtonStyle(StyleResolver* styleRes
     adjustSizeConstraints(style, SearchFieldResultsButton);
     style->resetBorder();
     style->setWhiteSpace(PRE);
+
+    float fontScale = style->fontSize() / defaultFontSize;
+    int decorationSize = lroundf(std::min(std::max(minSearchDecorationButtonSize, defaultFontSize * fontScale), maxSearchDecorationButtonSize));
+
+    style->setWidth(Length(decorationSize + searchFieldDecorationButtonOffset, Fixed));
+    style->setHeight(Length(decorationSize, Fixed));
 }
 
 bool RenderThemeEfl::paintSearchFieldResultsButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -956,6 +937,12 @@ void RenderThemeEfl::adjustSearchFieldResultsDecorationStyle(StyleResolver* styl
     adjustSizeConstraints(style, SearchFieldResultsDecoration);
     style->resetBorder();
     style->setWhiteSpace(PRE);
+
+    float fontScale = style->fontSize() / defaultFontSize;
+    int decorationSize = lroundf(std::min(std::max(minSearchDecorationButtonSize, defaultFontSize * fontScale), maxSearchDecorationButtonSize));
+
+    style->setWidth(Length(decorationSize + searchFieldDecorationButtonOffset, Fixed));
+    style->setHeight(Length(decorationSize, Fixed));
 }
 
 bool RenderThemeEfl::paintSearchFieldResultsDecoration(RenderObject* object, const PaintInfo& info, const IntRect& rect)
@@ -1022,7 +1009,7 @@ void RenderThemeEfl::setDefaultFontSize(int size)
     defaultFontSize = size;
 }
 
-void RenderThemeEfl::systemFont(int, FontDescription& fontDescription) const
+void RenderThemeEfl::systemFont(CSSValueID, FontDescription& fontDescription) const
 {
     // It was called by RenderEmbeddedObject::paintReplaced to render alternative string.
     // To avoid cairo_error while rendering, fontDescription should be passed.
@@ -1129,7 +1116,7 @@ bool RenderThemeEfl::paintMediaFullscreenButton(RenderObject* object, const Pain
     if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
         return false;
 
-    HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(mediaNode);
+    HTMLMediaElement* mediaElement = toHTMLMediaElement(mediaNode);
     if (!emitMediaButtonSignal(FullScreenButton, mediaElement->isFullscreen() ? MediaExitFullscreenButton : MediaEnterFullscreenButton, rect))
         return false;
 
@@ -1144,7 +1131,7 @@ bool RenderThemeEfl::paintMediaMuteButton(RenderObject* object, const PaintInfo&
     if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
         return false;
 
-    HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(mediaNode);
+    HTMLMediaElement* mediaElement = toHTMLMediaElement(mediaNode);
 
     if (!emitMediaButtonSignal(MuteUnMuteButton, mediaElement->muted() ? MediaMuteButton : MediaUnMuteButton, rect))
         return false;
@@ -1286,7 +1273,7 @@ bool RenderThemeEfl::paintMediaToggleClosedCaptionsButton(RenderObject* object, 
     if (!mediaNode || (!mediaNode->hasTagName(videoTag)))
         return false;
 
-    HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(mediaNode);
+    HTMLMediaElement* mediaElement = toHTMLMediaElement(mediaNode);
     if (!emitMediaButtonSignal(ToggleCaptionsButton, mediaElement->webkitClosedCaptionsVisible() ? MediaShowClosedCaptionsButton : MediaHideClosedCaptionsButton, rect))
         return false;
 

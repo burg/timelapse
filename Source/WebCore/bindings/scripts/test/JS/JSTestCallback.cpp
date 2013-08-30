@@ -25,7 +25,6 @@
 #include "JSTestCallback.h"
 
 #include "JSDOMStringList.h"
-#include "JSFloat32Array.h"
 #include "JSTestNode.h"
 #include "ScriptExecutionContext.h"
 #include "SerializedScriptValue.h"
@@ -36,7 +35,8 @@ using namespace JSC;
 namespace WebCore {
 
 JSTestCallback::JSTestCallback(JSObject* callback, JSDOMGlobalObject* globalObject)
-    : ActiveDOMCallback(globalObject->scriptExecutionContext())
+    : TestCallback()
+    , ActiveDOMCallback(globalObject->scriptExecutionContext())
     , m_data(new JSCallbackData(callback, globalObject))
 {
 }
@@ -54,6 +54,7 @@ JSTestCallback::~JSTestCallback()
     m_data = 0;
 #endif
 }
+
 
 // Functions
 
@@ -73,7 +74,7 @@ bool JSTestCallback::callbackWithNoParam()
     return !raisedException;
 }
 
-bool JSTestCallback::callbackWithArrayParam(Float32Array* arrayParam)
+bool JSTestCallback::callbackWithArrayParam(RefPtr<Float32Array> arrayParam)
 {
     if (!canInvokeCallback())
         return true;
@@ -148,8 +149,6 @@ bool JSTestCallback::callbackWithBoolean(bool boolParam)
 
 bool JSTestCallback::callbackRequiresThisToPass(int longParam, TestNode* testNodeParam)
 {
-    ASSERT(testNodeParam);
-
     if (!canInvokeCallback())
         return true;
 
@@ -163,9 +162,7 @@ bool JSTestCallback::callbackRequiresThisToPass(int longParam, TestNode* testNod
     args.append(toJS(exec, m_data->globalObject(), testNodeParam));
 
     bool raisedException = false;
-    JSValue jstestNodeParam = toJS(exec, m_data->globalObject(), testNodeParam);
-    m_data->invokeCallback(jstestNodeParam, args, &raisedException);
-
+    m_data->invokeCallback(args, &raisedException);
     return !raisedException;
 }
 

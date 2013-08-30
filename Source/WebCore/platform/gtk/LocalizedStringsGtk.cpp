@@ -141,6 +141,16 @@ String contextMenuItemTagOpenAudioInNewWindow()
     return String::fromUTF8(_("Open _Audio in New Window"));
 }
 
+String contextMenuItemTagDownloadVideoToDisk()
+{
+    return String::fromUTF8(_("Download _Video"));
+}
+
+String contextMenuItemTagDownloadAudioToDisk()
+{
+    return String::fromUTF8(_("Download _Audio"));
+}
+
 String contextMenuItemTagCopyVideoLinkToClipboard()
 {
     return String::fromUTF8(_("Cop_y Video Link Location"));
@@ -154,6 +164,16 @@ String contextMenuItemTagCopyAudioLinkToClipboard()
 String contextMenuItemTagToggleMediaControls()
 {
     return String::fromUTF8(_("_Toggle Media Controls"));
+}
+
+String contextMenuItemTagShowMediaControls()
+{
+    return String::fromUTF8(_("_Show Media Controls"));
+}
+
+String contextMenuItemTagHideMediaControls()
+{
+    return String::fromUTF8(_("_Hide Media Controls"));
 }
 
 String contextMenuItemTagToggleMediaLoop()
@@ -471,6 +491,11 @@ String AXMenuListActionVerb()
 {
     return String();
 }
+
+String AXListItemActionVerb()
+{
+    return String();
+}
     
 String missingPluginText()
 {
@@ -768,7 +793,7 @@ String textTrackSubtitlesText()
     return String::fromUTF8(C_("Subtitles", "Menu section heading for subtitles"));
 }
 
-String textTrackOffText()
+String textTrackOffMenuItemText()
 {
     return String::fromUTF8(C_("Off", "Menu item label for the track that represents disabling closed captions"));
 }

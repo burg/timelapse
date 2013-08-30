@@ -67,7 +67,7 @@ DrawingAreaImpl::DrawingAreaImpl(WebPage* webPage, const WebPageCreationParamete
     , m_displayTimer(RunLoop::main(), this, &DrawingAreaImpl::displayTimerFired)
     , m_exitCompositingTimer(RunLoop::main(), this, &DrawingAreaImpl::exitAcceleratedCompositingMode)
 {
-    if (webPage->corePage()->settings()->acceleratedDrawingEnabled() || webPage->corePage()->settings()->forceCompositingMode())
+    if (webPage->corePage()->settings().acceleratedDrawingEnabled() || webPage->corePage()->settings().forceCompositingMode())
         m_alwaysUseCompositing = true;
 
 #if USE(COORDINATED_GRAPHICS)
@@ -109,9 +109,6 @@ void DrawingAreaImpl::setNeedsDisplayInRect(const IntRect& rect)
     if (dirtyRect.isEmpty())
         return;
 
-    if (m_webPage->mainFrameHasCustomRepresentation())
-        return;
-
     m_dirtyRegion.unite(dirtyRect);
     scheduleDisplay();
 }
@@ -129,9 +126,6 @@ void DrawingAreaImpl::scroll(const IntRect& scrollRect, const IntSize& scrollDel
         m_layerTreeHost->scrollNonCompositedContents(scrollRect);
         return;
     }
-
-    if (m_webPage->mainFrameHasCustomRepresentation())
-        return;
 
     if (scrollRect.isEmpty())
         return;
@@ -259,26 +253,6 @@ void DrawingAreaImpl::setPageOverlayOpacity(PageOverlay* pageOverlay, float valu
         m_layerTreeHost->setPageOverlayOpacity(pageOverlay, value);
 }
 
-bool DrawingAreaImpl::pageOverlayShouldApplyFadeWhenPainting() const
-{
-    if (m_layerTreeHost && !m_layerTreeHost->pageOverlayShouldApplyFadeWhenPainting())
-        return false;
-
-    return true;
-}
-
-void DrawingAreaImpl::pageCustomRepresentationChanged()
-{
-    if (!m_alwaysUseCompositing)
-        return;
-
-    if (m_webPage->mainFrameHasCustomRepresentation()) {
-        if (m_layerTreeHost)
-            exitAcceleratedCompositingMode();
-    } else if (!m_layerTreeHost)
-        enterAcceleratedCompositingMode(0);
-}
-
 void DrawingAreaImpl::setPaintingEnabled(bool paintingEnabled)
 {
     m_isPaintingEnabled = paintingEnabled;
@@ -290,16 +264,16 @@ void DrawingAreaImpl::updatePreferences(const WebPreferencesStore& store)
     // Soon we want pages with fixed positioned elements to be able to be scrolled by the ScrollingCoordinator.
     // As a part of that work, we have to composite fixed position elements, and we have to allow those
     // elements to create a stacking context.
-    m_webPage->corePage()->settings()->setAcceleratedCompositingForFixedPositionEnabled(true);
-    m_webPage->corePage()->settings()->setFixedPositionCreatesStackingContext(true);
+    m_webPage->corePage()->settings().setAcceleratedCompositingForFixedPositionEnabled(true);
+    m_webPage->corePage()->settings().setFixedPositionCreatesStackingContext(true);
 
     // <rdar://problem/10697417>: It is necessary to force compositing when accelerate drawing
     // is enabled on Mac so that scrollbars are always in their own layers.
-    if (m_webPage->corePage()->settings()->acceleratedDrawingEnabled())
-        m_webPage->corePage()->settings()->setForceCompositingMode(LayerTreeHost::supportsAcceleratedCompositing());
+    if (m_webPage->corePage()->settings().acceleratedDrawingEnabled())
+        m_webPage->corePage()->settings().setForceCompositingMode(LayerTreeHost::supportsAcceleratedCompositing());
     else
 #endif
-        m_webPage->corePage()->settings()->setForceCompositingMode(store.getBoolValueForKey(WebPreferencesKey::forceCompositingModeKey()) && LayerTreeHost::supportsAcceleratedCompositing());
+        m_webPage->corePage()->settings().setForceCompositingMode(store.getBoolValueForKey(WebPreferencesKey::forceCompositingModeKey()) && LayerTreeHost::supportsAcceleratedCompositing());
 }
 
 void DrawingAreaImpl::layerHostDidFlushLayers()
@@ -540,7 +514,7 @@ void DrawingAreaImpl::enterAcceleratedCompositingMode(GraphicsLayer* graphicsLay
 
 void DrawingAreaImpl::exitAcceleratedCompositingMode()
 {
-    if (m_alwaysUseCompositing && !m_webPage->mainFrameHasCustomRepresentation())
+    if (m_alwaysUseCompositing)
         return;
 
     ASSERT(!m_layerTreeStateIsFrozen);
@@ -676,13 +650,6 @@ void DrawingAreaImpl::display(UpdateInfo& updateInfo)
     ASSERT(!m_isPaintingSuspended);
     ASSERT(!m_layerTreeHost);
     ASSERT(!m_webPage->size().isEmpty());
-
-    // FIXME: It would be better if we could avoid painting altogether when there is a custom representation.
-    if (m_webPage->mainFrameHasCustomRepresentation()) {
-        // ASSUMPTION: the custom representation will be painting the dirty region for us.
-        m_dirtyRegion = Region();
-        return;
-    }
 
     m_webPage->layoutIfNeeded();
 

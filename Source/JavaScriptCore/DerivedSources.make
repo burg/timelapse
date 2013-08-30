@@ -42,11 +42,11 @@ all : \
     DateConstructor.lut.h \
     DatePrototype.lut.h \
     ErrorPrototype.lut.h \
+    JSDataViewPrototype.lut.h \
     JSONObject.lut.h \
     JSGlobalObject.lut.h \
     KeywordLookup.h \
     Lexer.lut.h \
-    MathObject.lut.h \
     NamePrototype.lut.h \
     NumberConstructor.lut.h \
     NumberPrototype.lut.h \

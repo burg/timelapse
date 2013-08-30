@@ -37,8 +37,8 @@
 namespace WebKit {
 
 class NetworkResourceLoader;
-class SchedulableLoader;
-class SyncNetworkResourceLoader;
+
+typedef Deque<RefPtr<NetworkResourceLoader>> LoaderQueue;
 typedef uint64_t ResourceLoadIdentifier;
 
 class HostRecord : public RefCounted<HostRecord> {
@@ -52,9 +52,9 @@ public:
     
     const String& name() const { return m_name; }
     
-    void scheduleResourceLoader(PassRefPtr<SchedulableLoader>);
-    void addLoaderInProgress(SchedulableLoader*);
-    void removeLoader(SchedulableLoader*);
+    void scheduleResourceLoader(PassRefPtr<NetworkResourceLoader>);
+    void addLoaderInProgress(NetworkResourceLoader*);
+    void removeLoader(NetworkResourceLoader*);
     bool hasRequests() const;
     void servePendingRequests(WebCore::ResourceLoadPriority);
 
@@ -64,16 +64,14 @@ public:
 private:
     HostRecord(const String& name, int maxRequestsInFlight);
 
-    typedef Deque<RefPtr<SchedulableLoader>> LoaderQueue;
-
     void servePendingRequestsForQueue(LoaderQueue&, WebCore::ResourceLoadPriority);
-    bool limitsRequests(WebCore::ResourceLoadPriority, bool serialLoadingEnabled) const;
+    bool limitsRequests(WebCore::ResourceLoadPriority, NetworkResourceLoader*) const;
 
     LoaderQueue m_loadersPending[WebCore::ResourceLoadPriorityHighest + 1];
     LoaderQueue m_syncLoadersPending;
 
-    typedef HashSet<RefPtr<SchedulableLoader>> SchedulableLoaderSet;
-    SchedulableLoaderSet m_loadersInProgress;
+    typedef HashSet<RefPtr<NetworkResourceLoader>> NetworkResourceLoaderSet;
+    NetworkResourceLoaderSet m_loadersInProgress;
 
     const String m_name;
     int m_maxRequestsInFlight;

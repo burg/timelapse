@@ -119,7 +119,8 @@ void String::append(const String& str)
     }
 }
 
-void String::append(LChar c)
+template <typename CharacterType>
+inline void String::appendInternal(CharacterType c)
 {
     // FIXME: This is extremely inefficient. So much so that we might want to take this
     // out of String's API. We can make it better by optimizing the case where exactly
@@ -137,22 +138,14 @@ void String::append(LChar c)
         m_impl = StringImpl::create(&c, 1);
 }
 
+void String::append(LChar c)
+{
+    appendInternal(c);
+}
+
 void String::append(UChar c)
 {
-    // FIXME: This is extremely inefficient. So much so that we might want to take this
-    // out of String's API. We can make it better by optimizing the case where exactly
-    // one String is pointing at this StringImpl, but even then it's going to require a
-    // call to fastMalloc every single time.
-    if (m_impl) {
-        UChar* data;
-        if (m_impl->length() >= numeric_limits<unsigned>::max())
-            CRASH();
-        RefPtr<StringImpl> newImpl = StringImpl::createUninitialized(m_impl->length() + 1, data);
-        memcpy(data, m_impl->characters(), m_impl->length() * sizeof(UChar));
-        data[m_impl->length()] = c;
-        m_impl = newImpl.release();
-    } else
-        m_impl = StringImpl::create(&c, 1);
+    appendInternal(c);
 }
 
 int codePointCompare(const String& a, const String& b)
@@ -394,14 +387,26 @@ bool String::percentage(int& result) const
     return true;
 }
 
-const UChar* String::charactersWithNullTermination()
+Vector<UChar> String::charactersWithNullTermination() const
 {
-    if (!m_impl)
-        return 0;
-    if (m_impl->hasTerminatingNullCharacter())
-        return m_impl->characters();
-    m_impl = StringImpl::createWithTerminatingNullCharacter(*m_impl);
-    return m_impl->characters();
+    Vector<UChar> result;
+
+    if (m_impl) {
+        result.reserveInitialCapacity(length() + 1);
+
+        if (is8Bit()) {
+            const LChar* characters8 = m_impl->characters8();
+            for (size_t i = 0; i < length(); ++i)
+                result.uncheckedAppend(characters8[i]);
+        } else {
+            const UChar* characters16 = m_impl->characters16();
+            result.append(characters16, m_impl->length());
+        }
+
+        result.append(0);
+    }
+
+    return result;
 }
 
 String String::format(const char *format, ...)
@@ -787,92 +792,12 @@ CString String::latin1() const
     return result;
 }
 
-// Helper to write a three-byte UTF-8 code point to the buffer, caller must check room is available.
-static inline void putUTF8Triple(char*& buffer, UChar ch)
-{
-    ASSERT(ch >= 0x0800);
-    *buffer++ = static_cast<char>(((ch >> 12) & 0x0F) | 0xE0);
-    *buffer++ = static_cast<char>(((ch >> 6) & 0x3F) | 0x80);
-    *buffer++ = static_cast<char>((ch & 0x3F) | 0x80);
-}
-
 CString String::utf8(ConversionMode mode) const
 {
-    unsigned length = this->length();
-
-    if (!length)
+    if (!m_impl)
         return CString("", 0);
-
-    // Allocate a buffer big enough to hold all the characters
-    // (an individual UTF-16 UChar can only expand to 3 UTF-8 bytes).
-    // Optimization ideas, if we find this function is hot:
-    //  * We could speculatively create a CStringBuffer to contain 'length' 
-    //    characters, and resize if necessary (i.e. if the buffer contains
-    //    non-ascii characters). (Alternatively, scan the buffer first for
-    //    ascii characters, so we know this will be sufficient).
-    //  * We could allocate a CStringBuffer with an appropriate size to
-    //    have a good chance of being able to write the string into the
-    //    buffer without reallocing (say, 1.5 x length).
-    if (length > numeric_limits<unsigned>::max() / 3)
-        return CString();
-    Vector<char, 1024> bufferVector(length * 3);
-
-    char* buffer = bufferVector.data();
-
-    if (is8Bit()) {
-        const LChar* characters = this->characters8();
-
-        ConversionResult result = convertLatin1ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size());
-        ASSERT_UNUSED(result, result != targetExhausted); // (length * 3) should be sufficient for any conversion
-    } else {
-        const UChar* characters = this->characters16();
-
-        if (mode == StrictConversionReplacingUnpairedSurrogatesWithFFFD) {
-            const UChar* charactersEnd = characters + length;
-            char* bufferEnd = buffer + bufferVector.size();
-            while (characters < charactersEnd) {
-                // Use strict conversion to detect unpaired surrogates.
-                ConversionResult result = convertUTF16ToUTF8(&characters, charactersEnd, &buffer, bufferEnd, true);
-                ASSERT(result != targetExhausted);
-                // Conversion fails when there is an unpaired surrogate.
-                // Put replacement character (U+FFFD) instead of the unpaired surrogate.
-                if (result != conversionOK) {
-                    ASSERT((0xD800 <= *characters && *characters <= 0xDFFF));
-                    // There should be room left, since one UChar hasn't been converted.
-                    ASSERT((buffer + 3) <= bufferEnd);
-                    putUTF8Triple(buffer, replacementCharacter);
-                    ++characters;
-                }
-            }
-        } else {
-            bool strict = mode == StrictConversion;
-            ConversionResult result = convertUTF16ToUTF8(&characters, characters + length, &buffer, buffer + bufferVector.size(), strict);
-            ASSERT(result != targetExhausted); // (length * 3) should be sufficient for any conversion
-
-            // Only produced from strict conversion.
-            if (result == sourceIllegal) {
-                ASSERT(strict);
-                return CString();
-            }
-
-            // Check for an unconverted high surrogate.
-            if (result == sourceExhausted) {
-                if (strict)
-                    return CString();
-                // This should be one unpaired high surrogate. Treat it the same
-                // was as an unpaired high surrogate would have been handled in
-                // the middle of a string with non-strict conversion - which is
-                // to say, simply encode it to UTF-8.
-                ASSERT((characters + 1) == (this->characters() + length));
-                ASSERT((*characters >= 0xD800) && (*characters <= 0xDBFF));
-                // There should be room left, since one UChar hasn't been converted.
-                ASSERT((buffer + 3) <= (buffer + bufferVector.size()));
-                putUTF8Triple(buffer, *characters);
-            }
-        }
-    }
-
-    return CString(bufferVector.data(), buffer - bufferVector.data());
+    
+    return m_impl->utf8(mode);
 }
 
 String String::make8BitFrom16BitSource(const UChar* source, size_t length)
@@ -912,29 +837,20 @@ String String::fromUTF8(const LChar* stringStart, size_t length)
     if (!length)
         return emptyString();
 
-    // We'll use a StringImpl as a buffer; if the source string only contains ascii this should be
-    // the right length, if there are any multi-byte sequences this buffer will be too large.
-    UChar* buffer;
-    String stringBuffer(StringImpl::createUninitialized(length, buffer));
-    UChar* bufferEnd = buffer + length;
+    if (charactersAreAllASCII(stringStart, length))
+        return StringImpl::create(stringStart, length);
+
+    Vector<UChar, 1024> buffer(length);
+    UChar* bufferStart = buffer.data();
  
-    // Try converting into the buffer.
+    UChar* bufferCurrent = bufferStart;
     const char* stringCurrent = reinterpret_cast<const char*>(stringStart);
-    bool isAllASCII;
-    if (convertUTF8ToUTF16(&stringCurrent, reinterpret_cast<const char *>(stringStart + length), &buffer, bufferEnd, &isAllASCII) != conversionOK)
+    if (convertUTF8ToUTF16(&stringCurrent, reinterpret_cast<const char *>(stringStart + length), &bufferCurrent, bufferCurrent + buffer.size()) != conversionOK)
         return String();
 
-    if (isAllASCII)
-        return String(stringStart, length);
-
-    // stringBuffer is full (the input must have been all ascii) so just return it!
-    if (buffer == bufferEnd)
-        return stringBuffer;
-
-    // stringBuffer served its purpose as a buffer, copy the contents out into a new string.
-    unsigned utf16Length = buffer - stringBuffer.characters();
+    unsigned utf16Length = bufferCurrent - bufferStart;
     ASSERT(utf16Length < length);
-    return String(stringBuffer.characters(), utf16Length);
+    return StringImpl::create(bufferStart, utf16Length);
 }
 
 String String::fromUTF8(const LChar* string)

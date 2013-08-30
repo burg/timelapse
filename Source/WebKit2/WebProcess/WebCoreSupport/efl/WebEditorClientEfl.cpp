@@ -49,7 +49,7 @@ void WebEditorClient::handleKeyboardEvent(KeyboardEvent* event)
 
 void WebEditorClient::handleInputMethodKeydown(KeyboardEvent* event)
 {
-    Frame* frame = m_page->corePage()->focusController()->focusedOrMainFrame();
+    Frame* frame = m_page->corePage()->focusController().focusedOrMainFrame();
     if (!frame || !frame->editor().canEdit())
         return;
 
@@ -60,12 +60,5 @@ void WebEditorClient::handleInputMethodKeydown(KeyboardEvent* event)
     if (handled)
         event->setDefaultHandled();
 }
-
-#if USE(UNIFIED_TEXT_CHECKING)
-void WebEditorClient::checkTextOfParagraph(const UChar* text, int length, WebCore::TextCheckingTypeMask checkingTypes, Vector<TextCheckingResult>& results)
-{
-    m_page->sendSync(Messages::WebPageProxy::CheckTextOfParagraph(String(text, length), checkingTypes), Messages::WebPageProxy::CheckTextOfParagraph::Reply(results));
-}
-#endif
 
 }

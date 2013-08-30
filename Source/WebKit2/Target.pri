@@ -15,6 +15,12 @@ CONFIG += staticlib
 
 RESOURCES += $$PWD/WebKit2.qrc
 
+enable?(netscape_plugin_api):enable?(plugin_architecture_unsupported) {
+    # Netscape plugins are not supported for this architecture on WebKit2,
+    # but they may have been enabled for WebKit1.
+    WEBKIT_CONFIG -= netscape_plugin_api
+}
+
 HEADERS += \
     Platform/CoreIPC/ArgumentDecoder.h \
     Platform/CoreIPC/ArgumentEncoder.h \
@@ -242,7 +248,7 @@ HEADERS += \
     UIProcess/WebBackForwardList.h \
     UIProcess/WebBatteryManagerProxy.h \
     UIProcess/WebBatteryProvider.h \
-    UIProcess/WebColorChooserProxy.h \
+    UIProcess/WebColorPicker.h \
     UIProcess/WebColorPickerResultListenerProxy.h \
     UIProcess/WebConnectionToWebProcess.h \
     UIProcess/WebContext.h \
@@ -310,6 +316,7 @@ HEADERS += \
     WebProcess/InjectedBundle/InjectedBundleClient.h \
     WebProcess/InjectedBundle/InjectedBundleDOMWindowExtension.h \
     WebProcess/InjectedBundle/InjectedBundleHitTestResult.h \
+    WebProcess/InjectedBundle/InjectedBundleHitTestResultMediaType.h \
     WebProcess/InjectedBundle/InjectedBundleNavigationAction.h \
     WebProcess/InjectedBundle/InjectedBundlePageContextMenuClient.h \
     WebProcess/InjectedBundle/InjectedBundlePageDiagnosticLoggingClient.h \
@@ -564,6 +571,7 @@ SOURCES += \
     UIProcess/BackingStore.cpp \
     UIProcess/qt/BackingStoreQt.cpp \
     UIProcess/CoordinatedGraphics/CoordinatedLayerTreeHostProxy.cpp \
+    UIProcess/CoordinatedGraphics/WebPageProxyCoordinatedGraphics.cpp \
     UIProcess/DefaultUndoController.cpp \
     UIProcess/Downloads/DownloadProxy.cpp \
     UIProcess/Downloads/DownloadProxyMap.cpp \
@@ -598,7 +606,7 @@ SOURCES += \
     UIProcess/WebBackForwardList.cpp \
     UIProcess/WebBatteryManagerProxy.cpp \
     UIProcess/WebBatteryProvider.cpp \
-    UIProcess/WebColorChooserProxy.cpp \
+    UIProcess/WebColorPicker.cpp \
     UIProcess/WebColorPickerResultListenerProxy.cpp \
     UIProcess/WebConnectionToWebProcess.cpp \
     UIProcess/WebContext.cpp \
@@ -747,6 +755,7 @@ SOURCES += \
     WebProcess/WebPage/EventDispatcher.cpp \
     WebProcess/WebPage/FindController.cpp \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp \
+    WebProcess/WebPage/CoordinatedGraphics/WebPageCoordinatedGraphics.cpp \
     WebProcess/WebPage/TapHighlightController.cpp \
     WebProcess/WebPage/LayerTreeHost.cpp \
     WebProcess/WebPage/PageBanner.cpp \
@@ -844,25 +853,13 @@ have?(QTQUICK) {
 
     enable?(INPUT_TYPE_COLOR) {
         HEADERS += \
-            UIProcess/qt/WebColorChooserProxyQt.h
+            UIProcess/qt/WebColorPickerQt.h
         SOURCES += \
-            UIProcess/qt/WebColorChooserProxyQt.cpp
+            UIProcess/qt/WebColorPickerQt.cpp
     }
 }
 
 mac: {
-    use?(QTKIT) {
-        DEFINES += NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
-        isEqual(QT_ARCH, "i386") {
-            DEFINES+=NS_BUILD_32_LIKE_64
-        }
-        INCLUDEPATH += \
-            $$PWD/../../WebKitLibraries/
-        HEADERS += \
-            WebProcess/WebCoreSupport/qt/WebSystemInterface.h
-        OBJECTIVE_SOURCES += \
-            WebProcess/WebCoreSupport/qt/WebSystemInterface.mm
-    }
     INCLUDEPATH += \
         Platform/mac \
         Platform/CoreIPC/mac

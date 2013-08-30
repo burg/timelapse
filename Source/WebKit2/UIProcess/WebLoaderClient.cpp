@@ -126,14 +126,6 @@ void WebLoaderClient::didFirstVisuallyNonEmptyLayoutForFrame(WebPageProxy* page,
     m_client.didFirstVisuallyNonEmptyLayoutForFrame(toAPI(page), toAPI(frame), toAPI(userData), m_client.clientInfo);
 }
 
-void WebLoaderClient::didNewFirstVisuallyNonEmptyLayout(WebPageProxy* page, APIObject* userData)
-{
-    if (!m_client.didNewFirstVisuallyNonEmptyLayout)
-        return;
-
-    m_client.didNewFirstVisuallyNonEmptyLayout(toAPI(page), toAPI(userData), m_client.clientInfo);
-}
-
 void WebLoaderClient::didLayout(WebPageProxy* page, LayoutMilestones milestones, APIObject* userData)
 {
     if (!m_client.didLayout)
@@ -319,12 +311,22 @@ void WebLoaderClient::didBlockInsecurePluginVersion(WebPageProxy* page, Immutabl
             m_client.clientInfo);
 }
 
-PluginModuleLoadPolicy WebLoaderClient::pluginLoadPolicy(WebPageProxy* page, PluginModuleLoadPolicy currentPluginLoadPolicy, ImmutableDictionary* pluginInformation)
+PluginModuleLoadPolicy WebLoaderClient::pluginLoadPolicy(WebPageProxy* page, PluginModuleLoadPolicy currentPluginLoadPolicy, ImmutableDictionary* pluginInformation, String& unavailabilityDescription)
 {
-    if (!m_client.pluginLoadPolicy)
-        return currentPluginLoadPolicy;
+    WKStringRef unavailabilityDescriptionOut = 0;
+    PluginModuleLoadPolicy loadPolicy = currentPluginLoadPolicy;
 
-    return toPluginModuleLoadPolicy(m_client.pluginLoadPolicy(toAPI(page), toWKPluginLoadPolicy(currentPluginLoadPolicy), toAPI(pluginInformation), m_client.clientInfo));
+    if (m_client.pluginLoadPolicy_deprecatedForUseWithV2)
+        loadPolicy = toPluginModuleLoadPolicy(m_client.pluginLoadPolicy_deprecatedForUseWithV2(toAPI(page), toWKPluginLoadPolicy(currentPluginLoadPolicy), toAPI(pluginInformation), m_client.clientInfo));
+    else if (m_client.pluginLoadPolicy)
+        loadPolicy = toPluginModuleLoadPolicy(m_client.pluginLoadPolicy(toAPI(page), toWKPluginLoadPolicy(currentPluginLoadPolicy), toAPI(pluginInformation), &unavailabilityDescriptionOut, m_client.clientInfo));
+
+    if (unavailabilityDescriptionOut) {
+        RefPtr<WebString> webUnavailabilityDescription = adoptRef(toImpl(unavailabilityDescriptionOut));
+        unavailabilityDescription = webUnavailabilityDescription->string();
+    }
+    
+    return loadPolicy;
 }
 
 } // namespace WebKit

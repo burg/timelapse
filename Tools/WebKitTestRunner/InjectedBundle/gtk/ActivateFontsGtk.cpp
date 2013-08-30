@@ -56,7 +56,7 @@ void initializeGtkSettings()
 
 CString getOutputDir()
 {
-    const char* webkitOutputDir = g_getenv("WEBKITOUTPUTDIR");
+    const char* webkitOutputDir = g_getenv("WEBKIT_OUTPUTDIR");
     if (webkitOutputDir)
         return webkitOutputDir;
 
@@ -80,7 +80,7 @@ static CString getFontsPath()
     return CString();
 }
 
-void inititializeFontConfigSetting()
+void initializeFontConfigSetting()
 {
     FcInit();
 
@@ -151,7 +151,7 @@ void inititializeFontConfigSetting()
 void activateFonts()
 {
     initializeGtkSettings();
-    inititializeFontConfigSetting();
+    initializeFontConfigSetting();
 }
 
 }

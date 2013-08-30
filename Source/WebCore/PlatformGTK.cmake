@@ -42,6 +42,9 @@ list(APPEND WebCore_SOURCES
 
     editing/atk/FrameSelectionAtk.cpp
 
+    loader/soup/CachedRawResourceSoup.cpp
+    loader/soup/SubresourceLoaderSoup.cpp
+
     page/gtk/DragControllerGtk.cpp
     page/gtk/EventHandlerGtk.cpp
 
@@ -56,7 +59,6 @@ list(APPEND WebCore_SOURCES
     platform/audio/gstreamer/WebKitWebAudioSourceGStreamer.cpp
 
     platform/gtk/AsyncFileSystemGtk.cpp
-    platform/gtk/ClipboardGtk.cpp
     platform/gtk/ClipboardUtilitiesGtk.cpp
     platform/gtk/ContextMenuGtk.cpp
     platform/gtk/ContextMenuItemGtk.cpp
@@ -78,7 +80,6 @@ list(APPEND WebCore_SOURCES
     platform/gtk/GtkPopupMenu.cpp
     platform/gtk/GtkUtilities.cpp
     platform/gtk/GtkVersioning.c
-    platform/gtk/GtkWidgetBackingStoreX11.cpp
     platform/gtk/KeyBindingTranslator.cpp
     platform/gtk/LanguageGtk.cpp
     platform/gtk/LocalizedStringsGtk.cpp
@@ -108,6 +109,7 @@ list(APPEND WebCore_SOURCES
     platform/gtk/TemporaryLinkStubs.cpp
     platform/gtk/UserAgentGtk.cpp
     platform/gtk/WebKitAuthenticationWidget.cpp
+    platform/gtk/WidgetBackingStoreGtkX11.cpp
     platform/gtk/WidgetGtk.cpp
     platform/gtk/WidgetRenderingContext.cpp
 
@@ -116,10 +118,10 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cairo/DrawingBufferCairo.cpp
     platform/graphics/cairo/FontCairo.cpp
     platform/graphics/cairo/FontCairoHarfbuzzNG.cpp
-    platform/graphics/cairo/GLContext.cpp
+    platform/graphics/GLContext.cpp
     platform/graphics/cairo/GradientCairo.cpp
     platform/graphics/cairo/GraphicsContext3DCairo.cpp
-    platform/graphics/cairo/GraphicsContext3DPrivate.cpp
+    platform/graphics/GraphicsContext3DPrivate.cpp
     platform/graphics/cairo/GraphicsContextCairo.cpp
     platform/graphics/cairo/ImageBufferCairo.cpp
     platform/graphics/cairo/ImageCairo.cpp

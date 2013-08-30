@@ -89,7 +89,6 @@ RenderListBox::RenderListBox(Element* element)
     , m_inAutoscroll(false)
     , m_optionsWidth(0)
     , m_indexOffset(0)
-    , m_intrinsicLogicalHeight(0)
 {
     ASSERT(element);
     ASSERT(element->isHTMLElement());
@@ -125,14 +124,14 @@ void RenderListBox::updateFromElement()
             HTMLElement* element = listItems[i];
             String text;
             Font itemFont = style()->font();
-            if (element->hasTagName(optionTag))
+            if (isHTMLOptionElement(element))
                 text = toHTMLOptionElement(element)->textIndentedToRespectGroupLabel();
-            else if (element->hasTagName(optgroupTag)) {
-                text = static_cast<const HTMLOptGroupElement*>(element)->groupLabelText();
+            else if (isHTMLOptGroupElement(element)) {
+                text = toHTMLOptGroupElement(element)->groupLabelText();
                 FontDescription d = itemFont.fontDescription();
                 d.setWeight(d.bolderWeight());
                 itemFont = Font(d, itemFont.letterSpacing(), itemFont.wordSpacing());
-                itemFont.update(document()->ensureStyleResolver()->fontSelector());
+                itemFont.update(document()->ensureStyleResolver().fontSelector());
             }
 
             if (!text.isEmpty()) {
@@ -270,8 +269,8 @@ LayoutUnit RenderListBox::listHeight() const
 
 void RenderListBox::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const
 {
-    m_intrinsicLogicalHeight = itemHeight() * size() - rowSpacing + borderAndPaddingHeight();
-    RenderBox::computeLogicalHeight(m_intrinsicLogicalHeight, logicalTop, computedValues);
+    LayoutUnit height = itemHeight() * size() - rowSpacing + borderAndPaddingHeight();
+    RenderBox::computeLogicalHeight(height, logicalTop, computedValues);
 }
 
 int RenderListBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode lineDirection, LinePositionMode linePositionMode) const
@@ -348,7 +347,8 @@ void RenderListBox::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint&
     const Vector<HTMLElement*>& listItems = select->listItems();
     for (int i = 0; i < size; ++i) {
         HTMLElement* element = listItems[i];
-        if (element->hasTagName(optionTag) && !element->isDisabledFormControl()) {
+        if (isHTMLOptionElement(element) && !element->isDisabledFormControl()) {
+            select->setActiveSelectionEndIndex(i);
             rects.append(pixelSnappedIntRect(itemBoundingBoxRect(additionalOffset, i)));
             return;
         }
@@ -404,16 +404,16 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
         return;
 
     String itemText;
-    bool isOptionElement = element->hasTagName(optionTag);
+    bool isOptionElement = isHTMLOptionElement(element);
     if (isOptionElement)
         itemText = toHTMLOptionElement(element)->textIndentedToRespectGroupLabel();
-    else if (element->hasTagName(optgroupTag))
-        itemText = static_cast<const HTMLOptGroupElement*>(element)->groupLabelText();
+    else if (isHTMLOptGroupElement(element))
+        itemText = toHTMLOptGroupElement(element)->groupLabelText();
     applyTextTransform(style(), itemText, ' ');
 
     Color textColor = element->renderStyle() ? element->renderStyle()->visitedDependentColor(CSSPropertyColor) : style()->visitedDependentColor(CSSPropertyColor);
     if (isOptionElement && toHTMLOptionElement(element)->selected()) {
-        if (frame()->selection()->isFocusedAndActive() && document()->focusedElement() == node())
+        if (frame()->selection().isFocusedAndActive() && document()->focusedElement() == node())
             textColor = theme()->activeListBoxSelectionForegroundColor();
         // Honor the foreground color for disabled items
         else if (!element->isDisabledFormControl() && !select->isDisabledFormControl())
@@ -428,11 +428,11 @@ void RenderListBox::paintItemForeground(PaintInfo& paintInfo, const LayoutPoint&
     LayoutRect r = itemBoundingBoxRect(paintOffset, listIndex);
     r.move(itemOffsetForAlignment(textRun, itemStyle, itemFont, r));
 
-    if (element->hasTagName(optgroupTag)) {
+    if (isHTMLOptGroupElement(element)) {
         FontDescription d = itemFont.fontDescription();
         d.setWeight(d.bolderWeight());
         itemFont = Font(d, itemFont.letterSpacing(), itemFont.wordSpacing());
-        itemFont.update(document()->ensureStyleResolver()->fontSelector());
+        itemFont.update(document()->ensureStyleResolver().fontSelector());
     }
 
     // Draw the item text
@@ -445,8 +445,8 @@ void RenderListBox::paintItemBackground(PaintInfo& paintInfo, const LayoutPoint&
     HTMLElement* element = listItems[listIndex];
 
     Color backColor;
-    if (element->hasTagName(optionTag) && toHTMLOptionElement(element)->selected()) {
-        if (frame()->selection()->isFocusedAndActive() && document()->focusedElement() == node())
+    if (isHTMLOptionElement(element) && toHTMLOptionElement(element)->selected()) {
+        if (frame()->selection().isFocusedAndActive() && document()->focusedElement() == node())
             backColor = theme()->activeListBoxSelectionBackgroundColor();
         else
             backColor = theme()->inactiveListBoxSelectionBackgroundColor();
@@ -504,7 +504,7 @@ void RenderListBox::panScroll(const IntPoint& panStartMousePosition)
     // FIXME: This doesn't work correctly with transforms.
     FloatPoint absOffset = localToAbsolute();
 
-    IntPoint lastKnownMousePosition = frame()->eventHandler()->lastKnownMousePosition();
+    IntPoint lastKnownMousePosition = frame()->eventHandler().lastKnownMousePosition();
     // We need to check if the last known mouse position is out of the window. When the mouse is out of the window, the position is incoherent
     static IntPoint previousMousePosition;
     if (lastKnownMousePosition.y() < 0)
@@ -561,7 +561,7 @@ int RenderListBox::scrollToward(const IntPoint& destination)
 
 void RenderListBox::autoscroll(const IntPoint&)
 {
-    IntPoint pos = frame()->view()->windowToContents(frame()->eventHandler()->lastKnownMousePosition());
+    IntPoint pos = frame()->view()->windowToContents(frame()->eventHandler().lastKnownMousePosition());
 
     int endIndex = scrollToward(pos);
     if (selectElement()->isDisabledFormControl())
@@ -731,7 +731,7 @@ LayoutRect RenderListBox::controlClipRect(const LayoutPoint& additionalOffset) c
 bool RenderListBox::isActive() const
 {
     Page* page = frame()->page();
-    return page && page->focusController()->isActive();
+    return page && page->focusController().isActive();
 }
 
 void RenderListBox::invalidateScrollbarRect(Scrollbar* scrollbar, const IntRect& rect)

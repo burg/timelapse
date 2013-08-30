@@ -42,7 +42,7 @@ class WrappedNodeVisitor;
 class Page;
 class ScriptObject;
 class ScriptValue;
-class WorkerContext;
+class WorkerGlobalScope;
 
 class ScriptProfiler {
     WTF_MAKE_NONCOPYABLE(ScriptProfiler);
@@ -62,19 +62,17 @@ public:
     static void start(ScriptState* state, const String& title);
     static void startForPage(Page*, const String& title);
 #if ENABLE(WORKERS)
-    static void startForWorkerContext(WorkerContext*, const String& title);
+    static void startForWorkerGlobalScope(WorkerGlobalScope*, const String& title);
 #endif
     static PassRefPtr<ScriptProfile> stop(ScriptState* state, const String& title);
     static PassRefPtr<ScriptProfile> stopForPage(Page*, const String& title);
 #if ENABLE(WORKERS)
-    static PassRefPtr<ScriptProfile> stopForWorkerContext(WorkerContext*, const String& title);
+    static PassRefPtr<ScriptProfile> stopForWorkerGlobalScope(WorkerGlobalScope*, const String& title);
 #endif
     static PassRefPtr<ScriptHeapSnapshot> takeHeapSnapshot(const String&, HeapSnapshotProgress*) { return 0; }
     static bool causesRecompilation() { return true; }
     static bool isSampling() { return false; }
     static bool hasHeapProfiler() { return false; }
-    // FIXME: Implement this counter for JSC. See bug 73936 for more details.
-    static void visitNodeWrappers(WrappedNodeVisitor*) { }
     // FIXME: Support these methods for JSC. See bug 90358.
     static void visitExternalStrings(ExternalStringVisitor*) { }
     static void visitExternalArrays(ExternalArrayVisitor*) { }

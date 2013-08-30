@@ -43,6 +43,7 @@
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(TOUCH_EVENTS)
+#include "GestureRecognizer.h"
 #include "ewk_touch.h"
 #endif
 
@@ -146,6 +147,7 @@ public:
     void feedTouchEvent(Ewk_Touch_Event_Type type, const Eina_List* points, const Evas_Modifier* modifiers);
     bool touchEventsEnabled() const { return m_touchEventsEnabled; }
     void setTouchEventsEnabled(bool enabled);
+    void doneWithTouchEvent(WKTouchEventRef, bool);
 #endif
 
     void setCursor(const WebCore::Cursor& cursor);
@@ -200,6 +202,8 @@ public:
     void informURLChange();
 
     PassRefPtr<cairo_surface_t> takeSnapshot();
+
+    void didFindZoomableArea(const WKPoint&, const WKRect&);
 
 private:
     EwkView(WKViewRef, Evas_Object*);
@@ -276,6 +280,7 @@ private:
     bool m_mouseEventsEnabled;
 #if ENABLE(TOUCH_EVENTS)
     bool m_touchEventsEnabled;
+    OwnPtr<WebKit::GestureRecognizer> m_gestureRecognizer;
 #endif
     WebCore::Timer<EwkView> m_displayTimer;
     RefPtr<EwkContextMenu> m_contextMenu;

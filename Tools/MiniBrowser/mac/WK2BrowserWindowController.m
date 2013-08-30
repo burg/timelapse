@@ -653,15 +653,16 @@ static void runOpenPanel(WKPageRef page, WKFrameRef frame, WKOpenPanelParameters
         0, // shouldGoToBackForwardItem
         0, // didFailToInitializePlugin
         didDetectXSSForFrame,
-        0, // didNewFirstVisuallyNonEmptyLayout
+        0, // didNewFirstVisuallyNonEmptyLayout_unavailable
         0, // willGoToBackForwardListItem
         0, // interactionOccurredWhileProcessUnresponsive
         0, // pluginDidFail_deprecatedForUseWithV1
         0, // didReceiveIntentForFrame
         0, // registerIntentServiceForFrame
         0, // didLayout
-        0, // pluginLoadPolicy
+        0, // pluginLoadPolicy_deprecatedForUseWithV2
         0, // pluginDidFail
+        0, // pluginLoadPolicy
     };
     WKPageSetPageLoaderClient(_webView.pageRef, &loadClient);
     

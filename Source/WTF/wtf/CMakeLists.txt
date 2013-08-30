@@ -10,6 +10,7 @@ set(WTF_HEADERS
     BoundsCheckedPointer.h
     BumpPointerAllocator.h
     ByteOrder.h
+    CompilationThread.h
     Compiler.h
     CryptographicallyRandomNumber.h
     CurrentTime.h
@@ -17,6 +18,7 @@ set(WTF_HEADERS
     DataLog.h
     DecimalNumber.h
     Decoder.h
+    DeferrableRefCounted.h
     Deque.h
     DisallowCType.h
     DoublyLinkedList.h
@@ -27,6 +29,7 @@ set(WTF_HEADERS
     FeatureDefines.h
     FilePrintStream.h
     FixedArray.h
+    FlipBytes.h
     Forward.h
     FunctionDispatcher.h
     Functional.h
@@ -126,6 +129,7 @@ set(WTF_HEADERS
 
     text/AtomicString.h
     text/AtomicStringImpl.h
+    text/AtomicStringTable.h
     text/Base64.h
     text/CString.h
     text/IntegerToStringConversion.h
@@ -143,11 +147,10 @@ set(WTF_HEADERS
 )
 
 set(WTF_SOURCES
-    ArrayBuffer.cpp
-    ArrayBufferView.cpp
     Assertions.cpp
     Atomics.cpp
     BitVector.cpp
+    CompilationThread.cpp
     CryptographicallyRandomNumber.cpp
     CurrentTime.cpp
     DateMath.cpp
@@ -174,6 +177,7 @@ set(WTF_SOURCES
     RandomNumber.cpp
     RefCountedLeakCounter.cpp
     SHA1.cpp
+    SixCharacterHash.cpp
     StackBounds.cpp
     StringPrintStream.cpp
     TCSystemAlloc.cpp
@@ -192,6 +196,7 @@ set(WTF_SOURCES
     dtoa/strtod.cc
 
     text/AtomicString.cpp
+    text/AtomicStringTable.cpp
     text/Base64.cpp
     text/CString.cpp
     text/StringBuilder.cpp

@@ -42,7 +42,6 @@ public:
 
     void restore(Page*);
     void clear();
-    void destroy();
 
     Document* document() const { return m_cachedMainFrame->document(); }
     DocumentLoader* documentLoader() const { return m_cachedMainFrame->documentLoader(); }
@@ -58,8 +57,13 @@ public:
     void markForCaptionPreferencesChanged() { m_needsCaptionPreferencesChanged = true; }
 #endif
 
+#if USE(ACCELERATED_COMPOSITING)
+    void markForDeviceScaleChanged() { m_needsDeviceScaleChanged = true; }
+#endif
+
 private:
     CachedPage(Page*);
+    void destroy();
 
     double m_timeStamp;
     double m_expirationTime;
@@ -67,6 +71,7 @@ private:
     bool m_needStyleRecalcForVisitedLinks;
     bool m_needsFullStyleRecalc;
     bool m_needsCaptionPreferencesChanged;
+    bool m_needsDeviceScaleChanged;
 };
 
 } // namespace WebCore

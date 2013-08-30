@@ -27,10 +27,39 @@
 // MarkedArgumentBuffer of property names, passed to a macro so we can do set them up various
 // ways without repeating the list.
 #define JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
+    macro(Array) \
+    macro(ArrayBuffer) \
+    macro(BYTES_PER_ELEMENT) \
+    macro(Boolean) \
+    macro(Date) \
+    macro(Error) \
+    macro(EvalError) \
+    macro(Function) \
+    macro(Infinity) \
+    macro(JSON) \
+    macro(Math) \
+    macro(NaN) \
+    macro(Number) \
+    macro(Object) \
+    macro(RangeError) \
+    macro(ReferenceError) \
+    macro(RegExp) \
+    macro(String) \
+    macro(SyntaxError) \
+    macro(TypeError) \
+    macro(URIError) \
+    macro(UTC) \
+    macro(__defineGetter__) \
+    macro(__defineSetter__) \
+    macro(__lookupGetter__) \
+    macro(__lookupSetter__) \
+    macro(anonymous) \
     macro(apply) \
     macro(arguments) \
-    macro(Array) \
     macro(bind) \
+    macro(buffer) \
+    macro(byteLength) \
+    macro(byteOffset) \
     macro(bytecode) \
     macro(bytecodeIndex) \
     macro(bytecodes) \
@@ -47,14 +76,16 @@
     macro(counters) \
     macro(description) \
     macro(descriptions) \
+    macro(displayName) \
+    macro(document) \
     macro(enumerable) \
     macro(eval) \
     macro(exec) \
     macro(executionCount) \
     macro(exitKind) \
     macro(fromCharCode) \
-    macro(global) \
     macro(get) \
+    macro(global) \
     macro(hasOwnProperty) \
     macro(hash) \
     macro(header) \
@@ -67,16 +98,16 @@
     macro(isArray) \
     macro(isPrototypeOf) \
     macro(isWatchpoint) \
+    macro(join) \
     macro(lastIndex) \
     macro(length) \
     macro(message) \
     macro(multiline) \
     macro(name) \
     macro(now) \
+    macro(numInlinedCalls) \
     macro(numInlinedGetByIds) \
     macro(numInlinedPutByIds) \
-    macro(numInlinedCalls) \
-    macro(Object) \
     macro(opcode) \
     macro(origin) \
     macro(osrExitSites) \
@@ -86,9 +117,11 @@
     macro(propertyIsEnumerable) \
     macro(prototype) \
     macro(set) \
+    macro(slice) \
     macro(source) \
     macro(sourceCode) \
     macro(stack) \
+    macro(subarray) \
     macro(test) \
     macro(toExponential) \
     macro(toFixed) \
@@ -97,16 +130,10 @@
     macro(toLocaleString) \
     macro(toPrecision) \
     macro(toString) \
-    macro(UTC) \
     macro(value) \
     macro(valueOf) \
-    macro(writable) \
-    macro(displayName) \
-    macro(join) \
-    macro(__defineGetter__) \
-    macro(__defineSetter__) \
-    macro(__lookupGetter__) \
-    macro(__lookupSetter__)
+    macro(window) \
+    macro(writable)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(macro) \
     macro(null) \

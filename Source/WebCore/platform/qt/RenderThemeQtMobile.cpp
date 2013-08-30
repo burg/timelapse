@@ -209,7 +209,7 @@ QPalette RenderThemeQtMobile::colorPalette() const
 }
 
 StylePainterMobile::StylePainterMobile(RenderThemeQtMobile* theme, const PaintInfo& paintInfo)
-    : StylePainter(theme, paintInfo)
+    : StylePainter(paintInfo.context)
 {
     m_previousSmoothPixmapTransform = painter->testRenderHint(QPainter::SmoothPixmapTransform);
     if (!m_previousSmoothPixmapTransform)
@@ -866,7 +866,7 @@ bool RenderThemeQtMobile::paintSliderTrack(RenderObject* o, const PaintInfo& pi,
     if (!p.isValid())
         return true;
 
-    HTMLInputElement* slider = static_cast<HTMLInputElement*>(o->node());
+    HTMLInputElement* slider = toHTMLInputElement(o->node());
 
     const double min = slider->minimum();
     const double max = slider->maximum();

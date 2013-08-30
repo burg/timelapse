@@ -38,19 +38,35 @@
 namespace WebCore {
 bool ShapeOutsideInfo::isEnabledFor(const RenderBox* box)
 {
-    ShapeValue* value = box->style()->shapeOutside();
-    return box->isFloatingWithShapeOutside() && value->type() == ShapeValue::Shape && value->shape();
+    ShapeValue* shapeValue = box->style()->shapeOutside();
+    if (!box->isFloatingWithShapeOutside() || !shapeValue)
+        return false;
+
+    switch (shapeValue->type()) {
+    case ShapeValue::Shape:
+        return shapeValue->shape();
+    case ShapeValue::Image:
+        return shapeValue->isImageValid();
+    default:
+        return false;
+    }
+}
+
+bool ShapeOutsideInfo::computeSegmentsForContainingBlockLine(LayoutUnit lineTop, LayoutUnit floatTop, LayoutUnit lineHeight)
+{
+    LayoutUnit lineTopInShapeCoordinates = lineTop - floatTop + logicalTopOffset();
+    return computeSegmentsForLine(lineTopInShapeCoordinates, lineHeight);
 }
 
 bool ShapeOutsideInfo::computeSegmentsForLine(LayoutUnit lineTop, LayoutUnit lineHeight)
 {
     if (shapeSizeDirty() || m_lineTop != lineTop || m_lineHeight != lineHeight) {
         if (ShapeInfo<RenderBox, &RenderStyle::shapeOutside, &Shape::getExcludedIntervals>::computeSegmentsForLine(lineTop, lineHeight)) {
-            m_leftSegmentShapeBoundingBoxDelta = m_segments[0].logicalLeft - shapeLogicalLeft();
-            m_rightSegmentShapeBoundingBoxDelta = m_segments[m_segments.size()-1].logicalRight - shapeLogicalRight();
+            m_leftSegmentMarginBoxDelta = m_segments[0].logicalLeft + m_renderer->marginStart();
+            m_rightSegmentMarginBoxDelta = m_segments[m_segments.size()-1].logicalRight - m_renderer->logicalWidth() - m_renderer->marginEnd();
         } else {
-            m_leftSegmentShapeBoundingBoxDelta = 0;
-            m_rightSegmentShapeBoundingBoxDelta = 0;
+            m_leftSegmentMarginBoxDelta = m_renderer->logicalWidth() + m_renderer->marginStart();
+            m_rightSegmentMarginBoxDelta = -m_renderer->logicalWidth() - m_renderer->marginEnd();
         }
         m_lineTop = lineTop;
     }

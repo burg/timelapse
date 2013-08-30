@@ -48,6 +48,7 @@
 #include "RenderTableCell.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
+#include "ShadowRoot.h"
 #include "StylePropertySet.h"
 #include <wtf/HexNumber.h>
 #include <wtf/Vector.h>
@@ -88,9 +89,15 @@ TextStream& operator<<(TextStream& ts, const IntPoint& p)
     return ts << "(" << p.x() << "," << p.y() << ")";
 }
 
+TextStream& operator<<(TextStream& ts, const LayoutRect& r)
+{
+    // FIXME: These should be printed as floats. Keeping them ints for consistency with previous test expectations.
+    return ts << pixelSnappedIntRect(r);
+}
+
 TextStream& operator<<(TextStream& ts, const LayoutPoint& p)
 {
-    // FIXME: These should be printed as floats. Keeping them ints for consistency with pervious test expectations.
+    // FIXME: These should be printed as floats. Keeping them ints for consistency with previous test expectations.
     return ts << "(" << p.x().toInt() << "," << p.y().toInt() << ")";
 }
 
@@ -581,8 +588,7 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
         Widget* widget = toRenderWidget(&o)->widget();
         if (widget && widget->isFrameView()) {
             FrameView* view = toFrameView(widget);
-            RenderView* root = view->frame()->contentRenderer();
-            if (root) {
+            if (RenderView* root = view->frame().contentRenderer()) {
                 view->layout();
                 RenderLayer* l = root->layer();
                 if (l)
@@ -670,6 +676,8 @@ static void writeRenderRegionList(const RenderRegionList& flowThreadRegionList, 
                 Element* element = toElement(renderRegion->generatingNode());
                 ts << " #" << element->idForStyleResolution();
             }
+            if (renderRegion->hasLayer())
+                ts << " hasLayer";
             if (renderRegion->hasCustomRegionStyle())
                 ts << " region style: 1";
             if (renderRegion->hasAutoLogicalHeight())
@@ -841,7 +849,7 @@ static void writeSelection(TextStream& ts, const RenderObject* o)
     if (!frame)
         return;
 
-    VisibleSelection selection = frame->selection()->selection();
+    VisibleSelection selection = frame->selection().selection();
     if (selection.isCaret()) {
         ts << "caret: position " << selection.start().deprecatedEditingOffset() << " of " << nodePosition(selection.start().deprecatedNode());
         if (selection.affinity() == UPSTREAM)

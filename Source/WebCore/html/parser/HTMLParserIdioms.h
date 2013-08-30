@@ -29,7 +29,6 @@
 #include "QualifiedName.h"
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace WebCore {
 
@@ -104,6 +103,8 @@ inline bool threadSafeHTMLNamesMatch(const HTMLIdentifier& tagName, const Qualif
     return tagName.asStringImpl() == qName.localName().impl();
 }
 #endif
+
+String bestFitSourceForImageAttributes(float deviceScaleFactor, const String& srcAttribute, const String& sourceSetAttribute);
 
 }
 

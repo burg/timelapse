@@ -127,7 +127,7 @@ public:
     TextTrackType trackType() const { return m_trackType; }
 
     virtual bool isClosedCaptions() const { return false; }
-
+    virtual bool isSDH() const { return false; }
     virtual bool containsOnlyForcedSubtitles() const { return false; }
     virtual bool isMainProgramContent() const;
     virtual bool isEasyToRead() const { return false; }
@@ -160,7 +160,7 @@ protected:
 #endif
 
     virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData* ensureEventTargetData() OVERRIDE;
+    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
 
     RefPtr<TextTrackCueList> m_cues;
 

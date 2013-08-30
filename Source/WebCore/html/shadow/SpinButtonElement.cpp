@@ -50,6 +50,7 @@ inline SpinButtonElement::SpinButtonElement(Document* document, SpinButtonOwner&
     , m_pressStartingState(Indeterminate)
     , m_repeatingTimer(this, &SpinButtonElement::repeatingTimerFired)
 {
+    setHasCustomStyleResolveCallbacks();
 }
 
 PassRefPtr<SpinButtonElement> SpinButtonElement::create(Document* document, SpinButtonOwner& spinButtonOwner)
@@ -63,10 +64,9 @@ const AtomicString& SpinButtonElement::shadowPseudoId() const
     return innerPseudoId;
 }
 
-void SpinButtonElement::detach(const AttachContext& context)
+void SpinButtonElement::willDetachRenderers()
 {
     releaseCapture();
-    HTMLDivElement::detach(context);
 }
 
 void SpinButtonElement::defaultEventHandler(Event* event)
@@ -119,7 +119,7 @@ void SpinButtonElement::defaultEventHandler(Event* event)
         if (box->pixelSnappedBorderBoxRect().contains(local)) {
             if (!m_capturing) {
                 if (Frame* frame = document()->frame()) {
-                    frame->eventHandler()->setCapturingMouseEventsNode(this);
+                    frame->eventHandler().setCapturingMouseEventsNode(this);
                     m_capturing = true;
                     if (Page* page = document()->page())
                         page->chrome().registerPopupOpeningObserver(this);
@@ -195,7 +195,7 @@ void SpinButtonElement::releaseCapture()
     stopRepeatingTimer();
     if (m_capturing) {
         if (Frame* frame = document()->frame()) {
-            frame->eventHandler()->setCapturingMouseEventsNode(0);
+            frame->eventHandler().setCapturingMouseEventsNode(0);
             m_capturing = false;
             if (Page* page = document()->page())
                 page->chrome().unregisterPopupOpeningObserver(this);

@@ -184,10 +184,10 @@ Path HTMLAreaElement::getRegion(const LayoutSize& size) const
 HTMLImageElement* HTMLAreaElement::imageElement() const
 {
     Node* mapElement = parentNode();
-    if (!mapElement || !mapElement->hasTagName(mapTag))
+    if (!mapElement || !isHTMLMapElement(mapElement))
         return 0;
     
-    return static_cast<HTMLMapElement*>(mapElement)->imageElement();
+    return toHTMLMapElement(mapElement)->imageElement();
 }
 
 bool HTMLAreaElement::isKeyboardFocusable(KeyboardEvent*) const
@@ -251,17 +251,5 @@ String HTMLAreaElement::target() const
 {
     return getAttribute(targetAttr);
 }
-
-#if ENABLE(MICRODATA)
-String HTMLAreaElement::itemValueText() const
-{
-    return getURLAttribute(hrefAttr);
-}
-
-void HTMLAreaElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(hrefAttr, value);
-}
-#endif
 
 }

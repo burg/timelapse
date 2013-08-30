@@ -76,7 +76,7 @@
 #include "ScriptProfile.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerInspectorController.h"
 #include "WorkerRuntimeAgent.h"
 #include "WorkerThread.h"
@@ -292,6 +292,12 @@ void InspectorInstrumentation::didUpdateRegionLayoutImpl(InstrumentingAgents* in
         cssAgent->didUpdateRegionLayout(document, namedFlow);
 }
 
+void InspectorInstrumentation::didChangeRegionOversetImpl(InstrumentingAgents* instrumentingAgents, Document* document, WebKitNamedFlow* namedFlow)
+{
+    if (InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent())
+        cssAgent->didChangeRegionOverset(document, namedFlow);
+}
+
 void InspectorInstrumentation::mouseDidMoveOverElementImpl(InstrumentingAgents* instrumentingAgents, const HitTestResult& result, unsigned modifierFlags)
 {
     if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
@@ -366,6 +372,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willCallFunctionImpl(In
         timelineAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
         timelineAgentId = timelineAgent->id();
     }
+#if ENABLE(WEB_REPLAY)
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
+#endif    
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -622,7 +632,7 @@ void InspectorInstrumentation::didMatchRuleImpl(const InspectorInstrumentationCo
         cssAgent->didMatchRule(matched);
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willProcessRuleImpl(InstrumentingAgents* instrumentingAgents, StyleRule* rule, StyleResolver* styleResolver)
+InspectorInstrumentationCookie InspectorInstrumentation::willProcessRuleImpl(InstrumentingAgents* instrumentingAgents, StyleRule* rule, StyleResolver& styleResolver)
 {
     InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent();
     if (cssAgent) {
@@ -1151,29 +1161,29 @@ bool InspectorInstrumentation::shouldPauseDedicatedWorkerOnStartImpl(Instrumenti
     return false;
 }
 
-void InspectorInstrumentation::didStartWorkerContextImpl(InstrumentingAgents* instrumentingAgents, WorkerContextProxy* workerContextProxy, const KURL& url)
+void InspectorInstrumentation::didStartWorkerGlobalScopeImpl(InstrumentingAgents* instrumentingAgents, WorkerGlobalScopeProxy* workerGlobalScopeProxy, const KURL& url)
 {
     if (InspectorWorkerAgent* workerAgent = instrumentingAgents->inspectorWorkerAgent())
-        workerAgent->didStartWorkerContext(workerContextProxy, url);
+        workerAgent->didStartWorkerGlobalScope(workerGlobalScopeProxy, url);
 }
 
-void InspectorInstrumentation::willEvaluateWorkerScript(WorkerContext* workerContext, int workerThreadStartMode)
+void InspectorInstrumentation::willEvaluateWorkerScript(WorkerGlobalScope* workerGlobalScope, int workerThreadStartMode)
 {
-    if (workerThreadStartMode != PauseWorkerContextOnStart)
+    if (workerThreadStartMode != PauseWorkerGlobalScopeOnStart)
         return;
-    InstrumentingAgents* instrumentingAgents = instrumentationForWorkerContext(workerContext);
+    InstrumentingAgents* instrumentingAgents = instrumentationForWorkerGlobalScope(workerGlobalScope);
     if (!instrumentingAgents)
         return;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     if (WorkerRuntimeAgent* runtimeAgent = instrumentingAgents->workerRuntimeAgent())
-        runtimeAgent->pauseWorkerContext(workerContext);
+        runtimeAgent->pauseWorkerGlobalScope(workerGlobalScope);
 #endif
 }
 
-void InspectorInstrumentation::workerContextTerminatedImpl(InstrumentingAgents* instrumentingAgents, WorkerContextProxy* proxy)
+void InspectorInstrumentation::workerGlobalScopeTerminatedImpl(InstrumentingAgents* instrumentingAgents, WorkerGlobalScopeProxy* proxy)
 {
     if (InspectorWorkerAgent* workerAgent = instrumentingAgents->inspectorWorkerAgent())
-        workerAgent->workerContextTerminated(proxy);
+        workerAgent->workerGlobalScopeTerminated(proxy);
 }
 #endif
 
@@ -1358,6 +1368,17 @@ bool InspectorInstrumentation::timelineAgentEnabled(ScriptExecutionContext* scri
     return instrumentingAgents && instrumentingAgents->inspectorTimelineAgent();
 }
 
+bool InspectorInstrumentation::replayAgentEnabled(ScriptExecutionContext* scriptExecutionContext)
+{
+#if ENABLE(WEB_REPLAY)
+    InstrumentingAgents* instrumentingAgents = instrumentingAgentsForContext(scriptExecutionContext);
+    return instrumentingAgents && instrumentingAgents->inspectorReplayAgent();
+#else
+    UNUSED_PARAM(scriptExecutionContext);
+    return false;
+#endif
+}
+    
 void InspectorInstrumentation::pauseOnNativeEventIfNeeded(InstrumentingAgents* instrumentingAgents, bool isDOMEvent, const String& eventName, bool synchronous)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -1449,17 +1470,17 @@ InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForRenderer(Re
 }
 
 #if ENABLE(WORKERS)
-InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForWorkerContext(WorkerContext* workerContext)
+InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForWorkerGlobalScope(WorkerGlobalScope* workerGlobalScope)
 {
-    if (!workerContext)
+    if (!workerGlobalScope)
         return 0;
-    return instrumentationForWorkerContext(workerContext);
+    return instrumentationForWorkerGlobalScope(workerGlobalScope);
 }
 
 InstrumentingAgents* InspectorInstrumentation::instrumentingAgentsForNonDocumentContext(ScriptExecutionContext* context)
 {
-    if (context->isWorkerContext())
-        return instrumentationForWorkerContext(static_cast<WorkerContext*>(context));
+    if (context->isWorkerGlobalScope())
+        return instrumentationForWorkerGlobalScope(static_cast<WorkerGlobalScope*>(context));
     return 0;
 }
 #endif

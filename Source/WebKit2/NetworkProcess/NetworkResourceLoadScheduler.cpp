@@ -6,7 +6,6 @@
 #include "NetworkProcess.h"
 #include "NetworkResourceLoadParameters.h"
 #include "NetworkResourceLoader.h"
-#include "SyncNetworkResourceLoader.h"
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
 
@@ -17,14 +16,13 @@ using namespace WebCore;
 namespace WebKit {
 
 static const unsigned maxRequestsInFlightForNonHTTPProtocols = 20;
-static unsigned maxRequestsInFlightPerHost;
 
 NetworkResourceLoadScheduler::NetworkResourceLoadScheduler()
     : m_nonHTTPProtocolHost(HostRecord::create(String(), maxRequestsInFlightForNonHTTPProtocols))
     , m_requestTimer(this, &NetworkResourceLoadScheduler::requestTimerFired)
 
 {
-    maxRequestsInFlightPerHost = platformInitializeMaximumHTTPConnectionCountPerHost();
+    platformInitializeMaximumHTTPConnectionCountPerHost();
 }
 
 void NetworkResourceLoadScheduler::scheduleServePendingRequests()
@@ -38,7 +36,7 @@ void NetworkResourceLoadScheduler::requestTimerFired(WebCore::Timer<NetworkResou
     servePendingRequests();
 }
 
-void NetworkResourceLoadScheduler::scheduleLoader(PassRefPtr<SchedulableLoader> loader)
+void NetworkResourceLoadScheduler::scheduleLoader(PassRefPtr<NetworkResourceLoader> loader)
 {
     ResourceLoadPriority priority = loader->priority();
     const ResourceRequest& resourceRequest = loader->request();
@@ -68,7 +66,7 @@ HostRecord* NetworkResourceLoadScheduler::hostForURL(const WebCore::KURL& url, C
     String hostName = url.host();
     HostRecord* host = m_hosts.get(hostName);
     if (!host && createHostPolicy == CreateIfNotFound) {
-        RefPtr<HostRecord> newHost = HostRecord::create(hostName, maxRequestsInFlightPerHost);
+        RefPtr<HostRecord> newHost = HostRecord::create(hostName, m_maxRequestsInFlightPerHost);
         host = newHost.get();
         m_hosts.add(hostName, newHost.release());
     }
@@ -76,7 +74,7 @@ HostRecord* NetworkResourceLoadScheduler::hostForURL(const WebCore::KURL& url, C
     return host;
 }
 
-void NetworkResourceLoadScheduler::removeLoader(SchedulableLoader* loader)
+void NetworkResourceLoadScheduler::removeLoader(NetworkResourceLoader* loader)
 {
     ASSERT(isMainThread());
     ASSERT(loader);
@@ -94,7 +92,7 @@ void NetworkResourceLoadScheduler::removeLoader(SchedulableLoader* loader)
     scheduleServePendingRequests();
 }
 
-void NetworkResourceLoadScheduler::receivedRedirect(SchedulableLoader* loader, const WebCore::KURL& redirectURL)
+void NetworkResourceLoadScheduler::receivedRedirect(NetworkResourceLoader* loader, const WebCore::KURL& redirectURL)
 {
     ASSERT(isMainThread());
     LOG(NetworkScheduling, "(NetworkProcess) NetworkResourceLoadScheduler::receivedRedirect loader originally for '%s' redirected to '%s'", loader->request().url().string().utf8().data(), redirectURL.string().utf8().data());
@@ -149,7 +147,7 @@ void NetworkResourceLoadScheduler::removeScheduledLoaders(void* context)
 
 void NetworkResourceLoadScheduler::removeScheduledLoaders()
 {
-    Vector<RefPtr<SchedulableLoader>> loadersToRemove;
+    Vector<RefPtr<NetworkResourceLoader>> loadersToRemove;
     {
         MutexLocker locker(m_loadersToRemoveMutex);
         loadersToRemove = m_loadersToRemove;
@@ -161,7 +159,7 @@ void NetworkResourceLoadScheduler::removeScheduledLoaders()
         removeLoader(loadersToRemove[i].get());
 }
 
-void NetworkResourceLoadScheduler::scheduleRemoveLoader(SchedulableLoader* loader)
+void NetworkResourceLoadScheduler::scheduleRemoveLoader(NetworkResourceLoader* loader)
 {
     MutexLocker locker(m_loadersToRemoveMutex);
     

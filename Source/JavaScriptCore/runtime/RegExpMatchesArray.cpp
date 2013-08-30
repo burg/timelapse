@@ -46,7 +46,7 @@ RegExpMatchesArray* RegExpMatchesArray::create(ExecState* exec, JSString* input,
 {
     ASSERT(result);
     VM& vm = exec->vm();
-    Butterfly* butterfly = createArrayButterfly(vm, regExp->numSubpatterns() + 1);
+    Butterfly* butterfly = createArrayButterfly(vm, 0, regExp->numSubpatterns() + 1);
     RegExpMatchesArray* array = new (NotNull, allocateCell<RegExpMatchesArray>(vm.heap)) RegExpMatchesArray(vm, butterfly, exec->lexicalGlobalObject(), input, regExp, result);
     array->finishCreation(vm);
     return array;
@@ -60,7 +60,7 @@ void RegExpMatchesArray::finishCreation(VM& vm)
 void RegExpMatchesArray::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     RegExpMatchesArray* thisObject = jsCast<RegExpMatchesArray*>(cell);
-    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
 

@@ -43,6 +43,7 @@
 #include "NodeList.h"
 #include "RawDataDocumentParser.h"
 #include "ScriptController.h"
+#include "ShadowRoot.h"
 
 namespace WebCore {
 
@@ -78,14 +79,14 @@ void MediaDocumentParser::createDocumentStructure()
     static_cast<HTMLHtmlElement*>(rootElement.get())->insertedByParser();
 
     if (document()->frame())
-        document()->frame()->loader()->dispatchDocumentElementAvailable();
+        document()->frame()->loader().dispatchDocumentElementAvailable();
         
     RefPtr<Element> body = document()->createElement(bodyTag, false);
     rootElement->appendChild(body, IGNORE_EXCEPTION);
 
     RefPtr<Element> mediaElement = document()->createElement(videoTag, false);
 
-    m_mediaElement = static_cast<HTMLVideoElement*>(mediaElement.get());
+    m_mediaElement = toHTMLVideoElement(mediaElement.get());
     m_mediaElement->setAttribute(controlsAttr, "");
     m_mediaElement->setAttribute(autoplayAttr, "");
 
@@ -105,7 +106,7 @@ void MediaDocumentParser::createDocumentStructure()
     if (!frame)
         return;
 
-    frame->loader()->activeDocumentLoader()->setMainResourceDataBufferingPolicy(DoNotBufferData);
+    frame->loader().activeDocumentLoader()->setMainResourceDataBufferingPolicy(DoNotBufferData);
 }
 
 void MediaDocumentParser::appendBytes(DocumentWriter*, const char*, size_t)
@@ -140,12 +141,12 @@ static inline HTMLVideoElement* descendentVideoElement(Node* node)
     ASSERT(node);
 
     if (node->hasTagName(videoTag))
-        return static_cast<HTMLVideoElement*>(node);
+        return toHTMLVideoElement(node);
 
     RefPtr<NodeList> nodeList = node->getElementsByTagNameNS(videoTag.namespaceURI(), videoTag.localName());
    
     if (nodeList.get()->length() > 0)
-        return static_cast<HTMLVideoElement*>(nodeList.get()->item(0));
+        return toHTMLVideoElement(nodeList.get()->item(0));
 
     return 0;
 }
@@ -155,7 +156,7 @@ static inline HTMLVideoElement* ancestorVideoElement(Node* node)
     while (node && !node->hasTagName(videoTag))
         node = node->parentOrShadowHostNode();
 
-    return static_cast<HTMLVideoElement*>(node);
+    return toHTMLVideoElement(node);
 }
 
 void MediaDocument::defaultEventHandler(Event* event)

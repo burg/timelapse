@@ -35,7 +35,6 @@
 #include "HTMLNames.h"
 #include "Length.h"
 #include "MouseEvent.h"
-#include "NodeRenderingContext.h"
 #include "RenderFrameSet.h"
 #include "ScriptEventListener.h"
 #include "Text.h"
@@ -56,8 +55,7 @@ HTMLFrameSetElement::HTMLFrameSetElement(const QualifiedName& tagName, Document*
     , m_noresize(false)
 {
     ASSERT(hasTagName(framesetTag));
-    
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
 PassRefPtr<HTMLFrameSetElement> HTMLFrameSetElement::create(const QualifiedName& tagName, Document* document)
@@ -150,11 +148,11 @@ void HTMLFrameSetElement::parseAttribute(const QualifiedName& name, const Atomic
         HTMLElement::parseAttribute(name, value);
 }
 
-bool HTMLFrameSetElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool HTMLFrameSetElement::rendererIsNeeded(const RenderStyle& style)
 {
     // For compatibility, frames render even when display: none is set.
     // However, we delay creating a renderer until stylesheets have loaded. 
-    return context.style()->isStyleAvailable();
+    return style.isStyleAvailable();
 }
 
 RenderObject *HTMLFrameSetElement::createRenderer(RenderArena *arena, RenderStyle *style)
@@ -165,28 +163,32 @@ RenderObject *HTMLFrameSetElement::createRenderer(RenderArena *arena, RenderStyl
     return new (arena) RenderFrameSet(this);
 }
 
-void HTMLFrameSetElement::attach(const AttachContext& context)
+HTMLFrameSetElement* HTMLFrameSetElement::findContaining(Node* node)
 {
-    // Inherit default settings from parent frameset
-    // FIXME: This is not dynamic.
-    for (ContainerNode* node = parentNode(); node; node = node->parentNode()) {
-        if (node->hasTagName(framesetTag)) {
-            HTMLFrameSetElement* frameset = static_cast<HTMLFrameSetElement*>(node);
-            if (!m_frameborderSet)
-                m_frameborder = frameset->hasFrameBorder();
-            if (m_frameborder) {
-                if (!m_borderSet)
-                    m_border = frameset->border();
-                if (!m_borderColorSet)
-                    m_borderColorSet = frameset->hasBorderColor();
-            }
-            if (!m_noresize)
-                m_noresize = frameset->noResize();
-            break;
-        }
+    for (Element* parent = node->parentElement(); parent; parent = parent->parentElement()) {
+        if (isHTMLFrameSetElement(parent))
+            return toHTMLFrameSetElement(parent);
     }
+    return 0;
+}
 
-    HTMLElement::attach(context);
+void HTMLFrameSetElement::willAttachRenderers()
+{
+    // Inherit default settings from parent frameset.
+    // FIXME: This is not dynamic.
+    const HTMLFrameSetElement* containingFrameSet = findContaining(this);
+    if (!containingFrameSet)
+        return;
+    if (!m_frameborderSet)
+        m_frameborder = containingFrameSet->hasFrameBorder();
+    if (m_frameborder) {
+        if (!m_borderSet)
+            m_border = containingFrameSet->border();
+        if (!m_borderColorSet)
+            m_borderColorSet = containingFrameSet->hasBorderColor();
+    }
+    if (!m_noresize)
+        m_noresize = containingFrameSet->noResize();
 }
 
 void HTMLFrameSetElement::defaultEventHandler(Event* evt)
@@ -200,7 +202,7 @@ void HTMLFrameSetElement::defaultEventHandler(Event* evt)
     HTMLElement::defaultEventHandler(evt);
 }
 
-bool HTMLFrameSetElement::willRecalcStyle(StyleChange)
+bool HTMLFrameSetElement::willRecalcStyle(Style::Change)
 {
     if (needsStyleRecalc() && renderer()) {
         renderer()->setNeedsLayout(true);
@@ -214,7 +216,7 @@ Node::InsertionNotificationRequest HTMLFrameSetElement::insertedInto(ContainerNo
     HTMLElement::insertedInto(insertionPoint);
     if (insertionPoint->inDocument()) {
         if (Frame* frame = document()->frame())
-            frame->loader()->client()->dispatchDidBecomeFrameset(document()->isFrameSet());
+            frame->loader().client()->dispatchDidBecomeFrameset(document()->isFrameSet());
     }
 
     return InsertionDone;
@@ -225,7 +227,7 @@ void HTMLFrameSetElement::removedFrom(ContainerNode* insertionPoint)
     HTMLElement::removedFrom(insertionPoint);
     if (insertionPoint->inDocument()) {
         if (Frame* frame = document()->frame())
-            frame->loader()->client()->dispatchDidBecomeFrameset(document()->isFrameSet());
+            frame->loader().client()->dispatchDidBecomeFrameset(document()->isFrameSet());
     }
 }
 

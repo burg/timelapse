@@ -36,14 +36,14 @@
 #include "Node.h"
 #include "Page.h"
 #include "ScriptController.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerScriptController.h"
 #include <heap/StrongInlines.h>
 #include <interpreter/CallFrame.h>
 #include <runtime/JSGlobalObject.h>
 
 #if ENABLE(WORKERS)
-#include "JSWorkerContext.h"
+#include "JSWorkerGlobalScope.h"
 #endif
 
 namespace WebCore {
@@ -51,7 +51,7 @@ namespace WebCore {
 DOMWindow* domWindowFromScriptState(ScriptState* scriptState)
 {
     JSC::JSGlobalObject* globalObject = scriptState->lexicalGlobalObject();
-    if (!globalObject->inherits(&JSDOMWindowBase::s_info))
+    if (!globalObject->inherits(JSDOMWindowBase::info()))
         return 0;
     return JSC::jsCast<JSDOMWindowBase*>(globalObject)->impl();
 }
@@ -59,7 +59,7 @@ DOMWindow* domWindowFromScriptState(ScriptState* scriptState)
 ScriptExecutionContext* scriptExecutionContextFromScriptState(ScriptState* scriptState)
 {
     JSC::JSGlobalObject* globalObject = scriptState->lexicalGlobalObject();
-    if (!globalObject->inherits(&JSDOMGlobalObject::s_info))
+    if (!globalObject->inherits(JSDOMGlobalObject::info()))
         return 0;
     return JSC::jsCast<JSDOMGlobalObject*>(globalObject)->scriptExecutionContext();
 }
@@ -68,7 +68,7 @@ ScriptState* mainWorldScriptState(Frame* frame)
 {
     if (!frame)
         return 0;
-    JSDOMWindowShell* shell = frame->script()->windowShell(mainThreadNormalWorld());
+    JSDOMWindowShell* shell = frame->script().windowShell(mainThreadNormalWorld());
     return shell->window()->globalExec();
 }
 
@@ -82,20 +82,20 @@ ScriptState* scriptStateFromNode(DOMWrapperWorld* world, Node* node)
     Frame* frame = document->frame();
     if (!frame)
         return 0;
-    if (!frame->script()->canExecuteScripts(NotAboutToExecuteScript))
+    if (!frame->script().canExecuteScripts(NotAboutToExecuteScript))
         return 0;
-    return frame->script()->globalObject(world)->globalExec();
+    return frame->script().globalObject(world)->globalExec();
 }
 
 ScriptState* scriptStateFromPage(DOMWrapperWorld* world, Page* page)
 {
-    return page->mainFrame()->script()->globalObject(world)->globalExec();
+    return page->mainFrame()->script().globalObject(world)->globalExec();
 }
 
 #if ENABLE(WORKERS)
-ScriptState* scriptStateFromWorkerContext(WorkerContext* workerContext)
+ScriptState* scriptStateFromWorkerGlobalScope(WorkerGlobalScope* workerGlobalScope)
 {
-    return workerContext->script()->workerContextWrapper()->globalExec();
+    return workerGlobalScope->script()->workerGlobalScopeWrapper()->globalExec();
 }
 #endif
 

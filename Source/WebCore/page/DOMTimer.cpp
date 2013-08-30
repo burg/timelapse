@@ -30,6 +30,7 @@
 #include "InspectorInstrumentation.h"
 #include "ScheduledAction.h"
 #include "ScriptExecutionContext.h"
+#include "UserGestureIndicator.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
@@ -56,64 +57,66 @@ static int timerNestingLevel = 0;
 #if ENABLE(WEB_REPLAY)
 class InstrumentedDOMTimer : public DOMTimer {
 public:
-    InstrumentedDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action);
+    InstrumentedDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int originalInterval);
     virtual ~InstrumentedDOMTimer() {}
 protected:
-    virtual void start(int timeout, bool singleShot);
+    virtual void start(int timeout, bool singleShot) OVERRIDE;
 };
 
 class DeterministicDOMTimer : public DOMTimer {
 public:
-    DeterministicDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action);
+    DeterministicDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int originalInterval);
     virtual ~DeterministicDOMTimer() {}
 protected:
-    virtual void start(int timeout, bool singleShot);
+    virtual void start(int timeout, bool singleShot) OVERRIDE;
 };
-
-InstrumentedDOMTimer::InstrumentedDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action)
-: DOMTimer(context, action) {}
+    
+InstrumentedDOMTimer::InstrumentedDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int originalInterval)
+: DOMTimer(context, action, originalInterval) {}
 
 void InstrumentedDOMTimer::start(int timeout, bool singleShot)
 {
+    // Schedule the timer normally, then save the timeoutId assigned by the execution context.
     DOMTimer::start(timeout, singleShot);
     if (!scriptExecutionContext()->isDocument())
         return;
 
-    InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(scriptExecutionContext()));
-    if (!it || !it->isCapturing())
-        return;
+    Document* document = static_cast<Document*>(scriptExecutionContext());
+    InputIterator* it = getInputIteratorForDocument(document);
+    ASSERT(it && it->isCapturing());
 
-    int frameIndex = SerializedEventTarget::frameIndexFromDocument(static_cast<Document*>(scriptExecutionContext()));
-    TimerCreated* input = new TimerCreated(m_timeoutId, frameIndex);
-    it->storeInput(adoptPtr(input));
+    int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
+    it->storeInput(adoptPtr(new TimerCreated(m_timeoutId, frameIndex)));
 }
 
-DeterministicDOMTimer::DeterministicDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action)
-: DOMTimer(context, action) {}
+DeterministicDOMTimer::DeterministicDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int originalInterval)
+: DOMTimer(context, action, originalInterval)
+{
+    // Override the default behavior set in DOMTimer constructor.
+    m_shouldScheduleNormally = false;
+}
 
-void DeterministicDOMTimer::start(int timeout, bool singleShot)
+void DeterministicDOMTimer::start(int, bool)
 {
     if (!scriptExecutionContext()->isDocument())
         return;
 
-    InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(scriptExecutionContext()));
-    if (!it || !it->isReplaying())
-        return;
+    Document* document = static_cast<Document*>(scriptExecutionContext());
+    InputIterator* it = getInputIteratorForDocument(document);
+    ASSERT(it && it->isReplaying());
 
     NondeterministicInput* input = it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().TimerCreated);
     TimerCreated* castedInput = static_cast<TimerCreated*>(input);
-    // error handling case: if fetch failed, schedule normally.
-    // FIXME: This will cause divergences to happen later.
+    // Error handling case: if fetch failed, schedule normally.
     if (!castedInput)
         return;
 
-    // check that this timer was created in the same Document as originally observed.
-    Document* document = static_cast<Document*>(scriptExecutionContext());
+    // Check that this timer was created in the same Document as originally observed.
     ASSERT_UNUSED(document, castedInput->document(document->page()) == document);
+    // Set the timeoutId from memoized data, and register the timer with the execution context.
     m_timeoutId = castedInput->timerId();
-    m_shouldScheduleNormally = false;
-
-    DOMTimer::start(timeout, singleShot);
+    bool wasAdded = scriptExecutionContext()->addTimeout(m_timeoutId, this);
+    ASSERT_UNUSED(wasAdded, wasAdded);
 }
 #endif
 
@@ -124,15 +127,14 @@ static inline bool shouldForwardUserGesture(int interval, int nestingLevel)
         && nestingLevel == 1; // Gestures should not be forwarded to nested timers.
 }
 
-DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action)
+DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int interval)
     : SuspendableTimer(context)
     , m_timeoutId(0)
     , m_shouldScheduleNormally(true)
     , m_nestingLevel(timerNestingLevel + 1)
     , m_action(action)
-    , m_originalInterval(0) // set within DOMTimer::start
-{
-}
+    , m_originalInterval(interval)
+    , m_shouldForwardUserGesture(shouldForwardUserGesture(interval, m_nestingLevel)) {}
 
 DOMTimer::~DOMTimer()
 {
@@ -142,23 +144,11 @@ DOMTimer::~DOMTimer()
 
 void DOMTimer::start(int interval, bool singleShot)
 {
-    m_originalInterval = interval;
 
-    if (m_shouldScheduleNormally) {
-        // Keep asking for the next id until we're given one that we don't already have.
-        do {
-            m_timeoutId = scriptExecutionContext()->circularSequentialID();
-        } while (!scriptExecutionContext()->addTimeout(m_timeoutId, this));
-    } else {
-        // if not scheduling normally, then m_timeoutId must be set in some other way.
-        ASSERT(m_timeoutId > 0);
-        bool wasAdded = scriptExecutionContext()->addTimeout(m_timeoutId, this);
-        ASSERT_UNUSED(wasAdded, wasAdded);
-        return; // don't actually fire the timer quite yet.
-    }
-
-    if (shouldForwardUserGesture(interval, m_nestingLevel))
-        m_userGestureToken = UserGestureIndicator::currentToken();
+    // Keep asking for the next id until we're given one that we don't already have.
+    do {
+        m_timeoutId = scriptExecutionContext()->circularSequentialID();
+    } while (!scriptExecutionContext()->addTimeout(m_timeoutId, this));
 
     double intervalMilliseconds = intervalClampedToMinimum(interval, scriptExecutionContext()->minimumTimerInterval());
 
@@ -170,22 +160,21 @@ void DOMTimer::start(int interval, bool singleShot)
 
 int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int timeout, bool singleShot)
 {
-    DOMTimer* timer;
+    DOMTimer* timer = 0;
 #if ENABLE(WEB_REPLAY)
-    if (context->isDocument()) {
+    do {
+        if (!context->isDocument())
+            break;
         InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(context));
         if (it && it->isCapturing())
-            timer = new InstrumentedDOMTimer(context, action);
-        else if (it && it->isReplaying())
-            timer = new DeterministicDOMTimer(context, action);
-        else
-            timer = new DOMTimer(context, action);
-    } else {
-        timer = new DOMTimer(context, action);
-    }
-#else
-    timer = new DOMTimer(context, action);
+            timer = new InstrumentedDOMTimer(context, action, timeout);
+        if (it && it->isReplaying())
+            timer = new DeterministicDOMTimer(context, action, timeout);
+    } while (0);
+    if (!timer)
 #endif
+    timer = new DOMTimer(context, action, timeout);
+
     // DOMTimer::start() links the new timer into a list of ActiveDOMObjects held by the 'context'.
     // The timer is deleted when context is deleted (DOMTimer::contextDestroyed) or explicitly via DOMTimer::removeById(),
     // or if it is a one-time timer and it has fired (DOMTimer::fired).
@@ -213,53 +202,41 @@ void DOMTimer::fired()
 {
     ScriptExecutionContext* context = scriptExecutionContext();
     timerNestingLevel = m_nestingLevel;
+    ASSERT(!isSuspended());
     ASSERT(!context->activeDOMObjectsAreSuspended());
+    UserGestureIndicator gestureIndicator(m_shouldForwardUserGesture ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
     // Only the first execution of a multi-shot timer should get an affirmative user gesture indicator.
-    UserGestureIndicator gestureIndicator(m_userGestureToken.release());
+    m_shouldForwardUserGesture = false;
 
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireTimer(context, m_timeoutId);
 
-    // Simple case for non-one-shot timers.
-    if (isActive()) {
+    // For non-schedulable timers, simply fire the action.
+    if (!m_shouldScheduleNormally) {
+        // Don't delete the timer if it's not scheduled normally. The action may be reused later
+        // if it is a non-one-shot timer. It will be cleaned by destroyContext().
+        m_action->execute(context);
+    } else if (isActive()) {
+    // For non-one-shot timers, update the interval and fire the action.
         double minimumInterval = context->minimumTimerInterval();
         if (repeatInterval() && repeatInterval() < minimumInterval) {
             m_nestingLevel++;
             if (m_nestingLevel >= maxTimerNestingLevel)
-#if ENABLE(WEB_REPLAY)
-                if (m_shouldScheduleNormally)
-#endif
                 augmentRepeatInterval(minimumInterval - repeatInterval());
         }
 
         // No access to member variables after this point, it can delete the timer.
         m_action->execute(context);
-
-        InspectorInstrumentation::didFireTimer(cookie);
-
-        return;
-    }
-
-#if ENABLE(WEB_REPLAY)
-    //prevent deletion if in replay mode, since the isActive() will never be true.
-    //it will (hopefully) get cleaned by destroyContext()
-    //TODO: another option is to explicitly log timer deletion, if too many are retained.
-    if (m_shouldScheduleNormally) {
-#endif
-    // Delete timer before executing the action for one-shot timers.
-    OwnPtr<ScheduledAction> action = m_action.release();
-
-    // No access to member variables after this point.
-    delete this;
-    action->execute(context);
-#if ENABLE(WEB_REPLAY)
     } else {
-        m_action->execute(context);
+        // Delete timer before executing the action for one-shot timers.
+        OwnPtr<ScheduledAction> action = m_action.release();
+            
+        // No access to member variables after this point.
+        delete this;
+        action->execute(context);
+        timerNestingLevel = 0;
     }
-#endif
 
     InspectorInstrumentation::didFireTimer(cookie);
-
-    timerNestingLevel = 0;
 }
 
 void DOMTimer::contextDestroyed()
@@ -268,9 +245,8 @@ void DOMTimer::contextDestroyed()
     delete this;
 }
 
-void DOMTimer::stop()
+void DOMTimer::didStop()
 {
-    SuspendableTimer::stop();
     // Need to release JS objects potentially protected by ScheduledAction
     // because they can form circular references back to the ScriptExecutionContext
     // which will cause a memory leak.
@@ -279,10 +255,8 @@ void DOMTimer::stop()
 
 void DOMTimer::adjustMinimumTimerInterval(double oldMinimumTimerInterval)
 {
-#if ENABLE(WEB_REPLAY)
     if (!m_shouldScheduleNormally)
         return;
-#endif
     if (m_nestingLevel < maxTimerNestingLevel)
         return;
 

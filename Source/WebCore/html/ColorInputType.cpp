@@ -35,7 +35,6 @@
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
 #include "Color.h"
-#include "ElementShadow.h"
 #include "HTMLDataListElement.h"
 #include "HTMLDivElement.h"
 #include "HTMLInputElement.h"
@@ -117,7 +116,7 @@ Color ColorInputType::valueAsColor() const
 
 void ColorInputType::createShadowSubtree()
 {
-    ASSERT(element()->shadow());
+    ASSERT(element()->shadowRoot());
 
     Document* document = element()->document();
     RefPtr<HTMLDivElement> wrapperElement = HTMLDivElement::create(document);
@@ -150,9 +149,12 @@ void ColorInputType::handleDOMActivateEvent(Event* event)
     if (!ScriptController::processingUserGesture())
         return;
 
-    Chrome* chrome = this->chrome();
-    if (chrome && !m_chooser)
-        m_chooser = chrome->createColorChooser(this, valueAsColor());
+    if (Chrome* chrome = this->chrome()) {
+        if (!m_chooser)
+            m_chooser = chrome->createColorChooser(this, valueAsColor());
+        else
+            m_chooser->reattachColorChooser(valueAsColor());
+    }
 
     event->setDefaultHandled();
 }
@@ -170,6 +172,11 @@ bool ColorInputType::shouldRespectListAttribute()
 bool ColorInputType::typeMismatchFor(const String& value) const
 {
     return !isValidColorString(value);
+}
+
+bool ColorInputType::shouldResetOnDocumentActivation()
+{
+    return true;
 }
 
 void ColorInputType::didChooseColor(const Color& color)

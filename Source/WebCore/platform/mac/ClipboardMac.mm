@@ -27,27 +27,14 @@
 #import "Clipboard.h"
 
 #import "CachedImage.h"
-#import "DOMElementInternal.h"
-#import "Document.h"
-#import "DragClient.h"
-#import "DragController.h"
-#import "DragData.h"
-#import "Frame.h"
+#import "Element.h"
 #import "FrameSnapshottingMac.h"
-#import "Page.h"
-#import "Pasteboard.h"
-#import "PasteboardStrategy.h"
-#import "PlatformStrategies.h"
 
 namespace WebCore {
 
-void Clipboard::declareAndWriteDragImage(Element* element, const KURL& url, const String& title, Frame* frame)
-{
-    ASSERT(frame);
-    if (Page* page = frame->page())
-        page->dragController()->client()->declareAndWriteDragImage(m_pasteboard->name(), kit(element), url, title, frame);
-}
-    
+// FIXME: Need to refactor and figure out how to handle the flipping in a more sensible way so we can
+// use the default Clipboard::dragImage from Clipboard.cpp. Note also that this handles cases that
+// Clipboard::dragImage in Clipboard.cpp does not handle correctly, so must resolve that as well.
 DragImageRef Clipboard::createDragImage(IntPoint& location) const
 {
     NSImage *result = nil;
@@ -59,13 +46,13 @@ DragImageRef Clipboard::createDragImage(IntPoint& location) const
             result = snapshotDragImage(frame, m_dragImageElement.get(), &imageRect, &elementRect);
             // Client specifies point relative to element, not the whole image, which may include child
             // layers spread out all over the place.
-            location.setX(elementRect.origin.x - imageRect.origin.x + m_dragLoc.x());
-            location.setY(imageRect.size.height - (elementRect.origin.y - imageRect.origin.y + m_dragLoc.y()));
+            location.setX(elementRect.origin.x - imageRect.origin.x + m_dragLocation.x());
+            location.setY(imageRect.size.height - (elementRect.origin.y - imageRect.origin.y + m_dragLocation.y()));
         }
     } else if (m_dragImage) {
         result = m_dragImage->image()->getNSImage();
         
-        location = m_dragLoc;
+        location = m_dragLocation;
         location.setY([result size].height - location.y());
     }
     return result;

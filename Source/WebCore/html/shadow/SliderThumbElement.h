@@ -32,11 +32,9 @@
 #ifndef SliderThumbElement_h
 #define SliderThumbElement_h
 
-#include "FloatPoint.h"
 #include "HTMLDivElement.h"
 #include "HTMLNames.h"
 #include "RenderBlock.h"
-#include "RenderStyleConstants.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -56,7 +54,7 @@ public:
     virtual void defaultEventHandler(Event*);
     virtual bool willRespondToMouseMoveEvents() OVERRIDE;
     virtual bool willRespondToMouseClickEvents() OVERRIDE;
-    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual void willDetachRenderers() OVERRIDE;
     virtual const AtomicString& shadowPseudoId() const;
     HTMLInputElement* hostInput() const;
     void setPositionFromPoint(const LayoutPoint&);
@@ -74,12 +72,6 @@ private:
 
     bool m_inDragMode;
 };
-
-inline SliderThumbElement::SliderThumbElement(Document* document)
-    : HTMLDivElement(HTMLNames::divTag, document)
-    , m_inDragMode(false)
-{
-}
 
 inline PassRefPtr<SliderThumbElement> SliderThumbElement::create(Document* document)
 {

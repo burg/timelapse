@@ -162,10 +162,9 @@ public:
 #endif
 
     virtual PassNativeImagePtr nativeImageForCurrentFrame() OVERRIDE;
+    virtual ImageOrientation orientationForCurrentFrame() OVERRIDE { return frameOrientationAtIndex(currentFrame()); }
 
     virtual bool currentFrameKnownToBeOpaque() OVERRIDE;
-
-    ImageOrientation currentFrameOrientation();
 
 #if !ASSERT_DISABLED
     virtual bool notSolidColor();
@@ -191,10 +190,10 @@ protected:
 #endif
     virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
 #if USE(CG) || USE(CAIRO) || PLATFORM(BLACKBERRY)
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, RespectImageOrientationEnum) OVERRIDE;
+    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription) OVERRIDE;
 #endif
 
-#if (OS(WINCE) && !PLATFORM(QT))
+#if USE(WINGDI)
     virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
                              const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
 #endif

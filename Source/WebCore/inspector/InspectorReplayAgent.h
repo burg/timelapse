@@ -89,6 +89,7 @@ public:
     void didDispatchEventOnWindow();
     void frameNavigated(DocumentLoader*);
     void willFireTimer(int, Frame*);
+    void willCallFunction(const String&, int scriptLine, Frame*);
 
     bool capturing() const { return m_stateMachine.capturing(); }
     bool replaying() const { return m_stateMachine.replaying(); }

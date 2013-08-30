@@ -74,9 +74,9 @@ static bool isCharsetSpecifyingNode(Node* node)
     HTMLMetaCharsetParser::AttributeList attributes;
     if (element->hasAttributes()) {
         for (unsigned i = 0; i < element->attributeCount(); ++i) {
-            const Attribute* attribute = element->attributeItem(i);
+            const Attribute& attribute = element->attributeAt(i);
             // FIXME: We should deal appropriately with the attribute if they have a namespace.
-            attributes.append(std::make_pair(attribute->name().toString(), attribute->value().string()));
+            attributes.append(std::make_pair(attribute.name().toString(), attribute.value().string()));
         }
     }
     TextEncoding textEncoding = HTMLMetaCharsetParser::encodingFromMetaAttributes(attributes);
@@ -231,8 +231,8 @@ void PageSerializer::serializeFrame(Frame* frame)
         if (element->isStyledElement())
             retrieveResourcesForProperties(static_cast<StyledElement*>(element)->inlineStyle(), document);
 
-        if (element->hasTagName(HTMLNames::imgTag)) {
-            HTMLImageElement* imageElement = static_cast<HTMLImageElement*>(element);
+        if (isHTMLImageElement(element)) {
+            HTMLImageElement* imageElement = toHTMLImageElement(element);
             KURL url = document->completeURL(imageElement->getAttribute(HTMLNames::srcAttr));
             CachedImage* cachedImage = imageElement->cachedImage();
             addImageToResources(cachedImage, imageElement->renderer(), url);
@@ -243,9 +243,8 @@ void PageSerializer::serializeFrame(Frame* frame)
                 serializeCSSStyleSheet(sheet, url);
                 ASSERT(m_resourceURLs.contains(url));
             }
-        } else if (element->hasTagName(HTMLNames::styleTag)) {
-            HTMLStyleElement* styleElement = static_cast<HTMLStyleElement*>(element);
-            if (CSSStyleSheet* sheet = styleElement->sheet())
+        } else if (isHTMLStyleElement(element)) {
+            if (CSSStyleSheet* sheet = toHTMLStyleElement(element)->sheet())
                 serializeCSSStyleSheet(sheet, KURL());
         }
     }
@@ -315,7 +314,7 @@ void PageSerializer::addImageToResources(CachedImage* image, RenderObject* image
 
 void PageSerializer::retrieveResourcesForRule(StyleRule* rule, Document* document)
 {
-    retrieveResourcesForProperties(rule->properties(), document);
+    retrieveResourcesForProperties(&rule->properties(), document);
 }
 
 void PageSerializer::retrieveResourcesForProperties(const StylePropertySet* styleDeclaration, Document* document)

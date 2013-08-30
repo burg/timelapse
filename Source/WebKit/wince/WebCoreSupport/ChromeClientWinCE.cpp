@@ -165,7 +165,7 @@ void ChromeClientWinCE::takeFocus(FocusDirection)
     unfocus();
 }
 
-void ChromeClientWinCE::focusedNodeChanged(Node*)
+void ChromeClientWinCE::focusedElementChanged(Element*)
 {
     notImplemented();
 }
@@ -360,6 +360,16 @@ void ChromeClientWinCE::setCursorHiddenUntilMouseMoves(bool)
 }
 
 void ChromeClientWinCE::setLastSetCursorToCurrentCursor()
+{
+    notImplemented();
+}
+
+void ChromeClientWinCE::AXStartFrameLoad()
+{
+    notImplemented();
+}
+
+void ChromeClientWinCE::AXFinishFrameLoad()
 {
     notImplemented();
 }

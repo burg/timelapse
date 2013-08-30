@@ -64,6 +64,7 @@ namespace WebCore {
     class HTMLTableCellElement;
     class IntRect;
     class Node;
+    class Range;
     class RegularExpression;
     class RenderPart;
     class RenderView;
@@ -114,13 +115,13 @@ namespace WebCore {
         FrameView* view() const;
 
         Editor& editor() const;
-        EventHandler* eventHandler() const;
-        FrameLoader* loader() const;
+        EventHandler& eventHandler() const;
+        FrameLoader& loader() const;
         NavigationScheduler* navigationScheduler() const;
-        FrameSelection* selection() const;
+        FrameSelection& selection() const;
         FrameTree* tree() const;
         AnimationController* animation() const;
-        ScriptController* script();
+        ScriptController& script();
         
         RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
         RenderPart* ownerRenderer() const; // Renderer for the element that contains this frame.
@@ -140,7 +141,7 @@ namespace WebCore {
 
         static Frame* frameForWidget(const Widget*);
 
-        Settings* settings() const; // can be NULL
+        Settings& settings() const { return *m_settings; }
 
         void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot);
         bool shouldUsePrintingLayout() const;
@@ -209,6 +210,7 @@ namespace WebCore {
         HashSet<FrameDestructionObserver*> m_destructionObservers;
 
         Page* m_page;
+        const RefPtr<Settings> m_settings;
         mutable FrameTree m_treeNode;
         mutable FrameLoader m_loader;
         mutable NavigationScheduler m_navigationScheduler;
@@ -220,7 +222,7 @@ namespace WebCore {
         OwnPtr<ScriptController> m_script;
         const OwnPtr<Editor> m_editor;
         OwnPtr<FrameSelection> m_selection;
-        OwnPtr<EventHandler> m_eventHandler;
+        const OwnPtr<EventHandler> m_eventHandler;
         OwnPtr<AnimationController> m_animationController;
 
         float m_pageZoomFactor;
@@ -259,9 +261,9 @@ namespace WebCore {
         m_loader.init();
     }
 
-    inline FrameLoader* Frame::loader() const
+    inline FrameLoader& Frame::loader() const
     {
-        return &m_loader;
+        return m_loader;
     }
 
     inline NavigationScheduler* Frame::navigationScheduler() const
@@ -274,9 +276,9 @@ namespace WebCore {
         return m_view.get();
     }
 
-    inline ScriptController* Frame::script()
+    inline ScriptController& Frame::script()
     {
-        return m_script.get();
+        return *m_script;
     }
 
     inline Document* Frame::document() const
@@ -284,9 +286,9 @@ namespace WebCore {
         return m_doc.get();
     }
 
-    inline FrameSelection* Frame::selection() const
+    inline FrameSelection& Frame::selection() const
     {
-        return m_selection.get();
+        return *m_selection;
     }
 
     inline Editor& Frame::editor() const
@@ -329,9 +331,9 @@ namespace WebCore {
         m_page = 0;
     }
 
-    inline EventHandler* Frame::eventHandler() const
+    inline EventHandler& Frame::eventHandler() const
     {
-        return m_eventHandler.get();
+        return *m_eventHandler;
     }
 
 } // namespace WebCore

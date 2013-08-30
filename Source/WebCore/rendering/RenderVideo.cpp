@@ -128,7 +128,7 @@ LayoutSize RenderVideo::calculateIntrinsicSize()
     // size since they also have audio-only files. By setting the intrinsic
     // size to 300x1 the video will resize itself in these cases, and audio will
     // have the correct height (it needs to be > 0 for controls to render properly).
-    if (video->ownerDocument() && video->ownerDocument()->isMediaDocument())
+    if (video->document() && video->document()->isMediaDocument())
         return LayoutSize(defaultSize().width(), 1);
 
     return defaultSize();
@@ -230,8 +230,7 @@ void RenderVideo::layout()
     
 HTMLVideoElement* RenderVideo::videoElement() const
 {
-    ASSERT(node()->hasTagName(videoTag));
-    return static_cast<HTMLVideoElement*>(node()); 
+    return toHTMLVideoElement(node()); 
 }
 
 void RenderVideo::updateFromElement()

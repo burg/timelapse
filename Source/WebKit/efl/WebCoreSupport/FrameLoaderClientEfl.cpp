@@ -66,8 +66,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringConcatenate.h>
 
-using namespace WebCore;
-
 namespace WebCore {
 
 FrameLoaderClientEfl::FrameLoaderClientEfl(Evas_Object* view)
@@ -109,7 +107,7 @@ void FrameLoaderClientEfl::callPolicyFunction(FramePolicyFunction function, Poli
 {
     Frame* f = EWKPrivate::coreFrame(m_frame);
     ASSERT(f);
-    (f->loader()->policyChecker()->*function)(action);
+    (f->loader().policyChecker()->*function)(action);
 }
 
 WTF::PassRefPtr<DocumentLoader> FrameLoaderClientEfl::createDocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)
@@ -323,7 +321,7 @@ void FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction(FramePolicyFun
     // if not acceptNavigationRequest - look at Qt -> PolicyIgnore;
     // FIXME: do proper check and only reset forms when on PolicyIgnore
     Frame* f = EWKPrivate::coreFrame(m_frame);
-    f->loader()->resetMultipleFormSubmissionProtection();
+    f->loader().resetMultipleFormSubmissionProtection();
     callPolicyFunction(function, PolicyUse);
 }
 
@@ -351,7 +349,7 @@ void FrameLoaderClientEfl::dispatchDecidePolicyForNavigationAction(FramePolicyFu
     else {
         if (action.type() == NavigationTypeFormSubmitted || action.type() == NavigationTypeFormResubmitted) {
             Frame* f = EWKPrivate::coreFrame(m_frame);
-            f->loader()->resetMultipleFormSubmissionProtection();
+            f->loader().resetMultipleFormSubmissionProtection();
         }
         policy = PolicyUse;
     }
@@ -437,13 +435,12 @@ void FrameLoaderClientEfl::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* 
     Frame* coreFrame = EWKPrivate::coreFrame(m_frame);
     ASSERT(coreFrame);
 
-    Settings* settings = coreFrame->settings();
-    if (!settings || !settings->isScriptEnabled())
+    if (!coreFrame->settings().isScriptEnabled())
         return;
 
     Ewk_Window_Object_Cleared_Event event;
-    event.context = toGlobalRef(coreFrame->script()->globalObject(mainThreadNormalWorld())->globalExec());
-    event.windowObject = toRef(coreFrame->script()->globalObject(mainThreadNormalWorld()));
+    event.context = toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
+    event.windowObject = toRef(coreFrame->script().globalObject(mainThreadNormalWorld()));
     event.frame = m_frame;
 
     evas_object_smart_callback_call(m_view, "window,object,cleared", &event);
@@ -516,7 +513,7 @@ void FrameLoaderClientEfl::updateGlobalHistoryRedirectLinks()
         if (!frame)
             return;
 
-        WebCore::DocumentLoader* loader = frame->loader()->documentLoader();
+        WebCore::DocumentLoader* loader = frame->loader().documentLoader();
         if (!loader)
             return;
 
@@ -965,7 +962,7 @@ void FrameLoaderClientEfl::updateGlobalHistory()
     if (!frame)
         return;
 
-    WebCore::DocumentLoader* loader = frame->loader()->documentLoader();
+    WebCore::DocumentLoader* loader = frame->loader().documentLoader();
     if (!loader)
         return;
 

@@ -29,12 +29,15 @@
 #include "CachedImage.h"
 #include "EventNames.h"
 #include "FrameView.h"
+#include "HTMLAnchorElement.h"
 #include "HTMLDocument.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "Page.h"
 #include "RenderImage.h"
 #include "ScriptEventListener.h"
+#include <wtf/NotFound.h>
 
 using namespace std;
 
@@ -49,6 +52,7 @@ HTMLImageElement::HTMLImageElement(const QualifiedName& tagName, Document* docum
     , m_compositeOperator(CompositeSourceOver)
 {
     ASSERT(hasTagName(imgTag));
+    setHasCustomStyleResolveCallbacks();
     if (form)
         form->registerImgElement(this);
 }
@@ -108,15 +112,24 @@ void HTMLImageElement::collectStyleForPresentationAttribute(const QualifiedName&
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);
 }
 
+const AtomicString& HTMLImageElement::imageSourceURL() const
+{
+    return m_bestFitImageURL.isEmpty() ? fastGetAttribute(srcAttr) : m_bestFitImageURL;
+}
+
 void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == altAttr) {
         if (renderer() && renderer()->isImage())
             toRenderImage(renderer())->updateAltText();
-    } else if (name == srcAttr)
+    } else if (name == srcAttr || name == srcsetAttr) {
+        float deviceScaleFactor = 1.0;
+        if (Page* page = document()->page())
+            deviceScaleFactor = page->deviceScaleFactor();
+        m_bestFitImageURL = bestFitSourceForImageAttributes(deviceScaleFactor, fastGetAttribute(srcAttr), fastGetAttribute(srcsetAttr));
         m_imageLoader.updateFromElementIgnoringPreviousError();
-    else if (name == usemapAttr)
-        setIsLink(!value.isNull());
+    } else if (name == usemapAttr)
+        setIsLink(!value.isNull() && !shouldProhibitLinks(this));
     else if (name == onbeforeloadAttr)
         setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
     else if (name == compositeAttr) {
@@ -132,9 +145,9 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicStr
                 const AtomicString& id = getIdAttribute();
                 if (!id.isEmpty() && id != getNameAttribute()) {
                     if (willHaveName)
-                        document->documentNamedItemMap().add(id.impl(), this);
+                        document->addDocumentNamedItem(id, this);
                     else
-                        document->documentNamedItemMap().remove(id.impl(), this);
+                        document->removeDocumentNamedItem(id, this);
                 }
             }
         }
@@ -166,28 +179,28 @@ RenderObject* HTMLImageElement::createRenderer(RenderArena* arena, RenderStyle* 
 
 bool HTMLImageElement::canStartSelection() const
 {
-    if (shadow())
+    if (shadowRoot())
         return HTMLElement::canStartSelection();
 
     return false;
 }
 
-void HTMLImageElement::attach(const AttachContext& context)
+void HTMLImageElement::didAttachRenderers()
 {
-    HTMLElement::attach(context);
+    if (!renderer() || !renderer()->isImage())
+        return;
+    if (m_imageLoader.hasPendingBeforeLoadEvent())
+        return;
+    RenderImage* renderImage = toRenderImage(renderer());
+    RenderImageResource* renderImageResource = renderImage->imageResource();
+    if (renderImageResource->hasImage())
+        return;
+    renderImageResource->setCachedImage(m_imageLoader.image());
 
-    if (renderer() && renderer()->isImage() && !m_imageLoader.hasPendingBeforeLoadEvent()) {
-        RenderImage* renderImage = toRenderImage(renderer());
-        RenderImageResource* renderImageResource = renderImage->imageResource();
-        if (renderImageResource->hasImage())
-            return;
-        renderImageResource->setCachedImage(m_imageLoader.image());
-
-        // If we have no image at all because we have no src attribute, set
-        // image height and width for the alt text instead.
-        if (!m_imageLoader.image() && !renderImageResource->cachedImage())
-            renderImage->setImageSizeForAltText();
-    }
+    // If we have no image at all because we have no src attribute, set
+    // image height and width for the alt text instead.
+    if (!m_imageLoader.image() && !renderImageResource->cachedImage())
+        renderImage->setImageSizeForAltText();
 }
 
 Node::InsertionNotificationRequest HTMLImageElement::insertedInto(ContainerNode* insertionPoint)
@@ -195,8 +208,8 @@ Node::InsertionNotificationRequest HTMLImageElement::insertedInto(ContainerNode*
     if (!m_form) {
         // m_form can be non-null if it was set in constructor.
         for (ContainerNode* ancestor = parentNode(); ancestor; ancestor = ancestor->parentNode()) {
-            if (ancestor->hasTagName(formTag)) {
-                m_form = static_cast<HTMLFormElement*>(ancestor);
+            if (isHTMLFormElement(ancestor)) {
+                m_form = toHTMLFormElement(ancestor);
                 m_form->registerImgElement(this);
                 break;
             }
@@ -376,17 +389,5 @@ bool HTMLImageElement::isServerMap() const
 
     return document()->completeURL(stripLeadingAndTrailingHTMLSpaces(usemap)).isEmpty();
 }
-
-#if ENABLE(MICRODATA)
-String HTMLImageElement::itemValueText() const
-{
-    return getURLAttribute(srcAttr);
-}
-
-void HTMLImageElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(srcAttr, value);
-}
-#endif
 
 }

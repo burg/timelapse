@@ -89,7 +89,10 @@ struct WebPageCreationParameters {
     float mediaVolume;
     bool mayStartMediaWhenInWindow;
 
-    float minimumLayoutWidth;
+    WebCore::IntSize minimumLayoutSize;
+    bool autoSizingShouldExpandToViewHeight;
+    
+    WebCore::ScrollPinningBehavior scrollPinningBehavior;
 
 #if PLATFORM(MAC)
     LayerHostingMode layerHostingMode;

@@ -253,11 +253,33 @@ sub isGitSVN()
     return $isGitSVN;
 }
 
+sub gitDirectory()
+{
+    chomp(my $result = `git rev-parse --git-dir`);
+    return $result;
+}
+
+sub gitBisectStartBranch()
+{
+    my $bisectStartFile = File::Spec->catfile(gitDirectory(), "BISECT_START");
+    if (!-f $bisectStartFile) {
+        return "";
+    }
+    open(BISECT_START, $bisectStartFile) or die "Failed to open $bisectStartFile: $!";
+    chomp(my $result = <BISECT_START>);
+    close(BISECT_START);
+    return $result;
+}
+
 sub gitBranch()
 {
     unless (defined $gitBranch) {
         chomp($gitBranch = `git symbolic-ref -q HEAD`);
-        $gitBranch = "" if exitStatus($?);
+        my $hasDetachedHead = exitStatus($?);
+        if ($hasDetachedHead) {
+            # We may be in a git bisect session.
+            $gitBranch = gitBisectStartBranch();
+        }
         $gitBranch =~ s#^refs/heads/##;
         $gitBranch = "" if $gitBranch eq "master";
     }
@@ -322,12 +344,6 @@ sub chdirReturningRelativePath($)
     return File::Spec->abs2rel($previousDirectory, $newDirectory);
 }
 
-sub determineGitRoot()
-{
-    chomp(my $gitDir = `git rev-parse --git-dir`);
-    return dirname($gitDir);
-}
-
 sub determineSVNRoot()
 {
     my $last = '';
@@ -376,7 +392,7 @@ sub determineSVNRoot()
 sub determineVCSRoot()
 {
     if (isGit()) {
-        return determineGitRoot();
+        return dirname(gitDirectory());
     }
 
     if (!isSVN()) {

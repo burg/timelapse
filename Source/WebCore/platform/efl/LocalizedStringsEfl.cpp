@@ -128,6 +128,16 @@ String contextMenuItemTagOpenAudioInNewWindow()
     return String::fromUTF8("Open Audio in New Window");
 }
 
+String contextMenuItemTagDownloadVideoToDisk()
+{
+    return String::fromUTF8("Download Video");
+}
+
+String contextMenuItemTagDownloadAudioToDisk()
+{
+    return String::fromUTF8("Download Audio");
+}
+
 String contextMenuItemTagCopyVideoLinkToClipboard()
 {
     return String::fromUTF8("Copy Video Link Location");
@@ -141,6 +151,16 @@ String contextMenuItemTagCopyAudioLinkToClipboard()
 String contextMenuItemTagToggleMediaControls()
 {
     return String::fromUTF8("Toggle Media Controls");
+}
+
+String contextMenuItemTagShowMediaControls()
+{
+    return String::fromUTF8("Show Media Controls");
+}
+
+String contextMenuitemTagHideMediaControls()
+{
+    return String::fromUTF8("Hide Media Controls");
 }
 
 String contextMenuItemTagToggleMediaLoop()
@@ -424,6 +444,12 @@ String imageTitle(const String&, const IntSize&)
     return String();
 }
 
+String AXListItemActionVerb()
+{
+    notImplemented();
+    return String();
+}
+
 #if ENABLE(VIDEO)
 String localizedMediaControlElementString(const String&)
 {
@@ -604,7 +630,7 @@ String textTrackSubtitlesText()
     return String::fromUTF8("Subtitles");
 }
 
-String textTrackOffText()
+String textTrackOffMenuItemText()
 {
     return String::fromUTF8("Off");
 }

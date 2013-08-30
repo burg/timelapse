@@ -41,12 +41,12 @@ RenderSVGTextPath::RenderSVGTextPath(Element* element)
 
 Path RenderSVGTextPath::layoutPath() const
 {
-    SVGTextPathElement* textPathElement = static_cast<SVGTextPathElement*>(node());
+    SVGTextPathElement* textPathElement = toSVGTextPathElement(node());
     Element* targetElement = SVGURIReference::targetElementFromIRIString(textPathElement->href(), textPathElement->document());
     if (!targetElement || !targetElement->hasTagName(SVGNames::pathTag))
         return Path();
     
-    SVGPathElement* pathElement = static_cast<SVGPathElement*>(targetElement);
+    SVGPathElement* pathElement = toSVGPathElement(targetElement);
     
     Path pathData;
     updatePathFromGraphicsElement(pathElement, pathData);
@@ -62,17 +62,17 @@ Path RenderSVGTextPath::layoutPath() const
 
 float RenderSVGTextPath::startOffset() const
 {
-    return static_cast<SVGTextPathElement*>(node())->startOffset().valueAsPercentage();
+    return toSVGTextPathElement(node())->startOffset().valueAsPercentage();
 }
 
 bool RenderSVGTextPath::exactAlignment() const
 {
-    return static_cast<SVGTextPathElement*>(node())->spacing() == SVGTextPathSpacingExact;
+    return toSVGTextPathElement(node())->spacing() == SVGTextPathSpacingExact;
 }
 
 bool RenderSVGTextPath::stretchMethod() const
 {
-    return static_cast<SVGTextPathElement*>(node())->method() == SVGTextPathMethodStretch;
+    return toSVGTextPathElement(node())->method() == SVGTextPathMethodStretch;
 }
 
 }

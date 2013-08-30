@@ -30,6 +30,7 @@
 #include "WebFrame.h"
 #include "WebFrameLoaderClient.h"
 #include <WebCore/Document.h>
+#include <WebCore/Element.h>
 #include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/FrameView.h>
@@ -64,7 +65,7 @@ WebFrame* InjectedBundleHitTestResult::frame() const
     if (!frame)
         return 0;
 
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     return webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
 }
 
@@ -74,7 +75,7 @@ WebFrame* InjectedBundleHitTestResult::targetFrame() const
     if (!frame)
         return 0;
 
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader()->client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(frame->loader().client());
     return webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
 }
 
@@ -96,6 +97,32 @@ String InjectedBundleHitTestResult::absoluteLinkURL() const
 String InjectedBundleHitTestResult::absoluteMediaURL() const
 {
     return m_hitTestResult.absoluteMediaURL().string();
+}
+
+bool InjectedBundleHitTestResult::mediaIsInFullscreen() const
+{
+    return m_hitTestResult.mediaIsInFullscreen();
+}
+
+bool InjectedBundleHitTestResult::mediaHasAudio() const
+{
+    return m_hitTestResult.mediaHasAudio();
+}
+
+BundleHitTestResultMediaType InjectedBundleHitTestResult::mediaType() const
+{
+#if !ENABLE(VIDEO)
+    return BundleHitTestResultMediaTypeNone;
+#else
+    WebCore::Node* node = m_hitTestResult.innerNonSharedNode();
+    if (!node->isElementNode())
+        return BundleHitTestResultMediaTypeNone;
+    
+    if (!toElement(node)->isMediaElement())
+        return BundleHitTestResultMediaTypeNone;
+    
+    return m_hitTestResult.mediaIsVideo() ? BundleHitTestResultMediaTypeVideo : BundleHitTestResultMediaTypeAudio;    
+#endif
 }
 
 String InjectedBundleHitTestResult::linkLabel() const

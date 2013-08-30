@@ -28,6 +28,7 @@
 #define Widget_h
 
 #include "IntRect.h"
+#include "PlatformScreen.h"
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
@@ -191,7 +192,7 @@ public:
     IntPoint convertToContainingWindow(const IntPoint&) const;
     IntPoint convertFromContainingWindow(const IntPoint&) const;
 
-    virtual void frameRectsChanged();
+    virtual void frameRectsChanged() { }
 
     // Notifies this widget that other widgets on the page have been repositioned.
     virtual void widgetPositionsUpdated() {}

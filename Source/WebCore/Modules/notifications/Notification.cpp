@@ -49,7 +49,7 @@
 #include "ResourceResponse.h"
 #include "ThreadableLoader.h"
 #include "WindowFocusAllowedIndicator.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 
 namespace WebCore {
 
@@ -173,9 +173,9 @@ EventTargetData* Notification::eventTargetData()
     return &m_eventTargetData;
 }
 
-EventTargetData* Notification::ensureEventTargetData()
+EventTargetData& Notification::ensureEventTargetData()
 {
-    return &m_eventTargetData;
+    return m_eventTargetData;
 }
 
 void Notification::contextDestroyed()

@@ -95,7 +95,7 @@ void InspectorAgent::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWorld* 
     scriptSource.append("(");
     scriptSource.appendNumber(injectedScriptId);
     scriptSource.append(")");
-    frame->script()->executeScript(scriptSource.toString());
+    frame->script().executeScript(scriptSource.toString());
 }
 
 void InspectorAgent::setFrontend(InspectorFrontend* inspectorFrontend)
@@ -185,7 +185,7 @@ bool InspectorAgent::developerExtrasEnabled() const
 {
     if (!m_inspectedPage)
         return false;
-    return m_inspectedPage->settings()->developerExtrasEnabled();
+    return m_inspectedPage->settings().developerExtrasEnabled();
 }
 
 } // namespace WebCore

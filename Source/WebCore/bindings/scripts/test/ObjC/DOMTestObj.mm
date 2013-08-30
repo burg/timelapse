@@ -45,6 +45,7 @@
 #import "DOMTestObjectAConstructorInternal.h"
 #import "DOMTestObjectBConstructorInternal.h"
 #import "DOMTestObjectCConstructorInternal.h"
+#import "DOMTestSubObjConstructorInternal.h"
 #import "DOManyInternal.h"
 #import "DOMboolInternal.h"
 #import "Dictionary.h"
@@ -57,6 +58,7 @@
 #import "Node.h"
 #import "ObjCEventListener.h"
 #import "SVGDocument.h"
+#import "SVGPoint.h"
 #import "SVGStaticPropertyTearOff.h"
 #import "SerializedScriptValue.h"
 #import "TestEnumType.h"
@@ -65,6 +67,7 @@
 #import "TestObjectAConstructor.h"
 #import "TestObjectBConstructor.h"
 #import "TestObjectCConstructor.h"
+#import "TestSubObjConstructor.h"
 #import "ThreadCheck.h"
 #import "WebCoreObjCExtras.h"
 #import "WebScriptObjectPrivate.h"
@@ -109,6 +112,44 @@
 {
     WebCore::JSMainThreadNullState state;
     return kit(WTF::getPtr(IMPL->readOnlyTestObjAttr()));
+}
+
+- (DOMTestSubObjConstructor *)TestSubObjEnabledBySetting
+{
+    WebCore::JSMainThreadNullState state;
+    return kit(WTF::getPtr(IMPL->testSubObjEnabledBySetting()));
+}
+
+- (void)setTestSubObjEnabledBySetting:(DOMTestSubObjConstructor *)newTestSubObjEnabledBySetting
+{
+    WebCore::JSMainThreadNullState state;
+    ASSERT(newTestSubObjEnabledBySetting);
+
+    IMPL->setTestSubObjEnabledBySetting(core(newTestSubObjEnabledBySetting));
+}
+
+- (char)byteAttr
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->byteAttr();
+}
+
+- (void)setByteAttr:(char)newByteAttr
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->setByteAttr(newByteAttr);
+}
+
+- (unsigned char)octetAttr
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->octetAttr();
+}
+
+- (void)setOctetAttr:(unsigned char)newOctetAttr
+{
+    WebCore::JSMainThreadNullState state;
+    IMPL->setOctetAttr(newOctetAttr);
 }
 
 - (short)shortAttr
@@ -633,7 +674,7 @@
 - (DOMSVGPoint *)mutablePoint
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(WebCore::SVGStaticPropertyTearOff<WebCore::TestObj, WebCore::FloatPoint>::create(IMPL, IMPL->mutablePoint(), &WebCore::TestObj::updateMutablePoint)));
+    return kit(WTF::getPtr(WebCore::SVGStaticPropertyTearOff<WebCore::TestObj, WebCore::SVGPoint>::create(IMPL, IMPL->mutablePoint(), &WebCore::TestObj::updateMutablePoint)));
 }
 
 - (void)setMutablePoint:(DOMSVGPoint *)newMutablePoint
@@ -647,7 +688,7 @@
 - (DOMSVGPoint *)immutablePoint
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::FloatPoint>::create(IMPL->immutablePoint())));
+    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::SVGPoint>::create(IMPL->immutablePoint())));
 }
 
 - (void)setImmutablePoint:(DOMSVGPoint *)newImmutablePoint
@@ -773,6 +814,30 @@
 {
     WebCore::JSMainThreadNullState state;
     IMPL->voidMethodWithArgs(longArg, strArg, core(objArg));
+}
+
+- (char)byteMethod
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->byteMethod();
+}
+
+- (char)byteMethodWithArgs:(char)byteArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->byteMethodWithArgs(byteArg, strArg, core(objArg));
+}
+
+- (unsigned char)octetMethod
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->octetMethod();
+}
+
+- (unsigned char)octetMethodWithArgs:(unsigned char)octetArg strArg:(NSString *)strArg objArg:(DOMTestObj *)objArg
+{
+    WebCore::JSMainThreadNullState state;
+    return IMPL->octetMethodWithArgs(octetArg, strArg, core(objArg));
 }
 
 - (int)longMethod
@@ -1062,13 +1127,13 @@
 - (DOMSVGPoint *)mutablePointFunction
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::FloatPoint>::create(IMPL->mutablePointFunction())));
+    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::SVGPoint>::create(IMPL->mutablePointFunction())));
 }
 
 - (DOMSVGPoint *)immutablePointFunction
 {
     WebCore::JSMainThreadNullState state;
-    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::FloatPoint>::create(IMPL->immutablePointFunction())));
+    return kit(WTF::getPtr(WebCore::SVGPropertyTearOff<WebCore::SVGPoint>::create(IMPL->immutablePointFunction())));
 }
 
 - (void)orange

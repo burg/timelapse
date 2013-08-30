@@ -43,14 +43,14 @@
 
 namespace WebCore {
 
-PassOwnPtr<WebCoreAVFResourceLoader> WebCoreAVFResourceLoader::create(MediaPlayerPrivateAVFoundationObjC* parent, AVAssetResourceLoadingRequest* avRequest)
+PassRefPtr<WebCoreAVFResourceLoader> WebCoreAVFResourceLoader::create(MediaPlayerPrivateAVFoundationObjC* parent, AVAssetResourceLoadingRequest *avRequest)
 {
     ASSERT(avRequest);
     ASSERT(parent);
-    return adoptPtr(new WebCoreAVFResourceLoader(parent, avRequest));
+    return adoptRef(new WebCoreAVFResourceLoader(parent, avRequest));
 }
 
-WebCoreAVFResourceLoader::WebCoreAVFResourceLoader(MediaPlayerPrivateAVFoundationObjC* parent, AVAssetResourceLoadingRequest* avRequest)
+WebCoreAVFResourceLoader::WebCoreAVFResourceLoader(MediaPlayerPrivateAVFoundationObjC* parent, AVAssetResourceLoadingRequest *avRequest)
     : m_parent(parent)
     , m_avRequest(avRequest)
 {
@@ -68,7 +68,7 @@ void WebCoreAVFResourceLoader::startLoading()
 
     KURL requestURL = [[m_avRequest.get() request] URL];
 
-    CachedResourceRequest request(ResourceRequest(requestURL), ResourceLoaderOptions(SendCallbacks, DoNotSniffContent, BufferData, DoNotAllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, DoSecurityCheck));
+    CachedResourceRequest request(ResourceRequest(requestURL), ResourceLoaderOptions(SendCallbacks, DoNotSniffContent, BufferData, DoNotAllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, DoSecurityCheck, UseDefaultOriginRestrictionsForType));
 
     request.mutableResourceRequest().setPriority(ResourceLoadPriorityLow);
     CachedResourceLoader* loader = m_parent->player()->cachedResourceLoader();
@@ -88,6 +88,8 @@ void WebCoreAVFResourceLoader::stopLoading()
 
     m_resource->removeClient(this);
     m_resource = 0;
+
+    m_parent->didStopLoadingRequest(m_avRequest.get());
 }
 
 void WebCoreAVFResourceLoader::responseReceived(CachedResource* resource, const ResourceResponse& response)
@@ -122,9 +124,14 @@ void WebCoreAVFResourceLoader::dataReceived(CachedResource* resource, const char
 
 void WebCoreAVFResourceLoader::notifyFinished(CachedResource* resource)
 {
-    if (resource->loadFailedOrCanceled())
+    if (resource->loadFailedOrCanceled()) {
+        // <rdar://problem/13987417> Set the contentType of the contentInformationRequest to an empty
+        // string to trigger AVAsset's playable value to complete loading.
+        if ([m_avRequest.get() contentInformationRequest] && ![[m_avRequest.get() contentInformationRequest] contentType])
+            [[m_avRequest.get() contentInformationRequest] setContentType:@""];
+
         [m_avRequest.get() finishLoadingWithError:0];
-    else {
+    } else {
         fulfillRequestWithResource(resource);
         [m_avRequest.get() finishLoading];
     }

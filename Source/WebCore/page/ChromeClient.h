@@ -93,7 +93,7 @@ public:
     virtual bool canTakeFocus(FocusDirection) = 0;
     virtual void takeFocus(FocusDirection) = 0;
 
-    virtual void focusedNodeChanged(Node*) = 0;
+    virtual void focusedElementChanged(Element*) = 0;
     virtual void focusedFrameChanged(Frame*) = 0;
 
     // The Frame pointer provides the ChromeClient with context about which
@@ -238,6 +238,8 @@ public:
         
     virtual void elementDidFocus(const Node*) { };
     virtual void elementDidBlur(const Node*) { };
+    
+    virtual bool shouldPaintEntireContents() const { return false; }
 
 #if USE(ACCELERATED_COMPOSITING)
     // Allows ports to customize the type of graphics layers created by this page.
@@ -308,6 +310,8 @@ public:
 
 #if PLATFORM(WIN)
     virtual void setLastSetCursorToCurrentCursor() = 0;
+    virtual void AXStartFrameLoad() = 0;
+    virtual void AXFinishFrameLoad() = 0;
 #endif
 
 #if ENABLE(TOUCH_EVENTS)

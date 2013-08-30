@@ -32,9 +32,6 @@
 #include "CDATASection.h"
 #include "CSSPrimitiveValue.h"
 #include "CSSPropertyNames.h"
-#include "CSSRule.h"
-#include "CSSRuleList.h"
-#include "CSSStyleRule.h"
 #include "CSSValue.h"
 #include "CSSValueKeywords.h"
 #include "ChildListMutationScope.h"
@@ -43,32 +40,29 @@
 #include "DeleteButtonController.h"
 #endif
 #include "DocumentFragment.h"
-#include "DocumentType.h"
 #include "Editor.h"
+#include "ElementTraversal.h"
 #include "ExceptionCode.h"
 #include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
+#include "HTMLTableElement.h"
+#include "HTMLTextAreaElement.h"
 #include "HTMLTextFormControlElement.h"
 #include "KURL.h"
 #include "MarkupAccumulator.h"
-#include "NodeTraversal.h"
 #include "Range.h"
 #include "RenderBlock.h"
 #include "RenderObject.h"
-#include "Settings.h"
 #include "StylePropertySet.h"
-#include "StyleResolver.h"
 #include "TextIterator.h"
 #include "VisibleSelection.h"
 #include "VisibleUnits.h"
-#include "XMLNSNames.h"
 #include "htmlediting.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/unicode/CharacterNames.h>
 
 using namespace std;
 
@@ -112,9 +106,9 @@ static void completeURLs(DocumentFragment* fragment, const String& baseURL)
             continue;
         unsigned length = element->attributeCount();
         for (unsigned i = 0; i < length; i++) {
-            const Attribute* attribute = element->attributeItem(i);
-            if (element->isURLAttribute(*attribute) && !attribute->value().isEmpty())
-                changes.append(AttributeChange(element, attribute->name(), KURL(parsedBaseURL, attribute->value()).string()));
+            const Attribute& attribute = element->attributeAt(i);
+            if (element->isURLAttribute(attribute) && !attribute.value().isEmpty())
+                changes.append(AttributeChange(element, attribute.name(), KURL(parsedBaseURL, attribute.value()).string()));
         }
     }
 
@@ -223,7 +217,7 @@ String StyledMarkupAccumulator::takeResults()
 
 void StyledMarkupAccumulator::appendText(StringBuilder& out, Text* text)
 {    
-    const bool parentIsTextarea = text->parentElement() && text->parentElement()->tagQName() == textareaTag;
+    const bool parentIsTextarea = text->parentElement() && isHTMLTextAreaElement(text->parentElement());
     const bool wrappingSpan = shouldApplyWrappingStyle(text) && !parentIsTextarea;
     if (wrappingSpan) {
         RefPtr<EditingStyle> wrappingStyle = m_wrappingStyle->copy();
@@ -291,11 +285,11 @@ void StyledMarkupAccumulator::appendElement(StringBuilder& out, Element* element
     const bool shouldAnnotateOrForceInline = element->isHTMLElement() && (shouldAnnotate() || addDisplayInline);
     const bool shouldOverrideStyleAttr = shouldAnnotateOrForceInline || shouldApplyWrappingStyle(element);
     for (unsigned i = 0; i < length; ++i) {
-        const Attribute* attribute = element->attributeItem(i);
+        const Attribute& attribute = element->attributeAt(i);
         // We'll handle the style attribute separately, below.
-        if (attribute->name() == styleAttr && shouldOverrideStyleAttr)
+        if (attribute.name() == styleAttr && shouldOverrideStyleAttr)
             continue;
-        appendAttribute(out, element, *attribute, 0);
+        appendAttribute(out, element, attribute, 0);
     }
 
     if (shouldOverrideStyleAttr) {
@@ -440,7 +434,7 @@ static Node* ancestorToRetainStructureAndAppearanceForBlock(Node* commonAncestor
 
     if (commonAncestorBlock->hasTagName(tbodyTag) || commonAncestorBlock->hasTagName(trTag)) {
         ContainerNode* table = commonAncestorBlock->parentNode();
-        while (table && !table->hasTagName(tableTag))
+        while (table && !isHTMLTableElement(table))
             table = table->parentNode();
 
         return table;
@@ -472,7 +466,7 @@ static bool propertyMissingOrEqualToNone(StylePropertySet* style, CSSPropertyID 
         return true;
     if (!value->isPrimitiveValue())
         return false;
-    return static_cast<CSSPrimitiveValue*>(value.get())->getIdent() == CSSValueNone;
+    return static_cast<CSSPrimitiveValue*>(value.get())->getValueID() == CSSValueNone;
 }
 
 static bool needInterchangeNewlineAfter(const VisiblePosition& v)
@@ -527,7 +521,7 @@ static Node* highestAncestorToWrapMarkup(const Range* range, EAnnotateForInterch
     }
 
     Node* checkAncestor = specialCommonAncestor ? specialCommonAncestor : commonAncestor;
-    if (checkAncestor->renderer()) {
+    if (checkAncestor->renderer() && checkAncestor->renderer()->containingBlock()) {
         Node* newSpecialCommonAncestor = highestEnclosingNodeOfType(firstPositionInNode(checkAncestor), &isElementPresentational, CanCrossEditingBoundary, checkAncestor->renderer()->containingBlock()->node());
         if (newSpecialCommonAncestor)
             specialCommonAncestor = newSpecialCommonAncestor;
@@ -761,7 +755,7 @@ PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document* docum
     return fragment;
 }
 
-String createMarkup(const Node* node, EChildrenOnly childrenOnly, Vector<Node*>* nodes, EAbsoluteURLs shouldResolveURLs, Vector<QualifiedName>* tagNamesToSkip)
+String createMarkup(const Node* node, EChildrenOnly childrenOnly, Vector<Node*>* nodes, EAbsoluteURLs shouldResolveURLs, Vector<QualifiedName>* tagNamesToSkip, EFragmentSerialization fragmentSerialization)
 {
     if (!node)
         return "";
@@ -774,7 +768,7 @@ String createMarkup(const Node* node, EChildrenOnly childrenOnly, Vector<Node*>*
             return "";
     }
 #endif
-    MarkupAccumulator accumulator(nodes, shouldResolveURLs);
+    MarkupAccumulator accumulator(nodes, shouldResolveURLs, 0, fragmentSerialization);
     return accumulator.serializeNodes(const_cast<Node*>(node), deleteButtonContainerElement, childrenOnly, tagNamesToSkip);
 }
 
@@ -829,19 +823,22 @@ bool isPlainTextMarkup(Node *node)
     return (node->childNodeCount() == 2 && isTabSpanTextNode(node->firstChild()->firstChild()) && node->firstChild()->nextSibling()->isTextNode());
 }
 
+static bool contextPreservesNewline(const Range& context)
+{
+    VisiblePosition position(context.startPosition());
+    Node* container = position.deepEquivalent().containerNode();
+    if (!container || !container->renderer())
+        return false;
+
+    return container->renderer()->style()->preserveNewline();
+}
+
 PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String& text)
 {
     if (!context)
         return 0;
 
-    Node* styleNode = context->firstNode();
-    if (!styleNode) {
-        styleNode = context->startPosition().deprecatedNode();
-        if (!styleNode)
-            return 0;
-    }
-
-    Document* document = styleNode->document();
+    Document* document = context->ownerDocument();
     RefPtr<DocumentFragment> fragment = document->createDocumentFragment();
     
     if (text.isEmpty())
@@ -851,8 +848,7 @@ PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String
     string.replace("\r\n", "\n");
     string.replace('\r', '\n');
 
-    RenderObject* renderer = styleNode->renderer();
-    if (renderer && renderer->style()->preserveNewline()) {
+    if (contextPreservesNewline(*context)) {
         fragment->appendChild(document->createTextNode(string), ASSERT_NO_EXCEPTION);
         if (string.endsWith('\n')) {
             RefPtr<Element> element = createBreakElement(document);
@@ -1059,14 +1055,14 @@ PassRefPtr<DocumentFragment> createContextualFragment(const String& markup, HTML
     // accommodate folks passing complete HTML documents to make the
     // child of an element.
 
-    RefPtr<Node> nextNode;
-    for (RefPtr<Node> node = fragment->firstChild(); node; node = nextNode) {
-        nextNode = node->nextSibling();
-        if (node->hasTagName(htmlTag) || node->hasTagName(headTag) || node->hasTagName(bodyTag)) {
-            HTMLElement* element = toHTMLElement(node.get());
-            if (Node* firstChild = element->firstChild())
-                nextNode = firstChild;
-            removeElementPreservingChildren(fragment, element);
+    RefPtr<Element> nextElement;
+    for (RefPtr<Element> element = ElementTraversal::firstWithin(fragment.get()); element; element = nextElement) {
+        nextElement = ElementTraversal::nextSibling(element.get());
+        if (element->hasTagName(htmlTag) || element->hasTagName(headTag) || element->hasTagName(bodyTag)) {
+            HTMLElement* htmlElement = toHTMLElement(element.get());
+            if (Element* firstChild = ElementTraversal::firstWithin(htmlElement))
+                nextElement = firstChild;
+            removeElementPreservingChildren(fragment, htmlElement);
         }
     }
     return fragment.release();

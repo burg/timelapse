@@ -91,7 +91,7 @@ bool SubframeLoader::requestFrame(HTMLFrameOwnerElement* ownerElement, const Str
         return false;
 
     if (!scriptURL.isEmpty())
-        frame->script()->executeIfJavaScriptURL(scriptURL);
+        frame->script().executeIfJavaScriptURL(scriptURL);
 
     return true;
 }
@@ -108,14 +108,10 @@ bool SubframeLoader::resourceWillUsePlugin(const String& url, const String& mime
 
 bool SubframeLoader::pluginIsLoadable(HTMLPlugInImageElement* pluginElement, const KURL& url, const String& mimeType)
 {
-    Settings* settings = m_frame->settings();
-    if (!settings)
-        return false;
-
     if (MIMETypeRegistry::isJavaAppletMIMEType(mimeType)) {
-        if (!settings->isJavaEnabled())
+        if (!m_frame->settings().isJavaEnabled())
             return false;
-        if (document() && document()->securityOrigin()->isLocal() && !settings->isJavaEnabledForLocalFiles())
+        if (document() && document()->securityOrigin()->isLocal() && !m_frame->settings().isJavaEnabledForLocalFiles())
             return false;
     }
 
@@ -138,7 +134,7 @@ bool SubframeLoader::pluginIsLoadable(HTMLPlugInImageElement* pluginElement, con
             return false;
         }
 
-        if (m_frame->loader() && !m_frame->loader()->mixedContentChecker()->canRunInsecureContent(document()->securityOrigin(), url))
+        if (!m_frame->loader().mixedContentChecker()->canRunInsecureContent(document()->securityOrigin(), url))
             return false;
     }
 
@@ -188,7 +184,7 @@ static String findPluginMIMETypeFromURL(Page* page, const String& url)
 
 static void logPluginRequest(Page* page, const String& mimeType, const String& url, bool success)
 {
-    if (!page || !page->settings()->diagnosticLoggingEnabled())
+    if (!page || !page->settings().diagnosticLoggingEnabled())
         return;
 
     String newMIMEType = mimeType;
@@ -203,14 +199,14 @@ static void logPluginRequest(Page* page, const String& mimeType, const String& u
     String pluginFile = pluginData ? pluginData->pluginFileForMimeType(newMIMEType) : String();
     String description = !pluginFile ? newMIMEType : pluginFile;
 
-    ChromeClient* client = page->chrome().client();
-    client->logDiagnosticMessage(success ? DiagnosticLoggingKeys::pluginLoadedKey() : DiagnosticLoggingKeys::pluginLoadingFailedKey(), description, DiagnosticLoggingKeys::noopKey());
+    ChromeClient& chromeClient = page->chrome().client();
+    chromeClient.logDiagnosticMessage(success ? DiagnosticLoggingKeys::pluginLoadedKey() : DiagnosticLoggingKeys::pluginLoadingFailedKey(), description, DiagnosticLoggingKeys::noopKey());
 
     if (!page->hasSeenAnyPlugin())
-        client->logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsAtLeastOnePluginKey(), emptyString(), DiagnosticLoggingKeys::noopKey());
+        chromeClient.logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsAtLeastOnePluginKey(), emptyString(), DiagnosticLoggingKeys::noopKey());
     
     if (!page->hasSeenPlugin(description))
-        client->logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsPluginKey(), description, DiagnosticLoggingKeys::noopKey());
+        chromeClient.logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsPluginKey(), description, DiagnosticLoggingKeys::noopKey());
 
     page->sawPlugin(description);
 }
@@ -247,7 +243,7 @@ bool SubframeLoader::requestObject(HTMLPlugInImageElement* ownerElement, const S
 PassRefPtr<Widget> SubframeLoader::loadMediaPlayerProxyPlugin(Node* node, const KURL& url,
     const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
-    ASSERT(node->hasTagName(videoTag) || node->hasTagName(audioTag));
+    ASSERT(node->hasTagName(videoTag) || isHTMLAudioElement(node));
 
     KURL completedURL;
     if (!url.isEmpty())
@@ -261,7 +257,7 @@ PassRefPtr<Widget> SubframeLoader::loadMediaPlayerProxyPlugin(Node* node, const 
     if (!m_frame->document()->contentSecurityPolicy()->allowMediaFromSource(completedURL))
         return 0;
 
-    HTMLMediaElement* mediaElement = static_cast<HTMLMediaElement*>(node);
+    HTMLMediaElement* mediaElement = toHTMLMediaElement(node);
     RenderPart* renderer = toRenderPart(node->renderer());
     IntSize size;
 
@@ -270,10 +266,10 @@ PassRefPtr<Widget> SubframeLoader::loadMediaPlayerProxyPlugin(Node* node, const 
     else if (mediaElement->isVideo())
         size = RenderVideo::defaultSize();
 
-    if (!m_frame->loader()->mixedContentChecker()->canRunInsecureContent(m_frame->document()->securityOrigin(), completedURL))
+    if (!m_frame->loader().mixedContentChecker()->canRunInsecureContent(m_frame->document()->securityOrigin(), completedURL))
         return 0;
 
-    RefPtr<Widget> widget = m_frame->loader()->client()->createMediaPlayerProxyPlugin(size, mediaElement, completedURL,
+    RefPtr<Widget> widget = m_frame->loader().client()->createMediaPlayerProxyPlugin(size, mediaElement, completedURL,
                                          paramNames, paramValues, "application/x-media-element-proxy-plugin");
 
     if (widget && renderer) {
@@ -317,14 +313,14 @@ PassRefPtr<Widget> SubframeLoader::createJavaAppletWidget(const IntSize& size, H
 
     RefPtr<Widget> widget;
     if (allowPlugins(AboutToInstantiatePlugin))
-        widget = m_frame->loader()->client()->createJavaAppletWidget(size, element, baseURL, paramNames, paramValues);
+        widget = m_frame->loader().client()->createJavaAppletWidget(size, element, baseURL, paramNames, paramValues);
 
     logPluginRequest(document()->page(), element->serviceType(), String(), widget);
 
     if (!widget) {
         RenderEmbeddedObject* renderer = element->renderEmbeddedObject();
 
-        if (!renderer->showsUnavailablePluginIndicator())
+        if (!renderer->isPluginUnavailable())
             renderer->setPluginUnavailabilityReason(RenderEmbeddedObject::PluginMissing);
         return 0;
     }
@@ -337,9 +333,9 @@ Frame* SubframeLoader::loadOrRedirectSubframe(HTMLFrameOwnerElement* ownerElemen
 {
     Frame* frame = ownerElement->contentFrame();
     if (frame)
-        frame->navigationScheduler()->scheduleLocationChange(m_frame->document()->securityOrigin(), url.string(), m_frame->loader()->outgoingReferrer(), lockHistory, lockBackForwardList);
+        frame->navigationScheduler()->scheduleLocationChange(m_frame->document()->securityOrigin(), url.string(), m_frame->loader().outgoingReferrer(), lockHistory, lockBackForwardList);
     else
-        frame = loadSubframe(ownerElement, url, frameName, m_frame->loader()->outgoingReferrer());
+        frame = loadSubframe(ownerElement, url, frameName, m_frame->loader().outgoingReferrer());
 
     ASSERT(ownerElement->contentFrame() == frame || !ownerElement->contentFrame());
     return ownerElement->contentFrame();
@@ -353,10 +349,10 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
     int marginWidth = -1;
     int marginHeight = -1;
     if (ownerElement->hasTagName(frameTag) || ownerElement->hasTagName(iframeTag)) {
-        HTMLFrameElementBase* o = static_cast<HTMLFrameElementBase*>(ownerElement);
-        allowsScrolling = o->scrollingMode() != ScrollbarAlwaysOff;
-        marginWidth = o->marginWidth();
-        marginHeight = o->marginHeight();
+        HTMLFrameElementBase* frameElementBase = toHTMLFrameElementBase(ownerElement);
+        allowsScrolling = frameElementBase->scrollingMode() != ScrollbarAlwaysOff;
+        marginWidth = frameElementBase->marginWidth();
+        marginHeight = frameElementBase->marginHeight();
     }
 
     if (!ownerElement->document()->securityOrigin()->canDisplay(url)) {
@@ -365,10 +361,10 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
     }
 
     String referrerToUse = SecurityPolicy::generateReferrerHeader(ownerElement->document()->referrerPolicy(), url, referrer);
-    RefPtr<Frame> frame = m_frame->loader()->client()->createFrame(url, name, ownerElement, referrerToUse, allowsScrolling, marginWidth, marginHeight);
+    RefPtr<Frame> frame = m_frame->loader().client()->createFrame(url, name, ownerElement, referrerToUse, allowsScrolling, marginWidth, marginHeight);
 
     if (!frame)  {
-        m_frame->loader()->checkCallImplicitClose();
+        m_frame->loader().checkCallImplicitClose();
         return 0;
     }
     
@@ -378,14 +374,14 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
     // actually completed below. (Note that we set m_isComplete to false even for synchronous
     // loads, so that checkCompleted() below won't bail early.)
     // FIXME: Can we remove this entirely? m_isComplete normally gets set to false when a load is committed.
-    frame->loader()->started();
+    frame->loader().started();
    
     RenderObject* renderer = ownerElement->renderer();
     FrameView* view = frame->view();
     if (renderer && renderer->isWidget() && view)
         toRenderWidget(renderer)->setWidget(view);
     
-    m_frame->loader()->checkCallImplicitClose();
+    m_frame->loader().checkCallImplicitClose();
     
     // Some loads are performed synchronously (e.g., about:blank and loads
     // cancelled by returning a null ResourceRequest from requestFromDelegate).
@@ -396,24 +392,23 @@ Frame* SubframeLoader::loadSubframe(HTMLFrameOwnerElement* ownerElement, const K
     // FIXME: In this case the Frame will have finished loading before 
     // it's being added to the child list. It would be a good idea to
     // create the child first, then invoke the loader separately.
-    if (frame->loader()->state() == FrameStateComplete && !frame->loader()->policyDocumentLoader())
-        frame->loader()->checkCompleted();
+    if (frame->loader().state() == FrameStateComplete && !frame->loader().policyDocumentLoader())
+        frame->loader().checkCompleted();
 
     return frame.get();
 }
 
 bool SubframeLoader::allowPlugins(ReasonForCallingAllowPlugins reason)
 {
-    Settings* settings = m_frame->settings();
-    bool allowed = m_frame->loader()->client()->allowPlugins(settings && settings->arePluginsEnabled());
+    bool allowed = m_frame->loader().client()->allowPlugins(m_frame->settings().arePluginsEnabled());
     if (!allowed && reason == AboutToInstantiatePlugin)
-        m_frame->loader()->client()->didNotAllowPlugins();
+        m_frame->loader().client()->didNotAllowPlugins();
     return allowed;
 }
 
 bool SubframeLoader::shouldUsePlugin(const KURL& url, const String& mimeType, bool shouldPreferPlugInsForImages, bool hasFallback, bool& useFallback)
 {
-    if (m_frame->loader()->client()->shouldAlwaysUsePluginDocument(mimeType)) {
+    if (m_frame->loader().client()->shouldAlwaysUsePluginDocument(mimeType)) {
         useFallback = false;
         return true;
     }
@@ -427,7 +422,7 @@ bool SubframeLoader::shouldUsePlugin(const KURL& url, const String& mimeType, bo
             return true;
     }
         
-    ObjectContentType objectType = m_frame->loader()->client()->objectContentType(url, mimeType, shouldPreferPlugInsForImages);
+    ObjectContentType objectType = m_frame->loader().client()->objectContentType(url, mimeType, shouldPreferPlugInsForImages);
     // If an object's content can't be handled and it has no fallback, let
     // it be handled as a plugin to show the broken plugin icon.
     useFallback = objectType == ObjectContentNone && hasFallback;
@@ -452,11 +447,11 @@ bool SubframeLoader::loadPlugin(HTMLPlugInImageElement* pluginElement, const KUR
 
     IntSize contentSize = roundedIntSize(LayoutSize(renderer->contentWidth(), renderer->contentHeight()));
     bool loadManually = document()->isPluginDocument() && !m_containsPlugins && toPluginDocument(document())->shouldLoadPluginManually();
-    RefPtr<Widget> widget = m_frame->loader()->client()->createPlugin(contentSize,
+    RefPtr<Widget> widget = m_frame->loader().client()->createPlugin(contentSize,
         pluginElement, url, paramNames, paramValues, mimeType, loadManually);
 
     if (!widget) {
-        if (!renderer->showsUnavailablePluginIndicator())
+        if (!renderer->isPluginUnavailable())
             renderer->setPluginUnavailabilityReason(RenderEmbeddedObject::PluginMissing);
         return false;
     }

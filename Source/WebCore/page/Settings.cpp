@@ -53,8 +53,8 @@ namespace WebCore {
 static void setImageLoadingSettings(Page* page)
 {
     for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-        frame->document()->cachedResourceLoader()->setImagesEnabled(page->settings()->areImagesEnabled());
-        frame->document()->cachedResourceLoader()->setAutoLoadImages(page->settings()->loadsImagesAutomatically());
+        frame->document()->cachedResourceLoader()->setImagesEnabled(page->settings().areImagesEnabled());
+        frame->document()->cachedResourceLoader()->setAutoLoadImages(page->settings().loadsImagesAutomatically());
     }
 }
 
@@ -77,7 +77,7 @@ bool Settings::gShouldPaintNativeControls = true;
 bool Settings::gAVFoundationEnabled = false;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 bool Settings::gQTKitEnabled = true;
 #endif
 
@@ -89,6 +89,7 @@ bool Settings::gShouldUseHighResolutionTimers = true;
 #endif
     
 bool Settings::gShouldRespectPriorityInCSSAttributeSetters = false;
+bool Settings::gLowPowerVideoAudioBufferSizeEnabled = false;
 
 // NOTEs
 //  1) EditingMacBehavior comprises Tiger, Leopard, SnowLeopard and iOS builds, as well as QtWebKit when built on Mac;
@@ -135,6 +136,7 @@ Settings::Settings(Page* page)
 #endif
 #endif
     SETTINGS_INITIALIZER_LIST
+    , m_screenFontSubstitutionEnabled(shouldEnableScreenFontSubstitutionByDefault())
     , m_isJavaEnabled(false)
     , m_isJavaEnabledForLocalFiles(true)
     , m_loadsImagesAutomatically(false)
@@ -180,9 +182,9 @@ Settings::~Settings()
 {
 }
 
-PassOwnPtr<Settings> Settings::create(Page* page)
+PassRefPtr<Settings> Settings::create(Page* page)
 {
-    return adoptPtr(new Settings(page));
+    return adoptRef(new Settings(page));
 }
 
 SETTINGS_SETTER_BODIES
@@ -196,6 +198,13 @@ double Settings::hiddenPageDOMTimerAlignmentInterval()
 {
     return gHiddenPageDOMTimerAlignmentInterval;
 }
+
+#if !PLATFORM(MAC)
+bool Settings::shouldEnableScreenFontSubstitutionByDefault()
+{
+    return true;
+}
+#endif
 
 #if !PLATFORM(MAC) && !PLATFORM(BLACKBERRY)
 void Settings::initializeDefaultFontFamilies()
@@ -381,7 +390,11 @@ void Settings::setImagesEnabled(bool areImagesEnabled)
 
 void Settings::setPluginsEnabled(bool arePluginsEnabled)
 {
+    if (m_arePluginsEnabled == arePluginsEnabled)
+        return;
+
     m_arePluginsEnabled = arePluginsEnabled;
+    Page::refreshPlugins(false);
 }
 
 void Settings::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
@@ -464,6 +477,14 @@ void Settings::setUsesPageCache(bool usesPageCache)
     }
 }
 
+void Settings::setScreenFontSubstitutionEnabled(bool enabled)
+{
+    if (m_screenFontSubstitutionEnabled == enabled)
+        return;
+    m_screenFontSubstitutionEnabled = enabled;
+    m_page->setNeedsRecalcStyleInAllFrames();
+}
+
 void Settings::setFontRenderingMode(FontRenderingMode mode)
 {
     if (fontRenderingMode() == mode)
@@ -537,7 +558,7 @@ void Settings::setAVFoundationEnabled(bool enabled)
 }
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 void Settings::setQTKitEnabled(bool enabled)
 {
     if (gQTKitEnabled == enabled)
@@ -610,5 +631,10 @@ void Settings::setHiddenPageCSSAnimationSuspensionEnabled(bool flag)
     m_page->hiddenPageCSSAnimationSuspensionStateChanged();
 }
 #endif
+
+void Settings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
+{
+    gLowPowerVideoAudioBufferSizeEnabled = flag;
+}
 
 } // namespace WebCore

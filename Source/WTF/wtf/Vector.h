@@ -319,12 +319,14 @@ namespace WTF {
         VectorBufferBase()
             : m_buffer(0)
             , m_capacity(0)
+            , m_size(0)
         {
         }
 
-        VectorBufferBase(T* buffer, size_t capacity)
+        VectorBufferBase(T* buffer, size_t capacity, size_t size)
             : m_buffer(buffer)
             , m_capacity(capacity)
+            , m_size(size)
         {
         }
 
@@ -335,6 +337,7 @@ namespace WTF {
 
         T* m_buffer;
         unsigned m_capacity;
+        unsigned m_size; // Only used by the Vector subclass, but placed here to avoid padding the struct.
     };
 
     template<typename T, size_t inlineCapacity>
@@ -349,8 +352,9 @@ namespace WTF {
         {
         }
 
-        VectorBuffer(size_t capacity)
+        VectorBuffer(size_t capacity, size_t size = 0)
         {
+            m_size = size;
             // Calling malloc(0) might take a lock and may actually do an
             // allocation on some systems.
             if (capacity)
@@ -380,6 +384,10 @@ namespace WTF {
         using Base::capacity;
 
         using Base::releaseBuffer;
+
+    protected:
+        using Base::m_size;
+
     private:
         using Base::m_buffer;
         using Base::m_capacity;
@@ -392,12 +400,12 @@ namespace WTF {
         typedef VectorBufferBase<T> Base;
     public:
         VectorBuffer()
-            : Base(inlineBuffer(), inlineCapacity)
+            : Base(inlineBuffer(), inlineCapacity, 0)
         {
         }
 
-        VectorBuffer(size_t capacity)
-            : Base(inlineBuffer(), inlineCapacity)
+        VectorBuffer(size_t capacity, size_t size = 0)
+            : Base(inlineBuffer(), inlineCapacity, size)
         {
             if (capacity > inlineCapacity)
                 Base::allocateBuffer(capacity);
@@ -486,6 +494,9 @@ namespace WTF {
             return Base::releaseBuffer();
         }
 
+    protected:
+        using Base::m_size;
+
     private:
         using Base::m_buffer;
         using Base::m_capacity;
@@ -520,13 +531,11 @@ namespace WTF {
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
         Vector()
-            : m_size(0)
         {
         }
         
         explicit Vector(size_t size)
-            : Base(size)
-            , m_size(size)
+            : Base(size, size)
         {
             if (begin())
                 TypeOperations::initialize(begin(), end());
@@ -600,7 +609,14 @@ namespace WTF {
         const T& first() const { return at(0); }
         T& last() { return at(size() - 1); }
         const T& last() const { return at(size() - 1); }
-
+        
+        T takeLast()
+        {
+            T result = last();
+            removeLast();
+            return result;
+        }
+        
         template<typename U> bool contains(const U&) const;
         template<typename U> size_t find(const U&) const;
         template<typename U> size_t reverseFind(const U&) const;
@@ -608,6 +624,7 @@ namespace WTF {
         void shrink(size_t size);
         void grow(size_t size);
         void resize(size_t size);
+        void resizeToFit(size_t size);
         void reserveCapacity(size_t newCapacity);
         bool tryReserveCapacity(size_t newCapacity);
         void reserveInitialCapacity(size_t initialCapacity);
@@ -637,8 +654,7 @@ namespace WTF {
         }
 
         Vector(size_t size, const T& val)
-            : Base(size)
-            , m_size(size)
+            : Base(size, size)
         {
             if (begin())
                 TypeOperations::uninitializedFill(begin(), end(), val);
@@ -669,8 +685,7 @@ namespace WTF {
         template<typename U> U* expandCapacity(size_t newMinCapacity, U*); 
         template<typename U> void appendSlowCase(const U&);
 
-        unsigned m_size;
-
+        using Base::m_size;
         using Base::buffer;
         using Base::capacity;
         using Base::swap;
@@ -685,8 +700,7 @@ namespace WTF {
 
     template<typename T, size_t inlineCapacity, typename OverflowHandler>
     Vector<T, inlineCapacity, OverflowHandler>::Vector(const Vector& other)
-        : Base(other.capacity())
-        , m_size(other.size())
+        : Base(other.capacity(), other.size())
     {
         if (begin())
             TypeOperations::uninitializedCopy(other.begin(), other.end(), begin());
@@ -695,8 +709,7 @@ namespace WTF {
     template<typename T, size_t inlineCapacity, typename OverflowHandler>
     template<size_t otherCapacity, typename otherOverflowBehaviour>
     Vector<T, inlineCapacity, OverflowHandler>::Vector(const Vector<T, otherCapacity, otherOverflowBehaviour>& other)
-        : Base(other.capacity())
-        , m_size(other.size())
+        : Base(other.capacity(), other.size())
     {
         if (begin())
             TypeOperations::uninitializedCopy(other.begin(), other.end(), begin());
@@ -766,7 +779,6 @@ namespace WTF {
 #if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
     template<typename T, size_t inlineCapacity, typename OverflowHandler>
     Vector<T, inlineCapacity, OverflowHandler>::Vector(Vector<T, inlineCapacity, OverflowHandler>&& other)
-        : m_size(0)
     {
         // It's a little weird to implement a move constructor using swap but this way we
         // don't have to add a move constructor to VectorBuffer.
@@ -894,6 +906,13 @@ namespace WTF {
         }
         
         m_size = size;
+    }
+
+    template<typename T, size_t inlineCapacity, typename OverflowHandler>
+    void Vector<T, inlineCapacity, OverflowHandler>::resizeToFit(size_t size)
+    {
+        reserveCapacity(size);
+        resize(size);
     }
 
     template<typename T, size_t inlineCapacity, typename OverflowHandler>

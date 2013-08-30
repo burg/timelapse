@@ -86,14 +86,19 @@ public:
     void setIsReparsing() { m_isReparsing = true; }
     bool isReparsing() const { return m_isReparsing; }
 
-    JSTokenType lex(JSTokenData*, JSTokenLocation*, unsigned, bool strictMode);
+    JSTokenType lex(JSToken*, unsigned, bool strictMode);
     bool nextTokenIsColon();
     int lineNumber() const { return m_lineNumber; }
-    int currentCharPosition() const { return m_code - m_codeStartPlusOffset; }
+    ALWAYS_INLINE int currentOffset() const { return offsetFromSourcePtr(m_code); }
+    ALWAYS_INLINE int currentLineStartOffset() const { return offsetFromSourcePtr(m_lineStart); }
+    ALWAYS_INLINE JSTextPosition currentPosition() const
+    {
+        return JSTextPosition(m_lineNumber, currentOffset(), currentLineStartOffset());
+    }
     void setLastLineNumber(int lastLineNumber) { m_lastLineNumber = lastLineNumber; }
     int lastLineNumber() const { return m_lastLineNumber; }
     bool prevTerminator() const { return m_terminator; }
-    SourceCode sourceCode(int openBrace, int closeBrace, int firstLine);
+    SourceCode sourceCode(int openBrace, int closeBrace, int firstLine, unsigned startColumn);
     bool scanRegExp(const Identifier*& pattern, const Identifier*& flags, UChar patternPrefix = 0);
     bool skipRegExp();
 
@@ -101,11 +106,15 @@ public:
     bool sawError() const { return m_error; }
     String getErrorMessage() const { return m_lexErrorMessage; }
     void clear();
-    void setOffset(int offset)
+    void setOffset(int offset, int lineStartOffset)
     {
         m_error = 0;
         m_lexErrorMessage = String();
-        m_code = m_codeStart + offset;
+
+        m_code = sourcePtrFromOffset(offset);
+        m_lineStart = sourcePtrFromOffset(lineStartOffset);
+        ASSERT(currentOffset() >= currentLineStartOffset());
+
         m_buffer8.resize(0);
         m_buffer16.resize(0);
         if (LIKELY(m_code < m_codeEnd))
@@ -120,7 +129,7 @@ public:
 
     SourceProvider* sourceProvider() const { return m_source->provider(); }
 
-    JSTokenType lexExpectIdentifier(JSTokenData*, JSTokenLocation*, unsigned, bool strictMode);
+    JSTokenType lexExpectIdentifier(JSToken*, unsigned, bool strictMode);
 
 private:
     void record8(int);
@@ -165,10 +174,12 @@ private:
     UnicodeHexValue parseFourDigitUnicodeHex();
     void shiftLineTerminator();
 
+    ALWAYS_INLINE int offsetFromSourcePtr(const T* ptr) const { return ptr - m_codeStart; }
+    ALWAYS_INLINE const T* sourcePtrFromOffset(int offset) const { return m_codeStart + offset; }
+
     String invalidCharacterMessage() const;
-    ALWAYS_INLINE const T* currentCharacter() const;
-    ALWAYS_INLINE int currentOffset() const { return m_code - m_codeStart; }
-    ALWAYS_INLINE void setOffsetFromCharOffset(const T* charOffset) { setOffset(charOffset - m_codeStart); }
+    ALWAYS_INLINE const T* currentSourcePtr() const;
+    ALWAYS_INLINE void setOffsetFromSourcePtr(const T* sourcePtr, unsigned lineStartOffset) { setOffset(offsetFromSourcePtr(sourcePtr), lineStartOffset); }
 
     ALWAYS_INLINE void setCodeStart(const StringImpl*);
 
@@ -210,10 +221,12 @@ private:
     int m_lastToken;
 
     const SourceCode* m_source;
+    unsigned m_sourceOffset;
     const T* m_code;
     const T* m_codeStart;
     const T* m_codeEnd;
     const T* m_codeStartPlusOffset;
+    const T* m_lineStart;
     bool m_isReparsing;
     bool m_atLineStart;
     bool m_error;
@@ -322,12 +335,15 @@ ALWAYS_INLINE const Identifier* Lexer<T>::makeLCharIdentifier(const UChar* chara
 }
 
 template <typename T>
-ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSTokenData* tokenData, JSTokenLocation* tokenLocation, unsigned lexerFlags, bool strictMode)
+ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSToken* tokenRecord, unsigned lexerFlags, bool strictMode)
 {
+    JSTokenData* tokenData = &tokenRecord->m_data;
+    JSTokenLocation* tokenLocation = &tokenRecord->m_location;
     ASSERT((lexerFlags & LexerFlagsIgnoreReservedWords));
     const T* start = m_code;
     const T* ptr = start;
     const T* end = m_codeEnd;
+    JSTextPosition startPosition = currentPosition();
     if (ptr >= end) {
         ASSERT(ptr == end);
         goto slowCase;
@@ -350,6 +366,7 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSTokenData* tokenData, 
         m_current = 0;
 
     m_code = ptr;
+    ASSERT(currentOffset() >= currentLineStartOffset());
 
     // Create the identifier if needed
     if (lexerFlags & LexexFlagsDontBuildKeywords)
@@ -357,14 +374,17 @@ ALWAYS_INLINE JSTokenType Lexer<T>::lexExpectIdentifier(JSTokenData* tokenData, 
     else
         tokenData->ident = makeLCharIdentifier(start, ptr - start);
     tokenLocation->line = m_lineNumber;
-    tokenLocation->startOffset = start - m_codeStart;
+    tokenLocation->lineStartOffset = currentLineStartOffset();
+    tokenLocation->startOffset = offsetFromSourcePtr(start);
     tokenLocation->endOffset = currentOffset();
-    tokenLocation->charPosition = currentCharPosition();
+    ASSERT(tokenLocation->startOffset >= tokenLocation->lineStartOffset);
+    tokenRecord->m_startPosition = startPosition;
+    tokenRecord->m_endPosition = currentPosition();
     m_lastToken = IDENT;
     return IDENT;
     
 slowCase:
-    return lex(tokenData, tokenLocation, lexerFlags, strictMode);
+    return lex(tokenRecord, lexerFlags, strictMode);
 }
 
 } // namespace JSC

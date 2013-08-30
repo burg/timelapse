@@ -32,7 +32,7 @@ namespace WebCore {
 
 class GridTrack;
 
-class RenderGrid : public RenderBlock {
+class RenderGrid FINAL : public RenderBlock {
 public:
     RenderGrid(Element*);
     virtual ~RenderGrid();
@@ -110,6 +110,8 @@ private:
     void distributeSpaceToTracks(Vector<GridTrack*>&, Vector<GridTrack*>* tracksForGrowthAboveMaxBreadth, AccumulatorGetter, AccumulatorGrowFunction, LayoutUnit& availableLogicalSpace);
 
     const GridTrackSize& gridTrackSize(TrackSizingDirection, size_t) const;
+    size_t explicitGridColumnCount() const;
+    size_t explicitGridRowCount() const;
     size_t maximumIndexInDirection(TrackSizingDirection) const;
 
     LayoutUnit logicalContentHeightForChild(RenderBox*, Vector<GridTrack>&);
@@ -121,10 +123,10 @@ private:
     GridSpan resolveGridPositionsFromAutoPlacementPosition(const RenderBox*, TrackSizingDirection, size_t) const;
     PassOwnPtr<GridSpan> resolveGridPositionsFromStyle(const RenderBox*, TrackSizingDirection) const;
     enum GridPositionSide {
-        StartSide,
-        EndSide,
-        BeforeSide,
-        AfterSide
+        ColumnStartSide,
+        ColumnEndSide,
+        RowStartSide,
+        RowEndSide
     };
     size_t resolveGridPositionFromStyle(const GridPosition&, GridPositionSide) const;
 

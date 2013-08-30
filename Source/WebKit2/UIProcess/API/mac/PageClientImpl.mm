@@ -39,6 +39,7 @@
 #import "WKStringCF.h"
 #import "WKViewInternal.h"
 #import "StringUtilities.h"
+#import "WebColorPickerMac.h"
 #import "WebContextMenuProxyMac.h"
 #import "WebEditCommandProxy.h"
 #import "WebPopupMenuProxyMac.h"
@@ -393,10 +394,9 @@ PassRefPtr<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPagePr
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-PassRefPtr<WebColorChooserProxy> PageClientImpl::createColorChooserProxy(WebPageProxy*, const WebCore::Color&,  const WebCore::IntRect&)
+PassRefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy* page, const WebCore::Color& initialColor,  const WebCore::IntRect& rect)
 {
-    notImplemented();
-    return 0;
+    return WebColorPickerMac::create(page, initialColor, rect, wkView());
 }
 #endif
 
@@ -456,36 +456,6 @@ CGContextRef PageClientImpl::containingWindowGraphicsContext()
         return 0;
 
     return static_cast<CGContextRef>([[window graphicsContext] graphicsPort]);
-}
-
-void PageClientImpl::didCommitLoadForMainFrame(bool useCustomRepresentation)
-{
-    [m_wkView _setPageHasCustomRepresentation:useCustomRepresentation];
-}
-
-void PageClientImpl::didFinishLoadingDataForCustomRepresentation(const String& suggestedFilename, const CoreIPC::DataReference& dataReference)
-{
-    [m_wkView _didFinishLoadingDataForCustomRepresentationWithSuggestedFilename:suggestedFilename dataReference:dataReference];
-}
-
-double PageClientImpl::customRepresentationZoomFactor()
-{
-    return [m_wkView _customRepresentationZoomFactor];
-}
-
-void PageClientImpl::setCustomRepresentationZoomFactor(double zoomFactor)
-{
-    [m_wkView _setCustomRepresentationZoomFactor:zoomFactor];
-}
-
-void PageClientImpl::findStringInCustomRepresentation(const String& string, FindOptions options, unsigned maxMatchCount)
-{
-    [m_wkView _findStringInCustomRepresentation:string withFindOptions:options maxMatchCount:maxMatchCount];
-}
-
-void PageClientImpl::countStringMatchesInCustomRepresentation(const String& string, FindOptions options, unsigned maxMatchCount)
-{
-    [m_wkView _countStringMatchesInCustomRepresentation:string withFindOptions:options maxMatchCount:maxMatchCount];
 }
 
 void PageClientImpl::flashBackingStoreUpdates(const Vector<IntRect>&)

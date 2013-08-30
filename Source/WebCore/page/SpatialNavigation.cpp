@@ -60,17 +60,15 @@ FocusCandidate::FocusCandidate(Node* node, FocusDirection direction)
     , focusableNode(0)
     , enclosingScrollableBox(0)
     , distance(maxDistance())
-    , parentDistance(maxDistance())
     , alignment(None)
-    , parentAlignment(None)
     , isOffscreen(true)
     , isOffscreenAfterScrolling(true)
 {
     ASSERT(node);
     ASSERT(node->isElementNode());
 
-    if (node->hasTagName(HTMLNames::areaTag)) {
-        HTMLAreaElement* area = static_cast<HTMLAreaElement*>(node);
+    if (isHTMLAreaElement(node)) {
+        HTMLAreaElement* area = toHTMLAreaElement(node);
         HTMLImageElement* image = area->imageElement();
         if (!image || !image->renderer())
             return;
@@ -92,7 +90,7 @@ FocusCandidate::FocusCandidate(Node* node, FocusDirection direction)
 
 bool isSpatialNavigationEnabled(const Frame* frame)
 {
-    return (frame && frame->settings() && frame->settings()->spatialNavigationEnabled());
+    return (frame && frame->settings().spatialNavigationEnabled());
 }
 
 static RectsAlignment alignmentForRects(FocusDirection direction, const LayoutRect& curRect, const LayoutRect& targetRect, const LayoutSize& viewSize)
@@ -380,18 +378,18 @@ bool scrollInDirection(Node* container, FocusDirection direction)
         LayoutUnit dy = 0;
         switch (direction) {
         case FocusDirectionLeft:
-            dx = - min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollLeft());
+            dx = - std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollLeft());
             break;
         case FocusDirectionRight:
             ASSERT(container->renderBox()->scrollWidth() > (container->renderBox()->scrollLeft() + container->renderBox()->clientWidth()));
-            dx = min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollWidth() - (container->renderBox()->scrollLeft() + container->renderBox()->clientWidth()));
+            dx = std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollWidth() - (container->renderBox()->scrollLeft() + container->renderBox()->clientWidth()));
             break;
         case FocusDirectionUp:
-            dy = - min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollTop());
+            dy = - std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollTop());
             break;
         case FocusDirectionDown:
             ASSERT(container->renderBox()->scrollHeight() - (container->renderBox()->scrollTop() + container->renderBox()->clientHeight()));
-            dy = min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollHeight() - (container->renderBox()->scrollTop() + container->renderBox()->clientHeight()));
+            dy = std::min<LayoutUnit>(Scrollbar::pixelsPerLineStep(), container->renderBox()->scrollHeight() - (container->renderBox()->scrollTop() + container->renderBox()->clientHeight()));
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -450,6 +448,10 @@ Node* scrollableEnclosingBoxOrParentFrameForNodeInDirection(FocusDirection direc
 bool canScrollInDirection(const Node* container, FocusDirection direction)
 {
     ASSERT(container);
+
+    if (container->hasTagName(HTMLNames::selectTag))
+        return false;
+
     if (container->isDocumentNode())
         return canScrollInDirection(toDocument(container)->frame(), direction);
 
@@ -606,7 +608,7 @@ bool areElementsOnSameLine(const FocusCandidate& firstCandidate, const FocusCand
     if (!firstCandidate.rect.intersects(secondCandidate.rect))
         return false;
 
-    if (firstCandidate.focusableNode->hasTagName(HTMLNames::areaTag) || secondCandidate.focusableNode->hasTagName(HTMLNames::areaTag))
+    if (isHTMLAreaElement(firstCandidate.focusableNode) || isHTMLAreaElement(secondCandidate.focusableNode))
         return false;
 
     if (!firstCandidate.visibleNode->renderer()->isRenderInline() || !secondCandidate.visibleNode->renderer()->isRenderInline())
@@ -616,6 +618,28 @@ bool areElementsOnSameLine(const FocusCandidate& firstCandidate, const FocusCand
         return false;
 
     return true;
+}
+
+// Consider only those nodes as candidate which are exactly in the focus-direction.
+// e.g. If we are moving down then the nodes that are above current focused node should be considered as invalid.
+bool isValidCandidate(FocusDirection direction, const FocusCandidate& current, FocusCandidate& candidate)
+{
+    LayoutRect currentRect = current.rect;
+    LayoutRect candidateRect = candidate.rect;
+
+    switch (direction) {
+    case FocusDirectionLeft:
+        return candidateRect.x() < currentRect.maxX();
+    case FocusDirectionUp:
+        return candidateRect.y() < currentRect.maxY();
+    case FocusDirectionRight:
+        return candidateRect.maxX() > currentRect.x();
+    case FocusDirectionDown:
+        return candidateRect.maxY() > currentRect.y();
+    default:
+        ASSERT_NOT_REACHED();
+    }
+    return false;
 }
 
 void distanceDataForNode(FocusDirection direction, const FocusCandidate& current, FocusCandidate& candidate)

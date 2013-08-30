@@ -35,6 +35,7 @@ WebInspector.LogContentView = function(representedObject)
     this.messagesElement = document.createElement("div");
     this.messagesElement.className = "console-messages";
     this.messagesElement.tabIndex = 0;
+    this.messagesElement.setAttribute("role", "log");
     this.messagesElement.addEventListener("mousedown", this._mousedown.bind(this));
     this.messagesElement.addEventListener("focus", this._didFocus.bind(this));
     this.messagesElement.addEventListener("blur", this._didBlur.bind(this));
@@ -62,13 +63,13 @@ WebInspector.LogContentView = function(representedObject)
     this._scopeBar = new WebInspector.ScopeBar("log-scope-bar", scopeBarItems, scopeBarItems[0]);
     this._scopeBar.addEventListener(WebInspector.ScopeBar.Event.SelectionChanged, this._scopeBarSelectionDidChange, this);
 
-    this._clearLogNavigationItem = new WebInspector.ButtonNavigationItem("clear-log", WebInspector.UIString("Clear log (%s or %s)").format(this._logViewController.messagesClearKeyboardShortcut.displayName, this._logViewController.messagesAlternateClearKeyboardShortcut.displayName), "Images/NavigationItemTrash.pdf", 16, 16);
+    this._clearLogNavigationItem = new WebInspector.ButtonNavigationItem("clear-log", WebInspector.UIString("Clear log (%s or %s)").format(this._logViewController.messagesClearKeyboardShortcut.displayName, this._logViewController.messagesAlternateClearKeyboardShortcut.displayName), "Images/NavigationItemTrash.svg", 16, 16);
     this._clearLogNavigationItem.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this._clearLog, this);
 
     var toolTip = WebInspector.UIString("Show split console");
     var altToolTip = WebInspector.UIString("Show full-height console");
 
-    this._toggleSplitNavigationItem = new WebInspector.ToggleButtonNavigationItem("split-toggle", toolTip, altToolTip, "Images/SplitToggleDown.pdf", "Images/SplitToggleUp.pdf", 16, 16);
+    this._toggleSplitNavigationItem = new WebInspector.ToggleButtonNavigationItem("split-toggle", toolTip, altToolTip, "Images/SplitToggleDown.svg", "Images/SplitToggleUp.svg", 16, 16);
     this._toggleSplitNavigationItem.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this._toggleSplit, this);
     this._toggleSplitNavigationItem.toggled = WebInspector.isShowingSplitConsole();
 
@@ -264,6 +265,7 @@ WebInspector.LogContentView.prototype = {
 
         var data = "";
 
+        var isPrefixOptional = messages.length <= 1 && onlySelected;
         messages.forEach(function (messageElement, index) {
             var messageObject = messageElement.message;
             if (!messageObject)
@@ -273,7 +275,7 @@ WebInspector.LogContentView.prototype = {
 
             if (index > 0)
                 data += "\n"
-            data += messageObject.toClipboardString();
+            data += messageObject.toClipboardString(isPrefixOptional);
         });
 
         return data;

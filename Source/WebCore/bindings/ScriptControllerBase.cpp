@@ -51,16 +51,15 @@ bool ScriptController::canExecuteScripts(ReasonForCallingCanExecuteScripts reaso
         return true;
     }
 
-    Settings* settings = m_frame->settings();
-    const bool allowed = m_frame->loader()->client()->allowScript(settings && settings->isScriptEnabled());
+    const bool allowed = m_frame->loader().client()->allowScript(m_frame->settings().isScriptEnabled());
     if (!allowed && reason == AboutToExecuteScript)
-        m_frame->loader()->client()->didNotAllowScript();
+        m_frame->loader().client()->didNotAllowScript();
     return allowed;
 }
 
 ScriptValue ScriptController::executeScript(const String& script, bool forceUserGesture)
 {
-    UserGestureIndicator gestureIndicator(forceUserGesture ? DefinitelyProcessingNewUserGesture : PossiblyProcessingUserGesture);
+    UserGestureIndicator gestureIndicator(forceUserGesture ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
     return executeScript(ScriptSourceCode(script, m_frame->document()->url()));
 }
 

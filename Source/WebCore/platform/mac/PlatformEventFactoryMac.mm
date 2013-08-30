@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #import "Scrollbar.h"
 #import "WebCoreSystemInterface.h"
 #import "WindowsKeyboardCodes.h"
+#import <mach/mach_time.h>
 #import <wtf/ASCIICType.h>
 
 namespace WebCore {
@@ -156,7 +157,6 @@ static PlatformWheelEventPhase momentumPhaseForEvent(NSEvent *event)
 {
     uint32_t phase = PlatformWheelEventPhaseNone;
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     if ([event momentumPhase] & NSEventPhaseBegan)
         phase |= PlatformWheelEventPhaseBegan;
     if ([event momentumPhase] & NSEventPhaseStationary)
@@ -167,29 +167,12 @@ static PlatformWheelEventPhase momentumPhaseForEvent(NSEvent *event)
         phase |= PlatformWheelEventPhaseEnded;
     if ([event momentumPhase] & NSEventPhaseCancelled)
         phase |= PlatformWheelEventPhaseCancelled;
-#else
-    switch (wkGetNSEventMomentumPhase(event)) {
-    case wkEventPhaseNone:
-        phase = PlatformWheelEventPhaseNone;
-        break;
-    case wkEventPhaseBegan:
-        phase = PlatformWheelEventPhaseBegan;
-        break;
-    case wkEventPhaseChanged:
-        phase = PlatformWheelEventPhaseChanged;
-        break;
-    case wkEventPhaseEnded:
-        phase = PlatformWheelEventPhaseEnded;
-        break;
-    }
-#endif
 
     return static_cast<PlatformWheelEventPhase>(phase);
 }
 
 static PlatformWheelEventPhase phaseForEvent(NSEvent *event)
 {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     uint32_t phase = PlatformWheelEventPhaseNone; 
     if ([event phase] & NSEventPhaseBegan)
         phase |= PlatformWheelEventPhaseBegan;
@@ -207,10 +190,6 @@ static PlatformWheelEventPhase phaseForEvent(NSEvent *event)
 #endif
 
     return static_cast<PlatformWheelEventPhase>(phase);
-#else
-    UNUSED_PARAM(event);
-    return PlatformWheelEventPhaseNone;
-#endif
 }
 
 #if ENABLE(GESTURE_EVENTS)
@@ -231,14 +210,14 @@ static PlatformEvent::Type gestureEventTypeForEvent(NSEvent *event)
 static inline String textFromEvent(NSEvent* event)
 {
     if ([event type] == NSFlagsChanged)
-        return String("");
+        return emptyString();
     return String([event characters]);
 }
 
 static inline String unmodifiedTextFromEvent(NSEvent* event)
 {
     if ([event type] == NSFlagsChanged)
-        return String("");
+        return emptyString();
     return String([event charactersIgnoringModifiers]);
 }
 
@@ -267,7 +246,7 @@ String keyIdentifierForKeyEvent(NSEvent* event)
                 
             default:
                 ASSERT_NOT_REACHED();
-                return String("");
+                return emptyString();
         }
     
     NSString *s = [event charactersIgnoringModifiers];
@@ -346,6 +325,36 @@ int windowsKeyCodeForKeyEvent(NSEvent* event)
     return windowsKeyCodeForKeyCode([event keyCode]);
 }
 
+static CFAbsoluteTime systemStartupTime;
+
+static void updateSystemStartupTimeIntervalSince1970()
+{
+    // CFAbsoluteTimeGetCurrent() provides the absolute time in seconds since 2001.
+    // mach_absolute_time() provides a relative system time since startup minus the time the computer was suspended.
+    mach_timebase_info_data_t timebase_info;
+    mach_timebase_info(&timebase_info);
+    double elapsedTimeSinceStartup = static_cast<double>(mach_absolute_time()) * timebase_info.numer / timebase_info.denom / 1e9;
+    systemStartupTime = kCFAbsoluteTimeIntervalSince1970 + CFAbsoluteTimeGetCurrent() - elapsedTimeSinceStartup;
+}
+
+static CFTimeInterval cachedStartupTimeIntervalSince1970()
+{
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        [[[NSWorkspace sharedWorkspace] notificationCenter] addObserverForName:NSWorkspaceDidWakeNotification
+                                                                        object:nil
+                                                                         queue:nil
+                                                                    usingBlock:^(NSNotification *){ updateSystemStartupTimeIntervalSince1970(); }];
+        updateSystemStartupTimeIntervalSince1970();
+    });
+    return systemStartupTime;
+}
+
+double eventTimeStampSince1970(NSEvent* event)
+{
+    return static_cast<double>(cachedStartupTimeIntervalSince1970() + [event timestamp]);
+}
+
 static inline bool isKeyUpEvent(NSEvent *event)
 {
     if ([event type] != NSFlagsChanged)
@@ -400,7 +409,7 @@ public:
         // PlatformEvent
         m_type                              = mouseEventTypeForEvent(event);
         m_modifiers                         = modifiersForEvent(event);
-        m_timestamp                         = [event timestamp];
+        m_timestamp                         = eventTimeStampSince1970(event);
 
         // PlatformMouseEvent
         m_position                          = pointForEvent(event, windowView);
@@ -427,7 +436,7 @@ public:
         // PlatformEvent
         m_type                              = PlatformEvent::Wheel;
         m_modifiers                         = modifiersForEvent(event);
-        m_timestamp                         = [event timestamp];
+        m_timestamp                         = eventTimeStampSince1970(event);
 
         // PlatformWheelEvent
         m_position                          = pointForEvent(event, windowView);
@@ -471,7 +480,7 @@ public:
         // PlatformEvent
         m_type                              = isKeyUpEvent(event) ? PlatformEvent::KeyUp : PlatformEvent::KeyDown;
         m_modifiers                         = modifiersForEvent(event);
-        m_timestamp                         = [event timestamp];
+        m_timestamp                         = eventTimeStampSince1970(event);
 
         // PlatformKeyboardEvent
         m_text                              = textFromEvent(event);
@@ -520,7 +529,7 @@ public:
         // PlatformEvent
         m_type                              = gestureEventTypeForEvent(event);
         m_modifiers                         = modifiersForEvent(event);
-        m_timestamp                         = [event timestamp];
+        m_timestamp                         = eventTimeStampSince1970(event);
 
         // PlatformGestureEvent
         m_position                          = pointForEvent(event, windowView);

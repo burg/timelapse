@@ -31,6 +31,7 @@
 #include <heap/StrongInlines.h>
 #include <interpreter/CallFrame.h>
 #include <runtime/Operations.h>
+#include <runtime/Uint8Array.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -49,6 +50,10 @@ class SerializedScriptValue;
 class Storage;
 class TrackBase;
 class VoidCallback;
+
+#if ENABLE(SCRIPTED_SPEECH)
+class SpeechRecognitionResultList;
+#endif
 
 class JSDictionary {
 public:
@@ -115,7 +120,7 @@ private:
 #endif
     static void convertValue(JSC::ExecState*, JSC::JSValue, HashSet<AtomicString>& result);
     static void convertValue(JSC::ExecState*, JSC::JSValue, ArrayValue& result);
-    static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<Uint8Array>& result);
+    static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<JSC::Uint8Array>& result);
 #if ENABLE(ENCRYPTED_MEDIA)
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<MediaKeyError>& result);
 #endif
@@ -126,6 +131,9 @@ private:
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<CSSFontFaceRule>& result);
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<DOMError>& result);
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<VoidCallback>& result);
+#endif
+#if ENABLE(SCRIPTED_SPEECH)
+    static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<SpeechRecognitionResultList>&);
 #endif
 
     JSC::ExecState* m_exec;

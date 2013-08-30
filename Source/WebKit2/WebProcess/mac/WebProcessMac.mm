@@ -35,6 +35,7 @@
 #import "WebPage.h"
 #import "WebProcessCreationParameters.h"
 #import "WebProcessProxyMessages.h"
+#import <WebCore/AXObjectCache.h>
 #import <WebCore/FileSystem.h>
 #import <WebCore/Font.h>
 #import <WebCore/LocalizedStrings.h>
@@ -184,6 +185,8 @@ void WebProcess::platformInitializeWebProcess(const WebProcessCreationParameters
 
     m_presenterApplicationPid = parameters.presenterApplicationPid;
 
+    setEnhancedAccessibility(parameters.accessibilityEnhancedUserInterfaceEnabled);
+
     // rdar://9118639 accessibilityFocusedUIElement in NSApplication defaults to use the keyWindow. Since there's
     // no window in WK2, NSApplication needs to use the focused page's focused element.
     Method methodToPatch = class_getInstanceMethod([NSApplication class], @selector(accessibilityFocusedUIElement));
@@ -238,7 +241,14 @@ void WebProcess::updateActivePages()
             mainFrameOriginString = mainFrameOrigin->toRawString();
         else
             mainFrameOriginString = KURL(KURL(), mainFrame->url()).protocol() + ':'; // toRawString() is not supposed to work with unique origins, and would just return "://".
-        CFArrayAppendValue(activePageURLs.get(), userVisibleString([NSURL URLWithString:mainFrameOriginString]));
+
+        NSURL *originAsNSURL = [NSURL URLWithString:mainFrameOriginString];
+        // +[NSURL URLWithString:] returns nil when its argument is malformed. It's unclear how we can possibly have a malformed URL here,
+        // but it happens in practice according to <rdar://problem/14173389>. Leaving an assertion in to catch a reproducible case.
+        ASSERT(originAsNSURL);
+        NSString *userVisibleOriginString = originAsNSURL ? userVisibleString(originAsNSURL) : @"(null)";
+
+        CFArrayAppendValue(activePageURLs.get(), userVisibleOriginString);
     }
     WKSetApplicationInformationItem(kLSActivePageUserVisibleOriginsKey, activePageURLs.get());
 #endif

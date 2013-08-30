@@ -1,3 +1,185 @@
+2013-08-08  Benjamin Poulain  <bpoulain@apple.com>
+
+        Fix webkit.org content overflowing their content box
+
+        Rubberstamped by Simon Fraser.
+
+        More fixes to have webkit.org show properly on iPad and iPhone.
+
+        * blog/wp-content/themes/webkit/header.php:
+        Add the correct viewport width for the blog.
+
+        * building/debug.html:
+        * building/launch-debugger-vs2010-small.png: Added.
+        * building/set-debugging-properties-vs2010-small.png: Added.
+        Fix the images to make them fit in the page.
+
+        * coding/adding-features.html:
+        Using <pre> for the example of email just make it looks like our code examples.
+        Change the source to use <blockquote> so that the text can reflow to the content box.
+        * css/main.css:
+        (.code, pre, tt, code):
+        Scroll the content when it overflows the box for code and pre.
+
+2013-08-08  Benjamin Poulain  <benjamin@webkit.org>
+
+        Give a smaller viewport to webkit.org on devices
+
+        Rubberstamped by Simon Fraser.
+
+        The CSS of WebKit.org layout the content on 615px + a right margin of
+        215px + a left margin of 20px. The total layout width is 850px.
+
+        The standard viewport size on mobile devices is 980px. This leaves a gap
+        on the right side of the content when opening the size on iPhone/iPad.
+
+        This patch changes the layout width to be 860 to display more content on devices
+        while keeping a little margin.
+
+        * header.inc:
+
+2013-08-08  Cosmin Truta  <ctruta@blackberry.com>
+
+        SunSpider: Move the 3d-morph fix from version 1.0 to version 1.0.1
+        https://bugs.webkit.org/show_bug.cgi?id=117993
+
+        Reviewed by George Staikos.
+
+        * perf/sunspider-1.0.1/json2.js: Added.
+        * perf/sunspider-1.0.1/sunspider-1.0.1/driver.html: Added.
+        * perf/sunspider-1.0.1/sunspider-1.0.1/results.html: Added.
+        * perf/sunspider-1.0.1/sunspider-1.0.1/sunspider-test-contents.js: Added.
+        * perf/sunspider-1.0.1/sunspider-1.0.1/sunspider-test-prefix.js: Added.
+        * perf/sunspider-1.0.1/sunspider-analyze-results.js: Added.
+        * perf/sunspider-1.0.1/sunspider-compare-results.js: Added.
+        * perf/sunspider-1.0.1/sunspider.css: Added.
+        * perf/sunspider-1.0.1/sunspider.html: Added.
+        * perf/sunspider/sunspider.html: Updated to version 1.0.1.
+        * perf/sunspider/versions.html: Updated to version 1.0.1.
+
+2013-08-07  Benjamin Poulain  <benjamin@webkit.org>
+
+        Update the images for the blog size-matters
+
+        * blog-files/size-matters/JavaScriptCore-relative-binary-growth.png: Added.
+        * blog-files/size-matters/WebCore-relative-binary-growth.png: Added.
+        * blog-files/size-matters/WebKit-relative-binary-growth.png: Added.
+
+2013-08-05  Dean Jackson  <dino@apple.com>
+
+        Move previous commit into /demos.
+
+        * demos/srcset/image-1x.png: Renamed from Websites/webkit.org/blog-files/srcset/image-1x.png.
+        * demos/srcset/image-2x.png: Renamed from Websites/webkit.org/blog-files/srcset/image-2x.png.
+        * demos/srcset/image-src.png: Renamed from Websites/webkit.org/blog-files/srcset/image-src.png.
+        * demos/srcset/index.html: Renamed from Websites/webkit.org/blog-files/srcset/index.html.
+
+2013-08-05  Dean Jackson  <dino@apple.com>
+
+        Upload example for a blog post.
+
+        * blog-files/srcset/image-1x.png: Added.
+        * blog-files/srcset/image-2x.png: Added.
+        * blog-files/srcset/image-src.png: Added.
+        * blog-files/srcset/index.html: Added.
+
+2013-07-31  Benjamin Poulain  <benjamin@webkit.org>
+
+        Upload images for a potential blog post
+
+        * blog-files/size-matters: Added.
+        * blog-files/size-matters/JavaScript-growth.png: Added.
+        * blog-files/size-matters/WebCore-growth-baseline.png: Added.
+        * blog-files/size-matters/WebCore-growth.png: Added.
+        * blog-files/size-matters/WebKit-growth.png: Added.
+
+2013-07-14  Kwang Yul Seo  <skyul@company100.net>
+
+        Add Company100 to team.html
+        https://bugs.webkit.org/show_bug.cgi?id=118633
+
+        Reviewed by Andreas Kling.
+
+        * team.html:
+
+2013-07-11  Bruno de Oliveira Abinader  <bruno.d@partner.samsung.com>
+
+        Add 'partner.samsung.com' to domain affiliations
+        https://bugs.webkit.org/show_bug.cgi?id=118580
+
+        Reviewed by Antonio Gomes.
+
+        * team.html:
+
+2013-07-01  Benjamin Poulain  <benjamin@webkit.org>
+
+        Add screenshot of the inspector color picker for the blog
+
+        * blog-files/last-week-in-webkit: Added.
+        * blog-files/last-week-in-webkit/Inspector_color_picker.png: Added.
+
+2013-06-27  Roger Fong  <roger_fong@apple.com>
+
+        Update required tools for Windows instructions.
+
+        * building/tools.html:
+
+2013-06-18  Denis Nomiyama  <d.nomiyama@samsung.com>
+
+        The page title of technical-articles.html is incorrect.
+        https://bugs.webkit.org/show_bug.cgi?id=117727
+
+        Reviewed by Ryosuke Niwa.
+
+        Changed the page title of technical-articles.html to "WebKit Technical Articles".
+
+        * coding/technical-articles.html:
+
+2013-06-14  Timothy Hatcher  <timothy@apple.com>
+
+        Shrink larger images to fit the width of the blog.
+
+        * blog-files/new-inspector/hero-labeled.png:
+        * blog-files/new-inspector/hero.png:
+
+2013-06-12  Roger Fong  <roger_fong@apple.com>
+
+        Update webkit.org build instructions for Apple Windows port.
+        https://bugs.webkit.org/show_bug.cgi?id=117563.
+
+        Reviewed by Brent Fulgham.
+
+        * building/build.html:
+        * building/debug.html:
+        * building/launch-debugger-vs2005.png: Removed.
+        * building/launch-debugger-vs2010.png: Copied from webkit.org/building/launch-debugger-vs2005.png.
+        * building/set-as-startup-project-vs2005.png: Removed.
+        * building/set-as-startup-project-vs2010.png: Copied from webkit.org/building/set-as-startup-project-vs2005.png.
+        * building/set-debugging-properties-vs2005.png: Removed.
+        * building/set-debugging-properties-vs2010.png: Copied from webkit.org/building/set-debugging-properties-vs2005.png.
+        * building/tools.html:
+
+2013-06-12  Timothy Hatcher  <timothy@apple.com>
+
+        Add new Web Inspector images for a blog post.
+
+        * blog-files/new-inspector/activity-viewer.png: Added.
+        * blog-files/new-inspector/codemirror.png: Added.
+        * blog-files/new-inspector/console.png: Added.
+        * blog-files/new-inspector/hero-labeled.png: Added.
+        * blog-files/new-inspector/hero.png: Added.
+        * blog-files/new-inspector/layer-borders.png: Added.
+        * blog-files/new-inspector/layers.png: Added.
+        * blog-files/new-inspector/navigation-bar.png: Added.
+        * blog-files/new-inspector/open-sign.png: Added.
+        * blog-files/new-inspector/reasons.png: Added.
+        * blog-files/new-inspector/save.png: Added.
+        * blog-files/new-inspector/source-map.png: Added.
+        * blog-files/new-inspector/styles.png: Added.
+        * blog-files/new-inspector/toolbar-context-menu.png: Added.
+        * blog-files/new-inspector/toolbar-docked.png: Added.
+        * blog-files/new-inspector/toolbar.png: Added.
+
 2013-05-25  Bem Jones-Bey  <bjonesbe@adobe.com>
 
         Broken link to committers list on contributing web page

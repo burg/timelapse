@@ -38,40 +38,28 @@ static const double kThrottleHysteresisSeconds = 2.0;
 
 PageThrottler::PageThrottler(Page* page)
     : m_page(page)
-    , m_activeThrottleBlockers(0)
     , m_throttleState(PageNotThrottledState)
     , m_throttleHysteresisTimer(this, &PageThrottler::throttleHysteresisTimerFired)
 {
-    if (ChromeClient* chromeClient = m_page->chrome().client())
-        chromeClient->incrementActivePageCount();
+    m_page->chrome().client().incrementActivePageCount();
 }
 
 PageThrottler::~PageThrottler()
 {
+    setThrottled(false);
+
     for (HashSet<PageActivityAssertionToken*>::iterator i = m_activityTokens.begin(); i != m_activityTokens.end(); ++i)
         (*i)->invalidate();
 
-    if (m_throttleState != PageThrottledState && m_page) {
-        if (ChromeClient* chromeClient = m_page->chrome().client())
-            chromeClient->decrementActivePageCount();
-    }
-}
-
-void PageThrottler::clearPage()
-{
-    setThrottled(false);
-    m_page = 0;
+    if (m_throttleState != PageThrottledState)
+        m_page->chrome().client().decrementActivePageCount();
 }
 
 void PageThrottler::throttlePage()
 {
     m_throttleState = PageThrottledState;
 
-    if (!m_page)
-        return;
-
-    if (ChromeClient* chromeClient = m_page->chrome().client())
-        chromeClient->decrementActivePageCount();
+    m_page->chrome().client().decrementActivePageCount();
 
     for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (frame->document())
@@ -86,13 +74,11 @@ void PageThrottler::unthrottlePage()
     PageThrottleState oldState = m_throttleState;
     m_throttleState = PageNotThrottledState;
 
-    if (!m_page || oldState == PageNotThrottledState)
+    if (oldState == PageNotThrottledState)
         return;
 
-    if (oldState == PageThrottledState) {
-        if (ChromeClient* chromeClient = m_page->chrome().client())
-            chromeClient->incrementActivePageCount();
-    }
+    if (oldState == PageThrottledState)
+        m_page->chrome().client().incrementActivePageCount();
     
     for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (frame->document())
@@ -111,37 +97,6 @@ void PageThrottler::setThrottled(bool isThrottled)
         unthrottlePage();
         stopThrottleHysteresisTimer();
     }
-}
-
-void PageThrottler::preventThrottling()
-{
-    // If we've already got events that block throttling we can increment
-    // and return early
-    if (m_activeThrottleBlockers++)
-        return;
-
-    if (m_throttleState == PageNotThrottledState)
-        return;
-
-    if (m_throttleState == PageThrottledState)
-        unthrottlePage();
-
-    m_throttleState = PageWaitingToThrottleState;
-    stopThrottleHysteresisTimer();
-}
-
-void PageThrottler::allowThrottling()
-{
-    ASSERT(m_activeThrottleBlockers > 0);
-    m_activeThrottleBlockers--;
-    if (m_activeThrottleBlockers)
-        return;
-
-    if (m_throttleState == PageNotThrottledState)
-        return;
-
-    ASSERT(m_throttleState == PageWaitingToThrottleState);
-    startThrottleHysteresisTimer();
 }
 
 void PageThrottler::stopThrottleHysteresisTimer()
@@ -163,32 +118,50 @@ void PageThrottler::startThrottleHysteresisTimer()
 {
     if (m_throttleHysteresisTimer.isActive())
         m_throttleHysteresisTimer.stop();
-    if (!m_activeThrottleBlockers)
+    if (!m_activityTokens.size())
         m_throttleHysteresisTimer.startOneShot(kThrottleHysteresisSeconds);
 }
 
 void PageThrottler::throttleHysteresisTimerFired(Timer<PageThrottler>*)
 {
-    ASSERT(!m_activeThrottleBlockers);
+    ASSERT(!m_activityTokens.size());
     throttlePage();
 }
 
 void PageThrottler::addActivityToken(PageActivityAssertionToken* token)
 {
-    if (!token || m_activityTokens.contains(token))
-        return;
+    ASSERT(token && !m_activityTokens.contains(token));
 
     m_activityTokens.add(token);
-    preventThrottling();
+
+    // If we've already got events that block throttling we can return early
+    if (m_activityTokens.size() > 1)
+        return;
+
+    if (m_throttleState == PageNotThrottledState)
+        return;
+
+    if (m_throttleState == PageThrottledState)
+        unthrottlePage();
+
+    m_throttleState = PageWaitingToThrottleState;
+    stopThrottleHysteresisTimer();
 }
 
 void PageThrottler::removeActivityToken(PageActivityAssertionToken* token)
 {
-    if (!token || !m_activityTokens.contains(token))
-        return;
+    ASSERT(token && m_activityTokens.contains(token));
 
     m_activityTokens.remove(token);
-    allowThrottling();
+
+    if (m_activityTokens.size())
+        return;
+
+    if (m_throttleState == PageNotThrottledState)
+        return;
+
+    ASSERT(m_throttleState == PageWaitingToThrottleState);
+    startThrottleHysteresisTimer();
 }
 
 }

@@ -40,8 +40,10 @@
 #import "Font.h"
 #import "Frame.h"
 #import "FrameLoader.h"
+#import "HTMLImageElement.h"
 #import "HTMLNames.h"
 #import "HTMLParserIdioms.h"
+#import "HTMLTableElement.h"
 #import "LoaderNSURLExtras.h"
 #import "RenderImage.h"
 #import "TextIterator.h"
@@ -260,7 +262,7 @@ static NSFont *_fontForNameAndSize(NSString *fontName, CGFloat size, NSMutableDi
                     result = @"block";
                 else if (coreElement->hasTagName(liTag))
                     result = @"list-item";
-                else if (coreElement->hasTagName(tableTag))
+                else if (isHTMLTableElement(coreElement))
                     result = @"table";
                 else if (coreElement->hasTagName(trTag))
                     result = @"table-row";
@@ -784,7 +786,7 @@ static inline NSShadow *_shadowForShadowStyle(NSString *shadowStyle)
     NSFileWrapper *fileWrapper = nil;
     static NSImage *missingImage = nil;
     Frame* frame = core([element ownerDocument])->frame();
-    DocumentLoader *dataSource = frame->loader()->frameHasLoaded() ? frame->loader()->documentLoader() : 0;
+    DocumentLoader *dataSource = frame->loader().frameHasLoaded() ? frame->loader().documentLoader() : 0;
     BOOL ignoreOrientation = YES;
 
     if (_flags.isIndexing) return NO;
@@ -1562,7 +1564,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
             ancestorContainer = [ancestorContainer parentNode];
         }
         _document = [commonAncestorContainer ownerDocument];
-        _dataSource = (DocumentLoader *)core(_document)->frame()->loader()->documentLoader();
+        _dataSource = (DocumentLoader *)core(_document)->frame()->loader().documentLoader();
         if (_textSizeMultiplier <= 0.0) _textSizeMultiplier = 1;
         if (_defaultFontSize <= 0.0) _defaultFontSize = 12;
         if (_minimumFontSize < 1.0) _minimumFontSize = 1;
@@ -1675,7 +1677,7 @@ static NSInteger _colCompare(id block1, id block2, void *)
         
         if (startContainer == endContainer && (startOffset == endOffset - 1)) {
             Node* node = startContainer->childNode(startOffset);
-            if (node && node->hasTagName(imgTag)) {
+            if (node && isHTMLImageElement(node)) {
                 NSFileWrapper* fileWrapper = fileWrapperForElement(toElement(node));
                 NSTextAttachment* attachment = [[NSTextAttachment alloc] initWithFileWrapper:fileWrapper];
                 [string appendAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
@@ -1694,6 +1696,8 @@ static NSInteger _colCompare(id block1, id block2, void *)
         RenderStyle* style = renderer->style();
         if (style->textDecorationsInEffect() & TextDecorationUnderline)
             [attrs.get() setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
+        if (style->textDecorationsInEffect() & TextDecorationLineThrough)
+            [attrs.get() setObject:[NSNumber numberWithInteger:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
         if (NSFont *font = style->font().primaryFont()->getNSFont())
             [attrs.get() setObject:font forKey:NSFontAttributeName];
         else

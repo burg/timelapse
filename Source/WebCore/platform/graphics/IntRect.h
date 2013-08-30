@@ -33,7 +33,7 @@
 typedef struct CGRect CGRect;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(MAC)
 #ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGRect NSRect;
 #else
@@ -199,7 +199,7 @@ public:
     operator CGRect() const;
 #endif
 
-#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))
+#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES))
     operator NSRect() const;
 #endif
 
@@ -207,6 +207,8 @@ public:
     IntRect(const BlackBerry::Platform::IntRect&);
     operator BlackBerry::Platform::IntRect() const;
 #endif
+
+    void dump(PrintStream& out) const;
 
 private:
     IntPoint m_location;
@@ -243,7 +245,7 @@ inline bool operator!=(const IntRect& a, const IntRect& b)
 IntRect enclosingIntRect(const CGRect&);
 #endif
 
-#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)) || (PLATFORM(QT) && USE(QTKIT))
+#if (PLATFORM(MAC) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES))
 IntRect enclosingIntRect(const NSRect&);
 #endif
 

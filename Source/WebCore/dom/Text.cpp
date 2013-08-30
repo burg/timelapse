@@ -29,6 +29,7 @@
 #include "RenderText.h"
 #include "ScopedEventQueue.h"
 #include "ShadowRoot.h"
+#include "TextNodeTraversal.h"
 
 #if ENABLE(SVG)
 #include "RenderSVGInlineText.h"
@@ -37,6 +38,7 @@
 
 #include "StyleInheritedData.h"
 #include "StyleResolver.h"
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -52,6 +54,12 @@ PassRefPtr<Text> Text::create(Document* document, const String& data)
 PassRefPtr<Text> Text::createEditingText(Document* document, const String& data)
 {
     return adoptRef(new Text(document, data, CreateEditingText));
+}
+
+Text::~Text()
+{
+    if (renderer())
+        detachText();
 }
 
 PassRefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
@@ -86,66 +94,37 @@ PassRefPtr<Text> Text::splitText(unsigned offset, ExceptionCode& ec)
     return newText.release();
 }
 
-static const Text* earliestLogicallyAdjacentTextNode(const Text* t)
+static const Text* earliestLogicallyAdjacentTextNode(const Text* text)
 {
-    const Node* n = t;
-    while ((n = n->previousSibling())) {
-        Node::NodeType type = n->nodeType();
-        if (type == Node::TEXT_NODE || type == Node::CDATA_SECTION_NODE) {
-            t = static_cast<const Text*>(n);
-            continue;
-        }
-
-        // We would need to visit EntityReference child text nodes if they existed
-        ASSERT(type != Node::ENTITY_REFERENCE_NODE || !n->hasChildNodes());
-        break;
+    const Node* node = text;
+    while ((node = node->previousSibling())) {
+        if (!node->isTextNode())
+            break;
+        text = toText(node);
     }
-    return t;
+    return text;
 }
 
-static const Text* latestLogicallyAdjacentTextNode(const Text* t)
+static const Text* latestLogicallyAdjacentTextNode(const Text* text)
 {
-    const Node* n = t;
-    while ((n = n->nextSibling())) {
-        Node::NodeType type = n->nodeType();
-        if (type == Node::TEXT_NODE || type == Node::CDATA_SECTION_NODE) {
-            t = static_cast<const Text*>(n);
-            continue;
-        }
-
-        // We would need to visit EntityReference child text nodes if they existed
-        ASSERT(type != Node::ENTITY_REFERENCE_NODE || !n->hasChildNodes());
-        break;
+    const Node* node = text;
+    while ((node = node->nextSibling())) {
+        if (!node->isTextNode())
+            break;
+        text = toText(node);
     }
-    return t;
+    return text;
 }
 
 String Text::wholeText() const
 {
     const Text* startText = earliestLogicallyAdjacentTextNode(this);
     const Text* endText = latestLogicallyAdjacentTextNode(this);
+    const Node* onePastEndText = TextNodeTraversal::nextSibling(endText);
 
-    Node* onePastEndText = endText->nextSibling();
-    unsigned resultLength = 0;
-    for (const Node* n = startText; n != onePastEndText; n = n->nextSibling()) {
-        if (!n->isTextNode())
-            continue;
-        const Text* t = static_cast<const Text*>(n);
-        const String& data = t->data();
-        if (std::numeric_limits<unsigned>::max() - data.length() < resultLength)
-            CRASH();
-        resultLength += data.length();
-    }
     StringBuilder result;
-    result.reserveCapacity(resultLength);
-    for (const Node* n = startText; n != onePastEndText; n = n->nextSibling()) {
-        if (!n->isTextNode())
-            continue;
-        const Text* t = static_cast<const Text*>(n);
-        result.append(t->data());
-    }
-    ASSERT(result.length() == resultLength);
-
+    for (const Text* text = startText; text != onePastEndText; text = TextNodeTraversal::nextSibling(text))
+        result.append(text->data());
     return result.toString();
 }
 
@@ -199,7 +178,7 @@ PassRefPtr<Node> Text::cloneNode(bool /*deep*/)
     return create(document(), data());
 }
 
-bool Text::textRendererIsNeeded(NodeRenderingContext& context)
+bool Text::textRendererIsNeeded(const NodeRenderingContext& context)
 {
     if (isEditingText())
         return true;
@@ -236,11 +215,11 @@ bool Text::textRendererIsNeeded(NodeRenderingContext& context)
         RenderObject* first = parent->firstChild();
         while (first && first->isFloatingOrOutOfFlowPositioned())
             first = first->nextSibling();
-        RenderObject* next = context.nextRenderer();
-        if (!first || next == first)
+        if (!first || context.nextRenderer() == first) {
             // Whitespace at the start of a block just goes away.  Don't even
             // make a render object for this text.
             return false;
+        }
     }
     
     return true;
@@ -250,7 +229,7 @@ bool Text::textRendererIsNeeded(NodeRenderingContext& context)
 static bool isSVGShadowText(Text* text)
 {
     Node* parentNode = text->parentNode();
-    return parentNode->isShadowRoot() && toShadowRoot(parentNode)->host()->hasTagName(SVGNames::trefTag);
+    return parentNode->isShadowRoot() && toShadowRoot(parentNode)->hostElement()->hasTagName(SVGNames::trefTag);
 }
 
 static bool isSVGText(Text* text)
@@ -277,26 +256,49 @@ RenderText* Text::createTextRenderer(RenderArena* arena, RenderStyle* style)
     return new (arena) RenderText(this, dataImpl());
 }
 
-void Text::attach(const AttachContext& context)
+void Text::createTextRenderersForSiblingsAfterAttachIfNeeded(Node* sibling)
 {
-    createTextRendererIfNeeded();
-    CharacterData::attach(context);
+    ASSERT(sibling->previousSibling());
+    ASSERT(sibling->previousSibling()->renderer());
+    ASSERT(!sibling->renderer());
+    ASSERT(sibling->attached());
+    // If this node got a renderer it may be the previousRenderer() of sibling text nodes and thus affect the
+    // result of Text::textRendererIsNeeded() for those nodes.
+    for (; sibling; sibling = sibling->nextSibling()) {
+        if (sibling->renderer())
+            break;
+        if (!sibling->attached())
+            break; // Assume this means none of the following siblings are attached.
+        if (!sibling->isTextNode())
+            continue;
+        ASSERT(!sibling->renderer());
+        toText(sibling)->createTextRendererIfNeeded();
+        // If we again decided not to create a renderer for next, we can bail out the loop,
+        // because it won't affect the result of Text::textRendererIsNeeded() for the rest
+        // of sibling nodes.
+        if (!sibling->renderer())
+            break;
+    }
 }
 
-void Text::recalcTextStyle(StyleChange change)
+void Text::attachText()
 {
-    RenderText* renderer = toRenderText(this->renderer());
+    createTextRendererIfNeeded();
 
-    if (change != NoChange && renderer)
-        renderer->setStyle(document()->ensureStyleResolver()->styleForText(this));
+    Node* sibling = nextSibling();
+    if (renderer() && sibling && !sibling->renderer() && sibling->attached())
+        createTextRenderersForSiblingsAfterAttachIfNeeded(sibling);
 
-    if (needsStyleRecalc()) {
-        if (renderer)
-            renderer->setText(dataImpl());
-        else
-            reattach();
-    }
+    setAttached(true);
     clearNeedsStyleRecalc();
+}
+
+void Text::detachText()
+{
+    if (renderer())
+        renderer()->destroyAndCleanupAnonymousWrappers();
+    setRenderer(0);
+    setAttached(false);
 }
 
 void Text::updateTextRenderer(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData)
@@ -305,12 +307,14 @@ void Text::updateTextRenderer(unsigned offsetOfReplacedData, unsigned lengthOfRe
         return;
     RenderText* textRenderer = toRenderText(renderer());
     if (!textRenderer) {
-        reattach();
+        attachText();
         return;
     }
     NodeRenderingContext renderingContext(this, textRenderer->style());
     if (!textRendererIsNeeded(renderingContext)) {
-        reattach();
+        if (attached())
+            detachText();
+        attachText();
         return;
     }
     textRenderer->setTextWithOffset(dataImpl(), offsetOfReplacedData, lengthOfReplacedData);

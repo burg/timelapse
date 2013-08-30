@@ -32,7 +32,6 @@
 #include "NetworkResourceLoadParameters.h"
 #include "NetworkResourceLoadScheduler.h"
 #include "NetworkResourceLoader.h"
-#include "SyncNetworkResourceLoader.h"
 #include <wtf/MainThread.h>
 
 #if ENABLE(NETWORK_PROCESS)
@@ -56,7 +55,7 @@ HostRecord::~HostRecord()
 #endif
 }
 
-void HostRecord::scheduleResourceLoader(PassRefPtr<SchedulableLoader> loader)
+void HostRecord::scheduleResourceLoader(PassRefPtr<NetworkResourceLoader> loader)
 {
     ASSERT(isMainThread());
 
@@ -68,7 +67,7 @@ void HostRecord::scheduleResourceLoader(PassRefPtr<SchedulableLoader> loader)
         m_loadersPending[loader->priority()].append(loader);
 }
 
-void HostRecord::addLoaderInProgress(SchedulableLoader* loader)
+void HostRecord::addLoaderInProgress(NetworkResourceLoader* loader)
 {
     ASSERT(isMainThread());
 
@@ -76,29 +75,39 @@ void HostRecord::addLoaderInProgress(SchedulableLoader* loader)
     loader->setHostRecord(this);
 }
 
-void HostRecord::removeLoader(SchedulableLoader* loader)
+inline bool removeLoaderFromQueue(NetworkResourceLoader* loader, LoaderQueue& queue)
+{
+    LoaderQueue::iterator end = queue.end();
+    for (LoaderQueue::iterator it = queue.begin(); it != end; ++it) {
+        if (it->get() == loader) {
+            loader->setHostRecord(0);
+            queue.remove(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+void HostRecord::removeLoader(NetworkResourceLoader* loader)
 {
     ASSERT(isMainThread());
 
     // FIXME (NetworkProcess): Due to IPC race conditions, it's possible this HostRecord will be asked to remove the same loader twice.
     // It would be nice to know the loader has already been removed and treat it as a no-op.
 
-    SchedulableLoaderSet::iterator i = m_loadersInProgress.find(loader);
+    NetworkResourceLoaderSet::iterator i = m_loadersInProgress.find(loader);
     if (i != m_loadersInProgress.end()) {
         i->get()->setHostRecord(0);
         m_loadersInProgress.remove(i);
         return;
     }
+
+    if (removeLoaderFromQueue(loader, m_syncLoadersPending))
+        return;
     
-    for (int priority = ResourceLoadPriorityHighest; priority >= ResourceLoadPriorityLowest; --priority) {  
-        LoaderQueue::iterator end = m_loadersPending[priority].end();
-        for (LoaderQueue::iterator it = m_loadersPending[priority].begin(); it != end; ++it) {
-            if (it->get() == loader) {
-                it->get()->setHostRecord(0);
-                m_loadersPending[priority].remove(it);
-                return;
-            }
-        }
+    for (int priority = ResourceLoadPriorityHighest; priority >= ResourceLoadPriorityLowest; --priority) {
+        if (removeLoaderFromQueue(loader, m_loadersPending[priority]))
+            return;
     }
 }
 
@@ -132,8 +141,25 @@ uint64_t HostRecord::activeLoadCount() const
 
 void HostRecord::servePendingRequestsForQueue(LoaderQueue& queue, ResourceLoadPriority priority)
 {
+    // We only enforce the connection limit for http(s) hosts, which are the only ones with names.
+    bool shouldLimitRequests = !name().isNull();
+
+    // For non-named hosts - everything but http(s) - we should only enforce the limit if the document
+    // isn't done parsing and we don't know all stylesheets yet.
+
+    // FIXME (NetworkProcess): The above comment about document parsing and stylesheets is a holdover
+    // from the WebCore::ResourceLoadScheduler.
+    // The behavior described was at one time important for WebCore's single threadedness.
+    // It's possible that we don't care about it with the NetworkProcess.
+    // We should either decide it's not important and change the above comment, or decide it is
+    // still important and somehow account for it.
+    
+    // Very low priority loaders are only handled when no other loaders are in progress.
+    if (shouldLimitRequests && priority == ResourceLoadPriorityVeryLow && !m_loadersInProgress.isEmpty())
+        return;
+    
     while (!queue.isEmpty()) {
-        RefPtr<SchedulableLoader> loader = queue.first();
+        RefPtr<NetworkResourceLoader> loader = queue.first();
         ASSERT(loader->hostRecord() == this);
 
         // This request might be from WebProcess we've lost our connection to.
@@ -143,19 +169,7 @@ void HostRecord::servePendingRequestsForQueue(LoaderQueue& queue, ResourceLoadPr
             continue;
         }
 
-        // For named hosts - which are only http(s) hosts - we should always enforce the connection limit.
-        // For non-named hosts - everything but http(s) - we should only enforce the limit if the document
-        // isn't done parsing and we don't know all stylesheets yet.
-
-        // FIXME (NetworkProcess): The above comment about document parsing and stylesheets is a holdover
-        // from the WebCore::ResourceLoadScheduler.
-        // The behavior described was at one time important for WebCore's single threadedness.
-        // It's possible that we don't care about it with the NetworkProcess.
-        // We should either decide it's not important and change the above comment, or decide it is
-        // still important and somehow account for it.
-
-        bool shouldLimitRequests = !name().isNull();
-        if (shouldLimitRequests && limitsRequests(priority, loader->connectionToWebProcess()->isSerialLoadingEnabled()))
+        if (shouldLimitRequests && limitsRequests(priority, loader.get()))
             return;
 
         m_loadersInProgress.add(loader);
@@ -178,12 +192,37 @@ void HostRecord::servePendingRequests(ResourceLoadPriority minimumPriority)
         servePendingRequestsForQueue(m_loadersPending[priority], (ResourceLoadPriority)priority);
 }
 
-bool HostRecord::limitsRequests(ResourceLoadPriority priority, bool serialLoadingEnabled) const
+bool HostRecord::limitsRequests(ResourceLoadPriority priority, NetworkResourceLoader* loader) const
 {
+    ASSERT(loader);
+    ASSERT(loader->connectionToWebProcess());
+
     if (priority == ResourceLoadPriorityVeryLow && !m_loadersInProgress.isEmpty())
         return true;
 
-    return m_loadersInProgress.size() >= (serialLoadingEnabled ? 1 : m_maxRequestsInFlight);
+    if (loader->connectionToWebProcess()->isSerialLoadingEnabled() && m_loadersInProgress.size() >= 1)
+        return true;
+
+    // If we're exactly at the limit for requests in flight, and this loader is asynchronous, then we're done serving new requests.
+    // The synchronous loader exception handles the case where a sync XHR is made while 6 other requests are already in flight.
+    if (m_loadersInProgress.size() == m_maxRequestsInFlight && !loader->isSynchronous())
+        return true;
+
+    // If we're already past the limit of the number of loaders in flight, we won't even serve new synchronous requests right now.
+    if (m_loadersInProgress.size() > m_maxRequestsInFlight) {
+#ifndef NDEBUG
+        // If we have more loaders in progress than we should, at least one of them had better be synchronous.
+        NetworkResourceLoaderSet::iterator i = m_loadersInProgress.begin();
+        NetworkResourceLoaderSet::iterator end = m_loadersInProgress.end();
+        for (; i != end; ++i) {
+            if (i->get()->isSynchronous())
+                break;
+        }
+        ASSERT(i != end);
+#endif
+        return true;
+    }
+    return false;
 }
 
 } // namespace WebKit

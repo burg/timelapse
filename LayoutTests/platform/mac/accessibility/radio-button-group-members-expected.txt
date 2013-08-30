@@ -21,11 +21,13 @@ AXLinkedUIElements: <array of size 3>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 AXRole: AXRadioButton
@@ -49,11 +51,13 @@ AXLinkedUIElements: <array of size 3>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 AXRole: AXRadioButton
@@ -77,11 +81,13 @@ AXLinkedUIElements: <array of size 3>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 
@@ -109,11 +115,13 @@ AXLinkedUIElements: <array of size 2>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 AXRole: AXRadioButton
@@ -137,11 +145,13 @@ AXLinkedUIElements: <array of size 2>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 
@@ -169,11 +179,13 @@ AXLinkedUIElements: <array of size 2>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton: 'Yes'>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 AXRole: AXRadioButton
@@ -197,11 +209,13 @@ AXLinkedUIElements: <array of size 2>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton: 'No'>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 
@@ -229,11 +243,13 @@ AXLinkedUIElements: <array of size 1>
 AXSelected: 0
 AXBlockQuoteLevel: 0
 AXTopLevelUIElement: <AXRadioButton>
+AXLanguage: 
 AXTitleUIElement: (null)
 AXAccessKey: (null)
 AXRequired: 0
 AXInvalid: false
 AXARIABusy: 0
+AXRequired: 0
 
 ------------
 

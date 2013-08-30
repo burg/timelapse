@@ -252,7 +252,6 @@ public:
     // RenderObject tree manipulation
     //////////////////////////////////////////
     virtual bool canHaveChildren() const { return virtualChildren(); }
-    virtual bool canDOMChildrenHaveRenderParent() const { return false; } // Even if this render object can't have render children, the children in the DOM tree may have a render parent (that is different from this object).
     virtual bool canHaveGeneratedChildren() const;
     virtual bool isChildAllowed(RenderObject*, RenderStyle*) const { return true; }
     virtual void addChild(RenderObject* newChild, RenderObject* beforeChild = 0);
@@ -353,6 +352,7 @@ public:
     virtual bool isProgress() const { return false; }
 #endif
     virtual bool isRenderBlock() const { return false; }
+    virtual bool isRenderSVGBlock() const { return false; };
     virtual bool isRenderButton() const { return false; }
     virtual bool isRenderIFrame() const { return false; }
     virtual bool isRenderImage() const { return false; }
@@ -514,6 +514,7 @@ public:
     virtual bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction);
 #endif
 
+    bool hasAspectRatio() const { return isReplaced() && (isImage() || isVideo() || isCanvas()); }
     bool isAnonymous() const { return m_bitfields.isAnonymous(); }
     bool isAnonymousBlock() const
     {
@@ -542,16 +543,6 @@ public:
 
     bool isOutOfFlowPositioned() const { return m_bitfields.isOutOfFlowPositioned(); } // absolute or fixed positioning
     bool isInFlowPositioned() const { return m_bitfields.isRelPositioned() || m_bitfields.isStickyPositioned(); } // relative or sticky positioning
-    bool hasPaintOffset() const
-    {
-        bool positioned = isInFlowPositioned();
-#if ENABLE(CSS_SHAPES)
-        // Shape outside on a float can reposition the float in much the
-        // same way as relative positioning, so treat it as such.
-        positioned = positioned || isFloatingWithShapeOutside();
-#endif
-        return positioned;
-    }
     bool isRelPositioned() const { return m_bitfields.isRelPositioned(); } // relative positioning
     bool isStickyPositioned() const { return m_bitfields.isStickyPositioned(); }
     bool isPositioned() const { return m_bitfields.isPositioned(); }
@@ -645,7 +636,7 @@ public:
     // Returns the styled node that caused the generation of this renderer.
     // This is the same as node() except for renderers of :before and :after
     // pseudo elements for which their parent node is returned.
-    Node* generatingNode() const { return isPseudoElement() ? node()->parentOrShadowHostNode() : node(); }
+    Node* generatingNode() const { return isPseudoElement() ? generatingPseudoHostElement() : node(); }
 
     Document* document() const { return m_node->document(); }
     Frame* frame() const { return document()->frame(); }
@@ -665,7 +656,7 @@ public:
     void markContainingBlocksForLayout(bool scheduleRelayout = true, RenderObject* newRoot = 0);
     void setNeedsLayout(bool needsLayout, MarkingBehavior = MarkContainingBlockChain);
     void setChildNeedsLayout(bool childNeedsLayout, MarkingBehavior = MarkContainingBlockChain);
-    void setNeedsPositionedMovementLayout();
+    void setNeedsPositionedMovementLayout(const RenderStyle* oldStyle);
     void setNeedsSimplifiedNormalFlowLayout();
     void setPreferredLogicalWidthsDirty(bool, MarkingBehavior = MarkContainingBlockChain);
     void invalidateContainerPreferredLogicalWidths();
@@ -703,6 +694,9 @@ public:
 
     void updateFillImages(const FillLayer*, const FillLayer*);
     void updateImage(StyleImage*, StyleImage*);
+#if ENABLE(CSS_SHAPES)
+    void updateShapeImage(const ShapeValue*, const ShapeValue*);
+#endif
 
     virtual void paint(PaintInfo&, const LayoutPoint&);
 
@@ -873,7 +867,9 @@ public:
     virtual unsigned int length() const { return 1; }
 
     bool isFloatingOrOutOfFlowPositioned() const { return (isFloating() || isOutOfFlowPositioned()); }
+#if ENABLE(CSS_SHAPES)
     bool isFloatingWithShapeOutside() const { return isBox() && isFloating() && style()->shapeOutside(); }
+#endif
 
     bool isTransparent() const { return style()->opacity() < 1.0f; }
     float opacity() const { return style()->opacity(); }
@@ -1032,6 +1028,12 @@ private:
     StyleDifference adjustStyleDifference(StyleDifference, unsigned contextSensitiveProperties) const;
 
     Color selectionColor(int colorProperty) const;
+
+    Node* generatingPseudoHostElement() const;
+
+#if ENABLE(CSS_SHAPES)
+    void removeShapeImageClient(ShapeValue*);
+#endif
 
 #ifndef NDEBUG
     void checkBlockPositionedObjectsNeedLayout();
@@ -1244,15 +1246,19 @@ inline void RenderObject::setChildNeedsLayout(bool childNeedsLayout, MarkingBeha
     }
 }
 
-inline void RenderObject::setNeedsPositionedMovementLayout()
+inline void RenderObject::setNeedsPositionedMovementLayout(const RenderStyle* oldStyle)
 {
     bool alreadyNeededLayout = needsPositionedMovementLayout();
     setNeedsPositionedMovementLayout(true);
     ASSERT(!isSetNeedsLayoutForbidden());
     if (!alreadyNeededLayout) {
         markContainingBlocksForLayout();
-        if (hasLayer())
-            setLayerNeedsFullRepaintForPositionedMovementLayout();
+        if (hasLayer()) {
+            if (oldStyle && m_style->diffRequiresRepaint(oldStyle))
+                setLayerNeedsFullRepaint();
+            else
+                setLayerNeedsFullRepaintForPositionedMovementLayout();
+        }
     }
 }
 

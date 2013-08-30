@@ -158,13 +158,6 @@ void Pasteboard::clear()
     platformStrategies()->pasteboardStrategy()->setTypes(Vector<String>(), m_pasteboardName);
 }
 
-String Pasteboard::getStringSelection(Frame* frame, ShouldSerializeSelectedTextForClipboard shouldSerializeSelectedTextForClipboard)
-{
-    String text = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard ? frame->editor().selectedTextForClipboard() : frame->editor().selectedText();
-    text.replace(noBreakSpace, ' ');
-    return text;
-}
-
 PassRefPtr<SharedBuffer> Pasteboard::getDataSelection(Frame* frame, const String& pasteboardType)
 {
     if (pasteboardType == WebArchivePboardType) {
@@ -230,8 +223,12 @@ void Pasteboard::writeSelectionForTypes(const Vector<String>& pasteboardTypes, b
         platformStrategies()->pasteboardStrategy()->setBufferForType(getDataSelection(frame, NSRTFPboardType), NSRTFPboardType, m_pasteboardName);
     
     // Put plain string on the pasteboard.
-    if (types.contains(String(NSStringPboardType)))
-        platformStrategies()->pasteboardStrategy()->setStringForType(getStringSelection(frame, shouldSerializeSelectedTextForClipboard), NSStringPboardType, m_pasteboardName);
+    if (types.contains(String(NSStringPboardType))) {
+        String text = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard
+            ? frame->editor().stringSelectionForPasteboardWithImageAltText()
+            : frame->editor().stringSelectionForPasteboard();
+        platformStrategies()->pasteboardStrategy()->setStringForType(text, NSStringPboardType, m_pasteboardName);
+    }
     
     if (types.contains(WebSmartPastePboardType))
         platformStrategies()->pasteboardStrategy()->setBufferForType(0, WebSmartPastePboardType, m_pasteboardName);
@@ -418,7 +415,7 @@ static PassRefPtr<DocumentFragment> documentFragmentWithImageResource(Frame* fra
     if (!resource)
         return 0;
     
-    if (DocumentLoader* loader = frame->loader()->documentLoader())
+    if (DocumentLoader* loader = frame->loader().documentLoader())
         loader->addArchiveResource(resource.get());
 
     RefPtr<Element> imageElement = frame->document()->createElement(HTMLNames::imgTag, false);
@@ -463,7 +460,7 @@ static PassRefPtr<DocumentFragment> documentFragmentWithRTF(Frame* frame, NSStri
 
     size_t size = resources.size();
     if (size) {
-        DocumentLoader* loader = frame->loader()->documentLoader();
+        DocumentLoader* loader = frame->loader().documentLoader();
         for (size_t i = 0; i < size; ++i)
             loader->addArchiveResource(resources[i]);    
     }
@@ -498,10 +495,10 @@ static PassRefPtr<DocumentFragment> fragmentFromWebArchive(Frame* frame, PassRef
     if (!frame || !frame->document())
         return 0;
 
-    if (frame->loader()->client()->canShowMIMETypeAsHTML(MIMEType)) {
+    if (frame->loader().client()->canShowMIMETypeAsHTML(MIMEType)) {
         RetainPtr<NSString> markupString = adoptNS([[NSString alloc] initWithData:[mainResource->data()->createNSData() autorelease] encoding:NSUTF8StringEncoding]);
         // FIXME: seems poor form to do this as a side effect of getting a document fragment
-        if (DocumentLoader* loader = frame->loader()->documentLoader())
+        if (DocumentLoader* loader = frame->loader().documentLoader())
             loader->addAllArchiveResources(coreArchive.get());
         return createFragmentFromMarkup(frame->document(), markupString.get(), mainResource->url(), DisallowScriptingAndPluginContent);
     }

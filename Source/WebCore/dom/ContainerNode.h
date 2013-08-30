@@ -106,8 +106,6 @@ public:
 
     void cloneChildNodes(ContainerNode* clone);
 
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
-    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
     virtual LayoutRect boundingBox() const OVERRIDE;
     virtual void scheduleSetNeedsStyleRecalc(StyleChangeType = FullStyleChange) OVERRIDE FINAL;
 
@@ -118,14 +116,9 @@ public:
     // node that is of the type CDATA_SECTION_NODE, TEXT_NODE or COMMENT_NODE has changed its value.
     virtual void childrenChanged(bool createdByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
 
-    void attachChildren();
-    void attachChildrenLazily();
-    void detachChildren();
-    void detachChildrenIfNeeded();
-
     void disconnectDescendantFrames();
 
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const { return true; }
+    virtual bool childShouldCreateRenderer(const Node*) const { return true; }
 
 protected:
     ContainerNode(Document*, ConstructionType = CreateContainer);
@@ -158,10 +151,6 @@ private:
     Node* m_lastChild;
 };
 
-#ifndef NDEBUG
-bool childAttachedAllowedWhenAttachingChildren(ContainerNode*);
-#endif
-
 inline ContainerNode* toContainerNode(Node* node)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isContainerNode());
@@ -182,36 +171,6 @@ inline ContainerNode::ContainerNode(Document* document, ConstructionType type)
     , m_firstChild(0)
     , m_lastChild(0)
 {
-}
-
-inline void ContainerNode::attachChildren()
-{
-    for (Node* child = firstChild(); child; child = child->nextSibling()) {
-        ASSERT(!child->attached() || childAttachedAllowedWhenAttachingChildren(this));
-        if (!child->attached())
-            child->attach();
-    }
-}
-
-inline void ContainerNode::attachChildrenLazily()
-{
-    for (Node* child = firstChild(); child; child = child->nextSibling())
-        if (!child->attached())
-            child->lazyAttach();
-}
-
-inline void ContainerNode::detachChildrenIfNeeded()
-{
-    for (Node* child = firstChild(); child; child = child->nextSibling()) {
-        if (child->attached())
-            child->detach();
-    }
-}
-
-inline void ContainerNode::detachChildren()
-{
-    for (Node* child = firstChild(); child; child = child->nextSibling())
-        child->detach();
 }
 
 inline unsigned Node::childNodeCount() const

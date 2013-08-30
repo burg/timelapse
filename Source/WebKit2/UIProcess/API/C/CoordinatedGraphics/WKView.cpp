@@ -26,6 +26,7 @@
 #include "WKAPICast.h"
 #include "WebView.h"
 
+using namespace WebCore;
 using namespace WebKit;
 
 WKViewRef WKViewCreate(WKContextRef contextRef, WKPageGroupRef pageGroupRef)
@@ -52,6 +53,16 @@ void WKViewSetSize(WKViewRef viewRef, WKSize size)
 void WKViewSetViewClient(WKViewRef viewRef, const WKViewClient* client)
 {
     toImpl(viewRef)->initializeClient(client);
+}
+
+bool WKViewIsActive(WKViewRef viewRef)
+{
+    return toImpl(viewRef)->isActive();
+}
+
+void WKViewSetIsActive(WKViewRef viewRef, bool isActive)
+{
+    toImpl(viewRef)->setActive(isActive);
 }
 
 bool WKViewIsFocused(WKViewRef viewRef)
@@ -109,6 +120,12 @@ WKPoint WKViewUserViewportToContents(WKViewRef viewRef, WKPoint point)
 WKPoint WKViewUserViewportToScene(WKViewRef viewRef, WKPoint point)
 {
     WebCore::IntPoint result = toImpl(viewRef)->userViewportToScene(toIntPoint(point));
+    return WKPointMake(result.x(), result.y());
+}
+
+WKPoint WKViewContentsToUserViewport(WKViewRef viewRef, WKPoint point)
+{
+    WebCore::IntPoint result = toImpl(viewRef)->contentsToUserViewport(toIntPoint(point));
     return WKPointMake(result.x(), result.y());
 }
 
@@ -180,6 +197,12 @@ void WKViewSetOpacity(WKViewRef view, double opacity)
 double WKViewOpacity(WKViewRef view)
 {
     return toImpl(view)->opacity();
+}
+
+void WKViewFindZoomableAreaForRect(WKViewRef viewRef, WKRect wkRect)
+{
+    IntRect rect = toIntRect(wkRect);
+    toImpl(viewRef)->findZoomableAreaForPoint(rect.center(), rect.size());
 }
 
 #endif // USE(COORDINATED_GRAPHICS)

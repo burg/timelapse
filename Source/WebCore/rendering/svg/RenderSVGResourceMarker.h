@@ -33,7 +33,7 @@ namespace WebCore {
 class AffineTransform;
 class RenderObject;
 
-class RenderSVGResourceMarker : public RenderSVGResourceContainer {
+class RenderSVGResourceMarker FINAL : public RenderSVGResourceContainer {
 public:
     RenderSVGResourceMarker(SVGMarkerElement*);
     virtual ~RenderSVGResourceMarker();
@@ -60,7 +60,7 @@ public:
 
     FloatPoint referencePoint() const;
     float angle() const;
-    SVGMarkerUnitsType markerUnits() const { return static_cast<SVGMarkerElement*>(node())->markerUnits(); }
+    SVGMarkerUnitsType markerUnits() const { return toSVGMarkerElement(node())->markerUnits(); }
 
     virtual RenderSVGResourceType resourceType() const { return s_resourceType; }
     static RenderSVGResourceType s_resourceType;

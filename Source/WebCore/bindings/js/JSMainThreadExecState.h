@@ -50,16 +50,14 @@ public:
     static JSC::JSValue call(JSC::ExecState* exec, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args)
     {
         JSMainThreadExecState currentState(exec);
-        // Ensure DOM global object is unwrapped to the shell.
-        if (thisValue.isObject())
-            thisValue = thisValue.toThisObject(exec);
         return JSC::call(exec, functionObject, callType, callData, thisValue, args);
     };
 
     static inline InspectorInstrumentationCookie instrumentFunctionCall(ScriptExecutionContext* context, JSC::CallType callType, const JSC::CallData& callData)
     {
-        if (!InspectorInstrumentation::timelineAgentEnabled(context))
+        if (!InspectorInstrumentation::timelineAgentEnabled(context) && !InspectorInstrumentation::replayAgentEnabled(context))
             return InspectorInstrumentationCookie();
+
         String resourceName;
         int lineNumber = 1;
         if (callType == JSC::CallTypeJS) {

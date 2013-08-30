@@ -35,7 +35,7 @@ static const unsigned maxColumnIndex = 0x1FFFFFFE; // 536,870,910
 
 enum IncludeBorderColorOrNot { DoNotIncludeBorderColor, IncludeBorderColor };
 
-class RenderTableCell : public RenderBlock {
+class RenderTableCell FINAL : public RenderBlock {
 public:
     explicit RenderTableCell(Element*);
     
@@ -121,6 +121,8 @@ public:
 
     virtual void paint(PaintInfo&, const LayoutPoint&);
 
+    bool alignLeftRightBorderPaintRect(int& leftXOffset, int& rightXOffset);
+    bool alignTopBottomBorderPaintRect(int& topYOffset, int& bottomYOffset);
     void paintCollapsedBorders(PaintInfo&, const LayoutPoint&);
     void paintBackgroundsBehindCell(PaintInfo&, const LayoutPoint&, RenderObject* backgroundObject);
 
@@ -263,6 +265,11 @@ private:
     CollapsedBorderValue computeCollapsedEndBorder(IncludeBorderColorOrNot = IncludeBorderColor) const;
     CollapsedBorderValue computeCollapsedBeforeBorder(IncludeBorderColorOrNot = IncludeBorderColor) const;
     CollapsedBorderValue computeCollapsedAfterBorder(IncludeBorderColorOrNot = IncludeBorderColor) const;
+
+    RenderTableCell* cellAtLeft(const RenderStyle*) const;
+    RenderTableCell* cellAtRight(const RenderStyle*) const;
+    RenderTableCell* cellAtTop(const RenderStyle*) const;
+    RenderTableCell* cellAtBottom(const RenderStyle*) const;
 
     Length logicalWidthFromColumns(RenderTableCol* firstColForThisCell, Length widthFromStyle) const;
 

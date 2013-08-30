@@ -27,6 +27,8 @@
 #define ParserTokens_h
 
 #include "ParserModes.h"
+#include <limits.h>
+#include <stdint.h>
 
 namespace JSC {
 
@@ -148,34 +150,57 @@ enum JSTokenType {
     INVALID_STRING_LITERAL_ERRORTOK = 9 | ErrorTokenFlag,
 };
 
+struct JSTextPosition {
+    JSTextPosition() : line(0), offset(0), lineStartOffset(0) { }
+    JSTextPosition(int _line, int _offset, int _lineStartOffset) : line(_line), offset(_offset), lineStartOffset(_lineStartOffset) { }
+    JSTextPosition(const JSTextPosition& other) : line(other.line), offset(other.offset), lineStartOffset(other.lineStartOffset) { }
+
+    JSTextPosition operator+(int adjustment) const { return JSTextPosition(line, offset + adjustment, lineStartOffset); }
+    JSTextPosition operator+(unsigned adjustment) const { return *this + static_cast<int>(adjustment); }
+    JSTextPosition operator-(int adjustment) const { return *this + (- adjustment); }
+    JSTextPosition operator-(unsigned adjustment) const { return *this + (- static_cast<int>(adjustment)); }
+
+    operator int() const { return offset; }
+
+    int line;
+    int offset;
+    int lineStartOffset;
+};
+
 union JSTokenData {
-    int intValue;
+    struct {
+        uint32_t line;
+        uint32_t offset;
+        uint32_t lineStartOffset;
+    };
     double doubleValue;
     const Identifier* ident;
 };
 
 struct JSTokenLocation {
-    JSTokenLocation() : line(0), charPosition(0) { }
+    JSTokenLocation() : line(0), lineStartOffset(0), startOffset(0) { }
     JSTokenLocation(const JSTokenLocation& location)
     {
         line = location.line;
+        lineStartOffset = location.lineStartOffset;
         startOffset = location.startOffset;
         endOffset = location.endOffset;
-        charPosition = location.charPosition;
     }
+
     int line;
-    int startOffset;
-    int endOffset;
-    int charPosition;
+    unsigned lineStartOffset;
+    unsigned startOffset;
+    unsigned endOffset;
 };
 
 struct JSToken {
     JSTokenType m_type;
     JSTokenData m_data;
     JSTokenLocation m_location;
+    JSTextPosition m_startPosition;
+    JSTextPosition m_endPosition;
 };
 
-}
-
+} // namespace JSC
 
 #endif // ParserTokens_h

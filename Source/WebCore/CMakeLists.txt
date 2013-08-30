@@ -5,6 +5,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/gamepad"
     "${WEBCORE_DIR}/Modules/geolocation"
     "${WEBCORE_DIR}/Modules/indexeddb"
+    "${WEBCORE_DIR}/Modules/indieui"
     "${WEBCORE_DIR}/Modules/mediasource"
     "${WEBCORE_DIR}/Modules/mediastream"
     "${WEBCORE_DIR}/Modules/navigatorcontentutils"
@@ -80,6 +81,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/rendering/style"
     "${WEBCORE_DIR}/rendering/svg"
     "${WEBCORE_DIR}/storage"
+    "${WEBCORE_DIR}/style"
     "${WEBCORE_DIR}/svg"
     "${WEBCORE_DIR}/svg/animation"
     "${WEBCORE_DIR}/svg/graphics"
@@ -118,6 +120,7 @@ set(WebCore_IDL_INCLUDES
     Modules/gamepad
     Modules/geolocation
     Modules/indexeddb
+    Modules/indieui
     Modules/mediastream
     Modules/networkinfo
     Modules/notifications
@@ -175,7 +178,7 @@ set(WebCore_IDL_FILES
     Modules/filesystem/HTMLInputElementFileSystem.idl
     Modules/filesystem/Metadata.idl
     Modules/filesystem/MetadataCallback.idl
-    Modules/filesystem/WorkerContextFileSystem.idl
+    Modules/filesystem/WorkerGlobalScopeFileSystem.idl
 
     Modules/gamepad/Gamepad.idl
     Modules/gamepad/GamepadList.idl
@@ -202,7 +205,7 @@ set(WebCore_IDL_FILES
     Modules/indexeddb/IDBRequest.idl
     Modules/indexeddb/IDBTransaction.idl
     Modules/indexeddb/IDBVersionChangeEvent.idl
-    Modules/indexeddb/WorkerContextIndexedDatabase.idl
+    Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.idl
 
     Modules/mediasource/MediaSource.idl
     Modules/mediasource/SourceBuffer.idl
@@ -240,7 +243,7 @@ set(WebCore_IDL_FILES
     Modules/notifications/Notification.idl
     Modules/notifications/NotificationCenter.idl
     Modules/notifications/NotificationPermissionCallback.idl
-    Modules/notifications/WorkerContextNotifications.idl
+    Modules/notifications/WorkerGlobalScopeNotifications.idl
 
     Modules/proximity/DeviceProximityEvent.idl
 
@@ -271,7 +274,7 @@ set(WebCore_IDL_FILES
     Modules/webaudio/OscillatorNode.idl
     Modules/webaudio/AnalyserNode.idl
     Modules/webaudio/WaveShaperNode.idl
-    Modules/webaudio/WaveTable.idl
+    Modules/webaudio/PeriodicWave.idl
 
     Modules/webdatabase/Database.idl
     Modules/webdatabase/DatabaseCallback.idl
@@ -313,6 +316,7 @@ set(WebCore_IDL_FILES
     css/FontLoader.idl
     css/MediaList.idl
     css/MediaQueryList.idl
+    css/MediaQueryListListener.idl
     css/RGBColor.idl
     css/Rect.idl
     css/StyleMedia.idl
@@ -332,6 +336,7 @@ set(WebCore_IDL_FILES
     dom/BeforeLoadEvent.idl
     dom/CDATASection.idl
     dom/CharacterData.idl
+    dom/ChildNode.idl
     dom/ClientRect.idl
     dom/ClientRectList.idl
     dom/Clipboard.idl
@@ -378,7 +383,6 @@ set(WebCore_IDL_FILES
     dom/PopStateEvent.idl
     dom/ProcessingInstruction.idl
     dom/ProgressEvent.idl
-    dom/PropertyNodeList.idl
     dom/RangeException.idl
     dom/Range.idl
     dom/RequestAnimationFrameCallback.idl
@@ -467,7 +471,6 @@ set(WebCore_IDL_FILES
     html/HTMLParamElement.idl
     html/HTMLPreElement.idl
     html/HTMLProgressElement.idl
-    html/HTMLPropertiesCollection.idl
     html/HTMLQuoteElement.idl
     html/HTMLScriptElement.idl
     html/HTMLSelectElement.idl
@@ -490,38 +493,25 @@ set(WebCore_IDL_FILES
     html/ImageData.idl
     html/MediaController.idl
     html/MediaError.idl
-    html/MicroDataItemValue.idl
     html/RadioNodeList.idl
     html/TextMetrics.idl
     html/TimeRanges.idl
     html/ValidityState.idl
     html/VoidCallback.idl
 
-    html/canvas/ArrayBuffer.idl
-    html/canvas/ArrayBufferView.idl
     html/canvas/CanvasGradient.idl
     html/canvas/CanvasPattern.idl
     html/canvas/CanvasProxy.idl
     html/canvas/CanvasRenderingContext2D.idl
     html/canvas/CanvasRenderingContext.idl
-    html/canvas/DataView.idl
     html/canvas/DOMPath.idl
     html/canvas/EXTDrawBuffers.idl
     html/canvas/EXTTextureFilterAnisotropic.idl
-    html/canvas/Float32Array.idl
-    html/canvas/Float64Array.idl
-    html/canvas/Int16Array.idl
-    html/canvas/Int32Array.idl
-    html/canvas/Int8Array.idl
     html/canvas/OESStandardDerivatives.idl
     html/canvas/OESTextureFloat.idl
     html/canvas/OESTextureHalfFloat.idl
     html/canvas/OESVertexArrayObject.idl
     html/canvas/OESElementIndexUint.idl
-    html/canvas/Uint16Array.idl
-    html/canvas/Uint32Array.idl
-    html/canvas/Uint8Array.idl
-    html/canvas/Uint8ClampedArray.idl
     html/canvas/WebGLActiveInfo.idl
     html/canvas/WebGLBuffer.idl
     html/canvas/WebGLCompressedTextureATC.idl
@@ -574,6 +564,8 @@ set(WebCore_IDL_FILES
     page/SpeechInputResult.idl
     page/SpeechInputResultList.idl
     page/WebKitPoint.idl
+    page/WindowBase64.idl
+    page/WindowTimers.idl
     page/WorkerNavigator.idl
 
     plugins/DOMMimeType.idl
@@ -585,11 +577,11 @@ set(WebCore_IDL_FILES
     storage/StorageEvent.idl
 
     workers/AbstractWorker.idl
-    workers/DedicatedWorkerContext.idl
+    workers/DedicatedWorkerGlobalScope.idl
     workers/SharedWorker.idl
-    workers/SharedWorkerContext.idl
+    workers/SharedWorkerGlobalScope.idl
     workers/Worker.idl
-    workers/WorkerContext.idl
+    workers/WorkerGlobalScope.idl
     workers/WorkerLocation.idl
 
     xml/DOMParser.idl
@@ -645,6 +637,7 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGElementInstanceList.idl
     svg/SVGEllipseElement.idl
     svg/SVGException.idl
+    svg/SVGExternalResourcesRequired.idl
     svg/SVGFEBlendElement.idl
     svg/SVGFEColorMatrixElement.idl
     svg/SVGFEComponentTransferElement.idl
@@ -671,6 +664,8 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGFETileElement.idl
     svg/SVGFETurbulenceElement.idl
     svg/SVGFilterElement.idl
+    svg/SVGFilterPrimitiveStandardAttributes.idl
+    svg/SVGFitToViewBox.idl
     svg/SVGFontElement.idl
     svg/SVGFontFaceElement.idl
     svg/SVGFontFaceFormatElement.idl
@@ -682,6 +677,7 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGGlyphElement.idl
     svg/SVGGlyphRefElement.idl
     svg/SVGGradientElement.idl
+    svg/SVGGraphicsElement.idl
     svg/SVGHKernElement.idl
     svg/SVGImageElement.idl
     svg/SVGLength.idl
@@ -740,6 +736,7 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGSymbolElement.idl
     svg/SVGTRefElement.idl
     svg/SVGTSpanElement.idl
+    svg/SVGTests.idl
     svg/SVGTextContentElement.idl
     svg/SVGTextElement.idl
     svg/SVGTextPathElement.idl
@@ -747,6 +744,7 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGTitleElement.idl
     svg/SVGTransform.idl
     svg/SVGTransformList.idl
+    svg/SVGURIReference.idl
     svg/SVGUnitTypes.idl
     svg/SVGUseElement.idl
     svg/SVGViewElement.idl
@@ -788,7 +786,7 @@ set(WebCore_SOURCES
     Modules/filesystem/FileWriterSync.cpp
     Modules/filesystem/HTMLInputElementFileSystem.cpp
     Modules/filesystem/LocalFileSystem.cpp
-    Modules/filesystem/WorkerContextFileSystem.cpp
+    Modules/filesystem/WorkerGlobalScopeFileSystem.cpp
 
     Modules/gamepad/Gamepad.cpp
     Modules/gamepad/GamepadList.cpp
@@ -828,7 +826,7 @@ set(WebCore_SOURCES
     Modules/indexeddb/IDBTransactionCoordinator.cpp
     Modules/indexeddb/IDBVersionChangeEvent.cpp
     Modules/indexeddb/PageGroupIndexedDatabase.cpp
-    Modules/indexeddb/WorkerContextIndexedDatabase.cpp
+    Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.cpp
 
     Modules/mediasource/MediaSource.cpp
     Modules/mediasource/MediaSourceRegistry.cpp
@@ -870,7 +868,7 @@ set(WebCore_SOURCES
     Modules/notifications/NotificationCenter.cpp
     Modules/notifications/NotificationController.cpp
     Modules/notifications/Notification.cpp
-    Modules/notifications/WorkerContextNotifications.cpp
+    Modules/notifications/WorkerGlobalScopeNotifications.cpp
 
     Modules/proximity/DeviceProximityController.cpp
     Modules/proximity/DeviceProximityEvent.cpp
@@ -919,7 +917,7 @@ set(WebCore_SOURCES
     Modules/webaudio/WaveShaperDSPKernel.cpp
     Modules/webaudio/WaveShaperNode.cpp
     Modules/webaudio/WaveShaperProcessor.cpp
-    Modules/webaudio/WaveTable.cpp
+    Modules/webaudio/PeriodicWave.cpp
 
     Modules/webdatabase/ChangeVersionWrapper.cpp
     Modules/webdatabase/DOMWindowWebDatabase.cpp
@@ -1010,6 +1008,7 @@ set(WebCore_SOURCES
     css/CSSCrossfadeValue.cpp
     css/CSSCursorImageValue.cpp
     css/CSSDefaultStyleSheets.cpp
+    css/CSSFilterImageValue.cpp
     css/CSSFontFace.cpp
     css/CSSFontFaceLoadEvent.cpp
     css/CSSFontFaceRule.cpp
@@ -1065,7 +1064,6 @@ set(WebCore_SOURCES
     css/MediaQueryEvaluator.cpp
     css/MediaQueryExp.cpp
     css/MediaQueryList.cpp
-    css/MediaQueryListListener.cpp
     css/MediaQueryMatcher.cpp
     css/PageRuleCollector.cpp
     css/PropertySetCSSStyleDeclaration.cpp
@@ -1094,11 +1092,14 @@ set(WebCore_SOURCES
     css/SVGCSSStyleSelector.cpp
     css/TransformFunctions.cpp
     css/ViewportStyleResolver.cpp
+    css/WebKitCSSArrayFunctionValue.cpp
     css/WebKitCSSFilterRule.cpp
     css/WebKitCSSFilterValue.cpp
     css/WebKitCSSKeyframeRule.cpp
     css/WebKitCSSKeyframesRule.cpp
     css/WebKitCSSMatrix.cpp
+    css/WebKitCSSMatFunctionValue.cpp
+    css/WebKitCSSMixFunctionValue.cpp
     css/WebKitCSSRegionRule.cpp
     css/WebKitCSSSVGDocumentValue.cpp
     css/WebKitCSSShaderValue.cpp
@@ -1153,8 +1154,8 @@ set(WebCore_SOURCES
     dom/DocumentStyleSheetCollection.cpp
     dom/DocumentType.cpp
     dom/Element.cpp
+    dom/ElementData.cpp
     dom/ElementRareData.cpp
-    dom/ElementShadow.cpp
     dom/EntityReference.cpp
     dom/ErrorEvent.cpp
     dom/Event.cpp
@@ -1175,13 +1176,13 @@ set(WebCore_SOURCES
     dom/IconURL.cpp
     dom/IdTargetObserver.cpp
     dom/IdTargetObserverRegistry.cpp
+    dom/InlineStyleSheetOwner.cpp
     dom/LiveNodeList.cpp
     dom/KeyboardEvent.cpp
     dom/MessageChannel.cpp
     dom/MessageEvent.cpp
     dom/MessagePortChannel.cpp
     dom/MessagePort.cpp
-    dom/MicroDataItemList.cpp
     dom/MouseEvent.cpp
     dom/MouseRelatedEvent.cpp
     dom/MutationEvent.cpp
@@ -1209,7 +1210,6 @@ set(WebCore_SOURCES
     dom/PositionIterator.cpp
     dom/ProcessingInstruction.cpp
     dom/ProgressEvent.cpp
-    dom/PropertyNodeList.cpp
     dom/PseudoElement.cpp
     dom/QualifiedName.cpp
     dom/Range.cpp
@@ -1228,10 +1228,10 @@ set(WebCore_SOURCES
     dom/StaticNodeList.cpp
     dom/StringCallback.cpp
     dom/StyledElement.cpp
-    dom/StyleElement.cpp
     dom/TagNodeList.cpp
     dom/Text.cpp
     dom/TextEvent.cpp
+    dom/TextNodeTraversal.cpp
     dom/Touch.cpp
     dom/TouchEvent.cpp
     dom/TouchList.cpp
@@ -1423,7 +1423,6 @@ set(WebCore_SOURCES
     html/HTMLPlugInImageElement.cpp
     html/HTMLPreElement.cpp
     html/HTMLProgressElement.cpp
-    html/HTMLPropertiesCollection.cpp
     html/HTMLQuoteElement.cpp
     html/HTMLScriptElement.cpp
     html/HTMLSelectElement.cpp
@@ -1459,8 +1458,6 @@ set(WebCore_SOURCES
     html/MediaController.cpp
     html/MediaDocument.cpp
     html/MediaFragmentURIParser.cpp
-    html/MicroDataAttributeTokenList.cpp
-    html/MicroDataItemValue.cpp
     html/MonthInputType.cpp
     html/NumberInputType.cpp
     html/PasswordInputType.cpp
@@ -1492,7 +1489,6 @@ set(WebCore_SOURCES
     html/canvas/CanvasRenderingContext.cpp
     html/canvas/CanvasRenderingContext2D.cpp
     html/canvas/CanvasStyle.cpp
-    html/canvas/DataView.cpp
     html/canvas/EXTDrawBuffers.cpp
     html/canvas/EXTTextureFilterAnisotropic.cpp
     html/canvas/OESStandardDerivatives.cpp
@@ -1857,6 +1853,7 @@ set(WebCore_SOURCES
     platform/audio/Cone.cpp
     platform/audio/DirectConvolver.cpp
     platform/audio/Distance.cpp
+    platform/audio/DownSampler.cpp
     platform/audio/DynamicsCompressor.cpp
     platform/audio/DynamicsCompressorKernel.cpp
     platform/audio/EqualPowerPanner.cpp
@@ -1875,6 +1872,7 @@ set(WebCore_SOURCES
     platform/audio/ReverbConvolverStage.cpp
     platform/audio/ReverbInputBuffer.cpp
     platform/audio/SincResampler.cpp
+    platform/audio/UpSampler.cpp
     platform/audio/VectorMath.cpp
     platform/audio/ZeroPole.cpp
 
@@ -1910,7 +1908,9 @@ set(WebCore_SOURCES
     platform/graphics/Image.cpp
     platform/graphics/ImageBuffer.cpp
     platform/graphics/ImageOrientation.cpp
+    platform/graphics/IntPoint.cpp
     platform/graphics/IntRect.cpp
+    platform/graphics/IntSize.cpp
     platform/graphics/MediaPlayer.cpp
     platform/graphics/Path.cpp
     platform/graphics/PathTraversalState.cpp
@@ -1933,12 +1933,14 @@ set(WebCore_SOURCES
     platform/graphics/filters/CustomFilterCompiledProgram.cpp
     platform/graphics/filters/CustomFilterGlobalContext.cpp
     platform/graphics/filters/CustomFilterMesh.cpp
+    platform/graphics/filters/CustomFilterMeshGenerator.cpp
     platform/graphics/filters/CustomFilterOperation.cpp
     platform/graphics/filters/CustomFilterParameterList.cpp
     platform/graphics/filters/ValidatedCustomFilterOperation.cpp
     platform/graphics/filters/CustomFilterProgram.cpp
     platform/graphics/filters/CustomFilterProgramInfo.cpp
     platform/graphics/filters/CustomFilterRenderer.cpp
+    platform/graphics/filters/CustomFilterValidatedProgram.cpp
     platform/graphics/filters/DistantLightSource.cpp
     platform/graphics/filters/FEBlend.cpp
     platform/graphics/filters/FEColorMatrix.cpp
@@ -1967,6 +1969,7 @@ set(WebCore_SOURCES
     platform/graphics/filters/SpotLightSource.cpp
 
     platform/graphics/texmap/coordinated/AreaAllocator.cpp
+    platform/graphics/texmap/coordinated/CompositingCoordinator.cpp
     platform/graphics/texmap/coordinated/CoordinatedBackingStore.cpp
     platform/graphics/texmap/coordinated/CoordinatedGraphicsLayer.cpp
     platform/graphics/texmap/coordinated/CoordinatedGraphicsScene.cpp
@@ -2086,7 +2089,6 @@ set(WebCore_SOURCES
     plugins/PluginData.cpp
     plugins/PluginDebug.cpp
     plugins/PluginMainThreadScheduler.cpp
-    plugins/PluginPackage.cpp
     plugins/PluginStream.cpp
     plugins/PluginView.cpp
 
@@ -2204,11 +2206,13 @@ set(WebCore_SOURCES
     rendering/mathml/RenderMathMLOperator.cpp
     rendering/mathml/RenderMathMLRoot.cpp
     rendering/mathml/RenderMathMLRow.cpp
+    rendering/mathml/RenderMathMLSpace.cpp
     rendering/mathml/RenderMathMLSquareRoot.cpp
     rendering/mathml/RenderMathMLSubSup.cpp
     rendering/mathml/RenderMathMLUnderOver.cpp
 
     rendering/shapes/PolygonShape.cpp
+    rendering/shapes/RasterShape.cpp
     rendering/shapes/RectangleShape.cpp
     rendering/shapes/Shape.cpp
     rendering/shapes/ShapeInfo.cpp
@@ -2229,6 +2233,9 @@ set(WebCore_SOURCES
     rendering/style/StyleBoxData.cpp
     rendering/style/StyleCachedImage.cpp
     rendering/style/StyleCachedImageSet.cpp
+    rendering/style/StyleCachedShader.cpp
+    rendering/style/StyleCustomFilterProgram.cpp
+    rendering/style/StyleCustomFilterProgramCache.cpp
     rendering/style/StyleDeprecatedFlexibleBoxData.cpp
     rendering/style/StyleFilterData.cpp
     rendering/style/StyleFlexibleBoxData.cpp
@@ -2312,6 +2319,10 @@ set(WebCore_SOURCES
     storage/StorageSyncManager.cpp
     storage/StorageTracker.cpp
 
+    style/StyleFontSizeFunctions.cpp
+    style/StyleResolveForDocument.cpp
+    style/StyleResolveTree.cpp
+
     svg/ColorDistance.cpp
     svg/SVGAElement.cpp
     svg/SVGAltGlyphDefElement.cpp
@@ -2337,6 +2348,7 @@ set(WebCore_SOURCES
     svg/SVGAnimatedString.cpp
     svg/SVGAnimatedTransformList.cpp
     svg/SVGAnimatedType.cpp
+    svg/SVGAnimatedTypeAnimator.cpp
     svg/SVGAnimateElement.cpp
     svg/SVGAnimateMotionElement.cpp
     svg/SVGAnimateTransformElement.cpp
@@ -2397,6 +2409,7 @@ set(WebCore_SOURCES
     svg/SVGGlyphElement.cpp
     svg/SVGGlyphRefElement.cpp
     svg/SVGGradientElement.cpp
+    svg/SVGGraphicsElement.cpp
     svg/SVGHKernElement.cpp
     svg/SVGImageElement.cpp
     svg/SVGImageLoader.cpp
@@ -2443,8 +2456,6 @@ set(WebCore_SOURCES
     svg/SVGStringList.cpp
     svg/SVGStyleElement.cpp
     svg/SVGStyledElement.cpp
-    svg/SVGStyledLocatableElement.cpp
-    svg/SVGStyledTransformableElement.cpp
     svg/SVGSwitchElement.cpp
     svg/SVGSymbolElement.cpp
     svg/SVGTRefElement.cpp
@@ -2479,19 +2490,20 @@ set(WebCore_SOURCES
     svg/graphics/filters/SVGFilter.cpp
     svg/graphics/filters/SVGFilterBuilder.cpp
 
+    svg/properties/SVGAnimatedProperty.cpp
     svg/properties/SVGAttributeToPropertyMap.cpp
     svg/properties/SVGPathSegListPropertyTearOff.cpp
 
     workers/AbstractWorker.cpp
-    workers/DedicatedWorkerContext.cpp
+    workers/DedicatedWorkerGlobalScope.cpp
     workers/DedicatedWorkerThread.cpp
     workers/DefaultSharedWorkerRepository.cpp
     workers/SharedWorker.cpp
-    workers/SharedWorkerContext.cpp
+    workers/SharedWorkerGlobalScope.cpp
     workers/SharedWorkerRepository.cpp
     workers/SharedWorkerThread.cpp
     workers/Worker.cpp
-    workers/WorkerContext.cpp
+    workers/WorkerGlobalScope.cpp
     workers/WorkerEventQueue.cpp
     workers/WorkerLocation.cpp
     workers/WorkerMessagingProxy.cpp
@@ -2579,16 +2591,17 @@ set(WebCore_LIBRARIES
 
 if (ENABLE_SQL_DATABASE AND ENABLE_WORKERS)
     list(APPEND WebCore_SOURCES
-        Modules/webdatabase/WorkerContextWebDatabase.cpp
+        Modules/webdatabase/WorkerGlobalScopeWebDatabase.cpp
     )
 
     list(APPEND WebCore_IDL_FILES
-        Modules/webdatabase/WorkerContextWebDatabase.idl
+        Modules/webdatabase/WorkerGlobalScopeWebDatabase.idl
     )
 endif ()
 
 if (ENABLE_NETSCAPE_PLUGIN_API)
     list(APPEND WebCore_SOURCES
+        plugins/PluginPackage.cpp
         plugins/npapi.cpp
     )
 else ()
@@ -2830,21 +2843,9 @@ if (WTF_USE_3D_GRAPHICS)
         ${OPENGL_gl_LIBRARY}
     )
 
-    if (BISON_VERSION EQUAL "2.5")
-        # Bison 2.5 can not compile generated glslang.
-        # See https://bugs.webkit.org/show_bug.cgi?id=93487
-        list(APPEND ANGLESupport_SOURCES
-            ${THIRDPARTY_DIR}/ANGLE/src/compiler/glslang_lex.cpp
-            ${THIRDPARTY_DIR}/ANGLE/src/compiler/glslang_tab.cpp
-        )
-    else ()
-        list(APPEND ANGLESupport_SOURCES
-            ${DERIVED_SOURCES_WEBCORE_DIR}/glslang.cpp
-            ${DERIVED_SOURCES_WEBCORE_DIR}/glslang_tab.cpp
-        )
-    endif ()
-
     list(APPEND ANGLESupport_SOURCES
+        ${DERIVED_SOURCES_WEBCORE_DIR}/glslang.cpp
+        ${DERIVED_SOURCES_WEBCORE_DIR}/glslang_tab.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/BuiltInFunctionEmulator.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/CodeGenGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/Compiler.cpp
@@ -2855,8 +2856,8 @@ if (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphBuilder.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphOutput.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphTraverse.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/DetectCallDepth.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/DetectDiscontinuity.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/DetectRecursion.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ForLoopUnroll.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/InfoSink.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/Initialize.cpp
@@ -2866,7 +2867,6 @@ if (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/intermOut.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/IntermTraverse.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/MapLongVariableNames.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/ossource_posix.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/OutputESSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/OutputGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/OutputGLSLBase.cpp
@@ -2895,6 +2895,7 @@ if (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/TranslatorESSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/TranslatorGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/TranslatorHLSL.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/Uniform.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/UnfoldShortCircuit.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/util.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ValidateLimitations.cpp
@@ -2903,6 +2904,16 @@ if (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/VersionGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/third_party/compiler/ArrayBoundsClamper.cpp
     )
+
+    if (WIN32)
+        list(APPEND ANGLESupport_SOURCES
+            ${THIRDPARTY_DIR}/ANGLE/src/compiler/ossource_win.cpp
+        )
+    else ()
+        list(APPEND ANGLESupport_SOURCES
+            ${THIRDPARTY_DIR}/ANGLE/src/compiler/ossource_posix.cpp
+        )
+    endif ()
 
     list(APPEND WebCore_SOURCES
         platform/graphics/ANGLEWebKitBridge.cpp
@@ -2934,6 +2945,12 @@ set(WebCoreTestSupport_SOURCES
     platform/mock/PlatformSpeechSynthesizerMock.cpp
 )
 
+set(WebCoreTestSupport_LIBRARIES
+    JavaScriptCore
+    WTF
+    WebCore
+)
+
 # Modules that the bindings generator scripts may use
 set(SCRIPTS_RESOLVE_SUPPLEMENTAL
     ${WEBCORE_DIR}/bindings/scripts/IDLParser.pm
@@ -2946,7 +2963,9 @@ set(SCRIPTS_BINDINGS
 set(IDL_FILES_TMP ${DERIVED_SOURCES_WEBCORE_DIR}/idl_files.tmp)
 set(SUPPLEMENTAL_DEPENDENCY_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/supplemental_dependency.tmp)
 set(WINDOW_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/DOMWindowConstructors.idl)
-set(WORKERCONTEXT_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/WorkerContextConstructors.idl)
+set(WORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/WorkerGlobalScopeConstructors.idl)
+set(SHAREDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/SharedWorkerGlobalScopeConstructors.idl)
+set(DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE ${DERIVED_SOURCES_WEBCORE_DIR}/DedicatedWorkerGlobalScopeConstructors.idl)
 set(IDL_ATTRIBUTES_FILE ${WEBCORE_DIR}/bindings/scripts/IDLAttributes.txt)
 
 include(${WEBCORE_DIR}/UseJSC.cmake)
@@ -3184,14 +3203,12 @@ if (WebCore_OUTPUT_NAME)
 endif ()
 
 add_library(WebCoreTestSupport ${WebCoreTestSupport_LIBRARY_TYPE} ${WebCoreTestSupport_SOURCES})
+target_link_libraries(WebCoreTestSupport ${WebCoreTestSupport_LIBRARIES})
 set_target_properties(WebCoreTestSupport PROPERTIES FOLDER "WebCore")
 
 if (WebCoreTestSupport_OUTPUT_NAME)
     set_target_properties(WebCoreTestSupport PROPERTIES OUTPUT_NAME ${WebCoreTestSupport_OUTPUT_NAME})
 endif ()
-
-add_dependencies(WebCore JavaScriptCore)
-add_dependencies(WebCoreTestSupport WebCore)
 
 if (WTF_USE_LEVELDB)
     add_library(leveldb STATIC ${LEVELDB_SOURCES})

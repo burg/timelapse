@@ -142,15 +142,16 @@ public:
 
     float deviceScaleFactor() const { return m_deviceScaleFactor; }
 
-    virtual bool canContainRangeEndPoint() const { return false; }
-
 private:
     HTMLCanvasElement(const QualifiedName&, Document*);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
-    virtual bool areAuthorShadowsAllowed() const OVERRIDE { return false; }
+    virtual void willAttachRenderers() OVERRIDE;
+    virtual bool areAuthorShadowsAllowed() const OVERRIDE;
+
+    virtual bool canContainRangeEndPoint() const OVERRIDE;
+    virtual bool canStartSelection() const OVERRIDE;
 
     void reset();
 
@@ -186,6 +187,20 @@ private:
     mutable RefPtr<Image> m_presentedImage;
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 };
+
+inline bool isHTMLCanvasElement(const Node* node)
+{
+    return node->hasTagName(HTMLNames::canvasTag);
+}
+
+inline const HTMLCanvasElement* toHTMLCanvasElement(const Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLCanvasElement(node));
+    return static_cast<const HTMLCanvasElement*>(node);
+}
+
+// This will catch anyone doing an unnecessary cast.
+void toHTMLCanvasElement(const HTMLCanvasElement*);
 
 } //namespace
 

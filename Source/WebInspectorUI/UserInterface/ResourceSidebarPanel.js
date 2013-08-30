@@ -24,7 +24,7 @@
  */
 
 WebInspector.ResourceSidebarPanel = function() {
-    WebInspector.NavigationSidebarPanel.call(this, "resource", WebInspector.UIString("Resources"), "Images/NavigationItemStorage.pdf", "1", true, false, true);
+    WebInspector.NavigationSidebarPanel.call(this, "resource", WebInspector.UIString("Resources"), "Images/NavigationItemStorage.svg", "1", true, false, true);
 
     var searchElement = document.createElement("div");
     searchElement.classList.add("search-bar");
@@ -32,9 +32,9 @@ WebInspector.ResourceSidebarPanel = function() {
 
     this._inputElement = document.createElement("input");
     this._inputElement.type = "search";
-    this._inputElement.required = true;
     this._inputElement.spellcheck = false;
-    this._inputElement.addEventListener("search", this._searchFieldChanged.bind(this), false);
+    this._inputElement.addEventListener("search", this._searchFieldChanged.bind(this));
+    this._inputElement.addEventListener("input", this._searchFieldInput.bind(this));
     this._inputElement.setAttribute("results", 5);
     this._inputElement.setAttribute("autosave", "inspector-search");
     this._inputElement.setAttribute("placeholder", WebInspector.UIString("Search Resource Content"));
@@ -558,6 +558,13 @@ WebInspector.ResourceSidebarPanel.prototype = {
     _searchFieldChanged: function(event)
     {
         this.performSearch(event.target.value);
+    },
+
+    _searchFieldInput: function(event)
+    {
+        // If the search field is cleared, immediately clear the search results tree outline.
+        if (!event.target.value.length && this.contentTreeOutline === this._searchContentTreeOutline)
+            this.performSearch("");
     },
 
     _searchTreeElementForResource: function(resource)

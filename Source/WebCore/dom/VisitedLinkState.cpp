@@ -29,10 +29,10 @@
 #include "config.h"
 #include "VisitedLinkState.h"
 
+#include "ElementTraversal.h"
 #include "Frame.h"
 #include "HTMLAnchorElement.h"
 #include "HTMLNames.h"
-#include "NodeTraversal.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "PlatformStrategies.h"
@@ -75,8 +75,8 @@ void VisitedLinkState::invalidateStyleForAllLinks()
 
 inline static LinkHash linkHashForElement(Document* document, Element* element)
 {
-    if (element->hasTagName(aTag))
-        return static_cast<HTMLAnchorElement*>(element)->visitedLinkHash();
+    if (isHTMLAnchorElement(element))
+        return toHTMLAnchorElement(element)->visitedLinkHash();
     if (const AtomicString* attribute = linkAttribute(element))
         return WebCore::visitedLinkHash(document->baseURL(), *attribute);
     return 0;
@@ -106,8 +106,8 @@ EInsideLink VisitedLinkState::determineLinkStateSlowCase(Element* element)
         return InsideVisitedLink;
 
     LinkHash hash;
-    if (element->hasTagName(aTag))
-        hash = static_cast<HTMLAnchorElement*>(element)->visitedLinkHash();
+    if (isHTMLAnchorElement(element))
+        hash = toHTMLAnchorElement(element)->visitedLinkHash();
     else
         hash = WebCore::visitedLinkHash(element->document()->baseURL(), *attribute);
 

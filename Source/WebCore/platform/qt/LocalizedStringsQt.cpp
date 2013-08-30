@@ -133,6 +133,16 @@ String contextMenuItemTagOpenAudioInNewWindow()
     return QCoreApplication::translate("QWebPage", "Open Audio", "Open Audio in New Window");
 }
 
+String contextMenuItemTagDownloadVideoToDisk()
+{
+    return QCoreApplication::translate("QWebPage", "Download Video", "Download Video context menu item");
+}
+
+String contextMenuItemTagDownloadAudioToDisk()
+{
+    return QCoreApplication::translate("QWebPage", "Download Audio", "Download Audio context menu item");
+}
+
 String contextMenuItemTagCopyVideoLinkToClipboard()
 {
     return QCoreApplication::translate("QWebPage", "Copy Video", "Copy Video Link Location");
@@ -146,6 +156,16 @@ String contextMenuItemTagCopyAudioLinkToClipboard()
 String contextMenuItemTagToggleMediaControls()
 {
     return QCoreApplication::translate("QWebPage", "Toggle Controls", "Toggle Media Controls");
+}
+
+String contextMenuItemTagShowMediaControls()
+{
+    return QCoreApplication::translate("QWebPage", "Show Controls", "Show Media Controls");
+}
+
+String contextMenuItemTagHideMediaControls()
+{
+    return QCoreApplication::translate("QWebPage", "Hide Controls", "Hide Media Controls");
 }
 
 String contextMenuItemTagToggleMediaLoop()

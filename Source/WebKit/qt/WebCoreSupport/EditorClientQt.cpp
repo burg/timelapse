@@ -203,10 +203,10 @@ void EditorClientQt::respondToChangedSelection(Frame* frame)
 //     selection.formatForDebugger(buffer, sizeof(buffer));
 //     printf("%s\n", buffer);
 
-    if (supportsGlobalSelection() && frame->selection()->isRange()) {
+    if (supportsGlobalSelection() && frame->selection().isRange()) {
         bool oldSelectionMode = Pasteboard::generalPasteboard()->isSelectionMode();
         Pasteboard::generalPasteboard()->setSelectionMode(true);
-        Pasteboard::generalPasteboard()->writeSelection(frame->selection()->toNormalizedRange().get(), frame->editor().canSmartCopyOrDelete(), frame);
+        Pasteboard::generalPasteboard()->writeSelection(frame->selection().toNormalizedRange().get(), frame->editor().canSmartCopyOrDelete(), frame);
         Pasteboard::generalPasteboard()->setSelectionMode(oldSelectionMode);
     }
 
@@ -247,7 +247,7 @@ bool EditorClientQt::selectWordBeforeMenuEvent()
 void EditorClientQt::registerUndoStep(WTF::PassRefPtr<WebCore::UndoStep> step)
 {
 #ifndef QT_NO_UNDOSTACK
-    Frame* frame = m_page->page->focusController()->focusedOrMainFrame();
+    Frame* frame = m_page->page->focusController().focusedOrMainFrame();
     if (m_inUndoRedo || (frame && !frame->editor().lastEditCommand() /* HACK!! Don't recreate undos */))
         return;
     m_page->registerUndoStep(step);
@@ -336,15 +336,15 @@ bool EditorClientQt::smartInsertDeleteEnabled()
     Page* page = m_page->page;
     if (!page)
         return false;
-    return page->settings()->smartInsertDeleteEnabled();
+    return page->settings().smartInsertDeleteEnabled();
 }
 
 void EditorClientQt::toggleSmartInsertDelete()
 {
     Page* page = m_page->page;
     if (page) {
-        page->settings()->setSmartInsertDeleteEnabled(!page->settings()->smartInsertDeleteEnabled());
-        page->settings()->setSelectTrailingWhitespaceEnabled(!page->settings()->selectTrailingWhitespaceEnabled());
+        page->settings().setSmartInsertDeleteEnabled(!page->settings().smartInsertDeleteEnabled());
+        page->settings().setSelectTrailingWhitespaceEnabled(!page->settings().selectTrailingWhitespaceEnabled());
     }
 }
 
@@ -353,7 +353,7 @@ bool EditorClientQt::isSelectTrailingWhitespaceEnabled()
     Page* page = m_page->page;
     if (!page)
         return false;
-    return page->settings()->selectTrailingWhitespaceEnabled();
+    return page->settings().selectTrailingWhitespaceEnabled();
 }
 
 void EditorClientQt::toggleContinuousSpellChecking()
@@ -422,7 +422,7 @@ const char* editorCommandForKeyDownEvent(const KeyboardEvent* event)
 
 void EditorClientQt::handleKeyboardEvent(KeyboardEvent* event)
 {
-    Frame* frame = m_page->page->focusController()->focusedOrMainFrame();
+    Frame* frame = m_page->page->focusController().focusedOrMainFrame();
     if (!frame)
         return;
 
@@ -430,7 +430,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent* event)
     if (!kevent || kevent->type() == PlatformEvent::KeyUp)
         return;
 
-    Node* start = frame->selection()->start().containerNode();
+    Node* start = frame->selection().start().containerNode();
     if (!start)
         return;
 
@@ -506,7 +506,7 @@ void EditorClientQt::handleKeyboardEvent(KeyboardEvent* event)
     }
 
     // Non editable content.
-    if (m_page->page->settings()->caretBrowsingEnabled()) {
+    if (m_page->page->settings().caretBrowsingEnabled()) {
         switch (kevent->windowsVirtualKeyCode()) {
         case VK_LEFT:
         case VK_RIGHT:
@@ -617,10 +617,10 @@ void EditorClientQt::setInputMethodState(bool active)
         Qt::InputMethodHints hints;
 
         HTMLInputElement* inputElement = 0;
-        Frame* frame = m_page->page->focusController()->focusedOrMainFrame();
+        Frame* frame = m_page->page->focusController().focusedOrMainFrame();
         if (frame && frame->document() && frame->document()->focusedElement())
-            if (frame->document()->focusedElement()->hasTagName(HTMLNames::inputTag))
-                inputElement = static_cast<HTMLInputElement*>(frame->document()->focusedElement());
+            if (isHTMLInputElement(frame->document()->focusedElement()))
+                inputElement = toHTMLInputElement(frame->document()->focusedElement());
 
         if (inputElement) {
             // Set input method hints for "number", "tel", "email", "url" and "password" input elements.

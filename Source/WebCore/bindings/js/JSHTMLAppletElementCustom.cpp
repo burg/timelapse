@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#include "JSHTMLAppletElementCustom.h"
+#include "JSHTMLAppletElement.h"
 
 #include "HTMLAppletElement.h"
 #include "JSPluginElementFunctions.h"
@@ -36,11 +36,6 @@ using namespace JSC;
 bool JSHTMLAppletElement::getOwnPropertySlotDelegate(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     return pluginElementCustomGetOwnPropertySlot<JSHTMLAppletElement, Base>(exec, propertyName, slot, this);
-}
-
-bool JSHTMLAppletElement::getOwnPropertyDescriptorDelegate(ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return pluginElementCustomGetOwnPropertyDescriptor<JSHTMLAppletElement, Base>(exec, propertyName, descriptor, this);
 }
 
 bool JSHTMLAppletElement::putDelegate(ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)

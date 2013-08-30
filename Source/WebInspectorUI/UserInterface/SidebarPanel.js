@@ -23,18 +23,22 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.SidebarPanel = function(identifier, displayName, showToolTip, hideToolTip, image, element) {
+WebInspector.SidebarPanel = function(identifier, displayName, showToolTip, hideToolTip, image, element, role, label) {
     WebInspector.Object.call(this);
 
     this._identifier = identifier;
 
-    this._toolbarItem = new WebInspector.ActivateButtonToolbarItem(identifier, showToolTip, hideToolTip, displayName, image);
+    this._toolbarItem = new WebInspector.ActivateButtonToolbarItem(identifier, showToolTip, hideToolTip, displayName, image, null, "tab");
     this._toolbarItem.addEventListener(WebInspector.ButtonNavigationItem.Event.Clicked, this.toggle, this);
     this._toolbarItem.enabled = false;
 
     this._element = element || document.createElement("div");
     this._element.classList.add(WebInspector.SidebarPanel.StyleClassName);
     this._element.classList.add(identifier);
+
+    this._element.setAttribute("role", role || "group");
+    this._element.setAttribute("aria-label", label || displayName);
+
 };
 
 WebInspector.SidebarPanel.StyleClassName = "panel";

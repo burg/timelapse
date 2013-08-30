@@ -2,7 +2,7 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -49,7 +49,7 @@ struct KeyboardEventInit : public UIEventInit {
     KeyboardEventInit();
 
     String keyIdentifier;
-    unsigned keyLocation;
+    unsigned location;
     bool ctrlKey;
     bool altKey;
     bool shiftKey;
@@ -59,10 +59,13 @@ struct KeyboardEventInit : public UIEventInit {
 class KeyboardEvent : public UIEventWithKeyState {
 public:
     enum KeyLocationCode {
-        DOMKeyLocationStandard      = 0x00,
-        DOMKeyLocationLeft          = 0x01,
-        DOMKeyLocationRight         = 0x02,
-        DOMKeyLocationNumpad        = 0x03
+        DOM_KEY_LOCATION_STANDARD   = 0x00,
+        DOM_KEY_LOCATION_LEFT       = 0x01,
+        DOM_KEY_LOCATION_RIGHT      = 0x02,
+        DOM_KEY_LOCATION_NUMPAD     = 0x03
+        // FIXME: The following values are not supported yet (crbug.com/265446)
+        // DOM_KEY_LOCATION_MOBILE     = 0x04,
+        // DOM_KEY_LOCATION_JOYSTICK   = 0x05
     };
         
     static PassRefPtr<KeyboardEvent> create()
@@ -80,22 +83,14 @@ public:
         return adoptRef(new KeyboardEvent(type, initializer));
     }
 
-    static PassRefPtr<KeyboardEvent> create(const AtomicString& type, bool canBubble, bool cancelable, AbstractView* view,
-        const String& keyIdentifier, unsigned keyLocation,
-        bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey)
-    {
-        return adoptRef(new KeyboardEvent(type, canBubble, cancelable, view, keyIdentifier, keyLocation,
-        ctrlKey, altKey, shiftKey, metaKey, altGraphKey));
-    }
-
     virtual ~KeyboardEvent();
     
     void initKeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView*,
-        const String& keyIdentifier, unsigned keyLocation,
+        const String& keyIdentifier, unsigned location,
         bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey = false);
     
     const String& keyIdentifier() const { return m_keyIdentifier; }
-    unsigned keyLocation() const { return m_keyLocation; }
+    unsigned location() const { return m_location; }
 
     bool getModifierState(const String& keyIdentifier) const;
 
@@ -119,13 +114,10 @@ private:
     KeyboardEvent();
     KeyboardEvent(const PlatformKeyboardEvent&, AbstractView*);
     KeyboardEvent(const AtomicString&, const KeyboardEventInit&);
-    KeyboardEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView*,
-        const String& keyIdentifier, unsigned keyLocation,
-        bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey);
 
     OwnPtr<PlatformKeyboardEvent> m_keyEvent;
     String m_keyIdentifier;
-    unsigned m_keyLocation;
+    unsigned m_location;
     bool m_altGraphKey : 1;
 
 #if PLATFORM(MAC)

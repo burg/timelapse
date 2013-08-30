@@ -29,21 +29,27 @@
 #include "FrameSelection.h"
 #include "FrameTree.h"
 #include "HTMLAnchorElement.h"
+#include "HTMLAreaElement.h"
+#include "HTMLAudioElement.h"
 #include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLPlugInImageElement.h"
+#include "HTMLTextAreaElement.h"
 #include "HTMLVideoElement.h"
 #include "HitTestLocation.h"
+#include "PseudoElement.h"
 #include "RenderBlock.h"
 #include "RenderImage.h"
 #include "RenderInline.h"
 #include "Scrollbar.h"
+#include "ShadowRoot.h"
 #include "UserGestureIndicator.h"
 
 #if ENABLE(SVG)
+#include "SVGImageElement.h"
 #include "SVGNames.h"
 #include "XLinkNames.h"
 #endif
@@ -128,14 +134,14 @@ void HitTestResult::setToNonShadowAncestor()
 void HitTestResult::setInnerNode(Node* n)
 {
     if (n && n->isPseudoElement())
-        n = n->parentOrShadowHostNode();
+        n = toPseudoElement(n)->hostElement();
     m_innerNode = n;
 }
     
 void HitTestResult::setInnerNonSharedNode(Node* n)
 {
     if (n && n->isPseudoElement())
-        n = n->parentOrShadowHostNode();
+        n = toPseudoElement(n)->hostElement();
     m_innerNonSharedNode = n;
 }
 
@@ -179,7 +185,7 @@ bool HitTestResult::isSelected() const
     if (!frame)
         return false;
 
-    return frame->selection()->contains(m_hitTestLocation.point());
+    return frame->selection().contains(m_hitTestLocation.point());
 }
 
 String HitTestResult::spellingToolTip(TextDirection& dir) const
@@ -190,7 +196,7 @@ String HitTestResult::spellingToolTip(TextDirection& dir) const
     if (!m_innerNonSharedNode)
         return String();
     
-    DocumentMarker* marker = m_innerNonSharedNode->document()->markers()->markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Grammar);
+    DocumentMarker* marker = m_innerNonSharedNode->document()->markers().markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Grammar);
     if (!marker)
         return String();
 
@@ -206,7 +212,7 @@ String HitTestResult::replacedString() const
     if (!m_innerNonSharedNode)
         return String();
     
-    DocumentMarker* marker = m_innerNonSharedNode->document()->markers()->markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Replacement);
+    DocumentMarker* marker = m_innerNonSharedNode->document()->markers().markerContainingPoint(m_hitTestLocation.point(), DocumentMarker::Replacement);
     if (!marker)
         return String();
     
@@ -269,13 +275,13 @@ String HitTestResult::altDisplayString() const
     if (!m_innerNonSharedNode)
         return String();
     
-    if (m_innerNonSharedNode->hasTagName(imgTag)) {
-        HTMLImageElement* image = static_cast<HTMLImageElement*>(m_innerNonSharedNode.get());
+    if (isHTMLImageElement(m_innerNonSharedNode.get())) {
+        HTMLImageElement* image = toHTMLImageElement(m_innerNonSharedNode.get());
         return displayString(image->getAttribute(altAttr), m_innerNonSharedNode.get());
     }
     
-    if (m_innerNonSharedNode->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(m_innerNonSharedNode.get());
+    if (isHTMLInputElement(m_innerNonSharedNode.get())) {
+        HTMLInputElement* input = toHTMLInputElement(m_innerNonSharedNode.get());
         return displayString(input->alt(), m_innerNonSharedNode.get());
     }
 
@@ -314,11 +320,11 @@ KURL HitTestResult::absoluteImageURL() const
 
     AtomicString urlString;
     if (m_innerNonSharedNode->hasTagName(embedTag)
-        || m_innerNonSharedNode->hasTagName(imgTag)
-        || m_innerNonSharedNode->hasTagName(inputTag)
-        || m_innerNonSharedNode->hasTagName(objectTag)    
+        || isHTMLImageElement(m_innerNonSharedNode.get())
+        || isHTMLInputElement(m_innerNonSharedNode.get())
+        || m_innerNonSharedNode->hasTagName(objectTag)
 #if ENABLE(SVG)
-        || m_innerNonSharedNode->hasTagName(SVGNames::imageTag)
+        || isSVGImageElement(m_innerNonSharedNode.get())
 #endif
        ) {
         Element* element = toElement(m_innerNonSharedNode.get());
@@ -377,8 +383,8 @@ HTMLMediaElement* HitTestResult::mediaElement() const
     if (!(m_innerNonSharedNode->renderer() && m_innerNonSharedNode->renderer()->isMedia()))
         return 0;
 
-    if (m_innerNonSharedNode->hasTagName(HTMLNames::videoTag) || m_innerNonSharedNode->hasTagName(HTMLNames::audioTag))
-        return static_cast<HTMLMediaElement*>(m_innerNonSharedNode.get());
+    if (m_innerNonSharedNode->hasTagName(HTMLNames::videoTag) || isHTMLAudioElement(m_innerNonSharedNode.get()))
+        return toHTMLMediaElement(m_innerNonSharedNode.get());
     return 0;
 }
 #endif
@@ -399,14 +405,35 @@ void HitTestResult::toggleMediaLoopPlayback() const
 #endif
 }
 
+bool HitTestResult::mediaIsInFullscreen() const
+{
+#if ENABLE(VIDEO)
+    if (HTMLMediaElement* mediaElement = this->mediaElement())
+        return mediaElement->isVideo() && mediaElement->isFullscreen();
+#endif
+    return false;
+}
+
+void HitTestResult::toggleMediaFullscreenState() const
+{
+#if ENABLE(VIDEO)
+    if (HTMLMediaElement* mediaElement = this->mediaElement()) {
+        if (mediaElement->isVideo() && mediaElement->supportsFullscreen()) {
+            UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
+            mediaElement->toggleFullscreenState();
+        }
+    }
+#endif
+}
+
 void HitTestResult::enterFullscreenForVideo() const
 {
 #if ENABLE(VIDEO)
     HTMLMediaElement* mediaElt(mediaElement());
     if (mediaElt && mediaElt->hasTagName(HTMLNames::videoTag)) {
-        HTMLVideoElement* videoElt = static_cast<HTMLVideoElement*>(mediaElt);
+        HTMLVideoElement* videoElt = toHTMLVideoElement(mediaElt);
         if (!videoElt->isFullscreen() && mediaElt->supportsFullscreen()) {
-            UserGestureIndicator indicator(DefinitelyProcessingNewUserGesture);
+            UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
             videoElt->enterFullscreen();
         }
     }
@@ -489,7 +516,7 @@ KURL HitTestResult::absoluteLinkURL() const
         return KURL();
 
     AtomicString urlString;
-    if (m_innerURLElement->hasTagName(aTag) || m_innerURLElement->hasTagName(areaTag) || m_innerURLElement->hasTagName(linkTag))
+    if (isHTMLAnchorElement(m_innerURLElement.get()) || isHTMLAreaElement(m_innerURLElement.get()) || m_innerURLElement->hasTagName(linkTag))
         urlString = m_innerURLElement->getAttribute(hrefAttr);
 #if ENABLE(SVG)
     else if (m_innerURLElement->hasTagName(SVGNames::aTag))
@@ -506,8 +533,8 @@ bool HitTestResult::isLiveLink() const
     if (!(m_innerURLElement && m_innerURLElement->document()))
         return false;
 
-    if (m_innerURLElement->hasTagName(aTag))
-        return static_cast<HTMLAnchorElement*>(m_innerURLElement.get())->isLiveLink();
+    if (isHTMLAnchorElement(m_innerURLElement.get()))
+        return toHTMLAnchorElement(m_innerURLElement.get())->isLiveLink();
 #if ENABLE(SVG)
     if (m_innerURLElement->hasTagName(SVGNames::aTag))
         return m_innerURLElement->isLink();
@@ -545,11 +572,11 @@ bool HitTestResult::isContentEditable() const
     if (!m_innerNonSharedNode)
         return false;
 
-    if (m_innerNonSharedNode->hasTagName(textareaTag))
+    if (isHTMLTextAreaElement(m_innerNonSharedNode.get()))
         return true;
 
-    if (m_innerNonSharedNode->hasTagName(inputTag))
-        return static_cast<HTMLInputElement*>(m_innerNonSharedNode.get())->isTextField();
+    if (isHTMLInputElement(m_innerNonSharedNode.get()))
+        return toHTMLInputElement(m_innerNonSharedNode.get())->isTextField();
 
     return m_innerNonSharedNode->rendererIsEditable();
 }
@@ -635,7 +662,7 @@ Vector<String> HitTestResult::dictationAlternatives() const
     if (!m_innerNonSharedNode)
         return Vector<String>();
 
-    DocumentMarker* marker = m_innerNonSharedNode->document()->markers()->markerContainingPoint(pointInInnerNodeFrame(), DocumentMarker::DictationAlternatives);
+    DocumentMarker* marker = m_innerNonSharedNode->document()->markers().markerContainingPoint(pointInInnerNodeFrame(), DocumentMarker::DictationAlternatives);
     if (!marker)
         return Vector<String>();
 

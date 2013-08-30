@@ -30,7 +30,6 @@
 #include "ScrollAnimatorMac.h"
 
 #include "BlockExceptions.h"
-#include "EmptyProtocolDefinitions.h"
 #include "FloatPoint.h"
 #include "NSScrollerImpDetails.h"
 #include "PlatformGestureEvent.h"
@@ -1212,6 +1211,8 @@ void ScrollAnimatorMac::updateScrollerStyle()
         m_needsScrollerStyleUpdate = false;
         return;
     }
+    
+    macTheme->usesOverlayScrollbarsChanged();
 
     NSScrollerStyle newStyle = [m_scrollbarPainterController.get() scrollerStyle];
 

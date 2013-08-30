@@ -30,7 +30,6 @@
 #include "WebGLContextObject.h"
 
 #include <wtf/PassRefPtr.h>
-#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
@@ -59,6 +58,9 @@ public:
         {
         }
         
+        bool isBound() const { return bufferBinding && bufferBinding->object(); }
+        bool validateBinding() const { return !enabled || isBound(); }
+
         bool enabled;
         RefPtr<WebGLBuffer> bufferBinding;
         GC3Dsizei bytesPerElement;

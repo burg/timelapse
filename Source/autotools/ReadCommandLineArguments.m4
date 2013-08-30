@@ -22,7 +22,7 @@ AC_MSG_RESULT([$enable_debug])
 
 AC_MSG_CHECKING([whether to enable optimized builds])
 AC_ARG_ENABLE(optimizations, 
-    AC_HELP_STRING([--enable-optimizations], [turn on optimize builds (GCC only) [default=yes]]),
+    AC_HELP_STRING([--enable-optimizations], [turn on build-time optimizations [default=yes]]),
     [enable_optimizations=$enableval],
     [
         if test "$enable_debug" = "yes"; then
@@ -168,29 +168,21 @@ AC_ARG_ENABLE(debug_symbols,
     ])
 AC_MSG_RESULT([$enable_debug_symbols])
 
-AC_MSG_CHECKING([which GPU acceleration backend to use])
-AC_ARG_WITH(acceleration_backend,
-    AC_HELP_STRING([--with-acceleration-backend=@<:@opengl/clutter/none@:>@],
-        [Select accelerated backend (Clutter currently unsupported, OpenGL autodetected) [default=autodetect]]),
-    [],
-    [with_acceleration_backend="auto"])
-AC_MSG_RESULT([$with_acceleration_backend])
-
 AC_MSG_CHECKING([whether to enable WebGL support])
-AC_ARG_ENABLE(webgl, AC_HELP_STRING([--enable-webgl], [enable support for WebGL [default=check]]),
+AC_ARG_ENABLE(webgl, AC_HELP_STRING([--enable-webgl], [enable support for WebGL [default=auto]]),
     [],
     [enable_webgl="auto"])
 AC_MSG_RESULT([$enable_webgl])
 
 AC_MSG_CHECKING([whether to enable accelerated compositing support])
 AC_ARG_ENABLE(accelerated_compositing,
-    AC_HELP_STRING([--enable-accelerated-compositing], [enable support for accelerated compositing [default=check]]),
+    AC_HELP_STRING([--enable-accelerated-compositing], [enable support for accelerated compositing [default=auto]]),
     [],
     [enable_accelerated_compositing="auto"])
 AC_MSG_RESULT([$enable_accelerated_compositing])
 
 AC_MSG_CHECKING([whether to enable JIT compilation])
-AC_ARG_ENABLE(jit, AS_HELP_STRING([--enable-jit], [Enable JIT compilation (default: autodetect)]))
+AC_ARG_ENABLE(jit, AS_HELP_STRING([--enable-jit], [Enable JIT compilation (default: auto)]), [], [enable_jit=auto])
 AC_MSG_RESULT([$enable_jit])
 
 AC_MSG_CHECKING([whether to enable opcode stats])

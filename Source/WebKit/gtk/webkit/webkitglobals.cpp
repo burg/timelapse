@@ -26,20 +26,20 @@
 #include "ContextMenuItem.h"
 #include "FrameNetworkingContextGtk.h"
 #include "IconDatabase.h"
-#include "InitializeLogging.h"
+#include "Logging.h"
 #include "MemoryCache.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "PageGroup.h"
-#include "PlatformStrategiesGtk.h"
-#include "TextEncodingRegistry.h"
 #include "Pasteboard.h"
 #include "PasteboardHelperGtk.h"
+#include "PlatformStrategiesGtk.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "ResourceHandleInternal.h"
 #include "ResourceResponse.h"
 #include "SchemeRegistry.h"
+#include "TextEncodingRegistry.h"
 #include "webkitapplicationcache.h"
 #include "webkitfavicondatabase.h"
 #include "webkitglobalsprivate.h"
@@ -54,10 +54,6 @@
 #include <wtf/MainThread.h>
 #include <wtf/gobject/GOwnPtr.h>
 #include <wtf/gobject/GRefPtr.h>
-
-#if USE(CLUTTER)
-#include <clutter-gtk/clutter-gtk.h>
-#endif
 
 static WebKitCacheModel cacheModel = WEBKIT_CACHE_MODEL_DEFAULT;
 
@@ -160,6 +156,8 @@ void webkit_set_cache_model(WebKitCacheModel model)
         g_return_if_reached();
     }
 
+    bool disableCache = !cacheMinDeadCapacity && !cacheMaxDeadCapacity && !cacheTotalCapacity;
+    memoryCache()->setDisabled(disableCache);
     memoryCache()->setCapacities(cacheMinDeadCapacity, cacheMaxDeadCapacity, cacheTotalCapacity);
     memoryCache()->setDeadDecodedDataDeletionInterval(deadDecodedDataDeletionInterval);
     pageCache()->setCapacity(pageCacheCapacity);
@@ -563,10 +561,6 @@ void webkitInit()
     webkit_icon_database_set_path(webkit_get_icon_database(), iconDatabasePath.get());
 
     WebCore::ResourceHandle::setIgnoreSSLErrors(true);
-
-#if USE(CLUTTER)
-    gtk_clutter_init(0, 0);
-#endif
 
     atexit(webkitExit);
 }

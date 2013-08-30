@@ -148,7 +148,6 @@ using namespace WebCore;
         maxWidth = ceilf([NSWindow frameRectForContentRect:NSMakeRect(0.0f, 0.0f, maxWidth, 100.0f) styleMask:NSBorderlessWindowMask].size.width);
         maxWidth += 5.0f;
         windowFrame.size.width = std::max(maxWidth, windowFrame.size.width);
-        maxWidth = std::min<CGFloat>(400, windowFrame.size.width);
     }
     [_popupWindow setFrame:windowFrame display:NO];
     
@@ -172,7 +171,7 @@ using namespace WebCore;
 
         // Get preceeding word stem
         WebFrame *frame = [_htmlView _frame];
-        DOMRange *selection = kit(core(frame)->selection()->toNormalizedRange().get());
+        DOMRange *selection = kit(core(frame)->selection().toNormalizedRange().get());
         DOMRange *wholeWord = [frame _rangeByAlteringCurrentSelection:FrameSelection::AlterationExtend
             direction:DirectionBackward granularity:WordGranularity];
         DOMRange *prefix = [wholeWord cloneRange];

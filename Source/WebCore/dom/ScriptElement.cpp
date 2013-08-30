@@ -29,6 +29,7 @@
 #include "CachedResourceRequest.h"
 #include "ContentSecurityPolicy.h"
 #include "CrossOriginAccessControl.h"
+#include "CurrentScriptIncrementer.h"
 #include "Document.h"
 #include "DocumentParser.h"
 #include "Event.h"
@@ -49,6 +50,7 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "Text.h"
+#include "TextNodeTraversal.h"
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
@@ -208,7 +210,7 @@ bool ScriptElement::prepareScript(const TextPosition& scriptStartPosition, Legac
     if (!document->frame())
         return false;
 
-    if (!document->frame()->script()->canExecuteScripts(AboutToExecuteScript))
+    if (!document->frame()->script().canExecuteScripts(AboutToExecuteScript))
         return false;
 
     if (!isScriptForEventSupported())
@@ -307,10 +309,12 @@ void ScriptElement::executeScript(const ScriptSourceCode& sourceCode)
     if (Frame* frame = document->frame()) {
         {
             IgnoreDestructiveWriteCountIncrementer ignoreDesctructiveWriteCountIncrementer(m_isExternalScript ? document.get() : 0);
+            CurrentScriptIncrementer currentScriptIncrementer(document.get(), m_element);
+
             // Create a script from the script element node, using the script
             // block's source and the script block's type.
             // Note: This is where the script is compiled and actually executed.
-            frame->script()->evaluate(sourceCode);
+            frame->script().evaluate(sourceCode);
         }
     }
 }
@@ -390,39 +394,17 @@ bool ScriptElement::isScriptForEventSupported() const
 
 String ScriptElement::scriptContent() const
 {
-    StringBuilder content;
-    Text* firstTextNode = 0;
-    bool foundMultipleTextNodes = false;
-
-    for (Node* n = m_element->firstChild(); n; n = n->nextSibling()) {
-        if (!n->isTextNode())
-            continue;
-
-        Text* t = toText(n);
-        if (foundMultipleTextNodes)
-            content.append(t->data());
-        else if (firstTextNode) {
-            content.append(firstTextNode->data());
-            content.append(t->data());
-            foundMultipleTextNodes = true;
-        } else
-            firstTextNode = t;
-    }
-
-    if (firstTextNode && !foundMultipleTextNodes)
-        return firstTextNode->data();
-
-    return content.toString();
+    return TextNodeTraversal::contentsAsString(m_element);
 }
 
 ScriptElement* toScriptElementIfPossible(Element* element)
 {
-    if (element->isHTMLElement() && element->hasTagName(HTMLNames::scriptTag))
-        return static_cast<HTMLScriptElement*>(element);
+    if (isHTMLScriptElement(element))
+        return toHTMLScriptElement(element);
 
 #if ENABLE(SVG)
-    if (element->isSVGElement() && element->hasTagName(SVGNames::scriptTag))
-        return static_cast<SVGScriptElement*>(element);
+    if (isSVGScriptElement(element))
+        return toSVGScriptElement(element);
 #endif
 
     return 0;

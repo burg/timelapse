@@ -37,7 +37,6 @@
 #include "DateInputType.h"
 #include "DateTimeInputType.h"
 #include "DateTimeLocalInputType.h"
-#include "ElementShadow.h"
 #include "EmailInputType.h"
 #include "ExceptionCode.h"
 #include "ExceptionCodePlaceholder.h"
@@ -312,6 +311,11 @@ bool InputType::sizeShouldIncludeDecoration(int, int& preferredSize) const
 {
     preferredSize = element()->size();
     return false;
+}
+
+float InputType::decorationWidth() const
+{
+    return 0;
 }
 
 bool InputType::isInRange(const String& value) const

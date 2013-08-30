@@ -26,6 +26,8 @@
 #define RealtimeAnalyser_h
 
 #include "AudioArray.h"
+#include <runtime/Float32Array.h>
+#include <runtime/Uint8Array.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/OwnPtr.h>
@@ -57,9 +59,9 @@ public:
     void setSmoothingTimeConstant(float k) { m_smoothingTimeConstant = k; }
     float smoothingTimeConstant() const { return static_cast<float>(m_smoothingTimeConstant); }
 
-    void getFloatFrequencyData(Float32Array*);
-    void getByteFrequencyData(Uint8Array*);
-    void getByteTimeDomainData(Uint8Array*);
+    void getFloatFrequencyData(JSC::Float32Array*);
+    void getByteFrequencyData(JSC::Uint8Array*);
+    void getByteTimeDomainData(JSC::Uint8Array*);
 
     // The audio thread writes input data here.
     void writeInput(AudioBus*, size_t framesToProcess);

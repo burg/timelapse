@@ -52,8 +52,10 @@ RenderNamedFlowThread* RenderNamedFlowThread::createAnonymous(Document* document
 }
 
 RenderNamedFlowThread::RenderNamedFlowThread(PassRefPtr<WebKitNamedFlow> namedFlow)
-    : m_namedFlow(namedFlow)
+    : m_overset(true)
+    , m_namedFlow(namedFlow)
     , m_regionLayoutUpdateEventTimer(this, &RenderNamedFlowThread::regionLayoutUpdateEventTimerFired)
+    , m_regionOversetChangeEventTimer(this, &RenderNamedFlowThread::regionOversetChangeEventTimerFired)
 {
 }
 
@@ -85,6 +87,20 @@ void RenderNamedFlowThread::clearContentNodes()
     }
     
     m_contentNodes.clear();
+}
+
+void RenderNamedFlowThread::updateWritingMode()
+{
+    RenderRegion* firstRegion = m_regionList.first();
+    if (!firstRegion)
+        return;
+    if (style()->writingMode() == firstRegion->style()->writingMode())
+        return;
+
+    // The first region defines the principal writing mode for the entire flow.
+    RefPtr<RenderStyle> newStyle = RenderStyle::clone(style());
+    newStyle->setWritingMode(firstRegion->style()->writingMode());
+    setStyle(newStyle.release());
 }
 
 RenderObject* RenderNamedFlowThread::nextRendererForNode(Node* node) const
@@ -241,6 +257,9 @@ void RenderNamedFlowThread::addRegionToNamedFlowThread(RenderRegion* renderRegio
 
     renderRegion->setIsValid(true);
     addRegionToList(m_regionList, renderRegion);
+
+    if (m_regionList.first() == renderRegion)
+        updateWritingMode();
 }
 
 void RenderNamedFlowThread::addRegionToThread(RenderRegion* renderRegion)
@@ -280,6 +299,7 @@ void RenderNamedFlowThread::removeRegionFromThread(RenderRegion* renderRegion)
     }
 
     ASSERT(m_regionList.contains(renderRegion));
+    bool wasFirst = m_regionList.first() == renderRegion;
     m_regionList.remove(renderRegion);
 
     if (canBeDestroyed())
@@ -288,8 +308,64 @@ void RenderNamedFlowThread::removeRegionFromThread(RenderRegion* renderRegion)
     // After removing all the regions in the flow the following layout needs to dispatch the regionLayoutUpdate event
     if (m_regionList.isEmpty())
         setDispatchRegionLayoutUpdateEvent(true);
+    else if (wasFirst)
+        updateWritingMode();
 
     invalidateRegions();
+}
+
+void RenderNamedFlowThread::regionChangedWritingMode(RenderRegion* region)
+{
+    if (m_regionList.first() == region)
+        updateWritingMode();
+}
+
+void RenderNamedFlowThread::computeOversetStateForRegions(LayoutUnit oldClientAfterEdge)
+{
+    LayoutUnit height = oldClientAfterEdge;
+
+    // FIXME: the visual overflow of middle region (if it is the last one to contain any content in a render flow thread)
+    // might not be taken into account because the render flow thread height is greater that that regions height + its visual overflow
+    // because of how computeLogicalHeight is implemented for RenderNamedFlowThread (as a sum of all regions height).
+    // This means that the middle region will be marked as fit (even if it has visual overflow flowing into the next region)
+    if (hasRenderOverflow()
+        && ( (isHorizontalWritingMode() && visualOverflowRect().maxY() > clientBoxRect().maxY())
+            || (!isHorizontalWritingMode() && visualOverflowRect().maxX() > clientBoxRect().maxX())))
+        height = isHorizontalWritingMode() ? visualOverflowRect().maxY() : visualOverflowRect().maxX();
+
+    RenderRegion* lastReg = lastRegion();
+    for (RenderRegionList::iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
+        RenderRegion* region = *iter;
+        LayoutUnit flowMin = height - (isHorizontalWritingMode() ? region->flowThreadPortionRect().y() : region->flowThreadPortionRect().x());
+        LayoutUnit flowMax = height - (isHorizontalWritingMode() ? region->flowThreadPortionRect().maxY() : region->flowThreadPortionRect().maxX());
+        RegionOversetState previousState = region->regionOversetState();
+        RegionOversetState state = RegionFit;
+        if (flowMin <= 0)
+            state = RegionEmpty;
+        if (flowMax > 0 && region == lastReg)
+            state = RegionOverset;
+        region->setRegionOversetState(state);
+        // determine whether the NamedFlow object should dispatch a regionLayoutUpdate event
+        // FIXME: currently it cannot determine whether a region whose regionOverset state remained either "fit" or "overset" has actually
+        // changed, so it just assumes that the NamedFlow should dispatch the event
+        if (previousState != state
+            || state == RegionFit
+            || state == RegionOverset)
+            setDispatchRegionLayoutUpdateEvent(true);
+        
+        if (previousState != state)
+            setDispatchRegionOversetChangeEvent(true);
+    }
+    
+    // If the number of regions has changed since we last computed the overset property, schedule the regionOversetChange event.
+    if (previousRegionCountChanged()) {
+        setDispatchRegionOversetChangeEvent(true);
+        updatePreviousRegionCount();
+    }
+
+    // With the regions overflow state computed we can also set the overset flag for the named flow.
+    // If there are no valid regions in the chain, overset is true.
+    m_overset = lastReg ? lastReg->regionOversetState() == RegionOverset : true;
 }
 
 void RenderNamedFlowThread::checkInvalidRegions()
@@ -427,11 +503,27 @@ void RenderNamedFlowThread::dispatchRegionLayoutUpdateEvent()
         m_regionLayoutUpdateEventTimer.startOneShot(0);
 }
 
+void RenderNamedFlowThread::dispatchRegionOversetChangeEvent()
+{
+    RenderFlowThread::dispatchRegionOversetChangeEvent();
+    InspectorInstrumentation::didChangeRegionOverset(document(), m_namedFlow.get());
+    
+    if (!m_regionOversetChangeEventTimer.isActive() && m_namedFlow->hasEventListeners())
+        m_regionOversetChangeEventTimer.startOneShot(0);
+}
+
 void RenderNamedFlowThread::regionLayoutUpdateEventTimerFired(Timer<RenderNamedFlowThread>*)
 {
     ASSERT(m_namedFlow);
 
     m_namedFlow->dispatchRegionLayoutUpdateEvent();
+}
+
+void RenderNamedFlowThread::regionOversetChangeEventTimerFired(Timer<RenderNamedFlowThread>*)
+{
+    ASSERT(m_namedFlow);
+    
+    m_namedFlow->dispatchRegionOversetChangeEvent();
 }
 
 void RenderNamedFlowThread::setMarkForDestruction()

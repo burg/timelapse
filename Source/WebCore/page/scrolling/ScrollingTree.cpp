@@ -58,6 +58,7 @@ ScrollingTree::ScrollingTree(ScrollingCoordinator* scrollingCoordinator)
     , m_mainFramePinnedToTheTop(false)
     , m_mainFramePinnedToTheBottom(false)
     , m_mainFrameIsRubberBanding(false)
+    , m_scrollPinningBehavior(DoNotPin)
     , m_scrollingPerformanceLoggingEnabled(false)
     , m_isHandlingProgrammaticScroll(false)
 {
@@ -132,18 +133,21 @@ void ScrollingTree::commitNewTreeState(PassOwnPtr<ScrollingStateTree> scrollingS
 {
     ASSERT(ScrollingThread::isCurrentThread());
 
+    bool rootStateNodeChanged = scrollingStateTree->hasNewRootStateNode();
+    
     ScrollingStateScrollingNode* rootNode = scrollingStateTree->rootStateNode();
     if (rootNode
-        && (rootNode->hasChangedProperty(ScrollingStateScrollingNode::WheelEventHandlerCount)
+        && (rootStateNodeChanged
+            || rootNode->hasChangedProperty(ScrollingStateScrollingNode::WheelEventHandlerCount)
             || rootNode->hasChangedProperty(ScrollingStateScrollingNode::NonFastScrollableRegion)
             || rootNode->hasChangedProperty(ScrollingStateNode::ScrollLayer))) {
         MutexLocker lock(m_mutex);
 
-        if (rootNode->hasChangedProperty(ScrollingStateNode::ScrollLayer))
+        if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateNode::ScrollLayer))
             m_mainFrameScrollPosition = IntPoint();
-        if (rootNode->hasChangedProperty(ScrollingStateScrollingNode::WheelEventHandlerCount))
+        if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateScrollingNode::WheelEventHandlerCount))
             m_hasWheelEventHandlers = scrollingStateTree->rootStateNode()->wheelEventHandlerCount();
-        if (rootNode->hasChangedProperty(ScrollingStateScrollingNode::NonFastScrollableRegion))
+        if (rootStateNodeChanged || rootNode->hasChangedProperty(ScrollingStateScrollingNode::NonFastScrollableRegion))
             m_nonFastScrollableRegion = scrollingStateTree->rootStateNode()->nonFastScrollableRegion();
     }
     
@@ -322,6 +326,20 @@ void ScrollingTree::setRubberBandsAtTop(bool rubberBandsAtTop)
     MutexLocker locker(m_swipeStateMutex);
 
     m_rubberBandsAtTop = rubberBandsAtTop;
+}
+    
+void ScrollingTree::setScrollPinningBehavior(ScrollPinningBehavior pinning)
+{
+    MutexLocker locker(m_swipeStateMutex);
+    
+    m_scrollPinningBehavior = pinning;
+}
+
+ScrollPinningBehavior ScrollingTree::scrollPinningBehavior()
+{
+    MutexLocker lock(m_swipeStateMutex);
+    
+    return m_scrollPinningBehavior;
 }
 
 bool ScrollingTree::willWheelEventStartSwipeGesture(const PlatformWheelEvent& wheelEvent)

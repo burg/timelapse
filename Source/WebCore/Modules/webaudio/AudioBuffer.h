@@ -29,7 +29,7 @@
 #ifndef AudioBuffer_h
 #define AudioBuffer_h
 
-#include <wtf/Float32Array.h>
+#include <runtime/Float32Array.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -55,7 +55,7 @@ public:
 
     // Channel data access
     unsigned numberOfChannels() const { return m_channels.size(); }
-    Float32Array* getChannelData(unsigned channelIndex, ExceptionCode&);
+    PassRefPtr<Float32Array> getChannelData(unsigned channelIndex, ExceptionCode&);
     Float32Array* getChannelData(unsigned channelIndex);
     void zero();
 

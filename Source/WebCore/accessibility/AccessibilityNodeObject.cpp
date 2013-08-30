@@ -282,8 +282,8 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
         return StaticTextRole;
     if (node()->hasTagName(buttonTag))
         return buttonRoleType();
-    if (node()->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
+    if (isHTMLInputElement(node())) {
+        HTMLInputElement* input = toHTMLInputElement(node());
         if (input->isCheckbox())
             return CheckBoxRole;
         if (input->isRadioButton())
@@ -305,7 +305,7 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
         HTMLSelectElement* selectElement = toHTMLSelectElement(node());
         return selectElement->multiple() ? ListBoxRole : PopUpButtonRole;
     }
-    if (node()->hasTagName(textareaTag))
+    if (isHTMLTextAreaElement(node()))
         return TextAreaRole;
     if (headingLevel())
         return HeadingRole;
@@ -313,7 +313,7 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
         return DivRole;
     if (node()->hasTagName(pTag))
         return ParagraphRole;
-    if (node()->hasTagName(labelTag))
+    if (isHTMLLabelElement(node()))
         return LabelRole;
     if (node()->isElementNode() && toElement(node())->isFocusable())
         return GroupRole;
@@ -441,11 +441,11 @@ bool AccessibilityNodeObject::isNativeTextControl() const
     if (!node)
         return false;
 
-    if (node->hasTagName(textareaTag))
+    if (isHTMLTextAreaElement(node))
         return true;
 
-    if (node->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+    if (isHTMLInputElement(node)) {
+        HTMLInputElement* input = toHTMLInputElement(node);
         return input->isText() || input->isNumberField();
     }
 
@@ -488,14 +488,14 @@ bool AccessibilityNodeObject::isNativeImage() const
     if (!node)
         return false;
 
-    if (node->hasTagName(imgTag))
+    if (isHTMLImageElement(node))
         return true;
 
     if (node->hasTagName(appletTag) || node->hasTagName(embedTag) || node->hasTagName(objectTag))
         return true;
 
-    if (node->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+    if (isHTMLInputElement(node)) {
+        HTMLInputElement* input = toHTMLInputElement(node);
         return input->isImageButton();
     }
 
@@ -529,8 +529,8 @@ bool AccessibilityNodeObject::isInputImage() const
     if (!node)
         return false;
  
-    if (roleValue() == ButtonRole && node->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+    if (roleValue() == ButtonRole && isHTMLInputElement(node)) {
+        HTMLInputElement* input = toHTMLInputElement(node);
         return input->isImageButton();
     }
 
@@ -694,11 +694,11 @@ bool AccessibilityNodeObject::isReadOnly() const
     if (!node)
         return true;
 
-    if (node->hasTagName(textareaTag))
-        return static_cast<HTMLTextAreaElement*>(node)->isReadOnly();
+    if (isHTMLTextAreaElement(node))
+        return toHTMLFormControlElement(node)->isReadOnly();
 
-    if (node->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+    if (isHTMLInputElement(node)) {
+        HTMLInputElement* input = toHTMLInputElement(node);
         if (input->isTextField())
             return input->isReadOnly();
     }
@@ -716,6 +716,31 @@ bool AccessibilityNodeObject::isRequired() const
         return static_cast<HTMLFormControlElement*>(n)->isRequired();
 
     return false;
+}
+
+bool AccessibilityNodeObject::supportsRequiredAttribute() const
+{
+    switch (roleValue()) {
+    case CellRole:
+    case CheckBoxRole:
+    case ComboBoxRole:
+    case GridRole:
+    case IncrementorRole:
+    case ListBoxRole:
+    case PopUpButtonRole:
+    case RadioButtonRole:
+    case RadioGroupRole:
+    case RowHeaderRole:
+    case SliderRole:
+    case SpinButtonRole:
+    case TableHeaderContainerRole:
+    case TextAreaRole:
+    case TextFieldRole:
+    case ToggleButtonRole:
+        return true;
+    default:
+        return false;
+    }
 }
 
 int AccessibilityNodeObject::headingLevel() const
@@ -762,8 +787,8 @@ String AccessibilityNodeObject::valueDescription() const
 
 float AccessibilityNodeObject::valueForRange() const
 {
-    if (node() && node()->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
+    if (node() && isHTMLInputElement(node())) {
+        HTMLInputElement* input = toHTMLInputElement(node());
         if (input->isRangeControl())
             return input->valueAsNumber();
     }
@@ -776,8 +801,8 @@ float AccessibilityNodeObject::valueForRange() const
 
 float AccessibilityNodeObject::maxValueForRange() const
 {
-    if (node() && node()->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
+    if (node() && isHTMLInputElement(node())) {
+        HTMLInputElement* input = toHTMLInputElement(node());
         if (input->isRangeControl())
             return input->maximum();
     }
@@ -790,8 +815,8 @@ float AccessibilityNodeObject::maxValueForRange() const
 
 float AccessibilityNodeObject::minValueForRange() const
 {
-    if (node() && node()->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
+    if (node() && isHTMLInputElement(node())) {
+        HTMLInputElement* input = toHTMLInputElement(node());
         if (input->isRangeControl())
             return input->minimum();
     }
@@ -896,7 +921,7 @@ Element* AccessibilityNodeObject::anchorElement() const
     // search up the DOM tree for an anchor element
     // NOTE: this assumes that any non-image with an anchor is an HTMLAnchorElement
     for ( ; node; node = node->parentNode()) {
-        if (node->hasTagName(aTag) || (node->renderer() && cache->getOrCreate(node->renderer())->isAnchor()))
+        if (isHTMLAnchorElement(node) || (node->renderer() && cache->getOrCreate(node->renderer())->isAnchor()))
             return toElement(node);
     }
 
@@ -909,8 +934,8 @@ Element* AccessibilityNodeObject::actionElement() const
     if (!node)
         return 0;
 
-    if (node->hasTagName(inputTag)) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+    if (isHTMLInputElement(node)) {
+        HTMLInputElement* input = toHTMLInputElement(node);
         if (!input->isDisabledFormControl() && (isCheckboxOrRadio() || input->isTextButton()))
             return input;
     } else if (node->hasTagName(buttonTag))
@@ -996,13 +1021,13 @@ void AccessibilityNodeObject::alterSliderValue(bool increase)
     
 void AccessibilityNodeObject::increment()
 {
-    UserGestureIndicator gestureIndicator(DefinitelyProcessingNewUserGesture);
+    UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
     alterSliderValue(true);
 }
 
 void AccessibilityNodeObject::decrement()
 {
-    UserGestureIndicator gestureIndicator(DefinitelyProcessingNewUserGesture);
+    UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
     alterSliderValue(false);
 }
 
@@ -1076,8 +1101,8 @@ HTMLLabelElement* AccessibilityNodeObject::labelForElement(Element* element) con
     }
 
     for (Element* parent = element->parentElement(); parent; parent = parent->parentElement()) {
-        if (parent->hasTagName(labelTag))
-            return static_cast<HTMLLabelElement*>(parent);
+        if (isHTMLLabelElement(parent))
+            return toHTMLLabelElement(parent);
     }
 
     return 0;
@@ -1153,7 +1178,7 @@ void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOr
     if (!node)
         return;
     
-    bool isInputTag = node->hasTagName(inputTag);
+    bool isInputTag = isHTMLInputElement(node);
     if (isInputTag || AccessibilityObject::isARIAInput(ariaRoleAttribute()) || isControl()) {
         HTMLLabelElement* label = labelForElement(toElement(node));
         if (label) {
@@ -1213,9 +1238,9 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
     if (!node)
         return;
     
-    bool isInputTag = node->hasTagName(inputTag);
+    bool isInputTag = isHTMLInputElement(node);
     if (isInputTag) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+        HTMLInputElement* input = toHTMLInputElement(node);
         if (input->isTextButton()) {
             textOrder.append(AccessibilityText(input->valueWithDefault(), VisibleText));
             return;
@@ -1237,6 +1262,7 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
     case ToggleButtonRole:
     case CheckBoxRole:
     case ListBoxOptionRole:
+    case ListItemRole:
     case MenuButtonRole:
     case MenuItemRole:
     case RadioButtonRole:
@@ -1254,7 +1280,13 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
         useTextUnderElement = true;
     
     if (useTextUnderElement) {
-        String text = textUnderElement();
+        AccessibilityTextUnderElementMode mode;
+        
+        // Headings often include links as direct children. Those links need to be included in text under element.
+        if (isHeading())
+            mode.includeFocusableContent = true;
+
+        String text = textUnderElement(mode);
         if (!text.isEmpty())
             textOrder.append(AccessibilityText(text, ChildrenText));
     }
@@ -1349,10 +1381,10 @@ String AccessibilityNodeObject::alternativeTextForWebArea() const
     Node* owner = document->ownerElement();
     if (owner) {
         if (owner->hasTagName(frameTag) || owner->hasTagName(iframeTag)) {
-            const AtomicString& title = static_cast<HTMLFrameElementBase*>(owner)->getAttribute(titleAttr);
+            const AtomicString& title = toElement(owner)->getAttribute(titleAttr);
             if (!title.isEmpty())
                 return title;
-            return static_cast<HTMLFrameElementBase*>(owner)->getNameAttribute();
+            return toElement(owner)->getNameAttribute();
         }
         if (owner->isHTMLElement())
             return toHTMLElement(owner)->getNameAttribute();
@@ -1478,8 +1510,12 @@ unsigned AccessibilityNodeObject::hierarchicalLevel() const
 
 // When building the textUnderElement for an object, determine whether or not
 // we should include the inner text of this given descendant object or skip it.
-static bool shouldUseAccessiblityObjectInnerText(AccessibilityObject* obj)
+static bool shouldUseAccessiblityObjectInnerText(AccessibilityObject* obj, AccessibilityTextUnderElementMode mode)
 {
+    // Do not use any heuristic if we are explicitly asking to include all the children.
+    if (mode.childrenInclusion == AccessibilityTextUnderElementMode::TextUnderElementModeIncludeAllChildren)
+        return true;
+
     // Consider this hypothetical example:
     // <div tabindex=0>
     //   <h2>
@@ -1506,7 +1542,7 @@ static bool shouldUseAccessiblityObjectInnerText(AccessibilityObject* obj)
         return true;
     
     // Skip focusable children, so we don't include the text of links and controls.
-    if (obj->canSetFocusAttribute())
+    if (obj->canSetFocusAttribute() && !mode.includeFocusableContent)
         return false;
 
     // Skip big container elements like lists, tables, etc.
@@ -1516,7 +1552,7 @@ static bool shouldUseAccessiblityObjectInnerText(AccessibilityObject* obj)
     return true;
 }
 
-String AccessibilityNodeObject::textUnderElement() const
+String AccessibilityNodeObject::textUnderElement(AccessibilityTextUnderElementMode mode) const
 {
     Node* node = this->node();
     if (node && node->isTextNode())
@@ -1524,7 +1560,7 @@ String AccessibilityNodeObject::textUnderElement() const
 
     StringBuilder builder;
     for (AccessibilityObject* child = firstChild(); child; child = child->nextSibling()) {
-        if (!shouldUseAccessiblityObjectInnerText(child))
+        if (!shouldUseAccessiblityObjectInnerText(child, mode))
             continue;
 
         if (child->isAccessibilityNodeObject()) {
@@ -1538,7 +1574,7 @@ String AccessibilityNodeObject::textUnderElement() const
             }
         }
 
-        String childText = child->textUnderElement();
+        String childText = child->textUnderElement(mode);
         if (childText.length()) {
             if (builder.length())
                 builder.append(' ');
@@ -1555,9 +1591,9 @@ String AccessibilityNodeObject::title() const
     if (!node)
         return String();
 
-    bool isInputTag = node->hasTagName(inputTag);
+    bool isInputTag = isHTMLInputElement(node);
     if (isInputTag) {
-        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+        HTMLInputElement* input = toHTMLInputElement(node);
         if (input->isTextButton())
             return input->valueWithDefault();
     }
@@ -1581,6 +1617,7 @@ String AccessibilityNodeObject::title() const
     case ToggleButtonRole:
     case CheckBoxRole:
     case ListBoxOptionRole:
+    case ListItemRole:
     case MenuButtonRole:
     case MenuItemRole:
     case RadioButtonRole:
@@ -1593,10 +1630,12 @@ String AccessibilityNodeObject::title() const
         break;
     }
 
-    if (isHeading() || isLink())
+    if (isLink())
         return textUnderElement();
+    if (isHeading())
+        return textUnderElement(AccessibilityTextUnderElementMode(AccessibilityTextUnderElementMode::TextUnderElementModeSkipIgnoredChildren, true));
 
-    // If it's focusable but it's not content editable or a known control type, then it will appear to                  
+    // If it's focusable but it's not content editable or a known control type, then it will appear to
     // the user as a single atomic object, so we should use its text as the default title.                              
     if (isGenericFocusableElement())
         return textUnderElement();
@@ -1617,12 +1656,8 @@ String AccessibilityNodeObject::text() const
     if (!node)
         return String();
 
-    if (isNativeTextControl()) {
-        if (node->hasTagName(textareaTag))
-            return static_cast<HTMLTextAreaElement*>(node)->value();
-        if (node->hasTagName(inputTag))
-            return node->toInputElement()->value();
-    }
+    if (isNativeTextControl() && (isHTMLTextAreaElement(node) || isHTMLInputElement(node)))
+        return toHTMLTextFormControlElement(node)->value();
 
     if (!node->isElementNode())
         return String();
@@ -1679,10 +1714,10 @@ void AccessibilityNodeObject::colorValue(int& r, int& g, int& b) const
     if (!isColorWell())
         return;
 
-    if (!node() || !node()->hasTagName(inputTag))
+    if (!node() || !isHTMLInputElement(node()))
         return;
 
-    HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
+    HTMLInputElement* input = toHTMLInputElement(node());
     const AtomicString& type = input->getAttribute(typeAttr);
     if (!equalIgnoringCase(type, "color"))
         return;
@@ -1701,8 +1736,8 @@ static String accessibleNameForNode(Node* node)
     if (node->isTextNode())
         return toText(node)->data();
 
-    if (node->hasTagName(inputTag))
-        return static_cast<HTMLInputElement*>(node)->value();
+    if (isHTMLInputElement(node))
+        return toHTMLInputElement(node)->value();
 
     if (node->isHTMLElement()) {
         const AtomicString& alt = toHTMLElement(node)->getAttribute(altAttr);
@@ -1876,6 +1911,25 @@ bool AccessibilityNodeObject::hasContentEditableAttributeSet() const
     const AtomicString& contentEditableValue = getAttribute(contenteditableAttr);
     // Both "true" (case-insensitive) and the empty string count as true.
     return contentEditableValue.isEmpty() || equalIgnoringCase(contentEditableValue, "true");
+}
+
+bool AccessibilityNodeObject::canSetSelectedAttribute() const
+{
+    // Elements that can be selected
+    switch (roleValue()) {
+    case CellRole:
+    case RadioButtonRole:
+    case RowHeaderRole:
+    case RowRole:
+    case TabListRole:
+    case TabRole:
+    case TreeGridRole:
+    case TreeItemRole:
+    case TreeRole:
+        return isEnabled();
+    default:
+        return false;
+    }
 }
 
 } // namespace WebCore

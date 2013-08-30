@@ -29,6 +29,7 @@
 #import "SimpleFontData.h"
 #import "WebCoreSystemInterface.h"
 #import <AppKit/AppKit.h>
+#import <wtf/MathExtras.h>
 
 #define SYNTHETIC_OBLIQUE_ANGLE 14
 
@@ -50,18 +51,6 @@ bool Font::canReturnFallbackFontsForComplexText()
 bool Font::canExpandAroundIdeographsInComplexText()
 {
     return true;
-}
-
-// CTFontGetVerticalTranslationsForGlyphs is different on Snow Leopard.  It returns values for a font-size of 1
-// without unitsPerEm applied.  We have to apply a transform that scales up to the point size and that also 
-// divides by unitsPerEm.
-static bool hasBrokenCTFontGetVerticalTranslationsForGlyphs()
-{
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1060
-    return true;
-#else
-    return false;
-#endif
 }
 
 static void showGlyphsWithAdvances(const FloatPoint& point, const SimpleFontData* font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, size_t count)
@@ -90,15 +79,6 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const SimpleFontData
         CGAffineTransform runMatrix = CGAffineTransformConcat(savedMatrix, rotateLeftTransform);
         CGContextSetTextMatrix(context, runMatrix);
 
-        CGAffineTransform translationsTransform;
-        if (hasBrokenCTFontGetVerticalTranslationsForGlyphs()) {
-            translationsTransform = CGAffineTransformMake(platformData.m_size, 0, 0, platformData.m_size, 0, 0);
-            translationsTransform = CGAffineTransformConcat(translationsTransform, rotateLeftTransform);
-            CGFloat unitsPerEm = CGFontGetUnitsPerEm(platformData.cgFont());
-            translationsTransform = CGAffineTransformConcat(translationsTransform, CGAffineTransformMakeScale(1 / unitsPerEm, 1 / unitsPerEm));
-        } else
-            translationsTransform = rotateLeftTransform;
-
         Vector<CGSize, 256> translations(count);
         CTFontGetVerticalTranslationsForGlyphs(platformData.ctFont(), glyphs, translations.data(), count);
 
@@ -106,17 +86,15 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const SimpleFontData
 
         CGPoint position = FloatPoint(point.x(), point.y() + font->fontMetrics().floatAscent(IdeographicBaseline) - font->fontMetrics().floatAscent());
         for (size_t i = 0; i < count; ++i) {
-            CGSize translation = CGSizeApplyAffineTransform(translations[i], translationsTransform);
+            CGSize translation = CGSizeApplyAffineTransform(translations[i], rotateLeftTransform);
             positions[i] = CGPointApplyAffineTransform(CGPointMake(position.x - translation.width, position.y + translation.height), transform);
             position.x += advances[i].width;
             position.y += advances[i].height;
         }
         if (!platformData.isColorBitmapFont())
             CGContextShowGlyphsAtPositions(context, glyphs, positions.data(), count);
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         else
             CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
-#endif
         CGContextSetTextMatrix(context, savedMatrix);
     } else {
         if (!platformData.isColorBitmapFont())
@@ -124,10 +102,8 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const SimpleFontData
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
             CGContextShowGlyphsWithAdvances(context, glyphs, advances, count);
 #pragma clang diagnostic pop
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         else
             CTFontDrawGlyphs(platformData.ctFont(), glyphs, positions.data(), count, context);
-#endif
     }
 }
 
@@ -201,8 +177,13 @@ void Font::drawGlyphs(GraphicsContext* context, const SimpleFontData* font, cons
         memcpy(&matrix, [drawFont matrix], sizeof(matrix));
     matrix.b = -matrix.b;
     matrix.d = -matrix.d;
-    if (platformData.m_syntheticOblique)
-        matrix = CGAffineTransformConcat(matrix, CGAffineTransformMake(1, 0, -tanf(SYNTHETIC_OBLIQUE_ANGLE * acosf(0) / 90), 1, 0, 0)); 
+    if (platformData.m_syntheticOblique) {
+        static float obliqueSkew = tanf(SYNTHETIC_OBLIQUE_ANGLE * piFloat / 180);
+        if (font->platformData().orientation() == Vertical)
+            matrix = CGAffineTransformConcat(matrix, CGAffineTransformMake(1, obliqueSkew, 0, 1, 0, 0));
+        else
+            matrix = CGAffineTransformConcat(matrix, CGAffineTransformMake(1, 0, -obliqueSkew, 1, 0, 0));
+    }
     CGContextSetTextMatrix(cgContext, matrix);
 
 #if PLATFORM(MAC)

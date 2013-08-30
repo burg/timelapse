@@ -22,13 +22,11 @@
 #define SVGTitleElement_h
 #if ENABLE(SVG)
 
-#include "SVGLangSpace.h"
 #include "SVGStyledElement.h"
 
 namespace WebCore {
 
-class SVGTitleElement FINAL : public SVGStyledElement,
-                              public SVGLangSpace {
+class SVGTitleElement FINAL : public SVGStyledElement {
 public:
     static PassRefPtr<SVGTitleElement> create(const QualifiedName&, Document*);
 
@@ -39,7 +37,7 @@ private:
     virtual void removedFrom(ContainerNode*) OVERRIDE;
     virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
+    virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
 };
 
 } // namespace WebCore

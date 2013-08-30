@@ -58,7 +58,7 @@ public:
             m_view->setNeedsLayout(true);
     }
 
-    RenderNamedFlowThread* ensureRenderFlowThreadWithName(const AtomicString&);
+    RenderNamedFlowThread& ensureRenderFlowThreadWithName(const AtomicString&);
     const RenderNamedFlowThreadList* renderNamedFlowThreadList() const { return m_renderNamedFlowThreadList.get(); }
     bool hasRenderNamedFlowThreads() const { return m_renderNamedFlowThreadList && !m_renderNamedFlowThreadList->isEmpty(); }
     void layoutRenderNamedFlowThreads();
@@ -66,7 +66,7 @@ public:
 
     void registerNamedFlowContentNode(Node*, RenderNamedFlowThread*);
     void unregisterNamedFlowContentNode(Node*);
-    bool isContentNodeRegisteredWithAnyNamedFlow(Node*) const;
+    bool isContentNodeRegisteredWithAnyNamedFlow(const Node*) const;
 
     bool hasFlowThreadsWithAutoLogicalHeightRegions() const { return m_flowThreadsWithAutoLogicalHeightRegions; }
     void incrementFlowThreadsWithAutoLogicalHeightRegions() { ++m_flowThreadsWithAutoLogicalHeightRegions; }
@@ -75,6 +75,13 @@ public:
     bool updateFlowThreadsNeedingLayout();
     bool updateFlowThreadsNeedingTwoStepLayout();
     void updateFlowThreadsIntoConstrainedPhase();
+    void updateFlowThreadsIntoOverflowPhase();
+    void updateFlowThreadsIntoMeasureContentPhase();
+    void updateFlowThreadsIntoFinalPhase();
+
+#if USE(ACCELERATED_COMPOSITING)
+    void updateRenderFlowThreadLayersIfNeeded();
+#endif
 
 #ifndef NDEBUG
     bool isAutoLogicalHeightRegionsCountConsistent() const;
@@ -92,7 +99,7 @@ private:
     unsigned m_flowThreadsWithAutoLogicalHeightRegions;
     OwnPtr<RenderNamedFlowThreadList> m_renderNamedFlowThreadList;
     // maps a content node to its render flow thread.
-    HashMap<Node*, RenderNamedFlowThread*> m_mapNamedFlowContentNodes;
+    HashMap<const Node*, RenderNamedFlowThread*> m_mapNamedFlowContentNodes;
 };
 
 }

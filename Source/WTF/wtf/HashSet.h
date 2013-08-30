@@ -68,10 +68,8 @@ namespace WTF {
         // must have the following function members:
         //   static unsigned hash(const T&);
         //   static bool equal(const ValueType&, const T&);
-        // FIXME: We should reverse the order of the template arguments so that callers
-        // can just pass the translator and let the compiler deduce T.
-        template<typename T, typename HashTranslator> iterator find(const T&) const;
-        template<typename T, typename HashTranslator> bool contains(const T&) const;
+        template<typename HashTranslator, typename T> iterator find(const T&) const;
+        template<typename HashTranslator, typename T> bool contains(const T&) const;
 
         // The return value is a pair of an interator to the new value's location, 
         // and a bool that is true if an new entry was added.
@@ -83,15 +81,20 @@ namespace WTF {
         //   static unsigned hash(const T&);
         //   static bool equal(const ValueType&, const T&);
         //   static translate(ValueType&, const T&, unsigned hashCode);
-        // FIXME: We should reverse the order of the template arguments so that callers
-        // can just pass the translator and let the compiler deduce T.
-        template<typename T, typename HashTranslator> AddResult add(const T&);
+        template<typename HashTranslator, typename T> AddResult add(const T&);
+        
+        // Attempts to add a list of things to the set. Returns true if any of
+        // them are new to the set. Returns false if the set is unchanged.
+        template<typename IteratorType>
+        bool add(IteratorType begin, IteratorType end);
 
         void remove(const ValueType&);
         void remove(iterator);
         void clear();
 
         static bool isValidValue(const ValueType&);
+        
+        bool operator==(const HashSet&) const;
 
     private:
         friend void deleteAllValues<>(const HashSet&);
@@ -162,7 +165,7 @@ namespace WTF {
     }
 
     template<typename Value, typename HashFunctions, typename Traits>
-    template<typename T, typename HashTranslator>
+    template<typename HashTranslator, typename T>
     typename HashSet<Value, HashFunctions, Traits>::iterator
     inline HashSet<Value, HashFunctions, Traits>::find(const T& value) const
     {
@@ -170,7 +173,7 @@ namespace WTF {
     }
 
     template<typename Value, typename HashFunctions, typename Traits>
-    template<typename T, typename HashTranslator>
+    template<typename HashTranslator, typename T>
     inline bool HashSet<Value, HashFunctions, Traits>::contains(const T& value) const
     {
         return m_impl.template contains<HashSetTranslatorAdapter<HashTranslator> >(value);
@@ -183,11 +186,21 @@ namespace WTF {
     }
 
     template<typename Value, typename HashFunctions, typename Traits>
-    template<typename T, typename HashTranslator>
+    template<typename HashTranslator, typename T>
     inline typename HashSet<Value, HashFunctions, Traits>::AddResult
     HashSet<Value, HashFunctions, Traits>::add(const T& value)
     {
         return m_impl.template addPassingHashCode<HashSetTranslatorAdapter<HashTranslator> >(value, value);
+    }
+
+    template<typename T, typename U, typename V>
+    template<typename IteratorType>
+    inline bool HashSet<T, U, V>::add(IteratorType begin, IteratorType end)
+    {
+        bool changed = false;
+        for (IteratorType iter = begin; iter != end; ++iter)
+            changed |= add(*iter).isNewEntry;
+        return changed;
     }
 
     template<typename T, typename U, typename V>
@@ -255,6 +268,18 @@ namespace WTF {
         for (unsigned i = 0; it != end; ++it, ++i)
             vector[i] = *it;
     }  
+
+    template<typename T, typename U, typename V>
+    inline bool HashSet<T, U, V>::operator==(const HashSet& other) const
+    {
+        if (size() != other.size())
+            return false;
+        for (const_iterator iter = begin(); iter != end(); ++iter) {
+            if (!other.contains(*iter))
+                return false;
+        }
+        return true;
+    }
 
 } // namespace WTF
 

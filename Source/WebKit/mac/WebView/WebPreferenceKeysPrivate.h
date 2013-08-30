@@ -29,7 +29,6 @@
 // These are private because callers should be using the cover methods. They are in
 // a Private (as opposed to Internal) header file because Safari uses some of them
 // for managed preferences.
-#define WebKitLogLevelPreferenceKey @"WebKitLogLevel"
 #define WebKitStandardFontPreferenceKey @"WebKitStandardFont"
 #define WebKitFixedFontPreferenceKey @"WebKitFixedFont"
 #define WebKitSerifFontPreferenceKey @"WebKitSerifFont"
@@ -132,6 +131,7 @@
 #define WebKitQTKitEnabledPreferenceKey @"WebKitQTKitEnabled"
 #define WebKitHiddenPageDOMTimerThrottlingEnabledPreferenceKey @"WebKitHiddenPageDOMTimerThrottlingEnabled"
 #define WebKitHiddenPageCSSAnimationSuspensionEnabledPreferenceKey @"WebKitHiddenPageCSSAnimationSuspensionEnabled"
+#define WebKitLowPowerVideoAudioBufferSizeEnabledPreferenceKey @"WebKitLowPowerVideoAudioBufferSizeEnabled"
 
 // These are private both because callers should be using the cover methods and because the
 // cover methods themselves are private.

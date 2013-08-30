@@ -69,22 +69,8 @@ Bug(GTK) fast/dom/Geolocation/coordinates-interface-attributes.html [ Failure ]
 
 webkit.org/b/87951 fast/dom/Window/mozilla-focus-blur.html [ Failure ]
 
-webkit.org/b/104648 fast/images/webgl-teximage2d.html [ Timeout ]
-
-webkit.org/b/107534 fast/js/regress/object-closure-call.html [ Timeout ]
-webkit.org/b/107534 fast/js/regress/cell-argument.html [ Timeout ]
-
 # Misses setMediaType() implementation
 Bug(GTK) fast/media/print-restores-previous-mediatype.html [ Timeout ]
-
-webkit.org/b/108363 fast/regions/full-screen-video-from-region.html [ Timeout ]
-
-webkit.org/b/108363 fullscreen/full-screen-crash-offsetLeft.html [ Timeout ]
-webkit.org/b/108363 fullscreen/full-screen-no-style-sharing.html [ Timeout ]
-webkit.org/b/108363 fullscreen/full-screen-stacking-context.html [ Timeout ]
-webkit.org/b/108363 fullscreen/video-controls-drag.html [ Timeout ]
-webkit.org/b/108363 fullscreen/video-controls-override.html [ Timeout ]
-webkit.org/b/108363 fullscreen/video-specified-size.html [ Timeout ]
 
 # Needs further investigating.
 webkit.org/b/107962 webkit.org/b/108380 http/tests/cache/iframe-304-crash.html [ Failure ]
@@ -116,6 +102,8 @@ webkit.org/b/67187 inspector-protocol/nmi-webaudio-leak-test.html [ Skip ]
 
 webkit.org/b/86443 plugins/npruntime/delete-plugin-within-getProperty.html [ Crash ]
 
+webkit.org/b/117688 http/tests/security/video-poster-cross-origin-crash.html [ Crash Pass ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Crashing tests
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -131,6 +119,8 @@ webkit.org/b/86443 plugins/npruntime/delete-plugin-within-getProperty.html [ Cra
 #////////////////////////////////////////////////////////////////////////////////////////
 # Slow tests
 #////////////////////////////////////////////////////////////////////////////////////////
+
+webkit.org/b/108363 fullscreen/video-specified-size.html [ Pass Slow ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of slow tests
@@ -164,17 +154,12 @@ Bug(GTK) http/tests/appcache/origin-quota-continued-download-multiple-manifests.
 Bug(GTK) http/tests/appcache/origin-delete.html [ Failure ]
 Bug(GTK) http/tests/appcache/origins-with-appcache.html [ Failure ]
 
-Bug(GTK) [ Release ] http/tests/security/XFrameOptions/x-frame-options-allowall.html [ Failure ]
-Bug(GTK) [ Release ] http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html [ Failure ]
-Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-parent-same-origin-allow.html [ Failure ]
+Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html [ Failure ]
 Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-parent-same-origin-deny.html [ Failure ]
 Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag.html [ Failure ]
 Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-deny.html [ Failure ]
-Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-invalid.html [ Failure ]
 Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-multiple-headers-conflict.html [ Failure ]
-Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-multiple-headers-sameorigin-allow.html [ Failure ]
 Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-multiple-headers-sameorigin-deny.html [ Failure ]
-Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-parent-same-origin-allow.html [ Failure ]
 Bug(GTK) http/tests/security/XFrameOptions/x-frame-options-parent-same-origin-deny.html [ Failure ]
 
 # Gtk's DRT doesn't implement dumpResourceResponseMIMETypes which is required for the preloader tests.

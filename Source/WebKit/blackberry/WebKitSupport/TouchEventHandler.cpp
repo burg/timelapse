@@ -100,7 +100,7 @@ void TouchEventHandler::handleTouchHold()
     if (nodeUnderFatFinger && nodeUnderFatFinger->document()->frame() != m_webPage->focusedOrMainFrame()) {
         m_webPage->clearFocusNode();
         m_webPage->m_selectionHandler->cancelSelection();
-        m_webPage->m_page->focusController()->setFocusedFrame(nodeUnderFatFinger->document()->frame());
+        m_webPage->m_page->focusController().setFocusedFrame(nodeUnderFatFinger->document()->frame());
     }
 }
 
@@ -210,7 +210,7 @@ static Element* elementForTapHighlight(Element* elementUnderFatFinger)
             return elementUnderFatFinger;
     }
 
-    bool isArea = elementUnderFatFinger->hasTagName(HTMLNames::areaTag);
+    bool isArea = isHTMLAreaElement(elementUnderFatFinger);
     Node* linkNode = elementUnderFatFinger->isLink() ? elementUnderFatFinger : 0;
     if (!linkNode || !linkNode->isHTMLElement() || (!linkNode->renderer() && !isArea))
         return 0;
@@ -224,7 +224,7 @@ static Element* elementForTapHighlight(Element* elementUnderFatFinger)
     if (!isArea)
         return highlightCandidateElement;
 
-    HTMLAreaElement* area = static_cast<HTMLAreaElement*>(highlightCandidateElement);
+    HTMLAreaElement* area = toHTMLAreaElement(highlightCandidateElement);
     HTMLImageElement* image = area->imageElement();
     if (image && image->renderer())
         return image;

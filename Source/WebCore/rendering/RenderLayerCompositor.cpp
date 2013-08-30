@@ -33,6 +33,7 @@
 #include "CSSPropertyNames.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "FlowThreadController.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsLayer.h"
@@ -61,8 +62,11 @@
 #include "TransformState.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/TemporaryChange.h>
+#include <wtf/text/CString.h>
+#include <wtf/text/StringBuilder.h>
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+#include "HTMLAudioElement.h"
 #include "HTMLMediaElement.h"
 #endif
 
@@ -116,12 +120,7 @@ public:
 
     bool overlapsLayers(const IntRect& bounds) const
     {
-        const RectList& layerRects = m_overlapStack.last();
-        for (unsigned i = 0; i < layerRects.size(); i++) {
-            if (layerRects[i].intersects(bounds))
-                return true;
-        }
-        return false;
+        return m_overlapStack.last().intersects(bounds);
     }
 
     bool isEmpty()
@@ -136,14 +135,42 @@ public:
 
     void popCompositingContainer()
     {
-        m_overlapStack[m_overlapStack.size() - 2].appendVector(m_overlapStack.last());
+        m_overlapStack[m_overlapStack.size() - 2].append(m_overlapStack.last());
         m_overlapStack.removeLast();
     }
 
     RenderGeometryMap& geometryMap() { return m_geometryMap; }
 
 private:
-    typedef Vector<IntRect> RectList;
+    struct RectList {
+        Vector<IntRect> rects;
+        IntRect boundingRect;
+        
+        void append(const IntRect& rect)
+        {
+            rects.append(rect);
+            boundingRect.unite(rect);
+        }
+
+        void append(const RectList& rectList)
+        {
+            rects.appendVector(rectList.rects);
+            boundingRect.unite(rectList.boundingRect);
+        }
+        
+        bool intersects(const IntRect& rect) const
+        {
+            if (!rects.size() || !boundingRect.intersects(rect))
+                return false;
+
+            for (unsigned i = 0; i < rects.size(); i++) {
+                if (rects[i].intersects(rect))
+                    return true;
+            }
+            return false;
+        }
+    };
+
     Vector<RectList> m_overlapStack;
     HashSet<const RenderLayer*> m_layers;
     RenderGeometryMap m_geometryMap;
@@ -224,6 +251,9 @@ RenderLayerCompositor::RenderLayerCompositor(RenderView* renderView)
 
 RenderLayerCompositor::~RenderLayerCompositor()
 {
+    // Take care that the owned GraphicsLayers are deleted first as their destructors may call back here.
+    m_clipLayer = nullptr;
+    m_scrollLayer = nullptr;
     ASSERT(m_rootLayerAttachment == RootLayerUnattached);
 }
 
@@ -255,8 +285,7 @@ void RenderLayerCompositor::cacheAcceleratedCompositingFlags()
         // on a chrome that doesn't allow accelerated compositing.
         if (hasAcceleratedCompositing) {
             if (Page* page = this->page()) {
-                ChromeClient* chromeClient = page->chrome().client();
-                m_compositingTriggers = chromeClient->allowedCompositingTriggers();
+                m_compositingTriggers = page->chrome().client().allowedCompositingTriggers();
                 hasAcceleratedCompositing = m_compositingTriggers;
             }
         }
@@ -327,7 +356,7 @@ void RenderLayerCompositor::scheduleLayerFlushNow()
 {
     m_hasPendingLayerFlush = false;
     if (Page* page = this->page())
-        page->chrome().client()->scheduleCompositingLayerFlush();
+        page->chrome().client().scheduleCompositingLayerFlush();
 }
 
 void RenderLayerCompositor::scheduleLayerFlush(bool canThrottle)
@@ -353,7 +382,7 @@ void RenderLayerCompositor::flushPendingLayerChanges(bool isFlushRoot)
         return;
     }
 
-    AnimationUpdateBlock animationUpdateBlock(m_renderView->frameView()->frame()->animation());
+    AnimationUpdateBlock animationUpdateBlock(m_renderView->frameView()->frame().animation());
 
     ASSERT(!m_flushingLayers);
     m_flushingLayers = true;
@@ -421,7 +450,7 @@ void RenderLayerCompositor::notifyFlushBeforeDisplayRefresh(const GraphicsLayer*
     if (!m_layerUpdater) {
         PlatformDisplayID displayID = 0;
         if (Page* page = this->page())
-            displayID = page->displayID();
+            displayID = page->chrome().displayID();
 
         m_layerUpdater = adoptPtr(new GraphicsLayerUpdater(this, displayID));
     }
@@ -449,7 +478,7 @@ RenderLayerCompositor* RenderLayerCompositor::enclosingCompositorFlushingLayers(
     if (!m_renderView->frameView())
         return 0;
 
-    for (Frame* frame = m_renderView->frameView()->frame(); frame; frame = frame->tree()->parent()) {
+    for (Frame* frame = &m_renderView->frameView()->frame(); frame; frame = frame->tree()->parent()) {
         RenderLayerCompositor* compositor = frame->contentRenderer() ? frame->contentRenderer()->compositor() : 0;
         if (compositor->isFlushingLayers())
             return compositor;
@@ -492,7 +521,7 @@ void RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
     if (!m_reevaluateCompositingAfterLayout && !m_compositing)
         return;
 
-    AnimationUpdateBlock animationUpdateBlock(m_renderView->frameView()->frame()->animation());
+    AnimationUpdateBlock animationUpdateBlock(m_renderView->frameView()->frame().animation());
 
     TemporaryChange<bool> postLayoutChange(m_inPostLayoutUpdate, true);
     
@@ -537,6 +566,8 @@ void RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
 #endif
 
     if (checkForHierarchyUpdate) {
+        if (isFullUpdate)
+            updateRenderFlowThreadLayersIfNeeded();
         // Go through the layers in presentation order, so that we can compute which RenderLayers need compositing layers.
         // FIXME: we could maybe do this and the hierarchy udpate in one pass, but the parenting logic would be more complex.
         CompositingState compState(updateRoot);
@@ -554,9 +585,9 @@ void RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
         m_obligatoryBackingStoreBytes = 0;
         m_secondaryBackingStoreBytes = 0;
 
-        Frame* frame = m_renderView->frameView()->frame();
+        Frame& frame = m_renderView->frameView()->frame();
         bool isMainFrame = !m_renderView->document()->ownerElement();
-        LOG(Compositing, "\nUpdate %d of %s.\n", m_rootLayerUpdateCount, isMainFrame ? "main frame" : frame->tree()->uniqueName().string().utf8().data());
+        LOG(Compositing, "\nUpdate %d of %s.\n", m_rootLayerUpdateCount, isMainFrame ? "main frame" : frame.tree()->uniqueName().string().utf8().data());
     }
 #endif
 
@@ -599,6 +630,12 @@ void RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
     InspectorInstrumentation::layerTreeDidChange(page());
 }
 
+void RenderLayerCompositor::updateRenderFlowThreadLayersIfNeeded()
+{
+    if (m_renderView->hasRenderNamedFlowThreads())
+        m_renderView->flowThreadController()->updateRenderFlowThreadLayersIfNeeded();
+}
+
 void RenderLayerCompositor::layerBecameNonComposited(const RenderLayer* renderLayer)
 {
     // Inform the inspector that the given RenderLayer was destroyed.
@@ -625,7 +662,7 @@ void RenderLayerCompositor::logLayerInfo(const RenderLayer* layer, int depth)
 
     StringBuilder logString;
     logString.append(String::format("%*p %dx%d %.2fKB", 12 + depth * 2, layer,
-        backing->compositedBounds().width(), backing->compositedBounds().height(),
+        backing->compositedBounds().width().round(), backing->compositedBounds().height().round(),
         backing->backingStoreMemoryEstimate() / 1024));
     
     logString.append(" (");
@@ -738,7 +775,8 @@ bool RenderLayerCompositor::updateBacking(RenderLayer* layer, CompositingChangeR
             if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
                 scrollingCoordinator->frameViewFixedObjectsDidChange(m_renderView->frameView());
         }
-    }
+    } else
+        layer->setViewportConstrainedNotCompositedReason(RenderLayer::NoNotCompositedReason);
     
     if (layer->backing())
         layer->backing()->updateDebugIndicators(m_showDebugBorders, m_showRepaintCounter);
@@ -801,10 +839,10 @@ void RenderLayerCompositor::repaintInCompositedAncestor(RenderLayer* layer, cons
 
 // The bounds of the GraphicsLayer created for a compositing layer is the union of the bounds of all the descendant
 // RenderLayers that are rendered by the composited RenderLayer.
-IntRect RenderLayerCompositor::calculateCompositedBounds(const RenderLayer* layer, const RenderLayer* ancestorLayer) const
+LayoutRect RenderLayerCompositor::calculateCompositedBounds(const RenderLayer* layer, const RenderLayer* ancestorLayer) const
 {
     if (!canBeComposited(layer))
-        return IntRect();
+        return LayoutRect();
     return layer->calculateLayerBounds(ancestorLayer, 0, RenderLayer::DefaultCalculateLayerBoundsFlags | RenderLayer::ExcludeHiddenDescendants | RenderLayer::DontConstrainForMask);
 }
 
@@ -1840,14 +1878,11 @@ CompositingReasons RenderLayerCompositor::reasonsForCompositing(const RenderLaye
 
     if (requiresCompositingForVideo(renderer))
         reasons |= CompositingReasonVideo;
-
-    if (requiresCompositingForCanvas(renderer))
+    else if (requiresCompositingForCanvas(renderer))
         reasons |= CompositingReasonCanvas;
-
-    if (requiresCompositingForPlugin(renderer))
+    else if (requiresCompositingForPlugin(renderer))
         reasons |= CompositingReasonPlugin;
-
-    if (requiresCompositingForFrame(renderer))
+    else if (requiresCompositingForFrame(renderer))
         reasons |= CompositingReasonIFrame;
     
     if ((canRender3DTransforms() && renderer->style()->backfaceVisibility() == BackfaceVisibilityHidden))
@@ -1913,14 +1948,11 @@ const char* RenderLayerCompositor::logReasonsForCompositing(const RenderLayer* l
 
     if (reasons & CompositingReasonVideo)
         return "video";
-
-    if (reasons & CompositingReasonCanvas)
+    else if (reasons & CompositingReasonCanvas)
         return "canvas";
-
-    if (reasons & CompositingReasonPlugin)
+    else if (reasons & CompositingReasonPlugin)
         return "plugin";
-
-    if (reasons & CompositingReasonIFrame)
+    else if (reasons & CompositingReasonIFrame)
         return "iframe";
     
     if (reasons & CompositingReasonBackfaceVisibilityHidden)
@@ -2067,10 +2099,10 @@ bool RenderLayerCompositor::requiresCompositingForVideo(RenderObject* renderer) 
             return false;
 
         Node* node = renderer->node();
-        if (!node || (!node->hasTagName(HTMLNames::videoTag) && !node->hasTagName(HTMLNames::audioTag)))
+        if (!node || (!node->hasTagName(HTMLNames::videoTag) && !isHTMLAudioElement(node)))
             return false;
 
-        HTMLMediaElement* mediaElement = toMediaElement(node);
+        HTMLMediaElement* mediaElement = toHTMLMediaElement(node);
         return mediaElement->player() ? mediaElement->player()->supportsAcceleratedRendering() : false;
     }
 #endif // ENABLE(PLUGIN_PROXY_FOR_VIDEO)
@@ -2135,7 +2167,7 @@ bool RenderLayerCompositor::requiresCompositingForFrame(RenderObject* renderer) 
         return false;
 
     // If we can't reliably know the size of the iframe yet, don't change compositing state.
-    if (renderer->needsLayout())
+    if (!renderer->parent() || renderer->needsLayout())
         return frameRenderer->hasLayer() && frameRenderer->layer()->isComposited();
     
     // Don't go into compositing mode if height or width are zero.
@@ -2572,6 +2604,11 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForHeader(bool wantsLayer)
         if (m_layerForHeader) {
             m_layerForHeader->removeFromParent();
             m_layerForHeader = nullptr;
+
+            // The ScrollingTree knows about the header layer, and the position of the root layer is affected
+            // by the header layer, so if we remove the header, we need to tell the scrolling tree.
+            if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+                scrollingCoordinator->frameViewRootLayerDidChange(m_renderView->frameView());
         }
         return 0;
     }
@@ -2593,7 +2630,7 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForHeader(bool wantsLayer)
         scrollingCoordinator->frameViewRootLayerDidChange(m_renderView->frameView());
 
     if (Page* page = this->page())
-        page->chrome().client()->didAddHeaderLayer(m_layerForHeader.get());
+        page->chrome().client().didAddHeaderLayer(m_layerForHeader.get());
 
     return m_layerForHeader.get();
 }
@@ -2607,6 +2644,11 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForFooter(bool wantsLayer)
         if (m_layerForFooter) {
             m_layerForFooter->removeFromParent();
             m_layerForFooter = nullptr;
+
+            // The ScrollingTree knows about the footer layer, and the total scrollable size is affected
+            // by the footer layer, so if we remove the footer, we need to tell the scrolling tree.
+            if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+                scrollingCoordinator->frameViewRootLayerDidChange(m_renderView->frameView());
         }
         return 0;
     }
@@ -2627,7 +2669,7 @@ GraphicsLayer* RenderLayerCompositor::updateLayerForFooter(bool wantsLayer)
         scrollingCoordinator->frameViewRootLayerDidChange(m_renderView->frameView());
 
     if (Page* page = this->page())
-        page->chrome().client()->didAddFooterLayer(m_layerForFooter.get());
+        page->chrome().client().didAddFooterLayer(m_layerForFooter.get());
 
     return m_layerForFooter.get();
 }
@@ -2665,7 +2707,7 @@ void RenderLayerCompositor::updateOverflowControlsLayers()
             m_layerForOverhangAreas->setDrawsContent(false);
             m_layerForOverhangAreas->setSize(m_renderView->frameView()->frameRect().size());
 
-            ScrollbarTheme::theme()->setUpOverhangAreasLayerContents(m_layerForOverhangAreas.get(), this->page()->chrome().client()->underlayColor());
+            ScrollbarTheme::theme()->setUpOverhangAreasLayerContents(m_layerForOverhangAreas.get(), this->page()->chrome().client().underlayColor());
 
             // We want the overhang areas layer to be positioned below the frame contents,
             // so insert it below the clip layer.
@@ -2885,12 +2927,12 @@ void RenderLayerCompositor::attachRootLayer(RootLayerAttachment attachment)
             ASSERT_NOT_REACHED();
             break;
         case RootLayerAttachedViaChromeClient: {
-            Frame* frame = m_renderView->frameView()->frame();
-            Page* page = frame ? frame->page() : 0;
+            Frame& frame = m_renderView->frameView()->frame();
+            Page* page = frame.page();
             if (!page)
                 return;
 
-            page->chrome().client()->attachRootGraphicsLayer(frame, rootGraphicsLayer());
+            page->chrome().client().attachRootGraphicsLayer(&frame, rootGraphicsLayer());
             break;
         }
         case RootLayerAttachedViaEnclosingFrame: {
@@ -2929,12 +2971,12 @@ void RenderLayerCompositor::detachRootLayer()
         break;
     }
     case RootLayerAttachedViaChromeClient: {
-        Frame* frame = m_renderView->frameView()->frame();
-        Page* page = frame ? frame->page() : 0;
+        Frame& frame = m_renderView->frameView()->frame();
+        Page* page = frame.page();
         if (!page)
             return;
 
-        page->chrome().client()->attachRootGraphicsLayer(frame, 0);
+        page->chrome().client().attachRootGraphicsLayer(&frame, 0);
     }
     break;
     case RootLayerUnattached:
@@ -2964,7 +3006,7 @@ void RenderLayerCompositor::rootLayerAttachmentChanged()
 // to use a synthetic style change to get the iframes into RenderLayers in order to allow them to composite.
 void RenderLayerCompositor::notifyIFramesOfCompositingChange()
 {
-    Frame* frame = m_renderView->frameView() ? m_renderView->frameView()->frame() : 0;
+    Frame* frame = m_renderView->frameView() ? &m_renderView->frameView()->frame() : 0;
     if (!frame)
         return;
 
@@ -3197,17 +3239,14 @@ ScrollingCoordinator* RenderLayerCompositor::scrollingCoordinator() const
 GraphicsLayerFactory* RenderLayerCompositor::graphicsLayerFactory() const
 {
     if (Page* page = this->page())
-        return page->chrome().client()->graphicsLayerFactory();
+        return page->chrome().client().graphicsLayerFactory();
 
     return 0;
 }
 
 Page* RenderLayerCompositor::page() const
 {
-    if (Frame* frame = m_renderView->frameView()->frame())
-        return frame->page();
-    
-    return 0;
+    return m_renderView->frameView()->frame().page();
 }
 
 void RenderLayerCompositor::setLayerFlushThrottlingEnabled(bool enabled)
@@ -3261,13 +3300,13 @@ void RenderLayerCompositor::paintRelatedMilestonesTimerFired(Timer<RenderLayerCo
     if (!frameView)
         return;
 
-    Frame* frame = frameView->frame();
-    Page* page = frame ? frame->page() : 0;
+    Frame& frame = frameView->frame();
+    Page* page = frame.page();
     if (!page)
         return;
 
     // If the layer tree is frozen, we'll paint when it's unfrozen and schedule the timer again.
-    if (page->chrome().client()->layerTreeStateIsFrozen())
+    if (page->chrome().client().layerTreeStateIsFrozen())
         return;
 
     frameView->firePaintRelatedMilestones();

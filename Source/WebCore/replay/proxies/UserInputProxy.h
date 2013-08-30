@@ -63,8 +63,8 @@ public:
     bool handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent, bool fromReplay = false);
     void focusSetActive(bool active, bool fromReplay = false);
     void focusSetFocused(bool focused, bool fromReplay = false);
-    void scrollRecursively(ScrollDirection, ScrollGranularity, bool fromReplay = false);
-    void scrollRecursivelyLogical(ScrollLogicalDirection, ScrollGranularity, bool fromReplay = false);
+    bool scrollRecursively(ScrollDirection, ScrollGranularity, bool fromReplay = false);
+    bool scrollRecursivelyLogical(ScrollLogicalDirection, ScrollGranularity, bool fromReplay = false);
     void sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay = false);
 
 private:

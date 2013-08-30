@@ -36,6 +36,8 @@ from webkitpy.thirdparty.BeautifulSoup import BeautifulSoup
 from webkitpy.w3c.test_converter import W3CTestConverter
 
 
+DUMMY_FILENAME = 'dummy.html'
+
 class W3CTestConverterTest(unittest.TestCase):
 
     def fake_dir_path(self, converter, dirname):
@@ -48,8 +50,6 @@ class W3CTestConverterTest(unittest.TestCase):
         converter = W3CTestConverter()
         prop_list = converter.prefixed_properties
         self.assertTrue(prop_list, 'No prefixed properties found')
-        for prop in prop_list:
-            self.assertTrue(prop.startswith('-webkit-'))
 
     def test_convert_for_webkit_nothing_to_convert(self):
         """ Tests convert_for_webkit() using a basic test that has nothing to convert """
@@ -77,7 +77,7 @@ CONTENT OF TEST
         oc = OutputCapture()
         oc.capture_output()
         try:
-            converted = converter.convert_html('/nothing/to/convert', test_html)
+            converted = converter.convert_html('/nothing/to/convert', test_html, DUMMY_FILENAME)
         finally:
             oc.restore_output()
 
@@ -94,7 +94,7 @@ CONTENT OF TEST
         converter = W3CTestConverter()
         fake_dir_path = self.fake_dir_path(converter, "harnessonly")
 
-        converted = converter.convert_html(fake_dir_path, test_html)
+        converted = converter.convert_html(fake_dir_path, test_html, DUMMY_FILENAME)
 
         self.verify_conversion_happened(converted)
         self.verify_test_harness_paths(converter, converted[1], fake_dir_path, 1, 1)
@@ -125,7 +125,7 @@ CONTENT OF TEST
         oc = OutputCapture()
         oc.capture_output()
         try:
-            converted = converter.convert_html(fake_dir_path, test_content[1])
+            converted = converter.convert_html(fake_dir_path, test_content[1], DUMMY_FILENAME)
         finally:
             oc.restore_output()
 
@@ -160,7 +160,7 @@ CONTENT OF TEST
         oc.capture_output()
         try:
             test_content = self.generate_test_content(converter.prefixed_properties, 2, test_html)
-            converted = converter.convert_html(fake_dir_path, test_content[1])
+            converted = converter.convert_html(fake_dir_path, test_content[1], DUMMY_FILENAME)
         finally:
             oc.restore_output()
 
@@ -185,7 +185,7 @@ CONTENT OF TEST
         oc = OutputCapture()
         oc.capture_output()
         try:
-            converted = converter.convert_testharness_paths(doc, fake_dir_path)
+            converted = converter.convert_testharness_paths(doc, fake_dir_path, DUMMY_FILENAME)
         finally:
             oc.restore_output()
 
@@ -262,7 +262,7 @@ CONTENT OF TEST
         oc = OutputCapture()
         oc.capture_output()
         try:
-            converted = converter.convert_prefixed_properties(BeautifulSoup(test_content[1]))
+            converted = converter.convert_prefixed_properties(BeautifulSoup(test_content[1]), DUMMY_FILENAME)
         finally:
             oc.restore_output()
 
@@ -292,7 +292,7 @@ CONTENT OF TEST
         self.assertEquals(len(converted.findAll(href=relpath_pattern)), num_href_paths, 'testharness href relative path not correct')
 
     def verify_prefixed_properties(self, converted, test_properties):
-        self.assertEqual(len(converted[0]), len(test_properties), 'Incorrect number of properties converted')
+        self.assertEqual(len(set(converted[0])), len(set(test_properties)), 'Incorrect number of properties converted')
         for test_prop in test_properties:
             self.assertTrue((test_prop in converted[1]), 'Property ' + test_prop + ' not found in converted doc')
 

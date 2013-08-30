@@ -41,7 +41,7 @@ namespace WebCore {
 
 CachedScript::CachedScript(const ResourceRequest& resourceRequest, const String& charset)
     : CachedResource(resourceRequest, Script)
-    , m_decoder(TextResourceDecoder::create("application/javascript", charset))
+    , m_decoder(TextResourceDecoder::create(ASCIILiteral("application/javascript"), charset))
 {
     // It's javascript we want.
     // But some websites think their scripts are <some wrong mimetype here>
@@ -77,20 +77,16 @@ const String& CachedScript::script()
         m_script.append(m_decoder->flush());
         setDecodedSize(m_script.sizeInBytes());
     }
-    m_decodedDataDeletionTimer.startOneShot(0);
+    m_decodedDataDeletionTimer.restart();
     
     return m_script;
 }
 
-void CachedScript::data(ResourceBuffer* data, bool allDataReceived)
+void CachedScript::finishLoading(ResourceBuffer* data)
 {
-    if (!allDataReceived)
-        return;
-
     m_data = data;
     setEncodedSize(m_data.get() ? m_data->size() : 0);
-    setLoading(false);
-    checkNotify();
+    CachedResource::finishLoading(data);
 }
 
 void CachedScript::destroyDecodedData()

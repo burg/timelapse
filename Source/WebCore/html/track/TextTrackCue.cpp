@@ -483,8 +483,12 @@ void TextTrackCue::setText(const String& text)
 
 int TextTrackCue::cueIndex()
 {
-    if (m_cueIndex == invalidCueIndex)
-        m_cueIndex = track()->cues()->getCueIndex(this);
+    if (m_cueIndex == invalidCueIndex) {
+        ASSERT(track());
+        ASSERT(track()->cues());
+        if (TextTrackCueList* cueList = track()->cues())
+            m_cueIndex = cueList->getCueIndex(this);
+    }
 
     return m_cueIndex;
 }
@@ -628,6 +632,7 @@ void TextTrackCue::determineTextDirection()
     // their descendants.
     StringBuilder paragraphBuilder;
     for (Node* node = m_webVTTNodeTree->firstChild(); node; node = NodeTraversal::next(node, m_webVTTNodeTree.get())) {
+        // FIXME: The code does not match the comment above. This does not actually exclude Ruby Text Object descendant.
         if (!node->isTextNode() || node->localName() == rtTag)
             continue;
 
@@ -772,7 +777,7 @@ void TextTrackCue::markFutureAndPastNodes(ContainerNode* root, double previousTi
             toWebVTTElement(child)->setIsPastNode(isPastNode);
             // Make an elemenet id match a cue id for style matching purposes.
             if (!m_id.isEmpty())
-                toElement(child)->setIdAttribute(AtomicString(m_id.characters(), m_id.length()));
+                toElement(child)->setIdAttribute(m_id);
         }
     }
 }
@@ -1126,12 +1131,12 @@ NextSetting:
 #endif
 }
 
-int TextTrackCue::getCSSWritingDirection() const
+CSSValueID TextTrackCue::getCSSWritingDirection() const
 {
     return m_displayDirection;
 }
 
-int TextTrackCue::getCSSWritingMode() const
+CSSValueID TextTrackCue::getCSSWritingMode() const
 {
     return m_displayWritingMode;
 }
@@ -1164,9 +1169,9 @@ EventTargetData* TextTrackCue::eventTargetData()
     return &m_eventTargetData;
 }
 
-EventTargetData* TextTrackCue::ensureEventTargetData()
+EventTargetData& TextTrackCue::ensureEventTargetData()
 {
-    return &m_eventTargetData;
+    return m_eventTargetData;
 }
 
 bool TextTrackCue::isEqual(const TextTrackCue& cue, CueMatchRules match) const
@@ -1208,7 +1213,7 @@ void TextTrackCue::setFontSize(int fontSize, const IntSize&, bool important)
     
     LOG(Media, "TextTrackCue::setFontSize - setting cue font size to %i", fontSize);
 
-    displayTreeInternal()->setInlineStyleProperty(CSSPropertyFontSize, String::number(fontSize) + "px", important);
+    displayTreeInternal()->setInlineStyleProperty(CSSPropertyFontSize, fontSize, CSSPrimitiveValue::CSS_PX, important);
 }
 
 } // namespace WebCore

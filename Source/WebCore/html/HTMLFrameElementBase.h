@@ -52,7 +52,7 @@ protected:
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void didNotifySubtreeInsertions(ContainerNode*) OVERRIDE;
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual void didAttachRenderers() OVERRIDE;
 
 private:
     virtual bool supportsFocus() const OVERRIDE;
@@ -80,6 +80,12 @@ private:
 
     bool m_viewSource;
 };
+
+inline HTMLFrameElementBase* toHTMLFrameElementBase(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(HTMLNames::frameTag) || node->hasTagName(HTMLNames::iframeTag));
+    return static_cast<HTMLFrameElementBase*>(node);
+}
 
 } // namespace WebCore
 

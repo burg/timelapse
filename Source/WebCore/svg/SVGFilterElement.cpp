@@ -27,13 +27,13 @@
 #include "SVGFilterElement.h"
 
 #include "Attr.h"
-#include "NodeRenderingContext.h"
 #include "RenderSVGResourceFilter.h"
 #include "SVGElementInstance.h"
 #include "SVGFilterBuilder.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 #include "SVGNames.h"
 #include "SVGParserUtilities.h"
+#include "XLinkNames.h"
 
 namespace WebCore {
 
@@ -118,7 +118,7 @@ bool SVGFilterElement::isSupportedAttribute(const QualifiedName& attrName)
         supportedAttributes.add(SVGNames::heightAttr);
         supportedAttributes.add(SVGNames::filterResAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFilterElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -193,12 +193,12 @@ RenderObject* SVGFilterElement::createRenderer(RenderArena* arena, RenderStyle*)
     return new (arena) RenderSVGResourceFilter(this);
 }
 
-bool SVGFilterElement::childShouldCreateRenderer(const NodeRenderingContext& childContext) const
+bool SVGFilterElement::childShouldCreateRenderer(const Node* child) const
 {
-    if (!childContext.node()->isSVGElement())
+    if (!child->isSVGElement())
         return false;
 
-    SVGElement* svgElement = toSVGElement(childContext.node());
+    const SVGElement* svgElement = toSVGElement(child);
 
     DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, allowedChildElementTags, ());
     if (allowedChildElementTags.isEmpty()) {
@@ -229,7 +229,7 @@ bool SVGFilterElement::childShouldCreateRenderer(const NodeRenderingContext& chi
         allowedChildElementTags.add(SVGNames::feTurbulenceTag);
     }
 
-    return allowedChildElementTags.contains<QualifiedName, SVGAttributeHashTranslator>(svgElement->tagQName());
+    return allowedChildElementTags.contains<SVGAttributeHashTranslator>(svgElement->tagQName());
 }
 
 bool SVGFilterElement::selfHasRelativeLengths() const

@@ -76,8 +76,8 @@ public:
 
     virtual Color platformFocusRingColor() const;
 
-    virtual void systemFont(int propId, FontDescription&) const;
-    virtual Color systemColor(int cssValueId) const;
+    virtual void systemFont(CSSValueID, FontDescription&) const;
+    virtual Color systemColor(CSSValueID) const;
 
     virtual int minimumMenuListSize(RenderStyle*) const;
 
@@ -190,9 +190,7 @@ public:
     QPainter* painter;
 
 protected:
-    StylePainter(RenderThemeQt*, const PaintInfo&);
-    StylePainter();
-    void init(GraphicsContext*);
+    StylePainter(GraphicsContext*);
 
 private:
     QBrush m_previousBrush;

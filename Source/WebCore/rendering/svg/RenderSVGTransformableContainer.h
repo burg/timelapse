@@ -26,10 +26,10 @@
 
 namespace WebCore {
     
-class SVGStyledTransformableElement;
-class RenderSVGTransformableContainer : public RenderSVGContainer {
+class SVGGraphicsElement;
+class RenderSVGTransformableContainer FINAL : public RenderSVGContainer {
 public:
-    explicit RenderSVGTransformableContainer(SVGStyledTransformableElement*);
+    explicit RenderSVGTransformableContainer(SVGGraphicsElement*);
 
     virtual bool isSVGTransformableContainer() const { return true; }
     virtual const AffineTransform& localToParentTransform() const { return m_localTransform; }

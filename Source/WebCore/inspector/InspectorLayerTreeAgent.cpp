@@ -180,7 +180,7 @@ PassRefPtr<TypeBuilder::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectFo
         .setNodeId(idForNode(errorString, node))
         .setBounds(buildObjectForIntRect(renderer->absoluteBoundingBoxRect()))
         .setMemory(backing->backingStoreMemoryEstimate())
-        .setCompositedBounds(buildObjectForIntRect(backing->compositedBounds()))
+        .setCompositedBounds(buildObjectForIntRect(enclosingIntRect(backing->compositedBounds())))
         .setPaintCount(backing->graphicsLayer()->repaintCount());
 
     if (node && node->shadowHost())
@@ -193,7 +193,7 @@ PassRefPtr<TypeBuilder::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectFo
         if (isReflection)
             renderer = renderer->parent();
         layerObject->setIsGeneratedContent(true);
-        layerObject->setPseudoElementId(bindPseudoElement(static_cast<PseudoElement*>(renderer->node())));
+        layerObject->setPseudoElementId(bindPseudoElement(toPseudoElement(renderer->node())));
         if (renderer->isBeforeContent())
             layerObject->setPseudoElement("before");
         else if (renderer->isAfterContent())
@@ -253,14 +253,11 @@ void InspectorLayerTreeAgent::reasonsForCompositingLayer(ErrorString* errorStrin
 
     if (reasonsBitmask & CompositingReasonVideo)
         compositingReasons->setVideo(true);
-
-    if (reasonsBitmask & CompositingReasonCanvas)
+    else if (reasonsBitmask & CompositingReasonCanvas)
         compositingReasons->setCanvas(true);
-
-    if (reasonsBitmask & CompositingReasonPlugin)
+    else if (reasonsBitmask & CompositingReasonPlugin)
         compositingReasons->setPlugin(true);
-
-    if (reasonsBitmask & CompositingReasonIFrame)
+    else if (reasonsBitmask & CompositingReasonIFrame)
         compositingReasons->setIFrame(true);
     
     if (reasonsBitmask & CompositingReasonBackfaceVisibilityHidden)

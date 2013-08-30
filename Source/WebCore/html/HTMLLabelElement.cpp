@@ -26,11 +26,11 @@
 #include "HTMLLabelElement.h"
 
 #include "Document.h"
+#include "ElementTraversal.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "FormAssociatedElement.h"
 #include "HTMLNames.h"
-#include "NodeTraversal.h"
 
 namespace WebCore {
 
@@ -136,6 +136,7 @@ void HTMLLabelElement::defaultEventHandler(Event* evt)
         // Click the corresponding control.
         element->dispatchSimulatedClick(evt);
 
+        document()->updateLayoutIgnorePendingStylesheets();
         if (element->isMouseFocusable())
             element->focus();
 

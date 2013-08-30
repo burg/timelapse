@@ -125,7 +125,7 @@ case "$host" in
 
         # We don't use --cflags as this gives us a lot of things that we don't necessarily want,
         # like debugging and optimization flags. See man (1) icu-config for more info.
-        UNICODE_CFLAGS=`$icu_config --cppflags`
+        UNICODE_CFLAGS=`$icu_config --cppflags-searchpath`
         UNICODE_LIBS=`$icu_config --ldflags-libsonly`
         ;;
 esac
@@ -187,9 +187,6 @@ AC_SUBST(GTK_LIBS)
 AC_SUBST(CAIRO_CFLAGS)
 AC_SUBST(CAIRO_LIBS)
 
-
-found_opengl=no
-have_glx=no
 AC_CHECK_HEADERS([GL/glx.h], [have_glx="yes"], [have_glx="no"])
 AC_MSG_CHECKING([whether to enable GLX support])
 if test "$enable_glx" != "no"; then
@@ -205,7 +202,6 @@ if test "$enable_glx" != "no"; then
 fi
 AC_MSG_RESULT([$enable_glx])
 
-have_egl=no
 AC_CHECK_HEADERS([EGL/egl.h], [have_egl="yes"], [have_egl="no"])
 AC_MSG_CHECKING([whether to enable EGL support])
 if test "$enable_egl" != "no"; then
@@ -221,19 +217,18 @@ if test "$enable_egl" != "no"; then
 fi
 AC_MSG_RESULT([$enable_egl])
 
-have_gles2=no
 AC_CHECK_HEADERS([GLES2/gl2.h], [have_gles2="yes"], [have_gles2="no"])
 AC_MSG_CHECKING([whether to use OpenGL ES 2 support])
 if test "$enable_glx" = "yes"; then
     if test "$enable_gles2" = "yes"; then
-        AC_MSG_ERROR([Cannot enable OpenGL ES 2 support with GLX])
+        AC_MSG_ERROR([Cannot enable OpenGL ES 2 support with GLX enabled.])
     else
         enable_gles2=no
     fi
 fi
 if test "$enable_egl" = "no"; then
     if test "$enable_gles2" = "yes"; then
-        AC_MSG_ERROR([Cannot enable OpenGL ES 2 support without EGL])
+        AC_MSG_ERROR([Cannot enable OpenGL ES 2 support without EGL enabled.])
     else
         enable_gles2=no
     fi
@@ -241,30 +236,24 @@ fi
 if test "$enable_gles2" != "no"; then
     if test "$have_gles2" = "no"; then
         if test "$enable_gles2" = "yes"; then
-            AC_MSG_ERROR([--enable-gles2 specified, but not available])
+            AC_MSG_ERROR([--enable-gles2 specified, but not available.])
         else
             enable_gles2=no
         fi
-   else
+    else
         enable_gles2=yes
-        found_opengl=yes
-   fi
+    fi
 fi
 AC_MSG_RESULT([$enable_gles2])
 
-if test "$enable_gles2" != "yes"; then
+found_opengl=no
+if test "$enable_gles2" = "yes"; then
+    found_opengl=yes
+else
     AC_CHECK_HEADERS([GL/gl.h], [found_opengl="yes"], [])
 fi
 
-if test "$with_acceleration_backend" = "auto"; then
-    if test "$found_opengl" = "yes"; then
-        with_acceleration_backend="opengl";
-    else
-        with_acceleration_backend="none";
-    fi
-fi
-
-if test "$with_acceleration_backend" = "opengl"; then
+if test "$found_opengl" = "yes"; then
     PKG_CHECK_MODULES([XCOMPOSITE], [xcomposite]);
     PKG_CHECK_MODULES([XDAMAGE], [xdamage]);
     AC_SUBST(XCOMPOSITE_CFLAGS)
@@ -273,29 +262,25 @@ if test "$with_acceleration_backend" = "opengl"; then
     AC_SUBST(XDAMAGE_LIBS)
 fi
 
-# OpenGL is turned on by default (along with WebGL and accelerated compositing), but if Clutter is chosen
-# as the accelerated drawing backend, we want to disable it. COGL does not play well with OpenGL.
-if test "$enable_webgl" = "auto"; then
-    if test "$with_acceleration_backend" = "opengl"; then
-        enable_webgl="yes";
+if test "$enable_webgl" != "no"; then
+    if test "$found_opengl" = "yes"; then
+        enable_webgl=yes
     else
-        enable_webgl="no";
+        if test "$enable_webgl" = "yes"; then
+            AC_MSG_ERROR([OpenGL support must be present to enable WebGL.])
+        fi
+        enable_webgl=no
     fi
 fi
 
-if test "$enable_webgl" = "yes" && test "$with_acceleration_backend" != "opengl"; then
-    AC_MSG_ERROR([OpenGL must be active (and Clutter disabled) to use WebGL.])
-fi;
-
-if test "$enable_accelerated_compositing" = "yes" && test "$with_acceleration_backend" = "none"; then
-    AC_MSG_ERROR([OpenGL or Clutter must be active to use accelerated compositing.])
-fi
-
-if test "$enable_accelerated_compositing" = "auto"; then
-    if test "$with_acceleration_backend" != "none"; then
-        enable_accelerated_compositing="yes";
+if test "$enable_accelerated_compositing" != "no"; then
+    if test "$found_opengl" = "yes"; then
+        enable_accelerated_compositing=yes
     else
-        enable_accelerated_compositing="no";
+        if test "$enable_accelerated_compositing" = "yes"; then
+            AC_MSG_ERROR([OpenGL support must be present to enable accelerated compositing.])
+        fi
+        enable_accelerated_compositing=no
     fi
 fi
 
@@ -321,19 +306,11 @@ if test "$enable_opcode_stats" = "yes"; then
     fi
 fi
 
-case "$enable_jit" in
-    yes) JSC_CPPFLAGS="-DENABLE_JIT=1" ;;
-    no) JSC_CPPFLAGS="-DENABLE_JIT=0" ;;
-    *) enable_jit="autodetect" ;;
-esac
-AC_SUBST(JSC_CPPFLAGS)
-
-
 # Enable CSS Filters and Shaders if accelerated_compositing is turned on.
 enable_css_filters=no;
 enable_css_shaders=no;
 AC_MSG_CHECKING([whether to enable CSS Filters and Shaders])
-if test "$enable_accelerated_compositing" = "yes" && test "$with_acceleration_backend" = "opengl"; then
+if test "$enable_accelerated_compositing" = "yes" && test "$found_opengl" = "yes"; then
     enable_css_filters=yes;
     enable_css_shaders=yes;
 fi
@@ -346,7 +323,7 @@ GIRDIR=
 GIRTYPELIBDIR=
 
 if test "$enable_introspection" = "yes"; then
-    PKG_CHECK_MODULES([INTROSPECTION],[gobject-introspection-1.0 >= gobject_introspection_required])
+    PKG_CHECK_MODULES([INTROSPECTION],[gobject-introspection-1.0 >= gobject_introspection_required_version])
 
     G_IR_SCANNER="$($PKG_CONFIG --variable=g_ir_scanner gobject-introspection-1.0)"
     G_IR_COMPILER="$($PKG_CONFIG --variable=g_ir_compiler gobject-introspection-1.0)"
@@ -378,9 +355,9 @@ fi
 # HarfBuzz 0.9.18 splits harbuzz-icu into a separate library.
 # Since we support earlier HarfBuzz versions we keep this conditional for now.
 if $PKG_CONFIG --atleast-version 0.9.18 harfbuzz; then
-    PKG_CHECK_MODULES(HARFBUZZ_ICU, harfbuzz-icu >= $harfbuzz_required_version)
-    FREETYPE_CFLAGS+=" $HARFBUZZ_ICU_CFLAGS"
-    FREETYPE_LIBS+=" $HARFBUZZ_ICU_LIBS"
+    PKG_CHECK_MODULES([HARFBUZZ_ICU], [harfbuzz-icu >= harfbuzz_required_version])
+    FREETYPE_CFLAGS="$FREETYPE_CFLAGS $HARFBUZZ_ICU_CFLAGS"
+    FREETYPE_LIBS="$FREETYPE_LIBS $HARFBUZZ_ICU_LIBS"
 fi
 AC_SUBST([FREETYPE_CFLAGS])
 AC_SUBST([FREETYPE_LIBS])
@@ -432,55 +409,40 @@ if test "$enable_video" = "yes" || test "$enable_web_audio" = "yes"; then
     AC_SUBST([GSTREAMER_LIBS])
 fi
 
-acceleration_backend_description=$with_acceleration_backend
-if test "$with_acceleration_backend" = "clutter"; then
-    PKG_CHECK_MODULES(CLUTTER, clutter-1.0 >= clutter_required_version)
-    PKG_CHECK_MODULES([CLUTTER_GTK], [clutter-gtk-1.0 >= clutter_gtk_required_version])
-
-    AC_SUBST(CLUTTER_CFLAGS)
-    AC_SUBST(CLUTTER_LIBS)
-    AC_SUBST(CLUTTER_GTK_CFLAGS)
-    AC_SUBST(CLUTTER_GTK_LIBS)
-
-    enable_gles2=no
-    enable_glx=no
-    enable_egl=no
-fi
-
-if test "$with_acceleration_backend" = "opengl"; then
+acceleration_description=
+if test "$found_opengl" = "yes"; then
+    acceleration_description="OpenGL"
     if test "$enable_gles2" = "yes"; then
-        acceleration_backend_description+="(gles2"
+        acceleration_description="$acceleration_description (gles2"
         OPENGL_LIBS="-lGLESv2"
     else
-        acceleration_backend_description+="(gl"
+        acceleration_description="$acceleration_description (gl"
         OPENGL_LIBS="-lGL"
     fi
     if test "$enable_egl" = "yes"; then
-        acceleration_backend_description+=", egl"
-        OPENGL_LIBS+=" -lEGL"
+        acceleration_description="$acceleration_description, egl"
+        OPENGL_LIBS="$OPENGL_LIBS -lEGL"
     fi
     if test "$enable_glx" = "yes"; then
-        acceleration_backend_description+=", glx"
+        acceleration_description="$acceleration_description, glx"
     fi
 
     # Check whether dlopen() is in the core libc like on FreeBSD, or in a separate
     # libdl like on GNU/Linux (in which case we want to link to libdl).
-    AC_CHECK_FUNC([dlopen], [], [AC_CHECK_LIB([dl], [dlopen], [DLOPEN_LIBS="-ldl"])])
-    AC_SUBST([DLOPEN_LIBS])
+    AC_CHECK_FUNC([dlopen], [], [AC_CHECK_LIB([dl], [dlopen], [OPENGL_LIBS="$OPENGL_LIBS -ldl"])])
 
-    OPENGL_LIBS+=" $DLOPEN_LIBS"
-    acceleration_backend_description+=")"
+    acceleration_description="$acceleration_description)"
 fi
 AC_SUBST([OPENGL_LIBS])
 
 enable_accelerated_canvas=no
-if test "$enable_accelerated_compositing" = "yes" && test "$with_acceleration_backend" = "opengl"; then
+if test "$enable_accelerated_compositing" = "yes" && test "$found_opengl" = "yes"; then
     CAIRO_GL_LIBS="cairo-gl"
     if test "$enable_glx" = "yes"; then
-        CAIRO_GL_LIBS+=" cairo-glx"
+        CAIRO_GL_LIBS="$CAIRO_GL_LIBS cairo-glx"
     fi
     if test "$enable_egl" = "yes"; then
-        CAIRO_GL_LIBS+=" cairo-egl"
+        CAIRO_GL_LIBS="$CAIRO_GL_LIBS cairo-egl"
     fi
 
     # At the moment CairoGL does not add any extra cflags and libraries, so we can

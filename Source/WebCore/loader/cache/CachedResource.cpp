@@ -182,13 +182,20 @@ static ResourceRequest::TargetType cachedResourceTypeToTargetType(CachedResource
 }
 #endif
 
+static double deadDecodedDataDeletionIntervalForResourceType(CachedResource::Type type)
+{
+    if (type == CachedResource::Script)
+        return 0;
+    return memoryCache()->deadDecodedDataDeletionInterval();
+}
+
 DEFINE_DEBUG_ONLY_GLOBAL(RefCountedLeakCounter, cachedResourceLeakCounter, ("CachedResource"));
 
 CachedResource::CachedResource(const ResourceRequest& request, Type type)
     : m_resourceRequest(request)
     , m_loadPriority(defaultPriorityForResourceType(type))
     , m_responseTimestamp(currentTime())
-    , m_decodedDataDeletionTimer(this, &CachedResource::decodedDataDeletionTimerFired)
+    , m_decodedDataDeletionTimer(this, &CachedResource::decodedDataDeletionTimerFired, deadDecodedDataDeletionIntervalForResourceType(type))
     , m_lastDecodedAccessTime(0)
     , m_loadFinishTime(0)
     , m_encodedSize(0)
@@ -262,12 +269,12 @@ void CachedResource::addAdditionalRequestHeaders(CachedResourceLoader* cachedRes
     // the Content-Security-Policy at the CachedResourceLoader layer so we can
     // handle different resource types differently.
 
-    FrameLoader* frameLoader = cachedResourceLoader->frame()->loader();
+    FrameLoader& frameLoader = cachedResourceLoader->frame()->loader();
     String outgoingReferrer;
     String outgoingOrigin;
     if (m_resourceRequest.httpReferrer().isNull()) {
-        outgoingReferrer = frameLoader->outgoingReferrer();
-        outgoingOrigin = frameLoader->outgoingOrigin();
+        outgoingReferrer = frameLoader.outgoingReferrer();
+        outgoingOrigin = frameLoader.outgoingOrigin();
     } else {
         outgoingReferrer = m_resourceRequest.httpReferrer();
         outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
@@ -280,7 +287,7 @@ void CachedResource::addAdditionalRequestHeaders(CachedResourceLoader* cachedRes
         m_resourceRequest.setHTTPReferrer(outgoingReferrer);
     FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 
-    frameLoader->addExtraFieldsToSubresourceRequest(m_resourceRequest);
+    frameLoader.addExtraFieldsToSubresourceRequest(m_resourceRequest);
 }
 
 void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const ResourceLoaderOptions& options)
@@ -290,8 +297,8 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
         return;
     }
 
-    FrameLoader* frameLoader = cachedResourceLoader->frame()->loader();
-    if (options.securityCheck == DoSecurityCheck && (frameLoader->state() == FrameStateProvisional || !frameLoader->activeDocumentLoader() || frameLoader->activeDocumentLoader()->isStopping())) {
+    FrameLoader& frameLoader = cachedResourceLoader->frame()->loader();
+    if (options.securityCheck == DoSecurityCheck && (frameLoader.state() == FrameStateProvisional || !frameLoader.activeDocumentLoader() || frameLoader.activeDocumentLoader()->isStopping())) {
         failBeforeStarting();
         return;
     }
@@ -362,11 +369,18 @@ void CachedResource::checkNotify()
         c->notifyFinished(this);
 }
 
-void CachedResource::data(ResourceBuffer*, bool allDataReceived)
+void CachedResource::addDataBuffer(ResourceBuffer*)
 {
-    if (!allDataReceived)
-        return;
-    
+    ASSERT(m_options.dataBufferingPolicy == BufferData);
+}
+
+void CachedResource::addData(const char*, unsigned)
+{
+    ASSERT(m_options.dataBufferingPolicy == DoNotBufferData);
+}
+
+void CachedResource::finishLoading(ResourceBuffer*)
+{
     setLoading(false);
     checkNotify();
 }
@@ -553,12 +567,12 @@ void CachedResource::destroyDecodedDataIfNeeded()
 {
     if (!m_decodedSize)
         return;
-
-    if (double interval = memoryCache()->deadDecodedDataDeletionInterval())
-        m_decodedDataDeletionTimer.startOneShot(interval);
+    if (!memoryCache()->deadDecodedDataDeletionInterval())
+        return;
+    m_decodedDataDeletionTimer.restart();
 }
 
-void CachedResource::decodedDataDeletionTimerFired(Timer<CachedResource>*)
+void CachedResource::decodedDataDeletionTimerFired(DeferrableOneShotTimer<CachedResource>*)
 {
     destroyDecodedData();
 }
@@ -880,7 +894,6 @@ void CachedResource::setLoadPriority(ResourceLoadPriority loadPriority)
     if (m_loader)
         m_loader->didChangePriority(loadPriority);
 }
-
 
 CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* resource, CachedResourceClient* client)
     : m_resource(resource)

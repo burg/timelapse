@@ -28,7 +28,6 @@
 #define DOMTimer_h
 
 #include "SuspendableTimer.h"
-#include "UserGestureIndicator.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -44,34 +43,36 @@ namespace WebCore {
         static int install(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int timeout, bool singleShot);
         static void removeById(ScriptExecutionContext*, int timeoutId);
 
-        // ActiveDOMObject
-        virtual void contextDestroyed();
-        virtual void stop();
-
         // Adjust to a change in the ScriptExecutionContext's minimum timer interval.
         // This allows the minimum allowable interval time to be changed in response
         // to events like moving a tab to the background.
         void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
-        virtual void fired();
+        virtual void fired() OVERRIDE;
 
     protected:
-        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>);
+        DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval);
         // add to list of active context objects, start initial timer.
         virtual void start(int timeout, bool singleShot);
 
         int m_timeoutId;
         bool m_shouldScheduleNormally;
 
+        // ActiveDOMObject
+        virtual void contextDestroyed() OVERRIDE;
+
+        // SuspendableTimer
+        virtual void didStop() OVERRIDE;
+
     private:
         double intervalClampedToMinimum(int timeout, double minimumTimerInterval) const;
 
         // Retuns timer fire time rounded to the next multiple of timer alignment interval.
-        virtual double alignedFireTime(double) const;
-        
+        virtual double alignedFireTime(double) const OVERRIDE;
+
         int m_nestingLevel;
         OwnPtr<ScheduledAction> m_action;
         int m_originalInterval;
-        RefPtr<UserGestureToken> m_userGestureToken;
+        bool m_shouldForwardUserGesture;
     };
 
 } // namespace WebCore

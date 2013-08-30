@@ -28,7 +28,6 @@
 
 #include "ContainerNode.h"
 #include "ContentDistributor.h"
-#include "ElementShadow.h"
 #include "FlowThreadController.h"
 #include "HTMLContentElement.h"
 #include "HTMLInputElement.h"
@@ -57,7 +56,7 @@ NodeRenderingContext::NodeRenderingContext(Node* node)
     : m_node(node)
     , m_parentFlowRenderer(0)
 {
-    m_renderingParent = NodeRenderingTraversal::parent(node, &m_parentDetails);
+    m_renderingParent = NodeRenderingTraversal::parent(node);
 }
 
 NodeRenderingContext::NodeRenderingContext(Node* node, RenderStyle* style)
@@ -68,12 +67,12 @@ NodeRenderingContext::NodeRenderingContext(Node* node, RenderStyle* style)
 {
 }
 
-NodeRenderingContext::NodeRenderingContext(Node* node, const Node::AttachContext& context)
+NodeRenderingContext::NodeRenderingContext(Node* node, const Style::AttachContext& context)
     : m_node(node)
     , m_style(context.resolvedStyle)
     , m_parentFlowRenderer(0)
 {
-    m_renderingParent = NodeRenderingTraversal::parent(node, &m_parentDetails);
+    m_renderingParent = NodeRenderingTraversal::parent(node);
 }
 
 NodeRenderingContext::~NodeRenderingContext()
@@ -155,7 +154,7 @@ RenderObject* NodeRenderingContext::previousRenderer() const
     return 0;
 }
 
-RenderObject* NodeRenderingContext::parentRenderer()
+RenderObject* NodeRenderingContext::parentRenderer() const
 {
     if (RenderObject* renderer = m_node->renderer())
         return renderer->parent();
@@ -177,15 +176,10 @@ RenderObject* NodeRenderingContext::parentRenderer()
     if (m_parentFlowRenderer)
         return m_parentFlowRenderer;
 
-    if (m_node->isElementNode() && toElement(m_node)->moveToFlowThreadIsNeeded(m_style)) {
-        moveToFlowThread();
-        return m_parentFlowRenderer;
-    }
-
     return m_renderingParent ? m_renderingParent->renderer() : 0;
 }
 
-bool NodeRenderingContext::shouldCreateRenderer()
+bool NodeRenderingContext::shouldCreateRenderer() const
 {
     if (!m_node->document()->shouldCreateRenderers())
         return false;
@@ -194,53 +188,51 @@ bool NodeRenderingContext::shouldCreateRenderer()
     RenderObject* parentRenderer = this->parentRenderer();
     if (!parentRenderer)
         return false;
-    if (!parentRenderer->canHaveChildren()) {
-        if (parentRenderer->canDOMChildrenHaveRenderParent()) {
-            // In a region, only the children that need to be in a flow thread should have a renderer.
-            bool shouldBeInNamedFlow = m_node->isElementNode() && toElement(m_node)->moveToFlowThreadIsNeeded(m_style);
-            if (!shouldBeInNamedFlow)
-                return false;
-        } else
-            return false;
-    }
-
-    if (!m_renderingParent->childShouldCreateRenderer(*this))
+    if (!parentRenderer->canHaveChildren() && !(m_node->isPseudoElement() && parentRenderer->canHaveGeneratedChildren()))
+        return false;
+    if (!m_renderingParent->childShouldCreateRenderer(m_node))
         return false;
     return true;
 }
 
+// Check the specific case of elements that are children of regions but are flowed into a flow thread themselves.
+bool NodeRenderingContext::elementInsideRegionNeedsRenderer()
+{
+    bool elementInsideRegionNeedsRenderer = false;
+
+#if ENABLE(CSS_REGIONS)
+    Element* element = toElement(m_node);
+    RenderObject* parentRenderer = this->parentRenderer();
+    if ((parentRenderer && !parentRenderer->canHaveChildren() && parentRenderer->isRenderRegion())
+        || (!parentRenderer && element->parentElement() && element->parentElement()->isInsideRegion())) {
+
+        if (!m_style)
+            m_style = element->styleForRenderer();
+
+        elementInsideRegionNeedsRenderer = element->shouldMoveToFlowThread(m_style.get());
+
+        // Children of this element will only be allowed to be flowed into other flow-threads if display is NOT none.
+        if (element->rendererIsNeeded(*m_style))
+            element->setIsInsideRegion(true);
+    }
+#endif
+
+    return elementInsideRegionNeedsRenderer;
+}
+
 void NodeRenderingContext::moveToFlowThreadIfNeeded()
 {
-    ASSERT(m_node->isElementNode());
+#if ENABLE(CSS_REGIONS)
+    Element* element = toElement(m_node);
 
-    if (!toElement(m_node)->moveToFlowThreadIsNeeded(m_style))
+    if (!element->shouldMoveToFlowThread(m_style.get()))
         return;
 
-    moveToFlowThread();
-}
-
-void NodeRenderingContext::moveToFlowThread()
-{
-    ASSERT(m_node->isElementNode());
-    ASSERT(toElement(m_node)->moveToFlowThreadIsNeeded(m_style));
-
-    if (!m_style)
-        m_style = toElement(m_node)->styleForRenderer();
-    ASSERT(m_style);
     ASSERT(m_node->document()->renderView());
     FlowThreadController* flowThreadController = m_node->document()->renderView()->flowThreadController();
-    m_parentFlowRenderer = flowThreadController->ensureRenderFlowThreadWithName(m_style->flowThread());
+    m_parentFlowRenderer = &flowThreadController->ensureRenderFlowThreadWithName(m_style->flowThread());
     flowThreadController->registerNamedFlowContentNode(m_node, m_parentFlowRenderer);
-}
-
-bool NodeRenderingContext::isOnEncapsulationBoundary() const
-{
-    return isOnUpperEncapsulationBoundary() || isLowerEncapsulationBoundary(m_parentDetails.insertionPoint()) || isLowerEncapsulationBoundary(m_node->parentNode());
-}
-
-bool NodeRenderingContext::isOnUpperEncapsulationBoundary() const
-{
-    return m_node->parentNode() && m_node->parentNode()->isShadowRoot();
+#endif
 }
 
 void NodeRenderingContext::createRendererForElementIfNeeded()
@@ -249,15 +241,18 @@ void NodeRenderingContext::createRendererForElementIfNeeded()
 
     Element* element = toElement(m_node);
 
-    if (!shouldCreateRenderer())
+    element->setIsInsideRegion(false);
+
+    if (!shouldCreateRenderer() && !elementInsideRegionNeedsRenderer())
         return;
+
     if (!m_style)
         m_style = element->styleForRenderer();
     ASSERT(m_style);
 
     moveToFlowThreadIfNeeded();
 
-    if (!element->rendererIsNeeded(*this))
+    if (!element->rendererIsNeeded(*m_style))
         return;
 
     RenderObject* parentRenderer = this->parentRenderer();
@@ -304,7 +299,7 @@ void NodeRenderingContext::createRendererForTextIfNeeded()
     Document* document = textNode->document();
 
     if (resetStyleInheritance())
-        m_style = document->ensureStyleResolver()->defaultStyleForElement();
+        m_style = document->ensureStyleResolver().defaultStyleForElement();
     else
         m_style = parentRenderer->style();
 
@@ -327,6 +322,12 @@ void NodeRenderingContext::createRendererForTextIfNeeded()
     // Parent takes care of the animations, no need to call setAnimatableStyle.
     newRenderer->setStyle(m_style.release());
     parentRenderer->addChild(newRenderer, nextRenderer);
+}
+
+bool NodeRenderingContext::resetStyleInheritance() const
+{
+    ContainerNode* parent = m_node->parentNode();
+    return parent && parent->isShadowRoot() && toShadowRoot(parent)->resetStyleInheritance();
 }
 
 }

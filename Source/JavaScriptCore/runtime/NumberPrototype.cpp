@@ -80,17 +80,12 @@ void NumberPrototype::finishCreation(ExecState* exec, JSGlobalObject*)
     Base::finishCreation(exec->vm());
     setInternalValue(exec->vm(), jsNumber(0));
 
-    ASSERT(inherits(&s_info));
+    ASSERT(inherits(info()));
 }
 
-bool NumberPrototype::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
+bool NumberPrototype::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<NumberObject>(exec, ExecState::numberPrototypeTable(exec), jsCast<NumberPrototype*>(cell), propertyName, slot);
-}
-
-bool NumberPrototype::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticFunctionDescriptor<NumberObject>(exec, ExecState::numberPrototypeTable(exec), jsCast<NumberPrototype*>(object), propertyName, descriptor);
+    return getStaticFunctionSlot<NumberObject>(exec, ExecState::numberPrototypeTable(exec), jsCast<NumberPrototype*>(object), propertyName, slot);
 }
 
 // ------------------------------ Functions ---------------------------
@@ -476,7 +471,7 @@ static inline EncodedJSValue integerValueToString(ExecState* exec, int32_t radix
         ASSERT(value <= 36);
         ASSERT(value >= 0);
         VM* vm = &exec->vm();
-        return JSValue::encode(vm->smallStrings.singleCharacterString(vm, radixDigits[value]));
+        return JSValue::encode(vm->smallStrings.singleCharacterString(radixDigits[value]));
     }
 
     if (radix == 10) {

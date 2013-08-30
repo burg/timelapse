@@ -166,10 +166,14 @@ HRESULT STDMETHODCALLTYPE WebDownload::initToResumeWithBundle(
 {
     LOG(Download, "Attempting resume of download bundle %s", String(bundlePath, SysStringLen(bundlePath)).ascii().data());
 
-    RetainPtr<CFDataRef> resumeData = adoptCF(DownloadBundle::extractResumeData(String(bundlePath, SysStringLen(bundlePath))));
-
-    if (!resumeData)
+    Vector<char> buffer;
+    if (!DownloadBundle::extractResumeData(String(bundlePath, SysStringLen(bundlePath)), buffer))
         return E_FAIL;
+
+    // It is possible by some twist of fate the bundle magic number was naturally at the end of the file and its not actually a valid bundle.
+    // That, or someone engineered it that way to try to attack us. In that cause, this CFData will successfully create but when we actually
+    // try to start the CFURLDownload using this bogus data, it will fail and we will handle that gracefully.
+    RetainPtr<CFDataRef> resumeData = adoptCF(CFDataCreate(0, reinterpret_cast<const UInt8*>(buffer.data()), buffer.size()));
 
     if (!delegate)
         return E_FAIL;
@@ -254,7 +258,9 @@ HRESULT STDMETHODCALLTYPE WebDownload::cancelForResume()
         goto exit;
     }
 
-    DownloadBundle::appendResumeData(resumeData.get(), m_bundlePath);
+    const char* resumeBytes = reinterpret_cast<const char*>(CFDataGetBytePtr(resumeData.get()));
+    uint32_t resumeLength = CFDataGetLength(resumeData.get());
+    DownloadBundle::appendResumeData(resumeBytes, resumeLength, m_bundlePath);
 
 exit:
     m_download = 0;
@@ -472,7 +478,7 @@ void WebDownload::didFinish()
 
     // We try to rename the bundle to the final file name.  If that fails, we give the delegate one more chance to chose
     // the final file name, then we just leave it
-    if (!MoveFileEx(m_bundlePath.charactersWithNullTermination(), m_destination.charactersWithNullTermination(), 0)) {
+    if (!MoveFileEx(m_bundlePath.charactersWithNullTermination().data(), m_destination.charactersWithNullTermination().data(), 0)) {
         LOG_ERROR("Failed to move bundle %s to %s on completion\nError - %i", m_bundlePath.ascii().data(), m_destination.ascii().data(), GetLastError());
         
         bool reportBundlePathAsFinalPath = true;
@@ -484,7 +490,7 @@ void WebDownload::didFinish()
         // The call to m_delegate->decideDestinationWithSuggestedFilename() should have changed our destination, so we'll try the move
         // one last time.
         if (!m_destination.isEmpty())
-            if (MoveFileEx(m_bundlePath.charactersWithNullTermination(), m_destination.charactersWithNullTermination(), 0))
+            if (MoveFileEx(m_bundlePath.charactersWithNullTermination().data(), m_destination.charactersWithNullTermination().data(), 0))
                 reportBundlePathAsFinalPath = false;
 
         // We either need to tell the delegate our final filename is the bundle filename, or is the file name they just told us to use

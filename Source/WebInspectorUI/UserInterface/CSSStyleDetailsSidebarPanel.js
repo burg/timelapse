@@ -25,11 +25,11 @@
 
 WebInspector.CSSStyleDetailsSidebarPanel = function()
 {
-    WebInspector.DOMDetailsSidebarPanel.call(this, "css-style", WebInspector.UIString("Styles"), WebInspector.UIString("Style"), "Images/NavigationItemBrushAndRuler.pdf", "4");
+    WebInspector.DOMDetailsSidebarPanel.call(this, "css-style", WebInspector.UIString("Styles"), WebInspector.UIString("Style"), "Images/NavigationItemBrushAndRuler.svg", "4");
 
     this._selectedPanel = null;
 
-    this._navigationBar = new WebInspector.NavigationBar;
+    this._navigationBar = new WebInspector.NavigationBar(null, null, "tablist");
     this._navigationBar.addEventListener(WebInspector.NavigationBar.Event.NavigationItemSelected, this._navigationItemSelected, this);
     this.element.appendChild(this._navigationBar.element);
 

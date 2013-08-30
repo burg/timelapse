@@ -112,7 +112,7 @@ IDL_BINDINGS += \
     $$PWD/Modules/filesystem/FileWriterCallback.idl \
     $$PWD/Modules/filesystem/Metadata.idl \
     $$PWD/Modules/filesystem/MetadataCallback.idl \
-    $$PWD/Modules/filesystem/WorkerContextFileSystem.idl \
+    $$PWD/Modules/filesystem/WorkerGlobalScopeFileSystem.idl \
     $$PWD/Modules/geolocation/Coordinates.idl \
     $$PWD/Modules/geolocation/Geolocation.idl \
     $$PWD/Modules/geolocation/Geoposition.idl \
@@ -130,12 +130,12 @@ IDL_BINDINGS += \
     $$PWD/Modules/indexeddb/IDBObjectStore.idl \
     $$PWD/Modules/indexeddb/IDBRequest.idl \
     $$PWD/Modules/indexeddb/IDBTransaction.idl \
-    $$PWD/Modules/indexeddb/WorkerContextIndexedDatabase.idl \
+    $$PWD/Modules/indexeddb/WorkerGlobalScopeIndexedDatabase.idl \
     $$PWD/Modules/notifications/DOMWindowNotifications.idl \
     $$PWD/Modules/notifications/Notification.idl \
     $$PWD/Modules/notifications/NotificationCenter.idl \
     $$PWD/Modules/notifications/NotificationPermissionCallback.idl \
-    $$PWD/Modules/notifications/WorkerContextNotifications.idl \
+    $$PWD/Modules/notifications/WorkerGlobalScopeNotifications.idl \
     $$PWD/Modules/quota/DOMWindowQuota.idl \
     $$PWD/Modules/quota/NavigatorStorageQuota.idl \
     $$PWD/Modules/quota/StorageInfo.idl \
@@ -169,7 +169,7 @@ IDL_BINDINGS += \
     $$PWD/Modules/webaudio/OscillatorNode.idl \
     $$PWD/Modules/webaudio/AnalyserNode.idl \
     $$PWD/Modules/webaudio/WaveShaperNode.idl \
-    $$PWD/Modules/webaudio/WaveTable.idl \
+    $$PWD/Modules/webaudio/PeriodicWave.idl \
     $$PWD/Modules/webdatabase/DOMWindowWebDatabase.idl \
     $$PWD/Modules/webdatabase/Database.idl \
     $$PWD/Modules/webdatabase/DatabaseCallback.idl \
@@ -185,7 +185,7 @@ IDL_BINDINGS += \
     $$PWD/Modules/webdatabase/SQLTransactionErrorCallback.idl \
     $$PWD/Modules/webdatabase/SQLTransactionSync.idl \
     $$PWD/Modules/webdatabase/SQLTransactionSyncCallback.idl \
-    $$PWD/Modules/webdatabase/WorkerContextWebDatabase.idl \
+    $$PWD/Modules/webdatabase/WorkerGlobalScopeWebDatabase.idl \
     $$PWD/Modules/websockets/CloseEvent.idl \
     $$PWD/Modules/websockets/WebSocket.idl \
     $$PWD/css/Counter.idl \
@@ -209,6 +209,7 @@ IDL_BINDINGS += \
     $$PWD/css/FontLoader.idl \
     $$PWD/css/MediaList.idl \
     $$PWD/css/MediaQueryList.idl \
+    $$PWD/css/MediaQueryListListener.idl \
     $$PWD/css/Rect.idl \
     $$PWD/css/RGBColor.idl \
     $$PWD/css/StyleMedia.idl \
@@ -226,6 +227,7 @@ IDL_BINDINGS += \
     $$PWD/dom/Attr.idl \
     $$PWD/dom/BeforeLoadEvent.idl \
     $$PWD/dom/CharacterData.idl \
+    $$PWD/dom/ChildNode.idl \
     $$PWD/dom/ClientRect.idl \
     $$PWD/dom/ClientRectList.idl \
     $$PWD/dom/Clipboard.idl \
@@ -274,7 +276,6 @@ IDL_BINDINGS += \
     $$PWD/dom/PopStateEvent.idl \
     $$PWD/dom/ProcessingInstruction.idl \
     $$PWD/dom/ProgressEvent.idl \
-    $$PWD/dom/PropertyNodeList.idl \
     $$PWD/dom/RangeException.idl \
     $$PWD/dom/Range.idl \
     $$PWD/dom/RequestAnimationFrameCallback.idl \
@@ -300,14 +301,7 @@ IDL_BINDINGS += \
     $$PWD/fileapi/FileList.idl \
     $$PWD/fileapi/FileReader.idl \
     $$PWD/fileapi/FileReaderSync.idl \
-    $$PWD/html/canvas/ArrayBufferView.idl \
-    $$PWD/html/canvas/ArrayBuffer.idl \
-    $$PWD/html/canvas/DataView.idl \
-    $$PWD/html/canvas/Int8Array.idl \
-    $$PWD/html/canvas/Float32Array.idl \
-    $$PWD/html/canvas/Float64Array.idl \
     $$PWD/html/canvas/CanvasGradient.idl \
-    $$PWD/html/canvas/Int32Array.idl \
     $$PWD/html/canvas/CanvasPattern.idl \
     $$PWD/html/canvas/CanvasProxy.idl \
     $$PWD/html/canvas/CanvasRenderingContext.idl \
@@ -337,14 +331,9 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/WebGLRenderingContext.idl \
     $$PWD/html/canvas/WebGLShader.idl \
     $$PWD/html/canvas/WebGLShaderPrecisionFormat.idl \
-    $$PWD/html/canvas/Int16Array.idl \
     $$PWD/html/canvas/WebGLTexture.idl \
     $$PWD/html/canvas/WebGLUniformLocation.idl \
     $$PWD/html/canvas/WebGLVertexArrayObjectOES.idl \
-    $$PWD/html/canvas/Uint8Array.idl \
-    $$PWD/html/canvas/Uint8ClampedArray.idl \
-    $$PWD/html/canvas/Uint32Array.idl \
-    $$PWD/html/canvas/Uint16Array.idl \
     $$PWD/html/DOMFormData.idl \
     $$PWD/html/DOMSettableTokenList.idl \
     $$PWD/html/DOMTokenList.idl \
@@ -405,7 +394,6 @@ IDL_BINDINGS += \
     $$PWD/html/HTMLParamElement.idl \
     $$PWD/html/HTMLPreElement.idl \
     $$PWD/html/HTMLProgressElement.idl \
-    $$PWD/html/HTMLPropertiesCollection.idl \
     $$PWD/html/HTMLQuoteElement.idl \
     $$PWD/html/HTMLScriptElement.idl \
     $$PWD/html/HTMLSelectElement.idl \
@@ -427,7 +415,6 @@ IDL_BINDINGS += \
     $$PWD/html/ImageData.idl \
     $$PWD/html/MediaController.idl \
     $$PWD/html/MediaError.idl \
-    $$PWD/html/MicroDataItemValue.idl \
     $$PWD/html/RadioNodeList.idl \
     $$PWD/html/TextMetrics.idl \
     $$PWD/html/TimeRanges.idl \
@@ -461,6 +448,8 @@ IDL_BINDINGS += \
     $$PWD/page/SpeechInputResult.idl \
     $$PWD/page/SpeechInputResultList.idl \
     $$PWD/page/WebKitPoint.idl \
+    $$PWD/page/WindowBase64.idl \
+    $$PWD/page/WindowTimers.idl \
     $$PWD/page/WorkerNavigator.idl \
     $$PWD/plugins/DOMPlugin.idl \
     $$PWD/plugins/DOMMimeType.idl \
@@ -474,11 +463,11 @@ IDL_BINDINGS += \
     $$PWD/testing/MemoryInfo.idl \
     $$PWD/testing/TypeConversions.idl \
     $$PWD/workers/AbstractWorker.idl \
-    $$PWD/workers/DedicatedWorkerContext.idl \
+    $$PWD/workers/DedicatedWorkerGlobalScope.idl \
     $$PWD/workers/SharedWorker.idl \
-    $$PWD/workers/SharedWorkerContext.idl \
+    $$PWD/workers/SharedWorkerGlobalScope.idl \
     $$PWD/workers/Worker.idl \
-    $$PWD/workers/WorkerContext.idl \
+    $$PWD/workers/WorkerGlobalScope.idl \
     $$PWD/workers/WorkerLocation.idl \
     $$PWD/xml/DOMParser.idl \
     $$PWD/xml/XMLHttpRequest.idl \
@@ -530,6 +519,7 @@ enable?(SVG) {
     $$PWD/svg/SVGElementInstanceList.idl \
     $$PWD/svg/SVGEllipseElement.idl \
     $$PWD/svg/SVGException.idl \
+    $$PWD/svg/SVGExternalResourcesRequired.idl \
     $$PWD/svg/SVGFEBlendElement.idl \
     $$PWD/svg/SVGFEColorMatrixElement.idl \
     $$PWD/svg/SVGFEComponentTransferElement.idl \
@@ -556,6 +546,8 @@ enable?(SVG) {
     $$PWD/svg/SVGFETileElement.idl \
     $$PWD/svg/SVGFETurbulenceElement.idl \
     $$PWD/svg/SVGFilterElement.idl \
+    $$PWD/svg/SVGFilterPrimitiveStandardAttributes.idl \
+    $$PWD/svg/SVGFitToViewBox.idl \
     $$PWD/svg/SVGFontElement.idl \
     $$PWD/svg/SVGFontFaceElement.idl \
     $$PWD/svg/SVGFontFaceFormatElement.idl \
@@ -567,6 +559,7 @@ enable?(SVG) {
     $$PWD/svg/SVGGlyphElement.idl \
     $$PWD/svg/SVGGlyphRefElement.idl \
     $$PWD/svg/SVGGradientElement.idl \
+    $$PWD/svg/SVGGraphicsElement.idl \
     $$PWD/svg/SVGHKernElement.idl \
     $$PWD/svg/SVGImageElement.idl \
     $$PWD/svg/SVGLength.idl \
@@ -623,6 +616,7 @@ enable?(SVG) {
     $$PWD/svg/SVGSVGElement.idl \
     $$PWD/svg/SVGSwitchElement.idl \
     $$PWD/svg/SVGSymbolElement.idl \
+    $$PWD/svg/SVGTests.idl \
     $$PWD/svg/SVGTextContentElement.idl \
     $$PWD/svg/SVGTextElement.idl \
     $$PWD/svg/SVGTextPathElement.idl \
@@ -632,6 +626,7 @@ enable?(SVG) {
     $$PWD/svg/SVGTransformList.idl \
     $$PWD/svg/SVGTRefElement.idl \
     $$PWD/svg/SVGTSpanElement.idl \
+    $$PWD/svg/SVGURIReference.idl \
     $$PWD/svg/SVGUnitTypes.idl \
     $$PWD/svg/SVGUseElement.idl \
     $$PWD/svg/SVGViewElement.idl \
@@ -730,7 +725,9 @@ IDL_BINDINGS += generated/$$INTERNAL_SETTINGS_GENERATED_IDL
 # GENERATOR 0: Resolve [Supplemental] dependency in IDLs
 SUPPLEMENTAL_DEPENDENCY_FILE = supplemental_dependency.tmp
 WINDOW_CONSTRUCTORS_FILE = DOMWindowConstructors.idl
-WORKERCONTEXT_CONSTRUCTORS_FILE = WorkerContextConstructors.idl
+WORKERGLOBALSCOPE_CONSTRUCTORS_FILE = WorkerGlobalScopeConstructors.idl
+SHAREDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE = SharedWorkerGlobalScopeConstructors.idl
+DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE = DedicatedWorkerGlobalScopeConstructors.idl
 IDL_FILES_TMP = ${QMAKE_FUNC_FILE_OUT_PATH}/idl_files.tmp
 PREPROCESS_IDLS_SCRIPT = $$PWD/bindings/scripts/preprocess-idls.pl
 IDL_ATTRIBUTES_FILE = $$PWD/bindings/scripts/IDLAttributes.txt
@@ -750,8 +747,10 @@ preprocessIdls.commands += perl -I$$PWD/bindings/scripts $$preprocessIdls.script
                                --idlFilesList $$IDL_FILES_TMP \
                                --supplementalDependencyFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$SUPPLEMENTAL_DEPENDENCY_FILE \
                                --windowConstructorsFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$WINDOW_CONSTRUCTORS_FILE \
-                               --workerContextConstructorsFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$WORKERCONTEXT_CONSTRUCTORS_FILE
-preprocessIdls.output = $$SUPPLEMENTAL_DEPENDENCY_FILE $$WINDOW_CONSTRUCTORS_FILE $$WORKERCONTEXT_CONSTRUCTORS_FILE
+                               --workerGlobalScopeConstructorsFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$WORKERGLOBALSCOPE_CONSTRUCTORS_FILE \
+                               --sharedWorkerGlobalScopeConstructorsFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$SHAREDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE \
+                               --dedicatedWorkerGlobalScopeConstructorsFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE
+preprocessIdls.output = $$SUPPLEMENTAL_DEPENDENCY_FILE $$WINDOW_CONSTRUCTORS_FILE $$WORKERGLOBALSCOPE_CONSTRUCTORS_FILE $$SHAREDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE $$DEDICATEDWORKERGLOBALSCOPE_CONSTRUCTORS_FILE
 preprocessIdls.add_output_to_sources = false
 preprocessIdls.depends = $$IDL_BINDINGS
 GENERATORS += preprocessIdls
@@ -821,6 +820,7 @@ GENERATORS += inspectorJSON
 inspectorBackendCommands.output = InspectorBackendCommands.qrc
 inspectorBackendCommands.input = INSPECTOR_BACKEND_COMMANDS_QRC
 inspectorBackendCommands.commands = $$QMAKE_COPY $$toSystemPath($$INSPECTOR_BACKEND_COMMANDS_QRC) ${QMAKE_FUNC_FILE_OUT_PATH}$${QMAKE_DIR_SEP}InspectorBackendCommands.qrc
+inspectorBackendCommands.depends = $$INSPECTOR_JSON
 inspectorBackendCommands.add_output_to_sources = false
 GENERATORS += inspectorBackendCommands
 

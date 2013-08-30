@@ -36,10 +36,10 @@
 #include "JSNode.h"
 #include "JSStorage.h"
 #include "JSTrackCustom.h"
-#include "JSUint8Array.h"
 #include "JSVoidCallback.h"
 #include "ScriptValue.h"
 #include "SerializedScriptValue.h"
+#include <runtime/JSTypedArrays.h>
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
 #include <wtf/text/AtomicString.h>
@@ -50,6 +50,10 @@
 
 #if ENABLE(MEDIA_STREAM)
 #include "JSMediaStream.h"
+#endif
+
+#if ENABLE(SCRIPTED_SPEECH)
+#include "JSSpeechRecognitionResultList.h"
 #endif
 
 using namespace JSC;
@@ -246,6 +250,13 @@ void JSDictionary::convertValue(JSC::ExecState* exec, JSC::JSValue value, RefPtr
         return;
 
     result = JSVoidCallback::create(asObject(value), jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject()));
+}
+#endif
+
+#if ENABLE(SCRIPTED_SPEECH)
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<SpeechRecognitionResultList>& result)
+{
+    result = toSpeechRecognitionResultList(value);
 }
 #endif
 

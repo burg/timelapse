@@ -55,6 +55,7 @@ namespace JSC {
     class Register;
     class JSScope;
     class SamplingTool;
+    class StackIterator;
     struct CallFrameClosure;
     struct HandlerInfo;
     struct Instruction;
@@ -82,6 +83,7 @@ namespace JSC {
         Strong<UnlinkedCodeBlock> codeBlock;
         RefPtr<SourceProvider> code;
         int lineOffset;
+        unsigned firstLineColumnOffset;
         unsigned characterOffset;
         unsigned bytecodeOffset;
         String sourceURL;
@@ -125,22 +127,25 @@ namespace JSC {
             }
             return traceLine.isNull() ? emptyString() : traceLine;
         }
-        JS_EXPORT_PRIVATE unsigned line();
-        JS_EXPORT_PRIVATE unsigned column();
-        JS_EXPORT_PRIVATE void expressionInfo(int& divot, int& startOffset, int& endOffset);
+        JS_EXPORT_PRIVATE void computeLineAndColumn(unsigned& line, unsigned& column);
+
+    private:
+        void expressionInfo(int& divot, int& startOffset, int& endOffset, unsigned& line, unsigned& column);
     };
 
     class TopCallFrameSetter {
     public:
-        TopCallFrameSetter(VM& global, CallFrame* callFrame)
-            : vm(global)
-            , oldCallFrame(global.topCallFrame) 
+        TopCallFrameSetter(VM& currentVM, CallFrame* callFrame)
+            : vm(currentVM)
+            , oldCallFrame(currentVM.topCallFrame) 
         {
-            global.topCallFrame = callFrame;
+            ASSERT(!callFrame->hasHostCallFrameFlag());
+            currentVM.topCallFrame = callFrame;
         }
         
         ~TopCallFrameSetter() 
         {
+            ASSERT(!oldCallFrame->hasHostCallFrameFlag());
             vm.topCallFrame = oldCallFrame;
         }
     private:
@@ -150,11 +155,12 @@ namespace JSC {
     
     class NativeCallFrameTracer {
     public:
-        ALWAYS_INLINE NativeCallFrameTracer(VM* global, CallFrame* callFrame)
+        ALWAYS_INLINE NativeCallFrameTracer(VM* vm, CallFrame* callFrame)
         {
-            ASSERT(global);
+            ASSERT(vm);
             ASSERT(callFrame);
-            global->topCallFrame = callFrame;
+            ASSERT(!callFrame->hasHostCallFrameFlag());
+            vm->topCallFrame = callFrame;
         }
     };
 
@@ -208,19 +214,21 @@ namespace JSC {
         JSObject* executeConstruct(CallFrame*, JSObject* function, ConstructType, const ConstructData&, const ArgList&);
         JSValue execute(EvalExecutable*, CallFrame*, JSValue thisValue, JSScope*);
 
-        JSValue retrieveArgumentsFromVMCode(CallFrame*, JSFunction*) const;
-        JSValue retrieveCallerFromVMCode(CallFrame*, JSFunction*) const;
-        JS_EXPORT_PRIVATE void retrieveLastCaller(CallFrame*, int& lineNumber, intptr_t& sourceID, String& sourceURL, JSValue& function) const;
-        
         void getArgumentsData(CallFrame*, JSFunction*&, ptrdiff_t& firstParameterIndex, Register*& argv, int& argc);
         
         SamplingTool* sampler() { return m_sampler.get(); }
 
+        bool isInErrorHandlingMode() { return m_errorHandlingModeReentry; }
+
         NEVER_INLINE HandlerInfo* throwException(CallFrame*&, JSValue&, unsigned bytecodeOffset);
         NEVER_INLINE void debug(CallFrame*, DebugHookID, int firstLine, int lastLine, int column);
-        static const String getTraceLine(CallFrame*, StackFrameCodeType, const String&, int);
-        JS_EXPORT_PRIVATE static void getStackTrace(VM*, Vector<StackFrame>& results, size_t maxStackSize = std::numeric_limits<size_t>::max());
         static void addStackTraceIfNecessary(CallFrame*, JSValue error);
+        JSString* stackTraceAsString(ExecState*, Vector<StackFrame>);
+
+        static EncodedJSValue JSC_HOST_CALL constructWithErrorConstructor(ExecState*);
+        static EncodedJSValue JSC_HOST_CALL callErrorConstructor(ExecState*);
+        static EncodedJSValue JSC_HOST_CALL constructWithNativeErrorConstructor(ExecState*);
+        static EncodedJSValue JSC_HOST_CALL callNativeErrorConstructor(ExecState*);
 
         void dumpSampleData(ExecState* exec);
         void startSampling();
@@ -229,25 +237,14 @@ namespace JSC {
         JS_EXPORT_PRIVATE void dumpCallFrame(CallFrame*);
 
     private:
-        class StackPolicy {
-        public:
-            StackPolicy(Interpreter&, const StackBounds&);
-            inline size_t requiredCapacity() { return m_requiredCapacity; }
-
-        private:
-            Interpreter& m_interpreter;
-            size_t m_requiredCapacity;
-        };
-
         enum ExecutionFlag { Normal, InitializeAndReturn };
 
         CallFrameClosure prepareForRepeatCall(FunctionExecutable*, CallFrame*, JSFunction*, int argumentCountIncludingThis, JSScope*);
         void endRepeatCall(CallFrameClosure&);
         JSValue execute(CallFrameClosure&);
 
-        NEVER_INLINE bool unwindCallFrame(CallFrame*&, JSValue, unsigned& bytecodeOffset, CodeBlock*&);
-
-        static CallFrame* findFunctionCallFrameFromVMCode(CallFrame*, JSFunction*);
+        void getStackTrace(Vector<StackFrame>& results, size_t maxStackSize = std::numeric_limits<size_t>::max());
+        NEVER_INLINE bool unwindCallFrame(StackIterator&, JSValue);
 
         void dumpRegisters(CallFrame*);
         
@@ -257,6 +254,7 @@ namespace JSC {
         int m_sampleEntryDepth;
         OwnPtr<SamplingTool> m_sampler;
 
+        VM& m_vm;
         JSStack m_stack;
         int m_errorHandlingModeReentry;
         
@@ -269,12 +267,6 @@ namespace JSC {
         bool m_initialized;
 #endif
     };
-
-    // This value must not be an object that would require this conversion (WebCore's global object).
-    inline bool isValidThisObject(JSValue thisValue, ExecState* exec)
-    {
-        return !thisValue.isObject() || thisValue.toThisObject(exec) == thisValue;
-    }
 
     JSValue eval(CallFrame*);
     CallFrame* loadVarargs(CallFrame*, JSStack*, JSValue thisValue, JSValue arguments, int firstFreeRegister);

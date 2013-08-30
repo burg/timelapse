@@ -98,6 +98,15 @@ LayoutUnit RenderTextControlSingleLine::computeLogicalHeightLimit() const
     return containerElement() ? contentLogicalHeight() : logicalHeight();
 }
 
+static void setNeedsLayoutOnAncestors(RenderObject* start, RenderObject* ancestor)
+{
+    ASSERT(start != ancestor);
+    for (RenderObject* renderer = start; renderer != ancestor; renderer = renderer->parent()) {
+        ASSERT(renderer);
+        renderer->setNeedsLayout(true, MarkOnlyThis);
+    }
+}
+
 void RenderTextControlSingleLine::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
@@ -119,11 +128,11 @@ void RenderTextControlSingleLine::layout()
     // To ensure consistency between layouts, we need to reset any conditionally overriden height.
     if (innerTextRenderer && !innerTextRenderer->style()->logicalHeight().isAuto()) {
         innerTextRenderer->style()->setLogicalHeight(Length(Auto));
-        innerTextRenderer->setNeedsLayout(true, MarkOnlyThis);
+        setNeedsLayoutOnAncestors(innerTextRenderer, this);
     }
     if (innerBlockRenderer && !innerBlockRenderer->style()->logicalHeight().isAuto()) {
         innerBlockRenderer->style()->setLogicalHeight(Length(Auto));
-        innerBlockRenderer->setNeedsLayout(true, MarkOnlyThis);
+        setNeedsLayoutOnAncestors(innerBlockRenderer, this);
     }
 
     RenderBlock::layoutBlock(false);
@@ -255,7 +264,7 @@ void RenderTextControlSingleLine::styleDidChange(StyleDifference diff, const Ren
     }
     RenderObject* innerTextRenderer = innerTextElement()->renderer();
     if (innerTextRenderer && diff == StyleDifferenceLayout)
-        innerTextRenderer->setNeedsLayout(true, MarkOnlyThis);
+        innerTextRenderer->setNeedsLayout(true, MarkContainingBlockChain);
     if (HTMLElement* placeholder = inputElement()->placeholderElement())
         placeholder->setInlineStyleProperty(CSSPropertyTextOverflow, textShouldBeTruncated() ? CSSValueEllipsis : CSSValueClip);
     setHasOverflowClip(false);
@@ -275,9 +284,9 @@ void RenderTextControlSingleLine::capsLockStateMayHaveChanged()
 
     if (Frame* frame = document()->frame())
         shouldDrawCapsLockIndicator = inputElement()->isPasswordField()
-                                      && frame->selection()->isFocusedAndActive()
-                                      && document()->focusedElement() == node()
-                                      && PlatformKeyboardEvent::currentCapsLockState();
+            && frame->selection().isFocusedAndActive()
+            && document()->focusedElement() == node()
+            && PlatformKeyboardEvent::currentCapsLockState();
 
     if (shouldDrawCapsLockIndicator != m_shouldDrawCapsLockIndicator) {
         m_shouldDrawCapsLockIndicator = shouldDrawCapsLockIndicator;
@@ -337,15 +346,8 @@ LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charW
     if (maxCharWidth > 0.f)
         result += maxCharWidth - charWidth;
 
-    if (includesDecoration) {
-        HTMLElement* spinButton = innerSpinButtonElement();
-        if (RenderBox* spinRenderer = spinButton ? spinButton->renderBox() : 0) {
-            result += spinRenderer->borderAndPaddingLogicalWidth();
-            // Since the width of spinRenderer is not calculated yet, spinRenderer->logicalWidth() returns 0.
-            // So computedStyle()->logicalWidth() is used instead.
-            result += spinButton->computedStyle()->logicalWidth().value();
-        }
-    }
+    if (includesDecoration)
+        result += inputElement()->decorationWidth();
 
     return result;
 }

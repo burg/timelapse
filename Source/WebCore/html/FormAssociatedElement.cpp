@@ -108,8 +108,8 @@ HTMLFormElement* FormAssociatedElement::findAssociatedForm(const HTMLElement* el
         // treeScope()->getElementById() over the given element.
         HTMLFormElement* newForm = 0;
         Element* newFormCandidate = element->treeScope()->getElementById(formId);
-        if (newFormCandidate && newFormCandidate->hasTagName(formTag))
-            newForm = static_cast<HTMLFormElement*>(newFormCandidate);
+        if (newFormCandidate && isHTMLFormElement(newFormCandidate))
+            newForm = toHTMLFormElement(newFormCandidate);
         return newForm;
     }
 
@@ -179,7 +179,8 @@ void FormAssociatedElement::formAttributeChanged()
         m_formAttributeTargetObserver = nullptr;
     } else {
         resetFormOwner();
-        resetFormAttributeTargetObserver();
+        if (element->inDocument())
+            resetFormAttributeTargetObserver();
     }
 }
 

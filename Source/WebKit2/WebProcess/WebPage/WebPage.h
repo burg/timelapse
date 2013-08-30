@@ -190,7 +190,7 @@ public:
 
     void scrollMainFrameIfNotAtMaxScrollPosition(const WebCore::IntSize& scrollOffset);
 
-    void scrollBy(uint32_t scrollDirection, uint32_t scrollGranularity);
+    bool scrollBy(uint32_t scrollDirection, uint32_t scrollGranularity);
 
     void centerSelectionInVisibleArea();
 
@@ -235,7 +235,7 @@ public:
     WebColorChooser* activeColorChooser() const { return m_activeColorChooser; }
     void setActiveColorChooser(WebColorChooser*);
     void didChooseColor(const WebCore::Color&);
-    void didEndColorChooser();
+    void didEndColorPicker();
 #endif
 
     WebOpenPanelResultListener* activeOpenPanelResultListener() const { return m_activeOpenPanelResultListener.get(); }
@@ -272,8 +272,6 @@ public:
 #if ENABLE(FULLSCREEN_API)
     InjectedBundlePageFullScreenClient& injectedBundleFullScreenClient() { return m_fullScreenClient; }
 #endif
-
-    void setUnderlayPage(PassRefPtr<WebPage> underlayPage) { m_underlayPage = underlayPage; }
 
     bool findStringFromInjectedBundle(const String&, FindOptions);
 
@@ -368,8 +366,6 @@ public:
     void setBottomOverhangImage(PassRefPtr<WebImage>);
 
     void updateHeaderAndFooterLayersForDeviceScaleChange(float scaleFactor);
-
-    void containsPluginViewsWithPluginProcessToken(uint64_t plugInProcessToken, uint64_t callbackID);
 #endif // PLATFORM(MAC)
 
     bool windowIsFocused() const;
@@ -384,6 +380,8 @@ public:
     void setFooterPageBanner(PassRefPtr<PageBanner>);
     PageBanner* footerPageBanner();
 
+    void hidePageBanners();
+    void showPageBanners();
 
     WebCore::IntPoint screenToWindow(const WebCore::IntPoint&);
     WebCore::IntRect windowToScreen(const WebCore::IntRect&);
@@ -483,7 +481,7 @@ public:
     void getDataSelectionForPasteboard(const WTF::String pasteboardType, SharedMemory::Handle& handle, uint64_t& size);
     void shouldDelayWindowOrderingEvent(const WebKit::WebMouseEvent&, bool& result);
     void acceptsFirstMouse(int eventNumber, const WebKit::WebMouseEvent&, bool& result);
-    bool performNonEditingBehaviorForSelector(const String&);
+    bool performNonEditingBehaviorForSelector(const String&, WebCore::KeyboardEvent*);
     void insertDictatedText(const String& text, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, const Vector<WebCore::DictationAlternative>& dictationAlternativeLocations, bool& handled, EditorState& newState);
 #elif PLATFORM(EFL)
     void confirmComposition(const String& compositionString);
@@ -550,8 +548,6 @@ public:
     void setMediaVolume(float);
     void setMayStartMediaWhenInWindow(bool);
 
-    bool mainFrameHasCustomRepresentation() const;
-
     void didChangeScrollOffsetForMainFrame();
 
     void mainFrameDidLayout();
@@ -611,7 +607,6 @@ public:
     uint64_t nativeWindowHandle() { return m_nativeWindowHandle; }
 #endif
 
-    bool shouldUseCustomRepresentationForResponse(const WebCore::ResourceResponse&);
     bool canPluginHandleResponse(const WebCore::ResourceResponse& response);
 
     bool asynchronousPluginInitializationEnabled() const { return m_asynchronousPluginInitializationEnabled; }
@@ -639,8 +634,11 @@ public:
 
     bool mainFrameIsScrollable() const { return m_mainFrameIsScrollable; }
 
-    void setMinimumLayoutWidth(double);
-    double minimumLayoutWidth() const { return m_minimumLayoutWidth; }
+    void setMinimumLayoutSize(const WebCore::IntSize&);
+    WebCore::IntSize minimumLayoutSize() const { return m_minimumLayoutSize; }
+
+    void setAutoSizingShouldExpandToViewHeight(bool shouldExpand);
+    bool autoSizingShouldExpandToViewHeight() { return m_autoSizingShouldExpandToViewHeight; }
 
     bool canShowMIMEType(const String& MIMEType) const;
 
@@ -659,6 +657,12 @@ public:
     void stopExtendingIncrementalRenderingSuppression(unsigned token);
     bool shouldExtendIncrementalRenderingSuppression() { return !m_activeRenderingSuppressionTokens.isEmpty(); }
 
+    WebCore::ScrollPinningBehavior scrollPinningBehavior() { return m_scrollPinningBehavior; }
+    void setScrollPinningBehavior(uint32_t /* WebCore::ScrollPinningBehavior */ pinning);
+
+    WKTypeRef pageOverlayCopyAccessibilityAttributeValue(WKStringRef attribute, WKTypeRef parameter);
+    WKArrayRef pageOverlayCopyAccessibilityAttributesNames(bool parameterizedNames);
+    
 private:
     WebPage(uint64_t pageID, const WebPageCreationParameters&);
 
@@ -705,7 +709,7 @@ private:
     void setFocused(bool);
     void setInitialFocus(bool forward, bool isKeyboardEventValid, const WebKeyboardEvent&);
     void setWindowResizerSize(const WebCore::IntSize&);
-    void setIsInWindow(bool);
+    void setIsInWindow(bool isInWindow, bool wantsDidUpdateViewInWindowState = false);
     void validateCommand(const String&, uint64_t);
     void executeEditCommand(const String&);
 
@@ -725,8 +729,8 @@ private:
     void contextMenuHidden() { m_isShowingContextMenu = false; }
 #endif
 
-    static void scroll(WebCore::Page*, WebCore::ScrollDirection, WebCore::ScrollGranularity);
-    static void logicalScroll(WebCore::Page*, WebCore::ScrollLogicalDirection, WebCore::ScrollGranularity);
+    static bool scroll(WebCore::Page*, WebCore::ScrollDirection, WebCore::ScrollGranularity);
+    static bool logicalScroll(WebCore::Page*, WebCore::ScrollLogicalDirection, WebCore::ScrollGranularity);
 
     uint64_t restoreSession(const SessionState&);
     void restoreSessionAndNavigateToCurrentItem(const SessionState&);
@@ -778,7 +782,7 @@ private:
     void drawPagesToPDFFromPDFDocument(CGContextRef, PDFDocument *, const PrintInfo&, uint32_t first, uint32_t count);
 #endif
 
-    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect);
+    void viewExposedRectChanged(const WebCore::FloatRect& exposedRect, bool clipsToExposedRect);
     void setMainFrameIsScrollable(bool);
 
     void unapplyEditCommand(uint64_t commandID);
@@ -792,7 +796,7 @@ private:
     void hideFindUI();
     void countStringMatches(const String&, uint32_t findOptions, uint32_t maxMatchCount);
 
-#if PLATFORM(QT)
+#if USE(COORDINATED_GRAPHICS)
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize& area);
 #endif
 
@@ -856,6 +860,7 @@ private:
     OwnPtr<DrawingArea> m_drawingArea;
 
     HashSet<PluginView*> m_pluginViews;
+    bool m_hasSeenPlugin;
 
     HashMap<uint64_t, RefPtr<WebCore::TextCheckingRequest>> m_pendingTextCheckingRequestMap;
 
@@ -882,6 +887,7 @@ private:
 #if ENABLE(PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
     bool m_readyToFindPrimarySnapshottedPlugin;
     bool m_didFindPrimarySnapshottedPlugin;
+    unsigned m_numberOfPrimarySnapshotDetectionAttempts;
     String m_primaryPlugInPageOrigin;
     String m_primaryPlugInOrigin;
     String m_primaryPlugInMimeType;
@@ -955,8 +961,6 @@ private:
 #endif
     PageOverlayList m_pageOverlays;
 
-    RefPtr<WebPage> m_underlayPage;
-
 #if ENABLE(INSPECTOR)
     RefPtr<WebInspector> m_inspector;
 #endif
@@ -1002,7 +1006,8 @@ private:
 
     unsigned m_cachedPageCount;
 
-    double m_minimumLayoutWidth;
+    WebCore::IntSize m_minimumLayoutSize;
+    bool m_autoSizingShouldExpandToViewHeight;
 
 #if ENABLE(CONTEXT_MENUS)
     bool m_isShowingContextMenu;
@@ -1018,11 +1023,12 @@ private:
 #endif
     WebInspectorClient* m_inspectorClient;
 
-    HashSet<String, CaseFoldingHash> m_mimeTypesWithCustomRepresentations;
     WebCore::Color m_backgroundColor;
 
     HashSet<unsigned> m_activeRenderingSuppressionTokens;
     unsigned m_maximumRenderingSuppressionToken;
+    
+    WebCore::ScrollPinningBehavior m_scrollPinningBehavior;
 };
 
 } // namespace WebKit

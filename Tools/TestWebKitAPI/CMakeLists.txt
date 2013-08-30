@@ -18,7 +18,28 @@ include_directories(${CMAKE_BINARY_DIR}
     ${WEBKIT2_DIR}/Shared/API/c
     ${WEBKIT2_DIR}/Shared/Plugins
     ${WEBKIT2_DIR}/UIProcess
+    ${WEBKIT2_DIR}/WebProcess/InjectedBundle
+    ${WEBKIT2_DIR}/WebProcess/InjectedBundle/API/c
     ${WTF_DIR}
+)
+
+set(test_wtf_LIBRARIES
+    WTF
+    gtest
+)
+
+set(test_webcore_LIBRARIES
+    gtest
+    WTF
+    WebCore
+)
+
+set(test_webkit2_api_LIBRARIES
+    TestWebKitAPIBase
+    WTF
+    JavaScriptCore
+    WebKit2
+    gtest
 )
 
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
@@ -29,6 +50,7 @@ add_library(TestWebKitAPIInjectedBundle SHARED
     ${TESTWEBKITAPI_DIR}/InjectedBundleMain.cpp
     ${TESTWEBKITAPI_DIR}/PlatformUtilities.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/CanHandleRequest_Bundle.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WebKit2/DidAssociateFormControls_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/DOMWindowExtensionBasic_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/DOMWindowExtensionNoCache_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/DocumentStartUserScriptAlertCrash_Bundle.cpp
@@ -48,22 +70,23 @@ add_library(TestWebKitAPIInjectedBundle SHARED
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/ShouldGoToBackForwardListItem_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/UserMessage_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKConnection_Bundle.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WillLoad_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WillSendSubmitEvent_Bundle.cpp
 )
 
-target_link_libraries(TestWebKitAPIInjectedBundle WTF)
-add_dependencies(TestWebKitAPIInjectedBundle WebKit2 ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
+set(TestWebKitAPI_LIBRARIES
+    WTF
+    WebKit2
+)
+
+target_link_libraries(TestWebKitAPIInjectedBundle ${TestWebKitAPI_LIBRARIES})
+add_dependencies(TestWebKitAPIInjectedBundle ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
 
 get_property(TestWebKitAPIInjectedBundle_PATH TARGET TestWebKitAPIInjectedBundle PROPERTY LOCATION)
 
 add_definitions(-DGTEST_LINKED_AS_SHARED_LIBRARY=1
     -DTEST_WEBKIT2_RESOURCES_DIR=\"${TESTWEBKITAPI_DIR}/Tests/WebKit2\"
     -DTEST_INJECTED_BUNDLE_PATH=\"${TestWebKitAPIInjectedBundle_PATH}\"
-)
-
-set(test_wtf_LIBRARIES
-    WTF
-    gtest
 )
 
 add_executable(test_wtf
@@ -98,12 +121,6 @@ add_dependencies(test_wtf ${ForwardingHeadersForTestWebKitAPI_NAME} ${Forwarding
 add_test(test_wtf ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_wtf)
 set_tests_properties(test_wtf PROPERTIES TIMEOUT 60)
 
-set(test_webcore_LIBRARIES
-    gtest
-    WTF
-    WebCore
-)
-
 foreach (testName ${test_webcore_BINARIES})
     add_executable(test_webcore_${testName} ${test_main_SOURCES} ${TESTWEBKITAPI_DIR}/TestsController.cpp ${TESTWEBKITAPI_DIR}/Tests/WebCore/${testName}.cpp)
     add_test(test_webcore_${testName} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/test_webcore_${testName})
@@ -120,14 +137,6 @@ add_library(TestWebKitAPIBase
 )
 
 add_dependencies(TestWebKitAPIBase WebKit2 ${ForwardingHeadersForTestWebKitAPI_NAME} ${ForwardingNetworkHeadersForTestWebKitAPI_NAME})
-
-set(test_webkit2_api_LIBRARIES
-    TestWebKitAPIBase
-    WTF
-    JavaScriptCore
-    WebKit2
-    gtest
-)
 
 foreach (testName ${test_webkit2_api_BINARIES})
     get_filename_component(testBaseName ${testName} NAME)

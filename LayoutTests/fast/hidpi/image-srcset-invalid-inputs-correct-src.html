@@ -1,0 +1,13 @@
+<html>
+<head>
+<script>
+var targetScaleFactor = 1;
+</script>
+<script src="resources/srcset-helper.js"></script>
+</head>
+
+<body id="body">
+    <div>This test passes if this img tag below is a green square when the scale factor is 1. It ensures that invalid inputs from srcset are ignored, and src is selected (when it makes sense)</div>
+    <img height="100" width="100" src="resources/green-200-px-square.png" srcset="1x,,  ,      , 2x ,,"></img>
+</body>
+</html>

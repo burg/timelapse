@@ -88,15 +88,14 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext* scriptExecutionContext,
         args.append(jsStringWithCache(exec, errorEvent->message()));
         args.append(jsStringWithCache(exec, errorEvent->filename()));
         args.append(jsNumber(errorEvent->lineno()));
+        args.append(jsNumber(errorEvent->colno()));
 
         VM& vm = globalObject->vm();
         DynamicGlobalObjectScope globalObjectScope(vm, vm.dynamicGlobalObject ? vm.dynamicGlobalObject : globalObject);
 
-        JSValue thisValue = globalObject->methodTable()->toThisObject(globalObject, exec);
-
         JSValue returnValue = scriptExecutionContext->isDocument()
-            ? JSMainThreadExecState::call(exec, jsFunction, callType, callData, thisValue, args)
-            : JSC::call(exec, jsFunction, callType, callData, thisValue, args);
+            ? JSMainThreadExecState::call(exec, jsFunction, callType, callData, globalObject, args)
+            : JSC::call(exec, jsFunction, callType, callData, globalObject, args);
 
         globalObject->setCurrentEvent(savedEvent);
 

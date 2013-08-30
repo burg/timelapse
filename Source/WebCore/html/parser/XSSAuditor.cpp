@@ -27,25 +27,18 @@
 #include "config.h"
 #include "XSSAuditor.h"
 
-#include "Console.h"
 #include "ContentSecurityPolicy.h"
-#include "DOMWindow.h"
 #include "DecodeEscapeSequences.h"
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "FormData.h"
-#include "FormDataList.h"
 #include "Frame.h"
-#include "FrameLoaderClient.h"
 #include "HTMLDocumentParser.h"
 #include "HTMLNames.h"
-#include "HTMLTokenizer.h"
 #include "HTMLParamElement.h"
 #include "HTMLParserIdioms.h"
-#include "InspectorInstrumentation.h"
 #include "InspectorValues.h"
 #include "KURL.h"
-#include "PingLoader.h"
 #include "Settings.h"
 #include "TextEncoding.h"
 #include "TextResourceDecoder.h"
@@ -56,9 +49,7 @@
 #include "SVGNames.h"
 #endif
 
-#include <wtf/Functional.h>
 #include <wtf/MainThread.h>
-#include <wtf/text/CString.h>
 
 namespace WebCore {
 
@@ -248,8 +239,7 @@ void XSSAuditor::init(Document* document, XSSAuditorDelegate* auditorDelegate)
     m_state = Initialized;
 
     if (Frame* frame = document->frame())
-        if (Settings* settings = frame->settings())
-            m_isEnabled = settings->xssAuditorEnabled();
+        m_isEnabled = frame->settings().xssAuditorEnabled();
 
     if (!m_isEnabled)
         return;
@@ -282,7 +272,7 @@ void XSSAuditor::init(Document* document, XSSAuditorDelegate* auditorDelegate)
         m_decodedURL = String();
 
     String httpBodyAsString;
-    if (DocumentLoader* documentLoader = document->frame()->loader()->documentLoader()) {
+    if (DocumentLoader* documentLoader = document->frame()->loader().documentLoader()) {
         DEFINE_STATIC_LOCAL(String, XSSProtectionHeader, (ASCIILiteral("X-XSS-Protection")));
         String headerValue = documentLoader->response().httpHeaderField(XSSProtectionHeader);
         String errorDetails;

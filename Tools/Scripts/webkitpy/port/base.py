@@ -606,8 +606,8 @@ class Port(object):
         return [self.relative_test_filename(f) for f in files]
 
     # When collecting test cases, we include any file with these extensions.
-    _supported_test_extensions = set(['.html', '.shtml', '.xml', '.xhtml', '.pl', '.htm', '.php', '.svg', '.mht'])
-    _supported_reference_extensions = set(['.html', '.xml', '.xhtml', '.htm', '.svg'])
+    _supported_test_extensions = set(['.html', '.shtml', '.xml', '.xhtml', '.pl', '.htm', '.php', '.svg', '.mht', '.xht'])
+    _supported_reference_extensions = set(['.html', '.xml', '.xhtml', '.htm', '.svg', '.xht'])
 
     @staticmethod
     # If any changes are made here be sure to update the isUsedInReftest method in old-run-webkit-tests as well.
@@ -881,6 +881,7 @@ class Port(object):
             'LD_LIBRARY_PATH',
             'DBUS_SESSION_BUS_ADDRESS',
             'XDG_DATA_DIRS',
+            'XDG_RUNTIME_DIR',
 
             # Darwin:
             'DYLD_LIBRARY_PATH',
@@ -896,7 +897,7 @@ class Port(object):
 
             # Most ports (?):
             'WEBKIT_TESTFONTS',
-            'WEBKITOUTPUTDIR',
+            'WEBKIT_OUTPUTDIR',
 
             # Chromium:
             'CHROME_DEVEL_SANDBOX',

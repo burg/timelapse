@@ -66,7 +66,7 @@ struct EntityDescription {
 // FIXME: Noncopyable?
 class MarkupAccumulator {
 public:
-    MarkupAccumulator(Vector<Node*>*, EAbsoluteURLs, const Range* = 0);
+    MarkupAccumulator(Vector<Node*>*, EAbsoluteURLs, const Range* = 0, EFragmentSerialization = HTMLFragmentSerialization);
     virtual ~MarkupAccumulator();
 
     String serializeNodes(Node* targetNode, Node* nodeToSkip, EChildrenOnly);
@@ -88,7 +88,7 @@ protected:
     void appendNodeValue(StringBuilder&, const Node*, const Range*, EntityMask);
     bool shouldAddNamespaceElement(const Element*);
     bool shouldAddNamespaceAttribute(const Attribute&, Namespaces&);
-    void appendNamespace(StringBuilder&, const AtomicString& prefix, const AtomicString& namespaceURI, Namespaces&);
+    void appendNamespace(StringBuilder&, const AtomicString& prefix, const AtomicString& namespaceURI, Namespaces&, bool allowEmptyDefaultNS = false);
     EntityMask entityMaskForText(Text*) const;
     virtual void appendText(StringBuilder&, Text*);
     void appendXMLDeclaration(StringBuilder&, const Document*);
@@ -111,9 +111,11 @@ private:
     String resolveURLIfNeeded(const Element*, const String&) const;
     void appendQuotedURLAttributeValue(StringBuilder&, const Element*, const Attribute&);
     void serializeNodesWithNamespaces(Node* targetNode, Node* nodeToSkip, EChildrenOnly, const Namespaces*, Vector<QualifiedName>* tagNamesToSkip);
+    bool inXMLFragmentSerialization() const { return m_fragmentSerialization == XMLFragmentSerialization; }
 
     StringBuilder m_markup;
     const EAbsoluteURLs m_resolveURLsMethod;
+    EFragmentSerialization m_fragmentSerialization;
 };
 
 }

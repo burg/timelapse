@@ -103,7 +103,7 @@ static HashSet<Page*>* allPages;
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 
-static void networkStateChanged()
+static void networkStateChanged(bool isOnLine)
 {
     Vector<RefPtr<Frame> > frames;
 
@@ -115,7 +115,7 @@ static void networkStateChanged()
         InspectorInstrumentation::networkStateChanged(*it);
     }
 
-    AtomicString eventName = networkStateNotifier().onLine() ? eventNames().onlineEvent : eventNames().offlineEvent;
+    AtomicString eventName = isOnLine ? eventNames().onlineEvent : eventNames().offlineEvent;
     for (unsigned i = 0; i < frames.size(); i++)
         frames[i]->document()->dispatchWindowEvent(Event::create(eventName, false, false));
 }
@@ -189,7 +189,6 @@ Page::Page(PageClients& pageClients)
 #if ENABLE(PAGE_VISIBILITY_API)
     , m_visibilityState(PageVisibilityStateVisible)
 #endif
-    , m_displayID(0)
     , m_requestedLayoutMilestones(0)
     , m_headerHeight(0)
     , m_footerHeight(0)
@@ -201,13 +200,15 @@ Page::Page(PageClients& pageClients)
     , m_scriptedAnimationsSuspended(false)
     , m_pageThrottler(PageThrottler::create(this))
     , m_console(PageConsole::create(this))
+    , m_lastSpatialNavigationCandidatesCount(0) // NOTE: Only called from Internals for Spatial Navigation testing.
+    , m_framesHandlingBeforeUnloadEvent(0)
 {
     ASSERT(m_editorClient);
 
     if (!allPages) {
         allPages = new HashSet<Page*>;
-
-        networkStateNotifier().setNetworkStateChangedFunction(networkStateChanged);
+        
+        networkStateNotifier().addNetworkStateChangeListener(networkStateChanged);
     }
 
     ASSERT(!allPages->contains(this));
@@ -247,8 +248,8 @@ Page::~Page()
 #ifndef NDEBUG
     pageCounter.decrement();
 #endif
-    m_pageThrottler->clearPage();
 
+    m_pageThrottler.clear();
 }
 
 ArenaSize Page::renderTreeSize() const
@@ -438,10 +439,10 @@ void Page::goToItem(HistoryItem* item, FrameLoadType type)
     // being deref()-ed. Make sure we can still use it with HistoryController::goToItem later.
     RefPtr<HistoryItem> protector(item);
 
-    if (m_mainFrame->loader()->history()->shouldStopLoadingForHistoryItem(item))
-        m_mainFrame->loader()->stopAllLoaders();
+    if (m_mainFrame->loader().history()->shouldStopLoadingForHistoryItem(item))
+        m_mainFrame->loader().stopAllLoaders();
 
-    m_mainFrame->loader()->history()->goToItem(item, type);
+    m_mainFrame->loader().history()->goToItem(item, type);
 }
 
 int Page::getHistoryLength()
@@ -522,13 +523,13 @@ void Page::refreshPlugins(bool reload)
             continue;
 
         for (Frame* frame = (*it)->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-            if (frame->loader()->subframeLoader()->containsPlugins())
+            if (frame->loader().subframeLoader()->containsPlugins())
                 framesNeedingReload.append(frame);
         }
     }
 
     for (size_t i = 0; i < framesNeedingReload.size(); ++i)
-        framesNeedingReload[i]->loader()->reload();
+        framesNeedingReload[i]->loader().reload();
 }
 
 PluginData* Page::pluginData() const
@@ -580,13 +581,13 @@ bool Page::findString(const String& target, FindOptions options)
         return false;
 
     bool shouldWrap = options & WrapAround;
-    Frame* frame = focusController()->focusedOrMainFrame();
+    Frame* frame = focusController().focusedOrMainFrame();
     Frame* startFrame = frame;
     do {
         if (frame->editor().findString(target, (options & ~WrapAround) | StartInSelection)) {
             if (frame != startFrame)
-                startFrame->selection()->clear();
-            focusController()->setFocusedFrame(frame);
+                startFrame->selection().clear();
+            focusController().setFocusedFrame(frame);
             return true;
         }
         frame = incrementFrame(frame, !(options & Backwards), shouldWrap);
@@ -594,9 +595,9 @@ bool Page::findString(const String& target, FindOptions options)
 
     // Search contents of startFrame, on the other side of the selection that we did earlier.
     // We cheat a bit and just research with wrap on
-    if (shouldWrap && !startFrame->selection()->isNone()) {
+    if (shouldWrap && !startFrame->selection().isNone()) {
         bool found = startFrame->editor().findString(target, options | WrapAround | StartInSelection);
-        focusController()->setFocusedFrame(frame);
+        focusController().setFocusedFrame(frame);
         return found;
     }
 
@@ -613,7 +614,7 @@ void Page::findStringMatchingRanges(const String& target, FindOptions options, i
     Frame* frameWithSelection = 0;
     do {
         frame->editor().countMatchesForText(target, 0, options, limit ? (limit - matchRanges->size()) : 0, true, matchRanges);
-        if (frame->selection()->isRange())
+        if (frame->selection().isRange())
             frameWithSelection = frame;
         frame = incrementFrame(frame, true, false);
     } while (frame);
@@ -622,14 +623,28 @@ void Page::findStringMatchingRanges(const String& target, FindOptions options, i
         return;
 
     if (frameWithSelection) {
-        indexForSelection = NoMatchBeforeUserSelection;
-        RefPtr<Range> selectedRange = frameWithSelection->selection()->selection().firstRange();
-        for (size_t i = 0; i < matchRanges->size(); ++i) {
-            if (selectedRange->compareBoundaryPoints(Range::START_TO_END, matchRanges->at(i).get(), IGNORE_EXCEPTION) < 0) {
-                indexForSelection = i;
-                break;
+        indexForSelection = NoMatchAfterUserSelection;
+        RefPtr<Range> selectedRange = frameWithSelection->selection().selection().firstRange();
+        if (options & Backwards) {
+            for (size_t i = matchRanges->size(); i > 0; --i) {
+                if (selectedRange->compareBoundaryPoints(Range::END_TO_START, matchRanges->at(i - 1).get(), IGNORE_EXCEPTION) > 0) {
+                    indexForSelection = i - 1;
+                    break;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < matchRanges->size(); ++i) {
+                if (selectedRange->compareBoundaryPoints(Range::START_TO_END, matchRanges->at(i).get(), IGNORE_EXCEPTION) < 0) {
+                    indexForSelection = i;
+                    break;
+                }
             }
         }
+    } else {
+        if (options & Backwards)
+            indexForSelection = matchRanges->size() - 1;
+        else
+            indexForSelection = 0;
     }
 }
 
@@ -696,14 +711,14 @@ void Page::unmarkAllTextMatches()
 
     Frame* frame = mainFrame();
     do {
-        frame->document()->markers()->removeMarkers(DocumentMarker::TextMatch);
+        frame->document()->markers().removeMarkers(DocumentMarker::TextMatch);
         frame = incrementFrame(frame, true, false);
     } while (frame);
 }
 
 const VisibleSelection& Page::selection() const
 {
-    return focusController()->focusedOrMainFrame()->selection()->selection();
+    return focusController().focusedOrMainFrame()->selection().selection();
 }
 
 void Page::setDefersLoading(bool defers)
@@ -725,7 +740,7 @@ void Page::setDefersLoading(bool defers)
 
     m_defersLoading = defers;
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext())
-        frame->loader()->setDefersLoading(defers);
+        frame->loader().setDefersLoading(defers);
 }
 
 void Page::clearUndoRedoOperations()
@@ -777,7 +792,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
         if (document->renderer())
             document->renderer()->setNeedsLayout(true);
 
-        document->recalcStyle(Node::Force);
+        document->recalcStyle(Style::Force);
 
         // Transform change on RenderView doesn't trigger repaint on non-composited contents.
         mainFrame()->view()->invalidateRect(IntRect(LayoutRect::infiniteRect()));
@@ -809,6 +824,8 @@ void Page::setDeviceScaleFactor(float scaleFactor)
 #if USE(ACCELERATED_COMPOSITING)
     if (mainFrame())
         mainFrame()->deviceOrPageScaleFactorChanged();
+
+    pageCache()->markPagesForDeviceScaleChanged(this);
 #endif
 
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext())
@@ -901,9 +918,8 @@ unsigned Page::pageCount() const
     if (m_pagination.mode == Pagination::Unpaginated)
         return 0;
 
-    FrameView* frameView = mainFrame()->view();
-    if (frameView->needsLayout())
-        frameView->layout();
+    if (Document* document = mainFrame()->document())
+        document->updateLayoutIgnorePendingStylesheets();
 
     RenderView* contentRenderer = mainFrame()->contentRenderer();
     return contentRenderer ? contentRenderer->columnCount(contentRenderer->columnInfo()) : 0;
@@ -943,16 +959,6 @@ void Page::setIsInWindow(bool isInWindow)
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (FrameView* frameView = frame->view())
             frameView->setIsInWindow(isInWindow);
-    }
-}
-
-void Page::windowScreenDidChange(PlatformDisplayID displayID)
-{
-    m_displayID = displayID;
-
-    for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-        if (frame->document())
-            frame->document()->windowScreenDidChange(displayID);
     }
 }
 
@@ -1079,7 +1085,7 @@ void Page::allVisitedStateChanged(PageGroup* group)
         if (page->m_group != group)
             continue;
         for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree()->traverseNext())
-            frame->document()->visitedLinkState()->invalidateStyleForAllLinks();
+            frame->document()->visitedLinkState().invalidateStyleForAllLinks();
     }
 }
 
@@ -1095,7 +1101,7 @@ void Page::visitedStateChanged(PageGroup* group, LinkHash linkHash)
         if (page->m_group != group)
             continue;
         for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree()->traverseNext())
-            frame->document()->visitedLinkState()->invalidateStyleForLink(linkHash);
+            frame->document()->visitedLinkState().invalidateStyleForLink(linkHash);
     }
 }
 
@@ -1116,7 +1122,7 @@ void Page::setDebugger(JSC::Debugger* debugger)
     m_debugger = debugger;
 
     for (Frame* frame = m_mainFrame.get(); frame; frame = frame->tree()->traverseNext())
-        frame->script()->attachDebugger(m_debugger);
+        frame->script().attachDebugger(m_debugger);
 }
 
 StorageNamespace* Page::sessionStorage(bool optionalCreate)
@@ -1160,7 +1166,7 @@ void Page::setMemoryCacheClientCallsEnabled(bool enabled)
         return;
 
     for (RefPtr<Frame> frame = mainFrame(); frame; frame = frame->tree()->traverseNext())
-        frame->loader()->tellClientAboutPastMemoryCacheLoads();
+        frame->loader().tellClientAboutPastMemoryCacheLoads();
 }
 
 void Page::setMinimumTimerInterval(double minimumTimerInterval)
@@ -1468,7 +1474,7 @@ void Page::addRelevantRepaintedObject(RenderObject* object, const LayoutRect& ob
         m_isCountingRelevantRepaintedObjects = false;
         resetRelevantPaintedObjectCounter();
         if (Frame* frame = mainFrame())
-            frame->loader()->didLayout(DidHitRelevantRepaintedObjectsAreaThreshold);
+            frame->loader().didLayout(DidHitRelevantRepaintedObjectsAreaThreshold);
     }
 }
 
@@ -1576,6 +1582,22 @@ void Page::captionPreferencesChanged()
         frame->document()->captionPreferencesChanged();
 }
 #endif
+
+void Page::incrementFrameHandlingBeforeUnloadEventCount()
+{
+    ++m_framesHandlingBeforeUnloadEvent;
+}
+
+void Page::decrementFrameHandlingBeforeUnloadEventCount()
+{
+    ASSERT(m_framesHandlingBeforeUnloadEvent);
+    --m_framesHandlingBeforeUnloadEvent;
+}
+
+bool Page::isAnyFrameHandlingBeforeUnloadEvent()
+{
+    return m_framesHandlingBeforeUnloadEvent;
+}
 
 Page::PageClients::PageClients()
     : alternativeTextClient(0)

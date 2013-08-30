@@ -76,6 +76,8 @@ public:
 
     virtual bool canContainRangeEndPoint() const { return false; }
 
+    virtual const AtomicString& imageSourceURL() const OVERRIDE;
+
 protected:
     HTMLImageElement(const QualifiedName&, Document*, HTMLFormElement* = 0);
 
@@ -88,7 +90,7 @@ private:
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual void didAttachRenderers() OVERRIDE;
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
 
     virtual bool canStartSelection() const;
@@ -102,15 +104,27 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
 
-#if ENABLE(MICRODATA)
-    virtual String itemValueText() const OVERRIDE;
-    virtual void setItemValueText(const String&, ExceptionCode&) OVERRIDE;
-#endif
-
     HTMLImageLoader m_imageLoader;
     HTMLFormElement* m_form;
     CompositeOperator m_compositeOperator;
+    AtomicString m_bestFitImageURL;
 };
+
+inline bool isHTMLImageElement(Node* node)
+{
+    return node->hasTagName(HTMLNames::imgTag);
+}
+
+inline bool isHTMLImageElement(Element* element)
+{
+    return element->hasTagName(HTMLNames::imgTag);
+}
+
+inline HTMLImageElement* toHTMLImageElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLImageElement(node));
+    return static_cast<HTMLImageElement*>(node);
+}
 
 } //namespace
 

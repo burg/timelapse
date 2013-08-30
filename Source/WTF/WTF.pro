@@ -21,8 +21,6 @@ wince* {
 
 HEADERS += \
     Alignment.h \
-    ArrayBuffer.h \
-    ArrayBufferView.h \
     ASCIICType.h \
     Assertions.h \
     Atomics.h \
@@ -64,8 +62,6 @@ HEADERS += \
     FeatureDefines.h \
     FilePrintStream.h \
     FixedArray.h \
-    Float32Array.h \
-    Float64Array.h \
     Forward.h \
     FunctionDispatcher.h \
     Functional.h \
@@ -79,9 +75,6 @@ HEADERS += \
     HashTable.h \
     HashTraits.h \
     HexNumber.h \
-    Int16Array.h \
-    Int32Array.h \
-    Int8Array.h \
     ListHashSet.h \
     Locker.h \
     MainThread.h \
@@ -144,6 +137,7 @@ HEADERS += \
     text/AtomicString.h \
     text/AtomicStringHash.h \
     text/AtomicStringImpl.h \
+    text/AtomicStringTable.h \
     text/Base64.h \
     text/CString.h \
     text/IntegerToStringConversion.h \
@@ -162,10 +156,6 @@ HEADERS += \
     ThreadSafeRefCounted.h \
     ThreadSpecific.h \
     TypeTraits.h \
-    Uint16Array.h \
-    Uint32Array.h \
-    Uint8Array.h \
-    Uint8ClampedArray.h \
     unicode/CharacterNames.h \
     unicode/Collator.h \
     unicode/icu/UnicodeIcu.h \
@@ -183,11 +173,10 @@ HEADERS += \
 unix: HEADERS += ThreadIdentifierDataPthreads.h
 
 SOURCES += \
-    ArrayBuffer.cpp \
-    ArrayBufferView.cpp \
     Assertions.cpp \
     Atomics.cpp \
     BitVector.cpp \
+    CompilationThread.cpp \
     CryptographicallyRandomNumber.cpp \
     CurrentTime.cpp \
     DateMath.cpp \
@@ -226,6 +215,7 @@ SOURCES += \
     RandomNumber.cpp \
     RefCountedLeakCounter.cpp \
     SHA1.cpp \
+    SixCharacterHash.cpp \
     StackBounds.cpp \
     StringPrintStream.cpp \
     TCSystemAlloc.cpp \
@@ -233,6 +223,7 @@ SOURCES += \
     TypeTraits.cpp \
     WTFThreadData.cpp \
     text/AtomicString.cpp \
+    text/AtomicStringTable.cpp \
     text/Base64.cpp \
     text/CString.cpp \
     text/StringBuilder.cpp \

@@ -69,11 +69,10 @@ public:
 private:
     HTMLOptionElement(const QualifiedName&, Document*);
 
-    virtual bool supportsFocus() const OVERRIDE;
     virtual bool isFocusable() const OVERRIDE;
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
-    virtual void attach(const AttachContext& = AttachContext()) OVERRIDE;
-    virtual void detach(const AttachContext& = AttachContext()) OVERRIDE;
+    virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
+    virtual void didAttachRenderers() OVERRIDE;
+    virtual void willDetachRenderers() OVERRIDE;
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
@@ -87,7 +86,7 @@ private:
     virtual RenderStyle* nonRendererStyle() const OVERRIDE;
     virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
 
-    void didRecalcStyle(StyleChange) OVERRIDE;
+    void didRecalcStyle(Style::Change) OVERRIDE;
 
     String collectOptionInnerText() const;
 
@@ -96,25 +95,21 @@ private:
     RefPtr<RenderStyle> m_style;
 };
 
-HTMLOptionElement* toHTMLOptionElement(Node*);
-const HTMLOptionElement* toHTMLOptionElement(const Node*);
-void toHTMLOptionElement(const HTMLOptionElement*); // This overload will catch anyone doing an unnecessary cast.
+inline bool isHTMLOptionElement(const Node* node)
+{
+    return node->hasTagName(HTMLNames::optionTag);
+}
 
-#ifdef NDEBUG
-
-// The debug versions of these, with assertions, are not inlined.
+inline bool isHTMLOptionElement(const Element* element)
+{
+    return element->hasTagName(HTMLNames::optionTag);
+}
 
 inline HTMLOptionElement* toHTMLOptionElement(Node* node)
 {
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLOptionElement(node));
     return static_cast<HTMLOptionElement*>(node);
 }
-
-inline const HTMLOptionElement* toHTMLOptionElement(const Node* node)
-{
-    return static_cast<const HTMLOptionElement*>(node);
-}
-
-#endif
 
 } // namespace
 
