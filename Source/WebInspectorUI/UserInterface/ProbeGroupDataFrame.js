@@ -23,9 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.ProbeGroupDataFrame = function(count)
+WebInspector.ProbeGroupDataFrame = function(index)
 {
-	this.count = count;
+	this.count = 0;
+	this.index = index;
 };
 
 Object.defineProperty(WebInspector.ProbeGroupDataFrame, "compare",
@@ -34,7 +35,7 @@ Object.defineProperty(WebInspector.ProbeGroupDataFrame, "compare",
 		console.assert(a instanceof WebInspector.ProbeGroupDataFrame, a);
 		console.assert(b instanceof WebInspector.ProbeGroupDataFrame, b);
 
-		return a.count - b.count;
+		return a.index - b.index;
 	}
 });
 
@@ -47,7 +48,7 @@ WebInspector.ProbeGroupDataFrame.prototype = {
 
 	get key()
 	{
-		return "%d".format(this.count);
+		return "%d".format(this.index);
 	},
 
 	addSampleForProbe: function(probe, sample)
@@ -83,6 +84,7 @@ WebInspector.ProbeGroupDataFrame.prototype = {
 
 WebInspector.ProbeGroupReplayDataFrame = function(markIndex, hitCount)
 {
+	WebInspector.ProbeGroupDataFrame.call(this, 0);
 	this.markIndex = markIndex;
 	this.hitCount = hitCount;
 };

@@ -55,7 +55,7 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 		for (var i = 0; i < probes.length; ++i) {
 			var probeId = probes[i].probeId;
 			var sample = frame[probeId];
-			if (!sample.object) {
+			if (!sample || !sample.object) {
 				cellData[probeId] = sample;
 				continue;
 			}
