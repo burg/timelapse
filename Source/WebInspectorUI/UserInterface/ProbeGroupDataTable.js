@@ -29,14 +29,14 @@ WebInspector.ProbeGroupDataTable = function(probeGroup)
 
 	this._probeGroup = probeGroup;
 	this._frames = [];
-	this._separatorIndices = [];
 	this._previousBatchId = WebInspector.ProbeGroupDataTable.SentinelValue;
 };
 
 WebInspector.ProbeGroupDataTable.Event = {
-    FrameAppended: "probe-group-frame-appended",
+    FrameInserted: "probe-group-frame-inserted",
     FrameReplaced: "probe-group-frame-replaced",
-    SeparatorAppended: "probe-group-separator-appended",
+    SeparatorInserted: "probe-group-separator-inserted",
+    SeparatorReplaced: "probe-group-separator-replaced",
 	WillRemove: "probe-group-data-table-will-remove"
 };
 
@@ -54,16 +54,15 @@ WebInspector.ProbeGroupDataTable.prototype = {
 		return this._frames.slice();
 	},
 
-	get separatorIndices()
+	get separators()
 	{
-		return this._separatorIndices.slice();
+		return this._frames.filter(function(frame) { return frame.isSeparator; });
 	},
 
 	willRemove: function()
 	{
 		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.WillRemove);
 		this._frames = [];
-		this._separatorIndices = [];
 		delete this._probeGroup;
 	},
 
@@ -119,17 +118,21 @@ WebInspector.ProbeGroupDataTable.prototype = {
 	addFrame: function(frame)
 	{
 		this._frames.push(frame);
-		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameAppended, frame);
+		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameInserted, frame);
 	},
 
 	addSeparator: function()
 	{
-		var index = this._frames.length - 1;
-		// Don't add duplicate separators.
-		if (this._separatorIndices.length && this._separatorIndices[this._separatorIndices.length - 1] === index)
+		// Separators must be associated with a frame.
+		if (!this._frames.length)
 			return;
 
-		this._separatorIndices.push(index);
-		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorAppended);
+		var previousFrame = this._frames[this._frames.length - 1];
+		// Don't send out duplicate events for adjacent separators.
+		if (previousFrame.isSeparator)
+			return;
+
+		previousFrame.isSeparator = true;
+		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorInserted, previousFrame);
 	}
 };

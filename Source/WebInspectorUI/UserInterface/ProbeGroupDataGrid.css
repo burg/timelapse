@@ -28,13 +28,8 @@
 	font-style: italic;
 }
 
-.details-section.probe-group .data-grid > .data-container tr.empty {
-	background-color: #555;
-}
-
-.details-section.probe-group .data-grid > .data-container tr.empty td {
-	height: 2px;
-	line-height: 0px;
+.details-section.probe-group .data-grid > .data-container tr.separator {
+	border-bottom: 3px solid #555;
 }
 
 .details-section.probe-group .data-grid > .data-container .selected .section * {

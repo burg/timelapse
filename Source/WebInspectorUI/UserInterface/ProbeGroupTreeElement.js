@@ -117,9 +117,9 @@ WebInspector.ProbeGroupTreeElement.prototype = {
     {
         this._dataListeners = new WebInspector.EventListenerGroup(this, "Data table event listeners");
         this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.WillRemove, this._teardownData);
-        this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.FrameAppended, this._dataUpdated);
+        this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.FrameInserted, this._dataUpdated);
         this._dataListeners.register(this._probeGroup.dataTable, WebInspector.ProbeGroupDataTable.Event.FrameReplaced, this._dataUpdated);
-        this._dataListeners.install();        
+        this._dataListeners.install();
     },
 
     _teardownData: function()

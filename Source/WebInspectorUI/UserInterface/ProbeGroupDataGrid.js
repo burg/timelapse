@@ -36,7 +36,7 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     }
     WebInspector.DataGrid.call(this, columns);
 
-    this._gridNodes = {};
+    this._frameNodes = {};
 
     this._groupListeners = new WebInspector.EventListenerGroup(this, "Static probe group data grid listeners");
     this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
@@ -221,13 +221,13 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
         var frames = this._data.frames;
         for (var i = 0; i < this._data.frames.length; ++i)
-            this._updateGridNodeForFrame(frames[i]);
+            this._updateNodeForFrame(frames[i]);
     },
 
     fadeGridNodes: function(event)
     {
-        for (var index in this._gridNodes)
-            this._gridNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
+        for (var index in this._frameNodes)
+            this._frameNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
     },
 
     // Private
@@ -239,7 +239,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
         var frames = this._data.frames;
         for (var i = 0; i < frames.length; ++i)
-            this._updateGridNodeForFrame(frames[i]);
+            this._updateNodeForFrame(frames[i]);
     },
 
     _teardownProbe: function(event)
@@ -249,7 +249,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 
         var frames = this._data.frames;
         for (var i = 0; i < frames.length; ++i)
-            this._updateGridNodeForFrame(frames[i]);
+            this._updateNodeForFrame(frames[i]);
     },
 
     _setupData: function()
@@ -257,12 +257,13 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         this._data = this._probeGroup.dataTable;
         var frames = this._data.frames;
         for (var i = 0; i < frames.length; ++i)
-            this._updateGridNodeForFrame(frames[i]);
+            this._updateNodeForFrame(frames[i]);
 
         this._dataListeners = new WebInspector.EventListenerGroup(this, "Data table event listeners");
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameAppended, this._dataFrameAppended);
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameInserted, this._dataFrameInserted);
         this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.FrameReplaced, this._dataFrameReplaced);
-        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorAppended, this._dataSeparatorAppended);
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorInserted, this._dataSeparatorInserted);
+        this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorReplaced, this._dataSeparatorReplaced);
         this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.WillRemove, this._teardownData);
         this._dataListeners.install();
     },
@@ -271,36 +272,34 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     {
         this._dataListeners.uninstall(true);
         this.removeChildren();
-        this._gridNodes = {};
+        this._frameNodes = {};
+        this._separators = {};
     },
 
-    _updateGridNodeForFrame: function(frame)
+    _updateNodeForFrame: function(frame)
     {
         console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Tried to update probe group data grid with non-frame: ", frame);
-        if (this._gridNodes[frame.key]) {
-            this._gridNodes[frame.key].updateCellsFromFrame(frame, this._probeGroup);
+        if (this._frameNodes[frame.key]) {
+            this._frameNodes[frame.key].updateCellsFromFrame(frame, this._probeGroup);
             return;
         }
 
         var node = new WebInspector.ProbeGroupDataGridNode(frame, this._probeGroup);
-        this._gridNodes[frame.key] = node;
+        this._frameNodes[frame.key] = node;
         node.dataGrid = this;
         node.createCells();
+
         var sortFunction = function(a, b) {
             return a.frame.constructor.compare(a.frame, b.frame);
         };
         var insertionIndex = insertionIndexForObjectInListSortedByFunction(node, this.children, sortFunction);
-        if (insertionIndex === this.children.length) {
-            console.log("appending node ", node);
+        if (insertionIndex === this.children.length)
             this.appendChild(node);
-        } else if (this.children[insertionIndex].frame.key === frame.key) {
-            console.log("replacing node at index ", insertionIndex);
+        else if (this.children[insertionIndex].frame.key === frame.key) {
             this.removeChild(this.children[insertionIndex]);
             this.insertChild(node, insertionIndex);
-        } else {
-            console.log("inserting node at index ", insertionIndex);
+        } else
             this.insertChild(node, insertionIndex);
-        }
 /*
         if (data.empty) {
             this.fadeGridNodes();
@@ -309,20 +308,33 @@ WebInspector.ProbeGroupDataGrid.prototype = {
 */
     },
 
-    _dataFrameAppended: function(event)
+    _updateNodeForSeparator: function(frame)
+    {
+        console.assert(this._frameNodes.hasOwnProperty(frame.key), "Tried to add separator for unknown data frame: ", frame);
+        this._frameNodes[frame.key].updateCellsForSeparator(frame, this._probeGroup);
+    },
+
+    _dataFrameInserted: function(event)
     {
         var frame = event.data;
-        this._updateGridNodeForFrame(frame);
+        this._updateNodeForFrame(frame);
     },
 
     _dataFrameReplaced: function(event)
     {
         var frame = event.data;
-        this._updateGridNodeForFrame(frame);
+        this._updateNodeForFrame(frame);
     },
 
-    _dataSeparatorAppended: function(event)
+    _dataSeparatorInserted: function(event)
     {
-        console.log("TODO: ProbeGroupDataGrid._dataSeparatorAppended()");
+        var frame = event.data;
+        this._updateNodeForSeparator(frame);
+    },
+
+    _dataSeparatorReplaced: function(event)
+    {
+        var frame = event.data;
+        this._updateNodeForSeparator(frame);
     }
 }

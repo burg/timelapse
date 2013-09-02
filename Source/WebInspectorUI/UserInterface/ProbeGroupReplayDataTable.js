@@ -29,6 +29,7 @@ WebInspector.ProbeGroupReplayDataTable = function(probeGroup)
 
 	this._previousMarkIndex = WebInspector.ProbeGroupDataTable.SentinelValue;
 	this._hitCount = WebInspector.ProbeGroupDataTable.SentinelValue;
+	this._previousFrame = null;
 };
 
 WebInspector.ProbeGroupReplayDataTable.prototype = {
@@ -55,20 +56,24 @@ WebInspector.ProbeGroupReplayDataTable.prototype = {
 			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameReplaced, frame);
 		} else {
 			this._frames.splice(insertionIndex, 0, frame);
-			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameAppended, frame);
+			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.FrameInserted, frame);
 		}
+
+		// Save the previous frame so the separator can be placed there.
+		this._previousFrame = frame;
 	},
 
 	addSeparator: function()
 	{
-		// TODO: figure out whether we are prepending, appending, or replacing.
-		var index = this._frames.length - 1;
-
-		// Don't add duplicate separators.
-		if (this._separatorIndices.length && this._separatorIndices[this._separatorIndices.length - 1] === index)
+		// Separators must be associated with a frame.
+		if (!this._previousFrame)
 			return;
 
-		this._separatorIndices.push(index);
-		this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorAppended);
+		if (this._previousFrame.isSeparator)
+			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorReplaced, this._previousFrame);
+		else {
+			this._previousFrame.isSeparator = true;
+			this.dispatchEventToListeners(WebInspector.ProbeGroupDataTable.Event.SeparatorInserted, this._previousFrame);
+		}
 	}
 };

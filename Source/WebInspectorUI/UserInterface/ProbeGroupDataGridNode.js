@@ -35,6 +35,8 @@ WebInspector.ProbeGroupDataGridNode = function(frame, probeGroup)
     this._element.classList.add("revealed");
 };
 
+WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName = "separator";
+
 WebInspector.ProbeGroupDataGridNode.prototype = {
     constructor: WebInspector.ProbeGroupDataGridNode,
     __proto__: WebInspector.DataGridNode.prototype,
@@ -44,6 +46,11 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
     updateCellsFromFrame: function(frame, probeGroup)
     {
     	this.data = this._cellDataFromFrame(frame, probeGroup);
+    },
+
+    updateCellsForSeparator: function(frame, probeGroup)
+    {
+        this._element.classList.add(WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName);
     },
 
     // Private

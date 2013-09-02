@@ -27,6 +27,7 @@ WebInspector.ProbeGroupDataFrame = function(index)
 {
 	this.count = 0;
 	this.index = index;
+	this._separator = false;
 };
 
 Object.defineProperty(WebInspector.ProbeGroupDataFrame, "compare",
@@ -49,6 +50,16 @@ WebInspector.ProbeGroupDataFrame.prototype = {
 	get key()
 	{
 		return "%d".format(this.index);
+	},
+
+	get isSeparator()
+	{
+		return this._separator;
+	},
+
+	set isSeparator(value)
+	{
+		this._separator = !!value;
 	},
 
 	addSampleForProbe: function(probe, sample)
