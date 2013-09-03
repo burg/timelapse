@@ -52,6 +52,7 @@ namespace WebCore {
     macro(NavigateToPage) \
     macro(PlaybackError) \
     macro(RanPendingScripts) \
+    macro(ReloadFrame) \
     macro(ResourceCannotShowURL) \
     macro(ResourceDidFail) \
     macro(ResourceDidFinishLoading) \

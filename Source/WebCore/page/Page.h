@@ -76,6 +76,7 @@ class HistoryItem;
 class InspectorClient;
 class InspectorController;
 class MediaCanStartListener;
+class NavigationProxy;
 class NetworkProxy;
 class Node;
 class PageActivityAssertionToken;
@@ -197,11 +198,12 @@ public:
 #if ENABLE(CONTEXT_MENUS)
     ContextMenuController& contextMenuController() const { return *m_contextMenuController; }
 #endif
-        NetworkProxy* networkProxy() const { return m_networkProxy.get(); }
-        AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
-        UserInputProxy* userInputProxy() const { return m_userInputProxy.get(); }
+    NavigationProxy* navigationProxy() const { return m_navigationProxy.get(); }
+    NetworkProxy* networkProxy() const { return m_networkProxy.get(); }
+    AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
+    UserInputProxy* userInputProxy() const { return m_userInputProxy.get(); }
 #if ENABLE(WEB_REPLAY)
-        ReplayController* replayController() const { return m_replayController.get(); }
+    ReplayController* replayController() const { return m_replayController.get(); }
 #endif
 #if ENABLE(INSPECTOR)
     InspectorController* inspectorController() const { return m_inspectorController.get(); }
@@ -459,6 +461,7 @@ private:
 #if ENABLE(CONTEXT_MENUS)
     const OwnPtr<ContextMenuController> m_contextMenuController;
 #endif
+        OwnPtr<NavigationProxy> m_navigationProxy;
         OwnPtr<NetworkProxy> m_networkProxy;
         OwnPtr<AsyncEventProxy> m_asyncEventProxy;
         OwnPtr<UserInputProxy> m_userInputProxy;

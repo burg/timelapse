@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,39 +29,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- */
-// TODO(Issue #271): remove backend-side interpretation of inputs
-WebInspector.RecordingsAgent = function() {
-    // Not implemented.
+#ifndef NavigationProxy_h
+#define NavigationProxy_h
+
+#include "ReplayProxy.h"
+#include <wtf/PassOwnPtr.h>
+#include <wtf/Noncopyable.h>
+
+namespace WebCore {
+
+class Frame;
+class ReplayController;
+
+class NavigationProxy : public ReplayProxy {
+    WTF_MAKE_NONCOPYABLE(NavigationProxy);
+
+public:
+    static PassOwnPtr<NavigationProxy> create(Page*);
+    virtual ~NavigationProxy() {}
+
+    void reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay = false);
+private:
+    NavigationProxy(Page*);
+
 };
 
-// Must be kept in sync with InspectorRecordingsAgent.h
-WebInspector.RecordingsAgent.RecordType = {
-    MousePress: "MousePress",
-    MouseRelease: "MouseRelease",
-    MouseMove: "MouseMove",
-    MouseWheel: "MouseWheel",
-    KeyPress: "KeyPress",
-    Scroll: "Scroll",
-    Resize: "Resize",
+} // namespace WebCore
 
-    WindowActive: "WindowActive",
-    WindowInactive: "WindowInactive",
-    WindowFocused: "WindowFocused",
-    WindowUnfocused: "WindowUnfocused",
-
-    RequestResource: "RequestResource",
-    ReceiveResponse: "ReceiveResponse",
-    ReceiveData: "ReceiveData",
-    ResourceLoaded: "ResourceLoaded",
-
-    TimerFire: "TimerFire",
-
-    ReloadFrame: "ReloadFrame",
-    FrameNavigated: "FrameNavigated",
-    CaptureBegin: "CaptureBegin",
-    CaptureEnd: "CaptureEnd",
-    BreakpointHit: "BreakpointHit"
-};
+#endif // NavigationProxy_h

@@ -5163,8 +5163,6 @@
 		C481091C17052FF100AB4BAA /* HandleMouseRelease.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108BD17052FF100AB4BAA /* HandleMouseRelease.h */; };
 		C481091D17052FF100AB4BAA /* HandleWheelEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108BE17052FF100AB4BAA /* HandleWheelEvent.cpp */; };
 		C481091E17052FF100AB4BAA /* HandleWheelEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108BF17052FF100AB4BAA /* HandleWheelEvent.h */; };
-		C481091F17052FF100AB4BAA /* NavigateToPage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108C017052FF100AB4BAA /* NavigateToPage.cpp */; };
-		C481092017052FF100AB4BAA /* NavigateToPage.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108C117052FF100AB4BAA /* NavigateToPage.h */; };
 		C481092117052FF100AB4BAA /* ScrollPage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108C217052FF100AB4BAA /* ScrollPage.cpp */; };
 		C481092217052FF100AB4BAA /* ScrollPage.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108C317052FF100AB4BAA /* ScrollPage.h */; };
 		C481092317052FF100AB4BAA /* SendResizeEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108C417052FF100AB4BAA /* SendResizeEvent.cpp */; };
@@ -5199,6 +5197,12 @@
 		C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */; };
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4B991FC17122B750029CA63 /* InputStorage.cpp */; };
+		C4C3311917D64C51008BDACF /* NavigationProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4C3311717D64C51008BDACF /* NavigationProxy.cpp */; };
+		C4C3311A17D64C51008BDACF /* NavigationProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311817D64C51008BDACF /* NavigationProxy.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C4C3312017D663F3008BDACF /* NavigateToPage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4C3311C17D663F3008BDACF /* NavigateToPage.cpp */; };
+		C4C3312117D663F3008BDACF /* NavigateToPage.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311D17D663F3008BDACF /* NavigateToPage.h */; };
+		C4C3312217D663F3008BDACF /* ReloadFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */; };
+		C4C3312317D663F3008BDACF /* ReloadFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311F17D663F3008BDACF /* ReloadFrame.h */; };
 		C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4ECA671175FAD98005490E0 /* SentinelActions.cpp */; };
 		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C4F4CA44175AC86B00F71FE1 /* InputDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */; };
@@ -11978,8 +11982,6 @@
 		C48108BD17052FF100AB4BAA /* HandleMouseRelease.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HandleMouseRelease.h; sourceTree = "<group>"; };
 		C48108BE17052FF100AB4BAA /* HandleWheelEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HandleWheelEvent.cpp; sourceTree = "<group>"; };
 		C48108BF17052FF100AB4BAA /* HandleWheelEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HandleWheelEvent.h; sourceTree = "<group>"; };
-		C48108C017052FF100AB4BAA /* NavigateToPage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NavigateToPage.cpp; sourceTree = "<group>"; };
-		C48108C117052FF100AB4BAA /* NavigateToPage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigateToPage.h; sourceTree = "<group>"; };
 		C48108C217052FF100AB4BAA /* ScrollPage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ScrollPage.cpp; sourceTree = "<group>"; };
 		C48108C317052FF100AB4BAA /* ScrollPage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScrollPage.h; sourceTree = "<group>"; };
 		C48108C417052FF100AB4BAA /* SendResizeEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SendResizeEvent.cpp; sourceTree = "<group>"; };
@@ -12010,13 +12012,18 @@
 		C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorRecordingsAgent.h; sourceTree = "<group>"; };
 		C493493517A431C90054AC75 /* ResourceHandleClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceHandleClient.cpp; sourceTree = "<group>"; };
 		C493493717A432350054AC75 /* PageConsole.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PageConsole.cpp; sourceTree = "<group>"; };
-		C4954A9D1720807C00344F9E /* ScriptProbeServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ScriptProbeServer.cpp; sourceTree = "<group>"; };
 		C49826F6172E16630050DD62 /* ScriptProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScriptProbe.h; sourceTree = "<group>"; };
 		C49905EA17163821000AEC13 /* ReplayUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayUtilities.h; path = replay/ReplayUtilities.h; sourceTree = "<group>"; };
 		C49905EC1716389D000AEC13 /* ReplayUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayUtilities.cpp; path = replay/ReplayUtilities.cpp; sourceTree = "<group>"; };
 		C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EventLoopInputDispatcher.cpp; path = replay/EventLoopInputDispatcher.cpp; sourceTree = "<group>"; };
 		C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventLoopInputDispatcher.h; path = replay/EventLoopInputDispatcher.h; sourceTree = "<group>"; };
 		C4B991FC17122B750029CA63 /* InputStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InputStorage.cpp; path = replay/InputStorage.cpp; sourceTree = "<group>"; };
+		C4C3311717D64C51008BDACF /* NavigationProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NavigationProxy.cpp; sourceTree = "<group>"; };
+		C4C3311817D64C51008BDACF /* NavigationProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigationProxy.h; sourceTree = "<group>"; };
+		C4C3311C17D663F3008BDACF /* NavigateToPage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NavigateToPage.cpp; path = navigation/NavigateToPage.cpp; sourceTree = "<group>"; };
+		C4C3311D17D663F3008BDACF /* NavigateToPage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NavigateToPage.h; path = navigation/NavigateToPage.h; sourceTree = "<group>"; };
+		C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReloadFrame.cpp; path = navigation/ReloadFrame.cpp; sourceTree = "<group>"; };
+		C4C3311F17D663F3008BDACF /* ReloadFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReloadFrame.h; path = navigation/ReloadFrame.h; sourceTree = "<group>"; };
 		C4ECA671175FAD98005490E0 /* SentinelActions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SentinelActions.cpp; sourceTree = "<group>"; };
 		C4F4CA40175AC86B00F71FE1 /* InputCoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputCoder.h; sourceTree = "<group>"; };
 		C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputDecoder.h; sourceTree = "<group>"; };
@@ -19631,6 +19638,7 @@
 				C481087F17052FF100AB4BAA /* async */,
 				C481088D17052FF100AB4BAA /* memoization */,
 				C481089517052FF100AB4BAA /* network */,
+				C4C3311B17D6534E008BDACF /* navigation */,
 				C48108AD17052FF100AB4BAA /* user */,
 				C42BB776175FAA41008BF639 /* DisableCache.cpp */,
 				C481088917052FF100AB4BAA /* DisableCache.h */,
@@ -19728,8 +19736,6 @@
 				C48108BD17052FF100AB4BAA /* HandleMouseRelease.h */,
 				C48108BE17052FF100AB4BAA /* HandleWheelEvent.cpp */,
 				C48108BF17052FF100AB4BAA /* HandleWheelEvent.h */,
-				C48108C017052FF100AB4BAA /* NavigateToPage.cpp */,
-				C48108C117052FF100AB4BAA /* NavigateToPage.h */,
 				C48108C217052FF100AB4BAA /* ScrollPage.cpp */,
 				C48108C317052FF100AB4BAA /* ScrollPage.h */,
 				C48108C417052FF100AB4BAA /* SendResizeEvent.cpp */,
@@ -19755,6 +19761,8 @@
 				C48108CA17052FF100AB4BAA /* AsyncEventProxy.h */,
 				C48108CB17052FF100AB4BAA /* CapturingResourceHandleClient.cpp */,
 				C48108CC17052FF100AB4BAA /* CapturingResourceHandleClient.h */,
+				C4C3311717D64C51008BDACF /* NavigationProxy.cpp */,
+				C4C3311817D64C51008BDACF /* NavigationProxy.h */,
 				C48108CD17052FF100AB4BAA /* NetworkProxy.cpp */,
 				C48108CE17052FF100AB4BAA /* NetworkProxy.h */,
 				C4F7F940170603B9005AB205 /* ReplayProxy.h */,
@@ -19780,6 +19788,17 @@
 			);
 			name = serialization;
 			path = replay/serialization;
+			sourceTree = "<group>";
+		};
+		C4C3311B17D6534E008BDACF /* navigation */ = {
+			isa = PBXGroup;
+			children = (
+				C4C3311C17D663F3008BDACF /* NavigateToPage.cpp */,
+				C4C3311D17D663F3008BDACF /* NavigateToPage.h */,
+				C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */,
+				C4C3311F17D663F3008BDACF /* ReloadFrame.h */,
+			);
+			name = navigation;
 			sourceTree = "<group>";
 		};
 		CD0DBB3E142274E600280263 /* audio */ = {
@@ -24433,7 +24452,6 @@
 				C481091A17052FF100AB4BAA /* HandleMousePress.h in Headers */,
 				C481091C17052FF100AB4BAA /* HandleMouseRelease.h in Headers */,
 				C481091E17052FF100AB4BAA /* HandleWheelEvent.h in Headers */,
-				C481092017052FF100AB4BAA /* NavigateToPage.h in Headers */,
 				C481092217052FF100AB4BAA /* ScrollPage.h in Headers */,
 				C481092417052FF100AB4BAA /* SendResizeEvent.h in Headers */,
 				C481092717052FF100AB4BAA /* AsyncEventProxy.h in Headers */,
@@ -24455,7 +24473,6 @@
 				C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */,
 				C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */,
 				C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */,
-				C41370E7171C9D280099A2D9 /* DataProbe.h in Headers */,
 				C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */,
 				C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */,
 				C4F4CA44175AC86B00F71FE1 /* InputDecoder.h in Headers */,
@@ -24484,6 +24501,9 @@
 				FD1762E0176686D900D836A8 /* UpSampler.h in Headers */,
 				FD1762E4176686EA00D836A8 /* DownSampler.h in Headers */,
 				FBB0C5B817BBD629003D3677 /* CSSFilterImageValue.h in Headers */,
+				C4C3311A17D64C51008BDACF /* NavigationProxy.h in Headers */,
+				C4C3312117D663F3008BDACF /* NavigateToPage.h in Headers */,
+				C4C3312317D663F3008BDACF /* ReloadFrame.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -27474,7 +27494,6 @@
 				C481091917052FF100AB4BAA /* HandleMousePress.cpp in Sources */,
 				C481091B17052FF100AB4BAA /* HandleMouseRelease.cpp in Sources */,
 				C481091D17052FF100AB4BAA /* HandleWheelEvent.cpp in Sources */,
-				C481091F17052FF100AB4BAA /* NavigateToPage.cpp in Sources */,
 				C481092117052FF100AB4BAA /* ScrollPage.cpp in Sources */,
 				C481092317052FF100AB4BAA /* SendResizeEvent.cpp in Sources */,
 				C481092517052FF100AB4BAA /* CacheControllerMac.mm in Sources */,
@@ -27496,7 +27515,6 @@
 				C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */,
 				C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */,
 				C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */,
-				C4954A9F1720807C00344F9E /* ScriptProbeServer.cpp in Sources */,
 				C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */,
 				C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */,
 				C4F4CA4E175AF8D200F71FE1 /* JSONInputEncoder.cpp in Sources */,
@@ -27511,6 +27529,9 @@
 				FBB0C5B717BBD626003D3677 /* CSSFilterImageValue.cpp in Sources */,
 				C4F9D3C317C5454000ED7B6E /* PageConsole.cpp in Sources */,
 				C4F9D3C417C5455800ED7B6E /* ResourceHandleClient.cpp in Sources */,
+				C4C3311917D64C51008BDACF /* NavigationProxy.cpp in Sources */,
+				C4C3312017D663F3008BDACF /* NavigateToPage.cpp in Sources */,
+				C4C3312217D663F3008BDACF /* ReloadFrame.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

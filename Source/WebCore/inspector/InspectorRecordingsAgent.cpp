@@ -83,6 +83,7 @@ static const char ResourceLoaded[] = "ResourceLoaded";
 
 static const char TimerFire[] = "TimerFire";
 
+static const char ReloadFrame[] = "ReloadFrame";
 static const char FrameNavigated[] = "FrameNavigated";
 static const char CaptureBegin[] = "CaptureBegin";
 static const char CaptureEnd[] = "CaptureEnd";
@@ -104,6 +105,8 @@ static const char* getFrontendTypeForAction(const EventLoopInput& action)
         return ReplayActionType::MouseWheel;
     if (action.type() == inputTypes().HandleKeyPress)
         return ReplayActionType::KeyPress;
+    if (action.type() == inputTypes().ReloadFrame)
+        return ReplayActionType::ReloadFrame;
     if (action.type() == inputTypes().ScrollPage)
         return ReplayActionType::Scroll;
     if (action.type() == inputTypes().SendResizeEvent)
@@ -137,6 +140,7 @@ static PassRefPtr<InspectorObject> createFrontendDataForAction(const EventLoopIn
 {
     if (action.type() == inputTypes().FocusSetActive ||
         action.type() == inputTypes().FocusSetFocused ||
+        action.type() == inputTypes().ReloadFrame ||        
         action.type() == inputTypes().TimerFired)
         return ReplayActionFactory::createEmptyData();
     if (action.type() == inputTypes().HandleMouseMove)

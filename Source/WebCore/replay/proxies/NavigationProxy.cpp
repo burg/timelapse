@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012 Brian Burg.
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,39 +29,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- */
-// TODO(Issue #271): remove backend-side interpretation of inputs
-WebInspector.RecordingsAgent = function() {
-    // Not implemented.
-};
+#include "config.h"
 
-// Must be kept in sync with InspectorRecordingsAgent.h
-WebInspector.RecordingsAgent.RecordType = {
-    MousePress: "MousePress",
-    MouseRelease: "MouseRelease",
-    MouseMove: "MouseMove",
-    MouseWheel: "MouseWheel",
-    KeyPress: "KeyPress",
-    Scroll: "Scroll",
-    Resize: "Resize",
+#include "NavigationProxy.h"
 
-    WindowActive: "WindowActive",
-    WindowInactive: "WindowInactive",
-    WindowFocused: "WindowFocused",
-    WindowUnfocused: "WindowUnfocused",
+#include "DispatchEventBase.h"
+#include "Frame.h"
+#include "ReloadFrame.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
+#include <wtf/replay/InputIterator.h>
 
-    RequestResource: "RequestResource",
-    ReceiveResponse: "ReceiveResponse",
-    ReceiveData: "ReceiveData",
-    ResourceLoaded: "ResourceLoaded",
+/* We must always define these symbols even if web replay support is
+   not compiled, because the embedding API (WebKit or WebKit2) may be
+   built with web replay support. */
 
-    TimerFire: "TimerFire",
+namespace WebCore {
 
-    ReloadFrame: "ReloadFrame",
-    FrameNavigated: "FrameNavigated",
-    CaptureBegin: "CaptureBegin",
-    CaptureEnd: "CaptureEnd",
-    BreakpointHit: "BreakpointHit"
-};
+NavigationProxy::NavigationProxy(Page* page)
+: ReplayProxy(page)
+{}
+
+PassOwnPtr<NavigationProxy> NavigationProxy::create(Page* page)
+{
+    return adoptPtr(new NavigationProxy(page));
+}
+
+void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay)
+{
+    #if ENABLE(WEB_REPLAY)
+    if (!fromReplay && m_mode == Replaying)
+        return;
+
+    if (m_mode == Capturing && m_page->replayController()) {
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
+    }
+#else
+    UNUSED_PARAM(fromReplay);
+#endif
+
+    // do dispatch
+    frame->loader().reload(endToEndReload);
+}
+
+} // namespace WebCore

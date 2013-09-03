@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,39 +28,47 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- */
-// TODO(Issue #271): remove backend-side interpretation of inputs
-WebInspector.RecordingsAgent = function() {
-    // Not implemented.
+#ifndef ReloadFrame_h
+#define ReloadFrame_h
+
+#if ENABLE(WEB_REPLAY)
+
+#include "EventLoopInput.h"
+#include "InputCoder.h"
+#include "ReplayInputTypes.h"
+
+namespace WebCore {
+
+class ReplayController;
+
+class ReloadFrame : public EventLoopInput {
+
+public:
+    ReloadFrame(bool endToEndReload, int frameIndex);
+    virtual ~ReloadFrame();
+
+    // EventLoopInput API
+    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    size_t memorySize() const OVERRIDE { return sizeof(ReloadFrame); }
+
+    int frameIndex() const { return m_frameIndex; }
+    bool endToEndReload() const { return m_endToEndReload; }
+private:
+    int m_frameIndex;
+    bool m_endToEndReload;
 };
 
-// Must be kept in sync with InspectorRecordingsAgent.h
-WebInspector.RecordingsAgent.RecordType = {
-    MousePress: "MousePress",
-    MouseRelease: "MouseRelease",
-    MouseMove: "MouseMove",
-    MouseWheel: "MouseWheel",
-    KeyPress: "KeyPress",
-    Scroll: "Scroll",
-    Resize: "Resize",
-
-    WindowActive: "WindowActive",
-    WindowInactive: "WindowInactive",
-    WindowFocused: "WindowFocused",
-    WindowUnfocused: "WindowUnfocused",
-
-    RequestResource: "RequestResource",
-    ReceiveResponse: "ReceiveResponse",
-    ReceiveData: "ReceiveData",
-    ResourceLoaded: "ResourceLoaded",
-
-    TimerFire: "TimerFire",
-
-    ReloadFrame: "ReloadFrame",
-    FrameNavigated: "FrameNavigated",
-    CaptureBegin: "CaptureBegin",
-    CaptureEnd: "CaptureEnd",
-    BreakpointHit: "BreakpointHit"
+template<> struct InputCoder<ReloadFrame> {
+    static void encode(InputEncoder& encoder, const ReloadFrame& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<ReloadFrame>& input);
 };
+
+} //namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY)
+
+#endif // ReloadFrame_h

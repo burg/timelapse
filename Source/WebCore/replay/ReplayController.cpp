@@ -54,6 +54,7 @@
 #include "Logging.h"
 #include "MouseEvent.h"
 #include "NavigateToPage.h"
+#include "NavigationProxy.h"
 #include "NetworkProxy.h"
 #include "Node.h"
 #include "Page.h"
@@ -521,6 +522,7 @@ void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
     m_page->userInputProxy()->setProxyMode(mode);
     m_page->asyncEventProxy()->setProxyMode(mode);
+    m_page->navigationProxy()->setProxyMode(mode);
     m_page->networkProxy()->setProxyMode(mode);
 }
 

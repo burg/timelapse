@@ -55,6 +55,7 @@
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "MediaCanStartListener.h"
+#include "NavigationProxy.h"
 #include "Navigator.h"
 #include "NetworkProxy.h"
 #include "NetworkStateNotifier.h"
@@ -140,6 +141,7 @@ Page::Page(PageClients& pageClients)
 #if ENABLE(CONTEXT_MENUS)
     , m_contextMenuController(ContextMenuController::create(this, pageClients.contextMenuClient))
 #endif
+    , m_navigationProxy(NavigationProxy::create(this))
     , m_networkProxy(NetworkProxy::create(this))
     , m_asyncEventProxy(AsyncEventProxy::create(this))
     , m_userInputProxy(UserInputProxy::create(this))

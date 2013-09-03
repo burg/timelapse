@@ -110,6 +110,7 @@
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/MIMETypeRegistry.h>
 #include <WebCore/MouseEvent.h>
+#include <WebCore/NavigationProxy.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformKeyboardEvent.h>
 #include <WebCore/PluginDocument.h>
@@ -1013,7 +1014,7 @@ void WebPage::reload(bool reloadFromOrigin, const SandboxExtension::Handle& sand
     SendStopResponsivenessTimer stopper(this);
 
     m_sandboxExtensionTracker.beginLoad(m_mainFrame.get(), sandboxExtensionHandle);
-    m_mainFrame->coreFrame()->loader().reload(reloadFromOrigin);
+    corePage()->navigationProxy()->reloadFrame(m_mainFrame->coreFrame(), reloadFromOrigin);
 }
 
 void WebPage::goForward(uint64_t backForwardItemID)
