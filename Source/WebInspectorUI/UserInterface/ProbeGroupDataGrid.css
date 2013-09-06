@@ -32,10 +32,44 @@
 	border-bottom: 3px solid #555;
 }
 
-.details-section.probe-group .data-grid > .data-container .selected .section * {
+.details-section.probe-group .data-grid .data-container tr.separator {
+	border-bottom: 2px solid #666;
+}
+
+.details-section.probe-group .data-grid .data-container .selected .section * {
 	color: white;
 }
 
-.details-section.probe-group .data-grid > .data-container .section {
+.details-section.probe-group .data-grid .data-container .section {
 	left: -6px;
+}
+
+.details-section.probe-group .data-grid th {
+	height: 21px;
+
+	font-size: 11px;
+	font-family: "Lucida Grande", sans-serif;	
+	background-image: -webkit-linear-gradient(top, rgb(248, 248, 248), rgb(226, 226, 226));
+	background-size: 100% 100% !important;
+	background-position: center !important;
+	background-repeat: no-repeat !important;
+
+	box-shadow: inset rgba(255, 255, 255, 0.1) 0 1px 0;
+	border-bottom: 1px solid rgb(179, 179, 179) !important;
+}
+
+.details-section.probe-group .data-grid th:not(:last-child) {
+	border-right: 1px solid rgb(179, 179, 179);
+}
+
+.details-section.probe-group .data-grid th,
+.details-section.probe-group .data-grid td {
+	padding-left: 6px;
+	padding-right: 6px;
+}
+
+.details-section.probe-group .data-grid td {
+    padding-top: 2px;
+    padding-bottom: 2px;
+    line-height: 17px;
 }
