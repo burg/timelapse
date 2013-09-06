@@ -38,6 +38,7 @@ WebInspector.GeneralTreeElement = function(classNames, title, subtitle, represen
 WebInspector.GeneralTreeElement.StyleClassName = "item";
 WebInspector.GeneralTreeElement.DisclosureButtonStyleClassName = "disclosure-button";
 WebInspector.GeneralTreeElement.IconElementStyleClassName = "icon";
+WebInspector.GeneralTreeElement.IconWrapperElementStyleClassName = "icon-wrapper";
 WebInspector.GeneralTreeElement.StatusElementStyleClassName = "status";
 WebInspector.GeneralTreeElement.TitlesElementStyleClassName = "titles";
 WebInspector.GeneralTreeElement.MainTitleElementStyleClassName = "title";
@@ -248,7 +249,7 @@ WebInspector.GeneralTreeElement.prototype = {
             this._listItemNode.classList.add(WebInspector.GeneralTreeElement.TwoLineStyleClassName);
 
         this._listItemNode.appendChild(this._disclosureButton);
-        this._listItemNode.appendChild(this._iconElement);
+        this._listItemNode.appendChild(this._iconWrapperElement);
         this._listItemNode.appendChild(this._statusElement);
         this._listItemNode.appendChild(this._titlesElement);
 
@@ -309,6 +310,10 @@ WebInspector.GeneralTreeElement.prototype = {
 
         this._iconElement = document.createElement("img");
         this._iconElement.className = WebInspector.GeneralTreeElement.IconElementStyleClassName;
+
+        this._iconWrapperElement = document.createElement("div");
+        this._iconWrapperElement.className = WebInspector.GeneralTreeElement.IconWrapperElementStyleClassName;
+        this._iconWrapperElement.appendChild(this._iconElement);
 
         this._statusElement = document.createElement("div");
         this._statusElement.className = WebInspector.GeneralTreeElement.StatusElementStyleClassName;

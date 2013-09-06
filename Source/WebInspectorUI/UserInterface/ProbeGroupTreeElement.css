@@ -47,13 +47,23 @@
     font-style: italic;
 }
 
+/* This is a horrible hack. All icons should use the same wrapper style. */
+.probe-group-generic-line-icon .icon-wrapper {
+	width: 16px;
+	height: 16px;
+	position: relative;
+	float: left;
+	margin-top: 1px;
+	margin-right: 3px;
+	background-image: url(Images/ResultLine.svg);
+}
+
 .probe-group-generic-line-icon .icon {
-	content: url(Images/ResultLine.pdf);
+	opacity: 0;
+	content: url(Images/ProbeFireResultLine.svg);
 }
 
 .data-updated.probe-group-generic-line-icon .icon {
-	content: url(Images/Plus.pdf);
-	-webkit-filter: invert(50%) sepia(100%) saturate(7) invert(100%) hue-rotate(47deg) brightness(85%);
 	-webkit-animation-duration: 0.3s;
 	-webkit-animation-name: blink-plus-icon;
 }
