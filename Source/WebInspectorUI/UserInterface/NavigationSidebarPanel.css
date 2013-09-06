@@ -141,7 +141,7 @@
     display: none;
 }
 
-.navigation-sidebar-panel-content-tree-outline:not(.hide-disclosure-buttons) .item:not(.parent) .icon {
+.navigation-sidebar-panel-content-tree-outline:not(.hide-disclosure-buttons) .item:not(.parent) .icon-wrapper {
     margin-left: 16px;
 }
 
@@ -184,14 +184,22 @@
     background-image: -webkit-canvas(navigation-sidebar-panel-disclosure-triangle-open-selected) !important;
 }
 
-.navigation-sidebar-panel-content-tree-outline .item .icon {
+.navigation-sidebar-panel-content-tree-outline .item .icon-wrapper {
+    width: 16px;
+    height: 16px;
+    position: relative;
     float: left;
-
-    width: 32px;
-    height: 32px;
-
     margin-top: 1px;
     margin-right: 3px;
+}
+
+.navigation-sidebar-panel-content-tree-outline .item .icon {
+    z-index: 5;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
 }
 
 .navigation-sidebar-panel-content-tree-outline .item .status {

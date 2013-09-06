@@ -171,6 +171,10 @@ WebInspector.ProbeGroupTreeElement.prototype = {
         if (this.element.classList.contains(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName)) {
             clearTimeout(this._currentTimeout);
             this.element.classList.remove(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName);
+            // We want to restart the animation, which can only be done by removing the class,
+            // performing layout, and re-adding the class. Try adding class back on next tick.
+            setTimeout(this._dataUpdated.bind(this));
+            return;
         }
 
         this.element.classList.add(WebInspector.ProbeGroupTreeElement.DataUpdatedStyleClassName);
