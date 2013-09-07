@@ -1,3 +1,64 @@
+2013-09-05  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [CMAKE] Add c++0x into CXX_FLAGS as a default
+        https://bugs.webkit.org/show_bug.cgi?id=120812
+
+        Unreviewed build fix for EFL ports.
+
+        * tests/UnitTestUtils/EWKTestConfig.h: Add space between strings.
+
+2013-08-28  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Let Page create the main Frame
+        https://bugs.webkit.org/show_bug.cgi?id=120360
+
+        Reviewed by Darin Adler.
+
+        Page always creates the main Frame by itself after r154616.
+        This patch follows the changes for WebKit/Efl like other ports.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::createFrame):
+        Moved the logic of ewk_view_frame_create.
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_init):
+        (ewk_frame_child_add):
+        Moved construction logic of Frame and FrameLoderClientEfl from ewk_view.
+        (EWKPrivate::setCoreFrame):
+        * ewk/ewk_frame_private.h:
+        * ewk/ewk_view.cpp: Removed _ewk_view_core_frame_new.
+        (_ewk_view_priv_new):
+        (_ewk_view_smart_add):
+        (ewk_view_frame_rect_changed):
+        * ewk/ewk_view_private.h:
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        Frame::tree should return a reference instead of a pointer
+        https://bugs.webkit.org/show_bug.cgi?id=120259
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::clearFrameName):
+        (DumpRenderTreeSupportEfl::frameChildren):
+        (DumpRenderTreeSupportEfl::frameParent):
+        * ewk/ewk_frame.cpp:
+        (_ewk_frame_children_iterator_next):
+        (ewk_frame_child_find):
+        (ewk_frame_name_get):
+        (ewk_frame_child_add):
+        * ewk/ewk_view.cpp:
+        (ewk_view_frame_create):
+        Use tree(). instead of tree()->.
+
+2013-08-22  Andreas Kling  <akling@apple.com>
+
+        EFL build juice.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (kit):
+
 2013-08-20  Pratik Solanki  <psolanki@apple.com>
 
         <https://webkit.org/b/120029> Document::markers() should return a reference

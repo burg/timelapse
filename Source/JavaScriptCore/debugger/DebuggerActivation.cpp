@@ -31,7 +31,7 @@
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(DebuggerActivation);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(DebuggerActivation);
 
 const ClassInfo DebuggerActivation::s_info = { "DebuggerActivation", &Base::s_info, 0, 0, CREATE_METHOD_TABLE(DebuggerActivation) };
 
@@ -77,12 +77,6 @@ void DebuggerActivation::put(JSCell* cell, ExecState* exec, PropertyName propert
     thisObject->m_activation->methodTable()->put(thisObject->m_activation.get(), exec, propertyName, value, slot);
 }
 
-void DebuggerActivation::putDirectVirtual(JSObject* object, ExecState* exec, PropertyName propertyName, JSValue value, unsigned attributes)
-{
-    DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(object);
-    thisObject->m_activation->methodTable()->putDirectVirtual(thisObject->m_activation.get(), exec, propertyName, value, attributes);
-}
-
 bool DebuggerActivation::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(cell);
@@ -95,7 +89,7 @@ void DebuggerActivation::getOwnPropertyNames(JSObject* object, ExecState* exec, 
     thisObject->m_activation->methodTable()->getPropertyNames(thisObject->m_activation.get(), exec, propertyNames, mode);
 }
 
-bool DebuggerActivation::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor, bool shouldThrow)
+bool DebuggerActivation::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     DebuggerActivation* thisObject = jsCast<DebuggerActivation*>(object);
     return thisObject->m_activation->methodTable()->defineOwnProperty(thisObject->m_activation.get(), exec, propertyName, descriptor, shouldThrow);

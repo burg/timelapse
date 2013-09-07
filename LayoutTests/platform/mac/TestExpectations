@@ -379,6 +379,9 @@ webkit.org/b/61487 http/tests/media/video-cross-site.html [ Failure ]
 # Styled scope element is not yet enabled.
 webkit.org/b/49142 fast/css/style-scoped
 
+# fails because of antialiasing differences.
+fast/css/object-fit/object-fit-canvas.html [ Pass ImageOnlyFailure ]
+
 # CSS Regions tests for region styling and scoped styles
 fast/regions/style-scoped-in-flow-override-container-style.html
 fast/regions/style-scoped-in-flow-override-region-styling-multiple-regions.html
@@ -419,8 +422,6 @@ compositing/rtl/rtl-iframe-relative.html
 # For now, Web Audio tests are disabled
 # https://bugs.webkit.org/show_bug.cgi?id=86914
 webaudio/
-inspector-protocol/nmi-webaudio.html
-inspector-protocol/nmi-webaudio-leak-test.html
 
 # ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
@@ -851,9 +852,6 @@ media/video-size-intrinsic-scale.html
 # -- Flaky tests (WebKit 1 only) ---
 platform/mac/accessibility/search-with-frames.html
 
-# -- Flaky tests (WebKit 2 only) ---
-http/tests/websocket/tests/hybi/httponly-cookie.pl
-
 # --- Media ---
 media/controls-styling.html
 media/media-document-audio-repaint.html
@@ -959,10 +957,6 @@ webkit.org/b/112532 fast/frames/flattening/frameset-flattening-subframesets.html
 webkit.org/b/106185 fast/frames/flattening/iframe-flattening-fixed-height.html [ Failure Pass ]
 webkit.org/b/106185 fast/frames/flattening/frameset-flattening-grid.html [ Failure Pass ]
 
-# Flakey cookies tests
-webkit.org/b/73694 http/tests/cookies/simple-cookies-expired.html [ Failure Pass ]
-webkit.org/b/73695 http/tests/cookies/simple-cookies-max-age.html [ Failure Pass ]
-
 webkit.org/b/69999 [ Release ] http/tests/security/contentSecurityPolicy/media-src-allowed.html [ Failure Pass ]
 
 webkit.org/b/73766 css3/unicode-bidi-isolate-aharon-failing.html [ ImageOnlyFailure ]
@@ -1022,9 +1016,6 @@ webkit.org/b/88794 webaudio/codec-tests
 # Text Autosizing is not enabled.
 webkit.org/b/84186 fast/text-autosizing
 
-# Dialog element is not yet enabled.
-webkit.org/b/84635 fast/dom/HTMLDialogElement [ Skip ]
-
 # Skip tests in fast/text/shaping
 webkit.org/b/90951 fast/text/shaping
 
@@ -1048,6 +1039,9 @@ webkit.org/b/100324 css3/supports-dom-api.html
 # CSS Device Adaptation is not enabled.
 webkit.org/b/95959 css3/device-adapt [ Skip ]
 
+# Accelerated overflow scrolling (ENABLE_ACCELERATED_OVERFLOW_SCROLLING) is not enabled.
+fast/repaint/overflow-scroll-touch-repaint.html [ Skip ]
+
 # Hardware accelerated CSS transitions appear pixelated when scaled up using transform
 webkit.org/b/27684 compositing/text-on-scaled-layer.html [ ImageOnlyFailure ]
 webkit.org/b/27684 compositing/text-on-scaled-surface.html [ ImageOnlyFailure ]
@@ -1067,7 +1061,6 @@ webkit.org/b/98837 http/tests/security/svg-image-leak.html [ Skip ]
 webkit.org/b/98456 compositing/images/truncated-direct-png-image.html [ ImageOnlyFailure ]
 
 # Ref tests suffering from colorspace issues
-compositing/images/positioned-image-content-rect.html [ ImageOnlyFailure ]
 compositing/patterns/direct-pattern-compositing-add-text.html [ Pass ImageOnlyFailure ]
 compositing/patterns/direct-pattern-compositing-contain.html [ Pass ImageOnlyFailure ]
 compositing/patterns/direct-pattern-compositing-cover.html [ Pass ImageOnlyFailure ]
@@ -1092,8 +1085,8 @@ webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Ski
 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
 webkit.org/b/107356 [ MountainLion Release ] fast/css/sticky/sticky-top-zoomed.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html [ Skip ]
-webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html [ Skip ]
+webkit.org/b/100846 inspector-protocol/debugger/pause-dedicated-worker.html [ Skip ]
+webkit.org/b/100846 inspector-protocol/debugger/terminate-dedicated-worker-while-paused.html [ Skip ]
 
 # Mac doesn't have a toggle for CC any more, it's based on a menu of choices.
 webkit.org/b/101670 media/video-controls-captions.html [ Skip ]
@@ -1128,8 +1121,6 @@ webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Failure ]
 webkit.org/b/104954 http/tests/canvas/canvas-slow-font-loading.html [ ImageOnlyFailure ]
 
 webkit.org/b/104962 platform/mac/fast/loader/file-url-mimetypes-2.html [ Failure ]
-
-webkit.org/b/105603 http/tests/cookies/single-quoted-value.html [ Failure Pass ]
 
 webkit.org/b/105777 platform/mac/editing/spelling/autocorrection-in-textarea.html [ Failure Pass ]
 
@@ -1182,9 +1173,6 @@ webkit.org/b/111647 [ Debug ] sputnik/Conformance/12_Statement/12.6_Iteration_St
 webkit.org/b/111647 [ Debug ] sputnik/Conformance/13_Function_Definition/S13_A4_T4.html [ Slow ]
 webkit.org/b/111647 [ Debug ] sputnik/Unicode/Unicode_218/S7.6_A5.3_T2.html [ Slow ]
 
-webkit.org/b/111650 http/tests/cookies/third-party-cookie-relaxing.html [ Failure Pass ]
-webkit.org/b/111650 http/tests/plugins/third-party-cookie-accept-policy.html [ Failure Pass ]
-
 webkit.org/b/111754 inspector/debugger/debugger-expand-scope.html [ Crash Pass ]
 
 webkit.org/b/111606 fast/borders/border-fit-2.html [ Failure Pass ]
@@ -1220,11 +1208,6 @@ webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]
 
 # Snapshotted plugins not enabled on WK1
 plugins/snapshotting [ Skip ]
-
-# Fails in WebKit1, but passes in WebKit2 (re-enabled in mac-wk2 TestExpectations).
-webkit.org/b/113094 editing/pasteboard/can-read-in-copy-and-cut-events.html [ Failure ] 
-
-webkit.org/b/113094 editing/pasteboard/can-read-in-dragstart-event.html [ Failure ]
 
 webkit.org/b/113227 transitions/cross-fade-background-image.html [ Pass Failure ]
 webkit.org/b/113227 transitions/cross-fade-border-image.html [ Pass Failure ]
@@ -1281,8 +1264,6 @@ editing/secure-input/reset-state-on-navigation.html [ Failure ]
 
 webkit.org/b/116238 css3/filters/custom/filter-fallback-to-software.html [ Pass ImageOnlyFailure ]
 
-webkit.org/b/116241 inspector/storage-panel-dom-storage-update.html [ Failure ]
-
 webkit.org/b/116244 fast/events/mouse-cursor-image-set.html [ Failure Pass ]
 
 webkit.org/b/116245 canvas/philip/tests/2d.text.draw.fontface.notinpage.html [ Pass Failure ]
@@ -1311,3 +1292,10 @@ webkit.org/b/90708 fullscreen/exit-full-screen-iframe.html [ Pass Failure ]
 webkit.org/b/120085 [ Lion ] http/tests/inspector/resource-tree/resource-tree-document-url.html [ Pass Failure ]
 
 webkit.org/b/120087 [ Lion ] fast/forms/submit-to-url-fragment.html [ Pass Crash ]
+
+webkit.org/b/117962 [ Lion ] media/video-played-collapse.html [ Failure Pass ]
+
+webkit.org/b/120387 svg/animations/svglengthlist-animation-3.html [ Pass Failure ]
+
+# Don't run ogv and mkv tests on mac
+media/track/in-band [ WontFix ]

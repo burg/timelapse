@@ -1,3 +1,1130 @@
+2013-09-06  Denis Nomiyama  <d.nomiyama@samsung.com>
+
+        [GTK] AccessibilityUIElement::addNotificationListener() crashes on debug build
+        https://bugs.webkit.org/show_bug.cgi?id=120416
+
+        Reviewed by Mario Sanchez Prada.
+
+        Fixed crashes when running debug DRT. Simplified loops at AccessibilityCallbackAtk.cpp where the HashMap
+        iterator was removed inside a loop. Fixed AccessibilityUIElement::addNotificationListener() where
+        m_notificationHandler expected RefPtr.
+
+        The global notification handler was stored in the HashMap with key 0. And this caused an assertion when
+        HashMap::add() or find() are called. To fix it, moved the global handler to a separated pointer.
+
+        * DumpRenderTree/atk/AccessibilityCallbacks.h: Removed the global notification key.
+        * DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp:
+        (axObjectEventListener): Simplified the code by using HashMap::find() and a separate pointer for the
+        global notification handler.
+        (addAccessibilityNotificationHandler): Simplified the code by using HashMap::find() and a separate pointer
+        for the global notification handler.
+        (removeAccessibilityNotificationHandler): Added the removal for the global notification handler.
+        * DumpRenderTree/atk/AccessibilityNotificationHandlerAtk.h:
+        (AccessibilityNotificationHandler::create): Added static function to create
+        AccessibilityNotificationHandler.
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::addNotificationListener): Assigned m_notificationHandler with
+        AccessibilityNotificationHandler::create().
+
+2013-09-06  Gabor Abraham  <abrhm@inf.u-szeged.hu>
+
+        [Qt] REGRESSION(r155140) Pixel tests is still broken on Qt with QT_WEBKIT_DISABLE_UIPROCESS_DUMPPIXELS=1
+        https://bugs.webkit.org/show_bug.cgi?id=120847
+
+        Reviewed by Csaba Osztrogonác.
+
+        Move the force repaint code back to if (PlatformWebView::windowSnapshotEnabled()) block to support Qt.
+        Typo fixed: windowShapshotEnabled -> windowSnapshotEnabled.
+        Add a default PlatformWebView::windowSnapshotEnabled() to the !PLATFORM(QT).
+
+        * WebKitTestRunner/PlatformWebView.h:
+        (WTR::PlatformWebView::windowSnapshotEnabled):
+        * WebKitTestRunner/TestInvocation.cpp:
+        (WTR::TestInvocation::dumpResults):
+        * WebKitTestRunner/qt/PlatformWebViewQt.cpp:
+        (WTR::WrapperWindow::handleStatusChanged):
+        (WTR::PlatformWebView::windowSnapshotEnabled):
+        * WebKitTestRunner/qt/TestInvocationQt.cpp:
+        (WTR::TestInvocation::dumpPixelsAndCompareWithExpected):
+
+2013-09-06  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        REGRESSION(r155140) Broke pixel tests on EFL/GTK/Qt
+        https://bugs.webkit.org/show_bug.cgi?id=120843
+
+        Reviewed by Csaba Osztrogonác.
+
+        Call notifyDone like the platform specific forceRepaintDoneCallback methods
+        it replaced did. The method is empty on the Apple ports.
+
+        * WebKitTestRunner/TestInvocation.cpp:
+        (WTR::TestInvocation::forceRepaintDoneCallback):
+
+2013-09-06  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt][WK2] Window used by WebKitTestRunner loses active status
+        https://bugs.webkit.org/show_bug.cgi?id=120774
+
+        Reviewed by Jocelyn Turcotte.
+
+        When focusing the PlatformWebView which is done at the start of each test, we should
+        ensure the host window of PlatformWebView is also made active, otherwise we will
+        not receive the keyboard events send by EventSenderProxy.
+
+        * WebKitTestRunner/qt/PlatformWebViewQt.cpp:
+        (WTR::PlatformWebView::focus):
+
+2013-09-05  Seokju Kwon  <seokju@webkit.org>
+
+        Unreviewed build fix. VectorReverse.cpp was removed after r155151.
+
+        * TestWebKitAPI/CMakeLists.txt:
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Make Vector::uncheckedAppend work with move-only types
+        https://bugs.webkit.org/show_bug.cgi?id=120799
+
+        Reviewed by Andreas Kling.
+
+        * TestWebKitAPI/Tests/WTF/Vector.cpp:
+        (TestWebKitAPI::MoveOnly):
+        Add a move-only class.
+
+        (TestWebKitAPI::TEST):
+        Add a test for Vector<MoveOnly>::uncheckedAppend.
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Move all Vector tests into Vector.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=120797
+
+        Reviewed by Andreas Kling.
+
+        * TestWebKitAPI/CMakeLists.txt:
+        * TestWebKitAPI/GNUmakefile.am:
+        * TestWebKitAPI/TestWebKitAPI.vcxproj/TestWebKitAPI.vcxproj:
+        * TestWebKitAPI/TestWebKitAPI.vcxproj/TestWebKitAPI.vcxproj.filters:
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WTF/Vector.cpp:
+        (TestWebKitAPI::TEST):
+        * TestWebKitAPI/Tests/WTF/VectorBasic.cpp: Removed.
+        * TestWebKitAPI/Tests/WTF/VectorReverse.cpp: Removed.
+        * TestWebKitAPI/Tests/WTF/WTF.pro:
+
+2013-09-05  Simon Fraser  <simon.fraser@apple.com>
+
+        Expected result images are sometimes blank in WKTR
+        https://bugs.webkit.org/show_bug.cgi?id=120715
+
+        Reviewed by Tim Horton.
+        
+        In WebKitTestRunner, snapshots obtained via windowSnapshotImage() were
+        sometimes blank if a previous test triggered compositing mode, and the
+        current test or reference did not require compositing. This happened
+        because the UI process didn't wait for the web process to complete
+        its compositing mode switch before snapshotting. Fix by calling
+        WKPageForceRepaint() before we take the snapshot; this is async,
+        so we have to spin the runloop for a while.
+        
+        Remove the Qt/EFL code that does the same thing.
+
+        * WebKitTestRunner/TestInvocation.cpp:
+        (WTR::TestInvocation::forceRepaintDoneCallback):
+        (WTR::TestInvocation::dumpResults):
+        * WebKitTestRunner/TestInvocation.h:
+        * WebKitTestRunner/cairo/TestInvocationCairo.cpp:
+        (WTR::TestInvocation::dumpPixelsAndCompareWithExpected):
+        * WebKitTestRunner/qt/TestInvocationQt.cpp:
+        (WTR::TestInvocation::dumpPixelsAndCompareWithExpected):
+
+2013-09-05  Csaba Osztrogonác  <ossy@webkit.org>
+
+        Make build.webkit.org report the number of failing run-fast-jsc tests
+        https://bugs.webkit.org/show_bug.cgi?id=120766
+
+        Reviewed by Filip Pizlo.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (RunJavaScriptCoreTests.commandComplete):
+        (RunJavaScriptCoreTests.getText2):
+        * BuildSlaveSupport/build.webkit.org-config/mastercfg_unittest.py:
+        (RunJavaScriptCoreTestsTest): Added.
+        (RunJavaScriptCoreTestsTest.assertResults):
+        (RunJavaScriptCoreTestsTest.test_no_regressions_old_output):
+        (RunJavaScriptCoreTestsTest.test_mozilla_failure_old_output):
+        (RunJavaScriptCoreTestsTest.test_mozilla_failure_new_output):
+        (RunJavaScriptCoreTestsTest.test_fast_js_failure_new_output):
+        (RunJavaScriptCoreTestsTest.test_fast_js_crash_new_output):
+        (RunJavaScriptCoreTestsTest.test_mozilla_and_fast_js_failure_new_output):
+
+2013-09-05  Csaba Osztrogonác  <ossy@webkit.org>
+
+        Make run-fast-jsc script bash, dash and Darwin's /bin/sh friendly
+        https://bugs.webkit.org/show_bug.cgi?id=120759
+
+        Reviewed by Filip Pizlo.
+
+        * Scripts/run-fast-jsc: Remove bashisms to make bash, dash and Darwin's /bin/sh happy.
+        * Scripts/run-javascriptcore-tests: Enable run-fast-jsc tests everywhere, except Windows.
+
+2013-09-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, green the Mac bots by boosting the timeout on JSC tests. One of the
+        Mozilla tests appears to run for a longer time.
+        
+        I think we want to continue to allow a few tests here and there to be
+        longer-running, rather than excluding them. I seem to recall that those tests
+        catch good bugs.
+
+        * Scripts/run-javascriptcore-tests:
+
+2013-09-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, don't run fast/js tests in run-javascriptcore-tests on platforms that
+        can't support it because if non-bourne shells. This fixes part #2 of the Linux
+        bot breakage.
+
+        * Scripts/run-javascriptcore-tests:
+
+2013-09-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, don't rely on File::Slurp. This fixes part #1 of Linux bot breakage.
+
+        * Scripts/run-javascriptcore-tests:
+        (readAllLines):
+
+2013-09-04  Filip Pizlo  <fpizlo@apple.com>
+
+        jsc tests should have timeouts
+        https://bugs.webkit.org/show_bug.cgi?id=120725
+
+        Reviewed by Geoffrey Garen.
+        
+        Set the timeout to 20 seconds per test for now.
+
+        * Scripts/run-javascriptcore-tests:
+
+2013-09-04  Filip Pizlo  <fpizlo@apple.com>
+
+        run-javascriptcore-tests should run-fast-jsc as well
+        https://bugs.webkit.org/show_bug.cgi?id=120722
+
+        Reviewed by Geoffrey Garen.
+        
+        Makes run-javascriptcore-tests run the fast/js tests via run-fast-jsc tool.
+        Integrates run-fast-jsc's error reporting into run-javascriptcore-tests.
+
+        * Scripts/run-javascriptcore-tests:
+        (printThingsFound):
+
+2013-09-04  Sergio Correia  <sergio.correia@openbossa.org>
+
+        [EFL][WK2] Move ShouldGoToBackForwardListItem to the list of passing API tests
+        https://bugs.webkit.org/show_bug.cgi?id=120646
+
+        Reviewed by Gyuyoung Kim.
+
+        * TestWebKitAPI/PlatformEfl.cmake: Move ShouldGoToBackForwardListItem to the
+        list of passing tests, since it started to pass after r154045.
+
+2013-09-04  Krzysztof Czech  <k.czech@samsung.com>
+
+        [ATK] Adds an accessibility support to access a value of the color control element
+        https://bugs.webkit.org/show_bug.cgi?id=114354
+
+        Reviewed by Mario Sanchez Prada.
+
+        Added accessibility role of the color control element.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (roleToString):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::roleToString):
+
+2013-09-04  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        REGRESSION (r132328): /WebKit2APITests/TestWebKitAccessibility unit test is failing
+        https://bugs.webkit.org/show_bug.cgi?id=100408
+
+        Unreviewed gardening. Unskip TestWebKitAccessibility after
+        manually checking that it's running properly in the bot.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner): Unskipped TestWebKitAccessibility.
+
+2013-09-04  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Add support for the Wayland build target
+        https://bugs.webkit.org/show_bug.cgi?id=120627
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * GNUmakefile.am: Define the additional macros also if building the Wayland target.
+
+2013-09-04  Andre Moreira Magalhaes   <andre.magalhaes@collabora.co.uk>
+
+        [GStreamer] cannot play live streams
+        https://bugs.webkit.org/show_bug.cgi?id=116831
+
+        Reviewed by Philippe Normand.
+
+        Fix timeout issues with rtspsrc/udpsrc gstreamer elements.
+
+        * gtk/jhbuild.modules:
+        * gtk/patches/rtspsrc-timeout-on-udpsrc-is-in-nanoseconds.patch: Added.
+        * gtk/patches/udpsrc-improve-timeouts.patch: Added.
+        Changed gstreamer jhbuild modules to use tarball repos (required to add patches)
+        and added 2 patches to gst-plugins-good to fix timeout issues with rtsp streams.
+        Both patches are applied upstream and can be removed once a new gstreamer release
+        is out (up to 1.0.10 the patches are not included) and we bump the requirements.
+
+2013-09-03  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac] WebKitTestRunner still beeps sometimes
+        https://bugs.webkit.org/show_bug.cgi?id=120652
+
+        Reviewed by Tim Horton.
+
+        In bug 107251, we disabled beeping in WebProcess, but some of the beeps happen in
+        UI process (notably, AppKit beeps when handling a key equivalent returns NO).
+
+        * WebKitTestRunner/mac/TestControllerMac.mm: (WTR::TestController::platformInitialize):
+        Use the same SPI that we use in DRT and in WebProcess to disable beeping.
+
+2013-09-03  Krzysztof Czech  <k.czech@samsung.com>
+
+        [AX][ATK] Added support for sort and help attributes
+        https://bugs.webkit.org/show_bug.cgi?id=120456
+
+        Reviewed by Chris Fleizach.
+
+        Added missing implementation to AccessibilityUIElement::helpText and support for
+        aria-sort attribute.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (coreAttributeToAtkAttribute):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::coreAttributeToAtkAttribute):
+        (WTR::AccessibilityUIElement::helpText):
+
+2013-09-03  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt][WK1] PageVisibility tests are flaky
+        https://bugs.webkit.org/show_bug.cgi?id=120418
+
+        Reviewed by Jocelyn Turcotte.
+
+        Implement resetPageVisibility so we can reset visibility without
+        emiting visibility state change events.
+
+        * DumpRenderTree/qt/TestRunnerQt.cpp:
+        (TestRunner::resetPageVisibility):
+
+2013-09-03  ChangSeok Oh  <changseok.oh@collabora.com>
+
+        [GTK] libsoup upversion to fix a gstreamer issue, bug115354
+        https://bugs.webkit.org/show_bug.cgi?id=120613
+
+        Reviewed by Philippe Normand.
+
+        Up version of libsoup to 2.43.90. But the exact version which we'll use is not 2.43.90.
+        To fix bug115354, we need the Andre's patch for libsoup, but the lastest release
+        does not contain it. https://bugzilla.gnome.org/show_bug.cgi?id=706338
+        For the reason, we'll use libsoup git repo directly for a while until the next
+        libsoup release.
+
+        * gtk/jhbuild.modules:
+
+2013-09-02  Darin Adler  <darin@apple.com>
+
+        [Mac] No need for HardAutorelease, which is same as CFBridgingRelease
+        https://bugs.webkit.org/show_bug.cgi?id=120569
+
+        Reviewed by Andy Estes.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm:
+        (dump): Use CFBridgingRelease.
+
+2013-09-02  Anton Obzhirov  <a.obzhirov@samsung.com>
+
+        <https://webkit.org/b/98350> [GTK] accessibility/aria-invalid.html times out
+
+        Reviewed by Mario Sanchez Prada.
+
+        Added few mappings in DumpRenderTree and WebKitTestRunner for aria-invalid in order to get the tests run properly.
+
+        * DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp:
+        (axObjectEventListener):
+        Added mapping for invalid-entry event parameter.
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (coreAttributeToAtkAttribute):
+        Added mapping to aria-invalid.
+        (AccessibilityUIElement::stringAttributeValue):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::coreAttributeToAtkAttribute):
+        Added mapping to aria-invalid.
+
+2013-09-02  Nick Diego Yamane  <nick.yamane@openbossa.org>
+
+        Save md5 correctly when jhbuildPath doesn't exist yet
+        https://bugs.webkit.org/show_bug.cgi?id=120548
+
+        Reviewed by Gustavo Noronha Silva.
+
+        After r152605, Md5 for jhbuild files are saved before the update
+        process, this prevents the script to restart update from scratch
+        when initial checkouts fail. However it causes an issue when builddir
+        (or builddir/Dependencies) doesn't exist yet. In that case the
+        saveJhbuildMd5 function fails to create md5 files.
+        This patch adds a checking for the jhbuildPath and creates it if
+        necessary before trying to open the md5 files.
+
+        * Scripts/update-webkit-libs-jhbuild:
+        (saveJhbuildMd5):
+
+2013-09-02  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        Unreviewed. Move myself to the reviewers list.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-09-01  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2][Mac] Drag and drop tests interfere with user's UI
+        https://bugs.webkit.org/show_bug.cgi?id=120538
+
+        Reviewed by Dan Bernstein.
+
+        This makes running WebKit2 regression tests locally more viable. The patch doesn't
+        fix drag and drop tests to work as expected, I posted some thought about that in
+        <https://bugs.webkit.org/show_bug.cgi?id=68552>.
+
+        * WebKitTestRunner/EventSenderProxy.h:
+        (WTR::EventSenderProxy::position):
+        * WebKitTestRunner/TestController.h:
+        (WTR::TestController::eventSenderProxy):
+        Expose a way to get current mouse position from anywhere in WKTR code.
+
+        * WebKitTestRunner/WebKitTestRunner.xcodeproj/project.pbxproj: Added new files.
+
+        * WebKitTestRunner/mac/EventSenderProxy.mm: (WTR::EventSenderProxy::mouseUp):
+        Copied a FIXME comment from DumpRenderTree.
+
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (-[TestRunnerWKView dragImage:at:offset:event:pasteboard:source:slideBack:]):
+        Override drag initiation, using a custom NSDraggingInfo implementation.
+
+        * WebKitTestRunner/mac/TestControllerMac.mm: (WTR::TestController::platformInitialize):
+        Replace NSEvent with a custom class.
+
+        * WebKitTestRunner/mac/WebKitTestRunnerDraggingInfo.h: Added.
+        * WebKitTestRunner/mac/WebKitTestRunnerDraggingInfo.mm: Added.
+        * WebKitTestRunner/mac/WebKitTestRunnerEvent.h: Added.
+        * WebKitTestRunner/mac/WebKitTestRunnerEvent.mm: Added.
+        Largely a copy of DumpRenderTree classes, modified to not use global variables.
+        We should consider making these variables static in EventSenderProxy though, as
+        it's strange that mouse state in WKTR is reset between tests without WebKit ever
+        being told about that.
+
+2013-08-30  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build fix.
+
+        * win/AssembleBuildLogs/AssembleLogs.cmd: Make sure WebInspectorUI build output is reported
+        from the build machines.
+
+2013-08-30  Gabor Abraham  <abrhm@inf.u-szeged.hu>
+
+        [Qt] Remove qt-5.0-wk2 from the baseline search paths because the migration of expectations to qt-wk2 is done.
+        https://bugs.webkit.org/show_bug.cgi?id=120464
+
+        Reviewed by Jocelyn Turcotte.
+
+        * Scripts/webkitpy/port/qt.py:
+        (QtPort._search_paths):
+        * Scripts/webkitpy/port/qt_unittest.py:
+        (QtPortTest):
+
+2013-08-29  Filip Pizlo  <fpizlo@apple.com>
+
+        Just linking LLVM into JSC causes all plugin tests to fail
+        https://bugs.webkit.org/show_bug.cgi?id=113915
+
+        Reviewed by Oliver Hunt.
+        
+        Hide all LLVM symbols. This should prevent us from exporting LLVM's overrides for
+        raise/abort/__assert_rtn.
+
+        * Scripts/configure-llvm:
+
+2013-08-29  Joseph Pecoraro  <pecoraro@apple.com>
+
+        new-run-webkit-tests does not respect --no-sample-on-timeout switch
+        https://bugs.webkit.org/show_bug.cgi?id=120491
+
+        Reviewed by Darin Adler.
+
+        * Scripts/webkitpy/port/server_process.py:
+        (ServerProcess._handle_timeout):
+
+2013-08-29  Sam Weinig  <sam@webkit.org>
+
+        Add ENABLE guards for Promises
+        https://bugs.webkit.org/show_bug.cgi?id=120488
+
+        Reviewed by Andreas Kling.
+
+        * Scripts/webkitperl/FeatureList.pm:
+        * qmake/mkspecs/features/features.pri:
+
+2013-08-29  Andre Moreira Magalhaes   <andre.magalhaes@collabora.co.uk>
+
+        [GTK] Should enable WebGL by default on MiniBrowser
+        https://bugs.webkit.org/show_bug.cgi?id=120420
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Enable WebGL by default on MiniBrowser.
+
+        * MiniBrowser/gtk/main.c:
+        (main):
+
+2013-08-28  Simon Fraser  <simon.fraser@apple.com>
+
+        Add a Command-R shortcut in MiniBrowser
+        https://bugs.webkit.org/show_bug.cgi?id=120442
+
+        Reviewed by Dean Jackson.
+        
+        Add a "Reload Page" item to the View menu with a Command-R
+        shortcut.
+
+        * MiniBrowser/mac/MainMenu.xib:
+
+2013-08-29  Alberto Garcia  <berto@igalia.com>
+
+        [GTK] Update apt dependency list
+        https://bugs.webkit.org/show_bug.cgi?id=120399
+
+        Reviewed by Philippe Normand.
+
+        Remove bogus package gail-3.0, add xfonts-utils (needed by
+        xorg-xserver) and switch to the latest versions of libtiff and
+        libjpeg.
+
+        * gtk/install-dependencies:
+
+2013-08-28  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2][Mac] WebKitTestRunner doesn't force system appearance
+        https://bugs.webkit.org/show_bug.cgi?id=120437
+
+        Reviewed by Darin Adler.
+
+        * WebKitTestRunner/InjectedBundle/mac/InjectedBundleMac.mm:
+        (WTR::InjectedBundle::platformInitialize): Set AppleAquaColorVariant,
+        AppleHighlightColor and AppleOtherHighlightColor to the same values that DRT uses.
+        Fixed formatting.
+
+2013-08-16  Ryosuke Niwa  <rniwa@webkit.org>
+
+        <https://webkit.org/b/119806> [Mac] Add a way to easily test attributed string generation
+
+        Reviewed by Darin Adler.
+
+        Add textInputController.legacyAttributedString to retrieve the attributed string for copy & paste.
+
+        We can't use textInputController.attributedSubstringFromRange as it uses WebHTMLConverter's static
+        editingAttributedStringFromRange function, which doesn't implement the full converter at the moment.
+
+        Also NSMutableAttributedString.ranges and WebNSRange so that JavaScript can get a list of all
+        ranges in a given attributed string.
+
+        * DumpRenderTree/mac/TextInputController.m:
+        (-[WebNSRange initWithNSRange:]):
+        (-[WebNSRange location]):
+        (-[WebNSRange length]):
+        (+[WebNSRange isSelectorExcludedFromWebScript:]):
+        (+[NSMutableAttributedString isSelectorExcludedFromWebScript:]):
+        (+[NSMutableAttributedString webScriptNameForSelector:]):
+        (-[NSMutableAttributedString ranges]): Added.
+        (+[TextInputController isSelectorExcludedFromWebScript:]):
+        (+[TextInputController webScriptNameForSelector:]):
+        (-[TextInputController legacyAttributedString:]):
+
+2013-08-28  Denis Nomiyama  <d.nomiyama@samsung.com>
+
+        [GTK] accessibility/menu-list-sends-change-notification.html has incorrect expected results
+        https://bugs.webkit.org/show_bug.cgi?id=120419
+
+        Reviewed by Chris Fleizach.
+
+        Added a notification for AXFocusedUIElementChanged.
+
+        * DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp:
+        (axObjectEventListener): Added a notification for AXFocusedUIElementChanged.
+
+2013-08-28  Roger Fong  <roger_fong@apple.com>
+
+        Decrease number of workers used in NRWT by the Windows port.
+        https://bugs.webkit.org/show_bug.cgi?id=120435.
+
+        Reviewed by Brent Fulgham.
+
+        * Scripts/webkitpy/port/win.py:
+        (WinPort.default_child_processes):
+
+2013-08-28  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Http tests fails on Debian with Apache 2.4
+        https://bugs.webkit.org/show_bug.cgi?id=120352
+
+        Unreviewed fix-up.
+
+        Remember to update unit-test expectations and old-run-webkit-tests as well.
+
+        * Scripts/webkitperl/httpd.pm:
+        (getHTTPDConfigPathForTestDirectory):
+        * Scripts/webkitpy/port/port_testcase.py:
+        (test_apache_config_file_name_for_platform):
+
+2013-08-28  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Http tests fails on Debian with Apache 2.4
+        https://bugs.webkit.org/show_bug.cgi?id=120352
+
+        Reviewed by Andreas Kling.
+
+        Select httpd.conf file for debian based on version, matching Fedora behavior.
+
+        * Scripts/webkitpy/port/base.py:
+        (Port._apache_config_file_name_for_platform):
+
+2013-08-28  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r154593.
+        http://trac.webkit.org/changeset/154593
+        https://bugs.webkit.org/show_bug.cgi?id=120403
+
+        Caused 50+ flaky tests on WebKit1 bots (Requested by carewolf
+        on #webkit).
+
+        * DumpRenderTree/qt/DumpRenderTreeQt.cpp:
+        (WebPage::~WebPage):
+
+2013-08-28  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt][Wk2] Many tests are flaky on Qt 5.1
+        https://bugs.webkit.org/show_bug.cgi?id=118232
+
+        Reviewed by Jocelyn Turcotte.
+
+        We need to set renderToOffscreenBuffer since we won't otherwise get
+        the paint calls necessary to synchronize UI- and Web-Process. It was
+        only disabled in Qt 5.0 because it conflicted with setRenderWithoutShowing
+        which is no longer supported or needed.
+
+        * WebKitTestRunner/qt/PlatformWebViewQt.cpp:
+        (WTR::WrapperWindow::handleStatusChanged):
+
+2013-08-27  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2] Remove USE_WEBPROCESS_EVENT_SIMULATION
+        https://bugs.webkit.org/show_bug.cgi?id=120379
+
+        Reviewed by Darin Adler.
+
+        All major platforms have implemented UI process eventSender support, keeping old
+        web process side code only adds confusion.
+
+        * WebKitTestRunner/InjectedBundle/EventSendingController.cpp:
+        (WTR::EventSendingController::EventSendingController):
+        (WTR::EventSendingController::mouseDown):
+        (WTR::EventSendingController::mouseUp):
+        (WTR::EventSendingController::mouseMoveTo):
+        (WTR::EventSendingController::leapForward):
+        * WebKitTestRunner/InjectedBundle/EventSendingController.h:
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::resetStateToConsistentValues):
+        (WTR::TestController::didReceiveMessageFromInjectedBundle):
+        (WTR::TestController::didReceiveSynchronousMessageFromInjectedBundle):
+        * WebKitTestRunner/TestController.h:
+
+2013-08-27  Roger Fong  <roger_fong@apple.com>
+
+        NRWT on AppleWin port should delete semaphore lock files during cleanup tasks.
+        https://bugs.webkit.org/show_bug.cgi?id=120370.
+
+        Reviewed by Brent Fulgham.
+
+        * Scripts/webkitpy/port/win.py:
+        (WinPort.delete_sem_locks):
+        (WinPort.setup_test_run):
+
+2013-08-27  Denis Nomiyama  <d.nomiyama@samsung.com>
+
+        [GTK] Missing DRT AccessibilityUIElement::addNotificationListener implementation
+        https://bugs.webkit.org/show_bug.cgi?id=119883
+
+        Implemented the notification listener for AccessibilityUIElement. The signal is generated
+        by AXObjectCache::postPlatformNotification() and received by axObjectEventListener().
+        axObjectEventListener will then invoke JSObjectCallAsFunction() with the respective
+        callback function. The global callback function and callbacks for specific elements are
+        stored in a HashMap in AccessibilityCallbacksAtk.cpp.
+
+        Reviewed by Chris Fleizach.
+
+        * DumpRenderTree/AccessibilityUIElement.h: Added a notification handler for GTK+
+        * DumpRenderTree/atk/AccessibilityCallbacks.h: Added addAccessibilityNotificationListener()
+        and removeAccessibilityNotificationListener()
+        * DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp:
+        (axObjectEventListener): Call JS callback for global notification or for a specific element
+        (disconnectAccessibilityCallbacks): Only disconnect if logging is off and there is no
+        notification handler
+        (addAccessibilityNotificationHandler): Add notification listener to the list
+        (removeAccessibilityNotificationHandler): Remove notification listener from the list
+        * DumpRenderTree/atk/AccessibilityControllerAtk.cpp:
+        (AccessibilityController::setLogAccessibilityEvents): Set logging off before disconnecting
+        * DumpRenderTree/atk/AccessibilityNotificationHandlerAtk.cpp: Added.
+        (AccessibilityNotificationHandler::AccessibilityNotificationHandler): Create handler
+        (AccessibilityNotificationHandler::~AccessibilityNotificationHandler): Destroy handler.
+        Remove handler from the list and disconnect callbacks
+        (AccessibilityNotificationHandler::setNotificationFunctionCallback): Set the notification
+        callback and connect callbacks to signals
+        * DumpRenderTree/atk/AccessibilityNotificationHandlerAtk.h: Added.
+        (AccessibilityNotificationHandler::setPlatformElement): Set platform element
+        (AccessibilityNotificationHandler::platformElement): Get platform element
+        (AccessibilityNotificationHandler::notificationFunctionCallback): Get notification callback
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::addNotificationListener): Create notification handler, set the
+        platform element and the notification callback
+        (AccessibilityUIElement::removeNotificationListener):
+        * DumpRenderTree/efl/CMakeLists.txt: Added AccessibilityNotificationHandlerAtk.cpp/h
+        * GNUmakefile.am: Added AccessibilityNotificationHandlerAtk.cpp/h
+
+2013-08-27  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix GTK+ build after r154601.
+
+        * TestWebKitAPI/GNUmakefile.am: Remove mac specific file from
+        compilation added by mistake in r154601.
+
+2013-08-26  Alexey Proskuryakov  <ap@apple.com>
+
+        WebKitTestRunner needs to protect the user's pasteboard contents while running
+        https://bugs.webkit.org/show_bug.cgi?id=81419
+        <rdar://problem/11066794>
+
+        Reviewed by Darin Adler.
+
+        Mostly a copy/paste of DRT code.
+
+        Tested manually by making sure that editing/pasteboard/copy-image-with-alt-text.html
+        doesn't interfere with my clipboard while being run in a loop.
+
+        * WebKitTestRunner/WebKitTestRunner.xcodeproj/project.pbxproj:
+        * WebKitTestRunner/mac/PoseAsClass.h: Added.
+        * WebKitTestRunner/mac/PoseAsClass.mm: Added.
+        * WebKitTestRunner/mac/TestControllerMac.mm:
+        (WTR::TestController::platformInitialize):
+        (WTR::TestController::platformDestroy):
+        * WebKitTestRunner/mac/WebKitTestRunnerPasteboard.h: Added.
+        * WebKitTestRunner/mac/WebKitTestRunnerPasteboard.mm: Added.
+
+2013-08-26  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r154640.
+        http://trac.webkit.org/changeset/154640
+        https://bugs.webkit.org/show_bug.cgi?id=120329
+
+        Caused flaky crashes on a lot of editing tests (Requested by
+        rniwa on #webkit).
+
+        * WebKitTestRunner/WebKitTestRunner.xcodeproj/project.pbxproj:
+        * WebKitTestRunner/mac/PoseAsClass.h: Removed.
+        * WebKitTestRunner/mac/PoseAsClass.mm: Removed.
+        * WebKitTestRunner/mac/TestControllerMac.mm:
+        (WTR::TestController::platformInitialize):
+        (WTR::TestController::platformDestroy):
+        * WebKitTestRunner/mac/WebKitTestRunnerPasteboard.h: Removed.
+        * WebKitTestRunner/mac/WebKitTestRunnerPasteboard.mm: Removed.
+
+2013-08-26  Dan Bernstein  <mitz@apple.com>
+
+        Automatic bug reports case pain
+        https://bugs.webkit.org/show_bug.cgi?id=120330
+
+        Reviewed by Anders Carlsson.
+
+        * Scripts/webkitpy/tool/commands/download.py: Made the following changes to the Description
+        of bugs filed by the bot: changed “the sheriff-bot” to “webkitbot”, changed “case pain” to
+        “fail”, and removed “"Only you can prevent forest fires." -- Smokey the Bear”.
+
+2013-08-23  Andy Estes  <aestes@apple.com>
+
+        Fix issues found by the Clang Static Analyzer
+        https://bugs.webkit.org/show_bug.cgi?id=120230
+
+        Reviewed by Darin Adler.
+
+        * DumpRenderTree/mac/DumpRenderTreePasteboard.m:
+        (-[LocalPasteboard initWithName:]): Called [super init] first so that we
+        don't later use ivars from the wrong self.
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        (-[APITestDelegate initWithCompletionCondition:]): Ditto.
+        * TestWebKitAPI/Tests/WebKit2ObjC/CustomProtocolsTest.mm:
+        (TestWebKitAPI::TEST): Don't leak WKProcessGroups,
+        WKBrowsingContextGroups, and WKViews.
+
+2013-08-26  Alexey Proskuryakov  <ap@apple.com>
+
+        WebKitTestRunner needs to protect the user's pasteboard contents while running
+        https://bugs.webkit.org/show_bug.cgi?id=81419
+        <rdar://problem/11066794>
+
+        Reviewed by Darin Adler.
+
+        Mostly a copy/paste of DRT code.
+
+        Tested manually by making sure that editing/pasteboard/copy-image-with-alt-text.html
+        doesn't interfere with my clipboard while being run in a loop.
+
+        * WebKitTestRunner/WebKitTestRunner.xcodeproj/project.pbxproj:
+        * WebKitTestRunner/mac/PoseAsClass.h: Added.
+        * WebKitTestRunner/mac/PoseAsClass.mm: Added.
+        * WebKitTestRunner/mac/TestControllerMac.mm:
+        (WTR::TestController::platformInitialize):
+        (WTR::TestController::platformDestroy):
+        * WebKitTestRunner/mac/WebKitTestRunnerPasteboard.h: Added.
+        * WebKitTestRunner/mac/WebKitTestRunnerPasteboard.mm: Added.
+
+2013-08-26  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Include most of the WebKit2 unit tests into the build and testing
+        https://bugs.webkit.org/show_bug.cgi?id=120307
+
+        Reviewed by Philippe Normand.
+
+        There are still various unit test source files that are not being included into
+        the build. This patch includes most of these, only leaving out tests that do not
+        compile or test features that are not supported by the GTK port.
+
+        * Scripts/run-gtk-tests: Skip four newly-added tests that are failing or timing out.
+        (TestRunner):
+        * TestWebKitAPI/GNUmakefile.am:
+
+2013-08-26  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Allow to run tests without Xvfb in run-gtk-tests
+        https://bugs.webkit.org/show_bug.cgi?id=120298
+
+        Reviewed by Philippe Normand.
+
+        Add --no-xvfb command line option to run tests in the current
+        display.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner._run_xvfb): Return early if option --no-xvfb has been
+        passed.
+        (TestRunner._setup_testing_environment): Use helper function
+        _run_xvfb to start Xvfb if needed.
+        (TestRunner._tear_down_testing_environment): Check Xvfb is
+        actually running before trying to terminate it.
+
+2013-08-26  Zoltan Arvai  <zarvai@inf.u-szeged.hu>
+
+        Adding Gabor Abraham to contributors.json.
+
+        Reviewed by Csaba Osztrogonác.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-08-26  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Add support for passing test directories to run-gtk-tests
+        https://bugs.webkit.org/show_bug.cgi?id=120296
+
+        Reviewed by Philippe Normand.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner._get_tests_from_dir): Helper function to return all
+        unit tests found in a given directory.
+        (TestRunner._get_tests): Check the given tests passed in the
+        command line, so that if a directory is found the tests contained
+        in the directory are added to the list of tests to run.
+
+2013-08-26  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Improve the stop/reload button implementation in MiniBrowser
+        https://bugs.webkit.org/show_bug.cgi?id=120292
+
+        Reviewed by Philippe Normand.
+
+        - Use an instance member of BrowserWindow for the button widget
+          instead of a global variable.
+        - Use notify::is-loading to monitor the WebView load instead of
+          the estimated-load-progress property.
+        - Use webkit_web_view_is_loading() to check whether the view
+          is loading to change the button icon instead of a string
+          comparison of the gtk stock icon id.
+        - Use the right casts to fix compile warning.
+
+        * MiniBrowser/gtk/BrowserWindow.c:
+        (reloadOrStopCallback):
+        (webViewLoadProgressChanged):
+        (webViewIsLoadingChanged):
+        (browser_window_init):
+        (browserWindowConstructed):
+
+2013-08-26  Arunprasad Rajkumar  <arurajku@cisco.com>
+
+        [Qt] Remove the fix in QWebPage::javaScriptConsoleMessage introduced by (r61433)
+        https://bugs.webkit.org/show_bug.cgi?id=119791
+
+        Reviewed by Jocelyn Turcotte.
+        
+        Load empty url to send onunload event to currently running page. onunload event is 
+        mandatory for LayoutTests/plugins/open-and-close-window-with-plugin.html and
+        LayoutTests/plugins/geturlnotify-during-document-teardown.html.
+
+        * DumpRenderTree/qt/DumpRenderTreeQt.cpp:
+        (WebPage::~WebPage):
+
+2013-08-26  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Silence MiniBrowser compile warnings due to recent GTK+ deprecations
+        https://bugs.webkit.org/show_bug.cgi?id=120290
+
+        Reviewed by Philippe Normand.
+
+        * MiniBrowser/gtk/GNUmakefile.am: Add
+        -DGDK_VERSION_MIN_REQUIRED=GDK_VERSION_3_6 compile option.
+
+2013-08-26  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Add WillLoad test files to the TestWebKitAPI/TestWebKit2 program
+        https://bugs.webkit.org/show_bug.cgi?id=120288
+
+        Reviewed by Carlos Garcia Campos.
+
+        * TestWebKitAPI/GNUmakefile.am: Add the WillLoad.cpp build target that should be compiled
+        into the TestWebKit2 program. The InjectedBundle counterpart file is added to the build as well.
+        These unit tests are at the moment failing in debug configurations, so it would be nice to
+        have the GTK builds report these failures as well.
+
+2013-08-25  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] EWebLauncher is executed as full screen with device pixel ratio
+        https://bugs.webkit.org/show_bug.cgi?id=120282
+
+        Reviewed by Gyuyoung Kim.
+
+        * EWebLauncher/main.c:
+        Use double instead of float for device_pixel_ratio which is passed to ECORE_GETOPT_VALUE_DOUBLE.
+
+2013-08-25  Zan Dobersek  <zdobersek@igalia.com>
+
+        [gdb] Remove the pretty printer for KURLGooglePrivate
+        https://bugs.webkit.org/show_bug.cgi?id=120263
+
+        Reviewed by Benjamin Poulain.
+
+        Remove the pretty printer for the WebCore::KURLGooglePrivate structure that
+        was usable inside the gdb debugger. The structure was remove from the codebase
+        along with the GoogleURL backend for KURL.
+
+        * gdb/webkit.py:
+        (JSCJSStringPrinter.to_string):
+        (add_pretty_printers):
+
+2013-08-24  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix build-webkit --ftl-jit in the case that you have your own llvm directory. We need to
+        prune 'libgtest' and friends from the llvm build, since WebKit builds its own and none of the llvm
+        libraries depend on libgtest anyway.
+
+        * Scripts/copy-webkitlibraries-to-product-directory:
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        RetainPtr lacks move constructor for case when argument is a RetainPtr of a different type
+        https://bugs.webkit.org/show_bug.cgi?id=120255
+
+        Reviewed by Andreas Kling.
+
+        * TestWebKitAPI/Tests/WTF/ns/RetainPtr.mm: Added four tests covering move assignment and construction.
+
+2013-08-24  Anders Carlsson  <andersca@apple.com>
+
+        Don't treat NSLocalizedDescriptionKey and NSLocalizedRecoverySuggestionErrorKey as NSLocalized macros
+        https://bugs.webkit.org/show_bug.cgi?id=120249
+
+        Reviewed by Andreas Kling.
+
+        * Scripts/extract-localizable-strings:
+
+2013-08-24  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Expose WebKitFrame in WebKit2GTK+ web extensions API
+        https://bugs.webkit.org/show_bug.cgi?id=119743
+
+        Reviewed by Anders Carlsson.
+
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::InjectedBundlePage): Add
+        willDestroyFrame.
+
+2013-08-23  Thiago de Barros Lacerda  <thiago.lacerda@openbossa.org>
+
+        Move TestWebKitAPI_LIBRARIES before platform specific cmake include
+        https://bugs.webkit.org/show_bug.cgi?id=120220
+
+        Reviewed by Martin Robinson.
+
+        * TestWebKitAPI/CMakeLists.txt:
+
+2013-08-22  Filip Pizlo  <fpizlo@apple.com>
+
+        build-jsc --ftl-jit should work
+        https://bugs.webkit.org/show_bug.cgi?id=120194
+
+        Reviewed by Oliver Hunt.
+
+        * Scripts/build-jsc: Need to pass the feature flag to xcodebuild
+
+2013-08-23  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r153534.
+        http://trac.webkit.org/changeset/153534
+        https://bugs.webkit.org/show_bug.cgi?id=120216
+
+        Too many tests failing just WinEWS bots (Requested by rfong on
+        #webkit).
+
+        * Scripts/webkitpy/common/config/ews.json:
+
+2013-08-23  Alex Christensen  <alex.christensen@flexsim.com>
+
+        Unreviewed.  Added my webkit.org email address.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-08-23  Peter Gal  <galpeter@inf.u-szeged.hu>
+
+        [WTR] Should dump as text when the mimetype is text/plain
+        https://bugs.webkit.org/show_bug.cgi?id=118306
+
+        Reviewed by Christophe Dumez.
+
+        Check for the text/plain mimetype and if true then mark it as
+        text dump.
+
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::dump):
+
+2013-08-22  Filip Pizlo  <fpizlo@apple.com>
+
+        Update LLVM binary drops and scripts to the latest version from SVN
+        https://bugs.webkit.org/show_bug.cgi?id=120184
+
+        Reviewed by Mark Hahnenberg.
+
+        * ReducedFTL/build.sh:
+        * Scripts/configure-llvm: Added.
+        * Scripts/copy-webkitlibraries-to-product-directory:
+        * Scripts/export-llvm-build:
+
+2013-08-22  Andy Estes  <aestes@apple.com>
+
+        <https://webkit.org/b/120180> Fix issues with OTHER_LDFLAGS in various .xcconfig files
+
+        Reviewed by David Kilzer.
+
+        * TestWebKitAPI/Configurations/Base.xcconfig: Removed the definition of
+        OTHER_CPLUSPLUSFLAGS since -ftemplate-depth=256 is already set in
+        DebugRelease.xcconfig and TestWebKitAPI isn't built in Production.
+
+2013-08-22  Ryosuke Niwa  <rniwa@webkit.org>
+
+        NRWT: Add the ability to upload test results to new test results server
+        https://bugs.webkit.org/show_bug.cgi?id=120146
+
+        Reviewed by Andreas Kling.
+        
+        For the upcoming replacement for webkit-test-results.appspot.com, new-run-webkit-tests needs to use a new JSON format
+        that contains the full summary of the test run including information about passed tests.
+
+        Add this ability to NRWT so that I can start testing this feature. This patch adds the following optoins to NRWT:
+        --build-slave
+        --got-revision
+        --results-server-host
+
+        The last option is somewhat ambigious with --test-results-server but we're intending to deprecate the old server
+        so we should be able to delete --test-results-server in time.
+
+        * Scripts/webkitpy/layout_tests/controllers/manager.py:
+        (Manager.run):
+        (Manager._upload_json_files):
+        (Manager):
+        (Manager.upload_results):
+        * Scripts/webkitpy/layout_tests/models/test_run_results.py:
+        (summarize_results):
+        * Scripts/webkitpy/layout_tests/models/test_run_results_unittest.py:
+        (summarized_results):
+        (SummarizedResultsTest.test_summarized_results_wontfix):
+        (SummarizedResultsTest):
+        (SummarizedResultsTest.test_summarized_results_include_passes):
+        * Scripts/webkitpy/layout_tests/run_webkit_tests.py:
+        (parse_args):
+
+2013-08-22  Ryosuke Niwa  <rniwa@webkit.org>
+
+        WKR build fix. Somehow tool.bugs.quips() doesn't work in WKR so work around that.
+
+        * Scripts/webkitpy/tool/bot/irc_command.py:
+        (Hi.execute):
+
+2013-08-22  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] DRT bug revealed/caused by r154300
+        https://bugs.webkit.org/show_bug.cgi?id=120151
+
+        Reviewed by Simon Hausmann.
+
+        Since QtInstance had an implementation of getOwnPropertySlot and not getOwnPropertyDescriptor,
+        the behavior of getOwnPropertyDescriptor changed when it got implemented using getOwnPropertySlot
+        in r154300.
+
+        DRT relied on getOwnPropertyDescriptor returning undefined for JS set properties to distinguish
+        between native Qt methods and JSC bound methods. This patch changes the check to see if the 
+        property is writable since the Qt methods are ReadOnly.
+
+        * DumpRenderTree/qt/DumpRenderTreeQt.cpp:
+        (DumpRenderTree::initJSObjects):
+
+2013-08-21  Joseph Pecoraro  <pecoraro@apple.com>
+
+        <https://webkit.org/b/120134> [Tools] lldb_webkit.py helpers is incorrectly printing 8bit Strings
+
+        Reviewed by Benjamin Poulain.
+
+        WTFString moved the is8bit bit by one in r152201.
+
+        * lldb/lldb_webkit.py:
+        (WTFStringImplProvider.is_8bit):
+
+2013-08-21  Tim Horton  <timothy_horton@apple.com>
+
+        Revert http://trac.webkit.org/changeset/154022, as it failed to update
+        a variety of scripts that depended on the old format.
+
+        See https://bugs.webkit.org/show_bug.cgi?id=120131 for one such example.
+
+        * Scripts/prepare-ChangeLog:
+        (main):
+        (generateNewChangeLogs):
+
 2013-08-21  Brent Fulgham  <bfulgham@apple.com>
 
         [Windows] Unreviewed gardening: WebInspector should always be enabled for WinLauncher.

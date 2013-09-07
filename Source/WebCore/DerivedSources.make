@@ -34,6 +34,7 @@ VPATH = \
     $(WebCore)/Modules/indexeddb \
     $(WebCore)/Modules/indieui \
     $(WebCore)/Modules/mediasource \
+    $(WebCore)/Modules/mediastream \
     $(WebCore)/Modules/notifications \
     $(WebCore)/Modules/quota \
     $(WebCore)/Modules/speech \
@@ -115,6 +116,28 @@ BINDING_IDLS = \
     $(WebCore)/Modules/mediasource/MediaSource.idl \
     $(WebCore)/Modules/mediasource/SourceBuffer.idl \
     $(WebCore)/Modules/mediasource/SourceBufferList.idl \
+    $(WebCore)/Modules/mediastream/LocalMediaStream.idl \
+    $(WebCore)/Modules/mediastream/MediaStream.idl \
+    $(WebCore)/Modules/mediastream/MediaStreamEvent.idl \
+    $(WebCore)/Modules/mediastream/MediaStreamTrack.idl \
+    $(WebCore)/Modules/mediastream/MediaStreamTrackEvent.idl \
+    $(WebCore)/Modules/mediastream/NavigatorMediaStream.idl \
+    $(WebCore)/Modules/mediastream/NavigatorUserMediaError.idl \
+    $(WebCore)/Modules/mediastream/NavigatorUserMediaErrorCallback.idl \
+    $(WebCore)/Modules/mediastream/NavigatorUserMediaSuccessCallback.idl \
+    $(WebCore)/Modules/mediastream/RTCDTMFSender.idl \
+    $(WebCore)/Modules/mediastream/RTCDTMFToneChangeEvent.idl \
+    $(WebCore)/Modules/mediastream/RTCDataChannel.idl \
+    $(WebCore)/Modules/mediastream/RTCDataChannelEvent.idl \
+    $(WebCore)/Modules/mediastream/RTCErrorCallback.idl \
+    $(WebCore)/Modules/mediastream/RTCIceCandidate.idl \
+    $(WebCore)/Modules/mediastream/RTCIceCandidateEvent.idl \
+    $(WebCore)/Modules/mediastream/RTCPeerConnection.idl \
+    $(WebCore)/Modules/mediastream/RTCSessionDescription.idl \
+    $(WebCore)/Modules/mediastream/RTCSessionDescriptionCallback.idl \
+    $(WebCore)/Modules/mediastream/RTCStatsCallback.idl \
+    $(WebCore)/Modules/mediastream/RTCStatsReport.idl \
+    $(WebCore)/Modules/mediastream/RTCStatsResponse.idl \
     $(WebCore)/Modules/notifications/DOMWindowNotifications.idl \
     $(WebCore)/Modules/notifications/Notification.idl \
     $(WebCore)/Modules/notifications/NotificationCenter.idl \
@@ -152,6 +175,7 @@ BINDING_IDLS = \
     $(WebCore)/Modules/webaudio/DynamicsCompressorNode.idl \
     $(WebCore)/Modules/webaudio/ScriptProcessorNode.idl \
     $(WebCore)/Modules/webaudio/MediaElementAudioSourceNode.idl \
+    $(WebCore)/Modules/webaudio/MediaStreamAudioDestinationNode.idl \
     $(WebCore)/Modules/webaudio/MediaStreamAudioSourceNode.idl \
     $(WebCore)/Modules/webaudio/OscillatorNode.idl \
     $(WebCore)/Modules/webaudio/OfflineAudioContext.idl \
@@ -312,7 +336,6 @@ BINDING_IDLS = \
     $(WebCore)/html/HTMLDListElement.idl \
     $(WebCore)/html/HTMLDataListElement.idl \
     $(WebCore)/html/HTMLDetailsElement.idl \
-    $(WebCore)/html/HTMLDialogElement.idl \
     $(WebCore)/html/HTMLDirectoryElement.idl \
     $(WebCore)/html/HTMLDivElement.idl \
     $(WebCore)/html/HTMLDocument.idl \
@@ -587,7 +610,6 @@ BINDING_IDLS = \
     $(WebCore)/svg/SVGStopElement.idl \
     $(WebCore)/svg/SVGStringList.idl \
     $(WebCore)/svg/SVGStyleElement.idl \
-    $(WebCore)/svg/SVGStyledElement.idl \
     $(WebCore)/svg/SVGSwitchElement.idl \
     $(WebCore)/svg/SVGSymbolElement.idl \
     $(WebCore)/svg/SVGTRefElement.idl \
@@ -691,7 +713,7 @@ ifneq ($(SDKROOT),)
 	SDK_FLAGS=-isysroot $(SDKROOT)
 endif
 
-ifeq ($(shell $(CC) -x c++ -E -P -dM $(SDK_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -std=gnu++11 -x c++ -E -P -dM $(SDK_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
     ENABLE_ORIENTATION_EVENTS = 1
 endif
 
@@ -869,6 +891,10 @@ ifeq ($(findstring ENABLE_ENCRYPTED_MEDIA,$(FEATURE_DEFINES)), ENABLE_ENCRYPTED_
     HTML_FLAGS := $(HTML_FLAGS) ENABLE_ENCRYPTED_MEDIA=1
 endif
 
+ifeq ($(findstring ENABLE_MEDIA_STREAM,$(FEATURE_DEFINES)), ENABLE_MEDIA_STREAM)
+    HTML_FLAGS := $(HTML_FLAGS) ENABLE_MEDIA_STREAM=1
+endif
+
 ifdef HTML_FLAGS
 
 HTMLElementFactory.cpp HTMLNames.cpp : dom/make_names.pl bindings/scripts/Hasher.pm bindings/scripts/StaticString.pm html/HTMLTagNames.in html/HTMLAttributeNames.in
@@ -1022,7 +1048,7 @@ all : InspectorFrontend.h
 INSPECTOR_GENERATOR_SCRIPTS = inspector/CodeGeneratorInspector.py
 
 InspectorFrontend.h : Inspector.json $(INSPECTOR_GENERATOR_SCRIPTS)
-	python $(WebCore)/inspector/CodeGeneratorInspector.py $(WebCore)/inspector/Inspector.json --output_h_dir . --output_cpp_dir .
+	python $(WebCore)/inspector/CodeGeneratorInspector.py $(WebCore)/inspector/Inspector.json --output_h_dir . --output_cpp_dir . --output_js_dir .
 
 all : InspectorOverlayPage.h
 

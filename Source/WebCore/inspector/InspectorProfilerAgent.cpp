@@ -312,13 +312,10 @@ void InspectorProfilerAgent::getHeapSnapshot(ErrorString* errorString, int rawUi
 void InspectorProfilerAgent::removeProfile(ErrorString*, const String& type, int rawUid)
 {
     unsigned uid = static_cast<unsigned>(rawUid);
-    if (type == CPUProfileType) {
-        if (m_profiles.contains(uid))
-            m_profiles.remove(uid);
-    } else if (type == HeapProfileType) {
-        if (m_snapshots.contains(uid))
-            m_snapshots.remove(uid);
-    }
+    if (type == CPUProfileType)
+        m_profiles.remove(uid);
+    else if (type == HeapProfileType)
+        m_snapshots.remove(uid);
 }
 
 void InspectorProfilerAgent::resetState()

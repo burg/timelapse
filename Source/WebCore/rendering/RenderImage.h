@@ -101,6 +101,8 @@ private:
     IntSize imageSizeForError(CachedImage*) const;
     void imageDimensionsChanged(bool imageSizeChanged, const IntRect* = 0);
     bool updateIntrinsicSizeIfNeeded(const LayoutSize&, bool imageSizeChanged);
+    // Update the size of the image to be rendered. Object-fit may cause this to be different from the CSS box's content rect.
+    void updateInnerContentRect();
 
     void paintAreaElementFocusRing(PaintInfo&);
 
@@ -113,6 +115,18 @@ private:
 
     friend class RenderImageScaleObserver;
 };
+
+inline RenderImage& toRenderImage(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isRenderImage());
+    return static_cast<RenderImage&>(object);
+}
+
+inline const RenderImage& toRenderImage(const RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isRenderImage());
+    return static_cast<const RenderImage&>(object);
+}
 
 inline RenderImage* toRenderImage(RenderObject* object)
 {
@@ -128,6 +142,7 @@ inline const RenderImage* toRenderImage(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderImage(const RenderImage*);
+void toRenderImage(const RenderImage&);
 
 } // namespace WebCore
 

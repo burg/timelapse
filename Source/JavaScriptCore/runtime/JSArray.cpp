@@ -44,7 +44,7 @@ using namespace WTF;
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(JSArray);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSArray);
 
 const ClassInfo JSArray::s_info = {"Array", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(JSArray)};
 
@@ -76,7 +76,7 @@ void JSArray::setLengthWritable(ExecState* exec, bool writable)
 }
 
 // Defined in ES5.1 15.4.5.1
-bool JSArray::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor, bool throwException)
+bool JSArray::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool throwException)
 {
     JSArray* array = jsCast<JSArray*>(object);
 
@@ -109,7 +109,7 @@ bool JSArray::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName 
         unsigned newLen = descriptor.value().toUInt32(exec);
         // d. If newLen is not equal to ToNumber( Desc.[[Value]]), throw a RangeError exception.
         if (newLen != descriptor.value().toNumber(exec)) {
-            throwError(exec, createRangeError(exec, "Invalid array length"));
+            exec->vm().throwException(exec, createRangeError(exec, "Invalid array length"));
             return false;
         }
 
@@ -197,7 +197,7 @@ void JSArray::put(JSCell* cell, ExecState* exec, PropertyName propertyName, JSVa
     if (propertyName == exec->propertyNames().length) {
         unsigned newLength = value.toUInt32(exec);
         if (value.toNumber(exec) != static_cast<double>(newLength)) {
-            throwError(exec, createRangeError(exec, ASCIILiteral("Invalid array length")));
+            exec->vm().throwException(exec, createRangeError(exec, ASCIILiteral("Invalid array length")));
             return;
         }
         thisObject->setLength(exec, newLength, slot.isStrictMode());
@@ -269,6 +269,7 @@ bool JSArray::unshiftCountSlowCase(VM& vm, bool addToFront, unsigned count)
     // Step 2:
     // We're either going to choose to allocate a new ArrayStorage, or we're going to reuse the existing one.
 
+    DeferGC deferGC(vm.heap);
     void* newAllocBase = 0;
     unsigned newStorageCapacity;
     // If the current storage array is sufficiently large (but not too large!) then just keep using it.
@@ -568,7 +569,7 @@ void JSArray::push(ExecState* exec, JSValue value)
         if (length > MAX_ARRAY_INDEX) {
             methodTable()->putByIndex(this, exec, length, value, true);
             if (!exec->hadException())
-                throwError(exec, createRangeError(exec, "Invalid array length"));
+                exec->vm().throwException(exec, createRangeError(exec, "Invalid array length"));
             return;
         }
         
@@ -588,7 +589,7 @@ void JSArray::push(ExecState* exec, JSValue value)
         if (length > MAX_ARRAY_INDEX) {
             methodTable()->putByIndex(this, exec, length, value, true);
             if (!exec->hadException())
-                throwError(exec, createRangeError(exec, "Invalid array length"));
+                exec->vm().throwException(exec, createRangeError(exec, "Invalid array length"));
             return;
         }
         
@@ -620,7 +621,7 @@ void JSArray::push(ExecState* exec, JSValue value)
         if (length > MAX_ARRAY_INDEX) {
             methodTable()->putByIndex(this, exec, length, value, true);
             if (!exec->hadException())
-                throwError(exec, createRangeError(exec, "Invalid array length"));
+                exec->vm().throwException(exec, createRangeError(exec, "Invalid array length"));
             return;
         }
         
@@ -655,7 +656,7 @@ void JSArray::push(ExecState* exec, JSValue value)
             methodTable()->putByIndex(this, exec, storage->length(), value, true);
             // Per ES5.1 15.4.4.7 step 6 & 15.4.5.1 step 3.d.
             if (!exec->hadException())
-                throwError(exec, createRangeError(exec, "Invalid array length"));
+                exec->vm().throwException(exec, createRangeError(exec, "Invalid array length"));
             return;
         }
 

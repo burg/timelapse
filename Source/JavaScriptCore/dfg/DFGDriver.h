@@ -27,6 +27,7 @@
 #define DFGDriver_h
 
 #include "CallFrame.h"
+#include "DFGCompilationMode.h"
 #include "DFGPlan.h"
 #include <wtf/Platform.h>
 
@@ -34,26 +35,21 @@ namespace JSC {
 
 class CodeBlock;
 class JITCode;
-class VM;
 class MacroAssemblerCodePtr;
+class VM;
 
 namespace DFG {
 
+class Worklist;
+
 JS_EXPORT_PRIVATE unsigned getNumCompilations();
 
-#if ENABLE(DFG_JIT)
-CompilationResult tryCompile(ExecState*, CodeBlock*, RefPtr<JSC::JITCode>&, unsigned bytecodeIndex);
-CompilationResult tryCompileFunction(ExecState*, CodeBlock*, RefPtr<JSC::JITCode>&, MacroAssemblerCodePtr& jitCodeWithArityCheck, unsigned bytecodeIndex);
-CompilationResult tryFinalizePlan(PassRefPtr<Plan>, RefPtr<JSC::JITCode>&, MacroAssemblerCodePtr* jitCodeWithArityCheck);
-#else
-inline CompilationResult tryCompile(ExecState*, CodeBlock*, RefPtr<JSC::JITCode>&, unsigned) { return CompilationFailed; }
-inline CompilationResult tryCompileFunction(ExecState*, CodeBlock*, RefPtr<JSC::JITCode>&, MacroAssemblerCodePtr&, unsigned) { return CompilationFailed; }
-inline CompilationResult tryFinalizePlan(PassRefPtr<Plan>, RefPtr<JSC::JITCode>&, MacroAssemblerCodePtr*)
-{
-    UNREACHABLE_FOR_PLATFORM();
-    return CompilationFailed;
-}
-#endif
+// If the worklist is non-null, we do a concurrent compile. Otherwise we do a synchronous
+// compile. Even if we do a synchronous compile, we call the callback with the result.
+CompilationResult compile(
+    VM&, CodeBlock*, CompilationMode, unsigned osrEntryBytecodeIndex,
+    const Operands<JSValue>& mustHandleValues,
+    PassRefPtr<DeferredCompilationCallback>, Worklist*);
 
 } } // namespace JSC::DFG
 

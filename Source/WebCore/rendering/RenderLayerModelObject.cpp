@@ -63,7 +63,7 @@ void RenderLayerModelObject::ensureLayer()
     if (m_layer)
         return;
 
-    m_layer = new (renderArena()) RenderLayer(this);
+    m_layer = new (renderArena()) RenderLayer(*this);
     setHasLayer(true);
     m_layer->insertOnlyThisLayer();
 }
@@ -76,13 +76,8 @@ bool RenderLayerModelObject::hasSelfPaintingLayer() const
 void RenderLayerModelObject::willBeDestroyed()
 {
     if (isPositioned()) {
-        // Don't use this->view() because the document's renderView has been set to 0 during destruction.
-        if (Frame* frame = this->frame()) {
-            if (FrameView* frameView = frame->view()) {
-                if (style()->hasViewportConstrainedPosition())
-                    frameView->removeViewportConstrainedObject(this);
-            }
-        }
+        if (style()->hasViewportConstrainedPosition())
+            view().frameView().removeViewportConstrainedObject(this);
     }
 
     // RenderObject::willBeDestroyed calls back to destroyLayer() for layer destruction
@@ -172,21 +167,19 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
             setChildNeedsLayout(true);
     }
 
-    if (FrameView *frameView = view()->frameView()) {
-        bool newStyleIsViewportConstained = style()->hasViewportConstrainedPosition();
-        bool oldStyleIsViewportConstrained = oldStyle && oldStyle->hasViewportConstrainedPosition();
-        if (newStyleIsViewportConstained != oldStyleIsViewportConstrained) {
-            if (newStyleIsViewportConstained && layer())
-                frameView->addViewportConstrainedObject(this);
-            else
-                frameView->removeViewportConstrainedObject(this);
-        }
+    bool newStyleIsViewportConstained = style()->hasViewportConstrainedPosition();
+    bool oldStyleIsViewportConstrained = oldStyle && oldStyle->hasViewportConstrainedPosition();
+    if (newStyleIsViewportConstained != oldStyleIsViewportConstrained) {
+        if (newStyleIsViewportConstained && layer())
+            view().frameView().addViewportConstrainedObject(this);
+        else
+            view().frameView().removeViewportConstrainedObject(this);
     }
 }
 
 bool RenderLayerModelObject::updateLayerIfNeeded()
 {
-    LayoutStateDisabler layoutStateDisabler(view());
+    LayoutStateDisabler layoutStateDisabler(&view());
 
     bool hadLayer = hasLayer();
     if (requiresLayer()) {

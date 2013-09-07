@@ -62,6 +62,7 @@
 #include <runtime/ArrayBufferView.h>
 #include <runtime/JSLock.h>
 #include <runtime/Operations.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
@@ -191,6 +192,7 @@ XMLHttpRequest::XMLHttpRequest(ScriptExecutionContext* context)
     , m_exceptionCode(0)
     , m_progressEventThrottle(this)
     , m_responseTypeCode(ResponseTypeDefault)
+    , m_responseCacheIsValid(false)
 {
     initializeXMLHttpRequestStaticData();
 #ifndef NDEBUG
@@ -237,7 +239,14 @@ String XMLHttpRequest::responseText(ExceptionCode& ec)
         ec = INVALID_STATE_ERR;
         return "";
     }
-    return m_responseBuilder.toStringPreserveCapacity();
+    return responseTextIgnoringResponseType();
+}
+
+void XMLHttpRequest::didCacheResponseJSON()
+{
+    ASSERT(m_responseTypeCode == ResponseTypeJSON && doneWithoutErrors());
+    m_responseCacheIsValid = true;
+    m_responseBuilder.clear();
 }
 
 Document* XMLHttpRequest::responseXML(ExceptionCode& ec)
@@ -247,7 +256,7 @@ Document* XMLHttpRequest::responseXML(ExceptionCode& ec)
         return 0;
     }
 
-    if (m_error || m_state != DONE)
+    if (!doneWithoutErrors())
         return 0;
 
     if (!m_createdDocument) {
@@ -277,12 +286,10 @@ Document* XMLHttpRequest::responseXML(ExceptionCode& ec)
     return m_responseDocument.get();
 }
 
-Blob* XMLHttpRequest::responseBlob(ExceptionCode& ec)
+Blob* XMLHttpRequest::responseBlob()
 {
-    if (m_responseTypeCode != ResponseTypeBlob) {
-        ec = INVALID_STATE_ERR;
-        return 0;
-    }
+    ASSERT(m_responseTypeCode == ResponseTypeBlob);
+
     // We always return null before DONE.
     if (m_state != DONE)
         return 0;
@@ -313,12 +320,9 @@ Blob* XMLHttpRequest::responseBlob(ExceptionCode& ec)
     return m_responseBlob.get();
 }
 
-ArrayBuffer* XMLHttpRequest::responseArrayBuffer(ExceptionCode& ec)
+ArrayBuffer* XMLHttpRequest::responseArrayBuffer()
 {
-    if (m_responseTypeCode != ResponseTypeArrayBuffer) {
-        ec = INVALID_STATE_ERR;
-        return 0;
-    }
+    ASSERT(m_responseTypeCode == ResponseTypeArrayBuffer);
 
     if (m_state != DONE)
         return 0;
@@ -366,6 +370,8 @@ void XMLHttpRequest::setResponseType(const String& responseType, ExceptionCode& 
         m_responseTypeCode = ResponseTypeDefault;
     else if (responseType == "text")
         m_responseTypeCode = ResponseTypeText;
+    else if (responseType == "json")
+        m_responseTypeCode = ResponseTypeJSON;
     else if (responseType == "document")
         m_responseTypeCode = ResponseTypeDocument;
     else if (responseType == "blob")
@@ -383,6 +389,8 @@ String XMLHttpRequest::responseType()
         return "";
     case ResponseTypeText:
         return "text";
+    case ResponseTypeJSON:
+        return "json";
     case ResponseTypeDocument:
         return "document";
     case ResponseTypeBlob:
@@ -827,7 +835,7 @@ void XMLHttpRequest::createRequest(ExceptionCode& ec)
 void XMLHttpRequest::abort()
 {
     // internalAbort() calls dropProtection(), which may release the last reference.
-    RefPtr<XMLHttpRequest> protect(this);
+    Ref<XMLHttpRequest> protect(*this);
 
     bool sendFlag = m_loader;
 
@@ -891,6 +899,7 @@ void XMLHttpRequest::clearResponseBuffers()
     m_responseBlob = 0;
     m_binaryResponseBuilder.clear();
     m_responseArrayBuffer.clear();
+    m_responseCacheIsValid = false;
 }
 
 void XMLHttpRequest::clearRequest()
@@ -1193,7 +1202,7 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
     if (m_state < HEADERS_RECEIVED)
         changeState(HEADERS_RECEIVED);
 
-    bool useDecoder = m_responseTypeCode == ResponseTypeDefault || m_responseTypeCode == ResponseTypeText || m_responseTypeCode == ResponseTypeDocument;
+    bool useDecoder = shouldDecodeResponse();
 
     if (useDecoder && !m_decoder) {
         if (!m_responseEncoding.isEmpty())
@@ -1246,7 +1255,7 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
 void XMLHttpRequest::didTimeout()
 {
     // internalAbort() calls dropProtection(), which may release the last reference.
-    RefPtr<XMLHttpRequest> protect(this);
+    Ref<XMLHttpRequest> protect(*this);
     internalAbort();
 
     clearResponse();

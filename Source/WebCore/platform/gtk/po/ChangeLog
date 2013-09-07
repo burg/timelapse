@@ -1,3 +1,30 @@
+2013-08-28  Christian Kirbach  <Christian.Kirbach@googlemail.com>
+
+        [GTK] Please incorporate German translation update
+        https://bugs.webkit.org/show_bug.cgi?id=120016
+
+        Reviewed by Gustavo Noronha.
+
+        * de.po: updated.
+
+2013-08-27  Piotr Drąg  <piotrdrag@gmail.com>
+
+        [l10n] Updated Polish translation of WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=119986
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * pl.po: updated.
+
+2013-08-26  Enrico Nicoletto  <liverig@gmail.com>
+
+        [GTK L10N] Updated Brazilian Portuguese translation for WebKitGTK+
+        https://bugs.webkit.org/show_bug.cgi?id=120193
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * pt_BR.po: Updated.
+
 2013-07-29  Krishnababu Krothapalli  <k.meetme@gmail.com>
 
         Updated Telugu [te] Translations for WebKitGTK+ HEAD

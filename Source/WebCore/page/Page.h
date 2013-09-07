@@ -36,6 +36,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -70,6 +71,7 @@ class DragController;
 class EditorClient;
 class FocusController;
 class Frame;
+class FrameLoaderClient;
 class FrameSelection;
 class HaltablePlugin;
 class HistoryItem;
@@ -141,6 +143,7 @@ public:
         PlugInClient* plugInClient;
         RefPtr<BackForwardList> backForwardClient;
         ValidationMessageClient* validationMessageClient;
+        FrameLoaderClient* loaderClientForMainFrame;
     };
 
     explicit Page(PageClients&);
@@ -155,7 +158,7 @@ public:
     ViewportArguments viewportArguments() const;
 
     static void refreshPlugins(bool reload);
-    PluginData* pluginData() const;
+    PluginData& pluginData() const;
 
     void setCanStartMedia(bool);
     bool canStartMedia() const { return m_canStartMedia; }
@@ -163,8 +166,8 @@ public:
     EditorClient* editorClient() const { return m_editorClient; }
     PlugInClient* plugInClient() const { return m_plugInClient; }
 
-    void setMainFrame(PassRefPtr<Frame>);
-    Frame* mainFrame() const { return m_mainFrame.get(); }
+    Frame& mainFrame() const { return *m_mainFrame; }
+    bool frameIsMainFrame(const Frame* frame) { return frame == m_mainFrame.get(); }
 
     bool openedByDOM() const;
     void setOpenedByDOM();
@@ -405,7 +408,7 @@ public:
     PageThrottler* pageThrottler() { return m_pageThrottler.get(); }
     PassOwnPtr<PageActivityAssertionToken> createActivityToken();
 
-    PageConsole* console() { return m_console.get(); }
+    PageConsole& console() { return *m_console; }
 
 #if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
     void hiddenPageDOMTimerThrottlingStateChanged();
@@ -446,7 +449,7 @@ private:
     void setTimerAlignmentInterval(double);
     double timerAlignmentInterval() const;
 
-    void collectPluginViews(Vector<RefPtr<PluginViewBase>, 32>& pluginViewBases);
+    Vector<Ref<PluginViewBase>> pluginViews();
 
     void throttleTimers();
     void unthrottleTimers();
@@ -480,7 +483,7 @@ private:
     const OwnPtr<ProgressTracker> m_progress;
 
     OwnPtr<BackForwardController> m_backForwardController;
-    RefPtr<Frame> m_mainFrame;
+    const RefPtr<Frame> m_mainFrame;
 
     mutable RefPtr<PluginData> m_pluginData;
 
@@ -501,7 +504,6 @@ private:
     unsigned m_defersLoadingCallCount;
 
     bool m_inLowQualityInterpolationMode;
-    bool m_cookieEnabled;
     bool m_areMemoryCacheClientCallsEnabled;
     float m_mediaVolume;
 
@@ -563,7 +565,7 @@ private:
     bool m_scriptedAnimationsSuspended;
     OwnPtr<PageThrottler> m_pageThrottler;
 
-    OwnPtr<PageConsole> m_console;
+    const OwnPtr<PageConsole> m_console;
 
     HashSet<String> m_seenPlugins;
     HashSet<String> m_seenMediaEngines;

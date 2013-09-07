@@ -37,7 +37,7 @@
 #include "JSObject.h"
 #include "Operations.h"
 #include "SourceProvider.h"
-#include "StackIterator.h"
+#include "StackVisitor.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -212,7 +212,55 @@ JSGlobalContextRef JSContextGetGlobalContext(JSContextRef ctx)
 
     return toGlobalRef(exec->lexicalGlobalObject()->globalExec());
 }
-    
+
+class BacktraceFunctor {
+public:
+    BacktraceFunctor(StringBuilder& builder, unsigned remainingCapacityForFrameCapture)
+        : m_builder(builder)
+        , m_remainingCapacityForFrameCapture(remainingCapacityForFrameCapture)
+    {
+    }
+
+    StackVisitor::Status operator()(StackVisitor& visitor)
+    {
+        if (m_remainingCapacityForFrameCapture) {
+            // If callee is unknown, but we've not added any frame yet, we should
+            // still add the frame, because something called us, and gave us arguments.
+            JSObject* callee = visitor->callee();
+            if (!callee && visitor->index())
+                return StackVisitor::Done;
+
+            StringBuilder& builder = m_builder;
+            if (!builder.isEmpty())
+                builder.append('\n');
+            builder.append('#');
+            builder.appendNumber(visitor->index());
+            builder.append(' ');
+            builder.append(visitor->functionName());
+            builder.appendLiteral("() at ");
+            builder.append(visitor->sourceURL());
+            if (visitor->isJSFrame()) {
+                builder.append(':');
+                unsigned lineNumber;
+                unsigned unusedColumn;
+                visitor->computeLineAndColumn(lineNumber, unusedColumn);
+                builder.appendNumber(lineNumber);
+            }
+
+            if (!callee)
+                return StackVisitor::Done;
+
+            m_remainingCapacityForFrameCapture--;
+            return StackVisitor::Continue;
+        }
+        return StackVisitor::Done;
+    }
+
+private:
+    StringBuilder& m_builder;
+    unsigned m_remainingCapacityForFrameCapture;
+};
+
 JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
 {
     if (!ctx) {
@@ -223,34 +271,10 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
     JSLockHolder lock(exec);
     StringBuilder builder;
     CallFrame* frame = exec->vm().topCallFrame;
-    size_t i = 0;
+
     ASSERT(maxStackSize);
-    for (StackIterator iter = frame->begin(); iter != frame->end() && maxStackSize--; ++iter, ++i) {
-        JSObject* callee = iter->callee();
-        // If callee is unknown, but we've not added any frame yet, we should
-        // still add the frame, because something called us, and gave us arguments.
-        if (!callee && i)
-            break;
-
-        if (!builder.isEmpty())
-            builder.append('\n');
-        builder.append('#');
-        builder.appendNumber(i);
-        builder.append(' ');
-        builder.append(iter->functionName());
-        builder.appendLiteral("() at ");
-        builder.append(iter->sourceURL());
-        if (iter->isJSFrame()) {
-            builder.append(':');
-            unsigned lineNumber;
-            unsigned unusedColumn;
-            iter->computeLineAndColumn(lineNumber, unusedColumn);
-            builder.appendNumber(lineNumber);
-        }
-
-        if (!callee)
-            break;
-    }
+    BacktraceFunctor functor(builder, maxStackSize);
+    frame->iterate(functor);
 
     return OpaqueJSString::create(builder.toString()).leakRef();
 }

@@ -29,7 +29,6 @@
 #include "DragActions.h"
 #include "DragImage.h"
 #include "IntPoint.h"
-#include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -55,7 +54,7 @@ namespace WebCore {
         String effectAllowed() const;
         void setEffectAllowed(const String&);
 
-        ListHashSet<String> types() const;
+        Vector<String> types() const;
 
         PassRefPtr<FileList> files() const;
 
@@ -82,8 +81,6 @@ namespace WebCore {
 #if ENABLE(DRAG_SUPPORT)
         static PassRefPtr<Clipboard> createForDragAndDrop();
         static PassRefPtr<Clipboard> createForDragAndDrop(ClipboardAccessPolicy, const DragData&);
-
-        bool hasData();
 
         bool dropEffectIsUninitialized() const { return m_dropEffect == "uninitialized"; }
 

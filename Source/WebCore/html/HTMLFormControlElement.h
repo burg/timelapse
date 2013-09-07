@@ -144,6 +144,9 @@ private:
     virtual bool isValidFormControlElement();
     void updateAncestorDisabledState() const;
 
+    virtual HTMLElement* asHTMLElement() OVERRIDE FINAL { return this; }
+    virtual FormNamedItem* asFormNamedItem() OVERRIDE FINAL { return this; }
+
     OwnPtr<ValidationMessage> m_validationMessage;
     bool m_disabled : 1;
     bool m_isReadOnly : 1;
@@ -180,9 +183,11 @@ inline HTMLFormControlElement* toHTMLFormControlElement(Node* node)
     ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLFormControlElement(node));
     return static_cast<HTMLFormControlElement*>(node);
 }
-
 // This will catch anyone doing an unnecessary cast.
 void toHTMLFormControlElement(const HTMLFormControlElement*);
+
+template <> inline bool isElementOfType<HTMLFormControlElement>(const Element* element) { return isHTMLFormControlElement(element); }
+
 
 } // namespace
 

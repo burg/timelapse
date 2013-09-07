@@ -155,7 +155,7 @@ JIT::CodeRef JIT::privateCompileCTINativeCall(VM* vm, NativeFunction func)
 #endif // CPU(X86)
 
     // Check for an exception
-    Jump sawException = branch32(NotEqual, AbsoluteAddress(reinterpret_cast<char*>(&vm->exception) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), TrustedImm32(JSValue::EmptyValueTag));
+    Jump sawException = branch32(NotEqual, AbsoluteAddress(reinterpret_cast<char*>(vm->addressOfException()) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), TrustedImm32(JSValue::EmptyValueTag)); 
 
     // Return.
     ret();
@@ -211,7 +211,7 @@ void JIT::emit_op_jmp(Instruction* currentInstruction)
 void JIT::emit_op_new_object(Instruction* currentInstruction)
 {
     Structure* structure = currentInstruction[3].u.objectAllocationProfile->structure();
-    size_t allocationSize = JSObject::allocationSize(structure->inlineCapacity());
+    size_t allocationSize = JSFinalObject::allocationSize(structure->inlineCapacity());
     MarkedAllocator* allocator = &m_vm->heap.allocatorForObjectWithoutDestructor(allocationSize);
 
     RegisterID resultReg = regT0;
@@ -1002,10 +1002,10 @@ void JIT::emit_op_catch(Instruction* currentInstruction)
 
     // Now store the exception returned by cti_op_throw.
     loadPtr(Address(stackPointerRegister, OBJECT_OFFSETOF(struct JITStackFrame, vm)), regT3);
-    load32(Address(regT3, OBJECT_OFFSETOF(VM, exception) + OBJECT_OFFSETOF(JSValue, u.asBits.payload)), regT0);
-    load32(Address(regT3, OBJECT_OFFSETOF(VM, exception) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), regT1);
-    store32(TrustedImm32(JSValue().payload()), Address(regT3, OBJECT_OFFSETOF(VM, exception) + OBJECT_OFFSETOF(JSValue, u.asBits.payload)));
-    store32(TrustedImm32(JSValue().tag()), Address(regT3, OBJECT_OFFSETOF(VM, exception) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)));
+    load32(Address(regT3, VM::exceptionOffset() + OBJECT_OFFSETOF(JSValue, u.asBits.payload)), regT0);
+    load32(Address(regT3, VM::exceptionOffset() + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), regT1);
+    store32(TrustedImm32(JSValue().payload()), Address(regT3, VM::exceptionOffset() + OBJECT_OFFSETOF(JSValue, u.asBits.payload)));
+    store32(TrustedImm32(JSValue().tag()), Address(regT3, VM::exceptionOffset() + OBJECT_OFFSETOF(JSValue, u.asBits.tag)));
 
     unsigned exception = currentInstruction[1].u.operand;
     emitStore(exception, regT1, regT0);
@@ -1262,8 +1262,9 @@ void JIT::emitSlow_op_get_argument_by_val(Instruction* currentInstruction, Vecto
     linkSlowCase(iter);
     linkSlowCase(iter);
 
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_create_arguments);
-    slowPathCall.call();
+    JITStubCall(this, cti_op_create_arguments).call();
+    emitStore(arguments, regT1, regT0);
+    emitStore(unmodifiedArgumentsRegister(arguments), regT1, regT0);
     
     skipArgumentsCreation.link(this);
     JITStubCall stubCall(this, cti_op_get_by_val_generic);

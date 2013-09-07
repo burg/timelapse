@@ -39,7 +39,7 @@ class Element;
 class Node;
 class Range;
 
-typedef HashMap<AtomicStringImpl*, AtomicStringImpl*> Namespaces;
+typedef HashMap<AtomicString, AtomicStringImpl*> Namespaces;
 
 enum EntityMask {
     EntityAmp = 0x0001,
@@ -112,10 +112,12 @@ private:
     void appendQuotedURLAttributeValue(StringBuilder&, const Element*, const Attribute&);
     void serializeNodesWithNamespaces(Node* targetNode, Node* nodeToSkip, EChildrenOnly, const Namespaces*, Vector<QualifiedName>* tagNamesToSkip);
     bool inXMLFragmentSerialization() const { return m_fragmentSerialization == XMLFragmentSerialization; }
+    void generateUniquePrefix(QualifiedName&, const Namespaces&);
 
     StringBuilder m_markup;
     const EAbsoluteURLs m_resolveURLsMethod;
     EFragmentSerialization m_fragmentSerialization;
+    unsigned m_prefixLevel;
 };
 
 }

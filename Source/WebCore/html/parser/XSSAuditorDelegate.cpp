@@ -106,14 +106,14 @@ void XSSAuditorDelegate::didBlockScript(const XSSInfo& xssInfo)
     if (!m_didSendNotifications) {
         m_didSendNotifications = true;
 
-        frameLoader.client()->didDetectXSS(m_document->url(), xssInfo.m_didBlockEntirePage);
+        frameLoader.client().didDetectXSS(m_document->url(), xssInfo.m_didBlockEntirePage);
 
         if (!m_reportURL.isEmpty())
             PingLoader::sendViolationReport(m_document->frame(), m_reportURL, generateViolationReport());
     }
 
     if (xssInfo.m_didBlockEntirePage)
-        m_document->frame()->navigationScheduler()->scheduleLocationChange(m_document->securityOrigin(), SecurityOrigin::urlWithUniqueSecurityOrigin(), String());
+        m_document->frame()->navigationScheduler().scheduleLocationChange(m_document->securityOrigin(), SecurityOrigin::urlWithUniqueSecurityOrigin(), String());
 }
 
 } // namespace WebCore

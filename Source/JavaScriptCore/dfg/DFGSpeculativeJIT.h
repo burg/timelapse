@@ -1241,6 +1241,12 @@ public:
         return appendCallSetResult(operation, result);
     }
 
+    JITCompiler::Call callOperation(P_DFGOperation_EStJ operation, GPRReg result, Structure* structure, GPRReg arg2)
+    {
+        m_jit.setupArgumentsWithExecState(TrustedImmPtr(structure), arg2);
+        return appendCallWithExceptionCheckSetResult(operation, result);
+    }
+
     JITCompiler::Call callOperation(C_DFGOperation_EJ operation, GPRReg result, GPRReg arg1)
     {
         m_jit.setupArgumentsWithExecState(arg1);
@@ -1491,8 +1497,14 @@ public:
 
     JITCompiler::Call callOperation(P_DFGOperation_EJS operation, GPRReg result, JSValueRegs value, size_t index)
     {
-        m_jit.setupArgumentsWithExecState(value.payloadGPR(), value.tagGPR(), TrustedImmPtr(index));
+        m_jit.setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG value.payloadGPR(), value.tagGPR(), TrustedImmPtr(index));
         return appendCallSetResult(operation, result);
+    }
+
+    JITCompiler::Call callOperation(P_DFGOperation_EStJ operation, GPRReg result, Structure* structure, GPRReg arg2Tag, GPRReg arg2Payload)
+    {
+        m_jit.setupArgumentsWithExecState(TrustedImmPtr(structure), arg2Payload, arg2Tag);
+        return appendCallWithExceptionCheckSetResult(operation, result);
     }
 
     JITCompiler::Call callOperation(C_DFGOperation_EJ operation, GPRReg result, GPRReg arg1Tag, GPRReg arg1Payload)
@@ -1924,6 +1936,8 @@ public:
     
     void compileToStringOnCell(Node*);
     void compileNewStringObject(Node*);
+    
+    void compileNewTypedArray(Node*);
     
     void compileIntegerCompare(Node*, MacroAssembler::RelationalCondition);
     void compileBooleanCompare(Node*, MacroAssembler::RelationalCondition);

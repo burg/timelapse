@@ -562,6 +562,11 @@ bool MediaPlayer::supportsScanning() const
     return m_private->supportsScanning();
 }
 
+bool MediaPlayer::requiresImmediateCompositing() const
+{
+    return m_private->requiresImmediateCompositing();
+}
+
 IntSize MediaPlayer::naturalSize()
 {
     return m_private->naturalSize();
@@ -841,6 +846,16 @@ bool MediaPlayer::supportsAcceleratedRendering() const
     return m_private->supportsAcceleratedRendering();
 }
 #endif // USE(ACCELERATED_COMPOSITING)
+
+bool MediaPlayer::shouldMaintainAspectRatio() const
+{
+    return m_private->shouldMaintainAspectRatio();
+}
+
+void MediaPlayer::setShouldMaintainAspectRatio(bool maintainAspectRatio)
+{
+    m_private->setShouldMaintainAspectRatio(maintainAspectRatio);
+}
 
 bool MediaPlayer::hasSingleSecurityOrigin() const
 {

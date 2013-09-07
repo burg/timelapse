@@ -118,8 +118,8 @@ RenderObject* HTMLDetailsElement::createRenderer(RenderArena* arena, RenderStyle
 
 void HTMLDetailsElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
-    root->appendChild(DetailsSummaryElement::create(document()), ASSERT_NO_EXCEPTION, AttachLazily);
-    root->appendChild(DetailsContentElement::create(document()), ASSERT_NO_EXCEPTION, AttachLazily);
+    root->appendChild(DetailsSummaryElement::create(&document()), ASSERT_NO_EXCEPTION, AttachLazily);
+    root->appendChild(DetailsContentElement::create(&document()), ASSERT_NO_EXCEPTION, AttachLazily);
 }
 
 Element* HTMLDetailsElement::findMainSummary() const
@@ -138,7 +138,7 @@ void HTMLDetailsElement::parseAttribute(const QualifiedName& name, const AtomicS
         bool oldValue = m_isOpen;
         m_isOpen = !value.isNull();
         if (oldValue != m_isOpen && attached())
-            Style::reattachRenderTree(this);
+            Style::reattachRenderTree(*this);
     } else
         HTMLElement::parseAttribute(name, value);
 }

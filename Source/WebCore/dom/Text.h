@@ -28,7 +28,6 @@
 
 namespace WebCore {
 
-class NodeRenderingContext;
 class RenderText;
 
 class Text : public CharacterData {
@@ -48,15 +47,7 @@ public:
     String wholeText() const;
     PassRefPtr<Text> replaceWholeText(const String&, ExceptionCode&);
     
-    void createTextRendererIfNeeded();
-    bool textRendererIsNeeded(const NodeRenderingContext&);
     RenderText* createTextRenderer(RenderArena*, RenderStyle*);
-    void updateTextRenderer(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
-
-    void attachText();
-    void detachText();
-
-    static void createTextRenderersForSiblingsAfterAttachIfNeeded(Node*);
     
     virtual bool canContainRangeEndPoint() const OVERRIDE FINAL { return true; }
 

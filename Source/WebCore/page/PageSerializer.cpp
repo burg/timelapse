@@ -189,7 +189,7 @@ PageSerializer::PageSerializer(Vector<PageSerializer::Resource>* resources)
 
 void PageSerializer::serialize(Page* page)
 {
-    serializeFrame(page->mainFrame());
+    serializeFrame(&page->mainFrame());
 }
 
 void PageSerializer::serializeFrame(Frame* frame)
@@ -249,7 +249,7 @@ void PageSerializer::serializeFrame(Frame* frame)
         }
     }
 
-    for (Frame* childFrame = frame->tree()->firstChild(); childFrame; childFrame = childFrame->tree()->nextSibling())
+    for (Frame* childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling())
         serializeFrame(childFrame);
 }
 

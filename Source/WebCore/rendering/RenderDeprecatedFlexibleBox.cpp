@@ -126,13 +126,13 @@ RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Element* element)
     setChildrenInline(false); // All of our children must be block-level
     m_stretchingChildren = false;
     if (!isAnonymous()) {
-        const KURL& url = document()->url();
+        const KURL& url = document().url();
         if (url.protocolIs("chrome"))
-            FeatureObserver::observe(document(), FeatureObserver::DeprecatedFlexboxChrome);
+            FeatureObserver::observe(&document(), FeatureObserver::DeprecatedFlexboxChrome);
         else if (url.protocolIs("chrome-extension"))
-            FeatureObserver::observe(document(), FeatureObserver::DeprecatedFlexboxChromeExtension);
+            FeatureObserver::observe(&document(), FeatureObserver::DeprecatedFlexboxChromeExtension);
         else
-            FeatureObserver::observe(document(), FeatureObserver::DeprecatedFlexboxWebContent);
+            FeatureObserver::observe(&document(), FeatureObserver::DeprecatedFlexboxWebContent);
     }
 }
 
@@ -299,7 +299,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
         return;
 
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
-    LayoutStateMaintainer statePusher(view(), this, locationOffset(), hasTransform() || hasReflection() || style()->isFlippedBlocksWritingMode());
+    LayoutStateMaintainer statePusher(&view(), this, locationOffset(), hasTransform() || hasReflection() || style()->isFlippedBlocksWritingMode());
 
     // Regions changing widths can force us to relayout our children.
     RenderFlowThread* flowThread = flowThreadContainingBlock();
@@ -325,7 +325,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
     initMaxMarginValues();
 
 #if !ASSERT_DISABLED
-    LayoutSize oldLayoutDelta = view()->layoutDelta();
+    LayoutSize oldLayoutDelta = view().layoutDelta();
 #endif
 
     ChildFrameRects oldChildRects;
@@ -339,7 +339,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
         layoutVerticalBox(relayoutChildren);
 
     repaintChildrenDuringLayoutIfMoved(this, oldChildRects);
-    ASSERT(view()->layoutDeltaMatches(oldLayoutDelta));
+    ASSERT(view().layoutDeltaMatches(oldLayoutDelta));
 
     LayoutUnit oldClientAfterEdge = clientLogicalBottom();
     updateLogicalHeight();
@@ -375,8 +375,8 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
 
     updateLayerTransform();
 
-    if (view()->layoutState()->pageLogicalHeight())
-        setPageLogicalOffset(view()->layoutState()->pageLogicalOffset(this, logicalTop()));
+    if (view().layoutState()->pageLogicalHeight())
+        setPageLogicalOffset(view().layoutState()->pageLogicalOffset(this, logicalTop()));
 
     // Update our scrollbars if we're overflow:auto/scroll/hidden now that we know if
     // we overflow or not.
@@ -416,9 +416,9 @@ static void layoutChildIfNeededApplyingDelta(RenderBox* child, const LayoutSize&
     if (!child->needsLayout())
         return;
     
-    child->view()->addLayoutDelta(layoutDelta);
+    child->view().addLayoutDelta(layoutDelta);
     child->layoutIfNeeded();
-    child->view()->addLayoutDelta(-layoutDelta);
+    child->view().addLayoutDelta(-layoutDelta);
 }
 
 void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
@@ -1047,7 +1047,7 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         // Get ellipsis width, and if the last child is an anchor, it will go after the ellipsis, so add in a space and the anchor width too
         LayoutUnit totalWidth;
         InlineBox* anchorBox = lastLine->lastChild();
-        if (anchorBox && anchorBox->renderer()->style()->isLink())
+        if (anchorBox && anchorBox->renderer().style()->isLink())
             totalWidth = anchorBox->logicalWidth() + font.width(constructTextRun(this, font, ellipsisAndSpace, 2, style()));
         else {
             anchorBox = 0;
@@ -1055,26 +1055,26 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         }
 
         // See if this width can be accommodated on the last visible line
-        RenderBlock* destBlock = toRenderBlock(lastVisibleLine->renderer());
-        RenderBlock* srcBlock = toRenderBlock(lastLine->renderer());
+        RenderBlock& destBlock = toRenderBlock(lastVisibleLine->renderer());
+        RenderBlock& srcBlock = toRenderBlock(lastLine->renderer());
 
         // FIXME: Directions of src/destBlock could be different from our direction and from one another.
-        if (!srcBlock->style()->isLeftToRightDirection())
+        if (!srcBlock.style()->isLeftToRightDirection())
             continue;
 
-        bool leftToRight = destBlock->style()->isLeftToRightDirection();
+        bool leftToRight = destBlock.style()->isLeftToRightDirection();
         if (!leftToRight)
             continue;
 
-        LayoutUnit blockRightEdge = destBlock->logicalRightOffsetForLine(lastVisibleLine->y(), false);
+        LayoutUnit blockRightEdge = destBlock.logicalRightOffsetForLine(lastVisibleLine->y(), false);
         if (!lastVisibleLine->lineCanAccommodateEllipsis(leftToRight, blockRightEdge, lastVisibleLine->x() + lastVisibleLine->logicalWidth(), totalWidth))
             continue;
 
         // Let the truncation code kick in.
         // FIXME: the text alignment should be recomputed after the width changes due to truncation.
-        LayoutUnit blockLeftEdge = destBlock->logicalLeftOffsetForLine(lastVisibleLine->y(), false);
+        LayoutUnit blockLeftEdge = destBlock.logicalLeftOffsetForLine(lastVisibleLine->y(), false);
         lastVisibleLine->placeEllipsis(anchorBox ? ellipsisAndSpaceStr : ellipsisStr, leftToRight, blockLeftEdge, blockRightEdge, totalWidth, anchorBox);
-        destBlock->setHasMarkupTruncation(true);
+        destBlock.setHasMarkupTruncation(true);
     }
 }
 

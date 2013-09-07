@@ -42,7 +42,12 @@
 #define SOFT_LINK_AVF_FRAMEWORK(Lib) SOFT_LINK_FRAMEWORK_OPTIONAL(Lib)
 #define SOFT_LINK_AVF_POINTER(Lib, Name, Type) SOFT_LINK_POINTER_OPTIONAL(Lib, Name, Type)
 #else
+#ifdef DEBUG_ALL
+#define SOFT_LINK_AVF_FRAMEWORK(Lib) SOFT_LINK_DEBUG_LIBRARY(Lib)
+#else
 #define SOFT_LINK_AVF_FRAMEWORK(Lib) SOFT_LINK_LIBRARY(Lib)
+#endif
+
 #define SOFT_LINK_AVF_POINTER(Lib, Name, Type) SOFT_LINK_VARIABLE_DLL_IMPORT_OPTIONAL(Lib, Name, Type)
 #endif
 
@@ -97,7 +102,8 @@ AVFInbandTrackParent::~AVFInbandTrackParent()
 }
 
 InbandTextTrackPrivateAVF::InbandTextTrackPrivateAVF(AVFInbandTrackParent* owner)
-    : m_owner(owner)
+    : InbandTextTrackPrivate(Generic)
+    , m_owner(owner)
     , m_pendingCueStatus(None)
     , m_index(0)
     , m_hasBeenReported(false)

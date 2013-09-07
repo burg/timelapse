@@ -52,7 +52,16 @@ static String coreAttributeToAtkAttribute(JSStringRef attribute)
     JSStringGetUTF8CString(attribute, buffer.get(), bufferSize);
 
     String attributeString = String::fromUTF8(buffer.get());
-    return attributeString == "AXPlaceholderValue" ? "placeholder-text" : String();
+    if (attributeString == "AXInvalid")
+        return "aria-invalid";
+
+    if (attributeString == "AXPlaceholderValue")
+        return "placeholder-text";
+    
+    if (attributeString == "AXSortDirection")
+        return "aria-sort";
+
+    return String();
 }
 
 static String getAttributeSetValueForId(AtkObject* accessible, const char* id)
@@ -184,6 +193,8 @@ static const gchar* roleToString(AtkRole role)
         return "AXCanvas";
     case ATK_ROLE_CHECK_BOX:
         return "AXCheckBox";
+    case ATK_ROLE_COLOR_CHOOSER:
+        return "AXColorWell";
     case ATK_ROLE_COLUMN_HEADER:
         return "AXColumnHeader";
     case ATK_ROLE_COMBO_BOX:
@@ -686,10 +697,12 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::language()
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
 {
-    // FIXME: implement
-    // We need a way to call WebCore::AccessibilityObject::helpText()
-    // from here, probably a new helper class in WebProcess/WebCoreSupport.
-    return JSStringCreateWithCharacters(0, 0);
+    if (!m_element || !ATK_IS_OBJECT(m_element.get()))
+        return JSStringCreateWithCharacters(0, 0);
+
+    String attributeValue = getAttributeSetValueForId(ATK_OBJECT(m_element.get()), "aria-help");
+    GOwnPtr<char> axValue(g_strdup_printf("AXHelp: %s", attributeValue.utf8().data()));
+    return JSStringCreateWithUTF8CString(axValue.get());
 }
 
 double AccessibilityUIElement::x()

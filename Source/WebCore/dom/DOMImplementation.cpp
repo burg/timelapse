@@ -50,6 +50,7 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StyleSheetContents.h"
+#include "SubframeLoader.h"
 #include "TextDocument.h"
 #include "ThreadGlobalData.h"
 #include "XMLNames.h"
@@ -219,7 +220,7 @@ PassRefPtr<DocumentType> DOMImplementation::createDocumentType(const String& qua
     if (!Document::parseQualifiedName(qualifiedName, prefix, localName, ec))
         return 0;
 
-    return DocumentType::create(0, qualifiedName, publicId, systemId);
+    return DocumentType::create(m_document, qualifiedName, publicId, systemId);
 }
 
 DOMImplementation* DOMImplementation::getInterface(const String& /*feature*/)
@@ -249,16 +250,6 @@ PassRefPtr<Document> DOMImplementation::createDocument(const String& namespaceUR
         documentElement = doc->createElementNS(namespaceURI, qualifiedName, ec);
         if (ec)
             return 0;
-    }
-
-    // WRONG_DOCUMENT_ERR: Raised if doctype has already been used with a different document or was
-    // created from a different implementation.
-    // Hixie's interpretation of the DOM Core spec suggests we should prefer
-    // other exceptions to WRONG_DOCUMENT_ERR (based on order mentioned in spec),
-    // but this matches the new DOM Core spec (http://www.w3.org/TR/domcore/).
-    if (doctype && doctype->document()) {
-        ec = WRONG_DOCUMENT_ERR;
-        return 0;
     }
 
     if (doctype)
@@ -351,10 +342,10 @@ PassRefPtr<Document> DOMImplementation::createDocument(const String& type, Frame
     PluginData* pluginData = 0;
     PluginData::AllowedPluginTypes allowedPluginTypes = PluginData::OnlyApplicationPlugins;
     if (frame && frame->page()) {
-        if (frame->loader().subframeLoader()->allowPlugins(NotAboutToInstantiatePlugin))
+        if (frame->loader().subframeLoader().allowPlugins(NotAboutToInstantiatePlugin))
             allowedPluginTypes = PluginData::AllPlugins;
 
-        pluginData = frame->page()->pluginData();
+        pluginData = &frame->page()->pluginData();
     }
 
     // PDF is one image type for which a plugin can override built-in support.
@@ -375,7 +366,7 @@ PassRefPtr<Document> DOMImplementation::createDocument(const String& type, Frame
     // Everything else except text/plain can be overridden by plugins. In particular, Adobe SVG Viewer should be used for SVG, if installed.
     // Disallowing plug-ins to use text/plain prevents plug-ins from hijacking a fundamental type that the browser is expected to handle,
     // and also serves as an optimization to prevent loading the plug-in database in the common case.
-    if (type != "text/plain" && ((pluginData && pluginData->supportsMimeType(type, allowedPluginTypes)) || (frame && frame->loader().client()->shouldAlwaysUsePluginDocument(type))))
+    if (type != "text/plain" && ((pluginData && pluginData->supportsMimeType(type, allowedPluginTypes)) || (frame && frame->loader().client().shouldAlwaysUsePluginDocument(type))))
         return PluginDocument::create(frame, url);
     if (isTextMIMEType(type))
         return TextDocument::create(frame, url);

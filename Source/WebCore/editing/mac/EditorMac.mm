@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,8 @@
 #import "PlatformStrategies.h"
 #import "Range.h"
 #import "RenderBlock.h"
+#import "RenderImage.h"
+#import "ResourceBuffer.h"
 #import "RuntimeApplicationChecks.h"
 #import "Sound.h"
 #import "StylePropertySet.h"
@@ -77,11 +79,11 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText)
     RefPtr<Range> range = selectedRange();
     bool choosePlainText;
     
-    m_frame.editor().client()->setInsertionPasteboard(NSGeneralPboard);
+    client()->setInsertionPasteboard(NSGeneralPboard);
     RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(&m_frame, range, allowPlainText, choosePlainText);
     if (fragment && shouldInsertFragment(fragment, range, EditorInsertActionPasted))
         pasteAsFragment(fragment, canSmartReplaceWithPasteboard(pasteboard), false);
-    m_frame.editor().client()->setInsertionPasteboard(String());
+    client()->setInsertionPasteboard(String());
 }
 
 bool Editor::insertParagraphSeparatorInQuotedContent()
@@ -243,12 +245,6 @@ void Editor::takeFindStringFromSelection()
     platformStrategies()->pasteboardStrategy()->setStringForType(m_frame.displayStringModifiedByEncoding(selectedTextForClipboard()), NSStringPboardType, NSFindPboard);
 }
 
-void Editor::writeSelectionToPasteboard(const String& pasteboardName, const Vector<String>& pasteboardTypes)
-{
-    Pasteboard pasteboard(pasteboardName);
-    pasteboard.writeSelectionForTypes(pasteboardTypes, true, &m_frame, DefaultSelectedTextType);
-}
-    
 void Editor::readSelectionFromPasteboard(const String& pasteboardName)
 {
     Pasteboard pasteboard(pasteboardName);
@@ -274,9 +270,130 @@ String Editor::stringSelectionForPasteboardWithImageAltText()
     return text;
 }
 
+PassRefPtr<SharedBuffer> Editor::selectionInWebArchiveFormat()
+{
+    RefPtr<LegacyWebArchive> archive = LegacyWebArchive::createFromSelection(&m_frame);
+    return archive ? SharedBuffer::wrapCFData(archive->rawDataRepresentation().get()) : 0;
+}
+
+PassRefPtr<Range> Editor::adjustedSelectionRange()
+{
+    // FIXME: Why do we need to adjust the selection to include the anchor tag it's in?
+    // Whoever wrote this code originally forgot to leave us a comment explaining the rationale.
+    RefPtr<Range> range = selectedRange();
+    Node* commonAncestor = range->commonAncestorContainer(IGNORE_EXCEPTION);
+    ASSERT(commonAncestor);
+    Node* enclosingAnchor = enclosingNodeWithTag(firstPositionInNode(commonAncestor), HTMLNames::aTag);
+    if (enclosingAnchor && comparePositions(firstPositionInOrBeforeNode(range->startPosition().anchorNode()), range->startPosition()) >= 0)
+        range->setStart(enclosingAnchor, 0, IGNORE_EXCEPTION);
+    return range;
+}
+
+static NSAttributedString *attributedStringForRange(Range& range)
+{
+    return [adoptNS([[WebHTMLConverter alloc] initWithDOMRange:kit(&range)]) attributedString];
+}
+
+static PassRefPtr<SharedBuffer> dataInRTFDFormat(NSAttributedString *string)
+{
+    NSUInteger length = [string length];
+    return length ? SharedBuffer::wrapNSData([string RTFDFromRange:NSMakeRange(0, length) documentAttributes:nil]) : 0;
+}
+
+static PassRefPtr<SharedBuffer> dataInRTFFormat(NSAttributedString *string)
+{
+    NSUInteger length = [string length];
+    return length ? SharedBuffer::wrapNSData([string RTFFromRange:NSMakeRange(0, length) documentAttributes:nil]) : 0;
+}
+
 PassRefPtr<SharedBuffer> Editor::dataSelectionForPasteboard(const String& pasteboardType)
 {
-    return Pasteboard::getDataSelection(&m_frame, pasteboardType);
+    // FIXME: The interface to this function is awkward. We'd probably be better off with three separate functions.
+    // As of this writing, this is only used in WebKit2 to implement the method -[WKView writeSelectionToPasteboard:types:],
+    // which is only used to support OS X services.
+
+    // FIXME: Does this function really need to use adjustedSelectionRange()? Because writeSelectionToPasteboard() just uses selectedRange().
+
+    if (pasteboardType == WebArchivePboardType)
+        return selectionInWebArchiveFormat();
+
+    if (pasteboardType == String(NSRTFDPboardType))
+       return dataInRTFDFormat(attributedStringForRange(*adjustedSelectionRange()));
+
+    if (pasteboardType == String(NSRTFPboardType)) {
+        NSAttributedString* attributedString = attributedStringForRange(*adjustedSelectionRange());
+        // FIXME: Why is this attachment character stripping needed here, but not needed in writeSelectionToPasteboard?
+        if ([attributedString containsAttachments])
+            attributedString = attributedStringByStrippingAttachmentCharacters(attributedString);
+        return dataInRTFFormat(attributedString);
+    }
+
+    return 0;
+}
+
+void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
+{
+    NSAttributedString *attributedString = attributedStringForRange(*selectedRange());
+
+    PasteboardWebContent content;
+    content.canSmartCopyOrDelete = canSmartCopyOrDelete();
+    content.dataInWebArchiveFormat = selectionInWebArchiveFormat();
+    content.dataInRTFDFormat = [attributedString containsAttachments] ? dataInRTFDFormat(attributedString) : 0;
+    content.dataInRTFFormat = dataInRTFFormat(attributedString);
+    content.dataInStringFormat = stringSelectionForPasteboardWithImageAltText();
+    client()->getClientPasteboardDataForRange(selectedRange().get(), content.clientTypes, content.clientData);
+
+    pasteboard.setTypes(content);
+    client()->didSetSelectionTypesForPasteboard();
+    pasteboard.writeAfterSettingTypes(content);
+}
+
+static void getImage(Element& imageElement, RefPtr<Image>& image, CachedImage*& cachedImage)
+{
+    RenderObject* renderer = imageElement.renderer();
+    if (!renderer || !renderer->isImage())
+        return;
+
+    CachedImage* tentativeCachedImage = toRenderImage(renderer)->cachedImage();
+    if (!tentativeCachedImage || tentativeCachedImage->errorOccurred()) {
+        tentativeCachedImage = 0;
+        return;
+    }
+
+    image = tentativeCachedImage->imageForRenderer(renderer);
+    if (!image)
+        return;
+
+    cachedImage = tentativeCachedImage;
+}
+
+void Editor::writeURLToPasteboard(Pasteboard& pasteboard, const KURL& url, const String& title)
+{
+    PasteboardURL pasteboardURL;
+    pasteboardURL.url = url;
+    pasteboardURL.title = title;
+    pasteboardURL.userVisibleForm = client()->userVisibleString(pasteboardURL.url);
+
+    pasteboard.write(pasteboardURL);
+}
+
+void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElement, const KURL& url, const String& title)
+{
+    PasteboardImage pasteboardImage;
+
+    CachedImage* cachedImage;
+    getImage(imageElement, pasteboardImage.image, cachedImage);
+    if (!pasteboardImage.image)
+        return;
+    ASSERT(cachedImage);
+
+    pasteboardImage.url.url = url;
+    pasteboardImage.url.title = title;
+    pasteboardImage.url.userVisibleForm = client()->userVisibleString(pasteboardImage.url.url);
+    pasteboardImage.resourceData = cachedImage->resourceBuffer()->sharedBuffer();
+    pasteboardImage.resourceMIMEType = cachedImage->response().mimeType();
+
+    pasteboard.write(pasteboardImage);
 }
 
 } // namespace WebCore

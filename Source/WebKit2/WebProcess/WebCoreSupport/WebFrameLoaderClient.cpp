@@ -73,6 +73,7 @@
 #include <WebCore/ResourceBuffer.h>
 #include <WebCore/ResourceError.h>
 #include <WebCore/Settings.h>
+#include <WebCore/SubframeLoader.h>
 #include <WebCore/UIEventWithKeyState.h>
 #include <WebCore/Widget.h>
 #include <WebCore/WindowFeatures.h>
@@ -81,8 +82,8 @@ using namespace WebCore;
 
 namespace WebKit {
 
-WebFrameLoaderClient::WebFrameLoaderClient(WebFrame* frame)
-    : m_frame(frame)
+WebFrameLoaderClient::WebFrameLoaderClient()
+    : m_frame(0)
     , m_hasSentResponseToPluginView(false)
     , m_didCompletePageTransitionAlready(false)
     , m_frameCameFromPageCache(false)
@@ -95,9 +96,12 @@ WebFrameLoaderClient::~WebFrameLoaderClient()
     
 void WebFrameLoaderClient::frameLoaderDestroyed()
 {
+    if (WebPage* webPage = m_frame->page())
+        webPage->injectedBundleLoaderClient().willDestroyFrame(webPage, m_frame);
+
     m_frame->invalidate();
 
-    // Balances explicit ref() in WebFrame::createMainFrame and WebFrame::createSubframe.
+    // Balances explicit ref() in WebFrame::create().
     m_frame->deref();
 }
 
@@ -539,9 +543,6 @@ void WebFrameLoaderClient::dispatchDidLayout(LayoutMilestones milestones)
 
     RefPtr<APIObject> userData;
 
-    webPage->injectedBundleLoaderClient().didLayout(webPage, milestones, userData);
-    webPage->send(Messages::WebPageProxy::DidLayout(milestones, InjectedBundleUserMessageEncoder(userData.get())));
-
     if (milestones & DidFirstLayout) {
         // FIXME: We should consider removing the old didFirstLayout API since this is doing double duty with the
         // new didLayout API.
@@ -560,6 +561,10 @@ void WebFrameLoaderClient::dispatchDidLayout(LayoutMilestones milestones)
         ASSERT(!webPage->useFixedLayout() || m_frame != m_frame->page()->mainWebFrame() || m_frame->coreFrame()->document()->didDispatchViewportPropertiesChanged());
 #endif
     }
+
+    // Send this after DidFirstLayout-specific calls since some clients expect to get those messages first.
+    webPage->injectedBundleLoaderClient().didLayout(webPage, milestones, userData);
+    webPage->send(Messages::WebPageProxy::DidLayout(milestones, InjectedBundleUserMessageEncoder(userData.get())));
 
     if (milestones & DidFirstVisuallyNonEmptyLayout) {
         // FIXME: We should consider removing the old didFirstVisuallyNonEmptyLayoutForFrame API since this is doing
@@ -601,7 +606,7 @@ Frame* WebFrameLoaderClient::dispatchCreatePage(const NavigationAction& navigati
     if (!newPage)
         return 0;
     
-    return newPage->mainFrame();
+    return &newPage->mainFrame();
 }
 
 void WebFrameLoaderClient::dispatchShow()
@@ -1112,7 +1117,7 @@ void WebFrameLoaderClient::saveViewStateToItem(HistoryItem*)
 void WebFrameLoaderClient::restoreViewState()
 {
     // Inform the UI process of the scale factor.
-    double scaleFactor = m_frame->coreFrame()->loader().history()->currentItem()->pageScaleFactor();
+    double scaleFactor = m_frame->coreFrame()->loader().history().currentItem()->pageScaleFactor();
 
     // A scale factor of 0 means the history item has the default scale factor, thus we do not need to update it.
     if (scaleFactor)
@@ -1272,7 +1277,7 @@ PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const KURL& url, const Strin
     if (!subframe->coreFrame())
         return 0;
     ASSERT(subframe->coreFrame() == coreSubframe);
-    if (!coreSubframe->tree()->parent())
+    if (!coreSubframe->tree().parent())
         return 0;
 
     return coreSubframe;
@@ -1347,7 +1352,7 @@ PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& p
     if (!plugin) {
         if (WebPage* webPage = m_frame->page()) {
             String frameURLString = m_frame->coreFrame()->loader().documentLoader()->responseURL().string();
-            String pageURLString = webPage->corePage()->mainFrame()->loader().documentLoader()->responseURL().string();
+            String pageURLString = webPage->corePage()->mainFrame().loader().documentLoader()->responseURL().string();
             webPage->send(Messages::WebPageProxy::DidFailToInitializePlugin(appletElement->serviceType(), frameURLString, pageURLString));
         }
     }
@@ -1372,12 +1377,12 @@ void WebFrameLoaderClient::showMediaPlayerProxyPlugin(Widget*)
 }
 #endif
 
-static bool pluginSupportsExtension(PluginData* pluginData, const String& extension)
+static bool pluginSupportsExtension(const PluginData& pluginData, const String& extension)
 {
     ASSERT(extension.lower() == extension);
 
-    for (size_t i = 0; i < pluginData->mimes().size(); ++i) {
-        const MimeClassInfo& mimeClassInfo = pluginData->mimes()[i];
+    for (size_t i = 0; i < pluginData.mimes().size(); ++i) {
+        const MimeClassInfo& mimeClassInfo = pluginData.mimes()[i];
 
         if (mimeClassInfo.extensions.contains(extension))
             return true;
@@ -1400,10 +1405,8 @@ ObjectContentType WebFrameLoaderClient::objectContentType(const KURL& url, const
         if (mimeType.isEmpty()) {
             // Check if there's a plug-in around that can handle the extension.
             if (WebPage* webPage = m_frame->page()) {
-                if (PluginData* pluginData = webPage->corePage()->pluginData()) {
-                    if (pluginSupportsExtension(pluginData, extension))
-                        return ObjectContentNetscapePlugin;
-                }
+                if (pluginSupportsExtension(webPage->corePage()->pluginData(), extension))
+                    return ObjectContentNetscapePlugin;
             }
         }
     }
@@ -1413,12 +1416,11 @@ ObjectContentType WebFrameLoaderClient::objectContentType(const KURL& url, const
 
     bool plugInSupportsMIMEType = false;
     if (WebPage* webPage = m_frame->page()) {
-        if (PluginData* pluginData = webPage->corePage()->pluginData()) {
-            if (pluginData->supportsMimeType(mimeType, PluginData::AllPlugins) && webFrame()->coreFrame()->loader().subframeLoader()->allowPlugins(NotAboutToInstantiatePlugin))
-                plugInSupportsMIMEType = true;
-            else if (pluginData->supportsMimeType(mimeType, PluginData::OnlyApplicationPlugins))
-                plugInSupportsMIMEType = true;
-        }
+        const PluginData& pluginData = webPage->corePage()->pluginData();
+        if (pluginData.supportsMimeType(mimeType, PluginData::AllPlugins) && webFrame()->coreFrame()->loader().subframeLoader().allowPlugins(NotAboutToInstantiatePlugin))
+            plugInSupportsMIMEType = true;
+        else if (pluginData.supportsMimeType(mimeType, PluginData::OnlyApplicationPlugins))
+            plugInSupportsMIMEType = true;
     }
     
     if (MIMETypeRegistry::isSupportedImageMIMEType(mimeType))

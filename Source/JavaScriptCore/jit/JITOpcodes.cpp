@@ -97,7 +97,7 @@ void JIT::emit_op_jmp(Instruction* currentInstruction)
 void JIT::emit_op_new_object(Instruction* currentInstruction)
 {
     Structure* structure = currentInstruction[3].u.objectAllocationProfile->structure();
-    size_t allocationSize = JSObject::allocationSize(structure->inlineCapacity());
+    size_t allocationSize = JSFinalObject::allocationSize(structure->inlineCapacity());
     MarkedAllocator* allocator = &m_vm->heap.allocatorForObjectWithoutDestructor(allocationSize);
 
     RegisterID resultReg = regT0;
@@ -680,8 +680,8 @@ void JIT::emit_op_catch(Instruction* currentInstruction)
     killLastResultRegister(); // FIXME: Implicitly treat op_catch as a labeled statement, and remove this line of code.
     move(regT0, callFrameRegister);
     peek(regT3, OBJECT_OFFSETOF(struct JITStackFrame, vm) / sizeof(void*));
-    load64(Address(regT3, OBJECT_OFFSETOF(VM, exception)), regT0);
-    store64(TrustedImm64(JSValue::encode(JSValue())), Address(regT3, OBJECT_OFFSETOF(VM, exception)));
+    load64(Address(regT3, VM::exceptionOffset()), regT0);
+    store64(TrustedImm64(JSValue::encode(JSValue())), Address(regT3, VM::exceptionOffset()));
     emitPutVirtualRegister(currentInstruction[1].u.operand);
 }
 

@@ -302,6 +302,7 @@
     <ClCompile Include="..\bytecode\CodeBlockHash.cpp" />
     <ClCompile Include="..\bytecode\CodeOrigin.cpp" />
     <ClCompile Include="..\bytecode\CodeType.cpp" />
+    <ClCompile Include="..\bytecode\DeferredCompilationCallback.cpp" />
     <ClCompile Include="..\bytecode\ExecutionCounter.cpp" />
     <ClCompile Include="..\bytecode\ExitKind.cpp" />
     <ClCompile Include="..\bytecode\GetByIdStatus.cpp" />
@@ -324,12 +325,15 @@
     <ClCompile Include="..\debugger\Debugger.cpp" />
     <ClCompile Include="..\debugger\DebuggerActivation.cpp" />
     <ClCompile Include="..\debugger\DebuggerCallFrame.cpp" />
+    <ClCompile Include="..\dfg\DFGCompilationKey.cpp" />
+    <ClCompile Include="..\dfg\DFGCompilationMode.cpp" />
+    <ClCompile Include="..\dfg\DFGDriver.cpp" />
     <ClCompile Include="..\disassembler\Disassembler.cpp" />
     <ClCompile Include="..\heap\BlockAllocator.cpp" />
+    <ClCompile Include="..\heap\CodeBlockSet.cpp" />
     <ClCompile Include="..\heap\ConservativeRoots.cpp" />
     <ClCompile Include="..\heap\CopiedSpace.cpp" />
     <ClCompile Include="..\heap\CopyVisitor.cpp" />
-    <ClCompile Include="..\heap\DFGCodeBlocks.cpp" />
     <ClCompile Include="..\heap\GCThread.cpp" />
     <ClCompile Include="..\heap\GCThreadSharedData.cpp" />
     <ClCompile Include="..\heap\HandleSet.cpp" />
@@ -356,7 +360,7 @@
     <ClCompile Include="..\interpreter\CallFrame.cpp" />
     <ClCompile Include="..\interpreter\Interpreter.cpp" />
     <ClCompile Include="..\interpreter\JSStack.cpp" />
-    <ClCompile Include="..\interpreter\StackIterator.cpp" />
+    <ClCompile Include="..\interpreter\StackVisitor.cpp" />
     <ClCompile Include="..\interpreter\VMInspector.cpp" />
     <ClCompile Include="..\jit\ClosureCallStubRoutine.cpp" />
     <ClCompile Include="..\jit\ExecutableAllocator.cpp" />
@@ -377,11 +381,12 @@
     <ClCompile Include="..\jit\JITStubRoutine.cpp" />
     <ClCompile Include="..\jit\JITStubs.cpp" />
     <ClCompile Include="..\jit\JITThunks.cpp" />
+    <ClCompile Include="..\jit\JITToDFGDeferredCompilationCallback.cpp" />
     <ClCompile Include="..\jit\JumpReplacementWatchpoint.cpp" />
     <ClCompile Include="..\jit\ThunkGenerators.cpp" />
     <ClCompile Include="..\llint\LLIntCLoop.cpp" />
     <ClCompile Include="..\llint\LLIntData.cpp" />
-    <ClCompile Include="..\llint\LLIntEntrypoints.cpp" />
+    <ClCompile Include="..\llint\LLIntEntrypoint.cpp" />
     <ClCompile Include="..\llint\LLIntExceptions.cpp" />
     <ClCompile Include="..\llint\LLIntOffsetsExtractor.cpp" />
     <ClCompile Include="..\llint\LLIntSlowPaths.cpp" />
@@ -464,14 +469,23 @@
     <ClCompile Include="..\runtime\JSGlobalObject.cpp" />
     <ClCompile Include="..\runtime\JSGlobalObjectFunctions.cpp" />
     <ClCompile Include="..\runtime\JSLock.cpp" />
+    <ClCompile Include="..\runtime\JSMap.cpp" />
     <ClCompile Include="..\runtime\JSNameScope.cpp" />
     <ClCompile Include="..\runtime\JSNotAnObject.cpp" />
     <ClCompile Include="..\runtime\JSONObject.cpp" />
     <ClCompile Include="..\runtime\JSObject.cpp" />
+    <ClCompile Include="..\runtime\JSPromise.cpp" />
+    <ClCompile Include="..\runtime\JSPromiseCallback.cpp" />
+    <ClCompile Include="..\runtime\JSPromiseConstructor.cpp" />
+    <ClCompile Include="..\runtime\JSPromisePrototype.cpp" />
+    <ClCompile Include="..\runtime\JSPromiseResolver.cpp" />
+    <ClCompile Include="..\runtime\JSPromiseResolverConstructor.cpp" />
+    <ClCompile Include="..\runtime\JSPromiseResolverPrototype.cpp" />
     <ClCompile Include="..\runtime\JSPropertyNameIterator.cpp" />
     <ClCompile Include="..\runtime\JSProxy.cpp" />
     <ClCompile Include="..\runtime\JSScope.cpp" />
     <ClCompile Include="..\runtime\JSSegmentedVariableObject.cpp" />
+    <ClCompile Include="..\runtime\JSSet.cpp" />
     <ClCompile Include="..\runtime\JSString.cpp" />
     <ClCompile Include="..\runtime\JSStringJoiner.cpp" />
     <ClCompile Include="..\runtime\JSSymbolTableObject.cpp" />
@@ -483,6 +497,9 @@
     <ClCompile Include="..\runtime\JSWrapperObject.cpp" />
     <ClCompile Include="..\runtime\LiteralParser.cpp" />
     <ClCompile Include="..\runtime\Lookup.cpp" />
+    <ClCompile Include="..\runtime\MapConstructor.cpp" />
+    <ClCompile Include="..\runtime\MapData.cpp" />
+    <ClCompile Include="..\runtime\MapPrototype.cpp" />
     <ClCompile Include="..\runtime\MathObject.cpp" />
     <ClCompile Include="..\runtime\NameConstructor.cpp" />
     <ClCompile Include="..\runtime\NameInstance.cpp" />
@@ -509,6 +526,8 @@
     <ClCompile Include="..\runtime\RegExpObject.cpp" />
     <ClCompile Include="..\runtime\RegExpPrototype.cpp" />
     <ClCompile Include="..\runtime\SamplingCounter.cpp" />
+    <ClCompile Include="..\runtime\SetConstructor.cpp" />
+    <ClCompile Include="..\runtime\SetPrototype.cpp" />
     <ClCompile Include="..\runtime\SimpleTypedArrayController.cpp" />
     <ClCompile Include="..\runtime\SmallStrings.cpp" />
     <ClCompile Include="..\runtime\SparseArrayValueMap.cpp" />
@@ -521,6 +540,7 @@
     <ClCompile Include="..\runtime\StructureChain.cpp" />
     <ClCompile Include="..\runtime\StructureRareData.cpp" />
     <ClCompile Include="..\runtime\SymbolTable.cpp" />
+    <ClCompile Include="..\runtime\TestRunnerUtils.cpp" />
     <ClCompile Include="..\runtime\TypedArrayController.cpp" />
     <ClCompile Include="..\runtime\TypedArrayType.cpp" />
     <ClCompile Include="..\runtime\VM.cpp" />
@@ -535,22 +555,28 @@
     <ClCompile Include="..\yarr\YarrSyntaxChecker.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\ArrayConstructor.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\ArrayPrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\BooleanPrototype.lut.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\DateConstructor.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\DatePrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\ErrorPrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\HeaderDetection.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSDataViewPrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSGlobalObject.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSONObject.lut.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSPromiseConstructor.lut.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSPromisePrototype.lut.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSPromiseResolverPrototype.lut.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\KeywordLookup.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\Lexer.lut.h" />
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\LLIntAssembly.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\NamePrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\NumberConstructor.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\NumberPrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\ObjectConstructor.lut.h" />
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\ObjectPrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\RegExpConstructor.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\RegExpJitTables.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\RegExpObject.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\RegExpPrototype.lut.h" />
     <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\StringConstructor.lut.h" />
   </ItemGroup>
@@ -610,6 +636,7 @@
     <ClInclude Include="..\bytecode\CodeType.h" />
     <ClInclude Include="..\bytecode\Comment.h" />
     <ClInclude Include="..\bytecode\DataFormat.h" />
+    <ClInclude Include="..\bytecode\DeferredCompilationCallback.h" />
     <ClInclude Include="..\bytecode\EvalCodeCache.h" />
     <ClInclude Include="..\bytecode\ExecutionCounter.h" />
     <ClInclude Include="..\bytecode\ExitKind.h" />
@@ -647,10 +674,13 @@
     <ClInclude Include="..\debugger\Debugger.h" />
     <ClInclude Include="..\debugger\DebuggerActivation.h" />
     <ClInclude Include="..\debugger\DebuggerCallFrame.h" />
+    <ClInclude Include="..\dfg\DFGCompilationKey.h" />
+    <ClInclude Include="..\dfg\DFGCompilationMode.h" />
     <ClInclude Include="..\dfg\DFGDriver.h" />
     <ClInclude Include="..\dfg\DFGOSREntry.h" />
     <ClInclude Include="..\disassembler\Disassembler.h" />
     <ClInclude Include="..\heap\BlockAllocator.h" />
+    <ClInclude Include="..\heap\CodeBlockSet.h" />
     <ClInclude Include="..\heap\ConservativeRoots.h" />
     <ClInclude Include="..\heap\CopiedAllocator.h" />
     <ClInclude Include="..\heap\CopiedBlock.h" />
@@ -661,7 +691,6 @@
     <ClInclude Include="..\heap\CopyVisitor.h" />
     <ClInclude Include="..\heap\CopyVisitorInlines.h" />
     <ClInclude Include="..\heap\CopyWorkList.h" />
-    <ClInclude Include="..\heap\DFGCodeBlocks.h" />
     <ClInclude Include="..\heap\GCAssertions.h" />
     <ClInclude Include="..\heap\GCThread.h" />
     <ClInclude Include="..\heap\GCThreadSharedData.h" />
@@ -715,8 +744,7 @@
     <ClInclude Include="..\interpreter\JSStack.h" />
     <ClInclude Include="..\interpreter\JSStackInlines.h" />
     <ClInclude Include="..\interpreter\Register.h" />
-    <ClInclude Include="..\interpreter\StackIterator.h" />
-    <ClInclude Include="..\interpreter\StackIteratorPrivate.h" />
+    <ClInclude Include="..\interpreter\StackVisitor.h" />
     <ClInclude Include="..\interpreter\VMInspector.h" />
     <ClInclude Include="..\jit\ClosureCallStubRoutine.h" />
     <ClInclude Include="..\jit\CompactJITCodeMap.h" />
@@ -727,7 +755,6 @@
     <ClInclude Include="..\jit\JITCode.h" />
     <ClInclude Include="..\jit\JITCompilationEffort.h" />
     <ClInclude Include="..\jit\JITDisassembler.h" />
-    <ClInclude Include="..\jit\JITDriver.h" />
     <ClInclude Include="..\jit\JITExceptions.h" />
     <ClInclude Include="..\jit\JITInlines.h" />
     <ClInclude Include="..\jit\JITStubCall.h" />
@@ -737,6 +764,7 @@
     <ClInclude Include="..\jit\JITStubsX86Common.h" />
     <ClInclude Include="..\jit\JITStubsX86_64.h" />
     <ClInclude Include="..\jit\JITThunks.h" />
+    <ClInclude Include="..\jit\JITToDFGDeferredCompilationCallback.h" />
     <ClInclude Include="..\jit\JITWriteBarrier.h" />
     <ClInclude Include="..\jit\JSInterfaceJIT.h" />
     <ClInclude Include="..\jit\JumpReplacementWatchpoint.h" />
@@ -747,7 +775,7 @@
     <ClInclude Include="..\llint\LLIntCLoop.h" />
     <ClInclude Include="..\llint\LLIntCommon.h" />
     <ClInclude Include="..\llint\LLIntData.h" />
-    <ClInclude Include="..\llint\LLIntEntrypoints.h" />
+    <ClInclude Include="..\llint\LLIntEntrypoint.h" />
     <ClInclude Include="..\llint\LLIntExceptions.h" />
     <ClInclude Include="..\llint\LLIntOfflineAsmConfig.h" />
     <ClInclude Include="..\llint\LLIntOpcode.h" />
@@ -824,7 +852,6 @@
     <ClInclude Include="..\runtime\ErrorPrototype.h" />
     <ClInclude Include="..\runtime\ExceptionHelpers.h" />
     <ClInclude Include="..\runtime\Executable.h" />
-    <ClInclude Include="..\runtime\ExecutionHarness.h" />
     <ClInclude Include="..\runtime\Float32Array.h" />
     <ClInclude Include="..\runtime\Float64Array.h" />
     <ClInclude Include="..\runtime\FunctionConstructor.h" />
@@ -876,14 +903,23 @@
     <ClInclude Include="..\runtime\JSInt32Array.h" />
     <ClInclude Include="..\runtime\JSInt8Array.h" />
     <ClInclude Include="..\runtime\JSLock.h" />
+    <ClInclude Include="..\runtime\JSMap.h" />
     <ClInclude Include="..\runtime\JSNameScope.h" />
     <ClInclude Include="..\runtime\JSNotAnObject.h" />
     <ClInclude Include="..\runtime\JSONObject.h" />
     <ClInclude Include="..\runtime\JSObject.h" />
+    <ClInclude Include="..\runtime\JSPromise.h" />
+    <ClInclude Include="..\runtime\JSPromiseCallback.h" />
+    <ClInclude Include="..\runtime\JSPromiseConstructor.h" />
+    <ClInclude Include="..\runtime\JSPromisePrototype.h" />
+    <ClInclude Include="..\runtime\JSPromiseResolver.h" />
+    <ClInclude Include="..\runtime\JSPromiseResolverConstructor.h" />
+    <ClInclude Include="..\runtime\JSPromiseResolverPrototype.h" />
     <ClInclude Include="..\runtime\JSPropertyNameIterator.h" />
     <ClInclude Include="..\runtime\JSProxy.h" />
     <ClInclude Include="..\runtime\JSScope.h" />
     <ClInclude Include="..\runtime\JSSegmentedVariableObject.h" />
+    <ClInclude Include="..\runtime\JSSet.h" />
     <ClInclude Include="..\runtime\JSString.h" />
     <ClInclude Include="..\runtime\JSStringBuilder.h" />
     <ClInclude Include="..\runtime\JSStringJoiner.h" />
@@ -902,6 +938,9 @@
     <ClInclude Include="..\runtime\JSWrapperObject.h" />
     <ClInclude Include="..\runtime\LiteralParser.h" />
     <ClInclude Include="..\runtime\Lookup.h" />
+    <ClInclude Include="..\runtime\MapConstructor.h" />
+    <ClInclude Include="..\runtime\MapData.h" />
+    <ClInclude Include="..\runtime\MapPrototype.h" />
     <ClInclude Include="..\runtime\MatchResult.h" />
     <ClInclude Include="..\runtime\MathObject.h" />
     <ClInclude Include="..\runtime\NameConstructor.h" />
@@ -939,6 +978,8 @@
     <ClInclude Include="..\runtime\RegExpPrototype.h" />
     <ClInclude Include="..\runtime\Reject.h" />
     <ClInclude Include="..\runtime\SamplingCounter.h" />
+    <ClInclude Include="..\runtime\SetConstructor.h" />
+    <ClInclude Include="..\runtime\SetPrototype.h" />
     <ClInclude Include="..\runtime\SimpleTypedArrayController.h" />
     <ClInclude Include="..\runtime\SmallStrings.h" />
     <ClInclude Include="..\runtime\SparseArrayValueMap.h" />
@@ -953,7 +994,9 @@
     <ClInclude Include="..\runtime\StructureRareDataInlines.h" />
     <ClInclude Include="..\runtime\StructureTransitionTable.h" />
     <ClInclude Include="..\runtime\SymbolTable.h" />
+    <ClInclude Include="..\runtime\TestRunnerUtils.h" />
     <ClInclude Include="..\runtime\Tracing.h" />
+    <ClInclude Include="..\runtime\ToNativeFromValue.h" />
     <ClInclude Include="..\runtime\TypedArrayAdaptors.h" />
     <ClInclude Include="..\runtime\TypedArrayController.h" />
     <ClInclude Include="..\runtime\TypedArrayInlines.h" />
@@ -998,6 +1041,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
     </MASM>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

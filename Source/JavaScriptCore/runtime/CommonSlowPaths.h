@@ -49,7 +49,7 @@ ALWAYS_INLINE int arityCheckFor(ExecState* exec, JSStack* stack, CodeSpecializat
 {
     JSFunction* callee = jsCast<JSFunction*>(exec->callee());
     ASSERT(!callee->isHostFunction());
-    CodeBlock* newCodeBlock = &callee->jsExecutable()->generatedBytecodeFor(kind);
+    CodeBlock* newCodeBlock = callee->jsExecutable()->codeBlockFor(kind);
     int argumentCountIncludingThis = exec->argumentCountIncludingThis();
     
     // This ensures enough space for the worst case scenario of zero arguments passed by the caller.
@@ -66,7 +66,7 @@ ALWAYS_INLINE int arityCheckFor(ExecState* exec, JSStack* stack, CodeSpecializat
 inline bool opIn(ExecState* exec, JSValue propName, JSValue baseVal)
 {
     if (!baseVal.isObject()) {
-        exec->vm().exception = createInvalidParameterError(exec, "in", baseVal);
+        exec->vm().throwException(exec, createInvalidParameterError(exec, "in", baseVal));
         return false;
     }
 
@@ -80,7 +80,7 @@ inline bool opIn(ExecState* exec, JSValue propName, JSValue baseVal)
         return baseObj->hasProperty(exec, jsCast<NameInstance*>(propName.asCell())->privateName());
 
     Identifier property(exec, propName.toString(exec)->value(exec));
-    if (exec->vm().exception)
+    if (exec->vm().exception())
         return false;
     return baseObj->hasProperty(exec, property);
 }

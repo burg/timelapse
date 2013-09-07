@@ -195,8 +195,10 @@ public:
     
     void addLayoutOverflow(const LayoutRect&);
     void addVisualOverflow(const LayoutRect&);
+    void clearOverflow();
     
     void addVisualEffectOverflow();
+    LayoutRect applyVisualEffectOverflow(const LayoutRect&) const;
     void addOverflowFromChild(RenderBox* child) { addOverflowFromChild(child, child->locationOffset()); }
     void addOverflowFromChild(RenderBox* child, const LayoutSize& delta);
     
@@ -368,6 +370,7 @@ public:
 
     enum RenderBoxRegionInfoFlags { CacheRenderBoxRegionInfo, DoNotCacheRenderBoxRegionInfo };
     LayoutRect borderBoxRectInRegion(RenderRegion*, RenderBoxRegionInfoFlags = CacheRenderBoxRegionInfo) const;
+    LayoutRect clientBoxRectInRegion(RenderRegion*) const;
     RenderRegion* clampToStartAndEndRegions(RenderRegion*) const;
     void clearRenderBoxRegionInfo();
     virtual LayoutUnit offsetFromLogicalTopOfFirstPage() const;
@@ -405,7 +408,7 @@ public:
 
     bool stretchesToViewport() const
     {
-        return document()->inQuirksMode() && style()->logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isRoot() || isBody()) && !document()->shouldDisplaySeamlesslyWithParent() && !isInline();
+        return document().inQuirksMode() && style()->logicalHeight().isAuto() && !isFloatingOrOutOfFlowPositioned() && (isRoot() || isBody()) && !document().shouldDisplaySeamlesslyWithParent() && !isInline();
     }
 
     virtual LayoutSize intrinsicSize() const { return LayoutSize(); }
@@ -642,7 +645,7 @@ private:
     void updateShapeOutsideInfoAfterStyleChange(const ShapeValue* shapeOutside, const ShapeValue* oldShapeOutside);
 #endif
 
-    bool fixedElementLaysOutRelativeToFrame(Frame*, FrameView*) const;
+    bool fixedElementLaysOutRelativeToFrame(const FrameView&) const;
 
     bool includeVerticalScrollbarSize() const;
     bool includeHorizontalScrollbarSize() const;
@@ -706,6 +709,18 @@ private:
     static bool s_hadOverflowClip;
 };
 
+inline RenderBox& toRenderBox(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isBox());
+    return static_cast<RenderBox&>(object);
+}
+
+inline const RenderBox& toRenderBox(const RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isBox());
+    return static_cast<const RenderBox&>(object);
+}
+
 inline RenderBox* toRenderBox(RenderObject* object)
 { 
     ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBox());
@@ -720,6 +735,7 @@ inline const RenderBox* toRenderBox(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderBox(const RenderBox*);
+void toRenderBox(const RenderBox&);
 
 inline RenderBox* RenderBox::previousSiblingBox() const
 {

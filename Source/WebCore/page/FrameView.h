@@ -62,8 +62,8 @@ public:
     friend class RenderView;
     friend class Internals;
 
-    static PassRefPtr<FrameView> create(Frame*);
-    static PassRefPtr<FrameView> create(Frame*, const IntSize& initialSize);
+    static PassRefPtr<FrameView> create(Frame&);
+    static PassRefPtr<FrameView> create(Frame&, const IntSize& initialSize);
 
     virtual ~FrameView();
 
@@ -101,7 +101,7 @@ public:
     bool didFirstLayout() const;
     void layoutTimerFired(Timer<FrameView>*);
     void scheduleRelayout();
-    void scheduleRelayoutOfSubtree(RenderObject*);
+    void scheduleRelayoutOfSubtree(RenderObject&);
     void unscheduleRelayout();
     bool layoutPending() const;
     bool isInLayout() const { return m_inLayout; }
@@ -448,7 +448,7 @@ protected:
     virtual bool isFlippedDocument() const;
 
 private:
-    explicit FrameView(Frame*);
+    explicit FrameView(Frame&);
 
     void reset();
     void init();

@@ -34,6 +34,7 @@
 #include "RuntimeApplicationChecks.h"
 #include "ScriptExecutionContext.h"
 #include "SuspendableTimer.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
     
@@ -91,7 +92,7 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
 
 void DocumentEventQueue::enqueueOrDispatchScrollEvent(PassRefPtr<Node> target, ScrollEventTargetType targetType)
 {
-    if (!target->document()->hasListenerType(Document::SCROLL_LISTENER))
+    if (!target->document().hasListenerType(Document::SCROLL_LISTENER))
         return;
 
     // Per the W3C CSSOM View Module, scroll events fired at the document should bubble, others should not.
@@ -147,7 +148,7 @@ void DocumentEventQueue::pendingEventTimerFired()
     bool wasAdded = m_queuedEvents.add(0).isNewEntry;
     ASSERT_UNUSED(wasAdded, wasAdded); // It should not have already been in the list.
 
-    RefPtr<DocumentEventQueue> protector(this);
+    Ref<DocumentEventQueue> protect(*this);
 
     while (!m_queuedEvents.isEmpty()) {
         ListHashSet<RefPtr<Event>, 16>::iterator iter = m_queuedEvents.begin();

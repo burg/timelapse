@@ -41,6 +41,7 @@
 #import <WebCore/ScrollView.h>
 #import <WebCore/Scrollbar.h>
 #import <WebKitSystemInterface.h>
+#import <wtf/ObjcRuntimeExtras.h>
 
 using namespace WebCore;
 using namespace WebKit;
@@ -60,11 +61,11 @@ using namespace WebKit;
     if (!page)
         return nil;
     
-    WebCore::Frame* core = page->mainFrame();
-    if (!core || !core->document())
+    WebCore::Frame& core = page->mainFrame();
+    if (!core.document())
         return nil;
     
-    AccessibilityObject* root = core->document()->axObjectCache()->rootObject();
+    AccessibilityObject* root = core.document()->axObjectCache()->rootObject();
     if (!root)
         return nil;
     
@@ -207,7 +208,7 @@ using namespace WebKit;
         return nil;
     
     if (toImpl(result.get())->type() == WKStringGetTypeID())
-        return [(NSString *)WKStringCopyCFString(kCFAllocatorDefault, (WKStringRef)result.get()) autorelease];
+        return CFBridgingRelease(WKStringCopyCFString(kCFAllocatorDefault, (WKStringRef)result.get()));
     else if (toImpl(result.get())->type() == WKBooleanGetTypeID())
         return [NSNumber numberWithBool:WKBooleanGetValue(static_cast<WKBooleanRef>(result.get()))];
 

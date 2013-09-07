@@ -1953,6 +1953,9 @@
     <ClCompile Include="..\platform\network\cf\SocketStreamHandleCFNet.cpp">
       <Filter>platform\network\cf</Filter>
     </ClCompile>
+    <ClCompile Include="..\platform\network\cf\SynchronousLoaderClientCFNet.cpp">
+      <Filter>platform\network\cf</Filter>
+    </ClCompile>
     <ClCompile Include="..\platform\network\win\DownloadBundleWin.cpp">
       <Filter>platform\network\win</Filter>
     </ClCompile>
@@ -2449,9 +2452,6 @@
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\shapes\ShapeInsideInfo.cpp">
-      <Filter>rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="..\rendering\shapes\ShapeInterval.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\shapes\ShapeOutsideInfo.cpp">
@@ -3382,9 +3382,6 @@
       <Filter>dom</Filter>
     </ClCompile>
     <ClCompile Include="..\dom\NodeRareData.cpp">
-      <Filter>dom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dom\NodeRenderingContext.cpp">
       <Filter>dom</Filter>
     </ClCompile>
     <ClCompile Include="..\dom\NodeTraversal.cpp">
@@ -4332,7 +4329,13 @@
     <ClCompile Include="..\html\shadow\TextControlInnerElements.cpp">
       <Filter>html\shadow</Filter>
     </ClCompile>
+    <ClCompile Include="..\html\track\InbandGenericTextTrack.cpp">
+      <Filter>html\track</Filter>
+    </ClCompile>
     <ClCompile Include="..\html\track\InbandTextTrack.cpp">
+      <Filter>html\track</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\track\InbandWebVTTTextTrack.cpp">
       <Filter>html\track</Filter>
     </ClCompile>
     <ClCompile Include="..\html\track\LoadableTextTrack.cpp">
@@ -4480,6 +4483,9 @@
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDOMGlobalObject.cpp">
+      <Filter>bindings\js</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bindings\js\JSDOMGlobalObjectTask.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSDOMImplementationCustom.cpp">
@@ -4801,9 +4807,6 @@
       <Filter>rendering\svg</Filter>
     </ClCompile>
     <ClCompile Include="..\svg\SVGMaskElement.cpp">
-      <Filter>rendering\svg</Filter>
-    </ClCompile>
-    <ClCompile Include="..\svg\SVGStyledElement.cpp">
       <Filter>rendering\svg</Filter>
     </ClCompile>
     <ClCompile Include="..\svg\SVGStyleElement.cpp">
@@ -7033,7 +7036,6 @@
     <ClCompile Include="..\platform\graphics\egl\GLContextEGL.cpp">
       <Filter>platform\graphics\egl</Filter>
     </ClCompile>
-    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSSVGGraphicsElement.cpp" />
     <ClCompile Include="..\platform\graphics\avfoundation\cf\InbandTextTrackPrivateAVCF.cpp">
       <Filter>platform\graphics\avfoundation\cf</Filter>
     </ClCompile>
@@ -7052,23 +7054,50 @@
     <ClCompile Include="..\platform\graphics\GLContext.cpp">
       <Filter>platform\graphics</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\shapes\RasterShape.cpp" />
-    <ClCompile Include="..\bindings\js\WebCoreTypedArrayController.cpp" />
-    <ClCompile Include="..\style\StyleFontSizeFunctions.cpp" />
-    <ClCompile Include="..\style\StyleResolveForDocument.cpp" />
-    <ClCompile Include="..\style\StyleResolveTree.cpp" />
-    <ClCompile Include="..\css\CSSFilterImageValue.cpp" />
     <ClCompile Include="..\platform\win\WebCoreBundleWin.cpp">
       <Filter>platform\win</Filter>
     </ClCompile>
-    <ClCompile Include="..\dom\ElementData.cpp" />
-    <ClCompile Include="..\dom\InlineStyleSheetOwner.cpp" />
-    <ClCompile Include="..\dom\TextNodeTraversal.cpp" />
     <ClCompile Include="..\css\CSSImageSetValue.cpp">
       <Filter>css</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\style\StyleCachedImageSet.cpp">
       <Filter>rendering\style</Filter>
+    </ClCompile>
+    <ClCompile Include="..\rendering\ImageQualityController.cpp">
+      <Filter>rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\accessibility\AccessibilitySearchFieldButtons.cpp">
+      <Filter>accessibility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dom\ElementData.cpp">
+      <Filter>dom</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSSVGGraphicsElement.cpp">
+      <Filter>DerivedSources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\css\CSSFilterImageValue.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dom\InlineStyleSheetOwner.cpp">
+      <Filter>dom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\rendering\shapes\RasterShape.cpp">
+      <Filter>rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\style\StyleFontSizeFunctions.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
+    <ClCompile Include="..\style\StyleResolveForDocument.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
+    <ClCompile Include="..\style\StyleResolveTree.cpp">
+      <Filter>css</Filter>
+    </ClCompile>
+    <ClCompile Include="..\dom\TextNodeTraversal.cpp">
+      <Filter>dom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\bindings\js\WebCoreTypedArrayController.cpp">
+      <Filter>bindings\js</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -10450,9 +10479,6 @@
     <ClInclude Include="..\dom\NodeIterator.h">
       <Filter>dom</Filter>
     </ClInclude>
-    <ClInclude Include="..\dom\NodeRenderingContext.h">
-      <Filter>dom</Filter>
-    </ClInclude>
     <ClInclude Include="..\dom\NodeTraversal.h">
       <Filter>dom</Filter>
     </ClInclude>
@@ -10972,6 +10998,9 @@
     <ClInclude Include="..\html\FormDataList.h">
       <Filter>html</Filter>
     </ClInclude>
+    <ClInclude Include="..\html\FormNamedItem.h">
+      <Filter>html</Filter>
+    </ClInclude>
     <ClInclude Include="..\html\FTPDirectoryDocument.h">
       <Filter>html</Filter>
     </ClInclude>
@@ -11485,7 +11514,13 @@
     <ClInclude Include="..\html\shadow\TextControlInnerElements.h">
       <Filter>html\shadow</Filter>
     </ClInclude>
+    <ClInclude Include="..\html\track\InbandGenericTextTrack.h">
+      <Filter>html\track</Filter>
+    </ClInclude>
     <ClInclude Include="..\html\track\InbandTextTrack.h">
+      <Filter>html\track</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\track\InbandWebVTTTextTrack.h">
       <Filter>html\track</Filter>
     </ClInclude>
     <ClInclude Include="..\html\track\LoadableTextTrack.h">
@@ -11579,6 +11614,9 @@
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\JSDOMGlobalObject.h">
+      <Filter>bindings\js</Filter>
+    </ClInclude>
+    <ClInclude Include="..\bindings\js\JSDOMGlobalObjectTask.h">
       <Filter>bindings\js</Filter>
     </ClInclude>
     <ClInclude Include="..\bindings\js\JSErrorHandler.h">
@@ -12154,9 +12192,6 @@
     <ClInclude Include="..\svg\SVGStringList.h">
       <Filter>rendering\svg</Filter>
     </ClInclude>
-    <ClInclude Include="..\svg\SVGStyledElement.h">
-      <Filter>rendering\svg</Filter>
-    </ClInclude>
     <ClInclude Include="..\svg\SVGGraphicsElement.h">
       <Filter>rendering\svg</Filter>
     </ClInclude>
@@ -12212,6 +12247,9 @@
       <Filter>rendering\svg</Filter>
     </ClInclude>
     <ClInclude Include="..\svg\SVGURIReference.h">
+      <Filter>rendering\svg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\svg\SVGUnknownElement.h">
       <Filter>rendering\svg</Filter>
     </ClInclude>
     <ClInclude Include="..\svg\SVGUseElement.h">
@@ -14808,26 +14846,71 @@
     <ClInclude Include="..\platform\graphics\GLContext.h">
       <Filter>platform\graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\shapes\RasterShape.h" />
-    <ClInclude Include="..\dom\ElementTraversal.h" />
-    <ClInclude Include="..\style\StyleFontSizeFunctions.h" />
-    <ClInclude Include="..\style\StyleResolveForDocument.h" />
-    <ClInclude Include="..\style\StyleResolveTree.h" />
-    <ClInclude Include="..\css\CSSFilterImageValue.h" />
     <ClInclude Include="..\platform\win\WebCoreBundleWin.h">
       <Filter>platform\win</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\ca\PlatformCAFilters.h">
       <Filter>platform\graphics\ca</Filter>
     </ClInclude>
-    <ClInclude Include="..\dom\ElementData.h" />
-    <ClInclude Include="..\dom\InlineStyleSheetOwner.h" />
-    <ClInclude Include="..\dom\TextNodeTraversal.h" />
     <ClInclude Include="..\css\CSSImageSetValue.h">
       <Filter>css</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\style\StyleCachedImageSet.h">
       <Filter>rendering\style</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rendering\ImageQualityController.h">
+      <Filter>rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\accessibility\AccessibilitySearchFieldButtons.h">
+      <Filter>accessibility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementAncestorIterator.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementTraversal.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementChildIterator.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementData.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementDescendantIterator.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementIterator.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\ElementIteratorAssertions.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\css\CSSFilterImageValue.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\HTMLElementTypeChecks.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\InlineStyleSheetOwner.h">
+      <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\rendering\shapes\RasterShape.h">
+      <Filter>rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\style\StyleResolveTree.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\style\StyleFontSizeFunctions.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="..\style\StyleResolveForDocument.h">
+      <Filter>css</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\SVGElementTypeChecks.h">
+      <Filter>DerivedSources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\dom\TextNodeTraversal.h">
+      <Filter>dom</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -15661,7 +15744,27 @@
     </None>
     <None Include="WebCorePostBuild.cmd" />
     <None Include="WebCorePreBuild.cmd" />
-    <None Include="..\Resources\plugIns.js" />
+    <None Include="..\css\mathml.css">
+      <Filter>css</Filter>
+    </None>
+    <None Include="..\css\view-source.css">
+      <Filter>css</Filter>
+    </None>
+    <None Include="..\css\mediaControlsQuickTime.css">
+      <Filter>css</Filter>
+    </None>
+    <None Include="..\css\svg.css">
+      <Filter>css</Filter>
+    </None>
+    <None Include="..\css\themeWin.css">
+      <Filter>css</Filter>
+    </None>
+    <None Include="..\css\themeWinQuirks.css">
+      <Filter>css</Filter>
+    </None>
+    <None Include="..\Resources\plugIns.js">
+      <Filter>plugins</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuildStep Include="..\platform\graphics\win\MediaPlayerPrivateFullscreenWindow.h">

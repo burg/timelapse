@@ -1,3 +1,127 @@
+2013-09-04  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Add support for the Wayland build target
+        https://bugs.webkit.org/show_bug.cgi?id=120627
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * WebCoreSupport/ChromeClientGtk.cpp:
+        (WebKit::createBackingStore): Additionally guard the <gdk/gdkx.h> inclusion and the inclusion and use of
+        WidgetBackingStoreGtkX11 with PLATFORM(X11), ensuring this code is built when also building with X11 target
+        enabled. GDK_WINDOWING_X11 macro can be defined even if the X11 target is disabled.
+
+2013-09-02  Brian Holt  <brian.holt@samsung.com>
+
+        [ATK] Leak: Leaks in testatk.c
+        https://bugs.webkit.org/show_bug.cgi?id=118675
+
+        Reviewed by Mario Sanchez Prada.
+
+        Fixed memory leaks by matching ref calls with unrefs.
+
+        * tests/testatk.c:
+        (testWebkitAtkCaretOffsets):
+        (testWebkitAtkCaretOffsetsAndExtranousWhiteSpaces):
+        (testWebkitAtkGetTextAtOffset):
+        (testWebkitAtkGetTextAtOffsetNewlines):
+        (testWebkitAtkGetTextAtOffsetTextarea):
+        (testWebkitAtkGetTextAtOffsetTextInput):
+        (testWebkitAtkGetTextInParagraphAndBodySimple):
+        (testWebkitAtkGetTextInParagraphAndBodyModerate):
+        (testWebkitAtkTextAttributes):
+        (testWebkitAtkTextSelections):
+        (testWebkitAtkListsOfItems):
+
+2013-08-29  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Automake] libWebCoreDOM.la could use a better name
+        https://bugs.webkit.org/show_bug.cgi?id=120232
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: libWebCoreDOM has a new name - libGObjectDOMBindings.
+
+2013-08-29  Arnaud Renevier  <a.renevier@samsung.com>
+
+        [cairo] canvas drawing on itself doesn't work with accelerated canvas
+        https://bugs.webkit.org/show_bug.cgi?id=118808
+
+        Reviewed by Martin Robinson.
+
+        Change cairoImageSurfaceToGdkPixbuf to cairoSurfaceToGdkPixbuf.
+
+        * webkit/webkitfavicondatabase.cpp:
+        (getIconPixbufSynchronously):
+
+2013-08-26  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed GTK build fix.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::FrameLoaderClient): Remove an assertion that was not removed in r154658.
+
+2013-08-26  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Another GTK+ build fix.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+
+2013-08-26  Ryosuke Niwa  <rniwa@webkit.org>
+
+        GTK+ build fix. Like r154620.
+
+        * webkit/webkitwebframe.cpp:
+        (webkit_web_frame_new):
+
+2013-08-26  Pratik Solanki  <psolanki@apple.com>
+
+        PageGroup::groupSettings() should return a reference
+        https://bugs.webkit.org/show_bug.cgi?id=120319
+
+        Reviewed by Andreas Kling.
+
+        PageGroup::m_groupSettings is never NULL so we can just return a reference from groupSettings().
+
+        * webkit/webkitwebdatabase.cpp:
+        (webkit_set_web_database_directory_path):
+
+2013-08-26  Andreas Kling  <akling@apple.com>
+
+        WebCore: Let Page create the main Frame.
+        <https://webkit.org/b/119964>
+
+        Tweak WebKit1/GTK for changes in WebCore.
+
+        Patch by Zan Dobersek <zdobersek@igalia.com>
+        Reviewed by Gustavo Noronha Silva.
+
+        * WebCoreSupport/FrameLoaderClientGtk.h:
+        (WebKit::FrameLoaderClient::setWebFrame):
+        * webkit/webkitwebframe.cpp:
+        (webkit_web_frame_new):
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_init):
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        Frame::tree should return a reference instead of a pointer
+        https://bugs.webkit.org/show_bug.cgi?id=120259
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        (DumpRenderTreeSupportGtk::getFrameChildren):
+        (DumpRenderTreeSupportGtk::clearMainFrameName):
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::createFrame):
+        * webkit/webkitwebframe.cpp:
+        (webkit_web_frame_get_name):
+        (webkit_web_frame_get_parent):
+        (webkit_web_frame_find_frame):
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_set_highlight_text_matches):
+        Use tree(). instead of tree()->.
+
 2013-08-21  Zan Dobersek  <zdobersek@igalia.com>
 
         <https://webkit.org/b/119836> [GTK] ChromeClient::paint is susceptible to system time changes

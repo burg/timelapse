@@ -93,7 +93,7 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 }
 #endif
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(DateConstructor);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(DateConstructor);
 
 DateConstructor::DateConstructor(JSGlobalObject* globalObject, Structure* structure)
     : InternalFunction(globalObject, structure)

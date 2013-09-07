@@ -66,7 +66,11 @@
 #include "CoreMediaSoftLinking.h"
 
 // We don't bother softlinking against libdispatch since it's already been loaded by AAS.
+#ifdef DEBUG_ALL
+#pragma comment(lib, "libdispatch_debug.lib")
+#else
 #pragma comment(lib, "libdispatch.lib")
+#endif
 
 using namespace std;
 
@@ -104,6 +108,7 @@ public:
     void beginLoadingMetadata();
     
     void seekToTime(float);
+    void updateVideoLayerGravity();
 
     void setCurrentTrack(InbandTextTrackPrivateAVF*);
     InbandTextTrackPrivateAVF* currentTrack() const { return m_currentTrack; }
@@ -330,6 +335,14 @@ void MediaPlayerPrivateAVFoundationCF::cancelLoad()
 
     setIgnoreLoadStateChanges(false);
     setDelayCallbacks(false);
+}
+
+void MediaPlayerPrivateAVFoundationCF::updateVideoLayerGravity()
+{
+    ASSERT(supportsAcceleratedRendering());
+
+    if (m_avfWrapper)
+        m_avfWrapper->updateVideoLayerGravity();
 }
 
 bool MediaPlayerPrivateAVFoundationCF::hasLayerRenderer() const
@@ -849,6 +862,8 @@ void MediaPlayerPrivateAVFoundationCF::tracksChanged()
     if (!avAsset(m_avfWrapper))
         return;
 
+    setDelayCharacteristicsChangedNotification(true);
+
     bool haveCCTrack = false;
     bool hasCaptions = false;
 
@@ -922,8 +937,10 @@ void MediaPlayerPrivateAVFoundationCF::tracksChanged()
 
     sizeChanged();
 
-    if (!primaryAudioTrackLanguage.isNull() && primaryAudioTrackLanguage != languageOfPrimaryAudioTrack())
-        player()->characteristicChanged();
+    if (primaryAudioTrackLanguage != languageOfPrimaryAudioTrack())
+        characteristicsChanged();
+
+    setDelayCharacteristicsChangedNotification(false);
 }
 
 void MediaPlayerPrivateAVFoundationCF::sizeChanged()
@@ -954,6 +971,17 @@ void MediaPlayerPrivateAVFoundationCF::sizeChanged()
     if (movieSize.height > naturalSize.height)
         naturalSize.height = movieSize.height;
     setNaturalSize(IntSize(naturalSize));
+}
+
+bool MediaPlayerPrivateAVFoundationCF::requiresImmediateCompositing() const
+{
+    // The AVFoundationCF player needs to have the root compositor available at construction time
+    // so it can attach to the rendering device. Otherwise it falls back to CPU-only mode.
+    //
+    // It would be nice if AVCFPlayer had some way to switch to hardware-accelerated mode
+    // when asked, then we could follow AVFoundation's model and switch to compositing
+    // mode when beginning to play media.
+    return true;
 }
 
 #if !HAVE(AVFOUNDATION_LEGIBLE_OUTPUT_SUPPORT)
@@ -1104,6 +1132,12 @@ String MediaPlayerPrivateAVFoundationCF::languageOfPrimaryAudioTrack() const
 
     AVCFAssetTrackRef track = (AVCFAssetTrackRef)CFArrayGetValueAtIndex(tracks.get(), 0);
     RetainPtr<CFStringRef> language = adoptCF(AVCFAssetTrackCopyExtendedLanguageTag(track));
+
+    // If the language code is stored as a QuickTime 5-bit packed code there aren't enough bits for a full
+    // RFC 4646 language tag so extendedLanguageTag returns null. In this case languageCode will return the
+    // ISO 639-2/T language code so check it.
+    if (!language)
+        language = adoptCF(AVCFAssetTrackCopyLanguageCode(track));
 
     // Some legacy tracks have "und" as a language, treat that the same as no language at all.
     if (language && CFStringCompare(language.get(), CFSTR("und"), kCFCompareCaseInsensitive) != kCFCompareEqualTo) {
@@ -1556,6 +1590,7 @@ PlatformLayer* AVFWrapper::platformLayer()
     CACFLayerInsertSublayer(m_videoLayerWrapper->platformLayer(), m_caVideoLayer.get(), 0);
     m_videoLayerWrapper->setAnchorPoint(FloatPoint3D());
     m_videoLayerWrapper->setNeedsLayout();
+    updateVideoLayerGravity();
 
     return m_videoLayerWrapper->platformLayer();
 }
@@ -1622,14 +1657,14 @@ RetainPtr<CGImageRef> AVFWrapper::createImageForTimeInRect(float time, const Int
         return 0;
 
 #if !LOG_DISABLED
-    double start = WTF::currentTime();
+    double start = monotonicallyIncreasingTime();
 #endif
 
     AVCFAssetImageGeneratorSetMaximumSize(m_imageGenerator.get(), CGSize(rect.size()));
     CGImageRef image = AVCFAssetImageGeneratorCopyCGImageAtTime(m_imageGenerator.get(), CMTimeMakeWithSeconds(time, 600), 0, 0);
 
 #if !LOG_DISABLED
-    double duration = WTF::currentTime() - start;
+    double duration = monotonicallyIncreasingTime() - start;
     LOG(Media, "AVFWrapper::createImageForTimeInRect(%p) - creating image took %.4f", this, narrowPrecisionToFloat(duration));
 #endif
 
@@ -1648,6 +1683,12 @@ AVCFMediaSelectionGroupRef AVFWrapper::safeMediaSelectionGroupForLegibleMedia() 
     return AVCFAssetGetSelectionGroupForMediaCharacteristic(avAsset(), AVCFMediaCharacteristicLegible);
 }
 #endif
+
+void AVFWrapper::updateVideoLayerGravity()
+{
+    // We should call AVCFPlayerLayerSetVideoGravity() here, but it is not yet implemented.
+    // FIXME: <rdar://problem/14884340>
+}
 
 void LayerClient::platformCALayerLayoutSublayersOfLayer(PlatformCALayer* wrapperLayer)
 {

@@ -129,7 +129,7 @@ PassRefPtr<DOMStringList> Location::ancestorOrigins() const
     RefPtr<DOMStringList> origins = DOMStringList::create();
     if (!m_frame)
         return origins.release();
-    for (Frame* frame = m_frame->tree()->parent(); frame; frame = frame->tree()->parent())
+    for (Frame* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent())
         origins->append(frame->document()->securityOrigin()->toString());
     return origins.release();
 }
@@ -258,7 +258,7 @@ void Location::reload(DOMWindow* activeWindow)
     }
     if (protocolIsJavaScript(m_frame->document()->url()))
         return;
-    m_frame->navigationScheduler()->scheduleRefresh();
+    m_frame->navigationScheduler().scheduleRefresh();
 }
 
 void Location::setLocation(const String& url, DOMWindow* activeWindow, DOMWindow* firstWindow)

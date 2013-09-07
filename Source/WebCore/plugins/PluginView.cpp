@@ -124,7 +124,7 @@ IntRect PluginView::windowClipRect() const
     IntRect clipRect(m_windowRect);
     
     // Take our element and get the clip rect from the enclosing layer and frame view.
-    FrameView* parentView = m_element->document()->view();
+    FrameView* parentView = m_element->document().view();
     clipRect.intersect(parentView->windowClipRectForFrameOwner(m_element, true));
 
     return clipRect;
@@ -132,7 +132,7 @@ IntRect PluginView::windowClipRect() const
 
 void PluginView::setFrameRect(const IntRect& rect)
 {
-    if (m_element->document()->printing())
+    if (m_element->document().printing())
         return;
 
     if (rect != frameRect())
@@ -284,7 +284,7 @@ void PluginView::mediaCanStart()
 {
     ASSERT(!m_isStarted);
     if (!start())
-        parentFrame()->loader().client()->dispatchDidFailToStartPlugin(this);
+        parentFrame()->loader().client().dispatchDidFailToStartPlugin(this);
 }
 
 PluginView::~PluginView()
@@ -422,7 +422,7 @@ void PluginView::performRequest(PluginRequest* request)
     // don't let a plugin start any loads if it is no longer part of a document that is being 
     // displayed unless the loads are in the same frame as the plugin.
     const String& targetFrameName = request->frameLoadRequest().frameName();
-    if (m_parentFrame->loader().documentLoader() != m_parentFrame->loader().activeDocumentLoader() && (targetFrameName.isNull() || m_parentFrame->tree()->find(targetFrameName) != m_parentFrame))
+    if (m_parentFrame->loader().documentLoader() != m_parentFrame->loader().activeDocumentLoader() && (targetFrameName.isNull() || m_parentFrame->tree().find(targetFrameName) != m_parentFrame))
         return;
 
     KURL requestURL = request->frameLoadRequest().resourceRequest().url();
@@ -460,7 +460,7 @@ void PluginView::performRequest(PluginRequest* request)
 
     // Targeted JavaScript requests are only allowed on the frame that contains the JavaScript plugin
     // and this has been made sure in ::load.
-    ASSERT(targetFrameName.isEmpty() || m_parentFrame->tree()->find(targetFrameName) == m_parentFrame);
+    ASSERT(targetFrameName.isEmpty() || m_parentFrame->tree().find(targetFrameName) == m_parentFrame);
     
     // Executing a script can cause the plugin view to be destroyed, so we keep a reference to it.
     RefPtr<PluginView> protector(this);
@@ -528,7 +528,7 @@ NPError PluginView::load(const FrameLoadRequest& frameLoadRequest, bool sendNoti
             return NPERR_GENERIC_ERROR;
 
         // For security reasons, only allow JS requests to be made on the frame that contains the plug-in.
-        if (!targetFrameName.isNull() && m_parentFrame->tree()->find(targetFrameName) != m_parentFrame)
+        if (!targetFrameName.isNull() && m_parentFrame->tree().find(targetFrameName) != m_parentFrame)
             return NPERR_INVALID_PARAM;
     } else if (!m_parentFrame->document()->securityOrigin()->canDisplay(url))
         return NPERR_GENERIC_ERROR;
@@ -1368,11 +1368,7 @@ static Frame* getFrame(Frame* parentFrame, Element* element)
     if (parentFrame)
         return parentFrame;
     
-    Document* document = element->document();
-    if (document)
-        return document->frame();
-    
-    return 0;
+    return element->document().frame();
 }
 
 NPError PluginView::getValueForURL(NPNURLVariable variable, const char* url, char** value, uint32_t* len)

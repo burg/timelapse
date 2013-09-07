@@ -44,7 +44,7 @@ JITCode::~JITCode()
 JSValue JITCode::execute(JSStack* stack, CallFrame* callFrame, VM* vm)
 {
     JSValue result = JSValue::decode(ctiTrampoline(executableAddress(), stack, callFrame, 0, 0, vm));
-    return vm->exception ? jsNull() : result;
+    return vm->exception() ? jsNull() : result;
 }
 #endif
 
@@ -61,6 +61,12 @@ DFG::JITCode* JITCode::dfg()
 }
 
 FTL::JITCode* JITCode::ftl()
+{
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
+FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
 {
     RELEASE_ASSERT_NOT_REACHED();
     return 0;

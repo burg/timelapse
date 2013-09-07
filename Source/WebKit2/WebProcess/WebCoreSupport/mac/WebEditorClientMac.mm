@@ -113,7 +113,7 @@ DocumentFragment* WebEditorClient::documentFragmentFromAttributedString(NSAttrib
     NSDictionary *dictionary = [NSDictionary dictionaryWithObject:excludedElements forKey:NSExcludedElementsDocumentAttribute];
     
     NSArray *subResources;
-    Document* document = m_page->mainFrame() ? m_page->mainFrame()->document() : 0;
+    Document* document = m_page->mainFrame()->document();
     DOMDocumentFragment* fragment = [string _documentFromRange:NSMakeRange(0, [string length])
                                                       document:kit(document)
                                             documentAttributes:dictionary
@@ -133,14 +133,14 @@ void WebEditorClient::setInsertionPasteboard(const String&)
 
 static void changeWordCase(WebPage* page, SEL selector)
 {
-    Frame* frame = page->corePage()->focusController().focusedOrMainFrame();
-    if (!frame->editor().canEdit())
+    Frame& frame = page->corePage()->focusController().focusedOrMainFrame();
+    if (!frame.editor().canEdit())
         return;
 
-    frame->editor().command("selectWord").execute();
+    frame.editor().command("selectWord").execute();
 
-    NSString *selectedString = frame->displayStringModifiedByEncoding(frame->editor().selectedText());
-    page->replaceSelectionWithText(frame, [selectedString performSelector:selector]);
+    NSString *selectedString = frame.displayStringModifiedByEncoding(frame.editor().selectedText());
+    page->replaceSelectionWithText(&frame, [selectedString performSelector:selector]);
 }
 
 #if USE(APPKIT)

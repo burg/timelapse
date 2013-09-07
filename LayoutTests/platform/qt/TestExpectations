@@ -114,6 +114,9 @@ fast/events/constructors/composition-event-constructor.html
 fast/events/constructors/wheel-event-constructor.html
 fast/events/constructors/keyboard-event-constructor.html
 fast/events/constructors/focus-event-constructor.html
+fast/events/wheelevent-basic.html
+fast/events/wheelevent-constructor.html
+fast/events/wheelevent-mousewheel-interaction.html
 
 # ENABLE(INDEXED_DATABASE) is disabled.
 storage/indexeddb
@@ -197,6 +200,9 @@ html5lib/generated/run-template-write.html
 fast/xsl/xslt-xhtml-template.xml
 fast/xpath/xpath-template-element.html
 fast/xsl/xslt-processor-template.html
+
+# ENABLE(ACCELERATED_OVERFLOW_SCROLLING) is disabled.
+fast/repaint/overflow-scroll-touch-repaint.html [ Skip ]
 
 # JSC does not support setIsolatedWorldSecurityOrigin, (http://webkit.org/b/61540)
 http/tests/security/isolatedWorld/cross-origin-xhr.html
@@ -305,9 +311,6 @@ fast/css/draggable-region-parser.html
 # Text Autosizing is not enabled.
 webkit.org/b/84186 fast/text-autosizing
 
-# Dialog element is not yet enabled.
-webkit.org/b/84635 fast/dom/HTMLDialogElement
-
 # Missing test infrastructure, no gamepads available.
 webkit.org/b/92873 gamepad/gamepad-polling-access.html
 
@@ -322,6 +325,14 @@ webkit.org/b/58491 fast/css3-text/css3-text-decoration
 webkit.org/b/76173 fast/css3-text/css3-text-align-last
 webkit.org/b/99945 fast/css3-text/css3-text-justify [ Failure ]
 webkit.org/b/112755 fast/css3-text/css3-text-indent [ Failure ImageOnlyFailure ]
+
+# Backgroung spacing implementation is missing.
+webkit.org/b/120596 css3/background/background-repeat-space-border.html [ Skip ]
+webkit.org/b/120596 css3/background/background-repeat-space-content.html [ Skip ]
+webkit.org/b/120596 css3/background/background-repeat-space-padding.html [ Skip ]
+webkit.org/b/120596 css3/masking/mask-repeat-space-border.html [ Skip ]
+webkit.org/b/120596 css3/masking/mask-repeat-space-content.html [ Skip ]
+webkit.org/b/120596 css3/masking/mask-repeat-space-padding.html [ Skip ]
 
 # Web Inspector: Implement support for InspectorClient::overrideDeviceMetrics() in platforms other than Chromium
 # https://bugs.webkit.org/show_bug.cgi?id=82886
@@ -416,8 +427,6 @@ webkit.org/b/110735 fast/dom/custom [ Skip ]
 
 # For now, Web Audio API is disabled
 webaudio/
-webkit.org/b/101729 inspector-protocol/nmi-webaudio.html
-webkit.org/b/101729 inspector-protocol/nmi-webaudio-leak-test.html
 
 # [Qt] Enable WebGL by default for QtWebKit
 # https://bugs.webkit.org/show_bug.cgi?id=65998
@@ -460,6 +469,9 @@ webkit.org/b/84893 http/tests/w3c/webperf/submission/Intel/user-timing
 
 # Resource Timing is not enable yet, skip it.
 webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing
+
+# WEB_TIMING doesn't support on Qt.
+webkit.org/b/118395 http/tests/misc/webtiming-ssl.php [ Skip ]
 
 # Missing eventSender.scheduleAsynchronousKeyDown() implementation
 fast/dom/MutationObserver/inline-event-listener.html
@@ -623,6 +635,8 @@ http/tests/media
 http/tests/navigation/javascriptlink-goback.html
 http/tests/navigation/metaredirect-goback.html
 http/tests/navigation/timerredirect-goback.html
+
+webkit.org/b/120028 http/tests/navigation/post-frames-goback1-uncached.html [ Skip ]
 
 # Advanced credential handling
 http/tests/security/401-logout/401-logout.php
@@ -1167,6 +1181,7 @@ editing/spelling/spelling-hasspellingmarker.html
 
 # textInputController.hasGrammarMarkers() is not implemented.
 editing/spelling/grammar.html
+editing/spelling/grammar-markers.html
 editing/spelling/grammar-paste.html
 
 # textInputController.setComposition() is not implemented
@@ -2275,8 +2290,10 @@ fast/multicol/overflow-into-columngap.html
 fast/overflow/line-clamp-and-columns.html
 fast/table/td-width-fifty-percent-regression.html
 fast/text/descent-clip-in-scaled-page.html
+fast/text/partial-textruns.html
 fast/sub-pixel/block-with-margin-overflow.html
 svg/custom/anchor-on-use.svg
+svg/custom/masking-clipping-hidpi.svg
 svg/animations/animateTransform-rotate-around-point.svg
 svg/animations/animateMotion-additive-1.svg
 svg/text/alt-glyph-for-surrogate-pair.svg
@@ -2461,6 +2478,25 @@ http/tests/security/xssAuditor/script-tag-with-16bit-unicode5.html [ Failure ]
 http/tests/security/xssAuditor/script-tag-with-fancy-unicode.html [ Failure ]
 http/tests/security/xssAuditor/script-tag-with-invalid-url-encoding.html [ Failure ]
 
+# [Qt] REGRESSION(r154444): xss-DENIED test results changed
+# https://bugs.webkit.org/show_bug.cgi?id=120595
+http/tests/security/aboutBlank/xss-DENIED-navigate-opener-javascript-url.html
+http/tests/security/aboutBlank/xss-DENIED-set-opener.html
+http/tests/security/dataURL/xss-DENIED-from-data-url-in-foreign-domain-window-open.html
+http/tests/security/dataURL/xss-DENIED-from-data-url-to-data-url.html
+http/tests/security/dataURL/xss-DENIED-to-data-url-in-foreign-domain-subframe-location-change.html
+http/tests/security/dataURL/xss-DENIED-to-data-url-in-foreign-domain-subframe.html
+http/tests/security/dataURL/xss-DENIED-to-data-url-in-foreign-domain-window-open.html
+http/tests/security/dataURL/xss-DENIED-to-data-url-sub-frame-2-level.html
+
+# [Qt] Failing animations tests.
+# https://bugs.webkit.org/show_bug.cgi?id=120603
+animations/cross-fade-background-image.html
+animations/cross-fade-border-image-source.html
+animations/cross-fade-list-style-image.html
+animations/cross-fade-webkit-mask-box-image.html
+animations/cross-fade-webkit-mask-image.html
+
 # [Qt] REGRESSION: 2 tests started to fail with newer Qt5
 # https://bugs.webkit.org/show_bug.cgi?id=104140
 editing/selection/triple-click-in-pre.html [ Failure ]
@@ -2595,8 +2631,11 @@ webkit.org/b/100424 editing/selection/user-select-all-with-shift.html [ Failure 
 
 webkit.org/b/101539 editing/execCommand/switch-list-type-with-orphaned-li.html [ Failure ]
 
-webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html [ Skip ]
-webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html [ Skip ]
+webkit.org/b/100846 inspector-protocol/debugger/pause-dedicated-worker.html [ Skip ]
+webkit.org/b/100846 inspector-protocol/debugger/terminate-dedicated-worker-while-paused.html [ Skip ]
+
+# New test inspector-protocol/page/archive.html added in r154828 fails on EFL, Qt, GTK
+webkit.org/b/120682 inspector-protocol/page/archive.html [ Skip ]
 
 # QT still has the CC toggle button, not the menu of tracks.
 webkit.org/b/101670 media/video-controls-captions-trackmenu.html [ Skip ]
@@ -2723,6 +2762,8 @@ webkit.org/b/114157 fast/js/dom-static-property-for-in-iteration.html [ Failure 
 webkit.org/b/114338 compositing/overlap-blending/nested-overlap-overflow.html [ Skip ]
 webkit.org/b/114338 compositing/overlap-blending/nested-non-overlap-clipping.html [ Skip ]
 
+webkit.org/b/120622 compositing/video/video-object-fit.html [ Skip ]
+
 # REGRESSION(r148378): editing/style/block-style-005.html failing
 webkit.org/b/114612 editing/style/block-style-005.html [ Skip ]
 
@@ -2749,3 +2790,7 @@ webkit.org/b/117185 fast/forms/control-clip-overflow.html [ Skip ]
 
 # Synthesized italics not supported
 fast/text/international/synthesized-italic-vertical-latin.html [ Skip ]
+
+# Failing tests after r155014
+webkit.org/b/120671 editing/selection/doubleclick-japanese-text.html [ Skip ]
+webkit.org/b/120671 editing/style/make-text-writing-direction-inline-win.html [ Skip ]

@@ -30,6 +30,7 @@
 #include "ClassInfo.h"
 #include "CommonIdentifiers.h"
 #include "CallFrame.h"
+#include "DeferGC.h"
 #include "JSCell.h"
 #include "PropertySlot.h"
 #include "PropertyStorage.h"
@@ -98,11 +99,6 @@ class JSObject : public JSCell {
 public:
     typedef JSCell Base;
         
-    static size_t allocationSize(size_t inlineCapacity)
-    {
-        return sizeof(JSObject) + inlineCapacity * sizeof(WriteBarrierBase<Unknown>);
-    }
-        
     JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
     JS_EXPORT_PRIVATE static void copyBackingStore(JSCell*, CopyVisitor&, CopyToken);
 
@@ -126,6 +122,10 @@ public:
 
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     JS_EXPORT_PRIVATE static bool getOwnPropertySlotByIndex(JSObject*, ExecState*, unsigned propertyName, PropertySlot&);
+
+    // The key difference between this and getOwnPropertySlot is that getOwnPropertySlot
+    // currently returns incorrect results for the DOM window (with non-own properties)
+    // being returned. Once this is fixed we should migrate code & remove this method.
     bool getOwnPropertyDescriptor(ExecState*, PropertyName, PropertyDescriptor&);
 
     bool allowsAccessFrom(ExecState*);
@@ -457,13 +457,10 @@ public:
     //  - accessors are not called.
     //  - attributes will be respected (after the call the property will exist with the given attributes)
     //  - the property name is assumed to not be an index.
-    JS_EXPORT_PRIVATE static void putDirectVirtual(JSObject*, ExecState*, PropertyName, JSValue, unsigned attributes);
     void putDirect(VM&, PropertyName, JSValue, unsigned attributes = 0);
     void putDirect(VM&, PropertyName, JSValue, PutPropertySlot&);
     void putDirectWithoutTransition(VM&, PropertyName, JSValue, unsigned attributes = 0);
     void putDirectAccessor(ExecState*, PropertyName, JSValue, unsigned attributes);
-
-    bool propertyIsEnumerable(ExecState*, const Identifier& propertyName) const;
 
     JS_EXPORT_PRIVATE bool hasProperty(ExecState*, PropertyName) const;
     JS_EXPORT_PRIVATE bool hasProperty(ExecState*, unsigned propertyName) const;
@@ -582,7 +579,7 @@ public:
     void putDirectNativeFunction(ExecState*, JSGlobalObject*, const PropertyName&, unsigned functionLength, NativeFunction, Intrinsic, unsigned attributes);
     void putDirectNativeFunctionWithoutTransition(ExecState*, JSGlobalObject*, const PropertyName&, unsigned functionLength, NativeFunction, Intrinsic, unsigned attributes);
 
-    JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool shouldThrow);
+    JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     bool isGlobalObject() const;
     bool isVariableObject() const;
@@ -607,10 +604,10 @@ public:
     void reifyStaticFunctionsForDelete(ExecState* exec);
 
     JS_EXPORT_PRIVATE Butterfly* growOutOfLineStorage(VM&, size_t oldSize, size_t newSize);
-    void setButterfly(VM&, Butterfly*, Structure*);
     void setButterflyWithoutChangingStructure(Butterfly*); // You probably don't want to call this.
         
-    void setStructure(VM&, Structure*, Butterfly* = 0);
+    void setStructure(VM&, Structure*);
+    void setStructureAndButterfly(VM&, Structure*, Butterfly*);
     void setStructureAndReallocateStorageIfNecessary(VM&, unsigned oldCapacity, Structure*);
     void setStructureAndReallocateStorageIfNecessary(VM&, Structure*);
 
@@ -790,7 +787,7 @@ protected:
         
     ArrayStorage* ensureArrayStorageExistsAndEnterDictionaryIndexingMode(VM&);
         
-    bool defineOwnNonIndexProperty(ExecState*, PropertyName, PropertyDescriptor&, bool throwException);
+    bool defineOwnNonIndexProperty(ExecState*, PropertyName, const PropertyDescriptor&, bool throwException);
 
     template<IndexingType indexingShape>
     void putByIndexBeyondVectorLengthWithoutAttributes(ExecState*, unsigned propertyName, JSValue);
@@ -798,7 +795,7 @@ protected:
 
     bool increaseVectorLength(VM&, unsigned newLength);
     void deallocateSparseIndexMap();
-    bool defineOwnIndexedProperty(ExecState*, unsigned, PropertyDescriptor&, bool throwException);
+    bool defineOwnIndexedProperty(ExecState*, unsigned, const PropertyDescriptor&, bool throwException);
     SparseArrayValueMap* allocateSparseIndexMap(VM&);
         
     void notifyPresenceOfIndexedAccessors(VM&);
@@ -945,7 +942,7 @@ private:
 
     const HashEntry* findPropertyHashEntry(ExecState*, PropertyName) const;
         
-    void putIndexedDescriptor(ExecState*, SparseArrayEntry*, PropertyDescriptor&, PropertyDescriptor& old);
+    void putIndexedDescriptor(ExecState*, SparseArrayEntry*, const PropertyDescriptor&, PropertyDescriptor& old);
         
     void putByIndexBeyondVectorLength(ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
     bool putDirectIndexBeyondVectorLengthWithArrayStorage(ExecState*, unsigned propertyName, JSValue, unsigned attributes, PutDirectIndexMode, ArrayStorage*);
@@ -1017,6 +1014,11 @@ class JSFinalObject : public JSObject {
 public:
     typedef JSObject Base;
 
+    static size_t allocationSize(size_t inlineCapacity)
+    {
+        return sizeof(JSObject) + inlineCapacity * sizeof(WriteBarrierBase<Unknown>);
+    }
+        
     static const unsigned defaultSize = 64;
     static inline unsigned defaultInlineCapacity()
     {
@@ -1121,12 +1123,17 @@ inline bool JSObject::isErrorInstance() const
     return structure()->typeInfo().type() == ErrorInstanceType;
 }
 
-inline void JSObject::setButterfly(VM& vm, Butterfly* butterfly, Structure* structure)
+inline void JSObject::setStructureAndButterfly(VM& vm, Structure* structure, Butterfly* butterfly)
+{
+    m_butterfly = butterfly;
+    setStructure(vm, structure);
+}
+
+inline void JSObject::setStructure(VM& vm, Structure* structure)
 {
     ASSERT(structure);
-    ASSERT(!butterfly == (!structure->outOfLineCapacity() && !structure->hasIndexingHeader(this)));
-    setStructure(vm, structure, butterfly);
-    m_butterfly = butterfly;
+    ASSERT(!m_butterfly == !(structure->outOfLineCapacity() || structure->hasIndexingHeader(this)));
+    JSCell::setStructure(vm, structure);
 }
 
 inline void JSObject::setButterflyWithoutChangingStructure(Butterfly* butterfly)
@@ -1284,11 +1291,12 @@ inline bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName, JSVal
         if ((mode == PutModePut) && !isExtensible())
             return false;
 
+        DeferGC deferGC(vm.heap);
         Butterfly* newButterfly = m_butterfly;
         if (structure()->putWillGrowOutOfLineStorage())
             newButterfly = growOutOfLineStorage(vm, structure()->outOfLineCapacity(), structure()->suggestedNewOutOfLineStorageCapacity());
         offset = structure()->addPropertyWithoutTransition(vm, propertyName, attributes, specificFunction);
-        setButterfly(vm, newButterfly, structure());
+        setStructureAndButterfly(vm, structure(), newButterfly);
 
         validateOffset(offset);
         ASSERT(structure()->isValidOffset(offset));
@@ -1304,13 +1312,14 @@ inline bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName, JSVal
     PropertyOffset offset;
     size_t currentCapacity = structure()->outOfLineCapacity();
     if (Structure* structure = Structure::addPropertyTransitionToExistingStructure(this->structure(), propertyName, attributes, specificFunction, offset)) {
+        DeferGC deferGC(vm.heap);
         Butterfly* newButterfly = m_butterfly;
         if (currentCapacity != structure->outOfLineCapacity())
             newButterfly = growOutOfLineStorage(vm, currentCapacity, structure->outOfLineCapacity());
 
         validateOffset(offset);
         ASSERT(structure->isValidOffset(offset));
-        setButterfly(vm, newButterfly, structure);
+        setStructureAndButterfly(vm, structure, newButterfly);
         putDirect(vm, offset, value);
         // This is a new property; transitions with specific values are not currently cachable,
         // so leave the slot in an uncachable state.
@@ -1342,7 +1351,7 @@ inline bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName, JSVal
                 return true;
             }
             // case (2) Despecify, fall through to (3).
-            setStructure(vm, Structure::despecifyFunctionTransition(vm, structure(), propertyName), m_butterfly);
+            setStructure(vm, Structure::despecifyFunctionTransition(vm, structure(), propertyName));
         }
 
         // case (3) set the slot, do the put, return.
@@ -1370,24 +1379,19 @@ inline bool JSObject::putDirectInternal(VM& vm, PropertyName propertyName, JSVal
     return true;
 }
 
-inline void JSObject::setStructure(VM& vm, Structure* structure, Butterfly* butterfly)
-{
-    JSCell::setStructure(vm, structure);
-    ASSERT_UNUSED(butterfly, !butterfly == !(structure->outOfLineCapacity() || structure->hasIndexingHeader(this)));
-}
-
 inline void JSObject::setStructureAndReallocateStorageIfNecessary(VM& vm, unsigned oldCapacity, Structure* newStructure)
 {
     ASSERT(oldCapacity <= newStructure->outOfLineCapacity());
     
     if (oldCapacity == newStructure->outOfLineCapacity()) {
-        setStructure(vm, newStructure, m_butterfly);
+        setStructure(vm, newStructure);
         return;
     }
-    
+
+    DeferGC deferGC(vm.heap); 
     Butterfly* newButterfly = growOutOfLineStorage(
         vm, oldCapacity, newStructure->outOfLineCapacity());
-    setButterfly(vm, newButterfly, newStructure);
+    setStructureAndButterfly(vm, newStructure, newButterfly);
 }
 
 inline void JSObject::setStructureAndReallocateStorageIfNecessary(VM& vm, Structure* newStructure)
@@ -1420,12 +1424,13 @@ inline void JSObject::putDirect(VM& vm, PropertyName propertyName, JSValue value
 
 inline void JSObject::putDirectWithoutTransition(VM& vm, PropertyName propertyName, JSValue value, unsigned attributes)
 {
+    DeferGC deferGC(vm.heap);
     ASSERT(!value.isGetterSetter() && !(attributes & Accessor));
     Butterfly* newButterfly = m_butterfly;
     if (structure()->putWillGrowOutOfLineStorage())
         newButterfly = growOutOfLineStorage(vm, structure()->outOfLineCapacity(), structure()->suggestedNewOutOfLineStorageCapacity());
     PropertyOffset offset = structure()->addPropertyWithoutTransition(vm, propertyName, attributes, getCallableObject(value));
-    setButterfly(vm, newButterfly, structure());
+    setStructureAndButterfly(vm, structure(), newButterfly);
     putDirect(vm, offset, value);
 }
 

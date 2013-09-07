@@ -43,7 +43,7 @@
 #include "Operations.h"
 #include "Parser.h"
 #include "PropertyNameArray.h"
-#include "StackIterator.h"
+#include "StackVisitor.h"
 
 using namespace WTF;
 using namespace Unicode;
@@ -182,10 +182,36 @@ CallType JSFunction::getCallData(JSCell* cell, CallData& callData)
     return CallTypeJS;
 }
 
+class RetrieveArgumentsFunctor {
+public:
+    RetrieveArgumentsFunctor(JSFunction* functionObj)
+        : m_targetCallee(jsDynamicCast<JSObject*>(functionObj))
+        , m_result(jsNull())
+    {
+    }
+
+    JSValue result() const { return m_result; }
+
+    StackVisitor::Status operator()(StackVisitor& visitor)
+    {
+        JSObject* callee = visitor->callee();
+        if (callee != m_targetCallee)
+            return StackVisitor::Continue;
+
+        m_result = JSValue(visitor->arguments());
+        return StackVisitor::Done;
+    }
+
+private:
+    JSObject* m_targetCallee;
+    JSValue m_result;
+};
+
 static JSValue retrieveArguments(ExecState* exec, JSFunction* functionObj)
 {
-    StackIterator iter = exec->find(functionObj);
-    return iter != exec->end() ? JSValue(iter->arguments()) : jsNull();
+    RetrieveArgumentsFunctor functor(functionObj);
+    exec->iterate(functor);
+    return functor.result();
 }
 
 JSValue JSFunction::argumentsGetter(ExecState* exec, JSValue slotBase, PropertyName)
@@ -196,19 +222,51 @@ JSValue JSFunction::argumentsGetter(ExecState* exec, JSValue slotBase, PropertyN
     return retrieveArguments(exec, thisObj);
 }
 
-static bool skipOverBoundFunctions(StackIterator::Frame* frame)
-{
-    JSObject* callee = frame->callee();
-    bool shouldSkip = callee ? callee->inherits(JSBoundFunction::info()) : false;
-    return shouldSkip;
-}
+class RetrieveCallerFunctionFunctor {
+public:
+    RetrieveCallerFunctionFunctor(JSFunction* functionObj)
+        : m_targetCallee(jsDynamicCast<JSObject*>(functionObj))
+        , m_hasFoundFrame(false)
+        , m_hasSkippedToCallerFrame(false)
+        , m_result(jsNull())
+    {
+    }
+
+    JSValue result() const { return m_result; }
+
+    StackVisitor::Status operator()(StackVisitor& visitor)
+    {
+        JSObject* callee = visitor->callee();
+
+        if (callee && callee->inherits(JSBoundFunction::info()))
+            return StackVisitor::Continue;
+
+        if (!m_hasFoundFrame && (callee != m_targetCallee))
+            return StackVisitor::Continue;
+
+        m_hasFoundFrame = true;
+        if (!m_hasSkippedToCallerFrame) {
+            m_hasSkippedToCallerFrame = true;
+            return StackVisitor::Continue;
+        }
+
+        if (callee)
+            m_result = callee;
+        return StackVisitor::Done;
+    }
+
+private:
+    JSObject* m_targetCallee;
+    bool m_hasFoundFrame;
+    bool m_hasSkippedToCallerFrame;
+    JSValue m_result;
+};
 
 static JSValue retrieveCallerFunction(ExecState* exec, JSFunction* functionObj)
 {
-    StackIterator iter = exec->find(functionObj, skipOverBoundFunctions);
-    if (iter != exec->end())
-        ++iter;
-    return iter != exec->end() && iter->callee() ? iter->callee() : jsNull();
+    RetrieveCallerFunctionFunctor functor(functionObj);
+    exec->iterate(functor);
+    return functor.result();
 }
 
 JSValue JSFunction::callerGetter(ExecState* exec, JSValue slotBase, PropertyName)
@@ -366,7 +424,7 @@ bool JSFunction::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prop
     return Base::deleteProperty(thisObject, exec, propertyName);
 }
 
-bool JSFunction::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor, bool throwException)
+bool JSFunction::defineOwnProperty(JSObject* object, ExecState* exec, PropertyName propertyName, const PropertyDescriptor& descriptor, bool throwException)
 {
     JSFunction* thisObject = jsCast<JSFunction*>(object);
     if (thisObject->isHostFunction())
@@ -408,27 +466,27 @@ bool JSFunction::defineOwnProperty(JSObject* object, ExecState* exec, PropertyNa
      
     if (descriptor.configurablePresent() && descriptor.configurable()) {
         if (throwException)
-            throwError(exec, createTypeError(exec, ASCIILiteral("Attempting to configurable attribute of unconfigurable property.")));
+            exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to configurable attribute of unconfigurable property.")));
         return false;
     }
     if (descriptor.enumerablePresent() && descriptor.enumerable()) {
         if (throwException)
-            throwError(exec, createTypeError(exec, ASCIILiteral("Attempting to change enumerable attribute of unconfigurable property.")));
+            exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to change enumerable attribute of unconfigurable property.")));
         return false;
     }
     if (descriptor.isAccessorDescriptor()) {
         if (throwException)
-            throwError(exec, createTypeError(exec, ASCIILiteral("Attempting to change access mechanism for an unconfigurable property.")));
+            exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to change access mechanism for an unconfigurable property.")));
         return false;
     }
     if (descriptor.writablePresent() && descriptor.writable()) {
         if (throwException)
-            throwError(exec, createTypeError(exec, ASCIILiteral("Attempting to change writable attribute of unconfigurable property.")));
+            exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to change writable attribute of unconfigurable property.")));
         return false;
     }
     if (!valueCheck) {
         if (throwException)
-            throwError(exec, createTypeError(exec, ASCIILiteral("Attempting to change value of a readonly property.")));
+            exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Attempting to change value of a readonly property.")));
         return false;
     }
     return true;

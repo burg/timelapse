@@ -952,11 +952,9 @@ void EditingStyle::prepareToApplyAt(const Position& position, ShouldPreserveWrit
     }
 }
 
-void EditingStyle::mergeTypingStyle(Document* document)
+void EditingStyle::mergeTypingStyle(Document& document)
 {
-    ASSERT(document);
-
-    RefPtr<EditingStyle> typingStyle = document->frame()->selection().typingStyle();
+    RefPtr<EditingStyle> typingStyle = document.frame()->selection().typingStyle();
     if (!typingStyle || typingStyle == this)
         return;
 
@@ -1109,7 +1107,7 @@ void EditingStyle::mergeStyle(const StylePropertySet* style, CSSPropertyOverride
 static PassRefPtr<MutableStylePropertySet> styleFromMatchedRulesForElement(Element* element, unsigned rulesToInclude)
 {
     RefPtr<MutableStylePropertySet> style = MutableStylePropertySet::create();
-    Vector<RefPtr<StyleRuleBase> > matchedRules = element->document()->ensureStyleResolver().styleRulesForElement(element, rulesToInclude);
+    Vector<RefPtr<StyleRuleBase> > matchedRules = element->document().ensureStyleResolver().styleRulesForElement(element, rulesToInclude);
     for (unsigned i = 0; i < matchedRules.size(); ++i) {
         if (matchedRules[i]->isStyleRule())
             style->mergeAndOverrideOnConflict(static_pointer_cast<StyleRule>(matchedRules[i])->properties());
@@ -1368,7 +1366,7 @@ StyleChange::StyleChange(EditingStyle* style, const Position& position)
     , m_applySubscript(false)
     , m_applySuperscript(false)
 {
-    Document* document = position.anchorNode() ? position.anchorNode()->document() : 0;
+    Document* document = position.anchorNode() ? &position.anchorNode()->document() : 0;
     if (!style || !style->style() || !document || !document->frame())
         return;
 
@@ -1567,12 +1565,14 @@ static bool isCSSValueLength(CSSPrimitiveValue* value)
 
 int legacyFontSizeFromCSSValue(Document* document, CSSPrimitiveValue* value, bool shouldUseFixedFontDefaultSize, LegacyFontSizeMode mode)
 {
+    ASSERT(document); // FIXME: This method should take a Document&
+
     if (isCSSValueLength(value)) {
         int pixelFontSize = value->getIntValue(CSSPrimitiveValue::CSS_PX);
-        int legacyFontSize = Style::legacyFontSizeForPixelSize(pixelFontSize, shouldUseFixedFontDefaultSize, document);
+        int legacyFontSize = Style::legacyFontSizeForPixelSize(pixelFontSize, shouldUseFixedFontDefaultSize, *document);
         // Use legacy font size only if pixel value matches exactly to that of legacy font size.
         int cssPrimitiveEquivalent = legacyFontSize - 1 + CSSValueXSmall;
-        if (mode == AlwaysUseLegacyFontSize || Style::fontSizeForKeyword(cssPrimitiveEquivalent, shouldUseFixedFontDefaultSize, document) == pixelFontSize)
+        if (mode == AlwaysUseLegacyFontSize || Style::fontSizeForKeyword(cssPrimitiveEquivalent, shouldUseFixedFontDefaultSize, *document) == pixelFontSize)
             return legacyFontSize;
 
         return 0;

@@ -151,7 +151,7 @@ void SVGTRefElement::updateReferencedText(Element* target)
     ASSERT(shadowRoot());
     ShadowRoot* root = shadowRoot();
     if (!root->firstChild())
-        root->appendChild(Text::create(document(), textContent), ASSERT_NO_EXCEPTION);
+        root->appendChild(Text::create(&document(), textContent), ASSERT_NO_EXCEPTION);
     else {
         ASSERT(root->firstChild()->isTextNode());
         root->firstChild()->setTextContent(textContent, ASSERT_NO_EXCEPTION);
@@ -175,9 +175,9 @@ void SVGTRefElement::detachTarget()
 
     // Mark the referenced ID as pending.
     String id;
-    SVGURIReference::targetElementFromIRIString(href(), document(), &id);
+    SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
     if (!id.isEmpty())
-        document()->accessSVGExtensions()->addPendingResource(id, this);
+        document().accessSVGExtensions()->addPendingResource(id, this);
 }
 
 bool SVGTRefElement::isSupportedAttribute(const QualifiedName& attrName)
@@ -255,12 +255,12 @@ void SVGTRefElement::buildPendingResource()
         return;
 
     String id;
-    RefPtr<Element> target = SVGURIReference::targetElementFromIRIString(href(), document(), &id);
+    RefPtr<Element> target = SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
     if (!target.get()) {
         if (id.isEmpty())
             return;
 
-        document()->accessSVGExtensions()->addPendingResource(id, this);
+        document().accessSVGExtensions()->addPendingResource(id, this);
         ASSERT(hasPendingResources());
         return;
     }
@@ -277,7 +277,7 @@ void SVGTRefElement::buildPendingResource()
 
 Node::InsertionNotificationRequest SVGTRefElement::insertedInto(ContainerNode* rootParent)
 {
-    SVGStyledElement::insertedInto(rootParent);
+    SVGElement::insertedInto(rootParent);
     if (rootParent->inDocument())
         buildPendingResource();
     return InsertionDone;
@@ -285,7 +285,7 @@ Node::InsertionNotificationRequest SVGTRefElement::insertedInto(ContainerNode* r
 
 void SVGTRefElement::removedFrom(ContainerNode* rootParent)
 {
-    SVGStyledElement::removedFrom(rootParent);
+    SVGElement::removedFrom(rootParent);
     if (rootParent->inDocument())
         m_targetListener->detach();
 }

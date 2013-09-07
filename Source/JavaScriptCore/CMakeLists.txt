@@ -53,6 +53,7 @@ set(JavaScriptCore_SOURCES
     bytecode/CodeOrigin.cpp
     bytecode/CodeType.cpp
     bytecode/DFGExitProfile.cpp
+    bytecode/DeferredCompilationCallback.cpp
     bytecode/ExecutionCounter.cpp
     bytecode/ExitKind.cpp
     bytecode/GetByIdStatus.cpp
@@ -95,6 +96,8 @@ set(JavaScriptCore_SOURCES
     dfg/DFGClobberize.cpp
     dfg/DFGCommon.cpp
     dfg/DFGCommonData.cpp
+    dfg/DFGCompilationKey.cpp
+    dfg/DFGCompilationMode.cpp
     dfg/DFGConstantFoldingPhase.cpp
     dfg/DFGCriticalEdgeBreakingPhase.cpp
     dfg/DFGDCEPhase.cpp
@@ -129,6 +132,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGNodeFlags.cpp
     dfg/DFGOSRAvailabilityAnalysisPhase.cpp
     dfg/DFGOSREntry.cpp
+    dfg/DFGOSREntrypointCreationPhase.cpp
     dfg/DFGOSRExit.cpp
     dfg/DFGOSRExitBase.cpp
     dfg/DFGOSRExitCompiler.cpp
@@ -148,6 +152,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGSpeculativeJIT32_64.cpp
     dfg/DFGSpeculativeJIT64.cpp
     dfg/DFGThunks.cpp
+    dfg/DFGTierUpCheckInjectionPhase.cpp
     dfg/DFGTypeCheckHoistingPhase.cpp
     dfg/DFGUnificationPhase.cpp
     dfg/DFGUseKind.cpp
@@ -166,14 +171,10 @@ set(JavaScriptCore_SOURCES
     disassembler/X86Disassembler.cpp
 
     heap/BlockAllocator.cpp
+    heap/CodeBlockSet.cpp
+    heap/ConservativeRoots.cpp
     heap/CopiedSpace.cpp
     heap/CopyVisitor.cpp
-    heap/ConservativeRoots.cpp
-    heap/DFGCodeBlocks.cpp
-    heap/GCIncomingRefCountedSet.h
-    heap/GCIncomingRefCounted.h
-    heap/GCIncomingRefCountedSetInlines.h
-    heap/GCIncomingRefCountedInlines.h
     heap/GCThread.cpp
     heap/GCThreadSharedData.cpp
     heap/HandleSet.cpp
@@ -182,21 +183,6 @@ set(JavaScriptCore_SOURCES
     heap/HeapStatistics.cpp
     heap/HeapTimer.cpp
     heap/IncrementalSweeper.cpp
-    heap/JITStubRoutineSet.cpp
-    heap/MachineStackMarker.cpp
-
-    heap/BlockAllocator.cpp
-    heap/ConservativeRoots.cpp
-    heap/CopiedSpace.cpp
-    heap/CopyVisitor.cpp
-    heap/DFGCodeBlocks.cpp
-    heap/GCThread.cpp
-    heap/GCThreadSharedData.cpp
-    heap/HandleSet.cpp
-    heap/HandleStack.cpp
-    heap/Heap.cpp
-    heap/HeapStatistics.cpp
-    heap/HeapTimer.cpp
     heap/JITStubRoutineSet.cpp
     heap/MachineStackMarker.cpp
     heap/MarkStack.cpp
@@ -220,7 +206,7 @@ set(JavaScriptCore_SOURCES
     interpreter/CallFrame.cpp
     interpreter/Interpreter.cpp
     interpreter/JSStack.cpp
-    interpreter/StackIterator.cpp
+    interpreter/StackVisitor.cpp
     interpreter/VMInspector.cpp
 
     jit/ClosureCallStubRoutine.cpp
@@ -243,6 +229,7 @@ set(JavaScriptCore_SOURCES
     jit/JITStubRoutine.cpp
     jit/JITStubs.cpp
     jit/JITThunks.cpp
+    jit/JITToDFGDeferredCompilationCallback.cpp
     jit/JumpReplacementWatchpoint.cpp
     jit/ThunkGenerators.cpp
 
@@ -330,14 +317,23 @@ set(JavaScriptCore_SOURCES
     runtime/JSGlobalObject.cpp
     runtime/JSGlobalObjectFunctions.cpp
     runtime/JSLock.cpp
+    runtime/JSMap.cpp
     runtime/JSNameScope.cpp
     runtime/JSNotAnObject.cpp
     runtime/JSONObject.cpp
     runtime/JSObject.cpp
+    runtime/JSPromise.cpp
+    runtime/JSPromiseCallback.cpp
+    runtime/JSPromiseConstructor.cpp
+    runtime/JSPromisePrototype.cpp
+    runtime/JSPromiseResolver.cpp
+    runtime/JSPromiseResolverConstructor.cpp
+    runtime/JSPromiseResolverPrototype.cpp
     runtime/JSPropertyNameIterator.cpp
     runtime/JSProxy.cpp
     runtime/JSScope.cpp
     runtime/JSSegmentedVariableObject.cpp
+    runtime/JSSet.cpp
     runtime/JSStaticScopeObject.cpp
     runtime/JSString.cpp
     runtime/JSStringJoiner.cpp
@@ -350,6 +346,9 @@ set(JavaScriptCore_SOURCES
     runtime/JSWrapperObject.cpp
     runtime/LiteralParser.cpp
     runtime/Lookup.cpp
+    runtime/MapConstructor.cpp
+    runtime/MapData.cpp
+    runtime/MapPrototype.cpp
     runtime/MathObject.cpp
     runtime/MemoryStatistics.cpp
     runtime/NameConstructor.cpp
@@ -377,6 +376,8 @@ set(JavaScriptCore_SOURCES
     runtime/RegExpObject.cpp
     runtime/RegExpPrototype.cpp
     runtime/SamplingCounter.cpp
+    runtime/SetConstructor.cpp
+    runtime/SetPrototype.cpp
     runtime/SimpleTypedArrayController.cpp
     runtime/SmallStrings.cpp
     runtime/SparseArrayValueMap.cpp
@@ -389,6 +390,7 @@ set(JavaScriptCore_SOURCES
     runtime/StructureChain.cpp
     runtime/StructureRareData.cpp
     runtime/SymbolTable.cpp
+    runtime/TestRunnerUtils.cpp
     runtime/TypedArrayController.cpp
     runtime/TypedArrayType.cpp
     runtime/VM.cpp
@@ -415,6 +417,9 @@ set(JavaScriptCore_LUT_FILES
     runtime/JSDataViewPrototype.cpp
     runtime/JSGlobalObject.cpp
     runtime/JSONObject.cpp
+    runtime/JSPromiseConstructor.cpp
+    runtime/JSPromisePrototype.cpp
+    runtime/JSPromiseResolverPrototype.cpp
     runtime/NamePrototype.cpp
     runtime/NumberConstructor.cpp
     runtime/NumberPrototype.cpp
@@ -516,7 +521,7 @@ if (ENABLE_LLINT)
     list(APPEND JavaScriptCore_SOURCES
         llint/LLIntCLoop.cpp
         llint/LLIntData.cpp
-        llint/LLIntEntrypoints.cpp
+        llint/LLIntEntrypoint.cpp
         llint/LLIntExceptions.cpp
         llint/LLIntSlowPaths.cpp
         llint/LLIntThunks.cpp

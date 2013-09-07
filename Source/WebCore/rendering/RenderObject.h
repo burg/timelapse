@@ -211,6 +211,7 @@ public:
     RenderBox* enclosingBox() const;
     RenderBoxModelObject* enclosingBoxModelObject() const;
 
+    bool fixedPositionedWithNamedFlowContainingBlock() const;
     // Function to return our enclosing flow thread if we are contained inside one. This
     // function follows the containing block chain.
     RenderFlowThread* flowThreadContainingBlock() const
@@ -315,7 +316,7 @@ private:
     void* operator new(size_t) throw();
 
 public:
-    RenderArena* renderArena() const { return document()->renderArena(); }
+    RenderArena* renderArena() const { return document().renderArena(); }
 
     bool isPseudoElement() const { return node() && node()->isPseudoElement(); }
 
@@ -323,9 +324,6 @@ public:
     virtual bool isBlockFlow() const { return false; }
     virtual bool isBoxModelObject() const { return false; }
     virtual bool isCounter() const { return false; }
-#if ENABLE(DIALOG_ELEMENT)
-    virtual bool isDialog() const { return false; }
-#endif
     virtual bool isQuote() const { return false; }
 
 #if ENABLE(DETAILS_ELEMENT)
@@ -359,6 +357,7 @@ public:
     virtual bool isRenderInline() const { return false; }
     virtual bool isRenderPart() const { return false; }
     virtual bool isRenderRegion() const { return false; }
+    virtual bool isRenderReplaced() const { return false; }
     virtual bool isRenderView() const { return false; }
     virtual bool isReplica() const { return false; }
 
@@ -398,7 +397,7 @@ public:
 
     virtual bool isRenderScrollbarPart() const { return false; }
 
-    bool isRoot() const { return document()->documentElement() == m_node; }
+    bool isRoot() const { return document().documentElement() == m_node; }
     bool isBody() const;
     bool isHR() const;
     bool isLegend() const;
@@ -622,7 +621,7 @@ public:
     
     virtual void updateDragState(bool dragOn);
 
-    RenderView* view() const { return document()->renderView(); };
+    RenderView& view() const { return *document().renderView(); };
 
     // Returns true if this renderer is rooted, and optionally returns the hosting view (the root of the hierarchy).
     bool isRooted(RenderView** = 0) const;
@@ -638,8 +637,8 @@ public:
     // pseudo elements for which their parent node is returned.
     Node* generatingNode() const { return isPseudoElement() ? generatingPseudoHostElement() : node(); }
 
-    Document* document() const { return m_node->document(); }
-    Frame* frame() const { return document()->frame(); }
+    Document& document() const { return m_node->document(); }
+    Frame& frame() const; // Defined in RenderView.h
 
     bool hasOutlineAnnotation() const;
     bool hasOutline() const { return style()->hasOutline() || hasOutlineAnnotation(); }
@@ -797,7 +796,7 @@ public:
     virtual LayoutUnit maxPreferredLogicalWidth() const { return 0; }
 
     RenderStyle* style() const { return m_style.get(); }
-    RenderStyle* firstLineStyle() const { return document()->styleSheetCollection()->usesFirstLineRules() ? cachedFirstLineStyle() : style(); }
+    RenderStyle* firstLineStyle() const { return document().styleSheetCollection()->usesFirstLineRules() ? cachedFirstLineStyle() : style(); }
     RenderStyle* style(bool firstLine) const { return firstLine ? firstLineStyle() : style(); }
 
     // Used only by Element::pseudoStyleCacheIsInvalid to get a first line style based off of a
@@ -954,7 +953,7 @@ public:
     
     void remove() { if (parent()) parent()->removeChild(this); }
 
-    AnimationController* animation() const;
+    AnimationController& animation() const;
 
     bool visibleToHitTesting() const { return style()->visibility() == VISIBLE && style()->pointerEvents() != PE_NONE; }
 
@@ -1177,7 +1176,7 @@ private:
 
 inline bool RenderObject::documentBeingDestroyed() const
 {
-    return !document()->renderer();
+    return document().renderTreeBeingDestroyed();
 }
 
 inline bool RenderObject::isBeforeContent() const

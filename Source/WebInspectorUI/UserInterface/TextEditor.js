@@ -46,6 +46,7 @@ WebInspector.TextEditor = function(element, mimeType, delegate)
 
     this._codeMirror.on("change", this._contentChanged.bind(this));
     this._codeMirror.on("gutterClick", this._gutterMouseDown.bind(this));
+    this._codeMirror.on("gutterContextMenu", this._gutterContextMenu.bind(this));
     this._codeMirror.getScrollerElement().addEventListener("click", this._openClickedLinks.bind(this), true);
 
     this._completionController = new WebInspector.CodeMirrorCompletionController(this._codeMirror, this);
@@ -1099,6 +1100,17 @@ WebInspector.TextEditor.prototype = {
         document.addEventListener("mouseup", this._documentMouseUpEventListener, true);
     },
 
+    _gutterContextMenu: function(codeMirror, lineNumber, gutterElement, event)
+    {
+        if (this._delegate && typeof this._delegate.textEditorGutterContextMenu === "function") {
+            var breakpoints = [];
+            for (var columnNumber in this._breakpoints[lineNumber])
+                breakpoints.push({lineNumber:lineNumber, columnNumber:columnNumber});
+
+            this._delegate.textEditorGutterContextMenu(this, lineNumber, 0, breakpoints, event);
+        }
+    },
+
     _documentMouseMoved: function(event)
     {
         console.assert("_lineNumberWithMousedDownBreakpoint" in this);
@@ -1303,7 +1315,6 @@ WebInspector.TextEditor.prototype = {
                 }
 
                 if (!isNaN(this._executionLineNumber)) {
-                    console.assert(this._executionLineHandle);
                     console.assert(!isNaN(this._executionColumnNumber));
                     newExecutionLocation = this._formatterSourceMap.originalToFormatted(this._executionLineNumber, this._executionColumnNumber);
                 }
@@ -1327,7 +1338,6 @@ WebInspector.TextEditor.prototype = {
                 }
 
                 if (!isNaN(this._executionLineNumber)) {
-                    console.assert(this._executionLineHandle);
                     console.assert(!isNaN(this._executionColumnNumber));
                     newExecutionLocation = this._formatterSourceMap.formattedToOriginal(this._executionLineNumber, this._executionColumnNumber);
                 }

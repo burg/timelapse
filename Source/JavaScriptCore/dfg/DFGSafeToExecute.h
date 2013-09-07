@@ -231,7 +231,13 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node)
     case ForceOSRExit:
     case CheckWatchdogTimer:
     case StringFromCharCode:
+    case NewTypedArray:
     case Unreachable:
+    case ExtractOSREntryLocal:
+    case CheckTierUpInLoop:
+    case CheckTierUpAtReturn:
+    case CheckTierUpAndOSREnter:
+    case LoopHint:
         return true;
         
     case GetByVal:

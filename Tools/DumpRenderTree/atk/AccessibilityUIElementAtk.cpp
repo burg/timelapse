@@ -29,6 +29,7 @@
 
 #if HAVE(ACCESSIBILITY)
 
+#include "AccessibilityNotificationHandlerAtk.h"
 #include <JavaScriptCore/JSStringRef.h>
 #include <JavaScriptCore/OpaqueJSString.h>
 #include <atk/atk.h>
@@ -47,10 +48,16 @@ static String coreAttributeToAtkAttribute(JSStringRef attribute)
     JSStringGetUTF8CString(attribute, buffer.get(), bufferSize);
 
     String attributeString = String::fromUTF8(buffer.get());
+    if (attributeString == "AXInvalid")
+        return "aria-invalid";
+
     if (attributeString == "AXPlaceholderValue")
         return "placeholder-text";
 
-    return "";
+    if (attributeString == "AXSortDirection")
+        return "aria-sort";
+
+    return String();
 }
 
 static String getAttributeSetValueForId(AtkObject* accessible, const char* id)
@@ -97,6 +104,8 @@ static inline const char* roleToString(AtkRole role)
         return "AXCanvas";
     case ATK_ROLE_CHECK_BOX:
         return "AXCheckBox";
+    case ATK_ROLE_COLOR_CHOOSER:
+        return "AXColorWell";
     case ATK_ROLE_COLUMN_HEADER:
         return "AXColumnHeader";
     case ATK_ROLE_COMBO_BOX:
@@ -886,6 +895,13 @@ JSStringRef AccessibilityUIElement::stringAttributeValue(JSStringRef attribute)
         return JSStringCreateWithCharacters(0, 0);
 
     String attributeValue = getAttributeSetValueForId(ATK_OBJECT(m_element), atkAttributeName.utf8().data());
+
+    // In case of 'aria-invalid' when the attribute empty or has "false" for ATK
+    // according to http://www.w3.org/WAI/PF/aria-implementation/#mapping attribute
+    // is not mapped but layout tests will expect 'false'.
+    if (attributeValue.isEmpty() && atkAttributeName == "aria-invalid")
+        return JSStringCreateWithUTF8CString("false");
+
     return JSStringCreateWithUTF8CString(attributeValue.utf8().data());
 }
 
@@ -1027,13 +1043,26 @@ JSStringRef AccessibilityUIElement::url()
 
 bool AccessibilityUIElement::addNotificationListener(JSObjectRef functionCallback)
 {
-    // FIXME: implement
-    return false;
+    if (!functionCallback)
+        return false;
+
+    // Only one notification listener per element.
+    if (m_notificationHandler)
+        return false;
+
+    m_notificationHandler = AccessibilityNotificationHandler::create();
+    m_notificationHandler->setPlatformElement(platformUIElement());
+    m_notificationHandler->setNotificationFunctionCallback(functionCallback);
+
+    return true;
 }
 
 void AccessibilityUIElement::removeNotificationListener()
 {
-    // FIXME: implement
+    // Programmers should not be trying to remove a listener that's already removed.
+    ASSERT(m_notificationHandler);
+
+    m_notificationHandler = 0;
 }
 
 bool AccessibilityUIElement::isFocusable() const

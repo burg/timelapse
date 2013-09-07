@@ -165,8 +165,18 @@ if test "$with_target" = "directfb"; then
 else
     PKG_CHECK_MODULES(CAIRO, cairo >= cairo_required_version)
     PKG_CHECK_MODULES(GTK, gtk+-$GTK_API_VERSION >= $GTK_REQUIRED_VERSION)
+    GTK_ACTUAL_VERSION=`pkg-config --modversion gtk+-$GTK_API_VERSION`
+fi
+AC_SUBST(GTK_CFLAGS)
+AC_SUBST(GTK_LIBS)
+AC_SUBST(CAIRO_CFLAGS)
+AC_SUBST(CAIRO_LIBS)
 
-    if test "$with_target" = "x11" && test "$os_win32" = "no"; then
+if test "$with_x11_target" = "yes"; then
+    # The GTK+ X11 target dependency should match the version of the master GTK+ dependency.
+    PKG_CHECK_MODULES(GTK_X11, gtk+-x11-$GTK_API_VERSION = $GTK_ACTUAL_VERSION)
+
+    if test "$os_win32" = "no"; then
         PKG_CHECK_MODULES([XT], [xt], [xt_has_pkg_config=yes], [xt_has_pkg_config=no])
 
         # Some old versions of Xt do not provide xt.pc, so try to link against Xt
@@ -180,12 +190,24 @@ else
 
         AC_SUBST([XT_CFLAGS])
         AC_SUBST([XT_LIBS])
-   fi
+    fi
+
+    # Check for XRender under Linux/Unix. Some linkers require explicit linkage (like GNU Gold),
+    # so we cannot rely on GTK+ pulling XRender.
+    if test "$with_x11_target" = "yes"; then
+        PKG_CHECK_MODULES([XRENDER], [xrender])
+        AC_SUBST([XRENDER_CFLAGS])
+        AC_SUBST([XRENDER_LIBS])
+    fi
+elif test "enable_glx" != "no"; then
+    AC_MSG_WARN([X11 target support not enabled, disabling GLX support.])
+    enable_glx=no
 fi
-AC_SUBST(GTK_CFLAGS)
-AC_SUBST(GTK_LIBS)
-AC_SUBST(CAIRO_CFLAGS)
-AC_SUBST(CAIRO_LIBS)
+
+if test "$with_wayland_target" = "yes"; then
+    # The GTK+ Wayland target dependency should match the version of the master GTK+ dependency.
+    PKG_CHECK_MODULES(GTK_WAYLAND, gtk+-wayland-$GTK_API_VERSION = $GTK_ACTUAL_VERSION)
+fi
 
 AC_CHECK_HEADERS([GL/glx.h], [have_glx="yes"], [have_glx="no"])
 AC_MSG_CHECKING([whether to enable GLX support])
@@ -253,9 +275,9 @@ else
     AC_CHECK_HEADERS([GL/gl.h], [found_opengl="yes"], [])
 fi
 
-if test "$found_opengl" = "yes"; then
-    PKG_CHECK_MODULES([XCOMPOSITE], [xcomposite]);
-    PKG_CHECK_MODULES([XDAMAGE], [xdamage]);
+if test "$with_x11_target" = "yes" && test "$found_opengl" = "yes"; then
+    PKG_CHECK_MODULES([XCOMPOSITE], [xcomposite])
+    PKG_CHECK_MODULES([XDAMAGE], [xdamage])
     AC_SUBST(XCOMPOSITE_CFLAGS)
     AC_SUBST(XCOMPOSITE_LIBS)
     AC_SUBST(XDAMAGE_CFLAGS)
@@ -271,6 +293,11 @@ if test "$enable_webgl" != "no"; then
         fi
         enable_webgl=no
     fi
+fi
+
+if test "$with_x11_target" != "yes" && test "$with_wayland_target" = "yes" && test "enable_accelerated_compositing" != "no"; then
+    AC_MSG_WARN([Accelerated compositing for Wayland is not yet implemented, disabling due to the Wayland-only target.])
+    enable_accelerated_compositing=no
 fi
 
 if test "$enable_accelerated_compositing" != "no"; then
@@ -387,14 +414,6 @@ if test "$enable_geolocation" = "yes"; then
     AC_SUBST([GEOCLUE_LIBS])
 fi
 
-# Check for XRender under Linux/Unix. Some linkers require explicit linkage (like GNU Gold),
-# so we cannot rely on GTK+ pulling XRender.
-if test "$with_target" = "x11"; then
-    PKG_CHECK_MODULES([XRENDER], [xrender])
-    AC_SUBST([XRENDER_CFLAGS])
-    AC_SUBST([XRENDER_LIBS])
-fi
-
 if test "$enable_video" = "yes" || test "$enable_web_audio" = "yes"; then
     PKG_CHECK_MODULES([GSTREAMER], [
         gstreamer-1.0 >= gstreamer_required_version
@@ -499,6 +518,48 @@ if test "$enable_webkit2" = "yes"; then
    PKG_CHECK_MODULES([ATSPI2], [atspi-2 >= atspi2_required_version], [have_atspi2=yes], [have_atspi2=no])
    AC_SUBST([ATSPI2_CFLAGS])
    AC_SUBST([ATSPI2_LIBS])
+fi
+
+if test "$enable_jit" = "no"; then
+    AC_MSG_NOTICE([JIT compilation is disabled, also disabling FTL JIT support.])
+    enable_ftl_jit=no
+fi
+
+if test "$enable_ftl_jit" != no && test "$cxx_compiler" != "clang++"; then
+    if test "$enable_ftl_jit" = "yes"; then
+        AC_MSG_ERROR([Clang C++ compiler is required for FTL JIT support.])
+    else
+        AC_MSG_WARN([Clang C++ compiler is not used, disabling FTL JIT support.])
+        enable_ftl_jit=no
+    fi
+fi
+
+if test "$enable_ftl_jit" != "no"; then
+    AC_PATH_PROG(llvm_config, llvm-config, no)
+    if test "$llvm_config" = "no"; then
+        if test "$enable_ftl_jit" = "yes"; then
+            AC_MSG_ERROR([Cannot find llvm-config. LLVM >= 3.4 is needed for FTL JIT support.])
+        else
+            AC_MSG_WARN([Cannot find llvm-config. LLVM >= 3.4 is not present, disabling FTL JIT support.])
+            enable_ftl_jit=no
+        fi
+    else
+        LLVM_VERSION=`$llvm_config --version`
+        AX_COMPARE_VERSION([$LLVM_VERSION], [ge], [3.4], [have_llvm=yes], [have_llvm=no])
+        if test "$have_llvm" = "no"; then
+            if test "$enable_ftl_jit" = "yes"; then
+                AC_MSG_ERROR([LLVM >= 3.4 is needed for FTL JIT support.])
+            else
+                AC_MSG_WARN([LLVM >= 3.4 is not present, disabling FTL JIT support.])
+                enable_ftl_jit=no
+            fi
+        else
+            LLVM_CFLAGS=`$llvm_config --cppflags`
+            LLVM_LIBS="`$llvm_config --ldflags` `$llvm_config --libs`"
+            AC_SUBST([LLVM_CFLAGS])
+            AC_SUBST([LLVM_LIBS])
+        fi
+    fi
 fi
 
 m4_ifdef([GTK_DOC_CHECK], [

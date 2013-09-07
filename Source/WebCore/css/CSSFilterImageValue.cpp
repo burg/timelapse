@@ -48,7 +48,7 @@ CSSFilterImageValue::~CSSFilterImageValue()
         m_cachedImage->removeClient(&m_filterSubimageObserver);
 }
 
-String CSSFilterImageValue::customCssText() const
+String CSSFilterImageValue::customCSSText() const
 {
     StringBuilder result;
     result.appendLiteral("-webkit-filter(");
@@ -61,7 +61,7 @@ String CSSFilterImageValue::customCssText() const
 
 IntSize CSSFilterImageValue::fixedSize(const RenderObject* renderer)
 {
-    CachedResourceLoader* cachedResourceLoader = renderer->document()->cachedResourceLoader();
+    CachedResourceLoader* cachedResourceLoader = renderer->document().cachedResourceLoader();
     CachedImage* cachedImage = cachedImageForCSSValue(m_imageValue.get(), cachedResourceLoader);
 
     if (!cachedImage)
@@ -101,7 +101,7 @@ PassRefPtr<Image> CSSFilterImageValue::image(RenderObject* renderer, const IntSi
     if (size.isEmpty())
         return 0;
 
-    CachedResourceLoader* cachedResourceLoader = renderer->document()->cachedResourceLoader();
+    CachedResourceLoader* cachedResourceLoader = renderer->document().cachedResourceLoader();
     CachedImage* cachedImage = cachedImageForCSSValue(m_imageValue.get(), cachedResourceLoader);
 
     if (!cachedImage)
@@ -122,8 +122,7 @@ PassRefPtr<Image> CSSFilterImageValue::image(RenderObject* renderer, const IntSi
     filterRenderer->setSourceImage(texture.release());
     filterRenderer->setSourceImageRect(FloatRect(FloatPoint(), size));
     filterRenderer->setFilterRegion(FloatRect(FloatPoint(), size));
-    // FIXME: SVG Filter don't work at the moment.
-    if (!filterRenderer->build(0, m_filterOperations, true))
+    if (!filterRenderer->build(renderer, m_filterOperations, FilterFunction))
         return Image::nullImage();
     filterRenderer->apply();
 
@@ -162,8 +161,12 @@ bool CSSFilterImageValue::hasFailedOrCanceledSubresources() const
 
 bool CSSFilterImageValue::equals(const CSSFilterImageValue& other) const
 {
-    return compareCSSValuePtr(m_imageValue, other.m_imageValue)
-        && compareCSSValuePtr(m_filterValue, other.m_filterValue);
+    return equalInputImages(other) && compareCSSValuePtr(m_filterValue, other.m_filterValue);
+}
+
+bool CSSFilterImageValue::equalInputImages(const CSSFilterImageValue& other) const
+{
+    return compareCSSValuePtr(m_imageValue, other.m_imageValue);
 }
 
 } // namespace WebCore

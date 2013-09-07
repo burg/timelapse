@@ -131,12 +131,12 @@ static inline Frame* parentFromOwnerElement(HTMLFrameOwnerElement* ownerElement)
 {
     if (!ownerElement)
         return 0;
-    return ownerElement->document()->frame();
+    return ownerElement->document().frame();
 }
 
 static inline float parentPageZoomFactor(Frame* frame)
 {
-    Frame* parent = frame->tree()->parent();
+    Frame* parent = frame->tree().parent();
     if (!parent)
         return 1;
     return parent->pageZoomFactor();
@@ -144,7 +144,7 @@ static inline float parentPageZoomFactor(Frame* frame)
 
 static inline float parentTextZoomFactor(Frame* frame)
 {
-    Frame* parent = frame->tree()->parent();
+    Frame* parent = frame->tree().parent();
     if (!parent)
         return 1;
     return parent->textZoomFactor();
@@ -154,13 +154,13 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
     : m_page(page)
     , m_settings(&page->settings())
     , m_treeNode(this, parentFromOwnerElement(ownerElement))
-    , m_loader(this, frameLoaderClient)
+    , m_loader(*this, *frameLoaderClient)
     , m_navigationScheduler(this)
     , m_ownerElement(ownerElement)
     , m_script(adoptPtr(new ScriptController(this)))
     , m_editor(Editor::create(*this))
     , m_selection(adoptPtr(new FrameSelection(this)))
-    , m_eventHandler(adoptPtr(new EventHandler(this)))
+    , m_eventHandler(adoptPtr(new EventHandler(*this)))
     , m_animationController(adoptPtr(new AnimationController(this)))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
@@ -204,10 +204,7 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
 
 PassRefPtr<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* client)
 {
-    RefPtr<Frame> frame = adoptRef(new Frame(page, ownerElement, client));
-    if (!ownerElement)
-        page->setMainFrame(frame);
-    return frame.release();
+    return adoptRef(new Frame(page, ownerElement, client));
 }
 
 Frame::~Frame()
@@ -226,18 +223,6 @@ Frame::~Frame()
     HashSet<FrameDestructionObserver*>::iterator stop = m_destructionObservers.end();
     for (HashSet<FrameDestructionObserver*>::iterator it = m_destructionObservers.begin(); it != stop; ++it)
         (*it)->frameDestroyed();
-}
-
-bool Frame::inScope(TreeScope* scope) const
-{
-    ASSERT(scope);
-    Document* doc = document();
-    if (!doc)
-        return false;
-    HTMLFrameOwnerElement* owner = doc->ownerElement();
-    if (!owner)
-        return false;
-    return owner->treeScope() == scope;
 }
 
 void Frame::addDestructionObserver(FrameDestructionObserver* observer)
@@ -284,40 +269,23 @@ void Frame::setView(PassRefPtr<FrameView> view)
 #endif
 }
 
-void Frame::setDocument(PassRefPtr<Document> newDoc)
+void Frame::setDocument(PassRefPtr<Document> newDocument)
 {
-    ASSERT(!newDoc || newDoc->frame() == this);
+    ASSERT(!newDocument || newDocument->frame() == this);
+
     if (m_doc && m_doc->attached() && !m_doc->inPageCache()) {
         // FIXME: We don't call willRemove here. Why is that OK?
         m_doc->detach();
     }
 
-    m_doc = newDoc;
+    m_doc = newDocument.get();
     ASSERT(!m_doc || m_doc->domWindow());
     ASSERT(!m_doc || m_doc->domWindow()->frame() == this);
 
-    if (m_doc && !m_doc->attached())
-        m_doc->attach();
-
-    if (m_doc) {
-        m_script->updateDocument();
-        m_doc->updateViewportArguments();
-    }
-
-    if (m_page && m_page->mainFrame() == this) {
-        notifyChromeClientWheelEventHandlerCountChanged();
-#if ENABLE(TOUCH_EVENTS)
-        if (m_doc && m_doc->hasTouchEventHandlers())
-            m_page->chrome().client().needTouchEvents(true);
-#endif
-    }
-
-    // Suspend document if this frame was created in suspended state.
-    if (m_doc && activeDOMObjectsAndAnimationsSuspended()) {
-        m_doc->suspendScriptedAnimationControllerCallbacks();
-        m_animationController->suspendAnimationsForDocument(m_doc.get());
-        m_doc->suspendActiveDOMObjects(ActiveDOMObject::PageWillBeSuspended);
-    }
+    // Don't use m_doc because it can be overwritten and we want to guarantee
+    // that the document is not destroyed during this function call.
+    if (newDocument)
+        newDocument->didBecomeCurrentDocumentInFrame();
 }
 
 #if ENABLE(ORIENTATION_EVENTS)
@@ -521,7 +489,7 @@ void Frame::setPrinting(bool printing, const FloatSize& pageSize, const FloatSiz
     }
 
     // Subframes of the one we're printing don't lay out to the page size.
-    for (RefPtr<Frame> child = tree()->firstChild(); child; child = child->tree()->nextSibling())
+    for (RefPtr<Frame> child = tree().firstChild(); child; child = child->tree().nextSibling())
         child->setPrinting(printing, FloatSize(), FloatSize(), 0, shouldAdjustViewSize);
 }
 
@@ -529,7 +497,7 @@ bool Frame::shouldUsePrintingLayout() const
 {
     // Only top frame being printed should be fit to page size.
     // Subframes should be constrained by parents only.
-    return m_doc->printing() && (!tree()->parent() || !tree()->parent()->m_doc->printing());
+    return m_doc->printing() && (!tree().parent() || !tree().parent()->m_doc->printing());
 }
 
 FloatSize Frame::resizePageRectsKeepingRatio(const FloatSize& originalSize, const FloatSize& expectedSize)
@@ -618,7 +586,7 @@ Frame* Frame::frameForWidget(const Widget* widget)
 
     if (RenderWidget* renderer = RenderWidget::find(widget))
         if (Node* node = renderer->node())
-            return node->document()->frame();
+            return node->document().frame();
 
     // Assume all widgets are either a FrameView or owned by a RenderWidget.
     // FIXME: That assumption is not right for scroll bars!
@@ -630,7 +598,7 @@ void Frame::clearTimers(FrameView *view, Document *document)
 {
     if (view) {
         view->unscheduleRelayout();
-        view->frame().animation()->suspendAnimationsForDocument(document);
+        view->frame().animation().suspendAnimationsForDocument(document);
         view->frame().eventHandler().stopAutoscrollTimer();
     }
 }
@@ -640,24 +608,9 @@ void Frame::clearTimers()
     clearTimers(m_view.get(), document());
 }
 
-#if ENABLE(PAGE_VISIBILITY_API)
-void Frame::dispatchVisibilityStateChangeEvent()
-{
-    if (m_doc)
-        m_doc->dispatchVisibilityStateChangeEvent();
-
-    Vector<RefPtr<Frame> > childFrames;
-    for (Frame* child = tree()->firstChild(); child; child = child->tree()->nextSibling())
-        childFrames.append(child);
-
-    for (size_t i = 0; i < childFrames.size(); ++i)
-        childFrames[i]->dispatchVisibilityStateChangeEvent();
-}
-#endif
-
 void Frame::willDetachPage()
 {
-    if (Frame* parent = tree()->parent())
+    if (Frame* parent = tree().parent())
         parent->loader().checkLoadComplete();
 
     HashSet<FrameDestructionObserver*>::iterator stop = m_destructionObservers.end();
@@ -679,21 +632,23 @@ void Frame::willDetachPage()
 void Frame::disconnectOwnerElement()
 {
     if (m_ownerElement) {
-        if (Document* doc = document())
-            doc->topDocument()->clearAXObjectCache();
+        // We use the ownerElement's document to retrieve the cache, because the contentDocument for this
+        // frame is already detached (and can't access the top level AX cache).
+        // However, we pass in the current document to clearTextMarkerNodesInUse so we can identify the
+        // nodes inside this document that need to be removed from the cache.
+        
+        // We don't clear the AXObjectCache here because we don't want to clear the top level cache
+        // when a sub-frame is removed.
+#if HAVE(ACCESSIBILITY)
+        if (AXObjectCache* cache = m_ownerElement->document().existingAXObjectCache())
+            cache->clearTextMarkerNodesInUse(document());
+#endif
+        
         m_ownerElement->clearContentFrame();
         if (m_page)
             m_page->decrementSubframeCount();
     }
     m_ownerElement = 0;
-}
-
-String Frame::documentTypeString() const
-{
-    if (DocumentType* doctype = document()->doctype())
-        return createMarkup(doctype);
-
-    return String();
 }
 
 String Frame::displayStringModifiedByEncoding(const String& str) const
@@ -726,7 +681,7 @@ Document* Frame::documentAtPoint(const IntPoint& point)
 
     if (contentRenderer())
         result = eventHandler().hitTestResultAtPoint(pt);
-    return result.innerNode() ? result.innerNode()->document() : 0;
+    return result.innerNode() ? &result.innerNode()->document() : 0;
 }
 
 PassRefPtr<Range> Frame::rangeForPoint(const IntPoint& framePoint)
@@ -761,7 +716,7 @@ void Frame::createView(const IntSize& viewportSize, const Color& backgroundColor
     ASSERT(this);
     ASSERT(m_page);
 
-    bool isMainFrame = this == m_page->mainFrame();
+    bool isMainFrame = m_page->frameIsMainFrame(this);
 
     if (isMainFrame && view())
         view()->setParentVisible(false);
@@ -770,12 +725,12 @@ void Frame::createView(const IntSize& viewportSize, const Color& backgroundColor
 
     RefPtr<FrameView> frameView;
     if (isMainFrame) {
-        frameView = FrameView::create(this, viewportSize);
+        frameView = FrameView::create(*this, viewportSize);
         frameView->setFixedLayoutSize(fixedLayoutSize);
         frameView->setFixedVisibleContentRect(fixedVisibleContentRect);
         frameView->setUseFixedLayout(useFixedLayout);
     } else
-        frameView = FrameView::create(this);
+        frameView = FrameView::create(*this);
 
     frameView->setScrollbarModes(horizontalScrollbarMode, verticalScrollbarMode, horizontalLock, verticalLock);
 
@@ -864,7 +819,7 @@ String Frame::layerTreeAsText(LayerTreeFlags flags) const
     if (!contentRenderer())
         return String();
 
-    return contentRenderer()->compositor()->layerTreeAsText(flags);
+    return contentRenderer()->compositor().layerTreeAsText(flags);
 #else
     UNUSED_PARAM(flags);
     return String();
@@ -926,7 +881,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
 
     document->recalcStyle(Style::Force);
 
-    for (RefPtr<Frame> child = tree()->firstChild(); child; child = child->tree()->nextSibling())
+    for (RefPtr<Frame> child = tree().firstChild(); child; child = child->tree().nextSibling())
         child->setPageAndTextZoomFactors(m_pageZoomFactor, m_textZoomFactor);
 
     if (FrameView* view = this->view()) {
@@ -934,7 +889,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
             view->layout();
     }
 
-    if (page->mainFrame() == this)
+    if (page->frameIsMainFrame(this))
         pageCache()->markPagesForFullStyleRecalc(page);
 }
 
@@ -943,7 +898,7 @@ float Frame::frameScaleFactor() const
     Page* page = this->page();
 
     // Main frame is scaled with respect to he container but inner frames are not scaled with respect to the main frame.
-    if (!page || page->mainFrame() != this || settings().applyPageScaleFactorInCompositor())
+    if (!page || &page->mainFrame() != this || settings().applyPageScaleFactorInCompositor())
         return 1;
 
     return page->pageScaleFactor();
@@ -961,7 +916,7 @@ void Frame::suspendActiveDOMObjectsAndAnimations()
     // FIXME: Suspend/resume calls will not match if the frame is navigated, and gets a new document.
     if (document()) {
         document()->suspendScriptedAnimationControllerCallbacks();
-        animation()->suspendAnimationsForDocument(document());
+        animation().suspendAnimationsForDocument(document());
         document()->suspendActiveDOMObjects(ActiveDOMObject::PageWillBeSuspended);
     }
 }
@@ -977,7 +932,7 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
 
     if (document()) {
         document()->resumeActiveDOMObjects(ActiveDOMObject::PageWillBeSuspended);
-        animation()->resumeAnimationsForDocument(document());
+        animation().resumeAnimationsForDocument(document());
         document()->resumeScriptedAnimationControllerCallbacks();
     }
 
@@ -988,27 +943,13 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
 #if USE(ACCELERATED_COMPOSITING)
 void Frame::deviceOrPageScaleFactorChanged()
 {
-    for (RefPtr<Frame> child = tree()->firstChild(); child; child = child->tree()->nextSibling())
+    for (RefPtr<Frame> child = tree().firstChild(); child; child = child->tree().nextSibling())
         child->deviceOrPageScaleFactorChanged();
 
-    RenderView* root = contentRenderer();
-    if (root && root->compositor())
-        root->compositor()->deviceOrPageScaleFactorChanged();
+    if (RenderView* root = contentRenderer())
+        root->compositor().deviceOrPageScaleFactorChanged();
 }
 #endif
-void Frame::notifyChromeClientWheelEventHandlerCountChanged() const
-{
-    // Ensure that this method is being called on the main frame of the page.
-    ASSERT(m_page && m_page->mainFrame() == this);
-
-    unsigned count = 0;
-    for (const Frame* frame = this; frame; frame = frame->tree()->traverseNext()) {
-        if (frame->document())
-            count += frame->document()->wheelEventHandlerCount();
-    }
-
-    m_page->chrome().client().numWheelEventHandlersChanged(count);
-}
 
 bool Frame::isURLAllowed(const KURL& url) const
 {
@@ -1017,7 +958,7 @@ bool Frame::isURLAllowed(const KURL& url) const
     if (m_page->subframeCount() >= Page::maxNumberOfFrames)
         return false;
     bool foundSelfReference = false;
-    for (const Frame* frame = this; frame; frame = frame->tree()->parent()) {
+    for (const Frame* frame = this; frame; frame = frame->tree().parent()) {
         if (equalIgnoringFragmentIdentifier(frame->document()->url(), url)) {
             if (foundSelfReference)
                 return false;

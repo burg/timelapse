@@ -61,6 +61,7 @@
 
 #include <wtf/CurrentTime.h>
 #include <wtf/HashSet.h>
+#include <wtf/Ref.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringConcatenate.h>
@@ -747,7 +748,7 @@ void InspectorCSSAgent::regionLayoutUpdated(WebKitNamedFlow* namedFlow, int docu
         return;
 
     ErrorString errorString;
-    RefPtr<WebKitNamedFlow> protector(namedFlow);
+    Ref<WebKitNamedFlow> protect(*namedFlow);
 
     m_frontend->regionLayoutUpdated(buildObjectForNamedFlow(&errorString, namedFlow, documentNodeId));
 }
@@ -769,7 +770,7 @@ void InspectorCSSAgent::regionOversetChanged(WebKitNamedFlow* namedFlow, int doc
         return;
     
     ErrorString errorString;
-    RefPtr<WebKitNamedFlow> protector(namedFlow);
+    Ref<WebKitNamedFlow> protect(*namedFlow);
     
     m_frontend->regionOversetChanged(buildObjectForNamedFlow(&errorString, namedFlow, documentNodeId));
 }
@@ -809,7 +810,7 @@ void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int no
         return;
 
     // Matched rules.
-    StyleResolver& styleResolver = element->document()->ensureStyleResolver();
+    StyleResolver& styleResolver = element->document().ensureStyleResolver();
     Vector<RefPtr<StyleRuleBase> > matchedRules = styleResolver.styleRulesForElement(element, StyleResolver::AllCSSRules);
     matchedCSSRules = buildArrayForMatchedRuleList(matchedRules, styleResolver, element);
 
@@ -834,7 +835,7 @@ void InspectorCSSAgent::getMatchedStylesForNode(ErrorString* errorString, int no
         RefPtr<TypeBuilder::Array<TypeBuilder::CSS::InheritedStyleEntry> > entries = TypeBuilder::Array<TypeBuilder::CSS::InheritedStyleEntry>::create();
         Element* parentElement = element->parentElement();
         while (parentElement) {
-            StyleResolver& parentStyleResolver = parentElement->document()->ensureStyleResolver();
+            StyleResolver& parentStyleResolver = parentElement->document().ensureStyleResolver();
             Vector<RefPtr<StyleRuleBase> > parentMatchedRules = parentStyleResolver.styleRulesForElement(parentElement, StyleResolver::AllCSSRules);
             RefPtr<TypeBuilder::CSS::InheritedStyleEntry> entry = TypeBuilder::CSS::InheritedStyleEntry::create()
                 .setMatchedCSSRules(buildArrayForMatchedRuleList(parentMatchedRules, styleResolver, parentElement));
@@ -992,7 +993,7 @@ void InspectorCSSAgent::addRule(ErrorString* errorString, const int contextNodeI
     if (!node)
         return;
 
-    InspectorStyleSheet* inspectorStyleSheet = viaInspectorStyleSheet(node->document(), true);
+    InspectorStyleSheet* inspectorStyleSheet = viaInspectorStyleSheet(&node->document(), true);
     if (!inspectorStyleSheet) {
         *errorString = "No target stylesheet found";
         return;
@@ -1053,7 +1054,7 @@ void InspectorCSSAgent::forcePseudoState(ErrorString* errorString, int nodeId, c
         m_nodeIdToForcedPseudoState.set(nodeId, forcedPseudoState);
     else
         m_nodeIdToForcedPseudoState.remove(nodeId);
-    element->document()->styleResolverChanged(RecalcStyleImmediately);
+    element->document().styleResolverChanged(RecalcStyleImmediately);
 }
 
 void InspectorCSSAgent::getNamedFlowCollection(ErrorString* errorString, int documentNodeId, RefPtr<TypeBuilder::Array<TypeBuilder::CSS::NamedFlow> >& result)
@@ -1112,7 +1113,7 @@ void InspectorCSSAgent::didMatchRule(bool matched)
 void InspectorCSSAgent::willProcessRule(StyleRule* rule, StyleResolver& styleResolver)
 {
     if (m_currentSelectorProfile)
-        m_currentSelectorProfile->startSelector(styleResolver.inspectorCSSOMWrappers().getWrapperForRuleInSheets(rule, styleResolver.document()->styleSheetCollection()));
+        m_currentSelectorProfile->startSelector(styleResolver.inspectorCSSOMWrappers().getWrapperForRuleInSheets(rule, styleResolver.document().styleSheetCollection()));
 }
 
 void InspectorCSSAgent::didProcessRule()
@@ -1146,7 +1147,7 @@ Element* InspectorCSSAgent::elementForId(ErrorString* errorString, int nodeId)
         *errorString = "No node with given id found";
         return 0;
     }
-    if (node->nodeType() != Node::ELEMENT_NODE) {
+    if (!node->isElementNode()) {
         *errorString = "Not an element node";
         return 0;
     }
@@ -1274,7 +1275,7 @@ PassRefPtr<TypeBuilder::CSS::CSSRule> InspectorCSSAgent::buildObjectForRule(Styl
 
     // StyleRules returned by StyleResolver::styleRulesForElement lack parent pointers since that infomation is not cheaply available.
     // Since the inspector wants to walk the parent chain, we construct the full wrappers here.
-    CSSStyleRule* cssomWrapper = styleResolver.inspectorCSSOMWrappers().getWrapperForRuleInSheets(styleRule, styleResolver.document()->styleSheetCollection());
+    CSSStyleRule* cssomWrapper = styleResolver.inspectorCSSOMWrappers().getWrapperForRuleInSheets(styleRule, styleResolver.document().styleSheetCollection());
     if (!cssomWrapper)
         return 0;
     InspectorStyleSheet* inspectorStyleSheet = bindStyleSheet(cssomWrapper->parentStyleSheet());
@@ -1453,9 +1454,8 @@ void InspectorCSSAgent::resetPseudoStates()
 {
     HashSet<Document*> documentsToChange;
     for (NodeIdToForcedPseudoState::iterator it = m_nodeIdToForcedPseudoState.begin(), end = m_nodeIdToForcedPseudoState.end(); it != end; ++it) {
-        Element* element = toElement(m_domAgent->nodeForId(it->key));
-        if (element && element->document())
-            documentsToChange.add(element->document());
+        if (Element* element = toElement(m_domAgent->nodeForId(it->key)))
+            documentsToChange.add(&element->document());
     }
 
     m_nodeIdToForcedPseudoState.clear();

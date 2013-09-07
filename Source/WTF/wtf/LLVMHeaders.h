@@ -28,13 +28,15 @@
 
 #include <wtf/Platform.h>
 
-#if HAVE(LLVM) && ENABLE(FTL_JIT) && 0
+#if HAVE(LLVM)
 
 // It is necessary to include LLVM headers via this file, because:
 // - LLVM requires defining things that we don't normally define, and
 // - LLVM includes its C++ headers from its C headers, and its C++
 //   headers don't compile cleanly with our warnings.
 
+#undef __STDC_LIMIT_MACROS
+#undef __STDC_CONSTANT_MACROS
 #define __STDC_LIMIT_MACROS
 #define __STDC_CONSTANT_MACROS
 

@@ -24,7 +24,9 @@
  */
 
 WebInspector.Notification = {
-    GlobalModifierKeysDidChange: "global-modifiers-did-change"
+    GlobalModifierKeysDidChange: "global-modifiers-did-change",
+    PageArchiveStarted: "page-archive-started",
+    PageArchiveEnded: "page-archive-ended"
 };
 
 WebInspector.loaded = function()
@@ -74,6 +76,7 @@ WebInspector.loaded = function()
     this.cssStyleManager = new WebInspector.CSSStyleManager;
     this.logManager = new WebInspector.LogManager;
     this.issueManager = new WebInspector.IssueManager;
+    this.runtimeManager = new WebInspector.RuntimeManager;
     this.applicationCacheManager = new WebInspector.ApplicationCacheManager;
     this.timelineManager = new WebInspector.TimelineManager;
     this.profileManager = new WebInspector.ProfileManager;
@@ -1727,4 +1730,30 @@ WebInspector.revertDomChanges = function(domChanges)
             break;
         }
     }
+}
+
+WebInspector.archiveMainFrame = function()
+{
+    this.notifications.dispatchEventToListeners(WebInspector.Notification.PageArchiveStarted, event);
+
+    setTimeout(function() {
+        PageAgent.archive(function(error, data) {
+            this.notifications.dispatchEventToListeners(WebInspector.Notification.PageArchiveEnded, event);
+            if (error)
+                return;
+
+            var mainFrame = WebInspector.frameResourceManager.mainFrame;
+            var archiveName = mainFrame.mainResource.urlComponents.host || mainFrame.mainResource.displayName || "Archive";
+            var url = "web-inspector:///" + encodeURI(archiveName) + ".webarchive";
+            InspectorFrontendHost.save(url, data, true, true);
+        }.bind(this));
+    }.bind(this), 3000);
+}
+
+WebInspector.canArchiveMainFrame = function()
+{
+    if (!PageAgent.archive)
+        return false;
+
+    return WebInspector.Resource.Type.fromMIMEType(WebInspector.frameResourceManager.mainFrame.mainResource.mimeType) === WebInspector.Resource.Type.Document;
 }

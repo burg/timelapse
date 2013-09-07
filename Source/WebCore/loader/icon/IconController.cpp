@@ -82,7 +82,7 @@ IconURL IconController::iconURL(IconType iconType) const
 IconURLs IconController::urlsForTypes(int iconTypesMask)
 {
     IconURLs iconURLs;
-    if (m_frame->tree() && m_frame->tree()->parent())
+    if (m_frame->tree().parent())
         return iconURLs;
         
     if (iconTypesMask & Favicon && !appendToIconURLs(Favicon, &iconURLs))
@@ -136,7 +136,7 @@ void IconController::startLoader()
     if (!iconDatabase().isEnabled())
         return;
 
-    ASSERT(!m_frame->tree()->parent());
+    ASSERT(!m_frame->tree().parent());
     if (!documentCanHaveIcon(m_frame->document()->url()))
         return;
 
@@ -173,7 +173,7 @@ void IconController::startLoader()
         // icon is later read in from disk
         LOG(IconDatabase, "IconController %p might load icon %s later", this, urlString.ascii().data());
         m_waitingForLoadDecision = true;    
-        m_frame->loader().client()->registerForIconNotification();
+        m_frame->loader().client().registerForIconNotification();
         commitToDatabase(iconURL);
         return;
     }
@@ -225,11 +225,11 @@ void IconController::continueLoadWithDecision(IconLoadDecision iconLoadDecision)
         // Otherwise if the icon data *is* available, notify the delegate
         if (!iconDatabase().synchronousIconDataKnownForIconURL(urlString)) {
             LOG(IconDatabase, "Told not to load icon %s but icon data is not yet available - registering for notification and requesting load from disk", urlString.ascii().data());
-            m_frame->loader().client()->registerForIconNotification();
+            m_frame->loader().client().registerForIconNotification();
             iconDatabase().synchronousIconForPageURL(m_frame->document()->url().string(), IntSize(0, 0));
             iconDatabase().synchronousIconForPageURL(m_frame->loader().initialRequest().url().string(), IntSize(0, 0));
         } else
-            m_frame->loader().client()->dispatchDidReceiveIcon();
+            m_frame->loader().client().dispatchDidReceiveIcon();
 
         return;
     } 

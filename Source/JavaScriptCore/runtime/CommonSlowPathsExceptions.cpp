@@ -33,15 +33,16 @@
 
 namespace JSC { namespace CommonSlowPaths {
 
-void interpreterThrowInCaller(ExecState* exec, ReturnAddressPtr pc)
+void interpreterThrowInCaller(ExecState* exec, ReturnAddressPtr pc, JSObject* error)
 {
     VM* vm = &exec->vm();
     NativeCallFrameTracer tracer(vm, exec);
+    vm->throwException(exec, error);
 #if LLINT_SLOW_PATH_TRACING
-    dataLog("Throwing exception ", vm->exception, ".\n");
+    dataLog("Throwing exception ", vm->exception(), ".\n");
 #endif
-    genericThrow(
-        vm, exec, vm->exception,
+    genericUnwind(
+        vm, exec, vm->exception(),
         exec->codeBlock()->bytecodeOffset(exec, pc));
 }
 

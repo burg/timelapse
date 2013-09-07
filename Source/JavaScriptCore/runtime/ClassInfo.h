@@ -89,13 +89,10 @@ struct MethodTable {
     typedef bool (*CustomHasInstanceFunctionPtr)(JSObject*, ExecState*, JSValue);
     CustomHasInstanceFunctionPtr customHasInstance;
 
-    typedef void (*PutWithAttributesFunctionPtr)(JSObject*, ExecState*, PropertyName propertyName, JSValue, unsigned attributes);
-    PutWithAttributesFunctionPtr putDirectVirtual;
-
-    typedef bool (*DefineOwnPropertyFunctionPtr)(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool);
+    typedef bool (*DefineOwnPropertyFunctionPtr)(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool);
     DefineOwnPropertyFunctionPtr defineOwnProperty;
 
-    typedef void (*SlowDownAndWasteMemory)(JSArrayBufferView*);
+    typedef ArrayBuffer* (*SlowDownAndWasteMemory)(JSArrayBufferView*);
     SlowDownAndWasteMemory slowDownAndWasteMemory;
     
     typedef PassRefPtr<ArrayBufferView> (*GetTypedArrayImpl)(JSArrayBufferView*);
@@ -140,7 +137,6 @@ struct MethodTable {
         &ClassName::getPropertyNames, \
         &ClassName::className, \
         &ClassName::customHasInstance, \
-        &ClassName::putDirectVirtual, \
         &ClassName::defineOwnProperty, \
         &ClassName::slowDownAndWasteMemory, \
         &ClassName::getTypedArrayImpl \

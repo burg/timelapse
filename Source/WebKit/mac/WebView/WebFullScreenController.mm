@@ -58,7 +58,7 @@ static IntRect screenRectOfContents(Element* element)
     if (element->renderer() && element->renderer()->hasLayer() && element->renderer()->enclosingLayer()->isComposited()) {
         FloatQuad contentsBox = static_cast<FloatRect>(element->renderer()->enclosingLayer()->backing()->contentsBox());
         contentsBox = element->renderer()->localToAbsoluteQuad(contentsBox);
-        return element->renderer()->view()->frameView()->contentsToScreen(contentsBox.enclosingBoundingBox());
+        return element->renderer()->view().frameView().contentsToScreen(contentsBox.enclosingBoundingBox());
     }
     return element->screenRect();
 }
@@ -290,7 +290,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 {
     if (!_element)
         return;
-    _element->document()->webkitCancelFullScreen();
+    _element->document().webkitCancelFullScreen();
 }
 
 - (void)exitFullScreen
@@ -435,7 +435,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 
 - (Document*)_document 
 {
-    return _element->document();
+    return &_element->document();
 }
 
 - (void)_swapView:(NSView*)view with:(NSView*)otherView

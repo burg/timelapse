@@ -40,16 +40,20 @@
 #include "CodeBlock.h"
 #include "CodeProfiling.h"
 #include "CommonSlowPaths.h"
+#include "DFGCompilationMode.h"
+#include "DFGDriver.h"
 #include "DFGOSREntry.h"
 #include "DFGWorklist.h"
 #include "Debugger.h"
 #include "DeferGC.h"
+#include "ErrorInstance.h"
 #include "ExceptionHelpers.h"
 #include "GetterSetter.h"
 #include "Heap.h"
 #include <wtf/InlineASM.h>
 #include "JIT.h"
 #include "JITExceptions.h"
+#include "JITToDFGDeferredCompilationCallback.h"
 #include "JSActivation.h"
 #include "JSArray.h"
 #include "JSFunction.h"
@@ -324,7 +328,7 @@ struct StackHack {
 // handling code out of line as possible.
 static NEVER_INLINE void returnToThrowTrampoline(VM* vm, ReturnAddressPtr exceptionLocation, ReturnAddressPtr& returnAddressSlot)
 {
-    RELEASE_ASSERT(vm->exception);
+    RELEASE_ASSERT(vm->exception());
     vm->exceptionLocation = exceptionLocation;
     returnAddressSlot = ReturnAddressPtr(FunctionPtr(ctiVMThrowTrampoline));
 }
@@ -341,17 +345,17 @@ static NEVER_INLINE void returnToThrowTrampoline(VM* vm, ReturnAddressPtr except
 
 #define CHECK_FOR_EXCEPTION() \
     do { \
-        if (UNLIKELY(stackFrame.vm->exception)) \
+        if (UNLIKELY(stackFrame.vm->exception())) \
             VM_THROW_EXCEPTION(); \
     } while (0)
 #define CHECK_FOR_EXCEPTION_AT_END() \
     do { \
-        if (UNLIKELY(stackFrame.vm->exception)) \
+        if (UNLIKELY(stackFrame.vm->exception())) \
             VM_THROW_EXCEPTION_AT_END(); \
     } while (0)
 #define CHECK_FOR_EXCEPTION_VOID() \
     do { \
-        if (UNLIKELY(stackFrame.vm->exception)) { \
+        if (UNLIKELY(stackFrame.vm->exception())) { \
             VM_THROW_EXCEPTION_AT_END(); \
             return; \
         } \
@@ -397,41 +401,19 @@ private:
     JSValue m_callee;
 };
 
-class ErrorWithExceptionFunctor : public ErrorFunctor {
-    public:
-    ErrorWithExceptionFunctor(JSValue exception)
-        : m_exception(exception)
-    {
-    }
-    JSValue operator()(ExecState*)
-    {
-    return m_exception;
-    }
-
-private:
-    JSValue m_exception;
-};
-
 // Helper function for JIT stubs that may throw an exception in the middle of
 // processing a function call. This function rolls back the stack to
 // our caller, so exception processing can proceed from a valid state.
-template<typename T> static T throwExceptionFromOpCall(JITStackFrame& jitStackFrame, CallFrame* newCallFrame, ReturnAddressPtr& returnAddressSlot, ErrorFunctor& createError )
+template<typename T> static T throwExceptionFromOpCall(JITStackFrame& jitStackFrame, CallFrame* newCallFrame, ReturnAddressPtr& returnAddressSlot, ErrorFunctor* createError = 0)
 {
     CallFrame* callFrame = newCallFrame->callerFrame()->removeHostCallFrameFlag();
     jitStackFrame.callFrame = callFrame;
     callFrame->vm().topCallFrame = callFrame;
-    callFrame->vm().exception = createError(callFrame);
-    ASSERT(callFrame->vm().exception);
+    if (createError)
+        callFrame->vm().throwException(callFrame, (*createError)(callFrame));
+    ASSERT(callFrame->vm().exception());
     returnToThrowTrampoline(&callFrame->vm(), ReturnAddressPtr(newCallFrame->returnPC()), returnAddressSlot);
     return T();
-}
-
-template<typename T> static T throwExceptionFromOpCall(JITStackFrame& jitStackFrame, CallFrame* newCallFrame, ReturnAddressPtr& returnAddressSlot)
-{
-    CallFrame* callFrame = newCallFrame->callerFrame();
-    ASSERT(callFrame->vm().exception);
-    ErrorWithExceptionFunctor functor = ErrorWithExceptionFunctor(callFrame->vm().exception);
-    return throwExceptionFromOpCall<T>(jitStackFrame, newCallFrame, returnAddressSlot, functor);
 }
 
 // If the CPU specific header does not provide an implementation, use the default one here.
@@ -445,7 +427,7 @@ DEFINE_STUB_FUNCTION(void, handle_watchdog_timer)
     CallFrame* callFrame = stackFrame.callFrame;
     VM* vm = stackFrame.vm;
     if (UNLIKELY(vm->watchdog.didFire(callFrame))) {
-        vm->exception = createTerminatedExecutionException(vm);
+        vm->throwException(callFrame, createTerminatedExecutionException(vm));
         VM_THROW_EXCEPTION_AT_END();
         return;
     }
@@ -458,7 +440,7 @@ DEFINE_STUB_FUNCTION(void*, stack_check)
 
     if (UNLIKELY(!stackFrame.stack->grow(&callFrame->registers()[callFrame->codeBlock()->m_numCalleeRegisters]))) {
         ErrorWithExecFunctor functor = ErrorWithExecFunctor(createStackOverflowError);
-        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS, functor);
+        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
     }
 
     return callFrame;
@@ -607,7 +589,7 @@ DEFINE_STUB_FUNCTION(JSObject*, op_put_by_id_transition_realloc)
     JSObject* base = asObject(baseValue);
     VM& vm = *stackFrame.vm;
     Butterfly* butterfly = base->growOutOfLineStorage(vm, oldSize, newSize);
-    base->setButterfly(vm, butterfly, newStructure);
+    base->setStructureAndButterfly(vm, newStructure, butterfly);
 
     return base;
 }
@@ -894,7 +876,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_check_has_instance)
         }
     }
 
-    stackFrame.vm->exception = createInvalidParameterError(callFrame, "instanceof", baseVal);
+    stackFrame.vm->throwException(callFrame, createInvalidParameterError(callFrame, "instanceof", baseVal));
     VM_THROW_EXCEPTION_AT_END();
     return JSValue::encode(JSValue());
 }
@@ -926,6 +908,7 @@ DEFINE_STUB_FUNCTION(void, optimize)
     
     CallFrame* callFrame = stackFrame.callFrame;
     CodeBlock* codeBlock = callFrame->codeBlock();
+    VM& vm = callFrame->vm();
     unsigned bytecodeIndex = stackFrame.args[0].int32();
 
     if (bytecodeIndex) {
@@ -965,12 +948,12 @@ DEFINE_STUB_FUNCTION(void, optimize)
     // We cannot be in the process of asynchronous compilation and also have an optimized
     // replacement.
     ASSERT(
-        !stackFrame.vm->worklist
-        || !(stackFrame.vm->worklist->compilationState(codeBlock) != DFG::Worklist::NotKnown
+        !vm.worklist
+        || !(vm.worklist->compilationState(DFG::CompilationKey(codeBlock, DFG::DFGMode)) != DFG::Worklist::NotKnown
              && codeBlock->hasOptimizedReplacement()));
     
     DFG::Worklist::State worklistState;
-    if (stackFrame.vm->worklist) {
+    if (vm.worklist) {
         // The call to DFG::Worklist::completeAllReadyPlansForVM() will complete all ready
         // (i.e. compiled) code blocks. But if it completes ours, we also need to know
         // what the result was so that we don't plow ahead and attempt OSR or immediate
@@ -990,8 +973,8 @@ DEFINE_STUB_FUNCTION(void, optimize)
         // possible in order to minimize the chances of us executing baseline code after
         // optimized code is already available.
         
-        worklistState =
-            stackFrame.vm->worklist->completeAllReadyPlansForVM(*stackFrame.vm, codeBlock);
+        worklistState = vm.worklist->completeAllReadyPlansForVM(
+            vm, DFG::CompilationKey(codeBlock, DFG::DFGMode));
     } else
         worklistState = DFG::Worklist::NotKnown;
     
@@ -1019,7 +1002,7 @@ DEFINE_STUB_FUNCTION(void, optimize)
         if (Options::verboseOSR())
             dataLog("Considering OSR ", *codeBlock, " -> ", *codeBlock->replacement(), ".\n");
         // If we have an optimized replacement, then it must be the case that we entered
-        // cti_optimize from a loop. That's because is there's an optimized replacement,
+        // cti_optimize from a loop. That's because if there's an optimized replacement,
         // then all calls to this function will be relinked to the replacement and so
         // the prologue OSR will never fire.
         
@@ -1053,31 +1036,39 @@ DEFINE_STUB_FUNCTION(void, optimize)
         if (Options::verboseOSR())
             dataLog("Triggering optimized compilation of ", *codeBlock, "\n");
         
-        JSScope* scope = callFrame->scope();
-        CompilationResult result;
-        JSObject* error = codeBlock->compileOptimized(callFrame, scope, result, bytecodeIndex);
-        if (Options::verboseOSR()) {
-            dataLog("Optimizing compilation of ", *codeBlock, " result: ", result, "\n");
-            if (error)
-                dataLog("WARNING: optimized compilation failed with a JS error.\n");
+        unsigned numVarsWithValues;
+        if (bytecodeIndex)
+            numVarsWithValues = codeBlock->m_numVars;
+        else
+            numVarsWithValues = 0;
+        Operands<JSValue> mustHandleValues(
+            codeBlock->numParameters(), numVarsWithValues);
+        for (size_t i = 0; i < mustHandleValues.size(); ++i) {
+            int operand = mustHandleValues.operandForIndex(i);
+            if (operandIsArgument(operand)
+                && !operandToArgument(operand)
+                && codeBlock->codeType() == FunctionCode
+                && codeBlock->specializationKind() == CodeForConstruct) {
+                // Ugh. If we're in a constructor, the 'this' argument may hold garbage. It will
+                // also never be used. It doesn't matter what we put into the value for this,
+                // but it has to be an actual value that can be grokked by subsequent DFG passes,
+                // so we sanitize it here by turning it into Undefined.
+                mustHandleValues[i] = jsUndefined();
+            } else
+                mustHandleValues[i] = callFrame->uncheckedR(operand).jsValue();
         }
         
-        codeBlock->setOptimizationThresholdBasedOnCompilationResult(result);
+        CompilationResult result = DFG::compile(
+            vm, codeBlock->newReplacement().get(), DFG::DFGMode, bytecodeIndex,
+            mustHandleValues, JITToDFGDeferredCompilationCallback::create(),
+            vm.ensureWorklist());
+        
         if (result != CompilationSuccessful)
             return;
     }
     
     CodeBlock* optimizedCodeBlock = codeBlock->replacement();
     ASSERT(JITCode::isOptimizingJIT(optimizedCodeBlock->jitType()));
-    
-    if (optimizedCodeBlock->jitType() == JITCode::FTLJIT) {
-        // FTL JIT doesn't support OSR entry yet.
-        // https://bugs.webkit.org/show_bug.cgi?id=113625
-        
-        // Don't attempt OSR entry again.
-        codeBlock->dontOptimizeAnytimeSoon();
-        return;
-    }
     
     if (void* address = DFG::prepareOSREntry(callFrame, optimizedCodeBlock, bytecodeIndex)) {
         if (Options::verboseOSR()) {
@@ -1152,7 +1143,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_del_by_id)
     bool couldDelete = baseObj->methodTable()->deleteProperty(baseObj, callFrame, stackFrame.args[1].identifier());
     JSValue result = jsBoolean(couldDelete);
     if (!couldDelete && callFrame->codeBlock()->isStrictMode())
-        stackFrame.vm->exception = createTypeError(stackFrame.callFrame, "Unable to delete property.");
+        stackFrame.vm->throwException(stackFrame.callFrame, createTypeError(stackFrame.callFrame, "Unable to delete property."));
 
     CHECK_FOR_EXCEPTION_AT_END();
     return JSValue::encode(result);
@@ -1189,10 +1180,10 @@ inline void* jitCompileFor(CallFrame* callFrame, CodeSpecializationKind kind)
     ASSERT(!function->isHostFunction());
     FunctionExecutable* executable = function->jsExecutable();
     JSScope* callDataScopeChain = function->scope();
-    JSObject* error = executable->compileFor(callFrame, callDataScopeChain, kind);
+    JSObject* error = executable->prepareForExecution(callFrame, callDataScopeChain, kind);
     if (!error)
         return function;
-    callFrame->vm().exception = error;
+    callFrame->vm().throwException(callFrame, error);
     return 0;
 }
 
@@ -1239,7 +1230,7 @@ DEFINE_STUB_FUNCTION(int, op_call_arityCheck)
     int missingArgCount = CommonSlowPaths::arityCheckFor(callFrame, stackFrame.stack, CodeForCall);
     if (missingArgCount < 0) {
         ErrorWithExecFunctor functor = ErrorWithExecFunctor(createStackOverflowError);
-        return throwExceptionFromOpCall<int>(stackFrame, callFrame, STUB_RETURN_ADDRESS, functor);
+        return throwExceptionFromOpCall<int>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
     }
     return missingArgCount;
 }
@@ -1253,7 +1244,7 @@ DEFINE_STUB_FUNCTION(int, op_construct_arityCheck)
     int missingArgCount = CommonSlowPaths::arityCheckFor(callFrame, stackFrame.stack, CodeForConstruct);
     if (missingArgCount < 0) {
         ErrorWithExecFunctor functor = ErrorWithExecFunctor(createStackOverflowError);
-        return throwExceptionFromOpCall<int>(stackFrame, callFrame, STUB_RETURN_ADDRESS, functor);
+        return throwExceptionFromOpCall<int>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
     }
     return missingArgCount;
 }
@@ -1288,11 +1279,11 @@ inline void* lazyLinkFor(CallFrame* callFrame, CodeSpecializationKind kind)
         codePtr = executable->generatedJITCodeFor(kind)->addressForCall();
     else {
         FunctionExecutable* functionExecutable = static_cast<FunctionExecutable*>(executable);
-        if (JSObject* error = functionExecutable->compileFor(callFrame, callee->scope(), kind)) {
-            callFrame->vm().exception = error;
+        if (JSObject* error = functionExecutable->prepareForExecution(callFrame, callee->scope(), kind)) {
+            callFrame->vm().throwException(callFrame, error);
             return 0;
         }
-        codeBlock = &functionExecutable->generatedBytecodeFor(kind);
+        codeBlock = functionExecutable->codeBlockFor(kind);
         if (callFrame->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters())
             || callLinkInfo->callType == CallLinkInfo::CallVarargs)
             codePtr = functionExecutable->generatedJITCodeWithArityCheckFor(kind);
@@ -1351,7 +1342,7 @@ DEFINE_STUB_FUNCTION(void*, vm_lazyLinkClosureCall)
         ASSERT(executable->hasJITCodeForCall());
         codePtr = executable->generatedJITCodeForCall()->addressForCall();
         if (!callee->executable()->isHostFunction()) {
-            calleeCodeBlock = &jsCast<FunctionExecutable*>(executable)->generatedBytecodeForCall();
+            calleeCodeBlock = jsCast<FunctionExecutable*>(executable)->codeBlockForCall();
             if (callFrame->argumentCountIncludingThis() < static_cast<size_t>(calleeCodeBlock->numParameters())) {
                 shouldLink = false;
                 codePtr = executable->generatedJITCodeWithArityCheckFor(CodeForCall);
@@ -1365,9 +1356,9 @@ DEFINE_STUB_FUNCTION(void*, vm_lazyLinkClosureCall)
         
         FunctionExecutable* functionExecutable = jsCast<FunctionExecutable*>(executable);
         JSScope* scopeChain = callee->scope();
-        JSObject* error = functionExecutable->compileFor(callFrame, scopeChain, CodeForCall);
+        JSObject* error = functionExecutable->prepareForExecution(callFrame, scopeChain, CodeForCall);
         if (error) {
-            callFrame->vm().exception = error;
+            callFrame->vm().throwException(callFrame, error);
             return 0;
         }
         
@@ -1421,7 +1412,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_NotJSFunction)
     if (callType != CallTypeHost) {
         ASSERT(callType == CallTypeNone);
         ErrorWithExecAndCalleeFunctor functor = ErrorWithExecAndCalleeFunctor(createNotAFunctionError, callee);
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS, functor);
+        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
     }
 
     EncodedJSValue returnValue;
@@ -1430,7 +1421,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_NotJSFunction)
         returnValue = callData.native.function(callFrame);
     }
 
-    if (stackFrame.vm->exception)
+    if (stackFrame.vm->exception())
         return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
 
     return returnValue;
@@ -1517,7 +1508,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_construct_NotJSConstruct)
     if (constructType != ConstructTypeHost) {
         ASSERT(constructType == ConstructTypeNone);
         ErrorWithExecAndCalleeFunctor functor = ErrorWithExecAndCalleeFunctor(createNotAConstructorError, callee);
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS, functor);
+        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
     }
 
     EncodedJSValue returnValue;
@@ -1526,7 +1517,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_construct_NotJSConstruct)
         returnValue = constructData.native.function(callFrame);
     }
 
-    if (stackFrame.vm->exception)
+    if (stackFrame.vm->exception())
         return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
 
     return returnValue;
@@ -1666,7 +1657,7 @@ static void putByVal(CallFrame* callFrame, JSValue baseValue, JSValue subscript,
         baseValue.put(callFrame, jsCast<NameInstance*>(subscript.asCell())->privateName(), value, slot);
     } else {
         Identifier property(callFrame, subscript.toString(callFrame)->value(callFrame));
-        if (!callFrame->vm().exception) { // Don't put to an object if toString threw an exception.
+        if (!callFrame->vm().exception()) { // Don't put to an object if toString threw an exception.
             PutPropertySlot slot(callFrame->codeBlock()->isStrictMode());
             baseValue.put(callFrame, property, value, slot);
         }
@@ -1952,7 +1943,7 @@ DEFINE_STUB_FUNCTION(JSObject*, op_new_regexp)
 
     RegExp* regExp = stackFrame.args[0].regExp();
     if (!regExp->isValid()) {
-        stackFrame.vm->exception = createSyntaxError(callFrame, "Invalid flags supplied to RegExp constructor.");
+        stackFrame.vm->throwException(callFrame, createSyntaxError(callFrame, "Invalid flags supplied to RegExp constructor."));
         VM_THROW_EXCEPTION();
     }
 
@@ -1977,7 +1968,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_eval)
         return JSValue::encode(JSValue());
 
     JSValue result = eval(callFrame);
-    if (stackFrame.vm->exception)
+    if (stackFrame.vm->exception())
         return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
 
     return JSValue::encode(result);
@@ -1986,6 +1977,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_eval)
 DEFINE_STUB_FUNCTION(void*, op_throw)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
+    stackFrame.vm->throwException(stackFrame.callFrame, stackFrame.args[0].jsValue()); 
     ExceptionHandler handler = jitThrow(stackFrame.vm, stackFrame.callFrame, stackFrame.args[0].jsValue(), STUB_RETURN_ADDRESS);
     STUB_SET_RETURN_ADDRESS(handler.catchRoutine);
     return handler.callFrame;
@@ -2141,9 +2133,9 @@ DEFINE_STUB_FUNCTION(void, op_throw_static_error)
     CallFrame* callFrame = stackFrame.callFrame;
     String message = errorDescriptionForValue(callFrame, stackFrame.args[0].jsValue())->value(callFrame);
     if (stackFrame.args[1].asInt32)
-        stackFrame.vm->exception = createReferenceError(callFrame, message);
+        stackFrame.vm->throwException(callFrame, createReferenceError(callFrame, message));
     else
-        stackFrame.vm->exception = createTypeError(callFrame, message);
+        stackFrame.vm->throwException(callFrame, createTypeError(callFrame, message));
     VM_THROW_EXCEPTION_AT_END();
 }
 
@@ -2165,7 +2157,7 @@ DEFINE_STUB_FUNCTION(void*, vm_throw)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
     VM* vm = stackFrame.vm;
-    ExceptionHandler handler = jitThrow(vm, stackFrame.callFrame, vm->exception, vm->exceptionLocation);
+    ExceptionHandler handler = jitThrow(vm, stackFrame.callFrame, vm->exception(), vm->exceptionLocation);
     STUB_SET_RETURN_ADDRESS(handler.catchRoutine);
     return handler.callFrame;
 }
@@ -2181,7 +2173,7 @@ EncodedExceptionHandler JIT_STUB cti_vm_handle_exception(CallFrame* callFrame)
 
     VM* vm = callFrame->codeBlock()->vm();
     vm->topCallFrame = callFrame;
-    return encode(jitThrowNew(vm, callFrame, vm->exception));
+    return encode(jitThrowNew(vm, callFrame, vm->exception()));
 }
 #else
 ExceptionHandler JIT_STUB cti_vm_handle_exception(CallFrame* callFrame)
@@ -2194,7 +2186,7 @@ ExceptionHandler JIT_STUB cti_vm_handle_exception(CallFrame* callFrame)
 
     VM* vm = callFrame->codeBlock()->vm();
     vm->topCallFrame = callFrame;
-    return jitThrowNew(vm, callFrame, vm->exception);
+    return jitThrowNew(vm, callFrame, vm->exception());
 }
 #endif
 
@@ -2229,7 +2221,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_get_from_scope)
     PropertySlot slot(scope);
     if (!scope->getPropertySlot(exec, ident, slot)) {
         if (modeAndType.mode() == ThrowIfNotFound) {
-            throwError(exec, createUndefinedVariableError(exec, ident));
+            exec->vm().throwException(exec, createUndefinedVariableError(exec, ident));
             VM_THROW_EXCEPTION();
         }
         return JSValue::encode(jsUndefined());
@@ -2261,13 +2253,18 @@ DEFINE_STUB_FUNCTION(void, op_put_to_scope)
     ResolveModeAndType modeAndType = ResolveModeAndType(pc[4].u.operand);
 
     if (modeAndType.mode() == ThrowIfNotFound && !scope->hasProperty(exec, ident)) {
-        throwError(exec, createUndefinedVariableError(exec, ident));
+        exec->vm().throwException(exec, createUndefinedVariableError(exec, ident));
         VM_THROW_EXCEPTION_AT_END();
         return;
     }
 
     PutPropertySlot slot(codeBlock->isStrictMode());
     scope->methodTable()->put(scope, exec, ident, value, slot);
+    
+    if (exec->vm().exception()) {
+        VM_THROW_EXCEPTION_AT_END();
+        return;
+    }
 
     // Covers implicit globals. Since they don't exist until they first execute, we didn't know how to cache them at compile time.
     if (modeAndType.type() == GlobalProperty || modeAndType.type() == GlobalPropertyWithVarInjectionChecks) {

@@ -1,3 +1,646 @@
+2013-09-06  Alberto Garcia  <berto@igalia.com>
+
+        [GTK] GlibUtilities: getCurrentExecutablePath() does not compile on GNU/Hurd
+        https://bugs.webkit.org/show_bug.cgi?id=120793
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Original patch by Svante Signell <svante.signell@telia.com>.
+
+        PATH_MAX is not defined in GNU/Hurd, this patch adds a dummy
+        implementation to make it compile.
+
+        * wtf/gobject/GlibUtilities.cpp:
+        (getCurrentExecutablePath):
+
+2013-09-05  Dan Bernstein  <mitz@apple.com>
+
+        INSTALL_PATH_PREFIX is used even when not installing
+        https://bugs.webkit.org/show_bug.cgi?id=120810
+
+        Reviewed by Andy Estes.
+
+        * Configurations/CopyWTFHeaders.xcconfig: Removed INSTALL_PATH_PREFIX from
+        the definition of PRIVATE_HEADERS_FOLDER_PATH. Also removed the leading
+        slash, because the Xcode definition of this build setting is relative.
+        * WTF.xcodeproj/project.pbxproj: Prepend INSTALL_PATH_PREFIX here when installing.
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Fix build with older versions of clang from Xcode.
+
+        * wtf/Compiler.h:
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Make Vector::uncheckedAppend work with move-only types
+        https://bugs.webkit.org/show_bug.cgi?id=120799
+
+        Reviewed by Andreas Kling.
+
+        * wtf/Vector.h:
+        (WTF::::uncheckedAppend):
+        Use std::forward to invoke the move constructor when possible.
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Add COMPILER_SUPPORTS(CXX_AUTO_TYPE) and #error if it's 0
+        https://bugs.webkit.org/show_bug.cgi?id=120794
+
+        Reviewed by Andreas Kling.
+
+        People have already begun using C++11 auto in WebCore, so let's make it a prerequisite.
+
+        * wtf/Compiler.h:
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Clean up wtf/Compiler.h
+        https://bugs.webkit.org/show_bug.cgi?id=120790
+
+        Reviewed by Andreas Kling.
+
+        - Get rid of the CLANG_PRAGMA define, it's not used anywhere.
+        - Remove a workaround for a bug in the version of clang that came with Xcode 4.2.
+        - Replace WTF_COMPILER_SUPPORTS_CXX_FINAL_CONTROL with a compiler quirk for versions of clang
+          that have a buggy final implementation and fix a bug in the macro where final would be disabled
+          for versions of clang where __clang_minor__ is less than 2, regardless of the major version.
+        - Fail if someone tries to compile the WebKit stack with a compiler that doesn't support rvalue
+          references or static_assert.
+
+        * wtf/Compiler.h:
+
+2013-09-05  Anders Carlsson  <andersca@apple.com>
+
+        Change StringBuffer back to not use an OwnPtr in an attempt to fix ports.
+        
+        * wtf/text/StringBuffer.h:
+
+2013-09-04  Anders Carlsson  <andersca@apple.com>
+
+        Vector::releaseBuffer should return an OwnPtr
+        https://bugs.webkit.org/show_bug.cgi?id=120718
+
+        Reviewed by Andreas Kling.
+
+        Change Vector::releaseBuffer() to return an OwnPtr. I intentionally chose
+        to use an OwnPtr over a PassOwnPtr since we're trying to move away from PassOwnPtr objects.
+        
+        Fix fallout from this change by adopting OwnPtr/PassOwnPtr in StringBuffer and the two StringImpl
+        constructors that adopt the passed in pointer.
+
+        * wtf/Vector.h:
+        * wtf/text/StringBuffer.h:
+        * wtf/text/StringImpl.h:
+
+2013-09-05  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Remove String(RefPtr<StringImpl>) constructor
+        https://bugs.webkit.org/show_bug.cgi?id=120767
+
+        Reviewed by Anders Carlsson.
+
+        The String(RefPtr<StringImpl>) constructor should be removed for the following reasons:
+        - It almost does not have clients, so it is unneeded.
+        - RefPtr should never be passed by value
+
+        * wtf/text/StringBuilder.cpp:
+        (WTF::StringBuilder::shrinkToFit):
+        * wtf/text/WTFString.h:
+
+2013-09-05  Jaehun Lim  <ljaehun.lim@samsung.com>
+
+        Unreviewed. Fix build after r155083
+
+        Source/WTF/wtf/Vector.h:1210:48: error: ‘>>’ should be ‘> >’ within a nested template argument list
+
+        * wtf/Vector.h: Add missing space.
+
+2013-09-04  Mark Rowe  <mrowe@apple.com>
+
+        Fix AutodrainedPool.h to compile without errors under ARC.
+
+        Rubber-stamped by Anders Carlsson.
+
+        * wtf/AutodrainedPool.h: Some versions of Clang complain about any use of NSAutoreleasePool under ARC.
+        Change the type of the member variable to id to work around this. Since the implementation file is compiled
+        under manual reference counting, everything will work fine.
+
+2013-09-04  Anders Carlsson  <andersca@apple.com>
+
+        De-indent Vector.h.
+
+        Rubber-stamped by Andreas Kling.
+        
+        I'm cleaning up Vector and making it work with move-only objects, and the namespace WTF
+        indentation is driving me crazy.
+
+        * wtf/Vector.h:
+
+2013-09-03  Filip Pizlo  <fpizlo@apple.com>
+
+        CodeBlock memory cost reporting should be rationalized
+        https://bugs.webkit.org/show_bug.cgi?id=120615
+
+        Reviewed by Darin Adler.
+
+        * wtf/RefCountedArray.h:
+        (WTF::RefCountedArray::refCount):
+
+2013-09-03  Enrica Casucci  <enrica@apple.com>
+
+        Follow up to http://trac.webkit.org/changeset/155014
+
+        Reviewed by Alexey Proskuryakov.
+
+        In the r155014 I renamed hasLineBreakingPropertyComplexContext
+        to requiresComplexContextForWordBreaking but forgot to
+        make the same change in UnicodeWchar.h.
+
+        * wtf/unicode/wchar/UnicodeWchar.cpp:
+        (WTF::Unicode::requiresComplexContextForWordBreaking):
+        * wtf/unicode/wchar/UnicodeWchar.h:
+
+2013-09-03  Enrica Casucci  <enrica@apple.com>
+
+        Can't select Katakana word by double-clicking.
+        <rdar://problem/14654926>
+
+        Reviewed by Alexey Proskuryakov and Ryosuke Niwa.
+
+        For some languages, like Japanese we need
+        to use more context for word breaking.
+        I've renamed the function to better reflect its use
+        and remove the unused hasLineBreakingPropertyComplexContextOrIdeographic.
+
+        * wtf/unicode/icu/UnicodeIcu.h:
+        (WTF::Unicode::requiresComplexContextForWordBreaking):
+
+2013-09-03  Andreas Kling  <akling@apple.com>
+
+        Support Vector<Ref<T>>.
+        <https://webkit.org/b/120637>
+
+        Reviewed by Antti Koivisto.
+
+        Add a Ref(const T&) constructor to enable Vector<Ref<T>>. This looks a bit awkward
+        but is necessary for Vector::append(const T&) to find a constructor.
+
+        An alternative would be to add something like std::vector::emplace_back, but I can't
+        think of a good name for that, and it'd be nice if append() would "just work."
+
+        Also add operator->(). I initially excluded this because I felt it made for
+        unsafe-looking code. Things quickly got out of hand with .get() everywhere though.
+
+        IMO -> looks OK as long as it's only used on the first link in a dereference chain,
+        as that variable and its type will be "in context."
+
+        * wtf/Ref.h:
+        (WTF::Ref::Ref):
+        (WTF::Ref::~Ref):
+        (WTF::Ref::operator->):
+        (WTF::Ref::get):
+        * wtf/VectorTraits.h:
+
+            Add simple traits for Ref<T> so it can be moved around freely by Vector.
+
+2013-09-03  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Check WTF::VectorFiller template argument type size in compile time
+        https://bugs.webkit.org/show_bug.cgi?id=120631
+
+        Reviewed by Darin Adler.
+
+        The template argument's type size in WTF::VectorFiller 'memset' specialization
+        should be checked during compilation rather than in runtime.
+
+        * wtf/Vector.h:
+
+2013-09-02  Darin Adler  <darin@apple.com>
+
+        Cut down on double hashing and code needlessly using hash table iterators
+        https://bugs.webkit.org/show_bug.cgi?id=120611
+
+        Reviewed by Andreas Kling.
+
+        Double hashing is common in code that needs to combine a remove with some
+        action to only be done if the code is removed. The only way to avoid it is
+        to write code using find and a hash table iterator. To help with this, add
+        a boolean return value to remove functions to indicate if anything was removed.
+
+        Double hashing also happens in code that does a get followed by a remove.
+        The take function is helpful in this case. To help with this, add a takeFirst
+        funciton to ListHashSet.
+
+        * wtf/HashCountedSet.h:
+        (WTF::HashCountedSet::removeAll): Added a boolean return value, analogous to the one
+        that the HashCountedSet::remove function already has.
+
+        * wtf/HashMap.h:
+        (WTF::HashMap::remove): Added a boolean return value, true if something was removed.
+        * wtf/HashSet.h:
+        (WTF::HashSet::remove): Ditto.
+        * wtf/RefPtrHashMap.h:
+        (WTF::RefPtrHashMap::remove): Ditto.
+
+        * wtf/ListHashSet.h:
+        (WTF::ListHashSet::takeFirst): Added.
+        (WTF::ListHashSet::takeLast): Added.
+        (WTF::ListHashSet::remove): Added a boolean return value, true if something was removed.
+
+        * wtf/WTFThreadData.h:
+        (JSC::IdentifierTable::remove): Use the new remove return value to get rid of most of
+        the code in this function.
+
+2013-09-02  David Kilzer  <ddkilzer@apple.com>
+
+        Remove duplicate entries found by Xcode in WTF project
+
+        Platform.h was duplicated in r111778 after being added in
+        r111504.
+
+        A dangling reference to Ref.h was added in r154962.
+
+        * WTF.xcodeproj/project.pbxproj: Remove duplicate entries for
+        Platform.h and Ref.h.
+
+2013-09-02  Andreas Kling  <akling@apple.com>
+
+        Actually add Ref.h
+
+2013-09-02  Darin Adler  <darin@apple.com>
+
+        [Mac] No need for HardAutorelease, which is same as CFBridgingRelease
+        https://bugs.webkit.org/show_bug.cgi?id=120569
+
+        Reviewed by Andy Estes.
+
+        * wtf/ObjcRuntimeExtras.h: Added a FIXME about miscapitalization of ObjC.
+        Deleted HardAutorelease.
+        (wtfObjcMsgSend): Dropped the use of abbreviations in local class and argument names.
+        (wtfCallIMP): Ditto.
+
+2013-09-01  Andreas Kling  <akling@apple.com>
+
+        Ref: A smart pointer for the reference age.
+        <https://webkit.org/b/120570>
+
+        Reviewed by Antti Koivisto.
+
+        Add a very simple simple Ref<T> smart pointer class that is never null.
+        It's initialized by passing a T& to the constructor and cannot be assigned to.
+
+        operator-> is not overloaded, to prevent unsafe-looking code.
+        The value is extracted by "T& get()", since C++ does not let you override operator.()
+
+        * wtf/Ref.h:
+
+2013-08-30  Oliver Hunt  <oliver@apple.com>
+
+        Make JSValue bool conversion less dangerous
+        https://bugs.webkit.org/show_bug.cgi?id=120505
+
+        Reviewed by Darin Adler.
+
+        Make LIKELY and UNLIKELY macros coerce to bool before
+        passing to expect.
+
+        * wtf/Compiler.h:
+
+2013-08-30  Antti Koivisto  <antti@apple.com>
+
+        Remove code behind ENABLE(DIALOG_ELEMENT)
+        https://bugs.webkit.org/show_bug.cgi?id=120467
+
+        Reviewed by Darin Adler.
+
+        * wtf/FeatureDefines.h:
+
+2013-08-29  Sam Weinig  <sam@webkit.org>
+
+        Add ENABLE guards for Promises
+        https://bugs.webkit.org/show_bug.cgi?id=120488
+
+        Reviewed by Andreas Kling.
+
+        * wtf/FeatureDefines.h:
+
+2013-08-28  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Add support for building JSC with FTL JIT enabled
+        https://bugs.webkit.org/show_bug.cgi?id=120270
+
+        Reviewed by Filip Pizlo.
+
+        * wtf/Platform.h: Define ENABLE_FTL_JIT to the value of 1 for the GTK port if building for the x86-64
+        architecture with LLVM present and the define not being previously defined. This is applicable when
+        configuring the Automake build with '--enable-ftl-jit=auto'.
+
+2013-08-27  Arunprasad Rajkumar  <arurajku@cisco.com>
+
+        Replace currentTime() with monotonicallyIncreasingTime() in WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=119958
+
+        Reviewed by Alexey Proskuryakov.
+
+        WTF::currentTime() is prone to NTP and manual adjustments, so use
+        WTF::monotonicallyIncreasingTime() to measure elapsed time.
+
+        It is a continuation of r154201.
+
+        * wtf/CurrentTime.h: Edited comment.
+
+2013-08-27  Andre Moreira Magalhaes   <andre.magalhaes@collabora.co.uk>
+
+        [gstreamer] Make sure gstreamer source element is thread-safe
+        https://bugs.webkit.org/show_bug.cgi?id=115352
+
+        Reviewed by Philippe Normand.
+
+        Add convenience class that simplifies locking and unlocking a GMutex.
+
+        * GNUmakefile.list.am:
+        * wtf/gobject/GMutexLocker.h: Added.
+        (WebCore::GMutexLocker::GMutexLocker):
+        (WebCore::GMutexLocker::~GMutexLocker):
+        (WebCore::GMutexLocker::lock):
+        (WebCore::GMutexLocker::unlock):
+        (WebCore::GMutexLocker::mutex):
+
+2013-08-26  Andy Estes  <aestes@apple.com>
+
+        Don't leak objects in HardAutorelease when OBJC_NO_GC is undefined but
+        Objective-C GC is disabled at runtime.
+        
+        Reviewed by Darin Adler.
+
+        * wtf/ObjcRuntimeExtras.h:
+        (HardAutorelease):
+
+2013-08-23  Andy Estes  <aestes@apple.com>
+
+        Fix issues found by the Clang Static Analyzer
+        https://bugs.webkit.org/show_bug.cgi?id=120230
+
+        Reviewed by Darin Adler.
+
+        * wtf/ObjcRuntimeExtras.h:
+        (HardAutorelease): Added a canonical implementation of HardAutorelease.
+
+2013-08-26  Zan Dobersek  <zdobersek@igalia.com>
+
+        Undefine __STDC_LIMIT_MACROS and __STDC_CONSTANT_MACROS before redefining them
+        https://bugs.webkit.org/show_bug.cgi?id=120313
+
+        Reviewed by Darin Adler.
+
+        * wtf/LLVMHeaders.h: Undefine the two macros before they are defined again.
+        This way we avoid the compilation-time warnings about the macros being invalidly redefined.
+
+2013-08-26  Oliver Hunt  <oliver@apple.com>
+
+        Building is so overrated.
+
+        * wtf/Compression.cpp:
+        (WTF::GenericCompressedData::decompress):
+
+2013-08-26  Oliver Hunt  <oliver@apple.com>
+
+        Disable compression under MSVC for now as we're getting
+        weird release-only failures.
+
+        * wtf/Compression.cpp:
+
+2013-08-24  Benjamin Poulain  <benjamin@webkit.org>
+
+        Save three bytes per CStringBuffer object
+        https://bugs.webkit.org/show_bug.cgi?id=120040
+
+        Reviewed by Darin Adler.
+
+        Merge https://chromium.googlesource.com/chromium/blink/+/894ae8eafdb64912aefd8f9c809f4ccda84f3b89
+
+        sizeof(CStringBuffer) was rounded up to 8 on account of struct size and
+        alignment rules. This is clearly not what was intended.
+
+        * wtf/text/CString.cpp:
+        (WTF::CStringBuffer::createUninitialized):
+        * wtf/text/CString.h:
+        (WTF::CStringBuffer::data):
+        (WTF::CStringBuffer::mutableData):
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        RetainPtr lacks move constructor for case when argument is a RetainPtr of a different type
+        https://bugs.webkit.org/show_bug.cgi?id=120255
+
+        Reviewed by Andreas Kling.
+
+        * wtf/RetainPtr.h: Added missing move constructor, modeled on the other move constructor,
+        and the one from RetPtr.
+
+2013-08-24  Oliver Hunt  <oliver@apple.com>
+
+        Make the world build.
+
+        * wtf/Compression.h:
+
+2013-08-24  Oliver Hunt  <oliver@apple.com>
+
+        REGRESSION(r154498): Crashes on EFL, GTK, Qt on release configurations
+        https://bugs.webkit.org/show_bug.cgi?id=120246
+
+        Reviewed by Antti Koivisto.
+
+        Undestroy all the platforms that don't use the global new overload
+
+        * wtf/Compression.h:
+
+2013-08-21  Mark Rowe  <mrowe@apple.com>
+
+        <https://webkit.org/b/120141> Make RetainPtr work with ARC.
+
+        Have RetainPtr store the object its managing as a CFTypeRef and manage its lifetime with
+        CFRetain / CFRelease. This is necessary to have explicit control over the lifetime of
+        Objective-C objects when automatic reference counting is in use. Two helper methods are
+        introduced to convert between the pointer type that the RetainPtr manages and the CFTypeRef
+        that the pointer is stored as. For CF types and Objective-C types with ARC disabled,
+        these methods are simply casts. For Objective-C types under ARC they need to use the
+        special bridging casts to keep the compiler happy.
+
+        Reviewed by Anders Carlsson.
+
+        * wtf/RetainPtr.h:
+        (WTF::RetainPtr::RetainPtr): Use the helper methods to convert to and from the storage
+        types when necessary.
+        (WTF::RetainPtr::~RetainPtr): Ditto.
+        (WTF::RetainPtr::get): Ditto.
+        (WTF::RetainPtr::operator->): Ditto.
+        (WTF::RetainPtr::operator PtrType): Ditto.
+        (WTF::::RetainPtr): Ditto.
+        (WTF::::clear): Ditto.
+        (WTF::::leakRef): Ditto.
+        (WTF::=): Ditto.
+
+        (WTF::RetainPtr::fromStorageTypeHelper): Use crazy template magic to determine whether to use
+        a bridging cast or not depending on the desired return type.
+        (WTF::RetainPtr::fromStorageType):
+        (WTF::RetainPtr::toStorageType): Overloading is sufficient here.
+
+2013-08-21  Mark Rowe  <mrowe@apple.com>
+
+        Revert r153637.
+
+        It didn't work with ARC like it said it would. We'll need to take a slightly different approach.
+
+        Rubber-stamped by Anders Carlsson.
+
+        * wtf/RetainPtr.h:
+        (WTF::RetainPtr::RetainPtr):
+        (WTF::RetainPtr::~RetainPtr):
+        (WTF::RetainPtr::operator UnspecifiedBoolType):
+        (WTF::::RetainPtr):
+        (WTF::::clear):
+        (WTF::=):
+        (WTF::adoptCF):
+        (WTF::adoptNS):
+
+2013-08-23  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build correction after r154513.
+
+        * WTF.vcxproj/build-generated-files.sh: Variable was missing '$' character.
+
+2013-08-23  Darin Adler  <darin@apple.com>
+
+        Cut down repeated code in RefPtr and RetainPtr by using copy/move-and-swap for assignment operators
+        https://bugs.webkit.org/show_bug.cgi?id=120223
+
+        Reviewed by Anders Carlsson.
+
+        * wtf/RefPtr.h: Switch to copy-and-swap in the assignment operators. The move ones already were done
+        that way.
+        * wtf/RetainPtr.h: Ditto, except for the move ones too.
+
+2013-08-23  Oliver Hunt  <oliver@apple.com>
+
+        Add more validation logic to CompressibleVector
+        https://bugs.webkit.org/show_bug.cgi?id=120227
+
+        Reviewed by Brent Fulgham.
+
+        Add a pile of assertions to try on catch whatever is going wrong
+        in the windows environment or other platforms.
+
+        * wtf/Compression.cpp:
+        (WTF::GenericCompressedData::create):
+        (WTF::GenericCompressedData::decompress):
+        * wtf/Compression.h:
+        (WTF::CompressedVector::decompress):
+
+2013-08-23  Alex Christensen  <achristensen@apple.com>
+
+        Re-separating Win32 and Win64 builds.
+        https://bugs.webkit.org/show_bug.cgi?id=120178
+
+        Reviewed by Brent Fulgham.
+
+        * WTF.vcxproj/WTFGenerated.make:
+        Pass PlatformArchitecture as a command line parameter to bash scripts.
+        * WTF.vcxproj/build-generated-files.sh:
+        Use PlatformArchitecture from command line to determine which object directory to use (obj32 or obj64).
+
+2013-08-22  Filip Pizlo  <fpizlo@apple.com>
+
+        build-jsc --ftl-jit should work
+        https://bugs.webkit.org/show_bug.cgi?id=120194
+
+        Reviewed by Oliver Hunt.
+
+        * wtf/LLVMHeaders.h: I don't know what went wrong here. If HAVE(LLVM), then we need those headers!
+
+2013-08-23  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build correction after r154498.
+
+        * WTF.vcxproj/WTF.vcxproj.filters: Adjust files so they show up
+        in the proper folders.
+        * WTF.vcxproj/WTFCommon.props: Add search path for zlib header and
+        include link directive.
+
+2013-08-23  Oliver Hunt  <oliver@apple.com>
+
+        Attempt to appease windows bot.
+
+        * wtf/Compression.h:
+
+2013-08-23  Oliver Hunt  <oliver@apple.com>
+
+        Re-sort xcode project file
+
+        * WTF.xcodeproj/project.pbxproj:
+
+2013-08-23  Oliver Hunt  <oliver@apple.com>
+
+        Support in memory compression of rarely used data
+        https://bugs.webkit.org/show_bug.cgi?id=120143
+
+        Reviewed by Gavin Barraclough.
+
+        Adds a set of utility functions to wrap the use of zlib over a generic
+        type or a Vector<> as well as adding CompressibleVector that wraps
+        either a Vector<> or compressed data.
+
+        * GNUmakefile.list.am:
+        * WTF.pro:
+        * WTF.vcxproj/WTF.vcxproj:
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CMakeLists.txt:
+        * wtf/CheckedArithmetic.h:
+        * wtf/Compression.cpp: Added.
+        (WTF::zAlloc):
+        (WTF::zFree):
+        (WTF::GenericCompressedData::create):
+        (WTF::GenericCompressedData::decompress):
+        * wtf/Compression.h: Added.
+        (WTF::GenericCompressedData::compressedSize):
+        (WTF::GenericCompressedData::originalSize):
+        (WTF::GenericCompressedData::GenericCompressedData):
+        (WTF::CompressedVector::create):
+        (WTF::CompressedVector::decompress):
+        (WTF::CompressedVector::size):
+        (WTF::CompressibleVector::CompressibleVector):
+        (WTF::CompressibleVector::shrinkToFit):
+        (WTF::CompressibleVector::size):
+        (WTF::CompressibleVector::operator[]):
+        (WTF::CompressibleVector::at):
+        (WTF::CompressibleVector::begin):
+        (WTF::CompressibleVector::end):
+        (WTF::CompressibleVector::data):
+        (WTF::CompressibleVector::decompressIfNecessary):
+
+2013-08-21  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r154416.
+        http://trac.webkit.org/changeset/154416
+        https://bugs.webkit.org/show_bug.cgi?id=120147
+
+        Broke Windows builds (Requested by rniwa on #webkit).
+
+        * WTF.vcxproj/WTFGenerated.make:
+        * WTF.vcxproj/build-generated-files.sh:
+
+2013-08-21  Alex Christensen  <achristensen@apple.com>
+
+        <https://webkit.org/b/120137> Separating Win32 and Win64 builds.
+
+        Reviewed by Brent Fulgham.
+
+        * WTF.vcxproj/WTFGenerated.make:
+        Pass PlatformArchitecture as a command line parameter to bash scripts.
+        * WTF.vcxproj/build-generated-files.sh:
+        Use PlatformArchitecture from command line to determine which object directory to use (obj32 or obj64).
+
 2013-08-21  Allan Sandfeld Jensen  <allan.jensen@digia.com>
 
         Disable maybe-uninitialized warning in GCC 4.8

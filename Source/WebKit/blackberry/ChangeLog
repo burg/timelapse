@@ -1,3 +1,84 @@
+2013-08-30  Antti Koivisto  <antti@apple.com>
+
+        Remove code behind ENABLE(DIALOG_ELEMENT)
+        https://bugs.webkit.org/show_bug.cgi?id=120467
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/AboutDataEnableFeatures.in:
+
+2013-08-29  Jacky Jiang  <zhajiang@blackberry.com>
+
+        [BlackBerry] Scrolling text with FCC does not work while composing an email
+        https://bugs.webkit.org/show_bug.cgi?id=120493
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Gen Mak and Konrad Piascik.
+
+        JIRA 468007
+        m_cannotScrollIfHasFloatLayoutSizeRoundingError was true which prevented
+        FCC scrolling.
+        TransformedActualVisibleSize is quite different in email compose card
+        than browser. In this case, the issue was caused by transformedActualVisibleSize(768, 750)
+        which was not the actual visible size of the webkit part of the Cascades
+        view when keyboard popped up. We usually don't do keyboard adaptation for
+        windowless page clients; therefore, there will be no viewport change of
+        WebKit.
+        To fix the bug, we can ignore the windowless page clients.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::hasFloatLayoutSizeRoundingError):
+
+2013-08-27  Jacky Jiang  <zhajiang@blackberry.com>
+
+        [BlackBerry] Rotate device from landscape to portrait during youtube streaming will cause device screen flash with video list page
+        https://bugs.webkit.org/show_bug.cgi?id=120364
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Arvid Nilsson.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::setViewportSize):
+        (BlackBerry::WebKit::WebPagePrivate::discardLayerVisibilities):
+        (BlackBerry::WebKit::WebPagePrivate::discardFrontVisibilityCompositingThread):
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::discardFrontVisibility):
+        * Api/WebPageCompositor_p.h:
+        * Api/WebPage_p.h:
+        * WebKitSupport/FrameLayers.cpp:
+        (BlackBerry::WebKit::FrameLayers::discardBackVisibility):
+        * WebKitSupport/FrameLayers.h:
+
+2013-08-26  Pratik Solanki  <psolanki@apple.com>
+
+        PageGroup::groupSettings() should return a reference
+        https://bugs.webkit.org/show_bug.cgi?id=120319
+
+        Reviewed by Andreas Kling.
+
+        PageGroup::m_groupSettings is never NULL so we can just return a reference from groupSettings().
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::didChangeSettings):
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        Frame::tree should return a reference instead of a pointer
+        https://bugs.webkit.org/show_bug.cgi?id=120259
+
+        Reviewed by Andreas Kling.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::closeURLRecursively):
+        (BlackBerry::WebKit::enableCrossSiteXHRRecursively):
+        (BlackBerry::WebKit::WebPagePrivate::setScreenOrientation):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::createFrame):
+        * WebKitSupport/DOMSupport.cpp:
+        (BlackBerry::WebKit::DOMSupport::convertPointToFrame):
+        (BlackBerry::WebKit::DOMSupport::incrementFrame):
+        Use tree(). instead of tree()->.
+
 2013-08-20  Pratik Solanki  <psolanki@apple.com>
 
         <https://webkit.org/b/120029> Document::markers() should return a reference

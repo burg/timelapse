@@ -12,4 +12,6 @@ var result = 0;
 for (var i = 0; i < 100; ++i)
     result += marsaglia(i, i + 1, 1000000);
 
-print(result);
+if (result != 8216386243)
+    throw "Error: bad result: " + result;
+

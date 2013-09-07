@@ -110,7 +110,7 @@ RetainPtr<CFDataRef> WebFrameNetworkingContext::sourceApplicationAuditData() con
 
 ResourceError WebFrameNetworkingContext::blockedError(const ResourceRequest& request) const
 {
-    return frame()->loader().client()->blockedError(request);
+    return frame()->loader().client().blockedError(request);
 }
 
 NetworkStorageSession& WebFrameNetworkingContext::storageSession() const
@@ -123,4 +123,12 @@ NetworkStorageSession& WebFrameNetworkingContext::storageSession() const
     return NetworkStorageSession::defaultStorageSession();
 }
     
+WebFrameLoaderClient* WebFrameNetworkingContext::webFrameLoaderClient() const
+{
+    if (!frame())
+        return 0;
+
+    return toWebFrameLoaderClient(frame()->loader().client());
+}
+
 }

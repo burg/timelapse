@@ -426,9 +426,8 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(Node* node, FrameFilter* f
     ASSERT(node);
     if (!node)
         return create();
-        
-    Document* document = node->document();
-    Frame* frame = document ? document->frame() : 0;
+
+    Frame* frame = node->document().frame();
     if (!frame)
         return create();
 
@@ -445,7 +444,7 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(Node* node, FrameFilter* f
     String markupString = createMarkup(node, IncludeNode, &nodeList, DoNotResolveURLs, tagNamesToFilter.get());
     Node::NodeType nodeType = node->nodeType();
     if (nodeType != Node::DOCUMENT_NODE && nodeType != Node::DOCUMENT_TYPE_NODE)
-        markupString = frame->documentTypeString() + markupString;
+        markupString = documentTypeString(node->document()) + markupString;
 
     return create(markupString, frame, nodeList, filter);
 }
@@ -461,9 +460,9 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(Frame* frame)
         
     Vector<PassRefPtr<LegacyWebArchive> > subframeArchives;
     
-    unsigned children = frame->tree()->childCount();
+    unsigned children = frame->tree().childCount();
     for (unsigned i = 0; i < children; ++i) {
-        RefPtr<LegacyWebArchive> childFrameArchive = create(frame->tree()->child(i));
+        RefPtr<LegacyWebArchive> childFrameArchive = create(frame->tree().child(i));
         if (childFrameArchive)
             subframeArchives.append(childFrameArchive.release());
     }
@@ -483,18 +482,16 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(Range* range)
     if (!startContainer)
         return 0;
         
-    Document* document = startContainer->document();
-    if (!document)
-        return 0;
-        
-    Frame* frame = document->frame();
+    Document& document = startContainer->document();
+
+    Frame* frame = document.frame();
     if (!frame)
         return 0;
     
     Vector<Node*> nodeList;
     
     // FIXME: This is always "for interchange". Is that right? See the previous method.
-    String markupString = frame->documentTypeString() + createMarkup(range, &nodeList, AnnotateForInterchange);
+    String markupString = documentTypeString(document) + createMarkup(range, &nodeList, AnnotateForInterchange);
 
     return create(markupString, frame, nodeList, 0);
 }
@@ -511,7 +508,7 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString
     if (responseURL.isNull())
         responseURL = KURL(ParsedURLString, emptyString());
         
-    PassRefPtr<ArchiveResource> mainResource = ArchiveResource::create(utf8Buffer(markupString), responseURL, response.mimeType(), "UTF-8", frame->tree()->uniqueName());
+    RefPtr<ArchiveResource> mainResource = ArchiveResource::create(utf8Buffer(markupString), responseURL, response.mimeType(), "UTF-8", frame->tree().uniqueName());
 
     Vector<PassRefPtr<LegacyWebArchive> > subframeArchives;
     Vector<PassRefPtr<ArchiveResource> > subresources;
@@ -531,7 +528,7 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString
             if (subframeArchive)
                 subframeArchives.append(subframeArchive);
             else
-                LOG_ERROR("Unabled to archive subframe %s", childFrame->tree()->uniqueName().string().utf8().data());
+                LOG_ERROR("Unabled to archive subframe %s", childFrame->tree().uniqueName().string().utf8().data());
         } else {
             ListHashSet<KURL> subresourceURLs;
             node->getSubresourceURLs(subresourceURLs);
@@ -582,21 +579,25 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString
         }
     }
 
-    return create(mainResource, subresources, subframeArchives);
+    return create(mainResource.release(), subresources, subframeArchives);
 }
 
 PassRefPtr<LegacyWebArchive> LegacyWebArchive::createFromSelection(Frame* frame)
 {
     if (!frame)
         return 0;
-    
+
+    Document* document = frame->document();
+    if (!document)
+        return 0;
+
     RefPtr<Range> selectionRange = frame->selection().toNormalizedRange();
     Vector<Node*> nodeList;
-    String markupString = frame->documentTypeString() + createMarkup(selectionRange.get(), &nodeList, AnnotateForInterchange);
-    
+    String markupString = documentTypeString(*document) + createMarkup(selectionRange.get(), &nodeList, AnnotateForInterchange);
+
     RefPtr<LegacyWebArchive> archive = create(markupString, frame, nodeList, 0);
     
-    if (!frame->document() || !frame->document()->isFrameSet())
+    if (!document->isFrameSet())
         return archive.release();
         
     // Wrap the frameset document in an iframe so it can be pasted into

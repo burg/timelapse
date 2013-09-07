@@ -30,7 +30,7 @@
 #include "FlowThreadController.h"
 #include "InlineTextBox.h"
 #include "InspectorInstrumentation.h"
-#include "NodeRenderingContext.h"
+#include "NodeRenderingTraversal.h"
 #include "NodeTraversal.h"
 #include "Position.h"
 #include "Range.h"
@@ -38,6 +38,7 @@
 #include "RenderRegion.h"
 #include "RenderText.h"
 #include "RenderView.h"
+#include "ShadowRoot.h"
 #include "Text.h"
 #include "WebKitNamedFlow.h"
 
@@ -81,7 +82,7 @@ void RenderNamedFlowThread::clearContentNodes()
         
         ASSERT(contentNode && contentNode->isElementNode());
         ASSERT(contentNode->inNamedFlow());
-        ASSERT(contentNode->document() == document());
+        ASSERT(&contentNode->document() == &document());
         
         contentNode->clearInNamedFlow();
     }
@@ -411,7 +412,7 @@ void RenderNamedFlowThread::addDependencyOnFlowThread(RenderNamedFlowThread* oth
     RenderNamedFlowThreadCountedSet::AddResult result = m_layoutBeforeThreadsSet.add(otherFlowThread);
     if (result.isNewEntry) {
         // This is the first time we see this dependency. Make sure we recalculate all the dependencies.
-        view()->flowThreadController()->setIsRenderNamedFlowThreadOrderDirty(true);
+        view().flowThreadController().setIsRenderNamedFlowThreadOrderDirty(true);
     }
 }
 
@@ -420,7 +421,7 @@ void RenderNamedFlowThread::removeDependencyOnFlowThread(RenderNamedFlowThread* 
     bool removed = m_layoutBeforeThreadsSet.remove(otherFlowThread);
     if (removed) {
         checkInvalidRegions();
-        view()->flowThreadController()->setIsRenderNamedFlowThreadOrderDirty(true);
+        view().flowThreadController().setIsRenderNamedFlowThreadOrderDirty(true);
     }
 }
 
@@ -441,7 +442,7 @@ void RenderNamedFlowThread::pushDependencies(RenderNamedFlowThreadList& list)
 void RenderNamedFlowThread::registerNamedFlowContentNode(Node* contentNode)
 {
     ASSERT(contentNode && contentNode->isElementNode());
-    ASSERT(contentNode->document() == document());
+    ASSERT(&contentNode->document() == &document());
 
     contentNode->setInNamedFlow();
 
@@ -464,7 +465,7 @@ void RenderNamedFlowThread::unregisterNamedFlowContentNode(Node* contentNode)
     ASSERT(contentNode && contentNode->isElementNode());
     ASSERT(m_contentNodes.contains(contentNode));
     ASSERT(contentNode->inNamedFlow());
-    ASSERT(contentNode->document() == document());
+    ASSERT(&contentNode->document() == &document());
 
     contentNode->clearInNamedFlow();
     m_contentNodes.remove(contentNode);
@@ -480,24 +481,22 @@ const AtomicString& RenderNamedFlowThread::flowThreadName() const
 
 bool RenderNamedFlowThread::isChildAllowed(RenderObject* child, RenderStyle* style) const
 {
-    ASSERT(child);
-    ASSERT(style);
-
     if (!child->node())
         return true;
 
     ASSERT(child->node()->isElementNode());
-    RenderObject* parentRenderer = NodeRenderingContext(child->node()).parentRenderer();
-    if (!parentRenderer)
+    Node* originalParent = NodeRenderingTraversal::parent(child->node());
+
+    if (!originalParent || !originalParent->renderer())
         return true;
 
-    return parentRenderer->isChildAllowed(child, style);
+    return originalParent->renderer()->isChildAllowed(child, style);
 }
 
 void RenderNamedFlowThread::dispatchRegionLayoutUpdateEvent()
 {
     RenderFlowThread::dispatchRegionLayoutUpdateEvent();
-    InspectorInstrumentation::didUpdateRegionLayout(document(), m_namedFlow.get());
+    InspectorInstrumentation::didUpdateRegionLayout(&document(), m_namedFlow.get());
 
     if (!m_regionLayoutUpdateEventTimer.isActive() && m_namedFlow->hasEventListeners())
         m_regionLayoutUpdateEventTimer.startOneShot(0);
@@ -506,7 +505,7 @@ void RenderNamedFlowThread::dispatchRegionLayoutUpdateEvent()
 void RenderNamedFlowThread::dispatchRegionOversetChangeEvent()
 {
     RenderFlowThread::dispatchRegionOversetChangeEvent();
-    InspectorInstrumentation::didChangeRegionOverset(document(), m_namedFlow.get());
+    InspectorInstrumentation::didChangeRegionOverset(&document(), m_namedFlow.get());
     
     if (!m_regionOversetChangeEventTimer.isActive() && m_namedFlow->hasEventListeners())
         m_regionOversetChangeEventTimer.startOneShot(0);
@@ -599,7 +598,7 @@ void RenderNamedFlowThread::getRanges(Vector<RefPtr<Range> >& rangeObjects, cons
         if (!contentNode->renderer())
             continue;
 
-        RefPtr<Range> range = Range::create(contentNode->document());
+        RefPtr<Range> range = Range::create(&contentNode->document());
         bool foundStartPosition = false;
         bool startsAboveRegion = true;
         bool endsBelowRegion = true;
@@ -640,7 +639,7 @@ void RenderNamedFlowThread::getRanges(Vector<RefPtr<Range> >& rangeObjects, cons
                         if (range->intersectsNode(node, IGNORE_EXCEPTION))
                             range->setEndBefore(node, IGNORE_EXCEPTION);
                         rangeObjects.append(range->cloneRange(IGNORE_EXCEPTION));
-                        range = Range::create(contentNode->document());
+                        range = Range::create(&contentNode->document());
                         startsAboveRegion = true;
                     } else
                         skipOverOutsideNodes = true;

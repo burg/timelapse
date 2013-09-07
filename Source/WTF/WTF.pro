@@ -34,6 +34,7 @@ HEADERS += \
     ByteOrder.h \
     CheckedArithmetic.h \
     Compiler.h \
+    Compression.h \
     CryptographicallyRandomNumber.h \
     CurrentTime.h \
     DateMath.h \
@@ -84,6 +85,7 @@ HEADERS += \
     MessageQueue.h \
     MetaAllocator.h \
     MetaAllocatorHandle.h \
+    Ref.h \
     Noncopyable.h \
     NonCopyingSort.h \
     NotFound.h \
@@ -177,6 +179,7 @@ SOURCES += \
     Atomics.cpp \
     BitVector.cpp \
     CompilationThread.cpp \
+    Compression.cpp \
     CryptographicallyRandomNumber.cpp \
     CurrentTime.cpp \
     DateMath.cpp \

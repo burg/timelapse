@@ -152,7 +152,7 @@ bool isEditablePosition(const Position& p, EditableType editableType, EUpdateSty
     if (!node)
         return false;
     if (updateStyle == UpdateStyle)
-        node->document()->updateLayoutIgnorePendingStylesheets();
+        node->document().updateLayoutIgnorePendingStylesheets();
     else
         ASSERT(updateStyle == DoNotUpdateStyle);
 
@@ -1146,17 +1146,25 @@ int indexForVisiblePosition(const VisiblePosition& visiblePosition, RefPtr<Conta
         return 0;
 
     Position p(visiblePosition.deepEquivalent());
-    Document* document = p.anchorNode()->document();
+    Document& document = p.anchorNode()->document();
     ShadowRoot* shadowRoot = p.anchorNode()->containingShadowRoot();
 
     if (shadowRoot)
         scope = shadowRoot;
     else
-        scope = document->documentElement();
+        scope = document.documentElement();
 
-    RefPtr<Range> range = Range::create(document, firstPositionInNode(scope.get()), p.parentAnchoredEquivalent());
+    RefPtr<Range> range = Range::create(&document, firstPositionInNode(scope.get()), p.parentAnchoredEquivalent());
 
     return TextIterator::rangeLength(range.get(), true);
+}
+
+// FIXME: Merge these two functions.
+int indexForVisiblePosition(Node* node, const VisiblePosition& visiblePosition, bool forSelectionPreservation)
+{
+    ASSERT(node);
+    RefPtr<Range> range = Range::create(&node->document(), firstPositionInNode(node), visiblePosition.deepEquivalent().parentAnchoredEquivalent());
+    return TextIterator::rangeLength(range.get(), forSelectionPreservation);
 }
 
 VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
@@ -1167,6 +1175,20 @@ VisiblePosition visiblePositionForIndex(int index, ContainerNode* scope)
     if (!range)
         return VisiblePosition();
     return VisiblePosition(range->startPosition());
+}
+
+VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node* node, int index)
+{
+    ASSERT(node);
+    if (index <= 0)
+        return VisiblePosition(firstPositionInOrBeforeNode(node), DOWNSTREAM);
+
+    RefPtr<Range> range = Range::create(&node->document());
+    range->selectNodeContents(node, IGNORE_EXCEPTION);
+    CharacterIterator it(range.get());
+    it.advance(index - 1);
+
+    return VisiblePosition(Position(it.range()->endContainer(), it.range()->endOffset(), Position::PositionIsOffsetInAnchor), UPSTREAM);
 }
 
 // Determines whether two positions are visibly next to each other (first then second)

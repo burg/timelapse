@@ -1,3 +1,303 @@
+2013-08-30  Andreas Kling  <akling@apple.com>
+
+        Windows build fix for Document& Node::document().
+
+        * DOMCoreClasses.cpp:
+        (DOMNode::createInstance):
+
+2013-08-28  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] LayoutTests on Windows debug fails and exits early
+        https://bugs.webkit.org/show_bug.cgi?id=120438
+
+        Reviewed by Tim Horton.
+
+        Visual Studio mishandles char* containing utf8-content. Must manually
+        escape non-ASCII characters so the byte stream is correct for localized
+        string lookup.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::cannotShowURLError): Replace unicode apostrophe
+        character with utf8-byte equivalent.
+        (WebFrameLoaderClient::cannotShowMIMETypeError): Ditto.
+        (WebFrameLoaderClient::dispatchDidFailToStartPlugin): Ditto.
+
+2013-08-28  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Provide useful error messages for WebKitErrorDomain errors
+        https://bugs.webkit.org/show_bug.cgi?id=120428
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::cancelledError): Provide text for this error.
+        (WebFrameLoaderClient::blockedError): Hook up WEB_UI_STRING for this error.
+        (WebFrameLoaderClient::cannotShowURLError): Ditto
+        (WebFrameLoaderClient::interruptedForPolicyChangeError): Ditto
+        (WebFrameLoaderClient::cannotShowMIMETypeError): Ditto
+        (WebFrameLoaderClient::fileDoesNotExistError): Provide text for this error.
+        (WebFrameLoaderClient::pluginWillHandleLoadError): Hook up WEB_UI_STRING for this error.
+        (WebFrameLoaderClient::dispatchDidFailToStartPlugin): Ditto.
+        (WebFrameLoaderClient::createJavaAppletWidget): Ditto.
+        (WebFrameLoaderClient::webHistory): Remove blank line above method.
+
+2013-08-27  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Loader is not properly determining supported MIME types
+        https://bugs.webkit.org/show_bug.cgi?id=120383
+
+        Reviewed by Eric Carlson.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::canShowMIMEType): Modify to ask WebView if it can
+        display the media type. Use new helper function to avoid converting a String
+        to BSTR, only to immediatly be converted from BSTR back to String.
+        (WebFrameLoaderClient::canShowMIMETypeAsHTML): Ditto.
+        * WebView.cpp:
+        (WebView::canShowMIMEType): Move logic to a new (similarly named) helper function.
+        (WebView::canShowMIMETypeAsHTML): Ditto.
+        * WebView.h: Add declaration for two new helper functions.
+
+2013-08-26  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Another Windows build fix after r154658.
+
+        * WebView.cpp:
+        (WebView::shouldClose):
+
+2013-08-26  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Add missing interface files that were left out in r154627.
+
+        * Interfaces/Accessible2/AccessibleEditableText.idl: Added.
+        * Interfaces/Accessible2/AccessibleText.idl: Added.
+        * Interfaces/Accessible2/AccessibleText2.idl: Added.
+
+2013-08-26  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Let Page create the main Frame.
+        https://bugs.webkit.org/show_bug.cgi?id=120323
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::WebFrameLoaderClient): Remove assertion that frame
+        is passed as construction argument.
+        (WebFrameLoaderClient::createFrame): Call new 'createSubframeWithOwnerElement'
+        * WebCoreSupport/WebFrameLoaderClient.h: Update constructor to
+        handle case of no default frame argument.
+        (WebFrameLoaderClient::setWebFrame): Added.
+        * WebFrame.cpp:
+        (WebFrame::createSubframeWithOwnerElement): Renamed from 'init'.
+        (WebFrame::initWithWebFrameView): Added for new page-driven load path.
+        * WebFrame.h: Added new method signatures.
+        * WebView.cpp:
+        (WebView::initWithFrame): Update to match behavior of other ports.
+
+2013-08-23  Roger Fong  <roger_fong@apple.com>
+
+        <https://bugs.webkit.org/show_bug.cgi?id=119829> Add IAccessibleText and IAccessibleEditableText implementation.
+
+        Reviewed by Chris Fleizach.
+
+        Add IAccessibleText and IAccessibleEditableText interfaces and implementation to AppleWin port.
+
+        * AccessibleBase.cpp:
+        (AccessibleBase::createInstance): Create an AccessibleText instance when necessary.
+        (AccessibleBase::QueryService):
+        * AccessibleBase.h:
+        * AccessibleTextImpl.cpp: Added.
+        (AccessibleText::AccessibleText):
+        (AccessibleText::addSelection):
+        (AccessibleText::get_attributes): Not Implemented
+        (AccessibleText::get_caretOffset):
+        (AccessibleText::get_characterExtents):
+        (AccessibleText::get_nSelections):
+        (AccessibleText::get_offsetAtPoint):
+        (AccessibleText::get_selection):
+        (AccessibleText::get_text):
+        (AccessibleText::get_textBeforeOffset): Not Implemented
+        (AccessibleText::get_textAfterOffset): Not Implemented
+        (AccessibleText::get_textAtOffset): Not Implemented
+        (AccessibleText::removeSelection):
+        (AccessibleText::setCaretOffset):
+        (AccessibleText::setSelection):
+        (AccessibleText::get_nCharacters):
+        (AccessibleText::scrollSubstringTo):
+        (AccessibleText::scrollSubstringToPoint):
+        (AccessibleText::get_newText): Not Implemented
+        (AccessibleText::get_oldText): Not Implemented
+        (AccessibleText::get_attributeRange): Not Implemented
+        (AccessibleText::copyText):
+        (AccessibleText::deleteText):
+        (AccessibleText::insertText):
+        (AccessibleText::cutText):
+        (AccessibleText::pasteText):
+        (AccessibleText::replaceText):
+        (AccessibleText::setAttributes): Not Implemented
+        (AccessibleText::QueryInterface):
+        (AccessibleText::Release):
+        (AccessibleText::convertSpecialOffset):
+        (AccessibleText::initialCheck):
+        * AccessibleTextImpl.h: Added.
+        (AccessibleText::~AccessibleText):
+        (AccessibleText::AddRef):
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        Frame::tree should return a reference instead of a pointer
+        https://bugs.webkit.org/show_bug.cgi?id=120259
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::createFrame):
+        * WebFrame.cpp:
+        (WebFrame::name):
+        (WebFrame::findFrameNamed):
+        (WebFrame::parentFrame):
+        (EnumChildFrames::EnumChildFrames):
+        (EnumChildFrames::Next):
+        (EnumChildFrames::Skip):
+        (EnumChildFrames::Reset):
+        (WebFrame::isDescendantOfFrame):
+        (WebFrame::unmarkAllMisspellings):
+        (WebFrame::unmarkAllBadGrammar):
+        * WebView.cpp:
+        (WebView::initWithFrame):
+        (incrementFrame):
+        (WebView::clearMainFrameName):
+        Use tree(). instead of tree()->.
+
+2013-08-23  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Refactor WebFrame to compose with WebFrameLoaderClient
+        https://bugs.webkit.org/show_bug.cgi?id=120092
+
+        Reviewed by Anders Carlsson.
+
+        Revise WebFrame implementation on Windows to no longer subclass from
+        WebFrameLoaderClient, instead using a fully-functional WebFrameLoaderClient
+        as a helper object to perform the tasks, as is done in the other
+        ports. This is a step towards completing
+        https://bugs.webkit.org/show_bug.cgi?id=119964.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp: Add a new 'private data'
+        object to house the policy delegate and function.
+        (WebFrameLoaderClient::WebFramePolicyListenerPrivate::WebFramePolicyListenerPrivate):
+        Create the new private data object.
+        (WebFrameLoaderClient::WebFramePolicyListenerPrivate::~WebFramePolicyListenerPrivate):
+        Destroy the new private data object.
+        (WebFrameLoaderClient::WebFrameLoaderClient): Moved from WebFrame.cpp
+        (WebFrameLoaderClient::frameLoaderDestroyed): Ditto
+        (WebFrameLoaderClient::makeRepresentation): Ditto
+        (WebFrameLoaderClient::forceLayoutForNonHTML): Ditto
+        (WebFrameLoaderClient::setCopiesOnScroll): Ditto
+        (WebFrameLoaderClient::detachedFromParent2): Ditto
+        (WebFrameLoaderClient::detachedFromParent3): Ditto
+        (WebFrameLoaderClient::convertMainResourceLoadToDownload): Ditto
+        (WebFrameLoaderClient::dispatchDidLoadResourceFromMemoryCache): Ditto
+        (WebFrameLoaderClient::dispatchDidFailProvisionalLoad): Ditto
+        (WebFrameLoaderClient::dispatchDidFailLoad): Ditto
+        (WebFrameLoaderClient::dispatchDecidePolicyForResponse): Ditto
+        (WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction): Ditto
+        (WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction): Ditto
+        (WebFrameLoaderClient::dispatchUnableToImplementPolicy): Ditto
+        (WebFrameLoaderClient::dispatchWillSendSubmitEvent): Ditto
+        (WebFrameLoaderClient::dispatchWillSubmitForm): Ditto
+        (WebFrameLoaderClient::startDownload): Ditto
+        (WebFrameLoaderClient::willChangeTitle): Ditto
+        (WebFrameLoaderClient::didChangeTitle): Ditto
+        (WebFrameLoaderClient::cancelledError): Ditto
+        (WebFrameLoaderClient::blockedError): Ditto
+        (WebFrameLoaderClient::cannotShowURLError): Ditto
+        (WebFrameLoaderClient::interruptedForPolicyChangeError): Ditto
+        (WebFrameLoaderClient::cannotShowMIMETypeError): Ditto
+        (WebFrameLoaderClient::fileDoesNotExistError): Ditto
+        (WebFrameLoaderClient::pluginWillHandleLoadError): Ditto
+        (WebFrameLoaderClient::shouldFallBack): Ditto
+        (WebFrameLoaderClient::canHandleRequest): Ditto
+        (WebFrameLoaderClient::canShowMIMEType): Ditto
+        (WebFrameLoaderClient::canShowMIMETypeAsHTML): Ditto
+        (WebFrameLoaderClient::representationExistsForURLScheme): Ditto
+        (WebFrameLoaderClient::generatedMIMETypeForURLScheme): Ditto
+        (WebFrameLoaderClient::frameLoadCompleted): Ditto
+        (WebFrameLoaderClient::saveViewStateToItem): Ditto
+        (WebFrameLoaderClient::restoreViewState): Ditto
+        (WebFrameLoaderClient::provisionalLoadStarted): Ditto
+        (WebFrameLoaderClient::didFinishLoad): Ditto
+        (WebFrameLoaderClient::prepareForDataSourceReplacement): Ditto
+        (WebFrameLoaderClient::userAgent): Ditto
+        (WebFrameLoaderClient::objectContentType): Ditto
+        (WebFrameLoaderClient::createJavaAppletWidget): Ditto
+        (WebFrameLoaderClient::overrideMediaType): Ditto
+        (WebFrameLoaderClient::documentElementAvailable): Ditto
+        (WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld): Ditto
+        (WebFrameLoaderClient::registerForIconNotification): Ditto
+        (WebFrameLoaderClient::didPerformFirstNavigation): Ditto
+        (WebFrameLoaderClient::createNetworkingContext): Ditto
+        (WebFrameLoaderClient::shouldAlwaysUsePluginDocument): Ditto
+        (WebFrameLoaderClient::revertToProvisionalState): Ditto
+        (WebFrameLoaderClient::setMainFrameDocumentReady): Ditto
+        (WebFrameLoaderClient::cancelPolicyCheck): Ditto
+        (WebFrameLoaderClient::setUpPolicyListener): Ditto
+        (WebFrameLoaderClient::receivedPolicyDecision): Ditto
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        (WebFrameLoaderClient::webFrame): Add accessor method
+        * WebDataSource.cpp:
+        (WebDataSource::representation): Loader client is now
+        a WebFrameLoaderClient (not a WebFrame).
+        (WebDataSource::webFrame): Ditto
+        * WebElementPropertyBag.cpp:
+        (WebElementPropertyBag::Read): Loader client is now
+        a WebFrameLoaderClient (not a WebFrame)
+        * WebFrame.cpp:
+        (kit): Revise for WebFrameLoaderClient use.
+        (WebFrame::WebFramePrivate::WebFramePrivate): Remove
+        WebFramePolicyListener and FramePolicyFunction, since
+        they are no longer needed here. They were moved to
+        the WebFrameLoaderClient object.
+        (WebFrame::WebFrame): No longer inheriting from
+        WebFramePolicyListener.
+        (WebFrame::init): Frame::create now needs to be supplied
+        with a new WebFramePolicyListener, rather than 'this'
+        * WebFrame.h:
+        * WebFramePolicyListener.cpp:
+        (WebFramePolicyListener::receivedPolicyDecision): Loader
+        client is now a WebFramePolicyClient, not a WebFrame.
+
+2013-08-22  Andreas Kling  <akling@apple.com>
+
+        Another Windows build fix.
+
+        * WebDataSource.cpp:
+        (WebDataSource::subresourceForURL):
+
+2013-08-22  Andreas Kling  <akling@apple.com>
+
+        Windows build juice.
+
+        * WebDataSource.cpp:
+        (WebDataSource::representation):
+        (WebDataSource::webFrame):
+        * WebElementPropertyBag.cpp:
+        (WebElementPropertyBag::Read):
+        * WebFramePolicyListener.cpp:
+        (WebFramePolicyListener::receivedPolicyDecision):
+
+2013-08-21  Brent Fulgham  <bfulgham@apple.com>
+
+        <https://webkit.org/b/120125> [Windows] Correct Tooltip Text
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebChromeClient.cpp:
+        (WebChromeClient::runOpenPanel): Make sure valid strings are passed to the File Open
+        API call.
+        * WebView.cpp:
+        (WebView::setToolTip): Correct tooltip text (avoid passing address to temporary
+        return value.)
+
 2013-08-20  Brent Fulgham  <bfulgham@apple.com>
 
         <https://webkit.org/b/120098> [Windows] Enable the New Web Inspector

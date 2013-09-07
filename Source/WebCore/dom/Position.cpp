@@ -440,10 +440,10 @@ bool Position::atEditingBoundary() const
 
 Node* Position::parentEditingBoundary() const
 {
-    if (!m_anchorNode || !m_anchorNode->document())
+    if (!m_anchorNode)
         return 0;
 
-    Node* documentElement = m_anchorNode->document()->documentElement();
+    Node* documentElement = m_anchorNode->document().documentElement();
     if (!documentElement)
         return 0;
 
@@ -690,7 +690,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
                     otherBox = otherBox->nextLeafChild();
                     if (!otherBox)
                         break;
-                    if (otherBox == lastTextBox || (otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() > textOffset))
+                    if (otherBox == lastTextBox || (&otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() > textOffset))
                         continuesOnNextLine = false;
                 }
 
@@ -699,7 +699,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
                     otherBox = otherBox->prevLeafChild();
                     if (!otherBox)
                         break;
-                    if (otherBox == lastTextBox || (otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() > textOffset))
+                    if (otherBox == lastTextBox || (&otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() > textOffset))
                         continuesOnNextLine = false;
                 }
 
@@ -814,7 +814,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
                     otherBox = otherBox->nextLeafChild();
                     if (!otherBox)
                         break;
-                    if (otherBox == lastTextBox || (otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() >= textOffset))
+                    if (otherBox == lastTextBox || (&otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() >= textOffset))
                         continuesOnNextLine = false;
                 }
 
@@ -823,7 +823,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
                     otherBox = otherBox->prevLeafChild();
                     if (!otherBox)
                         break;
-                    if (otherBox == lastTextBox || (otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() >= textOffset))
+                    if (otherBox == lastTextBox || (&otherBox->renderer() == textRenderer && static_cast<InlineTextBox*>(otherBox)->start() >= textOffset))
                         continuesOnNextLine = false;
                 }
 

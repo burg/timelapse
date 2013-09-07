@@ -63,8 +63,7 @@ public:
 
     virtual void addMarkersToTextNode(Text* textNode, unsigned offsetOfInsertion, const String& textToBeInserted)
     {
-        Document* document = textNode->document();
-        DocumentMarkerController& markerController = document->markers();
+        DocumentMarkerController& markerController = textNode->document().markers();
         for (size_t i = 0; i < m_alternatives.size(); ++i) {
             const DictationAlternative& alternative = m_alternatives[i];
             markerController.addMarkerToNode(textNode, alternative.rangeStart + offsetOfInsertion, alternative.rangeLength, DocumentMarker::DictationAlternatives, DictationMarkerDetails::create(textToBeInserted.substring(alternative.rangeStart, alternative.rangeLength), alternative.dictationContext));
@@ -81,7 +80,7 @@ private:
     Vector<DictationAlternative> m_alternatives;
 };
 
-DictationCommand::DictationCommand(Document* document, const String& text, const Vector<DictationAlternative>& alternatives)
+DictationCommand::DictationCommand(Document& document, const String& text, const Vector<DictationAlternative>& alternatives)
     : TextInsertionBaseCommand(document)
     , m_textToInsert(text)
     , m_alternatives(alternatives)
@@ -99,11 +98,11 @@ void DictationCommand::insertText(Document* document, const String& text, const 
 
     RefPtr<DictationCommand> cmd;
     if (newText == text)
-        cmd = DictationCommand::create(document, newText, alternatives);
+        cmd = DictationCommand::create(*document, newText, alternatives);
     else
         // If the text was modified before insertion, the location of dictation alternatives
         // will not be valid anymore. We will just drop the alternatives.
-        cmd = DictationCommand::create(document, newText, Vector<DictationAlternative>());
+        cmd = DictationCommand::create(*document, newText, Vector<DictationAlternative>());
     applyTextInsertionCommand(frame.get(), cmd, selectionForInsertion, currentSelection);
 }
 

@@ -81,6 +81,7 @@ struct Ewk_Frame_Smart_Data {
 #ifdef EWK_FRAME_DEBUG
     Evas_Object* region;
 #endif
+    OwnPtr<WebCore::FrameLoaderClientEfl> frameLoaderClient;
     WebCore::Frame* frame;
     Ewk_Text_With_Direction title;
     const char* uri;
@@ -153,7 +154,7 @@ static inline void _ewk_frame_debug(Evas_Object* ewkFrame)
 
 static WebCore::FrameLoaderClientEfl* _ewk_frame_loader_efl_get(const WebCore::Frame* frame)
 {
-    return static_cast<WebCore::FrameLoaderClientEfl*>(frame->loader().client());
+    return &static_cast<WebCore::FrameLoaderClientEfl&>(frame->loader().client());
 }
 
 static Eina_Bool _ewk_frame_children_iterator_next(Eina_Iterator_Ewk_Frame* iterator, Evas_Object** data)
@@ -161,11 +162,8 @@ static Eina_Bool _ewk_frame_children_iterator_next(Eina_Iterator_Ewk_Frame* iter
     EWK_FRAME_SD_GET_OR_RETURN(iterator->object, smartData, false);
     EINA_SAFETY_ON_NULL_RETURN_VAL(smartData->frame, false);
 
-    WebCore::FrameTree* tree = smartData->frame->tree(); // check if it's still valid
-    EINA_SAFETY_ON_NULL_RETURN_VAL(tree, false);
-
-    if (iterator->currentIndex < tree->childCount()) {
-        *data = EWKPrivate::kitFrame(tree->child(iterator->currentIndex++));
+    if (iterator->currentIndex < smartData->frame->tree().childCount()) {
+        *data = EWKPrivate::kitFrame(smartData->frame->tree().child(iterator->currentIndex++));
         return true;
     }
 
@@ -332,7 +330,7 @@ Evas_Object* ewk_frame_child_find(Evas_Object* ewkFrame, const char* name)
     EINA_SAFETY_ON_NULL_RETURN_VAL(name, 0);
     EINA_SAFETY_ON_NULL_RETURN_VAL(smartData->frame, 0);
     WTF::String frameName = WTF::String::fromUTF8(name);
-    return EWKPrivate::kitFrame(smartData->frame->tree()->find(WTF::AtomicString(frameName)));
+    return EWKPrivate::kitFrame(smartData->frame->tree().find(WTF::AtomicString(frameName)));
 }
 
 Eina_Bool ewk_frame_uri_set(Evas_Object* ewkFrame, const char* uri)
@@ -366,7 +364,7 @@ const char* ewk_frame_name_get(const Evas_Object* ewkFrame)
         return 0;
     }
 
-    const WTF::String frameName = smartData->frame->tree()->uniqueName();
+    const WTF::String frameName = smartData->frame->tree().uniqueName();
 
     if ((smartData->name) && (smartData->name == frameName))
         return smartData->name;
@@ -720,9 +718,9 @@ Ewk_Hit_Test* ewk_frame_hit_test_new(const Evas_Object* ewkFrame, int x, int y)
     hitTest->title.string = eina_stringshare_add(result.title(direction).utf8().data());
     hitTest->title.direction = (direction == WebCore::LTR) ? EWK_TEXT_DIRECTION_LEFT_TO_RIGHT : EWK_TEXT_DIRECTION_RIGHT_TO_LEFT;
     hitTest->alternate_text = eina_stringshare_add(result.altDisplayString().utf8().data());
-    if (result.innerNonSharedNode() && result.innerNonSharedNode()->document()
-        && result.innerNonSharedNode()->document()->frame())
-        hitTest->frame = EWKPrivate::kitFrame(result.innerNonSharedNode()->document()->frame());
+    if (result.innerNonSharedNode()
+        && result.innerNonSharedNode()->document().frame())
+        hitTest->frame = EWKPrivate::kitFrame(result.innerNonSharedNode()->document().frame());
 
     hitTest->link.text = eina_stringshare_add(result.textContent().utf8().data());
     hitTest->link.url = eina_stringshare_add(result.absoluteLinkURL().string().utf8().data());
@@ -1105,20 +1103,19 @@ Evas_Object* ewk_frame_add(Evas* canvas)
  *
  * This is internal and should never be called by external users.
  */
-bool ewk_frame_init(Evas_Object* ewkFrame, Evas_Object* view, WebCore::Frame* frame)
+bool ewk_frame_init(Evas_Object* ewkFrame, Evas_Object* view, PassOwnPtr<WebCore::FrameLoaderClientEfl> frameLoaderClient)
 {
     EWK_FRAME_SD_GET_OR_RETURN(ewkFrame, smartData, false);
     if (!smartData->frame) {
-        WebCore::FrameLoaderClientEfl* frameLoaderClient = _ewk_frame_loader_efl_get(frame);
-        frameLoaderClient->setWebFrame(ewkFrame);
-        smartData->frame = frame;
+        smartData->frameLoaderClient = frameLoaderClient;
+        smartData->frameLoaderClient->setWebFrame(ewkFrame);
         smartData->view = view;
-        frame->init();
+
+        // FIXME: FrameLoaderClientEfl should get user agent directly from ewk_view.
+        smartData->frameLoaderClient->setCustomUserAgent(String::fromUTF8(ewk_view_setting_user_agent_get(view)));
         return true;
     }
 
-    ERR("frame %p already set for %p, ignored new %p",
-        smartData->frame, ewkFrame, frame);
     return false;
 }
 
@@ -1127,52 +1124,40 @@ bool ewk_frame_init(Evas_Object* ewkFrame, Evas_Object* view, WebCore::Frame* fr
  *
  * Adds child to the frame.
  */
-bool ewk_frame_child_add(Evas_Object* ewkFrame, WTF::PassRefPtr<WebCore::Frame> child, const WTF::String& name, const WebCore::KURL& url, const WTF::String& referrer)
+Evas_Object* ewk_frame_child_add(Evas_Object* ewkFrame, const WTF::String& name, WebCore::HTMLFrameOwnerElement* ownerElement)
 {
     EWK_FRAME_SD_GET_OR_RETURN(ewkFrame, smartData, 0);
     char buffer[256];
-    Evas_Object* frame;
-    WebCore::Frame* coreFrame;
 
-    frame = ewk_frame_add(smartData->base.evas);
+    Evas_Object* frame = ewk_frame_add(smartData->base.evas);
     if (!frame) {
         ERR("Could not create ewk_frame object.");
-        return false;
+        return 0;
     }
 
-    coreFrame = child.get();
-    if (coreFrame->tree())
-        coreFrame->tree()->setName(name);
-    else
-        ERR("no tree for child object");
-    smartData->frame->tree()->appendChild(child);
-
-    if (!ewk_frame_init(frame, smartData->view, coreFrame)) {
+    if (!ewk_frame_init(frame, smartData->view, adoptPtr(new WebCore::FrameLoaderClientEfl(smartData->view)))) {
+        ERR("Could not init ewk_frame object.");
         evas_object_del(frame);
-        return false;
+        return 0;
     }
+
+    EWK_FRAME_SD_GET_OR_RETURN(frame, childFrameSmartData, 0);
+    RefPtr<WebCore::Frame> coreFrame = WebCore::Frame::create(smartData->frame->page(), ownerElement, childFrameSmartData->frameLoaderClient.get());
+    childFrameSmartData->frame = coreFrame.get();
+    coreFrame->tree().setName(name);
+
+    if (ownerElement) {
+        ASSERT(ownerElement->document().frame());
+        ownerElement->document().frame()->tree().appendChild(coreFrame.release());
+    }
+    childFrameSmartData->frame->init();
+
     snprintf(buffer, sizeof(buffer), "EWK_Frame:child/%s", name.utf8().data());
     evas_object_name_set(frame, buffer);
     evas_object_smart_member_add(frame, ewkFrame);
     evas_object_show(frame);
 
-    // The creation of the frame may have run arbitrary JavaScript that removed it from the page already.
-    if (!coreFrame->page()) {
-        evas_object_del(frame);
-        return true;
-    }
-
-    evas_object_smart_callback_call(smartData->view, "frame,created", frame);
-    smartData->frame->loader().loadURLIntoChildFrame(url, referrer, coreFrame);
-
-    // The frame's onload handler may have removed it from the document.
-    // See fast/dom/null-page-show-modal-dialog-crash.html for an example.
-    if (!coreFrame->tree()->parent()) {
-        evas_object_del(frame);
-        return true;
-    }
-
-    return true;
+    return frame;
 }
 
 /**
@@ -1901,6 +1886,12 @@ void ewk_frame_xss_detected(Evas_Object* ewkFrame, const Ewk_Frame_Xss_Notificat
 }
 
 namespace EWKPrivate {
+
+void setCoreFrame(Evas_Object* ewkFrame, WebCore::Frame* coreFrame)
+{
+    EWK_FRAME_SD_GET_OR_RETURN(ewkFrame, smartData);
+    smartData->frame = coreFrame;
+}
 
 WebCore::Frame* coreFrame(const Evas_Object* ewkFrame)
 {
