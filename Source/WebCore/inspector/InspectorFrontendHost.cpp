@@ -178,7 +178,7 @@ void InspectorFrontendHost::bringToFront()
 
 void InspectorFrontendHost::setZoomFactor(float zoom)
 {
-    m_frontendPage->mainFrame()->setPageAndTextZoomFactors(zoom, 1);
+    m_frontendPage->mainFrame().setPageAndTextZoomFactors(zoom, 1);
 }
 
 void InspectorFrontendHost::inspectedURLChanged(const String& newURL)
@@ -224,7 +224,7 @@ String InspectorFrontendHost::localizedStringsURL()
 
 void InspectorFrontendHost::copyText(const String& text)
 {
-    Pasteboard::generalPasteboard()->writePlainText(text, Pasteboard::CannotSmartReplace);
+    Pasteboard::createForCopyAndPaste()->writePlainText(text, Pasteboard::CannotSmartReplace);
 }
 
 void InspectorFrontendHost::openInNewTab(const String& url)
@@ -240,10 +240,10 @@ bool InspectorFrontendHost::canSave()
     return false;
 }
 
-void InspectorFrontendHost::save(const String& url, const String& content, bool forceSaveAs)
+void InspectorFrontendHost::save(const String& url, const String& content, bool base64Encoded, bool forceSaveAs)
 {
     if (m_client)
-        m_client->save(url, content, forceSaveAs);
+        m_client->save(url, content, base64Encoded, forceSaveAs);
 }
 
 void InspectorFrontendHost::append(const String& url, const String& content)
@@ -289,7 +289,7 @@ String InspectorFrontendHost::loadResourceSynchronously(const String& url)
     Vector<char> data;
     ResourceError error;
     ResourceResponse response;
-    m_frontendPage->mainFrame()->loader().loadResourceSynchronously(request, DoNotAllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, error, response, data);
+    m_frontendPage->mainFrame().loader().loadResourceSynchronously(request, DoNotAllowStoredCredentials, DoNotAskClientForCrossOriginCredentials, error, response, data);
     return String::fromUTF8(data.data(), data.size());
 }
 
@@ -321,7 +321,7 @@ void InspectorFrontendHost::removeFileSystem(const String& fileSystemPath)
 #if ENABLE(FILE_SYSTEM)
 PassRefPtr<DOMFileSystem> InspectorFrontendHost::isolatedFileSystem(const String& fileSystemName, const String& rootURL)
 {
-    ScriptExecutionContext* context = m_frontendPage->mainFrame()->document();
+    ScriptExecutionContext* context = m_frontendPage->mainFrame().document();
     return DOMFileSystem::create(context, fileSystemName, FileSystemTypeIsolated, KURL(ParsedURLString, rootURL), AsyncFileSystem::create());
 }
 #endif

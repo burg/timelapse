@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -99,6 +99,7 @@ typedef size_t DFG_OPERATION (*S_DFGOperation_ECC)(ExecState*, JSCell*, JSCell*)
 typedef size_t DFG_OPERATION (*S_DFGOperation_EJ)(ExecState*, EncodedJSValue);
 typedef size_t DFG_OPERATION (*S_DFGOperation_EJJ)(ExecState*, EncodedJSValue, EncodedJSValue);
 typedef size_t DFG_OPERATION (*S_DFGOperation_J)(EncodedJSValue);
+typedef void DFG_OPERATION (*V_DFGOperation_E)(ExecState*);
 typedef void DFG_OPERATION (*V_DFGOperation_EOZD)(ExecState*, JSObject*, int32_t, double);
 typedef void DFG_OPERATION (*V_DFGOperation_EOZJ)(ExecState*, JSObject*, int32_t, EncodedJSValue);
 typedef void DFG_OPERATION (*V_DFGOperation_EC)(ExecState*, JSCell*);
@@ -122,9 +123,11 @@ typedef char* DFG_OPERATION (*P_DFGOperation_EPS)(ExecState*, void*, size_t);
 typedef char* DFG_OPERATION (*P_DFGOperation_ES)(ExecState*, size_t);
 typedef char* DFG_OPERATION (*P_DFGOperation_ESJss)(ExecState*, size_t, JSString*);
 typedef char* DFG_OPERATION (*P_DFGOperation_ESt)(ExecState*, Structure*);
+typedef char* DFG_OPERATION (*P_DFGOperation_EStJ)(ExecState*, Structure*, EncodedJSValue);
 typedef char* DFG_OPERATION (*P_DFGOperation_EStPS)(ExecState*, Structure*, void*, size_t);
 typedef char* DFG_OPERATION (*P_DFGOperation_EStSS)(ExecState*, Structure*, size_t, size_t);
 typedef char* DFG_OPERATION (*P_DFGOperation_EStZ)(ExecState*, Structure*, int32_t);
+typedef char* DFG_OPERATION (*P_DFGOperation_EZZ)(ExecState*, int32_t, int32_t);
 typedef StringImpl* DFG_OPERATION (*I_DFGOperation_EJss)(ExecState*, JSString*);
 typedef JSString* DFG_OPERATION (*Jss_DFGOperation_EZ)(ExecState*, int32_t);
 JSCell* DFG_OPERATION operationStringFromCharCode(ExecState*, int32_t)  WTF_INTERNAL; 
@@ -152,6 +155,24 @@ char* DFG_OPERATION operationNewArray(ExecState*, Structure*, void*, size_t) WTF
 char* DFG_OPERATION operationNewArrayBuffer(ExecState*, Structure*, size_t, size_t) WTF_INTERNAL;
 char* DFG_OPERATION operationNewEmptyArray(ExecState*, Structure*) WTF_INTERNAL;
 char* DFG_OPERATION operationNewArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewInt8ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewInt8ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewInt16ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewInt16ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewInt32ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewInt32ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint8ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint8ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint8ClampedArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint8ClampedArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint16ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint16ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint32ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewUint32ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewFloat32ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewFloat32ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
+char* DFG_OPERATION operationNewFloat64ArrayWithSize(ExecState*, Structure*, int32_t) WTF_INTERNAL;
+char* DFG_OPERATION operationNewFloat64ArrayWithOneArgument(ExecState*, Structure*, EncodedJSValue) WTF_INTERNAL;
 EncodedJSValue DFG_OPERATION operationNewRegexp(ExecState*, void*) WTF_INTERNAL;
 void DFG_OPERATION operationPutByValStrict(ExecState*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue) WTF_INTERNAL;
 void DFG_OPERATION operationPutByValNonStrict(ExecState*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty, EncodedJSValue encodedValue) WTF_INTERNAL;
@@ -283,7 +304,71 @@ void DFG_OPERATION debugOperationPrintSpeculationFailure(ExecState*, void*, void
 
 void DFG_OPERATION triggerReoptimizationNow(CodeBlock*) WTF_INTERNAL;
 
+#if ENABLE(FTL_JIT)
+void DFG_OPERATION triggerTierUpNow(ExecState*) WTF_INTERNAL;
+char* DFG_OPERATION triggerOSREntryNow(ExecState*, int32_t bytecodeIndex, int32_t streamIndex) WTF_INTERNAL;
+#endif // ENABLE(FTL_JIT)
+
 } // extern "C"
+
+inline P_DFGOperation_EStZ operationNewTypedArrayWithSizeForType(TypedArrayType type)
+{
+    switch (type) {
+    case TypeInt8:
+        return operationNewInt8ArrayWithSize;
+    case TypeInt16:
+        return operationNewInt16ArrayWithSize;
+    case TypeInt32:
+        return operationNewInt32ArrayWithSize;
+    case TypeUint8:
+        return operationNewUint8ArrayWithSize;
+    case TypeUint8Clamped:
+        return operationNewUint8ClampedArrayWithSize;
+    case TypeUint16:
+        return operationNewUint16ArrayWithSize;
+    case TypeUint32:
+        return operationNewUint32ArrayWithSize;
+    case TypeFloat32:
+        return operationNewFloat32ArrayWithSize;
+    case TypeFloat64:
+        return operationNewFloat64ArrayWithSize;
+    case NotTypedArray:
+    case TypeDataView:
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
+inline P_DFGOperation_EStJ operationNewTypedArrayWithOneArgumentForType(TypedArrayType type)
+{
+    switch (type) {
+    case TypeInt8:
+        return operationNewInt8ArrayWithOneArgument;
+    case TypeInt16:
+        return operationNewInt16ArrayWithOneArgument;
+    case TypeInt32:
+        return operationNewInt32ArrayWithOneArgument;
+    case TypeUint8:
+        return operationNewUint8ArrayWithOneArgument;
+    case TypeUint8Clamped:
+        return operationNewUint8ClampedArrayWithOneArgument;
+    case TypeUint16:
+        return operationNewUint16ArrayWithOneArgument;
+    case TypeUint32:
+        return operationNewUint32ArrayWithOneArgument;
+    case TypeFloat32:
+        return operationNewFloat32ArrayWithOneArgument;
+    case TypeFloat64:
+        return operationNewFloat64ArrayWithOneArgument;
+    case NotTypedArray:
+    case TypeDataView:
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
 } } // namespace JSC::DFG
 
 #endif

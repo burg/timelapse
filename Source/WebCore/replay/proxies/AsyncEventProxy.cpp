@@ -62,7 +62,7 @@ static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> event
         LOG(DeterministicReplay, "%-30s %s event: type=%s, target=%d/node[%p] %s\n", "[AsyncEventProxy]",
             (wasIgnored) ? "IGNORED" : "Received",
             event->type().string().utf8().data(),
-            SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? node->document() : node->ownerDocument()),
+            SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? &node->document() : node->ownerDocument()),
             (void*)node,
             node->nodeName().utf8().data());
 
@@ -97,22 +97,21 @@ PassOwnPtr<AsyncEventProxy> AsyncEventProxy::create(Page* page)
     return adoptPtr(new AsyncEventProxy(page));
 }
 
-void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
+void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
 {
-    ASSERT(frame);
 #if ENABLE(WEB_REPLAY)
     if (mode() == ReplayProxy::Replaying && !fromReplay)
         return;
 
     if (mode() == ReplayProxy::Capturing) {
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame.document());
         m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
     }
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(WEB_REPLAY)
 
-    frame->eventHandler().mouseMoved(fakeMouseMove);
+    frame.eventHandler().mouseMoved(fakeMouseMove);
 }
 
 bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpEventTarget, bool fromReplay)

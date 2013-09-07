@@ -943,7 +943,7 @@ static void closeURLRecursively(Frame* frame)
 
     Vector<RefPtr<Frame>, 10> childFrames;
 
-    for (RefPtr<Frame> childFrame = frame->tree()->firstChild(); childFrame; childFrame = childFrame->tree()->nextSibling())
+    for (RefPtr<Frame> childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling())
         childFrames.append(childFrame);
 
     unsigned size = childFrames.size();
@@ -974,7 +974,7 @@ static void enableCrossSiteXHRRecursively(Frame* frame)
     frame->document()->securityOrigin()->grantUniversalAccess();
 
     Vector<RefPtr<Frame>, 10> childFrames;
-    for (RefPtr<Frame> childFrame = frame->tree()->firstChild(); childFrame; childFrame = childFrame->tree()->nextSibling())
+    for (RefPtr<Frame> childFrame = frame->tree().firstChild(); childFrame; childFrame = childFrame->tree().nextSibling())
         childFrames.append(childFrame);
 
     unsigned size = childFrames.size();
@@ -1702,6 +1702,9 @@ double WebPagePrivate::zoomToFitScale() const
 
 bool WebPagePrivate::hasFloatLayoutSizeRoundingError() const
 {
+    if (!m_client->hasView())
+        return false;
+
     int contentsWidth = contentsSize().width();
     int contentsHeight = contentsSize().height();
     float devicePixelRatio = m_webSettings->devicePixelRatio();
@@ -3134,12 +3137,12 @@ void WebPagePrivate::setVisible(bool visible)
     if (visible != m_visible) {
         if (visible) {
             if (m_mainFrame)
-                m_mainFrame->animation()->resumeAnimations();
+                m_mainFrame->animation().resumeAnimations();
             if (m_page->scriptedAnimationsSuspended())
                 m_page->resumeScriptedAnimations();
         } else {
             if (m_mainFrame)
-                m_mainFrame->animation()->suspendAnimations();
+                m_mainFrame->animation().suspendAnimations();
             if (!m_page->scriptedAnimationsSuspended())
                 m_page->suspendScriptedAnimations();
 
@@ -3521,7 +3524,7 @@ void WebPagePrivate::setScreenOrientation(int orientation)
 #if ENABLE(ORIENTATION_EVENTS)
     if (m_mainFrame->orientation() == orientation)
         return;
-    for (RefPtr<Frame> frame = m_mainFrame; frame; frame = frame->tree()->traverseNext())
+    for (RefPtr<Frame> frame = m_mainFrame; frame; frame = frame->tree().traverseNext())
         frame->sendOrientationChangeEvent(orientation);
 #endif
 }
@@ -3558,6 +3561,11 @@ bool WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
         setShouldResetTilesWhenShown(true);
 
     bool hasPendingOrientation = m_pendingOrientation != -1;
+
+#if USE(ACCELERATED_COMPOSITING)
+    if (hasPendingOrientation)
+        discardLayerVisibilities();
+#endif
 
     IntSize viewportSizeBefore = actualVisibleSize();
     FloatPoint centerOfVisibleContentsRect = this->centerOfVisibleContentsRect();
@@ -5241,6 +5249,23 @@ void WebPagePrivate::scheduleRootLayerCommit()
     }
 }
 
+void WebPagePrivate::discardLayerVisibilities()
+{
+    if (!isAcceleratedCompositingActive())
+        return;
+
+    if (m_frameLayers)
+        m_frameLayers->discardBackVisibility();
+
+    Platform::userInterfaceThreadMessageClient()->dispatchSyncMessage(
+        Platform::createMethodCallMessage(&WebPagePrivate::discardFrontVisibilityCompositingThread, this));
+}
+
+void WebPagePrivate::discardFrontVisibilityCompositingThread()
+{
+    m_compositor->discardFrontVisibility();
+}
+
 static bool needsLayoutRecursive(FrameView* view)
 {
     if (view->needsLayout())
@@ -5851,14 +5876,14 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setLocalStorageEnabled(webSettings->isLocalStorageEnabled());
     coreSettings->setOfflineWebApplicationCacheEnabled(webSettings->isAppCacheEnabled());
 
-    m_page->group().groupSettings()->setLocalStorageQuotaBytes(webSettings->localStorageQuota());
+    m_page->group().groupSettings().setLocalStorageQuotaBytes(webSettings->localStorageQuota());
     coreSettings->setSessionStorageQuota(webSettings->sessionStorageQuota());
     coreSettings->setUsesPageCache(webSettings->maximumPagesInCache());
     coreSettings->setFrameFlatteningEnabled(webSettings->isFrameFlatteningEnabled());
 #endif
 
 #if ENABLE(INDEXED_DATABASE)
-    m_page->group().groupSettings()->setIndexedDBDatabasePath(webSettings->indexedDataBasePath());
+    m_page->group().groupSettings().setIndexedDBDatabasePath(webSettings->indexedDataBasePath());
 #endif
 
 

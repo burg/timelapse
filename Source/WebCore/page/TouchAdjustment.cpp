@@ -38,6 +38,7 @@
 #include "RenderObject.h"
 #include "RenderStyle.h"
 #include "RenderText.h"
+#include "RenderView.h"
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "TextBreakIterator.h"
@@ -116,7 +117,7 @@ bool providesContextMenuItems(Node* node)
         return true;
     if (node->renderer()->canBeSelectionLeaf()) {
         // If the context menu gesture will trigger a selection all selectable nodes are valid targets.
-        if (node->renderer()->frame()->editor().behavior().shouldSelectOnContextualMenuClick())
+        if (node->renderer()->frame().editor().behavior().shouldSelectOnContextualMenuClick())
             return true;
         // Only the selected part of the renderer is a valid target, but this will be corrected in
         // appendContextSubtargetsForNode.
@@ -157,7 +158,7 @@ static inline void appendContextSubtargetsForNode(Node* node, SubtargetGeometryL
     Text* textNode = static_cast<WebCore::Text*>(node);
     RenderText* textRenderer = static_cast<RenderText*>(textNode->renderer());
 
-    if (textRenderer->frame()->editor().behavior().shouldSelectOnContextualMenuClick()) {
+    if (textRenderer->frame().editor().behavior().shouldSelectOnContextualMenuClick()) {
         // Make subtargets out of every word.
         String textValue = textNode->data();
         TextBreakIterator* wordIterator = wordBreakIterator(textValue.characters(), textValue.length());
@@ -327,7 +328,7 @@ float zoomableIntersectionQuotient(const IntPoint& touchHotspot, const IntRect& 
     IntRect rect = subtarget.boundingBox();
 
     // Convert from frame coordinates to window coordinates.
-    rect = subtarget.node()->document()->view()->contentsToWindow(rect);
+    rect = subtarget.node()->document().view()->contentsToWindow(rect);
 
     // Check the rectangle is meaningful zoom target. It should at least contain the hotspot.
     if (!rect.contains(touchHotspot))
@@ -350,7 +351,7 @@ float hybridDistanceFunction(const IntPoint& touchHotspot, const IntRect& touchR
     IntRect rect = subtarget.boundingBox();
 
     // Convert from frame coordinates to window coordinates.
-    rect = subtarget.node()->document()->view()->contentsToWindow(rect);
+    rect = subtarget.node()->document().view()->contentsToWindow(rect);
    
     float radiusSquared = 0.25f * (touchRect.size().diagonalLengthSquared());
     float distanceToAdjustScore = rect.distanceSquaredToPoint(touchHotspot) / radiusSquared;
@@ -391,7 +392,7 @@ void adjustPointToRect(FloatPoint& point, const FloatRect& rect)
 
 bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const IntRect& touchArea, IntPoint& adjustedPoint)
 {
-    FrameView* view = geom.node()->document()->view();
+    FrameView* view = geom.node()->document().view();
     FloatQuad quad = geom.quad();
 
     if (quad.isRectilinear()) {
@@ -469,7 +470,7 @@ bool findNodeWithLowestDistanceMetric(Node*& targetNode, IntPoint& targetPoint, 
         }
     }
     if (targetNode) {
-        targetArea = targetNode->document()->view()->contentsToWindow(targetArea);
+        targetArea = targetNode->document().view()->contentsToWindow(targetArea);
     }
     return (targetNode);
 }

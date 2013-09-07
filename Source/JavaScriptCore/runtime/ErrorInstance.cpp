@@ -26,7 +26,7 @@
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(ErrorInstance);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ErrorInstance);
 
 const ClassInfo ErrorInstance::s_info = { "Error", &JSNonFinalObject::s_info, 0, 0, CREATE_METHOD_TABLE(ErrorInstance) };
 
@@ -44,7 +44,7 @@ void ErrorInstance::finishCreation(VM& vm, const String& message, Vector<StackFr
         putDirect(vm, vm.propertyNames->message, jsString(&vm, message), DontEnum);
     
     if (!stackTrace.isEmpty())
-        putDirect(vm, vm.propertyNames->stack, vm.interpreter->stackTraceAsString(vm.topCallFrame, stackTrace), None);
+        putDirect(vm, vm.propertyNames->stack, vm.interpreter->stackTraceAsString(vm.topCallFrame, stackTrace), DontEnum);
 }
     
 } // namespace JSC

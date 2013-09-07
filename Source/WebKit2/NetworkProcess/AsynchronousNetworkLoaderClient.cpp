@@ -52,12 +52,14 @@ void AsynchronousNetworkLoaderClient::willSendRequest(NetworkResourceLoader* loa
     loader->sendAbortingOnFailure(Messages::WebResourceLoader::WillSendRequest(request, redirectResponse), CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply);
 }
 
+#if USE(PROTECTION_SPACE_AUTH_CALLBACK)
 void AsynchronousNetworkLoaderClient::canAuthenticateAgainstProtectionSpace(NetworkResourceLoader* loader, const ProtectionSpace& protectionSpace)
 {
     // This message is DispatchMessageEvenWhenWaitingForSyncReply to avoid a situation where the NetworkProcess is deadlocked
     // waiting for 6 connections to complete while the WebProcess is waiting for a 7th (Synchronous XHR) to complete.
     loader->sendAbortingOnFailure(Messages::WebResourceLoader::CanAuthenticateAgainstProtectionSpace(protectionSpace), CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply);
 }
+#endif
 
 void AsynchronousNetworkLoaderClient::didReceiveResponse(NetworkResourceLoader* loader, const ResourceResponse& response)
 {
@@ -66,7 +68,7 @@ void AsynchronousNetworkLoaderClient::didReceiveResponse(NetworkResourceLoader* 
 
 void AsynchronousNetworkLoaderClient::didReceiveBuffer(NetworkResourceLoader* loader, SharedBuffer* buffer, int encodedDataLength)
 {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     ShareableResource::Handle shareableResourceHandle;
     NetworkResourceLoader::tryGetShareableHandleFromSharedBuffer(shareableResourceHandle, buffer);
     if (!shareableResourceHandle.isNull()) {

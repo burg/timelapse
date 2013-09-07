@@ -68,11 +68,15 @@ public:
     
     enum ResponseTypeCode {
         ResponseTypeDefault,
-        ResponseTypeText, 
+        ResponseTypeText,
+        ResponseTypeJSON,
         ResponseTypeDocument,
+
+        // Binary format
         ResponseTypeBlob,
         ResponseTypeArrayBuffer
     };
+    static const ResponseTypeCode FirstBinaryResponseType = ResponseTypeBlob;
 
 #if ENABLE(XHR_TIMEOUT)
     virtual void didTimeout();
@@ -101,17 +105,22 @@ public:
     void abort();
     void setRequestHeader(const AtomicString& name, const String& value, ExceptionCode&);
     void overrideMimeType(const String& override);
+    bool doneWithoutErrors() const { return !m_error && m_state == DONE; }
     String getAllResponseHeaders(ExceptionCode&) const;
     String getResponseHeader(const AtomicString& name, ExceptionCode&) const;
     String responseText(ExceptionCode&);
+    String responseTextIgnoringResponseType() const { return m_responseBuilder.toStringPreserveCapacity(); }
     Document* responseXML(ExceptionCode&);
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
-    Blob* responseBlob(ExceptionCode&);
+    Blob* responseBlob();
     Blob* optionalResponseBlob() const { return m_responseBlob.get(); }
 #if ENABLE(XHR_TIMEOUT)
     unsigned long timeout() const { return m_timeoutMilliseconds; }
     void setTimeout(unsigned long timeout, ExceptionCode&);
 #endif
+
+    bool responseCacheIsValid() const { return m_responseCacheIsValid; }
+    void didCacheResponseJSON();
 
     void sendFromInspector(PassRefPtr<FormData>, ExceptionCode&);
 
@@ -123,9 +132,9 @@ public:
     void setResponseType(const String&, ExceptionCode&);
     String responseType();
     ResponseTypeCode responseTypeCode() const { return m_responseTypeCode; }
-    
+
     // response attribute has custom getter.
-    JSC::ArrayBuffer* responseArrayBuffer(ExceptionCode&);
+    JSC::ArrayBuffer* responseArrayBuffer();
     JSC::ArrayBuffer* optionalResponseArrayBuffer() const { return m_responseArrayBuffer.get(); }
 
     void setLastSendLineNumber(unsigned lineNumber) { m_lastSendLineNumber = lineNumber; }
@@ -200,6 +209,8 @@ private:
     void networkError();
     void abortError();
 
+    bool shouldDecodeResponse() const { return m_responseTypeCode < FirstBinaryResponseType; }
+
     OwnPtr<XMLHttpRequestUpload> m_upload;
 
     KURL m_url;
@@ -249,6 +260,7 @@ private:
 
     // An enum corresponding to the allowed string values for the responseType attribute.
     ResponseTypeCode m_responseTypeCode;
+    bool m_responseCacheIsValid;
 };
 
 } // namespace WebCore

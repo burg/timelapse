@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -96,7 +96,7 @@ typedef unsigned CompositingReasons;
 class RenderLayerCompositor : public GraphicsLayerClient, public GraphicsLayerUpdaterClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit RenderLayerCompositor(RenderView*);
+    explicit RenderLayerCompositor(RenderView&);
     ~RenderLayerCompositor();
 
     // Return true if this RenderView is in "compositing mode" (i.e. has one or more
@@ -214,7 +214,7 @@ public:
     
 #if ENABLE(VIDEO)
     // Use by RenderVideo to ask if it should try to use accelerated compositing.
-    bool canAccelerateVideoRendering(RenderVideo*) const;
+    bool canAccelerateVideoRendering(RenderVideo&) const;
 #endif
 
     // Walk the tree looking for layers with 3d transforms. Useful in case you need
@@ -405,7 +405,7 @@ private:
 #endif
 
 private:
-    RenderView* m_renderView;
+    RenderView& m_renderView;
     OwnPtr<GraphicsLayer> m_rootContentLayer;
     Timer<RenderLayerCompositor> m_updateCompositingLayersTimer;
 

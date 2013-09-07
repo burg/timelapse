@@ -102,31 +102,36 @@ static uint64_t generateListenerID()
     return uniqueListenerID++;
 }
 
-PassRefPtr<WebFrame> WebFrame::createMainFrame(WebPage* page)
+PassRefPtr<WebFrame> WebFrame::createWithCoreMainFrame(WebPage* page, WebCore::Frame* coreFrame)
 {
-    RefPtr<WebFrame> frame = create();
-
+    RefPtr<WebFrame> frame = create(adoptPtr(static_cast<WebFrameLoaderClient*>(&coreFrame->loader().client())));
     page->send(Messages::WebPageProxy::DidCreateMainFrame(frame->frameID()));
 
-    frame->init(page, String(), 0);
-
+    frame->m_coreFrame = coreFrame;
+    frame->m_coreFrame->tree().setName(String());
+    frame->m_coreFrame->init();
     return frame.release();
 }
 
 PassRefPtr<WebFrame> WebFrame::createSubframe(WebPage* page, const String& frameName, HTMLFrameOwnerElement* ownerElement)
 {
-    RefPtr<WebFrame> frame = create();
-
+    RefPtr<WebFrame> frame = create(adoptPtr(new WebFrameLoaderClient));
     page->send(Messages::WebPageProxy::DidCreateSubframe(frame->frameID()));
 
-    frame->init(page, frameName, ownerElement);
-
+    RefPtr<Frame> coreFrame = Frame::create(page->corePage(), ownerElement, frame->m_frameLoaderClient.get());
+    frame->m_coreFrame = coreFrame.get();
+    frame->m_coreFrame->tree().setName(frameName);
+    if (ownerElement) {
+        ASSERT(ownerElement->document().frame());
+        ownerElement->document().frame()->tree().appendChild(coreFrame.release());
+    }
+    frame->m_coreFrame->init();
     return frame.release();
 }
 
-PassRefPtr<WebFrame> WebFrame::create()
+PassRefPtr<WebFrame> WebFrame::create(PassOwnPtr<WebFrameLoaderClient> frameLoaderClient)
 {
-    RefPtr<WebFrame> frame = adoptRef(new WebFrame);
+    RefPtr<WebFrame> frame = adoptRef(new WebFrame(frameLoaderClient));
 
     // Add explict ref() that will be balanced in WebFrameLoaderClient::frameLoaderDestroyed().
     frame->ref();
@@ -134,15 +139,16 @@ PassRefPtr<WebFrame> WebFrame::create()
     return frame.release();
 }
 
-WebFrame::WebFrame()
+WebFrame::WebFrame(PassOwnPtr<WebFrameLoaderClient> frameLoaderClient)
     : m_coreFrame(0)
     , m_policyListenerID(0)
     , m_policyFunction(0)
     , m_policyDownloadID(0)
-    , m_frameLoaderClient(this)
+    , m_frameLoaderClient(frameLoaderClient)
     , m_loadListener(0)
     , m_frameID(generateFrameID())
 {
+    m_frameLoaderClient->setWebFrame(this);
     WebProcess::shared().addWebFrame(m_frameID, this);
 
 #ifndef NDEBUG
@@ -157,21 +163,6 @@ WebFrame::~WebFrame()
 #ifndef NDEBUG
     webFrameCounter.decrement();
 #endif
-}
-
-void WebFrame::init(WebPage* page, const String& frameName, HTMLFrameOwnerElement* ownerElement)
-{
-    RefPtr<Frame> frame = Frame::create(page->corePage(), ownerElement, &m_frameLoaderClient);
-    m_coreFrame = frame.get();
-
-    frame->tree()->setName(frameName);
-
-    if (ownerElement) {
-        ASSERT(ownerElement->document()->frame());
-        ownerElement->document()->frame()->tree()->appendChild(frame);
-    }
-
-    frame->init();
 }
 
 WebPage* WebFrame::page() const
@@ -311,7 +302,7 @@ String WebFrame::contentsAsString() const
 
     if (isFrameSet()) {
         StringBuilder builder;
-        for (Frame* child = m_coreFrame->tree()->firstChild(); child; child = child->tree()->nextSibling()) {
+        for (Frame* child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
             if (!builder.isEmpty())
                 builder.append(' ');
 
@@ -387,7 +378,7 @@ String WebFrame::name() const
     if (!m_coreFrame)
         return String();
 
-    return m_coreFrame->tree()->uniqueName();
+    return m_coreFrame->tree().uniqueName();
 }
 
 String WebFrame::url() const
@@ -415,10 +406,10 @@ String WebFrame::innerText() const
 
 WebFrame* WebFrame::parentFrame() const
 {
-    if (!m_coreFrame || !m_coreFrame->ownerElement() || !m_coreFrame->ownerElement()->document())
+    if (!m_coreFrame || !m_coreFrame->ownerElement())
         return 0;
 
-    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(m_coreFrame->ownerElement()->document()->frame()->loader().client());
+    WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(m_coreFrame->ownerElement()->document().frame()->loader().client());
     return webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
 }
 
@@ -427,14 +418,14 @@ PassRefPtr<ImmutableArray> WebFrame::childFrames()
     if (!m_coreFrame)
         return ImmutableArray::create();
 
-    size_t size = m_coreFrame->tree()->childCount();
+    size_t size = m_coreFrame->tree().childCount();
     if (!size)
         return ImmutableArray::create();
 
     Vector<RefPtr<APIObject>> vector;
     vector.reserveInitialCapacity(size);
 
-    for (Frame* child = m_coreFrame->tree()->firstChild(); child; child = child->tree()->nextSibling()) {
+    for (Frame* child = m_coreFrame->tree().firstChild(); child; child = child->tree().nextSibling()) {
         WebFrameLoaderClient* webFrameLoaderClient = toWebFrameLoaderClient(child->loader().client());
         WebFrame* webFrame = webFrameLoaderClient ? webFrameLoaderClient->webFrame() : 0;
         ASSERT(webFrame);

@@ -24,7 +24,6 @@
 #define RenderText_h
 
 #include "RenderObject.h"
-#include "RenderView.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -105,8 +104,8 @@ public:
     virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) OVERRIDE;
     virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
 
-    LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0, view()); }
-    LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0, view()); }
+    LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0, &view()); }
+    LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0, &view()); }
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE FINAL;
 
@@ -198,6 +197,18 @@ private:
     InlineTextBox* m_lastTextBox;
 };
 
+inline RenderText& toRenderText(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isText());
+    return static_cast<RenderText&>(object);
+}
+
+inline const RenderText& toRenderText(const RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isText());
+    return static_cast<const RenderText&>(object);
+}
+
 inline RenderText* toRenderText(RenderObject* object)
 { 
     ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isText());
@@ -212,6 +223,7 @@ inline const RenderText* toRenderText(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderText(const RenderText*);
+void toRenderText(const RenderText&);
 
 #ifdef NDEBUG
 inline void RenderText::checkConsistency() const

@@ -27,55 +27,21 @@
 #include "JSCTestRunnerUtils.h"
 
 #include "APICast.h"
-#include "CodeBlock.h"
 #include "Operations.h"
+#include "TestRunnerUtils.h"
 
 namespace JSC {
 
-static FunctionExecutable* getExecutable(JSContextRef context, JSValueRef theFunctionValueRef)
-{
-    ExecState* exec = toJS(context);
-    JSValue theFunctionValue = toJS(exec, theFunctionValueRef);
-    
-    JSFunction* theFunction = jsDynamicCast<JSFunction*>(theFunctionValue);
-    if (!theFunction)
-        return 0;
-    
-    FunctionExecutable* executable = jsDynamicCast<FunctionExecutable*>(
-        theFunction->executable());
-    return executable;
-}
-
 JSValueRef numberOfDFGCompiles(JSContextRef context, JSValueRef theFunctionValueRef)
 {
-    bool pretendToHaveManyCompiles = false;
-#if ENABLE(DFG_JIT)
-    if (!Options::useJIT() || !Options::useDFGJIT())
-        pretendToHaveManyCompiles = true;
-#else
-    pretendToHaveManyCompiles = true;
-#endif
-    
-    if (FunctionExecutable* executable = getExecutable(context, theFunctionValueRef)) {
-        CodeBlock* baselineCodeBlock = executable->baselineCodeBlockFor(CodeForCall);
-        
-        if (!baselineCodeBlock)
-            return JSValueMakeNumber(context, 0);
-
-        if (pretendToHaveManyCompiles)
-            return JSValueMakeNumber(context, 1000000.0);
-        return JSValueMakeNumber(context, baselineCodeBlock->numberOfDFGCompiles());
-    }
-    
-    return JSValueMakeUndefined(context);
+    ExecState* exec= toJS(context);
+    return toRef(exec, numberOfDFGCompiles(toJS(exec, theFunctionValueRef)));
 }
 
 JSValueRef setNeverInline(JSContextRef context, JSValueRef theFunctionValueRef)
 {
-    if (FunctionExecutable* executable = getExecutable(context, theFunctionValueRef))
-        executable->setNeverInline(true);
-    
-    return JSValueMakeUndefined(context);
+    ExecState* exec= toJS(context);
+    return toRef(exec, setNeverInline(toJS(exec, theFunctionValueRef)));
 }
 
 } // namespace JSC

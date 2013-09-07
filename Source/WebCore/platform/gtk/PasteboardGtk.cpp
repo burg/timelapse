@@ -67,6 +67,11 @@ PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
     return create(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD));
 }
 
+PassOwnPtr<Pasteboard> Pasteboard::createForGlobalSelection()
+{
+    return create(gtk_clipboard_get(GDK_SELECTION_PRIMARY));
+}
+
 PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
 {
     return create(DataObjectGtk::create());
@@ -80,23 +85,6 @@ PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
 PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dragData)
 {
     return create(dragData.platformData());
-}
-
-static Pasteboard* selectionClipboard()
-{
-    static Pasteboard* pasteboard = Pasteboard::create(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD)).leakPtr();
-    return pasteboard;
-}
-
-static Pasteboard* primaryClipboard()
-{
-    static Pasteboard* pasteboard = Pasteboard::create(gtk_clipboard_get(GDK_SELECTION_PRIMARY)).leakPtr();
-    return pasteboard;
-}
-
-Pasteboard* Pasteboard::generalPasteboard()
-{
-    return PasteboardHelper::defaultPasteboardHelper()->usePrimarySelectionClipboard() ? primaryClipboard() : selectionClipboard();
 }
 
 Pasteboard::Pasteboard(PassRefPtr<DataObjectGtk> dataObject)
@@ -210,7 +198,7 @@ static KURL getURLForImageNode(Node* node)
         Element* element = toElement(node);
         urlString = element->imageSourceURL();
     }
-    return urlString.isEmpty() ? KURL() : node->document()->completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
+    return urlString.isEmpty() ? KURL() : node->document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
 }
 
 void Pasteboard::writeImage(Node* node, const KURL&, const String& title)
@@ -343,16 +331,6 @@ String Pasteboard::plainText(Frame* frame)
     return m_dataObject->text();
 }
 
-bool Pasteboard::isSelectionMode() const
-{
-    return PasteboardHelper::defaultPasteboardHelper()->usePrimarySelectionClipboard();
-}
-
-void Pasteboard::setSelectionMode(bool selectionMode)
-{
-    PasteboardHelper::defaultPasteboardHelper()->setUsePrimarySelectionClipboard(selectionMode);
-}
-
 bool Pasteboard::hasData()
 {
     if (m_gtkClipboard)
@@ -361,28 +339,28 @@ bool Pasteboard::hasData()
     return m_dataObject->hasText() || m_dataObject->hasMarkup() || m_dataObject->hasURIList() || m_dataObject->hasImage();
 }
 
-ListHashSet<String> Pasteboard::types()
+Vector<String> Pasteboard::types()
 {
     if (m_gtkClipboard)
         PasteboardHelper::defaultPasteboardHelper()->getClipboardContents(m_gtkClipboard);
 
-    ListHashSet<String> types;
+    Vector<String> types;
     if (m_dataObject->hasText()) {
-        types.add(ASCIILiteral("text/plain"));
-        types.add(ASCIILiteral("Text"));
-        types.add(ASCIILiteral("text"));
+        types.append(ASCIILiteral("text/plain"));
+        types.append(ASCIILiteral("Text"));
+        types.append(ASCIILiteral("text"));
     }
 
     if (m_dataObject->hasMarkup())
-        types.add(ASCIILiteral("text/html"));
+        types.append(ASCIILiteral("text/html"));
 
     if (m_dataObject->hasURIList()) {
-        types.add(ASCIILiteral("text/uri-list"));
-        types.add(ASCIILiteral("URL"));
+        types.append(ASCIILiteral("text/uri-list"));
+        types.append(ASCIILiteral("URL"));
     }
 
     if (m_dataObject->hasFilenames())
-        types.add(ASCIILiteral("Files"));
+        types.append(ASCIILiteral("Files"));
 
     return types;
 }

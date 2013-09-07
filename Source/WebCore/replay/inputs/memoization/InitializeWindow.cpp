@@ -53,7 +53,7 @@ void InitializeWindow::dispatch(ReplayController* controller,
 {
     ASSERT(sealed());
 
-    controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
+    controller->page()->mainFrame().document()->domWindow()->resizeTo((float) m_width, (float) m_height);
     dispatcher->didDispatch(this);
 }
 
@@ -69,8 +69,8 @@ String InitializeWindow::toString() const
 
 PassOwnPtr<InitializeWindow> InitializeWindow::createFromPage(Page* page)
 {
-    int width = page->mainFrame()->document()->domWindow()->outerWidth();
-    int height = page->mainFrame()->document()->domWindow()->outerHeight();
+    int width = page->mainFrame().document()->domWindow()->outerWidth();
+    int height = page->mainFrame().document()->domWindow()->outerHeight();
     return adoptPtr(new InitializeWindow(width, height));
 }
 

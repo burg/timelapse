@@ -34,7 +34,13 @@
 
 namespace JSC { namespace FTL {
 
-bool canCompile(DFG::Graph&);
+enum CapabilityLevel {
+    CannotCompile,
+    CanCompile,
+    CanCompileAndOSREnter
+};
+
+CapabilityLevel canCompile(DFG::Graph&);
 
 } } // namespace JSC::FTL
 

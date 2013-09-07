@@ -194,6 +194,15 @@ public:
     LayoutUnit offsetFromLogicalTopOfFirstRegion(const RenderBlock*) const;
     void clearRenderBoxRegionInfoAndCustomStyle(const RenderBox*, const RenderRegion*, const RenderRegion*, const RenderRegion*, const RenderRegion*);
 
+    LayoutRect mapFromFlowThreadToLocal(const RenderBox*, const LayoutRect&) const;
+    LayoutRect mapFromLocalToFlowThread(const RenderBox*, const LayoutRect&) const;
+
+    void addRegionsVisualEffectOverflow(const RenderBox*);
+    void addRegionsVisualOverflowFromTheme(const RenderBlock*);
+    void addRegionsOverflowFromChild(const RenderBox*, const RenderBox*, const LayoutSize&);
+    void addRegionsLayoutOverflow(const RenderBox*, const LayoutRect&);
+    void clearRegionsOverflow(const RenderBox*);
+
     // Used to estimate the maximum height of the flow thread.
     static LayoutUnit maxLogicalHeight() { return LayoutUnit::max() / 2; }
 
@@ -327,6 +336,18 @@ protected:
     bool m_layersToRegionMappingsDirty : 1;
 };
 
+inline RenderFlowThread& toRenderFlowThread(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isRenderFlowThread());
+    return static_cast<RenderFlowThread&>(object);
+}
+
+inline const RenderFlowThread& toRenderFlowThread(const RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isRenderFlowThread());
+    return static_cast<const RenderFlowThread&>(object);
+}
+
 inline RenderFlowThread* toRenderFlowThread(RenderObject* object)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderFlowThread());
@@ -341,6 +362,7 @@ inline const RenderFlowThread* toRenderFlowThread(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderFlowThread(const RenderFlowThread*);
+void toRenderFlowThread(const RenderFlowThread&);
 
 class CurrentRenderFlowThreadMaintainer {
     WTF_MAKE_NONCOPYABLE(CurrentRenderFlowThreadMaintainer);

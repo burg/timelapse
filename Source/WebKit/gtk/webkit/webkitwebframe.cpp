@@ -552,8 +552,8 @@ WebKitWebFrame* webkit_web_frame_new(WebKitWebView* webView)
     WebKitWebViewPrivate* viewPriv = webView->priv;
 
     priv->webView = webView;
-    WebKit::FrameLoaderClient* client = new WebKit::FrameLoaderClient(frame);
-    priv->coreFrame = Frame::create(viewPriv->corePage, 0, client).get();
+    priv->coreFrame = &viewPriv->corePage->mainFrame();
+    static_cast<WebKit::FrameLoaderClient*>(&viewPriv->corePage->mainFrame().loader().client())->setWebFrame(frame);
     priv->coreFrame->init();
 
     priv->origin = 0;
@@ -630,7 +630,7 @@ const gchar* webkit_web_frame_get_name(WebKitWebFrame* frame)
         return "";
 
     WebKitWebFramePrivate* priv = frame->priv;
-    CString frameName = coreFrame->tree()->uniqueName().string().utf8();
+    CString frameName = coreFrame->tree().uniqueName().string().utf8();
     if (!g_strcmp0(frameName.data(), priv->name))
         return priv->name;
 
@@ -655,7 +655,7 @@ WebKitWebFrame* webkit_web_frame_get_parent(WebKitWebFrame* frame)
     if (!coreFrame)
         return 0;
 
-    return kit(coreFrame->tree()->parent());
+    return kit(coreFrame->tree().parent());
 }
 
 /**
@@ -828,7 +828,7 @@ WebKitWebFrame* webkit_web_frame_find_frame(WebKitWebFrame* frame, const gchar* 
         return 0;
 
     String nameString = String::fromUTF8(name);
-    return kit(coreFrame->tree()->find(AtomicString(nameString)));
+    return kit(coreFrame->tree().find(AtomicString(nameString)));
 }
 
 /**
@@ -1210,8 +1210,7 @@ WebKitWebFrame* kit(WebCore::Frame* coreFrame)
     if (!coreFrame)
         return 0;
 
-    WebKit::FrameLoaderClient* client = static_cast<WebKit::FrameLoaderClient*>(coreFrame->loader().client());
-    return client ? client->webFrame() : 0;
+    return static_cast<WebKit::FrameLoaderClient&>(coreFrame->loader().client()).webFrame();
 }
 
 }

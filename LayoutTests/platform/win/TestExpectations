@@ -74,6 +74,9 @@ svg/custom/manually-parsed-svg-allowed-in-dashboard.html
 svg/custom/manually-parsed-embedded-svg-allowed-in-dashboard.html
 svg/custom/svg-allowed-in-dashboard-object.html
 
+# Accelerated overflow scrolling (ENABLE_ACCELERATED_OVERFLOW_SCROLLING) is not enabled.
+fast/repaint/overflow-scroll-touch-repaint.html [ Skip ]
+
 # Apache 1.3 doesn't support SSL <rdar://problem/5345985>
 http/tests/navigation/ping-cross-origin-from-https.html
 http/tests/ssl
@@ -1580,8 +1583,6 @@ css3/selectors3
 # For now, Web Audio tests are disabled
 # https://bugs.webkit.org/show_bug.cgi?id=86914
 webaudio/
-inspector-protocol/nmi-webaudio.html
-inspector-protocol/nmi-webaudio-leak-test.html
 
 # ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
@@ -2301,9 +2302,6 @@ media/video-src-empty.html
 # Interactive form validation not enabled on Windows
 fast/forms/number/number-interactive-validation-required.html
 
-# Dialog element is not yet enabled.
-fast/dom/HTMLDialogElement
-
 # Windows does not have global selection.
 editing/pasteboard/paste-global-selection.html
 
@@ -2449,8 +2447,8 @@ compositing/tiling/tile-cache-zoomed.html
 # Test added in r132901 is for chromium only
 fast/images/exif-orientation-image-document.html
 
-webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html
-webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html
+webkit.org/b/100846 inspector-protocol/debugger/pause-dedicated-worker.html
+webkit.org/b/100846 inspector-protocol/debugger/terminate-dedicated-worker-while-paused.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=100117
 fast/xmlhttprequest/xmlhttprequest-recursive-sync-event.html
@@ -2794,12 +2792,7 @@ media/track/track-legacyapi-with-automatic-mode.html
 fast/shapes
 
 # Skip failing tests to make EWS bots happy
-fast/dom/NodeList/nodelist-item-call-as-function.html [ Failure ]
 fast/dom/call-a-constructor-as-a-function.html [ Failure ]
 fast/forms/search-event-delay.html [ Failure ]
-fast/js/exception-thrown-from-new.html [ Failure ]
 fast/lists/inlineBoxWrapperNullCheck.html [ Failure ]
-fast/regex/cross-frame-callable.html [ Failure ]
-svg/dom/svgpath-out-of-bounds-getPathSeg.html [ Failure ]
 fast/js/global-constructors-attributes-dedicated-worker.html [ Failure ]
-fast/frames/seamless/seamless-nested-crash.html [ Failure ]

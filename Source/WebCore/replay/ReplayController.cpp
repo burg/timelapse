@@ -81,7 +81,7 @@ static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* n
         LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/node[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
-            SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? node->document() : node->ownerDocument()),
+            SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? &node->document() : node->ownerDocument()),
             (void*)node,
             node->nodeName().utf8().data());
 
@@ -198,20 +198,20 @@ void ReplayController::beginCapturing()
     m_activeIterator->storeInput(InitializeWindow::createFromPage(m_page));
     // attempt to pull reasonable values here to save in the log, and
     // also to use for the initial refresh.
-    Frame* mainFrame = m_page->mainFrame();
-    NavigateToPage* reloadInput = new NavigateToPage(mainFrame->document()->securityOrigin(),
-                                                     mainFrame->document()->url().string(),
-                                                     mainFrame->loader().referrer());
+    Frame& mainFrame = m_page->mainFrame();
+    NavigateToPage* reloadInput = new NavigateToPage(mainFrame.document()->securityOrigin(),
+                                                     mainFrame.document()->url().string(),
+                                                     mainFrame.loader().referrer());
     m_activeIterator->storeInput(adoptPtr(reloadInput));
 
     //The call to scheduleLocationChange should be the same on capture and replay.
     page()->networkProxy()->setExpectsPageLoad(true);
     // TODO: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
-    mainFrame->navigationScheduler()->scheduleLocationChange(reloadInput->securityOrigin().get(),
-                                                             reloadInput->url(),
-                                                             reloadInput->referrer(),
-                                                             false, false);
+    mainFrame.navigationScheduler().scheduleLocationChange(reloadInput->securityOrigin().get(),
+                                                           reloadInput->url(),
+                                                           reloadInput->referrer(),
+                                                           false, false);
 }
 
 bool ReplayController::endCapturing()
@@ -239,7 +239,7 @@ bool ReplayController::endCapturing()
     InspectorInstrumentation::recordingCreated(m_page, recording);
 
     // Permanently "suspend" active objects, such as timers, marquees, loaders, etc.
-    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext())
         frame->document()->suspendActiveDOMObjects(ActiveDOMObject::DocumentWillBecomeInactive);
 
     return true;
@@ -453,7 +453,7 @@ void ReplayController::resetReplayState()
     LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)m_page);
 
     m_activeIterator = 0;
-    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext())
         frame->script().globalObject(mainThreadNormalWorld())->setInputIterator(0);
 }
 

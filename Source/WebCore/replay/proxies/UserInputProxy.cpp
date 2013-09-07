@@ -103,7 +103,7 @@ bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent,
 #endif
 
     // do dispatch
-    return m_page->mainFrame()->eventHandler().handleMousePressEvent(mouseEvent);
+    return m_page->mainFrame().eventHandler().handleMousePressEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
@@ -119,7 +119,7 @@ bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEven
 #endif
 
     // do dispatch
-    return m_page->mainFrame()->eventHandler().handleMouseReleaseEvent(mouseEvent);
+    return m_page->mainFrame().eventHandler().handleMouseReleaseEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
@@ -135,7 +135,7 @@ bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, 
 #endif
 
     // do dispatch
-    return m_page->mainFrame()->eventHandler().mouseMoved(mouseEvent);
+    return m_page->mainFrame().eventHandler().mouseMoved(mouseEvent);
 }
 
 bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
@@ -151,7 +151,7 @@ bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& m
 #endif
 
     // do dispatch
-    return m_page->mainFrame()->eventHandler().passMouseMovedEventToScrollbars(mouseEvent);
+    return m_page->mainFrame().eventHandler().passMouseMovedEventToScrollbars(mouseEvent);
 }
 
 bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, bool fromReplay)
@@ -167,7 +167,7 @@ bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, 
 #endif
 
     // do dispatch
-    return m_page->focusController().focusedOrMainFrame()->eventHandler().keyEvent(keyEvent);
+    return m_page->focusController().focusedOrMainFrame().eventHandler().keyEvent(keyEvent);
 }
 
 bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent, bool /*fromReplay*/)
@@ -181,7 +181,7 @@ bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent,
 #endif*/
 
     // do dispatch
-    return m_page->focusController().focusedOrMainFrame()->eventHandler().handleAccessKey(keyEvent);
+    return m_page->focusController().focusedOrMainFrame().eventHandler().handleAccessKey(keyEvent);
 }
 
 bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool fromReplay)
@@ -197,7 +197,7 @@ bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool
 #endif
 
     // do dispatch
-    return m_page->mainFrame()->eventHandler().handleWheelEvent(wheelEvent);
+    return m_page->mainFrame().eventHandler().handleWheelEvent(wheelEvent);
 }
 
 void UserInputProxy::focusSetActive(bool active, bool fromReplay)
@@ -242,7 +242,7 @@ bool UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranular
     UNUSED_PARAM(fromReplay);
 #endif
 
-    return m_page->focusController().focusedOrMainFrame()->eventHandler().scrollRecursively(direction, granularity, 0);
+    return m_page->focusController().focusedOrMainFrame().eventHandler().scrollRecursively(direction, granularity, 0);
 }
 
 bool UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, ScrollGranularity granularity, bool fromReplay)
@@ -257,7 +257,7 @@ bool UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
     UNUSED_PARAM(fromReplay);
 #endif
 
-    return m_page->focusController().focusedOrMainFrame()->eventHandler().logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
+    return m_page->focusController().focusedOrMainFrame().eventHandler().logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
 }
 
 void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay)

@@ -37,7 +37,6 @@
 #include "HostCallReturnValue.h"
 #include "Interpreter.h"
 #include "JIT.h"
-#include "JITDriver.h"
 #include "JSActivation.h"
 #include "JSCJSValue.h"
 #include "JSGlobalObjectFunctions.h"
@@ -84,13 +83,13 @@ namespace JSC { namespace LLInt {
 #define LLINT_END_IMPL() LLINT_RETURN_TWO(pc, exec)
 
 #define LLINT_THROW(exceptionToThrow) do {                        \
-        vm.exception = (exceptionToThrow);                \
+        vm.throwException(exec, exceptionToThrow);             \
         pc = returnToThrow(exec, pc);                             \
         LLINT_END_IMPL();                                         \
     } while (false)
 
 #define LLINT_CHECK_EXCEPTION() do {                    \
-        if (UNLIKELY(vm.exception)) {           \
+        if (UNLIKELY(vm.exception())) {           \
             pc = returnToThrow(exec, pc);               \
             LLINT_END_IMPL();                           \
         }                                               \
@@ -144,14 +143,14 @@ namespace JSC { namespace LLInt {
 #define LLINT_CALL_THROW(exec, pc, exceptionToThrow) do {               \
         ExecState* __ct_exec = (exec);                                  \
         Instruction* __ct_pc = (pc);                                    \
-        vm.exception = (exceptionToThrow);                      \
+        vm.throwException(__ct_exec, exceptionToThrow);                     \
         LLINT_CALL_END_IMPL(__ct_exec, callToThrow(__ct_exec, __ct_pc)); \
     } while (false)
 
 #define LLINT_CALL_CHECK_EXCEPTION(exec, pc) do {                       \
         ExecState* __cce_exec = (exec);                                 \
         Instruction* __cce_pc = (pc);                                   \
-        if (UNLIKELY(vm.exception))                              \
+        if (UNLIKELY(vm.exception()))                                     \
             LLINT_CALL_END_IMPL(__cce_exec, callToThrow(__cce_exec, __cce_pc)); \
     } while (false)
 
@@ -213,7 +212,7 @@ static void traceFunctionPrologue(ExecState* exec, const char* comment, CodeSpec
 {
     JSFunction* callee = jsCast<JSFunction*>(exec->callee());
     FunctionExecutable* executable = callee->jsExecutable();
-    CodeBlock* codeBlock = &executable->generatedBytecodeFor(kind);
+    CodeBlock* codeBlock = executable->codeBlockFor(kind);
     dataLogF("%p / %p: in %s of function %p, executable %p; numVars = %u, numParameters = %u, numCalleeRegisters = %u, caller = %p.\n",
             codeBlock, exec, comment, callee, executable,
             codeBlock->m_numVars, codeBlock->numParameters(), codeBlock->m_numCalleeRegisters,
@@ -280,6 +279,9 @@ inline bool shouldJIT(ExecState* exec)
 // Returns true if we should try to OSR.
 inline bool jitCompileAndSetHeuristics(CodeBlock* codeBlock, ExecState* exec)
 {
+    VM& vm = exec->vm();
+    DeferGC deferGC(vm.heap);
+    
     codeBlock->updateAllValueProfilePredictions();
     
     if (!codeBlock->checkIfJITThresholdReached()) {
@@ -288,23 +290,32 @@ inline bool jitCompileAndSetHeuristics(CodeBlock* codeBlock, ExecState* exec)
         return false;
     }
     
-    CompilationResult result = codeBlock->jitCompile(exec);
-    switch (result) {
-    case CompilationNotNeeded:
+    switch (codeBlock->jitType()) {
+    case JITCode::BaselineJIT: {
         if (Options::verboseOSR())
             dataLogF("    Code was already compiled.\n");
         codeBlock->jitSoon();
         return true;
-    case CompilationFailed:
-        if (Options::verboseOSR())
-            dataLogF("    JIT compilation failed.\n");
-        codeBlock->dontJITAnytimeSoon();
-        return false;
-    case CompilationSuccessful:
-        if (Options::verboseOSR())
-            dataLogF("    JIT compilation successful.\n");
-        codeBlock->jitSoon();
-        return true;
+    }
+    case JITCode::InterpreterThunk: {
+        CompilationResult result = JIT::compile(&vm, codeBlock, JITCompilationCanFail);
+        switch (result) {
+        case CompilationFailed:
+            if (Options::verboseOSR())
+                dataLogF("    JIT compilation failed.\n");
+            codeBlock->dontJITAnytimeSoon();
+            return false;
+        case CompilationSuccessful:
+            if (Options::verboseOSR())
+                dataLogF("    JIT compilation successful.\n");
+            codeBlock->install();
+            codeBlock->jitSoon();
+            return true;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return false;
+        }
+    }
     default:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
@@ -340,22 +351,22 @@ LLINT_SLOW_PATH_DECL(entry_osr)
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_call)
 {
-    return entryOSR(exec, pc, &jsCast<JSFunction*>(exec->callee())->jsExecutable()->generatedBytecodeFor(CodeForCall), "entry_osr_function_for_call", Prologue);
+    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->callee())->jsExecutable()->codeBlockForCall(), "entry_osr_function_for_call", Prologue);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_construct)
 {
-    return entryOSR(exec, pc, &jsCast<JSFunction*>(exec->callee())->jsExecutable()->generatedBytecodeFor(CodeForConstruct), "entry_osr_function_for_construct", Prologue);
+    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->callee())->jsExecutable()->codeBlockForConstruct(), "entry_osr_function_for_construct", Prologue);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_call_arityCheck)
 {
-    return entryOSR(exec, pc, &jsCast<JSFunction*>(exec->callee())->jsExecutable()->generatedBytecodeFor(CodeForCall), "entry_osr_function_for_call_arityCheck", ArityCheck);
+    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->callee())->jsExecutable()->codeBlockForCall(), "entry_osr_function_for_call_arityCheck", ArityCheck);
 }
 
 LLINT_SLOW_PATH_DECL(entry_osr_function_for_construct_arityCheck)
 {
-    return entryOSR(exec, pc, &jsCast<JSFunction*>(exec->callee())->jsExecutable()->generatedBytecodeFor(CodeForConstruct), "entry_osr_function_for_construct_arityCheck", ArityCheck);
+    return entryOSR(exec, pc, jsCast<JSFunction*>(exec->callee())->jsExecutable()->codeBlockForConstruct(), "entry_osr_function_for_construct_arityCheck", ArityCheck);
 }
 
 LLINT_SLOW_PATH_DECL(loop_osr)
@@ -422,8 +433,7 @@ LLINT_SLOW_PATH_DECL(stack_check)
     if (UNLIKELY(!vm.interpreter->stack().grow(&exec->registers()[exec->codeBlock()->m_numCalleeRegisters]))) {
         ReturnAddressPtr returnPC = exec->returnPC();
         exec = exec->callerFrame();
-        vm.exception = createStackOverflowError(exec);
-        CommonSlowPaths::interpreterThrowInCaller(exec, returnPC);
+        CommonSlowPaths::interpreterThrowInCaller(exec, returnPC, createStackOverflowError(exec));
         pc = returnToThrowForThrownException(exec);
     }
     LLINT_END_IMPL();
@@ -1004,10 +1014,10 @@ inline SlowPathReturnType setUpCall(ExecState* execCallee, Instruction* pc, Code
         codePtr = executable->hostCodeEntryFor(kind);
     else {
         FunctionExecutable* functionExecutable = static_cast<FunctionExecutable*>(executable);
-        JSObject* error = functionExecutable->compileFor(execCallee, callee->scope(), kind);
+        JSObject* error = functionExecutable->prepareForExecution(execCallee, callee->scope(), kind);
         if (error)
             LLINT_CALL_THROW(execCallee->callerFrame(), pc, error);
-        codeBlock = &functionExecutable->generatedBytecodeFor(kind);
+        codeBlock = functionExecutable->codeBlockFor(kind);
         ASSERT(codeBlock);
         if (execCallee->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()))
             codePtr = functionExecutable->jsCodeWithArityCheckEntryFor(kind);
@@ -1261,7 +1271,7 @@ LLINT_SLOW_PATH_DECL(slow_path_profile_did_call)
 LLINT_SLOW_PATH_DECL(throw_from_native_call)
 {
     LLINT_BEGIN();
-    ASSERT(vm.exception);
+    ASSERT(vm.exception());
     LLINT_END();
 }
 
@@ -1282,7 +1292,7 @@ LLINT_SLOW_PATH_DECL(slow_path_get_from_scope)
     PropertySlot slot(scope);
     if (!scope->getPropertySlot(exec, ident, slot)) {
         if (modeAndType.mode() == ThrowIfNotFound)
-            LLINT_RETURN(throwError(exec, createUndefinedVariableError(exec, ident)));
+            LLINT_RETURN(exec->vm().throwException(exec, createUndefinedVariableError(exec, ident)));
         LLINT_RETURN(jsUndefined());
     }
 

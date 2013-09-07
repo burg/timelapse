@@ -42,6 +42,11 @@ set(test_webkit2_api_LIBRARIES
     gtest
 )
 
+set(TestWebKitAPI_LIBRARIES
+    WTF
+    WebKit2
+)
+
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
 add_library(TestWebKitAPIInjectedBundle SHARED
@@ -72,11 +77,6 @@ add_library(TestWebKitAPIInjectedBundle SHARED
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKConnection_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WillLoad_Bundle.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WillSendSubmitEvent_Bundle.cpp
-)
-
-set(TestWebKitAPI_LIBRARIES
-    WTF
-    WebKit2
 )
 
 target_link_libraries(TestWebKitAPIInjectedBundle ${TestWebKitAPI_LIBRARIES})
@@ -111,8 +111,6 @@ add_executable(test_wtf
     ${TESTWEBKITAPI_DIR}/Tests/WTF/StringOperators.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/TemporaryChange.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/Vector.cpp
-    ${TESTWEBKITAPI_DIR}/Tests/WTF/VectorBasic.cpp
-    ${TESTWEBKITAPI_DIR}/Tests/WTF/VectorReverse.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/WTFString.cpp
 )
 

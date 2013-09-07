@@ -101,7 +101,7 @@ double AnimationControllerPrivate::updateAnimations(SetChanged callSetChanged/* 
             if (!timeToNextService) {
                 if (callSetChanged == CallSetChanged) {
                     Node* node = it->key->node();
-                    ASSERT(!node || (node->document() && !node->document()->inPageCache()));
+                    ASSERT(!node || !node->document().inPageCache());
                     node->setNeedsStyleRecalc(SyntheticStyleChange);
                     calledSetChanged = true;
                 }
@@ -210,7 +210,7 @@ void AnimationControllerPrivate::addEventToDispatch(PassRefPtr<Element> element,
 
 void AnimationControllerPrivate::addNodeChangeToDispatch(PassRefPtr<Node> node)
 {
-    ASSERT(!node || (node->document() && !node->document()->inPageCache()));
+    ASSERT(!node || !node->document().inPageCache());
     if (!node)
         return;
 
@@ -269,8 +269,8 @@ void AnimationControllerPrivate::suspendAnimations()
     suspendAnimationsForDocument(m_frame->document());
 
     // Traverse subframes
-    for (Frame* child = m_frame->tree()->firstChild(); child; child = child->tree()->nextSibling())
-        child->animation()->suspendAnimations();
+    for (Frame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling())
+        child->animation().suspendAnimations();
 
     m_isSuspended = true;
 }
@@ -283,8 +283,8 @@ void AnimationControllerPrivate::resumeAnimations()
     resumeAnimationsForDocument(m_frame->document());
 
     // Traverse subframes
-    for (Frame* child = m_frame->tree()->firstChild(); child; child = child->tree()->nextSibling())
-        child->animation()->resumeAnimations();
+    for (Frame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling())
+        child->animation().resumeAnimations();
 
     m_isSuspended = false;
 }
@@ -296,7 +296,7 @@ void AnimationControllerPrivate::suspendAnimationsForDocument(Document* document
     RenderObjectAnimationMap::const_iterator animationsEnd = m_compositeAnimations.end();
     for (RenderObjectAnimationMap::const_iterator it = m_compositeAnimations.begin(); it != animationsEnd; ++it) {
         RenderObject* renderer = it->key;
-        if (renderer->document() == document) {
+        if (&renderer->document() == document) {
             CompositeAnimation* compAnim = it->value.get();
             compAnim->suspendAnimations();
         }
@@ -312,7 +312,7 @@ void AnimationControllerPrivate::resumeAnimationsForDocument(Document* document)
     RenderObjectAnimationMap::const_iterator animationsEnd = m_compositeAnimations.end();
     for (RenderObjectAnimationMap::const_iterator it = m_compositeAnimations.begin(); it != animationsEnd; ++it) {
         RenderObject* renderer = it->key;
-        if (renderer->document() == document) {
+        if (&renderer->document() == document) {
             CompositeAnimation* compAnim = it->value.get();
             compAnim->resumeAnimations();
         }
@@ -365,7 +365,7 @@ bool AnimationControllerPrivate::pauseTransitionAtTime(RenderObject* renderer, c
 double AnimationControllerPrivate::beginAnimationUpdateTime()
 {
     if (m_beginAnimationUpdateTime == cBeginAnimationUpdateTimeNotSet)
-        m_beginAnimationUpdateTime = currentTime();
+        m_beginAnimationUpdateTime = monotonicallyIncreasingTime();
     return m_beginAnimationUpdateTime;
 }
 
@@ -406,7 +406,7 @@ unsigned AnimationControllerPrivate::numberOfActiveAnimations(Document* document
     for (RenderObjectAnimationMap::const_iterator it = m_compositeAnimations.begin(); it != animationsEnd; ++it) {
         RenderObject* renderer = it->key;
         CompositeAnimation* compAnim = it->value.get();
-        if (renderer->document() == document)
+        if (&renderer->document() == document)
             count += compAnim->numberOfActiveAnimations();
     }
     
@@ -507,7 +507,7 @@ void AnimationController::cancelAnimations(RenderObject* renderer)
 
     if (m_data->clear(renderer)) {
         Node* node = renderer->node();
-        ASSERT(!node || (node->document() && !node->document()->inPageCache()));
+        ASSERT(!node || !node->document().inPageCache());
         if (node)
             node->setNeedsStyleRecalc(SyntheticStyleChange);
     }
@@ -516,7 +516,7 @@ void AnimationController::cancelAnimations(RenderObject* renderer)
 PassRefPtr<RenderStyle> AnimationController::updateAnimations(RenderObject* renderer, RenderStyle* newStyle)
 {
     // Don't do anything if we're in the cache
-    if (!renderer->document() || renderer->document()->inPageCache())
+    if (renderer->document().inPageCache())
         return newStyle;
 
     RenderStyle* oldStyle = renderer->style();
@@ -525,7 +525,7 @@ PassRefPtr<RenderStyle> AnimationController::updateAnimations(RenderObject* rend
         return newStyle;
 
     // Don't run transitions when printing.
-    if (renderer->view()->printing())
+    if (renderer->view().printing())
         return newStyle;
 
     // Fetch our current set of implicit animations from a hashtable.  We then compare them
@@ -542,8 +542,7 @@ PassRefPtr<RenderStyle> AnimationController::updateAnimations(RenderObject* rend
     if (renderer->parent() || newStyle->animations() || (oldStyle && oldStyle->animations())) {
         m_data->updateAnimationTimerForRenderer(renderer);
 #if ENABLE(REQUEST_ANIMATION_FRAME)
-        if (FrameView* view = renderer->document()->view())
-            view->scheduleAnimation();
+        renderer->view().frameView().scheduleAnimation();
 #endif
     }
 

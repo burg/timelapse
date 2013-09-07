@@ -39,13 +39,12 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "NodeTraversal.h"
-#include "RenderBox.h"
-#include "RenderTextControl.h"
+#include "RenderBlock.h"
 #include "RenderTheme.h"
 #include "ScriptEventListener.h"
 #include "ShadowRoot.h"
 #include "Text.h"
-#include "TextIterator.h"
+#include "htmlediting.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -153,7 +152,7 @@ bool HTMLTextFormControlElement::placeholderShouldBeVisible() const
         && isEmptyValue()
         && isEmptySuggestedValue()
         && !isPlaceholderEmpty()
-        && (document()->focusedElement() != this || (renderer() && renderer()->theme()->shouldShowPlaceholderWhenFocused()))
+        && (document().focusedElement() != this || (renderer() && renderer()->theme()->shouldShowPlaceholderWhenFocused()))
         && (!renderer() || renderer()->style()->visibility() == VISIBLE);
 }
 
@@ -223,12 +222,11 @@ void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
     setChangedSinceLastFormControlChangeEvent(false);
 }
 
-static inline bool hasVisibleTextArea(RenderTextControl* textControl, HTMLElement* innerText)
+static inline bool hasVisibleTextArea(RenderObject* textControl, HTMLElement* innerText)
 {
     ASSERT(textControl);
     return textControl->style()->visibility() != HIDDEN && innerText && innerText->renderer() && innerText->renderBox()->height();
 }
-
 
 void HTMLTextFormControlElement::setRangeText(const String& replacement, ExceptionCode& ec)
 {
@@ -302,7 +300,7 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, const Str
 
 void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextFieldSelectionDirection direction)
 {
-    document()->updateLayoutIgnorePendingStylesheets();
+    document().updateLayoutIgnorePendingStylesheets();
 
     if (!renderer() || !renderer()->isTextControl())
         return;
@@ -310,17 +308,16 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     end = max(end, 0);
     start = min(max(start, 0), end);
 
-    RenderTextControl* control = toRenderTextControl(renderer());
-    if (!hasVisibleTextArea(control, innerTextElement())) {
+    if (!hasVisibleTextArea(renderer(), innerTextElement())) {
         cacheSelection(start, end, direction);
         return;
     }
-    VisiblePosition startPosition = control->visiblePositionForIndex(start);
+    VisiblePosition startPosition = visiblePositionForIndex(start);
     VisiblePosition endPosition;
     if (start == end)
         endPosition = startPosition;
     else
-        endPosition = control->visiblePositionForIndex(end);
+        endPosition = visiblePositionForIndex(end);
 
     // startPosition and endPosition can be null position for example when
     // "-webkit-user-select: none" style attribute is specified.
@@ -335,26 +332,28 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
         newSelection = VisibleSelection(startPosition, endPosition);
     newSelection.setIsDirectional(direction != SelectionHasNoDirection);
 
-    if (Frame* frame = document()->frame())
+    if (Frame* frame = document().frame())
         frame->selection().setSelection(newSelection);
 }
 
 int HTMLTextFormControlElement::indexForVisiblePosition(const VisiblePosition& pos) const
 {
-    Position indexPosition = pos.deepEquivalent().parentAnchoredEquivalent();
-    if (enclosingTextFormControl(indexPosition) != this)
+    if (enclosingTextFormControl(pos.deepEquivalent()) != this)
         return 0;
-    RefPtr<Range> range = Range::create(indexPosition.document());
-    range->setStart(innerTextElement(), 0, ASSERT_NO_EXCEPTION);
-    range->setEnd(indexPosition.containerNode(), indexPosition.offsetInContainerNode(), ASSERT_NO_EXCEPTION);
-    return TextIterator::rangeLength(range.get());
+    bool forSelectionPreservation = false;
+    return WebCore::indexForVisiblePosition(innerTextElement(), pos, forSelectionPreservation);
+}
+
+VisiblePosition HTMLTextFormControlElement::visiblePositionForIndex(int index) const
+{
+    return visiblePositionForIndexUsingCharacterIterator(innerTextElement(), index);
 }
 
 int HTMLTextFormControlElement::selectionStart() const
 {
     if (!isTextFormControl())
         return 0;
-    if (document()->focusedElement() != this && hasCachedSelection())
+    if (document().focusedElement() != this && hasCachedSelection())
         return m_cachedSelectionStart;
 
     return computeSelectionStart();
@@ -363,7 +362,7 @@ int HTMLTextFormControlElement::selectionStart() const
 int HTMLTextFormControlElement::computeSelectionStart() const
 {
     ASSERT(isTextFormControl());
-    Frame* frame = document()->frame();
+    Frame* frame = document().frame();
     if (!frame)
         return 0;
 
@@ -374,7 +373,7 @@ int HTMLTextFormControlElement::selectionEnd() const
 {
     if (!isTextFormControl())
         return 0;
-    if (document()->focusedElement() != this && hasCachedSelection())
+    if (document().focusedElement() != this && hasCachedSelection())
         return m_cachedSelectionEnd;
     return computeSelectionEnd();
 }
@@ -382,7 +381,7 @@ int HTMLTextFormControlElement::selectionEnd() const
 int HTMLTextFormControlElement::computeSelectionEnd() const
 {
     ASSERT(isTextFormControl());
-    Frame* frame = document()->frame();
+    Frame* frame = document().frame();
     if (!frame)
         return 0;
 
@@ -412,7 +411,7 @@ const AtomicString& HTMLTextFormControlElement::selectionDirection() const
 {
     if (!isTextFormControl())
         return directionString(SelectionHasNoDirection);
-    if (document()->focusedElement() != this && hasCachedSelection())
+    if (document().focusedElement() != this && hasCachedSelection())
         return directionString(m_cachedSelectionDirection);
 
     return directionString(computeSelectionDirection());
@@ -421,7 +420,7 @@ const AtomicString& HTMLTextFormControlElement::selectionDirection() const
 TextFieldSelectionDirection HTMLTextFormControlElement::computeSelectionDirection() const
 {
     ASSERT(isTextFormControl());
-    Frame* frame = document()->frame();
+    Frame* frame = document().frame();
     if (!frame)
         return SelectionHasNoDirection;
 
@@ -454,7 +453,7 @@ PassRefPtr<Range> HTMLTextFormControlElement::selection() const
         return 0;
 
     if (!innerText->firstChild())
-        return Range::create(document(), innerText, 0, innerText, 0);
+        return Range::create(&document(), innerText, 0, innerText, 0);
 
     int offset = 0;
     Node* startNode = 0;
@@ -478,7 +477,7 @@ PassRefPtr<Range> HTMLTextFormControlElement::selection() const
     if (!startNode || !endNode)
         return 0;
 
-    return Range::create(document(), startNode, start, endNode, end);
+    return Range::create(&document(), startNode, start, endNode, end);
 }
 
 void HTMLTextFormControlElement::restoreCachedSelection()
@@ -494,7 +493,7 @@ void HTMLTextFormControlElement::selectionChanged(bool userTriggered)
     // selectionStart() or selectionEnd() will return cached selection when this node doesn't have focus
     cacheSelection(computeSelectionStart(), computeSelectionEnd(), computeSelectionDirection());
 
-    if (Frame* frame = document()->frame()) {
+    if (Frame* frame = document().frame()) {
         if (frame->selection().isRange() && userTriggered)
             dispatchEvent(Event::create(eventNames().selectEvent, true, false));
     }
@@ -504,7 +503,7 @@ void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const
 {
     if (name == placeholderAttr) {
         updatePlaceholderVisibility(true);
-        FeatureObserver::observe(document(), FeatureObserver::PlaceholderAttribute);
+        FeatureObserver::observe(&document(), FeatureObserver::PlaceholderAttribute);
     } else
         HTMLFormControlElementWithState::parseAttribute(name, value);
 }
@@ -523,14 +522,14 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
 
     bool textIsChanged = value != innerTextValue();
     if (textIsChanged || !innerTextElement()->hasChildNodes()) {
-        if (textIsChanged && document() && renderer()) {
-            if (AXObjectCache* cache = document()->existingAXObjectCache())
+        if (textIsChanged && renderer()) {
+            if (AXObjectCache* cache = document().existingAXObjectCache())
                 cache->postNotification(this, AXObjectCache::AXValueChanged, false);
         }
         innerTextElement()->setInnerText(value, ASSERT_NO_EXCEPTION);
 
         if (value.endsWith('\n') || value.endsWith('\r'))
-            innerTextElement()->appendChild(HTMLBRElement::create(document()), ASSERT_NO_EXCEPTION);
+            innerTextElement()->appendChild(HTMLBRElement::create(&document()), ASSERT_NO_EXCEPTION);
     }
 
     setFormControlValueMatchesRenderer(true);

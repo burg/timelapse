@@ -66,7 +66,6 @@ inline SVGImageElement::SVGImageElement(const QualifiedName& tagName, Document* 
 {
     ASSERT(isSVGImageElement(this));
     registerAnimatedPropertiesForSVGImageElement();
-    setHasCustomStyleResolveCallbacks();
 }
 
 PassRefPtr<SVGImageElement> SVGImageElement::create(const QualifiedName& tagName, Document* document)
@@ -224,7 +223,7 @@ void SVGImageElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
 {
     SVGGraphicsElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document()->completeURL(href()));
+    addSubresourceURL(urls, document().completeURL(href()));
 }
 
 void SVGImageElement::didMoveToNewDocument(Document* oldDocument)

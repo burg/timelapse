@@ -54,6 +54,7 @@ SOURCES += \
     accessibility/AccessibilityRenderObject.cpp \
     accessibility/AccessibilityScrollbar.cpp \
     accessibility/AccessibilityScrollView.cpp \
+    accessibility/AccessibilitySearchFieldButtons.cpp \
     accessibility/AccessibilitySlider.cpp \
     accessibility/AccessibilitySpinButton.cpp \
     accessibility/AccessibilityARIAGrid.cpp \
@@ -102,6 +103,7 @@ SOURCES += \
      bindings/js/JSDOMBinding.cpp \
      bindings/js/JSDOMFormDataCustom.cpp \
      bindings/js/JSDOMGlobalObject.cpp \
+     bindings/js/JSDOMGlobalObjectTask.cpp \
      bindings/js/JSDOMImplementationCustom.cpp \
      bindings/js/JSDOMMimeTypeArrayCustom.cpp \
      bindings/js/JSDOMPluginArrayCustom.cpp \
@@ -445,7 +447,6 @@ SOURCES += \
     dom/NodeFilter.cpp \
     dom/NodeIterator.cpp \
     dom/NodeRareData.cpp \
-    dom/NodeRenderingContext.cpp \
     dom/NodeRenderingTraversal.cpp \
     dom/NodeTraversal.cpp \
     dom/Notation.cpp \
@@ -612,7 +613,6 @@ SOURCES += \
     html/HTMLCollection.cpp \
     html/HTMLDListElement.cpp \
     html/HTMLDataListElement.cpp \
-    html/HTMLDialogElement.cpp \
     html/HTMLDirectoryElement.cpp \
     html/HTMLDetailsElement.cpp \
     html/HTMLDivElement.cpp \
@@ -1146,6 +1146,7 @@ SOURCES += \
     rendering/HitTestingTransformState.cpp \
     rendering/HitTestLocation.cpp \
     rendering/HitTestResult.cpp \
+    rendering/ImageQualityController.cpp \
     rendering/InlineBox.cpp \
     rendering/InlineFlowBox.cpp \
     rendering/InlineTextBox.cpp \
@@ -1163,7 +1164,6 @@ SOURCES += \
     rendering/RenderCounter.cpp \
     rendering/RenderDeprecatedFlexibleBox.cpp \
     rendering/RenderDetailsMarker.cpp \
-    rendering/RenderDialog.cpp \
     rendering/RenderEmbeddedObject.cpp \
     rendering/RenderFieldset.cpp \
     rendering/RenderFileUploadControl.cpp \
@@ -1239,7 +1239,6 @@ SOURCES += \
     rendering/shapes/Shape.cpp \
     rendering/shapes/ShapeInfo.cpp \
     rendering/shapes/ShapeInsideInfo.cpp \
-    rendering/shapes/ShapeInterval.cpp \
     rendering/shapes/ShapeOutsideInfo.cpp \
     rendering/style/BasicShapes.cpp \
     rendering/style/ContentData.cpp \
@@ -1353,6 +1352,7 @@ HEADERS += \
     bindings/js/JSDictionary.h \
     bindings/js/JSDOMBinding.h \
     bindings/js/JSDOMGlobalObject.h \
+    bindings/js/JSDOMGlobalObjectTask.h \
     bindings/js/JSDOMWindowBase.h \
     bindings/js/JSDOMWindowCustom.h \
     bindings/js/JSDOMWindowShell.h \
@@ -1611,8 +1611,13 @@ HEADERS += \
     dom/DOMTimeStamp.h \
     dom/DatasetDOMStringMap.h \
     dom/Element.h \
+    dom/ElementAncestorIterator.h \
+    dom/ElementChildIterator.h \
     dom/ElementData.h \
-    dom/ElementTravesal.h \
+    dom/ElementDescendantIterator.h \
+    dom/ElementIterator.h \
+    dom/ElementIteratorAssertions.h \
+    dom/ElementTraversal.h \
     dom/Entity.h \
     dom/EntityReference.h \
     dom/Event.h \
@@ -1652,7 +1657,6 @@ HEADERS += \
     dom/Node.h \
     dom/NodeIterator.h \
     dom/NodeRareData.h \
-    dom/NodeRenderingContext.h \
     dom/NodeRenderingTraversal.h \
     dom/NodeTraversal.h \
     dom/Notation.h \
@@ -1794,6 +1798,7 @@ HEADERS += \
     html/FormAssociatedElement.h \
     html/FormController.h \
     html/FormDataList.h \
+    html/FormNamedItem.h \
     html/FTPDirectoryDocument.h \
     html/HTMLAllCollection.h \
     html/HTMLAnchorElement.h \
@@ -1808,7 +1813,6 @@ HEADERS += \
     html/HTMLButtonElement.h \
     html/HTMLCanvasElement.h \
     html/HTMLCollection.h \
-    html/HTMLDialogElement.h \
     html/HTMLDirectoryElement.h \
     html/HTMLDetailsElement.h \
     html/HTMLDivElement.h \
@@ -2395,6 +2399,7 @@ HEADERS += \
     rendering/HitTestingTransformState.h \
     rendering/HitTestLocation.h \
     rendering/HitTestResult.h \
+    rendering/ImageQualityController.h \
     rendering/InlineBox.h \
     rendering/InlineFlowBox.h \
     rendering/InlineTextBox.h \
@@ -2794,7 +2799,6 @@ HEADERS += \
     svg/SVGStopElement.h \
     svg/SVGStringList.h \
     svg/SVGStyleElement.h \
-    svg/SVGStyledElement.h \
     svg/SVGSVGElement.h \
     svg/SVGSwitchElement.h \
     svg/SVGSymbolElement.h \
@@ -2811,6 +2815,7 @@ HEADERS += \
     svg/SVGTRefElement.h \
     svg/SVGTSpanElement.h \
     svg/SVGURIReference.h \
+    svg/SVGUnknownElement.h \
     svg/SVGUseElement.h \
     svg/SVGViewElement.h \
     svg/SVGViewSpec.h \
@@ -3321,8 +3326,6 @@ enable?(VIDEO) {
             platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.h \
             platform/graphics/gstreamer/VideoSinkGStreamer.h \
             platform/graphics/gstreamer/WebKitWebSourceGStreamer.h \
-            platform/graphics/gstreamer/PlatformVideoWindow.h \
-            platform/graphics/gstreamer/PlatformVideoWindowPrivate.h \
             platform/graphics/gstreamer/ImageGStreamer.h
         SOURCES += \
             platform/graphics/gstreamer/GStreamerGWorld.cpp \
@@ -3330,8 +3333,24 @@ enable?(VIDEO) {
             platform/graphics/gstreamer/MediaPlayerPrivateGStreamer.cpp \
             platform/graphics/gstreamer/VideoSinkGStreamer.cpp \
             platform/graphics/gstreamer/WebKitWebSourceGStreamer.cpp \
-            platform/graphics/gstreamer/PlatformVideoWindowQt.cpp \
             platform/graphics/gstreamer/ImageGStreamerQt.cpp
+        enable?(VIDEO_TRACK) {
+            HEADERS += \
+                platform/graphics/gstreamer/InbandTextTrackPrivateGStreamer.h \
+                platform/graphics/gstreamer/TextCombinerGStreamer.h \
+                platform/graphics/gstreamer/TextSinkGStreamer.h
+            SOURCES += \
+                platform/graphics/gstreamer/InbandTextTrackPrivateGStreamer.cpp \
+                platform/graphics/gstreamer/TextCombinerGStreamer.cpp \
+                platform/graphics/gstreamer/TextSinkGStreamer.cpp
+        }
+        use?(NATIVE_FULLSCREEN_VIDEO) {
+            HEADERS += \
+                platform/graphics/gstreamer/PlatformVideoWindow.h \
+                platform/graphics/gstreamer/PlatformVideoWindowPrivate.h
+            SOURCES += \
+                platform/graphics/gstreamer/PlatformVideoWindowQt.cpp
+        }
 
     } else:use?(QT_MULTIMEDIA) {
         HEADERS += \
@@ -3559,12 +3578,6 @@ enable?(XSLT) {
                 xml/XSLImportRule.h \
                 xml/XSLTUnicodeSort.h
 
-    } else {
-        SOURCES += \
-            dom/TransformSourceQt.cpp \
-            xml/XSLStyleSheetQt.cpp \
-            xml/XSLTProcessor.cpp \
-            xml/XSLTProcessorQt.cpp
     }
 }
 
@@ -3860,7 +3873,6 @@ enable?(SVG) {
         svg/SVGStopElement.cpp \
         svg/SVGStringList.cpp \
         svg/SVGStyleElement.cpp \
-        svg/SVGStyledElement.cpp \
         svg/SVGSwitchElement.cpp \
         svg/SVGSymbolElement.cpp \
         svg/SVGTRefElement.cpp \
@@ -3902,7 +3914,9 @@ enable?(VIDEO_TRACK) {
         html/HTMLTrackElement.h \
         html/track/AudioTrack.h \
         html/track/AudioTrackList.h \
+        html/track/InbandGenericTextTrack.h \
         html/track/InbandTextTrack.h \
+        html/track/InbandWebVTTTextTrack.h \
         html/track/LoadableTextTrack.h \
         html/track/TextTrack.h \
         html/track/TextTrackCue.h \
@@ -3936,7 +3950,9 @@ enable?(VIDEO_TRACK) {
         html/HTMLTrackElement.cpp \
         html/track/AudioTrack.cpp \
         html/track/AudioTrackList.cpp \
+        html/track/InbandGenericTextTrack.cpp \
         html/track/InbandTextTrack.cpp \
+        html/track/InbandWebVTTTextTrack.cpp \
         html/track/LoadableTextTrack.cpp \
         html/track/TextTrack.cpp \
         html/track/TextTrackCue.cpp \

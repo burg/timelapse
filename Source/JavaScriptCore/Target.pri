@@ -61,6 +61,7 @@ SOURCES += \
     bytecode/CodeOrigin.cpp \
     bytecode/CodeType.cpp \
     bytecode/DFGExitProfile.cpp \
+    bytecode/DeferredCompilationCallback.cpp \
     bytecode/ExecutionCounter.cpp \
     bytecode/ExitKind.cpp \
     bytecode/GetByIdStatus.cpp \
@@ -81,11 +82,11 @@ SOURCES += \
     bytecode/Watchpoint.cpp \
     bytecompiler/BytecodeGenerator.cpp \
     bytecompiler/NodesCodegen.cpp \
+    heap/CodeBlockSet.cpp \
     heap/CopiedSpaceInlines.h \
     heap/CopiedSpace.cpp \
     heap/CopyVisitor.cpp \
     heap/ConservativeRoots.cpp \
-    heap/DFGCodeBlocks.cpp \
     heap/Weak.cpp \
     heap/WeakBlock.cpp \
     heap/WeakHandleOwner.cpp \
@@ -128,6 +129,8 @@ SOURCES += \
     dfg/DFGClobberSet.cpp \
     dfg/DFGCommon.cpp \
     dfg/DFGCommonData.cpp \
+    dfg/DFGCompilationKey.cpp \
+    dfg/DFGCompilationMode.cpp \
     dfg/DFGCFAPhase.cpp \
     dfg/DFGCFGSimplificationPhase.cpp \
     dfg/DFGCPSRethreadingPhase.cpp \
@@ -167,6 +170,7 @@ SOURCES += \
     dfg/DFGOperations.cpp \
     dfg/DFGOSRAvailabilityAnalysisPhase.cpp \
     dfg/DFGOSREntry.cpp \
+    dfg/DFGOSREntrypointCreationPhase.cpp \
     dfg/DFGOSRExit.cpp \
     dfg/DFGOSRExitBase.cpp \
     dfg/DFGOSRExitCompiler.cpp \
@@ -186,6 +190,7 @@ SOURCES += \
     dfg/DFGSpeculativeJIT64.cpp \
     dfg/DFGTypeCheckHoistingPhase.cpp \
     dfg/DFGThunks.cpp \
+    dfg/DFGTierUpCheckInjectionPhase.cpp \
     dfg/DFGUnificationPhase.cpp \
     dfg/DFGUseKind.cpp \
     dfg/DFGValueSource.cpp \
@@ -200,7 +205,7 @@ SOURCES += \
     interpreter/CallFrame.cpp \
     interpreter/Interpreter.cpp \
     interpreter/JSStack.cpp \
-    interpreter/StackIterator.cpp \
+    interpreter/StackVisitor.cpp \
     jit/ClosureCallStubRoutine.cpp \
     jit/ExecutableAllocatorFixedVMPool.cpp \
     jit/ExecutableAllocator.cpp \
@@ -221,11 +226,12 @@ SOURCES += \
     jit/JITStubRoutine.cpp \
     jit/JITStubs.cpp \
     jit/JITThunks.cpp \
+    jit/JITToDFGDeferredCompilationCallback.cpp \
     jit/JumpReplacementWatchpoint.cpp \
     jit/ThunkGenerators.cpp \
     llint/LLIntCLoop.cpp \
     llint/LLIntData.cpp \
-    llint/LLIntEntrypoints.cpp \
+    llint/LLIntEntrypoint.cpp \
     llint/LLIntExceptions.cpp \
     llint/LLIntSlowPaths.cpp \
     llint/LLIntThunks.cpp \
@@ -319,12 +325,22 @@ SOURCES += \
     runtime/JSGlobalObject.cpp \
     runtime/JSGlobalObjectFunctions.cpp \
     runtime/JSLock.cpp \
+    runtime/JSMap.cpp \
+    runtime/JSNameScope.cpp \
     runtime/JSNameScope.cpp \
     runtime/JSNotAnObject.cpp \
     runtime/JSONObject.cpp \
     runtime/JSObject.cpp \
+    runtime/JSPromise.cpp \
+    runtime/JSPromiseCallback.cpp \
+    runtime/JSPromiseConstructor.cpp \
+    runtime/JSPromisePrototype.cpp \
+    runtime/JSPromiseResolver.cpp \
+    runtime/JSPromiseResolverConstructor.cpp \
+    runtime/JSPromiseResolverPrototype.cpp \
     runtime/JSPropertyNameIterator.cpp \
     runtime/JSProxy.cpp \
+    runtime/JSSet.cpp \
     runtime/JSScope.cpp \
     runtime/JSSegmentedVariableObject.cpp \
     runtime/JSString.cpp \
@@ -338,6 +354,9 @@ SOURCES += \
     runtime/JSWrapperObject.cpp \
     runtime/LiteralParser.cpp \
     runtime/Lookup.cpp \
+    runtime/MapConstructor.cpp \
+    runtime/MapData.cpp \
+    runtime/MapPrototype.cpp \
     runtime/MathObject.cpp \
     runtime/MemoryStatistics.cpp \
     runtime/NameConstructor.cpp \
@@ -365,6 +384,8 @@ SOURCES += \
     runtime/RegExpObject.cpp \
     runtime/RegExpPrototype.cpp \
     runtime/SamplingCounter.cpp \
+    runtime/SetConstructor.cpp \
+    runtime/SetPrototype.cpp \
     runtime/SimpleTypedArrayController.cpp \
     runtime/SmallStrings.cpp \
     runtime/SparseArrayValueMap.cpp \
@@ -377,6 +398,7 @@ SOURCES += \
     runtime/StructureChain.cpp \
     runtime/StructureRareData.cpp \
     runtime/SymbolTable.cpp \
+    runtime/TestRunnerUtils.cpp \
     runtime/TypedArrayController.cpp \
     runtime/TypedArrayType.cpp \
     runtime/VM.cpp \

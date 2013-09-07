@@ -46,13 +46,16 @@
 #include "DFGLivenessAnalysisPhase.h"
 #include "DFGLoopPreHeaderCreationPhase.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
+#include "DFGOSREntrypointCreationPhase.h"
 #include "DFGPredictionInjectionPhase.h"
 #include "DFGPredictionPropagationPhase.h"
 #include "DFGSSAConversionPhase.h"
+#include "DFGTierUpCheckInjectionPhase.h"
 #include "DFGTypeCheckHoistingPhase.h"
 #include "DFGUnificationPhase.h"
 #include "DFGValidate.h"
 #include "DFGVirtualRegisterAllocationPhase.h"
+#include "OperandsInlines.h"
 #include "Operations.h"
 #include <wtf/CurrentTime.h>
 
@@ -80,14 +83,13 @@ static void dumpAndVerifyGraph(Graph& graph, const char* text)
 }
 
 Plan::Plan(
-    CompileMode compileMode, PassRefPtr<CodeBlock> passedCodeBlock, unsigned osrEntryBytecodeIndex,
-    unsigned numVarsWithValues)
-    : compileMode(compileMode)
-    , vm(*passedCodeBlock->vm())
+    PassRefPtr<CodeBlock> passedCodeBlock, CompilationMode mode,
+    unsigned osrEntryBytecodeIndex, const Operands<JSValue>& mustHandleValues)
+    : vm(*passedCodeBlock->vm())
     , codeBlock(passedCodeBlock)
+    , mode(mode)
     , osrEntryBytecodeIndex(osrEntryBytecodeIndex)
-    , numVarsWithValues(numVarsWithValues)
-    , mustHandleValues(codeBlock->numParameters(), numVarsWithValues)
+    , mustHandleValues(mustHandleValues)
     , compilation(codeBlock->vm()->m_perBytecodeProfiler ? adoptRef(new Profiler::Compilation(codeBlock->vm()->m_perBytecodeProfiler->ensureBytecodesFor(codeBlock.get()), Profiler::DFG)) : 0)
     , identifiers(codeBlock.get())
     , weakReferences(codeBlock.get())
@@ -109,7 +111,7 @@ void Plan::compileInThread(LongLivedState& longLivedState)
     CompilationScope compilationScope;
 
     if (logCompilationChanges())
-        dataLog("DFG(Plan) compiling ", *codeBlock, ", number of instructions = ", codeBlock->instructionCount(), "\n");
+        dataLog("DFG(Plan) compiling ", *codeBlock, " with ", mode, ", number of instructions = ", codeBlock->instructionCount(), "\n");
 
     CompilationPath path = compileInThreadImpl(longLivedState);
 
@@ -133,7 +135,7 @@ void Plan::compileInThread(LongLivedState& longLivedState)
             break;
         }
         double now = currentTimeMS();
-        dataLog("Optimized ", *codeBlock->alternative(), " with ", pathName, " in ", now - before, " ms");
+        dataLog("Optimized ", *codeBlock->alternative(), " using ", mode, " with ", pathName, " in ", now - before, " ms");
         if (path == FTLPath)
             dataLog(" (DFG: ", beforeFTL - before, ", LLVM: ", now - beforeFTL, ")");
         dataLog(".\n");
@@ -142,6 +144,12 @@ void Plan::compileInThread(LongLivedState& longLivedState)
 
 Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
 {
+    if (verboseCompilationEnabled() && osrEntryBytecodeIndex != UINT_MAX) {
+        dataLog("\n");
+        dataLog("Compiler must handle OSR entry from bc#", osrEntryBytecodeIndex, " with values: ", mustHandleValues, "\n");
+        dataLog("\n");
+    }
+    
     Graph dfg(vm, *this, longLivedState);
     
     if (!parse(dfg)) {
@@ -161,6 +169,15 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
     performCPSRethreading(dfg);
     performUnification(dfg);
     performPredictionInjection(dfg);
+    
+    if (mode == FTLForOSREntryMode) {
+        bool result = performOSREntrypointCreation(dfg);
+        if (!result) {
+            finalizer = adoptPtr(new FailedFinalizer(*this));
+            return FailPath;
+        }
+        performCPSRethreading(dfg);
+    }
     
     if (validationEnabled())
         validate(dfg);
@@ -206,10 +223,19 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         dfg.m_naturalLoops.computeIfNecessary(dfg);
     }
 
+    switch (mode) {
+    case DFGMode: {
+        performTierUpCheckInjection(dfg);
+        break;
+    }
+    
+    case FTLMode:
+    case FTLForOSREntryMode: {
 #if ENABLE(FTL_JIT)
-    if (Options::useExperimentalFTL()
-        && compileMode == CompileFunction
-        && FTL::canCompile(dfg)) {
+        if (FTL::canCompile(dfg) == FTL::CannotCompile) {
+            finalizer = adoptPtr(new FailedFinalizer(*this));
+            return FailPath;
+        }
         
         performCriticalEdgeBreaking(dfg);
         performLoopPreHeaderCreation(dfg);
@@ -244,8 +270,16 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
         FTL::compile(state);
         FTL::link(state);
         return FTLPath;
-    }
+#else
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
 #endif // ENABLE(FTL_JIT)
+    }
+        
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
+    }
     
     performCPSRethreading(dfg);
     performDCE(dfg);
@@ -253,12 +287,10 @@ Plan::CompilationPath Plan::compileInThreadImpl(LongLivedState& longLivedState)
     dumpAndVerifyGraph(dfg, "Graph after optimization:");
 
     JITCompiler dataFlowJIT(dfg);
-    if (compileMode == CompileFunction) {
+    if (codeBlock->codeType() == FunctionCode) {
         dataFlowJIT.compileFunction();
         dataFlowJIT.linkFunction();
     } else {
-        ASSERT(compileMode == CompileOther);
-        
         dataFlowJIT.compile();
         dataFlowJIT.link();
     }
@@ -281,28 +313,39 @@ void Plan::reallyAdd(CommonData* commonData)
     writeBarriers.trigger(vm);
 }
 
-CompilationResult Plan::finalize(RefPtr<JSC::JITCode>& jitCode, MacroAssemblerCodePtr* jitCodeWithArityCheck)
+void Plan::notifyReady()
+{
+    callback->compilationDidBecomeReadyAsynchronously(codeBlock.get());
+    isCompiled = true;
+}
+
+CompilationResult Plan::finalizeWithoutNotifyingCallback()
 {
     if (!isStillValid())
         return CompilationInvalidated;
     
     bool result;
-    if (compileMode == CompileFunction)
-        result = finalizer->finalizeFunction(jitCode, *jitCodeWithArityCheck);
+    if (codeBlock->codeType() == FunctionCode)
+        result = finalizer->finalizeFunction();
     else
-        result = finalizer->finalize(jitCode);
+        result = finalizer->finalize();
     
     if (!result)
         return CompilationFailed;
     
-    reallyAdd(jitCode->dfgCommon());
+    reallyAdd(codeBlock->jitCode()->dfgCommon());
     
     return CompilationSuccessful;
 }
 
-CodeBlock* Plan::key()
+void Plan::finalizeAndNotifyCallback()
 {
-    return codeBlock->alternative();
+    callback->compilationDidComplete(codeBlock.get(), finalizeWithoutNotifyingCallback());
+}
+
+CompilationKey Plan::key()
+{
+    return CompilationKey(codeBlock->alternative(), mode);
 }
 
 } } // namespace JSC::DFG

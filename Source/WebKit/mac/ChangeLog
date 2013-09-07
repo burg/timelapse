@@ -1,3 +1,257 @@
+2013-09-05  Andreas Kling  <akling@apple.com>
+
+        ScrollView::children() should return a reference.
+        <https://webkit.org/b/120795>
+
+        Reviewed by Anders Carlsson.
+
+        * WebView/WebView.mm:
+        (-[WebView _addScrollerDashboardRegionsForFrameView:dashboardRegions:]):
+
+2013-09-04  Mark Rowe  <mrowe@apple.com>
+
+        <https://webkit.org/b/120707> Make WebKit's localizable strings mechanism usable under ARC
+
+        WebKit's localizable strings mechanism is also used outside of WebKit so it needs to work
+        both with and without ARC.
+
+        Reviewed by Anders Carlsson.
+
+        * Misc/WebLocalizableStrings.h: Mark the bundle member as unretained. This matches how the
+        member is used within WebLocalizableStrings.mm.
+
+2013-09-02  Darin Adler  <darin@apple.com>
+
+        [Mac] No need for HardAutorelease, which is same as CFBridgingRelease
+        https://bugs.webkit.org/show_bug.cgi?id=120569
+
+        Reviewed by Andy Estes.
+
+        * Misc/WebNSFileManagerExtras.mm:
+        (-[NSFileManager _webkit_startupVolumeName]): Removed some unneeded locals.
+        Got rid of the pointless ref/leakRef/HardAutorelease dance, and replaced it
+        with a [[x copy] autorelease].
+
+        * Misc/WebNSURLExtras.mm:
+        (-[NSURL _web_URLWithLowercasedScheme]): Use CFBridgingRelease, and got rid
+        of unneeded type casts.
+
+        * Plugins/WebBasePluginPackage.mm:
+        (+[WebBasePluginPackage preferredLocalizationName]): Use CFBridgingRelease.
+        * WebView/WebPDFRepresentation.mm:
+        (-[WebPDFRepresentation convertPostScriptDataSourceToPDF:]): Ditto.
+
+        * WebView/WebView.mm:
+        (+[WebView _setCacheModel:]): Use CFBridgingRelease and got rid of unneeded
+        type cast.
+
+2013-08-30  Antti Koivisto  <antti@apple.com>
+
+        Remove code behind ENABLE(DIALOG_ELEMENT)
+        https://bugs.webkit.org/show_bug.cgi?id=120467
+
+        Reviewed by Darin Adler.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-08-29  Sam Weinig  <sam@webkit.org>
+
+        Add ENABLE gaurds for Promises
+        https://bugs.webkit.org/show_bug.cgi?id=120488
+
+        Reviewed by Andreas Kling.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-08-29  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Download Web Archive of Inspected Page
+        https://bugs.webkit.org/show_bug.cgi?id=119774
+
+        Reviewed by Timothy Hatcher.
+
+        Update to support InspectorFrontendHost.save's new base64Encoded
+        parameter. It means the incoming content is binary data, not a string.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::save):
+
+2013-08-28  Chris Curtis  <chris_curtis@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=119548
+        Refactoring Exception throws.
+
+        Reviewed by Geoffrey Garen.
+        
+        Moved setting an exception into the vm, These functions changed to use the new functionality.
+
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::moveGlobalExceptionToExecState):
+        * Plugins/Hosted/ProxyInstance.mm:
+        (WebKit::ProxyInstance::invokeMethod):
+
+2013-08-27  Anders Carlsson  <andersca@apple.com>
+
+        Fix build.
+
+        * Plugins/Hosted/ProxyInstance.h:
+        * Plugins/Hosted/ProxyInstance.mm:
+        (WebKit::ProxyInstance::methodNamed):
+        (WebKit::ProxyInstance::fieldNamed):
+
+2013-08-23  Andy Estes  <aestes@apple.com>
+
+        Fix issues found by the Clang Static Analyzer
+        https://bugs.webkit.org/show_bug.cgi?id=120230
+
+        Reviewed by Darin Adler.
+
+        * Misc/WebNSFileManagerExtras.mm:
+        (-[NSFileManager _webkit_startupVolumeName]): Used HardAutorelease()
+        instead of WebCFAutorelease().
+        * Misc/WebNSObjectExtras.h: Removed definition of WebCFAutorelease().
+        * Misc/WebNSURLExtras.mm:
+        (-[NSURL _web_URLWithLowercasedScheme]): Used HardAutorelease()
+        instead of WebCFAutorelease().
+        * Plugins/Hosted/WebHostedNetscapePluginView.mm:
+        (-[WebHostedNetscapePluginView createPluginLayer]): Stop leaking
+        CGColors (CALayer retains its backgroundColor property despite the
+        property attributes claiming otherwise).
+        * Plugins/WebBasePluginPackage.mm:
+        (+[WebBasePluginPackage preferredLocalizationName]): Used
+        HardAutorelease() instead of WebCFAutorelease().
+        * WebView/WebDeviceOrientationProviderMock.mm:
+        (-[WebDeviceOrientationProviderMockInternal lastOrientation]): Stop
+        leaking WebDeviceOrientations.
+        * WebView/WebPDFRepresentation.mm:
+        (-[WebPDFRepresentation convertPostScriptDataSourceToPDF:]): Used
+        HardAutorelease() instead of WebCFAutorelease().
+        * WebView/WebView.mm:
+        (+[WebView _setCacheModel:]): Ditto.
+        (-[WebView _removeObjectForIdentifier:]): Ditto.
+
+2013-08-26  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac] can-read-in-dragstart-event.html and can-read-in-copy-and-cut-events.html fail
+        https://bugs.webkit.org/show_bug.cgi?id=113094
+
+        Reviewed by Darin Adler.
+
+        Return new pasteboard change count from all functions that change it.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::copy):
+        (WebPlatformStrategies::changeCount):
+        (WebPlatformStrategies::addTypes):
+        (WebPlatformStrategies::setTypes):
+        (WebPlatformStrategies::setBufferForType):
+        (WebPlatformStrategies::setPathnamesForType):
+        (WebPlatformStrategies::setStringForType):
+
+2013-08-26  Andreas Kling  <akling@apple.com>
+
+        Unreviewed build fix.
+
+        * WebView/WebFrame.mm:
+        (+[WebFrame _createMainFrameWithPage:frameName:frameView:]):
+
+2013-08-26  Andreas Kling  <akling@apple.com>
+
+        WebCore: Let Page create the main Frame.
+        <https://webkit.org/b/119964>
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        (WebFrameLoaderClient::setWebFrame):
+
+            Make it possible to construct a WebFrameLoaderClient with a null WebFrame*.
+            A WebFrame* is later hooked up with a call to setWebFrame().
+
+        * WebView/WebFrame.mm:
+        (+[WebFrame _createMainFrameWithPage:frameName:frameView:]):
+
+            Customized this method to wrap the Page::mainFrame() instead of creating a
+            new Frame.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+            Add a WebFrameLoaderClient to the PageClients passed to Page().
+
+2013-08-25  Darin Adler  <darin@apple.com>
+
+        Frame should not have a documentTypeString member function
+        https://bugs.webkit.org/show_bug.cgi?id=120262
+
+        Reviewed by Andreas Kling.
+
+        * WebView/WebFrame.mm: Removed _stringWithDocumentTypeStringAndMarkupString:
+        internal method, which was not used anywhere in WebKit. Internal methods are
+        only for use within WebKit, as opposed to public and private methods that can
+        be used outside.
+        * WebView/WebFrameInternal.h: Ditto.
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        Frame::tree should return a reference instead of a pointer
+        https://bugs.webkit.org/show_bug.cgi?id=120259
+
+        Reviewed by Andreas Kling.
+
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::performRequest):
+        * Plugins/WebBaseNetscapePluginView.mm:
+        (-[WebBaseNetscapePluginView resolvedURLStringForURL:target:]):
+        * Plugins/WebNetscapePluginView.mm:
+        (-[WebNetscapePluginView loadPluginRequest:]):
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (applyAppleDictionaryApplicationQuirkNonInlinePart):
+        (WebFrameLoaderClient::prepareForDataSourceReplacement):
+        (WebFrameLoaderClient::createFrame):
+        * WebView/WebFrame.mm:
+        (+[WebFrame _createFrameWithPage:frameName:frameView:ownerElement:]):
+        (-[WebFrame _updateBackgroundAndUpdatesWhileOffscreen]):
+        (-[WebFrame _unmarkAllBadGrammar]):
+        (-[WebFrame _unmarkAllMisspellings]):
+        (-[WebFrame _atMostOneFrameHasSelection]):
+        (-[WebFrame _findFrameWithSelection]):
+        (-[WebFrame _drawRect:contentsOnly:]):
+        (-[WebFrame _isDescendantOfFrame:]):
+        (-[WebFrame _recursive_resumeNullEventsForAllNetscapePlugins]):
+        (-[WebFrame _recursive_pauseNullEventsForAllNetscapePlugins]):
+        (-[WebFrame name]):
+        (-[WebFrame findFrameNamed:]):
+        (-[WebFrame parentFrame]):
+        (-[WebFrame childFrames]):
+        * WebView/WebView.mm:
+        (-[WebView _attachScriptDebuggerToAllFrames]):
+        (-[WebView _detachScriptDebuggerFromAllFrames]):
+        (-[WebView _clearMainFrameName]):
+        (-[WebView _isUsingAcceleratedCompositing]):
+        (-[WebView _isSoftwareRenderable]):
+        (-[WebView setHostWindow:]):
+        (incrementFrame):
+        Use tree(). instead of tree()->.
+
+2013-08-23  Beth Dakin  <bdakin@apple.com>
+
+        REGRESSION (r132545): Some PDFs generated by WebKit are blank when viewed in 
+        Adobe Reader
+        https://bugs.webkit.org/show_bug.cgi?id=120240
+        -and corresponding-
+        <rdar://problem/14634453>
+
+        Reviewed by Anders Carlsson.
+
+        Hook up new WebSystemInterface API to find out if the current context is the PDF 
+        context.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface):
+
 2013-08-20  Pratik Solanki  <psolanki@apple.com>
 
         <https://webkit.org/b/120029> Document::markers() should return a reference

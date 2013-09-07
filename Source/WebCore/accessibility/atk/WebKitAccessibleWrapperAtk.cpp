@@ -498,6 +498,23 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
     if (coreObject->ariaHasPopup())
         attributeSet = addToAtkAttributeSet(attributeSet, "aria-haspopup", "true");
 
+    String invalidStatus = coreObject->invalidStatus().string();
+    if (!invalidStatus.isEmpty() && invalidStatus != "false")
+        attributeSet = addToAtkAttributeSet(attributeSet, "aria-invalid", coreObject->invalidStatus().string().utf8().data());
+
+    String helpText = coreObject->helpText();
+    if (!helpText.isEmpty())
+        attributeSet = addToAtkAttributeSet(attributeSet, "aria-help", helpText.utf8().data());
+
+    const char* sortDescription = "AXUnknownSortDirection";
+    AccessibilitySortDirection sortDirection = coreObject->sortDirection();
+    if (sortDirection == SortDirectionAscending)
+        sortDescription = "AXAscendingSortDirection";
+    else if (sortDirection == SortDirectionDescending)
+        sortDescription = "AXDescendingSortDirection";
+
+    attributeSet = addToAtkAttributeSet(attributeSet, "aria-sort", sortDescription);
+
     return attributeSet;
 }
 
@@ -1018,6 +1035,12 @@ static guint16 getInterfaceMaskFromObject(AccessibilityObject* coreObject)
     // Value
     if (role == SliderRole || role == SpinButtonRole || role == ScrollBarRole)
         interfaceMask |= 1 << WAI_VALUE;
+
+#if ENABLE(INPUT_TYPE_COLOR)
+    // Color type.
+    if (role == ColorWellRole)
+        interfaceMask |= 1 << WAI_TEXT;
+#endif
 
     return interfaceMask;
 }

@@ -70,7 +70,18 @@ enum TypedArrayMode {
     // vector allocated using who-knows-what, and M = WastefulTypedArray.
     // The view does not own the vector.
     WastefulTypedArray,
+    
+    // A data view. B is unused, V points to a vector allocated using who-
+    // knows-what, and M = DataViewMode. The view does not own the vector.
+    // There is an extra field (in JSDataView) that points to the
+    // ArrayBuffer.
+    DataViewMode
 };
+
+inline bool hasArrayBuffer(TypedArrayMode mode)
+{
+    return mode >= WastefulTypedArray;
+}
 
 // When WebCore uses a JSArrayBufferView, it expects to be able to get the native
 // ArrayBuffer and little else. This requires slowing down and wasting memory,
@@ -91,6 +102,12 @@ public:
             & ~(sizeof(EncodedJSValue) - 1);
     }
 
+    static size_t allocationSize(size_t inlineCapacity)
+    {
+        ASSERT_UNUSED(inlineCapacity, !inlineCapacity);
+        return sizeof(JSArrayBufferView);
+    }
+        
 protected:
     class ConstructionContext {
         WTF_MAKE_NONCOPYABLE(ConstructionContext);
@@ -103,6 +120,11 @@ protected:
         JS_EXPORT_PRIVATE ConstructionContext(
             VM&, Structure*, PassRefPtr<ArrayBuffer>,
             unsigned byteOffset, unsigned length);
+        
+        enum DataViewTag { DataView };
+        ConstructionContext(
+            Structure*, PassRefPtr<ArrayBuffer>,
+            unsigned byteOffset, unsigned length, DataViewTag);
         
         bool operator!() const { return !m_structure; }
         
@@ -125,17 +147,15 @@ protected:
     
     static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
     static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
-    static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool shouldThrow);
+    static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
     
     static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
     
 public:
-    // Allocates the full-on native buffer. Also moves the data into the C heap
-    // if necessary.
-    void slowDownAndWasteMemoryIfNecessary();
-    
     TypedArrayMode mode() const { return m_mode; }
+    bool hasArrayBuffer() const { return JSC::hasArrayBuffer(mode()); }
+    
     ArrayBuffer* buffer();
     PassRefPtr<ArrayBufferView> impl();
     void neuter();
@@ -155,6 +175,8 @@ private:
 
 protected:
     static const unsigned StructureFlags = OverridesGetPropertyNames | OverridesGetOwnPropertySlot | Base::StructureFlags;
+    
+    ArrayBuffer* existingBufferInButterfly();
 
     void* m_vector;
     uint32_t m_length;

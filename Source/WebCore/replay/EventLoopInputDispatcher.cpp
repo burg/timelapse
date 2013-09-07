@@ -251,7 +251,7 @@ void EventLoopInputDispatcher::syncDispatchInput()
     ASSERT(m_runningInput);
 
     // flush document event queue before dispatching our own events.
-    m_page->mainFrame()->document()->eventQueue()->flush();
+    m_page->mainFrame().document()->eventQueue()->flush();
 
     if (m_mode == Realtime) {
         m_previousDispatchStartTime = monotonicallyIncreasingTime();

@@ -403,6 +403,11 @@ String AXFooterRoleDescriptionText()
     return String::fromUTF8("footer");
 }
 
+String AXSearchFieldCancelButtonText()
+{
+    return String::fromUTF8("cancel");
+}
+
 String AXButtonActionVerb()
 {
     return String::fromUTF8("press");
@@ -633,6 +638,11 @@ String textTrackSubtitlesText()
 String textTrackOffMenuItemText()
 {
     return String::fromUTF8("Off");
+}
+
+String textTrackAutomaticMenuItemText()
+{
+    return String::fromUTF8("Auto");
 }
 
 String textTrackNoLabelText()

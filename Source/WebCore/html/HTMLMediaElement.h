@@ -35,6 +35,7 @@
 #include "MediaPlayer.h"
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+#include "HTMLPlugInImageElement.h"
 #include "MediaPlayerProxy.h"
 #endif
 
@@ -506,6 +507,7 @@ private:
     virtual void mediaPlayerSetSize(const IntSize&) OVERRIDE;
     virtual void mediaPlayerPause() OVERRIDE;
     virtual void mediaPlayerPlay() OVERRIDE;
+    virtual bool mediaPlayerPlatformVolumeConfigurationRequired() const OVERRIDE;
     virtual bool mediaPlayerIsPaused() const OVERRIDE;
     virtual bool mediaPlayerIsLooping() const OVERRIDE;
     virtual HostWindow* mediaPlayerHostWindow() OVERRIDE;
@@ -637,6 +639,7 @@ private:
     RefPtr<MediaError> m_error;
 
     double m_volume;
+    bool m_volumeInitialized;
     double m_lastSeekTime;
     
     unsigned m_previousProgress;
@@ -724,7 +727,7 @@ private:
     bool m_haveVisibleTextTrack : 1;
     bool m_processingPreferenceChange : 1;
 
-    String m_forcedOrAutomaticSubtitleTrackLanguage;
+    String m_subtitleTrackLanguage;
     float m_lastTextTrackUpdateTime;
 
     CaptionUserPreferences::CaptionDisplayMode m_captionDisplayMode;

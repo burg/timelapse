@@ -25,9 +25,12 @@
 
 #include "StyledElement.h"
 
+#include "HTMLElementTypeHelpers.h"
+
 namespace WebCore {
 
 class DocumentFragment;
+class FormNamedItem;
 class HTMLCollection;
 class HTMLFormElement;
 
@@ -85,14 +88,13 @@ public:
 
     HTMLFormElement* form() const { return virtualForm(); }
 
-    HTMLFormElement* findFormAncestor() const;
-
     bool hasDirectionAuto() const;
     TextDirection directionalityIfhasDirAutoAttribute(bool& isAuto) const;
 
     virtual bool isHTMLUnknownElement() const { return false; }
 
     virtual bool isLabelable() const { return false; }
+    virtual FormNamedItem* asFormNamedItem() { return 0; }
 
 protected:
     HTMLElement(const QualifiedName& tagName, Document*, ConstructionType);
@@ -108,7 +110,7 @@ protected:
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
     unsigned parseBorderWidthAttribute(const AtomicString&) const;
 
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual void childrenChanged(const ChildChange&) OVERRIDE;
     void calculateAndAdjustDirectionality();
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
@@ -125,7 +127,7 @@ private:
 
     void dirAttributeChanged(const AtomicString&);
     void adjustDirectionalityIfNeededAfterChildAttributeChanged(Element* child);
-    void adjustDirectionalityIfNeededAfterChildrenChanged(Node* beforeChange, int childCountDelta);
+    void adjustDirectionalityIfNeededAfterChildrenChanged(Element* beforeChange, ChildChangeType);
     TextDirection directionality(Node** strongDirectionalityTextNode= 0) const;
 
     TranslateAttributeMode translateAttributeMode() const;
@@ -153,6 +155,8 @@ inline HTMLElement::HTMLElement(const QualifiedName& tagName, Document* document
 {
     ASSERT(tagName.localName().impl());
 }
+
+template <> inline bool isElementOfType<HTMLElement>(const Element* element) { return element->isHTMLElement(); }
 
 } // namespace WebCore
 

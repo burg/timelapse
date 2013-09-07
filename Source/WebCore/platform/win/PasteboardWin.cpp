@@ -90,12 +90,6 @@ static LRESULT CALLBACK PasteboardOwnerWndProc(HWND hWnd, UINT message, WPARAM w
     return lresult;
 }
 
-Pasteboard* Pasteboard::generalPasteboard() 
-{
-    static Pasteboard* pasteboard = new Pasteboard;
-    return pasteboard;
-}
-
 PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
     OwnPtr<Pasteboard> pasteboard = adoptPtr(new Pasteboard);
@@ -260,21 +254,21 @@ static void addMimeTypesForFormat(ListHashSet<String>& results, const FORMATETC&
     }
 }
 
-ListHashSet<String> Pasteboard::types()
+Vector<String> Pasteboard::types()
 {
     ListHashSet<String> results;
 
     if (!m_dataObject && m_dragDataMap.isEmpty())
-        return results;
+        return Vector<String>();
 
     if (m_dataObject) {
         COMPtr<IEnumFORMATETC> itr;
 
         if (FAILED(m_dataObject->EnumFormatEtc(DATADIR_GET, &itr)))
-            return results;
+            return Vector<String>();
 
         if (!itr)
-            return results;
+            return Vector<String>();
 
         FORMATETC data;
 
@@ -289,7 +283,9 @@ ListHashSet<String> Pasteboard::types()
         }
     }
 
-    return results;
+    Vector<String> vector;
+    copyToVector(results, vector);
+    return vector;
 }
 
 String Pasteboard::readString(const String& type)
@@ -436,7 +432,7 @@ void Pasteboard::writeRangeToDataObject(Range* selectedRange, Frame* frame)
 
     Vector<char> data;
     markupToCFHTML(createMarkup(selectedRange, 0, AnnotateForInterchange),
-        selectedRange->startContainer()->document()->url().string(), data);
+        selectedRange->startContainer()->document().url().string(), data);
     medium.hGlobal = createGlobalData(data);
     if (medium.hGlobal && FAILED(m_writableDataObject->SetData(htmlFormat(), &medium, TRUE)))
         ::GlobalFree(medium.hGlobal);
@@ -461,7 +457,7 @@ void Pasteboard::writeSelection(Range* selectedRange, bool canSmartCopyOrDelete,
     if (::OpenClipboard(m_owner)) {
         Vector<char> data;
         markupToCFHTML(createMarkup(selectedRange, 0, AnnotateForInterchange),
-            selectedRange->startContainer()->document()->url().string(), data);
+            selectedRange->startContainer()->document().url().string(), data);
         HGLOBAL cbData = createGlobalData(data);
         if (!::SetClipboardData(HTMLClipboardFormat, cbData))
             ::GlobalFree(cbData);

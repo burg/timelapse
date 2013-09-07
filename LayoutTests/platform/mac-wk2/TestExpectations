@@ -195,6 +195,7 @@ storage/websql/transaction-error-callback-isolated-world.html
 # https://bugs.webkit.org/show_bug.cgi?id=89401
 platform/mac/editing/input/insert-dictated-text.html
 platform/mac/editing/input/edit-dictated-text-with-alternative.html
+platform/mac/editing/attributed-string/
 
 # https://bugs.webkit.org/show_bug.cgi?id=89199
 editing/spelling/grammar-edit-word.html
@@ -310,7 +311,7 @@ webkit.org/b/117767 media/W3C/video/error/error_onerror_called_on_bogus_source.h
 webkit.org/b/117767 media/broken-video.html [ Failure ]
 webkit.org/b/117767 media/event-attributes.html [ Failure ]
 
-webkit.org/b/117962 [ MountainLion ] media/video-played-collapse.html [ Skip ]
+webkit.org/b/117962 media/video-played-collapse.html [ Failure ]
 
 webkit.org/b/118925 [ Debug ] compositing/background-color/background-color-alpha.html  [ ImageOnlyFailure ]  
 webkit.org/b/118925 [ Debug ] compositing/background-color/background-color-change-to-text.html  [ ImageOnlyFailure ]
@@ -334,6 +335,9 @@ webkit.org/b/118925 [ Debug ] svg/repaint/buffered-rendering-static-image.html  
 
 # Only failing on WK1
 webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Pass ]
+
+webkit.org/b/120148 [ Lion Release ] webaudio/javascriptaudionode-upmix2-8channel-input.html [ Pass Failure ]
+webkit.org/b/120161 [ Lion ] webaudio/codec-tests/mp3/128kbps-44khz.html [ Failure ]
 
 ### END OF (1) Classified failures with bug reports
 ########################################
@@ -365,12 +369,10 @@ fast/forms/range/slider-delete-while-dragging-thumb.html
 http/tests/security/credentials-in-referer.html
 svg/W3C-SVG-1.1/fonts-elem-04-b.svg
 
-# All additional tests that failed on the Lion WebKit2 Debug bot in r111739
-http/tests/cookies/simple-cookies-expired.html
+# An additional test that failed on the Lion WebKit2 Debug bot in r111739
 inspector/elements/edit-dom-actions.html
 
-# All tests that failed more than once on the Lion WebKit2 Debug bot between r111808 and r111849
-http/tests/cookies/simple-cookies-max-age.html
+# A test that failed more than once on the Lion WebKit2 Debug bot between r111808 and r111849
 fast/workers/worker-cloneport.html
 
 # Intermittent crashes
@@ -422,9 +424,6 @@ compositing/geometry/fixed-position-flipped-writing-mode.html [ Pass ]
 
 # Plug-in blocking callback doesn't exist in WebKit1, so reenabling.
 plugins/unavailable-plugin-indicator-obscurity.html [ Pass ]
-
-# Fails in WebKit1 only, so re-enabling.
-editing/pasteboard/can-read-in-copy-and-cut-events.html [ Pass ] 
 
 # Color input is enabled on Mac WK2 but not on WK1.
 fast/forms/color/input-color-onchange-event.html [ Pass ]

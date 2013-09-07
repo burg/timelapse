@@ -46,6 +46,7 @@
 #include "Settings.h"
 #include "SinkDocument.h"
 #include "TextResourceDecoder.h"
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
@@ -104,9 +105,9 @@ void DocumentWriter::begin()
 
 PassRefPtr<Document> DocumentWriter::createDocument(const KURL& url)
 {
-    if (!m_frame->loader().stateMachine()->isDisplayingInitialEmptyDocument() && m_frame->loader().client()->shouldAlwaysUsePluginDocument(m_mimeType))
+    if (!m_frame->loader().stateMachine()->isDisplayingInitialEmptyDocument() && m_frame->loader().client().shouldAlwaysUsePluginDocument(m_mimeType))
         return PluginDocument::create(m_frame, url);
-    if (!m_frame->loader().client()->hasHTMLView())
+    if (!m_frame->loader().client().hasHTMLView())
         return PlaceholderDocument::create(m_frame, url);
     return DOMImplementation::createDocument(m_mimeType, m_frame, url, m_frame->inViewSourceMode());
 }
@@ -160,7 +161,7 @@ void DocumentWriter::begin(const KURL& urlReference, bool dispatch, Document* ow
     // document.open).
     m_parser = document->parser();
 
-    if (m_frame->view() && m_frame->loader().client()->hasHTMLView())
+    if (m_frame->view() && m_frame->loader().client().hasHTMLView())
         m_frame->view()->setContentsSize(IntSize());
 
     m_state = StartedWritingState;
@@ -172,7 +173,7 @@ TextResourceDecoder* DocumentWriter::createDecoderIfNeeded()
         m_decoder = TextResourceDecoder::create(m_mimeType,
             m_frame->settings().defaultTextEncodingName(),
             m_frame->settings().usesEncodingDetector());
-        Frame* parentFrame = m_frame->tree()->parent();
+        Frame* parentFrame = m_frame->tree().parent();
         // Set the hint encoding to the parent frame encoding only if
         // the parent and the current frames share the security origin.
         // We impose this condition because somebody can make a child frame
@@ -233,7 +234,7 @@ void DocumentWriter::end()
     // http://bugs.webkit.org/show_bug.cgi?id=10854
     // The frame's last ref may be removed and it can be deleted by checkCompleted(), 
     // so we'll add a protective refcount
-    RefPtr<Frame> protector(m_frame);
+    Ref<Frame> protect(*m_frame);
 
     if (!m_parser)
         return;

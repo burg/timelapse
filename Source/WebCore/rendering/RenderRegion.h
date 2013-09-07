@@ -35,6 +35,7 @@
 
 namespace WebCore {
 
+class Element;
 struct LayerFragment;
 typedef Vector<LayerFragment, 1> LayerFragments;
 class RenderBox;
@@ -143,7 +144,20 @@ public:
     virtual bool requiresLayer() const { return m_requiresLayerForCompositing || RenderBlock::requiresLayer(); }
 #endif
 
+    void addLayoutOverflowForBox(const RenderBox*, const LayoutRect&);
+    void addVisualOverflowForBox(const RenderBox*, const LayoutRect&);
+    LayoutRect layoutOverflowRectForBox(const RenderBox*);
+    LayoutRect visualOverflowRectForBox(const RenderBox*);
+    LayoutRect layoutOverflowRectForBoxForPropagation(const RenderBox*);
+    LayoutRect visualOverflowRectForBoxForPropagation(const RenderBox*);
+
+    LayoutRect rectFlowPortionForBox(const RenderBox*, const LayoutRect&) const;
+
+    Element* generatingElement() const { return toElement(RenderObject::generatingNode()); }
+
 protected:
+    RenderOverflow* ensureOverflowForBox(const RenderBox*);
+
     void setRegionObjectsRegionStyle();
     void restoreRegionObjectsOriginalStyle();
 

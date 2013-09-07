@@ -28,18 +28,25 @@
 
 #include "ArrayBufferView.h"
 #include "JSArrayBufferView.h"
+#include "JSDataView.h"
 
 namespace JSC {
 
-inline void JSArrayBufferView::slowDownAndWasteMemoryIfNecessary()
-{
-    if (m_mode != WastefulTypedArray)
-        methodTable()->slowDownAndWasteMemory(this);
-}
-
 inline ArrayBuffer* JSArrayBufferView::buffer()
 {
-    slowDownAndWasteMemoryIfNecessary();
+    switch (m_mode) {
+    case WastefulTypedArray:
+        return existingBufferInButterfly();
+    case DataViewMode:
+        return jsCast<JSDataView*>(this)->buffer();
+    default:
+        return methodTable()->slowDownAndWasteMemory(this);
+    }
+}
+
+inline ArrayBuffer* JSArrayBufferView::existingBufferInButterfly()
+{
+    ASSERT(m_mode == WastefulTypedArray);
     return butterfly()->indexingHeader()->arrayBuffer();
 }
 
@@ -50,17 +57,15 @@ inline PassRefPtr<ArrayBufferView> JSArrayBufferView::impl()
 
 inline void JSArrayBufferView::neuter()
 {
-    ASSERT(m_mode == WastefulTypedArray);
+    ASSERT(hasArrayBuffer());
     m_length = 0;
     m_vector = 0;
 }
 
 inline unsigned JSArrayBufferView::byteOffset()
 {
-    if (m_mode != WastefulTypedArray) {
-        ASSERT(m_mode == FastTypedArray || m_mode == OversizeTypedArray);
+    if (!hasArrayBuffer())
         return 0;
-    }
     
     ptrdiff_t delta =
         static_cast<uint8_t*>(m_vector) - static_cast<uint8_t*>(buffer()->data());

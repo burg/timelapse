@@ -111,6 +111,7 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case IsString:
     case LogicalNot:
     case Int32ToDouble:
+    case ExtractOSREntryLocal:
         return;
         
     case MovHintAndCheck:
@@ -133,6 +134,10 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
     case ForceOSRExit:
     case Return:
     case Unreachable:
+    case CheckTierUpInLoop:
+    case CheckTierUpAtReturn:
+    case CheckTierUpAndOSREnter:
+    case LoopHint:
         write(SideState);
         return;
 
@@ -518,6 +523,21 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         read(GCState);
         write(GCState);
         return;
+        
+    case NewTypedArray:
+        switch (node->child1().useKind()) {
+        case Int32Use:
+            read(GCState);
+            write(GCState);
+            return;
+        case UntypedUse:
+            read(World);
+            write(World);
+            return;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return;
+        }
         
     case RegExpExec:
     case RegExpTest:

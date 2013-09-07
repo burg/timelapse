@@ -286,7 +286,7 @@ bool CachedResourceLoader::checkInsecureContent(CachedResource::Type type, const
     case CachedResource::FontResource: {
         // These resources can corrupt only the frame's pixels.
         if (Frame* f = frame()) {
-            Frame* top = f->tree()->top();
+            Frame* top = f->tree().top();
             if (!top->loader().mixedContentChecker()->canDisplayInsecureContent(top->document()->securityOrigin(), url))
                 return false;
         }
@@ -365,8 +365,8 @@ bool CachedResourceLoader::canRequest(CachedResource::Type type, const KURL& url
             return false;
 
         if (frame()) {
-            if (!frame()->loader().client()->allowScriptFromSource(frame()->settings().isScriptEnabled(), url)) {
-                frame()->loader().client()->didNotAllowScript();
+            if (!frame()->loader().client().allowScriptFromSource(frame()->settings().isScriptEnabled(), url)) {
+                frame()->loader().client().didNotAllowScript();
                 return false;
             }
         }
@@ -448,7 +448,7 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::requestResource(Cache
         return 0;
 
     if (Frame* f = frame())
-        f->loader().client()->dispatchWillRequestResource(&request);
+        f->loader().client().dispatchWillRequestResource(&request);
 
     if (memoryCache()->disabled()) {
         DocumentResourceMap::iterator it = m_documentResources.find(url.string());
@@ -704,7 +704,7 @@ void CachedResourceLoader::setImagesEnabled(bool enable)
 
 bool CachedResourceLoader::clientDefersImage(const KURL& url) const
 {
-    return frame() && !frame()->loader().client()->allowImage(m_imagesEnabled, url);
+    return frame() && !frame()->loader().client().allowImage(m_imagesEnabled, url);
 }
 
 bool CachedResourceLoader::shouldDeferImageLoad(const KURL& url) const

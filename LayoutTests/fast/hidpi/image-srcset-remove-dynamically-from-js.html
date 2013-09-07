@@ -1,45 +1,31 @@
 <html>
 <head>
 <script>
+    window.targetScaleFactor = 1;
+</script>
+<script src="resources/srcset-helper.js"></script>
+<script src="../js/resources/js-test-pre.js"></script>
+<script>
+    if (window.testRunner) {
+        testRunner.dumpAsText();
+    }
+
     function updateSrc() {
         var img = document.getElementById("foo");
+        // srcset must be set first, otherwise 'src' is loaded as well
         img.src = "";
     }
 
-    function runTest() {
-        if (!window.testRunner || !window.sessionStorage) {
-            updateSrc();
-            return;
-        }
-
-        if (!sessionStorage.scaleFactorIsSet) {
-            testRunner.waitUntilDone();
-            testRunner.setBackingScaleFactor(1, scaleFactorIsSet);
-        }
-
-        if (sessionStorage.pageReloaded && sessionStorage.scaleFactorIsSet) {
-            delete sessionStorage.pageReloaded;
-            delete sessionStorage.scaleFactorIsSet;
-            updateSrc();
-            testRunner.notifyDone();
-        } else {
-            // Right now there is a bug that srcset does not properly deal with dynamic changes to the scale factor,
-            // so to work around that, we must reload the page to get the 1x image.
-            sessionStorage.pageReloaded = true;
-            document.location.reload(true);
-        }
-    }
-
-    function scaleFactorIsSet() {
-        sessionStorage.scaleFactorIsSet = true;
-    }
-
-    window.onload = runTest;
+    addEventListener("DOMContentLoaded", function() {
+        updateSrc();
+    }, false);
+    addEventListener("load", function() {
+        shouldBeTrue('document.getElementById("foo").clientWidth==200');
+    }, false);
 </script>
 </head>
-
 <body id="body">
     <div>This test passes if this img tag below is a green square. It ensures that attributes can be removed dynamically from javascript</div>
-    <img id="foo" height="100" width="100" src="resources/blue-100-px-square.png" srcset="resources/green-200-px-square.png 2x"></img>
+    <img id="foo" src="resources/blue-100-px-square.png" srcset="resources/green-200-px-square.png 2x">
 </body>
 </html>

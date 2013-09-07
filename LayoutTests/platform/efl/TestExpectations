@@ -327,6 +327,9 @@ Bug(EFL) fast/canvas/canvas-gradient-addStop-error.html
 Bug(EFL) fast/canvas/fill-stroke-clip-reset-path.html
 Bug(EFL) http/tests/xmlhttprequest/default-content-type-dashboard.html
 
+# Accelerated overflow scrolling (ENABLE_ACCELERATED_OVERFLOW_SCROLLING) is not enabled.
+fast/repaint/overflow-scroll-touch-repaint.html [ Skip ]
+
 # Doesn't apply to platforms that don't enforce the CFNetwork-style 3rd party cookie policy
 webkit.org/b/35824 http/tests/cookies/third-party-cookie-relaxing.html
 
@@ -498,9 +501,6 @@ webkit.org/b/86080 fast/encoding/idn-security.html [ Skip ]
 
 # Text Autosizing is not yet enabled.
 webkit.org/b/84186 fast/text-autosizing
-
-# Dialog element is not yet enabled.
-webkit.org/b/84635 fast/dom/HTMLDialogElement [ Skip ]
 
 # HIGH_DPI_CANVAS is not enabled.
 webkit.org/b/101809 fast/canvas/canvas-resize-reset-pixelRatio.html [ Skip ]
@@ -1495,8 +1495,8 @@ webkit.org/b/102068 webkit.org/b/102993 media/media-document-audio-repaint.html 
 webkit.org/b/100859 ietestcenter/css3/bordersbackgrounds/background-repeat-space-padding-box.htm [ Failure ]
 webkit.org/b/100857 ietestcenter/css3/text/textshadow-005.htm [ Missing ]
 
-webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html [ Skip ]
-webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html [ Skip ]
+webkit.org/b/100846 inspector-protocol/debugger/pause-dedicated-worker.html [ Skip ]
+webkit.org/b/100846 inspector-protocol/debugger/terminate-dedicated-worker-while-paused.html [ Skip ]
 
 # New media test introduced in r133660 fails.
 webkit.org/b/101439 media/progress-events-generated-correctly.html [ Failure ]
@@ -1538,13 +1538,14 @@ webkit.org/b/101670 media/video-controls-captions-trackmenu-includes-enabled-tra
 # Fails until we enable the Resource Timing API.
 webkit.org/b/61138 http/tests/w3c/webperf/submission/Google/resource-timing [ Skip ]
 
-# No support for exposing in-band text tracks
+# In-band tracks only work on GStreamer >= 1.1.2
 Bug(EFL) media/track/track-in-band.html [ Skip ]
 Bug(EFL) media/track/track-in-band-cues-added-once.html [ Skip ]
 Bug(EFL) media/track/track-in-band-style.html [ Skip ]
 Bug(EFL) media/track/track-in-band-legacy-api.html [ Skip ]
 Bug(EFL) media/track/track-forced-subtitles-in-band.html [ Skip ]
 Bug(EFL) media/track/track-in-band-mode.html [ Skip ]
+Bug(EFL) media/track/in-band [ Skip ]
 
 # Rendering failure, also missing expected results:
 webkit.org/b/105093 compositing/webgl/webgl-nonpremultiplied-blend.html [ Skip ]
@@ -1575,8 +1576,6 @@ webkit.org/b/105294 webaudio/codec-tests/mp3/128kbps-44khz.html [ Missing Failur
 webkit.org/b/105294 webaudio/codec-tests/vorbis/vbr-128kbps-44khz.html [ Failure ]
 webkit.org/b/105294 webaudio/codec-tests/vorbis/vbr-96kbps-44khz.html [ Failure ]
 webkit.org/b/105294 webaudio/codec-tests/vorbis/vbr-70kbps-44khz.html [ Failure ]
-webkit.org/b/105535 inspector-protocol/nmi-webaudio.html [ Failure ]
-webkit.org/b/105535 inspector-protocol/nmi-webaudio-leak-test.html [ Failure ]
 
 # Enable when support drag-and-drop autoscrolling
 webkit.org/b/39725 fast/events/drag-and-drop-autoscroll.html [ Skip ]
@@ -1598,16 +1597,6 @@ webkit.org/b/114151 accessibility/svg-group-element-with-title.html [ Failure ]
 
 # Newly added test in r144727 failing.
 webkit.org/b/111850 accessibility/table-with-hidden-head-section.html [ Failure ]
-
-# Regression after r153432.
-webkit.org/b/119333 accessibility/image-link-inline-cont.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/image-link.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/image-map2.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/removed-continuation-element-causes-crash.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/table-cell-spans.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/table-cells.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/table-modification-crash.html [ Failure Crash ]
-webkit.org/b/119333 accessibility/table-remove-cell-crash.html [ Failure Crash ]
 
 # Newly added test at r139111 is failing.
 webkit.org/b/106439 editing/pasteboard/paste-noplugin.html [ Failure ]

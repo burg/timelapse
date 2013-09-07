@@ -36,12 +36,15 @@
 
 #include "ContentSearchUtils.h"
 #include "Frame.h"
+#include "JSDOMWindowCustom.h"
 #include "JSJavaScriptCallFrame.h"
 #include "JavaScriptCallFrame.h"
+#include "PageConsole.h"
 #include "ScriptBreakpoint.h"
 #include "ScriptDebugListener.h"
 #include "ScriptProbe.h"
 #include "ScriptValue.h"
+#include "Sound.h"
 #include <debugger/DebuggerCallFrame.h>
 #include <parser/SourceProvider.h>
 #include <runtime/JSLock.h>
@@ -143,7 +146,7 @@ void ScriptDebugServer::removeBreakpoint(const String& breakpointId)
     }
 }
 
-bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& position) const
+bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& position, ScriptBreakpoint *hitBreakpoint) const
 {
     if (!m_breakpointsActivated)
         return false;
@@ -178,6 +181,9 @@ bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& pos
     if (!hit)
         return false;
 
+    if (hitBreakpoint)
+        *hitBreakpoint = breaksVector.at(i);
+
     // An empty condition counts as no condition which is equivalent to "true".
     if (breaksVector.at(i).condition.isEmpty())
         return true;
@@ -186,9 +192,44 @@ bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& pos
     JSValue result = m_currentCallFrame->evaluate(breaksVector.at(i).condition, exception);
     if (exception) {
         // An erroneous condition counts as "false".
+        reportException(m_currentCallFrame->exec(), exception);
         return false;
     }
     return result.toBoolean(m_currentCallFrame->exec());
+}
+
+bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& breakpointAction) const
+{
+    switch (breakpointAction.type) {
+    case ScriptBreakpointActionTypeLog: {
+        DOMWindow* window = asJSDOMWindow(m_currentCallFrame->dynamicGlobalObject())->impl();
+        if (PageConsole* console = window->pageConsole())
+            console->addMessage(JSMessageSource, LogMessageLevel, breakpointAction.data);
+        break;
+    }
+    case ScriptBreakpointActionTypeEvaluate: {
+        JSValue exception;
+        m_currentCallFrame->evaluate(breakpointAction.data, exception);
+        if (exception)
+            reportException(m_currentCallFrame->exec(), exception);
+        break;
+    }
+    case ScriptBreakpointActionTypeSound:
+        systemBeep();
+        break;
+    }
+
+    return true;
+}
+
+bool ScriptDebugServer::evaluateBreakpointActions(const ScriptBreakpoint& breakpoint) const
+{
+    for (size_t i = 0; i < breakpoint.actions.size(); ++i) {
+        if (!evaluateBreakpointAction(breakpoint.actions[i]))
+            return false;
+    }
+
+    return true;
 }
 
 void ScriptDebugServer::clearBreakpoints()
@@ -506,7 +547,7 @@ void ScriptDebugServer::createCallFrame(const DebuggerCallFrame& debuggerCallFra
 
 void ScriptDebugServer::updateCallFrameAndPauseIfNeeded(const DebuggerCallFrame& debuggerCallFrame, intptr_t sourceID, int lineNumber, int columnNumber)
 {
-    ASSERT(m_currentCallFrame);
+    // ASSERT(m_currentCallFrame);
     if (!m_currentCallFrame)
         return;
 
@@ -523,13 +564,21 @@ void ScriptDebugServer::pauseIfNeeded(JSGlobalObject* dynamicGlobalObject)
     if (!getListenersForGlobalObject(dynamicGlobalObject))
         return;
 
+    ScriptBreakpoint breakpoint;
+    bool didHitBreakpoint = false;
     bool pauseNow = m_pauseOnNextStatement;
     pauseNow |= (m_pauseOnCallFrame == m_currentCallFrame);
-    pauseNow |= hasBreakpoint(m_currentCallFrame->sourceID(), m_currentCallFrame->position());
+    pauseNow |= didHitBreakpoint = hasBreakpoint(m_currentCallFrame->sourceID(), m_currentCallFrame->position(), &breakpoint);
     pauseNow |= hasActiveProbes(m_currentCallFrame->sourceID(), m_currentCallFrame->position());
     m_lastExecutedLine = m_currentCallFrame->position().m_line.zeroBasedInt();
     if (!pauseNow)
         return;
+
+    if (didHitBreakpoint) {
+        evaluateBreakpointActions(breakpoint);
+        if (breakpoint.autoContinue)
+            return;
+    }
 
     m_pauseOnCallFrame = 0;
     m_pauseOnNextStatement = false;

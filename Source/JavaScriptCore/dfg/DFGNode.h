@@ -527,9 +527,20 @@ struct Node {
         return variableAccessData()->local();
     }
     
+    bool hasUnlinkedLocal()
+    {
+        switch (op()) {
+        case GetLocalUnlinked:
+        case ExtractOSREntryLocal:
+            return true;
+        default:
+            return false;
+        }
+    }
+    
     VirtualRegister unlinkedLocal()
     {
-        ASSERT(op() == GetLocalUnlinked);
+        ASSERT(hasUnlinkedLocal());
         return static_cast<VirtualRegister>(m_opInfo);
     }
     
@@ -633,6 +644,24 @@ struct Node {
         if (op() == NewArrayBuffer)
             return newArrayBufferData()->indexingType;
         return m_opInfo;
+    }
+    
+    bool hasTypedArrayType()
+    {
+        switch (op()) {
+        case NewTypedArray:
+            return true;
+        default:
+            return false;
+        }
+    }
+    
+    TypedArrayType typedArrayType()
+    {
+        ASSERT(hasTypedArrayType());
+        TypedArrayType result = static_cast<TypedArrayType>(m_opInfo);
+        ASSERT(isTypedView(result));
+        return result;
     }
     
     bool hasInlineCapacity()

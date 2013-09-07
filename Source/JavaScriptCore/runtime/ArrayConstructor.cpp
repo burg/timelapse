@@ -44,7 +44,7 @@ static EncodedJSValue JSC_HOST_CALL arrayConstructorIsArray(ExecState*);
 
 namespace JSC {
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(ArrayConstructor);
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ArrayConstructor);
 
 const ClassInfo ArrayConstructor::s_info = { "Function", &InternalFunction::s_info, 0, ExecState::arrayConstructorTable, CREATE_METHOD_TABLE(ArrayConstructor) };
 
@@ -80,7 +80,7 @@ JSObject* constructArrayWithSizeQuirk(ExecState* exec, ArrayAllocationProfile* p
     
     uint32_t n = length.toUInt32(exec);
     if (n != length.toNumber(exec))
-        return throwError(exec, createRangeError(exec, ASCIILiteral("Array size is not a small enough positive integer.")));
+        return exec->vm().throwException(exec, createRangeError(exec, ASCIILiteral("Array size is not a small enough positive integer.")));
     return constructEmptyArray(exec, profile, globalObject, n);
 }
 

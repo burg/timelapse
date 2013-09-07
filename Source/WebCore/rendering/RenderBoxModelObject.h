@@ -228,7 +228,12 @@ protected:
         {
             m_tileSize = tileSize;
         }
-        
+        FloatSize spaceSize() const { return m_space; }
+        void setSpaceSize(const FloatSize& space)
+        {
+            m_space = space;
+        }
+
         void setPhaseX(int x) { m_phase.setX(x); }
         void setPhaseY(int y) { m_phase.setY(y); }
         
@@ -247,6 +252,7 @@ protected:
         IntPoint m_destOrigin;
         IntPoint m_phase;
         IntSize m_tileSize;
+        FloatSize m_space;
         bool m_hasNonLocalGeometry; // Has background-attachment: fixed. Implies that we can't always cheaply compute destRect.
     };
 
@@ -333,6 +339,18 @@ private:
                             Color, EBorderStyle, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
 };
 
+inline RenderBoxModelObject& toRenderBoxModelObject(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isBoxModelObject());
+    return static_cast<RenderBoxModelObject&>(object);
+}
+
+inline const RenderBoxModelObject& toRenderBoxModelObject(const RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isBoxModelObject());
+    return static_cast<const RenderBoxModelObject&>(object);
+}
+
 inline RenderBoxModelObject* toRenderBoxModelObject(RenderObject* object)
 { 
     ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBoxModelObject());
@@ -347,6 +365,7 @@ inline const RenderBoxModelObject* toRenderBoxModelObject(const RenderObject* ob
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderBoxModelObject(const RenderBoxModelObject*);
+void toRenderBoxModelObject(const RenderBoxModelObject&);
 
 } // namespace WebCore
 

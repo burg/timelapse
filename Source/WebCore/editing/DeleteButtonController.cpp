@@ -203,7 +203,7 @@ void DeleteButtonController::deviceScaleFactorChanged()
 
 void DeleteButtonController::createDeletionUI()
 {
-    RefPtr<HTMLDivElement> container = HTMLDivElement::create(m_target->document());
+    RefPtr<HTMLDivElement> container = HTMLDivElement::create(&m_target->document());
     container->setIdAttribute(containerElementIdentifier);
 
     container->setInlineStyleProperty(CSSPropertyWebkitUserDrag, CSSValueNone);
@@ -217,7 +217,7 @@ void DeleteButtonController::createDeletionUI()
     container->setInlineStyleProperty(CSSPropertyBottom, 0, CSSPrimitiveValue::CSS_PX);
     container->setInlineStyleProperty(CSSPropertyLeft, 0, CSSPrimitiveValue::CSS_PX);
 
-    RefPtr<HTMLDivElement> outline = HTMLDivElement::create(m_target->document());
+    RefPtr<HTMLDivElement> outline = HTMLDivElement::create(&m_target->document());
     outline->setIdAttribute(outlineElementIdentifier);
 
     const int borderWidth = 4;
@@ -241,7 +241,7 @@ void DeleteButtonController::createDeletionUI()
     if (ec)
         return;
 
-    RefPtr<DeleteButton> button = DeleteButton::create(m_target->document());
+    RefPtr<DeleteButton> button = DeleteButton::create(&m_target->document());
     button->setIdAttribute(buttonElementIdentifier);
 
     const int buttonWidth = 30;
@@ -363,13 +363,13 @@ void DeleteButtonController::disable()
 
 class RemoveTargetCommand : public CompositeEditCommand {
 public:
-    static PassRefPtr<RemoveTargetCommand> create(Document* document, PassRefPtr<Node> target)
+    static PassRefPtr<RemoveTargetCommand> create(Document& document, PassRefPtr<Node> target)
     {
         return adoptRef(new RemoveTargetCommand(document, target));
     }
 
 private:
-    RemoveTargetCommand(Document* document, PassRefPtr<Node> target)
+    RemoveTargetCommand(Document& document, PassRefPtr<Node> target)
         : CompositeEditCommand(document)
         , m_target(target)
     { }
@@ -394,7 +394,8 @@ void DeleteButtonController::deleteTarget()
     // within the target, we unconditionally update the selection to be
     // a caret where the target had been.
     Position pos = positionInParentBeforeNode(m_target.get());
-    applyCommand(RemoveTargetCommand::create(m_frame->document(), m_target));
+    ASSERT(m_frame->document());
+    applyCommand(RemoveTargetCommand::create(*m_frame->document(), m_target));
     m_frame->selection().setSelection(VisiblePosition(pos));
 }
 #endif

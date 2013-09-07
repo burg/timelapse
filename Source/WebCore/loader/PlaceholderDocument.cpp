@@ -26,16 +26,17 @@
 #include "config.h"
 #include "PlaceholderDocument.h"
 
-#include "ElementTraversal.h"
+#include "ElementIterator.h"
 
 namespace WebCore {
 
-void PlaceholderDocument::attach()
+void PlaceholderDocument::createRenderTree()
 {
     ASSERT(!attached());
 
-    for (Element* child = ElementTraversal::firstWithin(this); child; child = ElementTraversal::nextSibling(child))
-        Style::attachRenderTree(child);
+    auto children = elementChildren(this);
+    for (auto child = children.begin(), end = children.end(); child != end; ++child)
+        Style::attachRenderTree(*child);
 
     setAttached(true);
 }

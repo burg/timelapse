@@ -1,3 +1,136 @@
+2013-09-03  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Images scaled poorly on composited canvas
+        https://bugs.webkit.org/show_bug.cgi?id=120632
+
+        Reviewed by Jocelyn Turcotte.
+
+        Explicitly set a imageInterpolationQuality on the TextureMapper, because
+        InterpolationDefault may be interpreted differently by nested GraphicsContexts.
+
+        * WebCoreSupport/TextureMapperLayerClientQt.cpp:
+        (TextureMapperLayerClientQt::renderCompositedLayers):
+
+2013-09-03  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Tiled-backing store not clipped to frame or visible rect
+        https://bugs.webkit.org/show_bug.cgi?id=120606
+
+        Reviewed by Jocelyn Turcotte.
+
+        Clip painting from the tiled-backing store to the frame rect.
+
+        * WebCoreSupport/QWebFrameAdapter.cpp:
+        (QWebFrameAdapter::renderFromTiledBackingStore):
+
+2013-09-03  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt][WK1] PageVisibility tests are flaky
+        https://bugs.webkit.org/show_bug.cgi?id=120418
+
+        Reviewed by Jocelyn Turcotte.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        (DumpRenderTreeSupportQt::resetPageVisibility):
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2013-08-28  Zeno Albisser  <zeno@webkit.org>
+
+        [Qt] Option key combinations do not work in Input Elements.
+        https://bugs.webkit.org/show_bug.cgi?id=120423
+
+        Q_WS_MAC is obsolete. We should use Q_OS_MAC instead.
+        This caused QTBUG-32388.
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/EditorClientQt.cpp:
+        (WebCore::EditorClientQt::handleKeyboardEvent):
+
+2013-08-28  Darin Adler  <darin@apple.com>
+
+        Eliminate Pasteboard::generalPasteboard
+        https://bugs.webkit.org/show_bug.cgi?id=120392
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/EditorClientQt.cpp:
+        (WebCore::EditorClientQt::respondToChangedSelection):
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::triggerAction):
+        Use createForGlobalSelection instead of generalPasteboard and setSelectionMode.
+
+2013-08-28  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r154593.
+        http://trac.webkit.org/changeset/154593
+        https://bugs.webkit.org/show_bug.cgi?id=120403
+
+        Caused 50+ flaky tests on WebKit1 bots (Requested by carewolf
+        on #webkit).
+
+        * WidgetApi/qwebpage.cpp:
+        (QWebPage::javaScriptConsoleMessage):
+
+2013-08-27  Arunprasad Rajkumar  <arurajku@cisco.com>
+
+        [Qt] Let Page create the main Frame.
+        https://bugs.webkit.org/show_bug.cgi?id=120349
+
+        Adjust to latest changes in WebCore::Page to create the main frame.
+
+        Reviewed by Simon Hausmann.
+
+        * WebCoreSupport/QWebFrameAdapter.cpp:
+        (QWebFrameData::QWebFrameData):
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::initializeWebCorePage):
+
+2013-08-26  Arunprasad Rajkumar  <arurajku@cisco.com>
+
+        [Qt] Remove the fix in QWebPage::javaScriptConsoleMessage introduced by (r61433)
+        https://bugs.webkit.org/show_bug.cgi?id=119791
+
+        Reviewed by Jocelyn Turcotte.
+
+        * WidgetApi/qwebpage.cpp:
+        (QWebPage::javaScriptConsoleMessage): Removed hack specific to DRT, introduced by
+        (r61433).
+
+2013-08-24  Darin Adler  <darin@apple.com>
+
+        Frame::tree should return a reference instead of a pointer
+        https://bugs.webkit.org/show_bug.cgi?id=120259
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        (DumpRenderTreeSupportQt::clearFrameName):
+        * WebCoreSupport/FrameLoaderClientQt.cpp:
+        (drtDescriptionSuitableForTestResult):
+        (WebCore::FrameLoaderClientQt::dispatchDidCommitLoad):
+        (WebCore::FrameLoaderClientQt::dispatchDidFinishDocumentLoad):
+        (WebCore::FrameLoaderClientQt::postProgressStartedNotification):
+        (WebCore::FrameLoaderClientQt::didPerformFirstNavigation):
+        (WebCore::FrameLoaderClientQt::createFrame):
+        * WebCoreSupport/QWebFrameAdapter.cpp:
+        (QWebFrameData::QWebFrameData):
+        (QWebFrameAdapter::load):
+        (QWebFrameAdapter::uniqueName):
+        (QWebFrameAdapter::childFrames):
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::findText):
+        Use tree(). instead of tree()->.
+
+2013-08-23  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Update outdated source-paths in documentation
+        https://bugs.webkit.org/show_bug.cgi?id=120206
+
+        Reviewed by Anders Carlsson.
+
+        * docs/qtwebkit.qdoc:
+
 2013-08-19  Pratik Solanki  <psolanki@apple.com>
 
         <https://webkit.org/b/119918> Frame::selection() should return a reference

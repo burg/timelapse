@@ -21,11 +21,12 @@
 #define SVGMissingGlyphElement_h
 
 #if ENABLE(SVG_FONTS)
-#include "SVGStyledElement.h"
+#include "SVGElement.h"
+#include "SVGNames.h"
 
 namespace WebCore {
 
-class SVGMissingGlyphElement FINAL : public SVGStyledElement {
+class SVGMissingGlyphElement FINAL : public SVGElement {
 public:
     static PassRefPtr<SVGMissingGlyphElement> create(const QualifiedName&, Document*);
 
@@ -34,6 +35,12 @@ private:
 
     virtual bool rendererIsNeeded(const RenderStyle&) { return false; }
 };
+
+inline SVGMissingGlyphElement* toSVGMissingGlyphElement(Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(SVGNames::missing_glyphTag));
+    return static_cast<SVGMissingGlyphElement*>(node);
+}
 
 } // namespace WebCore
 

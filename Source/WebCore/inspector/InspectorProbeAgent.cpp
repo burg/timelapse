@@ -92,7 +92,7 @@ void InspectorProbeAgent::clearFrontend()
 
 void InspectorProbeAgent::clearResources()
 {
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    ScriptState* state = mainWorldScriptState(&m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
         injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
@@ -116,7 +116,7 @@ void InspectorProbeAgent::disable()
     PageScriptDebugServer::shared().removeListener(this, m_inspectedPage);
     m_instrumentingAgents->setInspectorProbeAgent(0);
 
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    ScriptState* state = mainWorldScriptState(&m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
     for (ProbeMap::iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it)
         injectedScript.releaseObjectGroup(objectGroupForProbeId(it->key));
@@ -137,7 +137,7 @@ void InspectorProbeAgent::captureProbeSample(ScriptState*, PassRefPtr<ScriptProb
     int sampleId = m_nextSampleId++;
 
     // TODO: (Issue #316): Implement some sort of storage for probe samples.
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    ScriptState* state = mainWorldScriptState(&m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
     RefPtr<TypeBuilder::Runtime::RemoteObject> payload = injectedScript.wrapObject(sample, objectGroupForProbeId(probe->uid()));
     RefPtr<TypeBuilder::Probe::ScriptProbeSample> result = TypeBuilder::Probe::ScriptProbeSample::create()
@@ -219,7 +219,7 @@ void InspectorProbeAgent::removeProbe(ErrorString* errorString, int probeId)
     if (m_frontend)
         m_frontend->probeRemoved(probeId);
 
-    ScriptState* state = mainWorldScriptState(m_inspectedPage->mainFrame());
+    ScriptState* state = mainWorldScriptState(&m_inspectedPage->mainFrame());
     InjectedScript injectedScript = m_injectedScriptManager->injectedScriptFor(state);
     injectedScript.releaseObjectGroup(objectGroupForProbeId(probe->uid()));
 

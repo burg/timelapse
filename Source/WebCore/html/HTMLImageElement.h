@@ -24,6 +24,7 @@
 #ifndef HTMLImageElement_h
 #define HTMLImageElement_h
 
+#include "FormNamedItem.h"
 #include "GraphicsTypes.h"
 #include "HTMLElement.h"
 #include "HTMLImageLoader.h"
@@ -32,7 +33,7 @@ namespace WebCore {
 
 class HTMLFormElement;
 
-class HTMLImageElement : public HTMLElement {
+class HTMLImageElement : public HTMLElement, public FormNamedItem {
     friend class HTMLFormElement;
 public:
     static PassRefPtr<HTMLImageElement> create(Document*);
@@ -104,27 +105,15 @@ private:
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
 
+    virtual bool isFormAssociatedElement() OVERRIDE FINAL { return false; }
+    virtual FormNamedItem* asFormNamedItem() OVERRIDE FINAL { return this; }
+    virtual HTMLElement* asHTMLElement() OVERRIDE FINAL { return this; }
+
     HTMLImageLoader m_imageLoader;
     HTMLFormElement* m_form;
     CompositeOperator m_compositeOperator;
     AtomicString m_bestFitImageURL;
 };
-
-inline bool isHTMLImageElement(Node* node)
-{
-    return node->hasTagName(HTMLNames::imgTag);
-}
-
-inline bool isHTMLImageElement(Element* element)
-{
-    return element->hasTagName(HTMLNames::imgTag);
-}
-
-inline HTMLImageElement* toHTMLImageElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLImageElement(node));
-    return static_cast<HTMLImageElement*>(node);
-}
 
 } //namespace
 

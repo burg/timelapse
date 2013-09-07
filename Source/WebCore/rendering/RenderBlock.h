@@ -544,6 +544,7 @@ protected:
 
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
     virtual void computePreferredLogicalWidths() OVERRIDE;
+    void adjustIntrinsicLogicalWidthsForColumns(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
 
     virtual int firstLineBoxBaseline() const;
     virtual int inlineBlockBaseline(LineDirectionMode) const OVERRIDE;
@@ -617,6 +618,8 @@ private:
 #if ENABLE(CSS_SHAPES)
     void computeShapeSize();
     void updateShapeInsideInfoAfterStyleChange(const ShapeValue*, const ShapeValue* oldShape);
+    void relayoutShapeDescendantIfMoved(RenderBlock* child, LayoutSize offset);
+    LayoutSize logicalOffsetFromShapeAncestorContainer(const RenderBlock* container) const;
 #endif
     virtual RenderObjectChildList* virtualChildren() { return children(); }
     virtual const RenderObjectChildList* virtualChildren() const { return children(); }
@@ -736,12 +739,12 @@ private:
         bool isPlaced() const { return m_isPlaced; }
         void setIsPlaced(bool placed = true) { m_isPlaced = placed; }
 
-        inline LayoutUnit x() const { ASSERT(isPlaced()); return m_frameRect.x(); }
-        inline LayoutUnit maxX() const { ASSERT(isPlaced()); return m_frameRect.maxX(); }
-        inline LayoutUnit y() const { ASSERT(isPlaced()); return m_frameRect.y(); }
-        inline LayoutUnit maxY() const { ASSERT(isPlaced()); return m_frameRect.maxY(); }
-        inline LayoutUnit width() const { return m_frameRect.width(); }
-        inline LayoutUnit height() const { return m_frameRect.height(); }
+        LayoutUnit x() const { ASSERT(isPlaced()); return m_frameRect.x(); }
+        LayoutUnit maxX() const { ASSERT(isPlaced()); return m_frameRect.maxX(); }
+        LayoutUnit y() const { ASSERT(isPlaced()); return m_frameRect.y(); }
+        LayoutUnit maxY() const { ASSERT(isPlaced()); return m_frameRect.maxY(); }
+        LayoutUnit width() const { return m_frameRect.width(); }
+        LayoutUnit height() const { return m_frameRect.height(); }
 
         void setX(LayoutUnit x) { ASSERT(!isInPlacedTree()); m_frameRect.setX(x); }
         void setY(LayoutUnit y) { ASSERT(!isInPlacedTree()); m_frameRect.setY(y); }
@@ -769,6 +772,46 @@ private:
         RootInlineBox* originatingLine() const { return m_originatingLine; }
         void setOriginatingLine(RootInlineBox* line) { m_originatingLine = line; }
 
+        LayoutUnit logicalTop(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? y() : x(); }
+        LayoutUnit logicalBottom(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? maxY() : maxX(); }
+        LayoutUnit logicalLeft(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? x() : y(); }
+        LayoutUnit logicalRight(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? maxX() : maxY(); }
+        LayoutUnit logicalWidth(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? width() : height(); }
+
+        int pixelSnappedLogicalTop(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? frameRect().pixelSnappedY() : frameRect().pixelSnappedX(); }
+        int pixelSnappedLogicalBottom(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? frameRect().pixelSnappedMaxY() : frameRect().pixelSnappedMaxX(); }
+        int pixelSnappedLogicalLeft(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? frameRect().pixelSnappedX() : frameRect().pixelSnappedY(); }
+        int pixelSnappedLogicalRight(bool isHorizontalWritingMode) const { return isHorizontalWritingMode ? frameRect().pixelSnappedMaxX() : frameRect().pixelSnappedMaxY(); }
+
+        void setLogicalTop(LayoutUnit logicalTop, bool isHorizontalWritingMode)
+        {
+            if (isHorizontalWritingMode)
+                setY(logicalTop);
+            else
+                setX(logicalTop);
+        }
+        void setLogicalLeft(LayoutUnit logicalLeft, bool isHorizontalWritingMode)
+        {
+            if (isHorizontalWritingMode)
+                setX(logicalLeft);
+            else
+                setY(logicalLeft);
+        }
+        void setLogicalHeight(LayoutUnit logicalHeight, bool isHorizontalWritingMode)
+        {
+            if (isHorizontalWritingMode)
+                setHeight(logicalHeight);
+            else
+                setWidth(logicalHeight);
+        }
+        void setLogicalWidth(LayoutUnit logicalWidth, bool isHorizontalWritingMode)
+        {
+            if (isHorizontalWritingMode)
+                setWidth(logicalWidth);
+            else
+                setHeight(logicalWidth);
+        }
+
     private:
         RenderBox* m_renderer;
         RootInlineBox* m_originatingLine;
@@ -785,46 +828,6 @@ private:
     };
 
     LayoutPoint flipFloatForWritingModeForChild(const FloatingObject*, const LayoutPoint&) const;
-
-    LayoutUnit logicalTopForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->y() : child->x(); }
-    LayoutUnit logicalBottomForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->maxY() : child->maxX(); }
-    LayoutUnit logicalLeftForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->x() : child->y(); }
-    LayoutUnit logicalRightForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->maxX() : child->maxY(); }
-    LayoutUnit logicalWidthForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->width() : child->height(); }
-
-    int pixelSnappedLogicalTopForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->frameRect().pixelSnappedY() : child->frameRect().pixelSnappedX(); }
-    int pixelSnappedLogicalBottomForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->frameRect().pixelSnappedMaxY() : child->frameRect().pixelSnappedMaxX(); }
-    int pixelSnappedLogicalLeftForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->frameRect().pixelSnappedX() : child->frameRect().pixelSnappedY(); }
-    int pixelSnappedLogicalRightForFloat(const FloatingObject* child) const { return isHorizontalWritingMode() ? child->frameRect().pixelSnappedMaxX() : child->frameRect().pixelSnappedMaxY(); }
-
-    void setLogicalTopForFloat(FloatingObject* child, LayoutUnit logicalTop)
-    {
-        if (isHorizontalWritingMode())
-            child->setY(logicalTop);
-        else
-            child->setX(logicalTop);
-    }
-    void setLogicalLeftForFloat(FloatingObject* child, LayoutUnit logicalLeft)
-    {
-        if (isHorizontalWritingMode())
-            child->setX(logicalLeft);
-        else
-            child->setY(logicalLeft);
-    }
-    void setLogicalHeightForFloat(FloatingObject* child, LayoutUnit logicalHeight)
-    {
-        if (isHorizontalWritingMode())
-            child->setHeight(logicalHeight);
-        else
-            child->setWidth(logicalHeight);
-    }
-    void setLogicalWidthForFloat(FloatingObject* child, LayoutUnit logicalWidth)
-    {
-        if (isHorizontalWritingMode())
-            child->setWidth(logicalWidth);
-        else
-            child->setHeight(logicalWidth);
-    }
 
     LayoutUnit xPositionForFloatIncludingMargin(const FloatingObject* child) const
     {
@@ -1117,7 +1120,7 @@ private:
     void layoutRunsAndFloats(LineLayoutState&, bool hasInlineChild);
     void layoutRunsAndFloatsInRange(LineLayoutState&, InlineBidiResolver&, const InlineIterator& cleanLineStart, const BidiStatus& cleanLineBidiStatus, unsigned consecutiveHyphenatedLines);
 #if ENABLE(CSS_SHAPES)
-    void updateShapeAndSegmentsForCurrentLine(ShapeInsideInfo*&, LayoutUnit&, LineLayoutState&);
+    void updateShapeAndSegmentsForCurrentLine(ShapeInsideInfo*&, const LayoutSize&, LineLayoutState&);
     void updateShapeAndSegmentsForCurrentLineInFlowThread(ShapeInsideInfo*&, LineLayoutState&);
     bool adjustLogicalLineTopAndLogicalHeightIfNeeded(ShapeInsideInfo*, LayoutUnit, LineLayoutState&, InlineBidiResolver&, FloatingObject*, InlineIterator&, WordMeasurements&);
 #endif
@@ -1204,50 +1207,41 @@ protected:
     typedef PODFreeListArena<PODRedBlackTree<FloatingObjectInterval>::Node> IntervalArena;
     
     template <FloatingObject::Type FloatTypeValue>
-    class FloatIntervalSearchAdapter {
+    class ComputeFloatOffsetAdapter {
     public:
         typedef FloatingObjectInterval IntervalType;
         
-        FloatIntervalSearchAdapter(const RenderBlock* renderer, int lowValue, int highValue, LayoutUnit& offset, LayoutUnit* heightRemaining)
+        ComputeFloatOffsetAdapter(const RenderBlock* renderer, int lineTop, int lineBottom, LayoutUnit& offset)
             : m_renderer(renderer)
-            , m_lowValue(lowValue)
-            , m_highValue(highValue)
+            , m_lineTop(lineTop)
+            , m_lineBottom(lineBottom)
             , m_offset(offset)
-            , m_heightRemaining(heightRemaining)
-#if ENABLE(CSS_SHAPES)
-            , m_last(0)
-#endif
+            , m_outermostFloat(0)
         {
         }
         
-        inline int lowValue() const { return m_lowValue; }
-        inline int highValue() const { return m_highValue; }
-        void collectIfNeeded(const IntervalType&) const;
+        int lowValue() const { return m_lineTop; }
+        int highValue() const { return m_lineBottom; }
+        void collectIfNeeded(const IntervalType&);
 
 #if ENABLE(CSS_SHAPES)
         // When computing the offset caused by the floats on a given line, if
         // the outermost float on that line has a shape-outside, the inline
         // content that butts up against that float must be positioned using
         // the contours of the shape, not the margin box of the float.
-        // We save the last float encountered so that the offset can be
-        // computed correctly by the code using this adapter.
-        const FloatingObject* lastFloat() const { return m_last; }
+        const FloatingObject* outermostFloat() const { return m_outermostFloat; }
 #endif
 
+        LayoutUnit getHeightRemaining() const;
+
     private:
+        bool updateOffsetIfNeeded(const FloatingObject*);
+
         const RenderBlock* m_renderer;
-        int m_lowValue;
-        int m_highValue;
+        int m_lineTop;
+        int m_lineBottom;
         LayoutUnit& m_offset;
-        LayoutUnit* m_heightRemaining;
-#if ENABLE(CSS_SHAPES)
-        // This member variable is mutable because the collectIfNeeded method
-        // is declared as const, even though it doesn't actually respect that
-        // contract. It modifies other member variables via loopholes in the
-        // const behavior. Instead of using loopholes, I decided it was better
-        // to make the fact that this is modified in a const method explicit.
-        mutable const FloatingObject* m_last;
-#endif
+        const FloatingObject* m_outermostFloat;
     };
 
     void createFloatingObjects();
@@ -1257,6 +1251,8 @@ public:
     class FloatingObjects {
         WTF_MAKE_NONCOPYABLE(FloatingObjects); WTF_MAKE_FAST_ALLOCATED;
     public:
+        ~FloatingObjects();
+
         void clear();
         void add(FloatingObject*);
         void remove(FloatingObject*);
@@ -1272,6 +1268,7 @@ public:
             computePlacedFloatsTreeIfNeeded();
             return m_placedFloatsTree; 
         }
+        void clearLineBoxTreePointers();
     private:
         FloatingObjects(const RenderBlock*, bool horizontalWritingMode);
         void computePlacedFloatsTree();
@@ -1367,6 +1364,18 @@ private:
     static bool s_canPropagateFloatIntoSibling;
 };
 
+inline RenderBlock& toRenderBlock(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isRenderBlock());
+    return static_cast<RenderBlock&>(object);
+}
+
+inline const RenderBlock& toRenderBlock(const RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isRenderBlock());
+    return static_cast<const RenderBlock&>(object);
+}
+
 inline RenderBlock* toRenderBlock(RenderObject* object)
 { 
     ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderBlock());
@@ -1381,6 +1390,7 @@ inline const RenderBlock* toRenderBlock(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderBlock(const RenderBlock*);
+void toRenderBlock(const RenderBlock&);
 
 #ifndef NDEBUG
 // These structures are used by PODIntervalTree for debugging purposes.

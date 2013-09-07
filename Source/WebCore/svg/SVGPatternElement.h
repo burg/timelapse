@@ -28,10 +28,10 @@
 #include "SVGAnimatedPreserveAspectRatio.h"
 #include "SVGAnimatedRect.h"
 #include "SVGAnimatedTransformList.h"
+#include "SVGElement.h"
 #include "SVGExternalResourcesRequired.h"
 #include "SVGFitToViewBox.h"
 #include "SVGNames.h"
-#include "SVGStyledElement.h"
 #include "SVGTests.h"
 #include "SVGURIReference.h"
 #include "SVGUnitTypes.h"
@@ -40,7 +40,7 @@ namespace WebCore {
 
 struct PatternAttributes;
  
-class SVGPatternElement FINAL : public SVGStyledElement,
+class SVGPatternElement FINAL : public SVGElement,
                                 public SVGURIReference,
                                 public SVGTests,
                                 public SVGExternalResourcesRequired,
@@ -61,7 +61,7 @@ private:
     bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void svgAttributeChanged(const QualifiedName&);
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual void childrenChanged(const ChildChange&) OVERRIDE;
 
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
 

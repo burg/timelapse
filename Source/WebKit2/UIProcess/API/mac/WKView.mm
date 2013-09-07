@@ -2754,16 +2754,16 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
     size.scale(1.0 / _data->_page->deviceScaleFactor());
     [image setSize:size];
     
-    // The call to super could release this WKView.
+    // The call below could release this WKView.
     RetainPtr<WKView> protector(self);
     
-    [super dragImage:image
-                  at:clientPoint
-              offset:NSZeroSize
-               event:(linkDrag) ? [NSApp currentEvent] :_data->_mouseDownEvent
-          pasteboard:[NSPasteboard pasteboardWithName:NSDragPboard]
-              source:self
-           slideBack:YES];
+    [self dragImage:image
+                 at:clientPoint
+             offset:NSZeroSize
+              event:(linkDrag) ? [NSApp currentEvent] :_data->_mouseDownEvent
+         pasteboard:[NSPasteboard pasteboardWithName:NSDragPboard]
+             source:self
+          slideBack:YES];
 }
 
 static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension)
@@ -2937,10 +2937,9 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 
 - (WKFullScreenWindowController*)fullScreenWindowController
 {
-    if (!_data->_fullScreenWindowController) {
-        _data->_fullScreenWindowController = adoptNS([[WKFullScreenWindowController alloc] initWithWindow:[self createFullScreenWindow]]);
-        [_data->_fullScreenWindowController.get() setWebView:self];
-    }
+    if (!_data->_fullScreenWindowController)
+        _data->_fullScreenWindowController = adoptNS([[WKFullScreenWindowController alloc] initWithWindow:[self createFullScreenWindow] webView:self]);
+
     return _data->_fullScreenWindowController.get();
 }
 

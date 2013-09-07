@@ -34,6 +34,7 @@
 #include "CallLinkStatus.h"
 #include "DFGCapabilities.h"
 #include "DFGCommon.h"
+#include "DFGDriver.h"
 #include "DFGNode.h"
 #include "DFGRepatch.h"
 #include "DFGWorklist.h"
@@ -164,7 +165,13 @@ CString CodeBlock::registerName(int r) const
     if (isConstantRegisterIndex(r))
         return constantName(r, getConstant(r));
 
-    return toCString("r", r);
+    if (operandIsArgument(r)) {
+        if (!operandToArgument(r))
+            return "this";
+        return toCString("arg", operandToArgument(r));
+    }
+
+    return toCString("loc", r);
 }
 
 static CString regexpToSourceString(RegExp* regExp)
@@ -207,27 +214,30 @@ NEVER_INLINE static const char* debugHookName(int debugHookID)
     return "";
 }
 
-void CodeBlock::printUnaryOp(PrintStream& out, ExecState*, int location, const Instruction*& it, const char* op)
+void CodeBlock::printUnaryOp(PrintStream& out, ExecState* exec, int location, const Instruction*& it, const char* op)
 {
     int r0 = (++it)->u.operand;
     int r1 = (++it)->u.operand;
 
-    out.printf("[%4d] %s\t\t %s, %s", location, op, registerName(r0).data(), registerName(r1).data());
+    printLocationAndOp(out, exec, location, it, op);
+    out.printf("%s, %s", registerName(r0).data(), registerName(r1).data());
 }
 
-void CodeBlock::printBinaryOp(PrintStream& out, ExecState*, int location, const Instruction*& it, const char* op)
+void CodeBlock::printBinaryOp(PrintStream& out, ExecState* exec, int location, const Instruction*& it, const char* op)
 {
     int r0 = (++it)->u.operand;
     int r1 = (++it)->u.operand;
     int r2 = (++it)->u.operand;
-    out.printf("[%4d] %s\t\t %s, %s, %s", location, op, registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+    printLocationAndOp(out, exec, location, it, op);
+    out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
 }
 
-void CodeBlock::printConditionalJump(PrintStream& out, ExecState*, const Instruction*, const Instruction*& it, int location, const char* op)
+void CodeBlock::printConditionalJump(PrintStream& out, ExecState* exec, const Instruction*, const Instruction*& it, int location, const char* op)
 {
     int r0 = (++it)->u.operand;
     int offset = (++it)->u.operand;
-    out.printf("[%4d] %s\t\t %s, %d(->%d)", location, op, registerName(r0).data(), offset, location + offset);
+    printLocationAndOp(out, exec, location, it, op);
+    out.printf("%s, %d(->%d)", registerName(r0).data(), offset, location + offset);
 }
 
 void CodeBlock::printGetByIdOp(PrintStream& out, ExecState* exec, int location, const Instruction*& it)
@@ -283,7 +293,8 @@ void CodeBlock::printGetByIdOp(PrintStream& out, ExecState* exec, int location, 
     int r0 = (++it)->u.operand;
     int r1 = (++it)->u.operand;
     int id0 = (++it)->u.operand;
-    out.printf("[%4d] %s\t %s, %s, %s", location, op, registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
+    printLocationAndOp(out, exec, location, it, op);
+    out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
     it += 4; // Increment up to the value profiler.
 }
 
@@ -434,13 +445,14 @@ void CodeBlock::printGetByIdCacheStatus(PrintStream& out, ExecState* exec, int l
 #endif
 }
 
-void CodeBlock::printCallOp(PrintStream& out, ExecState*, int location, const Instruction*& it, const char* op, CacheDumpMode cacheDumpMode, bool& hasPrintedProfiling)
+void CodeBlock::printCallOp(PrintStream& out, ExecState* exec, int location, const Instruction*& it, const char* op, CacheDumpMode cacheDumpMode, bool& hasPrintedProfiling)
 {
     int dst = (++it)->u.operand;
     int func = (++it)->u.operand;
     int argCount = (++it)->u.operand;
     int registerOffset = (++it)->u.operand;
-    out.printf("[%4d] %s %s, %s, %d, %d", location, op, registerName(dst).data(), registerName(func).data(), argCount, registerOffset);
+    printLocationAndOp(out, exec, location, it, op);
+    out.printf("%s, %s, %d, %d", registerName(dst).data(), registerName(func).data(), argCount, registerOffset);
     if (cacheDumpMode == DumpCaches) {
 #if ENABLE(LLINT)
         LLIntCallLinkInfo* callLinkInfo = it[1].u.callLinkInfo;
@@ -465,12 +477,13 @@ void CodeBlock::printCallOp(PrintStream& out, ExecState*, int location, const In
     dumpValueProfiling(out, it, hasPrintedProfiling);
 }
 
-void CodeBlock::printPutByIdOp(PrintStream& out, ExecState*, int location, const Instruction*& it, const char* op)
+void CodeBlock::printPutByIdOp(PrintStream& out, ExecState* exec, int location, const Instruction*& it, const char* op)
 {
     int r0 = (++it)->u.operand;
     int id0 = (++it)->u.operand;
     int r1 = (++it)->u.operand;
-    out.printf("[%4d] %s\t %s, %s, %s", location, op, registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data());
+    printLocationAndOp(out, exec, location, it, op);
+    out.printf("%s, %s, %s", registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data());
     it += 5;
 }
 
@@ -504,7 +517,8 @@ void CodeBlock::dumpBytecode(PrintStream& out)
     }
     if (needsFullScopeChain() && codeType() == FunctionCode)
         out.printf("; activation in r%d", activationRegister());
-
+    out.printf("\n");
+    
     const Instruction* begin = instructions().begin();
     const Instruction* end = instructions().end();
     for (const Instruction* it = begin; it != end; ++it)
@@ -648,27 +662,27 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
     bool hasPrintedProfiling = false;
     switch (exec->interpreter()->getOpcodeID(it->u.opcode)) {
         case op_enter: {
-            out.printf("[%4d] enter", location);
+            printLocationAndOp(out, exec, location, it, "enter");
             break;
         }
         case op_create_activation: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] create_activation %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "create_activation", r0);
             break;
         }
         case op_create_arguments: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] create_arguments\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "create_arguments", r0);
             break;
         }
         case op_init_lazy_reg: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] init_lazy_reg\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "init_lazy_reg", r0);
             break;
         }
         case op_get_callee: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] get_callee %s\n", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "get_callee", r0);
             ++it;
             break;
         }
@@ -676,19 +690,21 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             unsigned inferredInlineCapacity = (++it)->u.operand;
-            out.printf("[%4d] create_this %s, %s, %u", location, registerName(r0).data(), registerName(r1).data(), inferredInlineCapacity);
+            printLocationAndOp(out, exec, location, it, "create_this");
+            out.printf("%s, %s, %u", registerName(r0).data(), registerName(r1).data(), inferredInlineCapacity);
             break;
         }
         case op_to_this: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] to_this\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "to_this", r0);
             ++it; // Skip value profile.
             break;
         }
         case op_new_object: {
             int r0 = (++it)->u.operand;
             unsigned inferredInlineCapacity = (++it)->u.operand;
-            out.printf("[%4d] new_object\t %s, %u", location, registerName(r0).data(), inferredInlineCapacity);
+            printLocationAndOp(out, exec, location, it, "new_object");
+            out.printf("%s, %u", registerName(r0).data(), inferredInlineCapacity);
             ++it; // Skip object allocation profile.
             break;
         }
@@ -696,14 +712,16 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int dst = (++it)->u.operand;
             int argv = (++it)->u.operand;
             int argc = (++it)->u.operand;
-            out.printf("[%4d] new_array\t %s, %s, %d", location, registerName(dst).data(), registerName(argv).data(), argc);
+            printLocationAndOp(out, exec, location, it, "new_array");
+            out.printf("%s, %s, %d", registerName(dst).data(), registerName(argv).data(), argc);
             ++it; // Skip array allocation profile.
             break;
         }
         case op_new_array_with_size: {
             int dst = (++it)->u.operand;
             int length = (++it)->u.operand;
-            out.printf("[%4d] new_array_with_size\t %s, %s", location, registerName(dst).data(), registerName(length).data());
+            printLocationAndOp(out, exec, location, it, "new_array_with_size");
+            out.printf("%s, %s", registerName(dst).data(), registerName(length).data());
             ++it; // Skip array allocation profile.
             break;
         }
@@ -711,14 +729,16 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int dst = (++it)->u.operand;
             int argv = (++it)->u.operand;
             int argc = (++it)->u.operand;
-            out.printf("[%4d] new_array_buffer\t %s, %d, %d", location, registerName(dst).data(), argv, argc);
+            printLocationAndOp(out, exec, location, it, "new_array_buffer");
+            out.printf("%s, %d, %d", registerName(dst).data(), argv, argc);
             ++it; // Skip array allocation profile.
             break;
         }
         case op_new_regexp: {
             int r0 = (++it)->u.operand;
             int re0 = (++it)->u.operand;
-            out.printf("[%4d] new_regexp\t %s, ", location, registerName(r0).data());
+            printLocationAndOp(out, exec, location, it, "new_regexp");
+            out.printf("%s, ", registerName(r0).data());
             if (r0 >=0 && r0 < (int)m_unlinkedCode->numberOfRegExps())
                 out.printf("%s", regexpName(re0, regexp(re0)).data());
             else
@@ -728,7 +748,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
         case op_mov: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
-            out.printf("[%4d] mov\t\t %s, %s", location, registerName(r0).data(), registerName(r1).data());
+            printLocationAndOp(out, exec, location, it, "mov");
+            out.printf("%s, %s", registerName(r0).data(), registerName(r1).data());
             break;
         }
         case op_not: {
@@ -777,12 +798,12 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
         }
         case op_inc: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] pre_inc\t\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "pre_inc", r0);
             break;
         }
         case op_dec: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] pre_dec\t\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "pre_dec", r0);
             break;
         }
         case op_to_number: {
@@ -849,14 +870,16 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] check_has_instance\t\t %s, %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "check_has_instance");
+            out.printf("%s, %s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), registerName(r2).data(), offset, location + offset);
             break;
         }
         case op_instanceof: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] instanceof\t\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+            printLocationAndOp(out, exec, location, it, "instanceof");
+            out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
             break;
         }
         case op_typeof: {
@@ -892,7 +915,7 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             break;
         }
         case op_init_global_const_nop: {
-            out.printf("[%4d] init_global_const_nop\t", location);
+            printLocationAndOp(out, exec, location, it, "init_global_const_nop");
             it++;
             it++;
             it++;
@@ -902,7 +925,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
         case op_init_global_const: {
             WriteBarrier<Unknown>* registerPointer = (++it)->u.registerPointer;
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] init_global_const\t g%d(%p), %s", location, m_globalObject->findRegisterIndex(registerPointer), registerPointer, registerName(r0).data());
+            printLocationAndOp(out, exec, location, it, "init_global_const");
+            out.printf("g%d(%p), %s", m_globalObject->findRegisterIndex(registerPointer), registerPointer, registerName(r0).data());
             it++;
             it++;
             break;
@@ -972,21 +996,24 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int id0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] put_getter_setter\t %s, %s, %s, %s", location, registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data(), registerName(r2).data());
+            printLocationAndOp(out, exec, location, it, "put_getter_setter");
+            out.printf("%s, %s, %s, %s", registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data(), registerName(r2).data());
             break;
         }
         case op_del_by_id: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int id0 = (++it)->u.operand;
-            out.printf("[%4d] del_by_id\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
+            printLocationAndOp(out, exec, location, it, "del_by_id");
+            out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data());
             break;
         }
         case op_get_by_val: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] get_by_val\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+            printLocationAndOp(out, exec, location, it, "get_by_val");
+            out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
             dumpArrayProfiling(out, it, hasPrintedProfiling);
             dumpValueProfiling(out, it, hasPrintedProfiling);
             break;
@@ -995,7 +1022,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] get_argument_by_val\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+            printLocationAndOp(out, exec, location, it, "get_argument_by_val");
+            out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
             ++it;
             dumpValueProfiling(out, it, hasPrintedProfiling);
             break;
@@ -1007,14 +1035,16 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r3 = (++it)->u.operand;
             int r4 = (++it)->u.operand;
             int r5 = (++it)->u.operand;
-            out.printf("[%4d] get_by_pname\t %s, %s, %s, %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data(), registerName(r3).data(), registerName(r4).data(), registerName(r5).data());
+            printLocationAndOp(out, exec, location, it, "get_by_pname");
+            out.printf("%s, %s, %s, %s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data(), registerName(r3).data(), registerName(r4).data(), registerName(r5).data());
             break;
         }
         case op_put_by_val: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] put_by_val\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+            printLocationAndOp(out, exec, location, it, "put_by_val");
+            out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
             dumpArrayProfiling(out, it, hasPrintedProfiling);
             break;
         }
@@ -1022,19 +1052,22 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int r2 = (++it)->u.operand;
-            out.printf("[%4d] del_by_val\t %s, %s, %s", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
+            printLocationAndOp(out, exec, location, it, "del_by_val");
+            out.printf("%s, %s, %s", registerName(r0).data(), registerName(r1).data(), registerName(r2).data());
             break;
         }
         case op_put_by_index: {
             int r0 = (++it)->u.operand;
             unsigned n0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
-            out.printf("[%4d] put_by_index\t %s, %u, %s", location, registerName(r0).data(), n0, registerName(r1).data());
+            printLocationAndOp(out, exec, location, it, "put_by_index");
+            out.printf("%s, %u, %s", registerName(r0).data(), n0, registerName(r1).data());
             break;
         }
         case op_jmp: {
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jmp\t\t %d(->%d)", location, offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jmp");
+            out.printf("%d(->%d)", offset, location + offset);
             break;
         }
         case op_jtrue: {
@@ -1057,101 +1090,115 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r0 = (++it)->u.operand;
             Special::Pointer pointer = (++it)->u.specialPointer;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jneq_ptr\t\t %s, %d (%p), %d(->%d)", location, registerName(r0).data(), pointer, m_globalObject->actualPointerFor(pointer), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jneq_ptr");
+            out.printf("%s, %d (%p), %d(->%d)", registerName(r0).data(), pointer, m_globalObject->actualPointerFor(pointer), offset, location + offset);
             break;
         }
         case op_jless: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jless\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jless");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jlesseq: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jlesseq\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jlesseq");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jgreater: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jgreater\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jgreater");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jgreatereq: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jgreatereq\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jgreatereq");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jnless: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jnless\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jnless");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jnlesseq: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jnlesseq\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jnlesseq");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jngreater: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jngreater\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jngreater");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_jngreatereq: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int offset = (++it)->u.operand;
-            out.printf("[%4d] jngreatereq\t\t %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "jngreatereq");
+            out.printf("%s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), offset, location + offset);
             break;
         }
         case op_loop_hint: {
-            out.printf("[%4d] loop_hint", location);
+            printLocationAndOp(out, exec, location, it, "loop_hint");
             break;
         }
         case op_switch_imm: {
             int tableIndex = (++it)->u.operand;
             int defaultTarget = (++it)->u.operand;
             int scrutineeRegister = (++it)->u.operand;
-            out.printf("[%4d] switch_imm\t %d, %d(->%d), %s", location, tableIndex, defaultTarget, location + defaultTarget, registerName(scrutineeRegister).data());
+            printLocationAndOp(out, exec, location, it, "switch_imm");
+            out.printf("%d, %d(->%d), %s", tableIndex, defaultTarget, location + defaultTarget, registerName(scrutineeRegister).data());
             break;
         }
         case op_switch_char: {
             int tableIndex = (++it)->u.operand;
             int defaultTarget = (++it)->u.operand;
             int scrutineeRegister = (++it)->u.operand;
-            out.printf("[%4d] switch_char\t %d, %d(->%d), %s", location, tableIndex, defaultTarget, location + defaultTarget, registerName(scrutineeRegister).data());
+            printLocationAndOp(out, exec, location, it, "switch_char");
+            out.printf("%d, %d(->%d), %s", tableIndex, defaultTarget, location + defaultTarget, registerName(scrutineeRegister).data());
             break;
         }
         case op_switch_string: {
             int tableIndex = (++it)->u.operand;
             int defaultTarget = (++it)->u.operand;
             int scrutineeRegister = (++it)->u.operand;
-            out.printf("[%4d] switch_string\t %d, %d(->%d), %s", location, tableIndex, defaultTarget, location + defaultTarget, registerName(scrutineeRegister).data());
+            printLocationAndOp(out, exec, location, it, "switch_string");
+            out.printf("%d, %d(->%d), %s", tableIndex, defaultTarget, location + defaultTarget, registerName(scrutineeRegister).data());
             break;
         }
         case op_new_func: {
             int r0 = (++it)->u.operand;
             int f0 = (++it)->u.operand;
             int shouldCheck = (++it)->u.operand;
-            out.printf("[%4d] new_func\t\t %s, f%d, %s", location, registerName(r0).data(), f0, shouldCheck ? "<Checked>" : "<Unchecked>");
+            printLocationAndOp(out, exec, location, it, "new_func");
+            out.printf("%s, f%d, %s", registerName(r0).data(), f0, shouldCheck ? "<Checked>" : "<Unchecked>");
             break;
         }
         case op_new_func_exp: {
             int r0 = (++it)->u.operand;
             int f0 = (++it)->u.operand;
-            out.printf("[%4d] new_func_exp\t %s, f%d", location, registerName(r0).data(), f0);
+            printLocationAndOp(out, exec, location, it, "new_func_exp");
+            out.printf("%s, f%d", registerName(r0).data(), f0);
             break;
         }
         case op_call: {
@@ -1169,30 +1216,33 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int arguments = (++it)->u.operand;
             int firstFreeRegister = (++it)->u.operand;
             ++it;
-            out.printf("[%4d] call_varargs\t %s, %s, %s, %s, %d", location, registerName(result).data(), registerName(callee).data(), registerName(thisValue).data(), registerName(arguments).data(), firstFreeRegister);
+            printLocationAndOp(out, exec, location, it, "call_varargs");
+            out.printf("%s, %s, %s, %s, %d", registerName(result).data(), registerName(callee).data(), registerName(thisValue).data(), registerName(arguments).data(), firstFreeRegister);
             dumpValueProfiling(out, it, hasPrintedProfiling);
             break;
         }
         case op_tear_off_activation: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] tear_off_activation\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "tear_off_activation", r0);
             break;
         }
         case op_tear_off_arguments: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
-            out.printf("[%4d] tear_off_arguments %s, %s", location, registerName(r0).data(), registerName(r1).data());
+            printLocationAndOp(out, exec, location, it, "tear_off_arguments");
+            out.printf("%s, %s", registerName(r0).data(), registerName(r1).data());
             break;
         }
         case op_ret: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] ret\t\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "ret", r0);
             break;
         }
         case op_ret_object_or_this: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
-            out.printf("[%4d] constructor_ret\t\t %s %s", location, registerName(r0).data(), registerName(r1).data());
+            printLocationAndOp(out, exec, location, it, "constructor_ret");
+            out.printf("%s %s", registerName(r0).data(), registerName(r1).data());
             break;
         }
         case op_construct: {
@@ -1203,13 +1253,15 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             int count = (++it)->u.operand;
-            out.printf("[%4d] strcat\t\t %s, %s, %d", location, registerName(r0).data(), registerName(r1).data(), count);
+            printLocationAndOp(out, exec, location, it, "strcat");
+            out.printf("%s, %s, %d", registerName(r0).data(), registerName(r1).data(), count);
             break;
         }
         case op_to_primitive: {
             int r0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
-            out.printf("[%4d] to_primitive\t %s, %s", location, registerName(r0).data(), registerName(r1).data());
+            printLocationAndOp(out, exec, location, it, "to_primitive");
+            out.printf("%s, %s", registerName(r0).data(), registerName(r1).data());
             break;
         }
         case op_get_pnames: {
@@ -1218,7 +1270,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int r2 = it[3].u.operand;
             int r3 = it[4].u.operand;
             int offset = it[5].u.operand;
-            out.printf("[%4d] get_pnames\t %s, %s, %s, %s, %d(->%d)", location, registerName(r0).data(), registerName(r1).data(), registerName(r2).data(), registerName(r3).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "get_pnames");
+            out.printf("%s, %s, %s, %s, %d(->%d)", registerName(r0).data(), registerName(r1).data(), registerName(r2).data(), registerName(r3).data(), offset, location + offset);
             it += OPCODE_LENGTH(op_get_pnames) - 1;
             break;
         }
@@ -1229,40 +1282,43 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int size = it[4].u.operand;
             int iter = it[5].u.operand;
             int offset = it[6].u.operand;
-            out.printf("[%4d] next_pname\t %s, %s, %s, %s, %s, %d(->%d)", location, registerName(dest).data(), registerName(base).data(), registerName(i).data(), registerName(size).data(), registerName(iter).data(), offset, location + offset);
+            printLocationAndOp(out, exec, location, it, "next_pname");
+            out.printf("%s, %s, %s, %s, %s, %d(->%d)", registerName(dest).data(), registerName(base).data(), registerName(i).data(), registerName(size).data(), registerName(iter).data(), offset, location + offset);
             it += OPCODE_LENGTH(op_next_pname) - 1;
             break;
         }
         case op_push_with_scope: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] push_with_scope\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "push_with_scope", r0);
             break;
         }
         case op_pop_scope: {
-            out.printf("[%4d] pop_scope", location);
+            printLocationAndOp(out, exec, location, it, "pop_scope");
             break;
         }
         case op_push_name_scope: {
             int id0 = (++it)->u.operand;
             int r1 = (++it)->u.operand;
             unsigned attributes = (++it)->u.operand;
-            out.printf("[%4d] push_name_scope \t%s, %s, %u", location, idName(id0, identifier(id0)).data(), registerName(r1).data(), attributes);
+            printLocationAndOp(out, exec, location, it, "push_name_scope");
+            out.printf("%s, %s, %u", idName(id0, identifier(id0)).data(), registerName(r1).data(), attributes);
             break;
         }
         case op_catch: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] catch\t\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "catch", r0);
             break;
         }
         case op_throw: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] throw\t\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "throw", r0);
             break;
         }
         case op_throw_static_error: {
             int k0 = (++it)->u.operand;
             int k1 = (++it)->u.operand;
-            out.printf("[%4d] throw_static_error\t %s, %s", location, constantName(k0, getConstant(k0)).data(), k1 ? "true" : "false");
+            printLocationAndOp(out, exec, location, it, "throw_static_error");
+            out.printf("%s, %s", constantName(k0, getConstant(k0)).data(), k1 ? "true" : "false");
             break;
         }
         case op_debug: {
@@ -1270,22 +1326,23 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int firstLine = (++it)->u.operand;
             int lastLine = (++it)->u.operand;
             int column = (++it)->u.operand;
-            out.printf("[%4d] debug\t\t %s, %d, %d, %d", location, debugHookName(debugHookID), firstLine, lastLine, column);
+            printLocationAndOp(out, exec, location, it, "debug");
+            out.printf("%s, %d, %d, %d", debugHookName(debugHookID), firstLine, lastLine, column);
             break;
         }
         case op_profile_will_call: {
             int function = (++it)->u.operand;
-            out.printf("[%4d] profile_will_call %s", location, registerName(function).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "profile_will_call", function);
             break;
         }
         case op_profile_did_call: {
             int function = (++it)->u.operand;
-            out.printf("[%4d] profile_did_call\t %s", location, registerName(function).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "profile_did_call", function);
             break;
         }
         case op_end: {
             int r0 = (++it)->u.operand;
-            out.printf("[%4d] end\t\t %s", location, registerName(r0).data());
+            printLocationOpAndRegisterOperand(out, exec, location, it, "end", r0);
             break;
         }
         case op_resolve_scope: {
@@ -1293,7 +1350,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int id0 = (++it)->u.operand;
             int resolveModeAndType = (++it)->u.operand;
             ++it; // depth
-            out.printf("[%4d] resolve_scope\t %s, %s, %d", location, registerName(r0).data(), idName(id0, identifier(id0)).data(), resolveModeAndType);
+            printLocationAndOp(out, exec, location, it, "resolve_scope");
+            out.printf("%s, %s, %d", registerName(r0).data(), idName(id0, identifier(id0)).data(), resolveModeAndType);
             break;
         }
         case op_get_from_scope: {
@@ -1304,7 +1362,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             ++it; // Structure
             ++it; // Operand
             ++it; // Skip value profile.
-            out.printf("[%4d] get_from_scope\t %s, %s, %s, %d", location, registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data(), resolveModeAndType);
+            printLocationAndOp(out, exec, location, it, "get_from_scope");
+            out.printf("%s, %s, %s, %d", registerName(r0).data(), registerName(r1).data(), idName(id0, identifier(id0)).data(), resolveModeAndType);
             break;
         }
         case op_put_to_scope: {
@@ -1314,7 +1373,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
             int resolveModeAndType = (++it)->u.operand;
             ++it; // Structure
             ++it; // Operand
-            out.printf("[%4d] put_to_scope\t %s, %s, %s, %d", location, registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data(), resolveModeAndType);
+            printLocationAndOp(out, exec, location, it, "put_to_scope");
+            out.printf("%s, %s, %s, %d", registerName(r0).data(), idName(id0, identifier(id0)).data(), registerName(r1).data(), resolveModeAndType);
             break;
         }
 #if ENABLE(LLINT_C_LOOP)
@@ -1478,6 +1538,7 @@ CodeBlock::CodeBlock(CopyParsedBlockTag, CodeBlock& other)
     , m_numVars(other.m_numVars)
     , m_isConstructor(other.m_isConstructor)
     , m_shouldAlwaysBeInlined(true)
+    , m_didFailFTLCompilation(false)
     , m_unlinkedCode(*other.m_vm, other.m_ownerExecutable.get(), other.m_unlinkedCode.get())
     , m_ownerExecutable(*other.m_vm, other.m_ownerExecutable.get(), other.m_ownerExecutable.get())
     , m_vm(other.m_vm)
@@ -1503,6 +1564,7 @@ CodeBlock::CodeBlock(CopyParsedBlockTag, CodeBlock& other)
     , m_capabilityLevelState(DFG::CapabilityLevelNotSet)
 #endif
 {
+    ASSERT(m_heap->isDeferred());
     setNumParameters(other.numParameters());
     optimizeAfterWarmUp();
     jitAfterWarmUp();
@@ -1515,6 +1577,9 @@ CodeBlock::CodeBlock(CopyParsedBlockTag, CodeBlock& other)
         m_rareData->m_switchJumpTables = other.m_rareData->m_switchJumpTables;
         m_rareData->m_stringSwitchJumpTables = other.m_rareData->m_stringSwitchJumpTables;
     }
+    
+    m_heap->m_codeBlocks.add(this);
+    m_heap->reportExtraMemoryCost(sizeof(CodeBlock));
 }
 
 CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlinkedCodeBlock, JSScope* scope, PassRefPtr<SourceProvider> sourceProvider, unsigned sourceOffset, unsigned firstLineColumnOffset)
@@ -1524,6 +1589,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
     , m_numVars(unlinkedCodeBlock->m_numVars)
     , m_isConstructor(unlinkedCodeBlock->isConstructor())
     , m_shouldAlwaysBeInlined(true)
+    , m_didFailFTLCompilation(false)
     , m_unlinkedCode(m_globalObject->vm(), ownerExecutable, unlinkedCodeBlock)
     , m_ownerExecutable(m_globalObject->vm(), ownerExecutable, ownerExecutable)
     , m_vm(unlinkedCodeBlock->vm())
@@ -1543,7 +1609,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
     , m_capabilityLevelState(DFG::CapabilityLevelNotSet)
 #endif
 {
-    m_vm->startedCompiling(this);
+    ASSERT(m_heap->isDeferred());
 
     ASSERT(m_source);
     setNumParameters(unlinkedCodeBlock->numParameters());
@@ -1634,7 +1700,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
     // Allocate metadata buffers for the bytecode
 #if ENABLE(LLINT)
     if (size_t size = unlinkedCodeBlock->numberOfLLintCallLinkInfos())
-        m_llintCallLinkInfos.grow(size);
+        m_llintCallLinkInfos.resizeToFit(size);
 #endif
 #if ENABLE(DFG_JIT)
     if (size_t size = unlinkedCodeBlock->numberOfArrayProfiles())
@@ -1841,19 +1907,14 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 
     if (Options::dumpGeneratedBytecodes())
         dumpBytecode();
-    m_vm->finishedCompiling(this);
+    m_heap->m_codeBlocks.add(this);
+    m_heap->reportExtraMemoryCost(sizeof(CodeBlock) + m_instructions.size() * sizeof(Instruction));
 }
 
 CodeBlock::~CodeBlock()
 {
     if (m_vm->m_perBytecodeProfiler)
         m_vm->m_perBytecodeProfiler->notifyDestruction(this);
-    
-#if ENABLE(DFG_JIT)
-    // Remove myself from the set of DFG code blocks. Note that I may not be in this set
-    // (because I'm not a DFG code block), in which case this is a no-op anyway.
-    m_vm->heap.m_dfgCodeBlocks.m_set.remove(this);
-#endif
     
 #if ENABLE(VERBOSE_VALUE_PROFILE)
     dumpValueProfiles();
@@ -1902,38 +1963,60 @@ void EvalCodeCache::visitAggregate(SlotVisitor& visitor)
         visitor.append(&ptr->value);
 }
 
+CodeBlock* CodeBlock::specialOSREntryBlockOrNull()
+{
+#if ENABLE(FTL_JIT)
+    if (jitType() != JITCode::DFGJIT)
+        return 0;
+    DFG::JITCode* jitCode = m_jitCode->dfg();
+    return jitCode->osrEntryBlock.get();
+#else // ENABLE(FTL_JIT)
+    return 0;
+#endif // ENABLE(FTL_JIT)
+}
+
 void CodeBlock::visitAggregate(SlotVisitor& visitor)
 {
-#if ENABLE(PARALLEL_GC) && ENABLE(DFG_JIT)
-    if (JITCode::isOptimizingJIT(jitType())) {
-        DFG::CommonData* dfgCommon = m_jitCode->dfgCommon();
-        
-        // I may be asked to scan myself more than once, and it may even happen concurrently.
-        // To this end, use a CAS loop to check if I've been called already. Only one thread
-        // may proceed past this point - whichever one wins the CAS race.
-        unsigned oldValue;
-        do {
-            oldValue = dfgCommon->visitAggregateHasBeenCalled;
-            if (oldValue) {
-                // Looks like someone else won! Return immediately to ensure that we don't
-                // trace the same CodeBlock concurrently. Doing so is hazardous since we will
-                // be mutating the state of ValueProfiles, which contain JSValues, which can
-                // have word-tearing on 32-bit, leading to awesome timing-dependent crashes
-                // that are nearly impossible to track down.
-                
-                // Also note that it must be safe to return early as soon as we see the
-                // value true (well, (unsigned)1), since once a GC thread is in this method
-                // and has won the CAS race (i.e. was responsible for setting the value true)
-                // it will definitely complete the rest of this method before declaring
-                // termination.
-                return;
-            }
-        } while (!WTF::weakCompareAndSwap(&dfgCommon->visitAggregateHasBeenCalled, 0, 1));
-    }
-#endif // ENABLE(PARALLEL_GC) && ENABLE(DFG_JIT)
+#if ENABLE(PARALLEL_GC)
+    // I may be asked to scan myself more than once, and it may even happen concurrently.
+    // To this end, use a CAS loop to check if I've been called already. Only one thread
+    // may proceed past this point - whichever one wins the CAS race.
+    unsigned oldValue;
+    do {
+        oldValue = m_visitAggregateHasBeenCalled;
+        if (oldValue) {
+            // Looks like someone else won! Return immediately to ensure that we don't
+            // trace the same CodeBlock concurrently. Doing so is hazardous since we will
+            // be mutating the state of ValueProfiles, which contain JSValues, which can
+            // have word-tearing on 32-bit, leading to awesome timing-dependent crashes
+            // that are nearly impossible to track down.
+            
+            // Also note that it must be safe to return early as soon as we see the
+            // value true (well, (unsigned)1), since once a GC thread is in this method
+            // and has won the CAS race (i.e. was responsible for setting the value true)
+            // it will definitely complete the rest of this method before declaring
+            // termination.
+            return;
+        }
+    } while (!WTF::weakCompareAndSwap(&m_visitAggregateHasBeenCalled, 0, 1));
+#endif // ENABLE(PARALLEL_GC)
     
     if (!!m_alternative)
         m_alternative->visitAggregate(visitor);
+    
+    if (CodeBlock* otherBlock = specialOSREntryBlockOrNull())
+        otherBlock->visitAggregate(visitor);
+
+    visitor.reportExtraMemoryUsage(sizeof(CodeBlock));
+    if (m_jitCode)
+        visitor.reportExtraMemoryUsage(m_jitCode->size());
+    if (m_instructions.size()) {
+        // Divide by refCount() because m_instructions points to something that is shared
+        // by multiple CodeBlocks, and we only want to count it towards the heap size once.
+        // Having each CodeBlock report only its proportional share of the size is one way
+        // of accomplishing this.
+        visitor.reportExtraMemoryUsage(m_instructions.size() * sizeof(Instruction) / m_instructions.refCount());
+    }
 
     visitor.append(&m_unlinkedCode);
 
@@ -2362,37 +2445,30 @@ void CodeBlock::stronglyVisitWeakReferences(SlotVisitor& visitor)
 
 CodeBlock* CodeBlock::baselineVersion()
 {
-#if ENABLE(JIT)
-    // When we're initializing the original baseline code block, we won't be able
-    // to get its replacement. But we'll know that it's the original baseline code
-    // block because it won't have JIT code yet and it won't have an alternative.
-    if (jitType() == JITCode::None && !alternative())
+    if (JITCode::isBaselineCode(jitType()))
         return this;
-    
+#if ENABLE(JIT)
     CodeBlock* result = replacement();
-    ASSERT(result);
     while (result->alternative())
         result = result->alternative();
-    ASSERT(result);
-    ASSERT(JITCode::isBaselineCode(result->jitType()));
+    RELEASE_ASSERT(result);
+    RELEASE_ASSERT(JITCode::isBaselineCode(result->jitType()));
     return result;
 #else
-    return this;
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
 #endif
 }
 
 #if ENABLE(JIT)
+bool CodeBlock::hasOptimizedReplacement(JITCode::JITType typeToReplace)
+{
+    return JITCode::isHigherTier(replacement()->jitType(), typeToReplace);
+}
+
 bool CodeBlock::hasOptimizedReplacement()
 {
-    ASSERT(JITCode::isBaselineCode(jitType()));
-    bool result = JITCode::isHigherTier(replacement()->jitType(), jitType());
-    if (result)
-        ASSERT(JITCode::isOptimizingJIT(replacement()->jitType()));
-    else {
-        ASSERT(JITCode::isBaselineCode(replacement()->jitType()));
-        ASSERT(replacement() == this);
-    }
-    return result;
+    return hasOptimizedReplacement(jitType());
 }
 #endif
 
@@ -2441,9 +2517,6 @@ void CodeBlock::expressionRangeForBytecodeOffset(unsigned bytecodeOffset, int& d
 
 void CodeBlock::shrinkToFit(ShrinkMode shrinkMode)
 {
-#if ENABLE(LLINT)
-    m_llintCallLinkInfos.shrinkToFit();
-#endif
 #if ENABLE(JIT)
     m_structureStubInfos.shrinkToFit();
     m_callLinkInfos.shrinkToFit();
@@ -2536,20 +2609,22 @@ void CodeBlock::linkIncomingCall(ExecState* callerFrame, CallLinkInfo* incoming)
     noticeIncomingCall(callerFrame);
     m_incomingCalls.push(incoming);
 }
+#endif // ENABLE(JIT)
 
 void CodeBlock::unlinkIncomingCalls()
 {
 #if ENABLE(LLINT)
     while (m_incomingLLIntCalls.begin() != m_incomingLLIntCalls.end())
         m_incomingLLIntCalls.begin()->unlink();
-#endif
+#endif // ENABLE(LLINT)
+#if ENABLE(JIT)
     if (m_incomingCalls.isEmpty())
         return;
     RepatchBuffer repatchBuffer(this);
     while (m_incomingCalls.begin() != m_incomingCalls.end())
         m_incomingCalls.begin()->unlink(*m_vm, repatchBuffer);
-}
 #endif // ENABLE(JIT)
+}
 
 #if ENABLE(LLINT)
 void CodeBlock::linkIncomingCall(ExecState* callerFrame, LLIntCallLinkInfo* incoming)
@@ -2659,6 +2734,8 @@ void CodeBlock::clearEvalCache()
 {
     if (!!m_alternative)
         m_alternative->clearEvalCache();
+    if (CodeBlock* otherBlock = specialOSREntryBlockOrNull())
+        otherBlock->clearEvalCache();
     if (!m_rareData)
         return;
     m_rareData->m_evalCodeCache.clear();
@@ -2689,6 +2766,16 @@ void CodeBlock::copyPostParseDataFromAlternative()
     copyPostParseDataFrom(m_alternative.get());
 }
 
+void CodeBlock::install()
+{
+    ownerExecutable()->installCode(this);
+}
+
+PassRefPtr<CodeBlock> CodeBlock::newReplacement()
+{
+    return ownerExecutable()->newReplacementCodeBlockFor(specializationKind());
+}
+
 #if ENABLE(JIT)
 void CodeBlock::reoptimize()
 {
@@ -2702,65 +2789,18 @@ void CodeBlock::reoptimize()
 
 CodeBlock* ProgramCodeBlock::replacement()
 {
-    return &static_cast<ProgramExecutable*>(ownerExecutable())->generatedBytecode();
+    return jsCast<ProgramExecutable*>(ownerExecutable())->codeBlock();
 }
 
 CodeBlock* EvalCodeBlock::replacement()
 {
-    return &static_cast<EvalExecutable*>(ownerExecutable())->generatedBytecode();
+    return jsCast<EvalExecutable*>(ownerExecutable())->codeBlock();
 }
 
 CodeBlock* FunctionCodeBlock::replacement()
 {
-    return &static_cast<FunctionExecutable*>(ownerExecutable())->generatedBytecodeFor(m_isConstructor ? CodeForConstruct : CodeForCall);
+    return jsCast<FunctionExecutable*>(ownerExecutable())->codeBlockFor(m_isConstructor ? CodeForConstruct : CodeForCall);
 }
-
-#if ENABLE(DFG_JIT)
-JSObject* ProgramCodeBlock::compileOptimized(ExecState* exec, JSScope* scope, CompilationResult& result, unsigned bytecodeIndex)
-{
-    if (JITCode::isHigherTier(replacement()->jitType(), jitType())) {
-        result = CompilationNotNeeded;
-        return 0;
-    }
-    JSObject* error = static_cast<ProgramExecutable*>(ownerExecutable())->compileOptimized(exec, scope, result, bytecodeIndex);
-    return error;
-}
-
-CompilationResult ProgramCodeBlock::replaceWithDeferredOptimizedCode(PassRefPtr<DFG::Plan> plan)
-{
-    return static_cast<ProgramExecutable*>(ownerExecutable())->replaceWithDeferredOptimizedCode(plan);
-}
-
-JSObject* EvalCodeBlock::compileOptimized(ExecState* exec, JSScope* scope, CompilationResult& result, unsigned bytecodeIndex)
-{
-    if (JITCode::isHigherTier(replacement()->jitType(), jitType())) {
-        result = CompilationNotNeeded;
-        return 0;
-    }
-    JSObject* error = static_cast<EvalExecutable*>(ownerExecutable())->compileOptimized(exec, scope, result, bytecodeIndex);
-    return error;
-}
-
-CompilationResult EvalCodeBlock::replaceWithDeferredOptimizedCode(PassRefPtr<DFG::Plan> plan)
-{
-    return static_cast<EvalExecutable*>(ownerExecutable())->replaceWithDeferredOptimizedCode(plan);
-}
-
-JSObject* FunctionCodeBlock::compileOptimized(ExecState* exec, JSScope* scope, CompilationResult& result, unsigned bytecodeIndex)
-{
-    if (JITCode::isHigherTier(replacement()->jitType(), jitType())) {
-        result = CompilationNotNeeded;
-        return 0;
-    }
-    JSObject* error = static_cast<FunctionExecutable*>(ownerExecutable())->compileOptimizedFor(exec, scope, result, bytecodeIndex, m_isConstructor ? CodeForConstruct : CodeForCall);
-    return error;
-}
-
-CompilationResult FunctionCodeBlock::replaceWithDeferredOptimizedCode(PassRefPtr<DFG::Plan> plan)
-{
-    return static_cast<FunctionExecutable*>(ownerExecutable())->replaceWithDeferredOptimizedCodeFor(plan, m_isConstructor ? CodeForConstruct : CodeForCall);
-}
-#endif // ENABLE(DFG_JIT)
 
 DFG::CapabilityLevel ProgramCodeBlock::capabilityLevelInternal()
 {
@@ -2781,49 +2821,14 @@ DFG::CapabilityLevel FunctionCodeBlock::capabilityLevelInternal()
 
 void CodeBlock::jettison()
 {
+    DeferGC deferGC(*m_heap);
     ASSERT(JITCode::isOptimizingJIT(jitType()));
     ASSERT(this == replacement());
     alternative()->optimizeAfterWarmUp();
     tallyFrequentExitSites();
     if (DFG::shouldShowDisassembly())
         dataLog("Jettisoning ", *this, ".\n");
-    jettisonImpl();
-}
-
-void ProgramCodeBlock::jettisonImpl()
-{
-    static_cast<ProgramExecutable*>(ownerExecutable())->jettisonOptimizedCode(*vm());
-}
-
-void EvalCodeBlock::jettisonImpl()
-{
-    static_cast<EvalExecutable*>(ownerExecutable())->jettisonOptimizedCode(*vm());
-}
-
-void FunctionCodeBlock::jettisonImpl()
-{
-    static_cast<FunctionExecutable*>(ownerExecutable())->jettisonOptimizedCodeFor(*vm(), m_isConstructor ? CodeForConstruct : CodeForCall);
-}
-
-CompilationResult ProgramCodeBlock::jitCompileImpl(ExecState* exec)
-{
-    ASSERT(jitType() == JITCode::InterpreterThunk);
-    ASSERT(this == replacement());
-    return static_cast<ProgramExecutable*>(ownerExecutable())->jitCompile(exec);
-}
-
-CompilationResult EvalCodeBlock::jitCompileImpl(ExecState* exec)
-{
-    ASSERT(jitType() == JITCode::InterpreterThunk);
-    ASSERT(this == replacement());
-    return static_cast<EvalExecutable*>(ownerExecutable())->jitCompile(exec);
-}
-
-CompilationResult FunctionCodeBlock::jitCompileImpl(ExecState* exec)
-{
-    ASSERT(jitType() == JITCode::InterpreterThunk);
-    ASSERT(this == replacement());
-    return static_cast<FunctionExecutable*>(ownerExecutable())->jitCompileFor(exec, m_isConstructor ? CodeForConstruct : CodeForCall);
+    alternative()->install();
 }
 #endif
 
@@ -2831,7 +2836,7 @@ JSGlobalObject* CodeBlock::globalObjectFor(CodeOrigin codeOrigin)
 {
     if (!codeOrigin.inlineCallFrame)
         return globalObject();
-    return jsCast<FunctionExecutable*>(codeOrigin.inlineCallFrame->executable.get())->generatedBytecode().globalObject();
+    return jsCast<FunctionExecutable*>(codeOrigin.inlineCallFrame->executable.get())->eitherCodeBlock()->globalObject();
 }
 
 void CodeBlock::noticeIncomingCall(ExecState* callerFrame)
@@ -3017,26 +3022,10 @@ static int32_t clipThreshold(double threshold)
     return static_cast<int32_t>(threshold);
 }
 
-int32_t CodeBlock::counterValueForOptimizeAfterWarmUp()
+int32_t CodeBlock::adjustedCounterValue(int32_t desiredThreshold)
 {
     return clipThreshold(
-        Options::thresholdForOptimizeAfterWarmUp() *
-        optimizationThresholdScalingFactor() *
-        (1 << reoptimizationRetryCounter()));
-}
-
-int32_t CodeBlock::counterValueForOptimizeAfterLongWarmUp()
-{
-    return clipThreshold(
-        Options::thresholdForOptimizeAfterLongWarmUp() *
-        optimizationThresholdScalingFactor() *
-        (1 << reoptimizationRetryCounter()));
-}
-
-int32_t CodeBlock::counterValueForOptimizeSoon()
-{
-    return clipThreshold(
-        Options::thresholdForOptimizeSoon() *
+        static_cast<double>(desiredThreshold) *
         optimizationThresholdScalingFactor() *
         (1 << reoptimizationRetryCounter()));
 }
@@ -3044,10 +3033,12 @@ int32_t CodeBlock::counterValueForOptimizeSoon()
 bool CodeBlock::checkIfOptimizationThresholdReached()
 {
 #if ENABLE(DFG_JIT)
-    if (m_vm->worklist
-        && m_vm->worklist->compilationState(this) == DFG::Worklist::Compiled) {
-        optimizeNextInvocation();
-        return true;
+    if (DFG::Worklist* worklist = m_vm->worklist.get()) {
+        if (worklist->compilationState(DFG::CompilationKey(this, DFG::DFGMode))
+            == DFG::Worklist::Compiled) {
+            optimizeNextInvocation();
+            return true;
+        }
     }
 #endif
     
@@ -3073,7 +3064,8 @@ void CodeBlock::optimizeAfterWarmUp()
     if (Options::verboseOSR())
         dataLog(*this, ": Optimizing after warm-up.\n");
 #if ENABLE(DFG_JIT)
-    m_jitExecuteCounter.setNewThreshold(counterValueForOptimizeAfterWarmUp(), this);
+    m_jitExecuteCounter.setNewThreshold(
+        adjustedCounterValue(Options::thresholdForOptimizeAfterWarmUp()), this);
 #endif
 }
 
@@ -3082,7 +3074,8 @@ void CodeBlock::optimizeAfterLongWarmUp()
     if (Options::verboseOSR())
         dataLog(*this, ": Optimizing after long warm-up.\n");
 #if ENABLE(DFG_JIT)
-    m_jitExecuteCounter.setNewThreshold(counterValueForOptimizeAfterLongWarmUp(), this);
+    m_jitExecuteCounter.setNewThreshold(
+        adjustedCounterValue(Options::thresholdForOptimizeAfterLongWarmUp()), this);
 #endif
 }
 
@@ -3091,7 +3084,8 @@ void CodeBlock::optimizeSoon()
     if (Options::verboseOSR())
         dataLog(*this, ": Optimizing soon.\n");
 #if ENABLE(DFG_JIT)
-    m_jitExecuteCounter.setNewThreshold(counterValueForOptimizeSoon(), this);
+    m_jitExecuteCounter.setNewThreshold(
+        adjustedCounterValue(Options::thresholdForOptimizeSoon()), this);
 #endif
 }
 
@@ -3111,10 +3105,10 @@ void CodeBlock::setOptimizationThresholdBasedOnCompilationResult(CompilationResu
     case CompilationSuccessful:
         RELEASE_ASSERT(JITCode::isOptimizingJIT(replacement()->jitType()));
         optimizeNextInvocation();
-        break;
+        return;
     case CompilationFailed:
         dontOptimizeAnytimeSoon();
-        break;
+        return;
     case CompilationDeferred:
         // We'd like to do dontOptimizeAnytimeSoon() but we cannot because
         // forceOptimizationSlowPathConcurrently() is inherently racy. It won't
@@ -3122,16 +3116,14 @@ void CodeBlock::setOptimizationThresholdBasedOnCompilationResult(CompilationResu
         // function ends up being a no-op, we still eventually retry and realize
         // that we have optimized code ready.
         optimizeAfterWarmUp();
-        break;
+        return;
     case CompilationInvalidated:
         // Retry with exponential backoff.
         countReoptimization();
         optimizeAfterWarmUp();
-        break;
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-        break;
+        return;
     }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 #endif

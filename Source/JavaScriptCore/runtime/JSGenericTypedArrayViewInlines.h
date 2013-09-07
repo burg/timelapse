@@ -49,7 +49,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(
 {
     ConstructionContext context(exec->vm(), structure, length, sizeof(typename Adaptor::Type));
     if (!context) {
-        throwError(exec, createOutOfMemoryError(structure->globalObject()));
+        exec->vm().throwException(exec, createOutOfMemoryError(structure->globalObject()));
         return 0;
     }
     JSGenericTypedArrayView* result =
@@ -67,7 +67,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::createUninit
         exec->vm(), structure, length, sizeof(typename Adaptor::Type),
         ConstructionContext::DontInitialize);
     if (!context) {
-        throwError(exec, createOutOfMemoryError(structure->globalObject()));
+        exec->vm().throwException(exec, createOutOfMemoryError(structure->globalObject()));
         return 0;
     }
     JSGenericTypedArrayView* result =
@@ -84,7 +84,7 @@ JSGenericTypedArrayView<Adaptor>* JSGenericTypedArrayView<Adaptor>::create(
 {
     RefPtr<ArrayBuffer> buffer = passedBuffer;
     if (!ArrayBufferView::verifySubRange<typename Adaptor::Type>(buffer, byteOffset, length)) {
-        throwError(
+        exec->vm().throwException(
             exec, createRangeError(exec, "Byte offset and length out of range of buffer"));
         return 0;
     }
@@ -126,14 +126,15 @@ bool JSGenericTypedArrayView<Adaptor>::validateRange(
     if (canAccessRangeQuickly(offset, length))
         return true;
     
-    throwError(exec, createRangeError(exec, "Range consisting of offset and length are out of bounds"));
+    exec->vm().throwException(exec, createRangeError(exec, "Range consisting of offset and length are out of bounds"));
     return false;
 }
 
 template<typename Adaptor>
-template<typename OtherType>
+template<typename OtherAdaptor>
 bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
-    ExecState* exec, OtherType* other, unsigned offset, unsigned length)
+    ExecState* exec, JSGenericTypedArrayView<OtherAdaptor>* other,
+    unsigned offset, unsigned length)
 {
     // Handle the hilarious case: the act of getting the length could have resulted
     // in neutering. Well, no. That'll never happen because there cannot be
@@ -147,12 +148,69 @@ bool JSGenericTypedArrayView<Adaptor>::setWithSpecificType(
         return false;
     
     if (other->length() != length) {
-        throwError(exec, createRangeError(exec, "Length of incoming array changed unexpectedly."));
+        exec->vm().throwException(exec, createRangeError(exec, "Length of incoming array changed unexpectedly."));
         return false;
     }
     
+    // This method doesn't support copying between the same array. Note that
+    // set() will only call this if the types differ, which implicitly guarantees
+    // that we can't be the same array. This is relevant because the way we detect
+    // non-overlapping is by checking if either (a) either array doesn't have a
+    // backing buffer or (b) the backing buffers are different, but that doesn't
+    // catch the case where it's the *same* array - fortunately though, this code
+    // path never needs to worry about that case.
+    ASSERT(static_cast<JSCell*>(this) != static_cast<JSCell*>(other));
+    
+    // 1) If the two arrays are non-overlapping, we can copy in any order we like
+    //    and we don't need an intermediate buffer. Arrays are definitely
+    //    non-overlapping if either one of them has no backing buffer (that means
+    //    that it *owns* its philosophical backing buffer) or if they have
+    //    different backing buffers.
+    // 2) If the two arrays overlap but have the same element size, we can do a
+    //    memmove-like copy where we flip-flop direction based on which vector
+    //    starts before the other:
+    //    A) If the destination vector is before the source vector, then a forward
+    //       copy is in order.
+    //    B) If the destination vector is after the source vector, then a backward
+    //       copy is in order.
+    // 3) If we have different element sizes and there is a chance of overlap then
+    //    we need an intermediate vector.
+    
+    // NB. Comparisons involving elementSize will be constant-folded by template
+    // specialization.
+
+    unsigned otherElementSize = sizeof(typename OtherAdaptor::Type);
+    
+    // Handle cases (1) and (2B).
+    if (!hasArrayBuffer() || !other->hasArrayBuffer()
+        || existingBuffer() != other->existingBuffer()
+        || (elementSize == otherElementSize && vector() > other->vector())) {
+        for (unsigned i = length; i--;) {
+            setIndexQuicklyToNativeValue(
+                offset + i, OtherAdaptor::template convertTo<Adaptor>(
+                    other->getIndexQuicklyAsNativeValue(i)));
+        }
+        return true;
+    }
+    
+    // Now we either have (2A) or (3) - so first we try to cover (2A).
+    if (elementSize == otherElementSize) {
+        for (unsigned i = 0; i < length; ++i) {
+            setIndexQuicklyToNativeValue(
+                offset + i, OtherAdaptor::template convertTo<Adaptor>(
+                    other->getIndexQuicklyAsNativeValue(i)));
+        }
+        return true;
+    }
+    
+    // Fail: we need an intermediate transfer buffer (i.e. case (3)).
+    Vector<typename Adaptor::Type, 32> transferBuffer(length);
+    for (unsigned i = length; i--;) {
+        transferBuffer[i] = OtherAdaptor::template convertTo<Adaptor>(
+            other->getIndexQuicklyAsNativeValue(i));
+    }
     for (unsigned i = length; i--;)
-        setIndexQuickly(offset + i, other->getIndexQuickly(i));
+        setIndexQuicklyToNativeValue(offset + i, transferBuffer[i]);
     
     return true;
 }
@@ -170,29 +228,38 @@ bool JSGenericTypedArrayView<Adaptor>::set(
         if (!validateRange(exec, offset, length))
             return false;
         
-        memcpy(typedVector() + offset, other->typedVector(), other->byteLength());
+        memmove(typedVector() + offset, other->typedVector(), other->byteLength());
         return true;
     }
     
     switch (ci->typedArrayStorageType) {
     case TypeInt8:
-        return setWithSpecificType(exec, jsCast<JSInt8Array*>(object), offset, length);
+        return setWithSpecificType<Int8Adaptor>(
+            exec, jsCast<JSInt8Array*>(object), offset, length);
     case TypeInt16:
-        return setWithSpecificType(exec, jsCast<JSInt16Array*>(object), offset, length);
+        return setWithSpecificType<Int16Adaptor>(
+            exec, jsCast<JSInt16Array*>(object), offset, length);
     case TypeInt32:
-        return setWithSpecificType(exec, jsCast<JSInt32Array*>(object), offset, length);
+        return setWithSpecificType<Int32Adaptor>(
+            exec, jsCast<JSInt32Array*>(object), offset, length);
     case TypeUint8:
-        return setWithSpecificType(exec, jsCast<JSUint8Array*>(object), offset, length);
+        return setWithSpecificType<Uint8Adaptor>(
+            exec, jsCast<JSUint8Array*>(object), offset, length);
     case TypeUint8Clamped:
-        return setWithSpecificType(exec, jsCast<JSUint8ClampedArray*>(object), offset, length);
+        return setWithSpecificType<Uint8ClampedAdaptor>(
+            exec, jsCast<JSUint8ClampedArray*>(object), offset, length);
     case TypeUint16:
-        return setWithSpecificType(exec, jsCast<JSUint16Array*>(object), offset, length);
+        return setWithSpecificType<Uint16Adaptor>(
+            exec, jsCast<JSUint16Array*>(object), offset, length);
     case TypeUint32:
-        return setWithSpecificType(exec, jsCast<JSUint32Array*>(object), offset, length);
+        return setWithSpecificType<Uint32Adaptor>(
+            exec, jsCast<JSUint32Array*>(object), offset, length);
     case TypeFloat32:
-        return setWithSpecificType(exec, jsCast<JSFloat32Array*>(object), offset, length);
+        return setWithSpecificType<Float32Adaptor>(
+            exec, jsCast<JSFloat32Array*>(object), offset, length);
     case TypeFloat64:
-        return setWithSpecificType(exec, jsCast<JSFloat64Array*>(object), offset, length);
+        return setWithSpecificType<Float64Adaptor>(
+            exec, jsCast<JSFloat64Array*>(object), offset, length);
     case NotTypedArray:
     case TypeDataView: {
         if (!validateRange(exec, offset, length))
@@ -207,6 +274,12 @@ bool JSGenericTypedArrayView<Adaptor>::set(
     
     RELEASE_ASSERT_NOT_REACHED();
     return false;
+}
+
+template<typename Adaptor>
+ArrayBuffer* JSGenericTypedArrayView<Adaptor>::existingBuffer()
+{
+    return existingBufferInButterfly();
 }
 
 template<typename Adaptor>
@@ -258,7 +331,7 @@ void JSGenericTypedArrayView<Adaptor>::put(
 template<typename Adaptor>
 bool JSGenericTypedArrayView<Adaptor>::defineOwnProperty(
     JSObject* object, ExecState* exec, PropertyName propertyName,
-    PropertyDescriptor& descriptor, bool shouldThrow)
+    const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
     
@@ -379,6 +452,10 @@ void JSGenericTypedArrayView<Adaptor>::visitChildren(JSCell* cell, SlotVisitor& 
         
     case WastefulTypedArray:
         break;
+        
+    case DataViewMode:
+        RELEASE_ASSERT_NOT_REACHED();
+        break;
     }
     
     Base::visitChildren(thisObject, visitor);
@@ -403,7 +480,7 @@ void JSGenericTypedArrayView<Adaptor>::copyBackingStore(
 }
 
 template<typename Adaptor>
-void JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBufferView* object)
+ArrayBuffer* JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBufferView* object)
 {
     JSGenericTypedArrayView* thisObject = jsCast<JSGenericTypedArrayView*>(object);
     
@@ -451,7 +528,7 @@ void JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBufferView*
         buffer = ArrayBuffer::createAdopted(thisObject->m_vector, thisObject->byteLength());
         break;
         
-    case WastefulTypedArray:
+    default:
         RELEASE_ASSERT_NOT_REACHED();
         break;
     }
@@ -460,6 +537,8 @@ void JSGenericTypedArrayView<Adaptor>::slowDownAndWasteMemory(JSArrayBufferView*
     thisObject->m_vector = buffer->data();
     thisObject->m_mode = WastefulTypedArray;
     heap->addReference(thisObject, buffer.get());
+    
+    return buffer.get();
 }
 
 template<typename Adaptor>

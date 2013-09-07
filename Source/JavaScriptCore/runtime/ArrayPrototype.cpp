@@ -78,11 +78,11 @@ static inline bool isNumericCompareFunction(ExecState* exec, CallType callType, 
 
     FunctionExecutable* executable = callData.js.functionExecutable;
 
-    JSObject* error = executable->compileForCall(exec, callData.js.scope);
+    JSObject* error = executable->prepareForExecution(exec, callData.js.scope, CodeForCall);
     if (error)
         return false;
 
-    return executable->generatedBytecodeForCall().isNumericCompareFunction();
+    return executable->codeBlockForCall()->isNumericCompareFunction();
 }
 
 // ------------------------------ ArrayPrototype ----------------------------
