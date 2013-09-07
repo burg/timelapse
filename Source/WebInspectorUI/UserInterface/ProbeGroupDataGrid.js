@@ -48,7 +48,6 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
 }
 
 WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName = "faded";
-WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName = "empty";
 
 WebInspector.ProbeGroupDataGrid.prototype = {
     constructor: WebInspector.ProbeGroupDataGrid,
@@ -224,12 +223,6 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             this._updateNodeForFrame(frames[i]);
     },
 
-    fadeGridNodes: function(event)
-    {
-        for (var index in this._frameNodes)
-            this._frameNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
-    },
-
     // Private
 
     _setupProbe: function(event)
@@ -300,18 +293,16 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             this.insertChild(node, insertionIndex);
         } else
             this.insertChild(node, insertionIndex);
-/*
-        if (data.empty) {
-            this.fadeGridNodes();
-            node.element.classList.add(WebInspector.ProbeGroupDataGrid.EmptyGridNodeStyleClassName);
-        }
-*/
     },
 
     _updateNodeForSeparator: function(frame)
     {
         console.assert(this._frameNodes.hasOwnProperty(frame.key), "Tried to add separator for unknown data frame: ", frame);
         this._frameNodes[frame.key].updateCellsForSeparator(frame, this._probeGroup);
+
+        for (var index in this._frameNodes)
+            this._frameNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
+
     },
 
     _dataFrameInserted: function(event)

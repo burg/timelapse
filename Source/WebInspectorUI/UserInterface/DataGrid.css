@@ -306,13 +306,15 @@ body.window-inactive .data-grid th.sort-descending {
 }
 
 .data-grid tr.selected {
-    background-color: rgb(212, 212, 212) !important;
     color: inherit !important;
+    background-image: -webkit-linear-gradient(top, rgb(194, 194, 194), rgb(158, 158, 158));
+    background-origin: padding;
+    background-clip: padding;
 }
 
 .data-grid:focus tr.selected {
-    background-color: rgb(56, 121, 217) !important;
     color: white !important;
+    background-image: -webkit-linear-gradient(top, rgb(154, 180, 203), rgb(112, 139, 176));   
 }
 
 .data-grid tr:not(.parent) td.disclosure {
