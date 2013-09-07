@@ -36,6 +36,7 @@ WebInspector.ProbeGroupDataGridNode = function(frame, probeGroup)
 };
 
 WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName = "separator";
+WebInspector.ProbeGroupDataGridNode.UnknownValueStyleClassName = "unknown-value";
 
 WebInspector.ProbeGroupDataGridNode.prototype = {
     constructor: WebInspector.ProbeGroupDataGridNode,
@@ -45,7 +46,13 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 
     updateCellsFromFrame: function(frame, probeGroup)
     {
+		var probes = probeGroup.probes;
     	this.data = this._cellDataFromFrame(frame, probeGroup);
+    	// Go back and add unknown value styles to empty cells.
+    	// Cells are recreated each time, so don't bother removing styles.
+    	for (var i = 0; i < probes.length; ++i)
+    		if (frame[probes[i].probeId] == WebInspector.ProbeGroupDataFrame.MissingValue)
+    			this._element.children[i].classList.add(WebInspector.ProbeGroupDataGridNode.UnknownValueStyleClassName);
     },
 
     updateCellsForSeparator: function(frame, probeGroup)
