@@ -23,12 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-.details-section.probe-group .data-grid > .data-container tr.faded {
+.details-section.probe-group .data-grid .data-container tr.faded {
     color: #777;
 	font-style: italic;
 }
 
-.details-section.probe-group .data-grid > .data-container tr.faded td {
+.details-section.probe-group .data-grid .data-container tr.faded td {
 	background-color: rgba(100, 100, 100, 0.2);
 }
 
@@ -37,12 +37,27 @@
 	background-image: -webkit-repeating-linear-gradient(-45deg, transparent, transparent 7px, rgba(255, 255, 255, .5) 7px, rgba(255, 255, 255, .5) 14px);
 }
 
-.details-section.probe-group .data-grid > .data-container tr.separator {
+.details-section.probe-group .data-grid .data-container tr.separator {
 	border-bottom: 3px solid #555;
 }
 
 .details-section.probe-group .data-grid .data-container tr.separator {
 	border-bottom: 2px solid #666;
+}
+
+.details-section.probe-group .data-grid > .data-container tr.revealed {
+	-webkit-animation-duration: 0.3s;
+	-webkit-animation-name: blink-probe-frame;
+}
+
+@-webkit-keyframes blink-probe-frame {
+	0% {
+		background-color: rgba(144, 111, 199, 1);
+	}
+
+	100% {
+		background-color: rgba(144, 111, 199, 0);
+	}
 }
 
 .details-section.probe-group .data-grid .data-container .selected .section * {
