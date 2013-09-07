@@ -224,7 +224,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 
     bool eventWasHandled = false;
 #if ENABLE(WEB_REPLAY)
-    InputIterator* it = getInputIteratorForDocument(corePage()->mainFrame()->document());
+    InputIterator* it = getInputIteratorForDocument(corePage()->mainFrame().document());
     bool isCapturing = it && it->isCapturing();
     bool isReplaying = it && it->isReplaying();
 #endif

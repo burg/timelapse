@@ -3181,7 +3181,7 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
     bool metaKey;
     PlatformKeyboardEvent::getCurrentModifierState(shiftKey, ctrlKey, altKey, metaKey);
     PlatformMouseEvent fakeMouseMoveEvent(m_lastKnownMousePosition, m_lastKnownMouseGlobalPosition, NoButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey, metaKey, currentTime());
-    m_frame->page()->asyncEventProxy()->dispatchFakeMouseMove(m_frame, fakeMouseMoveEvent);
+    m_frame.page()->asyncEventProxy()->dispatchFakeMouseMove(m_frame, fakeMouseMoveEvent);
 }
 
 void EventHandler::setResizingFrameSet(HTMLFrameSetElement* frameSet)
@@ -3193,9 +3193,9 @@ void EventHandler::sendResizeEvent(bool dispatchSynchronously)
 {
     RefPtr<Event> resizeEvent = Event::create(eventNames().resizeEvent, false, false);
     if (dispatchSynchronously)
-        m_frame->document()->dispatchWindowEvent(resizeEvent.release(), m_frame->document()->domWindow());
+        m_frame.document()->dispatchWindowEvent(resizeEvent.release(), m_frame.document()->domWindow());
     else
-        m_frame->document()->enqueueWindowEvent(resizeEvent.release());
+        m_frame.document()->enqueueWindowEvent(resizeEvent.release());
 
 }
 

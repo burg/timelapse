@@ -149,7 +149,7 @@ PassRefPtr<InspectorObject> ReplayActionFactory::createFrameNavigatedData(Docume
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setString("url", loader->url().string());
-    data->setString("name", loader->frame()->tree()->name());
+    data->setString("name", loader->frame()->tree().name());
     return data.release();
 }
 

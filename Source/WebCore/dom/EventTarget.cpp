@@ -165,14 +165,17 @@ bool EventTarget::dispatchAsyncEvent(PassRefPtr<Event> event)
     AsyncEventProxy* eventProxy = 0;
     if (DOMWindow* window = toDOMWindow())
         eventProxy = window->frame()->page()->asyncEventProxy();
-    else if (Node* node = toNode())
-        eventProxy = node->document()->page()->asyncEventProxy();
-
-    ASSERT(eventProxy);
-    return eventProxy->dispatchAsyncEvent(event, this);
-#else
-    return dispatchEvent(event);
+    else if (Node* node = toNode()) {
+        // SVG documents don't have a Page, so don't interpose on their events.
+        if (!node->document().isSVGDocument())
+            eventProxy = node->document().page()->asyncEventProxy();
+    }
+    
+    if (eventProxy)
+        return eventProxy->dispatchAsyncEvent(event, this);
+    else
 #endif
+    return dispatchEvent(event);
 }
 
 void EventTarget::uncaughtExceptionInEventHandler()

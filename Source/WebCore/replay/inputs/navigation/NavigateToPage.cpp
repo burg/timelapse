@@ -75,7 +75,7 @@ void NavigateToPage::dispatch(ReplayController* controller,
     controller->page()->networkProxy()->setExpectsPageLoad(true);
 
     //schedule async page load (it uses delay 0)
-    controller->page()->mainFrame()->navigationScheduler()->scheduleLocationChange(m_securityOrigin.get(), m_url, m_referrer, true, true);
+    controller->page()->mainFrame().navigationScheduler().scheduleLocationChange(m_securityOrigin.get(), m_url, m_referrer, true, true);
     dispatcher->didDispatch(this);
 }
 

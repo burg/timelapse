@@ -5238,6 +5238,7 @@
 		C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB777175FAA41008BF639 /* EnableCache.cpp */; };
 		C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */; };
 		C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E40991702201F00FB0F77 /* ReplayActionFactory.h */; };
+		C43284F517DA8F66000F1F11 /* PageConsole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493717A432350054AC75 /* PageConsole.cpp */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
 		C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */; };
 		C48108E317052FF100AB4BAA /* DispatchAsyncEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */; };
@@ -5352,7 +5353,6 @@
 		C4F7F93E17060151005AB205 /* ReplayAgentStateMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */; };
 		C4F7F93F17060151005AB205 /* ReplayAgentStateMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F7F93D17060151005AB205 /* ReplayAgentStateMachine.h */; };
 		C4F7F941170603B9005AB205 /* ReplayProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F7F940170603B9005AB205 /* ReplayProxy.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C4F9D3C317C5454000ED7B6E /* PageConsole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493717A432350054AC75 /* PageConsole.cpp */; };
 		C4F9D3C417C5455800ED7B6E /* ResourceHandleClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493517A431C90054AC75 /* ResourceHandleClient.cpp */; };
 		C50B561612119D23008B46E0 /* GroupSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C50B561412119D23008B46E0 /* GroupSettings.cpp */; };
 		C50B561712119D23008B46E0 /* GroupSettings.h in Headers */ = {isa = PBXBuildFile; fileRef = C50B561512119D23008B46E0 /* GroupSettings.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -28164,6 +28164,7 @@
 				C4C3312217D663F3008BDACF /* ReloadFrame.cpp in Sources */,
 				BE16C59217CFE17200852C04 /* InbandGenericTextTrack.cpp in Sources */,
 				BE16C59417CFE17200852C04 /* InbandWebVTTTextTrack.cpp in Sources */,
+				C43284F517DA8F66000F1F11 /* PageConsole.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -129,7 +129,7 @@ void HistoryController::restoreScrollPositionAndViewState()
         return;
 
 #if ENABLE(WEB_REPLAY)
-    InputIterator* it = getInputIteratorForDocument(m_frame->document());
+    InputIterator* it = getInputIteratorForDocument(m_frame.document());
     if (it && (it->isCapturing() || it->isReplaying()))
         return;
 #endif

@@ -104,7 +104,6 @@ void WheelEvent::initWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<Abstrac
     m_deltaX = -rawDeltaX;
     m_deltaY = -rawDeltaY;
 
-    m_rawDelta = IntPoint(rawDeltaX, rawDeltaY);
     m_deltaMode = DOM_DELTA_PIXEL;
     m_directionInvertedFromDevice = false;
 

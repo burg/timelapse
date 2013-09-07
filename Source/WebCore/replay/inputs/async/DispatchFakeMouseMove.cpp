@@ -59,7 +59,7 @@ void DispatchFakeMouseMove::dispatch(ReplayController* controller,
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller->page()->asyncEventProxy()->dispatchFakeMouseMove(frame, platformEvent(), true);
+    controller->page()->asyncEventProxy()->dispatchFakeMouseMove(*frame, platformEvent(), true);
     dispatcher->didDispatch(this);
 }
 

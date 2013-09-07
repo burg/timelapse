@@ -61,8 +61,8 @@ int SerializedEventTarget::frameIndexFromDocument(Document* document)
 
     int idx = 0;
     Frame* targetFrame = document->frame();
-    Frame* mainFrame = targetFrame->tree()->top();
-    for (Frame* frame = mainFrame; frame; idx++, frame = frame->tree()->traverseNext(mainFrame))
+    Frame* mainFrame = targetFrame->tree().top();
+    for (Frame* frame = mainFrame; frame; idx++, frame = frame->tree().traverseNext(mainFrame))
         if (frame == targetFrame)
             return idx;
 
@@ -72,13 +72,13 @@ int SerializedEventTarget::frameIndexFromDocument(Document* document)
 
 Document* SerializedEventTarget::documentFromFrameIndex(Page* page, int frameIndex)
 {
-    ASSERT(page && page->mainFrame());
+    ASSERT(page);
     ASSERT(frameIndex >= 0);
 
-    Frame* mainFrame = page->mainFrame();
+    Frame* mainFrame = &page->mainFrame();
     Frame* frame = mainFrame;
     int idx = 0;
-    for (; idx < frameIndex && frame; idx++, frame = frame->tree()->traverseNext(mainFrame));
+    for (; idx < frameIndex && frame; idx++, frame = frame->tree().traverseNext(mainFrame));
 
     ASSERT(idx == frameIndex);
     ASSERT(frame && frame->document());
@@ -87,7 +87,7 @@ Document* SerializedEventTarget::documentFromFrameIndex(Page* page, int frameInd
 
 int SerializedEventTarget::nodeAbsIndex(Document* document, Node *node)
 {
-    ASSERT(node->document() == document);
+    ASSERT(&node->document() == document);
 
     int absIndex = 0;
     for (Node* n = node; n && n != document; n = NodeTraversal::previous(n))
@@ -121,7 +121,7 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
         ASSERT(node);
         ASSERT(node->inDocument() || node->ownerDocument());
         targetType = NODE;
-        Document* nodeDocument = (node->inDocument()) ? node->document() : node->ownerDocument();
+        Document* nodeDocument = (node->inDocument()) ? &node->document() : node->ownerDocument();
         nodeIndex = SerializedEventTarget::nodeAbsIndex(nodeDocument, node);
         frameIndex = frameIndexFromDocument(nodeDocument);
     } else {
