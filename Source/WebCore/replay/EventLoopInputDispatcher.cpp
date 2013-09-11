@@ -132,7 +132,7 @@ void EventLoopInputDispatcher::didDispatch(EventLoopInput* input)
 
     m_runningInput = 0;
     m_dispatching = false;
-    m_client->didDispatchInput(input);
+    m_client->didDispatchInput(*input);
 
     // if the expected input never came, just forget we were expecting it.
     // it may have been consumed by another instrumenting agent.
@@ -176,7 +176,7 @@ void EventLoopInputDispatcher::maybeDispatchInput()
         m_client->playbackError(false, errorMessage);
     }
 
-    m_client->willDispatchInput(m_waitingInput);
+    m_client->willDispatchInput(*m_waitingInput);
     if (!m_running) // could be changed by client in the previous call, so re-check.
         return;
 
@@ -263,7 +263,7 @@ void EventLoopInputDispatcher::syncDispatchInput()
     LOG(DeterministicReplay, "%-20s >DISPATCH: %s\n", "ReplayEvents",
                    m_runningInput->toString().utf8().data());
     m_dispatching = true;
-    m_runningInput->dispatch(m_page->replayController(), this);
+    m_runningInput->dispatch(m_page->replayController(), *this);
 }
 
 }; // namespace WebCore

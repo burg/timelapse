@@ -54,22 +54,21 @@ SendResizeEvent::SendResizeEvent(int width, int height, int frameIndex)
     , m_height(height)
     , m_frameIndex(frameIndex) {}
 
-void SendResizeEvent::dispatch(ReplayController* controller,
-                               EventLoopInputDispatcher* dispatcher)
+void SendResizeEvent::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
 
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
 
     document->domWindow()->resizeTo((float) m_width, (float) m_height);
-    controller->page()->userInputProxy()->sendResizeEvent(document->frame(), true);
+    controller.page()->userInputProxy().sendResizeEvent(document->frame(), true);
     // TODO: flushing this may be unsafe for some reason, if there are other things in the
     // document event queue that cannot be dispatched correctly without the stack unwinding.
     // If we encounter random crashes when replaying resize events, then we may need to
     // find another strategy, such as adding synthetic callback events or routing a callback
     // somehow.
     document->eventQueue()->flush();
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 const AtomicString& SendResizeEvent::type() const

@@ -48,19 +48,18 @@
 
 namespace WebCore {
 
-void InitializeFocus::dispatch(ReplayController* controller,
-                               EventLoopInputDispatcher* dispatcher)
+void InitializeFocus::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
 
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
     PassRefPtr<Frame> framePtr(document->frame());
 
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
-    controller->page()->userInputProxy()->focusSetActive(m_active, true);
-    controller->page()->userInputProxy()->focusSetFocused(m_focus, true);
-    controller->page()->focusController().setFocusedFrame(framePtr);
-    dispatcher->didDispatch(this);
+    controller.page()->userInputProxy().focusSetActive(m_active, true);
+    controller.page()->userInputProxy().focusSetFocused(m_focus, true);
+    controller.page()->focusController().setFocusedFrame(framePtr);
+    dispatcher.didDispatch(this);
 }
 
 const AtomicString& InitializeFocus::type() const

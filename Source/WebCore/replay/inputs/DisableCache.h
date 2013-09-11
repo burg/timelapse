@@ -50,7 +50,7 @@ public:
     virtual ~DisableCache() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher) OVERRIDE;
+    virtual void dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API

@@ -163,7 +163,7 @@ ReplayController::ReplayController(Page* page)
     : m_page(page)
     , m_nextRecordingId(1)
     , m_loadedRecording(0)
-    , m_cacheController(adoptRef(new CacheController()))
+    , m_cacheController(adoptPtr(new CacheController()))
     , m_stopBeforeMarkIndex(0)
     , m_status(CannotReplay)
     , m_errorStrategy(PauseOnError) { }
@@ -205,7 +205,7 @@ void ReplayController::beginCapturing()
     m_activeIterator->storeInput(adoptPtr(reloadInput));
 
     //The call to scheduleLocationChange should be the same on capture and replay.
-    page()->networkProxy()->setExpectsPageLoad(true);
+    page()->networkProxy().setExpectsPageLoad(true);
     // TODO: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
     mainFrame.navigationScheduler().scheduleLocationChange(reloadInput->securityOrigin().get(),
@@ -253,7 +253,7 @@ void ReplayController::pauseAtNextMark()
     // finish all inputs with the current mark index. If the dispatcher starts to
     // dispatch an input with a different index, we will pause it first.
     m_status = ReplayUpToMarkIndex;
-    m_stopBeforeMarkIndex = dispatcher()->currentMark().index() + 1;
+    m_stopBeforeMarkIndex = dispatcher().currentMark().index() + 1;
 }
 
 void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode mode)
@@ -265,7 +265,7 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
     // only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
 
-    bool isBackwardsMovement = replaying() && dispatcher()->currentMark().index() > index;
+    bool isBackwardsMovement = replaying() && dispatcher().currentMark().index() > index;
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || isBackwardsMovement) {
         resetReplayState();
         m_activeIterator = m_loadedRecording->createReplayIterator(m_page, this);
@@ -275,8 +275,8 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
     m_stopBeforeMarkIndex = index;
 
     InspectorInstrumentation::playbackStarted(m_page);
-    dispatcher()->setMode(mode);
-    dispatcher()->run();
+    dispatcher().setMode(mode);
+    dispatcher().run();
 }
 
 void ReplayController::replayToCompletion(ReplayMode mode)
@@ -295,8 +295,8 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 
     m_status = ReplayToCompletion;
     InspectorInstrumentation::playbackStarted(m_page);
-    dispatcher()->setMode(mode);
-    dispatcher()->run();
+    dispatcher().setMode(mode);
+    dispatcher().run();
 }
 
 
@@ -361,13 +361,13 @@ void ReplayController::willDispatchEvent(const Event& event, DOMWindow* window, 
     if (m_activeIterator->isCapturing())
         static_cast<CaptureInputIterator*>(m_activeIterator.get())->incrementDomEventCounter();
     if (m_activeIterator->isReplaying())
-        dispatcher()->incrementDomEventCounter();
+        dispatcher().incrementDomEventCounter();
 }
 
 void ReplayController::didDispatchEvent()
 {
     if (replaying())
-        dispatcher()->maybeDispatchInput();
+        dispatcher().maybeDispatchInput();
 }
 
 void ReplayController::frameNavigated(DocumentLoader* loader)
@@ -375,7 +375,7 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
     if (!capturing() && !replaying())
         return;
 
-    page()->networkProxy()->setExpectsPageLoad(false);
+    page()->networkProxy().setExpectsPageLoad(false);
     loader->frame()->script().globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
 
@@ -389,9 +389,9 @@ void ReplayController::willFireTimer(int timerId, Document* document)
 }
 
 //-- accessors
-PassRefPtr<CacheController> ReplayController::cacheController() const
+CacheController& ReplayController::cacheController() const
 {
-    return m_cacheController;
+    return *m_cacheController;
 }
 
 PassRefPtr<ReplayRecording> ReplayController::loadedRecording() const
@@ -424,17 +424,17 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
     }
 }
 
-void ReplayController::willDispatchInput(EventLoopInput* input)
+void ReplayController::willDispatchInput(const EventLoopInput& input)
 {
-    bool pauseAtSpecificMark = (m_status == ReplayUpToMarkIndex && m_stopBeforeMarkIndex == input->mark().index());
+    bool pauseAtSpecificMark = (m_status == ReplayUpToMarkIndex && m_stopBeforeMarkIndex == input.mark().index());
     if (m_status == ReplayToStart || pauseAtSpecificMark) {
         pauseReplay();
     }
 }
 
-void ReplayController::didDispatchInput(EventLoopInput* input)
+void ReplayController::didDispatchInput(const EventLoopInput& input)
 {
-    InspectorInstrumentation::playbackHitMark(m_page, input->mark().index());
+    InspectorInstrumentation::playbackHitMark(m_page, input.mark().index());
 }
 
 void ReplayController::didDispatchFinalInput()
@@ -459,10 +459,10 @@ void ReplayController::resetReplayState()
 
 void ReplayController::pauseReplay()
 {
-    dispatcher()->pause();
+    dispatcher().pause();
 
     m_status = PlaybackPaused;
-    InspectorInstrumentation::playbackPaused(m_page, dispatcher()->currentMark().index());
+    InspectorInstrumentation::playbackPaused(m_page, dispatcher().currentMark().index());
 }
 
 void ReplayController::finishReplay()
@@ -520,15 +520,15 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
 
 void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
-    m_page->userInputProxy()->setProxyMode(mode);
-    m_page->asyncEventProxy()->setProxyMode(mode);
-    m_page->navigationProxy()->setProxyMode(mode);
-    m_page->networkProxy()->setProxyMode(mode);
+    m_page->userInputProxy().setProxyMode(mode);
+    m_page->asyncEventProxy().setProxyMode(mode);
+    m_page->navigationProxy().setProxyMode(mode);
+    m_page->networkProxy().setProxyMode(mode);
 }
 
 bool ReplayController::capturing() const
 {
-    return m_status == CannotReplay && m_activeIterator &&
+    return m_status == CannotReplay && 
            m_activeIterator && m_activeIterator->isCapturing();
 }
 
@@ -539,7 +539,7 @@ bool ReplayController::replaying() const
            m_activeIterator && m_activeIterator->isReplaying();
 }
 
-EventLoopInputDispatcher* ReplayController::dispatcher() const
+EventLoopInputDispatcher& ReplayController::dispatcher() const
 {
     ASSERT(m_activeIterator);
     ASSERT(m_activeIterator->isReplaying());

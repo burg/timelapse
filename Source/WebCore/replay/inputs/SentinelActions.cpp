@@ -47,10 +47,10 @@ const AtomicString& BeginSentinel::type() const
     return inputTypes().BeginSentinel;
 }
 
-void BeginSentinel::dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher)
+void BeginSentinel::dispatch(ReplayController&, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<BeginSentinel>::encode(InputEncoder&, const BeginSentinel&)
@@ -68,10 +68,10 @@ const AtomicString& EndSentinel::type() const
     return inputTypes().EndSentinel;
 }
 
-void EndSentinel::dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher)
+void EndSentinel::dispatch(ReplayController&, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<EndSentinel>::encode(InputEncoder&, const EndSentinel&)

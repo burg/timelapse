@@ -50,12 +50,12 @@ const AtomicString& EnableCache::type() const
     return inputTypes().EnableCache;
 }
 
-void EnableCache::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
+void EnableCache::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
 
-    controller->cacheController()->enableCache();
-    dispatcher->didDispatch(this);
+    controller.cacheController().enableCache();
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<EnableCache>::encode(InputEncoder&, const EnableCache&)

@@ -61,8 +61,8 @@ public:
     virtual ~EventLoopInputDispatcherClient() {}
 
     virtual void playbackError(bool isFatal, const String& errorMessage) =0;
-    virtual void willDispatchInput(EventLoopInput*) =0;
-    virtual void didDispatchInput(EventLoopInput*) =0;
+    virtual void willDispatchInput(const EventLoopInput&) =0;
+    virtual void didDispatchInput(const EventLoopInput&) =0;
     virtual void didDispatchFinalInput() =0;
 };
 
@@ -87,8 +87,7 @@ public:
     void didDispatch(EventLoopInput*);
 
 private:
-    EventLoopInputDispatcher(Page*, ReplayInputIterator*,
-                             EventLoopInputDispatcherClient*);
+    EventLoopInputDispatcher(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
     void asyncDispatchInput();
     void syncDispatchInput();
     void timerFired(Timer<EventLoopInputDispatcher>*);

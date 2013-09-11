@@ -94,8 +94,8 @@ namespace WebCore {
 
         // EventLoopInputDispatcherClient API
         virtual void playbackError(bool isFatal, const String& errorMessage) OVERRIDE;
-        virtual void willDispatchInput(EventLoopInput*) OVERRIDE;
-        virtual void didDispatchInput(EventLoopInput*) OVERRIDE;
+        virtual void willDispatchInput(const EventLoopInput&) OVERRIDE;
+        virtual void didDispatchInput(const EventLoopInput&) OVERRIDE;
         virtual void didDispatchFinalInput() OVERRIDE;
 
         // FrameCamera API
@@ -108,7 +108,7 @@ namespace WebCore {
         void setErrorStrategy(ErrorStrategy mode) { m_errorStrategy = mode; }
 
         Page* page() const { return m_page; }
-        PassRefPtr<CacheController> cacheController() const;
+        CacheController& cacheController() const;
         PassRefPtr<ReplayRecording> loadedRecording() const;
 
         bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
@@ -125,15 +125,14 @@ namespace WebCore {
         bool capturing() const;
         bool replaying() const;
 
-        EventLoopInputDispatcher* dispatcher() const;
+        EventLoopInputDispatcher& dispatcher() const;
 
         Page* m_page;
 
         int m_nextRecordingId;
         RefPtr<ReplayRecording> m_loadedRecording;
         OwnPtr<WTF::InputIterator> m_activeIterator;
-        OwnPtr<EventLoopInputDispatcher> m_dispatcher;
-        RefPtr<CacheController> m_cacheController;
+        const OwnPtr<CacheController> m_cacheController;
         PositionMarkIndex m_stopBeforeMarkIndex;
         ReplayStatus m_status;
         ErrorStrategy m_errorStrategy;

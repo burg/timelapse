@@ -47,7 +47,8 @@ class NSURLCache;
 
 namespace WebCore {
 
-    class CacheController : public RefCounted<CacheController> {
+    class CacheController {
+        WTF_MAKE_NONCOPYABLE(CacheController);
     public:
         CacheController()
             : m_haveSavedSettings(false)

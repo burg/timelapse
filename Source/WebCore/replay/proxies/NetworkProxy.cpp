@@ -79,19 +79,19 @@ void NetworkProxy::removeHandleById(int id)
     m_replayHandleMap.remove(id);
 }
 
-ReplayController* NetworkProxy::controller() const
+ReplayController& NetworkProxy::controller() const
 {
     return m_page->replayController();
 }
 
 int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 {
-    InputIterator* it = controller()->activeIterator();
+    InputIterator* it = controller().activeIterator();
 
     if (mode() == ReplayProxy::Capturing) {
         ASSERT(it && it->isCapturing());
         int freshId = m_nextId++;
-        controller()->activeIterator()->storeInput(adoptPtr(new ResourceLoaderCreated(freshId, request)));
+        controller().activeIterator()->storeInput(adoptPtr(new ResourceLoaderCreated(freshId, request)));
 
         return freshId;
     }
@@ -117,7 +117,7 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 
             // FIXME(BJB): in general, I don't think a soft error is appropriate here. But,
             // let's see how often it has bad consequences.
-            controller()->playbackError(false,
+            controller().playbackError(false,
                                         "Network request details missing or differ from request observed when recording.");
         }
 

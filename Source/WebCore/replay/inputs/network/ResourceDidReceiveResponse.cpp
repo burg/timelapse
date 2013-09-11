@@ -58,22 +58,20 @@ ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, PassOwnPtr<
     , m_response(response) {}
 
 //EventLoopInput API
-void ResourceDidReceiveResponse::dispatch(ReplayController* controller,
-                                          EventLoopInputDispatcher* dispatcher)
+void ResourceDidReceiveResponse::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
+    HandleContext context = controller.page()->networkProxy().handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     if (!client) {
         // FIXME: this shouldn't be fatal error, because we can just not deliver the callback.
-        controller->playbackError(true,
-                                  String::format("Couldn't find handle context for id: %d", m_handleId));
+        controller.playbackError(true, String::format("Couldn't find handle context for id: %d", m_handleId));
         return;
     }
 
     client->didReceiveResponse(handle.get(), *m_response);
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 const AtomicString& ResourceDidReceiveResponse::type() const

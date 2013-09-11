@@ -49,13 +49,13 @@ const AtomicString& HandleMousePress::type() const
     return inputTypes().HandleMousePress;
 }
 
-void HandleMousePress::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
+void HandleMousePress::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    ASSERT(controller->page());
+    ASSERT(controller.page());
     ASSERT(sealed());
 
-    controller->page()->userInputProxy()->handleMousePressEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
+    controller.page()->userInputProxy().handleMousePressEvent(platformEvent(), true);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<HandleMousePress>::encode(InputEncoder& encoder, const HandleMousePress& input)

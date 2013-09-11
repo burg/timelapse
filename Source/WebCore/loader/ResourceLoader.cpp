@@ -116,11 +116,11 @@ bool ResourceLoader::init(const ResourceRequest& r)
     ASSERT(!m_documentLoader->isSubstituteLoadPending(this));
 
 #if ENABLE(WEB_REPLAY)
-    NetworkProxy* proxy = m_frame->page()->networkProxy();
+    NetworkProxy& proxy = m_frame->page()->networkProxy();
     InputIterator* it = getInputIteratorForDocument(m_frame->tree().top()->document());
     bool capturingOrReplaying = it && (it->isCapturing() || it->isReplaying());
-    if (capturingOrReplaying || proxy->expectsPageLoad())
-        m_loaderId = proxy->nextLoaderId(r);
+    if (capturingOrReplaying || proxy.expectsPageLoad())
+        m_loaderId = proxy.nextLoaderId(r);
 #endif // ENABLE(WEB_REPLAY)
 
     ResourceRequest clientRequest(r);
@@ -172,7 +172,7 @@ void ResourceLoader::start()
     }
 
     if (!m_reachedTerminalState)
-        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader().networkingContext(), m_request, this, m_loaderId, m_defersLoading, m_options.sniffContent == SniffContent);
+        m_handle = m_frame->page()->networkProxy().createResourceHandle(m_frame->loader().networkingContext(), m_request, this, m_loaderId, m_defersLoading, m_options.sniffContent == SniffContent);
 }
 
 void ResourceLoader::setDefersLoading(bool defers)

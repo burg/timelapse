@@ -49,13 +49,13 @@ const AtomicString& HandleMouseRelease::type() const
     return inputTypes().HandleMouseRelease;
 }
 
-void HandleMouseRelease::dispatch(ReplayController* controller, EventLoopInputDispatcher* dispatcher)
+void HandleMouseRelease::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    ASSERT(controller->page());
+    ASSERT(controller.page());
     ASSERT(sealed());
 
-    controller->page()->userInputProxy()->handleMouseReleaseEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
+    controller.page()->userInputProxy().handleMouseReleaseEvent(platformEvent(), true);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<HandleMouseRelease>::encode(InputEncoder& encoder, const HandleMouseRelease& input)

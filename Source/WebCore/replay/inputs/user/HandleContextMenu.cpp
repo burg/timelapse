@@ -47,15 +47,14 @@
 
 namespace WebCore {
 
-void HandleContextMenu::dispatch(ReplayController* controller,
-                                 EventLoopInputDispatcher* dispatcher)
+void HandleContextMenu::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
 
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
 
-    controller->page()->userInputProxy()->handleContextMenuEvent(platformEvent(), document->frame(), true);
-    dispatcher->didDispatch(this);
+    controller.page()->userInputProxy().handleContextMenuEvent(platformEvent(), document->frame(), true);
+    dispatcher.didDispatch(this);
 }
 
 const AtomicString& HandleContextMenu::type() const

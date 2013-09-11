@@ -51,7 +51,7 @@ public:
     int frameIndex() const { return m_frameIndex; }
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*);
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&);
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;

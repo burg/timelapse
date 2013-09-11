@@ -61,9 +61,9 @@ void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromRe
     if (!fromReplay && m_mode == Replaying)
         return;
 
-    if (m_mode == Capturing && m_page->replayController()) {
+    if (m_mode == Capturing) {
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
-        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
+        m_page->replayController().activeIterator()->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
     }
 #else
     UNUSED_PARAM(fromReplay);

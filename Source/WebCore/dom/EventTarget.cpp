@@ -164,11 +164,11 @@ bool EventTarget::dispatchAsyncEvent(PassRefPtr<Event> event)
 #if ENABLE(WEB_REPLAY)
     AsyncEventProxy* eventProxy = 0;
     if (DOMWindow* window = toDOMWindow())
-        eventProxy = window->frame()->page()->asyncEventProxy();
+        eventProxy = &window->frame()->page()->asyncEventProxy();
     else if (Node* node = toNode()) {
         // SVG documents don't have a Page, so don't interpose on their events.
         if (!node->document().isSVGDocument())
-            eventProxy = node->document().page()->asyncEventProxy();
+            eventProxy = &node->document().page()->asyncEventProxy();
     }
     
     if (eventProxy)

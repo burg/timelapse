@@ -2814,7 +2814,7 @@ void FrameView::sendResizeEventIfNeeded()
     Page* page = frame().page();
 
     if (page)
-        page->userInputProxy()->sendResizeEvent(m_frame.get(), canSendResizeEventSynchronously);
+        page->userInputProxy().sendResizeEvent(m_frame.get(), canSendResizeEventSynchronously);
     else {
         // If we resized during layout, queue up a resize event for later, otherwise fire it right away.
         RefPtr<Event> resizeEvent = Event::create(eventNames().resizeEvent, false, false);

@@ -106,18 +106,17 @@ size_t HandleKeyPress::memorySize() const
     return size;
 }
 
-void HandleKeyPress::dispatch(ReplayController* controller,
-                              EventLoopInputDispatcher* dispatcher)
+void HandleKeyPress::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    ASSERT(controller->page());
+    ASSERT(controller.page());
     ASSERT(sealed());
 
 /*
-    const String& screenshotDataUri = FrameCamera::dataUriImageFromFrame(controller->page()->mainFrame());
+    const String& screenshotDataUri = FrameCamera::dataUriImageFromFrame(controller.page()->mainFrame());
     controller->imageCaptured(screenshotDataUri);
 */
-    controller->page()->userInputProxy()->handleKeyPressEvent(platformEvent(), true);
-    dispatcher->didDispatch(this);
+    controller.page()->userInputProxy().handleKeyPressEvent(platformEvent(), true);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<PlatformKeyboardEvent>::encode(InputEncoder& encoder, const PlatformKeyboardEvent& input)

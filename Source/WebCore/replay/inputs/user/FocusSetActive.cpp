@@ -58,14 +58,13 @@ String FocusSetActive::toString() const
         return "FocusSetActive(to=inactive)";
 }
 
-void FocusSetActive::dispatch(ReplayController* controller,
-                              EventLoopInputDispatcher* dispatcher)
+void FocusSetActive::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    ASSERT(controller->page());
+    ASSERT(controller.page());
     ASSERT(sealed());
 
-    controller->page()->userInputProxy()->focusSetActive(m_toState, true);
-    dispatcher->didDispatch(this);
+    controller.page()->userInputProxy().focusSetActive(m_toState, true);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<FocusSetActive>::encode(InputEncoder& encoder, const FocusSetActive& input)

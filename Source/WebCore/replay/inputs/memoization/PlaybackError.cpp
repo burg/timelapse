@@ -42,11 +42,10 @@
 
 namespace WebCore {
 
-void PlaybackError::dispatch(ReplayController* controller,
-                             EventLoopInputDispatcher* dispatcher)
+void PlaybackError::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    controller->playbackError(false, m_errorMessage);
-    dispatcher->didDispatch(this);
+    controller.playbackError(false, m_errorMessage);
+    dispatcher.didDispatch(this);
 }
 
 const AtomicString& PlaybackError::type() const

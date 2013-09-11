@@ -77,7 +77,7 @@ public:
 
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
-    EventLoopInputDispatcher* dispatcher() const { return m_dispatcher.get(); }
+    EventLoopInputDispatcher& dispatcher() const { return *m_dispatcher; }
 
     //error handling
     bool hasError() const { return m_errorData.error != NoReplayError; }
@@ -91,7 +91,7 @@ private:
     InputStorage* m_storage;
 
     bool m_isActive;
-    OwnPtr<EventLoopInputDispatcher> m_dispatcher;
+    const OwnPtr<EventLoopInputDispatcher> m_dispatcher;
     ReplayErrorData m_errorData;
     Vector<size_t> m_positions;
 };

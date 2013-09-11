@@ -51,7 +51,7 @@ public:
     virtual ~BeginSentinel() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE;
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher& dispatcher) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API
@@ -73,7 +73,7 @@ public:
     virtual ~EndSentinel() {};
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher* dispatcher) OVERRIDE;
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher& dispatcher) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API

@@ -105,7 +105,7 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEve
 
     if (mode() == ReplayProxy::Capturing) {
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame.document());
-        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
+        m_page->replayController().activeIterator()->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
     }
 #else
     UNUSED_PARAM(fromReplay);
@@ -131,7 +131,7 @@ bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<
         return false;
 
     if (mode() == ReplayProxy::Capturing && isCapturableEventType(event->type()))
-        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new DispatchAsyncEvent(event, eventTarget)));
+        m_page->replayController().activeIterator()->storeInput(adoptPtr(new DispatchAsyncEvent(event, eventTarget)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(WEB_REPLAY)

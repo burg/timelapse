@@ -108,19 +108,19 @@ void InspectorReplayAgent::clearFrontend()
 void InspectorReplayAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController()->willDispatchEvent(event, window, node, reuseMark());
+        m_inspectedPage->replayController().willDispatchEvent(event, window, node, reuseMark());
 }
 
 void InspectorReplayAgent::didDispatchEvent()
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController()->didDispatchEvent();
+        m_inspectedPage->replayController().didDispatchEvent();
 }
 
 void InspectorReplayAgent::willDispatchEventOnWindow(const Event& event, DOMWindow* window)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController()->willDispatchEvent(event, window, 0, reuseMark());
+        m_inspectedPage->replayController().willDispatchEvent(event, window, 0, reuseMark());
 }
 
 void InspectorReplayAgent::didDispatchEventOnWindow()
@@ -131,13 +131,13 @@ void InspectorReplayAgent::didDispatchEventOnWindow()
 void InspectorReplayAgent::frameNavigated(DocumentLoader* loader)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController()->frameNavigated(loader);
+        m_inspectedPage->replayController().frameNavigated(loader);
 }
 
 void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController()->willFireTimer(timerId, frame->document());
+        m_inspectedPage->replayController().willFireTimer(timerId, frame->document());
 }
 
 void InspectorReplayAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
@@ -175,7 +175,7 @@ void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecor
 {
     // automatically load the created recording if nothing else is loaded.
     if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
-        m_inspectedPage->replayController()->loadRecording(prpRecording);
+        m_inspectedPage->replayController().loadRecording(prpRecording);
     }
 }
 
@@ -345,13 +345,13 @@ void InspectorReplayAgent::startCapture(ErrorString*)
     m_nextMarkIndex = 0;
 
     createMark();
-    m_inspectedPage->replayController()->beginCapturing();
+    m_inspectedPage->replayController().beginCapturing();
 }
 
 void InspectorReplayAgent::stopCapture(ErrorString*, bool* wasAllowed)
 {
     createMark();
-    *wasAllowed = m_inspectedPage->replayController()->endCapturing();
+    *wasAllowed = m_inspectedPage->replayController().endCapturing();
 }
 
 void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)
@@ -362,7 +362,7 @@ void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
-    m_inspectedPage->replayController()->replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
+    m_inspectedPage->replayController().replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorReplayAgent::replayToCompletion(ErrorString*, bool fastReplay)
@@ -373,25 +373,25 @@ void InspectorReplayAgent::replayToCompletion(ErrorString*, bool fastReplay)
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
-    m_inspectedPage->replayController()->replayToCompletion((fastReplay) ? FullSpeed : Realtime);
+    m_inspectedPage->replayController().replayToCompletion((fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorReplayAgent::pausePlayback(ErrorString*)
 {
     // this will fire InspectorInstrumentation::playbackPaused, and our
     // listener for that will change state machine and tell frontend.
-    m_inspectedPage->replayController()->pauseAtNextMark();
+    m_inspectedPage->replayController().pauseAtNextMark();
 }
 
 void InspectorReplayAgent::stopPlayback(ErrorString*, bool shouldUnlock)
 {
     m_inputLocked = !shouldUnlock;
-    m_inspectedPage->replayController()->cancelPlayback();
+    m_inspectedPage->replayController().cancelPlayback();
 }
 
 void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
 {
-    m_inspectedPage->replayController()->setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
+    m_inspectedPage->replayController().setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
 }
 
 void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool* wasAllowed)
@@ -403,18 +403,18 @@ void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool
         return;
     }
 
-    *wasAllowed = m_inspectedPage->replayController()->loadRecording(recording);
+    *wasAllowed = m_inspectedPage->replayController().loadRecording(recording);
 }
 
 void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAllowed)
 {
-    if (!m_inspectedPage->replayController()->loadedRecording().get()) {
+    if (!m_inspectedPage->replayController().loadedRecording().get()) {
         *wasAllowed = false;
         *errorString = "Tried to unload but no recording is currently loaded.";
         return;
     }
 
-    *wasAllowed = m_inspectedPage->replayController()->unloadRecording();
+    *wasAllowed = m_inspectedPage->replayController().unloadRecording();
 }
 
 }; // namespace WebCore

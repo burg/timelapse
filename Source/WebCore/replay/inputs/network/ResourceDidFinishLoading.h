@@ -46,7 +46,7 @@ public:
     ResourceDidFinishLoading(int id, double finishTime);
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&) OVERRIDE;
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;

@@ -63,63 +63,63 @@ CapturingResourceHandleClient::~CapturingResourceHandleClient()
 {
     // FIXME: this will probably do the wrong thing if the ResourceLoader switches
     // between two different handles without completely loading one.
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceLoaderDestroyed(m_id)));
 }
 
 // ResourceHandleClient API
 void CapturingResourceHandleClient::willSendRequest(ResourceHandle* handle, ResourceRequest& request, const ResourceResponse& redirectResponse)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceWillSendRequest(m_id, request, redirectResponse)));
     m_client->willSendRequest(handle, request, redirectResponse);
 }
 
 void CapturingResourceHandleClient::didSendData(ResourceHandle* handle, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceDidSendData(m_id, bytesSent, totalBytesToBeSent)));
     m_client->didSendData(handle, bytesSent, totalBytesToBeSent);
 }
 
 void CapturingResourceHandleClient::didReceiveResponse(ResourceHandle* handle, const ResourceResponse& response)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceDidReceiveResponse(m_id, response)));
     m_client->didReceiveResponse(handle, response);
 }
 
 void CapturingResourceHandleClient::didReceiveData(ResourceHandle* handle, const char* data, int length, int encodedLength)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceDidReceiveData(m_id, data, length, encodedLength)));
     m_client->didReceiveData(handle, data, length, encodedLength);
 }
 
 void CapturingResourceHandleClient::didFinishLoading(ResourceHandle* handle, double finishTime)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceDidFinishLoading(m_id, finishTime)));
     m_client->didFinishLoading(handle, finishTime);
 }
 
 void CapturingResourceHandleClient::didFail(ResourceHandle* handle, const ResourceError& error)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceDidFail(m_id, error)));
     m_client->didFail(handle, error);
 }
 
 void CapturingResourceHandleClient::wasBlocked(ResourceHandle* handle)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceWasBlocked(m_id)));
     m_client->wasBlocked(handle);
 }
 
 void CapturingResourceHandleClient::cannotShowURL(ResourceHandle* handle)
 {
-    if (InputIterator* it = m_proxy->controller()->activeIterator())
+    if (InputIterator* it = m_proxy->controller().activeIterator())
         it->storeInput(adoptPtr(new ResourceCannotShowURL(m_id)));
     m_client->cannotShowURL(handle);
 }

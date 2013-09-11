@@ -154,12 +154,11 @@ PassRefPtr<Event> DispatchAsyncEvent::event(Page* page)
     return 0;
 }
 
-void DispatchAsyncEvent::dispatch(ReplayController* controller,
-                                  EventLoopInputDispatcher* dispatcher)
+void DispatchAsyncEvent::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    Page* page = controller->page();
-    page->asyncEventProxy()->dispatchAsyncEvent(event(page), target(page), true);
-    dispatcher->didDispatch(this);
+    Page* page = controller.page();
+    page->asyncEventProxy().dispatchAsyncEvent(event(page), target(page), true);
+    dispatcher.didDispatch(this);
 }
 
 bool DispatchAsyncEvent::isSimpleEvent() const

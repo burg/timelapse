@@ -55,7 +55,7 @@ public:
     const String& referrer() const { return m_referrer; }
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) OVERRIDE;
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&) OVERRIDE;
     virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // NondeterministicInput API

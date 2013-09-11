@@ -106,18 +106,17 @@ String ScrollPage::toString() const
     return sb.toString();
 }
 
-void ScrollPage::dispatch(ReplayController* controller,
-                          EventLoopInputDispatcher* dispatcher)
+void ScrollPage::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    ASSERT(controller->page());
+    ASSERT(controller.page());
     ASSERT(sealed());
 
     if (isLogicalScroll())
-        controller->page()->userInputProxy()->scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
+        controller.page()->userInputProxy().scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
     else
-        controller->page()->userInputProxy()->scrollRecursively(scrollDirection(), scrollGranularity(), true);
+        controller.page()->userInputProxy().scrollRecursively(scrollDirection(), scrollGranularity(), true);
 
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<ScrollPage>::encode(InputEncoder& encoder, const ScrollPage& input)

@@ -201,12 +201,12 @@ public:
 #if ENABLE(CONTEXT_MENUS)
     ContextMenuController& contextMenuController() const { return *m_contextMenuController; }
 #endif
-    NavigationProxy* navigationProxy() const { return m_navigationProxy.get(); }
-    NetworkProxy* networkProxy() const { return m_networkProxy.get(); }
-    AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
-    UserInputProxy* userInputProxy() const { return m_userInputProxy.get(); }
+    NavigationProxy& navigationProxy() const { return *m_navigationProxy; }
+    NetworkProxy& networkProxy() const { return *m_networkProxy; }
+    AsyncEventProxy& asyncEventProxy() const { return *m_asyncEventProxy; }
+    UserInputProxy& userInputProxy() const { return *m_userInputProxy; }
 #if ENABLE(WEB_REPLAY)
-    ReplayController* replayController() const { return m_replayController.get(); }
+    ReplayController& replayController() const { return *m_replayController; }
 #endif
 #if ENABLE(INSPECTOR)
     InspectorController* inspectorController() const { return m_inspectorController.get(); }
@@ -464,12 +464,12 @@ private:
 #if ENABLE(CONTEXT_MENUS)
     const OwnPtr<ContextMenuController> m_contextMenuController;
 #endif
-        OwnPtr<NavigationProxy> m_navigationProxy;
-        OwnPtr<NetworkProxy> m_networkProxy;
-        OwnPtr<AsyncEventProxy> m_asyncEventProxy;
-        OwnPtr<UserInputProxy> m_userInputProxy;
+    const OwnPtr<NavigationProxy> m_navigationProxy;
+    const OwnPtr<NetworkProxy> m_networkProxy;
+    const OwnPtr<AsyncEventProxy> m_asyncEventProxy;
+    const OwnPtr<UserInputProxy> m_userInputProxy;
 #if ENABLE(WEB_REPLAY)
-        OwnPtr<ReplayController> m_replayController;
+    const OwnPtr<ReplayController> m_replayController;
 #endif
 #if ENABLE(INSPECTOR)
     OwnPtr<InspectorController> m_inspectorController;

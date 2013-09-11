@@ -64,15 +64,14 @@ ResourceWillSendRequest::ResourceWillSendRequest(int handleId, PassOwnPtr<Resour
 ResourceWillSendRequest::~ResourceWillSendRequest() {}
 
 //EventLoopInput API
-void ResourceWillSendRequest::dispatch(ReplayController* controller,
-                                       EventLoopInputDispatcher* dispatcher)
+void ResourceWillSendRequest::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    HandleContext context = controller->page()->networkProxy()->handleContextById(m_handleId);
+    HandleContext context = controller.page()->networkProxy().handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     client->willSendRequest(handle.get(), *m_request, *m_redirectResponse);
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 const AtomicString& ResourceWillSendRequest::type() const

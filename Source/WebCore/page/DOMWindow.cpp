@@ -1727,7 +1727,7 @@ bool DOMWindow::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventT
     // dispatch on the DOMWindow, even though prpTarget likely refers to document().
     // when this is actually dispatched, the DOMWindow's document is substituted
     // back as the second argument.
-    return frame()->page()->asyncEventProxy()->dispatchAsyncEvent(prpEvent, this);
+    return frame()->page()->asyncEventProxy().dispatchAsyncEvent(prpEvent, this);
 #else
     return dispatchEvent(prpEvent, prpTarget);
 #endif

@@ -56,7 +56,7 @@ public:
 #if ENABLE(WEB_REPLAY)
     HandleContext handleContextById(int);
     void removeHandleById(int);
-    ReplayController* controller() const;
+    ReplayController& controller() const;
     int nextLoaderId(const ResourceRequest&);
 
     // These flags manage the initial sequence leading up to controller->capturing()

@@ -61,11 +61,10 @@ String TimerFired::toString() const
     return makeString("TimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
 }
 
-void TimerFired::dispatch(ReplayController* controller,
-                          EventLoopInputDispatcher* dispatcher)
+void TimerFired::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
     ASSERT(sealed());
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
 
     //get the timer from SEC and fire it.
     DOMTimer* timer = document->findTimeout(m_timerId);
@@ -76,7 +75,7 @@ void TimerFired::dispatch(ReplayController* controller,
                   "[ReplayController]", m_frameIndex, m_timerId);
     }
 
-    dispatcher->didDispatch(this);
+    dispatcher.didDispatch(this);
 }
 
 void InputCoder<TimerFired>::encode(InputEncoder& encoder, const TimerFired& input)

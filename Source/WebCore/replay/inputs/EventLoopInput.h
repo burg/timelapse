@@ -35,7 +35,6 @@
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/CurrentTime.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -98,7 +97,7 @@ public:
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
 
-    virtual void dispatch(ReplayController*, EventLoopInputDispatcher*) =0;
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&) =0;
 
     virtual NondeterministicInput::QueueType queue() const { return NondeterministicInput::EventLoopInputQueue; }
     virtual bool isUserVisible() const { return true; }
