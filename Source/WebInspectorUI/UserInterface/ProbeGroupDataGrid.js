@@ -37,6 +37,7 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     WebInspector.DataGrid.call(this, columns);
 
     this._frameNodes = {};
+    this._nodesSinceLastNavigation = [];
 
     this._groupListeners = new WebInspector.EventListenerGroup(this, "Static probe group data grid listeners");
     this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
@@ -47,7 +48,8 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     this._setupData();
 }
 
-WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName = "faded";
+WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName = "past-value";
+WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName = "future-value";
 
 WebInspector.ProbeGroupDataGrid.prototype = {
     constructor: WebInspector.ProbeGroupDataGrid,
@@ -258,6 +260,10 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorInserted, this._dataSeparatorInserted);
         this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.SeparatorReplaced, this._dataSeparatorReplaced);
         this._dataListeners.register(this._data, WebInspector.ProbeGroupDataTable.Event.WillRemove, this._teardownData);
+
+        if (WebInspector.replayManager.canReplay || WebInspector.replayManager.isReplaying)
+            this._dataListeners.register(WebInspector.replayManager, WebInspector.ReplayManager.Event.CursorChanged, this._replayCursorChanged);
+
         this._dataListeners.install();
     },
 
@@ -272,27 +278,31 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     _updateNodeForFrame: function(frame)
     {
         console.assert(frame instanceof WebInspector.ProbeGroupDataFrame, "Tried to update probe group data grid with non-frame: ", frame);
+        var node = null;
         if (this._frameNodes[frame.key]) {
-            this._frameNodes[frame.key].updateCellsFromFrame(frame, this._probeGroup);
-            return;
+            node = this._frameNodes[frame.key];
+            node.updateCellsFromFrame(frame, this._probeGroup);
+        } else {
+            node = new WebInspector.ProbeGroupDataGridNode(frame, this._probeGroup);
+            this._frameNodes[frame.key] = node;
+            node.dataGrid = this;
+            node.createCells();
+
+            var sortFunction = function(a, b) {
+                return a.frame.constructor.compare(a.frame, b.frame);
+            };
+            var insertionIndex = insertionIndexForObjectInListSortedByFunction(node, this.children, sortFunction);
+            if (insertionIndex === this.children.length)
+                this.appendChild(node);
+            else if (this.children[insertionIndex].frame.key === frame.key) {
+                this.removeChild(this.children[insertionIndex]);
+                this.insertChild(node, insertionIndex);
+            } else
+                this.insertChild(node, insertionIndex);
         }
 
-        var node = new WebInspector.ProbeGroupDataGridNode(frame, this._probeGroup);
-        this._frameNodes[frame.key] = node;
-        node.dataGrid = this;
-        node.createCells();
-
-        var sortFunction = function(a, b) {
-            return a.frame.constructor.compare(a.frame, b.frame);
-        };
-        var insertionIndex = insertionIndexForObjectInListSortedByFunction(node, this.children, sortFunction);
-        if (insertionIndex === this.children.length)
-            this.appendChild(node);
-        else if (this.children[insertionIndex].frame.key === frame.key) {
-            this.removeChild(this.children[insertionIndex]);
-            this.insertChild(node, insertionIndex);
-        } else
-            this.insertChild(node, insertionIndex);
+        node.element.classList.remove(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
+        this._nodesSinceLastNavigation.push(node);
     },
 
     _updateNodeForSeparator: function(frame)
@@ -300,9 +310,12 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         console.assert(this._frameNodes.hasOwnProperty(frame.key), "Tried to add separator for unknown data frame: ", frame);
         this._frameNodes[frame.key].updateCellsForSeparator(frame, this._probeGroup);
 
-        for (var index in this._frameNodes)
-            this._frameNodes[index].element.classList.add(WebInspector.ProbeGroupDataGrid.FadedGridNodeStyleClassName);
+        for (var i = 0; i < this._nodesSinceLastNavigation.length; ++i) {
+            var node = this._nodesSinceLastNavigation[i];
+            node.element.classList.add(WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName);
+        }
 
+        this._nodesSinceLastNavigation = [];
     },
 
     _dataFrameInserted: function(event)
@@ -327,5 +340,21 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     {
         var frame = event.data;
         this._updateNodeForSeparator(frame);
+    },
+
+    _replayCursorChanged: function()
+    {
+        // We use the first mark index as a proxy for "beginning of the recording".
+        // It would be safer to make sure that this mark actually has the type
+        // "BeginSentinel".
+        if (WebInspector.replayManager.currentMarkIndex !== 1)
+            return;
+
+        this._nodesSinceLastNavigation = [];
+        for (var key in this._frameNodes) {
+            var elem = this._frameNodes[key].element;
+            elem.classList.add(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
+            elem.classList.remove(WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName);
+        }
     }
 }
