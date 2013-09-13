@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2012 Brian Burg.
- *  Copyright (C) 2012 University of Washington. All rights reserved.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,65 +30,63 @@
 
 #include "config.h"
 
-#include "NavigationProxy.h"
+#if ENABLE(WEB_REPLAY)
+
+#include "StopLoadingFrame.h"
 
 #include "DispatchEventBase.h"
+#include "Document.h"
 #include "Frame.h"
-#include "ReloadFrame.h"
-#include "StopLoadingFrame.h"
+#include "InputDecoder.h"
+#include "InputEncoder.h"
+#include "NavigationProxy.h"
+#include "Page.h"
 #include "ReplayController.h"
-#include "ReplayInputTypes.h"
-#include <wtf/replay/InputIterator.h>
-
-/* We must always define these symbols even if web replay support is
-   not compiled, because the embedding API (WebKit or WebKit2) may be
-   built with web replay support. */
 
 namespace WebCore {
 
-NavigationProxy::NavigationProxy(Page* page)
-: ReplayProxy(page)
-{}
+StopLoadingFrame::StopLoadingFrame(int frameIndex)
+    : m_frameIndex(frameIndex) { }
 
-PassOwnPtr<NavigationProxy> NavigationProxy::create(Page* page)
+StopLoadingFrame::~StopLoadingFrame() {}
+    
+//EventLoopInput API
+void StopLoadingFrame::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
 {
-    return adoptPtr(new NavigationProxy(page));
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    ASSERT(document);
+    Frame* frame = document->frame();
+    ASSERT(frame);
+
+    controller.page()->navigationProxy().stopLoadingFrame(frame, true);
+    dispatcher.didDispatch(this);
 }
 
-void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay)
+const AtomicString& StopLoadingFrame::type() const
 {
-    #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
-        return;
-
-    if (m_mode == Capturing) {
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
-    }
-#else
-    UNUSED_PARAM(fromReplay);
-#endif
-
-    // do dispatch
-    frame->loader().reload(endToEndReload);
+    return inputTypes().StopLoadingFrame;
 }
 
-void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
+String StopLoadingFrame::toString() const
 {
-    #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
-        return;
+    return makeString("StopLoadingFrame(", String::number(m_frameIndex), "/_)");
+}
 
-    if (m_mode == Capturing) {
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new StopLoadingFrame(frameIndex)));
-    }
-#else
-    UNUSED_PARAM(fromReplay);
-#endif
+void InputCoder<StopLoadingFrame>::encode(InputEncoder& encoder, const StopLoadingFrame& input)
+{
+    encoder.put("frameIndex", input.frameIndex());
+}
 
-    // do dispatch
-    frame->loader().stopForUserCancel();
+bool InputCoder<StopLoadingFrame>::decode(InputDecoder& decoder, OwnPtr<StopLoadingFrame>& input)
+{
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new StopLoadingFrame(frameIndex));
+    return true;
 }
 
 } // namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY)

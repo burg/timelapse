@@ -1,5 +1,4 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
@@ -29,32 +28,45 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NavigationProxy_h
-#define NavigationProxy_h
+#ifndef StopLoadingFrame_h
+#define StopLoadingFrame_h
 
-#include "ReplayProxy.h"
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Noncopyable.h>
+#if ENABLE(WEB_REPLAY)
+
+#include "EventLoopInput.h"
+#include "InputCoder.h"
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
-class Frame;
 class ReplayController;
 
-class NavigationProxy : public ReplayProxy {
-    WTF_MAKE_NONCOPYABLE(NavigationProxy);
+class StopLoadingFrame : public EventLoopInput {
 
 public:
-    static PassOwnPtr<NavigationProxy> create(Page*);
-    virtual ~NavigationProxy() {}
+    StopLoadingFrame(int frameIndex);
+    virtual ~StopLoadingFrame();
 
-    void reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay = false);
-    void stopLoadingFrame(Frame* frame, bool fromReplay = false);
+    // EventLoopInput API
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&) OVERRIDE;
+
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    size_t memorySize() const OVERRIDE { return sizeof(StopLoadingFrame); }
+
+    int frameIndex() const { return m_frameIndex; }
 private:
-    NavigationProxy(Page*);
-
+    int m_frameIndex;
 };
 
-} // namespace WebCore
+template<> struct InputCoder<StopLoadingFrame> {
+    static void encode(InputEncoder& encoder, const StopLoadingFrame& input);
+    static bool decode(InputDecoder& decoder, OwnPtr<StopLoadingFrame>& input);
+};
 
-#endif // NavigationProxy_h
+} //namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY)
+
+#endif // StopLoadingFrame_h

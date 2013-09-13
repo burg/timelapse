@@ -988,14 +988,14 @@ void WebPage::stopLoadingFrame(uint64_t frameID)
     if (!frame)
         return;
 
-    frame->coreFrame()->loader().stopForUserCancel();
+    corePage()->navigationProxy().stopLoadingFrame(frame->coreFrame());
 }
 
 void WebPage::stopLoading()
 {
     SendStopResponsivenessTimer stopper(this);
 
-    m_mainFrame->coreFrame()->loader().stopForUserCancel();
+    corePage()->navigationProxy().stopLoadingFrame(m_mainFrame->coreFrame());
 }
 
 void WebPage::setDefersLoading(bool defersLoading)
