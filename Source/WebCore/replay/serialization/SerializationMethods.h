@@ -46,6 +46,18 @@ class ResourceError;
 class ResourceLoadTiming;
 class ResourceRequest;
 class ResourceResponse;
+class SharedBuffer;
+class SubstituteData;
+
+template<> struct InputCoder<Vector<String>> {
+    static void encode(EncoderContext& encoder, const Vector<String>& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<Vector<String>>& input);
+};
+
+template<> struct InputCoder<SharedBuffer> {
+    static void encode(EncoderContext& encoder, const SharedBuffer& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<SharedBuffer>& input);
+};
 
 template<> struct InputCoder<FormData> {
     static void encode(EncoderContext& encoder, const FormData& input);
@@ -55,6 +67,11 @@ template<> struct InputCoder<FormData> {
 template<> struct InputCoder<FormDataElement> {
     static void encode(EncoderContext& encoder, const FormDataElement& input);
     static bool decode(DecoderContext& decoder, OwnPtr<FormDataElement>& input);
+};
+
+template<> struct InputCoder<SubstituteData> {
+    static void encode(EncoderContext& encoder, const SubstituteData& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<SubstituteData>& input);
 };
 
 template<> struct InputCoder<HTTPHeaderMap> {
@@ -80,11 +97,6 @@ template<> struct InputCoder<ResourceRequest> {
 template<> struct InputCoder<ResourceResponse> {
     static void encode(EncoderContext& encoder, const ResourceResponse& input);
     static bool decode(DecoderContext& decoder, OwnPtr<ResourceResponse>& input);
-};
-
-template<> struct InputCoder<Vector<String>> {
-    static void encode(EncoderContext& encoder, const Vector<String>& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<Vector<String>>& input);
 };
 
 } // namespace WebCore

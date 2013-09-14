@@ -5335,6 +5335,8 @@
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */; };
 		C4A898B117E3BC0400C74A2C /* StopLoadingFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = C4A898AF17E3BC0400C74A2C /* StopLoadingFrame.h */; };
+		C4A898B417E3DDA300C74A2C /* LoadURLRequest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898B217E3DDA300C74A2C /* LoadURLRequest.cpp */; };
+		C4A898B517E3DDA300C74A2C /* LoadURLRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = C4A898B317E3DDA300C74A2C /* LoadURLRequest.h */; };
 		C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4B991FC17122B750029CA63 /* InputStorage.cpp */; };
 		C4C3311917D64C51008BDACF /* NavigationProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4C3311717D64C51008BDACF /* NavigationProxy.cpp */; };
 		C4C3311A17D64C51008BDACF /* NavigationProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311817D64C51008BDACF /* NavigationProxy.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -12319,6 +12321,8 @@
 		C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventLoopInputDispatcher.h; path = replay/EventLoopInputDispatcher.h; sourceTree = "<group>"; };
 		C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StopLoadingFrame.cpp; path = navigation/StopLoadingFrame.cpp; sourceTree = "<group>"; };
 		C4A898AF17E3BC0400C74A2C /* StopLoadingFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StopLoadingFrame.h; path = navigation/StopLoadingFrame.h; sourceTree = "<group>"; };
+		C4A898B217E3DDA300C74A2C /* LoadURLRequest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LoadURLRequest.cpp; path = navigation/LoadURLRequest.cpp; sourceTree = "<group>"; };
+		C4A898B317E3DDA300C74A2C /* LoadURLRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LoadURLRequest.h; path = navigation/LoadURLRequest.h; sourceTree = "<group>"; };
 		C4B991FC17122B750029CA63 /* InputStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InputStorage.cpp; path = replay/InputStorage.cpp; sourceTree = "<group>"; };
 		C4C3311717D64C51008BDACF /* NavigationProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NavigationProxy.cpp; sourceTree = "<group>"; };
 		C4C3311817D64C51008BDACF /* NavigationProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigationProxy.h; sourceTree = "<group>"; };
@@ -20287,6 +20291,8 @@
 		C4C3311B17D6534E008BDACF /* navigation */ = {
 			isa = PBXGroup;
 			children = (
+				C4A898B217E3DDA300C74A2C /* LoadURLRequest.cpp */,
+				C4A898B317E3DDA300C74A2C /* LoadURLRequest.h */,
 				C4C3311C17D663F3008BDACF /* NavigateToPage.cpp */,
 				C4C3311D17D663F3008BDACF /* NavigateToPage.h */,
 				C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */,
@@ -25090,6 +25096,7 @@
 				BE16C59317CFE17200852C04 /* InbandGenericTextTrack.h in Headers */,
 				BE16C59517CFE17200852C04 /* InbandWebVTTTextTrack.h in Headers */,
 				C4A898B117E3BC0400C74A2C /* StopLoadingFrame.h in Headers */,
+				C4A898B517E3DDA300C74A2C /* LoadURLRequest.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -28176,6 +28183,7 @@
 				BE16C59417CFE17200852C04 /* InbandWebVTTTextTrack.cpp in Sources */,
 				C43284F517DA8F66000F1F11 /* PageConsole.cpp in Sources */,
 				C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */,
+				C4A898B417E3DDA300C74A2C /* LoadURLRequest.cpp in Sources */,
 				C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

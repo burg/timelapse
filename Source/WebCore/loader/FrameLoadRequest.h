@@ -59,6 +59,16 @@ public:
     {
     }
 
+    FrameLoadRequest(PassRefPtr<SecurityOrigin> requester, const ResourceRequest& resourceRequest, const String& frameName, const SubstituteData& substituteData)
+        : m_requester(requester)
+        , m_resourceRequest(resourceRequest)
+        , m_frameName(frameName)
+        , m_lockHistory(false)
+        , m_shouldCheckNewWindowPolicy(false)
+        , m_substituteData(substituteData)
+    {
+    }
+
     FrameLoadRequest(Frame*, const ResourceRequest&, const SubstituteData& = SubstituteData());
 
     bool isEmpty() const { return m_resourceRequest.isEmpty(); }
@@ -79,7 +89,7 @@ public:
 
     const SubstituteData& substituteData() const { return m_substituteData; }
     void setSubstituteData(const SubstituteData& data) { m_substituteData = data; }
-    bool hasSubstituteData() { return m_substituteData.isValid(); }
+    bool hasSubstituteData() const { return m_substituteData.isValid(); }
 
 private:
     RefPtr<SecurityOrigin> m_requester;

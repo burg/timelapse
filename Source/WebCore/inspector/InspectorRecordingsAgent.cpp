@@ -83,6 +83,7 @@ static const char ResourceLoaded[] = "ResourceLoaded";
 
 static const char TimerFire[] = "TimerFire";
 
+static const char LoadURLRequest[] = "LoadURL";
 static const char ReloadFrame[] = "ReloadFrame";
 static const char StopLoadingFrame[] = "StopLoadingFrame";
 static const char FrameNavigated[] = "FrameNavigated";
@@ -109,7 +110,9 @@ static const char* getFrontendTypeForAction(const EventLoopInput& action)
     if (action.type() == inputTypes().ReloadFrame)
         return ReplayActionType::ReloadFrame;
     if (action.type() == inputTypes().StopLoadingFrame)
-        return ReplayActionType::ReloadFrame;
+        return ReplayActionType::StopLoadingFrame;
+    if (action.type() == inputTypes().LoadURLRequest)
+        return ReplayActionType::LoadURLRequest;
     if (action.type() == inputTypes().ScrollPage)
         return ReplayActionType::Scroll;
     if (action.type() == inputTypes().SendResizeEvent)
@@ -144,7 +147,8 @@ static PassRefPtr<InspectorObject> createFrontendDataForAction(const EventLoopIn
     if (action.type() == inputTypes().FocusSetActive ||
         action.type() == inputTypes().FocusSetFocused ||
         action.type() == inputTypes().ReloadFrame ||
-        action.type() == inputTypes().StopLoadingFrame ||    
+        action.type() == inputTypes().StopLoadingFrame ||   
+        action.type() == inputTypes().LoadURLRequest || 
         action.type() == inputTypes().TimerFired)
         return ReplayActionFactory::createEmptyData();
     if (action.type() == inputTypes().HandleMouseMove)

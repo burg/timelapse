@@ -35,6 +35,8 @@
 
 #include "DispatchEventBase.h"
 #include "Frame.h"
+#include "FrameLoadRequest.h"
+#include "LoadURLRequest.h"
 #include "ReloadFrame.h"
 #include "StopLoadingFrame.h"
 #include "ReplayController.h"
@@ -54,6 +56,22 @@ NavigationProxy::NavigationProxy(Page* page)
 PassOwnPtr<NavigationProxy> NavigationProxy::create(Page* page)
 {
     return adoptPtr(new NavigationProxy(page));
+}
+
+void NavigationProxy::loadURLRequest(const FrameLoadRequest& request, bool fromReplay)
+{
+    #if ENABLE(WEB_REPLAY)
+    if (!fromReplay && m_mode == Replaying)
+        return;
+
+    if (m_mode == Capturing)
+        m_page->replayController().activeIterator()->storeInput(adoptPtr(new LoadURLRequest(request)));
+#else
+    UNUSED_PARAM(fromReplay);
+#endif
+
+    // do dispatch
+    m_page->mainFrame().loader().load(request);
 }
 
 void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay)

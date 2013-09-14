@@ -49,6 +49,7 @@ namespace WebCore {
     macro(InitializeFocus) \
     macro(InitializeWindow) \
     macro(InterpretedKeyCommands) \
+    macro(LoadURLRequest) \
     macro(NavigateToPage) \
     macro(PlaybackError) \
     macro(RanPendingScripts) \

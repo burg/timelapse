@@ -1,5 +1,4 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
@@ -29,33 +28,51 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NavigationProxy_h
-#define NavigationProxy_h
+#ifndef LoadURLRequest_h
+#define LoadURLRequest_h
 
-#include "ReplayProxy.h"
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Noncopyable.h>
+#if ENABLE(WEB_REPLAY)
+
+#include "EventLoopInput.h"
+#include "InputCoder.h"
+#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
-class Frame;
 struct FrameLoadRequest;
 class ReplayController;
 
-class NavigationProxy : public ReplayProxy {
-    WTF_MAKE_NONCOPYABLE(NavigationProxy);
-
+class LoadURLRequest : public EventLoopInput {
 public:
-    static PassOwnPtr<NavigationProxy> create(Page*);
-    virtual ~NavigationProxy() {}
+    LoadURLRequest(const FrameLoadRequest&);
+    LoadURLRequest(PassOwnPtr<FrameLoadRequest>);
+    virtual ~LoadURLRequest();
 
-    void loadURLRequest(const FrameLoadRequest& request, bool fromReplay = false);
-    void reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay = false);
-    void stopLoadingFrame(Frame* frame, bool fromReplay = false);
+    // EventLoopInput API
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&) OVERRIDE;
+
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+
+    const FrameLoadRequest& request() const { return *m_request; }
 private:
-    NavigationProxy(Page*);
+    OwnPtr<FrameLoadRequest> m_request;
+};
+
+template<> struct InputCoder<FrameLoadRequest> {
+    static void encode(EncoderContext& encoder, const FrameLoadRequest& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<FrameLoadRequest>& input);
+};
+
+template<> struct InputCoder<LoadURLRequest> {
+    static void encode(EncoderContext& encoder, const LoadURLRequest& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<LoadURLRequest>& input);
 };
 
 } // namespace WebCore
 
-#endif // NavigationProxy_h
+#endif // ENABLE(WEB_REPLAY)
+
+#endif // LoadURLRequest_h

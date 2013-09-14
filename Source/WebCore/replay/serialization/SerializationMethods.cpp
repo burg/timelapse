@@ -42,6 +42,7 @@
 #include "ResourceLoadTiming.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include "SubstituteData.h"
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -54,6 +55,26 @@ void InputCoder<Vector<String>>::encode(EncoderContext& encoder, const Vector<St
 }
 
 bool InputCoder<Vector<String>>::decode(DecoderContext&, OwnPtr<Vector<String>>&)
+{
+    // TODO: implement
+    return false;
+}
+
+void InputCoder<SharedBuffer>::encode(EncoderContext& encoder, const SharedBuffer& buffer)
+{
+    // TODO: this should store a base64-encoded string, rather than bytes as chars.
+    OwnPtr<EncoderContext> encodedData = encoder.createList();
+    const char* segment;
+    unsigned pos = 0;
+    while (unsigned length = buffer.getSomeData(segment, pos)) {
+        for (size_t i = 0; i < length; i++)
+            encoder.append((uint32_t)segment[i]);
+      pos += length;
+    }
+    encoder.put("data", *encodedData);
+}
+
+bool InputCoder<SharedBuffer>::decode(DecoderContext&, OwnPtr<SharedBuffer>&)
 {
     // TODO: implement
     return false;
@@ -124,6 +145,25 @@ void InputCoder<FormData>::encode(EncoderContext& encoder, const FormData& data)
 }
 
 bool InputCoder<FormData>::decode(DecoderContext&, OwnPtr<FormData>&)
+{
+    // TODO: implement
+    return false;
+}
+
+void InputCoder<SubstituteData>::encode(EncoderContext& encoder, const SubstituteData& data)
+{
+    OwnPtr<EncoderContext> encodedBuffer = encoder.createMap();
+    InputCoder<SharedBuffer>::encode(*encodedBuffer, *data.content());   
+    encoder.put("content", *encodedBuffer);
+
+    encoder.put("mimeType", data.mimeType());
+    encoder.put("textEncoding", data.textEncoding());
+    encoder.put("failingURL", data.failingURL().string());
+    encoder.put("responseURL", data.responseURL().string());
+    encoder.put("shouldRevealToSessionHistory", data.shouldRevealToSessionHistory());
+}
+
+bool InputCoder<SubstituteData>::decode(DecoderContext&, OwnPtr<SubstituteData>&)
 {
     // TODO: implement
     return false;
