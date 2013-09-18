@@ -35,8 +35,8 @@
 
 #include "ResourceCannotShowURL.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -75,12 +75,12 @@ size_t ResourceCannotShowURL::memorySize() const
     return sizeof(ResourceCannotShowURL);
 }
 
-void InputCoder<ResourceCannotShowURL>::encode(InputEncoder& encoder, const ResourceCannotShowURL& input)
+void InputCoder<ResourceCannotShowURL>::encode(EncoderContext& encoder, const ResourceCannotShowURL& input)
 {
     encoder.put("handleId", input.handleId());
 }
 
-bool InputCoder<ResourceCannotShowURL>::decode(InputDecoder& decoder, OwnPtr<ResourceCannotShowURL>& input)
+bool InputCoder<ResourceCannotShowURL>::decode(DecoderContext& decoder, OwnPtr<ResourceCannotShowURL>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

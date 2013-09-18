@@ -35,8 +35,8 @@
 
 #include "ResourceLoaderCreated.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ResourceRequest.h"
@@ -79,7 +79,7 @@ size_t ResourceLoaderCreated::memorySize() const
     return sizeof(ResourceLoaderCreated) + 1280 + 256;
 }
 
-void InputCoder<ResourceLoaderCreated>::encode(InputEncoder& encoder, const ResourceLoaderCreated& input)
+void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const ResourceLoaderCreated& input)
 {
     encoder.put("handleId", input.handleId());
 
@@ -88,7 +88,7 @@ void InputCoder<ResourceLoaderCreated>::encode(InputEncoder& encoder, const Reso
     encoder.popObjectAsProperty("request");
 }
 
-bool InputCoder<ResourceLoaderCreated>::decode(InputDecoder& decoder, OwnPtr<ResourceLoaderCreated>& input)
+bool InputCoder<ResourceLoaderCreated>::decode(DecoderContext& decoder, OwnPtr<ResourceLoaderCreated>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

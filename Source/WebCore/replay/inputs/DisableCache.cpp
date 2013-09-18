@@ -37,8 +37,8 @@
 
 #include "CacheController.h"
 #include "EventLoopInputDispatcher.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
@@ -58,11 +58,11 @@ const AtomicString& DisableCache::type() const
     return inputTypes().DisableCache;
 }
 
-void InputCoder<DisableCache>::encode(InputEncoder&, const DisableCache&)
+void InputCoder<DisableCache>::encode(EncoderContext&, const DisableCache&)
 {
 }
 
-bool InputCoder<DisableCache>::decode(InputDecoder&, OwnPtr<DisableCache>& input)
+bool InputCoder<DisableCache>::decode(DecoderContext&, OwnPtr<DisableCache>& input)
 {
     input = adoptPtr(new DisableCache());
     return true;

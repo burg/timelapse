@@ -73,8 +73,8 @@ private:
 };
 
 template<> struct InputCoder<InitializeFocus> {
-    static void encode(InputEncoder& encoder, const InitializeFocus& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<InitializeFocus>& input);
+    static void encode(EncoderContext& encoder, const InitializeFocus& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<InitializeFocus>& input);
 };
 
 } //namespace WebCore

@@ -29,12 +29,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JSONInputEncoder_h
-#define JSONInputEncoder_h
+#ifndef JSONEncoderContext_h
+#define JSONEncoderContext_h
 
 #if ENABLE(WEB_REPLAY)
 
-#include "InputEncoder.h"
+#include "EncoderContext.h"
 #include "InspectorTypeBuilder.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/replay/InputIterator.h>
@@ -45,11 +45,11 @@ namespace WebCore {
     class InspectorValue;
     class ReplayRecording;
 
-    class JSONInputEncoder : public InputEncoder {
-        WTF_MAKE_NONCOPYABLE(JSONInputEncoder);
+    class JSONEncoderContext : public EncoderContext {
+        WTF_MAKE_NONCOPYABLE(JSONEncoderContext);
     public:
-        JSONInputEncoder();
-        virtual ~JSONInputEncoder();
+        JSONEncoderContext();
+        virtual ~JSONEncoderContext();
 
         PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
         PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index=0);
@@ -96,4 +96,4 @@ namespace WebCore {
 
 #endif // ENABLE(WEB_REPLAY)
 
-#endif // JSONInputEncoder_h
+#endif // JSONEncoderContext_h

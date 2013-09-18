@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InputDecoder_h
-#define InputDecoder_h
+#ifndef DecoderContext_h
+#define DecoderContext_h
 
 #include "InputCoder.h"
 #include <wtf/Noncopyable.h>
@@ -38,24 +38,24 @@
 
 namespace WebCore {
 
-class InputDecoder {
-    WTF_MAKE_NONCOPYABLE(InputDecoder);
+class DecoderContext {
+    WTF_MAKE_NONCOPYABLE(DecoderContext);
 
 public:
-    InputDecoder() {}
-    virtual ~InputDecoder() {}
+    DecoderContext() {}
+    virtual ~DecoderContext() {}
 
     template<typename T> void decode(const T& t)
     {
         InputCoder<T>::decode(*this, t);
     }
 
-    // templatized interface to decode values succinctly
+    // Templatized interface to decode values succinctly.
     template<typename T> bool get(const String&, T&);
     template<typename T> bool pop(T&);
 
 protected:
-    // virtual methods to be overridden
+    // Virtual methods are overridden by the specific encoder context.
     virtual bool getString(const String&, String&) =0;
     virtual bool getBoolean(const String&, bool&) =0;
 
@@ -69,39 +69,39 @@ protected:
 };
 
 
-// redirects to virtual methods
-template<> inline bool InputDecoder::get(const String& key, String& result) {
+// Redirectors to virtual methods.
+template<> inline bool DecoderContext::get(const String& key, String& result) {
     return getString(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, bool& result) {
+template<> inline bool DecoderContext::get(const String& key, bool& result) {
     return getBoolean(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, double& result) {
+template<> inline bool DecoderContext::get(const String& key, double& result) {
     return getDouble(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, float& result) {
+template<> inline bool DecoderContext::get(const String& key, float& result) {
     return getFloat(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, int32_t& result) {
+template<> inline bool DecoderContext::get(const String& key, int32_t& result) {
     return getInt32(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, int64_t& result) {
+template<> inline bool DecoderContext::get(const String& key, int64_t& result) {
     return getInt64(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, uint32_t& result) {
+template<> inline bool DecoderContext::get(const String& key, uint32_t& result) {
     return getUInt32(key, result);
 }
 
-template<> inline bool InputDecoder::get(const String& key, uint64_t& result) {
+template<> inline bool DecoderContext::get(const String& key, uint64_t& result) {
     return getUInt64(key, result);
 }
 
 } // namespace WebCore
 
-#endif // InputDecoder_h
+#endif // DecoderContext_h

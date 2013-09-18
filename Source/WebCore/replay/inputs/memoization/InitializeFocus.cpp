@@ -39,8 +39,8 @@
 #include "Document.h"
 #include "FocusController.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
@@ -82,14 +82,14 @@ PassOwnPtr<InitializeFocus> InitializeFocus::createFromPage(Page* page)
     return adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));
 }
 
-void InputCoder<InitializeFocus>::encode(InputEncoder& encoder, const InitializeFocus& input)
+void InputCoder<InitializeFocus>::encode(EncoderContext& encoder, const InitializeFocus& input)
 {
     encoder.put("active", input.isActive());
     encoder.put("focused", input.isFocused());
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<InitializeFocus>::decode(InputDecoder& decoder, OwnPtr<InitializeFocus>& input)
+bool InputCoder<InitializeFocus>::decode(DecoderContext& decoder, OwnPtr<InitializeFocus>& input)
 {
     bool isActive;
     if (!decoder.get("active", isActive))

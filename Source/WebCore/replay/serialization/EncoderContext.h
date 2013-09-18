@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InputEncoder_h
-#define InputEncoder_h
+#ifndef EncoderContext_h
+#define EncoderContext_h
 
 #include "InputCoder.h"
 #include <wtf/Noncopyable.h>
@@ -38,24 +38,24 @@
 
 namespace WebCore {
 
-class InputEncoder {
-    WTF_MAKE_NONCOPYABLE(InputEncoder);
+class EncoderContext {
+    WTF_MAKE_NONCOPYABLE(EncoderContext);
 
 public:
-    InputEncoder() {}
-    virtual ~InputEncoder() {}
+    EncoderContext() {}
+    virtual ~EncoderContext() {}
 
     template<typename T> void encode(const T& t)
     {
         InputCoder<T>::encode(*this, t);
     }
 
-    // templatized interface to encode values succinctly
+    // Templatized interface to encode values succinctly.
     template<typename T> void put(const String&, const T&);
     template<typename T> void append(const T&);
 
 protected:
-    // virtual methods to be overridden
+    // Virtual methods to be overridden by the specific decoder context.
     virtual void putBoolean(const String&, bool) =0;
     virtual void putDouble(const String&, double) =0;
     virtual void putFloat(const String&, float) =0;
@@ -84,50 +84,50 @@ public:
 };
 
 // redirects to virtual methods
-template<> inline void InputEncoder::put(const String& key, const bool& value) {
+template<> inline void EncoderContext::put(const String& key, const bool& value) {
     return putBoolean(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const double& value) {
+template<> inline void EncoderContext::put(const String& key, const double& value) {
     return putDouble(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const float& value) {
+template<> inline void EncoderContext::put(const String& key, const float& value) {
     return putFloat(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const int32_t& value) {
+template<> inline void EncoderContext::put(const String& key, const int32_t& value) {
     return putInt32(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const int64_t& value) {
+template<> inline void EncoderContext::put(const String& key, const int64_t& value) {
     return putInt64(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const String& value) {
+template<> inline void EncoderContext::put(const String& key, const String& value) {
     return putString(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const uint32_t& value) {
+template<> inline void EncoderContext::put(const String& key, const uint32_t& value) {
     return putUInt32(key, value);
 }
 
-template<> inline void InputEncoder::put(const String& key, const uint64_t& value) {
+template<> inline void EncoderContext::put(const String& key, const uint64_t& value) {
     return putUInt64(key, value);
 }
 
-template<> inline void InputEncoder::append(const int32_t& value) {
+template<> inline void EncoderContext::append(const int32_t& value) {
     return appendInt32(value);
 }
 
-template<> inline void InputEncoder::append(const String& value) {
+template<> inline void EncoderContext::append(const String& value) {
     return appendString(value);
 }
 
-template<> inline void InputEncoder::append(const uint32_t& value) {
+template<> inline void EncoderContext::append(const uint32_t& value) {
     return appendUInt32(value);
 }
 
 } // namespace WebCore
 
-#endif // InputEncoder_h
+#endif // EncoderContext_h

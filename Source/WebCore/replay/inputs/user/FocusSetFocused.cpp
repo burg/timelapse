@@ -35,8 +35,8 @@
 
 #include "FocusSetFocused.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "Page.h"
@@ -67,12 +67,12 @@ void FocusSetFocused::dispatch(ReplayController& controller, EventLoopInputDispa
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<FocusSetFocused>::encode(InputEncoder& encoder, const FocusSetFocused& input)
+void InputCoder<FocusSetFocused>::encode(EncoderContext& encoder, const FocusSetFocused& input)
 {
     encoder.put("toState", input.toState());
 }
 
-bool InputCoder<FocusSetFocused>::decode(InputDecoder& decoder, OwnPtr<FocusSetFocused>& input)
+bool InputCoder<FocusSetFocused>::decode(DecoderContext& decoder, OwnPtr<FocusSetFocused>& input)
 {
     bool toState;
     if (!decoder.get("toState", toState))

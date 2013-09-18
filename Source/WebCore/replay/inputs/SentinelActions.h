@@ -61,8 +61,8 @@ public:
 };
 
 template<> struct InputCoder<BeginSentinel> {
-    static void encode(InputEncoder& encoder, const BeginSentinel& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<BeginSentinel>& input);
+    static void encode(EncoderContext& encoder, const BeginSentinel& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<BeginSentinel>& input);
 };
 
 class EndSentinel : public EventLoopInput {
@@ -83,8 +83,8 @@ public:
 };
 
 template<> struct InputCoder<EndSentinel> {
-    static void encode(InputEncoder& encoder, const EndSentinel& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<EndSentinel>& input);
+    static void encode(EncoderContext& encoder, const EndSentinel& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<EndSentinel>& input);
 };
 
 } //namespace WebCore

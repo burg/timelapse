@@ -35,8 +35,8 @@
 
 #include "ResourceDidFinishLoading.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -80,13 +80,13 @@ size_t ResourceDidFinishLoading::memorySize() const
     return sizeof(ResourceDidFinishLoading);
 }
 
-void InputCoder<ResourceDidFinishLoading>::encode(InputEncoder& encoder, const ResourceDidFinishLoading& input)
+void InputCoder<ResourceDidFinishLoading>::encode(EncoderContext& encoder, const ResourceDidFinishLoading& input)
 {
     encoder.put("handleId", input.handleId());
     encoder.put("finishTime", input.finishTime());
 }
 
-bool InputCoder<ResourceDidFinishLoading>::decode(InputDecoder& decoder, OwnPtr<ResourceDidFinishLoading>& input)
+bool InputCoder<ResourceDidFinishLoading>::decode(DecoderContext& decoder, OwnPtr<ResourceDidFinishLoading>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

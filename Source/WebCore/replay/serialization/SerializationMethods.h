@@ -48,43 +48,43 @@ class ResourceRequest;
 class ResourceResponse;
 
 template<> struct InputCoder<FormData> {
-    static void encode(InputEncoder& encoder, const FormData& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<FormData>& input);
+    static void encode(EncoderContext& encoder, const FormData& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<FormData>& input);
 };
 
 template<> struct InputCoder<FormDataElement> {
-    static void encode(InputEncoder& encoder, const FormDataElement& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<FormDataElement>& input);
+    static void encode(EncoderContext& encoder, const FormDataElement& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<FormDataElement>& input);
 };
 
 template<> struct InputCoder<HTTPHeaderMap> {
-    static void encode(InputEncoder& encoder, const HTTPHeaderMap& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<HTTPHeaderMap>& input);
+    static void encode(EncoderContext& encoder, const HTTPHeaderMap& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<HTTPHeaderMap>& input);
 };
 
 template<> struct InputCoder<ResourceError> {
-    static void encode(InputEncoder& encoder, const ResourceError& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ResourceError>& input);
+    static void encode(EncoderContext& encoder, const ResourceError& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ResourceError>& input);
 };
 
 template<> struct InputCoder<ResourceLoadTiming> {
-    static void encode(InputEncoder& encoder, const ResourceLoadTiming& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ResourceLoadTiming>& input);
+    static void encode(EncoderContext& encoder, const ResourceLoadTiming& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ResourceLoadTiming>& input);
 };
 
 template<> struct InputCoder<ResourceRequest> {
-    static void encode(InputEncoder& encoder, const ResourceRequest& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ResourceRequest>& input);
+    static void encode(EncoderContext& encoder, const ResourceRequest& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ResourceRequest>& input);
 };
 
 template<> struct InputCoder<ResourceResponse> {
-    static void encode(InputEncoder& encoder, const ResourceResponse& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ResourceResponse>& input);
+    static void encode(EncoderContext& encoder, const ResourceResponse& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ResourceResponse>& input);
 };
 
 template<> struct InputCoder<Vector<String> > {
-    static void encode(InputEncoder& encoder, const Vector<String>& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<Vector<String> >& input);
+    static void encode(EncoderContext& encoder, const Vector<String>& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<Vector<String> >& input);
 };
 
 } // namespace WebCore

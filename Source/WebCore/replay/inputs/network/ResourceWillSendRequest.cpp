@@ -35,8 +35,8 @@
 
 #include "ResourceWillSendRequest.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -95,7 +95,7 @@ size_t ResourceWillSendRequest::memorySize() const
     return sizeof(ResourceWillSendRequest) + 2 * m_redirectResponse->memoryUsage();
 }
 
-void InputCoder<ResourceWillSendRequest>::encode(InputEncoder& encoder, const ResourceWillSendRequest& input)
+void InputCoder<ResourceWillSendRequest>::encode(EncoderContext& encoder, const ResourceWillSendRequest& input)
 {
     encoder.put("handleId", input.handleId());
 
@@ -108,7 +108,7 @@ void InputCoder<ResourceWillSendRequest>::encode(InputEncoder& encoder, const Re
     encoder.popObjectAsProperty("redirectResponse");
 }
 
-bool InputCoder<ResourceWillSendRequest>::decode(InputDecoder& decoder, OwnPtr<ResourceWillSendRequest>& input)
+bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, OwnPtr<ResourceWillSendRequest>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

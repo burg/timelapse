@@ -38,8 +38,8 @@
 #include "AsyncEventProxy.h"
 #include "DispatchEventBase.h"
 #include "Document.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -72,14 +72,14 @@ String DispatchFakeMouseMove::toString() const
     return makeString("DispatchFakeMouseMove(", String::number(m_frameIndex), "/_)");
 }
 
-void InputCoder<DispatchFakeMouseMove>::encode(InputEncoder& encoder, const DispatchFakeMouseMove& input)
+void InputCoder<DispatchFakeMouseMove>::encode(EncoderContext& encoder, const DispatchFakeMouseMove& input)
 {
     encoder.put("frameIndex", input.frameIndex());
 
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<DispatchFakeMouseMove>::decode(InputDecoder& decoder, OwnPtr<DispatchFakeMouseMove>& input)
+bool InputCoder<DispatchFakeMouseMove>::decode(DecoderContext& decoder, OwnPtr<DispatchFakeMouseMove>& input)
 {
     OwnPtr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))

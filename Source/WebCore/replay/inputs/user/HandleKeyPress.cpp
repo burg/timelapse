@@ -37,8 +37,8 @@
 
 #include "Document.h"
 #include "FrameCamera.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Logging.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -119,7 +119,7 @@ void HandleKeyPress::dispatch(ReplayController& controller, EventLoopInputDispat
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<PlatformKeyboardEvent>::encode(InputEncoder& encoder, const PlatformKeyboardEvent& input)
+void InputCoder<PlatformKeyboardEvent>::encode(EncoderContext& encoder, const PlatformKeyboardEvent& input)
 {
     encoder.put("timestamp", input.timestamp());
     encoder.put("type", (uint64_t)input.type());
@@ -135,7 +135,7 @@ void InputCoder<PlatformKeyboardEvent>::encode(InputEncoder& encoder, const Plat
     encoder.put("systemKey", input.isSystemKey());
 }
 
-bool InputCoder<PlatformKeyboardEvent>::decode(InputDecoder& decoder, OwnPtr<PlatformKeyboardEvent>& input)
+bool InputCoder<PlatformKeyboardEvent>::decode(DecoderContext& decoder, OwnPtr<PlatformKeyboardEvent>& input)
 {
     double timestamp;
     if (!decoder.get("timestamp", timestamp))
@@ -189,12 +189,12 @@ bool InputCoder<PlatformKeyboardEvent>::decode(InputDecoder& decoder, OwnPtr<Pla
     return true;
 }
 
-void InputCoder<HandleKeyPress>::encode(InputEncoder& encoder, const HandleKeyPress& input)
+void InputCoder<HandleKeyPress>::encode(EncoderContext& encoder, const HandleKeyPress& input)
 {
     InputCoder<PlatformKeyboardEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleKeyPress>::decode(InputDecoder& decoder, OwnPtr<HandleKeyPress>& input)
+bool InputCoder<HandleKeyPress>::decode(DecoderContext& decoder, OwnPtr<HandleKeyPress>& input)
 {
     OwnPtr<PlatformKeyboardEvent> keyEvent;
     if (!InputCoder<PlatformKeyboardEvent>::decode(decoder, keyEvent))

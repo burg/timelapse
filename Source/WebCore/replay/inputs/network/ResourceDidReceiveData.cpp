@@ -35,8 +35,8 @@
 
 #include "ResourceDidReceiveData.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -86,7 +86,7 @@ size_t ResourceDidReceiveData::memorySize() const
     return sizeof(ResourceDidReceiveData) + m_buffer.size();
 }
 
-void InputCoder<ResourceDidReceiveData>::encode(InputEncoder& encoder, const ResourceDidReceiveData& input)
+void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const ResourceDidReceiveData& input)
 {
     encoder.put("handleId", input.handleId());
     encoder.put("length", input.length());
@@ -94,7 +94,7 @@ void InputCoder<ResourceDidReceiveData>::encode(InputEncoder& encoder, const Res
     encoder.storeResourceBytes(input.handleId(), input.data(), input.length());
 }
 
-bool InputCoder<ResourceDidReceiveData>::decode(InputDecoder&, OwnPtr<ResourceDidReceiveData>&)
+bool InputCoder<ResourceDidReceiveData>::decode(DecoderContext&, OwnPtr<ResourceDidReceiveData>&)
 {
     // TODO: implement
     return false;

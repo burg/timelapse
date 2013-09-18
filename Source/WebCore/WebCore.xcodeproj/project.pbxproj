@@ -5343,11 +5343,11 @@
 		C4C3312317D663F3008BDACF /* ReloadFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311F17D663F3008BDACF /* ReloadFrame.h */; };
 		C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4ECA671175FAD98005490E0 /* SentinelActions.cpp */; };
 		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C4F4CA44175AC86B00F71FE1 /* InputDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */; };
-		C4F4CA45175AC86B00F71FE1 /* InputEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA42175AC86B00F71FE1 /* InputEncoder.h */; };
+		C4F4CA44175AC86B00F71FE1 /* DecoderContext.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */; };
+		C4F4CA45175AC86B00F71FE1 /* EncoderContext.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA42175AC86B00F71FE1 /* EncoderContext.h */; };
 		C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F4CA4A175AF4DC00F71FE1 /* TimerCreated.cpp */; };
-		C4F4CA4E175AF8D200F71FE1 /* JSONInputEncoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F4CA4C175AF8D200F71FE1 /* JSONInputEncoder.cpp */; };
-		C4F4CA4F175AF8D200F71FE1 /* JSONInputEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA4D175AF8D200F71FE1 /* JSONInputEncoder.h */; };
+		C4F4CA4E175AF8D200F71FE1 /* JSONEncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F4CA4C175AF8D200F71FE1 /* JSONEncoderContext.cpp */; };
+		C4F4CA4F175AF8D200F71FE1 /* JSONEncoderContext.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA4D175AF8D200F71FE1 /* JSONEncoderContext.h */; };
 		C4F4CA52175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F4CA50175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp */; };
 		C4F4CA53175C462B00F71FE1 /* JavaScriptCoreInputCoders.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA51175C462B00F71FE1 /* JavaScriptCoreInputCoders.h */; };
 		C4F7F93A1705EA1F005AB205 /* InspectorReplayAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */; };
@@ -12326,11 +12326,11 @@
 		C4C3311F17D663F3008BDACF /* ReloadFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReloadFrame.h; path = navigation/ReloadFrame.h; sourceTree = "<group>"; };
 		C4ECA671175FAD98005490E0 /* SentinelActions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SentinelActions.cpp; sourceTree = "<group>"; };
 		C4F4CA40175AC86B00F71FE1 /* InputCoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputCoder.h; sourceTree = "<group>"; };
-		C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputDecoder.h; sourceTree = "<group>"; };
-		C4F4CA42175AC86B00F71FE1 /* InputEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputEncoder.h; sourceTree = "<group>"; };
+		C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DecoderContext.h; sourceTree = "<group>"; };
+		C4F4CA42175AC86B00F71FE1 /* EncoderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EncoderContext.h; sourceTree = "<group>"; };
 		C4F4CA4A175AF4DC00F71FE1 /* TimerCreated.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimerCreated.cpp; sourceTree = "<group>"; };
-		C4F4CA4C175AF8D200F71FE1 /* JSONInputEncoder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONInputEncoder.cpp; sourceTree = "<group>"; };
-		C4F4CA4D175AF8D200F71FE1 /* JSONInputEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONInputEncoder.h; sourceTree = "<group>"; };
+		C4F4CA4C175AF8D200F71FE1 /* JSONEncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONEncoderContext.cpp; sourceTree = "<group>"; };
+		C4F4CA4D175AF8D200F71FE1 /* JSONEncoderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONEncoderContext.h; sourceTree = "<group>"; };
 		C4F4CA50175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaScriptCoreInputCoders.cpp; sourceTree = "<group>"; };
 		C4F4CA51175C462B00F71FE1 /* JavaScriptCoreInputCoders.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaScriptCoreInputCoders.h; sourceTree = "<group>"; };
 		C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorReplayAgent.cpp; sourceTree = "<group>"; };
@@ -20270,10 +20270,10 @@
 				C4F4CA50175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp */,
 				C4F4CA51175C462B00F71FE1 /* JavaScriptCoreInputCoders.h */,
 				C4F4CA40175AC86B00F71FE1 /* InputCoder.h */,
-				C4F4CA41175AC86B00F71FE1 /* InputDecoder.h */,
-				C4F4CA42175AC86B00F71FE1 /* InputEncoder.h */,
-				C4F4CA4C175AF8D200F71FE1 /* JSONInputEncoder.cpp */,
-				C4F4CA4D175AF8D200F71FE1 /* JSONInputEncoder.h */,
+				C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */,
+				C4F4CA42175AC86B00F71FE1 /* EncoderContext.h */,
+				C4F4CA4C175AF8D200F71FE1 /* JSONEncoderContext.cpp */,
+				C4F4CA4D175AF8D200F71FE1 /* JSONEncoderContext.h */,
 				C48108DB17052FF100AB4BAA /* SerializationMethods.cpp */,
 				C48108DC17052FF100AB4BAA /* SerializationMethods.h */,
 			);
@@ -25055,9 +25055,9 @@
 				C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */,
 				C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */,
 				C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */,
-				C4F4CA44175AC86B00F71FE1 /* InputDecoder.h in Headers */,
-				C4F4CA45175AC86B00F71FE1 /* InputEncoder.h in Headers */,
-				C4F4CA4F175AF8D200F71FE1 /* JSONInputEncoder.h in Headers */,
+				C4F4CA44175AC86B00F71FE1 /* DecoderContext.h in Headers */,
+				C4F4CA45175AC86B00F71FE1 /* EncoderContext.h in Headers */,
+				C4F4CA4F175AF8D200F71FE1 /* JSONEncoderContext.h in Headers */,
 				C4F4CA53175C462B00F71FE1 /* JavaScriptCoreInputCoders.h in Headers */,
 				23C217CA171CB77F00AEFD81 /* FrameCamera.h in Headers */,
 				83C1D425178D5AB400141E68 /* SVGPathSegArcAbs.h in Headers */,
@@ -28155,7 +28155,7 @@
 				C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */,
 				C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */,
 				C4F4CA4B175AF4DC00F71FE1 /* TimerCreated.cpp in Sources */,
-				C4F4CA4E175AF8D200F71FE1 /* JSONInputEncoder.cpp in Sources */,
+				C4F4CA4E175AF8D200F71FE1 /* JSONEncoderContext.cpp in Sources */,
 				C4F4CA52175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp in Sources */,
 				C42BB778175FAA41008BF639 /* DisableCache.cpp in Sources */,
 				C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */,

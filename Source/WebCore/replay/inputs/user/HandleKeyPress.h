@@ -64,13 +64,13 @@ private:
 };
 
 template<> struct InputCoder<PlatformKeyboardEvent> {
-    static void encode(InputEncoder& encoder, const PlatformKeyboardEvent& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<PlatformKeyboardEvent>& input);
+    static void encode(EncoderContext& encoder, const PlatformKeyboardEvent& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<PlatformKeyboardEvent>& input);
 };
 
 template<> struct InputCoder<HandleKeyPress> {
-    static void encode(InputEncoder& encoder, const HandleKeyPress& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<HandleKeyPress>& input);
+    static void encode(EncoderContext& encoder, const HandleKeyPress& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<HandleKeyPress>& input);
 };
 
 } //namespace WebCore

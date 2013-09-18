@@ -37,8 +37,8 @@
 
 #include "CacheController.h"
 #include "EventLoopInputDispatcher.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
@@ -58,11 +58,11 @@ void EnableCache::dispatch(ReplayController& controller, EventLoopInputDispatche
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<EnableCache>::encode(InputEncoder&, const EnableCache&)
+void InputCoder<EnableCache>::encode(EncoderContext&, const EnableCache&)
 {
 }
 
-bool InputCoder<EnableCache>::decode(InputDecoder&, OwnPtr<EnableCache>& input)
+bool InputCoder<EnableCache>::decode(DecoderContext&, OwnPtr<EnableCache>& input)
 {
     input = adoptPtr(new EnableCache());
     return true;

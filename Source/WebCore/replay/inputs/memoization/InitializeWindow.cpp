@@ -38,8 +38,8 @@
 #include "Document.h"
 #include "DOMWindow.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -73,13 +73,13 @@ PassOwnPtr<InitializeWindow> InitializeWindow::createFromPage(Page* page)
     return adoptPtr(new InitializeWindow(width, height));
 }
 
-void InputCoder<InitializeWindow>::encode(InputEncoder& encoder, const InitializeWindow& input)
+void InputCoder<InitializeWindow>::encode(EncoderContext& encoder, const InitializeWindow& input)
 {
     encoder.put("width", input.width());
     encoder.put("height", input.height());
 }
 
-bool InputCoder<InitializeWindow>::decode(InputDecoder& decoder, OwnPtr<InitializeWindow>& input)
+bool InputCoder<InitializeWindow>::decode(DecoderContext& decoder, OwnPtr<InitializeWindow>& input)
 {
     int width;
     if (!decoder.get("width", width))

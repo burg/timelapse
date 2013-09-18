@@ -35,8 +35,8 @@
 
 #include "ResourceDidFail.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayInputTypes.h"
@@ -99,7 +99,7 @@ size_t ResourceDidFail::memorySize() const
     return size;
 }
 
-void InputCoder<ResourceDidFail>::encode(InputEncoder& encoder, const ResourceDidFail& input)
+void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const ResourceDidFail& input)
 {
     encoder.put("handleId", input.handleId());
 
@@ -108,7 +108,7 @@ void InputCoder<ResourceDidFail>::encode(InputEncoder& encoder, const ResourceDi
     encoder.popObjectAsProperty("error");
 }
 
-bool InputCoder<ResourceDidFail>::decode(InputDecoder& decoder, OwnPtr<ResourceDidFail>& input)
+bool InputCoder<ResourceDidFail>::decode(DecoderContext& decoder, OwnPtr<ResourceDidFail>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

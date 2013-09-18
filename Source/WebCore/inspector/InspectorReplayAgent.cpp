@@ -50,7 +50,7 @@
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMGlobalObject.h"
-#include "JSONInputEncoder.h"
+#include "JSONEncoderContext.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
@@ -196,7 +196,7 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     // TODO(Issue #271): remove backend-side interpretation of inputs
     m_frontend->capturedAction(InspectorRecordingsAgent::createInspectorObjectForAction(*input));
 
-    DEFINE_STATIC_LOCAL(JSONInputEncoder, encoder, ());
+    DEFINE_STATIC_LOCAL(JSONEncoderContext, encoder, ());
     RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = encoder.serializeInput(input, newMark.index());
     if (serializedInput)
         m_frontend->capturedInput(serializedInput.release());

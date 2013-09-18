@@ -35,8 +35,8 @@
 
 #include "ResourceDidSendData.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -84,14 +84,14 @@ size_t ResourceDidSendData::memorySize() const
     return sizeof(ResourceDidSendData);
 }
 
-void InputCoder<ResourceDidSendData>::encode(InputEncoder& encoder, const ResourceDidSendData& input)
+void InputCoder<ResourceDidSendData>::encode(EncoderContext& encoder, const ResourceDidSendData& input)
 {
     encoder.put("handleId", input.handleId());
     encoder.put("bytesSent", input.bytesSent());
     encoder.put("totalBytesToBeSent", input.totalBytesToBeSent());
 }
 
-bool InputCoder<ResourceDidSendData>::decode(InputDecoder& decoder, OwnPtr<ResourceDidSendData>& input)
+bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, OwnPtr<ResourceDidSendData>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

@@ -36,21 +36,21 @@
 
 namespace WebCore {
 
-class InputDecoder;
-class InputEncoder;
+class DecoderContext;
+class EncoderContext;
 
 template<typename T> struct InputCoder {
-    static void encode(InputEncoder& encoder, T& t)
+    static void encode(EncoderContext& encoder, T& t)
     {
         t.encode(encoder);
     }
 
-    static bool decode(InputDecoder& decoder, OwnPtr<T>& t)
+    static bool decode(DecoderContext& decoder, OwnPtr<T>& t)
     {
         return T::decode(decoder, t);
     }
 
-    static bool decode(InputDecoder& decoder, RefPtr<T>& t)
+    static bool decode(DecoderContext& decoder, RefPtr<T>& t)
     {
         return T::decode(decoder, t);
     }

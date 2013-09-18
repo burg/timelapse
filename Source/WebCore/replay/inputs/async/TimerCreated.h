@@ -69,8 +69,8 @@ private:
 };
 
 template<> struct InputCoder<TimerCreated> {
-    static void encode(InputEncoder& encoder, const TimerCreated& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<TimerCreated>& input);
+    static void encode(EncoderContext& encoder, const TimerCreated& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<TimerCreated>& input);
 };
 
 } //namespace WebCore

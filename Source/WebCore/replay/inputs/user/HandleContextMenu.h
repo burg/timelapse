@@ -63,8 +63,8 @@ private:
 };
 
 template<> struct InputCoder<HandleContextMenu> {
-    static void encode(InputEncoder& encoder, const HandleContextMenu& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<HandleContextMenu>& input);
+    static void encode(EncoderContext& encoder, const HandleContextMenu& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<HandleContextMenu>& input);
 };
 
 } //namespace WebCore

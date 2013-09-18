@@ -44,7 +44,7 @@ class DocumentLoader;
 class Event;
 class EventLoopInputDispatcher;
 class EventTarget;
-class InputEncoder;
+class EncoderContext;
 class Node;
 class ResourceResponse;
 
@@ -101,7 +101,7 @@ public:
 
     virtual NondeterministicInput::QueueType queue() const { return NondeterministicInput::EventLoopInputQueue; }
     virtual bool isUserVisible() const { return true; }
-    virtual void serializeDispatchInfo(InputEncoder&) const;
+    virtual void serializeDispatchInfo(EncoderContext&) const;
 
     // mark, dispatch count, and quota are not always known at construction time. They can
     // only be set when the event is "unsealed".

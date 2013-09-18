@@ -70,13 +70,13 @@ private:
 };
 
 template<> struct InputCoder<SecurityOrigin> {
-    static void encode(InputEncoder& encoder, const SecurityOrigin& input);
-    static bool decode(InputDecoder& decoder, RefPtr<SecurityOrigin>& input);
+    static void encode(EncoderContext& encoder, const SecurityOrigin& input);
+    static bool decode(DecoderContext& decoder, RefPtr<SecurityOrigin>& input);
 };
 
 template<> struct InputCoder<NavigateToPage> {
-    static void encode(InputEncoder& encoder, const NavigateToPage& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<NavigateToPage>& input);
+    static void encode(EncoderContext& encoder, const NavigateToPage& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<NavigateToPage>& input);
 };
 
 } //namespace WebCore

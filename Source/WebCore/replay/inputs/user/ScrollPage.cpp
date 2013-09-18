@@ -35,8 +35,8 @@
 
 #include "ScrollPage.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -119,14 +119,14 @@ void ScrollPage::dispatch(ReplayController& controller, EventLoopInputDispatcher
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<ScrollPage>::encode(InputEncoder& encoder, const ScrollPage& input)
+void InputCoder<ScrollPage>::encode(EncoderContext& encoder, const ScrollPage& input)
 {
     encoder.put("scrollDirection", (input.isLogicalScroll()) ? input.logicalScrollDirection() : input.scrollDirection());
     encoder.put("isLogicalScroll", input.isLogicalScroll());
     encoder.put("granularity", (uint64_t)input.scrollGranularity());
 }
 
-bool InputCoder<ScrollPage>::decode(InputDecoder& decoder, OwnPtr<ScrollPage>& input)
+bool InputCoder<ScrollPage>::decode(DecoderContext& decoder, OwnPtr<ScrollPage>& input)
 {
     uint64_t scrollDirection;
     if (!decoder.get("scrollDirection", scrollDirection))

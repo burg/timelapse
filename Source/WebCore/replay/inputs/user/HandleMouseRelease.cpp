@@ -35,8 +35,8 @@
 
 #include "HandleMouseRelease.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -58,12 +58,12 @@ void HandleMouseRelease::dispatch(ReplayController& controller, EventLoopInputDi
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<HandleMouseRelease>::encode(InputEncoder& encoder, const HandleMouseRelease& input)
+void InputCoder<HandleMouseRelease>::encode(EncoderContext& encoder, const HandleMouseRelease& input)
 {
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleMouseRelease>::decode(InputDecoder& decoder, OwnPtr<HandleMouseRelease>& input)
+bool InputCoder<HandleMouseRelease>::decode(DecoderContext& decoder, OwnPtr<HandleMouseRelease>& input)
 {
     OwnPtr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))

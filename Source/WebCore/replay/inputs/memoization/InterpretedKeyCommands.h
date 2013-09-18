@@ -53,7 +53,7 @@ public:
     virtual NondeterministicInput::QueueType queue() const OVERRIDE { return NondeterministicInput::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(InputEncoder&) const;
+    void serialize(EncoderContext&) const;
 
     const Vector<KeypressCommand>& commands() const { return m_commands; }
 
@@ -62,8 +62,8 @@ private:
 };
 
 template<> struct InputCoder<InterpretedKeyCommands> {
-    static void encode(InputEncoder& encoder, const InterpretedKeyCommands& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<InterpretedKeyCommands>& input);
+    static void encode(EncoderContext& encoder, const InterpretedKeyCommands& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<InterpretedKeyCommands>& input);
 };
 
 } // namespace WebCore

@@ -61,7 +61,7 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    void serialize(InputEncoder&) const;
+    void serialize(EncoderContext&) const;
 
     bool isSimpleEvent() const;
     bool isPopstateEvent() const;

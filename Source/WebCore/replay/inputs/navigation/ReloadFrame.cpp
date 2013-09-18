@@ -37,8 +37,8 @@
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NavigationProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -73,13 +73,13 @@ String ReloadFrame::toString() const
     return makeString("ReloadFrame(", String::number(m_frameIndex), "/_)");
 }
 
-void InputCoder<ReloadFrame>::encode(InputEncoder& encoder, const ReloadFrame& input)
+void InputCoder<ReloadFrame>::encode(EncoderContext& encoder, const ReloadFrame& input)
 {
     encoder.put("frameIndex", input.frameIndex());
     encoder.put("endToEndReload", input.endToEndReload());
 }
 
-bool InputCoder<ReloadFrame>::decode(InputDecoder& decoder, OwnPtr<ReloadFrame>& input)
+bool InputCoder<ReloadFrame>::decode(DecoderContext& decoder, OwnPtr<ReloadFrame>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))

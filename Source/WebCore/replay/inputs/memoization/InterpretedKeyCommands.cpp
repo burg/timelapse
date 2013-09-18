@@ -33,7 +33,7 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "InputEncoder.h"
+#include "EncoderContext.h"
 #include "InterpretedKeyCommands.h"
 #include "KeyboardEvent.h"
 #include "ReplayInputTypes.h"
@@ -79,7 +79,7 @@ size_t InterpretedKeyCommands::memorySize() const
     return size;
 }
 
-void InputCoder<InterpretedKeyCommands>::encode(InputEncoder& encoder, const InterpretedKeyCommands& input)
+void InputCoder<InterpretedKeyCommands>::encode(EncoderContext& encoder, const InterpretedKeyCommands& input)
 {
     const Vector<KeypressCommand>& commands = input.commands();
 
@@ -94,7 +94,7 @@ void InputCoder<InterpretedKeyCommands>::encode(InputEncoder& encoder, const Int
     encoder.popArrayAsProperty("commands");
 }
 
-bool InputCoder<InterpretedKeyCommands>::decode(InputDecoder&, OwnPtr<InterpretedKeyCommands>&)
+bool InputCoder<InterpretedKeyCommands>::decode(DecoderContext&, OwnPtr<InterpretedKeyCommands>&)
 {
     // TODO: implement
     return false;

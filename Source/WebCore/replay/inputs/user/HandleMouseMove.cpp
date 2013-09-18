@@ -35,8 +35,8 @@
 
 #include "HandleMouseMove.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -62,14 +62,14 @@ void HandleMouseMove::dispatch(ReplayController& controller, EventLoopInputDispa
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<HandleMouseMove>::encode(InputEncoder& encoder, const HandleMouseMove& input)
+void InputCoder<HandleMouseMove>::encode(EncoderContext& encoder, const HandleMouseMove& input)
 {
     encoder.put("scrollbarTargeted", input.scrollbarTargeted());
 
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleMouseMove>::decode(InputDecoder& decoder, OwnPtr<HandleMouseMove>& input)
+bool InputCoder<HandleMouseMove>::decode(DecoderContext& decoder, OwnPtr<HandleMouseMove>& input)
 {
     OwnPtr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))

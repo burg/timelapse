@@ -32,19 +32,19 @@
 #include "config.h"
 #include "JavaScriptCoreInputCoders.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include <replay/GetCurrentTime.h>
 #include <replay/SetRandomSeed.h>
 
 namespace WebCore {
 
-void InputCoder<JSC::GetCurrentTime>::encode(InputEncoder& encoder, const JSC::GetCurrentTime& input)
+void InputCoder<JSC::GetCurrentTime>::encode(EncoderContext& encoder, const JSC::GetCurrentTime& input)
 {
     encoder.put("currentTime", input.currentTime());
 }
 
-bool InputCoder<JSC::GetCurrentTime>::decode(InputDecoder& decoder, OwnPtr<JSC::GetCurrentTime>& input)
+bool InputCoder<JSC::GetCurrentTime>::decode(DecoderContext& decoder, OwnPtr<JSC::GetCurrentTime>& input)
 {
     double currentTime;
     if (!decoder.get("currentTime", currentTime))
@@ -54,12 +54,12 @@ bool InputCoder<JSC::GetCurrentTime>::decode(InputDecoder& decoder, OwnPtr<JSC::
     return true;
 }
 
-void InputCoder<JSC::SetRandomSeed>::encode(InputEncoder& encoder, const JSC::SetRandomSeed& input)
+void InputCoder<JSC::SetRandomSeed>::encode(EncoderContext& encoder, const JSC::SetRandomSeed& input)
 {
     encoder.put("randomSeed", input.randomSeed());
 }
 
-bool InputCoder<JSC::SetRandomSeed>::decode(InputDecoder& decoder, OwnPtr<JSC::SetRandomSeed>& input)
+bool InputCoder<JSC::SetRandomSeed>::decode(DecoderContext& decoder, OwnPtr<JSC::SetRandomSeed>& input)
 {
     double randomSeed;
     if (!decoder.get("randomSeed", randomSeed))

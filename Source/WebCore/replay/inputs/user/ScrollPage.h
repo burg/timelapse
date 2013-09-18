@@ -88,8 +88,8 @@ private:
 };
 
 template<> struct InputCoder<ScrollPage> {
-    static void encode(InputEncoder& encoder, const ScrollPage& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ScrollPage>& input);
+    static void encode(EncoderContext& encoder, const ScrollPage& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ScrollPage>& input);
 };
 
 } //namespace WebCore

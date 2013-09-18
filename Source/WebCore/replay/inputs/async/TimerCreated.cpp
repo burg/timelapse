@@ -34,8 +34,8 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
 
@@ -46,13 +46,13 @@ const AtomicString& TimerCreated::type() const
     return inputTypes().TimerCreated;
 }
 
-void InputCoder<TimerCreated>::encode(InputEncoder& encoder, const TimerCreated& input)
+void InputCoder<TimerCreated>::encode(EncoderContext& encoder, const TimerCreated& input)
 {
     encoder.put("timerId", input.timerId());
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<TimerCreated>::decode(InputDecoder& decoder, OwnPtr<TimerCreated>& input)
+bool InputCoder<TimerCreated>::decode(DecoderContext& decoder, OwnPtr<TimerCreated>& input)
 {
     int timerId;
     if (!decoder.get("timerId", timerId))

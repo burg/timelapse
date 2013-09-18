@@ -68,7 +68,7 @@ public:
     static SerializedEventTarget serialize(EventTarget*);
     EventTarget* deserialize(Page*);
 
-    void serialize(InputEncoder&) const;
+    void serialize(EncoderContext&) const;
 
     Document* document(Page*);
 private:
@@ -99,7 +99,7 @@ public:
     SerializedEventName name() const { return m_name; }
     const AtomicString& type() const { return deserializeEventName(m_name); }
 
-    void serialize(InputEncoder&) const;
+    void serialize(EncoderContext&) const;
 private:
     SerializedGenericEvent(SerializedEventName name, bool canBubble, bool cancelable)
         : m_name(name)

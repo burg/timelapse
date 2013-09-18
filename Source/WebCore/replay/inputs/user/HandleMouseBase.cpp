@@ -35,8 +35,8 @@
 
 #include "HandleMouseBase.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "PlatformMouseEvent.h"
 #include "ReplayInputTypes.h"
 #include <wtf/Assertions.h>
@@ -98,7 +98,7 @@ String HandleMouseBase::mouseEventTypeToString(PlatformEvent::Type type)
     }
 }
 
-void InputCoder<PlatformMouseEvent>::encode(InputEncoder& encoder, const PlatformMouseEvent& input)
+void InputCoder<PlatformMouseEvent>::encode(EncoderContext& encoder, const PlatformMouseEvent& input)
 {
     encoder.put("positionX", input.position().x());
     encoder.put("positionY", input.position().y());
@@ -114,7 +114,7 @@ void InputCoder<PlatformMouseEvent>::encode(InputEncoder& encoder, const Platfor
     encoder.put("timestamp", input.timestamp());
 }
 
-bool InputCoder<PlatformMouseEvent>::decode(InputDecoder& decoder, OwnPtr<PlatformMouseEvent>& input)
+bool InputCoder<PlatformMouseEvent>::decode(DecoderContext& decoder, OwnPtr<PlatformMouseEvent>& input)
 {
     int positionX;
     if (!decoder.get("positionX", positionX))

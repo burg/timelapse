@@ -35,8 +35,8 @@
 
 #include "PlaybackError.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include <wtf/text/StringConcatenate.h>
 
@@ -58,12 +58,12 @@ String PlaybackError::toString() const
     return makeString("PlaybackError(", m_errorMessage,")");
 }
 
-void InputCoder<PlaybackError>::encode(InputEncoder& encoder, const PlaybackError& input)
+void InputCoder<PlaybackError>::encode(EncoderContext& encoder, const PlaybackError& input)
 {
     encoder.put("errorMessage", input.errorMessage());
 }
 
-bool InputCoder<PlaybackError>::decode(InputDecoder& decoder, OwnPtr<PlaybackError>& input)
+bool InputCoder<PlaybackError>::decode(DecoderContext& decoder, OwnPtr<PlaybackError>& input)
 {
     String errorMessage;
     if (!decoder.get("errorMessage", errorMessage))

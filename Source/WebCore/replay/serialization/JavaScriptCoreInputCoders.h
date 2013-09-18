@@ -38,17 +38,17 @@
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
-class InputEncoder;
-class InputDecoder;
+class EncoderContext;
+class DecoderContext;
 
 template<> struct InputCoder<JSC::GetCurrentTime> {
-    static void encode(InputEncoder&, const JSC::GetCurrentTime&);
-    static bool decode(InputDecoder&, OwnPtr<JSC::GetCurrentTime>&);
+    static void encode(EncoderContext&, const JSC::GetCurrentTime&);
+    static bool decode(DecoderContext&, OwnPtr<JSC::GetCurrentTime>&);
 };
 
 template<> struct InputCoder<JSC::SetRandomSeed> {
-    static void encode(InputEncoder&, const JSC::SetRandomSeed&);
-    static bool decode(InputDecoder&, OwnPtr<JSC::SetRandomSeed>&);
+    static void encode(EncoderContext&, const JSC::SetRandomSeed&);
+    static bool decode(DecoderContext&, OwnPtr<JSC::SetRandomSeed>&);
 };
 
 } //namespace WebCore

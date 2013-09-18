@@ -36,8 +36,8 @@
 #include "SerializationMethods.h"
 
 #include "HTTPHeaderMap.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ResourceError.h"
 #include "ResourceLoadTiming.h"
 #include "ResourceRequest.h"
@@ -47,33 +47,33 @@
 
 namespace WebCore {
 
-void InputCoder<Vector<String> >::encode(InputEncoder& encoder, const Vector<String>& input)
+void InputCoder<Vector<String> >::encode(EncoderContext& encoder, const Vector<String>& input)
 {
     for (size_t i = 0; i < input.size(); i++)
         encoder.append(input[i]);
 }
 
-bool InputCoder<Vector<String> >::decode(InputDecoder&, OwnPtr<Vector<String> >&)
+bool InputCoder<Vector<String> >::decode(DecoderContext&, OwnPtr<Vector<String> >&)
 {
     // TODO: implement
     return false;
 }
 
 /* map is serialized from a WTF::HashMap, which has unique keys. So, this can be stored in an object */
-void InputCoder<HTTPHeaderMap>::encode(InputEncoder& encoder, const HTTPHeaderMap& input)
+void InputCoder<HTTPHeaderMap>::encode(EncoderContext& encoder, const HTTPHeaderMap& input)
 {
     HTTPHeaderMap::const_iterator end_it = input.end();
     for (HTTPHeaderMap::const_iterator it = input.begin(); it != end_it; ++it)
         encoder.put(it->key.string(), it->value);
 }
 
-bool InputCoder<HTTPHeaderMap>::decode(InputDecoder&, OwnPtr<HTTPHeaderMap>&)
+bool InputCoder<HTTPHeaderMap>::decode(DecoderContext&, OwnPtr<HTTPHeaderMap>&)
 {
     // TODO: implement
     return false;
 }
 
-void InputCoder<FormDataElement>::encode(InputEncoder& encoder, const FormDataElement& element)
+void InputCoder<FormDataElement>::encode(EncoderContext& encoder, const FormDataElement& element)
 {
     encoder.put("type", (uint64_t)element.m_type);
     switch (element.m_type) {
@@ -101,13 +101,13 @@ void InputCoder<FormDataElement>::encode(InputEncoder& encoder, const FormDataEl
     }
 }
 
-bool InputCoder<FormDataElement>::decode(InputDecoder&, OwnPtr<FormDataElement>&)
+bool InputCoder<FormDataElement>::decode(DecoderContext&, OwnPtr<FormDataElement>&)
 {
     // TODO: implement
     return false;
 }
 
-void InputCoder<FormData>::encode(InputEncoder& encoder, const FormData& data)
+void InputCoder<FormData>::encode(EncoderContext& encoder, const FormData& data)
 {
     // This is based on FormData::encodeForBackForward, except we use key/value objects instead
     // of a byte array.
@@ -131,13 +131,13 @@ void InputCoder<FormData>::encode(InputEncoder& encoder, const FormData& data)
     encoder.popArrayAsProperty("elements");
 }
 
-bool InputCoder<FormData>::decode(InputDecoder&, OwnPtr<FormData>&)
+bool InputCoder<FormData>::decode(DecoderContext&, OwnPtr<FormData>&)
 {
     // TODO: implement
     return false;
 }
 
-void InputCoder<ResourceLoadTiming>::encode(InputEncoder& encoder, const ResourceLoadTiming& data)
+void InputCoder<ResourceLoadTiming>::encode(EncoderContext& encoder, const ResourceLoadTiming& data)
 {
     encoder.put("requestTime", data.requestTime);
     encoder.put("proxyStart", data.proxyStart);
@@ -153,13 +153,13 @@ void InputCoder<ResourceLoadTiming>::encode(InputEncoder& encoder, const Resourc
     encoder.put("sslEnd", data.sslEnd);
 }
 
-bool InputCoder<ResourceLoadTiming>::decode(InputDecoder&, OwnPtr<ResourceLoadTiming>&)
+bool InputCoder<ResourceLoadTiming>::decode(DecoderContext&, OwnPtr<ResourceLoadTiming>&)
 {
     // TODO: implement
     return false;
 }
 
-void InputCoder<ResourceError>::encode(InputEncoder& encoder, const ResourceError& error)
+void InputCoder<ResourceError>::encode(EncoderContext& encoder, const ResourceError& error)
 {
     encoder.put("domain", error.domain());
     encoder.put("errorCode", error.errorCode());
@@ -167,13 +167,13 @@ void InputCoder<ResourceError>::encode(InputEncoder& encoder, const ResourceErro
     encoder.put("localizedDescription", error.localizedDescription());
 }
 
-bool InputCoder<ResourceError>::decode(InputDecoder&, OwnPtr<ResourceError>&)
+bool InputCoder<ResourceError>::decode(DecoderContext&, OwnPtr<ResourceError>&)
 {
     // TODO: implement
     return false;
 }
 
-void InputCoder<ResourceRequest>::encode(InputEncoder& encoder, const ResourceRequest& request)
+void InputCoder<ResourceRequest>::encode(EncoderContext& encoder, const ResourceRequest& request)
 {
     encoder.put("url", request.url().string());
     encoder.put("cachePolicy", (uint64_t)request.cachePolicy());
@@ -200,13 +200,13 @@ void InputCoder<ResourceRequest>::encode(InputEncoder& encoder, const ResourceRe
     encoder.put("loadPriority", (uint64_t)request.priority());
 }
 
-bool InputCoder<ResourceRequest>::decode(InputDecoder&, OwnPtr<ResourceRequest>&)
+bool InputCoder<ResourceRequest>::decode(DecoderContext&, OwnPtr<ResourceRequest>&)
 {
     // TODO: implement
     return false;
 }
 
-void InputCoder<ResourceResponse>::encode(InputEncoder& encoder, const ResourceResponse& response)
+void InputCoder<ResourceResponse>::encode(EncoderContext& encoder, const ResourceResponse& response)
 {
     encoder.put("url", response.url().string());
     encoder.put("mimeType", response.mimeType());
@@ -229,7 +229,7 @@ void InputCoder<ResourceResponse>::encode(InputEncoder& encoder, const ResourceR
     }
 }
 
-bool InputCoder<ResourceResponse>::decode(InputDecoder&, OwnPtr<ResourceResponse>&)
+bool InputCoder<ResourceResponse>::decode(DecoderContext&, OwnPtr<ResourceResponse>&)
 {
     // TODO: implement
     return false;

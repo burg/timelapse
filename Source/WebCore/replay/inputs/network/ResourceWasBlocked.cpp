@@ -35,8 +35,8 @@
 
 #include "ResourceWasBlocked.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -75,12 +75,12 @@ size_t ResourceWasBlocked::memorySize() const
     return sizeof(ResourceWasBlocked);
 }
 
-void InputCoder<ResourceWasBlocked>::encode(InputEncoder& encoder, const ResourceWasBlocked& input)
+void InputCoder<ResourceWasBlocked>::encode(EncoderContext& encoder, const ResourceWasBlocked& input)
 {
     encoder.put("handleId", input.handleId());
 }
 
-bool InputCoder<ResourceWasBlocked>::decode(InputDecoder& decoder, OwnPtr<ResourceWasBlocked>& input)
+bool InputCoder<ResourceWasBlocked>::decode(DecoderContext& decoder, OwnPtr<ResourceWasBlocked>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

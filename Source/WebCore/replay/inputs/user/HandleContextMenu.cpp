@@ -38,8 +38,8 @@
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -62,14 +62,14 @@ const AtomicString& HandleContextMenu::type() const
     return inputTypes().HandleContextMenu;
 }
 
-void InputCoder<HandleContextMenu>::encode(InputEncoder& encoder, const HandleContextMenu& input)
+void InputCoder<HandleContextMenu>::encode(EncoderContext& encoder, const HandleContextMenu& input)
 {
     encoder.put("frameIndex", input.frameIndex());
 
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleContextMenu>::decode(InputDecoder& decoder, OwnPtr<HandleContextMenu>& input)
+bool InputCoder<HandleContextMenu>::decode(DecoderContext& decoder, OwnPtr<HandleContextMenu>& input)
 {
     OwnPtr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))

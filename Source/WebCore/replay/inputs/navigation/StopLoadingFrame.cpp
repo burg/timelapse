@@ -37,8 +37,8 @@
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NavigationProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -72,12 +72,12 @@ String StopLoadingFrame::toString() const
     return makeString("StopLoadingFrame(", String::number(m_frameIndex), "/_)");
 }
 
-void InputCoder<StopLoadingFrame>::encode(InputEncoder& encoder, const StopLoadingFrame& input)
+void InputCoder<StopLoadingFrame>::encode(EncoderContext& encoder, const StopLoadingFrame& input)
 {
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<StopLoadingFrame>::decode(InputDecoder& decoder, OwnPtr<StopLoadingFrame>& input)
+bool InputCoder<StopLoadingFrame>::decode(DecoderContext& decoder, OwnPtr<StopLoadingFrame>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))

@@ -60,8 +60,8 @@ private:
 };
 
 template<> struct InputCoder<PlatformMouseEvent> {
-    static void encode(InputEncoder& encoder, const PlatformMouseEvent& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<PlatformMouseEvent>& input);
+    static void encode(EncoderContext& encoder, const PlatformMouseEvent& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<PlatformMouseEvent>& input);
 };
 
 } //namespace WebCore

@@ -39,8 +39,8 @@
 #include "Document.h"
 #include "DOMWindow.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
@@ -85,14 +85,14 @@ String SendResizeEvent::toString() const
     return sb.toString();
 }
 
-void InputCoder<SendResizeEvent>::encode(InputEncoder& encoder, const SendResizeEvent& input)
+void InputCoder<SendResizeEvent>::encode(EncoderContext& encoder, const SendResizeEvent& input)
 {
     encoder.put("width", input.width());
     encoder.put("height", input.height());
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<SendResizeEvent>::decode(InputDecoder& decoder, OwnPtr<SendResizeEvent>& input)
+bool InputCoder<SendResizeEvent>::decode(DecoderContext& decoder, OwnPtr<SendResizeEvent>& input)
 {
     int width;
     if (!decoder.get("width", width))

@@ -37,8 +37,8 @@
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMTimer.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include <wtf/text/StringConcatenate.h>
@@ -78,13 +78,13 @@ void TimerFired::dispatch(ReplayController& controller, EventLoopInputDispatcher
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<TimerFired>::encode(InputEncoder& encoder, const TimerFired& input)
+void InputCoder<TimerFired>::encode(EncoderContext& encoder, const TimerFired& input)
 {
     encoder.put("timerId", input.timerId());
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<TimerFired>::decode(InputDecoder& decoder, OwnPtr<TimerFired>& input)
+bool InputCoder<TimerFired>::decode(DecoderContext& decoder, OwnPtr<TimerFired>& input)
 {
     int timerId;
     if (!decoder.get("timerId", timerId))

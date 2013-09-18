@@ -37,8 +37,8 @@
 
 #include "DispatchEventBase.h"
 #include "Document.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ScriptRunner.h"
@@ -73,12 +73,12 @@ void RanPendingScripts::dispatch(ReplayController& controller, EventLoopInputDis
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<RanPendingScripts>::encode(InputEncoder& encoder, const RanPendingScripts& input)
+void InputCoder<RanPendingScripts>::encode(EncoderContext& encoder, const RanPendingScripts& input)
 {
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<RanPendingScripts>::decode(InputDecoder& decoder, OwnPtr<RanPendingScripts>& input)
+bool InputCoder<RanPendingScripts>::decode(DecoderContext& decoder, OwnPtr<RanPendingScripts>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))

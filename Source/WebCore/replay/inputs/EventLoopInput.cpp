@@ -35,11 +35,11 @@
 
 #include "EventLoopInput.h"
 
-#include "InputEncoder.h"
+#include "EncoderContext.h"
 
 namespace WebCore {
 
-void EventLoopInput::serializeDispatchInfo(InputEncoder& encoder) const
+void EventLoopInput::serializeDispatchInfo(EncoderContext& encoder) const
 {
     encoder.put("dispatchCount", m_dispatchCount);
     encoder.put("domEventQuota", m_domEventQuota);

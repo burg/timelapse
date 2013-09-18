@@ -35,8 +35,8 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInputDispatcher.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
 
@@ -53,11 +53,11 @@ void BeginSentinel::dispatch(ReplayController&, EventLoopInputDispatcher& dispat
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<BeginSentinel>::encode(InputEncoder&, const BeginSentinel&)
+void InputCoder<BeginSentinel>::encode(EncoderContext&, const BeginSentinel&)
 {
 }
 
-bool InputCoder<BeginSentinel>::decode(InputDecoder&, OwnPtr<BeginSentinel>& input)
+bool InputCoder<BeginSentinel>::decode(DecoderContext&, OwnPtr<BeginSentinel>& input)
 {
     input = adoptPtr(new BeginSentinel());
     return true;
@@ -74,11 +74,11 @@ void EndSentinel::dispatch(ReplayController&, EventLoopInputDispatcher& dispatch
     dispatcher.didDispatch(this);
 }
 
-void InputCoder<EndSentinel>::encode(InputEncoder&, const EndSentinel&)
+void InputCoder<EndSentinel>::encode(EncoderContext&, const EndSentinel&)
 {
 }
 
-bool InputCoder<EndSentinel>::decode(InputDecoder&, OwnPtr<EndSentinel>& input)
+bool InputCoder<EndSentinel>::decode(DecoderContext&, OwnPtr<EndSentinel>& input)
 {
     input = adoptPtr(new EndSentinel());
     return true;

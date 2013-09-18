@@ -35,8 +35,8 @@
 
 #include "HandleWheelEvent.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -44,7 +44,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
+#include "EncoderContext.h"
 
 namespace WebCore {
 
@@ -149,7 +149,7 @@ size_t HandleWheelEvent::memorySize() const
     return sizeof(HandleWheelEvent);
 }
 
-void InputCoder<PlatformWheelEvent>::encode(InputEncoder& encoder, const PlatformWheelEvent& input)
+void InputCoder<PlatformWheelEvent>::encode(EncoderContext& encoder, const PlatformWheelEvent& input)
 {
     encoder.put("positionX", input.position().x());
     encoder.put("positionY", input.position().y());
@@ -176,7 +176,7 @@ void InputCoder<PlatformWheelEvent>::encode(InputEncoder& encoder, const Platfor
 #endif
 }
 
-bool InputCoder<PlatformWheelEvent>::decode(InputDecoder& decoder, OwnPtr<PlatformWheelEvent>& input)
+bool InputCoder<PlatformWheelEvent>::decode(DecoderContext& decoder, OwnPtr<PlatformWheelEvent>& input)
 {
 
     int positionX;
@@ -277,12 +277,12 @@ bool InputCoder<PlatformWheelEvent>::decode(InputDecoder& decoder, OwnPtr<Platfo
     return true;
 }
 
-void InputCoder<HandleWheelEvent>::encode(InputEncoder& encoder, const HandleWheelEvent& input)
+void InputCoder<HandleWheelEvent>::encode(EncoderContext& encoder, const HandleWheelEvent& input)
 {
     InputCoder<PlatformWheelEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleWheelEvent>::decode(InputDecoder& decoder, OwnPtr<HandleWheelEvent>& input)
+bool InputCoder<HandleWheelEvent>::decode(DecoderContext& decoder, OwnPtr<HandleWheelEvent>& input)
 {
     OwnPtr<PlatformWheelEvent> wheelEvent;
     if (!InputCoder<PlatformWheelEvent>::decode(decoder, wheelEvent))

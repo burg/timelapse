@@ -50,7 +50,7 @@
 #include "Page.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
+#include "EncoderContext.h"
 
 namespace WebCore {
 
@@ -132,7 +132,7 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
     return SerializedEventTarget(targetType, nodeIndex, frameIndex);
 }
 
-void SerializedEventTarget::serialize(InputEncoder& encoder) const
+void SerializedEventTarget::serialize(EncoderContext& encoder) const
 {
     encoder.put("DET_type", String((m_targetType == NODE) ? "NODE" : "WINDOW"));
     encoder.put("DET_nodeIndex", m_nodeIndex);
@@ -168,7 +168,7 @@ SerializedGenericEvent SerializedGenericEvent::serialize(Event* event)
                                  event->cancelable());
 }
 
-void SerializedGenericEvent::serialize(InputEncoder& encoder) const
+void SerializedGenericEvent::serialize(EncoderContext& encoder) const
 {
     encoder.put("DE_name", deserializeEventName(m_name).string());
     encoder.put("DE_canBubble", m_canBubble);

@@ -60,8 +60,8 @@ public:
 };
 
 template<> struct InputCoder<DisableCache> {
-    static void encode(InputEncoder& encoder, const DisableCache& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<DisableCache>& input);
+    static void encode(EncoderContext& encoder, const DisableCache& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<DisableCache>& input);
 };
 
 } //namespace WebCore

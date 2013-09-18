@@ -66,8 +66,8 @@ private:
 };
 
 template<> struct InputCoder<PlaybackError> {
-    static void encode(InputEncoder& encoder, const PlaybackError& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<PlaybackError>& input);
+    static void encode(EncoderContext& encoder, const PlaybackError& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<PlaybackError>& input);
 };
 
 } //namespace WebCore

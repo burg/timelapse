@@ -38,8 +38,8 @@
 #include "ReplayController.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "KURL.h"
 #include "NavigationScheduler.h"
 #include "NetworkProxy.h"
@@ -104,12 +104,12 @@ size_t NavigateToPage::memorySize() const
     return size;
 }
 
-void InputCoder<SecurityOrigin>::encode(InputEncoder& encoder, const SecurityOrigin& input)
+void InputCoder<SecurityOrigin>::encode(EncoderContext& encoder, const SecurityOrigin& input)
 {
     encoder.put("origin", input.toString());
 }
 
-bool InputCoder<SecurityOrigin>::decode(InputDecoder& decoder, RefPtr<SecurityOrigin>& input)
+bool InputCoder<SecurityOrigin>::decode(DecoderContext& decoder, RefPtr<SecurityOrigin>& input)
 {
     String originString;
     if (!decoder.get("securityOrigin", originString))
@@ -119,14 +119,14 @@ bool InputCoder<SecurityOrigin>::decode(InputDecoder& decoder, RefPtr<SecurityOr
     return true;
 }
 
-void InputCoder<NavigateToPage>::encode(InputEncoder& encoder, const NavigateToPage& input)
+void InputCoder<NavigateToPage>::encode(EncoderContext& encoder, const NavigateToPage& input)
 {
     InputCoder<SecurityOrigin>::encode(encoder, *input.securityOrigin());
     encoder.put("url", input.url());
     encoder.put("referrer", input.referrer());
 }
 
-bool InputCoder<NavigateToPage>::decode(InputDecoder& decoder, OwnPtr<NavigateToPage>& input)
+bool InputCoder<NavigateToPage>::decode(DecoderContext& decoder, OwnPtr<NavigateToPage>& input)
 {
     RefPtr<SecurityOrigin> origin;
     if (!InputCoder<SecurityOrigin>::decode(decoder, origin))

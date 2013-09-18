@@ -33,7 +33,7 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "JSONInputEncoder.h"
+#include "JSONEncoderContext.h"
 
 #include "FunctorInputIterator.h"
 #include "InspectorValues.h"
@@ -121,7 +121,7 @@ static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRec
     return counter.returnValue();
 }
 
-static bool dispatchTypeSpecificEncodeMethod(JSONInputEncoder& encoder, const NondeterministicInput* input)
+static bool dispatchTypeSpecificEncodeMethod(JSONEncoderContext& encoder, const NondeterministicInput* input)
 {
     DEFINE_STATIC_LOCAL(const AtomicString, getCurrentTimeType, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, setRandomSeedType, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
@@ -278,7 +278,7 @@ class SerializeInputToJSONFunctor {
 public:
     typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > ReturnType;
 
-    SerializeInputToJSONFunctor(JSONInputEncoder* encoder)
+    SerializeInputToJSONFunctor(JSONEncoderContext* encoder)
     : m_encoder(encoder)
     , m_inputs(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) {}
     ~SerializeInputToJSONFunctor() {}
@@ -296,82 +296,82 @@ public:
 
     ReturnType returnValue() { return m_inputs.release(); }
 private:
-    JSONInputEncoder* m_encoder;
+    JSONEncoderContext* m_encoder;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > m_inputs;
 };
 
-JSONInputEncoder::JSONInputEncoder()
+JSONEncoderContext::JSONEncoderContext()
     : m_currentObject(0)
     , m_currentArray(0) {}
 
-JSONInputEncoder::~JSONInputEncoder()
+JSONEncoderContext::~JSONEncoderContext()
 {
 }
 
-void JSONInputEncoder::putBoolean(const String& key, bool value)
+void JSONEncoderContext::putBoolean(const String& key, bool value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setBoolean(key, value);
 }
 
-void JSONInputEncoder::putDouble(const String& key, double value)
+void JSONEncoderContext::putDouble(const String& key, double value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, value);
 }
 
-void JSONInputEncoder::putFloat(const String& key, float value)
+void JSONEncoderContext::putFloat(const String& key, float value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, (double) value);
 }
 
-void JSONInputEncoder::putInt(const String& key, int value)
+void JSONEncoderContext::putInt(const String& key, int value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, (double) value);
 }
 
-void JSONInputEncoder::putInt32(const String& key, int32_t value)
+void JSONEncoderContext::putInt32(const String& key, int32_t value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, (double) value);
 }
 
-void JSONInputEncoder::putInt64(const String& key, int64_t value)
+void JSONEncoderContext::putInt64(const String& key, int64_t value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, (double) value);
 }
 
-void JSONInputEncoder::putString(const String& key, const String& value)
+void JSONEncoderContext::putString(const String& key, const String& value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setString(key, value);
 }
 
-void JSONInputEncoder::putUInt32(const String& key, uint32_t value)
+void JSONEncoderContext::putUInt32(const String& key, uint32_t value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, (double) value);
 }
 
-void JSONInputEncoder::putUInt64(const String& key, uint64_t value)
+void JSONEncoderContext::putUInt64(const String& key, uint64_t value)
 {
     ASSERT(m_currentObject);
 
     m_currentObject->setNumber(key, (double) value);
 }
 
-void JSONInputEncoder::putUnsigned(const String& key, unsigned value)
+void JSONEncoderContext::putUnsigned(const String& key, unsigned value)
 {
     ASSERT(m_currentObject);
 
@@ -379,28 +379,28 @@ void JSONInputEncoder::putUnsigned(const String& key, unsigned value)
 }
 
 // insert string as element of current array
-void JSONInputEncoder::appendString(const String& value)
+void JSONEncoderContext::appendString(const String& value)
 {
     ASSERT(m_currentArray);
 
     m_currentArray->pushString(value);
 }
 
-void JSONInputEncoder::appendInt32(int32_t value)
+void JSONEncoderContext::appendInt32(int32_t value)
 {
     ASSERT(m_currentArray);
 
     m_currentArray->pushNumber((double) value);
 }
 
-void JSONInputEncoder::appendUInt32(uint32_t value)
+void JSONEncoderContext::appendUInt32(uint32_t value)
 {
     ASSERT(m_currentArray);
 
     m_currentArray->pushNumber((double) value);
 }
 
-void JSONInputEncoder::pushArray()
+void JSONEncoderContext::pushArray()
 {
     if (m_currentObject)
         m_stack.append(m_currentObject);
@@ -412,7 +412,7 @@ void JSONInputEncoder::pushArray()
     m_currentArray = array;
 }
 
-void JSONInputEncoder::pushObject()
+void JSONEncoderContext::pushObject()
 {
     if (m_currentObject)
         m_stack.append(m_currentObject);
@@ -425,7 +425,7 @@ void JSONInputEncoder::pushObject()
 }
 
 // pops stores key-value pair with current array as value
-void JSONInputEncoder::popArrayAsProperty(const String& key)
+void JSONEncoderContext::popArrayAsProperty(const String& key)
 {
     ASSERT(m_currentArray);
     ASSERT(!m_stack.isEmpty());
@@ -442,7 +442,7 @@ void JSONInputEncoder::popArrayAsProperty(const String& key)
 }
 
 // pops stores key-value pair with current array as value
-void JSONInputEncoder::popObjectAsProperty(const String& key)
+void JSONEncoderContext::popObjectAsProperty(const String& key)
 {
     ASSERT(m_currentObject);
     ASSERT(!m_stack.isEmpty());
@@ -459,7 +459,7 @@ void JSONInputEncoder::popObjectAsProperty(const String& key)
 }
 
 // pops inserts as element of current object
-void JSONInputEncoder::popArrayAsElement()
+void JSONEncoderContext::popArrayAsElement()
 {
     ASSERT(m_currentArray);
     ASSERT(!m_stack.isEmpty());
@@ -476,7 +476,7 @@ void JSONInputEncoder::popArrayAsElement()
 }
 
 // pops inserts as element of current array
-void JSONInputEncoder::popObjectAsElement()
+void JSONEncoderContext::popObjectAsElement()
 {
     ASSERT(m_currentObject);
     ASSERT(!m_stack.isEmpty());
@@ -492,13 +492,13 @@ void JSONInputEncoder::popObjectAsElement()
     m_stack.removeLast();
 }
 
-void JSONInputEncoder::storeResourceBytes(int /*id*/, const char* /*data*/, int /*length*/)
+void JSONEncoderContext::storeResourceBytes(int /*id*/, const char* /*data*/, int /*length*/)
 {
     // TODO(Issue #265): serialize resource bytes using base64 encoding.
 }
 
 // Only to be used to pop the root object, not nested objects.
-PassRefPtr<InspectorObject> JSONInputEncoder::popObject()
+PassRefPtr<InspectorObject> JSONEncoderContext::popObject()
 {
     ASSERT(m_currentObject);
     ASSERT(m_stack.isEmpty());
@@ -506,7 +506,7 @@ PassRefPtr<InspectorObject> JSONInputEncoder::popObject()
     return m_currentObject.release();
 }
 
-PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONInputEncoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
+PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONEncoderContext::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue>::create();
@@ -532,7 +532,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONInputEncoder::serial
     return recordingObject;
 }
 
-PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONInputEncoder::serializeInput(const NondeterministicInput* input, int index)
+PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONEncoderContext::serializeInput(const NondeterministicInput* input, int index)
 {
     pushObject(); // the "data" object
     put("id", (uint64_t)index);

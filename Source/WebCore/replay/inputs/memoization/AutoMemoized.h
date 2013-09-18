@@ -34,8 +34,8 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "InputEncoder.h"
-#include "InputDecoder.h"
+#include "EncoderContext.h"
+#include "DecoderContext.h"
 #include "ReplayInputTypes.h"
 #include "SerializedScriptValue.h"
 #include <runtime/JSObject.h>
@@ -120,8 +120,8 @@ template<> inline String AutoMemoized<WebCore::SerializedScriptValue>::resultStr
 }
 
 template<typename T> struct InputCoder<AutoMemoized<T> > {
-    static void encode(InputEncoder& encoder, const AutoMemoized<T>& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<AutoMemoized<T> >& input);
+    static void encode(EncoderContext& encoder, const AutoMemoized<T>& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<AutoMemoized<T> >& input);
 };
 
 template<typename T> inline const AtomicString& AutoMemoized<T>::type() const
@@ -141,13 +141,13 @@ template<typename T> inline size_t AutoMemoized<T>::memorySize() const
     return size;
 }
 
-template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(InputEncoder& encoder, const AutoMemoized<T>& input)
+template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(EncoderContext& encoder, const AutoMemoized<T>& input)
 {
     encoder.put("attribute", input.attributeName());
     encoder.put("result", input.result());
 }
 
-template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(InputDecoder& decoder, OwnPtr<AutoMemoized<T> >& input)
+template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(DecoderContext& decoder, OwnPtr<AutoMemoized<T> >& input)
 {
     String attribute;
     if (!decoder.get("attribute", attribute))

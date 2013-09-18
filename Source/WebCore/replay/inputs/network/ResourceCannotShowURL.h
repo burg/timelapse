@@ -61,8 +61,8 @@ private:
 };
 
 template<> struct InputCoder<ResourceCannotShowURL> {
-    static void encode(InputEncoder& encoder, const ResourceCannotShowURL& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ResourceCannotShowURL>& input);
+    static void encode(EncoderContext& encoder, const ResourceCannotShowURL& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ResourceCannotShowURL>& input);
 };
 
 } // namespace WebCore

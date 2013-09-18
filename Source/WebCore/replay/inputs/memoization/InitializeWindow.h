@@ -68,8 +68,8 @@ private:
 };
 
 template<> struct InputCoder<InitializeWindow> {
-    static void encode(InputEncoder& encoder, const InitializeWindow& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<InitializeWindow>& input);
+    static void encode(EncoderContext& encoder, const InitializeWindow& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<InitializeWindow>& input);
 };
 
 } //namespace WebCore

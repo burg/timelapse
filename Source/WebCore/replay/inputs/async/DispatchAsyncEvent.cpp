@@ -53,7 +53,7 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "InputEncoder.h"
+#include "EncoderContext.h"
 
 namespace WebCore {
 
@@ -118,7 +118,7 @@ size_t DispatchAsyncEvent::memorySize() const
     return size;
 }
 
-void DispatchAsyncEvent::serialize(InputEncoder& encoder) const
+void DispatchAsyncEvent::serialize(EncoderContext& encoder) const
 {
     encoder.put("eventType", m_event.type().string());
 

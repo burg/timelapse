@@ -35,8 +35,8 @@
 
 #include "ResourceDidReceiveResponse.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "InspectorInstrumentation.h"
 #include "NetworkProxy.h"
 #include "Page.h"
@@ -95,7 +95,7 @@ size_t ResourceDidReceiveResponse::memorySize() const
     return sizeof(ResourceDidReceiveResponse) + m_response->memoryUsage();
 }
 
-void InputCoder<ResourceDidReceiveResponse>::encode(InputEncoder& encoder, const ResourceDidReceiveResponse& input)
+void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input)
 {
     encoder.put("handleId", input.handleId());
 
@@ -104,7 +104,7 @@ void InputCoder<ResourceDidReceiveResponse>::encode(InputEncoder& encoder, const
     encoder.popObjectAsProperty("response");
 }
 
-bool InputCoder<ResourceDidReceiveResponse>::decode(InputDecoder& decoder, OwnPtr<ResourceDidReceiveResponse>& input)
+bool InputCoder<ResourceDidReceiveResponse>::decode(DecoderContext& decoder, OwnPtr<ResourceDidReceiveResponse>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

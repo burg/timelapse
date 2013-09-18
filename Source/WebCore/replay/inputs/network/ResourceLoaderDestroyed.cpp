@@ -35,8 +35,8 @@
 
 #include "ResourceLoaderDestroyed.h"
 
-#include "InputDecoder.h"
-#include "InputEncoder.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
 #include "NetworkProxy.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
@@ -68,12 +68,12 @@ size_t ResourceLoaderDestroyed::memorySize() const
     return sizeof(ResourceLoaderDestroyed);
 }
 
-void InputCoder<ResourceLoaderDestroyed>::encode(InputEncoder& encoder, const ResourceLoaderDestroyed& input)
+void InputCoder<ResourceLoaderDestroyed>::encode(EncoderContext& encoder, const ResourceLoaderDestroyed& input)
 {
     encoder.put("handleId", input.handleId());
 }
 
-bool InputCoder<ResourceLoaderDestroyed>::decode(InputDecoder& decoder, OwnPtr<ResourceLoaderDestroyed>& input)
+bool InputCoder<ResourceLoaderDestroyed>::decode(DecoderContext& decoder, OwnPtr<ResourceLoaderDestroyed>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))

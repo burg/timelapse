@@ -65,8 +65,8 @@ private:
 };
 
 template<> struct InputCoder<ResourceDidSendData> {
-    static void encode(InputEncoder& encoder, const ResourceDidSendData& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<ResourceDidSendData>& input);
+    static void encode(EncoderContext& encoder, const ResourceDidSendData& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<ResourceDidSendData>& input);
 };
 
 } // namespace Webcore

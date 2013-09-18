@@ -64,13 +64,13 @@ private:
 };
 
 template<> struct InputCoder<PlatformWheelEvent> {
-    static void encode(InputEncoder& encoder, const PlatformWheelEvent& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<PlatformWheelEvent>& input);
+    static void encode(EncoderContext& encoder, const PlatformWheelEvent& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<PlatformWheelEvent>& input);
 };
 
 template<> struct InputCoder<HandleWheelEvent> {
-    static void encode(InputEncoder& encoder, const HandleWheelEvent& input);
-    static bool decode(InputDecoder& decoder, OwnPtr<HandleWheelEvent>& input);
+    static void encode(EncoderContext& encoder, const HandleWheelEvent& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<HandleWheelEvent>& input);
 };
 
 } //namespace WebCore
