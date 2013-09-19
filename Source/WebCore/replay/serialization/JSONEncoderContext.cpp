@@ -90,37 +90,6 @@ static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
 
 namespace WebCore {
 
-class CountFunctor {
-public:
-    typedef size_t ReturnType;
-
-    CountFunctor() : m_count(0) { }
-    void count(size_t count) { m_count += count; }
-    ReturnType returnValue() { return m_count; }
-
-private:
-    ReturnType m_count;
-};
-
-struct CountMemorySize : CountFunctor {
-    void operator()(size_t, const NondeterministicInput* input) {
-        count(input->memorySize());
-    }
-};
-
-static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRecording)
-{
-    RefPtr<ReplayRecording> recording = prpRecording;
-    CountMemorySize counter;
-
-    for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
-        NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
-        recording->createFunctorIterator()->forEachInputInQueue(queueType, counter);
-    }
-
-    return counter.returnValue();
-}
-
 static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const NondeterministicInput* input)
 {
     DEFINE_STATIC_LOCAL(const AtomicString, getCurrentTimeType, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
@@ -413,7 +382,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONCoder::serialize(Pas
     RefPtr<TypeBuilder::Recordings::ReplayRecordingNew> recordingObject = TypeBuilder::Recordings::ReplayRecordingNew::create()
         .setUid(recording->uid())
         .setDateCreated(recording->creationTimestamp())
-        .setMemorySize(calculateMemorySizeForRecording(recording))
+        .setMemorySize(recording->memorySize())
         .setQueues(queues.release());
 
     return recordingObject;

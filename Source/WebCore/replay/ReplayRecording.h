@@ -56,6 +56,7 @@ public:
 
     int uid() const { return m_uid; }
     double creationTimestamp() const { return m_timestamp; }
+    size_t memorySize();
 
     PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page*);
     PassOwnPtr<ReplayInputIterator> createReplayIterator(Page*, EventLoopInputDispatcherClient*);

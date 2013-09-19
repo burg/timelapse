@@ -74,6 +74,36 @@ PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()
     return FunctorInputIterator::create(m_inputStorage.get());
 }
 
+class CountFunctor {
+public:
+    typedef size_t ReturnType;
+
+    CountFunctor() : m_count(0) { }
+    void count(size_t count) { m_count += count; }
+    ReturnType returnValue() { return m_count; }
+
+private:
+    ReturnType m_count;
+};
+
+struct CountMemorySize : CountFunctor {
+    void operator()(size_t, const NondeterministicInput* input) {
+        count(input->memorySize());
+    }
+};
+
+size_t ReplayRecording::memorySize()
+{
+    CountMemorySize counter;
+
+    for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
+        NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
+        createFunctorIterator()->forEachInputInQueue(queueType, counter);
+    }
+
+    return counter.returnValue();
+}
+
 }; // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
