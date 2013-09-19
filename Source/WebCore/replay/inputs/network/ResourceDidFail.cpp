@@ -103,9 +103,9 @@ void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const Resource
 {
     encoder.put("handleId", input.handleId());
 
-    encoder.pushObject();
-    InputCoder<ResourceError>::encode(encoder, input.error());
-    encoder.popObjectAsProperty("error");
+    OwnPtr<EncoderContext> encodedError = encoder.createMap();
+    InputCoder<ResourceError>::encode(*encodedError, input.error());
+    encoder.put("error", *encodedError);
 }
 
 bool InputCoder<ResourceDidFail>::decode(DecoderContext& decoder, OwnPtr<ResourceDidFail>& input)

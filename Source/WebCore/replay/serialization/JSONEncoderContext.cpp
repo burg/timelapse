@@ -121,7 +121,7 @@ static size_t calculateMemorySizeForRecording(PassRefPtr<ReplayRecording> prpRec
     return counter.returnValue();
 }
 
-static bool dispatchTypeSpecificEncodeMethod(JSONEncoderContext& encoder, const NondeterministicInput* input)
+static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const NondeterministicInput* input)
 {
     DEFINE_STATIC_LOCAL(const AtomicString, getCurrentTimeType, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, setRandomSeedType, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
@@ -274,20 +274,114 @@ static bool dispatchTypeSpecificEncodeMethod(JSONEncoderContext& encoder, const 
     return false;
 }
 
+JSONMapEncoder::JSONMapEncoder()
+: m_object(InspectorObject::create()) {}
+
+JSONMapEncoder::~JSONMapEncoder() {}
+
+void JSONMapEncoder::putBoolean(const String& key, bool value)
+{
+    m_object->setBoolean(key, value);
+}
+
+void JSONMapEncoder::putDouble(const String& key, double value)
+{
+    m_object->setNumber(key, value);
+}
+
+void JSONMapEncoder::putFloat(const String& key, float value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putInt(const String& key, int value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putInt32(const String& key, int32_t value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putInt64(const String& key, int64_t value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putString(const String& key, const String& value)
+{
+    m_object->setString(key, value);
+}
+
+void JSONMapEncoder::putUInt32(const String& key, uint32_t value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putUInt64(const String& key, uint64_t value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putUnsigned(const String& key, unsigned value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
+void JSONMapEncoder::putContext(const String& key, const EncoderContext& context)
+{
+    RefPtr<InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();
+    m_object->setValue(key, encodedObject);
+}
+
+void JSONMapEncoder::putBytes(const String& key, const char* data, int length)
+{
+    // TODO: implement
+    UNUSED_PARAM(key);
+    UNUSED_PARAM(data);
+    UNUSED_PARAM(length);
+}
+
+JSONListEncoder::JSONListEncoder()
+: m_array(InspectorArray::create()) {}
+
+JSONListEncoder::~JSONListEncoder() {}
+
+void JSONListEncoder::appendContext(const EncoderContext& context)
+{
+    RefPtr<InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();
+    m_array->pushValue(encodedObject);
+}
+
+void JSONListEncoder::appendInt32(int32_t value)
+{
+    m_array->pushNumber((double) value);
+}
+
+void JSONListEncoder::appendString(const String& value)
+{
+    m_array->pushString(value);
+}
+
+void JSONListEncoder::appendUInt32(uint32_t value)
+{
+    m_array->pushNumber((double) value);
+}
+
 class SerializeInputToJSONFunctor {
 public:
     typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > ReturnType;
 
-    SerializeInputToJSONFunctor(JSONEncoderContext* encoder)
-    : m_encoder(encoder)
-    , m_inputs(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) {}
+    SerializeInputToJSONFunctor()
+    : m_inputs(TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput>::create()) {}
     ~SerializeInputToJSONFunctor() {}
 
     void operator()(size_t index, const NondeterministicInput* input)
     {
         LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().string().ascii().data());
 
-        RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = m_encoder->serializeInput(input, index);
+        RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = JSONCoder::serializeInput(input, index);
         if (!serializedInput)
             return;
 
@@ -296,223 +390,16 @@ public:
 
     ReturnType returnValue() { return m_inputs.release(); }
 private:
-    JSONEncoderContext* m_encoder;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > m_inputs;
 };
 
-JSONEncoderContext::JSONEncoderContext()
-    : m_currentObject(0)
-    , m_currentArray(0) {}
-
-JSONEncoderContext::~JSONEncoderContext()
-{
-}
-
-void JSONEncoderContext::putBoolean(const String& key, bool value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setBoolean(key, value);
-}
-
-void JSONEncoderContext::putDouble(const String& key, double value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, value);
-}
-
-void JSONEncoderContext::putFloat(const String& key, float value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-void JSONEncoderContext::putInt(const String& key, int value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-void JSONEncoderContext::putInt32(const String& key, int32_t value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-void JSONEncoderContext::putInt64(const String& key, int64_t value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-void JSONEncoderContext::putString(const String& key, const String& value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setString(key, value);
-}
-
-void JSONEncoderContext::putUInt32(const String& key, uint32_t value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-void JSONEncoderContext::putUInt64(const String& key, uint64_t value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-void JSONEncoderContext::putUnsigned(const String& key, unsigned value)
-{
-    ASSERT(m_currentObject);
-
-    m_currentObject->setNumber(key, (double) value);
-}
-
-// insert string as element of current array
-void JSONEncoderContext::appendString(const String& value)
-{
-    ASSERT(m_currentArray);
-
-    m_currentArray->pushString(value);
-}
-
-void JSONEncoderContext::appendInt32(int32_t value)
-{
-    ASSERT(m_currentArray);
-
-    m_currentArray->pushNumber((double) value);
-}
-
-void JSONEncoderContext::appendUInt32(uint32_t value)
-{
-    ASSERT(m_currentArray);
-
-    m_currentArray->pushNumber((double) value);
-}
-
-void JSONEncoderContext::pushArray()
-{
-    if (m_currentObject)
-        m_stack.append(m_currentObject);
-    if (m_currentArray)
-        m_stack.append(m_currentArray);
-
-    RefPtr<InspectorArray> array = InspectorArray::create();
-    m_currentObject = 0;
-    m_currentArray = array;
-}
-
-void JSONEncoderContext::pushObject()
-{
-    if (m_currentObject)
-        m_stack.append(m_currentObject);
-    if (m_currentArray)
-        m_stack.append(m_currentArray);
-
-    RefPtr<InspectorObject> object = InspectorObject::create();
-    m_currentObject = object;
-    m_currentArray = 0;
-}
-
-// pops stores key-value pair with current array as value
-void JSONEncoderContext::popArrayAsProperty(const String& key)
-{
-    ASSERT(m_currentArray);
-    ASSERT(!m_stack.isEmpty());
-
-    RefPtr<InspectorValue> popped = m_stack.last();
-    ASSERT(popped->asObject());
-
-    RefPtr<InspectorArray> oldArray = m_currentArray;
-    m_currentObject = popped->asObject();
-    m_currentArray = 0;
-
-    m_currentObject->setArray(key, oldArray);
-    m_stack.removeLast();
-}
-
-// pops stores key-value pair with current array as value
-void JSONEncoderContext::popObjectAsProperty(const String& key)
-{
-    ASSERT(m_currentObject);
-    ASSERT(!m_stack.isEmpty());
-
-    RefPtr<InspectorValue> popped = m_stack.last();
-    ASSERT(popped->asObject());
-
-    RefPtr<InspectorObject> oldObject = m_currentObject;
-    m_currentObject = popped->asObject();
-    m_currentArray = 0;
-
-    m_currentObject->setObject(key, oldObject);
-    m_stack.removeLast();
-}
-
-// pops inserts as element of current object
-void JSONEncoderContext::popArrayAsElement()
-{
-    ASSERT(m_currentArray);
-    ASSERT(!m_stack.isEmpty());
-
-    RefPtr<InspectorValue> popped = m_stack.last();
-    ASSERT(popped->asArray());
-
-    RefPtr<InspectorArray> oldArray = m_currentArray;
-    m_currentArray = popped->asArray();
-    m_currentObject = 0;
-
-    m_currentArray->pushArray(oldArray);
-    m_stack.removeLast();
-}
-
-// pops inserts as element of current array
-void JSONEncoderContext::popObjectAsElement()
-{
-    ASSERT(m_currentObject);
-    ASSERT(!m_stack.isEmpty());
-
-    RefPtr<InspectorValue> popped = m_stack.last();
-    ASSERT(popped->asArray());
-
-    RefPtr<InspectorObject> oldObject = m_currentObject;
-    m_currentArray = popped->asArray();
-    m_currentObject = 0;
-
-    m_currentArray->pushObject(oldObject);
-    m_stack.removeLast();
-}
-
-void JSONEncoderContext::storeResourceBytes(int /*id*/, const char* /*data*/, int /*length*/)
-{
-    // TODO(Issue #265): serialize resource bytes using base64 encoding.
-}
-
-// Only to be used to pop the root object, not nested objects.
-PassRefPtr<InspectorObject> JSONEncoderContext::popObject()
-{
-    ASSERT(m_currentObject);
-    ASSERT(m_stack.isEmpty());
-
-    return m_currentObject.release();
-}
-
-PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONEncoderContext::serialize(PassRefPtr<ReplayRecording> prpRecording)
+PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue>::create();
 
     for (int i = 0; i < NondeterministicInput::QueueTypeLength; i++) {
-        SerializeInputToJSONFunctor collector(this);
+        SerializeInputToJSONFunctor collector;
         NondeterministicInput::QueueType queueType = static_cast<NondeterministicInput::QueueType>(i);
         PassRefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > queueInputs = recording->createFunctorIterator()->forEachInputInQueue(queueType, collector);
 
@@ -532,26 +419,34 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONEncoderContext::seri
     return recordingObject;
 }
 
-PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONEncoderContext::serializeInput(const NondeterministicInput* input, int index)
+PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONCoder::serializeInput(const NondeterministicInput* input, int index)
 {
-    pushObject(); // the "data" object
-    put("id", (uint64_t)index);
+    OwnPtr<EncoderContext> encodedInput = JSONCoder::createMap();
+    encodedInput->put("id", (uint64_t)index);
 
     // TODO: remove
     if (input->queue() == NondeterministicInput::EventLoopInputQueue)
-        static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*this);
+        static_cast<const EventLoopInput*>(input)->serializeDispatchInfo(*encodedInput);
 
     // abort if we couldn't perform type-specific encoding based on the tag.
-    if (!dispatchTypeSpecificEncodeMethod(*this, input)) {
-        popObject();
+    if (!dispatchTypeSpecificEncodeMethod(*encodedInput, input))
         return 0;
-    }
 
     RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = TypeBuilder::Recordings::ReplayInput::create()
                 .setType(input->type())
-                .setData(popObject());
+                .setData(static_cast<JSONEncoderContext*>(encodedInput.get())->encodedValue()->asObject());
 
     return serializedInput.release();
+}
+
+PassOwnPtr<EncoderContext> JSONCoder::createMap()
+{
+    return adoptPtr(new JSONMapEncoder());
+}
+
+PassOwnPtr<EncoderContext> JSONCoder::createList()
+{
+    return adoptPtr(new JSONListEncoder());
 }
 
 }; // namespace WebCore

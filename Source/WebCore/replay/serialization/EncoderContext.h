@@ -55,37 +55,39 @@ public:
     template<typename T> void append(const T&);
 
 protected:
-    // Virtual methods to be overridden by the specific decoder context.
-    virtual void putBoolean(const String&, bool) =0;
-    virtual void putDouble(const String&, double) =0;
-    virtual void putFloat(const String&, float) =0;
-    virtual void putInt(const String&, int) =0;
-    virtual void putInt32(const String&, int32_t) =0;
-    virtual void putInt64(const String&, int64_t) =0;
-    virtual void putString(const String&, const String&) =0;
-    virtual void putUInt32(const String&, uint32_t) =0;
-    virtual void putUInt64(const String&, uint64_t) =0;
-    virtual void putUnsigned(const String&, unsigned) =0;
+    // Virtual methods to be overridden by the specific encoder context.
+    virtual void putBoolean(const String&, bool);
+    virtual void putContext(const String&, const EncoderContext&);
+    virtual void putDouble(const String&, double);
+    virtual void putFloat(const String&, float);
+    virtual void putInt(const String&, int);
+    virtual void putInt32(const String&, int32_t);
+    virtual void putInt64(const String&, int64_t);
+    virtual void putString(const String&, const String&);
+    virtual void putUInt32(const String&, uint32_t);
+    virtual void putUInt64(const String&, uint64_t);
+    virtual void putUnsigned(const String&, unsigned);
 
-    virtual void appendInt32(int32_t) =0;
-    virtual void appendString(const String&) =0;
-    virtual void appendUInt32(uint32_t) =0;
+    virtual void appendInt32(int32_t);
+    virtual void appendString(const String&);
+    virtual void appendUInt32(uint32_t);
+    virtual void appendContext(const EncoderContext&);
 
 public:
-    virtual void pushArray() =0;
-    virtual void pushObject() =0;
-    // pops and stores key-value pair with it as value
-    virtual void popArrayAsProperty(const String&) =0;
-    virtual void popObjectAsProperty(const String&) =0;
-    // pops and inserts as element of current array
-    virtual void popArrayAsElement() =0;
-    virtual void popObjectAsElement() =0;
-    virtual void storeResourceBytes(int, const char* bytes, int length) =0;
+    // These methods don't have templatized shortcuts.
+    virtual void putBytes(const String&, const char* data, int length);
+
+    virtual PassOwnPtr<EncoderContext> createMap() =0;
+    virtual PassOwnPtr<EncoderContext> createList() =0;
 };
 
-// redirects to virtual methods
+// Redirectors to virtual methods.
 template<> inline void EncoderContext::put(const String& key, const bool& value) {
     return putBoolean(key, value);
+}
+
+template<> inline void EncoderContext::put(const String& key, const EncoderContext& value) {
+    return putContext(key, value);
 }
 
 template<> inline void EncoderContext::put(const String& key, const double& value) {
@@ -114,6 +116,10 @@ template<> inline void EncoderContext::put(const String& key, const uint32_t& va
 
 template<> inline void EncoderContext::put(const String& key, const uint64_t& value) {
     return putUInt64(key, value);
+}
+
+template<> inline void EncoderContext::append(const EncoderContext& value) {
+    return appendContext(value);
 }
 
 template<> inline void EncoderContext::append(const int32_t& value) {

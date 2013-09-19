@@ -47,13 +47,13 @@
 
 namespace WebCore {
 
-void InputCoder<Vector<String> >::encode(EncoderContext& encoder, const Vector<String>& input)
+void InputCoder<Vector<String>>::encode(EncoderContext& encoder, const Vector<String>& input)
 {
     for (size_t i = 0; i < input.size(); i++)
         encoder.append(input[i]);
 }
 
-bool InputCoder<Vector<String> >::decode(DecoderContext&, OwnPtr<Vector<String> >&)
+bool InputCoder<Vector<String>>::decode(DecoderContext&, OwnPtr<Vector<String>>&)
 {
     // TODO: implement
     return false;
@@ -78,11 +78,8 @@ void InputCoder<FormDataElement>::encode(EncoderContext& encoder, const FormData
     encoder.put("type", (uint64_t)element.m_type);
     switch (element.m_type) {
     case FormDataElement::data:
-        encoder.pushArray();
-        for (size_t i = 0; i < element.m_data.size(); i++)
-            encoder.append((uint32_t)element.m_data[i]);
-        encoder.popArrayAsProperty("data");
-        return;
+        encoder.putBytes("data", element.m_data.data(), element.m_data.size());
+        break;
     case FormDataElement::encodedFile:
         encoder.put("filename", element.m_filename);
         encoder.put("shouldGenerateFile", element.m_shouldGenerateFile);
@@ -91,12 +88,12 @@ void InputCoder<FormDataElement>::encode(EncoderContext& encoder, const FormData
         encoder.put("fileLength", (int64_t)element.m_fileLength);
         encoder.put("expectedFileModificationTime", element.m_expectedFileModificationTime);
 #endif
-        return;
+        break;
 
 #if ENABLE(BLOB)
     case FormDataElement::encodedBlob:
         encoder.put("blobURL", element.m_url.string());
-        return;
+        break;
 #endif
     }
 }
@@ -114,21 +111,16 @@ void InputCoder<FormData>::encode(EncoderContext& encoder, const FormData& data)
 
     encoder.put("alwaysStream", data.alwaysStream());
     encoder.put("identifier", data.identifier());
+    encoder.putBytes("boundary", data.boundary().data(), data.boundary().size());
 
-    encoder.pushArray();
-    const Vector<char> bytes = data.boundary();
-    for (size_t i = 0; i < bytes.size(); i++)
-        encoder.append((uint32_t)bytes[i]);
-    encoder.popArrayAsProperty("boundary");
-
-    encoder.pushArray();
+    OwnPtr<EncoderContext> encodedElements = encoder.createList();
     const Vector<FormDataElement> elems = data.elements();
     for (size_t i = 0; i < elems.size(); i++) {
-        encoder.pushObject();
-        InputCoder<FormDataElement>::encode(encoder, elems[i]);
-        encoder.popObjectAsElement();
+        OwnPtr<EncoderContext> encodedElement = encoder.createMap();
+        InputCoder<FormDataElement>::encode(*encodedElement, elems[i]);
+        encodedElements->append(*encodedElement);
     }
-    encoder.popArrayAsProperty("elements");
+    encoder.put("elements", *encodedElements);
 }
 
 bool InputCoder<FormData>::decode(DecoderContext&, OwnPtr<FormData>&)
@@ -181,19 +173,19 @@ void InputCoder<ResourceRequest>::encode(EncoderContext& encoder, const Resource
     encoder.put("firstPartyForCookies", request.firstPartyForCookies().string());
     encoder.put("httpMethod", request.httpMethod());
 
-    encoder.pushObject();
-    InputCoder<HTTPHeaderMap>::encode(encoder, request.httpHeaderFields());
-    encoder.popObjectAsProperty("httpHeaders");
+    OwnPtr<EncoderContext> encodedHeaders = encoder.createMap();
+    InputCoder<HTTPHeaderMap>::encode(*encodedHeaders, request.httpHeaderFields());
+    encoder.put("httpHeaders", *encodedHeaders);
 
-    encoder.pushArray();
-    InputCoder<Vector<String> >::encode(encoder, request.responseContentDispositionEncodingFallbackArray());
-    encoder.popArrayAsProperty("responseContentDispositionEncodingFallbackArray");
+    OwnPtr<EncoderContext> encodedFallbackArray = encoder.createList();
+    InputCoder<Vector<String>>::encode(*encodedFallbackArray, request.responseContentDispositionEncodingFallbackArray());
+    encoder.put("responseContentDispositionEncodingFallbackArray", *encodedFallbackArray);
 
-    // sometimes, there's no form data.
+    // Sometimes, there's no form data.
     if (FormData* body = request.httpBody()) {
-        encoder.pushObject();
-        InputCoder<FormData>::encode(encoder, *body);
-        encoder.popObjectAsProperty("httpBody");
+        OwnPtr<EncoderContext> encodedFormData = encoder.createMap();
+        InputCoder<FormData>::encode(*encodedFormData, *body);
+        encoder.put("httpBody", *encodedFormData);
     }
 
     encoder.put("allowCookies", request.allowCookies());
@@ -216,16 +208,16 @@ void InputCoder<ResourceResponse>::encode(EncoderContext& encoder, const Resourc
     encoder.put("httpStatusCode", response.httpStatusCode());
     encoder.put("httpStatusText", response.httpStatusText());
 
-    encoder.pushObject();
-    InputCoder<HTTPHeaderMap>::encode(encoder, response.httpHeaderFields());
-    encoder.popObjectAsProperty("httpHeaders");
+    OwnPtr<EncoderContext> encodedHeaders = encoder.createMap();
+    InputCoder<HTTPHeaderMap>::encode(*encodedHeaders, response.httpHeaderFields());
+    encoder.put("httpHeaders", *encodedHeaders);
 
     encoder.put("lastModifiedDate", (uint64_t)response.lastModified());
 
     if (ResourceLoadTiming* data = response.resourceLoadTiming()) {
-        encoder.pushObject();
-        InputCoder<ResourceLoadTiming>::encode(encoder, *data);
-        encoder.popObjectAsProperty("loadTiming");
+        OwnPtr<EncoderContext> encodedLoadTimings = encoder.createMap();
+        InputCoder<ResourceLoadTiming>::encode(*encodedLoadTimings, *data);
+        encoder.put("loadTiming", *encodedLoadTimings);
     }
 }
 

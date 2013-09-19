@@ -91,7 +91,7 @@ void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const R
     encoder.put("handleId", input.handleId());
     encoder.put("length", input.length());
     encoder.put("encodedLength", input.encodedLength());
-    encoder.storeResourceBytes(input.handleId(), input.data(), input.length());
+    encoder.putBytes("data", input.data(), input.length());
 }
 
 bool InputCoder<ResourceDidReceiveData>::decode(DecoderContext&, OwnPtr<ResourceDidReceiveData>&)

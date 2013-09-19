@@ -5239,6 +5239,7 @@
 		C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */; };
 		C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E40991702201F00FB0F77 /* ReplayActionFactory.h */; };
 		C43284F517DA8F66000F1F11 /* PageConsole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493717A432350054AC75 /* PageConsole.cpp */; };
+		C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C46ADBA017EB8B0600218391 /* EncoderContext.cpp */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
 		C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */; };
 		C48108E317052FF100AB4BAA /* DispatchAsyncEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */; };
@@ -12220,6 +12221,7 @@
 		C42BB777175FAA41008BF639 /* EnableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EnableCache.cpp; sourceTree = "<group>"; };
 		C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReplayActionFactory.cpp; sourceTree = "<group>"; };
 		C42E40991702201F00FB0F77 /* ReplayActionFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReplayActionFactory.h; sourceTree = "<group>"; };
+		C46ADBA017EB8B0600218391 /* EncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EncoderContext.cpp; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
 		C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchAsyncEvent.cpp; sourceTree = "<group>"; };
 		C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchAsyncEvent.h; sourceTree = "<group>"; };
@@ -20267,11 +20269,12 @@
 		C48108D817052FF100AB4BAA /* serialization */ = {
 			isa = PBXGroup;
 			children = (
+				C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */,
+				C46ADBA017EB8B0600218391 /* EncoderContext.cpp */,
+				C4F4CA42175AC86B00F71FE1 /* EncoderContext.h */,
+				C4F4CA40175AC86B00F71FE1 /* InputCoder.h */,
 				C4F4CA50175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp */,
 				C4F4CA51175C462B00F71FE1 /* JavaScriptCoreInputCoders.h */,
-				C4F4CA40175AC86B00F71FE1 /* InputCoder.h */,
-				C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */,
-				C4F4CA42175AC86B00F71FE1 /* EncoderContext.h */,
 				C4F4CA4C175AF8D200F71FE1 /* JSONEncoderContext.cpp */,
 				C4F4CA4D175AF8D200F71FE1 /* JSONEncoderContext.h */,
 				C48108DB17052FF100AB4BAA /* SerializationMethods.cpp */,
@@ -28173,6 +28176,7 @@
 				BE16C59417CFE17200852C04 /* InbandWebVTTTextTrack.cpp in Sources */,
 				C43284F517DA8F66000F1F11 /* PageConsole.cpp in Sources */,
 				C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */,
+				C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

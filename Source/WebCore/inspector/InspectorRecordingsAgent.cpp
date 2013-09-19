@@ -291,8 +291,7 @@ void InspectorRecordingsAgent::getSerializedRecording(ErrorString* errorString, 
     if (!recording)
         return;
 
-    JSONEncoderContext coder;
-    serializedObject = coder.serialize(recording);
+    serializedObject = JSONCoder::serialize(recording);
 }
 
 void InspectorRecordingsAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)

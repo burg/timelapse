@@ -99,13 +99,13 @@ void InputCoder<ResourceWillSendRequest>::encode(EncoderContext& encoder, const 
 {
     encoder.put("handleId", input.handleId());
 
-    encoder.pushObject();
-    InputCoder<ResourceRequest>::encode(encoder, input.request());
-    encoder.popObjectAsProperty("request");
+    OwnPtr<EncoderContext> encodedRequest = encoder.createMap();
+    InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
+    encoder.put("request", *encodedRequest);
 
-    encoder.pushObject();
-    InputCoder<ResourceResponse>::encode(encoder, input.redirectResponse());
-    encoder.popObjectAsProperty("redirectResponse");
+    OwnPtr<EncoderContext> encodedResponse = encoder.createMap();
+    InputCoder<ResourceResponse>::encode(*encodedResponse, input.redirectResponse());
+    encoder.put("redirectResponse", *encodedResponse);
 }
 
 bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, OwnPtr<ResourceWillSendRequest>& input)

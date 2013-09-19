@@ -34,7 +34,7 @@
 
 #include "InputCoder.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/text/WTFString.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -52,30 +52,35 @@ public:
 
     // Templatized interface to decode values succinctly.
     template<typename T> bool get(const String&, T&);
+    // TODO: This should use iterators, I think?
     template<typename T> bool pop(T&);
 
 protected:
-    // Virtual methods are overridden by the specific encoder context.
-    virtual bool getString(const String&, String&) =0;
+    // Virtual methods are overridden by the specific decoder context.
     virtual bool getBoolean(const String&, bool&) =0;
-
+    virtual bool getBytes(const String&, Vector<char>&) =0;
+    virtual bool getContext(const String&, OwnPtr<DecoderContext>&) =0;
     virtual bool getDouble(const String&, double&) =0;
     virtual bool getFloat(const String&, float&) =0;
-
     virtual bool getInt32(const String&, int32_t&) =0;
     virtual bool getInt64(const String&, int64_t&) =0;
+    virtual bool getString(const String&, String&) =0;
     virtual bool getUInt32(const String&, uint32_t&) =0;
     virtual bool getUInt64(const String&, uint64_t&) =0;
+    virtual bool getUnsigned(const String&, unsigned&) =0;
 };
 
-
 // Redirectors to virtual methods.
-template<> inline bool DecoderContext::get(const String& key, String& result) {
-    return getString(key, result);
-}
-
 template<> inline bool DecoderContext::get(const String& key, bool& result) {
     return getBoolean(key, result);
+}
+
+template<> inline bool DecoderContext::get(const String& key, Vector<char>& result) {
+    return getBytes(key, result);
+}
+
+template<> inline bool DecoderContext::get(const String& key, OwnPtr<DecoderContext>& result) {
+    return getContext(key, result);
 }
 
 template<> inline bool DecoderContext::get(const String& key, double& result) {
@@ -92,6 +97,10 @@ template<> inline bool DecoderContext::get(const String& key, int32_t& result) {
 
 template<> inline bool DecoderContext::get(const String& key, int64_t& result) {
     return getInt64(key, result);
+}
+
+template<> inline bool DecoderContext::get(const String& key, String& result) {
+    return getString(key, result);
 }
 
 template<> inline bool DecoderContext::get(const String& key, uint32_t& result) {

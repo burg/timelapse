@@ -82,9 +82,9 @@ template<> struct InputCoder<ResourceResponse> {
     static bool decode(DecoderContext& decoder, OwnPtr<ResourceResponse>& input);
 };
 
-template<> struct InputCoder<Vector<String> > {
+template<> struct InputCoder<Vector<String>> {
     static void encode(EncoderContext& encoder, const Vector<String>& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<Vector<String> >& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<Vector<String>>& input);
 };
 
 } // namespace WebCore

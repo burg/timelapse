@@ -144,8 +144,8 @@ void InspectorReplayAgent::willCallFunction(const String& scriptName, int script
 {
 #ifndef NDEBUG
     LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
-    scriptName.utf8().data(), scriptLine, 
-    SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);   
+    scriptName.utf8().data(), scriptLine,
+    SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);
 #else
     UNUSED_PARAM(scriptName);
     UNUSED_PARAM(scriptLine);
@@ -196,8 +196,7 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     // TODO(Issue #271): remove backend-side interpretation of inputs
     m_frontend->capturedAction(InspectorRecordingsAgent::createInspectorObjectForAction(*input));
 
-    DEFINE_STATIC_LOCAL(JSONEncoderContext, encoder, ());
-    RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = encoder.serializeInput(input, newMark.index());
+    RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
     if (serializedInput)
         m_frontend->capturedInput(serializedInput.release());
 }

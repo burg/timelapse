@@ -99,9 +99,9 @@ void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, con
 {
     encoder.put("handleId", input.handleId());
 
-    encoder.pushObject();
-    InputCoder<ResourceResponse>::encode(encoder, input.response());
-    encoder.popObjectAsProperty("response");
+    OwnPtr<EncoderContext> encodedResponse = encoder.createMap();
+    InputCoder<ResourceResponse>::encode(*encodedResponse, input.response());
+    encoder.put("response", *encodedResponse);
 }
 
 bool InputCoder<ResourceDidReceiveResponse>::decode(DecoderContext& decoder, OwnPtr<ResourceDidReceiveResponse>& input)

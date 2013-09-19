@@ -83,9 +83,9 @@ void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const Re
 {
     encoder.put("handleId", input.handleId());
 
-    encoder.pushObject();
-    InputCoder<ResourceRequest>::encode(encoder, input.request());
-    encoder.popObjectAsProperty("request");
+    OwnPtr<EncoderContext> encodedRequest = encoder.createMap();
+    InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
+    encoder.put("request", *encodedRequest);
 }
 
 bool InputCoder<ResourceLoaderCreated>::decode(DecoderContext& decoder, OwnPtr<ResourceLoaderCreated>& input)

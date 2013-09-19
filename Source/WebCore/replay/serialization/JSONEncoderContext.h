@@ -36,7 +36,6 @@
 
 #include "EncoderContext.h"
 #include "InspectorTypeBuilder.h"
-#include <wtf/Noncopyable.h>
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
@@ -45,51 +44,65 @@ namespace WebCore {
     class InspectorValue;
     class ReplayRecording;
 
-    class JSONEncoderContext : public EncoderContext {
-        WTF_MAKE_NONCOPYABLE(JSONEncoderContext);
+    class JSONCoder {
     public:
-        JSONEncoderContext();
-        virtual ~JSONEncoderContext();
+        static PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
+        static PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index=0);
+        static PassOwnPtr<EncoderContext> createMap();
+        static PassOwnPtr<EncoderContext> createList();
+    };
 
-        PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
-        PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index=0);
-    protected:
-        // insert key-value pair into current object
-        // insert string as element of current array
-        virtual void putString(const String&, const String&) OVERRIDE;
-        virtual void putUnsigned(const String&, unsigned) OVERRIDE;
-        virtual void putUInt32(const String&, uint32_t) OVERRIDE;
-        virtual void putUInt64(const String&, uint64_t) OVERRIDE;
-        virtual void putInt(const String&, int) OVERRIDE;
+    class JSONEncoderContext : public EncoderContext {
+    public:
+        virtual PassRefPtr<InspectorValue> encodedValue() const =0;
+        virtual PassOwnPtr<EncoderContext> createMap() OVERRIDE
+        {
+            return JSONCoder::createMap();
+        }
+
+        virtual PassOwnPtr<EncoderContext> createList() OVERRIDE
+        {
+            return JSONCoder::createList();
+        }
+    };
+
+    class JSONMapEncoder : public JSONEncoderContext {
+    public:
+        JSONMapEncoder();
+        virtual ~JSONMapEncoder();
+
         virtual void putBoolean(const String&, bool) OVERRIDE;
+        virtual void putContext(const String&, const EncoderContext&) OVERRIDE;
         virtual void putDouble(const String&, double) OVERRIDE;
         virtual void putFloat(const String&, float) OVERRIDE;
+        virtual void putInt(const String&, int) OVERRIDE;
         virtual void putInt32(const String&, int32_t) OVERRIDE;
         virtual void putInt64(const String&, int64_t) OVERRIDE;
+        virtual void putString(const String&, const String&) OVERRIDE;
+        virtual void putUInt32(const String&, uint32_t) OVERRIDE;
+        virtual void putUInt64(const String&, uint64_t) OVERRIDE;
+        virtual void putUnsigned(const String&, unsigned) OVERRIDE;
 
+        virtual void putBytes(const String&, const char* data, int length) OVERRIDE;
+
+        virtual PassRefPtr<InspectorValue> encodedValue() const { return m_object; }
+    private:
+        RefPtr<InspectorObject> m_object;
+    };
+
+    class JSONListEncoder : public JSONEncoderContext {
+    public:
+        JSONListEncoder();
+        virtual ~JSONListEncoder();
+
+        virtual void appendContext(const EncoderContext&) OVERRIDE;
         virtual void appendInt32(int32_t) OVERRIDE;
         virtual void appendString(const String&) OVERRIDE;
         virtual void appendUInt32(uint32_t) OVERRIDE;
 
-    public:
-        virtual void pushArray() OVERRIDE;
-        virtual void pushObject() OVERRIDE;
-
-        // pops and stores key-value pair with it as value
-        virtual void popArrayAsProperty(const String&) OVERRIDE;
-        virtual void popObjectAsProperty(const String&) OVERRIDE;
-        // pops and inserts as element of current array
-        virtual void popArrayAsElement() OVERRIDE;
-        virtual void popObjectAsElement() OVERRIDE;
-        virtual void storeResourceBytes(int, const char* data, int length) OVERRIDE;
-        PassRefPtr<InspectorObject> popObject();
-
+        virtual PassRefPtr<InspectorValue> encodedValue() const { return m_array; }
     private:
-        size_t memorySize();
-
-        RefPtr<InspectorObject> m_currentObject;
-        RefPtr<InspectorArray> m_currentArray;
-        Vector<RefPtr<InspectorValue> > m_stack;
+        RefPtr<InspectorArray> m_array;
     };
 
 } // namespace WebCore
