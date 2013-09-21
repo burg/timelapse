@@ -108,7 +108,7 @@ static bool planCounter(RenderObject* object, const AtomicString& identifier, bo
 
     // Real text nodes don't have their own style so they can't have counters.
     // We can't even look at their styles or we'll see extra resets and increments!
-    if (object->isText() && !object->isBR())
+    if (object->isText())
         return false;
     Node* generatingNode = object->generatingNode();
     // We must have a generating node or else we cannot have a counter.
@@ -349,13 +349,12 @@ static CounterNode* makeCounterNode(RenderObject* object, const AtomicString& id
     return newNode.get();
 }
 
-RenderCounter::RenderCounter(Document* node, const CounterContent& counter)
-    : RenderText(node, StringImpl::empty())
+RenderCounter::RenderCounter(const CounterContent& counter)
+    : RenderText(nullptr, emptyString())
     , m_counter(counter)
     , m_counterNode(0)
     , m_nextForSameCounter(0)
 {
-    view().addRenderCounter();
 }
 
 RenderCounter::~RenderCounter()
@@ -364,6 +363,15 @@ RenderCounter::~RenderCounter()
         m_counterNode->removeRenderer(this);
         ASSERT(!m_counterNode);
     }
+}
+
+RenderCounter* RenderCounter::createAnonymous(Document& document, const CounterContent& content)
+{
+    RenderCounter* counter = new (*document.renderArena()) RenderCounter(content);
+    counter->setDocumentForAnonymous(document);
+    counter->view().addRenderCounter();
+
+    return counter;
 }
 
 void RenderCounter::willBeDestroyed()
@@ -382,15 +390,15 @@ bool RenderCounter::isCounter() const
     return true;
 }
 
-PassRefPtr<StringImpl> RenderCounter::originalText() const
+String RenderCounter::originalText() const
 {
     if (!m_counterNode) {
         RenderObject* beforeAfterContainer = parent();
         while (true) {
             if (!beforeAfterContainer)
-                return 0;
+                return String();
             if (!beforeAfterContainer->isAnonymous() && !beforeAfterContainer->isPseudoElement())
-                return 0; // RenderCounters are restricted to before and after pseudo elements
+                return String(); // RenderCounters are restricted to before and after pseudo elements
             PseudoId containerStyle = beforeAfterContainer->style()->styleType();
             if ((containerStyle == BEFORE) || (containerStyle == AFTER))
                 break;
@@ -414,7 +422,7 @@ PassRefPtr<StringImpl> RenderCounter::originalText() const
         }
     }
 
-    return text.impl();
+    return text;
 }
 
 void RenderCounter::updateCounter()

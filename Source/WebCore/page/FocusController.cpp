@@ -163,7 +163,7 @@ static inline bool shouldVisit(Element* element, KeyboardEvent* event)
     return element->isKeyboardFocusable(event) || isNonFocusableShadowHost(element, event);
 }
 
-FocusController::FocusController(Page* page)
+FocusController::FocusController(Page& page)
     : m_page(page)
     , m_isActive(false)
     , m_isFocused(false)
@@ -172,14 +172,9 @@ FocusController::FocusController(Page* page)
 {
 }
 
-PassOwnPtr<FocusController> FocusController::create(Page* page)
-{
-    return adoptPtr(new FocusController(page));
-}
-
 void FocusController::setFocusedFrame(PassRefPtr<Frame> frame)
 {
-    ASSERT(!frame || frame->page() == m_page);
+    ASSERT(!frame || frame->page() == &m_page);
     if (m_focusedFrame == frame || m_isChangingFocusedFrame)
         return;
 
@@ -201,7 +196,7 @@ void FocusController::setFocusedFrame(PassRefPtr<Frame> frame)
         newFrame->document()->dispatchWindowEvent(Event::create(eventNames().focusEvent, false, false));
     }
 
-    m_page->chrome().focusedFrameChanged(newFrame.get());
+    m_page.chrome().focusedFrameChanged(newFrame.get());
 
     m_isChangingFocusedFrame = false;
 }
@@ -210,7 +205,7 @@ Frame& FocusController::focusedOrMainFrame() const
 {
     if (Frame* frame = focusedFrame())
         return *frame;
-    return m_page->mainFrame();
+    return m_page.mainFrame();
 }
 
 void FocusController::setFocused(bool focused)
@@ -224,7 +219,7 @@ void FocusController::setFocused(bool focused)
         focusedOrMainFrame().eventHandler().stopAutoscrollTimer();
 
     if (!m_focusedFrame)
-        setFocusedFrame(&m_page->mainFrame());
+        setFocusedFrame(&m_page.mainFrame());
 
     if (m_focusedFrame->view()) {
         m_focusedFrame->selection().setFocused(focused);
@@ -299,15 +294,15 @@ bool FocusController::advanceFocusInDocumentOrder(FocusDirection direction, Keyb
 
     if (!element) {
         // We didn't find a node to focus, so we should try to pass focus to Chrome.
-        if (!initialFocus && m_page->chrome().canTakeFocus(direction)) {
+        if (!initialFocus && m_page.chrome().canTakeFocus(direction)) {
             document->setFocusedElement(0);
             setFocusedFrame(0);
-            m_page->chrome().takeFocus(direction);
+            m_page.chrome().takeFocus(direction);
             return true;
         }
 
         // Chrome doesn't want focus, so we should wrap focus.
-        element = findFocusableElementRecursively(direction, FocusNavigationScope::focusNavigationScopeOf(m_page->mainFrame().document()), 0, event);
+        element = findFocusableElementRecursively(direction, FocusNavigationScope::focusNavigationScopeOf(m_page.mainFrame().document()), 0, event);
         element = findFocusableElementDescendingDownIntoFrameDocument(direction, element.get(), event);
 
         if (!element)
@@ -606,21 +601,21 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
     if (oldFocusedElement && oldFocusedElement->isRootEditableElement() && !relinquishesEditingFocus(oldFocusedElement))
         return false;
 
-    m_page->editorClient()->willSetInputMethodState();
+    m_page.editorClient()->willSetInputMethodState();
 
     clearSelectionIfNeeded(oldFocusedFrame.get(), newFocusedFrame.get(), element);
 
     if (!element) {
         if (oldDocument)
             oldDocument->setFocusedElement(0);
-        m_page->editorClient()->setInputMethodState(false);
+        m_page.editorClient()->setInputMethodState(false);
         return true;
     }
 
     RefPtr<Document> newDocument = &element->document();
 
     if (newDocument->focusedElement() == element) {
-        m_page->editorClient()->setInputMethodState(element->shouldUseInputMethod());
+        m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());
         return true;
     }
     
@@ -641,7 +636,7 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
     }
 
     if (newDocument->focusedElement() == element)
-        m_page->editorClient()->setInputMethodState(element->shouldUseInputMethod());
+        m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());
 
     return true;
 }
@@ -653,7 +648,7 @@ void FocusController::setActive(bool active)
     
     m_isActive = active;
 
-    if (FrameView* view = m_page->mainFrame().view()) {
+    if (FrameView* view = m_page.mainFrame().view()) {
         if (!view->platformWidget()) {
             view->updateLayoutAndStyleIfNeededRecursive();
             view->updateControlTints();
@@ -681,13 +676,13 @@ void FocusController::setContainingWindowIsVisible(bool containingWindowIsVisibl
 
     m_containingWindowIsVisible = containingWindowIsVisible;
 
-    FrameView* view = m_page->mainFrame().view();
+    FrameView* view = m_page.mainFrame().view();
     if (!view)
         return;
 
     contentAreaDidShowOrHide(view, containingWindowIsVisible);
 
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         FrameView* frameView = frame->view();
         if (!frameView)
             continue;
@@ -698,7 +693,7 @@ void FocusController::setContainingWindowIsVisible(bool containingWindowIsVisibl
 
         for (HashSet<ScrollableArea*>::const_iterator it = scrollableAreas->begin(), end = scrollableAreas->end(); it != end; ++it) {
             ScrollableArea* scrollableArea = *it;
-            ASSERT(scrollableArea->scrollbarsCanBeActive() || m_page->shouldSuppressScrollbarAnimations());
+            ASSERT(scrollableArea->scrollbarsCanBeActive() || m_page.shouldSuppressScrollbarAnimations());
 
             contentAreaDidShowOrHide(scrollableArea, containingWindowIsVisible);
         }

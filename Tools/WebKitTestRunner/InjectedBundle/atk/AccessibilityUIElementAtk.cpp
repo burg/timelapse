@@ -59,7 +59,7 @@ static String coreAttributeToAtkAttribute(JSStringRef attribute)
         return "placeholder-text";
     
     if (attributeString == "AXSortDirection")
-        return "aria-sort";
+        return "sort";
 
     return String();
 }
@@ -158,7 +158,7 @@ static void alterCurrentValue(PlatformUIElement element, int factor)
     atk_value_get_minimum_increment(ATK_VALUE(element.get()), &increment);
 
     GValue newValue = G_VALUE_INIT;
-    g_value_init(&newValue, G_TYPE_DOUBLE);
+    g_value_init(&newValue, G_TYPE_FLOAT);
 
     g_value_set_float(&newValue, g_value_get_float(&currentValue) + factor * g_value_get_float(&increment));
     atk_value_set_current_value(ATK_VALUE(element.get()), &newValue);
@@ -241,10 +241,14 @@ static const gchar* roleToString(AtkRole role)
         return "AXParagraph";
     case ATK_ROLE_PASSWORD_TEXT:
         return "AXPasswordField";
+    case ATK_ROLE_PROGRESS_BAR:
+        return "AXProgressIndicator";
     case ATK_ROLE_PUSH_BUTTON:
         return "AXButton";
     case ATK_ROLE_RADIO_BUTTON:
         return "AXRadioButton";
+    case ATK_ROLE_RADIO_MENU_ITEM:
+        return "AXRadioMenuItem";
     case ATK_ROLE_ROW_HEADER:
         return "AXRowHeader";
     case ATK_ROLE_RULER:
@@ -564,6 +568,24 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::stringAttributeValue(JSStringRe
         return JSStringCreateWithCharacters(0, 0);
 
     String attributeValue = getAttributeSetValueForId(ATK_OBJECT(m_element.get()), atkAttributeName.utf8().data());
+
+    // In case of 'aria-invalid' when the attribute empty or has "false" for ATK
+    // according to http://www.w3.org/WAI/PF/aria-implementation/#mapping attribute
+    // is not mapped but layout tests will expect 'false'.
+    if (attributeValue.isEmpty() && atkAttributeName == "aria-invalid")
+        return JSStringCreateWithUTF8CString("false");
+
+    // We need to translate ATK values exposed for 'aria-sort' (e.g. 'ascending')
+    // into those expected by the layout tests (e.g. 'AXAscendingSortDirection').
+    if (atkAttributeName == "sort") {
+        if (attributeValue == "ascending")
+            return JSStringCreateWithUTF8CString("AXAscendingSortDirection");
+        if (attributeValue == "descending")
+            return JSStringCreateWithUTF8CString("AXDescendingSortDirection");
+
+        return JSStringCreateWithUTF8CString("AXUnknownSortDirection");
+    }
+
     return JSStringCreateWithUTF8CString(attributeValue.utf8().data());
 }
 
@@ -697,12 +719,10 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::language()
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::helpText() const
 {
-    if (!m_element || !ATK_IS_OBJECT(m_element.get()))
-        return JSStringCreateWithCharacters(0, 0);
-
-    String attributeValue = getAttributeSetValueForId(ATK_OBJECT(m_element.get()), "aria-help");
-    GOwnPtr<char> axValue(g_strdup_printf("AXHelp: %s", attributeValue.utf8().data()));
-    return JSStringCreateWithUTF8CString(axValue.get());
+    // FIXME: We need to provide a proper implementation for this that does
+    // not depend on Mac specific concepts such as ATK_RELATION_DESCRIBED_BY,
+    // once it's implemented (see http://webkit.org/b/121684).
+    return JSStringCreateWithCharacters(0, 0);
 }
 
 double AccessibilityUIElement::x()
@@ -1103,13 +1123,26 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::url()
 
 bool AccessibilityUIElement::addNotificationListener(JSValueRef functionCallback)
 {
-    // FIXME: implement
+    if (!functionCallback)
+        return false;
+
+    // Only one notification listener per element.
+    if (m_notificationHandler)
+        return false;
+
+    m_notificationHandler = AccessibilityNotificationHandler::create();
+    m_notificationHandler->setPlatformElement(platformUIElement());
+    m_notificationHandler->setNotificationFunctionCallback(functionCallback);
+
     return true;
 }
 
 bool AccessibilityUIElement::removeNotificationListener()
 {
-    // FIXME: implement
+    // Programmers should not be trying to remove a listener that's already removed.
+    ASSERT(m_notificationHandler);
+    m_notificationHandler = 0;
+
     return true;
 }
 
@@ -1156,7 +1189,7 @@ bool AccessibilityUIElement::hasPopup() const
     if (!m_element || !ATK_IS_OBJECT(m_element.get()))
         return false;
 
-    return equalIgnoringCase(getAttributeSetValueForId(ATK_OBJECT(m_element.get()), "aria-haspopup"), "true");
+    return equalIgnoringCase(getAttributeSetValueForId(ATK_OBJECT(m_element.get()), "haspopup"), "true");
 }
 
 void AccessibilityUIElement::takeFocus()
@@ -1288,6 +1321,12 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::mathPostscriptsDescription() co
 }
 
 JSRetainPtr<JSStringRef> AccessibilityUIElement::mathPrescriptsDescription() const
+{
+    notImplemented();
+    return 0;
+}
+
+JSRetainPtr<JSStringRef> AccessibilityUIElement::classList() const
 {
     notImplemented();
     return 0;

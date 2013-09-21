@@ -76,7 +76,7 @@ public:
     inline bool atTextParagraphSeparator()
     {
         return m_obj && m_obj->preservesNewline() && m_obj->isText() && toRenderText(m_obj)->textLength()
-            && !toRenderText(m_obj)->isWordBreak() && toRenderText(m_obj)->characterAt(m_pos) == '\n';
+            && toRenderText(m_obj)->characterAt(m_pos) == '\n';
     }
     
     inline bool atParagraphSeparator()
@@ -166,7 +166,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
 static inline bool isIteratorTarget(RenderObject* object)
 {
     ASSERT(object); // The iterator will of course return 0, but its not an expected argument to this function.
-    return object->isText() || object->isFloating() || object->isOutOfFlowPositioned() || object->isReplaced();
+    return object->isTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isReplaced();
 }
 
 // This enum is only used for bidiNextShared()
@@ -420,12 +420,17 @@ static inline bool isIsolatedInline(RenderObject* object)
 static inline RenderObject* containingIsolate(RenderObject* object, RenderObject* root)
 {
     ASSERT(object);
+    RenderObject* containingIsolateObject = 0;
     while (object && object != root) {
+        if (containingIsolateObject && !isIsolatedInline(object))
+            break;
+
         if (isIsolatedInline(object))
-            return object;
+            containingIsolateObject = object;
+
         object = object->parent();
     }
-    return 0;
+    return containingIsolateObject;
 }
 
 static inline unsigned numberOfIsolateAncestors(const InlineIterator& iter)

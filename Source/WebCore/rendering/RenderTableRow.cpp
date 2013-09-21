@@ -113,14 +113,14 @@ void RenderTableRow::addChild(RenderObject* child, RenderObject* beforeChild)
         if (last && last->isAnonymous() && last->isTableCell() && !last->isBeforeOrAfterContent()) {
             if (beforeChild == last)
                 beforeChild = last->firstChild();
-            last->addChild(child, beforeChild);
+            toRenderTableCell(last)->addChild(child, beforeChild);
             return;
         }
 
         if (beforeChild && !beforeChild->isAnonymous() && beforeChild->parent() == this) {
             RenderObject* cell = beforeChild->previousSibling();
             if (cell && cell->isTableCell() && cell->isAnonymous()) {
-                cell->addChild(child);
+                toRenderTableCell(cell)->addChild(child);
                 return;
             }
         }
@@ -264,16 +264,16 @@ void RenderTableRow::imageChanged(WrappedImagePtr, const IntRect*)
     repaint();
 }
 
-RenderTableRow* RenderTableRow::createAnonymous(Document* document)
+RenderTableRow* RenderTableRow::createAnonymous(Document& document)
 {
-    RenderTableRow* renderer = new (document->renderArena()) RenderTableRow(0);
+    RenderTableRow* renderer = new (*document.renderArena()) RenderTableRow(0);
     renderer->setDocumentForAnonymous(document);
     return renderer;
 }
 
 RenderTableRow* RenderTableRow::createAnonymousWithParentRenderer(const RenderObject* parent)
 {
-    RenderTableRow* newRow = RenderTableRow::createAnonymous(&parent->document());
+    RenderTableRow* newRow = RenderTableRow::createAnonymous(parent->document());
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE_ROW);
     newRow->setStyle(newStyle.release());
     return newRow;

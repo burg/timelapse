@@ -75,11 +75,11 @@
 #include "PageCache.h"
 #include "PageGroup.h"
 #include "RegularExpression.h"
-#include "RenderPart.h"
 #include "RenderTableCell.h"
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
+#include "RenderWidget.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SVGNames.h"
 #include "ScriptController.h"
@@ -157,11 +157,11 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
     , m_loader(*this, *frameLoaderClient)
     , m_navigationScheduler(this)
     , m_ownerElement(ownerElement)
-    , m_script(adoptPtr(new ScriptController(this)))
+    , m_script(createOwned<ScriptController>(*this))
     , m_editor(Editor::create(*this))
     , m_selection(adoptPtr(new FrameSelection(this)))
     , m_eventHandler(adoptPtr(new EventHandler(*this)))
-    , m_animationController(adoptPtr(new AnimationController(this)))
+    , m_animationController(createOwned<AnimationController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
 #if ENABLE(ORIENTATION_EVENTS)
@@ -275,7 +275,8 @@ void Frame::setDocument(PassRefPtr<Document> newDocument)
 
     if (m_doc && m_doc->attached() && !m_doc->inPageCache()) {
         // FIXME: We don't call willRemove here. Why is that OK?
-        m_doc->detach();
+        m_doc->destroyRenderTree();
+        m_doc->disconnectFromFrame();
     }
 
     m_doc = newDocument.get();
@@ -563,7 +564,7 @@ RenderView* Frame::contentRenderer() const
     return document() ? document()->renderView() : 0;
 }
 
-RenderPart* Frame::ownerRenderer() const
+RenderWidget* Frame::ownerRenderer() const
 {
     HTMLFrameOwnerElement* ownerElement = m_ownerElement;
     if (!ownerElement)
@@ -575,9 +576,9 @@ RenderPart* Frame::ownerRenderer() const
     // that it has started but canceled, then this can turn into an ASSERT
     // since m_ownerElement would be 0 when the load is canceled.
     // https://bugs.webkit.org/show_bug.cgi?id=18585
-    if (!object->isRenderPart())
+    if (!object->isWidget())
         return 0;
-    return toRenderPart(object);
+    return toRenderWidget(object);
 }
 
 Frame* Frame::frameForWidget(const Widget* widget)
@@ -585,8 +586,7 @@ Frame* Frame::frameForWidget(const Widget* widget)
     ASSERT_ARG(widget, widget);
 
     if (RenderWidget* renderer = RenderWidget::find(widget))
-        if (Node* node = renderer->node())
-            return node->document().frame();
+        return renderer->frameOwnerElement().document().frame();
 
     // Assume all widgets are either a FrameView or owned by a RenderWidget.
     // FIXME: That assumption is not right for scroll bars!
@@ -885,7 +885,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
         child->setPageAndTextZoomFactors(m_pageZoomFactor, m_textZoomFactor);
 
     if (FrameView* view = this->view()) {
-        if (document->renderer() && document->renderer()->needsLayout() && view->didFirstLayout())
+        if (document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layout();
     }
 

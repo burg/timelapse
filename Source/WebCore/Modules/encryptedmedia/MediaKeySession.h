@@ -31,6 +31,7 @@
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "ExceptionCode.h"
+#include "GenericEventQueue.h"
 #include "Timer.h"
 #include <runtime/Uint8Array.h>
 #include <wtf/Deque.h>
@@ -40,7 +41,6 @@
 
 namespace WebCore {
 
-class GenericEventQueue;
 class MediaKeyError;
 class MediaKeys;
 class CDMSession;
@@ -84,7 +84,7 @@ protected:
     String m_keySystem;
     String m_sessionId;
     RefPtr<MediaKeyError> m_error;
-    OwnPtr<GenericEventQueue> m_asyncEventQueue;
+    GenericEventQueue m_asyncEventQueue;
     OwnPtr<CDMSession> m_session;
 
     struct PendingKeyRequest {

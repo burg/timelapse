@@ -65,10 +65,10 @@ void Pasteboard::writeSelection(Range* selectedRange, bool, Frame* frame, Should
     BlackBerry::Platform::Clipboard::write(text, html, url);
 }
 
-void Pasteboard::writeURL(KURL const& url, String const&, Frame*)
+void Pasteboard::write(const PasteboardURL& pasteboardURL)
 {
-    ASSERT(!url.isEmpty());
-    BlackBerry::Platform::Clipboard::writeURL(url.string());
+    ASSERT(!pasteboardURL.url.isEmpty());
+    BlackBerry::Platform::Clipboard::writeURL(pasteboardURL.url.string());
 }
 
 void Pasteboard::writePlainText(const String& text, SmartReplaceOption)
@@ -76,9 +76,9 @@ void Pasteboard::writePlainText(const String& text, SmartReplaceOption)
     BlackBerry::Platform::Clipboard::writePlainText(text);
 }
 
-String Pasteboard::plainText(Frame*)
+void Pasteboard::read(PasteboardPlainText& text)
 {
-    return BlackBerry::Platform::Clipboard::readPlainText();
+    text.text = BlackBerry::Platform::Clipboard::readPlainText();
 }
 
 PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame* frame, PassRefPtr<Range> context, bool allowPlainText, bool& chosePlainText)

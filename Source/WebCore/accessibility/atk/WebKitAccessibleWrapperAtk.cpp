@@ -35,6 +35,7 @@
 #if HAVE(ACCESSIBILITY)
 
 #include "AXObjectCache.h"
+#include "AccessibilityListBoxOption.h"
 #include "Document.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -91,15 +92,7 @@ struct _WebKitAccessiblePrivate {
 
 static AccessibilityObject* fallbackObject()
 {
-    // FIXME: An AXObjectCache with a Document is meaningless.
-    static AXObjectCache* fallbackCache = new AXObjectCache(0);
-    static AccessibilityObject* object = 0;
-    if (!object) {
-        // FIXME: using fallbackCache->getOrCreate(ListBoxOptionRole) is a hack
-        object = fallbackCache->getOrCreate(ListBoxOptionRole);
-        object->ref();
-    }
-
+    static AccessibilityObject* object = AccessibilityListBoxOption::create().leakRef();
     return object;
 }
 
@@ -496,24 +489,17 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
         attributeSet = addToAtkAttributeSet(attributeSet, "placeholder-text", placeholder.utf8().data());
 
     if (coreObject->ariaHasPopup())
-        attributeSet = addToAtkAttributeSet(attributeSet, "aria-haspopup", "true");
+        attributeSet = addToAtkAttributeSet(attributeSet, "haspopup", "true");
 
     String invalidStatus = coreObject->invalidStatus().string();
     if (!invalidStatus.isEmpty() && invalidStatus != "false")
         attributeSet = addToAtkAttributeSet(attributeSet, "aria-invalid", coreObject->invalidStatus().string().utf8().data());
 
-    String helpText = coreObject->helpText();
-    if (!helpText.isEmpty())
-        attributeSet = addToAtkAttributeSet(attributeSet, "aria-help", helpText.utf8().data());
-
-    const char* sortDescription = "AXUnknownSortDirection";
     AccessibilitySortDirection sortDirection = coreObject->sortDirection();
-    if (sortDirection == SortDirectionAscending)
-        sortDescription = "AXAscendingSortDirection";
-    else if (sortDirection == SortDirectionDescending)
-        sortDescription = "AXDescendingSortDirection";
-
-    attributeSet = addToAtkAttributeSet(attributeSet, "aria-sort", sortDescription);
+    if (sortDirection != SortDirectionNone) {
+        attributeSet = addToAtkAttributeSet(attributeSet, "sort",
+            sortDirection == SortDirectionAscending ? "ascending" : "descending");
+    }
 
     return attributeSet;
 }
@@ -551,6 +537,8 @@ static AtkRole atkRole(AccessibilityRole role)
     case MenuListOptionRole:
     case MenuItemRole:
         return ATK_ROLE_MENU_ITEM;
+    case MenuItemRadioRole:
+        return ATK_ROLE_RADIO_MENU_ITEM;
     case ColumnRole:
         // return ATK_ROLE_TABLE_COLUMN_HEADER; // Is this right?
         return ATK_ROLE_UNKNOWN; // Matches Mozilla
@@ -1033,7 +1021,7 @@ static guint16 getInterfaceMaskFromObject(AccessibilityObject* coreObject)
         interfaceMask |= 1 << WAI_DOCUMENT;
 
     // Value
-    if (role == SliderRole || role == SpinButtonRole || role == ScrollBarRole)
+    if (role == SliderRole || role == SpinButtonRole || role == ScrollBarRole || role == ProgressIndicatorRole)
         interfaceMask |= 1 << WAI_VALUE;
 
 #if ENABLE(INPUT_TYPE_COLOR)

@@ -36,6 +36,7 @@
 #include "CSSSelectorList.h"
 #include "CSSValueKeywords.h"
 #include "HTMLElement.h"
+#include "InspectorInstrumentation.h"
 #include "RenderRegion.h"
 #include "SVGElement.h"
 #include "SelectorCheckerFastPath.h"
@@ -373,8 +374,7 @@ inline bool ElementRuleCollector::ruleMatches(const RuleData& ruleData, const Co
     context.pseudoId = m_pseudoStyleRequest.pseudoId;
     context.scrollbar = m_pseudoStyleRequest.scrollbar;
     context.scrollbarPart = m_pseudoStyleRequest.scrollbarPart;
-    SelectorChecker::Match match = selectorChecker.match(context, dynamicPseudo);
-    if (match != SelectorChecker::SelectorMatches)
+    if (!selectorChecker.match(context, dynamicPseudo))
         return false;
     if (m_pseudoStyleRequest.pseudoId != NOPSEUDO && m_pseudoStyleRequest.pseudoId != dynamicPseudo)
         return false;
@@ -409,6 +409,12 @@ void ElementRuleCollector::doCollectMatchingRulesForList(const Vector<RuleData>*
             cookie = InspectorInstrumentation::willMatchRule(&document(), rule, m_inspectorCSSOMWrappers, document().styleSheetCollection());
         PseudoId dynamicPseudo = NOPSEUDO;
         if (ruleMatches(ruleData, matchRequest.scope, dynamicPseudo)) {
+            // For SharingRules testing, any match is good enough, we don't care what is matched.
+            if (m_mode == SelectorChecker::SharingRules) {
+                addMatchedRule(&ruleData);
+                break;
+            }
+
             // If the rule has no properties to apply, then ignore it in the non-debug mode.
             const StylePropertySet& properties = rule->properties();
             if (properties.isEmpty() && !matchRequest.includeEmptyRules) {

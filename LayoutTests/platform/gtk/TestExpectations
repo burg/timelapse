@@ -69,7 +69,7 @@ webkit.org/b/71851 http/tests/security/contentTypeOptions [ Skip ]
 fast/repaint/overflow-scroll-touch-repaint.html [ Skip ]
 
 # These test -apple- and -khtml- prefixed CSS properties, which we don't support.
-inspector/styles/vendor-prefixes.html [ WontFix Pass ]
+inspector/styles/vendor-prefixes.html [ Skip ]
 
 # This port doesn't support detecting slow unload handlers.
 fast/dom/Window/slow-unload-handler.html [ WontFix Timeout Failure ]
@@ -445,7 +445,7 @@ webkit.org/b/86176 [ Debug ] ietestcenter/css3/valuesandunits/units-000.htm [ Cr
 
 webkit.org/b/93812 [ Debug ] svg/custom/use-instanceRoot-as-event-target.xhtml [ Crash Pass ]
 
-webkit.org/b/90957 [ Release ] fast/js/random-array-gc-stress.html [ Crash Pass ]
+webkit.org/b/90957 [ Release ] js/dom/random-array-gc-stress.html [ Crash Pass ]
 
 webkit.org/b/94458 [ Debug ] fast/events/message-port-context-destroyed.html [ Crash Pass ]
 
@@ -686,9 +686,9 @@ webkit.org/b/119042 animations/resume-after-page-cache.html [ Failure Pass ]
 
 # These tests started to time out (or time out more often) since the FTL merge
 webkit.org/b/119253 [ Release ] css3/autoclose-braces-and-parentheses.html [ Timeout Pass ]
-webkit.org/b/119253 [ Debug ] fast/js/dfg-osr-entry-hoisted-clobbered-structure-check.html [ Timeout Pass ]
-webkit.org/b/119253 [ Debug ] fast/js/regress/nested-function-parsing.html [ Timeout Pass ]
-webkit.org/b/119253 [ Debug ] fast/js/regress/new-array-buffer-dead.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] js/dfg-osr-entry-hoisted-clobbered-structure-check.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] js/regress/nested-function-parsing.html [ Timeout Pass ]
+webkit.org/b/119253 [ Debug ] js/regress/new-array-buffer-dead.html [ Timeout Pass ]
 webkit.org/b/119253 [ Debug ] fast/media/update-media-query-css-parser.html [ Timeout Pass ]
 webkit.org/b/119253 fast/workers/dedicated-worker-lifecycle.html [ Timeout Pass ]
 
@@ -721,23 +721,23 @@ Bug(GTK) css3/flexbox/position-absolute-child.html [ Pass Slow ]
 Bug(GTK) css3/flexbox/multiline-justify-content.html [ Pass Slow ]
 Bug(GTK) [ Debug ] editing/selection/move-by-word-visually-crash-test-5.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/css/visited-link-hang.html [ Pass Slow ]
-Bug(GTK) fast/js/create-lots-of-workers.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-double-vote-fuzz.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-float32array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-float64array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-int16array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-int32array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-int32array-overflow-values.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-int8array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-uint16array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-uint32array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-uint32array-overflow-values.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-uint8array.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/dfg-uint8clampedarray.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/random-array-gc-stress.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/regress/method-on-number.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/string-replacement-outofmemory.html [ Pass Slow ]
-Bug(GTK) [ Debug ] fast/js/toString-and-valueOf-override.html [ Pass Slow ]
+Bug(GTK) js/dom/create-lots-of-workers.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-double-vote-fuzz.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-float32array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-float64array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-int16array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-int32array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-int32array-overflow-values.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-int8array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-uint16array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-uint32array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-uint32array-overflow-values.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-uint8array.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dfg-uint8clampedarray.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/dom/random-array-gc-stress.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/regress/method-on-number.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/string-replacement-outofmemory.html [ Pass Slow ]
+Bug(GTK) [ Debug ] js/toString-and-valueOf-override.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/frames/lots-of-iframes.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/frames/lots-of-objects.html [ Pass Slow ]
 Bug(GTK) [ Debug ] fast/workers/worker-cloneport.html [ Pass Slow ]
@@ -773,7 +773,7 @@ webkit.org/b/116958 http/tests/navigation/slowtimerredirect-basic.html [ Pass Sl
 
 webkit.org/b/119264 transitions/created-while-suspended.html [ Pass Slow ]
 
-webkit.org/b/120201 fast/js/regress/emscripten-memops.html [ Pass Slow ]
+webkit.org/b/120201 js/regress/emscripten-memops.html [ Pass Slow ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of slow tests
@@ -812,7 +812,7 @@ webkit.org/b/116958 http/tests/navigation/scrollstate-after-http-equiv-refresh.h
 webkit.org/b/116958 http/tests/navigation/scrollstate-after-location-reload.html [ Timeout ]
 
 # These tests time out after the FTL merge
-webkit.org/b/119254 fast/js/regress/marsaglia.html [ Timeout ]
+webkit.org/b/119254 js/regress/marsaglia.html [ Timeout ]
 webkit.org/b/119254 fast/workers/worker-call.html [ Timeout ]
 
 webkit.org/b/120682 inspector-protocol/page/archive.html [ Timeout ]
@@ -852,13 +852,13 @@ webkit.org/b/73766 css3/unicode-bidi-isolate-aharon-failing.html [ ImageOnlyFail
 
 webkit.org/b/79757 fast/selectors/selection-window-inactive.html [ ImageOnlyFailure ]
 
+webkit.org/b/121684 accessibility/aria-describedby-on-input.html [ Failure ]
 webkit.org/b/98355 accessibility/aria-link-supports-press.html [ Failure ]
 webkit.org/b/98357 accessibility/aria-readonly.html [ Failure ]
 webkit.org/b/98359 accessibility/aria-text-role.html [ Failure ]
 webkit.org/b/98360 accessibility/aria-used-on-image-maps.html [ Failure ]
 webkit.org/b/98361 accessibility/button-press-action.html [ Failure ]
 webkit.org/b/98363 accessibility/canvas-fallback-content-2.html [ Failure ]
-webkit.org/b/98370 accessibility/loading-iframe-sends-notification.html [ Failure ]
 webkit.org/b/98371 accessibility/loading-iframe-updates-axtree.html [ Failure ]
 webkit.org/b/98372 accessibility/onclick-handlers.html [ Failure ]
 webkit.org/b/98375 accessibility/secure-textfield-title-ui.html [ Failure ]
@@ -966,47 +966,9 @@ webkit.org/b/36627 editing/selection/extend-after-mouse-selection.html [ Failure
 Bug(GTK) fast/overflow/scrollbar-restored-and-then-locked.html [ Failure ]
 
 webkit.org/b/83174 inspector [ Skip ]
+webkit.org/b/83174 inspector-protocol/heap-profiler [ Skip ]
 webkit.org/b/83174 http/tests/inspector [ Skip ]
-
-webkit.org/b/82886 inspector/styles/override-screen-size.html [ Failure ]
-webkit.org/b/88780 inspector/debugger/dom-breakpoints.html [ Timeout Failure ]
-webkit.org/b/88780 inspector/debugger/event-listener-breakpoints.html [ Failure ]
-webkit.org/b/88780 inspector/debugger/step-through-event-listeners.html [ Failure ]
-webkit.org/b/89056 inspector/debugger/xhr-breakpoints.html [ Failure Timeout ]
-webkit.org/b/40300 inspector/debugger/live-edit.html [ Timeout Failure ]
-webkit.org/b/40300 inspector/debugger/live-edit-breakpoints.html [ Failure ]
-webkit.org/b/89652 inspector/debugger/debugger-compile-and-run.html [ Failure ]
-webkit.org/b/85709 inspector/extensions/extensions-eval-content-script.html [ Failure ]
-webkit.org/b/85709 inspector/extensions/extensions-audits-content-script.html [ Failure ]
-
-# These inspector tests fell out of the radar after the transition to NRWT
-# Some time out and some are flaky or present different baselines.
-Bug(GTK) inspector/debugger/scripts-panel.html [ Failure Pass ]
-Bug(GTK) inspector/elements/edit-dom-actions.html [ Failure Timeout Pass ]
-Bug(GTK) inspector/timeline/timeline-paint.html [ Failure ]
-Bug(GTK) inspector/timeline/timeline-decode-resize.html [ Failure ]
-Bug(GTK) http/tests/inspector/resource-har-pages.html [ Failure ]
-Bug(GTK) http/tests/inspector/resource-parameters.html [ Timeout ]
-
-webkit.org/b/56691 http/tests/inspector/network/network-size-chunked.html [ Failure ]
-webkit.org/b/56691 http/tests/inspector/network/network-size-sync.html [ Failure ]
-webkit.org/b/56691 http/tests/inspector/network/network-size.html [ Failure ]
-webkit.org/b/51380 http/tests/inspector/console-websocket-error.html [ Failure Timeout ]
-
-# JSC doesn't support heap profiling
-webkit.org/b/50485 inspector/profiler/heap-snapshot-comparison-dom-groups-change.html [ Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-inspect-dom-wrapper.html [ Timeout Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-loader.html [ Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-reveal-in-dominators-view.html [ Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-retainers.html [ Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-show-ranges.html [ Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-fields.html [ Failure ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-instances.html [ Failure ]
-webkit.org/b/50485 inspector-protocol/heap-profiler [ Skip ]
-
-webkit.org/b/73936 inspector/profiler/canvas2d/canvas-has-uninstrumented-canvases.html [ Failure ]
-webkit.org/b/73936 inspector/profiler/canvas2d/canvas-stack-trace.html [ Failure ]
-webkit.org/b/73936 inspector/profiler/canvas2d/canvas-replay-log-grid.html [ Timeout Failure ]
+webkit.org/b/83174 http/tests/inspector-enabled [ Skip ]
 
 webkit.org/b/37613 webkit.org/b/20011 printing [ Skip ]
 webkit.org/b/37613 editing/execCommand/print.html [ Skip ]
@@ -1368,8 +1330,6 @@ webkit.org/b/118577 platform/gtk/accessibility/replaced-objects-in-anonymous-blo
 
 webkit.org/b/114625 http/tests/cache/willsendrequest-returns-null-for-memory-cache-load.html [ Failure ]
 
-webkit.org/b/114626 accessibility/link-inside-button-accessible-text.html [ Failure ]
-
 webkit.org/b/114612 editing/style/block-style-005.html [ Failure ]
 
 webkit.org/b/115025 fast/events/constructors/mouse-event-constructor.html [ Failure ]
@@ -1453,16 +1413,6 @@ webkit.org/b/120105 http/tests/navigation/post-frames-goback1-uncached.html [ Fa
 
 webkit.org/b/120203 http/tests/security/cross-frame-access-getOwnPropertyDescriptor.html [ Failure ]
 
-webkit.org/b/120669 accessibility/notification-listeners.html [ Failure ]
-
-webkit.org/b/120670 accessibility/lists.html [ Failure ]
-webkit.org/b/120670 accessibility/plugin.html [ Failure ]
-webkit.org/b/120670 accessibility/table-detection.html [ Failure ]
-webkit.org/b/120670 accessibility/table-one-cell.html [ Failure ]
-webkit.org/b/120670 accessibility/table-with-aria-role.html [ Failure ]
-webkit.org/b/120670 accessibility/table-with-rules.html [ Failure ]
-webkit.org/b/120670 accessibility/transformed-element.html [ Failure ]
-
 webkit.org/b/120596 css3/background/background-repeat-space-border.html [ ImageOnlyFailure ]
 webkit.org/b/120596 css3/background/background-repeat-space-content.html [ ImageOnlyFailure ]
 webkit.org/b/120596 css3/background/background-repeat-space-padding.html [ ImageOnlyFailure ]
@@ -1474,8 +1424,11 @@ webkit.org/b/84045 accessibility/image-map1.html [ Failure ]
 
 webkit.org/b/120836 fast/regions/text-region-split-vertical-rl.html [ Failure ]
 
-webkit.org/b/120776 fast/hidpi/image-srcset-fraction.html [ Failure ]
 webkit.org/b/120776 fast/hidpi/image-srcset-change-dynamically-from-js-2x.html [ Failure ]
+webkit.org/b/120776 fast/hidpi/image-srcset-fraction.html [ Failure ]
+webkit.org/b/120776 fast/hidpi/image-srcset-fraction-1.5x.html [ Failure ]
+webkit.org/b/120776 fast/hidpi/image-srcset-invalid-inputs-correct-src.html [ Failure ]
+webkit.org/b/120776 fast/hidpi/image-srcset-invalid-inputs-except-one.html [ Failure ]
 webkit.org/b/120776 fast/hidpi/image-srcset-simple-2x.html [ Failure ]
 webkit.org/b/120776 fast/hidpi/image-srcset-src-selection-2x.html [ Failure ]
 
@@ -1485,6 +1438,10 @@ webkit.org/b/120842 fast/regions/overflow-in-uniform-regions-dynamic.html [ Imag
 webkit.org/b/120842 fast/regions/overflow-moving-below-floats-in-variable-width-regions.html [ ImageOnlyFailure ]
 
 webkit.org/b/120846 svg/custom/masking-clipping-hidpi.svg [ ImageOnlyFailure ]
+
+webkit.org/b/121593 accessibility/radio-button-title-label.html  [ Failure ]
+
+webkit.org/b/121594 accessibility/self-referencing-aria-labelledby.html [ Failure ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests failing

@@ -28,6 +28,7 @@
 
 #include "RenderFullScreen.h"
 
+#include "RenderBlockFlow.h"
 #include "RenderLayer.h"
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -36,13 +37,13 @@
 
 using namespace WebCore;
 
-class RenderFullScreenPlaceholder FINAL : public RenderBlock {
+class RenderFullScreenPlaceholder FINAL : public RenderBlockFlow {
 public:
     RenderFullScreenPlaceholder(RenderFullScreen* owner) 
-        : RenderBlock(0)
+        : RenderBlockFlow(0)
         , m_owner(owner) 
     {
-        setDocumentForAnonymous(&owner->document());
+        setDocumentForAnonymous(owner->document());
     }
 private:
     virtual bool isRenderFullScreenPlaceholder() const { return true; }
@@ -63,9 +64,9 @@ RenderFullScreen::RenderFullScreen()
     setReplaced(false); 
 }
 
-RenderFullScreen* RenderFullScreen::createAnonymous(Document* document)
+RenderFullScreen* RenderFullScreen::createAnonymous(Document& document)
 {
-    RenderFullScreen* renderer = new (document->renderArena()) RenderFullScreen();
+    RenderFullScreen* renderer = new (*document.renderArena()) RenderFullScreen();
     renderer->setDocumentForAnonymous(document);
     return renderer;
 }
@@ -73,7 +74,7 @@ RenderFullScreen* RenderFullScreen::createAnonymous(Document* document)
 void RenderFullScreen::willBeDestroyed()
 {
     if (m_placeholder) {
-        remove();
+        removeFromParent();
         if (!m_placeholder->beingDestroyed())
             m_placeholder->destroy();
         ASSERT(!m_placeholder);
@@ -113,9 +114,9 @@ static PassRefPtr<RenderStyle> createFullScreenStyle()
     return fullscreenStyle.release();
 }
 
-RenderObject* RenderFullScreen::wrapRenderer(RenderObject* object, RenderObject* parent, Document* document)
+RenderFullScreen* RenderFullScreen::wrapRenderer(RenderObject* object, RenderElement* parent, Document* document)
 {
-    RenderFullScreen* fullscreenRenderer = RenderFullScreen::createAnonymous(document);
+    RenderFullScreen* fullscreenRenderer = RenderFullScreen::createAnonymous(*document);
     fullscreenRenderer->setStyle(createFullScreenStyle());
     if (parent && !parent->isChildAllowed(fullscreenRenderer, fullscreenRenderer->style())) {
         fullscreenRenderer->destroy();
@@ -124,7 +125,7 @@ RenderObject* RenderFullScreen::wrapRenderer(RenderObject* object, RenderObject*
     if (object) {
         // |object->parent()| can be null if the object is not yet attached
         // to |parent|.
-        if (RenderObject* parent = object->parent()) {
+        if (RenderElement* parent = object->parent()) {
             RenderBlock* containingBlock = object->containingBlock();
             ASSERT(containingBlock);
             // Since we are moving the |object| to a new parent |fullscreenRenderer|,
@@ -132,7 +133,7 @@ RenderObject* RenderFullScreen::wrapRenderer(RenderObject* object, RenderObject*
             containingBlock->deleteLineBoxTree();
 
             parent->addChild(fullscreenRenderer, object);
-            object->remove();
+            object->removeFromParent();
             
             // Always just do a full layout to ensure that line boxes get deleted properly.
             // Because objects moved from |parent| to |fullscreenRenderer|, we want to
@@ -157,14 +158,14 @@ void RenderFullScreen::unwrapRenderer()
             // lying around on the child.
             if (child->isBox())
                 toRenderBox(child)->clearOverrideSize();
-            child->remove();
+            child->removeFromParent();
             parent()->addChild(child, this);
             parent()->setNeedsLayoutAndPrefWidthsRecalc();
         }
     }
     if (placeholder())
-        placeholder()->remove();
-    remove();
+        placeholder()->removeFromParent();
+    removeFromParent();
     document().setFullScreenRenderer(0);
 }
 

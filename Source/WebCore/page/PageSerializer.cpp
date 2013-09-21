@@ -50,6 +50,7 @@
 #include "MIMETypeRegistry.h"
 #include "MarkupAccumulator.h"
 #include "Page.h"
+#include "RenderElement.h"
 #include "StyleCachedImage.h"
 #include "StyleImage.h"
 #include "StylePropertySet.h"
@@ -91,7 +92,7 @@ static bool shouldIgnoreElement(Element* element)
 static const QualifiedName& frameOwnerURLAttributeName(const HTMLFrameOwnerElement& frameOwner)
 {
     // FIXME: We should support all frame owners including applets.
-    return frameOwner.hasTagName(HTMLNames::objectTag) ? HTMLNames::dataAttr : HTMLNames::srcAttr;
+    return isHTMLObjectElement(frameOwner) ? HTMLNames::dataAttr : HTMLNames::srcAttr;
 }
 
 class SerializerMarkupAccumulator : public WebCore::MarkupAccumulator {

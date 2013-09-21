@@ -42,12 +42,12 @@ static const int maxRowspan = 8190;
 
 using namespace HTMLNames;
 
-inline HTMLTableCellElement::HTMLTableCellElement(const QualifiedName& tagName, Document* document)
+inline HTMLTableCellElement::HTMLTableCellElement(const QualifiedName& tagName, Document& document)
     : HTMLTablePartElement(tagName, document)
 {
 }
 
-PassRefPtr<HTMLTableCellElement> HTMLTableCellElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLTableCellElement> HTMLTableCellElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLTableCellElement(tagName, document));
 }
@@ -179,7 +179,7 @@ HTMLTableCellElement* HTMLTableCellElement::cellAbove() const
     if (!cellAboveRenderer)
         return 0;
 
-    return static_cast<HTMLTableCellElement*>(cellAboveRenderer->node());
+    return static_cast<HTMLTableCellElement*>(cellAboveRenderer->element());
 }
 
 #ifndef NDEBUG

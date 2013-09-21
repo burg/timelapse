@@ -21,7 +21,7 @@
 
 #include "IntRect.h"
 #include "IntSize.h"
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -39,6 +39,8 @@ namespace WebCore {
 typedef GtkWidget* PlatformWidget;
 #elif PLATFORM(EFL)
 typedef Evas_Object* PlatformWidget;
+#elif PLATFORM(NIX)
+typedef void* PlatformWidget;
 #endif
 
 class WidgetBackingStore {

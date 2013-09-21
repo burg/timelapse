@@ -96,7 +96,7 @@ PageGroup* PageGroup::pageGroup(const String& groupName)
     if (!pageGroups)
         pageGroups = new PageGroupMap;
 
-    PageGroupMap::AddResult result = pageGroups->add(groupName, 0);
+    PageGroupMap::AddResult result = pageGroups->add(groupName, nullptr);
 
     if (result.isNewEntry) {
         ASSERT(!result.iterator->value);
@@ -265,7 +265,7 @@ StorageNamespace* PageGroup::localStorage()
 
 StorageNamespace* PageGroup::transientLocalStorage(SecurityOrigin* topOrigin)
 {
-    HashMap<RefPtr<SecurityOrigin>, RefPtr<StorageNamespace> >::AddResult result = m_transientLocalStorageMap.add(topOrigin, 0);
+    auto result = m_transientLocalStorageMap.add(topOrigin, nullptr);
 
     if (result.isNewEntry)
         result.iterator->value = StorageNamespace::transientLocalStorageNamespace(this, topOrigin);

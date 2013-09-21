@@ -1,3 +1,88 @@
+2013-09-20  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build fix after r156216.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in: I
+        accidentally exposed the symbol of the calling function, not
+        the missing symbol!
+
+2013-09-20  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed build fix after r156215.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in: Expose
+        missing symbols needed by DRT.
+
+2013-09-20  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Use COMPILE_DEFINITIONS target property for setting BUILDING_* defines
+        https://bugs.webkit.org/show_bug.cgi?id=121672
+
+        Reviewed by Gyuyoung Kim.
+
+        Since the scope of add_definitions() is always a whole file, we need to use
+        target properties instead to set definitions only for specific targets.
+
+        * CMakeLists.txt:
+
+2013-09-19  Bear Travis  <betravis@adobe.com>
+
+        CSS_SHAPES not supported on AppleWin port
+        https://bugs.webkit.org/show_bug.cgi?id=118810
+
+        Reviewed by Brent Fulgham.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in: Add required symbol for enabling CSS Shapes.
+
+2013-09-18  peavo@outlook.com  <peavo@outlook.com>
+
+        [Win] TestWebKitAPI does not compile.
+        https://bugs.webkit.org/show_bug.cgi?id=121485
+
+        Reviewed by Brent Fulgham.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in: Export needed symbols.
+
+2013-09-17  Andreas Kling  <akling@apple.com>
+
+        Some build juice for Windows.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+
+2013-09-13  Tim Horton  <timothy_horton@apple.com>
+
+        Unreviewed; part one of build fix for Windows.
+        Sorry for the noise, I thought I'd fixed it.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+
+2013-09-12  peavo@outlook.com  <peavo@outlook.com>
+
+        [Win] TestWebKitAPI fails to link.
+        https://bugs.webkit.org/show_bug.cgi?id=121223
+
+        Reviewed by Brent Fulgham.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in: Add required symbol.
+
+2013-09-11  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Avoid converting from IntSize->SIZE->IntSize
+        https://bugs.webkit.org/show_bug.cgi?id=121180
+
+        Reviewed by Anders Carlsson.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+        Remove unused symbol export.
+
+2013-09-08  Antti Koivisto  <antti@apple.com>
+
+        Fix window build.
+        
+        Not reviewed.
+
+        * WebKit.vcxproj/WebKitExportGenerator/WebKitExports.def.in:
+
 2013-08-30  Brent Fulgham  <bfulgham@apple.com>
 
         [Windows] Unreviewed build correction.

@@ -46,7 +46,7 @@
 #include "NodeTraversal.h"
 #include "PositionIterator.h"
 #include "Range.h"
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "TextIterator.h"
@@ -571,7 +571,7 @@ PassRefPtr<Range> extendRangeToWrappingNodes(PassRefPtr<Range> range, const Rang
         return range;
 
     // Create new range with the highest editable node contained within the range
-    RefPtr<Range> extendedRange = Range::create(range->ownerDocument());
+    RefPtr<Range> extendedRange = Range::create(&range->ownerDocument());
     extendedRange->selectNode(highestNode, IGNORE_EXCEPTION);
     return extendedRange.release();
 }
@@ -908,9 +908,9 @@ PassRefPtr<HTMLElement> createDefaultParagraphElement(Document* document)
 {
     switch (document->frame()->editor().defaultParagraphSeparator()) {
     case EditorParagraphSeparatorIsDiv:
-        return HTMLDivElement::create(document);
+        return HTMLDivElement::create(*document);
     case EditorParagraphSeparatorIsP:
-        return HTMLParagraphElement::create(document);
+        return HTMLParagraphElement::create(*document);
     }
 
     ASSERT_NOT_REACHED();
@@ -919,27 +919,29 @@ PassRefPtr<HTMLElement> createDefaultParagraphElement(Document* document)
 
 PassRefPtr<HTMLElement> createBreakElement(Document* document)
 {
-    return HTMLBRElement::create(document);
+    return HTMLBRElement::create(*document);
 }
 
 PassRefPtr<HTMLElement> createOrderedListElement(Document* document)
 {
-    return HTMLOListElement::create(document);
+    return HTMLOListElement::create(*document);
 }
 
 PassRefPtr<HTMLElement> createUnorderedListElement(Document* document)
 {
-    return HTMLUListElement::create(document);
+    return HTMLUListElement::create(*document);
 }
 
 PassRefPtr<HTMLElement> createListItemElement(Document* document)
 {
-    return HTMLLIElement::create(document);
+    return HTMLLIElement::create(*document);
 }
 
 PassRefPtr<HTMLElement> createHTMLElement(Document* document, const QualifiedName& name)
 {
-    return HTMLElementFactory::createHTMLElement(name, document, 0, false);
+    if (!document)
+        return nullptr;
+    return HTMLElementFactory::createElement(name, *document);
 }
 
 PassRefPtr<HTMLElement> createHTMLElement(Document* document, const AtomicString& tagName)
@@ -1290,7 +1292,7 @@ bool isBlockFlowElement(const Node* node)
     if (!node->isElementNode())
         return false;
     RenderObject* renderer = node->renderer();
-    return renderer && renderer->isBlockFlow();
+    return renderer && renderer->isRenderBlockFlow();
 }
 
 Element* deprecatedEnclosingBlockFlowElement(Node* node)

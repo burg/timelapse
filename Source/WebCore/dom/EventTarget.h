@@ -55,9 +55,7 @@ namespace WebCore {
     class IDBRequest;
     class IDBTransaction;
     class ScriptProcessorNode;
-    class LocalMediaStream;
     class MediaController;
-    class MediaSource;
     class MediaStream;
     class MessagePort;
     class Node;
@@ -66,7 +64,6 @@ namespace WebCore {
     class ScriptExecutionContext;
     class SharedWorker;
     class SharedWorkerGlobalScope;
-    class SourceBufferList;
     class TextTrack;
     class TextTrackCue;
     class VideoTrackList;
@@ -112,6 +109,7 @@ namespace WebCore {
 
         virtual Node* toNode();
         virtual DOMWindow* toDOMWindow();
+        virtual bool isMessagePort() const;
 
         virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture);
         virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture);

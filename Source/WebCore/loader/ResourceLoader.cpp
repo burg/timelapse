@@ -117,7 +117,7 @@ bool ResourceLoader::init(const ResourceRequest& r)
 
 #if ENABLE(WEB_REPLAY)
     NetworkProxy& proxy = m_frame->page()->networkProxy();
-    InputIterator* it = getInputIteratorForDocument(m_frame->tree().top()->document());
+    InputIterator* it = getInputIteratorForDocument(m_frame->tree().top().document());
     bool capturingOrReplaying = it && (it->isCapturing() || it->isReplaying());
     if (capturingOrReplaying || proxy.expectsPageLoad())
         m_loaderId = proxy.nextLoaderId(r);

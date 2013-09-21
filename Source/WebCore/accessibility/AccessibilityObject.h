@@ -158,6 +158,8 @@ enum AccessibilityRole {
     MenuBarRole,
     MenuButtonRole,
     MenuItemRole,
+    MenuItemCheckboxRole,
+    MenuItemRadioRole,
     MenuListPopupRole,
     MenuListOptionRole,
     OutlineRole,
@@ -467,6 +469,7 @@ public:
     bool isLandmark() const;
     bool isColorWell() const { return roleValue() == ColorWellRole; }
     bool isRangeControl() const;
+    bool isMeter() const;
 
     virtual bool isChecked() const { return false; }
     virtual bool isEnabled() const { return false; }
@@ -544,7 +547,9 @@ public:
     AccessibilitySortDirection sortDirection() const;
     virtual bool canvasHasFallbackContent() const { return false; }
     bool supportsRangeValue() const;
-
+    String identifierAttribute() const;
+    void classList(Vector<String>&) const;
+    
     bool supportsARIASetSize() const;
     bool supportsARIAPosInSet() const;
     int ariaSetSize() const;

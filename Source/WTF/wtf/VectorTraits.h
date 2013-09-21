@@ -21,11 +21,9 @@
 #ifndef WTF_VectorTraits_h
 #define WTF_VectorTraits_h
 
-#include <wtf/OwnArrayPtr.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
-#include <wtf/TypeTraits.h>
 #include <utility>
 #include <memory>
 
@@ -63,7 +61,7 @@ namespace WTF {
     };
 
     template<typename T>
-    struct VectorTraits : VectorTraitsBase<IsPod<T>::value, T> { };
+    struct VectorTraits : VectorTraitsBase<std::is_pod<T>::value, T> { };
 
     struct SimpleClassVectorTraits : VectorTraitsBase<false, void>
     {
@@ -72,7 +70,7 @@ namespace WTF {
         static const bool canCompareWithMemcmp = true;
     };
 
-    // we know OwnPtr and RefPtr are simple enough that initializing to 0 and moving with memcpy
+    // We know OwnPtr and RefPtr are simple enough that initializing to 0 and moving with memcpy
     // (and then not destructing the original) will totally work
     template<typename P>
     struct VectorTraits<RefPtr<P> > : SimpleClassVectorTraits { };
@@ -81,16 +79,13 @@ namespace WTF {
     struct VectorTraits<OwnPtr<P> > : SimpleClassVectorTraits { };
 
     template<typename P>
-    struct VectorTraits<OwnArrayPtr<P> > : SimpleClassVectorTraits { };
-
-    template<typename P>
     struct VectorTraits<Ref<P> > : SimpleClassVectorTraits { };
 
     template<>
     struct VectorTraits<AtomicString> : SimpleClassVectorTraits { };
 
     template<typename First, typename Second>
-    struct VectorTraits<pair<First, Second> >
+    struct VectorTraits<std::pair<First, Second> >
     {
         typedef VectorTraits<First> FirstTraits;
         typedef VectorTraits<Second> SecondTraits;

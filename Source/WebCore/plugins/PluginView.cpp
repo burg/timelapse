@@ -64,6 +64,7 @@
 #include "ScriptValue.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "UserGestureIndicator.h"
 #include "WheelEvent.h"
 #include "c_instance.h"
 #include "npruntime_impl.h"
@@ -173,7 +174,7 @@ void PluginView::handleEvent(Event* event)
     else if (event->isKeyboardEvent())
         handleKeyboardEvent(static_cast<KeyboardEvent*>(event));
 #if defined(XP_MACOSX)
-    else if (event->type() == eventNames().mousewheelEvent)
+    else if (event->type() == eventNames().wheelEvent || event->type() == eventNames().mousewheelEvent)
         handleWheelEvent(static_cast<WheelEvent*>(event));
 #endif
     else if (event->type() == eventNames().contextmenuEvent)
@@ -428,6 +429,8 @@ void PluginView::performRequest(PluginRequest* request)
     KURL requestURL = request->frameLoadRequest().resourceRequest().url();
     String jsString = scriptStringIfJavaScriptURL(requestURL);
 
+    UserGestureIndicator gestureIndicator(request->shouldAllowPopups() ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
+
     if (jsString.isNull()) {
         // if this is not a targeted request, create a stream for it. otherwise,
         // just pass it off to the loader
@@ -469,7 +472,7 @@ void PluginView::performRequest(PluginRequest* request)
     if (targetFrameName.isNull()) {
         String resultString;
 
-        ScriptState* scriptState = m_parentFrame->script().globalObject(pluginWorld())->globalExec();
+        JSC::ExecState* scriptState = m_parentFrame->script().globalObject(pluginWorld())->globalExec();
         CString cstr;
         if (result.getString(scriptState, resultString))
             cstr = resultString.utf8();
@@ -830,7 +833,7 @@ PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* p
     , m_wmPrintHDC(0)
     , m_haveUpdatedPluginWidget(false)
 #endif
-#if (PLATFORM(QT) && OS(WINDOWS)) || PLATFORM(EFL)
+#if (PLATFORM(QT) && OS(WINDOWS)) || PLATFORM(EFL) || PLATFORM(NIX)
     , m_window(0)
 #endif
 #if defined(XP_MACOSX)

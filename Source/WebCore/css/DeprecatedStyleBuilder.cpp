@@ -31,6 +31,7 @@
 #include "CSSAspectRatioValue.h"
 #include "CSSCalculationValue.h"
 #include "CSSCursorImageValue.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSToStyleMap.h"
 #include "CSSValueList.h"
@@ -38,6 +39,7 @@
 #include "CursorList.h"
 #include "Document.h"
 #include "Element.h"
+#include "Frame.h"
 #include "Pair.h"
 #include "Rect.h"
 #include "RenderObject.h"
@@ -344,7 +346,7 @@ enum LengthLegacyIntrinsic { LegacyIntrinsicDisabled = 0, LegacyIntrinsicEnabled
 enum LengthIntrinsic { IntrinsicDisabled = 0, IntrinsicEnabled };
 enum LengthNone { NoneDisabled = 0, NoneEnabled };
 enum LengthUndefined { UndefinedDisabled = 0, UndefinedEnabled };
-template <Length (RenderStyle::*getterFunction)() const,
+template <const Length& (RenderStyle::*getterFunction)() const,
           void (RenderStyle::*setterFunction)(Length),
           Length (*initialFunction)(),
           LengthAuto autoEnabled = AutoDisabled,
@@ -354,7 +356,7 @@ template <Length (RenderStyle::*getterFunction)() const,
           LengthUndefined noneUndefined = UndefinedDisabled>
 class ApplyPropertyLength {
 public:
-    static void setValue(RenderStyle* style, Length value) { (style->*setterFunction)(value); }
+    static void setValue(RenderStyle* style, Length value) { (style->*setterFunction)(std::move(value)); }
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
     {
         if (!value->isPrimitiveValue())
@@ -400,7 +402,7 @@ public:
 
     static PropertyHandler createHandler()
     {
-        PropertyHandler handler = ApplyPropertyDefaultBase<Length, getterFunction, Length, setterFunction, Length, initialFunction>::createHandler();
+        PropertyHandler handler = ApplyPropertyDefaultBase<const Length&, getterFunction, Length, setterFunction, Length, initialFunction>::createHandler();
         return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
     }
 };
@@ -428,10 +430,10 @@ public:
     }
 };
 
-template <LengthSize (RenderStyle::*getterFunction)() const, void (RenderStyle::*setterFunction)(LengthSize), LengthSize (*initialFunction)()>
+template <const LengthSize& (RenderStyle::*getterFunction)() const, void (RenderStyle::*setterFunction)(LengthSize), LengthSize (*initialFunction)()>
 class ApplyPropertyBorderRadius {
 public:
-    static void setValue(RenderStyle* style, LengthSize value) { (style->*setterFunction)(value); }
+    static void setValue(RenderStyle* style, LengthSize value) { (style->*setterFunction)(std::move(value)); }
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
     {
         if (!value->isPrimitiveValue())
@@ -474,7 +476,7 @@ public:
     }
     static PropertyHandler createHandler()
     {
-        PropertyHandler handler = ApplyPropertyDefaultBase<LengthSize, getterFunction, LengthSize, setterFunction, LengthSize, initialFunction>::createHandler();
+        PropertyHandler handler = ApplyPropertyDefaultBase<const LengthSize&, getterFunction, LengthSize, setterFunction, LengthSize, initialFunction>::createHandler();
         return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
     }
 };
@@ -483,12 +485,22 @@ template <typename T>
 struct FillLayerAccessorTypes {
     typedef T Setter;
     typedef T Getter;
+    typedef T InitialGetter;
 };
 
 template <>
 struct FillLayerAccessorTypes<StyleImage*> {
     typedef PassRefPtr<StyleImage> Setter;
     typedef StyleImage* Getter;
+    typedef StyleImage* InitialGetter;
+};
+
+template<>
+struct FillLayerAccessorTypes<Length>
+{
+    typedef Length Setter;
+    typedef const Length& Getter;
+    typedef Length InitialGetter;
 };
 
 template <typename T,
@@ -500,7 +512,7 @@ template <typename T,
           typename FillLayerAccessorTypes<T>::Getter (FillLayer::*getFunction)() const,
           void (FillLayer::*setFunction)(typename FillLayerAccessorTypes<T>::Setter),
           void (FillLayer::*clearFunction)(),
-          typename FillLayerAccessorTypes<T>::Getter (*initialFunction)(EFillLayerType),
+          typename FillLayerAccessorTypes<T>::InitialGetter (*initialFunction)(EFillLayerType),
           void (CSSToStyleMap::*mapFillFunction)(CSSPropertyID, FillLayer*, CSSValue*)>
 class ApplyPropertyFillLayer {
 public:
@@ -613,7 +625,18 @@ public:
                 if (originalLength >= 1.0)
                     length = 1.0;
             }
-
+            if (primitiveValue->isViewportPercentageLength()) { 
+                int viewPortHeight = styleResolver->document().renderView()->viewportSize().height() * length / 100.0f;
+                int viewPortWidth = styleResolver->document().renderView()->viewportSize().width() * length / 100.0f;
+                if (primitiveValue->isViewportPercentageHeight())
+                    length = viewPortHeight;
+                else if (primitiveValue->isViewportPercentageWidth())
+                    length = viewPortWidth;
+                else if (primitiveValue->isViewportPercentageMax())
+                    length = max(viewPortWidth, viewPortHeight);
+                else if (primitiveValue->isViewportPercentageMin())
+                    length = min(viewPortWidth, viewPortHeight);
+            }
         } else {
             ASSERT_NOT_REACHED();
             length = 0;
@@ -1407,10 +1430,69 @@ public:
     }
     static PropertyHandler createHandler()
     {
-        PropertyHandler handler = ApplyPropertyDefaultBase<Length, &RenderStyle::specifiedLineHeight, Length, &RenderStyle::setLineHeight, Length, &RenderStyle::initialLineHeight>::createHandler();
+        PropertyHandler handler = ApplyPropertyDefaultBase<const Length&, &RenderStyle::specifiedLineHeight, Length, &RenderStyle::setLineHeight, Length, &RenderStyle::initialLineHeight>::createHandler();
         return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
     }
 };
+
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+// FIXME: Share more code with class ApplyPropertyLineHeight.
+class ApplyPropertyLineHeightForIOSTextAutosizing {
+public:
+    static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
+    {
+        if (!value->isPrimitiveValue())
+            return;
+
+        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        Length lineHeight;
+
+        if (primitiveValue->getIdent() == CSSValueNormal)
+            lineHeight = RenderStyle::initialLineHeight();
+        else if (primitiveValue->isLength()) {
+            double multiplier = styleResolver->style()->effectiveZoom();
+            if (styleResolver->style()->textSizeAdjust().isNone()) {
+                if (Frame* frame = styleResolver->document().frame())
+                    multiplier *= frame->textZoomFactor();
+            }
+            lineHeight = primitiveValue->computeLength<Length>(styleResolver->style(), styleResolver->rootElementStyle(), multiplier);
+            if (styleResolver->style()->textSizeAdjust().isPercentage())
+                lineHeight = Length(lineHeight.value() * styleResolver->style()->textSizeAdjust().multiplier(), Fixed);
+        } else if (primitiveValue->isPercentage()) {
+            // FIXME: percentage should not be restricted to an integer here.
+            lineHeight = Length((styleResolver->style()->fontSize() * primitiveValue->getIntValue()) / 100, Fixed);
+        } else if (primitiveValue->isNumber()) {
+            // FIXME: number and percentage values should produce the same type of Length (ie. Fixed or Percent).
+            if (styleResolver->style()->textSizeAdjust().isPercentage())
+                lineHeight = Length(primitiveValue->getDoubleValue() * styleResolver->style()->textSizeAdjust().multiplier() * 100.0, Percent);
+            else
+                lineHeight = Length(primitiveValue->getDoubleValue() * 100.0, Percent);
+        } else if (primitiveValue->isViewportPercentageLength())
+            lineHeight = primitiveValue->viewportPercentageLength();
+        else
+            return;
+        styleResolver->style()->setLineHeight(lineHeight);
+        styleResolver->style()->setSpecifiedLineHeight(lineHeight);
+    }
+
+    static void applyInitialValue(CSSPropertyID, StyleResolver* styleResolver)
+    {
+        styleResolver->style()->setLineHeight(RenderStyle::initialLineHeight());
+        styleResolver->style()->setSpecifiedLineHeight(RenderStyle::initialSpecifiedLineHeight());
+    }
+
+    static void applyInheritValue(CSSPropertyID, StyleResolver* styleResolver)
+    {
+        styleResolver->style()->setLineHeight(styleResolver->parentStyle()->lineHeight());
+        styleResolver->style()->setSpecifiedLineHeight(styleResolver->parentStyle()->specifiedLineHeight());
+    }
+
+    static PropertyHandler createHandler()
+    {
+        return PropertyHandler(&applyInheritValue, &applyInitialValue, &applyValue);
+    }
+};
+#endif
 
 class ApplyPropertyPageSize {
 private:
@@ -2154,7 +2236,11 @@ DeprecatedStyleBuilder::DeprecatedStyleBuilder()
 #endif
     setPropertyHandler(CSSPropertyLeft, ApplyPropertyLength<&RenderStyle::left, &RenderStyle::setLeft, &RenderStyle::initialOffset, AutoEnabled>::createHandler());
     setPropertyHandler(CSSPropertyLetterSpacing, ApplyPropertyComputeLength<int, &RenderStyle::letterSpacing, &RenderStyle::setLetterSpacing, &RenderStyle::initialLetterWordSpacing, NormalEnabled, ThicknessDisabled, SVGZoomEnabled>::createHandler());
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    setPropertyHandler(CSSPropertyLineHeight, ApplyPropertyLineHeightForIOSTextAutosizing::createHandler());
+#else
     setPropertyHandler(CSSPropertyLineHeight, ApplyPropertyLineHeight::createHandler());
+#endif
     setPropertyHandler(CSSPropertyListStyleImage, ApplyPropertyStyleImage<&RenderStyle::listStyleImage, &RenderStyle::setListStyleImage, &RenderStyle::initialListStyleImage, CSSPropertyListStyleImage>::createHandler());
     setPropertyHandler(CSSPropertyListStylePosition, ApplyPropertyDefault<EListStylePosition, &RenderStyle::listStylePosition, EListStylePosition, &RenderStyle::setListStylePosition, EListStylePosition, &RenderStyle::initialListStylePosition>::createHandler());
     setPropertyHandler(CSSPropertyListStyleType, ApplyPropertyDefault<EListStyleType, &RenderStyle::listStyleType, EListStyleType, &RenderStyle::setListStyleType, EListStyleType, &RenderStyle::initialListStyleType>::createHandler());

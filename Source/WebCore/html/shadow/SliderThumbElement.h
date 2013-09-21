@@ -34,7 +34,7 @@
 
 #include "HTMLDivElement.h"
 #include "HTMLNames.h"
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -46,7 +46,7 @@ class FloatPoint;
 
 class SliderThumbElement FINAL : public HTMLDivElement {
 public:
-    static PassRefPtr<SliderThumbElement> create(Document*);
+    static PassRefPtr<SliderThumbElement> create(Document&);
 
     void setPositionFromValue();
 
@@ -60,8 +60,8 @@ public:
     void setPositionFromPoint(const LayoutPoint&);
 
 private:
-    SliderThumbElement(Document*);
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    SliderThumbElement(Document&);
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&);
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
     virtual bool isDisabledFormControl() const OVERRIDE;
     virtual bool matchesReadOnlyPseudoClass() const OVERRIDE;
@@ -73,14 +73,14 @@ private:
     bool m_inDragMode;
 };
 
-inline PassRefPtr<SliderThumbElement> SliderThumbElement::create(Document* document)
+inline PassRefPtr<SliderThumbElement> SliderThumbElement::create(Document& document)
 {
     return adoptRef(new SliderThumbElement(document));
 }
 
 inline PassRefPtr<Element> SliderThumbElement::cloneElementWithoutAttributesAndChildren()
 {
-    return create(&document());
+    return create(document());
 }
 
 inline SliderThumbElement* toSliderThumbElement(Node* node)
@@ -91,12 +91,12 @@ inline SliderThumbElement* toSliderThumbElement(Node* node)
 
 // This always return a valid pointer.
 // An assertion fails if the specified node is not a range input.
-SliderThumbElement* sliderThumbElementOf(Node*);
-HTMLElement* sliderTrackElementOf(Node*);
+SliderThumbElement* sliderThumbElementOf(HTMLInputElement&);
+HTMLElement* sliderTrackElementOf(HTMLInputElement&);
 
 // --------------------------------
 
-class RenderSliderThumb FINAL : public RenderBlock {
+class RenderSliderThumb FINAL : public RenderBlockFlow {
 public:
     RenderSliderThumb(SliderThumbElement*);
     void updateAppearance(RenderStyle* parentStyle);
@@ -109,11 +109,11 @@ private:
 
 class SliderContainerElement FINAL : public HTMLDivElement {
 public:
-    static PassRefPtr<SliderContainerElement> create(Document*);
+    static PassRefPtr<SliderContainerElement> create(Document&);
 
 private:
-    SliderContainerElement(Document*);
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    SliderContainerElement(Document&);
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&);
     virtual const AtomicString& shadowPseudoId() const;
 };
 

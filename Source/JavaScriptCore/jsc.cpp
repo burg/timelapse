@@ -261,8 +261,6 @@ protected:
     }
 };
 
-COMPILE_ASSERT(!IsInteger<GlobalObject>::value, WTF_IsInteger_GlobalObject_false);
-
 const ClassInfo GlobalObject::s_info = { "global", &JSGlobalObject::s_info, 0, ExecState::globalObjectTable, CREATE_METHOD_TABLE(GlobalObject) };
 const GlobalObjectMethodTable GlobalObject::s_globalObjectMethodTable = { &allowsAccessFrom, &supportsProfiling, &supportsRichSourceInfo, &shouldInterruptScript, &javaScriptExperimentsEnabled, 0 };
 
@@ -390,6 +388,12 @@ EncodedJSValue JSC_HOST_CALL functionRun(ExecState* exec)
         return JSValue::encode(exec->vm().throwException(exec, createError(exec, "Could not open file.")));
 
     GlobalObject* globalObject = GlobalObject::create(exec->vm(), GlobalObject::createStructure(exec->vm(), jsNull()), Vector<String>());
+
+    JSArray* array = constructEmptyArray(globalObject->globalExec(), 0);
+    for (unsigned i = 1; i < exec->argumentCount(); ++i)
+        array->putDirectIndex(globalObject->globalExec(), i - 1, exec->argument(i));
+    globalObject->putDirect(
+        exec->vm(), Identifier(globalObject->globalExec(), "arguments"), array);
 
     JSValue exception;
     StopWatch stopWatch;
@@ -849,28 +853,38 @@ int jscmain(int argc, char** argv)
     // Note that the options parsing can affect VM creation, and thus
     // comes first.
     CommandLine options(argc, argv);
-    VM* vm = VM::create(LargeHeap).leakRef();
-    APIEntryShim shim(vm);
+    RefPtr<VM> vm = VM::create(LargeHeap);
     int result;
+    {
+        APIEntryShim shim(vm.get());
 
-    if (options.m_profile && !vm->m_perBytecodeProfiler)
-        vm->m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*vm));
+        if (options.m_profile && !vm->m_perBytecodeProfiler)
+            vm->m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*vm));
     
-    GlobalObject* globalObject = GlobalObject::create(*vm, GlobalObject::createStructure(*vm, jsNull()), options.m_arguments);
-    bool success = runWithScripts(globalObject, options.m_scripts, options.m_dump);
-    if (options.m_interactive && success)
-        runInteractive(globalObject);
+        GlobalObject* globalObject = GlobalObject::create(*vm, GlobalObject::createStructure(*vm, jsNull()), options.m_arguments);
+        bool success = runWithScripts(globalObject, options.m_scripts, options.m_dump);
+        if (options.m_interactive && success)
+            runInteractive(globalObject);
 
-    result = success ? 0 : 3;
+        result = success ? 0 : 3;
 
-    if (options.m_exitCode)
-        printf("jsc exiting %d\n", result);
+        if (options.m_exitCode)
+            printf("jsc exiting %d\n", result);
     
-    if (options.m_profile) {
-        if (!vm->m_perBytecodeProfiler->save(options.m_profilerOutput.utf8().data()))
-            fprintf(stderr, "could not save profiler output.\n");
+        if (options.m_profile) {
+            if (!vm->m_perBytecodeProfiler->save(options.m_profilerOutput.utf8().data()))
+                fprintf(stderr, "could not save profiler output.\n");
+        }
     }
-
+    
+    if (Options::neverDeleteVMInCommandLine()) {
+        JSC::VM* temp = vm.release().leakRef();
+        UNUSED_PARAM(temp);
+    } else {
+        JSLockHolder lock(*vm);
+        vm.clear();
+    }
+    
     return result;
 }
 

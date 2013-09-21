@@ -111,9 +111,9 @@ public:
     bool isPaused() { return m_paused; }
     bool runningNestedMessageLoop() { return m_runningNestedMessageLoop; }
 
-    void compileScript(ScriptState*, const String& expression, const String& sourceURL, String* scriptId, String* exceptionMessage);
+    void compileScript(JSC::ExecState*, const String& expression, const String& sourceURL, String* scriptId, String* exceptionMessage);
     void clearCompiledScripts();
-    void runScript(ScriptState*, const String& scriptId, ScriptValue* result, bool* wasThrown, String* exceptionMessage);
+    void runScript(JSC::ExecState*, const String& scriptId, ScriptValue* result, bool* wasThrown, String* exceptionMessage);
 
     class Task {
         WTF_MAKE_FAST_ALLOCATED;
@@ -151,24 +151,24 @@ protected:
     void dispatchFailedToParseSource(const ListenerSet& listeners, JSC::SourceProvider*, int errorLine, const String& errorMessage);
     void dispatchCaptureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 
-    void createCallFrame(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
-    void updateCallFrameAndPauseIfNeeded(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
+    void createCallFrame(const JSC::DebuggerCallFrame&);
+    void updateCallFrameAndPauseIfNeeded(const JSC::DebuggerCallFrame&);
     void pauseIfNeeded(JSC::JSGlobalObject* dynamicGlobalObject);
 
     virtual void detach(JSC::JSGlobalObject*);
 
     virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg);
-    virtual void callEvent(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
-    void atStatement(const JSC::DebuggerCallFrame&, intptr_t sourceID, int firstLine, int columnNumber);
-    virtual void returnEvent(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
-    virtual void exception(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber, bool hasHandler);
-    virtual void willExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno, int columnNumber);
-    virtual void didExecuteProgram(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno, int columnNumber);
-    virtual void didReachBreakpoint(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineno, int columnNumber);
+    virtual void callEvent(const JSC::DebuggerCallFrame&);
+    virtual void atStatement(const JSC::DebuggerCallFrame&);
+    virtual void returnEvent(const JSC::DebuggerCallFrame&);
+    virtual void exception(const JSC::DebuggerCallFrame&, bool hasHandler);
+    virtual void willExecuteProgram(const JSC::DebuggerCallFrame&);
+    virtual void didExecuteProgram(const JSC::DebuggerCallFrame&);
+    virtual void didReachBreakpoint(const JSC::DebuggerCallFrame&);
 
 private:
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
-    void captureProbeSamplesIfNeeded(const JSC::DebuggerCallFrame&, intptr_t sourceID, int lineNumber, int columnNumber);
+    void captureProbeSamplesIfNeeded(const JSC::DebuggerCallFrame&);
     bool findProbesForPosition(ScriptId scriptId, const TextPosition&, ProbeSet& result) const;
 
     void clearPauseTrigger()

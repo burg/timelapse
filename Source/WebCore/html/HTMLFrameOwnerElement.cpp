@@ -24,7 +24,7 @@
 #include "DOMWindow.h"
 #include "Frame.h"
 #include "FrameLoader.h"
-#include "RenderPart.h"
+#include "RenderWidget.h"
 #include "ShadowRoot.h"
 #include <wtf/Ref.h>
 
@@ -35,20 +35,20 @@
 
 namespace WebCore {
 
-HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document* document)
+HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
     , m_contentFrame(0)
     , m_sandboxFlags(SandboxNone)
 {
 }
 
-RenderPart* HTMLFrameOwnerElement::renderPart() const
+RenderWidget* HTMLFrameOwnerElement::renderWidget() const
 {
     // HTMLObjectElement and HTMLEmbedElement may return arbitrary renderers
     // when using fallback content.
-    if (!renderer() || !renderer()->isRenderPart())
+    if (!renderer() || !renderer()->isWidget())
         return 0;
-    return toRenderPart(renderer());
+    return toRenderWidget(renderer());
 }
 
 void HTMLFrameOwnerElement::setContentFrame(Frame* frame)

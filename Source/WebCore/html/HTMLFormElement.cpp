@@ -55,7 +55,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLFormElement::HTMLFormElement(const QualifiedName& tagName, Document* document)
+HTMLFormElement::HTMLFormElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
     , m_associatedElementsBeforeIndex(0)
     , m_associatedElementsAfterIndex(0)
@@ -68,12 +68,12 @@ HTMLFormElement::HTMLFormElement(const QualifiedName& tagName, Document* documen
     ASSERT(hasTagName(formTag));
 }
 
-PassRefPtr<HTMLFormElement> HTMLFormElement::create(Document* document)
+PassRefPtr<HTMLFormElement> HTMLFormElement::create(Document& document)
 {
     return adoptRef(new HTMLFormElement(formTag, document));
 }
 
-PassRefPtr<HTMLFormElement> HTMLFormElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLFormElement> HTMLFormElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLFormElement(tagName, document));
 }

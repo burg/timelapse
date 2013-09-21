@@ -44,7 +44,7 @@ using namespace std;
 namespace WebCore {
 
 RenderRubyRun::RenderRubyRun()
-    : RenderBlock(0)
+    : RenderBlockFlow(0)
 {
     setReplaced(true);
     setInline(true);
@@ -127,7 +127,7 @@ void RenderRubyRun::addChild(RenderObject* child, RenderObject* beforeChild)
             // In this case the new text takes the place of the old one, and
             // the old text goes into a new run that is inserted as next sibling.
             ASSERT(beforeChild->parent() == this);
-            RenderObject* ruby = parent();
+            RenderElement* ruby = parent();
             ASSERT(ruby->isRuby());
             RenderBlock* newRun = staticCreateRubyRun(ruby);
             ruby->addChild(newRun, nextSibling());
@@ -141,7 +141,7 @@ void RenderRubyRun::addChild(RenderObject* child, RenderObject* beforeChild)
         } else if (hasRubyBase()) {
             // Insertion before a ruby base object.
             // In this case we need insert a new run before the current one and split the base.
-            RenderObject* ruby = parent();
+            RenderElement* ruby = parent();
             RenderRubyRun* newRun = staticCreateRubyRun(ruby);
             ruby->addChild(newRun, this);
             newRun->addChild(child);
@@ -200,7 +200,7 @@ void RenderRubyRun::removeChild(RenderObject* child)
 
 RenderRubyBase* RenderRubyRun::createRubyBase() const
 {
-    RenderRubyBase* renderer = RenderRubyBase::createAnonymous(&document());
+    RenderRubyBase* renderer = RenderRubyBase::createAnonymous(document());
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
     newStyle->setTextAlign(CENTER); // FIXME: use WEBKIT_CENTER?
     renderer->setStyle(newStyle.release());
@@ -211,7 +211,7 @@ RenderRubyRun* RenderRubyRun::staticCreateRubyRun(const RenderObject* parentRuby
 {
     ASSERT(parentRuby && parentRuby->isRuby());
     RenderRubyRun* rr = new (parentRuby->renderArena()) RenderRubyRun();
-    rr->setDocumentForAnonymous(&parentRuby->document());
+    rr->setDocumentForAnonymous(parentRuby->document());
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parentRuby->style(), INLINE_BLOCK);
     rr->setStyle(newStyle.release());
     return rr;

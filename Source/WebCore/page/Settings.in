@@ -105,6 +105,7 @@ experimentalNotificationsEnabled initial=false
 webGLEnabled initial=false
 webGLErrorsToConsoleEnabled initial=true
 openGLMultisamplingEnabled initial=true
+multithreadedWebGLEnabled initial=false
 privilegedWebGLExtensionsEnabled initial=false
 accelerated2dCanvasEnabled initial=false
 antialiased2dCanvasEnabled initial=true
@@ -186,6 +187,8 @@ spatialNavigationEnabled initial=false
 # enabled, the user can initiate drag using long press.
 touchDragDropEnabled initial=false
 
+autoscrollForDragAndDropEnabled initial=false
+
 unifiedTextCheckerEnabled initial=defaultUnifiedTextCheckerEnabled
 
 logsPageMessagesToSystemConsoleEnabled initial=false
@@ -200,3 +203,5 @@ selectTrailingWhitespaceEnabled initial=defaultSelectTrailingWhitespaceEnabled
 
 selectionIncludesAltImageText initial=true
 useLegacyBackgroundSizeShorthandBehavior initial=false
+
+minimumZoomFontSize type=float, initial=15, conditional=IOS_TEXT_AUTOSIZING

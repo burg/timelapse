@@ -44,6 +44,7 @@ class HTMLDocument;
 class IntSize;
 class Locale;
 class PseudoElement;
+class RenderElement;
 class RenderRegion;
 class ShadowRoot;
 
@@ -66,7 +67,7 @@ enum SpellcheckAttributeState {
 
 class Element : public ContainerNode {
 public:
-    static PassRefPtr<Element> create(const QualifiedName&, Document*);
+    static PassRefPtr<Element> create(const QualifiedName&, Document&);
     virtual ~Element();
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
@@ -126,6 +127,8 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitfullscreenchange);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitfullscreenerror);
 #endif
+
+    RenderElement* renderer() const;
 
     bool hasAttribute(const QualifiedName&) const;
     const AtomicString& getAttribute(const QualifiedName&) const;
@@ -301,7 +304,7 @@ public:
     void lazyAttach(ShouldSetAttached = SetAttached);
     void lazyReattach(ShouldSetAttached = SetAttached);
 
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&);
     virtual bool rendererIsNeeded(const RenderStyle&);
     void didAffectSelector(AffectedSelectorMask);
 
@@ -551,8 +554,8 @@ public:
     void clearHoverAndActiveStatusBeforeDetachingRenderer();
 
 protected:
-    Element(const QualifiedName& tagName, Document* document, ConstructionType type)
-        : ContainerNode(document, type)
+    Element(const QualifiedName& tagName, Document& document, ConstructionType type)
+        : ContainerNode(&document, type)
         , m_tagName(tagName)
     {
     }
@@ -590,6 +593,7 @@ private:
     void setAfterPseudoElement(PassRefPtr<PseudoElement>);
     void clearBeforePseudoElement();
     void clearAfterPseudoElement();
+    void resetNeedsNodeRenderingTraversalSlowPath();
 
     virtual bool areAuthorShadowsAllowed() const { return true; }
     virtual void didAddUserAgentShadowRoot(ShadowRoot*) { }
@@ -676,20 +680,34 @@ private:
     RefPtr<ElementData> m_elementData;
 };
 
-inline Element* toElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isElementNode());
-    return static_cast<Element*>(node);
-}
+inline bool isElement(const Node& node) { return node.isElementNode(); }
 
-inline const Element* toElement(const Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isElementNode());
-    return static_cast<const Element*>(node);
-}
 
-// This will catch anyone doing an unnecessary cast.
-void toElement(const Element*);
+#define ELEMENT_TYPE_CASTS(ElementClassName) \
+inline const ElementClassName* to##ElementClassName(const Node* node) \
+{ \
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || is##ElementClassName(*node)); \
+    return static_cast<const ElementClassName*>(node); \
+} \
+inline ElementClassName* to##ElementClassName(Node* node) \
+{ \
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || is##ElementClassName(*node)); \
+    return static_cast<ElementClassName*>(node); \
+} \
+inline const ElementClassName& to##ElementClassName(const Node& node) \
+{ \
+    ASSERT_WITH_SECURITY_IMPLICATION(is##ElementClassName(node)); \
+    return static_cast<const ElementClassName&>(node); \
+} \
+inline ElementClassName& to##ElementClassName(Node& node) \
+{ \
+    ASSERT_WITH_SECURITY_IMPLICATION(is##ElementClassName(node)); \
+    return static_cast<ElementClassName&>(node); \
+} \
+void to##ElementClassName(const ElementClassName*); \
+void to##ElementClassName(const ElementClassName&);
+
+ELEMENT_TYPE_CASTS(Element)
 
 template <typename Type> bool isElementOfType(const Element*);
 template <typename Type> bool isElementOfType(const Node* node) { return node->isElementNode() && isElementOfType<Type>(toElement(node)); }

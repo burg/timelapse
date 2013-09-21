@@ -46,6 +46,7 @@
 #include "FunctionConstructor.h"
 #include "FunctionPrototype.h"
 #include "GetterSetter.h"
+#include "HeapIterationScope.h"
 #include "Interpreter.h"
 #include "JSAPIWrapperObject.h"
 #include "JSActivation.h"
@@ -71,11 +72,11 @@
 #include "JSTypedArrayConstructors.h"
 #include "JSTypedArrayPrototypes.h"
 #include "JSTypedArrays.h"
+#include "JSWeakMap.h"
 #include "JSWithScope.h"
 #include "LegacyProfiler.h"
 #include "Lookup.h"
 #include "MapConstructor.h"
-#include "MapData.h"
 #include "MapPrototype.h"
 #include "MathObject.h"
 #include "NameConstructor.h"
@@ -99,6 +100,8 @@
 #include "StrictEvalActivation.h"
 #include "StringConstructor.h"
 #include "StringPrototype.h"
+#include "WeakMapConstructor.h"
+#include "WeakMapPrototype.h"
 
 #if ENABLE(PROMISES)
 #include "JSPromise.h"
@@ -308,9 +311,6 @@ void JSGlobalObject::reset(JSValue prototype)
     m_promiseWrapperCallbackStructure.set(exec->vm(), this, JSPromiseWrapperCallback::createStructure(exec->vm(), this, m_functionPrototype.get()));
 #endif // ENABLE(PROMISES)
 
-
-    m_mapDataStructure.set(exec->vm(), this, MapData::createStructure(exec->vm(), this, jsNull()));
-
 #define CREATE_PROTOTYPE_FOR_SIMPLE_TYPE(capitalName, lowerName, properName, instanceType, jsName) \
     m_ ## lowerName ## Prototype.set(exec->vm(), this, capitalName##Prototype::create(exec, this, capitalName##Prototype::createStructure(exec->vm(), this, m_objectPrototype.get()))); \
     m_ ## properName ## Structure.set(exec->vm(), this, instanceType::createStructure(exec->vm(), this, m_ ## lowerName ## Prototype.get()));
@@ -516,7 +516,10 @@ void JSGlobalObject::haveABadTime(VM& vm)
     // indexed storage.
     MarkedArgumentBuffer foundObjects; // Use MarkedArgumentBuffer because switchToSlowPutArrayStorage() may GC.
     ObjectsWithBrokenIndexingFinder finder(foundObjects, this);
-    vm.heap.objectSpace().forEachLiveCell(finder);
+    {
+        HeapIterationScope iterationScope(vm.heap);
+        vm.heap.objectSpace().forEachLiveCell(iterationScope, finder);
+    }
     while (!foundObjects.isEmpty()) {
         JSObject* object = asObject(foundObjects.last());
         foundObjects.removeLast();
@@ -640,8 +643,6 @@ void JSGlobalObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
 #undef VISIT_SIMPLE_TYPE
 
-    visitor.append(&thisObject->m_mapDataStructure);
-
     for (unsigned i = NUMBER_OF_TYPED_ARRAY_TYPES; i--;) {
         visitor.append(&thisObject->m_typedArrays[i].prototype);
         visitor.append(&thisObject->m_typedArrays[i].structure);
@@ -657,7 +658,7 @@ JSValue JSGlobalObject::toThis(JSCell*, ExecState* exec, ECMAMode ecmaMode)
 
 ExecState* JSGlobalObject::globalExec()
 {
-    return CallFrame::create(m_globalCallFrame + JSStack::CallFrameHeaderSize);
+    return CallFrame::create(m_globalCallFrame);
 }
 
 #if ENABLE(WEB_REPLAY)

@@ -26,7 +26,7 @@
 #include "config.h"
 #include "WebProcessConnection.h"
 
-#if ENABLE(PLUGIN_PROCESS)
+#if ENABLE(NETSCAPE_PLUGIN_API)
 
 #include "ActivityAssertion.h"
 #include "ArgumentCoders.h"
@@ -292,7 +292,7 @@ void WebProcessConnection::createPluginAsynchronously(const PluginCreationParame
 
     // The call to createPluginInternal can potentially cause the plug-in to be destroyed and
     // thus free the WebProcessConnection object. Protect it.
-    RefPtr<WebProcessConnection> protect(this);
+    Ref<WebProcessConnection> protect(*this);
     createPluginInternal(creationParameters, result, wantsWheelEvents, remoteLayerClientID);
 
     if (!m_connection) {
@@ -322,4 +322,4 @@ void WebProcessConnection::createPluginAsynchronously(const PluginCreationParame
 
 } // namespace WebKit
 
-#endif // ENABLE(PLUGIN_PROCESS)
+#endif // ENABLE(NETSCAPE_PLUGIN_API)

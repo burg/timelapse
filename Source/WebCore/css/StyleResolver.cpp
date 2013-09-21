@@ -52,7 +52,6 @@
 #include "CachedImage.h"
 #include "CalculationValue.h"
 #include "ContentData.h"
-#include "ContextFeatures.h"
 #include "Counter.h"
 #include "CounterContent.h"
 #include "CursorList.h"
@@ -298,8 +297,8 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
 void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet> >& styleSheets)
 {
     m_ruleSets.appendAuthorStyleSheets(firstNew, styleSheets, m_medium.get(), m_inspectorCSSOMWrappers, document().isViewSource(), this);
-    if (document().renderer() && document().renderer()->style())
-        document().renderer()->style()->font().update(fontSelector());
+    if (document().renderView() && document().renderView()->style())
+        document().renderView()->style()->font().update(fontSelector());
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     viewportStyleResolver()->resolve();
@@ -463,8 +462,10 @@ Node* StyleResolver::locateCousinList(Element* parent, unsigned& visitedNodeCoun
         return 0;
     if (!parent || !parent->isStyledElement())
         return 0;
+#if ENABLE(STYLE_SCOPED)
     if (parent->hasScopedHTMLStyleChild())
         return 0;
+#endif
     StyledElement* p = static_cast<StyledElement*>(parent);
     if (p->inlineStyle())
         return 0;
@@ -654,8 +655,10 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
 
     if (element->hasID() && m_ruleSets.features().idsInRules.contains(element->idForStyleResolution().impl()))
         return false;
+#if ENABLE(STYLE_SCOPED)
     if (element->hasScopedHTMLStyleChild())
         return false;
+#endif
 
     // FIXME: We should share style for option and optgroup whenever possible.
     // Before doing so, we need to resolve issues in HTMLSelectElement::recalcListItems
@@ -739,8 +742,10 @@ RenderStyle* StyleResolver::locateSharedStyle()
         return 0;
     if (parentElementPreventsSharing(state.element()->parentElement()))
         return 0;
+#if ENABLE(STYLE_SCOPED)
     if (state.styledElement()->hasScopedHTMLStyleChild())
         return 0;
+#endif
     if (state.element() == state.document().cssTarget())
         return 0;
     if (elementHasDirectionAuto(state.element()))
@@ -1452,6 +1457,9 @@ void StyleResolver::updateFont()
         return;
 
     RenderStyle* style = m_state.style();
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    checkForTextSizeAdjust(style);
+#endif
     checkForGenericFamilyChange(style, m_state.parentStyle());
     checkForZoomChange(style, m_state.parentStyle());
     checkForOrientationChange(style);
@@ -1545,7 +1553,11 @@ void StyleResolver::applyProperties(const StylePropertySet* properties, StyleRul
 #endif
         case HighPriorityProperties:
             COMPILE_ASSERT(firstCSSProperty == CSSPropertyColor, CSS_color_is_first_property);
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+            COMPILE_ASSERT(CSSPropertyZoom == CSSPropertyColor + 18, CSS_zoom_is_end_of_first_prop_range);
+#else
             COMPILE_ASSERT(CSSPropertyZoom == CSSPropertyColor + 17, CSS_zoom_is_end_of_first_prop_range);
+#endif
             COMPILE_ASSERT(CSSPropertyLineHeight == CSSPropertyZoom + 1, CSS_line_height_is_after_zoom);
 #if ENABLE(CSS_VARIABLES)
             if (property == CSSPropertyVariable)
@@ -2433,6 +2445,23 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         setFontDescription(fontDescription);
         return;
     }
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    case CSSPropertyWebkitTextSizeAdjust: {
+        HANDLE_INHERIT_AND_INITIAL(textSizeAdjust, TextSizeAdjust)
+        if (!primitiveValue)
+            return;
+
+        if (primitiveValue->getValueID() == CSSValueAuto)
+            state.style()->setTextSizeAdjust(TextSizeAdjustment(AutoTextSizeAdjustment));
+        else if (primitiveValue->getValueID() == CSSValueNone)
+            state.style()->setTextSizeAdjust(TextSizeAdjustment(NoTextSizeAdjustment));
+        else
+            state.style()->setTextSizeAdjust(TextSizeAdjustment(primitiveValue->getFloatValue()));
+
+        state.setFontDirty(true);
+        return;
+    }
+#endif
 #if ENABLE(DASHBOARD_SUPPORT)
     case CSSPropertyWebkitDashboardRegion:
     {
@@ -3105,6 +3134,21 @@ PassRefPtr<StyleImage> StyleResolver::cursorOrPendingFromValue(CSSPropertyID pro
         m_state.pendingImageProperties().set(property, value);
     return image.release();
 }
+
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+void StyleResolver::checkForTextSizeAdjust(RenderStyle* style)
+{
+    if (style->textSizeAdjust().isAuto())
+        return;
+
+    FontDescription newFontDescription(style->fontDescription());
+    if (!style->textSizeAdjust().isNone())
+        newFontDescription.setComputedSize(newFontDescription.specifiedSize() * style->textSizeAdjust().multiplier());
+    else
+        newFontDescription.setComputedSize(newFontDescription.specifiedSize());
+    style->setFontDescription(newFontDescription);
+}
+#endif
 
 void StyleResolver::checkForZoomChange(RenderStyle* style, RenderStyle* parentStyle)
 {

@@ -23,6 +23,7 @@
 #include "CachedImage.h"
 #include "DataObjectGtk.h"
 #include "DocumentFragment.h"
+#include "DragData.h"
 #include "Editor.h"
 #include "Frame.h"
 #include "HTMLImageElement.h"
@@ -173,12 +174,12 @@ void Pasteboard::writePlainText(const String& text, SmartReplaceOption smartRepl
         PasteboardHelper::defaultPasteboardHelper()->writeClipboardContents(m_gtkClipboard, (smartReplaceOption == CanSmartReplace) ? PasteboardHelper::IncludeSmartPaste : PasteboardHelper::DoNotIncludeSmartPaste);
 }
 
-void Pasteboard::writeURL(const KURL& url, const String& label, Frame* frame)
+void Pasteboard::write(const PasteboardURL& pasteboardURL)
 {
-    ASSERT(!url.isEmpty());
+    ASSERT(!pasteboardURL.url.isEmpty());
 
     m_dataObject->clearAll();
-    m_dataObject->setURL(url, label);
+    m_dataObject->setURL(pasteboardURL.url, pasteboardURL.title);
 
     if (m_gtkClipboard)
         PasteboardHelper::defaultPasteboardHelper()->writeClipboardContents(m_gtkClipboard);
@@ -194,7 +195,7 @@ static KURL getURLForImageNode(Node* node)
     else if (node->hasTagName(SVGNames::imageTag))
         urlString = toElement(node)->getAttribute(XLinkNames::hrefAttr);
 #endif
-    else if (node->hasTagName(HTMLNames::embedTag) || node->hasTagName(HTMLNames::objectTag)) {
+    else if (node->hasTagName(HTMLNames::embedTag) || isHTMLObjectElement(node)) {
         Element* element = toElement(node);
         urlString = element->imageSourceURL();
     }
@@ -324,11 +325,11 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame* frame, PassRefP
     return 0;
 }
 
-String Pasteboard::plainText(Frame* frame)
+void Pasteboard::read(PasteboardPlainText& text)
 {
     if (m_gtkClipboard)
         PasteboardHelper::defaultPasteboardHelper()->getClipboardContents(m_gtkClipboard);
-    return m_dataObject->text();
+    text.text = m_dataObject->text();
 }
 
 bool Pasteboard::hasData()

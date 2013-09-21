@@ -80,7 +80,6 @@ set(JavaScriptCore_SOURCES
     dfg/DFGAbstractValue.cpp
     dfg/DFGArgumentsSimplificationPhase.cpp
     dfg/DFGArrayMode.cpp
-    dfg/DFGAssemblyHelpers.cpp
     dfg/DFGAtTailAbstractState.cpp
     dfg/DFGBackwardsPropagationPhase.cpp
     dfg/DFGBasicBlock.cpp
@@ -209,6 +208,7 @@ set(JavaScriptCore_SOURCES
     interpreter/StackVisitor.cpp
     interpreter/VMInspector.cpp
 
+    jit/AssemblyHelpers.cpp
     jit/ClosureCallStubRoutine.cpp
     jit/ExecutableAllocator.cpp
     jit/ExecutableAllocatorFixedVMPool.cpp
@@ -342,6 +342,7 @@ set(JavaScriptCore_SOURCES
     runtime/JSTypedArrayPrototypes.cpp
     runtime/JSTypedArrays.cpp
     runtime/JSVariableObject.cpp
+    runtime/JSWeakMap.cpp
     runtime/JSWithScope.cpp
     runtime/JSWrapperObject.cpp
     runtime/LiteralParser.cpp
@@ -396,6 +397,9 @@ set(JavaScriptCore_SOURCES
     runtime/VM.cpp
     runtime/Watchdog.cpp
     runtime/WatchdogNone.cpp
+    runtime/WeakMapConstructor.cpp
+    runtime/WeakMapData.cpp
+    runtime/WeakMapPrototype.cpp
 
     tools/CodeProfile.cpp
     tools/CodeProfiling.cpp
@@ -660,9 +664,10 @@ add_subdirectory(shell)
 
 WEBKIT_WRAP_SOURCELIST(${JavaScriptCore_SOURCES})
 include_directories(${JavaScriptCore_INCLUDE_DIRECTORIES})
-add_definitions(-DBUILDING_JavaScriptCore -DSTATICALLY_LINKED_WITH_WTF)
+add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
 add_library(JavaScriptCore ${JavaScriptCore_LIBRARY_TYPE} ${JavaScriptCore_HEADERS} ${JavaScriptCore_SOURCES})
 target_link_libraries(JavaScriptCore ${JavaScriptCore_LIBRARIES})
+set_target_properties(JavaScriptCore PROPERTIES COMPILE_DEFINITIONS "BUILDING_JavaScriptCore")
 set_target_properties(JavaScriptCore PROPERTIES FOLDER "JavaScriptCore")
 set_target_properties(JavaScriptCore PROPERTIES LINK_INTERFACE_LIBRARIES "")
 

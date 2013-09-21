@@ -32,6 +32,7 @@
 #include "EventTarget.h"
 #include "MediaStreamDescriptor.h"
 #include "MediaStreamSource.h"
+#include "ScriptWrappable.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -40,20 +41,25 @@
 namespace WebCore {
 
 class MediaStreamComponent;
+class MediaStreamTrackSourcesCallback;
 
-class MediaStreamTrack : public RefCounted<MediaStreamTrack>, public ActiveDOMObject, public EventTarget, public MediaStreamSource::Observer {
+class MediaStreamTrack : public RefCounted<MediaStreamTrack>, public ScriptWrappable, public ActiveDOMObject, public EventTarget, public MediaStreamSource::Observer {
 public:
     static PassRefPtr<MediaStreamTrack> create(ScriptExecutionContext*, MediaStreamComponent*);
     virtual ~MediaStreamTrack();
 
-    String kind() const;
+    AtomicString kind() const;
     String id() const;
     String label() const;
 
     bool enabled() const;
     void setEnabled(bool);
 
-    String readyState() const;
+    void didEndTrack();
+    
+    AtomicString readyState() const;
+
+    static void getSources(ScriptExecutionContext*, PassRefPtr<MediaStreamTrackSourcesCallback>, ExceptionCode&);
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(mute);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(unmute);
@@ -85,8 +91,8 @@ private:
     // MediaStreamSourceObserver
     virtual void sourceChangedState() OVERRIDE;
 
-    bool m_stopped;
     RefPtr<MediaStreamComponent> m_component;
+    bool m_stopped;
 };
 
 typedef Vector<RefPtr<MediaStreamTrack> > MediaStreamTrackVector;

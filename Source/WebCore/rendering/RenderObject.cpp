@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2000 Dirk Mueller (mueller@kde.org)
  *           (C) 2004 Allan Sandfeld Jensen (kde@carewolf.com)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2011, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  * Copyright (C) 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
@@ -29,7 +29,6 @@
 
 #include "AXObjectCache.h"
 #include "AnimationController.h"
-#include "ContentData.h"
 #include "CursorList.h"
 #include "EventHandler.h"
 #include "FloatQuad.h"
@@ -49,26 +48,13 @@
 #include "PseudoElement.h"
 #include "RenderArena.h"
 #include "RenderCounter.h"
-#include "RenderDeprecatedFlexibleBox.h"
-#include "RenderFlexibleBox.h"
+#include "RenderFlowThread.h"
 #include "RenderGeometryMap.h"
-#include "RenderGrid.h"
-#include "RenderImage.h"
-#include "RenderImageResourceStyleImage.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
-#include "RenderListItem.h"
-#include "RenderMultiColumnBlock.h"
 #include "RenderNamedFlowThread.h"
-#include "RenderRegion.h"
-#include "RenderRuby.h"
-#include "RenderRubyText.h"
 #include "RenderScrollbarPart.h"
-#include "RenderTableCaption.h"
-#include "RenderTableCell.h"
-#include "RenderTableCol.h"
-#include "RenderTableRow.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
 #include "Settings.h"
@@ -148,9 +134,9 @@ bool RenderObject::s_noLongerAffectsParentBlock = false;
 
 RenderObjectAncestorLineboxDirtySet* RenderObject::s_ancestorLineboxDirtySet = 0;
 
-void* RenderObject::operator new(size_t sz, RenderArena* renderArena)
+void* RenderObject::operator new(size_t sz, RenderArena& renderArena)
 {
-    return renderArena->allocate(sz);
+    return renderArena.allocate(sz);
 }
 
 void RenderObject::operator delete(void* ptr, size_t sz)
@@ -159,85 +145,6 @@ void RenderObject::operator delete(void* ptr, size_t sz)
 
     // Stash size where destroy can find it.
     *(size_t *)ptr = sz;
-}
-
-RenderObject* RenderObject::createObject(Element* element, RenderStyle* style)
-{
-    Document& document = element->document();
-    RenderArena* arena = document.renderArena();
-
-    // Minimal support for content properties replacing an entire element.
-    // Works only if we have exactly one piece of content and it's a URL.
-    // Otherwise acts as if we didn't support this feature.
-    const ContentData* contentData = style->contentData();
-    if (contentData && !contentData->next() && contentData->isImage() && !element->isPseudoElement()) {
-        RenderImage* image = new (arena) RenderImage(element);
-        // RenderImageResourceStyleImage requires a style being present on the image but we don't want to
-        // trigger a style change now as the node is not fully attached. Moving this code to style change
-        // doesn't make sense as it should be run once at renderer creation.
-        image->setStyleInternal(style);
-        if (const StyleImage* styleImage = static_cast<const ImageContentData*>(contentData)->image()) {
-            image->setImageResource(RenderImageResourceStyleImage::create(const_cast<StyleImage*>(styleImage)));
-            image->setIsGeneratedContent();
-        } else
-            image->setImageResource(RenderImageResource::create());
-        image->setStyleInternal(0);
-        return image;
-    }
-
-    if (element->hasTagName(rubyTag)) {
-        if (style->display() == INLINE)
-            return new (arena) RenderRubyAsInline(element);
-        else if (style->display() == BLOCK)
-            return new (arena) RenderRubyAsBlock(element);
-    }
-    // treat <rt> as ruby text ONLY if it still has its default treatment of block
-    if (element->hasTagName(rtTag) && style->display() == BLOCK)
-        return new (arena) RenderRubyText(element);
-    if (document.cssRegionsEnabled() && style->isDisplayRegionType() && !style->regionThread().isEmpty())
-        return new (arena) RenderRegion(element, 0);
-    switch (style->display()) {
-    case NONE:
-        return 0;
-    case INLINE:
-        return new (arena) RenderInline(element);
-    case BLOCK:
-    case INLINE_BLOCK:
-    case RUN_IN:
-    case COMPACT:
-        if ((!style->hasAutoColumnCount() || !style->hasAutoColumnWidth()) && document.regionBasedColumnsEnabled())
-            return new (arena) RenderMultiColumnBlock(element);
-        return new (arena) RenderBlock(element);
-    case LIST_ITEM:
-        return new (arena) RenderListItem(element);
-    case TABLE:
-    case INLINE_TABLE:
-        return new (arena) RenderTable(element);
-    case TABLE_ROW_GROUP:
-    case TABLE_HEADER_GROUP:
-    case TABLE_FOOTER_GROUP:
-        return new (arena) RenderTableSection(element);
-    case TABLE_ROW:
-        return new (arena) RenderTableRow(element);
-    case TABLE_COLUMN_GROUP:
-    case TABLE_COLUMN:
-        return new (arena) RenderTableCol(element);
-    case TABLE_CELL:
-        return new (arena) RenderTableCell(element);
-    case TABLE_CAPTION:
-        return new (arena) RenderTableCaption(element);
-    case BOX:
-    case INLINE_BOX:
-        return new (arena) RenderDeprecatedFlexibleBox(element);
-    case FLEX:
-    case INLINE_FLEX:
-        return new (arena) RenderFlexibleBox(element);
-    case GRID:
-    case INLINE_GRID:
-        return new (arena) RenderGrid(element);
-    }
-
-    return 0;
 }
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, renderObjectCounter, ("RenderObject"));
@@ -317,68 +224,22 @@ void RenderObject::setFlowThreadStateIncludingDescendants(FlowThreadState state)
     }
 }
 
-void RenderObject::addChild(RenderObject* newChild, RenderObject* beforeChild)
+void RenderObject::setParent(RenderElement* parent)
 {
-    RenderObjectChildList* children = virtualChildren();
-    ASSERT(children);
-    if (!children)
-        return;
+    m_parent = parent;
 
-    bool needsTable = false;
-
-    if (newChild->isRenderTableCol()) {
-        RenderTableCol* newTableColumn = toRenderTableCol(newChild);
-        bool isColumnInColumnGroup = newTableColumn->isTableColumn() && isRenderTableCol();
-        needsTable = !isTable() && !isColumnInColumnGroup;
-    } else if (newChild->isTableCaption())
-        needsTable = !isTable();
-    else if (newChild->isTableSection())
-        needsTable = !isTable();
-    else if (newChild->isTableRow())
-        needsTable = !isTableSection();
-    else if (newChild->isTableCell())
-        needsTable = !isTableRow();
-
-    if (needsTable) {
-        RenderTable* table;
-        RenderObject* afterChild = beforeChild ? beforeChild->previousSibling() : children->lastChild();
-        if (afterChild && afterChild->isAnonymous() && afterChild->isTable() && !afterChild->isBeforeContent())
-            table = toRenderTable(afterChild);
-        else {
-            table = RenderTable::createAnonymousWithParentRenderer(this);
-            addChild(table, beforeChild);
-        }
-        table->addChild(newChild);
-    } else
-        children->insertChildNode(this, newChild, beforeChild);
-
-    if (newChild->isText() && newChild->style()->textTransform() == CAPITALIZE)
-        toRenderText(newChild)->transformText();
-
-    // SVG creates renderers for <g display="none">, as SVG requires children of hidden
-    // <g>s to have renderers - at least that's how our implementation works. Consider:
-    // <g display="none"><foreignObject><body style="position: relative">FOO...
-    // - requiresLayer() would return true for the <body>, creating a new RenderLayer
-    // - when the document is painted, both layers are painted. The <body> layer doesn't
-    //   know that it's inside a "hidden SVG subtree", and thus paints, even if it shouldn't.
-    // To avoid the problem alltogether, detect early if we're inside a hidden SVG subtree
-    // and stop creating layers at all for these cases - they're not used anyways.
-    if (newChild->hasLayer() && !layerCreationAllowedForSubtree())
-        toRenderLayerModelObject(newChild)->layer()->removeOnlyThisLayer();
-
-#if ENABLE(SVG)
-    SVGRenderSupport::childAdded(this, newChild);
-#endif
+    // Only update if our flow thread state is different from our new parent and if we're not a RenderFlowThread.
+    // A RenderFlowThread is always considered to be inside itself, so it never has to change its state
+    // in response to parent changes.
+    FlowThreadState newState = parent ? parent->flowThreadState() : NotInsideFlowThread;
+    if (newState != flowThreadState() && !isRenderFlowThread())
+        setFlowThreadStateIncludingDescendants(newState);
 }
 
-void RenderObject::removeChild(RenderObject* oldChild)
+void RenderObject::removeFromParent()
 {
-    RenderObjectChildList* children = virtualChildren();
-    ASSERT(children);
-    if (!children)
-        return;
-
-    children->removeChildNode(this, oldChild);
+    if (parent())
+        parent()->removeChild(this);
 }
 
 RenderObject* RenderObject::nextInPreOrder() const
@@ -479,102 +340,191 @@ RenderObject* RenderObject::lastLeafChild() const
     return r;
 }
 
-static void addLayers(RenderObject* obj, RenderLayer* parentLayer, RenderObject*& newObject,
-                      RenderLayer*& beforeChild)
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+// Inspired by Node::traverseNextNode.
+RenderObject* RenderObject::traverseNext(const RenderObject* stayWithin) const
 {
-    if (obj->hasLayer()) {
-        if (!beforeChild && newObject) {
-            // We need to figure out the layer that follows newObject. We only do
-            // this the first time we find a child layer, and then we update the
-            // pointer values for newObject and beforeChild used by everyone else.
-            beforeChild = newObject->parent()->findNextLayer(parentLayer, newObject);
-            newObject = 0;
-        }
-        parentLayer->addChild(toRenderLayerModelObject(obj)->layer(), beforeChild);
-        return;
+    if (firstChild()) {
+        ASSERT(!stayWithin || firstChild()->isDescendantOf(stayWithin));
+        return firstChild();
     }
-
-    for (RenderObject* curr = obj->firstChild(); curr; curr = curr->nextSibling())
-        addLayers(curr, parentLayer, newObject, beforeChild);
-}
-
-void RenderObject::addLayers(RenderLayer* parentLayer)
-{
-    if (!parentLayer)
-        return;
-
-    RenderObject* object = this;
-    RenderLayer* beforeChild = 0;
-    WebCore::addLayers(this, parentLayer, object, beforeChild);
-}
-
-void RenderObject::removeLayers(RenderLayer* parentLayer)
-{
-    if (!parentLayer)
-        return;
-
-    if (hasLayer()) {
-        parentLayer->removeChild(toRenderLayerModelObject(this)->layer());
-        return;
-    }
-
-    for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling())
-        curr->removeLayers(parentLayer);
-}
-
-void RenderObject::moveLayers(RenderLayer* oldParent, RenderLayer* newParent)
-{
-    if (!newParent)
-        return;
-
-    if (hasLayer()) {
-        RenderLayer* layer = toRenderLayerModelObject(this)->layer();
-        ASSERT(oldParent == layer->parent());
-        if (oldParent)
-            oldParent->removeChild(layer);
-        newParent->addChild(layer);
-        return;
-    }
-
-    for (RenderObject* curr = firstChild(); curr; curr = curr->nextSibling())
-        curr->moveLayers(oldParent, newParent);
-}
-
-RenderLayer* RenderObject::findNextLayer(RenderLayer* parentLayer, RenderObject* startPoint,
-                                         bool checkParent)
-{
-    // Error check the parent layer passed in. If it's null, we can't find anything.
-    if (!parentLayer)
+    if (this == stayWithin)
         return 0;
-
-    // Step 1: If our layer is a child of the desired parent, then return our layer.
-    RenderLayer* ourLayer = hasLayer() ? toRenderLayerModelObject(this)->layer() : 0;
-    if (ourLayer && ourLayer->parent() == parentLayer)
-        return ourLayer;
-
-    // Step 2: If we don't have a layer, or our layer is the desired parent, then descend
-    // into our siblings trying to find the next layer whose parent is the desired parent.
-    if (!ourLayer || ourLayer == parentLayer) {
-        for (RenderObject* curr = startPoint ? startPoint->nextSibling() : firstChild();
-             curr; curr = curr->nextSibling()) {
-            RenderLayer* nextLayer = curr->findNextLayer(parentLayer, 0, false);
-            if (nextLayer)
-                return nextLayer;
-        }
+    if (nextSibling()) {
+        ASSERT(!stayWithin || nextSibling()->isDescendantOf(stayWithin));
+        return nextSibling();
     }
-
-    // Step 3: If our layer is the desired parent layer, then we're finished. We didn't
-    // find anything.
-    if (parentLayer == ourLayer)
-        return 0;
-
-    // Step 4: If |checkParent| is set, climb up to our parent and check its siblings that
-    // follow us to see if we can locate a layer.
-    if (checkParent && parent())
-        return parent()->findNextLayer(parentLayer, this, true);
-
+    const RenderObject* n = this;
+    while (n && !n->nextSibling() && (!stayWithin || n->parent() != stayWithin))
+        n = n->parent();
+    if (n) {
+        ASSERT(!stayWithin || !n->nextSibling() || n->nextSibling()->isDescendantOf(stayWithin));
+        return n->nextSibling();
+    }
     return 0;
 }
+
+// Non-recursive version of the DFS search.
+RenderObject* RenderObject::traverseNext(const RenderObject* stayWithin, HeightTypeTraverseNextInclusionFunction inclusionFunction, int& currentDepth, int& newFixedDepth) const
+{
+    BlockContentHeightType overflowType;
+
+    // Check for suitable children.
+    for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
+        overflowType = inclusionFunction(child);
+        if (overflowType != FixedHeight) {
+            currentDepth++;
+            if (overflowType == OverflowHeight)
+                newFixedDepth = currentDepth;
+            ASSERT(!stayWithin || child->isDescendantOf(stayWithin));
+            return child;
+        }
+    }
+
+    if (this == stayWithin)
+        return 0;
+
+    // Now we traverse other nodes if they exist, otherwise
+    // we go to the parent node and try doing the same.
+    const RenderObject* n = this;
+    while (n) {
+        while (n && !n->nextSibling() && (!stayWithin || n->parent() != stayWithin)) {
+            n = n->parent();
+            currentDepth--;
+        }
+        if (!n)
+            return 0;
+        for (RenderObject* sibling = n->nextSibling(); sibling; sibling = sibling->nextSibling()) {
+            overflowType = inclusionFunction(sibling);
+            if (overflowType != FixedHeight) {
+                if (overflowType == OverflowHeight)
+                    newFixedDepth = currentDepth;
+                ASSERT(!stayWithin || !n->nextSibling() || n->nextSibling()->isDescendantOf(stayWithin));
+                return sibling;
+            }
+        }
+        if (!stayWithin || n->parent() != stayWithin) {
+            n = n->parent();
+            currentDepth--;
+        } else
+            return 0;
+    }
+    return 0;
+}
+
+RenderObject* RenderObject::traverseNext(const RenderObject* stayWithin, TraverseNextInclusionFunction inclusionFunction) const
+{
+    for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
+        if (inclusionFunction(child)) {
+            ASSERT(!stayWithin || child->isDescendantOf(stayWithin));
+            return child;
+        }
+    }
+
+    if (this == stayWithin)
+        return 0;
+
+    for (RenderObject* sibling = nextSibling(); sibling; sibling = sibling->nextSibling()) {
+        if (inclusionFunction(sibling)) {
+            ASSERT(!stayWithin || sibling->isDescendantOf(stayWithin));
+            return sibling;
+        }
+    }
+
+    const RenderObject* n = this;
+    while (n) {
+        while (n && !n->nextSibling() && (!stayWithin || n->parent() != stayWithin))
+            n = n->parent();
+        if (n) {
+            for (RenderObject* sibling = n->nextSibling(); sibling; sibling = sibling->nextSibling()) {
+                if (inclusionFunction(sibling)) {
+                    ASSERT(!stayWithin || !n->nextSibling() || n->nextSibling()->isDescendantOf(stayWithin));
+                    return sibling;
+                }
+            }
+            if ((!stayWithin || n->parent() != stayWithin))
+                n = n->parent();
+            else
+                return 0;
+        }
+    }
+    return 0;
+}
+
+static RenderObject::BlockContentHeightType includeNonFixedHeight(const RenderObject* render)
+{
+    RenderStyle* style = render->style();
+    if (style) {
+        if (style->height().type() == Fixed) {
+            if (render->isRenderBlock()) {
+                const RenderBlock* block = toRenderBlock(render);
+                // For fixed height styles, if the overflow size of the element spills out of the specified
+                // height, assume we can apply text auto-sizing.
+                if (style->overflowY() == OVISIBLE && style->height().value() < block->layoutOverflowRect().maxY())
+                    return RenderObject::OverflowHeight;
+            }
+            return RenderObject::FixedHeight;
+        }
+    }
+    return RenderObject::FlexibleHeight;
+}
+
+
+void RenderObject::adjustComputedFontSizesOnBlocks(float size, float visibleWidth)
+{
+    Document* document = view().frameView().frame().document();
+    if (!document)
+        return;
+
+    Vector<int> depthStack;
+    int currentDepth = 0;
+    int newFixedDepth = 0;
+
+    // We don't apply autosizing to nodes with fixed height normally.
+    // But we apply it to nodes which are located deep enough
+    // (nesting depth is greater than some const) inside of a parent block
+    // which has fixed height but its content overflows intentionally.
+    for (RenderObject* descendent = traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth); descendent; descendent = descendent->traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth)) {
+        while (depthStack.size() > 0 && currentDepth <= depthStack[depthStack.size() - 1])
+            depthStack.remove(depthStack.size() - 1);
+        if (newFixedDepth)
+            depthStack.append(newFixedDepth);
+
+        int stackSize = depthStack.size();
+        if (descendent->isRenderBlock() && !descendent->isListItem() && (!stackSize || currentDepth - depthStack[stackSize - 1] > TextAutoSizingFixedHeightDepth))
+            static_cast<RenderBlock*>(descendent)->adjustComputedFontSizes(size, visibleWidth);
+        newFixedDepth = 0;
+    }
+
+    // Remove style from auto-sizing table that are no longer valid.
+    document->validateAutoSizingNodes();
+}
+
+void RenderObject::resetTextAutosizing()
+{
+    Document* document = view().frameView().frame().document();
+    if (!document)
+        return;
+
+    document->resetAutoSizingNodes();
+
+    Vector<int> depthStack;
+    int currentDepth = 0;
+    int newFixedDepth = 0;
+
+    for (RenderObject* descendent = traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth); descendent; descendent = descendent->traverseNext(this, includeNonFixedHeight, currentDepth, newFixedDepth)) {
+        while (depthStack.size() > 0 && currentDepth <= depthStack[depthStack.size() - 1])
+            depthStack.remove(depthStack.size() - 1);
+        if (newFixedDepth)
+            depthStack.append(newFixedDepth);
+
+        int stackSize = depthStack.size();
+        if (descendent->isRenderBlock() && !descendent->isListItem() && (!stackSize || currentDepth - depthStack[stackSize - 1] > TextAutoSizingFixedHeightDepth))
+            toRenderBlock(descendent)->resetComputedFontSize();
+        newFixedDepth = 0;
+    }
+}
+#endif // ENABLE(IOS_TEXT_AUTOSIZING)
 
 RenderLayer* RenderObject::enclosingLayer() const
 {
@@ -1259,8 +1209,7 @@ FloatRect RenderObject::absoluteBoundingBoxRectForRange(const Range* range)
     if (!range || !range->startContainer())
         return FloatRect();
 
-    if (range->ownerDocument())
-        range->ownerDocument()->updateLayout();
+    range->ownerDocument().updateLayout();
 
     Vector<FloatQuad> quads;
     range->textQuads(quads);
@@ -1312,7 +1261,7 @@ RenderLayerModelObject* RenderObject::containerForRepaint() const
 #endif
     
 #if ENABLE(CSS_FILTERS)
-    if (document().view()->hasSoftwareFilters()) {
+    if (view().hasSoftwareFilters()) {
         if (RenderLayer* parentLayer = enclosingLayer()) {
             RenderLayer* enclosingFilterLayer = parentLayer->enclosingFilterLayer();
             if (enclosingFilterLayer)
@@ -1498,7 +1447,7 @@ bool RenderObject::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repa
         int borderRight = isBox() ? toRenderBox(this)->borderRight() : 0;
         LayoutUnit boxWidth = isBox() ? toRenderBox(this)->width() : LayoutUnit();
         LayoutUnit minInsetRightShadowExtent = min<LayoutUnit>(-insetShadowExtent.right(), min<LayoutUnit>(newBounds.width(), oldBounds.width()));
-        LayoutUnit borderWidth = max<LayoutUnit>(borderRight, max<LayoutUnit>(valueForLength(style()->borderTopRightRadius().width(), boxWidth, &view()), valueForLength(style()->borderBottomRightRadius().width(), boxWidth, &view())));
+        LayoutUnit borderWidth = max<LayoutUnit>(borderRight, max<LayoutUnit>(valueForLength(style()->borderTopRightRadius().width(), boxWidth, &view()), valueForLength(style()->borderBottomRightRadius().width(), boxWidth)));
         LayoutUnit decorationsWidth = max<LayoutUnit>(-outlineStyle->outlineOffset(), borderWidth + minInsetRightShadowExtent) + max<LayoutUnit>(outlineWidth, shadowRight);
         LayoutRect rightRect(newOutlineBox.x() + min(newOutlineBox.width(), oldOutlineBox.width()) - decorationsWidth,
             newOutlineBox.y(),
@@ -1518,7 +1467,7 @@ bool RenderObject::repaintAfterLayoutIfNeeded(const RenderLayerModelObject* repa
         int borderBottom = isBox() ? toRenderBox(this)->borderBottom() : 0;
         LayoutUnit boxHeight = isBox() ? toRenderBox(this)->height() : LayoutUnit();
         LayoutUnit minInsetBottomShadowExtent = min<LayoutUnit>(-insetShadowExtent.bottom(), min<LayoutUnit>(newBounds.height(), oldBounds.height()));
-        LayoutUnit borderHeight = max<LayoutUnit>(borderBottom, max<LayoutUnit>(valueForLength(style()->borderBottomLeftRadius().height(), boxHeight, &view()), valueForLength(style()->borderBottomRightRadius().height(), boxHeight, &view())));
+        LayoutUnit borderHeight = max<LayoutUnit>(borderBottom, max<LayoutUnit>(valueForLength(style()->borderBottomLeftRadius().height(), boxHeight), valueForLength(style()->borderBottomRightRadius().height(), boxHeight, &view())));
         LayoutUnit decorationsHeight = max<LayoutUnit>(-outlineStyle->outlineOffset(), borderHeight + minInsetBottomShadowExtent) + max<LayoutUnit>(outlineWidth, shadowBottom);
         LayoutRect bottomRect(newOutlineBox.x(),
             min(newOutlineBox.maxY(), oldOutlineBox.maxY()) - decorationsHeight,
@@ -1557,7 +1506,7 @@ void RenderObject::computeRectForRepaint(const RenderLayerModelObject* repaintCo
         return;
 
     if (RenderObject* o = parent()) {
-        if (o->isBlockFlow()) {
+        if (o->isRenderBlockFlow()) {
             RenderBlock* cb = toRenderBlock(o);
             if (cb->hasColumns())
                 cb->adjustRectForColumns(rect);
@@ -1714,7 +1663,7 @@ void RenderObject::handleDynamicFloatPositionChange()
         else {
             // An anonymous block must be made to wrap this inline.
             RenderBlock* block = toRenderBlock(parent())->createAnonymousBlock();
-            RenderObjectChildList* childlist = parent()->virtualChildren();
+            RenderObjectChildList* childlist = parent()->children();
             childlist->insertChildNode(parent(), block, this);
             block->children()->appendChildNode(block, childlist->removeChildNode(parent(), this));
         }
@@ -1964,7 +1913,7 @@ void RenderObject::styleWillChange(StyleDifference diff, const RenderStyle* newS
 
         s_affectsParentBlock = isFloatingOrOutOfFlowPositioned()
             && (!newStyle->isFloating() && !newStyle->hasOutOfFlowPosition())
-            && parent() && (parent()->isBlockFlow() || parent()->isRenderInline());
+            && parent() && (parent()->isRenderBlockFlow() || parent()->isRenderInline());
 
         s_noLongerAffectsParentBlock = ((!isFloating() && newStyle->isFloating()) || (!isOutOfFlowPositioned() && newStyle->hasOutOfFlowPosition()))
             && parent() && parent()->isRenderBlock();
@@ -2462,7 +2411,7 @@ inline void RenderObject::clearLayoutRootIfNeeded() const
 void RenderObject::willBeDestroyed()
 {
     // Destroy any leftover anonymous children.
-    RenderObjectChildList* children = virtualChildren();
+    RenderObjectChildList* children = this->children();
     if (children)
         children->destroyLeftoverChildren();
 
@@ -2481,7 +2430,7 @@ void RenderObject::willBeDestroyed()
     if (AXObjectCache* cache = document().existingAXObjectCache())
         cache->childrenChanged(this->parent());
 
-    remove();
+    removeFromParent();
 
     ASSERT(documentBeingDestroyed() || !view().frameView().hasSlowRepaintObject(this));
 
@@ -2526,23 +2475,6 @@ void RenderObject::insertedIntoTree()
 {
     // FIXME: We should ASSERT(isRooted()) here but generated content makes some out-of-order insertion.
 
-    // Keep our layer hierarchy updated. Optimize for the common case where we don't have any children
-    // and don't have a layer attached to ourselves.
-    RenderLayer* layer = 0;
-    if (firstChild() || hasLayer()) {
-        layer = parent()->enclosingLayer();
-        addLayers(layer);
-    }
-
-    // If |this| is visible but this object was not, tell the layer it has some visible content
-    // that needs to be drawn and layer visibility optimization can't be used
-    if (parent()->style()->visibility() != VISIBLE && style()->visibility() == VISIBLE && !hasLayer()) {
-        if (!layer)
-            layer = parent()->enclosingLayer();
-        if (layer)
-            layer->setHasVisibleContent();
-    }
-
     if (!isFloating() && parent()->childrenInline())
         parent()->dirtyLinesFromChangedChild(this);
 
@@ -2558,20 +2490,6 @@ void RenderObject::willBeRemovedFromTree()
         bool repaintFixedBackgroundsOnScroll = shouldRepaintFixedBackgroundsOnScroll(&view().frameView());
         if (repaintFixedBackgroundsOnScroll && m_style && m_style->hasFixedBackgroundImage())
             view().frameView().removeSlowRepaintObject(this);
-    }
-
-    // If we remove a visible child from an invisible parent, we don't know the layer visibility any more.
-    RenderLayer* layer = 0;
-    if (parent()->style()->visibility() != VISIBLE && style()->visibility() == VISIBLE && !hasLayer()) {
-        if ((layer = parent()->enclosingLayer()))
-            layer->dirtyVisibleContentStatus();
-    }
-
-    // Keep our layer hierarchy updated.
-    if (firstChild() || hasLayer()) {
-        if (!layer)
-            layer = parent()->enclosingLayer();
-        removeLayers(layer);
     }
 
     if (isOutOfFlowPositioned() && parent()->childrenInline())
@@ -2602,7 +2520,7 @@ void RenderObject::removeFromRenderFlowThread()
 
 void RenderObject::removeFromRenderFlowThreadRecursive(RenderFlowThread* renderFlowThread)
 {
-    if (const RenderObjectChildList* children = virtualChildren()) {
+    if (const RenderObjectChildList* children = this->children()) {
         for (RenderObject* child = children->firstChild(); child; child = child->nextSibling())
             child->removeFromRenderFlowThreadRecursive(renderFlowThread);
     }
@@ -2655,7 +2573,7 @@ void RenderObject::removeShapeImageClient(ShapeValue* shapeValue)
 }
 #endif
 
-void RenderObject::arenaDelete(RenderArena* arena, void* base)
+void RenderObject::arenaDelete(RenderArena& arena, void* base)
 {
     if (m_style) {
         for (const FillLayer* bgLayer = m_style->backgroundLayers(); bgLayer; bgLayer = bgLayer->next()) {
@@ -2689,7 +2607,7 @@ void RenderObject::arenaDelete(RenderArena* arena, void* base)
 #endif
 
     // Recover the size left there for us by operator delete and free the memory.
-    arena->free(*(size_t*)base, base);
+    arena.free(*(size_t*)base, base);
 }
 
 VisiblePosition RenderObject::positionForPoint(const LayoutPoint&)
@@ -2796,7 +2714,7 @@ static PassRefPtr<RenderStyle> firstLineStyleForCachedUncachedType(StyleCacheSta
     if (renderer->isBeforeOrAfterContent())
         rendererForFirstLineStyle = renderer->parent();
 
-    if (rendererForFirstLineStyle->isBlockFlow()) {
+    if (rendererForFirstLineStyle->isRenderBlockFlow() || rendererForFirstLineStyle->isRenderButton()) {
         if (RenderBlock* firstLineBlock = rendererForFirstLineStyle->firstLineBlock()) {
             if (type == Cached)
                 return firstLineBlock->getCachedPseudoStyle(FIRST_LINE, style);

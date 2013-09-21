@@ -35,7 +35,6 @@
 #include "CSSValue.h"
 #include "CSSValueKeywords.h"
 #include "ChildListMutationScope.h"
-#include "ContextFeatures.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
 #include "Editor.h"
@@ -524,7 +523,7 @@ static Node* highestAncestorToWrapMarkup(const Range* range, EAnnotateForInterch
 
     Node* checkAncestor = specialCommonAncestor ? specialCommonAncestor : commonAncestor;
     if (checkAncestor->renderer() && checkAncestor->renderer()->containingBlock()) {
-        Node* newSpecialCommonAncestor = highestEnclosingNodeOfType(firstPositionInNode(checkAncestor), &isElementPresentational, CanCrossEditingBoundary, checkAncestor->renderer()->containingBlock()->node());
+        Node* newSpecialCommonAncestor = highestEnclosingNodeOfType(firstPositionInNode(checkAncestor), &isElementPresentational, CanCrossEditingBoundary, checkAncestor->renderer()->containingBlock()->element());
         if (newSpecialCommonAncestor)
             specialCommonAncestor = newSpecialCommonAncestor;
     }
@@ -637,16 +636,13 @@ String createMarkup(const Range* range, Vector<Node*>* nodes, EAnnotateForInterc
     if (!range)
         return emptyString();
 
-    Document* document = range->ownerDocument();
-    if (!document)
-        return emptyString();
-
+    Document& document = range->ownerDocument();
     const Range* updatedRange = range;
 
 #if ENABLE(DELETION_UI)
     // Disable the delete button so it's elements are not serialized into the markup,
     // but make sure neither endpoint is inside the delete user interface.
-    Frame* frame = document->frame();
+    Frame* frame = document.frame();
     DeleteButtonControllerDisableScope deleteButtonControllerDisableScope(frame);
 
     RefPtr<Range> updatedRangeRef;
@@ -658,14 +654,14 @@ String createMarkup(const Range* range, Vector<Node*>* nodes, EAnnotateForInterc
     }
 #endif
 
-    return createMarkupInternal(document, range, updatedRange, nodes, shouldAnnotate, convertBlocksToInlines, shouldResolveURLs);
+    return createMarkupInternal(&document, range, updatedRange, nodes, shouldAnnotate, convertBlocksToInlines, shouldResolveURLs);
 }
 
 PassRefPtr<DocumentFragment> createFragmentFromMarkup(Document* document, const String& markup, const String& baseURL, ParserContentPolicy parserContentPolicy)
 {
     // We use a fake body element here to trick the HTML parser to using the InBody insertion mode.
-    RefPtr<HTMLBodyElement> fakeBody = HTMLBodyElement::create(document);
-    RefPtr<DocumentFragment> fragment = DocumentFragment::create(document);
+    RefPtr<HTMLBodyElement> fakeBody = HTMLBodyElement::create(*document);
+    RefPtr<DocumentFragment> fragment = DocumentFragment::create(*document);
 
     fragment->parseHTML(markup, fakeBody.get(), parserContentPolicy);
 
@@ -728,7 +724,6 @@ PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document* docum
 
     RefPtr<DocumentFragment> taggedFragment = createFragmentFromMarkup(document, taggedMarkup.toString(), baseURL, parserContentPolicy);
     RefPtr<Document> taggedDocument = Document::create(0, KURL());
-    taggedDocument->setContextFeatures(document->contextFeatures());
     taggedDocument->takeAllChildrenFrom(taggedFragment.get());
 
     RefPtr<Node> nodeBeforeContext;
@@ -746,7 +741,7 @@ PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document* docum
     // When there's a special common ancestor outside of the fragment, we must include it as well to
     // preserve the structure and appearance of the fragment. For example, if the fragment contains
     // TD, we need to include the enclosing TABLE tag as well.
-    RefPtr<DocumentFragment> fragment = DocumentFragment::create(document);
+    RefPtr<DocumentFragment> fragment = DocumentFragment::create(*document);
     if (specialCommonAncestor)
         fragment->appendChild(specialCommonAncestor, ASSERT_NO_EXCEPTION);
     else
@@ -760,14 +755,14 @@ PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document* docum
 String createMarkup(const Node* node, EChildrenOnly childrenOnly, Vector<Node*>* nodes, EAbsoluteURLs shouldResolveURLs, Vector<QualifiedName>* tagNamesToSkip, EFragmentSerialization fragmentSerialization)
 {
     if (!node)
-        return "";
+        return emptyString();
 
     HTMLElement* deleteButtonContainerElement = 0;
 #if ENABLE(DELETION_UI)
     if (Frame* frame = node->document().frame()) {
-        deleteButtonContainerElement = frame->editor().deleteButtonController()->containerElement();
+        deleteButtonContainerElement = frame->editor().deleteButtonController().containerElement();
         if (node->isDescendantOf(deleteButtonContainerElement))
-            return "";
+            return emptyString();
     }
 #endif
     MarkupAccumulator accumulator(nodes, shouldResolveURLs, 0, fragmentSerialization);
@@ -840,8 +835,8 @@ PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String
     if (!context)
         return 0;
 
-    Document* document = context->ownerDocument();
-    RefPtr<DocumentFragment> fragment = document->createDocumentFragment();
+    Document& document = context->ownerDocument();
+    RefPtr<DocumentFragment> fragment = document.createDocumentFragment();
     
     if (text.isEmpty())
         return fragment.release();
@@ -851,9 +846,9 @@ PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String
     string.replace('\r', '\n');
 
     if (contextPreservesNewline(*context)) {
-        fragment->appendChild(document->createTextNode(string), ASSERT_NO_EXCEPTION);
+        fragment->appendChild(document.createTextNode(string), ASSERT_NO_EXCEPTION);
         if (string.endsWith('\n')) {
-            RefPtr<Element> element = createBreakElement(document);
+            RefPtr<Element> element = createBreakElement(&document);
             element->setAttribute(classAttr, AppleInterchangeNewline);            
             fragment->appendChild(element.release(), ASSERT_NO_EXCEPTION);
         }
@@ -885,16 +880,16 @@ PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String
         RefPtr<Element> element;
         if (s.isEmpty() && i + 1 == numLines) {
             // For last line, use the "magic BR" rather than a P.
-            element = createBreakElement(document);
+            element = createBreakElement(&document);
             element->setAttribute(classAttr, AppleInterchangeNewline);
         } else if (useLineBreak) {
-            element = createBreakElement(document);
+            element = createBreakElement(&document);
             fillContainerFromString(fragment.get(), s);
         } else {
             if (useClonesOfEnclosingBlock)
                 element = block->cloneElementWithoutChildren();
             else
-                element = createDefaultParagraphElement(document);
+                element = createDefaultParagraphElement(&document);
             fillContainerFromString(element.get(), s);
         }
         fragment->appendChild(element.release(), ASSERT_NO_EXCEPTION);
@@ -975,7 +970,7 @@ PassRefPtr<DocumentFragment> createFragmentForInnerOuterHTML(const String& marku
     if (contextElement->hasTagName(templateTag))
         document = document->ensureTemplateDocument();
 #endif
-    RefPtr<DocumentFragment> fragment = DocumentFragment::create(document);
+    RefPtr<DocumentFragment> fragment = DocumentFragment::create(*document);
 
     if (document->isHTMLDocument()) {
         fragment->parseHTML(markup, contextElement, parserContentPolicy);
@@ -999,10 +994,10 @@ PassRefPtr<DocumentFragment> createFragmentForTransformToFragment(const String& 
         // Based on the documentation I can find, it looks like we want to start parsing the fragment in the InBody insertion mode.
         // Unfortunately, that's an implementation detail of the parser.
         // We achieve that effect here by passing in a fake body element as context for the fragment.
-        RefPtr<HTMLBodyElement> fakeBody = HTMLBodyElement::create(outputDoc);
+        RefPtr<HTMLBodyElement> fakeBody = HTMLBodyElement::create(*outputDoc);
         fragment->parseHTML(sourceString, fakeBody.get());
     } else if (sourceMIMEType == "text/plain")
-        fragment->parserAppendChild(Text::create(outputDoc, sourceString));
+        fragment->parserAppendChild(Text::create(*outputDoc, sourceString));
     else {
         bool successfulParse = fragment->parseXML(sourceString, 0);
         if (!successfulParse)
@@ -1106,7 +1101,7 @@ void replaceChildrenWithText(ContainerNode* container, const String& text, Excep
         return;
     }
 
-    RefPtr<Text> textNode = Text::create(&containerNode->document(), text);
+    RefPtr<Text> textNode = Text::create(containerNode->document(), text);
 
     if (hasOneChild(containerNode.get())) {
         containerNode->replaceChild(textNode.release(), containerNode->firstChild(), ec);

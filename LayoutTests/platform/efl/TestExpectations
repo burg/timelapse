@@ -117,10 +117,6 @@ editing/selection/extend-selection-after-double-click.html
 fast/forms/listbox-onchange.html
 fast/forms/onselect-textfield.html
 fast/forms/option-mouseevents.html
-fast/forms/search-abs-pos-cancel-button.html
-fast/forms/search-cancel-button-events.html
-fast/forms/search-transformed.html
-fast/forms/search-zoomed.html
 fast/forms/range/slider-delete-while-dragging-thumb.html
 fast/harness/results.html
 fast/repaint/selection-clear.html
@@ -228,10 +224,7 @@ fast/events/platform-wheelevent-paging-y-in-non-scrolling-div.html
 fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-div.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-page.html
-fast/forms/number/number-spinbutton-in-multi-column.html
-fast/forms/select/listbox-in-multi-column.html
 fast/inline/continuation-outlines-with-layers.html
-fast/invalid/residual-style.html
 
 # The black text is not overlapping with the red one
 fast/text/line-initial-and-final-swashes.html
@@ -249,7 +242,6 @@ svg/zoom/text/zoom-hixie-mixed-009.xml
 svg/batik/paints/gradientLimit.svg
 
 # EFL DRT doesn't fully support http tests yet. These tests make timeout error.
-fast/overflow/overflow-height-float-not-removed-crash3.html
 http/tests/misc/copy-resolves-urls.html
 http/tests/misc/iframe-invalid-source-crash.html
 http/tests/misc/submit-post-keygen.html
@@ -268,8 +260,7 @@ http/tests/xmlhttprequest/cross-origin-no-authorization.html
 http/tests/xmlhttprequest/logout.html
 http/tests/xmlhttprequest/redirect-cross-origin-tripmine.html
 
-# These test -apple- and -khtml- prefixed CSS properties, which we don't support.
-inspector/styles/vendor-prefixes.html [ WontFix ]
+webkit.org/b/121096 inspector [ Skip ]
 
 # There are no expected result set yet.
 editing/unsupported-content/list-delete-001.html 
@@ -303,15 +294,6 @@ fast/profiler/dead-time.html
 
 # following tests started failing on EFL afrer r122952.
 http/tests/inspector/resource-parameters.html
-inspector/styles/svg-style.xhtml
-inspector/debugger/live-edit.html
-inspector/debugger/live-edit-breakpoints.html
-inspector/debugger/debugger-compile-and-run.html
-
-webkit.org/b/88780 inspector/debugger/dom-breakpoints.html [ Timeout Failure ]
-webkit.org/b/88780 inspector/debugger/event-listener-breakpoints.html [ Failure ]
-webkit.org/b/88780 inspector/debugger/step-through-event-listeners.html [ Failure ]
-webkit.org/b/89056 inspector/debugger/xhr-breakpoints.html [ Failure Timeout ]
 
 # ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
@@ -370,7 +352,6 @@ Bug(EFL) fast/dom/shadow [ WontFix ]
 Bug(EFL) editing/text-iterator/basic-iteration-shadowdom.html [ WontFix ]
 Bug(EFL) accessibility/corresponding-control-deleted-crash.html [ WontFix ]
 Bug(EFL) fast/dom/HTMLTemplateElement/cycles-in-shadow.html [ WontFix ]
-Bug(EFL) inspector/elements/update-shadowdom.html [ WontFix ]
 
 # Rounding issues when running on 32-bits machines.
 svg/css/stars-with-shadow.html
@@ -508,7 +489,6 @@ webkit.org/b/101809 fast/canvas/canvas-resize-reset-pixelRatio.html [ Skip ]
 # DeviceOrientation support is not enabled by default.
 Bug(EFL) fast/dom/DeviceOrientation [ Skip ]
 Bug(EFL) fast/dom/Window/window-properties-device-orientation.html [ Skip ]
-Bug(EFL) inspector/device-orientation-success.html [ Skip ]
 
 # EFL port does not enable ORIENTATION_EVENTS
 webkit.org/b/90928 fast/dom/Orientation [ Skip ]
@@ -586,10 +566,6 @@ webkit.org/b/104809 media/video-timeupdate-during-playback.html [ Crash Pass ]
 
 webkit.org/b/111521 editing/selection/selection-invalid-offset.html [ Crash Pass ]
 
-# ASSERTION FAILED: static_cast<unsigned>(m_start + length) <= string.length().
-webkit.org/b/116024 fast/table/crash-section-logical-height-changed-needsCellRecalc.html [ Crash ]
-webkit.org/b/116024 fast/table/crash-split-table-section-no-cell-recalc.html [ Crash Pass ]
-
 # Sometimes crashes in PlatformContextCairo::drawSurfaceToContext().
 webkit.org/b/116025 compositing/video/video-background-color.html [ Crash Pass ]
 
@@ -632,15 +608,6 @@ webkit.org/b/78869 http/tests/inspector/inspect-element.html [ Failure Pass ]
 webkit.org/b/91958 http/tests/inspector-enabled/injected-script-discard.html [ Failure Pass ]
 webkit.org/b/85615 http/tests/inspector/resource-har-pages.html [ Failure Pass ]
 Bug(EFL) http/tests/inspector/search/resources-search-match-index.html [ Failure Pass ]
-webkit.org/b/93820 inspector/console/console-format-collections.html [ Failure Pass ]
-webkit.org/b/96886 [ Release ] inspector/debugger/dynamic-script-tag.html [ Failure Pass ]
-webkit.org/b/114160 [ Debug ] inspector/debugger/dynamic-script-tag.html [ Crash Failure Pass ]
-
-Bug(EFL) inspector/profiler/heap-snapshot.html [ Failure Pass ]
-Bug(EFL) inspector/timeline/timeline-enum-stability.html [ Failure Pass ]
-
-# New test added in r139405 that gives different output every run.
-webkit.org/b/104384 inspector/debugger/debugger-script-preprocessor.html [ Failure Pass ]
 
 # Sometimes asserts in MessagePort::contextDestroyed
 webkit.org/b/94458 http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html [ Crash Failure Pass ]
@@ -730,8 +697,6 @@ webkit.org/b/107024 compositing/video-page-visibility.html [ Pass Failure ]
 webkit.org/b/78819 fast/workers/shared-worker-load-error.html [ Failure Pass ]
 
 # Libsoup 2.42.0 regressions
-webkit.org/b/114918 http/tests/cache/reload-main-resource.php [ Failure ]
-webkit.org/b/114918 http/tests/cache/xhr-vary-header.html [ Failure ]
 webkit.org/b/114918 http/tests/xmlhttprequest/cache-override.html [ Failure Pass ]
 webkit.org/b/114918 http/tests/xmlhttprequest/range-test.html [ Failure Pass ]
 
@@ -1050,7 +1015,6 @@ Bug(EFL) fast/images/pdf-as-tiled-background.html
 Bug(EFL) fast/replaced/pdf-as-image.html
 
 # Started failing after sub-pixel layout was enabled.
-Bug(EFL) fast/replaced/table-percent-height-text-controls.html [ Failure ]
 Bug(EFL) fast/regions/overflow-last-region-vert-lr.html [ ImageOnlyFailure ]
 Bug(EFL) fast/spatial-navigation/snav-unit-overflow-and-scroll-in-direction.html [ Failure ]
 
@@ -1075,8 +1039,6 @@ Bug(EFL) storage/domstorage/localstorage/storagetracker
 
 # JSC does not support setIsolatedWorldSecurityOrigin.
 webkit.org/b/61540 http/tests/security/isolatedWorld/cross-origin-xhr.html [ Failure ]
-webkit.org/b/61540 inspector/extensions/extensions-audits-content-script.html [ Failure ]
-webkit.org/b/61540 inspector/extensions/extensions-eval-content-script.html [ Failure ]
 
 #__worldID is undefined in isolated world
 Bug(EFL) http/tests/security/isolatedWorld/didClearWindowObject.html
@@ -1260,14 +1222,10 @@ Bug(EFL) fast/media/media-query-list-03.html [ Failure ]
 Bug(EFL) fast/media/media-query-list-04.html [ Failure ]
 Bug(EFL) fast/media/media-query-list-05.html [ Failure ]
 Bug(EFL) fast/media/media-query-list-06.html [ Failure ]
-Bug(EFL) fast/media/media-query-list-07.html [ Failure ]
 
 # EFL's TestRunner should support for the Geolocation API
 webkit.org/b/82140 fast/dom/Geolocation [ Skip ]
 webkit.org/b/82140 fast/dom/Window/window-properties-geolocation.html [ Failure ]
-webkit.org/b/82140 inspector/geolocation-error.html [ Failure ]
-webkit.org/b/82140 inspector/geolocation-success.html [ Failure ]
-webkit.org/b/82140 inspector/geolocation-watchPosition.html [ Failure ]
 
 # IETC namespace failures
 webkit.org/b/86142 ietestcenter/css3/namespaces/syntax-021.xml [ ImageOnlyFailure ]
@@ -1327,8 +1285,6 @@ webkit.org/b/91339 css2.1/20110323/vertical-align-boxes-001.htm [ ImageOnlyFailu
 # Failing after r121121 on both GTK and EFL
 webkit.org/b/89845 fast/forms/input-set-composition-scroll.html [ Failure ]
 
-webkit.org/b/90007 http/tests/security/mixedContent/insecure-audio-video-in-main-frame.html [ Failure ]
-
 # These tests are failing after r122528.
 webkit.org/b/91210 http/tests/w3c/webperf/approved/navigation-timing/html/test_performance_attributes_exist_in_object.html [ Failure ]
 webkit.org/b/91210 http/tests/w3c/webperf/approved/navigation-timing/html/test_timing_xserver_redirect.html [ Failure ]
@@ -1346,16 +1302,6 @@ webkit.org/b/61799 canvas/philip/tests/2d.text.draw.space.collapse.start.html [ 
 webkit.org/b/61799 canvas/philip/tests/2d.text.measure.width.space.html [ Failure ]
 
 # JSC doesn't support heap profiling
-webkit.org/b/50485 inspector/profiler/heap-snapshot-inspect-dom-wrapper.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-comparison-dom-groups-change.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-comparison-show-all.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-loader.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-reveal-in-dominators-view.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-retainers.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-show-ranges.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-fields.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting.html [ Skip ]
-webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-instances.html [ Skip ]
 webkit.org/b/50485 inspector-protocol/heap-profiler [ Skip ]
 
 webkit.org/b/93976 fast/css-generated-content/quotes-lang.html [ ImageOnlyFailure ]
@@ -1377,9 +1323,6 @@ webkit.org/b/84037 fast/text/international/spaces-combined-in-vertical-text.html
 
 # Failed table/mozilla test, fields are not on the same line
 webkit.org/b/97109 tables/mozilla/bugs/bug99948.html [ Pass ]
-
-# New test introduced in r125790 fails
-webkit.org/b/94341 inspector/timeline/timeline-decode-resize.html [ Failure ]
 
 # Fails after r126350
 webkit.org/b/94788 media/track/track-cue-rendering-snap-to-lines-not-set.html [ Failure ]
@@ -1431,10 +1374,6 @@ webkit.org/b/100324 css3/supports-dom-api.html
 # fast/selectors/unqualified-hover-quirks.html or itself.
 webkit.org/b/10890 fast/selectors/unqualified-hover-strict.html [ Failure Pass ]
 
-webkit.org/b/73936 inspector/profiler/canvas2d/canvas-has-uninstrumented-canvases.html
-webkit.org/b/73936 inspector/profiler/canvas2d/canvas-stack-trace.html
-webkit.org/b/73936 inspector/profiler/canvas2d/canvas-replay-log-grid.html
-
 # EFL port does not support Emacs commands.
 Bug(EFL) editing/pasteboard/emacs-cntl-y-001.html [ Missing ]
 Bug(EFL) editing/pasteboard/emacs-ctrl-a-k-y.html [ Missing ]
@@ -1466,12 +1405,7 @@ Bug(EFL) animations/negative-delay.html [ Failure Pass ]
 Bug(EFL) compositing/bounds-in-flipped-writing-mode.html [ Failure ]
 Bug(EFL) compositing/iframes/leave-compositing-iframe.html [ Failure ]
 Bug(EFL) compositing/visibility/visibility-composited.html [ Failure ]
-Bug(EFL) editing/selection/caret-rtl.html [ Failure Pass ]
 Bug(EFL) editing/selection/caret-at-bidi-boundary.html [ Crash Pass ]
-Bug(EFL) editing/selection/caret-ltr.html [ Failure Pass ]
-Bug(EFL) editing/selection/caret-ltr-2-left.html [ Failure Pass ]
-Bug(EFL) editing/selection/caret-ltr-2.html [ Failure Pass ]
-Bug(EFL) editing/selection/caret-rtl-2.html [ Failure Pass ]
 Bug(EFL) fast/dynamic/012.html [ Failure ]
 Bug(EFL) fast/dynamic/layer-hit-test-crash.html [ Failure ]
 Bug(EFL) fast/layers/layer-visibility-sublayer.html [ Failure ]
@@ -1604,20 +1538,12 @@ webkit.org/b/106439 editing/pasteboard/paste-noplugin.html [ Failure ]
 # Mark as missing image result, same as other ports. Test should be updated to text-based repaint test.
 webkit.org/b/103955 fast/repaint/caret-with-transformation.html [ Missing ]
 
-# New inspector/editor/text-editor-formatter.html introduced in r139617 fails on EFL, Mac, QT
-# https://bugs.webkit.org/show_bug.cgi?id=106883
-inspector/editor/text-editor-formatter.html
-inspector/editor/text-editor-word-jumps.html
-inspector/editor/text-editor-home-button.html
-inspector/editor/text-editor-smart-braces.html
-
 # Test fails on JSC platforms due to GC timing problems
 webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
 
 # Fail to generate proper pixel results - let's wait with rebaselining.
 webkit.org/b/106992 scrollingcoordinator/non-fast-scrollable-region-scaled-iframe.html [ Failure Pass ]
 webkit.org/b/106992 scrollingcoordinator/non-fast-scrollable-region-transformed-iframe.html [ Failure Pass ]
-webkit.org/b/106992 svg/zoom/page/zoom-replaced-intrinsic-ratio-001.htm [ Failure ]
 webkit.org/b/106992 http/tests/misc/object-embedding-svg-delayed-size-negotiation-2.htm [ Failure ]
 
 webkit.org/b/107375 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
@@ -1670,9 +1596,6 @@ webkit.org/b/110654 css3/flexbox/button.html [ Failure ]
 webkit.org/b/111016 http/tests/loading/promote-img-preload-priority.html [ Failure ]
 
 webkit.org/b/111058 plugins/plugin-clip-subframe.html [ Failure ]
-
-# Button has focus but should not.
-webkit.org/b/114150 fast/forms/datalist/update-range-with-datalist.html [ ImageOnlyFailure ]
 
 # Newly added tests in r144190 are failing.
 webkit.org/b/111172 compositing/overlap-blending/children-opacity-huge.html [ ImageOnlyFailure ]
@@ -1733,9 +1656,6 @@ webkit.org/b/115659 accessibility/meter-element.html [ Failure ]
 
 # Newly added test in r148131 is failing.
 webkit.org/b/114876 media/click-volume-bar-not-pausing.html [ Failure ]
-
-# Newly added test in r148136 is failing.
-webkit.org/b/114877 accessibility/link-inside-button-accessible-text.html [ Failure ]
 
 webkit.org/b/114612 editing/style/block-style-005.html [ Failure ]
 

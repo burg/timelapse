@@ -29,20 +29,24 @@
 namespace WebCore {
 
 class InlineTextBox;
+class Text;
 
 class RenderText : public RenderObject {
 public:
-    RenderText(Node*, PassRefPtr<StringImpl>);
+    RenderText(Text*, const String&);
 #ifndef NDEBUG
     virtual ~RenderText();
 #endif
 
+    static RenderText* createAnonymous(Document&, const String&);
+
     virtual const char* renderName() const OVERRIDE;
 
-    virtual bool isTextFragment() const;
-    virtual bool isWordBreak() const;
+    Text* textNode() const;
 
-    virtual PassRefPtr<StringImpl> originalText() const;
+    virtual bool isTextFragment() const;
+
+    virtual String originalText() const;
 
     void extractTextBox(InlineTextBox*);
     void attachTextBox(InlineTextBox*);
@@ -63,7 +67,7 @@ public:
     enum ClippingOption { NoClipping, ClipToEllipsis };
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed = 0, ClippingOption = NoClipping) const;
 
-    virtual VisiblePosition positionForPoint(const LayoutPoint&);
+    virtual VisiblePosition positionForPoint(const LayoutPoint&) OVERRIDE;
 
     bool is8Bit() const { return m_text.is8Bit(); }
     const LChar* characters8() const { return m_text.impl()->characters8(); }
@@ -94,8 +98,8 @@ public:
     float firstRunX() const;
     float firstRunY() const;
 
-    virtual void setText(PassRefPtr<StringImpl>, bool force = false);
-    void setTextWithOffset(PassRefPtr<StringImpl>, unsigned offset, unsigned len, bool force = false);
+    virtual void setText(const String&, bool force = false);
+    void setTextWithOffset(const String&, unsigned offset, unsigned len, bool force = false);
 
     virtual void transformText();
 
@@ -104,8 +108,8 @@ public:
     virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) OVERRIDE;
     virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
 
-    LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0, &view()); }
-    LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0, &view()); }
+    LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0); }
+    LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0); }
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE FINAL;
 
@@ -136,14 +140,19 @@ public:
 
     void removeAndDestroyTextBoxes();
 
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
+    void setCandidateComputedTextSize(float s) { m_candidateComputedTextSize = s; }
+#endif
+
 protected:
     virtual void computePreferredLogicalWidths(float leadWidth);
-    virtual void willBeDestroyed();
+    virtual void willBeDestroyed() OVERRIDE;
 
     virtual void styleWillChange(StyleDifference, const RenderStyle*) OVERRIDE FINAL { }
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
-    virtual void setTextInternal(PassRefPtr<StringImpl>);
+    virtual void setTextInternal(const String&);
     virtual UChar previousCharacter() const;
     
     virtual InlineTextBox* createTextBox(); // Subclassed by SVG.
@@ -170,6 +179,8 @@ private:
 
     void secureText(UChar mask);
 
+    void node() const WTF_DELETED_FUNCTION;
+
     // We put the bitfield first to minimize padding on 64-bit.
     bool m_hasBreakableChar : 1; // Whether or not we can be broken into multiple lines.
     bool m_hasBreak : 1; // Whether or not we have a hard break (e.g., <pre> with '\n').
@@ -186,6 +197,10 @@ private:
     mutable bool m_knownToHaveNoOverflowAndNoFallbackFonts : 1;
     bool m_needsTranscoding : 1;
     
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    // FIXME: This should probably be part of the text sizing structures in Document instead. That would save some memory.
+    float m_candidateComputedTextSize;
+#endif
     float m_minWidth;
     float m_maxWidth;
     float m_beginMinWidth;

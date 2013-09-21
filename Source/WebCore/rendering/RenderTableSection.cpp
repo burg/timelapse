@@ -132,14 +132,14 @@ void RenderTableSection::addChild(RenderObject* child, RenderObject* beforeChild
         if (last && last->isAnonymous() && !last->isBeforeOrAfterContent()) {
             if (beforeChild == last)
                 beforeChild = last->firstChild();
-            last->addChild(child, beforeChild);
+            toRenderTableRow(last)->addChild(child, beforeChild);
             return;
         }
 
         if (beforeChild && !beforeChild->isAnonymous() && beforeChild->parent() == this) {
             RenderObject* row = beforeChild->previousSibling();
             if (row && row->isTableRow() && row->isAnonymous()) {
-                row->addChild(child);
+                toRenderTableRow(row)->addChild(child);
                 return;
             }
         }
@@ -150,11 +150,11 @@ void RenderTableSection::addChild(RenderObject* child, RenderObject* beforeChild
         while (lastBox && lastBox->parent()->isAnonymous() && !lastBox->isTableRow())
             lastBox = lastBox->parent();
         if (lastBox && lastBox->isAnonymous() && !lastBox->isBeforeOrAfterContent()) {
-            lastBox->addChild(child, beforeChild);
+            toRenderTableRow(lastBox)->addChild(child, beforeChild);
             return;
         }
 
-        RenderObject* row = RenderTableRow::createAnonymousWithParentRenderer(this);
+        RenderTableRow* row = RenderTableRow::createAnonymousWithParentRenderer(this);
         addChild(row, beforeChild);
         row->addChild(child);
         return;
@@ -279,7 +279,7 @@ int RenderTableSection::calcRowLogicalHeight()
         LayoutUnit baselineDescent = 0;
 
         // Our base size is the biggest logical height from our cells' styles (excluding row spanning cells).
-        m_rowPos[r + 1] = max(m_rowPos[r] + minimumValueForLength(m_grid[r].logicalHeight, 0, &view()).round(), 0);
+        m_rowPos[r + 1] = max(m_rowPos[r] + minimumValueForLength(m_grid[r].logicalHeight, 0).round(), 0);
 
         Row& row = m_grid[r].row;
         unsigned totalCols = row.size();
@@ -1438,7 +1438,7 @@ RenderTableSection* RenderTableSection::createAnonymousWithParentRenderer(const 
 {
     RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE_ROW_GROUP);
     RenderTableSection* newSection = new (parent->renderArena()) RenderTableSection(0);
-    newSection->setDocumentForAnonymous(&parent->document());
+    newSection->setDocumentForAnonymous(parent->document());
     newSection->setStyle(newStyle.release());
     return newSection;
 }

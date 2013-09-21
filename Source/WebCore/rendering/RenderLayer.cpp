@@ -72,6 +72,7 @@
 #include "HitTestingTransformState.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
+#include "InspectorInstrumentation.h"
 #include "OverflowEvent.h"
 #include "OverlapTestRequestClient.h"
 #include "Page.h"
@@ -220,10 +221,8 @@ RenderLayer::RenderLayer(RenderLayerModelObject& rendererLayerModelObject)
         m_hasVisibleContent = renderer().style()->visibility() == VISIBLE;
     }
 
-    Node* node = renderer().node();
-    if (node && node->isElementNode()) {
+    if (Element* element = renderer().element()) {
         // We save and restore only the scrollOffset as the other scroll values are recalculated.
-        Element* element = toElement(node);
         m_scrollOffset = element->savedLayerScrollOffset();
         if (!m_scrollOffset.isZero())
             scrollAnimator()->setCurrentPosition(FloatPoint(m_scrollOffset.width(), m_scrollOffset.height()));
@@ -239,9 +238,8 @@ RenderLayer::~RenderLayer()
     renderer().view().frameView().removeScrollableArea(this);
 
     if (!renderer().documentBeingDestroyed()) {
-        Node* node = renderer().node();
-        if (node && node->isElementNode())
-            toElement(node)->setSavedLayerScrollOffset(m_scrollOffset);
+        if (Element* element = renderer().element())
+            element->setSavedLayerScrollOffset(m_scrollOffset);
     }
 
     destroyScrollbar(HorizontalScrollbar);
@@ -277,7 +275,7 @@ String RenderLayer::name() const
     StringBuilder name;
     name.append(renderer().renderName());
 
-    if (Element* element = renderer().node() && renderer().node()->isElementNode() ? toElement(renderer().node()) : 0) {
+    if (Element* element = renderer().element()) {
         name.append(' ');
         name.append(element->tagName());
 
@@ -1159,6 +1157,26 @@ void RenderLayer::updateDescendantDependentFlags(HashSet<const RenderObject*>* o
     }
 }
 
+#if USE(ACCELERATED_COMPOSITING)
+// Return true if clipping change requires layer update.
+bool RenderLayer::updateDescendantClippingContext(bool addClipping)
+{
+    bool layerNeedsRebuild = false;
+    for (RenderLayer* child = firstChild(); child; child = child->nextSibling()) {
+        RenderLayerBacking* backing = child->backing();
+        // Update layer context when new clipping is added or existing clipping is removed.
+        if (backing && (addClipping || backing->hasAncestorClippingLayer())) {
+            if (backing->updateAncestorClippingLayer(compositor().clippedByAncestor(child)))
+                layerNeedsRebuild = true;
+        }
+
+        if (child->updateDescendantClippingContext(addClipping))
+            layerNeedsRebuild = true;
+    }
+    return layerNeedsRebuild;
+}
+#endif
+
 void RenderLayer::dirty3DTransformedDescendantStatus()
 {
     RenderLayer* curr = stackingContainer();
@@ -1466,7 +1484,12 @@ RenderLayer* RenderLayer::enclosingFilterLayer(IncludeSelfOrNot includeSelf) con
 RenderLayer* RenderLayer::enclosingFilterRepaintLayer() const
 {
     for (const RenderLayer* curr = this; curr; curr = curr->parent()) {
-        if ((curr != this && curr->requiresFullLayerImageForFilters()) || compositedWithOwnBackingStore(curr) || curr->isRootLayer())
+        if ((curr != this && curr->requiresFullLayerImageForFilters())
+#if USE(ACCELERATED_COMPOSITING)
+            || compositedWithOwnBackingStore(curr)
+#endif
+            || curr->isRootLayer()
+        )
             return const_cast<RenderLayer*>(curr);
     }
     return 0;
@@ -1578,7 +1601,7 @@ bool RenderLayer::cannotBlitToWindow() const
 bool RenderLayer::isTransparent() const
 {
 #if ENABLE(SVG)
-    if (renderer().node() && renderer().node()->namespaceURI() == SVGNames::svgNamespaceURI)
+    if (renderer().element() && renderer().element()->namespaceURI() == SVGNames::svgNamespaceURI)
         return false;
 #endif
     return renderer().isTransparent() || renderer().hasMask();
@@ -1715,9 +1738,9 @@ void RenderLayer::beginTransparencyLayers(GraphicsContext* context, const Render
     }
 }
 
-void* RenderLayer::operator new(size_t sz, RenderArena* renderArena)
+void* RenderLayer::operator new(size_t sz, RenderArena& renderArena)
 {
-    return renderArena->allocate(sz);
+    return renderArena.allocate(sz);
 }
 
 void RenderLayer::operator delete(void* ptr, size_t sz)
@@ -1726,12 +1749,12 @@ void RenderLayer::operator delete(void* ptr, size_t sz)
     *(size_t *)ptr = sz;
 }
 
-void RenderLayer::destroy(RenderArena* renderArena)
+void RenderLayer::destroy(RenderArena& renderArena)
 {
     delete this;
 
     // Recover the size left there for us by operator delete and free the memory.
-    renderArena->free(*(size_t *)this, this);
+    renderArena.free(*(size_t *)this, this);
 }
 
 void RenderLayer::addChild(RenderLayer* child, RenderLayer* beforeChild)
@@ -1875,8 +1898,10 @@ void RenderLayer::insertOnlyThisLayer()
     }
 
     // Remove all descendant layers from the hierarchy and add them to the new position.
-    for (RenderObject* curr = renderer().firstChild(); curr; curr = curr->nextSibling())
-        curr->moveLayers(m_parent, this);
+    for (RenderObject* curr = renderer().firstChild(); curr; curr = curr->nextSibling()) {
+        if (curr->isRenderElement())
+            toRenderElement(curr)->moveLayers(m_parent, this);
+    }
 
     // Clear out all the clip rects.
     clearClipRectsIncludingDescendants();
@@ -2228,7 +2253,7 @@ void RenderLayer::scrollTo(int x, int y)
 #if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
         view.frameView().updateAnnotatedRegions();
 #endif
-        view.updateWidgetPositions();
+        view.frameView().updateWidgetPositions();
 
         if (!m_updatingMarqueePosition) {
             // Avoid updating compositing layers if, higher on the stack, we're already updating layer
@@ -2261,8 +2286,8 @@ void RenderLayer::scrollTo(int x, int y)
         renderer().repaintUsingContainer(repaintContainer, pixelSnappedIntRect(m_repaintRect));
 
     // Schedule the scroll DOM event.
-    if (Node* node = renderer().node())
-        node->document().eventQueue()->enqueueOrDispatchScrollEvent(renderer().node(), DocumentEventQueue::ScrollEventElementTarget);
+    if (Node* element = renderer().element())
+        element->document().eventQueue().enqueueOrDispatchScrollEvent(*element);
 
     InspectorInstrumentation::didScrollLayer(&frame);
     if (scrollsOverflow())
@@ -2481,11 +2506,12 @@ bool RenderLayer::canResize() const
 void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOffset)
 {
     // FIXME: This should be possible on generated content but is not right now.
-    if (!inResizeMode() || !canResize() || !renderer().node())
+    if (!inResizeMode() || !canResize() || !renderer().element())
         return;
 
-    ASSERT(renderer().node()->isElementNode());
-    Element* element = toElement(renderer().node());
+    // FIXME: The only case where renderer->element()->renderer() != renderer is with continuations. Do they matter here?
+    // If they do it would still be better to deal with them explicitly.
+    Element* element = renderer().element();
     RenderBox* renderer = toRenderBox(element->renderer());
 
     Document& document = element->document();
@@ -6230,6 +6256,18 @@ void RenderLayer::styleChanged(StyleDifference, const RenderStyle* oldStyle)
         compositor().setCompositingLayersNeedRebuild();
     else if (isComposited())
         backing()->updateGraphicsLayerGeometry();
+
+    if (oldStyle) {
+        // Compositing layers keep track of whether they are clipped by any of the ancestors.
+        // When the current layer's clipping behaviour changes, we need to propagate it to the descendants.
+        RenderStyle* style = renderer().style();
+        bool wasClipping = oldStyle->hasClip() || oldStyle->overflowX() != OVISIBLE || oldStyle->overflowY() != OVISIBLE;
+        bool isClipping = style->hasClip() || style->overflowX() != OVISIBLE || style->overflowY() != OVISIBLE;
+        if (isClipping != wasClipping) {
+            if (updateDescendantClippingContext(isClipping))
+                compositor().setCompositingLayersNeedRebuild();
+        }
+    }
 #endif
 
 #if ENABLE(CSS_FILTERS)
@@ -6273,7 +6311,7 @@ void RenderLayer::updateScrollCornerStyle()
     RefPtr<RenderStyle> corner = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(SCROLLBAR_CORNER), actualRenderer->style()) : PassRefPtr<RenderStyle>(0);
     if (corner) {
         if (!m_scrollCorner) {
-            m_scrollCorner = RenderScrollbarPart::createAnonymous(&renderer().document());
+            m_scrollCorner = RenderScrollbarPart::createAnonymous(renderer().document());
             m_scrollCorner->setParent(&renderer());
         }
         m_scrollCorner->setStyle(corner.release());
@@ -6289,7 +6327,7 @@ void RenderLayer::updateResizerStyle()
     RefPtr<RenderStyle> resizer = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(RESIZER), actualRenderer->style()) : PassRefPtr<RenderStyle>(0);
     if (resizer) {
         if (!m_resizer) {
-            m_resizer = RenderScrollbarPart::createAnonymous(&renderer().document());
+            m_resizer = RenderScrollbarPart::createAnonymous(renderer().document());
             m_resizer->setParent(&renderer());
         }
         m_resizer->setStyle(resizer.release());
@@ -6307,7 +6345,7 @@ RenderLayer* RenderLayer::reflectionLayer() const
 void RenderLayer::createReflection()
 {
     ASSERT(!m_reflection);
-    m_reflection = RenderReplica::createAnonymous(&renderer().document());
+    m_reflection = RenderReplica::createAnonymous(renderer().document());
     m_reflection->setParent(&renderer()); // We create a 1-way connection.
 }
 
@@ -6468,7 +6506,7 @@ void RenderLayer::updateOrRemoveFilterEffectRenderer()
         filterInfo.setRenderer(filterRenderer.release());
         
         // We can optimize away code paths in other places if we know that there are no software filters.
-        renderer().view().frameView().setHasSoftwareFilters(true);
+        renderer().view().setHasSoftwareFilters(true);
     }
 
     // If the filter fails to build, remove it from the layer. It will still attempt to
@@ -6479,7 +6517,7 @@ void RenderLayer::updateOrRemoveFilterEffectRenderer()
 
 void RenderLayer::filterNeedsRepaint()
 {
-    renderer().node()->setNeedsStyleRecalc(SyntheticStyleChange);
+    renderer().element()->setNeedsStyleRecalc(SyntheticStyleChange);
     renderer().repaint();
 }
 
@@ -6494,7 +6532,7 @@ void showLayerTree(const WebCore::RenderLayer* layer)
     if (!layer)
         return;
 
-    WTF::String output = externalRepresentation(&layer->renderer().frame(), WebCore::RenderAsTextShowAllLayers | WebCore::RenderAsTextShowLayerNesting | WebCore::RenderAsTextShowCompositedLayers | WebCore::RenderAsTextShowAddresses | WebCore::RenderAsTextShowIDAndClass | WebCore::RenderAsTextDontUpdateLayout | WebCore::RenderAsTextShowLayoutState);
+    WTF::String output = externalRepresentation(&layer->renderer().frame(), WebCore::RenderAsTextShowAllLayers | WebCore::RenderAsTextShowLayerNesting | WebCore::RenderAsTextShowCompositedLayers | WebCore::RenderAsTextShowAddresses | WebCore::RenderAsTextShowIDAndClass | WebCore::RenderAsTextDontUpdateLayout | WebCore::RenderAsTextShowLayoutState | WebCore::RenderAsTextShowOverflow);
     fprintf(stderr, "%s\n", output.utf8().data());
 }
 

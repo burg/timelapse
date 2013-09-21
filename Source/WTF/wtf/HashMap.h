@@ -99,18 +99,20 @@ namespace WTF {
         // replaces value but not key if key is already present
         // return value is a pair of the iterator to the key location, 
         // and a boolean that's true if a new value was actually added
-        AddResult set(const KeyType&, MappedPassInType);
+        template<typename V> AddResult set(const KeyType&, V&&);
+        template<typename V> AddResult set(KeyType&&, V&&);
 
         // does nothing if key is already present
         // return value is a pair of the iterator to the key location, 
         // and a boolean that's true if a new value was actually added
-        AddResult add(const KeyType&, MappedPassInType);
+        template<typename V> AddResult add(const KeyType&, V&&);
+        template<typename V> AddResult add(KeyType&&, V&&);
 
         bool remove(const KeyType&);
         bool remove(iterator);
         void clear();
 
-        MappedPassOutType take(const KeyType&); // efficient combination of get with remove
+        MappedType take(const KeyType&); // efficient combination of get with remove
 
         // An alternate version of find() that finds the object by hashing and comparing
         // with some other type, to avoid the cost of type conversion. HashTranslator
@@ -127,14 +129,18 @@ namespace WTF {
         //   static unsigned hash(const T&);
         //   static bool equal(const ValueType&, const T&);
         //   static translate(ValueType&, const T&, unsigned hashCode);
-        template<typename HashTranslator, typename T> AddResult add(const T&, MappedPassInType);
+        template<typename HashTranslator, typename K, typename V> AddResult add(K&&, V&&);
 
         void checkConsistency() const;
 
         static bool isValidKey(const KeyType&);
 
     private:
-        AddResult inlineAdd(const KeyType&, MappedPassInReferenceType);
+        template<typename K, typename V>
+        AddResult inlineSet(K&&, V&&);
+
+        template<typename K, typename V>
+        AddResult inlineAdd(K&&, V&&);
 
         HashTableType m_impl;
     };
@@ -170,11 +176,10 @@ namespace WTF {
         private:
             friend class HashMap;
 
-            // These are intentionally not implemented.
-            HashMapKeysProxy();
-            HashMapKeysProxy(const HashMapKeysProxy&);
-            HashMapKeysProxy& operator=(const HashMapKeysProxy&);
-            ~HashMapKeysProxy();
+            HashMapKeysProxy() WTF_DELETED_FUNCTION;
+            HashMapKeysProxy(const HashMapKeysProxy&) WTF_DELETED_FUNCTION;
+            HashMapKeysProxy& operator=(const HashMapKeysProxy&) WTF_DELETED_FUNCTION;
+            ~HashMapKeysProxy() WTF_DELETED_FUNCTION;
     };
 
     template<typename KeyArg, typename MappedArg, typename HashArg,  typename KeyTraitsArg, typename MappedTraitsArg>
@@ -209,10 +214,10 @@ namespace WTF {
             friend class HashMap;
 
             // These are intentionally not implemented.
-            HashMapValuesProxy();
-            HashMapValuesProxy(const HashMapValuesProxy&);
-            HashMapValuesProxy& operator=(const HashMapValuesProxy&);
-            ~HashMapValuesProxy();
+            HashMapValuesProxy() WTF_DELETED_FUNCTION;
+            HashMapValuesProxy(const HashMapValuesProxy&) WTF_DELETED_FUNCTION;
+            HashMapValuesProxy& operator=(const HashMapValuesProxy&) WTF_DELETED_FUNCTION;
+            ~HashMapValuesProxy() WTF_DELETED_FUNCTION;
     };
 
     template<typename KeyTraits, typename MappedTraits> struct HashMapValueTraits : KeyValuePairHashTraits<KeyTraits, MappedTraits> {
@@ -227,10 +232,10 @@ namespace WTF {
     struct HashMapTranslator {
         template<typename T> static unsigned hash(const T& key) { return HashFunctions::hash(key); }
         template<typename T, typename U> static bool equal(const T& a, const U& b) { return HashFunctions::equal(a, b); }
-        template<typename T, typename U, typename V> static void translate(T& location, const U& key, const V& mapped)
+        template<typename T, typename U, typename V> static void translate(T& location, U&& key, V&& mapped)
         {
-            location.key = key;
-            ValueTraits::ValueTraits::store(mapped, location.value);
+            location.key = std::forward<U>(key);
+            location.value = std::forward<V>(mapped);
         }
     };
 
@@ -238,10 +243,10 @@ namespace WTF {
     struct HashMapTranslatorAdapter {
         template<typename T> static unsigned hash(const T& key) { return Translator::hash(key); }
         template<typename T, typename U> static bool equal(const T& a, const U& b) { return Translator::equal(a, b); }
-        template<typename T, typename U, typename V> static void translate(T& location, const U& key, const V& mapped, unsigned hashCode)
+        template<typename T, typename U, typename V> static void translate(T& location, U&& key, V&& mapped, unsigned hashCode)
         {
             Translator::translate(location.key, key, hashCode);
-            ValueTraits::ValueTraits::store(mapped, location.value);
+            location.value = std::forward<V>(mapped);
         }
     };
 
@@ -270,37 +275,37 @@ namespace WTF {
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
-    inline typename HashMap<T, U, V, W, X>::iterator HashMap<T, U, V, W, X>::begin()
+    inline auto HashMap<T, U, V, W, X>::begin() -> iterator
     {
         return m_impl.begin();
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
-    inline typename HashMap<T, U, V, W, X>::iterator HashMap<T, U, V, W, X>::end()
+    inline auto HashMap<T, U, V, W, X>::end() -> iterator
     {
         return m_impl.end();
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
-    inline typename HashMap<T, U, V, W, X>::const_iterator HashMap<T, U, V, W, X>::begin() const
+    inline auto HashMap<T, U, V, W, X>::begin() const -> const_iterator
     {
         return m_impl.begin();
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
-    inline typename HashMap<T, U, V, W, X>::const_iterator HashMap<T, U, V, W, X>::end() const
+    inline auto HashMap<T, U, V, W, X>::end() const -> const_iterator
     {
         return m_impl.end();
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
-    inline typename HashMap<T, U, V, W, X>::iterator HashMap<T, U, V, W, X>::find(const KeyType& key)
+    inline auto HashMap<T, U, V, W, X>::find(const KeyType& key) -> iterator
     {
         return m_impl.find(key);
     }
 
     template<typename T, typename U, typename V, typename W, typename X>
-    inline typename HashMap<T, U, V, W, X>::const_iterator HashMap<T, U, V, W, X>::find(const KeyType& key) const
+    inline auto HashMap<T, U, V, W, X>::find(const KeyType& key) const -> const_iterator
     {
         return m_impl.find(key);
     }
@@ -329,49 +334,67 @@ namespace WTF {
 
     template<typename T, typename U, typename V, typename W, typename X>
     template<typename HashTranslator, typename TYPE>
-    inline bool
-    HashMap<T, U, V, W, X>::contains(const TYPE& value) const
+    inline bool HashMap<T, U, V, W, X>::contains(const TYPE& value) const
     {
-        return m_impl.template contains<HashMapTranslatorAdapter<ValueTraits, HashTranslator> >(value);
+        return m_impl.template contains<HashMapTranslatorAdapter<ValueTraits, HashTranslator>>(value);
     }
 
-    template<typename T, typename U, typename V, typename W, typename X>
-    typename HashMap<T, U, V, W, X>::AddResult
-    HashMap<T, U, V, W, X>::inlineAdd(const KeyType& key, MappedPassInReferenceType mapped) 
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename K, typename V>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::inlineSet(K&& key, V&& value) -> AddResult
     {
-        return m_impl.template add<HashMapTranslator<ValueTraits, HashFunctions> >(key, mapped);
-    }
-
-    template<typename T, typename U, typename V, typename W, typename X>
-    typename HashMap<T, U, V, W, X>::AddResult
-    HashMap<T, U, V, W, X>::set(const KeyType& key, MappedPassInType mapped) 
-    {
-        AddResult result = inlineAdd(key, mapped);
+        AddResult result = inlineAdd(std::forward<K>(key), std::forward<V>(value));
         if (!result.isNewEntry) {
             // The inlineAdd call above found an existing hash table entry; we need to set the mapped value.
-            MappedTraits::store(mapped, result.iterator->value);
+            result.iterator->value = std::forward<V>(value);
         }
         return result;
     }
 
-    template<typename T, typename U, typename V, typename W, typename X>
-    template<typename HashTranslator, typename TYPE>
-    typename HashMap<T, U, V, W, X>::AddResult
-    HashMap<T, U, V, W, X>::add(const TYPE& key, MappedPassInType value)
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename K, typename V>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::inlineAdd(K&& key, V&& value) -> AddResult
     {
-        return m_impl.template addPassingHashCode<HashMapTranslatorAdapter<ValueTraits, HashTranslator> >(key, value);
+        return m_impl.template add<HashMapTranslator<ValueTraits, HashFunctions>>(std::forward<K>(key), std::forward<V>(value));
     }
 
-    template<typename T, typename U, typename V, typename W, typename X>
-    typename HashMap<T, U, V, W, X>::AddResult
-    HashMap<T, U, V, W, X>::add(const KeyType& key, MappedPassInType mapped)
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename T>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::set(const KeyType& key, T&& mapped) -> AddResult
+    {
+        return inlineSet(key, std::forward<T>(mapped));
+    }
+
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename T>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::set(KeyType&& key, T&& mapped) -> AddResult
+    {
+        return inlineSet(std::move(key), std::forward<T>(mapped));
+    }
+
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename HashTranslator, typename K, typename V>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::add(K&& key, V&& value) -> AddResult
+    {
+        return m_impl.template addPassingHashCode<HashMapTranslatorAdapter<ValueTraits, HashTranslator>>(std::forward<K>(key), std::forward<V>(value));
+    }
+
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename T>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::add(const KeyType& key, T&& mapped) -> AddResult
     {
         return inlineAdd(key, mapped);
     }
 
+    template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+    template<typename T>
+    auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::add(KeyType&& key, T&& mapped) -> AddResult
+    {
+        return inlineAdd(std::move(key), mapped);
+    }
+
     template<typename T, typename U, typename V, typename W, typename MappedTraits>
-    typename HashMap<T, U, V, W, MappedTraits>::MappedPeekType
-    HashMap<T, U, V, W, MappedTraits>::get(const KeyType& key) const
+    auto HashMap<T, U, V, W, MappedTraits>::get(const KeyType& key) const -> MappedPeekType
     {
         ValueType* entry = const_cast<HashTableType&>(m_impl).lookup(key);
         if (!entry)
@@ -402,15 +425,14 @@ namespace WTF {
     }
 
     template<typename T, typename U, typename V, typename W, typename MappedTraits>
-    typename HashMap<T, U, V, W, MappedTraits>::MappedPassOutType
-    HashMap<T, U, V, W, MappedTraits>::take(const KeyType& key)
+    auto HashMap<T, U, V, W, MappedTraits>::take(const KeyType& key) -> MappedType
     {
         iterator it = find(key);
         if (it == end())
-            return MappedTraits::passOut(MappedTraits::emptyValue());
-        MappedPassOutType result = MappedTraits::passOut(it->value);
+            return MappedTraits::emptyValue();
+        MappedType value = std::move(it->value);
         remove(it);
-        return result;
+        return value;
     }
 
     template<typename T, typename U, typename V, typename W, typename X>

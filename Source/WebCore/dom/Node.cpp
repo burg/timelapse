@@ -353,7 +353,7 @@ Node::~Node()
             willBeDeletedFrom(document);
     }
 
-    m_treeScope->guardDeref();
+    m_treeScope->selfOnlyDeref();
 
     InspectorCounters::decrementCounter(InspectorCounters::NodeCounter);
 }
@@ -1045,18 +1045,6 @@ void Node::removedFrom(ContainerNode* insertionPoint)
         clearFlag(IsInShadowTreeFlag);
 }
 
-bool Node::needsShadowTreeWalkerSlow() const
-{
-    if (isShadowRoot())
-        return true;
-    if (!isElementNode())
-        return false;
-    const Element* asElement = toElement(this);
-    if (asElement->isPseudoElement() || asElement->beforePseudoElement() || asElement->afterPseudoElement())
-        return true;
-    return asElement->isInsertionPoint() || asElement->shadowRoot();
-}
-
 bool Node::isRootEditableElement() const
 {
     return rendererIsEditable() && isElementNode() && (!parentNode() || !parentNode()->rendererIsEditable()
@@ -1451,7 +1439,7 @@ void Node::setTextContent(const String& text, ExceptionCode& ec)
         case ENTITY_NODE:
         case ENTITY_REFERENCE_NODE:
         case DOCUMENT_FRAGMENT_NODE: {
-            RefPtr<ContainerNode> container = toContainerNode(this);
+            Ref<ContainerNode> container(*toContainerNode(this));
             ChildListMutationScope mutation(this);
             container->removeChildren();
             if (!text.isEmpty())
@@ -2271,22 +2259,22 @@ bool Node::willRespondToTouchEvents()
 #endif
 }
 
-// This is here for inlining
+// This is here so it can be inlined into Node::removedLastRef.
+// FIXME: Really? Seems like this could be inlined into Node::removedLastRef if it was in TreeScope.h.
+// FIXME: It also not seem important to inline this. Is this really hot?
 inline void TreeScope::removedLastRefToScope()
 {
     ASSERT(!deletionHasBegun());
-    if (m_guardRefCount) {
-        // If removing a child removes the last self-only ref, we don't
-        // want the scope to be destructed until after
-        // removeDetachedChildren returns, so we guard ourselves with an
-        // extra self-only ref.
-        guardRef();
-        dispose();
+    if (m_selfOnlyRefCount) {
+        // If removing a child removes the last self-only ref, we don't want the scope to be destroyed
+        // until after removeDetachedChildren returns, so we protect ourselves with an extra self-only ref.
+        selfOnlyRef();
+        dropChildren();
 #ifndef NDEBUG
-        // We need to do this right now since guardDeref() can delete this.
+        // We need to do this right now since selfOnlyDeref() can delete this.
         rootNode()->m_inRemovedLastRefFunction = false;
 #endif
-        guardDeref();
+        selfOnlyDeref();
     } else {
 #ifndef NDEBUG
         rootNode()->m_inRemovedLastRefFunction = false;
@@ -2359,6 +2347,8 @@ void Node::updateAncestorConnectedSubframeCountForInsertion() const
         node->incrementConnectedSubframeCount(count);
 }
 
+#if ENABLE(STYLE_SCOPED)
+// FIXME: What is this code doing in Node, srsly?
 void Node::registerScopedHTMLStyleChild()
 {
     setHasScopedHTMLStyleChild(true);
@@ -2383,6 +2373,7 @@ size_t Node::numberOfScopedHTMLStyleChildren() const
 
     return count;
 }
+#endif
 
 } // namespace WebCore
 

@@ -992,6 +992,8 @@ webkit.org/b/85408 svg/batik/text/textLength.svg [ Failure Pass ]
 webkit.org/b/85408 svg/batik/text/textEffect.svg [ Pass Failure ]
 webkit.org/b/85408 svg/batik/paints/patternRegions-positioned-objects.svg [ Pass Failure ]
 webkit.org/b/85408 svg/batik/text/textDecoration.svg [ Pass Failure ]
+webkit.org/b/114120 svg/batik/masking/maskRegions.svg [ Pass Failure ]
+webkit.org/b/114375 svg/batik/filters/feTile.svg [ Pass Failure ]
 
 webkit.org/b/99893 svg/animations/mozilla/animateMotion-mpath-targetChange-1.svg [ ImageOnlyFailure ]
 
@@ -1060,6 +1062,9 @@ webkit.org/b/98837 http/tests/security/svg-image-leak.html [ Skip ]
 # Should never have been a ref test.
 webkit.org/b/98456 compositing/images/truncated-direct-png-image.html [ ImageOnlyFailure ]
 
+# Color profile dependent, passes on some bots and fails on others.
+webkit.org/b/121526 compositing/images/positioned-image-content-rect.html [ Pass ImageOnlyFailure ]
+
 # Ref tests suffering from colorspace issues
 compositing/patterns/direct-pattern-compositing-add-text.html [ Pass ImageOnlyFailure ]
 compositing/patterns/direct-pattern-compositing-contain.html [ Pass ImageOnlyFailure ]
@@ -1070,7 +1075,7 @@ compositing/patterns/direct-pattern-compositing-size.html [ Pass ImageOnlyFailur
 compositing/patterns/direct-pattern-compositing.html [ Pass ImageOnlyFailure ]
 
 # Timing out on Mountain Lion WK1 release sometimes
-webkit.org/b/99221 fast/js/random-array-gc-stress.html [ Pass Timeout ]
+webkit.org/b/99221 js/dom/random-array-gc-stress.html [ Pass Timeout ]
 
 # User Timing is not enable yet. so skip it.
 webkit.org/b/84893 http/tests/w3c/webperf/submission/Intel/user-timing [ Skip ]
@@ -1203,6 +1208,9 @@ webkit.org/b/112176 fast/css/sticky/sticky-both-sides.html [ ImageOnlyFailure Pa
 
 webkit.org/b/76364 fast/css/lang-mapped-to-webkit-locale-dynamic.xhtml [ Pass Failure ]
 
+# Always very slow, frequently timing out (only on bots, not locally).
+webkit.org/b/121331 http/tests/misc/submit-post-keygen.html [ Pass Failure Timeout ]
+
 # Feature not implemented
 webkit.org/b/91611 media/media-higher-prio-audio-stream.html [ Skip ]
 
@@ -1268,8 +1276,6 @@ webkit.org/b/116244 fast/events/mouse-cursor-image-set.html [ Failure Pass ]
 
 webkit.org/b/116245 canvas/philip/tests/2d.text.draw.fontface.notinpage.html [ Pass Failure ]
 
-webkit.org/b/116388 fast/js/post-message-numeric-property.html
-
 webkit.org/b/116582 [ Debug ] inspector/styles/import-pseudoclass-crash.html [ Pass Crash ]
 
 webkit.org/b/116592 inspector/geolocation-error.html [ Pass Failure ]
@@ -1299,3 +1305,27 @@ webkit.org/b/120387 svg/animations/svglengthlist-animation-3.html [ Pass Failure
 
 # Don't run ogv and mkv tests on mac
 media/track/in-band [ WontFix ]
+
+webkit.org/b/120922 compositing/overlap-blending/children-opacity-huge.html [ ImageOnlyFailure ]
+webkit.org/b/120922 compositing/overlap-blending/children-opacity-no-overlap.html [ ImageOnlyFailure ]
+
+webkit.org/b/120923 animations/cross-fade-background-image.html [ ImageOnlyFailure ]
+
+webkit.org/b/121053 fast/history/go-back-to-iframe-with-plugin.html [ Crash Timeout Pass ]
+
+webkit.org/b/121343 http/tests/inspector/network/network-size-chunked.html [ Failure ]
+webkit.org/b/121343 http/tests/inspector/network/network-size-sync.html [ Failure ]
+
+webkit.org/b/114280 svg/animations/smil-leak-dynamically-added-element-instances.svg [ Pass Failure ]
+webkit.org/b/114280 svg/animations/smil-leak-element-instances-noBaseValRef.svg [ Pass Failure ]
+webkit.org/b/114280 svg/animations/smil-leak-element-instances.svg [ Pass Failure ]
+webkit.org/b/114280 svg/animations/smil-leak-elements.svg [ Pass Failure ]
+
+webkit.org/b/90363 [ Debug ] fast/overflow/lots-of-sibling-inline-boxes.html [ Failure Pass Timeout ]
+webkit.org/b/104511 [ Debug ] inspector/elements/edit-dom-actions.html [ Failure Pass Timeout ]
+webkit.org/b/121452 [ Debug ] fast/frames/lots-of-objects.html [ Failure Pass Timeout ]
+
+# Frequently times out in DumpRenderTree (which is reported as a text failure).
+webkit.org/b/120544 inspector/storage-panel-dom-storage-update.html [ Pass Failure ]
+
+webkit.org/b/121582 [ Lion ] media/track/track-in-band-duplicate-tracks-when-source-changes.html [ Failure ]

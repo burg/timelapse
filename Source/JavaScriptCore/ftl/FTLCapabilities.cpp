@@ -86,7 +86,31 @@ inline CapabilityLevel canCompile(Node* node)
     case Upsilon:
     case ExtractOSREntryLocal:
     case LoopHint:
+    case Call:
+    case Construct:
+    case GlobalVarWatchpoint:
+    case GetMyScope:
+    case SkipScope:
+    case GetClosureRegisters:
+    case GetClosureVar:
+    case PutClosureVar:
         // These are OK.
+        break;
+    case GetIndexedPropertyStorage:
+        if (isTypedView(node->arrayMode().typedArrayType()))
+            break;
+        return CannotCompile;
+    case CheckArray:
+        switch (node->arrayMode().type()) {
+        case Array::Int32:
+        case Array::Double:
+        case Array::Contiguous:
+            break;
+        default:
+            if (isTypedView(node->arrayMode().typedArrayType()))
+                break;
+            return CannotCompile;
+        }
         break;
     case GetArrayLength:
         switch (node->arrayMode().type()) {
@@ -95,6 +119,8 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::Contiguous:
             break;
         default:
+            if (isTypedView(node->arrayMode().typedArrayType()))
+                break;
             return CannotCompile;
         }
         break;
@@ -107,6 +133,8 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::Contiguous:
             break;
         default:
+            if (isTypedView(node->arrayMode().typedArrayType()))
+                return CanCompileAndOSREnter;
             return CannotCompile;
         }
         switch (node->arrayMode().speculation()) {
@@ -127,12 +155,16 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::Contiguous:
             break;
         default:
+            if (isTypedView(node->arrayMode().typedArrayType()))
+                return CanCompileAndOSREnter;
             return CannotCompile;
         }
         break;
     case CompareEq:
     case CompareStrictEq:
         if (node->isBinaryUseKind(Int32Use))
+            break;
+        if (node->isBinaryUseKind(MachineIntUse))
             break;
         if (node->isBinaryUseKind(NumberUse))
             break;
@@ -144,6 +176,8 @@ inline CapabilityLevel canCompile(Node* node)
     case CompareGreater:
     case CompareGreaterEq:
         if (node->isBinaryUseKind(Int32Use))
+            break;
+        if (node->isBinaryUseKind(MachineIntUse))
             break;
         if (node->isBinaryUseKind(NumberUse))
             break;
@@ -206,6 +240,7 @@ CapabilityLevel canCompile(Graph& graph)
                 case UntypedUse:
                 case Int32Use:
                 case KnownInt32Use:
+                case MachineIntUse:
                 case NumberUse:
                 case KnownNumberUse:
                 case RealNumberUse:

@@ -34,7 +34,6 @@
 #include "ChromeClient.h"
 #include "ClientRect.h"
 #include "ClientRectList.h"
-#include "ComposedShadowTreeWalker.h"
 #include "ContentDistributor.h"
 #include "Cursor.h"
 #include "DOMStringList.h"
@@ -65,6 +64,7 @@
 #include "InspectorFrontendClientLocal.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorOverlay.h"
+#include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "InternalSettings.h"
 #include "IntRect.h"
@@ -355,7 +355,7 @@ PassRefPtr<Element> Internals::createContentElement(ExceptionCode& ec)
     }
 
 #if ENABLE(SHADOW_DOM)
-    return HTMLContentElement::create(document);
+    return HTMLContentElement::create(*document);
 #else
     return 0;
 #endif
@@ -508,61 +508,6 @@ bool Internals::attached(Node* node, ExceptionCode& ec)
     }
 
     return node->attached();
-}
-
-Node* Internals::nextSiblingByWalker(Node* node, ExceptionCode& ec)
-{
-    if (!node) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    ComposedShadowTreeWalker walker(node);
-    walker.nextSibling();
-    return walker.get();
-}
-
-Node* Internals::firstChildByWalker(Node* node, ExceptionCode& ec)
-{
-    if (!node) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    ComposedShadowTreeWalker walker(node);
-    walker.firstChild();
-    return walker.get();
-}
-
-Node* Internals::lastChildByWalker(Node* node, ExceptionCode& ec)
-{
-    if (!node) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    ComposedShadowTreeWalker walker(node);
-    walker.lastChild();
-    return walker.get();
-}
-
-Node* Internals::nextNodeByWalker(Node* node, ExceptionCode& ec)
-{
-    if (!node) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    ComposedShadowTreeWalker walker(node);
-    walker.next();
-    return walker.get();
-}
-
-Node* Internals::previousNodeByWalker(Node* node, ExceptionCode& ec)
-{
-    if (!node) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    ComposedShadowTreeWalker walker(node);
-    walker.previous();
-    return walker.get();
 }
 
 String Internals::elementRenderTreeAsText(Element* element, ExceptionCode& ec)
@@ -790,6 +735,22 @@ PassRefPtr<ClientRectList> Internals::inspectorHighlightRects(Document* document
 #endif
 }
 
+String Internals::inspectorHighlightObject(Document* document, ExceptionCode& ec)
+{
+#if ENABLE(INSPECTOR)
+    if (!document || !document->page() || !document->page()->inspectorController()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+    RefPtr<InspectorObject> object = document->page()->inspectorController()->buildObjectForHighlightedNode();
+    return object ? object->toJSONString() : String();
+#else
+    UNUSED_PARAM(document);
+    UNUSED_PARAM(ec);
+    return String();
+#endif
+}
+
 unsigned Internals::markerCountForNode(Node* node, const String& markerType, ExceptionCode& ec)
 {
     if (!node) {
@@ -843,8 +804,8 @@ String Internals::markerDescriptionForNode(Node* node, const String& markerType,
 
 void Internals::addTextMatchMarker(const Range* range, bool isActive)
 {
-    range->ownerDocument()->updateLayoutIgnorePendingStylesheets();
-    range->ownerDocument()->markers().addTextMatchMarker(range, isActive);
+    range->ownerDocument().updateLayoutIgnorePendingStylesheets();
+    range->ownerDocument().markers().addTextMatchMarker(range, isActive);
 }
 
 void Internals::setScrollViewPosition(Document* document, long x, long y, ExceptionCode& ec)
@@ -2043,7 +2004,7 @@ void Internals::simulateAudioInterruption(Node* node)
 
 bool Internals::isSelectPopupVisible(Node* node)
 {
-    if (!node->hasTagName(HTMLNames::selectTag))
+    if (!isHTMLSelectElement(node))
         return false;
 
     HTMLSelectElement* select = toHTMLSelectElement(node);

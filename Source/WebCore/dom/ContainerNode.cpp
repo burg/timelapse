@@ -96,6 +96,9 @@ static void collectChildrenAndRemoveFromOldParent(Node* node, NodeVector& nodes,
     toContainerNode(node)->removeChildren();
 }
 
+// FIXME: This function must get a new name.
+// It removes all children, not just a category called "detached children".
+// So this name is terribly confusing.
 void ContainerNode::removeDetachedChildren()
 {
     if (connectedSubframeCount()) {
@@ -865,7 +868,7 @@ void ContainerNode::cloneChildNodes(ContainerNode *clone)
 #if ENABLE(DELETION_UI)
     HTMLElement* deleteButtonContainerElement = 0;
     if (Frame* frame = document().frame())
-        deleteButtonContainerElement = frame->editor().deleteButtonController()->containerElement();
+        deleteButtonContainerElement = frame->editor().deleteButtonController().containerElement();
     cloneChildNodesAvoidingDeleteButton(this, clone, deleteButtonContainerElement);
 #else
     cloneChildNodesAvoidingDeleteButton(this, clone, 0);
@@ -910,12 +913,12 @@ bool ContainerNode::getUpperLeftCorner(FloatPoint& point) const
             return true;
         }
 
-        if (p->node() && p->node() == this && o->isText() && !o->isBR() && !toRenderText(o)->firstTextBox()) {
+        if (p->node() && p->node() == this && o->isText() && !toRenderText(o)->firstTextBox()) {
             // do nothing - skip unrendered whitespace that is a child or next sibling of the anchor
-        } else if ((o->isText() && !o->isBR()) || o->isReplaced()) {
+        } else if (o->isText() || o->isReplaced()) {
             point = FloatPoint();
             if (o->isText() && toRenderText(o)->firstTextBox()) {
-                point.move(toRenderText(o)->linesBoundingBox().x(), toRenderText(o)->firstTextBox()->root()->lineTop());
+                point.move(toRenderText(o)->linesBoundingBox().x(), toRenderText(o)->firstTextBox()->root().lineTop());
             } else if (o->isBox()) {
                 RenderBox* box = toRenderBox(o);
                 point.moveBy(box->location());

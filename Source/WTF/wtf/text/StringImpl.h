@@ -26,9 +26,9 @@
 #include <limits.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/CompilationThread.h>
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Forward.h>
 #include <wtf/MathExtras.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringHasher.h>
 #include <wtf/Vector.h>
@@ -233,7 +233,7 @@ private:
     }
 
     // Create a StringImpl adopting ownership of the provided buffer (BufferOwned)
-    StringImpl(PassOwnPtr<LChar> characters, unsigned length)
+    StringImpl(MallocPtr<LChar> characters, unsigned length)
         : m_refCount(s_refCountIncrement)
         , m_length(length)
         , m_data8(characters.leakPtr())
@@ -274,7 +274,7 @@ private:
     }
 
     // Create a StringImpl adopting ownership of the provided buffer (BufferOwned)
-    StringImpl(PassOwnPtr<UChar> characters, unsigned length)
+    StringImpl(MallocPtr<UChar> characters, unsigned length)
         : m_refCount(s_refCountIncrement)
         , m_length(length)
         , m_data16(characters.leakPtr())
@@ -332,7 +332,7 @@ private:
         // keys means that we don't need them to match any other string (in fact,
         // that's exactly the oposite of what we want!), and teh normal hash would
         // lead to lots of conflicts.
-        unsigned hash = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(this));
+        unsigned hash = cryptographicallyRandomNumber() | 1;
         hash <<= s_flagCount;
         if (!hash)
             hash = 1 << s_flagCount;
@@ -473,7 +473,7 @@ public:
             ASSERT(vector.data());
             if (size > std::numeric_limits<unsigned>::max())
                 CRASH();
-            return adoptRef(new StringImpl(vector.releaseBuffer().release(), size));
+            return adoptRef(new StringImpl(vector.releaseBuffer(), size));
         }
         return empty();
     }

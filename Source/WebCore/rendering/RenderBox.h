@@ -44,7 +44,7 @@ enum ShouldComputePreferred { ComputeActual, ComputePreferred };
 
 class RenderBox : public RenderBoxModelObject {
 public:
-    explicit RenderBox(ContainerNode*);
+    explicit RenderBox(Element*);
     virtual ~RenderBox();
 
     // hasAutoZIndex only returns true if the element is positioned or a flex-item since
@@ -53,9 +53,6 @@ public:
     {
         return isRoot() || isPositioned() || createsGroup() || hasClipPath() || hasOverflowClip()
             || hasTransform() || hasHiddenBackface() || hasReflection() || style()->specifiesColumns()
-#if ENABLE(CSS_SHAPES)
-            || isFloatingWithShapeOutside()
-#endif
             || !style()->hasAutoZIndex();
     }
 
@@ -596,7 +593,7 @@ public:
 #if ENABLE(CSS_SHAPES)
     ShapeOutsideInfo* shapeOutsideInfo() const
     {
-        return isFloatingWithShapeOutside() && ShapeOutsideInfo::isEnabledFor(this) ? ShapeOutsideInfo::info(this) : 0;
+        return ShapeOutsideInfo::isEnabledFor(this) ? ShapeOutsideInfo::info(this) : 0;
     }
 #endif
 

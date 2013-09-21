@@ -96,7 +96,6 @@ SOURCES += \
      bindings/js/JSCanvasRenderingContext2DCustom.cpp \
      bindings/js/JSCanvasRenderingContextCustom.cpp \
      bindings/js/JSClipboardCustom.cpp \
-     bindings/js/JSConsoleCustom.cpp \
      bindings/js/JSCryptoCustom.cpp \
      bindings/js/JSCustomXPathNSResolver.cpp \
      bindings/js/JSDictionary.cpp \
@@ -370,12 +369,10 @@ SOURCES += \
     dom/Clipboard.cpp \
     dom/ClipboardEvent.cpp \
     dom/Comment.cpp \
-    dom/ComposedShadowTreeWalker.cpp \
     dom/CompositionEvent.cpp \
     dom/ContainerNode.cpp \
     dom/ContainerNodeAlgorithms.cpp \
     dom/ContextDestructionObserver.cpp \
-    dom/ContextFeatures.cpp \
     dom/CustomEvent.cpp \
     dom/DecodedDataDocumentParser.cpp \
     dom/DeviceMotionController.cpp \
@@ -571,7 +568,7 @@ SOURCES += \
     fileapi/ThreadableBlobRegistry.cpp \
     fileapi/WebKitBlobBuilder.cpp \
     history/BackForwardController.cpp \
-    history/BackForwardListImpl.cpp \
+    history/BackForwardList.cpp \
     history/CachedFrame.cpp \
     history/CachedPage.cpp \
     history/HistoryItem.cpp \
@@ -696,6 +693,7 @@ SOURCES += \
     html/NumberInputType.cpp \
     html/PasswordInputType.cpp \
     html/PluginDocument.cpp \
+    html/PublicURLManager.cpp \
     html/RadioInputType.cpp \
     html/RadioNodeList.cpp \
     html/RangeInputType.cpp \
@@ -814,7 +812,6 @@ SOURCES += \
     inspector/ScriptCallFrame.cpp \
     inspector/ScriptCallStack.cpp \
     inspector/TimelineRecordFactory.cpp \
-    inspector/TimelineTraceEventProcessor.cpp \
     inspector/WorkerConsoleAgent.cpp \
     inspector/WorkerDebuggerAgent.cpp \
     inspector/WorkerInspectorController.cpp \
@@ -909,7 +906,6 @@ SOURCES += \
     page/FeatureObserver.cpp \
     page/FocusController.cpp \
     page/Frame.cpp \
-    page/FrameActionScheduler.cpp \
     page/FrameDestructionObserver.cpp \
     page/FrameTree.cpp \
     page/FrameView.cpp \
@@ -1090,7 +1086,6 @@ SOURCES += \
     platform/NotImplemented.cpp \
     platform/text/RegularExpression.cpp \
     platform/PlatformEvent.cpp \
-    platform/PlatformInstrumentation.cpp \
     platform/RuntimeApplicationChecks.cpp \
     platform/RunLoop.cpp \
     platform/SchemeRegistry.cpp \
@@ -1142,6 +1137,7 @@ SOURCES += \
     rendering/EllipsisBox.cpp \
     rendering/FilterEffectRenderer.cpp \
     rendering/FixedTableLayout.cpp \
+    rendering/FloatingObjects.cpp \
     rendering/FlowThreadController.cpp \
     rendering/HitTestingTransformState.cpp \
     rendering/HitTestLocation.cpp \
@@ -1152,18 +1148,19 @@ SOURCES += \
     rendering/InlineTextBox.cpp \
     rendering/LayoutState.cpp \
     rendering/LayoutRepainter.cpp \
-    rendering/RenderApplet.cpp \
+    rendering/LineWidth.cpp \
     rendering/RenderArena.cpp \
     rendering/RenderBlock.cpp \
+    rendering/RenderBlockFlow.cpp \
     rendering/RenderBlockLineLayout.cpp \
     rendering/RenderBox.cpp \
     rendering/RenderBoxModelObject.cpp \
-    rendering/RenderBR.cpp \
     rendering/RenderButton.cpp \
     rendering/RenderCombineText.cpp \
     rendering/RenderCounter.cpp \
     rendering/RenderDeprecatedFlexibleBox.cpp \
     rendering/RenderDetailsMarker.cpp \
+    rendering/RenderElement.cpp \
     rendering/RenderEmbeddedObject.cpp \
     rendering/RenderFieldset.cpp \
     rendering/RenderFileUploadControl.cpp \
@@ -1186,6 +1183,7 @@ SOURCES += \
     rendering/RenderLayerFilterInfo.cpp \
     rendering/RenderLayerModelObject.cpp \
     rendering/RenderLineBoxList.cpp \
+    rendering/RenderLineBreak.cpp \
     rendering/RenderListBox.cpp \
     rendering/RenderListItem.cpp \
     rendering/RenderListMarker.cpp \
@@ -1198,7 +1196,6 @@ SOURCES += \
     rendering/RenderNamedFlowThread.cpp \
     rendering/RenderObject.cpp \
     rendering/RenderObjectChildList.cpp \
-    rendering/RenderPart.cpp \
     rendering/RenderProgress.cpp \
     rendering/RenderQuote.cpp \
     rendering/RenderRegion.cpp \
@@ -1230,7 +1227,6 @@ SOURCES += \
     rendering/RenderTreeAsText.cpp \
     rendering/RenderView.cpp \
     rendering/RenderWidget.cpp \
-    rendering/RenderWordBreak.cpp \
     rendering/RootInlineBox.cpp \
     rendering/ScrollBehavior.cpp \
     rendering/shapes/PolygonShape.cpp \
@@ -1582,10 +1578,8 @@ HEADERS += \
     dom/ClipboardEvent.h \
     dom/Clipboard.h \
     dom/Comment.h \
-    dom/ComposedShadowTreeWalker.h \
     dom/ContainerNode.h \
     dom/ContainerNodeAlgorithms.h \
-    dom/ContextFeatures.h \
     dom/CustomEvent.h \
     dom/default/PlatformMessagePortChannel.h \
     dom/DeviceMotionClient.h \
@@ -1775,8 +1769,8 @@ HEADERS += \
     fileapi/FileThread.h \
     fileapi/FileThreadTask.h \
     fileapi/WebKitBlobBuilder.h \
+    history/BackForwardClient.h \
     history/BackForwardController.h \
-    history/BackForwardListImpl.h \
     history/BackForwardList.h \
     history/CachedFrame.h \
     history/CachedPage.h \
@@ -2396,6 +2390,8 @@ HEADERS += \
     rendering/EllipsisBox.h \
     rendering/FilterEffectRenderer.h \
     rendering/FixedTableLayout.h \
+    rendering/FloatingObjects.h \
+    rendering/FlowThreadController.h \
     rendering/HitTestingTransformState.h \
     rendering/HitTestLocation.h \
     rendering/HitTestResult.h \
@@ -2405,6 +2401,9 @@ HEADERS += \
     rendering/InlineTextBox.h \
     rendering/LayoutRepainter.h \
     rendering/LayoutState.h \
+    rendering/LineInfo.h \
+    rendering/LineWidth.h \
+    rendering/LineLayoutState.h \
     rendering/LogicalSelectionOffsetCaches.h \
     rendering/mathml/RenderMathMLBlock.h \
     rendering/mathml/RenderMathMLFenced.h \
@@ -2415,24 +2414,23 @@ HEADERS += \
     rendering/mathml/RenderMathMLRow.h \
     rendering/mathml/RenderMathMLSpace.h \
     rendering/mathml/RenderMathMLSquareRoot.h \
-    rendering/mathml/RenderMathMLSubSup.h \
+    rendering/mathml/RenderMathMLScripts.h \
     rendering/mathml/RenderMathMLUnderOver.h \
     rendering/Pagination.h \
     rendering/PaintInfo.h \
     rendering/PaintPhase.h \
     rendering/PointerEventsHitRules.h \
     rendering/RegionOversetState.h \
-    rendering/RenderApplet.h \
     rendering/RenderArena.h \
     rendering/RenderBlock.h \
     rendering/RenderBox.h \
     rendering/RenderBoxModelObject.h \
-    rendering/RenderBR.h \
     rendering/RenderButton.h \
     rendering/RenderCombineText.h \
     rendering/RenderCounter.h \
     rendering/RenderDeprecatedFlexibleBox.h \
     rendering/RenderDetailsMarker.h \
+    rendering/RenderElement.h \
     rendering/RenderEmbeddedObject.h \
     rendering/RenderFieldset.h \
     rendering/RenderFileUploadControl.h \
@@ -2454,6 +2452,7 @@ HEADERS += \
     rendering/RenderLayerCompositor.h \
     rendering/RenderLayerModelObject.h \
     rendering/RenderLineBoxList.h \
+    rendering/RenderLineBreak.h \
     rendering/RenderListBox.h \
     rendering/RenderListItem.h \
     rendering/RenderListMarker.h \
@@ -2466,7 +2465,6 @@ HEADERS += \
     rendering/RenderMultiColumnBlock.h \
     rendering/RenderObjectChildList.h \
     rendering/RenderObject.h \
-    rendering/RenderPart.h \
     rendering/RenderProgress.h \
     rendering/RenderQuote.h \
     rendering/RenderReplaced.h \
@@ -2497,7 +2495,6 @@ HEADERS += \
     rendering/RenderVideo.h \
     rendering/RenderView.h \
     rendering/RenderWidget.h \
-    rendering/RenderWordBreak.h \
     rendering/RootInlineBox.h \
     rendering/ScrollBehavior.h \
     rendering/shapes/PolygonShape.h \
@@ -2955,8 +2952,6 @@ use?(LIBXML2) {
     SOURCES += \
             xml/parser/XMLDocumentParserLibxml2.cpp \
             xml/parser/XMLDocumentParserScope.cpp
-} else {
-    SOURCES += xml/parser/XMLDocumentParserQt.cpp
 }
 
 enable?(SMOOTH_SCROLLING) {
@@ -3639,7 +3634,7 @@ enable?(MATHML) {
         rendering/mathml/RenderMathMLRow.cpp \
         rendering/mathml/RenderMathMLSpace.cpp \
         rendering/mathml/RenderMathMLSquareRoot.cpp \
-        rendering/mathml/RenderMathMLSubSup.cpp \
+        rendering/mathml/RenderMathMLScripts.cpp \
         rendering/mathml/RenderMathMLUnderOver.cpp
 
     ALL_IN_ONE_SOURCES +=
@@ -3703,7 +3698,6 @@ enable?(SVG) {
         rendering/svg/RenderSVGResourceRadialGradient.cpp \
         rendering/svg/RenderSVGResourceSolidColor.cpp \
         rendering/svg/RenderSVGRoot.cpp \
-        rendering/svg/RenderSVGTSpan.cpp \
         rendering/svg/RenderSVGText.cpp \
         rendering/svg/RenderSVGTextPath.cpp \
         rendering/svg/RenderSVGTransformableContainer.cpp \
@@ -3741,6 +3735,7 @@ enable?(SVG) {
         svg/properties/SVGAnimatedProperty.cpp \
         svg/properties/SVGAttributeToPropertyMap.cpp \
         svg/properties/SVGPathSegListPropertyTearOff.cpp \
+        svg/properties/SVGPropertyInfo.cpp \
         svg/SVGDocumentExtensions.cpp \
         svg/ColorDistance.cpp \
         svg/SVGAElement.cpp \

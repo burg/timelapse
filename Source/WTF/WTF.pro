@@ -20,7 +20,6 @@ wince* {
 }
 
 HEADERS += \
-    Alignment.h \
     ASCIICType.h \
     Assertions.h \
     Atomics.h \
@@ -58,7 +57,6 @@ HEADERS += \
     Encoder.h \
     EnumClass.h \
     ExportMacros.h \
-    FastAllocBase.h \
     FastMalloc.h \
     FeatureDefines.h \
     FilePrintStream.h \
@@ -79,6 +77,7 @@ HEADERS += \
     ListHashSet.h \
     Locker.h \
     MainThread.h \
+    MallocPtr.h \
     MathExtras.h \
     MD5.h \
     MediaTime.h \
@@ -87,14 +86,10 @@ HEADERS += \
     MetaAllocatorHandle.h \
     Ref.h \
     Noncopyable.h \
-    NonCopyingSort.h \
-    NotFound.h \
-    NullPtr.h \
     NumberOfCores.h \
     RAMSize.h \
     OSAllocator.h \
     OSRandomSource.h \
-    OwnArrayPtr.h \
     OwnPtr.h \
     OwnPtrCommon.h \
     PackedIntVector.h \
@@ -106,7 +101,6 @@ HEADERS += \
     ParallelJobsGeneric.h \
     ParallelJobsLibdispatch.h \
     ParallelJobsOpenMP.h \
-    PassOwnArrayPtr.h \
     PassOwnPtr.h \
     PassRefPtr.h \
     PassTraits.h \
@@ -157,7 +151,6 @@ HEADERS += \
     ThreadRestrictionVerifier.h \
     ThreadSafeRefCounted.h \
     ThreadSpecific.h \
-    TypeTraits.h \
     unicode/CharacterNames.h \
     unicode/Collator.h \
     unicode/icu/UnicodeIcu.h \
@@ -205,7 +198,6 @@ SOURCES += \
     MainThread.cpp \
     MediaTime.cpp \
     MetaAllocator.cpp \
-    NullPtr.cpp \
     NumberOfCores.cpp \
     RAMSize.cpp \
     OSRandomSource.cpp \
@@ -223,7 +215,6 @@ SOURCES += \
     StringPrintStream.cpp \
     TCSystemAlloc.cpp \
     Threading.cpp \
-    TypeTraits.cpp \
     WTFThreadData.cpp \
     text/AtomicString.cpp \
     text/AtomicStringTable.cpp \
@@ -243,7 +234,6 @@ unix: SOURCES += \
     ThreadingPthreads.cpp
 
 win*|wince*: SOURCES += \
-    win/OwnPtrWin.cpp \
     OSAllocatorWin.cpp \
     ThreadSpecificWin.cpp \
     ThreadingWin.cpp

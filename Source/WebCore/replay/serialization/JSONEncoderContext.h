@@ -36,6 +36,7 @@
 
 #include "EncoderContext.h"
 #include "InspectorTypeBuilder.h"
+#include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {

@@ -51,14 +51,8 @@
 #include "WebKitAccessibleUtil.h"
 #include "WebKitAccessibleWrapperAtk.h"
 #include "htmlediting.h"
-#include <wtf/NotFound.h>
 #include <wtf/gobject/GOwnPtr.h>
 #include <wtf/text/CString.h>
-
-#if PLATFORM(GTK)
-#include <libgail-util/gail-util.h>
-#include <pango/pango.h>
-#endif
 
 using namespace WebCore;
 
@@ -164,39 +158,6 @@ static gchar* textForObject(const AccessibilityObject* coreObject)
 
     return g_string_free(str, FALSE);
 }
-
-static gchar* webkitAccessibleTextGetText(AtkText*, gint startOffset, gint endOffset);
-
-#if PLATFORM(GTK)
-static GailTextUtil* getGailTextUtilForAtk(AtkText* textObject)
-{
-    GailTextUtil* gailTextUtil = gail_text_util_new();
-    GOwnPtr<char> text(webkitAccessibleTextGetText(textObject, 0, -1));
-    gail_text_util_text_setup(gailTextUtil, text.get());
-    return gailTextUtil;
-}
-
-static PangoLayout* getPangoLayoutForAtk(AtkText* textObject)
-{
-    AccessibilityObject* coreObject = core(textObject);
-
-    Document* document = coreObject->document();
-    if (!document)
-        return 0;
-
-    HostWindow* hostWindow = document->view()->hostWindow();
-    if (!hostWindow)
-        return 0;
-    PlatformPageClient webView = hostWindow->platformPageClient();
-    if (!webView)
-        return 0;
-
-    // Create a string with the layout as it appears on the screen
-    GOwnPtr<char> objectText(textForObject(coreObject));
-    PangoLayout* layout = gtk_widget_create_pango_layout(static_cast<GtkWidget*>(webView), objectText.get());
-    return layout;
-}
-#endif
 
 static int baselinePositionForRenderObject(RenderObject* renderObject)
 {
@@ -368,6 +329,8 @@ static AtkAttributeSet* attributeSetDifference(AtkAttributeSet* attributeSet1, A
     atk_attribute_set_free(toDelete);
     return attributeSet1;
 }
+
+static gchar* webkitAccessibleTextGetText(AtkText*, gint startOffset, gint endOffset);
 
 static guint accessibilityObjectLength(const AccessibilityObject* object)
 {
@@ -974,49 +937,140 @@ static char* webkitAccessibleTextSentenceForBoundary(AtkText* text, int offset, 
     return webkitAccessibleTextGetText(text, *startOffset, *endOffset);
 }
 
-static gchar* webkitAccessibleTextGetTextForOffset(AtkText* text, gint offset, AtkTextBoundary boundaryType, GetTextRelativePosition textPosition, gint* startOffset, gint* endOffset)
+static VisibleSelection lineAtPositionForAtkBoundary(const AccessibilityObject* coreObject, const VisiblePosition& position, AtkTextBoundary boundaryType)
 {
-    AccessibilityObject* coreObject = core(text);
-    if (!coreObject || !coreObject->isAccessibilityRenderObject())
-        return emptyTextSelectionAtOffset(0, startOffset, endOffset);
+    VisiblePosition startPosition;
+    VisiblePosition endPosition;
 
-    if (boundaryType == ATK_TEXT_BOUNDARY_CHAR)
-        return webkitAccessibleTextGetChar(text, offset, textPosition, startOffset, endOffset);
+    switch (boundaryType) {
+    case ATK_TEXT_BOUNDARY_LINE_START:
+        startPosition = isStartOfLine(position) ? position : logicalStartOfLine(position);
+        endPosition = logicalEndOfLine(position);
 
-    if (boundaryType == ATK_TEXT_BOUNDARY_WORD_START || boundaryType == ATK_TEXT_BOUNDARY_WORD_END)
-        return webkitAccessibleTextWordForBoundary(text, offset, boundaryType, textPosition, startOffset, endOffset);
-
-    if (boundaryType == ATK_TEXT_BOUNDARY_SENTENCE_START || boundaryType == ATK_TEXT_BOUNDARY_SENTENCE_END)
-        return webkitAccessibleTextSentenceForBoundary(text, offset, boundaryType, textPosition, startOffset, endOffset);
-
-#if PLATFORM(GTK)
-    // FIXME: Get rid of the code below once every single part above
-    // has been properly implemented without using Pango/Cairo.
-    GailOffsetType offsetType = GAIL_AT_OFFSET;
-    switch (textPosition) {
-    case GetTextPositionBefore:
-        offsetType = GAIL_BEFORE_OFFSET;
+        // In addition to checking that we are not at the end of a block, we need
+        // to check that endPosition has not UPSTREAM affinity, since that would
+        // cause trouble inside of text controls (we would be advancing too much).
+        if (!isEndOfBlock(endPosition) && endPosition.affinity() != UPSTREAM)
+            endPosition = endPosition.next();
         break;
 
-    case GetTextPositionAt:
-        break;
-
-    case GetTextPositionAfter:
-        offsetType = GAIL_AFTER_OFFSET;
+    case ATK_TEXT_BOUNDARY_LINE_END:
+        startPosition = isEndOfLine(position) ? position : logicalStartOfLine(position);
+        if (!isStartOfBlock(startPosition))
+            startPosition = startPosition.previous();
+        endPosition = logicalEndOfLine(position);
         break;
 
     default:
         ASSERT_NOT_REACHED();
     }
 
-    // Make sure we always return valid valid values for offsets.
-    *startOffset = 0;
-    *endOffset = 0;
+    VisibleSelection selectedLine(startPosition, endPosition);
 
-    return gail_text_util_get_text(getGailTextUtilForAtk(text), getPangoLayoutForAtk(text), offsetType, boundaryType, offset, startOffset, endOffset);
-#endif
+    // We mark the selection as 'upstream' so we can use that information later,
+    // when finding the actual offsets in getSelectionOffsetsForObject().
+    if (boundaryType == ATK_TEXT_BOUNDARY_LINE_END)
+        selectedLine.setAffinity(UPSTREAM);
 
-    notImplemented();
+    return selectedLine;
+}
+
+static char* webkitAccessibleTextLineForBoundary(AtkText* text, int offset, AtkTextBoundary boundaryType, GetTextRelativePosition textPosition, int* startOffset, int* endOffset)
+{
+    AccessibilityObject* coreObject = core(text);
+    Document* document = coreObject->document();
+    if (!document)
+        return emptyTextSelectionAtOffset(0, startOffset, endOffset);
+
+    Node* node = getNodeForAccessibilityObject(coreObject);
+    if (!node)
+        return emptyTextSelectionAtOffset(0, startOffset, endOffset);
+
+    int actualOffset = atkOffsetToWebCoreOffset(text, offset);
+
+    // Besides the usual conversion from ATK offsets to WebCore offsets,
+    // we need to consider the potential embedded objects that might have been
+    // inserted in the text exposed through AtkText when calculating the offset.
+    actualOffset -= numberOfReplacedElementsBeforeOffset(text, actualOffset);
+
+    VisiblePosition caretPosition = coreObject->visiblePositionForIndex(actualOffset);
+    VisibleSelection currentLine = lineAtPositionForAtkBoundary(coreObject, caretPosition, boundaryType);
+
+    // Take into account other relative positions, if needed, by
+    // calculating the new position that we would need to consider.
+    VisiblePosition newPosition = caretPosition;
+    switch (textPosition) {
+    case GetTextPositionAt:
+        // No need to do additional work if we are using the "at" position, we just
+        // explicitly list this case option to catch invalid values in the default case.
+        break;
+
+    case GetTextPositionBefore:
+        // Early return if asking for the previous line while already at the beginning.
+        if (isFirstVisiblePositionInNode(currentLine.visibleStart(), node))
+            return emptyTextSelectionAtOffset(0, startOffset, endOffset);
+        newPosition = currentLine.visibleStart().previous();
+        break;
+
+    case GetTextPositionAfter:
+        // Early return if asking for the following word while already at the end.
+        if (isLastVisiblePositionInNode(currentLine.visibleEnd(), node))
+            return emptyTextSelectionAtOffset(accessibilityObjectLength(coreObject), startOffset, endOffset);
+        newPosition = currentLine.visibleEnd().next();
+        break;
+
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    // Determine the relevant line we are actually interested in
+    // and calculate the ATK offsets for it, then return everything.
+    VisibleSelection selectedLine = newPosition != caretPosition ? lineAtPositionForAtkBoundary(coreObject, newPosition, boundaryType) : currentLine;
+    getSelectionOffsetsForObject(coreObject, selectedLine, *startOffset, *endOffset);
+
+    // We might need to adjust the start or end offset to include the list item marker,
+    // if present, when printing the first or the last full line for a list item.
+    RenderObject* renderer = coreObject->renderer();
+    if (renderer->isListItem()) {
+        // For Left-to-Right, the list item marker is at the beginning of the exposed text.
+        if (renderer->style()->direction() == LTR && isFirstVisiblePositionInNode(selectedLine.visibleStart(), node))
+            *startOffset = 0;
+
+        // For Right-to-Left, the list item marker is at the end of the exposed text.
+        if (renderer->style()->direction() == RTL && isLastVisiblePositionInNode(selectedLine.visibleEnd(), node))
+            *endOffset = accessibilityObjectLength(coreObject);
+    }
+
+    return webkitAccessibleTextGetText(text, *startOffset, *endOffset);
+}
+
+static gchar* webkitAccessibleTextGetTextForOffset(AtkText* text, gint offset, AtkTextBoundary boundaryType, GetTextRelativePosition textPosition, gint* startOffset, gint* endOffset)
+{
+    AccessibilityObject* coreObject = core(text);
+    if (!coreObject || !coreObject->isAccessibilityRenderObject())
+        return emptyTextSelectionAtOffset(0, startOffset, endOffset);
+
+    switch (boundaryType) {
+    case ATK_TEXT_BOUNDARY_CHAR:
+        return webkitAccessibleTextGetChar(text, offset, textPosition, startOffset, endOffset);
+
+    case ATK_TEXT_BOUNDARY_WORD_START:
+    case ATK_TEXT_BOUNDARY_WORD_END:
+        return webkitAccessibleTextWordForBoundary(text, offset, boundaryType, textPosition, startOffset, endOffset);
+
+    case ATK_TEXT_BOUNDARY_LINE_START:
+    case ATK_TEXT_BOUNDARY_LINE_END:
+        return webkitAccessibleTextLineForBoundary(text, offset, boundaryType, textPosition, startOffset, endOffset);
+
+    case ATK_TEXT_BOUNDARY_SENTENCE_START:
+    case ATK_TEXT_BOUNDARY_SENTENCE_END:
+        return webkitAccessibleTextSentenceForBoundary(text, offset, boundaryType, textPosition, startOffset, endOffset);
+
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    // This should never be reached.
     return 0;
 }
 

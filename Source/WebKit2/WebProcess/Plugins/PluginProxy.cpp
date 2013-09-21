@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PluginProxy.h"
 
-#if ENABLE(PLUGIN_PROCESS)
+#if ENABLE(NETSCAPE_PLUGIN_API)
 
 #include "DataReference.h"
 #include "NPRemoteObjectMap.h"
@@ -180,7 +180,7 @@ void PluginProxy::didCreatePluginInternal(bool wantsWheelEvents, uint32_t remote
 void PluginProxy::didFailToCreatePluginInternal()
 {
     // Calling out to the connection and the controller could potentially cause the plug-in proxy to go away, so protect it here.
-    RefPtr<PluginProxy> protect(this);
+    Ref<PluginProxy> protect(*this);
 
     m_connection->removePluginProxy(this);
     controller()->didFailToInitializePlugin();
@@ -715,4 +715,4 @@ PassRefPtr<WebCore::SharedBuffer> PluginProxy::liveResourceData() const
 
 } // namespace WebKit
 
-#endif // ENABLE(PLUGIN_PROCESS)
+#endif // ENABLE(NETSCAPE_PLUGIN_API)

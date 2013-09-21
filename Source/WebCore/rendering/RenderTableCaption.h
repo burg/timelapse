@@ -20,16 +20,19 @@
 #ifndef RenderTableCaption_h
 #define RenderTableCaption_h
 
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 
 namespace WebCore {
 
 class RenderTable;
 
-class RenderTableCaption FINAL : public RenderBlock {
+class RenderTableCaption FINAL : public RenderBlockFlow {
 public:
-    explicit RenderTableCaption(Element*);
+    explicit RenderTableCaption(Element&);
     virtual ~RenderTableCaption();
+
+    Element& element() const { return toElement(nodeForNonAnonymous()); }
+
     virtual LayoutUnit containingBlockLogicalWidthForContent() const OVERRIDE;
     
 private:

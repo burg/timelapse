@@ -1,3 +1,169 @@
+2013-09-20  Sergio Correia  <sergio.correia@openbossa.org>
+
+        [CMAKE] FindHarfBuzz: Handle harfbuzz / harfbuzz-icu split
+        https://bugs.webkit.org/show_bug.cgi?id=121688
+
+        Reviewed by Martin Robinson.
+
+        HarfBuzz 0.9.18 split ICU support into a separate harfbuzz-icu library.
+        To be able to build with earlier and newer versions of HarfBuzz, we should
+        check for harfbuzz-icu as well, if version >= 0.9.18.
+
+        * Source/cmake/FindHarfBuzz.cmake: Check for harfbuzz-icu, if version
+        >= 0.9.18.
+
+2013-09-16  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Make symbol export filter more strict, and disable for dev/test builds
+        https://bugs.webkit.org/show_bug.cgi?id=120586
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: only include test-related automake files when developer
+        mode is on.
+        * Source/autotools/ReadCommandLineArguments.m4: add --enable-developer-mode,
+        defaults to no, and to yes for debug builds.
+        * Source/autotools/SetupAutomake.m4: add ENABLE_DEVELOPER_MODE conditional.
+        * Source/autotools/symbols.filter: make the exported symbols list much shorter,
+        covering only the public ABI and a few symbols required by WebKit2 processes.
+
+2013-09-13  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        [GTK] Move to the new web inspector
+        https://bugs.webkit.org/show_bug.cgi?id=120647
+
+        Reviewed by Carlos Garcia Campos.
+
+        * GNUmakefile.am: include the new WebInspectorUI GNUmakefile.am.
+
+2013-09-13  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Update sync.profile
+        https://bugs.webkit.org/show_bug.cgi?id=121295
+
+        Reviewed by Simon Hausmann.
+
+        Ensure we let the dependencies pick the right branch instead of always master
+        and list all the dependencies we need on all platforms.
+
+        * Source/sync.profile:
+
+2013-09-11  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [GTK] Remove Gail dependency from build system for GTK3
+        https://bugs.webkit.org/show_bug.cgi?id=119673
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * Source/autotools/FindDependencies.m4: Don't look for GAIL at all.
+        * Source/autotools/Versions.m4: Removed any reference to GAIL.
+        * Source/cmake/FindGAIL3.cmake: Removed.
+        * Source/cmake/OptionsGTK.cmake: Don't look for the GAIL package.
+
+2013-09-11  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Split out generic Windows files into its own file
+        https://bugs.webkit.org/show_bug.cgi?id=119514
+
+        Reviewed by Gyuyoung Kim.
+
+        This allows us to add smaller CMakeLists.txt files when
+        adding additional Windows ports.
+
+        * Source/cmake/OptionsWinCE.cmake:
+        * Source/cmake/WebKitMacros.cmake:
+
+2013-09-11  Alberto Garcia  <berto@igalia.com>
+
+        autogen.sh: fix removal of autom4te.cache
+        https://bugs.webkit.org/show_bug.cgi?id=121150
+
+        Reviewed by Carlos Garcia Campos.
+
+        The removal of autom4te.cache is wrong, it uses 'rm -f' instead of
+        'rm -rf' and it relies on an undefined variable.
+
+        In addition to that, it should be done after running autoreconf,
+        which is when it's no longer needed.
+
+        * autogen.sh:
+
+2013-09-11  Alberto Garcia  <berto@igalia.com>
+
+        Unquoted $ORIGDIR in autogen.sh
+        https://bugs.webkit.org/show_bug.cgi?id=19512
+
+        Reviewed by Carlos Garcia Campos.
+
+        Quote all directory names. This doesn't mean that all possible
+        directory names are safe for building webkit, but the configure
+        script already runs a sanity check.
+
+        * autogen.sh:
+
+2013-09-11  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Stop disabling deprecated symbols in debug builds
+        https://bugs.webkit.org/show_bug.cgi?id=121145
+
+        Reviewed by Carlos Garcia Campos.
+
+        Disabling the dependencies' deprecated symbols in debug builds is only causing unnecessary
+        build failures. Compiler warnings are being thrown whenever a deprecated symbol is being
+        used, so a build failure is an overreach in this case.
+
+        * Source/autotools/SetupAutoconfHeader.m4:
+
+2013-09-10  Marcelo Morais  <m.morais@samsung.com>
+
+        [EFL] WebInspector: Move to new webinspector
+        https://bugs.webkit.org/show_bug.cgi?id=119559
+
+        Reviewed by Gyuyoung Kim.
+
+        Enabling the new Web Inspector on EFL port.
+        Co-author: Andre Loureiro <andre.vl@samsung.com>
+
+        * Source/PlatformEfl.cmake:
+        * Source/cmake/OptionsEfl.cmake:
+
+2013-09-06  Zan Dobersek  <zdobersek@igalia.com>
+
+        REGRESSION(r155143): Build failures on GTK port with Clang and libstdc++ < 4.8.1
+        https://bugs.webkit.org/show_bug.cgi?id=120896
+
+        Reviewed by Anders Carlsson.
+
+        The GTK port currently only permits using the libstdc++ standard library when compiling with
+        Clang. After r155143, build failures are occurring when using Clang and libstdc++ that predates
+        the 4.8.0 release due to the use of std::is_trivially_destructible that isn't available in
+        libstdc++ < 4.8.0.
+
+        To not add additional special casing, the GTK port should move onto requiring libstdc++ >= 4.8.1
+        when compiling with the Clang compiler. Version 4.8.1 was chosen since it's C++11 feature-complete.
+        This strict requirement is possible as compiling the GTK port with the Clang compiler is not really
+        widespread, so we can afford to adjust the required dependencies to match other ports' progression
+        instead of modifying the code.
+
+        * Source/autotools/CheckSystemAndBasicDependencies.m4: If the detected compiler is Clang, also check
+        that the libstdc++ standard library is used by testing for the __GLIBCXX__ macro that should be defined
+        to the value lesser than the '20130531', the date stamp used by the 4.8.1 release of libstdc++. Since
+        possible future releases of the 4.6 or 4.7 series of libstdc++ will also match this check due to a newer
+        date stamp contained in __GLIBCXX__, the std::is_trivially_destructible struct is also used so the
+        compilation will fail if the libstdc++ that's used is older than allowed (and therefor does not support
+        the feature). If the check fails, a fatal error is thrown, describing the requirement. Everything carries
+        on as normal otherwise.
+
+2013-09-06  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Bump the required Clang version to 3.2
+        https://bugs.webkit.org/show_bug.cgi?id=112537
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * Source/autotools/CheckSystemAndBasicDependencies.m4: Require the Clang 3.2 stack
+        when the Clang compiler is specified.
+
 2013-09-05  Brendan Long  <b.long@cablelabs.com>
 
         [Qt] DefaultFullScreenVideoHandler and PlatformVideoWindow are included in the build when they are disabled

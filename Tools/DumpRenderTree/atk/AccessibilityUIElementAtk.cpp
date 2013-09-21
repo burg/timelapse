@@ -55,7 +55,7 @@ static String coreAttributeToAtkAttribute(JSStringRef attribute)
         return "placeholder-text";
 
     if (attributeString == "AXSortDirection")
-        return "aria-sort";
+        return "sort";
 
     return String();
 }
@@ -152,10 +152,14 @@ static inline const char* roleToString(AtkRole role)
         return "AXParagraph";
     case ATK_ROLE_PASSWORD_TEXT:
         return "AXPasswordField";
+    case ATK_ROLE_PROGRESS_BAR:
+        return "AXProgressIndicator";
     case ATK_ROLE_PUSH_BUTTON:
         return "AXButton";
     case ATK_ROLE_RADIO_BUTTON:
         return "AXRadioButton";
+    case ATK_ROLE_RADIO_MENU_ITEM:
+        return "AXRadioMenuItem";
     case ATK_ROLE_ROW_HEADER:
         return "AXRowHeader";
     case ATK_ROLE_RULER:
@@ -532,6 +536,14 @@ JSStringRef AccessibilityUIElement::language()
     return JSStringCreateWithUTF8CString(axValue.get());
 }
 
+JSStringRef AccessibilityUIElement::helpText() const
+{
+    // FIXME: We need to provide a proper implementation for this that does
+    // not depend on Mac specific concepts such as ATK_RELATION_DESCRIBED_BY,
+    // once it's implemented (see http://webkit.org/b/121684).
+    return JSStringCreateWithCharacters(0, 0);
+}
+
 double AccessibilityUIElement::x()
 {
     int x, y;
@@ -902,6 +914,17 @@ JSStringRef AccessibilityUIElement::stringAttributeValue(JSStringRef attribute)
     if (attributeValue.isEmpty() && atkAttributeName == "aria-invalid")
         return JSStringCreateWithUTF8CString("false");
 
+    // We need to translate ATK values exposed for 'aria-sort' (e.g. 'ascending')
+    // into those expected by the layout tests (e.g. 'AXAscendingSortDirection').
+    if (atkAttributeName == "sort") {
+        if (attributeValue == "ascending")
+            return JSStringCreateWithUTF8CString("AXAscendingSortDirection");
+        if (attributeValue == "descending")
+            return JSStringCreateWithUTF8CString("AXDescendingSortDirection");
+
+        return JSStringCreateWithUTF8CString("AXUnknownSortDirection");
+    }
+
     return JSStringCreateWithUTF8CString(attributeValue.utf8().data());
 }
 
@@ -1121,7 +1144,7 @@ bool AccessibilityUIElement::hasPopup() const
     if (!m_element || !ATK_IS_OBJECT(m_element))
         return false;
 
-    return equalIgnoringCase(getAttributeSetValueForId(ATK_OBJECT(m_element), "aria-haspopup"), "true");
+    return equalIgnoringCase(getAttributeSetValueForId(ATK_OBJECT(m_element), "haspopup"), "true");
 }
 
 void AccessibilityUIElement::takeFocus()
@@ -1157,6 +1180,12 @@ void AccessibilityUIElement::scrollToMakeVisibleWithSubFocus(int x, int y, int w
 void AccessibilityUIElement::scrollToGlobalPoint(int x, int y)
 {
     // FIXME: implement
+}
+
+JSStringRef AccessibilityUIElement::classList() const
+{
+    // FIXME: implement
+    return 0;
 }
 
 #endif

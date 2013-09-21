@@ -136,6 +136,7 @@ JSCell* DFG_OPERATION operationStringFromCharCode(ExecState*, int32_t)  WTF_INTE
 JSCell* DFG_OPERATION operationNewObject(ExecState*, Structure*) WTF_INTERNAL;
 JSCell* DFG_OPERATION operationCreateThis(ExecState*, JSObject* constructor, int32_t inlineCapacity) WTF_INTERNAL;
 EncodedJSValue DFG_OPERATION operationToThis(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
+EncodedJSValue DFG_OPERATION operationToThisStrict(ExecState*, EncodedJSValue encodedOp1) WTF_INTERNAL;
 EncodedJSValue DFG_OPERATION operationValueAdd(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
 EncodedJSValue DFG_OPERATION operationValueAddNotNumber(ExecState*, EncodedJSValue encodedOp1, EncodedJSValue encodedOp2) WTF_INTERNAL;
 EncodedJSValue DFG_OPERATION operationGetByVal(ExecState*, EncodedJSValue encodedBase, EncodedJSValue encodedProperty) WTF_INTERNAL;
@@ -253,6 +254,13 @@ JSCell* DFG_OPERATION operationMakeRope2(ExecState*, JSString*, JSString*);
 JSCell* DFG_OPERATION operationMakeRope3(ExecState*, JSString*, JSString*, JSString*);
 char* DFG_OPERATION operationFindSwitchImmTargetForDouble(ExecState*, EncodedJSValue, size_t tableIndex);
 char* DFG_OPERATION operationSwitchString(ExecState*, size_t tableIndex, JSString*);
+
+#if ENABLE(FTL_JIT)
+// FIXME: Make calls work well. Currently they're a pure regression.
+// https://bugs.webkit.org/show_bug.cgi?id=113621
+EncodedJSValue DFG_OPERATION operationFTLCall(ExecState*) WTF_INTERNAL;
+EncodedJSValue DFG_OPERATION operationFTLConstruct(ExecState*) WTF_INTERNAL;
+#endif // ENABLE(FTL_JIT)
 
 // This method is used to lookup an exception hander, keyed by faultLocation, which is
 // the return location from one of the calls out to one of the helper operations above.

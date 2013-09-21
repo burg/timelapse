@@ -69,7 +69,7 @@ static const int DefaultHeight = 150;
 // in exchange for a smaller maximum canvas size.
 static const float MaxCanvasArea = 32768 * 8192; // Maximum canvas area in CSS pixels
 
-HTMLCanvasElement::HTMLCanvasElement(const QualifiedName& tagName, Document* document)
+HTMLCanvasElement::HTMLCanvasElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
     , m_size(DefaultWidth, DefaultHeight)
     , m_rendererIsCanvas(false)
@@ -83,12 +83,12 @@ HTMLCanvasElement::HTMLCanvasElement(const QualifiedName& tagName, Document* doc
     setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<HTMLCanvasElement> HTMLCanvasElement::create(Document* document)
+PassRefPtr<HTMLCanvasElement> HTMLCanvasElement::create(Document& document)
 {
     return adoptRef(new HTMLCanvasElement(canvasTag, document));
 }
 
-PassRefPtr<HTMLCanvasElement> HTMLCanvasElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLCanvasElement> HTMLCanvasElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLCanvasElement(tagName, document));
 }
@@ -109,12 +109,12 @@ void HTMLCanvasElement::parseAttribute(const QualifiedName& name, const AtomicSt
     HTMLElement::parseAttribute(name, value);
 }
 
-RenderObject* HTMLCanvasElement::createRenderer(RenderArena* arena, RenderStyle* style)
+RenderElement* HTMLCanvasElement::createRenderer(RenderArena& arena, RenderStyle& style)
 {
     Frame* frame = document().frame();
     if (frame && frame->script().canExecuteScripts(NotAboutToExecuteScript)) {
         m_rendererIsCanvas = true;
-        return new (arena) RenderHTMLCanvas(this);
+        return new (arena) RenderHTMLCanvas(*this);
     }
 
     m_rendererIsCanvas = false;

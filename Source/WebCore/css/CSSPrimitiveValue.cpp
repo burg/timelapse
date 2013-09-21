@@ -600,6 +600,12 @@ double CSSPrimitiveValue::computeLengthDouble(const RenderStyle* style, const Re
         case CSS_CALC_PERCENTAGE_WITH_NUMBER:
             ASSERT_NOT_REACHED();
             return -1.0;
+        case CSS_VH:
+        case CSS_VW:
+        case CSS_VMAX:
+        case CSS_VMIN:
+            factor = 1.0;
+            break;
         default:
             ASSERT_NOT_REACHED();
             return -1.0;

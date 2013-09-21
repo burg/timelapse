@@ -1,3 +1,44 @@
+2013-09-19  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Keep chasing the definition of QAccessibleWidget
+        https://bugs.webkit.org/show_bug.cgi?id=121611
+
+        Reviewed by Jocelyn Turcotte.
+
+        * WidgetApi/qwebviewaccessible_p.h:
+
+2013-09-16  Enrica Casucci  <enrica@apple.com>
+
+        Remove unused function didSetSelectionTypesForPasteboard from EditorClient.
+        https://bugs.webkit.org/show_bug.cgi?id=121464
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/EditorClientQt.cpp:
+        * WebCoreSupport/EditorClientQt.h:
+
+2013-09-12  Andreas Kling  <akling@apple.com>
+
+        Fix Qt build.
+
+        * WebCoreSupport/QWebPageAdapter.cpp:
+        (QWebPageAdapter::inputMethodQuery):
+
+2013-09-11  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Generate more HTML type checks and casting
+        https://bugs.webkit.org/show_bug.cgi?id=121080
+
+        Reviewed by Andreas Kling.
+
+        Clean-up remained functions of HTML elements using auto-generated isFooElement(),
+        and replace toFooElement() with ELEMENT_TYPE_CASTS() macro.
+
+        Besides this patch clean-up unnecessary checks which are being supported by
+        auto-generated isFooElement().
+
+        * WebCoreSupport/ChromeClientQt.cpp:
+
 2013-09-03  Allan Sandfeld Jensen  <allan.jensen@digia.com>
 
         [Qt] Images scaled poorly on composited canvas

@@ -27,7 +27,7 @@ namespace WebCore {
 
 class DOMWindow;
 class Frame;
-class RenderPart;
+class RenderWidget;
 
 #if ENABLE(SVG)
 class SVGDocument;
@@ -46,10 +46,10 @@ public:
 
     void disconnectContentFrame();
 
-    // Most subclasses use RenderPart (either RenderEmbeddedObject or RenderIFrame)
+    // Most subclasses use RenderWidget (either RenderEmbeddedObject or RenderIFrame)
     // except for HTMLObjectElement and HTMLEmbedElement which may return any
     // RenderObject when using fallback content.
-    RenderPart* renderPart() const;
+    RenderWidget* renderWidget() const;
 
 #if ENABLE(SVG)
     SVGDocument* getSVGDocument(ExceptionCode&) const;
@@ -60,7 +60,7 @@ public:
     SandboxFlags sandboxFlags() const { return m_sandboxFlags; }
 
 protected:
-    HTMLFrameOwnerElement(const QualifiedName& tagName, Document*);
+    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&);
     void setSandboxFlags(SandboxFlags);
 
 private:
@@ -70,6 +70,12 @@ private:
     Frame* m_contentFrame;
     SandboxFlags m_sandboxFlags;
 };
+
+inline HTMLFrameOwnerElement& toFrameOwnerElement(Node& node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(node.isFrameOwnerElement());
+    return static_cast<HTMLFrameOwnerElement&>(node);
+}
 
 inline HTMLFrameOwnerElement* toFrameOwnerElement(Node* node)
 {

@@ -351,7 +351,7 @@ void CSSFontSelector::dispatchInvalidationCallbacks()
         return;
     if (StyleResolver* styleResolver = m_document->styleResolverIfExists())
         styleResolver->invalidateMatchedPropertiesCache();
-    if (m_document->inPageCache() || !m_document->renderer())
+    if (m_document->inPageCache() || !m_document->renderView())
         return;
     m_document->scheduleForcedStyleRecalc();
 }
@@ -515,7 +515,7 @@ CSSSegmentedFontFace* CSSFontSelector::getFontFace(const FontDescription& fontDe
 
     FontTraitsMask traitsMask = fontDescription.traitsMask();
 
-    RefPtr<CSSSegmentedFontFace>& face = segmentedFontFaceCache->add(traitsMask, 0).iterator->value;
+    RefPtr<CSSSegmentedFontFace>& face = segmentedFontFaceCache->add(traitsMask, nullptr).iterator->value;
     if (!face) {
         face = CSSSegmentedFontFace::create(this);
 

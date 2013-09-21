@@ -28,7 +28,7 @@
 #ifndef DocumentStyleSheetCollection_h
 #define DocumentStyleSheetCollection_h
 
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -118,7 +118,7 @@ public:
     bool activeStyleSheetsContains(const CSSStyleSheet*) const;
 
 private:
-    DocumentStyleSheetCollection(Document*);
+    explicit DocumentStyleSheetCollection(Document*);
 
     void collectActiveStyleSheets(Vector<RefPtr<StyleSheet> >&);
     enum StyleResolverUpdateType {

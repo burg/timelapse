@@ -43,11 +43,9 @@
 #include "TextCodecMac.h"
 #endif
 
-#if ENABLE(WORKERS)
 #include <wtf/Threading.h>
 #include <wtf/ThreadSpecific.h>
 using namespace WTF;
-#endif
 
 #if ENABLE(WEB_REPLAY)
 #include "ReplayInputTypes.h"
@@ -55,11 +53,7 @@ using namespace WTF;
 
 namespace WebCore {
 
-#if ENABLE(WORKERS)
 ThreadSpecific<ThreadGlobalData>* ThreadGlobalData::staticData;
-#else
-ThreadGlobalData* ThreadGlobalData::staticData;
-#endif
 
 ThreadGlobalData::ThreadGlobalData()
     : m_cachedResourceRequestInitiators(adoptPtr(new CachedResourceRequestInitiators))
@@ -113,6 +107,13 @@ void ThreadGlobalData::destroy()
 
     m_eventNames.clear();
     m_threadTimers.clear();
+}
+
+ThreadGlobalData& threadGlobalData() 
+{
+    if (!ThreadGlobalData::staticData)
+        ThreadGlobalData::staticData = new ThreadSpecific<ThreadGlobalData>;
+    return **ThreadGlobalData::staticData;
 }
 
 } // namespace WebCore

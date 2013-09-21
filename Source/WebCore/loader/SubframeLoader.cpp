@@ -134,7 +134,7 @@ bool SubframeLoader::pluginIsLoadable(HTMLPlugInImageElement* pluginElement, con
             return false;
         }
 
-        if (!m_frame->loader().mixedContentChecker()->canRunInsecureContent(document()->securityOrigin(), url))
+        if (!m_frame->loader().mixedContentChecker().canRunInsecureContent(document()->securityOrigin(), url))
             return false;
     }
 
@@ -231,7 +231,7 @@ bool SubframeLoader::requestObject(HTMLPlugInImageElement* ownerElement, const S
     }
 
     // If the plug-in element already contains a subframe, loadOrRedirectSubframe will re-use it. Otherwise,
-    // it will create a new frame and set it as the RenderPart's widget, causing what was previously 
+    // it will create a new frame and set it as the RenderWidget's Widget, causing what was previously 
     // in the widget to be torn down.
     return loadOrRedirectSubframe(ownerElement, completedURL, frameName, true, true);
 }
@@ -255,7 +255,7 @@ PassRefPtr<Widget> SubframeLoader::loadMediaPlayerProxyPlugin(Node* node, const 
         return 0;
 
     HTMLMediaElement* mediaElement = toHTMLMediaElement(node);
-    RenderPart* renderer = toRenderPart(node->renderer());
+    RenderWidget* renderer = toRenderWidget(node->renderer());
     IntSize size;
 
     if (renderer)
@@ -263,7 +263,7 @@ PassRefPtr<Widget> SubframeLoader::loadMediaPlayerProxyPlugin(Node* node, const 
     else if (mediaElement->isVideo())
         size = RenderVideo::defaultSize();
 
-    if (!m_frame->loader().mixedContentChecker()->canRunInsecureContent(m_frame->document()->securityOrigin(), completedURL))
+    if (!m_frame->loader().mixedContentChecker().canRunInsecureContent(m_frame->document()->securityOrigin(), completedURL))
         return 0;
 
     RefPtr<Widget> widget = m_frame->loader().client().createMediaPlayerProxyPlugin(size, mediaElement, completedURL,

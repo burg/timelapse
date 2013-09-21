@@ -29,7 +29,7 @@
 
 #include "ContentData.h"
 #include "InspectorInstrumentation.h"
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include "RenderQuote.h"
 
 namespace WebCore {
@@ -55,7 +55,7 @@ String PseudoElement::pseudoElementNameForEvents(PseudoId pseudoId)
 }
 
 PseudoElement::PseudoElement(Element* host, PseudoId pseudoId)
-    : Element(pseudoElementTagName(), &host->document(), CreatePseudoElement)
+    : Element(pseudoElementTagName(), host->document(), CreatePseudoElement)
     , m_hostElement(host)
     , m_pseudoId(pseudoId)
 {
@@ -78,7 +78,7 @@ PassRefPtr<RenderStyle> PseudoElement::customStyleForRenderer()
 
 void PseudoElement::didAttachRenderers()
 {
-    RenderObject* renderer = this->renderer();
+    RenderElement* renderer = this->renderer();
     if (!renderer || !renderer->style()->regionThread().isEmpty())
         return;
 
@@ -86,7 +86,7 @@ void PseudoElement::didAttachRenderers()
     ASSERT(style->contentData());
 
     for (const ContentData* content = style->contentData(); content; content = content->next()) {
-        RenderObject* child = content->createRenderer(&document(), style);
+        RenderObject* child = content->createRenderer(document(), *style);
         if (renderer->isChildAllowed(child, style)) {
             renderer->addChild(child);
             if (child->isQuote())

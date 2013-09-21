@@ -67,8 +67,8 @@ namespace WebCore {
     class Node;
     class Range;
     class RegularExpression;
-    class RenderPart;
     class RenderView;
+    class RenderWidget;
     class ScriptController;
     class Settings;
     class TiledBackingStore;
@@ -125,7 +125,7 @@ namespace WebCore {
         ScriptController& script();
         
         RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
-        RenderPart* ownerRenderer() const; // Renderer for the element that contains this frame.
+        RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
 
     // ======== All public functions below this point are candidates to move out of Frame into another class. ========
 
@@ -184,6 +184,11 @@ namespace WebCore {
         String searchForLabelsBeforeElement(const Vector<String>& labels, Element*, size_t* resultDistance, bool* resultIsInCellAbove);
         String matchLabelsAgainstElement(const Vector<String>& labels, Element*);
 
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+        void setTextAutosizingWidth(float);
+        float textAutosizingWidth() const;
+#endif
+
         void suspendActiveDOMObjectsAndAnimations();
         void resumeActiveDOMObjectsAndAnimations();
         bool activeDOMObjectsAndAnimationsSuspended() const { return m_activeDOMObjectsAndAnimationsSuspendedCount > 0; }
@@ -214,6 +219,10 @@ namespace WebCore {
         const OwnPtr<FrameSelection> m_selection;
         const OwnPtr<EventHandler> m_eventHandler;
         const OwnPtr<AnimationController> m_animationController;
+
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+        float m_textAutosizingWidth;
+#endif
 
         float m_pageZoomFactor;
         float m_textZoomFactor;

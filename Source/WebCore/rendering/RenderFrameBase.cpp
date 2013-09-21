@@ -32,9 +32,9 @@
 #include "RenderView.h"
 
 namespace WebCore {
-    
-RenderFrameBase::RenderFrameBase(Element* element)
-    : RenderPart(element)
+
+RenderFrameBase::RenderFrameBase(HTMLFrameElementBase& element)
+    : RenderWidget(element)
 {
 }
 
@@ -72,7 +72,7 @@ void RenderFrameBase::layoutWithFlattening(bool hasFixedWidth, bool hasFixedHeig
     // we obey them and do not expand. With frame flattening
     // no subframe much ever become scrollable.
 
-    bool isScrollable = toHTMLFrameElementBase(node())->scrollingMode() != ScrollbarAlwaysOff;
+    bool isScrollable = frameOwnerElement().scrollingMode() != ScrollbarAlwaysOff;
 
     // consider iframe inset border
     int hBorder = borderLeft() + borderRight();

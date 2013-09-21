@@ -115,7 +115,7 @@
 #import <WebCore/AlternativeTextUIController.h>
 #import <WebCore/AnimationController.h>
 #import <WebCore/ApplicationCacheStorage.h>
-#import <WebCore/BackForwardListImpl.h>
+#import <WebCore/BackForwardList.h>
 #import <WebCore/MemoryCache.h>
 #import <WebCore/Chrome.h>
 #import <WebCore/ColorMac.h>
@@ -506,6 +506,7 @@ NSString *_WebMainFrameURLKey =         @"mainFrameURL";
 NSString *_WebMainFrameDocumentKey =    @"mainFrameDocument";
 
 NSString *_WebViewDidStartAcceleratedCompositingNotification = @"_WebViewDidStartAcceleratedCompositing";
+NSString * const WebViewWillCloseNotification = @"WebViewWillCloseNotification";
 
 NSString *WebKitKerningAndLigaturesEnabledByDefaultDefaultsKey = @"WebKitKerningAndLigaturesEnabledByDefault";
 
@@ -1084,6 +1085,8 @@ static bool fastDocumentTeardownEnabled()
     if (!_private || _private->closed)
         return;
 
+    [[NSNotificationCenter defaultCenter] postNotificationName:WebViewWillCloseNotification object:self];
+
     _private->closed = YES;
     [self _removeFromAllWebViewsSet];
 
@@ -1284,27 +1287,27 @@ static bool fastDocumentTeardownEnabled()
     // type.  (See behavior matrix at the top of WebFramePrivate.)  So we copy all the items
     // in the back forward list, and go to the current one.
 
-    BackForwardList* backForwardList = _private->page->backForwardList();
-    ASSERT(!backForwardList->currentItem()); // destination list should be empty
+    BackForwardClient* backForwardClient = _private->page->backForwardClient();
+    ASSERT(!backForwardClient->currentItem()); // destination list should be empty
 
-    BackForwardList* otherBackForwardList = otherView->_private->page->backForwardList();
-    if (!otherBackForwardList->currentItem())
+    BackForwardClient* otherBackForwardClient = otherView->_private->page->backForwardClient();
+    if (!otherBackForwardClient->currentItem())
         return; // empty back forward list, bail
     
     HistoryItem* newItemToGoTo = 0;
 
-    int lastItemIndex = otherBackForwardList->forwardListCount();
-    for (int i = -otherBackForwardList->backListCount(); i <= lastItemIndex; ++i) {
+    int lastItemIndex = otherBackForwardClient->forwardListCount();
+    for (int i = -otherBackForwardClient->backListCount(); i <= lastItemIndex; ++i) {
         if (i == 0) {
             // If this item is showing , save away its current scroll and form state,
             // since that might have changed since loading and it is normally not saved
             // until we leave that page.
             otherView->_private->page->mainFrame().loader().history().saveDocumentAndScrollState();
         }
-        RefPtr<HistoryItem> newItem = otherBackForwardList->itemAtIndex(i)->copy();
+        RefPtr<HistoryItem> newItem = otherBackForwardClient->itemAtIndex(i)->copy();
         if (i == 0) 
             newItemToGoTo = newItem.get();
-        backForwardList->addItem(newItem.release());
+        backForwardClient->addItem(newItem.release());
     }
     
     ASSERT(newItemToGoTo);
@@ -1508,6 +1511,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setShowDebugBorders([preferences showDebugBorders]);
     settings.setShowRepaintCounter([preferences showRepaintCounter]);
     settings.setWebGLEnabled([preferences webGLEnabled]);
+    settings.setMultithreadedWebGLEnabled([preferences multithreadedWebGLEnabled]);
     settings.setAccelerated2dCanvasEnabled([preferences accelerated2dCanvasEnabled]);
     settings.setLoadDeferringEnabled(shouldEnableLoadDeferring());
     settings.setWindowFocusRestricted(shouldRestrictWindowFocus());
@@ -3540,7 +3544,7 @@ static bool needsWebViewInitThreadWorkaround()
 
         LOG(Encoding, "FrameName = %@, GroupName = %@, useBackForwardList = %d\n", frameName, groupName, (int)useBackForwardList);
         [result _commonInitializationWithFrameName:frameName groupName:groupName];
-        static_cast<BackForwardListImpl*>([result page]->backForwardList())->setEnabled(useBackForwardList);
+        static_cast<BackForwardList*>([result page]->backForwardClient())->setEnabled(useBackForwardList);
         result->_private->allowsUndo = allowsUndo;
         if (preferences)
             [result setPreferences:preferences];
@@ -3564,7 +3568,7 @@ static bool needsWebViewInitThreadWorkaround()
     // Restore the subviews we set aside.
     _subviews = originalSubviews;
 
-    BOOL useBackForwardList = _private->page && static_cast<BackForwardListImpl*>(_private->page->backForwardList())->enabled();
+    BOOL useBackForwardList = _private->page && static_cast<BackForwardList*>(_private->page->backForwardClient())->enabled();
     if ([encoder allowsKeyedCoding]) {
         [encoder encodeObject:[[self mainFrame] name] forKey:@"FrameName"];
         [encoder encodeObject:[self groupName] forKey:@"GroupName"];
@@ -3936,7 +3940,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 {
     if (!_private->page)
         return nil;
-    BackForwardListImpl* list = static_cast<BackForwardListImpl*>(_private->page->backForwardList());
+    BackForwardList* list = static_cast<BackForwardList*>(_private->page->backForwardClient());
     if (!list->enabled())
         return nil;
     return kit(list);
@@ -3946,7 +3950,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 {
     if (!_private->page)
         return;
-    static_cast<BackForwardListImpl*>(_private->page->backForwardList())->setEnabled(flag);
+    static_cast<BackForwardList*>(_private->page->backForwardClient())->setEnabled(flag);
 }
 
 - (BOOL)goBack
@@ -4648,7 +4652,7 @@ static WebFrame *incrementFrame(WebFrame *frame, WebFindOptions options = 0)
     if (!_private->page || _private->page->defersLoading())
         return NO;
 
-    return !!_private->page->backForwardList()->backItem();
+    return !!_private->page->backForwardClient()->backItem();
 }
 
 - (BOOL)canGoForward
@@ -4656,7 +4660,7 @@ static WebFrame *incrementFrame(WebFrame *frame, WebFindOptions options = 0)
     if (!_private->page || _private->page->defersLoading())
         return NO;
 
-    return !!_private->page->backForwardList()->forwardItem();
+    return !!_private->page->backForwardClient()->forwardItem();
 }
 
 - (IBAction)goBack:(id)sender
@@ -6496,7 +6500,7 @@ bool LayerFlushController::flushLayers()
 
 - (void)_enterFullscreenForNode:(WebCore::Node*)node
 {
-    ASSERT(node->hasTagName(WebCore::HTMLNames::videoTag));
+    ASSERT(isHTMLVideoElement(node));
     HTMLMediaElement* videoElement = toHTMLMediaElement(node);
 
     if (_private->fullscreenController) {

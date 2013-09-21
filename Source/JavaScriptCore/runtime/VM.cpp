@@ -42,12 +42,13 @@
 #include "GCActivityCallback.h"
 #include "GetterSetter.h"
 #include "Heap.h"
+#include "HeapIterationScope.h"
 #include "HostCallReturnValue.h"
 #include "Identifier.h"
 #include "IncrementalSweeper.h"
 #include "Interpreter.h"
-#include "JSActivation.h"
 #include "JSAPIValueWrapper.h"
+#include "JSActivation.h"
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "JSGlobalObjectFunctions.h"
@@ -68,6 +69,7 @@
 #include "StrictEvalActivation.h"
 #include "StrongInlines.h"
 #include "UnlinkedCodeBlock.h"
+#include "WeakMapData.h"
 #include <wtf/ProcessID.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StringPrintStream.h>
@@ -155,27 +157,27 @@ VM::VM(VMType vmType, HeapType heapType)
     , vmType(vmType)
     , clientData(0)
     , topCallFrame(CallFrame::noCaller()->removeHostCallFrameFlag())
-    , arrayConstructorTable(fastNew<HashTable>(JSC::arrayConstructorTable))
-    , arrayPrototypeTable(fastNew<HashTable>(JSC::arrayPrototypeTable))
-    , booleanPrototypeTable(fastNew<HashTable>(JSC::booleanPrototypeTable))
-    , dataViewTable(fastNew<HashTable>(JSC::dataViewTable))
-    , dateTable(fastNew<HashTable>(JSC::dateTable))
-    , dateConstructorTable(fastNew<HashTable>(JSC::dateConstructorTable))
-    , errorPrototypeTable(fastNew<HashTable>(JSC::errorPrototypeTable))
-    , globalObjectTable(fastNew<HashTable>(JSC::globalObjectTable))
-    , jsonTable(fastNew<HashTable>(JSC::jsonTable))
-    , numberConstructorTable(fastNew<HashTable>(JSC::numberConstructorTable))
-    , numberPrototypeTable(fastNew<HashTable>(JSC::numberPrototypeTable))
-    , objectConstructorTable(fastNew<HashTable>(JSC::objectConstructorTable))
-    , privateNamePrototypeTable(fastNew<HashTable>(JSC::privateNamePrototypeTable))
-    , regExpTable(fastNew<HashTable>(JSC::regExpTable))
-    , regExpConstructorTable(fastNew<HashTable>(JSC::regExpConstructorTable))
-    , regExpPrototypeTable(fastNew<HashTable>(JSC::regExpPrototypeTable))
-    , stringConstructorTable(fastNew<HashTable>(JSC::stringConstructorTable))
+    , arrayConstructorTable(adoptPtr(new HashTable(JSC::arrayConstructorTable)))
+    , arrayPrototypeTable(adoptPtr(new HashTable(JSC::arrayPrototypeTable)))
+    , booleanPrototypeTable(adoptPtr(new HashTable(JSC::booleanPrototypeTable)))
+    , dataViewTable(adoptPtr(new HashTable(JSC::dataViewTable)))
+    , dateTable(adoptPtr(new HashTable(JSC::dateTable)))
+    , dateConstructorTable(adoptPtr(new HashTable(JSC::dateConstructorTable)))
+    , errorPrototypeTable(adoptPtr(new HashTable(JSC::errorPrototypeTable)))
+    , globalObjectTable(adoptPtr(new HashTable(JSC::globalObjectTable)))
+    , jsonTable(adoptPtr(new HashTable(JSC::jsonTable)))
+    , numberConstructorTable(adoptPtr(new HashTable(JSC::numberConstructorTable)))
+    , numberPrototypeTable(adoptPtr(new HashTable(JSC::numberPrototypeTable)))
+    , objectConstructorTable(adoptPtr(new HashTable(JSC::objectConstructorTable)))
+    , privateNamePrototypeTable(adoptPtr(new HashTable(JSC::privateNamePrototypeTable)))
+    , regExpTable(adoptPtr(new HashTable(JSC::regExpTable)))
+    , regExpConstructorTable(adoptPtr(new HashTable(JSC::regExpConstructorTable)))
+    , regExpPrototypeTable(adoptPtr(new HashTable(JSC::regExpPrototypeTable)))
+    , stringConstructorTable(adoptPtr(new HashTable(JSC::stringConstructorTable)))
 #if ENABLE(PROMISES)
-    , promisePrototypeTable(fastNew<HashTable>(JSC::promisePrototypeTable))
-    , promiseConstructorTable(fastNew<HashTable>(JSC::promiseConstructorTable))
-    , promiseResolverPrototypeTable(fastNew<HashTable>(JSC::promiseResolverPrototypeTable))
+    , promisePrototypeTable(adoptPtr(new HashTable(JSC::promisePrototypeTable)))
+    , promiseConstructorTable(adoptPtr(new HashTable(JSC::promiseConstructorTable)))
+    , promiseResolverPrototypeTable(adoptPtr(new HashTable(JSC::promiseResolverPrototypeTable)))
 #endif
     , identifierTable(vmType == Default ? wtfThreadData().currentIdentifierTable() : createIdentifierTable())
     , propertyNames(new CommonIdentifiers(this))
@@ -241,6 +243,9 @@ VM::VM(VMType vmType, HeapType heapType)
     unlinkedEvalCodeBlockStructure.set(*this, UnlinkedEvalCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedFunctionCodeBlockStructure.set(*this, UnlinkedFunctionCodeBlock::createStructure(*this, 0, jsNull()));
     propertyTableStructure.set(*this, PropertyTable::createStructure(*this, 0, jsNull()));
+    mapDataStructure.set(*this, MapData::createStructure(*this, 0, jsNull()));
+    weakMapDataStructure.set(*this, WeakMapData::createStructure(*this, 0, jsNull()));
+
     smallStrings.initializeCommonStrings(*this);
 
     wtfThreadData().setCurrentIdentifierTable(existingEntryIdentifierTable);
@@ -330,29 +335,6 @@ VM::~VM()
     promisePrototypeTable->deleteTable();
     promiseConstructorTable->deleteTable();
     promiseResolverPrototypeTable->deleteTable();
-#endif
-
-    fastDelete(const_cast<HashTable*>(arrayConstructorTable));
-    fastDelete(const_cast<HashTable*>(arrayPrototypeTable));
-    fastDelete(const_cast<HashTable*>(booleanPrototypeTable));
-    fastDelete(const_cast<HashTable*>(dataViewTable));
-    fastDelete(const_cast<HashTable*>(dateTable));
-    fastDelete(const_cast<HashTable*>(dateConstructorTable));
-    fastDelete(const_cast<HashTable*>(errorPrototypeTable));
-    fastDelete(const_cast<HashTable*>(globalObjectTable));
-    fastDelete(const_cast<HashTable*>(jsonTable));
-    fastDelete(const_cast<HashTable*>(numberConstructorTable));
-    fastDelete(const_cast<HashTable*>(numberPrototypeTable));
-    fastDelete(const_cast<HashTable*>(objectConstructorTable));
-    fastDelete(const_cast<HashTable*>(privateNamePrototypeTable));
-    fastDelete(const_cast<HashTable*>(regExpTable));
-    fastDelete(const_cast<HashTable*>(regExpConstructorTable));
-    fastDelete(const_cast<HashTable*>(regExpPrototypeTable));
-    fastDelete(const_cast<HashTable*>(stringConstructorTable));
-#if ENABLE(PROMISES)
-    fastDelete(const_cast<HashTable*>(promisePrototypeTable));
-    fastDelete(const_cast<HashTable*>(promiseConstructorTable));
-    fastDelete(const_cast<HashTable*>(promiseResolverPrototypeTable));
 #endif
 
     delete emptyList;
@@ -510,7 +492,7 @@ void VM::dumpSampleData(ExecState* exec)
 
 SourceProviderCache* VM::addSourceProviderCache(SourceProvider* sourceProvider)
 {
-    SourceProviderCacheMap::AddResult addResult = sourceProviderCacheMap.add(sourceProvider, 0);
+    auto addResult = sourceProviderCacheMap.add(sourceProvider, nullptr);
     if (addResult.isNewEntry)
         addResult.iterator->value = adoptRef(new SourceProviderCache);
     return addResult.iterator->value.get();
@@ -540,8 +522,8 @@ void VM::releaseExecutableMemory()
     
     if (dynamicGlobalObject) {
         StackPreservingRecompiler recompiler;
+        HeapIterationScope iterationScope(heap);
         HashSet<JSCell*> roots;
-        heap.canonicalizeCellLivenessData();
         heap.getConservativeRegisterRoots(roots);
         HashSet<JSCell*>::iterator end = roots.end();
         for (HashSet<JSCell*>::iterator ptr = roots.begin(); ptr != end; ++ptr) {
@@ -562,7 +544,7 @@ void VM::releaseExecutableMemory()
                 recompiler.currentlyExecutingFunctions.add(static_cast<FunctionExecutable*>(executable));
                 
         }
-        heap.objectSpace().forEachLiveCell<StackPreservingRecompiler>(recompiler);
+        heap.objectSpace().forEachLiveCell<StackPreservingRecompiler>(iterationScope, recompiler);
     }
     m_regExpCache->invalidateCode();
     heap.collectAllGarbage();
@@ -658,9 +640,11 @@ JSValue VM::throwException(ExecState* exec, JSValue error)
         CallFrame* callFrame;
         for (callFrame = exec; callFrame && !callFrame->codeBlock(); callFrame = callFrame->callerFrame()->removeHostCallFrameFlag())
             stackIndex++;
-        stackFrame = stackTrace.at(stackIndex);
-        bytecodeOffset = stackFrame.bytecodeOffset;
-        appendSourceToError(callFrame, static_cast<ErrorInstance*>(exception), bytecodeOffset);
+        if (callFrame && callFrame->codeBlock()) {
+            stackFrame = stackTrace.at(stackIndex);
+            bytecodeOffset = stackFrame.bytecodeOffset;
+            appendSourceToError(callFrame, static_cast<ErrorInstance*>(exception), bytecodeOffset);
+        }
     }
 
     if (exception->hasProperty(exec, this->propertyNames->stack))

@@ -1639,8 +1639,8 @@ def check_function_definition_and_pass_ptr(type_text, row, location_description,
        location_description: Used to indicate where the type is. This is either 'parameter' or 'return'.
        error: The function to call with any errors found.
     """
-    match_ref_or_own_ptr = '(?=\W|^)(Ref|Own)Ptr(?=\W)'
-    bad_type_usage = search(match_ref_or_own_ptr, type_text)
+    match_ref_ptr = '(?=\W|^)RefPtr(?=\W)'
+    bad_type_usage = search(match_ref_ptr, type_text)
     if not bad_type_usage or type_text.endswith('&') or type_text.endswith('*'):
         return
     type_name = bad_type_usage.group(0)
@@ -1730,10 +1730,10 @@ def check_for_leaky_patterns(clean_lines, line_number, function_state, error):
               'memory leaks.' % matched_get_dc.group('function_name'))
 
     matched_create_dc = search(r'\b(?P<function_name>Create(Compatible)?DC)\s*\(', line)
-    matched_own_dc = search(r'\badoptPtr\b', line)
+    matched_own_dc = search(r'\badoptGDIObject\b', line)
     if matched_create_dc and not matched_own_dc:
         error(line_number, 'runtime/leaky_pattern', 5,
-              'Use adoptPtr and OwnPtr<HDC> when calling %s to avoid potential '
+              'Use adoptGDIObject and GDIObject<HDC> when calling %s to avoid potential '
               'memory leaks.' % matched_create_dc.group('function_name'))
 
 
@@ -1907,6 +1907,8 @@ def check_spacing(file_extension, clean_lines, line_number, error):
         statement = matched.group('statement')
         condition, rest = up_to_unmatched_closing_paren(matched.group('remainder'))
         if condition is not None:
+            if statement == 'for' and search(r'(?:[^ :]:[^:]|[^:]:[^ :])', condition):
+                error(line_number, 'whitespace/colon', 4, 'Missing space around : in range-based for statement')
             condition_match = search(r'(?P<leading>[ ]*)(?P<separator>.).*[^ ]+(?P<trailing>[ ]*)', condition)
             if condition_match:
                 n_leading = len(condition_match.group('leading'))
@@ -3699,6 +3701,7 @@ class CppChecker(object):
         'runtime/virtual',
         'whitespace/blank_line',
         'whitespace/braces',
+        'whitespace/colon',
         'whitespace/comma',
         'whitespace/comments',
         'whitespace/declaration',

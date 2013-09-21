@@ -42,9 +42,9 @@ using namespace std;
 
 namespace WebCore {
 
-KeyframeAnimation::KeyframeAnimation(const Animation* animation, RenderObject* renderer, int index, CompositeAnimation* compAnim, RenderStyle* unanimatedStyle)
+KeyframeAnimation::KeyframeAnimation(const Animation& animation, RenderObject* renderer, int index, CompositeAnimation* compAnim, RenderStyle* unanimatedStyle)
     : AnimationBase(animation, renderer, compAnim)
-    , m_keyframes(renderer, animation->name())
+    , m_keyframes(renderer, animation.name())
     , m_index(index)
     , m_startEventDispatched(false)
     , m_unanimatedStyle(unanimatedStyle)
@@ -184,8 +184,9 @@ void KeyframeAnimation::animate(CompositeAnimation* compositeAnimation, RenderOb
         const RenderStyle* toStyle = 0;
         double progress = 0.0;
         fetchIntervalEndpointsForProperty(*it, fromStyle, toStyle, progress);
-#if USE(ACCELERATED_COMPOSITING)
+
         bool needsAnim = CSSPropertyAnimation::blendProperties(this, *it, animatedStyle.get(), fromStyle, toStyle, progress);
+#if USE(ACCELERATED_COMPOSITING)
         if (!needsAnim)
             // If we are running an accelerated animation, set a flag in the style
             // to indicate it. This can be used to make sure we get an updated

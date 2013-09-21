@@ -84,7 +84,7 @@ void ScrollView::removeChild(Widget* child)
         platformRemoveChild(child);
 }
 
-void ScrollView::setHasHorizontalScrollbar(bool hasBar)
+bool ScrollView::setHasHorizontalScrollbar(bool hasBar, bool* contentSizeAffected)
 {
     ASSERT(!hasBar || !avoidScrollbarCreation());
     if (hasBar && !m_horizontalScrollbar) {
@@ -92,14 +92,25 @@ void ScrollView::setHasHorizontalScrollbar(bool hasBar)
         addChild(m_horizontalScrollbar.get());
         didAddScrollbar(m_horizontalScrollbar.get(), HorizontalScrollbar);
         m_horizontalScrollbar->styleChanged();
-    } else if (!hasBar && m_horizontalScrollbar) {
+        if (contentSizeAffected)
+            *contentSizeAffected = !m_horizontalScrollbar->isOverlayScrollbar();
+        return true;
+    }
+    
+    if (!hasBar && m_horizontalScrollbar) {
+        bool wasOverlayScrollbar = m_horizontalScrollbar->isOverlayScrollbar();
         willRemoveScrollbar(m_horizontalScrollbar.get(), HorizontalScrollbar);
         removeChild(m_horizontalScrollbar.get());
         m_horizontalScrollbar = 0;
+        if (contentSizeAffected)
+            *contentSizeAffected = !wasOverlayScrollbar;
+        return true;
     }
+
+    return false;
 }
 
-void ScrollView::setHasVerticalScrollbar(bool hasBar)
+bool ScrollView::setHasVerticalScrollbar(bool hasBar, bool* contentSizeAffected)
 {
     ASSERT(!hasBar || !avoidScrollbarCreation());
     if (hasBar && !m_verticalScrollbar) {
@@ -107,11 +118,22 @@ void ScrollView::setHasVerticalScrollbar(bool hasBar)
         addChild(m_verticalScrollbar.get());
         didAddScrollbar(m_verticalScrollbar.get(), VerticalScrollbar);
         m_verticalScrollbar->styleChanged();
-    } else if (!hasBar && m_verticalScrollbar) {
+        if (contentSizeAffected)
+            *contentSizeAffected = !m_verticalScrollbar->isOverlayScrollbar();
+        return true;
+    }
+    
+    if (!hasBar && m_verticalScrollbar) {
+        bool wasOverlayScrollbar = m_verticalScrollbar->isOverlayScrollbar();
         willRemoveScrollbar(m_verticalScrollbar.get(), VerticalScrollbar);
         removeChild(m_verticalScrollbar.get());
         m_verticalScrollbar = 0;
+        if (contentSizeAffected)
+            *contentSizeAffected = !wasOverlayScrollbar;
+        return true;
     }
+
+    return false;
 }
 
 #if !PLATFORM(GTK)
@@ -508,11 +530,18 @@ void ScrollView::updateScrollbars(const IntSize& desiredOffset)
     if (vScroll != ScrollbarAuto)
         newHasVerticalScrollbar = (vScroll == ScrollbarAlwaysOn);
 
+    bool scrollbarAddedOrRemoved = false;
+
     if (m_scrollbarsSuppressed || (hScroll != ScrollbarAuto && vScroll != ScrollbarAuto)) {
-        if (hasHorizontalScrollbar != newHasHorizontalScrollbar && (hasHorizontalScrollbar || !avoidScrollbarCreation()))
-            setHasHorizontalScrollbar(newHasHorizontalScrollbar);
-        if (hasVerticalScrollbar != newHasVerticalScrollbar && (hasVerticalScrollbar || !avoidScrollbarCreation()))
-            setHasVerticalScrollbar(newHasVerticalScrollbar);
+        if (hasHorizontalScrollbar != newHasHorizontalScrollbar && (hasHorizontalScrollbar || !avoidScrollbarCreation())) {
+            if (setHasHorizontalScrollbar(newHasHorizontalScrollbar))
+                scrollbarAddedOrRemoved = true;
+        }
+
+        if (hasVerticalScrollbar != newHasVerticalScrollbar && (hasVerticalScrollbar || !avoidScrollbarCreation())) {
+            if (setHasVerticalScrollbar(newHasVerticalScrollbar))
+                scrollbarAddedOrRemoved = true;
+        }
     } else {
         bool sendContentResizedNotification = false;
         
@@ -542,8 +571,12 @@ void ScrollView::updateScrollbars(const IntSize& desiredOffset)
                 ScrollableArea::setScrollOrigin(IntPoint(scrollOrigin().x(), scrollOrigin().y() - m_horizontalScrollbar->height()));
             if (m_horizontalScrollbar)
                 m_horizontalScrollbar->invalidate();
-            setHasHorizontalScrollbar(newHasHorizontalScrollbar);
-            sendContentResizedNotification = true;
+
+            bool changeAffectsContentSize = false;
+            if (setHasHorizontalScrollbar(newHasHorizontalScrollbar, &changeAffectsContentSize)) {
+                scrollbarAddedOrRemoved = true;
+                sendContentResizedNotification |= changeAffectsContentSize;
+            }
         }
 
         if (hasVerticalScrollbar != newHasVerticalScrollbar && (hasVerticalScrollbar || !avoidScrollbarCreation())) {
@@ -551,8 +584,12 @@ void ScrollView::updateScrollbars(const IntSize& desiredOffset)
                 ScrollableArea::setScrollOrigin(IntPoint(scrollOrigin().x() - m_verticalScrollbar->width(), scrollOrigin().y()));
             if (m_verticalScrollbar)
                 m_verticalScrollbar->invalidate();
-            setHasVerticalScrollbar(newHasVerticalScrollbar);
-            sendContentResizedNotification = true;
+
+            bool changeAffectsContentSize = false;
+            if (setHasVerticalScrollbar(newHasVerticalScrollbar, &changeAffectsContentSize)) {
+                scrollbarAddedOrRemoved = true;
+                sendContentResizedNotification |= changeAffectsContentSize;
+            }
         }
 
         if (sendContentResizedNotification && m_updateScrollbarsPass < cMaxUpdateScrollbarsPass) {
@@ -568,6 +605,9 @@ void ScrollView::updateScrollbars(const IntSize& desiredOffset)
             }
             m_updateScrollbarsPass--;
         }
+
+        if (scrollbarAddedOrRemoved)
+            addedOrRemovedScrollbar();
     }
     
     // Set up the range (and page step/line step), but only do this if we're not in a nested call (to avoid

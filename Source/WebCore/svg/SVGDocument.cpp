@@ -88,14 +88,14 @@ void SVGDocument::updatePan(const FloatPoint& pos) const
 {
     if (rootElement()) {
         rootElement()->setCurrentTranslate(FloatPoint(pos.x() - m_translate.x(), pos.y() - m_translate.y()));
-        if (renderer())
-            renderer()->repaint();
+        if (renderView())
+            renderView()->repaint();
     }
 }
 
 bool SVGDocument::childShouldCreateRenderer(const Node* child) const
 {
-    if (child->hasTagName(SVGNames::svgTag))
+    if (isSVGSVGElement(child))
         return toSVGSVGElement(child)->isValid();
     return true;
 }

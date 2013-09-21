@@ -35,9 +35,9 @@
 #include "NodeRenderStyle.h"
 #include "NodeRenderingTraversal.h"
 #include "NodeTraversal.h"
+#include "RenderElement.h"
 #include "RenderFullScreen.h"
 #include "RenderNamedFlowThread.h"
-#include "RenderObject.h"
 #include "RenderText.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
@@ -220,17 +220,18 @@ static void createRendererIfNeeded(Element& element, RenderStyle* resolvedStyle)
     if (!element.rendererIsNeeded(*style))
         return;
 
-    RenderObject* parentRenderer;
+    RenderElement* parentRenderer;
     RenderObject* nextRenderer;
     if (parentFlowRenderer) {
         parentRenderer = parentFlowRenderer;
         nextRenderer = parentFlowRenderer->nextRendererForNode(&element);
     } else {
-        parentRenderer = renderingParentNode->renderer();
+        // FIXME: Make this path Element only, handle the root special case separately.
+        parentRenderer = toRenderElement(renderingParentNode->renderer());
         nextRenderer = nextSiblingRenderer(element, renderingParentNode);
     }
 
-    RenderObject* newRenderer = element.createRenderer(document.renderArena(), style.get());
+    RenderElement* newRenderer = element.createRenderer(*document.renderArena(), *style);
     if (!newRenderer)
         return;
     if (!parentRenderer->isChildAllowed(newRenderer, style.get())) {
@@ -280,25 +281,34 @@ static RenderObject* nextSiblingRenderer(const Text& textNode)
     return 0;
 }
 
-static void createTextRenderersForSiblingsAfterAttachIfNeeded(Node& node)
+static void reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(Node& current)
 {
-    if (!node.renderer())
+    if (current.isInsertionPoint())
         return;
-    // If this node got a renderer it may be the previousRenderer() of sibling text nodes and thus affect the
-    // result of Text::textRendererIsNeeded() for those nodes.
-    for (Node* sibling = node.nextSibling(); sibling; sibling = sibling->nextSibling()) {
-        if (sibling->renderer())
-            break;
+    // This function finds sibling text renderers where the results of textRendererIsNeeded may have changed as a result of
+    // the current node gaining or losing the renderer. This can only affect white space text nodes.
+    for (Node* sibling = NodeRenderingTraversal::nextSibling(&current); sibling; sibling = NodeRenderingTraversal::nextSibling(sibling)) {
+        // Siblings haven't been attached yet. They will be handled normally when they are.
         if (!sibling->attached())
-            break; // Assume this means none of the following siblings are attached.
+            return;
+        if (sibling->isElementNode()) {
+            // Text renderers beyond rendered elements can't be affected.
+            if (!sibling->renderer() || isRendererReparented(sibling->renderer()))
+                continue;
+            return;
+        }
         if (!sibling->isTextNode())
             continue;
-        attachTextRenderer(*toText(sibling));
-        // If we again decided not to create a renderer for next, we can bail out the loop,
-        // because it won't affect the result of Text::textRendererIsNeeded() for the rest
-        // of sibling nodes.
-        if (!sibling->renderer())
-            break;
+        Text& textSibling = *toText(sibling);
+        if (!textSibling.length() || !textSibling.containsOnlyWhitespace())
+            return;
+        Text& whitespaceTextSibling = textSibling;
+        bool hadRenderer = whitespaceTextSibling.renderer();
+        detachTextRenderer(whitespaceTextSibling);
+        attachTextRenderer(whitespaceTextSibling);
+        // No changes, futher renderers can't be affected.
+        if (hadRenderer == !!whitespaceTextSibling.renderer())
+            return;
     }
 }
 
@@ -349,7 +359,7 @@ static void createTextRendererIfNeeded(Text& textNode)
     ContainerNode* renderingParentNode = NodeRenderingTraversal::parent(&textNode);
     if (!renderingParentNode)
         return;
-    RenderObject* parentRenderer = renderingParentNode->renderer();
+    RenderElement* parentRenderer = toRenderElement(renderingParentNode->renderer());
     if (!parentRenderer || !parentRenderer->canHaveChildren())
         return;
     if (!renderingParentNode->childShouldCreateRenderer(&textNode))
@@ -365,7 +375,7 @@ static void createTextRendererIfNeeded(Text& textNode)
 
     if (!textRendererIsNeeded(textNode, *parentRenderer, *style))
         return;
-    RenderText* newRenderer = textNode.createTextRenderer(document.renderArena(), style.get());
+    RenderText* newRenderer = textNode.createTextRenderer(*document.renderArena(), *style);
     if (!newRenderer)
         return;
     if (!parentRenderer->isChildAllowed(newRenderer, style.get())) {
@@ -407,13 +417,14 @@ void updateTextRendererAfterContentChange(Text& textNode, unsigned offsetOfRepla
     RenderText* textRenderer = toRenderText(textNode.renderer());
     if (!textRenderer) {
         attachTextRenderer(textNode);
-        createTextRenderersForSiblingsAfterAttachIfNeeded(textNode);
+        reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(textNode);
         return;
     }
     RenderObject* parentRenderer = NodeRenderingTraversal::parent(&textNode)->renderer();
     if (!textRendererIsNeeded(textNode, *parentRenderer, *textRenderer->style())) {
         detachTextRenderer(textNode);
         attachTextRenderer(textNode);
+        reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(textNode);
         return;
     }
     textRenderer->setTextWithOffset(textNode.dataImpl(), offsetOfReplacedData, lengthOfReplacedData);
@@ -589,7 +600,7 @@ static Change resolveLocal(Element& current, Change inheritedChange)
         if (current.attached())
             detachRenderTree(current, ReattachDetach);
         attachRenderTree(current, newStyle.get());
-        createTextRenderersForSiblingsAfterAttachIfNeeded(current);
+        reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(current);
 
         return Detach;
     }
@@ -633,7 +644,7 @@ static void updateTextStyle(Text& text, RenderStyle* parentElementStyle, Style::
         renderer->setText(text.dataImpl());
     else {
         attachTextRenderer(text);
-        createTextRenderersForSiblingsAfterAttachIfNeeded(text);
+        reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(text);
     }
     text.clearNeedsStyleRecalc();
 }
@@ -801,9 +812,9 @@ void resolveTree(Document& document, Change change)
         }
 #endif
 
-        Style::Change documentChange = determineChange(documentStyle.get(), document.renderer()->style(), document.settings());
+        Style::Change documentChange = determineChange(documentStyle.get(), document.renderView()->style(), document.settings());
         if (documentChange != NoChange)
-            document.renderer()->setStyle(documentStyle.release());
+            document.renderView()->setStyle(documentStyle.release());
     }
 
     Element* documentElement = document.documentElement();
@@ -817,7 +828,7 @@ void resolveTree(Document& document, Change change)
 void attachRenderTree(Element& element)
 {
     attachRenderTree(element, nullptr);
-    createTextRenderersForSiblingsAfterAttachIfNeeded(element);
+    reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(element);
 }
 
 void detachRenderTree(Element& element)

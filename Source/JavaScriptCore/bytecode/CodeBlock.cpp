@@ -139,6 +139,8 @@ void CodeBlock::dumpAssumingJITType(PrintStream& out, JITCode::JITType jitType) 
         out.print(" (SABI)");
     if (ownerExecutable()->neverInline())
         out.print(" (NeverInline)");
+    if (ownerExecutable()->isStrictMode())
+        out.print(" (StrictMode)");
     out.print("]");
 }
 
@@ -171,7 +173,7 @@ CString CodeBlock::registerName(int r) const
         return toCString("arg", operandToArgument(r));
     }
 
-    return toCString("loc", r);
+    return toCString("loc", operandToLocal(r));
 }
 
 static CString regexpToSourceString(RegExp* regExp)
@@ -507,7 +509,7 @@ void CodeBlock::dumpBytecode(PrintStream& out)
     if (symbolTable() && symbolTable()->captureCount()) {
         out.printf(
             "; %d captured var(s) (from r%d to r%d, inclusive)",
-            symbolTable()->captureCount(), symbolTable()->captureStart(), symbolTable()->captureEnd() - 1);
+            symbolTable()->captureCount(), symbolTable()->captureStart(), symbolTable()->captureEnd() + 1);
     }
     if (usesArguments()) {
         out.printf(
@@ -2207,7 +2209,6 @@ void CodeBlock::visitWeakReferences(SlotVisitor& visitor)
 
 void CodeBlock::finalizeUnconditionally()
 {
-#if ENABLE(LLINT)
     Interpreter* interpreter = m_vm->interpreter;
     if (JITCode::couldBeInterpreted(jitType())) {
         const Vector<unsigned>& propertyAccessInstructions = m_unlinkedCode->propertyAccessInstructions();
@@ -2261,6 +2262,7 @@ void CodeBlock::finalizeUnconditionally()
             }
         }
 
+#if ENABLE(LLINT)
         for (unsigned i = 0; i < m_llintCallLinkInfos.size(); ++i) {
             if (m_llintCallLinkInfos[i].isLinked() && !Heap::isMarked(m_llintCallLinkInfos[i].callee.get())) {
                 if (Options::verboseOSR())
@@ -2270,8 +2272,8 @@ void CodeBlock::finalizeUnconditionally()
             if (!!m_llintCallLinkInfos[i].lastSeenCallee && !Heap::isMarked(m_llintCallLinkInfos[i].lastSeenCallee.get()))
                 m_llintCallLinkInfos[i].lastSeenCallee.clear();
         }
-    }
 #endif // ENABLE(LLINT)
+    }
 
 #if ENABLE(DFG_JIT)
     // Check if we're not live. If we are, then jettison.
@@ -2380,12 +2382,12 @@ void CodeBlock::resetStubInternal(RepatchBuffer& repatchBuffer, StructureStubInf
         break;
     case JITCode::DFGJIT:
         if (isGetByIdAccess(accessType))
-            DFG::dfgResetGetByID(repatchBuffer, stubInfo);
+            DFG::resetGetByID(repatchBuffer, stubInfo);
         else if (isPutByIdAccess(accessType))
-            DFG::dfgResetPutByID(repatchBuffer, stubInfo);
+            DFG::resetPutByID(repatchBuffer, stubInfo);
         else {
             RELEASE_ASSERT(isInAccess(accessType));
-            DFG::dfgResetIn(repatchBuffer, stubInfo);
+            DFG::resetIn(repatchBuffer, stubInfo);
         }
         break;
     default:
@@ -2449,14 +2451,19 @@ CodeBlock* CodeBlock::baselineVersion()
         return this;
 #if ENABLE(JIT)
     CodeBlock* result = replacement();
+    if (!result) {
+        // This can happen if we're creating the original CodeBlock for an executable.
+        // Assume that we're the baseline CodeBlock.
+        ASSERT(jitType() == JITCode::None);
+        return this;
+    }
     while (result->alternative())
         result = result->alternative();
     RELEASE_ASSERT(result);
     RELEASE_ASSERT(JITCode::isBaselineCode(result->jitType()));
     return result;
 #else
-    RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return this;
 #endif
 }
 
@@ -3193,7 +3200,7 @@ ArrayProfile* CodeBlock::getOrAddArrayProfile(unsigned bytecodeOffset)
 }
 
 void CodeBlock::updateAllPredictionsAndCountLiveness(
-    OperationInProgress operation, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles)
+    HeapOperation operation, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles)
 {
     ConcurrentJITLocker locker(m_lock);
     
@@ -3219,7 +3226,7 @@ void CodeBlock::updateAllPredictionsAndCountLiveness(
 #endif
 }
 
-void CodeBlock::updateAllValueProfilePredictions(OperationInProgress operation)
+void CodeBlock::updateAllValueProfilePredictions(HeapOperation operation)
 {
     unsigned ignoredValue1, ignoredValue2;
     updateAllPredictionsAndCountLiveness(operation, ignoredValue1, ignoredValue2);
@@ -3237,7 +3244,7 @@ void CodeBlock::updateAllArrayPredictions()
         m_arrayAllocationProfiles[i].updateIndexingType();
 }
 
-void CodeBlock::updateAllPredictions(OperationInProgress operation)
+void CodeBlock::updateAllPredictions(HeapOperation operation)
 {
     updateAllValueProfilePredictions(operation);
     updateAllArrayPredictions();

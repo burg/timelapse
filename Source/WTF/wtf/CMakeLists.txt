@@ -1,7 +1,6 @@
 set(WTF_HEADERS
     ASCIICType.h
     AVLTree.h
-    Alignment.h
     Assertions.h
     Atomics.h
     BitArray.h
@@ -25,7 +24,6 @@ set(WTF_HEADERS
     DoublyLinkedList.h
     DynamicAnnotations.h
     Encoder.h
-    FastAllocBase.h
     FastMalloc.h
     FeatureDefines.h
     FilePrintStream.h
@@ -48,29 +46,25 @@ set(WTF_HEADERS
     Locker.h
     MD5.h
     MainThread.h
+    MallocPtr.h
     MathExtras.h
     MediaTime.h
     MessageQueue.h
     MetaAllocator.h
     MetaAllocatorHandle.h
-    NonCopyingSort.h
     ThreadRestrictionVerifier.h
     Ref.h
     Noncopyable.h
-    NotFound.h
-    NullPtr.h
     NumberOfCores.h
     RAMSize.h
     OSAllocator.h
     OSRandomSource.h
-    OwnArrayPtr.h
     OwnPtr.h
     OwnPtrCommon.h
     PageAllocation.h
     PageAllocationAligned.h
     PageBlock.h
     PageReservation.h
-    PassOwnArrayPtr.h
     PassOwnPtr.h
     PassRefPtr.h
     PassTraits.h
@@ -109,7 +103,6 @@ set(WTF_HEADERS
     ThreadSpecific.h
     Threading.h
     ThreadingPrimitives.h
-    TypeTraits.h
     VMTags.h
     ValueCheck.h
     Vector.h
@@ -169,7 +162,6 @@ set(WTF_SOURCES
     MainThread.cpp
     MediaTime.cpp
     MetaAllocator.cpp
-    NullPtr.cpp
     OSRandomSource.cpp
     NumberOfCores.cpp
     RAMSize.cpp
@@ -185,7 +177,6 @@ set(WTF_SOURCES
     StringPrintStream.cpp
     TCSystemAlloc.cpp
     Threading.cpp
-    TypeTraits.cpp
     WTFThreadData.cpp
     dtoa.cpp
 
@@ -255,8 +246,6 @@ if (WIN32)
         OSAllocatorWin.cpp
         ThreadSpecificWin.cpp
         ThreadingWin.cpp
-
-        win/OwnPtrWin.cpp
     )
 else ()
     list(APPEND WTF_HEADERS
@@ -273,9 +262,9 @@ WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
 WEBKIT_WRAP_SOURCELIST(${WTF_SOURCES})
 include_directories(${WTF_INCLUDE_DIRECTORIES})
-add_definitions(-DBUILDING_WTF)
 add_library(WTF STATIC ${WTF_HEADERS} ${WTF_SOURCES})
 target_link_libraries(WTF ${WTF_LIBRARIES})
+set_target_properties(WTF PROPERTIES COMPILE_DEFINITIONS "BUILDING_WTF")
 set_target_properties(WTF PROPERTIES FOLDER "JavaScriptCore")
 
 if (WTF_OUTPUT_NAME)

@@ -28,11 +28,10 @@
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
 #include "DOMWrapperWorld.h"
-#include "Document.h"
 #include "ScriptWrappable.h"
 #include "ScriptWrappableInlines.h"
 #include "WebCoreTypedArrayController.h"
-#include <heap/SlotVisitor.h>
+#include <cstddef>
 #include <heap/Weak.h>
 #include <heap/WeakInlines.h>
 #include <runtime/Error.h>
@@ -48,7 +47,6 @@
 #include <runtime/TypedArrays.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/NullPtr.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -60,8 +58,11 @@ namespace WebCore {
 class DOMStringList;
 
     class CachedScript;
+    class Document;
     class Frame;
+    class HTMLDocument;
     class KURL;
+    class Node;
 
     typedef int ExceptionCode;
 
@@ -82,29 +83,6 @@ class DOMStringList;
         }
     };
 
-    // Constructors using this base class depend on being in a Document and
-    // can never be used from a WorkerGlobalScope.
-    class DOMConstructorWithDocument : public DOMConstructorObject {
-        typedef DOMConstructorObject Base;
-    public:
-        Document* document() const
-        {
-            return toDocument(scriptExecutionContext());
-        }
-
-    protected:
-        DOMConstructorWithDocument(JSC::Structure* structure, JSDOMGlobalObject* globalObject)
-            : DOMConstructorObject(structure, globalObject)
-        {
-        }
-
-        void finishCreation(JSDOMGlobalObject* globalObject)
-        {
-            Base::finishCreation(globalObject->vm());
-            ASSERT(globalObject->scriptExecutionContext()->isDocument());
-        }
-    };
-    
     JSC::Structure* getCachedDOMStructure(JSDOMGlobalObject*, const JSC::ClassInfo*);
     JSC::Structure* cacheDOMStructure(JSDOMGlobalObject*, JSC::Structure*, const JSC::ClassInfo*);
 
@@ -257,7 +235,7 @@ class DOMStringList;
         return index >= exec->argumentCount() ? JSC::JSValue() : exec->argument(index);
     }
 
-    const JSC::HashTable* getHashTableForGlobalData(JSC::VM&, const JSC::HashTable* staticTable);
+    const JSC::HashTable& getHashTableForGlobalData(JSC::VM&, const JSC::HashTable& staticTable);
 
     void reportException(JSC::ExecState*, JSC::JSValue exception, CachedScript* = 0);
     void reportCurrentException(JSC::ExecState*);
@@ -387,6 +365,28 @@ class DOMStringList;
         return toJS(exec, globalObject, ptr.get());
     }
 
+    template <typename T>
+    inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, Vector<T> vector)
+    {
+        JSC::JSArray* array = constructEmptyArray(exec, 0, vector.size());
+        
+        for (size_t i = 0; i < vector.size(); ++i)
+            array->putDirectIndex(exec, i, toJS(exec, globalObject, vector[i]));
+        
+        return array;
+    }
+
+    template <typename T>
+    inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, Vector<RefPtr<T>> vector)
+    {
+        JSC::JSArray* array = constructEmptyArray(exec, 0, vector.size());
+        
+        for (size_t i = 0; i < vector.size(); ++i)
+            array->putDirectIndex(exec, i, toJS(exec, globalObject, vector[i].get()));
+        
+        return array;
+    }
+    
     template <class T>
     struct JSValueTraits {
         static inline JSC::JSValue arrayJSValue(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, const T& value)

@@ -83,7 +83,7 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
     if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
         // flush document event queue, so event dispatch count reflects anything
         // dispatched or queued before this input was captured.
-        m_page->mainFrame().document()->eventQueue()->flush();
+        m_page->mainFrame().document()->eventQueue().flush();
 
         EventLoopInput* eventLoopInput = static_cast<EventLoopInput*>(input.get());
         eventLoopInput->setDispatchCount(m_domEventDispatchCount);

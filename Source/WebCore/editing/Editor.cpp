@@ -68,7 +68,6 @@
 #include "Pasteboard.h"
 #include "RemoveFormatCommand.h"
 #include "RenderBlock.h"
-#include "RenderPart.h"
 #include "RenderTextControl.h"
 #include "RenderedPosition.h"
 #include "ReplaceSelectionCommand.h"
@@ -104,13 +103,11 @@ using namespace WTF;
 using namespace Unicode;
 
 #if ENABLE(DELETION_UI)
+
 PassRefPtr<Range> Editor::avoidIntersectionWithDeleteButtonController(const Range* range) const
 {
-    DeleteButtonController* controller = deleteButtonController();
-    if (!range || !controller)
+    if (!range)
         return 0;
-
-    Document* document = range->ownerDocument();
 
     Node* startContainer = range->startContainer();
     int startOffset = range->startOffset();
@@ -122,7 +119,7 @@ PassRefPtr<Range> Editor::avoidIntersectionWithDeleteButtonController(const Rang
 
     ASSERT(endContainer);
 
-    Element* element = controller->containerElement();
+    Element* element = m_deleteButtonController->containerElement();
     if (startContainer == element || startContainer->isDescendantOf(element)) {
         ASSERT(element->parentNode());
         startContainer = element->parentNode();
@@ -134,16 +131,15 @@ PassRefPtr<Range> Editor::avoidIntersectionWithDeleteButtonController(const Rang
         endOffset = element->nodeIndex();
     }
 
-    return Range::create(document, startContainer, startOffset, endContainer, endOffset);
+    return Range::create(&range->ownerDocument(), startContainer, startOffset, endContainer, endOffset);
 }
 
 VisibleSelection Editor::avoidIntersectionWithDeleteButtonController(const VisibleSelection& selection) const
 {
-    DeleteButtonController* controller = deleteButtonController();
-    if (selection.isNone() || !controller)
+    if (selection.isNone())
         return selection;
 
-    Element* element = controller->containerElement();
+    Element* element = m_deleteButtonController->containerElement();
     if (!element)
         return selection;
     VisibleSelection updatedSelection = selection;
@@ -160,6 +156,7 @@ VisibleSelection Editor::avoidIntersectionWithDeleteButtonController(const Visib
 
     return updatedSelection;
 }
+
 #endif
 
 // When an event handler has moved the selection outside of a text control
@@ -415,30 +412,46 @@ void Editor::pasteAsFragment(PassRefPtr<DocumentFragment> pastingFragment, bool 
 
 void Editor::pasteAsPlainTextBypassingDHTML()
 {
-    pasteAsPlainTextWithPasteboard(Pasteboard::createForCopyAndPaste().get());
+    pasteAsPlainTextWithPasteboard(*Pasteboard::createForCopyAndPaste());
 }
 
-void Editor::pasteAsPlainTextWithPasteboard(Pasteboard* pasteboard)
+void Editor::pasteAsPlainTextWithPasteboard(Pasteboard& pasteboard)
 {
-    String text = pasteboard->plainText(&m_frame);
+    String text = readPlainTextFromPasteboard(pasteboard);
     if (client() && client()->shouldInsertText(text, selectedRange().get(), EditorInsertActionPasted))
         pasteAsPlainText(text, canSmartReplaceWithPasteboard(pasteboard));
 }
 
-#if !PLATFORM(MAC)
+String Editor::readPlainTextFromPasteboard(Pasteboard& pasteboard)
+{
+    PasteboardPlainText text;
+    pasteboard.read(text);
+    return plainTextFromPasteboard(text);
+}
+
+#if !(PLATFORM(MAC) && !PLATFORM(IOS))
+
+String Editor::plainTextFromPasteboard(const PasteboardPlainText& text)
+{
+    return text.text;
+}
+
+#endif
+
+#if !(PLATFORM(MAC) && !PLATFORM(IOS)) && !PLATFORM(EFL)
 void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText)
 {
     RefPtr<Range> range = selectedRange();
     bool chosePlainText;
     RefPtr<DocumentFragment> fragment = pasteboard->documentFragment(&m_frame, range, allowPlainText, chosePlainText);
     if (fragment && shouldInsertFragment(fragment, range, EditorInsertActionPasted))
-        pasteAsFragment(fragment, canSmartReplaceWithPasteboard(pasteboard), chosePlainText);
+        pasteAsFragment(fragment, canSmartReplaceWithPasteboard(*pasteboard), chosePlainText);
 }
 #endif
 
-bool Editor::canSmartReplaceWithPasteboard(Pasteboard* pasteboard)
+bool Editor::canSmartReplaceWithPasteboard(Pasteboard& pasteboard)
 {
-    return client() && client()->smartInsertDeleteEnabled() && pasteboard->canSmartReplace();
+    return client() && client()->smartInsertDeleteEnabled() && pasteboard.canSmartReplace();
 }
 
 bool Editor::shouldInsertFragment(PassRefPtr<DocumentFragment> fragment, PassRefPtr<Range> replacingDOMRange, EditorInsertAction givenAction)
@@ -895,6 +908,9 @@ void Editor::reappliedEditing(PassRefPtr<EditCommandComposition> cmd)
 
 Editor::Editor(Frame& frame)
     : m_frame(frame)
+#if ENABLE(DELETION_UI)
+    , m_deleteButtonController(adoptPtr(new DeleteButtonController(frame)))
+#endif
     , m_ignoreCompositionSelectionChange(false)
     , m_shouldStartNewKillRingSequence(false)
     // This is off by default, since most editors want this behavior (this matches IE but not FF).
@@ -906,9 +922,6 @@ Editor::Editor(Frame& frame)
     , m_defaultParagraphSeparator(EditorParagraphSeparatorIsDiv)
     , m_overwriteModeEnabled(false)
 {
-#if ENABLE(DELETION_UI)
-    m_deleteButtonController = adoptPtr(new DeleteButtonController(&frame));
-#endif
 }
 
 Editor::~Editor()
@@ -923,7 +936,7 @@ void Editor::clear()
     m_defaultParagraphSeparator = EditorParagraphSeparatorIsDiv;
 
 #if ENABLE(DELETION_UI)
-    m_deleteButtonController = adoptPtr(new DeleteButtonController(&m_frame));
+    m_deleteButtonController = adoptPtr(new DeleteButtonController(m_frame));
 #endif
 }
 
@@ -1051,7 +1064,7 @@ void Editor::cut()
         if (enclosingTextFormControl(m_frame.selection().start()))
             Pasteboard::createForCopyAndPaste()->writePlainText(selectedTextForClipboard(), canSmartCopyOrDelete() ? Pasteboard::CanSmartReplace : Pasteboard::CannotSmartReplace);
         else {
-#if PLATFORM(MAC) && !PLATFORM(IOS)
+#if (PLATFORM(MAC) && !PLATFORM(IOS)) || PLATFORM(EFL)
             writeSelectionToPasteboard(*Pasteboard::createForCopyAndPaste());
 #else
             // FIXME: Convert all other platforms to match Mac and delete this.
@@ -1079,13 +1092,13 @@ void Editor::copy()
     } else {
         Document* document = m_frame.document();
         if (HTMLImageElement* imageElement = imageElementFromImageDocument(document)) {
-#if PLATFORM(MAC) && !PLATFORM(IOS)
+#if (PLATFORM(MAC) && !PLATFORM(IOS)) || PLATFORM(EFL)
             writeImageToPasteboard(*Pasteboard::createForCopyAndPaste(), *imageElement, document->url(), document->title());
 #else
             Pasteboard::createForCopyAndPaste()->writeImage(imageElement, document->url(), document->title());
 #endif
         } else {
-#if PLATFORM(MAC) && !PLATFORM(IOS)
+#if (PLATFORM(MAC) && !PLATFORM(IOS)) || PLATFORM(EFL)
             writeSelectionToPasteboard(*Pasteboard::createForCopyAndPaste());
 #else
             // FIXME: Convert all other platforms to match Mac and delete this.
@@ -1115,7 +1128,7 @@ void Editor::paste(Pasteboard& pasteboard)
     if (m_frame.selection().isContentRichlyEditable())
         pasteWithPasteboard(&pasteboard, true);
     else
-        pasteAsPlainTextWithPasteboard(&pasteboard);
+        pasteAsPlainTextWithPasteboard(pasteboard);
 }
 
 void Editor::pasteAsPlainText()
@@ -1125,7 +1138,7 @@ void Editor::pasteAsPlainText()
     if (!canPaste())
         return;
     updateMarkersForWordsAffectedByEditing(false);
-    pasteAsPlainTextWithPasteboard(Pasteboard::createForCopyAndPaste().get());
+    pasteAsPlainTextWithPasteboard(*Pasteboard::createForCopyAndPaste());
 }
 
 void Editor::performDelete()
@@ -1168,11 +1181,15 @@ void Editor::copyURL(const KURL& url, const String& title)
 
 void Editor::copyURL(const KURL& url, const String& title, Pasteboard& pasteboard)
 {
+    PasteboardURL pasteboardURL;
+    pasteboardURL.url = url;
+    pasteboardURL.title = title;
+
 #if PLATFORM(MAC) && !PLATFORM(IOS)
-    writeURLToPasteboard(pasteboard, url, title);
-#else
-    pasteboard.writeURL(url, title, &m_frame);
+    fillInUserVisibleForm(pasteboardURL);
 #endif
+
+    pasteboard.write(pasteboardURL);
 }
 
 void Editor::copyImage(const HitTestResult& result)
@@ -1185,7 +1202,7 @@ void Editor::copyImage(const HitTestResult& result)
     if (url.isEmpty())
         url = result.absoluteImageURL();
 
-#if PLATFORM(MAC) && !PLATFORM(IOS)
+#if (PLATFORM(MAC) && !PLATFORM(IOS)) || PLATFORM(EFL)
     writeImageToPasteboard(*Pasteboard::createForCopyAndPaste(), *element, url, result.altDisplayString());
 #else
     Pasteboard::createForCopyAndPaste()->writeImage(element, url, result.altDisplayString());
@@ -1429,7 +1446,7 @@ WritingDirection Editor::baseWritingDirectionForSelectionStart() const
     if (!renderer)
         return result;
 
-    if (!renderer->isBlockFlow()) {
+    if (!renderer->isRenderBlockFlow()) {
         renderer = renderer->containingBlock();
         if (!renderer)
             return result;
@@ -2919,7 +2936,7 @@ static bool isFrameInRange(Frame* frame, Range* range)
 {
     bool inRange = false;
     for (HTMLFrameOwnerElement* ownerElement = frame->ownerElement(); ownerElement; ownerElement = ownerElement->document().ownerElement()) {
-        if (&ownerElement->document() == range->ownerDocument()) {
+        if (&ownerElement->document() == &range->ownerDocument()) {
             inRange = range->intersectsNode(ownerElement, IGNORE_EXCEPTION);
             break;
         }
@@ -2934,7 +2951,7 @@ unsigned Editor::countMatchesForText(const String& target, Range* range, FindOpt
 
     RefPtr<Range> searchRange;
     if (range) {
-        if (range->ownerDocument() == m_frame.document())
+        if (&range->ownerDocument() == m_frame.document())
             searchRange = range;
         else if (!isFrameInRange(&m_frame, range))
             return 0;
@@ -3068,7 +3085,7 @@ static Node* findFirstMarkable(Node* node)
     while (node) {
         if (!node->renderer())
             return 0;
-        if (node->renderer()->isText())
+        if (node->renderer()->isTextOrLineBreak())
             return node;
         if (isHTMLTextFormControlElement(node))
             node = toHTMLTextFormControlElement(node)->visiblePositionForIndex(1).deepEquivalent().deprecatedNode();

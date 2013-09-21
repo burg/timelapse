@@ -30,6 +30,7 @@
 #include "JSPropertyNameIterator.h"
 
 #include "JSGlobalObject.h"
+#include <wtf/StdLibExtras.h>
 
 namespace JSC {
 
@@ -39,7 +40,7 @@ inline JSPropertyNameIterator::JSPropertyNameIterator(ExecState* exec, PropertyN
     : JSCell(exec->vm(), exec->vm().propertyNameIteratorStructure.get())
     , m_numCacheableSlots(numCacheableSlots)
     , m_jsStringsSize(propertyNameArrayData->propertyNameVector().size())
-    , m_jsStrings(adoptArrayPtr(new WriteBarrier<Unknown>[m_jsStringsSize]))
+    , m_jsStrings(m_jsStringsSize ? std::make_unique<WriteBarrier<Unknown>[]>(m_jsStringsSize) : nullptr)
 {
 }
 

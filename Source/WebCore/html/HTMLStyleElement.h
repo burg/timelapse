@@ -36,9 +36,10 @@ typedef EventSender<HTMLStyleElement> StyleEventSender;
 
 class HTMLStyleElement FINAL : public HTMLElement {
 public:
-    static PassRefPtr<HTMLStyleElement> create(const QualifiedName&, Document*, bool createdByParser);
+    static PassRefPtr<HTMLStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLStyleElement();
 
+#if ENABLE(STYLE_SCOPED)
     bool scoped() const;
     void setScoped(bool);
     Element* scopingElement() const;
@@ -50,6 +51,7 @@ public:
             return false;
         return true;
     }
+#endif
 
     CSSStyleSheet* sheet() const { return m_styleSheetOwner.sheet(); }
 
@@ -60,7 +62,7 @@ public:
     static void dispatchPendingLoadEvents();
 
 private:
-    HTMLStyleElement(const QualifiedName&, Document*, bool createdByParser);
+    HTMLStyleElement(const QualifiedName&, Document&, bool createdByParser);
 
     // overload from HTMLElement
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
@@ -77,21 +79,27 @@ private:
 
     virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
 
+#if ENABLE(STYLE_SCOPED)
     void scopedAttributeChanged(bool);
     void registerWithScopingNode(bool);
     void unregisterWithScopingNode(ContainerNode*);
+#endif
 
     InlineStyleSheetOwner m_styleSheetOwner;
     bool m_firedLoad;
     bool m_loadedSheet;
 
+#if ENABLE(STYLE_SCOPED)
     enum ScopedStyleRegistrationState {
         NotRegistered,
         RegisteredAsScoped,
         RegisteredInShadowRoot
     };
     ScopedStyleRegistrationState m_scopedStyleRegistrationState;
+#endif
 };
+
+ELEMENT_TYPE_CASTS(HTMLStyleElement)
 
 } //namespace
 

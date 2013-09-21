@@ -23,8 +23,8 @@
 #include "AlternativeTextClient.h"
 #include "AnimationController.h"
 #include "AsyncEventProxy.h"
+#include "BackForwardClient.h"
 #include "BackForwardController.h"
-#include "BackForwardList.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
 #include "ClientRectList.h"
@@ -132,14 +132,14 @@ float deviceScaleFactor(Frame* frame)
 }
 
 Page::Page(PageClients& pageClients)
-    : m_chrome(Chrome::create(this, pageClients.chromeClient))
-    , m_dragCaretController(DragCaretController::create())
+    : m_chrome(createOwned<Chrome>(*this, *pageClients.chromeClient))
+    , m_dragCaretController(createOwned<DragCaretController>())
 #if ENABLE(DRAG_SUPPORT)
-    , m_dragController(DragController::create(this, pageClients.dragClient))
+    , m_dragController(createOwned<DragController>(*this, *pageClients.dragClient))
 #endif
-    , m_focusController(FocusController::create(this))
+    , m_focusController(createOwned<FocusController>(*this))
 #if ENABLE(CONTEXT_MENUS)
-    , m_contextMenuController(ContextMenuController::create(this, pageClients.contextMenuClient))
+    , m_contextMenuController(createOwned<ContextMenuController>(*this, *pageClients.contextMenuClient))
 #endif
     , m_navigationProxy(NavigationProxy::create(this))
     , m_networkProxy(NetworkProxy::create(this))
@@ -156,7 +156,7 @@ Page::Page(PageClients& pageClients)
 #endif
     , m_settings(Settings::create(this))
     , m_progress(ProgressTracker::create())
-    , m_backForwardController(BackForwardController::create(this, pageClients.backForwardClient))
+    , m_backForwardController(createOwned<BackForwardController>(*this, pageClients.backForwardClient))
     , m_mainFrame(Frame::create(this, 0, pageClients.loaderClientForMainFrame))
     , m_theme(RenderTheme::themeForPage(this))
     , m_editorClient(pageClients.editorClient)
@@ -245,7 +245,7 @@ Page::~Page()
     if (m_scrollingCoordinator)
         m_scrollingCoordinator->pageDestroyed();
 
-    backForward()->close();
+    backForward().close();
 
 #ifndef NDEBUG
     pageCounter.decrement();
@@ -369,15 +369,15 @@ void Page::setOpenedByDOM()
     m_openedByDOM = true;
 }
 
-BackForwardList* Page::backForwardList() const
+BackForwardClient* Page::backForwardClient() const
 {
-    return m_backForwardController->client();
+    return backForward().client();
 }
 
 bool Page::goBack()
 {
-    HistoryItem* item = backForward()->backItem();
-
+    HistoryItem* item = backForward().backItem();
+    
     if (item) {
         goToItem(item, FrameLoadTypeBack);
         return true;
@@ -387,8 +387,8 @@ bool Page::goBack()
 
 bool Page::goForward()
 {
-    HistoryItem* item = backForward()->forwardItem();
-
+    HistoryItem* item = backForward().forwardItem();
+    
     if (item) {
         goToItem(item, FrameLoadTypeForward);
         return true;
@@ -400,9 +400,9 @@ bool Page::canGoBackOrForward(int distance) const
 {
     if (distance == 0)
         return true;
-    if (distance > 0 && distance <= backForward()->forwardCount())
+    if (distance > 0 && distance <= backForward().forwardCount())
         return true;
-    if (distance < 0 && -distance <= backForward()->backCount())
+    if (distance < 0 && -distance <= backForward().backCount())
         return true;
     return false;
 }
@@ -412,14 +412,14 @@ void Page::goBackOrForward(int distance)
     if (distance == 0)
         return;
 
-    HistoryItem* item = backForward()->itemAtIndex(distance);
+    HistoryItem* item = backForward().itemAtIndex(distance);
     if (!item) {
         if (distance > 0) {
-            if (int forwardCount = backForward()->forwardCount())
-                item = backForward()->itemAtIndex(forwardCount);
+            if (int forwardCount = backForward().forwardCount())
+                item = backForward().itemAtIndex(forwardCount);
         } else {
-            if (int backCount = backForward()->backCount())
-                item = backForward()->itemAtIndex(-backCount);
+            if (int backCount = backForward().backCount())
+                item = backForward().itemAtIndex(-backCount);
         }
     }
 
@@ -443,7 +443,7 @@ void Page::goToItem(HistoryItem* item, FrameLoadType type)
 
 int Page::getHistoryLength()
 {
-    return backForward()->backCount() + 1 + backForward()->forwardCount();
+    return backForward().backCount() + 1 + backForward().forwardCount();
 }
 
 void Page::setGroupName(const String& name)
@@ -646,11 +646,11 @@ PassRefPtr<Range> Page::rangeOfString(const String& target, Range* referenceRang
     if (target.isEmpty())
         return 0;
 
-    if (referenceRange && referenceRange->ownerDocument()->page() != this)
+    if (referenceRange && referenceRange->ownerDocument().page() != this)
         return 0;
 
     bool shouldWrap = options & WrapAround;
-    Frame* frame = referenceRange ? referenceRange->ownerDocument()->frame() : &mainFrame();
+    Frame* frame = referenceRange ? referenceRange->ownerDocument().frame() : &mainFrame();
     Frame* startFrame = frame;
     do {
         if (RefPtr<Range> resultRange = frame->editor().rangeOfString(target, frame == startFrame ? referenceRange : 0, options & ~WrapAround))
@@ -779,8 +779,8 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
     m_pageScaleFactor = scale;
 
     if (!m_settings->applyPageScaleFactorInCompositor()) {
-        if (document->renderer())
-            document->renderer()->setNeedsLayout(true);
+        if (document->renderView())
+            document->renderView()->setNeedsLayout(true);
 
         document->recalcStyle(Style::Force);
 
@@ -796,7 +796,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
         view->setViewportConstrainedObjectsNeedLayout();
 
     if (view && view->scrollPosition() != origin) {
-        if (!m_settings->applyPageScaleFactorInCompositor() && document->renderer() && document->renderer()->needsLayout() && view->didFirstLayout())
+        if (!m_settings->applyPageScaleFactorInCompositor() && document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layout();
         view->setScrollPosition(origin);
     }

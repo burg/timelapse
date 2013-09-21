@@ -99,7 +99,7 @@ public:
     SnapshotDecision snapshotDecision() const { return m_snapshotDecision; }
 
 protected:
-    HTMLPlugInImageElement(const QualifiedName& tagName, Document*, bool createdByParser, PreferPlugInsForImagesOption);
+    HTMLPlugInImageElement(const QualifiedName& tagName, Document&, bool createdByParser, PreferPlugInsForImagesOption);
 
     bool isImageType();
 
@@ -125,7 +125,7 @@ protected:
     virtual bool isRestartedPlugin() const OVERRIDE { return m_isRestartedPlugin; }
 
 private:
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) OVERRIDE;
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) OVERRIDE;
     virtual bool willRecalcStyle(Style::Change) OVERRIDE;
 
     void didAddUserAgentShadowRoot(ShadowRoot*) OVERRIDE;
@@ -165,6 +165,14 @@ private:
     IntSize m_sizeWhenSnapshotted;
     SnapshotDecision m_snapshotDecision;
 };
+
+inline HTMLPlugInImageElement& toHTMLPlugInImageElement(Node& node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(node.isPluginElement());
+    HTMLPlugInElement& plugInElement = static_cast<HTMLPlugInElement&>(node);
+    ASSERT_WITH_SECURITY_IMPLICATION(plugInElement.isPlugInImageElement());
+    return static_cast<HTMLPlugInImageElement&>(plugInElement);
+}
 
 inline HTMLPlugInImageElement* toHTMLPlugInImageElement(Node* node)
 {

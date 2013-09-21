@@ -33,7 +33,7 @@
 namespace WebCore {
 
 class FloatPoint;
-    
+
 typedef void (*NodeCallback)(Node*, unsigned);
 
 namespace Private { 
@@ -124,7 +124,7 @@ public:
     virtual bool childShouldCreateRenderer(const Node*) const { return true; }
 
 protected:
-    ContainerNode(Document*, ConstructionType = CreateContainer);
+    explicit ContainerNode(Document*, ConstructionType = CreateContainer);
 
     static void queuePostAttachCallback(NodeCallback, Node*, unsigned = 0);
     static bool postAttachCallbacksAreSuspended();
@@ -220,12 +220,12 @@ inline Node* Node::highestAncestor() const
     return highest;
 }
 
-inline bool Node::needsShadowTreeWalker() const
+inline bool Node::needsNodeRenderingTraversalSlowPath() const
 {
-    if (getFlag(NeedsShadowTreeWalkerFlag))
+    if (getFlag(NeedsNodeRenderingTraversalSlowPathFlag))
         return true;
     ContainerNode* parent = parentOrShadowHostNode();
-    return parent && parent->getFlag(NeedsShadowTreeWalkerFlag);
+    return parent && parent->getFlag(NeedsNodeRenderingTraversalSlowPathFlag);
 }
 
 inline bool Node::isTreeScope() const

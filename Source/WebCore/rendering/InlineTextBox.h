@@ -24,7 +24,7 @@
 #define InlineTextBox_h
 
 #include "InlineBox.h"
-#include "RenderText.h" // so textRenderer() can be inline
+#include "RenderText.h"
 #include "TextRun.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -47,7 +47,7 @@ Color correctedTextColor(Color textColor, Color backgroundColor);
 
 class InlineTextBox : public InlineBox {
 public:
-    InlineTextBox(RenderObject& renderer)
+    explicit InlineTextBox(RenderText& renderer)
         : InlineBox(renderer)
         , m_prevTextBox(0)
         , m_nextTextBox(0)
@@ -57,7 +57,9 @@ public:
     {
     }
 
-    virtual void destroy(RenderArena*) OVERRIDE FINAL;
+    RenderText& renderer() const { return toRenderText(InlineBox::renderer()); }
+
+    virtual void destroy(RenderArena&) OVERRIDE FINAL;
 
     InlineTextBox* prevTextBox() const { return m_prevTextBox; }
     InlineTextBox* nextTextBox() const { return m_nextTextBox; }
@@ -121,11 +123,8 @@ protected:
     virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom);
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom) OVERRIDE;
 
-public:
-    RenderText& textRenderer() const;
-
 private:
-    virtual void deleteLine(RenderArena*) OVERRIDE FINAL;
+    virtual void deleteLine(RenderArena&) OVERRIDE FINAL;
     virtual void extractLine() OVERRIDE FINAL;
     virtual void attachLine() OVERRIDE FINAL;
 
@@ -211,11 +210,6 @@ inline const InlineTextBox* toInlineTextBox(const InlineBox* inlineBox)
 
 // This will catch anyone doing an unnecessary cast.
 void toInlineTextBox(const InlineTextBox*);
-
-inline RenderText& InlineTextBox::textRenderer() const
-{
-    return toRenderText(renderer());
-}
 
 void alignSelectionRectToDevicePixels(FloatRect&);
 

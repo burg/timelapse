@@ -83,7 +83,7 @@ RetainPtr<CFDictionaryRef> LegacyWebArchive::createPropertyListRepresentation(Ar
     SharedBuffer* data = resource->data();
     RetainPtr<CFDataRef> cfData;
     if (data)
-        cfData = adoptCF(data->createCFData());
+        cfData = data->createCFData();
     else
         cfData = adoptCF(CFDataCreate(0, 0, 0));
     CFDictionarySetValue(propertyList.get(), LegacyWebArchiveResourceDataKey, cfData.get());
@@ -268,7 +268,7 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(const KURL&, SharedBuffer*
     if (!data)
         return 0;
         
-    RetainPtr<CFDataRef> cfData = adoptCF(data->createCFData());
+    RetainPtr<CFDataRef> cfData = data->createCFData();
     if (!cfData)
         return 0;
         
@@ -518,8 +518,8 @@ PassRefPtr<LegacyWebArchive> LegacyWebArchive::create(const String& markupString
     for (size_t i = 0; i < nodesSize; ++i) {
         Node* node = nodes[i];
         Frame* childFrame;
-        if ((node->hasTagName(HTMLNames::frameTag) || node->hasTagName(HTMLNames::iframeTag) || node->hasTagName(HTMLNames::objectTag)) &&
-            (childFrame = toFrameOwnerElement(node)->contentFrame())) {
+        if ((isHTMLFrameElement(node) || isHTMLIFrameElement(node) || isHTMLObjectElement(node))
+            && (childFrame = toFrameOwnerElement(node)->contentFrame())) {
             if (frameFilter && !frameFilter->shouldIncludeSubframe(childFrame))
                 continue;
                 

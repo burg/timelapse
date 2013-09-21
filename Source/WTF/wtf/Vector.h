@@ -21,19 +21,22 @@
 #ifndef WTF_Vector_h
 #define WTF_Vector_h
 
-#include <wtf/Alignment.h>
+#include <limits>
+#include <string.h>
+#include <type_traits>
+#include <utility>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
+#include <wtf/MallocPtr.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/NotFound.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ValueCheck.h>
 #include <wtf/VectorTraits.h>
-#include <limits>
-#include <utility>
 
 namespace WTF {
+
+const size_t notFound = static_cast<size_t>(-1);
 
 template <bool needsDestruction, typename T>
 struct VectorDestructor;
@@ -88,20 +91,16 @@ struct VectorMover;
 template<typename T>
 struct VectorMover<false, T>
 {
-    static void move(const T* src, const T* srcEnd, T* dst)
+    static void move(T* src, T* srcEnd, T* dst)
     {
         while (src != srcEnd) {
-            new (NotNull, dst) T(*src);
-#if COMPILER(SUNCC) && __SUNPRO_CC <= 0x590
-            const_cast<T*>(src)->~T(); // Work around obscure SunCC 12 compiler bug.
-#else
+            new (NotNull, dst) T(std::move(*src));
             src->~T();
-#endif
             ++dst;
             ++src;
         }
     }
-    static void moveOverlapping(const T* src, const T* srcEnd, T* dst)
+    static void moveOverlapping(T* src, T* srcEnd, T* dst)
     {
         if (src > dst)
             move(src, srcEnd, dst);
@@ -110,7 +109,7 @@ struct VectorMover<false, T>
             while (src != srcEnd) {
                 --srcEnd;
                 --dstEnd;
-                new (NotNull, dstEnd) T(*srcEnd);
+                new (NotNull, dstEnd) T(std::move(*srcEnd));
                 srcEnd->~T();
             }
         }
@@ -175,7 +174,7 @@ struct VectorFiller<true, T>
 {
     static void uninitializedFill(T* dst, T* dstEnd, const T& val) 
     {
-        COMPILE_ASSERT(sizeof(T) == sizeof(char), Size_of_type_should_be_equal_to_one);
+        static_assert(sizeof(T) == 1, "Size of type T should be equal to one!");
 #if COMPILER(GCC) && defined(_FORTIFY_SOURCE)
         if (!__builtin_constant_p(dstEnd - dst) || (!(dstEnd - dst)))
 #endif
@@ -220,12 +219,12 @@ struct VectorTypeOperations
         VectorInitializer<VectorTraits<T>::needsInitialization, VectorTraits<T>::canInitializeWithMemset, T>::initialize(begin, end);
     }
 
-    static void move(const T* src, const T* srcEnd, T* dst)
+    static void move(T* src, T* srcEnd, T* dst)
     {
         VectorMover<VectorTraits<T>::canMoveWithMemcpy, T>::move(src, srcEnd, dst);
     }
 
-    static void moveOverlapping(const T* src, const T* srcEnd, T* dst)
+    static void moveOverlapping(T* src, T* srcEnd, T* dst)
     {
         VectorMover<VectorTraits<T>::canMoveWithMemcpy, T>::moveOverlapping(src, srcEnd, dst);
     }
@@ -308,12 +307,12 @@ public:
     const T* buffer() const { return m_buffer; }
     size_t capacity() const { return m_capacity; }
 
-    OwnPtr<T> releaseBuffer()
+    MallocPtr<T> releaseBuffer()
     {
         T* buffer = m_buffer;
         m_buffer = 0;
         m_capacity = 0;
-        return adoptPtr(buffer);
+        return adoptMallocPtr(buffer);
     }
 
 protected:
@@ -456,20 +455,20 @@ public:
         Base::reallocateBuffer(newCapacity);
     }
 
-    void swap(VectorBuffer<T, inlineCapacity>& other)
+    void swap(VectorBuffer& other)
     {
         if (buffer() == inlineBuffer() && other.buffer() == other.inlineBuffer()) {
-            WTF::swap(m_inlineBuffer, other.m_inlineBuffer);
+            std::swap(m_inlineBuffer, other.m_inlineBuffer);
             std::swap(m_capacity, other.m_capacity);
         } else if (buffer() == inlineBuffer()) {
             m_buffer = other.m_buffer;
             other.m_buffer = other.inlineBuffer();
-            WTF::swap(m_inlineBuffer, other.m_inlineBuffer);
+            std::swap(m_inlineBuffer, other.m_inlineBuffer);
             std::swap(m_capacity, other.m_capacity);
         } else if (other.buffer() == other.inlineBuffer()) {
             other.m_buffer = m_buffer;
             m_buffer = inlineBuffer();
-            WTF::swap(m_inlineBuffer, other.m_inlineBuffer);
+            std::swap(m_inlineBuffer, other.m_inlineBuffer);
             std::swap(m_capacity, other.m_capacity);
         } else {
             std::swap(m_buffer, other.m_buffer);
@@ -488,7 +487,7 @@ public:
     using Base::buffer;
     using Base::capacity;
 
-    OwnPtr<T> releaseBuffer()
+    MallocPtr<T> releaseBuffer()
     {
         if (buffer() == inlineBuffer())
             return nullptr;
@@ -502,11 +501,10 @@ private:
     using Base::m_buffer;
     using Base::m_capacity;
 
-    static const size_t m_inlineBufferSize = inlineCapacity * sizeof(T);
-    T* inlineBuffer() { return reinterpret_cast_ptr<T*>(m_inlineBuffer.buffer); }
-    const T* inlineBuffer() const { return reinterpret_cast_ptr<const T*>(m_inlineBuffer.buffer); }
+    T* inlineBuffer() { return reinterpret_cast_ptr<T*>(m_inlineBuffer); }
+    const T* inlineBuffer() const { return reinterpret_cast_ptr<const T*>(m_inlineBuffer); }
 
-    AlignedBuffer<m_inlineBufferSize, WTF_ALIGN_OF(T)> m_inlineBuffer;
+    typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_inlineBuffer[inlineCapacity];
 };
 
 struct UnsafeVectorOverflow {
@@ -642,7 +640,7 @@ public:
     void clear() { shrinkCapacity(0); }
 
     template<typename U> void append(const U*, size_t);
-    template<typename U> void append(const U&);
+    template<typename U> void append(U&&);
     template<typename U> void uncheckedAppend(U&& val);
     template<typename U, size_t otherCapacity> void appendVector(const Vector<U, otherCapacity>&);
     template<typename U> bool tryAppend(const U*, size_t);
@@ -666,7 +664,7 @@ public:
 
     template<typename Iterator> void appendRange(Iterator start, Iterator end);
 
-    OwnPtr<T> releaseBuffer();
+    MallocPtr<T> releaseBuffer();
 
     void swap(Vector<T, inlineCapacity, OverflowHandler>& other)
     {
@@ -680,11 +678,11 @@ public:
 
 private:
     void expandCapacity(size_t newMinCapacity);
-    const T* expandCapacity(size_t newMinCapacity, const T*);
+    T* expandCapacity(size_t newMinCapacity, T*);
     bool tryExpandCapacity(size_t newMinCapacity);
     const T* tryExpandCapacity(size_t newMinCapacity, const T*);
     template<typename U> U* expandCapacity(size_t newMinCapacity, U*); 
-    template<typename U> void appendSlowCase(const U&);
+    template<typename U> void appendSlowCase(U&&);
 
     using Base::m_size;
     using Base::buffer;
@@ -727,8 +725,7 @@ Vector<T, inlineCapacity, OverflowHandler>& Vector<T, inlineCapacity, OverflowHa
     else if (other.size() > capacity()) {
         clear();
         reserveCapacity(other.size());
-        if (!begin())
-            return *this;
+        ASSERT(begin());
     }
     
 // Works around an assert in VS2010. See https://connect.microsoft.com/VisualStudio/feedback/details/558044/std-copy-should-not-check-dest-when-first-last
@@ -760,8 +757,7 @@ Vector<T, inlineCapacity, OverflowHandler>& Vector<T, inlineCapacity, OverflowHa
     else if (other.size() > capacity()) {
         clear();
         reserveCapacity(other.size());
-        if (!begin())
-            return *this;
+        ASSERT(begin());
     }
     
 // Works around an assert in VS2010. See https://connect.microsoft.com/VisualStudio/feedback/details/558044/std-copy-should-not-check-dest-when-first-last
@@ -832,8 +828,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::fill(const T& val, size_t newSi
     else if (newSize > capacity()) {
         clear();
         reserveCapacity(newSize);
-        if (!begin())
-            return;
+        ASSERT(begin());
     }
     
     std::fill(begin(), end(), val);
@@ -856,7 +851,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::expandCapacity(size_t newMinCap
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler>
-const T* Vector<T, inlineCapacity, OverflowHandler>::expandCapacity(size_t newMinCapacity, const T* ptr)
+T* Vector<T, inlineCapacity, OverflowHandler>::expandCapacity(size_t newMinCapacity, T* ptr)
 {
     if (ptr < begin() || ptr >= end()) {
         expandCapacity(newMinCapacity);
@@ -943,8 +938,8 @@ void Vector<T, inlineCapacity, OverflowHandler>::reserveCapacity(size_t newCapac
     T* oldBuffer = begin();
     T* oldEnd = end();
     Base::allocateBuffer(newCapacity);
-    if (begin())
-        TypeOperations::move(oldBuffer, oldEnd, begin());
+    ASSERT(begin());
+    TypeOperations::move(oldBuffer, oldEnd, begin());
     Base::deallocateBuffer(oldBuffer);
 }
 
@@ -1008,8 +1003,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::append(const U* data, size_t da
     size_t newSize = m_size + dataSize;
     if (newSize > capacity()) {
         data = expandCapacity(newSize, data);
-        if (!begin())
-            return;
+        ASSERT(begin());
     }
     if (newSize < m_size)
         CRASH();
@@ -1039,28 +1033,27 @@ bool Vector<T, inlineCapacity, OverflowHandler>::tryAppend(const U* data, size_t
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler> template<typename U>
-ALWAYS_INLINE void Vector<T, inlineCapacity, OverflowHandler>::append(const U& val)
+ALWAYS_INLINE void Vector<T, inlineCapacity, OverflowHandler>::append(U&& value)
 {
     if (size() != capacity()) {
-        new (NotNull, end()) T(val);
+        new (NotNull, end()) T(std::forward<U>(value));
         ++m_size;
         return;
     }
 
-    appendSlowCase(val);
+    appendSlowCase(std::forward<U>(value));
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler> template<typename U>
-void Vector<T, inlineCapacity, OverflowHandler>::appendSlowCase(const U& val)
+void Vector<T, inlineCapacity, OverflowHandler>::appendSlowCase(U&& value)
 {
     ASSERT(size() == capacity());
 
-    const U* ptr = &val;
+    auto ptr = const_cast<typename std::remove_const<typename std::remove_reference<U>::type>::type*>(std::addressof(value));
     ptr = expandCapacity(size() + 1, ptr);
-    if (!begin())
-        return;
+    ASSERT(begin());
 
-    new (NotNull, end()) T(*ptr);
+    new (NotNull, end()) T(std::forward<U>(*ptr));
     ++m_size;
 }
 
@@ -1068,10 +1061,11 @@ void Vector<T, inlineCapacity, OverflowHandler>::appendSlowCase(const U& val)
 // vector's capacity is large enough for the append to succeed.
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler> template<typename U>
-inline void Vector<T, inlineCapacity, OverflowHandler>::uncheckedAppend(U&& val)
+inline void Vector<T, inlineCapacity, OverflowHandler>::uncheckedAppend(U&& value)
 {
     ASSERT(size() < capacity());
-    typename std::remove_reference<U>::type* ptr = &val;
+
+    auto ptr = std::addressof(value);
     new (NotNull, end()) T(std::forward<U>(*ptr));
     ++m_size;
 }
@@ -1089,8 +1083,7 @@ void Vector<T, inlineCapacity, OverflowHandler>::insert(size_t position, const U
     size_t newSize = m_size + dataSize;
     if (newSize > capacity()) {
         data = expandCapacity(newSize, data);
-        if (!begin())
-            return;
+        ASSERT(begin());
     }
     if (newSize < m_size)
         CRASH();
@@ -1108,8 +1101,7 @@ inline void Vector<T, inlineCapacity, OverflowHandler>::insert(size_t position, 
     const U* data = &val;
     if (size() == capacity()) {
         data = expandCapacity(size() + 1, data);
-        if (!begin())
-            return;
+        ASSERT(begin());
     }
     T* spot = begin() + position;
     TypeOperations::moveOverlapping(spot, end(), spot + 1);
@@ -1153,19 +1145,19 @@ inline void Vector<T, inlineCapacity, OverflowHandler>::reverse()
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler>
-inline OwnPtr<T> Vector<T, inlineCapacity, OverflowHandler>::releaseBuffer()
+inline MallocPtr<T> Vector<T, inlineCapacity, OverflowHandler>::releaseBuffer()
 {
-    OwnPtr<T> buffer = Base::releaseBuffer();
+    auto buffer = Base::releaseBuffer();
     if (inlineCapacity && !buffer && m_size) {
         // If the vector had some data, but no buffer to release,
         // that means it was using the inline buffer. In that case,
         // we create a brand new buffer so the caller always gets one.
         size_t bytes = m_size * sizeof(T);
-        buffer = adoptPtr(static_cast<T*>(fastMalloc(bytes)));
+        buffer = adoptMallocPtr(static_cast<T*>(fastMalloc(bytes)));
         memcpy(buffer.get(), data(), bytes);
     }
     m_size = 0;
-    return buffer.release();
+    return buffer;
 }
 
 template<typename T, size_t inlineCapacity, typename OverflowHandler>
@@ -1221,5 +1213,6 @@ template<typename T> struct ValueCheck<Vector<T> > {
 
 using WTF::Vector;
 using WTF::UnsafeVectorOverflow;
+using WTF::notFound;
 
 #endif // WTF_Vector_h

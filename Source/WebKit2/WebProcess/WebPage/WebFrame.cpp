@@ -222,7 +222,7 @@ void WebFrame::didReceivePolicyDecision(uint64_t listenerID, PolicyAction action
 
     m_policyDownloadID = downloadID;
 
-    (m_coreFrame->loader().policyChecker()->*function)(action);
+    (m_coreFrame->loader().policyChecker().*function)(action);
 }
 
 void WebFrame::startDownload(const WebCore::ResourceRequest& request)
@@ -608,7 +608,7 @@ bool WebFrame::containsAnyFormControls() const
     for (Node* node = document->documentElement(); node; node = NodeTraversal::next(node)) {
         if (!node->isElementNode())
             continue;
-        if (isHTMLInputElement(node) || toElement(node)->hasTagName(HTMLNames::selectTag) || isHTMLTextAreaElement(node))
+        if (isHTMLInputElement(node) || isHTMLSelectElement(node) || isHTMLTextAreaElement(node))
             return true;
     }
     return false;

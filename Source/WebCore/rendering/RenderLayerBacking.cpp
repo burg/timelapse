@@ -47,7 +47,6 @@
 #include "KeyframeList.h"
 #include "PluginViewBase.h"
 #include "ProgressTracker.h"
-#include "RenderApplet.h"
 #include "RenderIFrame.h"
 #include "RenderImage.h"
 #include "RenderLayerCompositor.h"
@@ -150,7 +149,8 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer* layer)
 
 RenderLayerBacking::~RenderLayerBacking()
 {
-    updateClippingLayers(false, false);
+    updateAncestorClippingLayer(false);
+    updateDescendantClippingLayer(false);
     updateOverflowControlsLayers(false, false, false);
     updateForegroundLayer(false);
     updateBackgroundLayer(false);
@@ -313,7 +313,7 @@ void RenderLayerBacking::createPrimaryGraphicsLayer()
 
 #if PLATFORM(MAC) && USE(CA)
     if (!compositor().acceleratedDrawingEnabled() && renderer().isCanvas()) {
-        const HTMLCanvasElement* canvas = toHTMLCanvasElement(renderer().node());
+        const HTMLCanvasElement* canvas = toHTMLCanvasElement(renderer().element());
         if (canvas->shouldAccelerate(canvas->size()))
             m_graphicsLayer->setAcceleratesDrawing(true);
     }
@@ -457,11 +457,11 @@ void RenderLayerBacking::updateCompositedBounds()
 
 void RenderLayerBacking::updateAfterWidgetResize()
 {
-    if (renderer().isRenderPart()) {
-        if (RenderLayerCompositor* innerCompositor = RenderLayerCompositor::frameContentsCompositor(toRenderPart(&renderer()))) {
-            innerCompositor->frameViewDidChangeSize();
-            innerCompositor->frameViewDidChangeLocation(flooredIntPoint(contentsBox().location()));
-        }
+    if (!renderer().isWidget())
+        return;
+    if (RenderLayerCompositor* innerCompositor = RenderLayerCompositor::frameContentsCompositor(toRenderWidget(&renderer()))) {
+        innerCompositor->frameViewDidChangeSize();
+        innerCompositor->frameViewDidChangeLocation(flooredIntPoint(contentsBox().location()));
     }
 }
 
@@ -512,7 +512,10 @@ bool RenderLayerBacking::updateGraphicsLayerConfiguration()
     if (m_owningLayer->needsCompositedScrolling())
         needsDescendentsClippingLayer = false;
 
-    if (updateClippingLayers(compositor().clippedByAncestor(m_owningLayer), needsDescendentsClippingLayer))
+    if (updateAncestorClippingLayer(compositor().clippedByAncestor(m_owningLayer)))
+        layerConfigChanged = true;
+
+    if (updateDescendantClippingLayer(needsDescendentsClippingLayer))
         layerConfigChanged = true;
 
     if (updateOverflowControlsLayers(requiresHorizontalScrollbarLayer(), requiresVerticalScrollbarLayer(), requiresScrollCornerLayer()))
@@ -556,20 +559,20 @@ bool RenderLayerBacking::updateGraphicsLayerConfiguration()
     }
 #if ENABLE(VIDEO)
     else if (renderer().isVideo()) {
-        HTMLMediaElement* mediaElement = toHTMLMediaElement(renderer().node());
+        HTMLMediaElement* mediaElement = toHTMLMediaElement(renderer().element());
         m_graphicsLayer->setContentsToMedia(mediaElement->platformLayer());
     }
 #endif
 #if ENABLE(WEBGL) || ENABLE(ACCELERATED_2D_CANVAS)
     else if (isAcceleratedCanvas(&renderer())) {
-        const HTMLCanvasElement* canvas = toHTMLCanvasElement(renderer().node());
+        const HTMLCanvasElement* canvas = toHTMLCanvasElement(renderer().element());
         if (CanvasRenderingContext* context = canvas->renderingContext())
             m_graphicsLayer->setContentsToCanvas(context->platformLayer());
         layerConfigChanged = true;
     }
 #endif
-    if (renderer().isRenderPart())
-        layerConfigChanged = RenderLayerCompositor::parentFrameContentLayers(toRenderPart(&renderer()));
+    if (renderer().isWidget())
+        layerConfigChanged = RenderLayerCompositor::parentFrameContentLayers(toRenderWidget(&renderer()));
 
     return layerConfigChanged;
 }
@@ -969,8 +972,8 @@ void RenderLayerBacking::updateDrawsContent(bool isSimpleContainer)
         m_backgroundLayer->setDrawsContent(hasPaintedContent);
 }
 
-// Return true if the layers changed.
-bool RenderLayerBacking::updateClippingLayers(bool needsAncestorClip, bool needsDescendantClip)
+// Return true if the layer changed.
+bool RenderLayerBacking::updateAncestorClippingLayer(bool needsAncestorClip)
 {
     bool layersChanged = false;
 
@@ -980,13 +983,21 @@ bool RenderLayerBacking::updateClippingLayers(bool needsAncestorClip, bool needs
             m_ancestorClippingLayer->setMasksToBounds(true);
             layersChanged = true;
         }
-    } else if (m_ancestorClippingLayer) {
+    } else if (hasAncestorClippingLayer()) {
         willDestroyLayer(m_ancestorClippingLayer.get());
         m_ancestorClippingLayer->removeFromParent();
         m_ancestorClippingLayer = nullptr;
         layersChanged = true;
     }
     
+    return layersChanged;
+}
+
+// Return true if the layer changed.
+bool RenderLayerBacking::updateDescendantClippingLayer(bool needsDescendantClip)
+{
+    bool layersChanged = false;
+
     if (needsDescendantClip) {
         if (!m_childContainmentLayer && !m_usingTiledCacheLayer) {
             m_childContainmentLayer = createGraphicsLayer("Child clipping Layer");
@@ -1568,7 +1579,7 @@ bool RenderLayerBacking::isSimpleContainerCompositingLayer() const
     if (renderer().isRenderRegion())
         return false;
 
-    if (renderer().node() && renderer().node()->isDocumentNode()) {
+    if (renderer().isRenderView()) {
         // Look to see if the root object has a non-simple background
         RenderObject* rootObject = renderer().document().documentElement() ? renderer().document().documentElement()->renderer() : 0;
         if (!rootObject)

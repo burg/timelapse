@@ -131,7 +131,7 @@ LayoutState::LayoutState(LayoutState* prev, RenderBox* renderer, const LayoutSiz
         computeLineGridPaginationOrigin(renderer);
 
     // If we have a new grid to track, then add it to our set.
-    if (renderer->style()->lineGrid() != RenderStyle::initialLineGrid() && renderer->isBlockFlow())
+    if (renderer->style()->lineGrid() != RenderStyle::initialLineGrid() && renderer->isRenderBlockFlow())
         establishLineGrid(toRenderBlock(renderer));
 
     // FIXME: <http://bugs.webkit.org/show_bug.cgi?id=13443> Apply control clip if present.
@@ -172,7 +172,7 @@ LayoutState::LayoutState(RenderObject* root)
 static bool inLayoutStateDestroy;
 #endif
 
-void LayoutState::destroy(RenderArena* renderArena)
+void LayoutState::destroy(RenderArena& renderArena)
 {
 #ifndef NDEBUG
     inLayoutStateDestroy = true;
@@ -181,12 +181,12 @@ void LayoutState::destroy(RenderArena* renderArena)
 #ifndef NDEBUG
     inLayoutStateDestroy = false;
 #endif
-    renderArena->free(*(size_t*)this, this);
+    renderArena.free(*(size_t*)this, this);
 }
 
-void* LayoutState::operator new(size_t sz, RenderArena* renderArena)
+void* LayoutState::operator new(size_t sz, RenderArena& renderArena)
 {
-    return renderArena->allocate(sz);
+    return renderArena.allocate(sz);
 }
 
 void LayoutState::operator delete(void* ptr, size_t sz)

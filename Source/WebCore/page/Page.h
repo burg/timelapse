@@ -57,7 +57,7 @@ namespace WebCore {
 class AlternativeTextClient;
 class AsyncEventProxy;
 class BackForwardController;
-class BackForwardList;
+class BackForwardClient;
 class Chrome;
 class ChromeClient;
 class ClientRectList;
@@ -141,7 +141,7 @@ public:
         DragClient* dragClient;
         InspectorClient* inspectorClient;
         PlugInClient* plugInClient;
-        RefPtr<BackForwardList> backForwardClient;
+        RefPtr<BackForwardClient> backForwardClient;
         ValidationMessageClient* validationMessageClient;
         FrameLoaderClient* loaderClientForMainFrame;
     };
@@ -173,7 +173,7 @@ public:
     void setOpenedByDOM();
 
     // DEPRECATED. Use backForward() instead of the following 6 functions.
-    BackForwardList* backForwardList() const;
+    BackForwardClient* backForwardClient() const;
     bool goBack();
     bool goForward();
     bool canGoBackOrForward(int distance) const;
@@ -224,7 +224,7 @@ public:
 
     Settings& settings() const { return *m_settings; }
     ProgressTracker& progress() const { return *m_progress; }
-    BackForwardController* backForward() const { return m_backForwardController.get(); }
+    BackForwardController& backForward() const { return *m_backForwardController; }
 
     FeatureObserver* featureObserver() { return &m_featureObserver; }
 
@@ -482,7 +482,7 @@ private:
     const RefPtr<Settings> m_settings;
     const OwnPtr<ProgressTracker> m_progress;
 
-    OwnPtr<BackForwardController> m_backForwardController;
+    const OwnPtr<BackForwardController> m_backForwardController;
     const RefPtr<Frame> m_mainFrame;
 
     mutable RefPtr<PluginData> m_pluginData;

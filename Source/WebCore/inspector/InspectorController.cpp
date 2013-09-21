@@ -335,6 +335,11 @@ void InspectorController::getHighlight(Highlight* highlight) const
     m_overlay->getHighlight(highlight);
 }
 
+PassRefPtr<InspectorObject> InspectorController::buildObjectForHighlightedNode() const
+{
+    return m_overlay->buildObjectForHighlightedNode();
+}
+
 void InspectorController::inspect(Node* node)
 {
     if (!enabled())
@@ -404,25 +409,6 @@ void InspectorController::resume()
 void InspectorController::setResourcesDataSizeLimitsFromInternals(int maximumResourcesContentSize, int maximumSingleResourceContentSize)
 {
     m_resourceAgent->setResourcesDataSizeLimitsFromInternals(maximumResourcesContentSize, maximumSingleResourceContentSize);
-}
-
-void InspectorController::willProcessTask()
-{
-    if (InspectorTimelineAgent* timelineAgent = m_instrumentingAgents->inspectorTimelineAgent())
-        timelineAgent->willProcessTask();
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    m_profilerAgent->willProcessTask();
-#endif
-}
-
-void InspectorController::didProcessTask()
-{
-    if (InspectorTimelineAgent* timelineAgent = m_instrumentingAgents->inspectorTimelineAgent())
-        timelineAgent->didProcessTask();
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    m_profilerAgent->didProcessTask();
-    m_domDebuggerAgent->didProcessTask();
-#endif
 }
 
 void InspectorController::didBeginFrame()

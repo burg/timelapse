@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2013 Apple Inc.  All rights reserved.
  * Copyright (C) 2013 Xueqing Huang <huangxueqing@baidu.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,6 +51,7 @@
 #include "markup.h"
 #include <wtf/WindowsExtras.h>
 #include <wtf/text/CString.h>
+#include <wtf/win/GDIObject.h>
 
 namespace WebCore {
 
@@ -639,7 +640,7 @@ exit:
     return hr;
 }
 
-void Pasteboard::writeURLToDataObject(const KURL& kurl, const String& titleStr, Frame* frame)
+void Pasteboard::writeURLToDataObject(const KURL& kurl, const String& titleStr)
 {
     if (!m_writableDataObject)
         return;
@@ -682,22 +683,22 @@ void Pasteboard::writeURLToDataObject(const KURL& kurl, const String& titleStr, 
     writeFileToDataObject(m_writableDataObject.get(), urlFileDescriptor, urlFileContent, 0);
 }
 
-void Pasteboard::writeURL(const KURL& url, const String& titleStr, Frame* frame)
+void Pasteboard::write(const PasteboardURL& pasteboardURL)
 {
-    ASSERT(!url.isEmpty());
+    ASSERT(!pasteboardURL.url.isEmpty());
 
     clear();
 
-    String title(titleStr);
+    String title(pasteboardURL.title);
     if (title.isEmpty()) {
-        title = url.lastPathComponent();
+        title = pasteboardURL.url.lastPathComponent();
         if (title.isEmpty())
-            title = url.host();
+            title = pasteboardURL.url.host();
     }
 
     // write to clipboard in format com.apple.safari.bookmarkdata to be able to paste into the bookmarks view with appropriate title
     if (::OpenClipboard(m_owner)) {
-        HGLOBAL cbData = createGlobalData(url, title);
+        HGLOBAL cbData = createGlobalData(pasteboardURL.url, title);
         if (!::SetClipboardData(BookmarkClipboardFormat, cbData))
             ::GlobalFree(cbData);
         ::CloseClipboard();
@@ -706,7 +707,7 @@ void Pasteboard::writeURL(const KURL& url, const String& titleStr, Frame* frame)
     // write to clipboard in format CF_HTML to be able to paste into contenteditable areas as a link
     if (::OpenClipboard(m_owner)) {
         Vector<char> data;
-        markupToCFHTML(urlToMarkup(url, title), "", data);
+        markupToCFHTML(urlToMarkup(pasteboardURL.url, title), "", data);
         HGLOBAL cbData = createGlobalData(data);
         if (!::SetClipboardData(HTMLClipboardFormat, cbData))
             ::GlobalFree(cbData);
@@ -715,13 +716,13 @@ void Pasteboard::writeURL(const KURL& url, const String& titleStr, Frame* frame)
 
     // bare-bones CF_UNICODETEXT support
     if (::OpenClipboard(m_owner)) {
-        HGLOBAL cbData = createGlobalData(url.string());
+        HGLOBAL cbData = createGlobalData(pasteboardURL.url.string());
         if (!::SetClipboardData(CF_UNICODETEXT, cbData))
             ::GlobalFree(cbData);
         ::CloseClipboard();
     }
 
-    writeURLToDataObject(url, titleStr, frame);
+    writeURLToDataObject(pasteboardURL.url, pasteboardURL.title);
 }
 
 void Pasteboard::writeImage(Node* node, const KURL&, const String&)
@@ -741,28 +742,24 @@ void Pasteboard::writeImage(Node* node, const KURL&, const String&)
     clear();
 
     HWndDC dc(0);
-    HDC compatibleDC = CreateCompatibleDC(0);
-    HDC sourceDC = CreateCompatibleDC(0);
-    OwnPtr<HBITMAP> resultBitmap = adoptPtr(CreateCompatibleBitmap(dc, image->width(), image->height()));
-    HGDIOBJ oldBitmap = SelectObject(compatibleDC, resultBitmap.get());
+    auto compatibleDC = adoptGDIObject(::CreateCompatibleDC(0));
+    auto sourceDC = adoptGDIObject(::CreateCompatibleDC(0));
+    auto resultBitmap = adoptGDIObject(::CreateCompatibleBitmap(dc, image->width(), image->height()));
+    HGDIOBJ oldBitmap = ::SelectObject(compatibleDC.get(), resultBitmap.get());
 
     BitmapInfo bmInfo = BitmapInfo::create(image->size());
 
-    HBITMAP coreBitmap = CreateDIBSection(dc, &bmInfo, DIB_RGB_COLORS, 0, 0, 0);
-    HGDIOBJ oldSource = SelectObject(sourceDC, coreBitmap);
-    image->getHBITMAP(coreBitmap);
+    auto coreBitmap = adoptGDIObject(::CreateDIBSection(dc, &bmInfo, DIB_RGB_COLORS, 0, 0, 0));
+    HGDIOBJ oldSource = ::SelectObject(sourceDC.get(), coreBitmap.get());
+    image->getHBITMAP(coreBitmap.get());
 
-    BitBlt(compatibleDC, 0, 0, image->width(), image->height(), sourceDC, 0, 0, SRCCOPY);
+    ::BitBlt(compatibleDC.get(), 0, 0, image->width(), image->height(), sourceDC.get(), 0, 0, SRCCOPY);
 
-    SelectObject(sourceDC, oldSource);
-    DeleteObject(coreBitmap);
-
-    SelectObject(compatibleDC, oldBitmap);
-    DeleteDC(sourceDC);
-    DeleteDC(compatibleDC);
+    ::SelectObject(sourceDC.get(), oldSource);
+    ::SelectObject(compatibleDC.get(), oldBitmap);
 
     if (::OpenClipboard(m_owner)) {
-        ::SetClipboardData(CF_BITMAP, resultBitmap.leakPtr());
+        ::SetClipboardData(CF_BITMAP, resultBitmap.leak());
         ::CloseClipboard();
     }
 }
@@ -777,33 +774,28 @@ bool Pasteboard::canSmartReplace()
     return ::IsClipboardFormatAvailable(WebSmartPasteFormat);
 }
 
-String Pasteboard::plainText(Frame* frame)
+void Pasteboard::read(PasteboardPlainText& text)
 {
     if (::IsClipboardFormatAvailable(CF_UNICODETEXT) && ::OpenClipboard(m_owner)) {
-        HANDLE cbData = ::GetClipboardData(CF_UNICODETEXT);
-        if (cbData) {
-            UChar* buffer = static_cast<UChar*>(GlobalLock(cbData));
-            String fromClipboard(buffer);
+        if (HANDLE cbData = ::GetClipboardData(CF_UNICODETEXT)) {
+            text.text = static_cast<UChar*>(GlobalLock(cbData));
             GlobalUnlock(cbData);
             ::CloseClipboard();
-            return fromClipboard;
+            return;
         }
         ::CloseClipboard();
     }
 
     if (::IsClipboardFormatAvailable(CF_TEXT) && ::OpenClipboard(m_owner)) {
-        HANDLE cbData = ::GetClipboardData(CF_TEXT);
-        if (cbData) {
-            char* buffer = static_cast<char*>(GlobalLock(cbData));
-            String fromClipboard(buffer);
+        if (HANDLE cbData = ::GetClipboardData(CF_TEXT)) {
+            // FIXME: This treats the characters as Latin-1, not UTF-8 or even Windows Latin-1. Is that the right encoding?
+            text.text = static_cast<char*>(GlobalLock(cbData));
             GlobalUnlock(cbData);
             ::CloseClipboard();
-            return fromClipboard;
+            return;
         }
         ::CloseClipboard();
     }
-
-    return String();
 }
 
 PassRefPtr<DocumentFragment> Pasteboard::documentFragment(Frame* frame, PassRefPtr<Range> context, bool allowPlainText, bool& chosePlainText)

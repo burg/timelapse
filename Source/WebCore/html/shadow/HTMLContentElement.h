@@ -40,9 +40,9 @@ namespace WebCore {
 
 class HTMLContentElement FINAL : public InsertionPoint {
 public:
-    static const QualifiedName& contentTagName(Document*);
-    static PassRefPtr<HTMLContentElement> create(const QualifiedName&, Document*);
-    static PassRefPtr<HTMLContentElement> create(Document*);
+    static const QualifiedName& contentTagName(Document&);
+    static PassRefPtr<HTMLContentElement> create(const QualifiedName&, Document&);
+    static PassRefPtr<HTMLContentElement> create(Document&);
 
     virtual ~HTMLContentElement();
 
@@ -56,7 +56,7 @@ public:
     virtual bool isSelectValid();
 
 protected:
-    HTMLContentElement(const QualifiedName&, Document*);
+    HTMLContentElement(const QualifiedName&, Document&);
 
 private:
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
@@ -78,18 +78,6 @@ inline const CSSSelectorList& HTMLContentElement::selectorList()
 {
     ensureSelectParsed();
     return m_selectorList;
-}
-
-inline bool isHTMLContentElement(const Node* node)
-{
-    ASSERT(node);
-    return node->isInsertionPoint() && toInsertionPoint(node)->insertionPointType() == InsertionPoint::HTMLContentElementType;
-}
-
-inline HTMLContentElement* toHTMLContentElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || isHTMLContentElement(node));
-    return static_cast<HTMLContentElement*>(node);
 }
 
 #endif // if ENABLE(SHADOW_DOM)

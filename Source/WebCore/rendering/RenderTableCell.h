@@ -25,6 +25,7 @@
 #ifndef RenderTableCell_h
 #define RenderTableCell_h
 
+#include "RenderBlockFlow.h"
 #include "RenderTableRow.h"
 #include "RenderTableSection.h"
 
@@ -35,7 +36,7 @@ static const unsigned maxColumnIndex = 0x1FFFFFFE; // 536,870,910
 
 enum IncludeBorderColorOrNot { DoNotIncludeBorderColor, IncludeBorderColor };
 
-class RenderTableCell FINAL : public RenderBlock {
+class RenderTableCell FINAL : public RenderBlockFlow {
 public:
     explicit RenderTableCell(Element*);
     
@@ -94,7 +95,7 @@ public:
     {
         // FIXME: This function does too much work, and is very hot during table layout!
         int adjustedLogicalHeight = pixelSnappedLogicalHeight() - (intrinsicPaddingBefore() + intrinsicPaddingAfter());
-        int styleLogicalHeight = valueForLength(style()->logicalHeight(), 0, &view());
+        int styleLogicalHeight = valueForLength(style()->logicalHeight(), 0);
         // In strict mode, box-sizing: content-box do the right thing and actually add in the border and padding.
         // Call computedCSSPadding* directly to avoid including implicitPadding.
         if (!document().inQuirksMode() && style()->boxSizing() != BORDER_BOX)
@@ -157,7 +158,7 @@ public:
     bool cellWidthChanged() const { return m_cellWidthChanged; }
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
 
-    static RenderTableCell* createAnonymous(Document*);
+    static RenderTableCell* createAnonymous(Document&);
     static RenderTableCell* createAnonymousWithParentRenderer(const RenderObject*);
     virtual RenderBox* createAnonymousBoxWithSameTypeAs(const RenderObject* parent) const OVERRIDE
     {

@@ -815,7 +815,7 @@ void WebFrameLoaderClient::dispatchWillSubmitForm(FramePolicyFunction function, 
 {
     id <WebFormDelegate> formDelegate = [getWebView(m_webFrame.get()) _formDelegate];
     if (!formDelegate) {
-        (core(m_webFrame.get())->loader().policyChecker()->*function)(PolicyUse);
+        (core(m_webFrame.get())->loader().policyChecker().*function)(PolicyUse);
         return;
     }
 
@@ -977,7 +977,7 @@ void WebFrameLoaderClient::updateGlobalHistoryItemForPage()
 
     if (Page* page = core(m_webFrame.get())->page()) {
         if (!page->settings().privateBrowsingEnabled())
-            historyItem = page->backForward()->currentItem();
+            historyItem = page->backForward().currentItem();
     }
 
     WebView *webView = getWebView(m_webFrame.get());
@@ -2044,7 +2044,7 @@ PassRefPtr<FrameNetworkingContext> WebFrameLoaderClient::createNetworkingContext
     _policyFunction = nullptr;
 
     ASSERT(policyFunction);
-    (frame->loader().policyChecker()->*policyFunction)(action);
+    (frame->loader().policyChecker().*policyFunction)(action);
 }
 
 - (void)ignore

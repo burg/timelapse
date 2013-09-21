@@ -44,7 +44,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-MeterShadowElement::MeterShadowElement(Document* document) 
+MeterShadowElement::MeterShadowElement(Document& document)
     : HTMLDivElement(HTMLNames::divTag, document)
 {
 }
@@ -60,7 +60,7 @@ bool MeterShadowElement::rendererIsNeeded(const RenderStyle& style)
     return render && !render->theme()->supportsMeter(render->style()->appearance()) && HTMLDivElement::rendererIsNeeded(style);
 }
 
-MeterInnerElement::MeterInnerElement(Document* document)
+MeterInnerElement::MeterInnerElement(Document& document)
     : MeterShadowElement(document)
 {
     DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-meter-inner-element", AtomicString::ConstructFromLiteral));
@@ -76,7 +76,7 @@ bool MeterInnerElement::rendererIsNeeded(const RenderStyle& style)
     return render && !render->theme()->supportsMeter(render->style()->appearance()) && HTMLDivElement::rendererIsNeeded(style);
 }
 
-RenderObject* MeterInnerElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderElement* MeterInnerElement::createRenderer(RenderArena& arena, RenderStyle&)
 {
     return new (arena) RenderMeter(this);
 }

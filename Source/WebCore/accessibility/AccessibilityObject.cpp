@@ -32,6 +32,7 @@
 #include "AXObjectCache.h"
 #include "AccessibilityRenderObject.h"
 #include "AccessibilityTable.h"
+#include "DOMTokenList.h"
 #include "Editor.h"
 #include "FloatRect.h"
 #include "FocusController.h"
@@ -398,7 +399,7 @@ static void appendAccessibilityObject(AccessibilityObject* object, Accessibility
             return;
         
         Document* doc = toFrameView(widget)->frame().document();
-        if (!doc || !doc->renderer())
+        if (!doc || !doc->hasLivingRenderTree())
             return;
         
         object = object->axObjectCache()->getOrCreate(doc);
@@ -534,6 +535,16 @@ bool AccessibilityObject::isRangeControl() const
     default:
         return false;
     }
+}
+
+bool AccessibilityObject::isMeter() const
+{
+#if ENABLE(METER_ELEMENT)
+    RenderObject* renderer = this->renderer();
+    return renderer && renderer->isMeter();
+#else
+    return false;
+#endif
 }
 
 IntPoint AccessibilityObject::clickPoint()
@@ -1454,8 +1465,8 @@ static ARIARoleMap* createARIARoleMap()
         { "menu", MenuRole },
         { "menubar", MenuBarRole },
         { "menuitem", MenuItemRole },
-        { "menuitemcheckbox", MenuItemRole },
-        { "menuitemradio", MenuItemRole },
+        { "menuitemcheckbox", MenuItemCheckboxRole },
+        { "menuitemradio", MenuItemRadioRole },
         { "note", DocumentNoteRole },
         { "navigation", LandmarkNavigationRole },
         { "option", ListBoxOptionRole },
@@ -1648,6 +1659,27 @@ int AccessibilityObject::ariaPosInSet() const
     return getAttribute(aria_posinsetAttr).toInt();
 }
     
+String AccessibilityObject::identifierAttribute() const
+{
+    return getAttribute(idAttr);
+}
+    
+void AccessibilityObject::classList(Vector<String>& classList) const
+{
+    Node* node = this->node();
+    if (!node || !node->isElementNode())
+        return;
+    
+    Element* element = toElement(node);
+    DOMTokenList* list = element->classList();
+    if (!list)
+        return;
+    unsigned length = list->length();
+    for (unsigned k = 0; k < length; k++)
+        classList.append(list->item(k).string());
+}
+
+    
 bool AccessibilityObject::supportsARIAExpanded() const
 {
     // Undefined values should not result in this attribute being exposed to ATs according to ARIA.
@@ -1671,8 +1703,13 @@ AccessibilityButtonState AccessibilityObject::checkboxOrRadioValue() const
     const AtomicString& result = getAttribute(aria_checkedAttr);
     if (equalIgnoringCase(result, "true"))
         return ButtonStateOn;
-    if (equalIgnoringCase(result, "mixed"))
+    if (equalIgnoringCase(result, "mixed")) {
+        // ARIA says that radio and menuitemradio elements must NOT expose button state mixed.
+        AccessibilityRole ariaRole = ariaRoleAttribute();
+        if (ariaRole == RadioButtonRole || ariaRole == MenuItemRadioRole)
+            return ButtonStateOff;
         return ButtonStateMixed;
+    }
     
     return ButtonStateOff;
 }

@@ -61,7 +61,7 @@ int SerializedEventTarget::frameIndexFromDocument(Document* document)
 
     int idx = 0;
     Frame* targetFrame = document->frame();
-    Frame* mainFrame = targetFrame->tree().top();
+    Frame* mainFrame = &targetFrame->tree().top();
     for (Frame* frame = mainFrame; frame; idx++, frame = frame->tree().traverseNext(mainFrame))
         if (frame == targetFrame)
             return idx;

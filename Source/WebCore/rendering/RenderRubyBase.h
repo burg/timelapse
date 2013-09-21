@@ -31,17 +31,17 @@
 #ifndef RenderRubyBase_h
 #define RenderRubyBase_h
 
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 
 namespace WebCore {
 
 class RenderRubyRun;
 
-class RenderRubyBase FINAL : public RenderBlock {
+class RenderRubyBase FINAL : public RenderBlockFlow {
 public:
     virtual ~RenderRubyBase();
     
-    static RenderRubyBase* createAnonymous(Document*);
+    static RenderRubyBase* createAnonymous(Document&);
 
     virtual const char* renderName() const { return "RenderRubyBase (anonymous)"; }
 

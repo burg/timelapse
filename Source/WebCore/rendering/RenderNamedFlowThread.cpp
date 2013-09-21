@@ -44,10 +44,10 @@
 
 namespace WebCore {
 
-RenderNamedFlowThread* RenderNamedFlowThread::createAnonymous(Document* document, PassRefPtr<WebKitNamedFlow> namedFlow)
+RenderNamedFlowThread* RenderNamedFlowThread::createAnonymous(Document& document, PassRefPtr<WebKitNamedFlow> namedFlow)
 {
-    ASSERT(document->cssRegionsEnabled());
-    RenderNamedFlowThread* renderer = new (document->renderArena()) RenderNamedFlowThread(namedFlow);
+    ASSERT(document.cssRegionsEnabled());
+    RenderNamedFlowThread* renderer = new (*document.renderArena()) RenderNamedFlowThread(namedFlow);
     renderer->setDocumentForAnonymous(document);
     return renderer;
 }
@@ -193,12 +193,12 @@ static bool compareRenderRegions(const RenderRegion* firstRegion, const RenderRe
     ASSERT(firstRegion);
     ASSERT(secondRegion);
 
-    ASSERT(firstRegion->generatingNode());
-    ASSERT(secondRegion->generatingNode());
+    ASSERT(firstRegion->generatingElement());
+    ASSERT(secondRegion->generatingElement());
 
     // If the regions belong to different nodes, compare their position in the DOM.
-    if (firstRegion->generatingNode() != secondRegion->generatingNode()) {
-        unsigned short position = firstRegion->generatingNode()->compareDocumentPosition(secondRegion->generatingNode());
+    if (firstRegion->generatingElement() != secondRegion->generatingElement()) {
+        unsigned short position = firstRegion->generatingElement()->compareDocumentPosition(secondRegion->generatingElement());
 
         // If the second region is contained in the first one, the first region is "less" if it's :before.
         if (position & Node::DOCUMENT_POSITION_CONTAINED_BY) {
@@ -485,7 +485,7 @@ bool RenderNamedFlowThread::isChildAllowed(RenderObject* child, RenderStyle* sty
         return true;
 
     ASSERT(child->node()->isElementNode());
-    Node* originalParent = NodeRenderingTraversal::parent(child->node());
+    Element* originalParent = toElement(NodeRenderingTraversal::parent(child->node()));
 
     if (!originalParent || !originalParent->renderer())
         return true;
@@ -568,6 +568,19 @@ static bool boxIntersectsRegion(LayoutUnit logicalTopForBox, LayoutUnit logicalB
         && logicalTopForBox < logicalBottomForRegion && logicalTopForRegion < logicalBottomForBox;
 }
 
+// Retrieve the next node to be visited while computing the ranges inside a region.
+static Node* nextNodeInsideContentNode(const Node* currNode, const Node* contentNode)
+{
+    ASSERT(currNode);
+    ASSERT(contentNode && contentNode->inNamedFlow());
+
+#if ENABLE(SVG)
+    if (currNode->renderer() && currNode->renderer()->isSVGRoot())
+        return NodeTraversal::nextSkippingChildren(currNode, contentNode);
+#endif
+    return NodeTraversal::next(currNode, contentNode);
+}
+
 void RenderNamedFlowThread::getRanges(Vector<RefPtr<Range> >& rangeObjects, const RenderRegion* region) const
 {
     LayoutUnit logicalTopForRegion;
@@ -605,7 +618,7 @@ void RenderNamedFlowThread::getRanges(Vector<RefPtr<Range> >& rangeObjects, cons
         bool skipOverOutsideNodes = false;
         Node* lastEndNode = 0;
 
-        for (Node* node = contentNode; node; node = NodeTraversal::next(node, contentNode)) {
+        for (Node* node = contentNode; node; node = nextNodeInsideContentNode(node, contentNode)) {
             RenderObject* renderer = node->renderer();
             if (!renderer)
                 continue;

@@ -28,9 +28,9 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "CCallHelpers.h"
 #include "CallFrameInlines.h"
 #include "CodeBlockWithJITType.h"
-#include "DFGCCallHelpers.h"
 #include "DFGCommon.h"
 #include "FTLJITCode.h"
 #include "JITStubs.h"
@@ -75,10 +75,10 @@ void link(State& state)
         // Plant a check that sufficient space is available in the JSStack.
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=56291
         jit.addPtr(
-            CCallHelpers::TrustedImm32(codeBlock->m_numCalleeRegisters * sizeof(Register)),
+            CCallHelpers::TrustedImm32(localToOperand(codeBlock->m_numCalleeRegisters) * sizeof(Register)),
             GPRInfo::callFrameRegister, GPRInfo::regT1);
         CCallHelpers::Jump stackCheck = jit.branchPtr(
-            CCallHelpers::Below,
+            CCallHelpers::Above,
             CCallHelpers::AbsoluteAddress(state.graph.m_vm.interpreter->stack().addressOfEnd()),
             GPRInfo::regT1);
         CCallHelpers::Label fromStackCheck = jit.label();

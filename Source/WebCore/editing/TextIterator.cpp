@@ -215,7 +215,7 @@ static inline bool fullyClipsContents(Node* node)
 static inline bool ignoresContainerClip(Node* node)
 {
     RenderObject* renderer = node->renderer();
-    if (!renderer || renderer->isText())
+    if (!renderer || renderer->isTextOrLineBreak())
         return false;
     return renderer->style()->hasOutOfFlowPosition();
 }
@@ -292,6 +292,8 @@ TextIterator::TextIterator(const Range* r, TextIteratorBehavior behavior)
 {
     if (!r)
         return;
+
+    r->ownerDocument().updateLayoutIgnorePendingStylesheets();
 
     // get and validate the range endpoints
     Node* startContainer = r->startContainer();
@@ -679,7 +681,7 @@ bool TextIterator::handleReplacedElement()
     }
 
     if (m_entersTextControls && renderer->isTextControl()) {
-        if (HTMLElement* innerTextElement = toRenderTextControl(renderer)->textFormControlElement()->innerTextElement()) {
+        if (HTMLElement* innerTextElement = toRenderTextControl(renderer)->textFormControlElement().innerTextElement()) {
             m_node = innerTextElement->containingShadowRoot();
             pushFullyClippedState(m_fullyClippedStack, m_node);
             m_offset = 0;
@@ -918,7 +920,7 @@ bool TextIterator::shouldRepresentNodeOffsetZero()
     // Additionally, if the range we are iterating over contains huge sections of unrendered content, 
     // we would create VisiblePositions on every call to this function without this check.
     if (!m_node->renderer() || m_node->renderer()->style()->visibility() != VISIBLE
-        || (m_node->renderer()->isBlockFlow() && !toRenderBlock(m_node->renderer())->height() && !m_node->hasTagName(bodyTag)))
+        || (m_node->renderer()->isRenderBlockFlow() && !toRenderBlock(m_node->renderer())->height() && !m_node->hasTagName(bodyTag)))
         return false;
 
     // The startPos.isNotNull() check is needed because the start could be before the body,
@@ -1117,6 +1119,8 @@ SimplifiedBackwardsTextIterator::SimplifiedBackwardsTextIterator(const Range* r,
 
     if (!r)
         return;
+
+    r->ownerDocument().updateLayoutIgnorePendingStylesheets();
 
     Node* startNode = r->startContainer();
     if (!startNode)
@@ -2427,7 +2431,6 @@ PassRefPtr<Range> TextIterator::rangeFromLocationAndLength(ContainerNode* scope,
             // FIXME: This is a workaround for the fact that the end of a run is often at the wrong
             // position for emitted '\n's.
             if (len == 1 && it.characterAt(0) == '\n') {
-                scope->document().updateLayoutIgnorePendingStylesheets();
                 it.advance();
                 if (!it.atEnd()) {
                     RefPtr<Range> range = it.range();
@@ -2535,8 +2538,8 @@ String plainText(const Range* r, TextIteratorBehavior defaultBehavior, bool isDi
 
     String result = builder.toString();
 
-    if (isDisplayString && r->ownerDocument())
-        r->ownerDocument()->displayStringModifiedByEncoding(result);
+    if (isDisplayString)
+        r->ownerDocument().displayStringModifiedByEncoding(result);
 
     return result;
 }
@@ -2557,7 +2560,7 @@ static size_t findPlainText(CharacterIterator& it, const String& target, FindOpt
 
     if (buffer.needsMoreContext()) {
         RefPtr<Range> startRange = it.range();
-        RefPtr<Range> beforeStartRange = startRange->ownerDocument()->createRange();
+        RefPtr<Range> beforeStartRange = startRange->ownerDocument().createRange();
         beforeStartRange->setEnd(startRange->startContainer(), startRange->startOffset(), IGNORE_EXCEPTION);
         for (SimplifiedBackwardsTextIterator backwardsIterator(beforeStartRange.get()); !backwardsIterator.atEnd(); backwardsIterator.advance()) {
             buffer.prependContext(backwardsIterator.characters(), backwardsIterator.length());
@@ -2593,9 +2596,6 @@ tryAgain:
 
 PassRefPtr<Range> findPlainText(const Range* range, const String& target, FindOptions options)
 {
-    // CharacterIterator requires renderers to be up-to-date
-    range->ownerDocument()->updateLayout();
-
     // First, find the text.
     size_t matchStart;
     size_t matchLength;

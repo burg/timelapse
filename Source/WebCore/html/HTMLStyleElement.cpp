@@ -25,12 +25,12 @@
 #include "HTMLStyleElement.h"
 
 #include "Attribute.h"
-#include "ContextFeatures.h"
 #include "Document.h"
 #include "Event.h"
 #include "EventSender.h"
 #include "HTMLNames.h"
 #include "MediaList.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptEventListener.h"
 #include "ScriptableDocumentParser.h"
 #include "ShadowRoot.h"
@@ -46,12 +46,14 @@ static StyleEventSender& styleLoadEventSender()
     return sharedLoadEventSender;
 }
 
-inline HTMLStyleElement::HTMLStyleElement(const QualifiedName& tagName, Document* document, bool createdByParser)
+inline HTMLStyleElement::HTMLStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : HTMLElement(tagName, document)
     , m_styleSheetOwner(document, createdByParser)
     , m_firedLoad(false)
     , m_loadedSheet(false)
+#if ENABLE(STYLE_SCOPED)
     , m_scopedStyleRegistrationState(NotRegistered)
+#endif
 {
     ASSERT(hasTagName(styleTag));
 }
@@ -65,7 +67,7 @@ HTMLStyleElement::~HTMLStyleElement()
     styleLoadEventSender().cancelEvent(this);
 }
 
-PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document* document, bool createdByParser)
+PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
     return adoptRef(new HTMLStyleElement(tagName, document, createdByParser));
 }
@@ -74,13 +76,15 @@ void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomicStr
 {
     if (name == titleAttr && sheet())
         sheet()->setTitle(value);
-    else if (name == scopedAttr && ContextFeatures::styleScopedEnabled(&document()))
+#if ENABLE(STYLE_SCOPED)
+    else if (name == scopedAttr && RuntimeEnabledFeatures::styleScopedEnabled())
         scopedAttributeChanged(!value.isNull());
+#endif
     else if (name == mediaAttr) {
         m_styleSheetOwner.setMedia(value);
         if (sheet()) {
             sheet()->setMediaQueries(MediaQuerySet::createAllowingDescriptionSyntax(value));
-            if (inDocument() && document().renderer())
+            if (inDocument() && document().hasLivingRenderTree())
                 document().styleResolverChanged(RecalcStyleImmediately);
         }
     } else if (name == typeAttr)
@@ -89,9 +93,16 @@ void HTMLStyleElement::parseAttribute(const QualifiedName& name, const AtomicStr
         HTMLElement::parseAttribute(name, value);
 }
 
+void HTMLStyleElement::finishParsingChildren()
+{
+    m_styleSheetOwner.finishParsingChildren(this);
+    HTMLElement::finishParsingChildren();
+}
+
+#if ENABLE(STYLE_SCOPED)
 void HTMLStyleElement::scopedAttributeChanged(bool scoped)
 {
-    ASSERT(ContextFeatures::styleScopedEnabled(&document()));
+    ASSERT(RuntimeEnabledFeatures::styleScopedEnabled());
 
     if (!inDocument())
         return;
@@ -118,12 +129,6 @@ void HTMLStyleElement::scopedAttributeChanged(bool scoped)
         registerWithScopingNode(false);
 }
 
-void HTMLStyleElement::finishParsingChildren()
-{
-    m_styleSheetOwner.finishParsingChildren(this);
-    HTMLElement::finishParsingChildren();
-}
-
 void HTMLStyleElement::registerWithScopingNode(bool scoped)
 {
     // Note: We cannot rely on the 'scoped' element already being present when this method is invoked.
@@ -147,7 +152,7 @@ void HTMLStyleElement::registerWithScopingNode(bool scoped)
         scope->shadowHost()->setNeedsStyleRecalc();
     else
         scope->setNeedsStyleRecalc();
-    if (inDocument() && !document().parsing() && document().renderer())
+    if (inDocument() && !document().parsing() && document().hasLivingRenderTree())
         document().styleResolverChanged(DeferRecalcStyle);
 
     m_scopedStyleRegistrationState = scoped ? RegisteredAsScoped : RegisteredInShadowRoot;
@@ -155,7 +160,7 @@ void HTMLStyleElement::registerWithScopingNode(bool scoped)
 
 void HTMLStyleElement::unregisterWithScopingNode(ContainerNode* scope)
 {
-    ASSERT(m_scopedStyleRegistrationState != NotRegistered || !ContextFeatures::styleScopedEnabled(&document()));
+    ASSERT(m_scopedStyleRegistrationState != NotRegistered || !RuntimeEnabledFeatures::styleScopedEnabled());
     if (!isRegisteredAsScoped())
         return;
 
@@ -165,56 +170,15 @@ void HTMLStyleElement::unregisterWithScopingNode(ContainerNode* scope)
         scope->unregisterScopedHTMLStyleChild();
         scope->setNeedsStyleRecalc();
     }
-    if (inDocument() && !document().parsing() && document().renderer())
+    if (inDocument() && !document().parsing() && document().hasLivingRenderTree())
         document().styleResolverChanged(DeferRecalcStyle);
 
     m_scopedStyleRegistrationState = NotRegistered;
 }
 
-Node::InsertionNotificationRequest HTMLStyleElement::insertedInto(ContainerNode* insertionPoint)
-{
-    HTMLElement::insertedInto(insertionPoint);
-    if (insertionPoint->inDocument()) {
-        m_styleSheetOwner.insertedIntoDocument(&document(), this);
-        if (m_scopedStyleRegistrationState == NotRegistered && (scoped() || isInShadowTree()))
-            registerWithScopingNode(scoped());
-    }
-
-    return InsertionDone;
-}
-
-void HTMLStyleElement::removedFrom(ContainerNode* insertionPoint)
-{
-    HTMLElement::removedFrom(insertionPoint);
-
-    // In the current implementation, <style scoped> is only registered if the node is in the document.
-    // That is, because willRemove() is also called if an ancestor is removed from the document.
-    // Now, if we want to register <style scoped> even if it's not inDocument,
-    // we'd need to find a way to discern whether that is the case, or whether <style scoped> itself is about to be removed.
-    if (m_scopedStyleRegistrationState != NotRegistered) {
-        ContainerNode* scope;
-        if (m_scopedStyleRegistrationState == RegisteredInShadowRoot) {
-            scope = containingShadowRoot();
-            if (!scope)
-                scope = insertionPoint->containingShadowRoot();
-        } else
-            scope = parentNode() ? parentNode() : insertionPoint;
-        unregisterWithScopingNode(scope);
-    }
-
-    if (insertionPoint->inDocument())
-        m_styleSheetOwner.removedFromDocument(&document(), this);
-}
-
-void HTMLStyleElement::childrenChanged(const ChildChange& change)
-{
-    HTMLElement::childrenChanged(change);
-    m_styleSheetOwner.childrenChanged(this);
-}
-
 bool HTMLStyleElement::scoped() const
 {
-    return fastHasAttribute(scopedAttr) && ContextFeatures::styleScopedEnabled(&document());
+    return RuntimeEnabledFeatures::styleScopedEnabled() && fastHasAttribute(scopedAttr);
 }
 
 void HTMLStyleElement::setScoped(bool scopedValue)
@@ -235,6 +199,52 @@ Element* HTMLStyleElement::scopingElement() const
         return 0;
 
     return toElement(parentOrShadowHost);
+}
+#endif // ENABLE(STYLE_SCOPED)
+
+Node::InsertionNotificationRequest HTMLStyleElement::insertedInto(ContainerNode* insertionPoint)
+{
+    HTMLElement::insertedInto(insertionPoint);
+    if (insertionPoint->inDocument()) {
+        m_styleSheetOwner.insertedIntoDocument(&document(), this);
+#if ENABLE(STYLE_SCOPED)
+        if (m_scopedStyleRegistrationState == NotRegistered && (scoped() || isInShadowTree()))
+            registerWithScopingNode(scoped());
+#endif
+    }
+
+    return InsertionDone;
+}
+
+void HTMLStyleElement::removedFrom(ContainerNode* insertionPoint)
+{
+    HTMLElement::removedFrom(insertionPoint);
+
+#if ENABLE(STYLE_SCOPED)
+    // In the current implementation, <style scoped> is only registered if the node is in the document.
+    // That is, because willRemove() is also called if an ancestor is removed from the document.
+    // Now, if we want to register <style scoped> even if it's not inDocument,
+    // we'd need to find a way to discern whether that is the case, or whether <style scoped> itself is about to be removed.
+    if (m_scopedStyleRegistrationState != NotRegistered) {
+        ContainerNode* scope;
+        if (m_scopedStyleRegistrationState == RegisteredInShadowRoot) {
+            scope = containingShadowRoot();
+            if (!scope)
+                scope = insertionPoint->containingShadowRoot();
+        } else
+            scope = parentNode() ? parentNode() : insertionPoint;
+        unregisterWithScopingNode(scope);
+    }
+#endif
+
+    if (insertionPoint->inDocument())
+        m_styleSheetOwner.removedFromDocument(&document(), this);
+}
+
+void HTMLStyleElement::childrenChanged(const ChildChange& change)
+{
+    HTMLElement::childrenChanged(change);
+    m_styleSheetOwner.childrenChanged(this);
 }
 
 void HTMLStyleElement::dispatchPendingLoadEvents()

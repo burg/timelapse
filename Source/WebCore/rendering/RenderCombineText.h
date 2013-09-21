@@ -22,13 +22,17 @@
 #define RenderCombineText_h
 
 #include "Font.h"
+#include "RenderElement.h"
 #include "RenderText.h"
+#include "Text.h"
 
 namespace WebCore {
 
 class RenderCombineText FINAL : public RenderText {
 public:
-    RenderCombineText(Node*, PassRefPtr<StringImpl>);
+    RenderCombineText(Text&, PassRefPtr<StringImpl>);
+
+    Text& textNode() const { return toText(nodeForNonAnonymous()); }
 
     void combineText();
     void adjustTextOrigin(FloatPoint& textOrigin, const FloatRect& boxRect) const;
@@ -38,11 +42,13 @@ public:
     const Font& originalFont() const { return parent()->style()->font(); }
 
 private:
+    void node() const WTF_DELETED_FUNCTION;
+
     virtual bool isCombineText() const { return true; }
     virtual float width(unsigned from, unsigned length, const Font&, float xPosition, HashSet<const SimpleFontData*>* fallbackFonts = 0, GlyphOverflow* = 0) const;
     virtual const char* renderName() const { return "RenderCombineText"; }
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-    virtual void setTextInternal(PassRefPtr<StringImpl>);
+    virtual void setTextInternal(const String&) OVERRIDE;
 
     float m_combinedTextWidth;
     bool m_isCombined : 1;

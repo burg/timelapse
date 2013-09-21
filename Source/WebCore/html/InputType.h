@@ -36,8 +36,8 @@
 #include "FeatureObserver.h"
 #include "HTMLTextFormControlElement.h"
 #include "StepRange.h"
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
-#include <wtf/FastAllocBase.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 
@@ -82,8 +82,8 @@ class InputType {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static PassOwnPtr<InputType> create(HTMLInputElement*, const AtomicString&);
-    static PassOwnPtr<InputType> createText(HTMLInputElement*);
+    static OwnPtr<InputType> create(HTMLInputElement&, const AtomicString&);
+    static OwnPtr<InputType> createText(HTMLInputElement&);
     virtual ~InputType();
 
     static bool themeSupportsDataListUI(InputType*);
@@ -186,7 +186,7 @@ public:
 
     virtual void handleClickEvent(MouseEvent*);
     virtual void handleMouseDownEvent(MouseEvent*);
-    virtual PassOwnPtr<ClickHandlingState> willDispatchClick();
+    virtual OwnPtr<ClickHandlingState> willDispatchClick();
     virtual void didDispatchClick(Event*, const ClickHandlingState&);
     virtual void handleDOMActivateEvent(Event*);
     virtual void handleKeydownEvent(KeyboardEvent*);
@@ -236,7 +236,7 @@ public:
     // Miscellaneous functions
 
     virtual bool rendererIsNeeded();
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*) const;
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) const;
     virtual void addSearchResult();
     virtual void attach();
     virtual void detach();
@@ -312,8 +312,8 @@ public:
     void dispatchSimulatedClickIfActive(KeyboardEvent*) const;
 
 protected:
-    explicit InputType(HTMLInputElement* element) : m_element(element) { }
-    HTMLInputElement* element() const { return m_element; }
+    explicit InputType(HTMLInputElement& element) : m_element(element) { }
+    HTMLInputElement& element() const { return m_element; }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
     void observeFeatureIfVisible(FeatureObserver::Feature) const;
@@ -323,7 +323,7 @@ private:
     void applyStep(int count, AnyStepHandling, TextFieldEventBehavior, ExceptionCode&);
 
     // Raw pointer because the HTMLInputElement object owns this InputType object.
-    HTMLInputElement* m_element;
+    HTMLInputElement& m_element;
 };
 
 } // namespace WebCore

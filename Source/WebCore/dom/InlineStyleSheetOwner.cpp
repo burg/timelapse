@@ -36,13 +36,13 @@
 
 namespace WebCore {
 
-InlineStyleSheetOwner::InlineStyleSheetOwner(Document* document, bool createdByParser)
+InlineStyleSheetOwner::InlineStyleSheetOwner(Document& document, bool createdByParser)
     : m_isParsingChildren(createdByParser)
     , m_loading(false)
     , m_startLineNumber(WTF::OrdinalNumber::beforeFirst())
 {
-    if (createdByParser && document && document->scriptableDocumentParser() && !document->isInDocumentWrite())
-        m_startLineNumber = document->scriptableDocumentParser()->lineNumber();
+    if (createdByParser && document.scriptableDocumentParser() && !document.isInDocumentWrite())
+        m_startLineNumber = document.scriptableDocumentParser()->lineNumber();
 }
 
 InlineStyleSheetOwner::~InlineStyleSheetOwner()
@@ -70,7 +70,7 @@ void InlineStyleSheetOwner::removedFromDocument(Document* document, Element* ele
         clearSheet();
 
     // If we're in document teardown, then we don't need to do any notification of our sheet's removal.
-    if (document->renderer())
+    if (document->hasLivingRenderTree())
         document->styleResolverChanged(DeferRecalcStyle);
 }
 

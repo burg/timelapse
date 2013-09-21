@@ -24,7 +24,11 @@
 
 #include "HostWindow.h"
 #include "NotImplemented.h"
-#include <wtf/OwnArrayPtr.h>
+#include <wtf/StdLibExtras.h>
+
+#if PLATFORM(NIX) && USE(EGL)
+#include "GLContextFromCurrentEGL.h"
+#endif
 
 #if USE(CAIRO)
 #include "PlatformContextCairo.h"
@@ -59,6 +63,9 @@ GraphicsContext3DPrivate::GraphicsContext3DPrivate(GraphicsContext3D* context, G
         m_glContext = GLContext::createOffscreenContext(GLContext::sharingContext());
         break;
     case GraphicsContext3D::RenderToCurrentGLContext:
+#if PLATFORM(NIX) && USE(EGL)
+        m_glContext = GLContextFromCurrentEGL::createFromCurrentGLContext();
+#endif
         break;
     case GraphicsContext3D::RenderDirectlyToHostWindow:
         ASSERT_NOT_REACHED();
@@ -100,7 +107,7 @@ void GraphicsContext3DPrivate::paintToTextureMapper(TextureMapper* textureMapper
         const int width = m_context->m_currentWidth;
         int totalBytes = width * height * 4;
 
-        OwnArrayPtr<unsigned char> pixels = adoptArrayPtr(new unsigned char[totalBytes]);
+        auto pixels = std::make_unique<unsigned char[]>(totalBytes);
         if (!pixels)
             return;
 

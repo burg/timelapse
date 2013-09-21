@@ -39,7 +39,7 @@ using namespace std;
 namespace WebCore {
 
 RenderRubyBase::RenderRubyBase()
-    : RenderBlock(0)
+    : RenderBlockFlow(0)
 {
     setInline(false);
 }
@@ -48,9 +48,9 @@ RenderRubyBase::~RenderRubyBase()
 {
 }
 
-RenderRubyBase* RenderRubyBase::createAnonymous(Document* document)
+RenderRubyBase* RenderRubyBase::createAnonymous(Document& document)
 {
-    RenderRubyBase* renderer = new (document->renderArena()) RenderRubyBase();
+    RenderRubyBase* renderer = new (*document.renderArena()) RenderRubyBase();
     renderer->setDocumentForAnonymous(document);
     return renderer;
 }

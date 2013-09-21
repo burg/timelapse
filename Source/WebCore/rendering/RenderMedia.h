@@ -28,38 +28,37 @@
 
 #if ENABLE(VIDEO)
 
+#include "HTMLMediaElement.h"
 #include "RenderImage.h"
 
 namespace WebCore {
 
-class HTMLMediaElement;
-
 class RenderMedia : public RenderImage {
 public:
-    explicit RenderMedia(HTMLMediaElement*);
-    RenderMedia(HTMLMediaElement*, const IntSize& intrinsicSize);
+    explicit RenderMedia(HTMLMediaElement&);
+    RenderMedia(HTMLMediaElement&, const IntSize& intrinsicSize);
     virtual ~RenderMedia();
 
-    RenderObject* firstChild() const { ASSERT(children() == virtualChildren()); return children()->firstChild(); }
-    RenderObject* lastChild() const { ASSERT(children() == virtualChildren()); return children()->lastChild(); }
+    HTMLMediaElement& mediaElement() const { return toHTMLMediaElement(nodeForNonAnonymous()); }
 
-    const RenderObjectChildList* children() const { return &m_children; }
-    RenderObjectChildList* children() { return &m_children; }
+    RenderObject* firstChild() const { return m_children.firstChild(); }
+    RenderObject* lastChild() const { return m_children.lastChild(); }
 
-    HTMLMediaElement* mediaElement() const;
+    virtual const RenderObjectChildList* children() const OVERRIDE FINAL { return &m_children; }
+    virtual RenderObjectChildList* children() OVERRIDE FINAL { return &m_children; }
 
 protected:
     virtual void layout();
 
 private:
-    virtual RenderObjectChildList* virtualChildren() OVERRIDE FINAL { return children(); }
-    virtual const RenderObjectChildList* virtualChildren() const OVERRIDE FINAL { return children(); }
+    void element() const WTF_DELETED_FUNCTION;
+
     virtual bool canHaveChildren() const OVERRIDE FINAL { return true; }
 
-    virtual const char* renderName() const { return "RenderMedia"; }
+    virtual const char* renderName() const OVERRIDE { return "RenderMedia"; }
     virtual bool isMedia() const OVERRIDE FINAL { return true; }
     virtual bool isImage() const OVERRIDE FINAL { return false; }
-    virtual void paintReplaced(PaintInfo&, const LayoutPoint&);
+    virtual void paintReplaced(PaintInfo&, const LayoutPoint&) OVERRIDE;
 
     virtual bool requiresForcedStyleRecalcPropagation() const OVERRIDE FINAL { return true; }
 
@@ -78,4 +77,5 @@ void toRenderMedia(const RenderMedia*);
 } // namespace WebCore
 
 #endif
+
 #endif // RenderMedia_h

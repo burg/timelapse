@@ -29,7 +29,6 @@
 #if USE(ACCELERATED_COMPOSITING)
 
 #include "ChromeClient.h"
-#include "Frame.h"
 #include "GraphicsLayerClient.h"
 #include "GraphicsLayerUpdater.h"
 #include "RenderLayer.h"
@@ -41,13 +40,15 @@ class FixedPositionViewportConstraints;
 class GraphicsLayer;
 class GraphicsLayerUpdater;
 class RenderEmbeddedObject;
-class RenderPart;
+class RenderWidget;
 class ScrollingCoordinator;
 class StickyPositionViewportConstraints;
 #if ENABLE(VIDEO)
 class RenderVideo;
 #endif
 class TiledBacking;
+
+typedef unsigned LayerTreeFlags;
 
 enum CompositingUpdateType {
     CompositingUpdateAfterStyleChange,
@@ -226,14 +227,15 @@ public:
     static bool allowsIndependentlyCompositedFrames(const FrameView*);
     bool shouldPropagateCompositingToEnclosingFrame() const;
 
-    static RenderLayerCompositor* frameContentsCompositor(RenderPart*);
+    static RenderLayerCompositor* frameContentsCompositor(RenderWidget*);
     // Return true if the layers changed.
-    static bool parentFrameContentLayers(RenderPart*);
+    static bool parentFrameContentLayers(RenderWidget*);
 
     // Update the geometry of the layers used for clipping and scrolling in frames.
     void frameViewDidChangeLocation(const IntPoint& contentsOffset);
     void frameViewDidChangeSize();
     void frameViewDidScroll();
+    void frameViewDidAddOrRemoveScrollbars();
     void frameViewDidLayout();
     void rootFixedBackgroundsChanged();
 

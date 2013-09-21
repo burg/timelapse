@@ -288,7 +288,7 @@ Bug(GTK) fast/forms/incremental-dom-property.html [ Pass Timeout ]
 Bug(GTK) fast/forms/select/menulist-type-ahead-find.html [ Pass Timeout ]
 Bug(GTK) fast/forms/select/optgroup-disabled.html [ Pass Timeout ]
 Bug(GTK) fast/forms/select-selected.html [ Pass Timeout ]
-Bug(GTK) fast/js/exceptions-thrown-in-callbacks.html [ Failure Pass ]
+Bug(GTK) js/exceptions-thrown-in-callbacks.html [ Failure Pass ]
 Bug(GTK) fast/loader/fragment-after-redirect-gets-back-entry.html [ Failure Pass ]
 Bug(GTK) fast/writing-mode/japanese-ruby-horizontal-bt.html [ Failure Pass ]
 Bug(GTK) fast/writing-mode/japanese-ruby-vertical-lr.html [ Failure Pass ]
@@ -334,15 +334,12 @@ Bug(GTK) media/W3C/audio/networkState/networkState_during_loadstart.html [ Failu
 # accessibility/ failures
 webkit.org/b/106334 accessibility/accessibility-node-memory-management.html [ Failure ]
 webkit.org/b/106335 accessibility/accessibility-node-reparent.html [ Failure ]
-webkit.org/b/106336 accessibility/aria-describedby-on-input.html [ Failure ]
-webkit.org/b/106337 accessibility/aria-help.html [ Failure ]
 webkit.org/b/106338 accessibility/aria-hidden-updates-alldescendants.html [ Failure ]
 webkit.org/b/106340 accessibility/img-fallsback-to-title.html [ Failure ]
 webkit.org/b/106343 accessibility/loading-iframe-sends-notification.html [ Failure ]
 webkit.org/b/106345 platform/gtk/accessibility/input-slider.html [ Failure ]
 webkit.org/b/116970 accessibility/multiselect-list-reports-active-option.html [ Failure ]
 webkit.org/b/116971 accessibility/poorly-formed-aria-table.html [ Failure ]
-webkit.org/b/116972 accessibility/selection-states.html [ Failure ]
 webkit.org/b/106346 accessibility/svg-remote-element.html [ Failure ]
 webkit.org/b/116973 platform/gtk/accessibility/caret-browsing-select-focus.html [ Failure ]
 
@@ -485,9 +482,6 @@ Bug(GTK) plugins/resize-from-plugin.html [ Failure ]
 Bug(GTK) editing/selection/context-menu-text-selection.html [ Failure Pass ]
 Bug(GTK) editing/spelling/context-menu-suggestions.html [ Failure ]
 
-# EventSender's contextClick should return objects that implements click() method
-webkit.org/b/98410 editing/pasteboard/copy-standalone-image-crash.html [ Timeout ]
-
 # An oncontextmenu attribute is not called.
 Bug(GTK) editing/spelling/spellcheck-input-search-crash.html [ Failure ]
 Bug(GTK) fast/events/contextmenu-scrolled-page-with-frame.html [ Failure ]
@@ -498,9 +492,6 @@ Bug(GTK) fast/events/context-onmousedown-event.html [ Failure ]
 Bug(GTK) animations/combo-transform-translate+scale.html [ Failure ]
 Bug(GTK) animations/play-state-suspend.html [ Failure ]
 Bug(GTK) animations/suspend-resume-animation.html [ Failure ]
-
-# [GTK] Missing WTR AccessibilityUIElement::addNotificationListener implementation
-webkit.org/b/120421 accessibility/aria-invalid.html [ Timeout ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests failing

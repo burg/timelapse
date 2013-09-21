@@ -39,7 +39,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLMeterElement::HTMLMeterElement(const QualifiedName& tagName, Document* document)
+HTMLMeterElement::HTMLMeterElement(const QualifiedName& tagName, Document& document)
     : LabelableElement(tagName, document)
 {
     ASSERT(hasTagName(meterTag));
@@ -49,17 +49,17 @@ HTMLMeterElement::~HTMLMeterElement()
 {
 }
 
-PassRefPtr<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document& document)
 {
     RefPtr<HTMLMeterElement> meter = adoptRef(new HTMLMeterElement(tagName, document));
     meter->ensureUserAgentShadowRoot();
     return meter;
 }
 
-RenderObject* HTMLMeterElement::createRenderer(RenderArena* arena, RenderStyle* style)
+RenderElement* HTMLMeterElement::createRenderer(RenderArena& arena, RenderStyle& style)
 {
-    if (hasAuthorShadowRoot() || !document().page()->theme()->supportsMeter(style->appearance()))
-        return RenderObject::createObject(this, style);
+    if (hasAuthorShadowRoot() || !document().page()->theme()->supportsMeter(style.appearance()))
+        return RenderElement::createFor(*this, style);
 
     return new (arena) RenderMeter(this);
 }
@@ -231,11 +231,11 @@ void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
     ASSERT(!m_value);
 
-    RefPtr<MeterInnerElement> inner = MeterInnerElement::create(&document());
+    RefPtr<MeterInnerElement> inner = MeterInnerElement::create(document());
     root->appendChild(inner);
 
-    RefPtr<MeterBarElement> bar = MeterBarElement::create(&document());
-    m_value = MeterValueElement::create(&document());
+    RefPtr<MeterBarElement> bar = MeterBarElement::create(document());
+    m_value = MeterValueElement::create(document());
     m_value->setWidthPercentage(0);
     m_value->updatePseudo();
     bar->appendChild(m_value, ASSERT_NO_EXCEPTION);

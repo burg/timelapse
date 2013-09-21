@@ -67,7 +67,7 @@ void SendResizeEvent::dispatch(ReplayController& controller, EventLoopInputDispa
     // If we encounter random crashes when replaying resize events, then we may need to
     // find another strategy, such as adding synthetic callback events or routing a callback
     // somehow.
-    document->eventQueue()->flush();
+    document->eventQueue().flush();
     dispatcher.didDispatch(this);
 }
 

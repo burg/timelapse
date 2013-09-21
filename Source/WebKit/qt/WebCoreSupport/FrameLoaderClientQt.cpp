@@ -67,7 +67,6 @@
 #include "QWebPageAdapter.h"
 #include "QWebPageClient.h"
 #include "QtPluginWidgetAdapter.h"
-#include "RenderPart.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleInternal.h"
 #include "ResourceLoader.h"
@@ -244,7 +243,7 @@ void FrameLoaderClientQt::setFrame(QWebFrameAdapter* webFrame, Frame* frame)
 
 void FrameLoaderClientQt::callPolicyFunction(FramePolicyFunction function, PolicyAction action)
 {
-    (m_frame->loader().policyChecker()->*function)(action);
+    (m_frame->loader().policyChecker().*function)(action);
 }
 
 bool FrameLoaderClientQt::hasWebView() const

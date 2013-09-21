@@ -98,7 +98,7 @@ static PlatformMouseEvent createMouseEvent(DragData* dragData)
                               metaKey, currentTime());
 }
 
-DragController::DragController(Page* page, DragClient* client)
+DragController::DragController(Page& page, DragClient& client)
     : m_page(page)
     , m_client(client)
     , m_documentUnderMouse(0)
@@ -110,29 +110,21 @@ DragController::DragController(Page* page, DragClient* client)
     , m_didInitiateDrag(false)
     , m_sourceDragOperation(DragOperationNone)
 {
-    ASSERT(m_client);
 }
 
 DragController::~DragController()
 {
-    m_client->dragControllerDestroyed();
+    m_client.dragControllerDestroyed();
 }
 
-PassOwnPtr<DragController> DragController::create(Page* page, DragClient* client)
-{
-    return adoptPtr(new DragController(page, client));
-}
-
-static PassRefPtr<DocumentFragment> documentFragmentFromDragData(DragData* dragData, Frame* frame, RefPtr<Range> context,
-                                          bool allowPlainText, bool& chosePlainText)
+static PassRefPtr<DocumentFragment> documentFragmentFromDragData(DragData* dragData, Frame* frame, PassRefPtr<Range> context, bool allowPlainText, bool& chosePlainText)
 {
     ASSERT(dragData);
     chosePlainText = false;
 
-    Document* document = context->ownerDocument();
-    ASSERT(document);
-    if (document && dragData->containsCompatibleContent()) {
-        if (PassRefPtr<DocumentFragment> fragment = dragData->asFragment(frame, context, allowPlainText, chosePlainText))
+    Document& document = context->ownerDocument();
+    if (dragData->containsCompatibleContent()) {
+        if (PassRefPtr<DocumentFragment> fragment = dragData->asFragment(frame, context.get(), allowPlainText, chosePlainText))
             return fragment;
 
         if (dragData->containsURL(frame, DragData::DoNotConvertFilenames)) {
@@ -148,9 +140,9 @@ static PassRefPtr<DocumentFragment> documentFragmentFromDragData(DragData* dragD
                     if (title.isEmpty())
                         title = url;
                 }
-                RefPtr<Node> anchorText = document->createTextNode(title);
+                RefPtr<Node> anchorText = document.createTextNode(title);
                 anchor->appendChild(anchorText, IGNORE_EXCEPTION);
-                RefPtr<DocumentFragment> fragment = document->createDocumentFragment();
+                RefPtr<DocumentFragment> fragment = document.createDocumentFragment();
                 fragment->appendChild(anchor, IGNORE_EXCEPTION);
                 return fragment.get();
             }
@@ -172,16 +164,16 @@ bool DragController::dragIsMove(FrameSelection& selection, DragData* dragData)
 // FIXME: This method is poorly named.  We're just clearing the selection from the document this drag is exiting.
 void DragController::cancelDrag()
 {
-    m_page->dragCaretController().clear();
+    m_page.dragCaretController().clear();
 }
 
 void DragController::dragEnded()
 {
     m_dragInitiator = 0;
     m_didInitiateDrag = false;
-    m_page->dragCaretController().clear();
+    m_page.dragCaretController().clear();
     
-    m_client->dragEnded();
+    m_client.dragEnded();
 }
 
 DragSession DragController::dragEntered(DragData* dragData)
@@ -193,11 +185,11 @@ void DragController::dragExited(DragData* dragData)
 {
     ASSERT(dragData);
 
-    if (RefPtr<FrameView> v = m_page->mainFrame().view()) {
+    if (RefPtr<FrameView> v = m_page.mainFrame().view()) {
         ClipboardAccessPolicy policy = (!m_documentUnderMouse || m_documentUnderMouse->securityOrigin()->isLocal()) ? ClipboardReadable : ClipboardTypesReadable;
         RefPtr<Clipboard> clipboard = Clipboard::createForDragAndDrop(policy, *dragData);
         clipboard->setSourceOperation(dragData->draggingSourceOperationMask());
-        m_page->mainFrame().eventHandler().cancelDragAndDrop(createMouseEvent(dragData), clipboard.get());
+        m_page.mainFrame().eventHandler().cancelDragAndDrop(createMouseEvent(dragData), clipboard.get());
         clipboard->setAccessPolicy(ClipboardNumb);    // invalidate clipboard here for security
     }
     mouseMovedIntoDocument(0);
@@ -214,10 +206,10 @@ DragSession DragController::dragUpdated(DragData* dragData)
 bool DragController::performDrag(DragData* dragData)
 {
     ASSERT(dragData);
-    m_documentUnderMouse = m_page->mainFrame().documentAtPoint(dragData->clientPosition());
+    m_documentUnderMouse = m_page.mainFrame().documentAtPoint(dragData->clientPosition());
     if ((m_dragDestinationAction & DragDestinationActionDHTML) && m_documentIsHandlingDrag) {
-        m_client->willPerformDragDestinationAction(DragDestinationActionDHTML, dragData);
-        RefPtr<Frame> mainFrame = &m_page->mainFrame();
+        m_client.willPerformDragDestinationAction(DragDestinationActionDHTML, dragData);
+        RefPtr<Frame> mainFrame = &m_page.mainFrame();
         bool preventedDefault = false;
         if (mainFrame->view()) {
             // Sending an event can result in the destruction of the view and part.
@@ -242,8 +234,8 @@ bool DragController::performDrag(DragData* dragData)
     if (operationForLoad(dragData) == DragOperationNone)
         return false;
 
-    m_client->willPerformDragDestinationAction(DragDestinationActionLoad, dragData);
-    m_page->mainFrame().loader().load(FrameLoadRequest(&m_page->mainFrame(), ResourceRequest(dragData->asURL(&m_page->mainFrame()))));
+    m_client.willPerformDragDestinationAction(DragDestinationActionLoad, dragData);
+    m_page.mainFrame().loader().load(FrameLoadRequest(&m_page.mainFrame(), ResourceRequest(dragData->asURL(&m_page.mainFrame()))));
     return true;
 }
 
@@ -261,9 +253,9 @@ void DragController::mouseMovedIntoDocument(Document* newDocument)
 DragSession DragController::dragEnteredOrUpdated(DragData* dragData)
 {
     ASSERT(dragData);
-    mouseMovedIntoDocument(m_page->mainFrame().documentAtPoint(dragData->clientPosition()));
+    mouseMovedIntoDocument(m_page.mainFrame().documentAtPoint(dragData->clientPosition()));
 
-    m_dragDestinationAction = m_client->actionMaskForDrag(dragData);
+    m_dragDestinationAction = m_client.actionMaskForDrag(dragData);
     if (m_dragDestinationAction == DragDestinationActionNone) {
         cancelDrag(); // FIXME: Why not call mouseMovedIntoDocument(0)?
         return DragSession();
@@ -338,7 +330,7 @@ bool DragController::tryDocumentDrag(DragData* dragData, DragDestinationAction a
         return false;
 
     if (isHandlingDrag) {
-        m_page->dragCaretController().clear();
+        m_page.dragCaretController().clear();
         return true;
     }
 
@@ -361,7 +353,7 @@ bool DragController::tryDocumentDrag(DragData* dragData, DragDestinationAction a
         }
         
         if (!m_fileInputElementUnderMouse)
-            m_page->dragCaretController().setCaretPosition(m_documentUnderMouse->frame()->visiblePositionForPoint(point));
+            m_page.dragCaretController().setCaretPosition(m_documentUnderMouse->frame()->visiblePositionForPoint(point));
 
         Frame* innerFrame = element->document().frame();
         dragSession.operation = dragIsMove(innerFrame->selection(), dragData) ? DragOperationMove : DragOperationCopy;
@@ -392,7 +384,7 @@ bool DragController::tryDocumentDrag(DragData* dragData, DragDestinationAction a
     }
     
     // We are not over an editable region. Make sure we're clearing any prior drag cursor.
-    m_page->dragCaretController().clear();
+    m_page.dragCaretController().clear();
     if (m_fileInputElementUnderMouse)
         m_fileInputElementUnderMouse->setCanReceiveDroppedFiles(false);
     m_fileInputElementUnderMouse = 0;
@@ -401,14 +393,14 @@ bool DragController::tryDocumentDrag(DragData* dragData, DragDestinationAction a
 
 DragSourceAction DragController::delegateDragSourceAction(const IntPoint& rootViewPoint)
 {
-    m_dragSourceAction = m_client->dragSourceActionMaskForPoint(rootViewPoint);
+    m_dragSourceAction = m_client.dragSourceActionMaskForPoint(rootViewPoint);
     return m_dragSourceAction;
 }
 
 DragOperation DragController::operationForLoad(DragData* dragData)
 {
     ASSERT(dragData);
-    Document* doc = m_page->mainFrame().documentAtPoint(dragData->clientPosition());
+    Document* doc = m_page.mainFrame().documentAtPoint(dragData->clientPosition());
 
     bool pluginDocumentAcceptsDrags = false;
 
@@ -438,9 +430,9 @@ static bool setSelectionToDragCaret(Frame* frame, VisibleSelection& dragCaret, R
 
 bool DragController::dispatchTextInputEventFor(Frame* innerFrame, DragData* dragData)
 {
-    ASSERT(m_page->dragCaretController().hasCaret());
-    String text = m_page->dragCaretController().isContentRichlyEditable() ? "" : dragData->asPlainText(innerFrame);
-    Node* target = innerFrame->editor().findEventTargetFrom(m_page->dragCaretController().caretPosition());
+    ASSERT(m_page.dragCaretController().hasCaret());
+    String text = m_page.dragCaretController().isContentRichlyEditable() ? "" : dragData->asPlainText(innerFrame);
+    Node* target = innerFrame->editor().findEventTargetFrom(m_page.dragCaretController().caretPosition());
     return target->dispatchEvent(TextEvent::createForDrop(innerFrame->document()->domWindow(), text), IGNORE_EXCEPTION);
 }
 
@@ -464,7 +456,7 @@ bool DragController::concludeEditDrag(DragData* dragData)
     RefPtr<Frame> innerFrame = element->document().frame();
     ASSERT(innerFrame);
 
-    if (m_page->dragCaretController().hasCaret() && !dispatchTextInputEventFor(innerFrame.get(), dragData))
+    if (m_page.dragCaretController().hasCaret() && !dispatchTextInputEventFor(innerFrame.get(), dragData))
         return true;
 
     if (dragData->containsColor()) {
@@ -476,7 +468,7 @@ bool DragController::concludeEditDrag(DragData* dragData)
         style->setProperty(CSSPropertyColor, color.serialized(), false);
         if (!innerFrame->editor().shouldApplyStyle(style.get(), innerRange.get()))
             return false;
-        m_client->willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
+        m_client.willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
         innerFrame->editor().applyStyle(style.get(), EditActionSetColor);
         return true;
     }
@@ -491,13 +483,13 @@ bool DragController::concludeEditDrag(DragData* dragData)
         return fileInput->receiveDroppedFiles(dragData);
     }
 
-    if (!m_page->dragController().canProcessDrag(dragData)) {
-        m_page->dragCaretController().clear();
+    if (!m_page.dragController().canProcessDrag(dragData)) {
+        m_page.dragCaretController().clear();
         return false;
     }
 
-    VisibleSelection dragCaret = m_page->dragCaretController().caretPosition();
-    m_page->dragCaretController().clear();
+    VisibleSelection dragCaret = m_page.dragCaretController().caretPosition();
+    m_page.dragCaretController().clear();
     RefPtr<Range> range = dragCaret.toNormalizedRange();
     RefPtr<Element> rootEditableElement = innerFrame->selection().rootEditableElement();
 
@@ -505,7 +497,7 @@ bool DragController::concludeEditDrag(DragData* dragData)
     // manually controlling drag behaviour
     if (!range)
         return false;
-    CachedResourceLoader* cachedResourceLoader = range->ownerDocument()->cachedResourceLoader();
+    CachedResourceLoader* cachedResourceLoader = range->ownerDocument().cachedResourceLoader();
     ResourceCacheValidationSuppressor validationSuppressor(cachedResourceLoader);
     if (dragIsMove(innerFrame->selection(), dragData) || dragCaret.isContentRichlyEditable()) {
         bool chosePlainText = false;
@@ -514,7 +506,7 @@ bool DragController::concludeEditDrag(DragData* dragData)
             return false;
         }
 
-        m_client->willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
+        m_client.willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
         if (dragIsMove(innerFrame->selection(), dragData)) {
             // NSTextView behavior is to always smart delete on moving a selection,
             // but only to smart insert if the selection granularity is word granularity.
@@ -537,7 +529,7 @@ bool DragController::concludeEditDrag(DragData* dragData)
             return false;
         }
 
-        m_client->willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
+        m_client.willPerformDragDestinationAction(DragDestinationActionEdit, dragData);
         if (setSelectionToDragCaret(innerFrame.get(), dragCaret, range, point))
             applyCommand(ReplaceSelectionCommand::create(*m_documentUnderMouse, createFragmentFromText(range.get(), text),  ReplaceSelectionCommand::SelectReplacement | ReplaceSelectionCommand::MatchStyle | ReplaceSelectionCommand::PreventNesting));
     }
@@ -557,12 +549,12 @@ bool DragController::canProcessDrag(DragData* dragData)
     if (!dragData->containsCompatibleContent())
         return false;
 
-    IntPoint point = m_page->mainFrame().view()->windowToContents(dragData->clientPosition());
+    IntPoint point = m_page.mainFrame().view()->windowToContents(dragData->clientPosition());
     HitTestResult result = HitTestResult(point);
-    if (!m_page->mainFrame().contentRenderer())
+    if (!m_page.mainFrame().contentRenderer())
         return false;
 
-    result = m_page->mainFrame().eventHandler().hitTestResultAtPoint(point, HitTestRequest::ReadOnly | HitTestRequest::Active);
+    result = m_page.mainFrame().eventHandler().hitTestResultAtPoint(point, HitTestRequest::ReadOnly | HitTestRequest::Active);
 
     if (!result.innerNonSharedNode())
         return false;
@@ -606,7 +598,7 @@ bool DragController::tryDHTMLDrag(DragData* dragData, DragOperation& operation)
 {
     ASSERT(dragData);
     ASSERT(m_documentUnderMouse);
-    RefPtr<Frame> mainFrame = &m_page->mainFrame();
+    RefPtr<Frame> mainFrame = &m_page.mainFrame();
     RefPtr<FrameView> viewProtector = mainFrame->view();
     if (!viewProtector)
         return false;
@@ -795,7 +787,7 @@ bool DragController::startDrag(Frame* src, const DragState& state, DragOperation
             if (enclosingTextFormControl(src->selection().start()))
                 clipboard->pasteboard().writePlainText(src->editor().selectedTextForClipboard(), Pasteboard::CannotSmartReplace);
             else {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(EFL)
                 src->editor().writeSelectionToPasteboard(clipboard->pasteboard());
 #else
                 // FIXME: Convert all other platforms to match Mac and delete this.
@@ -805,7 +797,7 @@ bool DragController::startDrag(Frame* src, const DragState& state, DragOperation
 
             src->editor().didWriteSelectionToPasteboard();
         }
-        m_client->willPerformDragSourceAction(DragSourceActionSelection, dragOrigin, clipboard);
+        m_client.willPerformDragSourceAction(DragSourceActionSelection, dragOrigin, clipboard);
         if (!dragImage) {
             dragImage = dissolveDragImageToFraction(src->dragImageForSelection(), DragImageAlpha);
             dragLoc = dragLocForSelectionDrag(src);
@@ -823,11 +815,11 @@ bool DragController::startDrag(Frame* src, const DragState& state, DragOperation
             declareAndWriteDragImage(clipboard, element, !linkURL.isEmpty() ? linkURL : imageURL, hitTestResult.altDisplayString());
         }
 
-        m_client->willPerformDragSourceAction(DragSourceActionImage, dragOrigin, clipboard);
+        m_client.willPerformDragSourceAction(DragSourceActionImage, dragOrigin, clipboard);
 
         if (!dragImage) {
             IntRect imageRect = hitTestResult.imageRect();
-            imageRect.setLocation(m_page->mainFrame().view()->rootViewToContents(src->view()->contentsToRootView(imageRect.location())));
+            imageRect.setLocation(m_page.mainFrame().view()->rootViewToContents(src->view()->contentsToRootView(imageRect.location())));
             doImageDrag(element, dragOrigin, hitTestResult.imageRect(), clipboard, src, m_dragOffset);
         } else
             // DHTML defined drag image
@@ -837,11 +829,7 @@ bool DragController::startDrag(Frame* src, const DragState& state, DragOperation
         if (!clipboard->pasteboard().hasData())
             // Simplify whitespace so the title put on the clipboard resembles what the user sees
             // on the web page. This includes replacing newlines with spaces.
-#if PLATFORM(MAC)
-            src->editor().writeURLToPasteboard(clipboard->pasteboard(), linkURL, hitTestResult.textContent().simplifyWhiteSpace());
-#else
-            clipboard->pasteboard().writeURL(linkURL, hitTestResult.textContent().simplifyWhiteSpace(), src);
-#endif
+            src->editor().copyURL(linkURL, hitTestResult.textContent().simplifyWhiteSpace(), clipboard->pasteboard());
 
         if (src->selection().isCaret() && src->selection().isContentEditable()) {
             // a user can initiate a drag on a link without having any text
@@ -853,7 +841,7 @@ bool DragController::startDrag(Frame* src, const DragState& state, DragOperation
                 src->selection().setSelection(VisibleSelection::selectionFromContentsOfNode(node));
         }
 
-        m_client->willPerformDragSourceAction(DragSourceActionLink, dragOrigin, clipboard);
+        m_client.willPerformDragSourceAction(DragSourceActionLink, dragOrigin, clipboard);
         if (!dragImage) {
             dragImage = createDragImageForLink(linkURL, hitTestResult.textContent(), src->settings().fontRenderingMode());
             IntSize size = dragImageSize(dragImage);
@@ -864,7 +852,7 @@ bool DragController::startDrag(Frame* src, const DragState& state, DragOperation
     } else if (state.type == DragSourceActionDHTML) {
         if (dragImage) {
             ASSERT(m_dragSourceAction & DragSourceActionDHTML);
-            m_client->willPerformDragSourceAction(DragSourceActionDHTML, dragOrigin, clipboard);
+            m_client.willPerformDragSourceAction(DragSourceActionDHTML, dragOrigin, clipboard);
             doSystemDrag(dragImage, dragLoc, dragOrigin, clipboard, src, false);
         } else
             startedDrag = false;
@@ -926,9 +914,9 @@ void DragController::doSystemDrag(DragImageRef image, const IntPoint& dragLoc, c
     m_didInitiateDrag = true;
     m_dragInitiator = frame->document();
     // Protect this frame and view, as a load may occur mid drag and attempt to unload this frame
-    RefPtr<Frame> frameProtector = &m_page->mainFrame();
+    RefPtr<Frame> frameProtector = &m_page.mainFrame();
     RefPtr<FrameView> viewProtector = frameProtector->view();
-    m_client->startDrag(image, viewProtector->rootViewToContents(frame->view()->contentsToRootView(dragLoc)),
+    m_client.startDrag(image, viewProtector->rootViewToContents(frame->view()->contentsToRootView(dragLoc)),
         viewProtector->rootViewToContents(frame->view()->contentsToRootView(eventPos)), clipboard, frameProtector.get(), forLink);
     // DragClient::startDrag can cause our Page to dispear, deallocating |this|.
     if (!frameProtector->page())
@@ -940,7 +928,7 @@ void DragController::doSystemDrag(DragImageRef image, const IntPoint& dragLoc, c
 // Manual drag caret manipulation
 void DragController::placeDragCaret(const IntPoint& windowPoint)
 {
-    mouseMovedIntoDocument(m_page->mainFrame().documentAtPoint(windowPoint));
+    mouseMovedIntoDocument(m_page.mainFrame().documentAtPoint(windowPoint));
     if (!m_documentUnderMouse)
         return;
     Frame* frame = m_documentUnderMouse->frame();
@@ -949,7 +937,7 @@ void DragController::placeDragCaret(const IntPoint& windowPoint)
         return;
     IntPoint framePoint = frameView->windowToContents(windowPoint);
 
-    m_page->dragCaretController().setCaretPosition(frame->visiblePositionForPoint(framePoint));
+    m_page.dragCaretController().setCaretPosition(frame->visiblePositionForPoint(framePoint));
 }
 
 } // namespace WebCore

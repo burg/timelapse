@@ -33,7 +33,7 @@
 
 #include "AXObjectCache.h"
 #include "ArchiveResource.h"
-#include "BackForwardListImpl.h"
+#include "BackForwardList.h"
 #include "CairoUtilities.h"
 #include "Chrome.h"
 #include "ChromeClientGtk.h"
@@ -120,6 +120,10 @@
 #if ENABLE(DEVICE_ORIENTATION)
 #include "DeviceMotionClientGtk.h"
 #include "DeviceOrientationClientGtk.h"
+#endif
+
+#if PLATFORM(WAYLAND) && defined(GDK_WINDOWING_WAYLAND)
+#include <gdk/gdkwayland.h>
 #endif
 
 /**
@@ -1941,7 +1945,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
         NULL,
         webkit_marshal_BOOLEAN__OBJECT,
         G_TYPE_BOOLEAN, 1,
-        G_TYPE_OBJECT);
+        WEBKIT_TYPE_DOWNLOAD);
 
     /**
      * WebKitWebView::load-started:
@@ -3493,6 +3497,27 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
     g_type_class_add_private(webViewClass, sizeof(WebKitWebViewPrivate));
 }
 
+static void updateAcceleratedCompositingSetting(Settings& settings, bool value)
+{
+#if PLATFORM(WAYLAND) && defined(GDK_WINDOWING_WAYLAND)
+    GdkDisplay* display = gdk_display_manager_get_default_display(gdk_display_manager_get());
+    if (GDK_IS_WAYLAND_DISPLAY(display)) {
+        if (!value)
+            return;
+
+        static bool unsupportedACWarningShown = false;
+        if (!unsupportedACWarningShown) {
+            g_warning("Accelerated compositing is not supported under Wayland displays, disabling.");
+            unsupportedACWarningShown = true;
+        }
+        settings.setAcceleratedCompositingEnabled(false);
+        return;
+    }
+#endif
+
+    settings.setAcceleratedCompositingEnabled(value);
+}
+
 static void webkit_web_view_update_settings(WebKitWebView* webView)
 {
     WebKitWebSettingsPrivate* settingsPrivate = webView->priv->webSettings->priv;
@@ -3562,7 +3587,7 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
 #endif
 
 #if USE(ACCELERATED_COMPOSITING)
-    coreSettings.setAcceleratedCompositingEnabled(settingsPrivate->enableAcceleratedCompositing);
+    updateAcceleratedCompositingSetting(coreSettings, settingsPrivate->enableAcceleratedCompositing);
     char* debugVisualsEnvironment = getenv("WEBKIT_SHOW_COMPOSITING_DEBUG_VISUALS");
     bool showDebugVisuals = debugVisualsEnvironment && !strcmp(debugVisualsEnvironment, "1");
     coreSettings.setShowDebugBorders(showDebugVisuals);
@@ -3711,7 +3736,7 @@ static void webkit_web_view_settings_notify(WebKitWebSettings* webSettings, GPar
 
 #if USE(ACCELERATED_COMPOSITING)
     else if (name == g_intern_string("enable-accelerated-compositing"))
-        settings.setAcceleratedCompositingEnabled(g_value_get_boolean(&value));
+        updateAcceleratedCompositingSetting(settings, g_value_get_boolean(&value));
 #endif
 
 #if ENABLE(WEB_AUDIO)
@@ -4047,7 +4072,7 @@ void webkit_web_view_set_maintains_back_forward_list(WebKitWebView* webView, gbo
 {
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
 
-    static_cast<BackForwardListImpl*>(core(webView)->backForwardList())->setEnabled(flag);
+    static_cast<BackForwardList*>(core(webView)->backForwardClient())->setEnabled(flag);
 }
 
 /**
@@ -4062,7 +4087,7 @@ void webkit_web_view_set_maintains_back_forward_list(WebKitWebView* webView, gbo
 WebKitWebBackForwardList* webkit_web_view_get_back_forward_list(WebKitWebView* webView)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), 0);
-    if (!core(webView) || !static_cast<BackForwardListImpl*>(core(webView)->backForwardList())->enabled())
+    if (!core(webView) || !static_cast<BackForwardList*>(core(webView)->backForwardClient())->enabled())
         return 0;
     return webView->priv->backForwardList.get();
 }
@@ -4143,7 +4168,7 @@ gboolean webkit_web_view_can_go_back(WebKitWebView* webView)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), FALSE);
 
-    if (!core(webView) || !core(webView)->backForwardList()->backItem())
+    if (!core(webView) || !core(webView)->backForwardClient()->backItem())
         return FALSE;
 
     return TRUE;
@@ -4184,7 +4209,7 @@ gboolean webkit_web_view_can_go_forward(WebKitWebView* webView)
     if (!page)
         return FALSE;
 
-    if (!page->backForwardList()->forwardItem())
+    if (!page->backForwardClient()->forwardItem())
         return FALSE;
 
     return TRUE;

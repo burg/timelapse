@@ -35,7 +35,6 @@
 #include "DOMPatchSupport.h"
 
 #include "Attribute.h"
-#include "ContextFeatures.h"
 #include "DOMEditor.h"
 #include "Document.h"
 #include "DocumentFragment.h"
@@ -101,7 +100,6 @@ void DOMPatchSupport::patchDocument(const String& markup)
 #endif
 
     ASSERT(newDocument);
-    newDocument->setContextFeatures(m_document->contextFeatures());
     RefPtr<DocumentParser> parser;
     if (m_document->isHTMLDocument())
         parser = HTMLDocumentParser::create(static_cast<HTMLDocument*>(newDocument.get()), false);
@@ -131,7 +129,7 @@ Node* DOMPatchSupport::patchNode(Node* node, const String& markup, ExceptionCode
 
     Node* previousSibling = node->previousSibling();
     // FIXME: This code should use one of createFragment* in markup.h
-    RefPtr<DocumentFragment> fragment = DocumentFragment::create(m_document);
+    RefPtr<DocumentFragment> fragment = DocumentFragment::create(*m_document);
     if (m_document->isHTMLDocument())
         fragment->parseHTML(markup, node->parentElement() ? node->parentElement() : m_document->documentElement());
     else

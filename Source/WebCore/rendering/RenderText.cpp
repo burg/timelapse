@@ -29,6 +29,7 @@
 #include "EllipsisBox.h"
 #include "FloatQuad.h"
 #include "FontTranscoder.h"
+#include "Frame.h"
 #include "FrameView.h"
 #include "Hyphenation.h"
 #include "InlineTextBox.h"
@@ -55,6 +56,9 @@ namespace WebCore {
 
 struct SameSizeAsRenderText : public RenderObject {
     uint32_t bitfields : 16;
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    float candidateTextSize;
+#endif
     float widths[4];
     String text;
     void* pointers[2];
@@ -134,32 +138,33 @@ static void makeCapitalized(String* string, UChar previous)
     *string = result.toString();
 }
 
-RenderText::RenderText(Node* node, PassRefPtr<StringImpl> str)
-    : RenderObject(!node || node->isDocumentNode() ? 0 : node)
+RenderText::RenderText(Text* textNode, const String& text)
+    : RenderObject(textNode)
     , m_hasTab(false)
     , m_linesDirty(false)
     , m_containsReversedText(false)
+    , m_isAllASCII(text.containsOnlyASCII())
     , m_knownToHaveNoOverflowAndNoFallbackFonts(false)
     , m_needsTranscoding(false)
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    , m_candidateComputedTextSize(0)
+#endif
     , m_minWidth(-1)
     , m_maxWidth(-1)
     , m_beginMinWidth(0)
     , m_endMinWidth(0)
-    , m_text(str)
+    , m_text(text)
     , m_firstTextBox(0)
     , m_lastTextBox(0)
 {
-    ASSERT(m_text);
-    // FIXME: Some clients of RenderText (and subclasses) pass Document as node to create anonymous renderer.
-    // They should be switched to passing null and using setDocumentForAnonymous.
-    if (node && node->isDocumentNode())
-        setDocumentForAnonymous(toDocument(node));
+    ASSERT(!m_text.isNull());
 
-    m_isAllASCII = m_text.containsOnlyASCII();
-    m_canUseSimpleFontCodePath = computeCanUseSimpleFontCodePath();
     setIsText();
 
-    view().frameView().incrementVisuallyNonEmptyCharacterCount(m_text.length());
+    m_canUseSimpleFontCodePath = computeCanUseSimpleFontCodePath();
+
+    if (textNode)
+        view().frameView().incrementVisuallyNonEmptyCharacterCount(m_text.length());
 }
 
 #ifndef NDEBUG
@@ -172,17 +177,25 @@ RenderText::~RenderText()
 
 #endif
 
+RenderText* RenderText::createAnonymous(Document& document, const String& text)
+{
+    RenderText* renderText = new (*document.renderArena()) RenderText(nullptr, text);
+    renderText->setDocumentForAnonymous(document);
+    renderText->view().frameView().incrementVisuallyNonEmptyCharacterCount(text.length());
+    return renderText;
+}
+
 const char* RenderText::renderName() const
 {
     return "RenderText";
 }
 
-bool RenderText::isTextFragment() const
+Text* RenderText::textNode() const
 {
-    return false;
+    return toText(RenderObject::node());
 }
 
-bool RenderText::isWordBreak() const
+bool RenderText::isTextFragment() const
 {
     return false;
 }
@@ -224,11 +237,6 @@ void RenderText::removeAndDestroyTextBoxes()
 {
     if (!documentBeingDestroyed()) {
         if (firstTextBox()) {
-            if (isBR()) {
-                RootInlineBox* next = firstTextBox()->root()->nextRootBox();
-                if (next)
-                    next->markDirty();
-            }
             for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox())
                 box->remove();
         } else if (parent())
@@ -300,7 +308,7 @@ void RenderText::removeTextBox(InlineTextBox* box)
 void RenderText::deleteTextBoxes()
 {
     if (firstTextBox()) {
-        RenderArena* arena = renderArena();
+        RenderArena& arena = renderArena();
         InlineTextBox* next;
         for (InlineTextBox* curr = firstTextBox(); curr; curr = next) {
             next = curr->nextTextBox();
@@ -310,10 +318,9 @@ void RenderText::deleteTextBoxes()
     }
 }
 
-PassRefPtr<StringImpl> RenderText::originalText() const
+String RenderText::originalText() const
 {
-    Node* e = node();
-    return (e && e->isTextNode()) ? toText(e)->dataImpl() : 0;
+    return textNode() ? textNode()->data() : String();
 }
 
 void RenderText::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
@@ -389,7 +396,7 @@ static IntRect ellipsisRectForBox(InlineTextBox* box, unsigned startPos, unsigne
         return IntRect();
     
     IntRect rect;
-    if (EllipsisBox* ellipsis = box->root()->ellipsisBox()) {
+    if (EllipsisBox* ellipsis = box->root().ellipsisBox()) {
         int ellipsisStartPosition = max<int>(startPos - box->start(), 0);
         int ellipsisEndPosition = min<int>(endPos - box->start(), box->len());
         
@@ -623,12 +630,12 @@ VisiblePosition RenderText::positionForPoint(const LayoutPoint& point)
         if (box->isLineBreak() && !box->prevLeafChild() && box->nextLeafChild() && !box->nextLeafChild()->isLineBreak())
             box = box->nextTextBox();
 
-        RootInlineBox* rootBox = box->root();
-        LayoutUnit top = min(rootBox->selectionTop(), rootBox->lineTop());
+        const RootInlineBox& rootBox = box->root();
+        LayoutUnit top = min(rootBox.selectionTop(), rootBox.lineTop());
         if (pointBlockDirection > top || (!blocksAreFlipped && pointBlockDirection == top)) {
-            LayoutUnit bottom = rootBox->selectionBottom();
-            if (rootBox->nextRootBox())
-                bottom = min(bottom, rootBox->nextRootBox()->lineTop());
+            LayoutUnit bottom = rootBox.selectionBottom();
+            if (rootBox.nextRootBox())
+                bottom = min(bottom, rootBox.nextRootBox()->lineTop());
 
             if (pointBlockDirection < bottom || (blocksAreFlipped && pointBlockDirection == bottom)) {
                 ShouldAffinityBeDownstream shouldAffinityBeDownstream;
@@ -652,70 +659,9 @@ LayoutRect RenderText::localCaretRect(InlineBox* inlineBox, int caretOffset, Lay
     if (!inlineBox)
         return LayoutRect();
 
-    ASSERT(inlineBox->isInlineTextBox());
-    if (!inlineBox->isInlineTextBox())
-        return LayoutRect();
-
     InlineTextBox* box = toInlineTextBox(inlineBox);
-
-    int height = box->root()->selectionHeight();
-    int top = box->root()->selectionTop();
-
-    // Go ahead and round left to snap it to the nearest pixel.
     float left = box->positionForOffset(caretOffset);
-
-    // Distribute the caret's width to either side of the offset.
-    int caretWidthLeftOfOffset = caretWidth / 2;
-    left -= caretWidthLeftOfOffset;
-    int caretWidthRightOfOffset = caretWidth - caretWidthLeftOfOffset;
-
-    left = roundf(left);
-
-    float rootLeft = box->root()->logicalLeft();
-    float rootRight = box->root()->logicalRight();
-
-    // FIXME: should we use the width of the root inline box or the
-    // width of the containing block for this?
-    if (extraWidthToEndOfLine)
-        *extraWidthToEndOfLine = (box->root()->logicalWidth() + rootLeft) - (left + 1);
-
-    RenderBlock* cb = containingBlock();
-    RenderStyle* cbStyle = cb->style();
-
-    float leftEdge;
-    float rightEdge;
-    leftEdge = min<float>(0, rootLeft);
-    rightEdge = max<float>(cb->logicalWidth(), rootRight);
-
-    bool rightAligned = false;
-    switch (cbStyle->textAlign()) {
-    case RIGHT:
-    case WEBKIT_RIGHT:
-        rightAligned = true;
-        break;
-    case LEFT:
-    case WEBKIT_LEFT:
-    case CENTER:
-    case WEBKIT_CENTER:
-        break;
-    case JUSTIFY:
-    case TASTART:
-        rightAligned = !cbStyle->isLeftToRightDirection();
-        break;
-    case TAEND:
-        rightAligned = cbStyle->isLeftToRightDirection();
-        break;
-    }
-
-    if (rightAligned) {
-        left = max(left, leftEdge);
-        left = min(left, rootRight - caretWidth);
-    } else {
-        left = min(left, rightEdge - caretWidthRightOfOffset);
-        left = max(left, rootLeft);
-    }
-
-    return style()->isHorizontalWritingMode() ? IntRect(left, top, caretWidth, height) : IntRect(top, left, height, caretWidth);
+    return box->root().computeCaretRect(left, caretWidth, extraWidthToEndOfLine);
 }
 
 ALWAYS_INLINE float RenderText::widthFromCache(const Font& f, int start, int len, float xPos, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
@@ -941,9 +887,6 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
     m_beginMinWidth = 0;
     m_endMinWidth = 0;
     m_maxWidth = 0;
-
-    if (isBR())
-        return;
 
     float currMinWidth = 0;
     float currMaxWidth = 0;
@@ -1241,17 +1184,12 @@ void RenderText::setSelectionState(SelectionState state)
                 startPos = 0;
 
             for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox()) {
-                if (box->isSelected(startPos, endPos)) {
-                    RootInlineBox* root = box->root();
-                    if (root)
-                        root->setHasSelectedChildren(true);
-                }
+                if (box->isSelected(startPos, endPos))
+                    box->root().setHasSelectedChildren(true);
             }
         } else {
             for (InlineTextBox* box = firstTextBox(); box; box = box->nextTextBox()) {
-                RootInlineBox* root = box->root();
-                if (root)
-                    root->setHasSelectedChildren(state == SelectionInside);
+                box->root().setHasSelectedChildren(state == SelectionInside);
             }
         }
     }
@@ -1262,13 +1200,13 @@ void RenderText::setSelectionState(SelectionState state)
         containingBlock->setSelectionState(state);
 }
 
-void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset, unsigned len, bool force)
+void RenderText::setTextWithOffset(const String& text, unsigned offset, unsigned len, bool force)
 {
-    if (!force && equal(m_text.impl(), text.get()))
+    if (!force && m_text == text)
         return;
 
     unsigned oldLen = textLength();
-    unsigned newLen = text->length();
+    unsigned newLen = text.length();
     int delta = newLen - oldLen;
     unsigned end = len ? offset + len - 1 : offset;
 
@@ -1287,9 +1225,9 @@ void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset,
         // Text run is entirely after the affected range.
         if (curr->start() > end) {
             curr->offsetRun(delta);
-            RootInlineBox* root = curr->root();
+            RootInlineBox& rootBox = curr->root();
             if (!firstRootBox) {
-                firstRootBox = root;
+                firstRootBox = &rootBox;
                 if (!dirtiedLines) {
                     // The affected area was in between two runs. Go ahead and mark the root box of
                     // the run after the affected area as dirty.
@@ -1297,7 +1235,7 @@ void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset,
                     dirtiedLines = true;
                 }
             }
-            lastRootBox = root;
+            lastRootBox = &rootBox;
         } else if (curr->end() >= offset && curr->end() <= end) {
             // Text run overlaps with the left end of the affected range.
             curr->dirtyLineBoxes();
@@ -1323,7 +1261,7 @@ void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset,
             firstRootBox = prev;
     } else if (lastTextBox()) {
         ASSERT(!lastRootBox);
-        firstRootBox = lastTextBox()->root();
+        firstRootBox = &lastTextBox()->root();
         firstRootBox->markDirty();
         dirtiedLines = true;
     }
@@ -1344,8 +1282,9 @@ void RenderText::setTextWithOffset(PassRefPtr<StringImpl> text, unsigned offset,
 
 void RenderText::transformText()
 {
-    if (RefPtr<StringImpl> textToTransform = originalText())
-        setText(textToTransform.release(), true);
+    String textToTransform = originalText();
+    if (!textToTransform.isNull())
+        setText(textToTransform, true);
 }
 
 static inline bool isInlineFlowOrEmptyText(const RenderObject* o)
@@ -1394,9 +1333,9 @@ void applyTextTransform(const RenderStyle* style, String& text, UChar previousCh
     }
 }
 
-void RenderText::setTextInternal(PassRefPtr<StringImpl> text)
+void RenderText::setTextInternal(const String& text)
 {
-    ASSERT(text);
+    ASSERT(!text.isNull());
     m_text = text;
     if (m_needsTranscoding) {
         const TextEncoding* encoding = document().decoder() ? &document().decoder()->encoding() : 0;
@@ -1423,8 +1362,7 @@ void RenderText::setTextInternal(PassRefPtr<StringImpl> text)
         }
     }
 
-    ASSERT(m_text);
-    ASSERT(!isBR() || (textLength() == 1 && m_text[0] == '\n'));
+    ASSERT(!m_text.isNull());
 
     m_isAllASCII = m_text.containsOnlyASCII();
     m_canUseSimpleFontCodePath = computeCanUseSimpleFontCodePath();
@@ -1452,11 +1390,11 @@ void RenderText::secureText(UChar mask)
     }
 }
 
-void RenderText::setText(PassRefPtr<StringImpl> text, bool force)
+void RenderText::setText(const String& text, bool force)
 {
-    ASSERT(text);
+    ASSERT(!text.isNull());
 
-    if (!force && equal(m_text.impl(), text.get()))
+    if (!force && m_text == text)
         return;
 
     setTextInternal(text);
@@ -1506,7 +1444,7 @@ InlineTextBox* RenderText::createInlineTextBox()
         textBox->setPreviousTextBox(m_lastTextBox);
         m_lastTextBox = textBox;
     }
-    textBox->setIsText(true);
+    textBox->setBehavesLikeText(true);
     return textBox;
 }
 

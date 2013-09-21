@@ -42,6 +42,7 @@
 #include "NotImplemented.h"
 #include "Page.h"
 #include "RawDataDocumentParser.h"
+#include "RenderElement.h"
 #include "ResourceBuffer.h"
 #include "Settings.h"
 
@@ -99,12 +100,12 @@ private:
 
 class ImageDocumentElement FINAL : public HTMLImageElement {
 public:
-    static PassRefPtr<ImageDocumentElement> create(ImageDocument*);
+    static PassRefPtr<ImageDocumentElement> create(ImageDocument&);
 
 private:
-    ImageDocumentElement(ImageDocument* document)
+    ImageDocumentElement(ImageDocument& document)
         : HTMLImageElement(imgTag, document)
-        , m_imageDocument(document)
+        , m_imageDocument(&document)
     {
     }
 
@@ -114,7 +115,7 @@ private:
     ImageDocument* m_imageDocument;
 };
 
-inline PassRefPtr<ImageDocumentElement> ImageDocumentElement::create(ImageDocument* document)
+inline PassRefPtr<ImageDocumentElement> ImageDocumentElement::create(ImageDocument& document)
 {
     return adoptRef(new ImageDocumentElement(document));
 }
@@ -206,7 +207,7 @@ void ImageDocument::createDocumentStructure()
     
     rootElement->appendChild(body, IGNORE_EXCEPTION);
     
-    RefPtr<ImageDocumentElement> imageElement = ImageDocumentElement::create(this);
+    RefPtr<ImageDocumentElement> imageElement = ImageDocumentElement::create(*this);
     
     imageElement->setAttribute(styleAttr, "-webkit-user-select: none");        
     imageElement->setLoadManually(true);

@@ -83,10 +83,10 @@ static inline RenderBlock* rubyAfterBlock(const RenderObject* ruby)
     return isRubyAfterBlock(child) ? toRenderBlock(child) : 0;
 }
 
-static RenderBlock* createAnonymousRubyInlineBlock(RenderObject* ruby)
+static RenderBlock* createAnonymousRubyInlineBlock(RenderObject& ruby)
 {
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(ruby->style(), INLINE_BLOCK);
-    RenderBlock* newBlock = RenderBlock::createAnonymous(&ruby->document());
+    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(ruby.style(), INLINE_BLOCK);
+    RenderBlock* newBlock = RenderBlock::createAnonymous(ruby.document());
     newBlock->setStyle(newStyle.release());
     return newBlock;
 }
@@ -109,8 +109,8 @@ static inline RenderRubyRun* findRubyRunParent(RenderObject* child)
 
 //=== ruby as inline object ===
 
-RenderRubyAsInline::RenderRubyAsInline(Element* element)
-    : RenderInline(element)
+RenderRubyAsInline::RenderRubyAsInline(Element& element)
+    : RenderInline(&element)
 {
 }
 
@@ -135,7 +135,7 @@ void RenderRubyAsInline::addChild(RenderObject* child, RenderObject* beforeChild
             // Wrap non-inline content with an anonymous inline-block.
             RenderBlock* beforeBlock = rubyBeforeBlock(this);
             if (!beforeBlock) {
-                beforeBlock = createAnonymousRubyInlineBlock(this);
+                beforeBlock = createAnonymousRubyInlineBlock(*this);
                 RenderInline::addChild(beforeBlock, firstChild());
             }
             beforeBlock->addChild(child);
@@ -150,7 +150,7 @@ void RenderRubyAsInline::addChild(RenderObject* child, RenderObject* beforeChild
             // Wrap non-inline content with an anonymous inline-block.
             RenderBlock* afterBlock = rubyAfterBlock(this);
             if (!afterBlock) {
-                afterBlock = createAnonymousRubyInlineBlock(this);
+                afterBlock = createAnonymousRubyInlineBlock(*this);
                 RenderInline::addChild(afterBlock);
             }
             afterBlock->addChild(child);
@@ -167,7 +167,7 @@ void RenderRubyAsInline::addChild(RenderObject* child, RenderObject* beforeChild
     if (beforeChild && !isAfterContent(beforeChild)) {
         // insert child into run
         ASSERT(!beforeChild->isRubyRun());
-        RenderObject* run = beforeChild;
+        RenderElement* run = beforeChild->parent();
         while (run && !run->isRubyRun())
             run = run->parent();
         if (run) {
@@ -215,8 +215,8 @@ void RenderRubyAsInline::removeChild(RenderObject* child)
 
 //=== ruby as block object ===
 
-RenderRubyAsBlock::RenderRubyAsBlock(Element* element)
-    : RenderBlock(element)
+RenderRubyAsBlock::RenderRubyAsBlock(Element& element)
+    : RenderBlockFlow(&element)
 {
 }
 
@@ -241,7 +241,7 @@ void RenderRubyAsBlock::addChild(RenderObject* child, RenderObject* beforeChild)
             // Wrap non-inline content with an anonymous inline-block.
             RenderBlock* beforeBlock = rubyBeforeBlock(this);
             if (!beforeBlock) {
-                beforeBlock = createAnonymousRubyInlineBlock(this);
+                beforeBlock = createAnonymousRubyInlineBlock(*this);
                 RenderBlock::addChild(beforeBlock, firstChild());
             }
             beforeBlock->addChild(child);
@@ -256,7 +256,7 @@ void RenderRubyAsBlock::addChild(RenderObject* child, RenderObject* beforeChild)
             // Wrap non-inline content with an anonymous inline-block.
             RenderBlock* afterBlock = rubyAfterBlock(this);
             if (!afterBlock) {
-                afterBlock = createAnonymousRubyInlineBlock(this);
+                afterBlock = createAnonymousRubyInlineBlock(*this);
                 RenderBlock::addChild(afterBlock);
             }
             afterBlock->addChild(child);
@@ -273,7 +273,7 @@ void RenderRubyAsBlock::addChild(RenderObject* child, RenderObject* beforeChild)
     if (beforeChild && !isAfterContent(beforeChild)) {
         // insert child into run
         ASSERT(!beforeChild->isRubyRun());
-        RenderObject* run = beforeChild;
+        RenderElement* run = beforeChild->parent();
         while (run && !run->isRubyRun())
             run = run->parent();
         if (run) {

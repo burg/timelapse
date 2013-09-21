@@ -56,8 +56,8 @@
 
 namespace WebCore {
 
-RenderSVGText::RenderSVGText(SVGTextElement* node) 
-    : RenderSVGBlock(node)
+RenderSVGText::RenderSVGText(SVGTextElement& element)
+    : RenderSVGBlock(element)
     , m_needsReordering(false)
     , m_needsPositioningValuesUpdate(false)
     , m_needsTransformUpdate(true)
@@ -68,6 +68,11 @@ RenderSVGText::RenderSVGText(SVGTextElement* node)
 RenderSVGText::~RenderSVGText()
 {
     ASSERT(m_layoutAttributes.isEmpty());
+}
+
+SVGTextElement& RenderSVGText::textElement() const
+{
+    return toSVGTextElement(RenderSVGBlock::graphicsElement());
 }
 
 bool RenderSVGText::isChildAllowed(RenderObject* child, RenderStyle*) const
@@ -354,8 +359,7 @@ void RenderSVGText::layout()
 
     bool updateCachedBoundariesInParents = false;
     if (m_needsTransformUpdate) {
-        SVGTextElement* text = static_cast<SVGTextElement*>(node());
-        m_localTransform = text->animatedLocalTransform();
+        m_localTransform = textElement().animatedLocalTransform();
         m_needsTransformUpdate = false;
         updateCachedBoundariesInParents = true;
     }
@@ -414,7 +418,10 @@ void RenderSVGText::layout()
     // FIXME: We need to find a way to only layout the child boxes, if needed.
     FloatRect oldBoundaries = objectBoundingBox();
     ASSERT(childrenInline());
-    forceLayoutInlineChildren();
+    LayoutUnit repaintLogicalTop = 0;
+    LayoutUnit repaintLogicalBottom = 0;
+    clearFloats();
+    layoutInlineChildren(true, repaintLogicalTop, repaintLogicalBottom);
 
     if (m_needsReordering)
         m_needsReordering = false;
@@ -512,9 +519,7 @@ FloatRect RenderSVGText::strokeBoundingBox() const
     if (!svgStyle->hasStroke())
         return strokeBoundaries;
 
-    ASSERT(node());
-    ASSERT(node()->isSVGElement());
-    SVGLengthContext lengthContext(toSVGElement(node()));
+    SVGLengthContext lengthContext(&textElement());
     strokeBoundaries.inflate(svgStyle->strokeWidth().value(lengthContext));
     return strokeBoundaries;
 }

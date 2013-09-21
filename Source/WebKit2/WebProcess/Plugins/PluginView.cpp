@@ -233,7 +233,7 @@ void PluginView::Stream::didReceiveData(NetscapePlugInStreamLoader*, const char*
 void PluginView::Stream::didFail(NetscapePlugInStreamLoader*, const ResourceError& error) 
 {
     // Calling streamDidFail could cause us to be deleted, so we hold on to a reference here.
-    RefPtr<Stream> protect(this);
+    Ref<Stream> protect(*this);
 
     // We only want to call streamDidFail if the stream was not explicitly cancelled by the plug-in.
     if (!m_streamWasCancelled)
@@ -246,7 +246,7 @@ void PluginView::Stream::didFail(NetscapePlugInStreamLoader*, const ResourceErro
 void PluginView::Stream::didFinishLoading(NetscapePlugInStreamLoader*)
 {
     // Calling streamDidFinishLoading could cause us to be deleted, so we hold on to a reference here.
-    RefPtr<Stream> protectStream(this);
+    Ref<Stream> protect(*this);
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
     // Protect the plug-in while we're calling into it.
@@ -816,7 +816,7 @@ String PluginView::getSelectionString() const
     return m_plugin->getSelectionString();
 }
 
-PassOwnPtr<WebEvent> PluginView::createWebEvent(MouseEvent* event) const
+OwnPtr<WebEvent> PluginView::createWebEvent(MouseEvent* event) const
 {
     WebEvent::Type type = WebEvent::NoType;
     unsigned clickCount = 1;
@@ -890,7 +890,8 @@ void PluginView::handleEvent(Event* event)
         didHandleEvent = m_plugin->handleMouseEvent(static_cast<const WebMouseEvent&>(*currentEvent));
         if (event->type() != eventNames().mousemoveEvent)
             pluginDidReceiveUserInteraction();
-    } else if (event->type() == eventNames().mousewheelEvent && currentEvent->type() == WebEvent::Wheel && m_plugin->wantsWheelEvents()) {
+    } else if ((event->type() == eventNames().wheelEvent || event->type() == eventNames().mousewheelEvent)
+        && currentEvent->type() == WebEvent::Wheel && m_plugin->wantsWheelEvents()) {
         didHandleEvent = m_plugin->handleWheelEvent(static_cast<const WebWheelEvent&>(*currentEvent));
         pluginDidReceiveUserInteraction();
     } else if (event->type() == eventNames().mouseoverEvent && currentEvent->type() == WebEvent::MouseMove)
@@ -1087,7 +1088,7 @@ void PluginView::pendingURLRequestsTimerFired()
 void PluginView::performURLRequest(URLRequest* request)
 {
     // This protector is needed to make sure the PluginView is not destroyed while it is still needed.
-    RefPtr<PluginView> protect(this);
+    Ref<PluginView> protect(*this);
 
     // First, check if this is a javascript: url.
     if (protocolIsJavaScript(request->request().url())) {
@@ -1186,7 +1187,7 @@ void PluginView::performJavaScriptURLRequest(URLRequest* request)
     if (!request->target().isNull())
         return;
 
-    ScriptState* scriptState = frame->script().globalObject(pluginWorld())->globalExec();
+    ExecState* scriptState = frame->script().globalObject(pluginWorld())->globalExec();
     String resultString;
     result.getString(scriptState, resultString);
   
@@ -1432,7 +1433,6 @@ void PluginView::pluginProcessCrashed()
     if (!m_pluginElement->renderer())
         return;
 
-    // FIXME: The renderer could also be a RenderApplet, we should handle that.
     if (!m_pluginElement->renderer()->isEmbeddedObject())
         return;
 

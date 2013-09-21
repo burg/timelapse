@@ -528,6 +528,12 @@
 #endif
 #define WTF_USE_APPKIT 1
 #define WTF_USE_SECURITY_FRAMEWORK 1
+
+/* OS X defines a series of platform macros for debugging. */
+/* Some of them are really annoying because they use common names (e.g. check()). */
+/* Disable those macros so that we are not limited in how we name methods and functions. */
+#undef __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES
+#define __ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES 0
 #endif /* PLATFORM(MAC) && !PLATFORM(IOS) */
 
 #if PLATFORM(IOS)
@@ -887,15 +893,6 @@
 #define ENABLE_EXECUTABLE_ALLOCATOR_FIXED 1
 #else
 #define ENABLE_EXECUTABLE_ALLOCATOR_DEMAND 1
-#endif
-#endif
-
-/* Use the QXmlStreamReader implementation for XMLDocumentParser */
-/* Use the QXmlQuery implementation for XSLTProcessor */
-#if PLATFORM(QT)
-#if !USE(LIBXML2)
-#define WTF_USE_QXMLSTREAM 1
-#define WTF_USE_QXMLQUERY 1
 #endif
 #endif
 

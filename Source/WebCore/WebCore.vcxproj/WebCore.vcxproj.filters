@@ -768,9 +768,6 @@
     <ClCompile Include="..\page\Frame.cpp">
       <Filter>page</Filter>
     </ClCompile>
-    <ClCompile Include="..\page\FrameActionScheduler.cpp">
-      <Filter>page</Filter>
-    </ClCompile>
     <ClCompile Include="..\page\FrameDestructionObserver.cpp">
       <Filter>page</Filter>
     </ClCompile>
@@ -1159,9 +1156,6 @@
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\PlatformEvent.cpp">
-      <Filter>platform</Filter>
-    </ClCompile>
-    <ClCompile Include="..\platform\PlatformInstrumentation.cpp">
       <Filter>platform</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\PlatformStrategies.cpp">
@@ -1974,6 +1968,9 @@
     <ClCompile Include="..\platform\network\curl\FormDataStreamCurl.cpp">
       <Filter>platform\network\curl</Filter>
     </ClCompile>
+    <ClCompile Include="..\platform\network\curl\MultipartHandle.cpp">
+      <Filter>platform\network\curl</Filter>
+    </ClCompile>
     <ClCompile Include="..\platform\network\curl\ProxyServerCurl.cpp">
       <Filter>platform\network\curl</Filter>
     </ClCompile>
@@ -2490,9 +2487,6 @@
     <ClCompile Include="..\rendering\PointerEventsHitRules.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\RenderApplet.cpp">
-      <Filter>rendering</Filter>
-    </ClCompile>
     <ClCompile Include="..\rendering\RenderArena.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
@@ -2641,9 +2635,6 @@
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\RenderObjectChildList.cpp">
-      <Filter>rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="..\rendering\RenderPart.cpp">
       <Filter>rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\RenderProgress.cpp">
@@ -2871,7 +2862,7 @@
     <ClCompile Include="..\rendering\mathml\RenderMathMLSquareRoot.cpp">
       <Filter>rendering\mathml</Filter>
     </ClCompile>
-    <ClCompile Include="..\rendering\mathml\RenderMathMLSubSup.cpp">
+    <ClCompile Include="..\rendering\mathml\RenderMathMLScripts.cpp">
       <Filter>rendering\mathml</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\mathml\RenderMathMLUnderOver.cpp">
@@ -2989,9 +2980,6 @@
       <Filter>rendering\svg</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\svg\RenderSVGTextPath.cpp">
-      <Filter>rendering\svg</Filter>
-    </ClCompile>
-    <ClCompile Include="..\rendering\svg\RenderSVGTSpan.cpp">
       <Filter>rendering\svg</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\svg\SVGInlineFlowBox.cpp">
@@ -3178,9 +3166,6 @@
       <Filter>dom</Filter>
     </ClCompile>
     <ClCompile Include="..\dom\Comment.cpp">
-      <Filter>dom</Filter>
-    </ClCompile>
-    <ClCompile Include="..\dom\ComposedShadowTreeWalker.cpp">
       <Filter>dom</Filter>
     </ClCompile>
     <ClCompile Include="..\dom\CompositionEvent.cpp">
@@ -4425,9 +4410,6 @@
     <ClCompile Include="..\bindings\js\JSClipboardCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
-    <ClCompile Include="..\bindings\js\JSConsoleCustom.cpp">
-      <Filter>bindings\js</Filter>
-    </ClCompile>
     <ClCompile Include="..\bindings\js\JSCSSFontFaceRuleCustom.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
@@ -4848,10 +4830,13 @@
     <ClCompile Include="..\svg\properties\SVGPathSegListPropertyTearOff.cpp">
       <Filter>rendering\svg\properties</Filter>
     </ClCompile>
+    <ClCompile Include="..\svg\properties\SVGPropertyInfo.cpp">
+      <Filter>rendering\svg\properties</Filter>
+    </ClCompile>
     <ClCompile Include="..\history\BackForwardController.cpp">
       <Filter>history</Filter>
     </ClCompile>
-    <ClCompile Include="..\history\BackForwardListImpl.cpp">
+    <ClCompile Include="..\history\BackForwardList.cpp">
       <Filter>history</Filter>
     </ClCompile>
     <ClCompile Include="..\history\CachedFrame.cpp">
@@ -5358,9 +5343,6 @@
     </ClCompile>
     <ClCompile Include="..\svg\graphics\SVGImageForContainer.cpp">
       <Filter>rendering\svg\graphics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\inspector\TimelineTraceEventProcessor.cpp">
-      <Filter>inspector</Filter>
     </ClCompile>
     <ClCompile Include="..\rendering\HitTestLocation.cpp">
       <Filter>rendering</Filter>
@@ -7099,6 +7081,12 @@
     <ClCompile Include="..\bindings\js\WebCoreTypedArrayController.cpp">
       <Filter>bindings\js</Filter>
     </ClCompile>
+    <ClCompile Include="..\rendering\RenderBlockFlow.cpp" />
+    <ClCompile Include="..\platform\win\StructuredExceptionHandlerSuppressor.cpp">
+      <Filter>platform\win</Filter>
+    </ClCompile>
+    <ClCompile Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSBeforeUnloadEvent.cpp" />
+    <ClCompile Include="..\rendering\FloatingObjects.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Modules\filesystem\AsyncFileWriter.h">
@@ -7743,9 +7731,6 @@
     <ClInclude Include="..\page\Frame.h">
       <Filter>page</Filter>
     </ClInclude>
-    <ClInclude Include="..\page\FrameActionScheduler.h">
-      <Filter>page</Filter>
-    </ClInclude>
     <ClInclude Include="..\page\FrameDestructionObserver.h">
       <Filter>page</Filter>
     </ClInclude>
@@ -8220,9 +8205,6 @@
     <ClInclude Include="..\platform\PlatformEvent.h">
       <Filter>platform</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\PlatformInstrumentation.h">
-      <Filter>platform</Filter>
-    </ClInclude>
     <ClInclude Include="..\platform\PlatformKeyboardEvent.h">
       <Filter>platform</Filter>
     </ClInclude>
@@ -8388,7 +8370,7 @@
     <ClInclude Include="..\platform\win\SoftLinking.h">
       <Filter>platform\win</Filter>
     </ClInclude>
-    <ClInclude Include="..\platform\win\StructuredExceptionHandlerSupressor.h">
+    <ClInclude Include="..\platform\win\StructuredExceptionHandlerSuppressor.h">
       <Filter>platform\win</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\win\SystemInfo.h">
@@ -8584,9 +8566,6 @@
       <Filter>platform\graphics\win</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\opentype\OpenTypeVerticalData.h">
-      <Filter>platform\graphics\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\platform\graphics\win\RefCountedGDIHandle.h">
       <Filter>platform\graphics\win</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\graphics\win\UniscribeController.h">
@@ -9498,9 +9477,6 @@
     <ClInclude Include="..\rendering\PointerEventsHitRules.h">
       <Filter>rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\RenderApplet.h">
-      <Filter>rendering</Filter>
-    </ClInclude>
     <ClInclude Include="..\rendering\RenderArena.h">
       <Filter>rendering</Filter>
     </ClInclude>
@@ -9637,9 +9613,6 @@
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\RenderObjectChildList.h">
-      <Filter>rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="..\rendering\RenderPart.h">
       <Filter>rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\RenderProgress.h">
@@ -9870,7 +9843,7 @@
     <ClInclude Include="..\rendering\mathml\RenderMathMLSquareRoot.h">
       <Filter>rendering\mathml</Filter>
     </ClInclude>
-    <ClInclude Include="..\rendering\mathml\RenderMathMLSubSup.h">
+    <ClInclude Include="..\rendering\mathml\RenderMathMLScripts.h">
       <Filter>rendering\mathml</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\mathml\RenderMathMLUnderOver.h">
@@ -10243,9 +10216,6 @@
       <Filter>dom</Filter>
     </ClInclude>
     <ClInclude Include="..\dom\Comment.h">
-      <Filter>dom</Filter>
-    </ClInclude>
-    <ClInclude Include="..\dom\ComposedShadowTreeWalker.h">
       <Filter>dom</Filter>
     </ClInclude>
     <ClInclude Include="..\dom\CompositionEvent.h">
@@ -11562,9 +11532,6 @@
     <ClInclude Include="..\bindings\generic\BindingSecurity.h">
       <Filter>bindings\generic</Filter>
     </ClInclude>
-    <ClInclude Include="..\bindings\generic\GenericBinding.h">
-      <Filter>bindings\generic</Filter>
-    </ClInclude>
     <ClInclude Include="..\bindings\generic\RuntimeEnabledFeatures.h">
       <Filter>bindings\generic</Filter>
     </ClInclude>
@@ -12405,13 +12372,13 @@
     <ClInclude Include="..\ForwardingHeaders\heap\Strong.h">
       <Filter>ForwardingHeaders\heap</Filter>
     </ClInclude>
+    <ClInclude Include="..\history\BackForwardClient.h">
+      <Filter>history</Filter>
+    </ClInclude>
     <ClInclude Include="..\history\BackForwardController.h">
       <Filter>history</Filter>
     </ClInclude>
     <ClInclude Include="..\history\BackForwardList.h">
-      <Filter>history</Filter>
-    </ClInclude>
-    <ClInclude Include="..\history\BackForwardListImpl.h">
       <Filter>history</Filter>
     </ClInclude>
     <ClInclude Include="..\history\CachedFrame.h">
@@ -13144,9 +13111,6 @@
     </ClInclude>
     <ClInclude Include="..\svg\graphics\SVGImageForContainer.h">
       <Filter>rendering\svg\graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\inspector\TimelineTraceEventProcessor.h">
-      <Filter>inspector</Filter>
     </ClInclude>
     <ClInclude Include="..\rendering\HitTestLocation.h">
       <Filter>rendering</Filter>
@@ -14888,9 +14852,6 @@
     <ClInclude Include="..\css\CSSFilterImageValue.h">
       <Filter>css</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\HTMLElementTypeChecks.h">
-      <Filter>DerivedSources</Filter>
-    </ClInclude>
     <ClInclude Include="..\dom\InlineStyleSheetOwner.h">
       <Filter>dom</Filter>
     </ClInclude>
@@ -14906,11 +14867,15 @@
     <ClInclude Include="..\style\StyleResolveForDocument.h">
       <Filter>css</Filter>
     </ClInclude>
-    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\SVGElementTypeChecks.h">
-      <Filter>DerivedSources</Filter>
-    </ClInclude>
     <ClInclude Include="..\dom\TextNodeTraversal.h">
       <Filter>dom</Filter>
+    </ClInclude>
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\HTMLElementTypeHelpers.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\SVGElementTypeHelpers.h" />
+    <ClInclude Include="$(ConfigurationBuildDir)\obj$(PlatformArchitecture)\$(ProjectName)\DerivedSources\JSBeforeUnloadEvent.h" />
+    <ClInclude Include="..\rendering\FloatingObjects.h" />
+    <ClInclude Include="..\platform\graphics\win\SharedGDIObject.h">
+      <Filter>platform\graphics\win</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -15830,6 +15795,9 @@
     <CustomBuildStep Include="..\platform\network\curl\FormDataStreamCurl.h">
       <Filter>platform\network\curl</Filter>
     </CustomBuildStep>
+    <CustomBuildStep Include="..\platform\network\curl\MultipartHandle.h">
+      <Filter>platform\network\curl</Filter>
+    </CustomBuildStep>
     <CustomBuildStep Include="..\platform\network\curl\ResourceError.h">
       <Filter>platform\network\curl</Filter>
     </CustomBuildStep>
@@ -15879,6 +15847,9 @@
   <ItemGroup>
     <MASM Include="..\plugins\win\PaintHooks.asm">
       <Filter>plugins\win</Filter>
+    </MASM>
+    <MASM Include="..\platform\win\makesafeseh.asm">
+      <Filter>platform\win</Filter>
     </MASM>
   </ItemGroup>
 </Project>

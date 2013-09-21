@@ -35,7 +35,7 @@
 #include "HTMLParserIdioms.h"
 #include "KURL.h"
 #include "Page.h"
-#include "RenderPart.h"
+#include "RenderWidget.h"
 #include "ScriptController.h"
 #include "ScriptEventListener.h"
 #include "Settings.h"
@@ -45,7 +45,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLFrameElementBase::HTMLFrameElementBase(const QualifiedName& tagName, Document* document)
+HTMLFrameElementBase::HTMLFrameElementBase(const QualifiedName& tagName, Document& document)
     : HTMLFrameOwnerElement(tagName, document)
     , m_scrolling(ScrollbarAuto)
     , m_marginWidth(-1)
@@ -176,7 +176,7 @@ void HTMLFrameElementBase::didNotifySubtreeInsertions(ContainerNode*)
 
 void HTMLFrameElementBase::didAttachRenderers()
 {
-    if (RenderPart* part = renderPart()) {
+    if (RenderWidget* part = renderWidget()) {
         if (Frame* frame = contentFrame())
             part->setWidget(frame->view());
     }

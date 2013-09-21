@@ -92,12 +92,12 @@ public:
 
     Frame& frame() const { return m_frame; }
 
-    PolicyChecker* policyChecker() const { return m_policyChecker.get(); }
+    PolicyChecker& policyChecker() const { return *m_policyChecker; }
     HistoryController& history() const { return *m_history; }
     ResourceLoadNotifier* notifier() const { return &m_notifer; }
     SubframeLoader& subframeLoader() const { return *m_subframeLoader; }
-    IconController* icon() const { return m_icon.get(); }
-    MixedContentChecker* mixedContentChecker() const { return &m_mixedContentChecker; }
+    IconController& icon() const { return *m_icon; }
+    MixedContentChecker& mixedContentChecker() const { return m_mixedContentChecker; }
 
     void prepareForHistoryNavigation();
     void setupForReplace();
@@ -386,12 +386,12 @@ private:
     // FIXME: These should be OwnPtr<T> to reduce build times and simplify
     // header dependencies unless performance testing proves otherwise.
     // Some of these could be lazily created for memory savings on devices.
-    OwnPtr<PolicyChecker> m_policyChecker;
+    const OwnPtr<PolicyChecker> m_policyChecker;
     const OwnPtr<HistoryController> m_history;
     mutable ResourceLoadNotifier m_notifer;
     const OwnPtr<SubframeLoader> m_subframeLoader;
     mutable FrameLoaderStateMachine m_stateMachine;
-    OwnPtr<IconController> m_icon;
+    const OwnPtr<IconController> m_icon;
     mutable MixedContentChecker m_mixedContentChecker;
 
     class FrameProgressTracker;

@@ -32,6 +32,15 @@
 
 namespace WebCore {
 
+EllipsisBox::EllipsisBox(RenderBlock& renderer, const AtomicString& ellipsisStr, InlineFlowBox* parent, int width, int height, int y, bool firstLine, bool isVertical, InlineBox* markupBox)
+    : InlineBox(renderer, FloatPoint(0, y), width, firstLine, true, false, false, isVertical, 0, 0, parent)
+    , m_shouldPaintMarkupBox(markupBox)
+    , m_height(height)
+    , m_str(ellipsisStr)
+    , m_selectionState(RenderObject::SelectionNone)
+{
+}
+
 void EllipsisBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom)
 {
     GraphicsContext* context = paintInfo.context;
@@ -71,11 +80,10 @@ void EllipsisBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, La
 
 InlineBox* EllipsisBox::markupBox() const
 {
-    if (!m_shouldPaintMarkupBox || !renderer().isRenderBlock())
+    if (!m_shouldPaintMarkupBox)
         return 0;
 
-    RenderBlock& block = toRenderBlock(renderer());
-    RootInlineBox* lastLine = block.lineAtIndex(block.lineCount() - 1);
+    RootInlineBox* lastLine = renderer().lineAtIndex(renderer().lineCount() - 1);
     if (!lastLine)
         return 0;
 
@@ -104,8 +112,9 @@ IntRect EllipsisBox::selectionRect()
 {
     RenderStyle* style = renderer().style(isFirstLineStyle());
     const Font& font = style->font();
+    const RootInlineBox& rootBox = root();
     // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
-    return enclosingIntRect(font.selectionRectForText(RenderBlock::constructTextRun(&renderer(), font, m_str, style, TextRun::AllowTrailingExpansion), IntPoint(x(), y() + root()->selectionTopAdjustedForPrecedingBlock()), root()->selectionHeightAdjustedForPrecedingBlock()));
+    return enclosingIntRect(font.selectionRectForText(RenderBlock::constructTextRun(&renderer(), font, m_str, style, TextRun::AllowTrailingExpansion), IntPoint(x(), y() + rootBox.selectionTopAdjustedForPrecedingBlock()), rootBox.selectionHeightAdjustedForPrecedingBlock()));
 }
 
 void EllipsisBox::paintSelection(GraphicsContext* context, const LayoutPoint& paintOffset, RenderStyle* style, const Font& font)
@@ -120,11 +129,13 @@ void EllipsisBox::paintSelection(GraphicsContext* context, const LayoutPoint& pa
     if (textColor == c)
         c = Color(0xff - c.red(), 0xff - c.green(), 0xff - c.blue());
 
-    GraphicsContextStateSaver stateSaver(*context);
-    LayoutUnit top = root()->selectionTop();
-    LayoutUnit h = root()->selectionHeight();
+    const RootInlineBox& rootBox = root();
+    LayoutUnit top = rootBox.selectionTop();
+    LayoutUnit h = rootBox.selectionHeight();
     FloatRect clipRect(x() + paintOffset.x(), top + paintOffset.y(), m_logicalWidth, h);
     alignSelectionRectToDevicePixels(clipRect);
+
+    GraphicsContextStateSaver stateSaver(*context);
     context->clip(clipRect);
     // FIXME: Why is this always LTR? Fix by passing correct text run flags below.
     context->drawHighlightForText(font, RenderBlock::constructTextRun(&renderer(), font, m_str, style, TextRun::AllowTrailingExpansion), roundedIntPoint(LayoutPoint(x() + paintOffset.x(), y() + paintOffset.y() + top)), h, c, style->colorSpace());
@@ -148,7 +159,7 @@ bool EllipsisBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     LayoutRect boundsRect(adjustedLocation, LayoutSize(m_logicalWidth, m_height));
     if (visibleToHitTesting() && boundsRect.intersects(HitTestLocation::rectForPoint(locationInContainer.point(), 0, 0, 0, 0))) {
         renderer().updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-        if (!result.addNodeToRectBasedTestResult(renderer().node(), request, locationInContainer, boundsRect))
+        if (!result.addNodeToRectBasedTestResult(renderer().element(), request, locationInContainer, boundsRect))
             return true;
     }
 

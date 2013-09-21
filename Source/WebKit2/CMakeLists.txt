@@ -558,6 +558,8 @@ set(WebKit2_MESSAGES_IN_FILES
 
     UIProcess/Plugins/PluginProcessProxy.messages.in
 
+    UIProcess/Network/CustomProtocols/CustomProtocolManagerProxy.messages.in
+
     WebProcess/WebProcess.messages.in
 
     WebProcess/ApplicationCache/WebApplicationCacheManager.messages.in
@@ -575,6 +577,8 @@ set(WebKit2_MESSAGES_IN_FILES
     WebProcess/IconDatabase/WebIconDatabaseProxy.messages.in
 
     WebProcess/MediaCache/WebMediaCacheManager.messages.in
+
+    WebProcess/Network/WebResourceLoader.messages.in
 
     WebProcess/NetworkInfo/WebNetworkInfoManager.messages.in
 

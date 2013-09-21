@@ -84,27 +84,27 @@ namespace JSC  {
 #ifndef NDEBUG
         void dumpCaller();
 #endif
-        static const HashTable* arrayConstructorTable(CallFrame* callFrame) { return callFrame->vm().arrayConstructorTable; }
-        static const HashTable* arrayPrototypeTable(CallFrame* callFrame) { return callFrame->vm().arrayPrototypeTable; }
-        static const HashTable* booleanPrototypeTable(CallFrame* callFrame) { return callFrame->vm().booleanPrototypeTable; }
-        static const HashTable* dataViewTable(CallFrame* callFrame) { return callFrame->vm().dataViewTable; }
-        static const HashTable* dateTable(CallFrame* callFrame) { return callFrame->vm().dateTable; }
-        static const HashTable* dateConstructorTable(CallFrame* callFrame) { return callFrame->vm().dateConstructorTable; }
-        static const HashTable* errorPrototypeTable(CallFrame* callFrame) { return callFrame->vm().errorPrototypeTable; }
-        static const HashTable* globalObjectTable(CallFrame* callFrame) { return callFrame->vm().globalObjectTable; }
-        static const HashTable* jsonTable(CallFrame* callFrame) { return callFrame->vm().jsonTable; }
-        static const HashTable* numberConstructorTable(CallFrame* callFrame) { return callFrame->vm().numberConstructorTable; }
-        static const HashTable* numberPrototypeTable(CallFrame* callFrame) { return callFrame->vm().numberPrototypeTable; }
-        static const HashTable* objectConstructorTable(CallFrame* callFrame) { return callFrame->vm().objectConstructorTable; }
-        static const HashTable* privateNamePrototypeTable(CallFrame* callFrame) { return callFrame->vm().privateNamePrototypeTable; }
-        static const HashTable* regExpTable(CallFrame* callFrame) { return callFrame->vm().regExpTable; }
-        static const HashTable* regExpConstructorTable(CallFrame* callFrame) { return callFrame->vm().regExpConstructorTable; }
-        static const HashTable* regExpPrototypeTable(CallFrame* callFrame) { return callFrame->vm().regExpPrototypeTable; }
-        static const HashTable* stringConstructorTable(CallFrame* callFrame) { return callFrame->vm().stringConstructorTable; }
+        static const HashTable& arrayConstructorTable(CallFrame* callFrame) { return *callFrame->vm().arrayConstructorTable; }
+        static const HashTable& arrayPrototypeTable(CallFrame* callFrame) { return *callFrame->vm().arrayPrototypeTable; }
+        static const HashTable& booleanPrototypeTable(CallFrame* callFrame) { return *callFrame->vm().booleanPrototypeTable; }
+        static const HashTable& dataViewTable(CallFrame* callFrame) { return *callFrame->vm().dataViewTable; }
+        static const HashTable& dateTable(CallFrame* callFrame) { return *callFrame->vm().dateTable; }
+        static const HashTable& dateConstructorTable(CallFrame* callFrame) { return *callFrame->vm().dateConstructorTable; }
+        static const HashTable& errorPrototypeTable(CallFrame* callFrame) { return *callFrame->vm().errorPrototypeTable; }
+        static const HashTable& globalObjectTable(CallFrame* callFrame) { return *callFrame->vm().globalObjectTable; }
+        static const HashTable& jsonTable(CallFrame* callFrame) { return *callFrame->vm().jsonTable; }
+        static const HashTable& numberConstructorTable(CallFrame* callFrame) { return *callFrame->vm().numberConstructorTable; }
+        static const HashTable& numberPrototypeTable(CallFrame* callFrame) { return *callFrame->vm().numberPrototypeTable; }
+        static const HashTable& objectConstructorTable(CallFrame* callFrame) { return *callFrame->vm().objectConstructorTable; }
+        static const HashTable& privateNamePrototypeTable(CallFrame* callFrame) { return *callFrame->vm().privateNamePrototypeTable; }
+        static const HashTable& regExpTable(CallFrame* callFrame) { return *callFrame->vm().regExpTable; }
+        static const HashTable& regExpConstructorTable(CallFrame* callFrame) { return *callFrame->vm().regExpConstructorTable; }
+        static const HashTable& regExpPrototypeTable(CallFrame* callFrame) { return *callFrame->vm().regExpPrototypeTable; }
+        static const HashTable& stringConstructorTable(CallFrame* callFrame) { return *callFrame->vm().stringConstructorTable; }
 #if ENABLE(PROMISES)
-        static const HashTable* promisePrototypeTable(CallFrame* callFrame) { return callFrame->vm().promisePrototypeTable; }
-        static const HashTable* promiseConstructorTable(CallFrame* callFrame) { return callFrame->vm().promiseConstructorTable; }
-        static const HashTable* promiseResolverPrototypeTable(CallFrame* callFrame) { return callFrame->vm().promiseResolverPrototypeTable; }
+        static const HashTable& promisePrototypeTable(CallFrame* callFrame) { return *callFrame->vm().promisePrototypeTable; }
+        static const HashTable& promiseConstructorTable(CallFrame* callFrame) { return *callFrame->vm().promiseConstructorTable; }
+        static const HashTable& promiseResolverPrototypeTable(CallFrame* callFrame) { return *callFrame->vm().promiseResolverPrototypeTable; }
 #endif
 
         static CallFrame* create(Register* callFrameBase) { return static_cast<CallFrame*>(callFrameBase); }
@@ -214,7 +214,7 @@ namespace JSC  {
             CallFrame* callerFrame, int argc, JSObject* callee)
         {
             ASSERT(callerFrame); // Use noCaller() rather than 0 for the outer host call frame caller.
-            ASSERT(callerFrame == noCaller() || callerFrame->removeHostCallFrameFlag()->stack()->end() >= this);
+            ASSERT(callerFrame == noCaller() || callerFrame->removeHostCallFrameFlag()->stack()->containsAddress(this));
 
             setCodeBlock(codeBlock);
             setScope(scope);
@@ -232,8 +232,8 @@ namespace JSC  {
         // Access to arguments as passed. (After capture, arguments may move to a different location.)
         size_t argumentCount() const { return argumentCountIncludingThis() - 1; }
         size_t argumentCountIncludingThis() const { return this[JSStack::ArgumentCount].payload(); }
-        static int argumentOffset(int argument) { return s_firstArgumentOffset - argument; }
-        static int argumentOffsetIncludingThis(int argument) { return s_thisArgumentOffset - argument; }
+        static int argumentOffset(int argument) { return (s_firstArgumentOffset + argument); }
+        static int argumentOffsetIncludingThis(int argument) { return (s_thisArgumentOffset + argument); }
 
         // In the following (argument() and setArgument()), the 'argument'
         // parameter is the index of the arguments of the target function of
@@ -293,8 +293,8 @@ namespace JSC  {
 
     private:
         static const intptr_t HostCallFrameFlag = 1;
-        static const int s_thisArgumentOffset = -1 - JSStack::CallFrameHeaderSize;
-        static const int s_firstArgumentOffset = s_thisArgumentOffset - 1;
+        static const int s_thisArgumentOffset = JSStack::CallFrameHeaderSize + 1;
+        static const int s_firstArgumentOffset = s_thisArgumentOffset + 1;
 
 #ifndef NDEBUG
         JSStack* stack();
@@ -318,7 +318,7 @@ namespace JSC  {
             //       offset = s_firstArgumentOffset - argIndex;
             // Hence:
             //       argIndex = s_firstArgumentOffset - offset;
-            size_t argIndex = s_firstArgumentOffset - offset;
+            size_t argIndex = offset - s_firstArgumentOffset;
             return argIndex;
         }
 

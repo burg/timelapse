@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -139,21 +139,33 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     
     for (size_t local = 0; local < entry->m_expectedValues.numberOfLocals(); ++local) {
         if (entry->m_localsForcedDouble.get(local)) {
-            if (!exec->registers()[local].jsValue().isNumber()) {
+            if (!exec->registers()[localToOperand(local)].jsValue().isNumber()) {
                 if (Options::verboseOSR()) {
                     dataLog(
-                        "    OSR failed because variable ", local, " is ",
-                        exec->registers()[local].jsValue(), ", expected number.\n");
+                        "    OSR failed because variable ", localToOperand(local), " is ",
+                        exec->registers()[localToOperand(local)].jsValue(), ", expected number.\n");
                 }
                 return 0;
             }
             continue;
         }
-        if (!entry->m_expectedValues.local(local).validate(exec->registers()[local].jsValue())) {
+        if (entry->m_localsForcedMachineInt.get(local)) {
+            if (!exec->registers()[localToOperand(local)].jsValue().isMachineInt()) {
+                if (Options::verboseOSR()) {
+                    dataLog(
+                        "    OSR failed because variable ", localToOperand(local), " is ",
+                        exec->registers()[localToOperand(local)].jsValue(), ", expected ",
+                        "machine int.\n");
+                }
+                return 0;
+            }
+            continue;
+        }
+        if (!entry->m_expectedValues.local(local).validate(exec->registers()[localToOperand(local)].jsValue())) {
             if (Options::verboseOSR()) {
                 dataLog(
-                    "    OSR failed because variable ", local, " is ",
-                    exec->registers()[local].jsValue(), ", expected ",
+                    "    OSR failed because variable ", localToOperand(local), " is ",
+                    exec->registers()[localToOperand(local)].jsValue(), ", expected ",
                     entry->m_expectedValues.local(local), ".\n");
             }
             return 0;
@@ -167,7 +179,7 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     //    it seems silly: you'd be diverting the program to error handling when it
     //    would have otherwise just kept running albeit less quickly.
     
-    if (!vm->interpreter->stack().grow(&exec->registers()[codeBlock->m_numCalleeRegisters])) {
+    if (!vm->interpreter->stack().grow(&exec->registers()[localToOperand(codeBlock->m_numCalleeRegisters)])) {
         if (Options::verboseOSR())
             dataLogF("    OSR failed because stack growth failed.\n");
         return 0;
@@ -179,7 +191,9 @@ void* prepareOSREntry(ExecState* exec, CodeBlock* codeBlock, unsigned bytecodeIn
     // 3) Perform data format conversions.
     for (size_t local = 0; local < entry->m_expectedValues.numberOfLocals(); ++local) {
         if (entry->m_localsForcedDouble.get(local))
-            *bitwise_cast<double*>(exec->registers() + local) = exec->registers()[local].jsValue().asNumber();
+            *bitwise_cast<double*>(exec->registers() + localToOperand(local)) = exec->registers()[localToOperand(local)].jsValue().asNumber();
+        if (entry->m_localsForcedMachineInt.get(local))
+            *bitwise_cast<int64_t*>(exec->registers() + localToOperand(local)) = exec->registers()[localToOperand(local)].jsValue().asMachineInt() << JSValue::int52ShiftAmount;
     }
     
     // 4) Fix the call frame.

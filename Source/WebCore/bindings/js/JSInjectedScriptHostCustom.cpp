@@ -76,7 +76,7 @@ Node* InjectedScriptHost::scriptValueAsNode(ScriptValue value)
     return toNode(value.jsValue());
 }
 
-ScriptValue InjectedScriptHost::nodeAsScriptValue(ScriptState* state, Node* node)
+ScriptValue InjectedScriptHost::nodeAsScriptValue(JSC::ExecState* state, Node* node)
 {
     if (!shouldAllowAccessToNode(state, node))
         return ScriptValue(state->vm(), jsNull());
@@ -280,13 +280,6 @@ JSValue JSInjectedScriptHost::evaluate(ExecState* exec) const
 {
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
     return globalObject->evalFunction();
-}
-
-JSValue JSInjectedScriptHost::setFunctionVariableValue(JSC::ExecState* exec)
-{
-    // FIXME: implement this. https://bugs.webkit.org/show_bug.cgi?id=107830
-    exec->vm().throwException(exec, createTypeError(exec, "Variable value mutation is not supported"));
-    return jsUndefined();
 }
 
 } // namespace WebCore

@@ -238,27 +238,24 @@ EXPORTS
 #endif
         symbolWithPointer(?isActiveInsertionPoint@WebCore@@YA_NPBVNode@1@@Z, ?isActiveInsertionPoint@WebCore@@YA_NPEBVNode@1@@Z)
         ?isCSSExclusionsEnabled@RuntimeEnabledFeatures@WebCore@@0_NA
+        ?isCSSShapesEnabled@RuntimeEnabledFeatures@WebCore@@0_NA
         symbolWithPointer(?isPreloaded@CachedResourceLoader@WebCore@@QBE_NABVString@WTF@@@Z, ?isPreloaded@CachedResourceLoader@WebCore@@QEBA_NAEBVString@WTF@@@Z)
         symbolWithPointer(?jsArray@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@PAVJSDOMGlobalObject@1@V?$PassRefPtr@VDOMStringList@WebCore@@@WTF@@@Z, ?jsArray@WebCore@@YA?AVJSValue@JSC@@PEAVExecState@3@PEAVJSDOMGlobalObject@1@V?$PassRefPtr@VDOMStringList@WebCore@@@WTF@@@Z)
         symbolWithPointer(?lastChangeWasUserEdit@HTMLTextFormControlElement@WebCore@@QBE_NXZ, ?lastChangeWasUserEdit@HTMLTextFormControlElement@WebCore@@QEBA_NXZ)
         symbolWithPointer(?mainThreadScrollingReasonsAsText@Page@WebCore@@QAE?AVString@WTF@@XZ, ?mainThreadScrollingReasonsAsText@Page@WebCore@@QEAA?AVString@WTF@@XZ)
         symbolWithPointer(?markerTextForListItem@WebCore@@YA?AVString@WTF@@PAVElement@1@@Z, ?markerTextForListItem@WebCore@@YA?AVString@WTF@@PEAVElement@1@@Z)
-        symbolWithPointer(?nextSibling@ComposedShadowTreeWalker@WebCore@@QAEXXZ, ?nextSibling@ComposedShadowTreeWalker@WebCore@@QEAAXXZ)
-        symbolWithPointer(?firstChild@ComposedShadowTreeWalker@WebCore@@QAEXXZ, ?firstChild@ComposedShadowTreeWalker@WebCore@@QEAAXXZ)
-        symbolWithPointer(?lastChild@ComposedShadowTreeWalker@WebCore@@QAEXXZ, ?lastChild@ComposedShadowTreeWalker@WebCore@@QEAAXXZ)
         symbolWithPointer(?length@StaticNodeList@WebCore@@UBEIXZ, ?length@StaticNodeList@WebCore@@UEBAIXZ)
         symbolWithPointer(?shadowRoot@Element@WebCore@@QBEPAVShadowRoot@2@XZ, ?shadowRoot@Element@WebCore@@QEBAPEAVShadowRoot@2@XZ)
         ?localUserSpecificStorageDirectory@WebCore@@YA?AVString@WTF@@XZ
         symbolWithPointer(?namedItem@StaticNodeList@WebCore@@UBEPAVNode@2@ABVAtomicString@WTF@@@Z, ?namedItem@StaticNodeList@WebCore@@UEBAPEAVNode@2@AEBVAtomicString@WTF@@@Z)
-        symbolWithPointer(?next@ComposedShadowTreeWalker@WebCore@@QAEXXZ, ?next@ComposedShadowTreeWalker@WebCore@@QEAAXXZ)
-        symbolWithPointer(?previous@ComposedShadowTreeWalker@WebCore@@QAEXXZ, ?previous@ComposedShadowTreeWalker@WebCore@@QEAAXXZ)
         ?number@String@WTF@@SA?AV12@_J@Z
         ?number@String@WTF@@SA?AV12@_K@Z
         ?number@String@WTF@@SA?AV12@H@Z
         ?number@String@WTF@@SA?AV12@I@Z
         ?number@String@WTF@@SA?AV12@NIW4TrailingZerosTruncatingPolicy@2@@Z
+#if ENABLE(STYLE_SCOPED)
         symbolWithPointer(?numberOfScopedHTMLStyleChildren@Node@WebCore@@QBEIXZ, ?numberOfScopedHTMLStyleChildren@Node@WebCore@@QEBA_KXZ)
-        symbolWithPointer(?completeURL@Document@WebCore@@QBE?AVKURL@2@ABVString@WTF@@@Z, ?completeURL@Document@WebCore@@QEBA?AVKURL@2@AEBVString@WTF@@@Z)
+#endif
         symbolWithPointer(?page@Document@WebCore@@QBEPAVPage@2@XZ, ?page@Document@WebCore@@QEBAPEAVPage@2@XZ)
         symbolWithPointer(?pageNumberForElement@PrintContext@WebCore@@SAHPAVElement@2@ABVFloatSize@2@@Z, ?pageNumberForElement@PrintContext@WebCore@@SAHPEAVElement@2@AEBVFloatSize@2@@Z)
         symbolWithPointer(?paintControlTints@FrameView@WebCore@@AAEXXZ, ?paintControlTints@FrameView@WebCore@@AEAAXXZ)
@@ -363,9 +360,6 @@ EXPORTS
         symbolWithPointer(?isBitmapImage@BitmapImage@WebCore@@UBE_NXZ, ?isBitmapImage@BitmapImage@WebCore@@UEBA_NXZ)
         symbolWithPointer(?currentFrameKnownToBeOpaque@BitmapImage@WebCore@@UAE_NXZ, ?currentFrameKnownToBeOpaque@BitmapImage@WebCore@@UEAA_NXZ)
         symbolWithPointer(?hasSingleSecurityOrigin@BitmapImage@WebCore@@UBE_NXZ, ?hasSingleSecurityOrigin@BitmapImage@WebCore@@UEBA_NXZ)
-#if !ASSERT_DISABLED
-        symbolWithPointer(?notSolidColor@BitmapImage@WebCore@@UAE_NXZ, ?notSolidColor@BitmapImage@WebCore@@UEAA_NXZ)
-#endif
         symbolWithPointer(?computeIntrinsicDimensions@Image@WebCore@@UAEXAAULength@2@0AAVFloatSize@2@@Z, ?computeIntrinsicDimensions@Image@WebCore@@UEAAXAEAULength@2@0AEAVFloatSize@2@@Z)
         symbolWithPointer(?size@BitmapImage@WebCore@@UBE?AVIntSize@2@XZ, ?size@BitmapImage@WebCore@@UEBA?AVIntSize@2@XZ)
         symbolWithPointer(?getHotSpot@BitmapImage@WebCore@@UBE_NAAVIntPoint@2@@Z, ?getHotSpot@BitmapImage@WebCore@@UEBA_NAEAVIntPoint@2@@Z)
@@ -388,12 +382,13 @@ EXPORTS
         symbolWithPointer(?draw@BitmapImage@WebCore@@MAEXPAVGraphicsContext@2@ABVFloatRect@2@1W4ColorSpace@2@W4CompositeOperator@2@W4BlendMode@2@@Z, ?draw@BitmapImage@WebCore@@MAEXPAVGraphicsContext@2@ABVFloatRect@2@1W4ColorSpace@2@W4CompositeOperator@2@W4BlendMode@2@@Z)
 #endif
         symbolWithPointer(?getHBITMAP@BitmapImage@WebCore@@UAE_NPAUHBITMAP__@@@Z, ?getHBITMAP@BitmapImage@WebCore@@UEAA_NPEAUHBITMAP__@@@Z)
-        symbolWithPointer(?getHBITMAPOfSize@BitmapImage@WebCore@@UAE_NPAUHBITMAP__@@PAUtagSIZE@@@Z, ?getHBITMAPOfSize@BitmapImage@WebCore@@UEAA_NPEAUHBITMAP__@@PEAUtagSIZE@@@Z)
+        ?getHBITMAPOfSize@BitmapImage@WebCore@@UAE_NPAUHBITMAP__@@PBVIntSize@2@@Z
+        ?create@BitmapImage@WebCore@@SA?AV?$PassRefPtr@VBitmapImage@WebCore@@@WTF@@PAUHBITMAP__@@@Z
+        ?create@BitmapInfo@WebCore@@SA?AU12@ABVIntSize@2@W4BitCount@12@@Z
         symbolWithPointer(?drawPattern@Image@WebCore@@UAEXPAVGraphicsContext@2@ABVFloatRect@2@ABVAffineTransform@2@ABVFloatPoint@2@W4ColorSpace@2@W4CompositeOperator@2@1W4BlendMode@2@@Z, ?drawPattern@Image@WebCore@@UEAAXPEAVGraphicsContext@2@AEBVFloatRect@2@AEBVAffineTransform@2@AEBVFloatPoint@2@W4ColorSpace@2@W4CompositeOperator@2@1W4BlendMode@2@@Z)
         symbolWithPointer(?drawFrameMatchingSourceSize@BitmapImage@WebCore@@MAEXPAVGraphicsContext@2@ABVFloatRect@2@ABVIntSize@2@W4ColorSpace@2@W4CompositeOperator@2@@Z, ?drawFrameMatchingSourceSize@BitmapImage@WebCore@@MEAAXPEAVGraphicsContext@2@AEBVFloatRect@2@AEBVIntSize@2@W4ColorSpace@2@W4CompositeOperator@2@@Z)
         symbolWithPointer(?mayFillWithSolidColor@BitmapImage@WebCore@@MAE_NXZ, ?mayFillWithSolidColor@BitmapImage@WebCore@@MEAA_NXZ)
         symbolWithPointer(?solidColor@BitmapImage@WebCore@@MBE?AVColor@2@XZ, ?solidColor@BitmapImage@WebCore@@MEBA?AVColor@2@XZ)
-        symbolWithPointer(?frameCount@BitmapImage@WebCore@@MAEIXZ, ?frameCount@BitmapImage@WebCore@@MEAA_KXZ)
         symbolWithPointer(?frameOrientationAtIndex@BitmapImage@WebCore@@IAE?AVImageOrientation@2@I@Z, ?frameOrientationAtIndex@BitmapImage@WebCore@@IEAA?AVImageOrientation@2@_K@Z)
         symbolWithPointer(?addAuthorSheet@DocumentStyleSheetCollection@WebCore@@QAEXV?$PassRefPtr@VStyleSheetContents@WebCore@@@WTF@@@Z, ?addAuthorSheet@DocumentStyleSheetCollection@WebCore@@QEAAXV?$PassRefPtr@VStyleSheetContents@WebCore@@@WTF@@@Z)
         symbolWithPointer(?parseString@StyleSheetContents@WebCore@@QAE_NABVString@WTF@@@Z, ?parseString@StyleSheetContents@WebCore@@QEAA_NAEBVString@WTF@@@Z)
@@ -458,3 +453,5 @@ EXPORTS
         symbolWithPointer(?nearest@TimeRanges@WebCore@@QBENN@Z, ?nearest@TimeRanges@WebCore@@QEBANN@Z)
         symbolWithPointer(?add@TimeRanges@WebCore@@QAEXNN@Z, ?add@TimeRanges@WebCore@@QEAAXNN@Z)
 #endif
+        symbolWithPointer(?toJSONString@InspectorValue@WebCore@@QBE?AVString@WTF@@XZ, ?toJSONString@InspectorValue@WebCore@@QBE?AVString@WTF@@XZ)
+        symbolWithPointer(?buildObjectForHighlightedNode@InspectorController@WebCore@@QBE?AV?$PassRefPtr@VInspectorObject@WebCore@@@WTF@@XZ, ?buildObjectForHighlightedNode@InspectorController@WebCore@@QBE?AV?$PassRefPtr@VInspectorObject@WebCore@@@WTF@@XZ)
