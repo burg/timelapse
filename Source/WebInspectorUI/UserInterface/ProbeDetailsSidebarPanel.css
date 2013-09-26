@@ -46,16 +46,16 @@
 }
 
 .details-section.probe-group .options > .probe-clear-samples {
-	content: url(Images/NavigationItemTrash.pdf);
+	content: url(Images/NavigationItemTrash.svg);
 	height: 13px;
 }
 
 .details-section.probe-group .options > .probe-remove {
-	content: url(Images/Close.pdf);
+	content: url(Images/Close.svg);
 }
 
 .details-section.probe-group .options > .probe-add {
-	content: url(Images/Plus.pdf);
+	content: url(Images/Plus.svg);
 }
 
 .details-section.probe-group .options > input {
