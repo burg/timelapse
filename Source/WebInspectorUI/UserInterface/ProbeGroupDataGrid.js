@@ -48,8 +48,11 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     this._setupData();
 }
 
-WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName = "past-value";
+WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName = "data-updated";
 WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName = "future-value";
+WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName = "past-value";
+
+WebInspector.ProbeGroupDataGrid.DataUpdatedAnimationDuration = 300; // milliseconds
 
 WebInspector.ProbeGroupDataGrid.prototype = {
     constructor: WebInspector.ProbeGroupDataGrid,
@@ -300,6 +303,12 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             } else
                 this.insertChild(node, insertionIndex);
         }
+        console.assert(node);
+
+        node.element.classList.add(WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName);
+        window.setTimeout(function() {
+            node.element.classList.remove(WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName);
+        }, WebInspector.ProbeGroupDataGrid.DataUpdatedAnimationDuration);
 
         node.element.classList.remove(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
         this._nodesSinceLastNavigation.push(node);
