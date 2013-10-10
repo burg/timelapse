@@ -36,6 +36,7 @@ WebInspector.ProbeGroupObject = function(url, position)
     this._probesByUid = {};
     this._enabled = false;
     this._resolved = false;
+    this._selected = false;
 
     this._createDataTable();
 
@@ -44,6 +45,8 @@ WebInspector.ProbeGroupObject = function(url, position)
     WebInspector.probeManager.addEventListener(WebInspector.ProbeManager.Event.ProbeResolveStateDidChange, this._resolveStateDidChange, this);
     WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingLoaded, this.clearSamples, this);
     WebInspector.replayManager.addEventListener(WebInspector.ReplayManager.Event.RecordingUnloaded, this.clearSamples, this);
+    WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.Paused, this._checkSelected, this);
+    WebInspector.debuggerManager.addEventListener(WebInspector.DebuggerManager.Event.Resumed, this._unselected, this);
 }
 
 WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
@@ -51,6 +54,8 @@ WebInspector.Object.addConstructorFunctions(WebInspector.ProbeGroupObject);
 WebInspector.ProbeGroupObject.Event = {
     Disabled: "probe-group-disabled",
     Enabled: "probe-group-enabled",
+    Selected: "probe-group-selected",
+    Unselected: "probe-group-unselected",
     ProbeAdded: "probe-group-probe-added",
     ProbeRemoved: "probe-group-probe-removed",
     ResolveStateDidChange: "probe-group-resolve-state-did-change",
@@ -149,7 +154,7 @@ WebInspector.ProbeGroupObject.prototype = {
     {
         for (var i = 0; i < this._probes.length; ++i)
             WebInspector.probeManager._clearSamplesForProbe(this._probes[i]);
-        
+
         this._createDataTable();
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.SamplesCleared, this);
     },
@@ -243,5 +248,23 @@ WebInspector.ProbeGroupObject.prototype = {
 
         this._resolved = anyProbeIsResolved;
         this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.ResolveStateDidChange, this);
+    },
+
+    _checkSelected: function(event)
+    {
+        var activeSourceCodeLocation = WebInspector.debuggerManager.activeCallFrame.sourceCodeLocation;
+        if (activeSourceCodeLocation.lineNumber !== this.position.lineNumber || activeSourceCodeLocation.columnNumber !== ++this.position.columnNumber)
+            return;
+        this._selected = true;
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.Selected, this);
+
+    },
+
+    _unselected: function(event)
+    {
+        if (!this._selected)
+            return;
+        this._selected = false;
+        this.dispatchEventToListeners(WebInspector.ProbeGroupObject.Event.Unselected, this);
     }
 };
