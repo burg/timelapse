@@ -43,6 +43,8 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeAdded, this._setupProbe);
     this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.ProbeRemoved, this._teardownProbe);
     this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.SamplesCleared, this._setupData);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Selected, this._pausedAtProbeGroup);
+    this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Unselected, this._executionResumed);
     this._groupListeners.install();
 
     this._setupData();
@@ -51,6 +53,7 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
 WebInspector.ProbeGroupDataGrid.DataUpdatedStyleClassName = "data-updated";
 WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName = "future-value";
 WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName = "past-value";
+WebInspector.ProbeGroupDataGrid.HighlightedFrameStyleClassName = "highlighted";
 
 WebInspector.ProbeGroupDataGrid.DataUpdatedAnimationDuration = 300; // milliseconds
 
@@ -276,6 +279,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
         this.removeChildren();
         this._frameNodes = {};
         this._separators = {};
+        delete this._lastUpdatedFrame;
     },
 
     _updateNodeForFrame: function(frame)
@@ -330,12 +334,14 @@ WebInspector.ProbeGroupDataGrid.prototype = {
     _dataFrameInserted: function(event)
     {
         var frame = event.data;
+        this._lastUpdatedFrame = frame;
         this._updateNodeForFrame(frame);
     },
 
     _dataFrameReplaced: function(event)
     {
         var frame = event.data;
+        this._lastUpdatedFrame = frame;
         this._updateNodeForFrame(frame);
     },
 
@@ -364,6 +370,25 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             var elem = this._frameNodes[key].element;
             elem.classList.add(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
             elem.classList.remove(WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName);
+        }
+    },
+
+    _pausedAtProbeGroup: function(event)
+    {
+        var lastIndex = this._data.frames.indexOf(this._lastUpdatedFrame);
+        var currentFrame = this._data.frames[lastIndex];
+        if (!currentFrame || !this._frameNodes[currentFrame.key])
+            return;
+        node = this._frameNodes[currentFrame.key];
+        node.element.classList.add(WebInspector.ProbeGroupDataGrid.HighlightedFrameStyleClassName);
+
+    },
+
+    _executionResumed: function(event)
+    {
+        for (var key in this._frameNodes) {
+            var elem = this._frameNodes[key].element;
+            elem.classList.remove(WebInspector.ProbeGroupDataGrid.HighlightedFrameStyleClassName);
         }
     }
 }
