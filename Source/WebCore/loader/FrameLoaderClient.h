@@ -34,6 +34,7 @@
 #include "IconURL.h"
 #include "LayoutMilestones.h"
 #include "ResourceLoadPriority.h"
+#include <functional>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
@@ -76,7 +77,7 @@ namespace WebCore {
 #endif
     class HTMLPlugInElement;
     class IntSize;
-    class KURL;
+    class URL;
     class MessageEvent;
     class NavigationAction;
     class Page;
@@ -97,7 +98,7 @@ namespace WebCore {
     class SubstituteData;
     class Widget;
 
-    typedef void (PolicyChecker::*FramePolicyFunction)(PolicyAction);
+    typedef std::function<void (PolicyAction)> FramePolicyFunction;
 
     class FrameLoaderClient {
     public:
@@ -140,7 +141,7 @@ namespace WebCore {
         virtual void dispatchDidHandleOnloadEvents() = 0;
         virtual void dispatchDidReceiveServerRedirectForProvisionalLoad() = 0;
         virtual void dispatchDidCancelClientRedirect() = 0;
-        virtual void dispatchWillPerformClientRedirect(const KURL&, double interval, double fireDate) = 0;
+        virtual void dispatchWillPerformClientRedirect(const URL&, double interval, double fireDate) = 0;
         virtual void dispatchDidNavigateWithinPage() { }
         virtual void dispatchDidChangeLocationWithinPage() = 0;
         virtual void dispatchDidPushStateWithinPage() = 0;
@@ -163,9 +164,9 @@ namespace WebCore {
         virtual Frame* dispatchCreatePage(const NavigationAction&) = 0;
         virtual void dispatchShow() = 0;
 
-        virtual void dispatchDecidePolicyForResponse(FramePolicyFunction, const ResourceResponse&, const ResourceRequest&) = 0;
-        virtual void dispatchDecidePolicyForNewWindowAction(FramePolicyFunction, const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String& frameName) = 0;
-        virtual void dispatchDecidePolicyForNavigationAction(FramePolicyFunction, const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>) = 0;
+        virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction) = 0;
+        virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String& frameName, FramePolicyFunction) = 0;
+        virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, FramePolicyFunction) = 0;
         virtual void cancelPolicyCheck() = 0;
 
         virtual void dispatchUnableToImplementPolicy(const ResourceError&) = 0;
@@ -173,7 +174,7 @@ namespace WebCore {
         virtual void dispatchWillRequestResource(CachedResourceRequest*) { }
 
         virtual void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) = 0;
-        virtual void dispatchWillSubmitForm(FramePolicyFunction, PassRefPtr<FormState>) = 0;
+        virtual void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction) = 0;
 
         virtual void revertToProvisionalState(DocumentLoader*) = 0;
         virtual void setMainDocumentError(DocumentLoader*, const ResourceError&) = 0;
@@ -214,8 +215,8 @@ namespace WebCore {
         // The indicated security origin has run active content (such as a
         // script) from an insecure source.  Note that the insecure content can
         // spread to other frames in the same origin.
-        virtual void didRunInsecureContent(SecurityOrigin*, const KURL&) = 0;
-        virtual void didDetectXSS(const KURL&, bool didBlockEntirePage) = 0;
+        virtual void didRunInsecureContent(SecurityOrigin*, const URL&) = 0;
+        virtual void didDetectXSS(const URL&, bool didBlockEntirePage) = 0;
 
         virtual ResourceError cancelledError(const ResourceRequest&) = 0;
         virtual ResourceError blockedError(const ResourceRequest&) = 0;
@@ -242,9 +243,9 @@ namespace WebCore {
         virtual void prepareForDataSourceReplacement() = 0;
 
         virtual PassRefPtr<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) = 0;
-        virtual void setTitle(const StringWithDirection&, const KURL&) = 0;
+        virtual void setTitle(const StringWithDirection&, const URL&) = 0;
 
-        virtual String userAgent(const KURL&) = 0;
+        virtual String userAgent(const URL&) = 0;
         
         virtual void savePlatformDataToCachedFrame(CachedFrame*) = 0;
         virtual void transitionToCommittedFromCachedFrame(CachedFrame*) = 0;
@@ -258,28 +259,26 @@ namespace WebCore {
         virtual bool canCachePage() const = 0;
         virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) = 0;
 
-        virtual PassRefPtr<Frame> createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) = 0;
-        virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
+        virtual PassRefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) = 0;
+        virtual PassRefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) = 0;
         virtual void recreatePlugin(Widget*) = 0;
         virtual void redirectDataToPlugin(Widget* pluginWidget) = 0;
 
-        virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;
+        virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) = 0;
 
         virtual void dispatchDidFailToStartPlugin(const PluginView*) const { }
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-        virtual PassRefPtr<Widget> createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&) = 0;
+        virtual PassRefPtr<Widget> createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&) = 0;
         virtual void hideMediaPlayerProxyPlugin(Widget*) = 0;
         virtual void showMediaPlayerProxyPlugin(Widget*) = 0;
 #endif
 
-        virtual ObjectContentType objectContentType(const KURL&, const String& mimeType, bool shouldPreferPlugInsForImages) = 0;
+        virtual ObjectContentType objectContentType(const URL&, const String& mimeType, bool shouldPreferPlugInsForImages) = 0;
         virtual String overrideMediaType() const = 0;
 
-        virtual void dispatchDidClearWindowObjectInWorld(DOMWrapperWorld*) = 0;
+        virtual void dispatchDidClearWindowObjectInWorld(DOMWrapperWorld&) = 0;
         virtual void documentElementAvailable() = 0;
         virtual void didPerformFirstNavigation() const = 0; // "Navigation" here means a transition from one page to another that ends up in the back/forward list.
-
-        virtual void didExhaustMemoryAvailableForScript() { };
 
         virtual void registerForIconNotification(bool listen = true) = 0;
         
@@ -294,41 +293,27 @@ namespace WebCore {
 #endif
 
         virtual bool shouldAlwaysUsePluginDocument(const String& /*mimeType*/) const { return false; }
-        virtual bool shouldLoadMediaElementURL(const KURL&) const { return true; }
+        virtual bool shouldLoadMediaElementURL(const URL&) const { return true; }
 
         virtual void didChangeScrollOffset() { }
 
         virtual bool allowScript(bool enabledPerSettings) { return enabledPerSettings; }
-        virtual bool allowScriptFromSource(bool enabledPerSettings, const KURL&) { return enabledPerSettings; }
+        virtual bool allowScriptFromSource(bool enabledPerSettings, const URL&) { return enabledPerSettings; }
         virtual bool allowPlugins(bool enabledPerSettings) { return enabledPerSettings; }
-        virtual bool allowImage(bool enabledPerSettings, const KURL&) { return enabledPerSettings; }
-        virtual bool allowDisplayingInsecureContent(bool enabledPerSettings, SecurityOrigin*, const KURL&) { return enabledPerSettings; }
-        virtual bool allowRunningInsecureContent(bool enabledPerSettings, SecurityOrigin*, const KURL&) { return enabledPerSettings; }
-
-        // This callback notifies the client that the frame was about to run
-        // JavaScript but did not because allowScript returned false. We
-        // have a separate callback here because there are a number of places
-        // that need to know if JavaScript is enabled but are not necessarily
-        // preparing to execute script.
-        virtual void didNotAllowScript() { }
-        // This callback is similar, but for plugins.
-        virtual void didNotAllowPlugins() { }
+        virtual bool allowImage(bool enabledPerSettings, const URL&) { return enabledPerSettings; }
+        virtual bool allowDisplayingInsecureContent(bool enabledPerSettings, SecurityOrigin*, const URL&) { return enabledPerSettings; }
+        virtual bool allowRunningInsecureContent(bool enabledPerSettings, SecurityOrigin*, const URL&) { return enabledPerSettings; }
 
         // Clients that generally disallow universal access can make exceptions for particular URLs.
-        virtual bool shouldForceUniversalAccessFromLocalURL(const KURL&) { return false; }
+        virtual bool shouldForceUniversalAccessFromLocalURL(const URL&) { return false; }
 
         virtual PassRefPtr<FrameNetworkingContext> createNetworkingContext() = 0;
 
-        virtual bool shouldPaintBrokenImage(const KURL&) const { return true; }
-
-        // Returns true if the embedder intercepted the postMessage call
-        virtual bool willCheckAndDispatchMessageEvent(SecurityOrigin* /*target*/, MessageEvent*) const { return false; }
-
-        virtual void didChangeName(const String&) { }
+        virtual bool shouldPaintBrokenImage(const URL&) const { return true; }
 
         virtual void dispatchWillOpenSocketStream(SocketStreamHandle*) { }
 
-        virtual void dispatchGlobalObjectAvailable(DOMWrapperWorld*) { }
+        virtual void dispatchGlobalObjectAvailable(DOMWrapperWorld&) { }
         virtual void dispatchWillDisconnectDOMWindowExtensionFromGlobalObject(DOMWindowExtension*) { }
         virtual void dispatchDidReconnectDOMWindowExtensionToGlobalObject(DOMWindowExtension*) { }
         virtual void dispatchWillDestroyGlobalObjectForDOMWindowExtension(DOMWindowExtension*) { }
@@ -343,11 +328,6 @@ namespace WebCore {
         // notification with the given GL_ARB_robustness guilt/innocence code (see Extensions3D.h).
         virtual void didLoseWebGLContext(int) { }
 #endif
-
-        // If an HTML document is being loaded, informs the embedder that the document will have its <body> attached soon.
-        virtual void dispatchWillInsertBody() { }
-
-        virtual void dispatchDidChangeResourcePriority(unsigned long /*identifier*/, ResourceLoadPriority) { }
 
         virtual void forcePageTransitionIfNeeded() { }
 

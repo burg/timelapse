@@ -87,7 +87,7 @@ namespace WebCore {
         void cancelPlayback();
 
         // External callbacks
-        void willDispatchEvent(const Event&, DOMWindow*, Node*, const PositionMark&);
+        void willDispatchEvent(const Event&, Frame*, const PositionMark&);
         void didDispatchEvent();
         void frameNavigated(DocumentLoader*);
         void willFireTimer(int, Document*);

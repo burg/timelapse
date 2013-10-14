@@ -46,7 +46,6 @@ protected:
     static const int DoubleConditionBits = DoubleConditionBitInvert | DoubleConditionBitSpecial;
 
 public:
-    typedef X86Assembler::FPRegisterID FPRegisterID;
     typedef X86Assembler::XMMRegisterID XMMRegisterID;
     
     static bool isCompactPtrAlignedAddressOffset(ptrdiff_t value)
@@ -97,14 +96,12 @@ public:
 
     static const RegisterID stackPointerRegister = X86Registers::esp;
     static const RegisterID framePointerRegister = X86Registers::ebp;
-
-#if ENABLE(JIT_CONSTANT_BLINDING)
+    
     static bool shouldBlindForSpecificArch(uint32_t value) { return value >= 0x00ffffff; }
 #if CPU(X86_64)
     static bool shouldBlindForSpecificArch(uint64_t value) { return value >= 0x00ffffff; }
 #if OS(DARWIN) // On 64-bit systems other than DARWIN uint64_t and uintptr_t are the same type so overload is prohibited.
     static bool shouldBlindForSpecificArch(uintptr_t value) { return value >= 0x00ffffff; }
-#endif
 #endif
 #endif
 
@@ -601,7 +598,19 @@ public:
         ASSERT(-128 <= imm.m_value && imm.m_value < 128);
         m_assembler.movb_i8m(imm.m_value, address.offset, address.base, address.index, address.scale);
     }
-    
+
+    static ALWAYS_INLINE RegisterID getUnusedRegister(BaseIndex address)
+    {
+        if (address.base != X86Registers::eax && address.index != X86Registers::eax)
+            return X86Registers::eax;
+
+        if (address.base != X86Registers::ebx && address.index != X86Registers::ebx)
+            return X86Registers::ebx;
+
+        ASSERT(address.base != X86Registers::ecx && address.index != X86Registers::ecx);
+        return X86Registers::ecx;
+    }
+
     void store8(RegisterID src, BaseIndex address)
     {
 #if CPU(X86)
@@ -609,15 +618,7 @@ public:
         // esp..edi are mapped to the 'h' registers!
         if (src >= 4) {
             // Pick a temporary register.
-            RegisterID temp;
-            if (address.base != X86Registers::eax && address.index != X86Registers::eax)
-                temp = X86Registers::eax;
-            else if (address.base != X86Registers::ebx && address.index != X86Registers::ebx)
-                temp = X86Registers::ebx;
-            else {
-                ASSERT(address.base != X86Registers::ecx && address.index != X86Registers::ecx);
-                temp = X86Registers::ecx;
-            }
+            RegisterID temp = getUnusedRegister(address);
 
             // Swap to the temporary register to perform the store.
             swap(src, temp);
@@ -636,16 +637,8 @@ public:
         // esp..edi are mapped to the 'h' registers!
         if (src >= 4) {
             // Pick a temporary register.
-            RegisterID temp;
-            if (address.base != X86Registers::eax && address.index != X86Registers::eax)
-                temp = X86Registers::eax;
-            else if (address.base != X86Registers::ebx && address.index != X86Registers::ebx)
-                temp = X86Registers::ebx;
-            else {
-                ASSERT(address.base != X86Registers::ecx && address.index != X86Registers::ecx);
-                temp = X86Registers::ecx;
-            }
-            
+            RegisterID temp = getUnusedRegister(address);
+
             // Swap to the temporary register to perform the store.
             swap(src, temp);
             m_assembler.movw_rm(temp, address.offset, address.base, address.index, address.scale);

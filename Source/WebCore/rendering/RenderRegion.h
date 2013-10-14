@@ -139,11 +139,6 @@ public:
 
     virtual void collectLayerFragments(LayerFragments&, const LayoutRect&, const LayoutRect&) { }
 
-#if USE(ACCELERATED_COMPOSITING)
-    void setRequiresLayerForCompositing(bool);
-    virtual bool requiresLayer() const { return m_requiresLayerForCompositing || RenderBlock::requiresLayer(); }
-#endif
-
     void addLayoutOverflowForBox(const RenderBox*, const LayoutRect&);
     void addVisualOverflowForBox(const RenderBox*, const LayoutRect&);
     LayoutRect layoutOverflowRectForBox(const RenderBox*);
@@ -190,7 +185,7 @@ private:
     virtual void installFlowThread();
 
     PassRefPtr<RenderStyle> computeStyleInRegion(const RenderObject*);
-    void computeChildrenStyleInRegion(const RenderObject*);
+    void computeChildrenStyleInRegion(const RenderElement*);
     void setObjectStyleInRegion(RenderObject*, PassRefPtr<RenderStyle>, bool objectRegionStyleCached);
 
     void checkRegionStyle();
@@ -232,9 +227,6 @@ private:
     bool m_isValid : 1;
     bool m_hasCustomRegionStyle : 1;
     bool m_hasAutoLogicalHeight : 1;
-#if USE(ACCELERATED_COMPOSITING)
-    bool m_requiresLayerForCompositing : 1;
-#endif
     bool m_hasComputedAutoHeight : 1;
 
     LayoutUnit m_computedAutoHeight;

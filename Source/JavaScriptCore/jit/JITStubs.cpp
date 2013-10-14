@@ -375,7 +375,8 @@ public:
         : m_factory(factory)
     {
     }
-    JSValue operator()(ExecState* exec)
+
+    virtual JSValue operator()(ExecState* exec) OVERRIDE
     {
         return m_factory(exec);
     }
@@ -392,7 +393,8 @@ public:
         : m_factory(factory), m_callee(callee)
     {
     }
-    JSValue operator()(ExecState* exec)
+
+    virtual JSValue operator()(ExecState* exec) OVERRIDE
     {
         return m_factory(exec, m_callee);
     }
@@ -432,26 +434,6 @@ DEFINE_STUB_FUNCTION(void, handle_watchdog_timer)
         VM_THROW_EXCEPTION_AT_END();
         return;
     }
-}
-
-DEFINE_STUB_FUNCTION(void*, stack_check)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    if (UNLIKELY(!stackFrame.stack->grow(&callFrame->registers()[-callFrame->codeBlock()->m_numCalleeRegisters]))) {
-        ErrorWithExecFunctor functor = ErrorWithExecFunctor(createStackOverflowError);
-        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
-    }
-
-    return callFrame;
-}
-
-DEFINE_STUB_FUNCTION(JSObject*, op_new_object)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    return constructEmptyObject(stackFrame.callFrame, stackFrame.args[0].structure());
 }
 
 DEFINE_STUB_FUNCTION(void, op_put_by_id_generic)
@@ -1047,7 +1029,7 @@ DEFINE_STUB_FUNCTION(void, optimize)
         for (size_t i = 0; i < mustHandleValues.size(); ++i) {
             int operand = mustHandleValues.operandForIndex(i);
             if (operandIsArgument(operand)
-                && !operandToArgument(operand)
+                && !VirtualRegister(operand).toArgument()
                 && codeBlock->codeType() == FunctionCode
                 && codeBlock->specializationKind() == CodeForConstruct) {
                 // Ugh. If we're in a constructor, the 'this' argument may hold garbage. It will
@@ -1150,245 +1132,6 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_del_by_id)
     return JSValue::encode(result);
 }
 
-DEFINE_STUB_FUNCTION(JSObject*, op_new_func)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-    
-    ASSERT(stackFrame.callFrame->codeBlock()->codeType() != FunctionCode || !stackFrame.callFrame->codeBlock()->needsFullScopeChain() || stackFrame.callFrame->uncheckedR(stackFrame.callFrame->codeBlock()->activationRegister()).jsValue());
-    return JSFunction::create(stackFrame.callFrame, stackFrame.args[0].function(), stackFrame.callFrame->scope());
-}
-
-inline void* jitCompileFor(CallFrame* callFrame, CodeSpecializationKind kind)
-{
-    // This function is called by cti_op_call_jitCompile() and
-    // cti_op_construct_jitCompile() JIT glue trampolines to compile the
-    // callee function that we want to call. Both cti glue trampolines are
-    // called by JIT'ed code which has pushed a frame and initialized most of
-    // the frame content except for the codeBlock.
-    //
-    // Normally, the prologue of the callee is supposed to set the frame's cb
-    // pointer to the cb of the callee. But in this case, the callee code does
-    // not exist yet until it is compiled below. The compilation process will
-    // allocate memory which may trigger a GC. The GC, in turn, will scan the
-    // JSStack, and will expect the frame's cb to either be valid or 0. If
-    // we don't initialize it, the GC will be accessing invalid memory and may
-    // crash.
-    //
-    // Hence, we should nullify it here before proceeding with the compilation.
-    callFrame->setCodeBlock(0);
-
-    JSFunction* function = jsCast<JSFunction*>(callFrame->callee());
-    ASSERT(!function->isHostFunction());
-    FunctionExecutable* executable = function->jsExecutable();
-    JSScope* callDataScopeChain = function->scope();
-    JSObject* error = executable->prepareForExecution(callFrame, callDataScopeChain, kind);
-    if (!error)
-        return function;
-    callFrame->vm().throwException(callFrame, error);
-    return 0;
-}
-
-DEFINE_STUB_FUNCTION(void*, op_call_jitCompile)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-#if !ASSERT_DISABLED
-    CallData callData;
-    ASSERT(stackFrame.callFrame->callee()->methodTable()->getCallData(stackFrame.callFrame->callee(), callData) == CallTypeJS);
-#endif
-    
-    CallFrame* callFrame = stackFrame.callFrame;
-    void* result = jitCompileFor(callFrame, CodeForCall);
-    if (!result)
-        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(void*, op_construct_jitCompile)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-#if !ASSERT_DISABLED
-    ConstructData constructData;
-    ASSERT(jsCast<JSFunction*>(stackFrame.callFrame->callee())->methodTable()->getConstructData(stackFrame.callFrame->callee(), constructData) == ConstructTypeJS);
-#endif
-
-    CallFrame* callFrame = stackFrame.callFrame;    
-    void* result = jitCompileFor(callFrame, CodeForConstruct);
-    if (!result)
-        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(int, op_call_arityCheck)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    int missingArgCount = CommonSlowPaths::arityCheckFor(callFrame, stackFrame.stack, CodeForCall);
-    if (missingArgCount < 0) {
-        ErrorWithExecFunctor functor = ErrorWithExecFunctor(createStackOverflowError);
-        return throwExceptionFromOpCall<int>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
-    }
-    return missingArgCount;
-}
-
-DEFINE_STUB_FUNCTION(int, op_construct_arityCheck)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    int missingArgCount = CommonSlowPaths::arityCheckFor(callFrame, stackFrame.stack, CodeForConstruct);
-    if (missingArgCount < 0) {
-        ErrorWithExecFunctor functor = ErrorWithExecFunctor(createStackOverflowError);
-        return throwExceptionFromOpCall<int>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
-    }
-    return missingArgCount;
-}
-
-inline void* lazyLinkFor(CallFrame* callFrame, CodeSpecializationKind kind)
-{
-    JSFunction* callee = jsCast<JSFunction*>(callFrame->callee());
-    ExecutableBase* executable = callee->executable();
-
-    MacroAssemblerCodePtr codePtr;
-    CodeBlock* codeBlock = 0;
-    CallLinkInfo* callLinkInfo = &callFrame->callerFrame()->codeBlock()->getCallLinkInfo(callFrame->returnPC());
-
-    // This function is called by cti_vm_lazyLinkCall() and
-    // cti_lazyLinkConstruct JIT glue trampolines to link the callee function
-    // that we want to call. Both cti glue trampolines are called by JIT'ed
-    // code which has pushed a frame and initialized most of the frame content
-    // except for the codeBlock.
-    //
-    // Normally, the prologue of the callee is supposed to set the frame's cb
-    // field to the cb of the callee. But in this case, the callee may not
-    // exist yet, and if not, it will be generated in the compilation below.
-    // The compilation will allocate memory which may trigger a GC. The GC, in
-    // turn, will scan the JSStack, and will expect the frame's cb to be valid
-    // or 0. If we don't initialize it, the GC will be accessing invalid
-    // memory and may crash.
-    //
-    // Hence, we should nullify it here before proceeding with the compilation.
-    callFrame->setCodeBlock(0);
-
-    if (executable->isHostFunction())
-        codePtr = executable->generatedJITCodeFor(kind)->addressForCall();
-    else {
-        FunctionExecutable* functionExecutable = static_cast<FunctionExecutable*>(executable);
-        if (JSObject* error = functionExecutable->prepareForExecution(callFrame, callee->scope(), kind)) {
-            callFrame->vm().throwException(callFrame, error);
-            return 0;
-        }
-        codeBlock = functionExecutable->codeBlockFor(kind);
-        if (callFrame->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters())
-            || callLinkInfo->callType == CallLinkInfo::CallVarargs)
-            codePtr = functionExecutable->generatedJITCodeWithArityCheckFor(kind);
-        else
-            codePtr = functionExecutable->generatedJITCodeFor(kind)->addressForCall();
-    }
-    
-    ConcurrentJITLocker locker(callFrame->callerFrame()->codeBlock()->m_lock);
-    if (!callLinkInfo->seenOnce())
-        callLinkInfo->setSeen();
-    else
-        JIT::linkFor(callFrame->callerFrame(), callee, callFrame->callerFrame()->codeBlock(), codeBlock, codePtr, callLinkInfo, &callFrame->vm(), kind);
-
-    return codePtr.executableAddress();
-}
-
-DEFINE_STUB_FUNCTION(void*, vm_lazyLinkCall)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    void* result = lazyLinkFor(callFrame, CodeForCall);
-    if (!result)
-        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(void*, vm_lazyLinkClosureCall)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    
-    CodeBlock* callerCodeBlock = callFrame->callerFrame()->codeBlock();
-    VM* vm = callerCodeBlock->vm();
-    CallLinkInfo* callLinkInfo = &callerCodeBlock->getCallLinkInfo(callFrame->returnPC());
-    JSFunction* callee = jsCast<JSFunction*>(callFrame->callee());
-    ExecutableBase* executable = callee->executable();
-    Structure* structure = callee->structure();
-    
-    ASSERT(callLinkInfo->callType == CallLinkInfo::Call);
-    ASSERT(callLinkInfo->isLinked());
-    ASSERT(callLinkInfo->callee);
-    ASSERT(callee != callLinkInfo->callee.get());
-    
-    bool shouldLink = false;
-    CodeBlock* calleeCodeBlock = 0;
-    MacroAssemblerCodePtr codePtr;
-    
-    if (executable == callLinkInfo->callee.get()->executable()
-        && structure == callLinkInfo->callee.get()->structure()) {
-        
-        shouldLink = true;
-        
-        ASSERT(executable->hasJITCodeForCall());
-        codePtr = executable->generatedJITCodeForCall()->addressForCall();
-        if (!callee->executable()->isHostFunction()) {
-            calleeCodeBlock = jsCast<FunctionExecutable*>(executable)->codeBlockForCall();
-            if (callFrame->argumentCountIncludingThis() < static_cast<size_t>(calleeCodeBlock->numParameters())) {
-                shouldLink = false;
-                codePtr = executable->generatedJITCodeWithArityCheckFor(CodeForCall);
-            }
-        }
-    } else if (callee->isHostFunction())
-        codePtr = executable->generatedJITCodeForCall()->addressForCall();
-    else {
-        // Need to clear the code block before compilation, because compilation can GC.
-        callFrame->setCodeBlock(0);
-        
-        FunctionExecutable* functionExecutable = jsCast<FunctionExecutable*>(executable);
-        JSScope* scopeChain = callee->scope();
-        JSObject* error = functionExecutable->prepareForExecution(callFrame, scopeChain, CodeForCall);
-        if (error) {
-            callFrame->vm().throwException(callFrame, error);
-            return 0;
-        }
-        
-        codePtr = functionExecutable->generatedJITCodeWithArityCheckFor(CodeForCall);
-    }
-    
-    if (shouldLink) {
-        ASSERT(codePtr);
-        ConcurrentJITLocker locker(callerCodeBlock->m_lock);
-        JIT::compileClosureCall(vm, callLinkInfo, callerCodeBlock, calleeCodeBlock, structure, executable, codePtr);
-        callLinkInfo->hasSeenClosure = true;
-    } else
-        JIT::linkSlowCall(callerCodeBlock, callLinkInfo);
-
-    return codePtr.executableAddress();
-}
-
-DEFINE_STUB_FUNCTION(void*, vm_lazyLinkConstruct)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    void* result = lazyLinkFor(callFrame, CodeForConstruct);
-    if (!result)
-        return throwExceptionFromOpCall<void*>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return result;
-}
-
 DEFINE_STUB_FUNCTION(JSObject*, op_push_activation)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
@@ -1396,36 +1139,6 @@ DEFINE_STUB_FUNCTION(JSObject*, op_push_activation)
     JSActivation* activation = JSActivation::create(stackFrame.callFrame->vm(), stackFrame.callFrame, stackFrame.callFrame->codeBlock());
     stackFrame.callFrame->setScope(activation);
     return activation;
-}
-
-DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_NotJSFunction)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    
-    JSValue callee = callFrame->calleeAsValue();
-
-    CallData callData;
-    CallType callType = getCallData(callee, callData);
-
-    ASSERT(callType != CallTypeJS);
-    if (callType != CallTypeHost) {
-        ASSERT(callType == CallTypeNone);
-        ErrorWithExecAndCalleeFunctor functor = ErrorWithExecAndCalleeFunctor(createNotAFunctionError, callee);
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
-    }
-
-    EncodedJSValue returnValue;
-    {
-        SamplingTool::CallRecord callRecord(CTI_SAMPLER, true);
-        returnValue = callData.native.function(callFrame);
-    }
-
-    if (stackFrame.vm->exception())
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return returnValue;
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_create_arguments)
@@ -1472,56 +1185,6 @@ DEFINE_STUB_FUNCTION(void, op_profile_did_call)
 
     if (LegacyProfiler* profiler = stackFrame.vm->enabledProfiler())
         profiler->didExecute(stackFrame.callFrame, stackFrame.args[0].jsValue());
-}
-
-DEFINE_STUB_FUNCTION(JSObject*, op_new_array)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    return constructArrayNegativeIndexed(stackFrame.callFrame, stackFrame.args[2].arrayAllocationProfile(), reinterpret_cast<JSValue*>(&stackFrame.callFrame->registers()[stackFrame.args[0].int32()]), stackFrame.args[1].int32());
-}
-
-DEFINE_STUB_FUNCTION(JSObject*, op_new_array_with_size)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-    
-    return constructArrayWithSizeQuirk(stackFrame.callFrame, stackFrame.args[1].arrayAllocationProfile(), stackFrame.callFrame->lexicalGlobalObject(), stackFrame.args[0].jsValue());
-}
-
-DEFINE_STUB_FUNCTION(JSObject*, op_new_array_buffer)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-    
-    return constructArray(stackFrame.callFrame, stackFrame.args[2].arrayAllocationProfile(), stackFrame.callFrame->codeBlock()->constantBuffer(stackFrame.args[0].int32()), stackFrame.args[1].int32());
-}
-
-DEFINE_STUB_FUNCTION(EncodedJSValue, op_construct_NotJSConstruct)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    JSValue callee = callFrame->calleeAsValue();
-
-    ConstructData constructData;
-    ConstructType constructType = getConstructData(callee, constructData);
-
-    ASSERT(constructType != ConstructTypeJS);
-    if (constructType != ConstructTypeHost) {
-        ASSERT(constructType == ConstructTypeNone);
-        ErrorWithExecAndCalleeFunctor functor = ErrorWithExecAndCalleeFunctor(createNotAConstructorError, callee);
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS, &functor);
-    }
-
-    EncodedJSValue returnValue;
-    {
-        SamplingTool::CallRecord callRecord(CTI_SAMPLER, true);
-        returnValue = constructData.native.function(callFrame);
-    }
-
-    if (stackFrame.vm->exception())
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return returnValue;
 }
 
 static JSValue getByVal(
@@ -1745,241 +1408,11 @@ DEFINE_STUB_FUNCTION(void*, op_load_varargs)
     return newCallFrame;
 }
 
-DEFINE_STUB_FUNCTION(int, op_jless)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-    JSValue src2 = stackFrame.args[1].jsValue();
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    bool result = jsLess<true>(callFrame, src1, src2);
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(int, op_jlesseq)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-    JSValue src2 = stackFrame.args[1].jsValue();
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    bool result = jsLessEq<true>(callFrame, src1, src2);
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(int, op_jgreater)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-    JSValue src2 = stackFrame.args[1].jsValue();
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    bool result = jsLess<false>(callFrame, src2, src1);
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(int, op_jgreatereq)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-    JSValue src2 = stackFrame.args[1].jsValue();
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    bool result = jsLessEq<false>(callFrame, src2, src1);
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(int, op_jtrue)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-
-    bool result = src1.toBoolean(stackFrame.callFrame);
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
-}
-
-DEFINE_STUB_FUNCTION(int, op_eq)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue src1 = stackFrame.args[0].jsValue();
-    JSValue src2 = stackFrame.args[1].jsValue();
-
-#if USE(JSVALUE32_64)
-    start:
-    if (src2.isUndefined()) {
-        return src1.isNull() || 
-               (src1.isCell() && src1.asCell()->structure()->masqueradesAsUndefined(stackFrame.callFrame->lexicalGlobalObject()))
-               || src1.isUndefined();
-    }
-    
-    if (src2.isNull()) {
-        return src1.isUndefined() || 
-               (src1.isCell() && src1.asCell()->structure()->masqueradesAsUndefined(stackFrame.callFrame->lexicalGlobalObject()))
-               || src1.isNull();
-    }
-
-    if (src1.isInt32()) {
-        if (src2.isDouble())
-            return src1.asInt32() == src2.asDouble();
-        double d = src2.toNumber(stackFrame.callFrame);
-        CHECK_FOR_EXCEPTION();
-        return src1.asInt32() == d;
-    }
-
-    if (src1.isDouble()) {
-        if (src2.isInt32())
-            return src1.asDouble() == src2.asInt32();
-        double d = src2.toNumber(stackFrame.callFrame);
-        CHECK_FOR_EXCEPTION();
-        return src1.asDouble() == d;
-    }
-
-    if (src1.isTrue()) {
-        if (src2.isFalse())
-            return false;
-        double d = src2.toNumber(stackFrame.callFrame);
-        CHECK_FOR_EXCEPTION();
-        return d == 1.0;
-    }
-
-    if (src1.isFalse()) {
-        if (src2.isTrue())
-            return false;
-        double d = src2.toNumber(stackFrame.callFrame);
-        CHECK_FOR_EXCEPTION();
-        return d == 0.0;
-    }
-    
-    if (src1.isUndefined())
-        return src2.isCell() && src2.asCell()->structure()->masqueradesAsUndefined(stackFrame.callFrame->lexicalGlobalObject());
-    
-    if (src1.isNull())
-        return src2.isCell() && src2.asCell()->structure()->masqueradesAsUndefined(stackFrame.callFrame->lexicalGlobalObject());
-
-    JSCell* cell1 = src1.asCell();
-
-    if (cell1->isString()) {
-        if (src2.isInt32())
-            return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == src2.asInt32();
-            
-        if (src2.isDouble())
-            return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == src2.asDouble();
-
-        if (src2.isTrue())
-            return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == 1.0;
-
-        if (src2.isFalse())
-            return jsToNumber(jsCast<JSString*>(cell1)->value(stackFrame.callFrame)) == 0.0;
-
-        JSCell* cell2 = src2.asCell();
-        if (cell2->isString())
-            return jsCast<JSString*>(cell1)->value(stackFrame.callFrame) == jsCast<JSString*>(cell2)->value(stackFrame.callFrame);
-
-        src2 = asObject(cell2)->toPrimitive(stackFrame.callFrame);
-        CHECK_FOR_EXCEPTION();
-        goto start;
-    }
-
-    if (src2.isObject())
-        return asObject(cell1) == asObject(src2);
-    src1 = asObject(cell1)->toPrimitive(stackFrame.callFrame);
-    CHECK_FOR_EXCEPTION();
-    goto start;
-    
-#else // USE(JSVALUE32_64)
-    CallFrame* callFrame = stackFrame.callFrame;
-    
-    bool result = JSValue::equalSlowCaseInline(callFrame, src1, src2);
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
-#endif // USE(JSVALUE32_64)
-}
-
-DEFINE_STUB_FUNCTION(int, op_eq_strings)
-{
-#if USE(JSVALUE32_64)
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSString* string1 = stackFrame.args[0].jsString();
-    JSString* string2 = stackFrame.args[1].jsString();
-
-    ASSERT(string1->isString());
-    ASSERT(string2->isString());
-    return string1->value(stackFrame.callFrame) == string2->value(stackFrame.callFrame);
-#else
-    UNUSED_PARAM(args);
-    RELEASE_ASSERT_NOT_REACHED();
-    return 0;
-#endif
-}
-
-DEFINE_STUB_FUNCTION(JSObject*, op_new_func_exp)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    FunctionExecutable* function = stackFrame.args[0].function();
-    JSFunction* func = JSFunction::create(callFrame, function, callFrame->scope());
-    ASSERT(callFrame->codeBlock()->codeType() != FunctionCode || !callFrame->codeBlock()->needsFullScopeChain() || callFrame->uncheckedR(callFrame->codeBlock()->activationRegister()).jsValue());
-
-    return func;
-}
-
-DEFINE_STUB_FUNCTION(JSObject*, op_new_regexp)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-
-    RegExp* regExp = stackFrame.args[0].regExp();
-    if (!regExp->isValid()) {
-        stackFrame.vm->throwException(callFrame, createSyntaxError(callFrame, "Invalid flags supplied to RegExp constructor."));
-        VM_THROW_EXCEPTION();
-    }
-
-    return RegExpObject::create(*stackFrame.vm, stackFrame.callFrame->lexicalGlobalObject(), stackFrame.callFrame->lexicalGlobalObject()->regExpStructure(), regExp);
-}
-
-DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_eval)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    CallFrame* callerFrame = callFrame->callerFrame();
-    ASSERT(callFrame->callerFrame()->codeBlock()->codeType() != FunctionCode
-        || !callFrame->callerFrame()->codeBlock()->needsFullScopeChain()
-        || callFrame->callerFrame()->uncheckedR(callFrame->callerFrame()->codeBlock()->activationRegister()).jsValue());
-
-    callFrame->setScope(callerFrame->scope());
-    callFrame->setReturnPC(static_cast<Instruction*>((STUB_RETURN_ADDRESS).value()));
-    callFrame->setCodeBlock(0);
-
-    if (!isHostFunction(callFrame->calleeAsValue(), globalFuncEval))
-        return JSValue::encode(JSValue());
-
-    JSValue result = eval(callFrame);
-    if (stackFrame.vm->exception())
-        return throwExceptionFromOpCall<EncodedJSValue>(stackFrame, callFrame, STUB_RETURN_ADDRESS);
-
-    return JSValue::encode(result);
-}
-
 DEFINE_STUB_FUNCTION(void*, op_throw)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
     stackFrame.vm->throwException(stackFrame.callFrame, stackFrame.args[0].jsValue()); 
-    ExceptionHandler handler = jitThrow(stackFrame.vm, stackFrame.callFrame, stackFrame.args[0].jsValue(), STUB_RETURN_ADDRESS);
+    ExceptionHandler handler = genericUnwind(stackFrame.vm, stackFrame.callFrame, stackFrame.args[0].jsValue());
     STUB_SET_RETURN_ADDRESS(handler.catchRoutine);
     return handler.callFrame;
 }
@@ -1995,17 +1428,6 @@ DEFINE_STUB_FUNCTION(JSPropertyNameIterator*, op_get_pnames)
     if (!jsPropertyNameIterator || jsPropertyNameIterator->cachedPrototypeChain() != structure->prototypeChain(callFrame))
         jsPropertyNameIterator = JSPropertyNameIterator::create(callFrame, o);
     return jsPropertyNameIterator;
-}
-
-DEFINE_STUB_FUNCTION(int, has_property)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSObject* base = stackFrame.args[0].jsObject();
-    JSString* property = stackFrame.args[1].jsString();
-    int result = base->hasProperty(stackFrame.callFrame, Identifier(stackFrame.callFrame, property->value(stackFrame.callFrame)));
-    CHECK_FOR_EXCEPTION_AT_END();
-    return result;
 }
 
 DEFINE_STUB_FUNCTION(void, op_push_with_scope)
@@ -2112,7 +1534,8 @@ DEFINE_STUB_FUNCTION(void, op_put_getter_setter)
     ASSERT(stackFrame.args[0].jsValue().isObject());
     JSObject* baseObj = asObject(stackFrame.args[0].jsValue());
 
-    GetterSetter* accessor = GetterSetter::create(callFrame);
+    VM& vm = callFrame->vm();
+    GetterSetter* accessor = GetterSetter::create(vm);
 
     JSValue getter = stackFrame.args[2].jsValue();
     JSValue setter = stackFrame.args[3].jsValue();
@@ -2121,9 +1544,9 @@ DEFINE_STUB_FUNCTION(void, op_put_getter_setter)
     ASSERT(getter.isObject() || setter.isObject());
 
     if (!getter.isUndefined())
-        accessor->setGetter(callFrame->vm(), asObject(getter));
+        accessor->setGetter(vm, asObject(getter));
     if (!setter.isUndefined())
-        accessor->setSetter(callFrame->vm(), asObject(setter));
+        accessor->setSetter(vm, asObject(setter));
     baseObj->putDirectAccessor(callFrame, stackFrame.args[1].identifier(), accessor, Accessor);
 }
 
@@ -2147,18 +1570,14 @@ DEFINE_STUB_FUNCTION(void, op_debug)
     CallFrame* callFrame = stackFrame.callFrame;
 
     int debugHookID = stackFrame.args[0].int32();
-    int firstLine = stackFrame.args[1].int32();
-    int lastLine = stackFrame.args[2].int32();
-    int column = stackFrame.args[3].int32();
-
-    stackFrame.vm->interpreter->debug(callFrame, static_cast<DebugHookID>(debugHookID), firstLine, lastLine, column);
+    stackFrame.vm->interpreter->debug(callFrame, static_cast<DebugHookID>(debugHookID));
 }
 
 DEFINE_STUB_FUNCTION(void*, vm_throw)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
     VM* vm = stackFrame.vm;
-    ExceptionHandler handler = jitThrow(vm, stackFrame.callFrame, vm->exception(), vm->exceptionLocation);
+    ExceptionHandler handler = genericUnwind(vm, stackFrame.callFrame, vm->exception());
     STUB_SET_RETURN_ADDRESS(handler.catchRoutine);
     return handler.callFrame;
 }
@@ -2174,7 +1593,7 @@ EncodedExceptionHandler JIT_STUB cti_vm_handle_exception(CallFrame* callFrame)
 
     VM* vm = callFrame->codeBlock()->vm();
     vm->topCallFrame = callFrame;
-    return encode(jitThrowNew(vm, callFrame, vm->exception()));
+    return encode(genericUnwind(vm, callFrame, vm->exception()));
 }
 #else
 ExceptionHandler JIT_STUB cti_vm_handle_exception(CallFrame* callFrame)
@@ -2187,7 +1606,7 @@ ExceptionHandler JIT_STUB cti_vm_handle_exception(CallFrame* callFrame)
 
     VM* vm = callFrame->codeBlock()->vm();
     vm->topCallFrame = callFrame;
-    return jitThrowNew(vm, callFrame, vm->exception());
+    return genericUnwind(vm, callFrame, vm->exception());
 }
 #endif
 

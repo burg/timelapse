@@ -64,7 +64,7 @@ void SVGMPathElement::buildPendingResource()
         return;
 
     String id;
-    Element* target = SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
+    Element* target = SVGURIReference::targetElementFromIRIString(href(), document(), &id);
     if (!target) {
         // Do not register as pending if we are already pending this resource.
         if (document().accessSVGExtensions()->isElementPendingResource(this, id))
@@ -88,19 +88,19 @@ void SVGMPathElement::clearResourceReferences()
     document().accessSVGExtensions()->removeAllTargetReferencesForElement(this);
 }
 
-Node::InsertionNotificationRequest SVGMPathElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGMPathElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         buildPendingResource();
     return InsertionDone;
 }
 
-void SVGMPathElement::removedFrom(ContainerNode* rootParent)
+void SVGMPathElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
-    notifyParentOfPathChange(rootParent);
-    if (rootParent->inDocument())
+    notifyParentOfPathChange(&rootParent);
+    if (rootParent.inDocument())
         clearResourceReferences();
 }
 
@@ -151,7 +151,7 @@ void SVGMPathElement::svgAttributeChanged(const QualifiedName& attrName)
 
 SVGPathElement* SVGMPathElement::pathElement()
 {
-    Element* target = targetElementFromIRIString(href(), &document());
+    Element* target = targetElementFromIRIString(href(), document());
     if (target && target->hasTagName(SVGNames::pathTag))
         return toSVGPathElement(target);
     return 0;

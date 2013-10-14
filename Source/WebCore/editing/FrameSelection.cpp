@@ -120,24 +120,6 @@ Element* FrameSelection::rootEditableElementOrDocumentElement() const
     return selectionRoot ? selectionRoot : m_frame->document()->documentElement();
 }
 
-Node* FrameSelection::rootEditableElementOrTreeScopeRootNode() const
-{
-    Element* selectionRoot = m_selection.rootEditableElement();
-    if (selectionRoot)
-        return selectionRoot;
-
-    Node* node = m_selection.base().containerNode();
-    return node ? node->treeScope()->rootNode() : 0;
-}
-
-Element* FrameSelection::rootEditableElementRespectingShadowTree() const
-{
-    Element* selectionRoot = m_selection.rootEditableElement();
-    if (selectionRoot && selectionRoot->isInShadowTree())
-        selectionRoot = selectionRoot->shadowHost();
-    return selectionRoot;
-}
-
 void FrameSelection::moveTo(const VisiblePosition &pos, EUserTriggered userTriggered, CursorAlignOnScroll align)
 {
     SetSelectionOptions options = CloseTyping | ClearTypingStyle | userTriggered;
@@ -355,7 +337,7 @@ static bool removingNodeRemovesPosition(Node* node, const Position& position)
 
 static void clearRenderViewSelection(const Position& position)
 {
-    RefPtr<Document> document = &position.anchorNode()->document();
+    Ref<Document> document(position.anchorNode()->document());
     document->updateStyleIfNeeded();
     if (RenderView* view = document->renderView())
         view->clearSelection();
@@ -1746,10 +1728,12 @@ bool FrameSelection::isFocusedAndActive() const
     return m_focused && m_frame->page() && m_frame->page()->focusController().isActive();
 }
 
+#if ENABLE(TEXT_CARET)
 inline static bool shouldStopBlinkingDueToTypingCommand(Frame* frame)
 {
     return frame->editor().lastEditCommand() && frame->editor().lastEditCommand()->shouldStopCaretBlinking();
 }
+#endif
 
 void FrameSelection::updateAppearance()
 {

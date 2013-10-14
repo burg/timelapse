@@ -51,7 +51,7 @@ class SharedBuffer;
 class TextResourceDecoder;
 class ThreadableLoader;
 
-class XMLHttpRequest : public ScriptWrappable, public RefCounted<XMLHttpRequest>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
+class XMLHttpRequest FINAL : public ScriptWrappable, public RefCounted<XMLHttpRequest>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassRefPtr<XMLHttpRequest> create(ScriptExecutionContext*);
@@ -82,19 +82,19 @@ public:
     virtual void didTimeout();
 #endif
 
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return XMLHttpRequestEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return ActiveDOMObject::scriptExecutionContext(); }
 
-    const KURL& url() const { return m_url; }
+    const URL& url() const { return m_url; }
     String statusText(ExceptionCode&) const;
     int status(ExceptionCode&) const;
     State readyState() const;
     bool withCredentials() const { return m_includeCredentials; }
     void setWithCredentials(bool, ExceptionCode&);
-    void open(const String& method, const KURL&, ExceptionCode&);
-    void open(const String& method, const KURL&, bool async, ExceptionCode&);
-    void open(const String& method, const KURL&, bool async, const String& user, ExceptionCode&);
-    void open(const String& method, const KURL&, bool async, const String& user, const String& password, ExceptionCode&);
+    void open(const String& method, const URL&, ExceptionCode&);
+    void open(const String& method, const URL&, bool async, ExceptionCode&);
+    void open(const String& method, const URL&, bool async, const String& user, ExceptionCode&);
+    void open(const String& method, const URL&, bool async, const String& user, const String& password, ExceptionCode&);
     void send(ExceptionCode&);
     void send(Document*, ExceptionCode&);
     void send(const String&, ExceptionCode&);
@@ -158,7 +158,7 @@ public:
     using RefCounted<XMLHttpRequest>::deref;
 
 private:
-    XMLHttpRequest(ScriptExecutionContext*);
+    explicit XMLHttpRequest(ScriptExecutionContext*);
 
     // ActiveDOMObject
     virtual void contextDestroyed() OVERRIDE;
@@ -169,8 +169,6 @@ private:
 
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
 
     Document* document() const;
     SecurityOrigin* securityOrigin() const;
@@ -179,12 +177,12 @@ private:
     bool usesDashboardBackwardCompatibilityMode() const;
 #endif
 
-    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-    virtual void didReceiveResponse(unsigned long identifier, const ResourceResponse&);
-    virtual void didReceiveData(const char* data, int dataLength);
-    virtual void didFinishLoading(unsigned long identifier, double finishTime);
-    virtual void didFail(const ResourceError&);
-    virtual void didFailRedirectCheck();
+    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) OVERRIDE;
+    virtual void didReceiveResponse(unsigned long identifier, const ResourceResponse&) OVERRIDE;
+    virtual void didReceiveData(const char* data, int dataLength) OVERRIDE;
+    virtual void didFinishLoading(unsigned long identifier, double finishTime) OVERRIDE;
+    virtual void didFail(const ResourceError&) OVERRIDE;
+    virtual void didFailRedirectCheck() OVERRIDE;
 
     String responseMIMEType() const;
     bool responseIsXML() const;
@@ -213,7 +211,7 @@ private:
 
     OwnPtr<XMLHttpRequestUpload> m_upload;
 
-    KURL m_url;
+    URL m_url;
     String m_method;
     HTTPHeaderMap m_requestHeaders;
     RefPtr<FormData> m_requestEntityBody;
@@ -253,8 +251,6 @@ private:
     unsigned m_lastSendLineNumber;
     String m_lastSendURL;
     ExceptionCode m_exceptionCode;
-
-    EventTargetData m_eventTargetData;
 
     XMLHttpRequestProgressEventThrottle m_progressEventThrottle;
 

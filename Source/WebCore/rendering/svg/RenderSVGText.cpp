@@ -135,7 +135,7 @@ static inline void collectLayoutAttributes(RenderObject* text, Vector<SVGTextLay
     }
 }
 
-static inline bool findPreviousAndNextAttributes(RenderObject* start, RenderSVGInlineText* locateElement, bool& stopAfterNext, SVGTextLayoutAttributes*& previous, SVGTextLayoutAttributes*& next)
+static inline bool findPreviousAndNextAttributes(RenderElement* start, RenderSVGInlineText* locateElement, bool& stopAfterNext, SVGTextLayoutAttributes*& previous, SVGTextLayoutAttributes*& next)
 {
     ASSERT(start);
     ASSERT(locateElement);
@@ -160,7 +160,7 @@ static inline bool findPreviousAndNextAttributes(RenderObject* start, RenderSVGI
         if (!child->isSVGInline())
             continue;
 
-        if (findPreviousAndNextAttributes(child, locateElement, stopAfterNext, previous, next))
+        if (findPreviousAndNextAttributes(toRenderElement(child), locateElement, stopAfterNext, previous, next))
             return true;
     }
 
@@ -438,7 +438,7 @@ void RenderSVGText::layout()
         RenderSVGBlock::setNeedsBoundariesUpdate();
 
     repainter.repaintAfterLayout();
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 RootInlineBox* RenderSVGText::createRootInlineBox() 

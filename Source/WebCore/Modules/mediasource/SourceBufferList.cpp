@@ -78,25 +78,6 @@ void SourceBufferList::scheduleEvent(const AtomicString& eventName)
     m_asyncEventQueue.enqueueEvent(event.release());
 }
 
-const AtomicString& SourceBufferList::interfaceName() const
-{
-    return eventNames().interfaceForSourceBufferList;
-}
-
-ScriptExecutionContext* SourceBufferList::scriptExecutionContext() const
-{
-    return m_scriptExecutionContext;
-}
-
-EventTargetData* SourceBufferList::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData& SourceBufferList::ensureEventTargetData()
-{
-    return m_eventTargetData;
-}
 
 } // namespace WebCore
 

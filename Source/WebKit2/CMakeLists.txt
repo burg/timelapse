@@ -1,6 +1,7 @@
 set(WebKit2_INCLUDE_DIRECTORIES
     "${JAVASCRIPTCORE_DIR}/llint"
     "${WEBKIT2_DIR}"
+    "${WEBKIT2_DIR}/NetworkProcess"
     "${WEBKIT2_DIR}/Platform"
     "${WEBKIT2_DIR}/Platform/CoreIPC"
     "${WEBKIT2_DIR}/PluginProcess"
@@ -25,6 +26,7 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/UIProcess/Downloads"
     "${WEBKIT2_DIR}/UIProcess/InspectorServer"
     "${WEBKIT2_DIR}/UIProcess/Launcher"
+    "${WEBKIT2_DIR}/UIProcess/Network"
     "${WEBKIT2_DIR}/UIProcess/Notifications"
     "${WEBKIT2_DIR}/UIProcess/Plugins"
     "${WEBKIT2_DIR}/UIProcess/Storage"
@@ -36,6 +38,7 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/WebProcess/Geolocation"
     "${WEBKIT2_DIR}/WebProcess/NetworkInfo"
     "${WEBKIT2_DIR}/WebProcess/IconDatabase"
+    "${WEBKIT2_DIR}/WebProcess/IndexedDB"
     "${WEBKIT2_DIR}/WebProcess/InjectedBundle"
     "${WEBKIT2_DIR}/WebProcess/InjectedBundle/API"
     "${WEBKIT2_DIR}/WebProcess/InjectedBundle/API/c"
@@ -187,7 +190,6 @@ set(WebKit2_SOURCES
     Shared/WebEvent.cpp
     Shared/WebEventConversion.cpp
     Shared/WebGeolocationPosition.cpp
-    Shared/WebGestureEvent.cpp
     Shared/WebGraphicsContext.cpp
     Shared/WebHitTestResult.cpp
     Shared/WebImage.cpp
@@ -235,9 +237,15 @@ set(WebKit2_SOURCES
     Shared/API/c/WKURLResponse.cpp
     Shared/API/c/WKUserContentURLPattern.cpp
 
+    Shared/Authentication/AuthenticationManager.cpp
+
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp
     Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp
+
+    Shared/Downloads/Download.cpp
+    Shared/Downloads/DownloadAuthenticationClient.cpp
+    Shared/Downloads/DownloadManager.cpp
 
     Shared/Plugins/NPIdentifierData.cpp
     Shared/Plugins/NPObjectMessageReceiver.cpp
@@ -253,11 +261,9 @@ set(WebKit2_SOURCES
 
     UIProcess/BackingStore.cpp
     UIProcess/DrawingAreaProxy.cpp
-    UIProcess/DrawingAreaProxyImpl.cpp
     UIProcess/FindIndicator.cpp
     UIProcess/GeolocationPermissionRequestManagerProxy.cpp
     UIProcess/GeolocationPermissionRequestProxy.cpp
-
     UIProcess/ResponsivenessTimer.cpp
     UIProcess/StatisticsRequest.cpp
     UIProcess/TextCheckerCompletion.cpp
@@ -295,7 +301,6 @@ set(WebKit2_SOURCES
     UIProcess/WebIconDatabaseClient.cpp
     UIProcess/WebInspectorProxy.cpp
     UIProcess/WebKeyValueStorageManager.cpp
-
     UIProcess/WebLoaderClient.cpp
     UIProcess/WebMediaCacheManagerProxy.cpp
     UIProcess/WebNavigationData.cpp
@@ -366,6 +371,7 @@ set(WebKit2_SOURCES
     UIProcess/Authentication/WebCredential.cpp
     UIProcess/Authentication/WebProtectionSpace.cpp
 
+    UIProcess/CoordinatedGraphics/CoordinatedDrawingAreaProxy.cpp
     UIProcess/CoordinatedGraphics/CoordinatedLayerTreeHostProxy.cpp
     UIProcess/CoordinatedGraphics/WebPageProxyCoordinatedGraphics.cpp
 
@@ -399,15 +405,9 @@ set(WebKit2_SOURCES
 
     WebProcess/ApplicationCache/WebApplicationCacheManager.cpp
 
-    Shared/Authentication/AuthenticationManager.cpp
-
     WebProcess/Battery/WebBatteryManager.cpp
 
     WebProcess/Cookies/WebCookieManager.cpp
-
-    Shared/Downloads/Download.cpp
-    Shared/Downloads/DownloadAuthenticationClient.cpp
-    Shared/Downloads/DownloadManager.cpp
 
     WebProcess/FullScreen/WebFullScreenManager.cpp
 
@@ -416,6 +416,8 @@ set(WebKit2_SOURCES
 
     WebProcess/IconDatabase/WebIconDatabaseProxy.cpp
 
+    WebProcess/IndexedDB/WebIDBFactoryBackend.cpp
+
     WebProcess/InjectedBundle/InjectedBundle.cpp
     WebProcess/InjectedBundle/InjectedBundleBackForwardList.cpp
     WebProcess/InjectedBundle/InjectedBundleBackForwardListItem.cpp
@@ -423,8 +425,8 @@ set(WebKit2_SOURCES
     WebProcess/InjectedBundle/InjectedBundleDOMWindowExtension.cpp
     WebProcess/InjectedBundle/InjectedBundleHitTestResult.cpp
     WebProcess/InjectedBundle/InjectedBundleNavigationAction.cpp
-    WebProcess/InjectedBundle/InjectedBundlePageDiagnosticLoggingClient.cpp
     WebProcess/InjectedBundle/InjectedBundlePageContextMenuClient.cpp
+    WebProcess/InjectedBundle/InjectedBundlePageDiagnosticLoggingClient.cpp
     WebProcess/InjectedBundle/InjectedBundlePageEditorClient.cpp
     WebProcess/InjectedBundle/InjectedBundlePageFormClient.cpp
     WebProcess/InjectedBundle/InjectedBundlePageFullScreenClient.cpp
@@ -503,7 +505,6 @@ set(WebKit2_SOURCES
 
     WebProcess/WebPage/DecoderAdapter.cpp
     WebProcess/WebPage/DrawingArea.cpp
-    WebProcess/WebPage/DrawingAreaImpl.cpp
     WebProcess/WebPage/EncoderAdapter.cpp
     WebProcess/WebPage/EventDispatcher.cpp
     WebProcess/WebPage/FindController.cpp
@@ -520,6 +521,7 @@ set(WebKit2_SOURCES
     WebProcess/WebPage/WebPageGroupProxy.cpp
     WebProcess/WebPage/WebUndoStep.cpp
 
+    WebProcess/WebPage/CoordinatedGraphics/CoordinatedDrawingArea.cpp
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp
     WebProcess/WebPage/CoordinatedGraphics/WebPageCoordinatedGraphics.cpp
 )
@@ -531,10 +533,11 @@ set(WebKit2_MESSAGES_IN_FILES
 
     Shared/WebConnection.messages.in
 
+    Shared/Authentication/AuthenticationManager.messages.in
+
     Shared/Plugins/NPObjectMessageReceiver.messages.in
 
     UIProcess/DrawingAreaProxy.messages.in
-    UIProcess/Storage/StorageManager.messages.in
     UIProcess/WebApplicationCacheManagerProxy.messages.in
     UIProcess/WebBatteryManagerProxy.messages.in
     UIProcess/WebContext.messages.in
@@ -551,20 +554,19 @@ set(WebKit2_MESSAGES_IN_FILES
     UIProcess/WebResourceCacheManagerProxy.messages.in
     UIProcess/WebVibrationProxy.messages.in
 
-
     UIProcess/CoordinatedGraphics/CoordinatedLayerTreeHostProxy.messages.in
 
     UIProcess/Downloads/DownloadProxy.messages.in
 
+    UIProcess/Network/CustomProtocols/CustomProtocolManagerProxy.messages.in
+
     UIProcess/Plugins/PluginProcessProxy.messages.in
 
-    UIProcess/Network/CustomProtocols/CustomProtocolManagerProxy.messages.in
+    UIProcess/Storage/StorageManager.messages.in
 
     WebProcess/WebProcess.messages.in
 
     WebProcess/ApplicationCache/WebApplicationCacheManager.messages.in
-
-    Shared/Authentication/AuthenticationManager.messages.in
 
     WebProcess/Battery/WebBatteryManager.messages.in
 

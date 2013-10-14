@@ -33,7 +33,6 @@
 #include "JSRadioNodeList.h"
 #include "Node.h"
 #include "RadioNodeList.h"
-#include "StaticNodeList.h"
 #include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
 
@@ -50,8 +49,7 @@ JSValue JSHTMLCollection::nameGetter(ExecState* exec, JSValue slotBase, Property
 {
     JSHTMLCollection* collection = jsCast<JSHTMLCollection*>(asObject(slotBase));
     const AtomicString& name = propertyNameToAtomicString(propertyName);
-    HTMLCollection* impl = collection->impl();
-    return toJS(exec, collection->globalObject(), impl->namedItem(name));
+    return toJS(exec, collection->globalObject(), collection->impl().namedItem(name));
 }
 
 JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, HTMLCollection* collection)

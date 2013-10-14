@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,48 +30,55 @@
 #define DebuggerCallFrame_h
 
 #include "CallFrame.h"
+#include <wtf/PassRefPtr.h>
+#include <wtf/RefCounted.h>
+#include <wtf/text/TextPosition.h>
 
 namespace JSC {
     
-class DebuggerCallFrame {
+class DebuggerCallFrame : public RefCounted<DebuggerCallFrame> {
 public:
     enum Type { ProgramType, FunctionType };
 
-    DebuggerCallFrame(CallFrame* callFrame, int line, int column)
-        : m_callFrame(callFrame)
-        , m_line(line)
-        , m_column(column)
+    static PassRefPtr<DebuggerCallFrame> create(CallFrame* callFrame)
     {
+        return adoptRef(new DebuggerCallFrame(callFrame));
     }
 
-    DebuggerCallFrame(CallFrame* callFrame, int line, int column, JSValue exception)
-        : m_callFrame(callFrame)
-        , m_line(line)
-        , m_column(column)
-        , m_exception(exception)
-    {
-    }
+    JS_EXPORT_PRIVATE explicit DebuggerCallFrame(CallFrame*);
 
     CallFrame* callFrame() const { return m_callFrame; }
+    JS_EXPORT_PRIVATE PassRefPtr<DebuggerCallFrame> callerFrame();
+    ExecState* exec() const { return m_callFrame; }
     JS_EXPORT_PRIVATE intptr_t sourceId() const;
-    int line() const { return m_line; }
-    int column() const { return m_column; }
-    JSGlobalObject* dynamicGlobalObject() const { return m_callFrame->dynamicGlobalObject(); }
-    JSScope* scope() const { return m_callFrame->scope(); }
-    JS_EXPORT_PRIVATE String functionName() const;
-    JS_EXPORT_PRIVATE String calculatedFunctionName() const;
-    JS_EXPORT_PRIVATE Type type() const;
-    JS_EXPORT_PRIVATE JSObject* thisObject() const;
-    JS_EXPORT_PRIVATE JSValue evaluate(const String&, JSValue& exception) const;
-    JSValue exception() const { return m_exception; }
 
-    void clear();
+    // line and column are in base 0 e.g. the first line is line 0.
+    int line() const { return m_position.m_line.zeroBasedInt(); }
+    int column() const { return m_position.m_column.zeroBasedInt(); }
+    JS_EXPORT_PRIVATE const TextPosition& position() const { return m_position; }
+
+    JS_EXPORT_PRIVATE JSGlobalObject* dynamicGlobalObject() const;
+    JS_EXPORT_PRIVATE JSScope* scope() const;
+    JS_EXPORT_PRIVATE String functionName() const;
+    JS_EXPORT_PRIVATE Type type() const;
+    JS_EXPORT_PRIVATE JSValue thisValue() const;
+    JS_EXPORT_PRIVATE JSValue evaluate(const String&, JSValue& exception) const;
+
+    bool isValid() const { return !!m_callFrame; }
+    JS_EXPORT_PRIVATE void invalidate();
+
+    // The following are only public for the Debugger's use only. They will be
+    // made private soon. Other clients should not use these.
+
+    JS_EXPORT_PRIVATE static JSValue evaluateWithCallFrame(CallFrame*, const String& script, JSValue& exception);
+    JS_EXPORT_PRIVATE static TextPosition positionForCallFrame(CallFrame*);
+    JS_EXPORT_PRIVATE static intptr_t sourceIdForCallFrame(CallFrame*);
+    static JSValue thisValueForCallFrame(CallFrame*);
 
 private:
     CallFrame* m_callFrame;
-    int m_line;
-    int m_column;
-    JSValue m_exception;
+    RefPtr<DebuggerCallFrame> m_caller;
+    TextPosition m_position;
 };
 
 } // namespace JSC

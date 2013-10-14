@@ -41,15 +41,6 @@
 #include <WebCore/RefPtrCairo.h>
 #endif
 
-#if PLATFORM(QT)
-#include <QImage>
-#ifdef Q_WS_X11
-// Avoid ambiguity caused by the Region typedef from qwindowdefs.h.
-namespace WebCore { class Region; }
-namespace WebKit { using WebCore::Region; }
-#endif
-#endif
-
 namespace WebCore {
     class Image;
     class GraphicsContext;
@@ -106,7 +97,7 @@ public:
     bool resize(const WebCore::IntSize& size);
 
     // Create a graphics context that can be used to paint into the backing store.
-    PassOwnPtr<WebCore::GraphicsContext> createGraphicsContext();
+    std::unique_ptr<WebCore::GraphicsContext> createGraphicsContext();
 
     // Paint the backing store into the given context.
     void paint(WebCore::GraphicsContext&, const WebCore::IntPoint& destination, const WebCore::IntRect& source);
@@ -129,11 +120,6 @@ public:
     // This creates a BitmapImage that directly references the shared bitmap data.
     // This is only safe to use when we know that the contents of the shareable bitmap won't change.
     PassRefPtr<cairo_surface_t> createCairoSurface();
-#elif PLATFORM(QT)
-    // This creates a QImage that directly references the shared bitmap data.
-    // This is only safe to use when we know that the contents of the shareable bitmap won't change.
-    QImage createQImage();
-    static void releaseSharedMemoryData(void* typelessBitmap);
 #endif
 
 private:

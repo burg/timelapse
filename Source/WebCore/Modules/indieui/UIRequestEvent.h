@@ -57,27 +57,12 @@ protected:
     
     UIRequestEvent();
     
-    const AtomicString& interfaceName() const OVERRIDE;
+    EventInterface eventInterface() const OVERRIDE;
     
 private:
     RefPtr<EventTarget> m_receiver;
 };
 
-class UIRequestEventDispatchMediator : public EventDispatchMediator {
-public:
-    static PassRefPtr<UIRequestEventDispatchMediator> create(PassRefPtr<UIRequestEvent> event)
-    {
-        return adoptRef(new UIRequestEventDispatchMediator(event));
-    }
-    
-private:
-    explicit UIRequestEventDispatchMediator(PassRefPtr<UIRequestEvent>);
-    
-    UIRequestEvent* event() const;
-    
-    virtual bool dispatchEvent(EventDispatcher*) const OVERRIDE;
-};
-    
 } // namespace WebCore
 
 #endif // ENABLE(INDIE_UI)

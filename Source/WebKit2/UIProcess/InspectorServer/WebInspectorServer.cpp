@@ -94,12 +94,10 @@ void WebInspectorServer::unregisterPage(int pageId)
         closeConnection(0, connection);
 }
 
-#if !PLATFORM(QT)
 String WebInspectorServer::inspectorUrlForPageID(int)
 {
     return String();
 }
-#endif
 
 void WebInspectorServer::sendMessageOverConnection(unsigned pageIdForConnection, const String& message)
 {
@@ -111,7 +109,7 @@ void WebInspectorServer::sendMessageOverConnection(unsigned pageIdForConnection,
 void WebInspectorServer::didReceiveUnrecognizedHTTPRequest(WebSocketServerConnection* connection, PassRefPtr<HTTPRequest> request)
 {
     // request->url() contains only the path extracted from the HTTP request line
-    // and KURL is poor at parsing incomplete URLs, so extract the interesting parts manually.
+    // and URL is poor at parsing incomplete URLs, so extract the interesting parts manually.
     String path = request->url();
     size_t pathEnd = path.find('?');
     if (pathEnd == notFound)

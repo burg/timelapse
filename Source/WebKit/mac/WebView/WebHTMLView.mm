@@ -104,6 +104,7 @@
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/MainFrame.h>
 #import <WebCore/Page.h>
 #import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/Range.h>
@@ -1147,6 +1148,8 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
 + (void)_postFlagsChangedEvent:(NSEvent *)flagsChangedEvent
 {
     // This is a workaround for: <rdar://problem/2981619> NSResponder_Private should include notification for FlagsChanged
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSMouseMoved
         location:[[flagsChangedEvent window] convertScreenToBase:[NSEvent mouseLocation]]
         modifierFlags:[flagsChangedEvent modifierFlags]
@@ -1154,6 +1157,7 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
         windowNumber:[flagsChangedEvent windowNumber]
         context:[flagsChangedEvent context]
         eventNumber:0 clickCount:0 pressure:0];
+#pragma clang diagnostic pop
 
     // Pretend it's a mouse move.
     [[NSNotificationCenter defaultCenter]
@@ -1171,6 +1175,8 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
 
 - (void)_updateMouseoverWithFakeEvent
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSMouseMoved
         location:[[self window] convertScreenToBase:[NSEvent mouseLocation]]
         modifierFlags:[[NSApp currentEvent] modifierFlags]
@@ -1178,7 +1184,8 @@ static NSURL* uniqueURLWithRelativePart(NSString *relativePart)
         windowNumber:[[self window] windowNumber]
         context:[[NSApp currentEvent] context]
         eventNumber:0 clickCount:0 pressure:0];
-    
+#pragma clang diagnostic pop
+
     [self _updateMouseoverWithEvent:fakeEvent];
 }
 
@@ -1745,6 +1752,8 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
         return;
     }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSLeftMouseDragged
         location:[[self window] convertScreenToBase:[NSEvent mouseLocation]]
         modifierFlags:[[NSApp currentEvent] modifierFlags]
@@ -1752,6 +1761,7 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
         windowNumber:[[self window] windowNumber]
         context:[[NSApp currentEvent] context]
         eventNumber:0 clickCount:0 pressure:0];
+#pragma clang diagnostic pop
     [self mouseDragged:fakeEvent];
 }
 
@@ -2055,8 +2065,11 @@ static bool mouseEventIsPartOfClickOrDrag(NSEvent *event)
         [fragment appendChild:anchor];
         return fragment;
     }
-    if (pboardType == NSStringPboardType)
-        return kit(createFragmentFromText(core(context), [[pasteboard stringForType:NSStringPboardType] precomposedStringWithCanonicalMapping]).get());
+    if (pboardType == NSStringPboardType) {
+        if (!context)
+            return nil;
+        return kit(createFragmentFromText(*core(context), [[pasteboard stringForType:NSStringPboardType] precomposedStringWithCanonicalMapping]).get());
+    }
     return nil;
 }
 
@@ -3541,6 +3554,8 @@ static void setMenuTargets(NSMenu* menu)
     // Record the mouse down position so we can determine drag hysteresis.
     [self _setMouseDownEvent:event];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSInputManager *currentInputManager = [NSInputManager currentInputManager];
 
     if (![currentInputManager wantsToHandleMouseEvents] || ![currentInputManager handleMouseEvent:event]) {
@@ -3557,6 +3572,7 @@ static void setMenuTargets(NSMenu* menu)
                 coreframe->eventHandler().mouseDown(event);
         }
     }
+#pragma clang diagnostic pop
 
     _private->handlingMouseDownEvent = NO;
 }
@@ -3581,9 +3597,12 @@ static void setMenuTargets(NSMenu* menu)
     // the current event prevents that from causing a problem inside WebKit or AppKit code.
     [[event retain] autorelease];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSInputManager *currentInputManager = [NSInputManager currentInputManager];
     if ([currentInputManager wantsToHandleMouseEvents] && [currentInputManager handleMouseEvent:event])
         return;
+#pragma clang diagnostic pop
 
     [self retain];
 
@@ -3673,7 +3692,7 @@ static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension
         if (!page) 
             return nil; 
         
-        const KURL& imageURL = page->dragController().draggingImageURL();
+        const URL& imageURL = page->dragController().draggingImageURL();
         ASSERT(!imageURL.isEmpty());
         draggingImageURL = imageURL;
 
@@ -3707,9 +3726,12 @@ static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension
 
     [self _setMouseDownEvent:nil];
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSInputManager *currentInputManager = [NSInputManager currentInputManager];
     if ([currentInputManager wantsToHandleMouseEvents] && [currentInputManager handleMouseEvent:event])
         return;
+#pragma clang diagnostic pop
 
     [self retain];
 
@@ -4188,7 +4210,10 @@ static PassRefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
 {
     id accTree = [[self _frame] accessibilityRoot];
     if (accTree) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         NSPoint windowCoord = [[self window] convertScreenToBase:point];
+#pragma clang diagnostic pop
         return [accTree accessibilityHitTest:[self convertPoint:windowCoord fromView:nil]];
     }
     return self;
@@ -5240,12 +5265,15 @@ static BOOL writingDirectionKeyBindingsEnabled()
     const Vector<KeypressCommand>& commands = parameters->event->keypressCommands();
 
     for (size_t i = 0; i < commands.size(); ++i) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (commands[i].commandName == "insertText:")
             [self insertText:commands[i].text];
         else if (commands[i].commandName == "noop:")
             ; // Do nothing. This case can be removed once <rdar://problem/9025012> is fixed.
         else
             [self doCommandBySelector:NSSelectorFromString(commands[i].commandName)];
+#pragma clang diagnostic pop
     }
     parameters->event->keypressCommands().clear();
     parameters->shouldSaveCommands = wasSavingCommands;
@@ -5385,7 +5413,10 @@ static BOOL writingDirectionKeyBindingsEnabled()
         // If we are in a layer-backed view, we need to manually initialize the geometry for our layer.
         [viewLayer setBounds:NSRectToCGRect([_private->layerHostingView bounds])];
         [viewLayer setAnchorPoint:CGPointMake(0, [self isFlipped] ? 1 : 0)];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         CGPoint layerPosition = NSPointToCGPoint([self convertPointToBase:[_private->layerHostingView frame].origin]);
+#pragma clang diagnostic pop
         [viewLayer setPosition:layerPosition];
     }
     
@@ -5474,8 +5505,11 @@ static BOOL writingDirectionKeyBindingsEnabled()
         LOG(TextInput, "textStorage -> nil");
         return nil;
     }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSAttributedString *result = [self attributedSubstringFromRange:NSMakeRange(0, UINT_MAX)];
-    
+#pragma clang diagnostic pop
+
     LOG(TextInput, "textStorage -> \"%@\"", result ? [result string] : @"");
     
     // We have to return an empty string rather than null to prevent TSM from calling -string
@@ -5884,12 +5918,15 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
 
     unsigned start;
     unsigned end;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (coreFrame->editor().getCompositionSelection(start, end))
         [[NSInputManager currentInputManager] markedTextSelectionChanged:NSMakeRange(start, end - start) client:self];
     else {
         coreFrame->editor().cancelComposition();
         [[NSInputManager currentInputManager] markedTextAbandoned:self];
     }
+#pragma clang diagnostic pop
 }
 
 @end
@@ -5997,7 +6034,7 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
     NSAttributedString *attributedString = [self _attributeStringFromDOMRange:[document _documentRange]];
     if (!attributedString) {
         Document* coreDocument = core(document);
-        attributedString = [WebHTMLConverter editingAttributedStringFromRange:Range::create(coreDocument, coreDocument, 0, coreDocument, coreDocument->childNodeCount()).get()];
+        attributedString = [WebHTMLConverter editingAttributedStringFromRange:Range::create(*coreDocument, coreDocument, 0, coreDocument, coreDocument->childNodeCount()).get()];
     }
     return attributedString;
 }

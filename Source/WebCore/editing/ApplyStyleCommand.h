@@ -71,8 +71,8 @@ private:
     ApplyStyleCommand(PassRefPtr<Element>, bool removeOnly, EditAction);
     ApplyStyleCommand(Document&, const EditingStyle*, bool (*isInlineElementToRemove)(const Element*), EditAction);
 
-    virtual void doApply();
-    virtual EditAction editingAction() const;
+    virtual void doApply() OVERRIDE;
+    virtual EditAction editingAction() const OVERRIDE;
 
     // style-removal helpers
     bool isStyledInlineElementToRemove(Element*) const;
@@ -136,7 +136,7 @@ enum ShouldStyleAttributeBeEmpty { AllowNonEmptyStyleAttribute, StyleAttributeSh
 bool isEmptyFontTag(const Element*, ShouldStyleAttributeBeEmpty = StyleAttributeShouldBeEmpty);
 bool isLegacyAppleStyleSpan(const Node*);
 bool isStyleSpanOrSpanWithOnlyStyleAttribute(const Element*);
-PassRefPtr<HTMLElement> createStyleSpanElement(Document*);
+PassRefPtr<HTMLElement> createStyleSpanElement(Document&);
 
 } // namespace WebCore
 

@@ -43,6 +43,7 @@ namespace WebCore {
     M(BackForward) \
     M(Compositing) \
     M(DeterministicReplay) \
+    M(DiskImageCache) \
     M(Editing) \
     M(Events) \
     M(FTP) \

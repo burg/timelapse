@@ -39,15 +39,15 @@ my @duplicates = ();
 
 my $numPredefinedProperties = 2;
 my @names = ();
-my %nameIsInherited = {};
-my %nameToId = {};
+my %nameIsInherited;
+my %nameToId;
 my @aliases = ();
 foreach (@NAMES) {
   next if (m/(^\s*$)/);
   next if (/^#/);
 
   # Input may use a different EOL sequence than $/, so avoid chomp.
-  $_ =~ s/\s*\[(.+?)\]$//;
+  $_ =~ s/\s*\[(.+?)\]\r?$//;
   my @options = ();
   if ($1) {
     @options = split(/\s*,\s*/, $1);

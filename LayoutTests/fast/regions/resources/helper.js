@@ -202,3 +202,58 @@ function compareArrays(current, expected) {
     }
     testPassed("Array ["  + expected.toString() + "] is equal to [" + current.toString() + "]");
 }
+
+function selectContentByRange(fromX, fromY, toX, toY) {
+    if (!window.testRunner)
+        return;
+
+    eventSender.mouseMoveTo(fromX, fromY);
+    eventSender.mouseDown();
+
+    eventSender.mouseMoveTo(toX, toY);
+    eventSender.mouseUp();
+}
+
+function selectContentByIds(fromId, toId) {
+    var fromRect = document.getElementById(fromId).getBoundingClientRect();
+    var toRect = document.getElementById(toId).getBoundingClientRect();
+
+    var fromRectVerticalCenter = fromRect.top + fromRect.height / 2;
+    var toRectVerticalCenter = toRect.top + toRect.height / 2;
+
+    selectContentByRange(fromRect.left, fromRectVerticalCenter, toRect.right, toRectVerticalCenter);
+}
+
+function selectContentByIdsVert(fromId, toId) {
+    var fromRect = document.getElementById(fromId).getBoundingClientRect();
+    var toRect = document.getElementById(toId).getBoundingClientRect();
+
+    var fromRectHorizontalCenter = fromRect.left + fromRect.width / 2;
+    var toRectHorizontalCenter = toRect.left + toRect.width / 2;
+
+    selectContentByRange(fromRectHorizontalCenter, fromRect.top, toRectHorizontalCenter, toRect.bottom);
+}
+
+function selectBaseAndExtent(fromId, fromOffset, toId, toOffset) {
+    var from = document.getElementById(fromId);
+    var to = document.getElementById(toId);
+
+    var selection = window.getSelection();
+    selection.setBaseAndExtent(from, fromOffset, to, toOffset);
+}
+
+function mouseClick(positionX, positionY) {
+    if (!window.testRunner)
+        return;
+
+    eventSender.mouseMoveTo(positionX, positionY);
+    eventSender.mouseDown();
+    eventSender.mouseUp();
+}
+
+function onMouseUpLogSelection(elementId) {
+    document.onmouseup = function() {
+        var selectedContent = document.getElementById(elementId);
+        selectedContent.innerHTML = window.getSelection().getRangeAt(0);
+    }
+}

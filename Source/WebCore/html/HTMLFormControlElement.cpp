@@ -38,7 +38,6 @@
 #include "HTMLTextAreaElement.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"
-#include "ScriptEventListener.h"
 #include "ValidationMessage.h"
 #include "ValidityState.h"
 #include <wtf/Ref.h>
@@ -230,7 +229,7 @@ void HTMLFormControlElement::didMoveToNewDocument(Document* oldDocument)
     HTMLElement::didMoveToNewDocument(oldDocument);
 }
 
-Node::InsertionNotificationRequest HTMLFormControlElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLFormControlElement::insertedInto(ContainerNode& insertionPoint)
 {
     m_ancestorDisabledState = AncestorDisabledStateUnknown;
     m_dataListAncestorState = Unknown;
@@ -240,7 +239,7 @@ Node::InsertionNotificationRequest HTMLFormControlElement::insertedInto(Containe
     return InsertionDone;
 }
 
-void HTMLFormControlElement::removedFrom(ContainerNode* insertionPoint)
+void HTMLFormControlElement::removedFrom(ContainerNode& insertionPoint)
 {
     m_validationMessage = nullptr;
     m_ancestorDisabledState = AncestorDisabledStateUnknown;
@@ -290,9 +289,7 @@ bool HTMLFormControlElement::isRequired() const
 
 static void updateFromElementCallback(Node* node, unsigned)
 {
-    ASSERT_ARG(node, node->isElementNode());
-    ASSERT_ARG(node, toElement(node)->isFormControlElement());
-    if (RenderObject* renderer = node->renderer())
+    if (auto renderer = toHTMLFormControlElement(node)->renderer())
         renderer->updateFromElement();
 }
 
@@ -330,7 +327,7 @@ bool HTMLFormControlElement::isKeyboardFocusable(KeyboardEvent* event) const
 
 bool HTMLFormControlElement::isMouseFocusable() const
 {
-#if PLATFORM(GTK) || PLATFORM(QT)
+#if PLATFORM(GTK)
     return HTMLElement::isMouseFocusable();
 #else
     return false;

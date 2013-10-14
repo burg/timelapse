@@ -306,6 +306,7 @@
     <ClCompile Include="..\bytecode\ExecutionCounter.cpp" />
     <ClCompile Include="..\bytecode\ExitKind.cpp" />
     <ClCompile Include="..\bytecode\GetByIdStatus.cpp" />
+    <ClCompile Include="..\bytecode\InlineCallFrameSet.cpp" />
     <ClCompile Include="..\bytecode\JumpTable.cpp" />
     <ClCompile Include="..\bytecode\LazyOperandValueProfile.cpp" />
     <ClCompile Include="..\bytecode\MethodOfGettingAValueProfile.cpp" />
@@ -319,6 +320,7 @@
     <ClCompile Include="..\bytecode\StructureStubClearingWatchpoint.cpp" />
     <ClCompile Include="..\bytecode\StructureStubInfo.cpp" />
     <ClCompile Include="..\bytecode\UnlinkedCodeBlock.cpp" />
+    <ClCompile Include="..\bytecode\ValueRecovery.cpp" />
     <ClCompile Include="..\bytecode\Watchpoint.cpp" />
     <ClCompile Include="..\bytecompiler\BytecodeGenerator.cpp" />
     <ClCompile Include="..\bytecompiler\NodesCodegen.cpp" />
@@ -377,6 +379,7 @@
     <ClCompile Include="..\jit\JITExceptions.cpp" />
     <ClCompile Include="..\jit\JITOpcodes.cpp" />
     <ClCompile Include="..\jit\JITOpcodes32_64.cpp" />
+    <ClCompile Include="..\jit\JITOperations.cpp" />
     <ClCompile Include="..\jit\JITPropertyAccess.cpp" />
     <ClCompile Include="..\jit\JITPropertyAccess32_64.cpp" />
     <ClCompile Include="..\jit\JITStubRoutine.cpp" />
@@ -384,6 +387,7 @@
     <ClCompile Include="..\jit\JITThunks.cpp" />
     <ClCompile Include="..\jit\JITToDFGDeferredCompilationCallback.cpp" />
     <ClCompile Include="..\jit\JumpReplacementWatchpoint.cpp" />
+    <ClCompile Include="..\jit\Repatch.cpp" />
     <ClCompile Include="..\jit\ThunkGenerators.cpp" />
     <ClCompile Include="..\llint\LLIntCLoop.cpp" />
     <ClCompile Include="..\llint\LLIntData.cpp" />
@@ -421,6 +425,8 @@
     <ClCompile Include="..\runtime\ArrayBuffer.cpp" />
     <ClCompile Include="..\runtime\ArrayBufferView.cpp" />
     <ClCompile Include="..\runtime\ArrayConstructor.cpp" />
+    <ClCompile Include="..\runtime\ArrayIteratorConstructor.cpp" />
+    <ClCompile Include="..\runtime\ArrayIteratorPrototype.cpp" />
     <ClCompile Include="..\runtime\ArrayPrototype.cpp" />
     <ClCompile Include="..\runtime\BooleanConstructor.cpp" />
     <ClCompile Include="..\runtime\BooleanObject.cpp" />
@@ -456,6 +462,7 @@
     <ClCompile Include="..\runtime\JSAPIValueWrapper.cpp" />
     <ClCompile Include="..\runtime\JSActivation.cpp" />
     <ClCompile Include="..\runtime\JSArray.cpp" />
+    <ClCompile Include="..\runtime\JSArrayIterator.cpp" />
     <ClCompile Include="..\runtime\JSArrayBuffer.cpp" />
     <ClCompile Include="..\runtime\JSArrayBufferConstructor.cpp" />
     <ClCompile Include="..\runtime\JSArrayBufferPrototype.cpp" />
@@ -648,6 +655,7 @@
     <ClInclude Include="..\bytecode\ExpressionRangeInfo.h" />
     <ClInclude Include="..\bytecode\GetByIdStatus.h" />
     <ClInclude Include="..\bytecode\HandlerInfo.h" />
+    <ClInclude Include="..\bytecode\InlineCallFrameSet.h" />
     <ClInclude Include="..\bytecode\Instruction.h" />
     <ClInclude Include="..\bytecode\JumpTable.h" />
     <ClInclude Include="..\bytecode\LazyOperandValueProfile.h" />
@@ -723,7 +731,6 @@
     <ClInclude Include="..\heap\MarkedSpace.h" />
     <ClInclude Include="..\heap\MarkStack.h" />
     <ClInclude Include="..\heap\MarkStackInlines.h" />
-    <ClInclude Include="..\heap\PassWeak.h" />
     <ClInclude Include="..\heap\Region.h" />
     <ClInclude Include="..\heap\SlotVisitor.h" />
     <ClInclude Include="..\heap\SlotVisitorInlines.h" />
@@ -767,6 +774,8 @@
     <ClInclude Include="..\jit\JITDisassembler.h" />
     <ClInclude Include="..\jit\JITExceptions.h" />
     <ClInclude Include="..\jit\JITInlines.h" />
+    <ClInclude Include="..\jit\JITOperationWrappers.h" />
+    <ClInclude Include="..\jit\JITOperations.h" />
     <ClInclude Include="..\jit\JITStubCall.h" />
     <ClInclude Include="..\jit\JITStubRoutine.h" />
     <ClInclude Include="..\jit\JITStubs.h" />
@@ -778,6 +787,9 @@
     <ClInclude Include="..\jit\JITWriteBarrier.h" />
     <ClInclude Include="..\jit\JSInterfaceJIT.h" />
     <ClInclude Include="..\jit\JumpReplacementWatchpoint.h" />
+    <ClInclude Include="..\jit\RegisterSet.h" />
+    <ClInclude Include="..\jit\Repatch.h" />
+    <ClInclude Include="..\jit\ScratchRegisterAllocator.h" />
     <ClInclude Include="..\jit\SpecializedThunkJIT.h" />
     <ClInclude Include="..\jit\ThunkGenerator.h" />
     <ClInclude Include="..\jit\ThunkGenerators.h" />
@@ -831,6 +843,8 @@
     <ClInclude Include="..\runtime\ArrayBufferView.h" />
     <ClInclude Include="..\runtime\ArrayConstructor.h" />
     <ClInclude Include="..\runtime\ArrayConventions.h" />
+    <ClInclude Include="..\runtime\ArrayIteratorConstructor.h" />
+    <ClInclude Include="..\runtime\ArrayIteratorPrototype.h" />
     <ClInclude Include="..\runtime\ArrayPrototype.h" />
     <ClInclude Include="..\runtime\ArrayStorage.h" />
     <ClInclude Include="..\runtime\BatchedTransitionOptimizer.h" />
@@ -889,6 +903,7 @@
     <ClInclude Include="..\runtime\JSArrayBufferPrototype.h" />
     <ClInclude Include="..\runtime\JSArrayBufferView.h" />
     <ClInclude Include="..\runtime\JSArrayBufferViewInlines.h" />
+    <ClInclude Include="..\runtime\JSArrayIterator.h" />
     <ClInclude Include="..\runtime\JSBoundFunction.h" />
     <ClInclude Include="..\runtime\JSCJSValue.h" />
     <ClInclude Include="..\runtime\JSCJSValueInlines.h" />

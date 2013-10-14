@@ -35,16 +35,16 @@
 
 #include "NavigateToPage.h"
 
-#include "ReplayController.h"
-#include "DocumentLoader.h"
-#include "Frame.h"
 #include "DecoderContext.h"
+#include "DocumentLoader.h"
 #include "EncoderContext.h"
-#include "KURL.h"
+#include "MainFrame.h"
 #include "NavigationScheduler.h"
 #include "NetworkProxy.h"
 #include "Page.h"
+#include "ReplayController.h"
 #include "SecurityOrigin.h"
+#include "URL.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
 
@@ -55,7 +55,7 @@ NavigateToPage::NavigateToPage(PassRefPtr<SecurityOrigin> securityOrigin, const 
     , m_url(url)
     , m_referrer(referrer)
 {
-    KURL parsedUrl = KURL(ParsedURLString, url);
+    URL parsedUrl = URL(ParsedURLString, url);
 }
 
 NavigateToPage::~NavigateToPage() {}

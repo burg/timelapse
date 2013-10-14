@@ -32,7 +32,7 @@ using namespace std;
 
 namespace WebCore {
 
-#if !USE(SOUP) && (!PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(QT)
+#if !USE(SOUP) && (!PLATFORM(MAC) || USE(CFNETWORK))
 double ResourceRequestBase::s_defaultTimeoutInterval = INT_MAX;
 #else
 // Will use NSURLRequest default timeout unless set to a non-zero value with setDefaultTimeoutInterval().
@@ -113,14 +113,14 @@ bool ResourceRequestBase::isNull() const
     return m_url.isNull();
 }
 
-const KURL& ResourceRequestBase::url() const 
+const URL& ResourceRequestBase::url() const 
 {
     updateResourceRequest(); 
     
     return m_url;
 }
 
-void ResourceRequestBase::setURL(const KURL& url)
+void ResourceRequestBase::setURL(const URL& url)
 { 
     updateResourceRequest(); 
 
@@ -182,14 +182,14 @@ void ResourceRequestBase::setTimeoutInterval(double timeoutInterval)
         m_platformRequestUpdated = false;
 }
 
-const KURL& ResourceRequestBase::firstPartyForCookies() const
+const URL& ResourceRequestBase::firstPartyForCookies() const
 {
     updateResourceRequest(); 
     
     return m_firstPartyForCookies;
 }
 
-void ResourceRequestBase::setFirstPartyForCookies(const KURL& firstPartyForCookies)
+void ResourceRequestBase::setFirstPartyForCookies(const URL& firstPartyForCookies)
 { 
     updateResourceRequest(); 
 
@@ -521,7 +521,7 @@ void ResourceRequestBase::updateResourceRequest(HTTPBodyUpdatePolicy bodyPolicy)
     }
 }
 
-#if !PLATFORM(MAC) && !USE(CFNETWORK) && !USE(SOUP) && !PLATFORM(QT) && !PLATFORM(BLACKBERRY)
+#if !PLATFORM(MAC) && !USE(CFNETWORK) && !USE(SOUP) && !PLATFORM(BLACKBERRY)
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
     // This is used by the loader to control the number of issued parallel load requests. 

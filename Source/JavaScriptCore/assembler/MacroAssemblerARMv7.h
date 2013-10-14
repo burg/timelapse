@@ -101,8 +101,6 @@ public:
     };
     
 public:
-    typedef ARMRegisters::FPDoubleRegisterID FPRegisterID;
-
     static const Scale ScalePtr = TimesFour;
 
     enum RelationalCondition {
@@ -775,7 +773,6 @@ public:
         m_assembler.vmov(dest, src1, src2);
     }
 
-#if ENABLE(JIT_CONSTANT_BLINDING)
     static bool shouldBlindForSpecificArch(uint32_t value)
     {
         ARMThumbImmediate immediate = ARMThumbImmediate::makeEncodedImm(value);
@@ -793,7 +790,6 @@ public:
         // be controlled by an attacker.
         return !immediate.isUInt12();
     }
-#endif
 
     // Floating-point operations:
 

@@ -34,6 +34,7 @@
 #include "JSDocumentFragment.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "MouseEvent.h"
 #include "NodeList.h"
 #include "NodeRenderStyle.h"
@@ -159,7 +160,7 @@ bool HTMLPlugInImageElement::isImageType()
         m_serviceType = mimeTypeFromDataURL(m_url);
 
     if (Frame* frame = document().frame()) {
-        KURL completedURL = document().completeURL(m_url);
+        URL completedURL = document().completeURL(m_url);
         return frame->loader().client().objectContentType(completedURL, m_serviceType, shouldPreferPlugInsForImages()) == ObjectContentImage;
     }
 
@@ -170,7 +171,7 @@ bool HTMLPlugInImageElement::isImageType()
 // depending on <param> values.
 bool HTMLPlugInImageElement::allowedToLoadFrameURL(const String& url)
 {
-    KURL completeURL = document().completeURL(url);
+    URL completeURL = document().completeURL(url);
 
     if (contentFrame() && protocolIsJavaScript(completeURL)
         && !document().securityOrigin()->canAccess(contentDocument()->securityOrigin()))
@@ -184,7 +185,7 @@ bool HTMLPlugInImageElement::allowedToLoadFrameURL(const String& url)
 bool HTMLPlugInImageElement::wouldLoadAsNetscapePlugin(const String& url, const String& serviceType)
 {
     ASSERT(document().frame());
-    KURL completedURL;
+    URL completedURL;
     if (!url.isEmpty())
         completedURL = document().completeURL(url);
 
@@ -355,6 +356,12 @@ void HTMLPlugInImageElement::checkSnapshotStatus()
     ensureUserAgentShadowRoot().dispatchEvent(Event::create(eventNames().resizeEvent, true, false));
 }
 
+static DOMWrapperWorld& plugInImageElementIsolatedWorld()
+{
+    static DOMWrapperWorld& isolatedWorld = *DOMWrapperWorld::create(JSDOMWindow::commonVM()).leakRef();
+    return isolatedWorld;
+}
+
 void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
     Page* page = document().page();
@@ -368,7 +375,7 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
     
     String mimeType = loadedMimeType();
 
-    static DOMWrapperWorld* isolatedWorld = DOMWrapperWorld::create(JSDOMWindow::commonVM()).leakRef();
+    DOMWrapperWorld& isolatedWorld = plugInImageElementIsolatedWorld();
     document().ensurePlugInsInjectedScript(isolatedWorld);
 
     ScriptController& scriptController = page->mainFrame().script();
@@ -431,7 +438,7 @@ static void addPlugInsFromNodeListMatchingPlugInOrigin(HTMLPlugInImageElementLis
             HTMLPlugInElement* plugInElement = toHTMLPlugInElement(node);
             if (plugInElement->isPlugInImageElement()) {
                 HTMLPlugInImageElement* plugInImageElement = toHTMLPlugInImageElement(node);
-                const KURL& loadedURL = plugInImageElement->loadedUrl();
+                const URL& loadedURL = plugInImageElement->loadedUrl();
                 String otherMimeType = plugInImageElement->loadedMimeType();
                 if (plugInOrigin == loadedURL.host() && mimeType == otherMimeType)
                     plugInList.append(plugInImageElement);
@@ -537,12 +544,12 @@ void HTMLPlugInImageElement::simulatedMouseClickTimerFired(DeferrableOneShotTime
     m_pendingClickEventFromSnapshot = nullptr;
 }
 
-static bool documentHadRecentUserGesture(Document* document)
+static bool documentHadRecentUserGesture(Document& document)
 {
-    double lastKnownUserGestureTimestamp = document->lastHandledUserGestureTimestamp();
+    double lastKnownUserGestureTimestamp = document.lastHandledUserGestureTimestamp();
 
-    if (document->frame() != &document->page()->mainFrame() && document->page()->mainFrame().document())
-        lastKnownUserGestureTimestamp = std::max(lastKnownUserGestureTimestamp, document->page()->mainFrame().document()->lastHandledUserGestureTimestamp());
+    if (document.frame() != &document.page()->mainFrame() && document.page()->mainFrame().document())
+        lastKnownUserGestureTimestamp = std::max(lastKnownUserGestureTimestamp, document.page()->mainFrame().document()->lastHandledUserGestureTimestamp());
 
     if (monotonicallyIncreasingTime() - lastKnownUserGestureTimestamp < autostartSoonAfterUserGestureThreshold)
         return true;
@@ -552,7 +559,7 @@ static bool documentHadRecentUserGesture(Document* document)
 
 void HTMLPlugInImageElement::checkSizeChangeForSnapshotting()
 {
-    if (!m_needsCheckForSizeChange || m_snapshotDecision != MaySnapshotWhenResized || documentHadRecentUserGesture(&document()))
+    if (!m_needsCheckForSizeChange || m_snapshotDecision != MaySnapshotWhenResized || documentHadRecentUserGesture(document()))
         return;
 
     m_needsCheckForSizeChange = false;
@@ -571,7 +578,7 @@ void HTMLPlugInImageElement::checkSizeChangeForSnapshotting()
         toPluginViewBase(widget)->beginSnapshottingRunningPlugin();
 }
 
-void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
+void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const URL& url)
 {
     LOG(Plugins, "%p Plug-in URL: %s", this, m_url.utf8().data());
     LOG(Plugins, "   Actual URL: %s", url.string().utf8().data());
@@ -604,7 +611,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
         return;
     }
 
-    bool inMainFrame = document().page()->frameIsMainFrame(document().frame());
+    bool inMainFrame = document().frame()->isMainFrame();
 
     if (document().isPluginDocument() && inMainFrame) {
         LOG(Plugins, "%p Plug-in document in main frame", this);
@@ -624,7 +631,7 @@ void HTMLPlugInImageElement::subframeLoaderWillCreatePlugIn(const KURL& url)
         return;
     }
 
-    if (documentHadRecentUserGesture(&document())) {
+    if (documentHadRecentUserGesture(document())) {
         LOG(Plugins, "%p Plug-in was created shortly after a user gesture, set to play", this);
         m_snapshotDecision = NeverSnapshot;
         return;
@@ -712,7 +719,7 @@ void HTMLPlugInImageElement::subframeLoaderDidCreatePlugIn(const Widget* widget)
 
 void HTMLPlugInImageElement::defaultEventHandler(Event* event)
 {
-    RenderObject* r = renderer();
+    RenderElement* r = renderer();
     if (r && r->isEmbeddedObject()) {
         if (isPlugInImageElement() && displayState() == WaitingForSnapshot && event->isMouseEvent() && event->type() == eventNames().clickEvent) {
             MouseEvent* mouseEvent = toMouseEvent(event);

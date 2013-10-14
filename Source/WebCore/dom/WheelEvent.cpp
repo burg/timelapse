@@ -25,7 +25,6 @@
 #include "WheelEvent.h"
 
 #include "Clipboard.h"
-#include "EventDispatcher.h"
 #include "EventNames.h"
 #include "PlatformWheelEvent.h"
 
@@ -118,45 +117,14 @@ void WheelEvent::initWebKitWheelEvent(int rawDeltaX, int rawDeltaY, PassRefPtr<A
                    ctrlKey, altKey, shiftKey, metaKey);
 }
 
-const AtomicString& WheelEvent::interfaceName() const
+EventInterface WheelEvent::eventInterface() const
 {
-    return eventNames().interfaceForWheelEvent;
+    return WheelEventInterfaceType;
 }
 
 bool WheelEvent::isMouseEvent() const
 {
     return false;
-}
-
-inline static unsigned deltaMode(const PlatformWheelEvent& event)
-{
-    return event.granularity() == ScrollByPageWheelEvent ? WheelEvent::DOM_DELTA_PAGE : WheelEvent::DOM_DELTA_PIXEL;
-}
-
-PassRefPtr<WheelEventDispatchMediator> WheelEventDispatchMediator::create(const PlatformWheelEvent& event, PassRefPtr<AbstractView> view)
-{
-    return adoptRef(new WheelEventDispatchMediator(event, view));
-}
-
-WheelEventDispatchMediator::WheelEventDispatchMediator(const PlatformWheelEvent& event, PassRefPtr<AbstractView> view)
-{
-    if (!(event.deltaX() || event.deltaY()))
-        return;
-
-    setEvent(WheelEvent::create(FloatPoint(event.wheelTicksX(), event.wheelTicksY()), FloatPoint(event.deltaX(), event.deltaY()),
-        deltaMode(event), view, event.globalPosition(), event.position(),
-        event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(), event.directionInvertedFromDevice(), event.timestamp()));
-}
-
-WheelEvent* WheelEventDispatchMediator::event() const
-{
-    return static_cast<WheelEvent*>(EventDispatchMediator::event());
-}
-
-bool WheelEventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) const
-{
-    ASSERT(event());
-    return EventDispatchMediator::dispatchEvent(dispatcher) && !event()->defaultHandled();
 }
 
 } // namespace WebCore

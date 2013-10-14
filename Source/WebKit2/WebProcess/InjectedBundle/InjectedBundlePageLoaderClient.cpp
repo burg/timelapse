@@ -55,7 +55,7 @@ static void releaseSharedBuffer(unsigned char*, const void* data)
     static_cast<SharedBuffer*>(const_cast<void*>(data))->deref();
 }
 
-void InjectedBundlePageLoaderClient::willLoadDataRequest(WebPage* page, const ResourceRequest& request, const SharedBuffer* data, const String& MIMEType, const String& encodingName, const KURL& unreachableURL, APIObject* userData)
+void InjectedBundlePageLoaderClient::willLoadDataRequest(WebPage* page, const ResourceRequest& request, const SharedBuffer* data, const String& MIMEType, const String& encodingName, const URL& unreachableURL, APIObject* userData)
 {
     if (!m_client.willLoadDataRequest)
         return;
@@ -257,7 +257,7 @@ void InjectedBundlePageLoaderClient::didLayout(WebPage* page, LayoutMilestones m
     userData = adoptRef(toImpl(userDataToPass));
 }
 
-void InjectedBundlePageLoaderClient::didClearWindowObjectForFrame(WebPage* page, WebFrame* frame, DOMWrapperWorld* world)
+void InjectedBundlePageLoaderClient::didClearWindowObjectForFrame(WebPage* page, WebFrame* frame, DOMWrapperWorld& world)
 {
     if (!m_client.didClearWindowObjectForFrame)
         return;
@@ -289,7 +289,7 @@ void InjectedBundlePageLoaderClient::didHandleOnloadEventsForFrame(WebPage* page
     m_client.didHandleOnloadEventsForFrame(toAPI(page), toAPI(frame), m_client.clientInfo);
 }
 
-void InjectedBundlePageLoaderClient::globalObjectIsAvailableForFrame(WebPage* page, WebFrame* frame, WebCore::DOMWrapperWorld* world)
+void InjectedBundlePageLoaderClient::globalObjectIsAvailableForFrame(WebPage* page, WebFrame* frame, WebCore::DOMWrapperWorld& world)
 {
     if (!m_client.globalObjectIsAvailableForFrame)
         return;

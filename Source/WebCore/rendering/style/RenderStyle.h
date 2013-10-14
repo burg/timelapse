@@ -745,8 +745,8 @@ public:
     void getTextShadowExtent(LayoutUnit& top, LayoutUnit& right, LayoutUnit& bottom, LayoutUnit& left) const { getShadowExtent(textShadow(), top, right, bottom, left); }
     void getTextShadowHorizontalExtent(LayoutUnit& left, LayoutUnit& right) const { getShadowHorizontalExtent(textShadow(), left, right); }
     void getTextShadowVerticalExtent(LayoutUnit& top, LayoutUnit& bottom) const { getShadowVerticalExtent(textShadow(), top, bottom); }
-    void getTextShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) { getShadowInlineDirectionExtent(textShadow(), logicalLeft, logicalRight); }
-    void getTextShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) { getShadowBlockDirectionExtent(textShadow(), logicalTop, logicalBottom); }
+    void getTextShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const { getShadowInlineDirectionExtent(textShadow(), logicalLeft, logicalRight); }
+    void getTextShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const { getShadowBlockDirectionExtent(textShadow(), logicalTop, logicalBottom); }
 
     float textStrokeWidth() const { return rareInheritedData->textStrokeWidth; }
     ColorSpace colorSpace() const { return static_cast<ColorSpace>(rareInheritedData->colorSpace); }
@@ -783,6 +783,9 @@ public:
     const Vector<GridTrackSize>& gridRows() const { return rareNonInheritedData->m_grid->m_gridRows; }
     const NamedGridLinesMap& namedGridColumnLines() const { return rareNonInheritedData->m_grid->m_namedGridColumnLines; }
     const NamedGridLinesMap& namedGridRowLines() const { return rareNonInheritedData->m_grid->m_namedGridRowLines; }
+    const NamedGridAreaMap& namedGridArea() const { return rareNonInheritedData->m_grid->m_namedGridArea; }
+    size_t namedGridAreaRowCount() const { return rareNonInheritedData->m_grid->m_namedGridAreaRowCount; }
+    size_t namedGridAreaColumnCount() const { return rareNonInheritedData->m_grid->m_namedGridAreaColumnCount; }
     GridAutoFlow gridAutoFlow() const { return rareNonInheritedData->m_grid->m_gridAutoFlow; }
     const GridTrackSize& gridAutoColumns() const { return rareNonInheritedData->m_grid->m_gridAutoColumns; }
     const GridTrackSize& gridAutoRows() const { return rareNonInheritedData->m_grid->m_gridAutoRows; }
@@ -797,8 +800,8 @@ public:
     LayoutBoxExtent getBoxShadowInsetExtent() const { return getShadowInsetExtent(boxShadow()); }
     void getBoxShadowHorizontalExtent(LayoutUnit& left, LayoutUnit& right) const { getShadowHorizontalExtent(boxShadow(), left, right); }
     void getBoxShadowVerticalExtent(LayoutUnit& top, LayoutUnit& bottom) const { getShadowVerticalExtent(boxShadow(), top, bottom); }
-    void getBoxShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) { getShadowInlineDirectionExtent(boxShadow(), logicalLeft, logicalRight); }
-    void getBoxShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) { getShadowBlockDirectionExtent(boxShadow(), logicalTop, logicalBottom); }
+    void getBoxShadowInlineDirectionExtent(LayoutUnit& logicalLeft, LayoutUnit& logicalRight) const { getShadowInlineDirectionExtent(boxShadow(), logicalLeft, logicalRight); }
+    void getBoxShadowBlockDirectionExtent(LayoutUnit& logicalTop, LayoutUnit& logicalBottom) const { getShadowBlockDirectionExtent(boxShadow(), logicalTop, logicalBottom); }
 
 #if ENABLE(CSS_BOX_DECORATION_BREAK)
     EBoxDecorationBreak boxDecorationBreak() const { return m_box->boxDecorationBreak(); }
@@ -889,6 +892,7 @@ public:
     // End CSS3 Getters
 
     const AtomicString& flowThread() const { return rareNonInheritedData->m_flowThread; }
+    bool hasStyleRegion() const { return !rareNonInheritedData->m_regionThread.isNull(); }
     const AtomicString& regionThread() const { return rareNonInheritedData->m_regionThread; }
     RegionFragment regionFragment() const { return static_cast<RegionFragment>(rareNonInheritedData->m_regionFragment); }
 
@@ -933,6 +937,9 @@ public:
     const LineClampValue& lineClamp() const { return rareNonInheritedData->lineClamp; }
 #if ENABLE(TOUCH_EVENTS)
     Color tapHighlightColor() const { return rareInheritedData->tapHighlightColor; }
+#endif
+#if PLATFORM(IOS)
+    bool touchCalloutEnabled() const { return rareInheritedData->touchCalloutEnabled; }
 #endif
 #if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
     bool useTouchOverflowScrolling() const { return rareInheritedData->useTouchOverflowScrolling; }
@@ -1315,6 +1322,9 @@ public:
     void setGridRows(const Vector<GridTrackSize>& lengths) { SET_VAR(rareNonInheritedData.access()->m_grid, m_gridRows, lengths); }
     void setNamedGridColumnLines(const NamedGridLinesMap& namedGridColumnLines) { SET_VAR(rareNonInheritedData.access()->m_grid, m_namedGridColumnLines, namedGridColumnLines); }
     void setNamedGridRowLines(const NamedGridLinesMap& namedGridRowLines) { SET_VAR(rareNonInheritedData.access()->m_grid, m_namedGridRowLines, namedGridRowLines); }
+    void setNamedGridArea(const NamedGridAreaMap& namedGridArea) { SET_VAR(rareNonInheritedData.access()->m_grid, m_namedGridArea, namedGridArea); }
+    void setNamedGridAreaRowCount(size_t rowCount) { SET_VAR(rareNonInheritedData.access()->m_grid, m_namedGridAreaRowCount, rowCount); }
+    void setNamedGridAreaColumnCount(size_t columnCount) { SET_VAR(rareNonInheritedData.access()->m_grid, m_namedGridAreaColumnCount, columnCount); }
     void setGridAutoFlow(GridAutoFlow flow) { SET_VAR(rareNonInheritedData.access()->m_grid, m_gridAutoFlow, flow); }
     void setGridItemColumnStart(const GridPosition& columnStartPosition) { SET_VAR(rareNonInheritedData.access()->m_gridItem, m_gridColumnStart, columnStartPosition); }
     void setGridItemColumnEnd(const GridPosition& columnEndPosition) { SET_VAR(rareNonInheritedData.access()->m_gridItem, m_gridColumnEnd, columnEndPosition); }
@@ -1441,6 +1451,9 @@ public:
 #if ENABLE(TOUCH_EVENTS)
     void setTapHighlightColor(const Color& c) { SET_VAR(rareInheritedData, tapHighlightColor, c); }
 #endif
+#if PLATFORM(IOS)
+    void setTouchCalloutEnabled(bool v) { SET_VAR(rareInheritedData, touchCalloutEnabled, v); }
+#endif
 #if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
     void setUseTouchOverflowScrolling(bool v) { SET_VAR(rareInheritedData, useTouchOverflowScrolling, v); }
 #endif
@@ -1523,6 +1536,14 @@ public:
     const Length& shapeMargin() const { return rareNonInheritedData->m_shapeMargin; }
     void setShapeMargin(Length shapeMargin) { SET_VAR(rareNonInheritedData, m_shapeMargin, std::move(shapeMargin)); }
     static Length initialShapeMargin() { return Length(0, Fixed); }
+
+    float shapeImageThreshold() const { return rareNonInheritedData->m_shapeImageThreshold; }
+    void setShapeImageThreshold(float shapeImageThreshold) 
+    { 
+        float clampedShapeImageThreshold = clampTo<float>(shapeImageThreshold, 0, 1);
+        SET_VAR(rareNonInheritedData, m_shapeImageThreshold, clampedShapeImageThreshold); 
+    }
+    static float initialShapeImageThreshold() { return 0; }
 #endif
 
     void setClipPath(PassRefPtr<ClipPathOperation> operation)
@@ -1540,7 +1561,7 @@ public:
     void clearContent();
     void setContent(const String&, bool add = false);
     void setContent(PassRefPtr<StyleImage>, bool add = false);
-    void setContent(PassOwnPtr<CounterContent>, bool add = false);
+    void setContent(std::unique_ptr<CounterContent>, bool add = false);
     void setContent(QuoteType, bool add = false);
 
     const CounterDirectiveMap* counterDirectives() const;
@@ -1759,6 +1780,9 @@ public:
     static GridTrackSize initialGridAutoColumns() { return GridTrackSize(Auto); }
     static GridTrackSize initialGridAutoRows() { return GridTrackSize(Auto); }
 
+    static NamedGridAreaMap initialNamedGridArea() { return NamedGridAreaMap(); }
+    static size_t initialNamedGridAreaCount() { return 0; }
+
     // 'auto' is the default.
     static GridPosition initialGridPosition() { return GridPosition(); }
 
@@ -1780,6 +1804,9 @@ public:
     static ETextSecurity initialTextSecurity() { return TSNONE; }
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     static TextSizeAdjustment initialTextSizeAdjust() { return TextSizeAdjustment(); }
+#endif
+#if PLATFORM(IOS)
+    static bool initialTouchCalloutEnabled() { return true; }
 #endif
 #if ENABLE(TOUCH_EVENTS)
     static Color initialTapHighlightColor();
@@ -1803,7 +1830,7 @@ private:
     bool changeRequiresPositionedLayoutOnly(const RenderStyle*, unsigned& changedContextSensitiveProperties) const;
     bool changeRequiresLayerRepaint(const RenderStyle*, unsigned& changedContextSensitiveProperties) const;
     bool changeRequiresRepaint(const RenderStyle*, unsigned& changedContextSensitiveProperties) const;
-    bool changeRequiresRepaintIfText(const RenderStyle*, unsigned& changedContextSensitiveProperties) const;
+    bool changeRequiresRepaintIfTextOrBorderOrOutline(const RenderStyle*, unsigned& changedContextSensitiveProperties) const;
     bool changeRequiresRecompositeLayer(const RenderStyle*, unsigned& changedContextSensitiveProperties) const;
 
     void setVisitedLinkColor(const Color&);
@@ -1883,7 +1910,7 @@ private:
     Color lightingColor() const { return svgStyle()->lightingColor(); }
 #endif
 
-    void appendContent(PassOwnPtr<ContentData>);
+    void appendContent(std::unique_ptr<ContentData>);
 };
 
 inline int adjustForAbsoluteZoom(int value, const RenderStyle* style)

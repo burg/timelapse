@@ -93,12 +93,6 @@ static inline LengthSize blendFunc(const AnimationBase* anim, const LengthSize& 
                       blendFunc(anim, from.height(), to.height(), progress));
 }
 
-static inline IntSize blendFunc(const AnimationBase* anim, const IntSize& from, const IntSize& to, double progress)
-{
-    return IntSize(blendFunc(anim, from.width(), to.width(), progress),
-                   blendFunc(anim, from.height(), to.height(), progress));
-}
-
 static inline ShadowStyle blendFunc(const AnimationBase* anim, ShadowStyle from, ShadowStyle to, double progress)
 {
     if (from == to)
@@ -288,11 +282,8 @@ static inline PassRefPtr<StyleImage> crossfadeBlend(const AnimationBase*, StyleC
     if (progress == 1)
         return toStyleImage;
 
-    CachedImage* fromCachedImage = static_cast<CachedImage*>(fromStyleImage->data());
-    CachedImage* toCachedImage = static_cast<CachedImage*>(toStyleImage->data());
-
-    RefPtr<CSSImageValue> fromImageValue = CSSImageValue::create(fromCachedImage->url(), fromStyleImage);
-    RefPtr<CSSImageValue> toImageValue = CSSImageValue::create(toCachedImage->url(), toStyleImage);
+    RefPtr<CSSImageValue> fromImageValue = CSSImageValue::create(fromStyleImage->cachedImage()->url(), fromStyleImage);
+    RefPtr<CSSImageValue> toImageValue = CSSImageValue::create(toStyleImage->cachedImage()->url(), toStyleImage);
     RefPtr<CSSCrossfadeValue> crossfadeValue = CSSCrossfadeValue::create(fromImageValue, toImageValue);
 
     crossfadeValue->setPercentage(CSSPrimitiveValue::create(progress, CSSPrimitiveValue::CSS_NUMBER));
@@ -1254,6 +1245,8 @@ CSSPropertyAnimationWrapperMap::CSSPropertyAnimationWrapperMap()
 
 #if ENABLE(CSS_SHAPES)
         new PropertyWrapperShape(CSSPropertyWebkitShapeInside, &RenderStyle::shapeInside, &RenderStyle::setShapeInside),
+        new PropertyWrapperShape(CSSPropertyWebkitShapeOutside, &RenderStyle::shapeOutside, &RenderStyle::setShapeOutside),
+        new PropertyWrapper<float>(CSSPropertyWebkitShapeImageThreshold, &RenderStyle::shapeImageThreshold, &RenderStyle::setShapeImageThreshold),
 #endif
 
         new PropertyWrapperVisitedAffectedColor(CSSPropertyWebkitColumnRuleColor, MaybeInvalidColor, &RenderStyle::columnRuleColor, &RenderStyle::setColumnRuleColor, &RenderStyle::visitedLinkColumnRuleColor, &RenderStyle::setVisitedLinkColumnRuleColor),

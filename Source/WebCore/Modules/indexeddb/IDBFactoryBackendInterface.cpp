@@ -28,15 +28,20 @@
 #include "config.h"
 #include "IDBFactoryBackendInterface.h"
 
-#include "IDBFactoryBackendImpl.h"
-
 #if ENABLE(INDEXED_DATABASE)
+
+#include "DatabaseStrategy.h"
+#include "PlatformStrategies.h"
+
+#if USE(LEVELDB)
+#include "IDBFactoryBackendLevelDB.h"
+#endif
 
 namespace WebCore {
 
 PassRefPtr<IDBFactoryBackendInterface> IDBFactoryBackendInterface::create()
 {
-    return IDBFactoryBackendImpl::create();
+    return platformStrategies()->databaseStrategy()->createIDBFactoryBackend();
 }
 
 } // namespace WebCore

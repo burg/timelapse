@@ -1,3 +1,692 @@
+2013-10-11  Timothy Hatcher  <timothy@apple.com>
+
+        Remove preference support for picking the old Web Inspector.
+        https://bugs.webkit.org/show_bug.cgi?id=122655
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::localizedStringsURL):
+        (-[WebInspectorWindowController inspectorPagePath]):
+
+2013-10-10  Simon Fraser  <simon.fraser@apple.com>
+
+        Always force layout before flushing compositing layers
+        https://bugs.webkit.org/show_bug.cgi?id=122626
+
+        Reviewed by Tim Horton.
+        
+        [m_webView _flushCompositingChanges] only actually flushes compositing
+        layers if the FrameView does not need layout (FrameView::flushCompositingStateForThisFrame()
+        returns in this case). In this situation, flushLayers() does actually try
+        to force a layout, but on some platforms it's possible for something else
+        to dirty layout before the runloop observer fires again. This can result
+        in flushLayers() never actually managing to flush, which stalls visual
+        updates.
+        
+        Fix by always calling -viewWillDraw (which updates layout) before flushing
+        layers. This now matches WebKit2 behavior.
+
+        * WebView/WebView.mm:
+        (LayerFlushController::flushLayers):
+
+2013-10-10  Andy Estes  <aestes@apple.com>
+
+        Add SPI for telling WebKit to prefer pictograph glyphs over monochrome ones
+        https://bugs.webkit.org/show_bug.cgi?id=122608
+
+        Reviewed by Dan Bernstein.
+
+        Based on patches by Dan Bernstein.
+
+        * WebView/WebView.mm:
+        (-[WebView _setFontFallbackPrefersPictographs:]): Called
+        WebCore::Settings::setFontFallbackPrefersPictographs().
+        * WebView/WebViewPrivate.h:
+
+2013-10-10  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/13341666> WebKit should always build against an SDK.
+
+        Have all projects default to building against the OS X Internal SDK for the Production
+        configuration. For the Debug and Release configurations, look for UseInternalSDK.xcconfig
+        to determine whether the OS X Internal SDK should be used. If not, use the normal OS X SDK.
+
+        Reviewed by Dan Bernstein.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+
+2013-10-08  Darin Adler  <darin@apple.com>
+
+        WebNetscapePluginView should no longer use deleteAllValues
+        https://bugs.webkit.org/show_bug.cgi?id=122495
+
+        Reviewed by Anders Carlsson.
+
+        * Plugins/WebNetscapePluginView.h: Use unique_ptr for both the pointer to
+        the timers hash table, and for the values in the hash table.
+
+        * Plugins/WebNetscapePluginView.mm:
+        (-[WebNetscapePluginView stopTimers]): Rewrote loop so it works with unique_ptr.
+        (-[WebNetscapePluginView startTimers]): Ditto.
+        (-[WebNetscapePluginView fini]): Removed unneeded code to delete timers.
+        (-[WebNetscapePluginView scheduleTimerWithInterval:repeat:timerFunc:]): Make
+        the timers hash table with make-unique. Fixed the loop that chooses the timer
+        ID so it won't ever try to use a deleted value, although that never happens
+        in practice. Use HashMap::add instead of using both contains and set.
+        Rearranged code so we don't need to make a raw pointer for the timer.
+        (-[WebNetscapePluginView unscheduleTimer:]): Use remove instead of take/delete,
+        since remove takes care of the deletion automatically since we are using the
+        unique_ptr class.
+
+2013-10-08  Darin Adler  <darin@apple.com>
+
+        Eliminate use of deleteAllValues in ProxyInstance
+        https://bugs.webkit.org/show_bug.cgi?id=122499
+
+        Reviewed by Anders Carlsson.
+
+        * Plugins/Hosted/ProxyInstance.h: Use unique_ptr for map values in m_fields and m_methods.
+
+        * Plugins/Hosted/ProxyInstance.mm:
+        (WebKit::ProxyInstance::~ProxyInstance): Removed calls to deleteAllValues.
+        (WebKit::ProxyInstance::methodNamed): Use make_unique and get to deal with map entries
+        that are unique_ptr. Also fixed a bug where this would do an expensive no-op if the map
+        already had an entry with a null in it. We would call the plug-in, but eventually
+        isNewEntry would be false so we would return null.
+        (WebKit::ProxyInstance::fieldNamed): Use make_unique and get to deal with map entries
+        that are unique_ptr.
+
+2013-10-08  Darin Adler  <darin@apple.com>
+
+        Change NetscapePluginInstanceProxy::m_replies to use unique_ptr instead of deleteAllValues
+        https://bugs.webkit.org/show_bug.cgi?id=122492
+
+        Reviewed by Andreas Kling.
+
+        * Plugins/Hosted/NetscapePluginHostManager.mm:
+        (WebKit::NetscapePluginHostManager::instantiatePlugin): Use auto so this works with
+        unique_ptr instead of auto_ptr.
+        * Plugins/Hosted/NetscapePluginHostProxy.mm:
+        (WKPCGetScriptableNPObjectReply): Use make_unique instead of using new directly.
+        (WKPCBooleanReply): Ditto.
+        (WKPCBooleanAndDataReply): Ditto.
+        (WKPCInstantiatePluginReply): Ditto.
+        * Plugins/Hosted/NetscapePluginInstanceProxy.h: Changed m_replies to map to unique_ptr
+        instead of to a raw pointer.
+        (WebKit::NetscapePluginInstanceProxy::setCurrentReply): Changed to take a unique_ptr
+        instead of a raw pointer since this takes ownership of the pointer.
+        (WebKit::NetscapePluginInstanceProxy::waitForReply): Changed to return a unique_ptr
+        instead of a auto_ptr because that's better. Use unique_ptr inside the function
+        too to avoid the need for an explicit delete.
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::~NetscapePluginInstanceProxy): Removed the call to
+        deleteAllValues.
+        (WebKit::NetscapePluginInstanceProxy::cancelStreamLoad): Removed unneeded initialization
+        of a local variable that was already set in all code paths.
+        (WebKit::NetscapePluginInstanceProxy::wheelEvent): Use auto so this works with unique_ptr
+        instead of auto_ptr.
+        (WebKit::NetscapePluginInstanceProxy::print): Ditto.
+        (WebKit::NetscapePluginInstanceProxy::snapshot): Ditto. Ditto.
+        (WebKit::NetscapePluginInstanceProxy::processRequestsAndWaitForReply): Changed to return
+        a unique_ptr. Also removed an unneeded assertion.
+        (WebKit::NetscapePluginInstanceProxy::createBindingsInstance): Use auto so this works
+        with unique_ptr instead of auto_ptr.
+
+        * Plugins/Hosted/ProxyInstance.h: Changed return type of waitForReply to unique_ptr.
+
+        * Plugins/Hosted/ProxyInstance.mm:
+        (WebKit::ProxyInstance::invoke): Use auto so this works with unique_ptr instead of auto_ptr.
+        (WebKit::ProxyInstance::supportsInvokeDefaultMethod): Ditto.
+        (WebKit::ProxyInstance::supportsConstruct): Ditto.
+        (WebKit::ProxyInstance::getPropertyNames): Ditto.
+        (WebKit::ProxyInstance::methodNamed): Ditto.
+        (WebKit::ProxyInstance::fieldNamed): Ditto.
+        (WebKit::ProxyInstance::fieldValue): Ditto.
+        (WebKit::ProxyInstance::setFieldValue): Ditto.
+
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        CTTE: Use references in and around DragController
+        https://bugs.webkit.org/show_bug.cgi?id=122427
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebDragClient.h:
+        * WebCoreSupport/WebDragClient.mm:
+        (WebDragClient::actionMaskForDrag):
+        (WebDragClient::willPerformDragDestinationAction):
+        (WebDragClient::willPerformDragSourceAction):
+        (WebDragClient::startDrag):
+        (WebDragClient::declareAndWriteDragImage):
+        * WebView/WebFrame.mm:
+        (-[WebFrame _replaceSelectionWithText:selectReplacement:smartReplace:]):
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView _documentFragmentFromPasteboard:forType:inContext:subresources:]):
+        * WebView/WebView.mm:
+        (-[WebView draggingEntered:]):
+        (-[WebView draggingUpdated:]):
+        (-[WebView draggingExited:]):
+        (-[WebView performDragOperation:]):
+
+2013-10-05  Sam Weinig  <sam@webkit.org>
+
+        CTTE: Thread references through markup.h
+        https://bugs.webkit.org/show_bug.cgi?id=122403
+
+        Reviewed by Darin Adler and Andreas Kling.
+
+        * DOM/WebDOMOperations.mm:
+        (-[DOMNode markupString]):
+        (-[DOMRange markupString]):
+        * WebView/WebFrame.mm:
+        (-[WebFrame _documentFragmentWithMarkupString:baseURLString:]):
+        (-[WebFrame _documentFragmentWithNodesAsParagraphs:]):
+
+2013-10-05  Sam Weinig  <sam@webkit.org>
+
+        CTTE: Pass DocumentWriter around as a reference
+        https://bugs.webkit.org/show_bug.cgi?id=122396
+
+        Reviewed by Andreas Kling.
+
+        * WebView/WebFrame.mm:
+        (-[WebFrame _canProvideDocumentSource]):
+
+2013-10-04  Alexey Proskuryakov  <ap@apple.com>
+
+        Don't preflight spell checker when calling -setContinuousSpellCheckingEnabled repeatedly
+        https://bugs.webkit.org/show_bug.cgi?id=122329
+
+        Reviewed by Darin Adler.
+
+        * WebView/WebView.mm: (-[WebView setContinuousSpellCheckingEnabled:]): Don't do any
+        work if preference didn't change (continuousSpellCheckingEnabled is a static that
+        starts with false).
+
+2013-10-04  Anders Carlsson  <andersca@apple.com>
+
+        FramePolicyFunction should be an std::function
+        https://bugs.webkit.org/show_bug.cgi?id=122362
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::dispatchDecidePolicyForResponse):
+        (WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction):
+        (WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction):
+        (WebFrameLoaderClient::dispatchWillSubmitForm):
+
+2013-10-04  Mark Lam  <mark.lam@apple.com>
+
+        Change ScriptDebugServer to use DebuggerCallFrame instead of JavaScriptCallFrame.
+        https://bugs.webkit.org/show_bug.cgi?id=121969.
+
+        Reviewed by Geoffrey Garen.
+
+        1. Make JavaScriptCallFrame a thin shell around the DebuggerCallFrame.
+           DebuggerCallFrame now tracks whether it is valid instead of needing
+           JavaScriptCallFrame do it.
+        2. ScriptDebugServer now only instantiates an DebuggerCallFrame when needed
+           just before it pauses and calls back to its client, and then invalidates
+           it immediately when the callback returns. Every subsequent callback to
+           the client will use a new instance of the DebuggerCallFrame.
+        3. Similarly, ScriptDebugServer now only creates a JavaScriptCallFrame when
+           it "pauses".
+        4. DebuggerCallFrame only creates its caller DebuggerCallFrame when
+           it is needed i.e. when the client calls callerFrame(). Similarly,
+           JavaScriptCallFrame only creates its caller when it's requested.
+        5. DebuggerCallFrame's line() and column() now returns a base-zero int.
+        6. WebScriptDebugDelegate now only caches the functionName of the frame
+           instead of the entire DebuggerCallFrame because that is all that is
+           needed.
+        7. Also removed evaluateInGlobalCallFrame() which is not used anywhere.
+
+        * WebView/WebScriptDebugDelegate.mm:
+        (-[WebScriptCallFramePrivate dealloc]):
+        (-[WebScriptCallFrame _initWithGlobalObject:functionName:exceptionValue:JSC::]):
+        (-[WebScriptCallFrame functionName]):
+        (-[WebScriptCallFrame exception]):
+        * WebView/WebScriptDebugger.mm:
+        (WebScriptDebugger::exception):
+
+2013-10-04  Anders Carlsson  <andersca@apple.com>
+
+        Remove some unneeded code from WidgetMac
+        https://bugs.webkit.org/show_bug.cgi?id=122355
+
+        Reviewed by Dan Bernstein.
+
+        Remove code to handle the visible rect changing, it's not needed anymore since we always put Netscape plug-ins into their own layers now.
+
+        * Plugins/Hosted/WebHostedNetscapePluginView.mm:
+        * Plugins/WebBaseNetscapePluginView.h:
+        * Plugins/WebBaseNetscapePluginView.mm:
+
+2013-10-04  Daniel Bates  <dabates@apple.com>
+
+        [iOS] Upstream disk image cache
+        https://bugs.webkit.org/show_bug.cgi?id=121985
+
+        Reviewed by Joseph Pecoraro.
+
+        * Misc/WebCache.mm:
+        (+[WebCache statistics]):
+        * WebView/WebDataSource.mm:
+        (BufferMemoryMapped): Added.
+        (-[WebDataSource _setAllowToBeMemoryMapped]): Added.
+        (-[WebDataSource setDataSourceDelegate:]): Added.
+        (-[WebDataSource dataSourceDelegate]): Added.
+        (-[WebDataSource dealloc]):
+        * WebView/WebDataSourcePrivate.h: Declared private delegate
+        protocol, WebDataSourcePrivateDelegate.
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences diskImageCacheEnabled]): Added.
+        (-[WebPreferences setDiskImageCacheEnabled:]): Added.
+        (-[WebPreferences diskImageCacheMinimumImageSize]): Added.
+        (-[WebPreferences setDiskImageCacheMinimumImageSize:]): Added.
+        (-[WebPreferences diskImageCacheMaximumCacheSize]): Added.
+        (-[WebPreferences setDiskImageCacheMaximumCacheSize:]): Added.
+        (-[WebPreferences _diskImageCacheSavedCacheDirectory]): Added.
+        (-[WebPreferences _setDiskImageCacheSavedCacheDirectory:]): Added.
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (-[WebView _preferencesChanged:]):
+
+2013-10-04  Anders Carlsson  <andersca@apple.com>
+
+        Remove WebAssertions.h
+        https://bugs.webkit.org/show_bug.cgi?id=122328
+
+        Reviewed by Jessie Berlin.
+
+        * Misc/WebAssertions.h: Removed.
+
+2013-10-03  Anders Carlsson  <andersca@apple.com>
+
+        Remove WebNSNotificationCenterExtras
+        https://bugs.webkit.org/show_bug.cgi?id=122316
+
+        Reviewed by Dan Bernstein.
+
+        Use dispatch_async to ensure that notifications are posted on the main thread.
+
+        * Misc/WebIconDatabase.mm:
+        (-[WebIconDatabase _sendNotificationForURL:]):
+        (-[WebIconDatabase _sendDidRemoveAllIconsNotification]):
+        * Misc/WebNSNotificationCenterExtras.h: Removed.
+        * Misc/WebNSNotificationCenterExtras.m: Removed.
+
+2013-10-03  Sam Weinig  <sam@webkit.org>
+
+        Remove shouldRubberBandInDirection from the WKBundlePageUIClient
+        https://bugs.webkit.org/show_bug.cgi?id=122309
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebChromeClient.h:
+
+2013-10-03  Anders Carlsson  <andersca@apple.com>
+
+        Ignore deprecation warnings
+        https://bugs.webkit.org/show_bug.cgi?id=122302
+
+        Reviewed by Mark Rowe.
+
+        * Misc/WebIconDatabase.mm:
+        (-[WebIconDatabase _scaleIcon:toSize:]):
+        (webGetNSImage):
+        * Misc/WebNSImageExtras.m:
+        (-[NSImage _web_scaleToMaxSize:]):
+        (-[NSImage _web_dissolveToFraction:]):
+        * Misc/WebNSViewExtras.m:
+        (-[NSView _web_DragImageForElement:rect:event:pasteboard:source:offset:]):
+        (-[NSView _web_convertRect:toView:]):
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::mouseEvent):
+        * Plugins/Hosted/WebTextInputWindowController.m:
+        (-[WebTextInputPanel _interpretKeyEvent:string:]):
+        * Plugins/WebBaseNetscapePluginView.mm:
+        (-[WebBaseNetscapePluginView convertFromX:andY:space:toX:andY:space:]):
+        * WebCoreSupport/WebDragClient.mm:
+        (WebDragClient::startDrag):
+        * WebInspector/WebNodeHighlight.mm:
+        (-[WebNodeHighlight _computeHighlightWindowFrame]):
+        * WebView/WebFullScreenController.mm:
+        (-[WebFullScreenController _startEnterFullScreenAnimationWithDuration:]):
+        (-[WebFullScreenController _startExitFullScreenAnimationWithDuration:]):
+        * WebView/WebHTMLView.mm:
+        (+[WebHTMLView _postFlagsChangedEvent:]):
+        (-[WebHTMLView _updateMouseoverWithFakeEvent]):
+        (-[WebHTMLView _autoscroll]):
+        (-[WebHTMLView mouseDown:]):
+        (-[WebHTMLView mouseDragged:]):
+        (-[WebHTMLView mouseUp:]):
+        (-[WebHTMLView accessibilityHitTest:]):
+        (-[WebHTMLView _executeSavedKeypressCommands]):
+        (-[WebHTMLView attachRootLayer:]):
+        (-[WebHTMLView textStorage]):
+        (-[WebHTMLView _updateSelectionForInputManager]):
+        * WebView/WebTextCompletionController.mm:
+        (-[WebTextCompletionController _buildUI]):
+        (-[WebTextCompletionController _placePopupWindow:]):
+
+2013-10-01  Sam Weinig  <sam@webkit.org>
+
+        CTTE: DOMWrapperWorlds should be passed around by reference
+        https://bugs.webkit.org/show_bug.cgi?id=122206
+
+        Reviewed by Andreas Kling.
+
+        * Plugins/Hosted/NetscapePluginInstanceProxy.mm:
+        (WebKit::NetscapePluginInstanceProxy::getWindowNPObject):
+        (WebKit::NetscapePluginInstanceProxy::getPluginElementNPObject):
+        (WebKit::NetscapePluginInstanceProxy::evaluate):
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        * WebView/WebFrame.mm:
+        (-[WebFrame _stringByEvaluatingJavaScriptFromString:withGlobalObject:inScriptWorld:]):
+        (-[WebFrame _globalContextForScriptWorld:]):
+        (-[WebFrame jsWrapperForNode:inScriptWorld:]):
+        * WebView/WebScriptWorld.mm:
+        (+[WebScriptWorld standardWorld]):
+        (+[WebScriptWorld findOrCreateWorld:]):
+        * WebView/WebScriptWorldInternal.h:
+        * WebView/WebView.mm:
+        (-[WebView _injectOutlookQuirksScript]):
+        (+[WebView _addUserScriptToGroup:world:source:url:whitelist:blacklist:injectionTime:injectedFrames:]):
+        (+[WebView _addUserStyleSheetToGroup:world:source:url:whitelist:blacklist:injectedFrames:]):
+        (+[WebView _removeUserScriptFromGroup:world:url:]):
+        (+[WebView _removeUserStyleSheetFromGroup:world:url:]):
+        (+[WebView _removeUserScriptsFromGroup:world:]):
+        (+[WebView _removeUserStyleSheetsFromGroup:world:]):
+
+2013-09-30  Sam Weinig  <sam@webkit.org>
+
+        Remove support for DOMFileSystem
+        https://bugs.webkit.org/show_bug.cgi?id=122137
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-30  Benjamin Poulain  <benjamin@webkit.org>
+
+        Remove the code guarded by STYLE_SCOPED
+        https://bugs.webkit.org/show_bug.cgi?id=122123
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-30  Mark Rowe  <mrowe@apple.com>
+
+        Fix the build when building against an SDK.
+
+        Xcode helpfully prepends $(SDKROOT) to the paths in FRAMEWORK_SEARCH_PATHS when generating
+        the compiler command lines. It can't know to do this for the system framework search paths
+        we add manually via OTHER_CFLAGS though, so we need to prefix them with $(SDKROOT) ourself.
+
+        * Configurations/WebKit.xcconfig:
+
+2013-09-29  Mark Rowe  <mrowe@apple.com>
+
+        Fix the Lion build.
+
+        Ensure that C++ and Objective-C++ files build with the right compiler flags.
+
+        * Configurations/WebKit.xcconfig:
+
+2013-09-28  Mark Rowe  <mrowe@apple.com>
+
+        Fix some failures with newer versions of clang.
+
+        Some CoreGraphics headers generate warnings under newer versions of clang. Since they're system headers the warnings would
+        usually be suppressed, but we're adding the frameworks to the non-system framework search path so they're no longer treated
+        as system headers. We address this by removing the system paths from FRAMEWORK_SEARCH_PATHS and using the -iframework compiler
+        flag in OTHER_CFLAGS to add the paths to the system framework search path. We have to set OTHER_CFLAGS at the target level
+        in order for it to coexist with the ASAN-related OTHER_CFLAGS that's set in DebugRelease.xcconfig.
+
+        Reviewed by Dan Bernstein.
+
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/WebKit.xcconfig:
+
+2013-09-28  Mark Rowe  <mrowe@apple.com>
+
+        Take Xcode's advice and enable some extra warnings.
+
+        Reviewed by Sam Weinig.
+
+        * Configurations/Base.xcconfig:
+
+2013-09-28  Darin Adler  <darin@apple.com>
+
+        Add Frame::mainFrame and Frame::isMainFrame
+        https://bugs.webkit.org/show_bug.cgi?id=122064
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::canHandleRequest):
+        (WebFrameLoaderClient::transitionToCommittedForNewPage):
+        * WebView/WebFrameView.mm:
+        (-[WebFrameView _install]):
+        Call isMainFrame.
+
+2013-09-28  Mark Rowe  <mrowe@apple.com>
+
+        WebKit fails to build with newer versions of clang.
+
+        Reviewed by Sam Weinig.
+
+        * Carbon/HIWebView.mm: Remove an unused function.
+        * History/BinaryPropertyList.cpp: #if a constant that's only used in 64-bit.
+        * Misc/WebIconDatabase.mm: Remove two unused constants.
+        * Plugins/WebBaseNetscapePluginView.mm: Remove an unused constant.
+        * WebCoreSupport/WebEditorClient.mm: Ditto.
+
+2013-09-27  Enrica Casucci  <enrica@apple.com>
+
+        Upstream changes to Pasteboard implementation for iOS.
+        https://bugs.webkit.org/show_bug.cgi?id=121818
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::writeToPasteboard):
+        (WebPlatformStrategies::getPasteboardItemsCount):
+        (WebPlatformStrategies::readBufferFromPasteboard):
+        (WebPlatformStrategies::readURLFromPasteboard):
+        (WebPlatformStrategies::readStringFromPasteboard):
+        (WebPlatformStrategies::changeCount):
+
+2013-09-26  Darin Adler  <darin@apple.com>
+
+        rename KURL to URL
+        https://bugs.webkit.org/show_bug.cgi?id=16214
+
+        Reviewed by Andreas Kling.
+
+        * many files: Renamed, using script.
+
+2013-09-06  Jer Noble  <jer.noble@apple.com>
+
+        [Mac] Implement the media controls in JavaScript.
+        https://bugs.webkit.org/show_bug.cgi?id=120895
+
+        Reviewed by Dean Jackson.
+
+        Define and turn on ENABLE_MEDIA_CONTROLS_SCRIPT.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-27  Darin Adler  <darin@apple.com>
+
+        Add empty MainFrame class
+        https://bugs.webkit.org/show_bug.cgi?id=121770
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebDragClient.mm:
+        * WebCoreSupport/WebInspectorClient.mm:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        * WebView/WebFrame.mm:
+        * WebView/WebHTMLView.mm:
+        * WebView/WebView.mm:
+        Include MainFrame.h instead of Frame.h as needed.
+
+2013-09-26  Eric Carlson  <eric.carlson@apple.com>
+
+        [MediaStream] make MediaStream testable
+        https://bugs.webkit.org/show_bug.cgi?id=121967
+
+        Reviewed by Dean Jackson.
+
+        * WebCoreSupport/WebUserMediaClient.h: Added.
+        * WebCoreSupport/WebUserMediaClient.mm: Added.
+
+        * WebView/WebUIDelegatePrivate.h: Declare decidePolicyForUserMediaRequestFromOrigin:listener:
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]): Register WebUserMediaClient.
+        (-[WebView _setUserMediaClient:]): New.
+        (-[WebView _userMediaClient]): New.
+        * WebView/WebViewData.h:
+        * WebView/WebViewPrivate.h:
+
+2013-09-25  Sam Weinig  <sam@webkit.org>
+
+        Pass a JSC::VM& to JS bindings object creation functions, rather than a JSC::ExecState*
+        https://bugs.webkit.org/show_bug.cgi?id=121934
+
+        Reviewed by Geoffrey Garen.
+
+        * Plugins/Hosted/ProxyInstance.mm:
+        (WebKit::ProxyInstance::newRuntimeObject):
+        * Plugins/Hosted/ProxyRuntimeObject.h:
+        (WebKit::ProxyRuntimeObject::create):
+        * Plugins/Hosted/ProxyRuntimeObject.mm:
+        (WebKit::ProxyRuntimeObject::ProxyRuntimeObject):
+        (WebKit::ProxyRuntimeObject::finishCreation):
+
+2013-09-25  Brady Eidson  <beidson@apple.com>
+
+        Enable the IndexedDB build on Mac, but leave the feature non-functional
+        https://bugs.webkit.org/show_bug.cgi?id=121918
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-25  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r156432.
+        http://trac.webkit.org/changeset/156432
+        https://bugs.webkit.org/show_bug.cgi?id=121932
+
+        some integer conversion things that need brady to fix
+        (Requested by thorton on #webkit).
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-25  Brady Eidson  <beidson@apple.com>
+
+        Enable the IndexedDB build on Mac, but leave the feature non-functional
+        https://bugs.webkit.org/show_bug.cgi?id=121918
+
+        Reviewed by Alexey Proskuryakov.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-25  Brent Fulgham  <bfulgham@apple.com>
+
+        Refactor RuntimeEnabledFeatures as a Singleton.
+        https://bugs.webkit.org/show_bug.cgi?id=121883.
+
+        Reviewed by Jer Noble.
+
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]): Use singleton accessor.
+        (-[WebView _setDashboardBehavior:to:]): Ditto.
+
+2013-09-25  Brady Eidson  <beidson@apple.com>
+
+        FeatureDefine.xcconfig cleanup (They should all be identical).
+        https://bugs.webkit.org/show_bug.cgi?id=121921
+
+        Reviewed by Mark Rowe.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-09-24  Mark Lam  <mark.lam@apple.com>
+
+        Change JSC debug hooks to pass a CallFrame* instead of a DebuggerCallFrame.
+        https://bugs.webkit.org/show_bug.cgi?id=121867.
+
+        Reviewed by Geoffrey Garen.
+
+        * WebView/WebScriptDebugDelegate.mm:
+        (-[WebScriptCallFrame _initWithGlobalObject:debuggerCallFrame:exceptionValue:JSC::]):
+        (-[WebScriptCallFrame exception]):
+        * WebView/WebScriptDebugger.h:
+        * WebView/WebScriptDebugger.mm:
+        (WebScriptDebugger::exception):
+
+2013-09-24  Enrica Casucci  <enrica@apple.com>
+
+        Upstream changes to Pasteboard implementation for iOS.
+        https://bugs.webkit.org/show_bug.cgi?id=121818
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::writeToPasteboard):
+
+2013-09-24  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/14971518> WebKit should build against the Xcode default toolchain when targeting OS X 10.8
+
+        Reviewed by Dan Bernstein.
+
+        * Configurations/Base.xcconfig:
+
+2013-09-21  Mark Lam  <mark.lam@apple.com>
+
+        Remove unused code in WebKit/mac's WebScriptDebugDelegate.
+        https://bugs.webkit.org/show_bug.cgi?id=121706.
+
+        Reviewed by Timothy Hatcher.
+
+        WebScriptDebugDelegate's didEnterCallFrame, willExecuteStatement,
+        and willLeaveCallFrame are not in use. Removed them and all methods
+        and fields used for supporting them.
+
+        * WebView/WebDelegateImplementationCaching.h:
+        * WebView/WebScriptDebugDelegate.h:
+        * WebView/WebScriptDebugDelegate.mm:
+        (-[WebScriptCallFramePrivate dealloc]):
+        (-[WebScriptCallFrame _initWithGlobalObject:debuggerCallFrame:]):
+        * WebView/WebScriptDebugger.h:
+        (WebScriptDebugger::globalObject):
+        (WebScriptDebugger::callEvent):
+        (WebScriptDebugger::atStatement):
+        (WebScriptDebugger::returnEvent):
+        (WebScriptDebugger::willExecuteProgram):
+        (WebScriptDebugger::didExecuteProgram):
+        (WebScriptDebugger::didReachBreakpoint):
+        * WebView/WebScriptDebugger.mm:
+        (WebScriptDebugger::WebScriptDebugger):
+        (WebScriptDebugger::exception):
+        * WebView/WebView.mm:
+        (-[WebView _cacheScriptDebugDelegateImplementations]):
+
 2013-09-18  Anders Carlsson  <andersca@apple.com>
 
         RefPtrHashMap should work with move only types

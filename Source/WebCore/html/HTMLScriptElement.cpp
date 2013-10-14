@@ -28,7 +28,6 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
-#include "ScriptEventListener.h"
 #include "Text.h"
 #include <wtf/Ref.h>
 
@@ -66,12 +65,12 @@ void HTMLScriptElement::parseAttribute(const QualifiedName& name, const AtomicSt
     else if (name == asyncAttr)
         handleAsyncAttribute();
     else if (name == onbeforeloadAttr)
-        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
+        setAttributeEventListener(eventNames().beforeloadEvent, name, value);
     else
         HTMLElement::parseAttribute(name, value);
 }
 
-Node::InsertionNotificationRequest HTMLScriptElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLScriptElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLElement::insertedInto(insertionPoint);
     ScriptElement::insertedInto(insertionPoint);
@@ -106,12 +105,12 @@ bool HTMLScriptElement::async() const
     return fastHasAttribute(asyncAttr) || forceAsync();
 }
 
-KURL HTMLScriptElement::src() const
+URL HTMLScriptElement::src() const
 {
     return document().completeURL(sourceAttributeValue());
 }
 
-void HTMLScriptElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void HTMLScriptElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLElement::addSubresourceAttributeURLs(urls);
 

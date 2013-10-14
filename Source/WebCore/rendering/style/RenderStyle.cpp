@@ -792,7 +792,7 @@ bool RenderStyle::changeRequiresRepaint(const RenderStyle* other, unsigned&) con
     return false;
 }
 
-bool RenderStyle::changeRequiresRepaintIfText(const RenderStyle* other, unsigned&) const
+bool RenderStyle::changeRequiresRepaintIfTextOrBorderOrOutline(const RenderStyle* other, unsigned&) const
 {
     if (inherited->color != other->inherited->color
         || inherited_flags._text_decorations != other->inherited_flags._text_decorations
@@ -864,8 +864,8 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
         return StyleDifferenceRecompositeLayer;
 #endif
 
-    if (changeRequiresRepaintIfText(other, changedContextSensitiveProperties))
-        return StyleDifferenceRepaintIfText;
+    if (changeRequiresRepaintIfTextOrBorderOrOutline(other, changedContextSensitiveProperties))
+        return StyleDifferenceRepaintIfTextOrBorderOrOutline;
 
     // Cursors are not checked, since they will be set appropriately in response to mouse events,
     // so they don't need to cause any repaint or layout.
@@ -922,17 +922,17 @@ void RenderStyle::clearContent()
         rareNonInheritedData.access()->m_content = nullptr;
 }
 
-void RenderStyle::appendContent(PassOwnPtr<ContentData> contentData)
+void RenderStyle::appendContent(std::unique_ptr<ContentData> contentData)
 {
-    OwnPtr<ContentData>& content = rareNonInheritedData.access()->m_content;
+    auto& content = rareNonInheritedData.access()->m_content;
     ContentData* lastContent = content.get();
     while (lastContent && lastContent->next())
         lastContent = lastContent->next();
 
     if (lastContent)
-        lastContent->setNext(contentData);
+        lastContent->setNext(std::move(contentData));
     else
-        content = contentData;
+        content = std::move(contentData);
 }
 
 void RenderStyle::setContent(PassRefPtr<StyleImage> image, bool add)
@@ -941,16 +941,16 @@ void RenderStyle::setContent(PassRefPtr<StyleImage> image, bool add)
         return;
         
     if (add) {
-        appendContent(ContentData::create(image));
+        appendContent(std::make_unique<ImageContentData>(image));
         return;
     }
 
-    rareNonInheritedData.access()->m_content = ContentData::create(image);
+    rareNonInheritedData.access()->m_content = std::make_unique<ImageContentData>(image);
 }
 
 void RenderStyle::setContent(const String& string, bool add)
 {
-    OwnPtr<ContentData>& content = rareNonInheritedData.access()->m_content;
+    auto& content = rareNonInheritedData.access()->m_content;
     if (add) {
         ContentData* lastContent = content.get();
         while (lastContent && lastContent->next())
@@ -962,36 +962,36 @@ void RenderStyle::setContent(const String& string, bool add)
                 TextContentData* textContent = static_cast<TextContentData*>(lastContent);
                 textContent->setText(textContent->text() + string);
             } else
-                lastContent->setNext(ContentData::create(string));
+                lastContent->setNext(std::make_unique<TextContentData>(string));
 
             return;
         }
     }
 
-    content = ContentData::create(string);
+    content = std::make_unique<TextContentData>(string);
 }
 
-void RenderStyle::setContent(PassOwnPtr<CounterContent> counter, bool add)
+void RenderStyle::setContent(std::unique_ptr<CounterContent> counter, bool add)
 {
     if (!counter)
         return;
 
     if (add) {
-        appendContent(ContentData::create(counter));
+        appendContent(std::make_unique<CounterContentData>(std::move(counter)));
         return;
     }
 
-    rareNonInheritedData.access()->m_content = ContentData::create(counter);
+    rareNonInheritedData.access()->m_content = std::make_unique<CounterContentData>(std::move(counter));
 }
 
 void RenderStyle::setContent(QuoteType quote, bool add)
 {
     if (add) {
-        appendContent(ContentData::create(quote));
+        appendContent(std::make_unique<QuoteContentData>(quote));
         return;
     }
 
-    rareNonInheritedData.access()->m_content = ContentData::create(quote);
+    rareNonInheritedData.access()->m_content = std::make_unique<QuoteContentData>(quote);
 }
     
 inline bool requireTransformOrigin(const Vector<RefPtr<TransformOperation> >& transformOperations, RenderStyle::ApplyTransformOrigin applyOrigin)

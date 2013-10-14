@@ -50,14 +50,14 @@ namespace WebCore {
     private:
         GCController(); // Use gcController() instead
 
-#if !USE(CF) && !PLATFORM(BLACKBERRY) && !PLATFORM(QT)
+#if !USE(CF) && !PLATFORM(BLACKBERRY)
         void gcTimerFired(Timer<GCController>*);
         Timer<GCController> m_GCTimer;
 #endif
     };
 
     // Function to obtain the global GC controller.
-    GCController& gcController();
+    GCController& gcController() PURE_FUNCTION;
 
 } // namespace WebCore
 

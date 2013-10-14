@@ -42,7 +42,6 @@
 #include "ExceptionCodePlaceholder.h"
 #include "FileSystem.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameSelection.h"
@@ -54,6 +53,7 @@
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "MediaCanStartListener.h"
 #include "NavigationProxy.h"
 #include "Navigator.h"
@@ -132,14 +132,14 @@ float deviceScaleFactor(Frame* frame)
 }
 
 Page::Page(PageClients& pageClients)
-    : m_chrome(createOwned<Chrome>(*this, *pageClients.chromeClient))
-    , m_dragCaretController(createOwned<DragCaretController>())
+    : m_chrome(std::make_unique<Chrome>(*this, *pageClients.chromeClient))
+    , m_dragCaretController(std::make_unique<DragCaretController>())
 #if ENABLE(DRAG_SUPPORT)
-    , m_dragController(createOwned<DragController>(*this, *pageClients.dragClient))
+    , m_dragController(std::make_unique<DragController>(*this, *pageClients.dragClient))
 #endif
-    , m_focusController(createOwned<FocusController>(*this))
+    , m_focusController(std::make_unique<FocusController>(*this))
 #if ENABLE(CONTEXT_MENUS)
-    , m_contextMenuController(createOwned<ContextMenuController>(*this, *pageClients.contextMenuClient))
+    , m_contextMenuController(std::make_unique<ContextMenuController>(*this, *pageClients.contextMenuClient))
 #endif
     , m_navigationProxy(NavigationProxy::create(this))
     , m_networkProxy(NetworkProxy::create(this))
@@ -155,9 +155,9 @@ Page::Page(PageClients& pageClients)
     , m_pointerLockController(PointerLockController::create(this))
 #endif
     , m_settings(Settings::create(this))
-    , m_progress(ProgressTracker::create())
-    , m_backForwardController(createOwned<BackForwardController>(*this, pageClients.backForwardClient))
-    , m_mainFrame(Frame::create(this, 0, pageClients.loaderClientForMainFrame))
+    , m_progress(std::make_unique<ProgressTracker>())
+    , m_backForwardController(std::make_unique<BackForwardController>(*this, pageClients.backForwardClient))
+    , m_mainFrame(MainFrame::create(*this, *pageClients.loaderClientForMainFrame))
     , m_theme(RenderTheme::themeForPage(this))
     , m_editorClient(pageClients.editorClient)
     , m_plugInClient(pageClients.plugInClient)
@@ -200,8 +200,8 @@ Page::Page(PageClients& pageClients)
 #endif
     , m_alternativeTextClient(pageClients.alternativeTextClient)
     , m_scriptedAnimationsSuspended(false)
-    , m_pageThrottler(PageThrottler::create(this))
-    , m_console(PageConsole::create(this))
+    , m_pageThrottler(std::make_unique<PageThrottler>(*this))
+    , m_console(std::make_unique<PageConsole>(*this))
     , m_lastSpatialNavigationCandidatesCount(0) // NOTE: Only called from Internals for Spatial Navigation testing.
     , m_framesHandlingBeforeUnloadEvent(0)
 {
@@ -250,14 +250,12 @@ Page::~Page()
 #ifndef NDEBUG
     pageCounter.decrement();
 #endif
-
-    m_pageThrottler.clear();
 }
 
 ArenaSize Page::renderTreeSize() const
 {
     ArenaSize total(0, 0);
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (const Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (!frame->document())
             continue;
         if (RenderArena* arena = frame->document()->renderArena()) {
@@ -451,15 +449,15 @@ void Page::setGroupName(const String& name)
     if (m_group && !m_group->name().isEmpty()) {
         ASSERT(m_group != m_singlePageGroup.get());
         ASSERT(!m_singlePageGroup);
-        m_group->removePage(this);
+        m_group->removePage(*this);
     }
 
     if (name.isEmpty())
         m_group = m_singlePageGroup.get();
     else {
-        m_singlePageGroup.clear();
+        m_singlePageGroup = nullptr;
         m_group = PageGroup::pageGroup(name);
-        m_group->addPage(this);
+        m_group->addPage(*this);
     }
 }
 
@@ -472,7 +470,7 @@ void Page::initGroup()
 {
     ASSERT(!m_singlePageGroup);
     ASSERT(!m_group);
-    m_singlePageGroup = PageGroup::create(this);
+    m_singlePageGroup = std::make_unique<PageGroup>(*this);
     m_group = m_singlePageGroup.get();
 }
 
@@ -563,11 +561,6 @@ static Frame* incrementFrame(Frame* curr, bool forward, bool wrapFlag)
     return forward
         ? curr->tree().traverseNextWithWrap(wrapFlag)
         : curr->tree().traversePreviousWithWrap(wrapFlag);
-}
-
-bool Page::findString(const String& target, TextCaseSensitivity caseSensitivity, FindDirection direction, bool shouldWrap)
-{
-    return findString(target, (caseSensitivity == TextCaseInsensitive ? CaseInsensitive : 0) | (direction == FindDirectionBackward ? Backwards : 0) | (shouldWrap ? WrapAround : 0));
 }
 
 bool Page::findString(const String& target, FindOptions options)
@@ -780,7 +773,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin)
 
     if (!m_settings->applyPageScaleFactorInCompositor()) {
         if (document->renderView())
-            document->renderView()->setNeedsLayout(true);
+            document->renderView()->setNeedsLayout();
 
         document->recalcStyle(Style::Force);
 
@@ -827,20 +820,17 @@ void Page::setShouldSuppressScrollbarAnimations(bool suppressAnimations)
     if (suppressAnimations == m_suppressScrollbarAnimations)
         return;
 
-    if (!suppressAnimations) {
-        // If animations are not going to be suppressed anymore, then there is nothing to do here but
-        // change the cached value.
-        m_suppressScrollbarAnimations = suppressAnimations;
-        return;
-    }
+    lockAllOverlayScrollbarsToHidden(suppressAnimations);
+    m_suppressScrollbarAnimations = suppressAnimations;
+}
 
-    // On the other hand, if we are going to start suppressing animations, then we need to make sure we
-    // finish any current scroll animations first.
+void Page::lockAllOverlayScrollbarsToHidden(bool lockOverlayScrollbars)
+{
     FrameView* view = mainFrame().view();
     if (!view)
         return;
 
-    view->finishCurrentScrollAnimations();
+    view->lockOverlayScrollbarStateToHidden(lockOverlayScrollbars);
     
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         FrameView* frameView = frame->view();
@@ -853,41 +843,9 @@ void Page::setShouldSuppressScrollbarAnimations(bool suppressAnimations)
 
         for (HashSet<ScrollableArea*>::const_iterator it = scrollableAreas->begin(), end = scrollableAreas->end(); it != end; ++it) {
             ScrollableArea* scrollableArea = *it;
-            ASSERT(scrollableArea->scrollbarsCanBeActive());
-
-            scrollableArea->finishCurrentScrollAnimations();
+            scrollableArea->lockOverlayScrollbarStateToHidden(lockOverlayScrollbars);
         }
     }
-
-    m_suppressScrollbarAnimations = suppressAnimations;
-}
-
-bool Page::rubberBandsAtBottom()
-{
-    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-        return scrollingCoordinator->rubberBandsAtBottom();
-
-    return false;
-}
-
-void Page::setRubberBandsAtBottom(bool rubberBandsAtBottom)
-{
-    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-        scrollingCoordinator->setRubberBandsAtBottom(rubberBandsAtBottom);
-}
-
-bool Page::rubberBandsAtTop()
-{
-    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-        return scrollingCoordinator->rubberBandsAtTop();
-
-    return false;
-}
-
-void Page::setRubberBandsAtTop(bool rubberBandsAtTop)
-{
-    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
-        scrollingCoordinator->setRubberBandsAtTop(rubberBandsAtTop);
 }
 
 void Page::setPagination(const Pagination& pagination)
@@ -948,6 +906,9 @@ void Page::setIsInWindow(bool isInWindow)
         if (FrameView* frameView = frame->view())
             frameView->setIsInWindow(isInWindow);
     }
+
+    if (isInWindow)
+        resumeAnimatingImages();
 }
 
 void Page::suspendScriptedAnimations()
@@ -977,8 +938,8 @@ void Page::userStyleSheetLocationChanged()
 {
     // FIXME: Eventually we will move to a model of just being handed the sheet
     // text instead of loading the URL ourselves.
-    KURL url = m_settings->userStyleSheetLocation();
-
+    URL url = m_settings->userStyleSheetLocation();
+    
     // Allow any local file URL scheme to be loaded.
     if (SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
         m_userStyleSheetPath = url.fileSystemPath();
@@ -1001,7 +962,7 @@ void Page::userStyleSheetLocationChanged()
 
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         if (frame->document())
-            frame->document()->styleSheetCollection()->updatePageUserSheet();
+            frame->document()->styleSheetCollection().updatePageUserSheet();
     }
 }
 
@@ -1248,7 +1209,7 @@ void Page::checkSubframeCountConsistency() const
     ASSERT(m_subframeCount >= 0);
 
     int subframeCount = 0;
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext())
+    for (const Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext())
         ++subframeCount;
 
     ASSERT(m_subframeCount + 1 == subframeCount);
@@ -1269,6 +1230,15 @@ void Page::unthrottleTimers()
     if (m_settings->hiddenPageDOMTimerThrottlingEnabled())
         setTimerAlignmentInterval(Settings::defaultDOMTimerAlignmentInterval());
 #endif
+}
+
+void Page::resumeAnimatingImages()
+{
+    // Drawing models which cache painted content while out-of-window (WebKit2's composited drawing areas, etc.)
+    // require that we repaint animated images to kickstart the animation loop.
+
+    for (Frame* frame = m_mainFrame.get(); frame; frame = frame->tree().traverseNext())
+        CachedImage::resumeAnimatingImagesForLoader(frame->document()->cachedResourceLoader());
 }
 
 #if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
@@ -1303,6 +1273,7 @@ void Page::setVisibilityState(PageVisibilityState visibilityState, bool isInitia
         unthrottleTimers();
         if (m_settings->hiddenPageCSSAnimationSuspensionEnabled())
             mainFrame().animation().resumeAnimations();
+        resumeAnimatingImages();
     }
 }
 #endif // ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
@@ -1486,6 +1457,8 @@ void Page::resumeActiveDOMObjectsAndAnimations()
 {
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext())
         frame->resumeActiveDOMObjectsAndAnimations();
+
+    resumeAnimatingImages();
 }
 
 bool Page::hasSeenAnyPlugin() const
@@ -1528,9 +1501,9 @@ void Page::resetSeenMediaEngines()
     m_seenMediaEngines.clear();
 }
 
-PassOwnPtr<PageActivityAssertionToken> Page::createActivityToken()
+std::unique_ptr<PageActivityAssertionToken> Page::createActivityToken()
 {
-    return adoptPtr(new PageActivityAssertionToken(m_pageThrottler.get()));
+    return m_pageThrottler->createActivityToken();
 }
 
 #if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)

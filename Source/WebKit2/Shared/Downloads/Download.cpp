@@ -39,20 +39,12 @@ using namespace WebCore;
 
 namespace WebKit {
 
-PassOwnPtr<Download> Download::create(DownloadManager& downloadManager, uint64_t downloadID, const ResourceRequest& request)
-{
-    return adoptPtr(new Download(downloadManager, downloadID, request));
-}
-
 Download::Download(DownloadManager& downloadManager, uint64_t downloadID, const ResourceRequest& request)
     : m_downloadManager(downloadManager)
     , m_downloadID(downloadID)
     , m_request(request)
 #if USE(CFNETWORK)
     , m_allowOverwrite(false)
-#endif
-#if PLATFORM(QT)
-    , m_qtDownloader(0)
 #endif
 {
     ASSERT(m_downloadID);

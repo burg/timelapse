@@ -170,7 +170,7 @@ SelectorChecker::Match SelectorChecker::matchRecursively(const SelectorCheckingC
 
             PseudoId pseudoId = CSSSelector::pseudoId(context.selector->pseudoType());
             if (pseudoId == FIRST_LETTER)
-                context.element->document().styleSheetCollection()->setUsesFirstLetterRules(true);
+                context.element->document().styleSheetCollection().setUsesFirstLetterRules(true);
             if (pseudoId != NOPSEUDO)
                 dynamicPseudo = pseudoId;
         }
@@ -189,10 +189,6 @@ SelectorChecker::Match SelectorChecker::matchRecursively(const SelectorCheckingC
 
     PseudoId ignoreDynamicPseudo = NOPSEUDO;
     if (relation != CSSSelector::SubSelector) {
-        // Abort if the next selector would exceed the scope.
-        if (context.element == context.scope && context.behaviorAtBoundary != StaysWithinTreeScope)
-            return SelectorFailsCompletely;
-
         // Bail-out if this selector is irrelevant for the pseudoId
         if (context.pseudoId != NOPSEUDO && context.pseudoId != dynamicPseudo)
             return SelectorFailsCompletely;
@@ -213,8 +209,6 @@ SelectorChecker::Match SelectorChecker::matchRecursively(const SelectorCheckingC
             Match match = this->matchRecursively(nextContext, ignoreDynamicPseudo);
             if (match == SelectorMatches || match == SelectorFailsCompletely)
                 return match;
-            if (nextContext.element == nextContext.scope && nextContext.behaviorAtBoundary != StaysWithinTreeScope)
-                return SelectorFailsCompletely;
         }
         return SelectorFailsCompletely;
 
@@ -268,9 +262,6 @@ SelectorChecker::Match SelectorChecker::matchRecursively(const SelectorCheckingC
 
     case CSSSelector::ShadowDescendant:
         {
-            // If we're in the same tree-scope as the scoping element, then following a shadow descendant combinator would escape that and thus the scope.
-            if (context.scope && context.scope->treeScope() == context.element->treeScope() && context.behaviorAtBoundary != StaysWithinTreeScope)
-                return SelectorFailsCompletely;
             Element* shadowHostNode = context.element->shadowHost();
             if (!shadowHostNode)
                 return SelectorFailsCompletely;
@@ -447,7 +438,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
                     element->setStyleAffectedByEmpty();
                     if (context.elementStyle)
                         context.elementStyle->setEmptyState(result);
-                    else if (element->renderStyle() && (element->document().styleSheetCollection()->usesSiblingRules() || element->renderStyle()->unique()))
+                    else if (element->renderStyle() && (element->document().styleSheetCollection().usesSiblingRules() || element->renderStyle()->unique()))
                         element->renderStyle()->setEmptyState(result);
                 }
                 return result;
@@ -624,7 +615,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
         case CSSSelector::PseudoHover:
             // If we're in quirks mode, then hover should never match anchors with no
             // href and *:hover should not match anything. This is important for sites like wsj.com.
-            if (m_strictParsing || context.isSubSelector || (selector->m_match == CSSSelector::Tag && selector->tagQName() != anyQName() && !isHTMLAnchorElement(element)) || element->isLink()) {
+            if (m_strictParsing || context.isSubSelector || element->isLink()) {
                 if (m_mode == ResolvingStyle) {
                     if (context.elementStyle)
                         context.elementStyle->setAffectedByHover();
@@ -638,7 +629,7 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context) const
         case CSSSelector::PseudoActive:
             // If we're in quirks mode, then :active should never match anchors with no
             // href and *:active should not match anything.
-            if (m_strictParsing || context.isSubSelector || (selector->m_match == CSSSelector::Tag && selector->tagQName() != anyQName() && !isHTMLAnchorElement(element)) || element->isLink()) {
+            if (m_strictParsing || context.isSubSelector || element->isLink()) {
                 if (m_mode == ResolvingStyle) {
                     if (context.elementStyle)
                         context.elementStyle->setAffectedByActive();

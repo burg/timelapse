@@ -28,7 +28,6 @@
 #include "AXObjectCache.h"
 #include "EllipsisBox.h"
 #include "FloatQuad.h"
-#include "FontTranscoder.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "Hyphenation.h"
@@ -100,6 +99,8 @@ private:
 
 static void makeCapitalized(String* string, UChar previous)
 {
+    // FIXME: Need to change this to use u_strToTitle instead of u_totitle and to consider locale.
+
     if (string->isNull())
         return;
 
@@ -130,7 +131,7 @@ static void makeCapitalized(String* string, UChar previous)
     int32_t startOfWord = textBreakFirst(boundary);
     for (endOfWord = textBreakNext(boundary); endOfWord != TextBreakDone; startOfWord = endOfWord, endOfWord = textBreakNext(boundary)) {
         if (startOfWord) // Ignore first char of previous string
-            result.append(stringImpl[startOfWord - 1] == noBreakSpace ? noBreakSpace : toTitleCase(stringWithPrevious[startOfWord]));
+            result.append(stringImpl[startOfWord - 1] == noBreakSpace ? noBreakSpace : u_totitle(stringWithPrevious[startOfWord]));
         for (int i = startOfWord + 1; i < endOfWord; i++)
             result.append(stringImpl[i - 1]);
     }
@@ -145,7 +146,7 @@ RenderText::RenderText(Text* textNode, const String& text)
     , m_containsReversedText(false)
     , m_isAllASCII(text.containsOnlyASCII())
     , m_knownToHaveNoOverflowAndNoFallbackFonts(false)
-    , m_needsTranscoding(false)
+    , m_useBackslashAsYenSymbol(false)
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     , m_candidateComputedTextSize(0)
 #endif
@@ -200,10 +201,17 @@ bool RenderText::isTextFragment() const
     return false;
 }
 
-void RenderText::updateNeedsTranscoding()
+bool RenderText::computeUseBackslashAsYenSymbol() const
 {
+    const FontDescription& fontDescription = style()->font().fontDescription();
+    if (style()->font().useBackslashAsYenSymbol())
+        return true;
+    if (fontDescription.isSpecifiedFont())
+        return false;
     const TextEncoding* encoding = document().decoder() ? &document().decoder()->encoding() : 0;
-    m_needsTranscoding = fontTranscoder().needsTranscoding(style()->font().fontDescription(), encoding);
+    if (encoding && encoding->backslashAsCurrencySymbol() != '\\')
+        return true;
+    return false;
 }
 
 void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -220,10 +228,10 @@ void RenderText::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
     RenderStyle* newStyle = style();
     bool needsResetText = false;
     if (!oldStyle) {
-        updateNeedsTranscoding();
-        needsResetText = m_needsTranscoding;
-    } else if (oldStyle->font().needsTranscoding() != newStyle->font().needsTranscoding() || (newStyle->font().needsTranscoding() && oldStyle->font().firstFamily() != newStyle->font().firstFamily())) {
-        updateNeedsTranscoding();
+        m_useBackslashAsYenSymbol = computeUseBackslashAsYenSymbol();
+        needsResetText = m_useBackslashAsYenSymbol;
+    } else if (oldStyle->font().useBackslashAsYenSymbol() != newStyle->font().useBackslashAsYenSymbol()) {
+        m_useBackslashAsYenSymbol = computeUseBackslashAsYenSymbol();
         needsResetText = true;
     }
 
@@ -704,7 +712,7 @@ ALWAYS_INLINE float RenderText::widthFromCache(const Font& f, int start, int len
         return w;
     }
 
-    TextRun run = RenderBlock::constructTextRun(const_cast<RenderText*>(this), f, this, start, len, style());
+    TextRun run = RenderBlock::constructTextRun(const_cast<RenderText*>(this), f, this, start, len, *style());
     run.setCharactersLength(textLength() - start);
     ASSERT(run.charactersLength() >= run.length());
 
@@ -759,7 +767,7 @@ void RenderText::trimmedPrefWidths(float leadWidth,
         const Font& font = style()->font(); // FIXME: This ignores first-line.
         if (stripFrontSpaces) {
             const UChar space = ' ';
-            float spaceWidth = font.width(RenderBlock::constructTextRun(this, font, &space, 1, style()));
+            float spaceWidth = font.width(RenderBlock::constructTextRun(this, font, &space, 1, *style()));
             maxW -= spaceWidth;
         } else
             maxW += font.wordSpacing();
@@ -803,9 +811,9 @@ void RenderText::trimmedPrefWidths(float leadWidth,
     }
 }
 
-static inline bool isSpaceAccordingToStyle(UChar c, RenderStyle* style)
+static inline bool isSpaceAccordingToStyle(UChar c, const RenderStyle& style)
 {
-    return c == ' ' || (c == noBreakSpace && style->nbspMode() == SPACE);
+    return c == ' ' || (c == noBreakSpace && style.nbspMode() == SPACE);
 }
 
 float RenderText::minLogicalWidth() const
@@ -836,10 +844,10 @@ void RenderText::computePreferredLogicalWidths(float leadWidth)
 static inline float hyphenWidth(RenderText* renderer, const Font& font)
 {
     RenderStyle* style = renderer->style();
-    return font.width(RenderBlock::constructTextRun(renderer, font, style->hyphenString().string(), style));
+    return font.width(RenderBlock::constructTextRun(renderer, font, style->hyphenString().string(), *style));
 }
 
-static float maxWordFragmentWidth(RenderText* renderer, RenderStyle* style, const Font& font, const UChar* word, int wordLength, int minimumPrefixLength, int minimumSuffixLength, int& suffixStart, HashSet<const SimpleFontData*>& fallbackFonts, GlyphOverflow& glyphOverflow)
+static float maxWordFragmentWidth(RenderText* renderer, const RenderStyle& style, const Font& font, const UChar* word, int wordLength, int minimumPrefixLength, int minimumSuffixLength, int& suffixStart, HashSet<const SimpleFontData*>& fallbackFonts, GlyphOverflow& glyphOverflow)
 {
     suffixStart = 0;
     if (wordLength <= minimumSuffixLength)
@@ -847,7 +855,7 @@ static float maxWordFragmentWidth(RenderText* renderer, RenderStyle* style, cons
 
     Vector<int, 8> hyphenLocations;
     int hyphenLocation = wordLength - minimumSuffixLength;
-    while ((hyphenLocation = lastHyphenLocation(word, wordLength, hyphenLocation, style->locale())) >= minimumPrefixLength)
+    while ((hyphenLocation = lastHyphenLocation(word, wordLength, hyphenLocation, style.locale())) >= minimumPrefixLength)
         hyphenLocations.append(hyphenLocation);
 
     if (hyphenLocations.isEmpty())
@@ -861,7 +869,7 @@ static float maxWordFragmentWidth(RenderText* renderer, RenderStyle* style, cons
         int fragmentLength = hyphenLocations[k] - suffixStart;
         StringBuilder fragmentWithHyphen;
         fragmentWithHyphen.append(word + suffixStart, fragmentLength);
-        fragmentWithHyphen.append(style->hyphenString());
+        fragmentWithHyphen.append(style.hyphenString());
 
         TextRun run = RenderBlock::constructTextRun(renderer, font, fragmentWithHyphen.characters(), fragmentWithHyphen.length(), style);
         run.setCharactersLength(fragmentWithHyphen.length());
@@ -896,11 +904,11 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
     m_hasBeginWS = false;
     m_hasEndWS = false;
 
-    RenderStyle* styleToUse = style();
-    const Font& f = styleToUse->font(); // FIXME: This ignores first-line.
-    float wordSpacing = styleToUse->wordSpacing();
+    const RenderStyle& style = *this->style();
+    const Font& f = style.font(); // FIXME: This ignores first-line.
+    float wordSpacing = style.wordSpacing();
     int len = textLength();
-    LazyLineBreakIterator breakIterator(m_text, styleToUse->locale());
+    LazyLineBreakIterator breakIterator(m_text, style.locale());
     bool needsWordSpacing = false;
     bool ignoringSpaces = false;
     bool isSpace = false;
@@ -911,30 +919,30 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
 
     // Non-zero only when kerning is enabled, in which case we measure words with their trailing
     // space, then subtract its width.
-    float wordTrailingSpaceWidth = f.typesettingFeatures() & Kerning ? f.width(RenderBlock::constructTextRun(this, f, &space, 1, styleToUse), &fallbackFonts) + wordSpacing : 0;
+    float wordTrailingSpaceWidth = f.typesettingFeatures() & Kerning ? f.width(RenderBlock::constructTextRun(this, f, &space, 1, style), &fallbackFonts) + wordSpacing : 0;
 
     // If automatic hyphenation is allowed, we keep track of the width of the widest word (or word
     // fragment) encountered so far, and only try hyphenating words that are wider.
     float maxWordWidth = numeric_limits<float>::max();
     int minimumPrefixLength = 0;
     int minimumSuffixLength = 0;
-    if (styleToUse->hyphens() == HyphensAuto && canHyphenate(styleToUse->locale())) {
+    if (style.hyphens() == HyphensAuto && canHyphenate(style.locale())) {
         maxWordWidth = 0;
 
         // Map 'hyphenate-limit-{before,after}: auto;' to 2.
-        minimumPrefixLength = styleToUse->hyphenationLimitBefore();
+        minimumPrefixLength = style.hyphenationLimitBefore();
         if (minimumPrefixLength < 0)
             minimumPrefixLength = 2;
 
-        minimumSuffixLength = styleToUse->hyphenationLimitAfter();
+        minimumSuffixLength = style.hyphenationLimitAfter();
         if (minimumSuffixLength < 0)
             minimumSuffixLength = 2;
     }
 
     int firstGlyphLeftOverflow = -1;
 
-    bool breakNBSP = styleToUse->autoWrap() && styleToUse->nbspMode() == SPACE;
-    bool breakAll = (styleToUse->wordBreak() == BreakAllWordBreak || styleToUse->wordBreak() == BreakWordBreak) && styleToUse->autoWrap();
+    bool breakNBSP = style.autoWrap() && style.nbspMode() == SPACE;
+    bool breakAll = (style.wordBreak() == BreakAllWordBreak || style.wordBreak() == BreakWordBreak) && style.autoWrap();
 
     for (int i = 0; i < len; i++) {
         UChar c = characterAt(i);
@@ -943,14 +951,14 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
 
         bool isNewline = false;
         if (c == '\n') {
-            if (styleToUse->preserveNewline()) {
+            if (style.preserveNewline()) {
                 m_hasBreak = true;
                 isNewline = true;
                 isSpace = false;
             } else
                 isSpace = true;
         } else if (c == '\t') {
-            if (!styleToUse->collapseWhiteSpace()) {
+            if (!style.collapseWhiteSpace()) {
                 m_hasTab = true;
                 isSpace = false;
             } else
@@ -963,7 +971,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
         if ((isSpace || isNewline) && i == len - 1)
             m_hasEndWS = true;
 
-        if (!ignoringSpaces && styleToUse->collapseWhiteSpace() && previousCharacterIsSpace && isSpace)
+        if (!ignoringSpaces && style.collapseWhiteSpace() && previousCharacterIsSpace && isSpace)
             ignoringSpaces = true;
 
         if (ignoringSpaces && !isSpace)
@@ -974,7 +982,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
             ASSERT(lastWordBoundary == i);
             lastWordBoundary++;
             continue;
-        } else if (c == softHyphen && styleToUse->hyphens() != HyphensNone) {
+        } else if (c == softHyphen && style.hyphens() != HyphensNone) {
             currMaxWidth += widthFromCache(f, lastWordBoundary, i - lastWordBoundary, leadWidth + currMaxWidth, &fallbackFonts, &glyphOverflow);
             if (firstGlyphLeftOverflow < 0)
                 firstGlyphLeftOverflow = glyphOverflow.left;
@@ -985,7 +993,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
         bool hasBreak = breakAll || isBreakable(breakIterator, i, nextBreakable, breakNBSP);
         bool betweenWords = true;
         int j = i;
-        while (c != '\n' && !isSpaceAccordingToStyle(c, styleToUse) && c != '\t' && (c != softHyphen || styleToUse->hyphens() == HyphensNone)) {
+        while (c != '\n' && !isSpaceAccordingToStyle(c, style) && c != '\t' && (c != softHyphen || style.hyphens() == HyphensNone)) {
             j++;
             if (j == len)
                 break;
@@ -1000,19 +1008,19 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
 
         int wordLen = j - i;
         if (wordLen) {
-            bool isSpace = (j < len) && isSpaceAccordingToStyle(c, styleToUse);
+            bool isSpace = (j < len) && isSpaceAccordingToStyle(c, style);
             float w;
             if (wordTrailingSpaceWidth && isSpace)
                 w = widthFromCache(f, i, wordLen + 1, leadWidth + currMaxWidth, &fallbackFonts, &glyphOverflow) - wordTrailingSpaceWidth;
             else {
                 w = widthFromCache(f, i, wordLen, leadWidth + currMaxWidth, &fallbackFonts, &glyphOverflow);
-                if (c == softHyphen && styleToUse->hyphens() != HyphensNone)
+                if (c == softHyphen && style.hyphens() != HyphensNone)
                     currMinWidth += hyphenWidth(this, f);
             }
 
             if (w > maxWordWidth) {
                 int suffixStart;
-                float maxFragmentWidth = maxWordFragmentWidth(this, styleToUse, f, characters() + i, wordLen, minimumPrefixLength, minimumSuffixLength, suffixStart, fallbackFonts, glyphOverflow);
+                float maxFragmentWidth = maxWordFragmentWidth(this, style, f, characters() + i, wordLen, minimumPrefixLength, minimumSuffixLength, suffixStart, fallbackFonts, glyphOverflow);
 
                 if (suffixStart) {
                     float suffixWidth;
@@ -1040,8 +1048,8 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
                 lastWordBoundary = j;
             }
 
-            bool isCollapsibleWhiteSpace = (j < len) && styleToUse->isCollapsibleWhiteSpace(c);
-            if (j < len && styleToUse->autoWrap())
+            bool isCollapsibleWhiteSpace = (j < len) && style.isCollapsibleWhiteSpace(c);
+            if (j < len && style.autoWrap())
                 m_hasBreakableChar = true;
 
             // Add in wordSpacing to our currMaxWidth, but not if this is the last word on a line or the
@@ -1068,7 +1076,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
         } else {
             // Nowrap can never be broken, so don't bother setting the
             // breakable character boolean. Pre can only be broken if we encounter a newline.
-            if (style()->autoWrap() || isNewline)
+            if (style.autoWrap() || isNewline)
                 m_hasBreakableChar = true;
 
             if (currMinWidth > m_minWidth)
@@ -1079,7 +1087,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
                 if (firstLine) {
                     firstLine = false;
                     leadWidth = 0;
-                    if (!styleToUse->autoWrap())
+                    if (!style.autoWrap())
                         m_beginMinWidth = currMaxWidth;
                 }
 
@@ -1087,10 +1095,10 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
                     m_maxWidth = currMaxWidth;
                 currMaxWidth = 0;
             } else {
-                TextRun run = RenderBlock::constructTextRun(this, f, this, i, 1, styleToUse);
+                TextRun run = RenderBlock::constructTextRun(this, f, this, i, 1, style);
                 run.setCharactersLength(len - i);
                 ASSERT(run.charactersLength() >= run.length());
-                run.setTabSize(!style()->collapseWhiteSpace(), style()->tabSize());
+                run.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
                 run.setXPos(leadWidth + currMaxWidth);
 
                 currMaxWidth += f.width(run, &fallbackFonts);
@@ -1111,10 +1119,10 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
     m_minWidth = max(currMinWidth, m_minWidth);
     m_maxWidth = max(currMaxWidth, m_maxWidth);
 
-    if (!styleToUse->autoWrap())
+    if (!style.autoWrap())
         m_minWidth = m_maxWidth;
 
-    if (styleToUse->whiteSpace() == PRE) {
+    if (style.whiteSpace() == PRE) {
         if (firstLine)
             m_beginMinWidth = m_maxWidth;
         m_endMinWidth = currMaxWidth;
@@ -1325,10 +1333,10 @@ void applyTextTransform(const RenderStyle* style, String& text, UChar previousCh
         makeCapitalized(&text, previousCharacter);
         break;
     case UPPERCASE:
-        text.makeUpper();
+        text = text.upper(style->locale());
         break;
     case LOWERCASE:
-        text.makeLower();
+        text = text.lower(style->locale());
         break;
     }
 }
@@ -1337,10 +1345,10 @@ void RenderText::setTextInternal(const String& text)
 {
     ASSERT(!text.isNull());
     m_text = text;
-    if (m_needsTranscoding) {
-        const TextEncoding* encoding = document().decoder() ? &document().decoder()->encoding() : 0;
-        fontTranscoder().convert(m_text, style()->font().fontDescription(), encoding);
-    }
+
+    if (m_useBackslashAsYenSymbol)
+        m_text.replace('\\', yenSign);
+
     ASSERT(m_text);
 
     if (style()) {
@@ -1405,14 +1413,11 @@ void RenderText::setText(const String& text, bool force)
         cache->textChanged(this);
 }
 
-String RenderText::textWithoutTranscoding() const
+String RenderText::textWithoutConvertingBackslashToYenSymbol() const
 {
-    // If m_text isn't transcoded or is secure, we can just return the modified text.
-    if (!m_needsTranscoding || style()->textSecurity() != TSNONE)
+    if (!m_useBackslashAsYenSymbol || style()->textSecurity() != TSNONE)
         return text();
 
-    // Otherwise, we should use original text. If text-transform is
-    // specified, we should transform the text on the fly.
     String text = originalText();
     applyTextTransform(style(), text, previousCharacter());
     return text;
@@ -1479,7 +1484,8 @@ float RenderText::width(unsigned from, unsigned len, float xPos, bool firstLine,
     if (from + len > textLength())
         len = textLength() - from;
 
-    return width(from, len, style(firstLine)->font(), xPos, fallbackFonts, glyphOverflow);
+    const RenderStyle& lineStyle = firstLine ? *firstLineStyle() : *style();
+    return width(from, len, lineStyle.font(), xPos, fallbackFonts, glyphOverflow);
 }
 
 float RenderText::width(unsigned from, unsigned len, const Font& f, float xPos, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* glyphOverflow) const
@@ -1504,7 +1510,7 @@ float RenderText::width(unsigned from, unsigned len, const Font& f, float xPos, 
         } else
             w = widthFromCache(f, from, len, xPos, fallbackFonts, glyphOverflow);
     } else {
-        TextRun run = RenderBlock::constructTextRun(const_cast<RenderText*>(this), f, this, from, len, style());
+        TextRun run = RenderBlock::constructTextRun(const_cast<RenderText*>(this), f, this, from, len, *style());
         run.setCharactersLength(textLength() - from);
         ASSERT(run.charactersLength() >= run.length());
 
@@ -1679,7 +1685,7 @@ int RenderText::previousOffset(int current) const
     return result;
 }
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(EFL)
 
 #define HANGUL_CHOSEONG_START (0x1100)
 #define HANGUL_CHOSEONG_END (0x115F)
@@ -1721,7 +1727,7 @@ inline bool isRegionalIndicator(UChar32 c)
 
 int RenderText::previousOffsetForBackwardDeletion(int current) const
 {
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) || PLATFORM(EFL)
     ASSERT(m_text);
     StringImpl& text = *m_text.impl();
     UChar32 character;
@@ -1764,7 +1770,6 @@ int RenderText::previousOffsetForBackwardDeletion(int current) const
     character = text.characterStartingAt(current);
     if (((character >= HANGUL_CHOSEONG_START) && (character <= HANGUL_JONGSEONG_END)) || ((character >= HANGUL_SYLLABLE_START) && (character <= HANGUL_SYLLABLE_END))) {
         HangulState state;
-        HangulState initialState;
 
         if (character < HANGUL_JUNGSEONG_START)
             state = HangulStateL;
@@ -1774,8 +1779,6 @@ int RenderText::previousOffsetForBackwardDeletion(int current) const
             state = HangulStateT;
         else
             state = isHangulLVT(character) ? HangulStateLVT : HangulStateLV;
-
-        initialState = state;
 
         while (current > 0 && ((character = text.characterStartingAt(current - 1)) >= HANGUL_CHOSEONG_START) && (character <= HANGUL_SYLLABLE_END) && ((character <= HANGUL_JONGSEONG_END) || (character >= HANGUL_SYLLABLE_START))) {
             switch (state) {

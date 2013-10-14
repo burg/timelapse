@@ -36,7 +36,7 @@ class JSCallbackFunction : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static JSCallbackFunction* create(ExecState*, JSGlobalObject*, JSObjectCallAsFunctionCallback, const String& name);
+    static JSCallbackFunction* create(VM&, JSGlobalObject*, JSObjectCallAsFunctionCallback, const String& name);
 
     DECLARE_INFO;
     
@@ -48,10 +48,12 @@ public:
     }
 
 private:
-    JSCallbackFunction(JSGlobalObject*, Structure*, JSObjectCallAsFunctionCallback);
+    JSCallbackFunction(VM&, Structure*, JSObjectCallAsFunctionCallback);
     void finishCreation(VM&, const String& name);
 
     static CallType getCallData(JSCell*, CallData&);
+
+    JSObjectCallAsFunctionCallback functionCallback() { return m_callback; }
 
     JSObjectCallAsFunctionCallback m_callback;
 };

@@ -1383,7 +1383,7 @@ private:
         if (!readStringData(type))
             return 0;
         if (m_isDOMGlobalObject)
-            file = File::create(path->string(), KURL(KURL(), url->string()), type->string());
+            file = File::create(path->string(), URL(URL(), url->string()), type->string());
         return true;
     }
 
@@ -1516,7 +1516,7 @@ private:
             double d;
             if (!read(d))
                 return JSValue();
-            return DateInstance::create(m_exec, m_globalObject->dateStructure(), d);
+            return DateInstance::create(m_exec->vm(), m_globalObject->dateStructure(), d);
         }
         case FileTag: {
             RefPtr<File> file;
@@ -1577,7 +1577,7 @@ private:
                 return JSValue();
             if (!m_isDOMGlobalObject)
                 return jsNull();
-            return getJSValue(Blob::create(KURL(KURL(), url->string()), type->string(), size).get());
+            return getJSValue(Blob::create(URL(URL(), url->string()), type->string(), size).get());
         }
         case StringTag: {
             CachedStringRef cachedString;
@@ -1591,12 +1591,13 @@ private:
             CachedStringRef cachedString;
             if (!readStringData(cachedString))
                 return JSValue();
-            StringObject* obj = constructString(m_exec, m_globalObject, cachedString->jsString(m_exec));
+            StringObject* obj = constructString(m_exec->vm(), m_globalObject, cachedString->jsString(m_exec));
             m_gcBuffer.append(obj);
             return obj;
         }
         case EmptyStringObjectTag: {
-            StringObject* obj = constructString(m_exec, m_globalObject, jsEmptyString(&m_exec->vm()));
+            VM& vm = m_exec->vm();
+            StringObject* obj = constructString(vm, m_globalObject, jsEmptyString(&vm));
             m_gcBuffer.append(obj);
             return obj;
         }
@@ -1609,8 +1610,9 @@ private:
                 return JSValue();
             RegExpFlags reFlags = regExpFlags(flags->string());
             ASSERT(reFlags != InvalidFlags);
-            RegExp* regExp = RegExp::create(m_exec->vm(), pattern->string(), reFlags);
-            return RegExpObject::create(m_exec, m_exec->lexicalGlobalObject(), m_globalObject->regExpStructure(), regExp); 
+            VM& vm = m_exec->vm();
+            RegExp* regExp = RegExp::create(vm, pattern->string(), reFlags);
+            return RegExpObject::create(vm, m_globalObject->regExpStructure(), regExp);
         }
         case ObjectReferenceTag: {
             unsigned index = 0;
@@ -1891,7 +1893,7 @@ PassOwnPtr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScriptValu
     }
 
     OwnPtr<ArrayBufferContentsArray> contents = adoptPtr(new ArrayBufferContentsArray(arrayBuffers.size()));
-    Vector<RefPtr<DOMWrapperWorld> > worlds;
+    Vector<Ref<DOMWrapperWorld>> worlds;
     static_cast<WebCoreJSClientData*>(exec->vm().clientData)->getAllWorlds(worlds);
 
     HashSet<JSC::ArrayBuffer*> visited;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2011, 2013 Apple Inc. All rights reserved.
  *           (C) 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,6 @@
 #include "FontCache.h"
 #include "Frame.h"
 #include "FrameLoader.h"
-#include "RenderObject.h"
 #include "Settings.h"
 #include "SimpleFontData.h"
 #include "StylePropertySet.h"
@@ -100,15 +99,15 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
     if (!fontFamily || !src || !fontFamily->isValueList() || !src->isValueList() || (unicodeRange && !unicodeRange->isValueList()))
         return;
 
-    CSSValueList* familyList = static_cast<CSSValueList*>(fontFamily.get());
+    CSSValueList* familyList = toCSSValueList(fontFamily.get());
     if (!familyList->length())
         return;
 
-    CSSValueList* srcList = static_cast<CSSValueList*>(src.get());
+    CSSValueList* srcList = toCSSValueList(src.get());
     if (!srcList->length())
         return;
 
-    CSSValueList* rangeList = static_cast<CSSValueList*>(unicodeRange.get());
+    CSSValueList* rangeList = toCSSValueList(unicodeRange.get());
 
     unsigned traitsMask = 0;
 
@@ -116,7 +115,7 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
         if (!fontStyle->isPrimitiveValue())
             return;
 
-        switch (static_cast<CSSPrimitiveValue*>(fontStyle.get())->getValueID()) {
+        switch (toCSSPrimitiveValue(fontStyle.get())->getValueID()) {
         case CSSValueNormal:
             traitsMask |= FontStyleNormalMask;
             break;
@@ -134,7 +133,7 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
         if (!fontWeight->isPrimitiveValue())
             return;
 
-        switch (static_cast<CSSPrimitiveValue*>(fontWeight.get())->getValueID()) {
+        switch (toCSSPrimitiveValue(fontWeight.get())->getValueID()) {
         case CSSValueBold:
         case CSSValue700:
             traitsMask |= FontWeight700Mask;
@@ -179,13 +178,13 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
         } else if (!fontVariant->isValueList())
             return;
 
-        CSSValueList* variantList = static_cast<CSSValueList*>(fontVariant.get());
+        CSSValueList* variantList = toCSSValueList(fontVariant.get());
         unsigned numVariants = variantList->length();
         if (!numVariants)
             return;
 
         for (unsigned i = 0; i < numVariants; ++i) {
-            switch (static_cast<CSSPrimitiveValue*>(variantList->itemWithoutBoundsCheck(i))->getValueID()) {
+            switch (toCSSPrimitiveValue(variantList->itemWithoutBoundsCheck(i))->getValueID()) {
                 case CSSValueNormal:
                     traitsMask |= FontVariantNormalMask;
                     break;
@@ -208,7 +207,7 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
 
     for (int i = 0; i < srcLength; i++) {
         // An item in the list either specifies a string (local font name) or a URL (remote font to download).
-        CSSFontFaceSrcValue* item = static_cast<CSSFontFaceSrcValue*>(srcList->itemWithoutBoundsCheck(i));
+        CSSFontFaceSrcValue* item = toCSSFontFaceSrcValue(srcList->itemWithoutBoundsCheck(i));
         OwnPtr<CSSFontFaceSource> source;
 
 #if ENABLE(SVG_FONTS)
@@ -235,7 +234,7 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
             RefPtr<CSSFontFaceRule> rule;
 #if ENABLE(FONT_LOAD_EVENTS)
             // FIXME: https://bugs.webkit.org/show_bug.cgi?id=112116 - This CSSFontFaceRule has no parent.
-            if (RuntimeEnabledFeatures::fontLoadEventsEnabled())
+            if (RuntimeEnabledFeatures::sharedFeatures().fontLoadEventsEnabled())
                 rule = static_pointer_cast<CSSFontFaceRule>(fontFaceRule->createCSSOMWrapper());
 #endif
             fontFace = CSSFontFace::create(static_cast<FontTraitsMask>(traitsMask), rule);
@@ -265,7 +264,7 @@ void CSSFontSelector::addFontFaceRule(const StyleRuleFontFace* fontFaceRule)
     // Hash under every single family name.
     int familyLength = familyList->length();
     for (int i = 0; i < familyLength; i++) {
-        CSSPrimitiveValue* item = static_cast<CSSPrimitiveValue*>(familyList->itemWithoutBoundsCheck(i));
+        CSSPrimitiveValue* item = toCSSPrimitiveValue(familyList->itemWithoutBoundsCheck(i));
         String familyName;
         if (item->isString()) {
             familyName = item->getStringValue();
@@ -631,6 +630,31 @@ bool CSSFontSelector::resolvesFamilyFor(const FontDescription& description) cons
             
     }
     return false;
+}
+
+size_t CSSFontSelector::fallbackFontDataCount()
+{
+    if (!m_document)
+        return 0;
+
+    if (Settings* settings = m_document->settings())
+        return settings->fontFallbackPrefersPictographs() ? 1 : 0;
+
+    return 0;
+}
+
+PassRefPtr<FontData> CSSFontSelector::getFallbackFontData(const FontDescription& fontDescription, size_t index)
+{
+    ASSERT_UNUSED(index, !index);
+
+    if (!m_document)
+        return 0;
+
+    Settings* settings = m_document->settings();
+    if (!settings || !settings->fontFallbackPrefersPictographs())
+        return 0;
+
+    return fontCache()->getCachedFontData(fontDescription, settings->pictographFontFamily());
 }
 
 }

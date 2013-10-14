@@ -54,8 +54,8 @@ typedef HashMap<OverlapTestRequestClient*, IntRect> OverlapTestRequestMap;
  */
 struct PaintInfo {
     PaintInfo(GraphicsContext* newContext, const IntRect& newRect, PaintPhase newPhase, PaintBehavior newPaintBehavior,
-        RenderObject* newSubtreePaintRoot = 0, RenderRegion* region = 0, ListHashSet<RenderInline*>* newOutlineObjects = 0,
-        OverlapTestRequestMap* overlapTestRequests = 0, const RenderLayerModelObject* newPaintContainer = 0)
+        RenderObject* newSubtreePaintRoot = nullptr, RenderRegion* region = nullptr, ListHashSet<RenderInline*>* newOutlineObjects = nullptr,
+        OverlapTestRequestMap* overlapTestRequests = nullptr, const RenderLayerModelObject* newPaintContainer = nullptr)
         : context(newContext)
         , rect(newRect)
         , phase(newPhase)
@@ -73,16 +73,16 @@ struct PaintInfo {
         if (!subtreePaintRoot)
             return;
 
-        // If we're the painting root, kids draw normally, and see root of 0.
+        // If we're the painting root, kids draw normally, and see root of nullptr.
         if (subtreePaintRoot == renderer) {
-            subtreePaintRoot = 0; 
+            subtreePaintRoot = nullptr;
             return;
         }
     }
 
-    bool shouldPaintWithinRoot(const RenderObject* renderer) const
+    bool shouldPaintWithinRoot(const RenderObject& renderer) const
     {
-        return !subtreePaintRoot || subtreePaintRoot == renderer;
+        return !subtreePaintRoot || subtreePaintRoot == &renderer;
     }
 
     bool forceBlackText() const { return paintBehavior & PaintBehaviorForceBlackText; }

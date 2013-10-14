@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2013 Apple Inc. All rights reserved.
  * Copyright (C) 2006 David Smith (catfish.man@gmail.com)
  * Copyright (C) 2010 Igalia S.L
  *
@@ -108,6 +108,7 @@
 #import "WebTextIterator.h"
 #import "WebUIDelegate.h"
 #import "WebUIDelegatePrivate.h"
+#import "WebUserMediaClient.h"
 #import <CoreFoundation/CFSet.h>
 #import <Foundation/NSURLConnection.h>
 #import <JavaScriptCore/APICast.h>
@@ -130,7 +131,6 @@
 #import <WebCore/EventHandler.h>
 #import <WebCore/ExceptionHandlers.h>
 #import <WebCore/FocusController.h>
-#import <WebCore/Frame.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameSelection.h>
 #import <WebCore/FrameTree.h>
@@ -150,6 +150,7 @@
 #import <WebCore/JSNotification.h>
 #import <WebCore/Logging.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/MainFrame.h>
 #import <WebCore/MemoryPressureHandler.h>
 #import <WebCore/NodeList.h>
 #import <WebCore/Notification.h>
@@ -203,6 +204,11 @@
 
 #if ENABLE(DASHBOARD_SUPPORT)
 #import <WebKit/WebDashboardRegion.h>
+#endif
+
+#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
+#import "WebDiskImageCacheClientIOS.h"
+#import <WebCore/DiskImageCacheIOS.h>
 #endif
 
 #if USE(GLIB)
@@ -680,8 +686,8 @@ static NSString *leakOutlookQuirksUserScriptContents()
 -(void)_injectOutlookQuirksScript
 {
     static NSString *outlookQuirksScriptContents = leakOutlookQuirksUserScriptContents();
-    core(self)->group().addUserScriptToWorld(core([WebScriptWorld world]),
-        outlookQuirksScriptContents, KURL(), Vector<String>(), Vector<String>(), InjectAtDocumentEnd, InjectInAllFrames);
+    core(self)->group().addUserScriptToWorld(*core([WebScriptWorld world]),
+        outlookQuirksScriptContents, URL(), Vector<String>(), Vector<String>(), InjectAtDocumentEnd, InjectInAllFrames);
 }
 
 static bool shouldRespectPriorityInCSSAttributeSetters()
@@ -738,6 +744,9 @@ static bool shouldUseLegacyBackgroundSizeShorthandBehavior()
 
         WebKitInitializeStorageIfNecessary();
         WebKitInitializeApplicationCachePathIfNecessary();
+#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
+        WebKitInitializeWebDiskImageCache();
+#endif
         
         Settings::setDefaultMinDOMTimerInterval(0.004);
         
@@ -765,6 +774,9 @@ static bool shouldUseLegacyBackgroundSizeShorthandBehavior()
 #endif
 #if ENABLE(DEVICE_ORIENTATION)
     WebCore::provideDeviceOrientationTo(_private->page, new WebDeviceOrientationClient(self));
+#endif
+#if ENABLE(MEDIA_STREAM)
+    WebCore::provideUserMediaTo(_private->page, new WebUserMediaClient(self));
 #endif
 
     _private->page->setCanStartMedia([self window]);
@@ -1521,13 +1533,13 @@ static bool needsSelfRetainWhileLoadingQuirk()
 #if ENABLE(CSS_SHADERS)
     settings.setCSSCustomFilterEnabled([preferences cssCustomFilterEnabled]);
 #endif
-    RuntimeEnabledFeatures::setCSSRegionsEnabled([preferences cssRegionsEnabled]);
-    RuntimeEnabledFeatures::setCSSCompositingEnabled([preferences cssCompositingEnabled]);
+    RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled([preferences cssRegionsEnabled]);
+    RuntimeEnabledFeatures::sharedFeatures().setCSSCompositingEnabled([preferences cssCompositingEnabled]);
 #if ENABLE(WEB_AUDIO)
     settings.setWebAudioEnabled([preferences webAudioEnabled]);
 #endif
 #if ENABLE(IFRAME_SEAMLESS)
-    RuntimeEnabledFeatures::setSeamlessIFramesEnabled([preferences seamlessIFramesEnabled]);
+    RuntimeEnabledFeatures::sharedFeatures().setSeamlessIFramesEnabled([preferences seamlessIFramesEnabled]);
 #endif
     settings.setCSSGridLayoutEnabled([preferences cssGridLayoutEnabled]);
 #if ENABLE(FULLSCREEN_API)
@@ -1600,6 +1612,13 @@ static bool needsSelfRetainWhileLoadingQuirk()
     BOOL zoomsTextOnly = [preferences zoomsTextOnly];
     if (_private->zoomsTextOnly != zoomsTextOnly)
         [self _setZoomMultiplier:_private->zoomMultiplier isTextOnly:zoomsTextOnly];
+
+#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
+    DiskImageCache& diskImageCache = WebCore::diskImageCache();
+    diskImageCache.setEnabled([preferences diskImageCacheEnabled]);
+    diskImageCache.setMinimumImageSize([preferences diskImageCacheMinimumImageSize]);
+    diskImageCache.setMaximumCacheSize([preferences diskImageCacheMaximumCacheSize]);
+#endif
 }
 
 static inline IMP getMethod(id o, SEL s)
@@ -1708,9 +1727,6 @@ static inline IMP getMethod(id o, SEL s)
     }
 
     cache->failedToParseSourceFunc = getMethod(delegate, @selector(webView:failedToParseSource:baseLineNumber:fromURL:withError:forWebFrame:));
-    cache->didEnterCallFrameFunc = getMethod(delegate, @selector(webView:didEnterCallFrame:sourceId:line:forWebFrame:));
-    cache->willExecuteStatementFunc = getMethod(delegate, @selector(webView:willExecuteStatement:sourceId:line:forWebFrame:));
-    cache->willLeaveCallFrameFunc = getMethod(delegate, @selector(webView:willLeaveCallFrame:sourceId:line:forWebFrame:));
 
     cache->exceptionWasRaisedFunc = getMethod(delegate, @selector(webView:exceptionWasRaised:hasHandler:sourceId:line:forWebFrame:));
     if (cache->exceptionWasRaisedFunc)
@@ -2189,7 +2205,7 @@ static inline IMP getMethod(id o, SEL s)
             if (_private->page)
                 _private->page->settings().setUsesDashboardBackwardCompatibilityMode(flag);
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
-            RuntimeEnabledFeatures::setLegacyCSSVendorPrefixesEnabled(flag);
+            RuntimeEnabledFeatures::sharedFeatures().setLegacyCSSVendorPrefixesEnabled(flag);
 #endif
             break;
         }
@@ -2687,8 +2703,11 @@ static Vector<String> toStringVector(NSArray* patterns)
     PageGroup* pageGroup = PageGroup::pageGroup(group);
     if (!pageGroup)
         return;
-    
-    pageGroup->addUserScriptToWorld(core(world), source, url, toStringVector(whitelist), toStringVector(blacklist), 
+
+    if (!world)
+        return;
+
+    pageGroup->addUserScriptToWorld(*core(world), source, url, toStringVector(whitelist), toStringVector(blacklist),
                                     injectionTime == WebInjectAtDocumentStart ? InjectAtDocumentStart : InjectAtDocumentEnd,
                                     injectedFrames == WebInjectInAllFrames ? InjectInAllFrames : InjectInTopFrameOnly);
 }
@@ -2711,7 +2730,10 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!pageGroup)
         return;
 
-    pageGroup->addUserStyleSheetToWorld(core(world), source, url, toStringVector(whitelist), toStringVector(blacklist), injectedFrames == WebInjectInAllFrames ? InjectInAllFrames : InjectInTopFrameOnly);
+    if (!world)
+        return;
+
+    pageGroup->addUserStyleSheetToWorld(*core(world), source, url, toStringVector(whitelist), toStringVector(blacklist), injectedFrames == WebInjectInAllFrames ? InjectInAllFrames : InjectInTopFrameOnly);
 }
 
 + (void)_removeUserScriptFromGroup:(NSString *)groupName world:(WebScriptWorld *)world url:(NSURL *)url
@@ -2724,7 +2746,10 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!pageGroup)
         return;
 
-    pageGroup->removeUserScriptFromWorld(core(world), url);
+    if (!world)
+        return;
+
+    pageGroup->removeUserScriptFromWorld(*core(world), url);
 }
 
 + (void)_removeUserStyleSheetFromGroup:(NSString *)groupName world:(WebScriptWorld *)world url:(NSURL *)url
@@ -2737,7 +2762,10 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!pageGroup)
         return;
 
-    pageGroup->removeUserStyleSheetFromWorld(core(world), url);
+    if (!world)
+        return;
+
+    pageGroup->removeUserStyleSheetFromWorld(*core(world), url);
 }
 
 + (void)_removeUserScriptsFromGroup:(NSString *)groupName world:(WebScriptWorld *)world
@@ -2750,7 +2778,10 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!pageGroup)
         return;
 
-    pageGroup->removeUserScriptsFromWorld(core(world));
+    if (!world)
+        return;
+
+    pageGroup->removeUserScriptsFromWorld(*core(world));
 }
 
 + (void)_removeUserStyleSheetsFromGroup:(NSString *)groupName world:(WebScriptWorld *)world
@@ -2763,7 +2794,10 @@ static Vector<String> toStringVector(NSArray* patterns)
     if (!pageGroup)
         return;
 
-    pageGroup->removeUserStyleSheetsFromWorld(core(world));
+    if (!world)
+        return;
+
+    pageGroup->removeUserStyleSheetsFromWorld(*core(world));
 }
 
 + (void)_removeAllUserContentFromGroup:(NSString *)groupName
@@ -3118,6 +3152,12 @@ static Vector<String> toStringVector(NSArray* patterns)
 - (NSData *)_sourceApplicationAuditData
 {
     return _private->sourceApplicationAuditData.get();
+}
+
+- (void)_setFontFallbackPrefersPictographs:(BOOL)flag
+{
+    if (_private->page)
+        _private->page->settings().setFontFallbackPrefersPictographs(flag);
 }
 
 @end
@@ -4298,7 +4338,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     IntPoint client([draggingInfo draggingLocation]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
-    return core(self)->dragController().dragEntered(&dragData).operation;
+    return core(self)->dragController().dragEntered(dragData).operation;
 }
 
 - (NSDragOperation)draggingUpdated:(id <NSDraggingInfo>)draggingInfo
@@ -4310,7 +4350,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     IntPoint client([draggingInfo draggingLocation]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
-    return page->dragController().dragUpdated(&dragData).operation;
+    return page->dragController().dragUpdated(dragData).operation;
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)draggingInfo
@@ -4322,7 +4362,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     IntPoint client([draggingInfo draggingLocation]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
-    page->dragController().dragExited(&dragData);
+    page->dragController().dragExited(dragData);
 }
 
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)draggingInfo
@@ -4335,7 +4375,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     IntPoint client([draggingInfo draggingLocation]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
-    return core(self)->dragController().performDrag(&dragData);
+    return core(self)->dragController().performDrag(dragData);
 }
 
 - (NSView *)_hitTest:(NSPoint *)point dragTypes:(NSSet *)types
@@ -5522,16 +5562,16 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
 
 - (void)setContinuousSpellCheckingEnabled:(BOOL)flag
 {
-    if (continuousSpellCheckingEnabled != flag) {
-        continuousSpellCheckingEnabled = flag;
-        [[NSUserDefaults standardUserDefaults] setBool:continuousSpellCheckingEnabled forKey:WebContinuousSpellCheckingEnabled];
-    }
-    
-    if ([self isContinuousSpellCheckingEnabled]) {
+    if (continuousSpellCheckingEnabled == flag)
+        return;
+
+    continuousSpellCheckingEnabled = flag;
+    [[NSUserDefaults standardUserDefaults] setBool:continuousSpellCheckingEnabled forKey:WebContinuousSpellCheckingEnabled];
+
+    if ([self isContinuousSpellCheckingEnabled])
         [[self class] _preflightSpellChecker];
-    } else {
+    else
         [[self mainFrame] _unmarkAllMisspellings];
-    }
 }
 
 - (BOOL)isContinuousSpellCheckingEnabled
@@ -6470,6 +6510,8 @@ bool LayerFlushController::flushLayers()
     if (viewsNeedDisplay)
         return false;
 
+    [m_webView _viewWillDrawInternal];
+
     if ([m_webView _flushCompositingChanges]) {
         // AppKit may have disabled screen updates, thinking an upcoming window flush will re-enable them.
         // In case setNeedsDisplayInRect() has prevented the window from needing to be flushed, re-enable screen
@@ -6479,10 +6521,6 @@ bool LayerFlushController::flushLayers()
 
         return true;
     }
-
-    // Since the WebView does not need display, -viewWillDraw will not be called. Perform pending layout now,
-    // so that the layers draw with up-to-date layout. 
-    [m_webView _viewWillDrawInternal];
 
     return false;
 }
@@ -6657,6 +6695,24 @@ static void glibContextIterationCallback(CFRunLoopObserverRef, CFRunLoopActivity
 }
 
 @end
+
+#if ENABLE(MEDIA_STREAM)
+@implementation WebView (WebViewUserMedia)
+
+- (void)_setUserMediaClient:(id<WebUserMediaClient>)userMediaClient
+{
+    if (_private)
+        _private->m_userMediaClient = userMediaClient;
+}
+
+- (id<WebUserMediaClient>)_userMediaClient
+{
+    if (_private)
+        return _private->m_userMediaClient;
+    return nil;
+}
+@end
+#endif
 
 @implementation WebView (WebViewGeolocation)
 

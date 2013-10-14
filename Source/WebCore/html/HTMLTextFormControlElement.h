@@ -46,7 +46,7 @@ public:
     void forwardEvent(Event*);
 
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
 
     // The derived class should return true if placeholder processing is needed.
     virtual bool supportsPlaceholder() const = 0;
@@ -104,7 +104,7 @@ protected:
     void restoreCachedSelection();
     bool hasCachedSelection() const { return m_cachedSelectionStart >= 0; }
 
-    virtual void defaultEventHandler(Event*);
+    virtual void defaultEventHandler(Event*) OVERRIDE;
     virtual void subtreeHasChanged() = 0;
 
     void setLastChangeWasNotUserEdit() { m_lastChangeWasUserEdit = false; }

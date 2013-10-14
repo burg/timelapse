@@ -29,7 +29,7 @@
 #include "DragActions.h"
 #include "DragImage.h"
 #include "IntPoint.h"
-#include "KURL.h"
+#include "URL.h"
 
 namespace WebCore {
 
@@ -58,17 +58,17 @@ namespace WebCore {
 
         DragClient& client() const { return m_client; }
 
-        DragSession dragEntered(DragData*);
-        void dragExited(DragData*);
-        DragSession dragUpdated(DragData*);
-        bool performDrag(DragData*);
+        DragSession dragEntered(DragData&);
+        void dragExited(DragData&);
+        DragSession dragUpdated(DragData&);
+        bool performDrag(DragData&);
         
         // FIXME: It should be possible to remove a number of these accessors once all
         // drag logic is in WebCore.
         void setDidInitiateDrag(bool initiated) { m_didInitiateDrag = initiated; } 
         bool didInitiateDrag() const { return m_didInitiateDrag; }
         DragOperation sourceDragOperation() const { return m_sourceDragOperation; }
-        const KURL& draggingImageURL() const { return m_draggingImageURL; }
+        const URL& draggingImageURL() const { return m_draggingImageURL; }
         void setDragOffset(const IntPoint& offset) { m_dragOffset = offset; }
         const IntPoint& dragOffset() const { return m_dragOffset; }
         DragSourceAction dragSourceAction() const { return m_dragSourceAction; }
@@ -82,7 +82,7 @@ namespace WebCore {
         
         void placeDragCaret(const IntPoint&);
         
-        bool startDrag(Frame* src, const DragState&, DragOperation srcOp, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin);
+        bool startDrag(Frame& src, const DragState&, DragOperation srcOp, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin);
         static const IntSize& maxDragImageSize();
         
         static const int LinkDragBorderInset;
@@ -92,24 +92,24 @@ namespace WebCore {
         static const float DragImageAlpha;
 
     private:
-        bool dispatchTextInputEventFor(Frame*, DragData*);
-        bool canProcessDrag(DragData*);
-        bool concludeEditDrag(DragData*);
-        DragSession dragEnteredOrUpdated(DragData*);
-        DragOperation operationForLoad(DragData*);
-        bool tryDocumentDrag(DragData*, DragDestinationAction, DragSession&);
-        bool tryDHTMLDrag(DragData*, DragOperation&);
-        DragOperation dragOperation(DragData*);
+        bool dispatchTextInputEventFor(Frame*, DragData&);
+        bool canProcessDrag(DragData&);
+        bool concludeEditDrag(DragData&);
+        DragSession dragEnteredOrUpdated(DragData&);
+        DragOperation operationForLoad(DragData&);
+        bool tryDocumentDrag(DragData&, DragDestinationAction, DragSession&);
+        bool tryDHTMLDrag(DragData&, DragOperation&);
+        DragOperation dragOperation(DragData&);
         void cancelDrag();
-        bool dragIsMove(FrameSelection&, DragData*);
-        bool isCopyKeyDown(DragData*);
+        bool dragIsMove(FrameSelection&, DragData&);
+        bool isCopyKeyDown(DragData&);
 
         void mouseMovedIntoDocument(Document*);
 
-        void doImageDrag(Element*, const IntPoint&, const IntRect&, Clipboard*, Frame*, IntPoint&);
-        void doSystemDrag(DragImageRef, const IntPoint&, const IntPoint&, Clipboard*, Frame*, bool forLink);
+        void doImageDrag(Element&, const IntPoint&, const IntRect&, Clipboard&, Frame&, IntPoint&);
+        void doSystemDrag(DragImageRef, const IntPoint&, const IntPoint&, Clipboard&, Frame&, bool forLink);
         void cleanupAfterSystemDrag();
-        void declareAndWriteDragImage(Clipboard*, Element*, const KURL&, const String& label);
+        void declareAndWriteDragImage(Clipboard&, Element&, const URL&, const String& label);
 
         Page& m_page;
         DragClient& m_client;
@@ -124,7 +124,7 @@ namespace WebCore {
         bool m_didInitiateDrag;
         DragOperation m_sourceDragOperation; // Set in startDrag when a drag starts from a mouse down within WebKit
         IntPoint m_dragOffset;
-        KURL m_draggingImageURL;
+        URL m_draggingImageURL;
     };
 
 }

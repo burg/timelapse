@@ -57,12 +57,10 @@ ScrollView::ScrollView()
     , m_clipsRepaints(true)
     , m_delegatesScrolling(false)
 {
-    platformInit();
 }
 
 ScrollView::~ScrollView()
 {
-    platformDestroy();
 }
 
 void ScrollView::addChild(PassRefPtr<Widget> prpChild) 
@@ -1391,19 +1389,7 @@ void ScrollView::setScrollOrigin(const IntPoint& origin, bool updatePositionAtAl
         updateScrollbars(scrollOffset());
 }
 
-#if !PLATFORM(EFL)
-
-void ScrollView::platformInit()
-{
-}
-
-void ScrollView::platformDestroy()
-{
-}
-
-#endif
-
-#if !PLATFORM(QT) && !PLATFORM(MAC)
+#if !PLATFORM(MAC)
 
 void ScrollView::platformAddChild(Widget*)
 {

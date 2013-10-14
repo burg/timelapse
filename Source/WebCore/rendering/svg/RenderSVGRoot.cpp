@@ -236,7 +236,7 @@ void RenderSVGRoot::layout()
 
     repainter.repaintAfterLayout();
 
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -291,8 +291,15 @@ void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paint
             continueRendering = renderingContext.isRenderingPrepared();
         }
 
-        if (continueRendering)
-            RenderBox::paint(childPaintInfo, LayoutPoint());
+        if (continueRendering) {
+            childPaintInfo.updateSubtreePaintRootForChildren(this);
+            for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
+                // FIXME: Can this ever have RenderText children?
+                if (!child->isRenderElement())
+                    continue;
+                toRenderElement(child)->paint(childPaintInfo, location());
+            }
+        }
     }
 
     childPaintInfo.context->restore();

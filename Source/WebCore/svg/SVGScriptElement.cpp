@@ -30,7 +30,6 @@
 #include "HTMLNames.h"
 #include "SVGAnimatedStaticPropertyTearOff.h"
 #include "SVGElementInstance.h"
-#include "ScriptEventListener.h"
 #include "XLinkNames.h"
 
 namespace WebCore {
@@ -83,7 +82,7 @@ void SVGScriptElement::parseAttribute(const QualifiedName& name, const AtomicStr
     }
 
     if (name == HTMLNames::onerrorAttr) {
-        setAttributeEventListener(eventNames().errorEvent, createAttributeEventListener(this, name, value));
+        setAttributeEventListener(eventNames().errorEvent, name, value);
         return;
     }
 
@@ -118,11 +117,11 @@ void SVGScriptElement::svgAttributeChanged(const QualifiedName& attrName)
     ASSERT_NOT_REACHED();
 }
 
-Node::InsertionNotificationRequest SVGScriptElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGScriptElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
     ScriptElement::insertedInto(rootParent);
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         SVGExternalResourcesRequired::insertedIntoDocument(this);
     return InsertionDone;
 }
@@ -154,7 +153,7 @@ void SVGScriptElement::setType(const String& type)
     m_type = type;
 }
 
-void SVGScriptElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void SVGScriptElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     SVGElement::addSubresourceAttributeURLs(urls);
 

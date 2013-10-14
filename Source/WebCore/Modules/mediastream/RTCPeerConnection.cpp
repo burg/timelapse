@@ -99,7 +99,7 @@ PassRefPtr<RTCConfiguration> RTCPeerConnection::parseConfiguration(const Diction
             ec = TYPE_MISMATCH_ERR;
             return 0;
         }
-        KURL url(KURL(), urlString);
+        URL url(URL(), urlString);
         if (!url.isValid() || !(url.protocolIs("turn") || url.protocolIs("stun"))) {
             ec = TYPE_MISMATCH_ERR;
             return 0;
@@ -559,8 +559,9 @@ void RTCPeerConnection::didRemoveRemoteStream(MediaStreamDescriptor* streamDescr
     ASSERT(scriptExecutionContext()->isContextThread());
     ASSERT(streamDescriptor->client());
 
+    // FIXME: this class shouldn't know that the descriptor client is a MediaStream!
     RefPtr<MediaStream> stream = static_cast<MediaStream*>(streamDescriptor->client());
-    stream->streamEnded();
+    stream->setEnded();
 
     if (m_signalingState == SignalingStateClosed)
         return;
@@ -585,16 +586,6 @@ void RTCPeerConnection::didAddRemoteDataChannel(PassOwnPtr<RTCDataChannelHandler
     scheduleDispatchEvent(RTCDataChannelEvent::create(eventNames().datachannelEvent, false, false, channel.release()));
 }
 
-const AtomicString& RTCPeerConnection::interfaceName() const
-{
-    return eventNames().interfaceForRTCPeerConnection;
-}
-
-ScriptExecutionContext* RTCPeerConnection::scriptExecutionContext() const
-{
-    return ActiveDOMObject::scriptExecutionContext();
-}
-
 void RTCPeerConnection::stop()
 {
     if (m_stopped)
@@ -607,16 +598,6 @@ void RTCPeerConnection::stop()
     Vector<RefPtr<RTCDataChannel> >::iterator i = m_dataChannels.begin();
     for (; i != m_dataChannels.end(); ++i)
         (*i)->stop();
-}
-
-EventTargetData* RTCPeerConnection::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData& RTCPeerConnection::ensureEventTargetData()
-{
-    return m_eventTargetData;
 }
 
 void RTCPeerConnection::changeSignalingState(SignalingState signalingState)

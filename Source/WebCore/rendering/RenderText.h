@@ -23,7 +23,7 @@
 #ifndef RenderText_h
 #define RenderText_h
 
-#include "RenderObject.h"
+#include "RenderElement.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -46,6 +46,9 @@ public:
 
     virtual bool isTextFragment() const;
 
+    RenderStyle* style() const;
+    RenderStyle* firstLineStyle() const;
+
     virtual String originalText() const;
 
     void extractTextBox(InlineTextBox*);
@@ -53,7 +56,7 @@ public:
     void removeTextBox(InlineTextBox*);
 
     StringImpl* text() const { return m_text.impl(); }
-    String textWithoutTranscoding() const;
+    String textWithoutConvertingBackslashToYenSymbol() const;
 
     InlineTextBox* createInlineTextBox();
     void dirtyLineBoxes(bool fullLayout);
@@ -103,10 +106,10 @@ public:
 
     virtual void transformText();
 
-    virtual bool canBeSelectionLeaf() const { return true; }
+    virtual bool canBeSelectionLeaf() const OVERRIDE { return true; }
     virtual void setSelectionState(SelectionState s) OVERRIDE FINAL;
     virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) OVERRIDE;
-    virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
+    virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0) OVERRIDE;
 
     LayoutUnit marginLeft() const { return minimumValueForLength(style()->marginLeft(), 0); }
     LayoutUnit marginRight() const { return minimumValueForLength(style()->marginRight(), 0); }
@@ -116,8 +119,8 @@ public:
     InlineTextBox* firstTextBox() const { return m_firstTextBox; }
     InlineTextBox* lastTextBox() const { return m_lastTextBox; }
 
-    virtual int caretMinOffset() const;
-    virtual int caretMaxOffset() const;
+    virtual int caretMinOffset() const OVERRIDE;
+    virtual int caretMaxOffset() const OVERRIDE;
     unsigned renderedTextLength() const;
 
     virtual int previousOffset(int current) const OVERRIDE FINAL;
@@ -140,6 +143,8 @@ public:
 
     void removeAndDestroyTextBoxes();
 
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     float candidateComputedTextSize() const { return m_candidateComputedTextSize; }
     void setCandidateComputedTextSize(float s) { m_candidateComputedTextSize = s; }
@@ -149,15 +154,14 @@ protected:
     virtual void computePreferredLogicalWidths(float leadWidth);
     virtual void willBeDestroyed() OVERRIDE;
 
-    virtual void styleWillChange(StyleDifference, const RenderStyle*) OVERRIDE FINAL { }
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
-
     virtual void setTextInternal(const String&);
     virtual UChar previousCharacter() const;
     
     virtual InlineTextBox* createTextBox(); // Subclassed by SVG.
 
 private:
+    virtual bool canHaveChildren() const OVERRIDE FINAL { return false; }
+
     void computePreferredLogicalWidths(float leadWidth, HashSet<const SimpleFontData*>& fallbackFonts, GlyphOverflow&);
 
     bool computeCanUseSimpleFontCodePath() const;
@@ -167,15 +171,13 @@ private:
     // callers with a RenderObject* can continue to use length().
     virtual unsigned length() const OVERRIDE FINAL { return textLength(); }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE FINAL { ASSERT_NOT_REACHED(); }
-    virtual void layout() OVERRIDE FINAL { ASSERT_NOT_REACHED(); }
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, HitTestAction) OVERRIDE FINAL { ASSERT_NOT_REACHED(); return false; }
 
     void deleteTextBoxes();
     bool containsOnlyWhitespace(unsigned from, unsigned len) const;
     float widthFromCache(const Font&, int start, int len, float xPos, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow*) const;
     bool isAllASCII() const { return m_isAllASCII; }
-    void updateNeedsTranscoding();
+    bool computeUseBackslashAsYenSymbol() const;
 
     void secureText(UChar mask);
 
@@ -195,7 +197,7 @@ private:
     bool m_isAllASCII : 1;
     bool m_canUseSimpleFontCodePath : 1;
     mutable bool m_knownToHaveNoOverflowAndNoFallbackFonts : 1;
-    bool m_needsTranscoding : 1;
+    bool m_useBackslashAsYenSymbol : 1;
     
 #if ENABLE(IOS_TEXT_AUTOSIZING)
     // FIXME: This should probably be part of the text sizing structures in Document instead. That would save some memory.
@@ -239,6 +241,16 @@ inline const RenderText* toRenderText(const RenderObject* object)
 // This will catch anyone doing an unnecessary cast.
 void toRenderText(const RenderText*);
 void toRenderText(const RenderText&);
+
+inline RenderStyle* RenderText::style() const
+{
+    return parent()->style();
+}
+
+inline RenderStyle* RenderText::firstLineStyle() const
+{
+    return parent()->firstLineStyle();
+}
 
 #ifdef NDEBUG
 inline void RenderText::checkConsistency() const

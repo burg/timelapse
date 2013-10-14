@@ -37,7 +37,7 @@
 namespace WebCore {
 class DOMWindowExtension;
 class DOMWrapperWorld;
-class KURL;
+class URL;
 class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
@@ -54,7 +54,7 @@ class WebFrame;
 class InjectedBundlePageLoaderClient : public APIClient<WKBundlePageLoaderClient, kWKBundlePageLoaderClientCurrentVersion> {
 public:
     void willLoadURLRequest(WebPage*, const WebCore::ResourceRequest&, APIObject*);
-    void willLoadDataRequest(WebPage*, const WebCore::ResourceRequest&, const WebCore::SharedBuffer*, const String&, const String&, const WebCore::KURL&, APIObject*);
+    void willLoadDataRequest(WebPage*, const WebCore::ResourceRequest&, const WebCore::SharedBuffer*, const String&, const String&, const WebCore::URL&, APIObject*);
 
     bool shouldGoToBackForwardListItem(WebPage*, InjectedBundleBackForwardListItem*, RefPtr<APIObject>& userData);
     void didStartProvisionalLoadForFrame(WebPage*, WebFrame*, RefPtr<APIObject>& userData);
@@ -77,12 +77,12 @@ public:
     void didLayoutForFrame(WebPage*, WebFrame*);
     void didLayout(WebPage*, WebCore::LayoutMilestones, RefPtr<APIObject>& userData);
 
-    void didClearWindowObjectForFrame(WebPage*, WebFrame*, WebCore::DOMWrapperWorld*);
+    void didClearWindowObjectForFrame(WebPage*, WebFrame*, WebCore::DOMWrapperWorld&);
     void didCancelClientRedirectForFrame(WebPage*, WebFrame*);
     void willPerformClientRedirectForFrame(WebPage*, WebFrame*, const String& url, double delay, double date);
     void didHandleOnloadEventsForFrame(WebPage*, WebFrame*);
 
-    void globalObjectIsAvailableForFrame(WebPage*, WebFrame*, WebCore::DOMWrapperWorld*);
+    void globalObjectIsAvailableForFrame(WebPage*, WebFrame*, WebCore::DOMWrapperWorld&);
     void willDisconnectDOMWindowExtensionFromGlobalObject(WebPage*, WebCore::DOMWindowExtension*);
     void didReconnectDOMWindowExtensionToGlobalObject(WebPage*, WebCore::DOMWindowExtension*);
     void willDestroyGlobalObjectForDOMWindowExtension(WebPage*, WebCore::DOMWindowExtension*);

@@ -29,8 +29,8 @@
 
 #include "WebView.h"
 
+#include "CoordinatedDrawingAreaProxy.h"
 #include "CoordinatedLayerTreeHostProxy.h"
-#include "DrawingAreaProxyImpl.h"
 #include "NotImplemented.h"
 #include "WebContextMenuProxy.h"
 #include "WebPageProxy.h"
@@ -281,9 +281,9 @@ WebCore::FloatSize WebView::visibleContentsSize() const
 
 // Page Client
 
-OwnPtr<DrawingAreaProxy> WebView::createDrawingAreaProxy()
+std::unique_ptr<DrawingAreaProxy> WebView::createDrawingAreaProxy()
 {
-    return createOwned<DrawingAreaProxyImpl>(page());
+    return std::make_unique<CoordinatedDrawingAreaProxy>(page());
 }
 
 void WebView::setViewNeedsDisplay(const WebCore::IntRect& area)

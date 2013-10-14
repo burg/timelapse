@@ -39,7 +39,7 @@ public:
         return ptr;
     }
 
-    static JSC::JSObject* createPrototype(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::ExecState*, unsigned propertyName, JSC::PropertySlot&);
     static void destroy(JSC::JSCell*);
@@ -51,8 +51,8 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::ExecState*, JSC::JSGlobalObject*);
-    TestCustomNamedGetter* impl() const { return m_impl; }
+    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
+    TestCustomNamedGetter& impl() const { return *m_impl; }
     void releaseImpl() { m_impl->deref(); m_impl = 0; }
 
     void releaseImplIfNotNull()
@@ -80,15 +80,15 @@ public:
     virtual void finalize(JSC::Handle<JSC::Unknown>, void* context);
 };
 
-inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld*, TestCustomNamedGetter*)
+inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestCustomNamedGetter*)
 {
     DEFINE_STATIC_LOCAL(JSTestCustomNamedGetterOwner, jsTestCustomNamedGetterOwner, ());
     return &jsTestCustomNamedGetterOwner;
 }
 
-inline void* wrapperContext(DOMWrapperWorld* world, TestCustomNamedGetter*)
+inline void* wrapperContext(DOMWrapperWorld& world, TestCustomNamedGetter*)
 {
-    return world;
+    return &world;
 }
 
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestCustomNamedGetter*);
@@ -97,7 +97,7 @@ TestCustomNamedGetter* toTestCustomNamedGetter(JSC::JSValue);
 class JSTestCustomNamedGetterPrototype : public JSC::JSNonFinalObject {
 public:
     typedef JSC::JSNonFinalObject Base;
-    static JSC::JSObject* self(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSObject* self(JSC::VM&, JSC::JSGlobalObject*);
     static JSTestCustomNamedGetterPrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
     {
         JSTestCustomNamedGetterPrototype* ptr = new (NotNull, JSC::allocateCell<JSTestCustomNamedGetterPrototype>(vm.heap)) JSTestCustomNamedGetterPrototype(vm, globalObject, structure);
@@ -121,14 +121,14 @@ protected:
 class JSTestCustomNamedGetterConstructor : public DOMConstructorObject {
 private:
     JSTestCustomNamedGetterConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::ExecState*, JSDOMGlobalObject*);
+    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
 
 public:
     typedef DOMConstructorObject Base;
-    static JSTestCustomNamedGetterConstructor* create(JSC::ExecState* exec, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
+    static JSTestCustomNamedGetterConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
     {
-        JSTestCustomNamedGetterConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestCustomNamedGetterConstructor>(*exec->heap())) JSTestCustomNamedGetterConstructor(structure, globalObject);
-        ptr->finishCreation(exec, globalObject);
+        JSTestCustomNamedGetterConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestCustomNamedGetterConstructor>(vm.heap)) JSTestCustomNamedGetterConstructor(structure, globalObject);
+        ptr->finishCreation(vm, globalObject);
         return ptr;
     }
 

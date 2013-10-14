@@ -300,6 +300,8 @@ webkit2platform_sources += \
 
 webkit2_sources += \
 	Source/WebKit2/config.h \
+	Source/WebKit2/NetworkProcess/soup/NetworkProcessSoup.cpp \
+	Source/WebKit2/NetworkProcess/soup/NetworkResourceLoadSchedulerSoup.cpp \
 	Source/WebKit2/PluginProcess/PluginControllerProxy.cpp \
 	Source/WebKit2/PluginProcess/PluginControllerProxy.h \
 	Source/WebKit2/PluginProcess/PluginCreationParameters.cpp \
@@ -816,6 +818,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/Authentication/WebProtectionSpace.h \
 	Source/WebKit2/UIProcess/BackingStore.cpp \
 	Source/WebKit2/UIProcess/BackingStore.h \
+	Source/WebKit2/UIProcess/DefaultUndoController.cpp \
+	Source/WebKit2/UIProcess/DefaultUndoController.h \
 	Source/WebKit2/UIProcess/Downloads/DownloadProxy.cpp \
 	Source/WebKit2/UIProcess/Downloads/DownloadProxy.h \
 	Source/WebKit2/UIProcess/Downloads/DownloadProxyMap.cpp \
@@ -852,6 +856,7 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/Launcher/gtk/ProcessLauncherGtk.cpp \
 	Source/WebKit2/UIProcess/Launcher/ProcessLauncher.cpp \
 	Source/WebKit2/UIProcess/Launcher/ProcessLauncher.h \
+	Source/WebKit2/UIProcess/Network/soup/NetworkProcessProxySoup.cpp \
 	Source/WebKit2/UIProcess/Notifications/NotificationPermissionRequest.cpp \
 	Source/WebKit2/UIProcess/Notifications/NotificationPermissionRequest.h \
 	Source/WebKit2/UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp \
@@ -886,6 +891,7 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/Storage/LocalStorageDatabaseTracker.h \
 	Source/WebKit2/UIProcess/Storage/StorageManager.cpp \
 	Source/WebKit2/UIProcess/Storage/StorageManager.h \
+	Source/WebKit2/UIProcess/soup/WebContextSoup.cpp \
 	Source/WebKit2/UIProcess/soup/WebCookieManagerProxySoup.cpp \
 	Source/WebKit2/UIProcess/soup/WebSoupRequestManagerClient.cpp \
 	Source/WebKit2/UIProcess/soup/WebSoupRequestManagerClient.h \
@@ -1034,6 +1040,8 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/gtk/WebProcessMainGtk.h \
 	Source/WebKit2/WebProcess/IconDatabase/WebIconDatabaseProxy.cpp \
 	Source/WebKit2/WebProcess/IconDatabase/WebIconDatabaseProxy.h \
+	Source/WebKit2/WebProcess/IndexedDB/WebIDBFactoryBackend.cpp \
+	Source/WebKit2/WebProcess/IndexedDB/WebIDBFactoryBackend.h \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleAPICast.h \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleBackForwardList.cpp \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleBackForwardList.h \

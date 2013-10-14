@@ -31,6 +31,7 @@
 #import <WebKitSystemInterface.h>
 #import <wtf/MainThread.h>
 #import <wtf/PassOwnPtr.h>
+#import <wtf/OwnPtr.h>
 
 using namespace WebCore;
 
@@ -41,19 +42,6 @@ static OwnPtr<NetworkStorageSession>& privateBrowsingStorageSession()
     ASSERT(isMainThread());
     DEFINE_STATIC_LOCAL(OwnPtr<NetworkStorageSession>, session, ());
     return session;
-}
-
-bool RemoteNetworkingContext::shouldClearReferrerOnHTTPSToHTTPRedirect() const
-{
-    return m_shouldClearReferrerOnHTTPSToHTTPRedirect;
-}
-
-RemoteNetworkingContext::RemoteNetworkingContext(bool needsSiteSpecificQuirks, bool localFileContentSniffingEnabled, bool privateBrowsingEnabled, bool shouldClearReferrerOnHTTPSToHTTPRedirect)
-    : m_needsSiteSpecificQuirks(needsSiteSpecificQuirks)
-    , m_localFileContentSniffingEnabled(localFileContentSniffingEnabled)
-    , m_privateBrowsingEnabled(privateBrowsingEnabled)
-    , m_shouldClearReferrerOnHTTPSToHTTPRedirect(shouldClearReferrerOnHTTPSToHTTPRedirect)
-{
 }
 
 RemoteNetworkingContext::~RemoteNetworkingContext()

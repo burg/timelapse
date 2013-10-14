@@ -1,3 +1,132 @@
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        Consolidate findString functions
+        https://bugs.webkit.org/show_bug.cgi?id=122480
+
+        Reviewed by Darin Adler.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_text_search):
+        * ewk/ewk_view.cpp:
+        (ewk_view_text_search):
+
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        CTTE: Use references in and around DragController
+        https://bugs.webkit.org/show_bug.cgi?id=122427
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DragClientEfl.cpp:
+        (WebCore::DragClientEfl::willPerformDragDestinationAction):
+        (WebCore::DragClientEfl::willPerformDragSourceAction):
+        (WebCore::DragClientEfl::actionMaskForDrag):
+        (WebCore::DragClientEfl::startDrag):
+        * WebCoreSupport/DragClientEfl.h:
+
+2013-10-04  Anders Carlsson  <andersca@apple.com>
+
+        FramePolicyFunction should be an std::function
+        https://bugs.webkit.org/show_bug.cgi?id=122362
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::callPolicyFunction):
+        (WebCore::FrameLoaderClientEfl::dispatchWillSubmitForm):
+        (WebCore::FrameLoaderClientEfl::dispatchDecidePolicyForResponse):
+        (WebCore::FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction):
+        (WebCore::FrameLoaderClientEfl::dispatchDecidePolicyForNavigationAction):
+        * WebCoreSupport/FrameLoaderClientEfl.h:
+
+2013-10-03  Sam Weinig  <sam@webkit.org>
+
+        Remove shouldRubberBandInDirection from the WKBundlePageUIClient
+        https://bugs.webkit.org/show_bug.cgi?id=122309
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/ChromeClientEfl.h:
+
+2013-10-01  Sam Weinig  <sam@webkit.org>
+
+        CTTE: DOMWrapperWorlds should be passed around by reference
+        https://bugs.webkit.org/show_bug.cgi?id=122206
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::evaluateScriptInIsolatedWorld):
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::dispatchDidClearWindowObjectInWorld):
+        * WebCoreSupport/FrameLoaderClientEfl.h:
+
+2013-09-30  Sam Weinig  <sam@webkit.org>
+
+        Fix the build.
+
+        * ewk/ewk_settings.cpp:
+
+2013-09-30  Sam Weinig  <sam@webkit.org>
+
+        Remove support for DOMFileSystem
+        https://bugs.webkit.org/show_bug.cgi?id=122137
+
+        Reviewed by Anders Carlsson.
+
+        * ewk/ewk_settings.cpp:
+        (ewk_settings_file_system_path_set):
+
+2013-09-28  Darin Adler  <darin@apple.com>
+
+        Add Frame::mainFrame and Frame::isMainFrame
+        https://bugs.webkit.org/show_bug.cgi?id=122064
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::dispatchWillSendRequest):
+        (WebCore::FrameLoaderClientEfl::assignIdentifierToInitialRequest):
+        (WebCore::FrameLoaderClientEfl::updateGlobalHistory):
+        Call isMainFrame.
+
+2013-09-26  Darin Adler  <darin@apple.com>
+
+        rename KURL to URL
+        https://bugs.webkit.org/show_bug.cgi?id=16214
+
+        Reviewed by Andreas Kling.
+
+        * many files: Renamed, using script.
+
+2013-09-27  Darin Adler  <darin@apple.com>
+
+        Add empty MainFrame class
+        https://bugs.webkit.org/show_bug.cgi?id=121770
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/AcceleratedCompositingContextEfl.cpp:
+        * WebCoreSupport/InspectorClientEfl.cpp:
+        * ewk/ewk_view.cpp:
+        Include MainFrame.h instead of Frame.h as needed.
+
+2013-09-25  Brent Fulgham  <bfulgham@apple.com>
+
+        Refactor RuntimeEnabledFeatures as a Singleton.
+        https://bugs.webkit.org/show_bug.cgi?id=121883.
+
+        Reviewed by Jer Noble.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::setCSSRegionsEnabled): Use singleton.
+        (DumpRenderTreeSupportEfl::setSeamlessIFramesEnabled): Ditto.
+        * ewk/ewk_settings.cpp:
+        (ewk_settings_shadow_dom_enable_get): Ditto.
+        (ewk_settings_shadow_dom_enable_set):
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new): Ditto.
+
 2013-09-20  Mario Sanchez Prada  <mario.prada@samsung.com>
 
         [ATK] Do not expose aria-help in ATK based platforms

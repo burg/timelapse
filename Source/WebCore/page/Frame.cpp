@@ -66,6 +66,7 @@
 #include "InspectorInstrumentation.h"
 #include "JSDOMWindowShell.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "MathMLNames.h"
 #include "MediaFeatureNames.h"
 #include "Navigator.h"
@@ -150,18 +151,19 @@ static inline float parentTextZoomFactor(Frame* frame)
     return parent->textZoomFactor();
 }
 
-inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* frameLoaderClient)
-    : m_page(page)
-    , m_settings(&page->settings())
+Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient& frameLoaderClient)
+    : m_mainFrame(ownerElement ? page.mainFrame() : static_cast<MainFrame&>(*this))
+    , m_page(&page)
+    , m_settings(&page.settings())
     , m_treeNode(this, parentFromOwnerElement(ownerElement))
-    , m_loader(*this, *frameLoaderClient)
+    , m_loader(*this, frameLoaderClient)
     , m_navigationScheduler(this)
     , m_ownerElement(ownerElement)
-    , m_script(createOwned<ScriptController>(*this))
+    , m_script(std::make_unique<ScriptController>(*this))
     , m_editor(Editor::create(*this))
     , m_selection(adoptPtr(new FrameSelection(this)))
     , m_eventHandler(adoptPtr(new EventHandler(*this)))
-    , m_animationController(createOwned<AnimationController>(*this))
+    , m_animationController(std::make_unique<AnimationController>(*this))
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
 #if ENABLE(ORIENTATION_EVENTS)
@@ -170,7 +172,6 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
     , m_inViewSourceMode(false)
     , m_activeDOMObjectsAndAnimationsSuspendedCount(0)
 {
-    ASSERT(page);
     AtomicString::init();
     HTMLNames::init();
     QualifiedName::init();
@@ -188,7 +189,8 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
         setTiledBackingStoreEnabled(settings().tiledBackingStoreEnabled());
 #endif
     } else {
-        page->incrementSubframeCount();
+        m_mainFrame.selfOnlyRef();
+        page.incrementSubframeCount();
         ownerElement->setContentFrame(this);
     }
 
@@ -204,7 +206,9 @@ inline Frame::Frame(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoader
 
 PassRefPtr<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* client)
 {
-    return adoptRef(new Frame(page, ownerElement, client));
+    ASSERT(page);
+    ASSERT(client);
+    return adoptRef(new Frame(*page, ownerElement, *client));
 }
 
 Frame::~Frame()
@@ -223,6 +227,9 @@ Frame::~Frame()
     HashSet<FrameDestructionObserver*>::iterator stop = m_destructionObservers.end();
     for (HashSet<FrameDestructionObserver*>::iterator it = m_destructionObservers.begin(); it != stop; ++it)
         (*it)->frameDestroyed();
+
+    if (!isMainFrame())
+        m_mainFrame.selfOnlyDeref();
 }
 
 void Frame::addDestructionObserver(FrameDestructionObserver* observer)
@@ -246,10 +253,8 @@ void Frame::setView(PassRefPtr<FrameView> view)
     // Prepare for destruction now, so any unload event handlers get run and the DOMWindow is
     // notified. If we wait until the view is destroyed, then things won't be hooked up enough for
     // these calls to work.
-    if (!view && m_doc && m_doc->attached() && !m_doc->inPageCache()) {
-        // FIXME: We don't call willRemove here. Why is that OK?
+    if (!view && m_doc && m_doc->attached() && !m_doc->inPageCache())
         m_doc->prepareForDestruction();
-    }
     
     if (m_view)
         m_view->unscheduleRelayout();
@@ -273,11 +278,8 @@ void Frame::setDocument(PassRefPtr<Document> newDocument)
 {
     ASSERT(!newDocument || newDocument->frame() == this);
 
-    if (m_doc && m_doc->attached() && !m_doc->inPageCache()) {
-        // FIXME: We don't call willRemove here. Why is that OK?
-        m_doc->destroyRenderTree();
-        m_doc->disconnectFromFrame();
-    }
+    if (m_doc && m_doc->attached() && !m_doc->inPageCache())
+        m_doc->prepareForDestruction();
 
     m_doc = newDocument.get();
     ASSERT(!m_doc || m_doc->domWindow());
@@ -533,12 +535,12 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
     const UserScriptMap* userScripts = m_page->group().userScripts();
     if (!userScripts)
         return;
-    UserScriptMap::const_iterator end = userScripts->end();
-    for (UserScriptMap::const_iterator it = userScripts->begin(); it != end; ++it)
-        injectUserScriptsForWorld(it->key.get(), *it->value, injectionTime);
+
+    for (auto it = userScripts->begin(), end = userScripts->end(); it != end; ++it)
+        injectUserScriptsForWorld(*it->key.get(), *it->value, injectionTime);
 }
 
-void Frame::injectUserScriptsForWorld(DOMWrapperWorld* world, const UserScriptVector& userScripts, UserScriptInjectionTime injectionTime)
+void Frame::injectUserScriptsForWorld(DOMWrapperWorld& world, const UserScriptVector& userScripts, UserScriptInjectionTime injectionTime)
 {
     if (userScripts.isEmpty())
         return;
@@ -569,7 +571,7 @@ RenderWidget* Frame::ownerRenderer() const
     HTMLFrameOwnerElement* ownerElement = m_ownerElement;
     if (!ownerElement)
         return 0;
-    RenderObject* object = ownerElement->renderer();
+    auto object = ownerElement->renderer();
     if (!object)
         return 0;
     // FIXME: If <object> is ever fixed to disassociate itself from frames
@@ -648,7 +650,7 @@ void Frame::disconnectOwnerElement()
         if (m_page)
             m_page->decrementSubframeCount();
     }
-    m_ownerElement = 0;
+    m_ownerElement = nullptr;
 }
 
 String Frame::displayStringModifiedByEncoding(const String& str) const
@@ -662,7 +664,7 @@ VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint)
     Node* node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
-    RenderObject* renderer = node->renderer();
+    auto renderer = node->renderer();
     if (!renderer)
         return VisiblePosition();
     VisiblePosition visiblePos = renderer->positionForPoint(result.localPoint());
@@ -716,7 +718,7 @@ void Frame::createView(const IntSize& viewportSize, const Color& backgroundColor
     ASSERT(this);
     ASSERT(m_page);
 
-    bool isMainFrame = m_page->frameIsMainFrame(this);
+    bool isMainFrame = this->isMainFrame();
 
     if (isMainFrame && view())
         view()->setParentVisible(false);
@@ -889,7 +891,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
             view->layout();
     }
 
-    if (page->frameIsMainFrame(this))
+    if (isMainFrame())
         pageCache()->markPagesForFullStyleRecalc(page);
 }
 
@@ -935,9 +937,6 @@ void Frame::resumeActiveDOMObjectsAndAnimations()
         animation().resumeAnimationsForDocument(document());
         document()->resumeScriptedAnimationControllerCallbacks();
     }
-
-    if (m_view)
-        m_view->resumeAnimatingImages();
 }
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -951,7 +950,7 @@ void Frame::deviceOrPageScaleFactorChanged()
 }
 #endif
 
-bool Frame::isURLAllowed(const KURL& url) const
+bool Frame::isURLAllowed(const URL& url) const
 {
     // We allow one level of self-reference because some sites depend on that,
     // but we don't allow more than one.
@@ -999,7 +998,7 @@ struct ScopedFramePaintingState {
 DragImageRef Frame::nodeImage(Node* node)
 {
     if (!node->renderer())
-        return 0;
+        return nullptr;
 
     const ScopedFramePaintingState state(this, node);
 
@@ -1010,10 +1009,10 @@ DragImageRef Frame::nodeImage(Node* node)
     m_doc->updateLayout();
     m_view->setNodeToDraw(node); // Enable special sub-tree drawing mode.
 
-    // Document::updateLayout may have blown away the original RenderObject.
-    RenderObject* renderer = node->renderer();
+    // Document::updateLayout may have blown away the original renderer.
+    auto renderer = node->renderer();
     if (!renderer)
-      return 0;
+        return nullptr;
 
     LayoutRect topLevelRect;
     IntRect paintingRect = pixelSnappedIntRect(renderer->paintingRootRect(topLevelRect));
@@ -1026,7 +1025,7 @@ DragImageRef Frame::nodeImage(Node* node)
 
     OwnPtr<ImageBuffer> buffer(ImageBuffer::create(paintingRect.size(), deviceScaleFactor, ColorSpaceDeviceRGB));
     if (!buffer)
-        return 0;
+        return nullptr;
     buffer->context()->translate(-paintingRect.x(), -paintingRect.y());
     buffer->context()->clip(FloatRect(0, 0, paintingRect.maxX(), paintingRect.maxY()));
 

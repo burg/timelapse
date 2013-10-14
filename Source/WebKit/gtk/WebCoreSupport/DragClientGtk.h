@@ -27,6 +27,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if ENABLE(DRAG_SUPPORT)
+
 #ifndef DragClientGtk_h
 #define DragClientGtk_h
 
@@ -38,26 +40,26 @@ typedef struct _WebKitWebView WebKitWebView;
 
 namespace WebKit {
 
-    class DragClient : public WebCore::DragClient {
-    public:
-        DragClient(WebKitWebView*);
-        ~DragClient();
+class DragClient : public WebCore::DragClient {
+public:
+    DragClient(WebKitWebView*);
+    ~DragClient();
 
-        virtual void willPerformDragDestinationAction(WebCore::DragDestinationAction, WebCore::DragData*);
-        virtual void willPerformDragSourceAction(WebCore::DragSourceAction, const WebCore::IntPoint&, WebCore::Clipboard*);
-        virtual WebCore::DragDestinationAction actionMaskForDrag(WebCore::DragData*);
+    virtual void dragControllerDestroyed();
 
-        virtual WebCore::DragSourceAction dragSourceActionMaskForPoint(const WebCore::IntPoint& windowPoint);
+    virtual void willPerformDragDestinationAction(WebCore::DragDestinationAction, WebCore::DragData&);
+    virtual void willPerformDragSourceAction(WebCore::DragSourceAction, const WebCore::IntPoint&, WebCore::Clipboard&);
+    virtual WebCore::DragDestinationAction actionMaskForDrag(WebCore::DragData&);
+    virtual WebCore::DragSourceAction dragSourceActionMaskForPoint(const WebCore::IntPoint& windowPoint);
+    virtual void startDrag(WebCore::DragImageRef, const WebCore::IntPoint& dragImageOrigin, const WebCore::IntPoint& eventPos, WebCore::Clipboard&, WebCore::Frame&, bool linkDrag = false);
 
-        virtual void startDrag(WebCore::DragImageRef dragImage, const WebCore::IntPoint& dragImageOrigin, const WebCore::IntPoint& eventPos, WebCore::Clipboard*, WebCore::Frame*, bool linkDrag = false);
-
-        virtual void dragControllerDestroyed();
-
-    private:
-        WebKitWebView* m_webView;
-        WebCore::IntPoint m_startPos;
-        WebCore::DragIcon m_dragIcon;
-    };
+private:
+    WebKitWebView* m_webView;
+    WebCore::IntPoint m_startPos;
+    WebCore::DragIcon m_dragIcon;
+};
 }
 
 #endif
+
+#endif // ENABLE(DRAG_SUPPORT)

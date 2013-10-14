@@ -165,17 +165,13 @@ private:
         return 0;
     }
     
-    Node* getCalleeLoadElimination(InlineCallFrame* inlineCallFrame)
+    Node* getCalleeLoadElimination()
     {
         for (unsigned i = m_indexInBlock; i--;) {
             Node* node = m_currentBlock->at(i);
-            if (node->codeOrigin.inlineCallFrame != inlineCallFrame)
-                continue;
             switch (node->op()) {
             case GetCallee:
                 return node;
-            case SetCallee:
-                return node->child1().node();
             default:
                 break;
             }
@@ -802,20 +798,16 @@ private:
         return 0;
     }
     
-    Node* getMyScopeLoadElimination(InlineCallFrame* inlineCallFrame)
+    Node* getMyScopeLoadElimination()
     {
         for (unsigned i = m_indexInBlock; i--;) {
             Node* node = m_currentBlock->at(i);
-            if (node->codeOrigin.inlineCallFrame != inlineCallFrame)
-                continue;
             switch (node->op()) {
             case CreateActivation:
                 // This may cause us to return a different scope.
                 return 0;
             case GetMyScope:
                 return node;
-            case SetMyScope:
-                return node->child1().node();
             default:
                 break;
             }
@@ -910,7 +902,9 @@ private:
                 
             case GetMyScope:
             case SkipTopScope:
-                if (m_graph.uncheckedActivationRegisterFor(node->codeOrigin) == local)
+                if (node->codeOrigin.inlineCallFrame)
+                    break;
+                if (m_graph.uncheckedActivationRegister() == local)
                     result.mayBeAccessed = true;
                 break;
                 
@@ -1091,7 +1085,7 @@ private:
         case GetCallee:
             if (cseMode == StoreElimination)
                 break;
-            setReplacement(getCalleeLoadElimination(node->codeOrigin.inlineCallFrame));
+            setReplacement(getCalleeLoadElimination());
             break;
 
         case GetLocal: {
@@ -1189,7 +1183,7 @@ private:
         case GetMyScope:
             if (cseMode == StoreElimination)
                 break;
-            setReplacement(getMyScopeLoadElimination(node->codeOrigin.inlineCallFrame));
+            setReplacement(getMyScopeLoadElimination());
             break;
             
         // Handle nodes that are conditionally pure: these are pure, and can

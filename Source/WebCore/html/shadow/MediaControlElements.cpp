@@ -100,7 +100,7 @@ void MediaControlPanelElement::startDrag(const LayoutPoint& eventLocation)
     if (m_isBeingDragged)
         return;
 
-    RenderObject* renderer = this->renderer();
+    auto renderer = this->renderer();
     if (!renderer || !renderer->isBox())
         return;
 
@@ -110,7 +110,7 @@ void MediaControlPanelElement::startDrag(const LayoutPoint& eventLocation)
 
     m_lastDragEventLocation = eventLocation;
 
-    frame->eventHandler().setCapturingMouseEventsNode(this);
+    frame->eventHandler().setCapturingMouseEventsElement(this);
 
     m_isBeingDragged = true;
 }
@@ -137,7 +137,7 @@ void MediaControlPanelElement::endDrag()
     if (!frame)
         return;
 
-    frame->eventHandler().setCapturingMouseEventsNode(0);
+    frame->eventHandler().setCapturingMouseEventsElement(nullptr);
 }
 
 void MediaControlPanelElement::startTimer()
@@ -368,10 +368,11 @@ void MediaControlVolumeSliderContainerElement::defaultEventHandler(Event* event)
 
     // Poor man's mouseleave event detection.
     MouseEvent* mouseEvent = static_cast<MouseEvent*>(event);
-    if (!mouseEvent->relatedTarget() || !mouseEvent->relatedTarget()->toNode())
+    EventTarget* relatedTarget = mouseEvent->relatedTarget();
+    if (!relatedTarget || !relatedTarget->toNode())
         return;
 
-    if (this->containsIncludingShadowDOM(mouseEvent->relatedTarget()->toNode()))
+    if (this->containsIncludingShadowDOM(relatedTarget->toNode()))
         return;
 
     hide();
@@ -977,7 +978,7 @@ void MediaControlTimelineElement::setPosition(double currentTime)
 
 void MediaControlTimelineElement::setDuration(double duration)
 {
-    setAttribute(maxAttr, String::number(std::isfinite(duration) ? duration : 0));
+    setAttribute(maxAttr, AtomicString::number(std::isfinite(duration) ? duration : 0));
 }
 
 
@@ -1396,20 +1397,20 @@ void MediaControlTextTrackContainerElement::updateSizes(bool forceUpdate)
 PassRefPtr<Image> MediaControlTextTrackContainerElement::createTextTrackRepresentationImage()
 {
     if (!hasChildNodes())
-        return 0;
+        return nullptr;
 
     Frame* frame = document().frame();
     if (!frame)
-        return 0;
+        return nullptr;
 
     document().updateLayout();
 
-    RenderObject* renderer = this->renderer();
+    auto renderer = this->renderer();
     if (!renderer)
-        return 0;
+        return nullptr;
 
     if (!renderer->hasLayer())
-        return 0;
+        return nullptr;
 
     RenderLayer* layer = toRenderLayerModelObject(renderer)->layer();
 
@@ -1418,9 +1419,10 @@ PassRefPtr<Image> MediaControlTextTrackContainerElement::createTextTrackRepresen
         deviceScaleFactor = page->deviceScaleFactor();
 
     IntRect paintingRect = IntRect(IntPoint(), layer->size());
+
     OwnPtr<ImageBuffer> buffer(ImageBuffer::create(paintingRect.size(), deviceScaleFactor, ColorSpaceDeviceRGB));
     if (!buffer)
-        return 0;
+        return nullptr;
 
     layer->paint(buffer->context(), paintingRect, PaintBehaviorFlattenCompositingLayers, 0, 0, RenderLayer::PaintLayerPaintingCompositingAllPhases);
 

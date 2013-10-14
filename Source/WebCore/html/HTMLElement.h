@@ -25,8 +25,6 @@
 
 #include "StyledElement.h"
 
-#include "HTMLElementTypeHelpers.h"
-
 namespace WebCore {
 
 class DocumentFragment;
@@ -79,12 +77,12 @@ public:
 
     void click();
 
-    virtual void accessKeyAction(bool sendMouseEvents);
+    virtual void accessKeyAction(bool sendMouseEvents) OVERRIDE;
 
     bool ieForbidsInsertHTML() const;
 
-    virtual bool rendererIsNeeded(const RenderStyle&);
-    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&);
+    virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) OVERRIDE;
 
     HTMLFormElement* form() const { return virtualForm(); }
 
@@ -145,5 +143,7 @@ template <> inline bool isElementOfType<HTMLElement>(const Element* element) { r
 ELEMENT_TYPE_CASTS(HTMLElement)
 
 } // namespace WebCore
+
+#include "HTMLElementTypeHelpers.h"
 
 #endif // HTMLElement_h

@@ -333,6 +333,20 @@ String String::upper() const
     return m_impl->upper();
 }
 
+String String::lower(const AtomicString& localeIdentifier) const
+{
+    if (!m_impl)
+        return String();
+    return m_impl->lower(localeIdentifier);
+}
+
+String String::upper(const AtomicString& localeIdentifier) const
+{
+    if (!m_impl)
+        return String();
+    return m_impl->upper(localeIdentifier);
+}
+
 String String::stripWhiteSpace() const
 {
     if (!m_impl)
@@ -411,21 +425,7 @@ Vector<UChar> String::charactersWithNullTermination() const
 
 String String::format(const char *format, ...)
 {
-#if PLATFORM(QT)
-    // Use QString::vsprintf to avoid the locale dependent formatting of vsnprintf.
-    // https://bugs.webkit.org/show_bug.cgi?id=18994
-    va_list args;
-    va_start(args, format);
-
-    QString buffer;
-    buffer.vsprintf(format, args);
-
-    va_end(args);
-
-    QByteArray ba = buffer.toUtf8();
-    return StringImpl::create(reinterpret_cast<const LChar*>(ba.constData()), ba.length());
-
-#elif OS(WINCE)
+#if OS(WINCE)
     va_list args;
     va_start(args, format);
 

@@ -26,8 +26,6 @@
 #include "config.h"
 #include "UIRequestEvent.h"
 
-#include "EventDispatcher.h"
-
 #if ENABLE(INDIE_UI)
 
 namespace WebCore {
@@ -73,26 +71,10 @@ UIRequestEvent::UIRequestEvent()
 UIRequestEvent::~UIRequestEvent()
 {
 }
-    
-const AtomicString& UIRequestEvent::interfaceName() const
-{
-    return eventNames().interfaceForUIRequestEvent;
-}
 
-UIRequestEventDispatchMediator::UIRequestEventDispatchMediator(PassRefPtr<UIRequestEvent> event)
-    : EventDispatchMediator(event)
+EventInterface UIRequestEvent::eventInterface() const
 {
-}
-
-UIRequestEvent* UIRequestEventDispatchMediator::event() const
-{
-    return static_cast<UIRequestEvent*>(EventDispatchMediator::event());
-}
-
-bool UIRequestEventDispatchMediator::dispatchEvent(EventDispatcher* dispatcher) const
-{
-    dispatcher->dispatch();
-    return event()->defaultHandled() || event()->defaultPrevented();
+    return UIRequestEventInterfaceType;
 }
     
 } // namespace WebCore

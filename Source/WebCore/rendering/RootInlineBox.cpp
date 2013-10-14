@@ -33,7 +33,6 @@
 #include "Page.h"
 #include "PaintInfo.h"
 #include "RenderArena.h"
-#include "RenderBlock.h"
 #include "RenderFlowThread.h"
 #include "RenderView.h"
 #include "VerticalPositionCache.h"
@@ -109,12 +108,12 @@ bool RootInlineBox::isHyphenated() const
 
 int RootInlineBox::baselinePosition(FontBaseline baselineType) const
 {
-    return boxModelObject()->baselinePosition(baselineType, isFirstLineStyle(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
+    return boxModelObject()->baselinePosition(baselineType, isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
 }
 
 LayoutUnit RootInlineBox::lineHeight() const
 {
-    return boxModelObject()->lineHeight(isFirstLineStyle(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
+    return boxModelObject()->lineHeight(isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOfInteriorLineBoxes);
 }
 
 bool RootInlineBox::lineCanAccommodateEllipsis(bool ltr, int blockEdge, int lineBoxEdge, int ellipsisWidth)
@@ -170,7 +169,7 @@ float RootInlineBox::placeEllipsisBox(bool ltr, float blockLeftEdge, float block
 
 void RootInlineBox::paintEllipsisBox(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit lineTop, LayoutUnit lineBottom) const
 {
-    if (hasEllipsisBox() && paintInfo.shouldPaintWithinRoot(&renderer()) && renderer().style()->visibility() == VISIBLE
+    if (hasEllipsisBox() && paintInfo.shouldPaintWithinRoot(renderer()) && renderer().style()->visibility() == VISIBLE
             && paintInfo.phase == PaintPhaseForeground)
         ellipsisBox()->paint(paintInfo, paintOffset, lineTop, lineBottom);
 }
@@ -191,7 +190,7 @@ void RootInlineBox::addHighlightOverflow()
 
 void RootInlineBox::paintCustomHighlight(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const AtomicString& highlightType)
 {
-    if (!paintInfo.shouldPaintWithinRoot(&renderer()) || renderer().style()->visibility() != VISIBLE || paintInfo.phase != PaintPhaseForeground)
+    if (!paintInfo.shouldPaintWithinRoot(renderer()) || renderer().style()->visibility() != VISIBLE || paintInfo.phase != PaintPhaseForeground)
         return;
 
     Page* page = renderer().frame().page();
@@ -212,9 +211,9 @@ void RootInlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     InlineFlowBox::paint(paintInfo, paintOffset, lineTop, lineBottom);
     paintEllipsisBox(paintInfo, paintOffset, lineTop, lineBottom);
 #if PLATFORM(MAC)
-    RenderStyle* styleToUse = renderer().style(isFirstLineStyle());
-    if (styleToUse->highlight() != nullAtom && !paintInfo.context->paintingDisabled())
-        paintCustomHighlight(paintInfo, paintOffset, styleToUse->highlight());
+    const RenderStyle& lineStyle = this->lineStyle();
+    if (lineStyle.highlight() != nullAtom && !paintInfo.context->paintingDisabled())
+        paintCustomHighlight(paintInfo, paintOffset, lineStyle.highlight());
 #endif
 }
 
@@ -385,7 +384,7 @@ LayoutUnit RootInlineBox::lineSnapAdjustment(LayoutUnit delta) const
 
     // Get the current line grid and offset.
     LayoutState* layoutState = block().view().layoutState();
-    RenderBlock* lineGrid = layoutState->lineGrid();
+    RenderBlockFlow* lineGrid = layoutState->lineGrid();
     LayoutSize lineGridOffset = layoutState->lineGridOffset();
     if (!lineGrid || lineGrid->style()->writingMode() != block().style()->writingMode())
         return 0;
@@ -756,7 +755,7 @@ InlineBox* RootInlineBox::closestLeafChildForLogicalLeftPosition(int leftPositio
 
 BidiStatus RootInlineBox::lineBreakBidiStatus() const
 { 
-    return BidiStatus(static_cast<WTF::Unicode::Direction>(m_lineBreakBidiStatusEor), static_cast<WTF::Unicode::Direction>(m_lineBreakBidiStatusLastStrong), static_cast<WTF::Unicode::Direction>(m_lineBreakBidiStatusLast), m_lineBreakContext);
+    return BidiStatus(static_cast<UCharDirection>(m_lineBreakBidiStatusEor), static_cast<UCharDirection>(m_lineBreakBidiStatusLastStrong), static_cast<UCharDirection>(m_lineBreakBidiStatusLast), m_lineBreakContext);
 }
 
 void RootInlineBox::setLineBreakInfo(RenderObject* obj, unsigned breakPos, const BidiStatus& status)
@@ -833,7 +832,7 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
     // Replaced boxes will return 0 for the line-height if line-box-contain says they are
     // not to be included.
     if (box->renderer().isReplaced()) {
-        if (renderer().style(isFirstLineStyle())->lineBoxContain() & LineBoxContainReplaced) {
+        if (lineStyle().lineBoxContain() & LineBoxContainReplaced) {
             ascent = box->baselinePosition(baselineType());
             descent = box->lineHeight() - ascent;
             
@@ -858,8 +857,9 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
     bool setUsedFont = false;
     bool setUsedFontWithLeading = false;
 
-    if (usedFonts && !usedFonts->isEmpty() && (includeFont || (box->renderer().style(isFirstLineStyle())->lineHeight().isNegative() && includeLeading))) {
-        usedFonts->append(box->renderer().style(isFirstLineStyle())->font().primaryFont());
+    const RenderStyle& boxLineStyle = box->lineStyle();
+    if (usedFonts && !usedFonts->isEmpty() && (includeFont || (boxLineStyle.lineHeight().isNegative() && includeLeading))) {
+        usedFonts->append(boxLineStyle.font().primaryFont());
         for (size_t i = 0; i < usedFonts->size(); ++i) {
             const FontMetrics& fontMetrics = usedFonts->at(i)->fontMetrics();
             int usedFontAscent = fontMetrics.ascent(baselineType());
@@ -897,8 +897,8 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
     }
     
     if (includeFontForBox(box) && !setUsedFont) {
-        int fontAscent = box->renderer().style(isFirstLineStyle())->fontMetrics().ascent(baselineType());
-        int fontDescent = box->renderer().style(isFirstLineStyle())->fontMetrics().descent(baselineType());
+        int fontAscent = boxLineStyle.fontMetrics().ascent(baselineType());
+        int fontDescent = boxLineStyle.fontMetrics().descent(baselineType());
         setAscentAndDescent(ascent, descent, fontAscent, fontDescent, ascentDescentSet);
         affectsAscent = fontAscent - box->logicalTop() > 0;
         affectsDescent = fontDescent + box->logicalTop() > 0; 
@@ -908,13 +908,13 @@ void RootInlineBox::ascentAndDescentForBox(InlineBox* box, GlyphOverflowAndFallb
         setAscentAndDescent(ascent, descent, glyphOverflow->top, glyphOverflow->bottom, ascentDescentSet);
         affectsAscent = glyphOverflow->top - box->logicalTop() > 0;
         affectsDescent = glyphOverflow->bottom + box->logicalTop() > 0; 
-        glyphOverflow->top = min(glyphOverflow->top, max(0, glyphOverflow->top - box->renderer().style(isFirstLineStyle())->fontMetrics().ascent(baselineType())));
-        glyphOverflow->bottom = min(glyphOverflow->bottom, max(0, glyphOverflow->bottom - box->renderer().style(isFirstLineStyle())->fontMetrics().descent(baselineType())));
+        glyphOverflow->top = min(glyphOverflow->top, max(0, glyphOverflow->top - boxLineStyle.fontMetrics().ascent(baselineType())));
+        glyphOverflow->bottom = min(glyphOverflow->bottom, max(0, glyphOverflow->bottom - boxLineStyle.fontMetrics().descent(baselineType())));
     }
 
     if (includeMarginForBox(box)) {
-        LayoutUnit ascentWithMargin = box->renderer().style(isFirstLineStyle())->fontMetrics().ascent(baselineType());
-        LayoutUnit descentWithMargin = box->renderer().style(isFirstLineStyle())->fontMetrics().descent(baselineType());
+        LayoutUnit ascentWithMargin = boxLineStyle.fontMetrics().ascent(baselineType());
+        LayoutUnit descentWithMargin = boxLineStyle.fontMetrics().descent(baselineType());
         if (box->parent() && !box->renderer().isTextOrLineBreak()) {
             ascentWithMargin += box->boxModelObject()->borderAndPaddingBefore() + box->boxModelObject()->marginBefore();
             descentWithMargin += box->boxModelObject()->borderAndPaddingAfter() + box->boxModelObject()->marginAfter();
@@ -938,8 +938,8 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
         return 0;
 
     // This method determines the vertical position for inline elements.
-    bool firstLine = isFirstLineStyle();
-    if (firstLine && !renderer->document().styleSheetCollection()->usesFirstLineRules())
+    bool firstLine = isFirstLine();
+    if (firstLine && !renderer->document().styleSheetCollection().usesFirstLineRules())
         firstLine = false;
 
     // Check the cache.
@@ -955,12 +955,13 @@ LayoutUnit RootInlineBox::verticalPositionForBox(InlineBox* box, VerticalPositio
     if (verticalAlign == TOP || verticalAlign == BOTTOM)
         return 0;
    
-    RenderObject* parent = renderer->parent();
+    RenderElement* parent = renderer->parent();
     if (parent->isRenderInline() && parent->style()->verticalAlign() != TOP && parent->style()->verticalAlign() != BOTTOM)
         verticalPosition = box->parent()->logicalTop();
     
     if (verticalAlign != BASELINE) {
-        const Font& font = parent->style(firstLine)->font();
+        const RenderStyle& parentLineStyle = firstLine ? *parent->firstLineStyle() : *parent->style();
+        const Font& font = parentLineStyle.font();
         const FontMetrics& fontMetrics = font.fontMetrics();
         int fontSize = font.pixelSize();
 

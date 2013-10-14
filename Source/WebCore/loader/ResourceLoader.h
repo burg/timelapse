@@ -44,7 +44,7 @@ class AuthenticationChallenge;
 class DocumentLoader;
 class Frame;
 class FrameLoader;
-class KURL;
+class URL;
 class ResourceBuffer;
 class ResourceHandle;
 
@@ -109,7 +109,9 @@ public:
     virtual void didFail(ResourceHandle*, const ResourceError&) OVERRIDE;
     virtual void wasBlocked(ResourceHandle*) OVERRIDE;
     virtual void cannotShowURL(ResourceHandle*) OVERRIDE;
-    virtual void willStopBufferingData(ResourceHandle*, const char* data, int length) { willStopBufferingData(data, length); }
+#if PLATFORM(MAC)
+    virtual void willStopBufferingData(ResourceHandle*, const char* data, int length) OVERRIDE { willStopBufferingData(data, length); }
+#endif
     virtual bool shouldUseCredentialStorage(ResourceHandle*) OVERRIDE { return shouldUseCredentialStorage(); }
     virtual void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) OVERRIDE { didReceiveAuthenticationChallenge(challenge); }
     virtual void didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) OVERRIDE { didCancelAuthenticationChallenge(challenge); }
@@ -132,7 +134,7 @@ public:
     virtual bool shouldCacheResponse(ResourceHandle*, CFCachedURLResponseRef) OVERRIDE;
 #endif
 
-    const KURL& url() const { return m_request.url(); }
+    const URL& url() const { return m_request.url(); } 
     ResourceHandle* handle() const { return m_handle.get(); }
     bool shouldSendResourceLoadCallbacks() const { return m_options.sendLoadCallbacks == SendCallbacks; }
     void setSendCallbackPolicy(SendCallbackPolicy sendLoadCallbacks) { m_options.sendLoadCallbacks = sendLoadCallbacks; }

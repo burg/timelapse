@@ -219,7 +219,6 @@ private:
 
     virtual void notifyScrollerThumbIsVisibleInRect(const WebCore::IntRect&) OVERRIDE;
     virtual void recommendedScrollbarStyleDidChange(int32_t newStyle) OVERRIDE;
-    virtual bool shouldRubberBandInDirection(WebCore::ScrollDirection) const OVERRIDE;
 
     virtual WebCore::Color underlayColor() const OVERRIDE;
     
@@ -234,6 +233,8 @@ private:
 
     virtual void didAddHeaderLayer(WebCore::GraphicsLayer*) OVERRIDE;
     virtual void didAddFooterLayer(WebCore::GraphicsLayer*) OVERRIDE;
+
+    virtual bool shouldUseTiledBackingForFrameView(const WebCore::FrameView*) const OVERRIDE;
 
     virtual void incrementActivePageCount() OVERRIDE;
     virtual void decrementActivePageCount() OVERRIDE;

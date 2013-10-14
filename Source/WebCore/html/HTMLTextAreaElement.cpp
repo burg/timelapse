@@ -266,7 +266,7 @@ void HTMLTextAreaElement::updateFocusAppearance(bool restorePreviousSelection)
 
 void HTMLTextAreaElement::defaultEventHandler(Event* event)
 {
-    if (renderer() && (event->isMouseEvent() || event->isDragEvent() || event->hasInterface(eventNames().interfaceForWheelEvent) || event->type() == eventNames().blurEvent))
+    if (renderer() && (event->isMouseEvent() || event->isDragEvent() || event->eventInterface() == WheelEventInterfaceType || event->type() == eventNames().blurEvent))
         forwardEvent(event);
     else if (renderer() && event->isBeforeTextInsertedEvent())
         handleBeforeTextInsertedEvent(static_cast<BeforeTextInsertedEvent*>(event));
@@ -440,7 +440,7 @@ void HTMLTextAreaElement::setMaxLength(int newValue, ExceptionCode& ec)
     if (newValue < 0)
         ec = INDEX_SIZE_ERR;
     else
-        setAttribute(maxlengthAttr, String::number(newValue));
+        setIntegralAttribute(maxlengthAttr, newValue);
 }
 
 String HTMLTextAreaElement::validationMessage() const
@@ -498,12 +498,12 @@ void HTMLTextAreaElement::accessKeyAction(bool)
 
 void HTMLTextAreaElement::setCols(int cols)
 {
-    setAttribute(colsAttr, String::number(cols));
+    setIntegralAttribute(colsAttr, cols);
 }
 
 void HTMLTextAreaElement::setRows(int rows)
 {
-    setAttribute(rowsAttr, String::number(rows));
+    setIntegralAttribute(rowsAttr, rows);
 }
 
 bool HTMLTextAreaElement::shouldUseInputMethod()
@@ -523,7 +523,7 @@ bool HTMLTextAreaElement::matchesReadOnlyPseudoClass() const
 
 bool HTMLTextAreaElement::matchesReadWritePseudoClass() const
 {
-    return !isReadOnly();
+    return !isDisabledOrReadOnly();
 }
 
 void HTMLTextAreaElement::updatePlaceholderText()

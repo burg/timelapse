@@ -45,7 +45,7 @@ class Dictionary;
 class RTCDataChannelHandler;
 class RTCPeerConnectionHandler;
 
-class RTCDataChannel : public RefCounted<RTCDataChannel>, public ScriptWrappable, public EventTarget, public RTCDataChannelHandlerClient {
+class RTCDataChannel FINAL : public RefCounted<RTCDataChannel>, public ScriptWrappable, public EventTargetWithInlineData, public RTCDataChannelHandlerClient {
 public:
     static PassRefPtr<RTCDataChannel> create(ScriptExecutionContext*, PassOwnPtr<RTCDataChannelHandler>);
     static PassRefPtr<RTCDataChannel> create(ScriptExecutionContext*, RTCPeerConnectionHandler*, const String& , const Dictionary&, ExceptionCode&);
@@ -79,8 +79,8 @@ public:
     void stop();
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const OVERRIDE;
-    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return RTCDataChannelEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return m_scriptExecutionContext; }
 
     using RefCounted<RTCDataChannel>::ref;
     using RefCounted<RTCDataChannel>::deref;
@@ -92,12 +92,9 @@ private:
     void scheduledEventTimerFired(Timer<RTCDataChannel>*);
 
     // EventTarget
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
 
-    EventTargetData m_eventTargetData;
     ScriptExecutionContext* m_scriptExecutionContext;
 
     // RTCDataChannelHandlerClient

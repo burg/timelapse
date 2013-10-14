@@ -35,10 +35,6 @@
 #include <wtf/text/ConversionMode.h>
 #include <wtf/unicode/Unicode.h>
 
-#if PLATFORM(QT)
-#include <QString>
-#endif
-
 #if USE(CF)
 typedef const struct __CFString * CFStringRef;
 #endif
@@ -159,10 +155,6 @@ private:
         BufferInternal,
         BufferOwned,
         BufferSubstring,
-#if PLATFORM(QT)
-        BufferAdoptedQString
-#endif
-        // NOTE: Adding more ownership types needs to extend m_hashAndFlags as we're at capacity
     };
 
     // Used to construct static strings, which have an special refCount that can never hit zero.
@@ -341,30 +333,6 @@ private:
         STRING_STATS_ADD_16BIT_STRING(m_length);
     }
 
-#if PLATFORM(QT)
-    // Used to create new strings that adopt an existing QString's data
-    enum ConstructAdoptedQStringTag { ConstructAdoptedQString };
-    StringImpl(QStringData* qStringData, ConstructAdoptedQStringTag)
-        : m_refCount(s_refCountIncrement)
-        , m_length(qStringData->size)
-        , m_data16(0)
-        , m_qStringData(qStringData)
-        , m_hashAndFlags(BufferAdoptedQString)
-    {
-        ASSERT(m_length);
-
-        // We ref the string-data to ensure it will be valid for the lifetime of
-        // this string. We then deref it in the destructor, so that the string
-        // data can eventually be freed.
-        m_qStringData->ref.ref();
-
-        // Now that we have a ref we can safely reference the string data
-        m_data16 = reinterpret_cast_ptr<const UChar*>(qStringData->data());
-        ASSERT(m_data16);
-
-        STRING_STATS_ADD_16BIT_STRING(m_length);
-    }
-#endif
     ~StringImpl();
 
 public:
@@ -481,10 +449,6 @@ public:
     WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> adopt(StringBuffer<UChar>&);
     WTF_EXPORT_STRING_API static PassRefPtr<StringImpl> adopt(StringBuffer<LChar>&);
 
-#if PLATFORM(QT)
-    static PassRefPtr<StringImpl> adopt(QStringData*);
-#endif
-
     unsigned length() const { return m_length; }
     bool is8Bit() const { return m_hashAndFlags & s_hashFlag8BitBuffer; }
 
@@ -537,9 +501,11 @@ public:
     bool has16BitShadow() const { return m_hashAndFlags & s_hashFlagHas16BitShadow; }
     WTF_EXPORT_STRING_API void upconvertCharacters(unsigned, unsigned) const;
     bool isIdentifier() const { return m_hashAndFlags & s_hashFlagIsIdentifier; }
+    bool isIdentifierOrUnique() const { return isIdentifier() || isEmptyUnique(); }
     void setIsIdentifier(bool isIdentifier)
     {
         ASSERT(!isStatic());
+        ASSERT(!isEmptyUnique());
         if (isIdentifier)
             m_hashAndFlags |= s_hashFlagIsIdentifier;
         else
@@ -555,6 +521,7 @@ public:
     void setIsAtomic(bool isAtomic)
     {
         ASSERT(!isStatic());
+        ASSERT(!isEmptyUnique());
         if (isAtomic)
             m_hashAndFlags |= s_hashFlagIsAtomic;
         else
@@ -565,10 +532,6 @@ public:
     bool isSubString() const { return  bufferOwnership() == BufferSubstring; }
 #endif
 
-#if PLATFORM(QT)
-    QStringData* qStringData() { return bufferOwnership() == BufferAdoptedQString ? m_qStringData : 0; }
-#endif
-    
     static WTF_EXPORT_STRING_API CString utf8ForCharacters(const UChar* characters, unsigned length, ConversionMode = LenientConversion);
     WTF_EXPORT_STRING_API CString utf8ForRange(unsigned offset, unsigned length, ConversionMode = LenientConversion) const;
     WTF_EXPORT_STRING_API CString utf8(ConversionMode = LenientConversion) const;
@@ -727,6 +690,8 @@ public:
 
     WTF_EXPORT_STRING_API PassRefPtr<StringImpl> lower();
     WTF_EXPORT_STRING_API PassRefPtr<StringImpl> upper();
+    WTF_EXPORT_STRING_API RefPtr<StringImpl> lower(const AtomicString& localeIdentifier);
+    WTF_EXPORT_STRING_API RefPtr<StringImpl> upper(const AtomicString& localeIdentifier);
 
     WTF_EXPORT_STRING_API PassRefPtr<StringImpl> fill(UChar);
     // FIXME: Do we need fill(char) or can we just do the right thing if UChar is ASCII?
@@ -780,7 +745,7 @@ public:
     WTF_EXPORT_STRING_API PassRefPtr<StringImpl> replace(StringImpl*, StringImpl*);
     WTF_EXPORT_STRING_API PassRefPtr<StringImpl> replace(unsigned index, unsigned len, StringImpl*);
 
-    WTF_EXPORT_STRING_API WTF::Unicode::Direction defaultWritingDirection(bool* hasStrongDirectionality = 0);
+    WTF_EXPORT_STRING_API UCharDirection defaultWritingDirection(bool* hasStrongDirectionality = nullptr);
 
 #if USE(CF)
     RetainPtr<CFStringRef> createCFString();
@@ -873,9 +838,6 @@ private:
         void* m_buffer;
         StringImpl* m_substringBuffer;
         mutable UChar* m_copyData16;
-#if PLATFORM(QT)
-        QStringData* m_qStringData;
-#endif
     };
     mutable unsigned m_hashAndFlags;
 };
@@ -1145,7 +1107,7 @@ inline bool equalIgnoringCase(const char* a, const LChar* b, unsigned length) { 
 inline bool equalIgnoringCase(const UChar* a, const UChar* b, int length)
 {
     ASSERT(length >= 0);
-    return !Unicode::umemcasecmp(a, b, length);
+    return !u_memcasecmp(a, b, length, U_FOLD_CASE_DEFAULT);
 }
 WTF_EXPORT_STRING_API bool equalIgnoringCaseNonNull(const StringImpl*, const StringImpl*);
 
@@ -1355,7 +1317,7 @@ static inline bool isSpaceOrNewline(UChar c)
 {
     // Use isASCIISpace() for basic Latin-1.
     // This will include newlines, which aren't included in Unicode DirWS.
-    return c <= 0x7F ? WTF::isASCIISpace(c) : WTF::Unicode::direction(c) == WTF::Unicode::WhiteSpaceNeutral;
+    return c <= 0x7F ? isASCIISpace(c) : u_charDirection(c) == U_WHITE_SPACE_NEUTRAL;
 }
 
 template<typename CharacterType>

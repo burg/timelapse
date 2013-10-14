@@ -54,20 +54,20 @@ enum SliceHistogramEnum {
 
 class BlobURLRegistry : public URLRegistry {
 public:
-    virtual void registerURL(SecurityOrigin*, const KURL&, URLRegistrable*) OVERRIDE;
-    virtual void unregisterURL(const KURL&) OVERRIDE;
+    virtual void registerURL(SecurityOrigin*, const URL&, URLRegistrable*) OVERRIDE;
+    virtual void unregisterURL(const URL&) OVERRIDE;
 
     static URLRegistry& registry();
 };
 
 
-void BlobURLRegistry::registerURL(SecurityOrigin* origin, const KURL& publicURL, URLRegistrable* blob)
+void BlobURLRegistry::registerURL(SecurityOrigin* origin, const URL& publicURL, URLRegistrable* blob)
 {
     ASSERT(&blob->registry() == this);
     ThreadableBlobRegistry::registerBlobURL(origin, publicURL, static_cast<Blob*>(blob)->url());
 }
 
-void BlobURLRegistry::unregisterURL(const KURL& url)
+void BlobURLRegistry::unregisterURL(const URL& url)
 {
     ThreadableBlobRegistry::unregisterBlobURL(url);
 }
@@ -82,14 +82,14 @@ URLRegistry& BlobURLRegistry::registry()
 Blob::Blob()
     : m_size(0)
 {
-    OwnPtr<BlobData> blobData = BlobData::create();
+    auto blobData = std::make_unique<BlobData>();
 
     // Create a new internal URL and register it with the provided blob data.
     m_internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerBlobURL(m_internalURL, blobData.release());
+    ThreadableBlobRegistry::registerBlobURL(m_internalURL, std::move(blobData));
 }
 
-Blob::Blob(PassOwnPtr<BlobData> blobData, long long size)
+Blob::Blob(std::unique_ptr<BlobData> blobData, long long size)
     : m_type(blobData->contentType())
     , m_size(size)
 {
@@ -97,10 +97,10 @@ Blob::Blob(PassOwnPtr<BlobData> blobData, long long size)
 
     // Create a new internal URL and register it with the provided blob data.
     m_internalURL = BlobURL::createInternalURL();
-    ThreadableBlobRegistry::registerBlobURL(m_internalURL, blobData);
+    ThreadableBlobRegistry::registerBlobURL(m_internalURL, std::move(blobData));
 }
 
-Blob::Blob(const KURL& srcURL, const String& type, long long size)
+Blob::Blob(const URL& srcURL, const String& type, long long size)
     : m_type(Blob::normalizedContentType(type))
     , m_size(size)
 {
@@ -217,19 +217,14 @@ PassRefPtr<Blob> Blob::slice(long long start, long long end, const String& conte
         end = size;
 
     long long length = end - start;
-    OwnPtr<BlobData> blobData = BlobData::create();
+    auto blobData = std::make_unique<BlobData>();
     blobData->setContentType(Blob::normalizedContentType(contentType));
-    if (isFile()) {
-#if ENABLE(FILE_SYSTEM)
-        if (!toFile(this)->fileSystemURL().isEmpty())
-            blobData->appendURL(toFile(this)->fileSystemURL(), start, length, modificationTime);
-        else
-#endif
+    if (isFile())
         blobData->appendFile(toFile(this)->path(), start, length, modificationTime);
-    } else
+    else
         blobData->appendBlob(m_internalURL, start, length);
 
-    return Blob::create(blobData.release(), length);
+    return Blob::create(std::move(blobData), length);
 }
 #endif
 

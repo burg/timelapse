@@ -63,6 +63,7 @@
 #if ENABLE(MEDIA_STREAM)
 #include "MediaStream.h"
 #include "MediaStreamAudioDestinationNode.h"
+#include "MediaStreamAudioSource.h"
 #include "MediaStreamAudioSourceNode.h"
 #endif
 
@@ -91,7 +92,6 @@
 // FIXME: check the proper way to reference an undefined thread ID
 const int UndefinedThreadIdentifier = 0xffffffff;
 
-const unsigned MaxNodesToDeletePerQuantum = 10;
 const unsigned MaxPeriodicWaveLength = 4096;
 
 namespace WebCore {
@@ -421,12 +421,14 @@ PassRefPtr<MediaStreamAudioSourceNode> AudioContext::createMediaStreamSource(Med
     // FIXME: get a provider for non-local MediaStreams (like from a remote peer).
     for (size_t i = 0; i < audioTracks.size(); ++i) {
         RefPtr<MediaStreamTrack> localAudio = audioTracks[i];
-        MediaStreamSource* source = localAudio->component()->source();
-        if (!source->deviceId().isEmpty()) {
-            destination()->enableInput(source->deviceId());
-            provider = destination()->localAudioInputProvider();
-            break;
-        }
+        if (!localAudio->source()->isAudioStreamSource())
+            continue;
+
+        MediaStreamAudioSource* source = static_cast<MediaStreamAudioSource*>(localAudio->source());
+        ASSERT(!source->deviceId().isEmpty());
+        destination()->enableInput(source->deviceId());
+        provider = destination()->localAudioInputProvider();
+        break;
     }
 
     RefPtr<MediaStreamAudioSourceNode> node = MediaStreamAudioSourceNode::create(this, mediaStream, provider);
@@ -734,7 +736,7 @@ void AudioContext::addDeferredFinishDeref(AudioNode* node)
 void AudioContext::handlePreRenderTasks()
 {
     ASSERT(isAudioThread());
- 
+
     // At the beginning of every render quantum, try to update the internal rendering graph state (from main thread changes).
     // It's OK if the tryLock() fails, we'll just take slightly longer to pick up the changes.
     bool mustReleaseLock;
@@ -753,8 +755,8 @@ void AudioContext::handlePreRenderTasks()
 void AudioContext::handlePostRenderTasks()
 {
     ASSERT(isAudioThread());
- 
-    // Must use a tryLock() here too.  Don't worry, the lock will very rarely be contended and this method is called frequently.
+
+    // Must use a tryLock() here too. Don't worry, the lock will very rarely be contended and this method is called frequently.
     // The worst that can happen is that there will be some nodes which will take slightly longer than usual to be deleted or removed
     // from the render graph (in which case they'll render silence).
     bool mustReleaseLock;
@@ -948,11 +950,6 @@ void AudioContext::processAutomaticPullNodes(size_t framesToProcess)
 
     for (unsigned i = 0; i < m_renderingAutomaticPullNodes.size(); ++i)
         m_renderingAutomaticPullNodes[i]->processIfNecessary(framesToProcess);
-}
-
-const AtomicString& AudioContext::interfaceName() const
-{
-    return eventNames().interfaceForAudioContext;
 }
 
 ScriptExecutionContext* AudioContext::scriptExecutionContext() const

@@ -43,7 +43,7 @@
 namespace WebCore {
 
 RenderSVGModelObject::RenderSVGModelObject(SVGElement& element)
-    : RenderElement(&element)
+    : RenderElement(&element, 0)
     , m_hasSVGShadow(false)
 {
 }
@@ -95,7 +95,7 @@ void RenderSVGModelObject::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixe
 void RenderSVGModelObject::willBeDestroyed()
 {
     SVGResourcesCache::clientDestroyed(this);
-    RenderObject::willBeDestroyed();
+    RenderElement::willBeDestroyed();
 }
 
 void RenderSVGModelObject::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
@@ -105,12 +105,12 @@ void RenderSVGModelObject::styleWillChange(StyleDifference diff, const RenderSty
         if (newStyle->hasTransform())
             setNeedsTransformUpdate();
     }
-    RenderObject::styleWillChange(diff, newStyle);
+    RenderElement::styleWillChange(diff, newStyle);
 }
 
 void RenderSVGModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderObject::styleDidChange(diff, oldStyle);
+    RenderElement::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(this, diff, style());
 }
 

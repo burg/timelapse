@@ -362,7 +362,7 @@ void FileInputType::setFiles(PassRefPtr<FileList> files)
     if (!files)
         return;
 
-    RefPtr<HTMLInputElement> input = &element();
+    Ref<HTMLInputElement> input(element());
 
     bool pathsChanged = false;
     if (files->length() != m_fileList->length())
@@ -433,10 +433,10 @@ void FileInputType::updateRendering(PassRefPtr<Icon> icon)
         element().renderer()->repaint();
 }
 
-bool FileInputType::receiveDroppedFiles(const DragData* dragData)
+bool FileInputType::receiveDroppedFiles(const DragData& dragData)
 {
     Vector<String> paths;
-    dragData->asFilenames(paths);
+    dragData.asFilenames(paths);
     if (paths.isEmpty())
         return false;
 
@@ -446,10 +446,6 @@ bool FileInputType::receiveDroppedFiles(const DragData* dragData)
         receiveDropForDirectoryUpload(paths);
         return true;
     }
-#endif
-
-#if ENABLE(FILE_SYSTEM)
-    m_droppedFileSystemId = dragData->droppedFileSystemId();
 #endif
 
     Vector<FileChooserFileInfo> files;
@@ -465,13 +461,6 @@ bool FileInputType::receiveDroppedFiles(const DragData* dragData)
     }
     return true;
 }
-
-#if ENABLE(FILE_SYSTEM)
-String FileInputType::droppedFileSystemId()
-{
-    return m_droppedFileSystemId;
-}
-#endif
 
 Icon* FileInputType::icon() const
 {

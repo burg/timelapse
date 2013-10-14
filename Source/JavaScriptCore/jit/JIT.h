@@ -51,6 +51,7 @@
 
 namespace JSC {
 
+    class ArrayAllocationProfile;
     class CodeBlock;
     class FunctionExecutable;
     class JIT;
@@ -421,6 +422,31 @@ namespace JSC {
         CodeRef privateCompileCTINativeCall(VM*, NativeFunction);
         void privateCompilePatchGetArrayLength(ReturnAddressPtr returnAddress);
 
+        // Add a call out from JIT code, without an exception check.
+        Call appendCall(const FunctionPtr& function)
+        {
+            Call functionCall = call();
+            m_calls.append(CallRecord(functionCall, m_bytecodeOffset, function.value()));
+            return functionCall;
+        }
+
+        void exceptionCheck(Jump jumpToHandler)
+        {
+            m_exceptionChecks.append(jumpToHandler);
+        }
+
+        void exceptionCheck()
+        {
+            m_exceptionChecks.append(emitExceptionCheck());
+        }
+
+        void exceptionCheckWithCallFrameRollback()
+        {
+            m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck());
+        }
+
+        void privateCompileExceptionHandlers();
+
         static bool isDirectPutById(StructureStubInfo*);
 
         void addSlowCase(Jump);
@@ -583,8 +609,11 @@ namespace JSC {
         void emitGetJITStubArg(int argumentNumber, RegisterID dst);
 
         void emitGetVirtualRegister(int src, RegisterID dst);
+        void emitGetVirtualRegister(VirtualRegister src, RegisterID dst);
         void emitGetVirtualRegisters(int src1, RegisterID dst1, int src2, RegisterID dst2);
+        void emitGetVirtualRegisters(VirtualRegister src1, RegisterID dst1, VirtualRegister src2, RegisterID dst2);
         void emitPutVirtualRegister(int dst, RegisterID from = regT0);
+        void emitPutVirtualRegister(VirtualRegister dst, RegisterID from = regT0);
         void emitStoreCell(int dst, RegisterID payload, bool /* only used in JSValue32_64 */ = false)
         {
             emitPutVirtualRegister(dst, payload);
@@ -636,7 +665,7 @@ namespace JSC {
 #endif
 
         void emit_compareAndJump(OpcodeID, int op1, int op2, unsigned target, RelationalCondition);
-        void emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondition, int (JIT_STUB *stub)(STUB_ARGS_DECLARATION), bool invert, Vector<SlowCaseEntry>::iterator&);
+        void emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondition, size_t (JIT_OPERATION *operation)(ExecState*, EncodedJSValue, EncodedJSValue), bool invert, Vector<SlowCaseEntry>::iterator&);
 
         void emit_op_add(Instruction*);
         void emit_op_bitand(Instruction*);
@@ -746,6 +775,7 @@ namespace JSC {
         void emitSlow_op_create_this(Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_div(Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_eq(Instruction*, Vector<SlowCaseEntry>::iterator&);
+        void emitSlow_op_get_callee(Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_id(Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_arguments_length(Instruction*, Vector<SlowCaseEntry>::iterator&);
         void emitSlow_op_get_by_val(Instruction*, Vector<SlowCaseEntry>::iterator&);
@@ -834,6 +864,32 @@ namespace JSC {
         }
         void linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator&, int virtualRegisterIndex);
 
+        MacroAssembler::Call appendCallWithExceptionCheck(const FunctionPtr&);
+        MacroAssembler::Call appendCallWithCallFrameRollbackOnException(const FunctionPtr&);
+        MacroAssembler::Call appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr&, int);
+        MacroAssembler::Call callOperation(C_JITOperation_ESt, Structure*);
+        MacroAssembler::Call callOperation(J_JITOperation_E, int);
+#if USE(JSVALUE64)
+        MacroAssembler::Call callOperation(J_JITOperation_EAapJ, int, ArrayAllocationProfile*, GPRReg);
+#else
+        MacroAssembler::Call callOperation(J_JITOperation_EAapJ, int, ArrayAllocationProfile*, GPRReg, GPRReg);
+#endif
+        MacroAssembler::Call callOperation(J_JITOperation_EAapJcpZ, int, ArrayAllocationProfile*, GPRReg, int32_t);
+        MacroAssembler::Call callOperation(J_JITOperation_EAapJcpZ, int, ArrayAllocationProfile*, const JSValue*, int32_t);
+        MacroAssembler::Call callOperation(J_JITOperation_EC, int, JSCell*);
+        MacroAssembler::Call callOperation(J_JITOperation_EP, int, void*);
+        MacroAssembler::Call callOperation(S_JITOperation_ECC, RegisterID, RegisterID);
+        MacroAssembler::Call callOperation(S_JITOperation_EJ, RegisterID);
+        MacroAssembler::Call callOperation(S_JITOperation_EJJ, RegisterID, RegisterID);
+        MacroAssembler::Call callOperation(S_JITOperation_EOJss, RegisterID, RegisterID);
+        MacroAssembler::Call callOperationWithCallFrameRollbackOnException(J_JITOperation_E);
+        MacroAssembler::Call callOperationWithCallFrameRollbackOnException(V_JITOperation_ECb, CodeBlock*);
+        MacroAssembler::Call callOperationWithCallFrameRollbackOnException(Z_JITOperation_E);
+#if USE(JSVALUE32_64)
+        MacroAssembler::Call callOperation(S_JITOperation_EJ, RegisterID, RegisterID);
+        MacroAssembler::Call callOperation(S_JITOperation_EJJ, RegisterID, RegisterID, RegisterID, RegisterID);
+#endif
+
         Jump checkStructure(RegisterID reg, Structure* structure);
 
         void restoreArgumentReferenceForTrampoline();
@@ -897,6 +953,9 @@ namespace JSC {
         unsigned m_bytecodeOffset;
         Vector<SlowCaseEntry> m_slowCases;
         Vector<SwitchRecord> m_switches;
+
+        JumpList m_exceptionChecks;
+        JumpList m_exceptionChecksWithCallFrameRollback;
 
         unsigned m_propertyAccessInstructionIndex;
         unsigned m_byValInstructionIndex;

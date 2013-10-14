@@ -67,6 +67,8 @@
 #include "StrictEvalActivation.h"
 #include "StrongInlines.h"
 #include "VMStackBounds.h"
+#include "VirtualRegister.h"
+
 #include <limits.h>
 #include <stdio.h>
 #include <wtf/StackStats.h>
@@ -318,7 +320,7 @@ void Interpreter::dumpRegisters(CallFrame* callFrame)
     while (it > end) {
         JSValue v = it->jsValue();
         int registerNumber = it - callFrame->registers();
-        String name = codeBlock->nameForRegister(registerNumber);
+        String name = codeBlock->nameForRegister(VirtualRegister(registerNumber));
         dataLogF("[r% 3d %14s]      | %10p | %-16s 0x%lld \n", registerNumber, name.ascii().data(), it, toCString(v).data(), (long long)JSValue::encode(v));
         it++;
     }
@@ -352,7 +354,7 @@ void Interpreter::dumpRegisters(CallFrame* callFrame)
         do {
             JSValue v = it->jsValue();
             int registerNumber = it - callFrame->registers();
-            String name = codeBlock->nameForRegister(registerNumber);
+            String name = codeBlock->nameForRegister(VirtualRegister(registerNumber));
             dataLogF("[r% 3d %14s]      | %10p | %-16s 0x%lld \n", registerNumber, name.ascii().data(), it, toCString(v).data(), (long long)JSValue::encode(v));
             --it;
             --registerCount;
@@ -389,7 +391,7 @@ bool Interpreter::isOpcode(Opcode opcode)
 #endif
 }
 
-static bool unwindCallFrame(StackVisitor& visitor, JSValue exceptionValue)
+static bool unwindCallFrame(StackVisitor& visitor)
 {
     CallFrame* callFrame = visitor->callFrame();
     CodeBlock* codeBlock = visitor->codeBlock();
@@ -397,39 +399,38 @@ static bool unwindCallFrame(StackVisitor& visitor, JSValue exceptionValue)
     JSScope* scope = callFrame->scope();
 
     if (Debugger* debugger = callFrame->dynamicGlobalObject()->debugger()) {
-        int line = codeBlock->ownerExecutable()->lastLine();
-        DebuggerCallFrame debuggerCallFrame(callFrame, line, 0, exceptionValue);
         if (callFrame->callee())
-            debugger->returnEvent(debuggerCallFrame);
+            debugger->returnEvent(callFrame);
         else
-            debugger->didExecuteProgram(debuggerCallFrame);
+            debugger->didExecuteProgram(callFrame);
     }
 
     JSValue activation;
     if (oldCodeBlock->codeType() == FunctionCode && oldCodeBlock->needsActivation()) {
-        activation = callFrame->uncheckedR(oldCodeBlock->activationRegister()).jsValue();
+#if ENABLE(DFG_JIT)
+        RELEASE_ASSERT(!visitor->isInlinedFrame());
+#endif
+        activation = callFrame->uncheckedR(oldCodeBlock->activationRegister().offset()).jsValue();
         if (activation)
             jsCast<JSActivation*>(activation)->tearOff(*scope->vm());
     }
 
     if (oldCodeBlock->codeType() == FunctionCode && oldCodeBlock->usesArguments()) {
-        if (JSValue arguments = callFrame->uncheckedR(unmodifiedArgumentsRegister(oldCodeBlock->argumentsRegister())).jsValue()) {
+        if (Arguments* arguments = visitor->existingArguments()) {
             if (activation)
-                jsCast<Arguments*>(arguments)->didTearOffActivation(callFrame, jsCast<JSActivation*>(activation));
+                arguments->didTearOffActivation(callFrame, jsCast<JSActivation*>(activation));
+#if ENABLE(DFG_JIT)
+            else if (visitor->isInlinedFrame())
+                arguments->tearOff(callFrame, visitor->inlineCallFrame());
+#endif
             else
-                jsCast<Arguments*>(arguments)->tearOff(callFrame);
+                arguments->tearOff(callFrame);
         }
     }
 
     CallFrame* callerFrame = callFrame->callerFrame();
     callFrame->vm().topCallFrame = callerFrame->removeHostCallFrameFlag();
     return !callerFrame->hasHostCallFrameFlag();
-}
-
-static ALWAYS_INLINE const String getSourceURLFromCallFrame(CallFrame* callFrame)
-{
-    ASSERT(!callFrame->hasHostCallFrameFlag());
-    return callFrame->codeBlock()->ownerExecutable()->sourceURL();
 }
 
 static StackFrameCodeType getStackFrameCodeType(StackVisitor& visitor)
@@ -596,9 +597,8 @@ private:
 
 class UnwindFunctor {
 public:
-    UnwindFunctor(CallFrame*& callFrame, JSValue& exceptionValue, bool isTermination, CodeBlock*& codeBlock, HandlerInfo*& handler)
+    UnwindFunctor(CallFrame*& callFrame, bool isTermination, CodeBlock*& codeBlock, HandlerInfo*& handler)
         : m_callFrame(callFrame)
-        , m_exceptionValue(exceptionValue)
         , m_isTermination(isTermination)
         , m_codeBlock(codeBlock)
         , m_handler(handler)
@@ -613,7 +613,7 @@ public:
         unsigned bytecodeOffset = visitor->bytecodeOffset();
 
         if (m_isTermination || !(m_handler = m_codeBlock->handlerForBytecodeOffset(bytecodeOffset))) {
-            if (!unwindCallFrame(visitor, m_exceptionValue)) {
+            if (!unwindCallFrame(visitor)) {
                 if (LegacyProfiler* profiler = vm.enabledProfiler())
                     profiler->exceptionUnwind(m_callFrame);
                 return StackVisitor::Done;
@@ -626,13 +626,12 @@ public:
 
 private:
     CallFrame*& m_callFrame;
-    JSValue& m_exceptionValue;
     bool m_isTermination;
     CodeBlock*& m_codeBlock;
     HandlerInfo*& m_handler;
 };
 
-NEVER_INLINE HandlerInfo* Interpreter::unwind(CallFrame*& callFrame, JSValue& exceptionValue, unsigned bytecodeOffset)
+NEVER_INLINE HandlerInfo* Interpreter::unwind(CallFrame*& callFrame, JSValue& exceptionValue)
 {
     CodeBlock* codeBlock = callFrame->codeBlock();
     bool isTermination = false;
@@ -655,9 +654,10 @@ NEVER_INLINE HandlerInfo* Interpreter::unwind(CallFrame*& callFrame, JSValue& ex
         // We need to clear the exception and the exception stack here in order to see if a new exception happens.
         // Afterwards, the values are put back to continue processing this error.
         ClearExceptionScope scope(&callFrame->vm());
-        int line = codeBlock->lineNumberForBytecodeOffset(bytecodeOffset);
-        int column = codeBlock->columnNumberForBytecodeOffset(bytecodeOffset);
-        DebuggerCallFrame debuggerCallFrame(callFrame, line, column, exceptionValue);
+        // This code assumes that if the debugger is enabled then there is no inlining.
+        // If that assumption turns out to be false then we'll ignore the inlined call
+        // frames.
+        // https://bugs.webkit.org/show_bug.cgi?id=121754
 
         bool hasHandler;
         if (isTermination)
@@ -668,14 +668,14 @@ NEVER_INLINE HandlerInfo* Interpreter::unwind(CallFrame*& callFrame, JSValue& ex
             hasHandler = !!functor.handler();
         }
 
-        debugger->exception(debuggerCallFrame, hasHandler);
+        debugger->exception(callFrame, exceptionValue, hasHandler);
     }
 
     // Calculate an exception handler vPC, unwinding call frames as necessary.
     HandlerInfo* handler = 0;
     VM& vm = callFrame->vm();
     ASSERT(callFrame == vm.topCallFrame);
-    UnwindFunctor functor(callFrame, exceptionValue, isTermination, codeBlock, handler);
+    UnwindFunctor functor(callFrame, isTermination, codeBlock, handler);
     callFrame->iterate(functor);
     if (!handler)
         return 0;
@@ -685,7 +685,7 @@ NEVER_INLINE HandlerInfo* Interpreter::unwind(CallFrame*& callFrame, JSValue& ex
 
     // Unwind the scope chain within the exception handler's call frame.
     int targetScopeDepth = handler->scopeDepth;
-    if (codeBlock->needsActivation() && callFrame->uncheckedR(codeBlock->activationRegister()).jsValue())
+    if (codeBlock->needsActivation() && callFrame->uncheckedR(codeBlock->activationRegister().offset()).jsValue())
         ++targetScopeDepth;
 
     JSScope* scope = callFrame->scope();
@@ -1209,7 +1209,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
         for (int i = 0; i < numFunctions; ++i) {
             FunctionExecutable* function = codeBlock->functionDecl(i);
             PutPropertySlot slot;
-            variableObject->methodTable()->put(variableObject, callFrame, function->name(), JSFunction::create(callFrame, function, scope), slot);
+            variableObject->methodTable()->put(variableObject, callFrame, function->name(), JSFunction::create(vm, function, scope), slot);
         }
     }
 
@@ -1248,7 +1248,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
     return checkedReturn(result);
 }
 
-NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookID debugHookID, int firstLine, int lastLine, int column)
+NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookID debugHookID)
 {
     Debugger* debugger = callFrame->dynamicGlobalObject()->debugger();
     if (!debugger)
@@ -1256,22 +1256,22 @@ NEVER_INLINE void Interpreter::debug(CallFrame* callFrame, DebugHookID debugHook
 
     switch (debugHookID) {
         case DidEnterCallFrame:
-            debugger->callEvent(DebuggerCallFrame(callFrame, firstLine, column));
+            debugger->callEvent(callFrame);
             return;
         case WillLeaveCallFrame:
-            debugger->returnEvent(DebuggerCallFrame(callFrame, lastLine, column));
+            debugger->returnEvent(callFrame);
             return;
         case WillExecuteStatement:
-            debugger->atStatement(DebuggerCallFrame(callFrame, firstLine, column));
+            debugger->atStatement(callFrame);
             return;
         case WillExecuteProgram:
-            debugger->willExecuteProgram(DebuggerCallFrame(callFrame, firstLine, column));
+            debugger->willExecuteProgram(callFrame);
             return;
         case DidExecuteProgram:
-            debugger->didExecuteProgram(DebuggerCallFrame(callFrame, lastLine, column));
+            debugger->didExecuteProgram(callFrame);
             return;
         case DidReachBreakpoint:
-            debugger->didReachBreakpoint(DebuggerCallFrame(callFrame, lastLine, column));
+            debugger->didReachBreakpoint(callFrame);
             return;
     }
 }    

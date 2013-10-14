@@ -36,11 +36,11 @@ class RenderTableRow FINAL : public RenderBox {
 public:
     explicit RenderTableRow(Element*);
 
-    RenderObject* firstChild() const { return m_children.firstChild(); }
-    RenderObject* lastChild() const { return m_children.lastChild(); }
+    RenderTableRow* nextRow() const;
+    RenderTableRow* previousRow() const;
 
-    virtual const RenderObjectChildList* children() const OVERRIDE { return &m_children; }
-    virtual RenderObjectChildList* children() OVERRIDE { return &m_children; }
+    RenderTableCell* firstCell() const;
+    RenderTableCell* lastCell() const;
 
     RenderTableSection* section() const { return toRenderTableSection(parent()); }
     RenderTable* table() const { return toRenderTable(parent()->parent()); }
@@ -90,16 +90,18 @@ public:
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) OVERRIDE;
 
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+
 private:
     virtual const char* renderName() const OVERRIDE { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)" : "RenderTableRow"; }
 
     virtual bool isTableRow() const OVERRIDE { return true; }
 
+    virtual bool canHaveChildren() const OVERRIDE { return true; }
     virtual void willBeRemovedFromTree() OVERRIDE;
 
     virtual void layout() OVERRIDE;
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
     virtual bool requiresLayer() const OVERRIDE { return hasOverflowClip() || hasTransform() || hasHiddenBackface() || hasClipPath() || createsGroup(); }
 
@@ -109,9 +111,19 @@ private:
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
-    RenderObjectChildList m_children;
+    void firstChild() const WTF_DELETED_FUNCTION;
+    void lastChild() const WTF_DELETED_FUNCTION;
+    void nextSibling() const WTF_DELETED_FUNCTION;
+    void previousSibling() const WTF_DELETED_FUNCTION;
+
     unsigned m_rowIndex : 31;
 };
+
+inline RenderTableRow& toRenderTableRow(RenderObject& object)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(object.isTableRow());
+    return static_cast<RenderTableRow&>(object);
+}
 
 inline RenderTableRow* toRenderTableRow(RenderObject* object)
 {
@@ -127,6 +139,26 @@ inline const RenderTableRow* toRenderTableRow(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderTableRow(const RenderTableRow*);
+
+inline RenderTableRow* RenderTableSection::firstRow() const
+{
+    return toRenderTableRow(RenderBox::firstChild());
+}
+
+inline RenderTableRow* RenderTableSection::lastRow() const
+{
+    return toRenderTableRow(RenderBox::lastChild());
+}
+
+inline RenderTableRow* RenderTableRow::nextRow() const
+{
+    return toRenderTableRow(RenderBox::nextSibling());
+}
+
+inline RenderTableRow* RenderTableRow::previousRow() const
+{
+    return toRenderTableRow(RenderBox::previousSibling());
+}
 
 } // namespace WebCore
 

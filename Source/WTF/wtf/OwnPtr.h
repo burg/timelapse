@@ -44,14 +44,6 @@ namespace WTF {
         // See comment in PassOwnPtr.h for why this takes a const reference.
         template<typename U> OwnPtr(const PassOwnPtr<U>& o);
 
-#if !COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
-        // This copy constructor is used implicitly by gcc when it generates
-        // transients for assigning a PassOwnPtr<T> object to a stack-allocated
-        // OwnPtr<T> object. It should never be called explicitly and gcc
-        // should optimize away the constructor when generating code.
-        OwnPtr(const OwnPtr<ValueType>&);
-#endif
-
         ~OwnPtr() { deleteOwnedPtr(m_ptr); }
 
         PtrType get() const { return m_ptr; }
@@ -73,27 +65,16 @@ namespace WTF {
         OwnPtr& operator=(std::nullptr_t) { clear(); return *this; }
         template<typename U> OwnPtr& operator=(const PassOwnPtr<U>&);
 
-#if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
         OwnPtr(OwnPtr&&);
         template<typename U> OwnPtr(OwnPtr<U>&&);
 
         OwnPtr& operator=(OwnPtr&&);
         template<typename U> OwnPtr& operator=(OwnPtr<U>&&);
-#endif
 
         void swap(OwnPtr& o) { std::swap(m_ptr, o.m_ptr); }
 
     private:
         explicit OwnPtr(PtrType ptr) : m_ptr(ptr) { }
-
-        template<typename U> friend OwnPtr<U> createOwned();
-        template<typename U, typename A1> friend OwnPtr<U> createOwned(A1&&);
-        template<typename U, typename A1, typename A2> friend OwnPtr<U> createOwned(A1&&, A2&&);
-
-#if !COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
-        // If rvalue references are supported, noncopyable takes care of this.
-        OwnPtr& operator=(const OwnPtr&);
-#endif
 
         // We should never have two OwnPtrs for the same underlying object (otherwise we'll get
         // double-destruction), so these equality operators should never be needed.
@@ -205,27 +186,8 @@ namespace WTF {
         return p.get();
     }
 
-template<typename T>
-inline OwnPtr<T> createOwned()
-{
-    return OwnPtr<T>(new T);
-}
-
-template<typename T, typename A1>
-inline OwnPtr<T> createOwned(A1&& a1)
-{
-    return OwnPtr<T>(new T(std::forward<A1>(a1)));
-}
-
-template<typename T, typename A1, typename A2>
-inline OwnPtr<T> createOwned(A1&& a1, A2&& a2)
-{
-    return OwnPtr<T>(new T(std::forward<A1>(a1), std::forward<A2>(a2)));
-}
-
 } // namespace WTF
 
 using WTF::OwnPtr;
-using WTF::createOwned;
 
 #endif // WTF_OwnPtr_h

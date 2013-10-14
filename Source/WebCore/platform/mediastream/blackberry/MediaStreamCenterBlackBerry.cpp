@@ -35,13 +35,15 @@
 
 #include "MediaStreamCenterBlackBerry.h"
 
+#include "MediaStreamCreationClient.h"
 #include "MediaStreamDescriptor.h"
-#include "MediaStreamSourcesQueryClient.h"
+#include "MediaStreamTrackSourcesRequestClient.h"
+#include "NotImplemented.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
 
-MediaStreamCenter& MediaStreamCenter::instance()
+MediaStreamCenter& MediaStreamCenter::platformCenter()
 {
     ASSERT(isMainThread());
     DEFINE_STATIC_LOCAL(MediaStreamCenterBlackBerry, center, ());
@@ -56,37 +58,20 @@ MediaStreamCenterBlackBerry::~MediaStreamCenterBlackBerry()
 {
 }
 
-void MediaStreamCenterBlackBerry::queryMediaStreamSources(PassRefPtr<MediaStreamSourcesQueryClient> client)
+void MediaStreamCenterBlackBerry::validateRequestConstraints(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints>, PassRefPtr<MediaConstraints>)
 {
-    MediaStreamSourceVector audioSources, videoSources;
-    client->didCompleteQuery(audioSources, videoSources);
+    notImplemented();
+}
+    
+void MediaStreamCenterBlackBerry::createMediaStream(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints>, PassRefPtr<MediaConstraints>)
+{
+    notImplemented();
 }
 
-bool MediaStreamCenterMac::getMediaStreamTrackSources(PassRefPtr<MediaStreamTrackSourcesRequestClient>)
+bool MediaStreamCenterBlackBerry::getMediaStreamTrackSources(PassRefPtr<MediaStreamTrackSourcesRequestClient>)
 {
+    notImplemented();
     return false;
-}
-
-void MediaStreamCenterBlackBerry::didSetMediaStreamTrackEnabled(MediaStreamDescriptor*, MediaStreamComponent*)
-{
-}
-
-bool MediaStreamCenterBlackBerry::didAddMediaStreamTrack(MediaStreamDescriptor*, MediaStreamComponent*)
-{
-    return false;
-}
-
-bool MediaStreamCenterBlackBerry::didRemoveMediaStreamTrack(MediaStreamDescriptor*, MediaStreamComponent*)
-{
-    return false;
-}
-
-void MediaStreamCenterBlackBerry::didStopLocalMediaStream(MediaStreamDescriptor*)
-{
-}
-
-void MediaStreamCenterBlackBerry::didCreateMediaStream(MediaStreamDescriptor*)
-{
 }
 
 } // namespace WebCore

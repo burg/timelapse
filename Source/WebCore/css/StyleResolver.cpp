@@ -36,7 +36,10 @@
 #include "CSSDefaultStyleSheets.h"
 #include "CSSFilterImageValue.h"
 #include "CSSFontFaceRule.h"
+#include "CSSFontFeatureValue.h"
 #include "CSSFontSelector.h"
+#include "CSSFontValue.h"
+#include "CSSGridTemplateValue.h"
 #include "CSSLineBoxContainValue.h"
 #include "CSSPageRule.h"
 #include "CSSParser.h"
@@ -45,6 +48,7 @@
 #include "CSSReflectValue.h"
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
+#include "CSSShadowValue.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
 #include "CSSTimingFunctionValue.h"
@@ -58,8 +62,6 @@
 #include "DeprecatedStyleBuilder.h"
 #include "DocumentStyleSheetCollection.h"
 #include "ElementRuleCollector.h"
-#include "FontFeatureValue.h"
-#include "FontValue.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameView.h"
@@ -102,7 +104,6 @@
 #include "Settings.h"
 #include "ShadowData.h"
 #include "ShadowRoot.h"
-#include "ShadowValue.h"
 #include "StyleCachedImage.h"
 #include "StyleFontSizeFunctions.h"
 #include "StyleGeneratedImage.h"
@@ -279,7 +280,7 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
 
     m_ruleSets.resetAuthorStyle();
 
-    DocumentStyleSheetCollection* styleSheetCollection = m_document.styleSheetCollection();
+    DocumentStyleSheetCollection& styleSheetCollection = m_document.styleSheetCollection();
     m_ruleSets.initUserStyle(styleSheetCollection, *m_medium, *this);
 
 #if ENABLE(SVG_FONTS)
@@ -291,7 +292,7 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
     }
 #endif
 
-    appendAuthorStyleSheets(0, styleSheetCollection->activeAuthorStyleSheets());
+    appendAuthorStyleSheets(0, styleSheetCollection.activeAuthorStyleSheets());
 }
 
 void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet> >& styleSheets)
@@ -462,10 +463,6 @@ Node* StyleResolver::locateCousinList(Element* parent, unsigned& visitedNodeCoun
         return 0;
     if (!parent || !parent->isStyledElement())
         return 0;
-#if ENABLE(STYLE_SCOPED)
-    if (parent->hasScopedHTMLStyleChild())
-        return 0;
-#endif
     StyledElement* p = static_cast<StyledElement*>(parent);
     if (p->inlineStyle())
         return 0;
@@ -655,10 +652,6 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
 
     if (element->hasID() && m_ruleSets.features().idsInRules.contains(element->idForStyleResolution().impl()))
         return false;
-#if ENABLE(STYLE_SCOPED)
-    if (element->hasScopedHTMLStyleChild())
-        return false;
-#endif
 
     // FIXME: We should share style for option and optgroup whenever possible.
     // Before doing so, we need to resolve issues in HTMLSelectElement::recalcListItems
@@ -742,10 +735,6 @@ RenderStyle* StyleResolver::locateSharedStyle()
         return 0;
     if (parentElementPreventsSharing(state.element()->parentElement()))
         return 0;
-#if ENABLE(STYLE_SCOPED)
-    if (state.styledElement()->hasScopedHTMLStyleChild())
-        return 0;
-#endif
     if (state.element() == state.document().cssTarget())
         return 0;
     if (elementHasDirectionAuto(state.element()))
@@ -1280,6 +1269,7 @@ void StyleResolver::adjustRenderStyle(RenderStyle* style, RenderStyle* parentSty
         || style->hasBlendMode()
         || style->position() == StickyPosition
         || (style->position() == FixedPosition && e && e->document().page() && e->document().page()->settings().fixedPositionCreatesStackingContext())
+        || style->hasStyleRegion()
         ))
         style->setZIndex(0);
 
@@ -1925,7 +1915,7 @@ static bool createGridTrackSize(CSSValue* value, GridTrackSize& trackSize, const
     if (!value->isPrimitiveValue())
         return false;
 
-    CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+    CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
     Pair* minMaxTrackBreadth = primitiveValue->getPairValue();
     if (!minMaxTrackBreadth) {
         Length workingLength;
@@ -1949,7 +1939,7 @@ static bool createGridTrackList(CSSValue* value, Vector<GridTrackSize>& trackSiz
 {
     // Handle 'none'.
     if (value->isPrimitiveValue()) {
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
         return primitiveValue->getValueID() == CSSValueNone;
     }
 
@@ -1960,7 +1950,7 @@ static bool createGridTrackList(CSSValue* value, Vector<GridTrackSize>& trackSiz
     for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
         CSSValue* currValue = i.value();
         if (currValue->isPrimitiveValue()) {
-            CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(currValue);
+            CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(currValue);
             if (primitiveValue->isString()) {
                 NamedGridLinesMap::AddResult result = namedGridLines.add(primitiveValue->getStringValue(), Vector<size_t>());
                 result.iterator->value.append(currentNamedGridLine);
@@ -1988,14 +1978,13 @@ static bool createGridPosition(CSSValue* value, GridPosition& position)
     // For now, we only accept: 'auto' | [ <integer> || <string> ] | span && <integer>?
     if (value->isPrimitiveValue()) {
 #if !ASSERT_DISABLED
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
         ASSERT(primitiveValue->getValueID() == CSSValueAuto);
 #endif
         return true;
     }
 
-    ASSERT_WITH_SECURITY_IMPLICATION(value->isValueList());
-    CSSValueList* values = static_cast<CSSValueList*>(value);
+    CSSValueList* values = toCSSValueList(value);
     ASSERT(values->length());
 
     bool isSpanPosition = false;
@@ -2004,17 +1993,17 @@ static bool createGridPosition(CSSValue* value, GridPosition& position)
     String gridLineName;
 
     CSSValueListIterator it = values;
-    CSSPrimitiveValue* currentValue = static_cast<CSSPrimitiveValue*>(it.value());
+    CSSPrimitiveValue* currentValue = toCSSPrimitiveValue(it.value());
     if (currentValue->getValueID() == CSSValueSpan) {
         isSpanPosition = true;
         it.advance();
-        currentValue = it.hasMore() ? static_cast<CSSPrimitiveValue*>(it.value()) : 0;
+        currentValue = it.hasMore() ? toCSSPrimitiveValue(it.value()) : 0;
     }
 
     if (currentValue && currentValue->isNumber()) {
         gridLineNumber = currentValue->getIntValue();
         it.advance();
-        currentValue = it.hasMore() ? static_cast<CSSPrimitiveValue*>(it.value()) : 0;
+        currentValue = it.hasMore() ? toCSSPrimitiveValue(it.value()) : 0;
     }
 
     if (currentValue && currentValue->isString()) {
@@ -2035,15 +2024,15 @@ static bool createGridPosition(CSSValue* value, GridPosition& position)
 static bool hasVariableReference(CSSValue* value)
 {
     if (value->isPrimitiveValue()) {
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
         return primitiveValue->hasVariableReference();
     }
 
-    if (value->isCalculationValue())
-        return static_cast<CSSCalcValue*>(value)->hasVariableReference();
+    if (value->isCalcValue())
+        return toCSSCalcValue(value)->hasVariableReference();
 
     if (value->isReflectValue()) {
-        CSSReflectValue* reflectValue = static_cast<CSSReflectValue*>(value);
+        CSSReflectValue* reflectValue = toCSSReflectValue(value);
         CSSPrimitiveValue* direction = reflectValue->direction();
         CSSPrimitiveValue* offset = reflectValue->offset();
         CSSValue* mask = reflectValue->mask();
@@ -2069,7 +2058,7 @@ void StyleResolver::resolveVariables(CSSPropertyID id, CSSValue* value, Vector<s
 
     // FIXME: It would be faster not to re-parse from strings, but for now CSS property validation lives inside the parser so we do it there.
     RefPtr<MutableStylePropertySet> resultSet = MutableStylePropertySet::create();
-    if (!CSSParser::parseValue(resultSet.get(), id, expression.second, false, &document()))
+    if (!CSSParser::parseValue(resultSet.get(), id, expression.second, false, document()))
         return; // expression failed to parse.
 
     for (unsigned i = 0; i < resultSet->propertyCount(); i++) {
@@ -2112,8 +2101,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 
 #if ENABLE(CSS_VARIABLES)
     if (id == CSSPropertyVariable) {
-        ASSERT_WITH_SECURITY_IMPLICATION(value->isVariableValue());
-        CSSVariableValue* variable = static_cast<CSSVariableValue*>(value);
+        CSSVariableValue* variable = toCSSVariableValue(value);
         ASSERT(!variable->name().isEmpty());
         ASSERT(!variable->value().isEmpty());
         state.style()->setVariable(variable->name(), variable->value());
@@ -2133,7 +2121,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         return;
     }
 
-    CSSPrimitiveValue* primitiveValue = value->isPrimitiveValue() ? static_cast<CSSPrimitiveValue*>(value) : 0;
+    CSSPrimitiveValue* primitiveValue = value->isPrimitiveValue() ? toCSSPrimitiveValue(value) : 0;
 
     float zoomFactor = state.style()->effectiveZoom();
 
@@ -2160,19 +2148,19 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                 CSSValue* item = i.value();
                 if (item->isImageGeneratorValue()) {
                     if (item->isGradientValue())
-                        state.style()->setContent(StyleGeneratedImage::create(static_cast<CSSGradientValue*>(item)->gradientWithStylesResolved(this).get()), didSet);
+                        state.style()->setContent(StyleGeneratedImage::create(toCSSGradientValue(item)->gradientWithStylesResolved(this).get()), didSet);
                     else
                         state.style()->setContent(StyleGeneratedImage::create(static_cast<CSSImageGeneratorValue*>(item)), didSet);
                     didSet = true;
 #if ENABLE(CSS_IMAGE_SET)
                 } else if (item->isImageSetValue()) {
-                    state.style()->setContent(setOrPendingFromValue(CSSPropertyContent, static_cast<CSSImageSetValue*>(item)), didSet);
+                    state.style()->setContent(setOrPendingFromValue(CSSPropertyContent, toCSSImageSetValue(item)), didSet);
                     didSet = true;
 #endif
                 }
 
                 if (item->isImageValue()) {
-                    state.style()->setContent(cachedOrPendingFromValue(CSSPropertyContent, static_cast<CSSImageValue*>(item)), didSet);
+                    state.style()->setContent(cachedOrPendingFromValue(CSSPropertyContent, toCSSImageValue(item)), didSet);
                     didSet = true;
                     continue;
                 }
@@ -2180,7 +2168,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                 if (!item->isPrimitiveValue())
                     continue;
 
-                CSSPrimitiveValue* contentValue = static_cast<CSSPrimitiveValue*>(item);
+                CSSPrimitiveValue* contentValue = toCSSPrimitiveValue(item);
 
                 if (contentValue->isString()) {
                     state.style()->setContent(contentValue->getStringValue().impl(), didSet);
@@ -2203,8 +2191,8 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                     CSSValueID listStyleIdent = counterValue->listStyleIdent();
                     if (listStyleIdent != CSSValueNone)
                         listStyleType = static_cast<EListStyleType>(listStyleIdent - CSSValueDisc);
-                    OwnPtr<CounterContent> counter = adoptPtr(new CounterContent(counterValue->identifier(), listStyleType, counterValue->separator()));
-                    state.style()->setContent(counter.release(), didSet);
+                    auto counter = std::make_unique<CounterContent>(counterValue->identifier(), listStyleType, counterValue->separator());
+                    state.style()->setContent(std::move(counter), didSet);
                     didSet = true;
                 } else {
                     switch (contentValue->getValueID()) {
@@ -2244,7 +2232,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             return;
         }
         if (value->isValueList()) {
-            CSSValueList* list = static_cast<CSSValueList*>(value);
+            CSSValueList* list = toCSSValueList(value);
             Vector<std::pair<String, String> > quotes;
             for (size_t i = 0; i < list->length(); i += 2) {
                 CSSValue* first = list->itemWithoutBoundsCheck(i);
@@ -2254,8 +2242,8 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                     continue;
                 ASSERT_WITH_SECURITY_IMPLICATION(first->isPrimitiveValue());
                 ASSERT_WITH_SECURITY_IMPLICATION(second->isPrimitiveValue());
-                String startQuote = static_cast<CSSPrimitiveValue*>(first)->getStringValue();
-                String endQuote = static_cast<CSSPrimitiveValue*>(second)->getStringValue();
+                String startQuote = toCSSPrimitiveValue(first)->getStringValue();
+                String endQuote = toCSSPrimitiveValue(second)->getStringValue();
                 quotes.append(std::make_pair(startQuote, endQuote));
             }
             state.style()->setQuotes(QuotesData::create(quotes));
@@ -2301,7 +2289,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
                 setFontDescription(fontDescription);
             }
         } else if (value->isFontValue()) {
-            FontValue* font = static_cast<FontValue*>(value);
+            CSSFontValue* font = toCSSFontValue(value);
             if (!font->style || !font->variant || !font->weight
                 || !font->size || !font->lineHeight || !font->family)
                 return;
@@ -2351,6 +2339,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     case CSSPropertyWebkitColumnRule:
     case CSSPropertyWebkitFlex:
     case CSSPropertyWebkitFlexFlow:
+    case CSSPropertyWebkitGridArea:
     case CSSPropertyWebkitGridColumn:
     case CSSPropertyWebkitGridRow:
     case CSSPropertyWebkitMarginCollapse:
@@ -2385,11 +2374,19 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             CSSValue* currValue = i.value();
             if (!currValue->isShadowValue())
                 continue;
-            ShadowValue* item = static_cast<ShadowValue*>(currValue);
+            CSSShadowValue* item = toCSSShadowValue(currValue);
             int x = item->x->computeLength<int>(state.style(), state.rootElementStyle(), zoomFactor);
+            if (item->x->isViewportPercentageLength())
+                x = viewportPercentageValue(*item->x, x);
             int y = item->y->computeLength<int>(state.style(), state.rootElementStyle(), zoomFactor);
+            if (item->y->isViewportPercentageLength())
+                y = viewportPercentageValue(*item->y, y);
             int blur = item->blur ? item->blur->computeLength<int>(state.style(), state.rootElementStyle(), zoomFactor) : 0;
+            if (item->blur && item->blur->isViewportPercentageLength())
+                blur = viewportPercentageValue(*item->blur, blur);
             int spread = item->spread ? item->spread->computeLength<int>(state.style(), state.rootElementStyle(), zoomFactor) : 0;
+            if (item->spread && item->spread->isViewportPercentageLength())
+                spread = viewportPercentageValue(*item->spread, spread);
             ShadowStyle shadowStyle = item->style && item->style->getValueID() == CSSValueInset ? Inset : Normal;
             Color color;
             if (item->color)
@@ -2415,7 +2412,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         if (!value->isReflectValue())
             return;
 
-        CSSReflectValue* reflectValue = static_cast<CSSReflectValue*>(value);
+        CSSReflectValue* reflectValue = toCSSReflectValue(value);
         RefPtr<StyleReflection> reflection = StyleReflection::create();
         reflection->setDirection(*reflectValue->direction());
         if (reflectValue->offset())
@@ -2568,6 +2565,16 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             state.style()->setPerspective(perspectiveValue);
         return;
     }
+#if PLATFORM(IOS)
+    case CSSPropertyWebkitTouchCallout: {
+        HANDLE_INHERIT_AND_INITIAL(touchCalloutEnabled, TouchCalloutEnabled);
+        if (!primitiveValue)
+            break;
+
+        state.style()->setTouchCalloutEnabled(primitiveValue->getStringValue().lower() != "none");
+        return;
+    }
+#endif
 #if ENABLE(TOUCH_EVENTS)
     case CSSPropertyWebkitTapHighlightColor: {
         HANDLE_INHERIT_AND_INITIAL(tapHighlightColor, TapHighlightColor);
@@ -2676,11 +2683,10 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             return;
         }
 
-        if (!value->isCSSLineBoxContainValue())
+        if (!value->isLineBoxContainValue())
             return;
 
-        CSSLineBoxContainValue* lineBoxContainValue = static_cast<CSSLineBoxContainValue*>(value);
-        state.style()->setLineBoxContain(lineBoxContainValue->value());
+        state.style()->setLineBoxContain(toCSSLineBoxContainValue(value)->value());
         return;
     }
 
@@ -2695,14 +2701,14 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             return;
 
         FontDescription fontDescription = state.style()->fontDescription();
-        CSSValueList* list = static_cast<CSSValueList*>(value);
+        CSSValueList* list = toCSSValueList(value);
         RefPtr<FontFeatureSettings> settings = FontFeatureSettings::create();
         int len = list->length();
         for (int i = 0; i < len; ++i) {
             CSSValue* item = list->itemWithoutBoundsCheck(i);
             if (!item->isFontFeatureValue())
                 continue;
-            FontFeatureValue* feature = static_cast<FontFeatureValue*>(item);
+            CSSFontFeatureValue* feature = toCSSFontFeatureValue(item);
             settings->append(FontFeature(feature->tag(), feature->value()));
         }
         fontDescription.setFeatureSettings(settings.release());
@@ -2779,6 +2785,31 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         if (!createGridPosition(value, rowEndPosition))
             return;
         state.style()->setGridItemRowEnd(rowEndPosition);
+        return;
+    }
+    case CSSPropertyWebkitGridTemplate: {
+        if (isInherit) {
+            state.style()->setNamedGridArea(state.parentStyle()->namedGridArea());
+            state.style()->setNamedGridAreaRowCount(state.parentStyle()->namedGridAreaRowCount());
+            state.style()->setNamedGridAreaColumnCount(state.parentStyle()->namedGridAreaColumnCount());
+            return;
+        }
+        if (isInitial) {
+            state.style()->setNamedGridArea(RenderStyle::initialNamedGridArea());
+            state.style()->setNamedGridAreaRowCount(RenderStyle::initialNamedGridAreaCount());
+            state.style()->setNamedGridAreaColumnCount(RenderStyle::initialNamedGridAreaCount());
+            return;
+        }
+
+        if (value->isPrimitiveValue()) {
+            ASSERT(toCSSPrimitiveValue(value)->getValueID() == CSSValueNone);
+            return;
+        }
+
+        CSSGridTemplateValue* gridTemplateValue = toCSSGridTemplateValue(value);
+        state.style()->setNamedGridArea(gridTemplateValue->gridAreaMap());
+        state.style()->setNamedGridAreaRowCount(gridTemplateValue->rowCount());
+        state.style()->setNamedGridAreaColumnCount(gridTemplateValue->columnCount());
         return;
     }
 
@@ -3036,6 +3067,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 #if ENABLE(CSS_SHAPES)
     case CSSPropertyWebkitShapeMargin:
     case CSSPropertyWebkitShapePadding:
+    case CSSPropertyWebkitShapeImageThreshold:
     case CSSPropertyWebkitShapeInside:
     case CSSPropertyWebkitShapeOutside:
 #endif
@@ -3075,21 +3107,21 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 PassRefPtr<StyleImage> StyleResolver::styleImage(CSSPropertyID property, CSSValue* value)
 {
     if (value->isImageValue())
-        return cachedOrPendingFromValue(property, static_cast<CSSImageValue*>(value));
+        return cachedOrPendingFromValue(property, toCSSImageValue(value));
 
     if (value->isImageGeneratorValue()) {
         if (value->isGradientValue())
-            return generatedOrPendingFromValue(property, static_cast<CSSGradientValue*>(value)->gradientWithStylesResolved(this).get());
+            return generatedOrPendingFromValue(property, toCSSGradientValue(value)->gradientWithStylesResolved(this).get());
         return generatedOrPendingFromValue(property, static_cast<CSSImageGeneratorValue*>(value));
     }
 
 #if ENABLE(CSS_IMAGE_SET)
     if (value->isImageSetValue())
-        return setOrPendingFromValue(property, static_cast<CSSImageSetValue*>(value));
+        return setOrPendingFromValue(property, toCSSImageSetValue(value));
 #endif
 
     if (value->isCursorImageValue())
-        return cursorOrPendingFromValue(property, static_cast<CSSCursorImageValue*>(value));
+        return cursorOrPendingFromValue(property, toCSSCursorImageValue(value));
 
     return 0;
 }
@@ -3107,7 +3139,7 @@ PassRefPtr<StyleImage> StyleResolver::generatedOrPendingFromValue(CSSPropertyID 
 #if ENABLE(CSS_FILTERS)
     if (value->isFilterImageValue()) {
         // FilterImage needs to calculate FilterOperations.
-        static_cast<CSSFilterImageValue*>(value)->createFilterOperations(this);
+        toCSSFilterImageValue(value)->createFilterOperations(this);
     }
 #endif
     if (value->isPending()) {
@@ -3120,7 +3152,7 @@ PassRefPtr<StyleImage> StyleResolver::generatedOrPendingFromValue(CSSPropertyID 
 #if ENABLE(CSS_IMAGE_SET)
 PassRefPtr<StyleImage> StyleResolver::setOrPendingFromValue(CSSPropertyID property, CSSImageSetValue* value)
 {
-    RefPtr<StyleImage> image = value->cachedOrPendingImageSet(&document());
+    RefPtr<StyleImage> image = value->cachedOrPendingImageSet(document());
     if (image && image->isPendingImage())
         m_state.pendingImageProperties().set(property, value);
     return image.release();
@@ -3129,7 +3161,7 @@ PassRefPtr<StyleImage> StyleResolver::setOrPendingFromValue(CSSPropertyID proper
 
 PassRefPtr<StyleImage> StyleResolver::cursorOrPendingFromValue(CSSPropertyID property, CSSCursorImageValue* value)
 {
-    RefPtr<StyleImage> image = value->cachedOrPendingImage(&document());
+    RefPtr<StyleImage> image = value->cachedOrPendingImage(document());
     if (image && image->isPendingImage())
         m_state.pendingImageProperties().set(property, value);
     return image.release();
@@ -3386,7 +3418,7 @@ void StyleResolver::loadPendingSVGDocuments()
 StyleShader* StyleResolver::styleShader(CSSValue* value)
 {
     if (value->isWebKitCSSShaderValue())
-        return cachedOrPendingStyleShaderFromValue(static_cast<WebKitCSSShaderValue*>(value));
+        return cachedOrPendingStyleShaderFromValue(toWebKitCSSShaderValue(value));
     return 0;
 }
 
@@ -3402,8 +3434,8 @@ PassRefPtr<CustomFilterProgram> StyleResolver::lookupCustomFilterProgram(WebKitC
     CustomFilterProgramType programType, const CustomFilterProgramMixSettings& mixSettings, CustomFilterMeshType meshType)
 {
     CachedResourceLoader* cachedResourceLoader = m_state.document().cachedResourceLoader();
-    KURL vertexShaderURL = vertexShader ? vertexShader->completeURL(cachedResourceLoader) : KURL();
-    KURL fragmentShaderURL = fragmentShader ? fragmentShader->completeURL(cachedResourceLoader) : KURL();
+    URL vertexShaderURL = vertexShader ? vertexShader->completeURL(cachedResourceLoader) : URL();
+    URL fragmentShaderURL = fragmentShader ? fragmentShader->completeURL(cachedResourceLoader) : URL();
     RefPtr<StyleCustomFilterProgram> program;
     if (m_customFilterProgramCache)
         program = m_customFilterProgramCache->lookup(CustomFilterProgramInfo(vertexShaderURL, fragmentShaderURL, programType, mixSettings, meshType));
@@ -3469,7 +3501,7 @@ PassRefPtr<CustomFilterParameter> StyleResolver::parseCustomFilterArrayParameter
         CSSValue* value = values->itemWithoutBoundsCheck(i);
         if (!value->isPrimitiveValue())
             return 0;
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
         if (primitiveValue->primitiveType() != CSSPrimitiveValue::CSS_NUMBER)
             return 0;
         arrayParameter->addValue(primitiveValue->getDoubleValue());
@@ -3480,7 +3512,7 @@ PassRefPtr<CustomFilterParameter> StyleResolver::parseCustomFilterArrayParameter
 PassRefPtr<CustomFilterParameter> StyleResolver::parseCustomFilterColorParameter(const String& name, CSSValueList* values)
 {
     ASSERT(values->length());
-    CSSPrimitiveValue* firstPrimitiveValue = static_cast<CSSPrimitiveValue*>(values->itemWithoutBoundsCheck(0));
+    CSSPrimitiveValue* firstPrimitiveValue = toCSSPrimitiveValue(values->itemWithoutBoundsCheck(0));
     RefPtr<CustomFilterColorParameter> colorParameter = CustomFilterColorParameter::create(name);
     colorParameter->setColor(Color(firstPrimitiveValue->getRGBA32Value()));
     return colorParameter.release();
@@ -3493,7 +3525,7 @@ PassRefPtr<CustomFilterParameter> StyleResolver::parseCustomFilterNumberParamete
         CSSValue* value = values->itemWithoutBoundsCheck(i);
         if (!value->isPrimitiveValue())
             return 0;
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
         if (primitiveValue->primitiveType() != CSSPrimitiveValue::CSS_NUMBER)
             return 0;
         numberParameter->addValue(primitiveValue->getDoubleValue());
@@ -3520,7 +3552,7 @@ PassRefPtr<CustomFilterParameter> StyleResolver::parseCustomFilterParameter(cons
     if (!parameterValue->isValueList())
         return 0;
 
-    CSSValueList* values = static_cast<CSSValueList*>(parameterValue);
+    CSSValueList* values = toCSSValueList(parameterValue);
     if (!values->length())
         return 0;
 
@@ -3542,7 +3574,7 @@ PassRefPtr<CustomFilterParameter> StyleResolver::parseCustomFilterParameter(cons
     if (!values->itemWithoutBoundsCheck(0)->isPrimitiveValue() || values->length() > 4)
         return 0;
     
-    CSSPrimitiveValue* firstPrimitiveValue = static_cast<CSSPrimitiveValue*>(values->itemWithoutBoundsCheck(0));
+    CSSPrimitiveValue* firstPrimitiveValue = toCSSPrimitiveValue(values->itemWithoutBoundsCheck(0));
     if (firstPrimitiveValue->primitiveType() == CSSPrimitiveValue::CSS_NUMBER)
         return parseCustomFilterNumberParameter(name, values);
 
@@ -3562,7 +3594,7 @@ bool StyleResolver::parseCustomFilterParameterList(CSSValue* parametersValue, Cu
         CSSValueListIterator iterator(parameterIterator.value());
         if (!iterator.isPrimitiveValue())
             return false;
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(iterator.value());
         if (primitiveValue->primitiveType() != CSSPrimitiveValue::CSS_STRING)
             return false;
         
@@ -3600,29 +3632,36 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperationWith
 {
     CSSValue* shadersValue = filterValue->itemWithoutBoundsCheck(0);
     ASSERT_WITH_SECURITY_IMPLICATION(shadersValue->isValueList());
-    CSSValueList* shadersList = static_cast<CSSValueList*>(shadersValue);
+    CSSValueList* shadersList = toCSSValueList(shadersValue);
 
     unsigned shadersListLength = shadersList->length();
     ASSERT(shadersListLength);
 
-    WebKitCSSShaderValue* vertexShader = toWebKitCSSShaderValue(shadersList->itemWithoutBoundsCheck(0));
+
+    WebKitCSSShaderValue* vertexShader = 0;
     WebKitCSSShaderValue* fragmentShader = 0;
+
+    if (shadersList->itemWithoutBoundsCheck(0)->isWebKitCSSShaderValue())
+        vertexShader = toWebKitCSSShaderValue(shadersList->itemWithoutBoundsCheck(0));
+
     CustomFilterProgramType programType = PROGRAM_TYPE_BLENDS_ELEMENT_TEXTURE;
     CustomFilterProgramMixSettings mixSettings;
 
     if (shadersListLength > 1) {
         CSSValue* fragmentShaderOrMixFunction = shadersList->itemWithoutBoundsCheck(1);
         if (fragmentShaderOrMixFunction->isWebKitCSSMixFunctionValue()) {
-            WebKitCSSMixFunctionValue* mixFunction = static_cast<WebKitCSSMixFunctionValue*>(fragmentShaderOrMixFunction);
+            WebKitCSSMixFunctionValue* mixFunction = toWebKitCSSMixFunctionValue(fragmentShaderOrMixFunction);
             CSSValueListIterator iterator(mixFunction);
 
             ASSERT(mixFunction->length());
-            fragmentShader = toWebKitCSSShaderValue(iterator.value());
+            if (iterator.value()->isWebKitCSSShaderValue())
+                fragmentShader = toWebKitCSSShaderValue(iterator.value());
+
             iterator.advance();
 
             ASSERT(mixFunction->length() <= 3);
             while (iterator.hasMore()) {
-                CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
+                CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(iterator.value());
                 if (CSSParser::isBlendMode(primitiveValue->getValueID()))
                     mixSettings.blendMode = *primitiveValue;
                 else if (CSSParser::isCompositeOperator(primitiveValue->getValueID()))
@@ -3633,13 +3672,14 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperationWith
             }
         } else {
             programType = PROGRAM_TYPE_NO_ELEMENT_TEXTURE;
-            fragmentShader = toWebKitCSSShaderValue(fragmentShaderOrMixFunction);
+            if (fragmentShaderOrMixFunction->isWebKitCSSShaderValue())
+                fragmentShader = toWebKitCSSShaderValue(fragmentShaderOrMixFunction);
         }
     }
 
     if (!vertexShader && !fragmentShader)
         return 0;
-    
+
     unsigned meshRows = 1;
     unsigned meshColumns = 1;
     CustomFilterMeshType meshType = MeshTypeAttached;
@@ -3654,7 +3694,7 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperationWith
         // the mesh-box list, if not it means it is the parameters list.
 
         if (iterator.hasMore() && iterator.isPrimitiveValue()) {
-            CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
+            CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(iterator.value());
             if (primitiveValue->isNumber()) {
                 // If only one integer value is specified, it will set both
                 // the rows and the columns.
@@ -3663,7 +3703,7 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperationWith
                 
                 // Try to match another number for the rows.
                 if (iterator.hasMore() && iterator.isPrimitiveValue()) {
-                    CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
+                    CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(iterator.value());
                     if (primitiveValue->isNumber()) {
                         meshRows = primitiveValue->getIntValue();
                         iterator.advance();
@@ -3673,7 +3713,7 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperationWith
         }
         
         if (iterator.hasMore() && iterator.isPrimitiveValue()) {
-            CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
+            CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(iterator.value());
             if (primitiveValue->getValueID() == CSSValueDetached) {
                 meshType = MeshTypeDetached;
                 iterator.advance();
@@ -3719,7 +3759,7 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
         return false;
     
     if (inValue->isPrimitiveValue()) {
-        CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(inValue);
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(inValue);
         if (primitiveValue->getValueID() == CSSValueNone)
             return true;
     }
@@ -3734,7 +3774,7 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
         if (!currValue->isWebKitCSSFilterValue())
             continue;
 
-        WebKitCSSFilterValue* filterValue = static_cast<WebKitCSSFilterValue*>(i.value());
+        WebKitCSSFilterValue* filterValue = toWebKitCSSFilterValue(i.value());
         FilterOperation::OperationType operationType = filterOperationForType(filterValue->operationType());
 
 #if ENABLE(CSS_SHADERS)
@@ -3761,11 +3801,11 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
             if (!argument->isWebKitCSSSVGDocumentValue())
                 continue;
 
-            WebKitCSSSVGDocumentValue* svgDocumentValue = static_cast<WebKitCSSSVGDocumentValue*>(argument);
-            KURL url = m_state.document().completeURL(svgDocumentValue->url());
+            WebKitCSSSVGDocumentValue* svgDocumentValue = toWebKitCSSSVGDocumentValue(argument);
+            URL url = m_state.document().completeURL(svgDocumentValue->url());
 
             RefPtr<ReferenceFilterOperation> operation = ReferenceFilterOperation::create(svgDocumentValue->url(), url.fragmentIdentifier(), operationType);
-            if (SVGURIReference::isExternalURIReference(svgDocumentValue->url(), &m_state.document())) {
+            if (SVGURIReference::isExternalURIReference(svgDocumentValue->url(), m_state.document())) {
                 if (!svgDocumentValue->loadRequested())
                     m_state.pendingSVGDocuments().set(operation.get(), svgDocumentValue);
                 else if (svgDocumentValue->cachedSVGDocument())
@@ -3777,7 +3817,8 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
         }
 
         // Check that all parameters are primitive values, with the
-        // exception of drop shadow which has a ShadowValue parameter.
+        // exception of drop shadow which has a CSSShadowValue parameter.
+        CSSPrimitiveValue* firstValue = nullptr;
         if (operationType != FilterOperation::DROP_SHADOW) {
             bool haveNonPrimitiveValue = false;
             for (unsigned j = 0; j < filterValue->length(); ++j) {
@@ -3788,9 +3829,10 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
             }
             if (haveNonPrimitiveValue)
                 continue;
+            if (filterValue->length())
+                firstValue = toCSSPrimitiveValue(filterValue->itemWithoutBoundsCheck(0));
         }
 
-        CSSPrimitiveValue* firstValue = filterValue->length() ? static_cast<CSSPrimitiveValue*>(filterValue->itemWithoutBoundsCheck(0)) : 0;
         switch (filterValue->operationType()) {
         case WebKitCSSFilterValue::GrayscaleFilterOperation:
         case WebKitCSSFilterValue::SepiaFilterOperation:
@@ -3845,10 +3887,17 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, FilterOperations& 
             if (!cssValue->isShadowValue())
                 continue;
 
-            ShadowValue* item = static_cast<ShadowValue*>(cssValue);
-            IntPoint location(item->x->computeLength<int>(style, rootStyle, zoomFactor),
-                              item->y->computeLength<int>(style, rootStyle, zoomFactor));
+            CSSShadowValue* item = toCSSShadowValue(cssValue);
+            int x = item->x->computeLength<int>(style, rootStyle, zoomFactor);
+            if (item->x->isViewportPercentageLength())
+                x = viewportPercentageValue(*item->x, x);
+            int y = item->y->computeLength<int>(style, rootStyle, zoomFactor);
+            if (item->y->isViewportPercentageLength())
+                y = viewportPercentageValue(*item->y, y);
+            IntPoint location(x, y);
             int blur = item->blur ? item->blur->computeLength<int>(style, rootStyle, zoomFactor) : 0;
+            if (item->blur && item->blur->isViewportPercentageLength())
+                blur = viewportPercentageValue(*item->blur, blur);
             Color color;
             if (item->color)
                 color = colorFromPrimitiveValue(item->color.get());
@@ -4055,6 +4104,24 @@ inline StyleResolver::MatchedProperties::MatchedProperties()
 
 inline StyleResolver::MatchedProperties::~MatchedProperties()
 {
+}
+
+int StyleResolver::viewportPercentageValue(CSSPrimitiveValue& unit, int percentage)
+{
+    int viewPortHeight = document().renderView()->viewportSize().height() * percentage / 100.0f;
+    int viewPortWidth = document().renderView()->viewportSize().width() * percentage / 100.0f;
+
+    if (unit.isViewportPercentageHeight())
+        return viewPortHeight;
+    if (unit.isViewportPercentageWidth())
+        return viewPortWidth;
+    if (unit.isViewportPercentageMax())
+        return max(viewPortWidth, viewPortHeight);
+    if (unit.isViewportPercentageMin())
+        return min(viewPortWidth, viewPortHeight);
+
+    ASSERT_NOT_REACHED();
+    return 0;
 }
 
 } // namespace WebCore

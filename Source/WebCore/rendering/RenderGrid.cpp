@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderGrid.h"
 
+#include "GridCoordinate.h"
 #include "LayoutRepainter.h"
 #include "NotImplemented.h"
 #include "RenderLayer.h"
@@ -127,7 +128,7 @@ private:
 };
 
 RenderGrid::RenderGrid(Element& element)
-    : RenderBlock(&element)
+    : RenderBlock(&element, 0)
 {
     // All of our children must be block level.
     setChildrenInline(false);
@@ -184,7 +185,7 @@ void RenderGrid::layoutBlock(bool relayoutChildren, LayoutUnit)
 
     repainter.repaintAfterLayout();
 
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 void RenderGrid::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const
@@ -367,7 +368,7 @@ LayoutUnit RenderGrid::logicalContentHeightForChild(RenderBox* child, Vector<Gri
     // doesn't return if the logical height is available so would need to be changed.
     // 2) Relayout if the column track's used breadth changed OR the logical height is unavailable.
     if (!child->needsLayout())
-        child->setNeedsLayout(true, MarkOnlyThis);
+        child->setNeedsLayout(MarkOnlyThis);
 
     child->setOverrideContainingBlockContentLogicalWidth(gridAreaBreadthForChild(child, ForColumns, columnTracks));
     // If |child| has a percentage logical height, we shouldn't let it override its intrinsic height, which is
@@ -674,7 +675,7 @@ void RenderGrid::layoutGridItems()
         LayoutUnit overrideContainingBlockContentLogicalWidth = gridAreaBreadthForChild(child, ForColumns, columnTracks);
         LayoutUnit overrideContainingBlockContentLogicalHeight = gridAreaBreadthForChild(child, ForRows, rowTracks);
         if (oldOverrideContainingBlockContentLogicalWidth != overrideContainingBlockContentLogicalWidth || oldOverrideContainingBlockContentLogicalHeight != overrideContainingBlockContentLogicalHeight)
-            child->setNeedsLayout(true, MarkOnlyThis);
+            child->setNeedsLayout(MarkOnlyThis);
 
         child->setOverrideContainingBlockContentLogicalWidth(overrideContainingBlockContentLogicalWidth);
         child->setOverrideContainingBlockContentLogicalHeight(overrideContainingBlockContentLogicalHeight);
@@ -705,20 +706,20 @@ void RenderGrid::layoutGridItems()
     clearGrid();
 }
 
-RenderGrid::GridCoordinate RenderGrid::cachedGridCoordinate(const RenderBox* gridItem) const
+GridCoordinate RenderGrid::cachedGridCoordinate(const RenderBox* gridItem) const
 {
     ASSERT(m_gridItemCoordinate.contains(gridItem));
     return m_gridItemCoordinate.get(gridItem);
 }
 
-RenderGrid::GridSpan RenderGrid::resolveGridPositionsFromAutoPlacementPosition(const RenderBox*, TrackSizingDirection, size_t initialPosition) const
+GridSpan RenderGrid::resolveGridPositionsFromAutoPlacementPosition(const RenderBox*, TrackSizingDirection, size_t initialPosition) const
 {
     // FIXME: We don't support spanning with auto positions yet. Once we do, this is wrong. Also we should make
     // sure the grid can accomodate the new item as we only grow 1 position in a given direction.
     return GridSpan(initialPosition, initialPosition);
 }
 
-PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveGridPositionsFromStyle(const RenderBox* gridItem, TrackSizingDirection direction) const
+PassOwnPtr<GridSpan> RenderGrid::resolveGridPositionsFromStyle(const RenderBox* gridItem, TrackSizingDirection direction) const
 {
     const GridPosition& initialPosition = (direction == ForColumns) ? gridItem->style()->gridItemColumnStart() : gridItem->style()->gridItemRowStart();
     const GridPositionSide initialPositionSide = (direction == ForColumns) ? ColumnStartSide : RowStartSide;
@@ -829,7 +830,7 @@ size_t RenderGrid::resolveGridPositionFromStyle(const GridPosition& position, Gr
     return 0;
 }
 
-PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveGridPositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, GridPositionSide side) const
+PassOwnPtr<GridSpan> RenderGrid::resolveGridPositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, GridPositionSide side) const
 {
     if (position.isAuto())
         return GridSpan::create(resolvedOppositePosition, resolvedOppositePosition);
@@ -853,7 +854,7 @@ PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveGridPositionAgainstOppositeP
     return GridSpan::create(resolvedOppositePosition, resolvedOppositePosition + positionOffset);
 }
 
-PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveNamedGridLinePositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, GridPositionSide side) const
+PassOwnPtr<GridSpan> RenderGrid::resolveNamedGridLinePositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, GridPositionSide side) const
 {
     ASSERT(position.isSpan());
     ASSERT(!position.namedGridLine().isNull());
@@ -874,7 +875,7 @@ PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveNamedGridLinePositionAgainst
     return resolveRowEndColumnEndNamedGridLinePositionAgainstOppositePosition(resolvedOppositePosition, position, it->value);
 }
 
-PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveRowStartColumnStartNamedGridLinePositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, const Vector<size_t>& gridLines) const
+PassOwnPtr<GridSpan> RenderGrid::resolveRowStartColumnStartNamedGridLinePositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, const Vector<size_t>& gridLines) const
 {
     // The grid line inequality needs to be strict (which doesn't match the after / end case) because |resolvedOppositePosition|
     // is already converted to an index in our grid representation (ie one was removed from the grid line to account for the side).
@@ -889,7 +890,7 @@ PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveRowStartColumnStartNamedGrid
     return GridSpan::create(resolvedGridLinePosition, resolvedOppositePosition);
 }
 
-PassOwnPtr<RenderGrid::GridSpan> RenderGrid::resolveRowEndColumnEndNamedGridLinePositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, const Vector<size_t>& gridLines) const
+PassOwnPtr<GridSpan> RenderGrid::resolveRowEndColumnEndNamedGridLinePositionAgainstOppositePosition(size_t resolvedOppositePosition, const GridPosition& position, const Vector<size_t>& gridLines) const
 {
     // FIXME: This could be a binary search as |gridLines| is ordered.
     size_t firstLineAfterOppositePositionIndex = 0;

@@ -46,9 +46,7 @@ SpeculativeJIT::SpeculativeJIT(JITCompiler& jit)
     , m_currentNode(0)
     , m_indexInBlock(0)
     , m_generationInfo(m_jit.codeBlock()->m_numCalleeRegisters)
-    , m_arguments(jit.codeBlock()->numParameters())
-    , m_variables(jit.graph().m_localVars)
-    , m_lastSetOperand(std::numeric_limits<int>::max())
+    , m_lastSetOperand(VirtualRegister())
     , m_state(m_jit.graph())
     , m_interpreter(m_jit.graph(), m_state)
     , m_stream(&jit.jitCode()->variableEventStream)
@@ -299,7 +297,7 @@ void SpeculativeJIT::runSlowPathGenerators()
 // On Windows we need to wrap fmod; on other platforms we can call it directly.
 // On ARMv7 we assert that all function pointers have to low bit set (point to thumb code).
 #if CALLING_CONVENTION_IS_STDCALL || CPU(ARM_THUMB2)
-static double DFG_OPERATION fmodAsDFGOperation(double x, double y)
+static double JIT_OPERATION fmodAsDFGOperation(double x, double y)
 {
     return fmod(x, y);
 }
@@ -895,22 +893,6 @@ void SpeculativeJIT::useChildren(Node* node)
     }
 }
 
-void SpeculativeJIT::writeBarrier(MacroAssembler& jit, GPRReg owner, GPRReg scratch1, GPRReg scratch2, WriteBarrierUseKind useKind)
-{
-    UNUSED_PARAM(jit);
-    UNUSED_PARAM(owner);
-    UNUSED_PARAM(scratch1);
-    UNUSED_PARAM(scratch2);
-    UNUSED_PARAM(useKind);
-    ASSERT(owner != scratch1);
-    ASSERT(owner != scratch2);
-    ASSERT(scratch1 != scratch2);
-
-#if ENABLE(WRITE_BARRIER_PROFILING)
-    JITCompiler::emitCount(jit, WriteBarrierCounters::jitCounterFor(useKind));
-#endif
-}
-
 void SpeculativeJIT::writeBarrier(GPRReg ownerGPR, GPRReg valueGPR, Edge valueUse, WriteBarrierUseKind useKind, GPRReg scratch1, GPRReg scratch2)
 {
     UNUSED_PARAM(ownerGPR);
@@ -1017,7 +999,7 @@ void SpeculativeJIT::compileIn(Node* node)
 #endif
 }
 
-bool SpeculativeJIT::nonSpeculativeCompare(Node* node, MacroAssembler::RelationalCondition cond, S_DFGOperation_EJJ helperFunction)
+bool SpeculativeJIT::nonSpeculativeCompare(Node* node, MacroAssembler::RelationalCondition cond, S_JITOperation_EJJ helperFunction)
 {
     unsigned branchIndexInBlock = detectPeepHoleBranch();
     if (branchIndexInBlock != UINT_MAX) {
@@ -1183,7 +1165,7 @@ void SpeculativeJIT::checkConsistency()
 
     for (gpr_iterator iter = m_gprs.begin(); iter != m_gprs.end(); ++iter) {
         VirtualRegister virtualRegister = iter.name();
-        if (virtualRegister == InvalidVirtualRegister)
+        if (!virtualRegister.isValid())
             continue;
 
         GenerationInfo& info = generationInfoFromVirtualRegister(virtualRegister);
@@ -1209,7 +1191,7 @@ void SpeculativeJIT::checkConsistency()
 
     for (fpr_iterator iter = m_fprs.begin(); iter != m_fprs.end(); ++iter) {
         VirtualRegister virtualRegister = iter.name();
-        if (virtualRegister == InvalidVirtualRegister)
+        if (!virtualRegister.isValid())
             continue;
 
         GenerationInfo& info = generationInfoFromVirtualRegister(virtualRegister);
@@ -1465,7 +1447,7 @@ void SpeculativeJIT::compilePeepHoleInt32Branch(Node* node, Node* branchNode, JI
 }
 
 // Returns true if the compare is fused with a subsequent branch.
-bool SpeculativeJIT::compilePeepHoleBranch(Node* node, MacroAssembler::RelationalCondition condition, MacroAssembler::DoubleCondition doubleCondition, S_DFGOperation_EJJ operation)
+bool SpeculativeJIT::compilePeepHoleBranch(Node* node, MacroAssembler::RelationalCondition condition, MacroAssembler::DoubleCondition doubleCondition, S_JITOperation_EJJ operation)
 {
     // Fused compare & branch.
     unsigned branchIndexInBlock = detectPeepHoleBranch();
@@ -1551,51 +1533,32 @@ void SpeculativeJIT::compileMovHintAndCheck(Node* node)
 void SpeculativeJIT::compileInlineStart(Node* node)
 {
     InlineCallFrame* inlineCallFrame = node->codeOrigin.inlineCallFrame;
+    InlineStartData* data = node->inlineStartData();
     int argumentCountIncludingThis = inlineCallFrame->arguments.size();
-    unsigned argumentPositionStart = node->argumentPositionStart();
-    CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(inlineCallFrame);
     for (int i = 0; i < argumentCountIncludingThis; ++i) {
-        ValueRecovery recovery;
-        if (codeBlock->isCaptured(argumentToOperand(i)))
-            recovery = ValueRecovery::alreadyInJSStack();
+        ArgumentPosition& position = m_jit.graph().m_argumentPositions[
+            data->argumentPositionStart + i];
+        VariableAccessData* variable = position.someVariable();
+        ValueSource source;
+        if (!variable)
+            source = ValueSource(SourceIsDead);
         else {
-            ArgumentPosition& argumentPosition =
-                m_jit.graph().m_argumentPositions[argumentPositionStart + i];
-            ValueSource valueSource;
-            switch (argumentPosition.flushFormat()) {
-            case DeadFlush:
-            case FlushedJSValue:
-                valueSource = ValueSource(ValueInJSStack);
-                break;
-            case FlushedDouble:
-                valueSource = ValueSource(DoubleInJSStack);
-                break;
-            case FlushedInt32:
-                valueSource = ValueSource(Int32InJSStack);
-                break;
-            case FlushedInt52:
-                valueSource = ValueSource(Int52InJSStack);
-                break;
-            case FlushedCell:
-                valueSource = ValueSource(CellInJSStack);
-                break;
-            case FlushedBoolean:
-                valueSource = ValueSource(BooleanInJSStack);
-                break;
-            }
-            recovery = computeValueRecoveryFor(valueSource);
+            source = ValueSource::forFlushFormat(
+                variable->machineLocal(),
+                m_jit.graph().m_argumentPositions[data->argumentPositionStart + i].flushFormat());
         }
-        // The recovery should refer either to something that has already been
-        // stored into the stack at the right place, or to a constant,
-        // since the Arguments code isn't smart enough to handle anything else.
-        // The exception is the this argument, which we don't really need to be
-        // able to recover.
-#if DFG_ENABLE(DEBUG_VERBOSE)
-        dataLogF("\nRecovery for argument %d: ", i);
-        recovery.dump(WTF::dataFile());
-#endif
-        inlineCallFrame->arguments[i] = recovery;
+        inlineCallFrame->arguments[i] = source.valueRecovery();
     }
+    
+    RELEASE_ASSERT(inlineCallFrame->isClosureCall == !!data->calleeVariable);
+    
+    if (inlineCallFrame->isClosureCall) {
+        ValueSource source = ValueSource::forFlushFormat(
+            data->calleeVariable->machineLocal(),
+            data->calleeVariable->flushFormat());
+        inlineCallFrame->calleeRecovery = source.valueRecovery();
+    } else
+        RELEASE_ASSERT(inlineCallFrame->calleeRecovery.isConstant());
 }
 
 void SpeculativeJIT::bail()
@@ -1614,6 +1577,8 @@ void SpeculativeJIT::compileCurrentBlock()
     
     ASSERT(m_block->isReachable);
     
+    m_jit.blockHeads()[m_block->index] = m_jit.label();
+
     if (!m_block->cfaHasVisited) {
         // Don't generate code for basic blocks that are unreachable according to CFA.
         // But to be sure that nobody has generated a jump to this block, drop in a
@@ -1622,7 +1587,6 @@ void SpeculativeJIT::compileCurrentBlock()
         return;
     }
 
-    m_jit.blockHeads()[m_block->index] = m_jit.label();
 #if DFG_ENABLE(JIT_BREAK_ON_EVERY_BLOCK)
     m_jit.breakpoint();
 #endif
@@ -1635,34 +1599,33 @@ void SpeculativeJIT::compileCurrentBlock()
     
     m_jit.jitAssertHasValidCallFrame();
 
-    ASSERT(m_arguments.size() == m_block->variablesAtHead.numberOfArguments());
-    for (size_t i = 0; i < m_arguments.size(); ++i) {
-        ValueSource valueSource = ValueSource(ValueInJSStack);
-        m_arguments[i] = valueSource;
-        m_stream->appendAndLog(VariableEvent::setLocal(argumentToOperand(i), valueSource.dataFormat()));
+    for (size_t i = 0; i < m_block->variablesAtHead.numberOfArguments(); ++i) {
+        m_stream->appendAndLog(
+            VariableEvent::setLocal(
+                virtualRegisterForArgument(i), virtualRegisterForArgument(i), DataFormatJS));
     }
     
     m_state.reset();
     m_state.beginBasicBlock(m_block);
     
-    ASSERT(m_variables.size() == m_block->variablesAtHead.numberOfLocals());
-    for (size_t i = 0; i < m_variables.size(); ++i) {
+    for (size_t i = 0; i < m_block->variablesAtHead.numberOfLocals(); ++i) {
         Node* node = m_block->variablesAtHead.local(i);
-        ValueSource valueSource;
         if (!node)
-            valueSource = ValueSource(SourceIsDead);
-        else if (node->variableAccessData()->isArgumentsAlias())
-            valueSource = ValueSource(ArgumentsSource);
+            continue; // No need to record dead SetLocal's.
+        
+        VariableAccessData* variable = node->variableAccessData();
+        DataFormat format;
+        if (variable->isArgumentsAlias())
+            format = DataFormatArguments;
         else if (!node->refCount())
-            valueSource = ValueSource(SourceIsDead);
+            continue; // No need to record dead SetLocal's.
         else
-            valueSource = ValueSource::forFlushFormat(node->variableAccessData()->flushFormat());
-        m_variables[i] = valueSource;
-        // FIXME: Don't emit SetLocal(Dead). https://bugs.webkit.org/show_bug.cgi?id=108019
-        m_stream->appendAndLog(VariableEvent::setLocal(localToOperand(i), valueSource.dataFormat()));
+            format = dataFormatFor(variable->flushFormat());
+        m_stream->appendAndLog(
+            VariableEvent::setLocal(virtualRegisterForLocal(i), variable->machineLocal(), format));
     }
     
-    m_lastSetOperand = std::numeric_limits<int>::max();
+    m_lastSetOperand = VirtualRegister();
     m_codeOriginForExitTarget = CodeOrigin();
     m_codeOriginForExitProfile = CodeOrigin();
     
@@ -1709,7 +1672,7 @@ void SpeculativeJIT::compileCurrentBlock()
                 
             case ZombieHint: {
                 m_lastSetOperand = m_currentNode->local();
-                m_stream->appendAndLog(VariableEvent::setLocal(m_currentNode->local(), DataFormatDead));
+                recordSetLocal(DataFormatDead);
                 break;
             }
 
@@ -1743,6 +1706,11 @@ void SpeculativeJIT::compileCurrentBlock()
             m_speculationDirection = (m_currentNode->flags() & NodeExitsForward) ? ForwardSpeculation : BackwardSpeculation;
             
             compile(m_currentNode);
+
+#if ENABLE(DFG_REGISTER_ALLOCATION_VALIDATION)
+            m_jit.clearRegisterAllocationOffsets();
+#endif
+
             if (!m_compileOkay) {
                 bail();
                 return;
@@ -1755,8 +1723,8 @@ void SpeculativeJIT::compileCurrentBlock()
             
 #if DFG_ENABLE(DEBUG_VERBOSE)
             if (m_currentNode->hasResult()) {
-                GenerationInfo& info = m_generationInfo[m_currentNode->virtualRegister()];
-                dataLogF("-> %s, vr#%d", dataFormatToString(info.registerFormat()), (int)m_currentNode->virtualRegister());
+                GenerationInfo& info = m_generationInfo[m_currentNode->virtualRegister().toLocal()];
+                dataLogF("-> %s, vr#%d", dataFormatToString(info.registerFormat()), m_currentNode->virtualRegister().toLocal());
                 if (info.registerFormat() != DataFormatNone) {
                     if (info.registerFormat() == DataFormatDouble)
                         dataLogF(", %s", FPRInfo::debugName(info.fpr()));
@@ -1804,11 +1772,6 @@ void SpeculativeJIT::checkArgumentTypes()
     m_codeOriginForExitTarget = CodeOrigin(0);
     m_codeOriginForExitProfile = CodeOrigin(0);
 
-    for (size_t i = 0; i < m_arguments.size(); ++i)
-        m_arguments[i] = ValueSource(ValueInJSStack);
-    for (size_t i = 0; i < m_variables.size(); ++i)
-        m_variables[i] = ValueSource(ValueInJSStack);
-    
     for (int i = 0; i < m_jit.codeBlock()->numParameters(); ++i) {
         Node* node = m_jit.graph().m_arguments[i];
         ASSERT(node->op() == SetArgument);
@@ -1893,7 +1856,7 @@ void SpeculativeJIT::createOSREntries()
             continue;
         if (!block->isOSRTarget)
             continue;
-
+        
         // Currently we don't have OSR entry trampolines. We could add them
         // here if need be.
         m_osrEntryHeads.append(m_jit.blockHeads()[blockIndex]);
@@ -1912,19 +1875,6 @@ void SpeculativeJIT::linkOSREntries(LinkBuffer& linkBuffer)
         m_jit.noticeOSREntry(*block, m_osrEntryHeads[osrEntryIndex++], linkBuffer);
     }
     ASSERT(osrEntryIndex == m_osrEntryHeads.size());
-}
-
-ValueRecovery SpeculativeJIT::computeValueRecoveryFor(const ValueSource& valueSource)
-{
-    if (valueSource.isInJSStack())
-        return valueSource.valueRecovery();
-        
-    ASSERT(valueSource.kind() == HaveNode);
-    Node* node = valueSource.id().node(m_jit.graph());
-    if (isConstant(node))
-        return ValueRecovery::constant(valueOfJSConstant(node));
-    
-    return ValueRecovery();
 }
 
 void SpeculativeJIT::compileDoublePutByVal(Node* node, SpeculateCellOperand& base, SpeculateStrictInt32Operand& property)
@@ -3160,12 +3110,8 @@ void SpeculativeJIT::compileArithSub(Node* node)
                 m_jit.move(op1.gpr(), result.gpr());
                 m_jit.sub32(Imm32(imm2), result.gpr());
             } else {
-#if ENABLE(JIT_CONSTANT_BLINDING)
                 GPRTemporary scratch(this);
                 speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branchSub32(MacroAssembler::Overflow, op1.gpr(), Imm32(imm2), result.gpr(), scratch.gpr()));
-#else
-                speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branchSub32(MacroAssembler::Overflow, op1.gpr(), Imm32(imm2), result.gpr()));
-#endif
             }
 
             int32Result(result.gpr(), node);
@@ -3500,7 +3446,7 @@ void SpeculativeJIT::compileArithDiv(Node* node)
             notZero.link(&m_jit);
             JITCompiler::Jump notNeg2ToThe31 =
                 m_jit.branch32(JITCompiler::NotEqual, op1GPR, TrustedImm32(-2147483647-1));
-            m_jit.move(op1GPR, eax.gpr());
+            m_jit.zeroExtend32ToPtr(op1GPR, eax.gpr());
             done.append(m_jit.jump());
         
             notNeg2ToThe31.link(&m_jit);
@@ -3842,7 +3788,7 @@ void SpeculativeJIT::compileArithMod(Node* node)
 }
 
 // Returns true if the compare is fused with a subsequent branch.
-bool SpeculativeJIT::compare(Node* node, MacroAssembler::RelationalCondition condition, MacroAssembler::DoubleCondition doubleCondition, S_DFGOperation_EJJ operation)
+bool SpeculativeJIT::compare(Node* node, MacroAssembler::RelationalCondition condition, MacroAssembler::DoubleCondition doubleCondition, S_JITOperation_EJJ operation)
 {
     if (compilePeepHoleBranch(node, condition, doubleCondition, operation))
         return true;
@@ -4221,6 +4167,28 @@ void SpeculativeJIT::compileStringIdentEquality(Node* node)
 #endif
 }
 
+void SpeculativeJIT::compileStringZeroLength(Node* node)
+{
+    SpeculateCellOperand str(this, node->child1());
+    GPRReg strGPR = str.gpr();
+
+    // Make sure that this is a string.
+    speculateString(node->child1(), strGPR);
+
+    GPRTemporary eq(this);
+    GPRReg eqGPR = eq.gpr();
+
+    // Fetch the length field from the string object.
+    m_jit.test32(MacroAssembler::Zero, MacroAssembler::Address(strGPR, JSString::offsetOfLength()), MacroAssembler::TrustedImm32(-1), eqGPR);
+
+#if USE(JSVALUE64)
+    m_jit.or32(TrustedImm32(ValueFalse), eqGPR);
+    jsValueResult(eqGPR, node, DataFormatJSBoolean);
+#else
+    booleanResult(eqGPR, node);
+#endif
+}
+
 void SpeculativeJIT::compileGetIndexedPropertyStorage(Node* node)
 {
     SpeculateCellOperand base(this, node->child1());
@@ -4311,18 +4279,18 @@ void SpeculativeJIT::compileGetByValOnArguments(Node* node)
         Uncountable, JSValueSource(), 0,
         m_jit.branch32(
             MacroAssembler::AboveOrEqual, propertyReg,
-            MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_numArguments))));
+            MacroAssembler::Address(baseReg, Arguments::offsetOfNumArguments())));
     speculationCheck(
         Uncountable, JSValueSource(), 0,
         m_jit.branchTestPtr(
             MacroAssembler::NonZero,
             MacroAssembler::Address(
-                baseReg, OBJECT_OFFSETOF(Arguments, m_slowArguments))));
+                baseReg, Arguments::offsetOfSlowArgumentData())));
     
     m_jit.move(propertyReg, resultReg);
     m_jit.signExtend32ToPtr(resultReg, resultReg);
     m_jit.loadPtr(
-        MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_registers)),
+        MacroAssembler::Address(baseReg, Arguments::offsetOfRegisters()),
         scratchReg);
     
 #if USE(JSVALUE32_64)
@@ -4366,10 +4334,10 @@ void SpeculativeJIT::compileGetArgumentsLength(Node* node)
         Uncountable, JSValueSource(), 0,
         m_jit.branchTest8(
             MacroAssembler::NonZero,
-            MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_overrodeLength))));
+            MacroAssembler::Address(baseReg, Arguments::offsetOfOverrodeLength())));
     
     m_jit.load32(
-        MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_numArguments)),
+        MacroAssembler::Address(baseReg, Arguments::offsetOfNumArguments()),
         resultReg);
     int32Result(resultReg, node);
 }
@@ -4443,7 +4411,7 @@ void SpeculativeJIT::compileNewFunctionExpression(Node* node)
     GPRReg resultGPR = result.gpr();
     flushRegisters();
     callOperation(
-        operationNewFunctionExpression,
+        operationNewFunctionNoCheck,
         resultGPR,
         m_jit.codeBlock()->functionExpr(node->functionExprIndex()));
     cellResult(resultGPR, node);

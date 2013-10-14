@@ -41,7 +41,6 @@
 #include "DocumentWriter.h"
 #include "Event.h"
 #include "FormState.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "FrameTree.h"
@@ -51,6 +50,7 @@
 #include "IconController.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "MemoryCache.h"
 #include "Page.h"
 #include "PolicyChecker.h"
@@ -183,12 +183,12 @@ ResourceRequest& DocumentLoader::request()
     return m_request;
 }
 
-const KURL& DocumentLoader::url() const
+const URL& DocumentLoader::url() const
 {
     return request().url();
 }
 
-void DocumentLoader::replaceRequestURLForSameDocumentNavigation(const KURL& url)
+void DocumentLoader::replaceRequestURLForSameDocumentNavigation(const URL& url)
 {
     m_originalRequestCopy.setURL(url);
     m_request.setURL(url);
@@ -371,7 +371,7 @@ void DocumentLoader::finishedLoading(double finishTime)
         // cancel the already-finished substitute load.
         unsigned long identifier = m_identifierForLoadWithoutResourceLoader;
         m_identifierForLoadWithoutResourceLoader = 0;
-        frameLoader()->notifier()->dispatchDidFinishLoading(this, identifier, finishTime);
+        frameLoader()->notifier().dispatchDidFinishLoading(this, identifier, finishTime);
     }
 
 #if USE(CONTENT_FILTERING)
@@ -436,7 +436,7 @@ bool DocumentLoader::isPostOrRedirectAfterPost(const ResourceRequest& newRequest
 
 void DocumentLoader::handleSubstituteDataLoadNow(DocumentLoaderTimer*)
 {
-    KURL url = m_substituteData.responseURL();
+    URL url = m_substituteData.responseURL();
     if (url.isEmpty())
         url = m_request.url();
     ResourceResponse response(url, m_substituteData.mimeType(), m_substituteData.content()->size(), m_substituteData.textEncoding(), "");
@@ -495,7 +495,7 @@ void DocumentLoader::willSendRequest(ResourceRequest& newRequest, const Resource
 
     // Update cookie policy base URL as URL changes, except for subframes, which use the
     // URL of the main frame which doesn't change when we redirect.
-    if (frameLoader()->isLoadingMainFrame())
+    if (frameLoader()->frame().isMainFrame())
         newRequest.setFirstPartyForCookies(newRequest.url());
 
     // If we're fielding a redirect in response to a POST, force a load from origin, since
@@ -613,7 +613,7 @@ void DocumentLoader::responseReceived(CachedResource* resource, const ResourceRe
 
     if (m_identifierForLoadWithoutResourceLoader) {
         addResponse(m_response);
-        frameLoader()->notifier()->dispatchDidReceiveResponse(this, m_identifierForLoadWithoutResourceLoader, m_response, 0);
+        frameLoader()->notifier().dispatchDidReceiveResponse(this, m_identifierForLoadWithoutResourceLoader, m_response, 0);
     }
 
     ASSERT(!m_waitingForContentPolicy);
@@ -653,7 +653,7 @@ void DocumentLoader::continueAfterContentPolicy(PolicyAction policy)
     if (isStopping())
         return;
 
-    KURL url = m_request.url();
+    URL url = m_request.url();
     const String& mimeType = m_response.mimeType();
     
     switch (policy) {
@@ -825,7 +825,7 @@ void DocumentLoader::dataReceived(CachedResource* resource, const char* data, in
 #if USE(CFNETWORK) || PLATFORM(MAC)
     // Workaround for <rdar://problem/6060782>
     if (m_response.isNull())
-        m_response = ResourceResponse(KURL(), "text/html", 0, String(), String());
+        m_response = ResourceResponse(URL(), "text/html", 0, String(), String());
 #endif
 
     // There is a bug in CFNetwork where callbacks can be dispatched even when loads are deferred.
@@ -852,7 +852,7 @@ void DocumentLoader::dataReceived(CachedResource* resource, const char* data, in
 #endif
 
     if (m_identifierForLoadWithoutResourceLoader)
-        frameLoader()->notifier()->dispatchDidReceiveData(this, m_identifierForLoadWithoutResourceLoader, data, length, -1);
+        frameLoader()->notifier().dispatchDidReceiveData(this, m_identifierForLoadWithoutResourceLoader, data, length, -1);
 
     m_applicationCacheHost->mainResourceDataReceived(data, length, -1, false);
     m_timeOfLastDataReceived = monotonicallyIncreasingTime();
@@ -1012,7 +1012,7 @@ void DocumentLoader::addArchiveResource(PassRefPtr<ArchiveResource> resource)
     m_archiveResourceCollection->addResource(resource);
 }
 
-PassRefPtr<Archive> DocumentLoader::popArchiveForSubframe(const String& frameName, const KURL& url)
+PassRefPtr<Archive> DocumentLoader::popArchiveForSubframe(const String& frameName, const URL& url)
 {
     return m_archiveResourceCollection ? m_archiveResourceCollection->popSubframeArchive(frameName, url) : PassRefPtr<Archive>(0);
 }
@@ -1029,7 +1029,7 @@ SharedBuffer* DocumentLoader::parsedArchiveData() const
 }
 #endif // ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
 
-ArchiveResource* DocumentLoader::archiveResourceForURL(const KURL& url) const
+ArchiveResource* DocumentLoader::archiveResourceForURL(const URL& url) const
 {
     if (!m_archiveResourceCollection)
         return 0;
@@ -1051,7 +1051,7 @@ PassRefPtr<ArchiveResource> DocumentLoader::mainResource() const
     return ArchiveResource::create(data, r.url(), r.mimeType(), r.textEncodingName(), frame()->tree().uniqueName());
 }
 
-PassRefPtr<ArchiveResource> DocumentLoader::subresource(const KURL& url) const
+PassRefPtr<ArchiveResource> DocumentLoader::subresource(const URL& url) const
 {
     if (!isCommitted())
         return 0;
@@ -1083,7 +1083,7 @@ void DocumentLoader::getSubresources(Vector<PassRefPtr<ArchiveResource> >& subre
     const CachedResourceLoader::DocumentResourceMap& allResources = m_cachedResourceLoader->allCachedResources();
     CachedResourceLoader::DocumentResourceMap::const_iterator end = allResources.end();
     for (CachedResourceLoader::DocumentResourceMap::const_iterator it = allResources.begin(); it != end; ++it) {
-        RefPtr<ArchiveResource> subresource = this->subresource(KURL(ParsedURLString, it->value->url()));
+        RefPtr<ArchiveResource> subresource = this->subresource(URL(ParsedURLString, it->value->url()));
         if (subresource)
             subresources.append(subresource.release());
     }
@@ -1210,7 +1210,7 @@ void DocumentLoader::setTitle(const StringWithDirection& title)
     frameLoader()->didChangeTitle(this);
 }
 
-KURL DocumentLoader::urlForHistory() const
+URL DocumentLoader::urlForHistory() const
 {
     // Return the URL to be used for history and B/F list.
     // Returns nil for WebDataProtocol URLs that aren't alternates
@@ -1226,24 +1226,24 @@ bool DocumentLoader::urlForHistoryReflectsFailure() const
     return m_substituteData.isValid() || m_response.httpStatusCode() >= 400;
 }
 
-const KURL& DocumentLoader::originalURL() const
+const URL& DocumentLoader::originalURL() const
 {
     return m_originalRequestCopy.url();
 }
 
-const KURL& DocumentLoader::requestURL() const
+const URL& DocumentLoader::requestURL() const
 {
     return request().url();
 }
 
-const KURL& DocumentLoader::responseURL() const
+const URL& DocumentLoader::responseURL() const
 {
     return m_response.url();
 }
 
-KURL DocumentLoader::documentURL() const
+URL DocumentLoader::documentURL() const
 {
-    KURL url = substituteData().responseURL();
+    URL url = substituteData().responseURL();
 #if ENABLE(WEB_ARCHIVE)
     if (url.isEmpty() && m_archive && m_archive->type() == Archive::WebArchive)
         url = m_archive->mainResource()->url();
@@ -1260,7 +1260,7 @@ const String& DocumentLoader::responseMIMEType() const
     return m_response.mimeType();
 }
 
-const KURL& DocumentLoader::unreachableURL() const
+const URL& DocumentLoader::unreachableURL() const
 {
     return m_substituteData.failingURL();
 }
@@ -1378,8 +1378,8 @@ void DocumentLoader::startLoadingMainResource()
 
     if (m_substituteData.isValid()) {
         m_identifierForLoadWithoutResourceLoader = m_frame->page()->progress().createUniqueIdentifier();
-        frameLoader()->notifier()->assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, m_request);
-        frameLoader()->notifier()->dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, m_request, ResourceResponse());
+        frameLoader()->notifier().assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, m_request);
+        frameLoader()->notifier().dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, m_request, ResourceResponse());
         handleSubstituteDataLoadSoon();
         return;
     }
@@ -1401,8 +1401,8 @@ void DocumentLoader::startLoadingMainResource()
 
     if (!mainResourceLoader()) {
         m_identifierForLoadWithoutResourceLoader = m_frame->page()->progress().createUniqueIdentifier();
-        frameLoader()->notifier()->assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, request);
-        frameLoader()->notifier()->dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, request, ResourceResponse());
+        frameLoader()->notifier().assignIdentifierToInitialRequest(m_identifierForLoadWithoutResourceLoader, this, request);
+        frameLoader()->notifier().dispatchWillSendRequest(this, m_identifierForLoadWithoutResourceLoader, request, ResourceResponse());
     }
     m_mainResource->addClient(this);
 

@@ -28,7 +28,7 @@
 
 #include "GStreamerUtilities.h"
 #include "GStreamerVersioning.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MediaPlayer.h"
@@ -43,6 +43,7 @@
 #include <wtf/text/CString.h>
 
 #if ENABLE(VIDEO_TRACK) && defined(GST_API_VERSION_1)
+#include "InbandMetadataTextTrackPrivateGStreamer.h"
 #include "InbandTextTrackPrivateGStreamer.h"
 #include "TextCombinerGStreamer.h"
 #include "TextSinkGStreamer.h"
@@ -334,7 +335,7 @@ void MediaPlayerPrivateGStreamer::load(const String& url)
     if (!initializeGStreamerAndRegisterWebKitElements())
         return;
 
-    KURL kurl(KURL(), url);
+    URL kurl(URL(), url);
     String cleanUrl(url);
 
     // Clean out everything after file:// url path.
@@ -346,7 +347,7 @@ void MediaPlayerPrivateGStreamer::load(const String& url)
 
     ASSERT(m_playBin);
 
-    m_url = KURL(KURL(), cleanUrl);
+    m_url = URL(URL(), cleanUrl);
     g_object_set(m_playBin.get(), "uri", cleanUrl.utf8().data(), NULL);
 
     INFO_MEDIA_MESSAGE("Load %s", cleanUrl.utf8().data());
@@ -958,6 +959,11 @@ gboolean MediaPlayerPrivateGStreamer::handleMessage(GstMessage* message)
             g_free(detail);
         }
         break;
+#if ENABLE(VIDEO_TRACK) && defined(GST_API_VERSION_1)
+    case GST_MESSAGE_TOC:
+        processTableOfContents(message);
+        break;
+#endif
     default:
         LOG_MEDIA_MESSAGE("Unhandled GStreamer message type: %s",
                     GST_MESSAGE_TYPE_NAME(message));
@@ -985,6 +991,56 @@ void MediaPlayerPrivateGStreamer::processBufferingStats(GstMessage* message)
 
     updateStates();
 }
+
+#if ENABLE(VIDEO_TRACK) && defined(GST_API_VERSION_1)
+void MediaPlayerPrivateGStreamer::processTableOfContents(GstMessage* message)
+{
+    if (m_chaptersTrack)
+        m_player->removeTextTrack(m_chaptersTrack);
+
+    m_chaptersTrack = InbandMetadataTextTrackPrivateGStreamer::create(InbandTextTrackPrivate::Chapters);
+    m_player->addTextTrack(m_chaptersTrack);
+
+    GstToc* toc;
+    gboolean updated;
+    gst_message_parse_toc(message, &toc, &updated);
+    ASSERT(toc);
+
+    for (GList* i = gst_toc_get_entries(toc); i; i = i->next)
+        processTableOfContentsEntry(static_cast<GstTocEntry*>(i->data), 0);
+
+    gst_toc_unref(toc);
+}
+
+void MediaPlayerPrivateGStreamer::processTableOfContentsEntry(GstTocEntry* entry, GstTocEntry* parent)
+{
+    ASSERT(entry);
+
+    RefPtr<GenericCueData> cue = GenericCueData::create();
+
+    gint64 start = -1, stop = -1;
+    gst_toc_entry_get_start_stop_times(entry, &start, &stop);
+    if (start != -1)
+        cue->setStartTime(static_cast<double>(start) / GST_SECOND);
+    if (stop != -1)
+        cue->setEndTime(static_cast<double>(stop) / GST_SECOND);
+
+    GstTagList* tags = gst_toc_entry_get_tags(entry);
+    if (tags) {
+        gchar* title =  0;
+        gst_tag_list_get_string(tags, GST_TAG_TITLE, &title);
+        if (title) {
+            cue->setContent(title);
+            g_free(title);
+        }
+    }
+
+    m_chaptersTrack->client()->addGenericCue(m_chaptersTrack.get(), cue.release());
+
+    for (GList* i = gst_toc_entry_get_sub_entries(entry); i; i = i->next)
+        processTableOfContentsEntry(static_cast<GstTocEntry*>(i->data), entry);
+}
+#endif
 
 void MediaPlayerPrivateGStreamer::fillTimerFired(Timer<MediaPlayerPrivateGStreamer>*)
 {
@@ -1428,8 +1484,8 @@ bool MediaPlayerPrivateGStreamer::loadNextLocation()
         // Found a candidate. new-location is not always an absolute url
         // though. We need to take the base of the current url and
         // append the value of new-location to it.
-        KURL baseUrl = gst_uri_is_valid(newLocation) ? KURL() : m_url;
-        KURL newUrl = KURL(baseUrl, newLocation);
+        URL baseUrl = gst_uri_is_valid(newLocation) ? URL() : m_url;
+        URL newUrl = URL(baseUrl, newLocation);
 
         RefPtr<SecurityOrigin> securityOrigin = SecurityOrigin::create(m_url);
         if (securityOrigin->canRequest(newUrl)) {
@@ -1653,7 +1709,7 @@ void MediaPlayerPrivateGStreamer::getSupportedTypes(HashSet<String>& types)
     types = mimeTypeCache();
 }
 
-MediaPlayer::SupportsType MediaPlayerPrivateGStreamer::supportsType(const String& type, const String& codecs, const KURL&)
+MediaPlayer::SupportsType MediaPlayerPrivateGStreamer::supportsType(const String& type, const String& codecs, const URL&)
 {
     if (type.isNull() || type.isEmpty())
         return MediaPlayer::IsNotSupported;

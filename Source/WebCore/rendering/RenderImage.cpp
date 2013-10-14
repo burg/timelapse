@@ -127,7 +127,7 @@ bool RenderImage::setImageSizeForAltText(CachedImage* newImage /* = 0 */)
         FontCachePurgePreventer fontCachePurgePreventer;
 
         const Font& font = style()->font();
-        IntSize paddedTextSize(paddingWidth + min(ceilf(font.width(RenderBlock::constructTextRun(this, font, m_altText, style()))), maxAltTextWidth), paddingHeight + min(font.fontMetrics().height(), maxAltTextHeight));
+        IntSize paddedTextSize(paddingWidth + min(ceilf(font.width(RenderBlock::constructTextRun(this, font, m_altText, *style()))), maxAltTextWidth), paddingHeight + min(font.fontMetrics().height(), maxAltTextHeight));
         imageSize = imageSize.expandedTo(paddedTextSize);
     }
 
@@ -262,7 +262,7 @@ void RenderImage::imageDimensionsChanged(bool imageSizeChanged, const IntRect* r
         if (imageSizeChanged || hasOverrideSize || containingBlockNeedsToRecomputePreferredSize) {
             shouldRepaint = false;
             if (!selfNeedsLayout())
-                setNeedsLayout(true);
+                setNeedsLayout();
         }
 
         if (everHadLayout() && !selfNeedsLayout()) {
@@ -392,7 +392,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 
                 // Only draw the alt text if it'll fit within the content box,
                 // and only if it fits above the error image.
-                TextRun textRun = RenderBlock::constructTextRun(this, font, text, style());
+                TextRun textRun = RenderBlock::constructTextRun(this, font, text, *style());
                 LayoutUnit textWidth = font.width(textRun);
                 if (errorPictureDrawn) {
                     if (usableWidth >= textWidth && fontMetrics.height() <= imageOffset.height())
@@ -563,7 +563,7 @@ LayoutUnit RenderImage::minimumReplacedHeight() const
 HTMLMapElement* RenderImage::imageMap() const
 {
     HTMLImageElement* i = element() && isHTMLImageElement(element()) ? toHTMLImageElement(element()) : 0;
-    return i ? i->treeScope()->getImageMap(i->fastGetAttribute(usemapAttr)) : 0;
+    return i ? i->treeScope().getImageMap(i->fastGetAttribute(usemapAttr)) : 0;
 }
 
 bool RenderImage::nodeAtPoint(const HitTestRequest& request, HitTestResult& result, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction hitTestAction)

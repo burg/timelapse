@@ -33,6 +33,7 @@
 #include "WebPreferences.h"
 #include <WebCore/COMPtr.h>
 #include <WebCore/DragActions.h>
+#include <WebCore/GraphicsLayer.h>
 #include <WebCore/IntRect.h>
 #include <WebCore/SharedGDIObject.h>
 #include <WebCore/SuspendableTimer.h>
@@ -908,7 +909,7 @@ public:
 
     // Convenient to be able to violate the rules of COM here for easy movement to the frame.
     WebFrame* topLevelFrame() const { return m_mainFrame; }
-    const WTF::String& userAgentForKURL(const WebCore::KURL& url);
+    const WTF::String& userAgentForKURL(const WebCore::URL& url);
 
     static bool canHandleRequest(const WebCore::ResourceRequest&);
 
@@ -947,7 +948,7 @@ public:
     bool onGetObject(WPARAM, LPARAM, LRESULT&) const;
     static STDMETHODIMP AccessibleObjectFromWindow(HWND, DWORD objectID, REFIID, void** ppObject);
 
-    void downloadURL(const WebCore::KURL&);
+    void downloadURL(const WebCore::URL&);
 
 #if USE(ACCELERATED_COMPOSITING)
     void flushPendingGraphicsLayerChangesSoon();
@@ -1156,7 +1157,7 @@ protected:
     void setAcceleratedCompositing(bool);
 
     RefPtr<WebCore::CACFLayerTreeHost> m_layerTreeHost;
-    OwnPtr<WebCore::GraphicsLayer> m_backingLayer;
+    std::unique_ptr<WebCore::GraphicsLayer> m_backingLayer;
     bool m_isAcceleratedCompositing;
 #endif
 

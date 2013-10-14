@@ -48,7 +48,7 @@ public:
 
     // Most subclasses use RenderWidget (either RenderEmbeddedObject or RenderIFrame)
     // except for HTMLObjectElement and HTMLEmbedElement which may return any
-    // RenderObject when using fallback content.
+    // RenderElement when using fallback content.
     RenderWidget* renderWidget() const;
 
 #if ENABLE(SVG)
@@ -77,35 +77,50 @@ inline HTMLFrameOwnerElement& toFrameOwnerElement(Node& node)
     return static_cast<HTMLFrameOwnerElement&>(node);
 }
 
+inline const HTMLFrameOwnerElement& toFrameOwnerElement(const Node& node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(node.isFrameOwnerElement());
+    return static_cast<const HTMLFrameOwnerElement&>(node);
+}
+
 inline HTMLFrameOwnerElement* toFrameOwnerElement(Node* node)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isFrameOwnerElement());
     return static_cast<HTMLFrameOwnerElement*>(node);
 }
 
+inline const HTMLFrameOwnerElement* toFrameOwnerElement(const Node* node)
+{
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isFrameOwnerElement());
+    return static_cast<const HTMLFrameOwnerElement*>(node);
+}
+
+void toFrameOwnerElement(const HTMLFrameOwnerElement&);
+void toFrameOwnerElement(const HTMLFrameOwnerElement*);
+
 class SubframeLoadingDisabler {
 public:
-    explicit SubframeLoadingDisabler(Node* root)
+    explicit SubframeLoadingDisabler(ContainerNode& root)
         : m_root(root)
     {
-        disabledSubtreeRoots().add(m_root);
+        disabledSubtreeRoots().add(&m_root);
     }
 
     ~SubframeLoadingDisabler()
     {
-        disabledSubtreeRoots().remove(m_root);
+        disabledSubtreeRoots().remove(&m_root);
     }
 
-    static bool canLoadFrame(HTMLFrameOwnerElement*);
+    static bool canLoadFrame(HTMLFrameOwnerElement&);
 
 private:
-    static HashSet<Node*>& disabledSubtreeRoots()
+    static HashSet<ContainerNode*>& disabledSubtreeRoots()
     {
-        DEFINE_STATIC_LOCAL(HashSet<Node*>, nodes, ());
+        DEFINE_STATIC_LOCAL(HashSet<ContainerNode*>, nodes, ());
         return nodes;
     }
 
-    Node* m_root;
+    ContainerNode& m_root;
 };
 
 } // namespace WebCore

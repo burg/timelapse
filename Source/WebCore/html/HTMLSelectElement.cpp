@@ -52,7 +52,6 @@
 #include "RenderListBox.h"
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
-#include "ScriptEventListener.h"
 #include "Settings.h"
 #include "SpatialNavigation.h"
 
@@ -85,6 +84,14 @@ PassRefPtr<HTMLSelectElement> HTMLSelectElement::create(const QualifiedName& tag
 {
     ASSERT(tagName.matches(selectTag));
     return adoptRef(new HTMLSelectElement(tagName, document, form));
+}
+
+void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
+{
+    // Even though the options didn't necessarily change, we will call setOptionsChangedOnRenderer for its side effect
+    // of recomputing the width of the element. We need to do that if the style change included a change in zoom level.
+    setOptionsChangedOnRenderer();
+    HTMLFormControlElement::didRecalcStyle(styleChange);
 }
 
 const AtomicString& HTMLSelectElement::formControlType() const
@@ -219,7 +226,7 @@ void HTMLSelectElement::add(HTMLElement* element, HTMLElement* before, Exception
     setNeedsValidityCheck();
 }
 
-void HTMLSelectElement::remove(int optionIndex)
+void HTMLSelectElement::removeByIndex(int optionIndex)
 {
     int listIndex = optionToListIndex(optionIndex);
     if (listIndex < 0)
@@ -291,7 +298,7 @@ void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomicSt
         // Set the attribute value to a number.
         // This is important since the style rules for this attribute can determine the appearance property.
         int size = value.toInt();
-        String attrSize = String::number(size);
+        AtomicString attrSize = AtomicString::number(size);
         if (attrSize != value) {
             // FIXME: This is horribly factored.
             if (Attribute* sizeAttribute = ensureUniqueElementData().findAttributeByName(sizeAttr))
@@ -409,7 +416,7 @@ void HTMLSelectElement::setMultiple(bool multiple)
 
 void HTMLSelectElement::setSize(int size)
 {
-    setAttribute(sizeAttr, String::number(size));
+    setIntegralAttribute(sizeAttr, size);
 }
 
 Node* HTMLSelectElement::namedItem(const AtomicString& name)
@@ -435,7 +442,7 @@ void HTMLSelectElement::setOption(unsigned index, HTMLOptionElement* option, Exc
         // Replace an existing entry?
     } else if (diff < 0) {
         before = toHTMLElement(options()->item(index+1));
-        remove(index);
+        removeByIndex(index);
     }
     // Finally add the new element.
     if (!ec) {
@@ -680,13 +687,13 @@ void HTMLSelectElement::scrollToSelection()
     if (usesMenuList())
         return;
 
-    if (RenderObject* renderer = this->renderer())
+    if (auto renderer = this->renderer())
         toRenderListBox(renderer)->selectionChanged();
 }
 
 void HTMLSelectElement::setOptionsChangedOnRenderer()
 {
-    if (RenderObject* renderer = this->renderer()) {
+    if (auto renderer = this->renderer()) {
         if (usesMenuList())
             toRenderMenuList(renderer)->setOptionsChanged(true);
         else
@@ -852,7 +859,7 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
         deselectItemsWithoutValidation(element);
 
     // For the menu list case, this is what makes the selected element appear.
-    if (RenderObject* renderer = this->renderer())
+    if (auto renderer = this->renderer())
         renderer->updateFromElement();
 
     scrollToSelection();
@@ -861,7 +868,7 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
         m_isProcessingUserDrivenChange = flags & UserDriven;
         if (flags & DispatchChangeEvent)
             dispatchChangeEventForMenuList();
-        if (RenderObject* renderer = this->renderer()) {
+        if (auto renderer = this->renderer()) {
             if (usesMenuList())
                 toRenderMenuList(renderer)->didSetSelectedIndex(listIndex);
             else if (renderer->isListBox())
@@ -1480,7 +1487,7 @@ void HTMLSelectElement::defaultEventHandler(Event* event)
 
     if (event->type() == eventNames().keypressEvent && event->isKeyboardEvent()) {
         KeyboardEvent* keyboardEvent = static_cast<KeyboardEvent*>(event);
-        if (!keyboardEvent->ctrlKey() && !keyboardEvent->altKey() && !keyboardEvent->metaKey() && isPrintableChar(keyboardEvent->charCode())) {
+        if (!keyboardEvent->ctrlKey() && !keyboardEvent->altKey() && !keyboardEvent->metaKey() && u_isprint(keyboardEvent->charCode())) {
             typeAheadFind(keyboardEvent);
             event->setDefaultHandled();
             return;
@@ -1530,7 +1537,7 @@ void HTMLSelectElement::typeAheadFind(KeyboardEvent* event)
         listBoxOnChange();
 }
 
-Node::InsertionNotificationRequest HTMLSelectElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLSelectElement::insertedInto(ContainerNode& insertionPoint)
 {
     // When the element is created during document parsing, it won't have any
     // items yet - but for innerHTML and related methods, this method is called

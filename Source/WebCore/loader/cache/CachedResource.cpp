@@ -34,7 +34,7 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
-#include "KURL.h"
+#include "URL.h"
 #include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MemoryCache.h"
@@ -230,7 +230,7 @@ CachedResource::CachedResource(const ResourceRequest& request, Type type)
 
     if (!m_resourceRequest.url().hasFragmentIdentifier())
         return;
-    KURL urlForCache = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
+    URL urlForCache = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
     if (urlForCache.hasFragmentIdentifier())
         return;
     m_fragmentIdentifierForRequest = m_resourceRequest.url().fragmentIdentifier();
@@ -344,7 +344,7 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
     // We should look into removing the expectation of that knowledge from the platform network stacks.
     ResourceRequest request(m_resourceRequest);
     if (!m_fragmentIdentifierForRequest.isNull()) {
-        KURL url = request.url();
+        URL url = request.url();
         url.setFragmentIdentifier(m_fragmentIdentifierForRequest);
         request.setURL(url);
         m_fragmentIdentifierForRequest = String();
@@ -826,6 +826,14 @@ bool CachedResource::mustRevalidateDueToCacheHeaders(CachePolicy cachePolicy) co
 
 bool CachedResource::isSafeToMakePurgeable() const
 { 
+#if ENABLE(DISK_IMAGE_CACHE)
+    // It does not make sense to have a resource in the disk image cache
+    // (memory mapped on disk) and purgeable (in memory). So do not allow
+    // disk image cached resources to be purgeable.
+    if (isUsingDiskImageCache())
+        return false;
+#endif
+
     return !hasClients() && !m_proxyResource && !m_resourceToRevalidate;
 }
 
@@ -913,6 +921,13 @@ void CachedResource::CachedResourceCallback::timerFired(Timer<CachedResourceCall
 {
     m_resource->didAddClient(m_client);
 }
+
+#if ENABLE(DISK_IMAGE_CACHE)
+bool CachedResource::isUsingDiskImageCache() const
+{
+    return m_data && m_data->isUsingDiskImageCache();
+}
+#endif
 
 #if PLATFORM(MAC)
 void CachedResource::tryReplaceEncodedData(PassRefPtr<SharedBuffer> newBuffer)

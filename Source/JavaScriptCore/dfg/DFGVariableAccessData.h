@@ -28,6 +28,7 @@
 
 #include "DFGDoubleFormatState.h"
 #include "DFGFlushFormat.h"
+#include "DFGFlushedAt.h"
 #include "DFGNodeFlags.h"
 #include "Operands.h"
 #include "SpeculatedType.h"
@@ -81,11 +82,12 @@ public:
         return m_local;
     }
     
-    int operand()
+    VirtualRegister& machineLocal()
     {
-        return static_cast<int>(local());
+        ASSERT(find() == this);
+        return m_machineLocal;
     }
-    
+
     bool mergeIsCaptured(bool isCaptured)
     {
         return checkAndSet(m_shouldNeverUnbox, m_shouldNeverUnbox | isCaptured)
@@ -230,7 +232,7 @@ public:
     {
         // We don't support this facility for arguments, yet.
         // FIXME: make this work for arguments.
-        if (operandIsArgument(operand()))
+        if (local().isArgument())
             return false;
         
         // If the variable is not a number prediction, then this doesn't
@@ -278,7 +280,7 @@ public:
     {
         ASSERT(isRoot());
         
-        if (operandIsArgument(local()) || shouldNeverUnbox())
+        if (local().isArgument() || shouldNeverUnbox())
             return DFG::mergeDoubleFormatState(m_doubleFormatState, NotUsingDoubleFormat);
         
         if (m_doubleFormatState == CantUseDoubleFormat)
@@ -333,7 +335,7 @@ public:
         if (isInt32Speculation(prediction))
             return FlushedInt32;
         
-        if (enableInt52() && !operandIsArgument(m_local) && isMachineIntSpeculation(prediction))
+        if (enableInt52() && !m_local.isArgument() && isMachineIntSpeculation(prediction))
             return FlushedInt52;
         
         if (isCellSpeculation(prediction))
@@ -345,6 +347,11 @@ public:
         return FlushedJSValue;
     }
     
+    FlushedAt flushedAt()
+    {
+        return FlushedAt(flushFormat(), machineLocal());
+    }
+    
 private:
     // This is slightly space-inefficient, since anything we're unified with
     // will have the same operand and should have the same prediction. But
@@ -352,6 +359,7 @@ private:
     // usage for variable access nodes do be significant.
 
     VirtualRegister m_local;
+    VirtualRegister m_machineLocal;
     SpeculatedType m_prediction;
     SpeculatedType m_argumentAwarePrediction;
     NodeFlags m_flags;

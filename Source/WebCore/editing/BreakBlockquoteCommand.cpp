@@ -71,7 +71,7 @@ void BreakBlockquoteCommand::doApply()
     if (!topBlockquote || !topBlockquote->parentNode() || !topBlockquote->isElementNode())
         return;
     
-    RefPtr<Element> breakNode = createBreakElement(&document());
+    RefPtr<Element> breakNode = createBreakElement(document());
 
     bool isLastVisPosInNode = isLastVisiblePositionInNode(visiblePos, topBlockquote);
 
@@ -150,7 +150,7 @@ void BreakBlockquoteCommand::doApply()
             while (listChildNode && !listChildNode->hasTagName(liTag))
                 listChildNode = listChildNode->nextSibling();
             if (listChildNode && listChildNode->renderer() && listChildNode->renderer()->isListItem())
-                setNodeAttribute(clonedChild, startAttr, String::number(toRenderListItem(listChildNode->renderer())->value()));
+                setNodeAttribute(clonedChild, startAttr, AtomicString::number(toRenderListItem(listChildNode->renderer())->value()));
         }
             
         appendNode(clonedChild.get(), clonedAncestor.get());

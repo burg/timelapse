@@ -2,7 +2,7 @@
 #
 # Copyright (C) 2011 Google Inc. All rights reserved.
 # Copyright (C) 2009 Torch Mobile Inc.
-# Copyright (C) 2009 Apple Inc. All rights reserved.
+# Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
 # Copyright (C) 2010 Chris Jerdonek (cjerdonek@webkit.org)
 #
 # Redistribution and use in source and binary forms, with or without
@@ -1738,9 +1738,7 @@ class CppStyleTest(CppStyleTestBase):
         self.assert_lint('a<Foo*> t <<= &b & &c; // Test', '')
         self.assert_lint('a<Foo*> t <<= *b / &c; // Test', '')
         self.assert_lint('if (a=b == 1)', 'Missing spaces around =  [whitespace/operators] [4]')
-        self.assert_lint('a = 1<<20', 'Missing spaces around <<  [whitespace/operators] [3]')
         self.assert_lint('if (a = b == 1)', '')
-        self.assert_lint('a = 1 << 20', '')
         self.assert_multi_line_lint('#include <sys/io.h>\n', '')
         self.assert_multi_line_lint('#import <foo/bar.h>\n', '')
 
@@ -2791,14 +2789,6 @@ class OrderOfIncludesTest(CppStyleTestBase):
                          classify_include('PrefixFooCustom.cpp',
                                           'Foo.h',
                                           False, include_state))
-        self.assertEqual(cpp_style._MOC_HEADER,
-                         classify_include('foo.cpp',
-                                          'foo.moc',
-                                          False, include_state))
-        self.assertEqual(cpp_style._MOC_HEADER,
-                         classify_include('foo.cpp',
-                                          'moc_foo.cpp',
-                                          False, include_state))
         # <public/foo.h> must be considered as primary even if is_system is True.
         self.assertEqual(cpp_style._PRIMARY_HEADER,
                          classify_include('foo/foo.cpp',
@@ -2812,11 +2802,6 @@ class OrderOfIncludesTest(CppStyleTestBase):
                          classify_include('foo.cpp',
                                           'public/foop.h',
                                           True, include_state))
-        # Qt private APIs use _p.h suffix.
-        self.assertEqual(cpp_style._PRIMARY_HEADER,
-                         classify_include('foo.cpp',
-                                          'foo_p.h',
-                                          False, include_state))
         # Tricky example where both includes might be classified as primary.
         self.assert_language_rules_check('ScrollbarThemeWince.cpp',
                                          '#include "config.h"\n'
@@ -3440,7 +3425,7 @@ class PassPtrTest(CppStyleTestBase):
             'RefPtr<Type1> myFunction(int)\n'
             '{\n'
             '}',
-            'The return type should use PassRefPtr instead of RefPtr.  [readability/pass_ptr] [5]')
+            '')
         self.assert_pass_ptr_check(
             'OwnPtr<Type1> myFunction(int)\n'
             '{\n'
@@ -4704,12 +4689,6 @@ class WebKitStyleTest(CppStyleTestBase):
 
         # There is an exception for some unit tests that begin with "tst_".
         self.assert_lint('void tst_QWebFrame::arrayObjectEnumerable(int var1, int var2)', '')
-
-        # The Qt API uses names that begin with "qt_" or "_q_".
-        self.assert_lint('void QTFrame::qt_drt_is_awesome(int var1, int var2)', '')
-        self.assert_lint('void QTFrame::_q_drt_is_awesome(int var1, int var2)', '')
-        self.assert_lint('void qt_drt_is_awesome(int var1, int var2);', '')
-        self.assert_lint('void _q_drt_is_awesome(int var1, int var2);', '')
 
         # Cairo forward-declarations should not be a failure.
         self.assert_lint('typedef struct _cairo cairo_t;', '')

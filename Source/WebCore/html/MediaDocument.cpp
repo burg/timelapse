@@ -50,21 +50,21 @@ namespace WebCore {
 using namespace HTMLNames;
 
 // FIXME: Share more code with PluginDocumentParser.
-class MediaDocumentParser : public RawDataDocumentParser {
+class MediaDocumentParser FINAL : public RawDataDocumentParser {
 public:
-    static PassRefPtr<MediaDocumentParser> create(MediaDocument* document)
+    static PassRefPtr<MediaDocumentParser> create(MediaDocument& document)
     {
         return adoptRef(new MediaDocumentParser(document));
     }
     
 private:
-    MediaDocumentParser(Document* document)
+    MediaDocumentParser(Document& document)
         : RawDataDocumentParser(document)
         , m_mediaElement(0)
     {
     }
 
-    virtual void appendBytes(DocumentWriter*, const char*, size_t);
+    virtual void appendBytes(DocumentWriter&, const char*, size_t);
 
     void createDocumentStructure();
 
@@ -109,7 +109,7 @@ void MediaDocumentParser::createDocumentStructure()
     frame->loader().activeDocumentLoader()->setMainResourceDataBufferingPolicy(DoNotBufferData);
 }
 
-void MediaDocumentParser::appendBytes(DocumentWriter*, const char*, size_t)
+void MediaDocumentParser::appendBytes(DocumentWriter&, const char*, size_t)
 {
     if (m_mediaElement)
         return;
@@ -118,7 +118,7 @@ void MediaDocumentParser::appendBytes(DocumentWriter*, const char*, size_t)
     finish();
 }
     
-MediaDocument::MediaDocument(Frame* frame, const KURL& url)
+MediaDocument::MediaDocument(Frame* frame, const URL& url)
     : HTMLDocument(frame, url, MediaDocumentClass)
     , m_replaceMediaElementTimer(this, &MediaDocument::replaceMediaElementTimerFired)
 {
@@ -133,7 +133,7 @@ MediaDocument::~MediaDocument()
 
 PassRefPtr<DocumentParser> MediaDocument::createParser()
 {
-    return MediaDocumentParser::create(this);
+    return MediaDocumentParser::create(*this);
 }
 
 static inline HTMLVideoElement* descendentVideoElement(Node* node)
@@ -230,7 +230,7 @@ void MediaDocument::replaceMediaElementTimerFired(Timer<MediaDocument>*)
         DocumentLoader* documentLoader = loader();
         ASSERT(documentLoader);
         if (documentLoader)
-            embedElement->setAttribute(typeAttr, documentLoader->writer()->mimeType());
+            embedElement->setAttribute(typeAttr, documentLoader->writer().mimeType());
 
         videoElement->parentNode()->replaceChild(embedElement, videoElement, IGNORE_EXCEPTION);
     }

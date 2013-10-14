@@ -96,7 +96,7 @@ void SVGFEImageElement::buildPendingResource()
         return;
 
     String id;
-    Element* target = SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
+    Element* target = SVGURIReference::targetElementFromIRIString(href(), document(), &id);
     if (!target) {
         if (id.isEmpty())
             requestImageResource();
@@ -174,17 +174,17 @@ void SVGFEImageElement::svgAttributeChanged(const QualifiedName& attrName)
     ASSERT_NOT_REACHED();
 }
 
-Node::InsertionNotificationRequest SVGFEImageElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGFEImageElement::insertedInto(ContainerNode& rootParent)
 {
     SVGFilterPrimitiveStandardAttributes::insertedInto(rootParent);
     buildPendingResource();
     return InsertionDone;
 }
 
-void SVGFEImageElement::removedFrom(ContainerNode* rootParent)
+void SVGFEImageElement::removedFrom(ContainerNode& rootParent)
 {
     SVGFilterPrimitiveStandardAttributes::removedFrom(rootParent);
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         clearResourceReferences();
 }
 
@@ -206,10 +206,10 @@ PassRefPtr<FilterEffect> SVGFEImageElement::build(SVGFilterBuilder*, Filter* fil
 {
     if (m_cachedImage)
         return FEImage::createWithImage(filter, m_cachedImage->imageForRenderer(renderer()), preserveAspectRatio());
-    return FEImage::createWithIRIReference(filter, &document(), href(), preserveAspectRatio());
+    return FEImage::createWithIRIReference(filter, document(), href(), preserveAspectRatio());
 }
 
-void SVGFEImageElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void SVGFEImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     SVGFilterPrimitiveStandardAttributes::addSubresourceAttributeURLs(urls);
 

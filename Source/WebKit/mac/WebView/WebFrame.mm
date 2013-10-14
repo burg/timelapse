@@ -69,7 +69,6 @@
 #import <WebCore/Editor.h>
 #import <WebCore/EventHandler.h>
 #import <WebCore/EventNames.h>
-#import <WebCore/Frame.h>
 #import <WebCore/FrameLoadRequest.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameLoaderStateMachine.h>
@@ -81,6 +80,7 @@
 #import <WebCore/HitTestResult.h>
 #import <WebCore/JSNode.h>
 #import <WebCore/LegacyWebArchive.h>
+#import <WebCore/MainFrame.h>
 #import <WebCore/Page.h>
 #import <WebCore/PlatformEventFactoryMac.h>
 #import <WebCore/PluginData.h>
@@ -721,24 +721,42 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 
 - (DOMDocumentFragment *)_documentFragmentWithMarkupString:(NSString *)markupString baseURLString:(NSString *)baseURLString 
 {
-    if (!_private->coreFrame || !_private->coreFrame->document())
+    Frame* frame = _private->coreFrame;
+    if (!frame)
         return nil;
 
-    return kit(createFragmentFromMarkup(_private->coreFrame->document(), markupString, baseURLString, DisallowScriptingContent).get());
+    Document* document = frame->document();
+    if (!document)
+        return nil;
+
+    return kit(createFragmentFromMarkup(*document, markupString, baseURLString, DisallowScriptingContent).get());
 }
 
 - (DOMDocumentFragment *)_documentFragmentWithNodesAsParagraphs:(NSArray *)nodes
 {
-    if (!_private->coreFrame || !_private->coreFrame->document())
+    Frame* frame = _private->coreFrame;
+    if (!frame)
         return nil;
-    
+
+    Document* document = frame->document();
+    if (!document)
+        return nil;
+
     NSEnumerator *nodeEnum = [nodes objectEnumerator];
     Vector<Node*> nodesVector;
     DOMNode *node;
     while ((node = [nodeEnum nextObject]))
         nodesVector.append(core(node));
-    
-    return kit(createFragmentFromNodes(_private->coreFrame->document(), nodesVector).get());
+
+    RefPtr<DocumentFragment> fragment = document->createDocumentFragment();
+
+    for (auto node : nodesVector) {
+        RefPtr<Element> element = createDefaultParagraphElement(*document);
+        element->appendChild(node, ASSERT_NO_EXCEPTION);
+        fragment->appendChild(element.release(), ASSERT_NO_EXCEPTION);
+    }
+
+    return kit(fragment.release().get());
 }
 
 - (void)_replaceSelectionWithNode:(DOMNode *)node selectReplacement:(BOOL)selectReplacement smartReplace:(BOOL)smartReplace matchStyle:(BOOL)matchStyle
@@ -803,7 +821,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 - (BOOL)_canProvideDocumentSource
 {
     Frame* frame = _private->coreFrame;
-    String mimeType = frame->document()->loader()->writer()->mimeType();
+    String mimeType = frame->document()->loader()->writer().mimeType();
     PluginData* pluginData = frame->page() ? &frame->page()->pluginData() : 0;
 
     if (WebCore::DOMImplementation::isTextMIMEType(mimeType)
@@ -980,8 +998,10 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
 }
 
 - (void)_replaceSelectionWithText:(NSString *)text selectReplacement:(BOOL)selectReplacement smartReplace:(BOOL)smartReplace
-{   
-    DOMDocumentFragment* fragment = kit(createFragmentFromText(_private->coreFrame->selection().toNormalizedRange().get(), text).get());
+{
+    RefPtr<Range> range = _private->coreFrame->selection().toNormalizedRange();
+    
+    DOMDocumentFragment* fragment = range ? kit(createFragmentFromText(*range, text).get()) : nil;
     [self _replaceSelectionWithFragment:fragment selectReplacement:selectReplacement smartReplace:smartReplace matchStyle:YES];
 }
 
@@ -1092,6 +1112,9 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     if (!string)
         return @"";
 
+    if (!world)
+        return @"";
+
     // Start off with some guess at a frame and a global object, we'll try to do better...!
     JSDOMWindow* anyWorldGlobalObject = _private->coreFrame->script().globalObject(mainThreadNormalWorld());
 
@@ -1101,11 +1124,11 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
         anyWorldGlobalObject = static_cast<JSDOMWindowShell*>(globalObjectObj)->window();
 
     // Get the frame frome the global object we've settled on.
-    Frame* frame = anyWorldGlobalObject->impl()->frame();
+    Frame* frame = anyWorldGlobalObject->impl().frame();
     ASSERT(frame->document());
     RetainPtr<WebFrame> webFrame(kit(frame)); // Running arbitrary JavaScript can destroy the frame.
 
-    JSC::JSValue result = frame->script().executeScriptInWorld(core(world), string, true).jsValue();
+    JSC::JSValue result = frame->script().executeScriptInWorld(*core(world), string, true).jsValue();
 
     if (!webFrame->_private->coreFrame) // In case the script removed our frame from the page.
         return @"";
@@ -1129,7 +1152,7 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     DOMWrapperWorld* coreWorld = core(world);
     if (!coreWorld)
         return 0;
-    return toGlobalRef(coreFrame->script().globalObject(coreWorld)->globalExec());
+    return toGlobalRef(coreFrame->script().globalObject(*coreWorld)->globalExec());
 }
 
 #if JSC_OBJC_API_ENABLED
@@ -1260,7 +1283,10 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     if (!coreFrame)
         return 0;
 
-    JSDOMWindow* globalObject = coreFrame->script().globalObject(core(world));
+    if (!world)
+        return 0;
+
+    JSDOMWindow* globalObject = coreFrame->script().globalObject(*core(world));
     JSC::ExecState* exec = globalObject->globalExec();
 
     JSC::JSLockHolder lock(exec);
@@ -1417,7 +1443,7 @@ static NSURL *createUniqueWebDataURL()
     if (!pthread_main_np())
         return [[self _webkit_invokeOnMainThread] _loadData:data MIMEType:MIMEType textEncodingName:encodingName baseURL:baseURL unreachableURL:unreachableURL];
     
-    KURL responseURL;
+    URL responseURL;
     if (!baseURL) {
         baseURL = blankURL();
         responseURL = createUniqueWebDataURL();

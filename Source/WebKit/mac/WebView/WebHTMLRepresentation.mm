@@ -58,7 +58,7 @@
 #import <WebCore/NodeTraversal.h>
 #import <WebCore/Range.h>
 #import <WebCore/RegularExpression.h>
-#import <WebCore/RenderObject.h>
+#import <WebCore/RenderElement.h>
 #import <WebCore/TextResourceDecoder.h>
 #import <WebKit/DOMHTMLInputElement.h>
 #import <wtf/Assertions.h>
@@ -274,7 +274,7 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
 
 - (NSAttributedString *)attributedStringFrom:(DOMNode *)startNode startOffset:(int)startOffset to:(DOMNode *)endNode endOffset:(int)endOffset
 {
-    return [WebHTMLConverter editingAttributedStringFromRange:Range::create(&core(startNode)->document(), core(startNode), startOffset, core(endNode), endOffset).get()];
+    return [WebHTMLConverter editingAttributedStringFromRange:Range::create(core(startNode)->document(), core(startNode), startOffset, core(endNode), endOffset).get()];
 }
 
 static HTMLFormElement* formElementFromDOMElement(DOMElement *element)

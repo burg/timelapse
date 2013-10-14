@@ -38,7 +38,6 @@
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
-#include "Frame.h"
 #include "FrameSelection.h"
 #include "FrameTree.h"
 #include "FrameView.h"
@@ -50,10 +49,10 @@
 #include "HitTestResult.h"
 #include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
+#include "MainFrame.h"
 #include "NodeRenderingTraversal.h"
 #include "Page.h"
 #include "Range.h"
-#include "RenderObject.h"
 #include "RenderWidget.h"
 #include "ScrollAnimator.h"
 #include "Settings.h"
@@ -98,7 +97,7 @@ FocusNavigationScope FocusNavigationScope::focusNavigationScopeOf(Node* node)
         root = n;
     // The result is not always a ShadowRoot nor a DocumentNode since
     // a starting node is in an orphaned tree in composed shadow tree.
-    return FocusNavigationScope(root->treeScope());
+    return FocusNavigationScope(&root->treeScope());
 }
 
 FocusNavigationScope FocusNavigationScope::focusNavigationScopeOwnedByShadowHost(Node* node)
@@ -253,7 +252,7 @@ bool FocusController::setInitialFocus(FocusDirection direction, KeyboardEvent* e
     // into the web area again, even if focus did not change within WebCore. PostNotification is called instead
     // of handleFocusedUIElementChanged, because this will send the notification even if the element is the same.
     if (AXObjectCache* cache = focusedOrMainFrame().document()->existingAXObjectCache())
-        cache->postNotification(focusedOrMainFrame().document(), AXObjectCache::AXFocusedUIElementChanged, true);
+        cache->postNotification(focusedOrMainFrame().document(), AXObjectCache::AXFocusedUIElementChanged);
 
     return didAdvanceFocus;
 }
@@ -548,7 +547,7 @@ static bool relinquishesEditingFocus(Node *node)
     if (!frame || !root)
         return false;
 
-    return frame->editor().shouldEndEditing(rangeOfContents(root).get());
+    return frame->editor().shouldEndEditing(rangeOfContents(*root).get());
 }
 
 static void clearSelectionIfNeeded(Frame* oldFocusedFrame, Frame* newFocusedFrame, Node* newFocusedNode)
@@ -612,14 +611,14 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
         return true;
     }
 
-    RefPtr<Document> newDocument = &element->document();
+    Ref<Document> newDocument(element->document());
 
     if (newDocument->focusedElement() == element) {
         m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());
         return true;
     }
     
-    if (oldDocument && oldDocument != newDocument)
+    if (oldDocument && oldDocument != &newDocument.get())
         oldDocument->setFocusedElement(0);
 
     if (newFocusedFrame && !newFocusedFrame->page()) {
@@ -629,11 +628,10 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtr<Frame> newF
     setFocusedFrame(newFocusedFrame);
 
     Ref<Element> protect(*element);
-    if (newDocument) {
-        bool successfullyFocused = newDocument->setFocusedElement(element, direction);
-        if (!successfullyFocused)
-            return false;
-    }
+
+    bool successfullyFocused = newDocument->setFocusedElement(element, direction);
+    if (!successfullyFocused)
+        return false;
 
     if (newDocument->focusedElement() == element)
         m_page.editorClient()->setInputMethodState(element->shouldUseInputMethod());

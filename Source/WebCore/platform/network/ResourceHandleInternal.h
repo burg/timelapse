@@ -54,15 +54,6 @@
 class Frame;
 #endif
 
-#if PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QWebNetworkJob;
-QT_END_NAMESPACE
-namespace WebCore {
-class QNetworkReplyHandler;
-}
-#endif
-
 #if PLATFORM(MAC)
 OBJC_CLASS NSURLAuthenticationChallenge;
 OBJC_CLASS NSURLConnection;
@@ -119,9 +110,6 @@ namespace WebCore {
             , m_bodyDataSent(0)
             , m_redirectCount(0)
 #endif
-#if PLATFORM(QT)
-            , m_job(0)
-#endif
 #if PLATFORM(MAC)
             , m_startWhenScheduled(false)
             , m_needsSiteSpecificQuirks(false)
@@ -130,7 +118,7 @@ namespace WebCore {
             , m_scheduledFailureType(ResourceHandle::NoFailure)
             , m_failureTimer(loader, &ResourceHandle::fireFailure)
         {
-            const KURL& url = m_firstRequest.url();
+            const URL& url = m_firstRequest.url();
             m_user = url.user();
             m_pass = url.pass();
             m_firstRequest.removeCredentials();
@@ -217,9 +205,6 @@ namespace WebCore {
             Credential credential;
             AuthenticationChallenge challenge;
         } m_credentialDataToSaveInPersistentStore;
-#endif
-#if PLATFORM(QT)
-        QNetworkReplyHandler* m_job;
 #endif
 
 #if PLATFORM(MAC)

@@ -25,8 +25,9 @@
 
 #import "config.h"
 #import "Color.h"
-#import "KURL.h"
+#import "URL.h"
 #import "PlatformPasteboard.h"
+#import "SharedBuffer.h"
 
 namespace WebCore {
 
@@ -94,7 +95,7 @@ Color PlatformPasteboard::color()
                     (int)([color blueComponent] * 255.0 + 0.5), (int)([color alphaComponent] * 255.0 + 0.5));    
 }
 
-KURL PlatformPasteboard::url()
+URL PlatformPasteboard::url()
 {
     return [NSURL URLFromPasteboard:m_pasteboard.get()];
 }

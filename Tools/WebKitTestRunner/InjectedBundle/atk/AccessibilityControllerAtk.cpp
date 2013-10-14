@@ -128,4 +128,26 @@ PassRefPtr<AccessibilityUIElement> AccessibilityController::focusedElement()
     return AccessibilityUIElement::create(static_cast<AtkObject*>(root));
 }
 
+bool AccessibilityController::addNotificationListener(JSValueRef functionCallback)
+{
+    if (!functionCallback)
+        return false;
+
+    // Only one global notification listener.
+    if (!m_globalNotificationHandler)
+        m_globalNotificationHandler = AccessibilityNotificationHandler::create();
+    m_globalNotificationHandler->setNotificationFunctionCallback(functionCallback);
+
+    return true;
+}
+
+bool AccessibilityController::removeNotificationListener()
+{
+    // Programmers should not be trying to remove a listener that's already removed.
+    ASSERT(m_globalNotificationHandler);
+
+    m_globalNotificationHandler = 0;
+    return false;
+}
+
 } // namespace WTR

@@ -56,10 +56,6 @@
 #include <cairo.h>
 #endif
 
-#if PLATFORM(QT)
-#include <QRawFont>
-#endif
-
 namespace WebCore {
 
 class FontDescription;
@@ -162,8 +158,8 @@ public:
     Glyph zeroGlyph() const { return m_zeroGlyph; }
     void setZeroGlyph(Glyph zeroGlyph) { m_zeroGlyph = zeroGlyph; }
 
-    virtual const SimpleFontData* fontDataForCharacter(UChar32) const;
-    virtual bool containsCharacters(const UChar*, int length) const;
+    virtual const SimpleFontData* fontDataForCharacter(UChar32) const OVERRIDE;
+    virtual bool containsCharacters(const UChar*, int length) const OVERRIDE;
 
     Glyph glyphForCharacter(UChar32) const;
 
@@ -173,15 +169,15 @@ public:
     AdditionalFontData* fontData() const { return m_fontData.get(); }
     bool isSVGFont() const { return m_fontData; }
 
-    virtual bool isCustomFont() const { return m_isCustomFont; }
-    virtual bool isLoading() const { return m_isLoading; }
-    virtual bool isSegmented() const;
+    virtual bool isCustomFont() const OVERRIDE { return m_isCustomFont; }
+    virtual bool isLoading() const OVERRIDE { return m_isLoading; }
+    virtual bool isSegmented() const OVERRIDE;
 
     const GlyphData& missingGlyphData() const { return m_missingGlyphData; }
     void setMissingGlyphData(const GlyphData& glyphData) { m_missingGlyphData = glyphData; }
 
 #ifndef NDEBUG
-    virtual String description() const;
+    virtual String description() const OVERRIDE;
 #endif
 
 #if PLATFORM(MAC)
@@ -204,9 +200,6 @@ public:
 #if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 1080
         wkCTFontTransformOptions options = (typesettingFeatures & Kerning ? wkCTFontTransformApplyPositioning : 0) | (typesettingFeatures & Ligatures ? wkCTFontTransformApplyShaping : 0);
         return wkCTFontTransformGlyphs(m_platformData.ctFont(), glyphs, reinterpret_cast<CGSize*>(advances), glyphCount, options);
-#elif PLATFORM(QT) && QT_VERSION >= 0x050100
-        QRawFont::LayoutFlags flags = (typesettingFeatures & Kerning) ? QRawFont::KernedAdvances : QRawFont::SeparateAdvances;
-        return m_platformData.rawFont().advancesForGlyphIndexes(glyphs, advances, glyphCount, flags);
 #else
         UNUSED_PARAM(glyphs);
         UNUSED_PARAM(advances);
@@ -215,10 +208,6 @@ public:
         return false;
 #endif
     }
-
-#if PLATFORM(QT)
-    QRawFont getQtRawFont() const { return m_platformData.rawFont(); }
-#endif
 
 #if PLATFORM(WIN)
     bool isSystemFont() const { return m_isSystemFont; }

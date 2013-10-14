@@ -59,25 +59,25 @@ static inline bool isRubyBeforeBlock(const RenderObject* object)
 {
     return isAnonymousRubyInlineBlock(object)
         && !object->previousSibling()
-        && object->firstChild()
-        && object->firstChild()->style()->styleType() == BEFORE;
+        && object->firstChildSlow()
+        && object->firstChildSlow()->style()->styleType() == BEFORE;
 }
 
 static inline bool isRubyAfterBlock(const RenderObject* object)
 {
     return isAnonymousRubyInlineBlock(object)
         && !object->nextSibling()
-        && object->firstChild()
-        && object->firstChild()->style()->styleType() == AFTER;
+        && object->firstChildSlow()
+        && object->firstChildSlow()->style()->styleType() == AFTER;
 }
 
-static inline RenderBlock* rubyBeforeBlock(const RenderObject* ruby)
+static inline RenderBlock* rubyBeforeBlock(const RenderElement* ruby)
 {
     RenderObject* child = ruby->firstChild();
     return isRubyBeforeBlock(child) ? toRenderBlock(child) : 0;
 }
 
-static inline RenderBlock* rubyAfterBlock(const RenderObject* ruby)
+static inline RenderBlock* rubyAfterBlock(const RenderElement* ruby)
 {
     RenderObject* child = ruby->lastChild();
     return isRubyAfterBlock(child) ? toRenderBlock(child) : 0;
@@ -91,7 +91,7 @@ static RenderBlock* createAnonymousRubyInlineBlock(RenderObject& ruby)
     return newBlock;
 }
 
-static RenderRubyRun* lastRubyRun(const RenderObject* ruby)
+static RenderRubyRun* lastRubyRun(const RenderElement* ruby)
 {
     RenderObject* child = ruby->lastChild();
     if (child && !child->isRubyRun())
@@ -121,7 +121,7 @@ RenderRubyAsInline::~RenderRubyAsInline()
 void RenderRubyAsInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderInline::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren();
+    propagateStyleToAnonymousChildren(PropagateToAllChildren);
 }
 
 void RenderRubyAsInline::addChild(RenderObject* child, RenderObject* beforeChild)
@@ -227,7 +227,7 @@ RenderRubyAsBlock::~RenderRubyAsBlock()
 void RenderRubyAsBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren();
+    propagateStyleToAnonymousChildren(PropagateToAllChildren);
 }
 
 void RenderRubyAsBlock::addChild(RenderObject* child, RenderObject* beforeChild)

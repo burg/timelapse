@@ -27,10 +27,7 @@
 #include "ChildProcess.h"
 
 #include "SandboxInitializationParameters.h"
-
-#if !OS(WINDOWS)
 #include <unistd.h>
-#endif
 
 using namespace WebCore;
 
@@ -152,11 +149,16 @@ void ChildProcess::terminationTimerFired()
     terminate();
 }
 
+void ChildProcess::stopRunLoop()
+{
+    RunLoop::main()->stop();
+}
+
 void ChildProcess::terminate()
 {
     m_connection->invalidate();
 
-    RunLoop::main()->stop();
+    stopRunLoop();
 }
 
 #if !PLATFORM(MAC)

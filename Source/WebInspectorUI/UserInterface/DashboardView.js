@@ -93,11 +93,7 @@ WebInspector.DashboardView.prototype = {
 
     set logs(logs)
     {
-        this._logs = logs;
-
-        var item = this._items.logs;
-        item.text = this._formatPossibleLargeNumber(logs);
-        this._setItemEnabled(item, logs > 0);
+        this._setConsoleItemValue("logs", logs);
     },
 
     get issues()
@@ -107,11 +103,7 @@ WebInspector.DashboardView.prototype = {
 
     set issues(issues)
     {
-        this._issues = issues;
-
-        var item = this._items.issues;
-        item.text = this._formatPossibleLargeNumber(issues);
-        this._setItemEnabled(item, issues > 0);
+        this._setConsoleItemValue("issues", issues);
     },
 
     get errors()
@@ -121,11 +113,7 @@ WebInspector.DashboardView.prototype = {
 
     set errors(errors)
     {
-        this._errors = errors;
-
-        var item = this._items.errors;
-        item.text = this._formatPossibleLargeNumber(errors);
-        this._setItemEnabled(item, errors > 0);
+        this._setConsoleItemValue("errors", errors);
     },
 
     set time(time)
@@ -267,6 +255,40 @@ WebInspector.DashboardView.prototype = {
         WebInspector.showConsoleView(scope);
     },
 
+    _setConsoleItemValue: function(itemName, newValue)
+    {
+        var iVarName = "_" + itemName;
+        var previousValue = this[iVarName];
+        this[iVarName] = newValue;
+
+        var item = this._items[itemName];
+        item.text = this._formatPossibleLargeNumber(newValue);
+        this._setItemEnabled(item, newValue > 0);
+
+        if (newValue <= previousValue)
+            return;
+
+        var container = item.container;
+
+        function animationEnded(event)
+        {
+            if (event.target === container) {
+                container.classList.remove("pulsing");
+                container.removeEventListener("webkitAnimationEnd", animationEnded);
+            }
+        }
+
+        // We need to force a style invalidation in the case where we already
+        // were animating this item after we've removed the pulsing CSS class.
+        if (container.classList.contains("pulsing")) {
+            container.classList.remove("pulsing");
+            container.recalculateStyles();
+        } else
+            container.addEventListener("webkitAnimationEnd", animationEnded);
+
+        container.classList.add("pulsing");
+    },
+
     _replayItemWasClicked: function(event)
     {
         if (event.target !== this._replayStateButton) {
@@ -283,7 +305,6 @@ WebInspector.DashboardView.prototype = {
         this._replayStateButtonTemporarilyLocked = true;
 
         switch (WebInspector.replayManager.replayState) {
-
         case WebInspector.ReplayManager.ReplayState.ReplayPausedAtInput:
         case WebInspector.ReplayManager.ReplayState.CanReplay:
             WebInspector.replayManager.replayToCompletionSoon(false, WebInspector.ReplayManager.ReplaySpeed.Normal);

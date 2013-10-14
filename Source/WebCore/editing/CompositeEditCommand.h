@@ -40,11 +40,11 @@ class Text;
 
 class EditCommandComposition : public UndoStep {
 public:
-    static PassRefPtr<EditCommandComposition> create(Document*, const VisibleSelection&, const VisibleSelection&, EditAction);
+    static PassRefPtr<EditCommandComposition> create(Document&, const VisibleSelection&, const VisibleSelection&, EditAction);
 
     virtual void unapply() OVERRIDE;
     virtual void reapply() OVERRIDE;
-    EditAction editingAction() const OVERRIDE { return m_editAction; }
+    virtual EditAction editingAction() const OVERRIDE { return m_editAction; }
     void append(SimpleEditCommand*);
     bool wasCreateLinkCommand() const { return m_editAction == EditActionCreateLink; }
 
@@ -60,7 +60,7 @@ public:
 #endif
 
 private:
-    EditCommandComposition(Document*, const VisibleSelection& startingSelection, const VisibleSelection& endingSelection, EditAction);
+    EditCommandComposition(Document&, const VisibleSelection& startingSelection, const VisibleSelection& endingSelection, EditAction);
 
     RefPtr<Document> m_document;
     VisibleSelection m_startingSelection;
@@ -152,7 +152,7 @@ protected:
 
     PassRefPtr<Node> moveParagraphContentsToNewBlockIfNecessary(const Position&);
     
-    void pushAnchorElementDown(Node*);
+    void pushAnchorElementDown(Element&);
     
     void moveParagraph(const VisiblePosition&, const VisiblePosition&, const VisiblePosition&, bool preserveSelection = false, bool preserveStyle = true);
     void moveParagraphs(const VisiblePosition&, const VisiblePosition&, const VisiblePosition&, bool preserveSelection = false, bool preserveStyle = true);
@@ -170,7 +170,7 @@ protected:
     Vector<RefPtr<EditCommand> > m_commands;
 
 private:
-    bool isCompositeEditCommand() const OVERRIDE { return true; }
+    virtual bool isCompositeEditCommand() const OVERRIDE { return true; }
 
     RefPtr<EditCommandComposition> m_composition;
 };

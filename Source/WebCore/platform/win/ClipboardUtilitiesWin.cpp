@@ -27,7 +27,7 @@
 #include "ClipboardUtilitiesWin.h"
 
 #include "DocumentFragment.h"
-#include "KURL.h"
+#include "URL.h"
 #include "TextEncoding.h"
 #include "markup.h"
 #include <shlobj.h>
@@ -173,7 +173,7 @@ static FORMATETC* texthtmlFormat()
     return &texthtmlFormat;
 }
 
-HGLOBAL createGlobalData(const KURL& url, const String& title)
+HGLOBAL createGlobalData(const URL& url, const String& title)
 {
     String mutableURL(url.string());
     String mutableTitle(title);
@@ -641,7 +641,7 @@ PassRefPtr<DocumentFragment> fragmentFromCFHTML(Document* doc, const String& cfh
     }
 
     String markup = extractMarkupFromCFHTML(cfhtml);
-    return createFragmentFromMarkup(doc, markup, srcURL, DisallowScriptingAndPluginContent);
+    return createFragmentFromMarkup(*doc, markup, srcURL, DisallowScriptingAndPluginContent);
 }
 
 PassRefPtr<DocumentFragment> fragmentFromHTML(Document* doc, IDataObject* data) 
@@ -658,7 +658,7 @@ PassRefPtr<DocumentFragment> fragmentFromHTML(Document* doc, IDataObject* data)
     String html = getTextHTML(data);
     String srcURL;
     if (!html.isEmpty())
-        return createFragmentFromMarkup(doc, html, srcURL, DisallowScriptingAndPluginContent);
+        return createFragmentFromMarkup(*doc, html, srcURL, DisallowScriptingAndPluginContent);
 
     return 0;
 }
@@ -676,7 +676,7 @@ PassRefPtr<DocumentFragment> fragmentFromHTML(Document* document, const DragData
 
     String srcURL;
     if (getDataMapItem(data, texthtmlFormat(), stringData))
-        return createFragmentFromMarkup(document, stringData, srcURL, DisallowScriptingAndPluginContent);
+        return createFragmentFromMarkup(*document, stringData, srcURL, DisallowScriptingAndPluginContent);
 
     return 0;
 }

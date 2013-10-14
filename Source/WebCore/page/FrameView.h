@@ -45,10 +45,11 @@ class Event;
 class FloatSize;
 class Frame;
 class HTMLFrameOwnerElement;
-class KURL;
+class URL;
 class Node;
 class Page;
 class RenderBox;
+class RenderElement;
 class RenderEmbeddedObject;
 class RenderLayer;
 class RenderObject;
@@ -105,13 +106,13 @@ public:
     bool didFirstLayout() const;
     void layoutTimerFired(Timer<FrameView>*);
     void scheduleRelayout();
-    void scheduleRelayoutOfSubtree(RenderObject&);
+    void scheduleRelayoutOfSubtree(RenderElement&);
     void unscheduleRelayout();
     bool layoutPending() const;
     bool isInLayout() const { return m_inLayout; }
 
     RenderObject* layoutRoot(bool onlyDuringLayout = false) const;
-    void clearLayoutRoot() { m_layoutRoot = 0; }
+    void clearLayoutRoot() { m_layoutRoot = nullptr; }
     int layoutCount() const { return m_layoutCount; }
 
     bool needsLayout() const;
@@ -197,7 +198,6 @@ public:
     void scrollPositionChangedViaPlatformWidget();
     virtual void repaintFixedElementsAfterScrolling() OVERRIDE;
     virtual void updateFixedElementsAfterScrolling() OVERRIDE;
-    virtual bool shouldRubberBandInDirection(ScrollDirection) const OVERRIDE;
     virtual bool requestScrollPositionUpdate(const IntPoint&) OVERRIDE;
     virtual bool isRubberBandInProgress() const OVERRIDE;
     virtual IntPoint minimumScrollPosition() const OVERRIDE;
@@ -217,15 +217,15 @@ public:
     bool isOverlappedIncludingAncestors() const;
     void setContentIsOpaque(bool);
 
-    void addSlowRepaintObject(RenderObject*);
-    void removeSlowRepaintObject(RenderObject*);
-    bool hasSlowRepaintObject(RenderObject* o) const { return m_slowRepaintObjects && m_slowRepaintObjects->contains(o); }
+    void addSlowRepaintObject(RenderElement*);
+    void removeSlowRepaintObject(RenderElement*);
+    bool hasSlowRepaintObject(RenderElement* o) const { return m_slowRepaintObjects && m_slowRepaintObjects->contains(o); }
     bool hasSlowRepaintObjects() const { return m_slowRepaintObjects && m_slowRepaintObjects->size(); }
 
     // Includes fixed- and sticky-position objects.
-    typedef HashSet<RenderObject*> ViewportConstrainedObjectSet;
-    void addViewportConstrainedObject(RenderObject*);
-    void removeViewportConstrainedObject(RenderObject*);
+    typedef HashSet<RenderElement*> ViewportConstrainedObjectSet;
+    void addViewportConstrainedObject(RenderElement*);
+    void removeViewportConstrainedObject(RenderElement*);
     const ViewportConstrainedObjectSet* viewportConstrainedObjects() const { return m_viewportConstrainedObjects.get(); }
     bool hasViewportConstrainedObjects() const { return m_viewportConstrainedObjects && m_viewportConstrainedObjects->size() > 0; }
 
@@ -246,10 +246,6 @@ public:
 
     void updateLayerFlushThrottlingInAllFrames();
     void adjustTiledBackingCoverage();
-
-    void beginDisableRepaints();
-    void endDisableRepaints();
-    bool repaintsDisabled() { return m_disableRepaints > 0; }
 
 #if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     void updateAnnotatedRegions();
@@ -325,16 +321,16 @@ public:
     // NO OTHER PLATFORM BESIDES MAC SHOULD USE THIS METHOD.
     void adjustPageHeightDeprecated(float* newBottom, float oldTop, float oldBottom, float bottomLimit);
 
-    bool scrollToFragment(const KURL&);
+    bool scrollToFragment(const URL&);
     bool scrollToAnchor(const String&);
     void maintainScrollPositionAtAnchor(Node*);
     void scrollElementToRect(Element*, const IntRect&);
 
     // Methods to convert points and rects between the coordinate space of the renderer, and this view.
-    IntRect convertFromRenderer(const RenderObject*, const IntRect&) const;
-    IntRect convertToRenderer(const RenderObject*, const IntRect&) const;
-    IntPoint convertFromRenderer(const RenderObject*, const IntPoint&) const;
-    IntPoint convertToRenderer(const RenderObject*, const IntPoint&) const;
+    IntRect convertFromRenderer(const RenderElement*, const IntRect&) const;
+    IntRect convertToRenderer(const RenderElement*, const IntRect&) const;
+    IntPoint convertFromRenderer(const RenderElement*, const IntPoint&) const;
+    IntPoint convertToRenderer(const RenderElement*, const IntPoint&) const;
 
     bool isFrameViewScrollCorner(RenderScrollbarPart* scrollCorner) const { return m_scrollCorner == scrollCorner; }
 
@@ -356,15 +352,11 @@ public:
     virtual bool isHandlingWheelEvent() const OVERRIDE;
     bool shouldSetCursor() const;
 
-    virtual bool scrollbarsCanBeActive() const OVERRIDE;
-
     // FIXME: Remove this method once plugin loading is decoupled from layout.
     void flushAnyPendingPostLayoutTasks();
 
     virtual bool shouldSuspendScrollAnimations() const OVERRIDE;
     virtual void scrollbarStyleChanged(int newStyle, bool forceUpdate) OVERRIDE;
-
-    void setAnimatorsAreActive();
 
     RenderBox* embeddedContentBox() const;
     
@@ -409,6 +401,7 @@ public:
 #endif
 
     virtual bool isActive() const OVERRIDE;
+    virtual bool updatesScrollLayerPositionOnMainThread() const OVERRIDE;
 
 #if ENABLE(RUBBER_BANDING)
     GraphicsLayer* setWantsLayerForTopOverHangArea(bool) const;
@@ -423,10 +416,6 @@ public:
     virtual void willStartLiveResize() OVERRIDE;
     virtual void willEndLiveResize() OVERRIDE;
 
-#if USE(ACCELERATED_COMPOSITING)
-    virtual bool scrollbarAnimationsAreSuppressed() const OVERRIDE;
-#endif
-
     void addPaintPendingMilestones(LayoutMilestones);
     void firePaintRelatedMilestones();
     LayoutMilestones milestonesPendingPaint() const { return m_milestonesPendingPaint; }
@@ -434,13 +423,13 @@ public:
     bool visualUpdatesAllowedByClient() const { return m_visualUpdatesAllowedByClient; }
     void setVisualUpdatesAllowedByClient(bool);
 
-    void resumeAnimatingImages();
-    
     void setScrollPinningBehavior(ScrollPinningBehavior);
 
     void updateWidgetPositions();
     void didAddWidgetToRenderTree(Widget&);
     void willRemoveWidgetFromRenderTree(Widget&);
+
+    void addTrackedRepaintRect(const IntRect&);
 
 protected:
     virtual bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect) OVERRIDE;
@@ -459,8 +448,6 @@ private:
 
     virtual bool isFrameView() const OVERRIDE { return true; }
 
-    bool isMainFrameView() const;
-
     friend class RenderWidget;
     bool useSlowRepaints(bool considerOverlap = true) const;
     bool useSlowRepaintsIfNotOverlapped() const;
@@ -469,7 +456,7 @@ private:
 
     bool shouldUpdateFixedElementsAfterScrolling();
 
-    void applyOverflowToViewport(RenderObject*, ScrollbarMode& hMode, ScrollbarMode& vMode);
+    void applyOverflowToViewport(RenderElement*, ScrollbarMode& hMode, ScrollbarMode& vMode);
     void applyPaginationToViewport();
 
     void updateOverflowStatus(bool horizontalOverflow, bool verticalOverflow);
@@ -521,7 +508,7 @@ private:
 
     void updateScrollableAreaSet();
 
-    virtual void notifyPageThatContentAreaWillPaint() const;
+    virtual void notifyPageThatContentAreaWillPaint() const OVERRIDE;
 
     bool shouldUseLoadTimeDeferredRepaintDelay() const;
     void deferredRepaintTimerFired(Timer<FrameView>*);
@@ -561,8 +548,7 @@ private:
     OwnPtr<ListHashSet<RenderEmbeddedObject*>> m_embeddedObjectsToUpdate;
     const RefPtr<Frame> m_frame;
 
-    typedef HashSet<RenderObject*> RenderObjectSet;
-    OwnPtr<RenderObjectSet> m_slowRepaintObjects;
+    OwnPtr<HashSet<RenderElement*>> m_slowRepaintObjects;
 
     bool m_needsFullRepaint;
     
@@ -576,7 +562,7 @@ private:
 
     Timer<FrameView> m_layoutTimer;
     bool m_delayedLayout;
-    RenderObject* m_layoutRoot;
+    RenderElement* m_layoutRoot;
     
     bool m_layoutSchedulingEnabled;
     bool m_inLayout;
@@ -599,7 +585,7 @@ private:
     bool m_overflowStatusDirty;
     bool m_horizontalOverflow;
     bool m_verticalOverflow;    
-    RenderObject* m_viewportRenderer;
+    RenderElement* m_viewportRenderer;
 
     Pagination m_pagination;
 
@@ -613,8 +599,6 @@ private:
     Timer<FrameView> m_deferredRepaintTimer;
     double m_deferredRepaintDelay;
     double m_lastPaintTime;
-
-    unsigned m_disableRepaints;
 
     bool m_isTrackingRepaints; // Used for testing.
     Vector<IntRect> m_trackedRepaintRects;

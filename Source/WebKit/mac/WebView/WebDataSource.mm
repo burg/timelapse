@@ -49,7 +49,7 @@
 #import "WebViewInternal.h"
 #import <WebCore/ApplicationCacheStorage.h>
 #import <WebCore/FrameLoader.h>
-#import <WebCore/KURL.h>
+#import <WebCore/URL.h>
 #import <WebCore/LegacyWebArchive.h>
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/ResourceBuffer.h>
@@ -96,6 +96,17 @@ static inline WebDataSourcePrivate* toPrivate(void* privateAttribute)
 {
     return reinterpret_cast<WebDataSourcePrivate*>(privateAttribute);
 }
+
+#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
+static void BufferMemoryMapped(PassRefPtr<SharedBuffer> buffer, SharedBuffer::CompletionStatus mapStatus, SharedBuffer::MemoryMappedNotifyCallbackData data)
+{
+    NSObject<WebDataSourcePrivateDelegate> *delegate = [(WebDataSource *)data dataSourceDelegate];
+    if (mapStatus == SharedBuffer::Succeeded)
+        [delegate dataSourceMemoryMapped];
+    else
+        [delegate dataSourceMemoryMapFailed];
+}
+#endif
 
 @interface WebDataSource (WebFileInternal)
 @end
@@ -196,6 +207,48 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
     toPrivate(_private)->loader->setDeferMainResourceDataLoad(flag);
 }
+
+#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
+- (void)_setAllowToBeMemoryMapped
+{
+    RefPtr<ResourceBuffer> mainResourceBuffer = toPrivate(_private)->loader->mainResourceData();
+    if (!mainResourceBuffer)
+        return;
+
+    RefPtr<SharedBuffer> mainResourceData = mainResourceBuffer->sharedBuffer();
+    if (!mainResourceData)
+        return;
+
+    if (mainResourceData->memoryMappedNotificationCallback() != BufferMemoryMapped) {
+        ASSERT(!mainResourceData->memoryMappedNotificationCallback() && !mainResourceData->memoryMappedNotificationCallbackData());
+        mainResourceData->setMemoryMappedNotificationCallback(BufferMemoryMapped, self);
+    }
+
+    switch (mainResourceData->allowToBeMemoryMapped()) {
+    case SharedBuffer::SuccessAlreadyMapped:
+        [[self dataSourceDelegate] dataSourceMemoryMapped];
+        return;
+    case SharedBuffer::PreviouslyQueuedForMapping:
+    case SharedBuffer::QueuedForMapping:
+        return;
+    case SharedBuffer::FailureCacheFull:
+        [[self dataSourceDelegate] dataSourceMemoryMapFailed];
+        return;
+    }
+    ASSERT_NOT_REACHED();
+}
+
+- (void)setDataSourceDelegate:(NSObject<WebDataSourcePrivateDelegate> *)delegate
+{
+    ASSERT(!toPrivate(_private)->_dataSourceDelegate);
+    toPrivate(_private)->_dataSourceDelegate = delegate;
+}
+
+- (NSObject<WebDataSourcePrivateDelegate> *)dataSourceDelegate
+{
+    return toPrivate(_private)->_dataSourceDelegate;
+}
+#endif // ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
 
 @end
 
@@ -312,7 +365,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 // May return nil if not initialized with a URL.
 - (NSURL *)_URL
 {
-    const KURL& url = toPrivate(_private)->loader->url();
+    const URL& url = toPrivate(_private)->loader->url();
     if (url.isEmpty())
         return nil;
     return url;
@@ -382,6 +435,20 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
     if (toPrivate(_private) && toPrivate(_private)->includedInWebKitStatistics)
         --WebDataSourceCount;
+
+#if ENABLE(DISK_IMAGE_CACHE) && PLATFORM(IOS)
+    if (_private) {
+        RefPtr<ResourceBuffer> mainResourceBuffer = toPrivate(_private)->loader->mainResourceData();
+        if (mainResourceBuffer) {
+            RefPtr<SharedBuffer> mainResourceData = mainResourceBuffer->sharedBuffer();
+            if (mainResourceData && 
+                mainResourceData->memoryMappedNotificationCallbackData() == self &&
+                mainResourceData->memoryMappedNotificationCallback() == BufferMemoryMapped) {
+                mainResourceData->setMemoryMappedNotificationCallback(nullptr, nullptr);
+            }
+        }
+    }
+#endif
 
     delete toPrivate(_private);
 
@@ -462,7 +529,7 @@ static inline void addTypesFromClass(NSMutableDictionary *allTypes, Class objCCl
 
 - (NSURL *)unreachableURL
 {
-    const KURL& unreachableURL = toPrivate(_private)->loader->unreachableURL();
+    const URL& unreachableURL = toPrivate(_private)->loader->unreachableURL();
     if (unreachableURL.isEmpty())
         return nil;
     return unreachableURL;

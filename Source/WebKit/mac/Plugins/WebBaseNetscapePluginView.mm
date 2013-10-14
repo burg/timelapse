@@ -67,8 +67,6 @@
 #define LoginWindowDidSwitchFromUserNotification    @"WebLoginWindowDidSwitchFromUserNotification"
 #define LoginWindowDidSwitchToUserNotification      @"WebLoginWindowDidSwitchToUserNotification"
 
-static const NSTimeInterval ClearSubstituteImageDelay = 0.5;
-
 using namespace WebCore;
 
 @implementation WebBaseNetscapePluginView
@@ -304,11 +302,6 @@ using namespace WebCore;
     // WebCore may impose an additional clip (via CSS overflow or clip properties).  Fetch
     // that clip now.    
     return NSIntersectionRect([self convertRect:[self _windowClipRect] fromView:nil], [super visibleRect]);
-}
-
-- (void)visibleRectDidChange
-{
-    [self renewGState];
 }
 
 - (BOOL)acceptsFirstResponder
@@ -766,16 +759,25 @@ using namespace WebCore;
     switch (sourceSpace) {
         case NPCoordinateSpacePlugin:
             sourcePointInScreenSpace = [self convertPoint:sourcePoint toView:nil];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePointInScreenSpace];
+#pragma clang diagnostic pop
             break;
             
         case NPCoordinateSpaceWindow:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePoint];
+#pragma clang diagnostic pop
             break;
             
         case NPCoordinateSpaceFlippedWindow:
             sourcePoint.y = [[self currentWindow] frame].size.height - sourcePoint.y;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             sourcePointInScreenSpace = [[self currentWindow] convertBaseToScreen:sourcePoint];
+#pragma clang diagnostic pop
             break;
             
         case NPCoordinateSpaceScreen:
@@ -795,16 +797,25 @@ using namespace WebCore;
     // Then convert back to the destination space
     switch (destSpace) {
         case NPCoordinateSpacePlugin:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
+#pragma clang diagnostic pop
             destPoint = [self convertPoint:destPoint fromView:nil];
             break;
             
         case NPCoordinateSpaceWindow:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
+#pragma clang diagnostic pop
             break;
             
         case NPCoordinateSpaceFlippedWindow:
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
             destPoint = [[self currentWindow] convertScreenToBase:sourcePointInScreenSpace];
+#pragma clang diagnostic pop
             destPoint.y = [[self currentWindow] frame].size.height - destPoint.y;
             break;
             
@@ -847,7 +858,7 @@ using namespace WebCore;
     if (!frame->document()->securityOrigin()->canAccess(targetFrame->document()->securityOrigin()))
         return CString();
   
-    KURL absoluteURL = targetFrame->document()->completeURL(relativeURLString);
+    URL absoluteURL = targetFrame->document()->completeURL(relativeURLString);
     return absoluteURL.string().utf8();
 }
 

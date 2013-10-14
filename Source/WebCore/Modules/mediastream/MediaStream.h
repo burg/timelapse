@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +42,9 @@
 
 namespace WebCore {
 
-class MediaStream : public RefCounted<MediaStream>, public URLRegistrable, public ScriptWrappable, public MediaStreamDescriptorClient, public EventTarget, public ContextDestructionObserver {
+class MediaStreamCenter;
+
+class MediaStream FINAL : public RefCounted<MediaStream>, public URLRegistrable, public ScriptWrappable, public MediaStreamDescriptorClient, public EventTargetWithInlineData, public ContextDestructionObserver {
 public:
     static PassRefPtr<MediaStream> create(ScriptExecutionContext*);
     static PassRefPtr<MediaStream> create(ScriptExecutionContext*, PassRefPtr<MediaStream>);
@@ -59,21 +62,18 @@ public:
     MediaStreamTrackVector getVideoTracks() const { return m_videoTracks; }
 
     bool ended() const;
-    void stop();
+    void setEnded();
+    PassRefPtr<MediaStream> clone();
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(ended);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(addtrack);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(removetrack);
 
-    // MediaStreamDescriptorClient
-    virtual void trackEnded() OVERRIDE;
-    virtual void streamEnded() OVERRIDE;
-
     MediaStreamDescriptor* descriptor() const { return m_descriptor.get(); }
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const OVERRIDE;
-    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const FINAL { return MediaStreamEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const FINAL { return ContextDestructionObserver::scriptExecutionContext(); }
 
     using RefCounted<MediaStream>::ref;
     using RefCounted<MediaStream>::deref;
@@ -84,35 +84,31 @@ public:
 protected:
     MediaStream(ScriptExecutionContext*, PassRefPtr<MediaStreamDescriptor>);
 
-    // EventTarget
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
-
     // ContextDestructionObserver
-    virtual void contextDestroyed();
+    virtual void contextDestroyed() OVERRIDE FINAL;
 
 private:
     // EventTarget
-    virtual void refEventTarget() OVERRIDE { ref(); }
-    virtual void derefEventTarget() OVERRIDE { deref(); }
+    virtual void refEventTarget() OVERRIDE FINAL { ref(); }
+    virtual void derefEventTarget() OVERRIDE FINAL { deref(); }
 
     // MediaStreamDescriptorClient
-    virtual void addRemoteTrack(MediaStreamComponent*) OVERRIDE;
-    virtual void removeRemoteTrack(MediaStreamComponent*) OVERRIDE;
+    virtual void trackDidEnd() OVERRIDE FINAL;
+    virtual void streamDidEnd() OVERRIDE FINAL;
+    virtual void addRemoteSource(MediaStreamSource*) OVERRIDE FINAL;
+    virtual void removeRemoteSource(MediaStreamSource*) OVERRIDE FINAL;
 
     void scheduleDispatchEvent(PassRefPtr<Event>);
     void scheduledEventTimerFired(Timer<MediaStream>*);
 
-    bool m_stopped;
+    void cloneMediaStreamTrackVector(MediaStreamTrackVector&, const MediaStreamTrackVector&);
 
-    EventTargetData m_eventTargetData;
-
+    RefPtr<MediaStreamDescriptor> m_descriptor;
     MediaStreamTrackVector m_audioTracks;
     MediaStreamTrackVector m_videoTracks;
-    RefPtr<MediaStreamDescriptor> m_descriptor;
 
     Timer<MediaStream> m_scheduledEventTimer;
-    Vector<RefPtr<Event> > m_scheduledEvents;
+    Vector<RefPtr<Event>> m_scheduledEvents;
 };
 
 typedef Vector<RefPtr<MediaStream> > MediaStreamVector;

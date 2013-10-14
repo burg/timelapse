@@ -134,7 +134,9 @@ void DeleteSelectionCommand::initializeStartEnd(Position& start, Position& end)
         
         if (!startSpecialContainer && !endSpecialContainer)
             break;
-            
+
+        m_mergeBlocksAfterDelete = false;
+
         if (VisiblePosition(start) != m_selectionToDelete.visibleStart() || VisiblePosition(end) != m_selectionToDelete.visibleEnd())
             break;
 
@@ -627,7 +629,7 @@ void DeleteSelectionCommand::mergeParagraphs()
     
     // We need to merge into m_upstreamStart's block, but it's been emptied out and collapsed by deletion.
     if (!mergeDestination.deepEquivalent().deprecatedNode() || !mergeDestination.deepEquivalent().deprecatedNode()->isDescendantOf(enclosingBlock(m_upstreamStart.containerNode())) || m_startsAtEmptyLine) {
-        insertNodeAt(createBreakElement(&document()).get(), m_upstreamStart);
+        insertNodeAt(createBreakElement(document()).get(), m_upstreamStart);
         mergeDestination = VisiblePosition(m_upstreamStart);
     }
     
@@ -657,8 +659,8 @@ void DeleteSelectionCommand::mergeParagraphs()
         return;
     }
     
-    RefPtr<Range> range = Range::create(&document(), startOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent(), endOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent());
-    RefPtr<Range> rangeToBeReplaced = Range::create(&document(), mergeDestination.deepEquivalent().parentAnchoredEquivalent(), mergeDestination.deepEquivalent().parentAnchoredEquivalent());
+    RefPtr<Range> range = Range::create(document(), startOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent(), endOfParagraphToMove.deepEquivalent().parentAnchoredEquivalent());
+    RefPtr<Range> rangeToBeReplaced = Range::create(document(), mergeDestination.deepEquivalent().parentAnchoredEquivalent(), mergeDestination.deepEquivalent().parentAnchoredEquivalent());
     if (!frame().editor().client()->shouldMoveRangeAfterDelete(range.get(), rangeToBeReplaced.get()))
         return;
     
@@ -760,7 +762,7 @@ String DeleteSelectionCommand::originalStringForAutocorrectionAtBeginningOfSelec
     if (nextPosition.isNull())
         return String();
 
-    RefPtr<Range> rangeOfFirstCharacter = Range::create(&document(), startOfSelection.deepEquivalent(), nextPosition.deepEquivalent());
+    RefPtr<Range> rangeOfFirstCharacter = Range::create(document(), startOfSelection.deepEquivalent(), nextPosition.deepEquivalent());
     Vector<DocumentMarker*> markers = document().markers().markersInRange(rangeOfFirstCharacter.get(), DocumentMarker::Autocorrected);
     for (size_t i = 0; i < markers.size(); ++i) {
         const DocumentMarker* marker = markers[i];
@@ -851,7 +853,7 @@ void DeleteSelectionCommand::doApply()
     
     removePreviouslySelectedEmptyTableRows();
     
-    RefPtr<Node> placeholder = m_needPlaceholder ? createBreakElement(&document()).get() : 0;
+    RefPtr<Node> placeholder = m_needPlaceholder ? createBreakElement(document()).get() : 0;
     
     if (placeholder) {
         if (m_sanitizeMarkup)

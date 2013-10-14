@@ -64,6 +64,7 @@ namespace WebCore {
     class HTMLFrameOwnerElement;
     class HTMLTableCellElement;
     class IntRect;
+    class MainFrame;
     class Node;
     class Range;
     class RegularExpression;
@@ -100,7 +101,7 @@ namespace WebCore {
             bool useFixedLayout = false, ScrollbarMode = ScrollbarAuto, bool horizontalLock = false,
             ScrollbarMode = ScrollbarAuto, bool verticalLock = false);
 
-        ~Frame();
+        virtual ~Frame();
 
         void addDestructionObserver(FrameDestructionObserver*);
         void removeDestructionObserver(FrameDestructionObserver*);
@@ -108,6 +109,9 @@ namespace WebCore {
         void willDetachPage();
         void detachFromPage();
         void disconnectOwnerElement();
+
+        MainFrame& mainFrame() const;
+        bool isMainFrame() const;
 
         Page* page() const;
         HTMLFrameOwnerElement* ownerElement() const;
@@ -193,17 +197,19 @@ namespace WebCore {
         void resumeActiveDOMObjectsAndAnimations();
         bool activeDOMObjectsAndAnimationsSuspended() const { return m_activeDOMObjectsAndAnimationsSuspendedCount > 0; }
 
-        bool isURLAllowed(const KURL&) const;
+        bool isURLAllowed(const URL&) const;
 
     // ========
 
-    private:
-        Frame(Page*, HTMLFrameOwnerElement*, FrameLoaderClient*);
+    protected:
+        Frame(Page&, HTMLFrameOwnerElement*, FrameLoaderClient&);
 
-        void injectUserScriptsForWorld(DOMWrapperWorld*, const UserScriptVector&, UserScriptInjectionTime);
+    private:
+        void injectUserScriptsForWorld(DOMWrapperWorld&, const UserScriptVector&, UserScriptInjectionTime);
 
         HashSet<FrameDestructionObserver*> m_destructionObservers;
 
+        MainFrame& m_mainFrame;
         Page* m_page;
         const RefPtr<Settings> m_settings;
         mutable FrameTree m_treeNode;
@@ -214,11 +220,11 @@ namespace WebCore {
         RefPtr<FrameView> m_view;
         RefPtr<Document> m_doc;
 
-        const OwnPtr<ScriptController> m_script;
+        const std::unique_ptr<ScriptController> m_script;
         const OwnPtr<Editor> m_editor;
         const OwnPtr<FrameSelection> m_selection;
         const OwnPtr<EventHandler> m_eventHandler;
-        const OwnPtr<AnimationController> m_animationController;
+        const std::unique_ptr<AnimationController> m_animationController;
 
 #if ENABLE(IOS_TEXT_AUTOSIZING)
         float m_textAutosizingWidth;
@@ -242,12 +248,12 @@ namespace WebCore {
 
     private:
         // TiledBackingStoreClient interface
-        virtual void tiledBackingStorePaintBegin();
-        virtual void tiledBackingStorePaint(GraphicsContext*, const IntRect&);
-        virtual void tiledBackingStorePaintEnd(const Vector<IntRect>& paintedArea);
-        virtual IntRect tiledBackingStoreContentsRect();
-        virtual IntRect tiledBackingStoreVisibleRect();
-        virtual Color tiledBackingStoreBackgroundColor() const;
+        virtual void tiledBackingStorePaintBegin() OVERRIDE FINAL;
+        virtual void tiledBackingStorePaint(GraphicsContext*, const IntRect&) OVERRIDE FINAL;
+        virtual void tiledBackingStorePaintEnd(const Vector<IntRect>& paintedArea) OVERRIDE FINAL;
+        virtual IntRect tiledBackingStoreContentsRect() OVERRIDE FINAL;
+        virtual IntRect tiledBackingStoreVisibleRect() OVERRIDE FINAL;
+        virtual Color tiledBackingStoreBackgroundColor() const OVERRIDE FINAL;
 
         OwnPtr<TiledBackingStore> m_tiledBackingStore;
 #endif
@@ -333,6 +339,11 @@ namespace WebCore {
     inline EventHandler& Frame::eventHandler() const
     {
         return *m_eventHandler;
+    }
+
+    inline MainFrame& Frame::mainFrame() const
+    {
+        return m_mainFrame;
     }
 
 } // namespace WebCore

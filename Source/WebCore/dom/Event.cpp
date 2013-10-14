@@ -23,7 +23,6 @@
 #include "config.h"
 #include "Event.h"
 
-#include "EventDispatcher.h"
 #include "EventNames.h"
 #include "EventTarget.h"
 #include "UserGestureIndicator.h"
@@ -121,14 +120,9 @@ void Event::initEvent(const AtomicString& eventTypeArg, bool canBubbleArg, bool 
     m_cancelable = cancelableArg;
 }
 
-const AtomicString& Event::interfaceName() const
+EventInterface Event::eventInterface() const
 {
-    return eventNames().interfaceForEvent;
-}
-
-bool Event::hasInterface(const AtomicString& name) const
-{
-    return interfaceName() == name;
+    return EventInterfaceType;
 }
 
 bool Event::isUIEvent() const

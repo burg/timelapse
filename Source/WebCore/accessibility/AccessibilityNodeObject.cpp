@@ -68,6 +68,7 @@
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "ProgressTracker.h"
+#include "RenderView.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "Text.h"
@@ -131,7 +132,7 @@ void AccessibilityNodeObject::childrenChanged()
     if (!node() && !renderer())
         return;
 
-    axObjectCache()->postNotification(this, document(), AXObjectCache::AXChildrenChanged, true);
+    axObjectCache()->postNotification(this, document(), AXObjectCache::AXChildrenChanged);
 
     // Go up the accessibility parent chain, but only if the element already exists. This method is
     // called during render layouts, minimal work should be done. 
@@ -145,11 +146,11 @@ void AccessibilityNodeObject::childrenChanged()
 
         // If this element supports ARIA live regions, then notify the AT of changes.
         if (parent->supportsARIALiveRegion())
-            axObjectCache()->postNotification(parent, parent->document(), AXObjectCache::AXLiveRegionChanged, true);
+            axObjectCache()->postNotification(parent, parent->document(), AXObjectCache::AXLiveRegionChanged);
         
         // If this element is an ARIA text control, notify the AT of changes.
         if (parent->isARIATextControl() && !parent->isNativeTextControl() && !parent->node()->rendererIsEditable())
-            axObjectCache()->postNotification(parent, parent->document(), AXObjectCache::AXValueChanged, true);
+            axObjectCache()->postNotification(parent, parent->document(), AXObjectCache::AXValueChanged);
     }
 }
 
@@ -422,7 +423,7 @@ bool AccessibilityNodeObject::canvasHasFallbackContent() const
     // If it has any children that are elements, we'll assume it might be fallback
     // content. If it has no children or its only children are not elements
     // (e.g. just text nodes), it doesn't have fallback content.
-    return elementChildren(canvasElement).begin() != elementChildren(canvasElement).end();
+    return elementChildren(canvasElement).first();
 }
 
 bool AccessibilityNodeObject::isImageButton() const
@@ -945,29 +946,47 @@ Element* AccessibilityNodeObject::anchorElement() const
     return 0;
 }
 
+static bool isNodeActionElement(Node* node)
+{
+    if (isHTMLInputElement(node)) {
+        HTMLInputElement* input = toHTMLInputElement(node);
+        if (!input->isDisabledFormControl() && (input->isRadioButton() || input->isCheckbox() || input->isTextButton() || input->isFileUpload() || input->isImageButton()))
+            return true;
+    } else if (node->hasTagName(buttonTag) || node->hasTagName(selectTag))
+        return true;
+
+    return false;
+}
+    
+static Element* nativeActionElement(Node* start)
+{
+    if (!start)
+        return 0;
+    
+    // Do a deep-dive to see if any nodes should be used as the action element.
+    // We have to look at Nodes, since this method should only be called on objects that do not have children (like buttons).
+    // It solves the problem when authors put role="button" on a group and leave the actual button inside the group.
+    
+    for (Node* child = start->firstChild(); child; child = child->nextSibling()) {
+        if (isNodeActionElement(child))
+            return toElement(child);
+
+        if (Element* subChild = nativeActionElement(child))
+            return subChild;
+    }
+    return 0;
+}
+    
 Element* AccessibilityNodeObject::actionElement() const
 {
     Node* node = this->node();
     if (!node)
         return 0;
 
-    if (isHTMLInputElement(node)) {
-        HTMLInputElement* input = toHTMLInputElement(node);
-        if (!input->isDisabledFormControl() && (isCheckboxOrRadio() || input->isTextButton()))
-            return input;
-    } else if (node->hasTagName(buttonTag))
-        return toElement(node);
-
-    if (isFileUploadButton())
-        return toElement(node);
-            
-    if (AccessibilityObject::isARIAInput(ariaRoleAttribute()))
-        return toElement(node);
-
-    if (isImageButton())
+    if (isNodeActionElement(node))
         return toElement(node);
     
-    if (node->hasTagName(selectTag))
+    if (AccessibilityObject::isARIAInput(ariaRoleAttribute()))
         return toElement(node);
 
     switch (roleValue()) {
@@ -979,6 +998,9 @@ Element* AccessibilityNodeObject::actionElement() const
     case MenuItemCheckboxRole:
     case MenuItemRadioRole:
     case ListItemRole:
+        // Check if the author is hiding the real control element inside the ARIA element.
+        if (Element* nativeElement = nativeActionElement(node))
+            return nativeElement;
         return toElement(node);
     default:
         break;
@@ -1054,7 +1076,7 @@ void AccessibilityNodeObject::changeValueByStep(bool increase)
 
     setValue(String::number(value));
 
-    axObjectCache()->postNotification(node(), AXObjectCache::AXValueChanged, true);
+    axObjectCache()->postNotification(node(), AXObjectCache::AXValueChanged);
 }
 
 void AccessibilityNodeObject::changeValueByPercent(float percentChange)
@@ -1065,7 +1087,7 @@ void AccessibilityNodeObject::changeValueByPercent(float percentChange)
     value += range * (percentChange / 100);
     setValue(String::number(value));
 
-    axObjectCache()->postNotification(node(), AXObjectCache::AXValueChanged, true);
+    axObjectCache()->postNotification(node(), AXObjectCache::AXValueChanged);
 }
 
 bool AccessibilityNodeObject::isGenericFocusableElement() const
@@ -1110,13 +1132,11 @@ HTMLLabelElement* AccessibilityNodeObject::labelForElement(Element* element) con
 
     const AtomicString& id = element->getIdAttribute();
     if (!id.isEmpty()) {
-        if (HTMLLabelElement* label = element->treeScope()->labelElementForId(id))
+        if (HTMLLabelElement* label = element->treeScope().labelElementForId(id))
             return label;
     }
 
-    auto labelAncestors = ancestorsOfType<HTMLLabelElement>(element);
-    auto enclosingLabel = labelAncestors.begin();
-    return enclosingLabel != labelAncestors.end() ? &*enclosingLabel : nullptr;
+    return ancestorsOfType<HTMLLabelElement>(element).first();
 }
 
 String AccessibilityNodeObject::ariaAccessibilityDescription() const
@@ -1180,7 +1200,7 @@ AccessibilityObject* AccessibilityNodeObject::menuButtonForMenu() const
     return 0;
 }
 
-void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOrder)
+void AccessibilityNodeObject::titleElementText(Vector<AccessibilityText>& textOrder) const
 {
     Node* node = this->node();
     if (!node)
@@ -1273,7 +1293,10 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
     case ToggleButtonRole:
     case CheckBoxRole:
     case ListBoxOptionRole:
+    // MacOS does not expect native <li> elements to expose label information, it only expects leaf node elements to do that.
+#if !PLATFORM(MAC)
     case ListItemRole:
+#endif
     case MenuButtonRole:
     case MenuItemRole:
     case MenuItemCheckboxRole:
@@ -1289,8 +1312,13 @@ void AccessibilityNodeObject::visibleText(Vector<AccessibilityText>& textOrder) 
     
     // If it's focusable but it's not content editable or a known control type, then it will appear to
     // the user as a single atomic object, so we should use its text as the default title.
-    if (isHeading() || isLink() || isGenericFocusableElement())
+    if (isHeading() || isLink())
         useTextUnderElement = true;
+    else if (isGenericFocusableElement()) {
+        // If a node uses a negative tabindex, do not expose it as a generic focusable element, because keyboard focus management
+        // will never land on this specific element.
+        useTextUnderElement = !(node && node->isElementNode() && toElement(node)->tabIndex() < 0);
+    }
     
     if (useTextUnderElement) {
         AccessibilityTextUnderElementMode mode;
@@ -1580,6 +1608,12 @@ String AccessibilityNodeObject::textUnderElement(AccessibilityTextUnderElementMo
     if (node && node->isTextNode())
         return toText(node)->wholeText();
 
+    // The render tree should be stable before going ahead. Otherwise, further uses of the
+    // TextIterator will force a layout update, potentially altering the accessibility tree
+    // and leading to crashes in the loop that computes the result text from the children.
+    ASSERT(!document()->renderView()->layoutState());
+    ASSERT(!document()->childNeedsStyleRecalc());
+
     StringBuilder builder;
     for (AccessibilityObject* child = firstChild(); child; child = child->nextSibling()) {
         if (!shouldUseAccessiblityObjectInnerText(child, mode))
@@ -1662,8 +1696,15 @@ String AccessibilityNodeObject::title() const
 
     // If it's focusable but it's not content editable or a known control type, then it will appear to
     // the user as a single atomic object, so we should use its text as the default title.                              
-    if (isGenericFocusableElement())
+    if (isGenericFocusableElement()) {
+        // If a node uses a negative tabindex, do not expose it as a generic focusable element, because keyboard focus management
+        // will never land on this specific element.
+        Node* node = this->node();
+        if (node && node->isElementNode() && toElement(node)->tabIndex() < 0)
+            return String();
+        
         return textUnderElement();
+    }
 
     return String();
 }
@@ -1774,7 +1815,15 @@ static String accessibleNameForNode(Node* node)
     if (isHTMLInputElement(node))
         return toHTMLInputElement(node)->value();
     
-    String text = node->document().axObjectCache()->getOrCreate(node)->textUnderElement();
+    // If the node can be turned into an AX object, we can use standard name computation rules.
+    // If however, the node cannot (because there's no renderer e.g.) fallback to using the basic text underneath.
+    AccessibilityObject* axObject = node->document().axObjectCache()->getOrCreate(node);
+    String text;
+    if (axObject)
+        text = axObject->textUnderElement();
+    else if (node->isElementNode())
+        text = toElement(node)->innerText();
+    
     if (!text.isEmpty())
         return text;
     
@@ -1812,9 +1861,7 @@ void AccessibilityNodeObject::elementsFromAttribute(Vector<Element*>& elements, 
     if (!node || !node->isElementNode())
         return;
 
-    TreeScope* scope = node->treeScope();
-    if (!scope)
-        return;
+    TreeScope& treeScope = node->treeScope();
 
     String idList = getAttribute(attribute).string();
     if (idList.isEmpty())
@@ -1827,7 +1874,7 @@ void AccessibilityNodeObject::elementsFromAttribute(Vector<Element*>& elements, 
     unsigned size = idVector.size();
     for (unsigned i = 0; i < size; ++i) {
         AtomicString idName(idVector[i]);
-        Element* idElement = scope->getElementById(idName);
+        Element* idElement = treeScope.getElementById(idName);
         if (idElement)
             elements.append(idElement);
     }

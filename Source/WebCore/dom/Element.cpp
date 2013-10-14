@@ -65,12 +65,14 @@
 #include "HTMLTableRowsCollection.h"
 #include "InsertionPoint.h"
 #include "InspectorInstrumentation.h"
+#include "KeyboardEvent.h"
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
 #include "NamedNodeMap.h"
 #include "NodeList.h"
 #include "NodeRenderStyle.h"
 #include "Page.h"
+#include "PlatformWheelEvent.h"
 #include "PointerLockController.h"
 #include "PseudoElement.h"
 #include "RenderRegion.h"
@@ -85,6 +87,7 @@
 #include "Text.h"
 #include "TextIterator.h"
 #include "VoidCallback.h"
+#include "WheelEvent.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include "htmlediting.h"
@@ -236,6 +239,70 @@ bool Element::isMouseFocusable() const
 bool Element::shouldUseInputMethod()
 {
     return isContentEditable(UserSelectAllIsAlwaysNonEditable);
+}
+
+bool Element::dispatchMouseEvent(const PlatformMouseEvent& platformEvent, const AtomicString& eventType, int detail, Element* relatedTarget)
+{
+    if (isDisabledFormControl())
+        return false;
+
+    RefPtr<MouseEvent> mouseEvent = MouseEvent::create(eventType, document().defaultView(), platformEvent, detail, relatedTarget);
+
+    if (mouseEvent->type().isEmpty())
+        return true; // Shouldn't happen.
+
+    ASSERT(!mouseEvent->target() || mouseEvent->target() != relatedTarget);
+    bool didNotSwallowEvent = dispatchEvent(mouseEvent) && !mouseEvent->defaultHandled();
+
+    if (mouseEvent->type() == eventNames().clickEvent && mouseEvent->detail() == 2) {
+        // Special case: If it's a double click event, we also send the dblclick event. This is not part
+        // of the DOM specs, but is used for compatibility with the ondblclick="" attribute. This is treated
+        // as a separate event in other DOM-compliant browsers like Firefox, and so we do the same.
+        RefPtr<MouseEvent> doubleClickEvent = MouseEvent::create();
+        doubleClickEvent->initMouseEvent(eventNames().dblclickEvent,
+            mouseEvent->bubbles(), mouseEvent->cancelable(), mouseEvent->view(), mouseEvent->detail(),
+            mouseEvent->screenX(), mouseEvent->screenY(), mouseEvent->clientX(), mouseEvent->clientY(),
+            mouseEvent->ctrlKey(), mouseEvent->altKey(), mouseEvent->shiftKey(), mouseEvent->metaKey(),
+            mouseEvent->button(), relatedTarget);
+
+        if (mouseEvent->defaultHandled())
+            doubleClickEvent->setDefaultHandled();
+
+        dispatchEvent(doubleClickEvent);
+        if (doubleClickEvent->defaultHandled() || doubleClickEvent->defaultPrevented())
+            return false;
+    }
+    return didNotSwallowEvent;
+}
+
+inline static unsigned deltaMode(const PlatformWheelEvent& event)
+{
+    return event.granularity() == ScrollByPageWheelEvent ? WheelEvent::DOM_DELTA_PAGE : WheelEvent::DOM_DELTA_PIXEL;
+}
+
+bool Element::dispatchWheelEvent(const PlatformWheelEvent& event)
+{
+    if (!(event.deltaX() || event.deltaY()))
+        return true;
+
+    RefPtr<WheelEvent> wheelEvent = WheelEvent::create(
+        FloatPoint(event.wheelTicksX(), event.wheelTicksY()),
+        FloatPoint(event.deltaX(), event.deltaY()),
+        deltaMode(event),
+        document().defaultView(),
+        event.globalPosition(),
+        event.position(),
+        event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(),
+        event.directionInvertedFromDevice(),
+        event.timestamp());
+
+    return EventDispatcher::dispatchEvent(this, wheelEvent) && !wheelEvent->defaultHandled();
+}
+
+bool Element::dispatchKeyEvent(const PlatformKeyboardEvent& platformEvent)
+{
+    RefPtr<KeyboardEvent> event = KeyboardEvent::create(platformEvent, document().defaultView());
+    return EventDispatcher::dispatchEvent(this, event) && !event->defaultHandled();
 }
 
 void Element::dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions eventOptions, SimulatedClickVisualOptions visualOptions)
@@ -577,8 +644,8 @@ void Element::scrollByUnits(int units, ScrollGranularity granularity)
         direction = ScrollUp;
         units = -units;
     }
-    Node* stopNode = this;
-    toRenderBox(renderer())->scroll(direction, granularity, units, &stopNode);
+    Element* stopElement = this;
+    toRenderBox(renderer())->scroll(direction, granularity, units, &stopElement);
 }
 
 void Element::scrollByLines(int lines)
@@ -591,17 +658,17 @@ void Element::scrollByPages(int pages)
     scrollByUnits(pages, ScrollByPage);
 }
 
-static float localZoomForRenderer(RenderObject* renderer)
+static float localZoomForRenderer(RenderElement* renderer)
 {
     // FIXME: This does the wrong thing if two opposing zooms are in effect and canceled each
     // other out, but the alternative is that we'd have to crawl up the whole render tree every
     // time (or store an additional bit in the RenderStyle to indicate that a zoom was specified).
     float zoomFactor = 1;
     if (renderer->style()->effectiveZoom() != 1) {
-        // Need to find the nearest enclosing RenderObject that set up
+        // Need to find the nearest enclosing RenderElement that set up
         // a differing zoom, and then we divide our result by it to eliminate the zoom.
-        RenderObject* prev = renderer;
-        for (RenderObject* curr = prev->parent(); curr; curr = curr->parent()) {
+        RenderElement* prev = renderer;
+        for (RenderElement* curr = prev->parent(); curr; curr = curr->parent()) {
             if (curr->style()->effectiveZoom() != prev->style()->effectiveZoom()) {
                 zoomFactor = prev->style()->zoom();
                 break;
@@ -614,7 +681,7 @@ static float localZoomForRenderer(RenderObject* renderer)
     return zoomFactor;
 }
 
-static int adjustForLocalZoom(LayoutUnit value, RenderObject* renderer)
+static int adjustForLocalZoom(LayoutUnit value, RenderElement* renderer)
 {
     float zoomFactor = localZoomForRenderer(renderer);
     if (zoomFactor == 1)
@@ -680,11 +747,13 @@ Element* Element::bindingsOffsetParent()
 Element* Element::offsetParent()
 {
     document().updateLayoutIgnorePendingStylesheets();
-    if (RenderObject* renderer = this->renderer()) {
-        if (RenderObject* offsetParent = renderer->offsetParent())
-            return toElement(offsetParent->node());
-    }
-    return 0;
+    auto renderer = this->renderer();
+    if (!renderer)
+        return nullptr;
+    auto offsetParent = renderer->offsetParent();
+    if (!offsetParent)
+        return nullptr;
+    return offsetParent->element();
 }
 
 int Element::clientLeft()
@@ -791,14 +860,42 @@ int Element::scrollTop()
 
 void Element::setScrollLeft(int newLeft)
 {
+    if (document().documentElement() == this && document().inQuirksMode())
+        return;
+
     document().updateLayoutIgnorePendingStylesheets();
+
+    if (!document().hasLivingRenderTree())
+        return;
+
+    if (document().documentElement() == this) {
+        RenderView& renderView = *document().renderView();
+        int zoom = renderView.style()->effectiveZoom();
+        renderView.frameView().setScrollPosition(IntPoint(newLeft * zoom, renderView.frameView().scrollY() * zoom));
+        return;
+    }
+
     if (RenderBox* rend = renderBox())
         rend->setScrollLeft(static_cast<int>(newLeft * rend->style()->effectiveZoom()));
 }
 
 void Element::setScrollTop(int newTop)
 {
+    if (document().documentElement() == this && document().inQuirksMode())
+        return;
+
     document().updateLayoutIgnorePendingStylesheets();
+
+    if (!document().hasLivingRenderTree())
+        return;
+
+    if (document().documentElement() == this) {
+        RenderView& renderView = *document().renderView();
+        int zoom = renderView.style()->effectiveZoom();
+        renderView.frameView().setScrollPosition(IntPoint(renderView.frameView().scrollX() * zoom, newTop * zoom));
+        return;
+    }
+
     if (RenderBox* rend = renderBox())
         rend->setScrollTop(static_cast<int>(newTop * rend->style()->effectiveZoom()));
 }
@@ -1234,10 +1331,10 @@ void Element::setPrefix(const AtomicString& prefix, ExceptionCode& ec)
     m_tagName.setPrefix(prefix.isEmpty() ? AtomicString() : prefix);
 }
 
-KURL Element::baseURI() const
+URL Element::baseURI() const
 {
     const AtomicString& baseAttribute = getAttribute(baseAttr);
-    KURL base(KURL(), baseAttribute);
+    URL base(URL(), baseAttribute);
     if (!base.protocol().isEmpty())
         return base;
 
@@ -1245,11 +1342,11 @@ KURL Element::baseURI() const
     if (!parent)
         return base;
 
-    const KURL& parentBase = parent->baseURI();
+    const URL& parentBase = parent->baseURI();
     if (parentBase.isNull())
         return base;
 
-    return KURL(parentBase, baseAttribute);
+    return URL(parentBase, baseAttribute);
 }
 
 const AtomicString& Element::imageSourceURL() const
@@ -1267,7 +1364,7 @@ RenderElement* Element::createRenderer(RenderArena&, RenderStyle& style)
     return RenderElement::createFor(*this, style);
 }
 
-Node::InsertionNotificationRequest Element::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest Element::insertedInto(ContainerNode& insertionPoint)
 {
     bool wasInDocument = inDocument();
     // need to do superclass processing first so inDocument() is true
@@ -1280,42 +1377,42 @@ Node::InsertionNotificationRequest Element::insertedInto(ContainerNode* insertio
         setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(true);
 #endif
 
-    if (!insertionPoint->isInTreeScope())
+    if (!insertionPoint.isInTreeScope())
         return InsertionDone;
 
     if (hasRareData())
         elementRareData()->clearClassListValueForQuirksMode();
 
-    TreeScope* newScope = insertionPoint->treeScope();
+    TreeScope* newScope = &insertionPoint.treeScope();
     HTMLDocument* newDocument = !wasInDocument && inDocument() && newScope->documentScope()->isHTMLDocument() ? toHTMLDocument(newScope->documentScope()) : 0;
-    if (newScope != treeScope())
+    if (newScope != &treeScope())
         newScope = 0;
 
     const AtomicString& idValue = getIdAttribute();
     if (!idValue.isNull()) {
         if (newScope)
-            updateIdForTreeScope(newScope, nullAtom, idValue);
+            updateIdForTreeScope(*newScope, nullAtom, idValue);
         if (newDocument)
-            updateIdForDocument(newDocument, nullAtom, idValue, AlwaysUpdateHTMLDocumentNamedItemMaps);
+            updateIdForDocument(*newDocument, nullAtom, idValue, AlwaysUpdateHTMLDocumentNamedItemMaps);
     }
 
     const AtomicString& nameValue = getNameAttribute();
     if (!nameValue.isNull()) {
         if (newScope)
-            updateNameForTreeScope(newScope, nullAtom, nameValue);
+            updateNameForTreeScope(*newScope, nullAtom, nameValue);
         if (newDocument)
-            updateNameForDocument(newDocument, nullAtom, nameValue);
+            updateNameForDocument(*newDocument, nullAtom, nameValue);
     }
 
     if (newScope && hasTagName(labelTag)) {
         if (newScope->shouldCacheLabelsByForAttribute())
-            updateLabel(newScope, nullAtom, fastGetAttribute(forAttr));
+            updateLabel(*newScope, nullAtom, fastGetAttribute(forAttr));
     }
 
     return InsertionDone;
 }
 
-void Element::removedFrom(ContainerNode* insertionPoint)
+void Element::removedFrom(ContainerNode& insertionPoint)
 {
 #if ENABLE(FULLSCREEN_API)
     if (containsFullScreenElement())
@@ -1328,31 +1425,31 @@ void Element::removedFrom(ContainerNode* insertionPoint)
 
     setSavedLayerScrollOffset(IntSize());
 
-    if (insertionPoint->isInTreeScope()) {
-        TreeScope* oldScope = insertionPoint->treeScope();
+    if (insertionPoint.isInTreeScope()) {
+        TreeScope* oldScope = &insertionPoint.treeScope();
         HTMLDocument* oldDocument = inDocument() && oldScope->documentScope()->isHTMLDocument() ? toHTMLDocument(oldScope->documentScope()) : 0;
-        if (oldScope != treeScope())
+        if (oldScope != &treeScope())
             oldScope = 0;
 
         const AtomicString& idValue = getIdAttribute();
         if (!idValue.isNull()) {
             if (oldScope)
-                updateIdForTreeScope(oldScope, idValue, nullAtom);
+                updateIdForTreeScope(*oldScope, idValue, nullAtom);
             if (oldDocument)
-                updateIdForDocument(oldDocument, idValue, nullAtom, AlwaysUpdateHTMLDocumentNamedItemMaps);
+                updateIdForDocument(*oldDocument, idValue, nullAtom, AlwaysUpdateHTMLDocumentNamedItemMaps);
         }
 
         const AtomicString& nameValue = getNameAttribute();
         if (!nameValue.isNull()) {
             if (oldScope)
-                updateNameForTreeScope(oldScope, nameValue, nullAtom);
+                updateNameForTreeScope(*oldScope, nameValue, nullAtom);
             if (oldDocument)
-                updateNameForDocument(oldDocument, nameValue, nullAtom);
+                updateNameForDocument(*oldDocument, nameValue, nullAtom);
         }
 
         if (oldScope && hasTagName(labelTag)) {
             if (oldScope->shouldCacheLabelsByForAttribute())
-                updateLabel(oldScope, fastGetAttribute(forAttr), nullAtom);
+                updateLabel(*oldScope, fastGetAttribute(forAttr), nullAtom);
         }
     }
 
@@ -1363,10 +1460,10 @@ void Element::removedFrom(ContainerNode* insertionPoint)
 #endif
 }
 
-void Element::unregisterNamedFlowContentNode()
+void Element::unregisterNamedFlowContentElement()
 {
     if (document().cssRegionsEnabled() && inNamedFlow() && document().renderView())
-        document().renderView()->flowThreadController().unregisterNamedFlowContentNode(this);
+        document().renderView()->flowThreadController().unregisterNamedFlowContentElement(*this);
 }
 
 void Element::lazyReattach(ShouldSetAttached shouldSetAttached)
@@ -1433,10 +1530,10 @@ void Element::addShadowRoot(PassRefPtr<ShadowRoot> newShadowRoot)
     ensureElementRareData().setShadowRoot(newShadowRoot);
 
     shadowRoot->setHostElement(this);
-    shadowRoot->setParentTreeScope(treeScope());
+    shadowRoot->setParentTreeScope(&treeScope());
     shadowRoot->distributor().didShadowBoundaryChange(this);
 
-    ChildNodeInsertionNotifier(this).notify(shadowRoot);
+    ChildNodeInsertionNotifier(*this).notify(*shadowRoot);
 
     resetNeedsNodeRenderingTraversalSlowPath();
 
@@ -1464,7 +1561,7 @@ void Element::removeShadowRoot()
     oldRoot->setHostElement(0);
     oldRoot->setParentTreeScope(&document());
 
-    ChildNodeRemovalNotifier(this).notify(oldRoot.get());
+    ChildNodeRemovalNotifier(*this).notify(*oldRoot);
 
     oldRoot->distributor().invalidateDistribution(this);
 }
@@ -1475,7 +1572,7 @@ PassRefPtr<ShadowRoot> Element::createShadowRoot(ExceptionCode& ec)
         ensureUserAgentShadowRoot();
 
 #if ENABLE(SHADOW_DOM)
-    if (RuntimeEnabledFeatures::authorShadowDOMForAnyElementEnabled()) {
+    if (RuntimeEnabledFeatures::sharedFeatures().authorShadowDOMForAnyElementEnabled()) {
         addShadowRoot(ShadowRoot::create(document(), ShadowRoot::AuthorShadowRoot));
         return shadowRoot();
     }
@@ -1721,7 +1818,7 @@ PassRefPtr<Attr> Element::setAttributeNode(Attr* attrNode, ExceptionCode& ec)
     setAttributeInternal(index, attrNode->qualifiedName(), attrNode->value(), NotInSynchronizationOfLazyAttribute);
 
     attrNode->attachToElement(this);
-    treeScope()->adoptIfNeeded(attrNode);
+    treeScope().adoptIfNeeded(attrNode);
     ensureAttrNodeListForElement(this).append(attrNode);
 
     return oldAttrNode.release();
@@ -1962,7 +2059,7 @@ void Element::updateFocusAppearance(bool /*restorePreviousSelection*/)
 void Element::blur()
 {
     cancelFocusAppearanceUpdate();
-    if (treeScope()->focusedElement() == this) {
+    if (treeScope().focusedElement() == this) {
         if (Frame* frame = document().frame())
             frame->page()->focusController().setFocusedElement(0, frame);
         else
@@ -1974,14 +2071,14 @@ void Element::dispatchFocusInEvent(const AtomicString& eventType, PassRefPtr<Ele
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
     ASSERT(eventType == eventNames().focusinEvent || eventType == eventNames().DOMFocusInEvent);
-    dispatchScopedEventDispatchMediator(FocusInEventDispatchMediator::create(FocusEvent::create(eventType, true, false, document().defaultView(), 0, oldFocusedElement)));
+    dispatchScopedEvent(FocusEvent::create(eventType, true, false, document().defaultView(), 0, oldFocusedElement));
 }
 
 void Element::dispatchFocusOutEvent(const AtomicString& eventType, PassRefPtr<Element> newFocusedElement)
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
     ASSERT(eventType == eventNames().focusoutEvent || eventType == eventNames().DOMFocusOutEvent);
-    dispatchScopedEventDispatchMediator(FocusOutEventDispatchMediator::create(FocusEvent::create(eventType, true, false, document().defaultView(), 0, newFocusedElement)));
+    dispatchScopedEvent(FocusEvent::create(eventType, true, false, document().defaultView(), 0, newFocusedElement));
 }
 
 void Element::dispatchFocusEvent(PassRefPtr<Element> oldFocusedElement, FocusDirection)
@@ -1990,7 +2087,7 @@ void Element::dispatchFocusEvent(PassRefPtr<Element> oldFocusedElement, FocusDir
         document().page()->chrome().client().elementDidFocus(this);
 
     RefPtr<FocusEvent> event = FocusEvent::create(eventNames().focusEvent, false, false, document().defaultView(), 0, oldFocusedElement);
-    EventDispatcher::dispatchEvent(this, FocusEventDispatchMediator::create(event.release()));
+    EventDispatcher::dispatchEvent(this, event.release());
 }
 
 void Element::dispatchBlurEvent(PassRefPtr<Element> newFocusedElement)
@@ -1999,7 +2096,7 @@ void Element::dispatchBlurEvent(PassRefPtr<Element> newFocusedElement)
         document().page()->chrome().client().elementDidBlur(this);
 
     RefPtr<FocusEvent> event = FocusEvent::create(eventNames().blurEvent, false, false, document().defaultView(), 0, newFocusedElement);
-    EventDispatcher::dispatchEvent(this, BlurEventDispatchMediator::create(event.release()));
+    EventDispatcher::dispatchEvent(this, event.release());
 }
 
 
@@ -2011,7 +2108,7 @@ String Element::innerText()
     if (!renderer())
         return textContent(true);
 
-    return plainText(rangeOfContents(const_cast<Element*>(this)).get());
+    return plainText(rangeOfContents(*this).get());
 }
 
 String Element::outerText()
@@ -2310,14 +2407,14 @@ bool Element::updateExistingPseudoElement(PseudoElement* existingPseudoElement, 
     // FIXME: This is silly.
     // Wait until our parent is not displayed or pseudoElementRendererIsNeeded
     // is false, otherwise we could continously create and destroy PseudoElements
-    // when RenderObject::isChildAllowed on our parent returns false for the
+    // when RenderElement::isChildAllowed on our parent returns false for the
     // PseudoElement's renderer for each style recalc.
     return renderer() && pseudoElementRendererIsNeeded(existingPseudoElement->renderStyle());
 }
 
 PassRefPtr<PseudoElement> Element::createPseudoElementIfNeeded(PseudoId pseudoId)
 {
-    if (!document().styleSheetCollection()->usesBeforeAfterRules())
+    if (!document().styleSheetCollection().usesBeforeAfterRules())
         return 0;
     if (!renderer() || !renderer()->canHaveGeneratedChildren())
         return 0;
@@ -2451,7 +2548,7 @@ bool Element::webkitMatchesSelector(const String& selector, ExceptionCode& ec)
         return false;
     }
 
-    SelectorQuery* selectorQuery = document().selectorQueryCache().add(selector, &document(), ec);
+    SelectorQuery* selectorQuery = document().selectorQueryCache().add(selector, document(), ec);
     if (!selectorQuery)
         return false;
     return selectorQuery->matches(this);
@@ -2478,7 +2575,7 @@ DOMStringMap* Element::dataset()
     return data.dataset();
 }
 
-KURL Element::getURLAttribute(const QualifiedName& name) const
+URL Element::getURLAttribute(const QualifiedName& name) const
 {
 #if !ASSERT_DISABLED
     if (elementData()) {
@@ -2489,7 +2586,7 @@ KURL Element::getURLAttribute(const QualifiedName& name) const
     return document().completeURL(stripLeadingAndTrailingHTMLSpaces(getAttribute(name)));
 }
 
-KURL Element::getNonEmptyURLAttribute(const QualifiedName& name) const
+URL Element::getNonEmptyURLAttribute(const QualifiedName& name) const
 {
 #if !ASSERT_DISABLED
     if (elementData()) {
@@ -2499,7 +2596,7 @@ KURL Element::getNonEmptyURLAttribute(const QualifiedName& name) const
 #endif
     String value = stripLeadingAndTrailingHTMLSpaces(getAttribute(name));
     if (value.isEmpty())
-        return KURL();
+        return URL();
     return document().completeURL(value);
 }
 
@@ -2510,8 +2607,7 @@ int Element::getIntegralAttribute(const QualifiedName& attributeName) const
 
 void Element::setIntegralAttribute(const QualifiedName& attributeName, int value)
 {
-    // FIXME: Need an AtomicString version of String::number.
-    setAttribute(attributeName, String::number(value));
+    setAttribute(attributeName, AtomicString::number(value));
 }
 
 unsigned Element::getUnsignedIntegralAttribute(const QualifiedName& attributeName) const
@@ -2521,8 +2617,7 @@ unsigned Element::getUnsignedIntegralAttribute(const QualifiedName& attributeNam
 
 void Element::setUnsignedIntegralAttribute(const QualifiedName& attributeName, unsigned value)
 {
-    // FIXME: Need an AtomicString version of String::number.
-    setAttribute(attributeName, String::number(value));
+    setAttribute(attributeName, AtomicString::number(value));
 }
 
 #if ENABLE(INDIE_UI)
@@ -2645,7 +2740,7 @@ bool Element::shouldMoveToFlowThread(const RenderStyle& styleToUse) const
     if (styleToUse.flowThread().isEmpty())
         return false;
 
-    return !isRegisteredWithNamedFlow();
+    return !document().renderView()->flowThreadController().isContentElementRegisteredWithAnyNamedFlow(*this);
 }
 
 const AtomicString& Element::webkitRegionOverset() const
@@ -2729,21 +2824,21 @@ inline void Element::updateName(const AtomicString& oldName, const AtomicString&
         return;
     if (!document().isHTMLDocument())
         return;
-    updateNameForDocument(toHTMLDocument(&document()), oldName, newName);
+    updateNameForDocument(toHTMLDocument(document()), oldName, newName);
 }
 
-void Element::updateNameForTreeScope(TreeScope* scope, const AtomicString& oldName, const AtomicString& newName)
+void Element::updateNameForTreeScope(TreeScope& scope, const AtomicString& oldName, const AtomicString& newName)
 {
     ASSERT(isInTreeScope());
     ASSERT(oldName != newName);
 
     if (!oldName.isEmpty())
-        scope->removeElementByName(oldName, this);
+        scope.removeElementByName(*oldName.impl(), *this);
     if (!newName.isEmpty())
-        scope->addElementByName(newName, this);
+        scope.addElementByName(*newName.impl(), *this);
 }
 
-void Element::updateNameForDocument(HTMLDocument* document, const AtomicString& oldName, const AtomicString& newName)
+void Element::updateNameForDocument(HTMLDocument& document, const AtomicString& oldName, const AtomicString& newName)
 {
     ASSERT(inDocument());
     ASSERT(oldName != newName);
@@ -2751,17 +2846,17 @@ void Element::updateNameForDocument(HTMLDocument* document, const AtomicString& 
     if (WindowNameCollection::nodeMatchesIfNameAttributeMatch(this)) {
         const AtomicString& id = WindowNameCollection::nodeMatchesIfIdAttributeMatch(this) ? getIdAttribute() : nullAtom;
         if (!oldName.isEmpty() && oldName != id)
-            document->removeWindowNamedItem(oldName, this);
+            document.removeWindowNamedItem(*oldName.impl(), *this);
         if (!newName.isEmpty() && newName != id)
-            document->addWindowNamedItem(newName, this);
+            document.addWindowNamedItem(*newName.impl(), *this);
     }
 
     if (DocumentNameCollection::nodeMatchesIfNameAttributeMatch(this)) {
         const AtomicString& id = DocumentNameCollection::nodeMatchesIfIdAttributeMatch(this) ? getIdAttribute() : nullAtom;
         if (!oldName.isEmpty() && oldName != id)
-            document->removeDocumentNamedItem(oldName, this);
+            document.removeDocumentNamedItem(*oldName.impl(), *this);
         if (!newName.isEmpty() && newName != id)
-            document->addDocumentNamedItem(newName, this);
+            document.addDocumentNamedItem(*newName.impl(), *this);
     }
 }
 
@@ -2779,21 +2874,21 @@ inline void Element::updateId(const AtomicString& oldId, const AtomicString& new
         return;
     if (!document().isHTMLDocument())
         return;
-    updateIdForDocument(toHTMLDocument(&document()), oldId, newId, UpdateHTMLDocumentNamedItemMapsOnlyIfDiffersFromNameAttribute);
+    updateIdForDocument(toHTMLDocument(document()), oldId, newId, UpdateHTMLDocumentNamedItemMapsOnlyIfDiffersFromNameAttribute);
 }
 
-void Element::updateIdForTreeScope(TreeScope* scope, const AtomicString& oldId, const AtomicString& newId)
+void Element::updateIdForTreeScope(TreeScope& scope, const AtomicString& oldId, const AtomicString& newId)
 {
     ASSERT(isInTreeScope());
     ASSERT(oldId != newId);
 
     if (!oldId.isEmpty())
-        scope->removeElementById(oldId, this);
+        scope.removeElementById(*oldId.impl(), *this);
     if (!newId.isEmpty())
-        scope->addElementById(newId, this);
+        scope.addElementById(*newId.impl(), *this);
 }
 
-void Element::updateIdForDocument(HTMLDocument* document, const AtomicString& oldId, const AtomicString& newId, HTMLDocumentNamedItemMapsUpdatingCondition condition)
+void Element::updateIdForDocument(HTMLDocument& document, const AtomicString& oldId, const AtomicString& newId, HTMLDocumentNamedItemMapsUpdatingCondition condition)
 {
     ASSERT(inDocument());
     ASSERT(oldId != newId);
@@ -2801,21 +2896,21 @@ void Element::updateIdForDocument(HTMLDocument* document, const AtomicString& ol
     if (WindowNameCollection::nodeMatchesIfIdAttributeMatch(this)) {
         const AtomicString& name = condition == UpdateHTMLDocumentNamedItemMapsOnlyIfDiffersFromNameAttribute && WindowNameCollection::nodeMatchesIfNameAttributeMatch(this) ? getNameAttribute() : nullAtom;
         if (!oldId.isEmpty() && oldId != name)
-            document->removeWindowNamedItem(oldId, this);
+            document.removeWindowNamedItem(*oldId.impl(), *this);
         if (!newId.isEmpty() && newId != name)
-            document->addWindowNamedItem(newId, this);
+            document.addWindowNamedItem(*newId.impl(), *this);
     }
 
     if (DocumentNameCollection::nodeMatchesIfIdAttributeMatch(this)) {
         const AtomicString& name = condition == UpdateHTMLDocumentNamedItemMapsOnlyIfDiffersFromNameAttribute && DocumentNameCollection::nodeMatchesIfNameAttributeMatch(this) ? getNameAttribute() : nullAtom;
         if (!oldId.isEmpty() && oldId != name)
-            document->removeDocumentNamedItem(oldId, this);
+            document.removeDocumentNamedItem(*oldId.impl(), *this);
         if (!newId.isEmpty() && newId != name)
-            document->addDocumentNamedItem(newId, this);
+            document.addDocumentNamedItem(*newId.impl(), *this);
     }
 }
 
-void Element::updateLabel(TreeScope* scope, const AtomicString& oldForAttributeValue, const AtomicString& newForAttributeValue)
+void Element::updateLabel(TreeScope& scope, const AtomicString& oldForAttributeValue, const AtomicString& newForAttributeValue)
 {
     ASSERT(hasTagName(labelTag));
 
@@ -2826,9 +2921,9 @@ void Element::updateLabel(TreeScope* scope, const AtomicString& oldForAttributeV
         return;
 
     if (!oldForAttributeValue.isEmpty())
-        scope->removeLabel(oldForAttributeValue, toHTMLLabelElement(this));
+        scope.removeLabel(*oldForAttributeValue.impl(), *toHTMLLabelElement(this));
     if (!newForAttributeValue.isEmpty())
-        scope->addLabel(newForAttributeValue, toHTMLLabelElement(this));
+        scope.addLabel(*newForAttributeValue.impl(), *toHTMLLabelElement(this));
 }
 
 void Element::willModifyAttribute(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue)
@@ -2838,9 +2933,8 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
     else if (name == HTMLNames::nameAttr)
         updateName(oldValue, newValue);
     else if (name == HTMLNames::forAttr && hasTagName(labelTag)) {
-        TreeScope* scope = treeScope();
-        if (scope->shouldCacheLabelsByForAttribute())
-            updateLabel(scope, oldValue, newValue);
+        if (treeScope().shouldCacheLabelsByForAttribute())
+            updateLabel(treeScope(), oldValue, newValue);
     }
 
     if (oldValue != newValue) {
@@ -2848,8 +2942,8 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
             setNeedsStyleRecalc();
     }
 
-    if (OwnPtr<MutationObserverInterestGroup> recipients = MutationObserverInterestGroup::createForAttributesMutation(this, name))
-        recipients->enqueueMutationRecord(MutationRecord::createAttributes(this, name, oldValue));
+    if (OwnPtr<MutationObserverInterestGroup> recipients = MutationObserverInterestGroup::createForAttributesMutation(*this, name))
+        recipients->enqueueMutationRecord(MutationRecord::createAttributes(*this, name, oldValue));
 
 #if ENABLE(INSPECTOR)
     InspectorInstrumentation::willModifyDOMAttr(&document(), this, oldValue, newValue);
@@ -2885,15 +2979,15 @@ PassRefPtr<HTMLCollection> Element::ensureCachedHTMLCollection(CollectionType ty
     RefPtr<HTMLCollection> collection;
     if (type == TableRows) {
         ASSERT(hasTagName(tableTag));
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLTableRowsCollection>(this, type);
+        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLTableRowsCollection>(*this, type);
     } else if (type == SelectOptions) {
         ASSERT(hasTagName(selectTag));
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLOptionsCollection>(this, type);
+        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLOptionsCollection>(*this, type);
     } else if (type == FormControls) {
         ASSERT(hasTagName(formTag) || hasTagName(fieldsetTag));
-        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLFormControlsCollection>(this, type);
+        return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLFormControlsCollection>(*this, type);
     }
-    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLCollection>(this, type);
+    return ensureRareData().ensureNodeLists().addCacheWithAtomicName<HTMLCollection>(*this, type);
 }
 
 HTMLCollection* Element::cachedHTMLCollection(CollectionType type)
@@ -2926,7 +3020,7 @@ PassRefPtr<Attr> Element::ensureAttr(const QualifiedName& name)
     RefPtr<Attr> attrNode = findAttrNodeInList(attrNodeList, name);
     if (!attrNode) {
         attrNode = Attr::create(this, name);
-        treeScope()->adoptIfNeeded(attrNode.get());
+        treeScope().adoptIfNeeded(attrNode.get());
         attrNodeList.append(attrNode);
     }
     return attrNode.release();
@@ -2972,7 +3066,7 @@ void Element::resetComputedStyle()
 
 void Element::clearStyleDerivedDataBeforeDetachingRenderer()
 {
-    unregisterNamedFlowContentNode();
+    unregisterNamedFlowContentElement();
     cancelFocusAppearanceUpdate();
     clearBeforePseudoElement();
     clearAfterPseudoElement();

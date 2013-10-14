@@ -109,7 +109,7 @@ HistoryItem::HistoryItem(const String& urlString, const String& title, const Str
     iconDatabase().retainIconForPageURL(m_urlString);
 }
 
-HistoryItem::HistoryItem(const KURL& url, const String& target, const String& parent, const String& title)
+HistoryItem::HistoryItem(const URL& url, const String& target, const String& parent, const String& title)
     : m_urlString(url.string())
     , m_originalURLString(url.string())
     , m_target(target)
@@ -240,14 +240,14 @@ double HistoryItem::lastVisitedTime() const
     return m_lastVisitedTime;
 }
 
-KURL HistoryItem::url() const
+URL HistoryItem::url() const
 {
-    return KURL(ParsedURLString, m_urlString);
+    return URL(ParsedURLString, m_urlString);
 }
 
-KURL HistoryItem::originalURL() const
+URL HistoryItem::originalURL() const
 {
-    return KURL(ParsedURLString, m_originalURLString);
+    return URL(ParsedURLString, m_originalURLString);
 }
 
 const String& HistoryItem::referrer() const
@@ -282,7 +282,7 @@ void HistoryItem::setURLString(const String& urlString)
     notifyHistoryItemChanged(this);
 }
 
-void HistoryItem::setURL(const KURL& url)
+void HistoryItem::setURL(const URL& url)
 {
     pageCache()->remove(this);
     setURLString(url.string());
@@ -331,11 +331,11 @@ void HistoryItem::padDailyCountsForNewVisit(double time)
     int daysElapsed = timeToDay(time) - timeToDay(m_lastVisitedTime);
 
     if (daysElapsed < 0)
-      daysElapsed = 0;
+        daysElapsed = 0;
 
-    Vector<int> padding;
+    Vector<int, 32> padding;
     padding.fill(0, daysElapsed);
-    m_dailyVisitCounts.insert(0, padding);
+    m_dailyVisitCounts.insertVector(0, padding);
 }
 
 static const size_t daysPerWeek = 7;

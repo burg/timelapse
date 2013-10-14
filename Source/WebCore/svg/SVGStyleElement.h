@@ -52,8 +52,8 @@ private:
 
     bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
+    virtual void removedFrom(ContainerNode&) OVERRIDE;
     virtual void childrenChanged(const ChildChange&) OVERRIDE;
 
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE { return false; }
@@ -61,8 +61,8 @@ private:
     virtual void finishParsingChildren();
 
     virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
-    virtual bool sheetLoaded() OVERRIDE { return m_styleSheetOwner.sheetLoaded(&document()); }
-    virtual void startLoadingDynamicSheet() OVERRIDE { m_styleSheetOwner.startLoadingDynamicSheet(&document()); }
+    virtual bool sheetLoaded() OVERRIDE { return m_styleSheetOwner.sheetLoaded(document()); }
+    virtual void startLoadingDynamicSheet() OVERRIDE { m_styleSheetOwner.startLoadingDynamicSheet(document()); }
     virtual Timer<SVGElement>* svgLoadEventTimer() OVERRIDE { return &m_svgLoadEventTimer; }
 
     InlineStyleSheetOwner m_styleSheetOwner;

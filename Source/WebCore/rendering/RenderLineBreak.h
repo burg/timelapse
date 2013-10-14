@@ -35,7 +35,7 @@ public:
     virtual ~RenderLineBreak();
 
     // FIXME: The lies here keep render tree dump based test results unchanged.
-    virtual const char* renderName() const { return m_isWBR ? "RenderWordBreak" : "RenderBR"; }
+    virtual const char* renderName() const OVERRIDE { return m_isWBR ? "RenderWordBreak" : "RenderBR"; }
 
     virtual bool isWBR() const OVERRIDE { return m_isWBR; }
 
@@ -53,6 +53,9 @@ public:
 
 private:
     void node() const WTF_DELETED_FUNCTION;
+
+    virtual bool canHaveChildren() const OVERRIDE { return false; }
+    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE FINAL { }
 
     virtual VisiblePosition positionForPoint(const LayoutPoint&) OVERRIDE;
     virtual int caretMinOffset() const OVERRIDE;

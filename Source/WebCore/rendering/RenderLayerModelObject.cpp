@@ -37,9 +37,8 @@ bool RenderLayerModelObject::s_hadLayer = false;
 bool RenderLayerModelObject::s_hadTransform = false;
 bool RenderLayerModelObject::s_layerWasSelfPainting = false;
 
-RenderLayerModelObject::RenderLayerModelObject(Element* element)
-    : RenderElement(element)
-    , m_layer(0)
+RenderLayerModelObject::RenderLayerModelObject(Element* element, unsigned baseTypeFlags)
+    : RenderElement(element, baseTypeFlags | RenderLayerModelObjectFlag)
 {
 }
 
@@ -54,8 +53,7 @@ void RenderLayerModelObject::destroyLayer()
 {
     ASSERT(!hasLayer()); // Callers should have already called setHasLayer(false)
     ASSERT(m_layer);
-    m_layer->destroy(renderArena());
-    m_layer = 0;
+    m_layer = nullptr;
 }
 
 void RenderLayerModelObject::ensureLayer()
@@ -63,7 +61,7 @@ void RenderLayerModelObject::ensureLayer()
     if (m_layer)
         return;
 
-    m_layer = new (renderArena()) RenderLayer(*this);
+    m_layer = std::make_unique<RenderLayer>(*this);
     setHasLayer(true);
     m_layer->insertOnlyThisLayer();
 }
@@ -81,7 +79,7 @@ void RenderLayerModelObject::willBeDestroyed()
     }
 
     // RenderObject::willBeDestroyed calls back to destroyLayer() for layer destruction
-    RenderObject::willBeDestroyed();
+    RenderElement::willBeDestroyed();
 }
 
 void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
@@ -131,18 +129,18 @@ void RenderLayerModelObject::styleWillChange(StyleDifference diff, const RenderS
         }
     }
 
-    RenderObject::styleWillChange(diff, newStyle);
+    RenderElement::styleWillChange(diff, newStyle);
 }
 
 void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderObject::styleDidChange(diff, oldStyle);
+    RenderElement::styleDidChange(diff, oldStyle);
     updateFromStyle();
 
     if (requiresLayer()) {
         if (!layer() && layerCreationAllowedForSubtree()) {
             if (s_wasFloating && isFloating())
-                setChildNeedsLayout(true);
+                setChildNeedsLayout();
             ensureLayer();
             if (parent() && !needsLayout() && containingBlock()) {
                 layer()->setRepaintStatus(NeedsFullRepaint);
@@ -156,7 +154,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
         setHasReflection(false);
         layer()->removeOnlyThisLayer(); // calls destroyLayer() which clears m_layer
         if (s_wasFloating && isFloating())
-            setChildNeedsLayout(true);
+            setChildNeedsLayout();
         if (s_hadTransform)
             setNeedsLayoutAndPrefWidthsRecalc();
     }
@@ -164,7 +162,7 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
     if (layer()) {
         layer()->styleChanged(diff, oldStyle);
         if (s_hadLayer && layer()->isSelfPaintingLayer() != s_layerWasSelfPainting)
-            setChildNeedsLayout(true);
+            setChildNeedsLayout();
     }
 
     bool newStyleIsViewportConstained = style()->hasViewportConstrainedPosition();
@@ -175,33 +173,6 @@ void RenderLayerModelObject::styleDidChange(StyleDifference diff, const RenderSt
         else
             view().frameView().removeViewportConstrainedObject(this);
     }
-}
-
-bool RenderLayerModelObject::updateLayerIfNeeded()
-{
-    LayoutStateDisabler layoutStateDisabler(&view());
-
-    bool hadLayer = hasLayer();
-    if (requiresLayer()) {
-        if (!layer() && layerCreationAllowedForSubtree()) {
-            ensureLayer();
-            if (parent() && containingBlock()) {
-                layer()->setRepaintStatus(NeedsFullRepaint);
-                // There is only one layer to update, it is not worth using |cachedOffset| since
-                // we are not sure the value will be used.
-                layer()->updateLayerPositions(0);
-            }
-        }
-    } else if (layer() && layer()->parent())
-        layer()->removeOnlyThisLayer(); // calls destroyLayer() which clears m_layer
-
-    if (hadLayer == hasLayer())
-        return false;
-
-    if (layer())
-        layer()->styleChanged(StyleDifferenceEqual, 0);
-
-    return true;
 }
 
 } // namespace WebCore

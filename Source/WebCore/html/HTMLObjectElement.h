@@ -70,8 +70,8 @@ private:
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
+    virtual void removedFrom(ContainerNode&) OVERRIDE;
 
     virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
 
@@ -82,7 +82,7 @@ private:
 
     virtual RenderWidget* renderWidgetForJSBindings() const;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const;
 
     virtual void updateWidget(PluginCreationOption);
     void updateDocNamedItem();

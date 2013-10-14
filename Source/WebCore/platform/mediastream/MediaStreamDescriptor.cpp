@@ -35,6 +35,7 @@
 
 #include "MediaStreamDescriptor.h"
 
+#include "MediaStreamCenter.h"
 #include "MediaStreamSource.h"
 #include "UUID.h"
 #include <wtf/RefCounted.h>
@@ -42,90 +43,97 @@
 
 namespace WebCore {
 
-PassRefPtr<MediaStreamDescriptor> MediaStreamDescriptor::create(const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources)
+PassRefPtr<MediaStreamDescriptor> MediaStreamDescriptor::create(const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources, EndedAtCreationFlag flag)
 {
-    return adoptRef(new MediaStreamDescriptor(createCanonicalUUIDString(), audioSources, videoSources));
+    return adoptRef(new MediaStreamDescriptor(createCanonicalUUIDString(), audioSources, videoSources, flag == IsEnded));
 }
 
-PassRefPtr<MediaStreamDescriptor> MediaStreamDescriptor::create(const MediaStreamComponentVector& audioComponents, const MediaStreamComponentVector& videoComponents)
+MediaStreamDescriptor::~MediaStreamDescriptor()
 {
-    return adoptRef(new MediaStreamDescriptor(createCanonicalUUIDString(), audioComponents, videoComponents));
+    for (size_t i = 0; i < m_audioStreamSources.size(); i++)
+        m_audioStreamSources[i]->setStream(0);
+    
+    for (size_t i = 0; i < m_videoStreamSources.size(); i++)
+        m_videoStreamSources[i]->setStream(0);
 }
 
-void MediaStreamDescriptor::addComponent(PassRefPtr<MediaStreamComponent> component)
+void MediaStreamDescriptor::addSource(PassRefPtr<MediaStreamSource> source)
 {
-    switch (component->source()->type()) {
-    case MediaStreamSource::TypeAudio:
-        if (m_audioComponents.find(component) == notFound)
-            m_audioComponents.append(component);
+    switch (source->type()) {
+    case MediaStreamSource::Audio:
+        if (m_audioStreamSources.find(source) == notFound)
+            m_audioStreamSources.append(source);
         break;
-    case MediaStreamSource::TypeVideo:
-        if (m_videoComponents.find(component) == notFound)
-            m_videoComponents.append(component);
+    case MediaStreamSource::Video:
+        if (m_videoStreamSources.find(source) == notFound)
+            m_videoStreamSources.append(source);
         break;
     }
 }
 
-void MediaStreamDescriptor::removeComponent(PassRefPtr<MediaStreamComponent> component)
+void MediaStreamDescriptor::removeSource(PassRefPtr<MediaStreamSource> source)
 {
     size_t pos = notFound;
-    switch (component->source()->type()) {
-    case MediaStreamSource::TypeAudio:
-        pos = m_audioComponents.find(component);
-        if (pos != notFound)
-            m_audioComponents.remove(pos);
+    switch (source->type()) {
+    case MediaStreamSource::Audio:
+        pos = m_audioStreamSources.find(source);
+        if (pos == notFound)
+            return;
+        m_audioStreamSources.remove(pos);
         break;
-    case MediaStreamSource::TypeVideo:
-        pos = m_videoComponents.find(component);
-        if (pos != notFound)
-            m_videoComponents.remove(pos);
+    case MediaStreamSource::Video:
+        pos = m_videoStreamSources.find(source);
+        if (pos == notFound)
+            return;
+        m_videoStreamSources.remove(pos);
         break;
     }
+
+    source->setStream(0);
 }
 
-void MediaStreamDescriptor::addRemoteTrack(MediaStreamComponent* component)
+void MediaStreamDescriptor::addRemoteSource(MediaStreamSource* source)
 {
     if (m_client)
-        m_client->addRemoteTrack(component);
+        m_client->addRemoteSource(source);
     else
-        addComponent(component);
+        addSource(source);
 }
 
-void MediaStreamDescriptor::removeRemoteTrack(MediaStreamComponent* component)
+void MediaStreamDescriptor::removeRemoteSource(MediaStreamSource* source)
 {
     if (m_client)
-        m_client->removeRemoteTrack(component);
+        m_client->removeRemoteSource(source);
     else
-        removeComponent(component);
+        removeSource(source);
 }
 
-MediaStreamDescriptor::MediaStreamDescriptor(const String& id, const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources)
+MediaStreamDescriptor::MediaStreamDescriptor(const String& id, const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources, bool ended)
     : m_client(0)
     , m_id(id)
-    , m_ended(false)
+    , m_ended(ended)
 {
     ASSERT(m_id.length());
-    for (size_t i = 0; i < audioSources.size(); i++)
-        m_audioComponents.append(MediaStreamComponent::create(this, audioSources[i]));
+    for (size_t i = 0; i < audioSources.size(); i++) {
+        audioSources[i]->setStream(this);
+        m_audioStreamSources.append(audioSources[i]);
+    }
 
-    for (size_t i = 0; i < videoSources.size(); i++)
-        m_videoComponents.append(MediaStreamComponent::create(this, videoSources[i]));
+    for (size_t i = 0; i < videoSources.size(); i++) {
+        videoSources[i]->setStream(this);
+        m_videoStreamSources.append(videoSources[i]);
+    }
 }
 
-MediaStreamDescriptor::MediaStreamDescriptor(const String& id, const MediaStreamComponentVector& audioComponents, const MediaStreamComponentVector& videoComponents)
-    : m_client(0)
-    , m_id(id)
-    , m_ended(false)
+void MediaStreamDescriptor::setEnded()
 {
-    ASSERT(m_id.length());
-    for (MediaStreamComponentVector::const_iterator iter = audioComponents.begin(); iter != audioComponents.end(); ++iter) {
-        (*iter)->setStream(this);
-        m_audioComponents.append((*iter));
-    }
-    for (MediaStreamComponentVector::const_iterator iter = videoComponents.begin(); iter != videoComponents.end(); ++iter) {
-        (*iter)->setStream(this);
-        m_videoComponents.append((*iter));
-    }
+    if (m_client)
+        m_client->streamDidEnd();
+    m_ended = true;
+    for (size_t i = 0; i < m_audioStreamSources.size(); i++)
+        m_audioStreamSources[i]->setReadyState(MediaStreamSource::Ended);
+    for (size_t i = 0; i < m_videoStreamSources.size(); i++)
+        m_videoStreamSources[i]->setReadyState(MediaStreamSource::Ended);
 }
 
 } // namespace WebCore

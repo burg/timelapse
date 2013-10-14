@@ -74,7 +74,7 @@ private:
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
     
@@ -89,7 +89,7 @@ private:
     virtual int scrollHeight();
     virtual int scrollWidth();
     
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const;
 };
 
 } //namespace

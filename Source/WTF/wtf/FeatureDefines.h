@@ -174,10 +174,6 @@
 #define ENABLE_FULLSCREEN_API 1
 #endif
 
-#if !defined(ENABLE_GESTURE_EVENTS)
-#define ENABLE_GESTURE_EVENTS 1
-#endif
-
 #if !defined(ENABLE_RUBBER_BANDING)
 #define ENABLE_RUBBER_BANDING 1
 #endif
@@ -186,10 +182,8 @@
 #define ENABLE_SMOOTH_SCROLLING 1
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 #if !defined(ENABLE_THREADED_SCROLLING)
 #define ENABLE_THREADED_SCROLLING 1
-#endif
 #endif
 
 #if ENABLE(VIDEO)
@@ -298,17 +292,6 @@
 #endif
 
 #endif /* PLATFORM(GTK) */
-
-/* --------- Qt port (Unix, Windows, Mac, WinCE) --------- */
-#if PLATFORM(QT)
-
-#if OS(UNIX)
-#if !defined(ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH)
-#define ENABLE_PLUGIN_PACKAGE_SIMPLE_HASH 1
-#endif
-#endif
-
-#endif /* PLATFORM(QT) */
 
 /* --------- Blackberry port (QNX) --------- */
 #if PLATFORM(BLACKBERRY)
@@ -474,10 +457,6 @@
 #define ENABLE_FAST_MOBILE_SCROLLING 0
 #endif
 
-#if !defined(ENABLE_FILE_SYSTEM)
-#define ENABLE_FILE_SYSTEM 0
-#endif
-
 #if !defined(ENABLE_FILTERS)
 #define ENABLE_FILTERS 0
 #endif
@@ -500,10 +479,6 @@
 
 #if !defined(ENABLE_GEOLOCATION)
 #define ENABLE_GEOLOCATION 0
-#endif
-
-#if !defined(ENABLE_GESTURE_EVENTS)
-#define ENABLE_GESTURE_EVENTS 0
 #endif
 
 #if !defined(ENABLE_GLIB_SUPPORT)
@@ -614,6 +589,10 @@
 
 #if !defined(ENABLE_MEDIA_CAPTURE)
 #define ENABLE_MEDIA_CAPTURE 0
+#endif
+
+#if !defined(ENABLE_MEDIA_CONTROLS_SCRIPT)
+#define ENABLE_MEDIA_CONTROLS_SCRIPT 0
 #endif
 
 #if !defined(ENABLE_MEDIA_SOURCE)
@@ -756,10 +735,6 @@
 
 #if !defined(ENABLE_SQL_DATABASE)
 #define ENABLE_SQL_DATABASE 1
-#endif
-
-#if !defined(ENABLE_STYLE_SCOPED)
-#define ENABLE_STYLE_SCOPED 0
 #endif
 
 #if !defined(ENABLE_SUBPIXEL_LAYOUT)

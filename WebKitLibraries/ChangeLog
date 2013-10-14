@@ -1,3 +1,59 @@
+2013-10-10  Filip Pizlo  <fpizlo@apple.com>
+
+        Update the binary drops to the latest version of LLVM, built without -fvisibility=hidden
+        now that we have soft linking. Also include DataTypes.h in the drop.
+
+        Rubber stamped by Michael Saboff.
+
+        * LLVMIncludesMountainLion.tar.bz2:
+        * LLVMLibrariesMountainLion.tar.bz2:
+
+2013-10-01  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL should use the new version of LLVM MCJIT memory manager APIs that take a SectionName
+        https://bugs.webkit.org/show_bug.cgi?id=122193
+
+        Reviewed by Geoffrey Garen.
+
+        * LLVMIncludesMountainLion.tar.bz2:
+        * LLVMLibrariesMountainLion.tar.bz2:
+
+2013-10-01  Brent Fulgham  <bfulgham@apple.com>
+
+        [Win] Implement the media controls in JavaScript.
+        https://bugs.webkit.org/show_bug.cgi?id=122166
+
+        Reviewed by Jer Noble.
+
+        * win/tools/vsprops/FeatureDefines.props: Activate the
+        ENABLE_MEDIA_CONTROLS_SCRIPT flag.
+
+2013-09-24  Bear Travis  <betravis@adobe.com>
+
+        Disable CSS_SHAPES on Windows
+        https://bugs.webkit.org/show_bug.cgi?id=121879
+
+        Reviewed by Brent Fulgham.
+
+        Enabling CSS_SHAPES on Windows is currently causing crashes in DRT.
+        Turn the feature off until it can be appropriately fixed.
+
+        * win/tools/vsprops/FeatureDefines.props: Disable on Win port
+        * win/tools/vsprops/FeatureDefinesCairo.props: Disable on WinCairo port
+
+2013-09-23  Patrick Gansterer  <paroga@webkit.org>
+
+        use NOMINMAX instead of #define min min
+        https://bugs.webkit.org/show_bug.cgi?id=73563
+
+        Reviewed by Brent Fulgham.
+
+        Use NOMINMAX instead of #define min/max as a cleaner
+        way of ensuring that Windows system header files don't
+        define min/max as macro in the first place.
+
+        * win/tools/vsprops/common.props:
+
 2013-09-20  Mark Rowe  <mrowe@apple.com>
 
         Fix link errors for external users when building WebKit with Xcode 5.

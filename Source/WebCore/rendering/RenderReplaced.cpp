@@ -43,14 +43,14 @@ const int cDefaultWidth = 300;
 const int cDefaultHeight = 150;
 
 RenderReplaced::RenderReplaced(Element* element)
-    : RenderBox(element)
+    : RenderBox(element, RenderReplacedFlag)
     , m_intrinsicSize(cDefaultWidth, cDefaultHeight)
 {
     setReplaced(true);
 }
 
 RenderReplaced::RenderReplaced(Element* element, const LayoutSize& intrinsicSize)
-    : RenderBox(element)
+    : RenderBox(element, RenderReplacedFlag)
     , m_intrinsicSize(intrinsicSize)
 {
     setReplaced(true);
@@ -96,7 +96,7 @@ void RenderReplaced::layout()
     invalidateBackgroundObscurationStatus();
 
     repainter.repaintAfterLayout();
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 void RenderReplaced::intrinsicSizeChanged()
@@ -129,7 +129,7 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     if (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection && !canHaveChildren())
         return;
     
-    if (!paintInfo.shouldPaintWithinRoot(this))
+    if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
     
     bool drawSelectionTint = selectionState() != SelectionNone && !document().printing();
@@ -176,7 +176,7 @@ bool RenderReplaced::shouldPaint(PaintInfo& paintInfo, const LayoutPoint& paintO
             && paintInfo.phase != PaintPhaseSelection && paintInfo.phase != PaintPhaseMask)
         return false;
 
-    if (!paintInfo.shouldPaintWithinRoot(this))
+    if (!paintInfo.shouldPaintWithinRoot(*this))
         return false;
         
     // if we're invisible or haven't received a layout yet, then just bail.

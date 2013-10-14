@@ -38,6 +38,7 @@
 #include "InjectedScriptManager.h"
 #include "InspectorState.h"
 #include "InstrumentingAgents.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PageScriptDebugServer.h"
 #include "ScriptProbe.h"

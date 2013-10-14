@@ -40,7 +40,7 @@ public:
     {
         return adoptRef(new TextTrackList(element, context));
     }
-    ~TextTrackList();
+    virtual ~TextTrackList();
 
     virtual unsigned length() const OVERRIDE;
     int getTrackIndex(TextTrack*);
@@ -52,7 +52,7 @@ public:
     virtual void remove(TrackBase*) OVERRIDE;
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE;
 
 private:
     TextTrackList(HTMLMediaElement*, ScriptExecutionContext*);

@@ -38,15 +38,12 @@
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
 
+#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/PassRefPtr.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class InspectorObject;
 class InspectorController;
 class InspectorFrontend;
 class InspectorCompositeState;
@@ -77,12 +74,8 @@ public:
     void recordingCreated(PassRefPtr<ReplayRecording>);
 
     // Calls from the frontend
-    virtual void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecording>&) OVERRIDE;
-    virtual void getSerializedRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecordingNew>&) OVERRIDE;
+    virtual void getSerializedRecording(ErrorString*, int, RefPtr<TypeBuilder::Recordings::ReplayRecording>&) OVERRIDE;
     virtual void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&) OVERRIDE;
-
-    // TODO(Issue #271): remove backend-side interpretation of inputs
-    static PassRefPtr<TypeBuilder::Recordings::ReplayAction> createInspectorObjectForAction(const EventLoopInput&);
 
 private:
     InspectorRecordingsAgent(InstrumentingAgents*, InspectorCompositeState*);

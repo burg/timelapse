@@ -130,7 +130,7 @@ void RenderListBox::updateFromElement()
             if (!text.isEmpty()) {
                 applyTextTransform(style(), text, ' ');
                 // FIXME: Why is this always LTR? Can't text direction affect the width?
-                TextRun textRun = constructTextRun(this, itemFont, text, style(), TextRun::AllowTrailingExpansion);
+                TextRun textRun = constructTextRun(this, itemFont, text, *style(), TextRun::AllowTrailingExpansion);
                 textRun.disableRoundingHacks();
                 float textWidth = itemFont.width(textRun);
                 width = max(width, textWidth);
@@ -594,12 +594,12 @@ bool RenderListBox::listIndexIsVisible(int index)
     return index >= m_indexOffset && index < m_indexOffset + numVisibleItems();
 }
 
-bool RenderListBox::scroll(ScrollDirection direction, ScrollGranularity granularity, float multiplier, Node**)
+bool RenderListBox::scroll(ScrollDirection direction, ScrollGranularity granularity, float multiplier, Element**)
 {
     return ScrollableArea::scroll(direction, granularity, multiplier);
 }
 
-bool RenderListBox::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Node**)
+bool RenderListBox::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Element**)
 {
     return ScrollableArea::scroll(logicalToPhysical(direction, style()->isHorizontalWritingMode(), style()->isFlippedBlocksWritingMode()), granularity, multiplier);
 }
@@ -789,16 +789,6 @@ bool RenderListBox::isHandlingWheelEvent() const
 bool RenderListBox::shouldSuspendScrollAnimations() const
 {
     return view().frameView().shouldSuspendScrollAnimations();
-}
-
-bool RenderListBox::scrollbarsCanBeActive() const
-{
-    return view().frameView().scrollbarsCanBeActive();
-}
-
-bool RenderListBox::scrollbarAnimationsAreSuppressed() const
-{
-    return view().frameView().scrollbarAnimationsAreSuppressed();
 }
 
 ScrollableArea* RenderListBox::enclosingScrollableArea() const

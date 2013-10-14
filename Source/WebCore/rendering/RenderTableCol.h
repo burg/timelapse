@@ -38,12 +38,6 @@ public:
     explicit RenderTableCol(Element&);
     Element& element() const { return toElement(nodeForNonAnonymous()); }
 
-    RenderObject* firstChild() const { return m_children.firstChild(); }
-    RenderObject* lastChild() const { return m_children.lastChild(); }
-
-    virtual const RenderObjectChildList* children() const OVERRIDE { return &m_children; }
-    virtual RenderObjectChildList* children() OVERRIDE { return &m_children; }
-
     void clearPreferredLogicalWidthsDirtyBits();
 
     unsigned span() const { return m_span; }
@@ -94,10 +88,10 @@ private:
     virtual void imageChanged(WrappedImagePtr, const IntRect* = 0) OVERRIDE;
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
+    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE { }
 
     RenderTable* table() const;
 
-    RenderObjectChildList m_children;
     unsigned m_span;
 };
 

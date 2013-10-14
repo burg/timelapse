@@ -38,7 +38,6 @@
 #include "IntRect.h"
 #include "Timer.h"
 #include "UpdateAtlas.h"
-#include <wtf/OwnPtr.h>
 
 #if ENABLE(CSS_SHADERS)
 #include "FilterOperations.h"
@@ -67,7 +66,7 @@ public:
         virtual void paintLayerContents(const GraphicsLayer*, GraphicsContext&, const IntRect& clipRect) = 0;
     };
 
-    static PassOwnPtr<CompositingCoordinator> create(Page*, CompositingCoordinator::Client*);
+    CompositingCoordinator(Page*, CompositingCoordinator::Client*);
     virtual ~CompositingCoordinator();
 
     void setRootCompositingLayer(GraphicsLayer*);
@@ -94,8 +93,6 @@ public:
 #endif
 
 private:
-    CompositingCoordinator(Page*, CompositingCoordinator::Client*);
-
     // GraphicsLayerClient
     virtual void notifyAnimationStarted(const GraphicsLayer*, double time) OVERRIDE;
     virtual void notifyFlushRequired(const GraphicsLayer*) OVERRIDE;
@@ -122,7 +119,7 @@ private:
     virtual void removeUpdateAtlas(uint32_t atlasID) OVERRIDE;
 
     // GraphicsLayerFactory
-    virtual PassOwnPtr<GraphicsLayer> createGraphicsLayer(GraphicsLayerClient*) OVERRIDE;
+    virtual std::unique_ptr<GraphicsLayer> createGraphicsLayer(GraphicsLayerClient*) OVERRIDE;
 
     void initializeRootCompositingLayerIfNeeded();
     void flushPendingImageBackingChanges();
@@ -135,7 +132,7 @@ private:
     Page* m_page;
     CompositingCoordinator::Client* m_client;
 
-    OwnPtr<GraphicsLayer> m_rootLayer;
+    std::unique_ptr<GraphicsLayer> m_rootLayer;
     GraphicsLayer* m_rootCompositingLayer;
 
     CoordinatedGraphicsState m_state;
@@ -144,7 +141,7 @@ private:
     LayerMap m_registeredLayers;
     typedef HashMap<CoordinatedImageBackingID, RefPtr<CoordinatedImageBacking> > ImageBackingMap;
     ImageBackingMap m_imageBackings;
-    Vector<OwnPtr<UpdateAtlas> > m_updateAtlases;
+    Vector<std::unique_ptr<UpdateAtlas>> m_updateAtlases;
 
     // We don't send the messages related to releasing resources to renderer during purging, because renderer already had removed all resources.
     bool m_isPurging;

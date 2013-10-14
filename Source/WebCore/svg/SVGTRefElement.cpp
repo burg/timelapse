@@ -175,7 +175,7 @@ void SVGTRefElement::detachTarget()
 
     // Mark the referenced ID as pending.
     String id;
-    SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
+    SVGURIReference::targetElementFromIRIString(href(), document(), &id);
     if (!id.isEmpty())
         document().accessSVGExtensions()->addPendingResource(id, this);
 }
@@ -255,7 +255,7 @@ void SVGTRefElement::buildPendingResource()
         return;
 
     String id;
-    RefPtr<Element> target = SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
+    RefPtr<Element> target = SVGURIReference::targetElementFromIRIString(href(), document(), &id);
     if (!target.get()) {
         if (id.isEmpty())
             return;
@@ -275,18 +275,18 @@ void SVGTRefElement::buildPendingResource()
     updateReferencedText(target.get());
 }
 
-Node::InsertionNotificationRequest SVGTRefElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGTRefElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         buildPendingResource();
     return InsertionDone;
 }
 
-void SVGTRefElement::removedFrom(ContainerNode* rootParent)
+void SVGTRefElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         m_targetListener->detach();
 }
 

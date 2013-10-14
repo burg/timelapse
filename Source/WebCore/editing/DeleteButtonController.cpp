@@ -102,24 +102,24 @@ static bool isDeletableElement(const Node* node)
     if ((borderBoundingBox.width() * borderBoundingBox.height()) < minimumArea)
         return false;
 
-    if (renderer->isTable())
+    if (box->isTable())
         return true;
 
     if (node->hasTagName(ulTag) || node->hasTagName(olTag) || node->hasTagName(iframeTag))
         return true;
 
-    if (renderer->isOutOfFlowPositioned())
+    if (box->isOutOfFlowPositioned())
         return true;
 
-    if (renderer->isRenderBlock() && !renderer->isTableCell()) {
-        RenderStyle* style = renderer->style();
+    if (box->isRenderBlock() && !box->isTableCell()) {
+        RenderStyle* style = box->style();
         if (!style)
             return false;
 
         // Allow blocks that have background images
         if (style->hasBackgroundImage()) {
             for (const FillLayer* background = style->backgroundLayers(); background; background = background->next()) {
-                if (background->image() && background->image()->canRender(renderer, 1))
+                if (background->image() && background->image()->canRender(box, 1))
                     return true;
             }
         }
@@ -142,7 +142,7 @@ static bool isDeletableElement(const Node* node)
         if (!parentStyle)
             return false;
 
-        if (renderer->hasBackground() && (!parentRenderer->hasBackground() || style->visitedDependentColor(CSSPropertyBackgroundColor) != parentStyle->visitedDependentColor(CSSPropertyBackgroundColor)))
+        if (box->hasBackground() && (!parentRenderer->hasBackground() || style->visitedDependentColor(CSSPropertyBackgroundColor) != parentStyle->visitedDependentColor(CSSPropertyBackgroundColor)))
             return true;
     }
 
@@ -224,14 +224,14 @@ void DeleteButtonController::createDeletionUI()
     const int borderRadius = 6;
 
     outline->setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
-    outline->setInlineStyleProperty(CSSPropertyZIndex, String::number(-1000000));
+    outline->setInlineStyleProperty(CSSPropertyZIndex, ASCIILiteral("-1000000"));
     outline->setInlineStyleProperty(CSSPropertyTop, -borderWidth - m_target->renderBox()->borderTop(), CSSPrimitiveValue::CSS_PX);
     outline->setInlineStyleProperty(CSSPropertyRight, -borderWidth - m_target->renderBox()->borderRight(), CSSPrimitiveValue::CSS_PX);
     outline->setInlineStyleProperty(CSSPropertyBottom, -borderWidth - m_target->renderBox()->borderBottom(), CSSPrimitiveValue::CSS_PX);
     outline->setInlineStyleProperty(CSSPropertyLeft, -borderWidth - m_target->renderBox()->borderLeft(), CSSPrimitiveValue::CSS_PX);
     outline->setInlineStyleProperty(CSSPropertyBorderWidth, borderWidth, CSSPrimitiveValue::CSS_PX);
     outline->setInlineStyleProperty(CSSPropertyBorderStyle, CSSValueSolid);
-    outline->setInlineStyleProperty(CSSPropertyBorderColor, "rgba(0, 0, 0, 0.6)");
+    outline->setInlineStyleProperty(CSSPropertyBorderColor, ASCIILiteral("rgba(0, 0, 0, 0.6)"));
     outline->setInlineStyleProperty(CSSPropertyBorderRadius, borderRadius, CSSPrimitiveValue::CSS_PX);
     outline->setInlineStyleProperty(CSSPropertyVisibility, CSSValueVisible);
 
@@ -249,7 +249,7 @@ void DeleteButtonController::createDeletionUI()
     const int buttonBottomShadowOffset = 2;
 
     button->setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
-    button->setInlineStyleProperty(CSSPropertyZIndex, String::number(1000000));
+    button->setInlineStyleProperty(CSSPropertyZIndex, ASCIILiteral("1000000"));
     button->setInlineStyleProperty(CSSPropertyTop, (-buttonHeight / 2) - m_target->renderBox()->borderTop() - (borderWidth / 2) + buttonBottomShadowOffset, CSSPrimitiveValue::CSS_PX);
     button->setInlineStyleProperty(CSSPropertyLeft, (-buttonWidth / 2) - m_target->renderBox()->borderLeft() - (borderWidth / 2), CSSPrimitiveValue::CSS_PX);
     button->setInlineStyleProperty(CSSPropertyWidth, buttonWidth, CSSPrimitiveValue::CSS_PX);
@@ -316,7 +316,7 @@ void DeleteButtonController::show(HTMLElement* element)
     }
 
     if (m_target->renderer()->style()->hasAutoZIndex()) {
-        m_target->setInlineStyleProperty(CSSPropertyZIndex, String::number(0));
+        m_target->setInlineStyleProperty(CSSPropertyZIndex, ASCIILiteral("0"));
         m_wasAutoZIndex = true;
     }
 }

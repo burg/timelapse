@@ -35,13 +35,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/unicode/CharacterNames.h>
 
-#if PLATFORM(QT)
-#include <QRawFont>
-QT_BEGIN_NAMESPACE
-class QTextLayout;
-QT_END_NAMESPACE
-#endif
-
 // "X11/X.h" defines Complex to 0 and conflicts
 // with Complex value in CodePath enum.
 #ifdef Complex
@@ -170,11 +163,6 @@ public:
     static unsigned expansionOpportunityCount(const LChar*, size_t length, TextDirection, bool& isAfterExpansion);
     static unsigned expansionOpportunityCount(const UChar*, size_t length, TextDirection, bool& isAfterExpansion);
 
-#if PLATFORM(QT)
-    QRawFont rawFont() const;
-    QFont syntheticFont() const;
-#endif
-
     static void setShouldUseSmoothing(bool);
     static bool shouldUseSmoothing();
 
@@ -257,7 +245,7 @@ public:
     static String normalizeSpaces(const LChar*, unsigned length);
     static String normalizeSpaces(const UChar*, unsigned length);
 
-    bool needsTranscoding() const { return m_needsTranscoding; }
+    bool useBackslashAsYenSymbol() const { return m_useBackslashAsYenSymbol; }
     FontGlyphs* glyphs() const { return m_glyphs.get(); }
 
 private:
@@ -308,17 +296,13 @@ private:
         return features;
     }
 
-#if PLATFORM(QT)
-    void initFormatForTextLayout(QTextLayout*, const TextRun&) const;
-#endif
-
     static TypesettingFeatures s_defaultTypesettingFeatures;
 
     FontDescription m_fontDescription;
     mutable RefPtr<FontGlyphs> m_glyphs;
     short m_letterSpacing;
     short m_wordSpacing;
-    bool m_needsTranscoding;
+    mutable bool m_useBackslashAsYenSymbol;
     mutable unsigned m_typesettingFeatures : 2; // (TypesettingFeatures) Caches values computed from m_fontDescription.
 };
 

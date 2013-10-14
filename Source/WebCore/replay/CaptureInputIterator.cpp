@@ -38,10 +38,10 @@
 #include "Document.h"
 #include "DocumentEventQueue.h"
 #include "EventLoopInput.h"
-#include "Frame.h"
 #include "InputStorage.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>

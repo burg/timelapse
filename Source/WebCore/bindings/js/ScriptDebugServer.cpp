@@ -60,6 +60,29 @@ using namespace JSC;
 
 namespace WebCore {
 
+class DebuggerCallFrameScope {
+public:
+    DebuggerCallFrameScope(ScriptDebugServer& debugger)
+        : m_debugger(debugger)
+    {
+        ASSERT(!m_debugger.m_currentDebuggerCallFrame);
+        if (m_debugger.m_currentCallFrame)
+            m_debugger.m_currentDebuggerCallFrame = DebuggerCallFrame::create(debugger.m_currentCallFrame);
+    }
+
+    ~DebuggerCallFrameScope()
+    {
+        if (m_debugger.m_currentDebuggerCallFrame) {
+            m_debugger.m_currentDebuggerCallFrame->invalidate();
+            m_debugger.m_currentDebuggerCallFrame = 0;
+        }
+    }
+
+private:
+    ScriptDebugServer& m_debugger;
+};
+
+
 ScriptDebugServer::ScriptDebugServer()
     : m_callingListeners(false)
     , m_pauseOnExceptionsState(DontPauseOnExceptions)
@@ -70,6 +93,7 @@ ScriptDebugServer::ScriptDebugServer()
     , m_breakpointsActivated(true)
     , m_probesActivated(true)
     , m_pauseOnCallFrame(0)
+    , m_currentCallFrame(0)
     , m_recompileTimer(this, &ScriptDebugServer::recompileAllJSFunctions)
     , m_lastExecutedLine(-1)
     , m_lastExecutedSourceId(-1)
@@ -94,10 +118,10 @@ String ScriptDebugServer::setBreakpoint(const String& sourceID, const ScriptBrea
         return "";
     SourceIdToBreakpointsMap::iterator it = m_sourceIdToBreakpoints.find(sourceIDValue);
     if (it == m_sourceIdToBreakpoints.end())
-        it = m_sourceIdToBreakpoints.set(sourceIDValue, LineToBreakpointMap()).iterator;
-    LineToBreakpointMap::iterator breaksIt = it->value.find(scriptBreakpoint.lineNumber + 1);
+        it = m_sourceIdToBreakpoints.set(sourceIDValue, LineToBreakpointsMap()).iterator;
+    LineToBreakpointsMap::iterator breaksIt = it->value.find(scriptBreakpoint.lineNumber);
     if (breaksIt == it->value.end())
-        breaksIt = it->value.set(scriptBreakpoint.lineNumber + 1, BreakpointsInLine()).iterator;
+        breaksIt = it->value.set(scriptBreakpoint.lineNumber, BreakpointsInLine()).iterator;
 
     BreakpointsInLine& breaksVector = breaksIt->value;
     unsigned breaksCount = breaksVector.size();
@@ -132,7 +156,7 @@ void ScriptDebugServer::removeBreakpoint(const String& breakpointId)
     SourceIdToBreakpointsMap::iterator it = m_sourceIdToBreakpoints.find(sourceIDValue);
     if (it == m_sourceIdToBreakpoints.end())
         return;
-    LineToBreakpointMap::iterator breaksIt = it->value.find(lineNumber + 1);
+    LineToBreakpointsMap::iterator breaksIt = it->value.find(lineNumber);
     if (breaksIt == it->value.end())
         return;
 
@@ -155,12 +179,12 @@ bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& pos
     if (it == m_sourceIdToBreakpoints.end())
         return false;
 
-    int lineNumber = position.m_line.zeroBasedInt();
-    int columnNumber = position.m_column.zeroBasedInt();
-    if (lineNumber < 0 || columnNumber < 0)
+    int line = position.m_line.zeroBasedInt();
+    int column = position.m_column.zeroBasedInt();
+    if (line < 0 || column < 0)
         return false;
 
-    LineToBreakpointMap::const_iterator breaksIt = it->value.find(lineNumber + 1);
+    LineToBreakpointsMap::const_iterator breaksIt = it->value.find(line);
     if (breaksIt == it->value.end())
         return false;
 
@@ -172,8 +196,8 @@ bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& pos
         int breakLine = breaksVector.at(i).lineNumber;
         int breakColumn = breaksVector.at(i).columnNumber;
         // Since frontend truncates the indent, the first statement in a line must match the breakpoint (line,0).
-        if ((lineNumber != m_lastExecutedLine && lineNumber == breakLine && !breakColumn)
-            || (lineNumber == breakLine && columnNumber == breakColumn)) {
+        if ((line != m_lastExecutedLine && line == breakLine && !breakColumn)
+            || (line == breakLine && column == breakColumn)) {
             hit = true;
             break;
         }
@@ -189,29 +213,30 @@ bool ScriptDebugServer::hasBreakpoint(intptr_t sourceID, const TextPosition& pos
         return true;
 
     JSValue exception;
-    JSValue result = m_currentCallFrame->evaluate(breaksVector.at(i).condition, exception);
+    JSValue result = DebuggerCallFrame::evaluateWithCallFrame(m_currentCallFrame, breaksVector.at(i).condition, exception);
     if (exception) {
         // An erroneous condition counts as "false".
-        reportException(m_currentCallFrame->exec(), exception);
+        reportException(m_currentCallFrame, exception);
         return false;
     }
-    return result.toBoolean(m_currentCallFrame->exec());
+    return result.toBoolean(m_currentCallFrame);
 }
 
 bool ScriptDebugServer::evaluateBreakpointAction(const ScriptBreakpointAction& breakpointAction) const
 {
+    DebuggerCallFrame* debuggerCallFrame = currentDebuggerCallFrame();
     switch (breakpointAction.type) {
     case ScriptBreakpointActionTypeLog: {
-        DOMWindow* window = asJSDOMWindow(m_currentCallFrame->dynamicGlobalObject())->impl();
-        if (PageConsole* console = window->pageConsole())
+        DOMWindow& window = asJSDOMWindow(debuggerCallFrame->dynamicGlobalObject())->impl();
+        if (PageConsole* console = window.pageConsole())
             console->addMessage(JSMessageSource, LogMessageLevel, breakpointAction.data);
         break;
     }
     case ScriptBreakpointActionTypeEvaluate: {
         JSValue exception;
-        m_currentCallFrame->evaluate(breakpointAction.data, exception);
+        debuggerCallFrame->evaluate(breakpointAction.data, exception);
         if (exception)
-            reportException(m_currentCallFrame->exec(), exception);
+            reportException(debuggerCallFrame->exec(), exception);
         break;
     }
     case ScriptBreakpointActionTypeSound:
@@ -317,7 +342,7 @@ void ScriptDebugServer::breakProgram()
         return;
 
     m_pauseOnNextStatement = true;
-    pauseIfNeeded(m_currentCallFrame->dynamicGlobalObject());
+    pauseIfNeeded(m_currentCallFrame);
 }
 
 void ScriptDebugServer::continueProgram()
@@ -343,7 +368,7 @@ void ScriptDebugServer::stepOverStatement()
     if (!m_paused)
         return;
 
-    m_pauseOnCallFrame = m_currentCallFrame.get();
+    m_pauseOnCallFrame = m_currentCallFrame;
     m_doneProcessingDebuggerEvents = true;
 }
 
@@ -352,7 +377,7 @@ void ScriptDebugServer::stepOutOfFunction()
     if (!m_paused)
         return;
 
-    m_pauseOnCallFrame = m_currentCallFrame ? m_currentCallFrame->caller() : 0;
+    m_pauseOnCallFrame = m_currentCallFrame ? m_currentCallFrame->callerFrameNoFlags() : 0;
     m_doneProcessingDebuggerEvents = true;
 }
 
@@ -374,17 +399,25 @@ void ScriptDebugServer::updateCallStack(ScriptValue*)
     // FIXME(40300): implement this.
 }
 
+DebuggerCallFrame* ScriptDebugServer::currentDebuggerCallFrame() const
+{
+    ASSERT(m_currentDebuggerCallFrame);
+    return m_currentDebuggerCallFrame.get();
+}
+
 void ScriptDebugServer::dispatchDidPause(ScriptDebugListener* listener)
 {
     ASSERT(m_paused);
-    JSGlobalObject* globalObject = m_currentCallFrame->scopeChain()->globalObject();
+    DebuggerCallFrame* debuggerCallFrame = currentDebuggerCallFrame();
+    JSGlobalObject* globalObject = debuggerCallFrame->scope()->globalObject();
     JSC::ExecState* state = globalObject->globalExec();
+    RefPtr<JavaScriptCallFrame> javaScriptCallFrame = JavaScriptCallFrame::create(debuggerCallFrame);
     JSValue jsCallFrame;
     {
-        if (m_currentCallFrame->isValid() && globalObject->inherits(JSDOMGlobalObject::info())) {
+        if (globalObject->inherits(JSDOMGlobalObject::info())) {
             JSDOMGlobalObject* domGlobalObject = jsCast<JSDOMGlobalObject*>(globalObject);
             JSLockHolder lock(state);
-            jsCallFrame = toJS(state, domGlobalObject, m_currentCallFrame.get());
+            jsCallFrame = toJS(state, domGlobalObject, javaScriptCallFrame.get());
         } else
             jsCallFrame = jsUndefined();
     }
@@ -436,7 +469,7 @@ void ScriptDebugServer::dispatchCaptureProbeSample(ScriptState* exec, PassRefPtr
 
 bool ScriptDebugServer::isContentScript(ExecState* exec)
 {
-    return currentWorld(exec) != mainThreadNormalWorld();
+    return &currentWorld(exec) != &mainThreadNormalWorld();
 }
 
 void ScriptDebugServer::detach(JSGlobalObject* globalObject)
@@ -535,31 +568,28 @@ void ScriptDebugServer::dispatchFunctionToListeners(JavaScriptExecutionCallback 
     }
 }
 
-void ScriptDebugServer::createCallFrame(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::updateCallFrame(CallFrame* callFrame)
 {
-    intptr_t sourceId = debuggerCallFrame.sourceId();
-    m_currentCallFrame = JavaScriptCallFrame::create(debuggerCallFrame, m_currentCallFrame);
+    m_currentCallFrame = callFrame;
+    intptr_t sourceId = DebuggerCallFrame::sourceIdForCallFrame(callFrame);
     if (m_lastExecutedSourceId != sourceId) {
         m_lastExecutedLine = -1;
         m_lastExecutedSourceId = sourceId;
     }
 }
 
-void ScriptDebugServer::updateCallFrameAndPauseIfNeeded(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::updateCallFrameAndPauseIfNeeded(CallFrame* callFrame)
 {
-    // ASSERT(m_currentCallFrame);
-    if (!m_currentCallFrame)
-        return;
-
-    m_currentCallFrame->update(debuggerCallFrame);
-    pauseIfNeeded(debuggerCallFrame.dynamicGlobalObject());
+    updateCallFrame(callFrame);
+    pauseIfNeeded(callFrame);
 }
 
-void ScriptDebugServer::pauseIfNeeded(JSGlobalObject* dynamicGlobalObject)
+void ScriptDebugServer::pauseIfNeeded(CallFrame* callFrame)
 {
     if (m_paused)
         return;
 
+    JSGlobalObject* dynamicGlobalObject = callFrame->dynamicGlobalObject();
     if (!getListenersForGlobalObject(dynamicGlobalObject))
         return;
 
@@ -567,11 +597,16 @@ void ScriptDebugServer::pauseIfNeeded(JSGlobalObject* dynamicGlobalObject)
     bool didHitBreakpoint = false;
     bool pauseNow = m_pauseOnNextStatement;
     pauseNow |= (m_pauseOnCallFrame == m_currentCallFrame);
-    pauseNow |= didHitBreakpoint = hasBreakpoint(m_currentCallFrame->sourceID(), m_currentCallFrame->position(), &breakpoint);
-    pauseNow |= hasActiveProbes(m_currentCallFrame->sourceID(), m_currentCallFrame->position());
-    m_lastExecutedLine = m_currentCallFrame->position().m_line.zeroBasedInt();
+
+    intptr_t sourceId = DebuggerCallFrame::sourceIdForCallFrame(m_currentCallFrame);
+    TextPosition position = DebuggerCallFrame::positionForCallFrame(m_currentCallFrame);
+    pauseNow |= didHitBreakpoint = hasBreakpoint(sourceId, position, &breakpoint);
+    pauseNow |= hasActiveProbes(sourceId, position);
+    m_lastExecutedLine = position.m_line.zeroBasedInt();
     if (!pauseNow)
         return;
+
+    DebuggerCallFrameScope debuggerCallFrameScope(*this);
 
     if (didHitBreakpoint) {
         evaluateBreakpointActions(breakpoint);
@@ -647,20 +682,19 @@ bool ScriptDebugServer::hasActiveProbes(ScriptId scriptId, const TextPosition& p
     return false;
 }
 
-void ScriptDebugServer::captureProbeSamplesIfNeeded(const JSC::DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::captureProbeSamplesIfNeeded(CallFrame* callFrame)
 {
 #if ENABLE(WEB_REPLAY)
     // If web replay is active, only generate probe samples during replay.
-    JSC::JSGlobalObject* globalObject = debuggerCallFrame.dynamicGlobalObject();
+    JSGlobalObject* globalObject = callFrame->dynamicGlobalObject();
     InputIterator* it = globalObject->inputIterator();
     if (it && !it->isReplaying())
         return;
 #endif
 
-    TextPosition textPosition(OrdinalNumber::fromOneBasedInt(debuggerCallFrame.line()), OrdinalNumber::fromOneBasedInt(debuggerCallFrame.column()));
-
+    TextPosition position = DebuggerCallFrame::positionForCallFrame(callFrame);
     ProbeSet foundProbes;
-    if (!findProbesForPosition(debuggerCallFrame.sourceId(), textPosition, foundProbes))
+    if (!findProbesForPosition(DebuggerCallFrame::sourceIdForCallFrame(callFrame), position, foundProbes))
         return;
 
     int batchId = m_nextBatchId++;
@@ -669,38 +703,38 @@ void ScriptDebugServer::captureProbeSamplesIfNeeded(const JSC::DebuggerCallFrame
     for (; probesIt != foundProbes.end(); ++probesIt) {
         RefPtr<ScriptProbe> probe = *probesIt;
         JSC::JSValue exception;
-        JSC::JSValue result = debuggerCallFrame.evaluate(probe->expression(), exception);
+        JSC::JSValue result = DebuggerCallFrame::evaluateWithCallFrame(callFrame, probe->expression(), exception);
         // TODO: (Issue #314): Propagate exception to the frontend instead of silently dropping it.
         if (exception)
             continue;
 
-        ScriptValue wrappedResult = ScriptValue(debuggerCallFrame.callFrame()->vm(), result);
-        dispatchCaptureProbeSample(debuggerCallFrame.callFrame(), probe, batchId, wrappedResult);
+        ScriptValue wrappedResult = ScriptValue(callFrame->vm(), result);
+        dispatchCaptureProbeSample(callFrame, probe, batchId, wrappedResult);
     }
 }
 
-void ScriptDebugServer::callEvent(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::callEvent(CallFrame* callFrame)
 {
     if (!m_paused) {
-        createCallFrame(debuggerCallFrame);
-        pauseIfNeeded(debuggerCallFrame.dynamicGlobalObject());
+        updateCallFrame(callFrame);
+        pauseIfNeeded(callFrame);
     }
 }
 
-void ScriptDebugServer::atStatement(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::atStatement(CallFrame* callFrame)
 {
-    captureProbeSamplesIfNeeded(debuggerCallFrame);
+    captureProbeSamplesIfNeeded(callFrame);
 
     if (!m_paused)
-        updateCallFrameAndPauseIfNeeded(debuggerCallFrame);
+        updateCallFrameAndPauseIfNeeded(callFrame);
 }
 
-void ScriptDebugServer::returnEvent(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::returnEvent(CallFrame* callFrame)
 {
     if (m_paused)
         return;
 
-    updateCallFrameAndPauseIfNeeded(debuggerCallFrame);
+    updateCallFrameAndPauseIfNeeded(callFrame);
 
     // detach may have been called during pauseIfNeeded
     if (!m_currentCallFrame)
@@ -708,11 +742,12 @@ void ScriptDebugServer::returnEvent(const DebuggerCallFrame& debuggerCallFrame)
 
     // Treat stepping over a return statement like stepping out.
     if (m_currentCallFrame == m_pauseOnCallFrame)
-        m_pauseOnCallFrame = m_currentCallFrame->caller();
-    m_currentCallFrame = m_currentCallFrame->caller();
+        m_pauseOnCallFrame = m_currentCallFrame->callerFrameNoFlags();
+
+    m_currentCallFrame = m_currentCallFrame->callerFrameNoFlags();
 }
 
-void ScriptDebugServer::exception(const DebuggerCallFrame& debuggerCallFrame, bool hasHandler)
+void ScriptDebugServer::exception(CallFrame* callFrame, JSValue, bool hasHandler)
 {
     if (m_paused)
         return;
@@ -720,42 +755,42 @@ void ScriptDebugServer::exception(const DebuggerCallFrame& debuggerCallFrame, bo
     if (m_pauseOnExceptionsState == PauseOnAllExceptions || (m_pauseOnExceptionsState == PauseOnUncaughtExceptions && !hasHandler))
         m_pauseOnNextStatement = true;
 
-    updateCallFrameAndPauseIfNeeded(debuggerCallFrame);
+    updateCallFrameAndPauseIfNeeded(callFrame);
 }
 
-void ScriptDebugServer::willExecuteProgram(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::willExecuteProgram(CallFrame* callFrame)
 {
     if (!m_paused) {
-        createCallFrame(debuggerCallFrame);
-        pauseIfNeeded(debuggerCallFrame.dynamicGlobalObject());
+        updateCallFrame(callFrame);
+        pauseIfNeeded(callFrame);
     }
 }
 
-void ScriptDebugServer::didExecuteProgram(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::didExecuteProgram(CallFrame* callFrame)
 {
     if (m_paused)
         return;
 
-    updateCallFrameAndPauseIfNeeded(debuggerCallFrame);
+    updateCallFrameAndPauseIfNeeded(callFrame);
 
     // Treat stepping over the end of a program like stepping out.
     if (!m_currentCallFrame)
         return;
     if (m_currentCallFrame == m_pauseOnCallFrame) {
-        m_pauseOnCallFrame = m_currentCallFrame->caller();
+        m_pauseOnCallFrame = m_currentCallFrame->callerFrameNoFlags();
         if (!m_currentCallFrame)
             return;
     }
-    m_currentCallFrame = m_currentCallFrame->caller();
+    m_currentCallFrame = m_currentCallFrame->callerFrameNoFlags();
 }
 
-void ScriptDebugServer::didReachBreakpoint(const DebuggerCallFrame& debuggerCallFrame)
+void ScriptDebugServer::didReachBreakpoint(CallFrame* callFrame)
 {
     if (m_paused)
         return;
 
     m_pauseOnNextStatement = true;
-    updateCallFrameAndPauseIfNeeded(debuggerCallFrame);
+    updateCallFrameAndPauseIfNeeded(callFrame);
 }
 
 void ScriptDebugServer::recompileAllJSFunctionsSoon()

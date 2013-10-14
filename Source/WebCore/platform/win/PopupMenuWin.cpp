@@ -647,7 +647,7 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
 
         String itemText = client()->itemText(index);
             
-        TextDirection direction = (itemText.defaultWritingDirection() == WTF::Unicode::RightToLeft) ? RTL : LTR;
+        TextDirection direction = (itemText.defaultWritingDirection() == U_RIGHT_TO_LEFT) ? RTL : LTR;
         TextRun textRun(itemText, 0, 0, TextRun::AllowTrailingExpansion, direction);
 
         context.setFillColor(optionTextColor, ColorSpaceDeviceRGB);
@@ -749,11 +749,6 @@ int PopupMenuWin::visibleWidth() const
 IntSize PopupMenuWin::contentsSize() const
 {
     return m_windowRect.size();
-}
-
-bool PopupMenuWin::scrollbarsCanBeActive() const
-{
-    return m_showPopup;
 }
 
 IntRect PopupMenuWin::scrollableAreaBoundingBox() const

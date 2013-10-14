@@ -362,7 +362,7 @@ private:
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInput> > m_inputs;
 };
 
-PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
+PassRefPtr<TypeBuilder::Recordings::ReplayRecording> JSONCoder::serialize(PassRefPtr<ReplayRecording> prpRecording)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
     RefPtr<TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue> > queues = TypeBuilder::Array<TypeBuilder::Recordings::ReplayInputQueue>::create();
@@ -379,7 +379,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> JSONCoder::serialize(Pas
         queues->addItem(queue.release());
     }
 
-    RefPtr<TypeBuilder::Recordings::ReplayRecordingNew> recordingObject = TypeBuilder::Recordings::ReplayRecordingNew::create()
+    RefPtr<TypeBuilder::Recordings::ReplayRecording> recordingObject = TypeBuilder::Recordings::ReplayRecording::create()
         .setUid(recording->uid())
         .setDateCreated(recording->creationTimestamp())
         .setMemorySize(recording->memorySize())

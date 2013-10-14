@@ -32,7 +32,7 @@
 #include "CSSValuePool.h"
 #include "DOMSettableTokenList.h"
 #include "DocumentFragment.h"
-#include "ElementIterator.h"
+#include "ElementAncestorIterator.h"
 #include "Event.h"
 #include "EventListener.h"
 #include "EventNames.h"
@@ -51,7 +51,6 @@
 #include "NodeTraversal.h"
 #include "RenderLineBreak.h"
 #include "ScriptController.h"
-#include "ScriptEventListener.h"
 #include "Settings.h"
 #include "StylePropertySet.h"
 #include "SubframeLoader.h"
@@ -125,9 +124,9 @@ bool HTMLElement::ieForbidsInsertHTML() const
     return false;
 }
 
-static inline CSSValueID unicodeBidiAttributeForDirAuto(HTMLElement* element)
+static inline CSSValueID unicodeBidiAttributeForDirAuto(HTMLElement& element)
 {
-    if (element->hasLocalName(preTag) || element->hasLocalName(textareaTag))
+    if (element.hasLocalName(preTag) || element.hasLocalName(textareaTag))
         return CSSValueWebkitPlaintext;
     // FIXME: For bdo element, dir="auto" should result in "bidi-override isolate" but we don't support having multiple values in unicode-bidi yet.
     // See https://bugs.webkit.org/show_bug.cgi?id=73164.
@@ -196,7 +195,7 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserDrag, CSSValueNone);
     } else if (name == dirAttr) {
         if (equalIgnoringCase(value, "auto"))
-            addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(this));
+            addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyDirection, value);
             if (!hasTagName(bdiTag) && !hasTagName(bdoTag) && !hasTagName(outputTag))
@@ -340,18 +339,18 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& 
             populateEventNameForAttributeLocalNameMap(eventNames);
         const AtomicString& eventName = eventNames.get(name.localName().impl());
         if (!eventName.isNull())
-            setAttributeEventListener(eventName, createAttributeEventListener(this, name, value));
+            setAttributeEventListener(eventName, name, value);
     }
 }
 
 String HTMLElement::innerHTML() const
 {
-    return createMarkup(this, ChildrenOnly);
+    return createMarkup(*this, ChildrenOnly);
 }
 
 String HTMLElement::outerHTML() const
 {
-    return createMarkup(this);
+    return createMarkup(*this);
 }
 
 void HTMLElement::setInnerHTML(const String& html, ExceptionCode& ec)
@@ -362,29 +361,27 @@ void HTMLElement::setInnerHTML(const String& html, ExceptionCode& ec)
         if (hasLocalName(templateTag))
             container = toHTMLTemplateElement(this)->content();
 #endif
-        replaceChildrenWithFragment(container, fragment.release(), ec);
+        replaceChildrenWithFragment(*container, fragment.release(), ec);
     }
 }
 
-static void mergeWithNextTextNode(PassRefPtr<Node> node, ExceptionCode& ec)
+static void mergeWithNextTextNode(Text& node, ExceptionCode& ec)
 {
-    ASSERT(node && node->isTextNode());
-    Node* next = node->nextSibling();
+    Node* next = node.nextSibling();
     if (!next || !next->isTextNode())
         return;
-    
-    RefPtr<Text> textNode = toText(node.get());
-    RefPtr<Text> textNext = toText(next);
+
+    Ref<Text> textNode(node);
+    Ref<Text> textNext(toText(*next));
     textNode->appendData(textNext->data(), ec);
     if (ec)
         return;
-    if (textNext->parentNode()) // Might have been removed by mutation event.
-        textNext->remove(ec);
+    textNext->remove(ec);
 }
 
 void HTMLElement::setOuterHTML(const String& html, ExceptionCode& ec)
 {
-    Node* p = parentNode();
+    Element* p = parentElement();
     if (!p || !p->isHTMLElement()) {
         ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
@@ -398,12 +395,11 @@ void HTMLElement::setOuterHTML(const String& html, ExceptionCode& ec)
         return;
       
     parent->replaceChild(fragment.release(), this, ec);
-    RefPtr<Node> node = next ? next->previousSibling() : 0;
+    RefPtr<Node> node = next ? next->previousSibling() : nullptr;
     if (!ec && node && node->isTextNode())
-        mergeWithNextTextNode(node.release(), ec);
-
+        mergeWithNextTextNode(toText(*node), ec);
     if (!ec && prev && prev->isTextNode())
-        mergeWithNextTextNode(prev.release(), ec);
+        mergeWithNextTextNode(toText(*prev), ec);
 }
 
 PassRefPtr<DocumentFragment> HTMLElement::textToFragment(const String& text, ExceptionCode& ec)
@@ -415,19 +411,19 @@ PassRefPtr<DocumentFragment> HTMLElement::textToFragment(const String& text, Exc
 
         // Find next line break.
         for (i = start; i < length; i++) {
-          c = text[i];
-          if (c == '\r' || c == '\n')
-              break;
+            c = text[i];
+            if (c == '\r' || c == '\n')
+                break;
         }
 
         fragment->appendChild(Text::create(document(), text.substring(start, i - start)), ec);
         if (ec)
-            return 0;
+            return nullptr;
 
         if (c == '\r' || c == '\n') {
             fragment->appendChild(HTMLBRElement::create(document()), ec);
             if (ec)
-                return 0;
+                return nullptr;
             // Make sure \r\n doesn't result in two line breaks.
             if (c == '\r' && i + 1 < length && text[i + 1] == '\n')
                 i++;
@@ -460,23 +456,23 @@ void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
             removeChildren();
             return;
         }
-        replaceChildrenWithText(this, text, ec);
+        replaceChildrenWithText(*this, text, ec);
         return;
     }
 
     // FIXME: Do we need to be able to detect preserveNewline style even when there's no renderer?
     // FIXME: Can the renderer be out of date here? Do we need to call updateStyleIfNeeded?
     // For example, for the contents of textarea elements that are display:none?
-    RenderObject* r = renderer();
+    auto r = renderer();
     if (r && r->style()->preserveNewline()) {
         if (!text.contains('\r')) {
-            replaceChildrenWithText(this, text, ec);
+            replaceChildrenWithText(*this, text, ec);
             return;
         }
         String textWithConsistentLineBreaks = text;
         textWithConsistentLineBreaks.replace("\r\n", "\n");
         textWithConsistentLineBreaks.replace('\r', '\n');
-        replaceChildrenWithText(this, textWithConsistentLineBreaks, ec);
+        replaceChildrenWithText(*this, textWithConsistentLineBreaks, ec);
         return;
     }
 
@@ -484,10 +480,10 @@ void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
     ec = 0;
     RefPtr<DocumentFragment> fragment = textToFragment(text, ec);
     if (!ec)
-        replaceChildrenWithFragment(this, fragment.release(), ec);
+        replaceChildrenWithFragment(*this, fragment.release(), ec);
 }
 
-void HTMLElement::setOuterText(const String &text, ExceptionCode& ec)
+void HTMLElement::setOuterText(const String& text, ExceptionCode& ec)
 {
     if (ieForbidsInsertHTML()) {
         ec = NO_MODIFICATION_ALLOWED_ERR;
@@ -501,7 +497,7 @@ void HTMLElement::setOuterText(const String &text, ExceptionCode& ec)
         return;
     }
 
-    ContainerNode* parent = parentNode();
+    RefPtr<ContainerNode> parent = parentNode();
     if (!parent) {
         ec = NO_MODIFICATION_ALLOWED_ERR;
         return;
@@ -524,12 +520,11 @@ void HTMLElement::setOuterText(const String &text, ExceptionCode& ec)
         return;
     parent->replaceChild(newChild.release(), this, ec);
 
-    RefPtr<Node> node = next ? next->previousSibling() : 0;
+    RefPtr<Node> node = next ? next->previousSibling() : nullptr;
     if (!ec && node && node->isTextNode())
-        mergeWithNextTextNode(node.release(), ec);
-
+        mergeWithNextTextNode(toText(*node), ec);
     if (!ec && prev && prev->isTextNode())
-        mergeWithNextTextNode(prev.release(), ec);
+        mergeWithNextTextNode(toText(*prev), ec);
 }
 
 Node* HTMLElement::insertAdjacent(const String& where, Node* newChild, ExceptionCode& ec)
@@ -543,23 +538,23 @@ Node* HTMLElement::insertAdjacent(const String& where, Node* newChild, Exception
 
     if (equalIgnoringCase(where, "beforeBegin")) {
         ContainerNode* parent = this->parentNode();
-        return (parent && parent->insertBefore(newChild, this, ec)) ? newChild : 0;
+        return (parent && parent->insertBefore(newChild, this, ec)) ? newChild : nullptr;
     }
 
     if (equalIgnoringCase(where, "afterBegin"))
-        return insertBefore(newChild, firstChild(), ec) ? newChild : 0;
+        return insertBefore(newChild, firstChild(), ec) ? newChild : nullptr;
 
     if (equalIgnoringCase(where, "beforeEnd"))
-        return appendChild(newChild, ec) ? newChild : 0;
+        return appendChild(newChild, ec) ? newChild : nullptr;
 
     if (equalIgnoringCase(where, "afterEnd")) {
         ContainerNode* parent = this->parentNode();
-        return (parent && parent->insertBefore(newChild, nextSibling(), ec)) ? newChild : 0;
+        return (parent && parent->insertBefore(newChild, nextSibling(), ec)) ? newChild : nullptr;
     }
     
     // IE throws COM Exception E_INVALIDARG; this is the best DOM exception alternative.
     ec = NOT_SUPPORTED_ERR;
-    return 0;
+    return nullptr;
 }
 
 Element* HTMLElement::insertAdjacentElement(const String& where, Element* newChild, ExceptionCode& ec)
@@ -567,7 +562,7 @@ Element* HTMLElement::insertAdjacentElement(const String& where, Element* newChi
     if (!newChild) {
         // IE throws COM Exception E_INVALIDARG; this is the best DOM exception alternative.
         ec = TYPE_MISMATCH_ERR;
-        return 0;
+        return nullptr;
     }
 
     Node* returnValue = insertAdjacent(where, newChild, ec);
@@ -582,7 +577,7 @@ static Element* contextElementForInsertion(const String& where, Element* element
         ContainerNode* parent = element->parentNode();
         if (parent && !parent->isElementNode()) {
             ec = NO_MODIFICATION_ALLOWED_ERR;
-            return 0;
+            return nullptr;
         }
         ASSERT_WITH_SECURITY_IMPLICATION(!parent || parent->isElementNode());
         return toElement(parent);
@@ -590,7 +585,7 @@ static Element* contextElementForInsertion(const String& where, Element* element
     if (equalIgnoringCase(where, "afterBegin") || equalIgnoringCase(where, "beforeEnd"))
         return element;
     ec =  SYNTAX_ERR;
-    return 0;
+    return nullptr;
 }
 
 void HTMLElement::insertAdjacentHTML(const String& where, const String& markup, ExceptionCode& ec)
@@ -660,25 +655,25 @@ String HTMLElement::contentEditable() const
     const AtomicString& value = fastGetAttribute(contenteditableAttr);
 
     if (value.isNull())
-        return "inherit";
+        return ASCIILiteral("inherit");
     if (value.isEmpty() || equalIgnoringCase(value, "true"))
-        return "true";
+        return ASCIILiteral("true");
     if (equalIgnoringCase(value, "false"))
-         return "false";
+        return ASCIILiteral("false");
     if (equalIgnoringCase(value, "plaintext-only"))
-        return "plaintext-only";
+        return ASCIILiteral("plaintext-only");
 
-    return "inherit";
+    return ASCIILiteral("inherit");
 }
 
 void HTMLElement::setContentEditable(const String& enabled, ExceptionCode& ec)
 {
     if (equalIgnoringCase(enabled, "true"))
-        setAttribute(contenteditableAttr, "true");
+        setAttribute(contenteditableAttr, AtomicString("true", AtomicString::ConstructFromLiteral));
     else if (equalIgnoringCase(enabled, "false"))
-        setAttribute(contenteditableAttr, "false");
+        setAttribute(contenteditableAttr, AtomicString("false", AtomicString::ConstructFromLiteral));
     else if (equalIgnoringCase(enabled, "plaintext-only"))
-        setAttribute(contenteditableAttr, "plaintext-only");
+        setAttribute(contenteditableAttr, AtomicString("plaintext-only", AtomicString::ConstructFromLiteral));
     else if (equalIgnoringCase(enabled, "inherit"))
         removeAttribute(contenteditableAttr);
     else
@@ -687,12 +682,14 @@ void HTMLElement::setContentEditable(const String& enabled, ExceptionCode& ec)
 
 bool HTMLElement::draggable() const
 {
-    return equalIgnoringCase(getAttribute(draggableAttr), "true");
+    return equalIgnoringCase(fastGetAttribute(draggableAttr), "true");
 }
 
 void HTMLElement::setDraggable(bool value)
 {
-    setAttribute(draggableAttr, value ? "true" : "false");
+    setAttribute(draggableAttr, value
+        ? AtomicString("true", AtomicString::ConstructFromLiteral)
+        : AtomicString("false", AtomicString::ConstructFromLiteral));
 }
 
 bool HTMLElement::spellcheck() const
@@ -702,23 +699,24 @@ bool HTMLElement::spellcheck() const
 
 void HTMLElement::setSpellcheck(bool enable)
 {
-    setAttribute(spellcheckAttr, enable ? "true" : "false");
+    setAttribute(spellcheckAttr, enable
+        ? AtomicString("true", AtomicString::ConstructFromLiteral)
+        : AtomicString("false", AtomicString::ConstructFromLiteral));
 }
-
 
 void HTMLElement::click()
 {
-    dispatchSimulatedClick(0, SendNoEvents, DoNotShowPressedLook);
+    dispatchSimulatedClick(nullptr, SendNoEvents, DoNotShowPressedLook);
 }
 
 void HTMLElement::accessKeyAction(bool sendMouseEvents)
 {
-    dispatchSimulatedClick(0, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
+    dispatchSimulatedClick(nullptr, sendMouseEvents ? SendMouseUpDownEvents : SendNoEvents);
 }
 
 String HTMLElement::title() const
 {
-    return getAttribute(titleAttr);
+    return fastGetAttribute(titleAttr);
 }
 
 short HTMLElement::tabIndex() const
@@ -730,16 +728,16 @@ short HTMLElement::tabIndex() const
 
 void HTMLElement::setTabIndex(int value)
 {
-    setAttribute(tabindexAttr, String::number(value));
+    setIntegralAttribute(tabindexAttr, value);
 }
 
 TranslateAttributeMode HTMLElement::translateAttributeMode() const
 {
-    const AtomicString& value = getAttribute(translateAttr);
+    const AtomicString& value = fastGetAttribute(translateAttr);
 
-    if (value == nullAtom)
+    if (value.isNull())
         return TranslateAttributeInherit;
-    if (equalIgnoringCase(value, "yes") || equalIgnoringCase(value, ""))
+    if (equalIgnoringCase(value, "yes") || value.isEmpty())
         return TranslateAttributeYes;
     if (equalIgnoringCase(value, "no"))
         return TranslateAttributeNo;
@@ -749,14 +747,14 @@ TranslateAttributeMode HTMLElement::translateAttributeMode() const
 
 bool HTMLElement::translate() const
 {
-    for (const Node* n = this; n; n = n->parentNode()) {
-        if (n->isHTMLElement()) {
-            TranslateAttributeMode mode = static_cast<const HTMLElement*>(n)->translateAttributeMode();
-            if (mode != TranslateAttributeInherit) {
-                ASSERT(mode == TranslateAttributeYes || mode == TranslateAttributeNo);
-                return mode == TranslateAttributeYes;
-            }
-        }
+    // FIXME: Need to fix lineageOfType to work with const and remove this const_cast.
+    auto lineage = lineageOfType<HTMLElement>(const_cast<HTMLElement*>(this));
+    for (auto element = lineage.begin(), end = lineage.end(); element != end; ++element) {
+        TranslateAttributeMode mode = element->translateAttributeMode();
+        if (mode == TranslateAttributeInherit)
+            continue;
+        ASSERT(mode == TranslateAttributeYes || mode == TranslateAttributeNo);
+        return mode == TranslateAttributeYes;
     }
 
     // Default on the root element is translate=yes.
@@ -767,7 +765,6 @@ void HTMLElement::setTranslate(bool enable)
 {
     setAttribute(translateAttr, enable ? "yes" : "no");
 }
-
 
 PassRefPtr<HTMLCollection> HTMLElement::children()
 {
@@ -805,7 +802,7 @@ static inline bool elementAffectsDirectionality(const Node* node)
     return node->isHTMLElement() && (node->hasTagName(bdiTag) || toHTMLElement(node)->hasAttribute(dirAttr));
 }
 
-static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastNode = 0)
+static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastNode = nullptr)
 {
     firstNode->setSelfOrAncestorHasDirAutoAttribute(flag);
 
@@ -837,7 +834,7 @@ void HTMLElement::childrenChanged(const ChildChange& change)
 bool HTMLElement::hasDirectionAuto() const
 {
     const AtomicString& direction = fastGetAttribute(dirAttr);
-    return (hasTagName(bdiTag) && direction == nullAtom) || equalIgnoringCase(direction, "auto");
+    return (hasTagName(bdiTag) && direction.isNull()) || equalIgnoringCase(direction, "auto");
 }
 
 TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) const
@@ -856,10 +853,10 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
     if (isHTMLTextFormControlElement(this)) {
         HTMLTextFormControlElement* textElement = toHTMLTextFormControlElement(const_cast<HTMLElement*>(this));
         bool hasStrongDirectionality;
-        Unicode::Direction textDirection = textElement->value().defaultWritingDirection(&hasStrongDirectionality);
+        UCharDirection textDirection = textElement->value().defaultWritingDirection(&hasStrongDirectionality);
         if (strongDirectionalityTextNode)
-            *strongDirectionalityTextNode = hasStrongDirectionality ? textElement : 0;
-        return (textDirection == Unicode::LeftToRight) ? LTR : RTL;
+            *strongDirectionalityTextNode = hasStrongDirectionality ? textElement : nullptr;
+        return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
     }
 
     Node* node = firstChild();
@@ -882,17 +879,17 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
 
         if (node->isTextNode()) {
             bool hasStrongDirectionality;
-            WTF::Unicode::Direction textDirection = node->textContent(true).defaultWritingDirection(&hasStrongDirectionality);
+            UCharDirection textDirection = node->textContent(true).defaultWritingDirection(&hasStrongDirectionality);
             if (hasStrongDirectionality) {
                 if (strongDirectionalityTextNode)
                     *strongDirectionalityTextNode = node;
-                return (textDirection == WTF::Unicode::LeftToRight) ? LTR : RTL;
+                return (textDirection == U_LEFT_TO_RIGHT) ? LTR : RTL;
             }
         }
         node = NodeTraversal::next(node, this);
     }
     if (strongDirectionalityTextNode)
-        *strongDirectionalityTextNode = 0;
+        *strongDirectionalityTextNode = nullptr;
     return LTR;
 }
 
@@ -937,7 +934,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
 {
     // FIXME: This function looks suspicious.
     if (document().renderView() && (changeType == ElementRemoved || changeType == TextRemoved)) {
-        Node* node = beforeChange ? beforeChange->nextSibling() : 0;
+        Node* node = beforeChange ? beforeChange->nextSibling() : nullptr;
         for (; node; node = node->nextSibling()) {
             if (elementAffectsDirectionality(node))
                 continue;
@@ -949,7 +946,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     if (!selfOrAncestorHasDirAutoAttribute())
         return;
 
-    Node* oldMarkedNode = 0;
+    Node* oldMarkedNode = nullptr;
     if (beforeChange)
         oldMarkedNode = changeType == ElementInserted ? ElementTraversal::nextSibling(beforeChange) : beforeChange->nextSibling();
 
@@ -977,28 +974,26 @@ void HTMLElement::addHTMLLengthToStyle(MutableStylePropertySet* style, CSSProper
     // FIXME: This function should not spin up the CSS parser, but should instead just figure out the correct
     // length unit and make the appropriate parsed value.
 
-    // strip attribute garbage..
-    StringImpl* v = value.impl();
-    if (v) {
-        unsigned int l = 0;
+    if (StringImpl* string = value.impl()) {
+        unsigned parsedLength = 0;
 
-        while (l < v->length() && (*v)[l] <= ' ')
-            l++;
+        while (parsedLength < string->length() && (*string)[parsedLength] <= ' ')
+            ++parsedLength;
 
-        for (; l < v->length(); l++) {
-            UChar cc = (*v)[l];
+        for (; parsedLength < string->length(); ++parsedLength) {
+            UChar cc = (*string)[parsedLength];
             if (cc > '9')
                 break;
             if (cc < '0') {
                 if (cc == '%' || cc == '*')
-                    l++;
+                    ++parsedLength;
                 if (cc != '.')
                     break;
             }
         }
 
-        if (l != v->length()) {
-            addPropertyToPresentationAttributeStyle(style, propertyID, v->substring(0, l));
+        if (parsedLength != string->length()) {
+            addPropertyToPresentationAttributeStyle(style, propertyID, string->substring(0, parsedLength));
             return;
         }
     }
@@ -1094,4 +1089,5 @@ void dumpInnerHTML(WebCore::HTMLElement* element)
 {
     printf("%s\n", element->innerHTML().ascii().data());
 }
+
 #endif

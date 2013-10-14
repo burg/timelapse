@@ -33,9 +33,7 @@
 #include "IntSize.h"
 #include <wtf/Forward.h>
 
-#if PLATFORM(QT)
-#define DefaultInterpolationQuality InterpolationMedium
-#elif USE(CG)
+#if USE(CG)
 #define DefaultInterpolationQuality InterpolationLow
 #else
 #define DefaultInterpolationQuality InterpolationDefault
@@ -146,7 +144,7 @@ private:
     HTMLCanvasElement(const QualifiedName&, Document&);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&);
+    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) OVERRIDE;
     virtual void willAttachRenderers() OVERRIDE;
     virtual bool areAuthorShadowsAllowed() const OVERRIDE;
 

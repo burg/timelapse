@@ -59,20 +59,11 @@ class KeyboardEvent;
 class MouseEvent;
 class Node;
 class RenderArena;
-class RenderObject;
 class RenderStyle;
 class TouchEvent;
+struct InputElementClickState;
 
 typedef int ExceptionCode;
-
-struct ClickHandlingState {
-    WTF_MAKE_FAST_ALLOCATED;
-  
-public:
-    bool checked;
-    bool indeterminate;
-    RefPtr<HTMLInputElement> checkedRadioButton;
-};
 
 // An InputType object represents the type-specific part of an HTMLInputElement.
 // Do not expose instances of InputType and classes derived from it to classes
@@ -186,8 +177,8 @@ public:
 
     virtual void handleClickEvent(MouseEvent*);
     virtual void handleMouseDownEvent(MouseEvent*);
-    virtual OwnPtr<ClickHandlingState> willDispatchClick();
-    virtual void didDispatchClick(Event*, const ClickHandlingState&);
+    virtual void willDispatchClick(InputElementClickState&);
+    virtual void didDispatchClick(Event*, const InputElementClickState&);
     virtual void handleDOMActivateEvent(Event*);
     virtual void handleKeydownEvent(KeyboardEvent*);
     virtual void handleKeypressEvent(KeyboardEvent*);
@@ -248,10 +239,7 @@ public:
     virtual FileList* files();
     virtual void setFiles(PassRefPtr<FileList>);
     // Should return true if the given DragData has more than one dropped files.
-    virtual bool receiveDroppedFiles(const DragData*);
-#if ENABLE(FILE_SYSTEM)
-    virtual String droppedFileSystemId();
-#endif
+    virtual bool receiveDroppedFiles(const DragData&);
     virtual Icon* icon() const;
     // Should return true if the corresponding renderer for a type can display a suggested value.
     virtual bool canSetSuggestedValue();

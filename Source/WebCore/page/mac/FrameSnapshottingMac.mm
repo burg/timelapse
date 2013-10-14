@@ -49,7 +49,10 @@ NSImage* imageFromRect(Frame* frame, NSRect rect)
     NSImage* resultImage = [[[NSImage alloc] initWithSize:rect.size] autorelease];
     
     if (rect.size.width != 0 && rect.size.height != 0) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [resultImage setFlipped:YES];
+#pragma clang diagnostic pop
         [resultImage lockFocus];
 
         GraphicsContext graphicsContext((CGContextRef)[[NSGraphicsContext currentContext] graphicsPort]);        
@@ -59,7 +62,10 @@ NSImage* imageFromRect(Frame* frame, NSRect rect)
         graphicsContext.restore();
 
         [resultImage unlockFocus];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         [resultImage setFlipped:NO];
+#pragma clang diagnostic pop
     }
     
     frame->view()->setPaintBehavior(oldBehavior);
@@ -135,7 +141,7 @@ NSImage* snapshotDragImage(Frame* frame, Node* node, NSRect* imageRect, NSRect* 
                                         // imply new styles, plus JS could have changed other things
 
 
-    // Document::updateLayout may have blown away the original RenderObject.
+    // Document::updateLayout may have blown away the original RenderElement.
     renderer = node->renderer();
     if (!renderer)
         return nil;

@@ -46,10 +46,8 @@
 #include "EventHandler.h"
 #include "ExceptionCode.h"
 #include "FormController.h"
-#include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameView.h"
-#include "HTMLContentElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLSelectElement.h"
@@ -69,6 +67,7 @@
 #include "InternalSettings.h"
 #include "IntRect.h"
 #include "Language.h"
+#include "MainFrame.h"
 #include "MallocStatistics.h"
 #include "MemoryCache.h"
 #include "MemoryInfo.h"
@@ -78,7 +77,6 @@
 #include "Range.h"
 #include "RenderEmbeddedObject.h"
 #include "RenderMenuList.h"
-#include "RenderObject.h"
 #include "RenderTreeAsText.h"
 #include "RenderView.h"
 #include "RuntimeEnabledFeatures.h"
@@ -148,9 +146,8 @@
 #include "Vibration.h"
 #endif
 
-#if PLATFORM(QT)
-#include "NetworkingContext.h"
-#include <QNetworkAccessManager>
+#if ENABLE(MEDIA_STREAM)
+#include "MockMediaStreamCenter.h"
 #endif
 
 namespace WebCore {
@@ -274,13 +271,6 @@ void Internals::resetToConsistentState(Page* page)
         page->mainFrame().editor().toggleContinuousSpellChecking();
     if (page->mainFrame().editor().isOverwriteModeEnabled())
         page->mainFrame().editor().toggleOverwriteModeEnabled();
-
-#if PLATFORM(QT)
-    if (NetworkingContext* context = page->mainFrame().loader().networkingContext()) {
-        if (QNetworkAccessManager* qnam = context->networkAccessManager())
-            qnam->clearAccessCache();
-    }
-#endif
 }
 
 Internals::Internals(Document* document)
@@ -289,6 +279,10 @@ Internals::Internals(Document* document)
 #if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
     if (document && document->page())
         document->page()->group().captionPreferences()->setTestingMode(true);
+#endif
+    
+#if ENABLE(MEDIA_STREAM)
+    MockMediaStreamCenter::registerMockMediaStreamCenter();
 #endif
 }
 
@@ -346,34 +340,6 @@ bool Internals::isLoadingFromMemoryCache(const String& url)
     return resource && resource->status() == CachedResource::Cached;
 }
 
-PassRefPtr<Element> Internals::createContentElement(ExceptionCode& ec)
-{
-    Document* document = contextDocument();
-    if (!document) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-
-#if ENABLE(SHADOW_DOM)
-    return HTMLContentElement::create(*document);
-#else
-    return 0;
-#endif
-}
-
-bool Internals::isValidContentSelect(Element* insertionPoint, ExceptionCode& ec)
-{
-    if (!insertionPoint || !insertionPoint->isInsertionPoint()) {
-        ec = INVALID_ACCESS_ERR;
-        return false;
-    }
-
-#if ENABLE(SHADOW_DOM)
-    return isHTMLContentElement(insertionPoint) && toHTMLContentElement(insertionPoint)->isSelectValid();
-#else
-    return false;
-#endif
-}
 
 Node* Internals::treeScopeRootNode(Node* node, ExceptionCode& ec)
 {
@@ -382,7 +348,7 @@ Node* Internals::treeScopeRootNode(Node* node, ExceptionCode& ec)
         return 0;
     }
 
-    return node->treeScope()->rootNode();
+    return node->treeScope().rootNode();
 }
 
 Node* Internals::parentTreeScope(Node* node, ExceptionCode& ec)
@@ -391,7 +357,7 @@ Node* Internals::parentTreeScope(Node* node, ExceptionCode& ec)
         ec = INVALID_ACCESS_ERR;
         return 0;
     }
-    const TreeScope* parentTreeScope = node->treeScope()->parentTreeScope();
+    const TreeScope* parentTreeScope = node->treeScope().parentTreeScope();
     return parentTreeScope ? parentTreeScope->rootNode() : 0;
 }
 
@@ -524,19 +490,6 @@ String Internals::elementRenderTreeAsText(Element* element, ExceptionCode& ec)
     }
 
     return representation;
-}
-
-size_t Internals::numberOfScopedHTMLStyleChildren(const Node* scope, ExceptionCode& ec) const
-{
-    if (scope && (scope->isElementNode() || scope->isShadowRoot()))
-#if ENABLE(STYLE_SCOPED)
-        return scope->numberOfScopedHTMLStyleChildren();
-#else
-        return 0;
-#endif
-
-    ec = INVALID_ACCESS_ERR;
-    return 0;
 }
 
 PassRefPtr<CSSComputedStyleDeclaration> Internals::computedStyleIncludingVisitedInfo(Node* node, ExceptionCode& ec) const
@@ -711,7 +664,7 @@ PassRefPtr<ClientRect> Internals::boundingBox(Element* element, ExceptionCode& e
     }
 
     element->document().updateLayoutIgnorePendingStylesheets();
-    RenderObject* renderer = element->renderer();
+    auto renderer = element->renderer();
     if (!renderer)
         return ClientRect::create();
     return ClientRect::create(renderer->absoluteBoundingBoxRectIgnoringTransforms());
@@ -791,7 +744,7 @@ PassRefPtr<Range> Internals::markerRangeForNode(Node* node, const String& marker
     DocumentMarker* marker = markerAt(node, markerType, index, ec);
     if (!marker)
         return 0;
-    return Range::create(&node->document(), node, marker->startOffset(), node, marker->endOffset());
+    return Range::create(node->document(), node, marker->startOffset(), node, marker->endOffset());
 }
 
 String Internals::markerDescriptionForNode(Node* node, const String& markerType, unsigned index, ExceptionCode& ec)
@@ -1246,7 +1199,7 @@ PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int centerX, i
     if (!request.ignoreClipping() && !frameView->visibleContentRect().intersects(HitTestLocation::rectForPoint(point, topPadding, rightPadding, bottomPadding, leftPadding)))
         return 0;
 
-    Vector<RefPtr<Node> > matches;
+    Vector<Ref<Node>> matches;
 
     // Need padding to trigger a rect based hit test, but we want to return a NodeList
     // so we special case this.
@@ -1254,11 +1207,15 @@ PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int centerX, i
         HitTestResult result(point);
         renderView->hitTest(request, result);
         if (result.innerNode())
-            matches.append(result.innerNode()->deprecatedShadowAncestorNode());
+            matches.append(*result.innerNode()->deprecatedShadowAncestorNode());
     } else {
         HitTestResult result(point, topPadding, rightPadding, bottomPadding, leftPadding);
         renderView->hitTest(request, result);
-        copyToVector(result.rectBasedTestResult(), matches);
+        
+        const HitTestResult::NodeSet& nodeSet = result.rectBasedTestResult();
+        matches.reserveInitialCapacity(nodeSet.size());
+        for (auto it = nodeSet.begin(), end = nodeSet.end(); it != end; ++it)
+            matches.uncheckedAppend(*it->get());
     }
 
     return StaticNodeList::adopt(matches);
@@ -1471,7 +1428,11 @@ PassRefPtr<DOMWindow> Internals::openDummyInspectorFrontend(const String& url)
     DOMWindow* window = page->mainFrame().document()->domWindow();
     ASSERT(window);
 
-    m_frontendWindow = window->open(url, "", "", window, window);
+#if defined(_MSC_VER) && _MSC_VER <= 1700
+    m_frontendWindow = window->open(url, "", "", window, window); // Work around bug in VS2010 and earlier
+#else
+    m_frontendWindow = window->open(url, "", "", *window, *window);
+#endif
     ASSERT(m_frontendWindow);
 
     Page* frontendPage = m_frontendWindow->document()->page();
@@ -1654,20 +1615,30 @@ void Internals::allowRoundingHacks() const
     TextRun::setAllowsRoundingHacks(true);
 }
 
-void Internals::insertAuthorCSS(Document* document, const String& css) const
+void Internals::insertAuthorCSS(Document* document, const String& css, ExceptionCode& ec) const
 {
-    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(document);
+    if (!document) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(*document);
     parsedSheet->setIsUserStyleSheet(false);
     parsedSheet->parseString(css);
-    document->styleSheetCollection()->addAuthorSheet(parsedSheet);
+    document->styleSheetCollection().addAuthorSheet(parsedSheet);
 }
 
-void Internals::insertUserCSS(Document* document, const String& css) const
+void Internals::insertUserCSS(Document* document, const String& css, ExceptionCode& ec) const
 {
-    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(document);
+    if (!document) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(*document);
     parsedSheet->setIsUserStyleSheet(true);
     parsedSheet->parseString(css);
-    document->styleSheetCollection()->addUserSheet(parsedSheet);
+    document->styleSheetCollection().addUserSheet(parsedSheet);
 }
 
 String Internals::counterValue(Element* element)
@@ -2009,7 +1980,7 @@ bool Internals::isSelectPopupVisible(Node* node)
 
     HTMLSelectElement* select = toHTMLSelectElement(node);
 
-    RenderObject* renderer = select->renderer();
+    auto renderer = select->renderer();
     if (!renderer->isMenuList())
         return false;
 
@@ -2131,7 +2102,7 @@ bool Internals::isPluginUnavailabilityIndicatorObscured(Element* element, Except
         return false;
     }
 
-    RenderObject* renderer = element->renderer();
+    auto renderer = element->renderer();
     if (!renderer || !renderer->isEmbeddedObject()) {
         ec = INVALID_ACCESS_ERR;
         return false;

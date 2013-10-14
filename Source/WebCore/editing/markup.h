@@ -38,7 +38,7 @@ class Document;
 class DocumentFragment;
 class Element;
 class HTMLElement;
-class KURL;
+class URL;
 class Node;
 class QualifiedName;
 class Range;
@@ -49,10 +49,8 @@ enum EChildrenOnly { IncludeNode, ChildrenOnly };
 enum EAbsoluteURLs { DoNotResolveURLs, ResolveAllURLs, ResolveNonLocalURLs };
 enum EFragmentSerialization { HTMLFragmentSerialization, XMLFragmentSerialization };
 
-PassRefPtr<DocumentFragment> createFragmentFromText(Range* context, const String& text);
-PassRefPtr<DocumentFragment> createFragmentFromMarkup(Document*, const String& markup, const String& baseURL, ParserContentPolicy = AllowScriptingContent);
-PassRefPtr<DocumentFragment> createFragmentFromMarkupWithContext(Document*, const String& markup, unsigned fragmentStart, unsigned fragmentEnd, const String& baseURL, ParserContentPolicy);
-PassRefPtr<DocumentFragment> createFragmentFromNodes(Document*, const Vector<Node*>&);
+PassRefPtr<DocumentFragment> createFragmentFromText(Range& context, const String& text);
+PassRefPtr<DocumentFragment> createFragmentFromMarkup(Document&, const String& markup, const String& baseURL, ParserContentPolicy = AllowScriptingContent);
 PassRefPtr<DocumentFragment> createFragmentForInnerOuterHTML(const String&, Element*, ParserContentPolicy, ExceptionCode&);
 PassRefPtr<DocumentFragment> createFragmentForTransformToFragment(const String&, const String& sourceMIMEType, Document* outputDoc);
 PassRefPtr<DocumentFragment> createContextualFragment(const String&, HTMLElement*, ParserContentPolicy, ExceptionCode&);
@@ -61,16 +59,16 @@ bool isPlainTextMarkup(Node*);
 
 // These methods are used by HTMLElement & ShadowRoot to replace the
 // children with respected fragment/text.
-void replaceChildrenWithFragment(ContainerNode*, PassRefPtr<DocumentFragment>, ExceptionCode&);
-void replaceChildrenWithText(ContainerNode*, const String&, ExceptionCode&);
+void replaceChildrenWithFragment(ContainerNode&, PassRefPtr<DocumentFragment>, ExceptionCode&);
+void replaceChildrenWithText(ContainerNode&, const String&, ExceptionCode&);
 
-String createMarkup(const Range*, Vector<Node*>* = 0, EAnnotateForInterchange = DoNotAnnotateForInterchange, bool convertBlocksToInlines = false, EAbsoluteURLs = DoNotResolveURLs);
-String createMarkup(const Node*, EChildrenOnly = IncludeNode, Vector<Node*>* = 0, EAbsoluteURLs = DoNotResolveURLs, Vector<QualifiedName>* tagNamesToSkip = 0, EFragmentSerialization = HTMLFragmentSerialization);
+String createMarkup(const Range&, Vector<Node*>* = 0, EAnnotateForInterchange = DoNotAnnotateForInterchange, bool convertBlocksToInlines = false, EAbsoluteURLs = DoNotResolveURLs);
+String createMarkup(const Node&, EChildrenOnly = IncludeNode, Vector<Node*>* = 0, EAbsoluteURLs = DoNotResolveURLs, Vector<QualifiedName>* tagNamesToSkip = 0, EFragmentSerialization = HTMLFragmentSerialization);
 
-String createFullMarkup(const Node*);
-String createFullMarkup(const Range*);
+String createFullMarkup(const Node&);
+String createFullMarkup(const Range&);
 
-String urlToMarkup(const KURL&, const String& title);
+String urlToMarkup(const URL&, const String& title);
 
 String documentTypeString(const Document&);
 

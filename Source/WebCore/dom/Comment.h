@@ -40,6 +40,13 @@ private:
     virtual bool childTypeAllowed(NodeType) const;
 };
 
+inline bool isComment(const Node& node)
+{
+    return node.nodeType() == Node::COMMENT_NODE;
+}
+
+NODE_TYPE_CASTS(Comment)
+
 } // namespace WebCore
 
 #endif // Comment_h

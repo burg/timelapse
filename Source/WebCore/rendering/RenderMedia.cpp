@@ -58,7 +58,7 @@ void RenderMedia::layout()
 
     RenderImage::layout();
 
-    RenderBox* controlsRenderer = toRenderBox(m_children.firstChild());
+    RenderBox* controlsRenderer = toRenderBox(firstChild());
     if (!controlsRenderer)
         return;
 
@@ -83,9 +83,9 @@ void RenderMedia::layout()
     controlsRenderer->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
     controlsRenderer->style()->setHeight(Length(newSize.height(), Fixed));
     controlsRenderer->style()->setWidth(Length(newSize.width(), Fixed));
-    controlsRenderer->setNeedsLayout(true, MarkOnlyThis);
+    controlsRenderer->setNeedsLayout(MarkOnlyThis);
     controlsRenderer->layout();
-    setChildNeedsLayout(false);
+    clearChildNeedsLayout();
 
     statePusher.pop();
 }

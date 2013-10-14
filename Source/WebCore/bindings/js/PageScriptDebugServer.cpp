@@ -36,9 +36,9 @@
 
 #include "Document.h"
 #include "EventLoop.h"
-#include "Frame.h"
 #include "FrameView.h"
 #include "JSDOMWindowCustom.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "PluginView.h"
@@ -60,7 +60,7 @@ static Page* toPage(JSGlobalObject* globalObject)
     ASSERT_ARG(globalObject, globalObject);
 
     JSDOMWindow* window = asJSDOMWindow(globalObject);
-    Frame* frame = window->impl()->frame();
+    Frame* frame = window->impl().frame();
     return frame ? frame->page() : 0;
 }
 

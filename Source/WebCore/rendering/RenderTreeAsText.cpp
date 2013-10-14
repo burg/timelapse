@@ -69,10 +69,6 @@
 #include "RenderLayerBacking.h"
 #endif
 
-#if PLATFORM(QT)
-#include <QVariant>
-#endif
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -503,23 +499,6 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             }
         }
     }
-
-#if PLATFORM(QT)
-    // Print attributes of embedded QWidgets. E.g. when the WebCore::Widget
-    // is invisible the QWidget should be invisible too.
-    if (o.isWidget()) {
-        const RenderWidget* part = toRenderWidget(const_cast<RenderObject*>(&o));
-        if (part->widget() && part->widget()->platformWidget()) {
-            QObject* wid = part->widget()->platformWidget();
-
-            ts << " [QT: ";
-            ts << "geometry: {" << wid->property("geometry").toRect() << "} ";
-            ts << "isHidden: " << !wid->property("isVisible").toBool() << " ";
-            ts << "isSelfVisible: " << part->widget()->isSelfVisible() << " ";
-            ts << "isParentVisible: " << part->widget()->isParentVisible() << " ] ";
-        }
-    }
-#endif
 }
 
 static void writeTextRun(TextStream& ts, const RenderText& o, const InlineTextBox& run)
@@ -595,12 +574,12 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
             writeIndent(ts, indent + 1);
             writeTextRun(ts, text, *box);
         }
-    }
-
-    for (RenderObject* child = o.firstChild(); child; child = child->nextSibling()) {
-        if (child->hasLayer())
-            continue;
-        write(ts, *child, indent + 1, behavior);
+    } else {
+        for (RenderObject* child = toRenderElement(o).firstChild(); child; child = child->nextSibling()) {
+            if (child->hasLayer())
+                continue;
+            write(ts, *child, indent + 1, behavior);
+        }
     }
 
     if (o.isWidget()) {
@@ -694,8 +673,6 @@ static void writeRenderRegionList(const RenderRegionList& flowThreadRegionList, 
                 ts << " {" << tagName << "}";
             if (renderRegion->generatingElement()->hasID())
                 ts << " #" << renderRegion->generatingElement()->idForStyleResolution();
-            if (renderRegion->hasLayer())
-                ts << " hasLayer";
             if (renderRegion->hasCustomRegionStyle())
                 ts << " region style: 1";
             if (renderRegion->hasAutoLogicalHeight())
@@ -914,7 +891,7 @@ String externalRepresentation(Element* element, RenderAsTextBehavior behavior)
     return externalRepresentation(toRenderBox(renderer), behavior | RenderAsTextShowAllLayers);
 }
 
-static void writeCounterValuesFromChildren(TextStream& stream, RenderObject* parent, bool& isFirstCounter)
+static void writeCounterValuesFromChildren(TextStream& stream, RenderElement* parent, bool& isFirstCounter)
 {
     if (!parent)
         return;

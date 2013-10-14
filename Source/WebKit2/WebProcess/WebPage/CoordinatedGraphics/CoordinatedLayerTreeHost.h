@@ -28,7 +28,6 @@
 #include <WebCore/CompositingCoordinator.h>
 #include <WebCore/GraphicsLayerFactory.h>
 #include <wtf/HashSet.h>
-#include <wtf/OwnPtr.h>
 
 #if ENABLE(CSS_SHADERS)
 #include "WebCustomFilterProgramProxy.h"
@@ -119,10 +118,10 @@ private:
     void disconnectCustomFilterPrograms();
 #endif
 
-    OwnPtr<WebCore::CompositingCoordinator> m_coordinator;
+    std::unique_ptr<WebCore::CompositingCoordinator> m_coordinator;
 
     // The page overlay layer. Will be null if there's no page overlay.
-    OwnPtr<WebCore::GraphicsLayer> m_pageOverlayLayer;
+    std::unique_ptr<WebCore::GraphicsLayer> m_pageOverlayLayer;
     RefPtr<PageOverlay> m_pageOverlay;
 
 #if ENABLE(CSS_SHADERS)

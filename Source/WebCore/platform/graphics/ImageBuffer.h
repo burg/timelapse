@@ -136,7 +136,7 @@ namespace WebCore {
 
     private:
 #if USE(CG)
-        PassNativeImagePtr copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
+        RetainPtr<CGImageRef> copyNativeImage(BackingStoreCopy = CopyBackingStore) const;
         void flushContext() const;
         void flushContextIfNecessary() const;
 #endif
@@ -150,7 +150,7 @@ namespace WebCore {
         friend class GraphicsContext;
         friend class GeneratedImage;
         friend class CrossfadeGeneratedImage;
-        friend class GeneratorGeneratedImage;
+        friend class GradientImage;
 
     private:
         ImageBufferData m_data;

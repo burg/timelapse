@@ -77,7 +77,7 @@ class DeprecatedStyleBuilder;
 class Element;
 class Frame;
 class FrameView;
-class KURL;
+class URL;
 class KeyframeList;
 class KeyframeValue;
 class MediaQueryEvaluator;
@@ -151,17 +151,6 @@ public:
     RenderScrollbar* scrollbar;
 };
 
-class MatchRequest {
-public:
-    MatchRequest(RuleSet* ruleSet, bool includeEmptyRules = false, const ContainerNode* scope = 0)
-        : ruleSet(ruleSet)
-        , includeEmptyRules(includeEmptyRules)
-        , scope(scope) { }
-    const RuleSet* ruleSet;
-    const bool includeEmptyRules;
-    const ContainerNode* scope;
-};
-
 // This class selects a RenderStyle for a given element based on a collection of stylesheets.
 class StyleResolver {
     WTF_MAKE_NONCOPYABLE(StyleResolver); WTF_MAKE_FAST_ALLOCATED;
@@ -204,18 +193,10 @@ public:
     const DocumentRuleSets& ruleSets() const { return m_ruleSets; }
     SelectorFilter& selectorFilter() { return m_selectorFilter; }
 
-#if ENABLE(STYLE_SCOPED) || ENABLE(SHADOW_DOM)
+#if ENABLE(SHADOW_DOM)
     StyleScopeResolver* ensureScopeResolver()
     {
-#if ENABLE(STYLE_SCOPED)
-#if ENABLE(SHADOW_DOM)
-        ASSERT(RuntimeEnabledFeatures::shadowDOMEnabled() || RuntimeEnabledFeatures::styleScopedEnabled());
-#else
-        ASSERT(RuntimeEnabledFeatures::styleScopedEnabled());
-#endif
-#else
-        ASSERT(RuntimeEnabledFeatures::shadowDOMEnabled());
-#endif
+        ASSERT(RuntimeEnabledFeatures::sharedFeatures().shadowDOMEnabled());
         if (!m_scopeResolver)
             m_scopeResolver = adoptPtr(new StyleScopeResolver());
         return m_scopeResolver.get();
@@ -309,6 +290,8 @@ public:
 #endif // ENABLE(CSS_FILTERS)
 
     void loadPendingResources();
+
+    int viewportPercentageValue(CSSPrimitiveValue& unit, int percentage);
 
     struct RuleRange {
         RuleRange(int& firstRuleIndex, int& lastRuleIndex): firstRuleIndex(firstRuleIndex), lastRuleIndex(lastRuleIndex) { }
@@ -584,6 +567,7 @@ private:
 
     bool classNamesAffectedByRules(const SpaceSplitString&) const;
     bool sharingCandidateHasIdenticalStyleAffectingAttributes(StyledElement*) const;
+
 
     unsigned m_matchedPropertiesCacheAdditionsSinceLastSweep;
 

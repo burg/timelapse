@@ -182,7 +182,10 @@ IntRect ScrollView::platformContentsToScreen(const IntRect& rect) const
     if (NSView* documentView = this->documentView()) {
         NSRect tempRect = rect;
         tempRect = [documentView convertRect:tempRect toView:nil];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         tempRect.origin = [[documentView window] convertBaseToScreen:tempRect.origin];
+#pragma clang diagnostic pop
         return enclosingIntRect(tempRect);
     }
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -193,7 +196,10 @@ IntPoint ScrollView::platformScreenToContents(const IntPoint& point) const
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
     if (NSView* documentView = this->documentView()) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         NSPoint windowCoord = [[documentView window] convertScreenToBase: point];
+#pragma clang diagnostic pop
         return IntPoint([documentView convertPoint:windowCoord fromView:nil]);
     }
     END_BLOCK_OBJC_EXCEPTIONS;
@@ -205,7 +211,6 @@ bool ScrollView::platformIsOffscreen() const
     return ![platformWidget() window] || ![[platformWidget() window] isVisible];
 }
 
-#if USE(SCROLLBAR_PAINTER)
 static inline NSScrollerKnobStyle toNSScrollerKnobStyle(ScrollbarOverlayStyle style)
 {
     switch (style) {
@@ -217,15 +222,10 @@ static inline NSScrollerKnobStyle toNSScrollerKnobStyle(ScrollbarOverlayStyle st
         return NSScrollerKnobStyleDefault;
     }
 }
-#endif
 
 void ScrollView::platformSetScrollbarOverlayStyle(ScrollbarOverlayStyle overlayStyle)
 {
-#if USE(SCROLLBAR_PAINTER)
     [scrollView() setScrollerKnobStyle:toNSScrollerKnobStyle(overlayStyle)];
-#else
-    UNUSED_PARAM(overlayStyle);
-#endif
 }
 
 void ScrollView::platformSetScrollOrigin(const IntPoint& origin, bool updatePositionAtAll, bool updatePositionSynchronously)

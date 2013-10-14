@@ -52,9 +52,6 @@ public:
     // can be called from any thread).
     static void initializeMainRunLoop();
 
-    // Must be called before entering main run loop. If called, application style run loop will be used, handling events.
-    static void setUseApplicationRunLoopOnMainRunLoop();
-
     static RunLoop* current();
     static RunLoop* main();
     static bool isMain();
@@ -96,10 +93,6 @@ public:
 #elif PLATFORM(MAC)
         static void timerFired(CFRunLoopTimerRef, void*);
         RetainPtr<CFRunLoopTimerRef> m_timer;
-#elif PLATFORM(QT)
-        static void timerFired(RunLoop*, int ID);
-        int m_ID;
-        bool m_isRepeating;
 #elif PLATFORM(EFL)
         static bool timerFired(void* data);
         Ecore_Timer* m_timer;
@@ -155,11 +148,6 @@ private:
     RetainPtr<CFRunLoopRef> m_runLoop;
     RetainPtr<CFRunLoopSourceRef> m_runLoopSource;
     int m_nestingLevel;
-#elif PLATFORM(QT)
-    typedef HashMap<int, TimerBase*> TimerMap;
-    TimerMap m_activeTimers;
-    class TimerObject;
-    TimerObject* m_timerObject;
 #elif PLATFORM(EFL)
     bool m_initEfl;
 

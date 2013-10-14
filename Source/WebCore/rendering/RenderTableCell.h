@@ -70,6 +70,9 @@ public:
         return m_column;
     }
 
+    RenderTableCell* nextCell() const;
+    RenderTableCell* previousCell() const;
+
     RenderTableRow* row() const { return toRenderTableRow(parent()); }
     RenderTableSection* section() const { return toRenderTableSection(parent()->parent()); }
     RenderTable* table() const { return toRenderTable(parent()->parent()->parent()); }
@@ -106,26 +109,26 @@ public:
 
     void setCellLogicalWidth(int constrainedLogicalWidth);
 
-    virtual int borderLeft() const;
-    virtual int borderRight() const;
-    virtual int borderTop() const;
-    virtual int borderBottom() const;
-    virtual int borderStart() const;
-    virtual int borderEnd() const;
-    virtual int borderBefore() const;
-    virtual int borderAfter() const;
+    virtual int borderLeft() const OVERRIDE;
+    virtual int borderRight() const OVERRIDE;
+    virtual int borderTop() const OVERRIDE;
+    virtual int borderBottom() const OVERRIDE;
+    virtual int borderStart() const OVERRIDE;
+    virtual int borderEnd() const OVERRIDE;
+    virtual int borderBefore() const OVERRIDE;
+    virtual int borderAfter() const OVERRIDE;
 
     void collectBorderValues(RenderTable::CollapsedBorderValues&) const;
     static void sortBorderValues(RenderTable::CollapsedBorderValues&);
 
-    virtual void layout();
+    virtual void layout() OVERRIDE;
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
 
     bool alignLeftRightBorderPaintRect(int& leftXOffset, int& rightXOffset);
     bool alignTopBottomBorderPaintRect(int& topYOffset, int& bottomYOffset);
     void paintCollapsedBorders(PaintInfo&, const LayoutPoint&);
-    void paintBackgroundsBehindCell(PaintInfo&, const LayoutPoint&, RenderObject* backgroundObject);
+    void paintBackgroundsBehindCell(PaintInfo&, const LayoutPoint&, RenderElement* backgroundObject);
 
     LayoutUnit cellBaselinePosition() const;
     bool isBaselineAligned() const 
@@ -153,7 +156,7 @@ public:
 
     void setOverrideLogicalContentHeightFromRowHeight(LayoutUnit);
 
-    virtual void scrollbarsChanged(bool horizontalScrollbarChanged, bool verticalScrollbarChanged);
+    virtual void scrollbarsChanged(bool horizontalScrollbarChanged, bool verticalScrollbarChanged) OVERRIDE;
 
     bool cellWidthChanged() const { return m_cellWidthChanged; }
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
@@ -207,6 +210,8 @@ public:
         return style()->borderEnd();
     }
 
+    using RenderBlockFlow::nodeAtPoint;
+
 #ifndef NDEBUG
     bool isFirstOrLastCellInRow() const
     {
@@ -214,24 +219,24 @@ public:
     }
 #endif
 protected:
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
-    virtual void computePreferredLogicalWidths();
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
+    virtual void computePreferredLogicalWidths() OVERRIDE;
 
 private:
-    virtual const char* renderName() const { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)" : "RenderTableCell"; }
+    virtual const char* renderName() const OVERRIDE { return (isAnonymous() || isPseudoElement()) ? "RenderTableCell (anonymous)" : "RenderTableCell"; }
 
-    virtual bool isTableCell() const { return true; }
+    virtual bool isTableCell() const OVERRIDE { return true; }
 
     virtual void willBeRemovedFromTree() OVERRIDE;
 
     virtual void updateLogicalWidth() OVERRIDE;
 
-    virtual void paintBoxDecorations(PaintInfo&, const LayoutPoint&);
-    virtual void paintMask(PaintInfo&, const LayoutPoint&);
+    virtual void paintBoxDecorations(PaintInfo&, const LayoutPoint&) OVERRIDE;
+    virtual void paintMask(PaintInfo&, const LayoutPoint&) OVERRIDE;
 
     virtual bool boxShadowShouldBeAppliedToBackground(BackgroundBleedAvoidance, InlineFlowBox*) const OVERRIDE;
 
-    virtual LayoutSize offsetFromContainer(RenderObject*, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const;
+    virtual LayoutSize offsetFromContainer(RenderObject*, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const OVERRIDE;
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const OVERRIDE;
     virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed = false) const OVERRIDE;
 
@@ -279,6 +284,9 @@ private:
     unsigned parseRowSpanFromDOM() const;
     unsigned parseColSpanFromDOM() const;
 
+    void nextSibling() const WTF_DELETED_FUNCTION;
+    void previousSibling() const WTF_DELETED_FUNCTION;
+
     // Note MSVC will only pack members if they have identical types, hence we use unsigned instead of bool here.
     unsigned m_column : 29;
     unsigned m_cellWidthChanged : 1;
@@ -302,6 +310,26 @@ inline const RenderTableCell* toRenderTableCell(const RenderObject* object)
 
 // This will catch anyone doing an unnecessary cast.
 void toRenderTableCell(const RenderTableCell*);
+
+inline RenderTableCell* RenderTableCell::nextCell() const
+{
+    return toRenderTableCell(RenderBlockFlow::nextSibling());
+}
+
+inline RenderTableCell* RenderTableCell::previousCell() const
+{
+    return toRenderTableCell(RenderBlockFlow::previousSibling());
+}
+
+inline RenderTableCell* RenderTableRow::firstCell() const
+{
+    return toRenderTableCell(RenderBox::firstChild());
+}
+
+inline RenderTableCell* RenderTableRow::lastCell() const
+{
+    return toRenderTableCell(RenderBox::lastChild());
+}
 
 } // namespace WebCore
 

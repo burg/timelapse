@@ -42,14 +42,12 @@ class UpdateInfo;
 
 class DrawingAreaImpl : public DrawingArea {
 public:
-    static PassOwnPtr<DrawingAreaImpl> create(WebPage*, const WebPageCreationParameters&);
+    DrawingAreaImpl(WebPage*, const WebPageCreationParameters&);
     virtual ~DrawingAreaImpl();
 
     void layerHostDidFlushLayers();
 
 private:
-    DrawingAreaImpl(WebPage*, const WebPageCreationParameters&);
-
     // DrawingArea
     virtual void setNeedsDisplay() OVERRIDE;
     virtual void setNeedsDisplayInRect(const WebCore::IntRect&) OVERRIDE;
@@ -73,14 +71,6 @@ private:
     virtual WebCore::GraphicsLayerFactory* graphicsLayerFactory() OVERRIDE;
     virtual void setRootCompositingLayer(WebCore::GraphicsLayer*) OVERRIDE;
     virtual void scheduleCompositingLayerFlush() OVERRIDE;
-#endif
-
-#if PLATFORM(MAC)
-    virtual void setLayerHostingMode(uint32_t) OVERRIDE;
-#endif
-
-#if USE(COORDINATED_GRAPHICS)
-    virtual void didReceiveCoordinatedLayerTreeHostMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 #endif
 
     // CoreIPC message handlers.

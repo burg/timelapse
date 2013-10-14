@@ -142,7 +142,7 @@ static bool executeToggleStyleInList(Frame& frame, EditorCommandSource source, E
     RefPtr<CSSValue> selectedCSSValue = selectionStyle->style()->getPropertyCSSValue(propertyID);
     String newStyle = ASCIILiteral("none");
     if (selectedCSSValue->isValueList()) {
-        RefPtr<CSSValueList> selectedCSSValueList = static_cast<CSSValueList*>(selectedCSSValue.get());
+        RefPtr<CSSValueList> selectedCSSValueList = toCSSValueList(selectedCSSValue.get());
         if (!selectedCSSValueList->removeAll(value))
             selectedCSSValueList->append(value);
         if (selectedCSSValueList->length())
@@ -253,7 +253,7 @@ static unsigned verticalScrollDistance(Frame& frame)
     Element* focusedElement = frame.document()->focusedElement();
     if (!focusedElement)
         return 0;
-    RenderObject* renderer = focusedElement->renderer();
+    auto renderer = focusedElement->renderer();
     if (!renderer || !renderer->isBox())
         return 0;
     RenderStyle* style = renderer->style();
@@ -270,7 +270,7 @@ static RefPtr<Range> unionDOMRanges(Range* a, Range* b)
     Range* start = a->compareBoundaryPoints(Range::START_TO_START, b, ASSERT_NO_EXCEPTION) <= 0 ? a : b;
     Range* end = a->compareBoundaryPoints(Range::END_TO_END, b, ASSERT_NO_EXCEPTION) <= 0 ? b : a;
 
-    return Range::create(&a->ownerDocument(), start->startContainer(), start->startOffset(), end->endContainer(), end->endOffset());
+    return Range::create(a->ownerDocument(), start->startContainer(), start->startOffset(), end->endContainer(), end->endOffset());
 }
 
 // Execute command functions
@@ -329,7 +329,7 @@ static bool executeDelete(Frame& frame, Event*, EditorCommandSource source, cons
     case CommandFromDOMWithUserInterface:
         // If the current selection is a caret, delete the preceding character. IE performs forwardDelete, but we currently side with Firefox.
         // Doesn't scroll to make the selection visible, or modify the kill ring (this time, siding with IE, not Firefox).
-        TypingCommand::deleteKeyPressed(frame.document(), frame.selection().granularity() == WordGranularity ? TypingCommand::SmartDelete : 0);
+        TypingCommand::deleteKeyPressed(*frame.document(), frame.selection().granularity() == WordGranularity ? TypingCommand::SmartDelete : 0);
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -412,7 +412,7 @@ static bool executeDeleteWordForward(Frame& frame, Event*, EditorCommandSource, 
 
 static bool executeFindString(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    return frame.editor().findString(value, true, false, true, false);
+    return frame.editor().findString(value, CaseInsensitive | WrapAround);
 }
 
 static bool executeFontName(Frame& frame, Event*, EditorCommandSource source, const String& value)
@@ -466,7 +466,7 @@ static bool executeForwardDelete(Frame& frame, Event*, EditorCommandSource sourc
         // Doesn't scroll to make the selection visible, or modify the kill ring.
         // ForwardDelete is not implemented in IE or Firefox, so this behavior is only needed for
         // backward compatibility with ourselves, and for consistency with Delete.
-        TypingCommand::forwardDeleteKeyPressed(frame.document());
+        TypingCommand::forwardDeleteKeyPressed(*frame.document());
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -501,7 +501,7 @@ static bool executeInsertHorizontalRule(Frame& frame, Event*, EditorCommandSourc
 
 static bool executeInsertHTML(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    return executeInsertFragment(frame, createFragmentFromMarkup(frame.document(), value, ""));
+    return executeInsertFragment(frame, createFragmentFromMarkup(*frame.document(), value, ""));
 }
 
 static bool executeInsertImage(Frame& frame, Event*, EditorCommandSource, const String& value)
@@ -522,7 +522,7 @@ static bool executeInsertLineBreak(Frame& frame, Event* event, EditorCommandSour
         // Doesn't scroll to make the selection visible, or modify the kill ring.
         // InsertLineBreak is not implemented in IE or Firefox, so this behavior is only needed for
         // backward compatibility with ourselves, and for consistency with other commands.
-        TypingCommand::insertLineBreak(frame.document(), 0);
+        TypingCommand::insertLineBreak(*frame.document(), 0);
         return true;
     }
     ASSERT_NOT_REACHED();
@@ -537,7 +537,7 @@ static bool executeInsertNewline(Frame& frame, Event* event, EditorCommandSource
 
 static bool executeInsertNewlineInQuotedContent(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    TypingCommand::insertParagraphSeparatorInQuotedContent(frame.document());
+    TypingCommand::insertParagraphSeparatorInQuotedContent(*frame.document());
     return true;
 }
 
@@ -550,7 +550,7 @@ static bool executeInsertOrderedList(Frame& frame, Event*, EditorCommandSource, 
 
 static bool executeInsertParagraph(Frame& frame, Event*, EditorCommandSource, const String&)
 {
-    TypingCommand::insertParagraphSeparator(frame.document(), 0);
+    TypingCommand::insertParagraphSeparator(*frame.document(), 0);
     return true;
 }
 
@@ -561,7 +561,7 @@ static bool executeInsertTab(Frame& frame, Event* event, EditorCommandSource, co
 
 static bool executeInsertText(Frame& frame, Event*, EditorCommandSource, const String& value)
 {
-    TypingCommand::insertText(frame.document(), value, 0);
+    TypingCommand::insertText(*frame.document(), value, 0);
     return true;
 }
 
@@ -925,7 +925,7 @@ static bool executePaste(Frame& frame, Event*, EditorCommandSource source, const
     return true;
 }
 
-#if PLATFORM(GTK) || PLATFORM(QT)
+#if PLATFORM(GTK)
 
 static bool executePasteGlobalSelection(Frame& frame, Event*, EditorCommandSource source, const String&)
 {
@@ -1603,7 +1603,7 @@ static const CommandMap& createCommandMap()
         { "Yank", { executeYank, supportedFromMenuOrKeyBinding, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
         { "YankAndSelect", { executeYankAndSelect, supportedFromMenuOrKeyBinding, enabledInEditableText, stateNone, valueNull, notTextInsertion, doNotAllowExecutionWhenDisabled } },
 
-#if PLATFORM(GTK) || PLATFORM(QT)
+#if PLATFORM(GTK)
         { "PasteGlobalSelection", { executePasteGlobalSelection, supportedFromMenuOrKeyBinding, enabledPaste, stateNone, valueNull, notTextInsertion, allowExecutionWhenDisabled } },
 #endif
 

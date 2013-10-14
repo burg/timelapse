@@ -156,7 +156,8 @@ public:
     
     static Address addressFor(VirtualRegister virtualRegister)
     {
-        return Address(GPRInfo::callFrameRegister, virtualRegister * sizeof(Register));
+        ASSERT(virtualRegister.isValid());
+        return Address(GPRInfo::callFrameRegister, virtualRegister.offset() * sizeof(Register));
     }
     static Address addressFor(int operand)
     {
@@ -165,7 +166,8 @@ public:
 
     static Address tagFor(VirtualRegister virtualRegister)
     {
-        return Address(GPRInfo::callFrameRegister, virtualRegister * sizeof(Register) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag));
+        ASSERT(virtualRegister.isValid());
+        return Address(GPRInfo::callFrameRegister, virtualRegister.offset() * sizeof(Register) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag));
     }
     static Address tagFor(int operand)
     {
@@ -174,7 +176,8 @@ public:
 
     static Address payloadFor(VirtualRegister virtualRegister)
     {
-        return Address(GPRInfo::callFrameRegister, virtualRegister * sizeof(Register) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload));
+        ASSERT(virtualRegister.isValid());
+        return Address(GPRInfo::callFrameRegister, virtualRegister.offset() * sizeof(Register) + OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload));
     }
     static Address payloadFor(int operand)
     {
@@ -267,6 +270,7 @@ public:
     void jitAssertIsJSDouble(GPRReg);
     void jitAssertIsCell(GPRReg);
     void jitAssertHasValidCallFrame();
+    void jitAssertIsNull(GPRReg);
 #else
     void jitAssertIsInt32(GPRReg) { }
     void jitAssertIsJSInt32(GPRReg) { }
@@ -274,6 +278,7 @@ public:
     void jitAssertIsJSDouble(GPRReg) { }
     void jitAssertIsCell(GPRReg) { }
     void jitAssertHasValidCallFrame() { }
+    void jitAssertIsNull(GPRReg) { }
 #endif
 
     // These methods convert between doubles, and doubles boxed and JSValues.
@@ -327,9 +332,9 @@ public:
     Jump emitExceptionCheck(ExceptionCheckKind kind = NormalExceptionCheck)
     {
 #if USE(JSVALUE64)
-    return branchTest64(kind == NormalExceptionCheck ? NonZero : Zero, AbsoluteAddress(vm()->addressOfException()));
+        return branchTest64(kind == NormalExceptionCheck ? NonZero : Zero, AbsoluteAddress(vm()->addressOfException()));
 #elif USE(JSVALUE32_64)
-    return branch32(kind == NormalExceptionCheck ? NotEqual : Equal, AbsoluteAddress(reinterpret_cast<char*>(vm()->addressOfException()) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), TrustedImm32(JSValue::EmptyValueTag));
+        return branch32(kind == NormalExceptionCheck ? NotEqual : Equal, AbsoluteAddress(reinterpret_cast<char*>(vm()->addressOfException()) + OBJECT_OFFSETOF(JSValue, u.asBits.tag)), TrustedImm32(JSValue::EmptyValueTag));
 #endif
     }
 
@@ -380,18 +385,18 @@ public:
         return m_baselineCodeBlock;
     }
     
-    int argumentsRegisterFor(InlineCallFrame* inlineCallFrame)
+    VirtualRegister baselineArgumentsRegisterFor(InlineCallFrame* inlineCallFrame)
     {
         if (!inlineCallFrame)
-            return codeBlock()->argumentsRegister();
+            return baselineCodeBlock()->argumentsRegister();
         
-        return baselineCodeBlockForInlineCallFrame(
-            inlineCallFrame)->argumentsRegister() + inlineCallFrame->stackOffset;
+        return VirtualRegister(baselineCodeBlockForInlineCallFrame(
+            inlineCallFrame)->argumentsRegister().offset() + inlineCallFrame->stackOffset);
     }
     
-    int argumentsRegisterFor(const CodeOrigin& codeOrigin)
+    VirtualRegister baselineArgumentsRegisterFor(const CodeOrigin& codeOrigin)
     {
-        return argumentsRegisterFor(codeOrigin.inlineCallFrame);
+        return baselineArgumentsRegisterFor(codeOrigin.inlineCallFrame);
     }
     
     SharedSymbolTable* symbolTableFor(const CodeOrigin& codeOrigin)
@@ -406,11 +411,35 @@ public:
         return codeOrigin.inlineCallFrame->stackOffset * sizeof(Register);
     }
 
+    int offsetOfArgumentsIncludingThis(InlineCallFrame* inlineCallFrame)
+    {
+        if (!inlineCallFrame)
+            return CallFrame::argumentOffsetIncludingThis(0) * sizeof(Register);
+        if (inlineCallFrame->arguments.size() <= 1)
+            return 0;
+        ValueRecovery recovery = inlineCallFrame->arguments[1];
+        RELEASE_ASSERT(recovery.technique() == DisplacedInJSStack);
+        return (recovery.virtualRegister().offset() - 1) * sizeof(Register);
+    }
+    
     int offsetOfArgumentsIncludingThis(const CodeOrigin& codeOrigin)
     {
-        if (!codeOrigin.inlineCallFrame)
-            return CallFrame::argumentOffsetIncludingThis(0) * sizeof(Register);
-        return (codeOrigin.inlineCallFrame->stackOffset + CallFrame::argumentOffsetIncludingThis(0)) * sizeof(Register);
+        return offsetOfArgumentsIncludingThis(codeOrigin.inlineCallFrame);
+    }
+
+    void writeBarrier(GPRReg owner, GPRReg scratch1, GPRReg scratch2, WriteBarrierUseKind useKind)
+    {
+        UNUSED_PARAM(owner);
+        UNUSED_PARAM(scratch1);
+        UNUSED_PARAM(scratch2);
+        UNUSED_PARAM(useKind);
+        ASSERT(owner != scratch1);
+        ASSERT(owner != scratch2);
+        ASSERT(scratch1 != scratch2);
+        
+#if ENABLE(WRITE_BARRIER_PROFILING)
+        emitCount(WriteBarrierCounters::jitCounterFor(useKind));
+#endif
     }
 
     Vector<BytecodeAndMachineOffset>& decodedCodeMapFor(CodeBlock*);

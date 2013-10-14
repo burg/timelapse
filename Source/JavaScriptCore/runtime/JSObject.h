@@ -460,6 +460,7 @@ public:
     void putDirect(VM&, PropertyName, JSValue, unsigned attributes = 0);
     void putDirect(VM&, PropertyName, JSValue, PutPropertySlot&);
     void putDirectWithoutTransition(VM&, PropertyName, JSValue, unsigned attributes = 0);
+    void putDirectNonIndexAccessor(VM&, PropertyName, JSValue, unsigned attributes);
     void putDirectAccessor(ExecState*, PropertyName, JSValue, unsigned attributes);
 
     JS_EXPORT_PRIVATE bool hasProperty(ExecState*, PropertyName) const;
@@ -576,8 +577,8 @@ public:
     void putDirect(VM& vm, PropertyOffset offset, JSValue value) { locationForOffset(offset)->set(vm, this, value); }
     void putDirectUndefined(PropertyOffset offset) { locationForOffset(offset)->setUndefined(); }
 
-    void putDirectNativeFunction(ExecState*, JSGlobalObject*, const PropertyName&, unsigned functionLength, NativeFunction, Intrinsic, unsigned attributes);
-    void putDirectNativeFunctionWithoutTransition(ExecState*, JSGlobalObject*, const PropertyName&, unsigned functionLength, NativeFunction, Intrinsic, unsigned attributes);
+    void putDirectNativeFunction(VM&, JSGlobalObject*, const PropertyName&, unsigned functionLength, NativeFunction, Intrinsic, unsigned attributes);
+    void putDirectNativeFunctionWithoutTransition(VM&, JSGlobalObject*, const PropertyName&, unsigned functionLength, NativeFunction, Intrinsic, unsigned attributes);
 
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
@@ -1032,6 +1033,7 @@ public:
     }
 
     static JSFinalObject* create(ExecState*, Structure*);
+    static JSFinalObject* create(VM&, Structure*);
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, unsigned inlineCapacity)
     {
         return Structure::create(vm, globalObject, prototype, TypeInfo(FinalObjectType, StructureFlags), info(), NonArray, inlineCapacity);
@@ -1072,6 +1074,13 @@ inline JSFinalObject* JSFinalObject::create(ExecState* exec, Structure* structur
         )
     ) JSFinalObject(exec->vm(), structure);
     finalObject->finishCreation(exec->vm());
+    return finalObject;
+}
+
+inline JSFinalObject* JSFinalObject::create(VM& vm, Structure* structure)
+{
+    JSFinalObject* finalObject = new (NotNull, allocateCell<JSFinalObject>(vm.heap, allocationSize(structure->inlineCapacity()))) JSFinalObject(vm, structure);
+    finalObject->finishCreation(vm);
     return finalObject;
 }
 
@@ -1497,12 +1506,12 @@ inline int offsetRelativeToBase(PropertyOffset offset)
 
 COMPILE_ASSERT(!(sizeof(JSObject) % sizeof(WriteBarrierBase<Unknown>)), JSObject_inline_storage_has_correct_alignment);
 
-ALWAYS_INLINE Identifier makeIdentifier(ExecState* exec, const char* name)
+ALWAYS_INLINE Identifier makeIdentifier(VM& vm, const char* name)
 {
-    return Identifier(exec, name);
+    return Identifier(&vm, name);
 }
 
-ALWAYS_INLINE Identifier makeIdentifier(ExecState*, const Identifier& name)
+ALWAYS_INLINE Identifier makeIdentifier(VM&, const Identifier& name)
 {
     return name;
 }
@@ -1513,7 +1522,7 @@ ALWAYS_INLINE Identifier makeIdentifier(ExecState*, const Identifier& name)
 // have the expected meanings.
 #define JSC_NATIVE_INTRINSIC_FUNCTION(jsName, cppName, attributes, length, intrinsic) \
     putDirectNativeFunction(\
-        exec, globalObject, makeIdentifier(exec, (jsName)), (length), cppName, \
+        vm, globalObject, makeIdentifier(vm, (jsName)), (length), cppName, \
         (intrinsic), (attributes))
 
 // As above, but this assumes that the function you're defining doesn't have an

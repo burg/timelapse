@@ -979,7 +979,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (![self _prepareAccessibilityCall])
         return nil;
     
-    KURL url = m_object->url();
+    URL url = m_object->url();
     if (url.isNull())
         return nil;
     return (NSURL*)url;
@@ -1651,7 +1651,7 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (range->endContainer() != scope && !range->endContainer()->isDescendantOf(scope))
         return NSMakeRange(NSNotFound, 0);
     
-    RefPtr<Range> testRange = Range::create(&scope->document(), scope, 0, range->startContainer(), range->startOffset());
+    RefPtr<Range> testRange = Range::create(scope->document(), scope, 0, range->startContainer(), range->startOffset());
     ASSERT(testRange->startContainer() == scope);
     int startPosition = TextIterator::rangeLength(testRange.get());
     
@@ -2025,6 +2025,14 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
         return nil;
     
     return m_object->ariaLiveRegionAtomic();
+}
+
+- (BOOL)accessibilityIsExpanded
+{
+    if (![self _prepareAccessibilityCall])
+        return NO;
+
+    return m_object->isExpanded();
 }
 
 - (NSString *)accessibilityInvalidStatus

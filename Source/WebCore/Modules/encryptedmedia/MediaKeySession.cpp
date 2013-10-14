@@ -219,16 +219,6 @@ void MediaKeySession::addKeyTimerFired(Timer<MediaKeySession>*)
     }
 }
 
-const AtomicString& MediaKeySession::interfaceName() const
-{
-    return eventNames().interfaceForMediaKeySession;
-}
-
-ScriptExecutionContext* MediaKeySession::scriptExecutionContext() const
-{
-    return ContextDestructionObserver::scriptExecutionContext();
-}
-
 }
 
 #endif

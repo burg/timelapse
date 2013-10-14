@@ -58,7 +58,7 @@ class RTCSessionDescriptionCallback;
 class RTCStatsCallback;
 class VoidCallback;
 
-class RTCPeerConnection : public RefCounted<RTCPeerConnection>, public ScriptWrappable, public RTCPeerConnectionHandlerClient, public EventTarget, public ActiveDOMObject {
+class RTCPeerConnection FINAL : public RefCounted<RTCPeerConnection>, public ScriptWrappable, public RTCPeerConnectionHandlerClient, public EventTargetWithInlineData, public ActiveDOMObject {
 public:
     static PassRefPtr<RTCPeerConnection> create(ScriptExecutionContext*, const Dictionary& rtcConfiguration, const Dictionary& mediaConstraints, ExceptionCode&);
     ~RTCPeerConnection();
@@ -120,8 +120,8 @@ public:
     virtual void didAddRemoteDataChannel(PassOwnPtr<RTCDataChannelHandler>) OVERRIDE;
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const OVERRIDE;
-    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return RTCPeerConnectionEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return ActiveDOMObject::scriptExecutionContext(); }
 
     // ActiveDOMObject
     virtual void stop() OVERRIDE;
@@ -138,11 +138,8 @@ private:
     bool hasLocalStreamWithTrackId(const String& trackId);
 
     // EventTarget implementation.
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
-    EventTargetData m_eventTargetData;
 
     void changeSignalingState(SignalingState);
     void changeIceGatheringState(IceGatheringState);

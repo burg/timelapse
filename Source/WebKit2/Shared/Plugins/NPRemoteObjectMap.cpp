@@ -78,7 +78,7 @@ void NPRemoteObjectMap::npObjectProxyDestroyed(NPObject* npObject)
 uint64_t NPRemoteObjectMap::registerNPObject(NPObject* npObject, Plugin* plugin)
 {
     uint64_t npObjectID = generateNPObjectID();
-    m_registeredNPObjects.set(npObjectID, NPObjectMessageReceiver::create(this, plugin, npObjectID, npObject).leakPtr());
+    m_registeredNPObjects.set(npObjectID, std::make_unique<NPObjectMessageReceiver>(this, plugin, npObjectID, npObject).release());
 
     return npObjectID;
 }
@@ -227,7 +227,7 @@ void NPRemoteObjectMap::pluginDestroyed(Plugin* plugin)
     }
 }
 
-void NPRemoteObjectMap::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+void NPRemoteObjectMap::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
 {
     NPObjectMessageReceiver* messageReceiver = m_registeredNPObjects.get(decoder.destinationID());
     if (!messageReceiver)

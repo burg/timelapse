@@ -126,7 +126,7 @@ void RenderFlowThread::invalidateRegions()
     m_regionRangeMap.clear();
     m_breakBeforeToRegionMap.clear();
     m_breakAfterToRegionMap.clear();
-    setNeedsLayout(true);
+    setNeedsLayout();
 
     m_regionsInvalidated = true;
 }
@@ -316,11 +316,6 @@ bool RenderFlowThread::updateLayerToRegionMappings()
         if (!m_layerToRegionMap)
             m_layerToRegionMap = adoptPtr(new LayerToRegionMap());
         m_layerToRegionMap->swap(layerToRegionMap);
-
-        for (RenderRegionList::iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
-            RenderRegion* region = *iter;
-            region->setRequiresLayerForCompositing(regionToLayerListMap.contains(region));
-        }
     }
 
     m_layersToRegionMappingsDirty = false;
@@ -970,7 +965,7 @@ void RenderFlowThread::markAutoLogicalHeightRegionsForLayout()
 
         // FIXME: We need to find a way to avoid marking all the regions ancestors for layout
         // as we are already inside layout.
-        region->setNeedsLayout(true);
+        region->setNeedsLayout();
     }
 }
 

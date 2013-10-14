@@ -81,7 +81,7 @@ public:
     void repaintRectangleInViewAndCompositedLayers(const LayoutRect&, bool immediate = false);
     void repaintViewAndCompositedLayers();
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
     virtual void paintBoxDecorations(PaintInfo&, const LayoutPoint&) OVERRIDE;
 
     enum SelectionRepaintMode { RepaintNewXOROld, RepaintNewMinusOld, RepaintNothing };
@@ -96,8 +96,8 @@ public:
 
     bool printing() const;
 
-    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const;
-    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
+    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const OVERRIDE;
+    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const OVERRIDE;
 
 #if USE(ACCELERATED_COMPOSITING)
     void setMaximalOutlineSize(int o);
@@ -149,9 +149,9 @@ public:
 
     // Returns true if layoutState should be used for its cached offset and clip.
     bool layoutStateEnabled() const { return m_layoutStateDisableCount == 0 && m_layoutState; }
-    LayoutState* layoutState() const { return m_layoutState; }
+    LayoutState* layoutState() const { return m_layoutState.get(); }
 
-    virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&);
+    virtual void updateHitTestResult(HitTestResult&, const LayoutPoint&) OVERRIDE;
 
     LayoutUnit pageLogicalHeight() const { return m_pageLogicalHeight; }
     void setPageLogicalHeight(LayoutUnit height)
@@ -202,7 +202,7 @@ public:
     bool checkTwoPassLayoutForAutoHeightRegions() const;
     FlowThreadController& flowThreadController();
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
     IntervalArena* intervalArena();
 
@@ -233,7 +233,7 @@ public:
 protected:
     virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const OVERRIDE;
-    virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const;
+    virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const OVERRIDE;
     virtual bool requiresColumns(int desiredColumnCount) const OVERRIDE;
     
 private:
@@ -256,7 +256,7 @@ private:
 #endif
             ) {
             pushLayoutStateForCurrentFlowThread(renderer);
-            m_layoutState = new (renderArena()) LayoutState(m_layoutState, renderer, offset, pageHeight, pageHeightChanged, colInfo);
+            m_layoutState = std::make_unique<LayoutState>(std::move(m_layoutState), renderer, offset, pageHeight, pageHeightChanged, colInfo);
             return true;
         }
         return false;
@@ -264,9 +264,7 @@ private:
 
     void popLayoutState()
     {
-        LayoutState* state = m_layoutState;
-        m_layoutState = state->m_next;
-        state->destroy(renderArena());
+        m_layoutState = std::move(m_layoutState->m_next);
         popLayoutStateForCurrentFlowThread();
     }
 
@@ -324,7 +322,7 @@ private:
     OwnPtr<ImageQualityController> m_imageQualityController;
     LayoutUnit m_pageLogicalHeight;
     bool m_pageLogicalHeightChanged;
-    LayoutState* m_layoutState;
+    std::unique_ptr<LayoutState> m_layoutState;
     unsigned m_layoutStateDisableCount;
 #if USE(ACCELERATED_COMPOSITING)
     OwnPtr<RenderLayerCompositor> m_compositor;

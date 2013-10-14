@@ -337,6 +337,16 @@ private:
             JSValue value = m_state.forNode(node).value();
             if (!value)
                 continue;
+            
+            // Check if merging the abstract value of the constant into the abstract value
+            // we've proven for this node wouldn't widen the proof. If it widens the proof
+            // (i.e. says that the set contains more things in it than it previously did)
+            // then we refuse to fold.
+            AbstractValue oldValue = m_state.forNode(node);
+            AbstractValue constantValue;
+            constantValue.set(m_graph, value);
+            if (oldValue.merge(constantValue))
+                continue;
                 
             CodeOrigin codeOrigin = node->codeOrigin;
             AdjacencyList children = node->children;
@@ -385,23 +395,7 @@ private:
         
         return changed;
     }
-    
-#if !ASSERT_DISABLED
-    bool isCapturedAtOrAfter(BasicBlock* block, unsigned indexInBlock, int operand)
-    {
-        for (; indexInBlock < block->size(); ++indexInBlock) {
-            Node* node = block->at(indexInBlock);
-            if (!node->hasLocal(m_graph))
-                continue;
-            if (node->local() != operand)
-                continue;
-            if (node->variableAccessData()->isCaptured())
-                return true;
-        }
-        return false;
-    }
-#endif // !ASSERT_DISABLED
-    
+
     void addStructureTransitionCheck(CodeOrigin codeOrigin, unsigned indexInBlock, JSCell* cell)
     {
         Node* weakConstant = m_insertionSet.insertNode(

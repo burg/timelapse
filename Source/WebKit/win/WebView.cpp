@@ -89,7 +89,6 @@
 #include <WebCore/FileSystem.h>
 #include <WebCore/FloatQuad.h>
 #include <WebCore/FocusController.h>
-#include <WebCore/Frame.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/FrameSelection.h>
 #include <WebCore/FrameTree.h>
@@ -111,6 +110,7 @@
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/Logging.h>
 #include <WebCore/MIMETypeRegistry.h>
+#include <WebCore/MainFrame.h>
 #include <WebCore/MemoryCache.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -224,9 +224,9 @@ static inline String toString(BSTR bstr)
     return String(bstr, SysStringLen(bstr));
 }
 
-static inline KURL toKURL(BSTR bstr)
+static inline URL toURL(BSTR bstr)
 {
-    return KURL(KURL(), toString(bstr));
+    return URL(URL(), toString(bstr));
 }
 
 class PreferencesChangedOrRemovedObserver : public IWebNotificationObserver {
@@ -1607,7 +1607,8 @@ bool WebView::gestureNotify(WPARAM wParam, LPARAM lParam)
         // The hit testing above won't detect if we've hit the main frame's vertical scrollbar. Check that manually now.
         RECT webViewRect;
         GetWindowRect(m_viewWindow, &webViewRect);
-        hitScrollbar = view->verticalScrollbar() && (gestureBeginPoint.x > (webViewRect.right - view->verticalScrollbar()->theme()->scrollbarThickness()));  
+        hitScrollbar = (view->verticalScrollbar() && (gestureBeginPoint.x > (webViewRect.right - view->verticalScrollbar()->theme()->scrollbarThickness()))) 
+            || (view->horizontalScrollbar() && (gestureBeginPoint.y > (webViewRect.bottom - view->horizontalScrollbar()->theme()->scrollbarThickness())));  
     }
 
     bool canBeScrolled = false;
@@ -1618,25 +1619,33 @@ bool WebView::gestureNotify(WPARAM wParam, LPARAM lParam)
                 break;
             }
         }
+    } else {
+        // We've hit the main document but not any of the document's content
+        if (core(m_mainFrame)->view()->isScrollable())
+            canBeScrolled = true;
     }
 
     // We always allow two-fingered panning with inertia and a gutter (which limits movement to one
     // direction in most cases).
     DWORD dwPanWant = GC_PAN | GC_PAN_WITH_INERTIA | GC_PAN_WITH_GUTTER;
-    // We never allow single-fingered horizontal panning. That gesture is reserved for creating text
-    // selections. This matches IE.
-    DWORD dwPanBlock = GC_PAN_WITH_SINGLE_FINGER_HORIZONTALLY;
+    DWORD dwPanBlock = 0;
 
     if (hitScrollbar || !canBeScrolled) {
         // The part of the page under the gesture can't be scrolled, or the gesture is on a scrollbar.
-        // Disallow single-fingered vertical panning in this case, too, so we'll fall back to the default
+        // Disallow single-fingered panning in this case so we'll fall back to the default
         // behavior (which allows the scrollbar thumb to be dragged, text selections to be made, etc.).
-        dwPanBlock |= GC_PAN_WITH_SINGLE_FINGER_VERTICALLY;
+        dwPanBlock = GC_PAN_WITH_SINGLE_FINGER_VERTICALLY | GC_PAN_WITH_SINGLE_FINGER_HORIZONTALLY;
     } else {
         // The part of the page the gesture is under can be scrolled, and we're not under a scrollbar.
         // Allow single-fingered vertical panning in this case, so the user will be able to pan the page
         // with one or two fingers.
         dwPanWant |= GC_PAN_WITH_SINGLE_FINGER_VERTICALLY;
+
+        // Disable single-fingered horizontal panning only if the target node is text.
+        if (m_gestureTargetNode && m_gestureTargetNode->isTextNode())
+            dwPanBlock = GC_PAN_WITH_SINGLE_FINGER_HORIZONTALLY;
+        else
+            dwPanWant |= GC_PAN_WITH_SINGLE_FINGER_HORIZONTALLY;
     }
 
     GESTURECONFIG gc = { GID_PAN, dwPanWant, dwPanBlock };
@@ -1667,6 +1676,10 @@ bool WebView::gesture(WPARAM wParam, LPARAM lParam)
         m_gestureTargetNode = 0;
         break;
     case GID_PAN: {
+        if (gi.dwFlags & GF_BEGIN) {
+            m_lastPanX = gi.ptsLocation.x;
+            m_lastPanY = gi.ptsLocation.y;
+        }
         // Where are the fingers currently?
         long currentX = gi.ptsLocation.x;
         long currentY = gi.ptsLocation.y;
@@ -1686,43 +1699,50 @@ bool WebView::gesture(WPARAM wParam, LPARAM lParam)
             return false;
         }
 
-        if (!m_gestureTargetNode || !m_gestureTargetNode->renderer())
-            return false;
+        ScrollableArea* scrolledArea = 0;
 
-        // We negate here since panning up moves the content up, but moves the scrollbar down.
-        m_gestureTargetNode->renderer()->enclosingLayer()->scrollByRecursively(IntSize(-deltaX, -deltaY));
-           
+        if (!m_gestureTargetNode || !m_gestureTargetNode->renderer()) {
+            // We might directly hit the document without hitting any nodes
+            coreFrame->view()->scrollBy(IntSize(-deltaX, -deltaY));
+            scrolledArea = coreFrame->view();
+        } else
+            m_gestureTargetNode->renderer()->enclosingLayer()->enclosingScrollableLayer()->scrollByRecursively(IntSize(-deltaX, -deltaY), WebCore::RenderLayer::ScrollOffsetClamped, &scrolledArea);
+
         if (!(UpdatePanningFeedbackPtr() && BeginPanningFeedbackPtr() && EndPanningFeedbackPtr())) {
             CloseGestureInfoHandlePtr()(gestureHandle);
             return true;
         }
 
+        // Handle overpanning
         if (gi.dwFlags & GF_BEGIN) {
             BeginPanningFeedbackPtr()(m_viewWindow);
             m_yOverpan = 0;
+            m_xOverpan = 0;
         } else if (gi.dwFlags & GF_END) {
             EndPanningFeedbackPtr()(m_viewWindow, true);
             m_yOverpan = 0;
+            m_xOverpan = 0;
         }
 
-        ScrollView* view = coreFrame->view();
-        if (!view) {
-            CloseGestureInfoHandlePtr()(gestureHandle);
-            return true;
-        }
-        Scrollbar* vertScrollbar = view->verticalScrollbar();
-        if (!vertScrollbar) {
+        if (!scrolledArea) {
             CloseGestureInfoHandlePtr()(gestureHandle);
             return true;
         }
 
-        // FIXME: Support Horizontal Window Bounce. <https://webkit.org/b/28500>.
-        // FIXME: If the user starts panning down after a window bounce has started, the window doesn't bounce back 
-        // until they release their finger. <https://webkit.org/b/28501>.
-        if (vertScrollbar->currentPos() == 0)
-            UpdatePanningFeedbackPtr()(m_viewWindow, 0, m_yOverpan, gi.dwFlags & GF_INERTIA);
-        else if (vertScrollbar->currentPos() >= vertScrollbar->maximum())
-            UpdatePanningFeedbackPtr()(m_viewWindow, 0, m_yOverpan, gi.dwFlags & GF_INERTIA);
+        Scrollbar* vertScrollbar = scrolledArea->verticalScrollbar();
+
+        int ypan = 0;
+        int xpan = 0;
+
+        if (vertScrollbar && (!vertScrollbar->currentPos() || vertScrollbar->currentPos() >= vertScrollbar->maximum()))
+            ypan = m_yOverpan;
+
+        Scrollbar* horiScrollbar = scrolledArea->horizontalScrollbar();
+
+        if (horiScrollbar && (!horiScrollbar->currentPos() || horiScrollbar->currentPos() >= horiScrollbar->maximum()))
+            xpan = m_xOverpan;
+
+        UpdatePanningFeedbackPtr()(m_viewWindow, xpan, ypan, gi.dwFlags & GF_INERTIA);
 
         CloseGestureInfoHandlePtr()(gestureHandle);
         return true;
@@ -2443,11 +2463,8 @@ LRESULT CALLBACK WebView::WebViewWndProc(HWND hWnd, UINT message, WPARAM wParam,
             break;
     }
 
-    if (webView->needsDisplay()) {
-        webView->paint(0, 0);
-        if (webView->usesLayeredWindow())
-            webView->performLayeredWindowUpdate();
-    }
+    if (webView->needsDisplay() && message != WM_PAINT)
+        ::UpdateWindow(hWnd);
 
     if (!handled)
         lResult = DefWindowProc(hWnd, message, wParam, lParam);
@@ -2478,7 +2495,7 @@ static String webKitVersionString()
     return buildNumberStringPtr;
 }
 
-const String& WebView::userAgentForKURL(const KURL&)
+const String& WebView::userAgentForKURL(const URL&)
 {
     if (m_userAgentOverridden)
         return m_userAgentCustom;
@@ -3491,7 +3508,8 @@ HRESULT STDMETHODCALLTYPE WebView::searchFor(
     if (!str || !SysStringLen(str))
         return E_INVALIDARG;
 
-    *found = m_page->findString(toString(str), caseFlag ? TextCaseSensitive : TextCaseInsensitive, forward ? FindDirectionForward : FindDirectionBackward, wrapFlag);
+    FindOptions options = (caseFlag ? 0 : CaseInsensitive) | (forward ? 0 : Backwards) | (wrapFlag ? WrapAround : 0);
+    *found = m_page->findString(toString(str), options);
     return S_OK;
 }
 
@@ -4767,12 +4785,12 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
     hr = preferences->isCSSRegionsEnabled(&enabled);
     if (FAILED(hr))
         return hr;
-    RuntimeEnabledFeatures::setCSSRegionsEnabled(!!enabled);
+    RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(!!enabled);
 
     hr = preferences->areSeamlessIFramesEnabled(&enabled);
     if (FAILED(hr))
         return hr;
-    RuntimeEnabledFeatures::setSeamlessIFramesEnabled(!!enabled);
+    RuntimeEnabledFeatures::sharedFeatures().setSeamlessIFramesEnabled(!!enabled);
 
     hr = preferences->privateBrowsingEnabled(&enabled);
     if (FAILED(hr))
@@ -4835,7 +4853,7 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
         settings.setUserStyleSheetLocation(url.get());
         str.clear();
     } else
-        settings.setUserStyleSheetLocation(KURL());
+        settings.setUserStyleSheetLocation(URL());
 
     hr = preferences->shouldPrintBackgrounds(&enabled);
     if (FAILED(hr))
@@ -5235,7 +5253,7 @@ HRESULT STDMETHODCALLTYPE WebView::DragEnter(
     ::ScreenToClient(m_viewWindow, (LPPOINT)&localpt);
     DragData data(pDataObject, IntPoint(localpt.x, localpt.y), 
         IntPoint(pt.x, pt.y), keyStateToDragOperation(grfKeyState));
-    *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragEntered(&data).operation);
+    *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragEntered(data).operation);
 
     m_lastDropEffect = *pdwEffect;
     m_dragData = pDataObject;
@@ -5254,7 +5272,7 @@ HRESULT STDMETHODCALLTYPE WebView::DragOver(
         ::ScreenToClient(m_viewWindow, (LPPOINT)&localpt);
         DragData data(m_dragData.get(), IntPoint(localpt.x, localpt.y), 
             IntPoint(pt.x, pt.y), keyStateToDragOperation(grfKeyState));
-        *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragUpdated(&data).operation);
+        *pdwEffect = dragOperationToDragCursor(m_page->dragController().dragUpdated(data).operation);
     } else
         *pdwEffect = DROPEFFECT_NONE;
 
@@ -5270,7 +5288,7 @@ HRESULT STDMETHODCALLTYPE WebView::DragLeave()
     if (m_dragData) {
         DragData data(m_dragData.get(), IntPoint(), IntPoint(), 
             DragOperationNone);
-        m_page->dragController().dragExited(&data);
+        m_page->dragController().dragExited(data);
         m_dragData = 0;
     }
     return S_OK;
@@ -5288,7 +5306,7 @@ HRESULT STDMETHODCALLTYPE WebView::Drop(
     ::ScreenToClient(m_viewWindow, (LPPOINT)&localpt);
     DragData data(pDataObject, IntPoint(localpt.x, localpt.y), 
         IntPoint(pt.x, pt.y), keyStateToDragOperation(grfKeyState));
-    m_page->dragController().performDrag(&data);
+    m_page->dragController().performDrag(data);
     return S_OK;
 }
 
@@ -6340,7 +6358,7 @@ HRESULT WebView::addUserScriptToGroup(BSTR groupName, IWebScriptWorld* iWorld, B
     if (!pageGroup)
         return E_FAIL;
 
-    pageGroup->addUserScriptToWorld(world->world(), toString(source), toKURL(url),
+    pageGroup->addUserScriptToWorld(world->world(), toString(source), toURL(url),
                                     toStringVector(whitelistCount, whitelist), toStringVector(blacklistCount, blacklist),
                                     injectionTime == WebInjectAtDocumentStart ? InjectAtDocumentStart : InjectAtDocumentEnd,
                                     InjectInAllFrames);
@@ -6365,7 +6383,7 @@ HRESULT WebView::addUserStyleSheetToGroup(BSTR groupName, IWebScriptWorld* iWorl
     if (!pageGroup)
         return E_FAIL;
 
-    pageGroup->addUserStyleSheetToWorld(world->world(), toString(source), toKURL(url),
+    pageGroup->addUserStyleSheetToWorld(world->world(), toString(source), toURL(url),
                                         toStringVector(whitelistCount, whitelist), toStringVector(blacklistCount, blacklist),
                                         InjectInAllFrames);
 
@@ -6387,7 +6405,7 @@ HRESULT WebView::removeUserScriptFromGroup(BSTR groupName, IWebScriptWorld* iWor
     if (!pageGroup)
         return E_FAIL;
 
-    pageGroup->removeUserScriptFromWorld(world->world(), toKURL(url));
+    pageGroup->removeUserScriptFromWorld(world->world(), toURL(url));
 
     return S_OK;
 }
@@ -6407,7 +6425,7 @@ HRESULT WebView::removeUserStyleSheetFromGroup(BSTR groupName, IWebScriptWorld* 
     if (!pageGroup)
         return E_FAIL;
 
-    pageGroup->removeUserStyleSheetFromWorld(world->world(), toKURL(url));
+    pageGroup->removeUserStyleSheetFromWorld(world->world(), toURL(url));
 
     return S_OK;
 }
@@ -6529,7 +6547,7 @@ HRESULT WebView::addVisitedLinks(BSTR* visitedURLs, unsigned visitedURLCount)
     return S_OK;
 }
 
-void WebView::downloadURL(const KURL& url)
+void WebView::downloadURL(const URL& url)
 {
     // It's the delegate's job to ref the WebDownload to keep it alive - otherwise it will be
     // destroyed when this function returns.

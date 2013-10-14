@@ -325,6 +325,8 @@ public:
     static const RegisterID scratchReg2 = SH4Registers::r11;
     static const uint32_t maxInstructionSize = 16;
 
+    static RegisterID firstRegister() { return SH4Registers::r0; }
+
     enum {
         padForAlign8 = 0x00,
         padForAlign16 = 0x0009,
@@ -459,7 +461,7 @@ public:
     void andlImm8r(int imm8, RegisterID dst)
     {
         ASSERT((imm8 <= 255) && (imm8 >= 0));
-        ASSERT(dst == SH4Registers::r0);
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
 
         uint16_t opc = getOpcodeGroup5(ANDIMM_OPCODE, imm8);
         oneShortOp(opc);
@@ -492,7 +494,7 @@ public:
     void orlImm8r(int imm8, RegisterID dst)
     {
         ASSERT((imm8 <= 255) && (imm8 >= 0));
-        ASSERT(dst == SH4Registers::r0);
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
 
         uint16_t opc = getOpcodeGroup5(ORIMM_OPCODE, imm8);
         oneShortOp(opc);
@@ -519,7 +521,7 @@ public:
     void xorlImm8r(int imm8, RegisterID dst)
     {
         ASSERT((imm8 <= 255) && (imm8 >= 0));
-        ASSERT(dst == SH4Registers::r0);
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
 
         uint16_t opc = getOpcodeGroup5(XORIMM_OPCODE, imm8);
         oneShortOp(opc);
@@ -687,6 +689,7 @@ public:
 
     void cmpEqImmR0(int imm, RegisterID dst)
     {
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
         uint16_t opc = getOpcodeGroup5(CMPEQIMM_OPCODE, imm);
         oneShortOp(opc);
     }
@@ -699,7 +702,8 @@ public:
 
     void testlImm8r(int imm, RegisterID dst)
     {
-        ASSERT((dst == SH4Registers::r0) && (imm <= 255) && (imm >= 0));
+        ASSERT((imm <= 255) && (imm >= 0));
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
 
         uint16_t opc = getOpcodeGroup5(TSTIMM_OPCODE, imm);
         oneShortOp(opc);
@@ -1062,7 +1066,7 @@ public:
 
     void movwPCReg(int offset, RegisterID base, RegisterID dst)
     {
-        ASSERT(base == SH4Registers::pc);
+        ASSERT_UNUSED(base, base == SH4Registers::pc);
         ASSERT((offset <= 255) && (offset >= 0));
 
         uint16_t opc = getOpcodeGroup3(MOVW_READ_OFFPC_OPCODE, dst, offset);
@@ -1071,7 +1075,7 @@ public:
 
     void movwMemReg(int offset, RegisterID base, RegisterID dst)
     {
-        ASSERT(dst == SH4Registers::r0);
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
 
         uint16_t opc = getOpcodeGroup11(MOVW_READ_OFFRM_OPCODE, base, offset);
         oneShortOp(opc);
@@ -1137,7 +1141,7 @@ public:
 
     void movbMemReg(int offset, RegisterID base, RegisterID dst)
     {
-        ASSERT(dst == SH4Registers::r0);
+        ASSERT_UNUSED(dst, dst == SH4Registers::r0);
 
         uint16_t opc = getOpcodeGroup11(MOVB_READ_OFFRM_OPCODE, base, offset);
         oneShortOp(opc);
@@ -1545,17 +1549,11 @@ public:
             insn[0] = getOpcodeGroup3(MOVL_READ_OFFPC_OPCODE, SH4Registers::r13, insn[0] & 0x00ff);
             insn[1] = (insn[1] & 0xf00f) | (rd << 8) | (SH4Registers::r13 << 4);
             cacheFlush(insn, 2 * sizeof(SH4Word));
-            changePCrelativeAddress(insn[0] & 0x00ff, insn, imm);
-            return;
-        }
-
-        if ((insn[0] & 0x00ff) == 1)
+        } else {
             insn[1] = getOpcodeGroup6(BRA_OPCODE, 3);
-        else
-            insn[1] = NOP_OPCODE;
-
-        insn[2] = NOP_OPCODE;
-        cacheFlush(&insn[1], 2 * sizeof(SH4Word));
+            insn[2] = NOP_OPCODE;
+            cacheFlush(&insn[1], 2 * sizeof(SH4Word));
+        }
 
         changePCrelativeAddress(insn[0] & 0x00ff, insn, imm);
     }
@@ -2211,8 +2209,8 @@ public:
         printfStdoutInstr(">> end repatch\n");
     }
 #else
-    static void printInstr(uint16_t opc, unsigned size, bool isdoubleInst = true) { };
-    static void printBlockInstr(uint16_t* first, unsigned offset, int nbInstr) { };
+    static void printInstr(uint16_t, unsigned, bool = true) { };
+    static void printBlockInstr(uint16_t*, unsigned, int) { };
 #endif
 
     static void replaceWithLoad(void* instructionStart)

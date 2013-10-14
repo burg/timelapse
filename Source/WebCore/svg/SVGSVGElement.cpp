@@ -56,7 +56,6 @@
 #include "SVGViewElement.h"
 #include "SVGViewSpec.h"
 #include "SVGZoomEvent.h"
-#include "ScriptEventListener.h"
 #include "StaticNodeList.h"
 #include <wtf/StdLibExtras.h>
 
@@ -222,7 +221,7 @@ void SVGSVGElement::setCurrentTranslate(const FloatPoint& translation)
 void SVGSVGElement::updateCurrentTranslate()
 {
     if (RenderObject* object = renderer())
-        object->setNeedsLayout(true);
+        object->setNeedsLayout();
 
     if (parentNode() == &document() && document().renderView())
         document().renderView()->repaint();
@@ -237,13 +236,13 @@ void SVGSVGElement::parseAttribute(const QualifiedName& name, const AtomicString
 
         // Only handle events if we're the outermost <svg> element
         if (name == HTMLNames::onunloadAttr)
-            document().setWindowAttributeEventListener(eventNames().unloadEvent, createAttributeEventListener(document().frame(), name, value));
+            document().setWindowAttributeEventListener(eventNames().unloadEvent, name, value);
         else if (name == HTMLNames::onresizeAttr)
-            document().setWindowAttributeEventListener(eventNames().resizeEvent, createAttributeEventListener(document().frame(), name, value));
+            document().setWindowAttributeEventListener(eventNames().resizeEvent, name, value);
         else if (name == HTMLNames::onscrollAttr)
-            document().setWindowAttributeEventListener(eventNames().scrollEvent, createAttributeEventListener(document().frame(), name, value));
+            document().setWindowAttributeEventListener(eventNames().scrollEvent, name, value);
         else if (name == SVGNames::onzoomAttr)
-            document().setWindowAttributeEventListener(eventNames().zoomEvent, createAttributeEventListener(document().frame(), name, value));
+            document().setWindowAttributeEventListener(eventNames().zoomEvent, name, value);
         else
             setListener = false;
  
@@ -252,9 +251,9 @@ void SVGSVGElement::parseAttribute(const QualifiedName& name, const AtomicString
     }
 
     if (name == HTMLNames::onabortAttr)
-        document().setWindowAttributeEventListener(eventNames().abortEvent, createAttributeEventListener(document().frame(), name, value));
+        document().setWindowAttributeEventListener(eventNames().abortEvent, name, value);
     else if (name == HTMLNames::onerrorAttr)
-        document().setWindowAttributeEventListener(eventNames().errorEvent, createAttributeEventListener(document().frame(), name, value));
+        document().setWindowAttributeEventListener(eventNames().errorEvent, name, value);
     else if (name == SVGNames::xAttr)
         setXBaseValue(SVGLength::construct(LengthModeWidth, value, parseError));
     else if (name == SVGNames::yAttr)
@@ -336,20 +335,21 @@ void SVGSVGElement::forceRedraw()
 
 PassRefPtr<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(const FloatRect& rect, SVGElement* referenceElement, CollectIntersectionOrEnclosure collect) const
 {
-    Vector<RefPtr<Node> > nodes;
+    Vector<Ref<Element>> elements;
 
     auto svgDescendants = descendantsOfType<SVGElement>(referenceElement ? referenceElement : this);
     for (auto it = svgDescendants.begin(), end = svgDescendants.end(); it != end; ++it) {
         const SVGElement* svgElement = &*it;
         if (collect == CollectIntersectionList) {
-            if (checkIntersection(svgElement, rect))
-                nodes.append(const_cast<SVGElement*>(svgElement));
+            if (RenderSVGModelObject::checkIntersection(svgElement->renderer(), rect))
+                elements.append(*const_cast<SVGElement*>(svgElement));
         } else {
-            if (checkEnclosure(svgElement, rect))
-                nodes.append(const_cast<SVGElement*>(svgElement));
+            if (RenderSVGModelObject::checkEnclosure(svgElement->renderer(), rect))
+                elements.append(*const_cast<SVGElement*>(svgElement));
         }
     }
-    return StaticNodeList::adopt(nodes);
+
+    return StaticElementList::adopt(elements);
 }
 
 PassRefPtr<NodeList> SVGSVGElement::getIntersectionList(const FloatRect& rect, SVGElement* referenceElement) const
@@ -488,9 +488,9 @@ RenderElement* SVGSVGElement::createRenderer(RenderArena& arena, RenderStyle&)
     return new (arena) RenderSVGViewportContainer(*this);
 }
 
-Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode& rootParent)
 {
-    if (rootParent->inDocument()) {
+    if (rootParent.inDocument()) {
         document().accessSVGExtensions()->addTimeContainer(this);
 
         // Animations are started at the end of document parsing and after firing the load event,
@@ -502,9 +502,9 @@ Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode* ro
     return SVGGraphicsElement::insertedInto(rootParent);
 }
 
-void SVGSVGElement::removedFrom(ContainerNode* rootParent)
+void SVGSVGElement::removedFrom(ContainerNode& rootParent)
 {
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         document().accessSVGExtensions()->removeTimeContainer(this);
     SVGGraphicsElement::removedFrom(rootParent);
 }
@@ -771,7 +771,7 @@ void SVGSVGElement::documentDidResumeFromPageCache()
 // See http://www.w3.org/TR/SVG11/struct.html#InterfaceSVGSVGElement
 Element* SVGSVGElement::getElementById(const AtomicString& id)
 {
-    Element* element = treeScope()->getElementById(id);
+    Element* element = treeScope().getElementById(id);
     if (element && element->isDescendantOf(this))
         return element;
 

@@ -41,7 +41,7 @@ PassRefPtr<SVGHKernElement> SVGHKernElement::create(const QualifiedName& tagName
     return adoptRef(new SVGHKernElement(tagName, document));
 }
 
-Node::InsertionNotificationRequest SVGHKernElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGHKernElement::insertedInto(ContainerNode& rootParent)
 {
     ContainerNode* fontNode = parentNode();
     if (fontNode && isSVGFontElement(fontNode))
@@ -50,7 +50,7 @@ Node::InsertionNotificationRequest SVGHKernElement::insertedInto(ContainerNode* 
     return SVGElement::insertedInto(rootParent);
 }
 
-void SVGHKernElement::removedFrom(ContainerNode* rootParent)
+void SVGHKernElement::removedFrom(ContainerNode& rootParent)
 {
     ContainerNode* fontNode = parentNode();
     if (fontNode && isSVGFontElement(fontNode))
@@ -59,7 +59,7 @@ void SVGHKernElement::removedFrom(ContainerNode* rootParent)
     SVGElement::removedFrom(rootParent);
 }
 
-void SVGHKernElement::buildHorizontalKerningPair(KerningPairVector& kerningPairs)
+void SVGHKernElement::buildHorizontalKerningPair(SVGKerningMap& kerningMap)
 {
     String u1 = fastGetAttribute(SVGNames::u1Attr);
     String g1 = fastGetAttribute(SVGNames::g1Attr);
@@ -74,7 +74,7 @@ void SVGHKernElement::buildHorizontalKerningPair(KerningPairVector& kerningPairs
         && parseKerningUnicodeString(u1, kerningPair.unicodeRange1, kerningPair.unicodeName1)
         && parseKerningUnicodeString(u2, kerningPair.unicodeRange2, kerningPair.unicodeName2)) {
         kerningPair.kerning = fastGetAttribute(SVGNames::kAttr).string().toFloat();
-        kerningPairs.append(kerningPair);
+        kerningMap.insert(kerningPair);
     }
 }
 

@@ -32,15 +32,13 @@
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 #include "CoreText/CoreText.h"
 #endif
-#include "DOMWrapperWorld.h"
 #include "FloatConversion.h"
 #include "HTMLMediaElement.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Language.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MediaControlElements.h"
-#include "PageGroup.h"
 #include "SoftLinking.h"
 #include "TextTrackCue.h"
 #include "TextTrackList.h"
@@ -141,7 +139,7 @@ static void userCaptionPreferencesChangedNotificationCallback(CFNotificationCent
 }
 #endif
 
-CaptionUserPreferencesMediaAF::CaptionUserPreferencesMediaAF(PageGroup* group)
+CaptionUserPreferencesMediaAF::CaptionUserPreferencesMediaAF(PageGroup& group)
     : CaptionUserPreferences(group)
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     , m_listeningForPreferenceChanges(false)

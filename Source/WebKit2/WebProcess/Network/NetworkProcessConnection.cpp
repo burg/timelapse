@@ -65,7 +65,7 @@ void NetworkProcessConnection::didReceiveMessage(CoreIPC::Connection* connection
     didReceiveNetworkProcessConnectionMessage(connection, decoder);
 }
 
-void NetworkProcessConnection::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+void NetworkProcessConnection::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
 {
     ASSERT_NOT_REACHED();
 }
@@ -80,6 +80,7 @@ void NetworkProcessConnection::didReceiveInvalidMessage(CoreIPC::Connection*, Co
 {
 }
 
+#if ENABLE(SHAREABLE_RESOURCE)
 void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, const ShareableResource::Handle& handle)
 {
     CachedResource* resource = memoryCache()->resourceForRequest(request);
@@ -94,6 +95,7 @@ void NetworkProcessConnection::didCacheResource(const ResourceRequest& request, 
 
     resource->tryReplaceEncodedData(buffer.release());
 }
+#endif
 
 } // namespace WebKit
 

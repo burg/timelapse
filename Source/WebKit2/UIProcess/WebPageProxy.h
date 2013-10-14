@@ -86,10 +86,6 @@
 #include <Evas.h>
 #endif
 
-#if PLATFORM(QT)
-#include "QtNetworkRequestData.h"
-#endif
-
 namespace CoreIPC {
     class ArgumentDecoder;
     class Connection;
@@ -110,10 +106,6 @@ namespace WebCore {
     struct ViewportAttributes;
     struct WindowFeatures;
 }
-
-#if PLATFORM(QT)
-class QQuickNetworkReply;
-#endif
 
 #if USE(APPKIT)
 #ifdef __OBJC__
@@ -157,10 +149,6 @@ struct PlatformPopupMenuData;
 struct PrintInfo;
 struct WebPageCreationParameters;
 struct WebPopupItem;
-
-#if ENABLE(GESTURE_EVENTS)
-class WebGestureEvent;
-#endif
 
 #if ENABLE(VIBRATION)
 class WebVibrationProxy;
@@ -365,19 +353,11 @@ public:
 #if USE(TILED_BACKING_STORE) 
     void didRenderFrame(const WebCore::IntSize& contentsSize, const WebCore::IntRect& coveredRect);
 #endif
-#if PLATFORM(QT)
-    void registerApplicationScheme(const String& scheme);
-    void resolveApplicationSchemeRequest(QtNetworkRequestData);
-    void sendApplicationSchemeReply(const QQuickNetworkReply*);
-    void authenticationRequiredRequest(const String& hostname, const String& realm, const String& prefilledUsername, String& username, String& password);
-    void certificateVerificationRequest(const String& hostname, bool& ignoreErrors);
-    void proxyAuthenticationRequiredRequest(const String& hostname, uint16_t port, const String& prefilledUsername, String& username, String& password);
-#endif // PLATFORM(QT).
 #if PLATFORM(EFL)
     void setThemePath(const String&);
 #endif
 
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(GTK)
     void setComposition(const String& text, Vector<WebCore::CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd);
     void confirmComposition(const String& compositionString, int64_t selectionStart, int64_t selectionLength);
     void cancelComposition();
@@ -434,14 +414,8 @@ public:
     void handleMouseEvent(const NativeWebMouseEvent&);
     void handleWheelEvent(const NativeWebWheelEvent&);
     void handleKeyboardEvent(const NativeWebKeyboardEvent&);
-#if ENABLE(GESTURE_EVENTS)
-    void handleGestureEvent(const WebGestureEvent&);
-#endif
 #if ENABLE(TOUCH_EVENTS)
     void handleTouchEvent(const NativeWebTouchEvent&);
-#if PLATFORM(QT)
-    void handlePotentialActivation(const WebCore::IntPoint& touchPoint, const WebCore::IntSize& touchArea);
-#endif
 #endif
 
     void scrollBy(WebCore::ScrollDirection, WebCore::ScrollGranularity);
@@ -512,10 +486,14 @@ public:
     bool isPinnedToTopSide() const { return m_mainFrameIsPinnedToTopSide; }
     bool isPinnedToBottomSide() const { return m_mainFrameIsPinnedToBottomSide; }
 
-    bool rubberBandsAtBottom() const { return m_rubberBandsAtBottom; }
-    void setRubberBandsAtBottom(bool);
-    bool rubberBandsAtTop() const { return m_rubberBandsAtTop; }
+    bool rubberBandsAtLeft() const;
+    void setRubberBandsAtLeft(bool);
+    bool rubberBandsAtRight() const;
+    void setRubberBandsAtRight(bool);
+    bool rubberBandsAtTop() const;
     void setRubberBandsAtTop(bool);
+    bool rubberBandsAtBottom() const;
+    void setRubberBandsAtBottom(bool);
 
     void setPaginationMode(WebCore::Pagination::Mode);
     WebCore::Pagination::Mode paginationMode() const { return m_paginationMode; }
@@ -589,10 +567,10 @@ public:
 
 #if ENABLE(DRAG_SUPPORT)    
     // Drag and drop support.
-    void dragEntered(WebCore::DragData*, const String& dragStorageName = String());
-    void dragUpdated(WebCore::DragData*, const String& dragStorageName = String());
-    void dragExited(WebCore::DragData*, const String& dragStorageName = String());
-    void performDrag(WebCore::DragData*, const String& dragStorageName, const SandboxExtension::Handle&, const SandboxExtension::HandleArray&);
+    void dragEntered(WebCore::DragData&, const String& dragStorageName = String());
+    void dragUpdated(WebCore::DragData&, const String& dragStorageName = String());
+    void dragExited(WebCore::DragData&, const String& dragStorageName = String());
+    void performDrag(WebCore::DragData&, const String& dragStorageName, const SandboxExtension::Handle&, const SandboxExtension::HandleArray&);
 
     void didPerformDragControllerAction(WebCore::DragSession);
     void dragEnded(const WebCore::IntPoint& clientPosition, const WebCore::IntPoint& globalPosition, uint64_t operation);
@@ -601,7 +579,7 @@ public:
     void setPromisedData(const String& pasteboardName, const SharedMemory::Handle& imageHandle, uint64_t imageSize, const String& filename, const String& extension,
                          const String& title, const String& url, const String& visibleURL, const SharedMemory::Handle& archiveHandle, uint64_t archiveSize);
 #endif
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(GTK)
     void startDrag(const WebCore::DragData&, const ShareableBitmap::Handle& dragImage);
 #endif
 #endif
@@ -664,7 +642,7 @@ public:
     void findZoomableAreaForPoint(const WebCore::IntPoint&, const WebCore::IntSize&);
 #endif
 
-#if PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(GTK)
+#if PLATFORM(EFL) || PLATFORM(GTK)
     void handleDownloadRequest(DownloadProxy*);
 #endif
 
@@ -780,12 +758,14 @@ public:
         
 private:
     WebPageProxy(PageClient*, PassRefPtr<WebProcessProxy>, WebPageGroup*, uint64_t pageID);
+    void platformInitialize();
 
+    void resetState();
     void resetStateAfterProcessExited();
 
     // CoreIPC::MessageReceiver
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
 
     // WebPopupMenuProxy::Client
     virtual void valueChangedForPopupMenu(WebPopupMenuProxy*, int32_t newSelectedIndex);
@@ -793,14 +773,10 @@ private:
 #if PLATFORM(GTK)
     virtual void failedToShowPopupMenu();
 #endif
-#if PLATFORM(QT)
-    virtual void changeSelectedIndex(int32_t newSelectedIndex);
-    virtual void closePopupMenu();
-#endif
 
     // Implemented in generated WebPageProxyMessageReceiver.cpp
     void didReceiveWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveSyncWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
+    void didReceiveSyncWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
 
     void didCreateMainFrame(uint64_t frameID);
     void didCreateSubframe(uint64_t frameID);
@@ -890,7 +866,7 @@ private:
 #if USE(COORDINATED_GRAPHICS)
     void didFindZoomableArea(const WebCore::IntPoint&, const WebCore::IntRect&);
 #endif
-#if PLATFORM(QT) || PLATFORM(EFL)
+#if PLATFORM(EFL)
     void didChangeContentsSize(const WebCore::IntSize&);
 #endif
 
@@ -905,9 +881,6 @@ private:
 #endif
 
     void editorStateChanged(const EditorState&);
-#if PLATFORM(QT)
-    void willSetInputMethodState();
-#endif
 
     // Back/Forward list management
     void backForwardAddItem(uint64_t itemID);
@@ -1014,7 +987,7 @@ private:
     void clearPendingAPIRequestURL() { m_pendingAPIRequestURL = String(); }
     void setPendingAPIRequestURL(const String& pendingAPIRequestURL) { m_pendingAPIRequestURL = pendingAPIRequestURL; }
 
-    bool maybeInitializeSandboxExtensionHandle(const WebCore::KURL&, SandboxExtension::Handle&);
+    bool maybeInitializeSandboxExtensionHandle(const WebCore::URL&, SandboxExtension::Handle&);
 
 #if PLATFORM(MAC)
     void substitutionsPanelIsShowing(bool&);
@@ -1036,7 +1009,7 @@ private:
 
     void clearLoadDependentCallbacks();
 
-    void performDragControllerAction(DragControllerAction, WebCore::DragData*, const String& dragStorageName, const SandboxExtension::Handle&, const SandboxExtension::HandleArray&);
+    void performDragControllerAction(DragControllerAction, WebCore::DragData&, const String& dragStorageName, const SandboxExtension::Handle&, const SandboxExtension::HandleArray&);
 
     void updateBackingStoreDiscardableState();
 
@@ -1068,7 +1041,7 @@ private:
     WebPageContextMenuClient m_contextMenuClient;
 #endif
 
-    OwnPtr<DrawingAreaProxy> m_drawingArea;
+    std::unique_ptr<DrawingAreaProxy> m_drawingArea;
     RefPtr<WebProcessProxy> m_process;
     RefPtr<WebPageGroup> m_pageGroup;
     RefPtr<WebFrameProxy> m_mainFrame;
@@ -1187,9 +1160,6 @@ private:
     WebCore::PolicyAction m_syncNavigationActionPolicyAction;
     uint64_t m_syncNavigationActionPolicyDownloadID;
 
-#if ENABLE(GESTURE_EVENTS)
-    Deque<WebGestureEvent> m_gestureEventQueue;
-#endif
     Deque<NativeWebKeyboardEvent> m_keyEventQueue;
     Deque<NativeWebWheelEvent> m_wheelEventQueue;
     Deque<OwnPtr<Vector<NativeWebWheelEvent>>> m_currentlyProcessedWheelEvents;
@@ -1240,8 +1210,11 @@ private:
     bool m_mainFrameIsPinnedToTopSide;
     bool m_mainFrameIsPinnedToBottomSide;
 
-    bool m_rubberBandsAtBottom;
+    bool m_useLegacyImplicitRubberBandControl;
+    bool m_rubberBandsAtLeft;
+    bool m_rubberBandsAtRight;
     bool m_rubberBandsAtTop;
+    bool m_rubberBandsAtBottom;
 
     bool m_mainFrameInViewSourceMode;
         
@@ -1270,10 +1243,6 @@ private:
     WebCore::FloatRect m_lastSentExposedRect;
     bool m_clipsToExposedRect;
     bool m_lastSentClipsToExposedRect;
-#endif
-
-#if PLATFORM(QT)
-    WTF::HashSet<RefPtr<QtRefCountedNetworkRequestData>> m_applicationSchemeRequests;
 #endif
 
 #if ENABLE(PAGE_VISIBILITY_API)

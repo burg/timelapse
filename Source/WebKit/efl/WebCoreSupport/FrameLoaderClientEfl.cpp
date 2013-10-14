@@ -47,6 +47,7 @@
 #include "HTMLFormElement.h"
 #include "HTTPStatusCodes.h"
 #include "MIMETypeRegistry.h"
+#include "MainFrame.h"
 #include "NotImplemented.h"
 #include "Page.h"
 #include "PluginDatabase.h"
@@ -93,7 +94,7 @@ const String& FrameLoaderClientEfl::customUserAgent() const
     return m_customUserAgent;
 }
 
-String FrameLoaderClientEfl::userAgent(const KURL&)
+String FrameLoaderClientEfl::userAgent(const URL&)
 {
     if (!m_customUserAgent.isEmpty())
         return m_customUserAgent;
@@ -105,9 +106,7 @@ String FrameLoaderClientEfl::userAgent(const KURL&)
 
 void FrameLoaderClientEfl::callPolicyFunction(FramePolicyFunction function, PolicyAction action)
 {
-    Frame* f = EWKPrivate::coreFrame(m_frame);
-    ASSERT(f);
-    (f->loader().policyChecker().*function)(action);
+    function(action);
 }
 
 WTF::PassRefPtr<DocumentLoader> FrameLoaderClientEfl::createDocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)
@@ -118,7 +117,7 @@ WTF::PassRefPtr<DocumentLoader> FrameLoaderClientEfl::createDocumentLoader(const
     return loader.release();
 }
 
-void FrameLoaderClientEfl::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<FormState>)
+void FrameLoaderClientEfl::dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction function)
 {
     // FIXME: This is surely too simple
     ASSERT(function);
@@ -183,7 +182,7 @@ void FrameLoaderClientEfl::dispatchWillSendRequest(DocumentLoader* loader, unsig
     bool isMainFrameRequest = false;
     if (loader) {
             const FrameLoader* frameLoader = loader->frameLoader();
-            isMainFrameRequest = (loader == frameLoader->provisionalDocumentLoader() && frameLoader->isLoadingMainFrame());
+            isMainFrameRequest = (loader == frameLoader->provisionalDocumentLoader() && frameLoader->frame().isMainFrame());
     }
 
     Ewk_Frame_Resource_Request request = { 0, firstParty.data(), httpMethod.data(), identifier, m_frame, isMainFrameRequest };
@@ -212,7 +211,7 @@ void FrameLoaderClientEfl::dispatchWillSendRequest(DocumentLoader* loader, unsig
     evas_object_smart_callback_call(m_view, "resource,request,willsend", &messages);
 
     if (request.url != orig.url) {
-        coreRequest.setURL(KURL(KURL(), request.url));
+        coreRequest.setURL(URL(URL(), request.url));
 
         // Calling client might have changed our url pointer.
         // Free the new allocated string.
@@ -236,7 +235,7 @@ void FrameLoaderClientEfl::assignIdentifierToInitialRequest(unsigned long identi
     bool isMainFrameRequest = false;
     if (loader) {
             const FrameLoader* frameLoader = loader->frameLoader();
-            isMainFrameRequest = (loader == frameLoader->provisionalDocumentLoader() && frameLoader->isLoadingMainFrame());
+            isMainFrameRequest = (loader == frameLoader->provisionalDocumentLoader() && frameLoader->frame().isMainFrame());
     }
 
     Ewk_Frame_Resource_Request request = { url.data(), firstParty.data(), httpMethod.data(), identifier, m_frame, isMainFrameRequest };
@@ -286,7 +285,7 @@ void FrameLoaderClientEfl::dispatchDidReceiveResponse(DocumentLoader* loader, un
     evas_object_smart_callback_call(m_view, "resource,response,received", &response);
 }
 
-void FrameLoaderClientEfl::dispatchDecidePolicyForResponse(FramePolicyFunction function, const ResourceResponse& response, const ResourceRequest& resourceRequest)
+void FrameLoaderClientEfl::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& resourceRequest, FramePolicyFunction function)
 {
     // we need to call directly here (currently callPolicyFunction does that!)
     ASSERT(function);
@@ -308,7 +307,7 @@ void FrameLoaderClientEfl::dispatchDecidePolicyForResponse(FramePolicyFunction f
         callPolicyFunction(function, PolicyDownload);
 }
 
-void FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function, const NavigationAction&, const ResourceRequest& resourceRequest, PassRefPtr<FormState>, const String&)
+void FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest& resourceRequest, PassRefPtr<FormState>, const String&, FramePolicyFunction function)
 {
     ASSERT(function);
     ASSERT(m_frame);
@@ -325,7 +324,7 @@ void FrameLoaderClientEfl::dispatchDecidePolicyForNewWindowAction(FramePolicyFun
     callPolicyFunction(function, PolicyUse);
 }
 
-void FrameLoaderClientEfl::dispatchDecidePolicyForNavigationAction(FramePolicyFunction function, const NavigationAction& action, const ResourceRequest& resourceRequest, PassRefPtr<FormState>)
+void FrameLoaderClientEfl::dispatchDecidePolicyForNavigationAction(const NavigationAction& action, const ResourceRequest& resourceRequest, PassRefPtr<FormState>, FramePolicyFunction function)
 {
     ASSERT(function);
     ASSERT(m_frame);
@@ -356,7 +355,7 @@ void FrameLoaderClientEfl::dispatchDecidePolicyForNavigationAction(FramePolicyFu
     callPolicyFunction(function, policy);
 }
 
-PassRefPtr<Widget> FrameLoaderClientEfl::createPlugin(const IntSize& pluginSize, HTMLPlugInElement* element, const KURL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
+PassRefPtr<Widget> FrameLoaderClientEfl::createPlugin(const IntSize& pluginSize, HTMLPlugInElement* element, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
 {
     ASSERT(m_frame);
     ASSERT(m_view);
@@ -366,7 +365,7 @@ PassRefPtr<Widget> FrameLoaderClientEfl::createPlugin(const IntSize& pluginSize,
                                   mimeType, loadManually);
 }
 
-PassRefPtr<Frame> FrameLoaderClientEfl::createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool /*allowsScrolling*/, int /*marginWidth*/, int /*marginHeight*/)
+PassRefPtr<Frame> FrameLoaderClientEfl::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement, const String& referrer, bool /*allowsScrolling*/, int /*marginWidth*/, int /*marginHeight*/)
 {
     ASSERT(m_frame);
     ASSERT(m_view);
@@ -406,14 +405,14 @@ void FrameLoaderClientEfl::redirectDataToPlugin(Widget* pluginWidget)
         m_hasSentResponseToPlugin = false;
 }
 
-PassRefPtr<Widget> FrameLoaderClientEfl::createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const KURL&,
+PassRefPtr<Widget> FrameLoaderClientEfl::createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL&,
                                                                 const Vector<String>& /*paramNames*/, const Vector<String>& /*paramValues*/)
 {
     notImplemented();
     return 0;
 }
 
-ObjectContentType FrameLoaderClientEfl::objectContentType(const KURL& url, const String& mimeType, bool shouldPreferPlugInsForImages)
+ObjectContentType FrameLoaderClientEfl::objectContentType(const URL& url, const String& mimeType, bool shouldPreferPlugInsForImages)
 {
     // FIXME: once plugin support is enabled, this method needs to correctly handle the 'shouldPreferPlugInsForImages' flag. See
     // WebCore::FrameLoader::defaultObjectContentType() for an example.
@@ -452,9 +451,9 @@ String FrameLoaderClientEfl::overrideMediaType() const
     return String::fromUTF8(ewk_settings_css_media_type_get());
 }
 
-void FrameLoaderClientEfl::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
+void FrameLoaderClientEfl::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld& world)
 {
-    if (world != mainThreadNormalWorld())
+    if (&world != &mainThreadNormalWorld())
         return;
 
     Frame* coreFrame = EWKPrivate::coreFrame(m_frame);
@@ -575,12 +574,12 @@ void FrameLoaderClientEfl::didDisplayInsecureContent()
     ewk_frame_mixed_content_displayed_set(m_frame, true);
 }
 
-void FrameLoaderClientEfl::didRunInsecureContent(SecurityOrigin*, const KURL&)
+void FrameLoaderClientEfl::didRunInsecureContent(SecurityOrigin*, const URL&)
 {
     ewk_frame_mixed_content_run_set(m_frame, true);
 }
 
-void FrameLoaderClientEfl::didDetectXSS(const KURL& insecureURL, bool didBlockEntirePage)
+void FrameLoaderClientEfl::didDetectXSS(const URL& insecureURL, bool didBlockEntirePage)
 {
     CString cs = insecureURL.string().utf8();
     Ewk_Frame_Xss_Notification xssInfo = { cs.data(), didBlockEntirePage };
@@ -630,7 +629,7 @@ void FrameLoaderClientEfl::dispatchDidCancelClientRedirect()
     ewk_frame_redirect_cancelled(m_frame);
 }
 
-void FrameLoaderClientEfl::dispatchWillPerformClientRedirect(const KURL& url, double, double)
+void FrameLoaderClientEfl::dispatchWillPerformClientRedirect(const URL& url, double, double)
 {
     ewk_frame_redirect_requested(m_frame, url.string().utf8().data());
 }
@@ -788,7 +787,7 @@ void FrameLoaderClientEfl::prepareForDataSourceReplacement()
     notImplemented();
 }
 
-void FrameLoaderClientEfl::setTitle(const StringWithDirection&, const KURL&)
+void FrameLoaderClientEfl::setTitle(const StringWithDirection&, const URL&)
 {
     // no need for, dispatchDidReceiveTitle is the right callback
 }
@@ -992,7 +991,7 @@ void FrameLoaderClientEfl::updateGlobalHistory()
         return;
 
     const FrameLoader* frameLoader = loader->frameLoader();
-    const bool isMainFrameRequest = frameLoader && (loader == frameLoader->provisionalDocumentLoader()) && frameLoader->isLoadingMainFrame();
+    const bool isMainFrameRequest = frameLoader && (loader == frameLoader->provisionalDocumentLoader()) && frameLoader->frame().isMainFrame();
     const CString& urlForHistory = loader->urlForHistory().string().utf8();
     const CString& title = loader->title().string().utf8();
     const CString& firstParty = loader->request().firstPartyForCookies().string().utf8();

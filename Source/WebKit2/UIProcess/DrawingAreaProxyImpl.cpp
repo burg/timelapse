@@ -36,10 +36,6 @@
 #include "WebProcessProxy.h"
 #include <WebCore/Region.h>
 
-#if USE(COORDINATED_GRAPHICS)
-#include "CoordinatedLayerTreeHostProxy.h"
-#endif
-
 using namespace WebCore;
 
 namespace WebKit {
@@ -53,11 +49,6 @@ DrawingAreaProxyImpl::DrawingAreaProxyImpl(WebPageProxy* webPageProxy)
     , m_isBackingStoreDiscardable(true)
     , m_discardBackingStoreTimer(RunLoop::current(), this, &DrawingAreaProxyImpl::discardBackingStore)
 {
-#if USE(COORDINATED_GRAPHICS)
-    // Construct the proxy early to allow messages to be sent to the web process while AC is entered there.
-    if (webPageProxy->pageGroup()->preferences()->forceCompositingMode())
-        m_coordinatedLayerTreeHostProxy = adoptPtr(new CoordinatedLayerTreeHostProxy(this));
-#endif
 }
 
 DrawingAreaProxyImpl::~DrawingAreaProxyImpl()
@@ -269,7 +260,7 @@ void DrawingAreaProxyImpl::incorporateUpdate(const UpdateInfo& updateInfo)
         return;
 
     if (!m_backingStore)
-        m_backingStore = BackingStore::create(updateInfo.viewSize, updateInfo.deviceScaleFactor, m_webPageProxy);
+        m_backingStore = std::make_unique<BackingStore>(updateInfo.viewSize, updateInfo.deviceScaleFactor, m_webPageProxy);
 
     m_backingStore->incorporateUpdate(updateInfo);
 
@@ -360,19 +351,7 @@ void DrawingAreaProxyImpl::enterAcceleratedCompositingMode(const LayerTreeContex
     m_backingStore = nullptr;
     m_layerTreeContext = layerTreeContext;
     m_webPageProxy->enterAcceleratedCompositingMode(layerTreeContext);
-#if USE(COORDINATED_GRAPHICS)
-    if (!m_coordinatedLayerTreeHostProxy)
-        m_coordinatedLayerTreeHostProxy = adoptPtr(new CoordinatedLayerTreeHostProxy(this));
-#endif
 }
-
-#if USE(COORDINATED_GRAPHICS)
-void DrawingAreaProxyImpl::setVisibleContentsRect(const WebCore::FloatRect& visibleContentsRect, const WebCore::FloatPoint& trajectoryVector)
-{
-    if (m_coordinatedLayerTreeHostProxy)
-        m_coordinatedLayerTreeHostProxy->setVisibleContentsRect(visibleContentsRect, trajectoryVector);
-}
-#endif
 
 void DrawingAreaProxyImpl::exitAcceleratedCompositingMode()
 {

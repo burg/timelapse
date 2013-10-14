@@ -218,7 +218,7 @@ void RenderTableCell::computeIntrinsicPadding(int rowHeight)
     // FIXME: Changing an intrinsic padding shouldn't trigger a relayout as it only shifts the cell inside the row but
     // doesn't change the logical height.
     if (intrinsicPaddingBefore != oldIntrinsicPaddingBefore || intrinsicPaddingAfter != oldIntrinsicPaddingAfter)
-        setNeedsLayout(true, MarkOnlyThis);
+        setNeedsLayout(MarkOnlyThis);
 }
 
 void RenderTableCell::updateLogicalWidth()
@@ -230,8 +230,8 @@ void RenderTableCell::setCellLogicalWidth(int tableLayoutLogicalWidth)
     if (tableLayoutLogicalWidth == logicalWidth())
         return;
 
-    setNeedsLayout(true, MarkOnlyThis);
-    row()->setChildNeedsLayout(true, MarkOnlyThis);
+    setNeedsLayout(MarkOnlyThis);
+    row()->setChildNeedsLayout(MarkOnlyThis);
 
     if (!table()->selfNeedsLayout() && checkForRepaintDuringLayout())
         repaint();
@@ -255,7 +255,7 @@ void RenderTableCell::layout()
     if (isBaselineAligned() && section()->rowBaseline(rowIndex()) && cellBaselinePosition() > section()->rowBaseline(rowIndex())) {
         int newIntrinsicPaddingBefore = max<LayoutUnit>(0, intrinsicPaddingBefore() - max<LayoutUnit>(0, cellBaselinePosition() - oldCellBaseline));
         setIntrinsicPaddingBefore(newIntrinsicPaddingBefore);
-        setNeedsLayout(true, MarkOnlyThis);
+        setNeedsLayout(MarkOnlyThis);
         layoutBlock(cellWidthChanged());
     }
 
@@ -739,7 +739,7 @@ CollapsedBorderValue RenderTableCell::computeCollapsedBeforeBorder(IncludeBorder
         if (prevCell->section() == section())
             prevRow = parent()->previousSibling();
         else
-            prevRow = prevCell->section()->lastChild();
+            prevRow = prevCell->section()->lastRow();
     
         if (prevRow) {
             result = chooseBorder(CollapsedBorderValue(prevRow->style()->borderAfter(), includeColor ? prevRow->style()->visitedDependentColor(afterColorProperty) : Color(), BROW), result);
@@ -1156,7 +1156,7 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
 {
     ASSERT(paintInfo.phase == PaintPhaseCollapsedTableBorders);
 
-    if (!paintInfo.shouldPaintWithinRoot(this) || style()->visibility() != VISIBLE)
+    if (!paintInfo.shouldPaintWithinRoot(*this) || style()->visibility() != VISIBLE)
         return;
 
     LayoutRect localRepaintRect = paintInfo.rect;
@@ -1264,9 +1264,9 @@ void RenderTableCell::paintCollapsedBorders(PaintInfo& paintInfo, const LayoutPo
     }
 }
 
-void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const LayoutPoint& paintOffset, RenderObject* backgroundObject)
+void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const LayoutPoint& paintOffset, RenderElement* backgroundObject)
 {
-    if (!paintInfo.shouldPaintWithinRoot(this))
+    if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
 
     if (!backgroundObject)
@@ -1302,7 +1302,7 @@ void RenderTableCell::paintBackgroundsBehindCell(PaintInfo& paintInfo, const Lay
 
 void RenderTableCell::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (!paintInfo.shouldPaintWithinRoot(this))
+    if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
 
     RenderTable* tableElt = table();

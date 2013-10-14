@@ -40,6 +40,7 @@
 #include "Frame.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"

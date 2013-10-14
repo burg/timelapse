@@ -203,10 +203,10 @@ void SVGImageElement::didAttachRenderers()
     }
 }
 
-Node::InsertionNotificationRequest SVGImageElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGImageElement::insertedInto(ContainerNode& rootParent)
 {
     SVGGraphicsElement::insertedInto(rootParent);
-    if (!rootParent->inDocument())
+    if (!rootParent.inDocument())
         return InsertionDone;
     // Update image loader, as soon as we're living in the tree.
     // We can only resolve base URIs properly, after that!
@@ -219,7 +219,7 @@ const AtomicString& SVGImageElement::imageSourceURL() const
     return getAttribute(XLinkNames::hrefAttr);
 }
 
-void SVGImageElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void SVGImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     SVGGraphicsElement::addSubresourceAttributeURLs(urls);
 

@@ -100,7 +100,7 @@ public:
 class BitmapImage FINAL : public Image {
     friend class GeneratedImage;
     friend class CrossfadeGeneratedImage;
-    friend class GeneratorGeneratedImage;
+    friend class GradientImage;
     friend class GraphicsContext;
 public:
     static PassRefPtr<BitmapImage> create(PassNativeImagePtr nativeImage, ImageObserver* observer = 0)
@@ -111,7 +111,7 @@ public:
     {
         return adoptRef(new BitmapImage(observer));
     }
-#if PLATFORM(WIN) || (PLATFORM(QT) && OS(WINDOWS))
+#if PLATFORM(WIN)
     static PassRefPtr<BitmapImage> create(HBITMAP);
 #endif
     virtual ~BitmapImage();
@@ -135,6 +135,9 @@ public:
     virtual void resetAnimation() OVERRIDE;
 
     virtual unsigned decodedSize() const OVERRIDE;
+
+    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
+        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal) OVERRIDE;
 
 #if PLATFORM(MAC)
     // Accessors for native image formats.
@@ -296,6 +299,8 @@ private:
     bool m_sizeAvailable : 1; // Whether or not we can obtain the size of the first image frame yet from ImageIO.
     mutable bool m_hasUniformFrameSize : 1;
     mutable bool m_haveFrameCount : 1;
+
+    RefPtr<Image> m_cachedImage;
 };
 
 }

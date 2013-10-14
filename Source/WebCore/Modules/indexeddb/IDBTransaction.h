@@ -50,7 +50,7 @@ class IDBObjectStore;
 class IDBOpenDBRequest;
 struct IDBObjectStoreMetadata;
 
-class IDBTransaction : public ScriptWrappable, public RefCounted<IDBTransaction>, public EventTarget, public ActiveDOMObject {
+class IDBTransaction FINAL : public ScriptWrappable, public RefCounted<IDBTransaction>, public EventTargetWithInlineData, public ActiveDOMObject {
 public:
     static PassRefPtr<IDBTransaction> create(ScriptExecutionContext*, int64_t, const Vector<String>& objectStoreNames, IndexedDB::TransactionMode, IDBDatabase*);
     static PassRefPtr<IDBTransaction> create(ScriptExecutionContext*, int64_t, IDBDatabase*, IDBOpenDBRequest*, const IDBDatabaseMetadata& previousMetadata);
@@ -96,18 +96,17 @@ public:
     void objectStoreDeleted(const String&);
     void setActive(bool);
     void setError(PassRefPtr<DOMError>, const String& errorMessage);
-    String webkitErrorMessage() const;
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(complete);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(error);
 
-    virtual void onAbort(PassRefPtr<IDBDatabaseError>);
-    virtual void onComplete();
+    void onAbort(PassRefPtr<IDBDatabaseError>);
+    void onComplete();
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return IDBTransactionEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return ActiveDOMObject::scriptExecutionContext(); }
 
     using EventTarget::dispatchEvent;
     virtual bool dispatchEvent(PassRefPtr<Event>) OVERRIDE;
@@ -134,8 +133,6 @@ private:
     // EventTarget
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
 
     enum State {
         Inactive, // Created or started, but not in an event callback
@@ -168,8 +165,6 @@ private:
     IDBDatabaseMetadata m_previousMetadata;
 
     HashSet<IDBCursor*> m_openCursors;
-
-    EventTargetData m_eventTargetData;
 };
 
 } // namespace WebCore

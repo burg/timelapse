@@ -81,8 +81,8 @@ public:
     void contentAreaDidShow() const;
     void contentAreaDidHide() const;
 
-    void finishCurrentScrollAnimations() const;
-    virtual bool scrollbarAnimationsAreSuppressed() const { return false; }
+    void lockOverlayScrollbarStateToHidden(bool shouldLockState) const;
+    bool scrollbarsCanBeActive() const;
 
     virtual void didAddScrollbar(Scrollbar*, ScrollbarOrientation);
     virtual void willRemoveScrollbar(Scrollbar*, ScrollbarOrientation);
@@ -109,6 +109,8 @@ public:
     virtual bool isScrollCornerVisible() const = 0;
     virtual IntRect scrollCornerRect() const = 0;
     virtual void invalidateScrollCorner(const IntRect&);
+
+    virtual bool updatesScrollLayerPositionOnMainThread() const = 0;
 
     // Convert points and rects between the scrollbar and its containing view.
     // The client needs to implement these in order to be aware of layout effects
@@ -155,8 +157,6 @@ public:
     virtual bool shouldSuspendScrollAnimations() const { return true; }
     virtual void scrollbarStyleChanged(int /*newStyle*/, bool /*forceUpdate*/) { }
     virtual void setVisibleScrollerThumbRect(const IntRect&) { }
-
-    virtual bool scrollbarsCanBeActive() const = 0;
     
     // Note that this only returns scrollable areas that can actually be scrolled.
     virtual ScrollableArea* enclosingScrollableArea() const = 0;
@@ -164,7 +164,6 @@ public:
     // Returns the bounding box of this scrollable area, in the coordinate system of the enclosing scroll view.
     virtual IntRect scrollableAreaBoundingBox() const = 0;
 
-    virtual bool shouldRubberBandInDirection(ScrollDirection) const { return true; }
     virtual bool isRubberBandInProgress() const { return false; }
 
     virtual bool scrollAnimatorEnabled() const { return false; }
@@ -175,6 +174,10 @@ public:
     static IntPoint constrainScrollPositionForOverhang(const IntRect& visibleContentRect, const IntSize& totalContentsSize, const IntPoint& scrollPosition, const IntPoint& scrollOrigin, int headerHeight, int footetHeight);
     IntPoint constrainScrollPositionForOverhang(const IntPoint& scrollPosition);
 
+    // Computes the double value for the scrollbar's current position and the current overhang amount.
+    // This function is static so that it can be called from the main thread or the scrolling thread.
+    static void computeScrollbarValueAndOverhang(float currentPosition, float totalSize, float visibleSize, float& doubleValue, float& overhangAmount);
+
     // Let subclasses provide a way of asking for and servicing scroll
     // animations.
     virtual bool scheduleAnimation() { return false; }
@@ -183,6 +186,12 @@ public:
 #if USE(ACCELERATED_COMPOSITING)
     virtual TiledBacking* tiledBacking() { return 0; }
     virtual bool usesCompositedScrolling() const { return false; }
+
+    virtual GraphicsLayer* layerForHorizontalScrollbar() const { return 0; }
+    virtual GraphicsLayer* layerForVerticalScrollbar() const { return 0; }
+
+    void verticalScrollbarLayerDidChange();
+    void horizontalScrollbarLayerDidChange();
 #endif
 
 protected:
@@ -198,8 +207,6 @@ protected:
 #if USE(ACCELERATED_COMPOSITING)
     friend class ScrollingCoordinator;
     virtual GraphicsLayer* layerForScrolling() const { return 0; }
-    virtual GraphicsLayer* layerForHorizontalScrollbar() const { return 0; }
-    virtual GraphicsLayer* layerForVerticalScrollbar() const { return 0; }
     virtual GraphicsLayer* layerForScrollCorner() const { return 0; }
 #if ENABLE(RUBBER_BANDING)
     virtual GraphicsLayer* layerForOverhangAreas() const { return 0; }

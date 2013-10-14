@@ -41,8 +41,8 @@
 #include "IDBCursorWithValue.h"
 #include "IDBDatabase.h"
 #include "IDBEventDispatcher.h"
-#include "IDBTracing.h"
 #include "IDBTransaction.h"
+#include "Logging.h"
 #include "ScriptExecutionContext.h"
 
 namespace WebCore {
@@ -118,15 +118,6 @@ unsigned short IDBRequest::errorCode(ExceptionCode& ec) const
         return 0;
     }
     return m_errorCode;
-}
-
-String IDBRequest::webkitErrorMessage(ExceptionCode& ec) const
-{
-    if (m_readyState != DONE) {
-        ec = IDBDatabaseException::InvalidStateError;
-        return String();
-    }
-    return m_errorMessage;
 }
 
 PassRefPtr<IDBAny> IDBRequest::source() const
@@ -258,7 +249,7 @@ bool IDBRequest::shouldEnqueueEvent() const
 
 void IDBRequest::onError(PassRefPtr<IDBDatabaseError> error)
 {
-    IDB_TRACE("IDBRequest::onError()");
+    LOG(StorageAPI, "IDBRequest::onError()");
     if (!shouldEnqueueEvent())
         return;
 
@@ -276,7 +267,7 @@ static PassRefPtr<Event> createSuccessEvent()
 
 void IDBRequest::onSuccess(PassRefPtr<DOMStringList> domStringList)
 {
-    IDB_TRACE("IDBRequest::onSuccess(DOMStringList)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(DOMStringList)");
     if (!shouldEnqueueEvent())
         return;
 
@@ -286,7 +277,7 @@ void IDBRequest::onSuccess(PassRefPtr<DOMStringList> domStringList)
 
 void IDBRequest::onSuccess(PassRefPtr<IDBCursorBackendInterface> backend, PassRefPtr<IDBKey> key, PassRefPtr<IDBKey> primaryKey, PassRefPtr<SharedBuffer> buffer)
 {
-    IDB_TRACE("IDBRequest::onSuccess(IDBCursor)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(IDBCursor)");
     if (!shouldEnqueueEvent())
         return;
 
@@ -311,7 +302,7 @@ void IDBRequest::onSuccess(PassRefPtr<IDBCursorBackendInterface> backend, PassRe
 
 void IDBRequest::onSuccess(PassRefPtr<IDBKey> idbKey)
 {
-    IDB_TRACE("IDBRequest::onSuccess(IDBKey)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(IDBKey)");
     if (!shouldEnqueueEvent())
         return;
 
@@ -325,7 +316,7 @@ void IDBRequest::onSuccess(PassRefPtr<IDBKey> idbKey)
 
 void IDBRequest::onSuccess(PassRefPtr<SharedBuffer> valueBuffer)
 {
-    IDB_TRACE("IDBRequest::onSuccess(SharedBuffer)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(SharedBuffer)");
     if (!shouldEnqueueEvent())
         return;
 
@@ -349,7 +340,7 @@ static PassRefPtr<IDBObjectStore> effectiveObjectStore(PassRefPtr<IDBAny> source
 
 void IDBRequest::onSuccess(PassRefPtr<SharedBuffer> valueBuffer, PassRefPtr<IDBKey> prpPrimaryKey, const IDBKeyPath& keyPath)
 {
-    IDB_TRACE("IDBRequest::onSuccess(SharedBuffer, IDBKey, IDBKeyPath)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(SharedBuffer, IDBKey, IDBKeyPath)");
     if (!shouldEnqueueEvent())
         return;
 
@@ -371,7 +362,7 @@ void IDBRequest::onSuccess(PassRefPtr<SharedBuffer> valueBuffer, PassRefPtr<IDBK
 
 void IDBRequest::onSuccess(int64_t value)
 {
-    IDB_TRACE("IDBRequest::onSuccess(int64_t)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(int64_t)");
     if (!shouldEnqueueEvent())
         return;
     return onSuccessInternal(SerializedScriptValue::numberValue(value));
@@ -379,7 +370,7 @@ void IDBRequest::onSuccess(int64_t value)
 
 void IDBRequest::onSuccess()
 {
-    IDB_TRACE("IDBRequest::onSuccess()");
+    LOG(StorageAPI, "IDBRequest::onSuccess()");
     if (!shouldEnqueueEvent())
         return;
     return onSuccessInternal(SerializedScriptValue::undefinedValue());
@@ -404,7 +395,7 @@ void IDBRequest::onSuccessInternal(const ScriptValue& value)
 
 void IDBRequest::onSuccess(PassRefPtr<IDBKey> key, PassRefPtr<IDBKey> primaryKey, PassRefPtr<SharedBuffer> buffer)
 {
-    IDB_TRACE("IDBRequest::onSuccess(key, primaryKey, value)");
+    LOG(StorageAPI, "IDBRequest::onSuccess(key, primaryKey, value)");
     if (!shouldEnqueueEvent())
         return;
 
@@ -434,19 +425,14 @@ void IDBRequest::stop()
         markEarlyDeath();
 }
 
-const AtomicString& IDBRequest::interfaceName() const
+EventTargetInterface IDBRequest::eventTargetInterface() const
 {
-    return eventNames().interfaceForIDBRequest;
-}
-
-ScriptExecutionContext* IDBRequest::scriptExecutionContext() const
-{
-    return ActiveDOMObject::scriptExecutionContext();
+    return IDBRequestEventTargetInterfaceType;
 }
 
 bool IDBRequest::dispatchEvent(PassRefPtr<Event> event)
 {
-    IDB_TRACE("IDBRequest::dispatchEvent");
+    LOG(StorageAPI, "IDBRequest::dispatchEvent");
     ASSERT(m_readyState == PENDING);
     ASSERT(!m_contextStopped);
     ASSERT(m_hasPendingActivity);
@@ -556,16 +542,6 @@ void IDBRequest::enqueueEvent(PassRefPtr<Event> event)
 
     if (scriptExecutionContext()->eventQueue().enqueueEvent(event.get()))
         m_enqueuedEvents.append(event);
-}
-
-EventTargetData* IDBRequest::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData& IDBRequest::ensureEventTargetData()
-{
-    return m_eventTargetData;
 }
 
 } // namespace WebCore

@@ -33,10 +33,10 @@
 #include "WebPage.h"
 #include "WebPageCreationParameters.h"
 #include "WebProcess.h"
-#include <WebCore/Frame.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/InspectorFrontendChannel.h>
 #include <WebCore/InspectorFrontendClient.h>
+#include <WebCore/MainFrame.h>
 #include <WebCore/Page.h>
 #include <WebCore/ScriptController.h>
 #include <WebCore/ScriptValue.h>
@@ -58,7 +58,6 @@ WebInspector::WebInspector(WebPage* page, InspectorFrontendChannel* frontendChan
     , m_frontendChannel(frontendChannel)
 #if PLATFORM(MAC)
     , m_hasLocalizedStringsURL(false)
-    , m_usesWebKitUserInterface(false)
 #endif
 #if ENABLE(INSPECTOR_SERVER)
     , m_remoteFrontendConnected(false)

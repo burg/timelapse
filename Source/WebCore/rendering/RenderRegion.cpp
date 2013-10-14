@@ -55,9 +55,6 @@ RenderRegion::RenderRegion(Element* element, RenderFlowThread* flowThread)
     , m_isValid(false)
     , m_hasCustomRegionStyle(false)
     , m_hasAutoLogicalHeight(false)
-#if USE(ACCELERATED_COMPOSITING)
-    , m_requiresLayerForCompositing(false)
-#endif
     , m_hasComputedAutoHeight(false)
     , m_computedAutoHeight(0)
 {
@@ -489,15 +486,15 @@ void RenderRegion::setRegionObjectsRegionStyle()
     // Start from content nodes and recursively compute the style in region for the render objects below.
     // If the style in region was already computed, used that style instead of computing a new one.
     const RenderNamedFlowThread& namedFlow = view().flowThreadController().ensureRenderFlowThreadWithName(style()->regionThread());
-    const NamedFlowContentNodes& contentNodes = namedFlow.contentNodes();
+    const NamedFlowContentElements& contentElements = namedFlow.contentElements();
 
-    for (NamedFlowContentNodes::const_iterator iter = contentNodes.begin(), end = contentNodes.end(); iter != end; ++iter) {
-        const Node* node = *iter;
+    for (auto iter = contentElements.begin(), end = contentElements.end(); iter != end; ++iter) {
+        const Element* element = *iter;
         // The list of content nodes contains also the nodes with display:none.
-        if (!node->renderer())
+        if (!element->renderer())
             continue;
 
-        RenderObject* object = node->renderer();
+        RenderElement* object = element->renderer();
         // If the content node does not flow any of its children in this region,
         // we do not compute any style for them in this region.
         if (!flowThread()->objectInFlowRegion(object, this))
@@ -530,7 +527,8 @@ void RenderRegion::restoreRegionObjectsOriginalStyle()
         RenderObject* object = const_cast<RenderObject*>(iter->key);
         RefPtr<RenderStyle> objectRegionStyle = object->style();
         RefPtr<RenderStyle> objectOriginalStyle = iter->value.style;
-        object->setStyleInternal(objectOriginalStyle);
+        if (object->isRenderElement())
+            toRenderElement(object)->setStyleInternal(objectOriginalStyle);
 
         bool shouldCacheRegionStyle = iter->value.cached;
         if (!shouldCacheRegionStyle) {
@@ -578,7 +576,7 @@ PassRefPtr<RenderStyle> RenderRegion::computeStyleInRegion(const RenderObject* o
     return renderObjectRegionStyle.release();
 }
 
-void RenderRegion::computeChildrenStyleInRegion(const RenderObject* object)
+void RenderRegion::computeChildrenStyleInRegion(const RenderElement* object)
 {
     for (RenderObject* child = object->firstChild(); child; child = child->nextSibling()) {
 
@@ -600,7 +598,8 @@ void RenderRegion::computeChildrenStyleInRegion(const RenderObject* object)
 
         setObjectStyleInRegion(child, childStyleInRegion, objectRegionStyleCached);
 
-        computeChildrenStyleInRegion(child);
+        if (child->isRenderElement())
+            computeChildrenStyleInRegion(toRenderElement(child));
     }
 }
 
@@ -609,7 +608,8 @@ void RenderRegion::setObjectStyleInRegion(RenderObject* object, PassRefPtr<Rende
     ASSERT(object->flowThreadContainingBlock());
 
     RefPtr<RenderStyle> objectOriginalStyle = object->style();
-    object->setStyleInternal(styleInRegion);
+    if (object->isRenderElement())
+        toRenderElement(object)->setStyleInternal(styleInRegion);
 
     if (object->isBoxModelObject() && !object->hasBoxDecorations()) {
         bool hasBoxDecorations = object->isTableCell()
@@ -632,7 +632,7 @@ void RenderRegion::clearObjectStyleInRegion(const RenderObject* object)
     m_renderObjectRegionStyle.remove(object);
 
     // Clear the style for the children of this object.
-    for (RenderObject* child = object->firstChild(); child; child = child->nextSibling())
+    for (RenderObject* child = object->firstChildSlow(); child; child = child->nextSibling())
         clearObjectStyleInRegion(child);
 }
 
@@ -717,24 +717,6 @@ void RenderRegion::updateLogicalHeight()
         RenderBlockFlow::updateLogicalHeight();
     }
 }
-
-#if USE(ACCELERATED_COMPOSITING)
-void RenderRegion::setRequiresLayerForCompositing(bool requiresLayerForCompositing)
-{
-    // This function is called when the regions had already
-    // been laid out, after the flow thread decides there are 
-    // composited layers that will display in this region.
-    ASSERT(!needsLayout());
-    if (m_requiresLayerForCompositing == requiresLayerForCompositing)
-        return;
-    
-    bool requiredLayer = requiresLayer();
-    m_requiresLayerForCompositing = requiresLayerForCompositing;
-
-    if (requiredLayer != requiresLayer())
-        updateLayerIfNeeded();
-}
-#endif
 
 RenderOverflow* RenderRegion::ensureOverflowForBox(const RenderBox* box)
 {

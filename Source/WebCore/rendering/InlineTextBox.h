@@ -41,10 +41,6 @@ public:
     BufferForAppendingHyphen() { reserveCapacity(256); }
 };
 
-// Helper functions shared by InlineTextBox / SVGRootInlineBox
-void updateGraphicsContext(GraphicsContext*, const Color& fillColor, const Color& strokeColor, float strokeThickness, ColorSpace);
-Color correctedTextColor(Color textColor, Color backgroundColor);
-
 class InlineTextBox : public InlineBox {
 public:
     explicit InlineTextBox(RenderText& renderer)
@@ -58,6 +54,7 @@ public:
     }
 
     RenderText& renderer() const { return toRenderText(InlineBox::renderer()); }
+    const RenderStyle& lineStyle() const { return isFirstLine() ? *renderer().firstLineStyle() : *renderer().style(); }
 
     virtual void destroy(RenderArena&) OVERRIDE FINAL;
 
@@ -90,7 +87,7 @@ public:
     virtual int baselinePosition(FontBaseline) const OVERRIDE FINAL;
     virtual LayoutUnit lineHeight() const OVERRIDE FINAL;
 
-    bool getEmphasisMarkPosition(RenderStyle*, TextEmphasisPosition&) const;
+    bool getEmphasisMarkPosition(const RenderStyle&, TextEmphasisPosition&) const;
 
     LayoutRect logicalOverflowRect() const;
     void setLogicalOverflowRect(const LayoutRect&);
@@ -109,8 +106,8 @@ private:
     LayoutUnit selectionBottom();
     LayoutUnit selectionHeight();
 
-    TextRun constructTextRun(RenderStyle*, const Font&, BufferForAppendingHyphen* = 0) const;
-    TextRun constructTextRun(RenderStyle*, const Font&, String, int maximumLength, BufferForAppendingHyphen* = 0) const;
+    TextRun constructTextRun(const RenderStyle&, const Font&, BufferForAppendingHyphen* = 0) const;
+    TextRun constructTextRun(const RenderStyle&, const Font&, String, int maximumLength, BufferForAppendingHyphen* = 0) const;
 
 public:
     virtual FloatRect calculateBoundaries() const { return FloatRect(x(), y(), width(), height()); }
@@ -175,8 +172,8 @@ private:
                       // denote no truncation (the whole run paints) and full truncation (nothing paints at all).
 
 protected:
-    void paintCompositionBackground(GraphicsContext*, const FloatPoint& boxOrigin, RenderStyle*, const Font&, int startPos, int endPos);
-    void paintDocumentMarkers(GraphicsContext*, const FloatPoint& boxOrigin, RenderStyle*, const Font&, bool background);
+    void paintCompositionBackground(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, int startPos, int endPos);
+    void paintDocumentMarkers(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, bool background);
     void paintCompositionUnderline(GraphicsContext*, const FloatPoint& boxOrigin, const CompositionUnderline&);
 #if PLATFORM(MAC)
     void paintCustomHighlight(const LayoutPoint&, const AtomicString& type);
@@ -184,10 +181,10 @@ protected:
 
 private:
     void paintDecoration(GraphicsContext*, const FloatPoint& boxOrigin, TextDecoration, TextDecorationStyle, const ShadowData*);
-    void paintSelection(GraphicsContext*, const FloatPoint& boxOrigin, RenderStyle*, const Font&, Color textColor);
-    void paintDocumentMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, RenderStyle*, const Font&, bool grammar);
-    void paintTextMatchMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, RenderStyle*, const Font&);
-    void computeRectForReplacementMarker(DocumentMarker*, RenderStyle*, const Font&);
+    void paintSelection(GraphicsContext*, const FloatPoint& boxOrigin, const RenderStyle&, const Font&, Color textColor);
+    void paintDocumentMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, const RenderStyle&, const Font&, bool grammar);
+    void paintTextMatchMarker(GraphicsContext*, const FloatPoint& boxOrigin, DocumentMarker*, const RenderStyle&, const Font&);
+    void computeRectForReplacementMarker(DocumentMarker*, const RenderStyle&, const Font&);
 
     TextRun::ExpansionBehavior expansionBehavior() const
     {

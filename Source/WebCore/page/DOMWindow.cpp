@@ -62,7 +62,6 @@
 #include "ExceptionCodePlaceholder.h"
 #include "FloatRect.h"
 #include "FocusController.h"
-#include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
@@ -71,8 +70,9 @@
 #include "HTMLFrameOwnerElement.h"
 #include "History.h"
 #include "InspectorInstrumentation.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Location.h"
+#include "MainFrame.h"
 #include "MediaQueryList.h"
 #include "MediaQueryMatcher.h"
 #include "MessageEvent.h"
@@ -216,10 +216,9 @@ static bool allowsBeforeUnloadListeners(DOMWindow* window)
     Frame* frame = window->frame();
     if (!frame)
         return false;
-    Page* page = frame->page();
-    if (!page)
+    if (!frame->page())
         return false;
-    return page->frameIsMainFrame(frame);
+    return frame->isMainFrame();
 }
 
 bool DOMWindow::dispatchAllPendingBeforeUnloadEvents()
@@ -423,16 +422,6 @@ DOMWindow::~DOMWindow()
 
     removeAllUnloadEventListeners(this);
     removeAllBeforeUnloadEventListeners(this);
-}
-
-const AtomicString& DOMWindow::interfaceName() const
-{
-    return eventNames().interfaceForDOMWindow;
-}
-
-ScriptExecutionContext* DOMWindow::scriptExecutionContext() const
-{
-    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 DOMWindow* DOMWindow::toDOMWindow()
@@ -798,7 +787,7 @@ Storage* DOMWindow::localStorage(ExceptionCode& ec) const
     return m_localStorage.get();
 }
 
-void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort* port, const String& targetOrigin, DOMWindow* source, ExceptionCode& ec)
+void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort* port, const String& targetOrigin, DOMWindow& source, ExceptionCode& ec)
 {
     MessagePortArray ports;
     if (port)
@@ -806,12 +795,12 @@ void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, MessagePo
     postMessage(message, &ports, targetOrigin, source, ec);
 }
 
-void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const MessagePortArray* ports, const String& targetOrigin, DOMWindow* source, ExceptionCode& ec)
+void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const MessagePortArray* ports, const String& targetOrigin, DOMWindow& source, ExceptionCode& ec)
 {
     if (!isCurrentlyDisplayedInFrame())
         return;
 
-    Document* sourceDocument = source->document();
+    Document* sourceDocument = source.document();
 
     // Compute the target origin.  We need to do this synchronously in order
     // to generate the SYNTAX_ERR exception correctly.
@@ -846,7 +835,7 @@ void DOMWindow::postMessage(PassRefPtr<SerializedScriptValue> message, const Mes
         stackTrace = createScriptCallStack(ScriptCallStack::maxCallStackSizeToCapture, true);
 
     // Schedule the message.
-    PostMessageTimer* timer = new PostMessageTimer(this, message, sourceOrigin, source, channels.release(), target.get(), stackTrace.release());
+    PostMessageTimer* timer = new PostMessageTimer(this, message, sourceOrigin, &source, channels.release(), target.get(), stackTrace.release());
     timer->startOneShot(0);
 }
 
@@ -857,15 +846,7 @@ void DOMWindow::postMessageTimerFired(PassOwnPtr<PostMessageTimer> t)
     if (!document() || !isCurrentlyDisplayedInFrame())
         return;
 
-    RefPtr<MessageEvent> event = timer->event(document());
-
-    // Give the embedder a chance to intercept this postMessage because this
-    // DOMWindow might be a proxy for another in browsers that support
-    // postMessage calls across WebKit instances.
-    if (m_frame->loader().client().willCheckAndDispatchMessageEvent(timer->targetOrigin(), event.get()))
-        return;
-
-    dispatchMessageEventWithOriginCheck(timer->targetOrigin(), event, timer->stackTrace());
+    dispatchMessageEventWithOriginCheck(timer->targetOrigin(), timer->event(document()), timer->stackTrace());
 }
 
 void DOMWindow::dispatchMessageEventWithOriginCheck(SecurityOrigin* intendedTargetOrigin, PassRefPtr<Event> event, PassRefPtr<ScriptCallStack> stackTrace)
@@ -917,7 +898,7 @@ void DOMWindow::focus(ScriptExecutionContext* context)
     }
 
     // If we're a top level window, bring the window to the front.
-    if (page->frameIsMainFrame(m_frame) && allowFocus)
+    if (m_frame->isMainFrame() && allowFocus)
         page->chrome().focus();
 
     if (!m_frame)
@@ -943,7 +924,7 @@ void DOMWindow::blur()
     if (m_frame->settings().windowFocusRestricted())
         return;
 
-    if (m_frame != &page->mainFrame())
+    if (!m_frame->isMainFrame())
         return;
 
     page->chrome().unfocus();
@@ -958,7 +939,7 @@ void DOMWindow::close(ScriptExecutionContext* context)
     if (!page)
         return;
 
-    if (m_frame != &page->mainFrame())
+    if (!m_frame->isMainFrame())
         return;
 
     if (context) {
@@ -1118,8 +1099,9 @@ bool DOMWindow::find(const String& string, bool caseSensitive, bool backwards, b
     if (!isCurrentlyDisplayedInFrame())
         return false;
 
-    // FIXME (13016): Support wholeWord, searchInFrames and showDialog
-    return m_frame->editor().findString(string, !backwards, caseSensitive, wrap, false);
+    // FIXME (13016): Support wholeWord, searchInFrames and showDialog.    
+    FindOptions options = (backwards ? Backwards : 0) | (caseSensitive ? 0 : CaseInsensitive) | (wrap ? WrapAround : 0);
+    return m_frame->editor().findString(string, options);
 }
 
 bool DOMWindow::offscreenBuffering() const
@@ -1212,6 +1194,9 @@ int DOMWindow::scrollX() const
     if (!view)
         return 0;
 
+    if (!view->scrollX())
+        return 0;
+
     m_frame->document()->updateLayoutIgnorePendingStylesheets();
 
     return view->mapFromLayoutToCSSUnits(view->scrollX());
@@ -1224,6 +1209,9 @@ int DOMWindow::scrollY() const
 
     FrameView* view = m_frame->view();
     if (!view)
+        return 0;
+
+    if (!view->scrollY())
         return 0;
 
     m_frame->document()->updateLayoutIgnorePendingStylesheets();
@@ -1258,7 +1246,6 @@ void DOMWindow::setName(const String& string)
         return;
 
     m_frame->tree().setName(string);
-    m_frame->loader().client().didChangeName(string);
 }
 
 void DOMWindow::setStatus(const String& string)
@@ -1463,10 +1450,9 @@ bool DOMWindow::allowedToChangeWindowGeometry() const
 {
     if (!m_frame)
         return false;
-    const Page* page = m_frame->page();
-    if (!page)
+    if (!m_frame->page())
         return false;
-    if (m_frame != &page->mainFrame())
+    if (!m_frame->isMainFrame())
         return false;
     // Prevent web content from tricking the user into initiating a drag.
     if (m_frame->eventHandler().mousePressed())
@@ -1625,10 +1611,10 @@ bool DOMWindow::addEventListener(const AtomicString& eventType, PassRefPtr<Event
     else if (eventType == eventNames().beforeunloadEvent && allowsBeforeUnloadListeners(this))
         addBeforeUnloadEventListener(this);
 #if ENABLE(DEVICE_ORIENTATION)
-    else if (eventType == eventNames().devicemotionEvent && RuntimeEnabledFeatures::deviceMotionEnabled()) {
+    else if (eventType == eventNames().devicemotionEvent && RuntimeEnabledFeatures::sharedFeatures().deviceMotionEnabled()) {
         if (DeviceMotionController* controller = DeviceMotionController::from(page()))
             controller->addDeviceEventListener(this);
-    } else if (eventType == eventNames().deviceorientationEvent && RuntimeEnabledFeatures::deviceOrientationEnabled()) {
+    } else if (eventType == eventNames().deviceorientationEvent && RuntimeEnabledFeatures::sharedFeatures().deviceOrientationEnabled()) {
         if (DeviceOrientationController* controller = DeviceOrientationController::from(page()))
             controller->addDeviceEventListener(this);
     }
@@ -1777,33 +1763,23 @@ void DOMWindow::finishedLoading()
     }
 }
 
-EventTargetData* DOMWindow::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData& DOMWindow::ensureEventTargetData()
-{
-    return m_eventTargetData;
-}
-
-void DOMWindow::setLocation(const String& urlString, DOMWindow* activeWindow, DOMWindow* firstWindow, SetLocationLocking locking)
+void DOMWindow::setLocation(const String& urlString, DOMWindow& activeWindow, DOMWindow& firstWindow, SetLocationLocking locking)
 {
     if (!isCurrentlyDisplayedInFrame())
         return;
 
-    Document* activeDocument = activeWindow->document();
+    Document* activeDocument = activeWindow.document();
     if (!activeDocument)
         return;
 
     if (!activeDocument->canNavigate(m_frame))
         return;
 
-    Frame* firstFrame = firstWindow->frame();
+    Frame* firstFrame = firstWindow.frame();
     if (!firstFrame)
         return;
 
-    KURL completedURL = firstFrame->document()->completeURL(urlString);
+    URL completedURL = firstFrame->document()->completeURL(urlString);
     if (completedURL.isNull())
         return;
 
@@ -1826,25 +1802,25 @@ void DOMWindow::printErrorMessage(const String& message)
     pageConsole()->addMessage(JSMessageSource, ErrorMessageLevel, message);
 }
 
-String DOMWindow::crossDomainAccessErrorMessage(DOMWindow* activeWindow)
+String DOMWindow::crossDomainAccessErrorMessage(const DOMWindow& activeWindow)
 {
-    const KURL& activeWindowURL = activeWindow->document()->url();
+    const URL& activeWindowURL = activeWindow.document()->url();
     if (activeWindowURL.isNull())
         return String();
 
-    ASSERT(!activeWindow->document()->securityOrigin()->canAccess(document()->securityOrigin()));
+    ASSERT(!activeWindow.document()->securityOrigin()->canAccess(document()->securityOrigin()));
 
     // FIXME: This message, and other console messages, have extra newlines. Should remove them.
-    SecurityOrigin* activeOrigin = activeWindow->document()->securityOrigin();
+    SecurityOrigin* activeOrigin = activeWindow.document()->securityOrigin();
     SecurityOrigin* targetOrigin = document()->securityOrigin();
     String message = "Blocked a frame with origin \"" + activeOrigin->toString() + "\" from accessing a frame with origin \"" + targetOrigin->toString() + "\". ";
 
     // Sandbox errors: Use the origin of the frames' location, rather than their actual origin (since we know that at least one will be "null").
-    KURL activeURL = activeWindow->document()->url();
-    KURL targetURL = document()->url();
-    if (document()->isSandboxed(SandboxOrigin) || activeWindow->document()->isSandboxed(SandboxOrigin)) {
+    URL activeURL = activeWindow.document()->url();
+    URL targetURL = document()->url();
+    if (document()->isSandboxed(SandboxOrigin) || activeWindow.document()->isSandboxed(SandboxOrigin)) {
         message = "Blocked a frame at \"" + SecurityOrigin::create(activeURL)->toString() + "\" from accessing a frame at \"" + SecurityOrigin::create(targetURL)->toString() + "\". ";
-        if (document()->isSandboxed(SandboxOrigin) && activeWindow->document()->isSandboxed(SandboxOrigin))
+        if (document()->isSandboxed(SandboxOrigin) && activeWindow.document()->isSandboxed(SandboxOrigin))
             return "Sandbox access violation: " + message + " Both frames are sandboxed and lack the \"allow-same-origin\" flag.";
         if (document()->isSandboxed(SandboxOrigin))
             return "Sandbox access violation: " + message + " The frame being accessed is sandboxed and lacks the \"allow-same-origin\" flag.";
@@ -1867,7 +1843,7 @@ String DOMWindow::crossDomainAccessErrorMessage(DOMWindow* activeWindow)
     return message + "Protocols, domains, and ports must match.";
 }
 
-bool DOMWindow::isInsecureScriptAccess(DOMWindow* activeWindow, const String& urlString)
+bool DOMWindow::isInsecureScriptAccess(DOMWindow& activeWindow, const String& urlString)
 {
     if (!protocolIsJavaScript(urlString))
         return false;
@@ -1878,12 +1854,12 @@ bool DOMWindow::isInsecureScriptAccess(DOMWindow* activeWindow, const String& ur
     // Frame on navigation: https://bugs.webkit.org/show_bug.cgi?id=62054
     if (isCurrentlyDisplayedInFrame()) {
         // FIXME: Is there some way to eliminate the need for a separate "activeWindow == this" check?
-        if (activeWindow == this)
+        if (&activeWindow == this)
             return false;
 
         // FIXME: The name canAccess seems to be a roundabout way to ask "can execute script".
         // Can we name the SecurityOrigin function better to make this more clear?
-        if (activeWindow->document()->securityOrigin()->canAccess(document()->securityOrigin()))
+        if (activeWindow.document()->securityOrigin()->canAccess(document()->securityOrigin()))
             return false;
     }
 
@@ -1892,14 +1868,14 @@ bool DOMWindow::isInsecureScriptAccess(DOMWindow* activeWindow, const String& ur
 }
 
 PassRefPtr<Frame> DOMWindow::createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures& windowFeatures,
-    DOMWindow* activeWindow, Frame* firstFrame, Frame* openerFrame, PrepareDialogFunction function, void* functionContext)
+    DOMWindow& activeWindow, Frame* firstFrame, Frame* openerFrame, PrepareDialogFunction function, void* functionContext)
 {
-    Frame* activeFrame = activeWindow->frame();
+    Frame* activeFrame = activeWindow.frame();
 
-    KURL completedURL = urlString.isEmpty() ? KURL(ParsedURLString, emptyString()) : firstFrame->document()->completeURL(urlString);
+    URL completedURL = urlString.isEmpty() ? URL(ParsedURLString, emptyString()) : firstFrame->document()->completeURL(urlString);
     if (!completedURL.isEmpty() && !completedURL.isValid()) {
         // Don't expose client code to invalid URLs.
-        activeWindow->printErrorMessage("Unable to open a window with invalid URL '" + completedURL.string() + "'.\n");
+        activeWindow.printErrorMessage("Unable to open a window with invalid URL '" + completedURL.string() + "'.\n");
         return 0;
     }
 
@@ -1908,7 +1884,7 @@ PassRefPtr<Frame> DOMWindow::createWindow(const String& urlString, const AtomicS
 
     ResourceRequest request(completedURL, referrer);
     FrameLoader::addHTTPOriginIfNeeded(request, firstFrame->loader().outgoingOrigin());
-    FrameLoadRequest frameRequest(activeWindow->document()->securityOrigin(), request, frameName);
+    FrameLoadRequest frameRequest(activeWindow.document()->securityOrigin(), request, frameName);
 
     // We pass the opener frame for the lookupFrame in case the active frame is different from
     // the opener frame, and the name references a frame relative to the opener frame.
@@ -1927,10 +1903,10 @@ PassRefPtr<Frame> DOMWindow::createWindow(const String& urlString, const AtomicS
         function(newFrame->document()->domWindow(), functionContext);
 
     if (created)
-        newFrame->loader().changeLocation(activeWindow->document()->securityOrigin(), completedURL, referrer, false, false);
+        newFrame->loader().changeLocation(activeWindow.document()->securityOrigin(), completedURL, referrer, false, false);
     else if (!urlString.isEmpty()) {
         bool lockHistory = !ScriptController::processingUserGesture();
-        newFrame->navigationScheduler().scheduleLocationChange(activeWindow->document()->securityOrigin(), completedURL.string(), referrer, lockHistory, false);
+        newFrame->navigationScheduler().scheduleLocationChange(activeWindow.document()->securityOrigin(), completedURL.string(), referrer, lockHistory, false);
     }
 
     // Navigating the new frame could result in it being detached from its page by a navigation policy delegate.
@@ -1940,19 +1916,28 @@ PassRefPtr<Frame> DOMWindow::createWindow(const String& urlString, const AtomicS
     return newFrame.release();
 }
 
+#if defined(_MSC_VER) && _MSC_VER <= 1700
+// Work around a compiler bug in Visual Studio:
 PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicString& frameName, const String& windowFeaturesString,
     DOMWindow* activeWindow, DOMWindow* firstWindow)
 {
+    return open(urlString, frameName, windowFeaturesString, *activeWindow, *firstWindow);
+}
+#endif
+
+PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicString& frameName, const String& windowFeaturesString,
+    DOMWindow& activeWindow, DOMWindow& firstWindow)
+{
     if (!isCurrentlyDisplayedInFrame())
         return 0;
-    Document* activeDocument = activeWindow->document();
+    Document* activeDocument = activeWindow.document();
     if (!activeDocument)
         return 0;
-    Frame* firstFrame = firstWindow->frame();
+    Frame* firstFrame = firstWindow.frame();
     if (!firstFrame)
         return 0;
 
-    if (!firstWindow->allowPopUp()) {
+    if (!firstWindow.allowPopUp()) {
         // Because FrameTree::find() returns true for empty strings, we must check for empty frame names.
         // Otherwise, illegitimate window.open() calls with no name will pass right through the popup blocker.
         if (frameName.isEmpty() || !m_frame->tree().find(frameName))
@@ -1974,7 +1959,7 @@ PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicStrin
         if (!activeDocument->canNavigate(targetFrame))
             return 0;
 
-        KURL completedURL = firstFrame->document()->completeURL(urlString);
+        URL completedURL = firstFrame->document()->completeURL(urlString);
 
         if (targetFrame->document()->domWindow()->isInsecureScriptAccess(activeWindow, completedURL))
             return targetFrame->document()->domWindow();
@@ -2000,14 +1985,14 @@ PassRefPtr<DOMWindow> DOMWindow::open(const String& urlString, const AtomicStrin
 }
 
 void DOMWindow::showModalDialog(const String& urlString, const String& dialogFeaturesString,
-    DOMWindow* activeWindow, DOMWindow* firstWindow, PrepareDialogFunction function, void* functionContext)
+    DOMWindow& activeWindow, DOMWindow& firstWindow, PrepareDialogFunction function, void* functionContext)
 {
     if (!isCurrentlyDisplayedInFrame())
         return;
-    Frame* activeFrame = activeWindow->frame();
+    Frame* activeFrame = activeWindow.frame();
     if (!activeFrame)
         return;
-    Frame* firstFrame = firstWindow->frame();
+    Frame* firstFrame = firstWindow.frame();
     if (!firstFrame)
         return;
 
@@ -2017,7 +2002,7 @@ void DOMWindow::showModalDialog(const String& urlString, const String& dialogFea
         return;
     }
 
-    if (!canShowModalDialogNow(m_frame) || !firstWindow->allowPopUp())
+    if (!canShowModalDialogNow(m_frame) || !firstWindow.allowPopUp())
         return;
 
     WindowFeatures windowFeatures(dialogFeaturesString, screenAvailableRect(m_frame->view()));

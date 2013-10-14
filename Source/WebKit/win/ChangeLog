@@ -1,3 +1,310 @@
+2013-10-10  Anders Carlsson  <andersca@apple.com>
+
+        Fix build.
+        
+        * Interfaces/WebKit.idl:
+        Oops, didn't mean to remove the uuid for WebURLResponse.
+
+2013-10-10  Anders Carlsson  <andersca@apple.com>
+
+        Remove WebScrollBar
+        https://bugs.webkit.org/show_bug.cgi?id=122623
+
+        Reviewed by Brent Fulgham.
+
+        WebScrollBar isn't used by anyone, remove it.
+
+        * ForEachCoClass.h:
+        * Interfaces/IWebScrollBarDelegatePrivate.idl: Removed.
+        * Interfaces/IWebScrollBarPrivate.idl: Removed.
+        * Interfaces/WebKit.idl:
+        * WebKitClassFactory.cpp:
+        (WebKitClassFactory::CreateInstance):
+        * WebScrollBar.cpp: Removed.
+        * WebScrollBar.h: Removed.
+
+2013-10-10  Beth Dakin  <bdakin@apple.com>
+
+        Build fix after http://trac.webkit.org/changeset/157253
+
+        * WebScrollBar.h:
+
+2013-10-09  peavo@outlook.com  <peavo@outlook.com>
+
+        [Win] BeginPaint should only be called in response to WM_PAINT.
+        https://bugs.webkit.org/show_bug.cgi?id=122549
+
+        Reviewed by Brent Fulgham.
+
+        According to the documentation, the Win32 api function BeginPaint should only be called in response to a WM_PAINT message.
+        Currently, the WebView window procedure might call this function (via WebView::paint(0, 0)) for all types of messages.
+        Also, there is potential for double drawing. If some message is dispatched before WM_PAINT, WebView::paint(0, 0) will be called.
+        This call does not validate the area drawn, so later the WM_PAINT will arrive, drawing the same area.
+        This can be fixed by calling the Win32 function UpdateWindow(), which will do a synchronous window update, and validate the area.
+
+        * WebView.cpp:
+        (WebView::WebViewWndProc): Use Win32 function UpdateWindow() to draw invalid area.
+
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        Consolidate findString functions
+        https://bugs.webkit.org/show_bug.cgi?id=122480
+
+        Reviewed by Darin Adler.
+
+        * WebView.cpp:
+        (WebView::searchFor):
+
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        CTTE: Use references in and around DragController
+        https://bugs.webkit.org/show_bug.cgi?id=122427
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebDragClient.cpp:
+        (WebDragClient::actionMaskForDrag):
+        (WebDragClient::willPerformDragDestinationAction):
+        (WebDragClient::willPerformDragSourceAction):
+        (WebDragClient::startDrag):
+        * WebCoreSupport/WebDragClient.h:
+
+2013-10-04  Anders Carlsson  <andersca@apple.com>
+
+        FramePolicyFunction should be an std::function
+        https://bugs.webkit.org/show_bug.cgi?id=122362
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::dispatchDecidePolicyForResponse):
+        (WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction):
+        (WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction):
+        (WebFrameLoaderClient::dispatchWillSubmitForm):
+        (WebFrameLoaderClient::receivedPolicyDecision):
+
+2013-10-03  Sam Weinig  <sam@webkit.org>
+
+        Remove shouldRubberBandInDirection from the WKBundlePageUIClient
+        https://bugs.webkit.org/show_bug.cgi?id=122309
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebChromeClient.h:
+
+2013-10-02  Roger Fong  <roger_fong@apple.com>
+
+        [Windows] Unreviewed build fix.
+
+        * WebScriptWorld.cpp:
+        (WebScriptWorld::findOrCreateWorld):
+
+2013-10-01  Sam Weinig  <sam@webkit.org>
+
+        CTTE: DOMWrapperWorlds should be passed around by reference
+        https://bugs.webkit.org/show_bug.cgi?id=122206
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld):
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        * WebScriptWorld.cpp:
+        (WebScriptWorld::standardWorld):
+        (WebScriptWorld::findOrCreateWorld):
+        * WebScriptWorld.h:
+        (WebScriptWorld::world):
+
+2013-10-01  Alex Christensen  <achristensen@webkit.org>
+
+        Implemented createWebViewWithRequest in WinLauncher.
+        https://bugs.webkit.org/show_bug.cgi?id=122069
+
+        Reviewed by Brent Fulgham.
+
+        * WebCoreSupport/WebChromeClient.cpp:
+        (WebChromeClient::createWindow):
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::dispatchCreatePage):
+        Pass request url from the NavigationAction to createWebViewWithRequest.
+
+2013-09-30  Andreas Kling  <akling@apple.com>
+
+        Try to fix the Windows build.
+
+        * WebFrame.cpp:
+        (WebFrame::pauseAnimation):
+        (WebFrame::pauseTransition):
+
+2013-09-27  Roger Fong  <roger_fong@apple.com>
+
+        [Windows] Unreviewed build fix following r156560.
+
+        * WebView.h:
+
+2013-09-26  Darin Adler  <darin@apple.com>
+
+        rename KURL to URL
+        https://bugs.webkit.org/show_bug.cgi?id=16214
+
+        Reviewed by Andreas Kling.
+
+        * many files: Renamed, using script.
+
+2013-09-27  Darin Adler  <darin@apple.com>
+
+        Add empty MainFrame class
+        https://bugs.webkit.org/show_bug.cgi?id=121770
+
+        Reviewed by Andreas Kling.
+
+        * win/WebCoreSupport/WebDragClient.cpp:
+        * win/WebCoreSupport/WebContextMenuClient.cpp:
+        * win/WebDropSource.cpp:
+        * win/WebFrame.cpp:
+        * win/WebView.cpp:
+        Include MainFrame.h instead of Frame.h as needed.
+
+2013-09-25  Roger Fong  <roger_fong@apple.com>
+
+        [Windows] Attempting to scroll from a non-scrollable layer results the main document getting scrolled.
+        https://bugs.webkit.org/show_bug.cgi?id=121889.
+        <rdar://problem/15072441>
+
+        Reviewed by Timothy Horton.
+
+        * WebView.cpp:
+        (WebView::gesture): 
+        Call scrollByRecursively on the current RenderLayer's enclosingScrollableLayer to make sure that the method
+        doesn't bail early and end up just scrolling the main document instead of the next scrollable layer in the RenderLayer tree.
+
+2013-09-25  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Replace CF time functions with Windows API functions in WebHistory
+        https://bugs.webkit.org/show_bug.cgi?id=121599
+
+        Reviewed by Brent Fulgham.
+
+        This reduces the dependencies on the CoreFoundation library.
+
+        * WebHistory.cpp:
+        (addDayToSystemTime):
+        (getDayBoundaries):
+        (beginningOfDay):
+        (dateKey):
+        (WebHistory::orderedLastVisitedDays):
+        * WebHistory.h:
+
+2013-09-24  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Refactor RuntimeEnabledFeatures as a Singleton.
+        https://bugs.webkit.org/show_bug.cgi?id=121883
+
+        Reviewed by Jer Noble.
+
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged): Use singleton accessor
+
+2013-09-24  Roger Fong  <roger_fong@apple.com>
+
+        [Windows] Overpanning occurs even when what is being panned isn't the main document.
+        https://bugs.webkit.org/show_bug.cgi?id=121885.
+        <rdar://problem/15072332>.
+
+        Reviewed by Brent Fulgham.
+
+        * WebView.cpp:
+        (WebView::gestureNotify):
+        (WebView::gesture):
+
+2013-09-24  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed crash fix after r156321.
+
+        Fix a few mistakes in the use of Vectors and counting that introduced test crashes.
+
+        * WebHistory.cpp:
+        (WebHistory::removeAllItems): Loop termination tried to test an unsigned for negative size.
+        (WebHistory::removeItemFromDateCaches): Vector was being created with empty entries.
+        (WebHistory::addItemToDateCaches): Ditto.
+
+2013-09-24  Patrick Gansterer  <paroga@webkit.org>
+
+        Make WebHistory more type safe
+        https://bugs.webkit.org/show_bug.cgi?id=121801
+
+        Reviewed by Brent Fulgham.
+
+        Use a WTF::Vector instead of a CFMutableArray to avoid
+        casting from void* all the time when accessing the entries.
+        This reduces the dependencies on CoreFoundation too.
+
+        * WebHistory.cpp:
+        (getDayBoundaries):
+        (beginningOfDay):
+        (dateKey):
+        (WebHistory::orderedItemsLastVisitedOnDay):
+        (WebHistory::removeItemFromDateCaches):
+        (WebHistory::addItemToDateCaches):
+        * WebHistory.h:
+
+2013-09-23  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Implement WebMutableURLRequest::setHTTPBody()
+        https://bugs.webkit.org/show_bug.cgi?id=91920
+
+        Reviewed by Brent Fulgham.
+
+        * WebMutableURLRequest.cpp:
+        (WebMutableURLRequest::setHTTPBody):
+        (WebMutableURLRequest::setHTTPBodyStream):
+
+2013-09-23  Patrick Gansterer  <paroga@webkit.org>
+
+        use NOMINMAX instead of #define min min
+        https://bugs.webkit.org/show_bug.cgi?id=73563
+
+        Reviewed by Brent Fulgham.
+
+        Use NOMINMAX instead of #define min/max as a cleaner
+        way of ensuring that Windows system header files don't
+        define min/max as macro in the first place.
+
+        * WebKitPrefix.h:
+
+2013-09-22  Sam Weinig  <sam@webkit.org>
+
+        Try to fix the windows build (take 2).
+
+        * DOMEventsClasses.cpp:
+        (DOMEvent::createInstance):
+
+2013-09-22  Sam Weinig  <sam@webkit.org>
+
+        Try to fix the windows build.
+
+        * DOMEventsClasses.cpp:
+        (DOMEvent::createInstance):
+
+2013-09-20  Roger Fong  <roger_fong@apple.com>
+
+        Handle panning gestures messages properly on Windows.
+        https://bugs.webkit.org/show_bug.cgi?id=121711.
+
+        Reviewed by Brent Fulgham.
+
+        This fixes a number of issues with panning gestures on Windows.
+        1. Two finger panning in one direction can sometimes cause some unexpected scrolling 
+        in the other direction when the gesture first begins (directions meaning horizontal and vertical)
+        2. Single finger horizontal panning should only be disabled when attempting to select text.
+        3. Scrolling via panning should be clamped, other wise we can scroll contents completely out of the scrollview.
+        4. Horizontal overpan should work.
+        5. Overpan should occur whenever we scroll to the extents of whichever scroll view we're currently scrolling.
+
+        * WebView.cpp:
+        (WebView::gestureNotify):
+        (WebView::gesture):
+
 2013-09-20  Patrick Gansterer  <paroga@webkit.org>
 
         Fix MIDL files for Visual Studio 2012

@@ -41,7 +41,6 @@
 #include "NodeTraversal.h"
 #include "RenderBlock.h"
 #include "RenderTheme.h"
-#include "ScriptEventListener.h"
 #include "ShadowRoot.h"
 #include "Text.h"
 #include "htmlediting.h"
@@ -74,10 +73,10 @@ bool HTMLTextFormControlElement::childShouldCreateRenderer(const Node* child) co
     return hasShadowRootParent(child) && HTMLFormControlElementWithState::childShouldCreateRenderer(child);
 }
 
-Node::InsertionNotificationRequest HTMLTextFormControlElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLTextFormControlElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLFormControlElementWithState::insertedInto(insertionPoint);
-    if (!insertionPoint->inDocument())
+    if (!insertionPoint.inDocument())
         return InsertionDone;
     String initialValue = value();
     setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
@@ -204,10 +203,9 @@ void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
     setChangedSinceLastFormControlChangeEvent(false);
 }
 
-static inline bool hasVisibleTextArea(RenderObject* textControl, HTMLElement* innerText)
+static inline bool hasVisibleTextArea(RenderElement& textControl, HTMLElement* innerText)
 {
-    ASSERT(textControl);
-    return textControl->style()->visibility() != HIDDEN && innerText && innerText->renderer() && innerText->renderBox()->height();
+    return textControl.style()->visibility() != HIDDEN && innerText && innerText->renderer() && innerText->renderBox()->height();
 }
 
 void HTMLTextFormControlElement::setRangeText(const String& replacement, ExceptionCode& ec)
@@ -290,7 +288,7 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     end = max(end, 0);
     start = min(max(start, 0), end);
 
-    if (!hasVisibleTextArea(renderer(), innerTextElement())) {
+    if (!hasVisibleTextArea(*renderer(), innerTextElement())) {
         cacheSelection(start, end, direction);
         return;
     }
@@ -435,7 +433,7 @@ PassRefPtr<Range> HTMLTextFormControlElement::selection() const
         return 0;
 
     if (!innerText->firstChild())
-        return Range::create(&document(), innerText, 0, innerText, 0);
+        return Range::create(document(), innerText, 0, innerText, 0);
 
     int offset = 0;
     Node* startNode = 0;
@@ -459,7 +457,7 @@ PassRefPtr<Range> HTMLTextFormControlElement::selection() const
     if (!startNode || !endNode)
         return 0;
 
-    return Range::create(&document(), startNode, start, endNode, end);
+    return Range::create(document(), startNode, start, endNode, end);
 }
 
 void HTMLTextFormControlElement::restoreCachedSelection()
@@ -506,7 +504,7 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
     if (textIsChanged || !innerTextElement()->hasChildNodes()) {
         if (textIsChanged && renderer()) {
             if (AXObjectCache* cache = document().existingAXObjectCache())
-                cache->postNotification(this, AXObjectCache::AXValueChanged, false);
+                cache->postNotification(this, AXObjectCache::AXValueChanged, TargetObservableParent);
         }
         innerTextElement()->setInnerText(value, ASSERT_NO_EXCEPTION);
 

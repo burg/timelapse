@@ -38,6 +38,7 @@ JSC::MacroAssemblerX86Common::SSE2CheckState JSC::MacroAssemblerX86Common::s_sse
 #include "DFGCapabilities.h"
 #include "Interpreter.h"
 #include "JITInlines.h"
+#include "JITOperations.h"
 #include "JITStubCall.h"
 #include "JSArray.h"
 #include "JSFunction.h"
@@ -407,6 +408,7 @@ void JIT::privateCompileSlowCases()
         DEFINE_SLOWCASE_OP(op_create_this)
         DEFINE_SLOWCASE_OP(op_div)
         DEFINE_SLOWCASE_OP(op_eq)
+        DEFINE_SLOWCASE_OP(op_get_callee)
         case op_get_by_id_out_of_line:
         case op_get_array_length:
         DEFINE_SLOWCASE_OP(op_get_by_id)
@@ -632,7 +634,7 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
     if (m_codeBlock->codeType() == FunctionCode) {
         stackCheck.link(this);
         m_bytecodeOffset = 0;
-        JITStubCall(this, cti_stack_check).call();
+        callOperationWithCallFrameRollbackOnException(operationStackCheck, m_codeBlock);
 #ifndef NDEBUG
         m_bytecodeOffset = (unsigned)-1; // Reset this, in order to guard its use with ASSERTs.
 #endif
@@ -649,7 +651,9 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
 
         m_bytecodeOffset = 0;
 
-        JITStubCall(this, m_codeBlock->m_isConstructor ? cti_op_construct_arityCheck : cti_op_call_arityCheck).call(regT0);
+        callOperationWithCallFrameRollbackOnException(m_codeBlock->m_isConstructor ? operationConstructArityCheck : operationCallArityCheck);
+        if (returnValueRegister != regT0)
+            move(returnValueRegister, regT0);
         branchTest32(Zero, regT0).linkTo(beginLabel, this);
         emitNakedCall(m_vm->getCTIStub(arityFixup).code());
 
@@ -661,6 +665,8 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
     }
 
     ASSERT(m_jmpTable.isEmpty());
+    
+    privateCompileExceptionHandlers();
     
     if (m_disassembler)
         m_disassembler->setEndOfCode(label());
@@ -706,10 +712,6 @@ CompilationResult JIT::privateCompile(JITCompilationEffort effort)
         if (iter->to)
             patchBuffer.link(iter->from, FunctionPtr(iter->to));
     }
-
-    m_codeBlock->callReturnIndexVector().reserveCapacity(m_calls.size());
-    for (Vector<CallRecord>::iterator iter = m_calls.begin(); iter != m_calls.end(); ++iter)
-        m_codeBlock->callReturnIndexVector().append(CallReturnOffsetToBytecodeOffset(patchBuffer.returnAddressOffset(iter->from), iter->bytecodeOffset));
 
     m_codeBlock->setNumberOfStructureStubInfos(m_propertyAccessCompilationInfo.size());
     for (unsigned i = 0; i < m_propertyAccessCompilationInfo.size(); ++i)
@@ -800,24 +802,59 @@ void JIT::linkFor(ExecState* exec, JSFunction* callee, CodeBlock* callerCodeBloc
         ASSERT(callLinkInfo->callType == CallLinkInfo::Call
                || callLinkInfo->callType == CallLinkInfo::CallVarargs);
         if (callLinkInfo->callType == CallLinkInfo::Call) {
-            repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(linkClosureCallGenerator).code());
+            repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(linkClosureCallThunkGenerator).code());
             return;
         }
 
-        repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(virtualCallGenerator).code());
+        repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(virtualCallThunkGenerator).code());
         return;
     }
 
     ASSERT(kind == CodeForConstruct);
-    repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(virtualConstructGenerator).code());
+    repatchBuffer.relink(callLinkInfo->callReturnLocation, vm->getCTIStub(virtualConstructThunkGenerator).code());
 }
 
 void JIT::linkSlowCall(CodeBlock* callerCodeBlock, CallLinkInfo* callLinkInfo)
 {
     RepatchBuffer repatchBuffer(callerCodeBlock);
 
-    repatchBuffer.relink(callLinkInfo->callReturnLocation, callerCodeBlock->vm()->getCTIStub(virtualCallGenerator).code());
+    repatchBuffer.relink(callLinkInfo->callReturnLocation, callerCodeBlock->vm()->getCTIStub(virtualCallThunkGenerator).code());
 }
+
+void JIT::privateCompileExceptionHandlers()
+{
+    if (m_exceptionChecks.empty() && m_exceptionChecksWithCallFrameRollback.empty())
+        return;
+
+    Jump doLookup;
+
+    if (!m_exceptionChecksWithCallFrameRollback.empty()) {
+        // Remove hostCallFlag from caller
+        m_exceptionChecksWithCallFrameRollback.link(this);
+        emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, GPRInfo::argumentGPR0);
+        andPtr(TrustedImmPtr(reinterpret_cast<void *>(~CallFrame::hostCallFrameFlag())), GPRInfo::argumentGPR0);
+        doLookup = jump();
+    }
+
+    if (!m_exceptionChecks.empty())
+        m_exceptionChecks.link(this);
+    
+    // lookupExceptionHandler is passed one argument, the exec (the CallFrame*).
+    move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
+
+    if (doLookup.isSet())
+        doLookup.link(this);
+
+#if CPU(X86)
+    // FIXME: should use the call abstraction, but this is currently in the SpeculativeJIT layer!
+    poke(GPRInfo::argumentGPR0);
+#endif
+    m_calls.append(CallRecord(call(), (unsigned)-1, FunctionPtr(lookupExceptionHandler).value()));
+    // lookupExceptionHandler leaves the handler CallFrame* in the returnValueGPR,
+    // and the address of the handler in returnValueGPR2.
+    jump(GPRInfo::returnValueGPR2);
+}
+
 
 } // namespace JSC
 

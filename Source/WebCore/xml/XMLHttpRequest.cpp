@@ -300,7 +300,7 @@ Blob* XMLHttpRequest::responseBlob()
         // instead of copying the bytes. Embedders who store blob data in the
         // same process as WebCore would at least to teach BlobData to take
         // a SharedBuffer, even if they don't get the Blob from the network layer directly.
-        OwnPtr<BlobData> blobData = BlobData::create();
+        auto blobData = std::make_unique<BlobData>();
         // If we errored out or got no data, we still return a blob, just an empty one.
         size_t size = 0;
         if (m_binaryResponseBuilder) {
@@ -312,7 +312,7 @@ Blob* XMLHttpRequest::responseBlob()
             blobData->setContentType(normalizedContentType); // responseMIMEType defaults to text/xml which may be incorrect.
             m_binaryResponseBuilder.clear();
         }
-        m_responseBlob = Blob::create(blobData.release(), size);
+        m_responseBlob = Blob::create(std::move(blobData), size);
     }
 
     return m_responseBlob.get();
@@ -452,12 +452,14 @@ bool XMLHttpRequest::isAllowedHTTPMethod(const String& method)
 
 String XMLHttpRequest::uppercaseKnownHTTPMethod(const String& method)
 {
-    if (equalIgnoringCase(method, "COPY") || equalIgnoringCase(method, "DELETE") || equalIgnoringCase(method, "GET")
-        || equalIgnoringCase(method, "HEAD") || equalIgnoringCase(method, "INDEX") || equalIgnoringCase(method, "LOCK")
-        || equalIgnoringCase(method, "M-POST") || equalIgnoringCase(method, "MKCOL") || equalIgnoringCase(method, "MOVE")
-        || equalIgnoringCase(method, "OPTIONS") || equalIgnoringCase(method, "POST") || equalIgnoringCase(method, "PROPFIND")
-        || equalIgnoringCase(method, "PROPPATCH") || equalIgnoringCase(method, "PUT") || equalIgnoringCase(method, "UNLOCK")) {
-        return method.upper();
+    const char* const methods[] = { "COPY", "DELETE", "GET", "HEAD", "INDEX", "LOCK", "M-POST", "MKCOL", "MOVE", "OPTIONS", "POST", "PROPFIND", "PROPPATCH", "PUT", "UNLOCK" };
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(methods); ++i) {
+        if (equalIgnoringCase(method, methods[i])) {
+            // Don't bother allocating a new string if it's already all uppercase.
+            if (method == methods[i])
+                break;
+            return ASCIILiteral(methods[i]);
+        }
     }
     return method;
 }
@@ -469,12 +471,12 @@ bool XMLHttpRequest::isAllowedHTTPHeader(const String& name)
         && !name.startsWith(staticData->m_secHeaderPrefix, false);
 }
 
-void XMLHttpRequest::open(const String& method, const KURL& url, ExceptionCode& ec)
+void XMLHttpRequest::open(const String& method, const URL& url, ExceptionCode& ec)
 {
     open(method, url, true, ec);
 }
 
-void XMLHttpRequest::open(const String& method, const KURL& url, bool async, ExceptionCode& ec)
+void XMLHttpRequest::open(const String& method, const URL& url, bool async, ExceptionCode& ec)
 {
     internalAbort();
     State previousState = m_state;
@@ -554,17 +556,17 @@ void XMLHttpRequest::open(const String& method, const KURL& url, bool async, Exc
         m_state = OPENED;
 }
 
-void XMLHttpRequest::open(const String& method, const KURL& url, bool async, const String& user, ExceptionCode& ec)
+void XMLHttpRequest::open(const String& method, const URL& url, bool async, const String& user, ExceptionCode& ec)
 {
-    KURL urlWithCredentials(url);
+    URL urlWithCredentials(url);
     urlWithCredentials.setUser(user);
 
     open(method, urlWithCredentials, async, ec);
 }
 
-void XMLHttpRequest::open(const String& method, const KURL& url, bool async, const String& user, const String& password, ExceptionCode& ec)
+void XMLHttpRequest::open(const String& method, const URL& url, bool async, const String& user, const String& password, ExceptionCode& ec)
 {
-    KURL urlWithCredentials(url);
+    URL urlWithCredentials(url);
     urlWithCredentials.setUser(user);
     urlWithCredentials.setPass(password);
 
@@ -611,7 +613,7 @@ void XMLHttpRequest::send(Document* document, ExceptionCode& ec)
 
         // FIXME: According to XMLHttpRequest Level 2, this should use the Document.innerHTML algorithm
         // from the HTML5 specification to serialize the document.
-        String body = createMarkup(document);
+        String body = createMarkup(*document);
 
         // FIXME: this should use value of document.inputEncoding to determine the encoding to use.
         TextEncoding encoding = UTF8Encoding();
@@ -1303,26 +1305,6 @@ void XMLHttpRequest::contextDestroyed()
 {
     ASSERT(!m_loader);
     ActiveDOMObject::contextDestroyed();
-}
-
-const AtomicString& XMLHttpRequest::interfaceName() const
-{
-    return eventNames().interfaceForXMLHttpRequest;
-}
-
-ScriptExecutionContext* XMLHttpRequest::scriptExecutionContext() const
-{
-    return ActiveDOMObject::scriptExecutionContext();
-}
-
-EventTargetData* XMLHttpRequest::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData& XMLHttpRequest::ensureEventTargetData()
-{
-    return m_eventTargetData;
 }
 
 } // namespace WebCore

@@ -62,7 +62,7 @@ namespace JSC {
 
     class CallArguments {
     public:
-        CallArguments(BytecodeGenerator& generator, ArgumentsNode* argumentsNode);
+        CallArguments(BytecodeGenerator&, ArgumentsNode*, unsigned additionalArguments = 0);
 
         RegisterID* thisRegister() { return m_argv[0].get(); }
         RegisterID* argumentRegister(unsigned i) { return m_argv[i + 1].get(); }
@@ -286,7 +286,10 @@ namespace JSC {
                 lineStart -= sourceOffset;
             else
                 lineStart = 0;
-            ASSERT(divotOffset >= lineStart);
+
+            if (divotOffset < lineStart)
+                return;
+
             unsigned column = divotOffset - lineStart;
 
             unsigned instructionOffset = instructions().size();
@@ -405,7 +408,7 @@ namespace JSC {
         RegisterID* emitPushWithScope(RegisterID* scope);
         void emitPopScope();
 
-        void emitDebugHook(DebugHookID, unsigned firstLine, unsigned lastLine, unsigned charOffset, unsigned lineStart);
+        void emitDebugHook(DebugHookID, unsigned line, unsigned charOffset, unsigned lineStart);
 
         int scopeDepth() { return m_localScopeDepth + m_finallyDepth; }
         bool hasFinaliser() { return m_finallyDepth != 0; }
@@ -499,13 +502,13 @@ namespace JSC {
         RegisterID& registerFor(int index)
         {
             if (operandIsLocal(index))
-                return m_calleeRegisters[operandToLocal(index)];
+                return m_calleeRegisters[VirtualRegister(index).toLocal()];
 
             if (index == JSStack::Callee)
                 return m_calleeRegister;
 
             ASSERT(m_parameters.size());
-            return m_parameters[operandToArgument(index)];
+            return m_parameters[VirtualRegister(index).toArgument()];
         }
 
         unsigned addConstant(const Identifier&);

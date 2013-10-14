@@ -49,7 +49,7 @@ class MediaSource;
 class SourceBufferPrivate;
 class TimeRanges;
 
-class SourceBuffer : public RefCounted<SourceBuffer>, public ActiveDOMObject, public EventTarget, public ScriptWrappable {
+class SourceBuffer FINAL : public RefCounted<SourceBuffer>, public ActiveDOMObject, public EventTargetWithInlineData, public ScriptWrappable {
 public:
     static PassRefPtr<SourceBuffer> create(PassOwnPtr<SourceBufferPrivate>, MediaSource*);
 
@@ -72,16 +72,14 @@ public:
     virtual void stop() OVERRIDE;
 
     // EventTarget interface
-    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
-    virtual const AtomicString& interfaceName() const OVERRIDE;
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return ActiveDOMObject::scriptExecutionContext(); }
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return SourceBufferEventTargetInterfaceType; }
 
     using RefCounted<SourceBuffer>::ref;
     using RefCounted<SourceBuffer>::deref;
 
 protected:
     // EventTarget interface
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
 
@@ -97,7 +95,6 @@ private:
     OwnPtr<SourceBufferPrivate> m_private;
     MediaSource* m_source;
     GenericEventQueue m_asyncEventQueue;
-    EventTargetData m_eventTargetData;
 
     bool m_updating;
     double m_timestampOffset;

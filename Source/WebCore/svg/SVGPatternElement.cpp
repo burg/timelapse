@@ -168,7 +168,7 @@ void SVGPatternElement::svgAttributeChanged(const QualifiedName& attrName)
         updateRelativeLengthsInformation();
 
     if (RenderObject* object = renderer())
-        object->setNeedsLayout(true);
+        object->setNeedsLayout();
 }
 
 void SVGPatternElement::childrenChanged(const ChildChange& change)
@@ -179,7 +179,7 @@ void SVGPatternElement::childrenChanged(const ChildChange& change)
         return;
 
     if (RenderObject* object = renderer())
-        object->setNeedsLayout(true);
+        object->setNeedsLayout();
 }
 
 RenderElement* SVGPatternElement::createRenderer(RenderArena& arena, RenderStyle&)
@@ -229,7 +229,7 @@ void SVGPatternElement::collectPatternAttributes(PatternAttributes& attributes) 
         processedPatterns.add(current);
 
         // Respect xlink:href, take attributes from referenced element
-        Element* refElement = SVGURIReference::targetElementFromIRIString(current->href(), &document());
+        Element* refElement = SVGURIReference::targetElementFromIRIString(current->href(), document());
         if (refElement && isSVGPatternElement(refElement)) {
             current = toSVGPatternElement(refElement);
 

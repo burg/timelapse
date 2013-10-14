@@ -30,9 +30,9 @@
 #if USE(COORDINATED_GRAPHICS)
 #include "CoordinatedLayerTreeHost.h"
 
+#include "CoordinatedDrawingArea.h"
 #include "CoordinatedGraphicsArgumentCoders.h"
 #include "CoordinatedLayerTreeHostProxyMessages.h"
-#include "DrawingAreaImpl.h"
 #include "GraphicsContext.h"
 #include "WebCoordinatedSurface.h"
 #include "WebCoreArgumentCoders.h"
@@ -74,7 +74,7 @@ CoordinatedLayerTreeHost::CoordinatedLayerTreeHost(WebPage* webPage)
     , m_layerFlushSchedulingEnabled(true)
     , m_forceRepaintAsyncCallbackID(0)
 {
-    m_coordinator = CompositingCoordinator::create(webPage->corePage(), this);
+    m_coordinator = std::make_unique<CompositingCoordinator>(webPage->corePage(), this);
 
     m_coordinator->createRootLayer(webPage->size());
     m_layerTreeContext.coordinatedLayerID = toCoordinatedGraphicsLayer(m_coordinator->rootLayer())->id();
@@ -318,7 +318,7 @@ void CoordinatedLayerTreeHost::performScheduledLayerFlush()
     }
 
     if (m_notifyAfterScheduledLayerFlush && didSync) {
-        static_cast<DrawingAreaImpl*>(m_webPage->drawingArea())->layerHostDidFlushLayers();
+        static_cast<CoordinatedDrawingArea*>(m_webPage->drawingArea())->layerHostDidFlushLayers();
         m_notifyAfterScheduledLayerFlush = false;
     }
 }
@@ -352,7 +352,7 @@ void CoordinatedLayerTreeHost::destroyPageOverlayLayer()
 
 void CoordinatedLayerTreeHost::paintLayerContents(const GraphicsLayer* graphicsLayer, GraphicsContext& graphicsContext, const IntRect& clipRect)
 {
-    if (graphicsLayer == m_pageOverlayLayer) {
+    if (graphicsLayer == m_pageOverlayLayer.get()) {
         // Overlays contain transparent contents and won't clear the context as part of their rendering, so we do it here.
         graphicsContext.clearRect(clipRect);
         m_webPage->drawPageOverlay(m_pageOverlay.get(), graphicsContext, clipRect);

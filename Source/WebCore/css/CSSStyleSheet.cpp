@@ -37,8 +37,10 @@
 #include "Node.h"
 #include "SVGNames.h"
 #include "SecurityOrigin.h"
+#include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyleSheetContents.h"
+#include "WebKitCSSKeyframesRule.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -84,11 +86,11 @@ PassRefPtr<CSSStyleSheet> CSSStyleSheet::create(PassRefPtr<StyleSheetContents> s
     return adoptRef(new CSSStyleSheet(sheet, ownerNode, false));
 }
 
-PassRefPtr<CSSStyleSheet> CSSStyleSheet::createInline(Node* ownerNode, const KURL& baseURL, const String& encoding)
+PassRefPtr<CSSStyleSheet> CSSStyleSheet::createInline(Node& ownerNode, const URL& baseURL, const String& encoding)
 {
-    CSSParserContext parserContext(&ownerNode->document(), baseURL, encoding);
+    CSSParserContext parserContext(ownerNode.document(), baseURL, encoding);
     RefPtr<StyleSheetContents> sheet = StyleSheetContents::create(baseURL.string(), parserContext);
-    return adoptRef(new CSSStyleSheet(sheet.release(), ownerNode, true));
+    return adoptRef(new CSSStyleSheet(sheet.release(), &ownerNode, true));
 }
 
 CSSStyleSheet::CSSStyleSheet(PassRefPtr<StyleSheetContents> contents, CSSImportRule* ownerRule)
@@ -157,7 +159,7 @@ void CSSStyleSheet::didMutateRuleFromCSSStyleDeclaration()
     didMutate();
 }
 
-void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContentsWereClonedForMutation contentsWereClonedForMutation)
+void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContentsWereClonedForMutation contentsWereClonedForMutation, StyleRuleKeyframes* insertedKeyframesRule)
 {
     ASSERT(m_contents->isMutable());
     ASSERT(m_contents->hasOneClient());
@@ -166,7 +168,12 @@ void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContent
     if (!owner)
         return;
 
-    if (mutationType == RuleInsertion && !contentsWereClonedForMutation && !owner->styleSheetCollection()->activeStyleSheetsContains(this)) {
+    if (mutationType == RuleInsertion && !contentsWereClonedForMutation && !owner->styleSheetCollection().activeStyleSheetsContains(this)) {
+        if (insertedKeyframesRule) {
+            if (StyleResolver* resolver = owner->styleResolverIfExists())
+                resolver->addKeyframeStyle(insertedKeyframesRule);
+            return;
+        }
         owner->scheduleOptimizedStyleSheetUpdate();
         return;
     }
@@ -251,7 +258,7 @@ bool CSSStyleSheet::canAccessRules() const
 {
     if (m_isInlineStylesheet)
         return true;
-    KURL baseURL = m_contents->baseURL();
+    URL baseURL = m_contents->baseURL();
     if (baseURL.isEmpty())
         return true;
     Document* document = ownerDocument();
@@ -295,7 +302,7 @@ unsigned CSSStyleSheet::insertRule(const String& ruleString, unsigned index, Exc
         return 0;
     }
 
-    RuleMutationScope mutationScope(this, RuleInsertion);
+    RuleMutationScope mutationScope(this, RuleInsertion, rule->type() == StyleRuleBase::Keyframes ? static_cast<StyleRuleKeyframes*>(rule.get()) : 0);
 
     bool success = m_contents->wrapperInsertRule(rule, index);
     if (!success) {
@@ -363,7 +370,7 @@ String CSSStyleSheet::href() const
     return m_contents->originalURL();
 }
 
-KURL CSSStyleSheet::baseURL() const
+URL CSSStyleSheet::baseURL() const
 {
     return m_contents->baseURL();
 }
@@ -401,9 +408,10 @@ void CSSStyleSheet::clearChildRuleCSSOMWrappers()
     m_childRuleCSSOMWrappers.clear();
 }
 
-CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSStyleSheet* sheet, RuleMutationType mutationType)
+CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSStyleSheet* sheet, RuleMutationType mutationType, StyleRuleKeyframes* insertedKeyframesRule)
     : m_styleSheet(sheet)
     , m_mutationType(mutationType)
+    , m_insertedKeyframesRule(insertedKeyframesRule)
 {
     ASSERT(m_styleSheet);
     m_contentsWereClonedForMutation = m_styleSheet->willMutateRules();
@@ -413,6 +421,7 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
     : m_styleSheet(rule ? rule->parentStyleSheet() : 0)
     , m_mutationType(OtherMutation)
     , m_contentsWereClonedForMutation(ContentsWereNotClonedForMutation)
+    , m_insertedKeyframesRule(nullptr)
 {
     if (m_styleSheet)
         m_contentsWereClonedForMutation = m_styleSheet->willMutateRules();
@@ -421,7 +430,7 @@ CSSStyleSheet::RuleMutationScope::RuleMutationScope(CSSRule* rule)
 CSSStyleSheet::RuleMutationScope::~RuleMutationScope()
 {
     if (m_styleSheet)
-        m_styleSheet->didMutateRules(m_mutationType, m_contentsWereClonedForMutation);
+        m_styleSheet->didMutateRules(m_mutationType, m_contentsWereClonedForMutation, m_insertedKeyframesRule);
 }
 
 }

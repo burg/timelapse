@@ -36,7 +36,7 @@ public:
     String text() const { return scriptContent(); }
     void setText(const String&);
 
-    KURL src() const;
+    URL src() const;
 
     void setAsync(bool);
     bool async() const;
@@ -45,12 +45,12 @@ private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void childrenChanged(const ChildChange&) OVERRIDE;
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const;
 
     virtual String sourceAttributeValue() const;
     virtual String charsetAttributeValue() const;

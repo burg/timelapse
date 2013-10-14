@@ -426,7 +426,6 @@ InspectorBackend.registerCommand("Probe.createScriptProbe", [{"name": "url", "ty
 InspectorBackend.registerRecordingsDispatcher = InspectorBackend.registerDomainDispatcher.bind(InspectorBackend, "Recordings");
 InspectorBackend.registerEvent("Recordings.recordingAdded", ["uid"]);
 InspectorBackend.registerEvent("Recordings.recordingRemoved", ["uid"]);
-InspectorBackend.registerCommand("Recordings.getRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
 InspectorBackend.registerCommand("Recordings.getSerializedRecording", [{"name": "uid", "type": "number", "optional": false}], ["recording"]);
 InspectorBackend.registerCommand("Recordings.getAvailableRecordings", [], ["recordingUids"]);
 
@@ -436,7 +435,6 @@ InspectorBackend.registerEvent("Replay.replayEnabled", []);
 InspectorBackend.registerEvent("Replay.replayDisabled", []);
 InspectorBackend.registerEvent("Replay.captureStarted", []);
 InspectorBackend.registerEvent("Replay.captureStopped", []);
-InspectorBackend.registerEvent("Replay.capturedAction", ["record"]);
 InspectorBackend.registerEvent("Replay.capturedInput", ["input"]);
 InspectorBackend.registerEvent("Replay.playbackHitMark", ["mark"]);
 InspectorBackend.registerEvent("Replay.playbackStarted", []);

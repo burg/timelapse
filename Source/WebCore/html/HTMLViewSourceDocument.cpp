@@ -49,11 +49,11 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLViewSourceDocument::HTMLViewSourceDocument(Frame* frame, const KURL& url, const String& mimeType)
+HTMLViewSourceDocument::HTMLViewSourceDocument(Frame* frame, const URL& url, const String& mimeType)
     : HTMLDocument(frame, url)
     , m_type(mimeType)
 {
-    styleSheetCollection()->setUsesBeforeAfterRulesOverride(true);
+    styleSheetCollection().setUsesBeforeAfterRulesOverride(true);
     setIsViewSource(true);
 
     setCompatibilityMode(QuirksMode);
@@ -63,9 +63,9 @@ HTMLViewSourceDocument::HTMLViewSourceDocument(Frame* frame, const KURL& url, co
 PassRefPtr<DocumentParser> HTMLViewSourceDocument::createParser()
 {
     if (m_type == "text/html" || m_type == "application/xhtml+xml" || m_type == "image/svg+xml" || DOMImplementation::isXMLMIMEType(m_type))
-        return HTMLViewSourceParser::create(this);
+        return HTMLViewSourceParser::create(*this);
 
-    return TextViewSourceParser::create(this);
+    return TextViewSourceParser::create(*this);
 }
 
 void HTMLViewSourceDocument::createContainingTable()

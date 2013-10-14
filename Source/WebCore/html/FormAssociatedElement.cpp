@@ -76,10 +76,10 @@ void FormAssociatedElement::didMoveToNewDocument(Document* oldDocument)
         resetFormAttributeTargetObserver();
 }
 
-void FormAssociatedElement::insertedInto(ContainerNode* insertionPoint)
+void FormAssociatedElement::insertedInto(ContainerNode& insertionPoint)
 {
     resetFormOwner();
-    if (!insertionPoint->inDocument())
+    if (!insertionPoint.inDocument())
         return;
 
     HTMLElement* element = toHTMLElement(this);
@@ -87,10 +87,10 @@ void FormAssociatedElement::insertedInto(ContainerNode* insertionPoint)
         resetFormAttributeTargetObserver();
 }
 
-void FormAssociatedElement::removedFrom(ContainerNode* insertionPoint)
+void FormAssociatedElement::removedFrom(ContainerNode& insertionPoint)
 {
     HTMLElement* element = toHTMLElement(this);
-    if (insertionPoint->inDocument() && element->fastHasAttribute(formAttr))
+    if (insertionPoint.inDocument() && element->fastHasAttribute(formAttr))
         m_formAttributeTargetObserver = nullptr;
     // If the form and element are both in the same tree, preserve the connection to the form.
     // Otherwise, null out our form and remove ourselves from the form's list of elements.
@@ -105,9 +105,9 @@ HTMLFormElement* FormAssociatedElement::findAssociatedForm(const HTMLElement* el
         // The HTML5 spec says that the element should be associated with
         // the first element in the document to have an ID that equal to
         // the value of form attribute, so we put the result of
-        // treeScope()->getElementById() over the given element.
+        // treeScope().getElementById() over the given element.
         HTMLFormElement* newForm = 0;
-        Element* newFormCandidate = element->treeScope()->getElementById(formId);
+        Element* newFormCandidate = element->treeScope().getElementById(formId);
         if (newFormCandidate && isHTMLFormElement(newFormCandidate))
             newForm = toHTMLFormElement(newFormCandidate);
         return newForm;
@@ -279,7 +279,7 @@ OwnPtr<FormAttributeTargetObserver> FormAttributeTargetObserver::create(const At
 }
 
 FormAttributeTargetObserver::FormAttributeTargetObserver(const AtomicString& id, FormAssociatedElement* element)
-    : IdTargetObserver(toHTMLElement(element)->treeScope()->idTargetObserverRegistry(), id)
+    : IdTargetObserver(toHTMLElement(element)->treeScope().idTargetObserverRegistry(), id)
     , m_element(element)
 {
 }

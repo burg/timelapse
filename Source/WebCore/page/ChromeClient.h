@@ -176,7 +176,6 @@ public:
     virtual void setToolTip(const String&, TextDirection) = 0;
 
     virtual void print(Frame*) = 0;
-    virtual bool shouldRubberBandInDirection(ScrollDirection) const = 0;
 
     virtual Color underlayColor() const { return Color(); }
 
@@ -364,6 +363,8 @@ public:
 
     virtual void didAddHeaderLayer(GraphicsLayer*) { }
     virtual void didAddFooterLayer(GraphicsLayer*) { }
+
+    virtual bool shouldUseTiledBackingForFrameView(const FrameView*) const { return false; }
 
     // These methods are used to report pages that are performing
     // some task that we consider to be "active", and so the user

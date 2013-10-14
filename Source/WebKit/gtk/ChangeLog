@@ -1,3 +1,231 @@
+2013-10-09  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] Implement new API in AtkText: atk_text_get_string_at_offset()
+        https://bugs.webkit.org/show_bug.cgi?id=120638
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Update ATK unit test to check the new API as well if the version
+        of ATK is new enough.
+
+        * tests/testatk.c:
+        (testGetStringFunction): New helper function, to check the new API.
+        (runGetStringTests): Ditto.
+        (testWebkitAtkGetStringAtOffset): New unit test, similar to the
+        one already present to check the old API but focused in the new one.
+        (testWebkitAtkGetStringAtOffsetNewlines): Ditto.
+        (testWebkitAtkGetStringAtOffsetTextarea): Ditto.
+        (testWebkitAtkGetStringAtOffsetTextInput): Ditto.
+        (testWebkitAtkGetStringAtOffsetWithPreformattedText): Ditto.
+        (testWebkitAtkGetStringAtOffsetWithSpecialCharacters): Ditto.
+        (testWebkitAtkGetStringAtOffsetWithWrappedLines): Ditto.
+        (testWebkitAtkGetStringAtOffsetWithEmbeddedObjects): Ditto.
+        (testWebkitAtkGetExtents): Add checks for the new API, if possible.
+        (testWebkitAtkLinksWithInlineImages): Ditto.
+        (main): Add the new unit tests to check the new API, if possible.
+
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        Consolidate findString functions
+        https://bugs.webkit.org/show_bug.cgi?id=122480
+
+        Reviewed by Darin Adler.
+
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_search_text):
+
+2013-10-07  Sam Weinig  <sam@webkit.org>
+
+        CTTE: Use references in and around DragController
+        https://bugs.webkit.org/show_bug.cgi?id=122427
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/DragClientGtk.cpp:
+        (WebKit::DragClient::willPerformDragDestinationAction):
+        (WebKit::DragClient::willPerformDragSourceAction):
+        (WebKit::DragClient::actionMaskForDrag):
+        (WebKit::DragClient::startDrag):
+        * WebCoreSupport/DragClientGtk.h:
+        * webkit/webkitwebview.cpp:
+        (dragExitedCallback):
+        (webkit_web_view_drag_motion):
+        (webkit_web_view_drag_data_received):
+        (webkit_web_view_drag_drop):
+
+2013-10-04  Philippe Normand  <pnormand@igalia.com>
+
+        [GTK] UserMediaClientGtk needs API update
+        https://bugs.webkit.org/show_bug.cgi?id=122324
+
+        Reviewed by Martin Robinson.
+
+        Update UserMediaClientGtk API after changes made in the parent
+        class in r156473.
+
+        * WebCoreSupport/UserMediaClientGtk.cpp:
+        (WebKit::UserMediaClientGtk::requestPermission):
+        (WebKit::UserMediaClientGtk::cancelRequest):
+        * WebCoreSupport/UserMediaClientGtk.h:
+
+2013-10-05  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed GTK build fix after r156946. The framePolicyFunction is an attribute
+        on the WebKitWebPolicyDecisionPrivate object.
+
+        * webkit/webkitwebpolicydecision.cpp:
+        (webkit_web_policy_decision_use):
+        (webkit_web_policy_decision_ignore):
+        (webkit_web_policy_decision_download):
+
+2013-10-04  Darin Adler  <darin@apple.com>
+
+        text-transform: lowercase is not lang-dependent (Turkish languages : tr,az)
+        https://bugs.webkit.org/show_bug.cgi?id=21312
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        (DumpRenderTreeSupportGtk::doCommand): Use StringImpl::upper instead of
+        StringImpl::makeUpper.
+
+2013-10-04  Anders Carlsson  <andersca@apple.com>
+
+        FramePolicyFunction should be an std::function
+        https://bugs.webkit.org/show_bug.cgi?id=122362
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::dispatchWillSubmitForm):
+        (WebKit::FrameLoaderClient::dispatchDecidePolicyForResponse):
+        (WebKit::FrameLoaderClient::dispatchDecidePolicyForNewWindowAction):
+        * WebCoreSupport/FrameLoaderClientGtk.h:
+        * webkit/webkitwebpolicydecision.cpp:
+        (webkit_web_policy_decision_use):
+        (webkit_web_policy_decision_ignore):
+        (webkit_web_policy_decision_download):
+
+2013-10-03  Sam Weinig  <sam@webkit.org>
+
+        Remove shouldRubberBandInDirection from the WKBundlePageUIClient
+        https://bugs.webkit.org/show_bug.cgi?id=122309
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/ChromeClientGtk.h:
+
+2013-10-01  Sam Weinig  <sam@webkit.org>
+
+        CTTE: DOMWrapperWorlds should be passed around by reference
+        https://bugs.webkit.org/show_bug.cgi?id=122206
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::dispatchDidClearWindowObjectInWorld):
+        * WebCoreSupport/FrameLoaderClientGtk.h:
+
+2013-09-30  Benjamin Poulain  <benjamin@webkit.org>
+
+        Remove the code guarded by STYLE_SCOPED
+        https://bugs.webkit.org/show_bug.cgi?id=122123
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportGtk.h:
+
+2013-09-28  Darin Adler  <darin@apple.com>
+
+        Add Frame::mainFrame and Frame::isMainFrame
+        https://bugs.webkit.org/show_bug.cgi?id=122064
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::assignIdentifierToInitialRequest):
+        Call isMainFrame.
+
+2013-09-28  Philippe Normand  <pnormand@igalia.com>
+
+        Unreviewed GTK build fix after r156560.
+
+        * WebCoreSupport/AcceleratedCompositingContext.h:
+
+2013-09-26  Darin Adler  <darin@apple.com>
+
+        rename KURL to URL
+        https://bugs.webkit.org/show_bug.cgi?id=16214
+
+        Reviewed by Andreas Kling.
+
+        * many files: Renamed, using script.
+
+2013-09-27  Darin Adler  <darin@apple.com>
+
+        Add empty MainFrame class
+        https://bugs.webkit.org/show_bug.cgi?id=121770
+
+        Reviewed by Andreas Kling.
+
+        * WebCoreSupport/AcceleratedCompositingContextGL.cpp:
+        * WebCoreSupport/ChromeClientGtk.cpp:
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        * WebCoreSupport/GtkAdjustmentWatcher.cpp:
+        * webkit/webkitwebframe.cpp:
+        * webkit/webkitwebview.cpp:
+        * webkit/webkitviewportattributes.cpp:
+        Include MainFrame.h instead of Frame.h as needed.
+
+2013-09-25  Brent Fulgham  <bfulgham@apple.com>
+
+        Refactor RuntimeEnabledFeatures as a Singleton.
+        https://bugs.webkit.org/show_bug.cgi?id=121883.
+
+        Reviewed by Jer Noble.
+
+        * WebCoreSupport/DumpRenderTreeSupportGtk.cpp:
+        (DumpRenderTreeSupportGtk::setCSSRegionsEnabled): Use singleton.
+        (DumpRenderTreeSupportGtk::setExperimentalContentSecurityPolicyFeaturesEnabled):
+        (DumpRenderTreeSupportGtk::setSeamlessIFramesEnabled):
+        (DumpRenderTreeSupportGtk::setShadowDOMEnabled):
+        (DumpRenderTreeSupportGtk::setStyleScopedEnabled):
+        * webkit/webkitwebview.cpp:
+        (webkit_web_view_update_settings): Ditto.
+
+2013-09-24  Lorenzo Tilve  <ltilve@igalia.com>
+
+        [GTK] Fix compilation problems when setting ENABLE_DRAG_SUPPORT = FALSE
+        https://bugs.webkit.org/show_bug.cgi?id=121782
+
+        Reviewed by Martin Robinson.
+
+        Disabled drag functions.
+
+        * WebCoreSupport/DragClientGtk.cpp:
+        * WebCoreSupport/DragClientGtk.h:
+
+2013-09-24  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Fix accelerated compositing disabling under Wayland displays
+        https://bugs.webkit.org/show_bug.cgi?id=121788
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * webkit/webkitwebview.cpp:
+        (updateAcceleratedCompositingSetting): Fix a ridiculous early return in the case of disabling the accelerated
+        compositing setting. There's no need to re-disable the setting if it was already disabled, but it should
+        definitely be disabled if the setting was previously enabled.
+
+2013-09-22  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed, GTK build fix when building with GTK+ 2.0.
+        Patch provided by Dominique Leuenberger <dimstar@opensuse.org>.
+
+        * WebCoreSupport/AcceleratedCompositingContextGL.cpp: Include GtkVersioning.h to set up
+        the mock GDK_IS_X11_DISPLAY macro if it's not provided by the GTK+ headers.
+
 2013-09-20  Mario Sanchez Prada  <mario.prada@samsung.com>
 
         [ATK] Do not expose aria-help in ATK based platforms

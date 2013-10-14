@@ -33,7 +33,6 @@
     boolean isPreloaded(DOMString url);
     boolean isLoadingFromMemoryCache(DOMString url);
 
-    [RaisesException] unsigned long numberOfScopedHTMLStyleChildren(Node scope);
     [RaisesException] CSSStyleDeclaration computedStyleIncludingVisitedInfo(Node node);
 
 #if defined(ENABLE_SHADOW_DOM) && ENABLE_SHADOW_DOM
@@ -49,8 +48,6 @@
     [RaisesException] Element includerFor(Node node);
     [RaisesException] DOMString shadowPseudoId(Element element);
     [RaisesException] void setShadowPseudoId(Element element, DOMString id);
-    [RaisesException] Element createContentElement();
-    [RaisesException] boolean isValidContentSelect(Element contentElement);
     [RaisesException] Node treeScopeRootNode(Node node);
     [RaisesException] Node parentTreeScope(Node node);
 
@@ -183,8 +180,8 @@
 
     void allowRoundingHacks();
 
-    void insertAuthorCSS(Document document, DOMString css);
-    void insertUserCSS(Document document, DOMString css);
+    [RaisesException] void insertAuthorCSS(Document document, DOMString css);
+    [RaisesException] void insertUserCSS(Document document, DOMString css);
 
 #if defined(ENABLE_BATTERY_STATUS) && ENABLE_BATTERY_STATUS
     [RaisesException] void setBatteryStatus(Document document, DOMString eventType, boolean charging, double chargingTime, double dischargingTime, double level);

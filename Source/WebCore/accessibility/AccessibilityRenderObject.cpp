@@ -169,27 +169,27 @@ static inline bool isInlineWithContinuation(RenderObject* object)
     return toRenderInline(renderer)->continuation();
 }
 
-static inline RenderObject* firstChildInContinuation(RenderObject* renderer)
+static inline RenderObject* firstChildInContinuation(RenderInline& renderer)
 {
-    RenderObject* r = toRenderInline(renderer)->continuation();
+    auto continuation = renderer.continuation();
 
-    while (r) {
-        if (r->isRenderBlock())
-            return r;
-        if (RenderObject* child = r->firstChild())
+    while (continuation) {
+        if (continuation->isRenderBlock())
+            return continuation;
+        if (RenderObject* child = continuation->firstChild())
             return child;
-        r = toRenderInline(r)->continuation(); 
+        continuation = toRenderInline(continuation)->continuation();
     }
 
-    return 0;
+    return nullptr;
 }
 
 static inline RenderObject* firstChildConsideringContinuation(RenderObject* renderer)
 {
-    RenderObject* firstChild = renderer->firstChild();
+    RenderObject* firstChild = renderer->firstChildSlow();
 
     if (!firstChild && isInlineWithContinuation(renderer))
-        firstChild = firstChildInContinuation(renderer);
+        firstChild = firstChildInContinuation(toRenderInline(*renderer));
 
     return firstChild;
 }
@@ -197,7 +197,7 @@ static inline RenderObject* firstChildConsideringContinuation(RenderObject* rend
 
 static inline RenderObject* lastChildConsideringContinuation(RenderObject* renderer)
 {
-    RenderObject* lastChild = renderer->lastChild();
+    RenderObject* lastChild = renderer->lastChildSlow();
     RenderObject* prev;
     RenderObject* cur = renderer;
 
@@ -207,7 +207,7 @@ static inline RenderObject* lastChildConsideringContinuation(RenderObject* rende
     while (cur) {
         prev = cur;
 
-        if (RenderObject* lc = cur->lastChild())
+        if (RenderObject* lc = cur->lastChildSlow())
             lastChild = lc;
 
         if (cur->isRenderInline()) {
@@ -325,7 +325,8 @@ static inline RenderObject* childBeforeConsideringContinuations(RenderInline* r,
 
 static inline bool firstChildIsInlineContinuation(RenderObject* renderer)
 {
-    return renderer->firstChild() && renderer->firstChild()->isInlineElementContinuation();
+    RenderObject* child = renderer->firstChildSlow();
+    return child && child->isInlineElementContinuation();
 }
 
 AccessibilityObject* AccessibilityRenderObject::previousSibling() const
@@ -344,9 +345,9 @@ AccessibilityObject* AccessibilityRenderObject::previousSibling() const
     // Case 2: Anonymous block parent of the end of a continuation - skip all the way to before
     // the parent of the start, since everything in between will be linked up via the continuation.
     else if (m_renderer->isAnonymousBlock() && firstChildIsInlineContinuation(m_renderer)) {
-        RenderObject* firstParent = startOfContinuations(m_renderer->firstChild())->parent();
+        RenderObject* firstParent = startOfContinuations(m_renderer->firstChildSlow())->parent();
         while (firstChildIsInlineContinuation(firstParent))
-            firstParent = startOfContinuations(firstParent->firstChild())->parent();
+            firstParent = startOfContinuations(firstParent->firstChildSlow())->parent();
         previousSibling = firstParent->previousSibling();
     }
 
@@ -367,7 +368,8 @@ AccessibilityObject* AccessibilityRenderObject::previousSibling() const
 
 static inline bool lastChildHasContinuation(RenderObject* renderer)
 {
-    return renderer->lastChild() && isInlineWithContinuation(renderer->lastChild());
+    RenderObject* child = renderer->lastChildSlow();
+    return child && isInlineWithContinuation(child);
 }
 
 AccessibilityObject* AccessibilityRenderObject::nextSibling() const
@@ -386,7 +388,7 @@ AccessibilityObject* AccessibilityRenderObject::nextSibling() const
     // Case 2: Anonymous block parent of the start of a continuation - skip all the way to
     // after the parent of the end, since everything in between will be linked up via the continuation.
     else if (m_renderer->isAnonymousBlock() && lastChildHasContinuation(m_renderer)) {
-        RenderObject* lastParent = endOfContinuations(m_renderer->lastChild())->parent();
+        RenderElement* lastParent = endOfContinuations(toRenderBlock(m_renderer)->lastChild())->parent();
         while (lastChildHasContinuation(lastParent))
             lastParent = endOfContinuations(lastParent->lastChild())->parent();
         nextSibling = lastParent->nextSibling();
@@ -403,7 +405,7 @@ AccessibilityObject* AccessibilityRenderObject::nextSibling() const
 
     // Case 5: node has no next sibling, and its parent is an inline with a continuation.
     else if (isInlineWithContinuation(m_renderer->parent())) {
-        RenderObject* continuation = toRenderInline(m_renderer->parent())->continuation();
+        auto continuation = toRenderInline(m_renderer->parent())->continuation();
         
         // Case 5a: continuation is a block - in this case the block itself is the next sibling.
         if (continuation->isRenderBlock())
@@ -434,11 +436,11 @@ RenderObject* AccessibilityRenderObject::renderParentObject() const
     if (!m_renderer)
         return 0;
 
-    RenderObject* parent = m_renderer->parent();
+    RenderElement* parent = m_renderer->parent();
 
     // Case 1: node is a block and is an inline's continuation. Parent
     // is the start of the continuation chain.
-    RenderObject* startOfConts = 0;
+    RenderInline* startOfConts = nullptr;
     RenderObject* firstChild = 0;
     if (m_renderer->isRenderBlock() && (startOfConts = startOfContinuations(m_renderer)))
         parent = startOfConts;
@@ -459,9 +461,10 @@ RenderObject* AccessibilityRenderObject::renderParentObject() const
                     break;
                 }
             }
-            if (firstChild == parent->firstChild())
+            RenderObject* parentFirstChild = parent->firstChild();
+            if (firstChild == parentFirstChild)
                 break;
-            firstChild = parent->firstChild();
+            firstChild = parentFirstChild;
             if (!firstChild->node())
                 break;
             nodeRenderFirstChild = firstChild->node()->renderer();
@@ -657,7 +660,7 @@ String AccessibilityRenderObject::textUnderElement(AccessibilityTextUnderElement
                 if (frame->document() != &node->document())
                     return String();
 
-                return plainText(rangeOfContents(node).get(), textIteratorBehaviorForTextRange());
+                return plainText(rangeOfContents(*node).get(), textIteratorBehaviorForTextRange());
             }
         }
     
@@ -893,13 +896,13 @@ AccessibilityObject* AccessibilityRenderObject::internalLinkElement() const
         return 0;
     HTMLAnchorElement* anchor = toHTMLAnchorElement(element);
     
-    KURL linkURL = anchor->href();
+    URL linkURL = anchor->href();
     String fragmentIdentifier = linkURL.fragmentIdentifier();
     if (fragmentIdentifier.isEmpty())
         return 0;
     
     // check if URL is the same as current URL
-    KURL documentURL = m_renderer->document().url();
+    URL documentURL = m_renderer->document().url();
     if (!equalIgnoringFragmentIdentifier(documentURL, linkURL))
         return 0;
     
@@ -931,13 +934,13 @@ void AccessibilityRenderObject::addRadioButtonGroupMembers(AccessibilityChildren
     HTMLInputElement* input = toHTMLInputElement(node);
     // if there's a form, then this is easy
     if (input->form()) {
-        Vector<RefPtr<Node> > formElements;
+        Vector<Ref<Element>> formElements;
         input->form()->getNamedElements(input->name(), formElements);
         
         unsigned len = formElements.size();
         for (unsigned i = 0; i < len; ++i) {
-            Node* associateElement = formElements[i].get();
-            if (AccessibilityObject* object = axObjectCache()->getOrCreate(associateElement))
+            Element& associateElement = formElements[i].get();
+            if (AccessibilityObject* object = axObjectCache()->getOrCreate(&associateElement))
                 linkedUIElements.append(object);        
         } 
     } else {
@@ -1259,7 +1262,7 @@ bool AccessibilityRenderObject::computeAccessibilityIsIgnored() const
             
             // check whether rendered image was stretched from one-dimensional file image
             if (image->cachedImage()) {
-                LayoutSize imageSize = image->cachedImage()->imageSizeForRenderer(m_renderer, image->view().zoomFactor());
+                LayoutSize imageSize = image->cachedImage()->imageSizeForRenderer(toRenderElement(m_renderer), image->view().zoomFactor());
                 return imageSize.height() <= 1 || imageSize.width() <= 1;
             }
         }
@@ -1445,7 +1448,7 @@ void AccessibilityRenderObject::setSelectedTextRange(const PlainTextRange& range
         Position(node, range.start + range.length, Position::PositionIsOffsetInAnchor), DOWNSTREAM));
 }
 
-KURL AccessibilityRenderObject::url() const
+URL AccessibilityRenderObject::url() const
 {
     if (isAnchor() && isHTMLAnchorElement(m_renderer->node())) {
         if (HTMLAnchorElement* anchor = toHTMLAnchorElement(anchorElement()))
@@ -1461,7 +1464,7 @@ KURL AccessibilityRenderObject::url() const
     if (isInputImage())
         return toHTMLInputElement(m_renderer->node())->src();
     
-    return KURL();
+    return URL();
 }
 
 bool AccessibilityRenderObject::isUnvisited() const
@@ -2260,7 +2263,7 @@ AccessibilityObject* AccessibilityRenderObject::activeDescendant() const
     if (activeDescendantAttrStr.isNull() || activeDescendantAttrStr.isEmpty())
         return 0;
     
-    Element* target = element->treeScope()->getElementById(activeDescendantAttrStr);
+    Element* target = element->treeScope().getElementById(activeDescendantAttrStr);
     if (!target)
         return 0;
     
@@ -2298,11 +2301,11 @@ void AccessibilityRenderObject::handleAriaExpandedChanged()
     
     // Post that the row count changed.
     if (containerParent)
-        axObjectCache()->postNotification(containerParent, document(), AXObjectCache::AXRowCountChanged, true);
+        axObjectCache()->postNotification(containerParent, document(), AXObjectCache::AXRowCountChanged);
 
     // Post that the specific row either collapsed or expanded.
     if (roleValue() == RowRole || roleValue() == TreeItemRole)
-        axObjectCache()->postNotification(this, document(), isExpanded() ? AXObjectCache::AXRowExpanded : AXObjectCache::AXRowCollapsed, true);
+        axObjectCache()->postNotification(this, document(), isExpanded() ? AXObjectCache::AXRowExpanded : AXObjectCache::AXRowCollapsed);
 }
 
 void AccessibilityRenderObject::handleActiveDescendantChanged()
@@ -2315,7 +2318,7 @@ void AccessibilityRenderObject::handleActiveDescendantChanged()
     AccessibilityRenderObject* activedescendant = static_cast<AccessibilityRenderObject*>(activeDescendant());
     
     if (activedescendant && shouldNotifyActiveDescendant())
-        renderer()->document().axObjectCache()->postNotification(m_renderer, AXObjectCache::AXActiveDescendantChanged, true);
+        renderer()->document().axObjectCache()->postNotification(m_renderer, AXObjectCache::AXActiveDescendantChanged);
 }
 
 AccessibilityObject* AccessibilityRenderObject::correspondingControlForLabelElement() const
@@ -2708,10 +2711,10 @@ void AccessibilityRenderObject::textChanged()
             continue;
         
         if (parent->supportsARIALiveRegion())
-            cache->postNotification(renderParent, AXObjectCache::AXLiveRegionChanged, true);
+            cache->postNotification(renderParent, AXObjectCache::AXLiveRegionChanged);
 
         if (parent->isARIATextControl() && !parent->isNativeTextControl() && !parent->node()->rendererIsEditable())
-            cache->postNotification(renderParent, AXObjectCache::AXValueChanged, true);
+            cache->postNotification(renderParent, AXObjectCache::AXValueChanged);
     }
 }
 
@@ -3363,13 +3366,13 @@ String AccessibilityRenderObject::passwordFieldValue() const
     // Look for the RenderText object in the RenderObject tree for this input field.
     RenderObject* renderer = node()->renderer();
     while (renderer && !renderer->isText())
-        renderer = renderer->firstChild();
+        renderer = toRenderElement(renderer)->firstChild();
 
     if (!renderer || !renderer->isText())
         return String();
 
     // Return the text that is actually being rendered in the input field.
-    return static_cast<RenderText*>(renderer)->textWithoutTranscoding();
+    return static_cast<RenderText*>(renderer)->textWithoutConvertingBackslashToYenSymbol();
 #else
     // It seems only GTK is interested in this at the moment.
     return String();

@@ -35,7 +35,6 @@
 #include "ConsoleAPITypes.h"
 #include "ConsoleTypes.h"
 #include "Element.h"
-#include "EventContext.h"
 #include "FormData.h"
 #include "Frame.h"
 #include "HitTestResult.h"
@@ -60,7 +59,6 @@ class DOMWrapperWorld;
 class Database;
 class Document;
 class Element;
-class EventContext;
 class EventLoopInput;
 class DocumentLoader;
 class DocumentStyleSheetCollection;
@@ -73,7 +71,7 @@ class InspectorCSSOMWrappers;
 class InspectorInstrumentation;
 class InspectorTimelineAgent;
 class InstrumentingAgents;
-class KURL;
+class URL;
 class Node;
 class PseudoElement;
 class RenderLayer;
@@ -120,7 +118,7 @@ private:
 
 class InspectorInstrumentation {
 public:
-    static void didClearWindowObjectInWorld(Frame*, DOMWrapperWorld*);
+    static void didClearWindowObjectInWorld(Frame*, DOMWrapperWorld&);
     static bool isDebuggerPaused(Frame*);
 
     static void willInsertDOMNode(Document*, Node* parent);
@@ -154,7 +152,7 @@ public:
     static void didCallFunction(const InspectorInstrumentationCookie&);
     static InspectorInstrumentationCookie willDispatchXHRReadyStateChangeEvent(ScriptExecutionContext*, XMLHttpRequest*);
     static void didDispatchXHRReadyStateChangeEvent(const InspectorInstrumentationCookie&);
-    static InspectorInstrumentationCookie willDispatchEvent(Document*, const Event&, DOMWindow*, Node*, const EventPath&);
+    static InspectorInstrumentationCookie willDispatchEvent(Document*, const Event&, bool hasEventListeners);
     static void didDispatchEvent(const InspectorInstrumentationCookie&);
     static InspectorInstrumentationCookie willHandleEvent(ScriptExecutionContext*, Event*);
     static void didHandleEvent(const InspectorInstrumentationCookie&);
@@ -181,7 +179,7 @@ public:
     static InspectorInstrumentationCookie willRecalculateStyle(Document*);
     static void didRecalculateStyle(const InspectorInstrumentationCookie&);
     static void didScheduleStyleRecalculation(Document*);
-    static InspectorInstrumentationCookie willMatchRule(Document*, StyleRule*, InspectorCSSOMWrappers&, DocumentStyleSheetCollection*);
+    static InspectorInstrumentationCookie willMatchRule(Document*, StyleRule*, InspectorCSSOMWrappers&, DocumentStyleSheetCollection&);
     static void didMatchRule(const InspectorInstrumentationCookie&, bool matched);
     static InspectorInstrumentationCookie willProcessRule(Document*, StyleRule*, StyleResolver&);
     static void didProcessRule(const InspectorInstrumentationCookie&);
@@ -207,7 +205,7 @@ public:
     static void didFinishLoading(Frame*, DocumentLoader*, unsigned long identifier, double finishTime);
     static void didFailLoading(Frame*, DocumentLoader*, unsigned long identifier, const ResourceError&);
     static void documentThreadableLoaderStartedLoadingForClient(ScriptExecutionContext*, unsigned long identifier, ThreadableLoaderClient*);
-    static void willLoadXHR(ScriptExecutionContext*, ThreadableLoaderClient*, const String&, const KURL&, bool, PassRefPtr<FormData>, const HTTPHeaderMap&, bool);
+    static void willLoadXHR(ScriptExecutionContext*, ThreadableLoaderClient*, const String&, const URL&, bool, PassRefPtr<FormData>, const HTTPHeaderMap&, bool);
     static void didFailXHRLoading(ScriptExecutionContext*, ThreadableLoaderClient*);
     static void didFinishXHRLoading(ScriptExecutionContext*, ThreadableLoaderClient*, unsigned long identifier, const String& sourceString, const String& url, const String& sendURL, unsigned sendLineNumber);
     static void didReceiveXHRResponse(ScriptExecutionContext*, unsigned long identifier);
@@ -267,7 +265,7 @@ public:
 
 #if ENABLE(WORKERS)
     static bool shouldPauseDedicatedWorkerOnStart(ScriptExecutionContext*);
-    static void didStartWorkerGlobalScope(ScriptExecutionContext*, WorkerGlobalScopeProxy*, const KURL&);
+    static void didStartWorkerGlobalScope(ScriptExecutionContext*, WorkerGlobalScopeProxy*, const URL&);
     static void workerGlobalScopeTerminated(ScriptExecutionContext*, WorkerGlobalScopeProxy*);
     static void willEvaluateWorkerScript(WorkerGlobalScope*, int workerThreadStartMode);
 #endif
@@ -289,7 +287,7 @@ public:
 #endif
 
 #if ENABLE(WEB_SOCKETS)
-    static void didCreateWebSocket(Document*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol);
+    static void didCreateWebSocket(Document*, unsigned long identifier, const URL& requestURL, const URL& documentURL, const String& protocol);
     static void willSendWebSocketHandshakeRequest(Document*, unsigned long identifier, const ResourceRequest&);
     static void didReceiveWebSocketHandshakeResponse(Document*, unsigned long identifier, const ResourceResponse&);
     static void didCloseWebSocket(Document*, unsigned long identifier);
@@ -342,7 +340,7 @@ public:
 
 private:
 #if ENABLE(INSPECTOR)
-    static void didClearWindowObjectInWorldImpl(InstrumentingAgents*, Frame*, DOMWrapperWorld*);
+    static void didClearWindowObjectInWorldImpl(InstrumentingAgents*, Frame*, DOMWrapperWorld&);
     static bool isDebuggerPausedImpl(InstrumentingAgents*);
 
     static void willInsertDOMNodeImpl(InstrumentingAgents*, Node* parent);
@@ -377,7 +375,7 @@ private:
     static void didCallFunctionImpl(const InspectorInstrumentationCookie&);
     static InspectorInstrumentationCookie willDispatchXHRReadyStateChangeEventImpl(InstrumentingAgents*, XMLHttpRequest*, ScriptExecutionContext*);
     static void didDispatchXHRReadyStateChangeEventImpl(const InspectorInstrumentationCookie&);
-    static InspectorInstrumentationCookie willDispatchEventImpl(InstrumentingAgents*, const Event&, DOMWindow*, Node*, const EventPath&, Document*);
+    static InspectorInstrumentationCookie willDispatchEventImpl(InstrumentingAgents*, const Event&, bool hasEventListeners, Document*);
     static InspectorInstrumentationCookie willHandleEventImpl(InstrumentingAgents*, Event*);
     static void didHandleEventImpl(const InspectorInstrumentationCookie&);
     static void didDispatchEventImpl(const InspectorInstrumentationCookie&);
@@ -402,7 +400,7 @@ private:
     static InspectorInstrumentationCookie willRecalculateStyleImpl(InstrumentingAgents*, Frame*);
     static void didRecalculateStyleImpl(const InspectorInstrumentationCookie&);
     static void didScheduleStyleRecalculationImpl(InstrumentingAgents*, Document*);
-    static InspectorInstrumentationCookie willMatchRuleImpl(InstrumentingAgents*, StyleRule*, InspectorCSSOMWrappers&, DocumentStyleSheetCollection*);
+    static InspectorInstrumentationCookie willMatchRuleImpl(InstrumentingAgents*, StyleRule*, InspectorCSSOMWrappers&, DocumentStyleSheetCollection&);
     static void didMatchRuleImpl(const InspectorInstrumentationCookie&, bool matched);
     static InspectorInstrumentationCookie willProcessRuleImpl(InstrumentingAgents*, StyleRule*, StyleResolver&);
     static void didProcessRuleImpl(const InspectorInstrumentationCookie&);
@@ -430,7 +428,7 @@ private:
     static void didFinishLoadingImpl(InstrumentingAgents*, unsigned long identifier, DocumentLoader*, double finishTime);
     static void didFailLoadingImpl(InstrumentingAgents*, unsigned long identifier, DocumentLoader*, const ResourceError&);
     static void documentThreadableLoaderStartedLoadingForClientImpl(InstrumentingAgents*, unsigned long identifier, ThreadableLoaderClient*);
-    static void willLoadXHRImpl(InstrumentingAgents*, ThreadableLoaderClient*, const String&, const KURL&, bool, PassRefPtr<FormData>, const HTTPHeaderMap&, bool);
+    static void willLoadXHRImpl(InstrumentingAgents*, ThreadableLoaderClient*, const String&, const URL&, bool, PassRefPtr<FormData>, const HTTPHeaderMap&, bool);
     static void didFailXHRLoadingImpl(InstrumentingAgents*, ThreadableLoaderClient*);
     static void didFinishXHRLoadingImpl(InstrumentingAgents*, ThreadableLoaderClient*, unsigned long identifier, const String& sourceString, const String& url, const String& sendURL, unsigned sendLineNumber);
     static void didReceiveXHRResponseImpl(InstrumentingAgents*, unsigned long identifier);
@@ -487,12 +485,12 @@ private:
 
 #if ENABLE(WORKERS)
     static bool shouldPauseDedicatedWorkerOnStartImpl(InstrumentingAgents*);
-    static void didStartWorkerGlobalScopeImpl(InstrumentingAgents*, WorkerGlobalScopeProxy*, const KURL&);
+    static void didStartWorkerGlobalScopeImpl(InstrumentingAgents*, WorkerGlobalScopeProxy*, const URL&);
     static void workerGlobalScopeTerminatedImpl(InstrumentingAgents*, WorkerGlobalScopeProxy*);
 #endif
 
 #if ENABLE(WEB_SOCKETS)
-    static void didCreateWebSocketImpl(InstrumentingAgents*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol, Document*);
+    static void didCreateWebSocketImpl(InstrumentingAgents*, unsigned long identifier, const URL& requestURL, const URL& documentURL, const String& protocol, Document*);
     static void willSendWebSocketHandshakeRequestImpl(InstrumentingAgents*, unsigned long identifier, const ResourceRequest&, Document*);
     static void didReceiveWebSocketHandshakeResponseImpl(InstrumentingAgents*, unsigned long identifier, const ResourceResponse&, Document*);
     static void didCloseWebSocketImpl(InstrumentingAgents*, unsigned long identifier, Document*);
@@ -552,7 +550,7 @@ private:
 #endif
 };
 
-inline void InspectorInstrumentation::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWorld* world)
+inline void InspectorInstrumentation::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWorld& world)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
@@ -923,18 +921,17 @@ inline void InspectorInstrumentation::didDispatchXHRReadyStateChangeEvent(const 
 #endif
 }
 
-inline InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEvent(Document* document, const Event& event, DOMWindow* window, Node* node, const EventPath& eventPath)
+inline InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEvent(Document* document, const Event& event, bool hasEventListeners)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(InspectorInstrumentationCookie());
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
-        return willDispatchEventImpl(instrumentingAgents, event, window, node, eventPath, document);
+        return willDispatchEventImpl(instrumentingAgents, event, hasEventListeners, document);
 #else
     UNUSED_PARAM(document);
     UNUSED_PARAM(event);
     UNUSED_PARAM(window);
     UNUSED_PARAM(node);
-    UNUSED_PARAM(eventPath);
 #endif
     return InspectorInstrumentationCookie();
 }
@@ -1223,7 +1220,7 @@ inline void InspectorInstrumentation::didScheduleStyleRecalculation(Document* do
 #endif
 }
 
-inline InspectorInstrumentationCookie InspectorInstrumentation::willMatchRule(Document* document, StyleRule* rule, InspectorCSSOMWrappers& inspectorCSSOMWrappers, DocumentStyleSheetCollection* styleSheetCollection)
+inline InspectorInstrumentationCookie InspectorInstrumentation::willMatchRule(Document* document, StyleRule* rule, InspectorCSSOMWrappers& inspectorCSSOMWrappers, DocumentStyleSheetCollection& styleSheetCollection)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(InspectorInstrumentationCookie());
@@ -1544,7 +1541,7 @@ inline void InspectorInstrumentation::documentThreadableLoaderStartedLoadingForC
 #endif
 }
 
-inline void InspectorInstrumentation::willLoadXHR(ScriptExecutionContext* context, ThreadableLoaderClient* client, const String& method, const KURL& url, bool async, PassRefPtr<FormData> formData, const HTTPHeaderMap& headers, bool includeCredentials)
+inline void InspectorInstrumentation::willLoadXHR(ScriptExecutionContext* context, ThreadableLoaderClient* client, const String& method, const URL& url, bool async, PassRefPtr<FormData> formData, const HTTPHeaderMap& headers, bool includeCredentials)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForContext(context))
@@ -1846,7 +1843,7 @@ inline bool InspectorInstrumentation::shouldPauseDedicatedWorkerOnStart(ScriptEx
     return false;
 }
 
-inline void InspectorInstrumentation::didStartWorkerGlobalScope(ScriptExecutionContext* context, WorkerGlobalScopeProxy* proxy, const KURL& url)
+inline void InspectorInstrumentation::didStartWorkerGlobalScope(ScriptExecutionContext* context, WorkerGlobalScopeProxy* proxy, const URL& url)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForContext(context))
@@ -1873,7 +1870,7 @@ inline void InspectorInstrumentation::workerGlobalScopeTerminated(ScriptExecutio
 
 
 #if ENABLE(WEB_SOCKETS)
-inline void InspectorInstrumentation::didCreateWebSocket(Document* document, unsigned long identifier, const KURL& requestURL, const KURL& documentURL, const String& protocol)
+inline void InspectorInstrumentation::didCreateWebSocket(Document* document, unsigned long identifier, const URL& requestURL, const URL& documentURL, const String& protocol)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))

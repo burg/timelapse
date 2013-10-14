@@ -153,18 +153,18 @@ void HTMLCanvasElement::removeObserver(CanvasObserver* observer)
 
 void HTMLCanvasElement::setHeight(int value)
 {
-    setAttribute(heightAttr, String::number(value));
+    setIntegralAttribute(heightAttr, value);
 }
 
 void HTMLCanvasElement::setWidth(int value)
 {
-    setAttribute(widthAttr, String::number(value));
+    setIntegralAttribute(widthAttr, value);
 }
 
 #if ENABLE(WEBGL)
 static bool requiresAcceleratedCompositingForWebGL()
 {
-#if PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(QT)
+#if PLATFORM(GTK) || PLATFORM(EFL)
     return false;
 #else
     return true;
@@ -262,8 +262,8 @@ bool HTMLCanvasElement::is2dType(const String& type)
 #if ENABLE(WEBGL)
 bool HTMLCanvasElement::is3dType(const String& type)
 {
-    // Accept the legacy "webkit-3d" name as well as the provisional "experimental-webgl" name.
-    return type == "webkit-3d" || type == "experimental-webgl";
+    // Retain support for the legacy "webkit-3d" name.
+    return type == "webgl" || type == "experimental-webgl" || type == "webkit-3d";
 }
 #endif
 
@@ -340,7 +340,7 @@ void HTMLCanvasElement::reset()
         static_cast<WebGLRenderingContext*>(m_context.get())->reshape(width(), height());
 #endif
 
-    if (RenderObject* renderer = this->renderer()) {
+    if (auto renderer = this->renderer()) {
         if (m_rendererIsCanvas) {
             if (oldSize != size()) {
                 toRenderHTMLCanvas(renderer)->canvasSizeChanged();

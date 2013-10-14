@@ -38,9 +38,6 @@ static URLSchemesMap& localURLSchemes()
 #if PLATFORM(MAC)
         localSchemes.add("applewebdata");
 #endif
-#if PLATFORM(QT)
-        localSchemes.add("qrc");
-#endif
     }
 
     return localSchemes;
@@ -103,9 +100,6 @@ static URLSchemesMap& canDisplayOnlyIfCanRequestSchemes()
 #if ENABLE(BLOB)
     if (canDisplayOnlyIfCanRequestSchemes.isEmpty()) {
         canDisplayOnlyIfCanRequestSchemes.add("blob");
-#if ENABLE(FILE_SYSTEM)
-        canDisplayOnlyIfCanRequestSchemes.add("filesystem");
-#endif
     }
 #endif // ENABLE(BLOB)
 

@@ -27,6 +27,9 @@
 #include "ThunkGenerators.h"
 
 #include "CodeBlock.h"
+#include "JITOperations.h"
+#include "JSArray.h"
+#include "JSArrayIterator.h"
 #include "JSStack.h"
 #include "Operations.h"
 #include "SpecializedThunkJIT.h"
@@ -38,133 +41,236 @@
 
 namespace JSC {
 
-static JSInterfaceJIT::Call generateSlowCaseFor(VM* vm, JSInterfaceJIT& jit)
+inline void emitPointerValidation(CCallHelpers& jit, GPRReg pointerGPR)
 {
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::regT2);
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::ScopeChain, JSInterfaceJIT::regT2, JSInterfaceJIT::regT2);
-    jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT2, JSStack::ScopeChain);
-
-    // Also initialize ReturnPC and CodeBlock, like a JS function would.
-    jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3);
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT3, JSStack::ReturnPC);
-    jit.emitPutImmediateToCallFrameHeader(0, JSStack::CodeBlock);
-
-    jit.storePtr(JSInterfaceJIT::callFrameRegister, &vm->topCallFrame);
-    jit.restoreArgumentReference();
-    JSInterfaceJIT::Call callNotJSFunction = jit.call();
-    jit.emitGetFromCallFrameHeaderPtr(JSStack::CallerFrame, JSInterfaceJIT::callFrameRegister);
-    jit.restoreReturnAddressBeforeReturn(JSInterfaceJIT::regT3);
-    jit.ret();
-    
-    return callNotJSFunction;
+#if !ASSERT_DISABLED
+    CCallHelpers::Jump isNonZero = jit.branchTestPtr(CCallHelpers::NonZero, pointerGPR);
+    jit.breakpoint();
+    isNonZero.link(&jit);
+    jit.push(pointerGPR);
+    jit.load8(pointerGPR, pointerGPR);
+    jit.pop(pointerGPR);
+#else
+    UNUSED_PARAM(jit);
+    UNUSED_PARAM(pointerGPR);
+#endif
 }
 
-static MacroAssemblerCodeRef linkForGenerator(VM* vm, FunctionPtr lazyLink, FunctionPtr notJSFunction, const char* name)
+MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(VM* vm)
 {
-    JSInterfaceJIT jit(vm);
+    CCallHelpers jit(vm);
     
-    JSInterfaceJIT::JumpList slowCase;
+    // We will jump to here if the JIT code thinks it's making a call, but the
+    // linking helper (C++ code) decided to throw an exception instead. We will
+    // have saved the callReturnIndex in the first arguments of JITStackFrame.
+    // Note that the return address will be on the stack at this point, so we
+    // need to remove it and drop it on the floor, since we don't care about it.
+    // Finally note that the call frame register points at the callee frame, so
+    // we need to pop it.
+    jit.preserveReturnAddressAfterCall(GPRInfo::nonPreservedNonReturnGPR);
+    jit.loadPtr(
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::CallerFrame),
+        GPRInfo::callFrameRegister);
+#if USE(JSVALUE64)
+    jit.peek64(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#else
+    jit.peek(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#endif
+    jit.setupArgumentsWithExecState(GPRInfo::nonPreservedNonReturnGPR);
+    jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(lookupExceptionHandler)), GPRInfo::nonArgGPR0);
+    emitPointerValidation(jit, GPRInfo::nonArgGPR0);
+    jit.call(GPRInfo::nonArgGPR0);
+    emitPointerValidation(jit, GPRInfo::returnValueGPR2);
+    jit.jump(GPRInfo::returnValueGPR2);
+    
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    return FINALIZE_CODE(patchBuffer, ("Throw exception from call slow path thunk"));
+}
+
+static void slowPathFor(
+    CCallHelpers& jit, VM* vm, P_JITOperation_E slowPathFunction)
+{
+    jit.preserveReturnAddressAfterCall(GPRInfo::nonArgGPR2);
+    emitPointerValidation(jit, GPRInfo::nonArgGPR2);
+    jit.storePtr(
+        GPRInfo::nonArgGPR2,
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC));
+    jit.storePtr(GPRInfo::callFrameRegister, &vm->topCallFrame);
+#if USE(JSVALUE64)
+    jit.poke64(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#else
+    jit.poke(GPRInfo::nonPreservedNonReturnGPR, JITSTACKFRAME_ARGS_INDEX);
+#endif
+    jit.setupArgumentsExecState();
+    jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(slowPathFunction)), GPRInfo::nonArgGPR0);
+    emitPointerValidation(jit, GPRInfo::nonArgGPR0);
+    jit.call(GPRInfo::nonArgGPR0);
+    
+    // This slow call will return the address of one of the following:
+    // 1) Exception throwing thunk.
+    // 2) Host call return value returner thingy.
+    // 3) The function to call.
+    jit.loadPtr(
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC),
+        GPRInfo::nonPreservedNonReturnGPR);
+    jit.storePtr(
+        CCallHelpers::TrustedImmPtr(0),
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ReturnPC));
+    emitPointerValidation(jit, GPRInfo::nonPreservedNonReturnGPR);
+    jit.restoreReturnAddressBeforeReturn(GPRInfo::nonPreservedNonReturnGPR);
+    emitPointerValidation(jit, GPRInfo::returnValueGPR);
+    jit.jump(GPRInfo::returnValueGPR);
+}
+
+static MacroAssemblerCodeRef linkForThunkGenerator(
+    VM* vm, CodeSpecializationKind kind)
+{
+    // The return address is on the stack or in the link register. We will hence
+    // save the return address to the call frame while we make a C++ function call
+    // to perform linking and lazy compilation if necessary. We expect the callee
+    // to be in nonArgGPR0/nonArgGPR1 (payload/tag), the call frame to have already
+    // been adjusted, nonPreservedNonReturnGPR holds the exception handler index,
+    // and all other registers to be available for use. We use JITStackFrame::args
+    // to save important information across calls.
+    
+    CCallHelpers jit(vm);
+    
+    slowPathFor(jit, vm, kind == CodeForCall ? operationLinkCall : operationLinkConstruct);
+    
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    return FINALIZE_CODE(
+        patchBuffer,
+        ("Link %s slow path thunk", kind == CodeForCall ? "call" : "construct"));
+}
+
+MacroAssemblerCodeRef linkCallThunkGenerator(VM* vm)
+{
+    return linkForThunkGenerator(vm, CodeForCall);
+}
+
+MacroAssemblerCodeRef linkConstructThunkGenerator(VM* vm)
+{
+    return linkForThunkGenerator(vm, CodeForConstruct);
+}
+
+// For closure optimizations, we only include calls, since if you're using closures for
+// object construction then you're going to lose big time anyway.
+MacroAssemblerCodeRef linkClosureCallThunkGenerator(VM* vm)
+{
+    CCallHelpers jit(vm);
+    
+    slowPathFor(jit, vm, operationLinkClosureCall);
+    
+    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
+    return FINALIZE_CODE(patchBuffer, ("Link closure call slow path thunk"));
+}
+
+static MacroAssemblerCodeRef virtualForThunkGenerator(
+    VM* vm, CodeSpecializationKind kind)
+{
+    // The return address is on the stack, or in the link register. We will hence
+    // jump to the callee, or save the return address to the call frame while we
+    // make a C++ function call to the appropriate JIT operation.
+
+    CCallHelpers jit(vm);
+    
+    CCallHelpers::JumpList slowCase;
+
+    // FIXME: we should have a story for eliminating these checks. In many cases,
+    // the DFG knows that the value is definitely a cell, or definitely a function.
     
 #if USE(JSVALUE64)
-    slowCase.append(jit.emitJumpIfNotJSCell(JSInterfaceJIT::regT0));
-    slowCase.append(jit.emitJumpIfNotType(JSInterfaceJIT::regT0, JSInterfaceJIT::regT1, JSFunctionType));
-#else // USE(JSVALUE64)
-    slowCase.append(jit.branch32(JSInterfaceJIT::NotEqual, JSInterfaceJIT::regT1, JSInterfaceJIT::TrustedImm32(JSValue::CellTag)));
-    slowCase.append(jit.emitJumpIfNotType(JSInterfaceJIT::regT0, JSInterfaceJIT::regT1, JSFunctionType));
-#endif // USE(JSVALUE64)
-
-    // Finish canonical initialization before JS function call.
-    jit.loadPtr(JSInterfaceJIT::Address(JSInterfaceJIT::regT0, JSFunction::offsetOfScopeChain()), JSInterfaceJIT::regT1);
-    jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
-
-    // Also initialize ReturnPC for use by lazy linking and exceptions.
-    jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3);
-    jit.emitPutToCallFrameHeader(JSInterfaceJIT::regT3, JSStack::ReturnPC);
-    
-    jit.storePtr(JSInterfaceJIT::callFrameRegister, &vm->topCallFrame);
-    jit.restoreArgumentReference();
-    JSInterfaceJIT::Call callLazyLink = jit.call();
-    jit.restoreReturnAddressBeforeReturn(JSInterfaceJIT::regT3);
-    jit.jump(JSInterfaceJIT::regT0);
-    
-    slowCase.link(&jit);
-    JSInterfaceJIT::Call callNotJSFunction = generateSlowCaseFor(vm, jit);
-    
-    LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
-    patchBuffer.link(callLazyLink, lazyLink);
-    patchBuffer.link(callNotJSFunction, notJSFunction);
-    
-    return FINALIZE_CODE(patchBuffer, ("link %s trampoline", name));
-}
-
-MacroAssemblerCodeRef linkCallGenerator(VM* vm)
-{
-    return linkForGenerator(vm, FunctionPtr(cti_vm_lazyLinkCall), FunctionPtr(cti_op_call_NotJSFunction), "call");
-}
-
-MacroAssemblerCodeRef linkConstructGenerator(VM* vm)
-{
-    return linkForGenerator(vm, FunctionPtr(cti_vm_lazyLinkConstruct), FunctionPtr(cti_op_construct_NotJSConstruct), "construct");
-}
-
-MacroAssemblerCodeRef linkClosureCallGenerator(VM* vm)
-{
-    return linkForGenerator(vm, FunctionPtr(cti_vm_lazyLinkClosureCall), FunctionPtr(cti_op_call_NotJSFunction), "closure call");
-}
-
-static MacroAssemblerCodeRef virtualForGenerator(VM* vm, FunctionPtr compile, FunctionPtr notJSFunction, const char* name, CodeSpecializationKind kind)
-{
-    JSInterfaceJIT jit(vm);
-    
-    JSInterfaceJIT::JumpList slowCase;
-
-#if USE(JSVALUE64)    
-    slowCase.append(jit.emitJumpIfNotJSCell(JSInterfaceJIT::regT0));
-#else // USE(JSVALUE64)
-    slowCase.append(jit.branch32(JSInterfaceJIT::NotEqual, JSInterfaceJIT::regT1, JSInterfaceJIT::TrustedImm32(JSValue::CellTag)));
-#endif // USE(JSVALUE64)
-    slowCase.append(jit.emitJumpIfNotType(JSInterfaceJIT::regT0, JSInterfaceJIT::regT1, JSFunctionType));
-
-    // Finish canonical initialization before JS function call.
-    jit.loadPtr(JSInterfaceJIT::Address(JSInterfaceJIT::regT0, JSFunction::offsetOfScopeChain()), JSInterfaceJIT::regT1);
-    jit.emitPutCellToCallFrameHeader(JSInterfaceJIT::regT1, JSStack::ScopeChain);
-
-    jit.loadPtr(JSInterfaceJIT::Address(JSInterfaceJIT::regT0, JSFunction::offsetOfExecutable()), JSInterfaceJIT::regT2);
-    JSInterfaceJIT::Jump hasCodeBlock1 = jit.branch32(JSInterfaceJIT::GreaterThanOrEqual, JSInterfaceJIT::Address(JSInterfaceJIT::regT2, FunctionExecutable::offsetOfNumParametersFor(kind)), JSInterfaceJIT::TrustedImm32(0));
-    jit.preserveReturnAddressAfterCall(JSInterfaceJIT::regT3);
-    jit.storePtr(JSInterfaceJIT::callFrameRegister, &vm->topCallFrame);
-    jit.restoreArgumentReference();
-    JSInterfaceJIT::Call callCompile = jit.call();
-    jit.restoreReturnAddressBeforeReturn(JSInterfaceJIT::regT3);
-    jit.loadPtr(JSInterfaceJIT::Address(JSInterfaceJIT::regT0, JSFunction::offsetOfExecutable()), JSInterfaceJIT::regT2);
-
-    hasCodeBlock1.link(&jit);
-    jit.loadPtr(JSInterfaceJIT::Address(JSInterfaceJIT::regT2, FunctionExecutable::offsetOfJITCodeWithArityCheckFor(kind)), JSInterfaceJIT::regT0);
-#if !ASSERT_DISABLED
-    JSInterfaceJIT::Jump ok = jit.branchTestPtr(JSInterfaceJIT::NonZero, JSInterfaceJIT::regT0);
-    jit.breakpoint();
-    ok.link(&jit);
+    slowCase.append(
+        jit.branchTest64(
+            CCallHelpers::NonZero, GPRInfo::nonArgGPR0, GPRInfo::tagMaskRegister));
+#else
+    slowCase.append(
+        jit.branch32(
+            CCallHelpers::NotEqual, GPRInfo::nonArgGPR1,
+            CCallHelpers::TrustedImm32(JSValue::CellTag)));
 #endif
-    jit.jump(JSInterfaceJIT::regT0);
+    jit.loadPtr(CCallHelpers::Address(GPRInfo::nonArgGPR0, JSCell::structureOffset()), GPRInfo::nonArgGPR2);
+    slowCase.append(
+        jit.branchPtr(
+            CCallHelpers::NotEqual,
+            CCallHelpers::Address(GPRInfo::nonArgGPR2, Structure::classInfoOffset()),
+            CCallHelpers::TrustedImmPtr(JSFunction::info())));
     
+    // Now we know we have a JSFunction.
+    
+    jit.loadPtr(
+        CCallHelpers::Address(GPRInfo::nonArgGPR0, JSFunction::offsetOfExecutable()),
+        GPRInfo::nonArgGPR2);
+    slowCase.append(
+        jit.branch32(
+            CCallHelpers::LessThan,
+            CCallHelpers::Address(
+                GPRInfo::nonArgGPR2, ExecutableBase::offsetOfNumParametersFor(kind)),
+            CCallHelpers::TrustedImm32(0)));
+    
+    // Now we know that we have a CodeBlock, and we're committed to making a fast
+    // call.
+    
+    jit.loadPtr(
+        CCallHelpers::Address(GPRInfo::nonArgGPR0, JSFunction::offsetOfScopeChain()),
+        GPRInfo::nonArgGPR1);
+#if USE(JSVALUE64)
+    jit.store64(
+        GPRInfo::nonArgGPR1,
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ScopeChain));
+#else
+    jit.storePtr(
+        GPRInfo::nonArgGPR1,
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ScopeChain +
+            OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload)));
+    jit.store32(
+        CCallHelpers::TrustedImm32(JSValue::CellTag),
+        CCallHelpers::Address(
+            GPRInfo::callFrameRegister,
+            static_cast<ptrdiff_t>(sizeof(Register)) * JSStack::ScopeChain +
+            OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag)));
+#endif
+    
+    jit.loadPtr(
+        CCallHelpers::Address(GPRInfo::nonArgGPR2, ExecutableBase::offsetOfJITCodeWithArityCheckFor(kind)),
+        GPRInfo::regT0);
+    
+    // Make a tail call. This will return back to JIT code.
+    emitPointerValidation(jit, GPRInfo::regT0);
+    jit.jump(GPRInfo::regT0);
+
     slowCase.link(&jit);
-    JSInterfaceJIT::Call callNotJSFunction = generateSlowCaseFor(vm, jit);
+    
+    // Here we don't know anything, so revert to the full slow path.
+    
+    slowPathFor(jit, vm, kind == CodeForCall ? operationVirtualCall : operationVirtualConstruct);
     
     LinkBuffer patchBuffer(*vm, &jit, GLOBAL_THUNK_ID);
-    patchBuffer.link(callCompile, compile);
-    patchBuffer.link(callNotJSFunction, notJSFunction);
-    
-    return FINALIZE_CODE(patchBuffer, ("virtual %s trampoline", name));
+    return FINALIZE_CODE(
+        patchBuffer,
+        ("Virtual %s slow path thunk", kind == CodeForCall ? "call" : "construct"));
 }
 
-MacroAssemblerCodeRef virtualCallGenerator(VM* vm)
+MacroAssemblerCodeRef virtualCallThunkGenerator(VM* vm)
 {
-    return virtualForGenerator(vm, FunctionPtr(cti_op_call_jitCompile), FunctionPtr(cti_op_call_NotJSFunction), "call", CodeForCall);
+    return virtualForThunkGenerator(vm, CodeForCall);
 }
 
-MacroAssemblerCodeRef virtualConstructGenerator(VM* vm)
+MacroAssemblerCodeRef virtualConstructThunkGenerator(VM* vm)
 {
-    return virtualForGenerator(vm, FunctionPtr(cti_op_construct_jitCompile), FunctionPtr(cti_op_construct_NotJSConstruct), "construct", CodeForConstruct);
+    return virtualForThunkGenerator(vm, CodeForConstruct);
 }
 
 MacroAssemblerCodeRef stringLengthTrampolineGenerator(VM* vm)
@@ -882,6 +988,98 @@ MacroAssemblerCodeRef imulThunkGenerator(VM* vm)
     return jit.finalize(vm->jitStubs->ctiNativeCall(vm), "imul");
 }
 
+MacroAssemblerCodeRef arrayIteratorNextThunkGenerator(VM* vm)
+{
+    typedef SpecializedThunkJIT::TrustedImm32 TrustedImm32;
+    typedef SpecializedThunkJIT::TrustedImmPtr TrustedImmPtr;
+    typedef SpecializedThunkJIT::Address Address;
+    typedef SpecializedThunkJIT::BaseIndex BaseIndex;
+    typedef SpecializedThunkJIT::Jump Jump;
+    
+    SpecializedThunkJIT jit(vm);
+    // Make sure we're being called on an array iterator, and load m_iteratedObject, and m_nextIndex into regT0 and regT1 respectively
+    jit.loadArgumentWithSpecificClass(JSArrayIterator::info(), SpecializedThunkJIT::ThisArgument, SpecializedThunkJIT::regT4, SpecializedThunkJIT::regT1);
+
+    // Early exit if we don't have a thunk for this form of iteration
+    jit.appendFailure(jit.branch32(SpecializedThunkJIT::AboveOrEqual, Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfIterationKind()), TrustedImm32(ArrayIterateKeyValue)));
+    
+    jit.loadPtr(Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfIteratedObject()), SpecializedThunkJIT::regT0);
+    
+    jit.load32(Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()), SpecializedThunkJIT::regT1);
+    
+    // Pull out the butterfly from iteratedObject
+    jit.loadPtr(Address(SpecializedThunkJIT::regT0, JSCell::structureOffset()), SpecializedThunkJIT::regT2);
+    
+    jit.load8(Address(SpecializedThunkJIT::regT2, Structure::indexingTypeOffset()), SpecializedThunkJIT::regT3);
+    jit.loadPtr(Address(SpecializedThunkJIT::regT0, JSObject::butterflyOffset()), SpecializedThunkJIT::regT2);
+    
+    jit.and32(TrustedImm32(IndexingShapeMask), SpecializedThunkJIT::regT3);
+    
+    Jump notDone = jit.branch32(SpecializedThunkJIT::Below, SpecializedThunkJIT::regT1, Address(SpecializedThunkJIT::regT2, Butterfly::offsetOfPublicLength()));
+    // Return the termination signal to indicate that we've finished
+    jit.move(TrustedImmPtr(vm->iterationTerminator.get()), SpecializedThunkJIT::regT0);
+    jit.returnJSCell(SpecializedThunkJIT::regT0);
+    
+    notDone.link(&jit);
+    
+    
+    Jump notKey = jit.branch32(SpecializedThunkJIT::NotEqual, Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfIterationKind()), TrustedImm32(ArrayIterateKey));
+    // If we're doing key iteration we just need to increment m_nextIndex and return the current value
+    jit.add32(TrustedImm32(1), Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()));
+    jit.returnInt32(SpecializedThunkJIT::regT1);
+    
+    notKey.link(&jit);
+    
+    
+    // Okay, now we're returning a value so make sure we're inside the vector size
+    jit.appendFailure(jit.branch32(SpecializedThunkJIT::AboveOrEqual, SpecializedThunkJIT::regT1, Address(SpecializedThunkJIT::regT2, Butterfly::offsetOfVectorLength())));
+    
+    // So now we perform inline loads for int32, value/undecided, and double storage
+    Jump undecidedStorage = jit.branch32(SpecializedThunkJIT::Equal, SpecializedThunkJIT::regT3, TrustedImm32(UndecidedShape));
+    Jump notContiguousStorage = jit.branch32(SpecializedThunkJIT::NotEqual, SpecializedThunkJIT::regT3, TrustedImm32(ContiguousShape));
+    
+    undecidedStorage.link(&jit);
+    
+    jit.loadPtr(Address(SpecializedThunkJIT::regT0, JSObject::butterflyOffset()), SpecializedThunkJIT::regT2);
+    
+#if USE(JSVALUE64)
+    jit.load64(BaseIndex(SpecializedThunkJIT::regT2, SpecializedThunkJIT::regT1, SpecializedThunkJIT::TimesEight), SpecializedThunkJIT::regT0);
+    Jump notHole = jit.branchTest64(SpecializedThunkJIT::NonZero, SpecializedThunkJIT::regT0);
+    jit.move(JSInterfaceJIT::TrustedImm64(ValueUndefined), JSInterfaceJIT::regT0);
+    notHole.link(&jit);
+    jit.addPtr(TrustedImm32(1), Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()));
+    jit.returnJSValue(SpecializedThunkJIT::regT0);
+#else
+    jit.load32(BaseIndex(SpecializedThunkJIT::regT2, SpecializedThunkJIT::regT1, SpecializedThunkJIT::TimesEight, JSValue::offsetOfTag()), SpecializedThunkJIT::regT3);
+    Jump notHole = jit.branch32(SpecializedThunkJIT::NotEqual, SpecializedThunkJIT::regT3, TrustedImm32(JSValue::EmptyValueTag));
+    jit.move(JSInterfaceJIT::TrustedImm32(JSValue::UndefinedTag), JSInterfaceJIT::regT1);
+    jit.move(JSInterfaceJIT::TrustedImm32(0), JSInterfaceJIT::regT0);
+    jit.add32(TrustedImm32(1), Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()));
+    jit.returnJSValue(SpecializedThunkJIT::regT0, JSInterfaceJIT::regT1);
+    notHole.link(&jit);
+    jit.load32(BaseIndex(SpecializedThunkJIT::regT2, SpecializedThunkJIT::regT1, SpecializedThunkJIT::TimesEight, JSValue::offsetOfPayload()), SpecializedThunkJIT::regT0);
+    jit.add32(TrustedImm32(1), Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()));
+    jit.move(SpecializedThunkJIT::regT3, SpecializedThunkJIT::regT1);
+    jit.returnJSValue(SpecializedThunkJIT::regT0, SpecializedThunkJIT::regT1);
+#endif
+    notContiguousStorage.link(&jit);
+    
+    Jump notInt32Storage = jit.branch32(SpecializedThunkJIT::NotEqual, SpecializedThunkJIT::regT3, TrustedImm32(Int32Shape));
+    jit.loadPtr(Address(SpecializedThunkJIT::regT0, JSObject::butterflyOffset()), SpecializedThunkJIT::regT2);
+    jit.load32(BaseIndex(SpecializedThunkJIT::regT2, SpecializedThunkJIT::regT1, SpecializedThunkJIT::TimesEight, JSValue::offsetOfPayload()), SpecializedThunkJIT::regT0);
+    jit.add32(TrustedImm32(1), Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()));
+    jit.returnInt32(SpecializedThunkJIT::regT0);
+    notInt32Storage.link(&jit);
+    
+    jit.appendFailure(jit.branch32(SpecializedThunkJIT::NotEqual, SpecializedThunkJIT::regT3, TrustedImm32(DoubleShape)));
+    jit.loadPtr(Address(SpecializedThunkJIT::regT0, JSObject::butterflyOffset()), SpecializedThunkJIT::regT2);
+    jit.loadDouble(BaseIndex(SpecializedThunkJIT::regT2, SpecializedThunkJIT::regT1, SpecializedThunkJIT::TimesEight), SpecializedThunkJIT::fpRegT0);
+    jit.add32(TrustedImm32(1), Address(SpecializedThunkJIT::regT4, JSArrayIterator::offsetOfNextIndex()));
+    jit.returnDouble(SpecializedThunkJIT::fpRegT0);
+    
+    return jit.finalize(vm->jitStubs->ctiNativeCall(vm), "array-iterator-next");
+}
+    
 }
 
 #endif // ENABLE(JIT)

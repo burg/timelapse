@@ -113,7 +113,7 @@ gboolean axObjectEventListener(GSignalInvocationHint* signalHint, unsigned numPa
     if (loggingAccessibilityEvents)
         printAccessibilityEvent(accessible, signalName.get(), signalValue.get());
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(EFL)
     WKBundlePageRef page = InjectedBundle::shared().page()->page();
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     JSContextRef jsContext = WKBundleFrameGetJavaScriptContext(mainFrame);
@@ -174,7 +174,7 @@ void AccessibilityNotificationHandler::setNotificationFunctionCallback(JSValueRe
 
     m_notificationFunctionCallback = notificationFunctionCallback;
 
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(EFL)
     WKBundlePageRef page = InjectedBundle::shared().page()->page();
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     JSContextRef jsContext = WKBundleFrameGetJavaScriptContext(mainFrame);
@@ -205,7 +205,7 @@ void AccessibilityNotificationHandler::setNotificationFunctionCallback(JSValueRe
 
 void AccessibilityNotificationHandler::removeAccessibilityNotificationHandler()
 {
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(EFL)
     WKBundlePageRef page = InjectedBundle::shared().page()->page();
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(page);
     JSContextRef jsContext = WKBundleFrameGetJavaScriptContext(mainFrame);
@@ -244,8 +244,8 @@ void AccessibilityNotificationHandler::connectAccessibilityCallbacks()
 
 bool AccessibilityNotificationHandler::disconnectAccessibilityCallbacks()
 {
-    // Only disconnect if logging is off and there is no notification handler.
-    if (loggingAccessibilityEvents || !notificationHandlers.isEmpty() || globalNotificationHandler)
+    // Only disconnect if there is no notification handler.
+    if (!notificationHandlers.isEmpty() || globalNotificationHandler)
         return false;
 
     // AtkObject signals.

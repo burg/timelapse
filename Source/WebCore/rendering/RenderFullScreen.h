@@ -36,20 +36,20 @@ class RenderFullScreen FINAL : public RenderFlexibleBox {
 public:
     static RenderFullScreen* createAnonymous(Document&);
 
-    virtual bool isRenderFullScreen() const { return true; }
-    virtual const char* renderName() const { return "RenderFullScreen"; }
+    virtual bool isRenderFullScreen() const OVERRIDE { return true; }
+    virtual const char* renderName() const OVERRIDE { return "RenderFullScreen"; }
 
     void setPlaceholder(RenderBlock*);
     RenderBlock* placeholder() { return m_placeholder; }
     void createPlaceholder(PassRefPtr<RenderStyle>, const LayoutRect& frameRect);
 
 
-    static RenderFullScreen* wrapRenderer(RenderObject*, RenderElement*, Document*);
+    static RenderFullScreen* wrapRenderer(RenderObject*, RenderElement*, Document&);
     void unwrapRenderer();
 
 private:
     RenderFullScreen();
-    virtual void willBeDestroyed();
+    virtual void willBeDestroyed() OVERRIDE;
 
 protected:
     RenderBlock* m_placeholder;

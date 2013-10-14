@@ -44,7 +44,7 @@
 #include "DeviceOrientationData.h"
 #include "DocumentLoader.h"
 #include "Event.h"
-#include "EventContext.h"
+#include "EventDispatcher.h"
 #include "InspectorAgent.h"
 #include "InspectorApplicationCacheAgent.h"
 #include "InspectorCSSAgent.h"
@@ -67,6 +67,7 @@
 #include "InspectorTimelineAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
+#include "MainFrame.h"
 #include "PageDebuggerAgent.h"
 #include "PageRuntimeAgent.h"
 #include "RenderObject.h"
@@ -99,22 +100,6 @@ static HashSet<InstrumentingAgents*>* instrumentingAgentsSet = 0;
 }
 
 int InspectorInstrumentation::s_frontendCounter = 0;
-
-static bool eventHasListeners(const AtomicString& eventType, DOMWindow* window, Node* node, const EventPath& eventPath)
-{
-    if (window && window->hasEventListeners(eventType))
-        return true;
-
-    if (node->hasEventListeners(eventType))
-        return true;
-
-    for (size_t i = 0; i < eventPath.size(); i++) {
-        if (eventPath[i]->node()->hasEventListeners(eventType))
-            return true;
-    }
-
-    return false;
-}
 
 static Frame* frameForScriptExecutionContext(ScriptExecutionContext* context)
 {
@@ -155,7 +140,7 @@ InspectorInstrumentationCookie::~InspectorInstrumentationCookie()
 {
 }
 
-void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgents* instrumentingAgents, Frame* frame, DOMWrapperWorld* world)
+void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgents* instrumentingAgents, Frame* frame, DOMWrapperWorld& world)
 {
     InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent();
     if (pageAgent)
@@ -164,12 +149,12 @@ void InspectorInstrumentation::didClearWindowObjectInWorldImpl(InstrumentingAgen
         inspectorAgent->didClearWindowObjectInWorld(frame, world);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     if (PageDebuggerAgent* debuggerAgent = instrumentingAgents->pageDebuggerAgent()) {
-        if (pageAgent && world == mainThreadNormalWorld() && frame == pageAgent->mainFrame())
+        if (pageAgent && &world == &mainThreadNormalWorld() && frame == pageAgent->mainFrame())
             debuggerAgent->didClearMainFrameWindowObject();
     }
 #endif
     if (PageRuntimeAgent* pageRuntimeAgent = instrumentingAgents->pageRuntimeAgent()) {
-        if (world == mainThreadNormalWorld())
+        if (&world == &mainThreadNormalWorld())
             pageRuntimeAgent->didCreateMainWorldContext(frame);
     }
 }
@@ -376,7 +361,7 @@ InspectorInstrumentationCookie InspectorInstrumentation::willCallFunctionImpl(In
 #if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
-#endif    
+#endif
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -403,17 +388,17 @@ void InspectorInstrumentation::didDispatchXHRReadyStateChangeEventImpl(const Ins
         timelineAgent->didDispatchXHRReadyStateChangeEvent();
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(InstrumentingAgents* instrumentingAgents, const Event& event, DOMWindow* window, Node* node, const EventPath& eventPath, Document* document)
+InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(InstrumentingAgents* instrumentingAgents, const Event& event, bool hasEventListeners, Document* document)
 {
     int timelineAgentId = 0;
     InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent();
-    if (timelineAgent && eventHasListeners(event.type(), window, node, eventPath)) {
+    if (timelineAgent && hasEventListeners) {
         timelineAgent->willDispatchEvent(event, document->frame());
         timelineAgentId = timelineAgent->id();
     }
 #if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->willDispatchEvent(event, window, node);
+        replayAgent->willDispatchEvent(event, document->frame());
 #endif // ENABLE(WEB_REPLAY)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
@@ -449,7 +434,7 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWind
     }
 #if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->willDispatchEventOnWindow(event, window);
+        replayAgent->willDispatchEvent(event, window ? window->frame() : 0);
 #endif // ENABLE(WEB_REPLAY)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
@@ -460,7 +445,7 @@ void InspectorInstrumentation::didDispatchEventOnWindowImpl(const InspectorInstr
         timelineAgent->didDispatchEvent();
 #if ENABLE(WEB_REPLAY)
     if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
-        replayAgent->didDispatchEventOnWindow();
+        replayAgent->didDispatchEvent();
 #endif // ENABLE(WEB_REPLAY)
 }
 
@@ -615,7 +600,7 @@ void InspectorInstrumentation::didScheduleStyleRecalculationImpl(InstrumentingAg
         resourceAgent->didScheduleStyleRecalculation(document);
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willMatchRuleImpl(InstrumentingAgents* instrumentingAgents, StyleRule* rule, InspectorCSSOMWrappers& inspectorCSSOMWrappers, DocumentStyleSheetCollection* sheetCollection)
+InspectorInstrumentationCookie InspectorInstrumentation::willMatchRuleImpl(InstrumentingAgents* instrumentingAgents, StyleRule* rule, InspectorCSSOMWrappers& inspectorCSSOMWrappers, DocumentStyleSheetCollection& sheetCollection)
 {
     InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent();
     if (cssAgent) {
@@ -824,7 +809,7 @@ void InspectorInstrumentation::documentThreadableLoaderStartedLoadingForClientIm
         resourceAgent->documentThreadableLoaderStartedLoadingForClient(identifier, client);
 }
 
-void InspectorInstrumentation::willLoadXHRImpl(InstrumentingAgents* instrumentingAgents, ThreadableLoaderClient* client, const String& method, const KURL& url, bool async, PassRefPtr<FormData> formData, const HTTPHeaderMap& headers, bool includeCredentials)
+void InspectorInstrumentation::willLoadXHRImpl(InstrumentingAgents* instrumentingAgents, ThreadableLoaderClient* client, const String& method, const URL& url, bool async, PassRefPtr<FormData> formData, const HTTPHeaderMap& headers, bool includeCredentials)
 {
     if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
         resourceAgent->willLoadXHR(client, method, url, async, formData, headers, includeCredentials);
@@ -929,14 +914,14 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
     if (!inspectorAgent || !inspectorAgent->developerExtrasEnabled())
         return;
 
-    if (page->frameIsMainFrame(loader->frame())) {
+    if (loader->frame()->isMainFrame()) {
         if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
             consoleAgent->reset();
         if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
             resourceAgent->mainFrameNavigated(loader);
 #if ENABLE(JAVASCRIPT_DEBUGGER)
         if (InspectorProbeAgent* probeAgent = instrumentingAgents->inspectorProbeAgent())
-            probeAgent->clearResources();       
+            probeAgent->clearResources();
         if (InspectorProfilerAgent* profilerAgent = instrumentingAgents->inspectorProfilerAgent())
             profilerAgent->resetState();
         if (InspectorHeapProfilerAgent* heapProfilerAgent = instrumentingAgents->inspectorHeapProfilerAgent())
@@ -1161,7 +1146,7 @@ bool InspectorInstrumentation::shouldPauseDedicatedWorkerOnStartImpl(Instrumenti
     return false;
 }
 
-void InspectorInstrumentation::didStartWorkerGlobalScopeImpl(InstrumentingAgents* instrumentingAgents, WorkerGlobalScopeProxy* workerGlobalScopeProxy, const KURL& url)
+void InspectorInstrumentation::didStartWorkerGlobalScopeImpl(InstrumentingAgents* instrumentingAgents, WorkerGlobalScopeProxy* workerGlobalScopeProxy, const URL& url)
 {
     if (InspectorWorkerAgent* workerAgent = instrumentingAgents->inspectorWorkerAgent())
         workerAgent->didStartWorkerGlobalScope(workerGlobalScopeProxy, url);
@@ -1188,7 +1173,7 @@ void InspectorInstrumentation::workerGlobalScopeTerminatedImpl(InstrumentingAgen
 #endif
 
 #if ENABLE(WEB_SOCKETS)
-void InspectorInstrumentation::didCreateWebSocketImpl(InstrumentingAgents* instrumentingAgents, unsigned long identifier, const KURL& requestURL, const KURL&, const String& protocol, Document* document)
+void InspectorInstrumentation::didCreateWebSocketImpl(InstrumentingAgents* instrumentingAgents, unsigned long identifier, const URL& requestURL, const URL&, const String& protocol, Document* document)
 {
     InspectorAgent* inspectorAgent = instrumentingAgents->inspectorAgent();
     if (!inspectorAgent || !inspectorAgent->developerExtrasEnabled())
@@ -1378,7 +1363,7 @@ bool InspectorInstrumentation::replayAgentEnabled(ScriptExecutionContext* script
     return false;
 #endif
 }
-    
+
 void InspectorInstrumentation::pauseOnNativeEventIfNeeded(InstrumentingAgents* instrumentingAgents, bool isDOMEvent, const String& eventName, bool synchronous)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER)

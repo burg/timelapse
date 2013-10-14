@@ -88,25 +88,24 @@ JSValue JSXMLHttpRequest::open(ExecState* exec)
     if (exec->argumentCount() < 2)
         return exec->vm().throwException(exec, createNotEnoughArgumentsError(exec));
 
-    const KURL& url = impl()->scriptExecutionContext()->completeURL(exec->argument(1).toString(exec)->value(exec));
-    String method = exec->argument(0).toString(exec)->value(exec);
+    const URL& url = impl().scriptExecutionContext()->completeURL(exec->uncheckedArgument(1).toString(exec)->value(exec));
+    String method = exec->uncheckedArgument(0).toString(exec)->value(exec);
 
     ExceptionCode ec = 0;
     if (exec->argumentCount() >= 3) {
-        bool async = exec->argument(2).toBoolean(exec);
+        bool async = exec->uncheckedArgument(2).toBoolean(exec);
+        if (!exec->argument(3).isUndefined()) {
+            String user = valueToStringWithNullCheck(exec, exec->uncheckedArgument(3));
 
-        if (exec->argumentCount() >= 4 && !exec->argument(3).isUndefined()) {
-            String user = valueToStringWithNullCheck(exec, exec->argument(3));
-
-            if (exec->argumentCount() >= 5 && !exec->argument(4).isUndefined()) {
-                String password = valueToStringWithNullCheck(exec, exec->argument(4));
-                impl()->open(method, url, async, user, password, ec);
+            if (!exec->argument(4).isUndefined()) {
+                String password = valueToStringWithNullCheck(exec, exec->uncheckedArgument(4));
+                impl().open(method, url, async, user, password, ec);
             } else
-                impl()->open(method, url, async, user, ec);
+                impl().open(method, url, async, user, ec);
         } else
-            impl()->open(method, url, async, ec);
+            impl().open(method, url, async, ec);
     } else
-        impl()->open(method, url, ec);
+        impl().open(method, url, ec);
 
     setDOMException(exec, ec);
     return jsUndefined();
@@ -146,34 +145,30 @@ private:
 
 JSValue JSXMLHttpRequest::send(ExecState* exec)
 {
-    InspectorInstrumentation::willSendXMLHttpRequest(impl()->scriptExecutionContext(), impl()->url());
+    InspectorInstrumentation::willSendXMLHttpRequest(impl().scriptExecutionContext(), impl().url());
 
     ExceptionCode ec = 0;
-    if (!exec->argumentCount())
-        impl()->send(ec);
-    else {
-        JSValue val = exec->argument(0);
-        if (val.isUndefinedOrNull())
-            impl()->send(ec);
-        else if (val.inherits(JSDocument::info()))
-            impl()->send(toDocument(val), ec);
-        else if (val.inherits(JSBlob::info()))
-            impl()->send(toBlob(val), ec);
-        else if (val.inherits(JSDOMFormData::info()))
-            impl()->send(toDOMFormData(val), ec);
-        else if (val.inherits(JSArrayBuffer::info()))
-            impl()->send(toArrayBuffer(val), ec);
-        else if (val.inherits(JSArrayBufferView::info())) {
-            RefPtr<ArrayBufferView> view = toArrayBufferView(val);
-            impl()->send(view.get(), ec);
-        } else
-            impl()->send(val.toString(exec)->value(exec), ec);
-    }
+    JSValue val = exec->argument(0);
+    if (val.isUndefinedOrNull())
+        impl().send(ec);
+    else if (val.inherits(JSDocument::info()))
+        impl().send(toDocument(val), ec);
+    else if (val.inherits(JSBlob::info()))
+        impl().send(toBlob(val), ec);
+    else if (val.inherits(JSDOMFormData::info()))
+        impl().send(toDOMFormData(val), ec);
+    else if (val.inherits(JSArrayBuffer::info()))
+        impl().send(toArrayBuffer(val), ec);
+    else if (val.inherits(JSArrayBufferView::info())) {
+        RefPtr<ArrayBufferView> view = toArrayBufferView(val);
+        impl().send(view.get(), ec);
+    } else
+        impl().send(val.toString(exec)->value(exec), ec);
 
     SendFunctor functor;
     exec->iterate(functor);
-    impl()->setLastSendLineNumber(functor.line());
-    impl()->setLastSendURL(functor.url());
+    impl().setLastSendLineNumber(functor.line());
+    impl().setLastSendURL(functor.url());
     setDOMException(exec, ec);
     return jsUndefined();
 }
@@ -181,7 +176,7 @@ JSValue JSXMLHttpRequest::send(ExecState* exec)
 JSValue JSXMLHttpRequest::responseText(ExecState* exec) const
 {
     ExceptionCode ec = 0;
-    String text = impl()->responseText(ec);
+    String text = impl().responseText(ec);
     if (ec) {
         setDOMException(exec, ec);
         return jsUndefined();
@@ -191,7 +186,7 @@ JSValue JSXMLHttpRequest::responseText(ExecState* exec) const
 
 JSValue JSXMLHttpRequest::response(ExecState* exec) const
 {
-    switch (impl()->responseTypeCode()) {
+    switch (impl().responseTypeCode()) {
     case XMLHttpRequest::ResponseTypeDefault:
     case XMLHttpRequest::ResponseTypeText:
         return responseText(exec);
@@ -199,19 +194,19 @@ JSValue JSXMLHttpRequest::response(ExecState* exec) const
     case XMLHttpRequest::ResponseTypeJSON:
         {
             // FIXME: Use CachedAttribute for other types as well.
-            if (m_response && impl()->responseCacheIsValid())
+            if (m_response && impl().responseCacheIsValid())
                 return m_response.get();
 
-            if (!impl()->doneWithoutErrors())
+            if (!impl().doneWithoutErrors())
                 return jsNull();
 
-            JSValue value = JSONParse(exec, impl()->responseTextIgnoringResponseType());
+            JSValue value = JSONParse(exec, impl().responseTextIgnoringResponseType());
             if (!value)
                 value = jsNull();
             JSXMLHttpRequest* jsRequest = const_cast<JSXMLHttpRequest*>(this);
             jsRequest->m_response.set(exec->vm(), jsRequest, value);
 
-            impl()->didCacheResponseJSON();
+            impl().didCacheResponseJSON();
 
             return value;
         }
@@ -219,7 +214,7 @@ JSValue JSXMLHttpRequest::response(ExecState* exec) const
     case XMLHttpRequest::ResponseTypeDocument:
         {
             ExceptionCode ec = 0;
-            Document* document = impl()->responseXML(ec);
+            Document* document = impl().responseXML(ec);
             if (ec) {
                 setDOMException(exec, ec);
                 return jsUndefined();
@@ -228,10 +223,10 @@ JSValue JSXMLHttpRequest::response(ExecState* exec) const
         }
 
     case XMLHttpRequest::ResponseTypeBlob:
-        return toJS(exec, globalObject(), impl()->responseBlob());
+        return toJS(exec, globalObject(), impl().responseBlob());
 
     case XMLHttpRequest::ResponseTypeArrayBuffer:
-        return toJS(exec, globalObject(), impl()->responseArrayBuffer());
+        return toJS(exec, globalObject(), impl().responseArrayBuffer());
     }
 
     return jsUndefined();

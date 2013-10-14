@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -42,20 +42,13 @@ struct DumpContext;
 // Describes how to recover a given bytecode virtual register at a given
 // code point.
 enum ValueRecoveryTechnique {
-    // It's already in the stack at the right location.
-    AlreadyInJSStack,
-    // It's already in the stack but unboxed.
-    AlreadyInJSStackAsUnboxedInt32,
-    AlreadyInJSStackAsUnboxedInt52,
-    AlreadyInJSStackAsUnboxedCell,
-    AlreadyInJSStackAsUnboxedBoolean,
-    AlreadyInJSStackAsUnboxedDouble,
     // It's in a register.
     InGPR,
     UnboxedInt32InGPR,
     UnboxedInt52InGPR,
     UnboxedStrictInt52InGPR,
     UnboxedBooleanInGPR,
+    UnboxedCellInGPR,
 #if USE(JSVALUE32_64)
     InPair,
 #endif
@@ -88,48 +81,6 @@ public:
     bool isSet() const { return m_technique != DontKnow; }
     bool operator!() const { return !isSet(); }
     
-    static ValueRecovery alreadyInJSStack()
-    {
-        ValueRecovery result;
-        result.m_technique = AlreadyInJSStack;
-        return result;
-    }
-    
-    static ValueRecovery alreadyInJSStackAsUnboxedInt32()
-    {
-        ValueRecovery result;
-        result.m_technique = AlreadyInJSStackAsUnboxedInt32;
-        return result;
-    }
-    
-    static ValueRecovery alreadyInJSStackAsUnboxedInt52()
-    {
-        ValueRecovery result;
-        result.m_technique = AlreadyInJSStackAsUnboxedInt52;
-        return result;
-    }
-    
-    static ValueRecovery alreadyInJSStackAsUnboxedCell()
-    {
-        ValueRecovery result;
-        result.m_technique = AlreadyInJSStackAsUnboxedCell;
-        return result;
-    }
-    
-    static ValueRecovery alreadyInJSStackAsUnboxedBoolean()
-    {
-        ValueRecovery result;
-        result.m_technique = AlreadyInJSStackAsUnboxedBoolean;
-        return result;
-    }
-    
-    static ValueRecovery alreadyInJSStackAsUnboxedDouble()
-    {
-        ValueRecovery result;
-        result.m_technique = AlreadyInJSStackAsUnboxedDouble;
-        return result;
-    }
-    
     static ValueRecovery inGPR(MacroAssembler::RegisterID gpr, DataFormat dataFormat)
     {
         ASSERT(dataFormat != DataFormatNone);
@@ -145,6 +96,8 @@ public:
             result.m_technique = UnboxedStrictInt52InGPR;
         else if (dataFormat == DataFormatBoolean)
             result.m_technique = UnboxedBooleanInGPR;
+        else if (dataFormat == DataFormatCell)
+            result.m_technique = UnboxedCellInGPR;
         else
             result.m_technique = InGPR;
         result.m_source.gpr = gpr;
@@ -211,7 +164,7 @@ public:
             result.m_technique = DisplacedInJSStack;
             break;
         }
-        result.m_source.virtualReg = virtualReg;
+        result.m_source.virtualReg = virtualReg.offset();
         return result;
     }
     
@@ -240,6 +193,9 @@ public:
         case InGPR:
         case UnboxedInt32InGPR:
         case UnboxedBooleanInGPR:
+        case UnboxedCellInGPR:
+        case UnboxedInt52InGPR:
+        case UnboxedStrictInt52InGPR:
 #if USE(JSVALUE32_64)
         case InPair:
 #endif
@@ -250,24 +206,9 @@ public:
         }
     }
     
-    bool isAlreadyInJSStack() const
-    {
-        switch (technique()) {
-        case AlreadyInJSStack:
-        case AlreadyInJSStackAsUnboxedInt32:
-        case AlreadyInJSStackAsUnboxedInt52:
-        case AlreadyInJSStackAsUnboxedCell:
-        case AlreadyInJSStackAsUnboxedBoolean:
-        case AlreadyInJSStackAsUnboxedDouble:
-            return true;
-        default:
-            return false;
-        }
-    }
-    
     MacroAssembler::RegisterID gpr() const
     {
-        ASSERT(m_technique == InGPR || m_technique == UnboxedInt32InGPR || m_technique == UnboxedBooleanInGPR || m_technique == UInt32InGPR || m_technique == UnboxedInt52InGPR || m_technique == UnboxedStrictInt52InGPR);
+        ASSERT(m_technique == InGPR || m_technique == UnboxedInt32InGPR || m_technique == UnboxedBooleanInGPR || m_technique == UInt32InGPR || m_technique == UnboxedInt52InGPR || m_technique == UnboxedStrictInt52InGPR || m_technique == UnboxedCellInGPR);
         return m_source.gpr;
     }
     
@@ -294,7 +235,7 @@ public:
     VirtualRegister virtualRegister() const
     {
         ASSERT(m_technique == DisplacedInJSStack || m_technique == Int32DisplacedInJSStack || m_technique == DoubleDisplacedInJSStack || m_technique == CellDisplacedInJSStack || m_technique == BooleanDisplacedInJSStack || m_technique == Int52DisplacedInJSStack || m_technique == StrictInt52DisplacedInJSStack);
-        return m_source.virtualReg;
+        return VirtualRegister(m_source.virtualReg);
     }
     
     JSValue constant() const
@@ -303,92 +244,11 @@ public:
         return JSValue::decode(m_source.constant);
     }
     
-    void dumpInContext(PrintStream& out, DumpContext* context) const
-    {
-        switch (technique()) {
-        case AlreadyInJSStack:
-            out.printf("-");
-            return;
-        case AlreadyInJSStackAsUnboxedInt32:
-            out.printf("(int32)");
-            return;
-        case AlreadyInJSStackAsUnboxedInt52:
-            out.printf("(int52)");
-            return;
-        case AlreadyInJSStackAsUnboxedCell:
-            out.printf("(cell)");
-            return;
-        case AlreadyInJSStackAsUnboxedBoolean:
-            out.printf("(bool)");
-            return;
-        case AlreadyInJSStackAsUnboxedDouble:
-            out.printf("(double)");
-            return;
-        case InGPR:
-            out.print(gpr());
-            return;
-        case UnboxedInt32InGPR:
-            out.print("int32(", gpr(), ")");
-            return;
-        case UnboxedInt52InGPR:
-            out.print("int53(", gpr(), ")");
-            return;
-        case UnboxedStrictInt52InGPR:
-            out.print("strictInt52(", gpr(), ")");
-            return;
-        case UnboxedBooleanInGPR:
-            out.print("bool(", gpr(), ")");
-            return;
-        case UInt32InGPR:
-            out.print("uint32(", gpr(), ")");
-            return;
-        case InFPR:
-            out.print(fpr());
-            return;
-#if USE(JSVALUE32_64)
-        case InPair:
-            out.print("pair(", tagGPR(), ", ", payloadGPR(), ")");
-            return;
-#endif
-        case DisplacedInJSStack:
-            out.printf("*%d", virtualRegister());
-            return;
-        case Int32DisplacedInJSStack:
-            out.printf("*int32(%d)", virtualRegister());
-            return;
-        case Int52DisplacedInJSStack:
-            out.printf("*int52(%d)", virtualRegister());
-            return;
-        case StrictInt52DisplacedInJSStack:
-            out.printf("*strictInt52(%d)", virtualRegister());
-            return;
-        case DoubleDisplacedInJSStack:
-            out.printf("*double(%d)", virtualRegister());
-            return;
-        case CellDisplacedInJSStack:
-            out.printf("*cell(%d)", virtualRegister());
-            return;
-        case BooleanDisplacedInJSStack:
-            out.printf("*bool(%d)", virtualRegister());
-            return;
-        case ArgumentsThatWereNotCreated:
-            out.printf("arguments");
-            return;
-        case Constant:
-            out.print("[", inContext(constant(), context), "]");
-            return;
-        case DontKnow:
-            out.printf("!");
-            return;
-        }
-        RELEASE_ASSERT_NOT_REACHED();
-    }
+    JSValue recover(ExecState*) const;
     
-    void dump(PrintStream& out) const
-    {
-        dumpInContext(out, 0);
-    }
-    
+    void dumpInContext(PrintStream& out, DumpContext* context) const;
+    void dump(PrintStream& out) const;
+
 private:
     ValueRecoveryTechnique m_technique;
     union {
@@ -400,7 +260,7 @@ private:
             MacroAssembler::RegisterID payloadGPR;
         } pair;
 #endif
-        VirtualRegister virtualReg;
+        int virtualReg;
         EncodedJSValue constant;
     } m_source;
 };

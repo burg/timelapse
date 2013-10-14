@@ -25,7 +25,6 @@
 
 #include "Console.h"
 #include "DOMWindow.h"
-#include "EventDispatcher.h"
 #include "Node.h"
 
 namespace WebCore {
@@ -90,9 +89,9 @@ bool UIEvent::isUIEvent() const
     return true;
 }
 
-const AtomicString& UIEvent::interfaceName() const
+EventInterface UIEvent::eventInterface() const
 {
-    return eventNames().interfaceForUIEvent;
+    return UIEventInterfaceType;
 }
 
 int UIEvent::keyCode() const

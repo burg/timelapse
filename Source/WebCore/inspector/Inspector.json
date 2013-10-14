@@ -2734,16 +2734,6 @@
                 "description": "The index and timestamp of an input action."
             },
             {
-                "id": "ReplayAction",
-                "type": "object",
-                "properties": [
-                    { "name": "type", "type": "string", "description": "Action type." },
-                    { "name": "mark", "$ref": "Mark", "description": "The time and index of the action." },
-                    { "name": "data", "type": "object", "description": "Action details." }
-                ],
-                "description": "(Deprecated) A replay action contains information about a captured event loop input."
-            },
-            {
                 "id": "ReplayInput",
                 "type": "object",
                 "properties": [
@@ -2760,7 +2750,7 @@
                 ]
             },
             {
-                "id": "ReplayRecordingNew",
+                "id": "ReplayRecording",
                 "type": "object",
                 "properties": [
                     { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
@@ -2769,29 +2759,9 @@
                     { "name": "queues", "type": "array", "items": { "$ref": "ReplayInputQueue"} }
                 ],
                 "description": "A replay recording serialized to JSON."
-            },
-            {
-                "id": "ReplayRecording",
-                "type": "object",
-                "properties": [
-                    { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
-                    { "name": "dateCreated", "type": "number", "description": "Creation time of recording, in milliseconds since the epoch." },
-                    { "name": "actions", "type": "array", "items": { "$ref": "ReplayAction" }, "description": "User-visible actions for this recording." }
-                ],
-                "description": "(Deprecated) A replay recording that consists of metadata and a list of actions."
             }
         ],
         "commands": [
-            {
-                "name": "getRecording",
-                "description": "(deprecated) Returns recording with the specified id if one exists.",
-                "parameters": [
-                    { "name": "uid", "$ref": "RecordingId" }
-                ],
-                "returns": [
-                    { "name": "recording", "$ref": "ReplayRecording", "description": "the requested recording", "optional": true }
-                ]
-            },
             {
                 "name": "getSerializedRecording",
                 "description": "Returns the recording serialized to a JSON object.",
@@ -2799,7 +2769,7 @@
                     { "name": "uid", "$ref": "RecordingId" }
                 ],
                 "returns": [
-                    { "name": "recording", "$ref": "ReplayRecordingNew", "description": "the requested recording", "optional": true }
+                    { "name": "recording", "$ref": "ReplayRecording", "description": "the requested recording", "optional": true }
                 ]
             },
             {
@@ -2921,13 +2891,6 @@
             {
                 "name": "captureStopped",
                 "description": "Fired when capture has stopped."
-            },
-            {
-                "name": "capturedAction",
-                "description": "A new action was captured.",
-                "parameters": [
-                    { "name": "record", "$ref": "Recordings.ReplayAction", "description": "An action representing a captured event loop input." }
-                ]
             },
             {
                 "name": "capturedInput",

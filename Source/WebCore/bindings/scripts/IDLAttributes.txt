@@ -87,10 +87,12 @@ NamedConstructor=*
 NoInterfaceObject
 Nondeterministic
 NotEnumerable
+NotDeletable
 ObjCCustomImplementation
 ObjCLegacyUnnamedParameters
 ObjCPolymorphic
 ObjCProtocol
+OperationsNotDeletable
 PassContext
 RaisesException
 Reflect=*

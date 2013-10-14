@@ -54,10 +54,6 @@ typedef SIZE* LPSIZE;
 typedef struct HBITMAP__ *HBITMAP;
 #endif
 
-#if PLATFORM(QT)
-#include <QPixmap>
-#endif
-
 #if PLATFORM(GTK)
 typedef struct _GdkPixbuf GdkPixbuf;
 #endif
@@ -88,7 +84,7 @@ class ImageObserver;
 class Image : public RefCounted<Image> {
     friend class GeneratedImage;
     friend class CrossfadeGeneratedImage;
-    friend class GeneratorGeneratedImage;
+    friend class GradientImage;
     friend class GraphicsContext;
 
 public:
@@ -168,10 +164,6 @@ public:
 #if PLATFORM(GTK)
     virtual GdkPixbuf* getGdkPixbuf() { return 0; }
     static PassRefPtr<Image> loadPlatformThemeIcon(const char* name, int size);
-#endif
-
-#if PLATFORM(QT)
-    static void setPlatformResource(const char* name, const QPixmap&);
 #endif
 
 #if PLATFORM(EFL)

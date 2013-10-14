@@ -25,7 +25,6 @@
 #ifndef WheelEvent_h
 #define WheelEvent_h
 
-#include "EventDispatchMediator.h"
 #include "FloatPoint.h"
 #include "MouseEvent.h"
 
@@ -96,7 +95,7 @@ public:
     // Needed for Objective-C legacy support
     bool isHorizontal() const { return m_wheelDelta.x(); }
 
-    virtual const AtomicString& interfaceName() const;
+    virtual EventInterface eventInterface() const;
     virtual bool isMouseEvent() const;
 
 private:
@@ -117,15 +116,6 @@ private:
     IntPoint m_unscaledPageLocation;
 #endif
     bool m_directionInvertedFromDevice;
-};
-
-class WheelEventDispatchMediator : public EventDispatchMediator {
-public:
-    static PassRefPtr<WheelEventDispatchMediator> create(const PlatformWheelEvent&, PassRefPtr<AbstractView>);
-private:
-    WheelEventDispatchMediator(const PlatformWheelEvent&, PassRefPtr<AbstractView>);
-    WheelEvent* event() const;
-    virtual bool dispatchEvent(EventDispatcher*) const OVERRIDE;
 };
 
 } // namespace WebCore

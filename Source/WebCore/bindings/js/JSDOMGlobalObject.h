@@ -36,8 +36,6 @@ namespace WebCore {
     class Document;
     class Event;
     class DOMWrapperWorld;
-    class JSLazyEventListener;
-    class JSEventListener;
     class ScriptExecutionContext;
 
     typedef HashMap<const JSC::ClassInfo*, JSC::WriteBarrier<JSC::Structure> > JSDOMStructureMap;
@@ -67,10 +65,11 @@ namespace WebCore {
 
         static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
 
-        DOMWrapperWorld* world() { return m_world.get(); }
+        DOMWrapperWorld& world() { return *m_world; }
 
     protected:
         static WEBKIT_EXPORTDATA const JSC::ClassInfo s_info;
+
     public:
         static const JSC::ClassInfo* info() { return &s_info; }
 
@@ -88,22 +87,22 @@ namespace WebCore {
     };
 
     template<class ConstructorClass>
-    inline JSC::JSObject* getDOMConstructor(JSC::ExecState* exec, const JSDOMGlobalObject* globalObject)
+    inline JSC::JSObject* getDOMConstructor(JSC::VM& vm, const JSDOMGlobalObject* globalObject)
     {
         if (JSC::JSObject* constructor = const_cast<JSDOMGlobalObject*>(globalObject)->constructors().get(ConstructorClass::info()).get())
             return constructor;
-        JSC::JSObject* constructor = ConstructorClass::create(exec, ConstructorClass::createStructure(exec->vm(), const_cast<JSDOMGlobalObject*>(globalObject), globalObject->objectPrototype()), const_cast<JSDOMGlobalObject*>(globalObject));
+        JSC::JSObject* constructor = ConstructorClass::create(vm, ConstructorClass::createStructure(vm, const_cast<JSDOMGlobalObject*>(globalObject), globalObject->objectPrototype()), const_cast<JSDOMGlobalObject*>(globalObject));
         ASSERT(!const_cast<JSDOMGlobalObject*>(globalObject)->constructors().contains(ConstructorClass::info()));
         JSC::WriteBarrier<JSC::JSObject> temp;
-        const_cast<JSDOMGlobalObject*>(globalObject)->constructors().add(ConstructorClass::info(), temp).iterator->value.set(exec->vm(), globalObject, constructor);
+        const_cast<JSDOMGlobalObject*>(globalObject)->constructors().add(ConstructorClass::info(), temp).iterator->value.set(vm, globalObject, constructor);
         return constructor;
     }
 
     JSDOMGlobalObject* toJSDOMGlobalObject(Document*, JSC::ExecState*);
     JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext*, JSC::ExecState*);
 
-    JSDOMGlobalObject* toJSDOMGlobalObject(Document*, DOMWrapperWorld*);
-    JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext*, DOMWrapperWorld*);
+    JSDOMGlobalObject* toJSDOMGlobalObject(Document*, DOMWrapperWorld&);
+    JSDOMGlobalObject* toJSDOMGlobalObject(ScriptExecutionContext*, DOMWrapperWorld&);
 
 } // namespace WebCore
 

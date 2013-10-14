@@ -45,7 +45,7 @@ class MediaKeyError;
 class MediaKeys;
 class CDMSession;
 
-class MediaKeySession : public RefCounted<MediaKeySession>, public EventTarget, public ContextDestructionObserver {
+class MediaKeySession FINAL : public RefCounted<MediaKeySession>, public EventTargetWithInlineData, public ContextDestructionObserver {
 public:
     static PassRefPtr<MediaKeySession> create(ScriptExecutionContext*, MediaKeys*, const String& keySystem);
     ~MediaKeySession();
@@ -72,8 +72,8 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitkeyerror);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitkeymessage);
 
-    virtual const AtomicString& interfaceName() const OVERRIDE;
-    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return MediaKeySessionEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return ContextDestructionObserver::scriptExecutionContext(); }
 
 protected:
     MediaKeySession(ScriptExecutionContext*, MediaKeys*, const String& keySystem);
@@ -101,11 +101,6 @@ protected:
 private:
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
-
-    virtual EventTargetData* eventTargetData() OVERRIDE { return &m_eventTargetData; }
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE { return m_eventTargetData; }
-
-    EventTargetData m_eventTargetData;
 };
 
 }

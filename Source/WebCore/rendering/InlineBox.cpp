@@ -140,15 +140,16 @@ float InlineBox::logicalHeight() const
 {
     if (hasVirtualLogicalHeight())
         return virtualLogicalHeight();
-    
+
+    const RenderStyle& lineStyle = this->lineStyle();
     if (renderer().isTextOrLineBreak())
-        return behavesLikeText() ? renderer().style(isFirstLineStyle())->fontMetrics().height() : 0;
+        return behavesLikeText() ? lineStyle.fontMetrics().height() : 0;
     if (renderer().isBox() && parent())
         return isHorizontal() ? toRenderBox(renderer()).height() : toRenderBox(renderer()).width();
 
     ASSERT(isInlineFlowBox());
     RenderBoxModelObject* flowObject = boxModelObject();
-    const FontMetrics& fontMetrics = renderer().style(isFirstLineStyle())->fontMetrics();
+    const FontMetrics& fontMetrics = lineStyle.fontMetrics();
     float result = fontMetrics.height();
     if (parent())
         result += flowObject->borderAndPaddingLogicalHeight();
@@ -225,12 +226,13 @@ void InlineBox::adjustPosition(float dx, float dy)
 
 void InlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, LayoutUnit /* lineTop */, LayoutUnit /*lineBottom*/)
 {
-    if (!paintInfo.shouldPaintWithinRoot(&renderer()) || (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection))
+    RenderElement& renderer = toRenderElement(this->renderer());
+    if (!paintInfo.shouldPaintWithinRoot(renderer) || (paintInfo.phase != PaintPhaseForeground && paintInfo.phase != PaintPhaseSelection))
         return;
 
     LayoutPoint childPoint = paintOffset;
-    if (parent()->renderer().style()->isFlippedBlocksWritingMode() && renderer().isBox()) // Faster than calling containingBlock().
-        childPoint = m_renderer.containingBlock()->flipForWritingModeForChild(&toRenderBox(renderer()), childPoint);
+    if (parent()->renderer().style()->isFlippedBlocksWritingMode() && renderer.isBox()) // Faster than calling containingBlock().
+        childPoint = m_renderer.containingBlock()->flipForWritingModeForChild(&toRenderBox(renderer), childPoint);
     
     // Paint all phases of replaced elements atomically, as though the replaced element established its
     // own stacking context.  (See Appendix E.2, section 6.4 on inline block/table elements in the CSS2.1
@@ -238,16 +240,16 @@ void InlineBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, Layo
     bool preservePhase = paintInfo.phase == PaintPhaseSelection || paintInfo.phase == PaintPhaseTextClip;
     PaintInfo info(paintInfo);
     info.phase = preservePhase ? paintInfo.phase : PaintPhaseBlockBackground;
-    m_renderer.paint(info, childPoint);
+    renderer.paint(info, childPoint);
     if (!preservePhase) {
         info.phase = PaintPhaseChildBlockBackgrounds;
-        m_renderer.paint(info, childPoint);
+        renderer.paint(info, childPoint);
         info.phase = PaintPhaseFloat;
-        m_renderer.paint(info, childPoint);
+        renderer.paint(info, childPoint);
         info.phase = PaintPhaseForeground;
-        m_renderer.paint(info, childPoint);
+        renderer.paint(info, childPoint);
         info.phase = PaintPhaseOutline;
-        m_renderer.paint(info, childPoint);
+        renderer.paint(info, childPoint);
     }
 }
 

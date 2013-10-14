@@ -30,9 +30,9 @@
 #import "ScrollingCoordinatorMac.h"
 
 #include "GraphicsLayer.h"
-#include "Frame.h"
 #include "FrameView.h"
 #include "IntRect.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PlatformWheelEvent.h"
 #include "PluginViewBase.h"
@@ -48,7 +48,6 @@
 #include "ScrollingThread.h"
 #include "ScrollingTree.h"
 #include "TiledBacking.h"
-
 #include <wtf/Functional.h>
 #include <wtf/MainThread.h>
 #include <wtf/PassRefPtr.h>
@@ -93,26 +92,6 @@ bool ScrollingCoordinatorMac::isRubberBandInProgress() const
     return scrollingTree()->isRubberBandInProgress();
 }
 
-bool ScrollingCoordinatorMac::rubberBandsAtBottom() const
-{
-    return scrollingTree()->rubberBandsAtBottom();
-}
-
-void ScrollingCoordinatorMac::setRubberBandsAtBottom(bool rubberBandsAtBottom)
-{
-    scrollingTree()->setRubberBandsAtBottom(rubberBandsAtBottom);
-}
-
-bool ScrollingCoordinatorMac::rubberBandsAtTop() const
-{
-    return scrollingTree()->rubberBandsAtTop();
-}
-
-void ScrollingCoordinatorMac::setRubberBandsAtTop(bool rubberBandsAtTop)
-{
-    scrollingTree()->setRubberBandsAtTop(rubberBandsAtTop);
-}
-    
 void ScrollingCoordinatorMac::setScrollPinningBehavior(ScrollPinningBehavior pinning)
 {
     scrollingTree()->setScrollPinningBehavior(pinning);
@@ -152,11 +131,17 @@ void ScrollingCoordinatorMac::frameViewLayoutUpdated(FrameView* frameView)
     if (!node)
         return;
 
+    Scrollbar* verticalScrollbar = frameView->verticalScrollbar();
+    Scrollbar* horizontalScrollbar = frameView->horizontalScrollbar();
+    if ((verticalScrollbar && verticalScrollbar->supportsUpdateOnSecondaryThread())
+        || (horizontalScrollbar && horizontalScrollbar->supportsUpdateOnSecondaryThread()))
+        setScrollbarPaintersFromScrollbarsForNode(verticalScrollbar, horizontalScrollbar, node);
+
     ScrollParameters scrollParameters;
     scrollParameters.horizontalScrollElasticity = frameView->horizontalScrollElasticity();
     scrollParameters.verticalScrollElasticity = frameView->verticalScrollElasticity();
-    scrollParameters.hasEnabledHorizontalScrollbar = frameView->horizontalScrollbar() && frameView->horizontalScrollbar()->enabled();
-    scrollParameters.hasEnabledVerticalScrollbar = frameView->verticalScrollbar() && frameView->verticalScrollbar()->enabled();
+    scrollParameters.hasEnabledHorizontalScrollbar = horizontalScrollbar && horizontalScrollbar->enabled();
+    scrollParameters.hasEnabledVerticalScrollbar = verticalScrollbar && verticalScrollbar->enabled();
     scrollParameters.horizontalScrollbarMode = frameView->horizontalScrollbarMode();
     scrollParameters.verticalScrollbarMode = frameView->verticalScrollbarMode();
 
@@ -199,7 +184,7 @@ void ScrollingCoordinatorMac::frameViewRootLayerDidChange(FrameView* frameView)
     setFooterLayerForNode(footerLayerForFrameView(frameView), node);
 }
 
-void ScrollingCoordinatorMac::scrollableAreaScrollbarLayerDidChange(ScrollableArea* scrollableArea, ScrollbarOrientation)
+void ScrollingCoordinatorMac::scrollableAreaScrollbarLayerDidChange(ScrollableArea* scrollableArea, ScrollbarOrientation orientation)
 {
     ASSERT(isMainThread());
     ASSERT(m_page);
@@ -207,7 +192,10 @@ void ScrollingCoordinatorMac::scrollableAreaScrollbarLayerDidChange(ScrollableAr
     if (scrollableArea != static_cast<ScrollableArea*>(m_page->mainFrame().view()))
         return;
 
-    // FIXME: Implement.
+    if (orientation == VerticalScrollbar)
+        scrollableArea->verticalScrollbarLayerDidChange();
+    else
+        scrollableArea->horizontalScrollbarLayerDidChange();
 }
 
 bool ScrollingCoordinatorMac::requestScrollPositionUpdate(FrameView* frameView, const IntPoint& scrollPosition)
@@ -296,6 +284,12 @@ void ScrollingCoordinatorMac::setFooterLayerForNode(GraphicsLayer* footerLayer, 
     ASSERT(node == m_scrollingStateTree->rootStateNode());
 
     node->setFooterLayer(footerLayer);
+    scheduleTreeStateCommit();
+}
+
+void ScrollingCoordinatorMac::setScrollbarPaintersFromScrollbarsForNode(Scrollbar* verticalScrollbar, Scrollbar* horizontalScrollbar, ScrollingStateScrollingNode* node)
+{
+    node->setScrollbarPaintersFromScrollbars(verticalScrollbar, horizontalScrollbar);
     scheduleTreeStateCommit();
 }
 

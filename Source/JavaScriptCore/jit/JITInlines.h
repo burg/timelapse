@@ -204,6 +204,160 @@ ALWAYS_INLINE void JIT::restoreArgumentReferenceForTrampoline()
     // In the trampoline on x86-64, the first argument register is not overwritten.
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheck(const FunctionPtr& function)
+{
+    updateTopCallFrame();
+    MacroAssembler::Call call = appendCall(function);
+    exceptionCheck();
+    return call;
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithCallFrameRollbackOnException(const FunctionPtr& function)
+{
+    updateTopCallFrame(); // The callee is responsible for setting topCallFrame to their caller
+    MacroAssembler::Call call = appendCall(function);
+    exceptionCheckWithCallFrameRollback();
+    return call;
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueResult(const FunctionPtr& function, int dst)
+{
+    MacroAssembler::Call call = appendCallWithExceptionCheck(function);
+#if USE(JSVALUE64)
+    emitPutVirtualRegister(dst, returnValueRegister);
+#else
+    emitStore(dst, returnValue2Register, returnValueRegister);
+#endif
+    return call;
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(C_JITOperation_ESt operation, Structure* structure)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(structure));
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_E operation, int dst)
+{
+    setupArgumentsExecState();
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EAapJcpZ operation, int dst, ArrayAllocationProfile* arg1, GPRReg arg2, int32_t arg3)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(arg1), arg2, TrustedImm32(arg3));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EAapJcpZ operation, int dst, ArrayAllocationProfile* arg1, const JSValue* arg2, int32_t arg3)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(arg1), TrustedImmPtr(arg2), TrustedImm32(arg3));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EC operation, int dst, JSCell* cell)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(cell));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EP operation, int dst, void* pointer)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(pointer));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_ECC operation, RegisterID regOp1, RegisterID regOp2)
+{
+    setupArgumentsWithExecState(regOp1, regOp2);
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_EJ operation, RegisterID regOp)
+{
+    setupArgumentsWithExecState(regOp);
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_EJJ operation, RegisterID regOp1, RegisterID regOp2)
+{
+    setupArgumentsWithExecState(regOp1, regOp2);
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_EOJss operation, RegisterID regOp1, RegisterID regOp2)
+{
+    setupArgumentsWithExecState(regOp1, regOp2);
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperationWithCallFrameRollbackOnException(J_JITOperation_E operation)
+{
+    setupArgumentsExecState();
+    return appendCallWithCallFrameRollbackOnException(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperationWithCallFrameRollbackOnException(V_JITOperation_ECb operation, CodeBlock* pointer)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(pointer));
+    return appendCallWithCallFrameRollbackOnException(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperationWithCallFrameRollbackOnException(Z_JITOperation_E operation)
+{
+    setupArgumentsExecState();
+    return appendCallWithCallFrameRollbackOnException(operation);
+}
+
+#if USE(JSVALUE32_64)
+
+// EncodedJSValue in JSVALUE32_64 is a 64-bit integer. When being compiled in ARM EABI, it must be aligned even-numbered register (r0, r2 or [sp]).
+// To avoid assemblies from using wrong registers, let's occupy r1 or r3 with a dummy argument when necessary.
+#if (COMPILER_SUPPORTS(EABI) && CPU(ARM)) || CPU(MIPS)
+#define EABI_32BIT_DUMMY_ARG      TrustedImm32(0),
+#else
+#define EABI_32BIT_DUMMY_ARG
+#endif
+
+// JSVALUE32_64 is a 64-bit integer that cannot be put half in an argument register and half on stack when using SH4 architecture.
+// To avoid this, let's occupy the 4th argument register (r7) with a dummy argument when necessary.
+#if CPU(SH4)
+#define SH4_32BIT_DUMMY_ARG      TrustedImm32(0),
+#else
+#define SH4_32BIT_DUMMY_ARG
+#endif
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EAapJ operation, int dst, ArrayAllocationProfile* arg1, GPRReg arg2Tag, GPRReg arg2Payload)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(arg1), EABI_32BIT_DUMMY_ARG arg2Payload, arg2Tag);
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_EJ operation, RegisterID argTag, RegisterID argPayload)
+{
+    setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG argPayload, argTag);
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_EJJ operation, RegisterID arg1Tag, RegisterID arg1Payload, RegisterID arg2Tag, RegisterID arg2Payload)
+{
+    setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG arg1Payload, arg1Tag, SH4_32BIT_DUMMY_ARG arg2Payload, arg2Tag);
+    return appendCallWithExceptionCheck(operation);
+}
+
+#undef EABI_32BIT_DUMMY_ARG
+#undef SH4_32BIT_DUMMY_ARG
+
+#else // USE(JSVALUE32_64)
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EAapJ operation, int dst, ArrayAllocationProfile* arg1, GPRReg arg2)
+{
+    setupArgumentsWithExecState(TrustedImmPtr(arg1), arg2);
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+#endif // USE(JSVALUE32_64)
+
 ALWAYS_INLINE JIT::Jump JIT::checkStructure(RegisterID reg, Structure* structure)
 {
     return branchPtr(NotEqual, Address(reg, JSCell::structureOffset()), TrustedImmPtr(structure));
@@ -758,7 +912,7 @@ ALWAYS_INLINE void JIT::emitGetVirtualRegister(int src, RegisterID dst)
         return;
     }
 
-    if (src == m_lastResultBytecodeRegister && m_codeBlock->isTemporaryRegisterIndex(operandToLocal(src)) && !atJumpTarget()) {
+    if (src == m_lastResultBytecodeRegister && operandIsLocal(src) && m_codeBlock->isTemporaryRegisterIndex(VirtualRegister(src).toLocal()) && !atJumpTarget()) {
         // The argument we want is already stored in eax
         if (dst != cachedResultRegister)
             move(cachedResultRegister, dst);
@@ -770,6 +924,11 @@ ALWAYS_INLINE void JIT::emitGetVirtualRegister(int src, RegisterID dst)
     killLastResultRegister();
 }
 
+ALWAYS_INLINE void JIT::emitGetVirtualRegister(VirtualRegister src, RegisterID dst)
+{
+    emitGetVirtualRegister(src.offset(), dst);
+}
+
 ALWAYS_INLINE void JIT::emitGetVirtualRegisters(int src1, RegisterID dst1, int src2, RegisterID dst2)
 {
     if (src2 == m_lastResultBytecodeRegister) {
@@ -779,6 +938,11 @@ ALWAYS_INLINE void JIT::emitGetVirtualRegisters(int src1, RegisterID dst1, int s
         emitGetVirtualRegister(src1, dst1);
         emitGetVirtualRegister(src2, dst2);
     }
+}
+
+ALWAYS_INLINE void JIT::emitGetVirtualRegisters(VirtualRegister src1, RegisterID dst1, VirtualRegister src2, RegisterID dst2)
+{
+    emitGetVirtualRegisters(src1.offset(), dst1, src2.offset(), dst2);
 }
 
 ALWAYS_INLINE int32_t JIT::getConstantOperandImmediateInt(int src)
@@ -795,6 +959,11 @@ ALWAYS_INLINE void JIT::emitPutVirtualRegister(int dst, RegisterID from)
 {
     store64(from, Address(callFrameRegister, dst * sizeof(Register)));
     m_lastResultBytecodeRegister = (from == cachedResultRegister) ? dst : std::numeric_limits<int>::max();
+}
+
+ALWAYS_INLINE void JIT::emitPutVirtualRegister(VirtualRegister dst, RegisterID from)
+{
+    emitPutVirtualRegister(dst.offset(), from);
 }
 
 ALWAYS_INLINE void JIT::emitInitRegister(int dst)

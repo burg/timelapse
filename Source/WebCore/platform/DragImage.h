@@ -35,13 +35,9 @@
 #if PLATFORM(MAC)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS NSImage;
-#elif PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QPixmap;
-QT_END_NAMESPACE
 #elif PLATFORM(WIN)
 typedef struct HBITMAP__* HBITMAP;
-#elif PLATFORM(GTK)
+#elif PLATFORM(GTK) || PLATFORM(NIX)
 typedef struct _cairo_surface cairo_surface_t;
 #endif
 
@@ -51,17 +47,15 @@ typedef struct _cairo_surface cairo_surface_t;
 namespace WebCore {
 
     class Image;
-    class KURL;
+    class URL;
 
 #if PLATFORM(MAC)
     typedef RetainPtr<NSImage> DragImageRef;
-#elif PLATFORM(QT)
-    typedef QPixmap* DragImageRef;
 #elif PLATFORM(WIN)
     typedef HBITMAP DragImageRef;
-#elif PLATFORM(GTK)
+#elif PLATFORM(GTK) || PLATFORM(NIX)
     typedef cairo_surface_t* DragImageRef;
-#elif PLATFORM(EFL) || PLATFORM(BLACKBERRY) || PLATFORM(NIX)
+#elif PLATFORM(EFL) || PLATFORM(BLACKBERRY)
     typedef void* DragImageRef;
 #endif
     
@@ -76,7 +70,7 @@ namespace WebCore {
     
     DragImageRef createDragImageFromImage(Image*, ImageOrientationDescription);
     DragImageRef createDragImageIconForCachedImageFilename(const String&);
-    DragImageRef createDragImageForLink(KURL&, const String& label, FontRenderingMode);
+    DragImageRef createDragImageForLink(URL&, const String& label, FontRenderingMode);
     void deleteDragImage(DragImageRef);
 }
 

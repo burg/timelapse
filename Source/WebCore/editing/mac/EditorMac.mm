@@ -100,7 +100,7 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText)
 bool Editor::insertParagraphSeparatorInQuotedContent()
 {
     // FIXME: Why is this missing calls to canEdit, canEditRichly, etc.?
-    TypingCommand::insertParagraphSeparatorInQuotedContent(m_frame.document());
+    TypingCommand::insertParagraphSeparatorInQuotedContent(document());
     revealSelectionAfterEditingOperation();
     return true;
 }
@@ -159,7 +159,7 @@ const SimpleFontData* Editor::fontForSelection(bool& hasMultipleFonts) const
         // In the loop below, n should eventually match pastEnd and not become nil, but we've seen at least one
         // unreproducible case where this didn't happen, so check for null also.
         for (Node* node = startNode; node && node != pastEnd; node = NodeTraversal::next(node)) {
-            RenderObject* renderer = node->renderer();
+            auto renderer = node->renderer();
             if (!renderer)
                 continue;
             // FIXME: Are there any node types that have renderers, but that we should be skipping?
@@ -359,7 +359,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 
 static void getImage(Element& imageElement, RefPtr<Image>& image, CachedImage*& cachedImage)
 {
-    RenderObject* renderer = imageElement.renderer();
+    auto renderer = imageElement.renderer();
     if (!renderer || !renderer->isImage())
         return;
 
@@ -386,7 +386,7 @@ String Editor::plainTextFromPasteboard(const PasteboardPlainText& text)
     String string = text.text;
 
     // FIXME: It's not clear this is 100% correct since we know -[NSURL URLWithString:] does not handle
-    // all the same cases we handle well in the KURL code for creating an NSURL.
+    // all the same cases we handle well in the URL code for creating an NSURL.
     if (text.isURL)
         string = client()->userVisibleString([NSURL URLWithString:string]);
 
@@ -394,7 +394,7 @@ String Editor::plainTextFromPasteboard(const PasteboardPlainText& text)
     return [(NSString *)string precomposedStringWithCanonicalMapping];
 }
 
-void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElement, const KURL& url, const String& title)
+void Editor::writeImageToPasteboard(Pasteboard& pasteboard, Element& imageElement, const URL& url, const String& title)
 {
     PasteboardImage pasteboardImage;
 
@@ -437,7 +437,7 @@ private:
     virtual bool readRTFD(PassRefPtr<SharedBuffer>) override;
     virtual bool readRTF(PassRefPtr<SharedBuffer>) override;
     virtual bool readImage(PassRefPtr<SharedBuffer>, const String& type) override;
-    virtual bool readURL(const KURL&, const String& title) override;
+    virtual bool readURL(const URL&, const String& title) override;
     virtual bool readPlainText(const String&) override;
 };
 
@@ -446,7 +446,7 @@ bool Editor::WebContentReader::readWebArchive(PassRefPtr<SharedBuffer> buffer)
     if (!frame.document())
         return false;
 
-    RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(KURL(), buffer.get());
+    RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(URL(), buffer.get());
     if (!archive)
         return false;
 
@@ -462,7 +462,7 @@ bool Editor::WebContentReader::readWebArchive(PassRefPtr<SharedBuffer> buffer)
             loader->addAllArchiveResources(archive.get());
 
         String markupString = String::fromUTF8(mainResource->data()->data(), mainResource->data()->size());
-        fragment = createFragmentFromMarkup(frame.document(), markupString, mainResource->url(), DisallowScriptingAndPluginContent);
+        fragment = createFragmentFromMarkup(*frame.document(), markupString, mainResource->url(), DisallowScriptingAndPluginContent);
         return true;
     }
 
@@ -480,14 +480,18 @@ bool Editor::WebContentReader::readFilenames(const Vector<String>& paths)
     if (!size)
         return false;
 
-    fragment = frame.document()->createDocumentFragment();
+    if (!frame.document())
+        return false;
+    Document& document = *frame.document();
+
+    fragment = document.createDocumentFragment();
 
     for (size_t i = 0; i < size; i++) {
         String text = paths[i];
         text = frame.editor().client()->userVisibleString([NSURL fileURLWithPath:text]);
 
-        RefPtr<HTMLElement> paragraph = createDefaultParagraphElement(frame.document());
-        paragraph->appendChild(frame.document()->createTextNode(text));
+        RefPtr<HTMLElement> paragraph = createDefaultParagraphElement(document);
+        paragraph->appendChild(document.createTextNode(text));
         fragment->appendChild(paragraph.release());
     }
 
@@ -510,7 +514,11 @@ bool Editor::WebContentReader::readHTML(const String& string)
     if (stringOmittingMicrosoftPrefix.isEmpty())
         return false;
 
-    fragment = createFragmentFromMarkup(frame.document(), stringOmittingMicrosoftPrefix, emptyString(), DisallowScriptingAndPluginContent);
+    if (!frame.document())
+        return false;
+    Document& document = *frame.document();
+
+    fragment = createFragmentFromMarkup(document, stringOmittingMicrosoftPrefix, emptyString(), DisallowScriptingAndPluginContent);
     return fragment;
 }
 
@@ -531,13 +539,13 @@ bool Editor::WebContentReader::readImage(PassRefPtr<SharedBuffer> buffer, const 
     ASSERT(type.contains('/'));
     String typeAsFilenameWithExtension = type;
     typeAsFilenameWithExtension.replace('/', '.');
-    KURL imageURL = KURL(KURL(), "webkit-fake-url://" + createCanonicalUUIDString() + '/' + typeAsFilenameWithExtension);
+    URL imageURL = URL(URL(), "webkit-fake-url://" + createCanonicalUUIDString() + '/' + typeAsFilenameWithExtension);
 
     fragment = frame.editor().createFragmentForImageResourceAndAddResource(ArchiveResource::create(buffer, imageURL, type, emptyString(), emptyString()));
     return fragment;
 }
 
-bool Editor::WebContentReader::readURL(const KURL& url, const String& title)
+bool Editor::WebContentReader::readURL(const URL& url, const String& title)
 {
     if (url.string().isEmpty())
         return false;
@@ -556,7 +564,7 @@ bool Editor::WebContentReader::readPlainText(const String& text)
     if (!allowPlainText)
         return false;
 
-    fragment = createFragmentFromText(&context, [text precomposedStringWithCanonicalMapping]);
+    fragment = createFragmentFromText(context, [text precomposedStringWithCanonicalMapping]);
     if (!fragment)
         return false;
 
@@ -579,10 +587,10 @@ PassRefPtr<DocumentFragment> Editor::createFragmentForImageResourceAndAddResourc
     if (!resource)
         return nullptr;
 
-    RefPtr<Element> imageElement = m_frame.document()->createElement(HTMLNames::imgTag, false);
+    RefPtr<Element> imageElement = document().createElement(HTMLNames::imgTag, false);
     imageElement->setAttribute(HTMLNames::srcAttr, resource->url().string());
 
-    RefPtr<DocumentFragment> fragment = m_frame.document()->createDocumentFragment();
+    RefPtr<DocumentFragment> fragment = document().createDocumentFragment();
     fragment->appendChild(imageElement.release());
 
     // FIXME: The code in createFragmentAndAddResources calls setDefersLoading(true). Don't we need that here?
@@ -594,7 +602,7 @@ PassRefPtr<DocumentFragment> Editor::createFragmentForImageResourceAndAddResourc
 
 PassRefPtr<DocumentFragment> Editor::createFragmentAndAddResources(NSAttributedString *string)
 {
-    if (!m_frame.page() || !m_frame.document() || !m_frame.document()->isHTMLDocument())
+    if (!m_frame.page() || !document().isHTMLDocument())
         return nullptr;
 
     if (!string)

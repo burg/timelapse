@@ -64,12 +64,14 @@ private:
 
     // CoreIPC::Connection::Client
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
     virtual void didClose(CoreIPC::Connection*) OVERRIDE;
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 
+#if ENABLE(SHAREABLE_RESOURCE)
     // Message handlers.
     void didCacheResource(const WebCore::ResourceRequest&, const ShareableResource::Handle&);
+#endif
 
     // The connection from the web process to the network process.
     RefPtr<CoreIPC::Connection> m_connection;

@@ -475,7 +475,7 @@ void RenderEmbeddedObject::layout()
         view().frameView().addEmbeddedObjectToUpdate(*this);
     }
 
-    setNeedsLayout(false);
+    clearNeedsLayout();
 
     LayoutSize newSize = contentBoxRect().size();
 
@@ -494,7 +494,7 @@ void RenderEmbeddedObject::layout()
         return;
 
     // This code copied from RenderMedia::layout().
-    RenderObject* child = m_children.firstChild();
+    RenderObject* child = firstChild();
 
     if (!child)
         return;
@@ -515,9 +515,9 @@ void RenderEmbeddedObject::layout()
     childBox->setLocation(LayoutPoint(borderLeft(), borderTop()) + LayoutSize(paddingLeft(), paddingTop()));
     childBox->style()->setHeight(Length(newSize.height(), Fixed));
     childBox->style()->setWidth(Length(newSize.width(), Fixed));
-    childBox->setNeedsLayout(true, MarkOnlyThis);
+    childBox->setNeedsLayout(MarkOnlyThis);
     childBox->layout();
-    setChildNeedsLayout(false);
+    clearChildNeedsLayout();
     
     statePusher.pop();
 }
@@ -569,7 +569,7 @@ bool RenderEmbeddedObject::nodeAtPoint(const HitTestRequest& request, HitTestRes
     return true;
 }
 
-bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity granularity, float, Node**)
+bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity granularity, float, Element**)
 {
     if (!widget() || !widget()->isPluginViewBase())
         return false;
@@ -577,10 +577,10 @@ bool RenderEmbeddedObject::scroll(ScrollDirection direction, ScrollGranularity g
     return toPluginViewBase(widget())->scroll(direction, granularity);
 }
 
-bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Node** stopNode)
+bool RenderEmbeddedObject::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Element** stopElement)
 {
     // Plugins don't expose a writing direction, so assuming horizontal LTR.
-    return scroll(logicalToPhysical(direction, true, false), granularity, multiplier, stopNode);
+    return scroll(logicalToPhysical(direction, true, false), granularity, multiplier, stopElement);
 }
 
 
@@ -615,7 +615,7 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
     if (event->type() == eventNames().mousedownEvent && static_cast<MouseEvent*>(event)->button() == LeftButton) {
         m_mouseDownWasInUnavailablePluginIndicator = isInUnavailablePluginIndicator(mouseEvent);
         if (m_mouseDownWasInUnavailablePluginIndicator) {
-            frame().eventHandler().setCapturingMouseEventsNode(&element);
+            frame().eventHandler().setCapturingMouseEventsElement(&element);
             element.setIsCapturingMouseEvents(true);
             setUnavailablePluginIndicatorIsPressed(true);
         }
@@ -623,7 +623,7 @@ void RenderEmbeddedObject::handleUnavailablePluginIndicatorEvent(Event* event)
     }
     if (event->type() == eventNames().mouseupEvent && static_cast<MouseEvent*>(event)->button() == LeftButton) {
         if (m_unavailablePluginIndicatorIsPressed) {
-            frame().eventHandler().setCapturingMouseEventsNode(0);
+            frame().eventHandler().setCapturingMouseEventsElement(nullptr);
             element.setIsCapturingMouseEvents(false);
             setUnavailablePluginIndicatorIsPressed(false);
         }

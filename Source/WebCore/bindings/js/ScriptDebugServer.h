@@ -50,7 +50,6 @@ class ExecState;
 }
 namespace WebCore {
 
-class JavaScriptCallFrame;
 class ScriptDebugListener;
 class ScriptObject;
 class ScriptProbe;
@@ -151,24 +150,31 @@ protected:
     void dispatchFailedToParseSource(const ListenerSet& listeners, JSC::SourceProvider*, int errorLine, const String& errorMessage);
     void dispatchCaptureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 
-    void createCallFrame(const JSC::DebuggerCallFrame&);
-    void updateCallFrameAndPauseIfNeeded(const JSC::DebuggerCallFrame&);
-    void pauseIfNeeded(JSC::JSGlobalObject* dynamicGlobalObject);
+    // These update functions are only needed because our current breakpoints are
+    // key'ed off the source position instead of the bytecode PC. This ensures
+    // that we don't break on the same line more than once. Once we switch to a
+    // bytecode PC key'ed breakpoint, we will not need these anymore and should
+    // be able to remove them.
+    void updateCallFrame(JSC::CallFrame*);
+    void updateCallFrameAndPauseIfNeeded(JSC::CallFrame*);
+    void pauseIfNeeded(JSC::CallFrame*);
 
-    virtual void detach(JSC::JSGlobalObject*);
+    JSC::DebuggerCallFrame* currentDebuggerCallFrame() const;
 
-    virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg);
-    virtual void callEvent(const JSC::DebuggerCallFrame&);
-    virtual void atStatement(const JSC::DebuggerCallFrame&);
-    virtual void returnEvent(const JSC::DebuggerCallFrame&);
-    virtual void exception(const JSC::DebuggerCallFrame&, bool hasHandler);
-    virtual void willExecuteProgram(const JSC::DebuggerCallFrame&);
-    virtual void didExecuteProgram(const JSC::DebuggerCallFrame&);
-    virtual void didReachBreakpoint(const JSC::DebuggerCallFrame&);
+    virtual void detach(JSC::JSGlobalObject*) OVERRIDE;
+
+    virtual void sourceParsed(JSC::ExecState*, JSC::SourceProvider*, int errorLine, const String& errorMsg) OVERRIDE;
+    virtual void callEvent(JSC::CallFrame*) OVERRIDE;
+    virtual void atStatement(JSC::CallFrame*) OVERRIDE;
+    virtual void returnEvent(JSC::CallFrame*) OVERRIDE;
+    virtual void exception(JSC::CallFrame*, JSC::JSValue exceptionValue, bool hasHandler) OVERRIDE;
+    virtual void willExecuteProgram(JSC::CallFrame*) OVERRIDE;
+    virtual void didExecuteProgram(JSC::CallFrame*) OVERRIDE;
+    virtual void didReachBreakpoint(JSC::CallFrame*) OVERRIDE;
 
 private:
-    typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
-    void captureProbeSamplesIfNeeded(const JSC::DebuggerCallFrame&);
+    typedef HashSet<RefPtr<ScriptProbe>> ProbeSet;
+    void captureProbeSamplesIfNeeded(JSC::CallFrame*);
     bool findProbesForPosition(ScriptId scriptId, const TextPosition&, ProbeSet& result) const;
 
     void clearPauseTrigger()
@@ -179,8 +185,8 @@ private:
 
 protected:
     typedef Vector<ScriptBreakpoint> BreakpointsInLine;
-    typedef HashMap<long, BreakpointsInLine> LineToBreakpointMap;
-    typedef HashMap<intptr_t, LineToBreakpointMap> SourceIdToBreakpointsMap;
+    typedef HashMap<int, BreakpointsInLine, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > LineToBreakpointsMap;
+    typedef HashMap<intptr_t, LineToBreakpointsMap> SourceIdToBreakpointsMap;
 
     bool m_callingListeners;
     PauseOnExceptionsState m_pauseOnExceptionsState;
@@ -190,15 +196,17 @@ protected:
     bool m_doneProcessingDebuggerEvents;
     bool m_breakpointsActivated;
     bool m_probesActivated;
-    JavaScriptCallFrame* m_pauseOnCallFrame;
-    RefPtr<JavaScriptCallFrame> m_currentCallFrame;
+    JSC::CallFrame* m_pauseOnCallFrame;
+    JSC::CallFrame* m_currentCallFrame;
+    RefPtr<JSC::DebuggerCallFrame> m_currentDebuggerCallFrame;
     SourceIdToBreakpointsMap m_sourceIdToBreakpoints;
     Timer<ScriptDebugServer> m_recompileTimer;
 
     int m_lastExecutedLine;
     intptr_t m_lastExecutedSourceId;
 
-    typedef HashMap<int, RefPtr<ScriptProbe> > ProbeMap;
+    friend class DebuggerCallFrameScope;
+    typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
     typedef HashMap<TextPosition, ProbeSet> PositionToScriptProbeSet;
     typedef HashMap<ScriptId, PositionToScriptProbeSet> ScriptIdToPositionsMap;
 

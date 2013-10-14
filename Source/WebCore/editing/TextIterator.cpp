@@ -642,7 +642,7 @@ static inline RenderText* firstRenderTextInFirstLetter(RenderObject* firstLetter
         return 0;
 
     // FIXME: Should this check descendent objects?
-    for (RenderObject* current = firstLetter->firstChild(); current; current = current->nextSibling()) {
+    for (RenderObject* current = firstLetter->firstChildSlow(); current; current = current->nextSibling()) {
         if (current->isText())
             return toRenderText(current);
     }
@@ -1032,7 +1032,7 @@ void TextIterator::emitCharacter(UChar c, Node* textNode, Node* offsetBaseNode, 
 void TextIterator::emitText(Node* textNode, RenderObject* renderObject, int textStartOffset, int textEndOffset)
 {
     RenderText* renderer = toRenderText(renderObject);
-    m_text = m_emitsOriginalText ? renderer->originalText() : (m_emitsTextWithoutTranscoding ? renderer->textWithoutTranscoding() : renderer->text());
+    m_text = m_emitsOriginalText ? renderer->originalText() : (m_emitsTextWithoutTranscoding ? renderer->textWithoutConvertingBackslashToYenSymbol() : renderer->text());
     ASSERT(!m_text.isEmpty());
     ASSERT(0 <= textStartOffset && textStartOffset < static_cast<int>(m_text.length()));
     ASSERT(0 <= textEndOffset && textEndOffset <= static_cast<int>(m_text.length()));
@@ -1065,12 +1065,12 @@ PassRefPtr<Range> TextIterator::range() const
             m_positionEndOffset += index;
             m_positionOffsetBaseNode = 0;
         }
-        return Range::create(&m_positionNode->document(), m_positionNode, m_positionStartOffset, m_positionNode, m_positionEndOffset);
+        return Range::create(m_positionNode->document(), m_positionNode, m_positionStartOffset, m_positionNode, m_positionEndOffset);
     }
 
     // otherwise, return the end of the overall range we were given
     if (m_endContainer)
-        return Range::create(&m_endContainer->document(), m_endContainer, m_endOffset, m_endContainer, m_endOffset);
+        return Range::create(m_endContainer->document(), m_endContainer, m_endOffset, m_endContainer, m_endOffset);
         
     return 0;
 }
@@ -1367,9 +1367,9 @@ bool SimplifiedBackwardsTextIterator::advanceRespectingRange(Node* next)
 PassRefPtr<Range> SimplifiedBackwardsTextIterator::range() const
 {
     if (m_positionNode)
-        return Range::create(&m_positionNode->document(), m_positionNode, m_positionStartOffset, m_positionNode, m_positionEndOffset);
+        return Range::create(m_positionNode->document(), m_positionNode, m_positionStartOffset, m_positionNode, m_positionEndOffset);
     
-    return Range::create(&m_startNode->document(), m_startNode, m_startOffset, m_startNode, m_startOffset);
+    return Range::create(m_startNode->document(), m_startNode, m_startOffset, m_startNode, m_startOffset);
 }
 
 // --------
@@ -1468,7 +1468,7 @@ static PassRefPtr<Range> characterSubrange(CharacterIterator& it, int offset, in
         it.advance(length - 1);
     RefPtr<Range> end = it.range();
 
-    return Range::create(&start->startContainer()->document(),
+    return Range::create(start->startContainer()->document(),
         start->startContainer(), start->startOffset(), 
         end->endContainer(), end->endOffset());
 }
@@ -2316,9 +2316,9 @@ inline size_t SearchBuffer::append(const UChar* characters, size_t length)
     }
     const int maxFoldedCharacters = 16; // sensible maximum is 3, this should be more than enough
     UChar foldedCharacters[maxFoldedCharacters];
-    bool error;
-    int numFoldedCharacters = foldCase(foldedCharacters, maxFoldedCharacters, characters, 1, &error);
-    ASSERT(!error);
+    UErrorCode status = U_ZERO_ERROR;
+    int numFoldedCharacters = u_strFoldCase(foldedCharacters, maxFoldedCharacters, characters, 1, U_FOLD_CASE_DEFAULT, &status);
+    ASSERT(U_SUCCESS(status));
     ASSERT(numFoldedCharacters);
     ASSERT(numFoldedCharacters <= maxFoldedCharacters);
     if (!error && numFoldedCharacters) {
@@ -2406,7 +2406,7 @@ PassRefPtr<Range> TextIterator::rangeFromLocationAndLength(ContainerNode* scope,
 
     RefPtr<Range> textRunRange;
 
-    TextIterator it(rangeOfContents(scope).get(), forSelectionPreservation ? TextIteratorEmitsCharactersBetweenAllVisiblePositions : TextIteratorDefaultBehavior);
+    TextIterator it(rangeOfContents(*scope).get(), forSelectionPreservation ? TextIteratorEmitsCharactersBetweenAllVisiblePositions : TextIteratorDefaultBehavior);
     
     // FIXME: the atEnd() check shouldn't be necessary, workaround for <http://bugs.webkit.org/show_bug.cgi?id=6289>.
     if (rangeLocation == 0 && rangeLength == 0 && it.atEnd()) {
@@ -2504,7 +2504,7 @@ bool TextIterator::getLocationAndLengthFromRange(Node* scope, const Range* range
     if (range->endContainer() != scope && !range->endContainer()->isDescendantOf(scope))
         return false;
 
-    RefPtr<Range> testRange = Range::create(&scope->document(), scope, 0, range->startContainer(), range->startOffset());
+    RefPtr<Range> testRange = Range::create(scope->document(), scope, 0, range->startContainer(), range->startOffset());
     ASSERT(testRange->startContainer() == scope);
     location = TextIterator::rangeLength(testRange.get());
 

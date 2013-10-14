@@ -292,6 +292,8 @@ private:
                 fixEdge<Int32Use>(node->child1());
             else if (node->child1()->shouldSpeculateNumber())
                 fixEdge<NumberUse>(node->child1());
+            else if (node->child1()->shouldSpeculateString())
+                fixEdge<StringUse>(node->child1());
             break;
         }
             
@@ -759,8 +761,6 @@ private:
         case PutClosureVar:
         case SkipTopScope:
         case SkipScope:
-        case SetCallee:
-        case SetMyScope:
         case PutStructure:
         case AllocatePropertyStorage:
         case ReallocatePropertyStorage:
@@ -886,8 +886,17 @@ private:
         case Int52ToValue:
             RELEASE_ASSERT_NOT_REACHED();
             break;
-        
-#if !ASSERT_DISABLED    
+
+        case IsString:
+            if (node->child1()->shouldSpeculateString()) {
+                m_insertionSet.insertNode(m_indexInBlock, SpecNone, Phantom, node->codeOrigin,
+                    Edge(node->child1().node(), StringUse));
+                m_graph.convertToConstant(node, jsBoolean(true));
+                observeUseKindOnNode<StringUse>(node);
+            }
+            break;
+
+#if !ASSERT_DISABLED
         // Have these no-op cases here to ensure that nobody forgets to add handlers for new opcodes.
         case SetArgument:
         case JSConstant:
@@ -914,7 +923,6 @@ private:
         case IsUndefined:
         case IsBoolean:
         case IsNumber:
-        case IsString:
         case IsObject:
         case IsFunction:
         case CreateActivation:
@@ -1221,7 +1229,7 @@ private:
             case FlushedJSValue:
                 break;
             case FlushedDouble:
-                fixEdge<NumberUse>(node->child1(), ForwardSpeculation);
+                fixEdge<NumberUse>(node->child1());
                 break;
             case FlushedInt32:
                 fixEdge<Int32Use>(node->child1());
@@ -1409,11 +1417,11 @@ private:
     // edge, you either call fixEdge() or perform the equivalent functionality
     // yourself. Obviously, you should have a really good reason if you do the latter.
     template<UseKind useKind>
-    void fixEdge(Edge& edge, SpeculationDirection direction = BackwardSpeculation)
+    void fixEdge(Edge& edge)
     {
         if (isDouble(useKind)) {
             if (edge->shouldSpeculateInt32ForArithmetic()) {
-                injectInt32ToDoubleNode(edge, useKind, direction);
+                injectInt32ToDoubleNode(edge, useKind, m_currentNode->speculationDirection());
                 return;
             }
             
@@ -1426,6 +1434,7 @@ private:
                 Node* result = m_insertionSet.insertNode(
                     m_indexInBlock, SpecInt52AsDouble, Int52ToDouble,
                     m_currentNode->codeOrigin, Edge(edge.node(), NumberUse));
+                result->setSpeculationDirection(m_currentNode->speculationDirection());
                 edge = Edge(result, useKind);
                 return;
             }
@@ -1479,6 +1488,7 @@ private:
             Node* result = m_insertionSet.insertNode(
                 m_indexInBlock, SpecInt52, Int52ToValue,
                 m_currentNode->codeOrigin, Edge(edge.node(), UntypedUse));
+            result->setSpeculationDirection(m_currentNode->speculationDirection());
             edge = Edge(result, useKind);
             return;
         }

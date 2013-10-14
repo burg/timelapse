@@ -48,7 +48,6 @@
 #include "RenderEmbeddedObject.h"
 #include "RenderImage.h"
 #include "RenderWidget.h"
-#include "ScriptEventListener.h"
 #include "Settings.h"
 #include "SubframeLoader.h"
 #include "Text.h"
@@ -124,7 +123,7 @@ void HTMLObjectElement::parseAttribute(const QualifiedName& name, const AtomicSt
         if (renderer())
             setNeedsWidgetUpdate(true);
     } else if (name == onbeforeloadAttr)
-        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
+        setAttributeEventListener(eventNames().beforeloadEvent, name, value);
     else
         HTMLPlugInImageElement::parseAttribute(name, value);
 }
@@ -255,11 +254,6 @@ bool HTMLObjectElement::shouldAllowQuickTimeClassIdQuirk()
     
 bool HTMLObjectElement::hasValidClassId()
 {
-#if PLATFORM(QT)
-    if (equalIgnoringCase(serviceType(), "application/x-qt-plugin") || equalIgnoringCase(serviceType(), "application/x-qt-styled-widget"))
-        return true;
-#endif
-
     if (MIMETypeRegistry::isJavaAppletMIMEType(serviceType()) && classId().startsWith("java:", false))
         return true;
     
@@ -285,7 +279,7 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
     // FIXME: I'm not sure it's ever possible to get into updateWidget during a
     // removal, but just in case we should avoid loading the frame to prevent
     // security bugs.
-    if (!SubframeLoadingDisabler::canLoadFrame(this))
+    if (!SubframeLoadingDisabler::canLoadFrame(*this))
         return;
 
     String url = this->url();
@@ -323,14 +317,14 @@ void HTMLObjectElement::updateWidget(PluginCreationOption pluginCreationOption)
         renderFallbackContent();
 }
 
-Node::InsertionNotificationRequest HTMLObjectElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLObjectElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLPlugInImageElement::insertedInto(insertionPoint);
     FormAssociatedElement::insertedInto(insertionPoint);
     return InsertionDone;
 }
 
-void HTMLObjectElement::removedFrom(ContainerNode* insertionPoint)
+void HTMLObjectElement::removedFrom(ContainerNode& insertionPoint)
 {
     HTMLPlugInImageElement::removedFrom(insertionPoint);
     FormAssociatedElement::removedFrom(insertionPoint);
@@ -433,17 +427,17 @@ void HTMLObjectElement::updateDocNamedItem()
         const AtomicString& id = getIdAttribute();
         if (!id.isEmpty()) {
             if (isNamedItem)
-                document->addDocumentNamedItem(id, this);
+                document->addDocumentNamedItem(*id.impl(), *this);
             else
-                document->removeDocumentNamedItem(id, this);
+                document->removeDocumentNamedItem(*id.impl(), *this);
         }
 
         const AtomicString& name = getNameAttribute();
         if (!name.isEmpty() && id != name) {
             if (isNamedItem)
-                document->addDocumentNamedItem(name, this);
+                document->addDocumentNamedItem(*name.impl(), *this);
             else
-                document->removeDocumentNamedItem(name, this);
+                document->removeDocumentNamedItem(*name.impl(), *this);
         }
     }
     m_docNamedItem = isNamedItem;
@@ -467,7 +461,7 @@ bool HTMLObjectElement::containsJavaApplet() const
     return false;
 }
 
-void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void HTMLObjectElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLPlugInImageElement::addSubresourceAttributeURLs(urls);
 

@@ -128,22 +128,13 @@ static inline bool isReachableFromDOM(JSNode* jsNode, Node* node, SlotVisitor& v
 bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
 {
     JSNode* jsNode = jsCast<JSNode*>(handle.get().asCell());
-    return isReachableFromDOM(jsNode, jsNode->impl(), visitor);
-}
-
-void JSNodeOwner::finalize(JSC::Handle<JSC::Unknown> handle, void* context)
-{
-    JSNode* jsNode = static_cast<JSNode*>(handle.get().asCell());
-    DOMWrapperWorld* world = static_cast<DOMWrapperWorld*>(context);
-    uncacheWrapper(world, jsNode->impl(), jsNode);
-    jsNode->releaseImpl();
+    return isReachableFromDOM(jsNode, &jsNode->impl(), visitor);
 }
 
 JSValue JSNode::insertBefore(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
+    bool ok = impl().insertBefore(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -152,9 +143,8 @@ JSValue JSNode::insertBefore(ExecState* exec)
 
 JSValue JSNode::replaceChild(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
+    bool ok = impl().replaceChild(toNode(exec->argument(0)), toNode(exec->argument(1)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(1);
@@ -163,9 +153,8 @@ JSValue JSNode::replaceChild(ExecState* exec)
 
 JSValue JSNode::removeChild(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->removeChild(toNode(exec->argument(0)), ec);
+    bool ok = impl().removeChild(toNode(exec->argument(0)), ec);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -174,9 +163,8 @@ JSValue JSNode::removeChild(ExecState* exec)
 
 JSValue JSNode::appendChild(ExecState* exec)
 {
-    Node* imp = static_cast<Node*>(impl());
     ExceptionCode ec = 0;
-    bool ok = imp->appendChild(toNode(exec->argument(0)), ec, AttachLazily);
+    bool ok = impl().appendChild(toNode(exec->argument(0)), ec, AttachLazily);
     setDOMException(exec, ec);
     if (ok)
         return exec->argument(0);
@@ -198,8 +186,8 @@ void JSNode::visitChildren(JSCell* cell, SlotVisitor& visitor)
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
 
-    Node* node = thisObject->impl();
-    node->visitJSEventListeners(visitor);
+    Node& node = thisObject->impl();
+    node.visitJSEventListeners(visitor);
 
     visitor.addOpaqueRoot(root(node));
 }

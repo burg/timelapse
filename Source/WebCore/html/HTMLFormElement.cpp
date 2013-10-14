@@ -44,7 +44,6 @@
 #include "Page.h"
 #include "RenderTextControl.h"
 #include "ScriptController.h"
-#include "ScriptEventListener.h"
 #include "Settings.h"
 #include <limits>
 #include <wtf/Ref.h>
@@ -100,18 +99,18 @@ bool HTMLFormElement::rendererIsNeeded(const RenderStyle& style)
     if (!m_wasDemoted)
         return HTMLElement::rendererIsNeeded(style);
 
-    ContainerNode* node = parentNode();
-    RenderObject* parentRenderer = node->renderer();
+    auto parent = parentNode();
+    auto parentRenderer = parent->renderer();
 
     if (!parentRenderer)
         return false;
 
     // FIXME: Shouldn't we also check for table caption (see |formIsTablePart| below).
-    bool parentIsTableElementPart = (parentRenderer->isTable() && isHTMLTableElement(node))
-        || (parentRenderer->isTableRow() && node->hasTagName(trTag))
-        || (parentRenderer->isTableSection() && node->hasTagName(tbodyTag))
-        || (parentRenderer->isRenderTableCol() && node->hasTagName(colTag))
-        || (parentRenderer->isTableCell() && node->hasTagName(trTag));
+    bool parentIsTableElementPart = (parentRenderer->isTable() && isHTMLTableElement(parent))
+        || (parentRenderer->isTableRow() && parent->hasTagName(trTag))
+        || (parentRenderer->isTableSection() && parent->hasTagName(tbodyTag))
+        || (parentRenderer->isRenderTableCol() && parent->hasTagName(colTag))
+        || (parentRenderer->isTableCell() && parent->hasTagName(trTag));
 
     if (!parentIsTableElementPart)
         return true;
@@ -125,10 +124,10 @@ bool HTMLFormElement::rendererIsNeeded(const RenderStyle& style)
     return formIsTablePart;
 }
 
-Node::InsertionNotificationRequest HTMLFormElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLFormElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLElement::insertedInto(insertionPoint);
-    if (insertionPoint->inDocument())
+    if (insertionPoint.inDocument())
         document().didAssociateFormControl(this);
     return InsertionDone;
 }
@@ -141,7 +140,7 @@ static inline Node* findRoot(Node* n)
     return root;
 }
 
-void HTMLFormElement::removedFrom(ContainerNode* insertionPoint)
+void HTMLFormElement::removedFrom(ContainerNode& insertionPoint)
 {
     Node* root = findRoot(this);
     Vector<FormAssociatedElement*> associatedElements(m_associatedElements);
@@ -150,11 +149,11 @@ void HTMLFormElement::removedFrom(ContainerNode* insertionPoint)
     HTMLElement::removedFrom(insertionPoint);
 }
 
-void HTMLFormElement::handleLocalEvents(Event* event)
+void HTMLFormElement::handleLocalEvents(Event& event)
 {
-    Node* targetNode = event->target()->toNode();
-    if (event->eventPhase() != Event::CAPTURING_PHASE && targetNode && targetNode != this && (event->type() == eventNames().submitEvent || event->type() == eventNames().resetEvent)) {
-        event->stopPropagation();
+    Node* targetNode = event.target()->toNode();
+    if (event.eventPhase() != Event::CAPTURING_PHASE && targetNode && targetNode != this && (event.type() == eventNames().submitEvent || event.type() == eventNames().resetEvent)) {
+        event.stopPropagation();
         return;
     }
     HTMLElement::handleLocalEvents(event);
@@ -674,16 +673,16 @@ bool HTMLFormElement::hasNamedElement(const AtomicString& name)
 }
 
 // FIXME: Use RefPtr<HTMLElement> for namedItems. elements()->namedItems never return non-HTMLElement nodes.
-void HTMLFormElement::getNamedElements(const AtomicString& name, Vector<RefPtr<Node> >& namedItems)
+void HTMLFormElement::getNamedElements(const AtomicString& name, Vector<Ref<Element>>& namedItems)
 {
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/forms.html#dom-form-nameditem
     elements()->namedItems(name, namedItems);
 
     HTMLElement* elementFromPast = elementFromPastNamesMap(name);
-    if (namedItems.size() == 1 && namedItems.first() != elementFromPast)
-        addToPastNamesMap(toHTMLElement(namedItems.first().get())->asFormNamedItem(), name);
+    if (namedItems.size() == 1 && &namedItems.first().get() != elementFromPast)
+        addToPastNamesMap(toHTMLElement(&namedItems.first().get())->asFormNamedItem(), name);
     else if (elementFromPast && namedItems.isEmpty())
-        namedItems.append(elementFromPast);
+        namedItems.append(*elementFromPast);
 }
 
 void HTMLFormElement::documentDidResumeFromPageCache()

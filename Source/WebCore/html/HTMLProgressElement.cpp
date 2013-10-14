@@ -23,6 +23,7 @@
 #include "HTMLProgressElement.h"
 
 #include "Attribute.h"
+#include "ElementTraversal.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
 #include "HTMLDivElement.h"
@@ -74,11 +75,8 @@ bool HTMLProgressElement::childShouldCreateRenderer(const Node* child) const
 RenderProgress* HTMLProgressElement::renderProgress() const
 {
     if (renderer() && renderer()->isProgress())
-        return static_cast<RenderProgress*>(renderer());
-
-    RenderObject* renderObject = userAgentShadowRoot()->firstChild()->renderer();
-    ASSERT_WITH_SECURITY_IMPLICATION(!renderObject || renderObject->isProgress());
-    return static_cast<RenderProgress*>(renderObject);
+        return toRenderProgress(renderer());
+    return toRenderProgress(ElementTraversal::firstWithin(userAgentShadowRoot())->renderer());
 }
 
 void HTMLProgressElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -109,7 +107,7 @@ void HTMLProgressElement::setValue(double value, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(valueAttr, String::number(value >= 0 ? value : 0));
+    setAttribute(valueAttr, AtomicString::number(value >= 0 ? value : 0));
 }
 
 double HTMLProgressElement::max() const
@@ -124,7 +122,7 @@ void HTMLProgressElement::setMax(double max, ExceptionCode& ec)
         ec = NOT_SUPPORTED_ERR;
         return;
     }
-    setAttribute(maxAttr, String::number(max > 0 ? max : 1));
+    setAttribute(maxAttr, AtomicString::number(max > 0 ? max : 1));
 }
 
 double HTMLProgressElement::position() const

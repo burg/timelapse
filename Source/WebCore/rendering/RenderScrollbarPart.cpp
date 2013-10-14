@@ -37,7 +37,7 @@ using namespace std;
 namespace WebCore {
 
 RenderScrollbarPart::RenderScrollbarPart(RenderScrollbar* scrollbar, ScrollbarPart part)
-    : RenderBlock(0)
+    : RenderBlock(nullptr, 0)
     , m_scrollbar(scrollbar)
     , m_part(part)
 {
@@ -63,7 +63,7 @@ void RenderScrollbarPart::layout()
     else
         layoutVerticalPart();
 
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 void RenderScrollbarPart::layoutHorizontalPart()
@@ -209,10 +209,10 @@ void RenderScrollbarPart::paintIntoRect(GraphicsContext* graphicsContext, const 
     }
 }
 
-RenderObject* RenderScrollbarPart::rendererOwningScrollbar() const
+RenderBox* RenderScrollbarPart::rendererOwningScrollbar() const
 {
     if (!m_scrollbar)
-        return 0;
+        return nullptr;
     return m_scrollbar->owningRenderer();
 }
 

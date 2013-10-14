@@ -29,6 +29,7 @@
 #define JSC_COMMON_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
     macro(Array) \
     macro(ArrayBuffer) \
+    macro(ArrayIterator) \
     macro(BYTES_PER_ELEMENT) \
     macro(Boolean) \
     macro(Date) \
@@ -80,6 +81,7 @@
     macro(descriptions) \
     macro(displayName) \
     macro(document) \
+    macro(done) \
     macro(enumerable) \
     macro(eval) \
     macro(exec) \
@@ -106,10 +108,12 @@
     macro(message) \
     macro(multiline) \
     macro(name) \
+    macro(next) \
     macro(now) \
     macro(numInlinedCalls) \
     macro(numInlinedGetByIds) \
     macro(numInlinedPutByIds) \
+    macro(of) \
     macro(opcode) \
     macro(origin) \
     macro(osrExitSites) \
@@ -208,6 +212,9 @@ namespace JSC {
         const Identifier underscoreProto;
         const Identifier thisIdentifier;
         const Identifier useStrictIdentifier;
+        const Identifier iteratorPrivateName;
+        const Identifier iteratorNextPrivateName;
+        const Identifier hasNextIdentifier;
 
         
 #define JSC_IDENTIFIER_DECLARE_KEYWORD_NAME_GLOBAL(name) const Identifier name##Keyword;

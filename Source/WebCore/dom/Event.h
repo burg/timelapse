@@ -25,7 +25,7 @@
 #define Event_h
 
 #include "DOMTimeStamp.h"
-#include "EventNames.h"
+#include "EventInterfaces.h"
 #include "ScriptWrappable.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
@@ -36,7 +36,6 @@ namespace WebCore {
 
 class Clipboard;
 class EventTarget;
-class EventDispatcher;
 class HTMLIFrameElement;
 
 struct EventInit {
@@ -45,6 +44,14 @@ struct EventInit {
 
     bool bubbles;
     bool cancelable;
+};
+
+enum EventInterface {
+
+#define DOM_EVENT_INTERFACE_DECLARE(name) name##InterfaceType,
+DOM_EVENT_INTERFACES_FOR_EACH(DOM_EVENT_INTERFACE_DECLARE)
+#undef DOM_EVENT_INTERFACE_DECLARE
+
 };
 
 class Event : public ScriptWrappable, public RefCounted<Event> {
@@ -120,8 +127,7 @@ public:
 
     Clipboard* clipboardData() const { return isClipboardEvent() ? clipboard() : 0; }
 
-    virtual const AtomicString& interfaceName() const;
-    bool hasInterface(const AtomicString&) const;
+    virtual EventInterface eventInterface() const;
 
     // These events are general classes of events.
     virtual bool isUIEvent() const;
@@ -164,6 +170,8 @@ public:
     bool isBeingDispatched() const { return eventPhase(); }
 
     virtual PassRefPtr<Event> cloneFor(HTMLIFrameElement*) const;
+
+    virtual EventTarget* relatedTarget() const { return nullptr; }
 
 protected:
     Event();

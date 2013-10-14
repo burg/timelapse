@@ -25,7 +25,7 @@
 #include "GtkAdjustmentWatcher.h"
 #include "IntRect.h"
 #include "IntSize.h"
-#include "KURL.h"
+#include "URL.h"
 #include "PopupMenu.h"
 #include "Region.h"
 #include "SearchPopupMenu.h"
@@ -147,7 +147,6 @@ namespace WebKit {
         void cancelFullScreen();
 #endif
 
-        virtual bool shouldRubberBandInDirection(ScrollDirection) const { return true; }
         virtual void numWheelEventHandlersChanged(unsigned) { }
 
 #if USE(ACCELERATED_COMPOSITING) 
@@ -167,7 +166,7 @@ namespace WebKit {
     private:
         WebKitWebView* m_webView;
         GtkAdjustmentWatcher m_adjustmentWatcher;
-        KURL m_hoveredLinkURL;
+        URL m_hoveredLinkURL;
         unsigned int m_closeSoonTimer;
 
         Timer <ChromeClient> m_displayTimer;

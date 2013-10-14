@@ -74,14 +74,12 @@ public:
         COMPILE_ASSERT((charactersCount - 1 <= ((unsigned(~0) - sizeof(StringImpl)) / sizeof(LChar))), AtomicStringFromLiteralCannotOverflow);
     }
 
-#if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
     // We have to declare the copy constructor and copy assignment operator as well, otherwise
     // they'll be implicitly deleted by adding the move constructor and move assignment operator.
     AtomicString(const AtomicString& other) : m_string(other.m_string) { }
     AtomicString(AtomicString&& other) : m_string(std::move(other.m_string)) { }
     AtomicString& operator=(const AtomicString& other) { m_string = other.m_string; return *this; }
     AtomicString& operator=(AtomicString&& other) { m_string = std::move(other.m_string); return *this; }
-#endif
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     AtomicString(WTF::HashTableDeletedValueType) : m_string(WTF::HashTableDeletedValue) { }
@@ -101,7 +99,12 @@ public:
     unsigned length() const { return m_string.length(); }
     
     UChar operator[](unsigned int i) const { return m_string[i]; }
-    
+
+    WTF_EXPORT_STRING_API static AtomicString number(int);
+    WTF_EXPORT_STRING_API static AtomicString number(unsigned);
+    WTF_EXPORT_STRING_API static AtomicString number(double);
+    // If we need more overloads of the number function, we can add all the others that String has, but these seem to do for now.
+
     bool contains(UChar c) const { return m_string.contains(c); }
     bool contains(const LChar* s, bool caseSensitive = true) const
         { return m_string.contains(s, caseSensitive); }
@@ -149,10 +152,6 @@ public:
 #ifdef __OBJC__
     AtomicString(NSString* s) : m_string(add((CFStringRef)s)) { }
     operator NSString*() const { return m_string; }
-#endif
-#if PLATFORM(QT)
-    AtomicString(const QString& s) : m_string(add(String(s).impl())) { }
-    operator QString() const { return m_string; }
 #endif
 #if PLATFORM(BLACKBERRY)
     AtomicString(const BlackBerry::Platform::String& s) : m_string(add(String(s).impl())) { }

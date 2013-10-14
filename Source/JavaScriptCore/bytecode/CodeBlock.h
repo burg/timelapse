@@ -71,6 +71,7 @@
 #include "StructureStubInfo.h"
 #include "UnconditionalFinalizer.h"
 #include "ValueProfile.h"
+#include "VirtualRegister.h"
 #include "Watchpoint.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/PassOwnPtr.h>
@@ -86,7 +87,7 @@ class ExecState;
 class LLIntOffsetsExtractor;
 class RepatchBuffer;
 
-inline int unmodifiedArgumentsRegister(int argumentsRegister) { return argumentsRegister + 1; }
+inline VirtualRegister unmodifiedArgumentsRegister(VirtualRegister argumentsRegister) { return VirtualRegister(argumentsRegister.offset() + 1); }
 
 static ALWAYS_INLINE int missingThisObjectMarker() { return std::numeric_limits<int>::max(); }
 
@@ -148,7 +149,7 @@ public:
 
     inline bool isKnownNotImmediate(int index)
     {
-        if (index == m_thisRegister && !m_isStrictMode)
+        if (index == m_thisRegister.offset() && !m_isStrictMode)
             return true;
 
         if (isConstantRegisterIndex(index))
@@ -199,25 +200,9 @@ public:
     }
 #endif // ENABLE(JIT)
 
-    unsigned bytecodeOffset(ExecState*, ReturnAddressPtr);
-
     void unlinkIncomingCalls();
 
 #if ENABLE(JIT)
-    unsigned bytecodeOffsetForCallAtIndex(unsigned index)
-    {
-        if (!m_rareData)
-            return 1;
-        Vector<CallReturnOffsetToBytecodeOffset, 0, UnsafeVectorOverflow>& callIndices = m_rareData->m_callReturnIndexVector;
-        if (!callIndices.size())
-            return 1;
-        // FIXME: Fix places in DFG that call out to C that don't set the CodeOrigin. https://bugs.webkit.org/show_bug.cgi?id=118315
-        ASSERT(index < m_rareData->m_callReturnIndexVector.size());
-        if (index >= m_rareData->m_callReturnIndexVector.size())
-            return 1;
-        return m_rareData->m_callReturnIndexVector[index].bytecodeOffset;
-    }
-
     void unlinkCalls();
         
     void linkIncomingCall(ExecState* callerFrame, CallLinkInfo*);
@@ -260,6 +245,9 @@ public:
     unsigned instructionCount() { return m_instructions.size(); }
 
     int argumentIndexAfterCapture(size_t argument);
+    
+    bool hasSlowArguments();
+    const SlowArgument* machineSlowArguments();
 
     // Exactly equivalent to codeBlock->ownerExecutable()->installCode(codeBlock);
     void install();
@@ -314,79 +302,58 @@ public:
     void setVM(VM* vm) { m_vm = vm; }
     VM* vm() { return m_vm; }
 
-    void setThisRegister(int thisRegister) { m_thisRegister = thisRegister; }
-    int thisRegister() const { return m_thisRegister; }
+    void setThisRegister(VirtualRegister thisRegister) { m_thisRegister = thisRegister; }
+    VirtualRegister thisRegister() const { return m_thisRegister; }
 
     bool needsFullScopeChain() const { return m_unlinkedCode->needsFullScopeChain(); }
     bool usesEval() const { return m_unlinkedCode->usesEval(); }
 
-    void setArgumentsRegister(int argumentsRegister)
+    void setArgumentsRegister(VirtualRegister argumentsRegister)
     {
-        ASSERT(argumentsRegister != (int)InvalidVirtualRegister);
+        ASSERT(argumentsRegister.isValid());
         m_argumentsRegister = argumentsRegister;
         ASSERT(usesArguments());
     }
-    int argumentsRegister() const
+    VirtualRegister argumentsRegister() const
     {
         ASSERT(usesArguments());
         return m_argumentsRegister;
     }
-    int uncheckedArgumentsRegister()
+    VirtualRegister uncheckedArgumentsRegister()
     {
         if (!usesArguments())
-            return InvalidVirtualRegister;
+            return VirtualRegister();
         return argumentsRegister();
     }
-    void setActivationRegister(int activationRegister)
+    void setActivationRegister(VirtualRegister activationRegister)
     {
         m_activationRegister = activationRegister;
     }
-    int activationRegister() const
+
+    VirtualRegister activationRegister() const
     {
         ASSERT(needsFullScopeChain());
         return m_activationRegister;
     }
-    int uncheckedActivationRegister()
+
+    VirtualRegister uncheckedActivationRegister()
     {
         if (!needsFullScopeChain())
-            return InvalidVirtualRegister;
+            return VirtualRegister();
         return activationRegister();
     }
-    bool usesArguments() const { return m_argumentsRegister != (int)InvalidVirtualRegister; }
+
+    bool usesArguments() const { return m_argumentsRegister.isValid(); }
 
     bool needsActivation() const
     {
         return m_needsActivation;
     }
 
-    bool isCaptured(int operand, InlineCallFrame* inlineCallFrame = 0) const
-    {
-        if (operandIsArgument(operand))
-            return operandToArgument(operand) && usesArguments();
-
-        if (inlineCallFrame)
-            return inlineCallFrame->capturedVars.get(operandToLocal(operand));
-
-        // The activation object isn't in the captured region, but it's "captured"
-        // in the sense that stores to its location can be observed indirectly.
-        if (needsActivation() && operand == activationRegister())
-            return true;
-
-        // Ditto for the arguments object.
-        if (usesArguments() && operand == argumentsRegister())
-            return true;
-
-        // Ditto for the arguments object.
-        if (usesArguments() && operand == unmodifiedArgumentsRegister(argumentsRegister()))
-            return true;
-
-        // We're in global code so there are no locals to capture
-        if (!symbolTable())
-            return false;
-
-        return operand <= symbolTable()->captureStart()
-            && operand > symbolTable()->captureEnd();
-    }
+    bool isCaptured(VirtualRegister operand, InlineCallFrame* = 0) const;
+    
+    int framePointerOffsetToGetActivationRegisters(int machineCaptureStart);
+    int framePointerOffsetToGetActivationRegisters();
 
     CodeType codeType() const { return m_unlinkedCode->codeType(); }
     PutPropertySlot::Context putByIdContext() const
@@ -407,7 +374,7 @@ public:
 
     void clearEvalCache();
 
-    String nameForRegister(int registerNumber);
+    String nameForRegister(VirtualRegister);
 
 #if ENABLE(JIT)
     void setNumberOfStructureStubInfos(size_t size) { m_structureStubInfos.grow(size); }
@@ -581,52 +548,28 @@ public:
 
     bool hasExpressionInfo() { return m_unlinkedCode->hasExpressionInfo(); }
 
-#if ENABLE(JIT)
-    Vector<CallReturnOffsetToBytecodeOffset, 0, UnsafeVectorOverflow>& callReturnIndexVector()
-    {
-        createRareDataIfNecessary();
-        return m_rareData->m_callReturnIndexVector;
-    }
-#endif
-
 #if ENABLE(DFG_JIT)
-    SegmentedVector<InlineCallFrame, 4>& inlineCallFrames()
-    {
-        createRareDataIfNecessary();
-        return m_rareData->m_inlineCallFrames;
-    }
-        
     Vector<CodeOrigin, 0, UnsafeVectorOverflow>& codeOrigins()
     {
-        createRareDataIfNecessary();
-        return m_rareData->m_codeOrigins;
+        return m_jitCode->dfgCommon()->codeOrigins;
     }
     
-    unsigned addCodeOrigin(CodeOrigin codeOrigin)
-    {
-        createRareDataIfNecessary();
-        unsigned result = m_rareData->m_codeOrigins.size();
-        m_rareData->m_codeOrigins.append(codeOrigin);
-        return result;
-    }
-        
     // Having code origins implies that there has been some inlining.
     bool hasCodeOrigins()
     {
-        return m_rareData && !!m_rareData->m_codeOrigins.size();
+        return JITCode::isOptimizingJIT(jitType());
     }
         
     bool canGetCodeOrigin(unsigned index)
     {
-        if (!m_rareData)
+        if (!hasCodeOrigins())
             return false;
-        return m_rareData->m_codeOrigins.size() > index;
+        return index < codeOrigins().size();
     }
 
     CodeOrigin codeOrigin(unsigned index)
     {
-        RELEASE_ASSERT(m_rareData);
-        return m_rareData->m_codeOrigins[index];
+        return codeOrigins()[index];
     }
 
     bool addFrequentExitSite(const DFG::FrequentExitSite& site)
@@ -910,14 +853,14 @@ public:
 
 #if ENABLE(VALUE_PROFILER)
     bool shouldOptimizeNow();
-    void updateAllValueProfilePredictions(HeapOperation = NoOperation);
+    void updateAllValueProfilePredictions();
     void updateAllArrayPredictions();
-    void updateAllPredictions(HeapOperation = NoOperation);
+    void updateAllPredictions();
 #else
     bool updateAllPredictionsAndCheckIfShouldOptimizeNow() { return false; }
-    void updateAllValueProfilePredictions(HeapOperation = NoOperation) { }
+    void updateAllValueProfilePredictions() { }
     void updateAllArrayPredictions() { }
-    void updateAllPredictions(HeapOperation = NoOperation) { }
+    void updateAllPredictions() { }
 #endif
 
 #if ENABLE(JIT)
@@ -958,8 +901,8 @@ public:
     bool m_didFailFTLCompilation;
     
 protected:
-    virtual void visitWeakReferences(SlotVisitor&);
-    virtual void finalizeUnconditionally();
+    virtual void visitWeakReferences(SlotVisitor&) OVERRIDE;
+    virtual void finalizeUnconditionally() OVERRIDE;
 
 #if ENABLE(DFG_JIT)
     void tallyFrequentExitSites();
@@ -981,7 +924,7 @@ private:
 #endif
         
 #if ENABLE(VALUE_PROFILER)
-    void updateAllPredictionsAndCountLiveness(HeapOperation, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
+    void updateAllPredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 #endif
 
     void setConstantRegisters(const Vector<WriteBarrier<Unknown> >& constants)
@@ -1067,9 +1010,9 @@ private:
     VM* m_vm;
 
     RefCountedArray<Instruction> m_instructions;
-    int m_thisRegister;
-    int m_argumentsRegister;
-    int m_activationRegister;
+    VirtualRegister m_thisRegister;
+    VirtualRegister m_argumentsRegister;
+    VirtualRegister m_activationRegister;
 
     bool m_isStrictMode;
     bool m_needsActivation;
@@ -1144,14 +1087,6 @@ private:
         Vector<StringJumpTable> m_stringSwitchJumpTables;
 
         EvalCodeCache m_evalCodeCache;
-
-#if ENABLE(JIT)
-        Vector<CallReturnOffsetToBytecodeOffset, 0, UnsafeVectorOverflow> m_callReturnIndexVector;
-#endif
-#if ENABLE(DFG_JIT)
-        SegmentedVector<InlineCallFrame, 4> m_inlineCallFrames;
-        Vector<CodeOrigin, 0, UnsafeVectorOverflow> m_codeOrigins;
-#endif
     };
 #if COMPILER(MSVC)
     friend void WTF::deleteOwnedPtr<RareData>(RareData*);
@@ -1192,8 +1127,8 @@ public:
 
 #if ENABLE(JIT)
 protected:
-    virtual CodeBlock* replacement();
-    virtual DFG::CapabilityLevel capabilityLevelInternal();
+    virtual CodeBlock* replacement() OVERRIDE;
+    virtual DFG::CapabilityLevel capabilityLevelInternal() OVERRIDE;
 #endif
 };
 
@@ -1214,8 +1149,8 @@ public:
     
 #if ENABLE(JIT)
 protected:
-    virtual CodeBlock* replacement();
-    virtual DFG::CapabilityLevel capabilityLevelInternal();
+    virtual CodeBlock* replacement() OVERRIDE;
+    virtual DFG::CapabilityLevel capabilityLevelInternal() OVERRIDE;
 #endif
     
 private:
@@ -1236,8 +1171,8 @@ public:
     
 #if ENABLE(JIT)
 protected:
-    virtual CodeBlock* replacement();
-    virtual DFG::CapabilityLevel capabilityLevelInternal();
+    virtual CodeBlock* replacement() OVERRIDE;
+    virtual DFG::CapabilityLevel capabilityLevelInternal() OVERRIDE;
 #endif
 };
 
@@ -1267,6 +1202,11 @@ inline int CodeBlock::argumentIndexAfterCapture(size_t argument)
     
     ASSERT(slowArguments[argument].status == SlowArgument::Captured);
     return slowArguments[argument].index;
+}
+
+inline bool CodeBlock::hasSlowArguments()
+{
+    return !!symbolTable()->slowArguments();
 }
 
 inline Register& ExecState::r(int index)

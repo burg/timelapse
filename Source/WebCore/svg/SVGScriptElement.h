@@ -46,14 +46,14 @@ private:
 
     bool isSupportedAttribute(const QualifiedName&);
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void childrenChanged(const ChildChange&) OVERRIDE;
 
     virtual void svgAttributeChanged(const QualifiedName&);
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
     virtual void finishParsingChildren();
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const;
 
     virtual bool haveLoadedRequiredResources() { return SVGExternalResourcesRequired::haveLoadedRequiredResources(); }
 

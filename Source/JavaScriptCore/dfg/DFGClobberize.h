@@ -207,10 +207,6 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         read(AbstractHeap(Variables, JSStack::Callee));
         return;
         
-    case SetCallee:
-        write(AbstractHeap(Variables, JSStack::Callee));
-        return;
-        
     case GetLocal:
     case GetArgument:
         read(AbstractHeap(Variables, node->local()));
@@ -500,12 +496,8 @@ void clobberize(Graph& graph, Node* node, ReadFunctor& read, WriteFunctor& write
         read(AbstractHeap(Variables, JSStack::ScopeChain));
         return;
         
-    case SetMyScope:
-        write(AbstractHeap(Variables, JSStack::ScopeChain));
-        return;
-        
     case SkipTopScope:
-        read(AbstractHeap(Variables, graph.m_codeBlock->activationRegister()));
+        read(AbstractHeap(Variables, graph.activationRegister()));
         return;
         
     case GetClosureRegisters:

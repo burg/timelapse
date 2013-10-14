@@ -29,6 +29,7 @@
 #include "BytecodeConventions.h"
 #include "CCallHelpers.h"
 #include "JITCode.h"
+#include "JITOperations.h"
 #include "JITStubs.h"
 #include "JSCJSValue.h"
 #include "JSStack.h"
@@ -89,6 +90,7 @@ namespace JSC {
         static const RegisterID nonArgGPR1 = X86Registers::eax; // regT0
 #elif CPU(X86)
         static const RegisterID returnValueRegister = X86Registers::eax;
+        static const RegisterID returnValue2Register = X86Registers::edx;
         static const RegisterID cachedResultRegister = X86Registers::eax;
         // On x86 we always use fastcall conventions = but on
         // OS X if might make more sense to just use regparm.
@@ -109,6 +111,7 @@ namespace JSC {
         static const FPRegisterID fpRegT3 = X86Registers::xmm3;
 #elif CPU(ARM)
         static const RegisterID returnValueRegister = ARMRegisters::r0;
+        static const RegisterID returnValue2Register = ARMRegisters::r1;
         static const RegisterID cachedResultRegister = ARMRegisters::r0;
         static const RegisterID firstArgumentRegister = ARMRegisters::r0;
         static const RegisterID secondArgumentRegister = ARMRegisters::r1;
@@ -131,6 +134,7 @@ namespace JSC {
         static const FPRegisterID fpRegT3 = ARMRegisters::d3;
 #elif CPU(MIPS)
         static const RegisterID returnValueRegister = MIPSRegisters::v0;
+        static const RegisterID returnValue2Register = MIPSRegisters::v1;
         static const RegisterID cachedResultRegister = MIPSRegisters::v0;
         static const RegisterID firstArgumentRegister = MIPSRegisters::a0;
         static const RegisterID secondArgumentRegister = MIPSRegisters::a1;
@@ -169,6 +173,7 @@ namespace JSC {
         static const RegisterID secondArgumentRegister = regT5;
 
         static const RegisterID returnValueRegister = SH4Registers::r0;
+        static const RegisterID returnValue2Register = SH4Registers::r1;
         static const RegisterID cachedResultRegister = SH4Registers::r0;
 
         static const FPRegisterID fpRegT0 = SH4Registers::dr0;
@@ -186,7 +191,7 @@ namespace JSC {
         static const unsigned Int32Tag = 0xffffffff;
         COMPILE_ASSERT(Int32Tag == JSValue::Int32Tag, Int32Tag_out_of_sync);
 #else
-        static const unsigned Int32Tag = TagTypeNumber >> 32;
+        static const unsigned Int32Tag = static_cast<unsigned>(TagTypeNumber >> 32);
 #endif
         inline Jump emitLoadJSCell(unsigned virtualRegisterIndex, RegisterID payload);
         inline Jump emitLoadInt32(unsigned virtualRegisterIndex, RegisterID dst);

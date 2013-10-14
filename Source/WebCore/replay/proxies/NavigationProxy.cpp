@@ -34,13 +34,13 @@
 #include "NavigationProxy.h"
 
 #include "DispatchEventBase.h"
-#include "Frame.h"
 #include "FrameLoadRequest.h"
 #include "LoadURLRequest.h"
+#include "MainFrame.h"
 #include "ReloadFrame.h"
-#include "StopLoadingFrame.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
+#include "StopLoadingFrame.h"
 #include <wtf/replay/InputIterator.h>
 
 /* We must always define these symbols even if web replay support is

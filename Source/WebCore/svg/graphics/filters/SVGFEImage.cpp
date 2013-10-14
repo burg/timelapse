@@ -47,9 +47,9 @@ FEImage::FEImage(Filter* filter, PassRefPtr<Image> image, const SVGPreserveAspec
 {
 }
 
-FEImage::FEImage(Filter* filter, Document* document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
+FEImage::FEImage(Filter* filter, Document& document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
     : FilterEffect(filter)
-    , m_document(document)
+    , m_document(&document)
     , m_href(href)
     , m_preserveAspectRatio(preserveAspectRatio)
 {
@@ -60,7 +60,7 @@ PassRefPtr<FEImage> FEImage::createWithImage(Filter* filter, PassRefPtr<Image> i
     return adoptRef(new FEImage(filter, image, preserveAspectRatio));
 }
 
-PassRefPtr<FEImage> FEImage::createWithIRIReference(Filter* filter, Document* document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
+PassRefPtr<FEImage> FEImage::createWithIRIReference(Filter* filter, Document& document, const String& href, const SVGPreserveAspectRatio& preserveAspectRatio)
 {
     return adoptRef(new FEImage(filter, document, href, preserveAspectRatio));
 }
@@ -88,7 +88,7 @@ RenderElement* FEImage::referencedRenderer() const
 {
     if (!m_document)
         return 0;
-    Element* hrefElement = SVGURIReference::targetElementFromIRIString(m_href, m_document);
+    Element* hrefElement = SVGURIReference::targetElementFromIRIString(m_href, *m_document);
     if (!hrefElement || !hrefElement->isSVGElement())
         return 0;
     return hrefElement->renderer();
@@ -96,7 +96,7 @@ RenderElement* FEImage::referencedRenderer() const
 
 void FEImage::platformApplySoftware()
 {
-    RenderObject* renderer = referencedRenderer();
+    RenderElement* renderer = referencedRenderer();
     if (!m_image && !renderer)
         return;
 
@@ -125,7 +125,7 @@ void FEImage::platformApplySoftware()
         const AffineTransform& absoluteTransform = svgFilter->absoluteTransform();
         resultImage->context()->concatCTM(absoluteTransform);
 
-        SVGElement* contextNode = toSVGElement(renderer->node());
+        SVGElement* contextNode = toSVGElement(renderer->element());
         if (contextNode->hasRelativeLengths()) {
             SVGLengthContext lengthContext(contextNode);
             float width = 0;
@@ -138,7 +138,7 @@ void FEImage::platformApplySoftware()
         }
 
         AffineTransform contentTransformation;
-        SVGRenderingContext::renderSubtreeToImageBuffer(resultImage, renderer, contentTransformation);
+        SVGRenderingContext::renderSubtreeToImageBuffer(resultImage, *renderer, contentTransformation);
         return;
     }
 

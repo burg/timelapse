@@ -34,12 +34,12 @@
 #include "Document.h"
 #include "Font.h"
 #include "FontGenericFamilies.h"
-#include "Frame.h"
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "HTMLMediaElement.h"
 #include "HistoryItem.h"
 #include "InspectorInstrumentation.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "StorageMap.h"
@@ -112,6 +112,18 @@ static EditingBehaviorType editingBehaviorTypeForPlatform()
     ;
 }
 
+#if PLATFORM(IOS)
+static const bool defaultFixedPositionCreatesStackingContext = true;
+static const bool defaultMediaPlaybackAllowsInline = false;
+static const bool defaultMediaPlaybackRequiresUserGesture = true;
+static const bool defaultShouldRespectImageOrientation = true;
+#else
+static const bool defaultFixedPositionCreatesStackingContext = false;
+static const bool defaultMediaPlaybackAllowsInline = true;
+static const bool defaultMediaPlaybackRequiresUserGesture = false;
+static const bool defaultShouldRespectImageOrientation = false;
+#endif
+
 static const double defaultIncrementalRenderingSuppressionTimeoutInSeconds = 5;
 #if USE(UNIFIED_TEXT_CHECKING)
 static const bool defaultUnifiedTextCheckerEnabled = true;
@@ -170,6 +182,7 @@ Settings::Settings(Page* page)
 #if ENABLE(PAGE_VISIBILITY_API)
     , m_hiddenPageCSSAnimationSuspensionEnabled(false)
 #endif
+    , m_fontFallbackPrefersPictographs(false)
 {
     // A Frame may not have been created yet, so we initialize the AtomicString
     // hash before trying to use it.
@@ -404,7 +417,7 @@ void Settings::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
     m_page->privateBrowsingStateChanged();
 }
 
-void Settings::setUserStyleSheetLocation(const KURL& userStyleSheetLocation)
+void Settings::setUserStyleSheetLocation(const URL& userStyleSheetLocation)
 {
     if (m_userStyleSheetLocation == userStyleSheetLocation)
         return;
@@ -628,6 +641,15 @@ void Settings::setHiddenPageCSSAnimationSuspensionEnabled(bool flag)
     m_page->hiddenPageCSSAnimationSuspensionStateChanged();
 }
 #endif
+
+void Settings::setFontFallbackPrefersPictographs(bool preferPictographs)
+{
+    if (m_fontFallbackPrefersPictographs == preferPictographs)
+        return;
+
+    m_fontFallbackPrefersPictographs = preferPictographs;
+    m_page->setNeedsRecalcStyleInAllFrames();
+}
 
 void Settings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
 {

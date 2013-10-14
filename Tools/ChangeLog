@@ -1,3 +1,2224 @@
+2013-10-11  Timothy Hatcher  <timothy@apple.com>
+
+        Remove preference support for picking the old Web Inspector.
+        https://bugs.webkit.org/show_bug.cgi?id=122655
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::resetStateToConsistentValues):
+
+2013-10-11  Filip Pizlo  <fpizlo@apple.com>
+
+        Fix 64-bit build on everything but Windows.
+
+        Rubber stamped by Brent Fulgham.
+
+        * Scripts/webkitdirs.pm:
+        (argumentsForConfiguration):
+
+2013-10-11  Alexey Proskuryakov  <ap@apple.com>
+
+        Touch a file to see how auto-update works.
+
+        Rubber-stamped by Tim Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTestResults.js:
+
+2013-10-11  Alexey Proskuryakov  <ap@apple.com>
+
+        LeaksViewer fails to present recent results list if current build is still updating svn
+        https://bugs.webkit.org/show_bug.cgi?id=122670
+
+        Fixed an obvious mistake in the previous patch.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/LeaksViewer/RecentBuildsLoader.js:
+        (RecentBuildsLoader.prototype.start):
+
+2013-10-11  Alexey Proskuryakov  <ap@apple.com>
+
+        LeaksViewer fails to present recent results list if current build is still updating svn
+        https://bugs.webkit.org/show_bug.cgi?id=122670
+
+        Reviewed by Adam Roben.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/LeaksViewer/RecentBuildsLoader.js:
+        (RecentBuildsLoader.prototype.start): Skip builds that don't have an svn revision yet.
+
+2013-10-11  Brent Fulgham  <bfulgham@apple.com>
+
+        Unreviewed build fix for --64-bit target.
+
+        * Scripts/webkitdirs.pm:
+        (argumentsForConfiguration): Use 'isWin64' test, since @ARGV value may have
+        been removed by this point.
+        (hasArgument): Remove unused temporary.
+
+2013-10-10  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        webkit-patch failure-reason has a quite low limit for 'too many failures'
+        https://bugs.webkit.org/show_bug.cgi?id=122556
+
+        Reviewed by Darin Adler.
+
+        * Scripts/webkitpy/tool/commands/queries.py:
+        (FailureReason._explain_failures_for_builder): adjust the number of too many failures
+        to match what the layout test runners use these days.
+
+2013-10-10  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        webkit-patch failure-reason should allow specifying failures one is interested in
+        https://bugs.webkit.org/show_bug.cgi?id=122554
+
+        Reviewed by Darin Adler.
+
+        * Scripts/webkitpy/tool/commands/queries.py:
+        (FailureReason):
+        (FailureReason._explain_failures_for_builder): keep track of explained failures and drop out of the
+        loop if the ones we're interested in been explained.
+        (FailureReason._done_explaining): check the failures we're interested in have been explained, if any.
+        (FailureReason.execute): initialize failures to explain and the explained set.
+
+2013-10-10  Filip Pizlo  <fpizlo@apple.com>
+
+        Make sure that DataTypes.h is in the binary drop.
+
+        Rubber stamped by Michael Saboff.
+
+        * Scripts/export-llvm-build:
+
+2013-10-10  Filip Pizlo  <fpizlo@apple.com>
+
+        FTL: Soft-link LLVM as a workaround for LLVM's static initializers and exit-time destructors
+        https://bugs.webkit.org/show_bug.cgi?id=122566
+
+        Reviewed by Mark Rowe.
+
+        * Scripts/configure-llvm:
+
+2013-10-10  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/13341666> WebKit should always build against an SDK.
+
+        Have all projects default to building against the OS X Internal SDK for the Production
+        configuration. For the Debug and Release configurations, look for UseInternalSDK.xcconfig
+        to determine whether the OS X Internal SDK should be used. If not, use the normal OS X SDK.
+
+        Reviewed by Dan Bernstein.
+
+        * DumpRenderTree/mac/Configurations/Base.xcconfig:
+        * DumpRenderTree/mac/Configurations/DebugRelease.xcconfig:
+        * MiniBrowser/Configurations/Base.xcconfig:
+        * MiniBrowser/Configurations/DebugRelease.xcconfig:
+        * TestWebKitAPI/Configurations/Base.xcconfig:
+        * TestWebKitAPI/Configurations/DebugRelease.xcconfig:
+        * WebKitTestRunner/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/DebugRelease.xcconfig:
+
+2013-10-10  Gustavo Noronha Silva  <gns@gnome.org>
+
+        Unreviewed gardening, the inspector protocol timeouts are also affecting TestInspectorServer.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner): skip TestInspectorServer.
+
+2013-10-10  Andres Gomez  <agomez@igalia.com>
+
+        [GTK] Provide search functionality to MiniBrowser
+        https://bugs.webkit.org/show_bug.cgi?id=117631
+
+        Reviewed by Carlos Garcia Campos.
+
+        Adds a search bar to MiniBrowser with the minimum functionality
+        and a new button to the toolbar for showing the new search
+        bar. Typical keyboard shortcuts are also added.
+
+        * MiniBrowser/gtk/BrowserSearchBar.c: Added.
+        (doSearch):
+        (searchNext):
+        (searchPrevious):
+        (searchCloseButtonClickedCallback):
+        (searchEntryMenuIconPressedCallback):
+        (searchEntryClearIconReleasedCallback):
+        (searchEntryChangedCallback):
+        (searchEntryActivatedCallback):
+        (searchPrevButtonClickedCallback):
+        (searchNextButtonClickedCallback):
+        (searchMenuCheckButtonToggledCallback):
+        (browser_search_bar_init):
+        (browserSearchBarFinalize):
+        (browser_search_bar_class_init):
+        (browser_search_bar_new):
+        (browser_search_bar_add_accelerators):
+        (browser_search_bar_open):
+        (browser_search_bar_close):
+        * MiniBrowser/gtk/BrowserSearchBar.h: Added.
+        * MiniBrowser/gtk/BrowserWindow.c:
+        (webViewEnterFullScreen): Closes new search bar.
+        (webViewLeaveFullScreen): Opens new search bar if previously
+        visible.
+        (searchCallback): Added. Shows and hides the new search bar.
+        (browser_window_init): Added search button to the toolbar.
+        (browserWindowConstructed): Creates the new search bar.
+        * MiniBrowser/gtk/GNUmakefile.am: Added new files to compilation.
+
+2013-10-09  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        webkit-patch failure-reason fails with UnicodeDecodeError when name has non-ascii characters
+        https://bugs.webkit.org/show_bug.cgi?id=122552
+
+        Reviewed by Darin Adler.
+
+        * Scripts/webkitpy/common/checkout/commitinfo.py:
+        (CommitInfo.blame_string): ensure objects are made into unicode strings, not regular ones that
+        will cause UnicodeDecodeError for non-ascii characters.
+
+2013-10-09  Alexey Proskuryakov  <ap@apple.com>
+
+        Would like a link to dashboard from build.webkit.org main page
+        https://bugs.webkit.org/show_bug.cgi?id=122577
+
+        Reviewed by Tim Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/templates/root.html: Added.
+
+2013-10-09  Brent Fulgham  <bfulgham@apple.com>
+
+        [Win] Check for MathML fonts and warn user if they are missing.
+        https://bugs.webkit.org/show_bug.cgi?id=122568
+
+        Reviewed by Tim Horton.
+
+        * Scripts/webkitdirs.pm:
+        (checkRequiredSystemConfig): Use common gperf/bison/flex tests, rather than
+        Windows-specific code I added previously.
+        (fontExists): Added
+        (checkInstalledTools): Add check for MathML fonts.
+
+2013-10-09  Alexey Proskuryakov  <ap@apple.com>
+
+        http://build.webkit.org/dashboard/ doesn't link to webkitpy failures
+        https://bugs.webkit.org/show_bug.cgi?id=122471
+
+        Reviewed by Tim Hatcher.
+
+        Added links to webkitpy, webkitperl and bindings-tests results.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js:
+        (Buildbot.prototype.apiTestResultsURLForIteration):
+        (Buildbot.prototype.webkitpyTestResultsURLForIteration):
+        (Buildbot.prototype.webkitperlTestResultsURLForIteration):
+        (Buildbot.prototype.bindingsTestResultsURLForIteration):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus):
+
+2013-10-09  Alexey Proskuryakov  <ap@apple.com>
+
+        Move some functions from WebKitBuildbot to Buildbot class.
+
+        Suggested by Tim Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js:
+        (Buildbot.prototype.javascriptTestResultsURLForIteration):
+        (Buildbot.prototype.apiTestResultsURLForIteration):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot.prototype.layoutTestResultsURLForIteration):
+
+2013-10-09  Timothy Hatcher  <timothy@apple.com>
+
+        Add API tests to the Dashbord page.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122283
+
+        Reviewed by Timothy Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot.prototype.apiTestResultsURLForIteration):
+
+2013-10-09  Timothy Hatcher  <timothy@apple.com>
+
+        Attempt to fix faulty Dashboard iteration updating by always rebuilding test result objects.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122515
+
+        Reviewed by Alexey Proskuryakov.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotIteration.js:
+        (BuildbotIteration.prototype.update):
+
+2013-10-09  Alexey Proskuryakov  <ap@apple.com>
+
+        build.webkit.org/dashboard doesn't provide a results link when there issues at multiple steps
+        https://bugs.webkit.org/show_bug.cgi?id=122573
+
+        Reviewed by Tim Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus): Provide a URL.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js:
+        (Buildbot.prototype.buildPageURLForIteration): Added.
+
+2013-10-09  Alexey Proskuryakov  <ap@apple.com>
+
+        http://build.webkit.org/dashboard/ links to a wrong jscore-test results page
+        https://bugs.webkit.org/show_bug.cgi?id=122569
+
+        Reviewed by Tim Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot.prototype.javascriptTestResultsURLForIteration): "actual.html" used
+        to be produced by the old Mozilla test harness that we don't use any more.
+
+2013-10-09  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        Add GTK 64 bits release to the buildbot dashboard
+        https://bugs.webkit.org/show_bug.cgi?id=122548
+
+        Reviewed by Darin Adler.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/GTK.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot): add 64 bits release wk2 and wk1 testers.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/Main.css:
+        (table.queue-grid tr.platform.linux-gtk img.logo): use the GTK+ logo in its dashboard line.
+
+2013-10-09  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] Implement new API in AtkText: atk_text_get_string_at_offset()
+        https://bugs.webkit.org/show_bug.cgi?id=120638
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * gtk/jhbuild.modules: Raised ATK and AT-SPI versions to 2.10.0, so we
+        can check both the old and new APIs to retrieve text at a given offset.
+
+2013-10-08  Alex Christensen  <achristensen@webkit.org>
+
+        Improved WinLauncher.
+        https://bugs.webkit.org/show_bug.cgi?id=122536
+
+        Reviewed by Brent Fulgham.
+
+        * WinLauncher/PrintWebUIDelegate.cpp:
+        (PrintWebUIDelegate::runJavaScriptAlertPanelWithMessage): Added.
+        (PrintWebUIDelegate::runJavaScriptConfirmPanelWithMessage): Added.
+        * WinLauncher/PrintWebUIDelegate.h: Removed stubs.
+        * WinLauncher/WinLauncher.cpp:
+        (createCrashReport): Use the executable name instead of "WinLauncher".
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.exe.manifest: Removed.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibCommon.props: Link to Wininet.lib.
+        * win/DLLLauncher/DLLLauncherMain.cpp: Remove VS2005 dependency for WinCairo.
+
+2013-10-08  Mark Lam  <mark.lam@apple.com>
+
+        Fix ruby LoadError when running run-javascriptcore-tests.
+        https://bugs.webkit.org/show_bug.cgi?id=122519.
+
+        Reviewed by Mark Hahnenberg.
+
+        The scripts needed to explicitly require 'rubygems' for older versions of ruby
+        (versions before 1.9).
+
+        * Scripts/jsc-stress-test-helpers/profiler-test-helper:
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-08  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Unreviewed, add my new email to contributors.json.
+
+        * Scripts/webkitpy/common/config/contributors.json:
+
+2013-10-08  Brent Fulgham  <bfulgham@apple.com>
+
+        Unreviewed build correction.
+
+        * Scripts/webkitpy/port/win.py:
+        (WinPort.write_registry_value): Use string representation of error message to avoid
+        format conversion problem.
+
+2013-10-07  Brent Fulgham  <bfulgham@apple.com>
+
+        [Win] Add checks for proper build and test environment
+        https://bugs.webkit.org/show_bug.cgi?id=122466
+
+        Reviewed by Darin Adler.
+
+        This patch makes two changes:
+        1. Update webkitdirs.pm to check for some common misconfigurations and provide helpful warnings or
+           error messages so that people know what to fix to get things working.
+        2. Modify the win.py port to handle the 32-bit and 64-bit test environments, as well as making sure
+           the various environment settings are properly configured for our test environment.
+
+        * Scripts/webkitdirs.pm:
+        (checkInstalledTools): Add checks for some common Cygwin configuration problems that have
+        caused problems in the past.
+        (setupAppleWinEnv):
+        * Scripts/webkitpy/port/win.py:
+        (WinPort):
+        (WinPort.read_registry_string): Parameterize for run architecture and registry root.
+        (WinPort.write_registry_value): Parameterize registry writing by data type (string versus
+        DWORD, etc.)
+        (WinPort.write_registry_string): Revise to call new generic registry write function.
+        (WinPort.setup_crash_log_saving): Revise for new API
+        (WinPort.restore_crash_log_saving): Ditto
+        (WinPort.prevent_error_dialogs): Add new methods to prevent Windows dialogs that block our test
+        servers from running.
+        (WinPort.allow_error_dialogs): Ditto.
+        (WinPort.setup_test_run): Call new API to turn off user input dialogs on program failure.
+        (WinPort.clean_up_test_run): Call new API to reactivatea user input dialogs after test run finished.
+
+2013-10-08  Philippe Normand  <pnormand@igalia.com>
+
+        [GStreamer] enable v4l2 plugin
+        https://bugs.webkit.org/show_bug.cgi?id=122503
+
+        Reviewed by Martin Robinson.
+
+        * gtk/jhbuild.modules: Enable the plugin, it now builds fine since
+        we updated our GStreamer version to 1.0.8.
+
+2013-10-08  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] Expose state of aria-invalid as ATK_STATE_INVALID_ENTRY
+        https://bugs.webkit.org/show_bug.cgi?id=122104
+
+        Reviewed by Chris Fleizach.
+
+        Updated stringAttributeValue to double check that the exposure of
+        aria-invalid as a state is consistent with its exposure as a text
+        attribute as well, when it applies (implementations of AtkText).
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::stringAttributeValue): Add double check.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::stringAttributeValue): Ditto.
+
+2013-10-07  Filip Pizlo  <fpizlo@apple.com>
+
+        run-jsc-stress-tests progress meter should update more quickly on older Rubies
+        https://bugs.webkit.org/show_bug.cgi?id=122459
+
+        Reviewed by Darin Adler.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-07  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [buildbot] parse tests that are reported as crashed correctly for GTK+
+        https://bugs.webkit.org/show_bug.cgi?id=122476
+
+        Reviewed by Martin Robinson.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (RunGtkAPITests.commandComplete): parse the crashed tests output so that is reported
+        as a failure of the API tests.
+
+2013-10-07  Gustavo Noronha Silva  <gns@gnome.org>
+
+        Unreviewed. Skipping API test that is causing the next one to crash,
+        see https://bugs.webkit.org/show_bug.cgi?id=121970.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner):
+
+2013-10-07  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        [GTK] run-gtk-tests does not distinguish between failure and crashes
+        https://bugs.webkit.org/show_bug.cgi?id=122135
+
+        Reviewed by Martin Robinson.
+
+        The GTK+ API test runner does not distinguish between failures and crashes. This change
+        makes it do that, so it's easier for us to spot the more important/higher priority crash
+        case.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner._run_test_command): return the exit code instead of a boolean true/false,
+        so we have more information on how the process ended.
+        (TestRunner._run_test): check the exit code to distinguish between crashes and failures.
+        (TestRunner.run_tests): report crashes.
+
+2013-10-07  Gustavo Noronha Silva  <gns@gnome.org>
+
+        [GTK] Missing packages for APT on install-dependencies
+        https://bugs.webkit.org/show_bug.cgi?id=121555
+
+        Reviewed by Martin Robinson.
+
+        * gtk/install-dependencies: add packages that are needed for
+        building WebKit itself and the jhbuild dependencies.
+
+2013-10-07  Anders Carlsson  <andersca@apple.com>
+
+        Fix test failures.
+
+        * Scripts/webkitpy/port/base.py:
+        (Port.to.start_helper):
+        * Scripts/webkitpy/port/mock_drt.py:
+        (MockDRTPort.start_helper):
+
+2013-10-07  Anders Carlsson  <andersca@apple.com>
+
+        Always force discrete mode when running layout tests
+        https://bugs.webkit.org/show_bug.cgi?id=122465
+
+        Reviewed by Tim Horton.
+
+        This should speed up WebGL tests and hopefully prevent race conditions that may cause window server crashes from happening.
+        
+        * DumpRenderTree/DumpRenderTree.xcodeproj/project.pbxproj:
+        Link with IOKit.
+
+        * DumpRenderTree/mac/LayoutTestHelper.m:
+        (installLayoutTestColorProfile):
+        Check installColorProfile.
+
+        (restoreUserColorProfile):
+        Check installColorProfile.
+
+        (lockDownDiscreteGraphics):
+        New function to force discrete graphics.
+
+        (main):
+        Add '--install-color-profile' option.
+
+        * Scripts/webkitpy/layout_tests/controllers/manager.py:
+        (Manager._set_up_run):
+        Always start the helper, but pass self._options.pixel_tests to it.
+
+        * Scripts/webkitpy/port/mac.py:
+        (MacPort.start_helper):
+        Pass --install-color-profile' to the helper if pixel_tests is true.
+
+2013-10-07  Timothy Hatcher  <timothy@apple.com>
+
+        Properly count binding test failures as failures.
+
+        Fix the total for multiple failures in different steps too by avoiding undefined.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122232
+
+        Reviewed by Alexey Proskuryakov.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTestResults.js:
+        (BuildbotTestResults):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus):
+
+2013-10-07  Gustavo Noronha Silva  <gustavo.noronha@collabora.com>
+
+        [GTK] Fails to build with jhbuild with newer system glib
+        https://bugs.webkit.org/show_bug.cgi?id=122132
+
+        Reviewed by Martin Robinson.
+
+        Newer glib includes new symbols that some system libraries which we depend on, such as pango, have
+        started relying on. glib is not a dependency that should change test results, and is provided in
+        jhbuild with the intention of supporting the other bits that do, so using a newer stable release
+        should not be an issue.
+
+        * gtk/jhbuild.modules:
+
+2013-10-06  Filip Pizlo  <fpizlo@apple.com>
+
+        run-jsc-stress-tests shouldn't print its goofy progress meter when running on the bots
+        https://bugs.webkit.org/show_bug.cgi?id=122437
+
+        Reviewed by Antoine Quint.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-06  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix build on old Rubies.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-06  Filip Pizlo  <fpizlo@apple.com>
+
+        Unified test infrastructure via the jsc shell
+        https://bugs.webkit.org/show_bug.cgi?id=120696
+
+        Reviewed by Oliver Hunt.
+        
+        Make run-jsc-stress-tests smart enough to be able to handle different styles of test
+        output (silent or noisy) and different styles of test failure (just bad exit code,
+        text diff, filtering for some magical text, etc.). This allows me to get rid of the
+        layout-test-helper. It also allows me to switch all of the old Mozilla tests to
+        running in run-jsc-stress-tests.
+        
+        Also removes all of the code paths that defended against not having shellwords. Just
+        install the shellwords gem if you want to run tests.
+        
+        Also removes the non-parallel test running code. No reason for it to exist anymore.
+        
+        This is a massive increase in test coverage. It uncovered bugs. I fixed two of them
+        as part of this patch, and left three more as new bugzillas.
+
+        * Scripts/create-mozilla-js-test-list: Added.
+        * Scripts/jsc-stress-test-helpers/check-mozilla-failure: Added.
+        * Scripts/jsc-stress-test-helpers/layout-test-helper: Removed.
+        * Scripts/run-javascriptcore-tests:
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-05  Filip Pizlo  <fpizlo@apple.com>
+
+        run-jsc-stress-tests should be less verbose
+        https://bugs.webkit.org/show_bug.cgi?id=122397
+
+        Reviewed by Sam Weinig.
+        
+        It now just prints something like:
+        
+         965/1831 ....
+        
+        Where the first number is the number of tests that completed, the second number is the
+        number of tests total, and the dots are the number of tests running right now - which is
+        useful towards the end when you're waiting for the last slow tests to finish.
+        
+        It will also print out the output from failing tests and it will print a line for skipped
+        tests (to annoy you into getting them into a shape where they can be unskipped). For
+        example, for LayoutTests, it will print just the diff, if the test fails. It's cool.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Allow skipping of run-jsc-stress-tests that are configured using yaml files
+        https://bugs.webkit.org/show_bug.cgi?id=122385
+
+        Reviewed by Sam Wieinig.
+        
+        Make tests run via YAML be able to do the parse-for-commands trick that allows
+        us to skip tests and do other custom per-test stuff.
+
+        * Scripts/jsc-stress-test-helpers/layout-test-helper:
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-05  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, fix tests on older Rubies.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-05  Anders Carlsson  <andersca@apple.com>
+
+        Don't filter the weak symbols.
+
+        * Scripts/check-for-weak-vtables-and-externals:
+
+2013-10-04  Filip Pizlo  <fpizlo@apple.com>
+
+        Have run-javascriptcore-tests run JS LayoutTests using run-jsc-stress-tests so that it runs in parallel
+        https://bugs.webkit.org/show_bug.cgi?id=122376
+
+        Reviewed by Mark Hahnenberg.
+
+        * Scripts/jsc-stress-test-helpers/layout-test-helper: Added.
+        * Scripts/run-javascriptcore-tests:
+        (printThingsFound):
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-04  Filip Pizlo  <fpizlo@apple.com>
+
+        It should be even easier to run and debug a failing JSC stress test
+        https://bugs.webkit.org/show_bug.cgi?id=122337
+
+        Reviewed by Oliver Hunt.
+        
+        If a test fails, you can now just say:
+
+        sh WebKitBuild/Debug/jsc-stress-results/regress/script-tests/emscripten-cube2hash.js.ftl-eager-no-cjit
+
+        and get the reproduction. You don't have to set any environment variables like before.
+        Also if you want to debug the failing test you can now just say:
+
+        sh WebKitBuild/Debug/jsc-stress-results/regress/script-tests/emscripten-cube2hash.js.ftl-eager-no-cjit lldb --
+
+        Broadly, any arguments passed to the reproduction script are prepended to the command to
+        run the test. This is sort of quirky and won't work for some tests (for example the
+        profiler tests run a ruby script that runs some other stuff) but it'll work for most of
+        them and that's good enough for now.
+
+        * Scripts/run-jsc-stress-tests:
+
+2013-10-04  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Correct run-path when using 64-bit binaries.
+
+        Reviewed by David Kilzer.
+
+        * Scripts/webkitdirs.pm:
+        (determineConfigurationProductDir): If running in 64-bit mode, use the 'bin64'
+        directory. Otherwise use the existing 'bin32' directory.
+
+2013-10-04  Brent Fulgham  <bfulgham@apple.com>
+
+        Teach webkitdirs.pm to honor the --64-bit flag
+        https://bugs.webkit.org/show_bug.cgi?id=122357
+
+        Reviewed by David Kilzer.
+
+        * Scripts/webkitdirs.pm:
+        (argumentsForConfiguration): Modify to check if --64-bit is supplied
+        by the user.
+        (findMatchingArguments): Added.
+        (hasArgument): Added.
+        (checkForArgumentAndRemoveFromArrayRef): Refactor to use the new
+        findMatchingArguments subroutine.
+
+2013-10-04  Alexey Proskuryakov  <ap@apple.com>
+
+        Update svn-config for new Visual Studio extensions
+        https://bugs.webkit.org/show_bug.cgi?id=122344
+
+        Reviewed by Brent Fulgham.
+
+        * svn-config: Add new Visual Studio extensions.
+
+2013-10-04  Alex Christensen  <achristensen@webkit.org>
+
+        Made WinLauncher have better error handling, crash reporting, and modifiability.
+        https://bugs.webkit.org/show_bug.cgi?id=122319
+
+        Reviewed by Brent Fulgham.
+
+        * WinLauncher/WinLauncher.cpp:
+        (WinLauncherWebHost::didFailProvisionalLoadWithError):
+        Don't display the numerous "Cancelled" messages that are obviously from the user.
+        (createCrashReport): Added.
+        (dllLauncherEntryPoint):
+        Made main loop back into while loop and write a crash report if it crashes.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLib.vcxproj:
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLib.vcxproj.filters:
+        Added WinLauncherReplace.h.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibCommon.props:
+        Added linking to DbgHelp.lib.
+        * WinLauncher/WinLauncherReplace.h:
+        Added to make modifying WinLauncher behaviour and appearance easy.
+        (processCrashDump): Added.
+
+2013-10-04  Dirk Pranke  <dpranke@chromium.org>
+
+        remove dpranke from webkitpy watchlist
+        https://bugs.webkit.org/show_bug.cgi?id=122331
+
+        Reviewed by Brent Fulgham.
+
+        * Scripts/webkitpy/common/config/watchlist:
+
+2013-10-04  Tim Horton  <timothy_horton@apple.com>
+
+        [mac][wk2] ScrollPinningBehaviors, SpacebarScrolling, and ScrollByLineCommands fail after r156793
+        https://bugs.webkit.org/show_bug.cgi?id=122299
+
+        Reviewed by Beth Dakin.
+
+        * TestWebKitAPI/Tests/WebKit2/SpacebarScrolling.cpp:
+        * TestWebKitAPI/Tests/WebKit2/mac/EditorCommands.mm:
+        The last fix didn't work; instead of trying to block, turn off threaded scrolling for all three tests.
+
+2013-10-04  Alexey Proskuryakov  <ap@apple.com>
+
+        Watchlist is broken after <http://trac.webkit.org/r156880>
+
+        * Scripts/webkitpy/common/config/watchlist: Remove an incorrect change.
+
+2013-10-04  Brent Fulgham  <bfulgham@apple.com>
+
+        Remove Qt features from build and test tools
+        https://bugs.webkit.org/show_bug.cgi?id=122312
+
+        Reviewed by Anders Carlsson.
+
+        * Scripts/build-dumprendertree:
+        * Scripts/build-jsc:
+        * Scripts/build-webkit:
+        * Scripts/build-webkittestrunner:
+        * Scripts/old-run-webkit-tests:
+        (openDumpTool):
+        (buildPlatformResultHierarchy):
+        (buildPlatformTestHierarchy):
+        (readSkippedFiles):
+        * Scripts/run-launcher:
+        * Scripts/run-qtwebkit-tests: Removed.
+        * Scripts/run-webkit-tests:
+        (useNewRunWebKitTests):
+        * Scripts/update-webkit:
+        * Scripts/webkit-build-directory:
+        * Scripts/webkitdirs.pm:
+        (argumentsForConfiguration):
+        (jscProductDir):
+        (builtDylibPathForName):
+        (isAppleWebKit):
+        (launcherPath):
+        (launcherName):
+        (checkRequiredSystemConfig):
+        (setupCygwinEnv):
+        (copyInspectorFrontendFiles):
+        (setPathForRunningWebKitApp):
+        * Scripts/webkitpy/common/checkout/baselineoptimizer.py:
+        * Scripts/webkitpy/common/checkout/baselineoptimizer_unittest.py:
+        (BaselineOptimizerTest.test_mac_future):
+        (BaselineOptimizerTest.test_win_does_not_drop_to_win_7sp0):
+        (BaselineOptimizerTest.test_common_directory_includes_root):
+        (BaselineOptimizerTest.test_virtual_ports_filtered):
+        * Scripts/webkitpy/common/checkout/changelog_unittest.py:
+        (test_parse_reviewer_text):
+        * Scripts/webkitpy/common/config/watchlist:
+        * Scripts/webkitpy/layout_tests/run_webkit_tests_integrationtest.py:
+        (PortTest.disabled_test_chromium_mac_lion_in_test_shell_mode):
+        * Scripts/webkitpy/port/base.py:
+        (Port.__init__):
+        (Port._port_flag_for_scripts):
+        (Port._wk2_port_name):
+        * Scripts/webkitpy/port/builders.py:
+        * Scripts/webkitpy/port/factory.py:
+        (platform_options):
+        (PortFactory):
+        (PortFactory._default_port):
+        * Scripts/webkitpy/port/factory_unittest.py:
+        (FactoryTest.test_gtk):
+        * Scripts/webkitpy/port/qt.py: Removed.
+        * Scripts/webkitpy/port/qt_unittest.py: Removed.
+        * Scripts/webkitpy/style/checker.py:
+        * Scripts/webkitpy/style/checker_unittest.py:
+        (GlobalVariablesTest.test_path_rules_specifier):
+        * Scripts/webkitpy/style/checkers/cmake.py:
+        (CMakeChecker):
+        * Scripts/webkitpy/style/checkers/cpp.py:
+        (_classify_include):
+        (check_include_line):
+        (check_identifier_name_in_declaration):
+        * Scripts/webkitpy/style/checkers/cpp_unittest.py:
+        (OrderOfIncludesTest.test_classify_include):
+        (WebKitStyleTest.test_names):
+        * Scripts/webkitpy/style/checkers/test_expectations_unittest.py:
+        (TestExpectationsTestCase.test_determine_port_from_expectations_path):
+        * Scripts/webkitpy/tool/commands/rebaseline_unittest.py:
+        (TestRebaselineTest.test_baseline_directory):
+        * Scripts/webkitpy/tool/main.py:
+        (WebKitPatch):
+
+2013-10-03  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Unreviewed. Add myself to some watchlists.
+
+        * Scripts/webkitpy/common/config/watchlist:
+
+2013-10-03  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Remove Qt builders from the flakiness dashboard.
+
+        * TestResultServer/static-dashboards/builders.jsonp:
+        * TestResultServer/static-dashboards/flakiness_dashboard.js:
+        * TestResultServer/static-dashboards/flakiness_dashboard_unittests.js:
+        * TestResultServer/static-dashboards/loader_unittests.js:
+
+2013-10-03  Tim Horton  <timothy_horton@apple.com>
+
+        [mac][wk2] ScrollPinningBehaviors, SpacebarScrolling, and ScrollByLineCommands fail after r156793
+        https://bugs.webkit.org/show_bug.cgi?id=122299
+
+        Reviewed by Beth Dakin.
+
+        * TestWebKitAPI/Tests/WebKit2/ScrollPinningBehaviors.cpp:
+        Disable threaded scrolling.
+
+        * TestWebKitAPI/Tests/WebKit2/SpacebarScrolling.cpp:
+        * TestWebKitAPI/Tests/WebKit2/mac/EditorCommands.mm:
+        Synchronously wait for the scrolling thread to inform the main thread of the new scroll position.
+
+2013-10-03  Anders Carlsson  <andersca@apple.com>
+
+        Use numeric strings in the OS version dictionary
+        https://bugs.webkit.org/show_bug.cgi?id=122300
+
+        Reviewed by Mark Rowe.
+
+        * Scripts/webkitpy/common/system/platforminfo.py:
+        (PlatformInfo._determine_mac_version):
+
+2013-10-03  Alexey Proskuryakov  <ap@apple.com>
+
+        Fix LeaksViewer to load leaks results from MountainLion, not Lion.
+
+        Rubber-stamped by Tim Horton.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/LeaksViewer/LeaksViewer.js:
+        (LeaksViewer._displayURLPrompt):
+
+2013-10-03  Dan Bernstein  <mitz@apple.com>
+
+        REGRESSION (r156811): Objective-C JavaScriptCore API test failing on Mountain Lion bots
+        https://bugs.webkit.org/show_bug.cgi?id=122260
+
+        Reviewed by Alexey Proskuryakov.
+
+        For the API to work, the tests need to be compiled with a newer version of the LLVM
+        compiler. Until the bots are updated to that version, disable the tests on 10.8.
+
+        * TestWebKitAPI/Tests/mac/WebViewDidCreateJavaScriptContext.mm:
+
+2013-10-02  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] Expose aria-invalid as a text attribute (not object attribute)
+        https://bugs.webkit.org/show_bug.cgi?id=122015
+
+        Reviewed by Chris Fleizach.
+
+        Adapted DRT and WKTR to check the exposure of the aria-invalid
+        attribute as a text attribute, instead of an object attribute.
+
+        Also, done some refactoring of the code to try to keep things
+        simpler and more coherent, by defining new helper functions,
+        simplifying code, moving static variables and functions into
+        unnammed namespaces and so on, without altering the logic other
+        than for checking the text attribute for aria-invalid.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (coreAttributeToAtkAttribute): Consider 'invalid' as the name of
+        the attribute exposed by the ATK wrapper, not 'aria-invalid'.
+        Also, never return an empty string if not falling through any of
+        the cases checked here, and return the original attribute instead.
+        (atkAttributeValueToCoreAttributeValue): New helper function to
+        match the attributes values returned by the ATK wrapper with the
+        values expected by the layout tests. Moved the mappings for the
+        values of AXSortDirection here as well.
+        (getAttributeSet): New helper function to retrieve a list of
+        attributes (an AtkAttributeSet) from an AtkObject using the right
+        API depending on whether we want the object attributes or the text
+        attributes (in case the object implements AtkText).
+        (getAttributeSetValueForId): Simplified by using getAttributeSet
+        and atkAttributeValueToCoreAttributeValue. Also, added a new
+        parameter to indicater whether we are interested in object
+        attributes or text attributes.
+        (getAtkAttributeSetAsString): Ditto.
+        (attributesOfElement): Updated to pass the new required parameter
+        to getAtkAttributeSetAsString, indicating that we want the object
+        attributes in this case, for backwards compatibility.
+        (indexRangeInTable): Moved up in the file into the unnammed namespace.
+        (alterCurrentValue): Ditto.
+        (AccessibilityUIElement::stringAttributeValue): After moving most
+        of the code here to the new helper functions, simplified it by
+        just checking whether the required attribute is provided as an
+        object attribute or, if that's not the case, as a text attribute.
+        (AccessibilityUIElement::isAttributeSupported): Ditto.
+        (AccessibilityUIElement::intValue): Updated to pass the new
+        required parameter to getAttributeSetValueForId, indicating that
+        we want the object attributes in this case.
+        (AccessibilityUIElement::hasPopup): Ditto.
+
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::coreAttributeToAtkAttribute): Same changes than for DRT.
+        (WTR::atkAttributeValueToCoreAttributeValue): Ditto.
+        (WTR::getAttributeSet): Ditto.
+        (WTR::getAttributeSetValueForId): Ditto.
+        (WTR::getAtkAttributeSetAsString): Ditto.
+        (WTR::attributesOfElement): Ditto.
+        (WTR::AccessibilityUIElement::stringAttributeValue): Ditto.
+        (WTR::AccessibilityUIElement::isAttributeSupported): Ditto.
+        (WTR::AccessibilityUIElement::intValue): Ditto.
+        (WTR::AccessibilityUIElement::hasPopup): Ditto.
+
+2013-10-02  Ryosuke Niwa  <rniwa@webkit.org>
+
+        EWS build fix after the Qt EWS removal.
+
+        * QueueStatusServer/model/attachment.py:
+        (Attachment._calculate_queue_positions):
+
+2013-10-02  Anders Carlsson  <andersca@apple.com>
+
+        Remove Qt code from Tools/
+        https://bugs.webkit.org/show_bug.cgi?id=122227
+
+        Reviewed by Andreas Kling.
+
+        * DumpRenderTree/WorkQueue.cpp:
+        * DumpRenderTree/blackberry/src.pro: Removed.
+        * DumpRenderTree/qt/DumpRenderTree.pro: Removed.
+        * DumpRenderTree/qt/DumpRenderTree.qrc: Removed.
+        * DumpRenderTree/qt/DumpRenderTreeMain.cpp: Removed.
+        * DumpRenderTree/qt/DumpRenderTreeQt.cpp: Removed.
+        * DumpRenderTree/qt/DumpRenderTreeQt.h: Removed.
+        * DumpRenderTree/qt/EventSenderQt.cpp: Removed.
+        * DumpRenderTree/qt/EventSenderQt.h: Removed.
+        * DumpRenderTree/qt/GCControllerQt.cpp: Removed.
+        * DumpRenderTree/qt/TestNetscapePlugin/TestNetscapePlugin.pro: Removed.
+        * DumpRenderTree/qt/TestRunnerQt.cpp: Removed.
+        * DumpRenderTree/qt/TestRunnerQt.h: Removed.
+        * DumpRenderTree/qt/TextInputControllerQt.cpp: Removed.
+        * DumpRenderTree/qt/TextInputControllerQt.h: Removed.
+        * DumpRenderTree/qt/WorkQueueItemQt.cpp: Removed.
+        * DumpRenderTree/qt/WorkQueueItemQt.h: Removed.
+        * DumpRenderTree/qt/fonts/AHEM____.TTF: Removed.
+        * DumpRenderTree/qt/resources/user.css: Removed.
+        * DumpRenderTree/qt/testplugin.cpp: Removed.
+        * DumpRenderTree/qt/testplugin.h: Removed.
+        * ImageDiff/ImageDiff.pro: Removed.
+        * ImageDiff/qt/ImageDiff.cpp: Removed.
+        * MiniBrowser/qt/BrowserWindow.cpp: Removed.
+        * MiniBrowser/qt/BrowserWindow.h: Removed.
+        * MiniBrowser/qt/MiniBrowser.pro: Removed.
+        * MiniBrowser/qt/MiniBrowser.qrc: Removed.
+        * MiniBrowser/qt/MiniBrowserApplication.cpp: Removed.
+        * MiniBrowser/qt/MiniBrowserApplication.h: Removed.
+        * MiniBrowser/qt/UrlLoader.cpp: Removed.
+        * MiniBrowser/qt/UrlLoader.h: Removed.
+        * MiniBrowser/qt/icons/checkbox_checked.png: Removed.
+        * MiniBrowser/qt/icons/checkbox_unchecked.png: Removed.
+        * MiniBrowser/qt/icons/contents_width.png: Removed.
+        * MiniBrowser/qt/icons/favicon.png: Removed.
+        * MiniBrowser/qt/icons/find.png: Removed.
+        * MiniBrowser/qt/icons/folder.png: Removed.
+        * MiniBrowser/qt/icons/info.png: Removed.
+        * MiniBrowser/qt/icons/next.png: Removed.
+        * MiniBrowser/qt/icons/plus.png: Removed.
+        * MiniBrowser/qt/icons/previous.png: Removed.
+        * MiniBrowser/qt/icons/refresh.png: Removed.
+        * MiniBrowser/qt/icons/stop.png: Removed.
+        * MiniBrowser/qt/icons/titlebar.png: Removed.
+        * MiniBrowser/qt/icons/touch.png: Removed.
+        * MiniBrowser/qt/icons/touchpoint.png: Removed.
+        * MiniBrowser/qt/icons/up.png: Removed.
+        * MiniBrowser/qt/js/MultiSelect.js: Removed.
+        * MiniBrowser/qt/main.cpp: Removed.
+        * MiniBrowser/qt/qml/AlertDialog.qml: Removed.
+        * MiniBrowser/qt/qml/AuthenticationDialog.qml: Removed.
+        * MiniBrowser/qt/qml/BrowserWindow.qml: Removed.
+        * MiniBrowser/qt/qml/CheckBox.qml: Removed.
+        * MiniBrowser/qt/qml/ColorChooser.qml: Removed.
+        * MiniBrowser/qt/qml/ConfirmDialog.qml: Removed.
+        * MiniBrowser/qt/qml/Dialog.qml: Removed.
+        * MiniBrowser/qt/qml/DialogButton.qml: Removed.
+        * MiniBrowser/qt/qml/DialogLineInput.qml: Removed.
+        * MiniBrowser/qt/qml/FilePicker.qml: Removed.
+        * MiniBrowser/qt/qml/ItemSelector.qml: Removed.
+        * MiniBrowser/qt/qml/MockTouchPoint.qml: Removed.
+        * MiniBrowser/qt/qml/PromptDialog.qml: Removed.
+        * MiniBrowser/qt/qml/ProxyAuthenticationDialog.qml: Removed.
+        * MiniBrowser/qt/qml/ScrollIndicator.qml: Removed.
+        * MiniBrowser/qt/qml/ViewportInfoItem.qml: Removed.
+        * MiniBrowser/qt/raw/DerivedSources.pri: Removed.
+        * MiniBrowser/qt/raw/MiniBrowserRaw.pro: Removed.
+        * MiniBrowser/qt/raw/Target.pri: Removed.
+        * MiniBrowser/qt/raw/View.cpp: Removed.
+        * MiniBrowser/qt/raw/View.h: Removed.
+        * MiniBrowser/qt/utils.cpp: Removed.
+        * MiniBrowser/qt/utils.h: Removed.
+        * QtTestBrowser/QtTestBrowser.pro: Removed.
+        * QtTestBrowser/QtTestBrowser.qrc: Removed.
+        * QtTestBrowser/cookiejar.cpp: Removed.
+        * QtTestBrowser/cookiejar.h: Removed.
+        * QtTestBrowser/favicon.png: Removed.
+        * QtTestBrowser/fpstimer.cpp: Removed.
+        * QtTestBrowser/fpstimer.h: Removed.
+        * QtTestBrowser/launcherwindow.cpp: Removed.
+        * QtTestBrowser/launcherwindow.h: Removed.
+        * QtTestBrowser/locationedit.cpp: Removed.
+        * QtTestBrowser/locationedit.h: Removed.
+        * QtTestBrowser/mainwindow.cpp: Removed.
+        * QtTestBrowser/mainwindow.h: Removed.
+        * QtTestBrowser/qttestbrowser.cpp: Removed.
+        * QtTestBrowser/urlloader.cpp: Removed.
+        * QtTestBrowser/urlloader.h: Removed.
+        * QtTestBrowser/useragentlist.txt: Removed.
+        * QtTestBrowser/utils.cpp: Removed.
+        * QtTestBrowser/utils.h: Removed.
+        * QtTestBrowser/webinspector.h: Removed.
+        * QtTestBrowser/webpage.cpp: Removed.
+        * QtTestBrowser/webpage.h: Removed.
+        * QtTestBrowser/webview.cpp: Removed.
+        * QtTestBrowser/webview.h: Removed.
+        * TestWebKitAPI/DerivedSources.pri: Removed.
+        * TestWebKitAPI/InjectedBundle.pri: Removed.
+        * TestWebKitAPI/PlatformWebView.h:
+        * TestWebKitAPI/TestWebKitAPI.pri: Removed.
+        * TestWebKitAPI/TestWebKitAPI.pro: Removed.
+        * TestWebKitAPI/Tests.pri: Removed.
+        * TestWebKitAPI/Tests/JavaScriptCore/JavaScriptCore.pro: Removed.
+        * TestWebKitAPI/Tests/WTF/IntegerToStringConversion.cpp:
+        * TestWebKitAPI/Tests/WTF/WTF.pro: Removed.
+        * TestWebKitAPI/Tests/WebKit2/WebKit2.pro: Removed.
+        * TestWebKitAPI/qt/InjectedBundleControllerQt.cpp: Removed.
+        * TestWebKitAPI/qt/PlatformUtilitiesQt.cpp: Removed.
+        * TestWebKitAPI/qt/PlatformWebViewQt.cpp: Removed.
+        * TestWebKitAPI/qt/main.cpp: Removed.
+        * Tools.pro: Removed.
+        * WebKitTestRunner/DerivedSources.pri: Removed.
+        * WebKitTestRunner/EventSenderProxy.h:
+        * WebKitTestRunner/InjectedBundle/DerivedSources.pri: Removed.
+        * WebKitTestRunner/InjectedBundle/InjectedBundle.pro: Removed.
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::resetAfterTest):
+        (WTR::InjectedBundlePage::dumpDOMAsWebArchive):
+        (WTR::InjectedBundlePage::didClearWindowForFrame):
+        * WebKitTestRunner/InjectedBundle/Target.pri: Removed.
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        * WebKitTestRunner/InjectedBundle/qt/ActivateFontsQt.cpp: Removed.
+        * WebKitTestRunner/InjectedBundle/qt/InjectedBundleQt.cpp: Removed.
+        * WebKitTestRunner/InjectedBundle/qt/TestRunnerQt.cpp: Removed.
+        * WebKitTestRunner/PlatformWebView.h:
+        * WebKitTestRunner/Target.pri: Removed.
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::resetStateToConsistentValues):
+        * WebKitTestRunner/TestController.h:
+        * WebKitTestRunner/WebKitTestRunner.pro: Removed.
+        * WebKitTestRunner/qt/EventSenderProxyQt.cpp: Removed.
+        * WebKitTestRunner/qt/PlatformWebViewQt.cpp: Removed.
+        * WebKitTestRunner/qt/TestControllerQt.cpp: Removed.
+        * WebKitTestRunner/qt/TestInvocationQt.cpp: Removed.
+        * WebKitTestRunner/qt/WebKitTestRunner.qrc: Removed.
+        * WebKitTestRunner/qt/main.cpp: Removed.
+        * WebKitTestRunner/qt/resources/user.css: Removed.
+        * qmake/.qmake.cache: Removed.
+        * qmake/.qmake.conf: Removed.
+        * qmake/README: Removed.
+        * qmake/config.tests/README: Removed.
+        * qmake/config.tests/fontconfig/fontconfig.cpp: Removed.
+        * qmake/config.tests/fontconfig/fontconfig.pro: Removed.
+        * qmake/config.tests/gccdepends/empty.cpp: Removed.
+        * qmake/config.tests/gccdepends/gccdepends.pro: Removed.
+        * qmake/config.tests/glx/glx.cpp: Removed.
+        * qmake/config.tests/glx/glx.pro: Removed.
+        * qmake/config.tests/gnuld/gnuld.pro: Removed.
+        * qmake/config.tests/gnuld/main.cpp: Removed.
+        * qmake/config.tests/libXcomposite/libXcomposite.cpp: Removed.
+        * qmake/config.tests/libXcomposite/libXcomposite.pro: Removed.
+        * qmake/config.tests/libXrender/libXrender.cpp: Removed.
+        * qmake/config.tests/libXrender/libXrender.pro: Removed.
+        * qmake/config.tests/libwebp/libwebp.cpp: Removed.
+        * qmake/config.tests/libwebp/libwebp.pro: Removed.
+        * qmake/config.tests/libxml2/libxml2.cpp: Removed.
+        * qmake/config.tests/libxml2/libxml2.pro: Removed.
+        * qmake/config.tests/libxslt/libxslt.cpp: Removed.
+        * qmake/config.tests/libxslt/libxslt.pro: Removed.
+        * qmake/config.tests/libzlib/libzlib.cpp: Removed.
+        * qmake/config.tests/libzlib/libzlib.pro: Removed.
+        * qmake/dump-features.pl: Removed.
+        * qmake/mkspecs/features/configure.prf: Removed.
+        * qmake/mkspecs/features/default_post.prf: Removed.
+        * qmake/mkspecs/features/default_pre.prf: Removed.
+        * qmake/mkspecs/features/features.prf: Removed.
+        * qmake/mkspecs/features/features.pri: Removed.
+        * qmake/mkspecs/features/force_static_libs_as_shared.prf: Removed.
+        * qmake/mkspecs/features/functions.prf: Removed.
+        * qmake/mkspecs/features/gprof.prf: Removed.
+        * qmake/mkspecs/features/mac/default_post.prf: Removed.
+        * qmake/mkspecs/features/mac/default_pre.prf: Removed.
+        * qmake/mkspecs/features/minimal_qt.prf: Removed.
+        * qmake/mkspecs/features/production_build.prf: Removed.
+        * qmake/mkspecs/features/rpath.prf: Removed.
+        * qmake/mkspecs/features/unix/default_post.prf: Removed.
+        * qmake/mkspecs/features/unix/default_pre.prf: Removed.
+        * qmake/mkspecs/features/unix/icc.prf: Removed.
+        * qmake/mkspecs/features/use_all_in_one_files.prf: Removed.
+        * qmake/mkspecs/features/valgrind.prf: Removed.
+        * qmake/mkspecs/features/webkit_modules.prf: Removed.
+        * qmake/mkspecs/features/win32/default_post.prf: Removed.
+        * qmake/mkspecs/features/win32/default_pre.prf: Removed.
+        * qmake/mkspecs/modules/angle.prf: Removed.
+        * qmake/mkspecs/modules/javascriptcore.prf: Removed.
+        * qmake/mkspecs/modules/webcore.prf: Removed.
+        * qmake/mkspecs/modules/webkit1.prf: Removed.
+        * qmake/mkspecs/modules/webkit2.prf: Removed.
+        * qmake/mkspecs/modules/wtf.prf: Removed.
+
+2013-10-02  Tim Horton  <timothy_horton@apple.com>
+
+        [mac] Stop using DrawingAreaImpl on PLATFORM(MAC) 
+        https://bugs.webkit.org/show_bug.cgi?id=121859
+        <rdar://problem/15069359>
+
+        Reviewed by Anders Carlsson.
+
+        * WebKitTestRunner/TestInvocation.cpp:
+        (WTR::shouldUseThreadedScrolling):
+        (WTR::updateThreadedScrollingForCurrentTest):
+        (WTR::TestInvocation::invoke):
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (-[TestRunnerWKView initWithFrame:contextRef:pageGroupRef:relatedToPage:useThreadedScrolling:]):
+        (WTR::PlatformWebView::PlatformWebView):
+        (WTR::PlatformWebView::viewSupportsOptions):
+        Rename the tiled drawing switch to threaded scrolling, since that's really
+        all it switches now that we use tiled drawing everywhere.
+
+        Use an unbuffered window, as well, to avoid snapshotting issues on some platforms
+        and to more closely match the case we're interested in testing.
+
+2013-10-02  Anders Carlsson  <andersca@apple.com>
+
+        Move AHEM____.TTF from qt/fonts/ to fonts/.
+
+        Rubber-stamped by Andreas Kling.
+
+        * DumpRenderTree/DumpRenderTree.xcodeproj/project.pbxproj:
+        * DumpRenderTree/fonts/AHEM____.TTF: Renamed from Tools/DumpRenderTree/qt/fonts/AHEM____.TTF.
+
+2013-10-02  Ádám Kallai  <kadam@inf.u-szeged.hu>
+
+        Remove Qt bots and EWS from trunk.
+        https://bugs.webkit.org/show_bug.cgi?id=122210.
+
+        Reviewed by Allan Sandfeld Jensen.
+
+        Remove Qt buil dbots.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json:
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (appendCustomBuildFlags):
+        (RunGtkAPITests.getText2):
+        (Factory.__init__):
+        (TestFactory.__init__):
+        (BuildAndTestFactory.__init__):
+        (loadBuilderConfig):
+        * BuildSlaveSupport/build.webkit.org-config/mastercfg_unittest.py:
+
+2013-10-02  Ádám Kallai  <kadam@inf.u-szeged.hu>
+
+        Remove Qt bots and EWS from trunk.
+        https://bugs.webkit.org/show_bug.cgi?id=122210.
+
+        Reviewed by Allan Sandfeld Jensen.
+
+        Remove Qt EWS bots.
+
+        * QueueStatusServer/config/queues.py:
+        * Scripts/webkitpy/common/config/ews.json:
+
+2013-10-01  Timothy Hatcher  <timothy@apple.com>
+
+        Fix singular labels for test failures.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122200
+
+        Reviewed by Joseph Pecoraro.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus):
+
+2013-10-01  Timothy Hatcher  <timothy@apple.com>
+
+        Don't keep appending iterations each time the queue updates.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122198
+
+        Reviewed by Joseph Pecoraro.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotQueue.js:
+        (BuildbotQueue.prototype.update):
+
+2013-10-01  Timothy Hatcher  <timothy@apple.com>
+
+        Properly sort iterations in the Dashboard by revision for out-of-order queues.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122196
+
+        Reviewed by Brent Fulgham.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotIteration.js:
+        (BuildbotIteration):
+        (BuildbotIteration.prototype.update):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotQueue.js:
+        (BuildbotQueue.prototype.update):
+        (BuildbotQueue.prototype.sortIterations):
+
+2013-10-01  Timothy Hatcher  <timothy@apple.com>
+
+        Fix some exceptions seen in the Buildbot Dashboard when looking at unloaded iterations.
+
+        Also fix some URLs to not have extras slashes and add a page title.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122192
+
+        Reviewed by Joseph Pecoraro.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot.prototype.buildLogURLForIteration):
+        (WebKitBuildbot.prototype.layoutTestResultsURLForIteration):
+        (WebKitBuildbot.prototype.javascriptTestResultsURLForIteration):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/index.html:
+
+2013-10-01  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac] Set NSApplication current event while sending events directly to views
+        https://bugs.webkit.org/show_bug.cgi?id=122179
+
+        Reviewed by Darin Adler.
+
+        DumpRenderTree and WebKitTestRunner send events directly to WebHMTLView or WKView,
+        which doesn't update [NSApp currentEvent]. But there are many places in WebKit that
+        use the current event.
+
+        * DumpRenderTree/mac/EventSendingController.mm:
+        (-[EventSendingController mouseDown:withModifiers:]):
+        (-[EventSendingController mouseUp:withModifiers:]):
+        (-[EventSendingController mouseMoveToX:Y:]):
+        (-[EventSendingController mouseScrollByX:andY:continuously:]):
+        (-[EventSendingController contextClick]):
+        (-[EventSendingController keyDown:withModifiers:withLocation:]):
+        * WebKitTestRunner/mac/EventSenderProxy.mm:
+        (WTR::EventSenderProxy::mouseDown):
+        (WTR::EventSenderProxy::mouseUp):
+        (WTR::EventSenderProxy::mouseMoveTo):
+        (WTR::EventSenderProxy::keyDown):
+        (WTR::EventSenderProxy::mouseScrollBy):
+        Update the current event. We were already using the SPI in WebKit.
+
+2013-10-01  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Buildbot Dashboard: Fix JSHint issue: 'perlTestResults' used out of scope.
+        https://bugs.webkit.org/show_bug.cgi?id=122183
+
+        Reviewed by Timothy Hatcher.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotIteration.js:
+        (BuildbotIteration.prototype.update):
+
+2013-10-01  Timothy Hatcher  <timothy@apple.com>
+
+        Tweaks to the Buildbot Dashboard
+
+        https://bugs.webkit.org/show_bug.cgi?id=122169
+
+        Reviewed by Alexey Proskuryakov.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotBuilderQueueView.js:
+        (BuildbotBuilderQueueView.prototype.update.appendBuilderQueueStatus):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotQueueView.js:
+        (BuildbotQueueView.prototype.revisionLinksForIteration):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js:
+        (BuildbotTesterQueueView.prototype.update.appendBuilderQueueStatus):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Initialization.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Main.js:
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js:
+        (WebKitBuildbot.prototype.buildLogURLForIteration):
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/index.html:
+
+2013-10-01  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r156725.
+        http://trac.webkit.org/changeset/156725
+        https://bugs.webkit.org/show_bug.cgi?id=122176
+
+        broke all the mismatch tests again (Requested by thorton on
+        #webkit).
+
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+
+2013-10-01  Alex Christensen  <achristensen@webkit.org>
+
+        Implemented createWebViewWithRequest in WinLauncher.
+        https://bugs.webkit.org/show_bug.cgi?id=122069
+
+        Reviewed by Brent Fulgham.
+
+        * WinLauncher/PrintWebUIDelegate.cpp:
+        (PrintWebUIDelegate::createWebViewWithRequest): Added.
+        * WinLauncher/PrintWebUIDelegate.h:
+        Removed createWebViewWithRequest stub.
+
+2013-10-01  Tim Horton  <timothy_horton@apple.com>
+
+        [wk2] WebKitTestRunner's window snapshots are blank with tiled drawing
+        https://bugs.webkit.org/show_bug.cgi?id=122006
+        <rdar://problem/15095197>
+
+        Reviewed by Dean Jackson.
+
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+        Layer-back the root view in WebKitTestRunner's window, to work around a bug
+        where the window server snapshot API returns blank snapshots.
+
+        Re-landing after r156724, this should not break everything now.
+
+2013-10-01  Tim Horton  <timothy_horton@apple.com>
+
+        [mac] 1x emulation on Retina hardware shouldn't use SPI
+        https://bugs.webkit.org/show_bug.cgi?id=122152
+        <rdar://problem/15119384>
+
+        Reviewed by Anders Carlsson.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm:
+        (createWebViewAndOffscreenWindow):
+        (main):
+        * DumpRenderTree/mac/DumpRenderTreeWindow.h:
+        * DumpRenderTree/mac/DumpRenderTreeWindow.mm:
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+        * WebKitTestRunner/mac/main.mm:
+        (main):
+        Register for AppleMagnifiedMode instead of using _setWindowResolution:displayIfChanged:.
+
+2013-09-30  Sam Weinig  <sam@webkit.org>
+
+        check-webkit-style should not warn about use of C++11 “>>”  instead of “> >"
+        https://bugs.webkit.org/show_bug.cgi?id=116474
+
+        Reviewed by Ryosuke Niwa.
+
+        * Scripts/webkitpy/style/checkers/cpp.py:
+        * Scripts/webkitpy/style/checkers/cpp_unittest.py:
+
+2013-09-30  Sam Weinig  <sam@webkit.org>
+
+        Remove support for DOMFileSystem
+        https://bugs.webkit.org/show_bug.cgi?id=122137
+
+        Reviewed by Anders Carlsson.
+
+        * Scripts/webkitperl/FeatureList.pm:
+        * Scripts/webkitpy/style/checkers/cpp.py:
+        (check_spacing):
+        * Scripts/webkitpy/style/checkers/cpp_unittest.py:
+        (CppStyleTest.test_spacing_for_binary_ops):
+        * qmake/mkspecs/features/features.pri:
+
+2013-09-30  Mark Rowe  <mrowe@apple.com>
+
+        More build fixage for builds with SDKs.
+
+        * WebKitTestRunner/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/BaseTarget.xcconfig:
+
+2013-09-30  Timothy Hatcher  <timothy@apple.com>
+
+        Add initial version of a new Buildbot dashboard view.
+
+        https://bugs.webkit.org/show_bug.cgi?id=122131
+
+        Reviewed by Alexey Proskuryakov.
+
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Lion.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Lion@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Mavericks.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Mavericks@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/MountainLion.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/MountainLion@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/PlatformRing.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/PlatformRing@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Windows7.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Windows7@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Windows8.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/Windows8@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/WindowsXP.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Images/WindowsXP@2x.png: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BaseObject.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Buildbot.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotBuilderQueueView.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotIteration.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotQueue.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotQueueView.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTestResults.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/BuildbotTesterQueueView.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Main.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/StatusLineView.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/Utilities.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Scripts/WebKitBuildbot.js: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/BuildbotBuilderQueueView.css: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/BuildbotQueueView.css: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/BuildbotTesterQueueView.css: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/Main.css: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/Styles/StatusLineView.css: Added.
+        * BuildSlaveSupport/build.webkit.org-config/public_html/dashboard/index.html: Added.
+
+2013-09-30  Benjamin Poulain  <benjamin@webkit.org>
+
+        Remove the code guarded by STYLE_SCOPED
+        https://bugs.webkit.org/show_bug.cgi?id=122123
+
+        Reviewed by Anders Carlsson.
+
+        * DumpRenderTree/gtk/DumpRenderTree.cpp:
+        (resetDefaultsToConsistentValues):
+        * Scripts/webkitperl/FeatureList.pm:
+        * qmake/mkspecs/features/features.pri:
+
+2013-09-30  Mark Rowe  <mrowe@apple.com>
+
+        Fix the build when building against an SDK.
+
+        Xcode helpfully prepends $(SDKROOT) to the paths in FRAMEWORK_SEARCH_PATHS when generating
+        the compiler command lines. It can't know to do this for the system framework search paths
+        we add manually via OTHER_CFLAGS though, so we need to prefix them with $(SDKROOT) ourself.
+
+        * DumpRenderTree/mac/Configurations/BaseTarget.xcconfig:
+        * WebKitTestRunner/Configurations/BaseTarget.xcconfig:
+
+2013-09-30  Brent Fulgham  <bfulgham@apple.com>
+
+        [Windows] Unreviewed test fix. Prevent crash when changing URL paths during testing.
+
+        A shared BSTR value (_bstr_t) was being reallocated outside the smart pointer, causing
+        it to be double-freed.
+
+        * WinLauncher/WinLauncher.cpp:
+        (EditProc): Be explicit about type passed to loadURL.
+        (loadURL): Create a shallow copy of the BSTR so we only allocate memory if needed. Use _bstr_t so
+        that reallocating the BSTR is done with the knowledge of the smart pointer.
+
+2013-09-30  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Fix force_static_libs_as_shared in WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=121961
+
+        Reviewed by Csaba Osztrogonác.
+
+        Get rid of the unused WebKit2QML library
+
+        * qmake/mkspecs/features/webkit_modules.prf:
+        * qmake/mkspecs/modules/webkit2qml.prf: Removed.
+
+2013-09-30  Krzysztof Wolanski  <k.wolanski@samsung.com>
+
+        [EFL] Fix incorrect click counting in EventSenderProxy
+        https://bugs.webkit.org/show_bug.cgi?id=122098
+
+        Reviewed by Gyuyoung Kim.
+
+        Previously used two types of recording time, which conflicted with each other.
+
+        * WebKitTestRunner/efl/EventSenderProxyEfl.cpp:
+        (WTR::EventSenderProxy::mouseUp):
+
+2013-09-30  Zan Dobersek  <zdobersek@igalia.com>
+
+        [webkitpy] Make the Xvfb screen depth overridable
+        https://bugs.webkit.org/show_bug.cgi?id=122089
+
+        Reviewed by Gyuyoung Kim.
+
+        Make the Xvfb screen depth overridable by checking if the XVFB_SCREEN_DEPTH environment variable
+        was set. The default value that's used if the variable wasn't set is 24.
+
+        * Scripts/webkitpy/port/xvfbdriver.py:
+        (XvfbDriver._xvfb_screen_depth):
+        (XvfbDriver._start):
+        * Scripts/webkitpy/port/xvfbdriver_unittest.py:
+        (XvfbDriverTest.make_driver):
+        (XvfbDriverTest.test_start_no_pixel_tests):
+        (XvfbDriverTest.test_start_pixel_tests):
+        (XvfbDriverTest.test_start_arbitrary_worker_number):
+        (XvfbDriverTest.test_next_free_display):
+        (XvfbDriverTest.test_start_next_worker):
+
+2013-09-29  Mark Rowe  <mrowe@apple.com>
+
+        Fix the Lion build.
+
+        Ensure that C++ and Objective-C++ files build with the right compiler flags.
+
+        * DumpRenderTree/mac/Configurations/BaseTarget.xcconfig:
+        * WebKitTestRunner/Configurations/BaseTarget.xcconfig:
+
+2013-09-28  Mark Rowe  <mrowe@apple.com>
+
+        Fix some failures with newer versions of clang.
+
+        Some CoreGraphics headers generate warnings under newer versions of clang. Since they're system headers the warnings would
+        usually be suppressed, but we're adding the frameworks to the non-system framework search path so they're no longer treated
+        as system headers. We address this by removing the system paths from FRAMEWORK_SEARCH_PATHS and using the -iframework compiler
+        flag in OTHER_CFLAGS to add the paths to the system framework search path. We have to set OTHER_CFLAGS at the target level
+        in order for it to coexist with the ASAN-related OTHER_CFLAGS that's set in DebugRelease.xcconfig.
+
+        Reviewed by Dan Bernstein.
+
+        * DumpRenderTree/mac/Configurations/Base.xcconfig:
+        * DumpRenderTree/mac/Configurations/BaseTarget.xcconfig: A new .xcconfig file that's included by all target-specific .xcconfig files.
+        * DumpRenderTree/mac/Configurations/DebugRelease.xcconfig:
+        * DumpRenderTree/mac/Configurations/DumpRenderTree.xcconfig:
+        * DumpRenderTree/mac/Configurations/ImageDiff.xcconfig:
+        * DumpRenderTree/mac/Configurations/TestNetscapePlugIn.xcconfig:
+        * WebKitTestRunner/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/BaseTarget.xcconfig: A new .xcconfig file that's included by all target-specific .xcconfig files.
+        * WebKitTestRunner/Configurations/DebugRelease.xcconfig:
+        * WebKitTestRunner/Configurations/InjectedBundle.xcconfig:
+        * WebKitTestRunner/Configurations/WebKitTestRunner.xcconfig:
+
+2013-09-27  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r156569.
+        http://trac.webkit.org/changeset/156569
+        https://bugs.webkit.org/show_bug.cgi?id=122035
+
+        broke a lot of mismatch tests (Requested by thorton on
+        #webkit).
+
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+
+2013-09-27  Alexey Proskuryakov  <ap@apple.com>
+
+        Don't retry failures on Apple MountainLion Release WK1 tester
+        https://bugs.webkit.org/show_bug.cgi?id=122026
+
+        Reviewed by Mark Rowe.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json: Added --no-retry-failures
+        on this bot.
+
+2013-09-27  Alexey Proskuryakov  <ap@apple.com>
+
+        Don't hardcode builder specific configuration in buildbot master.cfg
+        https://bugs.webkit.org/show_bug.cgi?id=122023
+
+        Reviewed by Mark Rowe.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json: Added an additionalArguments
+        property to Qt Mountain Lion Release, making it run pixel tests.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (RunWebKitTests.start): Use additionalArguments.
+        (RunWebKit2Tests.start): Don't hardcode individual bot behavior here.
+
+2013-09-27  Tim Horton  <timothy_horton@apple.com>
+
+        [wk2] WebKitTestRunner's window snapshots are blank with tiled drawing
+        https://bugs.webkit.org/show_bug.cgi?id=122006
+        <rdar://problem/15095197>
+
+        Reviewed by Dean Jackson.
+
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+        Layer-back the root view in WebKitTestRunner's window, to work around a bug
+        where the window server snapshot API returns blank snapshots.
+
+2013-09-27  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [GTK] GTK does not expose heading level correctly. Was: accessibility/heading-level.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=106924
+
+        Reviewed by Chris Fleizach.
+
+        Consider headings levels as values to be returned in intValue()
+        both in DRT and WKTR, so we can share more tests with other ports.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::intValue): Consider headings too.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::intValue): Ditto.
+
+2013-09-26  Darin Adler  <darin@apple.com>
+
+        rename KURL to URL
+        https://bugs.webkit.org/show_bug.cgi?id=16214
+
+        Reviewed by Andreas Kling.
+
+        * many files: Renamed, using script.
+
+2013-09-27  Darin Adler  <darin@apple.com>
+
+        Fix Python scripts test failures.
+
+        * Scripts/webkitpy/style/checkers/cpp.py:
+        (_FunctionState.modifiers_and_return_type): Added this back. Used only by tests
+        now, not by the checker itself.
+
+2013-09-27  Denis Nomiyama  <d.nomiyama@samsung.com>
+
+        [GTK][WK2] Logging of accessibility events is not disabled between tests
+        https://bugs.webkit.org/show_bug.cgi?id=121957
+
+        Reviewed by Mario Sanchez Prada.
+
+        Fixed an issue in AccessibilityNotificationHandler where the destructor
+        was not disconnecting accessibility event callbacks if logging was on.
+        The decision of disconnecting events can solely rely on the existence of
+        notification handlers because logging uses the global notification
+        handler.
+
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityNotificationHandlerAtk.cpp:
+        (WTR::AccessibilityNotificationHandler::disconnectAccessibilityCallbacks): Fixed
+        disconnection when logging is on.
+
+2013-09-27  Patrick Gansterer  <paroga@webkit.org>
+
+        Add general CMakeLists.txt for DRT
+        https://bugs.webkit.org/show_bug.cgi?id=119268
+
+        Reviewed by Gyuyoung Kim.
+
+        The new file allows better sharing between ports.
+
+        * CMakeLists.txt:
+        * DumpRenderTree/CMakeLists.txt: Added.
+        * DumpRenderTree/PlatformEfl.cmake: Added.
+        * DumpRenderTree/efl/CMakeLists.txt: Removed.
+
+2013-09-27  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Fix force_static_libs_as_shared in WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=121961
+
+        Reviewed by Csaba Osztrogonác.
+
+        Reenable force_static_libs_as_shared when building WebKit2.
+
+        * qmake/mkspecs/features/default_post.prf:
+
+2013-09-27  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Mock implementations of positioning and orientation not used
+        https://bugs.webkit.org/show_bug.cgi?id=121956
+
+        Reviewed by Csaba Osztrogonác.
+
+        Move production_build checks to sanitizeFeatures where its value is actually known.
+
+        * qmake/mkspecs/features/features.prf:
+        * qmake/mkspecs/features/features.pri:
+
+2013-09-27  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] Normalize checks in entry points for DRT and WKTR
+        https://bugs.webkit.org/show_bug.cgi?id=121959
+
+        Reviewed by Chris Fleizach.
+
+        Always check if we have a proper instance of AtkObject,
+        implementing the interfaces that we might need for each case, at
+        the entry point of every method of AccessibilityUIElement for ATK,
+        and do those checks in an uniform way across DRT and WKTR, to
+        avoid confusion and issues when modifying these files in the future.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::getChildren): Use normalized checks.
+        (AccessibilityUIElement::getChildrenWithRange): Ditto.
+        (AccessibilityUIElement::rowCount): Ditto.
+        (AccessibilityUIElement::columnCount): Ditto.
+        (AccessibilityUIElement::childrenCount): Ditto.
+        (AccessibilityUIElement::elementAtPoint): Ditto.
+        (AccessibilityUIElement::getChildAtIndex): Ditto.
+        (AccessibilityUIElement::allAttributes): Ditto.
+        (AccessibilityUIElement::titleUIElement): Ditto.
+        (AccessibilityUIElement::parentElement): Ditto.
+        (AccessibilityUIElement::attributesOfChildren): Ditto.
+        (AccessibilityUIElement::role): Ditto.
+        (AccessibilityUIElement::title): Ditto.
+        (AccessibilityUIElement::description): Ditto.
+        (AccessibilityUIElement::stringValue): Ditto.
+        (AccessibilityUIElement::language): Ditto.
+        (AccessibilityUIElement::x): Ditto.
+        (AccessibilityUIElement::y): Ditto.
+        (AccessibilityUIElement::width): Ditto.
+        (AccessibilityUIElement::height): Ditto.
+        (AccessibilityUIElement::orientation): Ditto.
+        (AccessibilityUIElement::intValue): Ditto.
+        (AccessibilityUIElement::minValue): Ditto.
+        (AccessibilityUIElement::maxValue): Ditto.
+        (indexRangeInTable): Ditto.
+        (AccessibilityUIElement::cellForColumnAndRow): Ditto.
+        (AccessibilityUIElement::stringAttributeValue): Ditto.
+        (alterCurrentValue): Ditto.
+        (AccessibilityUIElement::press): Ditto.
+        (AccessibilityUIElement::documentEncoding): Ditto.
+        (AccessibilityUIElement::documentURI): Ditto.
+        (AccessibilityUIElement::hasPopup): Ditto.
+
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::indexRangeInTable): Use normalized checks.
+        (WTR::alterCurrentValue): Ditto.
+        (WTR::AccessibilityUIElement::getChildren): Ditto.
+        (WTR::AccessibilityUIElement::getChildrenWithRange): Ditto.
+        (WTR::AccessibilityUIElement::childrenCount): Ditto.
+        (WTR::AccessibilityUIElement::elementAtPoint): Ditto.
+        (WTR::AccessibilityUIElement::indexOfChild): Ditto.
+        (WTR::AccessibilityUIElement::childAtIndex): Ditto.
+        (WTR::AccessibilityUIElement::titleUIElement): Ditto.
+        (WTR::AccessibilityUIElement::parentElement): Ditto.
+        (WTR::AccessibilityUIElement::attributesOfChildren): Ditto.
+        (WTR::AccessibilityUIElement::allAttributes): Ditto.
+        (WTR::AccessibilityUIElement::stringAttributeValue): Ditto.
+        (WTR::AccessibilityUIElement::role): Ditto.
+        (WTR::AccessibilityUIElement::title): Ditto.
+        (WTR::AccessibilityUIElement::description): Ditto.
+        (WTR::AccessibilityUIElement::orientation): Ditto.
+        (WTR::AccessibilityUIElement::stringValue): Ditto.
+        (WTR::AccessibilityUIElement::language): Ditto.
+        (WTR::AccessibilityUIElement::x): Ditto.
+        (WTR::AccessibilityUIElement::y): Ditto.
+        (WTR::AccessibilityUIElement::width): Ditto.
+        (WTR::AccessibilityUIElement::height): Ditto.
+        (WTR::AccessibilityUIElement::intValue): Ditto.
+        (WTR::AccessibilityUIElement::minValue): Ditto.
+        (WTR::AccessibilityUIElement::maxValue): Ditto.
+        (WTR::AccessibilityUIElement::rowCount): Ditto.
+        (WTR::AccessibilityUIElement::columnCount): Ditto.
+        (WTR::AccessibilityUIElement::cellForColumnAndRow): Ditto.
+        (WTR::AccessibilityUIElement::press): Ditto.
+        (WTR::AccessibilityUIElement::documentEncoding): Ditto.
+        (WTR::AccessibilityUIElement::documentURI): Ditto.
+        (WTR::AccessibilityUIElement::hasPopup): Ditto.
+
+2013-09-27  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] accessibility/aria-sort.html is failing after r156409
+        https://bugs.webkit.org/show_bug.cgi?id=121947
+
+        Reviewed by Chris Fleizach.
+
+        Implement AccessibilityUIElement::isSupported for the ATK
+        platforms, just by checking whether we have an associated object
+        attribute exposed for the wrapper object matching the required
+        attribute in the layout test (e.g "AXSortDirection" -> "sort").
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::isAttributeSupported): Implemented.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::isAttributeSupported): Implemented.
+
+2013-09-26  Eric Carlson  <eric.carlson@apple.com>
+
+        [MediaStream] make MediaStream testable
+        https://bugs.webkit.org/show_bug.cgi?id=121967
+
+        Reviewed by Dean Jackson.
+
+        * DumpRenderTree/mac/UIDelegate.mm:
+        (-[UIDelegate webView:decidePolicyForUserMediaRequestFromOrigin:listener:]): Add a very permissive
+            user media request policy delegate.
+
+2013-09-26  Brian J. Burg  <burg@cs.washington.edu>
+
+        build-webkit --inspector-frontend should copy WebInspectorUI files
+        https://bugs.webkit.org/show_bug.cgi?id=117851
+
+        Reviewed by Joseph Pecoraro.
+
+        Change the --inspector-frontend build option to additionally build/copy 
+        WebInspectorUI by setting it as the only project that needs to be built.
+
+        * Scripts/build-webkit:
+
+2013-09-26  Zan Dobersek  <zdobersek@igalia.com>
+
+        XvfbDriver should set up Xvfb instances providing screens of 8-bit depth
+        https://bugs.webkit.org/show_bug.cgi?id=121951
+
+        Reviewed by Carlos Garcia Campos.
+
+        Screens with 24-bit depth are causing problems as it doesn't seem to be possible to fall back to
+        software rendering successfully on the GTK 64-bit release builder, resulting in crashes in almost
+        500 layout tests that trigger accelerated compositing to be used.
+
+        * Scripts/webkitpy/port/xvfbdriver.py:
+        (XvfbDriver._start):
+        * Scripts/webkitpy/port/xvfbdriver_unittest.py: Update unit test baselines.
+        (XvfbDriverTest.test_start_no_pixel_tests):
+        (XvfbDriverTest.test_start_pixel_tests):
+        (XvfbDriverTest.test_start_arbitrary_worker_number):
+        (XvfbDriverTest.test_next_free_display):
+        (XvfbDriverTest.test_start_next_worker):
+
+2013-09-26  Tim Horton  <timothy_horton@apple.com>
+
+        Tiled drawing should not imply threaded scrolling
+        https://bugs.webkit.org/show_bug.cgi?id=121874
+        <rdar://problem/15071494>
+
+        Reviewed by Sam Weinig.
+
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+        The existing tiled-drawing layout tests require threaded scrolling to be enabled.
+
+2013-09-26  Commit Queue  <commit-queue@webkit.org>
+
+        Unreviewed, rolling out r156457.
+        http://trac.webkit.org/changeset/156457
+        https://bugs.webkit.org/show_bug.cgi?id=121960
+
+        Broke webkitpy tests. (Requested by kling on #webkit).
+
+        * Scripts/webkitpy/port/xvfbdriver.py:
+        (XvfbDriver._start):
+
+2013-09-26  Zan Dobersek  <zdobersek@igalia.com>
+
+        XvfbDriver should set up Xvfb instances providing screens of 8-bit depth
+        https://bugs.webkit.org/show_bug.cgi?id=121951
+
+        Reviewed by Carlos Garcia Campos.
+
+        Screens with 24-bit depth are causing problems as it doesn't seem to be possible to fall back to
+        software rendering successfully on the GTK 64-bit release builder, resulting in crashes in almost
+        500 layout tests that trigger accelerated compositing to be used.
+
+        * Scripts/webkitpy/port/xvfbdriver.py:
+        (XvfbDriver._start):
+
+2013-09-25  Alex Christensen  <achristensen@webkit.org>
+
+        Removed check for Apple Application Support directory in WinCairo port.
+        https://bugs.webkit.org/show_bug.cgi?id=121869
+
+        Reviewed by Brent Fulgham.
+
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeLauncher.vcxproj:
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffLauncher.vcxproj:
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.vcxproj:
+        Use DLLLauncherWinCairo.props for WinCairo ports.
+        * win/DLLLauncher/DLLLauncherMain.cpp:
+        (wWinMain):
+        Don't call modifyPath to check for AAS in the WinCairo port.
+        * win/DLLLauncher/DLLLauncherWinCairo.props: Added to define WIN_CAIRO.
+
+2013-09-25  Alex Christensen  <achristensen@webkit.org>
+
+        Enabled AssembleBuildLogs on WinCairo port.
+        https://bugs.webkit.org/show_bug.cgi?id=121923
+
+        Reviewed by Brent Fulgham.
+
+        * win/AssembleBuildLogs/AssembleBuildLogs.vcxproj:
+        Fixed reference to README, added WinCairo configurations.
+        * win/AssembleBuildLogs/AssembleBuildLogs.vcxproj.filters:
+        Fixed reference to README.
+        * win/AssembleBuildLogs/AssembleLogs.cmd:
+        Added ANGLE projects, skipped QTMovieWin for WinCairo, use PlatformArchitecture for Win64.
+        * win/AssembleBuildLogs/README: Fixed spelling.
+
+2013-09-25  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Fix MSVC C4146 compiler warning
+        https://bugs.webkit.org/show_bug.cgi?id=121838
+
+        Reviewed by Brent Fulgham.
+
+        Fix some variables from unsinged to int to fix the compiler warning
+        "unary minus operator applied to unsigned type, result still unsigned".
+
+        * DumpRenderTree/WorkQueueItem.h:
+        (BackItem::BackItem):
+        (ForwardItem::ForwardItem):
+        * DumpRenderTree/win/DumpRenderTree.cpp:
+        (createWebViewAndOffscreenWindow):
+
+2013-09-25  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Switch the 64-bit Release builder to testing layout tests under WK2
+        https://bugs.webkit.org/show_bug.cgi?id=121256
+
+        Reviewed by Martin Robinson.
+
+        Switch the GTK 64-bit Release builder to testing the layout tests under WebKit2.
+        The GTK 64-bit Release WK2 testing builder is switched to now run layout tests under WebKit1.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json:
+
+2013-09-25  Patrick Gansterer  <paroga@webkit.org>
+
+        Add style checker for CMake lists
+        https://bugs.webkit.org/show_bug.cgi?id=121764
+
+        Reviewed by Ryosuke Niwa.
+
+        Add an additional check to make sure that list of files are sorted.
+        Exclude lists of include directories for now, since the order
+        can be importent for compilation of some files.
+
+        * Scripts/webkitpy/style/checkers/cmake.py:
+        (CMakeChecker.check):
+        (CMakeChecker._check_indent):
+        (CMakeChecker):
+        (CMakeChecker._check_list_order):
+        (CMakeChecker._list_item_path):
+        * Scripts/webkitpy/style/checkers/cmake_unittest.py:
+        (CMakeCheckerTest.test_check):
+
+2013-09-25  Patrick Gansterer  <paroga@webkit.org>
+
+        CMakeChecker takes unusually long time to run
+        https://bugs.webkit.org/show_bug.cgi?id=105662
+
+        Reviewed by Ryosuke Niwa.
+
+        Move the caching mechanism for regular expression of the C++ checker into
+        a common file and use it for the CMake and ChangeLog checkers too.
+
+        * Scripts/webkitpy/style/checkers/changelog.py:
+        (ChangeLogChecker.check_entry):
+        * Scripts/webkitpy/style/checkers/cmake.py:
+        (CMakeChecker._process_line):
+        (CMakeChecker._check_no_space_cmds):
+        (CMakeChecker._check_one_space_cmds):
+        (CMakeChecker._check_non_lowercase_cmd):
+        * Scripts/webkitpy/style/checkers/common.py:
+        (match):
+        (search):
+        (searchIgnorecase):
+        (sub):
+        (subn):
+        * Scripts/webkitpy/style/checkers/cpp.py:
+
+2013-09-25  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        [Qt] Fix build with Qt 5.2 QtPosition module
+        https://bugs.webkit.org/show_bug.cgi?id=121089
+
+        Reviewed by Simon Hausmann.
+
+        QtLocation -> QtPositioning. Make sure we set build type before doing configure checks
+        that might depend on them.
+
+        * qmake/mkspecs/features/default_pre.prf:
+        * qmake/mkspecs/features/features.prf:
+
+2013-09-25  Mario Sanchez Prada  <mario.prada@samsung.com>
+
+        [ATK] Fix style issues in AccessibilityUIElementAtk
+        https://bugs.webkit.org/show_bug.cgi?id=121898
+
+        Reviewed by Chris Fleizach.
+
+        Avoid the '.f' suffix for float literals and use G_VALUE_INIT
+        instead of { 0, { { 0 } } } to initialize a GValue.
+
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp:
+        (AccessibilityUIElement::clickPointX): Remove suffix.
+        (AccessibilityUIElement::clickPointY): Ditto.
+        (AccessibilityUIElement::intValue): Use G_VALUE_INIT and remove suffix.
+        (AccessibilityUIElement::minValue): Ditto.
+        (AccessibilityUIElement::maxValue): Ditto.
+        (AccessibilityUIElement::numberAttributeValue): Remove suffix.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityUIElementAtk.cpp:
+        (WTR::AccessibilityUIElement::numberAttributeValue): Remove suffix.
+        (WTR::AccessibilityUIElement::x): Ditto.
+        (WTR::AccessibilityUIElement::y): Ditto.
+        (WTR::AccessibilityUIElement::width): Ditto.
+        (WTR::AccessibilityUIElement::height): Ditto.
+        (WTR::AccessibilityUIElement::clickPointX): Ditto.
+        (WTR::AccessibilityUIElement::clickPointY): Ditto.
+        (WTR::AccessibilityUIElement::intValue): Ditto.
+        (WTR::AccessibilityUIElement::minValue): Ditto.
+        (WTR::AccessibilityUIElement::maxValue): Ditto.
+
+2013-09-25  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] accessibility/loading-iframe-sends-notification.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=112003
+
+        Reviewed by Mario Sanchez Prada.
+
+        Enabled addNotificationListener and removeNotificationListener for EFL port.
+
+        * WebKitTestRunner/InjectedBundle/AccessibilityController.cpp:
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityControllerAtk.cpp:
+        (WTR::AccessibilityController::removeNotificationListener):
+
+2013-09-24  Filip Pizlo  <fpizlo@apple.com>
+
+        Crashing under JSC::DFG::SpeculativeJIT::spill visiting citicards.com
+        https://bugs.webkit.org/show_bug.cgi?id=121844
+
+        Reviewed by Mark Hahnenberg.
+
+        * Scripts/run-javascriptcore-tests: Be more clear about what test suite failed.
+
+2013-09-24  Alexey Proskuryakov  <ap@apple.com>
+
+        [Mac][WK2] Multiple font tests fail is there is a global setting for font antialiasing threshold
+        https://bugs.webkit.org/show_bug.cgi?id=121854
+
+        Reviewed by Anders Carlsson.
+
+        * WebKitTestRunner/InjectedBundle/mac/InjectedBundleMac.mm:
+        (WTR::InjectedBundle::platformInitialize): Post a notification to update cached
+        settings in underlying frameworks.
+
+2013-09-24  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/14971518> WebKit should build against the Xcode default toolchain when targeting OS X 10.8
+
+        Reviewed by Dan Bernstein.
+
+        * DumpRenderTree/mac/Configurations/Base.xcconfig:
+        * MiniBrowser/Configurations/Base.xcconfig:
+        * TestWebKitAPI/Configurations/Base.xcconfig:
+        * WebKitLauncher/Configurations/Base.xcconfig:
+        * WebKitTestRunner/Configurations/Base.xcconfig:
+
+2013-09-24  Denis Nomiyama  <d.nomiyama@samsung.com>
+
+        [ATK] Missing WTR AccessibilityController::addNotificationListener implementation
+        https://bugs.webkit.org/show_bug.cgi?id=121674
+
+        Reviewed by Mario Sanchez Prada.
+
+        Implemented the global notification listener for
+        AccessibilityController. The signal is generated by
+        AXObjectCache::postPlatformNotification() and received by
+        axObjectEventListener(). axObjectEventListener will then invoke
+        JSObjectCallAsFunction() with the respective callback function.
+
+        There is no additional test for this patch since its implementation will
+        be tested by an accessibility layout test that is currently failing
+        (accessibility/loading-iframe-sends-notification.html).
+
+        * WebKitTestRunner/InjectedBundle/AccessibilityController.cpp: Removed
+        stub implementations of addNotificationListener and
+        removeNotificationListener for the GTK port.
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityControllerAtk.cpp:
+        (WTR::AccessibilityController::addNotificationListener): Creates the
+        notification handler and sets the notification function callback.
+        (WTR::AccessibilityController::removeNotificationListener): Removes the
+        global handler.
+
+2013-09-24  Anton Obzhirov  <a.obzhirov@samsung.com>
+
+        [GTK] fast/images/exif-orientation-composited.html is failing
+        https://bugs.webkit.org/show_bug.cgi?id=119731
+
+        Reviewed by Carlos Garcia Campos.
+
+        Add handling respect image orientation property in DRT.
+
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        (TestRunner::overridePreference):
+
+2013-09-24  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Bump the GTK+ dependency in the Wayland-specific Jhbuild moduleset
+        https://bugs.webkit.org/show_bug.cgi?id=121787
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * gtk/jhbuild-wayland.modules: Bump the GTK+ dependency that's intended for use when building
+        with the Wayland target enabled to version 3.10.0.
+
+2013-09-23  Patrick Gansterer  <paroga@webkit.org>
+
+        use NOMINMAX instead of #define min min
+        https://bugs.webkit.org/show_bug.cgi?id=73563
+
+        Reviewed by Brent Fulgham.
+
+        Use NOMINMAX instead of #define min/max as a cleaner
+        way of ensuring that Windows system header files don't
+        define min/max as macro in the first place.
+
+        * DumpRenderTree/DumpRenderTreePrefix.h:
+        * DumpRenderTree/cg/ImageDiffCG.cpp:
+        * DumpRenderTree/config.h:
+        * DumpRenderTree/win/ImageDiffCairo.cpp:
+        * WebKitTestRunner/WebKitTestRunnerPrefix.h:
+        * WebKitTestRunner/config.h:
+
+2013-09-23  Benjamin Poulain  <benjamin@webkit.org>
+
+        Delete TestWebKitAPI domain or some keys before running TestWebKitAPI
+        https://bugs.webkit.org/show_bug.cgi?id=121715 & <rdar://problem/14269434>
+
+        Reviewed by Alexey Proskuryakov.
+
+        Previously, initalizing a WebPreference would change the cache model
+        to WebCacheModelDocumentBrowser. That behavior was due to a stale
+        preference file on disk.
+
+        This patch fixes the tests by resetting the default, and using the proper
+        default values after initializing WebPreference.
+
+        * TestWebKitAPI/Tests/mac/SetAndUpdateCacheModel.mm:
+        (TestWebKitAPI::TEST): Use the proper initial value, unrelated
+        to the previous runs.
+
+        * TestWebKitAPI/Tests/mac/SetAndUpdateCacheModel.mm:
+        (TestWebKitAPI::TEST): This test needs b/f cache to be enabled, so change
+        cache model to the one required.
+
+        * TestWebKitAPI/ios/mainIOS.mm:
+        (main): Reset the preferences before testing.
+        * TestWebKitAPI/mac/mainMac.mm:
+        (main): Ditto.
+
+2013-09-23  Benjamin Poulain  <benjamin@webkit.org>
+
+        Delete TestWebKitAPI domain or some keys before running TestWebKitAPI
+        https://bugs.webkit.org/show_bug.cgi?id=121715 & <rdar://problem/14269434>
+
+        Reviewed by Alexey Proskuryakov.
+
+        Previously, initalizing a WebPreference would change the cache model
+        to WebCacheModelDocumentBrowser. That behavior was due to a stale
+        preference file on disk.
+
+        This patch fixes the tests by resetting the default, and using the proper
+        default values after initializing WebPreference.
+
+        * TestWebKitAPI/Tests/mac/SetAndUpdateCacheModel.mm:
+        (TestWebKitAPI::TEST): Use the proper initial value, unrelated
+        to the previous runs.
+
+        * TestWebKitAPI/ios/mainIOS.mm:
+        (main): Reset the preferences before testing.
+        * TestWebKitAPI/mac/mainMac.mm:
+        (main): Ditto.
+
+2013-09-23  Anders Carlsson  <andersca@apple.com>
+
+        ListHashSet should work with move-only types
+        https://bugs.webkit.org/show_bug.cgi?id=121802
+
+        Reviewed by Andreas Kling.
+
+        * TestWebKitAPI/Tests/WTF/ListHashSet.cpp:
+        (TestWebKitAPI::TEST):
+        Add a test for move-only types.
+
+2013-09-23  Alex Christensen  <alex.christensen@flexsim.com>
+
+        Added --64-bit option for Windows build.
+        https://bugs.webkit.org/show_bug.cgi?id=121799
+
+        Reviewed by Brent Fulgham.
+
+        * Scripts/webkitdirs.pm:
+        (determinePassedConfiguration): Add "|x64" for 64-bit configuration.
+        (isWin64): Added.
+        (determineIsWin64): Added.
+
+2013-09-23  Anders Carlsson  <andersca@apple.com>
+
+        ListHashSet should use std::reverse_iterator for reverse iterators
+        https://bugs.webkit.org/show_bug.cgi?id=121795
+
+        Reviewed by Antti Koivisto.
+
+        Add test for reverse iterators.
+
+        * TestWebKitAPI/Tests/WTF/ListHashSet.cpp:
+        (TestWebKitAPI::TEST):
+
+2013-09-23  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] accessibility/aria-invalid is failing
+        https://bugs.webkit.org/show_bug.cgi?id=111986
+
+        Reviewed by Mario Sanchez Prada.
+
+        Adds possibility to retrieve JS context.
+        This is part of the implementation of AccessibilityUIElement::addNotificationListener
+        from 119883 and 120421.
+
+        * DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp:
+        (axObjectEventListener):
+        (addAccessibilityNotificationHandler):
+        (removeAccessibilityNotificationHandler):
+        * WebKitTestRunner/InjectedBundle/atk/AccessibilityNotificationHandlerAtk.cpp:
+        (WTR::AccessibilityNotificationHandler::setNotificationFunctionCallback):
+        (WTR::AccessibilityNotificationHandler::removeAccessibilityNotificationHandler):
+
 2013-09-20  Mark Rowe  <mrowe@apple.com>
 
         <https://webkit.org/b/90090> build-webkit should verify that your tools are up-to-date

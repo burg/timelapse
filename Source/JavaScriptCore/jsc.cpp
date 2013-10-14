@@ -78,11 +78,6 @@
 #include <windows.h>
 #endif
 
-#if PLATFORM(QT)
-#include <QCoreApplication>
-#include <QDateTime>
-#endif
-
 #if PLATFORM(IOS)
 #include <fenv.h>
 #include <arm/arch.h>
@@ -250,14 +245,14 @@ protected:
 
     void addFunction(VM& vm, const char* name, NativeFunction function, unsigned arguments)
     {
-        Identifier identifier(globalExec(), name);
-        putDirect(vm, identifier, JSFunction::create(globalExec(), this, arguments, identifier.string(), function));
+        Identifier identifier(&vm, name);
+        putDirect(vm, identifier, JSFunction::create(vm, this, arguments, identifier.string(), function));
     }
     
     void addConstructableFunction(VM& vm, const char* name, NativeFunction function, unsigned arguments)
     {
-        Identifier identifier(globalExec(), name);
-        putDirect(vm, identifier, JSFunction::create(globalExec(), this, arguments, identifier.string(), function, NoIntrinsic, function));
+        Identifier identifier(&vm, name);
+        putDirect(vm, identifier, JSFunction::create(vm, this, arguments, identifier.string(), function, NoIntrinsic, function));
     }
 };
 
@@ -300,7 +295,7 @@ EncodedJSValue JSC_HOST_CALL functionPrint(ExecState* exec)
         if (i)
             putchar(' ');
 
-        printf("%s", exec->argument(i).toString(exec)->value(exec).utf8().data());
+        printf("%s", exec->uncheckedArgument(i).toString(exec)->value(exec).utf8().data());
     }
 
     putchar('\n');
@@ -391,7 +386,7 @@ EncodedJSValue JSC_HOST_CALL functionRun(ExecState* exec)
 
     JSArray* array = constructEmptyArray(globalObject->globalExec(), 0);
     for (unsigned i = 1; i < exec->argumentCount(); ++i)
-        array->putDirectIndex(globalObject->globalExec(), i - 1, exec->argument(i));
+        array->putDirectIndex(globalObject->globalExec(), i - 1, exec->uncheckedArgument(i));
     globalObject->putDirect(
         exec->vm(), Identifier(globalObject->globalExec(), "arguments"), array);
 
@@ -450,7 +445,7 @@ EncodedJSValue JSC_HOST_CALL functionCheckSyntax(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL functionSetSamplingFlags(ExecState* exec)
 {
     for (unsigned i = 0; i < exec->argumentCount(); ++i) {
-        unsigned flag = static_cast<unsigned>(exec->argument(i).toNumber(exec));
+        unsigned flag = static_cast<unsigned>(exec->uncheckedArgument(i).toNumber(exec));
         if ((flag >= 1) && (flag <= 32))
             SamplingFlags::setFlag(flag);
     }
@@ -460,7 +455,7 @@ EncodedJSValue JSC_HOST_CALL functionSetSamplingFlags(ExecState* exec)
 EncodedJSValue JSC_HOST_CALL functionClearSamplingFlags(ExecState* exec)
 {
     for (unsigned i = 0; i < exec->argumentCount(); ++i) {
-        unsigned flag = static_cast<unsigned>(exec->argument(i).toNumber(exec));
+        unsigned flag = static_cast<unsigned>(exec->uncheckedArgument(i).toNumber(exec));
         if ((flag >= 1) && (flag <= 32))
             SamplingFlags::clearFlag(flag);
     }
@@ -574,10 +569,6 @@ int main(int argc, char** argv)
     BlackBerry::Platform::setupApplicationLogging("jsc");
 #endif
 
-#if PLATFORM(QT)
-    QCoreApplication app(argc, argv);
-#endif
-
 #if PLATFORM(EFL)
     ecore_init();
 #endif
@@ -587,7 +578,8 @@ int main(int argc, char** argv)
     WTF::initializeMainThread();
 #endif
     JSC::initializeThreading();
-    
+
+#if !OS(WINCE)
     if (char* timeoutString = getenv("JSC_timeout")) {
         if (sscanf(timeoutString, "%lf", &s_desiredTimeout) != 1) {
             dataLog(
@@ -598,6 +590,7 @@ int main(int argc, char** argv)
             createThread(timeoutThreadMain, 0, "jsc Timeout Thread");
         }
     }
+#endif
 
     // We can't use destructors in the following code because it uses Windows
     // Structured Exception Handling
@@ -853,10 +846,10 @@ int jscmain(int argc, char** argv)
     // Note that the options parsing can affect VM creation, and thus
     // comes first.
     CommandLine options(argc, argv);
-    RefPtr<VM> vm = VM::create(LargeHeap);
+    VM* vm = VM::create(LargeHeap).leakRef();
     int result;
     {
-        APIEntryShim shim(vm.get());
+        APIEntryShim shim(vm);
 
         if (options.m_profile && !vm->m_perBytecodeProfiler)
             vm->m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*vm));
@@ -875,14 +868,6 @@ int jscmain(int argc, char** argv)
             if (!vm->m_perBytecodeProfiler->save(options.m_profilerOutput.utf8().data()))
                 fprintf(stderr, "could not save profiler output.\n");
         }
-    }
-    
-    if (Options::neverDeleteVMInCommandLine()) {
-        JSC::VM* temp = vm.release().leakRef();
-        UNUSED_PARAM(temp);
-    } else {
-        JSLockHolder lock(*vm);
-        vm.clear();
     }
     
     return result;

@@ -33,7 +33,7 @@ extern "C" const char * _Block_signature(id);
 extern int failed;
 extern "C" void testObjectiveCAPI(void);
 
-#if JSC_OBJC_API_ENABLED
+#if JSC_OBJC_API_ENABLED && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 
 @protocol ParentObject <JSExport>
 @end
@@ -241,6 +241,47 @@ static JSVirtualMachine *sharedInstance = nil;
 
 @end
 
+@interface JSCollection : NSObject
+- (void)setValue:(JSValue *)value forKey:(NSString *)key;
+- (JSValue *)valueForKey:(NSString *)key;
+@end
+
+@implementation JSCollection {
+    NSMutableDictionary *_dict;
+}
+- (id)init
+{
+    self = [super init];
+    if (!self)
+        return nil;
+
+    _dict = [[NSMutableDictionary alloc] init];
+
+    return self;
+}
+
+- (void)setValue:(JSValue *)value forKey:(NSString *)key
+{
+    JSManagedValue *oldManagedValue = [_dict objectForKey:key];
+    if (oldManagedValue) {
+        JSValue* oldValue = [oldManagedValue value];
+        if (oldValue)
+            [oldValue.context.virtualMachine removeManagedReference:oldManagedValue withOwner:self];
+    }
+    JSManagedValue *managedValue = [JSManagedValue managedValueWithValue:value];
+    [value.context.virtualMachine addManagedReference:managedValue withOwner:self];
+    [_dict setObject:managedValue forKey:key];
+}
+
+- (JSValue *)valueForKey:(NSString *)key
+{
+    JSManagedValue *managedValue = [_dict objectForKey:key];
+    if (!managedValue)
+        return nil;
+    return [managedValue value];
+}
+@end
+
 static void checkResult(NSString *description, bool passed)
 {
     NSLog(@"TEST: \"%@\": %@", description, passed ? @"PASSED" : @"FAILED");
@@ -288,6 +329,41 @@ void testObjectiveCAPI()
         checkResult(@"Check dictionary literal", [obj isKindOfClass:[NSDictionary class]]);
         id num = (NSDictionary *)obj[@"x"];
         checkResult(@"Check numeric literal", [num isKindOfClass:[NSNumber class]]);
+    }
+
+    @autoreleasepool {
+        JSCollection* myPrivateProperties = [[JSCollection alloc] init];
+
+        @autoreleasepool {
+            JSContext* context = [[JSContext alloc] init];
+            TestObject* rootObject = [TestObject testObject];
+            context[@"root"] = rootObject;
+            [context.virtualMachine addManagedReference:myPrivateProperties withOwner:rootObject];
+            [myPrivateProperties setValue:[JSValue valueWithBool:true inContext:context] forKey:@"is_ham"];
+            [myPrivateProperties setValue:[JSValue valueWithObject:@"hello!" inContext:context] forKey:@"message"];
+            [myPrivateProperties setValue:[JSValue valueWithInt32:42 inContext:context] forKey:@"my_number"];
+            [myPrivateProperties setValue:[JSValue valueWithNullInContext:context] forKey:@"definitely_null"];
+            [myPrivateProperties setValue:[JSValue valueWithUndefinedInContext:context] forKey:@"not_sure_if_undefined"];
+
+            JSSynchronousGarbageCollectForDebugging([context JSGlobalContextRef]);
+
+            JSValue *isHam = [myPrivateProperties valueForKey:@"is_ham"];
+            JSValue *message = [myPrivateProperties valueForKey:@"message"];
+            JSValue *myNumber = [myPrivateProperties valueForKey:@"my_number"];
+            JSValue *definitelyNull = [myPrivateProperties valueForKey:@"definitely_null"];
+            JSValue *notSureIfUndefined = [myPrivateProperties valueForKey:@"not_sure_if_undefined"];
+            checkResult(@"is_ham is true", [isHam isBoolean] && [isHam toBool]);
+            checkResult(@"message is hello!", [message isString] && [@"hello!" isEqualToString:[message toString]]);
+            checkResult(@"my_number is 42", [myNumber isNumber] && [myNumber toInt32] == 42);
+            checkResult(@"definitely_null is null", [definitelyNull isNull]);
+            checkResult(@"not_sure_if_undefined is undefined", [notSureIfUndefined isUndefined]);
+        }
+
+        checkResult(@"is_ham is nil", ![myPrivateProperties valueForKey:@"is_ham"]);
+        checkResult(@"message is nil", ![myPrivateProperties valueForKey:@"message"]);
+        checkResult(@"my_number is 42", ![myPrivateProperties valueForKey:@"my_number"]);
+        checkResult(@"definitely_null is null", ![myPrivateProperties valueForKey:@"definitely_null"]);
+        checkResult(@"not_sure_if_undefined is undefined", ![myPrivateProperties valueForKey:@"not_sure_if_undefined"]);
     }
 
     @autoreleasepool {
@@ -829,6 +905,61 @@ void testObjectiveCAPI()
             managedTestObject = [JSManagedValue managedValueWithValue:context[@"testObject"]];
             [context.virtualMachine addManagedReference:managedTestObject withOwner:testObject];
         }
+    }
+
+    @autoreleasepool {
+        JSContext *context = [[JSContext alloc] init];
+        context[@"MyClass"] = ^{
+            JSValue *newThis = [JSValue valueWithNewObjectInContext:[JSContext currentContext]];
+            JSGlobalContextRef contextRef = [[JSContext currentContext] JSGlobalContextRef];
+            JSObjectRef newThisRef = JSValueToObject(contextRef, [newThis JSValueRef], NULL);
+            JSObjectSetPrototype(contextRef, newThisRef, [[JSContext currentContext][@"MyClass"][@"prototype"] JSValueRef]);
+            return newThis;
+        };
+
+        context[@"MyOtherClass"] = ^{
+            JSValue *newThis = [JSValue valueWithNewObjectInContext:[JSContext currentContext]];
+            JSGlobalContextRef contextRef = [[JSContext currentContext] JSGlobalContextRef];
+            JSObjectRef newThisRef = JSValueToObject(contextRef, [newThis JSValueRef], NULL);
+            JSObjectSetPrototype(contextRef, newThisRef, [[JSContext currentContext][@"MyOtherClass"][@"prototype"] JSValueRef]);
+            return newThis;
+        };
+
+        context.exceptionHandler = ^(JSContext *context, JSValue *exception) {
+            NSLog(@"EXCEPTION: %@", [exception toString]);
+            context.exception = nil;
+        };
+
+        JSValue *constructor1 = context[@"MyClass"];
+        JSValue *constructor2 = context[@"MyOtherClass"];
+
+        JSValue *value1 = [context evaluateScript:@"new MyClass()"];
+        checkResult(@"value1 instanceof MyClass", [value1 isInstanceOf:constructor1]);
+        checkResult(@"!(value1 instanceof MyOtherClass)", ![value1 isInstanceOf:constructor2]);
+        checkResult(@"MyClass.prototype.constructor === MyClass", [[context evaluateScript:@"MyClass.prototype.constructor === MyClass"] toBool]);
+        checkResult(@"MyClass instanceof Function", [[context evaluateScript:@"MyClass instanceof Function"] toBool]);
+
+        JSValue *value2 = [context evaluateScript:@"new MyOtherClass()"];
+        checkResult(@"value2 instanceof MyOtherClass", [value2 isInstanceOf:constructor2]);
+        checkResult(@"!(value2 instanceof MyClass)", ![value2 isInstanceOf:constructor1]);
+        checkResult(@"MyOtherClass.prototype.constructor === MyOtherClass", [[context evaluateScript:@"MyOtherClass.prototype.constructor === MyOtherClass"] toBool]);
+        checkResult(@"MyOtherClass instanceof Function", [[context evaluateScript:@"MyOtherClass instanceof Function"] toBool]);
+    }
+
+    @autoreleasepool {
+        JSContext *context = [[JSContext alloc] init];
+        context[@"MyClass"] = ^{
+            NSLog(@"I'm intentionally not returning anything.");
+        };
+        JSValue *result = [context evaluateScript:@"new MyClass()"];
+        checkResult(@"result === undefined", [result isUndefined]);
+        checkResult(@"exception.message is correct'", context.exception 
+            && [@"Objective-C blocks called as constructors must return an object." isEqualToString:[context.exception[@"message"] toString]]);
+    }
+
+    @autoreleasepool {
+        checkResult(@"[JSContext currentThis] == nil outside of callback", ![JSContext currentThis]);
+        checkResult(@"[JSContext currentArguments] == nil outside of callback", ![JSContext currentArguments]);
     }
 }
 

@@ -48,7 +48,6 @@
 #import "ContextMenuController.h"
 #import "Editor.h"
 #import "Font.h"
-#import "Frame.h"
 #import "FrameLoaderClient.h"
 #import "FrameSelection.h"
 #import "HTMLAnchorElement.h"
@@ -59,6 +58,7 @@
 #import "HTMLNames.h"
 #import "HTMLTextAreaElement.h"
 #import "LocalizedStrings.h"
+#import "MainFrame.h"
 #import "Page.h"
 #import "RenderTextControl.h"
 #import "RenderView.h"
@@ -1524,12 +1524,13 @@ static NSMutableArray *convertStringsToNSArray(const Vector<String>& vector)
     
     // WebKit1 code path... platformWidget() exists.
     if (frameView && frameView->platformWidget()) {
-        
         NSPoint nsPoint = (NSPoint)point;
         NSView* view = frameView->documentView();
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         nsPoint = [[view window] convertBaseToScreen:[view convertPoint:nsPoint toView:nil]];
+#pragma clang diagnostic pop
         return CGPointMake(nsPoint.x, nsPoint.y);
-
     } else {
         
         // Find the appropriate scroll view to use to convert the contents to the window.
@@ -2138,7 +2139,7 @@ static NSString* roleValueToNSString(AccessibilityRole value)
     }
     
     if ([attributeName isEqualToString: NSAccessibilityURLAttribute]) {
-        KURL url = m_object->url();
+        URL url = m_object->url();
         if (url.isNull())
             return nil;
         return (NSURL*)url;

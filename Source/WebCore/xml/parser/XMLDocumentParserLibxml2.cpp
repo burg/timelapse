@@ -410,7 +410,7 @@ static void switchToUTF16(xmlParserCtxtPtr ctxt)
     xmlSwitchEncoding(ctxt, BOMHighByte == 0xFF ? XML_CHAR_ENCODING_UTF16LE : XML_CHAR_ENCODING_UTF16BE);
 }
 
-static bool shouldAllowExternalLoad(const KURL& url)
+static bool shouldAllowExternalLoad(const URL& url)
 {
     String urlString = url.string();
 
@@ -451,7 +451,7 @@ static void* openFunc(const char* uri)
     ASSERT(XMLDocumentParserScope::currentCachedResourceLoader);
     ASSERT(currentThread() == libxmlLoaderThread);
 
-    KURL url(KURL(), uri);
+    URL url(URL(), uri);
 
     if (!shouldAllowExternalLoad(url))
         return &globalDescriptor;
@@ -576,14 +576,14 @@ bool XMLDocumentParser::supportsXMLVersion(const String& version)
     return version == "1.0";
 }
 
-XMLDocumentParser::XMLDocumentParser(Document* document, FrameView* frameView)
+XMLDocumentParser::XMLDocumentParser(Document& document, FrameView* frameView)
     : ScriptableDocumentParser(document)
     , m_view(frameView)
     , m_context(0)
     , m_pendingCallbacks(PendingCallbacks::create())
     , m_depthTriggeringEntityExpansion(-1)
     , m_isParsingEntityDeclaration(false)
-    , m_currentNode(document)
+    , m_currentNode(&document)
     , m_sawError(false)
     , m_sawCSS(false)
     , m_sawXSLTransform(false)
@@ -598,14 +598,14 @@ XMLDocumentParser::XMLDocumentParser(Document* document, FrameView* frameView)
 {
 }
 
-XMLDocumentParser::XMLDocumentParser(DocumentFragment* fragment, Element* parentElement, ParserContentPolicy parserContentPolicy)
-    : ScriptableDocumentParser(&fragment->document(), parserContentPolicy)
+XMLDocumentParser::XMLDocumentParser(DocumentFragment& fragment, Element* parentElement, ParserContentPolicy parserContentPolicy)
+    : ScriptableDocumentParser(fragment.document(), parserContentPolicy)
     , m_view(0)
     , m_context(0)
     , m_pendingCallbacks(PendingCallbacks::create())
     , m_depthTriggeringEntityExpansion(-1)
     , m_isParsingEntityDeclaration(false)
-    , m_currentNode(fragment)
+    , m_currentNode(&fragment)
     , m_sawError(false)
     , m_sawCSS(false)
     , m_sawXSLTransform(false)
@@ -618,7 +618,7 @@ XMLDocumentParser::XMLDocumentParser(DocumentFragment* fragment, Element* parent
     , m_scriptStartPosition(TextPosition::belowRangePosition())
     , m_parsingFragment(true)
 {
-    fragment->ref();
+    fragment.ref();
 
     // Add namespaces based on the parent node
     Vector<Element*> elemStack;

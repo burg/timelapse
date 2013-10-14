@@ -166,7 +166,7 @@ void SVGSMILElement::buildPendingResource()
     if (href.isEmpty())
         target = parentNode() && parentNode()->isElementNode() ? toElement(parentNode()) : 0;
     else
-        target = SVGURIReference::targetElementFromIRIString(href, &document(), &id);
+        target = SVGURIReference::targetElementFromIRIString(href, document(), &id);
     SVGElement* svgTarget = target && target->isSVGElement() ? toSVGElement(target) : 0;
 
     if (svgTarget && !svgTarget->inDocument())
@@ -234,10 +234,10 @@ void SVGSMILElement::reset()
     resolveFirstInterval();
 }
 
-Node::InsertionNotificationRequest SVGSMILElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGSMILElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
-    if (!rootParent->inDocument())
+    if (!rootParent.inDocument())
         return InsertionDone;
 
     // Verify we are not in <use> instance tree.
@@ -267,9 +267,9 @@ Node::InsertionNotificationRequest SVGSMILElement::insertedInto(ContainerNode* r
     return InsertionDone;
 }
 
-void SVGSMILElement::removedFrom(ContainerNode* rootParent)
+void SVGSMILElement::removedFrom(ContainerNode& rootParent)
 {
-    if (rootParent->inDocument()) {
+    if (rootParent.inDocument()) {
         clearResourceReferences();
         disconnectConditions();
         setTargetElement(0);
@@ -517,7 +517,7 @@ void SVGSMILElement::svgAttributeChanged(const QualifiedName& attrName)
 
 inline Element* SVGSMILElement::eventBaseFor(const Condition& condition)
 {
-    return condition.m_baseID.isEmpty() ? targetElement() : treeScope()->getElementById(condition.m_baseID);
+    return condition.m_baseID.isEmpty() ? targetElement() : treeScope().getElementById(condition.m_baseID);
 }
 
 void SVGSMILElement::connectConditions()
@@ -537,7 +537,7 @@ void SVGSMILElement::connectConditions()
             eventBase->addEventListener(condition.m_name, condition.m_eventListener, false);
         } else if (condition.m_type == Condition::Syncbase) {
             ASSERT(!condition.m_baseID.isEmpty());
-            condition.m_syncbase = treeScope()->getElementById(condition.m_baseID);
+            condition.m_syncbase = treeScope().getElementById(condition.m_baseID);
             if (!isSMILElement(condition.m_syncbase.get())) {
                 condition.m_syncbase = 0;
                 continue;

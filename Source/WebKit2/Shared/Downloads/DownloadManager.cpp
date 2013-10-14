@@ -40,20 +40,20 @@ DownloadManager::DownloadManager(Client* client)
 
 void DownloadManager::startDownload(uint64_t downloadID, const ResourceRequest& request)
 {
-    OwnPtr<Download> download = Download::create(*this, downloadID, request);
+    auto download = std::make_unique<Download>(*this, downloadID, request);
     download->start();
 
     ASSERT(!m_downloads.contains(downloadID));
-    m_downloads.set(downloadID, download.leakPtr());
+    m_downloads.set(downloadID, download.release());
 }
 
 void DownloadManager::convertHandleToDownload(uint64_t downloadID, ResourceHandle* handle, const ResourceRequest& request, const ResourceResponse& response)
 {
-    OwnPtr<Download> download = Download::create(*this, downloadID, request);
+    auto download = std::make_unique<Download>(*this, downloadID, request);
 
     download->startWithHandle(handle, response);
     ASSERT(!m_downloads.contains(downloadID));
-    m_downloads.set(downloadID, download.leakPtr());
+    m_downloads.set(downloadID, download.release());
 }
 
 void DownloadManager::cancelDownload(uint64_t downloadID)
@@ -92,14 +92,5 @@ AuthenticationManager& DownloadManager::downloadsAuthenticationManager()
 {
     return m_client->downloadsAuthenticationManager();
 }
-
-#if PLATFORM(QT)
-void DownloadManager::startTransfer(uint64_t downloadID, const String& destination)
-{
-    ASSERT(m_downloads.contains(downloadID));
-    Download* download = m_downloads.get(downloadID);
-    download->startTransfer(destination);
-}
-#endif
 
 } // namespace WebKit

@@ -64,7 +64,7 @@ public:
     void increment() { m_offset++; }
     bool atEnd() const { return !m_textRun || m_offset >= m_textRun->length(); }
     UChar current() const { return (*m_textRun)[m_offset]; }
-    WTF::Unicode::Direction direction() const { return atEnd() ? WTF::Unicode::OtherNeutral : WTF::Unicode::direction(current()); }
+    UCharDirection direction() const { return atEnd() ? U_OTHER_NEUTRAL : u_charDirection(current()); }
 
     bool operator==(const TextRunIterator& other)
     {
@@ -189,7 +189,7 @@ bool GraphicsContext::hasBlurredShadow() const
     return m_state.shadowColor.isValid() && m_state.shadowColor.alpha() && m_state.shadowBlur;
 }
 
-#if PLATFORM(QT) || USE(CAIRO)
+#if USE(CAIRO)
 bool GraphicsContext::mustUseShadowBlur() const
 {
     // We can't avoid ShadowBlur if the shadow has blur.
@@ -380,12 +380,10 @@ void GraphicsContext::endTransparencyLayer()
     --m_transparencyCount;
 }
 
-#if !PLATFORM(QT)
 bool GraphicsContext::isInTransparencyLayer() const
 {
     return (m_transparencyCount > 0) && supportsTransparencyLayers();
 }
-#endif
 
 bool GraphicsContext::updatingControlTints() const
 {
@@ -599,12 +597,10 @@ void GraphicsContext::drawImageBuffer(ImageBuffer* image, ColorSpace styleColorS
         image->draw(this, styleColorSpace, dest, src, op, blendMode, useLowQualityScale);
 }
 
-#if !PLATFORM(QT)
 void GraphicsContext::clip(const IntRect& rect)
 {
     clip(FloatRect(rect));
 }
-#endif
 
 void GraphicsContext::clipRoundedRect(const RoundedRect& rect)
 {
@@ -643,7 +639,7 @@ void GraphicsContext::clipToImageBuffer(ImageBuffer* buffer, const FloatRect& re
     buffer->clip(this, rect);
 }
 
-#if !USE(CG) && !PLATFORM(QT) && !USE(CAIRO)
+#if !USE(CG) && !USE(CAIRO)
 IntRect GraphicsContext::clipBounds() const
 {
     ASSERT_NOT_REACHED();
@@ -693,7 +689,7 @@ void GraphicsContext::fillRoundedRect(const RoundedRect& rect, const Color& colo
         fillRect(rect.rect(), color, colorSpace, compositeOperation(), blendMode);
 }
 
-#if !USE(CG) && !PLATFORM(QT) && !USE(CAIRO)
+#if !USE(CG) && !USE(CAIRO)
 void GraphicsContext::fillRectWithRoundedHole(const IntRect& rect, const RoundedRect& roundedHoleRect, const Color& color, ColorSpace colorSpace)
 {
     if (paintingDisabled())
@@ -738,6 +734,16 @@ BlendMode GraphicsContext::blendModeOperation() const
     return m_state.blendMode;
 }
 
+void GraphicsContext::setDrawLuminanceMask(bool drawLuminanceMask)
+{
+    m_state.drawLuminanceMask = drawLuminanceMask;
+}
+
+bool GraphicsContext::drawLuminanceMask() const
+{
+    return m_state.drawLuminanceMask;
+}
+
 #if !USE(CG)
 // Implement this if you want to go ahead and push the drawing mode into your native context
 // immediately.
@@ -746,7 +752,7 @@ void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags)
 }
 #endif
 
-#if !PLATFORM(QT) && !USE(CAIRO)
+#if !USE(CAIRO)
 void GraphicsContext::setPlatformStrokeStyle(StrokeStyle)
 {
 }

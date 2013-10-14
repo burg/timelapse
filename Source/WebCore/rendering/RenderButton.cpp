@@ -105,8 +105,6 @@ void RenderButton::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 {
     RenderBlock::styleDidChange(diff, oldStyle);
 
-    if (m_buttonText)
-        m_buttonText->setStyle(style());
     if (m_inner) // RenderBlock handled updating the anonymous block's style.
         setupInnerStyle(m_inner->style());
 
@@ -126,6 +124,8 @@ void RenderButton::setupInnerStyle(RenderStyle* innerStyle)
     ASSERT(innerStyle->refCount() == 1);
     // RenderBlock::createAnonymousBlock creates a new RenderStyle, so this is
     // safe to modify.
+    // FIXME: I don't see how the comment above is accurate when this is called
+    // from the RenderButton::styleDidChange function.
     innerStyle->setFlexGrow(1.0f);
     // Use margin:auto instead of align-items:center to get safe centering, i.e.
     // when the content overflows, treat it the same as align-items: flex-start.
@@ -156,7 +156,6 @@ void RenderButton::setText(const String& str)
             m_buttonText->setText(str.impl());
         else {
             m_buttonText = RenderTextFragment::createAnonymous(document(), str);
-            m_buttonText->setStyle(style());
             addChild(m_buttonText);
         }
     }

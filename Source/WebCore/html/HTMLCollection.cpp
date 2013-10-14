@@ -158,13 +158,13 @@ static NodeListInvalidationType invalidationTypeExcludingIdAndNameAttributes(Col
     return DoNotInvalidateOnAttributeChanges;
 }
 
-HTMLCollection::HTMLCollection(Node* ownerNode, CollectionType type, ItemAfterOverrideType itemAfterOverrideType)
+HTMLCollection::HTMLCollection(Node& ownerNode, CollectionType type, ItemAfterOverrideType itemAfterOverrideType)
     : LiveNodeListBase(ownerNode, rootTypeFromCollectionType(type), invalidationTypeExcludingIdAndNameAttributes(type),
         WebCore::shouldOnlyIncludeDirectChildren(type), type, itemAfterOverrideType)
 {
 }
 
-PassRefPtr<HTMLCollection> HTMLCollection::create(Node* base, CollectionType type)
+PassRefPtr<HTMLCollection> HTMLCollection::create(Node& base, CollectionType type)
 {
     return adoptRef(new HTMLCollection(base, type, DoesNotOverrideItemAfter));
 }
@@ -173,7 +173,7 @@ HTMLCollection::~HTMLCollection()
 {
     // HTMLNameCollection removes cache by itself.
     if (type() != WindowNamedItems && type() != DocumentNamedItems)
-        ownerNode()->nodeLists()->removeCacheWithAtomicName(this, type());
+        ownerNode().nodeLists()->removeCacheWithAtomicName(this, type());
 }
 
 template <class NodeListType>
@@ -580,14 +580,14 @@ Node* HTMLCollection::namedItem(const AtomicString& name) const
         return 0;
 
     if (!overridesItemAfter() && root->isInTreeScope()) {
-        TreeScope* treeScope = root->treeScope();
+        TreeScope& treeScope = root->treeScope();
         Element* candidate = 0;
-        if (treeScope->hasElementWithId(name.impl())) {
-            if (!treeScope->containsMultipleElementsWithId(name))
-                candidate = treeScope->getElementById(name);
-        } else if (treeScope->hasElementWithName(name.impl())) {
-            if (!treeScope->containsMultipleElementsWithName(name)) {
-                candidate = treeScope->getElementByName(name);
+        if (treeScope.hasElementWithId(*name.impl())) {
+            if (!treeScope.containsMultipleElementsWithId(name))
+                candidate = treeScope.getElementById(name);
+        } else if (treeScope.hasElementWithName(*name.impl())) {
+            if (!treeScope.containsMultipleElementsWithName(name)) {
+                candidate = treeScope.getElementByName(name);
                 if (candidate && type() == DocAll && (!candidate->isHTMLElement() || !nameShouldBeVisibleInDocumentAll(toHTMLElement(candidate))))
                     candidate = 0;
             }
@@ -646,7 +646,7 @@ bool HTMLCollection::hasNamedItem(const AtomicString& name) const
     return namedItem(name);
 }
 
-void HTMLCollection::namedItems(const AtomicString& name, Vector<RefPtr<Node> >& result) const
+void HTMLCollection::namedItems(const AtomicString& name, Vector<Ref<Element>>& result) const
 {
     ASSERT(result.isEmpty());
     if (name.isEmpty())
@@ -658,15 +658,15 @@ void HTMLCollection::namedItems(const AtomicString& name, Vector<RefPtr<Node> >&
     Vector<Element*>* nameResults = nameCache(name);
 
     for (unsigned i = 0; idResults && i < idResults->size(); ++i)
-        result.append(idResults->at(i));
+        result.append(*idResults->at(i));
 
     for (unsigned i = 0; nameResults && i < nameResults->size(); ++i)
-        result.append(nameResults->at(i));
+        result.append(*nameResults->at(i));
 }
 
 PassRefPtr<NodeList> HTMLCollection::tags(const String& name)
 {
-    return ownerNode()->getElementsByTagName(name);
+    return ownerNode().getElementsByTagName(name);
 }
 
 void HTMLCollection::append(NodeCacheMap& map, const AtomicString& key, Element* element)

@@ -133,9 +133,10 @@ fast/repaint/float-overflow.html
 # https://bugs.webkit.org/show_bug.cgi?id=92573
 http/tests/misc/submit-post-keygen.html
 
-# <rdar://problem/11991881>
-inspector/profiler/heap-snapshot-containment-show-all.html
-inspector/debugger/debugger-expand-scope.html
+# Skipping the tests for the old inspector UI
+inspector [ Skip ]
+http/tests/inspector [ Skip ]
+http/tests/inspector-enabled [ Skip ]
 
 # Lion does not support web notifications
 http/tests/notifications
@@ -156,3 +157,16 @@ webkit.org/b/118870 [ Debug ] compositing/patterns/direct-pattern-compositing-pa
 webkit.org/b/118870 [ Debug ] compositing/patterns/direct-pattern-compositing-position.html [ ImageOnlyFailure ]
 webkit.org/b/118870 [ Debug ] compositing/patterns/direct-pattern-compositing-size.html [ ImageOnlyFailure ]   
 webkit.org/b/118870 [ Debug ] compositing/patterns/direct-pattern-compositing.html [ ImageOnlyFailure ]
+
+# Tests need new generated expected results
+webkit.org/b/121828 fast/repaint/japanese-rl-selection-repaint-in-regions.html [ Missing ]
+
+# Blame list: http://trac.webkit.org/log/?verbose=on&rev=157242&stop_rev=157239
+Bug(rniwa) fast/xsl/sort-unicode.xml [ Failure ]
+Bug(rniwa) svg/W3C-SVG-1.1/coords-viewattr-01-b.svg [ Failure ]
+Bug(rniwa) svg/W3C-SVG-1.1/coords-viewattr-02-b.svg [ Failure ]
+Bug(rniwa) svg/W3C-SVG-1.1/render-elems-03-t.svg [ Failure ]
+Bug(rniwa) svg/custom/preserve-aspect-ratio-syntax.svg [ Failure ]
+Bug(rniwa) svg/custom/viewbox-syntax.svg [ Failure ]
+Bug(rniwa) svg/zoom/page/zoom-coords-viewattr-01-b.svg [ Failure ]
+Bug(rniwa) svg/zoom/text/zoom-coords-viewattr-01-b.svg [ Failure ]

@@ -61,18 +61,14 @@ public:
     void processDidClose();
 
     void didReceiveDownloadProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveSyncDownloadProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
-
-#if PLATFORM(QT)
-    void startTransfer(const String& filename);
-#endif
+    void didReceiveSyncDownloadProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
 
 private:
     explicit DownloadProxy(DownloadProxyMap&, WebContext*);
 
     // CoreIPC::MessageReceiver
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
 
     // Message handlers.
     void didStart(const WebCore::ResourceRequest&);

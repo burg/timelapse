@@ -692,6 +692,7 @@ static gboolean webkitWebViewBaseQueryTooltip(GtkWidget* widget, gint x, gint y,
     return TRUE;
 }
 
+#if ENABLE(DRAG_SUPPORT)
 static void webkitWebViewBaseDragDataGet(GtkWidget* widget, GdkDragContext* context, GtkSelectionData* selectionData, guint info, guint time)
 {
     WEBKIT_WEB_VIEW_BASE(widget)->priv->dragAndDropHelper.handleGetDragData(context, selectionData, info);
@@ -722,10 +723,11 @@ static void webkitWebViewBaseDragDataReceived(GtkWidget* widget, GdkDragContext*
 
     DragData dragData(dataObject, position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
     webViewBase->priv->pageProxy->resetDragOperation();
-    webViewBase->priv->pageProxy->dragEntered(&dragData);
+    webViewBase->priv->pageProxy->dragEntered(dragData);
     DragOperation operation = webViewBase->priv->pageProxy->dragSession().operation;
     gdk_drag_status(context, dragOperationToSingleGdkDragAction(operation), time);
 }
+#endif // ENABLE(DRAG_SUPPORT)
 
 static AtkObject* webkitWebViewBaseGetAccessible(GtkWidget* widget)
 {
@@ -755,6 +757,7 @@ static AtkObject* webkitWebViewBaseGetAccessible(GtkWidget* widget)
     return priv->accessible.get();
 }
 
+#if ENABLE(DRAG_SUPPORT)
 static gboolean webkitWebViewBaseDragMotion(GtkWidget* widget, GdkDragContext* context, gint x, gint y, guint time)
 {
     WebKitWebViewBase* webViewBase = WEBKIT_WEB_VIEW_BASE(widget);
@@ -764,13 +767,13 @@ static gboolean webkitWebViewBaseDragMotion(GtkWidget* widget, GdkDragContext* c
         return TRUE;
 
     DragData dragData(dataObject, position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
-    webViewBase->priv->pageProxy->dragUpdated(&dragData);
+    webViewBase->priv->pageProxy->dragUpdated(dragData);
     DragOperation operation = webViewBase->priv->pageProxy->dragSession().operation;
     gdk_drag_status(context, dragOperationToSingleGdkDragAction(operation), time);
     return TRUE;
 }
 
-static void dragExitedCallback(GtkWidget* widget, DragData* dragData, bool dropHappened)
+static void dragExitedCallback(GtkWidget* widget, DragData& dragData, bool dropHappened)
 {
     // Don't call dragExited if we have just received a drag-drop signal. This
     // happens in the case of a successful drop onto the view.
@@ -798,10 +801,11 @@ static gboolean webkitWebViewBaseDragDrop(GtkWidget* widget, GdkDragContext* con
     DragData dragData(dataObject, position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
     SandboxExtension::Handle handle;
     SandboxExtension::HandleArray sandboxExtensionForUpload;
-    webViewBase->priv->pageProxy->performDrag(&dragData, String(), handle, sandboxExtensionForUpload);
+    webViewBase->priv->pageProxy->performDrag(dragData, String(), handle, sandboxExtensionForUpload);
     gtk_drag_finish(context, TRUE, FALSE, time);
     return TRUE;
 }
+#endif // ENABLE(DRAG_SUPPORT)
 
 static void webkitWebViewBaseParentSet(GtkWidget* widget, GtkWidget* oldParent)
 {
@@ -850,12 +854,14 @@ static void webkit_web_view_base_class_init(WebKitWebViewBaseClass* webkitWebVie
     widgetClass->scroll_event = webkitWebViewBaseScrollEvent;
     widgetClass->motion_notify_event = webkitWebViewBaseMotionNotifyEvent;
     widgetClass->query_tooltip = webkitWebViewBaseQueryTooltip;
+#if ENABLE(DRAG_SUPPORT)
     widgetClass->drag_end = webkitWebViewBaseDragEnd;
     widgetClass->drag_data_get = webkitWebViewBaseDragDataGet;
     widgetClass->drag_motion = webkitWebViewBaseDragMotion;
     widgetClass->drag_leave = webkitWebViewBaseDragLeave;
     widgetClass->drag_drop = webkitWebViewBaseDragDrop;
     widgetClass->drag_data_received = webkitWebViewBaseDragDataReceived;
+#endif // ENABLE(DRAG_SUPPORT)
     widgetClass->get_accessible = webkitWebViewBaseGetAccessible;
     widgetClass->parent_set = webkitWebViewBaseParentSet;
     widgetClass->destroy = webkitWebViewBaseDestroy;
@@ -941,6 +947,7 @@ void webkitWebViewBaseSetTooltipArea(WebKitWebViewBase* webViewBase, const IntRe
     webViewBase->priv->tooltipArea = tooltipArea;
 }
 
+#if ENABLE(DRAG_SUPPORT)
 void webkitWebViewBaseStartDrag(WebKitWebViewBase* webViewBase, const DragData& dragData, PassRefPtr<ShareableBitmap> dragImage)
 {
     WebKitWebViewBasePrivate* priv = webViewBase->priv;
@@ -967,6 +974,7 @@ void webkitWebViewBaseStartDrag(WebKitWebViewBase* webViewBase, const DragData& 
     } else
         gtk_drag_set_icon_default(context);
 }
+#endif // ENABLE(DRAG_SUPPORT)
 
 void webkitWebViewBaseForwardNextKeyEvent(WebKitWebViewBase* webkitWebViewBase)
 {

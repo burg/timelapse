@@ -51,7 +51,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RenderTable::RenderTable(Element* element)
-    : RenderBlock(element)
+    : RenderBlock(element, 0)
     , m_head(0)
     , m_foot(0)
     , m_firstBody(0)
@@ -78,7 +78,7 @@ RenderTable::~RenderTable()
 void RenderTable::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
-    propagateStyleToAnonymousChildren();
+    propagateStyleToAnonymousChildren(PropagateToAllChildren);
 
     ETableLayout oldTableLayout = oldStyle ? oldStyle->tableLayout() : TAUTO;
 
@@ -184,9 +184,10 @@ void RenderTable::addChild(RenderObject* child, RenderObject* beforeChild)
     while (lastBox && lastBox->parent()->isAnonymous() && !lastBox->isTableSection() && lastBox->style()->display() != TABLE_CAPTION && lastBox->style()->display() != TABLE_COLUMN_GROUP)
         lastBox = lastBox->parent();
     if (lastBox && lastBox->isAnonymous() && !isAfterContent(lastBox)) {
-        if (beforeChild == lastBox)
-            beforeChild = lastBox->firstChild();
-        toRenderTableSection(lastBox)->addChild(child, beforeChild);
+        RenderTableSection* section = toRenderTableSection(lastBox);
+        if (beforeChild == section)
+            beforeChild = section->firstRow();
+        section->addChild(child, beforeChild);
         return;
     }
 
@@ -413,7 +414,7 @@ void RenderTable::layout()
 
     if (logicalWidth() != oldLogicalWidth) {
         for (unsigned i = 0; i < m_captions.size(); i++)
-            m_captions[i]->setNeedsLayout(true, MarkOnlyThis);
+            m_captions[i]->setNeedsLayout(MarkOnlyThis);
     }
     // FIXME: The optimisation below doesn't work since the internal table
     // layout could have changed.  we need to add a flag to the table
@@ -433,14 +434,14 @@ void RenderTable::layout()
         if (child->isTableSection()) {
             RenderTableSection* section = toRenderTableSection(child);
             if (m_columnLogicalWidthChanged)
-                section->setChildNeedsLayout(true, MarkOnlyThis);
+                section->setChildNeedsLayout(MarkOnlyThis);
             section->layoutIfNeeded();
             totalSectionLogicalHeight += section->calcRowLogicalHeight();
             if (collapsing)
                 section->recalcOuterBorder();
             ASSERT(!section->needsLayout());
         } else if (child->isRenderTableCol()) {
-            child->layoutIfNeeded();
+            toRenderTableCol(child)->layoutIfNeeded();
             ASSERT(!child->needsLayout());
         }
     }
@@ -555,7 +556,7 @@ void RenderTable::layout()
     }
 
     m_columnLogicalWidthChanged = false;
-    setNeedsLayout(false);
+    clearNeedsLayout();
 }
 
 // Collect all the unique border values that we want to paint in a sorted list.
@@ -568,14 +569,10 @@ void RenderTable::recalcCollapsedBorders()
     for (RenderObject* section = firstChild(); section; section = section->nextSibling()) {
         if (!section->isTableSection())
             continue;
-        for (RenderObject* row = section->firstChild(); row; row = row->nextSibling()) {
-            if (!row->isTableRow())
-                continue;
-            for (RenderObject* cell = row->firstChild(); cell; cell = cell->nextSibling()) {
-                if (!cell->isTableCell())
-                    continue;
-                ASSERT(toRenderTableCell(cell)->table() == this);
-                toRenderTableCell(cell)->collectBorderValues(m_collapsedBorders);
+        for (RenderTableRow* row = toRenderTableSection(section)->firstRow(); row; row = row->nextRow()) {
+            for (RenderTableCell* cell = row->firstCell(); cell; cell = cell->nextCell()) {
+                ASSERT(cell->table() == this);
+                cell->collectBorderValues(m_collapsedBorders);
             }
         }
     }
@@ -654,9 +651,12 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     info.updateSubtreePaintRootForChildren(this);
 
     for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
-        if (child->isBox() && !toRenderBox(child)->hasSelfPaintingLayer() && (child->isTableSection() || child->isTableCaption())) {
-            LayoutPoint childPoint = flipForWritingModeForChild(toRenderBox(child), paintOffset);
-            child->paint(info, childPoint);
+        if (!child->isBox())
+            continue;
+        RenderBox& box = toRenderBox(*child);
+        if (!box.hasSelfPaintingLayer() && (box.isTableSection() || box.isTableCaption())) {
+            LayoutPoint childPoint = flipForWritingModeForChild(&box, paintOffset);
+            box.paint(info, childPoint);
         }
     }
     
@@ -700,7 +700,7 @@ void RenderTable::subtractCaptionRect(LayoutRect& rect) const
 
 void RenderTable::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (!paintInfo.shouldPaintWithinRoot(this))
+    if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
 
     LayoutRect rect(paintOffset, size());

@@ -38,7 +38,7 @@ namespace WebCore  {
 class CachedCSSStyleSheet;
 class CachedResource;
 class CachedResourceLoader;
-class KURL;
+class URL;
 class ResourceRequest;
 class ResourceResponse;
 class ScriptExecutionContext;
@@ -100,7 +100,12 @@ public:
         int decodedSize;
         int purgeableSize;
         int purgedSize;
+#if ENABLE(DISK_IMAGE_CACHE)
+        int mappedSize;
+        TypeStatistic() : count(0), size(0), liveSize(0), decodedSize(0), purgeableSize(0), purgedSize(0), mappedSize(0) { }
+#else
         TypeStatistic() : count(0), size(0), liveSize(0), decodedSize(0), purgeableSize(0), purgedSize(0) { }
+#endif
         void addResource(CachedResource*);
     };
     
@@ -112,13 +117,13 @@ public:
         TypeStatistic fonts;
     };
 
-    CachedResource* resourceForURL(const KURL&);
+    CachedResource* resourceForURL(const URL&);
     CachedResource* resourceForRequest(const ResourceRequest&);
     
     bool add(CachedResource* resource);
     void remove(CachedResource* resource) { evict(resource); }
 
-    static KURL removeFragmentIdentifierIfNeeded(const KURL& originalURL);
+    static URL removeFragmentIdentifierIfNeeded(const URL& originalURL);
     
     void revalidationSucceeded(CachedResource* revalidatingResource, const ResourceResponse&);
     void revalidationFailed(CachedResource* revalidatingResource);
@@ -159,6 +164,10 @@ public:
     void removeFromLiveResourcesSize(CachedResource*);
 
     static bool shouldMakeResourcePurgeableOnEviction();
+
+#if ENABLE(DISK_IMAGE_CACHE)
+    void flushCachedImagesToDisk(); // Flush encoded data from resources still referenced by web pages.
+#endif
 
     static void removeUrlFromCache(ScriptExecutionContext*, const String& urlString);
     static void removeRequestFromCache(ScriptExecutionContext*, const ResourceRequest&);

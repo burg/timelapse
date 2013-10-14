@@ -46,7 +46,7 @@ namespace WebCore {
 InputIterator* getInputIteratorForDocument(Document* document)
 {
     if (!document)
-        return false;
+        return 0;
 
     JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
     if (!window)

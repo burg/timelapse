@@ -165,6 +165,8 @@ String StylePropertySet::getPropertyValue(CSSPropertyID propertyID) const
         return getShorthandValue(webkitFlexShorthand());
     case CSSPropertyWebkitFlexFlow:
         return getShorthandValue(webkitFlexFlowShorthand());
+    case CSSPropertyWebkitGridArea:
+        return getShorthandValue(webkitGridAreaShorthand());
     case CSSPropertyWebkitGridColumn:
         return getShorthandValue(webkitGridColumnShorthand());
     case CSSPropertyWebkitGridRow:
@@ -364,10 +366,9 @@ String StylePropertySet::getLayeredShorthandValue(const StylePropertyShorthand& 
     for (unsigned i = 0; i < size; ++i) {
         values[i] = getPropertyCSSValue(shorthand.properties()[i]);
         if (values[i]) {
-            if (values[i]->isBaseValueList()) {
-                CSSValueList* valueList = static_cast<CSSValueList*>(values[i].get());
-                numLayers = max(valueList->length(), numLayers);
-            } else
+            if (values[i]->isBaseValueList())
+                numLayers = max(toCSSValueList(values[i].get())->length(), numLayers);
+            else
                 numLayers = max<size_t>(1U, numLayers);
         }
     }
@@ -387,7 +388,7 @@ String StylePropertySet::getLayeredShorthandValue(const StylePropertyShorthand& 
             RefPtr<CSSValue> value;
             if (values[j]) {
                 if (values[j]->isBaseValueList())
-                    value = static_cast<CSSValueList*>(values[j].get())->item(i);
+                    value = toCSSValueList(values[j].get())->item(i);
                 else {
                     value = values[j];
 
@@ -412,12 +413,12 @@ String StylePropertySet::getLayeredShorthandValue(const StylePropertyShorthand& 
                     RefPtr<CSSValue> yValue;
                     RefPtr<CSSValue> nextValue = values[j + 1];
                     if (nextValue->isValueList())
-                        yValue = static_cast<CSSValueList*>(nextValue.get())->itemWithoutBoundsCheck(i);
+                        yValue = toCSSValueList(nextValue.get())->itemWithoutBoundsCheck(i);
                     else
                         yValue = nextValue;
 
-                    CSSValueID xId = static_cast<CSSPrimitiveValue*>(value.get())->getValueID();
-                    CSSValueID yId = static_cast<CSSPrimitiveValue*>(yValue.get())->getValueID();
+                    CSSValueID xId = toCSSPrimitiveValue(value.get())->getValueID();
+                    CSSValueID yId = toCSSPrimitiveValue(yValue.get())->getValueID();
                     if (xId != yId) {
                         if (xId == CSSValueRepeat && yId == CSSValueNoRepeat) {
                             useRepeatXShorthand = true;
@@ -1041,7 +1042,7 @@ void MutableStylePropertySet::mergeAndOverrideOnConflict(const StylePropertySet&
         addParsedProperty(other.propertyAt(i).toCSSProperty());
 }
 
-void StylePropertySet::addSubresourceStyleURLs(ListHashSet<KURL>& urls, StyleSheetContents* contextStyleSheet) const
+void StylePropertySet::addSubresourceStyleURLs(ListHashSet<URL>& urls, StyleSheetContents* contextStyleSheet) const
 {
     unsigned size = propertyCount();
     for (unsigned i = 0; i < size; ++i)
@@ -1271,7 +1272,7 @@ String StylePropertySet::PropertyReference::cssName() const
         ASSERT(propertyValue()->isVariableValue());
         if (!propertyValue()->isVariableValue())
             return emptyString(); // Should not happen, but if it does, avoid a bad cast.
-        return "-webkit-var-" + static_cast<const CSSVariableValue*>(propertyValue())->name();
+        return "-webkit-var-" + toCSSVariableValue(propertyValue())->name();
     }
 #endif
     return getPropertyNameString(id());

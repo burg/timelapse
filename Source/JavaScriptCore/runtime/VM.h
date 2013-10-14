@@ -35,7 +35,6 @@
 #include "Heap.h"
 #include "Intrinsic.h"
 #include "JITThunks.h"
-#include "JITThunks.h"
 #include "JSCJSValue.h"
 #include "JSLock.h"
 #include "LLIntData.h"
@@ -99,6 +98,11 @@ namespace JSC {
     class Worklist;
     }
 #endif // ENABLE(DFG_JIT)
+#if ENABLE(FTL_JIT)
+    namespace FTL {
+    class Thunks;
+    }
+#endif // ENABLE(FTL_JIT)
 
     struct HashTable;
     struct Instruction;
@@ -270,6 +274,7 @@ namespace JSC {
         Strong<Structure> propertyTableStructure;
         Strong<Structure> mapDataStructure;
         Strong<Structure> weakMapDataStructure;
+        Strong<JSCell> iterationTerminator;
 
         IdentifierTable* identifierTable;
         CommonIdentifiers* propertyNames;
@@ -325,6 +330,9 @@ namespace JSC {
             return jitStubs->ctiStub(this, generator);
         }
         NativeExecutable* getHostFunction(NativeFunction, Intrinsic);
+#endif
+#if ENABLE(FTL_JIT)
+        std::unique_ptr<FTL::Thunks> ftlThunks;
 #endif
         NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor);
 

@@ -103,7 +103,7 @@ namespace WebCore {
         friend ThreadGlobalData& threadGlobalData();
     };
 
-ThreadGlobalData& threadGlobalData();
+ThreadGlobalData& threadGlobalData() PURE_FUNCTION;
     
 } // namespace WebCore
 

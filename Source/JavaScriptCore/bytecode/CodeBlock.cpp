@@ -36,7 +36,6 @@
 #include "DFGCommon.h"
 #include "DFGDriver.h"
 #include "DFGNode.h"
-#include "DFGRepatch.h"
 #include "DFGWorklist.h"
 #include "Debugger.h"
 #include "Interpreter.h"
@@ -50,6 +49,7 @@
 #include "Operations.h"
 #include "PolymorphicPutByIdList.h"
 #include "ReduceWhitespace.h"
+#include "Repatch.h"
 #include "RepatchBuffer.h"
 #include "SlotVisitorInlines.h"
 #include <stdio.h>
@@ -168,12 +168,12 @@ CString CodeBlock::registerName(int r) const
         return constantName(r, getConstant(r));
 
     if (operandIsArgument(r)) {
-        if (!operandToArgument(r))
+        if (!VirtualRegister(r).toArgument())
             return "this";
-        return toCString("arg", operandToArgument(r));
+        return toCString("arg", VirtualRegister(r).toArgument());
     }
 
-    return toCString("loc", operandToLocal(r));
+    return toCString("loc", VirtualRegister(r).toLocal());
 }
 
 static CString regexpToSourceString(RegExp* regExp)
@@ -514,11 +514,11 @@ void CodeBlock::dumpBytecode(PrintStream& out)
     if (usesArguments()) {
         out.printf(
             "; uses arguments, in r%d, r%d",
-            argumentsRegister(),
-            unmodifiedArgumentsRegister(argumentsRegister()));
+            argumentsRegister().offset(),
+            unmodifiedArgumentsRegister(argumentsRegister()).offset());
     }
     if (needsFullScopeChain() && codeType() == FunctionCode)
-        out.printf("; activation in r%d", activationRegister());
+        out.printf("; activation in r%d", activationRegister().offset());
     out.printf("\n");
     
     const Instruction* begin = instructions().begin();
@@ -1325,11 +1325,8 @@ void CodeBlock::dumpBytecode(PrintStream& out, ExecState* exec, const Instructio
         }
         case op_debug: {
             int debugHookID = (++it)->u.operand;
-            int firstLine = (++it)->u.operand;
-            int lastLine = (++it)->u.operand;
-            int column = (++it)->u.operand;
             printLocationAndOp(out, exec, location, it, "debug");
-            out.printf("%s, %d, %d, %d", debugHookName(debugHookID), firstLine, lastLine, column);
+            out.printf("%s", debugHookName(debugHookID));
             break;
         }
         case op_profile_will_call: {
@@ -1622,7 +1619,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 
     setConstantRegisters(unlinkedCodeBlock->constantRegisters());
     if (unlinkedCodeBlock->usesGlobalObject())
-        m_constantRegisters[unlinkedCodeBlock->globalObjectRegister()].set(*m_vm, ownerExecutable, m_globalObject.get());
+        m_constantRegisters[unlinkedCodeBlock->globalObjectRegister().offset()].set(*m_vm, ownerExecutable, m_globalObject.get());
     m_functionDecls.grow(unlinkedCodeBlock->numberOfFunctionDecls());
     for (size_t count = unlinkedCodeBlock->numberOfFunctionDecls(), i = 0; i < count; ++i) {
         UnlinkedFunctionExecutable* unlinkedExecutable = unlinkedCodeBlock->functionDecl(i);
@@ -1737,10 +1734,8 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
             instructions[i + opLength - 2] = &m_arrayProfiles[arrayProfileIndex];
             // fallthrough
         }
-        case op_to_this:
         case op_get_by_id:
-        case op_call_varargs:
-        case op_get_callee: {
+        case op_call_varargs: {
             ValueProfile* profile = &m_valueProfiles[pc[i + opLength - 1].u.operand];
             ASSERT(profile->m_bytecodeOffset == -1);
             profile->m_bytecodeOffset = i;
@@ -1874,11 +1869,6 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
             break;
         }
 
-        case op_debug: {
-            instructions[i + 4] = columnNumberForBytecodeOffset(i);
-            break;
-        }
-
         default:
             break;
         }
@@ -1897,6 +1887,7 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
     if (Options::showDisassembly()
         || Options::showDFGDisassembly()
         || Options::dumpBytecodeAtDFGTime()
+        || Options::dumpGraphAtEachPhase()
         || Options::verboseCompilation()
         || Options::logCompilationChanges()
         || Options::validateGraph()
@@ -2247,6 +2238,20 @@ void CodeBlock::finalizeUnconditionally()
                 break;
             case op_get_array_length:
                 break;
+            case op_to_this:
+                if (!curInstruction[2].u.structure || Heap::isMarked(curInstruction[2].u.structure.get()))
+                    break;
+                if (Options::verboseOSR())
+                    dataLogF("Clearing LLInt to_this with structure %p.\n", curInstruction[2].u.structure.get());
+                curInstruction[2].u.structure.clear();
+                break;
+            case op_get_callee:
+                if (!curInstruction[2].u.jsCell || Heap::isMarked(curInstruction[2].u.jsCell.get()))
+                    break;
+                if (Options::verboseOSR())
+                    dataLogF("Clearing LLInt get callee with function %p.\n", curInstruction[2].u.jsCell.get());
+                curInstruction[2].u.jsCell.clear();
+                break;
             case op_get_from_scope:
             case op_put_to_scope: {
                 WriteBarrierBase<Structure>& structure = curInstruction[5].u.structure;
@@ -2382,12 +2387,12 @@ void CodeBlock::resetStubInternal(RepatchBuffer& repatchBuffer, StructureStubInf
         break;
     case JITCode::DFGJIT:
         if (isGetByIdAccess(accessType))
-            DFG::resetGetByID(repatchBuffer, stubInfo);
+            resetGetByID(repatchBuffer, stubInfo);
         else if (isPutByIdAccess(accessType))
-            DFG::resetPutByID(repatchBuffer, stubInfo);
+            resetPutByID(repatchBuffer, stubInfo);
         else {
             RELEASE_ASSERT(isInAccess(accessType));
-            DFG::resetIn(repatchBuffer, stubInfo);
+            resetIn(repatchBuffer, stubInfo);
         }
         break;
     default:
@@ -2420,7 +2425,7 @@ void CodeBlock::stronglyVisitStrongReferences(SlotVisitor& visitor)
     for (unsigned i = 0; i < m_objectAllocationProfiles.size(); ++i)
         m_objectAllocationProfiles[i].visitAggregate(visitor);
 
-    updateAllPredictions(Collection);
+    updateAllPredictions();
 }
 
 void CodeBlock::stronglyVisitWeakReferences(SlotVisitor& visitor)
@@ -2478,6 +2483,66 @@ bool CodeBlock::hasOptimizedReplacement()
     return hasOptimizedReplacement(jitType());
 }
 #endif
+
+bool CodeBlock::isCaptured(VirtualRegister operand, InlineCallFrame* inlineCallFrame) const
+{
+    if (operand.isArgument())
+        return operand.toArgument() && usesArguments();
+
+    if (inlineCallFrame)
+        return inlineCallFrame->capturedVars.get(operand.toLocal());
+
+    // The activation object isn't in the captured region, but it's "captured"
+    // in the sense that stores to its location can be observed indirectly.
+    if (needsActivation() && operand == activationRegister())
+        return true;
+
+    // Ditto for the arguments object.
+    if (usesArguments() && operand == argumentsRegister())
+        return true;
+
+    // Ditto for the arguments object.
+    if (usesArguments() && operand == unmodifiedArgumentsRegister(argumentsRegister()))
+        return true;
+
+    // We're in global code so there are no locals to capture
+    if (!symbolTable())
+        return false;
+
+    return operand.offset() <= symbolTable()->captureStart()
+        && operand.offset() > symbolTable()->captureEnd();
+}
+
+int CodeBlock::framePointerOffsetToGetActivationRegisters(int machineCaptureStart)
+{
+    // We'll be adding this to the stack pointer to get a registers pointer that looks
+    // like it would have looked in the baseline engine. For example, if bytecode would
+    // have put the first captured variable at offset -5 but we put it at offset -1, then
+    // we'll have an offset of 4.
+    int32_t offset = 0;
+    
+    // Compute where we put the captured variables. This offset will point the registers
+    // pointer directly at the first captured var.
+    offset += machineCaptureStart;
+    
+    // Now compute the offset needed to make the runtime see the captured variables at the
+    // same offset that the bytecode would have used.
+    offset -= symbolTable()->captureStart();
+    
+    return offset;
+}
+
+int CodeBlock::framePointerOffsetToGetActivationRegisters()
+{
+    if (!JITCode::isOptimizingJIT(jitType()))
+        return 0;
+#if ENABLE(DFG_JIT)
+    return framePointerOffsetToGetActivationRegisters(jitCode()->dfgCommon()->machineCaptureStart);
+#else
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+#endif
+}
 
 HandlerInfo* CodeBlock::handlerForBytecodeOffset(unsigned bytecodeOffset)
 {
@@ -2545,25 +2610,17 @@ void CodeBlock::shrinkToFit(ShrinkMode shrinkMode)
         }
     } // else don't shrink these, because we would have already pointed pointers into these tables.
 
-    if (m_rareData) {
+    if (m_rareData)
         m_rareData->m_exceptionHandlers.shrinkToFit();
-#if ENABLE(JIT)
-        m_rareData->m_callReturnIndexVector.shrinkToFit();
-#endif
-#if ENABLE(DFG_JIT)
-        m_rareData->m_inlineCallFrames.shrinkToFit();
-        m_rareData->m_codeOrigins.shrinkToFit();
-#endif
-    }
 }
 
 void CodeBlock::createActivation(CallFrame* callFrame)
 {
     ASSERT(codeType() == FunctionCode);
     ASSERT(needsFullScopeChain());
-    ASSERT(!callFrame->uncheckedR(activationRegister()).jsValue());
+    ASSERT(!callFrame->uncheckedR(activationRegister().offset()).jsValue());
     JSActivation* activation = JSActivation::create(callFrame->vm(), callFrame, this);
-    callFrame->uncheckedR(activationRegister()) = JSValue(activation);
+    callFrame->uncheckedR(activationRegister().offset()) = JSValue(activation);
     callFrame->setScope(activation);
 }
 
@@ -2641,102 +2698,6 @@ void CodeBlock::linkIncomingCall(ExecState* callerFrame, LLIntCallLinkInfo* inco
 }
 #endif // ENABLE(LLINT)
 
-#if ENABLE(JIT)
-ClosureCallStubRoutine* CodeBlock::findClosureCallForReturnPC(ReturnAddressPtr returnAddress)
-{
-    for (unsigned i = m_callLinkInfos.size(); i--;) {
-        CallLinkInfo& info = m_callLinkInfos[i];
-        if (!info.stub)
-            continue;
-        if (!info.stub->code().executableMemory()->contains(returnAddress.value()))
-            continue;
-
-        RELEASE_ASSERT(info.stub->codeOrigin().bytecodeIndex != CodeOrigin::invalidBytecodeIndex);
-        return info.stub.get();
-    }
-    
-    // The stub routine may have been jettisoned. This is rare, but we have to handle it.
-    const JITStubRoutineSet& set = m_vm->heap.jitStubRoutines();
-    for (unsigned i = set.size(); i--;) {
-        GCAwareJITStubRoutine* genericStub = set.at(i);
-        if (!genericStub->isClosureCall())
-            continue;
-        ClosureCallStubRoutine* stub = static_cast<ClosureCallStubRoutine*>(genericStub);
-        if (!stub->code().executableMemory()->contains(returnAddress.value()))
-            continue;
-        RELEASE_ASSERT(stub->codeOrigin().bytecodeIndex != CodeOrigin::invalidBytecodeIndex);
-        return stub;
-    }
-    
-    return 0;
-}
-#endif
-
-unsigned CodeBlock::bytecodeOffset(ExecState* exec, ReturnAddressPtr returnAddress)
-{
-    UNUSED_PARAM(exec);
-    UNUSED_PARAM(returnAddress);
-#if ENABLE(LLINT)
-#if !ENABLE(LLINT_C_LOOP)
-    // When using the JIT, we could have addresses that are not bytecode
-    // addresses. We check if the return address is in the LLint glue and
-    // opcode handlers range here to ensure that we are looking at bytecode
-    // before attempting to convert the return address into a bytecode offset.
-    //
-    // In the case of the C Loop LLInt, the JIT is disabled, and the only
-    // valid return addresses should be bytecode PCs. So, we can and need to
-    // forego this check because when we do not ENABLE(COMPUTED_GOTO_OPCODES),
-    // then the bytecode "PC"s are actually the opcodeIDs and are not bounded
-    // by llint_begin and llint_end.
-    if (returnAddress.value() >= LLInt::getCodePtr(llint_begin)
-        && returnAddress.value() <= LLInt::getCodePtr(llint_end))
-#endif
-    {
-        RELEASE_ASSERT(exec->codeBlock());
-        RELEASE_ASSERT(exec->codeBlock() == this);
-        RELEASE_ASSERT(JITCode::isBaselineCode(jitType()));
-        Instruction* instruction = exec->currentVPC();
-        RELEASE_ASSERT(instruction);
-
-        return bytecodeOffset(instruction);
-    }
-#endif // !ENABLE(LLINT)
-
-#if ENABLE(JIT)
-    if (!m_rareData)
-        return 1;
-    Vector<CallReturnOffsetToBytecodeOffset, 0, UnsafeVectorOverflow>& callIndices = m_rareData->m_callReturnIndexVector;
-    if (!callIndices.size())
-        return 1;
-    
-    if (jitCode()->contains(returnAddress.value())) {
-        unsigned callReturnOffset = jitCode()->offsetOf(returnAddress.value());
-        CallReturnOffsetToBytecodeOffset* result =
-            binarySearch<CallReturnOffsetToBytecodeOffset, unsigned>(
-                callIndices, callIndices.size(), callReturnOffset, getCallReturnOffset);
-        RELEASE_ASSERT(result->callReturnOffset == callReturnOffset);
-        RELEASE_ASSERT(result->bytecodeOffset < instructionCount());
-        return result->bytecodeOffset;
-    }
-    ClosureCallStubRoutine* closureInfo = findClosureCallForReturnPC(returnAddress);
-    CodeOrigin origin = closureInfo->codeOrigin();
-    while (InlineCallFrame* inlineCallFrame = origin.inlineCallFrame) {
-        if (inlineCallFrame->baselineCodeBlock() == this)
-            break;
-        origin = inlineCallFrame->caller;
-        RELEASE_ASSERT(origin.bytecodeIndex != CodeOrigin::invalidBytecodeIndex);
-    }
-    RELEASE_ASSERT(origin.bytecodeIndex != CodeOrigin::invalidBytecodeIndex);
-    unsigned bytecodeIndex = origin.bytecodeIndex;
-    RELEASE_ASSERT(bytecodeIndex < instructionCount());
-    return bytecodeIndex;
-#endif // ENABLE(JIT)
-
-#if !ENABLE(LLINT) && !ENABLE(JIT)
-    return 1;
-#endif
-}
-
 void CodeBlock::clearEvalCache()
 {
     if (!!m_alternative)
@@ -2781,6 +2742,18 @@ void CodeBlock::install()
 PassRefPtr<CodeBlock> CodeBlock::newReplacement()
 {
     return ownerExecutable()->newReplacementCodeBlockFor(specializationKind());
+}
+
+const SlowArgument* CodeBlock::machineSlowArguments()
+{
+    if (!JITCode::isOptimizingJIT(jitType()))
+        return symbolTable()->slowArguments();
+    
+#if ENABLE(DFG_JIT)
+    return jitCode()->dfgCommon()->slowArguments.get();
+#else // ENABLE(DFG_JIT)
+    return 0;
+#endif // ENABLE(DFG_JIT)
 }
 
 #if ENABLE(JIT)
@@ -3199,8 +3172,7 @@ ArrayProfile* CodeBlock::getOrAddArrayProfile(unsigned bytecodeOffset)
     return addArrayProfile(bytecodeOffset);
 }
 
-void CodeBlock::updateAllPredictionsAndCountLiveness(
-    HeapOperation operation, unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles)
+void CodeBlock::updateAllPredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles)
 {
     ConcurrentJITLocker locker(m_lock);
     
@@ -3213,23 +3185,23 @@ void CodeBlock::updateAllPredictionsAndCountLiveness(
             numSamples = ValueProfile::numberOfBuckets; // We don't want profiles that are extremely hot to be given more weight.
         numberOfSamplesInProfiles += numSamples;
         if (profile->m_bytecodeOffset < 0) {
-            profile->computeUpdatedPrediction(locker, operation);
+            profile->computeUpdatedPrediction(locker);
             continue;
         }
         if (profile->numberOfSamples() || profile->m_prediction != SpecNone)
             numberOfLiveNonArgumentValueProfiles++;
-        profile->computeUpdatedPrediction(locker, operation);
+        profile->computeUpdatedPrediction(locker);
     }
     
 #if ENABLE(DFG_JIT)
-    m_lazyOperandValueProfiles.computeUpdatedPredictions(locker, operation);
+    m_lazyOperandValueProfiles.computeUpdatedPredictions(locker);
 #endif
 }
 
-void CodeBlock::updateAllValueProfilePredictions(HeapOperation operation)
+void CodeBlock::updateAllValueProfilePredictions()
 {
     unsigned ignoredValue1, ignoredValue2;
-    updateAllPredictionsAndCountLiveness(operation, ignoredValue1, ignoredValue2);
+    updateAllPredictionsAndCountLiveness(ignoredValue1, ignoredValue2);
 }
 
 void CodeBlock::updateAllArrayPredictions()
@@ -3244,9 +3216,9 @@ void CodeBlock::updateAllArrayPredictions()
         m_arrayAllocationProfiles[i].updateIndexingType();
 }
 
-void CodeBlock::updateAllPredictions(HeapOperation operation)
+void CodeBlock::updateAllPredictions()
 {
-    updateAllValueProfilePredictions(operation);
+    updateAllValueProfilePredictions();
     updateAllArrayPredictions();
 }
 
@@ -3266,7 +3238,7 @@ bool CodeBlock::shouldOptimizeNow()
     
     unsigned numberOfLiveNonArgumentValueProfiles;
     unsigned numberOfSamplesInProfiles;
-    updateAllPredictionsAndCountLiveness(NoOperation, numberOfLiveNonArgumentValueProfiles, numberOfSamplesInProfiles);
+    updateAllPredictionsAndCountLiveness(numberOfLiveNonArgumentValueProfiles, numberOfSamplesInProfiles);
 
     if (Options::verboseOSR()) {
         dataLogF(
@@ -3428,32 +3400,30 @@ bool CodeBlock::usesOpcode(OpcodeID opcodeID)
     return false;
 }
 
-String CodeBlock::nameForRegister(int registerNumber)
+String CodeBlock::nameForRegister(VirtualRegister virtualRegister)
 {
     ConcurrentJITLocker locker(symbolTable()->m_lock);
     SymbolTable::Map::iterator end = symbolTable()->end(locker);
     for (SymbolTable::Map::iterator ptr = symbolTable()->begin(locker); ptr != end; ++ptr) {
-        if (ptr->value.getIndex() == registerNumber) {
+        if (ptr->value.getIndex() == virtualRegister.offset()) {
             // FIXME: This won't work from the compilation thread.
             // https://bugs.webkit.org/show_bug.cgi?id=115300
             return String(ptr->key);
         }
     }
-    if (needsActivation() && registerNumber == activationRegister())
+    if (needsActivation() && virtualRegister == activationRegister())
         return ASCIILiteral("activation");
-    if (registerNumber == thisRegister())
+    if (virtualRegister == thisRegister())
         return ASCIILiteral("this");
     if (usesArguments()) {
-        if (registerNumber == argumentsRegister())
+        if (virtualRegister == argumentsRegister())
             return ASCIILiteral("arguments");
-        if (unmodifiedArgumentsRegister(argumentsRegister()) == registerNumber)
+        if (unmodifiedArgumentsRegister(argumentsRegister()) == virtualRegister)
             return ASCIILiteral("real arguments");
     }
-    if (registerNumber < 0) {
-        int argumentPosition = -registerNumber;
-        argumentPosition -= JSStack::CallFrameHeaderSize + 1;
-        return String::format("arguments[%3d]", argumentPosition - 1).impl();
-    }
+    if (virtualRegister.isArgument())
+        return String::format("arguments[%3d]", virtualRegister.toArgument()).impl();
+
     return "";
 }
 

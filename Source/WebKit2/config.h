@@ -65,22 +65,11 @@ static const type& name() \
 #define WINVER 0x0502
 #endif
 
-/* If we don't define these, they get defined in windef.h. */
-/* We want to use std::min and std::max. */
-#ifndef max
-#define max max
-#endif
-#ifndef min
-#define min min
-#endif
-
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_ /* Prevent inclusion of winsock.h in windows.h */
 #endif
 
-#if !PLATFORM(QT)
 #include <WebCore/config.h>
-#endif
 #include <windows.h>
 
 #if USE(CG)
@@ -104,8 +93,6 @@ static const type& name() \
 #define PLUGIN_ARCHITECTURE_MAC 1
 #elif (PLATFORM(GTK) || PLATFORM(EFL)) && (OS(UNIX) && !OS(MAC_OS_X)) && PLATFORM(X11)
 #define PLUGIN_ARCHITECTURE_X11 1
-#elif PLATFORM(QT)
-// Qt handles this features.prf
 #else
 #define PLUGIN_ARCHITECTURE_UNSUPPORTED 1
 #endif
@@ -114,7 +101,7 @@ static const type& name() \
 #define PLUGIN_ARCHITECTURE(ARCH) (defined PLUGIN_ARCHITECTURE_##ARCH && PLUGIN_ARCHITECTURE_##ARCH)
 
 #ifndef ENABLE_INSPECTOR_SERVER
-#if ENABLE(INSPECTOR) && (PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(EFL))
+#if ENABLE(INSPECTOR) && (PLATFORM(GTK) || PLATFORM(EFL))
 #define ENABLE_INSPECTOR_SERVER 1
 #endif
 #endif

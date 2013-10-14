@@ -30,6 +30,8 @@
 
 namespace WebCore {
 
+class RenderTableRow;
+
 enum CollapsedBorderSide {
     CBSBefore,
     CBSAfter,
@@ -65,11 +67,8 @@ public:
     explicit RenderTableSection(Element*);
     virtual ~RenderTableSection();
 
-    RenderObject* firstChild() const { return m_children.firstChild(); }
-    RenderObject* lastChild() const { return m_children.lastChild(); }
-
-    virtual const RenderObjectChildList* children() const OVERRIDE { return &m_children; }
-    virtual RenderObjectChildList* children() OVERRIDE { return &m_children; }
+    RenderTableRow* firstRow() const;
+    RenderTableRow* lastRow() const;
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0) OVERRIDE;
 
@@ -204,6 +203,8 @@ protected:
 private:
     virtual const char* renderName() const OVERRIDE { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)" : "RenderTableSection"; }
 
+    virtual bool canHaveChildren() const OVERRIDE { return true; }
+
     virtual bool isTableSection() const OVERRIDE { return true; }
 
     virtual void willBeRemovedFromTree() OVERRIDE;
@@ -242,7 +243,8 @@ private:
 
     void setLogicalPositionForCell(RenderTableCell*, unsigned effectiveColumn) const;
 
-    RenderObjectChildList m_children;
+    void firstChild() const WTF_DELETED_FUNCTION;
+    void lastChild() const WTF_DELETED_FUNCTION;
 
     Vector<RowStruct> m_grid;
     Vector<int> m_rowPos;

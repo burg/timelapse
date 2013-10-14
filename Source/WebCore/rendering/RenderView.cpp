@@ -66,7 +66,7 @@ RenderView::RenderView(Document& document)
     , m_maximalOutlineSize(0)
     , m_pageLogicalHeight(0)
     , m_pageLogicalHeightChanged(false)
-    , m_layoutState(0)
+    , m_layoutState(nullptr)
     , m_layoutStateDisableCount(0)
     , m_renderQuoteHead(0)
     , m_renderCounterCount(0)
@@ -162,7 +162,7 @@ void RenderView::checkLayoutState(const LayoutState& state)
 {
     ASSERT(layoutDeltaMatches(LayoutSize()));
     ASSERT(!m_layoutStateDisableCount);
-    ASSERT(m_layoutState == &state);
+    ASSERT(m_layoutState.get() == &state);
 }
 #endif
 
@@ -302,20 +302,24 @@ void RenderView::layout()
     // Use calcWidth/Height to get the new width/height, since this will take the full page zoom factor into account.
     bool relayoutChildren = !shouldUsePrintingLayout() && (width() != viewWidth() || height() != viewHeight());
     if (relayoutChildren) {
-        setChildNeedsLayout(true, MarkOnlyThis);
+        setChildNeedsLayout(MarkOnlyThis);
         for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
-            if ((child->isBox() && (toRenderBox(child)->hasRelativeLogicalHeight() || toRenderBox(child)->hasViewportPercentageLogicalHeight()))
-                    || child->style()->logicalHeight().isPercent()
-                    || child->style()->logicalMinHeight().isPercent()
-                    || child->style()->logicalMaxHeight().isPercent()
-                    || child->style()->logicalHeight().isViewportPercentage()
-                    || child->style()->logicalMinHeight().isViewportPercentage()
-                    || child->style()->logicalMaxHeight().isViewportPercentage()
+            if (!child->isBox())
+                continue;
+            RenderBox& box = toRenderBox(*child);
+            if (box.hasRelativeLogicalHeight()
+                || box.hasViewportPercentageLogicalHeight()
+                || box.style()->logicalHeight().isPercent()
+                || box.style()->logicalMinHeight().isPercent()
+                || box.style()->logicalMaxHeight().isPercent()
+                || box.style()->logicalHeight().isViewportPercentage()
+                || box.style()->logicalMinHeight().isViewportPercentage()
+                || box.style()->logicalMaxHeight().isViewportPercentage()
 #if ENABLE(SVG)
-                    || child->isSVGRoot()
+                || box.isSVGRoot()
 #endif
                 )
-                child->setChildNeedsLayout(true, MarkOnlyThis);
+                box.setChildNeedsLayout(MarkOnlyThis);
         }
     }
 
@@ -323,24 +327,23 @@ void RenderView::layout()
     if (!needsLayout())
         return;
 
-    LayoutState state;
-    bool isSeamlessAncestorInFlowThread = initializeLayoutState(state);
+    m_layoutState = std::make_unique<LayoutState>();
+    bool isSeamlessAncestorInFlowThread = initializeLayoutState(*m_layoutState);
 
     m_pageLogicalHeightChanged = false;
-    m_layoutState = &state;
 
     if (checkTwoPassLayoutForAutoHeightRegions())
-        layoutContentInAutoLogicalHeightRegions(state);
+        layoutContentInAutoLogicalHeightRegions(*m_layoutState);
     else
-        layoutContent(state);
+        layoutContent(*m_layoutState);
 
-    layoutContentToComputeOverflowInRegions(state);
+    layoutContentToComputeOverflowInRegions(*m_layoutState);
 
 #ifndef NDEBUG
-    checkLayoutState(state);
+    checkLayoutState(*m_layoutState);
 #endif
-    m_layoutState = 0;
-    setNeedsLayout(false);
+    m_layoutState = nullptr;
+    clearNeedsLayout();
     
     if (isSeamlessAncestorInFlowThread)
         flowThreadController().setCurrentRenderFlowThread(0);
@@ -434,18 +437,18 @@ void RenderView::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
     ASSERT(LayoutPoint(IntPoint(paintOffset.x(), paintOffset.y())) == paintOffset);
 
     // This avoids painting garbage between columns if there is a column gap.
-    if (frameView().pagination().mode != Pagination::Unpaginated && paintInfo.shouldPaintWithinRoot(this))
+    if (frameView().pagination().mode != Pagination::Unpaginated && paintInfo.shouldPaintWithinRoot(*this))
         paintInfo.context->fillRect(paintInfo.rect, frameView().baseBackgroundColor(), ColorSpaceDeviceRGB);
 
     paintObject(paintInfo, paintOffset);
 }
 
-static inline bool isComposited(RenderObject* object)
+static inline bool isComposited(RenderElement* object)
 {
     return object->hasLayer() && toRenderLayerModelObject(object)->layer()->isComposited();
 }
 
-static inline bool rendererObscuresBackground(RenderObject* rootObject)
+static inline bool rendererObscuresBackground(RenderElement* rootObject)
 {
     if (!rootObject)
         return false;
@@ -459,7 +462,7 @@ static inline bool rendererObscuresBackground(RenderObject* rootObject)
     if (isComposited(rootObject))
         return false;
 
-    const RenderObject* rootRenderer = rootObject->rendererForRootBackground();
+    const RenderElement* rootRenderer = rootObject->rendererForRootBackground();
     if (rootRenderer->style()->backgroundClip() == TextFillBox)
         return false;
 
@@ -468,7 +471,7 @@ static inline bool rendererObscuresBackground(RenderObject* rootObject)
 
 void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
 {
-    if (!paintInfo.shouldPaintWithinRoot(this))
+    if (!paintInfo.shouldPaintWithinRoot(*this))
         return;
 
     // Check to see if we are enclosed by a layer that requires complex painting rules.  If so, we cannot blit
@@ -502,8 +505,8 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
 
     bool rootFillsViewport = false;
     bool rootObscuresBackground = false;
-    Node* documentElement = document().documentElement();
-    if (RenderObject* rootRenderer = documentElement ? documentElement->renderer() : 0) {
+    Element* documentElement = document().documentElement();
+    if (RenderElement* rootRenderer = documentElement ? documentElement->renderer() : 0) {
         // The document element's renderer is currently forced to be a block, but may not always be.
         RenderBox* rootBox = rootRenderer->isBox() ? toRenderBox(rootRenderer) : 0;
         rootFillsViewport = rootBox && !rootBox->x() && !rootBox->y() && rootBox->width() >= width() && rootBox->height() >= height();
@@ -535,15 +538,9 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
     }
 }
 
-bool RenderView::shouldRepaint(const LayoutRect& r) const
+bool RenderView::shouldRepaint(const LayoutRect& rect) const
 {
-    if (printing() || r.width() == 0 || r.height() == 0)
-        return false;
-
-    if (frameView().repaintsDisabled())
-        return false;
-
-    return true;
+    return !printing() && !rect.isEmpty();
 }
 
 void RenderView::repaintRootContents()
@@ -969,11 +966,11 @@ IntRect RenderView::unscaledDocumentRect() const
 
 bool RenderView::rootBackgroundIsEntirelyFixed() const
 {
-    RenderObject* rootObject = document().documentElement() ? document().documentElement()->renderer() : 0;
+    RenderElement* rootObject = document().documentElement() ? document().documentElement()->renderer() : 0;
     if (!rootObject)
         return false;
 
-    RenderObject* rootRenderer = rootObject->rendererForRootBackground();
+    RenderElement* rootRenderer = rootObject->rendererForRootBackground();
     return rootRenderer->hasEntirelyFixedBackground();
 }
 
@@ -1036,7 +1033,7 @@ void RenderView::pushLayoutState(RenderObject* root)
     ASSERT(m_layoutState == 0);
 
     pushLayoutStateForCurrentFlowThread(root);
-    m_layoutState = new (renderArena()) LayoutState(root);
+    m_layoutState = std::make_unique<LayoutState>(root);
 }
 
 bool RenderView::shouldDisableLayoutStateForSubtree(RenderObject* renderer) const

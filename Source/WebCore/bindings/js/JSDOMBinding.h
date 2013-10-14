@@ -24,7 +24,6 @@
 #ifndef JSDOMBinding_h
 #define JSDOMBinding_h
 
-#include "BindingState.h"
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
 #include "DOMWrapperWorld.h"
@@ -59,12 +58,16 @@ class DOMStringList;
 
     class CachedScript;
     class Document;
+    class DOMWindow;
     class Frame;
     class HTMLDocument;
-    class KURL;
+    class URL;
     class Node;
 
     typedef int ExceptionCode;
+
+    DOMWindow& activeDOMWindow(JSC::ExecState*);
+    DOMWindow& firstDOMWindow(JSC::ExecState*);
 
     // Base class for all constructor objects in the JSC bindings.
     class DOMConstructorObject : public JSDOMWrapper {
@@ -94,106 +97,105 @@ class DOMStringList;
         return JSC::jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
     }
 
-    template<class WrapperClass> inline JSC::Structure* getDOMStructure(JSC::ExecState* exec, JSDOMGlobalObject* globalObject)
+    template<class WrapperClass> inline JSC::Structure* getDOMStructure(JSC::VM& vm, JSDOMGlobalObject* globalObject)
     {
         if (JSC::Structure* structure = getCachedDOMStructure(globalObject, WrapperClass::info()))
             return structure;
-        return cacheDOMStructure(globalObject, WrapperClass::createStructure(exec->vm(), globalObject, WrapperClass::createPrototype(exec, globalObject)), WrapperClass::info());
+        return cacheDOMStructure(globalObject, WrapperClass::createStructure(vm, globalObject, WrapperClass::createPrototype(vm, globalObject)), WrapperClass::info());
     }
 
     template<class WrapperClass> inline JSC::Structure* deprecatedGetDOMStructure(JSC::ExecState* exec)
     {
         // FIXME: This function is wrong.  It uses the wrong global object for creating the prototype structure.
-        return getDOMStructure<WrapperClass>(exec, deprecatedGlobalObjectForPrototype(exec));
+        return getDOMStructure<WrapperClass>(exec->vm(), deprecatedGlobalObjectForPrototype(exec));
     }
 
-    template<class WrapperClass> inline JSC::JSObject* getDOMPrototype(JSC::ExecState* exec, JSC::JSGlobalObject* globalObject)
+    template<class WrapperClass> inline JSC::JSObject* getDOMPrototype(JSC::VM& vm, JSC::JSGlobalObject* globalObject)
     {
-        return JSC::jsCast<JSC::JSObject*>(asObject(getDOMStructure<WrapperClass>(exec, JSC::jsCast<JSDOMGlobalObject*>(globalObject))->storedPrototype()));
+        return JSC::jsCast<JSC::JSObject*>(asObject(getDOMStructure<WrapperClass>(vm, JSC::jsCast<JSDOMGlobalObject*>(globalObject))->storedPrototype()));
     }
 
-    inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld* world, JSC::ArrayBuffer*)
+    inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld& world, JSC::ArrayBuffer*)
     {
-        return static_cast<WebCoreTypedArrayController*>(world->vm()->m_typedArrayController.get())->wrapperOwner();
+        return static_cast<WebCoreTypedArrayController*>(world.vm()->m_typedArrayController.get())->wrapperOwner();
     }
     
-    inline void* wrapperContext(DOMWrapperWorld* world, JSC::ArrayBuffer*)
+    inline void* wrapperContext(DOMWrapperWorld& world, JSC::ArrayBuffer*)
     {
-        return world;
+        return &world;
     }
 
-    inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld*, void*) { return 0; }
-    inline bool setInlineCachedWrapper(DOMWrapperWorld*, void*, JSDOMWrapper*, JSC::WeakHandleOwner*, void*) { return false; }
-    inline bool clearInlineCachedWrapper(DOMWrapperWorld*, void*, JSDOMWrapper*) { return false; }
+    inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld&, void*) { return 0; }
+    inline bool setInlineCachedWrapper(DOMWrapperWorld&, void*, JSDOMWrapper*, JSC::WeakHandleOwner*, void*) { return false; }
+    inline bool clearInlineCachedWrapper(DOMWrapperWorld&, void*, JSDOMWrapper*) { return false; }
 
-    inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld* world, ScriptWrappable* domObject)
+    inline JSDOMWrapper* getInlineCachedWrapper(DOMWrapperWorld& world, ScriptWrappable* domObject)
     {
-        if (!world->isNormal())
+        if (!world.isNormal())
             return 0;
         return domObject->wrapper();
     }
 
-    inline JSC::JSArrayBuffer* getInlineCachedWrapper(DOMWrapperWorld* world, JSC::ArrayBuffer* buffer)
+    inline JSC::JSArrayBuffer* getInlineCachedWrapper(DOMWrapperWorld& world, JSC::ArrayBuffer* buffer)
     {
-        if (!world->isNormal())
+        if (!world.isNormal())
             return 0;
         return buffer->m_wrapper.get();
     }
 
-    inline bool setInlineCachedWrapper(DOMWrapperWorld* world, ScriptWrappable* domObject, JSDOMWrapper* wrapper, JSC::WeakHandleOwner* wrapperOwner, void* context)
+    inline bool setInlineCachedWrapper(DOMWrapperWorld& world, ScriptWrappable* domObject, JSDOMWrapper* wrapper, JSC::WeakHandleOwner* wrapperOwner, void* context)
     {
-        if (!world->isNormal())
+        if (!world.isNormal())
             return false;
-        domObject->setWrapper(*world->vm(), wrapper, wrapperOwner, context);
+        domObject->setWrapper(wrapper, wrapperOwner, context);
         return true;
     }
 
-    inline bool setInlineCachedWrapper(DOMWrapperWorld* world, JSC::ArrayBuffer* domObject, JSC::JSArrayBuffer* wrapper, JSC::WeakHandleOwner* wrapperOwner, void* context)
+    inline bool setInlineCachedWrapper(DOMWrapperWorld& world, JSC::ArrayBuffer* domObject, JSC::JSArrayBuffer* wrapper, JSC::WeakHandleOwner* wrapperOwner, void* context)
     {
-        if (!world->isNormal())
+        if (!world.isNormal())
             return false;
-        domObject->m_wrapper = JSC::PassWeak<JSC::JSArrayBuffer>(wrapper, wrapperOwner, context);
+        domObject->m_wrapper = JSC::Weak<JSC::JSArrayBuffer>(wrapper, wrapperOwner, context);
         return true;
     }
 
-    inline bool clearInlineCachedWrapper(DOMWrapperWorld* world, ScriptWrappable* domObject, JSDOMWrapper* wrapper)
+    inline bool clearInlineCachedWrapper(DOMWrapperWorld& world, ScriptWrappable* domObject, JSDOMWrapper* wrapper)
     {
-        if (!world->isNormal())
+        if (!world.isNormal())
             return false;
         domObject->clearWrapper(wrapper);
         return true;
     }
 
-    inline bool clearInlineCachedWrapper(DOMWrapperWorld* world, JSC::ArrayBuffer* domObject, JSC::JSArrayBuffer* wrapper)
+    inline bool clearInlineCachedWrapper(DOMWrapperWorld& world, JSC::ArrayBuffer* domObject, JSC::JSArrayBuffer* wrapper)
     {
-        if (!world->isNormal())
+        if (!world.isNormal())
             return false;
         weakClear(domObject->m_wrapper, wrapper);
         return true;
     }
 
-    template <typename DOMClass> inline JSC::JSObject* getCachedWrapper(DOMWrapperWorld* world, DOMClass* domObject)
+    template <typename DOMClass> inline JSC::JSObject* getCachedWrapper(DOMWrapperWorld& world, DOMClass* domObject)
     {
         if (JSC::JSObject* wrapper = getInlineCachedWrapper(world, domObject))
             return wrapper;
-        return world->m_wrappers.get(domObject);
+        return world.m_wrappers.get(domObject);
     }
 
-    template <typename DOMClass, typename WrapperClass> inline void cacheWrapper(DOMWrapperWorld* world, DOMClass* domObject, WrapperClass* wrapper)
+    template <typename DOMClass, typename WrapperClass> inline void cacheWrapper(DOMWrapperWorld& world, DOMClass* domObject, WrapperClass* wrapper)
     {
         JSC::WeakHandleOwner* owner = wrapperOwner(world, domObject);
         void* context = wrapperContext(world, domObject);
         if (setInlineCachedWrapper(world, domObject, wrapper, owner, context))
             return;
-        JSC::PassWeak<JSC::JSObject> passWeak(wrapper, owner, context);
-        weakAdd(world->m_wrappers, (void*)domObject, passWeak);
+        weakAdd(world.m_wrappers, (void*)domObject, JSC::Weak<JSC::JSObject>(wrapper, owner, context));
     }
 
-    template <typename DOMClass, typename WrapperClass> inline void uncacheWrapper(DOMWrapperWorld* world, DOMClass* domObject, WrapperClass* wrapper)
+    template <typename DOMClass, typename WrapperClass> inline void uncacheWrapper(DOMWrapperWorld& world, DOMClass* domObject, WrapperClass* wrapper)
     {
         if (clearInlineCachedWrapper(world, domObject, wrapper))
             return;
-        weakRemove(world->m_wrappers, (void*)domObject, wrapper);
+        weakRemove(world.m_wrappers, (void*)domObject, wrapper);
     }
     
     #define CREATE_DOM_WRAPPER(exec, globalObject, className, object) createWrapper<JS##className>(exec, globalObject, static_cast<className*>(object))
@@ -201,7 +203,7 @@ class DOMStringList;
     {
         ASSERT(node);
         ASSERT(!getCachedWrapper(currentWorld(exec), node));
-        WrapperClass* wrapper = WrapperClass::create(getDOMStructure<WrapperClass>(exec, globalObject), globalObject, node);
+        WrapperClass* wrapper = WrapperClass::create(getDOMStructure<WrapperClass>(exec->vm(), globalObject), globalObject, node);
         // FIXME: The entire function can be removed, once we fix caching.
         // This function is a one-off hack to make Nodes cache in the right global object.
         cacheWrapper(currentWorld(exec), node, wrapper);
@@ -244,17 +246,17 @@ class DOMStringList;
     void setDOMException(JSC::ExecState*, ExceptionCode);
 
     JSC::JSValue jsStringWithCache(JSC::ExecState*, const String&);
-    JSC::JSValue jsString(JSC::ExecState*, const KURL&); // empty if the URL is null
+    JSC::JSValue jsString(JSC::ExecState*, const URL&); // empty if the URL is null
     inline JSC::JSValue jsStringWithCache(JSC::ExecState* exec, const AtomicString& s)
     { 
         return jsStringWithCache(exec, s.string());
     }
         
     JSC::JSValue jsStringOrNull(JSC::ExecState*, const String&); // null if the string is null
-    JSC::JSValue jsStringOrNull(JSC::ExecState*, const KURL&); // null if the URL is null
+    JSC::JSValue jsStringOrNull(JSC::ExecState*, const URL&); // null if the URL is null
 
     JSC::JSValue jsStringOrUndefined(JSC::ExecState*, const String&); // undefined if the string is null
-    JSC::JSValue jsStringOrUndefined(JSC::ExecState*, const KURL&); // undefined if the URL is null
+    JSC::JSValue jsStringOrUndefined(JSC::ExecState*, const URL&); // undefined if the URL is null
 
     // See JavaScriptCore for explanation: Should be used for any string that is already owned by another
     // object, to let the engine know that collecting the JSString wrapper is unlikely to save memory.
@@ -559,7 +561,7 @@ class DOMStringList;
     bool shouldAllowAccessToNode(JSC::ExecState*, Node*);
     bool shouldAllowAccessToFrame(JSC::ExecState*, Frame*);
     bool shouldAllowAccessToFrame(JSC::ExecState*, Frame*, String& message);
-    bool shouldAllowAccessToDOMWindow(BindingState*, DOMWindow*, String& message);
+    bool shouldAllowAccessToDOMWindow(JSC::ExecState*, DOMWindow&, String& message);
 
     void printErrorMessageForFrame(Frame*, const String& message);
     JSC::JSValue objectToStringFunctionGetter(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
@@ -578,7 +580,7 @@ class DOMStringList;
             }
         }
 
-        JSStringCache& stringCache = currentWorld(exec)->m_stringCache;
+        JSStringCache& stringCache = currentWorld(exec).m_stringCache;
         JSStringCache::AddResult addResult = stringCache.add(stringImpl, nullptr);
         if (addResult.isNewEntry)
             addResult.iterator->value = JSC::jsString(exec, String(stringImpl));
@@ -617,22 +619,16 @@ class DOMStringList;
             char padding[8];
         };
 
-        struct BaseMixin {
-            size_t memoryCost();
-        };
-
-        struct Base : public T, public BaseMixin { };
-
-        template<typename U, U> struct
-        TypeChecker { };
+        template<typename U>
+        static decltype(static_cast<U*>(nullptr)->memoryCost(), YesType()) test(int);
 
         template<typename U>
-        static NoType dummy(U*, TypeChecker<size_t (BaseMixin::*)(), &U::memoryCost>* = 0);
-        static YesType dummy(...);
+        static NoType test(...);
 
     public:
-        static const bool value = sizeof(dummy(static_cast<Base*>(0))) == sizeof(YesType);
+        static const bool value = sizeof(test<T>(0)) == sizeof(YesType);
     };
+
     template <typename T, bool hasReportCostFunction = HasMemoryCostMemberFunction<T>::value > struct ReportMemoryCost;
     template <typename T> struct ReportMemoryCost<T, true> {
         static void reportMemoryCost(JSC::ExecState* exec, T* impl)

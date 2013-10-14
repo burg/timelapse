@@ -31,10 +31,10 @@ namespace WebCore {
 
 Node* LiveNodeListBase::rootNode() const
 {
-    if (isRootedAtDocument() && m_ownerNode->inDocument())
-        return &m_ownerNode->document();
+    if (isRootedAtDocument() && ownerNode().inDocument())
+        return &ownerNode().document();
 
-    return m_ownerNode.get();
+    return &ownerNode();
 }
 
 ContainerNode* LiveNodeListBase::rootContainerNode() const
@@ -74,7 +74,7 @@ Node* LiveNodeList::namedItem(const AtomicString& elementId) const
     Node* rootNode = this->rootNode();
 
     if (rootNode->inDocument()) {
-        Element* element = rootNode->treeScope()->getElementById(elementId);
+        Element* element = rootNode->treeScope().getElementById(elementId);
         if (element && nodeMatches(element) && element->isDescendantOf(rootNode))
             return element;
         if (!element)

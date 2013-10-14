@@ -758,7 +758,7 @@ static VisiblePosition startOfStyleRange(const VisiblePosition& visiblePos)
     // traverse backward by renderer to look for style change
     for (RenderObject* r = renderer->previousInPreOrder(); r; r = r->previousInPreOrder()) {
         // skip non-leaf nodes
-        if (r->firstChild())
+        if (r->firstChildSlow())
             continue;
 
         // stop at style change
@@ -781,7 +781,7 @@ static VisiblePosition endOfStyleRange(const VisiblePosition& visiblePos)
     // traverse forward by renderer to look for style change
     for (RenderObject* r = renderer->nextInPreOrder(); r; r = r->nextInPreOrder()) {
         // skip non-leaf nodes
-        if (r->firstChild())
+        if (r->firstChildSlow())
             continue;
 
         // stop at style change
@@ -1343,15 +1343,20 @@ bool AccessibilityObject::ariaIsMultiline() const
 const AtomicString& AccessibilityObject::invalidStatus() const
 {
     DEFINE_STATIC_LOCAL(const AtomicString, invalidStatusFalse, ("false", AtomicString::ConstructFromLiteral));
+    DEFINE_STATIC_LOCAL(const AtomicString, invalidStatusTrue, ("true", AtomicString::ConstructFromLiteral));
     
     // aria-invalid can return false (default), grammer, spelling, or true.
     const AtomicString& ariaInvalid = getAttribute(aria_invalidAttr);
     
-    // If empty or not present, it should return false.
-    if (ariaInvalid.isEmpty())
+    // If 'false', empty or not present, it should return false.
+    if (ariaInvalid.isEmpty() || equalIgnoringCase(ariaInvalid, invalidStatusFalse))
         return invalidStatusFalse;
     
-    return ariaInvalid;
+    // Only 'true', 'grammar' and 'spelling' are values recognised by the WAI-ARIA
+    // specification. Any other non empty string should be treated as 'true'.
+    if (equalIgnoringCase(ariaInvalid, "spelling") || equalIgnoringCase(ariaInvalid, "grammar"))
+        return ariaInvalid;
+    return invalidStatusTrue;
 }
  
 bool AccessibilityObject::hasAttribute(const QualifiedName& attribute) const
@@ -1627,6 +1632,8 @@ AccessibilitySortDirection AccessibilityObject::sortDirection() const
         return SortDirectionAscending;
     if (equalIgnoringCase(sortAttribute, "descending"))
         return SortDirectionDescending;
+    if (equalIgnoringCase(sortAttribute, "other"))
+        return SortDirectionOther;
     
     return SortDirectionNone;
 }

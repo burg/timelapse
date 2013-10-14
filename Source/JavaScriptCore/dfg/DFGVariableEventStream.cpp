@@ -115,7 +115,7 @@ void VariableEventStream::reconstruct(
     
     unsigned numVariables;
     if (codeOrigin.inlineCallFrame)
-        numVariables = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame)->m_numCalleeRegisters + operandToLocal(codeOrigin.inlineCallFrame->stackOffset);
+        numVariables = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame)->m_numCalleeRegisters + VirtualRegister(codeOrigin.inlineCallFrame->stackOffset).toLocal();
     else
         numVariables = baselineCodeBlock->m_numCalleeRegisters;
     
@@ -124,8 +124,10 @@ void VariableEventStream::reconstruct(
     // reflect this.
     if (!index) {
         valueRecoveries = Operands<ValueRecovery>(codeBlock->numParameters(), numVariables);
-        for (size_t i = 0; i < valueRecoveries.size(); ++i)
-            valueRecoveries[i] = ValueRecovery::alreadyInJSStack();
+        for (size_t i = 0; i < valueRecoveries.size(); ++i) {
+            valueRecoveries[i] = ValueRecovery::displacedInJSStack(
+                VirtualRegister(valueRecoveries.operandForIndex(i)), DataFormatJS);
+        }
         return;
     }
     
@@ -140,6 +142,8 @@ void VariableEventStream::reconstruct(
 
     // Step 2: Create a mock-up of the DFG's state and execute the events.
     Operands<ValueSource> operandSources(codeBlock->numParameters(), numVariables);
+    for (unsigned i = operandSources.size(); i--;)
+        operandSources[i] = ValueSource(SourceIsDead);
     HashMap<MinifiedID, MinifiedGenerationInfo> generationInfos;
     for (unsigned i = startIndex; i < index; ++i) {
         const VariableEvent& event = at(i);
@@ -163,12 +167,12 @@ void VariableEventStream::reconstruct(
             break;
         }
         case MovHintEvent:
-            if (operandSources.hasOperand(event.operand()))
-                operandSources.setOperand(event.operand(), ValueSource(event.id()));
+            if (operandSources.hasOperand(event.bytecodeRegister()))
+                operandSources.setOperand(event.bytecodeRegister(), ValueSource(event.id()));
             break;
         case SetLocalEvent:
-            if (operandSources.hasOperand(event.operand()))
-                operandSources.setOperand(event.operand(), ValueSource::forDataFormat(event.dataFormat()));
+            if (operandSources.hasOperand(event.bytecodeRegister()))
+                operandSources.setOperand(event.bytecodeRegister(), ValueSource::forDataFormat(event.machineRegister(), event.dataFormat()));
             break;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -277,13 +281,6 @@ void VariableEventStream::reconstruct(
         
         valueRecoveries[i] =
             ValueRecovery::displacedInJSStack(static_cast<VirtualRegister>(info.u.virtualReg), info.format);
-    }
-    
-    // Step 4: Make sure that for locals that coincide with true call frame headers, the exit compiler knows
-    // that those values don't have to be recovered. Signal this by using ValueRecovery::alreadyInJSStack()
-    for (InlineCallFrame* inlineCallFrame = codeOrigin.inlineCallFrame; inlineCallFrame; inlineCallFrame = inlineCallFrame->caller.inlineCallFrame) {
-        for (unsigned i = JSStack::CallFrameHeaderSize; i--;)
-            valueRecoveries.setLocal(operandToLocal(inlineCallFrame->stackOffset) - i - 1, ValueRecovery::alreadyInJSStack());
     }
 }
 

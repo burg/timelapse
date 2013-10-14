@@ -200,7 +200,7 @@ String HitTestResult::spellingToolTip(TextDirection& dir) const
     if (!marker)
         return String();
 
-    if (RenderObject* renderer = m_innerNonSharedNode->renderer())
+    if (auto renderer = m_innerNonSharedNode->renderer())
         dir = renderer->style()->direction();
     return marker->description();
 }
@@ -228,7 +228,7 @@ String HitTestResult::title(TextDirection& dir) const
         if (titleNode->isElementNode()) {
             String title = toElement(titleNode)->title();
             if (!title.isEmpty()) {
-                if (RenderObject* renderer = titleNode->renderer())
+                if (auto renderer = titleNode->renderer())
                     dir = renderer->style()->direction();
                 return title;
             }
@@ -243,7 +243,7 @@ String HitTestResult::innerTextIfTruncated(TextDirection& dir) const
         if (!truncatedNode->isElementNode())
             continue;
 
-        if (RenderObject* renderer = truncatedNode->renderer()) {
+        if (auto renderer = toElement(truncatedNode)->renderer()) {
             if (renderer->isRenderBlock()) {
                 RenderBlock* block = toRenderBlock(renderer);
                 if (block->style()->textOverflow()) {
@@ -293,7 +293,7 @@ Image* HitTestResult::image() const
     if (!m_innerNonSharedNode)
         return 0;
     
-    RenderObject* renderer = m_innerNonSharedNode->renderer();
+    auto renderer = m_innerNonSharedNode->renderer();
     if (renderer && renderer->isImage()) {
         RenderImage* image = static_cast<WebCore::RenderImage*>(renderer);
         if (image->cachedImage() && !image->cachedImage()->errorOccurred())
@@ -310,13 +310,13 @@ IntRect HitTestResult::imageRect() const
     return m_innerNonSharedNode->renderBox()->absoluteContentQuad().enclosingBoundingBox();
 }
 
-KURL HitTestResult::absoluteImageURL() const
+URL HitTestResult::absoluteImageURL() const
 {
     if (!m_innerNonSharedNode)
-        return KURL();
+        return URL();
 
     if (!(m_innerNonSharedNode->renderer() && m_innerNonSharedNode->renderer()->isImage()))
-        return KURL();
+        return URL();
 
     AtomicString urlString;
     if (m_innerNonSharedNode->hasTagName(embedTag)
@@ -330,37 +330,37 @@ KURL HitTestResult::absoluteImageURL() const
         Element* element = toElement(m_innerNonSharedNode.get());
         urlString = element->imageSourceURL();
     } else
-        return KURL();
+        return URL();
 
     return m_innerNonSharedNode->document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
 }
 
-KURL HitTestResult::absolutePDFURL() const
+URL HitTestResult::absolutePDFURL() const
 {
     if (!m_innerNonSharedNode)
-        return KURL();
+        return URL();
 
     if (!m_innerNonSharedNode->hasTagName(embedTag) && !m_innerNonSharedNode->hasTagName(objectTag))
-        return KURL();
+        return URL();
 
     HTMLPlugInImageElement* element = toHTMLPlugInImageElement(m_innerNonSharedNode.get());
-    KURL url = m_innerNonSharedNode->document().completeURL(stripLeadingAndTrailingHTMLSpaces(element->url()));
+    URL url = m_innerNonSharedNode->document().completeURL(stripLeadingAndTrailingHTMLSpaces(element->url()));
     if (!url.isValid())
-        return KURL();
+        return URL();
 
     if (element->serviceType() == "application/pdf" || (element->serviceType().isEmpty() && url.path().lower().endsWith(".pdf")))
         return url;
-    return KURL();
+    return URL();
 }
 
-KURL HitTestResult::absoluteMediaURL() const
+URL HitTestResult::absoluteMediaURL() const
 {
 #if ENABLE(VIDEO)
     if (HTMLMediaElement* mediaElt = mediaElement())
         return mediaElt->currentSrc();
-    return KURL();
+    return URL();
 #else
-    return KURL();
+    return URL();
 #endif
 }
 
@@ -510,10 +510,10 @@ void HitTestResult::toggleMediaMuteState() const
 #endif
 }
 
-KURL HitTestResult::absoluteLinkURL() const
+URL HitTestResult::absoluteLinkURL() const
 {
     if (!m_innerURLElement)
-        return KURL();
+        return URL();
 
     AtomicString urlString;
     if (isHTMLAnchorElement(m_innerURLElement.get()) || isHTMLAreaElement(m_innerURLElement.get()) || m_innerURLElement->hasTagName(linkTag))
@@ -523,7 +523,7 @@ KURL HitTestResult::absoluteLinkURL() const
         urlString = m_innerURLElement->getAttribute(XLinkNames::hrefAttr);
 #endif
     else
-        return KURL();
+        return URL();
 
     return m_innerURLElement->document().completeURL(stripLeadingAndTrailingHTMLSpaces(urlString));
 }

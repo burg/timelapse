@@ -75,7 +75,7 @@ TreeScope::TreeScope(ContainerNode* rootNode, Document* document)
     ASSERT(document);
     ASSERT(rootNode != document);
     m_parentTreeScope->selfOnlyRef();
-    m_rootNode->setTreeScope(this);
+    m_rootNode->setTreeScope(*this);
 }
 
 TreeScope::TreeScope(Document* document)
@@ -86,7 +86,7 @@ TreeScope::TreeScope(Document* document)
     , m_idTargetObserverRegistry(IdTargetObserverRegistry::create())
 {
     ASSERT(document);
-    m_rootNode->setTreeScope(this);
+    m_rootNode->setTreeScope(*this);
 }
 
 TreeScope::TreeScope()
@@ -144,7 +144,7 @@ Element* TreeScope::getElementById(const AtomicString& elementId) const
         return 0;
     if (!m_elementsById)
         return 0;
-    return m_elementsById->getElementById(elementId.impl(), this);
+    return m_elementsById->getElementById(*elementId.impl(), *this);
 }
 
 const Vector<Element*>* TreeScope::getAllElementsById(const AtomicString& elementId) const
@@ -153,22 +153,22 @@ const Vector<Element*>* TreeScope::getAllElementsById(const AtomicString& elemen
         return 0;
     if (!m_elementsById)
         return 0;
-    return m_elementsById->getAllElementsById(elementId.impl(), this);
+    return m_elementsById->getAllElementsById(*elementId.impl(), *this);
 }
 
-void TreeScope::addElementById(const AtomicString& elementId, Element* element)
+void TreeScope::addElementById(const AtomicStringImpl& elementId, Element& element)
 {
     if (!m_elementsById)
         m_elementsById = adoptPtr(new DocumentOrderedMap);
-    m_elementsById->add(elementId.impl(), element);
+    m_elementsById->add(elementId, element);
     m_idTargetObserverRegistry->notifyObservers(elementId);
 }
 
-void TreeScope::removeElementById(const AtomicString& elementId, Element* element)
+void TreeScope::removeElementById(const AtomicStringImpl& elementId, Element& element)
 {
     if (!m_elementsById)
         return;
-    m_elementsById->remove(elementId.impl(), element);
+    m_elementsById->remove(elementId, element);
     m_idTargetObserverRegistry->notifyObservers(elementId);
 }
 
@@ -178,27 +178,27 @@ Element* TreeScope::getElementByName(const AtomicString& name) const
         return 0;
     if (!m_elementsByName)
         return 0;
-    return m_elementsByName->getElementByName(name.impl(), this);
+    return m_elementsByName->getElementByName(*name.impl(), *this);
 }
 
-void TreeScope::addElementByName(const AtomicString& name, Element* element)
+void TreeScope::addElementByName(const AtomicStringImpl& name, Element& element)
 {
     if (!m_elementsByName)
         m_elementsByName = adoptPtr(new DocumentOrderedMap);
-    m_elementsByName->add(name.impl(), element);
+    m_elementsByName->add(name, element);
 }
 
-void TreeScope::removeElementByName(const AtomicString& name, Element* element)
+void TreeScope::removeElementByName(const AtomicStringImpl& name, Element& element)
 {
     if (!m_elementsByName)
         return;
-    m_elementsByName->remove(name.impl(), element);
+    m_elementsByName->remove(name, element);
 }
 
 Node* TreeScope::ancestorInThisScope(Node* node) const
 {
     while (node) {
-        if (node->treeScope() == this)
+        if (&node->treeScope() == this)
             return node;
         if (!node->isInShadowTree())
             return 0;
@@ -209,24 +209,24 @@ Node* TreeScope::ancestorInThisScope(Node* node) const
     return 0;
 }
 
-void TreeScope::addImageMap(HTMLMapElement* imageMap)
+void TreeScope::addImageMap(HTMLMapElement& imageMap)
 {
-    AtomicStringImpl* name = imageMap->getName().impl();
+    AtomicStringImpl* name = imageMap.getName().impl();
     if (!name)
         return;
     if (!m_imageMapsByName)
         m_imageMapsByName = adoptPtr(new DocumentOrderedMap);
-    m_imageMapsByName->add(name, imageMap);
+    m_imageMapsByName->add(*name, imageMap);
 }
 
-void TreeScope::removeImageMap(HTMLMapElement* imageMap)
+void TreeScope::removeImageMap(HTMLMapElement& imageMap)
 {
     if (!m_imageMapsByName)
         return;
-    AtomicStringImpl* name = imageMap->getName().impl();
+    AtomicStringImpl* name = imageMap.getName().impl();
     if (!name)
         return;
-    m_imageMapsByName->remove(name, imageMap);
+    m_imageMapsByName->remove(*name, imageMap);
 }
 
 HTMLMapElement* TreeScope::getImageMap(const String& url) const
@@ -237,9 +237,13 @@ HTMLMapElement* TreeScope::getImageMap(const String& url) const
         return 0;
     size_t hashPos = url.find('#');
     String name = (hashPos == notFound ? url : url.substring(hashPos + 1)).impl();
-    if (rootNode()->document().isHTMLDocument())
-        return toHTMLMapElement(m_imageMapsByName->getElementByLowercasedMapName(AtomicString(name.lower()).impl(), this));
-    return toHTMLMapElement(m_imageMapsByName->getElementByMapName(AtomicString(name).impl(), this));
+    if (name.isEmpty())
+        return 0;
+    if (rootNode()->document().isHTMLDocument()) {
+        AtomicString lowercasedName = name.lower();
+        return m_imageMapsByName->getElementByLowercasedMapName(*lowercasedName.impl(), *this);
+    }
+    return m_imageMapsByName->getElementByMapName(*AtomicString(name).impl(), *this);
 }
 
 Node* nodeFromPoint(Document* document, int x, int y, LayoutPoint* localPoint)
@@ -278,16 +282,16 @@ Element* TreeScope::elementFromPoint(int x, int y) const
     return toElement(node);
 }
 
-void TreeScope::addLabel(const AtomicString& forAttributeValue, HTMLLabelElement* element)
+void TreeScope::addLabel(const AtomicStringImpl& forAttributeValue, HTMLLabelElement& element)
 {
     ASSERT(m_labelsByForAttribute);
-    m_labelsByForAttribute->add(forAttributeValue.impl(), element);
+    m_labelsByForAttribute->add(forAttributeValue, element);
 }
 
-void TreeScope::removeLabel(const AtomicString& forAttributeValue, HTMLLabelElement* element)
+void TreeScope::removeLabel(const AtomicStringImpl& forAttributeValue, HTMLLabelElement& element)
 {
     ASSERT(m_labelsByForAttribute);
-    m_labelsByForAttribute->remove(forAttributeValue.impl(), element);
+    m_labelsByForAttribute->remove(forAttributeValue, element);
 }
 
 HTMLLabelElement* TreeScope::labelElementForId(const AtomicString& forAttributeValue)
@@ -303,11 +307,11 @@ HTMLLabelElement* TreeScope::labelElementForId(const AtomicString& forAttributeV
         for (auto label = labelDescendants.begin(), end = labelDescendants.end(); label != end; ++label) {
             const AtomicString& forValue = label->fastGetAttribute(forAttr);
             if (!forValue.isEmpty())
-                addLabel(forValue, &*label);
+                addLabel(*forValue.impl(), *label);
         }
     }
 
-    return toHTMLLabelElement(m_labelsByForAttribute->getElementByLabelForAttribute(forAttributeValue.impl(), this));
+    return m_labelsByForAttribute->getElementByLabelForAttribute(*forAttributeValue.impl(), *this);
 }
 
 DOMSelection* TreeScope::getSelection() const
@@ -322,7 +326,7 @@ DOMSelection* TreeScope::getSelection() const
     // as a container. It is now enabled only if runtime Shadow DOM feature is enabled.
     // See https://bugs.webkit.org/show_bug.cgi?id=82697
 #if ENABLE(SHADOW_DOM)
-    if (RuntimeEnabledFeatures::shadowDOMEnabled()) {
+    if (RuntimeEnabledFeatures::sharedFeatures().shadowDOMEnabled()) {
         m_selection = DOMSelection::create(this);
         return m_selection.get();
     }
@@ -367,7 +371,7 @@ void TreeScope::adoptIfNeeded(Node* node)
     ASSERT(node);
     ASSERT(!node->isDocumentNode());
     ASSERT(!node->m_deletionHasBegun);
-    TreeScopeAdopter adopter(node, this);
+    TreeScopeAdopter adopter(node, *this);
     if (adopter.needsScopeChange())
         adopter.execute();
 }
@@ -390,10 +394,10 @@ Element* TreeScope::focusedElement()
         element = focusedFrameOwnerElement(document.page()->focusController().focusedFrame(), document.frame());
     if (!element)
         return 0;
-    TreeScope* treeScope = element->treeScope();
+    TreeScope* treeScope = &element->treeScope();
     while (treeScope != this && treeScope != &document) {
         element = toShadowRoot(treeScope->rootNode())->hostElement();
-        treeScope = element->treeScope();
+        treeScope = &element->treeScope();
     }
     if (this != treeScope)
         return 0;
@@ -403,7 +407,7 @@ Element* TreeScope::focusedElement()
 static void listTreeScopes(Node* node, Vector<TreeScope*, 5>& treeScopes)
 {
     while (true) {
-        treeScopes.append(node->treeScope());
+        treeScopes.append(&node->treeScope());
         Element* ancestor = node->shadowHost();
         if (!ancestor)
             break;
@@ -416,8 +420,8 @@ TreeScope* commonTreeScope(Node* nodeA, Node* nodeB)
     if (!nodeA || !nodeB)
         return 0;
 
-    if (nodeA->treeScope() == nodeB->treeScope())
-        return nodeA->treeScope();
+    if (&nodeA->treeScope() == &nodeB->treeScope())
+        return &nodeA->treeScope();
 
     Vector<TreeScope*, 5> treeScopesA;
     listTreeScopes(nodeA, treeScopesA);
@@ -441,7 +445,7 @@ bool TreeScope::deletionHasBegun()
 
 void TreeScope::beginDeletion()
 {
-    ASSERT(this != noDocumentInstance());
+    ASSERT(this != &noDocumentInstance());
     rootNode()->m_deletionHasBegun = true;
 }
 #endif

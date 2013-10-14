@@ -67,12 +67,41 @@ namespace JSC {
 class MacroAssembler : public MacroAssemblerBase {
 public:
 
+    static bool isStackRelated(RegisterID reg)
+    {
+        return reg == stackPointerRegister || reg == framePointerRegister;
+    }
+    
+    static RegisterID firstRealRegister()
+    {
+        RegisterID firstRegister = MacroAssembler::firstRegister();
+        while (MacroAssembler::isStackRelated(firstRegister))
+            firstRegister = static_cast<RegisterID>(firstRegister + 1);
+        return firstRegister;
+    }
+    
+    static RegisterID nextRegister(RegisterID reg)
+    {
+        RegisterID result = static_cast<RegisterID>(reg + 1);
+        while (MacroAssembler::isStackRelated(result))
+            result = static_cast<RegisterID>(result + 1);
+        return result;
+    }
+    
+    static RegisterID secondRealRegister()
+    {
+        return nextRegister(firstRealRegister());
+    }
+    
+    static FPRegisterID nextFPRegister(FPRegisterID reg)
+    {
+        return static_cast<FPRegisterID>(reg + 1);
+    }
+
     using MacroAssemblerBase::pop;
     using MacroAssemblerBase::jump;
     using MacroAssemblerBase::branch32;
     using MacroAssemblerBase::move;
-
-#if ENABLE(JIT_CONSTANT_BLINDING)
     using MacroAssemblerBase::add32;
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
@@ -85,7 +114,6 @@ public:
     using MacroAssemblerBase::sub32;
     using MacroAssemblerBase::urshift32;
     using MacroAssemblerBase::xor32;
-#endif
 
     static const double twoToThe32; // This is super useful for some double code.
 
@@ -377,7 +405,12 @@ public:
     {
         and32(imm, srcDest);
     }
-    
+
+    void andPtr(TrustedImmPtr imm, RegisterID srcDest)
+    {
+        and32(TrustedImm32(imm), srcDest);
+    }
+
     void negPtr(RegisterID dest)
     {
         neg32(dest);
@@ -636,6 +669,11 @@ public:
         and64(imm, srcDest);
     }
     
+    void andPtr(TrustedImmPtr imm, RegisterID srcDest)
+    {
+        and64(imm, srcDest);
+    }
+    
     void lshiftPtr(Imm32 imm, RegisterID srcDest)
     {
         lshift64(trustedImm32ForShift(imm), srcDest);
@@ -866,7 +904,6 @@ public:
         return branchSub64(cond, src1, src2, dest);
     }
 
-#if ENABLE(JIT_CONSTANT_BLINDING)
     using MacroAssemblerBase::and64;
     using MacroAssemblerBase::convertInt32ToDouble;
     using MacroAssemblerBase::store64;
@@ -1086,11 +1123,8 @@ public:
             store64(imm.asTrustedImm64(), dest);
     }
 
-#endif // ENABLE(JIT_CONSTANT_BLINDING)
-
 #endif // !CPU(X86_64)
 
-#if ENABLE(JIT_CONSTANT_BLINDING)
     bool shouldBlind(Imm32 imm)
     {
 #if ENABLE(FORCED_JIT_BLINDING)
@@ -1452,7 +1486,6 @@ public:
     {
         urshift32(src, trustedImm32ForShift(amount), dest);
     }
-#endif // ENABLE(JIT_CONSTANT_BLINDING)
 };
 
 } // namespace JSC

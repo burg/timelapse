@@ -31,7 +31,6 @@ code interfaceName=HTMLElement
 col interfaceName=HTMLTableColElement
 colgroup interfaceName=HTMLTableColElement
 command interfaceName=HTMLElement
-content interfaceName=HTMLContentElement, conditional=SHADOW_DOM, runtimeConditional=shadowDOM, generateTypeHelpers
 webkitShadowContent interfaceName=HTMLElement, noConstructor
 datalist interfaceName=HTMLDataListElement, conditional=DATALIST_ELEMENT
 dd interfaceName=HTMLElement
@@ -121,7 +120,7 @@ sup interfaceName=HTMLElement
 table generateTypeHelpers
 tbody interfaceName=HTMLTableSectionElement
 td interfaceName=HTMLTableCellElement
-template conditional=TEMPLATE_ELEMENT
+template conditional=TEMPLATE_ELEMENT, generateTypeHelpers
 textarea interfaceName=HTMLTextAreaElement, constructorNeedsFormElement, generateTypeHelpers
 tfoot interfaceName=HTMLTableSectionElement
 th interfaceName=HTMLTableCellElement

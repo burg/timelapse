@@ -69,3 +69,51 @@
     font-weight: bold;
     color: red;
 }
+
+.break {
+    -webkit-region-break-before: always;
+    display: block;
+}
+
+.token {
+    color: blue;
+    font-weight: bold;
+}
+
+.description {
+    width: 600px;
+}
+
+.bigBox {
+    height: 100px;
+    width: 300px;
+}
+
+.greyBigBox {
+    height: 100px;
+    width: 300px;
+    background-color: lightgrey;
+}
+
+.descriptionVert {
+    height: 600px;
+}
+
+.bigBoxVert {
+    height: 300px;
+    width: 100px;
+}
+
+.greyBigBoxVert {
+    height: 300px;
+    width: 100px;
+    background-color: lightgrey;
+}
+
+.float {
+    float: left;
+}
+
+.clear {
+    clear: both;
+}

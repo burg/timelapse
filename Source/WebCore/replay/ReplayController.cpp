@@ -39,19 +39,17 @@
 #include "CacheController.h"
 #include "CaptureInputIterator.h"
 #include "DisableCache.h"
-#include "DocumentEventQueue.h"
 #include "DocumentLoader.h"
 #include "DOMWindow.h"
 #include "EnableCache.h"
 #include "Event.h"
-#include "Frame.h"
 #include "FrameTree.h"
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InspectorInstrumentation.h"
-#include "KURL.h"
 #include "Location.h"
 #include "Logging.h"
+#include "MainFrame.h"
 #include "MouseEvent.h"
 #include "NavigateToPage.h"
 #include "NavigationProxy.h"
@@ -61,11 +59,11 @@
 #include "ReplayInputIterator.h"
 #include "ReplayRecording.h"
 #include "ReplayUtilities.h"
-#include "ResourceResponse.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
 #include "TimerFired.h"
+#include "URL.h"
 #include "UserInputProxy.h"
 #include <stdarg.h>
 #include <wtf/replay/InputIterator.h>
@@ -75,9 +73,13 @@
 namespace WebCore {
 
 #if !LOG_DISABLED
-static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* node, bool wasIgnored)
+static void dumpEventDispatchInfo(const Event& event, Frame*, bool wasIgnored)
 {
-    if (node)
+    EventTarget* target = event.target();
+    if (!target)
+        return;
+
+    if (Node* node = target->toNode())
         LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/node[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
@@ -85,7 +87,7 @@ static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* n
             (void*)node,
             node->nodeName().utf8().data());
 
-    else if (window)
+    else if (DOMWindow* window = target->toDOMWindow())
         LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/window[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
@@ -198,7 +200,7 @@ void ReplayController::beginCapturing()
     m_activeIterator->storeInput(InitializeWindow::createFromPage(m_page));
     // attempt to pull reasonable values here to save in the log, and
     // also to use for the initial refresh.
-    Frame& mainFrame = m_page->mainFrame();
+    MainFrame& mainFrame = m_page->mainFrame();
     NavigateToPage* reloadInput = new NavigateToPage(mainFrame.document()->securityOrigin(),
                                                      mainFrame.document()->url().string(),
                                                      mainFrame.loader().referrer());
@@ -333,20 +335,18 @@ void ReplayController::cancelPlayback()
 
 //-- external callbacks
 
-void ReplayController::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const PositionMark&)
+void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const PositionMark&)
 {
-    if (!window)
+    if (!frame)
         return;
 
-    InputIterator* it = getInputIteratorForDocument(window->document());
+    InputIterator* it = getInputIteratorForDocument(frame->document());
     bool shouldIgnore =  !it || (!it->isCapturing() && !it->isReplaying());
 
 #if !LOG_DISABLED
-    dumpEventDispatchInfo(event, window, node, shouldIgnore);
+    dumpEventDispatchInfo(event, frame, shouldIgnore);
 #else
     UNUSED_PARAM(event);
-    UNUSED_PARAM(window);
-    UNUSED_PARAM(node);
 #endif // !LOG_DISABLED
 
     if (shouldIgnore)
@@ -528,7 +528,7 @@ void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 
 bool ReplayController::capturing() const
 {
-    return m_status == CannotReplay && 
+    return m_status == CannotReplay &&
            m_activeIterator && m_activeIterator->isCapturing();
 }
 

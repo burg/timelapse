@@ -313,7 +313,7 @@ public:
     friend class RenderReplica;
 
     explicit RenderLayer(RenderLayerModelObject&);
-    ~RenderLayer();
+    virtual ~RenderLayer();
 
     String name() const;
 
@@ -386,7 +386,7 @@ public:
     };
 
     // Scrolling methods for layers that can scroll their overflow.
-    void scrollByRecursively(const IntSize&, ScrollOffsetClamping = ScrollOffsetUnclamped);
+    void scrollByRecursively(const IntSize&, ScrollOffsetClamping = ScrollOffsetUnclamped, ScrollableArea** scrolledArea = 0);
     void scrollToOffset(const IntSize&, ScrollOffsetClamping = ScrollOffsetUnclamped);
     void scrollToXOffset(int x, ScrollOffsetClamping clamp = ScrollOffsetUnclamped) { scrollToOffset(IntSize(x, scrollYOffset()), clamp); }
     void scrollToYOffset(int y, ScrollOffsetClamping clamp = ScrollOffsetUnclamped) { scrollToOffset(IntSize(scrollXOffset(), y), clamp); }
@@ -411,9 +411,9 @@ public:
     bool hasVerticalScrollbar() const { return verticalScrollbar(); }
 
     // ScrollableArea overrides
-    virtual Scrollbar* horizontalScrollbar() const { return m_hBar.get(); }
-    virtual Scrollbar* verticalScrollbar() const { return m_vBar.get(); }
-    virtual ScrollableArea* enclosingScrollableArea() const;
+    virtual Scrollbar* horizontalScrollbar() const OVERRIDE { return m_hBar.get(); }
+    virtual Scrollbar* verticalScrollbar() const OVERRIDE { return m_vBar.get(); }
+    virtual ScrollableArea* enclosingScrollableArea() const OVERRIDE;
 
     int verticalScrollbarWidth(OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize) const;
     int horizontalScrollbarHeight(OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize) const;
@@ -748,23 +748,16 @@ public:
     bool hasBlendMode() const { return false; }
 #endif
 
-    // Overloaded new operator. Derived classes must override operator new
-    // in order to allocate out of the RenderArena.
-    void* operator new(size_t, RenderArena&);
-
-    // Overridden to prevent the normal delete from being called.
-    void operator delete(void*, size_t);
-
 #if USE(ACCELERATED_COMPOSITING)
     bool isComposited() const { return m_backing != 0; }
     bool hasCompositedMask() const;
     RenderLayerBacking* backing() const { return m_backing.get(); }
     RenderLayerBacking* ensureBacking();
     void clearBacking(bool layerBeingDestroyed = false);
-    virtual GraphicsLayer* layerForScrolling() const;
-    virtual GraphicsLayer* layerForHorizontalScrollbar() const;
-    virtual GraphicsLayer* layerForVerticalScrollbar() const;
-    virtual GraphicsLayer* layerForScrollCorner() const;
+    virtual GraphicsLayer* layerForScrolling() const OVERRIDE;
+    virtual GraphicsLayer* layerForHorizontalScrollbar() const OVERRIDE;
+    virtual GraphicsLayer* layerForVerticalScrollbar() const OVERRIDE;
+    virtual GraphicsLayer* layerForScrollCorner() const OVERRIDE;
     virtual bool usesCompositedScrolling() const OVERRIDE;
     bool needsCompositedScrolling() const;
     bool needsCompositingLayersRebuiltForClip(const RenderStyle* oldStyle, const RenderStyle* newStyle) const;
@@ -806,7 +799,7 @@ public:
     void setLayerListMutationAllowed(bool flag) { m_layerListMutationAllowed = flag; }
 #endif
 
-    Node* enclosingElement() const;
+    Element* enclosingElement() const;
 
 #if USE(ACCELERATED_COMPOSITING)
     enum ViewportConstrainedNotCompositedReason {
@@ -861,7 +854,7 @@ private:
     void updateScrollbarsAfterStyleChange(const RenderStyle* oldStyle);
     void updateScrollbarsAfterLayout();
 
-    void setAncestorChainHasOutOfFlowPositionedDescendant(RenderObject* containingBlock);
+    void setAncestorChainHasOutOfFlowPositionedDescendant(RenderBlock* containingBlock);
     void dirtyAncestorChainHasOutOfFlowPositionedDescendantStatus();
     void updateOutOfFlowPositioned(const RenderStyle* oldStyle);
 
@@ -886,9 +879,6 @@ private:
     IntSize scrolledContentOffset() const { return m_scrollOffset; }
 
     IntSize clampScrollOffset(const IntSize&) const;
-
-    // The normal operator new is disallowed on all render objects.
-    void* operator new(size_t) throw();
 
     void setNextSibling(RenderLayer* next) { m_next = next; }
     void setPreviousSibling(RenderLayer* prev) { m_previous = prev; }
@@ -1003,34 +993,33 @@ private:
 
     bool shouldBeSelfPaintingLayer() const;
 
-    int scrollPosition(Scrollbar*) const;
+    virtual int scrollPosition(Scrollbar*) const OVERRIDE;
     
     // ScrollableArea interface
-    virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&);
-    virtual void invalidateScrollCornerRect(const IntRect&);
-    virtual bool isActive() const;
-    virtual bool isScrollCornerVisible() const;
-    virtual IntRect scrollCornerRect() const;
-    virtual IntRect convertFromScrollbarToContainingView(const Scrollbar*, const IntRect&) const;
-    virtual IntRect convertFromContainingViewToScrollbar(const Scrollbar*, const IntRect&) const;
-    virtual IntPoint convertFromScrollbarToContainingView(const Scrollbar*, const IntPoint&) const;
-    virtual IntPoint convertFromContainingViewToScrollbar(const Scrollbar*, const IntPoint&) const;
-    virtual int scrollSize(ScrollbarOrientation) const;
-    virtual void setScrollOffset(const IntPoint&);
-    virtual IntPoint scrollPosition() const;
-    virtual IntPoint minimumScrollPosition() const;
-    virtual IntPoint maximumScrollPosition() const;
-    virtual IntRect visibleContentRect(VisibleContentRectIncludesScrollbars) const;
-    virtual int visibleHeight() const;
-    virtual int visibleWidth() const;
-    virtual IntSize contentsSize() const;
-    virtual IntSize overhangAmount() const;
-    virtual IntPoint lastKnownMousePosition() const;
+    virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&) OVERRIDE;
+    virtual void invalidateScrollCornerRect(const IntRect&) OVERRIDE;
+    virtual bool isActive() const OVERRIDE;
+    virtual bool isScrollCornerVisible() const OVERRIDE;
+    virtual IntRect scrollCornerRect() const OVERRIDE;
+    virtual IntRect convertFromScrollbarToContainingView(const Scrollbar*, const IntRect&) const OVERRIDE;
+    virtual IntRect convertFromContainingViewToScrollbar(const Scrollbar*, const IntRect&) const OVERRIDE;
+    virtual IntPoint convertFromScrollbarToContainingView(const Scrollbar*, const IntPoint&) const OVERRIDE;
+    virtual IntPoint convertFromContainingViewToScrollbar(const Scrollbar*, const IntPoint&) const OVERRIDE;
+    virtual int scrollSize(ScrollbarOrientation) const OVERRIDE;
+    virtual void setScrollOffset(const IntPoint&) OVERRIDE;
+    virtual IntPoint scrollPosition() const OVERRIDE;
+    virtual IntPoint minimumScrollPosition() const OVERRIDE;
+    virtual IntPoint maximumScrollPosition() const OVERRIDE;
+    virtual IntRect visibleContentRect(VisibleContentRectIncludesScrollbars) const OVERRIDE;
+    virtual int visibleHeight() const OVERRIDE;
+    virtual int visibleWidth() const OVERRIDE;
+    virtual IntSize contentsSize() const OVERRIDE;
+    virtual IntSize overhangAmount() const OVERRIDE;
+    virtual IntPoint lastKnownMousePosition() const OVERRIDE;
     virtual bool isHandlingWheelEvent() const OVERRIDE;
-    virtual bool shouldSuspendScrollAnimations() const;
-    virtual bool scrollbarsCanBeActive() const;
+    virtual bool shouldSuspendScrollAnimations() const OVERRIDE;
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;
-    virtual bool scrollbarAnimationsAreSuppressed() const OVERRIDE;
+    virtual bool updatesScrollLayerPositionOnMainThread() const OVERRIDE { return true; }
 
     // Rectangle encompassing the scroll corner and resizer rect.
     IntRect scrollCornerAndResizerRect() const;
@@ -1048,7 +1037,7 @@ private:
 
     void updateDescendantDependentFlags(HashSet<const RenderObject*>* outOfFlowDescendantContainingBlocks = 0);
 #if USE(ACCELERATED_COMPOSITING)
-    bool updateDescendantClippingContext(bool addClipping);
+    bool checkIfDescendantClippingContextNeedsUpdate(bool isClipping);
 #endif
 
     // This flag is computed by RenderLayerCompositor, which knows more about 3d hierarchies than we do.
@@ -1117,9 +1106,6 @@ private:
     friend class RenderLayerBacking;
     friend class RenderLayerCompositor;
     friend class RenderLayerModelObject;
-
-    // Only safe to call from RenderBoxModelObject::destroyLayer(RenderArena&)
-    void destroy(RenderArena&);
 
     LayoutUnit overflowTop() const;
     LayoutUnit overflowBottom() const;

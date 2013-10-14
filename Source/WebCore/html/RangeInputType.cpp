@@ -245,7 +245,7 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent* event)
         setValueAsDecimal(newValue, eventBehavior, IGNORE_EXCEPTION);
 
         if (AXObjectCache* cache = element().document().existingAXObjectCache())
-            cache->postNotification(&element(), AXObjectCache::AXValueChanged, true);
+            cache->postNotification(&element(), AXObjectCache::AXValueChanged);
         element().dispatchFormControlChangeEvent();
     }
 
@@ -344,7 +344,7 @@ void RangeInputType::listAttributeTargetChanged()
     m_tickMarkValuesDirty = true;
     HTMLElement* sliderTrackElement = sliderTrackElementOf(element());
     if (sliderTrackElement->renderer())
-        sliderTrackElement->renderer()->setNeedsLayout(true);
+        sliderTrackElement->renderer()->setNeedsLayout();
 }
 
 void RangeInputType::updateTickMarkValues()

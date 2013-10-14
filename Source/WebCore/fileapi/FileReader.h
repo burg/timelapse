@@ -53,7 +53,7 @@ class ScriptExecutionContext;
 
 typedef int ExceptionCode;
 
-class FileReader : public RefCounted<FileReader>, public ActiveDOMObject, public EventTarget, public FileReaderLoaderClient {
+class FileReader FINAL : public RefCounted<FileReader>, public ActiveDOMObject, public EventTargetWithInlineData, public FileReaderLoaderClient {
 public:
     static PassRefPtr<FileReader> create(ScriptExecutionContext*);
 
@@ -81,14 +81,14 @@ public:
     String stringResult();
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const { return ActiveDOMObject::scriptExecutionContext(); }
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return FileReaderEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE { return ActiveDOMObject::scriptExecutionContext(); }
 
     // FileReaderLoaderClient
-    virtual void didStartLoading();
-    virtual void didReceiveData();
-    virtual void didFinishLoading();
-    virtual void didFail(int errorCode);
+    virtual void didStartLoading() OVERRIDE;
+    virtual void didReceiveData() OVERRIDE;
+    virtual void didFinishLoading() OVERRIDE;
+    virtual void didFail(int errorCode) OVERRIDE;
 
     using RefCounted<FileReader>::ref;
     using RefCounted<FileReader>::deref;
@@ -101,7 +101,7 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(loadend);
 
 private:
-    FileReader(ScriptExecutionContext*);
+    explicit FileReader(ScriptExecutionContext*);
 
     // ActiveDOMObject
     virtual bool canSuspend() const OVERRIDE;
@@ -110,8 +110,6 @@ private:
     // EventTarget
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
-    virtual EventTargetData* eventTargetData() OVERRIDE { return &m_eventTargetData; }
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE { return m_eventTargetData; }
 
     void terminate();
     void readInternal(Blob*, FileReaderLoader::ReadType, ExceptionCode&);
@@ -120,12 +118,9 @@ private:
 
     ReadyState m_state;
     bool m_aborting;
-    EventTargetData m_eventTargetData;
-
     RefPtr<Blob> m_blob;
     FileReaderLoader::ReadType m_readType;
     String m_encoding;
-
     OwnPtr<FileReaderLoader> m_loader;
     RefPtr<FileError> m_error;
     double m_lastProgressNotificationTimeMS;

@@ -78,9 +78,9 @@ void RenderBoxModelObject::setSelectionState(SelectionState state)
 
     if ((state == SelectionStart && selectionState() == SelectionEnd)
         || (state == SelectionEnd && selectionState() == SelectionStart))
-        RenderObject::setSelectionState(SelectionBoth);
+        RenderLayerModelObject::setSelectionState(SelectionBoth);
     else
-        RenderObject::setSelectionState(state);
+        RenderLayerModelObject::setSelectionState(state);
 
     // FIXME: We should consider whether it is OK propagating to ancestor RenderInlines.
     // This is a workaround for http://webkit.org/b/32123
@@ -159,8 +159,8 @@ bool RenderBoxModelObject::shouldPaintAtLowQuality(GraphicsContext* context, Ima
     return view().imageQualityController().shouldPaintAtLowQuality(context, this, image, layer, size);
 }
 
-RenderBoxModelObject::RenderBoxModelObject(Element* element)
-    : RenderLayerModelObject(element)
+RenderBoxModelObject::RenderBoxModelObject(Element* element, unsigned baseTypeFlags)
+    : RenderLayerModelObject(element, baseTypeFlags | RenderBoxModelObjectFlag)
 {
 }
 
@@ -569,7 +569,7 @@ static void applyBoxShadowForBackground(GraphicsContext* context, RenderStyle* s
 }
 
 void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, const Color& color, const FillLayer* bgLayer, const LayoutRect& rect,
-    BackgroundBleedAvoidance bleedAvoidance, InlineFlowBox* box, const LayoutSize& boxSize, CompositeOperator op, RenderObject* backgroundObject)
+    BackgroundBleedAvoidance bleedAvoidance, InlineFlowBox* box, const LayoutSize& boxSize, CompositeOperator op, RenderElement* backgroundObject)
 {
     GraphicsContext* context = paintInfo.context;
     if (context->paintingDisabled() || rect.isEmpty())
@@ -795,8 +795,9 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
         geometry.clip(paintInfo.rect);
         if (!geometry.destRect().isEmpty()) {
             CompositeOperator compositeOp = op == CompositeSourceOver ? bgLayer->composite() : op;
-            RenderObject* clientForBackgroundImage = backgroundObject ? backgroundObject : this;
+            auto clientForBackgroundImage = backgroundObject ? backgroundObject : this;
             RefPtr<Image> image = bgImage->image(clientForBackgroundImage, geometry.tileSize());
+            context->setDrawLuminanceMask(bgLayer->maskSourceType() == MaskLuminance);
             bool useLowQualityScaling = shouldPaintAtLowQuality(context, image.get(), bgLayer, geometry.tileSize());
             if (image.get())
                 image->setSpaceSize(geometry.spaceSize());
@@ -1042,7 +1043,7 @@ static inline int getSpace(int areaSize, int tileSize)
 }
 
 void RenderBoxModelObject::calculateBackgroundImageGeometry(const RenderLayerModelObject* paintContainer, const FillLayer* fillLayer, const LayoutRect& paintRect,
-    BackgroundImageGeometry& geometry, RenderObject* backgroundObject) const
+    BackgroundImageGeometry& geometry, RenderElement* backgroundObject) const
 {
     LayoutUnit left = 0;
     LayoutUnit top = 0;
@@ -1110,7 +1111,7 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const RenderLayerMod
         positioningAreaSize = geometry.destRect().size();
     }
 
-    const RenderObject* clientForBackgroundImage = backgroundObject ? backgroundObject : this;
+    auto clientForBackgroundImage = backgroundObject ? backgroundObject : this;
     IntSize fillTileSize = calculateFillTileSize(fillLayer, positioningAreaSize);
     fillLayer->image()->setContainerSizeForRenderer(clientForBackgroundImage, fillTileSize, style()->effectiveZoom());
     geometry.setTileSize(fillTileSize);
@@ -1122,7 +1123,9 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const RenderLayerMod
 
     LayoutUnit computedXPosition = minimumValueForLength(fillLayer->xPosition(), availableWidth, true);
     if (backgroundRepeatX == RoundFill && positioningAreaSize.width() > 0 && fillTileSize.width() > 0) {
-        int nrTiles = ceil((double)positioningAreaSize.width() / fillTileSize.width());
+        long nrTiles = lroundf((float)positioningAreaSize.width() / fillTileSize.width());
+        if (!nrTiles)
+            nrTiles = 1;
 
         if (fillLayer->size().size.height().isAuto() && backgroundRepeatY != RoundFill)
             fillTileSize.setHeight(fillTileSize.height() * positioningAreaSize.width() / (nrTiles * fillTileSize.width()));
@@ -1135,7 +1138,9 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const RenderLayerMod
 
     LayoutUnit computedYPosition = minimumValueForLength(fillLayer->yPosition(), availableHeight, true);
     if (backgroundRepeatY == RoundFill && positioningAreaSize.height() > 0 && fillTileSize.height() > 0) {
-        int nrTiles = ceil((double)positioningAreaSize.height() / fillTileSize.height());
+        long nrTiles = lroundf((float)positioningAreaSize.height() / fillTileSize.height());
+        if (!nrTiles)
+            nrTiles = 1;
 
         if (fillLayer->size().size.width().isAuto() && backgroundRepeatX != RoundFill)
             fillTileSize.setWidth(fillTileSize.width() * positioningAreaSize.height() / (nrTiles * fillTileSize.height()));
@@ -2734,7 +2739,7 @@ bool RenderBoxModelObject::shouldAntialiasLines(GraphicsContext* context)
 
 void RenderBoxModelObject::mapAbsoluteToLocalPoint(MapCoordinatesFlags mode, TransformState& transformState) const
 {
-    RenderObject* o = container();
+    RenderElement* o = container();
     if (!o)
         return;
 
@@ -2781,9 +2786,13 @@ void RenderBoxModelObject::moveChildTo(RenderBoxModelObject* toBoxModelObject, R
     if (fullRemoveInsert && (toBoxModelObject->isRenderBlock() || toBoxModelObject->isRenderInline())) {
         // Takes care of adding the new child correctly if toBlock and fromBlock
         // have different kind of children (block vs inline).
-        toBoxModelObject->addChild(children()->removeChildNode(this, child), beforeChild);
-    } else
-        toBoxModelObject->children()->insertChildNode(toBoxModelObject, children()->removeChildNode(this, child, fullRemoveInsert), beforeChild, fullRemoveInsert);
+        removeChildInternal(child, NotifyChildren);
+        toBoxModelObject->addChild(child, beforeChild);
+    } else {
+        NotifyChildrenType notifyType = fullRemoveInsert ? NotifyChildren : DontNotifyChildren;
+        removeChildInternal(child, notifyType);
+        toBoxModelObject->insertChildInternal(child, beforeChild, notifyType);
+    }
 }
 
 void RenderBoxModelObject::moveChildrenTo(RenderBoxModelObject* toBoxModelObject, RenderObject* startChild, RenderObject* endChild, RenderObject* beforeChild, bool fullRemoveInsert)
@@ -2792,9 +2801,9 @@ void RenderBoxModelObject::moveChildrenTo(RenderBoxModelObject* toBoxModelObject
     // anonymous blocks which can no longer carry positioned objects (see r120761)
     // or when fullRemoveInsert is false.
     if (fullRemoveInsert && isRenderBlock()) {
-        RenderBlock* block = toRenderBlock(this);
-        block->removePositionedObjects(0);
-        block->removeFloatingObjects(); 
+        toRenderBlock(this)->removePositionedObjects(0);
+        if (isRenderBlockFlow())
+            toRenderBlockFlow(this)->removeFloatingObjects(); 
     }
 
     ASSERT(!beforeChild || toBoxModelObject == beforeChild->parent());

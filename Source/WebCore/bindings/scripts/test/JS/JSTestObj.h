@@ -39,7 +39,7 @@ public:
         return ptr;
     }
 
-    static JSC::JSObject* createPrototype(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
     static void put(JSC::JSCell*, JSC::ExecState*, JSC::PropertyName, JSC::JSValue, JSC::PutPropertySlot&);
     static void destroy(JSC::JSCell*);
@@ -51,7 +51,7 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
     JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute1;
     JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute2;
     static void visitChildren(JSCell*, JSC::SlotVisitor&);
@@ -65,7 +65,7 @@ public:
     JSC::JSValue customMethod(JSC::ExecState*);
     JSC::JSValue customMethodWithArgs(JSC::ExecState*);
     static JSC::JSValue classMethod2(JSC::ExecState*);
-    TestObj* impl() const { return m_impl; }
+    TestObj& impl() const { return *m_impl; }
     void releaseImpl() { m_impl->deref(); m_impl = 0; }
 
     void releaseImplIfNotNull()
@@ -90,15 +90,15 @@ public:
     virtual void finalize(JSC::Handle<JSC::Unknown>, void* context);
 };
 
-inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld*, TestObj*)
+inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestObj*)
 {
     DEFINE_STATIC_LOCAL(JSTestObjOwner, jsTestObjOwner, ());
     return &jsTestObjOwner;
 }
 
-inline void* wrapperContext(DOMWrapperWorld* world, TestObj*)
+inline void* wrapperContext(DOMWrapperWorld& world, TestObj*)
 {
-    return world;
+    return &world;
 }
 
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestObj*);
@@ -107,7 +107,7 @@ TestObj* toTestObj(JSC::JSValue);
 class JSTestObjPrototype : public JSC::JSNonFinalObject {
 public:
     typedef JSC::JSNonFinalObject Base;
-    static JSC::JSObject* self(JSC::ExecState*, JSC::JSGlobalObject*);
+    static JSC::JSObject* self(JSC::VM&, JSC::JSGlobalObject*);
     static JSTestObjPrototype* create(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::Structure* structure)
     {
         JSTestObjPrototype* ptr = new (NotNull, JSC::allocateCell<JSTestObjPrototype>(vm.heap)) JSTestObjPrototype(vm, globalObject, structure);
@@ -131,14 +131,14 @@ protected:
 class JSTestObjConstructor : public DOMConstructorObject {
 private:
     JSTestObjConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::ExecState*, JSDOMGlobalObject*);
+    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
 
 public:
     typedef DOMConstructorObject Base;
-    static JSTestObjConstructor* create(JSC::ExecState* exec, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
+    static JSTestObjConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
     {
-        JSTestObjConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestObjConstructor>(*exec->heap())) JSTestObjConstructor(structure, globalObject);
-        ptr->finishCreation(exec, globalObject);
+        JSTestObjConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestObjConstructor>(vm.heap)) JSTestObjConstructor(structure, globalObject);
+        ptr->finishCreation(vm, globalObject);
         return ptr;
     }
 
@@ -231,6 +231,7 @@ JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionStrictFunctionWithAr
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVariadicStringMethod(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVariadicDoubleMethod(JSC::ExecState*);
 JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionVariadicNodeMethod(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionAny(JSC::ExecState*);
 // Attributes
 
 JSC::JSValue jsTestObjReadOnlyLongAttr(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
@@ -363,6 +364,9 @@ JSC::JSValue jsTestObjNullableLongSettableAttribute(JSC::ExecState*, JSC::JSValu
 void setJSTestObjNullableLongSettableAttribute(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
 JSC::JSValue jsTestObjNullableStringValue(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
 void setJSTestObjNullableStringValue(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
+JSC::JSValue jsTestObjAttribute(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
+JSC::JSValue jsTestObjAttributeWithReservedEnumType(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
+void setJSTestObjAttributeWithReservedEnumType(JSC::ExecState*, JSC::JSObject*, JSC::JSValue);
 JSC::JSValue jsTestObjConstructor(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
 // Constants
 
@@ -381,6 +385,7 @@ JSC::JSValue jsTestObjCONST_VALUE_12(JSC::ExecState*, JSC::JSValue, JSC::Propert
 JSC::JSValue jsTestObjCONST_VALUE_13(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
 JSC::JSValue jsTestObjCONST_VALUE_14(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
 JSC::JSValue jsTestObjCONST_JAVASCRIPT(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
+JSC::JSValue jsTestObjReadonly(JSC::ExecState*, JSC::JSValue, JSC::PropertyName);
 
 } // namespace WebCore
 

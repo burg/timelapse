@@ -160,7 +160,7 @@ void SVGTextPathElement::buildPendingResource()
         return;
 
     String id;
-    Element* target = SVGURIReference::targetElementFromIRIString(href(), &document(), &id);
+    Element* target = SVGURIReference::targetElementFromIRIString(href(), document(), &id);
     if (!target) {
         // Do not register as pending if we are already pending this resource.
         if (document().accessSVGExtensions()->isElementPendingResource(this, id))
@@ -177,17 +177,17 @@ void SVGTextPathElement::buildPendingResource()
     }
 }
 
-Node::InsertionNotificationRequest SVGTextPathElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGTextPathElement::insertedInto(ContainerNode& rootParent)
 {
     SVGTextContentElement::insertedInto(rootParent);
     buildPendingResource();
     return InsertionDone;
 }
 
-void SVGTextPathElement::removedFrom(ContainerNode* rootParent)
+void SVGTextPathElement::removedFrom(ContainerNode& rootParent)
 {
     SVGTextContentElement::removedFrom(rootParent);
-    if (rootParent->inDocument())
+    if (rootParent.inDocument())
         clearResourceReferences();
 }
 

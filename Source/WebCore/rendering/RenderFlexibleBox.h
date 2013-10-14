@@ -53,7 +53,7 @@ public:
     virtual int firstLineBoxBaseline() const OVERRIDE;
     virtual int inlineBlockBaseline(LineDirectionMode) const OVERRIDE;
 
-    virtual void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) OVERRIDE FINAL;
+    virtual void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) OVERRIDE;
 
     bool isHorizontalFlow() const;
 
@@ -61,7 +61,7 @@ protected:
     virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
     virtual void computePreferredLogicalWidths() OVERRIDE;
 
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
 private:
     enum FlexSign {

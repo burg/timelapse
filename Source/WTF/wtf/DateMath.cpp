@@ -113,11 +113,6 @@ namespace WTF {
 
 /* Constants */
 
-static const double minutesPerDay = 24.0 * 60.0;
-static const double secondsPerYear = 24.0 * 60.0 * 60.0 * 365.0;
-
-static const double usecPerSec = 1000000.0;
-
 static const double maxUnixTime = 2145859200.0; // 12/31/2037
 // ECMAScript asks not to support for a date of which total
 // millisecond value is larger than the following value.
@@ -184,12 +179,12 @@ double msToDays(double ms)
     return floor(ms / msPerDay);
 }
 
-static String twoDigitStringFromNumber(int number)
+static void appendTwoDigitNumber(StringBuilder& builder, int number)
 {
-    ASSERT(number >= 0 && number < 100);
-    if (number > 9)
-        return String::number(number);
-    return makeString("0", String::number(number));
+    ASSERT(number >= 0);
+    ASSERT(number < 100);
+    builder.append('0' + number / 10);
+    builder.append('0' + number % 10);
 }
 
 int msToYear(double ms)
@@ -1101,17 +1096,17 @@ String makeRFC2822DateString(unsigned dayOfWeek, unsigned day, unsigned month, u
     stringBuilder.appendNumber(year);
     stringBuilder.append(' ');
 
-    stringBuilder.append(twoDigitStringFromNumber(hours));
+    appendTwoDigitNumber(stringBuilder, hours);
     stringBuilder.append(':');
-    stringBuilder.append(twoDigitStringFromNumber(minutes));
+    appendTwoDigitNumber(stringBuilder, minutes);
     stringBuilder.append(':');
-    stringBuilder.append(twoDigitStringFromNumber(seconds));
+    appendTwoDigitNumber(stringBuilder, seconds);
     stringBuilder.append(' ');
 
     stringBuilder.append(utcOffset > 0 ? '+' : '-');
     int absoluteUTCOffset = abs(utcOffset);
-    stringBuilder.append(twoDigitStringFromNumber(absoluteUTCOffset / 60));
-    stringBuilder.append(twoDigitStringFromNumber(absoluteUTCOffset % 60));
+    appendTwoDigitNumber(stringBuilder, absoluteUTCOffset / 60);
+    appendTwoDigitNumber(stringBuilder, absoluteUTCOffset % 60);
 
     return stringBuilder.toString();
 }

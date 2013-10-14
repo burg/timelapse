@@ -34,7 +34,6 @@
 #import "AttributedString.h"
 #import "ColorSpaceData.h"
 #import "DataReference.h"
-#import "DrawingAreaProxyImpl.h"
 #import "EditorState.h"
 #import "FindIndicator.h"
 #import "FindIndicatorWindow.h"
@@ -147,7 +146,6 @@ struct WKViewInterpretKeyEventsParameters {
 - (void)_postFakeMouseMovedEventForFlagsChangedEvent:(NSEvent *)flagsChangedEvent;
 - (void)_setDrawingAreaSize:(NSSize)size;
 - (void)_setPluginComplexTextInputState:(PluginComplexTextInputState)pluginComplexTextInputState;
-- (BOOL)_shouldUseTiledDrawingArea;
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 - (void)_setIsWindowOccluded:(BOOL)isWindowOccluded;
@@ -156,7 +154,7 @@ struct WKViewInterpretKeyEventsParameters {
 
 @interface WKViewData : NSObject {
 @public
-    OwnPtr<PageClientImpl> _pageClient;
+    std::unique_ptr<PageClientImpl> _pageClient;
     RefPtr<WebPageProxy> _page;
     
     // Cache of the associated WKBrowsingContextController.
@@ -174,7 +172,8 @@ struct WKViewInterpretKeyEventsParameters {
     // For asynchronous validation.
     ValidationMap _validationMap;
 
-    OwnPtr<FindIndicatorWindow> _findIndicatorWindow;
+    std::unique_ptr<FindIndicatorWindow> _findIndicatorWindow;
+
     // We keep here the event when resending it to
     // the application to distinguish the case of a new event from one 
     // that has been already sent to WebCore.
@@ -195,10 +194,7 @@ struct WKViewInterpretKeyEventsParameters {
     BOOL _ignoringMouseDraggedEvents;
 
     id _flagsChangedEventMonitor;
-#if ENABLE(GESTURE_EVENTS)
-    id _endGestureMonitor;
-#endif
-    
+
 #if ENABLE(FULLSCREEN_API)
     RetainPtr<WKFullScreenWindowController> _fullScreenWindowController;
 #endif
@@ -1215,41 +1211,6 @@ NATIVE_EVENT_HANDLER(scrollWheel, Wheel)
     return result;
 }
 
-#if ENABLE(GESTURE_EVENTS)
-
-static const short kIOHIDEventTypeScroll = 6;
-
-- (void)shortCircuitedEndGestureWithEvent:(NSEvent *)event
-{
-    if ([event subtype] != kIOHIDEventTypeScroll)
-        return;
-
-    WebGestureEvent webEvent = WebEventFactory::createWebGestureEvent(event, self);
-    _data->_page->handleGestureEvent(webEvent);
-
-    if (_data->_endGestureMonitor) {
-        [NSEvent removeMonitor:_data->_endGestureMonitor];
-        _data->_endGestureMonitor = nil;
-    }
-}
-
-- (void)beginGestureWithEvent:(NSEvent *)event
-{
-    if ([event subtype] != kIOHIDEventTypeScroll)
-        return;
-
-    WebGestureEvent webEvent = WebEventFactory::createWebGestureEvent(event, self);
-    _data->_page->handleGestureEvent(webEvent);
-
-    if (!_data->_endGestureMonitor) {
-        _data->_endGestureMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskEndGesture handler:^(NSEvent *blockEvent) {
-            [self shortCircuitedEndGestureWithEvent:blockEvent];
-            return blockEvent;
-        }];
-    }
-}
-#endif
-
 - (void)doCommandBySelector:(SEL)selector
 {
     LOG(TextInput, "doCommandBySelector:\"%s\"", sel_getName(selector));
@@ -1700,9 +1661,12 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
 
     NSWindow *window = [self window];
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (window)
         thePoint = [window convertScreenToBase:thePoint];
-    thePoint = [self convertPoint:thePoint fromView:nil];  // the point is relative to the main frame 
+#pragma clang diagnostic pop
+    thePoint = [self convertPoint:thePoint fromView:nil];  // the point is relative to the main frame
     
     uint64_t result = _data->_page->characterIndexForPoint(IntPoint(thePoint));
     LOG(TextInput, "characterIndexForPoint:(%f, %f) -> %u", thePoint.x, thePoint.y, result);
@@ -1723,8 +1687,11 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
     resultRect = [self convertRect:resultRect toView:nil];
     
     NSWindow *window = [self window];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (window)
         resultRect.origin = [window convertBaseToScreen:resultRect.origin];
+#pragma clang diagnostic pop
 
     if (actualRange) {
         // FIXME: Update actualRange to match the range of first rect.
@@ -1768,7 +1735,7 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
 
     _data->_page->resetDragOperation();
-    _data->_page->dragEntered(&dragData, [[draggingInfo draggingPasteboard] name]);
+    _data->_page->dragEntered(dragData, [[draggingInfo draggingPasteboard] name]);
     return NSDragOperationCopy;
 }
 
@@ -1777,7 +1744,7 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
     IntPoint client([self convertPoint:[draggingInfo draggingLocation] fromView:nil]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
-    _data->_page->dragUpdated(&dragData, [[draggingInfo draggingPasteboard] name]);
+    _data->_page->dragUpdated(dragData, [[draggingInfo draggingPasteboard] name]);
     
     WebCore::DragSession dragSession = _data->_page->dragSession();
     NSInteger numberOfValidItemsForDrop = dragSession.numberOfItemsToBeAccepted;
@@ -1798,7 +1765,7 @@ static void extractUnderlines(NSAttributedString *string, Vector<CompositionUnde
     IntPoint client([self convertPoint:[draggingInfo draggingLocation] fromView:nil]);
     IntPoint global(globalPoint([draggingInfo draggingLocation], [self window]));
     DragData dragData(draggingInfo, client, global, static_cast<DragOperation>([draggingInfo draggingSourceOperationMask]), [self applicationFlags:draggingInfo]);
-    _data->_page->dragExited(&dragData, [[draggingInfo draggingPasteboard] name]);
+    _data->_page->dragExited(dragData, [[draggingInfo draggingPasteboard] name]);
     _data->_page->resetDragOperation();
 }
 
@@ -1862,7 +1829,7 @@ static void createSandboxExtensionsForFileUpload(NSPasteboard *pasteboard, Sandb
     SandboxExtension::HandleArray sandboxExtensionForUpload;
     createSandboxExtensionsForFileUpload([draggingInfo draggingPasteboard], sandboxExtensionForUpload);
 
-    _data->_page->performDrag(&dragData, [[draggingInfo draggingPasteboard] name], sandboxExtensionHandle, sandboxExtensionForUpload);
+    _data->_page->performDrag(dragData, [[draggingInfo draggingPasteboard] name], sandboxExtensionHandle, sandboxExtensionForUpload);
 
     return YES;
 }
@@ -2012,12 +1979,6 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
         [NSEvent removeMonitor:_data->_flagsChangedEventMonitor];
         _data->_flagsChangedEventMonitor = nil;
 
-#if ENABLE(GESTURE_EVENTS)
-        if (_data->_endGestureMonitor) {
-            [NSEvent removeMonitor:_data->_endGestureMonitor];
-            _data->_endGestureMonitor = nil;
-        }
-#endif
         WKHideWordDefinitionWindow();
     }
 
@@ -2117,60 +2078,10 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 }
 #endif
 
-static void drawPageBackground(CGContextRef context, WebPageProxy* page, const IntRect& rect)
-{
-    if (!page->drawsBackground())
-        return;
-
-    CGContextSaveGState(context);
-    CGContextSetBlendMode(context, kCGBlendModeCopy);
-
-    CGColorRef backgroundColor;
-    if (page->drawsTransparentBackground())
-        backgroundColor = CGColorGetConstantColor(kCGColorClear);
-    else
-        backgroundColor = CGColorGetConstantColor(kCGColorWhite);
-
-    CGContextSetFillColorWithColor(context, backgroundColor);
-    CGContextFillRect(context, rect);
-
-    CGContextRestoreGState(context);
-}
-
 - (void)drawRect:(NSRect)rect
 {
     LOG(View, "drawRect: x:%g, y:%g, width:%g, height:%g", rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
     _data->_page->endPrinting();
-
-    if ([self _shouldUseTiledDrawingArea]) {
-        // Nothing to do here.
-        return;
-    }
-
-    CGContextRef context = static_cast<CGContextRef>([[NSGraphicsContext currentContext] graphicsPort]);
-
-    if (DrawingAreaProxyImpl* drawingArea = static_cast<DrawingAreaProxyImpl*>(_data->_page->drawingArea())) {
-        const NSRect *rectsBeingDrawn;
-        NSInteger numRectsBeingDrawn;
-        [self getRectsBeingDrawn:&rectsBeingDrawn count:&numRectsBeingDrawn];
-        for (NSInteger i = 0; i < numRectsBeingDrawn; ++i) {
-            Region unpaintedRegion;
-            drawingArea->paint(context, enclosingIntRect(rectsBeingDrawn[i]), unpaintedRegion);
-
-            // If the window doesn't have a valid backing store, we need to fill the parts of the page that we
-            // didn't paint with the background color (white or clear), to avoid garbage in those areas.
-            if (!_data->_windowHasValidBackingStore || !drawingArea->hasReceivedFirstUpdate()) {
-                Vector<IntRect> unpaintedRects = unpaintedRegion.rects();
-                for (size_t i = 0; i < unpaintedRects.size(); ++i)
-                    drawPageBackground(context, _data->_page.get(), unpaintedRects[i]);
-
-                _data->_windowHasValidBackingStore = YES;
-            }
-        }
-    } else 
-        drawPageBackground(context, _data->_page.get(), enclosingIntRect(rect));
-
-    _data->_page->didDraw();
 }
 
 - (BOOL)isOpaque
@@ -2302,9 +2213,12 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
 
 - (void)_postFakeMouseMovedEventForFlagsChangedEvent:(NSEvent *)flagsChangedEvent
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     NSEvent *fakeEvent = [NSEvent mouseEventWithType:NSMouseMoved location:[[flagsChangedEvent window] convertScreenToBase:[NSEvent mouseLocation]]
         modifierFlags:[flagsChangedEvent modifierFlags] timestamp:[flagsChangedEvent timestamp] windowNumber:[flagsChangedEvent windowNumber]
         context:[flagsChangedEvent context] eventNumber:0 clickCount:0 pressure:0];
+#pragma clang diagnostic pop
     NativeWebMouseEvent webEvent(fakeEvent, self);
     _data->_page->handleMouseEvent(webEvent);
 }
@@ -2337,11 +2251,6 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
     _data->_resizeScrollOffset = NSZeroSize;
 }
 
-- (BOOL)_shouldUseTiledDrawingArea
-{
-    return NO;
-}
-
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 - (void)quickLookWithEvent:(NSEvent *)event
 {
@@ -2365,18 +2274,12 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
 
 @implementation WKView (Internal)
 
-- (OwnPtr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy
+- (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy
 {
-#if ENABLE(THREADED_SCROLLING)
-    if ([self _shouldUseTiledDrawingArea]) {
-        if (getenv("WK_USE_REMOTE_LAYER_TREE_DRAWING_AREA"))
-            return RemoteLayerTreeDrawingAreaProxy::create(_data->_page.get());
+    if (getenv("WK_USE_REMOTE_LAYER_TREE_DRAWING_AREA"))
+        return std::make_unique<RemoteLayerTreeDrawingAreaProxy>(_data->_page.get());
 
-        return createOwned<TiledCoreAnimationDrawingAreaProxy>(_data->_page.get());
-    }
-#endif
-
-    return createOwned<DrawingAreaProxyImpl>(_data->_page.get());
+    return std::make_unique<TiledCoreAnimationDrawingAreaProxy>(_data->_page.get());
 }
 
 - (BOOL)_isFocused
@@ -2659,7 +2562,7 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
     }
 
     if (!_data->_findIndicatorWindow)
-        _data->_findIndicatorWindow = createOwned<FindIndicatorWindow>(self);
+        _data->_findIndicatorWindow = std::make_unique<FindIndicatorWindow>(self);
 
     _data->_findIndicatorWindow->setFindIndicator(findIndicator, fadeOut, animate);
 }
@@ -2757,6 +2660,8 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
     // The call below could release this WKView.
     RetainPtr<WKView> protector(self);
     
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [self dragImage:image
                  at:clientPoint
              offset:NSZeroSize
@@ -2764,6 +2669,7 @@ static void drawPageBackground(CGContextRef context, WebPageProxy* page, const I
          pasteboard:[NSPasteboard pasteboardWithName:NSDragPboard]
              source:self
           slideBack:YES];
+#pragma clang diagnostic pop
 }
 
 static bool matchesExtensionOrEquivalent(NSString *filename, NSString *extension)
@@ -3065,7 +2971,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 
     _data = [[WKViewData alloc] init];
 
-    _data->_pageClient = PageClientImpl::create(self);
+    _data->_pageClient = std::make_unique<PageClientImpl>(self);
     _data->_page = toImpl(contextRef)->createWebPage(_data->_pageClient.get(), toImpl(pageGroupRef), toImpl(relatedPage));
     _data->_page->setIntrinsicDeviceScaleFactor([self _intrinsicDeviceScaleFactor]);
     _data->_page->initializeWebPage();
@@ -3090,12 +2996,10 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     
     [self _registerDraggedTypes];
 
-    if ([self _shouldUseTiledDrawingArea]) {
-        self.wantsLayer = YES;
+    self.wantsLayer = YES;
 
-        // Explicitly set the layer contents placement so AppKit will make sure that our layer has masksToBounds set to YES.
-        self.layerContentsPlacement = NSViewLayerContentsPlacementTopLeft;
-    }
+    // Explicitly set the layer contents placement so AppKit will make sure that our layer has masksToBounds set to YES.
+    self.layerContentsPlacement = NSViewLayerContentsPlacementTopLeft;
 
     WebContext::statistics().wkViewCount++;
 
@@ -3108,7 +3012,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 - (BOOL)wantsUpdateLayer
 {
-    return [self _shouldUseTiledDrawingArea];
+    return YES;
 }
 
 - (void)updateLayer
@@ -3188,7 +3092,10 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 - (void)performDictionaryLookupAtCurrentMouseLocation
 {
     NSPoint thePoint = [NSEvent mouseLocation];
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     thePoint = [[self window] convertScreenToBase:thePoint];
+#pragma clang diagnostic pop
     thePoint = [self convertPoint:thePoint fromView:nil];
 
     _data->_page->performDictionaryLookupAtLocation(FloatPoint(thePoint.x, thePoint.y));

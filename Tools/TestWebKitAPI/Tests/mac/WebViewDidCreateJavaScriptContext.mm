@@ -30,7 +30,8 @@
 #import <WebKit/WebFrameLoadDelegatePrivate.h>
 #import <wtf/RetainPtr.h>
 
-#if JSC_OBJC_API_ENABLED
+// FIXME <rdar://problem/15139479> Reenable the JSC Objective-C API tests on Mountain Lion once the bots are running Xcode 5
+#if JSC_OBJC_API_ENABLED && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 
 @class MyConsole;
 
@@ -248,6 +249,7 @@ TEST(WebKit1, DidCreateJavaScriptContextBackForwardCacheTest)
     @autoreleasepool {
         RetainPtr<WebView> webView = adoptNS([[WebView alloc] initWithFrame:NSMakeRect(0, 0, 120, 200) frameName:nil groupName:nil]);
         RetainPtr<DidCreateJavaScriptContextFrameLoadDelegate> frameLoadDelegate = adoptNS([[DidCreateJavaScriptContextFrameLoadDelegate alloc] init]);
+        [[webView.get() preferences] setCacheModel:WebCacheModelDocumentBrowser];
 
         webView.get().frameLoadDelegate = frameLoadDelegate.get();
         WebFrame *mainFrame = webView.get().mainFrame;

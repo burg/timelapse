@@ -126,8 +126,8 @@ public:
     void pasteAsPlainText();
     void performDelete();
 
-    void copyURL(const KURL&, const String& title);
-    void copyURL(const KURL&, const String& title, Pasteboard&);
+    void copyURL(const URL&, const String& title);
+    void copyURL(const URL&, const String& title, Pasteboard&);
     void copyImage(const HitTestResult&);
 
     String readPlainTextFromPasteboard(Pasteboard&);
@@ -325,8 +325,6 @@ public:
     String selectedText() const;
     String selectedTextForClipboard() const;
     bool findString(const String&, FindOptions);
-    // FIXME: Switch callers over to the FindOptions version and retire this one.
-    bool findString(const String&, bool forward, bool caseFlag, bool wrapFlag, bool startInSelection);
 
     PassRefPtr<Range> rangeOfString(const String&, Range*, FindOptions);
     PassRefPtr<Range> findStringAndScrollToVisible(const String&, Range*, FindOptions);
@@ -413,7 +411,7 @@ public:
 
 #if PLATFORM(MAC) || PLATFORM(EFL)
     void writeSelectionToPasteboard(Pasteboard&);
-    void writeImageToPasteboard(Pasteboard&, Element& imageElement, const KURL&, const String& title);
+    void writeImageToPasteboard(Pasteboard&, Element& imageElement, const URL&, const String& title);
 #endif
 
 private:

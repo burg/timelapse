@@ -47,11 +47,6 @@ typedef id DragDataRef;
 typedef void* DragDataRef;
 #endif
 
-#elif PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QMimeData;
-QT_END_NAMESPACE
-typedef const QMimeData* DragDataRef;
 #elif PLATFORM(WIN)
 typedef struct IDataObject* DragDataRef;
 #include <wtf/text/WTFString.h>
@@ -69,7 +64,7 @@ namespace WebCore {
 
 class Frame;
 class DocumentFragment;
-class KURL;
+class URL;
 class Range;
 
 enum DragApplicationFlags {
@@ -109,8 +104,7 @@ public:
     String asPlainText(Frame*) const;
     void asFilenames(Vector<String>&) const;
     Color asColor() const;
-    PassRefPtr<DocumentFragment> asFragment(Frame*, PassRefPtr<Range> context,
-                                            bool allowPlainText, bool& chosePlainText) const;
+    PassRefPtr<DocumentFragment> asFragment(Frame*, Range& context, bool allowPlainText, bool& chosePlainText) const;
     bool canSmartReplace() const;
     bool containsColor() const;
     bool containsFiles() const;
@@ -120,11 +114,7 @@ public:
     const String& pasteboardName() const { return m_pasteboardName; }
 #endif
 
-#if ENABLE(FILE_SYSTEM)
-    String droppedFileSystemId() const;
-#endif
-
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(GTK)
     // This constructor should used only by WebKit2 IPC because DragData
     // is initialized by the decoder and not in the constructor.
     DragData() { }

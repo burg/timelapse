@@ -42,15 +42,13 @@ class FindIndicatorWindow;
 
 class PageClientImpl FINAL : public PageClient {
 public:
-    static PassOwnPtr<PageClientImpl> create(WKView*);
+    explicit PageClientImpl(WKView*);
     virtual ~PageClientImpl();
     
     void viewWillMoveToAnotherWindow();
 
 private:
-    explicit PageClientImpl(WKView*);
-
-    virtual OwnPtr<DrawingAreaProxy> createDrawingAreaProxy();
+    virtual std::unique_ptr<DrawingAreaProxy> createDrawingAreaProxy();
     virtual void setViewNeedsDisplay(const WebCore::IntRect&);
     virtual void displayView();
     virtual bool canScrollView();
@@ -92,9 +90,6 @@ private:
     virtual WebCore::IntPoint screenToWindow(const WebCore::IntPoint&);
     virtual WebCore::IntRect windowToScreen(const WebCore::IntRect&);
 
-#if ENABLE(GESTURE_EVENTS)
-    virtual void doneWithGestureEvent(const WebGestureEvent&, bool wasEventHandled);
-#endif
     virtual void doneWithKeyEvent(const NativeWebKeyboardEvent&, bool wasEventHandled);
 
     virtual PassRefPtr<WebPopupMenuProxy> createPopupMenuProxy(WebPageProxy*);

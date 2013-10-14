@@ -35,7 +35,7 @@ public:
     explicit RenderTextControlSingleLine(HTMLInputElement&);
     virtual ~RenderTextControlSingleLine();
     // FIXME: Move create*Style() to their classes.
-    virtual PassRefPtr<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const;
+    virtual PassRefPtr<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const OVERRIDE;
     PassRefPtr<RenderStyle> createInnerBlockStyle(const RenderStyle* startStyle) const;
 
     void capsLockStateMayHaveChanged();
@@ -45,7 +45,6 @@ protected:
     virtual LayoutUnit computeLogicalHeightLimit() const;
     HTMLElement* containerElement() const;
     HTMLElement* innerBlockElement() const;
-    virtual void updateFromElement() OVERRIDE;
     HTMLInputElement& inputElement() const;
 
 private:
@@ -69,8 +68,8 @@ private:
     virtual int scrollHeight() const OVERRIDE;
     virtual void setScrollLeft(int) OVERRIDE;
     virtual void setScrollTop(int) OVERRIDE;
-    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0) OVERRIDE;
-    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0) OVERRIDE;
+    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0) OVERRIDE FINAL;
+    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0) OVERRIDE FINAL;
 
     int textBlockWidth() const;
     virtual float getAvgCharWidth(AtomicString family) OVERRIDE;
@@ -115,7 +114,7 @@ public:
     RenderTextControlInnerBlock(Element* element) : RenderBlockFlow(element) { }
 
 private:
-    virtual bool hasLineIfEmpty() const { return true; }
+    virtual bool hasLineIfEmpty() const OVERRIDE { return true; }
 };
 
 }

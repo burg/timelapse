@@ -303,6 +303,7 @@ z-index
 -webkit-flex-wrap
 -webkit-justify-content
 -webkit-font-size-delta
+-webkit-grid-area
 -webkit-grid-auto-columns
 -webkit-grid-auto-rows
 -webkit-grid-column-end
@@ -313,6 +314,7 @@ z-index
 -webkit-grid-row-start
 -webkit-grid-column
 -webkit-grid-row
+-webkit-grid-template
 -webkit-grid-auto-flow
 -webkit-highlight [Inherited]
 -webkit-hyphenate-character [Inherited]
@@ -431,6 +433,7 @@ z-index
 -webkit-shape-outside
 -webkit-shape-margin
 -webkit-shape-padding
+-webkit-shape-image-threshold
 #endif
 #if defined(ENABLE_CSS_EXCLUSIONS) && ENABLE_CSS_EXCLUSIONS
 -webkit-wrap-flow
@@ -453,4 +456,7 @@ user-zoom
 #endif
 #if defined(ENABLE_ACCELERATED_OVERFLOW_SCROLLING) && ENABLE_ACCELERATED_OVERFLOW_SCROLLING
 -webkit-overflow-scrolling [Inherited]
+#endif
+#if defined(WTF_PLATFORM_IOS) && WTF_PLATFORM_IOS
+-webkit-touch-callout [Inherited]
 #endif

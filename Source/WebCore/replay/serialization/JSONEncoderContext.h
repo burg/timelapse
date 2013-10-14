@@ -47,7 +47,7 @@ namespace WebCore {
 
     class JSONCoder {
     public:
-        static PassRefPtr<TypeBuilder::Recordings::ReplayRecordingNew> serialize(PassRefPtr<ReplayRecording>);
+        static PassRefPtr<TypeBuilder::Recordings::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
         static PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index=0);
         static PassOwnPtr<EncoderContext> createMap();
         static PassOwnPtr<EncoderContext> createList();

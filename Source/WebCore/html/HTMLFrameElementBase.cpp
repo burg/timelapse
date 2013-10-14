@@ -33,11 +33,10 @@
 #include "FrameView.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "KURL.h"
+#include "URL.h"
 #include "Page.h"
 #include "RenderWidget.h"
 #include "ScriptController.h"
-#include "ScriptEventListener.h"
 #include "Settings.h"
 #include "SubframeLoader.h"
 
@@ -60,7 +59,7 @@ bool HTMLFrameElementBase::isURLAllowed() const
     if (m_URL.isEmpty())
         return true;
 
-    const KURL& completeURL = document().completeURL(m_URL);
+    const URL& completeURL = document().completeURL(m_URL);
 
     if (protocolIsJavaScript(completeURL)) { 
         Document* contentDoc = this->contentDocument();
@@ -127,10 +126,10 @@ void HTMLFrameElementBase::parseAttribute(const QualifiedName& name, const Atomi
             contentFrame()->setInViewSourceMode(viewSourceMode());
 #endif
     } else if (name == onbeforeloadAttr)
-        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
+        setAttributeEventListener(eventNames().beforeloadEvent, name, value);
     else if (name == onbeforeunloadAttr) {
         // FIXME: should <frame> elements have beforeunload handlers?
-        setAttributeEventListener(eventNames().beforeunloadEvent, createAttributeEventListener(this, name, value));
+        setAttributeEventListener(eventNames().beforeunloadEvent, name, value);
     } else
         HTMLFrameOwnerElement::parseAttribute(name, value);
 }
@@ -143,10 +142,10 @@ void HTMLFrameElementBase::setNameAndOpenURL()
     openURL();
 }
 
-Node::InsertionNotificationRequest HTMLFrameElementBase::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLFrameElementBase::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLFrameOwnerElement::insertedInto(insertionPoint);
-    if (insertionPoint->inDocument())
+    if (insertionPoint.inDocument())
         return InsertionShouldCallDidNotifySubtreeInsertions;
     return InsertionDone;
 }
@@ -160,7 +159,7 @@ void HTMLFrameElementBase::didNotifySubtreeInsertions(ContainerNode*)
     if (!document().frame())
         return;
 
-    if (!SubframeLoadingDisabler::canLoadFrame(this))
+    if (!SubframeLoadingDisabler::canLoadFrame(*this))
         return;
 
     // JavaScript in src=javascript: and beforeonload can access the renderer
@@ -182,10 +181,10 @@ void HTMLFrameElementBase::didAttachRenderers()
     }
 }
 
-KURL HTMLFrameElementBase::location() const
+URL HTMLFrameElementBase::location() const
 {
     if (fastHasAttribute(srcdocAttr))
-        return KURL(ParsedURLString, "about:srcdoc");
+        return URL(ParsedURLString, "about:srcdoc");
     return document().completeURL(getAttribute(srcAttr));
 }
 

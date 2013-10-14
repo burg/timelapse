@@ -36,7 +36,6 @@
 #include "HTMLParserIdioms.h"
 #include "Page.h"
 #include "RenderImage.h"
-#include "ScriptEventListener.h"
 
 using namespace std;
 
@@ -124,10 +123,25 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicStr
     } else if (name == srcAttr || name == srcsetAttr) {
         m_bestFitImageURL = bestFitSourceForImageAttributes(document().deviceScaleFactor(), fastGetAttribute(srcAttr), fastGetAttribute(srcsetAttr));
         m_imageLoader.updateFromElementIgnoringPreviousError();
-    } else if (name == usemapAttr)
+    } else if (name == usemapAttr) {
         setIsLink(!value.isNull() && !shouldProhibitLinks(this));
-    else if (name == onbeforeloadAttr)
-        setAttributeEventListener(eventNames().beforeloadEvent, createAttributeEventListener(this, name, value));
+
+        if (inDocument() && !m_lowercasedUsemap.isNull())
+            document().removeImageElementByLowercasedUsemap(*m_lowercasedUsemap.impl(), *this);
+
+        // The HTMLImageElement's useMap() value includes the '#' symbol at the beginning, which has to be stripped off.
+        // FIXME: We should check that the first character is '#'.
+        // FIXME: HTML5 specification says we should strip any leading string before '#'.
+        // FIXME: HTML5 specification says we should ignore usemap attributes without #.
+        if (value.length() > 1)
+            m_lowercasedUsemap = value.string().substring(1).lower();
+        else
+            m_lowercasedUsemap = nullAtom;
+
+        if (inDocument() && !m_lowercasedUsemap.isNull())
+            document().addImageElementByLowercasedUsemap(*m_lowercasedUsemap.impl(), *this);
+    } else if (name == onbeforeloadAttr)
+        setAttributeEventListener(eventNames().beforeloadEvent, name, value);
     else if (name == compositeAttr) {
         // FIXME: images don't support blend modes in their compositing attribute.
         BlendMode blendOp = BlendModeNormal;
@@ -141,9 +155,9 @@ void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicStr
                 const AtomicString& id = getIdAttribute();
                 if (!id.isEmpty() && id != getNameAttribute()) {
                     if (willHaveName)
-                        document->addDocumentNamedItem(id, this);
+                        document->addDocumentNamedItem(*id.impl(), *this);
                     else
-                        document->removeDocumentNamedItem(id, this);
+                        document->removeDocumentNamedItem(*id.impl(), *this);
                 }
             }
         }
@@ -199,7 +213,7 @@ void HTMLImageElement::didAttachRenderers()
         renderImage->setImageSizeForAltText();
 }
 
-Node::InsertionNotificationRequest HTMLImageElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLImageElement::insertedInto(ContainerNode& insertionPoint)
 {
     if (!m_form) { // m_form can be non-null if it was set in constructor.
         m_form = HTMLFormElement::findClosestFormAncestor(*this);
@@ -207,18 +221,25 @@ Node::InsertionNotificationRequest HTMLImageElement::insertedInto(ContainerNode*
             m_form->registerImgElement(this);
     }
 
+    if (insertionPoint.inDocument() && !m_lowercasedUsemap.isNull())
+        document().addImageElementByLowercasedUsemap(*m_lowercasedUsemap.impl(), *this);
+
     // If we have been inserted from a renderer-less document,
     // our loader may have not fetched the image, so do it now.
-    if (insertionPoint->inDocument() && !m_imageLoader.image())
+    if (insertionPoint.inDocument() && !m_imageLoader.image())
         m_imageLoader.updateFromElement();
 
     return HTMLElement::insertedInto(insertionPoint);
 }
 
-void HTMLImageElement::removedFrom(ContainerNode* insertionPoint)
+void HTMLImageElement::removedFrom(ContainerNode& insertionPoint)
 {
     if (m_form)
         m_form->removeImgElement(this);
+
+    if (insertionPoint.inDocument() && !m_lowercasedUsemap.isNull())
+        document().removeImageElementByLowercasedUsemap(*m_lowercasedUsemap.impl(), *this);
+
     m_form = 0;
     HTMLElement::removedFrom(insertionPoint);
 }
@@ -294,6 +315,12 @@ bool HTMLImageElement::isURLAttribute(const Attribute& attribute) const
         || HTMLElement::isURLAttribute(attribute);
 }
 
+bool HTMLImageElement::matchesLowercasedUsemap(const AtomicStringImpl& name) const
+{
+    ASSERT(const_cast<AtomicStringImpl&>(name).lower() == &name);
+    return m_lowercasedUsemap.impl() == &name;
+}
+
 const AtomicString& HTMLImageElement::alt() const
 {
     return getAttribute(altAttr);
@@ -307,10 +334,10 @@ bool HTMLImageElement::draggable() const
 
 void HTMLImageElement::setHeight(int value)
 {
-    setAttribute(heightAttr, String::number(value));
+    setIntegralAttribute(heightAttr, value);
 }
 
-KURL HTMLImageElement::src() const
+URL HTMLImageElement::src() const
 {
     return document().completeURL(getAttribute(srcAttr));
 }
@@ -322,29 +349,27 @@ void HTMLImageElement::setSrc(const String& value)
 
 void HTMLImageElement::setWidth(int value)
 {
-    setAttribute(widthAttr, String::number(value));
+    setIntegralAttribute(widthAttr, value);
 }
 
 int HTMLImageElement::x() const
 {
-    RenderObject* r = renderer();
-    if (!r)
+    auto renderer = this->renderer();
+    if (!renderer)
         return 0;
 
     // FIXME: This doesn't work correctly with transforms.
-    FloatPoint absPos = r->localToAbsolute();
-    return absPos.x();
+    return renderer->localToAbsolute().x();
 }
 
 int HTMLImageElement::y() const
 {
-    RenderObject* r = renderer();
-    if (!r)
+    auto renderer = this->renderer();
+    if (!renderer)
         return 0;
 
     // FIXME: This doesn't work correctly with transforms.
-    FloatPoint absPos = r->localToAbsolute();
-    return absPos.y();
+    return renderer->localToAbsolute().y();
 }
 
 bool HTMLImageElement::complete() const
@@ -352,7 +377,7 @@ bool HTMLImageElement::complete() const
     return m_imageLoader.imageComplete();
 }
 
-void HTMLImageElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void HTMLImageElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     HTMLElement::addSubresourceAttributeURLs(urls);
 
@@ -380,5 +405,17 @@ bool HTMLImageElement::isServerMap() const
 
     return document().completeURL(stripLeadingAndTrailingHTMLSpaces(usemap)).isEmpty();
 }
+
+#if PLATFORM(IOS)
+// FIXME: This is a workaround for <rdar://problem/7725158>. We should find a better place for the touchCalloutEnabled() logic.
+bool HTMLImageElement::willRespondToMouseClickEvents()
+{
+    auto renderer = this->renderer();
+    RenderStyle* style = renderer ? renderer->style() : nullptr;
+    if (!style || style->touchCalloutEnabled())
+        return true;
+    return HTMLElement::willRespondToMouseClickEvents();
+}
+#endif
 
 }

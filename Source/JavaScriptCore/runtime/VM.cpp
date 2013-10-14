@@ -38,6 +38,7 @@
 #include "DFGWorklist.h"
 #include "DebuggerActivation.h"
 #include "ErrorInstance.h"
+#include "FTLThunks.h"
 #include "FunctionConstructor.h"
 #include "GCActivityCallback.h"
 #include "GetterSetter.h"
@@ -245,7 +246,7 @@ VM::VM(VMType vmType, HeapType heapType)
     propertyTableStructure.set(*this, PropertyTable::createStructure(*this, 0, jsNull()));
     mapDataStructure.set(*this, MapData::createStructure(*this, 0, jsNull()));
     weakMapDataStructure.set(*this, WeakMapData::createStructure(*this, 0, jsNull()));
-
+    iterationTerminator.set(*this, JSFinalObject::create(*this, JSFinalObject::createStructure(*this, 0, jsNull(), 1)));
     smallStrings.initializeCommonStrings(*this);
 
     wtfThreadData().setCurrentIdentifierTable(existingEntryIdentifierTable);
@@ -254,6 +255,10 @@ VM::VM(VMType vmType, HeapType heapType)
     jitStubs = adoptPtr(new JITThunks());
     performPlatformSpecificJITAssertions(this);
 #endif
+
+#if ENABLE(FTL_JIT)
+    ftlThunks = std::make_unique<FTL::Thunks>();
+#endif // ENABLE(FTL_JIT)
     
     interpreter->initialize(this->canUseJIT());
     
@@ -420,6 +425,8 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return logThunkGenerator;
     case IMulIntrinsic:
         return imulThunkGenerator;
+    case ArrayIteratorNextIntrinsic:
+        return arrayIteratorNextThunkGenerator;
     default:
         return 0;
     }

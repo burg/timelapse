@@ -54,22 +54,22 @@ namespace WebCore {
     class WorkerNavigator;
     class WorkerThread;
 
-    class WorkerGlobalScope : public RefCounted<WorkerGlobalScope>, public ScriptExecutionContext, public EventTarget {
+    class WorkerGlobalScope : public RefCounted<WorkerGlobalScope>, public ScriptExecutionContext, public EventTargetWithInlineData {
     public:
         virtual ~WorkerGlobalScope();
 
         virtual bool isWorkerGlobalScope() const OVERRIDE { return true; }
 
-        virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
+        virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE FINAL { return const_cast<WorkerGlobalScope*>(this); }
 
         virtual bool isSharedWorkerGlobalScope() const { return false; }
         virtual bool isDedicatedWorkerGlobalScope() const { return false; }
 
-        virtual const KURL& url() const OVERRIDE FINAL { return m_url; }
-        virtual KURL completeURL(const String&) const OVERRIDE FINAL;
+        virtual const URL& url() const OVERRIDE FINAL { return m_url; }
+        virtual URL completeURL(const String&) const OVERRIDE FINAL;
 
         const GroupSettings* groupSettings() { return m_groupSettings.get(); }
-        virtual String userAgent(const KURL&) const;
+        virtual String userAgent(const URL&) const OVERRIDE;
 
         virtual void disableEval(const String& errorMessage) OVERRIDE;
 
@@ -139,7 +139,7 @@ namespace WebCore {
         virtual SecurityOrigin* topOrigin() const OVERRIDE { return m_topOrigin.get(); }
 
     protected:
-        WorkerGlobalScope(const KURL&, const String& userAgent, PassOwnPtr<GroupSettings>, WorkerThread*, PassRefPtr<SecurityOrigin> topOrigin);
+        WorkerGlobalScope(const URL&, const String& userAgent, std::unique_ptr<GroupSettings>, WorkerThread*, PassRefPtr<SecurityOrigin> topOrigin);
         void applyContentSecurityPolicyFromString(const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
 
         virtual void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, PassRefPtr<ScriptCallStack>) OVERRIDE;
@@ -149,10 +149,8 @@ namespace WebCore {
         virtual void refScriptExecutionContext() OVERRIDE { ref(); }
         virtual void derefScriptExecutionContext() OVERRIDE { deref(); }
 
-        virtual void refEventTarget() OVERRIDE { ref(); }
-        virtual void derefEventTarget() OVERRIDE { deref(); }
-        virtual EventTargetData* eventTargetData() OVERRIDE;
-        virtual EventTargetData& ensureEventTargetData() OVERRIDE;
+        virtual void refEventTarget() OVERRIDE FINAL { ref(); }
+        virtual void derefEventTarget() OVERRIDE FINAL { deref(); }
 
         virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, PassRefPtr<ScriptCallStack>, JSC::ExecState* = 0, unsigned long requestIdentifier = 0) OVERRIDE;
         virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0) OVERRIDE;
@@ -161,9 +159,9 @@ namespace WebCore {
 
         virtual WorkerEventQueue& eventQueue() const OVERRIDE FINAL;
 
-        KURL m_url;
+        URL m_url;
         String m_userAgent;
-        OwnPtr<GroupSettings> m_groupSettings;
+        std::unique_ptr<GroupSettings> m_groupSettings;
 
         mutable RefPtr<WorkerLocation> m_location;
         mutable RefPtr<WorkerNavigator> m_navigator;
@@ -175,7 +173,6 @@ namespace WebCore {
         OwnPtr<WorkerInspectorController> m_workerInspectorController;
 #endif
         bool m_closing;
-        EventTargetData m_eventTargetData;
 
         HashSet<Observer*> m_workerObservers;
 

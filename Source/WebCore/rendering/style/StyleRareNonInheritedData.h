@@ -123,7 +123,7 @@ public:
     DataRef<StyleGridData> m_grid;
     DataRef<StyleGridItemData> m_gridItem;
 
-    OwnPtr<ContentData> m_content;
+    std::unique_ptr<ContentData> m_content;
     OwnPtr<CounterDirectiveMap> m_counterDirectives;
 
     OwnPtr<ShadowData> m_boxShadow;  // For box-shadow decorations.
@@ -143,6 +143,7 @@ public:
     RefPtr<ShapeValue> m_shapeOutside;
     Length m_shapeMargin;
     Length m_shapePadding;
+    float m_shapeImageThreshold;
 #endif
 
     RefPtr<ClipPathOperation> m_clipPath;

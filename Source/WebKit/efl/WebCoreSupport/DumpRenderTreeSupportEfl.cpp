@@ -2,6 +2,7 @@
     Copyright (C) 2011 ProFUSION embedded systems
     Copyright (C) 2011 Samsung Electronics
     Copyright (C) 2012 Intel Corporation. All rights reserved.
+    Copyright (C) 2013 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -220,13 +221,13 @@ String DumpRenderTreeSupportEfl::suitableDRTFrameName(const Evas_Object* ewkFram
     return String("frame (anonymous)");
 }
 
-const WebCore::KURL DumpRenderTreeSupportEfl::provisionalURL(const Evas_Object* ewkFrame)
+const WebCore::URL DumpRenderTreeSupportEfl::provisionalURL(const Evas_Object* ewkFrame)
 {
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, WebCore::KURL());
+    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, WebCore::URL());
 
     WebCore::DocumentLoader* provisionalDocumentLoader = frame->loader().provisionalDocumentLoader();
     if (!provisionalDocumentLoader)
-        return WebCore::KURL();
+        return WebCore::URL();
 
     return provisionalDocumentLoader->url();
 }
@@ -269,7 +270,7 @@ void DumpRenderTreeSupportEfl::addUserScript(const Evas_Object* ewkView, const S
 {
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
 
-    page->group().addUserScriptToWorld(WebCore::mainThreadNormalWorld(), sourceCode, WebCore::KURL(),
+    page->group().addUserScriptToWorld(WebCore::mainThreadNormalWorld(), sourceCode, WebCore::URL(),
                                        Vector<String>(), Vector<String>(), runAtStart ? WebCore::InjectAtDocumentStart : WebCore::InjectAtDocumentEnd,
                                        allFrames ? WebCore::InjectInAllFrames : WebCore::InjectInTopFrameOnly);
 }
@@ -285,7 +286,7 @@ void DumpRenderTreeSupportEfl::addUserStyleSheet(const Evas_Object* ewkView, con
 {
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
 
-    page->group().addUserStyleSheetToWorld(WebCore::mainThreadNormalWorld(), sourceCode, WebCore::KURL(), Vector<String>(), Vector<String>(), allFrames ? WebCore::InjectInAllFrames : WebCore::InjectInTopFrameOnly);
+    page->group().addUserStyleSheetToWorld(WebCore::mainThreadNormalWorld(), sourceCode, WebCore::URL(), Vector<String>(), Vector<String>(), allFrames ? WebCore::InjectInAllFrames : WebCore::InjectInTopFrameOnly);
 }
 
 void DumpRenderTreeSupportEfl::clearUserStyleSheets(const Evas_Object* ewkView)
@@ -320,13 +321,13 @@ void DumpRenderTreeSupportEfl::setCSSRegionsEnabled(const Evas_Object* ewkView, 
 {
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
 
-    WebCore::RuntimeEnabledFeatures::setCSSRegionsEnabled(enabled);
+    WebCore::RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(enabled);
 }
 
 void DumpRenderTreeSupportEfl::setSeamlessIFramesEnabled(bool enabled)
 {
 #if ENABLE(IFRAME_SEAMLESS)
-    WebCore::RuntimeEnabledFeatures::setSeamlessIFramesEnabled(enabled);
+    WebCore::RuntimeEnabledFeatures::sharedFeatures().setSeamlessIFramesEnabled(enabled);
 #else
     UNUSED_PARAM(enabled);
 #endif
@@ -487,7 +488,7 @@ void DumpRenderTreeSupportEfl::evaluateScriptInIsolatedWorld(const Evas_Object* 
         anyWorldGlobalObject = static_cast<WebCore::JSDOMWindowShell*>(globalObjectObj)->window();
 
     // Comment from mac: Get the frame from the global object we've settled on.
-    WebCore::Frame* globalFrame = anyWorldGlobalObject->impl()->frame();
+    WebCore::Frame* globalFrame = anyWorldGlobalObject->impl().frame();
     if (!globalFrame)
         return;
 
@@ -510,7 +511,7 @@ void DumpRenderTreeSupportEfl::evaluateScriptInIsolatedWorld(const Evas_Object* 
 
     // The code below is only valid for JSC, V8 specific code is to be added
     // when V8 will be supported in EFL port. See Qt implemenation.
-    proxy.executeScriptInWorld(scriptWorld.get(), script, true);
+    proxy.executeScriptInWorld(*scriptWorld, script, true);
 }
 
 JSGlobalContextRef DumpRenderTreeSupportEfl::globalContextRefForFrame(const Evas_Object* ewkFrame)
@@ -646,7 +647,7 @@ bool DumpRenderTreeSupportEfl::selectedRange(Evas_Object* ewkView, int* start, i
     WebCore::Element* selectionRoot = frame.selection().rootEditableElement();
     WebCore::Element* scope = selectionRoot ? selectionRoot : frame.document()->documentElement();
 
-    RefPtr<WebCore::Range> testRange = WebCore::Range::create(&scope->document(), scope, 0, range->startContainer(), range->startOffset());
+    RefPtr<WebCore::Range> testRange = WebCore::Range::create(scope->document(), scope, 0, range->startContainer(), range->startOffset());
     *start = WebCore::TextIterator::rangeLength(testRange.get());
 
     WebCore::ExceptionCode ec;

@@ -151,8 +151,8 @@ public:
 
     void setExtracted(bool extracted = true) { m_bitfields.setExtracted(extracted); }
     
-    void setFirstLineStyleBit(bool firstLine) { m_bitfields.setFirstLine(firstLine); }
-    bool isFirstLineStyle() const { return m_bitfields.firstLine(); }
+    void setIsFirstLine(bool firstLine) { m_bitfields.setFirstLine(firstLine); }
+    bool isFirstLine() const { return m_bitfields.firstLine(); }
 
     void remove();
 
@@ -181,11 +181,12 @@ public:
     InlineBox* nextLeafChildIgnoringLineBreak() const;
     InlineBox* prevLeafChildIgnoringLineBreak() const;
 
+    // FIXME: There should be a subclass that returns RenderElement. Plain InlineBox shouldn't be instantiated.
     RenderObject& renderer() const { return m_renderer; }
 
     InlineFlowBox* parent() const
     {
-        ASSERT(!m_hasBadParent);
+        ASSERT_WITH_SECURITY_IMPLICATION(!m_hasBadParent);
         return m_parent;
     }
     void setParent(InlineFlowBox* par) { m_parent = par; }
@@ -279,8 +280,10 @@ public:
     int expansion() const { return m_bitfields.expansion(); }
 
     bool visibleToHitTesting() const { return renderer().style()->visibility() == VISIBLE && renderer().style()->pointerEvents() != PE_NONE; }
+
+    const RenderStyle& lineStyle() const { return m_bitfields.firstLine() ? *renderer().firstLineStyle() : *renderer().style(); }
     
-    EVerticalAlign verticalAlign() const { return renderer().style(m_bitfields.firstLine())->verticalAlign(); }
+    EVerticalAlign verticalAlign() const { return lineStyle().verticalAlign(); }
 
     // Use with caution! The type is not checked!
     RenderBoxModelObject* boxModelObject() const

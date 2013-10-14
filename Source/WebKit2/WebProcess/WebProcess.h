@@ -43,12 +43,6 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/AtomicStringHash.h>
 
-#if PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QNetworkAccessManager;
-QT_END_NAMESPACE
-#endif
-
 #if PLATFORM(MAC)
 #include <dispatch/dispatch.h>
 #endif
@@ -139,10 +133,6 @@ public:
     const TextCheckerState& textCheckerState() const { return m_textCheckerState; }
     DownloadManager& downloadManager();
 
-#if PLATFORM(QT)
-    QNetworkAccessManager* networkAccessManager() { return m_networkAccessManager; }
-#endif
-
     void clearResourceCaches(ResourceCachesToClear = AllResourceCaches);
     
 #if ENABLE(NETSCAPE_PLUGIN_API)
@@ -215,9 +205,6 @@ private:
 
     void downloadRequest(uint64_t downloadID, uint64_t initiatingPageID, const WebCore::ResourceRequest&);
     void cancelDownload(uint64_t downloadID);
-#if PLATFORM(QT)
-    void startTransfer(uint64_t downloadID, const String& destination);
-#endif
 
     void setTextCheckerState(const TextCheckerState&);
     
@@ -241,12 +228,16 @@ private:
     virtual bool shouldTerminate() OVERRIDE;
     virtual void terminate() OVERRIDE;
 
+#if PLATFORM(MAC)
+    virtual void stopRunLoop() OVERRIDE;
+#endif
+
     void platformInitializeProcess(const ChildProcessInitializationParameters&);
 
     // CoreIPC::Connection::Client
     friend class WebConnectionToUIProcess;
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
     virtual void didClose(CoreIPC::Connection*);
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 
@@ -283,10 +274,6 @@ private:
 #endif
 
     bool m_fullKeyboardAccessEnabled;
-
-#if PLATFORM(QT)
-    QNetworkAccessManager* m_networkAccessManager;
-#endif
 
     HashMap<uint64_t, WebFrame*> m_frameMap;
 

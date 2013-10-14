@@ -40,6 +40,8 @@ static inline int cssyyerror(void*, const char*)
     return 1;
 }
 
+#if YYDEBUG > 0
+
 static inline bool isCSSTokenAString(int yytype)
 {
     switch (yytype) {
@@ -64,6 +66,8 @@ static inline bool isCSSTokenAString(int yytype)
         return false;
     }
 }
+
+#endif
 
 %}
 
@@ -952,7 +956,7 @@ region:
     before_region_rule WEBKIT_REGION_RULE_SYM WHITESPACE selector_list at_rule_header_end '{' at_rule_body_start maybe_space block_valid_rule_list save_block {
         OwnPtr<Vector<RefPtr<StyleRuleBase>>> ruleList = adoptPtr($9);
         if ($4)
-            $$ = parser->createRegionRule($4, ruleList.get()).leakRef();
+            $$ = parser->createRegionRule(adoptPtr($4).get(), ruleList.get()).leakRef();
         else {
             $$ = nullptr;
             parser->popRuleData();
@@ -1305,7 +1309,7 @@ pseudo:
         $$ = nullptr;
         auto selector = std::make_unique<CSSParserSelector>();
         selector->setMatch(CSSSelector::PseudoClass);
-        selector->setArgument(String::number($4 * $5));
+        selector->setArgument(AtomicString::number($4 * $5));
         selector->setValue($2);
         if (selector->pseudoType() != CSSSelector::PseudoUnknown)
             $$ = selector.release();

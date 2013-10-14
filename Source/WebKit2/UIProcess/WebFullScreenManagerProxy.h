@@ -41,16 +41,12 @@ class IntRect;
 OBJC_CLASS WKView;
 #elif PLATFORM(GTK)
 typedef struct _WebKitWebViewBase WebKitWebViewBase;
-#elif PLATFORM(QT)
-class QQuickWebView;
 #endif
 
 namespace WebKit {
     
 #if PLATFORM(MAC)
 typedef WKView PlatformWebView;
-#elif PLATFORM(QT)
-typedef QQuickWebView PlatformWebView;
 #elif PLATFORM(GTK)
 typedef WebKitWebViewBase PlatformWebView;
 #elif PLATFORM(EFL)
@@ -90,7 +86,7 @@ private:
     void beganExitFullScreen(const WebCore::IntRect& initialFrame, const WebCore::IntRect& finalFrame);
 
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
 
     WebPageProxy* m_page;
     PlatformWebView* m_webView;

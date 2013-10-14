@@ -83,6 +83,7 @@ struct HashTable;
     macro(Error, error, error, ErrorInstance, Error) \
     macro(JSArrayBuffer, arrayBuffer, arrayBuffer, JSArrayBuffer, ArrayBuffer) \
     macro(WeakMap, weakMap, weakMap, JSWeakMap, WeakMap) \
+    macro(ArrayIterator, arrayIterator, arrayIterator, JSArrayIterator, ArrayIterator) \
 
 #define DECLARE_SIMPLE_BUILTIN_TYPE(capitalName, lowerName, properName, instanceType, jsName) \
     class JS ## capitalName; \
@@ -125,8 +126,8 @@ struct GlobalObjectMethodTable {
 
 class JSGlobalObject : public JSSegmentedVariableObject {
 private:
-    typedef HashSet<RefPtr<OpaqueJSWeakObjectMap> > WeakMapSet;
-    typedef HashMap<OpaqueJSClass*, OwnPtr<OpaqueJSClassContextData> > OpaqueJSClassDataMap;
+    typedef HashSet<RefPtr<OpaqueJSWeakObjectMap>> WeakMapSet;
+    typedef HashMap<OpaqueJSClass*, std::unique_ptr<OpaqueJSClassContextData>> OpaqueJSClassDataMap;
 
     struct JSGlobalObjectRareData {
         JSGlobalObjectRareData()
@@ -196,6 +197,8 @@ protected:
     WriteBarrier<Structure> m_regExpMatchesArrayStructure;
     WriteBarrier<Structure> m_regExpStructure;
     WriteBarrier<Structure> m_internalFunctionStructure;
+    
+    WriteBarrier<Structure> m_iteratorResultStructure;
 
 #if ENABLE(PROMISES)
     WriteBarrier<Structure> m_promiseStructure;
@@ -337,10 +340,10 @@ public:
     JSFunction* evalFunction() const { return m_evalFunction.get(); }
     JSFunction* callFunction() const { return m_callFunction.get(); }
     JSFunction* applyFunction() const { return m_applyFunction.get(); }
-    GetterSetter* throwTypeErrorGetterSetter(ExecState* exec)
+    GetterSetter* throwTypeErrorGetterSetter(VM& vm)
     {
         if (!m_throwTypeErrorGetterSetter)
-            createThrowTypeError(exec);
+            createThrowTypeError(vm);
         return m_throwTypeErrorGetterSetter.get();
     }
 
@@ -404,6 +407,8 @@ public:
     Structure* regExpStructure() const { return m_regExpStructure.get(); }
     Structure* setStructure() const { return m_setStructure.get(); }
     Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
+    Structure* iteratorResultStructure() const { return m_iteratorResultStructure.get(); }
+    static ptrdiff_t iteratorResultStructureOffset() { return OBJECT_OFFSETOF(JSGlobalObject, m_iteratorResultStructure); }
 
 #if ENABLE(PROMISES)
     Structure* promiseStructure() const { return m_promiseStructure.get(); }
@@ -551,7 +556,7 @@ private:
     JS_EXPORT_PRIVATE void init(JSObject* thisValue);
     void reset(JSValue prototype);
 
-    void createThrowTypeError(ExecState*);
+    void createThrowTypeError(VM&);
 
     JS_EXPORT_PRIVATE static void clearRareData(JSCell*);
 };

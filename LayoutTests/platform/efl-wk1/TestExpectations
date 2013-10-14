@@ -147,7 +147,6 @@ webkit.org/b/117574 editing/selection/selection-actions.html [ ImageOnlyFailure 
 webkit.org/b/117574 editing/selection/selection-button-text.html [ ImageOnlyFailure ]
  
 webkit.org/b/111984 accessibility/aria-hidden-updates-alldescendants.html [ Failure ]
-webkit.org/b/111986 accessibility/aria-invalid.html [ Failure ]
 webkit.org/b/111987 accessibility/aria-link-supports-press.html [ Failure ]
 webkit.org/b/111988 accessibility/aria-readonly.html [ Failure ]
 webkit.org/b/111991 accessibility/aria-text-role.html [ Failure ]
@@ -156,9 +155,8 @@ webkit.org/b/111993 accessibility/button-press-action.html [ Failure ]
 webkit.org/b/111994 accessibility/canvas-accessibilitynodeobject.html [ Failure ]
 webkit.org/b/111996 accessibility/canvas-fallback-content-2.html [ Failure ]
 webkit.org/b/111999 accessibility/disabled-controls-not-focusable.html [ Failure ]
-webkit.org/b/112000 accessibility/heading-level.html [ Failure ]
+webkit.org/b/122109 accessibility/file-upload-button-stringvalue.html [ Failure ]
 webkit.org/b/112002 accessibility/inline-continuations.html [ Failure ]
-webkit.org/b/112003 accessibility/loading-iframe-sends-notification.html [ Failure ]
 webkit.org/b/112023 accessibility/loading-iframe-updates-axtree.html [ Failure ]
 webkit.org/b/112005 accessibility/onclick-handlers.html [ Failure ]
 webkit.org/b/112006 accessibility/secure-textfield-title-ui.html [ Failure ]
@@ -216,9 +214,6 @@ webkit.org/b/98231 http/tests/security/cross-origin-plugin-allowed.html [ Failur
 webkit.org/b/98231 http/tests/security/cross-origin-plugin-private-browsing-toggled-allowed.html [ Failure ]
 webkit.org/b/98231 http/tests/security/storage-blocking-loosened-plugin.html [ Failure ]
 webkit.org/b/98231 http/tests/security/storage-blocking-loosened-private-browsing-plugin.html [ Failure ]
- 
-# EFL's DumpRenderTree should support LayoutTestController's dumpEditingCallbacks()
-webkit.org/b/84835 editing/execCommand/indent-paragraphs.html [ Failure ]
  
 # Incomplete policy delegate dumping (missing "originated from")
 Bug(EFL) http/tests/misc/policy-delegate-called-twice.html [ Failure ]
@@ -324,8 +319,6 @@ webkit.org/b/96881 fast/frames/sandboxed-iframe-plugins.html [ Failure ]
 webkit.org/b/96881 http/tests/plugins [ Skip ]
 webkit.org/b/96881 plugins [ Skip ]
 webkit.org/b/96881 userscripts/user-script-plugin-document.html [ Failure ]
-webkit.org/b/96881 http/tests/inspector/network/network-embed.html [ Failure ]
-webkit.org/b/96881 http/tests/inspector/network/network-content-replacement-embed.html [ Failure ]
 
 # EFL WK1 does not support the spellchecker feature
 webkit.org/b/86633 editing/spelling [ Skip ]
@@ -494,3 +487,14 @@ webkit.org/b/87226 printing/width-overflow.html [ Failure ]
 
 # Failing tests after r155014
 webkit.org/b/120671 editing/selection/doubleclick-japanese-text.html [ Failure ]
+
+# eventSender related test fails (TEST-42)
+Bug(EFL) fast/harness/results.html [ Failure ]
+
+# EFL has not fully implemented about some SVG attributes
+Bug(EFL) svg/zoom/page/zoom-zoom-coords.xhtml [ Failure ]
+
+# Text selection does not work correctly in DumpRenderTree
+Bug(EFL) fast/events/selectstart-by-double-triple-clicks.html [ Failure ]
+Bug(EFL) fast/events/selectstart-by-drag.html [ Failure ]
+Bug(EFL) fast/text/offsetForPosition-complex-fallback.html [ Failure ]

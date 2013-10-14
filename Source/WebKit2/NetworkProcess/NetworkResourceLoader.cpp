@@ -103,9 +103,9 @@ NetworkResourceLoader::NetworkResourceLoader(const NetworkResourceLoadParameters
     ASSERT(isMainThread());
     
     if (reply)
-        m_networkLoaderClient = SynchronousNetworkLoaderClient::create(m_request, reply);
+        m_networkLoaderClient = std::make_unique<SynchronousNetworkLoaderClient>(m_request, reply);
     else
-        m_networkLoaderClient = AsynchronousNetworkLoaderClient::create();
+        m_networkLoaderClient = std::make_unique<AsynchronousNetworkLoaderClient>();
 }
 
 NetworkResourceLoader::~NetworkResourceLoader()
@@ -126,9 +126,9 @@ void NetworkResourceLoader::start()
 
     // Explicit ref() balanced by a deref() in NetworkResourceLoader::resourceHandleStopped()
     ref();
-    
-    // FIXME (NetworkProcess): Create RemoteNetworkingContext with actual settings.
-    m_networkingContext = RemoteNetworkingContext::create(false, false, m_inPrivateBrowsingMode, m_shouldClearReferrerOnHTTPSToHTTPRedirect);
+
+    // FIXME (NetworkProcess): Set platform specific settings.
+    m_networkingContext = RemoteNetworkingContext::create(m_inPrivateBrowsingMode, m_shouldClearReferrerOnHTTPSToHTTPRedirect);
 
     consumeSandboxExtensions();
 

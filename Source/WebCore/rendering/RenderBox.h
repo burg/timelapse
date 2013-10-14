@@ -32,6 +32,7 @@
 
 namespace WebCore {
 
+class RenderBlockFlow;
 class RenderBoxRegionInfo;
 class RenderRegion;
 struct PaintInfo;
@@ -44,7 +45,7 @@ enum ShouldComputePreferred { ComputeActual, ComputePreferred };
 
 class RenderBox : public RenderBoxModelObject {
 public:
-    explicit RenderBox(Element*);
+    explicit RenderBox(Element*, unsigned baseTypeFlags);
     virtual ~RenderBox();
 
     // hasAutoZIndex only returns true if the element is positioned or a flex-item since
@@ -208,8 +209,8 @@ public:
 
     // IE extensions. Used to calculate offsetWidth/Height.  Overridden by inlines (RenderFlow)
     // to return the remaining width on a given line (and the height of a single line).
-    virtual LayoutUnit offsetWidth() const { return width(); }
-    virtual LayoutUnit offsetHeight() const { return height(); }
+    virtual LayoutUnit offsetWidth() const OVERRIDE { return width(); }
+    virtual LayoutUnit offsetHeight() const OVERRIDE { return height(); }
 
     virtual int pixelSnappedOffsetWidth() const OVERRIDE FINAL;
     virtual int pixelSnappedOffsetHeight() const OVERRIDE FINAL;
@@ -288,20 +289,19 @@ public:
     virtual LayoutUnit collapsedMarginBefore() const { return marginBefore(); }
     virtual LayoutUnit collapsedMarginAfter() const { return marginAfter(); }
 
-    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const;
-    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const;
+    virtual void absoluteRects(Vector<IntRect>&, const LayoutPoint& accumulatedOffset) const OVERRIDE;
+    virtual void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const OVERRIDE;
     
     LayoutRect reflectionBox() const;
     int reflectionOffset() const;
     // Given a rect in the object's coordinate space, returns the corresponding rect in the reflection.
     LayoutRect reflectedRect(const LayoutRect&) const;
 
-    virtual void layout();
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void layout() OVERRIDE;
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
-    virtual LayoutUnit minPreferredLogicalWidth() const;
-    virtual LayoutUnit maxPreferredLogicalWidth() const;
+    virtual LayoutUnit minPreferredLogicalWidth() const OVERRIDE;
+    virtual LayoutUnit maxPreferredLogicalWidth() const OVERRIDE;
 
     // FIXME: We should rename these back to overrideLogicalHeight/Width and have them store
     // the border-box height/width like the regular height/width accessors on RenderBox.
@@ -326,7 +326,7 @@ public:
     void clearContainingBlockOverrideSize();
     void clearOverrideContainingBlockContentLogicalHeight();
 
-    virtual LayoutSize offsetFromContainer(RenderObject*, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const;
+    virtual LayoutSize offsetFromContainer(RenderObject*, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const OVERRIDE;
     
     LayoutUnit adjustBorderBoxLogicalWidthForBoxSizing(LayoutUnit width) const;
     LayoutUnit adjustBorderBoxLogicalHeightForBoxSizing(LayoutUnit height) const;
@@ -389,7 +389,7 @@ public:
     void repaintDuringLayoutIfMoved(const LayoutRect&);
     virtual void repaintOverhangingFloats(bool paintAllDescendants);
 
-    virtual LayoutUnit containingBlockLogicalWidthForContent() const;
+    virtual LayoutUnit containingBlockLogicalWidthForContent() const OVERRIDE;
     LayoutUnit containingBlockLogicalHeightForContent(AvailableLogicalHeightType) const;
 
     LayoutUnit containingBlockLogicalWidthForContentInRegion(RenderRegion*) const;
@@ -447,8 +447,8 @@ public:
     int horizontalScrollbarHeight() const;
     int instrinsicScrollbarLogicalWidth() const;
     int scrollbarLogicalHeight() const { return style()->isHorizontalWritingMode() ? horizontalScrollbarHeight() : verticalScrollbarWidth(); }
-    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
-    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
+    virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0);
+    virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Element** stopElement = 0);
     bool canBeScrolledAndHasScrollableArea() const;
     virtual bool canBeProgramaticallyScrolled() const;
     virtual void autoscroll(const IntPoint&);
@@ -471,7 +471,7 @@ public:
     bool hasUnsplittableScrollingOverflow() const;
     bool isUnsplittableForPagination() const;
 
-    virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0);
+    virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0) OVERRIDE;
 
     virtual LayoutRect overflowClipRect(const LayoutPoint& location, RenderRegion*, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhaseBlockBackground);
     virtual LayoutRect overflowClipRectForChildLayers(const LayoutPoint& location, RenderRegion* region, OverlayScrollbarSizeRelevancy relevancy) { return overflowClipRect(location, region, relevancy); }
@@ -484,7 +484,7 @@ public:
     virtual void paintObject(PaintInfo&, const LayoutPoint&) { ASSERT_NOT_REACHED(); }
     virtual void paintBoxDecorations(PaintInfo&, const LayoutPoint&);
     virtual void paintMask(PaintInfo&, const LayoutPoint&);
-    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0);
+    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0) OVERRIDE;
 
     // Called when a positioned object moves but doesn't necessarily change size.  A simplified layout is attempted
     // that just updates the object's position. If the size does change, the object remains dirty.
@@ -501,11 +501,9 @@ public:
 
     LayoutRect maskClipRect();
 
-    virtual VisiblePosition positionForPoint(const LayoutPoint&);
+    virtual VisiblePosition positionForPoint(const LayoutPoint&) OVERRIDE;
 
-    RenderBlock* outermostBlockContainingFloatingObject();
-    void updatePaintingContainerForFloatingObject();
-    virtual bool updateLayerIfNeeded();
+    RenderBlockFlow* outermostBlockContainingFloatingObject();
 
     void removeFloatingOrPositionedChildFromBlockLists();
     
@@ -524,7 +522,7 @@ public:
     bool isDeprecatedFlexItem() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isDeprecatedFlexibleBox(); }
     bool isFlexItemIncludingDeprecated() const { return !isInline() && !isFloatingOrOutOfFlowPositioned() && parent() && parent()->isFlexibleBoxIncludingDeprecated(); }
     
-    virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
+    virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const OVERRIDE;
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const OVERRIDE;
 
     virtual LayoutUnit offsetLeft() const OVERRIDE;
@@ -595,13 +593,19 @@ public:
     {
         return ShapeOutsideInfo::isEnabledFor(this) ? ShapeOutsideInfo::info(this) : 0;
     }
+
+    void markShapeOutsideDependentsForLayout()
+    {
+        if (isFloating())
+            removeFloatingOrPositionedChildFromBlockLists();
+    }
 #endif
 
 protected:
-    virtual void willBeDestroyed();
+    virtual void willBeDestroyed() OVERRIDE;
 
-    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle);
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle) OVERRIDE;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
     virtual void updateFromStyle() OVERRIDE;
 
     // Returns false if it could not cheaply compute the extent (e.g. fixed background), in which case the returned rect may be incorrect.
@@ -611,8 +615,8 @@ protected:
 
     void paintBackground(const PaintInfo&, const LayoutRect&, BackgroundBleedAvoidance = BackgroundBleedNone);
     
-    void paintFillLayer(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, BackgroundBleedAvoidance, CompositeOperator, RenderObject* backgroundObject);
-    void paintFillLayers(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, BackgroundBleedAvoidance = BackgroundBleedNone, CompositeOperator = CompositeSourceOver, RenderObject* backgroundObject = 0);
+    void paintFillLayer(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, BackgroundBleedAvoidance, CompositeOperator, RenderElement* backgroundObject);
+    void paintFillLayers(const PaintInfo&, const Color&, const FillLayer*, const LayoutRect&, BackgroundBleedAvoidance = BackgroundBleedNone, CompositeOperator = CompositeSourceOver, RenderElement* backgroundObject = nullptr);
 
     void paintMaskImages(const PaintInfo&, const LayoutRect&);
 
@@ -631,7 +635,7 @@ protected:
 
     virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags = ApplyContainerFlip, bool* wasFixed = 0) const OVERRIDE;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject*, RenderGeometryMap&) const OVERRIDE;
-    virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const;
+    virtual void mapAbsoluteToLocalPoint(MapCoordinatesFlags, TransformState&) const OVERRIDE;
 
     void paintRootBoxFillLayers(const PaintInfo&);
 
@@ -639,7 +643,7 @@ protected:
  
 private:
 #if ENABLE(CSS_SHAPES)
-    void updateShapeOutsideInfoAfterStyleChange(const ShapeValue* shapeOutside, const ShapeValue* oldShapeOutside);
+    void updateShapeOutsideInfoAfterStyleChange(const RenderStyle&, const RenderStyle* oldStyle);
 #endif
 
     bool fixedElementLaysOutRelativeToFrame(const FrameView&) const;

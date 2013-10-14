@@ -47,21 +47,11 @@
 #include "npruntime_internal.h"
 #endif
 
-#if OS(WINDOWS) && (PLATFORM(GTK) || PLATFORM(QT))
+#if OS(WINDOWS) && PLATFORM(GTK)
 typedef struct HWND__* HWND;
 typedef HWND PlatformPluginWidget;
 #else
 typedef PlatformWidget PlatformPluginWidget;
-#endif
-#if PLATFORM(QT)
-#if USE(TEXTURE_MAPPER)
-#include "TextureMapperPlatformLayer.h"
-#endif
-
-#include <QImage>
-QT_BEGIN_NAMESPACE
-class QPainter;
-QT_END_NAMESPACE
 #endif
 #if PLATFORM(GTK)
 typedef struct _GtkSocket GtkSocket;
@@ -79,7 +69,7 @@ namespace WebCore {
     class HTMLPlugInElement;
     class KeyboardEvent;
     class MouseEvent;
-    class KURL;
+    class URL;
 #if OS(WINDOWS) && ENABLE(NETSCAPE_PLUGIN_API)
     class PluginMessageThrottlerWin;
 #endif
@@ -132,7 +122,7 @@ namespace WebCore {
                      , public PluginManualLoader
                      , private MediaCanStartListener {
     public:
-        static PassRefPtr<PluginView> create(Frame* parentFrame, const IntSize&, HTMLPlugInElement*, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
+        static PassRefPtr<PluginView> create(Frame* parentFrame, const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
         virtual ~PluginView();
 
         PluginPackage* plugin() const { return m_plugin.get(); }
@@ -217,7 +207,7 @@ namespace WebCore {
 
         const String& pluginsPage() const { return m_pluginsPage; }
         const String& mimeType() const { return m_mimeType; }
-        const KURL& url() const { return m_url; }
+        const URL& url() const { return m_url; }
 
 #if defined(XP_MACOSX) && ENABLE(NETSCAPE_PLUGIN_API)
         bool popUpContextMenu(NPMenu*);
@@ -244,13 +234,8 @@ namespace WebCore {
 #endif
         void keepAlive();
 
-#if PLATFORM(QT) && ENABLE(NETSCAPE_PLUGIN_API) && defined(XP_UNIX)
-        // PluginViewQt (X11) needs a few workarounds when running under DRT
-        static void setIsRunningUnderDRT(bool flag) { s_isRunningUnderDRT = flag; }
-#endif
-
     private:
-        PluginView(Frame* parentFrame, const IntSize&, PluginPackage*, HTMLPlugInElement*, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
+        PluginView(Frame* parentFrame, const IntSize&, PluginPackage*, HTMLPlugInElement*, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually);
 
         void setParameters(const Vector<String>& paramNames, const Vector<String>& paramValues);
         bool startOrAddToUnstartedList();
@@ -286,7 +271,7 @@ namespace WebCore {
         RefPtr<PluginPackage> m_plugin;
         HTMLPlugInElement* m_element;
         bool m_isStarted;
-        KURL m_url;
+        URL m_url;
         PluginStatus m_status;
         Vector<IntRect> m_invalidRects;
 
@@ -369,7 +354,7 @@ namespace WebCore {
         bool m_haveUpdatedPluginWidget;
 #endif
 
-#if ((PLATFORM(GTK) || PLATFORM(QT)) && OS(WINDOWS)) || PLATFORM(EFL) || PLATFORM(NIX)
+#if (PLATFORM(GTK) && OS(WINDOWS)) || PLATFORM(EFL) || PLATFORM(NIX)
         // On Mac OSX and Qt/Windows the plugin does not have its own native widget,
         // but is using the containing window as its reference for positioning/painting.
         PlatformPluginWidget m_window;
@@ -402,15 +387,6 @@ private:
 
         void initXEvent(XEvent* event);
 #endif
-
-#if PLATFORM(QT)
-#if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
-        static bool s_isRunningUnderDRT;
-        static void setXKeyEventSpecificFields(XEvent*, KeyboardEvent*);
-        void paintUsingXPixmap(QPainter* painter, const QRect &exposedRect);
-        QWebPageClient* platformPageClient() const;
-#endif
-#endif // PLATFORM(QT)
 
 #if PLATFORM(GTK)
         static gboolean plugRemovedCallback(GtkSocket*, PluginView*);

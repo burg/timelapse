@@ -52,7 +52,7 @@ void JSSharedWorker::visitChildren(JSCell* cell, SlotVisitor& visitor)
     ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());
     Base::visitChildren(thisObject, visitor);
 
-    if (MessagePort* port = thisObject->impl()->port())
+    if (MessagePort* port = thisObject->impl().port())
         visitor.addOpaqueRoot(port);
 }
 
@@ -63,18 +63,19 @@ EncodedJSValue JSC_HOST_CALL JSSharedWorkerConstructor::constructJSSharedWorker(
     if (exec->argumentCount() < 1)
         return throwVMError(exec, createNotEnoughArgumentsError(exec));
 
-    String scriptURL = exec->argument(0).toString(exec)->value(exec);
+    String scriptURL = exec->uncheckedArgument(0).toString(exec)->value(exec);
     String name;
     if (exec->argumentCount() > 1)
-        name = exec->argument(1).toString(exec)->value(exec);
+        name = exec->uncheckedArgument(1).toString(exec)->value(exec);
 
     if (exec->hadException())
         return JSValue::encode(JSValue());
 
     // FIXME: We need to use both the dynamic scope and the lexical scope (dynamic scope for resolving the worker URL)
-    DOMWindow* window = asJSDOMWindow(exec->lexicalGlobalObject())->impl();
+    DOMWindow& window = asJSDOMWindow(exec->lexicalGlobalObject())->impl();
     ExceptionCode ec = 0;
-    RefPtr<SharedWorker> worker = SharedWorker::create(window->document(), scriptURL, name, ec);
+    ASSERT(window.document());
+    RefPtr<SharedWorker> worker = SharedWorker::create(*window.document(), scriptURL, name, ec);
     if (ec) {
         setDOMException(exec, ec);
         return JSValue::encode(JSValue());

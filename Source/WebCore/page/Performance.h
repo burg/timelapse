@@ -52,13 +52,13 @@ class ResourceRequest;
 class ResourceResponse;
 class UserTiming;
 
-class Performance : public ScriptWrappable, public RefCounted<Performance>, public DOMWindowProperty, public EventTarget {
+class Performance FINAL : public ScriptWrappable, public RefCounted<Performance>, public DOMWindowProperty, public EventTargetWithInlineData {
 public:
     static PassRefPtr<Performance> create(Frame* frame) { return adoptRef(new Performance(frame)); }
     ~Performance();
 
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const;
+    virtual EventTargetInterface eventTargetInterface() const OVERRIDE { return PerformanceEventTargetInterfaceType; }
+    virtual ScriptExecutionContext* scriptExecutionContext() const OVERRIDE;
 
     PerformanceNavigation* navigation() const;
     PerformanceTiming* timing() const;
@@ -95,11 +95,7 @@ private:
 
     virtual void refEventTarget() OVERRIDE { ref(); }
     virtual void derefEventTarget() OVERRIDE { deref(); }
-    virtual EventTargetData* eventTargetData() OVERRIDE;
-    virtual EventTargetData& ensureEventTargetData() OVERRIDE;
     bool isResourceTimingBufferFull();
-
-    EventTargetData m_eventTargetData;
 
     mutable RefPtr<PerformanceNavigation> m_navigation;
     mutable RefPtr<PerformanceTiming> m_timing;

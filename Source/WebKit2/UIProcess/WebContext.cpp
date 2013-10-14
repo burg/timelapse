@@ -558,11 +558,11 @@ WebProcessProxy* WebContext::createNewWebProcess()
         for (size_t i = 0; i != m_messagesToInjectedBundlePostedToEmptyContext.size(); ++i) {
             pair<String, RefPtr<APIObject>>& message = m_messagesToInjectedBundlePostedToEmptyContext[i];
 
-            OwnPtr<CoreIPC::ArgumentEncoder> messageData = CoreIPC::ArgumentEncoder::create();
+            CoreIPC::ArgumentEncoder messageData;
 
-            messageData->encode(message.first);
-            messageData->encode(WebContextUserMessageEncoder(message.second.get()));
-            process->send(Messages::WebProcess::PostInjectedBundleMessage(CoreIPC::DataReference(messageData->buffer(), messageData->bufferSize())), 0);
+            messageData.encode(message.first);
+            messageData.encode(WebContextUserMessageEncoder(message.second.get()));
+            process->send(Messages::WebProcess::PostInjectedBundleMessage(CoreIPC::DataReference(messageData.buffer(), messageData.bufferSize())), 0);
         }
         m_messagesToInjectedBundlePostedToEmptyContext.clear();
     } else
@@ -725,11 +725,6 @@ DownloadProxy* WebContext::download(WebPageProxy* initiatingPage, const Resource
     }
 #endif
 
-#if PLATFORM(QT)
-    ASSERT(initiatingPage); // Our design does not suppport downloads without a WebPage.
-    initiatingPage->handleDownloadRequest(downloadProxy);
-#endif
-
     m_processes[0]->send(Messages::WebProcess::DownloadRequest(downloadProxy->downloadID(), initiatingPageID, request), 0);
     return downloadProxy;
 }
@@ -744,13 +739,12 @@ void WebContext::postMessageToInjectedBundle(const String& messageName, APIObjec
 
     // FIXME: Return early if the message body contains any references to WKPageRefs/WKFrameRefs etc. since they're local to a process.
 
-    OwnPtr<CoreIPC::ArgumentEncoder> messageData = CoreIPC::ArgumentEncoder::create();
-    messageData->encode(messageName);
-    messageData->encode(WebContextUserMessageEncoder(messageBody));
+    CoreIPC::ArgumentEncoder messageData;
+    messageData.encode(messageName);
+    messageData.encode(WebContextUserMessageEncoder(messageBody));
 
-    for (size_t i = 0; i < m_processes.size(); ++i) {
-        m_processes[i]->send(Messages::WebProcess::PostInjectedBundleMessage(CoreIPC::DataReference(messageData->buffer(), messageData->bufferSize())), 0);
-    }
+    for (size_t i = 0; i < m_processes.size(); ++i)
+        m_processes[i]->send(Messages::WebProcess::PostInjectedBundleMessage(CoreIPC::DataReference(messageData.buffer(), messageData.bufferSize())), 0);
 }
 
 // InjectedBundle client
@@ -898,7 +892,7 @@ bool WebContext::dispatchMessage(CoreIPC::Connection* connection, CoreIPC::Messa
     return m_messageReceiverMap.dispatchMessage(connection, decoder);
 }
 
-bool WebContext::dispatchSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+bool WebContext::dispatchSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
 {
     return m_messageReceiverMap.dispatchSyncMessage(connection, decoder, replyEncoder);
 }
@@ -927,7 +921,7 @@ void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
     ASSERT_NOT_REACHED();
 }
 
-void WebContext::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebContext::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
 {
     if (decoder.messageReceiverName() == Messages::WebContext::messageReceiverName()) {
         didReceiveSyncWebContextMessage(connection, decoder, replyEncoder);

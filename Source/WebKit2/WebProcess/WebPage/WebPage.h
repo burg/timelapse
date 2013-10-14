@@ -67,16 +67,6 @@
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(QT)
-#include "ArgumentCodersQt.h"
-#include "QtNetworkAccessManager.h"
-#include "QtNetworkReply.h"
-#include "QtNetworkReplyData.h"
-#include "QtNetworkRequestData.h"
-#include <QNetworkReply>
-#include <QNetworkRequest>
-#endif
-
 #if HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
 #include "WebPageAccessibilityObject.h"
 #include <wtf/gobject/GRefPtr.h>
@@ -156,10 +146,6 @@ struct EditorState;
 struct PrintInfo;
 struct WebPageCreationParameters;
 struct WebPreferencesStore;
-
-#if ENABLE(GESTURE_EVENTS)
-class WebGestureEvent;
-#endif
 
 #if ENABLE(TOUCH_EVENTS)
 class WebTouchEvent;
@@ -242,7 +228,7 @@ public:
     void setActiveOpenPanelResultListener(PassRefPtr<WebOpenPanelResultListener>);
 
     void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
+    void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&) OVERRIDE;
 
     // -- InjectedBundle methods
 #if ENABLE(CONTEXT_MENUS)
@@ -322,9 +308,6 @@ public:
 
     void setSuppressScrollbarAnimations(bool);
 
-    void setRubberBandsAtBottom(bool);
-    void setRubberBandsAtTop(bool);
-
     void setPaginationMode(uint32_t /* WebCore::Pagination::Mode */);
     void setPaginationBehavesLikeColumns(bool);
     void setPageLength(double);
@@ -391,9 +374,6 @@ public:
     static const WebEvent* currentEvent();
 
     FindController& findController() { return m_findController; }
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(QT)
-    TapHighlightController& tapHighlightController() { return m_tapHighlightController; }
-#endif
 
 #if ENABLE(GEOLOCATION)
     GeolocationPermissionRequestManager& geolocationPermissionRequestManager() { return m_geolocationPermissionRequestManager; }
@@ -413,10 +393,10 @@ public:
     WebContextMenu* contextMenuAtPointInWindow(const WebCore::IntPoint&);
 #endif
     
-    bool hasLocalDataForURL(const WebCore::KURL&);
-    String cachedResponseMIMETypeForURL(const WebCore::KURL&);
-    String cachedSuggestedFilenameForURL(const WebCore::KURL&);
-    PassRefPtr<WebCore::SharedBuffer> cachedResponseDataForURL(const WebCore::KURL&);
+    bool hasLocalDataForURL(const WebCore::URL&);
+    String cachedResponseMIMETypeForURL(const WebCore::URL&);
+    String cachedSuggestedFilenameForURL(const WebCore::URL&);
+    PassRefPtr<WebCore::SharedBuffer> cachedResponseDataForURL(const WebCore::URL&);
 
     static bool canHandleRequest(const WebCore::ResourceRequest&);
 
@@ -450,7 +430,7 @@ public:
     void commitPageTransitionViewport();
 #endif
 
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(GTK)
     void setComposition(const String& text, Vector<WebCore::CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd);
     void confirmComposition(const String& text, int64_t selectionStart, int64_t selectionLength);
     void cancelComposition();
@@ -524,7 +504,7 @@ public:
     void clearSelection();
 
 #if ENABLE(DRAG_SUPPORT)
-#if PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(GTK)
     void performDragControllerAction(uint64_t action, WebCore::DragData);
 #else
     void performDragControllerAction(uint64_t action, WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, uint64_t draggingSourceOperationMask, const WTF::String& dragStorageName, uint32_t flags, const SandboxExtension::Handle&, const SandboxExtension::HandleArray&);
@@ -582,16 +562,7 @@ public:
     void contextMenuShowing() { m_isShowingContextMenu = true; }
 #endif
 
-#if PLATFORM(QT)
-    void registerApplicationScheme(const String& scheme);
-    void applicationSchemeReply(const QtNetworkReplyData&);
-    void receivedApplicationSchemeRequest(const QNetworkRequest&, QtNetworkReply*);
-    void setUserScripts(const Vector<String>&);
-#endif
     void wheelEvent(const WebWheelEvent&);
-#if ENABLE(GESTURE_EVENTS)
-    void gestureEvent(const WebGestureEvent&);
-#endif
 
     void numWheelEventHandlersChanged(unsigned);
     void recomputeShortCircuitHorizontalWheelEventsState();
@@ -673,7 +644,7 @@ private:
     void platformInitialize();
 
     void didReceiveWebPageMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveSyncWebPageMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
+    void didReceiveSyncWebPageMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, std::unique_ptr<CoreIPC::MessageEncoder>&);
 
 #if !PLATFORM(MAC)
     static const char* interpretKeyEvent(const WebCore::KeyboardEvent*);
@@ -686,9 +657,9 @@ private:
 
     String sourceForFrame(WebFrame*);
 
-    void loadDataImpl(PassRefPtr<WebCore::SharedBuffer>, const String& MIMEType, const String& encodingName, const WebCore::KURL& baseURL, const WebCore::KURL& failingURL, CoreIPC::MessageDecoder&);
+    void loadDataImpl(PassRefPtr<WebCore::SharedBuffer>, const String& MIMEType, const String& encodingName, const WebCore::URL& baseURL, const WebCore::URL& failingURL, CoreIPC::MessageDecoder&);
 
-    bool platformHasLocalDataForURL(const WebCore::KURL&);
+    bool platformHasLocalDataForURL(const WebCore::URL&);
 
     // Actions
     void tryClose();
@@ -721,9 +692,6 @@ private:
 #if ENABLE(TOUCH_EVENTS)
     void touchEvent(const WebTouchEvent&);
     void touchEventSyncForTesting(const WebTouchEvent&, bool& handled);
-#if PLATFORM(QT)
-    void highlightPotentialActivation(const WebCore::IntPoint&, const WebCore::IntSize& area);
-#endif
 #endif
 #if ENABLE(CONTEXT_MENUS)
     void contextMenuHidden() { m_isShowingContextMenu = false; }
@@ -806,10 +774,6 @@ private:
 #if PLATFORM(GTK)
     void failedToShowPopupMenu();
 #endif
-#if PLATFORM(QT)
-    void hidePopupMenu();
-    void selectedIndex(int32_t newIndex);
-#endif
 
     void didChooseFilesForOpenPanel(const Vector<String>&);
     void didCancelForOpenPanel();
@@ -857,7 +821,7 @@ private:
     String m_userAgent;
 
     WebCore::IntSize m_viewSize;
-    OwnPtr<DrawingArea> m_drawingArea;
+    std::unique_ptr<DrawingArea> m_drawingArea;
 
     HashSet<PluginView*> m_pluginViews;
     bool m_hasSeenPlugin;
@@ -956,9 +920,6 @@ private:
     InjectedBundlePageDiagnosticLoggingClient m_logDiagnosticMessageClient;
 
     FindController m_findController;
-#if ENABLE(TOUCH_EVENTS) && PLATFORM(QT)
-    TapHighlightController m_tapHighlightController;
-#endif
     PageOverlayList m_pageOverlays;
 
 #if ENABLE(INSPECTOR)
@@ -1015,9 +976,6 @@ private:
     
     bool m_willGoToBackForwardItemCallbackEnabled;
     
-#if PLATFORM(QT)
-    HashMap<String, QtNetworkReply*> m_applicationSchemeReplies;
-#endif
 #if ENABLE(PAGE_VISIBILITY_API)
     WebCore::PageVisibilityState m_visibilityState;
 #endif
@@ -1029,6 +987,8 @@ private:
     unsigned m_maximumRenderingSuppressionToken;
     
     WebCore::ScrollPinningBehavior m_scrollPinningBehavior;
+
+    bool m_useThreadedScrolling;
 };
 
 } // namespace WebKit

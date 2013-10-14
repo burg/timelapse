@@ -29,6 +29,17 @@ WebInspector.Notification = {
     PageArchiveEnded: "page-archive-ended"
 };
 
+WebInspector.ContentViewCookieType = {
+    ApplicationCache: "application-cache",
+    CookieStorage: "cookie-storage",
+    Database: "database",
+    DatabaseTable: "database-table",
+    DOMStorage: "dom-storage",
+    Resource: "resource", // includes Frame too.
+    Timelines: "timelines",
+
+};
+
 WebInspector.loaded = function()
 {
     // Tell the InspectorFrontendHost we loaded first to establish communication with InspectorBackend.
@@ -107,6 +118,13 @@ WebInspector.loaded = function()
 
     WebInspector.Frame.addEventListener(WebInspector.Frame.Event.MainResourceDidChange, this._mainResourceDidChange, this);
 
+    // These listeners are for events that could resolve a pending content view cookie.
+    this.applicationCacheManager.addEventListener(WebInspector.ApplicationCacheManager.Event.FrameManifestAdded, this._resolveAndShowPendingContentViewCookie, this);
+    this.frameResourceManager.addEventListener(WebInspector.FrameResourceManager.Event.MainFrameDidChange, this._resolveAndShowPendingContentViewCookie, this);
+    this.storageManager.addEventListener(WebInspector.StorageManager.Event.DatabaseWasAdded, this._resolveAndShowPendingContentViewCookie, this);
+    this.storageManager.addEventListener(WebInspector.StorageManager.Event.CookieStorageObjectWasAdded, this._resolveAndShowPendingContentViewCookie, this);
+    this.storageManager.addEventListener(WebInspector.StorageManager.Event.DOMStorageObjectWasAdded, this._resolveAndShowPendingContentViewCookie, this);
+
     document.addEventListener("DOMContentLoaded", this.contentLoaded.bind(this));
 
     document.addEventListener("beforecopy", this._beforecopy.bind(this));
@@ -121,6 +139,7 @@ WebInspector.loaded = function()
     window.addEventListener("resize", this._windowResized.bind(this));
     window.addEventListener("keydown", this._windowKeyDown.bind(this));
     window.addEventListener("keyup", this._windowKeyUp.bind(this));
+    window.addEventListener("mousemove", this._mouseMoved.bind(this), true);
 
     // Create settings.
     this._lastSelectedNavigationSidebarPanelSetting = new WebInspector.Setting("last-selected-navigation-sidebar-panel", "resource");
@@ -149,6 +168,11 @@ WebInspector.loaded = function()
     this._dockButtonToggledSetting = new WebInspector.Setting("dock-button-toggled", false);
 
     this.showShadowDOMSetting = new WebInspector.Setting("show-shadow-dom", false);
+
+    this.mouseCoords = {
+        x: 0,
+        y: 0
+    };
 }
 
 WebInspector.contentLoaded = function()
@@ -162,7 +186,7 @@ WebInspector.contentLoaded = function()
     this.toolbar = new WebInspector.Toolbar(document.getElementById("toolbar"));
     this.toolbar.addEventListener(WebInspector.Toolbar.Event.DisplayModeDidChange, this._toolbarDisplayModeDidChange, this);
     this.toolbar.addEventListener(WebInspector.Toolbar.Event.SizeModeDidChange, this._toolbarSizeModeDidChange, this);
-    
+
     var contentElement = document.getElementById("content");
     contentElement.setAttribute("role", "main");
     contentElement.setAttribute("aria-label", WebInspector.UIString("Content"));
@@ -294,11 +318,8 @@ WebInspector.contentLoaded = function()
         if (this._lastContentCookieSetting.value === "console") {
             // The console does not have a sidebar, so handle its special cookie here.
             this.showFullHeightConsole();
-        } else {
-            var responsibleSidebarPanel = this.navigationSidebar.findSidebarPanel(this._lastContentViewResponsibleSidebarPanelSetting.value);
-            if (responsibleSidebarPanel)
-                responsibleSidebarPanel.showContentViewForCookie(this._lastContentCookieSetting.value);
-        }
+        } else
+            this._showContentViewForCookie(this._lastContentCookieSetting.value);
     }
 
     this._updateSplitConsoleHeight(this._splitConsoleHeightSetting.value);
@@ -528,7 +549,8 @@ WebInspector.openURL = function(url, frame, alwaysOpenExternally, lineNumber)
     // WebInspector.Frame.resourceForURL does not check the main resource, only sub-resources. So check both.
     var resource = frame.url === url ? frame.mainResource : frame.resourceForURL(url, searchChildFrames);
     if (resource) {
-        this.resourceSidebarPanel.showSourceCode(resource, lineNumber);
+        var position = new WebInspector.SourceCodePosition(lineNumber, 0);
+        this.resourceSidebarPanel.showSourceCode(resource, position);
         return;
     }
 
@@ -821,6 +843,15 @@ WebInspector._windowKeyUp = function(event)
     this.undockButtonNavigationItem.toggled = (event.altKey && !event.metaKey && !event.shiftKey) ? opposite : !opposite;
 }
 
+WebInspector._mouseMoved = function(event)
+{
+    this._updateModifierKeys(event);
+    this.mouseCoords = {
+        x: event.pageX,
+        y: event.pageY
+    };
+}
+
 WebInspector._undock = function(event)
 {
     this._dockButtonToggledSetting.value = this.undockButtonNavigationItem.toggled;
@@ -1012,8 +1043,8 @@ WebInspector._updateCurrentContentViewCookie = function()
     if (!responsibleSidebarPanel)
         return;
 
-    var cookie = responsibleSidebarPanel.cookieForContentView(currentContentView);
-
+    var cookie = {};
+    currentContentView.saveToCookie(cookie);
     this._lastContentViewResponsibleSidebarPanelSetting.value = responsibleSidebarPanel.identifier;
     this._lastContentCookieSetting.value = cookie;
 }
@@ -1107,6 +1138,73 @@ WebInspector._contentBrowserRepresentedObjectsDidChange = function(event)
     delete this._ignoreDetailsSidebarPanelSelectedEvent;
 
     this._updateCurrentContentViewCookie(event);
+}
+
+WebInspector._showContentViewForCookie = function(cookie)
+{
+    if (!cookie || !cookie.type)
+        return null;
+
+    this._pendingContentViewCookie = cookie;
+    var shownContentView = this._resolveAndShowPendingContentViewCookie();
+
+    // At this point, we assume no storage objects or views have been created yet.
+    // If the cookie requests these views, they will be shown when the storage object
+    // is added (if it matches exactly), or any view of the same type (after a timeout).
+    if (!shownContentView) {
+        if (this._lastAttemptCookieCheckingTimeout)
+            clearTimeout(this._lastAttemptCookieCheckingTimeout);
+
+        var lastAttemptToRestoreFromCookie = function() {
+            delete this._lastAttemptCookieCheckingTimeout;
+            this._resolveAndShowPendingContentViewCookie(true);
+        };
+
+        // When the specific storage item wasn't found we want to relax the check to show the first item with the
+        // same type. There is no good time to naturally declare the cookie wasn't found, so we do that on a timeout.
+        this._lastAttemptCookieCheckingTimeout = setTimeout(lastAttemptToRestoreFromCookie.bind(this), 500);
+    }
+
+    return shownContentView;
+}
+
+WebInspector._resolveAndShowPendingContentViewCookie = function(matchOnTypeAlone)
+{
+    var cookie = this._pendingContentViewCookie;
+    if (!cookie)
+        return false;
+
+    var representedObject = null;
+
+    if (cookie.type === WebInspector.ContentViewCookieType.Resource)
+        representedObject = this.frameResourceManager.objectForCookie(cookie);
+
+    if (cookie.type === WebInspector.ContentViewCookieType.Timelines)
+        representedObject = this.timelineManager.objectForCookie(cookie);
+
+    if (cookie.type === WebInspector.ContentViewCookieType.CookieStorage || cookie.type === WebInspector.ContentViewCookieType.Database  || cookie.type === WebInspector.ContentViewCookieType.DatabaseTable || cookie.type === WebInspector.ContentViewCookieType.DOMStorage)
+        representedObject = this.storageManager.objectForCookie(cookie, matchOnTypeAlone);
+
+    if (cookie.type === WebInspector.ContentViewCookieType.ApplicationCache)
+        representedObject = this.applicationCacheManager.objectForCookie(cookie, matchOnTypeAlone);
+
+    if (!representedObject)
+        return false;
+
+    // If we reached this point, then we should be able to create and/or display a content view based on the cookie.
+    delete this._pendingContentViewCookie;
+    if (this._lastAttemptCookieCheckingTimeout)
+        clearTimeout(this._lastAttemptCookieCheckingTimeout);
+
+    // Delay this work because other listeners of the originating event might not have fired yet.
+    // So displaying the content view before those listeners do their work might cause the
+    // dependent view states (navigation sidebar tree elements, path components) to be wrong.
+    function delayedWork()
+    {
+        this.contentBrowser.showContentViewForRepresentedObject(representedObject, cookie);
+    }
+    setTimeout(delayedWork.bind(this), 0);
+    return true;
 }
 
 WebInspector._initializeWebSocketIfNeeded = function()
@@ -1409,7 +1507,7 @@ WebInspector.elementDragStart = function(element, dividerDrag, elementDragEnd, e
     WebInspector._elementDraggingEventTarget = eventTarget || targetDocument;
     WebInspector._elementDraggingEventTarget.addEventListener("mousemove", dividerDrag, true);
     WebInspector._elementDraggingEventTarget.addEventListener("mouseup", elementDragEnd, true);
-    
+
     targetDocument.body.style.cursor = cursor;
 
     event.preventDefault();
@@ -1419,9 +1517,9 @@ WebInspector.elementDragEnd = function(event)
 {
     WebInspector._elementDraggingEventTarget.removeEventListener("mousemove", WebInspector._elementDraggingEventListener, true);
     WebInspector._elementDraggingEventTarget.removeEventListener("mouseup", WebInspector._elementEndDraggingEventListener, true);
-    
+
     event.target.ownerDocument.body.style.removeProperty("cursor");
-    
+
     if (WebInspector._elementDraggingGlassPane)
         WebInspector._elementDraggingGlassPane.parentElement.removeChild(WebInspector._elementDraggingGlassPane);
 

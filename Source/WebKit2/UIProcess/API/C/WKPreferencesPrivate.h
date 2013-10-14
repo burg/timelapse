@@ -191,7 +191,7 @@ WK_EXPORT bool WKPreferencesGetMockScrollbarsEnabled(WKPreferencesRef preference
 WK_EXPORT void WKPreferencesSetApplicationChromeModeEnabled(WKPreferencesRef preferencesRef, bool enabled);
 WK_EXPORT bool WKPreferencesGetApplicationChromeModeEnabled(WKPreferencesRef preferencesRef);
 
-// Defaults to false.
+// Deprecated. Always returns false.
 WK_EXPORT void WKPreferencesSetInspectorUsesWebKitUserInterface(WKPreferencesRef preferencesRef, bool enabled);
 WK_EXPORT bool WKPreferencesGetInspectorUsesWebKitUserInterface(WKPreferencesRef preferencesRef);
 
@@ -286,6 +286,10 @@ WK_EXPORT bool WKPreferencesGetAutostartOriginPlugInSnapshottingEnabled(WKPrefer
 // Defaults to true
 WK_EXPORT void WKPreferencesSetPrimaryPlugInSnapshotDetectionEnabled(WKPreferencesRef preferencesRef, bool enabled);
 WK_EXPORT bool WKPreferencesGetPrimaryPlugInSnapshotDetectionEnabled(WKPreferencesRef preferencesRef);
+
+// Defaults to true
+WK_EXPORT void WKPreferencesSetThreadedScrollingEnabled(WKPreferencesRef preferencesRef, bool enabled);
+WK_EXPORT bool WKPreferencesGetThreadedScrollingEnabled(WKPreferencesRef preferencesRef);
 
 // Defaults to 5 seconds.
 WK_EXPORT void WKPreferencesSetIncrementalRenderingSuppressionTimeout(WKPreferencesRef preferencesRef, double timeout);

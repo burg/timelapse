@@ -45,7 +45,7 @@
 #import "htmlediting.h"
 #import "HTMLNames.h"
 #import "Image.h"
-#import "KURL.h"
+#import "URL.h"
 #import "LegacyWebArchive.h"
 #import "LoaderNSURLExtras.h"
 #import "MIMETypeRegistry.h"
@@ -71,6 +71,24 @@ const char* const WebURLNamePboardType = "public.url-name";
 const char WebSmartPastePboardType[] = "NeXT smart paste pasteboard type";
 const char WebURLPboardType[] = "public.url";
 const char WebURLsWithTitlesPboardType[] = "WebURLsWithTitlesPboardType";
+
+// Making this non-inline so that WebKit 2's decoding doesn't have to include SharedBuffer.h.
+PasteboardWebContent::PasteboardWebContent()
+{
+}
+
+PasteboardWebContent::~PasteboardWebContent()
+{
+}
+
+// Making this non-inline so that WebKit 2's decoding doesn't have to include Image.h.
+PasteboardImage::PasteboardImage()
+{
+}
+
+PasteboardImage::~PasteboardImage()
+{
+}
 
 static const Vector<String> writableTypesForURL()
 {
@@ -383,7 +401,7 @@ void Pasteboard::read(PasteboardWebContentReader& reader)
     }
 
     if (types.contains(String(NSURLPboardType))) {
-        KURL url = strategy.url(m_pasteboardName);
+        URL url = strategy.url(m_pasteboardName);
         String title = strategy.stringForType(WebURLNamePboardType, m_pasteboardName);
         if (!url.isNull() && reader.readURL(url, title))
             return;

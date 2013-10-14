@@ -1,3 +1,520 @@
+2013-10-10  Brian J. Burg  <burg@cs.washington.edu>
+
+        Web Inspector: content views and managers should save/restore view state.
+        https://bugs.webkit.org/show_bug.cgi?id=122546
+
+        To restore the same content view and sidebars when re-opening the
+        inspector, a cookie is saved whenever a new content view is shown
+        in the main content browser. Previously, this cookie was created
+        and restored using navigation sidebar-specific logic. This has two
+        major flaws: non-default sidebars for a represented object are not
+        restored correctly; and it centralizes storage of view-specific
+        state such as subview selections.
+
+        This patch adds ContentView methods for saving a key for the
+        view's represented object, and saving/restoring any view-specific
+        state as the view is shown. The 'type' field of the cookie
+        specifies the manager which deserializes the cookie into a
+        represented object.
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/ApplicationCacheFrameContentView.js:
+        (WebInspector.ApplicationCacheFrameContentView):
+        (WebInspector.ApplicationCacheFrameContentView.prototype.saveToCookie):
+        (WebInspector.ApplicationCacheFrameContentView.prototype._maybeUpdate):
+        (WebInspector.ApplicationCacheFrameContentView.prototype._updateStatus):
+        (WebInspector.ApplicationCacheFrameContentView.prototype.updateStatus):
+        (WebInspector.ApplicationCacheFrameContentView.prototype._updateCallback):
+        * UserInterface/ApplicationCacheManager.js:
+        (WebInspector.ApplicationCacheManager.prototype.networkStateUpdated):
+        (WebInspector.ApplicationCacheManager.prototype.applicationCacheStatusUpdated):
+        (WebInspector.ApplicationCacheManager.prototype.):
+        (WebInspector.ApplicationCacheManager.prototype.requestApplicationCache):
+        (WebInspector.ApplicationCacheManager.prototype.objectForCookie):
+        (WebInspector.ApplicationCacheManager.prototype._manifestForFrameLoaded):
+        (WebInspector.ApplicationCacheManager.prototype._framesWithManifestsLoaded):
+        (WebInspector.ApplicationCacheManager.prototype._frameManifestUpdated):
+        * UserInterface/BackForwardEntry.js:
+        (WebInspector.BackForwardEntry):
+        (WebInspector.BackForwardEntry.prototype._restoreFromCookie):
+        * UserInterface/ContentBrowser.js:
+        (WebInspector.ContentBrowser.prototype.showContentViewForRepresentedObject):
+        (WebInspector.ContentBrowser.prototype.showContentView):
+        * UserInterface/ContentView.js:
+        (WebInspector.ContentView.prototype.saveToCookie):
+        (WebInspector.ContentView.prototype.restoreFromCookie):
+        * UserInterface/ContentViewContainer.js:
+        (WebInspector.ContentViewContainer.prototype.showContentView):
+        * UserInterface/CookieStorageContentView.js:
+        (WebInspector.CookieStorageContentView.prototype.update):
+        (WebInspector.CookieStorageContentView.prototype.saveToCookie):
+        (WebInspector.CookieStorageContentView.prototype._rebuildTable):
+        (WebInspector.CookieStorageContentView.prototype._filterCookies):
+        * UserInterface/DOMStorageContentView.js:
+        (WebInspector.DOMStorageContentView.prototype.saveToCookie):
+        * UserInterface/DatabaseContentView.js:
+        (WebInspector.DatabaseContentView.prototype.saveToCookie):
+        (WebInspector.DatabaseContentView.prototype._messagesClicked):
+        * UserInterface/DatabaseTableContentView.js:
+        (WebInspector.DatabaseTableContentView):
+        (WebInspector.DatabaseTableContentView.prototype.saveToCookie):
+        * UserInterface/FrameContentView.js:
+        (WebInspector.FrameContentView.prototype.saveToCookie):
+        (WebInspector.FrameContentView.prototype.restoreFromCookie):
+        * UserInterface/FrameResourceManager.js:
+        (WebInspector.FrameResourceManager.prototype.objectForCookie):
+        * UserInterface/InstrumentSidebarPanel.js:
+        (WebInspector.InstrumentSidebarPanel):
+        (WebInspector.InstrumentSidebarPanel.prototype.showTimeline):
+        (WebInspector.InstrumentSidebarPanel.prototype.shown):
+        (WebInspector.InstrumentSidebarPanel.prototype._timelinesTreeElementSelected):
+        * UserInterface/Main.js:
+        (WebInspector.loaded):
+        (WebInspector.contentLoaded):
+        (WebInspector.openURL):
+        (WebInspector._updateCurrentContentViewCookie):
+        (WebInspector._showContentViewForCookie.lastAttemptToRestoreFromCookie):
+        (WebInspector._showContentViewForCookie):
+        (WebInspector._resolveAndShowPendingContentViewCookie.delayedWork):
+        (WebInspector._resolveAndShowPendingContentViewCookie):
+        (WebInspector.elementDragStart):
+        (WebInspector.elementDragEnd):
+        (WebInspector.createMessageTextView):
+        (WebInspector.linkifyStringAsFragment):
+        * UserInterface/NavigationSidebarPanel.js:
+        * UserInterface/ResourceClusterContentView.js:
+        (WebInspector.ResourceClusterContentView.prototype.saveToCookie):
+        (WebInspector.ResourceClusterContentView.prototype.restoreFromCookie):
+        * UserInterface/ResourceSidebarPanel.js:
+        (WebInspector.ResourceSidebarPanel.prototype.showSourceCode):
+        (WebInspector.ResourceSidebarPanel.prototype._mainFrameDidChange):
+        (WebInspector.ResourceSidebarPanel.prototype._domStorageObjectWasAdded):
+        (WebInspector.ResourceSidebarPanel.prototype._databaseWasAdded):
+        (WebInspector.ResourceSidebarPanel.prototype._cookieStorageObjectWasAdded):
+        (WebInspector.ResourceSidebarPanel.prototype._frameManifestAdded):
+        * UserInterface/ScriptContentView.js:
+        (WebInspector.ScriptContentView.prototype.saveToCookie):
+        (WebInspector.ScriptContentView.prototype.restoreFromCookie):
+        * UserInterface/StorageManager.js:
+        (WebInspector.StorageManager.prototype.findMatchingObjectInArray):
+        (WebInspector.StorageManager.prototype.objectForCookie):
+        * UserInterface/TimelineManager.js:
+        (WebInspector.TimelineManager):
+        (WebInspector.TimelineManager.prototype.get timelines):
+        (WebInspector.TimelineManager.prototype.objectForCookie):
+        * UserInterface/TimelinesContentView.js:
+        (WebInspector.TimelinesContentView.prototype.saveToCookie):
+        (WebInspector.TimelinesContentView.prototype.restoreFromCookie):
+        (WebInspector.TimelinesContentView.prototype._makeColumnScopeBar):
+
+2013-10-10  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/13341666> WebKit should always build against an SDK.
+
+        Have all projects default to building against the OS X Internal SDK for the Production
+        configuration. For the Debug and Release configurations, look for UseInternalSDK.xcconfig
+        to determine whether the OS X Internal SDK should be used. If not, use the normal OS X SDK.
+
+        Reviewed by Dan Bernstein.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+
+2013-10-04  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: pressing the Cmd key over a CSS property should underline it immediately (jump to definition mode)
+        https://bugs.webkit.org/show_bug.cgi?id=119012
+
+        Reviewed by Joseph Pecoraro.
+
+        We add an "enabled" state to the tokenTrackingController to indicate that we're interested
+        in tracking hovered tokens. The tokenTrackingController is now only enabled in the
+        CSSStyleDeclarationTextEditor when the Cmd key is pressed and in the SourceCodeTextEditor
+        when either the Cmd key is pressed (NonSymbolTokens mode) or when the debugger is paused
+        (JavaScriptExpression mode).
+        
+        The tokenTrackingController is now smarter about how it tracks mouse events when it's enabled,
+        tracking "mouseenter" and "mouseleave" events to enable tracking allowing immediate detection of
+        tokens being hovered or no longer being hovered even with quick mouse movements. Additioanlly,
+        using the new top-level mouse coordinates tracking, we can detect a hovered token as soon as
+        it's being enabled to provide instant feedback to the user.
+
+        This new top-level mouse coordinates tracking couple with tracking of modifier keys also fixes
+        http://webkit.org/b/119011.
+
+        * UserInterface/CSSStyleDeclarationTextEditor.js:
+        (WebInspector.CSSStyleDeclarationTextEditor.prototype._updateJumpToSymbolTrackingMode):
+        Highlight the last known hovered candidate's range as soon as the Cmd key is pressed and enable
+        the tokenTrackingController if we're dealing with a non-read-only editor. When the Cmd key is
+        released, disable the tokenTrackingController.
+
+        * UserInterface/CodeMirrorTokenTrackingController.js:
+        (WebInspector.CodeMirrorTokenTrackingController):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype.get enabled):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype.set enabled):
+        New enabled state for the tokenTrackingController which indicates whether it should be tracking
+        mouse events to track hovered tokens in the editor. Upon being enabled, the tokenTrackingController
+        looks up the mouse coordinates continuously tracked at the window level to check for a token
+        at the last known mouse coordinates in case we're already over a token that may be highlighted.
+
+        (WebInspector.CodeMirrorTokenTrackingController.prototype.highlightLastHoveredRange):
+        New public method allowing to highlight the last know candidate range, if any. This is used from
+        editor code when the Cmd key is pressed and we want to force the last know candidate to be
+        highlighted.
+
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._startTracking):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._stopTracking):
+        Make these two methods private now that they're automatically called by the "mouseenter" and
+        "mouseleave" event handling when we're in the "enabled" state. Additionally, the public
+        "tracking" property has been removed since it is no longer useful to the developer.
+
+        (WebInspector.CodeMirrorTokenTrackingController.prototype.handleEvent):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._mouseEntered):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._mouseLeft):
+        New handlers for the "mouseenter" and "mouseleave" events enabling tracking of hovered tokens.
+
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._mouseMovedOverEditor):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._updateHoveredTokenInfo):
+        Refactor _mouseMovedOverEditor() into two methods with the new _updateHoveredTokenInfo()
+        allowing to customize the mouse coordinates to be used since we may call
+        _updateHoveredTokenInfo() outside of the context of a mouse event (ie. a keypress event).
+
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._windowLostFocus):
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._resetTrackingStates):
+        New private method combining all the various states that need to be reset when tracking
+        is turned off, including the removal of the highlighted range if any. This is now called
+        when the window loses focus.
+
+        * UserInterface/Main.js:
+        (WebInspector.loaded):
+        (WebInspector._mouseMoved):
+        Add a new window-level "mousemove" event handler to always track mouse coordinates and key modifier
+        states. This ensures that we may have the most accurate information possible for key modifiers and
+        allow code to query the last recorded mouse position in situations where it wouldn't be possible
+        to have dealt with a mouse event, as is the case when the tokenTrackingController just started tracking.
+
+        * UserInterface/SourceCodeTextEditor.js:
+        (WebInspector.SourceCodeTextEditor.prototype._updateTokenTrackingControllerEnabled):
+        (WebInspector.SourceCodeTextEditor.prototype._debuggerDidPause):
+        (WebInspector.SourceCodeTextEditor.prototype._debuggerDidResume):
+        (WebInspector.SourceCodeTextEditor.prototype._enableJumpToSymbolTrackingModeSettings):
+        (WebInspector.SourceCodeTextEditor.prototype._disableJumpToSymbolTrackingModeSettings):
+        Update the "enabled" state on the tokenTrackingController when it may have changed based
+        on those two conditions: we should have either an active debugger call frame or the
+        Cmd key should have been pressed. This ensures we only track hovered tokens as needed.
+
+        (WebInspector.SourceCodeTextEditor.prototype._updateJumpToSymbolTrackingMode):
+        Highlight the last known hovered candidate's range as soon as the Cmd key is pressed.
+
+2013-10-02  Brian J. Burg  <burg@cs.washington.edu>
+
+        Web Inspector: save and restore source positions in back/forward history
+        https://bugs.webkit.org/show_bug.cgi?id=122062
+
+        Reviewed by Timothy Hatcher.
+
+        Previously, the back/forward entries comprised of only the content
+        views, but not their positions if navigated via hyperlink (i.e.,
+        handling script.js:42).  When multiple instances of the same
+        content view appeared in the back/forward list, the most recent
+        navigation was displayed rather than the linked position.
+
+        We now store context necessary to re-navigate such hyperlinks by
+        storing view- specific data inside a cookie object, and invoke a
+        supplied callback to take any position initialization actions,
+        such as calling TextEditor.revealPosition.  This state is
+        encapsulated into BackForwardEntry instances.
+
+        Functions that save and restore scroll positions inside content
+        views have been changed to store state in BackForwardEntry
+        instances, so multiple scroll positions can be saved for a content
+        view appearing in the navigation history more than once.
+
+        * UserInterface/BackForwardEntry.js: Added.
+        (WebInspector.BackForwardEntry):
+        (WebInspector.BackForwardEntry.prototype.get contentView):
+        (WebInspector.BackForwardEntry.prototype.get cookie):
+        (WebInspector.BackForwardEntry.prototype.prepareToShow):
+        (WebInspector.BackForwardEntry.prototype.prepareToHide):
+        (WebInspector.BackForwardEntry.prototype._restoreFromCookie):
+        (WebInspector.BackForwardEntry.prototype._restoreScrollPositions):
+        (WebInspector.BackForwardEntry.prototype._saveScrollPositions):
+        * UserInterface/ContentBrowser.js:
+        (WebInspector.ContentBrowser.prototype.showContentView):
+        (WebInspector.ContentBrowser.prototype._updateContentViewNavigationItems):
+        (WebInspector.ContentBrowser.prototype._updateFindBanner):
+        * UserInterface/ContentViewContainer.js:
+        (WebInspector.ContentViewContainer.prototype.get currentContentView):
+        (WebInspector.ContentViewContainer.prototype.get currentBackForwardEntry):
+        (WebInspector.ContentViewContainer.prototype.showContentView):
+        (WebInspector.ContentViewContainer.prototype.showBackForwardEntryForIndex):
+        (WebInspector.ContentViewContainer.prototype.replaceContentView):
+        (WebInspector.ContentViewContainer.prototype.closeAllContentViewsOfPrototype):
+        (WebInspector.ContentViewContainer.prototype.closeAllContentViews):
+        (WebInspector.ContentViewContainer.prototype.goBack):
+        (WebInspector.ContentViewContainer.prototype.goForward):
+        (WebInspector.ContentViewContainer.prototype.shown):
+        (WebInspector.ContentViewContainer.prototype.hidden):
+        (WebInspector.ContentViewContainer.prototype._showEntry):
+        (WebInspector.ContentViewContainer.prototype._hideEntry):
+        * UserInterface/Main.html:
+        * UserInterface/Main.js:
+        (WebInspector.openURL):
+        * UserInterface/ResourceSidebarPanel.js:
+        (WebInspector.ResourceSidebarPanel.prototype.restoreCallback):
+        (WebInspector.ResourceSidebarPanel.prototype.showSourceCode):
+
+2013-10-02  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: highlight newly added console messages in the Activity Viewer
+        https://bugs.webkit.org/show_bug.cgi?id=122093
+
+        Reviewed by Joseph Pecoraro.
+
+        Fade the appropriate console log button in the Activity Viewer for a short duration
+        to call attention to it when its count is incremented. The animation may be restarted
+        in-flight if the count is incremented as we were pulsing the opacity.
+
+        * UserInterface/DashboardView.css:
+        (.toolbar .dashboard > .item.pulsing):
+        (@-webkit-keyframes console-item-pulse):
+        New pulse animation for a console item in the Activity Viewer, the new "pulsing" CSS
+        class is applied in WebInspector.DashboardView.prototype._setConsoleItemValue().
+
+        * UserInterface/DashboardView.js:
+        (WebInspector.DashboardView.prototype.set logs):
+        (WebInspector.DashboardView.prototype.set issues):
+        (WebInspector.DashboardView.prototype.set errors):
+        Refactor setters to use the new WebInspector.DashboardView.prototype._setConsoleItemValue()
+        method.
+
+        (WebInspector.DashboardView.prototype._setConsoleItemValue):
+        We now set the ivar backing console item values in this new refactored method and additionally
+        apply an animation to the DOM element for the given item if its value is incremented such that
+        it pulses, subtly calling out the developer's attention to it.
+
+        * UserInterface/Utilities.js:
+        New Element.prototype.recalculateStyles() method to abstract the hack required to force
+        a style recalc on a given element.
+
+2013-10-01  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: evaluate and show a popover for selected text in JS source when paused
+        https://bugs.webkit.org/show_bug.cgi?id=122151
+
+        Reviewed by Joseph Pecoraro.
+
+        Identify if the hovered token is contained within the text selection (if any) and use
+        the selection as the hovered expression to allow the user to select text and hover it
+        to see what it evaluates to.
+
+        * UserInterface/CodeMirrorTokenTrackingController.js:
+        (WebInspector.CodeMirrorTokenTrackingController.prototype.highlightRange):
+        Check we're trying to highlight a different range before removing the highlight
+        and applying the new one, this prevents the marked text from flashing if it's
+        being re-hovered which would easily happen when hovering multiple tokens within
+        the same selection.
+
+        (WebInspector.CodeMirrorTokenTrackingController.prototype._processJavaScriptExpression):
+        In the case where there is selected text, check whether the hovered token is at least
+        partially contained within the selection, and if so use the selection text as the
+        hovered expression to evaluate.
+
+2013-10-01  Antoine Quint  <graouts@apple.com>
+
+        Console buttons don’t show after page reload
+        https://bugs.webkit.org/show_bug.cgi?id=116515
+
+        Reviewed by Darin Adler.
+
+        The correct display of navigation items in the ContentBrowser is contingent on
+        the ContentViewContainer's _backForwardList being up-to-date when the navigation
+        items are retrieved from it. However, when the main resource changes (in this case
+        the user refreshes the browser), calls are made to ContentViewContainer's
+        closeAllContentViewsOfPrototype() which may modify the _backForwardList but doesn't
+        necessarily notify of a change to the currentContentView since we may be still showing
+        the same view in case it wasn't directly related to the main resource, for instance
+        the console log.
+
+        We now check if the _backForwardList is changed as a result of calling
+        closeAllContentViewsOfPrototype() and in that case also dispatch the
+        CurrentContentViewDidChange event which will restore the correct state
+        for the back/forward buttons and navigation items of the navigation bar.
+
+        * UserInterface/ContentViewContainer.js:
+        (WebInspector.ContentViewContainer.prototype.closeAllContentViewsOfPrototype):
+        Track changes to the _backForwardList and dispatch the CurrentContentViewDidChange
+        event in case such changes happened.
+
+2013-09-30  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: rows in the Layer sidebar panel may have the incorrect background color
+        https://bugs.webkit.org/show_bug.cgi?id=122108
+
+        Reviewed by Darin Adler.
+
+        The LayerTreeDataGrid is a custom DataGrid subclass which exposes a .setChildren() method
+        used to sort chidren without DOM order manipulation, for performance reason. However, since
+        the way the alternating background color is usually implemented is based on the built-in
+        CSS pseudo-classes working with DOM order, the background colors of nodes in the LayerTreeDataGrid
+        can be incorrect depending on the sort order and the number of nodes. To fix this, we now manually
+        set "even" and "odd" CSS classes on those nodes when they're sorted such that we have a chance
+        to style them as intended.
+
+        * UserInterface/LayerTreeDataGrid.js:
+        (WebInspector.LayerTreeDataGrid.prototype._updateChildren):
+        Check if the data grid node index is even or odd and reflect this via an exclusive "even"
+        or "odd" CSS class name.
+
+        * UserInterface/LayerTreeSidebarPanel.css:
+        (.layer-tree.panel .data-container tbody > tr.even):
+        (.layer-tree.panel .data-container tbody > tr.odd):
+        Apply alternating colors based on the exclusive "even" and "odd" CSS class names as applied in
+        WebInspector.LayerTreeDataGrid.prototype._updateChildren().
+
+2013-09-30  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: Popover displaying "reasons for compositing" may remain on screen after selected layer is removed
+        https://bugs.webkit.org/show_bug.cgi?id=117575
+
+        Ensure the popover attached to the selected data grid node is updated when the
+        content or sort order of the Layer sidebar panel is updated.
+
+        Reviewed by Darin Adler.
+
+        * UserInterface/LayerTreeSidebarPanel.js:
+        (WebInspector.LayerTreeSidebarPanel.prototype._sortDataGrid):
+
+2013-09-30  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: nodes can be dragged from the console log
+        https://bugs.webkit.org/show_bug.cgi?id=122105
+
+        Reviewed by Darin Adler.
+
+        Catch "dragstart" events targeting nodes hosted in a DOMTreeOutline within the console
+        log view and prevent the default logic to trigger so that these nodes can't be dragged
+        off the console as it wouldn't make sense to.
+
+        * UserInterface/DOMTreeOutline.js:
+        (WebInspector.DOMTreeOutline):
+        Create a class property to allow the CSS class name to be used in WebInspector.LogContentView.
+
+        * UserInterface/LogContentView.js:
+        (WebInspector.LogContentView):
+        (WebInspector.LogContentView.prototype._ondragstart):
+        Track the "dragstart" events in their capture phase such that, if the event target is
+        a DOM node hosted in a DOMTreeOutline, we can prevent the event from propagating and
+        cancel its default behavior such that no dragging at all is performed.
+
+2013-09-26  Brian J. Burg  <burg@cs.washington.edu>
+
+        Web Inspector: dissociate old content views that are spliced from back/forward list
+        https://bugs.webkit.org/show_bug.cgi?id=121987
+
+        Reviewed by Timothy Hatcher.
+
+        There was a bug where old back/forward list entries were not being dissociated when
+        the newly-shown content view was already in the list. Instead, dissociation should be
+        skipped if the old list entry is not already in the list.
+
+        * UserInterface/ContentViewContainer.js:
+        (WebInspector.ContentViewContainer.prototype.showContentView):
+
+2013-09-26  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: Activity viewer not properly reset when reloading
+        https://bugs.webkit.org/show_bug.cgi?id=121958
+
+        Reviewed by Darin Adler.
+
+        Reset the resources count and accumulated size when we detect the main frame
+        has changed, which will work with documents where there are no resources besides
+        frames in which case WebInspector.Frame.Event.AllResourcesRemoved was not fired
+        and our counts wouldn't be reset correctly.
+
+        * UserInterface/DashboardManager.js:
+        (WebInspector.DashboardManager):
+        (WebInspector.DashboardManager.prototype._mainResourceDidChange):
+
+2013-09-26  Antoine Quint  <graouts@apple.com>
+
+        Web Inspector: Keep DOM tree expanded on page reload
+        https://bugs.webkit.org/show_bug.cgi?id=121665
+
+        Reviewed by Darin Adler.
+
+        Allow the node that was selected before reloading the page to be selected
+        at the page is reloaded. Credit goes to Joseph Pecoraro for the fix.
+
+        * UserInterface/DOMTreeContentView.js:
+        (WebInspector.DOMTreeContentView.prototype._rootDOMNodeAvailable.selectNode):
+
+2013-09-24  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Using Breakpoint Actions Breaks iOS inspection
+        https://bugs.webkit.org/show_bug.cgi?id=121862
+
+        Reviewed by Timothy Hatcher.
+
+        Only use DebuggerAgent.BreakpointActionType if it is available.
+        Otherwise leave options undefined for breakpoints since the backend
+        does not support it.
+
+        * UserInterface/DebuggerManager.js:
+        (WebInspector.DebuggerManager.prototype._setBreakpoint):
+
+2013-09-24  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Include iOS 7 Inspector.json Version
+        https://bugs.webkit.org/show_bug.cgi?id=121852
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/Legacy/7.0/InspectorBackendCommands.js: Added.
+        * Versions/Inspector-iOS-7.0.json: Added.
+
+2013-09-24  Mark Rowe  <mrowe@apple.com>
+
+        <rdar://problem/14971518> WebKit should build against the Xcode default toolchain when targeting OS X 10.8
+
+        Reviewed by Dan Bernstein.
+
+        * Configurations/Base.xcconfig:
+
+2013-09-24  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Breakpoint Actions input should disable spellchecking
+        https://bugs.webkit.org/show_bug.cgi?id=121846
+
+        Reviewed by Timothy Hatcher.
+
+        * UserInterface/BreakpointActionView.js:
+
+2013-09-21  Timothy Hatcher  <timothy@apple.com>
+
+        Hook up the initiator info and show it in the Resource details sidebar.
+
+        https://bugs.webkit.org/show_bug.cgi?id=121741
+
+        Reviewed by Joseph Pecoraro.
+
+        * UserInterface/FrameResourceManager.js:
+        (WebInspector.FrameResourceManager.prototype.resourceRequestWillBeSent):
+        (WebInspector.FrameResourceManager.prototype.resourceRequestWasServedFromMemoryCache):
+        (WebInspector.FrameResourceManager.prototype._addNewResourceToFrame):
+        (WebInspector.FrameResourceManager.prototype._initiatorSourceCodeLocationFromPayload):
+        * UserInterface/NetworkObserver.js:
+        (WebInspector.NetworkObserver.prototype.requestWillBeSent):
+        (WebInspector.NetworkObserver.prototype.requestServedFromMemoryCache):
+        * UserInterface/Resource.js:
+        (WebInspector.Resource):
+        (WebInspector.Resource.prototype.get initiatorSourceCodeLocation):
+        * UserInterface/ResourceDetailsSidebarPanel.js:
+        (WebInspector.ResourceDetailsSidebarPanel):
+        (WebInspector.ResourceDetailsSidebarPanel.prototype._refreshURL):
+
 2013-09-20  Timothy Hatcher  <timothy@apple.com>
 
         Parse MIME-types and strip them down to the base type when needed.
@@ -1394,7 +1911,7 @@
 
 2013-07-22  Diego Pino Garcia  <dpino@igalia.com>
 
-        Web Inspector: When right-clicking on a DataGrid column, show editing 
+        Web Inspector: When right-clicking on a DataGrid column, show editing
         menu option as "Edit <columnName>" instead of just "Edit"
         https://bugs.webkit.org/show_bug.cgi?id=118970
 
@@ -1670,7 +2187,7 @@
 
 2013-06-27  James Craig  <james@cookiecrook.com>
 
-        Web Inspector: AX: Add container ARIA roles (toolbar, main, labeled regions, etc.) 
+        Web Inspector: AX: Add container ARIA roles (toolbar, main, labeled regions, etc.)
         so the layout is more discoverable to screen reader users
         https://bugs.webkit.org/show_bug.cgi?id=118104
 
@@ -1701,7 +2218,7 @@
 
         Main console log area (div.console-messages) is now an ARIA live region (role="log")
         so screen readers speak plain text updates.
-        
+
         Also added contextual labels (e.g. input/output) but speech output verification of
         those is currently blocked by http://webkit.org/b/118096
 

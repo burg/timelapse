@@ -87,7 +87,6 @@
 #import <WebCore/EventHandler.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/FormState.h>
-#import <WebCore/Frame.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/FrameLoaderStateMachine.h>
 #import <WebCore/FrameLoaderTypes.h>
@@ -107,6 +106,7 @@
 #import <WebCore/IconDatabase.h>
 #import <WebCore/LoaderNSURLExtras.h>
 #import <WebCore/MIMETypeRegistry.h>
+#import <WebCore/MainFrame.h>
 #import <WebCore/MouseEvent.h>
 #import <WebCore/Page.h>
 #import <WebCore/PluginViewBase.h>
@@ -413,7 +413,7 @@ bool WebFrameLoaderClient::canAuthenticateAgainstProtectionSpace(DocumentLoader*
 }
 #endif
 
-bool WebFrameLoaderClient::shouldPaintBrokenImage(const KURL& imageURL) const
+bool WebFrameLoaderClient::shouldPaintBrokenImage(const URL& imageURL) const
 {
     WebView *webView = getWebView(m_webFrame.get());
     WebResourceDelegateImplementationCache* implementations = WebViewGetResourceLoadDelegateImplementations(webView);
@@ -530,7 +530,7 @@ void WebFrameLoaderClient::dispatchDidCancelClientRedirect()
         CallFrameLoadDelegate(implementations->didCancelClientRedirectForFrameFunc, webView, @selector(webView:didCancelClientRedirectForFrame:), m_webFrame.get());
 }
 
-void WebFrameLoaderClient::dispatchWillPerformClientRedirect(const KURL& url, double delay, double fireDate)
+void WebFrameLoaderClient::dispatchWillPerformClientRedirect(const URL& url, double delay, double fireDate)
 {
     WebView *webView = getWebView(m_webFrame.get());
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(webView);
@@ -743,8 +743,7 @@ void WebFrameLoaderClient::dispatchShow()
     [[webView _UIDelegateForwarder] webViewShow:webView];
 }
 
-void WebFrameLoaderClient::dispatchDecidePolicyForResponse(FramePolicyFunction function,
-    const ResourceResponse& response, const ResourceRequest& request)
+void WebFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& request, FramePolicyFunction function)
 {
     WebView *webView = getWebView(m_webFrame.get());
 
@@ -752,29 +751,27 @@ void WebFrameLoaderClient::dispatchDecidePolicyForResponse(FramePolicyFunction f
                         decidePolicyForMIMEType:response.mimeType()
                                         request:request.nsURLRequest(UpdateHTTPBody)
                                           frame:m_webFrame.get()
-                               decisionListener:setUpPolicyListener(function).get()];
+                               decisionListener:setUpPolicyListener(std::move(function)).get()];
 }
 
-void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function,
-    const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName)
+void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName, FramePolicyFunction function)
 {
     WebView *webView = getWebView(m_webFrame.get());
     [[webView _policyDelegateForwarder] webView:webView
             decidePolicyForNewWindowAction:actionDictionary(action, formState)
                                    request:request.nsURLRequest(UpdateHTTPBody)
                               newFrameName:frameName
-                          decisionListener:setUpPolicyListener(function).get()];
+                          decisionListener:setUpPolicyListener(std::move(function)).get()];
 }
 
-void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(FramePolicyFunction function,
-    const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState)
+void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction& action, const ResourceRequest& request, PassRefPtr<FormState> formState, FramePolicyFunction function)
 {
     WebView *webView = getWebView(m_webFrame.get());
     [[webView _policyDelegateForwarder] webView:webView
                 decidePolicyForNavigationAction:actionDictionary(action, formState)
                                         request:request.nsURLRequest(UpdateHTTPBody)
                                           frame:m_webFrame.get()
-                               decisionListener:setUpPolicyListener(function).get()];
+                               decisionListener:setUpPolicyListener(std::move(function)).get()];
 }
 
 void WebFrameLoaderClient::cancelPolicyCheck()
@@ -811,16 +808,16 @@ void WebFrameLoaderClient::dispatchWillSendSubmitEvent(PassRefPtr<WebCore::FormS
     CallFormDelegate(getWebView(m_webFrame.get()), @selector(willSendSubmitEventToForm:inFrame:withValues:), formElement, m_webFrame.get(), values);
 }
 
-void WebFrameLoaderClient::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<FormState> formState)
+void WebFrameLoaderClient::dispatchWillSubmitForm(PassRefPtr<FormState> formState, FramePolicyFunction function)
 {
     id <WebFormDelegate> formDelegate = [getWebView(m_webFrame.get()) _formDelegate];
     if (!formDelegate) {
-        (core(m_webFrame.get())->loader().policyChecker().*function)(PolicyUse);
+        function(PolicyUse);
         return;
     }
 
     NSDictionary *values = makeFormFieldValuesDictionary(formState.get());
-    CallFormDelegate(getWebView(m_webFrame.get()), @selector(frame:sourceFrame:willSubmitForm:withValues:submissionListener:), m_webFrame.get(), kit(formState->sourceDocument()->frame()), kit(formState->form()), values, setUpPolicyListener(function).get());
+    CallFormDelegate(getWebView(m_webFrame.get()), @selector(frame:sourceFrame:willSubmitForm:withValues:submissionListener:), m_webFrame.get(), kit(formState->sourceDocument()->frame()), kit(formState->form()), values, setUpPolicyListener(std::move(function)).get());
 }
 
 void WebFrameLoaderClient::revertToProvisionalState(DocumentLoader* loader)
@@ -992,7 +989,7 @@ void WebFrameLoaderClient::didDisplayInsecureContent()
         CallFrameLoadDelegate(implementations->didDisplayInsecureContentFunc, webView, @selector(webViewDidDisplayInsecureContent:));
 }
 
-void WebFrameLoaderClient::didRunInsecureContent(SecurityOrigin* origin, const KURL& insecureURL)
+void WebFrameLoaderClient::didRunInsecureContent(SecurityOrigin* origin, const URL& insecureURL)
 {
     WebView *webView = getWebView(m_webFrame.get());   
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(webView);
@@ -1002,7 +999,7 @@ void WebFrameLoaderClient::didRunInsecureContent(SecurityOrigin* origin, const K
     }
 }
 
-void WebFrameLoaderClient::didDetectXSS(const KURL& insecureURL, bool didBlockEntirePage)
+void WebFrameLoaderClient::didDetectXSS(const URL& insecureURL, bool didBlockEntirePage)
 {
     WebView *webView = getWebView(m_webFrame.get());   
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(webView);
@@ -1063,10 +1060,7 @@ bool WebFrameLoaderClient::shouldFallBack(const ResourceError& error)
 
 bool WebFrameLoaderClient::canHandleRequest(const ResourceRequest& request) const
 {
-    Frame* frame = core(m_webFrame.get());
-    Page* page = frame->page();
-    BOOL forMainFrame = page && page->frameIsMainFrame(frame);
-    return [WebView _canHandleRequest:request.nsURLRequest(UpdateHTTPBody) forMainFrame:forMainFrame];
+    return [WebView _canHandleRequest:request.nsURLRequest(UpdateHTTPBody) forMainFrame:core(m_webFrame.get())->isMainFrame()];
 }
 
 bool WebFrameLoaderClient::canShowMIMEType(const String& MIMEType) const
@@ -1192,7 +1186,7 @@ PassRefPtr<DocumentLoader> WebFrameLoaderClient::createDocumentLoader(const Reso
     return loader.release();
 }
 
-void WebFrameLoaderClient::setTitle(const StringWithDirection& title, const KURL& url)
+void WebFrameLoaderClient::setTitle(const StringWithDirection& title, const URL& url)
 {
     WebView* view = getWebView(m_webFrame.get());
     
@@ -1265,7 +1259,7 @@ void WebFrameLoaderClient::transitionToCommittedForNewPage()
     // If we own the view, delete the old one - otherwise the render m_frame will take care of deleting the view.
     Frame* coreFrame = core(m_webFrame.get());
     Page* page = coreFrame->page();
-    bool isMainFrame = page->frameIsMainFrame(coreFrame);
+    bool isMainFrame = coreFrame->isMainFrame();
     if (isMainFrame && coreFrame->view())
         coreFrame->view()->setParentVisible(false);
     coreFrame->setView(0);
@@ -1320,7 +1314,7 @@ RetainPtr<WebFramePolicyListener> WebFrameLoaderClient::setUpPolicyListener(Fram
     return m_policyListener;
 }
 
-String WebFrameLoaderClient::userAgent(const KURL& url)
+String WebFrameLoaderClient::userAgent(const URL& url)
 {
     WebView *webView = getWebView(m_webFrame.get());
     ASSERT(webView);
@@ -1328,7 +1322,7 @@ String WebFrameLoaderClient::userAgent(const KURL& url)
     // We should never get here with nil for the WebView unless there is a bug somewhere else.
     // But if we do, it's better to return the empty string than just crashing on the spot.
     // Most other call sites are tolerant of nil because of Objective-C behavior, but this one
-    // is not because the return value of _userAgentForURL is a const KURL&.
+    // is not because the return value of _userAgentForURL is a const URL&.
     if (!webView)
         return emptyString();
 
@@ -1389,7 +1383,7 @@ bool WebFrameLoaderClient::canCachePage() const
     return [[[m_webFrame.get() _dataSource] representation] isKindOfClass:[WebHTMLRepresentation class]];
 }
 
-PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
     const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -1423,7 +1417,7 @@ PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const KURL& url, const Strin
     return 0;
 }
 
-ObjectContentType WebFrameLoaderClient::objectContentType(const KURL& url, const String& mimeType, bool shouldPreferPlugInsForImages)
+ObjectContentType WebFrameLoaderClient::objectContentType(const URL& url, const String& mimeType, bool shouldPreferPlugInsForImages)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
 
@@ -1641,7 +1635,7 @@ private:
 
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
 
-PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize& size, HTMLPlugInElement* element, const KURL& url,
+PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize& size, HTMLPlugInElement* element, const URL& url,
     const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -1746,9 +1740,9 @@ PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize& size, HTMLP
     if (errorCode && m_webFrame) {
         WebResourceDelegateImplementationCache* implementations = WebViewGetResourceLoadDelegateImplementations(webView);
         if (implementations->plugInFailedWithErrorFunc) {
-            KURL pluginPageURL = document->completeURL(stripLeadingAndTrailingHTMLSpaces(parameterValue(paramNames, paramValues, "pluginspage")));
+            URL pluginPageURL = document->completeURL(stripLeadingAndTrailingHTMLSpaces(parameterValue(paramNames, paramValues, "pluginspage")));
             if (!pluginPageURL.protocolIsInHTTPFamily())
-                pluginPageURL = KURL();
+                pluginPageURL = URL();
             NSString *pluginName = pluginPackage ? (NSString *)[pluginPackage pluginInfo].name : nil;
 
             NSError *error = [[NSError alloc] _initWithPluginErrorCode:errorCode
@@ -1799,7 +1793,7 @@ void WebFrameLoaderClient::redirectDataToPlugin(Widget* pluginWidget)
     END_BLOCK_OBJC_EXCEPTIONS;
 }
     
-PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& size, HTMLAppletElement* element, const KURL& baseURL, 
+PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& size, HTMLAppletElement* element, const URL& baseURL, 
     const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -1855,7 +1849,7 @@ PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& s
 }
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-PassRefPtr<Widget> WebFrameLoaderClient::createMediaPlayerProxyPlugin(const IntSize& size, HTMLMediaElement* element, const KURL& url,
+PassRefPtr<Widget> WebFrameLoaderClient::createMediaPlayerProxyPlugin(const IntSize& size, HTMLMediaElement* element, const URL& url,
     const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
@@ -1942,7 +1936,7 @@ String WebFrameLoaderClient::overrideMediaType() const
 void WebFrameLoaderClient::documentElementAvailable() {
 }
 
-void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
+void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld& world)
 {
     WebView *webView = getWebView(m_webFrame.get());
     WebFrameLoadDelegateImplementationCache* implementations = WebViewGetFrameLoadDelegateImplementations(webView);
@@ -1953,7 +1947,7 @@ void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* 
         return;
     }
 
-    if (world != mainThreadNormalWorld())
+    if (&world != &mainThreadNormalWorld())
         return;
 
     Frame *frame = core(m_webFrame.get());
@@ -2016,7 +2010,7 @@ PassRefPtr<FrameNetworkingContext> WebFrameLoaderClient::createNetworkingContext
         return nil;
 
     _frame = frame;
-    _policyFunction = policyFunction;
+    _policyFunction = std::move(policyFunction);
 
     return self;
 }
@@ -2040,11 +2034,11 @@ PassRefPtr<FrameNetworkingContext> WebFrameLoaderClient::createNetworkingContext
     if (!frame)
         return;
 
-    FramePolicyFunction policyFunction = _policyFunction;
+    FramePolicyFunction policyFunction = std::move(_policyFunction);
     _policyFunction = nullptr;
 
     ASSERT(policyFunction);
-    (frame->loader().policyChecker().*policyFunction)(action);
+    policyFunction(action);
 }
 
 - (void)ignore

@@ -105,27 +105,16 @@ void InspectorReplayAgent::clearFrontend()
     m_frontend = 0;
 }
 
-void InspectorReplayAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node)
+void InspectorReplayAgent::willDispatchEvent(const Event& event, Frame* frame)
 {
     if (capturing() || replaying())
-        m_inspectedPage->replayController().willDispatchEvent(event, window, node, reuseMark());
+        m_inspectedPage->replayController().willDispatchEvent(event, frame, reuseMark());
 }
 
 void InspectorReplayAgent::didDispatchEvent()
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController().didDispatchEvent();
-}
-
-void InspectorReplayAgent::willDispatchEventOnWindow(const Event& event, DOMWindow* window)
-{
-    if (capturing() || replaying())
-        m_inspectedPage->replayController().willDispatchEvent(event, window, 0, reuseMark());
-}
-
-void InspectorReplayAgent::didDispatchEventOnWindow()
-{
-    didDispatchEvent();
 }
 
 void InspectorReplayAgent::frameNavigated(DocumentLoader* loader)
@@ -193,9 +182,6 @@ void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
     if (!input->isUserVisible())
         return;
 
-    // TODO(Issue #271): remove backend-side interpretation of inputs
-    m_frontend->capturedAction(InspectorRecordingsAgent::createInspectorObjectForAction(*input));
-
     RefPtr<TypeBuilder::Recordings::ReplayInput> serializedInput = JSONCoder::serializeInput(input, newMark.index());
     if (serializedInput)
         m_frontend->capturedInput(serializedInput.release());
@@ -211,7 +197,6 @@ void InspectorReplayAgent::captureStarted()
         m_frontend->captureStarted();
         m_frontend->inputUnlocked();
     }
-
 }
 
 void InspectorReplayAgent::captureFinished()

@@ -38,8 +38,6 @@
 
 namespace JSC {
 
-static const double D32 = 4294967296.0;
-
 // ECMA 9.4
 double JSValue::toInteger(ExecState* exec) const
 {
@@ -76,8 +74,9 @@ JSObject* JSValue::toObjectSlowCase(ExecState* exec, JSGlobalObject* globalObjec
         return constructBooleanFromImmediateBoolean(exec, globalObject, asValue());
 
     ASSERT(isUndefinedOrNull());
-    exec->vm().throwException(exec, createNotAnObjectError(exec, *this));
-    return JSNotAnObject::create(exec);
+    VM& vm = exec->vm();
+    vm.throwException(exec, createNotAnObjectError(exec, *this));
+    return JSNotAnObject::create(vm);
 }
 
 JSValue JSValue::toThisSlowCase(ExecState* exec, ECMAMode ecmaMode) const
@@ -108,8 +107,9 @@ JSObject* JSValue::synthesizePrototype(ExecState* exec) const
         return exec->lexicalGlobalObject()->booleanPrototype();
 
     ASSERT(isUndefinedOrNull());
-    exec->vm().throwException(exec, createNotAnObjectError(exec, *this));
-    return JSNotAnObject::create(exec);
+    VM& vm = exec->vm();
+    vm.throwException(exec, createNotAnObjectError(exec, *this));
+    return JSNotAnObject::create(vm);
 }
 
 // ECMA 8.7.2
@@ -218,6 +218,8 @@ void JSValue::dumpInContext(PrintStream& out, DumpContext* context) const
                     out.print(" (atomic)");
                 if (impl->isIdentifier())
                     out.print(" (identifier)");
+                if (impl->isEmptyUnique())
+                    out.print(" (unique)");
             } else
                 out.print(" (unresolved)");
             out.print(": ", impl);

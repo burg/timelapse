@@ -55,7 +55,6 @@
 #include <WebCore/DOMWrapperWorld.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FormState.h>
-#include <WebCore/Frame.h>
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameLoader.h>
 #include <WebCore/FrameView.h>
@@ -64,6 +63,7 @@
 #include <WebCore/HistoryController.h>
 #include <WebCore/HistoryItem.h>
 #include <WebCore/MIMETypeRegistry.h>
+#include <WebCore/MainFrame.h>
 #include <WebCore/MouseEvent.h>
 #include <WebCore/NotImplemented.h>
 #include <WebCore/Page.h>
@@ -296,7 +296,7 @@ void WebFrameLoaderClient::dispatchDidCancelClientRedirect()
     webPage->injectedBundleLoaderClient().didCancelClientRedirectForFrame(webPage, m_frame);
 }
 
-void WebFrameLoaderClient::dispatchWillPerformClientRedirect(const KURL& url, double interval, double fireDate)
+void WebFrameLoaderClient::dispatchWillPerformClientRedirect(const URL& url, double interval, double fireDate)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -618,14 +618,14 @@ void WebFrameLoaderClient::dispatchShow()
     webPage->show();
 }
 
-void WebFrameLoaderClient::dispatchDecidePolicyForResponse(FramePolicyFunction function, const ResourceResponse& response, const ResourceRequest& request)
+void WebFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& request, FramePolicyFunction function)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
         return;
 
     if (!request.url().string()) {
-        (m_frame->coreFrame()->loader().policyChecker().*function)(PolicyUse);
+        function(PolicyUse);
         return;
     }
 
@@ -634,11 +634,11 @@ void WebFrameLoaderClient::dispatchDecidePolicyForResponse(FramePolicyFunction f
     // Notify the bundle client.
     WKBundlePagePolicyAction policy = webPage->injectedBundlePolicyClient().decidePolicyForResponse(webPage, m_frame, response, request, userData);
     if (policy == WKBundlePagePolicyActionUse) {
-        (m_frame->coreFrame()->loader().policyChecker().*function)(PolicyUse);
+        function(PolicyUse);
         return;
     }
 
-    uint64_t listenerID = m_frame->setUpPolicyListener(function);
+    uint64_t listenerID = m_frame->setUpPolicyListener(std::move(function));
     bool receivedPolicyAction;
     uint64_t policyAction;
     uint64_t downloadID;
@@ -652,7 +652,7 @@ void WebFrameLoaderClient::dispatchDecidePolicyForResponse(FramePolicyFunction f
         m_frame->didReceivePolicyDecision(listenerID, static_cast<PolicyAction>(policyAction), downloadID);
 }
 
-void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(FramePolicyFunction function, const NavigationAction& navigationAction, const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName)
+void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const NavigationAction& navigationAction, const ResourceRequest& request, PassRefPtr<FormState> formState, const String& frameName, FramePolicyFunction function)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -665,27 +665,27 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(FramePolicyFun
     // Notify the bundle client.
     WKBundlePagePolicyAction policy = webPage->injectedBundlePolicyClient().decidePolicyForNewWindowAction(webPage, m_frame, action.get(), request, frameName, userData);
     if (policy == WKBundlePagePolicyActionUse) {
-        (m_frame->coreFrame()->loader().policyChecker().*function)(PolicyUse);
+        function(PolicyUse);
         return;
     }
 
 
-    uint64_t listenerID = m_frame->setUpPolicyListener(function);
+    uint64_t listenerID = m_frame->setUpPolicyListener(std::move(function));
 
     // Notify the UIProcess.
     webPage->send(Messages::WebPageProxy::DecidePolicyForNewWindowAction(m_frame->frameID(), action->navigationType(), action->modifiers(), action->mouseButton(), request, frameName, listenerID, InjectedBundleUserMessageEncoder(userData.get())));
 }
 
-void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(FramePolicyFunction function, const NavigationAction& navigationAction, const ResourceRequest& request, PassRefPtr<FormState> formState)
+void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction& navigationAction, const ResourceRequest& request, PassRefPtr<FormState> formState, FramePolicyFunction function)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
         return;
 
     // Always ignore requests with empty URLs. 
-    if (request.isEmpty()) { 
-        (m_frame->coreFrame()->loader().policyChecker().*function)(PolicyIgnore); 
-        return; 
+    if (request.isEmpty()) {
+        function(PolicyIgnore);
+        return;
     }
 
     RefPtr<APIObject> userData;
@@ -695,11 +695,11 @@ void WebFrameLoaderClient::dispatchDecidePolicyForNavigationAction(FramePolicyFu
     // Notify the bundle client.
     WKBundlePagePolicyAction policy = webPage->injectedBundlePolicyClient().decidePolicyForNavigationAction(webPage, m_frame, action.get(), request, userData);
     if (policy == WKBundlePagePolicyActionUse) {
-        (m_frame->coreFrame()->loader().policyChecker().*function)(PolicyUse);
+        function(PolicyUse);
         return;
     }
     
-    uint64_t listenerID = m_frame->setUpPolicyListener(function);
+    uint64_t listenerID = m_frame->setUpPolicyListener(std::move(function));
     bool receivedPolicyAction;
     uint64_t policyAction;
     uint64_t downloadID;
@@ -749,7 +749,7 @@ void WebFrameLoaderClient::dispatchWillSendSubmitEvent(PassRefPtr<FormState> prp
     webPage->injectedBundleFormClient().willSendSubmitEvent(webPage, form, m_frame, sourceFrame, formState->textFieldValues());
 }
 
-void WebFrameLoaderClient::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<FormState> prpFormState)
+void WebFrameLoaderClient::dispatchWillSubmitForm(PassRefPtr<FormState> prpFormState, FramePolicyFunction function)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -770,7 +770,7 @@ void WebFrameLoaderClient::dispatchWillSubmitForm(FramePolicyFunction function, 
     webPage->injectedBundleFormClient().willSubmitForm(webPage, form, m_frame, sourceFrame, values, userData);
 
 
-    uint64_t listenerID = m_frame->setUpPolicyListener(function);
+    uint64_t listenerID = m_frame->setUpPolicyListener(std::move(function));
 
     webPage->send(Messages::WebPageProxy::WillSubmitForm(m_frame->frameID(), sourceFrame->frameID(), values, listenerID, InjectedBundleUserMessageEncoder(userData.get())));
 }
@@ -985,7 +985,7 @@ void WebFrameLoaderClient::didDisplayInsecureContent()
     webPage->send(Messages::WebPageProxy::DidDisplayInsecureContentForFrame(m_frame->frameID(), InjectedBundleUserMessageEncoder(userData.get())));
 }
 
-void WebFrameLoaderClient::didRunInsecureContent(SecurityOrigin*, const KURL&)
+void WebFrameLoaderClient::didRunInsecureContent(SecurityOrigin*, const URL&)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -998,7 +998,7 @@ void WebFrameLoaderClient::didRunInsecureContent(SecurityOrigin*, const KURL&)
     webPage->send(Messages::WebPageProxy::DidRunInsecureContentForFrame(m_frame->frameID(), InjectedBundleUserMessageEncoder(userData.get())));
 }
 
-void WebFrameLoaderClient::didDetectXSS(const KURL&, bool)
+void WebFrameLoaderClient::didDetectXSS(const URL&, bool)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -1056,13 +1056,6 @@ bool WebFrameLoaderClient::shouldFallBack(const ResourceError& error)
 
     if (error.errorCode() == pluginWillHandleLoadError.errorCode() && error.domain() == pluginWillHandleLoadError.domain())
         return false;
-
-#if PLATFORM(QT)
-    DEFINE_STATIC_LOCAL(const ResourceError, errorInterruptedForPolicyChange, (this->interruptedForPolicyChangeError(ResourceRequest())));
-
-    if (error.errorCode() == errorInterruptedForPolicyChange.errorCode() && error.domain() == errorInterruptedForPolicyChange.domain())
-        return false;
-#endif
 
     return true;
 }
@@ -1158,7 +1151,7 @@ PassRefPtr<DocumentLoader> WebFrameLoaderClient::createDocumentLoader(const Reso
     return DocumentLoader::create(request, data);
 }
 
-void WebFrameLoaderClient::setTitle(const StringWithDirection& title, const KURL& url)
+void WebFrameLoaderClient::setTitle(const StringWithDirection& title, const URL& url)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage || !webPage->pageGroup()->isVisibleToHistoryClient())
@@ -1169,7 +1162,7 @@ void WebFrameLoaderClient::setTitle(const StringWithDirection& title, const KURL
         title.string(), url.string(), m_frame->frameID()), 0);
 }
 
-String WebFrameLoaderClient::userAgent(const KURL&)
+String WebFrameLoaderClient::userAgent(const URL&)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -1256,7 +1249,7 @@ void WebFrameLoaderClient::convertMainResourceLoadToDownload(DocumentLoader *doc
     m_frame->convertMainResourceLoadToDownload(documentLoader, request, response);
 }
 
-PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const KURL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
                                                     const String& referrer, bool /*allowsScrolling*/, int /*marginWidth*/, int /*marginHeight*/)
 {
     WebPage* webPage = m_frame->page();
@@ -1283,7 +1276,7 @@ PassRefPtr<Frame> WebFrameLoaderClient::createFrame(const KURL& url, const Strin
     return coreSubframe;
 }
 
-PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement* pluginElement, const KURL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
+PassRefPtr<Widget> WebFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement* pluginElement, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
 {
     ASSERT(paramNames.size() == paramValues.size());
     ASSERT(m_frame->page());
@@ -1346,9 +1339,9 @@ void WebFrameLoaderClient::redirectDataToPlugin(Widget* pluginWidget)
         m_pluginView = static_cast<PluginView*>(pluginWidget);
 }
 
-PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement* appletElement, const KURL&, const Vector<String>& paramNames, const Vector<String>& paramValues)
+PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement* appletElement, const URL&, const Vector<String>& paramNames, const Vector<String>& paramValues)
 {
-    RefPtr<Widget> plugin = createPlugin(pluginSize, appletElement, KURL(), paramNames, paramValues, appletElement->serviceType(), false);
+    RefPtr<Widget> plugin = createPlugin(pluginSize, appletElement, URL(), paramNames, paramValues, appletElement->serviceType(), false);
     if (!plugin) {
         if (WebPage* webPage = m_frame->page()) {
             String frameURLString = m_frame->coreFrame()->loader().documentLoader()->responseURL().string();
@@ -1360,7 +1353,7 @@ PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& p
 }
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
-PassRefPtr<Widget> WebFrameLoaderClient::createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const KURL&, const Vector<String>&, const Vector<String>&, const String&)
+PassRefPtr<Widget> WebFrameLoaderClient::createMediaPlayerProxyPlugin(const IntSize&, HTMLMediaElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&)
 {
     notImplemented();
     return 0;
@@ -1390,7 +1383,7 @@ static bool pluginSupportsExtension(const PluginData& pluginData, const String& 
     return false;
 }
 
-ObjectContentType WebFrameLoaderClient::objectContentType(const KURL& url, const String& mimeTypeIn, bool shouldPreferPlugInsForImages)
+ObjectContentType WebFrameLoaderClient::objectContentType(const URL& url, const String& mimeTypeIn, bool shouldPreferPlugInsForImages)
 {
     // FIXME: This should be merged with WebCore::FrameLoader::defaultObjectContentType when the plugin code
     // is consolidated.
@@ -1441,7 +1434,7 @@ String WebFrameLoaderClient::overrideMediaType() const
     return String();
 }
 
-void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* world)
+void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld& world)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -1456,7 +1449,7 @@ void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* 
 }
 
 
-void WebFrameLoaderClient::dispatchGlobalObjectAvailable(DOMWrapperWorld* world)
+void WebFrameLoaderClient::dispatchGlobalObjectAvailable(DOMWrapperWorld& world)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)
@@ -1575,7 +1568,7 @@ bool WebFrameLoaderClient::allowScript(bool enabledPerSettings)
     return true;
 }
 
-bool WebFrameLoaderClient::shouldForceUniversalAccessFromLocalURL(const WebCore::KURL& url)
+bool WebFrameLoaderClient::shouldForceUniversalAccessFromLocalURL(const WebCore::URL& url)
 {
     WebPage* webPage = m_frame->page();
     if (!webPage)

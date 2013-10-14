@@ -36,10 +36,10 @@ class WeakMapConstructor : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static WeakMapConstructor* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, WeakMapPrototype* prototype)
+    static WeakMapConstructor* create(VM& vm, Structure* structure, WeakMapPrototype* prototype)
     {
-        WeakMapConstructor* constructor = new (NotNull, allocateCell<WeakMapConstructor>(*exec->heap())) WeakMapConstructor(globalObject, structure);
-        constructor->finishCreation(exec, prototype);
+        WeakMapConstructor* constructor = new (NotNull, allocateCell<WeakMapConstructor>(vm.heap)) WeakMapConstructor(vm, structure);
+        constructor->finishCreation(vm, prototype);
         return constructor;
     }
 
@@ -51,11 +51,11 @@ public:
     }
 
 private:
-    WeakMapConstructor(JSGlobalObject* globalObject, Structure* structure)
-        : Base(globalObject, structure)
+    WeakMapConstructor(VM& vm, Structure* structure)
+        : Base(vm, structure)
     {
     }
-    void finishCreation(ExecState*, WeakMapPrototype*);
+    void finishCreation(VM&, WeakMapPrototype*);
     static ConstructType getConstructData(JSCell*, ConstructData&);
     static CallType getCallData(JSCell*, CallData&);
 };

@@ -12,6 +12,7 @@
  *  Copyright (C) 2009 Bobby Powers
  *  Copyright (C) 2010 Joone Hur <joone@kldp.org>
  *  Copyright (C) 2012 Igalia S.L.
+ *  Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -70,6 +71,7 @@
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "InspectorClientGtk.h"
+#include "MainFrame.h"
 #include "MemoryCache.h"
 #include "MouseEventWithHitTestResults.h"
 #include "NotImplemented.h"
@@ -1527,7 +1529,7 @@ static void webkit_web_view_drag_data_get(GtkWidget* widget, GdkDragContext* con
     WEBKIT_WEB_VIEW(widget)->priv->dragAndDropHelper.handleGetDragData(context, selectionData, info);
 }
 
-static void dragExitedCallback(GtkWidget* widget, DragData* dragData, bool dropHappened)
+static void dragExitedCallback(GtkWidget* widget, DragData& dragData, bool dropHappened)
 {
     // Don't call dragExited if we have just received a drag-drop signal. This
     // happens in the case of a successful drop onto the view.
@@ -1550,7 +1552,7 @@ static gboolean webkit_web_view_drag_motion(GtkWidget* widget, GdkDragContext* c
         return TRUE;
 
     DragData dragData(dataObject, position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
-    DragOperation operation = core(webView)->dragController().dragUpdated(&dragData).operation;
+    DragOperation operation = core(webView)->dragController().dragUpdated(dragData).operation;
     gdk_drag_status(context, dragOperationToSingleGdkDragAction(operation), time);
     return TRUE;
 }
@@ -1564,7 +1566,7 @@ static void webkit_web_view_drag_data_received(GtkWidget* widget, GdkDragContext
         return;
 
     DragData dragData(dataObject, position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
-    DragOperation operation = core(webView)->dragController().dragEntered(&dragData).operation;
+    DragOperation operation = core(webView)->dragController().dragEntered(dragData).operation;
     gdk_drag_status(context, dragOperationToSingleGdkDragAction(operation), time);
 }
 
@@ -1577,7 +1579,7 @@ static gboolean webkit_web_view_drag_drop(GtkWidget* widget, GdkDragContext* con
 
     IntPoint position(x, y);
     DragData dragData(dataObject, position, convertWidgetPointToScreenPoint(widget, position), gdkDragActionToDragOperation(gdk_drag_context_get_actions(context)));
-    core(webView)->dragController().performDrag(&dragData);
+    core(webView)->dragController().performDrag(dragData);
     gtk_drag_finish(context, TRUE, FALSE, time);
     return TRUE;
 }
@@ -3502,7 +3504,7 @@ static void updateAcceleratedCompositingSetting(Settings& settings, bool value)
 #if PLATFORM(WAYLAND) && defined(GDK_WINDOWING_WAYLAND)
     GdkDisplay* display = gdk_display_manager_get_default_display(gdk_display_manager_get());
     if (GDK_IS_WAYLAND_DISPLAY(display)) {
-        if (!value)
+        if (!settings.acceleratedCompositingEnabled() && !value)
             return;
 
         static bool unsupportedACWarningShown = false;
@@ -3537,7 +3539,7 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
     coreSettings.setScriptEnabled(settingsPrivate->enableScripts);
     coreSettings.setPluginsEnabled(settingsPrivate->enablePlugins);
     coreSettings.setTextAreasAreResizable(settingsPrivate->resizableTextAreas);
-    coreSettings.setUserStyleSheetLocation(KURL(KURL(), settingsPrivate->userStylesheetURI.data()));
+    coreSettings.setUserStyleSheetLocation(URL(URL(), settingsPrivate->userStylesheetURI.data()));
     coreSettings.setDeveloperExtrasEnabled(settingsPrivate->enableDeveloperExtras);
     coreSettings.setPrivateBrowsingEnabled(settingsPrivate->enablePrivateBrowsing);
     coreSettings.setCaretBrowsingEnabled(settingsPrivate->enableCaretBrowsing);
@@ -3583,7 +3585,7 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
 #endif
 
 #if ENABLE(MEDIA_STREAM)
-    WebCore::RuntimeEnabledFeatures::setMediaStreamEnabled(settingsPrivate->enableMediaStream);
+    WebCore::RuntimeEnabledFeatures::sharedFeatures().setMediaStreamEnabled(settingsPrivate->enableMediaStream);
 #endif
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -3665,7 +3667,7 @@ static void webkit_web_view_settings_notify(WebKitWebSettings* webSettings, GPar
     else if (name == g_intern_string("resizable-text-areas"))
         settings.setTextAreasAreResizable(g_value_get_boolean(&value));
     else if (name == g_intern_string("user-stylesheet-uri"))
-        settings.setUserStyleSheetLocation(KURL(KURL(), g_value_get_string(&value)));
+        settings.setUserStyleSheetLocation(URL(URL(), g_value_get_string(&value)));
     else if (name == g_intern_string("enable-developer-extras"))
         settings.setDeveloperExtrasEnabled(g_value_get_boolean(&value));
     else if (name == g_intern_string("enable-private-browsing"))
@@ -4373,10 +4375,8 @@ gboolean webkit_web_view_search_text(WebKitWebView* webView, const gchar* string
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), FALSE);
     g_return_val_if_fail(string, FALSE);
 
-    TextCaseSensitivity caseSensitivity = caseSensitive ? TextCaseSensitive : TextCaseInsensitive;
-    FindDirection direction = forward ? FindDirectionForward : FindDirectionBackward;
-
-    return core(webView)->findString(String::fromUTF8(string), caseSensitivity, direction, shouldWrap);
+    FindOptions options = (caseSensitive ? 0 : CaseInsensitive) | (forward ? 0 : Backwards) | (shouldWrap ? WrapAround : 0);
+    return core(webView)->findString(String::fromUTF8(string), options);
 }
 
 /**
