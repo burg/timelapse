@@ -35,27 +35,21 @@ namespace WebCore {
 class EventSender {
     WTF_MAKE_NONCOPYABLE(EventSender); WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit EventSender(const AtomicString& eventType);
+    EventSender();
 
-    const AtomicString& eventType() const { return m_eventType; }
-    void dispatchEventSoon(EventSenderClient*);
-    void cancelEvent(EventSenderClient*);
+    void dispatchEventSoon(EventSenderClient*, const AtomicString&);
+    void cancelEvent(EventSenderClient*, const AtomicString&);
     void dispatchPendingEvents();
-
 #ifndef NDEBUG
-    bool hasPendingEvents(EventSenderClient* sender) const
-    {
-        return m_dispatchSoonList.find(sender) != notFound || m_dispatchingList.find(sender) != notFound;
-    }
+    bool hasPendingEvents(EventSenderClient* sender) const;
 #endif
 
 private:
     void timerFired(Timer<EventSender>*) { dispatchPendingEvents(); }
 
-    AtomicString m_eventType;
     Timer<EventSender> m_timer;
-    Vector<EventSenderClient*> m_dispatchSoonList;
-    Vector<EventSenderClient*> m_dispatchingList;
+    Vector<std::pair<EventSenderClient*, const AtomicString&>> m_dispatchSoonList;
+    Vector<std::pair<EventSenderClient*, const AtomicString&>> m_dispatchingList;
 };
 
 } // namespace WebCore

@@ -59,7 +59,7 @@ using namespace HTMLNames;
 
 static EventSender& linkLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, (eventNames().loadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, ());
     return sharedLoadEventSender;
 }
 
@@ -94,7 +94,7 @@ HTMLLinkElement::~HTMLLinkElement()
     if (inDocument())
         document().styleSheetCollection().removeStyleSheetCandidateNode(*this);
 
-    linkLoadEventSender().cancelEvent(this);
+    linkLoadEventSender().cancelEvent(this, eventNames().loadEvent);
 }
 
 void HTMLLinkElement::setDisabledState(bool disabled)
@@ -365,7 +365,7 @@ void HTMLLinkElement::dispatchPendingLoadEvents()
     linkLoadEventSender().dispatchPendingEvents();
 }
 
-void HTMLLinkElement::dispatchPendingEvent(const EventSender&)
+void HTMLLinkElement::dispatchPendingEvent(const AtomicString&)
 {
     if (m_loadedSheet)
         linkLoaded();
@@ -378,7 +378,7 @@ void HTMLLinkElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccu
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    linkLoadEventSender().dispatchEventSoon(this);
+    linkLoadEventSender().dispatchEventSoon(this, eventNames().loadEvent);
     m_firedLoad = true;
 }
 

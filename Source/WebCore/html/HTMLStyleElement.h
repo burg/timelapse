@@ -64,7 +64,7 @@ private:
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const;
 
     // EventSenderClient API
-    virtual void dispatchPendingEvent(const EventSender&) OVERRIDE;
+    virtual void dispatchPendingEvent(const AtomicString&) OVERRIDE;
 
     InlineStyleSheetOwner m_styleSheetOwner;
     bool m_firedLoad;

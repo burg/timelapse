@@ -68,19 +68,19 @@ namespace WebCore {
 
 static EventSender& beforeLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(EventSender, sender, (eventNames().beforeloadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sender, ());
     return sender;
 }
 
 static EventSender& loadEventSender()
 {
-    DEFINE_STATIC_LOCAL(EventSender, sender, (eventNames().loadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sender, ());
     return sender;
 }
 
 static EventSender& errorEventSender()
 {
-    DEFINE_STATIC_LOCAL(EventSender, sender, (eventNames().errorEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sender, ());
     return sender;
 }
 
@@ -110,15 +110,15 @@ ImageLoader::~ImageLoader()
 
     ASSERT(m_hasPendingBeforeLoadEvent || !beforeLoadEventSender().hasPendingEvents(this));
     if (m_hasPendingBeforeLoadEvent)
-        beforeLoadEventSender().cancelEvent(this);
+        beforeLoadEventSender().cancelEvent(this, eventNames().beforeloadEvent);
 
     ASSERT(m_hasPendingLoadEvent || !loadEventSender().hasPendingEvents(this));
     if (m_hasPendingLoadEvent)
-        loadEventSender().cancelEvent(this);
+        loadEventSender().cancelEvent(this, eventNames().loadEvent);
 
     ASSERT(m_hasPendingErrorEvent || !errorEventSender().hasPendingEvents(this));
     if (m_hasPendingErrorEvent)
-        errorEventSender().cancelEvent(this);
+        errorEventSender().cancelEvent(this, eventNames().errorEvent);
 
     // If the ImageLoader is being destroyed but it is still protecting its image-loading Element,
     // remove that protection here.
@@ -142,15 +142,15 @@ void ImageLoader::setImageWithoutConsideringPendingLoadEvent(CachedImage* newIma
     if (newImage != oldImage) {
         m_image = newImage;
         if (m_hasPendingBeforeLoadEvent) {
-            beforeLoadEventSender().cancelEvent(this);
+            beforeLoadEventSender().cancelEvent(this, eventNames().beforeloadEvent);
             m_hasPendingBeforeLoadEvent = false;
         }
         if (m_hasPendingLoadEvent) {
-            loadEventSender().cancelEvent(this);
+            loadEventSender().cancelEvent(this, eventNames().loadEvent);
             m_hasPendingLoadEvent = false;
         }
         if (m_hasPendingErrorEvent) {
-            errorEventSender().cancelEvent(this);
+            errorEventSender().cancelEvent(this, eventNames().errorEvent);
             m_hasPendingErrorEvent = false;
         }
         m_imageComplete = true;
@@ -208,7 +208,7 @@ void ImageLoader::updateFromElement()
         if (!newImage && !pageIsBeingDismissed(document)) {
             m_failedLoadURL = attr;
             m_hasPendingErrorEvent = true;
-            errorEventSender().dispatchEventSoon(this);
+            errorEventSender().dispatchEventSoon(this, eventNames().errorEvent);
         } else
             clearFailedLoadURL();
     } else if (!attr.isNull()) {
@@ -220,11 +220,11 @@ void ImageLoader::updateFromElement()
     CachedImage* oldImage = m_image.get();
     if (newImage != oldImage) {
         if (m_hasPendingBeforeLoadEvent) {
-            beforeLoadEventSender().cancelEvent(this);
+            beforeLoadEventSender().cancelEvent(this, eventNames().beforeloadEvent);
             m_hasPendingBeforeLoadEvent = false;
         }
         if (m_hasPendingLoadEvent) {
-            loadEventSender().cancelEvent(this);
+            loadEventSender().cancelEvent(this, eventNames().loadEvent);
             m_hasPendingLoadEvent = false;
         }
 
@@ -233,7 +233,7 @@ void ImageLoader::updateFromElement()
         // this load and we should not cancel the event.
         // FIXME: If both previous load and this one got blocked with an error, we can receive one error event instead of two.
         if (m_hasPendingErrorEvent && newImage) {
-            errorEventSender().cancelEvent(this);
+            errorEventSender().cancelEvent(this, eventNames().errorEvent);
             m_hasPendingErrorEvent = false;
         }
 
@@ -247,7 +247,7 @@ void ImageLoader::updateFromElement()
                 if (!document.hasListenerType(Document::BEFORELOAD_LISTENER))
                     dispatchPendingBeforeLoadEvent();
                 else
-                    beforeLoadEventSender().dispatchEventSoon(this);
+                    beforeLoadEventSender().dispatchEventSoon(this, eventNames().beforeloadEvent);
             } else
                 updateRenderer();
 
@@ -293,7 +293,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         setImageWithoutConsideringPendingLoadEvent(0);
 
         m_hasPendingErrorEvent = true;
-        errorEventSender().dispatchEventSoon(this);
+        errorEventSender().dispatchEventSoon(this, eventNames().errorEvent);
 
         DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Cross-origin image load denied by Cross-Origin Resource Sharing policy.")));
         m_element->document().addConsoleMessage(SecurityMessageSource, ErrorMessageLevel, consoleMessage);
@@ -314,7 +314,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         return;
     }
 
-    loadEventSender().dispatchEventSoon(this);
+    loadEventSender().dispatchEventSoon(this, eventNames().loadEvent);
 }
 
 RenderImageResource* ImageLoader::renderImageResource()
@@ -383,15 +383,13 @@ void ImageLoader::timerFired(Timer<ImageLoader>*)
     m_element->deref();
 }
 
-void ImageLoader::dispatchPendingEvent(const EventSender& eventSender)
+void ImageLoader::dispatchPendingEvent(const AtomicString& eventName)
 {
-    ASSERT(&eventSender == &beforeLoadEventSender() || &eventSender == &loadEventSender() || &eventSender == &errorEventSender());
-    const AtomicString& eventType = eventSender.eventType();
-    if (eventType == eventNames().beforeloadEvent)
+    if (eventName == eventNames().beforeloadEvent)
         dispatchPendingBeforeLoadEvent();
-    if (eventType == eventNames().loadEvent)
+    if (eventName == eventNames().loadEvent)
         dispatchPendingLoadEvent();
-    if (eventType == eventNames().errorEvent)
+    if (eventName == eventNames().errorEvent)
         dispatchPendingErrorEvent();
 }
 
@@ -413,7 +411,7 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         m_image = 0;
     }
 
-    loadEventSender().cancelEvent(this);
+    loadEventSender().cancelEvent(this, eventNames().loadEvent);
     m_hasPendingLoadEvent = false;
 
     if (isHTMLObjectElement(m_element))

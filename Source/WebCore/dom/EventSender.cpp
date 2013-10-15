@@ -29,32 +29,31 @@
 
 namespace WebCore {
 
-EventSender::EventSender(const AtomicString& eventType)
-    : m_eventType(eventType)
-    , m_timer(this, &EventSender::timerFired)
+EventSender::EventSender()
+    : m_timer(this, &EventSender::timerFired)
 {
 }
 
-void EventSender::dispatchEventSoon(EventSenderClient* sender)
+void EventSender::dispatchEventSoon(EventSenderClient* sender, const AtomicString& eventName)
 {
-    m_dispatchSoonList.append(sender);
+    m_dispatchSoonList.append(std::make_pair(sender, eventName));
     if (!m_timer.isActive())
         m_timer.startOneShot(0);
 }
 
-void EventSender::cancelEvent(EventSenderClient* sender)
+void EventSender::cancelEvent(EventSenderClient* sender, const AtomicString& eventName)
 {
     // Remove instances of this sender from both lists.
     // Use loops because we allow multiple instances to get into the lists.
     size_t size = m_dispatchSoonList.size();
     for (size_t i = 0; i < size; ++i) {
-        if (m_dispatchSoonList[i] == sender)
-            m_dispatchSoonList[i] = 0;
+        if (m_dispatchSoonList[i].first == sender && m_dispatchSoonList[i].second == eventName)
+            m_dispatchSoonList[i].first = 0;
     }
     size = m_dispatchingList.size();
     for (size_t i = 0; i < size; ++i) {
-        if (m_dispatchingList[i] == sender)
-            m_dispatchingList[i] = 0;
+        if (m_dispatchingList[i].first == sender && m_dispatchingList[i].second == eventName)
+            m_dispatchingList[i].first = 0;
     }
 }
 
@@ -73,12 +72,34 @@ void EventSender::dispatchPendingEvents()
     m_dispatchingList.swap(m_dispatchSoonList);
     size_t size = m_dispatchingList.size();
     for (size_t i = 0; i < size; ++i) {
-        if (EventSenderClient* sender = m_dispatchingList[i]) {
-            m_dispatchingList[i] = 0;
-            sender->dispatchPendingEvent(*this);
+        // The sender may have been zeroed out if it was cancelled.
+        if (EventSenderClient* sender = m_dispatchingList[i].first) {
+            const AtomicString& eventName = m_dispatchingList[i].second;
+            m_dispatchingList[i].first = 0;
+            sender->dispatchPendingEvent(eventName);
         }
     }
     m_dispatchingList.clear();
 }
+
+#ifndef NDEBUG
+bool EventSender::hasPendingEvents(EventSenderClient* sender) const
+{
+    // Use loops because we allow multiple instances to get into the lists.
+    size_t size = m_dispatchSoonList.size();
+    for (size_t i = 0; i < size; ++i) {
+        if (m_dispatchSoonList[i].first == sender)
+            return true;
+    }
+    size = m_dispatchingList.size();
+    for (size_t i = 0; i < size; ++i) {
+        if (m_dispatchingList[i].first == sender)
+            return true;
+    }
+
+    return false;
+}
+#endif
+
 
 } // namespace WebCore

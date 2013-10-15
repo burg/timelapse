@@ -90,14 +90,14 @@ private:
     virtual void linkLoadingErrored() OVERRIDE;
 
     bool isAlternate() const { return m_disabledState == Unset && m_relAttribute.m_isAlternate; }
-    
+
     void setDisabledState(bool);
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
 
     // EventSenderClient API
-    virtual void dispatchPendingEvent(const EventSender&) OVERRIDE;
-    
+    virtual void dispatchPendingEvent(const AtomicString&) OVERRIDE;
+
 private:
     HTMLLinkElement(const QualifiedName&, Document&, bool createdByParser);
 

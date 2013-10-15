@@ -62,6 +62,9 @@ public:
     bool hasPendingBeforeLoadEvent() const { return m_hasPendingBeforeLoadEvent; }
     bool hasPendingActivity() const { return m_hasPendingLoadEvent || m_hasPendingErrorEvent; }
 
+    // EventSenderClient API
+    virtual void dispatchPendingEvent(const AtomicString&);
+
     static void dispatchPendingBeforeLoadEvents();
     static void dispatchPendingLoadEvents();
     static void dispatchPendingErrorEvents();
@@ -69,9 +72,6 @@ public:
 protected:
     virtual void notifyFinished(CachedResource*) OVERRIDE;
 
-    // EventSenderClient API
-    virtual void dispatchPendingEvent(const EventSender&) OVERRIDE;
-    
 private:
     virtual void dispatchLoadEvent() = 0;
     virtual String sourceURI(const AtomicString&) const = 0;

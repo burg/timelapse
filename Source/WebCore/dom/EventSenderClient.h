@@ -41,7 +41,7 @@ public:
     EventSenderClient();
     virtual ~EventSenderClient();
 
-    virtual void dispatchPendingEvent(const EventSender&) =0;
+    virtual void dispatchPendingEvent(const AtomicString&) =0;
 };
 
 } // namspace WebCore

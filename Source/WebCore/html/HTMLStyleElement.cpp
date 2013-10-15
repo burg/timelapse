@@ -41,7 +41,7 @@ using namespace HTMLNames;
 
 static EventSender& styleLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, (eventNames().loadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, ());
     return sharedLoadEventSender;
 }
 
@@ -60,7 +60,7 @@ HTMLStyleElement::~HTMLStyleElement()
     // Therefore we can't ASSERT(m_scopedStyleRegistrationState == NotRegistered).
     m_styleSheetOwner.clearDocumentData(document(), *this);
 
-    styleLoadEventSender().cancelEvent(this);
+    styleLoadEventSender().cancelEvent(this, eventNames().loadEvent);
 }
 
 PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -119,7 +119,7 @@ void HTMLStyleElement::dispatchPendingLoadEvents()
     styleLoadEventSender().dispatchPendingEvents();
 }
 
-void HTMLStyleElement::dispatchPendingEvent(const EventSender&)
+void HTMLStyleElement::dispatchPendingEvent(const AtomicString&)
 {
     if (m_loadedSheet)
         dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
@@ -132,7 +132,7 @@ void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOcc
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(this);
+    styleLoadEventSender().dispatchEventSoon(this, eventNames().loadEvent);
     m_firedLoad = true;
 }
 
