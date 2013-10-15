@@ -57,9 +57,9 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static LinkEventSender& linkLoadEventSender()
+static EventSender& linkLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(LinkEventSender, sharedLoadEventSender, (eventNames().loadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, (eventNames().loadEvent));
     return sharedLoadEventSender;
 }
 
@@ -188,11 +188,11 @@ void HTMLLinkElement::process()
 
     if (m_disabledState != Disabled && (m_relAttribute.m_isStyleSheet || (acceptIfTypeContainsTextCSS && type.contains("text/css")))
         && document().frame() && url.isValid()) {
-        
+
         String charset = getAttribute(charsetAttr);
         if (charset.isEmpty() && document().frame())
             charset = document().charset();
-        
+
         if (m_cachedSheet) {
             removePendingSheet();
             m_cachedSheet->removeClient(this);
@@ -222,7 +222,7 @@ void HTMLLinkElement::process()
         CachedResourceRequest request(ResourceRequest(document().completeURL(url)), charset, priority);
         request.setInitiator(this);
         m_cachedSheet = document().cachedResourceLoader()->requestCSSStyleSheet(request);
-        
+
         if (m_cachedSheet)
             m_cachedSheet->addClient(this);
         else {
@@ -365,9 +365,8 @@ void HTMLLinkElement::dispatchPendingLoadEvents()
     linkLoadEventSender().dispatchPendingEvents();
 }
 
-void HTMLLinkElement::dispatchPendingEvent(LinkEventSender* eventSender)
+void HTMLLinkElement::dispatchPendingEvent(const EventSender&)
 {
-    ASSERT_UNUSED(eventSender, eventSender == &linkLoadEventSender());
     if (m_loadedSheet)
         linkLoaded();
     else
@@ -435,10 +434,10 @@ void HTMLLinkElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 
     if (!m_relAttribute.m_isStyleSheet)
         return;
-    
+
     // Append the URL of this link element.
     addSubresourceURL(urls, href());
-    
+
     // Walk the URLs linked by the linked-to stylesheet.
     if (CSSStyleSheet* styleSheet = const_cast<HTMLLinkElement*>(this)->sheet())
         styleSheet->contents()->addSubresourceStyleURLs(urls);

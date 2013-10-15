@@ -5199,6 +5199,10 @@
 		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */; };
 		C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */; };
+		C41A8BEE180DB95000E06C0F /* EventSenderClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41A8BEC180DB95000E06C0F /* EventSenderClient.cpp */; };
+		C41A8BEF180DB95000E06C0F /* EventSenderClient.h in Headers */ = {isa = PBXBuildFile; fileRef = C41A8BED180DB95000E06C0F /* EventSenderClient.h */; };
+		C41A8BF0180DC19A00E06C0F /* EventSender.h in Headers */ = {isa = PBXBuildFile; fileRef = CE5CB1B314EDAB6F00BB2795 /* EventSender.h */; };
+		C41A8BF2180DC40200E06C0F /* EventSender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41A8BF1180DC40200E06C0F /* EventSender.cpp */; };
 		C41D354E1711F57A00E40FB7 /* InputStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D354C1711F57A00E40FB7 /* InputStorage.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41D35571712064900E40FB7 /* CaptureInputIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */; };
 		C41D35581712064900E40FB7 /* CaptureInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35541712064800E40FB7 /* CaptureInputIterator.h */; };
@@ -12224,6 +12228,9 @@
 		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
 		C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorProbeAgent.cpp; sourceTree = "<group>"; };
 		C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorProbeAgent.h; sourceTree = "<group>"; };
+		C41A8BEC180DB95000E06C0F /* EventSenderClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventSenderClient.cpp; sourceTree = "<group>"; };
+		C41A8BED180DB95000E06C0F /* EventSenderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventSenderClient.h; sourceTree = "<group>"; };
+		C41A8BF1180DC40200E06C0F /* EventSender.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventSender.cpp; sourceTree = "<group>"; };
 		C41D354C1711F57A00E40FB7 /* InputStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InputStorage.h; path = replay/InputStorage.h; sourceTree = "<group>"; };
 		C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CaptureInputIterator.cpp; path = replay/CaptureInputIterator.cpp; sourceTree = "<group>"; };
 		C41D35541712064800E40FB7 /* CaptureInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CaptureInputIterator.h; path = replay/CaptureInputIterator.h; sourceTree = "<group>"; };
@@ -21305,7 +21312,10 @@
 				939885C208B7E3D100E707C4 /* EventNames.h */,
 				BC9A6142146859D9006057FD /* EventNames.in */,
 				8F6756191288B17B0047ACA3 /* EventQueue.h */,
+				C41A8BF1180DC40200E06C0F /* EventSender.cpp */,
 				CE5CB1B314EDAB6F00BB2795 /* EventSender.h */,
+				C41A8BEC180DB95000E06C0F /* EventSenderClient.cpp */,
+				C41A8BED180DB95000E06C0F /* EventSenderClient.h */,
 				E12EDBE90B308E0B002704B6 /* EventTarget.cpp */,
 				E12EDB7A0B308A78002704B6 /* EventTarget.h */,
 				85AFA7420AAF298400E84305 /* EventTarget.idl */,
@@ -22674,6 +22684,7 @@
 				76FC2B0C12370DA0006A991A /* DOMTokenList.h in Headers */,
 				E145349716A9BB6A000F6FD2 /* DOMTransitionEvent.h in Headers */,
 				E145349916A9BB6A000F6FD2 /* DOMTransitionEventInternal.h in Headers */,
+				C41A8BEF180DB95000E06C0F /* EventSenderClient.h in Headers */,
 				BC1A37BE097C715F0019F3D8 /* DOMTraversal.h in Headers */,
 				85526CD20AB0B7D9000302EA /* DOMTreeWalker.h in Headers */,
 				850B41C30AD9E7E700A6ED4F /* DOMTreeWalkerInternal.h in Headers */,
@@ -25073,6 +25084,7 @@
 				C481090C17052FF100AB4BAA /* SentinelActions.h in Headers */,
 				C481090E17052FF100AB4BAA /* FocusSetActive.h in Headers */,
 				C481091017052FF100AB4BAA /* FocusSetFocused.h in Headers */,
+				C41A8BF0180DC19A00E06C0F /* EventSender.h in Headers */,
 				C481091217052FF100AB4BAA /* HandleContextMenu.h in Headers */,
 				C481091417052FF100AB4BAA /* HandleKeyPress.h in Headers */,
 				C481091617052FF100AB4BAA /* HandleMouseBase.h in Headers */,
@@ -26690,6 +26702,7 @@
 				E446143B0CD689CC00FADA75 /* JSHTMLSourceElement.cpp in Sources */,
 				9752D38D1413104B003305BD /* JSHTMLSpanElement.cpp in Sources */,
 				A80E7B0F0A19D606007FB8C5 /* JSHTMLStyleElement.cpp in Sources */,
+				C41A8BF2180DC40200E06C0F /* EventSender.cpp in Sources */,
 				BCA169A20BFD55B40019CA76 /* JSHTMLTableCaptionElement.cpp in Sources */,
 				BC06EDE30BFD6D0D00856E9D /* JSHTMLTableCellElement.cpp in Sources */,
 				BC06ED9D0BFD660600856E9D /* JSHTMLTableColElement.cpp in Sources */,
@@ -26989,6 +27002,7 @@
 				BCEF45F50E687B5C001C1287 /* JSTextMetrics.cpp in Sources */,
 				070756941422668D00414161 /* JSTextTrack.cpp in Sources */,
 				070756DD14239B4E00414161 /* JSTextTrackCue.cpp in Sources */,
+				C41A8BEE180DB95000E06C0F /* EventSenderClient.cpp in Sources */,
 				07E117071489EBEB00EC5ACE /* JSTextTrackCueCustom.cpp in Sources */,
 				070756DF14239B4E00414161 /* JSTextTrackCueList.cpp in Sources */,
 				07E116B11489C9A100EC5ACE /* JSTextTrackCustom.cpp in Sources */,

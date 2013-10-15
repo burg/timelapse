@@ -30,6 +30,7 @@
 #include "Element.h"
 #include "Event.h"
 #include "EventSender.h"
+#include "EventSenderClient.h"
 #include "Frame.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
@@ -65,21 +66,21 @@ template<> struct ValueCheck<WebCore::ImageLoader*> {
 
 namespace WebCore {
 
-static ImageEventSender& beforeLoadEventSender()
+static EventSender& beforeLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(ImageEventSender, sender, (eventNames().beforeloadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sender, (eventNames().beforeloadEvent));
     return sender;
 }
 
-static ImageEventSender& loadEventSender()
+static EventSender& loadEventSender()
 {
-    DEFINE_STATIC_LOCAL(ImageEventSender, sender, (eventNames().loadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sender, (eventNames().loadEvent));
     return sender;
 }
 
-static ImageEventSender& errorEventSender()
+static EventSender& errorEventSender()
 {
-    DEFINE_STATIC_LOCAL(ImageEventSender, sender, (eventNames().errorEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sender, (eventNames().errorEvent));
     return sender;
 }
 
@@ -215,7 +216,7 @@ void ImageLoader::updateFromElement()
         // FIXME: Should we fire this event asynchronoulsy via errorEventSender()?
         m_element->dispatchEvent(Event::create(eventNames().errorEvent, false, false));
     }
-    
+
     CachedImage* oldImage = m_image.get();
     if (newImage != oldImage) {
         if (m_hasPendingBeforeLoadEvent) {
@@ -374,7 +375,7 @@ void ImageLoader::updatedHasPendingEvent()
     } else {
         ASSERT(!m_derefElementTimer.isActive());
         m_derefElementTimer.startOneShot(0);
-    }   
+    }
 }
 
 void ImageLoader::timerFired(Timer<ImageLoader>*)
@@ -382,10 +383,10 @@ void ImageLoader::timerFired(Timer<ImageLoader>*)
     m_element->deref();
 }
 
-void ImageLoader::dispatchPendingEvent(ImageEventSender* eventSender)
+void ImageLoader::dispatchPendingEvent(const EventSender& eventSender)
 {
-    ASSERT(eventSender == &beforeLoadEventSender() || eventSender == &loadEventSender() || eventSender == &errorEventSender());
-    const AtomicString& eventType = eventSender->eventType();
+    ASSERT(&eventSender == &beforeLoadEventSender() || &eventSender == &loadEventSender() || &eventSender == &errorEventSender());
+    const AtomicString& eventType = eventSender.eventType();
     if (eventType == eventNames().beforeloadEvent)
         dispatchPendingBeforeLoadEvent();
     if (eventType == eventNames().loadEvent)
@@ -414,7 +415,7 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
 
     loadEventSender().cancelEvent(this);
     m_hasPendingLoadEvent = false;
-    
+
     if (isHTMLObjectElement(m_element))
         static_cast<HTMLObjectElement*>(m_element)->renderFallbackContent();
 

@@ -39,9 +39,9 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static StyleEventSender& styleLoadEventSender()
+static EventSender& styleLoadEventSender()
 {
-    DEFINE_STATIC_LOCAL(StyleEventSender, sharedLoadEventSender, (eventNames().loadEvent));
+    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, (eventNames().loadEvent));
     return sharedLoadEventSender;
 }
 
@@ -119,9 +119,8 @@ void HTMLStyleElement::dispatchPendingLoadEvents()
     styleLoadEventSender().dispatchPendingEvents();
 }
 
-void HTMLStyleElement::dispatchPendingEvent(StyleEventSender* eventSender)
+void HTMLStyleElement::dispatchPendingEvent(const EventSender&)
 {
-    ASSERT_UNUSED(eventSender, eventSender == &styleLoadEventSender());
     if (m_loadedSheet)
         dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
     else
@@ -138,7 +137,7 @@ void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOcc
 }
 
 void HTMLStyleElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
-{    
+{
     HTMLElement::addSubresourceAttributeURLs(urls);
 
     if (CSSStyleSheet* styleSheet = const_cast<HTMLStyleElement*>(this)->sheet())

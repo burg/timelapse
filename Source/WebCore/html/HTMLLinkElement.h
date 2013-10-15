@@ -28,6 +28,7 @@
 #include "CachedStyleSheetClient.h"
 #include "CachedResourceHandle.h"
 #include "DOMSettableTokenList.h"
+#include "EventSenderClient.h"
 #include "HTMLElement.h"
 #include "IconURL.h"
 #include "LinkLoader.h"
@@ -36,13 +37,11 @@
 
 namespace WebCore {
 
+class EventSender;
 class HTMLLinkElement;
 class URL;
 
-template<typename T> class EventSender;
-typedef EventSender<HTMLLinkElement> LinkEventSender;
-
-class HTMLLinkElement FINAL : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient {
+class HTMLLinkElement FINAL : public HTMLElement, public CachedStyleSheetClient, public LinkLoaderClient, public EventSenderClient {
 public:
     static PassRefPtr<HTMLLinkElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLLinkElement();
@@ -68,7 +67,6 @@ public:
     void setSizes(const String&);
     DOMSettableTokenList* sizes() const;
 
-    void dispatchPendingEvent(LinkEventSender*);
     static void dispatchPendingLoadEvents();
 
 private:
@@ -97,6 +95,9 @@ private:
 
     virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
 
+    // EventSenderClient API
+    virtual void dispatchPendingEvent(const EventSender&) OVERRIDE;
+    
 private:
     HTMLLinkElement(const QualifiedName&, Document&, bool createdByParser);
 

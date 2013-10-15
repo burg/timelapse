@@ -25,19 +25,18 @@
 
 #include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
+#include "EventSenderClient.h"
 #include "Timer.h"
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
 class Element;
+class EventSender;
 class ImageLoader;
 class RenderImageResource;
 
-template<typename T> class EventSender;
-typedef EventSender<ImageLoader> ImageEventSender;
-
-class ImageLoader : public CachedImageClient {
+class ImageLoader : public CachedImageClient, public EventSenderClient {
 public:
     explicit ImageLoader(Element*);
     virtual ~ImageLoader();
@@ -63,8 +62,6 @@ public:
     bool hasPendingBeforeLoadEvent() const { return m_hasPendingBeforeLoadEvent; }
     bool hasPendingActivity() const { return m_hasPendingLoadEvent || m_hasPendingErrorEvent; }
 
-    void dispatchPendingEvent(ImageEventSender*);
-
     static void dispatchPendingBeforeLoadEvents();
     static void dispatchPendingLoadEvents();
     static void dispatchPendingErrorEvents();
@@ -72,6 +69,9 @@ public:
 protected:
     virtual void notifyFinished(CachedResource*) OVERRIDE;
 
+    // EventSenderClient API
+    virtual void dispatchPendingEvent(const EventSender&) OVERRIDE;
+    
 private:
     virtual void dispatchLoadEvent() = 0;
     virtual String sourceURI(const AtomicString&) const = 0;

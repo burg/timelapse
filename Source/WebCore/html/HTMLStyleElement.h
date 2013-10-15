@@ -23,18 +23,17 @@
 #ifndef HTMLStyleElement_h
 #define HTMLStyleElement_h
 
+#include "EventSenderClient.h"
 #include "HTMLElement.h"
 #include "InlineStyleSheetOwner.h"
 
 namespace WebCore {
 
+class EventSender;
 class HTMLStyleElement;
 class StyleSheet;
 
-template<typename T> class EventSender;
-typedef EventSender<HTMLStyleElement> StyleEventSender;
-
-class HTMLStyleElement FINAL : public HTMLElement {
+class HTMLStyleElement FINAL : public HTMLElement, public EventSenderClient {
 public:
     static PassRefPtr<HTMLStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~HTMLStyleElement();
@@ -44,7 +43,6 @@ public:
     bool disabled() const;
     void setDisabled(bool);
 
-    void dispatchPendingEvent(StyleEventSender*);
     static void dispatchPendingLoadEvents();
 
 private:
@@ -64,6 +62,9 @@ private:
     virtual void startLoadingDynamicSheet() { m_styleSheetOwner.startLoadingDynamicSheet(document()); }
 
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const;
+
+    // EventSenderClient API
+    virtual void dispatchPendingEvent(const EventSender&) OVERRIDE;
 
     InlineStyleSheetOwner m_styleSheetOwner;
     bool m_firedLoad;
