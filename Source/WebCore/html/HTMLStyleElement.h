@@ -43,8 +43,6 @@ public:
     bool disabled() const;
     void setDisabled(bool);
 
-    static void dispatchPendingLoadEvents();
-
 private:
     HTMLStyleElement(const QualifiedName&, Document&, bool createdByParser);
 

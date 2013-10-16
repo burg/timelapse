@@ -67,8 +67,6 @@ public:
     void setSizes(const String&);
     DOMSettableTokenList* sizes() const;
 
-    static void dispatchPendingLoadEvents();
-
 private:
     virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 

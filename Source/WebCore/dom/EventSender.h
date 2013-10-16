@@ -26,30 +26,35 @@
 #ifndef EventSender_h
 #define EventSender_h
 
-#include "EventSenderClient.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
+#include <wtf/text/AtomicString.h>
 
 namespace WebCore {
+
+class Document;
+class EventSenderClient;
 
 class EventSender {
     WTF_MAKE_NONCOPYABLE(EventSender); WTF_MAKE_FAST_ALLOCATED;
 public:
-    EventSender();
+    EventSender(Document&);
 
     void dispatchEventSoon(EventSenderClient*, const AtomicString&);
     void cancelEvent(EventSenderClient*, const AtomicString&);
-    void dispatchPendingEvents();
 #ifndef NDEBUG
     bool hasPendingEvents(EventSenderClient* sender) const;
 #endif
 
+    void dispatchPendingEventsWithType(const AtomicString&);
 private:
-    void timerFired(Timer<EventSender>*) { dispatchPendingEvents(); }
+    void timerFired(Timer<EventSender>*) { dispatchAllPendingEvents(); }
 
+    void dispatchAllPendingEvents();
+    
     Timer<EventSender> m_timer;
-    Vector<std::pair<EventSenderClient*, const AtomicString&>> m_dispatchSoonList;
-    Vector<std::pair<EventSenderClient*, const AtomicString&>> m_dispatchingList;
+    Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchSoonList;
+    Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchingList;
 };
 
 } // namespace WebCore

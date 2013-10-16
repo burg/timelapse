@@ -33,7 +33,6 @@
 #include "Document.h"
 #include "DocumentStyleSheetCollection.h"
 #include "Event.h"
-#include "EventSender.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
@@ -56,12 +55,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-
-static EventSender& linkLoadEventSender()
-{
-    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, ());
-    return sharedLoadEventSender;
-}
 
 inline HTMLLinkElement::HTMLLinkElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : HTMLElement(tagName, document)
@@ -94,7 +87,7 @@ HTMLLinkElement::~HTMLLinkElement()
     if (inDocument())
         document().styleSheetCollection().removeStyleSheetCandidateNode(*this);
 
-    linkLoadEventSender().cancelEvent(this, eventNames().loadEvent);
+    document().eventSender().cancelEvent(this, eventNames().loadEvent);
 }
 
 void HTMLLinkElement::setDisabledState(bool disabled)
@@ -360,13 +353,9 @@ bool HTMLLinkElement::sheetLoaded()
     return false;
 }
 
-void HTMLLinkElement::dispatchPendingLoadEvents()
+void HTMLLinkElement::dispatchPendingEvent(const AtomicString& eventName)
 {
-    linkLoadEventSender().dispatchPendingEvents();
-}
-
-void HTMLLinkElement::dispatchPendingEvent(const AtomicString&)
-{
+    ASSERT_UNUSED(eventName, eventName == eventNames().loadEvent);
     if (m_loadedSheet)
         linkLoaded();
     else
@@ -378,7 +367,7 @@ void HTMLLinkElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccu
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    linkLoadEventSender().dispatchEventSoon(this, eventNames().loadEvent);
+    document().eventSender().dispatchEventSoon(this, eventNames().loadEvent);
     m_firedLoad = true;
 }
 

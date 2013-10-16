@@ -22,7 +22,6 @@
 #include "config.h"
 #include "HTMLImageLoader.h"
 
-#include "AsyncEventProxy.h"
 #include "CachedImage.h"
 #include "Element.h"
 #include "Event.h"

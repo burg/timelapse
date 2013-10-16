@@ -27,9 +27,12 @@
 #include "config.h"
 #include "EventSender.h"
 
+#include "Document.h"
+#include "EventSenderClient.h"
+
 namespace WebCore {
 
-EventSender::EventSender()
+EventSender::EventSender(Document&)
     : m_timer(this, &EventSender::timerFired)
 {
 }
@@ -57,7 +60,33 @@ void EventSender::cancelEvent(EventSenderClient* sender, const AtomicString& eve
     }
 }
 
-void EventSender::dispatchPendingEvents()
+void EventSender::dispatchPendingEventsWithType(const AtomicString& eventName)
+{
+    // Need to avoid re-entering this function; if new dispatches are
+    // scheduled before the parent finishes processing the list, they
+    // will set a timer and eventually be processed.
+    if (!m_dispatchingList.isEmpty())
+        return;
+    
+    m_timer.stop();
+    
+    m_dispatchSoonList.checkConsistency();
+    
+    m_dispatchingList.swap(m_dispatchSoonList);
+    size_t size = m_dispatchingList.size();
+    for (size_t i = 0; i < size; ++i) {
+        // The sender may have been zeroed out if it was cancelled.
+        EventSenderClient* currentSender = m_dispatchingList[i].first;
+        const AtomicString& currentEventName = m_dispatchingList[i].second;
+        if (!currentSender || eventName != currentEventName)
+            continue;
+        m_dispatchingList[i].first = 0;
+        currentSender->dispatchPendingEvent(eventName);
+    }
+    m_dispatchingList.clear();
+}
+    
+void EventSender::dispatchAllPendingEvents()
 {
     // Need to avoid re-entering this function; if new dispatches are
     // scheduled before the parent finishes processing the list, they

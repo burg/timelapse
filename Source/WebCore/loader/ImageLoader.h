@@ -65,16 +65,14 @@ public:
     // EventSenderClient API
     virtual void dispatchPendingEvent(const AtomicString&);
 
-    static void dispatchPendingBeforeLoadEvents();
-    static void dispatchPendingLoadEvents();
-    static void dispatchPendingErrorEvents();
-
 protected:
     virtual void notifyFinished(CachedResource*) OVERRIDE;
 
 private:
     virtual void dispatchLoadEvent() = 0;
     virtual String sourceURI(const AtomicString&) const = 0;
+
+    EventSender& eventSender() const;
 
     void updatedHasPendingEvent();
 

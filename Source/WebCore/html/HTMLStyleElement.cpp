@@ -27,7 +27,6 @@
 #include "Attribute.h"
 #include "Document.h"
 #include "Event.h"
-#include "EventSender.h"
 #include "HTMLNames.h"
 #include "MediaList.h"
 #include "RuntimeEnabledFeatures.h"
@@ -38,12 +37,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-
-static EventSender& styleLoadEventSender()
-{
-    DEFINE_STATIC_LOCAL(EventSender, sharedLoadEventSender, ());
-    return sharedLoadEventSender;
-}
 
 inline HTMLStyleElement::HTMLStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : HTMLElement(tagName, document)
@@ -60,7 +53,7 @@ HTMLStyleElement::~HTMLStyleElement()
     // Therefore we can't ASSERT(m_scopedStyleRegistrationState == NotRegistered).
     m_styleSheetOwner.clearDocumentData(document(), *this);
 
-    styleLoadEventSender().cancelEvent(this, eventNames().loadEvent);
+    document().eventSender().cancelEvent(this, eventNames().loadEvent);
 }
 
 PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
@@ -114,13 +107,10 @@ void HTMLStyleElement::childrenChanged(const ChildChange& change)
     m_styleSheetOwner.childrenChanged(*this);
 }
 
-void HTMLStyleElement::dispatchPendingLoadEvents()
+void HTMLStyleElement::dispatchPendingEvent(const AtomicString& eventName)
 {
-    styleLoadEventSender().dispatchPendingEvents();
-}
-
-void HTMLStyleElement::dispatchPendingEvent(const AtomicString&)
-{
+    ASSERT_UNUSED(eventName, eventName == eventNames().loadEvent);
+    
     if (m_loadedSheet)
         dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
     else
@@ -132,7 +122,7 @@ void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOcc
     if (m_firedLoad)
         return;
     m_loadedSheet = !errorOccurred;
-    styleLoadEventSender().dispatchEventSoon(this, eventNames().loadEvent);
+    document().eventSender().dispatchEventSoon(this, eventNames().loadEvent);
     m_firedLoad = true;
 }
 
