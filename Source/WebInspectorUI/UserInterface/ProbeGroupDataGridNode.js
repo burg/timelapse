@@ -44,6 +44,11 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 
     // Public
 
+    get element()
+    {
+		return this._element;
+    },
+
     updateCellsFromFrame: function(frame, probeGroup)
     {
 		var probes = probeGroup.probes;
@@ -58,6 +63,11 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
     updateCellsForSeparator: function(frame, probeGroup)
     {
         this._element.classList.add(WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName);
+    },
+
+    setUpReplay: function()
+    {
+        this._element.addEventListener("dblclick", this._replayToNode.bind(this));
     },
 
     // Private
@@ -87,5 +97,10 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 			}
 		}
 		return cellData;
+    },
+
+    _replayToNode: function(event)
+    {
+		WebInspector.replayManager.replayToMarkIndexSoon(this.frame.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Normal);
     },
 };

@@ -295,6 +295,9 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             node.dataGrid = this;
             node.createCells();
 
+            if (WebInspector.replayManager.canReplay || WebInspector.replayManager.isReplaying)
+                node.setUpReplay();
+
             var sortFunction = function(a, b) {
                 return a.frame.constructor.compare(a.frame, b.frame);
             };
