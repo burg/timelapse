@@ -132,6 +132,9 @@ void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
 void InspectorReplayAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
 {
 #ifndef NDEBUG
+    if (!capturing() && !replaying())
+        return;
+    
     LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
     scriptName.utf8().data(), scriptLine,
     SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);
