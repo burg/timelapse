@@ -358,7 +358,7 @@ InspectorInstrumentationCookie InspectorInstrumentation::willCallFunctionImpl(In
         timelineAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
         timelineAgentId = timelineAgent->id();
     }
-#if ENABLE(WEB_REPLAY)
+#if ENABLE(WEB_REPLAY) && !defined(NDEBUG)
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->willCallFunction(scriptName, scriptLine, frameForScriptExecutionContext(context));
 #endif

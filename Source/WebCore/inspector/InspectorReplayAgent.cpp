@@ -129,22 +129,18 @@ void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
         m_inspectedPage->replayController().willFireTimer(timerId, frame->document());
 }
 
+#ifndef NDEBUG
 void InspectorReplayAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
 {
-#ifndef NDEBUG
     if (!capturing() && !replaying())
         return;
     
     LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
     scriptName.utf8().data(), scriptLine,
     SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);
-#else
-    UNUSED_PARAM(scriptName);
-    UNUSED_PARAM(scriptLine);
-    UNUSED_PARAM(frame);
-#endif
 }
-
+#endif
+    
 void InspectorReplayAgent::recordingUnloaded()
 {
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);

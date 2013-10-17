@@ -87,7 +87,9 @@ public:
     void didDispatchEvent();
     void frameNavigated(DocumentLoader*);
     void willFireTimer(int, Frame*);
+#ifndef NDEBUG
     void willCallFunction(const String&, int scriptLine, Frame*);
+#endif
 
     bool capturing() const { return m_stateMachine.capturing(); }
     bool replaying() const { return m_stateMachine.replaying(); }
