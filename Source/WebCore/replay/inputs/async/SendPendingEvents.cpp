@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, Jake Bailey.
+ *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,23 +29,60 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#ifndef ReplayUtilities_h
-#define ReplayUtilities_h
+#include "config.h"
 
 #if ENABLE(WEB_REPLAY)
 
-namespace WTF {
-class InputIterator;
-}
+#include "SendPendingEvents.h"
+
+#include "DispatchEventBase.h"
+#include "Document.h"
+#include "DecoderContext.h"
+#include "EncoderContext.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
+#include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
-class Document;
 
-WTF::InputIterator* getInputIteratorForDocument(Document*);
+SendPendingEvents::SendPendingEvents(int frameIndex)
+: m_frameIndex(frameIndex) {}
+
+const AtomicString& SendPendingEvents::type() const
+{
+    return inputTypes().SendPendingEvents;
+}
+
+String SendPendingEvents::toString() const
+{
+    return makeString("SendPendingEvents(", String::number(m_frameIndex), ")");
+}
+
+void SendPendingEvents::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+{
+    ASSERT(sealed());
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    ASSERT(document);
+    document->eventSender().dispatchAllPendingEvents();
+
+    dispatcher.didDispatch(this);
+}
+
+void InputCoder<SendPendingEvents>::encode(EncoderContext& encoder, const SendPendingEvents& input)
+{
+    encoder.put("frameIndex", input.frameIndex());
+}
+
+bool InputCoder<SendPendingEvents>::decode(DecoderContext& decoder, OwnPtr<SendPendingEvents>& input)
+{
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = adoptPtr(new SendPendingEvents(frameIndex));
+    return true;
+}
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // ReplayUtilities_h

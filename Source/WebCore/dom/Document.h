@@ -57,6 +57,7 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
 
@@ -418,6 +419,11 @@ public:
 
     String documentURI() const { return m_documentURI; }
     void setDocumentURI(const String&);
+
+#if ENABLE(WEB_REPLAY)
+    InputIterator* inputIterator() const { return m_inputIterator; }
+    void setInputIterator(InputIterator* iterator) { m_inputIterator = iterator; }
+#endif
 
     virtual URL baseURI() const OVERRIDE;
 
@@ -1573,6 +1579,10 @@ private:
 
 #if ENABLE(FONT_LOAD_EVENTS)
     RefPtr<FontLoader> m_fontloader;
+#endif
+
+#if ENABLE(WEB_REPLAY)
+    InputIterator* m_inputIterator;
 #endif
 
     Timer<Document> m_didAssociateFormControlsTimer;

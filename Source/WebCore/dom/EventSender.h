@@ -46,13 +46,15 @@ public:
     bool hasPendingEvents(EventSenderClient* sender) const;
 #endif
 
+    void dispatchAllPendingEvents();
     void dispatchPendingEventsWithType(const AtomicString&);
 private:
-    void timerFired(Timer<EventSender>*) { dispatchAllPendingEvents(); }
+    void timerFired(Timer<EventSender>*);
 
-    void dispatchAllPendingEvents();
-    
     Timer<EventSender> m_timer;
+#if ENABLE(WEB_REPLAY)
+    Document& m_document;
+#endif
     Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchSoonList;
     Vector<std::pair<EventSenderClient*, AtomicString>> m_dispatchingList;
 };

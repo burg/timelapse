@@ -35,7 +35,6 @@
 #if ENABLE(WEB_REPLAY)
 #include "DispatchEventBase.h"
 #include "RanPendingScripts.h"
-#include "ReplayUtilities.h"
 #include <wtf/replay/InputIterator.h>
 #endif
 
@@ -88,7 +87,7 @@ void ScriptRunner::resume()
 {
 #if ENABLE(WEB_REPLAY)
     // timerFired will be called deterministically during replay, so don't start m_timer.
-    InputIterator* it = getInputIteratorForDocument(&m_document);
+    InputIterator* it = m_document.inputIterator();
     if (it && it->isReplaying())
         return;
 #endif
@@ -110,7 +109,7 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
     }
 #if ENABLE(WEB_REPLAY)
     // timerFired will be called deterministically during replay, so don't start m_timer.
-    InputIterator* it = getInputIteratorForDocument(&m_document);
+    InputIterator* it = m_document.inputIterator();
     if (it && it->isReplaying())
         return;
 #endif
@@ -121,7 +120,7 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_timer);
 #if ENABLE(WEB_REPLAY)
-    InputIterator* it = getInputIteratorForDocument(&m_document);
+    InputIterator* it = m_document.inputIterator();
     if (it && it->isCapturing()) {
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(&m_document);
         it->storeInput(adoptPtr(new RanPendingScripts(frameIndex)));

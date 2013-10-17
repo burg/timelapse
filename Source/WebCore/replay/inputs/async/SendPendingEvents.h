@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
+  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,32 +28,46 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef SendPendingEvents_h
+#define SendPendingEvents_h
 
 #if ENABLE(WEB_REPLAY)
 
-#include "ReplayUtilities.h"
-
-#include "Document.h"
-#include "DOMWrapperWorld.h"
-#include "Frame.h"
-#include "JSDOMWindow.h"
-#include <wtf/replay/InputIterator.h>
+#include "EventLoopInput.h"
+#include "InputCoder.h"
 
 namespace WebCore {
 
-InputIterator* getInputIteratorForDocument(Document* document)
-{
-    if (!document)
-        return 0;
+class ReplayController;
+class Document;
 
-    JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    if (!window)
-        return 0;
+class SendPendingEvents : public EventLoopInput {
+public:
+    SendPendingEvents(int frameIndex);
+    virtual ~SendPendingEvents() {}
 
-    return window->inputIterator();
-}
+    // EventLoopInput API
+    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&);
+    virtual bool isUserVisible() const OVERRIDE { return false; }
 
-} // namespace WebCore
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const;
+    size_t memorySize() const OVERRIDE { return sizeof(SendPendingEvents); }
+
+    int frameIndex() const { return m_frameIndex; }
+
+private:
+    int m_frameIndex;
+};
+
+template<> struct InputCoder<SendPendingEvents> {
+    static void encode(EncoderContext& encoder, const SendPendingEvents& input);
+    static bool decode(DecoderContext& decoder, OwnPtr<SendPendingEvents>& input);
+};
+
+} //namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
+
+#endif // SendPendingEvents_h

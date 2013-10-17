@@ -50,7 +50,6 @@
 #include <wtf/Ref.h>
 
 #if ENABLE(WEB_REPLAY)
-#include "ReplayUtilities.h"
 #include <wtf/replay/InputIterator.h>
 #endif
 
@@ -746,7 +745,7 @@ void HTMLDocumentParser::append(PassRefPtr<StringImpl> inputSource)
 
 #if ENABLE(WEB_REPLAY)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
-    InputIterator* it = getInputIteratorForDocument(document());
+    InputIterator* it = document() ? document()->inputIterator() : 0;
     if (it && (it->isCapturing() || it->isReplaying()))
         pumpTokenizerIfPossible(ForceSynchronous);
     else
@@ -910,7 +909,7 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
 
 #if ENABLE(WEB_REPLAY)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
-    InputIterator* it = getInputIteratorForDocument(document());
+    InputIterator* it = document() ? document()->inputIterator() : 0;
     if (it && (it->isCapturing() || it->isReplaying()))
         pumpTokenizerIfPossible(ForceSynchronous);
     else

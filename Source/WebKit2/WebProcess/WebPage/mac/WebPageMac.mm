@@ -73,7 +73,6 @@
 #if ENABLE(WEB_REPLAY)
 #import <WebCore/InterpretedKeyCommands.h>
 #import <WebCore/ReplayInputTypes.h>
-#import <WebCore/ReplayUtilities.h>
 #import <wtf/replay/InputIterator.h>
 #import <wtf/replay/NondeterministicInput.h>
 #endif
@@ -110,7 +109,7 @@ NSObject *WebPage::accessibilityObjectForMainFramePlugin()
 {
     if (!m_page)
         return 0;
-    
+
     if (PluginView* pluginView = pluginViewForFrame(&m_page->mainFrame()))
         return pluginView->accessibilityObject();
 
@@ -222,7 +221,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 
     bool eventWasHandled = false;
 #if ENABLE(WEB_REPLAY)
-    InputIterator* it = getInputIteratorForDocument(corePage()->mainFrame().document());
+    InputIterator* it = (frame && frame->document()) ? frame->document()->inputIterator() : 0;
     bool isCapturing = it && it->isCapturing();
     bool isReplaying = it && it->isReplaying();
 #endif
@@ -422,7 +421,7 @@ void WebPage::characterIndexForPoint(IntPoint point, uint64_t& index)
 
     HitTestResult result = m_page->mainFrame().eventHandler().hitTestResultAtPoint(point);
     Frame* frame = result.innerNonSharedNode() ? result.innerNodeFrame() : &m_page->focusController().focusedOrMainFrame();
-    
+
     RefPtr<Range> range = frame->rangeForPoint(result.roundedPointInInnerNodeFrame());
     if (!range)
         return;
@@ -454,14 +453,14 @@ void WebPage::firstRectForCharacterRange(uint64_t location, uint64_t length, Web
     Frame& frame = m_page->focusController().focusedOrMainFrame();
     resultRect.setLocation(IntPoint(0, 0));
     resultRect.setSize(IntSize(0, 0));
-    
+
     RefPtr<Range> range = convertToRange(&frame, NSMakeRange(location, length));
     if (!range)
         return;
 
     ASSERT(range->startContainer());
     ASSERT(range->endContainer());
-     
+
     IntRect rect = frame.editor().firstRectForRange(range.get());
     resultRect = frame.view()->contentsToWindow(rect);
 }
@@ -651,7 +650,7 @@ bool WebPage::performNonEditingBehaviorForSelector(const String& selector, Keybo
 
     // FIXME: All these selectors have corresponding Editor commands, but the commands only work in editable content.
     // Should such non-editing behaviors be implemented in Editor or EventHandler::defaultArrowEventHandler() perhaps?
-    
+
     bool didPerformAction = false;
 
     if (selector == "moveUp:")
@@ -750,7 +749,7 @@ WKAccessibilityWebPageObject* WebPage::accessibilityRemoteObject()
 {
     return m_mockAccessibilityElement.get();
 }
-         
+
 bool WebPage::platformHasLocalDataForURL(const WebCore::URL& url)
 {
     NSMutableURLRequest* request = [[NSMutableURLRequest alloc] initWithURL:url];

@@ -58,7 +58,6 @@
 #include "Page.h"
 #include "ReplayInputIterator.h"
 #include "ReplayRecording.h"
-#include "ReplayUtilities.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
@@ -340,7 +339,7 @@ void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const
     if (!frame)
         return;
 
-    InputIterator* it = getInputIteratorForDocument(frame->document());
+    InputIterator* it = frame->document() ? frame->document()->inputIterator() : 0;
     bool shouldIgnore =  !it || (!it->isCapturing() && !it->isReplaying());
 
 #if !LOG_DISABLED
@@ -376,12 +375,13 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
         return;
 
     page()->networkProxy().setExpectsPageLoad(false);
+    loader->frame()->document()->setInputIterator(m_activeIterator.get());
     loader->frame()->script().globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
 
 void ReplayController::willFireTimer(int timerId, Document* document)
 {
-    InputIterator* it = getInputIteratorForDocument(document);
+    InputIterator* it = document ? document->inputIterator() : 0;
     int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
 
     if (it && it->isCapturing())
@@ -453,8 +453,10 @@ void ReplayController::resetReplayState()
     LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)m_page);
 
     m_activeIterator = 0;
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext())
+    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
         frame->script().globalObject(mainThreadNormalWorld())->setInputIterator(0);
+        frame->document()->setInputIterator(0);
+    }
 }
 
 void ReplayController::pauseReplay()

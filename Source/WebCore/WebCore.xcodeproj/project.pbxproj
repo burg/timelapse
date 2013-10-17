@@ -5210,6 +5210,8 @@
 		C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35561712064800E40FB7 /* ReplayInputIterator.h */; };
 		C42BB778175FAA41008BF639 /* DisableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB776175FAA41008BF639 /* DisableCache.cpp */; };
 		C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB777175FAA41008BF639 /* EnableCache.cpp */; };
+		C44958FE180F57EF003BAF73 /* SendPendingEvents.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */; };
+		C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = C44958FD180F57EF003BAF73 /* SendPendingEvents.h */; };
 		C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C46ADBA017EB8B0600218391 /* EncoderContext.cpp */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
 		C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */; };
@@ -5300,8 +5302,6 @@
 		C48F15121757D14D00B039D6 /* InspectorRecordingsAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48F15101757D14D00B039D6 /* InspectorRecordingsAgent.cpp */; };
 		C48F15131757D14D00B039D6 /* InspectorRecordingsAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C48F15111757D14D00B039D6 /* InspectorRecordingsAgent.h */; };
 		C49826F7172E16630050DD62 /* ScriptProbe.h in Headers */ = {isa = PBXBuildFile; fileRef = C49826F6172E16630050DD62 /* ScriptProbe.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905EA17163821000AEC13 /* ReplayUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C49905ED1716389E000AEC13 /* ReplayUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49905EC1716389D000AEC13 /* ReplayUtilities.cpp */; };
 		C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */; };
 		C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */; };
 		C4A898B017E3BC0400C74A2C /* StopLoadingFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */; };
@@ -12238,6 +12238,8 @@
 		C41D35561712064800E40FB7 /* ReplayInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayInputIterator.h; path = replay/ReplayInputIterator.h; sourceTree = "<group>"; };
 		C42BB776175FAA41008BF639 /* DisableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DisableCache.cpp; sourceTree = "<group>"; };
 		C42BB777175FAA41008BF639 /* EnableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EnableCache.cpp; sourceTree = "<group>"; };
+		C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SendPendingEvents.cpp; sourceTree = "<group>"; };
+		C44958FD180F57EF003BAF73 /* SendPendingEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SendPendingEvents.h; sourceTree = "<group>"; };
 		C46ADBA017EB8B0600218391 /* EncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EncoderContext.cpp; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
 		C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchAsyncEvent.cpp; sourceTree = "<group>"; };
@@ -12330,8 +12332,6 @@
 		C493493517A431C90054AC75 /* ResourceHandleClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceHandleClient.cpp; sourceTree = "<group>"; };
 		C493493717A432350054AC75 /* PageConsole.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PageConsole.cpp; sourceTree = "<group>"; };
 		C49826F6172E16630050DD62 /* ScriptProbe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScriptProbe.h; sourceTree = "<group>"; };
-		C49905EA17163821000AEC13 /* ReplayUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayUtilities.h; path = replay/ReplayUtilities.h; sourceTree = "<group>"; };
-		C49905EC1716389D000AEC13 /* ReplayUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayUtilities.cpp; path = replay/ReplayUtilities.cpp; sourceTree = "<group>"; };
 		C49E81471719DDA7006A39B2 /* EventLoopInputDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EventLoopInputDispatcher.cpp; path = replay/EventLoopInputDispatcher.cpp; sourceTree = "<group>"; };
 		C49E81481719DDA8006A39B2 /* EventLoopInputDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventLoopInputDispatcher.h; path = replay/EventLoopInputDispatcher.h; sourceTree = "<group>"; };
 		C4A898AE17E3BC0400C74A2C /* StopLoadingFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StopLoadingFrame.cpp; path = navigation/StopLoadingFrame.cpp; sourceTree = "<group>"; };
@@ -20146,8 +20146,6 @@
 				C48108D517052FF100AB4BAA /* ReplayInputTypes.h */,
 				C48108D617052FF100AB4BAA /* ReplayRecording.cpp */,
 				C48108D717052FF100AB4BAA /* ReplayRecording.h */,
-				C49905EC1716389D000AEC13 /* ReplayUtilities.cpp */,
-				C49905EA17163821000AEC13 /* ReplayUtilities.h */,
 			);
 			name = replay;
 			sourceTree = "<group>";
@@ -20184,6 +20182,8 @@
 				C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */,
 				C481088417052FF100AB4BAA /* RanPendingScripts.cpp */,
 				C481088517052FF100AB4BAA /* RanPendingScripts.h */,
+				C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */,
+				C44958FD180F57EF003BAF73 /* SendPendingEvents.h */,
 				C4F4CA4A175AF4DC00F71FE1 /* TimerCreated.cpp */,
 				C481088617052FF100AB4BAA /* TimerCreated.h */,
 				C481088717052FF100AB4BAA /* TimerFired.cpp */,
@@ -23126,6 +23126,7 @@
 				5913A24213D49EBA00F5B05C /* IdentifiersFactory.h in Headers */,
 				49E911C50EF86D47009D0CAF /* IdentityTransformOperation.h in Headers */,
 				C0C054CD1118C8E400CE2636 /* IDLParser.pm in Headers */,
+				C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */,
 				C3CF17A515B0063F00276D39 /* IdTargetObserver.h in Headers */,
 				C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */,
 				8AB4BC77126FDB7100DEB727 /* IgnoreDestructiveWriteCountIncrementer.h in Headers */,
@@ -25108,7 +25109,6 @@
 				C41D354E1711F57A00E40FB7 /* InputStorage.h in Headers */,
 				C41D35581712064900E40FB7 /* CaptureInputIterator.h in Headers */,
 				C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */,
-				C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */,
 				C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */,
 				C48EA71617178087001A8BB4 /* FunctorInputIterator.h in Headers */,
 				C49E814A1719DDA8006A39B2 /* EventLoopInputDispatcher.h in Headers */,
@@ -27479,6 +27479,7 @@
 				7EE6846E12D26E3800E79415 /* ResourceRequestCFNet.cpp in Sources */,
 				514C76530CE9234E007EF3CD /* ResourceRequestMac.mm in Sources */,
 				514C767E0CE923A1007EF3CD /* ResourceResponseBase.cpp in Sources */,
+				C44958FE180F57EF003BAF73 /* SendPendingEvents.cpp in Sources */,
 				7EE6847112D26E3800E79415 /* ResourceResponseCFNet.cpp in Sources */,
 				514C76550CE9234F007EF3CD /* ResourceResponseMac.mm in Sources */,
 				FD3160A412B026F700C1A359 /* Reverb.cpp in Sources */,
@@ -28206,7 +28207,6 @@
 				C41D35571712064900E40FB7 /* CaptureInputIterator.cpp in Sources */,
 				C41D35591712064900E40FB7 /* ReplayInputIterator.cpp in Sources */,
 				C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */,
-				C49905ED1716389E000AEC13 /* ReplayUtilities.cpp in Sources */,
 				C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */,
 				C49E81491719DDA8006A39B2 /* EventLoopInputDispatcher.cpp in Sources */,
 				C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */,

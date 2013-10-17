@@ -30,16 +30,35 @@
 #include "Document.h"
 #include "EventSenderClient.h"
 
+#if ENABLE(WEB_REPLAY)
+#include "DispatchEventBase.h"
+#include "InputIterator.h"
+#include "SendPendingEvents.h"
+#endif
+
 namespace WebCore {
 
-EventSender::EventSender(Document&)
+EventSender::EventSender(Document& document)
     : m_timer(this, &EventSender::timerFired)
+#if ENABLE(WEB_REPLAY)
+    , m_document(document)
+#endif
 {
+#if !ENABLE(WEB_REPLAY)
+    UNUSED_PARAM(document);
+#endif
 }
 
 void EventSender::dispatchEventSoon(EventSenderClient* sender, const AtomicString& eventName)
 {
     m_dispatchSoonList.append(std::make_pair(sender, eventName));
+
+#if ENABLE(WEB_REPLAY)
+    // If we are replaying, don't use the timer to schedule the callbacks.
+    if (m_document.inputIterator() && m_document.inputIterator()->isReplaying())
+        return;
+#endif
+
     if (!m_timer.isActive())
         m_timer.startOneShot(0);
 }
@@ -67,11 +86,9 @@ void EventSender::dispatchPendingEventsWithType(const AtomicString& eventName)
     // will set a timer and eventually be processed.
     if (!m_dispatchingList.isEmpty())
         return;
-    
-    m_timer.stop();
-    
+
     m_dispatchSoonList.checkConsistency();
-    
+
     m_dispatchingList.swap(m_dispatchSoonList);
     size_t size = m_dispatchingList.size();
     for (size_t i = 0; i < size; ++i) {
@@ -85,7 +102,21 @@ void EventSender::dispatchPendingEventsWithType(const AtomicString& eventName)
     }
     m_dispatchingList.clear();
 }
-    
+
+void EventSender::timerFired(Timer<EventSender>*)
+{
+#if ENABLE(WEB_REPLAY)
+    InputIterator* iterator = m_document.inputIterator();
+    ASSERT(!iterator || !iterator->isReplaying());
+    if (iterator && iterator->isCapturing()) {
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(&m_document);
+        iterator->storeInput(adoptPtr(new SendPendingEvents(frameIndex)));
+    }
+#endif
+    m_timer.stop();
+    dispatchAllPendingEvents();
+}
+
 void EventSender::dispatchAllPendingEvents()
 {
     // Need to avoid re-entering this function; if new dispatches are
@@ -93,8 +124,6 @@ void EventSender::dispatchAllPendingEvents()
     // will set a timer and eventually be processed.
     if (!m_dispatchingList.isEmpty())
         return;
-
-    m_timer.stop();
 
     m_dispatchSoonList.checkConsistency();
 
@@ -129,6 +158,5 @@ bool EventSender::hasPendingEvents(EventSenderClient* sender) const
     return false;
 }
 #endif
-
 
 } // namespace WebCore

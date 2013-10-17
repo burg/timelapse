@@ -167,7 +167,7 @@ void HTMLScriptElement::dispatchLoadEvent()
     ASSERT(!haveFiredLoadEvent());
     setHaveFiredLoadEvent(true);
 
-    dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
+    dispatchEvent(Event::create(eventNames().loadEvent, false, false));
 }
 
 PassRefPtr<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren()

@@ -379,8 +379,6 @@ void ImageLoader::dispatchPendingEvent(const AtomicString& eventName)
         dispatchPendingLoadEvent();
     if (eventName == eventNames().errorEvent)
         dispatchPendingErrorEvent();
-    
-    ASSERT_NOT_REACHED();
 }
 
 void ImageLoader::dispatchPendingBeforeLoadEvent()

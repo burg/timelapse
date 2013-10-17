@@ -38,7 +38,6 @@
 #if ENABLE(WEB_REPLAY)
 #include "DispatchEventBase.h"
 #include "ReplayInputTypes.h"
-#include "ReplayUtilities.h"
 #include "TimerCreated.h"
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
@@ -70,7 +69,7 @@ public:
 protected:
     virtual void start(int timeout, bool singleShot) OVERRIDE;
 };
-    
+
 InstrumentedDOMTimer::InstrumentedDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int originalInterval)
 : DOMTimer(context, action, originalInterval) {}
 
@@ -82,7 +81,7 @@ void InstrumentedDOMTimer::start(int timeout, bool singleShot)
         return;
 
     Document* document = static_cast<Document*>(scriptExecutionContext());
-    InputIterator* it = getInputIteratorForDocument(document);
+    InputIterator* it = document ? document->inputIterator() : 0;
     ASSERT(it && it->isCapturing());
 
     int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
@@ -102,7 +101,7 @@ void DeterministicDOMTimer::start(int, bool)
         return;
 
     Document* document = static_cast<Document*>(scriptExecutionContext());
-    InputIterator* it = getInputIteratorForDocument(document);
+    InputIterator* it = document ? document->inputIterator() : 0;
     ASSERT(it && it->isReplaying());
 
     NondeterministicInput* input = it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().TimerCreated);
@@ -165,7 +164,8 @@ int DOMTimer::install(ScriptExecutionContext* context, PassOwnPtr<ScheduledActio
     do {
         if (!context->isDocument())
             break;
-        InputIterator* it = getInputIteratorForDocument(static_cast<Document*>(context));
+        ASSERT(context);
+        InputIterator* it = static_cast<Document*>(context)->inputIterator();
         if (it && it->isCapturing())
             timer = new InstrumentedDOMTimer(context, action, timeout);
         if (it && it->isReplaying())
@@ -229,7 +229,7 @@ void DOMTimer::fired()
     } else {
         // Delete timer before executing the action for one-shot timers.
         OwnPtr<ScheduledAction> action = m_action.release();
-            
+
         // No access to member variables after this point.
         delete this;
         action->execute(context);

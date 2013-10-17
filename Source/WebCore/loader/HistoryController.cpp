@@ -53,7 +53,6 @@
 #include <wtf/text/CString.h>
 
 #if ENABLE(WEB_REPLAY)
-#include "ReplayUtilities.h"
 #include <wtf/replay/InputIterator.h>
 #endif
 
@@ -129,7 +128,7 @@ void HistoryController::restoreScrollPositionAndViewState()
         return;
 
 #if ENABLE(WEB_REPLAY)
-    InputIterator* it = getInputIteratorForDocument(m_frame.document());
+    InputIterator* it = m_frame.document()->inputIterator();
     if (it && (it->isCapturing() || it->isReplaying()))
         return;
 #endif
@@ -221,7 +220,7 @@ void HistoryController::restoreDocumentState()
         case FrameLoadTypeStandard:
             break;
     }
-    
+
     if (!m_currentItem)
         return;
     if (m_frame.loader().requestedHistoryItem() != m_currentItem.get())
@@ -244,7 +243,7 @@ void HistoryController::invalidateCurrentItemCachedPage()
     // FIXME: This is a grotesque hack to fix <rdar://problem/4059059> Crash in RenderFlow::detach
     // Somehow the PageState object is not properly updated, and is holding onto a stale document.
     // Both Xcode and FileMaker see this crash, Safari does not.
-    
+
     ASSERT(cachedPage->document() == m_frame.document());
     if (cachedPage->document() == m_frame.document()) {
         cachedPage->document()->setInPageCache(false);
@@ -269,7 +268,7 @@ bool HistoryController::shouldStopLoadingForHistoryItem(HistoryItem* targetItem)
 void HistoryController::goToItem(HistoryItem* targetItem, FrameLoadType type)
 {
     ASSERT(!m_frame.tree().parent());
-    
+
     // shouldGoToHistoryItem is a private delegate method. This is needed to fix:
     // <rdar://problem/3951283> can view pages from the back/forward cache that should be disallowed by Parental Controls
     // Ultimately, history item navigations should go through the policy delegate. That's covered in:
@@ -335,7 +334,7 @@ void HistoryController::updateForReload()
 
     if (m_currentItem) {
         pageCache()->remove(m_currentItem.get());
-    
+
         if (m_frame.loader().loadType() == FrameLoadTypeReload || m_frame.loader().loadType() == FrameLoadTypeReloadFromOrigin)
             saveScrollPositionAndViewStateToItem(m_currentItem.get());
     }
@@ -393,7 +392,7 @@ void HistoryController::updateForRedirectWithLockedBackForwardList()
     if (m_frame.loader().documentLoader())
         LOG(History, "WebCoreHistory: Updating History for redirect load in frame %s", m_frame.loader().documentLoader()->title().string().utf8().data());
 #endif
-    
+
     bool needPrivacy = m_frame.settings().privateBrowsingEnabled();
     const URL& historyURL = m_frame.loader().documentLoader()->urlForHistory();
 
@@ -634,7 +633,7 @@ void HistoryController::initializeItem(HistoryItem* item)
         url = blankURL();
     if (originalURL.isEmpty())
         originalURL = blankURL();
-    
+
     Frame* parentFrame = m_frame.tree().parent();
     String parent = parentFrame ? parentFrame->tree().uniqueName() : "";
     StringWithDirection title = documentLoader->title();
@@ -693,7 +692,7 @@ PassRefPtr<HistoryItem> HistoryController::createItemTree(Frame& targetFrame, bo
             // If the child is a frame corresponding to an <object> element that never loaded,
             // we don't want to create a history item, because that causes fallback content
             // to be ignored on reload.
-            
+
             if (!(!hasChildLoaded && childLoader.isHostedByObjectElement()))
                 bfItem->addChildItem(childLoader.history().createItemTree(targetFrame, clipAtTarget));
         }
@@ -849,7 +848,7 @@ void HistoryController::pushState(PassRefPtr<SerializedScriptValue> stateObject,
 
     // Get a HistoryItem tree for the current frame tree.
     RefPtr<HistoryItem> topItem = m_frame.mainFrame().loader().history().createItemTree(m_frame, false);
-    
+
     // Override data in the current item (created by createItemTree) to reflect
     // the pushState() arguments.
     m_currentItem->setTitle(title);

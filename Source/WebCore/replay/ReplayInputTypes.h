@@ -65,6 +65,7 @@ namespace WebCore {
     macro(ResourceWasBlocked) \
     macro(ResourceWillSendRequest) \
     macro(ScrollPage) \
+    macro(SendPendingEvents) \
     macro(SendResizeEvent) \
     macro(StopLoadingFrame) \
     macro(TimerCreated) \

@@ -53,7 +53,6 @@
 #include <wtf/Ref.h>
 
 #if ENABLE(WEB_REPLAY)
-#include "ReplayUtilities.h"
 #include <wtf/replay/InputIterator.h>
 #endif
 
@@ -117,11 +116,12 @@ bool ResourceLoader::init(const ResourceRequest& r)
 
 #if ENABLE(WEB_REPLAY)
     NetworkProxy& proxy = m_frame->page()->networkProxy();
-    InputIterator* it = getInputIteratorForDocument(m_frame->tree().top().document());
+    // FIXME: shouldn't this consult the frame's document, not the top frame's?
+    InputIterator* it = m_frame->tree().top().document()->inputIterator();
     bool capturingOrReplaying = it && (it->isCapturing() || it->isReplaying());
     if (capturingOrReplaying || proxy.expectsPageLoad())
         m_loaderId = proxy.nextLoaderId(r);
-#endif // ENABLE(WEB_REPLAY)
+#endif
 
     ResourceRequest clientRequest(r);
 
@@ -410,8 +410,8 @@ void ResourceLoader::cancel(const ResourceError& error)
     // willCancel() and didFailToLoad() both call out to clients that might do
     // something causing the last reference to this object to go away.
     Ref<ResourceLoader> protect(*this);
-    
-    // If we re-enter cancel() from inside willCancel(), we want to pick up from where we left 
+
+    // If we re-enter cancel() from inside willCancel(), we want to pick up from where we left
     // off without re-running willCancel()
     if (m_cancellationStatus == NotCancelled) {
         m_cancellationStatus = CalledWillCancel;
@@ -523,7 +523,7 @@ bool ResourceLoader::shouldUseCredentialStorage()
 {
     if (m_options.allowCredentials == DoNotAllowStoredCredentials)
         return false;
-    
+
     Ref<ResourceLoader> protect(*this);
     return frameLoader()->client().shouldUseCredentialStorage(documentLoader(), identifier());
 }

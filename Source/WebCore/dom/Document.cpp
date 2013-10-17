@@ -495,6 +495,9 @@ Document::Document(Frame* frame, const URL& url, unsigned documentClasses)
 #if ENABLE(FONT_LOAD_EVENTS)
     , m_fontloader(0)
 #endif
+#if ENABLE(WEB_REPLAY)
+    , m_inputIterator(0)
+#endif
     , m_didAssociateFormControlsTimer(this, &Document::didAssociateFormControlsTimerFired)
     , m_hasInjectedPlugInsScript(false)
     , m_renderTreeBeingDestroyed(false)
