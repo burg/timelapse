@@ -47,6 +47,8 @@ WebInspector.ProbeGroupDataGrid = function(probeGroup)
     this._groupListeners.register(probeGroup, WebInspector.ProbeGroupObject.Event.Unselected, this._executionResumed);
     this._groupListeners.install();
 
+    this.element.addEventListener("dblclick", this._gridClicked.bind(this));
+
     this._setupData();
 }
 
@@ -70,6 +72,7 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             this._teardownProbe(probes[i]);
 
         this._groupListeners.uninstall(true);
+        this.element.removeEventListener("dblclick", this._gridClicked.bind(this));
     },
 
     addColumn: function(columnIdentifier, column, index)
@@ -371,6 +374,14 @@ WebInspector.ProbeGroupDataGrid.prototype = {
             elem.classList.add(WebInspector.ProbeGroupDataGrid.FutureFrameStyleClassName);
             elem.classList.remove(WebInspector.ProbeGroupDataGrid.PastFrameStyleClassName);
         }
+    },
+
+    _gridClicked: function(event)
+    {
+        if (!event.target.gridNode || !(WebInspector.replayManager.canReplay || WebInspector.replayManager.isReplaying))
+            return;
+
+        WebInspector.replayManager.replayToMarkIndexSoon(event.target.gridNode.frame.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Normal);
     },
 
     _pausedAtProbeGroup: function(event)
