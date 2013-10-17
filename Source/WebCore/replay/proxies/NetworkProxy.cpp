@@ -33,19 +33,21 @@
 
 #include "NetworkProxy.h"
 
+#include "NetworkingContext.h"
+#include "ResourceHandle.h"
+#include "ResourceHandleClient.h"
+#include "ResourceRequest.h"
+#include <wtf/text/CString.h>
+
+#if ENABLE(WEB_REPLAY)
 #include "CapturingResourceHandleClient.h"
 #include "EmptyClients.h"
-#include "InspectorInstrumentation.h"
-#include "NetworkingContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
 #include "ResourceLoaderCreated.h"
-#include "ResourceRequest.h"
 #include <wtf/replay/InputIterator.h>
-#include <wtf/text/CString.h>
+#endif
 
 /* We must always define these symbols even if web replay support is
    not compiled, because the embedding API (WebKit or WebKit2) may be
@@ -61,6 +63,9 @@ NetworkProxy::NetworkProxy(Page* page)
 , m_expectsPageLoad(false)
 , m_replayHandleMap(HashMap<int, HandleContext>())
 #endif // ENABLE(WEB_REPLAY)
+{}
+
+NetworkProxy::~NetworkProxy()
 {}
 
 PassOwnPtr<NetworkProxy> NetworkProxy::create(Page* page)

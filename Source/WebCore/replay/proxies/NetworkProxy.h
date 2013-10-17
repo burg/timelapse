@@ -32,7 +32,6 @@
 #ifndef NetworkProxy_h
 #define NetworkProxy_h
 
-#include "ResourceHandle.h"
 #include "ReplayProxy.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Noncopyable.h>
@@ -41,6 +40,7 @@ namespace WebCore {
 
 class ReplayController;
 class NetworkingContext;
+class ResourceHandle;
 class ResourceHandleClient;
 class ResourceRequest;
 
@@ -51,7 +51,7 @@ class NetworkProxy : public ReplayProxy {
 
 public:
     static PassOwnPtr<NetworkProxy> create(Page*);
-    virtual ~NetworkProxy() {}
+    virtual ~NetworkProxy();
 
 #if ENABLE(WEB_REPLAY)
     HandleContext handleContextById(int);
