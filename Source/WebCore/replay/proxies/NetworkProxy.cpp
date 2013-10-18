@@ -42,10 +42,13 @@
 #if ENABLE(WEB_REPLAY)
 #include "CapturingResourceHandleClient.h"
 #include "EmptyClients.h"
+#include "JSONEncoderContext.h"
+#include "Logging.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include "ResourceLoaderCreated.h"
+#include "SerializationMethods.h"
 #include <wtf/replay/InputIterator.h>
 #endif
 
@@ -55,10 +58,22 @@
 
 namespace WebCore {
 
+#if ENABLE(WEB_REPLAY)
+static void printResourceRequestDiagnostics(const ResourceRequest& request)
+{
+    OwnPtr<EncoderContext> encoder = JSONCoder::createMap();
+    InputCoder<ResourceRequest>::encode(*encoder, request);
+    RefPtr<InspectorValue> value = static_cast<JSONEncoderContext*>(encoder.get())->encodedValue();
+    String jsonString = value->toJSONString();
+
+    LOG(DeterministicReplay, "---\n%s", jsonString.utf8().data());
+}
+#endif
+
 NetworkProxy::NetworkProxy(Page* page)
 : ReplayProxy(page)
 #if ENABLE(WEB_REPLAY)
-// start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX
+// Start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX.
 , m_nextId(1)
 , m_expectsPageLoad(false)
 , m_replayHandleMap(HashMap<int, HandleContext>())
@@ -103,30 +118,23 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 
     if (mode() == ReplayProxy::Replaying) {
         ASSERT(it && it->isReplaying());
-        int loaderId;
         ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(NondeterministicInput::LoaderMemoizedDataQueue, inputTypes().ResourceLoaderCreated));
-        if (memoizedData)
-            loaderId = memoizedData->handleId();
-        else // error handling case
-            loaderId = -1;
+        int loaderId = memoizedData ? memoizedData->handleId() : -1;
 
-        // error handling when requests don't match
-        if (!memoizedData || !ResourceRequestBase::compare(memoizedData->request(), request)) {
-            LOG_ERROR("%-30s Network request details differ from request observed when recording.", "[NetworkProxy]");
-            LOG_ERROR("Replayed request URL: %s", request.url().string().utf8().data());
+        // FIXME: is a soft error appropriate here?
+        if (!memoizedData)
+            controller().playbackError(false, "Memoized network request details were missing.");
+        else if (!ResourceRequestBase::compare(memoizedData->request(), request)) {
+            controller().playbackError(false, "Network request details differ from request observed when recording.");
 
-            if (memoizedData)
-                LOG_ERROR("Memoized request URL: %s", memoizedData->request().url().string().utf8().data());
-            else
-                LOG_ERROR("Memoized request: NULL");
-
-            // FIXME(BJB): in general, I don't think a soft error is appropriate here. But,
-            // let's see how often it has bad consequences.
-            controller().playbackError(false,
-                                        "Network request details missing or differ from request observed when recording.");
+            LOG(DeterministicReplay, "Memoized request information:");
+            printResourceRequestDiagnostics(memoizedData->request());
         }
+        else // Normal case: requests are equal.
+            return loaderId;
 
-        return loaderId;
+        LOG(DeterministicReplay, "Actual request information:");
+        printResourceRequestDiagnostics(request);
     }
 
     return -1;
