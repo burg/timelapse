@@ -154,7 +154,7 @@
     readonly attribute HTMLCollection links;
     readonly attribute HTMLCollection forms;
     readonly attribute HTMLCollection anchors;
-    readonly attribute DOMString lastModified;
+    [Nondeterministic] readonly attribute DOMString lastModified;
 
     NodeList getElementsByName([Default=Undefined] optional DOMString elementName);
 
@@ -168,9 +168,9 @@
     [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString defaultCharset;
     [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString readyState;
 
-    Element            elementFromPoint([Default=Undefined] optional long x, 
+    Element            elementFromPoint([Default=Undefined] optional long x,
                                         [Default=Undefined] optional long y);
-    Range              caretRangeFromPoint([Default=Undefined] optional long x, 
+    Range              caretRangeFromPoint([Default=Undefined] optional long x,
                                            [Default=Undefined] optional long y);
 
     // Mozilla extensions
@@ -200,7 +200,7 @@
     [ObjCUseDefaultView] CSSRuleList getMatchedCSSRules(Element element,
                                               DOMString pseudoElement,
                                               optional boolean authorOnly);
-                                              
+
 #endif
 
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
