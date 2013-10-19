@@ -110,11 +110,11 @@ void HTMLStyleElement::childrenChanged(const ChildChange& change)
 void HTMLStyleElement::dispatchPendingEvent(const AtomicString& eventName)
 {
     ASSERT_UNUSED(eventName, eventName == eventNames().loadEvent);
-    
+
     if (m_loadedSheet)
-        dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
+        dispatchEvent(Event::create(eventNames().loadEvent, false, false));
     else
-        dispatchAsyncEvent(Event::create(eventNames().errorEvent, false, false));
+        dispatchEvent(Event::create(eventNames().errorEvent, false, false));
 }
 
 void HTMLStyleElement::notifyLoadedSheetAndAllCriticalSubresources(bool errorOccurred)
