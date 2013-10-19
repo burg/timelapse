@@ -70,23 +70,23 @@ private:
 class EventLoopInput : public NondeterministicInput {
 
 public:
-    EventLoopInput(int dispatchCount, const PositionMark& mark)
-    : m_dispatchCount(dispatchCount)
-    , m_domEventQuota(-1)
+    EventLoopInput(int ticksCount, const PositionMark& mark)
+    : m_executionTicksCount(ticksCount)
+    , m_executionTicksQuota(-1)
     , m_mark(mark)
     , m_sealed(false)
     , m_dispatchCounted(true) {}
 
     EventLoopInput()
-    : m_dispatchCount(-1)
-    , m_domEventQuota(-1)
+    : m_executionTicksCount(-1)
+    , m_executionTicksQuota(-1)
     , m_mark(PositionMark())
     , m_sealed(false)
     , m_dispatchCounted(true) {}
 
     EventLoopInput(bool dispatchCounted)
-    : m_dispatchCount(0)
-    , m_domEventQuota(0)
+    : m_executionTicksCount(0)
+    , m_executionTicksQuota(0)
     , m_mark(PositionMark())
     , m_sealed(true)
     , m_dispatchCounted(dispatchCounted) {}
@@ -106,23 +106,21 @@ public:
     // mark, dispatch count, and quota are not always known at construction time. They can
     // only be set when the event is "unsealed".
 
-    void setDispatchCount(unsigned count) { ASSERT(!m_sealed); m_dispatchCount = count; }
-    virtual int dispatchCount() const { return m_dispatchCount; }
+    void setExecutionTicksCount(unsigned count) { ASSERT(!m_sealed); m_executionTicksCount = count; }
+    virtual int executionTicksCount() const { return m_executionTicksCount; }
 
     void setMark(const PositionMark& mark) { ASSERT(!m_sealed); m_mark = mark; }
     PositionMark mark() const { return m_mark; }
 
-    void setDOMEventQuota(unsigned quota) { ASSERT(!m_sealed); m_domEventQuota = quota; }
-    int DOMEventQuota() const { return m_domEventQuota; }
+    void setExecutionTicksQuota(unsigned quota) { ASSERT(!m_sealed); m_executionTicksQuota = quota; }
+    int executionTicksQuota() const { return m_executionTicksQuota; }
 
-    // only actions added through ReplayController::captureEventLoopInput can be dispatch-
-    // counted. ReplayController will ignore the dispatch count of other actions.
     bool dispatchCounted() const { return m_dispatchCounted; }
 
     void seal()
     {
-        ASSERT(m_domEventQuota > -1);
-        ASSERT(m_dispatchCount > -1);
+        ASSERT(m_executionTicksQuota > -1);
+        ASSERT(m_executionTicksCount > -1);
         ASSERT(!m_sealed);
 
         m_sealed = true;
@@ -131,15 +129,18 @@ public:
     bool sealed() const { return m_sealed; }
 
 private:
-    //for debugging purposes to ensure correct replay
-    int m_dispatchCount;
-    int m_domEventQuota;
-    //used by clients to specify discrete units of the recording.
-    //so, clients only need to track the marks that they have set,
-    //instead of some implementation-specific detail like event dispatched count.
+    // For debugging purposes, we count the number of execution ticks before
+    // this input is dispatched,and the number of ticks that happen as a
+    // result of dispatching the event. We also ensure that
+    int m_executionTicksCount;
+    int m_executionTicksQuota;
     PositionMark m_mark;
     bool m_sealed;
+    // Whether or not this is a "real" event loop input.
+    // PlaybackError is the only input for which this is false.
+    // FIXME: is this actually necessary?
     bool m_dispatchCounted;
+
 };
 
 } //namespace WebCore

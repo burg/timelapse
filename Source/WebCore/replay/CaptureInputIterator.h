@@ -53,6 +53,7 @@ public:
     // InputIterator API
     virtual bool isCapturing() const { return m_isActive; }
     virtual bool isReplaying() const { return false; }
+    virtual void incrementExecutionTicks() OVERRIDE { m_executionTicksCount += 1; }
 
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
@@ -60,7 +61,6 @@ public:
 
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
-    void incrementDomEventCounter() { m_domEventDispatchCount++; }
 
 private:
     CaptureInputIterator(InputStorage*, Page*);
@@ -70,7 +70,7 @@ private:
     Page* m_page;
 
     EventLoopInput* m_previousEventLoopInput;
-    int m_domEventDispatchCount;
+    int m_executionTicksCount;
     bool m_isActive;
 };
 

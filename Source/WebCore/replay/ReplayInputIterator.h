@@ -71,15 +71,16 @@ public:
     virtual bool isCapturing() const { return false; }
     virtual bool isReplaying() const { return m_isActive; }
 
+    virtual void incrementExecutionTicks() OVERRIDE;
+
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
-    //used for temporary deactivation; e.g. when injected scripts are evaluated.
+    // Used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
     EventLoopInputDispatcher& dispatcher() const { return *m_dispatcher; }
 
-    //error handling
     bool hasError() const { return m_errorData.error != NoReplayError; }
     WTF_EXPORT_PRIVATE String errorMessage() const;
     // TODO: if the previous error allocated any POD, must clean up here.

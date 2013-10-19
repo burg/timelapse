@@ -76,6 +76,11 @@ PassOwnPtr<ReplayInputIterator> ReplayInputIterator::create(InputStorage* storag
     return adoptPtr(new ReplayInputIterator(storage, page, client));
 }
 
+void ReplayInputIterator::incrementExecutionTicks()
+{
+    m_dispatcher->incrementExecutionTicks();
+}
+
 void ReplayInputIterator::storeInput(PassOwnPtr<NondeterministicInput>)
 {
     // cannot store inputs from replay iterator

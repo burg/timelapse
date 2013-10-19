@@ -1978,11 +1978,11 @@ inline void InspectorInstrumentation::recordingCreated(Page* page, PassRefPtr<Re
 #endif
 }
 
-inline void InspectorInstrumentation::capturedEventLoopInput(Page* page, EventLoopInput* action)
+inline void InspectorInstrumentation::capturedEventLoopInput(Page* page, EventLoopInput* input)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        capturedEventLoopInputImpl(instrumentingAgents, action);
+        capturedEventLoopInputImpl(instrumentingAgents, input);
 #endif
 }
 

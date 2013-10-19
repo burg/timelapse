@@ -318,11 +318,11 @@ void ReplayController::cancelPlayback()
         case ReplayUpToMarkIndex:
         case ReplayToCompletion:
         case PlaybackResetting:
-            // this cancels any pending timers, and fires instrumentation.
+            // This cancels any pending timers, and fires instrumentation.
             pauseReplay();
 
         case PlaybackPaused:
-            // this disconnects the determinism log from global object, and fires instrumentation.
+            // This disconnects the determinism log from global object, and fires instrumentation.
             finishReplay();
 
         case PlaybackFinished:
@@ -331,8 +331,6 @@ void ReplayController::cancelPlayback()
     }
 
 }
-
-//-- external callbacks
 
 void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const PositionMark&)
 {
@@ -352,15 +350,12 @@ void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const
         return;
 
 #ifndef NDEBUG
-    // this is only used to break on specific event types.
+    // This is only used to break on specific event types.
     debugHookOnDomEvents(event);
 #endif // !defined(NDEBUG)
 
-    // finally, increment the dispatch count before the actual dispatch occurs.
-    if (m_activeIterator->isCapturing())
-        static_cast<CaptureInputIterator*>(m_activeIterator.get())->incrementDomEventCounter();
-    if (m_activeIterator->isReplaying())
-        dispatcher().incrementDomEventCounter();
+    // Finally, increment the execution tick before the actual dispatch occurs.
+    it->incrementExecutionTicks();
 }
 
 void ReplayController::didDispatchEvent()
@@ -375,6 +370,8 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
         return;
 
     page()->networkProxy().setExpectsPageLoad(false);
+    // We store the input iterator in both Document and JSDOMWindow, so that
+    // replay state is accessible without layering violations.
     loader->frame()->document()->setInputIterator(m_activeIterator.get());
     loader->frame()->script().globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
@@ -388,7 +385,6 @@ void ReplayController::willFireTimer(int timerId, Document* document)
         m_activeIterator->storeInput(adoptPtr(new TimerFired(timerId, frameIndex)));
 }
 
-//-- accessors
 CacheController& ReplayController::cacheController() const
 {
     return *m_cacheController;
@@ -399,7 +395,6 @@ PassRefPtr<ReplayRecording> ReplayController::loadedRecording() const
     return m_loadedRecording;
 }
 
-// EventLoopInputDispatcherClient API
 void ReplayController::playbackError(bool isFatal, const String& errorMessage)
 {
     ASSERT(replaying());

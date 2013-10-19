@@ -72,18 +72,16 @@ public:
     ~EventLoopInputDispatcher();
     static PassOwnPtr<EventLoopInputDispatcher> create(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
 
-    // Main API
     void run();
     void pause();
     void setMode(ReplayMode mode) { m_mode = mode; }
     ReplayMode mode() const { return m_mode; }
     const PositionMark& currentMark() const { return m_currentMark; }
 
-    // External callbacks
-    void incrementDomEventCounter();
+    void incrementExecutionTicks();
     void maybeDispatchInput();
 
-    // Post-dispatch callback
+    // Called by EventLoopInput subclasses to signal end of dispatch.
     void didDispatch(EventLoopInput*);
 
 private:
@@ -97,24 +95,21 @@ private:
     ReplayInputIterator* m_iterator;
     Timer<EventLoopInputDispatcher> m_timer;
 
-    // this pointer contains the next input to dispatch. The input could either be
-    // waiting on a specific number of dom event dispatches, or on another input executing.
     EventLoopInput* m_waitingInput;
-    // this pointer is set immediately before an input dispatch() method was called,
-    // up until the corresponding didDispatch() callback to signal input completion.
+    // This pointer is valid when an event loop input is presently dispatching.
     EventLoopInput* m_runningInput;
     bool m_dispatching;
     bool m_running;
 
-    int m_domEventDispatchCount;
-    // used during replay to check for DOM event dispatch count consistency.
-    int m_domEventRemainingQuota;
+    int m_executionTicksCount;
+    // Used during replay to check whether the correct number of events were dispatched.
+    int m_executionTicksQuota;
 
     ReplayMode m_mode;
     PositionMark m_currentMark;
-    // the time at which the last input dispatch() method was called.
+    // The time at which the last input dispatch() method was called.
     double m_previousDispatchStartTime;
-    // the time specified by the last dispatched input's mark.
+    // The time specified by the last dispatched input's mark.
     double m_previousMarkTime;
 };
 

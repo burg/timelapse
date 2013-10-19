@@ -46,6 +46,7 @@ public:
 
     virtual bool isCapturing() const =0;
     virtual bool isReplaying() const =0;
+    virtual void incrementExecutionTicks() { }
 
     WTF_EXPORT_PRIVATE virtual void storeInput(PassOwnPtr<NondeterministicInput>) =0;
     WTF_EXPORT_PRIVATE virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&) =0;

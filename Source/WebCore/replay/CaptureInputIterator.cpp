@@ -52,7 +52,7 @@ CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
 : m_storage(storage)
 , m_page(page)
 , m_previousEventLoopInput(0)
-, m_domEventDispatchCount(0)
+, m_executionTicksCount(0)
 , m_isActive(true)
 {
     ASSERT(m_page);
@@ -81,12 +81,13 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
     ASSERT(m_isActive);
 
     if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
-        // flush document event queue, so event dispatch count reflects anything
+        // Flush document event queue, so event dispatch count reflects anything
         // dispatched or queued before this input was captured.
+        // TODO(#384): instead, DocumentEventQueue should be mediated by AsyncEventProxy.
         m_page->mainFrame().document()->eventQueue().flush();
 
         EventLoopInput* eventLoopInput = static_cast<EventLoopInput*>(input.get());
-        eventLoopInput->setDispatchCount(m_domEventDispatchCount);
+        eventLoopInput->setExecutionTicksCount(m_executionTicksCount);
         if (m_previousEventLoopInput)
             finalizePreviousInput();
         m_previousEventLoopInput = eventLoopInput;
@@ -118,8 +119,8 @@ void CaptureInputIterator::setIsActive(bool state)
 
 void CaptureInputIterator::finalizePreviousInput()
 {
-    int eventQuota = m_domEventDispatchCount - m_previousEventLoopInput->dispatchCount();
-    m_previousEventLoopInput->setDOMEventQuota(eventQuota);
+    int ticksQuota = m_executionTicksCount - m_previousEventLoopInput->executionTicksCount();
+    m_previousEventLoopInput->setExecutionTicksQuota(ticksQuota);
     m_previousEventLoopInput->seal();
 }
 

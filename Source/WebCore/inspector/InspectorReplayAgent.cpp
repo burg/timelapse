@@ -134,13 +134,13 @@ void InspectorReplayAgent::willCallFunction(const String& scriptName, int script
 {
     if (!capturing() && !replaying())
         return;
-    
+
     LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
     scriptName.utf8().data(), scriptLine,
     SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);
 }
 #endif
-    
+
 void InspectorReplayAgent::recordingUnloaded()
 {
     m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
@@ -161,7 +161,7 @@ void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecord
 
 void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
 {
-    // automatically load the created recording if nothing else is loaded.
+    // Automatically load the created recording if nothing else is loaded.
     if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
         m_inspectedPage->replayController().loadRecording(prpRecording);
     }
@@ -169,8 +169,8 @@ void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecor
 
 void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
 {
-    // this instrumentation should only fire when we are actually capturing.
-    // if it's some transient state, the caller should know not to call.
+    // This instrumentation should only fire when we are actually capturing.
+    // If it's some transient state, the caller should know not to call.
     ASSERT(capturing());
 
     PositionMark newMark = createMark();

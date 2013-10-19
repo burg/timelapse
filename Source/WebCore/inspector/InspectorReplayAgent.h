@@ -34,6 +34,7 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
+// Uses PositionMark.
 #include "EventLoopInput.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"

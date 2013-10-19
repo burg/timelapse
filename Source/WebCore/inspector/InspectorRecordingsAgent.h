@@ -34,7 +34,6 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
-#include "EventLoopInput.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
 
