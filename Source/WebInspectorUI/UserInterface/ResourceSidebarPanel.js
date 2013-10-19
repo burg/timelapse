@@ -311,7 +311,7 @@ WebInspector.ResourceSidebarPanel.prototype = {
                 updateEmptyContentPlaceholderTimeout = null;
             }
 
-            this.updateEmptyContentPlaceholder(WebInspector.UIString("No Search Results"));
+            this.emptyContentPlaceholder = WebInspector.UIString("No Search Results");
         }
 
         function resourcesCallback(error, result)
