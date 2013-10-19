@@ -58,14 +58,11 @@ String SendPendingEvents::toString() const
     return makeString("SendPendingEvents(", String::number(m_frameIndex), ")");
 }
 
-void SendPendingEvents::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void SendPendingEvents::dispatch(ReplayController& controller)
 {
-    ASSERT(sealed());
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
     document->eventSender().dispatchAllPendingEvents();
-
-    dispatcher.didDispatch(this);
 }
 
 void InputCoder<SendPendingEvents>::encode(EncoderContext& encoder, const SendPendingEvents& input)

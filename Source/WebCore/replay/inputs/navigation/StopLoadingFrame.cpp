@@ -49,9 +49,8 @@ StopLoadingFrame::StopLoadingFrame(int frameIndex)
     : m_frameIndex(frameIndex) { }
 
 StopLoadingFrame::~StopLoadingFrame() {}
-    
-//EventLoopInput API
-void StopLoadingFrame::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+
+void StopLoadingFrame::dispatch(ReplayController& controller)
 {
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
@@ -59,7 +58,6 @@ void StopLoadingFrame::dispatch(ReplayController& controller, EventLoopInputDisp
     ASSERT(frame);
 
     controller.page()->navigationProxy().stopLoadingFrame(frame, true);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& StopLoadingFrame::type() const

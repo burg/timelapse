@@ -50,7 +50,7 @@ public:
     virtual ~ResourceWillSendRequest();
 
     // EventLoopInput API
-    virtual void dispatch(ReplayController&, EventLoopInputDispatcher&) OVERRIDE;
+    virtual void dispatch(ReplayController&) OVERRIDE;
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;

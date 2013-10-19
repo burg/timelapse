@@ -42,6 +42,7 @@
 #include "ReplayInputIterator.h"
 #include "SentinelActions.h"
 
+#include <wtf/TemporaryChange.h>
 #include <wtf/text/CString.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
@@ -112,25 +113,6 @@ void EventLoopInputDispatcher::incrementExecutionTicks()
             m_client->playbackError(false, errorMessage);
         }
     }
-}
-
-void EventLoopInputDispatcher::didDispatch(EventLoopInput* input)
-{
-    if (!m_runningInput) {
-        LOG(DeterministicReplay, "%-20s Clearing pending didDispatch flag, since it appears replay stopped while processing this event (i.e., inside a debugger's inner event loop, or because of a fatal replay error)\n", "ReplayEvents");
-        return;
-    }
-    ASSERT(m_dispatching);
-    ASSERT(input == m_runningInput);
-#ifdef NDEBUG
-    UNUSED_PARAM(input);
-#endif // !defined(NDEBUG)
-
-    m_runningInput = 0;
-    m_dispatching = false;
-    m_client->didDispatchInput(*input);
-
-    maybeDispatchInput();
 }
 
 void EventLoopInputDispatcher::maybeDispatchInput()
@@ -242,7 +224,8 @@ void EventLoopInputDispatcher::syncDispatchInput()
 {
     ASSERT(m_runningInput);
 
-    // flush document event queue before dispatching our own events.
+    // Flush document event queue before dispatching our own events.
+    // TODO(#384): Don't flush the document event queue on every turn.
     m_page->mainFrame().document()->eventQueue().flush();
 
     if (m_mode == Realtime) {
@@ -254,8 +237,15 @@ void EventLoopInputDispatcher::syncDispatchInput()
                    "ReplayEvents");
     LOG(DeterministicReplay, "%-20s >DISPATCH: %s\n", "ReplayEvents",
                    m_runningInput->toString().utf8().data());
-    m_dispatching = true;
-    m_runningInput->dispatch(m_page->replayController(), *this);
+
+    ASSERT(!m_dispatching);
+    ASSERT(m_runningInput->sealed());
+    TemporaryChange<bool> change(m_dispatching, true);
+    m_runningInput->dispatch(m_page->replayController());
+    m_client->didDispatchInput(*m_runningInput);
+    m_runningInput = 0;
+
+    maybeDispatchInput();
 }
 
 }; // namespace WebCore

@@ -49,17 +49,13 @@ const AtomicString& HandleMouseMove::type() const
     return inputTypes().HandleMouseMove;
 }
 
-void HandleMouseMove::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void HandleMouseMove::dispatch(ReplayController& controller)
 {
     ASSERT(controller.page());
-    ASSERT(sealed());
-
-    // this allows reusing the struct to handle two page inputs with same data, different API method.
     if (m_scrollbarTargeted)
         controller.page()->userInputProxy().handleMouseMoveOnScrollbarEvent(platformEvent(), true);
     else
         controller.page()->userInputProxy().handleMouseMoveEvent(platformEvent(), true);
-    dispatcher.didDispatch(this);
 }
 
 void InputCoder<HandleMouseMove>::encode(EncoderContext& encoder, const HandleMouseMove& input)

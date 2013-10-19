@@ -61,9 +61,8 @@ String TimerFired::toString() const
     return makeString("TimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
 }
 
-void TimerFired::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void TimerFired::dispatch(ReplayController& controller)
 {
-    ASSERT(sealed());
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
 
     //get the timer from SEC and fire it.
@@ -74,8 +73,6 @@ void TimerFired::dispatch(ReplayController& controller, EventLoopInputDispatcher
         LOG_ERROR("%-30s REPLAY DIVERGENCE! Couldn't find and fire timer %d/%d.\n",
                   "[ReplayController]", m_frameIndex, m_timerId);
     }
-
-    dispatcher.didDispatch(this);
 }
 
 void InputCoder<TimerFired>::encode(EncoderContext& encoder, const TimerFired& input)

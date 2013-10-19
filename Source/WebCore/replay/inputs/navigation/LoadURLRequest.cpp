@@ -55,11 +55,9 @@ LoadURLRequest::LoadURLRequest(PassOwnPtr<FrameLoadRequest> request)
 
 LoadURLRequest::~LoadURLRequest() {}
 
-//EventLoopInput API
-void LoadURLRequest::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void LoadURLRequest::dispatch(ReplayController& controller)
 {
     controller.page()->navigationProxy().loadURLRequest(*m_request);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& LoadURLRequest::type() const

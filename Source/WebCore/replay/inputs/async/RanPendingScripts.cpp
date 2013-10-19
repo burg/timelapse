@@ -60,17 +60,14 @@ String RanPendingScripts::toString() const
     return makeString("RanPendingScripts(", String::number(m_frameIndex), ")");
 }
 
-void RanPendingScripts::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void RanPendingScripts::dispatch(ReplayController& controller)
 {
-    ASSERT(sealed());
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
 
-    //call ScriptRunner timer callback manually
+    // Call ScriptRunner timer callback manually.
     ScriptRunner* scriptRunner = document->scriptRunner();
     ASSERT(scriptRunner->hasPendingScripts());
     scriptRunner->timerFired(&scriptRunner->m_timer);
-
-    dispatcher.didDispatch(this);
 }
 
 void InputCoder<RanPendingScripts>::encode(EncoderContext& encoder, const RanPendingScripts& input)

@@ -46,11 +46,9 @@ namespace WebCore {
 ResourceLoaderDestroyed::ResourceLoaderDestroyed(int handleId)
     : m_handleId(handleId) {}
 
-//EventLoopInput API
-void ResourceLoaderDestroyed::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void ResourceLoaderDestroyed::dispatch(ReplayController& controller)
 {
     controller.page()->networkProxy().removeHandleById(m_handleId);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& ResourceLoaderDestroyed::type() const

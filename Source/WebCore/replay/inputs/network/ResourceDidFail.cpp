@@ -57,15 +57,13 @@ ResourceDidFail::ResourceDidFail(int handleId, PassOwnPtr<ResourceError> error)
     : m_handleId(handleId)
     , m_error(*error) {}
 
-// EventLoopInput API
-void ResourceDidFail::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void ResourceDidFail::dispatch(ReplayController& controller)
 {
     HandleContext context = controller.page()->networkProxy().handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     client->didFail(handle.get(), m_error.copy());
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& ResourceDidFail::type() const

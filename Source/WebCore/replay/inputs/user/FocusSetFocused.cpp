@@ -58,13 +58,10 @@ String FocusSetFocused::toString() const
         return "FocusSetFocused(to=inactive)";
 }
 
-void FocusSetFocused::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void FocusSetFocused::dispatch(ReplayController& controller)
 {
     ASSERT(controller.page());
-    ASSERT(sealed());
-
     controller.page()->userInputProxy().focusSetFocused(m_toState, true);
-    dispatcher.didDispatch(this);
 }
 
 void InputCoder<FocusSetFocused>::encode(EncoderContext& encoder, const FocusSetFocused& input)

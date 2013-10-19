@@ -36,7 +36,6 @@
 #include "DisableCache.h"
 
 #include "CacheController.h"
-#include "EventLoopInputDispatcher.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "ReplayController.h"
@@ -45,12 +44,11 @@
 
 namespace WebCore {
 
-void DisableCache::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void DisableCache::dispatch(ReplayController& controller)
 {
     ASSERT(sealed());
 
     controller.cacheController().disableCache();
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& DisableCache::type() const

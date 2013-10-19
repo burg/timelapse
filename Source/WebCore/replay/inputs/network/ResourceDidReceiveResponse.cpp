@@ -57,8 +57,7 @@ ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, PassOwnPtr<
     : m_handleId(handleId)
     , m_response(response) {}
 
-//EventLoopInput API
-void ResourceDidReceiveResponse::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void ResourceDidReceiveResponse::dispatch(ReplayController& controller)
 {
     HandleContext context = controller.page()->networkProxy().handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
@@ -71,7 +70,6 @@ void ResourceDidReceiveResponse::dispatch(ReplayController& controller, EventLoo
     }
 
     client->didReceiveResponse(handle.get(), *m_response);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& ResourceDidReceiveResponse::type() const

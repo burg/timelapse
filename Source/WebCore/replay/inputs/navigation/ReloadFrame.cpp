@@ -50,9 +50,8 @@ ReloadFrame::ReloadFrame(bool endToEndReload, int frameIndex)
     , m_endToEndReload(endToEndReload) { }
 
 ReloadFrame::~ReloadFrame() {}
-    
-//EventLoopInput API
-void ReloadFrame::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+
+void ReloadFrame::dispatch(ReplayController& controller)
 {
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
@@ -60,7 +59,6 @@ void ReloadFrame::dispatch(ReplayController& controller, EventLoopInputDispatche
     ASSERT(frame);
 
     controller.page()->navigationProxy().reloadFrame(frame, m_endToEndReload, true);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& ReloadFrame::type() const

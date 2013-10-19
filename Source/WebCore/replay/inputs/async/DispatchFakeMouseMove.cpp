@@ -50,8 +50,7 @@ DispatchFakeMouseMove::DispatchFakeMouseMove(const PlatformMouseEvent& event, in
     : HandleMouseBase(event)
     , m_frameIndex(frameIndex) { }
 
-//EventLoopInput API
-void DispatchFakeMouseMove::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void DispatchFakeMouseMove::dispatch(ReplayController& controller)
 {
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
@@ -59,7 +58,6 @@ void DispatchFakeMouseMove::dispatch(ReplayController& controller, EventLoopInpu
     ASSERT(frame);
 
     controller.page()->asyncEventProxy().dispatchFakeMouseMove(*frame, platformEvent(), true);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& DispatchFakeMouseMove::type() const

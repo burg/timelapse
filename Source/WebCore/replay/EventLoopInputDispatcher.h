@@ -81,9 +81,6 @@ public:
     void incrementExecutionTicks();
     void maybeDispatchInput();
 
-    // Called by EventLoopInput subclasses to signal end of dispatch.
-    void didDispatch(EventLoopInput*);
-
 private:
     EventLoopInputDispatcher(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
     void asyncDispatchInput();

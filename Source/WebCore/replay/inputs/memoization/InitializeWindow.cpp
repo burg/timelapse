@@ -49,12 +49,9 @@
 
 namespace WebCore {
 
-void InitializeWindow::dispatch(ReplayController& controller, EventLoopInputDispatcher& dispatcher)
+void InitializeWindow::dispatch(ReplayController& controller)
 {
-    ASSERT(sealed());
-
     controller.page()->mainFrame().document()->domWindow()->resizeTo((float) m_width, (float) m_height);
-    dispatcher.didDispatch(this);
 }
 
 const AtomicString& InitializeWindow::type() const
