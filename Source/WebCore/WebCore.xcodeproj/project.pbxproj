@@ -5200,7 +5200,7 @@
 		C41370E4171C78D40099A2D9 /* InspectorProbeAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41370E2171C78D30099A2D9 /* InspectorProbeAgent.cpp */; };
 		C41370E5171C78D40099A2D9 /* InspectorProbeAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C41370E3171C78D40099A2D9 /* InspectorProbeAgent.h */; };
 		C41A8BEE180DB95000E06C0F /* EventSenderClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41A8BEC180DB95000E06C0F /* EventSenderClient.cpp */; };
-		C41A8BEF180DB95000E06C0F /* EventSenderClient.h in Headers */ = {isa = PBXBuildFile; fileRef = C41A8BED180DB95000E06C0F /* EventSenderClient.h */; };
+		C41A8BEF180DB95000E06C0F /* EventSenderClient.h in Headers */ = {isa = PBXBuildFile; fileRef = C41A8BED180DB95000E06C0F /* EventSenderClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41A8BF0180DC19A00E06C0F /* EventSender.h in Headers */ = {isa = PBXBuildFile; fileRef = CE5CB1B314EDAB6F00BB2795 /* EventSender.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C41A8BF2180DC40200E06C0F /* EventSender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41A8BF1180DC40200E06C0F /* EventSender.cpp */; };
 		C41D354E1711F57A00E40FB7 /* InputStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D354C1711F57A00E40FB7 /* InputStorage.h */; settings = {ATTRIBUTES = (Private, ); }; };

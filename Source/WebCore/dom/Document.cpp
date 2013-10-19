@@ -473,7 +473,6 @@ Document::Document(Frame* frame, const URL& url, unsigned documentClasses)
     , m_isAnimatingFullScreen(false)
 #endif
     , m_loadEventDelayCount(0)
-    , m_loadEventDelayTimer(this, &Document::loadEventDelayTimerFired)
     , m_referrerPolicy(ReferrerPolicyDefault)
     , m_directionSetOnDocumentElement(false)
     , m_writingModeSetOnDocumentElement(false)
@@ -5533,11 +5532,15 @@ void Document::decrementLoadEventDelayCount()
     ASSERT(m_loadEventDelayCount);
     --m_loadEventDelayCount;
 
-    if (frame() && !m_loadEventDelayCount && !m_loadEventDelayTimer.isActive())
-        m_loadEventDelayTimer.startOneShot(0);
+    if (frame() && !m_loadEventDelayCount) {
+#ifndef NDEBUG
+        ASSERT(!eventSender().hasPendingEvents(this));
+#endif
+        eventSender().dispatchEventSoon(this, eventNames().loadEvent);
+    }
 }
 
-void Document::loadEventDelayTimerFired(Timer<Document>*)
+void Document::dispatchPendingEvent(const AtomicString&)
 {
     if (frame())
         frame()->loader().checkCompleted();

@@ -35,6 +35,7 @@
 #include "DocumentStyleSheetCollection.h"
 #include "DocumentTiming.h"
 #include "EventSender.h"
+#include "EventSenderClient.h"
 #include "FocusDirection.h"
 #include "HitTestRequest.h"
 #include "IconURL.h"
@@ -236,7 +237,7 @@ enum DocumentClass {
 
 typedef unsigned char DocumentClassFlags;
 
-class Document : public ContainerNode, public TreeScope, public ScriptExecutionContext {
+class Document : public ContainerNode, public TreeScope, public ScriptExecutionContext, public EventSenderClient {
 public:
     static PassRefPtr<Document> create(Frame* frame, const URL& url)
     {
@@ -1090,6 +1091,9 @@ public:
     void decrementLoadEventDelayCount();
     bool isDelayingLoadEvent() const { return m_loadEventDelayCount; }
 
+    // EventSenderClient API.
+    virtual void dispatchPendingEvent(const AtomicString&) OVERRIDE;
+
 #if ENABLE(TOUCH_EVENTS)
     PassRefPtr<Touch> createTouch(DOMWindow*, EventTarget*, int identifier, int pageX, int pageY, int screenX, int screenY, int radiusX, int radiusY, float rotationAngle, float force, ExceptionCode&) const;
 #endif
@@ -1249,8 +1253,6 @@ private:
     void createStyleResolver();
 
     void seamlessParentUpdatedStylesheets();
-
-    void loadEventDelayTimerFired(Timer<Document>*);
 
     void pendingTasksTimerFired(Timer<Document>*);
 
@@ -1498,7 +1500,6 @@ private:
 #endif
 
     int m_loadEventDelayCount;
-    Timer<Document> m_loadEventDelayTimer;
 
     ViewportArguments m_viewportArguments;
 
