@@ -90,17 +90,17 @@ ImageLoader::~ImageLoader()
     if (m_image)
         m_image->removeClient(this);
 
-    ASSERT(m_hasPendingBeforeLoadEvent || !eventSender().hasPendingEvents(this));
+    ASSERT(m_hasPendingBeforeLoadEvent || !eventSender().hasPendingEventsForSender(this));
     if (m_hasPendingBeforeLoadEvent)
-        eventSender().cancelEvent(this, eventNames().beforeloadEvent);
+        eventSender().cancelEventForSender(this, eventNames().beforeloadEvent);
 
-    ASSERT(m_hasPendingLoadEvent || !eventSender().hasPendingEvents(this));
+    ASSERT(m_hasPendingLoadEvent || !eventSender().hasPendingEventsForSender(this));
     if (m_hasPendingLoadEvent)
-        eventSender().cancelEvent(this, eventNames().loadEvent);
+        eventSender().cancelEventForSender(this, eventNames().loadEvent);
 
-    ASSERT(m_hasPendingErrorEvent || !eventSender().hasPendingEvents(this));
+    ASSERT(m_hasPendingErrorEvent || !eventSender().hasPendingEventsForSender(this));
     if (m_hasPendingErrorEvent)
-        eventSender().cancelEvent(this, eventNames().errorEvent);
+        eventSender().cancelEventForSender(this, eventNames().errorEvent);
 
     // If the ImageLoader is being destroyed but it is still protecting its image-loading Element,
     // remove that protection here.
@@ -124,15 +124,15 @@ void ImageLoader::setImageWithoutConsideringPendingLoadEvent(CachedImage* newIma
     if (newImage != oldImage) {
         m_image = newImage;
         if (m_hasPendingBeforeLoadEvent) {
-            eventSender().cancelEvent(this, eventNames().beforeloadEvent);
+            eventSender().cancelEventForSender(this, eventNames().beforeloadEvent);
             m_hasPendingBeforeLoadEvent = false;
         }
         if (m_hasPendingLoadEvent) {
-            eventSender().cancelEvent(this, eventNames().loadEvent);
+            eventSender().cancelEventForSender(this, eventNames().loadEvent);
             m_hasPendingLoadEvent = false;
         }
         if (m_hasPendingErrorEvent) {
-            eventSender().cancelEvent(this, eventNames().errorEvent);
+            eventSender().cancelEventForSender(this, eventNames().errorEvent);
             m_hasPendingErrorEvent = false;
         }
         m_imageComplete = true;
@@ -202,11 +202,11 @@ void ImageLoader::updateFromElement()
     CachedImage* oldImage = m_image.get();
     if (newImage != oldImage) {
         if (m_hasPendingBeforeLoadEvent) {
-            eventSender().cancelEvent(this, eventNames().beforeloadEvent);
+            eventSender().cancelEventForSender(this, eventNames().beforeloadEvent);
             m_hasPendingBeforeLoadEvent = false;
         }
         if (m_hasPendingLoadEvent) {
-            eventSender().cancelEvent(this, eventNames().loadEvent);
+            eventSender().cancelEventForSender(this, eventNames().loadEvent);
             m_hasPendingLoadEvent = false;
         }
 
@@ -215,7 +215,7 @@ void ImageLoader::updateFromElement()
         // this load and we should not cancel the event.
         // FIXME: If both previous load and this one got blocked with an error, we can receive one error event instead of two.
         if (m_hasPendingErrorEvent && newImage) {
-            eventSender().cancelEvent(this, eventNames().errorEvent);
+            eventSender().cancelEventForSender(this, eventNames().errorEvent);
             m_hasPendingErrorEvent = false;
         }
 
@@ -399,7 +399,7 @@ void ImageLoader::dispatchPendingBeforeLoadEvent()
         m_image = 0;
     }
 
-    eventSender().cancelEvent(this, eventNames().loadEvent);
+    eventSender().cancelEventForSender(this, eventNames().loadEvent);
     m_hasPendingLoadEvent = false;
 
     if (isHTMLObjectElement(m_element))

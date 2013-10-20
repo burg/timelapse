@@ -63,7 +63,7 @@ void EventSender::dispatchEventSoon(EventSenderClient* sender, const AtomicStrin
         m_timer.startOneShot(0);
 }
 
-void EventSender::cancelEvent(EventSenderClient* sender, const AtomicString& eventName)
+void EventSender::cancelEventForSender(EventSenderClient* sender, const AtomicString& eventName)
 {
     // Remove instances of this sender from both lists.
     // Use loops because we allow multiple instances to get into the lists.
@@ -103,20 +103,6 @@ void EventSender::dispatchPendingEventsWithType(const AtomicString& eventName)
     m_dispatchingList.clear();
 }
 
-void EventSender::timerFired(Timer<EventSender>*)
-{
-#if ENABLE(WEB_REPLAY)
-    InputIterator* iterator = m_document.inputIterator();
-    ASSERT(!iterator || !iterator->isReplaying());
-    if (iterator && iterator->isCapturing()) {
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(&m_document);
-        iterator->storeInput(adoptPtr(new SendPendingEvents(frameIndex)));
-    }
-#endif
-    m_timer.stop();
-    dispatchAllPendingEvents();
-}
-
 void EventSender::dispatchAllPendingEvents()
 {
     // Need to avoid re-entering this function; if new dispatches are
@@ -140,8 +126,7 @@ void EventSender::dispatchAllPendingEvents()
     m_dispatchingList.clear();
 }
 
-#ifndef NDEBUG
-bool EventSender::hasPendingEvents(EventSenderClient* sender) const
+bool EventSender::hasPendingEventsForSender(const EventSenderClient* sender) const
 {
     // Use loops because we allow multiple instances to get into the lists.
     size_t size = m_dispatchSoonList.size();
@@ -157,6 +142,19 @@ bool EventSender::hasPendingEvents(EventSenderClient* sender) const
 
     return false;
 }
+
+void EventSender::timerFired(Timer<EventSender>*)
+{
+#if ENABLE(WEB_REPLAY)
+    InputIterator* iterator = m_document.inputIterator();
+    ASSERT(!iterator || !iterator->isReplaying());
+    if (iterator && iterator->isCapturing()) {
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(&m_document);
+        iterator->storeInput(adoptPtr(new SendPendingEvents(frameIndex)));
+    }
 #endif
+    m_timer.stop();
+    dispatchAllPendingEvents();
+}
 
 } // namespace WebCore

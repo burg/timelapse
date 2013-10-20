@@ -53,7 +53,7 @@ HTMLStyleElement::~HTMLStyleElement()
     // Therefore we can't ASSERT(m_scopedStyleRegistrationState == NotRegistered).
     m_styleSheetOwner.clearDocumentData(document(), *this);
 
-    document().eventSender().cancelEvent(this, eventNames().loadEvent);
+    document().eventSender().cancelEventForSender(this, eventNames().loadEvent);
 }
 
 PassRefPtr<HTMLStyleElement> HTMLStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)

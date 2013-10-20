@@ -41,10 +41,8 @@ public:
     EventSender(Document&);
 
     void dispatchEventSoon(EventSenderClient*, const AtomicString&);
-    void cancelEvent(EventSenderClient*, const AtomicString&);
-#ifndef NDEBUG
-    bool hasPendingEvents(EventSenderClient* sender) const;
-#endif
+    void cancelEventForSender(EventSenderClient*, const AtomicString&);
+    bool hasPendingEventsForSender(const EventSenderClient* sender) const;
 
     void dispatchAllPendingEvents();
     void dispatchPendingEventsWithType(const AtomicString&);

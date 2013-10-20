@@ -5534,7 +5534,7 @@ void Document::decrementLoadEventDelayCount()
 
     if (frame() && !m_loadEventDelayCount) {
 #ifndef NDEBUG
-        ASSERT(!eventSender().hasPendingEvents(this));
+        ASSERT(!eventSender().hasPendingEventsForSender(this));
 #endif
         eventSender().dispatchEventSoon(this, eventNames().loadEvent);
     }

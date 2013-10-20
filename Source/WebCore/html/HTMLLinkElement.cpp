@@ -87,7 +87,7 @@ HTMLLinkElement::~HTMLLinkElement()
     if (inDocument())
         document().styleSheetCollection().removeStyleSheetCandidateNode(*this);
 
-    document().eventSender().cancelEvent(this, eventNames().loadEvent);
+    document().eventSender().cancelEventForSender(this, eventNames().loadEvent);
 }
 
 void HTMLLinkElement::setDisabledState(bool disabled)
