@@ -123,12 +123,6 @@ void InspectorReplayAgent::frameNavigated(DocumentLoader* loader)
         m_inspectedPage->replayController().frameNavigated(loader);
 }
 
-void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
-{
-    if (capturing() || replaying())
-        m_inspectedPage->replayController().willFireTimer(timerId, frame->document());
-}
-
 #ifndef NDEBUG
 void InspectorReplayAgent::willCallFunction(const String& scriptName, int scriptLine, Frame* frame)
 {

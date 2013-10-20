@@ -486,10 +486,6 @@ InspectorInstrumentationCookie InspectorInstrumentation::willFireTimerImpl(Instr
         timelineAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
         timelineAgentId = timelineAgent->id();
     }
-#if ENABLE(WEB_REPLAY)
-    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
-#endif // ENABLE(WEB_REPLAY)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 

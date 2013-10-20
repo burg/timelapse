@@ -90,7 +90,6 @@ namespace WebCore {
         void willDispatchEvent(const Event&, Frame*, const PositionMark&);
         void didDispatchEvent();
         void frameNavigated(DocumentLoader*);
-        void willFireTimer(int, Document*);
 
         // EventLoopInputDispatcherClient API
         virtual void playbackError(bool isFatal, const String& errorMessage) OVERRIDE;

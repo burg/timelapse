@@ -36,9 +36,11 @@
 #include <wtf/StdLibExtras.h>
 
 #if ENABLE(WEB_REPLAY)
+#include "CaptureInputIterator.h"
 #include "DispatchEventBase.h"
 #include "ReplayInputTypes.h"
 #include "TimerCreated.h"
+#include "TimerFired.h"
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 #endif
@@ -60,6 +62,7 @@ public:
     virtual ~InstrumentedDOMTimer() {}
 protected:
     virtual void start(int timeout, bool singleShot) OVERRIDE;
+    virtual void fired() OVERRIDE;
 };
 
 class DeterministicDOMTimer : public DOMTimer {
@@ -86,6 +89,23 @@ void InstrumentedDOMTimer::start(int timeout, bool singleShot)
 
     int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
     it->storeInput(adoptPtr(new TimerCreated(m_timeoutId, frameIndex)));
+}
+
+void InstrumentedDOMTimer::fired()
+{
+    if (!scriptExecutionContext()->isDocument()) {
+        DOMTimer::fired();
+        return;
+    }
+
+    Document* document = static_cast<Document*>(scriptExecutionContext());
+    InputIterator* it = document ? document->inputIterator() : 0;
+    ASSERT(it && it->isCapturing());
+
+    int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
+    it->storeInput(adoptPtr(new TimerFired(m_timeoutId, frameIndex)));
+
+    DOMTimer::fired();
 }
 
 DeterministicDOMTimer::DeterministicDOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> action, int originalInterval)

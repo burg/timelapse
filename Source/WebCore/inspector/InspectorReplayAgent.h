@@ -87,7 +87,6 @@ public:
     void willDispatchEvent(const Event&, Frame*);
     void didDispatchEvent();
     void frameNavigated(DocumentLoader*);
-    void willFireTimer(int, Frame*);
 #ifndef NDEBUG
     void willCallFunction(const String&, int scriptLine, Frame*);
 #endif

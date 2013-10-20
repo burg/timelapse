@@ -376,15 +376,6 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
     loader->frame()->script().globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
 
-void ReplayController::willFireTimer(int timerId, Document* document)
-{
-    InputIterator* it = document ? document->inputIterator() : 0;
-    int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
-
-    if (it && it->isCapturing())
-        m_activeIterator->storeInput(adoptPtr(new TimerFired(timerId, frameIndex)));
-}
-
 CacheController& ReplayController::cacheController() const
 {
     return *m_cacheController;
