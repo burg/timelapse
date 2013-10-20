@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -30,6 +30,7 @@
 #define AnimationControllerPrivate_h
 
 #include "CSSPropertyNames.h"
+#include "EventSenderClient.h"
 #include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -55,7 +56,7 @@ enum SetChanged {
     CallSetChanged = 1
 };
 
-class AnimationControllerPrivate {
+class AnimationControllerPrivate : EventSenderClient {
     WTF_MAKE_NONCOPYABLE(AnimationControllerPrivate); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit AnimationControllerPrivate(Frame&);
@@ -68,7 +69,6 @@ public:
     CompositeAnimation& ensureCompositeAnimation(RenderElement*);
     bool clear(RenderElement*);
 
-    void updateStyleIfNeededDispatcherFired(Timer<AnimationControllerPrivate>*);
     void startUpdateStyleIfNeededDispatcher();
     void addEventToDispatch(PassRefPtr<Element> element, const AtomicString& eventType, const String& name, double elapsedTime);
     void addNodeChangeToDispatch(PassRefPtr<Node>);
@@ -99,7 +99,7 @@ public:
     void setBeginAnimationUpdateTime(double t) { m_beginAnimationUpdateTime = t; }
     void endAnimationUpdate();
     void receivedStartTimeResponse(double);
-    
+
     void addToAnimationsWaitingForStyle(AnimationBase*);
     void removeFromAnimationsWaitingForStyle(AnimationBase*);
 
@@ -116,15 +116,17 @@ public:
 private:
     void animationTimerFired(Timer<AnimationControllerPrivate>*);
 
+    // EventSenderClient
+    void dispatchPendingEvent(const AtomicString& eventName);
+
     void styleAvailable();
     void fireEventsAndUpdateStyle();
     void startTimeResponse(double t);
 
     HashMap<RenderElement*, RefPtr<CompositeAnimation>> m_compositeAnimations;
     Timer<AnimationControllerPrivate> m_animationTimer;
-    Timer<AnimationControllerPrivate> m_updateStyleIfNeededDispatcher;
     Frame& m_frame;
-    
+
     class EventToDispatch {
     public:
         RefPtr<Element> element;
@@ -132,10 +134,10 @@ private:
         String name;
         double elapsedTime;
     };
-    
+
     Vector<EventToDispatch> m_eventsToDispatch;
     Vector<RefPtr<Node> > m_nodeChangesToDispatch;
-    
+
     double m_beginAnimationUpdateTime;
 
     typedef HashSet<RefPtr<AnimationBase> > WaitingAnimationsSet;
