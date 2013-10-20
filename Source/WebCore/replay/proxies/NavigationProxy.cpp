@@ -33,6 +33,7 @@
 
 #include "NavigationProxy.h"
 
+#include "CaptureInputIterator.h"
 #include "DispatchEventBase.h"
 #include "FrameLoadRequest.h"
 #include "LoadURLRequest.h"
@@ -60,30 +61,36 @@ PassOwnPtr<NavigationProxy> NavigationProxy::create(Page* page)
 
 void NavigationProxy::loadURLRequest(const FrameLoadRequest& request, bool fromReplay)
 {
-    #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+#if ENABLE(WEB_REPLAY)
+    if (!fromReplay && mode() == Replaying)
         return;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new LoadURLRequest(request)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new LoadURLRequest(request)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     m_page->mainFrame().loader().load(request);
 }
 
 void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay)
 {
-    #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+#if ENABLE(WEB_REPLAY)
+    if (!fromReplay && mode() == Replaying)
         return;
 
-    if (m_mode == Capturing) {
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
+        it->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
     }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -94,14 +101,17 @@ void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromRe
 
 void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
 {
-    #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+#if ENABLE(WEB_REPLAY)
+    if (!fromReplay && mode() == Replaying)
         return;
 
-    if (m_mode == Capturing) {
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new StopLoadingFrame(frameIndex)));
+        it->storeInput(adoptPtr(new StopLoadingFrame(frameIndex)));
     }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif

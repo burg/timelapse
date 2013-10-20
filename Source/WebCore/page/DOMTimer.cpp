@@ -105,6 +105,7 @@ void InstrumentedDOMTimer::fired()
     int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
     it->storeInput(adoptPtr(new TimerFired(m_timeoutId, frameIndex)));
 
+    EventLoopInputExtent extent(it);
     DOMTimer::fired();
 }
 

@@ -45,12 +45,30 @@
 
 namespace WebCore {
 
+EventLoopInputExtent::EventLoopInputExtent(InputIterator* iterator)
+: m_iterator(iterator)
+{
+    if (!m_iterator || !m_iterator->isCapturing())
+        return;
+
+    static_cast<CaptureInputIterator*>(iterator)->setWithinInputExtent(true);
+}
+
+EventLoopInputExtent::~EventLoopInputExtent()
+{
+    if (!m_iterator || !m_iterator->isCapturing())
+        return;
+
+    static_cast<CaptureInputIterator*>(m_iterator)->setWithinInputExtent(false);
+}
+
 CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
 : m_storage(storage)
 , m_page(page)
 , m_previousEventLoopInput(0)
 , m_executionTicksCount(0)
 , m_isActive(true)
+, m_withinInputExtent(false)
 {
     ASSERT(m_page);
     ASSERT(m_storage && !m_storage->isReadOnly());
@@ -70,6 +88,12 @@ PassOwnPtr<CaptureInputIterator> CaptureInputIterator::create(InputStorage* stor
     CaptureInputIterator* it = new CaptureInputIterator(storage, page);
     LOG(DeterministicReplay, "%-30sCreated capture iterator=%p.\n", "[ReplayController]", (void*)it);
     return adoptPtr(it);
+}
+
+void CaptureInputIterator::incrementExecutionTicks()
+{
+    ASSERT(withinInputExtent());
+    m_executionTicksCount += 1;
 }
 
 void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)

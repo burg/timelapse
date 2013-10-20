@@ -189,6 +189,8 @@ void ReplayController::beginCapturing()
     changeProxyMode(ReplayProxy::Capturing);
 
     InspectorInstrumentation::captureStarted(m_page);
+    // Combine the following inputs into a single extent, since they are synchronous.
+    EventLoopInputExtent extent(m_activeIterator.get());
 
     // create begin sentinel
     m_activeIterator->storeInput(adoptPtr(new BeginSentinel()));
@@ -224,6 +226,7 @@ bool ReplayController::endCapturing()
         return false;
     }
 
+    // An event loop input extent is not needed here, as these inputs do not trigger events.
     m_activeIterator->storeInput(adoptPtr(new EnableCache()));
     m_activeIterator->storeInput(adoptPtr(new EndSentinel()));
     m_activeIterator = 0;

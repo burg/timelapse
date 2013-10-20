@@ -44,8 +44,19 @@ class EventLoopInput;
 class InputStorage;
 class Page;
 
+class EventLoopInputExtent {
+    WTF_MAKE_NONCOPYABLE(EventLoopInputExtent);
+public:
+    EventLoopInputExtent(InputIterator*);
+    ~EventLoopInputExtent();
+
+private:
+    InputIterator* m_iterator;
+};
+
 class CaptureInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(CaptureInputIterator);
+    friend class EventLoopInputExtent;
 public:
     static PassOwnPtr<CaptureInputIterator> create(InputStorage*, Page*);
     virtual ~CaptureInputIterator();
@@ -53,7 +64,7 @@ public:
     // InputIterator API
     virtual bool isCapturing() const { return m_isActive; }
     virtual bool isReplaying() const { return false; }
-    virtual void incrementExecutionTicks() OVERRIDE { m_executionTicksCount += 1; }
+    virtual void incrementExecutionTicks() OVERRIDE;
 
     virtual void storeInput(PassOwnPtr<NondeterministicInput>);
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
@@ -61,6 +72,10 @@ public:
 
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
+
+protected:
+    void setWithinInputExtent(bool withinInputExtent) { m_withinInputExtent = withinInputExtent; }
+    bool withinInputExtent() const { return m_withinInputExtent; }
 
 private:
     CaptureInputIterator(InputStorage*, Page*);
@@ -72,6 +87,7 @@ private:
     EventLoopInput* m_previousEventLoopInput;
     int m_executionTicksCount;
     bool m_isActive;
+    bool m_withinInputExtent;
 };
 
 } // namespace WebCore

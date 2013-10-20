@@ -33,7 +33,7 @@
 
 #include "AsyncEventProxy.h"
 
-#include "ReplayController.h"
+#include "CaptureInputIterator.h"
 #include "DispatchAsyncEvent.h"
 #include "DispatchFakeMouseMove.h"
 #include "Document.h"
@@ -45,6 +45,7 @@
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
+#include "ReplayController.h"
 #include <wtf/replay/InputIterator.h>
 #include <wtf/text/CString.h>
 
@@ -103,10 +104,13 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEve
     if (mode() == ReplayProxy::Replaying && !fromReplay)
         return;
 
-    if (mode() == ReplayProxy::Capturing) {
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == ReplayProxy::Capturing);
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame.document());
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
+        it->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
     }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(WEB_REPLAY)

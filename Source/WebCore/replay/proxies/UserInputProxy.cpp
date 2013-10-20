@@ -33,6 +33,7 @@
 
 #include "UserInputProxy.h"
 
+#include "CaptureInputIterator.h"
 #include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMWindow.h"
@@ -75,108 +76,125 @@ PassOwnPtr<UserInputProxy> UserInputProxy::create(Page* page)
 bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, const Frame* frame, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing) {
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
         int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleContextMenu(mouseEvent, frameIndex)));
+        it->storeInput(adoptPtr(new HandleContextMenu(mouseEvent, frameIndex)));
     }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return frame->eventHandler().sendContextMenuEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleMousePress(mouseEvent)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new HandleMousePress(mouseEvent)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return m_page->mainFrame().eventHandler().handleMousePressEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleMouseRelease(mouseEvent)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new HandleMouseRelease(mouseEvent)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return m_page->mainFrame().eventHandler().handleMouseReleaseEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, false)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, false)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return m_page->mainFrame().eventHandler().mouseMoved(mouseEvent);
 }
 
 bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, true)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, true)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return m_page->mainFrame().eventHandler().passMouseMovedEventToScrollbars(mouseEvent);
 }
 
 bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleKeyPress(keyEvent)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new HandleKeyPress(keyEvent)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return m_page->focusController().focusedOrMainFrame().eventHandler().keyEvent(keyEvent);
 }
 
 bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent, bool /*fromReplay*/)
 {
 /*#if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
+    if (mode() == Capturing)
         m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleKeyPress(mouseEvent)));
 #endif*/
 
@@ -187,27 +205,34 @@ bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent,
 bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return true;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new HandleWheelEvent(wheelEvent)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new HandleWheelEvent(wheelEvent)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     return m_page->mainFrame().eventHandler().handleWheelEvent(wheelEvent);
 }
 
 void UserInputProxy::focusSetActive(bool active, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new FocusSetActive(active)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new FocusSetActive(active)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -218,11 +243,15 @@ void UserInputProxy::focusSetActive(bool active, bool fromReplay)
 void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new FocusSetFocused(focused)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new FocusSetFocused(focused)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -233,11 +262,15 @@ void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
 bool UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranularity granularity, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return false;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -248,11 +281,15 @@ bool UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranular
 bool UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, ScrollGranularity granularity, bool fromReplay)
 {
 #if ENABLE(WEB_REPLAY)
-    if (!fromReplay && m_mode == Replaying)
+    if (!fromReplay && mode() == Replaying)
         return false;
 
-    if (m_mode == Capturing)
-        m_page->replayController().activeIterator()->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
+    }
+    EventLoopInputExtent extent(it);
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -261,26 +298,28 @@ bool UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
 }
 
 void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay)
-    {
+{
 #if ENABLE(WEB_REPLAY)
-        if (!fromReplay && m_mode == Replaying)
-            return;
+    if (!fromReplay && mode() == Replaying)
+        return;
 
-        // on replay, whether it is synchronous or not doesn't matter because
-        // the document event queue is always emptied before dispatching event loop inputs.
-        if (m_mode == Capturing) {
-            int width = frame->document()->domWindow()->outerWidth();
-            int height = frame->document()->domWindow()->outerHeight();
-            int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+    // On replay, whether it is synchronous or not doesn't matter because
+    // the document event queue is always emptied before dispatching event loop inputs.
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        int width = frame->document()->domWindow()->outerWidth();
+        int height = frame->document()->domWindow()->outerHeight();
+        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
 
-            m_page->replayController().activeIterator()->storeInput(adoptPtr(new SendResizeEvent(width, height, frameIndex)));
-        }
+        it->storeInput(adoptPtr(new SendResizeEvent(width, height, frameIndex)));
+    }
+    EventLoopInputExtent extent(it);
 #else
-        UNUSED_PARAM(fromReplay);
+    UNUSED_PARAM(fromReplay);
 #endif
 
-        frame->eventHandler().sendResizeEvent(dispatchSynchronously);
-    }
+    frame->eventHandler().sendResizeEvent(dispatchSynchronously);
+}
 
 } // namespace WebCore
-

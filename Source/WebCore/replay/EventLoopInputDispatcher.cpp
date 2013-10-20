@@ -97,6 +97,9 @@ void EventLoopInputDispatcher::incrementExecutionTicks()
     m_executionTicksCount++;
     m_executionTicksQuota--;
 
+    // Ticks should not be added if we are not dispatching an event loop input.
+    ASSERT(m_dispatching);
+
     if (m_executionTicksQuota < 0) {
         if (m_timer.isActive()) {
             // Fire the timer early to try and inject the next event before the "willDispatchEvent" event happens.
