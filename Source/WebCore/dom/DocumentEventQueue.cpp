@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -32,44 +32,63 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
-#include "SuspendableTimer.h"
 #include <wtf/Ref.h>
 
 namespace WebCore {
-    
-class DocumentEventQueue::Timer FINAL : public SuspendableTimer {
-public:
-    static PassOwnPtr<Timer> create(DocumentEventQueue& eventQueue)
-    {
-        return adoptPtr(new Timer(eventQueue));
-    }
 
-private:
-    Timer(DocumentEventQueue& eventQueue)
-        : SuspendableTimer(&eventQueue.m_document)
-        , m_eventQueue(eventQueue)
-    {
-    }
-
-    virtual void fired() OVERRIDE
-    {
-        ASSERT(!isSuspended());
-        m_eventQueue.pendingEventTimerFired();
-    }
-
-    DocumentEventQueue& m_eventQueue;
-};
+static const AtomicString& emptyQueueEvent()
+{
+    DEFINE_STATIC_LOCAL(AtomicString, name, ("emptyqueue", AtomicString::ConstructFromLiteral));
+    return name;
+}
 
 DocumentEventQueue::DocumentEventQueue(Document& document)
-    : m_document(document)
-    , m_pendingEventTimer(Timer::create(*this))
+    : ActiveDOMObject(&document)
+    , m_document(document)
     , m_isClosed(false)
+    , m_suspended(false)
 {
-    m_pendingEventTimer->suspendIfNeeded();
+    suspendIfNeeded();
 }
 
 DocumentEventQueue::~DocumentEventQueue()
 {
+}
+
+bool DocumentEventQueue::hasPendingActivity() const
+{
+    return m_document.eventSender().hasPendingEventsForSender(this);
+}
+
+void DocumentEventQueue::stop()
+{
+    if (!m_suspended)
+        flush();
+
+    // It is not allowed for an ActiveDOMObject to become active again after stop().
+    close();
+}
+
+void DocumentEventQueue::suspend(ReasonForSuspension)
+{
+    ASSERT(!m_suspended);
+    m_suspended = true;
+
+    m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
+}
+
+void DocumentEventQueue::resume()
+{
+    ASSERT(m_suspended);
+    m_suspended = false;
+
+    if (!m_isClosed)
+        m_document.eventSender().dispatchEventSoon(this, emptyQueueEvent());
+}
+
+bool DocumentEventQueue::canSuspend() const
+{
+    return true;
 }
 
 bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
@@ -81,8 +100,8 @@ bool DocumentEventQueue::enqueueEvent(PassRefPtr<Event> event)
         return false;
 
     m_queuedEvents.add(event);
-    if (!m_pendingEventTimer->isActive())
-        m_pendingEventTimer->startOneShot(0);
+    if (!m_document.eventSender().hasPendingEventsForSender(this))
+        m_document.eventSender().dispatchEventSoon(this, emptyQueueEvent());
     return true;
 }
 
@@ -112,33 +131,35 @@ bool DocumentEventQueue::cancelEvent(Event& event)
 {
     bool found = m_queuedEvents.remove(&event);
     if (m_queuedEvents.isEmpty())
-        m_pendingEventTimer->cancel();
+        m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
     return found;
 }
 
 void DocumentEventQueue::close()
 {
     m_isClosed = true;
-    m_pendingEventTimer->cancel();
+    m_suspended = true;
+    m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
     m_queuedEvents.clear();
 }
 
 void DocumentEventQueue::flush()
 {
-    // if there is something sitting in a timer, fire pre-emptively
+    // If there is an event pending, cancel and fire pre-emptively.
     if (m_queuedEvents.isEmpty())
         return;
-        
-    if (m_pendingEventTimer->isActive())
-        m_pendingEventTimer->cancel();
 
-    pendingEventTimerFired();
+
+    if (m_document.eventSender().hasPendingEventsForSender(this))
+        m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
+
+    dispatchPendingEvent(emptyQueueEvent());
 }
 
-void DocumentEventQueue::pendingEventTimerFired()
+void DocumentEventQueue::dispatchPendingEvent(const AtomicString& eventName)
 {
-    ASSERT(!m_pendingEventTimer->isActive());
     ASSERT(!m_queuedEvents.isEmpty());
+    ASSERT_UNUSED(eventName, eventName == emptyQueueEvent());
 
     m_nodesWithQueuedScrollEvents.clear();
 

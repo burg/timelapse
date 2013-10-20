@@ -21,14 +21,16 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
 #ifndef DocumentEventQueue_h
 #define DocumentEventQueue_h
 
+#include "ActiveDOMObject.h"
 #include "EventQueue.h"
+#include "EventSenderClient.h"
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/OwnPtr.h>
@@ -39,7 +41,7 @@ class Document;
 class Event;
 class Node;
 
-class DocumentEventQueue FINAL : public EventQueue {
+class DocumentEventQueue FINAL : public EventQueue, public ActiveDOMObject, public EventSenderClient {
 public:
     explicit DocumentEventQueue(Document&);
     virtual ~DocumentEventQueue();
@@ -52,16 +54,23 @@ public:
     void enqueueOrDispatchScrollEvent(Node&);
 
 private:
-    void pendingEventTimerFired();
     void dispatchEvent(Event&);
 
-    class Timer;
+    // EventSenderClient
+    void dispatchPendingEvent(const AtomicString&) OVERRIDE;
+
+    // ActiveDOMObject
+    virtual bool hasPendingActivity() const OVERRIDE;
+    virtual void stop() OVERRIDE;
+    virtual bool canSuspend() const OVERRIDE;
+    virtual void suspend(ReasonForSuspension) OVERRIDE;
+    virtual void resume() OVERRIDE;
 
     Document& m_document;
-    OwnPtr<Timer> m_pendingEventTimer;
     ListHashSet<RefPtr<Event>, 16> m_queuedEvents;
     HashSet<Node*> m_nodesWithQueuedScrollEvents;
     bool m_isClosed;
+    bool m_suspended;
 };
 
 }

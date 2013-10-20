@@ -35,13 +35,10 @@
 
 #include "CaptureInputIterator.h"
 
-#include "Document.h"
-#include "DocumentEventQueue.h"
 #include "EventLoopInput.h"
 #include "InputStorage.h"
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
@@ -81,11 +78,6 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
     ASSERT(m_isActive);
 
     if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
-        // Flush document event queue, so event dispatch count reflects anything
-        // dispatched or queued before this input was captured.
-        // TODO(#384): instead, DocumentEventQueue should be mediated by AsyncEventProxy.
-        m_page->mainFrame().document()->eventQueue().flush();
-
         EventLoopInput* eventLoopInput = static_cast<EventLoopInput*>(input.get());
         eventLoopInput->setExecutionTicksCount(m_executionTicksCount);
         if (m_previousEventLoopInput)

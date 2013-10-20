@@ -33,18 +33,13 @@
 #include "EventLoopInputDispatcher.h"
 
 #if ENABLE(WEB_REPLAY)
-#include "Document.h"
-#include "DocumentEventQueue.h"
 #include "EventLoopInput.h"
 #include "Logging.h"
-#include "MainFrame.h"
 #include "Page.h"
 #include "ReplayInputIterator.h"
-#include "SentinelActions.h"
 
 #include <wtf/TemporaryChange.h>
 #include <wtf/text/CString.h>
-#include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -223,10 +218,6 @@ void EventLoopInputDispatcher::asyncDispatchInput()
 void EventLoopInputDispatcher::syncDispatchInput()
 {
     ASSERT(m_runningInput);
-
-    // Flush document event queue before dispatching our own events.
-    // TODO(#384): Don't flush the document event queue on every turn.
-    m_page->mainFrame().document()->eventQueue().flush();
 
     if (m_mode == Realtime) {
         m_previousDispatchStartTime = monotonicallyIncreasingTime();
