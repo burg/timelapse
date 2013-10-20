@@ -59,6 +59,10 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 
+#if ENABLE(PAGE_VISIBILITY_API)
+#include "SetPageVisibility.h"
+#endif
+
 /* We must always define these symbols even if web replay support is
    not compiled, because the embedding API (WebKit or WebKit2) may be
    built with web replay support. */
@@ -321,5 +325,26 @@ void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronou
 
     frame->eventHandler().sendResizeEvent(dispatchSynchronously);
 }
+
+#if ENABLE(PAGE_VISIBILITY_API)
+void UserInputProxy::setPageVisibility(PageVisibilityState visibilityState, bool isInitialState, bool fromReplay)
+{
+#if ENABLE(WEB_REPLAY)
+    if (!fromReplay && mode() == Replaying)
+        return;
+
+    InputIterator* it = m_page->replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        ASSERT(mode() == Capturing);
+        it->storeInput(adoptPtr(new SetPageVisibility(visibilityState, isInitialState)));
+    }
+    EventLoopInputExtent extent(it);
+#else
+    UNUSED_PARAM(fromReplay);
+#endif
+
+    m_page->setVisibilityState(visibilityState, isInitialState);
+}
+#endif
 
 } // namespace WebCore

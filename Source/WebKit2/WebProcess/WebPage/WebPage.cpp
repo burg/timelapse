@@ -197,7 +197,7 @@ public:
         : m_page(page)
     {
     }
-    
+
     ~SendStopResponsivenessTimer()
     {
         m_page->send(Messages::WebPageProxy::StopResponsivenessTimer());
@@ -373,18 +373,18 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 
     setMinimumLayoutSize(parameters.minimumLayoutSize);
     setAutoSizingShouldExpandToViewHeight(parameters.autoSizingShouldExpandToViewHeight);
-    
+
     setScrollPinningBehavior(parameters.scrollPinningBehavior);
 
     m_userAgent = parameters.userAgent;
 
     WebBackForwardListProxy::setHighestItemIDFromUIProcess(parameters.highestUsedBackForwardItemID);
-    
+
     if (!parameters.sessionState.isEmpty())
         restoreSession(parameters.sessionState);
 
     m_drawingArea->setPaintingEnabled(true);
-    
+
     setMediaVolume(parameters.mediaVolume);
 
     // We use the DidFirstLayout milestone to determine when to unfreeze the layer tree.
@@ -702,7 +702,7 @@ void WebPage::executeEditingCommand(const String& commandName, const String& arg
         pluginView->handleEditingCommand(commandName, argument);
         return;
     }
-    
+
     frame.editor().command(commandName).execute(argument);
 }
 
@@ -712,11 +712,11 @@ bool WebPage::isEditingCommandEnabled(const String& commandName)
 
     if (PluginView* pluginView = focusedPluginViewForFrame(frame))
         return pluginView->isEditingCommandEnabled(commandName);
-    
+
     Editor::Command command = frame.editor().command(commandName);
     return command.isSupported() && command.isEnabled();
 }
-    
+
 void WebPage::clearMainFrameName()
 {
     if (Frame* frame = mainFrame())
@@ -1001,7 +1001,7 @@ void WebPage::setSize(const WebCore::IntSize& viewSize)
     FrameView* view = m_page->mainFrame().view();
     view->resize(viewSize);
     m_drawingArea->setNeedsDisplay();
-    
+
     m_viewSize = viewSize;
 
 #if USE(TILED_BACKING_STORE)
@@ -1071,7 +1071,7 @@ void WebPage::scrollMainFrameIfNotAtMaxScrollPosition(const IntSize& scrollOffse
     IntPoint scrollPosition = frameView->scrollPosition();
     IntPoint maximumScrollPosition = frameView->maximumScrollPosition();
 
-    // If the current scroll position in a direction is the max scroll position 
+    // If the current scroll position in a direction is the max scroll position
     // we don't want to scroll at all.
     IntSize newScrollOffset;
     if (scrollPosition.x() < maximumScrollPosition.x())
@@ -1191,7 +1191,7 @@ double WebPage::pageScaleFactor() const
     PluginView* pluginView = pluginViewForFrame(&m_page->mainFrame());
     if (pluginView && pluginView->handlesPageScaleFactor())
         return pluginView->pageScaleFactor();
-    
+
     return m_page->pageScaleFactor();
 }
 
@@ -1328,7 +1328,7 @@ void WebPage::postInjectedBundleMessage(const String& messageName, CoreIPC::Mess
 void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay, bool shouldFadeIn)
 {
     RefPtr<PageOverlay> overlay = pageOverlay;
-    
+
     if (m_pageOverlays.contains(overlay.get()))
         return;
 
@@ -1475,7 +1475,7 @@ WebContextMenu* WebPage::contextMenu()
 WebContextMenu* WebPage::contextMenuAtPointInWindow(const IntPoint& point)
 {
     corePage()->contextMenuController().clearContextMenu();
-    
+
     // Simulate a mouse click to generate the correct menu.
     PlatformMouseEvent mouseEvent(point, point, RightButton, PlatformEvent::MousePressed, 1, false, false, false, false, currentTime());
     bool handled = corePage()->mainFrame().eventHandler().sendContextMenuEvent(mouseEvent);
@@ -1486,7 +1486,7 @@ WebContextMenu* WebPage::contextMenuAtPointInWindow(const IntPoint& point)
 }
 #endif
 
-// Events 
+// Events
 
 static const WebEvent* g_currentEvent = 0;
 
@@ -1538,7 +1538,7 @@ static bool handleContextMenuEvent(const PlatformMouseEvent& platformMouseEvent,
     Frame* frame = &page->corePage()->mainFrame();
     if (result.innerNonSharedNode())
         frame = result.innerNonSharedNode()->document().frame();
-    
+
     bool handled = page->corePage()->userInputProxy().handleContextMenuEvent(platformMouseEvent, frame);
     if (handled)
         page->contextMenu()->show();
@@ -1638,8 +1638,8 @@ void WebPage::mouseEventSyncForTesting(const WebMouseEvent& mouseEvent, bool& ha
         CurrentEvent currentEvent(mouseEvent);
 
         // We need to do a full, normal hit test during this mouse event if the page is active or if a mouse
-        // button is currently pressed. It is possible that neither of those things will be true since on 
-        // Lion when legacy scrollbars are enabled, WebKit receives mouse events all the time. If it is one 
+        // button is currently pressed. It is possible that neither of those things will be true since on
+        // Lion when legacy scrollbars are enabled, WebKit receives mouse events all the time. If it is one
         // of those cases where the page is not active and the mouse is not pressed, then we can fire a more
         // efficient scrollbars-only version of the event.
         bool onlyUpdateScrollbars = !(m_page->focusController().isActive() || (mouseEvent.button() != WebMouseEvent::NoButton));
@@ -1765,18 +1765,18 @@ uint64_t WebPage::restoreSession(const SessionState& sessionState)
     for (size_t i = 0; i < size; ++i) {
         WebBackForwardListItem* webItem = list[i].get();
         DecoderAdapter decoder(webItem->backForwardData().data(), webItem->backForwardData().size());
-        
+
         RefPtr<HistoryItem> item = HistoryItem::decodeBackForwardTree(webItem->url(), webItem->title(), webItem->originalURL(), decoder);
         if (!item) {
             LOG_ERROR("Failed to decode a HistoryItem from session state data.");
             return 0;
         }
-        
+
         if (i == sessionState.currentIndex())
             currentItemID = webItem->itemID();
-        
+
         WebBackForwardListProxy::addItemFromUIProcess(list[i]->itemID(), item.release());
-    }    
+    }
     ASSERT(currentItemID);
     return currentItemID;
 }
@@ -1841,7 +1841,7 @@ void WebPage::setActive(bool isActive)
 {
     m_page->userInputProxy().focusSetActive(isActive);
 
-#if PLATFORM(MAC)    
+#if PLATFORM(MAC)
     // Tell all our plug-in views that the window focus changed.
     for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it)
         (*it)->setWindowIsFocused(isActive);
@@ -1965,12 +1965,12 @@ inline bool WebPage::canHandleUserEvents() const
 void WebPage::setIsInWindow(bool isInWindow, bool wantsDidUpdateViewInWindowState)
 {
     bool pageWasInWindow = m_page->isInWindow();
-    
+
     if (!isInWindow) {
         m_setCanStartMediaTimer.stop();
         m_page->setCanStartMedia(false);
         m_page->willMoveOffscreen();
-        
+
         if (pageWasInWindow)
             WebProcess::shared().pageWillLeaveWindow(m_pageID);
     } else {
@@ -1981,7 +1981,7 @@ void WebPage::setIsInWindow(bool isInWindow, bool wantsDidUpdateViewInWindowStat
             m_setCanStartMediaTimer.startOneShot(0);
 
         m_page->didMoveOnscreen();
-        
+
         if (!pageWasInWindow)
             WebProcess::shared().pageDidEnterWindow(m_pageID);
     }
@@ -2016,7 +2016,7 @@ void WebPage::didCompletePageTransition()
         send(Messages::WebPageProxy::PageTransitionViewportReady());
     else
 #endif
-        
+
     m_drawingArea->setLayerTreeStateIsFrozen(false);
 }
 
@@ -2046,7 +2046,7 @@ IntPoint WebPage::screenToWindow(const IntPoint& point)
     sendSync(Messages::WebPageProxy::ScreenToWindow(point), Messages::WebPageProxy::ScreenToWindow::Reply(windowPoint));
     return windowPoint;
 }
-    
+
 IntRect WebPage::windowToScreen(const IntRect& rect)
 {
     IntRect screenRect;
@@ -2065,7 +2065,7 @@ IntRect WebPage::windowResizerRect() const
             frameViewSize = view->size();
     }
 
-    return IntRect(frameViewSize.width() - m_windowResizerSize.width(), frameViewSize.height() - m_windowResizerSize.height(), 
+    return IntRect(frameViewSize.width() - m_windowResizerSize.width(), frameViewSize.height() - m_windowResizerSize.height(),
                    m_windowResizerSize.width(), m_windowResizerSize.height());
 }
 
@@ -2292,7 +2292,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings.setLoadsSiteIconsIgnoringImageLoadingSetting(store.getBoolValueForKey(WebPreferencesKey::loadsSiteIconsIgnoringImageLoadingPreferenceKey()));
     settings.setPluginsEnabled(store.getBoolValueForKey(WebPreferencesKey::pluginsEnabledKey()));
     settings.setJavaEnabled(store.getBoolValueForKey(WebPreferencesKey::javaEnabledKey()));
-    settings.setJavaEnabledForLocalFiles(store.getBoolValueForKey(WebPreferencesKey::javaEnabledForLocalFilesKey()));    
+    settings.setJavaEnabledForLocalFiles(store.getBoolValueForKey(WebPreferencesKey::javaEnabledForLocalFilesKey()));
     settings.setOfflineWebApplicationCacheEnabled(store.getBoolValueForKey(WebPreferencesKey::offlineWebApplicationCacheEnabledKey()));
     settings.setLocalStorageEnabled(store.getBoolValueForKey(WebPreferencesKey::localStorageEnabledKey()));
     settings.setXSSAuditorEnabled(store.getBoolValueForKey(WebPreferencesKey::xssAuditorEnabledKey()));
@@ -2558,11 +2558,11 @@ void WebPage::performDragControllerAction(uint64_t action, WebCore::IntPoint cli
     case DragControllerActionUpdated:
         send(Messages::WebPageProxy::DidPerformDragControllerAction(m_page->dragController().dragUpdated(dragData)));
         break;
-        
+
     case DragControllerActionExited:
         m_page->dragController().dragExited(dragData);
         break;
-        
+
     case DragControllerActionPerformDrag: {
         ASSERT(!m_pendingDropSandboxExtension);
 
@@ -2613,7 +2613,7 @@ void WebPage::mayPerformUploadDragDestinationAction()
         m_pendingDropExtensionsForFileUpload[i]->consumePermanently();
     m_pendingDropExtensionsForFileUpload.clear();
 }
-    
+
 #endif // ENABLE(DRAG_SUPPORT)
 
 WebUndoStep* WebPage::webUndoStep(uint64_t stepID)
@@ -2808,7 +2808,7 @@ void WebPage::capitalizeWord()
     m_page->focusController().focusedOrMainFrame().editor().capitalizeWord();
 }
 #endif
-    
+
 void WebPage::setTextForActivePopupMenu(int32_t index)
 {
     if (!m_activePopupMenu)
@@ -2864,7 +2864,7 @@ void WebPage::didChangeScrollOffsetForMainFrame()
 
     if (isPinnedToLeftSide != m_cachedMainFrameIsPinnedToLeftSide || isPinnedToRightSide != m_cachedMainFrameIsPinnedToRightSide || isPinnedToTopSide != m_cachedMainFrameIsPinnedToTopSide || isPinnedToBottomSide != m_cachedMainFrameIsPinnedToBottomSide) {
         send(Messages::WebPageProxy::DidChangeScrollOffsetPinningForMainFrame(isPinnedToLeftSide, isPinnedToRightSide, isPinnedToTopSide, isPinnedToBottomSide));
-        
+
         m_cachedMainFrameIsPinnedToLeftSide = isPinnedToLeftSide;
         m_cachedMainFrameIsPinnedToRightSide = isPinnedToRightSide;
         m_cachedMainFrameIsPinnedToTopSide = isPinnedToTopSide;
@@ -2941,7 +2941,7 @@ void WebPage::windowAndViewFramesChanged(const FloatRect& windowFrameInScreenCoo
     m_windowFrameInUnflippedScreenCoordinates = windowFrameInUnflippedScreenCoordinates;
     m_viewFrameInWindowCoordinates = viewFrameInWindowCoordinates;
     m_accessibilityPosition = accessibilityViewCoordinates;
-    
+
     // Tell all our plug-in views that the window and view frames have changed.
     for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it)
         (*it)->windowAndViewFramesChanged(enclosingIntRect(windowFrameInScreenCoordinates), enclosingIntRect(viewFrameInWindowCoordinates));
@@ -2996,7 +2996,7 @@ void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Messag
         return;
     }
 #endif
-    
+
 #if ENABLE(INSPECTOR)
     if (decoder.messageReceiverName() == Messages::WebInspector::messageReceiverName()) {
         if (WebInspector* inspector = this->inspector())
@@ -3016,10 +3016,10 @@ void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Messag
 }
 
 void WebPage::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, std::unique_ptr<CoreIPC::MessageEncoder>& replyEncoder)
-{   
+{
     didReceiveSyncWebPageMessage(connection, decoder, replyEncoder);
 }
-    
+
 InjectedBundleBackForwardList* WebPage::backForwardList()
 {
     if (!m_backForwardList)
@@ -3061,7 +3061,7 @@ void WebPage::SandboxExtensionTracker::beginLoad(WebFrame* frame, const SandboxE
 
 void WebPage::SandboxExtensionTracker::setPendingProvisionalSandboxExtension(PassRefPtr<SandboxExtension> pendingProvisionalSandboxExtension)
 {
-    m_pendingProvisionalSandboxExtension = pendingProvisionalSandboxExtension;    
+    m_pendingProvisionalSandboxExtension = pendingProvisionalSandboxExtension;
 }
 
 static bool shouldReuseCommittedSandboxExtension(WebFrame* frame)
@@ -3559,7 +3559,7 @@ FrameView* WebPage::mainFrameView() const
 {
     if (Frame* frame = mainFrame())
         return frame->view();
-    
+
     return 0;
 }
 
@@ -3583,7 +3583,7 @@ void WebPage::setVisibilityState(uint32_t visibilityState, bool isInitialState)
             view->show();
     }
 
-    m_page->setVisibilityState(state, isInitialState);
+    m_page->userInputProxy().setPageVisibility(state, isInitialState);
     m_visibilityState = state;
 
     if (state == WebCore::PageVisibilityStateHidden) {
@@ -3870,7 +3870,7 @@ void WebPage::determinePrimarySnapshottedPlugInTimerFired()
 {
     if (!m_page)
         return;
-    
+
     Settings& settings = m_page->settings();
     if (!settings.snapshotAllPlugIns() && settings.primaryPlugInSnapshotDetectionEnabled())
         determinePrimarySnapshottedPlugIn();
@@ -4025,7 +4025,7 @@ void WebPage::stopExtendingIncrementalRenderingSuppression(unsigned token)
 
     m_page->mainFrame().view()->setVisualUpdatesAllowedByClient(!shouldExtendIncrementalRenderingSuppression());
 }
-    
+
 void WebPage::setScrollPinningBehavior(uint32_t pinning)
 {
     m_scrollPinningBehavior = static_cast<ScrollPinningBehavior>(pinning);

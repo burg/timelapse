@@ -5325,6 +5325,8 @@
 		C4F4CA4F175AF8D200F71FE1 /* JSONEncoderContext.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA4D175AF8D200F71FE1 /* JSONEncoderContext.h */; };
 		C4F4CA52175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F4CA50175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp */; };
 		C4F4CA53175C462B00F71FE1 /* JavaScriptCoreInputCoders.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA51175C462B00F71FE1 /* JavaScriptCoreInputCoders.h */; };
+		C4F6FF1F181482E8004ACF8F /* SetPageVisibility.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F6FF1D181482E8004ACF8F /* SetPageVisibility.cpp */; };
+		C4F6FF20181482E8004ACF8F /* SetPageVisibility.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F6FF1E181482E8004ACF8F /* SetPageVisibility.h */; };
 		C4F7F93A1705EA1F005AB205 /* InspectorReplayAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */; };
 		C4F7F93B1705EA1F005AB205 /* InspectorReplayAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F7F9391705EA1F005AB205 /* InspectorReplayAgent.h */; };
 		C4F7F93E17060151005AB205 /* ReplayAgentStateMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */; };
@@ -12354,6 +12356,8 @@
 		C4F4CA4D175AF8D200F71FE1 /* JSONEncoderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONEncoderContext.h; sourceTree = "<group>"; };
 		C4F4CA50175C462B00F71FE1 /* JavaScriptCoreInputCoders.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaScriptCoreInputCoders.cpp; sourceTree = "<group>"; };
 		C4F4CA51175C462B00F71FE1 /* JavaScriptCoreInputCoders.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaScriptCoreInputCoders.h; sourceTree = "<group>"; };
+		C4F6FF1D181482E8004ACF8F /* SetPageVisibility.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SetPageVisibility.cpp; sourceTree = "<group>"; };
+		C4F6FF1E181482E8004ACF8F /* SetPageVisibility.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SetPageVisibility.h; sourceTree = "<group>"; };
 		C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorReplayAgent.cpp; sourceTree = "<group>"; };
 		C4F7F9391705EA1F005AB205 /* InspectorReplayAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorReplayAgent.h; sourceTree = "<group>"; };
 		C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayAgentStateMachine.cpp; path = replay/ReplayAgentStateMachine.cpp; sourceTree = "<group>"; };
@@ -20260,6 +20264,8 @@
 				C48108C317052FF100AB4BAA /* ScrollPage.h */,
 				C48108C417052FF100AB4BAA /* SendResizeEvent.cpp */,
 				C48108C517052FF100AB4BAA /* SendResizeEvent.h */,
+				C4F6FF1D181482E8004ACF8F /* SetPageVisibility.cpp */,
+				C4F6FF1E181482E8004ACF8F /* SetPageVisibility.h */,
 			);
 			path = user;
 			sourceTree = "<group>";
@@ -23223,6 +23229,7 @@
 				F3ABFE0C130E9DA000E7F7D1 /* InstrumentingAgents.h in Headers */,
 				B27535720B053814002CE64F /* IntPoint.h in Headers */,
 				E462A4A1113E71BE004A4220 /* IntPointHash.h in Headers */,
+				C4F6FF20181482E8004ACF8F /* SetPageVisibility.h in Headers */,
 				B27535740B053814002CE64F /* IntRect.h in Headers */,
 				A2B9217316C5CC420041DCD9 /* IntRectExtent.h in Headers */,
 				E134F5AB12EE343F004EC58D /* IntRectHash.h in Headers */,
@@ -26800,6 +26807,7 @@
 				A85F22091430377D007CC884 /* JSPopStateEventCustom.cpp in Sources */,
 				598365E41355F604001B185D /* JSPositionCallback.cpp in Sources */,
 				FE80DA710E9C472F000D6F75 /* JSPositionError.cpp in Sources */,
+				C4F6FF1F181482E8004ACF8F /* SetPageVisibility.cpp in Sources */,
 				598365E61355F60D001B185D /* JSPositionErrorCallback.cpp in Sources */,
 				65DF31FF09D1CC60000BE325 /* JSProcessingInstruction.cpp in Sources */,
 				E44613ED0CD681BA00FADA75 /* JSProgressEvent.cpp in Sources */,

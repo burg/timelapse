@@ -67,6 +67,7 @@ namespace WebCore {
     macro(ScrollPage) \
     macro(SendPendingEvents) \
     macro(SendResizeEvent) \
+    macro(SetPageVisibility) \
     macro(StopLoadingFrame) \
     macro(TimerCreated) \
     macro(TimerFired) \

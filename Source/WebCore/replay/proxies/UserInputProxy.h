@@ -32,11 +32,15 @@
 #ifndef UserInputProxy_h
 #define UserInputProxy_h
 
-#include "ScrollTypes.h"
 #include "ReplayProxy.h"
+#include "ScrollTypes.h"
 #include <wtf/RefPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+
+#if ENABLE(PAGE_VISIBILITY_API)
+#include "PageVisibilityState.h"
+#endif
 
 namespace WebCore {
 
@@ -67,10 +71,14 @@ public:
     bool scrollRecursivelyLogical(ScrollLogicalDirection, ScrollGranularity, bool fromReplay = false);
     void sendResizeEvent(const Frame* frame, bool dispatchSynchronously, bool fromReplay = false);
 
+#if ENABLE(PAGE_VISIBILITY_API)
+    void setPageVisibility(PageVisibilityState, bool isInitialState, bool fromReplay = false);
+#endif
+
 private:
     UserInputProxy(Page*);
 };
-    
+
 } // namespace WebCore
 
 #endif // UserInputProxy_h
