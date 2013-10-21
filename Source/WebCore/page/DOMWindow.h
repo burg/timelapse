@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef DOMWindow_h
@@ -236,7 +236,7 @@ namespace WebCore {
         double devicePixelRatio() const;
 
         PassRefPtr<WebKitPoint> webkitConvertPointFromPageToNode(Node*, const WebKitPoint*) const;
-        PassRefPtr<WebKitPoint> webkitConvertPointFromNodeToPage(Node*, const WebKitPoint*) const;        
+        PassRefPtr<WebKitPoint> webkitConvertPointFromNodeToPage(Node*, const WebKitPoint*) const;
 
         Console* console() const;
         PageConsole* pageConsole() const;
@@ -285,8 +285,6 @@ namespace WebCore {
 
         using EventTarget::dispatchEvent;
         bool dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget);
-        using EventTarget::dispatchAsyncEvent;
-        bool dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget);
         void dispatchLoadEvent();
 
         DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
@@ -487,7 +485,7 @@ namespace WebCore {
     inline String DOMWindow::defaultStatus() const
     {
         return m_defaultStatus;
-    } 
+    }
 
 } // namespace WebCore
 

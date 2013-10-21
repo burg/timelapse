@@ -34,7 +34,7 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "DispatchEventBase.h"
+#include "EventLoopInput.h"
 #include "InputCoder.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
@@ -62,7 +62,7 @@ public:
 
     int timerId() const { return m_timerId; }
     int frameIndex() const { return m_frameIndex; }
-    Document* document(Page* page) const { return SerializedEventTarget::documentFromFrameIndex(page, m_frameIndex); }
+    Document* document(Page* page) const;
 private:
     int m_timerId;
     int m_frameIndex;

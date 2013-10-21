@@ -35,7 +35,6 @@
 
 #include "InitializeFocus.h"
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "FocusController.h"
 #include "Frame.h"
@@ -50,7 +49,7 @@ namespace WebCore {
 
 void InitializeFocus::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
     PassRefPtr<Frame> framePtr(document->frame());
 
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
@@ -73,7 +72,7 @@ String InitializeFocus::toString() const
 
 PassOwnPtr<InitializeFocus> InitializeFocus::createFromPage(Page* page)
 {
-    int focusedFrameIndex = SerializedEventTarget::frameIndexFromDocument(page->focusController().focusedFrame()->document());
+    int focusedFrameIndex = frameIndexFromDocument(page->focusController().focusedFrame()->document());
     bool isFocused = page->focusController().isFocused();
     bool isActive = page->focusController().isActive();
     return adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));

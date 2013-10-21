@@ -25,7 +25,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
 
@@ -124,7 +124,6 @@ namespace WebCore {
         virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture);
         virtual void removeAllEventListeners();
         virtual bool dispatchEvent(PassRefPtr<Event>);
-        virtual bool dispatchAsyncEvent(PassRefPtr<Event>);
         bool dispatchEvent(PassRefPtr<Event>, ExceptionCode&); // DOM API
         virtual void uncaughtExceptionInEventHandler();
 
@@ -146,14 +145,14 @@ namespace WebCore {
 
     protected:
         virtual ~EventTarget();
-        
+
         virtual EventTargetData* eventTargetData() = 0;
         virtual EventTargetData& ensureEventTargetData() = 0;
 
     private:
         virtual void refEventTarget() = 0;
         virtual void derefEventTarget() = 0;
-        
+
         void fireEventListeners(Event*, EventTargetData*, EventListenerVector&);
         void setupLegacyTypeObserverIfNeeded(const AtomicString& legacyTypeName, bool hasLegacyTypeListeners, bool hasNewTypeListeners);
 

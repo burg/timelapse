@@ -35,7 +35,6 @@
 
 #include "SendPendingEvents.h"
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -60,7 +59,7 @@ String SendPendingEvents::toString() const
 
 void SendPendingEvents::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
     document->eventSender().dispatchAllPendingEvents();
 }

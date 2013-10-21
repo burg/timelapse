@@ -35,9 +35,46 @@
 
 #include "EventLoopInput.h"
 
+
+#include "Document.h"
 #include "EncoderContext.h"
+#include "FrameTree.h"
+#include "MainFrame.h"
+#include "Page.h"
+#include <wtf/Assertions.h>
 
 namespace WebCore {
+
+int frameIndexFromDocument(Document* document)
+{
+    ASSERT(document);
+    ASSERT(document->frame());
+
+    int idx = 0;
+    Frame* targetFrame = document->frame();
+    Frame* mainFrame = &targetFrame->tree().top();
+    for (Frame* frame = mainFrame; frame; idx++, frame = frame->tree().traverseNext(mainFrame))
+        if (frame == targetFrame)
+            return idx;
+
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+Document* documentFromFrameIndex(Page* page, int frameIndex)
+{
+    ASSERT(page);
+    ASSERT(frameIndex >= 0);
+
+    Frame* mainFrame = &page->mainFrame();
+    Frame* frame = mainFrame;
+    int idx = 0;
+    for (; idx < frameIndex && frame; idx++, frame = frame->tree().traverseNext(mainFrame));
+
+    ASSERT(idx == frameIndex);
+    ASSERT(frame && frame->document());
+    return frame->document();
+}
 
 void EventLoopInput::serializeDispatchInfo(EncoderContext& encoder) const
 {

@@ -36,13 +36,13 @@
 #include "DispatchFakeMouseMove.h"
 
 #include "AsyncEventProxy.h"
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "Frame.h"
 #include "Page.h"
 #include "ReplayController.h"
+#include "ReplayInputTypes.h"
 
 namespace WebCore {
 
@@ -52,7 +52,7 @@ DispatchFakeMouseMove::DispatchFakeMouseMove(const PlatformMouseEvent& event, in
 
 void DispatchFakeMouseMove::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
     Frame* frame = document->frame();
     ASSERT(frame);

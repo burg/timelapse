@@ -35,7 +35,6 @@
 
 #include "HandleContextMenu.h"
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "Frame.h"
 #include "DecoderContext.h"
@@ -49,7 +48,7 @@ namespace WebCore {
 
 void HandleContextMenu::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
     controller.page()->userInputProxy().handleContextMenuEvent(platformEvent(), document->frame(), true);
 }
 

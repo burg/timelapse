@@ -35,7 +35,6 @@
 
 #include "SendResizeEvent.h"
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMWindow.h"
 #include "Frame.h"
@@ -55,7 +54,7 @@ SendResizeEvent::SendResizeEvent(int width, int height, int frameIndex)
 
 void SendResizeEvent::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
     document->domWindow()->resizeTo((float) m_width, (float) m_height);
     controller.page()->userInputProxy().sendResizeEvent(document->frame(), true);
 }

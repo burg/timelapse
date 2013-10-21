@@ -39,14 +39,11 @@
 
 namespace WebCore {
 
-class ReplayController;
-class DocumentLoader;
-class Event;
-class EventLoopInputDispatcher;
+class Document;
 class EventTarget;
 class EncoderContext;
-class Node;
-class ResourceResponse;
+class ReplayController;
+class Page;
 
 typedef unsigned PositionMarkIndex;
 struct PositionMark {
@@ -66,6 +63,9 @@ private:
     PositionMarkIndex m_index;
     double m_time;
 };
+
+int frameIndexFromDocument(Document*);
+Document* documentFromFrameIndex(Page* page, int frameIndex);
 
 class EventLoopInput : public NondeterministicInput {
 
@@ -93,7 +93,7 @@ public:
 
     virtual ~EventLoopInput() {};
 
-    // NondeterministicInput API
+    // NondeterministicInput
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
 
@@ -103,8 +103,8 @@ public:
     virtual bool isUserVisible() const { return true; }
     virtual void serializeDispatchInfo(EncoderContext&) const;
 
-    // mark, dispatch count, and quota are not always known at construction time. They can
-    // only be set when the event is "unsealed".
+    // Mark, dispatch count, and quota are only known at construction time during replay.
+    // During capture, these are set when the following event loop input is captured.
 
     void setExecutionTicksCount(unsigned count) { ASSERT(!m_sealed); m_executionTicksCount = count; }
     virtual int executionTicksCount() const { return m_executionTicksCount; }
@@ -131,7 +131,7 @@ public:
 private:
     // For debugging purposes, we count the number of execution ticks before
     // this input is dispatched,and the number of ticks that happen as a
-    // result of dispatching the event. We also ensure that
+    // result of dispatching the event.
     int m_executionTicksCount;
     int m_executionTicksQuota;
     PositionMark m_mark;

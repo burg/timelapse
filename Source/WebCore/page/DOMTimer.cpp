@@ -37,7 +37,6 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
-#include "DispatchEventBase.h"
 #include "ReplayInputTypes.h"
 #include "TimerCreated.h"
 #include "TimerFired.h"
@@ -87,7 +86,7 @@ void InstrumentedDOMTimer::start(int timeout, bool singleShot)
     InputIterator* it = document ? document->inputIterator() : 0;
     ASSERT(it && it->isCapturing());
 
-    int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
+    int frameIndex = frameIndexFromDocument(document);
     it->storeInput(adoptPtr(new TimerCreated(m_timeoutId, frameIndex)));
 }
 
@@ -102,7 +101,7 @@ void InstrumentedDOMTimer::fired()
     InputIterator* it = document ? document->inputIterator() : 0;
     ASSERT(it && it->isCapturing());
 
-    int frameIndex = SerializedEventTarget::frameIndexFromDocument(document);
+    int frameIndex = frameIndexFromDocument(document);
     it->storeInput(adoptPtr(new TimerFired(m_timeoutId, frameIndex)));
 
     EventLoopInputExtent extent(it);

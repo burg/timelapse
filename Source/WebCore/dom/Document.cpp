@@ -1252,7 +1252,7 @@ void Document::setReadyState(ReadyState readyState)
 #endif
 
     m_readyState = readyState;
-    dispatchAsyncEvent(Event::create(eventNames().readystatechangeEvent, false, false));
+    dispatchEvent(Event::create(eventNames().readystatechangeEvent, false, false));
 
     if (settings() && settings()->suppressesIncrementalRendering())
         setVisualUpdatesAllowed(readyState);
@@ -3648,14 +3648,6 @@ void Document::dispatchWindowEvent(PassRefPtr<Event> event,  PassRefPtr<EventTar
     m_domWindow->dispatchEvent(event, target);
 }
 
-void Document::dispatchAsyncWindowEvent(PassRefPtr<Event> event,  PassRefPtr<EventTarget> target)
-{
-    ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
-    if (!m_domWindow)
-        return;
-    m_domWindow->dispatchAsyncEvent(event, target);
-}
-
 void Document::dispatchWindowLoadEvent()
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
@@ -4439,7 +4431,7 @@ void Document::finishedParsing()
         m_documentTiming.domContentLoadedEventStart = monotonicallyIncreasingTime();
 #endif
 
-    dispatchAsyncEvent(Event::create(eventNames().DOMContentLoadedEvent, true, false));
+    dispatchEvent(Event::create(eventNames().DOMContentLoadedEvent, true, false));
 
 #if ENABLE(WEB_TIMING)
     if (!m_documentTiming.domContentLoadedEventEnd)
@@ -5012,7 +5004,7 @@ template void Document::displayBufferModifiedByEncodingInternal<UChar>(UChar*, u
 void Document::enqueuePageshowEvent(PageshowEventPersistence persisted)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=36334 Pageshow event needs to fire asynchronously.
-    dispatchAsyncWindowEvent(PageTransitionEvent::create(eventNames().pageshowEvent, persisted), this);
+    dispatchWindowEvent(PageTransitionEvent::create(eventNames().pageshowEvent, persisted), this);
 }
 
 void Document::enqueueHashchangeEvent(const String& oldURL, const String& newURL)
@@ -5023,7 +5015,7 @@ void Document::enqueueHashchangeEvent(const String& oldURL, const String& newURL
 void Document::enqueuePopstateEvent(PassRefPtr<SerializedScriptValue> stateObject)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=36202 Popstate event needs to fire asynchronously
-    dispatchAsyncWindowEvent(PopStateEvent::create(stateObject, m_domWindow ? m_domWindow->history() : 0));
+    dispatchWindowEvent(PopStateEvent::create(stateObject, m_domWindow ? m_domWindow->history() : 0));
 }
 
 void Document::addMediaCanStartListener(MediaCanStartListener* listener)

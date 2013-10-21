@@ -32,7 +32,6 @@
 #ifndef AsyncEventProxy_h
 #define AsyncEventProxy_h
 
-#include "DispatchAsyncEvent.h"
 #include "PlatformMouseEvent.h"
 #include "ReplayProxy.h"
 #include <wtf/Noncopyable.h>
@@ -56,13 +55,12 @@ public:
     virtual ~AsyncEventProxy() {}
 
     void dispatchFakeMouseMove(Frame&, const PlatformMouseEvent&, bool fromReplay = false);
-    bool dispatchAsyncEvent(PassRefPtr<Event>, PassRefPtr<EventTarget>, bool fromReplay = false);
     static bool dispatchEvent(PassRefPtr<Event>, PassRefPtr<EventTarget>);
 
 private:
     AsyncEventProxy(Page*);
 };
-    
+
 } // namespace WebCore
 
 #endif // AsyncEventProxy_h

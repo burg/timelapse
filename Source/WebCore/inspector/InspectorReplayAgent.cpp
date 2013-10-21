@@ -34,13 +34,8 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(WEB_REPLAY)
 
-// For SerializedEventTarget::frameIndexFromDocument().
-#include "DispatchEventBase.h"
 #include "DocumentLoader.h"
-#include "DOMWindow.h"
-#include "Element.h"
 #include "Event.h"
-#include "EventContext.h"
 #include "Frame.h"
 #include "InspectorController.h"
 #include "InspectorDebuggerAgent.h"
@@ -49,10 +44,8 @@
 #include "InspectorState.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
-#include "JSDOMGlobalObject.h"
 #include "JSONEncoderContext.h"
 #include "Logging.h"
-#include "Node.h"
 #include "Page.h"
 #include "ReplayAgentStateMachine.h"
 #include "ReplayController.h"
@@ -63,6 +56,11 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
+
+#ifndef NDEBUG
+// For frameIndexFromDocument().
+#include "EventLoopInput.h"
+#endif
 
 using namespace std;
 using namespace WTF;
@@ -130,8 +128,7 @@ void InspectorReplayAgent::willCallFunction(const String& scriptName, int script
         return;
 
     LOG(DeterministicReplay, "%-20s --->---> Function Call: %s:%d, target=%d/frame[%p]", " ",
-    scriptName.utf8().data(), scriptLine,
-    SerializedEventTarget::frameIndexFromDocument(frame->document()), (void*)frame);
+    scriptName.utf8().data(), scriptLine, frameIndexFromDocument(frame->document()), (void*)frame);
 }
 #endif
 

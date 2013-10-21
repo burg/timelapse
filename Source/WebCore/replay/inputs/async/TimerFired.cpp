@@ -34,7 +34,6 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMTimer.h"
 #include "DecoderContext.h"
@@ -63,7 +62,7 @@ String TimerFired::toString() const
 
 void TimerFired::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
 
     //get the timer from SEC and fire it.
     DOMTimer* timer = document->findTimeout(m_timerId);

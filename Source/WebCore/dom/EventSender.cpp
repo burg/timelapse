@@ -32,7 +32,6 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
-#include "DispatchEventBase.h"
 #include "InputIterator.h"
 #include "SendPendingEvents.h"
 #endif
@@ -150,7 +149,7 @@ void EventSender::timerFired(Timer<EventSender>*)
     InputIterator* iterator = m_document.inputIterator();
     ASSERT(!iterator || !iterator->isReplaying());
     if (iterator && iterator->isCapturing()) {
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(&m_document);
+        int frameIndex = frameIndexFromDocument(&m_document);
         iterator->storeInput(adoptPtr(new SendPendingEvents(frameIndex)));
     }
     EventLoopInputExtent extent(iterator);

@@ -82,7 +82,7 @@ static void dumpEventDispatchInfo(const Event& event, Frame*, bool wasIgnored)
         LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/node[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
-            SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? &node->document() : node->ownerDocument()),
+            frameIndexFromDocument((node->inDocument()) ? &node->document() : node->ownerDocument()),
             (void*)node,
             node->nodeName().utf8().data());
 
@@ -90,7 +90,7 @@ static void dumpEventDispatchInfo(const Event& event, Frame*, bool wasIgnored)
         LOG(DeterministicReplay, "%-20s --->%s DOM event: type=%s, target=%d/window[%p] %s\n", "ReplayEvents",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             event.type().string().utf8().data(),
-            SerializedEventTarget::frameIndexFromDocument(window->document()),
+            frameIndexFromDocument(window->document()),
             (void*)window,
             window->location()->href().utf8().data());
 }

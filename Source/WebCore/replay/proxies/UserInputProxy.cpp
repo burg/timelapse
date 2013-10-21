@@ -34,7 +34,6 @@
 #include "UserInputProxy.h"
 
 #include "CaptureInputIterator.h"
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "DOMWindow.h"
 #include "EventHandler.h"
@@ -86,7 +85,7 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
     InputIterator* it = m_page->replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        int frameIndex = frameIndexFromDocument(frame->document());
         it->storeInput(adoptPtr(new HandleContextMenu(mouseEvent, frameIndex)));
     }
     EventLoopInputExtent extent(it);
@@ -314,7 +313,7 @@ void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronou
         ASSERT(mode() == Capturing);
         int width = frame->document()->domWindow()->outerWidth();
         int height = frame->document()->domWindow()->outerHeight();
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        int frameIndex = frameIndexFromDocument(frame->document());
 
         it->storeInput(adoptPtr(new SendResizeEvent(width, height, frameIndex)));
     }

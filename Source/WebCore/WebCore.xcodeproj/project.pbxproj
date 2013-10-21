@@ -5214,8 +5214,6 @@
 		C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = C44958FD180F57EF003BAF73 /* SendPendingEvents.h */; };
 		C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C46ADBA017EB8B0600218391 /* EncoderContext.cpp */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
-		C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */; };
-		C48108E317052FF100AB4BAA /* DispatchAsyncEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */; };
 		C48108E417052FF100AB4BAA /* DispatchFakeMouseMove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */; };
 		C48108E517052FF100AB4BAA /* DispatchFakeMouseMove.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */; };
 		C48108E617052FF100AB4BAA /* RanPendingScripts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088417052FF100AB4BAA /* RanPendingScripts.cpp */; };
@@ -5224,8 +5222,6 @@
 		C48108E917052FF100AB4BAA /* TimerFired.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088717052FF100AB4BAA /* TimerFired.cpp */; };
 		C48108EA17052FF100AB4BAA /* TimerFired.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088817052FF100AB4BAA /* TimerFired.h */; };
 		C48108EB17052FF100AB4BAA /* DisableCache.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088917052FF100AB4BAA /* DisableCache.h */; };
-		C48108EC17052FF100AB4BAA /* DispatchEventBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088A17052FF100AB4BAA /* DispatchEventBase.cpp */; };
-		C48108ED17052FF100AB4BAA /* DispatchEventBase.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088B17052FF100AB4BAA /* DispatchEventBase.h */; };
 		C48108EE17052FF100AB4BAA /* EnableCache.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088C17052FF100AB4BAA /* EnableCache.h */; };
 		C48108EF17052FF100AB4BAA /* AutoMemoized.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088E17052FF100AB4BAA /* AutoMemoized.h */; };
 		C48108F017052FF100AB4BAA /* InitializeFocus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088F17052FF100AB4BAA /* InitializeFocus.cpp */; };
@@ -12244,8 +12240,6 @@
 		C44958FD180F57EF003BAF73 /* SendPendingEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SendPendingEvents.h; sourceTree = "<group>"; };
 		C46ADBA017EB8B0600218391 /* EncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EncoderContext.cpp; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
-		C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchAsyncEvent.cpp; sourceTree = "<group>"; };
-		C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchAsyncEvent.h; sourceTree = "<group>"; };
 		C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchFakeMouseMove.cpp; sourceTree = "<group>"; };
 		C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchFakeMouseMove.h; sourceTree = "<group>"; };
 		C481088417052FF100AB4BAA /* RanPendingScripts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RanPendingScripts.cpp; sourceTree = "<group>"; };
@@ -12254,8 +12248,6 @@
 		C481088717052FF100AB4BAA /* TimerFired.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimerFired.cpp; sourceTree = "<group>"; };
 		C481088817052FF100AB4BAA /* TimerFired.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TimerFired.h; sourceTree = "<group>"; };
 		C481088917052FF100AB4BAA /* DisableCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DisableCache.h; sourceTree = "<group>"; };
-		C481088A17052FF100AB4BAA /* DispatchEventBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchEventBase.cpp; sourceTree = "<group>"; };
-		C481088B17052FF100AB4BAA /* DispatchEventBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchEventBase.h; sourceTree = "<group>"; };
 		C481088C17052FF100AB4BAA /* EnableCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EnableCache.h; sourceTree = "<group>"; };
 		C481088E17052FF100AB4BAA /* AutoMemoized.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AutoMemoized.h; sourceTree = "<group>"; };
 		C481088F17052FF100AB4BAA /* InitializeFocus.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InitializeFocus.cpp; sourceTree = "<group>"; };
@@ -20164,8 +20156,6 @@
 				C48108AD17052FF100AB4BAA /* user */,
 				C42BB776175FAA41008BF639 /* DisableCache.cpp */,
 				C481088917052FF100AB4BAA /* DisableCache.h */,
-				C481088A17052FF100AB4BAA /* DispatchEventBase.cpp */,
-				C481088B17052FF100AB4BAA /* DispatchEventBase.h */,
 				C42BB777175FAA41008BF639 /* EnableCache.cpp */,
 				C481088C17052FF100AB4BAA /* EnableCache.h */,
 				C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */,
@@ -20180,8 +20170,6 @@
 		C481087F17052FF100AB4BAA /* async */ = {
 			isa = PBXGroup;
 			children = (
-				C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */,
-				C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */,
 				C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */,
 				C481088317052FF100AB4BAA /* DispatchFakeMouseMove.h */,
 				C481088417052FF100AB4BAA /* RanPendingScripts.cpp */,
@@ -25067,13 +25055,11 @@
 				977E2E0F12F0FC9C00C13380 /* XSSAuditorDelegate.h in Headers */,
 				FD537353137B651800008DCE /* ZeroPole.h in Headers */,
 				C48108DF17052FF100AB4BAA /* CacheController.h in Headers */,
-				C48108E317052FF100AB4BAA /* DispatchAsyncEvent.h in Headers */,
 				C48108E517052FF100AB4BAA /* DispatchFakeMouseMove.h in Headers */,
 				C48108E717052FF100AB4BAA /* RanPendingScripts.h in Headers */,
 				C48108E817052FF100AB4BAA /* TimerCreated.h in Headers */,
 				C48108EA17052FF100AB4BAA /* TimerFired.h in Headers */,
 				C48108EB17052FF100AB4BAA /* DisableCache.h in Headers */,
-				C48108ED17052FF100AB4BAA /* DispatchEventBase.h in Headers */,
 				C48108EE17052FF100AB4BAA /* EnableCache.h in Headers */,
 				C48108EF17052FF100AB4BAA /* AutoMemoized.h in Headers */,
 				C48108F117052FF100AB4BAA /* InitializeFocus.h in Headers */,
@@ -28171,11 +28157,9 @@
 				977E2E0E12F0FC9C00C13379 /* XSSAuditor.cpp in Sources */,
 				977E2E0E12F0FC9C00C13380 /* XSSAuditorDelegate.cpp in Sources */,
 				FD537352137B651800008DCE /* ZeroPole.cpp in Sources */,
-				C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */,
 				C48108E417052FF100AB4BAA /* DispatchFakeMouseMove.cpp in Sources */,
 				C48108E617052FF100AB4BAA /* RanPendingScripts.cpp in Sources */,
 				C48108E917052FF100AB4BAA /* TimerFired.cpp in Sources */,
-				C48108EC17052FF100AB4BAA /* DispatchEventBase.cpp in Sources */,
 				C48108F017052FF100AB4BAA /* InitializeFocus.cpp in Sources */,
 				C48108F217052FF100AB4BAA /* InitializeWindow.cpp in Sources */,
 				C48108F417052FF100AB4BAA /* PlaybackError.cpp in Sources */,

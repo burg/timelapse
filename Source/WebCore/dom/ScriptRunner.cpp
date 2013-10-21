@@ -34,7 +34,6 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
-#include "DispatchEventBase.h"
 #include "RanPendingScripts.h"
 #include <wtf/replay/InputIterator.h>
 #endif
@@ -123,7 +122,7 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 #if ENABLE(WEB_REPLAY)
     InputIterator* it = m_document.inputIterator();
     if (it && it->isCapturing()) {
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(&m_document);
+        int frameIndex = frameIndexFromDocument(&m_document);
         it->storeInput(adoptPtr(new RanPendingScripts(frameIndex)));
     }
     EventLoopInputExtent extent(it);

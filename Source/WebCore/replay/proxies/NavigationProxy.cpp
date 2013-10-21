@@ -34,7 +34,6 @@
 #include "NavigationProxy.h"
 
 #include "CaptureInputIterator.h"
-#include "DispatchEventBase.h"
 #include "FrameLoadRequest.h"
 #include "LoadURLRequest.h"
 #include "MainFrame.h"
@@ -87,7 +86,7 @@ void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromRe
     InputIterator* it = m_page->replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        int frameIndex = frameIndexFromDocument(frame->document());
         it->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
     }
     EventLoopInputExtent extent(it);
@@ -108,7 +107,7 @@ void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
     InputIterator* it = m_page->replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        int frameIndex = SerializedEventTarget::frameIndexFromDocument(frame->document());
+        int frameIndex = frameIndexFromDocument(frame->document());
         it->storeInput(adoptPtr(new StopLoadingFrame(frameIndex)));
     }
     EventLoopInputExtent extent(it);

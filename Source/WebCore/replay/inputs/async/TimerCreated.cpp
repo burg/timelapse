@@ -36,6 +36,8 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
+// For documentFromFrameIndex().
+#include "EventLoopInput.h"
 #include "ReplayInputTypes.h"
 #include <wtf/PassOwnPtr.h>
 
@@ -44,6 +46,11 @@ namespace WebCore {
 const AtomicString& TimerCreated::type() const
 {
     return inputTypes().TimerCreated;
+}
+
+Document* TimerCreated::document(Page* page) const
+{
+    return documentFromFrameIndex(page, m_frameIndex);
 }
 
 void InputCoder<TimerCreated>::encode(EncoderContext& encoder, const TimerCreated& input)

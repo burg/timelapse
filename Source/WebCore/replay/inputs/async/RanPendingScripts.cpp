@@ -35,7 +35,6 @@
 
 #include "RanPendingScripts.h"
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
@@ -62,7 +61,7 @@ String RanPendingScripts::toString() const
 
 void RanPendingScripts::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
 
     // Call ScriptRunner timer callback manually.
     ScriptRunner* scriptRunner = document->scriptRunner();

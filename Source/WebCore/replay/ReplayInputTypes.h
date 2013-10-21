@@ -35,7 +35,6 @@ namespace WebCore {
     macro(BeginSentinel) \
     macro(DisableCache) \
     macro(DispatchFakeMouseMove) \
-    macro(DispatchAsyncEvent) \
     macro(EnableCache) \
     macro(EndSentinel) \
     macro(FocusSetActive) \

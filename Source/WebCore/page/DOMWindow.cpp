@@ -27,7 +27,6 @@
 #include "config.h"
 #include "DOMWindow.h"
 
-#include "AsyncEventProxy.h"
 #include "BackForwardController.h"
 #include "BarProp.h"
 #include "BeforeUnloadEvent.h"
@@ -1022,7 +1021,7 @@ bool DOMWindow::confirm(const String& message)
 {
     if (!m_frame)
         return false;
-    
+
     // Pages are not allowed to cause modal alerts during BeforeUnload dispatch.
     if (page() && page()->isAnyFrameHandlingBeforeUnloadEvent()) {
         printErrorMessage("Use of window.confirm is not allowed during beforeunload event dispatch.");
@@ -1099,7 +1098,7 @@ bool DOMWindow::find(const String& string, bool caseSensitive, bool backwards, b
     if (!isCurrentlyDisplayedInFrame())
         return false;
 
-    // FIXME (13016): Support wholeWord, searchInFrames and showDialog.    
+    // FIXME (13016): Support wholeWord, searchInFrames and showDialog.
     FindOptions options = (backwards ? Backwards : 0) | (caseSensitive ? 0 : CaseInsensitive) | (wrap ? WrapAround : 0);
     return m_frame->editor().findString(string, options);
 }
@@ -1675,17 +1674,17 @@ void DOMWindow::dispatchLoadEvent()
         RefPtr<DocumentLoader> documentLoader = m_frame->loader().documentLoader();
         DocumentLoadTiming* timing = documentLoader->timing();
         timing->markLoadEventStart();
-        dispatchAsyncEvent(loadEvent, document());
+        dispatchEvent(loadEvent, document());
         timing->markLoadEventEnd();
     } else
-        dispatchAsyncEvent(loadEvent, document());
+        dispatchEvent(loadEvent, document());
 
     // For load events, send a separate load event to the enclosing frame only.
     // This is a DOM extension and is independent of bubbling/capturing rules of
     // the DOM.
     Element* ownerElement = m_frame ? m_frame->ownerElement() : 0;
     if (ownerElement)
-        ownerElement->dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
+        ownerElement->dispatchEvent(Event::create(eventNames().loadEvent, false, false));
 
     InspectorInstrumentation::loadEventFired(frame());
 }
@@ -1706,19 +1705,6 @@ bool DOMWindow::dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget
     InspectorInstrumentation::didDispatchEventOnWindow(cookie);
 
     return result;
-}
-
-bool DOMWindow::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget)
-{
-#if ENABLE(WEB_REPLAY)
-    UNUSED_PARAM(prpTarget);
-    // dispatch on the DOMWindow, even though prpTarget likely refers to document().
-    // when this is actually dispatched, the DOMWindow's document is substituted
-    // back as the second argument.
-    return frame()->page()->asyncEventProxy().dispatchAsyncEvent(prpEvent, this);
-#else
-    return dispatchEvent(prpEvent, prpTarget);
-#endif
 }
 
 void DOMWindow::removeAllEventListeners()

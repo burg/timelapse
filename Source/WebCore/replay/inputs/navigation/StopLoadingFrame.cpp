@@ -34,7 +34,6 @@
 
 #include "StopLoadingFrame.h"
 
-#include "DispatchEventBase.h"
 #include "Document.h"
 #include "Frame.h"
 #include "DecoderContext.h"
@@ -52,7 +51,7 @@ StopLoadingFrame::~StopLoadingFrame() {}
 
 void StopLoadingFrame::dispatch(ReplayController& controller)
 {
-    Document* document = SerializedEventTarget::documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
     ASSERT(document);
     Frame* frame = document->frame();
     ASSERT(frame);
