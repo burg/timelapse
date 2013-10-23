@@ -58,8 +58,8 @@ public:
     double creationTimestamp() const { return m_timestamp; }
     size_t memorySize();
 
-    PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page*);
-    PassOwnPtr<ReplayInputIterator> createReplayIterator(Page*, EventLoopInputDispatcherClient*);
+    PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page&);
+    PassOwnPtr<ReplayInputIterator> createReplayIterator(Page&, EventLoopInputDispatcherClient*);
     PassOwnPtr<FunctorInputIterator> createFunctorIterator();
 
 private:

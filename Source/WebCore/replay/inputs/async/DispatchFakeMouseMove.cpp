@@ -52,12 +52,12 @@ DispatchFakeMouseMove::DispatchFakeMouseMove(const PlatformMouseEvent& event, in
 
 void DispatchFakeMouseMove::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
     ASSERT(document);
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller.page()->asyncEventProxy().dispatchFakeMouseMove(*frame, platformEvent(), true);
+    controller.page().asyncEventProxy().dispatchFakeMouseMove(*frame, platformEvent(), true);
 }
 
 const AtomicString& DispatchFakeMouseMove::type() const

@@ -51,12 +51,12 @@ StopLoadingFrame::~StopLoadingFrame() {}
 
 void StopLoadingFrame::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
     ASSERT(document);
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller.page()->navigationProxy().stopLoadingFrame(frame, true);
+    controller.page().navigationProxy().stopLoadingFrame(frame, true);
 }
 
 const AtomicString& StopLoadingFrame::type() const

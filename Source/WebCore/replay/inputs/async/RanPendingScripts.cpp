@@ -61,7 +61,7 @@ String RanPendingScripts::toString() const
 
 void RanPendingScripts::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
 
     // Call ScriptRunner timer callback manually.
     ScriptRunner* scriptRunner = document->scriptRunner();

@@ -51,8 +51,7 @@ const AtomicString& HandleMouseRelease::type() const
 
 void HandleMouseRelease::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
-    controller.page()->userInputProxy().handleMouseReleaseEvent(platformEvent(), true);
+    controller.page().userInputProxy().handleMouseReleaseEvent(platformEvent(), true);
 }
 
 void InputCoder<HandleMouseRelease>::encode(EncoderContext& encoder, const HandleMouseRelease& input)

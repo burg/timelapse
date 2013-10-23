@@ -51,7 +51,7 @@ ResourceCannotShowURL::ResourceCannotShowURL(int handleId)
 
 void ResourceCannotShowURL::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page()->networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());

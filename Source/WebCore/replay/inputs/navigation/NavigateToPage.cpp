@@ -67,8 +67,8 @@ PassRefPtr<SecurityOrigin> NavigateToPage::securityOrigin() const
 
 void NavigateToPage::dispatch(ReplayController& controller)
 {
-    controller.page()->networkProxy().setExpectsPageLoad(true);
-    controller.page()->mainFrame().navigationScheduler().scheduleLocationChange(m_securityOrigin.get(), m_url, m_referrer, true, true);
+    controller.page().networkProxy().setExpectsPageLoad(true);
+    controller.page().mainFrame().navigationScheduler().scheduleLocationChange(m_securityOrigin.get(), m_url, m_referrer, true, true);
 }
 
 const AtomicString& NavigateToPage::type() const

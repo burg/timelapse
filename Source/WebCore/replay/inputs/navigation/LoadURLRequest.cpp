@@ -57,7 +57,7 @@ LoadURLRequest::~LoadURLRequest() {}
 
 void LoadURLRequest::dispatch(ReplayController& controller)
 {
-    controller.page()->navigationProxy().loadURLRequest(*m_request);
+    controller.page().navigationProxy().loadURLRequest(*m_request);
 }
 
 const AtomicString& LoadURLRequest::type() const

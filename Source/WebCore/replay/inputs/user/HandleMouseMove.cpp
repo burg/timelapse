@@ -51,11 +51,10 @@ const AtomicString& HandleMouseMove::type() const
 
 void HandleMouseMove::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
     if (m_scrollbarTargeted)
-        controller.page()->userInputProxy().handleMouseMoveOnScrollbarEvent(platformEvent(), true);
+        controller.page().userInputProxy().handleMouseMoveOnScrollbarEvent(platformEvent(), true);
     else
-        controller.page()->userInputProxy().handleMouseMoveEvent(platformEvent(), true);
+        controller.page().userInputProxy().handleMouseMoveEvent(platformEvent(), true);
 }
 
 void InputCoder<HandleMouseMove>::encode(EncoderContext& encoder, const HandleMouseMove& input)

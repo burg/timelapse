@@ -60,8 +60,7 @@ String FocusSetFocused::toString() const
 
 void FocusSetFocused::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
-    controller.page()->userInputProxy().focusSetFocused(m_toState, true);
+    controller.page().userInputProxy().focusSetFocused(m_toState, true);
 }
 
 void InputCoder<FocusSetFocused>::encode(EncoderContext& encoder, const FocusSetFocused& input)

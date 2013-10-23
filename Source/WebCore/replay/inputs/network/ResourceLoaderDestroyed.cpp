@@ -48,7 +48,7 @@ ResourceLoaderDestroyed::ResourceLoaderDestroyed(int handleId)
 
 void ResourceLoaderDestroyed::dispatch(ReplayController& controller)
 {
-    controller.page()->networkProxy().removeHandleById(m_handleId);
+    controller.page().networkProxy().removeHandleById(m_handleId);
 }
 
 const AtomicString& ResourceLoaderDestroyed::type() const

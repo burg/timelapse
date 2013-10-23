@@ -54,9 +54,9 @@ SendResizeEvent::SendResizeEvent(int width, int height, int frameIndex)
 
 void SendResizeEvent::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
     document->domWindow()->resizeTo((float) m_width, (float) m_height);
-    controller.page()->userInputProxy().sendResizeEvent(document->frame(), true);
+    controller.page().userInputProxy().sendResizeEvent(document->frame(), true);
 }
 
 const AtomicString& SendResizeEvent::type() const

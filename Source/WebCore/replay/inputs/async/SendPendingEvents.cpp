@@ -59,7 +59,7 @@ String SendPendingEvents::toString() const
 
 void SendPendingEvents::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
     ASSERT(document);
     document->eventSender().dispatchAllPendingEvents();
 }

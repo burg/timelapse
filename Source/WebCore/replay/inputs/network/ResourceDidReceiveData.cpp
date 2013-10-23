@@ -58,7 +58,7 @@ ResourceDidReceiveData::~ResourceDidReceiveData() {}
 
 void ResourceDidReceiveData::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page()->networkProxy().handleContextById(handleId());
+    HandleContext context = controller.page().networkProxy().handleContextById(handleId());
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 

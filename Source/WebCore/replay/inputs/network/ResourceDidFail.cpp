@@ -59,7 +59,7 @@ ResourceDidFail::ResourceDidFail(int handleId, PassOwnPtr<ResourceError> error)
 
 void ResourceDidFail::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page()->networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 

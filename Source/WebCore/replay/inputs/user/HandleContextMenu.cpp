@@ -48,8 +48,8 @@ namespace WebCore {
 
 void HandleContextMenu::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
-    controller.page()->userInputProxy().handleContextMenuEvent(platformEvent(), document->frame(), true);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
+    controller.page().userInputProxy().handleContextMenuEvent(platformEvent(), document->frame(), true);
 }
 
 const AtomicString& HandleContextMenu::type() const

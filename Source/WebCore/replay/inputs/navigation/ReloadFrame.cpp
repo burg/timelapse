@@ -52,12 +52,12 @@ ReloadFrame::~ReloadFrame() {}
 
 void ReloadFrame::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
     ASSERT(document);
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller.page()->navigationProxy().reloadFrame(frame, m_endToEndReload, true);
+    controller.page().navigationProxy().reloadFrame(frame, m_endToEndReload, true);
 }
 
 const AtomicString& ReloadFrame::type() const

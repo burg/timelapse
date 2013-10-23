@@ -137,8 +137,7 @@ String HandleWheelEvent::toString() const
 
 void HandleWheelEvent::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
-    controller.page()->userInputProxy().handleWheelEvent(const_cast<PlatformWheelEvent&>(platformEvent()), true);
+    controller.page().userInputProxy().handleWheelEvent(const_cast<PlatformWheelEvent&>(platformEvent()), true);
 }
 
 size_t HandleWheelEvent::memorySize() const

@@ -64,7 +64,7 @@ public:
     bool isFocused() const { return m_focus; }
     bool isActive() const { return m_active; }
     int frameIndex() const { return m_frameIndex; }
-    static PassOwnPtr<InitializeFocus> createFromPage(Page*);
+    static PassOwnPtr<InitializeFocus> createFromPage(const Page&);
 
 private:
     bool m_focus;

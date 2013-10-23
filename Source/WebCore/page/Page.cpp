@@ -108,7 +108,7 @@ DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 static void networkStateChanged(bool isOnLine)
 {
     Vector<Ref<Frame>> frames;
-    
+
     // Get all the frames of all the pages in all the page groups
     for (auto it = allPages->begin(), end = allPages->end(); it != end; ++it) {
         for (Frame* frame = &(*it)->mainFrame(); frame; frame = frame->tree().traverseNext())
@@ -146,7 +146,7 @@ Page::Page(PageClients& pageClients)
     , m_asyncEventProxy(AsyncEventProxy::create(this))
     , m_userInputProxy(UserInputProxy::create(this))
 #if ENABLE(WEB_REPLAY)
-    , m_replayController(adoptPtr(new ReplayController(this)))
+    , m_replayController(adoptPtr(new ReplayController(*this)))
 #endif
 #if ENABLE(INSPECTOR)
     , m_inspectorController(InspectorController::create(this, pageClients.inspectorClient))
@@ -209,7 +209,7 @@ Page::Page(PageClients& pageClients)
 
     if (!allPages) {
         allPages = new HashSet<Page*>;
-        
+
         networkStateNotifier().addNetworkStateChangeListener(networkStateChanged);
     }
 
@@ -226,7 +226,7 @@ Page::~Page()
     m_mainFrame->setView(0);
     setGroupName(String());
     allPages->remove(this);
-    
+
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         frame->willDetachPage();
         frame->detachFromPage();
@@ -375,7 +375,7 @@ BackForwardClient* Page::backForwardClient() const
 bool Page::goBack()
 {
     HistoryItem* item = backForward().backItem();
-    
+
     if (item) {
         goToItem(item, FrameLoadTypeBack);
         return true;
@@ -386,7 +386,7 @@ bool Page::goBack()
 bool Page::goForward()
 {
     HistoryItem* item = backForward().forwardItem();
-    
+
     if (item) {
         goToItem(item, FrameLoadTypeForward);
         return true;
@@ -514,7 +514,7 @@ void Page::refreshPlugins(bool reload)
 
         if (!reload)
             continue;
-        
+
         for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
             if (frame->loader().subframeLoader().containsPlugins())
                 framesNeedingReload.append(*frame);
@@ -831,7 +831,7 @@ void Page::lockAllOverlayScrollbarsToHidden(bool lockOverlayScrollbars)
         return;
 
     view->lockOverlayScrollbarStateToHidden(lockOverlayScrollbars);
-    
+
     for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         FrameView* frameView = frame->view();
         if (!frameView)
@@ -939,7 +939,7 @@ void Page::userStyleSheetLocationChanged()
     // FIXME: Eventually we will move to a model of just being handed the sheet
     // text instead of loading the URL ourselves.
     URL url = m_settings->userStyleSheetLocation();
-    
+
     // Allow any local file URL scheme to be loaded.
     if (SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
         m_userStyleSheetPath = url.fileSystemPath();

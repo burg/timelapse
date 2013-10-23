@@ -108,8 +108,7 @@ size_t HandleKeyPress::memorySize() const
 
 void HandleKeyPress::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
-    controller.page()->userInputProxy().handleKeyPressEvent(platformEvent(), true);
+    controller.page().userInputProxy().handleKeyPressEvent(platformEvent(), true);
 }
 
 void InputCoder<PlatformKeyboardEvent>::encode(EncoderContext& encoder, const PlatformKeyboardEvent& input)

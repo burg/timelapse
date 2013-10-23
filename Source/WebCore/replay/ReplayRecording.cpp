@@ -57,16 +57,16 @@ ReplayRecording::ReplayRecording(int uid)
 ReplayRecording::~ReplayRecording()
 {}
 
-PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page* page)
+PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page& page)
 {
     ASSERT(m_canCapture);
     m_canCapture = false;
-    return CaptureInputIterator::create(m_inputStorage.get(), page);
+    return CaptureInputIterator::create(m_inputStorage.get(), &page);
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page* page, EventLoopInputDispatcherClient* client)
+PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page& page, EventLoopInputDispatcherClient* client)
 {
-    return ReplayInputIterator::create(m_inputStorage.get(), page, client);
+    return ReplayInputIterator::create(m_inputStorage.get(), &page, client);
 }
 
 PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()

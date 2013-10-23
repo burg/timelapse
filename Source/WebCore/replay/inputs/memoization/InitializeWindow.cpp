@@ -51,7 +51,7 @@ namespace WebCore {
 
 void InitializeWindow::dispatch(ReplayController& controller)
 {
-    controller.page()->mainFrame().document()->domWindow()->resizeTo((float) m_width, (float) m_height);
+    controller.page().mainFrame().document()->domWindow()->resizeTo((float) m_width, (float) m_height);
 }
 
 const AtomicString& InitializeWindow::type() const
@@ -64,10 +64,10 @@ String InitializeWindow::toString() const
     return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
-PassOwnPtr<InitializeWindow> InitializeWindow::createFromPage(Page* page)
+PassOwnPtr<InitializeWindow> InitializeWindow::createFromPage(const Page& page)
 {
-    int width = page->mainFrame().document()->domWindow()->outerWidth();
-    int height = page->mainFrame().document()->domWindow()->outerHeight();
+    int width = page.mainFrame().document()->domWindow()->outerWidth();
+    int height = page.mainFrame().document()->domWindow()->outerHeight();
     return adoptPtr(new InitializeWindow(width, height));
 }
 

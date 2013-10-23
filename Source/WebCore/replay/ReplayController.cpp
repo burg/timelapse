@@ -96,7 +96,7 @@ static void dumpEventDispatchInfo(const Event& event, Frame*, bool wasIgnored)
 }
 #endif // !LOG_DISABLED
 
-ReplayController::ReplayController(Page* page)
+ReplayController::ReplayController(Page& page)
     : m_page(page)
     , m_nextRecordingId(1)
     , m_loadedRecording(0)
@@ -122,7 +122,7 @@ void ReplayController::beginCapturing()
     m_activeIterator = m_loadedRecording->createCaptureIterator(m_page);
     changeProxyMode(ReplayProxy::Capturing);
 
-    InspectorInstrumentation::captureStarted(m_page);
+    InspectorInstrumentation::captureStarted(&m_page);
     // Combine the following inputs into a single extent, since they are synchronous.
     EventLoopInputExtent extent(m_activeIterator.get());
 
@@ -135,14 +135,14 @@ void ReplayController::beginCapturing()
     m_activeIterator->storeInput(InitializeWindow::createFromPage(m_page));
     // attempt to pull reasonable values here to save in the log, and
     // also to use for the initial refresh.
-    MainFrame& mainFrame = m_page->mainFrame();
+    MainFrame& mainFrame = m_page.mainFrame();
     NavigateToPage* reloadInput = new NavigateToPage(mainFrame.document()->securityOrigin(),
                                                      mainFrame.document()->url().string(),
                                                      mainFrame.loader().referrer());
     m_activeIterator->storeInput(adoptPtr(reloadInput));
 
     //The call to scheduleLocationChange should be the same on capture and replay.
-    page()->networkProxy().setExpectsPageLoad(true);
+    m_page.networkProxy().setExpectsPageLoad(true);
     // TODO: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
     mainFrame.navigationScheduler().scheduleLocationChange(reloadInput->securityOrigin().get(),
@@ -173,11 +173,11 @@ bool ReplayController::endCapturing()
 
     // Now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
-    InspectorInstrumentation::captureFinished(m_page);
-    InspectorInstrumentation::recordingCreated(m_page, recording);
+    InspectorInstrumentation::captureFinished(&m_page);
+    InspectorInstrumentation::recordingCreated(&m_page, recording);
 
     // Permanently "suspend" active objects, such as timers, marquees, loaders, etc.
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext())
+    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext())
         frame->document()->suspendActiveDOMObjects(ActiveDOMObject::DocumentWillBecomeInactive);
 
     return true;
@@ -210,7 +210,7 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
     m_status = ReplayUpToMarkIndex;
     m_stopBeforeMarkIndex = index;
 
-    InspectorInstrumentation::playbackStarted(m_page);
+    InspectorInstrumentation::playbackStarted(&m_page);
     dispatcher().setMode(mode);
     dispatcher().run();
 }
@@ -230,7 +230,7 @@ void ReplayController::replayToCompletion(ReplayMode mode)
     }
 
     m_status = ReplayToCompletion;
-    InspectorInstrumentation::playbackStarted(m_page);
+    InspectorInstrumentation::playbackStarted(&m_page);
     dispatcher().setMode(mode);
     dispatcher().run();
 }
@@ -261,7 +261,7 @@ void ReplayController::cancelPlayback()
 
         case PlaybackFinished:
             changeProxyMode(ReplayProxy::Open);
-            InspectorInstrumentation::playbackCancelled(m_page);
+            InspectorInstrumentation::playbackCancelled(&m_page);
     }
 
 }
@@ -292,7 +292,7 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
     if (!capturing() && !replaying())
         return;
 
-    page()->networkProxy().setExpectsPageLoad(false);
+    m_page.networkProxy().setExpectsPageLoad(false);
     // We store the input iterator in both Document and JSDOMWindow, so that
     // replay state is accessible from script and layout without layering violations.
     loader->frame()->document()->setInputIterator(m_activeIterator.get());
@@ -320,7 +320,7 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
     if (isFatal) {
         LOG(DeterministicReplay, "%-20s Terminating playback due to fatal error.", "ReplayController");
         cancelPlayback();
-        InspectorInstrumentation::playbackError(m_page, true, errorMessage);
+        InspectorInstrumentation::playbackError(&m_page, true, errorMessage);
         return;
     }
 
@@ -329,7 +329,7 @@ void ReplayController::playbackError(bool isFatal, const String& errorMessage)
     } else {
         LOG(DeterministicReplay, "%-20s Reporting and pausing because of non-fatal error.", "ReplayController");
         pauseReplay();
-        InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
+        InspectorInstrumentation::playbackError(&m_page, isFatal, errorMessage);
     }
 }
 
@@ -343,7 +343,7 @@ void ReplayController::willDispatchInput(const EventLoopInput& input)
 
 void ReplayController::didDispatchInput(const EventLoopInput& input)
 {
-    InspectorInstrumentation::playbackHitMark(m_page, input.mark().index());
+    InspectorInstrumentation::playbackHitMark(&m_page, input.mark().index());
 }
 
 void ReplayController::didDispatchFinalInput()
@@ -353,15 +353,15 @@ void ReplayController::didDispatchFinalInput()
 
 void ReplayController::imageCaptured(const String& imageDataUri)
 {
-    InspectorInstrumentation::imageCaptured(m_page, imageDataUri);
+    InspectorInstrumentation::imageCaptured(&m_page, imageDataUri);
 }
 
 void ReplayController::resetReplayState()
 {
-    LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)m_page);
+    LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)(&m_page));
 
     m_activeIterator = 0;
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         frame->script().globalObject(mainThreadNormalWorld())->setInputIterator(0);
         frame->document()->setInputIterator(0);
     }
@@ -372,14 +372,14 @@ void ReplayController::pauseReplay()
     dispatcher().pause();
 
     m_status = PlaybackPaused;
-    InspectorInstrumentation::playbackPaused(m_page, dispatcher().currentMark().index());
+    InspectorInstrumentation::playbackPaused(&m_page, dispatcher().currentMark().index());
 }
 
 void ReplayController::finishReplay()
 {
     m_status = PlaybackFinished;
     resetReplayState();
-    InspectorInstrumentation::playbackFinished(m_page);
+    InspectorInstrumentation::playbackFinished(&m_page);
 }
 
 bool ReplayController::unloadRecording(bool suppressNotifications)
@@ -403,7 +403,7 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
     changeProxyMode(ReplayProxy::Open);
 
     if (!suppressNotifications)
-        InspectorInstrumentation::recordingUnloaded(m_page);
+        InspectorInstrumentation::recordingUnloaded(&m_page);
     return true;
 
 }
@@ -424,16 +424,16 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
 
     m_loadedRecording = recording;
     if (!suppressNotifications)
-        InspectorInstrumentation::recordingLoaded(m_page, recording);
+        InspectorInstrumentation::recordingLoaded(&m_page, recording);
     return true;
 }
 
 void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
-    m_page->userInputProxy().setProxyMode(mode);
-    m_page->asyncEventProxy().setProxyMode(mode);
-    m_page->navigationProxy().setProxyMode(mode);
-    m_page->networkProxy().setProxyMode(mode);
+    m_page.userInputProxy().setProxyMode(mode);
+    m_page.asyncEventProxy().setProxyMode(mode);
+    m_page.navigationProxy().setProxyMode(mode);
+    m_page.networkProxy().setProxyMode(mode);
 }
 
 bool ReplayController::capturing() const

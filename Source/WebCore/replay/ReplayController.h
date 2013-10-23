@@ -75,7 +75,7 @@ namespace WebCore {
     class ReplayController : public EventLoopInputDispatcherClient {
         WTF_MAKE_NONCOPYABLE(ReplayController);
     public:
-        ReplayController(Page*);
+        ReplayController(Page&);
         ~ReplayController();
 
         // Main API
@@ -104,7 +104,7 @@ namespace WebCore {
         ErrorStrategy errorStrategy() const { return m_errorStrategy; }
         void setErrorStrategy(ErrorStrategy mode) { m_errorStrategy = mode; }
 
-        Page* page() const { return m_page; }
+        Page& page() const { return m_page; }
         CacheController& cacheController() const;
         PassRefPtr<ReplayRecording> loadedRecording() const;
 
@@ -124,7 +124,7 @@ namespace WebCore {
 
         EventLoopInputDispatcher& dispatcher() const;
 
-        Page* m_page;
+        Page& m_page;
 
         int m_nextRecordingId;
         RefPtr<ReplayRecording> m_loadedRecording;

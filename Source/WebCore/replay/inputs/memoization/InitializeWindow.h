@@ -61,7 +61,7 @@ public:
 
     int width() const { return m_width; }
     int height() const { return m_height; }
-    static PassOwnPtr<InitializeWindow> createFromPage(Page*);
+    static PassOwnPtr<InitializeWindow> createFromPage(const Page&);
 private:
     int m_width;
     int m_height;

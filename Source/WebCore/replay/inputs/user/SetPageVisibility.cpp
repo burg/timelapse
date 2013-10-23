@@ -93,8 +93,7 @@ String SetPageVisibility::toString() const
 
 void SetPageVisibility::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
-    controller.page()->userInputProxy().setPageVisibility(m_visibilityState, m_isInitialState, true);
+    controller.page().userInputProxy().setPageVisibility(m_visibilityState, m_isInitialState, true);
 }
 
 void InputCoder<SetPageVisibility>::encode(EncoderContext& encoder, const SetPageVisibility& input)

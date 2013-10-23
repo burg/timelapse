@@ -108,11 +108,10 @@ String ScrollPage::toString() const
 
 void ScrollPage::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
     if (isLogicalScroll())
-        controller.page()->userInputProxy().scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
+        controller.page().userInputProxy().scrollRecursivelyLogical(logicalScrollDirection(), scrollGranularity(), true);
     else
-        controller.page()->userInputProxy().scrollRecursively(scrollDirection(), scrollGranularity(), true);
+        controller.page().userInputProxy().scrollRecursively(scrollDirection(), scrollGranularity(), true);
 }
 
 void InputCoder<ScrollPage>::encode(EncoderContext& encoder, const ScrollPage& input)

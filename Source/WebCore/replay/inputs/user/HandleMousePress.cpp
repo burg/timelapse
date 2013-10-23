@@ -51,8 +51,7 @@ const AtomicString& HandleMousePress::type() const
 
 void HandleMousePress::dispatch(ReplayController& controller)
 {
-    ASSERT(controller.page());
-    controller.page()->userInputProxy().handleMousePressEvent(platformEvent(), true);
+    controller.page().userInputProxy().handleMousePressEvent(platformEvent(), true);
 }
 
 void InputCoder<HandleMousePress>::encode(EncoderContext& encoder, const HandleMousePress& input)

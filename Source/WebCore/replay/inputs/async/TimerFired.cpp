@@ -62,7 +62,7 @@ String TimerFired::toString() const
 
 void TimerFired::dispatch(ReplayController& controller)
 {
-    Document* document = documentFromFrameIndex(controller.page(), m_frameIndex);
+    Document* document = documentFromFrameIndex(&controller.page(), m_frameIndex);
 
     //get the timer from SEC and fire it.
     DOMTimer* timer = document->findTimeout(m_timerId);
