@@ -33,6 +33,7 @@
 #include "EventLoopInputDispatcher.h"
 
 #if ENABLE(WEB_REPLAY)
+
 #include "EventLoopInput.h"
 #include "Logging.h"
 #include "Page.h"
@@ -49,12 +50,10 @@ EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterat
     , m_client(client)
     , m_iterator(it)
     , m_timer(this, &EventLoopInputDispatcher::timerFired)
-    , m_waitingInput(0)
     , m_runningInput(0)
     , m_dispatching(false)
     , m_running(false)
-    , m_executionTicksCount(0)
-    , m_executionTicksQuota(0)
+    , m_elapsedTicks(0)
     , m_mode(FullSpeed)
     , m_currentMark(0)
     , m_previousDispatchStartTime(0.0)
@@ -77,7 +76,7 @@ void EventLoopInputDispatcher::run()
     m_running = true;
 
     LOG(DeterministicReplay, "%-20s Running...\n", "ReplayEvents");
-    maybeDispatchInput();
+    dispatchInputSoon();
 }
 
 void EventLoopInputDispatcher::pause()
@@ -94,85 +93,32 @@ void EventLoopInputDispatcher::pause()
 
 void EventLoopInputDispatcher::incrementExecutionTicks()
 {
-    m_executionTicksCount++;
-    m_executionTicksQuota--;
-
     // Ticks should not be added if we are not dispatching an event loop input.
-    ASSERT(m_dispatching);
+    ASSERT(m_dispatching && m_runningInput);
 
-    if (m_executionTicksQuota < 0) {
-        if (m_timer.isActive()) {
-            // Fire the timer early to try and inject the next event before the "willDispatchEvent" event happens.
-            m_timer.stop();
-            syncDispatchInput();
-        } else {
-            // This usually indicates nondeterministic APIs, or reordering of dispatchable inputs and DOM events.
-            String errorMessage = String::format("more DOM events were dispatched (%d) than expected (%d) before the next input.", m_runningInput->executionTicksQuota(), m_runningInput->executionTicksQuota()-1);
-            m_client->playbackError(false, errorMessage);
-        }
-    }
-}
+    m_elapsedTicks++;
 
-void EventLoopInputDispatcher::maybeDispatchInput()
-{
-    // If an input is presently being dispatched, abort.
-    if (!m_running || m_runningInput)
-        return;
-
-    // If there was an error between now the previous dispatch, report it now.
-    if (m_iterator->hasError()) {
-        // TODO: Some errors should be recoverable, but for now they are all fatal.
-        m_client->playbackError(true, m_iterator->errorMessage());
-        return;
-    }
-
-    if (!m_waitingInput)
-        m_waitingInput = static_cast<EventLoopInput*>(m_iterator->uncheckedLoadInput(NondeterministicInput::EventLoopInputQueue));
-
-    ASSERT(m_waitingInput);
-    m_currentMark = m_waitingInput->mark();
-
-    DEFINE_STATIC_LOCAL(const AtomicString, endSentinel, ("EndSentinel", AtomicString::ConstructFromLiteral));
-
-    if (m_waitingInput->type() == endSentinel) {
-        m_client->didDispatchFinalInput();
-        return;
-    }
-
-    // If this event is overdue, then the replay has diverged.
-    if (m_waitingInput->dispatchCounted() && m_waitingInput->executionTicksCount() < m_executionTicksCount) {
-        String errorMessage = String::format("Next input should be injected after %d retired DOM events, but %d DOM events have retired.",
-                                             m_waitingInput->executionTicksCount(),
-                                             m_executionTicksCount);
-
+    if (m_runningInput->executionTicksQuota() < m_elapsedTicks) {
+        // This usually indicates nondeterministic APIs, or reordering of dispatchable inputs and DOM events.
+        String errorMessage = String::format("OVERFLOW: more DOM events were dispatched (%d) than expected (%d) before the next input.", m_elapsedTicks, m_runningInput->executionTicksQuota());
         m_client->playbackError(false, errorMessage);
     }
-
-    m_client->willDispatchInput(*m_waitingInput);
-    if (!m_running) // Could be changed by client in the previous call, so re-check.
-        return;
-
-    // If this event is next in line or overdue, promote it to "running", then fire immediately.
-    if (!m_waitingInput->dispatchCounted() || m_waitingInput->executionTicksCount() <= m_executionTicksCount) {
-        m_runningInput = m_waitingInput;
-        m_waitingInput = 0;
-        asyncDispatchInput();
-    }
-
-    // Otherwise, it will be considered for dispatch after every future tick.
-    else
-        LOG(DeterministicReplay, "%-20s Waiting to dispatch next input (current: %d@; target: %d@).\n",
-            "ReplayEvents", m_executionTicksCount, m_waitingInput->executionTicksCount());
 }
 
 void EventLoopInputDispatcher::timerFired(Timer<EventLoopInputDispatcher>*)
 {
-    syncDispatchInput();
+    dispatchInput();
 }
 
-void EventLoopInputDispatcher::asyncDispatchInput()
+void EventLoopInputDispatcher::dispatchInputSoon()
 {
-    ASSERT(m_runningInput);
+    ASSERT(m_running);
+
+    // We may already have an input if replay was paused just before dispatching.
+    if (!m_runningInput) {
+        m_runningInput = static_cast<EventLoopInput*>(m_iterator->uncheckedLoadInput(NondeterministicInput::EventLoopInputQueue));
+        m_currentMark = m_runningInput->mark();
+    }
 
     if (m_timer.isActive())
         m_timer.stop();
@@ -198,13 +144,13 @@ void EventLoopInputDispatcher::asyncDispatchInput()
         double elapsed = monotonicallyIncreasingTime() - m_previousDispatchStartTime;
         double waitInterval = targetInterval - elapsed;
 
-        // a negative wait time means that dispatch took longer on replay than on
+        // A negative wait time means that dispatch took longer on replay than on
         // capture. In this case, proceed without waiting at all (subject to
         // the nonzero interval condition as in the FullSpeed replay mode).
         if (waitInterval < 0.0)
             waitInterval = (1.0 * 0.001);
 
-        LOG(DeterministicReplay, "%-20s (WAIT: %.3f ms)", "ReplayEvents", waitInterval*1000.0);
+        LOG(DeterministicReplay, "%-20s (WAIT: %.3f ms)", "ReplayEvents", waitInterval * 1000.0);
 
         if (waitInterval > 1000.0) {
             LOG_ERROR("%-20s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
@@ -218,28 +164,55 @@ void EventLoopInputDispatcher::asyncDispatchInput()
     }
 }
 
-void EventLoopInputDispatcher::syncDispatchInput()
+void EventLoopInputDispatcher::dispatchInput()
 {
-    ASSERT(m_runningInput);
+    ASSERT(m_runningInput && m_runningInput->sealed());
+    ASSERT(!m_dispatching);
 
     if (m_mode == Realtime) {
         m_previousDispatchStartTime = monotonicallyIncreasingTime();
         m_previousMarkTime = m_runningInput->mark().time();
     }
-    m_executionTicksQuota = m_runningInput->executionTicksQuota();
-    LOG(DeterministicReplay, "%-20s ----------------------------------------------",
-                   "ReplayEvents");
-    LOG(DeterministicReplay, "%-20s >DISPATCH: %s\n", "ReplayEvents",
-                   m_runningInput->toString().utf8().data());
+    LOG(DeterministicReplay, "%-20s ----------------------------------------------", "ReplayEvents");
+    LOG(DeterministicReplay, "%-20s >DISPATCH: %s\n", "ReplayEvents", m_runningInput->toString().utf8().data());
 
-    ASSERT(!m_dispatching);
-    ASSERT(m_runningInput->sealed());
-    TemporaryChange<bool> change(m_dispatching, true);
-    m_runningInput->dispatch(m_page->replayController());
-    m_client->didDispatchInput(*m_runningInput);
+    m_client->willDispatchInput(*m_runningInput);
+    // Client could stop replay in the previous callback, so check again.
+    if (!m_running)
+        return;
+
+    {
+        m_elapsedTicks = 0;
+        TemporaryChange<bool> change(m_dispatching, true);
+        m_runningInput->dispatch(m_page->replayController());
+    }
+
+    EventLoopInput* dispatchedInput = m_runningInput;
     m_runningInput = 0;
 
-    maybeDispatchInput();
+    // Notify clients that the event was dispatched.
+    m_client->didDispatchInput(*dispatchedInput);
+    DEFINE_STATIC_LOCAL(const AtomicString, endSentinel, ("EndSentinel", AtomicString::ConstructFromLiteral));
+    if (dispatchedInput->type() == endSentinel) {
+        m_client->didDispatchFinalInput();
+        return;
+    }
+
+    // Check for DOM event underflow.
+    if (dispatchedInput->executionTicksQuota() > m_elapsedTicks) {
+        String errorMessage = String::format("UNDERFLOW: fewer DOM events were dispatched (%d) than expected (%d) before the next input.", m_elapsedTicks, dispatchedInput->executionTicksQuota());
+        m_client->playbackError(false, errorMessage);
+    }
+
+    // If there was a memoization error, report it now.
+    if (m_iterator->hasError())
+        m_client->playbackError(true, m_iterator->errorMessage());
+
+    // Clients could stop replay during event dispatch, or from any callback above.
+    if (!m_running)
+        return;
+
+    dispatchInputSoon();
 }
 
 }; // namespace WebCore

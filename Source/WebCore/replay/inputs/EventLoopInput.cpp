@@ -78,7 +78,6 @@ Document* documentFromFrameIndex(Page* page, int frameIndex)
 
 void EventLoopInput::serializeDispatchInfo(EncoderContext& encoder) const
 {
-    encoder.put("dispatchCount", m_executionTicksCount);
     encoder.put("domEventQuota", m_executionTicksQuota);
     encoder.put("markIndex", m_mark.index());
     encoder.put("markTimestamp", m_mark.time());

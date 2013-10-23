@@ -45,9 +45,8 @@ class ReplayController;
 class PlaybackError : public EventLoopInput {
 
 public:
-    PlaybackError(String errorMessage, bool dispatchCounted=false)
-    : EventLoopInput(dispatchCounted)
-    , m_errorMessage(errorMessage) {}
+    PlaybackError(String errorMessage)
+    : m_errorMessage(errorMessage) {}
 
     virtual ~PlaybackError() {};
 

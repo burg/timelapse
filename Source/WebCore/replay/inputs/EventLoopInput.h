@@ -70,26 +70,15 @@ Document* documentFromFrameIndex(Page* page, int frameIndex);
 class EventLoopInput : public NondeterministicInput {
 
 public:
-    EventLoopInput(int ticksCount, const PositionMark& mark)
-    : m_executionTicksCount(ticksCount)
-    , m_executionTicksQuota(-1)
+    EventLoopInput(const PositionMark& mark)
+    : m_executionTicksQuota(-1)
     , m_mark(mark)
-    , m_sealed(false)
-    , m_dispatchCounted(true) {}
+    , m_sealed(false) {}
 
     EventLoopInput()
-    : m_executionTicksCount(-1)
-    , m_executionTicksQuota(-1)
+    : m_executionTicksQuota(-1)
     , m_mark(PositionMark())
-    , m_sealed(false)
-    , m_dispatchCounted(true) {}
-
-    EventLoopInput(bool dispatchCounted)
-    : m_executionTicksCount(0)
-    , m_executionTicksQuota(0)
-    , m_mark(PositionMark())
-    , m_sealed(true)
-    , m_dispatchCounted(dispatchCounted) {}
+    , m_sealed(false) {}
 
     virtual ~EventLoopInput() {};
 
@@ -103,11 +92,8 @@ public:
     virtual bool isUserVisible() const { return true; }
     virtual void serializeDispatchInfo(EncoderContext&) const;
 
-    // Mark, dispatch count, and quota are only known at construction time during replay.
+    // Mark and tick quota are only known at construction time during replay.
     // During capture, these are set when the following event loop input is captured.
-
-    void setExecutionTicksCount(unsigned count) { ASSERT(!m_sealed); m_executionTicksCount = count; }
-    virtual int executionTicksCount() const { return m_executionTicksCount; }
 
     void setMark(const PositionMark& mark) { ASSERT(!m_sealed); m_mark = mark; }
     PositionMark mark() const { return m_mark; }
@@ -115,12 +101,9 @@ public:
     void setExecutionTicksQuota(unsigned quota) { ASSERT(!m_sealed); m_executionTicksQuota = quota; }
     int executionTicksQuota() const { return m_executionTicksQuota; }
 
-    bool dispatchCounted() const { return m_dispatchCounted; }
-
     void seal()
     {
         ASSERT(m_executionTicksQuota > -1);
-        ASSERT(m_executionTicksCount > -1);
         ASSERT(!m_sealed);
 
         m_sealed = true;
@@ -132,15 +115,9 @@ private:
     // For debugging purposes, we count the number of execution ticks before
     // this input is dispatched,and the number of ticks that happen as a
     // result of dispatching the event.
-    int m_executionTicksCount;
     int m_executionTicksQuota;
     PositionMark m_mark;
     bool m_sealed;
-    // Whether or not this is a "real" event loop input.
-    // PlaybackError is the only input for which this is false.
-    // FIXME: is this actually necessary?
-    bool m_dispatchCounted;
-
 };
 
 } //namespace WebCore

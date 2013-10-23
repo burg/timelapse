@@ -66,7 +66,7 @@ CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
 : m_storage(storage)
 , m_page(page)
 , m_previousEventLoopInput(0)
-, m_executionTicksCount(0)
+, m_elapsedTicks(0)
 , m_isActive(true)
 , m_withinInputExtent(false)
 {
@@ -93,7 +93,7 @@ PassOwnPtr<CaptureInputIterator> CaptureInputIterator::create(InputStorage* stor
 void CaptureInputIterator::incrementExecutionTicks()
 {
     ASSERT(withinInputExtent());
-    m_executionTicksCount += 1;
+    m_elapsedTicks += 1;
 }
 
 void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
@@ -103,7 +103,6 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
 
     if (input->queue() == NondeterministicInput::EventLoopInputQueue) {
         EventLoopInput* eventLoopInput = static_cast<EventLoopInput*>(input.get());
-        eventLoopInput->setExecutionTicksCount(m_executionTicksCount);
         if (m_previousEventLoopInput)
             finalizePreviousInput();
         m_previousEventLoopInput = eventLoopInput;
@@ -115,14 +114,14 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
 
 NondeterministicInput* CaptureInputIterator::loadInput(NondeterministicInput::QueueType, const AtomicString&)
 {
-    // can't load inputs from capturing iterator.
+    // Can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();
     return 0;
 }
 
 NondeterministicInput* CaptureInputIterator::uncheckedLoadInput(NondeterministicInput::QueueType)
 {
-    // can't load inputs from capturing iterator.
+    // Can't load inputs from capturing iterator.
     ASSERT_NOT_REACHED();
     return 0;
 }
@@ -135,9 +134,9 @@ void CaptureInputIterator::setIsActive(bool state)
 
 void CaptureInputIterator::finalizePreviousInput()
 {
-    int ticksQuota = m_executionTicksCount - m_previousEventLoopInput->executionTicksCount();
-    m_previousEventLoopInput->setExecutionTicksQuota(ticksQuota);
+    m_previousEventLoopInput->setExecutionTicksQuota(m_elapsedTicks);
     m_previousEventLoopInput->seal();
+    m_elapsedTicks = 0;
 }
 
 }; // namespace WebCore

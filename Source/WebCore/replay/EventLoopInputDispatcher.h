@@ -79,12 +79,11 @@ public:
     const PositionMark& currentMark() const { return m_currentMark; }
 
     void incrementExecutionTicks();
-    void maybeDispatchInput();
 
 private:
     EventLoopInputDispatcher(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
-    void asyncDispatchInput();
-    void syncDispatchInput();
+    void dispatchInputSoon();
+    void dispatchInput();
     void timerFired(Timer<EventLoopInputDispatcher>*);
 
     Page* m_page;
@@ -92,16 +91,12 @@ private:
     ReplayInputIterator* m_iterator;
     Timer<EventLoopInputDispatcher> m_timer;
 
-    EventLoopInput* m_waitingInput;
     // This pointer is valid when an event loop input is presently dispatching.
     EventLoopInput* m_runningInput;
     bool m_dispatching;
     bool m_running;
 
-    int m_executionTicksCount;
-    // Used during replay to check whether the correct number of events were dispatched.
-    int m_executionTicksQuota;
-
+    int m_elapsedTicks;
     ReplayMode m_mode;
     PositionMark m_currentMark;
     // The time at which the last input dispatch() method was called.

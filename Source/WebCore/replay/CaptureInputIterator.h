@@ -85,7 +85,7 @@ private:
     Page* m_page;
 
     EventLoopInput* m_previousEventLoopInput;
-    int m_executionTicksCount;
+    int m_elapsedTicks;
     bool m_isActive;
     bool m_withinInputExtent;
 };
