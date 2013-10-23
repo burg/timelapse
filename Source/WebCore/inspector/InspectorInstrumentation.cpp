@@ -418,10 +418,6 @@ void InspectorInstrumentation::didDispatchEventImpl(const InspectorInstrumentati
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
-#if ENABLE(WEB_REPLAY)
-    if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
-        replayAgent->didDispatchEvent();
-#endif // ENABLE(WEB_REPLAY)
 }
 
 InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWindowImpl(InstrumentingAgents* instrumentingAgents, const Event& event, DOMWindow* window)
@@ -443,10 +439,6 @@ void InspectorInstrumentation::didDispatchEventOnWindowImpl(const InspectorInstr
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
-#if ENABLE(WEB_REPLAY)
-    if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
-        replayAgent->didDispatchEvent();
-#endif // ENABLE(WEB_REPLAY)
 }
 
 InspectorInstrumentationCookie InspectorInstrumentation::willEvaluateScriptImpl(InstrumentingAgents* instrumentingAgents, const String& url, int lineNumber, Frame* frame)

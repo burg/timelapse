@@ -361,12 +361,6 @@ void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const
     it->incrementExecutionTicks();
 }
 
-void ReplayController::didDispatchEvent()
-{
-    if (replaying())
-        dispatcher().maybeDispatchInput();
-}
-
 void ReplayController::frameNavigated(DocumentLoader* loader)
 {
     if (!capturing() && !replaying())

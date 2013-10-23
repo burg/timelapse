@@ -88,7 +88,6 @@ namespace WebCore {
 
         // External callbacks
         void willDispatchEvent(const Event&, Frame*, const PositionMark&);
-        void didDispatchEvent();
         void frameNavigated(DocumentLoader*);
 
         // EventLoopInputDispatcherClient API

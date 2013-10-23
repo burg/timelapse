@@ -109,12 +109,6 @@ void InspectorReplayAgent::willDispatchEvent(const Event& event, Frame* frame)
         m_inspectedPage->replayController().willDispatchEvent(event, frame, reuseMark());
 }
 
-void InspectorReplayAgent::didDispatchEvent()
-{
-    if (capturing() || replaying())
-        m_inspectedPage->replayController().didDispatchEvent();
-}
-
 void InspectorReplayAgent::frameNavigated(DocumentLoader* loader)
 {
     if (capturing() || replaying())

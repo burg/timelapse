@@ -83,9 +83,8 @@ public:
     void setFrontend(InspectorFrontend*);
     void clearFrontend();
 
-    // Calls from WebKit (InspectorInstrumentation/InstrumentingAgents)
+    // Callbacks from InspectorInstrumentation.
     void willDispatchEvent(const Event&, Frame*);
-    void didDispatchEvent();
     void frameNavigated(DocumentLoader*);
 #ifndef NDEBUG
     void willCallFunction(const String&, int scriptLine, Frame*);
