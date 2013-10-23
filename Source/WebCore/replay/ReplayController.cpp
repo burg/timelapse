@@ -96,70 +96,6 @@ static void dumpEventDispatchInfo(const Event& event, Frame*, bool wasIgnored)
 }
 #endif // !LOG_DISABLED
 
-#ifndef NDEBUG
-static bool debugHookOnDomEvents(const Event& event)
-{
-    if (event.type() == eventNames().beforeunloadEvent)
-        return false;
-    if (event.type() == eventNames().blurEvent)
-        return false;
-    if (event.type() == eventNames().clickEvent)
-        return false;
-    if (event.type() == eventNames().dblclickEvent)
-        return false;
-    // DOMContentLoaded is fired by the default event handler for the main document's loadEvent.
-    if (event.type() == eventNames().DOMContentLoadedEvent)
-        return false;
-    if (event.type() == eventNames().errorEvent)
-        return false;
-    if (event.type() == eventNames().focusEvent)
-        return false;
-    if (event.type() == eventNames().keydownEvent)
-        return false;
-    if (event.type() == eventNames().keypressEvent)
-        return false;
-    if (event.type() == eventNames().keyupEvent)
-        return false;
-    if (event.type() == eventNames().loadEvent)
-        return false;
-    if (event.type() == eventNames().mousedownEvent)
-        return false;
-    if (event.type() == eventNames().mousemoveEvent)
-        return false;
-    if (event.type() == eventNames().mouseoutEvent)
-        return false;
-    if (event.type() == eventNames().mouseoverEvent)
-        return false;
-    if (event.type() == eventNames().mouseupEvent)
-        return false;
-    if (event.type() == eventNames().mousewheelEvent)
-        return false;
-    // pagehide is fired by Document::implicitClose() (I think)
-    if (event.type() == eventNames().pagehideEvent)
-        return false;
-    if (event.type() == eventNames().readystatechangeEvent)
-        return false;
-    if (event.type() == eventNames().pageshowEvent)
-        return false;
-    if (event.type() == eventNames().popstateEvent)
-        return false;
-    if (event.type() == eventNames().selectEvent)
-        return false;
-    // selectionchangeEvents are kicked off by mouse events, which
-    // enqueue selectionchange into the DocumentEventQueue. (enqueued
-    // by FrameSelection::setSelection).
-    if (event.type() == eventNames().selectionchangeEvent)
-        return false;
-    if (event.type() == eventNames().selectstartEvent)
-        return false;
-    if (event.type() == eventNames().unloadEvent)
-        return false;
-
-    return false;
-}
-#endif // !NDEBUG
-
-
 ReplayController::ReplayController(Page* page)
     : m_page(page)
     , m_nextRecordingId(1)
@@ -172,8 +108,6 @@ ReplayController::ReplayController(Page* page)
 ReplayController::~ReplayController()
 {
 }
-
-//-- capture controls
 
 void ReplayController::beginCapturing()
 {
@@ -249,12 +183,10 @@ bool ReplayController::endCapturing()
     return true;
 }
 
-//-- replay API
-
 void ReplayController::pauseAtNextMark()
 {
     ASSERT(replaying());
-    // finish all inputs with the current mark index. If the dispatcher starts to
+    // Finish all inputs with the current mark index. If the dispatcher starts to
     // dispatch an input with a different index, we will pause it first.
     m_status = ReplayUpToMarkIndex;
     m_stopBeforeMarkIndex = dispatcher().currentMark().index() + 1;
@@ -266,7 +198,7 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
 
     LOG(DeterministicReplay, "%-20s About to begin replay to mark %d.\n", "ReplayController", index);
 
-    // only undone by recording, or cancelling playback.
+    // Only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
 
     bool isBackwardsMovement = replaying() && dispatcher().currentMark().index() > index;
@@ -289,7 +221,7 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 
     LOG(DeterministicReplay, "%-20s About to begin replay to completion.\n", "ReplayController");
 
-    // only undone by recording, or cancelling playback.
+    // Only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
 
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished) {
@@ -312,11 +244,10 @@ void ReplayController::cancelPlayback()
             ASSERT_NOT_REACHED();
             break;
 
-        /* from here, we intentionally fall through the cases. Depending on the current state, we
-           need to perform some or all of the following transitions to cancel gracefully:
-
-            running --> paused --> finished --> cancelled
-        */
+        // From here, we intentionally fall through the cases. Depending on the current state, we
+        // need to perform some or all of the following transitions to cancel gracefully:
+        //
+        //    running --> paused --> finished --> cancelled
         case ReplayToStart:
         case ReplayUpToMarkIndex:
         case ReplayToCompletion:
@@ -352,11 +283,6 @@ void ReplayController::willDispatchEvent(const Event& event, Frame* frame, const
     if (shouldIgnore)
         return;
 
-#ifndef NDEBUG
-    // This is only used to break on specific event types.
-    debugHookOnDomEvents(event);
-#endif // !defined(NDEBUG)
-
     // Finally, increment the execution tick before the actual dispatch occurs.
     it->incrementExecutionTicks();
 }
@@ -368,7 +294,7 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
 
     page()->networkProxy().setExpectsPageLoad(false);
     // We store the input iterator in both Document and JSDOMWindow, so that
-    // replay state is accessible without layering violations.
+    // replay state is accessible from script and layout without layering violations.
     loader->frame()->document()->setInputIterator(m_activeIterator.get());
     loader->frame()->script().globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
@@ -430,7 +356,6 @@ void ReplayController::imageCaptured(const String& imageDataUri)
     InspectorInstrumentation::imageCaptured(m_page, imageDataUri);
 }
 
-// Private methods
 void ReplayController::resetReplayState()
 {
     LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)m_page);

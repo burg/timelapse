@@ -86,11 +86,11 @@ namespace WebCore {
         void replayToCompletion(ReplayMode mode = FullSpeed);
         void cancelPlayback();
 
-        // External callbacks
+        // Callbacks from InspectorReplayAgent.
         void willDispatchEvent(const Event&, Frame*, const PositionMark&);
         void frameNavigated(DocumentLoader*);
 
-        // EventLoopInputDispatcherClient API
+        // EventLoopInputDispatcherClient
         virtual void playbackError(bool isFatal, const String& errorMessage) OVERRIDE;
         virtual void willDispatchInput(const EventLoopInput&) OVERRIDE;
         virtual void didDispatchInput(const EventLoopInput&) OVERRIDE;
@@ -99,7 +99,6 @@ namespace WebCore {
         // FrameCamera API
         void imageCaptured(const String& imageDataUri);
 
-        // Accessors and queries
         WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
 
         ErrorStrategy errorStrategy() const { return m_errorStrategy; }
