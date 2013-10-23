@@ -47,13 +47,8 @@
 
 namespace WebCore {
 
-AsyncEventProxy::AsyncEventProxy(Page* page)
+AsyncEventProxy::AsyncEventProxy(Page& page)
 : ReplayProxy(page) {}
-
-PassOwnPtr<AsyncEventProxy> AsyncEventProxy::create(Page* page)
-{
-    return adoptPtr(new AsyncEventProxy(page));
-}
 
 void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
 {
@@ -61,7 +56,7 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEve
     if (mode() == ReplayProxy::Replaying && !fromReplay)
         return;
 
-    InputIterator* it = m_page->replayController().activeIterator();
+    InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == ReplayProxy::Capturing);
         int frameIndex = frameIndexFromDocument(frame.document());
@@ -73,20 +68,6 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEve
 #endif
 
     frame.eventHandler().mouseMoved(fakeMouseMove);
-}
-
-bool AsyncEventProxy::dispatchEvent(PassRefPtr<Event> event, PassRefPtr<EventTarget> eventTarget)
-{
-    //must dispatch differently depending on target type. Node overrides
-    //EventTarget::dispatchEvent, but DOMWindow implements this dispatch in overloaded function.
-    if (Node* node = eventTarget->toNode())
-        return node->dispatchEvent(event);
-
-    if (DOMWindow* window = eventTarget->toDOMWindow())
-        return window->dispatchEvent(event, window->document());
-
-    ASSERT_NOT_REACHED();
-    return false;
 }
 
 } // namespace WebCore

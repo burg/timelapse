@@ -51,14 +51,10 @@ class AsyncEventProxy : public ReplayProxy {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static PassOwnPtr<AsyncEventProxy> create(Page*);
+    AsyncEventProxy(Page&);
     virtual ~AsyncEventProxy() {}
 
     void dispatchFakeMouseMove(Frame&, const PlatformMouseEvent&, bool fromReplay = false);
-    static bool dispatchEvent(PassRefPtr<Event>, PassRefPtr<EventTarget>);
-
-private:
-    AsyncEventProxy(Page*);
 };
 
 } // namespace WebCore

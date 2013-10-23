@@ -54,7 +54,7 @@ class UserInputProxy : public ReplayProxy {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
-    static PassOwnPtr<UserInputProxy> create(Page*);
+    UserInputProxy(Page&);
     virtual ~UserInputProxy() {}
 
     bool handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, const Frame* frame, bool fromReplay = false);
@@ -74,9 +74,6 @@ public:
 #if ENABLE(PAGE_VISIBILITY_API)
     void setPageVisibility(PageVisibilityState, bool isInitialState, bool fromReplay = false);
 #endif
-
-private:
-    UserInputProxy(Page*);
 };
 
 } // namespace WebCore

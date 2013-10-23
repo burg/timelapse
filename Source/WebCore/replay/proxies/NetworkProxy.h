@@ -48,9 +48,8 @@ typedef std::pair<RefPtr<ResourceHandle>, ResourceHandleClient*> HandleContext;
 
 class NetworkProxy : public ReplayProxy {
     WTF_MAKE_NONCOPYABLE(NetworkProxy);
-
 public:
-    static PassOwnPtr<NetworkProxy> create(Page*);
+    NetworkProxy(Page&);
     virtual ~NetworkProxy();
 
 #if ENABLE(WEB_REPLAY)
@@ -63,18 +62,15 @@ public:
     // or controller->replaying() becoming true.
     bool expectsPageLoad() const { return m_expectsPageLoad; }
     void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
-#endif // ENABLE(WEB_REPLAY)
+#endif
 
     PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, int loaderId, bool, bool);
-
 private:
-    NetworkProxy(Page*);
-
 #if ENABLE(WEB_REPLAY)
     int m_nextId;
     bool m_expectsPageLoad;
     HashMap<int, HandleContext> m_replayHandleMap;
-#endif // ENABLE(WEB_REPLAY)
+#endif
 };
 
 } // namespace WebCore

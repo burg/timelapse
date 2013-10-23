@@ -460,12 +460,12 @@ private:
 #if ENABLE(CONTEXT_MENUS)
     const std::unique_ptr<ContextMenuController> m_contextMenuController;
 #endif
-    const OwnPtr<NavigationProxy> m_navigationProxy;
-    const OwnPtr<NetworkProxy> m_networkProxy;
-    const OwnPtr<AsyncEventProxy> m_asyncEventProxy;
-    const OwnPtr<UserInputProxy> m_userInputProxy;
+    const std::unique_ptr<NavigationProxy> m_navigationProxy;
+    const std::unique_ptr<NetworkProxy> m_networkProxy;
+    const std::unique_ptr<AsyncEventProxy> m_asyncEventProxy;
+    const std::unique_ptr<UserInputProxy> m_userInputProxy;
 #if ENABLE(WEB_REPLAY)
-    const OwnPtr<ReplayController> m_replayController;
+    const std::unique_ptr<ReplayController> m_replayController;
 #endif
 #if ENABLE(INSPECTOR)
     OwnPtr<InspectorController> m_inspectorController;

@@ -49,14 +49,9 @@
 
 namespace WebCore {
 
-NavigationProxy::NavigationProxy(Page* page)
+NavigationProxy::NavigationProxy(Page& page)
 : ReplayProxy(page)
 {}
-
-PassOwnPtr<NavigationProxy> NavigationProxy::create(Page* page)
-{
-    return adoptPtr(new NavigationProxy(page));
-}
 
 void NavigationProxy::loadURLRequest(const FrameLoadRequest& request, bool fromReplay)
 {
@@ -64,7 +59,7 @@ void NavigationProxy::loadURLRequest(const FrameLoadRequest& request, bool fromR
     if (!fromReplay && mode() == Replaying)
         return;
 
-    InputIterator* it = m_page->replayController().activeIterator();
+    InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
         it->storeInput(adoptPtr(new LoadURLRequest(request)));
@@ -74,7 +69,7 @@ void NavigationProxy::loadURLRequest(const FrameLoadRequest& request, bool fromR
     UNUSED_PARAM(fromReplay);
 #endif
 
-    m_page->mainFrame().loader().load(request);
+    m_page.mainFrame().loader().load(request);
 }
 
 void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay)
@@ -83,7 +78,7 @@ void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromRe
     if (!fromReplay && mode() == Replaying)
         return;
 
-    InputIterator* it = m_page->replayController().activeIterator();
+    InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
         int frameIndex = frameIndexFromDocument(frame->document());
@@ -94,7 +89,6 @@ void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromRe
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     frame->loader().reload(endToEndReload);
 }
 
@@ -104,7 +98,7 @@ void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
     if (!fromReplay && mode() == Replaying)
         return;
 
-    InputIterator* it = m_page->replayController().activeIterator();
+    InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
         int frameIndex = frameIndexFromDocument(frame->document());
@@ -115,7 +109,6 @@ void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
     UNUSED_PARAM(fromReplay);
 #endif
 
-    // do dispatch
     frame->loader().stopForUserCancel();
 }
 

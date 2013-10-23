@@ -53,14 +53,14 @@ public:
     ProxyMode mode() const { return m_mode; }
 
 protected:
-    ReplayProxy(Page* page)
+    ReplayProxy(Page& page)
     : m_page(page)
     , m_mode(Open) {}
 
-    Page* m_page;
+    Page& m_page;
     ProxyMode m_mode;
 };
-    
+
 } // namespace WebCore
 
 #endif // ReplayProxy_h

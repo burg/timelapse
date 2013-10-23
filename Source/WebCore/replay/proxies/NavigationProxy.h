@@ -46,14 +46,12 @@ class NavigationProxy : public ReplayProxy {
     WTF_MAKE_NONCOPYABLE(NavigationProxy);
 
 public:
-    static PassOwnPtr<NavigationProxy> create(Page*);
+    NavigationProxy(Page&);
     virtual ~NavigationProxy() {}
 
     void loadURLRequest(const FrameLoadRequest& request, bool fromReplay = false);
     void reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay = false);
     void stopLoadingFrame(Frame* frame, bool fromReplay = false);
-private:
-    NavigationProxy(Page*);
 };
 
 } // namespace WebCore
