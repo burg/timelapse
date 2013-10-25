@@ -48,8 +48,20 @@ using namespace std;
 
 namespace WebCore {
 
-RenderRegion::RenderRegion(Element* element, RenderFlowThread* flowThread)
+RenderRegion::RenderRegion(Element& element, RenderFlowThread* flowThread)
     : RenderBlockFlow(element)
+    , m_flowThread(flowThread)
+    , m_parentNamedFlowThread(0)
+    , m_isValid(false)
+    , m_hasCustomRegionStyle(false)
+    , m_hasAutoLogicalHeight(false)
+    , m_hasComputedAutoHeight(false)
+    , m_computedAutoHeight(0)
+{
+}
+
+RenderRegion::RenderRegion(Document& document, RenderFlowThread* flowThread)
+    : RenderBlockFlow(document)
     , m_flowThread(flowThread)
     , m_parentNamedFlowThread(0)
     , m_isValid(false)
@@ -528,7 +540,7 @@ void RenderRegion::restoreRegionObjectsOriginalStyle()
         RefPtr<RenderStyle> objectRegionStyle = object->style();
         RefPtr<RenderStyle> objectOriginalStyle = iter->value.style;
         if (object->isRenderElement())
-            toRenderElement(object)->setStyleInternal(objectOriginalStyle);
+            toRenderElement(object)->setStyleInternal(*objectOriginalStyle);
 
         bool shouldCacheRegionStyle = iter->value.cached;
         if (!shouldCacheRegionStyle) {
@@ -609,7 +621,7 @@ void RenderRegion::setObjectStyleInRegion(RenderObject* object, PassRefPtr<Rende
 
     RefPtr<RenderStyle> objectOriginalStyle = object->style();
     if (object->isRenderElement())
-        toRenderElement(object)->setStyleInternal(styleInRegion);
+        toRenderElement(object)->setStyleInternal(*styleInRegion);
 
     if (object->isBoxModelObject() && !object->hasBoxDecorations()) {
         bool hasBoxDecorations = object->isTableCell()
@@ -682,7 +694,7 @@ void RenderRegion::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderRegion::getRanges(Vector<RefPtr<Range> >& rangeObjects) const
+void RenderRegion::getRanges(Vector<RefPtr<Range>>& rangeObjects) const
 {
     const RenderNamedFlowThread& namedFlow = view().flowThreadController().ensureRenderFlowThreadWithName(style()->regionThread());
     namedFlow.getRanges(rangeObjects, this);
@@ -717,6 +729,16 @@ void RenderRegion::updateLogicalHeight()
         RenderBlockFlow::updateLogicalHeight();
     }
 }
+
+void RenderRegion::adjustRegionBoundsFromFlowThreadPortionRect(const IntPoint& layerOffset, IntRect& regionBounds)
+{
+    LayoutRect flippedFlowThreadPortionRect = flowThreadPortionRect();
+    flowThread()->flipForWritingMode(flippedFlowThreadPortionRect);
+    regionBounds.moveBy(roundedIntPoint(flippedFlowThreadPortionRect.location()));
+
+    UNUSED_PARAM(layerOffset);
+}
+
 
 RenderOverflow* RenderRegion::ensureOverflowForBox(const RenderBox* box)
 {

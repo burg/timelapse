@@ -52,7 +52,7 @@ public:
 
     virtual bool applyResource(RenderObject*, RenderStyle*, GraphicsContext*&, unsigned short resourceMode) OVERRIDE FINAL;
     virtual void postApplyResource(RenderObject*, GraphicsContext*&, unsigned short resourceMode, const Path*, const RenderSVGShape*) OVERRIDE FINAL;
-    virtual FloatRect resourceBoundingBox(RenderObject*) OVERRIDE FINAL { return FloatRect(); }
+    virtual FloatRect resourceBoundingBox(const RenderObject&) OVERRIDE FINAL { return FloatRect(); }
 
 protected:
     explicit RenderSVGResourceGradient(SVGGradientElement&);
@@ -70,7 +70,7 @@ protected:
 
 private:
     bool m_shouldCollectGradientAttributes : 1;
-    HashMap<RenderObject*, OwnPtr<GradientData> > m_gradientMap;
+    HashMap<RenderObject*, OwnPtr<GradientData>> m_gradientMap;
 
 #if USE(CG)
     GraphicsContext* m_savedContext;

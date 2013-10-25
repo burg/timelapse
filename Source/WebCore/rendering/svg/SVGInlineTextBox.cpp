@@ -106,9 +106,9 @@ float SVGInlineTextBox::positionForOffset(int) const
     return 0;
 }
 
-FloatRect SVGInlineTextBox::selectionRectForTextFragment(const SVGTextFragment& fragment, int startPosition, int endPosition, RenderStyle* style)
+FloatRect SVGInlineTextBox::selectionRectForTextFragment(const SVGTextFragment& fragment, int startPosition, int endPosition, RenderStyle* style) const
 {
-    ASSERT(startPosition < endPosition);
+    ASSERT_WITH_SECURITY_IMPLICATION(startPosition < endPosition);
     ASSERT(style);
 
     FontCachePurgePreventer fontCachePurgePreventer;
@@ -132,7 +132,7 @@ FloatRect SVGInlineTextBox::selectionRectForTextFragment(const SVGTextFragment& 
     return selectionRect;
 }
 
-LayoutRect SVGInlineTextBox::localSelectionRect(int startPosition, int endPosition)
+LayoutRect SVGInlineTextBox::localSelectionRect(int startPosition, int endPosition) const
 {
     int boxStart = start();
     startPosition = max(startPosition - boxStart, 0);
@@ -331,10 +331,9 @@ void SVGInlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint&, LayoutUni
     ASSERT(!m_paintingResource);
 }
 
-bool SVGInlineTextBox::acquirePaintingResource(GraphicsContext*& context, float scalingFactor, RenderObject* renderer, RenderStyle* style)
+bool SVGInlineTextBox::acquirePaintingResource(GraphicsContext*& context, float scalingFactor, RenderBoxModelObject& renderer, RenderStyle* style)
 {
     ASSERT(scalingFactor);
-    ASSERT(renderer);
     ASSERT(style);
     ASSERT(m_paintingResourceMode != ApplyToDefaultMode);
 
@@ -351,13 +350,13 @@ bool SVGInlineTextBox::acquirePaintingResource(GraphicsContext*& context, float 
     if (!m_paintingResource)
         return false;
 
-    if (!m_paintingResource->applyResource(renderer, style, context, m_paintingResourceMode)) {
+    if (!m_paintingResource->applyResource(&renderer, style, context, m_paintingResourceMode)) {
         if (fallbackColor.isValid()) {
             RenderSVGResourceSolidColor* fallbackResource = RenderSVGResource::sharedSolidPaintingResource();
             fallbackResource->setColor(fallbackColor);
 
             m_paintingResource = fallbackResource;
-            m_paintingResource->applyResource(renderer, style, context, m_paintingResourceMode);
+            m_paintingResource->applyResource(&renderer, style, context, m_paintingResourceMode);
         }
     }
 
@@ -378,7 +377,7 @@ void SVGInlineTextBox::releasePaintingResource(GraphicsContext*& context, const 
 
 bool SVGInlineTextBox::prepareGraphicsContextForTextPainting(GraphicsContext*& context, float scalingFactor, TextRun& textRun, RenderStyle* style)
 {
-    bool acquiredResource = acquirePaintingResource(context, scalingFactor, &parent()->renderer(), style);
+    bool acquiredResource = acquirePaintingResource(context, scalingFactor, parent()->renderer(), style);
     if (!acquiredResource)
         return false;
 
@@ -418,7 +417,7 @@ TextRun SVGInlineTextBox::constructTextRun(RenderStyle* style, const SVGTextFrag
                 , dirOverride() || style->rtlOrdering() == VisualOrder /* directionalOverride */);
 
     if (textRunNeedsRenderingContext(style->font()))
-        run.setRenderingContext(SVGTextRunRenderingContext::create(&renderer()));
+        run.setRenderingContext(SVGTextRunRenderingContext::create(renderer()));
 
     run.disableRoundingHacks();
 
@@ -454,7 +453,7 @@ bool SVGInlineTextBox::mapStartEndPositionsIntoFragmentCoordinates(const SVGText
         endPosition -= offset;
     }
 
-    ASSERT(startPosition < endPosition);
+    ASSERT_WITH_SECURITY_IMPLICATION(startPosition < endPosition);
     return true;
 }
 
@@ -480,21 +479,21 @@ static inline float thicknessForDecoration(TextDecoration, const Font& font)
     return font.size() / 20.0f;
 }
 
-static inline RenderObject* findRenderObjectDefininingTextDecoration(InlineFlowBox* parentBox)
+static inline RenderBoxModelObject& findRendererDefininingTextDecoration(InlineFlowBox* parentBox)
 {
     // Lookup first render object in parent hierarchy which has text-decoration set.
-    RenderObject* renderer = 0;
+    RenderBoxModelObject* renderer = nullptr;
     while (parentBox) {
         renderer = &parentBox->renderer();
 
-        if (renderer->style() && renderer->style()->textDecoration() != TextDecorationNone)
+        if (renderer->style()->textDecoration() != TextDecorationNone)
             break;
 
         parentBox = parentBox->parent();
     }
 
     ASSERT(renderer);
-    return renderer;
+    return *renderer;
 }
 
 void SVGInlineTextBox::paintDecoration(GraphicsContext* context, TextDecoration decoration, const SVGTextFragment& fragment)
@@ -503,8 +502,8 @@ void SVGInlineTextBox::paintDecoration(GraphicsContext* context, TextDecoration 
         return;
 
     // Find out which render style defined the text-decoration, as its fill/stroke properties have to be used for drawing instead of ours.
-    RenderObject* decorationRenderer = findRenderObjectDefininingTextDecoration(parent());
-    RenderStyle* decorationStyle = decorationRenderer->style();
+    auto& decorationRenderer = findRendererDefininingTextDecoration(parent());
+    RenderStyle* decorationStyle = decorationRenderer.style();
     ASSERT(decorationStyle);
 
     if (decorationStyle->visibility() == HIDDEN)
@@ -527,17 +526,17 @@ void SVGInlineTextBox::paintDecoration(GraphicsContext* context, TextDecoration 
     }
 }
 
-void SVGInlineTextBox::paintDecorationWithStyle(GraphicsContext* context, TextDecoration decoration, const SVGTextFragment& fragment, RenderObject* decorationRenderer)
+void SVGInlineTextBox::paintDecorationWithStyle(GraphicsContext* context, TextDecoration decoration, const SVGTextFragment& fragment, RenderBoxModelObject& decorationRenderer)
 {
     ASSERT(!m_paintingResource);
     ASSERT(m_paintingResourceMode != ApplyToDefaultMode);
 
-    RenderStyle* decorationStyle = decorationRenderer->style();
+    RenderStyle* decorationStyle = decorationRenderer.style();
     ASSERT(decorationStyle);
 
     float scalingFactor = 1;
     Font scaledFont;
-    RenderSVGInlineText::computeNewScaledFontForStyle(decorationRenderer, decorationStyle, scalingFactor, scaledFont);
+    RenderSVGInlineText::computeNewScaledFontForStyle(&decorationRenderer, decorationStyle, scalingFactor, scaledFont);
     ASSERT(scalingFactor);
 
     // The initial y value refers to overline position.

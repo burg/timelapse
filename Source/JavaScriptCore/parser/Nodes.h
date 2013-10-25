@@ -80,7 +80,7 @@ namespace JSC {
 
     namespace DeclarationStacks {
         enum VarAttrs { IsConstant = 1, HasInitializer = 2 };
-        typedef Vector<std::pair<Identifier, unsigned> > VarStack;
+        typedef Vector<std::pair<Identifier, unsigned>> VarStack;
         typedef Vector<FunctionBodyNode*> FunctionStack;
     }
 
@@ -161,6 +161,7 @@ namespace JSC {
         virtual bool isAdd() const { return false; }
         virtual bool isSubtract() const { return false; }
         virtual bool isBoolean() const { return false; }
+        virtual bool isSpreadExpression() const { return false; }
 
         virtual void emitBytecodeInConditionContext(BytecodeGenerator&, Label*, Label*, FallThroughMode);
 
@@ -479,13 +480,17 @@ namespace JSC {
 
         PropertyNode(VM*, const Identifier&, ExpressionNode*, Type);
         PropertyNode(VM*, double, ExpressionNode*, Type);
+        PropertyNode(VM*, ExpressionNode* propertyName, ExpressionNode*, Type);
+        
+        ExpressionNode* expressionName() const { return m_expression; }
+        const Identifier* name() const { return m_name; }
 
-        const Identifier& name() const { return m_name; }
         Type type() const { return m_type; }
 
     private:
         friend class PropertyListNode;
-        const Identifier& m_name;
+        const Identifier* m_name;
+        ExpressionNode* m_expression;
         ExpressionNode* m_assign;
         Type m_type;
     };
@@ -548,6 +553,19 @@ namespace JSC {
 
         ExpressionNode* m_base;
         const Identifier& m_ident;
+    };
+
+    class SpreadExpressionNode : public ExpressionNode, public ThrowableExpressionData {
+    public:
+        SpreadExpressionNode(const JSTokenLocation&, ExpressionNode*);
+        
+        ExpressionNode* expression() const { return m_expression; }
+        
+    private:
+        virtual RegisterID* emitBytecode(BytecodeGenerator&, RegisterID* = 0) OVERRIDE;
+        
+        virtual bool isSpreadExpression() const OVERRIDE { return true; }
+        ExpressionNode* m_expression;
     };
 
     class ArgumentListNode : public ExpressionNode {

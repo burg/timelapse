@@ -45,7 +45,6 @@ enum ShouldComputePreferred { ComputeActual, ComputePreferred };
 
 class RenderBox : public RenderBoxModelObject {
 public:
-    explicit RenderBox(Element*, unsigned baseTypeFlags);
     virtual ~RenderBox();
 
     // hasAutoZIndex only returns true if the element is positioned or a flex-item since
@@ -509,7 +508,7 @@ public:
     
     RenderLayer* enclosingFloatPaintingLayer() const;
     
-    virtual int firstLineBoxBaseline() const { return -1; }
+    virtual int firstLineBaseline() const { return -1; }
     virtual int inlineBlockBaseline(LineDirectionMode) const { return -1; } // Returns -1 if we should skip this box when computing the baseline of an inline-block.
 
     bool shrinkToAvoidFloats() const;
@@ -602,6 +601,9 @@ public:
 #endif
 
 protected:
+    RenderBox(Element&, unsigned baseTypeFlags);
+    RenderBox(Document&, unsigned baseTypeFlags);
+
     virtual void willBeDestroyed() OVERRIDE;
 
     virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle) OVERRIDE;
@@ -710,33 +712,7 @@ private:
     static bool s_hadOverflowClip;
 };
 
-inline RenderBox& toRenderBox(RenderObject& object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(object.isBox());
-    return static_cast<RenderBox&>(object);
-}
-
-inline const RenderBox& toRenderBox(const RenderObject& object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(object.isBox());
-    return static_cast<const RenderBox&>(object);
-}
-
-inline RenderBox* toRenderBox(RenderObject* object)
-{ 
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBox());
-    return static_cast<RenderBox*>(object);
-}
-
-inline const RenderBox* toRenderBox(const RenderObject* object)
-{ 
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBox());
-    return static_cast<const RenderBox*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderBox(const RenderBox*);
-void toRenderBox(const RenderBox&);
+RENDER_OBJECT_TYPE_CASTS(RenderBox, isBox())
 
 inline RenderBox* RenderBox::previousSiblingBox() const
 {

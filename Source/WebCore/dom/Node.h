@@ -509,9 +509,6 @@ public:
     virtual bool willRespondToMouseClickEvents();
     virtual bool willRespondToTouchEvents();
 
-    PassRefPtr<Element> querySelector(const AtomicString& selectors, ExceptionCode&);
-    PassRefPtr<NodeList> querySelectorAll(const AtomicString& selectors, ExceptionCode&);
-
     unsigned short compareDocumentPosition(Node*);
 
     virtual Node* toNode() OVERRIDE;
@@ -675,7 +672,7 @@ private:
 
     void trackForDebugging();
 
-    Vector<OwnPtr<MutationObserverRegistration> >* mutationObserverRegistry();
+    Vector<OwnPtr<MutationObserverRegistration>>* mutationObserverRegistry();
     HashSet<MutationObserverRegistration*>* transientMutationObserverRegistry();
 
     mutable uint32_t m_nodeFlags;
@@ -721,29 +718,8 @@ inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
     return parentNode();
 }
 
-#define NODE_TYPE_CASTS(NodeClassName) \
-inline const NodeClassName* to##NodeClassName(const Node* node) \
-{ \
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || is##NodeClassName(*node)); \
-    return static_cast<const NodeClassName*>(node); \
-} \
-inline NodeClassName* to##NodeClassName(Node* node) \
-{ \
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || is##NodeClassName(*node)); \
-    return static_cast<NodeClassName*>(node); \
-} \
-inline const NodeClassName& to##NodeClassName(const Node& node) \
-{ \
-    ASSERT_WITH_SECURITY_IMPLICATION(is##NodeClassName(node)); \
-    return static_cast<const NodeClassName&>(node); \
-} \
-inline NodeClassName& to##NodeClassName(Node& node) \
-{ \
-    ASSERT_WITH_SECURITY_IMPLICATION(is##NodeClassName(node)); \
-    return static_cast<NodeClassName&>(node); \
-} \
-void to##NodeClassName(const NodeClassName*); \
-void to##NodeClassName(const NodeClassName&);
+#define NODE_TYPE_CASTS(ToClassName) \
+    TYPE_CASTS_BASE(ToClassName, Node, node, WebCore::is##ToClassName(*node), WebCore::is##ToClassName(node))
 
 } // namespace WebCore
 

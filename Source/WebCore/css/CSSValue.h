@@ -250,7 +250,7 @@ private:
 };
 
 template<typename CSSValueType>
-inline bool compareCSSValueVector(const Vector<RefPtr<CSSValueType> >& firstVector, const Vector<RefPtr<CSSValueType> >& secondVector)
+inline bool compareCSSValueVector(const Vector<RefPtr<CSSValueType>>& firstVector, const Vector<RefPtr<CSSValueType>>& secondVector)
 {
     size_t size = firstVector.size();
     if (size != secondVector.size())
@@ -272,19 +272,8 @@ inline bool compareCSSValuePtr(const RefPtr<CSSValueType>& first, const RefPtr<C
     return first ? second && first->equals(*second) : !second;
 }
 
-#define CSS_VALUE_TYPE_CASTS(ValueTypeName) \
-inline const CSS##ValueTypeName* toCSS##ValueTypeName(const CSSValue* value) \
-{ \
-    ASSERT_WITH_SECURITY_IMPLICATION(!value || value->is##ValueTypeName()); \
-    return static_cast<const CSS##ValueTypeName*>(value); \
-} \
-inline CSS##ValueTypeName* toCSS##ValueTypeName(CSSValue* value) \
-{ \
-    ASSERT_WITH_SECURITY_IMPLICATION(!value || value->is##ValueTypeName()); \
-    return static_cast<CSS##ValueTypeName*>(value); \
-} \
-void toCSS##ValueTypeName(const CSS##ValueTypeName*); \
-void toCSS##ValueTypeName(const CSS##ValueTypeName&);
+#define CSS_VALUE_TYPE_CASTS(ToValueTypeName, predicate) \
+    TYPE_CASTS_BASE(ToValueTypeName, CSSValue, value, value->predicate, value.predicate)
 
 } // namespace WebCore
 

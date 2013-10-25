@@ -69,9 +69,9 @@ void SearchInputType::addSearchResult()
         toRenderSearchField(renderer)->addSearchResult();
 }
 
-RenderElement* SearchInputType::createRenderer(RenderArena& arena, RenderStyle&) const
+RenderElement* SearchInputType::createRenderer(RenderStyle&) const
 {
-    return new (arena) RenderSearchField(element());
+    return new RenderSearchField(element());
 }
 
 const AtomicString& SearchInputType::formControlType() const
@@ -162,7 +162,7 @@ void SearchInputType::startSearchEventTimer()
 
     // After typing the first key, we wait 0.5 seconds.
     // After the second key, 0.4 seconds, then 0.3, then 0.2 from then on.
-    m_searchEventTimer.startOneShot(max(0.2, 0.6 - 0.1 * length));
+    m_searchEventTimer.startOneShot(std::max(0.2, 0.6 - 0.1 * length));
 }
 
 void SearchInputType::stopSearchEventTimer()

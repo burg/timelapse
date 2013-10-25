@@ -164,15 +164,11 @@ NSString *NSAccessibilityEnhancedUserInterfaceAttribute = @"AXEnhancedUserInterf
 {
     [webFrameView release];
 
-    delete scriptDebugger;
-
     [super dealloc];
 }
 
 - (void)finalize
 {
-    delete scriptDebugger;
-
     [super finalize];
 }
 
@@ -322,20 +318,16 @@ WebView *getWebView(WebFrame *webFrame)
         return;
 
     if (_private->scriptDebugger) {
-        ASSERT(_private->scriptDebugger == globalObject->debugger());
+        ASSERT(_private->scriptDebugger.get() == globalObject->debugger());
         return;
     }
 
-    _private->scriptDebugger = new WebScriptDebugger(globalObject);
+    _private->scriptDebugger = std::make_unique<WebScriptDebugger>(globalObject);
 }
 
 - (void)_detachScriptDebugger
 {
-    if (!_private->scriptDebugger)
-        return;
-
-    delete _private->scriptDebugger;
-    _private->scriptDebugger = 0;
+    _private->scriptDebugger = nullptr;
 }
 
 - (id)_initWithWebFrameView:(WebFrameView *)fv webView:(WebView *)v
@@ -800,7 +792,8 @@ static inline WebDataSource *dataSource(DocumentLoader* loader)
     if (!_private->coreFrame || !style)
         return;
     // FIXME: We shouldn't have to create a copy here.
-    _private->coreFrame->editor().computeAndSetTypingStyle(core(style)->copyProperties().get(), undoAction);
+    Ref<MutableStylePropertySet> properties(core(style)->copyProperties());
+    _private->coreFrame->editor().computeAndSetTypingStyle(&properties.get(), undoAction);
 }
 
 #if ENABLE(DRAG_SUPPORT)

@@ -56,7 +56,6 @@
 #include <wtf/text/TextPosition.h>
 
 using namespace JSC;
-using namespace std;
 
 namespace WebCore {
 
@@ -337,7 +336,7 @@ void ScriptController::setCaptureCallStackForUncaughtExceptions(bool)
 {
 }
 
-void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::ExecState*, SecurityOrigin*> >& result)
+void ScriptController::collectIsolatedContexts(Vector<std::pair<JSC::ExecState*, SecurityOrigin*>>& result)
 {
     for (ShellMap::iterator iter = m_windowShells.begin(); iter != m_windowShells.end(); ++iter) {
         JSC::ExecState* exec = iter->value->window()->globalExec();

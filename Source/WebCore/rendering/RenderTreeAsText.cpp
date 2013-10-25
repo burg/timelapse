@@ -36,6 +36,7 @@
 #include "InlineTextBox.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
+#include "RenderBlockFlow.h"
 #include "RenderDetailsMarker.h"
 #include "RenderFileUploadControl.h"
 #include "RenderInline.h"
@@ -49,6 +50,7 @@
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "ShadowRoot.h"
+#include "SimpleLineLayoutResolver.h"
 #include "StylePropertySet.h"
 #include <wtf/HexNumber.h>
 #include <wtf/Vector.h>
@@ -244,7 +246,13 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         // many test results.
         const RenderText& text = toRenderText(o);
         IntRect linesBox = text.linesBoundingBox();
-        r = IntRect(text.firstRunX(), text.firstRunY(), linesBox.width(), linesBox.height());
+        if (text.simpleLines()) {
+            int y = linesBox.y();
+            if (text.containingBlock()->isTableCell())
+                y -= toRenderTableCell(o.containingBlock())->intrinsicPaddingBefore();
+            r = IntRect(linesBox.x(), y, linesBox.width(), linesBox.height());
+        } else
+            r = IntRect(text.firstRunX(), text.firstRunY(), linesBox.width(), linesBox.height());
         if (adjustForTableCells && !text.firstTextBox())
             adjustForTableCells = false;
     } else if (o.isBR()) {
@@ -526,6 +534,21 @@ static void writeTextRun(TextStream& ts, const RenderText& o, const InlineTextBo
     ts << "\n";
 }
 
+static void writeSimpleLine(TextStream& ts, const RenderText& o, const LayoutRect& rect, const String& text)
+{
+    int x = rect.x();
+    int y = rect.y();
+    int logicalWidth = ceilf(rect.x() + rect.width()) - x;
+
+    if (o.containingBlock()->isTableCell())
+        y -= toRenderTableCell(o.containingBlock())->intrinsicPaddingBefore();
+        
+    ts << "text run at (" << x << "," << y << ") width " << logicalWidth;
+    ts << ": "
+        << quoteAndEscapeNonPrintables(text);
+    ts << "\n";
+}
+
 void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavior behavior)
 {
 #if ENABLE(SVG)
@@ -569,16 +592,29 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
     ts << "\n";
 
     if (o.isText()) {
-        const RenderText& text = toRenderText(o);
-        for (InlineTextBox* box = text.firstTextBox(); box; box = box->nextTextBox()) {
-            writeIndent(ts, indent + 1);
-            writeTextRun(ts, text, *box);
+        auto& text = toRenderText(o);
+        if (auto lines = text.simpleLines()) {
+            ASSERT(!text.firstTextBox());
+            SimpleLineLayout::Resolver resolver(*lines, toRenderBlockFlow(*text.parent()));
+            for (auto it = resolver.begin(), end = resolver.end(); it != end; ++it) {
+                auto line = *it;
+                writeIndent(ts, indent + 1);
+                writeSimpleLine(ts, text, line.rect(), line.text());
+            }
+        } else {
+            for (auto box = text.firstTextBox(); box; box = box->nextTextBox()) {
+                writeIndent(ts, indent + 1);
+                writeTextRun(ts, text, *box);
+            }
         }
+
     } else {
-        for (RenderObject* child = toRenderElement(o).firstChild(); child; child = child->nextSibling()) {
-            if (child->hasLayer())
-                continue;
-            write(ts, *child, indent + 1, behavior);
+        if (!toRenderElement(o).isRenderNamedFlowFragmentContainer()) {
+            for (RenderObject* child = toRenderElement(o).firstChild(); child; child = child->nextSibling()) {
+                if (child->hasLayer())
+                    continue;
+                write(ts, *child, indent + 1, behavior);
+            }
         }
     }
 
@@ -668,7 +704,7 @@ static void writeRenderRegionList(const RenderRegionList& flowThreadRegionList, 
         writeIndent(ts, indent + 2);
         ts << "RenderRegion";
         if (renderRegion->generatingElement()) {
-            String tagName = getTagName(renderRegion->element());
+            String tagName = getTagName(renderRegion->generatingElement());
             if (!tagName.isEmpty())
                 ts << " {" << tagName << "}";
             if (renderRegion->generatingElement()->hasID())
@@ -728,8 +764,8 @@ static void writeLayers(TextStream& ts, const RenderLayer* rootLayer, RenderLaye
     // FIXME: Apply overflow to the root layer to not break every test.  Complete hack.  Sigh.
     LayoutRect paintDirtyRect(paintRect);
     if (rootLayer == l) {
-        paintDirtyRect.setWidth(max<LayoutUnit>(paintDirtyRect.width(), rootLayer->renderBox()->layoutOverflowRect().maxX()));
-        paintDirtyRect.setHeight(max<LayoutUnit>(paintDirtyRect.height(), rootLayer->renderBox()->layoutOverflowRect().maxY()));
+        paintDirtyRect.setWidth(std::max<LayoutUnit>(paintDirtyRect.width(), rootLayer->renderBox()->layoutOverflowRect().maxX()));
+        paintDirtyRect.setHeight(std::max<LayoutUnit>(paintDirtyRect.height(), rootLayer->renderBox()->layoutOverflowRect().maxY()));
         l->setSize(l->size().expandedTo(pixelSnappedIntSize(maxLayoutOverflow(l->renderBox()), LayoutPoint(0, 0))));
     }
     
@@ -775,18 +811,22 @@ static void writeLayers(TextStream& ts, const RenderLayer* rootLayer, RenderLaye
     if (Vector<RenderLayer*>* posList = l->posZOrderList()) {
         size_t layerCount = 0;
         for (unsigned i = 0; i != posList->size(); ++i)
-            if (!posList->at(i)->isOutOfFlowRenderFlowThread())
+            if (!posList->at(i)->isFlowThreadCollectingGraphicsLayersUnderRegions())
                 ++layerCount;
         if (layerCount) {
             int currIndent = indent;
-            if (behavior & RenderAsTextShowLayerNesting) {
-                writeIndent(ts, indent);
-                ts << " positive z-order list(" << layerCount << ")\n";
-                ++currIndent;
-            }
-            for (unsigned i = 0; i != posList->size(); ++i) {
-                if (!posList->at(i)->isOutOfFlowRenderFlowThread())
-                    writeLayers(ts, rootLayer, posList->at(i), paintDirtyRect, currIndent, behavior);
+            // We only print the header if there's at list a non-RenderNamedFlowThread part of the list.
+            if (!posList->size() || !posList->at(0)->isFlowThreadCollectingGraphicsLayersUnderRegions()) {
+                if (behavior & RenderAsTextShowLayerNesting) {
+                    writeIndent(ts, indent);
+                    ts << " positive z-order list(" << posList->size() << ")\n";
+                    ++currIndent;
+                }
+                for (unsigned i = 0; i != posList->size(); ++i) {
+                    // Do not print named flows twice.
+                    if (!posList->at(i)->isFlowThreadCollectingGraphicsLayersUnderRegions())
+                        writeLayers(ts, rootLayer, posList->at(i), paintDirtyRect, currIndent, behavior);
+                }
             }
         }
     }

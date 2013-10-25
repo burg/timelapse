@@ -81,8 +81,6 @@
 #include "TouchEvent.h"
 #endif
 
-using namespace std;
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -190,7 +188,7 @@ HTMLElement* HTMLInputElement::containerElement() const
     return m_inputType->containerElement();
 }
 
-HTMLElement* HTMLInputElement::innerTextElement() const
+TextControlInnerTextElement* HTMLInputElement::innerTextElement() const
 {
     return m_inputType->innerTextElement();
 }
@@ -791,9 +789,9 @@ bool HTMLInputElement::rendererIsNeeded(const RenderStyle& style)
     return m_inputType->rendererIsNeeded() && HTMLTextFormControlElement::rendererIsNeeded(style);
 }
 
-RenderElement* HTMLInputElement::createRenderer(RenderArena& arena, RenderStyle& style)
+RenderElement* HTMLInputElement::createRenderer(RenderStyle& style)
 {
-    return m_inputType->createRenderer(arena, style);
+    return m_inputType->createRenderer(style);
 }
 
 void HTMLInputElement::willAttachRenderers()

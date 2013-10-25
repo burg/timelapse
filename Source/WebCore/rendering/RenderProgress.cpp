@@ -33,7 +33,7 @@ using namespace std;
 
 namespace WebCore {
 
-RenderProgress::RenderProgress(HTMLElement* element)
+RenderProgress::RenderProgress(HTMLElement& element)
     : RenderBlockFlow(element)
     , m_position(HTMLProgressElement::InvalidPosition)
     , m_animationStartTime(0)
@@ -57,7 +57,7 @@ void RenderProgress::updateFromElement()
 
     updateAnimationState();
     repaint();
-    RenderBlock::updateFromElement();
+    RenderBlockFlow::updateFromElement();
 }
 
 void RenderProgress::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const

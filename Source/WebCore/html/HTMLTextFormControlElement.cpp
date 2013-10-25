@@ -39,17 +39,18 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "NodeTraversal.h"
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
+#include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include "TextControlInnerElements.h"
 #include "htmlediting.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
-using namespace std;
 
 HTMLTextFormControlElement::HTMLTextFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElementWithState(tagName, document, form)
@@ -169,12 +170,12 @@ void HTMLTextFormControlElement::updatePlaceholderVisibility(bool placeholderVal
 
 void HTMLTextFormControlElement::setSelectionStart(int start)
 {
-    setSelectionRange(start, max(start, selectionEnd()), selectionDirection());
+    setSelectionRange(start, std::max(start, selectionEnd()), selectionDirection());
 }
 
 void HTMLTextFormControlElement::setSelectionEnd(int end)
 {
-    setSelectionRange(min(end, selectionStart()), end, selectionDirection());
+    setSelectionRange(std::min(end, selectionStart()), end, selectionDirection());
 }
 
 void HTMLTextFormControlElement::setSelectionDirection(const String& direction)
@@ -184,7 +185,7 @@ void HTMLTextFormControlElement::setSelectionDirection(const String& direction)
 
 void HTMLTextFormControlElement::select()
 {
-    setSelectionRange(0, numeric_limits<int>::max(), SelectionHasNoDirection);
+    setSelectionRange(0, std::numeric_limits<int>::max(), SelectionHasNoDirection);
 }
 
 String HTMLTextFormControlElement::selectedText() const
@@ -203,7 +204,7 @@ void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
     setChangedSinceLastFormControlChangeEvent(false);
 }
 
-static inline bool hasVisibleTextArea(RenderElement& textControl, HTMLElement* innerText)
+static inline bool hasVisibleTextArea(RenderElement& textControl, TextControlInnerTextElement* innerText)
 {
     return textControl.style()->visibility() != HIDDEN && innerText && innerText->renderer() && innerText->renderBox()->height();
 }
@@ -285,8 +286,8 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     if (!renderer() || !renderer()->isTextControl())
         return;
 
-    end = max(end, 0);
-    start = min(max(start, 0), end);
+    end = std::max(end, 0);
+    start = std::min(std::max(start, 0), end);
 
     if (!hasVisibleTextArea(*renderer(), innerTextElement())) {
         cacheSelection(start, end, direction);
@@ -428,7 +429,7 @@ PassRefPtr<Range> HTMLTextFormControlElement::selection() const
     int end = m_cachedSelectionEnd;
 
     ASSERT(start <= end);
-    HTMLElement* innerText = innerTextElement();
+    TextControlInnerTextElement* innerText = innerTextElement();
     if (!innerText)
         return 0;
 
@@ -526,8 +527,11 @@ static String finishText(StringBuilder& result)
 
 String HTMLTextFormControlElement::innerTextValue() const
 {
-    HTMLElement* innerText = innerTextElement();
-    if (!innerText || !isTextFormControl())
+    if (!isTextFormControl())
+        return emptyString();
+
+    TextControlInnerTextElement* innerText = innerTextElement();
+    if (!innerText)
         return emptyString();
 
     StringBuilder result;
@@ -561,11 +565,14 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 {
     // FIXME: It's not acceptable to ignore the HardWrap setting when there is no renderer.
     // While we have no evidence this has ever been a practical problem, it would be best to fix it some day.
-    HTMLElement* innerText = innerTextElement();
-    if (!innerText || !isTextFormControl())
+    if (!isTextFormControl())
         return value();
 
-    RenderBlock* renderer = toRenderBlock(innerText->renderer());
+    TextControlInnerTextElement* innerText = innerTextElement();
+    if (!innerText)
+        return value();
+
+    RenderTextControlInnerBlock* renderer = innerText->renderer();
     if (!renderer)
         return value();
 
@@ -609,9 +616,9 @@ HTMLTextFormControlElement* enclosingTextFormControl(const Position& position)
         
     Node* container = position.containerNode();
     if (!container)
-        return 0;
+        return nullptr;
     Element* ancestor = container->shadowHost();
-    return ancestor && isHTMLTextFormControlElement(ancestor) ? toHTMLTextFormControlElement(ancestor) : 0;
+    return ancestor && isHTMLTextFormControlElement(*ancestor) ? toHTMLTextFormControlElement(ancestor) : nullptr;
 }
 
 static const Element* parentHTMLElement(const Element* element)

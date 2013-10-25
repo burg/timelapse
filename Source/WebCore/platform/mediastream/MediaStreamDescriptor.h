@@ -35,16 +35,16 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "MediaStreamSource.h"
+#include "MediaStreamTrack.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class MediaStreamDescriptorClient {
+class MediaStreamDescriptorClient : public MediaStreamTrack::Observer {
 public:
     virtual ~MediaStreamDescriptorClient() { }
 
-    virtual void trackDidEnd() = 0;
     virtual void streamDidEnd() = 0;
     virtual void addRemoteSource(MediaStreamSource*) = 0;
     virtual void removeRemoteSource(MediaStreamSource*) = 0;
@@ -56,7 +56,7 @@ public:
 
     static PassRefPtr<MediaStreamDescriptor> create(const MediaStreamSourceVector& audioSources, const MediaStreamSourceVector& videoSources, EndedAtCreationFlag);
 
-    virtual ~MediaStreamDescriptor();
+    virtual ~MediaStreamDescriptor() { }
 
     MediaStreamDescriptorClient* client() const { return m_client; }
     void setClient(MediaStreamDescriptorClient* client) { m_client = client; }
@@ -83,12 +83,12 @@ private:
 
     MediaStreamDescriptorClient* m_client;
     String m_id;
-    Vector<RefPtr<MediaStreamSource> > m_audioStreamSources;
-    Vector<RefPtr<MediaStreamSource> > m_videoStreamSources;
+    Vector<RefPtr<MediaStreamSource>> m_audioStreamSources;
+    Vector<RefPtr<MediaStreamSource>> m_videoStreamSources;
     bool m_ended;
 };
 
-typedef Vector<RefPtr<MediaStreamDescriptor> > MediaStreamDescriptorVector;
+typedef Vector<RefPtr<MediaStreamDescriptor>> MediaStreamDescriptorVector;
 
 } // namespace WebCore
 

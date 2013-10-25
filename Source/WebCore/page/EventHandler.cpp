@@ -187,7 +187,7 @@ public:
 
     ~MaximumDurationTracker()
     {
-        *m_maxDuration = max(*m_maxDuration, monotonicallyIncreasingTime() - m_start);
+        *m_maxDuration = std::max(*m_maxDuration, monotonicallyIncreasingTime() - m_start);
     }
 
 private:
@@ -2571,14 +2571,6 @@ void EventHandler::defaultWheelEventHandler(Node* startNode, WheelEvent* wheelEv
 }
 
 #if ENABLE(TOUCH_ADJUSTMENT)
-bool EventHandler::shouldApplyTouchAdjustment(const PlatformGestureEvent& event) const
-{
-    if (!m_frame.settings().touchAdjustmentEnabled())
-        return false;
-    return !event.area().isEmpty();
-}
-
-
 bool EventHandler::bestClickableNodeForTouchPoint(const IntPoint& touchCenter, const IntSize& touchRadius, IntPoint& targetPoint, Node*& targetNode)
 {
     IntPoint hitTestPoint = m_frame.view()->windowToContents(touchCenter);
@@ -2612,29 +2604,6 @@ bool EventHandler::bestZoomableAreaForTouchPoint(const IntPoint& touchCenter, co
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
     return findBestZoomableArea(targetNode, targetArea, touchCenter, touchRect, result.rectBasedTestResult());
-}
-
-bool EventHandler::adjustGesturePosition(const PlatformGestureEvent& gestureEvent, IntPoint& adjustedPoint)
-{
-    if (!shouldApplyTouchAdjustment(gestureEvent))
-        return false;
-
-    Node* targetNode = 0;
-    switch (gestureEvent.type()) {
-    case PlatformEvent::GestureTap:
-    case PlatformEvent::GestureTapDown:
-        bestClickableNodeForTouchPoint(gestureEvent.position(), IntSize(gestureEvent.area().width() / 2, gestureEvent.area().height() / 2), adjustedPoint, targetNode);
-        break;
-    case PlatformEvent::GestureLongPress:
-    case PlatformEvent::GestureLongTap:
-    case PlatformEvent::GestureTwoFingerTap:
-        bestContextMenuNodeForTouchPoint(gestureEvent.position(), IntSize(gestureEvent.area().width() / 2, gestureEvent.area().height() / 2), adjustedPoint, targetNode);
-        break;
-    default:
-        // FIXME: Implement handling for other types as needed.
-        ASSERT_NOT_REACHED();
-    }
-    return targetNode;
 }
 #endif
 
@@ -3599,11 +3568,11 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
 
     // A different view on the 'touches' list above, filtered and grouped by event target. Used for the
     // 'targetTouches' list in the JS event.
-    typedef HashMap<EventTarget*, RefPtr<TouchList> > TargetTouchesMap;
+    typedef HashMap<EventTarget*, RefPtr<TouchList>> TargetTouchesMap;
     TargetTouchesMap touchesByTarget;
 
     // Array of touches per state, used to assemble the 'changedTouches' list in the JS event.
-    typedef HashSet<RefPtr<EventTarget> > EventTargetSet;
+    typedef HashSet<RefPtr<EventTarget>> EventTargetSet;
     struct {
         // The touches corresponding to the particular change state this struct instance represents.
         RefPtr<TouchList> m_touches;

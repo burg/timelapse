@@ -89,9 +89,12 @@ private:
 typedef OptionRange optionRange;
 
 #define JSC_OPTIONS(v) \
+    v(bool, useLLInt,  true) \
     v(bool, useJIT,    true) \
     v(bool, useDFGJIT, true) \
     v(bool, useRegExpJIT, true) \
+    \
+    v(bool, crashIfCantAllocateJITMemory, false) \
     \
     v(bool, forceDFGCodeBlockLiveness, false) \
     \
@@ -123,7 +126,7 @@ typedef OptionRange optionRange;
     v(bool, useLLVMSmallCodeModel, false) \
     v(bool, ftlTrapsOnOSRExit, false) \
     v(bool, ftlOSRExitOmitsMarshalling, false) \
-    v(bool, ftlOSRExitUsesStackmap, false) \
+    v(bool, ftlUsesStackmaps, false) \
     v(bool, useLLVMOSRExitIntrinsic, false) \
     v(bool, dumpLLVMIR, false) \
     v(bool, llvmAlwaysFailsBeforeCompile, false) \

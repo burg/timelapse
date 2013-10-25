@@ -1,0 +1,193 @@
+2013-10-23  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Reverted erroneously committed changes from the previous commit.
+
+        * index.html:
+
+2013-10-23  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Clicking on a test name on the new flakiness dashboard should add a new test pane
+        https://bugs.webkit.org/show_bug.cgi?id=123194
+
+        Reviewed by Simon Fraser.
+
+        Added a new click handler on each test name inside the builder test view add a new test pane.
+        Moved the old trac link to a right-arrow inline SVG icon.
+
+        Also tweaked the style so that the builder test view looks different from other test panes.
+
+        * index.html:
+        (TestResultsView._urlFromTest): Extracted from TestResultsView._linkifiedTestName.
+        (TestResultsView._populateBuilderPane): Fetch the test when its name is clicked.
+        Added a circled right arrow for the old trac link.
+        * main.css: Tweaked the style to move the rounded border around the builder test view to be
+        around the form controls to clearly differentiate it from a regular test pane.
+
+2013-10-22  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard's test pane should show the latest WebKit revision for each builder
+        https://bugs.webkit.org/show_bug.cgi?id=123189
+
+        Reviewed by Simon Fraser.
+
+        * index.html:
+        (TestResultsView._populateTestPane): Call _createTestResultHeader and _createTestResultRow with
+        a list of repository information.
+        (TestResultsView._createTestResultHeader): Optionally creates headers for a list of repositories.
+        (TestResultsView._createTestResultRow): Add a hyperlinked revision information for each builder.
+        Also add a hyperlink to file a Bugzilla bug when there is no bug associated with the test already.
+        * js/build.js:
+        (Build.formattedRevision): Extracted from Build.formattedRevisions.
+        (Build.formattedRevisions):
+
+2013-10-22  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Make tables on the new flakiness dashboard sortable
+        https://bugs.webkit.org/show_bug.cgi?id=123141
+
+        Reviewed by Simon Fraser.
+
+        Use jquery.tablesorter.js to make test and builder tables sortable. The jquery plugin is already used by run-perf-tests.
+
+        * index.html:
+        (TestResultsView._populateTestPane): Add tablesorter to the class name and wrap tr's inside a tbody so that tablesorter
+        could sort them.
+        (TestResultsView._populateBuilderPane): Ditto.
+        * main.css:
+        (.resultsTable thead): Use cursor: pointer to signify the fact it's clickable.
+        (.resultsTable th): Don't repeat arrows.
+        (.resultsTable th.headerSortUp): Inline SVG up arrow.
+        (.resultsTable th.headerSortDown): Inline SVG down arrow.
+
+2013-10-21  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard should hyperlink test names, WebKit revisions, and bubbles
+        https://bugs.webkit.org/show_bug.cgi?id=123134
+
+        Reviewed by Stephanie Lewis.
+
+        Copied admin.css, admin-header.php, admin-footer.php, builders.php, repositories.php from WebKit Perf Monitor.
+        (Unfortunately WebKit Perf Monitor hasn't been committed into WebKit repository just yet.)
+
+        Updated various parts of index.html to linkify test names, build numbers, and bubbles (to results page).
+
+        * admin/admin.css: Added.
+        * admin/builders.php: Added.
+        * admin/index.php: Removed the duplicated code now that it uses admin-header.php.
+        * admin/repositories.php: Added.
+        * api/manifest.php: Use camelCase for blame_url and build_url to be consistent with other JSON properties.
+        Also exported testCategories from config so that we can linkify test names in the dashboard.
+        * include/admin-footer.php: Added.
+        * include/admin-header.php: Added.
+        * include/config.json: Added test categories. This avoids hard-coding the URL to trac in php/js.
+        * include/init-database.sql: Added name and build_url to builders table and category to tests.
+        * include/test-results.php: Assume the test category to be LayoutTest for now.
+
+        * index.html:
+        (TestResultsView): Initialize _builders, _slaves, _repositories, _testCategories as dictionaries as intended.
+        (TestResultsView.setTestCategories): Added.
+        (TestResultsView._createResultCell): Dynamically resolve URLs of results page and and build page.
+        (TestResultsView._populateTestPane): Linkify the test name. Unfortunately we don't have a test object anywhere.
+        We need to figure out a way to find the test object here eventually. For now, hard-coding "LayoutTest" works.
+        (TestResultsView._linkifiedTestName): Added.
+        (TestResultsView._createBuildsAndComputeSlownessOfResults): Takes builderId to set "builder" property on each
+        result object as it's used by Build class.
+        (TestResultsView._populateBuilderPane):
+        (fetchManigest):
+
+        * js/build.js:
+        (Build.buildUrl): Support $builderName so that we don't have to keep repeating builder names in the database.
+        (Build.revision): Don't access [0] if revisions[repositoryId] was undefined.
+
+2013-10-21  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard should align results by revision numbers
+        https://bugs.webkit.org/show_bug.cgi?id=123129
+
+        Reviewed by Tim Horton.
+
+        * include/config.json: Specify the default cache time to be 10 minutes.
+        * include/json-shared.php: Added Expires and Cache-Control headers. It's configurable via config.json.
+        * index.html:
+        (TestResultsView._createResultCell): Don't put '-' in a result cell without time.
+        (TestResultsView._populateTestPane): Create an array of build times ordered from the newest to the oldest.
+        Not that build.time() is the newest commit time among all repository for each result. e.g. if we had
+        both WebKit and Safari repository information in a given result, the newer of the two will be used.
+        (TestResultsView._createTestResultHeader): Added.
+        (TestResultsView._createBuildsAndComputeSlownessOfResults): Extracted from _createTestResultRow so
+        that _populateTestPane could use Build object before calling _createTestResultRow.
+        (TestResultsView._createTestResultRow): Takes buildTimes. Insert an empty cell for a build time if
+        the current row doesn't contain that a result for that build time.
+        (TestResultsView._populateBuilderPane):
+        * main.css: Tweaked the style so that bubbles are aligned vertically without '-'.
+        (.resultsTable):
+        (.resultsTable thead th):
+        (.resultsTable .resultCell):
+        (.resultsTable a):
+        (.resultsTable span a):
+
+2013-10-21  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard show test time, modifiers, and flaky tests
+        https://bugs.webkit.org/show_bug.cgi?id=123119
+
+        Reviewed by Tim Horton.
+
+        * api/failing-tests.php: Manually serialize each row in the results to avoid hitting the memory limit.
+        * include/db.php:
+        (Database::query): Added.
+        (Database::fetch_next_row): Added.
+        * include/init-database.sql: Added modifiers and time columns to results table.
+        * include/test-results.php:
+        (store_test_results): Update start_time and end_time to the union of the new interval and the existing interval.
+        (recursively_add_test_results): Handle empty $full_name to eliminate the loop over tests in store_test_results.
+        Also verify that each test name, expected and actual results conform to the specific format to prevent XSS.
+        Also use insert_row instead of select_or_insert_row to avoid issuing an unnecessary SQL query.
+        (format_result): Extracted from format_result_rows. Used in failing-tests.php.
+        * index.html:
+        (TestResultsView): Added _currentBuilderFailureType and _currentBuilderDays.
+        (TestResultsView._createResultCell): Show the test time and the expected result.
+        (TestResultsView._createTestResultRow): Compute the slowest run and also round time to tenth of second for time
+        less than 10s or second if it's more than 10s so that the test time will always be shown in two digits.
+        Also show the bug number and the latest expected result on the left columns after linkifying the bug numbers. 
+        (TestResultsView._matchesFailureType): Added. Determines whether results is of a particular failure type.
+        (TestResultsView._populateBuilderPane):
+        (TestResultsView.fetchFailingTestsForBuilder): Store the failure type such as flaky, wrongtestexpectations.
+        (TestResultsView.updateLocationHash):
+        (TestResultsView.loadTestsFromLocationHash):
+        (fetchManifest):
+        * js/dom.js:
+        (element): appendChild if an item is a Node. Otherwise, e.g. integer, create a text node out of toString() call.
+        * main.css: Updated styles.
+
+2013-10-18  Ryosuke Niwa  <rniwa@webkit.org>
+
+        New flakiness dashboard should support showing the failing tests per builder
+        https://bugs.webkit.org/show_bug.cgi?id=123011
+
+        Reviewed by Timothy Hatcher.
+
+        Added the feature. Also did some refactoring to add this feature.
+
+        * ChangeLog: Added.
+        * api/failing-tests.php: Added.
+        * api/manifest.php: Removed the code to make maps by id. The work is now done in index.html.
+        * api/results.php:
+        * common.css: Added. Extracted from index.html.
+        * include/test-results.php: Extracted parse_revisions_array and format_result_rows from results.php.
+        * index.html:
+        * main.css: Added.
+        (TestResultsView.setAvailableTests): Added.
+        (TestResultsView.showTooltip): Fixed the code to compute x and y coordinates of the tooltip to take
+        scrolled positions into account.
+        (TestResultsView._createTestResultRow): Extracted from _populateTestPane.
+        (TestResultsView.fetchTest): Added the code to show "Loading..." in the pane while loading the JSON.
+        (TestResultsView.fetchTests): Respect the doNotUpdateHash flag.
+        (TestResultsView._populateBuilderPane): Added.
+        (TestResultsView.fetchFailingTestsForBuilder): Added.
+        (TestResultsView.updateLocationHash): Serialize builder & builderDays.
+        (TestResultsView.locationHashChanged): Don't delete existing test panes since that's now done in
+        loadTestsFromLocationHash.
+        (TestResultsView.loadTestsFromLocationHash): Take care of both 'tests' and 'builder' components.
+        (fetchManifest): Setup the UI to select a builder.
+

@@ -326,6 +326,10 @@ public:
     static const uint32_t maxInstructionSize = 16;
 
     static RegisterID firstRegister() { return SH4Registers::r0; }
+    static RegisterID lastRegister() { return SH4Registers::r15; }
+
+    static FPRegisterID firstFPRegister() { return SH4Registers::dr0; }
+    static FPRegisterID lastFPRegister() { return SH4Registers::dr14; }
 
     enum {
         padForAlign8 = 0x00,
@@ -344,6 +348,8 @@ public:
         , m_indexOfTailOfLastWatchpoint(INT_MIN)
     {
     }
+
+    SH4Buffer& buffer() { return m_buffer; }
 
     // SH4 condition codes
     typedef enum {
@@ -1651,11 +1657,6 @@ public:
         uint16_t* instructionPtr = static_cast<uint16_t*>(from);
         instructionPtr -= 3;
         return reinterpret_cast<void*>(readPCrelativeAddress((*instructionPtr & 0xff), instructionPtr));
-    }
-
-    PassRefPtr<ExecutableMemoryHandle> executableCopy(VM& vm, void* ownerUID, JITCompilationEffort effort)
-    {
-        return m_buffer.executableCopy(vm, ownerUID, effort);
     }
 
     static void cacheFlush(void* code, size_t size)

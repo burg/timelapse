@@ -32,7 +32,7 @@
 #include "InlineTextBox.h"
 #include "NodeTraversal.h"
 #include "Position.h"
-#include "RenderBlock.h"
+#include "RenderBlockFlow.h"
 #include "RenderObject.h"
 #include "RenderedPosition.h"
 #include "Text.h"
@@ -905,7 +905,7 @@ bool isEndOfLine(const VisiblePosition &p)
 static inline IntPoint absoluteLineDirectionPointToLocalPointInBlock(RootInlineBox* root, int lineDirectionPoint)
 {
     ASSERT(root);
-    RenderBlock& containingBlock = root->block();
+    RenderBlockFlow& containingBlock = root->blockFlow();
     FloatPoint absoluteBlockPoint = containingBlock.localToAbsolute(FloatPoint());
     if (containingBlock.hasOverflowClip())
         absoluteBlockPoint -= containingBlock.scrolledContentOffset();
@@ -1129,7 +1129,7 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
         if (r->isBR() || isBlock(n))
             break;
 
-        if (r->isText() && toRenderText(r)->renderedTextLength()) {
+        if (r->isText() && toRenderText(r)->hasRenderedText()) {
             ASSERT_WITH_SECURITY_IMPLICATION(n->isTextNode());
             type = Position::PositionIsOffsetInAnchor;
             if (style->preserveNewline()) {
@@ -1137,7 +1137,7 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
                 int i = toRenderText(r)->textLength();
                 int o = offset;
                 if (n == startNode && o < i)
-                    i = max(0, o);
+                    i = std::max(0, o);
                 while (--i >= 0) {
                     if (chars[i] == '\n')
                         return VisiblePosition(Position(toText(n), i + 1), DOWNSTREAM);
@@ -1211,7 +1211,7 @@ VisiblePosition endOfParagraph(const VisiblePosition &c, EditingBoundaryCrossing
             break;
 
         // FIXME: We avoid returning a position where the renderer can't accept the caret.
-        if (r->isText() && toRenderText(r)->renderedTextLength()) {
+        if (r->isText() && toRenderText(r)->hasRenderedText()) {
             ASSERT_WITH_SECURITY_IMPLICATION(n->isTextNode());
             int length = toRenderText(r)->textLength();
             type = Position::PositionIsOffsetInAnchor;

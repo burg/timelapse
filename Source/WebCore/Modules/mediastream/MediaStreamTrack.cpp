@@ -204,13 +204,10 @@ const AtomicString& MediaStreamTrack::readyState() const
     static NeverDestroyed<AtomicString> live("live", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> newState("new", AtomicString::ConstructFromLiteral);
 
-    if (!m_source)
-        return newState;
-
     if (m_stopped)
         return ended;
 
-    switch (m_source->readyState()) {
+    switch (m_readyState) {
     case MediaStreamSource::Live:
         return live;
     case MediaStreamSource::New:
@@ -221,6 +218,20 @@ const AtomicString& MediaStreamTrack::readyState() const
 
     ASSERT_NOT_REACHED();
     return emptyAtom;
+}
+
+void MediaStreamTrack::setState(MediaStreamSource::ReadyState state)
+{
+    if (m_readyState == MediaStreamSource::Ended || m_readyState == state)
+        return;
+
+    MediaStreamSource::ReadyState oldState = m_readyState;
+    m_readyState = state;
+
+    if (m_readyState == MediaStreamSource::Live && oldState == MediaStreamSource::New)
+        scheduleEventDispatch(Event::create(eventNames().startedEvent, false, false));
+    if (m_readyState == MediaStreamSource::Ended && oldState != MediaStreamSource::Ended)
+        scheduleEventDispatch(Event::create(eventNames().endedEvent, false, false));
 }
 
 void MediaStreamTrack::getSources(ScriptExecutionContext* context, PassRefPtr<MediaStreamTrackSourcesCallback> callback, ExceptionCode& ec)
@@ -275,16 +286,26 @@ void MediaStreamTrack::stopProducingData()
 
     // Set m_stopped before stopping the source because that may result in a call to sourceChangedState
     // and we only want to dispatch the 'ended' event if necessary.
+    setState(MediaStreamSource::Ended);
     m_stopped = true;
     m_source->stop();
-
-    if (m_readyState != MediaStreamSource::Ended)
-        scheduleEventDispatch(Event::create(eventNames().endedEvent, false, false));
 }
 
 bool MediaStreamTrack::ended() const
 {
-    return m_stopped || (m_source && m_source->readyState() == MediaStreamSource::Ended);
+    return m_stopped || m_readyState == MediaStreamSource::Ended;
+}
+
+void MediaStreamTrack::addObserver(MediaStreamTrack::Observer* observer)
+{
+    m_observers.append(observer);
+}
+
+void MediaStreamTrack::removeObserver(MediaStreamTrack::Observer* observer)
+{
+    size_t pos = m_observers.find(observer);
+    if (pos != notFound)
+        m_observers.remove(pos);
 }
 
 void MediaStreamTrack::sourceStateChanged()
@@ -292,13 +313,7 @@ void MediaStreamTrack::sourceStateChanged()
     if (m_stopped)
         return;
 
-    MediaStreamSource::ReadyState oldReadyState = m_readyState;
-    m_readyState = m_source->readyState();
-
-    if (m_readyState >= MediaStreamSource::Live && oldReadyState == MediaStreamSource::New)
-        scheduleEventDispatch(Event::create(eventNames().startedEvent, false, false));
-    if (m_readyState == MediaStreamSource::Ended && oldReadyState != MediaStreamSource::Ended)
-        scheduleEventDispatch(Event::create(eventNames().endedEvent, false, false));
+    setState(m_source->readyState());
 }
     
 void MediaStreamTrack::sourceMutedChanged()
@@ -344,12 +359,8 @@ bool MediaStreamTrack::stopped()
 
 void MediaStreamTrack::trackDidEnd()
 {
-    // FIXME: this is wrong, the track shouldn't have to call the descriptor's client!
-    MediaStreamDescriptorClient* client = m_source ? m_source->stream()->client() : 0;
-    if (!client)
-        return;
-    
-    client->trackDidEnd();
+    for (Vector<Observer*>::iterator i = m_observers.begin(); i != m_observers.end(); ++i)
+        (*i)->trackDidEnd();
 }
 
 void MediaStreamTrack::stop()

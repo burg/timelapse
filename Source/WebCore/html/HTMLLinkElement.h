@@ -136,6 +136,8 @@ private:
     PendingSheetType m_pendingSheetType;
 };
 
+NODE_TYPE_CASTS(HTMLLinkElement)
+
 } //namespace
 
 #endif

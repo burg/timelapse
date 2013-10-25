@@ -45,7 +45,6 @@
 
 using namespace JSC;
 using namespace WTF;
-using namespace std;
 
 namespace WebCore {
 
@@ -260,9 +259,9 @@ static CSSPropertyInfo cssPropertyIDForJSCSSPropertyName(PropertyName propertyNa
             *bufferPtr++ = toASCIILower(c);
         } else
             *bufferPtr++ = c;
-        ASSERT(bufferPtr < bufferEnd);
+        ASSERT_WITH_SECURITY_IMPLICATION(bufferPtr < bufferEnd);
     }
-    ASSERT(bufferPtr < bufferEnd);
+    ASSERT_WITH_SECURITY_IMPLICATION(bufferPtr < bufferEnd);
     *bufferPtr = '\0';
 
     unsigned outputLength = bufferPtr - buffer;
@@ -389,7 +388,7 @@ void JSCSSStyleDeclaration::getOwnPropertyNames(JSObject* object, ExecState* exe
         Vector<String, numCSSProperties> jsPropertyNames;
         for (int id = firstCSSProperty; id < firstCSSProperty + numCSSProperties; ++id)
             jsPropertyNames.append(getJSPropertyName(static_cast<CSSPropertyID>(id)));
-        sort(jsPropertyNames.begin(), jsPropertyNames.end(), WTF::codePointCompareLessThan);
+        std::sort(jsPropertyNames.begin(), jsPropertyNames.end(), WTF::codePointCompareLessThan);
 
         propertyIdentifiers = new Identifier[numCSSProperties];
         for (int i = 0; i < numCSSProperties; ++i)

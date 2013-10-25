@@ -32,7 +32,7 @@
 namespace WebCore {
 
 RenderSVGBlock::RenderSVGBlock(SVGGraphicsElement& element)
-    : RenderBlockFlow(&element)
+    : RenderBlockFlow(element)
 {
 }
 
@@ -46,24 +46,26 @@ LayoutRect RenderSVGBlock::visualOverflowRect() const
     return borderRect;
 }
 
-void RenderSVGBlock::setStyle(PassRefPtr<RenderStyle> style) 
+void RenderSVGBlock::setStyle(PassRef<RenderStyle> style)
 {
-    RefPtr<RenderStyle> useStyle = style;
-
-    // SVG text layout code expects us to be a block-level style element.   
-    if (useStyle->isDisplayInlineType()) {
-        RefPtr<RenderStyle> newStyle = RenderStyle::create();
-        newStyle->inheritFrom(useStyle.get());
-        newStyle->setDisplay(BLOCK);
-        useStyle = newStyle.release();
+    if (!style.get().isDisplayInlineType()) {
+        RenderBlockFlow::setStyle(std::move(style));
+        return;
     }
 
-    RenderBlock::setStyle(useStyle.release());
+    Ref<RenderStyle> styleToInheritFrom(std::move(style));
+
+    // SVG text layout code expects us to be a block-level style element.   
+    auto newStyle = RenderStyle::create();
+    newStyle.get().inheritFrom(&styleToInheritFrom.get());
+    newStyle.get().setDisplay(BLOCK);
+
+    RenderBlockFlow::setStyle(std::move(newStyle));
 }
 
 void RenderSVGBlock::updateFromStyle()
 {
-    RenderBlock::updateFromStyle();
+    RenderBlockFlow::updateFromStyle();
 
     // RenderSVGlock, used by Render(SVGText|ForeignObject), is not allowed to call setHasOverflowClip(true).
     // RenderBlock assumes a layer to be present when the overflow clip functionality is requested. Both
@@ -89,19 +91,14 @@ void RenderSVGBlock::absoluteRects(Vector<IntRect>&, const LayoutPoint&) const
 void RenderSVGBlock::willBeDestroyed()
 {
     SVGResourcesCache::clientDestroyed(this);
-    RenderBlock::willBeDestroyed();
-}
-
-void RenderSVGBlock::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
-{
-    if (diff == StyleDifferenceLayout)
-        setNeedsBoundariesUpdate();
-    RenderBlock::styleWillChange(diff, newStyle);
+    RenderBlockFlow::willBeDestroyed();
 }
 
 void RenderSVGBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderBlock::styleDidChange(diff, oldStyle);
+    if (diff == StyleDifferenceLayout)
+        setNeedsBoundariesUpdate();
+    RenderBlockFlow::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(this, diff, style());
 }
 

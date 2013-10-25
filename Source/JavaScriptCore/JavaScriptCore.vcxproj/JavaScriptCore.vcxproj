@@ -336,6 +336,7 @@
     <ClCompile Include="..\heap\ConservativeRoots.cpp" />
     <ClCompile Include="..\heap\CopiedSpace.cpp" />
     <ClCompile Include="..\heap\CopyVisitor.cpp" />
+    <ClCompile Include="..\heap\DeferGC.cpp" />
     <ClCompile Include="..\heap\GCThread.cpp" />
     <ClCompile Include="..\heap\GCThreadSharedData.cpp" />
     <ClCompile Include="..\heap\HandleSet.cpp" />
@@ -377,6 +378,7 @@
     <ClCompile Include="..\jit\JITCode.cpp" />
     <ClCompile Include="..\jit\JITDisassembler.cpp" />
     <ClCompile Include="..\jit\JITExceptions.cpp" />
+    <ClCompile Include="..\jit\JITInlineCacheGenerator.cpp" />
     <ClCompile Include="..\jit\JITOpcodes.cpp" />
     <ClCompile Include="..\jit\JITOpcodes32_64.cpp" />
     <ClCompile Include="..\jit\JITOperations.cpp" />
@@ -704,6 +706,7 @@
     <ClInclude Include="..\heap\CopyVisitor.h" />
     <ClInclude Include="..\heap\CopyVisitorInlines.h" />
     <ClInclude Include="..\heap\CopyWorkList.h" />
+    <ClInclude Include="..\heap\DeferGC.h" />
     <ClInclude Include="..\heap\GCAssertions.h" />
     <ClInclude Include="..\heap\GCThread.h" />
     <ClInclude Include="..\heap\GCThreadSharedData.h" />
@@ -773,10 +776,10 @@
     <ClInclude Include="..\jit\JITCompilationEffort.h" />
     <ClInclude Include="..\jit\JITDisassembler.h" />
     <ClInclude Include="..\jit\JITExceptions.h" />
+    <ClInclude Include="..\jit\JITInlineCacheGenerator.h" />
     <ClInclude Include="..\jit\JITInlines.h" />
     <ClInclude Include="..\jit\JITOperationWrappers.h" />
     <ClInclude Include="..\jit\JITOperations.h" />
-    <ClInclude Include="..\jit\JITStubCall.h" />
     <ClInclude Include="..\jit\JITStubRoutine.h" />
     <ClInclude Include="..\jit\JITStubs.h" />
     <ClInclude Include="..\jit\JITStubsX86.h" />
@@ -787,10 +790,13 @@
     <ClInclude Include="..\jit\JITWriteBarrier.h" />
     <ClInclude Include="..\jit\JSInterfaceJIT.h" />
     <ClInclude Include="..\jit\JumpReplacementWatchpoint.h" />
+    <ClCompile Include="..\jit\RegisterSet.cpp" />
     <ClInclude Include="..\jit\RegisterSet.h" />
     <ClInclude Include="..\jit\Repatch.h" />
     <ClInclude Include="..\jit\ScratchRegisterAllocator.h" />
     <ClInclude Include="..\jit\SpecializedThunkJIT.h" />
+    <ClCompile Include="..\jit\TempRegisterSet.cpp" />
+    <ClInclude Include="..\jit\TempRegisterSet.h" />
     <ClInclude Include="..\jit\ThunkGenerator.h" />
     <ClInclude Include="..\jit\ThunkGenerators.h" />
     <ClInclude Include="..\jit\UnusedPointer.h" />

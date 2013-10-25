@@ -276,7 +276,7 @@ static void writeStyle(TextStream& ts, const RenderObject& object)
         const RenderSVGShape& shape = static_cast<const RenderSVGShape&>(object);
 
         Color fallbackColor;
-        if (RenderSVGResource* strokePaintingResource = RenderSVGResource::strokePaintingResource(const_cast<RenderSVGShape*>(&shape), shape.style(), fallbackColor)) {
+        if (RenderSVGResource* strokePaintingResource = RenderSVGResource::strokePaintingResource(const_cast<RenderSVGShape&>(shape), shape.style(), fallbackColor)) {
             TextStreamSeparator s(" ");
             ts << " [stroke={" << s;
             writeSVGPaintingResource(ts, strokePaintingResource);
@@ -303,7 +303,7 @@ static void writeStyle(TextStream& ts, const RenderObject& object)
             ts << "}]";
         }
 
-        if (RenderSVGResource* fillPaintingResource = RenderSVGResource::fillPaintingResource(const_cast<RenderSVGShape*>(&shape), shape.style(), fallbackColor)) {
+        if (RenderSVGResource* fillPaintingResource = RenderSVGResource::fillPaintingResource(const_cast<RenderSVGShape&>(shape), shape.style(), fallbackColor)) {
             TextStreamSeparator s(" ");
             ts << " [fill={" << s;
             writeSVGPaintingResource(ts, fillPaintingResource);
@@ -506,7 +506,7 @@ void writeSVGResourceContainer(TextStream& ts, const RenderObject& object, int i
         // Creating a placeholder filter which is passed to the builder.
         FloatRect dummyRect;
         RefPtr<SVGFilter> dummyFilter = SVGFilter::create(AffineTransform(), dummyRect, dummyRect, dummyRect, true);
-        if (RefPtr<SVGFilterBuilder> builder = filter->buildPrimitives(dummyFilter.get())) {
+        if (auto builder = filter->buildPrimitives(dummyFilter.get())) {
             if (FilterEffect* lastEffect = builder->lastEffect())
                 lastEffect->externalRepresentation(ts, indent + 1);
         }
@@ -649,7 +649,7 @@ void writeResources(TextStream& ts, const RenderObject& object, int indent)
             writeNameAndQuotedValue(ts, "masker", svgStyle->maskerResource());
             ts << " ";
             writeStandardPrefix(ts, *masker, 0);
-            ts << " " << masker->resourceBoundingBox(&renderer) << "\n";
+            ts << " " << masker->resourceBoundingBox(renderer) << "\n";
         }
     }
     if (!svgStyle->clipperResource().isEmpty()) {
@@ -659,7 +659,7 @@ void writeResources(TextStream& ts, const RenderObject& object, int indent)
             writeNameAndQuotedValue(ts, "clipPath", svgStyle->clipperResource());
             ts << " ";
             writeStandardPrefix(ts, *clipper, 0);
-            ts << " " << clipper->resourceBoundingBox(&renderer) << "\n";
+            ts << " " << clipper->resourceBoundingBox(renderer) << "\n";
         }
     }
 #if ENABLE(FILTERS)
@@ -670,7 +670,7 @@ void writeResources(TextStream& ts, const RenderObject& object, int indent)
             writeNameAndQuotedValue(ts, "filter", svgStyle->filterResource());
             ts << " ";
             writeStandardPrefix(ts, *filter, 0);
-            ts << " " << filter->resourceBoundingBox(&renderer) << "\n";
+            ts << " " << filter->resourceBoundingBox(renderer) << "\n";
         }
     }
 #endif

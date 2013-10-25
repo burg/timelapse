@@ -1524,6 +1524,7 @@ static bool needsSelfRetainWhileLoadingQuirk()
     settings.setShowRepaintCounter([preferences showRepaintCounter]);
     settings.setWebGLEnabled([preferences webGLEnabled]);
     settings.setMultithreadedWebGLEnabled([preferences multithreadedWebGLEnabled]);
+    settings.setForceSoftwareWebGLRendering([preferences forceSoftwareWebGLRendering]);
     settings.setAccelerated2dCanvasEnabled([preferences accelerated2dCanvasEnabled]);
     settings.setLoadDeferringEnabled(shouldEnableLoadDeferring());
     settings.setWindowFocusRestricted(shouldRestrictWindowFocus());
@@ -5815,10 +5816,11 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSC::JSValue j
     // We don't know enough at thls level to pass in a relevant WebUndoAction; we'd have to
     // change the API to allow this.
     WebFrame *webFrame = [self _selectedOrMainFrame];
-    Frame* coreFrame = core(webFrame);
-    // FIXME: We shouldn't have to make a copy here.
-    if (coreFrame)
-        coreFrame->editor().applyStyle(core(style)->copyProperties().get());
+    if (Frame* coreFrame = core(webFrame)) {
+        // FIXME: We shouldn't have to make a copy here.
+        Ref<MutableStylePropertySet> properties(core(style)->copyProperties());
+        coreFrame->editor().applyStyle(&properties.get());
+    }
 }
 
 @end
@@ -6069,7 +6071,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
 
         // This code is here to avoid a PLT regression. We can remove it if we
         // can prove that the overall system gain would justify the regression.
-        cacheMaxDeadCapacity = max(24u, cacheMaxDeadCapacity);
+        cacheMaxDeadCapacity = std::max<unsigned>(24, cacheMaxDeadCapacity);
 
         deadDecodedDataDeletionInterval = 60;
 
@@ -6106,7 +6108,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
 
 
     // Don't shrink a big disk cache, since that would cause churn.
-    nsurlCacheDiskCapacity = max(nsurlCacheDiskCapacity, [nsurlCache diskCapacity]);
+    nsurlCacheDiskCapacity = std::max(nsurlCacheDiskCapacity, [nsurlCache diskCapacity]);
 
     memoryCache()->setCapacities(cacheMinDeadCapacity, cacheMaxDeadCapacity, cacheTotalCapacity);
     memoryCache()->setDeadDecodedDataDeletionInterval(deadDecodedDataDeletionInterval);
@@ -6133,7 +6135,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
     WebCacheModel cacheModel = WebCacheModelDocumentViewer;
     NSEnumerator *enumerator = [(NSMutableSet *)allWebViewsSet objectEnumerator];
     while (WebPreferences *preferences = [[enumerator nextObject] preferences])
-        cacheModel = max(cacheModel, [preferences cacheModel]);
+        cacheModel = std::max(cacheModel, [preferences cacheModel]);
     return cacheModel;
 }
 
@@ -6146,7 +6148,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
     if (![self _didSetCacheModel] || cacheModel > [self _cacheModel])
         [self _setCacheModel:cacheModel];
     else if (cacheModel < [self _cacheModel])
-        [self _setCacheModel:max([[WebPreferences standardPreferences] cacheModel], [self _maxCacheModelInAnyInstance])];
+        [self _setCacheModel:std::max([[WebPreferences standardPreferences] cacheModel], [self _maxCacheModelInAnyInstance])];
 }
 
 + (void)_preferencesRemovedNotification:(NSNotification *)notification
@@ -6155,7 +6157,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
     ASSERT([preferences isKindOfClass:[WebPreferences class]]);
 
     if ([preferences cacheModel] == [self _cacheModel])
-        [self _setCacheModel:max([[WebPreferences standardPreferences] cacheModel], [self _maxCacheModelInAnyInstance])];
+        [self _setCacheModel:std::max([[WebPreferences standardPreferences] cacheModel], [self _maxCacheModelInAnyInstance])];
 }
 
 - (WebFrame *)_focusedFrame

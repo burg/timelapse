@@ -187,8 +187,6 @@
 #include "WebVTTElement.h"
 #endif
 
-using namespace std;
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -295,7 +293,7 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
     appendAuthorStyleSheets(0, styleSheetCollection.activeAuthorStyleSheets());
 }
 
-void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet> >& styleSheets)
+void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet>>& styleSheets)
 {
     m_ruleSets.appendAuthorStyleSheets(firstNew, styleSheets, m_medium.get(), m_inspectorCSSOMWrappers, document().isViewSource(), this);
     if (document().renderView() && document().renderView()->style())
@@ -783,29 +781,28 @@ static inline bool isAtShadowBoundary(const Element* element)
     return parentNode && parentNode->isShadowRoot();
 }
 
-PassRefPtr<RenderStyle> StyleResolver::styleForElement(Element* element, RenderStyle* defaultParent,
+PassRef<RenderStyle> StyleResolver::styleForElement(Element* element, RenderStyle* defaultParent,
     StyleSharingBehavior sharingBehavior, RuleMatchingBehavior matchingBehavior, RenderRegion* regionForStyling)
 {
     // Once an element has a renderer, we don't try to destroy it, since otherwise the renderer
     // will vanish if a style recalc happens during loading.
     if (sharingBehavior == AllowStyleSharing && !element->document().haveStylesheetsLoaded() && !element->renderer()) {
         if (!s_styleNotYetAvailable) {
-            s_styleNotYetAvailable = RenderStyle::create().leakRef();
+            s_styleNotYetAvailable = &RenderStyle::create().leakRef();
             s_styleNotYetAvailable->setDisplay(NONE);
             s_styleNotYetAvailable->font().update(m_fontSelector);
         }
         element->document().setHasNodesWithPlaceholderStyle();
-        return s_styleNotYetAvailable;
+        return *s_styleNotYetAvailable;
     }
 
     State& state = m_state;
     initElement(element);
     state.initForStyleResolve(document(), element, defaultParent, regionForStyling);
     if (sharingBehavior == AllowStyleSharing) {
-        RenderStyle* sharedStyle = locateSharedStyle();
-        if (sharedStyle) {
+        if (RenderStyle* sharedStyle = locateSharedStyle()) {
             state.clear();
-            return sharedStyle;
+            return *sharedStyle;
         }
     }
 
@@ -855,7 +852,7 @@ PassRefPtr<RenderStyle> StyleResolver::styleForElement(Element* element, RenderS
     return state.takeStyle();
 }
 
-PassRefPtr<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* elementStyle, const StyleKeyframe* keyframe, KeyframeValue& keyframeValue)
+PassRef<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* elementStyle, const StyleKeyframe* keyframe, KeyframeValue& keyframeValue)
 {
     MatchResult result;
     result.addMatchedProperties(keyframe->properties());
@@ -922,7 +919,7 @@ void StyleResolver::keyframeStylesForAnimation(Element* e, const RenderStyle* el
     const StyleRuleKeyframes* keyframesRule = it->value.get();
 
     // Construct and populate the style for each keyframe
-    const Vector<RefPtr<StyleKeyframe> >& keyframes = keyframesRule->keyframes();
+    const Vector<RefPtr<StyleKeyframe>>& keyframes = keyframesRule->keyframes();
     for (unsigned i = 0; i < keyframes.size(); ++i) {
         // Apply the declaration to the style. This is a simplified version of the logic in styleForElement
         initElement(e);
@@ -1021,7 +1018,7 @@ PassRefPtr<RenderStyle> StyleResolver::pseudoStyleForElement(Element* e, const P
     return state.takeStyle();
 }
 
-PassRefPtr<RenderStyle> StyleResolver::styleForPage(int pageIndex)
+PassRef<RenderStyle> StyleResolver::styleForPage(int pageIndex)
 {
     m_state.initForStyleResolve(document(), document().documentElement()); // m_rootElementStyle will be set to the document style.
 
@@ -1057,7 +1054,7 @@ PassRefPtr<RenderStyle> StyleResolver::styleForPage(int pageIndex)
     return m_state.takeStyle();
 }
 
-PassRefPtr<RenderStyle> StyleResolver::defaultStyleForElement()
+PassRef<RenderStyle> StyleResolver::defaultStyleForElement()
 {
     m_state.setStyle(RenderStyle::create());
     // Make sure our fonts are initialized if we don't inherit them from our parent style.
@@ -1269,7 +1266,7 @@ void StyleResolver::adjustRenderStyle(RenderStyle* style, RenderStyle* parentSty
         || style->hasBlendMode()
         || style->position() == StickyPosition
         || (style->position() == FixedPosition && e && e->document().page() && e->document().page()->settings().fixedPositionCreatesStackingContext())
-        || style->hasStyleRegion()
+        || style->hasFlowFrom()
         ))
         style->setZIndex(0);
 
@@ -1457,15 +1454,15 @@ void StyleResolver::updateFont()
     m_state.setFontDirty(false);
 }
 
-Vector<RefPtr<StyleRuleBase> > StyleResolver::styleRulesForElement(Element* e, unsigned rulesToInclude)
+Vector<RefPtr<StyleRuleBase>> StyleResolver::styleRulesForElement(Element* e, unsigned rulesToInclude)
 {
     return pseudoStyleRulesForElement(e, NOPSEUDO, rulesToInclude);
 }
 
-Vector<RefPtr<StyleRuleBase> > StyleResolver::pseudoStyleRulesForElement(Element* e, PseudoId pseudoId, unsigned rulesToInclude)
+Vector<RefPtr<StyleRuleBase>> StyleResolver::pseudoStyleRulesForElement(Element* e, PseudoId pseudoId, unsigned rulesToInclude)
 {
     if (!e || !e->document().haveStylesheetsLoaded())
-        return Vector<RefPtr<StyleRuleBase> >();
+        return Vector<RefPtr<StyleRuleBase>>();
 
     initElement(e);
     m_state.initForStyleResolve(document(), e, 0);
@@ -1778,7 +1775,7 @@ void StyleResolver::applyPropertyToStyle(CSSPropertyID id, CSSValue* value, Rend
 {
     initElement(0);
     m_state.initForStyleResolve(document(), 0, style);
-    m_state.setStyle(style);
+    m_state.setStyle(*style);
     applyPropertyToCurrentStyle(id, value);
 }
 
@@ -1888,7 +1885,7 @@ bool StyleResolver::useSVGZoomRules()
     return m_state.element() && m_state.element()->isSVGElement();
 }
 
-static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, const StyleResolver::State& state, Length& workingLength)
+static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, const StyleResolver::State& state, GridLength& workingLength)
 {
     if (primitiveValue->getValueID() == CSSValueWebkitMinContent) {
         workingLength = Length(MinContent);
@@ -1900,12 +1897,18 @@ static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, const Styl
         return true;
     }
 
+    if (primitiveValue->isFlex()) {
+        // Fractional unit.
+        workingLength.setFlex(primitiveValue->getDoubleValue());
+        return true;
+    }
+
     workingLength = primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | ViewportPercentageConversion | AutoConversion>(state.style(), state.rootElementStyle(), state.style()->effectiveZoom());
-    if (workingLength.isUndefined())
+    if (workingLength.length().isUndefined())
         return false;
 
     if (primitiveValue->isLength())
-        workingLength.setQuirk(primitiveValue->isQuirkValue());
+        workingLength.length().setQuirk(primitiveValue->isQuirkValue());
 
     return true;
 }
@@ -1918,7 +1921,7 @@ static bool createGridTrackSize(CSSValue* value, GridTrackSize& trackSize, const
     CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
     Pair* minMaxTrackBreadth = primitiveValue->getPairValue();
     if (!minMaxTrackBreadth) {
-        Length workingLength;
+        GridLength workingLength;
         if (!createGridTrackBreadth(primitiveValue, state, workingLength))
             return false;
 
@@ -1926,8 +1929,8 @@ static bool createGridTrackSize(CSSValue* value, GridTrackSize& trackSize, const
         return true;
     }
 
-    Length minTrackBreadth;
-    Length maxTrackBreadth;
+    GridLength minTrackBreadth;
+    GridLength maxTrackBreadth;
     if (!createGridTrackBreadth(minMaxTrackBreadth->first(), state, minTrackBreadth) || !createGridTrackBreadth(minMaxTrackBreadth->second(), state, maxTrackBreadth))
         return false;
 
@@ -2047,7 +2050,7 @@ static bool hasVariableReference(CSSValue* value)
     return false;
 }
 
-void StyleResolver::resolveVariables(CSSPropertyID id, CSSValue* value, Vector<std::pair<CSSPropertyID, String> >& knownExpressions)
+void StyleResolver::resolveVariables(CSSPropertyID id, CSSValue* value, Vector<std::pair<CSSPropertyID, String>>& knownExpressions)
 {
     std::pair<CSSPropertyID, String> expression(id, value->serializeResolvingVariables(*m_state.style()->variables()));
 
@@ -2075,7 +2078,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 {
 #if ENABLE(CSS_VARIABLES)
     if (id != CSSPropertyVariable && hasVariableReference(value)) {
-        Vector<std::pair<CSSPropertyID, String> > knownExpressions;
+        Vector<std::pair<CSSPropertyID, String>> knownExpressions;
         resolveVariables(id, value, knownExpressions);
         return;
     }
@@ -2233,7 +2236,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         }
         if (value->isValueList()) {
             CSSValueList* list = toCSSValueList(value);
-            Vector<std::pair<String, String> > quotes;
+            Vector<std::pair<String, String>> quotes;
             for (size_t i = 0; i < list->length(); i += 2) {
                 CSSValue* first = list->itemWithoutBoundsCheck(i);
                 // item() returns null if out of bounds so this is safe.
@@ -2251,7 +2254,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         }
         if (primitiveValue) {
             if (primitiveValue->getValueID() == CSSValueNone)
-                state.style()->setQuotes(QuotesData::create(Vector<std::pair<String, String> >()));
+                state.style()->setQuotes(QuotesData::create(Vector<std::pair<String, String>>()));
         }
         return;
     // Shorthand properties.
@@ -3393,10 +3396,10 @@ void StyleResolver::loadPendingSVGDocuments()
         return;
 
     CachedResourceLoader* cachedResourceLoader = state.document().cachedResourceLoader();
-    Vector<RefPtr<FilterOperation> >& filterOperations = state.style()->mutableFilter().operations();
+    Vector<RefPtr<FilterOperation>>& filterOperations = state.style()->mutableFilter().operations();
     for (unsigned i = 0; i < filterOperations.size(); ++i) {
         RefPtr<FilterOperation> filterOperation = filterOperations.at(i);
-        if (filterOperation->getOperationType() == FilterOperation::REFERENCE) {
+        if (filterOperation->type() == FilterOperation::REFERENCE) {
             ReferenceFilterOperation* referenceFilter = static_cast<ReferenceFilterOperation*>(filterOperation.get());
 
             WebKitCSSSVGDocumentValue* value = state.pendingSVGDocuments().get(referenceFilter);
@@ -3456,10 +3459,10 @@ void StyleResolver::loadPendingShaders()
 
     CachedResourceLoader* cachedResourceLoader = m_state.document().cachedResourceLoader();
 
-    Vector<RefPtr<FilterOperation> >& filterOperations = m_state.style()->mutableFilter().operations();
+    Vector<RefPtr<FilterOperation>>& filterOperations = m_state.style()->mutableFilter().operations();
     for (unsigned i = 0; i < filterOperations.size(); ++i) {
         RefPtr<FilterOperation> filterOperation = filterOperations.at(i);
-        if (filterOperation->getOperationType() == FilterOperation::CUSTOM) {
+        if (filterOperation->type() == FilterOperation::CUSTOM) {
             CustomFilterOperation* customFilter = static_cast<CustomFilterOperation*>(filterOperation.get());
             ASSERT(customFilter->program());
             StyleCustomFilterProgram* program = static_cast<StyleCustomFilterProgram*>(customFilter->program());
@@ -4116,9 +4119,9 @@ int StyleResolver::viewportPercentageValue(CSSPrimitiveValue& unit, int percenta
     if (unit.isViewportPercentageWidth())
         return viewPortWidth;
     if (unit.isViewportPercentageMax())
-        return max(viewPortWidth, viewPortHeight);
+        return std::max(viewPortWidth, viewPortHeight);
     if (unit.isViewportPercentageMin())
-        return min(viewPortWidth, viewPortHeight);
+        return std::min(viewPortWidth, viewPortHeight);
 
     ASSERT_NOT_REACHED();
     return 0;

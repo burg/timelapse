@@ -75,8 +75,6 @@ namespace WebCore {
 using namespace HTMLNames;
 
 #ifndef NDEBUG
-static void* baseOfRenderObjectBeingDeleted;
-
 RenderObject::SetLayoutNeededForbiddenScope::SetLayoutNeededForbiddenScope(RenderObject* renderObject, bool isForbidden)
     : m_renderObject(renderObject)
     , m_preexistingForbidden(m_renderObject->isSetNeedsLayoutForbidden())
@@ -101,22 +99,9 @@ struct SameSizeAsRenderObject {
 
 COMPILE_ASSERT(sizeof(RenderObject) == sizeof(SameSizeAsRenderObject), RenderObject_should_stay_small);
 
-void* RenderObject::operator new(size_t sz, RenderArena& renderArena)
-{
-    return renderArena.allocate(sz);
-}
-
-void RenderObject::operator delete(void* ptr, size_t sz)
-{
-    ASSERT(baseOfRenderObjectBeingDeleted == ptr);
-
-    // Stash size where destroy can find it.
-    *(size_t *)ptr = sz;
-}
-
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, renderObjectCounter, ("RenderObject"));
 
-RenderObject::RenderObject(Node* node)
+RenderObject::RenderObject(Node& node)
     : CachedImageClient()
     , m_node(node)
     , m_parent(0)
@@ -205,7 +190,7 @@ void RenderObject::setParent(RenderElement* parent)
 void RenderObject::removeFromParent()
 {
     if (parent())
-        parent()->removeChild(this);
+        parent()->removeChild(*this);
 }
 
 RenderObject* RenderObject::nextInPreOrder() const
@@ -652,7 +637,7 @@ void RenderObject::markContainingBlocksForLayout(bool scheduleRelayout, RenderEl
     ASSERT(!scheduleRelayout || !newRoot);
     ASSERT(!isSetNeedsLayoutForbidden());
 
-    RenderElement* ancestor = container();
+    auto ancestor = container();
 
     bool simplifiedNormalFlowLayout = needsSimplifiedNormalFlowLayout() && !selfNeedsLayout() && !normalChildNeedsLayout();
     bool hasOutOfFlowPosition = !isText() && style()->hasOutOfFlowPosition();
@@ -665,7 +650,7 @@ void RenderObject::markContainingBlocksForLayout(bool scheduleRelayout, RenderEl
 #endif
         // Don't mark the outermost object of an unrooted subtree. That object will be
         // marked when the subtree is added to the document.
-        RenderElement* container = ancestor->container();
+        auto container = ancestor->container();
         if (!container && !ancestor->isRenderView())
             return;
         if (hasOutOfFlowPosition) {
@@ -726,11 +711,11 @@ void RenderObject::invalidateContainerPreferredLogicalWidths()
 {
     // In order to avoid pathological behavior when inlines are deeply nested, we do include them
     // in the chain that we mark dirty (even though they're kind of irrelevant).
-    RenderObject* o = isTableCell() ? containingBlock() : container();
+    auto o = isTableCell() ? containingBlock() : container();
     while (o && !o->preferredLogicalWidthsDirty()) {
         // Don't invalidate the outermost object of an unrooted subtree. That object will be 
         // invalidated when the subtree is added to the document.
-        RenderObject* container = o->isTableCell() ? o->containingBlock() : o->container();
+        auto container = o->isTableCell() ? o->containingBlock() : o->container();
         if (!container && !o->isRenderView())
             break;
 
@@ -757,7 +742,7 @@ void RenderObject::setLayerNeedsFullRepaintForPositionedMovementLayout()
 
 RenderBlock* RenderObject::containingBlock() const
 {
-    RenderElement* o = parent();
+    auto o = parent();
     if (!o && isRenderScrollbarPart())
         o = toRenderScrollbarPart(this)->rendererOwningScrollbar();
 
@@ -1496,7 +1481,7 @@ void RenderObject::computeRectForRepaint(const RenderLayerModelObject* repaintCo
     if (repaintContainer == this)
         return;
 
-    if (RenderObject* o = parent()) {
+    if (auto o = parent()) {
         if (o->isRenderBlockFlow()) {
             RenderBlock* cb = toRenderBlock(o);
             if (cb->hasColumns())
@@ -1651,7 +1636,7 @@ void RenderObject::handleDynamicFloatPositionChange()
             // An anonymous block must be made to wrap this inline.
             RenderBlock* block = toRenderBlock(parent())->createAnonymousBlock();
             parent()->insertChildInternal(block, this, RenderElement::NotifyChildren);
-            parent()->removeChildInternal(this, RenderElement::NotifyChildren);
+            parent()->removeChildInternal(*this, RenderElement::NotifyChildren);
             block->insertChildInternal(this, nullptr, RenderElement::NotifyChildren);
         }
     }
@@ -1679,11 +1664,6 @@ void RenderObject::removeAnonymousWrappersForInlinesIfNecessary()
             parentBlock->collapseAnonymousBoxChild(parentBlock, toRenderBlock(curr));
         curr = next;
     }
-}
-
-LayoutRect RenderObject::viewRect() const
-{
-    return view().viewRect();
 }
 
 FloatPoint RenderObject::localToAbsolute(const FloatPoint& localPoint, MapCoordinatesFlags mode) const
@@ -1717,7 +1697,7 @@ void RenderObject::mapLocalToContainer(const RenderLayerModelObject* repaintCont
     if (repaintContainer == this)
         return;
 
-    RenderObject* o = parent();
+    auto o = parent();
     if (!o)
         return;
 
@@ -1744,7 +1724,7 @@ const RenderObject* RenderObject::pushMappingToContainer(const RenderLayerModelO
 {
     ASSERT_UNUSED(ancestorToStopAt, ancestorToStopAt != this);
 
-    RenderObject* container = parent();
+    auto container = parent();
     if (!container)
         return 0;
 
@@ -1760,7 +1740,7 @@ const RenderObject* RenderObject::pushMappingToContainer(const RenderLayerModelO
 
 void RenderObject::mapAbsoluteToLocalPoint(MapCoordinatesFlags mode, TransformState& transformState) const
 {
-    RenderObject* o = parent();
+    auto o = parent();
     if (o) {
         o->mapAbsoluteToLocalPoint(mode, transformState);
         if (o->hasOverflowClip())
@@ -1849,7 +1829,7 @@ LayoutSize RenderObject::offsetFromAncestorContainer(RenderObject* container) co
     LayoutPoint referencePoint;
     const RenderObject* currContainer = this;
     do {
-        RenderElement* nextContainer = currContainer->container();
+        auto nextContainer = currContainer->container();
         ASSERT(nextContainer);  // This means we reached the top without finding container.
         if (!nextContainer)
             break;
@@ -1922,7 +1902,7 @@ RenderElement* RenderObject::container(const RenderLayerModelObject* repaintCont
     // containingBlock() simply skips relpositioned inlines and lets an enclosing block handle
     // the layout of the positioned object.  This does mean that computePositionedLogicalWidth and
     // computePositionedLogicalHeight have to use container().
-    RenderElement* o = parent();
+    auto o = parent();
 
     if (isText())
         return o;
@@ -2106,7 +2086,7 @@ void RenderObject::destroyAndCleanupAnonymousWrappers()
     }
 
     RenderObject* destroyRoot = this;
-    for (RenderElement* destroyRootParent = destroyRoot->parent(); destroyRootParent && destroyRootParent->isAnonymous(); destroyRoot = destroyRootParent, destroyRootParent = destroyRootParent->parent()) {
+    for (auto destroyRootParent = destroyRoot->parent(); destroyRootParent && destroyRootParent->isAnonymous(); destroyRoot = destroyRootParent, destroyRootParent = destroyRootParent->parent()) {
         // Currently we only remove anonymous cells' and table sections' wrappers but we should remove all unneeded
         // wrappers. See http://webkit.org/b/52123 as an example where this is needed.
         if (!destroyRootParent->isTableCell() && !destroyRootParent->isTableSection())
@@ -2124,22 +2104,7 @@ void RenderObject::destroyAndCleanupAnonymousWrappers()
 void RenderObject::destroy()
 {
     willBeDestroyed();
-    arenaDelete(renderArena(), this);
-}
-
-void RenderObject::arenaDelete(RenderArena& arena, void* base)
-{
-#ifndef NDEBUG
-    void* savedBase = baseOfRenderObjectBeingDeleted;
-    baseOfRenderObjectBeingDeleted = base;
-#endif
     delete this;
-#ifndef NDEBUG
-    baseOfRenderObjectBeingDeleted = savedBase;
-#endif
-
-    // Recover the size left there for us by operator delete and free the memory.
-    arena.free(*(size_t*)base, base);
 }
 
 VisiblePosition RenderObject::positionForPoint(const LayoutPoint&)
@@ -2195,8 +2160,8 @@ void RenderObject::updateHitTestResult(HitTestResult& result, const LayoutPoint&
     // If we hit the anonymous renderers inside generated content we should
     // actually hit the generated content so walk up to the PseudoElement.
     if (!node && parent() && parent()->isBeforeOrAfterContent()) {
-        for (RenderObject* renderer = parent(); renderer && !node; renderer = renderer->parent())
-            node = renderer->node();
+        for (auto renderer = parent(); renderer && !node; renderer = renderer->parent())
+            node = renderer->element();
     }
 
     if (node) {
@@ -2477,9 +2442,9 @@ RenderBoxModelObject* RenderObject::offsetParent() const
 
     bool skipTables = isPositioned();
     float currZoom = style()->effectiveZoom();
-    RenderObject* curr = parent();
-    while (curr && (!curr->node() || (!curr->isPositioned() && !curr->isBody())) && !curr->isRenderNamedFlowThread()) {
-        Node* element = curr->node();
+    auto curr = parent();
+    while (curr && (!curr->element() || (!curr->isPositioned() && !curr->isBody())) && !curr->isRenderNamedFlowThread()) {
+        Element* element = curr->element();
         if (!skipTables && element && (isHTMLTableElement(element) || element->hasTagName(tdTag) || element->hasTagName(thTag)))
             break;
  
@@ -2497,7 +2462,7 @@ RenderBoxModelObject* RenderObject::offsetParent() const
     return curr && curr->isBoxModelObject() ? toRenderBoxModelObject(curr) : 0;
 }
 
-VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affinity)
+VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affinity) const
 {
     // If this is a non-anonymous renderer in an editable area, then it's simple.
     if (Node* node = nonPseudoNode()) {
@@ -2521,10 +2486,10 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
     // find a single non-anonymous renderer.
 
     // Find a nearby non-anonymous renderer.
-    RenderObject* child = this;
-    while (RenderObject* parent = child->parent()) {
+    const RenderObject* child = this;
+    while (const auto parent = child->parent()) {
         // Find non-anonymous content after.
-        RenderObject* renderer = child;
+        const RenderObject* renderer = child;
         while ((renderer = renderer->nextInPreOrder(parent))) {
             if (Node* node = renderer->nonPseudoNode())
                 return VisiblePosition(firstPositionInOrBeforeNode(node), DOWNSTREAM);
@@ -2540,8 +2505,8 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
         }
 
         // Use the parent itself unless it too is anonymous.
-        if (Node* node = parent->nonPseudoNode())
-            return VisiblePosition(firstPositionInOrBeforeNode(node), DOWNSTREAM);
+        if (Element* element = parent->nonPseudoElement())
+            return VisiblePosition(firstPositionInOrBeforeNode(element), DOWNSTREAM);
 
         // Repeat at the next level up.
         child = parent;
@@ -2551,7 +2516,7 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
     return VisiblePosition();
 }
 
-VisiblePosition RenderObject::createVisiblePosition(const Position& position)
+VisiblePosition RenderObject::createVisiblePosition(const Position& position) const
 {
     if (position.isNotNull())
         return VisiblePosition(position);
@@ -2603,7 +2568,7 @@ RenderSVGResourceContainer* RenderObject::toRenderSVGResourceContainer()
 
 void RenderObject::setNeedsBoundariesUpdate()
 {
-    if (RenderObject* renderer = parent())
+    if (auto renderer = parent())
         renderer->setNeedsBoundariesUpdate();
 }
 

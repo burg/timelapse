@@ -141,7 +141,7 @@ Vector<Gradient::ColorStop> SVGGradientElement::buildStops()
 {
     Vector<Gradient::ColorStop> stops;
 
-    auto stopChildren = childrenOfType<SVGStopElement>(this);
+    auto stopChildren = childrenOfType<SVGStopElement>(*this);
     float previousOffset = 0.0f;
 
     for (auto stop = stopChildren.begin(), end = stopChildren.end(); stop != end; ++stop) {
@@ -161,6 +161,11 @@ Vector<Gradient::ColorStop> SVGGradientElement::buildStops()
     }
 
     return stops;
+}
+
+bool isSVGGradientElement(const Node& node)
+{
+    return node.hasTagName(SVGNames::radialGradientTag) || node.hasTagName(SVGNames::linearGradientTag);
 }
 
 }

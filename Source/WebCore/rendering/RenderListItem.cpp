@@ -42,7 +42,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RenderListItem::RenderListItem(Element& element)
-    : RenderBlockFlow(&element)
+    : RenderBlockFlow(element)
     , m_marker(0)
     , m_hasExplicitValue(false)
     , m_isValueUpToDate(false)
@@ -53,17 +53,17 @@ RenderListItem::RenderListItem(Element& element)
 
 void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderBlock::styleDidChange(diff, oldStyle);
+    RenderBlockFlow::styleDidChange(diff, oldStyle);
 
     if (style()->listStyleType() != NoneListStyle
         || (style()->listStyleImage() && !style()->listStyleImage()->errorOccurred())) {
-        RefPtr<RenderStyle> newStyle = RenderStyle::create();
+        auto newStyle = RenderStyle::create();
         // The marker always inherits from the list item, regardless of where it might end
         // up (e.g., in some deeply nested line box). See CSS3 spec.
-        newStyle->inheritFrom(style()); 
+        newStyle.get().inheritFrom(style());
         if (!m_marker)
-            m_marker = RenderListMarker::createAnonymous(*this);
-        m_marker->setStyle(newStyle.release());
+            m_marker = new RenderListMarker(*this);
+        m_marker->setStyle(std::move(newStyle));
     } else if (m_marker) {
         m_marker->destroy();
         m_marker = 0;
@@ -81,7 +81,7 @@ void RenderListItem::willBeDestroyed()
 
 void RenderListItem::insertedIntoTree()
 {
-    RenderBlock::insertedIntoTree();
+    RenderBlockFlow::insertedIntoTree();
 
     updateListMarkerNumbers();
 }

@@ -728,6 +728,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSTreeWalker.h \
 	DerivedSources/WebCore/JSUIEvent.cpp \
 	DerivedSources/WebCore/JSUIEvent.h \
+	DerivedSources/WebCore/JSDOMURLMediaStream.cpp \
+	DerivedSources/WebCore/JSDOMURLMediaStream.h \
 	DerivedSources/WebCore/JSValidityState.cpp \
 	DerivedSources/WebCore/JSValidityState.h \
 	DerivedSources/WebCore/JSVoidCallback.cpp \
@@ -1234,6 +1236,7 @@ dom_binding_idls += \
 	$(WebCore)/Modules/mediastream/RTCStatsReport.idl \
 	$(WebCore)/Modules/mediastream/RTCStatsResponse.idl \
 	$(WebCore)/Modules/mediastream/SourceInfo.idl \
+	$(WebCore)/Modules/mediastream/DOMURLMediaStream.idl \
 	$(WebCore)/Modules/mediastream/VideoStreamTrack.idl \
 	$(WebCore)/Modules/navigatorcontentutils/NavigatorContentUtils.idl \
 	$(WebCore)/Modules/notifications/DOMWindowNotifications.idl \
@@ -1295,6 +1298,8 @@ dom_binding_idls += \
 	$(WebCore)/Modules/webdatabase/WorkerGlobalScopeWebDatabase.idl \
 	$(WebCore)/Modules/websockets/CloseEvent.idl \
 	$(WebCore)/Modules/websockets/WebSocket.idl \
+	$(WebCore)/crypto/CryptoKey.idl \
+	$(WebCore)/crypto/SubtleCrypto.idl \
 	$(WebCore)/css/CSSCharsetRule.idl \
 	$(WebCore)/css/CSSFontFaceLoadEvent.idl \
 	$(WebCore)/css/CSSFontFaceRule.idl \
@@ -1787,6 +1792,7 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/DOMWindowIndexedDatabase.h \
 	Source/WebCore/Modules/indexeddb/IDBAny.cpp \
 	Source/WebCore/Modules/indexeddb/IDBAny.h \
+	Source/WebCore/Modules/indexeddb/IDBBackingStoreInterface.h \
 	Source/WebCore/Modules/indexeddb/leveldb/IDBBackingStoreLevelDB.cpp \
 	Source/WebCore/Modules/indexeddb/leveldb/IDBBackingStoreLevelDB.h \
 	Source/WebCore/Modules/indexeddb/IDBCallbacks.h \
@@ -1797,8 +1803,8 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBCursor.h \
 	Source/WebCore/Modules/indexeddb/IDBCursorWithValue.cpp \
 	Source/WebCore/Modules/indexeddb/IDBCursorWithValue.h \
-	Source/WebCore/Modules/indexeddb/leveldb/IDBDatabaseBackendLevelDB.cpp \
-	Source/WebCore/Modules/indexeddb/leveldb/IDBDatabaseBackendLevelDB.h \
+	Source/WebCore/Modules/indexeddb/IDBDatabaseBackendImpl.cpp \
+	Source/WebCore/Modules/indexeddb/IDBDatabaseBackendImpl.h \
 	Source/WebCore/Modules/indexeddb/IDBDatabaseBackendInterface.h \
 	Source/WebCore/Modules/indexeddb/IDBDatabaseCallbacks.h \
 	Source/WebCore/Modules/indexeddb/IDBDatabaseCallbacksImpl.cpp \
@@ -1819,6 +1825,8 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBHistograms.h \
 	Source/WebCore/Modules/indexeddb/IDBIndex.cpp \
 	Source/WebCore/Modules/indexeddb/IDBIndex.h \
+	Source/WebCore/Modules/indexeddb/IDBIndexWriter.cpp \
+	Source/WebCore/Modules/indexeddb/IDBIndexWriter.h \
 	Source/WebCore/Modules/indexeddb/IDBKey.cpp \
 	Source/WebCore/Modules/indexeddb/IDBKey.h \
 	Source/WebCore/Modules/indexeddb/IDBKeyPath.cpp \
@@ -1828,22 +1836,24 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/leveldb/IDBLevelDBCoding.cpp \
 	Source/WebCore/Modules/indexeddb/leveldb/IDBLevelDBCoding.h \
 	Source/WebCore/Modules/indexeddb/IDBMetadata.h \
-	Source/WebCore/Modules/indexeddb/leveldb/IDBObjectStoreBackendLevelDB.cpp \
-	Source/WebCore/Modules/indexeddb/leveldb/IDBObjectStoreBackendLevelDB.h \
 	Source/WebCore/Modules/indexeddb/IDBObjectStore.cpp \
 	Source/WebCore/Modules/indexeddb/IDBObjectStore.h \
 	Source/WebCore/Modules/indexeddb/IDBOpenDBRequest.cpp \
 	Source/WebCore/Modules/indexeddb/IDBOpenDBRequest.h \
 	Source/WebCore/Modules/indexeddb/IDBPendingTransactionMonitor.cpp \
 	Source/WebCore/Modules/indexeddb/IDBPendingTransactionMonitor.h \
+	Source/WebCore/Modules/indexeddb/IDBRecordIdentifier.h \
 	Source/WebCore/Modules/indexeddb/IDBRequest.cpp \
 	Source/WebCore/Modules/indexeddb/IDBRequest.h \
 	Source/WebCore/Modules/indexeddb/leveldb/IDBTransactionBackendLevelDB.cpp \
 	Source/WebCore/Modules/indexeddb/leveldb/IDBTransactionBackendLevelDB.h \
-	Source/WebCore/Modules/indexeddb/leveldb/IDBTransactionCoordinatorLevelDB.cpp \
-	Source/WebCore/Modules/indexeddb/leveldb/IDBTransactionCoordinatorLevelDB.h \
+	Source/WebCore/Modules/indexeddb/leveldb/IDBTransactionBackendLevelDBOperations.cpp \
+	Source/WebCore/Modules/indexeddb/leveldb/IDBTransactionBackendLevelDBOperations.h \
 	Source/WebCore/Modules/indexeddb/IDBTransaction.cpp \
 	Source/WebCore/Modules/indexeddb/IDBTransaction.h \
+	Source/WebCore/Modules/indexeddb/IDBTransactionBackendInterface.h \
+	Source/WebCore/Modules/indexeddb/IDBTransactionCoordinator.cpp \
+	Source/WebCore/Modules/indexeddb/IDBTransactionCoordinator.h \
 	Source/WebCore/Modules/indexeddb/IDBVersionChangeEvent.cpp \
 	Source/WebCore/Modules/indexeddb/IDBVersionChangeEvent.h \
 	Source/WebCore/Modules/indexeddb/IndexedDB.h \
@@ -1937,6 +1947,8 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/mediastream/RTCVoidRequestImpl.h \
 	Source/WebCore/Modules/mediastream/SourceInfo.cpp \
 	Source/WebCore/Modules/mediastream/SourceInfo.h \
+	Source/WebCore/Modules/mediastream/DOMURLMediaStream.cpp \
+	Source/WebCore/Modules/mediastream/DOMURLMediaStream.h \
 	Source/WebCore/Modules/mediastream/UserMediaClient.h \
 	Source/WebCore/Modules/mediastream/UserMediaController.h \
 	Source/WebCore/Modules/mediastream/UserMediaController.cpp \
@@ -2476,6 +2488,7 @@ webcore_sources += \
 	Source/WebCore/bridge/runtime_root.cpp \
 	Source/WebCore/bridge/runtime_root.h \
 	Source/WebCore/config.h \
+	Source/WebCore/crypto/SubtleCrypto.h \
 	Source/WebCore/css/BasicShapeFunctions.cpp \
 	Source/WebCore/css/BasicShapeFunctions.h \
 	Source/WebCore/css/Counter.h \
@@ -2739,8 +2752,6 @@ webcore_sources += \
 	Source/WebCore/dom/ContextDestructionObserver.h \
 	Source/WebCore/dom/CrossThreadTask.h \
 	Source/WebCore/dom/CurrentScriptIncrementer.h \
-	Source/WebCore/dom/CustomElementConstructor.h \
-	Source/WebCore/dom/CustomElementRegistry.h \
 	Source/WebCore/dom/CustomEvent.cpp \
 	Source/WebCore/dom/CustomEvent.h \
 	Source/WebCore/dom/DatasetDOMStringMap.cpp \
@@ -3691,9 +3702,9 @@ webcore_sources += \
 	Source/WebCore/html/TypeAhead.h \
 	Source/WebCore/html/URLInputType.cpp \
 	Source/WebCore/html/URLInputType.h \
+	Source/WebCore/html/URLRegistry.h \
 	Source/WebCore/html/ValidationMessage.cpp \
 	Source/WebCore/html/ValidationMessage.h \
-	Source/WebCore/html/ValidityState.cpp \
 	Source/WebCore/html/ValidityState.h \
 	Source/WebCore/html/VoidCallback.h \
 	Source/WebCore/html/WeekInputType.cpp \
@@ -4392,6 +4403,8 @@ webcore_sources += \
 	Source/WebCore/rendering/RenderMultiColumnFlowThread.h \
 	Source/WebCore/rendering/RenderMultiColumnSet.cpp \
 	Source/WebCore/rendering/RenderMultiColumnSet.h \
+    Source/WebCore/rendering/RenderNamedFlowFragment.cpp \
+    Source/WebCore/rendering/RenderNamedFlowFragment.h \
 	Source/WebCore/rendering/RenderNamedFlowThread.cpp \
 	Source/WebCore/rendering/RenderNamedFlowThread.h \
 	Source/WebCore/rendering/RenderObject.cpp \
@@ -4442,18 +4455,20 @@ webcore_sources += \
 	Source/WebCore/rendering/RenderTableRow.h \
 	Source/WebCore/rendering/RenderTableSection.cpp \
 	Source/WebCore/rendering/RenderTableSection.h \
+	Source/WebCore/rendering/RenderText.cpp \
+	Source/WebCore/rendering/RenderText.h \
 	Source/WebCore/rendering/RenderTextControl.cpp \
 	Source/WebCore/rendering/RenderTextControl.h \
 	Source/WebCore/rendering/RenderTextControlMultiLine.cpp \
 	Source/WebCore/rendering/RenderTextControlMultiLine.h \
 	Source/WebCore/rendering/RenderTextControlSingleLine.cpp \
 	Source/WebCore/rendering/RenderTextControlSingleLine.h \
-	Source/WebCore/rendering/RenderText.cpp \
 	Source/WebCore/rendering/RenderTextTrackCue.cpp \
 	Source/WebCore/rendering/RenderTextTrackCue.h \
 	Source/WebCore/rendering/RenderTextFragment.cpp \
 	Source/WebCore/rendering/RenderTextFragment.h \
-	Source/WebCore/rendering/RenderText.h \
+	Source/WebCore/rendering/RenderTextLineBoxes.cpp \
+	Source/WebCore/rendering/RenderTextLineBoxes.h \
 	Source/WebCore/rendering/RenderTheme.cpp \
 	Source/WebCore/rendering/RenderTheme.h \
 	Source/WebCore/rendering/RenderTreeAsText.cpp \
@@ -4468,6 +4483,11 @@ webcore_sources += \
 	Source/WebCore/rendering/RootInlineBox.h \
 	Source/WebCore/rendering/ScrollBehavior.cpp \
 	Source/WebCore/rendering/ScrollBehavior.h \
+	Source/WebCore/rendering/SimpleLineLayout.cpp \
+	Source/WebCore/rendering/SimpleLineLayout.h \
+	Source/WebCore/rendering/SimpleLineLayoutFunctions.cpp \
+	Source/WebCore/rendering/SimpleLineLayoutFunctions.h \
+	Source/WebCore/rendering/SimpleLineLayoutResolver.h \
 	Source/WebCore/rendering/TextAutosizer.cpp \
 	Source/WebCore/rendering/TextAutosizer.h \
 	Source/WebCore/rendering/TextPaintStyle.cpp \
@@ -4526,7 +4546,9 @@ webcore_sources += \
 	Source/WebCore/rendering/style/FillLayer.cpp \
 	Source/WebCore/rendering/style/FillLayer.h \
 	Source/WebCore/rendering/style/GridCoordinate.h \
+	Source/WebCore/rendering/style/GridLength.h \
 	Source/WebCore/rendering/style/GridPosition.h \
+	Source/WebCore/rendering/style/GridTrackSize.h \
 	Source/WebCore/rendering/style/KeyframeList.cpp \
 	Source/WebCore/rendering/style/KeyframeList.h \
 	Source/WebCore/rendering/style/LineClampValue.h \
@@ -4590,7 +4612,6 @@ webcore_sources += \
 	Source/WebCore/rendering/style/StyleVariableData.h \
 	Source/WebCore/rendering/style/StyleVisualData.cpp \
 	Source/WebCore/rendering/style/StyleVisualData.h \
-	Source/WebCore/rendering/style/GridTrackSize.h \
 	Source/WebCore/rendering/TableLayout.h \
 	Source/WebCore/rendering/TrailingFloatsRootInlineBox.h \
 	Source/WebCore/storage/StorageThread.cpp \

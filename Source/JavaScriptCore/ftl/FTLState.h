@@ -33,6 +33,7 @@
 #include "DFGGraph.h"
 #include "FTLAbbreviations.h"
 #include "FTLGeneratedFunction.h"
+#include "FTLInlineCacheDescriptor.h"
 #include "FTLJITCode.h"
 #include "FTLJITFinalizer.h"
 #include "FTLStackMaps.h"
@@ -56,6 +57,7 @@ public:
     RefPtr<JITCode> jitCode;
     GeneratedFunction generatedFunction;
     JITFinalizer* finalizer;
+    SegmentedVector<GetByIdDescriptor> getByIds;
     Vector<CString> codeSectionNames;
     Vector<CString> dataSectionNames;
     RefCountedArray<LSectionWord> stackmapsSection;

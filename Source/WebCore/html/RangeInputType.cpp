@@ -65,7 +65,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-using namespace std;
 
 static const int rangeDefaultMinimum = 0;
 static const int rangeDefaultMaximum = 100;
@@ -159,10 +158,10 @@ void RangeInputType::handleMouseDownEvent(MouseEvent* event)
     ASSERT(element().shadowRoot());
     if (targetNode != &element() && !targetNode->isDescendantOf(element().userAgentShadowRoot()))
         return;
-    SliderThumbElement* thumb = sliderThumbElementOf(element());
-    if (targetNode == thumb)
+    SliderThumbElement& thumb = typedSliderThumbElement();
+    if (targetNode == &thumb)
         return;
-    thumb->dragFrom(event->absoluteLocation());
+    thumb.dragFrom(event->absoluteLocation());
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -179,9 +178,7 @@ void RangeInputType::handleTouchEvent(TouchEvent* event)
 
     TouchList* touches = event->targetTouches();
     if (touches->length() == 1) {
-        Touch* touch = touches->item(0);
-        SliderThumbElement* thumb = sliderThumbElementOf(element());
-        thumb->setPositionFromPoint(touch->absoluteLocation());
+        typedSliderThumbElement().setPositionFromPoint(touches->item(0)->absoluteLocation());
         event->setDefaultHandled();
     }
 }
@@ -209,7 +206,7 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent* event)
     // FIXME: We can't use stepUp() for the step value "any". So, we increase
     // or decrease the value by 1/100 of the value range. Is it reasonable?
     const Decimal step = equalIgnoringCase(element().fastGetAttribute(stepAttr), "any") ? (stepRange.maximum() - stepRange.minimum()) / 100 : stepRange.step();
-    const Decimal bigStep = max((stepRange.maximum() - stepRange.minimum()) / 10, step);
+    const Decimal bigStep = std::max((stepRange.maximum() - stepRange.minimum()) / 10, step);
 
     bool isVertical = false;
     if (element().renderer()) {
@@ -254,7 +251,7 @@ void RangeInputType::handleKeydownEvent(KeyboardEvent* event)
 
 void RangeInputType::createShadowSubtree()
 {
-    ASSERT(element().shadowRoot());
+    ASSERT(element().userAgentShadowRoot());
 
     Document& document = element().document();
     RefPtr<HTMLDivElement> track = HTMLDivElement::create(document);
@@ -265,9 +262,32 @@ void RangeInputType::createShadowSubtree()
     element().userAgentShadowRoot()->appendChild(container.release(), IGNORE_EXCEPTION);
 }
 
-RenderElement* RangeInputType::createRenderer(RenderArena& arena, RenderStyle&) const
+HTMLElement* RangeInputType::sliderTrackElement() const
 {
-    return new (arena) RenderSlider(&element());
+    ASSERT(element().userAgentShadowRoot());
+    ASSERT(element().userAgentShadowRoot()->firstChild()); // container
+    ASSERT(element().userAgentShadowRoot()->firstChild()->isHTMLElement());
+    ASSERT(element().userAgentShadowRoot()->firstChild()->firstChild()); // track
+
+    return &toHTMLElement(*element().userAgentShadowRoot()->firstChild()->firstChild());
+}
+
+SliderThumbElement& RangeInputType::typedSliderThumbElement() const
+{
+    ASSERT(sliderTrackElement()->firstChild()); // thumb
+    ASSERT(sliderTrackElement()->firstChild()->isHTMLElement());
+
+    return static_cast<SliderThumbElement&>(*sliderTrackElement()->firstChild());
+}
+
+HTMLElement* RangeInputType::sliderThumbElement() const
+{
+    return &typedSliderThumbElement();
+}
+
+RenderElement* RangeInputType::createRenderer(RenderStyle&) const
+{
+    return new RenderSlider(element());
 }
 
 Decimal RangeInputType::parseToNumber(const String& src, const Decimal& defaultValue) const
@@ -298,7 +318,7 @@ void RangeInputType::minOrMaxAttributeChanged()
     if (element().hasDirtyValue())
         element().setValue(element().value());
 
-    sliderThumbElementOf(element())->setPositionFromValue();
+    typedSliderThumbElement().setPositionFromValue();
 }
 
 void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldEventBehavior eventBehavior)
@@ -308,7 +328,7 @@ void RangeInputType::setValue(const String& value, bool valueChanged, TextFieldE
     if (!valueChanged)
         return;
 
-    sliderThumbElementOf(element())->setPositionFromValue();
+    typedSliderThumbElement().setPositionFromValue();
 }
 
 String RangeInputType::fallbackValue() const
@@ -328,21 +348,11 @@ bool RangeInputType::shouldRespectListAttribute()
     return InputType::themeSupportsDataListUI(this);
 }
 
-HTMLElement* RangeInputType::sliderThumbElement() const
-{
-    return sliderThumbElementOf(element());
-}
-
-HTMLElement* RangeInputType::sliderTrackElement() const
-{
-    return sliderTrackElementOf(element());
-}
-
 #if ENABLE(DATALIST_ELEMENT)
 void RangeInputType::listAttributeTargetChanged()
 {
     m_tickMarkValuesDirty = true;
-    HTMLElement* sliderTrackElement = sliderTrackElementOf(element());
+    HTMLElement* sliderTrackElement = this->sliderTrackElement();
     if (sliderTrackElement->renderer())
         sliderTrackElement->renderer()->setNeedsLayout();
 }

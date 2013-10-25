@@ -121,7 +121,7 @@ void RenderTextControlSingleLine::layout()
     // and type=search if the text height is taller than the contentHeight()
     // because of compability.
 
-    RenderBox* innerTextRenderer = innerTextElement()->renderBox();
+    RenderTextControlInnerBlock* innerTextRenderer = innerTextElement()->renderer();
     RenderBox* innerBlockRenderer = innerBlockElement() ? innerBlockElement()->renderBox() : 0;
 
     // To ensure consistency between layouts, we need to reset any conditionally overriden height.
@@ -261,7 +261,7 @@ void RenderTextControlSingleLine::styleDidChange(StyleDifference diff, const Ren
         containerRenderer->style()->setHeight(Length());
         containerRenderer->style()->setWidth(Length());
     }
-    RenderObject* innerTextRenderer = innerTextElement()->renderer();
+    RenderTextControlInnerBlock* innerTextRenderer = innerTextElement()->renderer();
     if (innerTextRenderer && diff == StyleDifferenceLayout)
         innerTextRenderer->setNeedsLayout(MarkContainingBlockChain);
     if (HTMLElement* placeholder = inputElement().placeholderElement())
@@ -351,45 +351,45 @@ LayoutUnit RenderTextControlSingleLine::computeControlLogicalHeight(LayoutUnit l
     return lineHeight + nonContentHeight;
 }
 
-PassRefPtr<RenderStyle> RenderTextControlSingleLine::createInnerTextStyle(const RenderStyle* startStyle) const
+PassRef<RenderStyle> RenderTextControlSingleLine::createInnerTextStyle(const RenderStyle* startStyle) const
 {
-    RefPtr<RenderStyle> textBlockStyle = RenderStyle::create();   
-    textBlockStyle->inheritFrom(startStyle);
-    adjustInnerTextStyle(startStyle, textBlockStyle.get());
+    auto textBlockStyle = RenderStyle::create();
+    textBlockStyle.get().inheritFrom(startStyle);
+    adjustInnerTextStyle(startStyle, &textBlockStyle.get());
 
-    textBlockStyle->setWhiteSpace(PRE);
-    textBlockStyle->setOverflowWrap(NormalOverflowWrap);
-    textBlockStyle->setOverflowX(OHIDDEN);
-    textBlockStyle->setOverflowY(OHIDDEN);
-    textBlockStyle->setTextOverflow(textShouldBeTruncated() ? TextOverflowEllipsis : TextOverflowClip);
+    textBlockStyle.get().setWhiteSpace(PRE);
+    textBlockStyle.get().setOverflowWrap(NormalOverflowWrap);
+    textBlockStyle.get().setOverflowX(OHIDDEN);
+    textBlockStyle.get().setOverflowY(OHIDDEN);
+    textBlockStyle.get().setTextOverflow(textShouldBeTruncated() ? TextOverflowEllipsis : TextOverflowClip);
 
     if (m_desiredInnerTextLogicalHeight >= 0)
-        textBlockStyle->setLogicalHeight(Length(m_desiredInnerTextLogicalHeight, Fixed));
+        textBlockStyle.get().setLogicalHeight(Length(m_desiredInnerTextLogicalHeight, Fixed));
     // Do not allow line-height to be smaller than our default.
-    if (textBlockStyle->fontMetrics().lineSpacing() > lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes))
-        textBlockStyle->setLineHeight(RenderStyle::initialLineHeight());
+    if (textBlockStyle.get().fontMetrics().lineSpacing() > lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes))
+        textBlockStyle.get().setLineHeight(RenderStyle::initialLineHeight());
 
-    textBlockStyle->setDisplay(BLOCK);
+    textBlockStyle.get().setDisplay(BLOCK);
 
-    return textBlockStyle.release();
+    return textBlockStyle;
 }
 
-PassRefPtr<RenderStyle> RenderTextControlSingleLine::createInnerBlockStyle(const RenderStyle* startStyle) const
+PassRef<RenderStyle> RenderTextControlSingleLine::createInnerBlockStyle(const RenderStyle* startStyle) const
 {
-    RefPtr<RenderStyle> innerBlockStyle = RenderStyle::create();
-    innerBlockStyle->inheritFrom(startStyle);
+    auto innerBlockStyle = RenderStyle::create();
+    innerBlockStyle.get().inheritFrom(startStyle);
 
-    innerBlockStyle->setFlexGrow(1);
+    innerBlockStyle.get().setFlexGrow(1);
     // min-width: 0; is needed for correct shrinking.
     // FIXME: Remove this line when https://bugs.webkit.org/show_bug.cgi?id=111790 is fixed.
-    innerBlockStyle->setMinWidth(Length(0, Fixed));
-    innerBlockStyle->setDisplay(BLOCK);
-    innerBlockStyle->setDirection(LTR);
+    innerBlockStyle.get().setMinWidth(Length(0, Fixed));
+    innerBlockStyle.get().setDisplay(BLOCK);
+    innerBlockStyle.get().setDirection(LTR);
 
     // We don't want the shadow dom to be editable, so we set this block to read-only in case the input itself is editable.
-    innerBlockStyle->setUserModify(READ_ONLY);
+    innerBlockStyle.get().setUserModify(READ_ONLY);
 
-    return innerBlockStyle.release();
+    return innerBlockStyle;
 }
 
 bool RenderTextControlSingleLine::textShouldBeTruncated() const
@@ -399,7 +399,7 @@ bool RenderTextControlSingleLine::textShouldBeTruncated() const
 
 void RenderTextControlSingleLine::autoscroll(const IntPoint& position)
 {
-    RenderBox* renderer = innerTextElement()->renderBox();
+    RenderTextControlInnerBlock* renderer = innerTextElement()->renderer();
     if (!renderer)
         return;
     RenderLayer* layer = renderer->layer();
@@ -411,28 +411,28 @@ int RenderTextControlSingleLine::scrollWidth() const
 {
     if (innerTextElement())
         return innerTextElement()->scrollWidth();
-    return RenderBlock::scrollWidth();
+    return RenderBlockFlow::scrollWidth();
 }
 
 int RenderTextControlSingleLine::scrollHeight() const
 {
     if (innerTextElement())
         return innerTextElement()->scrollHeight();
-    return RenderBlock::scrollHeight();
+    return RenderBlockFlow::scrollHeight();
 }
 
 int RenderTextControlSingleLine::scrollLeft() const
 {
     if (innerTextElement())
         return innerTextElement()->scrollLeft();
-    return RenderBlock::scrollLeft();
+    return RenderBlockFlow::scrollLeft();
 }
 
 int RenderTextControlSingleLine::scrollTop() const
 {
     if (innerTextElement())
         return innerTextElement()->scrollTop();
-    return RenderBlock::scrollTop();
+    return RenderBlockFlow::scrollTop();
 }
 
 void RenderTextControlSingleLine::setScrollLeft(int newLeft)
@@ -449,21 +449,21 @@ void RenderTextControlSingleLine::setScrollTop(int newTop)
 
 bool RenderTextControlSingleLine::scroll(ScrollDirection direction, ScrollGranularity granularity, float multiplier, Element** stopElement)
 {
-    RenderBox* renderer = innerTextElement()->renderBox();
+    RenderTextControlInnerBlock* renderer = innerTextElement()->renderer();
     if (!renderer)
         return false;
     RenderLayer* layer = renderer->layer();
     if (layer && layer->scroll(direction, granularity, multiplier))
         return true;
-    return RenderBlock::scroll(direction, granularity, multiplier, stopElement);
+    return RenderBlockFlow::scroll(direction, granularity, multiplier, stopElement);
 }
 
 bool RenderTextControlSingleLine::logicalScroll(ScrollLogicalDirection direction, ScrollGranularity granularity, float multiplier, Element** stopElement)
 {
-    RenderLayer* layer = innerTextElement()->renderBox()->layer();
+    RenderLayer* layer = innerTextElement()->renderer()->layer();
     if (layer && layer->scroll(logicalToPhysical(direction, style()->isHorizontalWritingMode(), style()->isFlippedBlocksWritingMode()), granularity, multiplier))
         return true;
-    return RenderBlock::logicalScroll(direction, granularity, multiplier, stopElement);
+    return RenderBlockFlow::logicalScroll(direction, granularity, multiplier, stopElement);
 }
 
 HTMLInputElement& RenderTextControlSingleLine::inputElement() const

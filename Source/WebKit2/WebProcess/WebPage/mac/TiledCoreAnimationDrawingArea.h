@@ -53,6 +53,9 @@ public:
     TiledCoreAnimationDrawingArea(WebPage*, const WebPageCreationParameters&);
     virtual ~TiledCoreAnimationDrawingArea();
 
+    virtual void suspendPainting() OVERRIDE;
+    virtual void resumePainting() OVERRIDE;
+
 private:
     // DrawingArea
     virtual void setNeedsDisplay() OVERRIDE;
@@ -75,6 +78,7 @@ private:
 
     virtual void setExposedRect(const WebCore::FloatRect&) OVERRIDE;
     virtual void setClipsToExposedRect(bool) OVERRIDE;
+    virtual bool supportsThreadedScrolling() OVERRIDE { return true; }
 
     virtual void didChangeScrollOffsetForAnyFrame() OVERRIDE;
 
@@ -93,8 +97,6 @@ private:
     virtual bool flushLayers() OVERRIDE;
 
     // Message handlers.
-    virtual void suspendPainting() OVERRIDE;
-    virtual void resumePainting() OVERRIDE;
     virtual void updateGeometry(const WebCore::IntSize& viewSize, const WebCore::IntSize& layerPosition) OVERRIDE;
     virtual void setDeviceScaleFactor(float) OVERRIDE;
     virtual void setLayerHostingMode(uint32_t) OVERRIDE;

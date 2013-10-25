@@ -159,8 +159,13 @@ bool RenderBoxModelObject::shouldPaintAtLowQuality(GraphicsContext* context, Ima
     return view().imageQualityController().shouldPaintAtLowQuality(context, this, image, layer, size);
 }
 
-RenderBoxModelObject::RenderBoxModelObject(Element* element, unsigned baseTypeFlags)
+RenderBoxModelObject::RenderBoxModelObject(Element& element, unsigned baseTypeFlags)
     : RenderLayerModelObject(element, baseTypeFlags | RenderBoxModelObjectFlag)
+{
+}
+
+RenderBoxModelObject::RenderBoxModelObject(Document& document, unsigned baseTypeFlags)
+    : RenderLayerModelObject(document, baseTypeFlags | RenderBoxModelObjectFlag)
 {
 }
 
@@ -202,7 +207,7 @@ static LayoutSize accumulateInFlowPositionOffsets(const RenderObject* child)
     if (!child->isAnonymousBlock() || !child->isInFlowPositioned())
         return LayoutSize();
     LayoutSize offset;
-    RenderObject* p = toRenderBlock(child)->inlineElementContinuation();
+    RenderElement* p = toRenderBlock(child)->inlineElementContinuation();
     while (p && p->isRenderInline()) {
         if (p->isInFlowPositioned()) {
             RenderInline* renderInline = toRenderInline(p);
@@ -309,7 +314,7 @@ LayoutPoint RenderBoxModelObject::adjustedPositionRelativeToOffsetParent(const L
             // CSS regions specification says that region flows should return the body element as their offsetParent.
             // Since we will bypass the body’s renderer anyway, just end the loop if we encounter a region flow (named flow thread).
             // See http://dev.w3.org/csswg/css-regions/#cssomview-offset-attributes
-            RenderObject* curr = parent();
+            auto curr = parent();
             while (curr != offsetParent && !curr->isRenderNamedFlowThread()) {
                 // FIXME: What are we supposed to do inside SVG content?
                 if (!isOutOfFlowPositioned()) {
@@ -1096,7 +1101,7 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const RenderLayerMod
     } else {
         geometry.setHasNonLocalGeometry();
 
-        IntRect viewportRect = pixelSnappedIntRect(viewRect());
+        IntRect viewportRect = pixelSnappedIntRect(view().viewRect());
         if (fixedBackgroundPaintsInLocalCoordinates())
             viewportRect.setLocation(IntPoint());
         else
@@ -2739,7 +2744,7 @@ bool RenderBoxModelObject::shouldAntialiasLines(GraphicsContext* context)
 
 void RenderBoxModelObject::mapAbsoluteToLocalPoint(MapCoordinatesFlags mode, TransformState& transformState) const
 {
-    RenderElement* o = container();
+    auto o = container();
     if (!o)
         return;
 
@@ -2786,11 +2791,11 @@ void RenderBoxModelObject::moveChildTo(RenderBoxModelObject* toBoxModelObject, R
     if (fullRemoveInsert && (toBoxModelObject->isRenderBlock() || toBoxModelObject->isRenderInline())) {
         // Takes care of adding the new child correctly if toBlock and fromBlock
         // have different kind of children (block vs inline).
-        removeChildInternal(child, NotifyChildren);
+        removeChildInternal(*child, NotifyChildren);
         toBoxModelObject->addChild(child, beforeChild);
     } else {
         NotifyChildrenType notifyType = fullRemoveInsert ? NotifyChildren : DontNotifyChildren;
-        removeChildInternal(child, notifyType);
+        removeChildInternal(*child, notifyType);
         toBoxModelObject->insertChildInternal(child, beforeChild, notifyType);
     }
 }

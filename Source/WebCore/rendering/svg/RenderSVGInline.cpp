@@ -33,7 +33,7 @@
 namespace WebCore {
     
 RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element)
-    : RenderInline(&element)
+    : RenderInline(element)
 {
     setAlwaysCreateLineBoxes();
 }
@@ -106,15 +106,10 @@ void RenderSVGInline::willBeDestroyed()
     RenderInline::willBeDestroyed();
 }
 
-void RenderSVGInline::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
+void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     if (diff == StyleDifferenceLayout)
         setNeedsBoundariesUpdate();
-    RenderInline::styleWillChange(diff, newStyle);
-}
-
-void RenderSVGInline::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
     RenderInline::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(this, diff, style());
 }
@@ -128,9 +123,9 @@ void RenderSVGInline::addChild(RenderObject* child, RenderObject* beforeChild)
         textRenderer->subtreeChildWasAdded(child);
 }
 
-void RenderSVGInline::removeChild(RenderObject* child)
+void RenderSVGInline::removeChild(RenderObject& child)
 {
-    SVGResourcesCache::clientWillBeRemovedFromTree(child);
+    SVGResourcesCache::clientWillBeRemovedFromTree(&child);
 
     RenderSVGText* textRenderer = RenderSVGText::locateRenderSVGTextAncestor(this);
     if (!textRenderer) {
@@ -138,7 +133,7 @@ void RenderSVGInline::removeChild(RenderObject* child)
         return;
     }
     Vector<SVGTextLayoutAttributes*, 2> affectedAttributes;
-    textRenderer->subtreeChildWillBeRemoved(child, affectedAttributes);
+    textRenderer->subtreeChildWillBeRemoved(&child, affectedAttributes);
     RenderInline::removeChild(child);
     textRenderer->subtreeChildWasRemoved(affectedAttributes);
 }

@@ -3984,7 +3984,7 @@ static PassRefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
     float userScaleFactor = [printOperation _web_pageSetupScaleFactor];
     float maxShrinkToFitScaleFactor = 1.0f / _WebHTMLViewPrintingMaximumShrinkFactor;
     float shrinkToFitScaleFactor = (useViewWidth ? [printOperation _web_availablePaperWidth] :  [printOperation _web_availablePaperHeight]) / viewLogicalWidth;
-    return userScaleFactor * max(maxShrinkToFitScaleFactor, shrinkToFitScaleFactor);
+    return userScaleFactor * std::max(maxShrinkToFitScaleFactor, shrinkToFitScaleFactor);
 }
 
 // FIXME 3491344: This is a secret AppKit-internal method that we need to override in order
@@ -4370,7 +4370,8 @@ static PassRefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
 {
     if (Frame* coreFrame = core([self _frame])) {
         // FIXME: We shouldn't have to make a copy here. We want callers of this function to work directly with StylePropertySet eventually.
-        coreFrame->editor().applyStyleToSelection(core(style)->copyProperties().get(), undoAction);
+        Ref<MutableStylePropertySet> properties(core(style)->copyProperties());
+        coreFrame->editor().applyStyleToSelection(&properties.get(), undoAction);
     }
 }
 
@@ -4672,7 +4673,8 @@ static PassRefPtr<KeyboardEvent> currentKeyboardEvent(Frame* coreFrame)
     if ([[webView _editingDelegateForwarder] webView:webView shouldApplyStyle:style toElementsInDOMRange:range]) {
         if (Frame* coreFrame = core([self _frame])) {
             // FIXME: We shouldn't have to make a copy here.
-            coreFrame->editor().applyStyle(core(style)->copyProperties().get(), [self _undoActionFromColorPanelWithSelector:selector]);
+            Ref<MutableStylePropertySet> properties(core(style)->copyProperties());
+            coreFrame->editor().applyStyle(&properties.get(), [self _undoActionFromColorPanelWithSelector:selector]);
         }
     }
 

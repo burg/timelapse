@@ -37,8 +37,6 @@
 #include "Page.h"
 #include "RenderImage.h"
 
-using namespace std;
-
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -177,12 +175,12 @@ String HTMLImageElement::altText() const
     return alt;
 }
 
-RenderElement* HTMLImageElement::createRenderer(RenderArena& arena, RenderStyle& style)
+RenderElement* HTMLImageElement::createRenderer(RenderStyle& style)
 {
     if (style.hasContent())
         return RenderElement::createFor(*this, style);
 
-    RenderImage* image = new (arena) RenderImage(this);
+    RenderImage* image = new RenderImage(*this);
     image->setImageResource(RenderImageResource::create());
     return image;
 }
@@ -317,7 +315,7 @@ bool HTMLImageElement::isURLAttribute(const Attribute& attribute) const
 
 bool HTMLImageElement::matchesLowercasedUsemap(const AtomicStringImpl& name) const
 {
-    ASSERT(const_cast<AtomicStringImpl&>(name).lower() == &name);
+    ASSERT(String(&const_cast<AtomicStringImpl&>(name)).lower().impl() == &name);
     return m_lowercasedUsemap.impl() == &name;
 }
 

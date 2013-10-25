@@ -38,12 +38,18 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderTableRow::RenderTableRow(Element* element)
+RenderTableRow::RenderTableRow(Element& element)
     : RenderBox(element, 0)
     , m_rowIndex(unsetRowIndex)
 {
-    // init RenderObject attributes
-    setInline(false);   // our object is not Inline
+    setInline(false);
+}
+
+RenderTableRow::RenderTableRow(Document& document)
+    : RenderBox(document, 0)
+    , m_rowIndex(unsetRowIndex)
+{
+    setInline(false);
 }
 
 void RenderTableRow::willBeRemovedFromTree()
@@ -253,18 +259,10 @@ void RenderTableRow::imageChanged(WrappedImagePtr, const IntRect*)
     repaint();
 }
 
-RenderTableRow* RenderTableRow::createAnonymous(Document& document)
-{
-    RenderTableRow* renderer = new (*document.renderArena()) RenderTableRow(0);
-    renderer->setDocumentForAnonymous(document);
-    return renderer;
-}
-
 RenderTableRow* RenderTableRow::createAnonymousWithParentRenderer(const RenderObject* parent)
 {
-    RenderTableRow* newRow = RenderTableRow::createAnonymous(parent->document());
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE_ROW);
-    newRow->setStyle(newStyle.release());
+    RenderTableRow* newRow = new RenderTableRow(parent->document());
+    newRow->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE_ROW));
     return newRow;
 }
 

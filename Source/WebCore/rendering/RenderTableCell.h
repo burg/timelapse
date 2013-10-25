@@ -38,7 +38,8 @@ enum IncludeBorderColorOrNot { DoNotIncludeBorderColor, IncludeBorderColor };
 
 class RenderTableCell FINAL : public RenderBlockFlow {
 public:
-    explicit RenderTableCell(Element*);
+    explicit RenderTableCell(Element&);
+    explicit RenderTableCell(Document&);
     
     unsigned colSpan() const
     {
@@ -103,7 +104,7 @@ public:
         // Call computedCSSPadding* directly to avoid including implicitPadding.
         if (!document().inQuirksMode() && style()->boxSizing() != BORDER_BOX)
             styleLogicalHeight += (computedCSSPaddingBefore() + computedCSSPaddingAfter()).floor() + borderBefore() + borderAfter();
-        return max(styleLogicalHeight, adjustedLogicalHeight);
+        return std::max(styleLogicalHeight, adjustedLogicalHeight);
     }
 
 
@@ -161,7 +162,6 @@ public:
     bool cellWidthChanged() const { return m_cellWidthChanged; }
     void setCellWidthChanged(bool b = true) { m_cellWidthChanged = b; }
 
-    static RenderTableCell* createAnonymous(Document&);
     static RenderTableCell* createAnonymousWithParentRenderer(const RenderObject*);
     virtual RenderBox* createAnonymousBoxWithSameTypeAs(const RenderObject* parent) const OVERRIDE
     {
@@ -296,20 +296,7 @@ private:
     int m_intrinsicPaddingAfter;
 };
 
-inline RenderTableCell* toRenderTableCell(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableCell());
-    return static_cast<RenderTableCell*>(object);
-}
-
-inline const RenderTableCell* toRenderTableCell(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isTableCell());
-    return static_cast<const RenderTableCell*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderTableCell(const RenderTableCell*);
+RENDER_OBJECT_TYPE_CASTS(RenderTableCell, isTableCell())
 
 inline RenderTableCell* RenderTableCell::nextCell() const
 {

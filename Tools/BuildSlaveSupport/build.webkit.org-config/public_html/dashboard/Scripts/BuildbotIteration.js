@@ -28,7 +28,6 @@ BuildbotIteration = function(queue, id, finished)
     BaseObject.call(this);
 
     console.assert(queue);
-    console.assert(id);
 
     this.queue = queue;
     this.id = id;
@@ -77,11 +76,6 @@ BuildbotIteration.prototype = {
             var testStep = data.steps.findFirst(function(step) { return step.name === stepName; });
             if (!testStep)
                 return null;
-
-            if (testStep.results[0] === 4) {
-                // This build step was interrupted (perhaps due to the build slave restarting).
-                return null;
-            }
 
             var testResults = {};
 
@@ -160,7 +154,11 @@ BuildbotIteration.prototype = {
 
             this.loaded = true;
 
+            // Results values (same for the iteration and for each of its steps):
+            // SUCCESS: 0, WARNINGS: 1, FAILURE: 2, SKIPPED: 3, EXCEPTION: 4, RETRY: 5.
             this.failed = !!data.results;
+
+            this.text = data.text.join(" ");
 
             if (!data.currentStep)
                 this.finished = true;

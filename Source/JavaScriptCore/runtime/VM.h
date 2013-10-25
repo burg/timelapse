@@ -186,7 +186,7 @@ namespace JSC {
 
         bool isSharedInstance() { return vmType == APIShared; }
         bool usingAPI() { return vmType != Default; }
-        static bool sharedInstanceExists();
+        JS_EXPORT_PRIVATE static bool sharedInstanceExists();
         JS_EXPORT_PRIVATE static VM& sharedInstance();
 
         JS_EXPORT_PRIVATE static PassRefPtr<VM> create(HeapType = SmallHeap);
@@ -319,7 +319,7 @@ namespace JSC {
         PrototypeMap prototypeMap;
 
         OwnPtr<ParserArena> parserArena;
-        typedef HashMap<RefPtr<SourceProvider>, RefPtr<SourceProviderCache> > SourceProviderCacheMap;
+        typedef HashMap<RefPtr<SourceProvider>, RefPtr<SourceProviderCache>> SourceProviderCacheMap;
         SourceProviderCacheMap sourceProviderCacheMap;
         OwnPtr<Keywords> keywords;
         Interpreter* interpreter;
@@ -340,7 +340,17 @@ namespace JSC {
         {
             return OBJECT_OFFSETOF(VM, m_exception);
         }
-        
+
+        static ptrdiff_t callFrameForThrowOffset()
+        {
+            return OBJECT_OFFSETOF(VM, callFrameForThrow);
+        }
+
+        static ptrdiff_t targetMachinePCForThrowOffset()
+        {
+            return OBJECT_OFFSETOF(VM, targetMachinePCForThrow);
+        }
+
         JS_EXPORT_PRIVATE void clearException();
         JS_EXPORT_PRIVATE void clearExceptionStack();
         void getExceptionInfo(JSValue& exception, RefCountedArray<StackFrame>& exceptionStack);
@@ -403,7 +413,7 @@ namespace JSC {
         BumpPointerAllocator m_regExpAllocator;
 
 #if ENABLE(REGEXP_TRACING)
-        typedef ListHashSet<RefPtr<RegExp> > RTTraceList;
+        typedef ListHashSet<RefPtr<RegExp>> RTTraceList;
         RTTraceList* m_rtTraceList;
 #endif
 

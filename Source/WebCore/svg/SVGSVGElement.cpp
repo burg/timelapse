@@ -337,7 +337,7 @@ PassRefPtr<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(const Flo
 {
     Vector<Ref<Element>> elements;
 
-    auto svgDescendants = descendantsOfType<SVGElement>(referenceElement ? referenceElement : this);
+    auto svgDescendants = descendantsOfType<SVGElement>(*(referenceElement ? referenceElement : this));
     for (auto it = svgDescendants.begin(), end = svgDescendants.end(); it != end; ++it) {
         const SVGElement* svgElement = &*it;
         if (collect == CollectIntersectionList) {
@@ -480,12 +480,12 @@ bool SVGSVGElement::rendererIsNeeded(const RenderStyle& style)
     return StyledElement::rendererIsNeeded(style);
 }
 
-RenderElement* SVGSVGElement::createRenderer(RenderArena& arena, RenderStyle&)
+RenderElement* SVGSVGElement::createRenderer(RenderStyle&)
 {
     if (isOutermostSVGSVGElement())
-        return new (arena) RenderSVGRoot(*this);
+        return new RenderSVGRoot(*this);
 
-    return new (arena) RenderSVGViewportContainer(*this);
+    return new RenderSVGViewportContainer(*this);
 }
 
 Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode& rootParent)
@@ -535,7 +535,7 @@ void SVGSVGElement::setCurrentTime(float seconds)
 {
     if (std::isnan(seconds))
         return;
-    seconds = max(seconds, 0.0f);
+    seconds = std::max(seconds, 0.0f);
     m_timeContainer->setElapsed(seconds);
 }
 
@@ -777,7 +777,8 @@ Element* SVGSVGElement::getElementById(const AtomicString& id)
 
     // Fall back to traversing our subtree. Duplicate ids are allowed, the first found will
     // be returned.
-    for (auto element = elementDescendants(this).begin(), end = elementDescendants(this).end(); element != end; ++element) {
+    auto descendants = elementDescendants(*this);
+    for (auto element = descendants.begin(), end = descendants.end(); element != end; ++element) {
         if (element->getIdAttribute() == id)
             return &*element;
     }

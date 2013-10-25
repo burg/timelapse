@@ -35,8 +35,8 @@ using namespace std;
 
 namespace WebCore {
 
-RenderMultiColumnSet::RenderMultiColumnSet(RenderFlowThread* flowThread)
-    : RenderRegionSet(0, flowThread)
+RenderMultiColumnSet::RenderMultiColumnSet(RenderFlowThread& flowThread)
+    : RenderRegionSet(flowThread.document(), flowThread)
     , m_computedColumnCount(1)
     , m_computedColumnWidth(0)
     , m_computedColumnHeight(0)
@@ -47,14 +47,6 @@ RenderMultiColumnSet::RenderMultiColumnSet(RenderFlowThread* flowThread)
     , m_maximumDistanceBetweenForcedBreaks(0)
     , m_forcedBreakOffset(0)
 {
-}
-
-RenderMultiColumnSet* RenderMultiColumnSet::createAnonymous(RenderFlowThread& flowThread)
-{
-    Document& document = flowThread.document();
-    RenderMultiColumnSet* renderer = new (*document.renderArena()) RenderMultiColumnSet(&flowThread);
-    renderer->setDocumentForAnonymous(document);
-    return renderer;
 }
 
 LayoutUnit RenderMultiColumnSet::heightAdjustedForSetOffset(LayoutUnit height) const
@@ -514,6 +506,36 @@ void RenderMultiColumnSet::collectLayerFragments(LayerFragments& fragments, cons
         fragment.paginationClip = flippedFlowThreadOverflowPortion;
         fragments.append(fragment);
     }
+}
+
+void RenderMultiColumnSet::adjustRegionBoundsFromFlowThreadPortionRect(const IntPoint& layerOffset, IntRect& regionBounds)
+{
+    LayoutUnit layerLogicalTop = isHorizontalWritingMode() ? layerOffset.y() : layerOffset.x();
+    unsigned startColumn = columnIndexAtOffset(layerLogicalTop);
+    
+    LayoutUnit colGap = columnGap();
+    LayoutUnit colLogicalWidth = computedColumnWidth();
+    
+    LayoutRect flowThreadPortion = flowThreadPortionRectAt(startColumn);
+    LayoutPoint translationOffset;
+
+    LayoutUnit inlineOffset = startColumn * (colLogicalWidth + colGap);
+    if (!style()->isLeftToRightDirection())
+        inlineOffset = -inlineOffset;
+    translationOffset.setX(inlineOffset);
+        
+    LayoutUnit blockOffset = isHorizontalWritingMode() ? -flowThreadPortion.y() : -flowThreadPortion.x();
+    if (isFlippedBlocksWritingMode(style()->writingMode()))
+        blockOffset = -blockOffset;
+    translationOffset.setY(blockOffset);
+    
+    if (!isHorizontalWritingMode())
+        translationOffset = translationOffset.transposedPoint();
+
+    // FIXME: The translation needs to include the multicolumn set's content offset within the
+    // multicolumn block as well. This won't be an issue until we start creating multiple multicolumn sets.
+    
+    regionBounds.moveBy(roundedIntPoint(-translationOffset));
 }
 
 const char* RenderMultiColumnSet::renderName() const

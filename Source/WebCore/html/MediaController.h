@@ -144,12 +144,12 @@ private:
     bool m_muted;
     ReadyState m_readyState;
     PlaybackState m_playbackState;
-    Vector<RefPtr<Event> > m_pendingEvents;
+    Vector<RefPtr<Event>> m_pendingEvents;
     Timer<MediaController> m_asyncEventTimer;
     mutable Timer<MediaController> m_clearPositionTimer;
     String m_mediaGroup;
     bool m_closedCaptionsVisible;
-    PassRefPtr<Clock> m_clock;
+    std::unique_ptr<Clock> m_clock;
     ScriptExecutionContext* m_scriptExecutionContext;
     Timer<MediaController> m_timeupdateTimer;
     double m_previousTimeupdateTime;

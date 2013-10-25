@@ -38,7 +38,7 @@ using namespace std;
 namespace WebCore {
 
 RenderRubyText::RenderRubyText(Element& element)
-    : RenderBlockFlow(&element)
+    : RenderBlockFlow(element)
 {
 }
 
@@ -46,9 +46,9 @@ RenderRubyText::~RenderRubyText()
 {
 }
 
-bool RenderRubyText::isChildAllowed(RenderObject* child, RenderStyle*) const
+bool RenderRubyText::isChildAllowed(const RenderObject& child, const RenderStyle&) const
 {
-    return child->isInline();
+    return child.isInline();
 }
 
 ETextAlign RenderRubyText::textAlignmentForLine(bool endsWithSoftBreak) const
@@ -56,7 +56,7 @@ ETextAlign RenderRubyText::textAlignmentForLine(bool endsWithSoftBreak) const
     ETextAlign textAlign = style()->textAlign();
     // FIXME: This check is bogus since user can set the initial value.
     if (textAlign != RenderStyle::initialTextAlign())
-        return RenderBlock::textAlignmentForLine(endsWithSoftBreak);
+        return RenderBlockFlow::textAlignmentForLine(endsWithSoftBreak);
 
     // The default behavior is to allow ruby text to expand if it is shorter than the ruby base.
     return JUSTIFY;
@@ -67,7 +67,7 @@ void RenderRubyText::adjustInlineDirectionLineBounds(int expansionOpportunityCou
     ETextAlign textAlign = style()->textAlign();
     // FIXME: This check is bogus since user can set the initial value.
     if (textAlign != RenderStyle::initialTextAlign())
-        return RenderBlock::adjustInlineDirectionLineBounds(expansionOpportunityCount, logicalLeft, logicalWidth);
+        return RenderBlockFlow::adjustInlineDirectionLineBounds(expansionOpportunityCount, logicalLeft, logicalWidth);
 
     int maxPreferredLogicalWidth = this->maxPreferredLogicalWidth();
     if (maxPreferredLogicalWidth >= logicalWidth)

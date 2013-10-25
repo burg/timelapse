@@ -64,7 +64,6 @@ inline SVGImageElement::SVGImageElement(const QualifiedName& tagName, Document& 
     , m_height(LengthModeHeight)
     , m_imageLoader(this)
 {
-    ASSERT(isSVGImageElement(this));
     registerAnimatedPropertiesForSVGImageElement();
 }
 
@@ -183,9 +182,9 @@ bool SVGImageElement::selfHasRelativeLengths() const
         || height().isRelative();
 }
 
-RenderElement* SVGImageElement::createRenderer(RenderArena& arena, RenderStyle&)
+RenderElement* SVGImageElement::createRenderer(RenderStyle&)
 {
-    return new (arena) RenderSVGImage(*this);
+    return new RenderSVGImage(*this);
 }
 
 bool SVGImageElement::haveLoadedRequiredResources()

@@ -145,8 +145,7 @@ protected:
     void dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback callback);
     void dispatchDidPause(ScriptDebugListener*);
     void dispatchDidContinue(ScriptDebugListener*);
-    void dispatchWillParseSource(const ListenerSet& listeners, ScriptDebugListener::Script&);
-    void dispatchDidParseSource(const ListenerSet& listeners, ScriptDebugListener::Script&);
+    void dispatchDidParseSource(const ListenerSet& listeners, JSC::SourceProvider*, bool isContentScript);
     void dispatchFailedToParseSource(const ListenerSet& listeners, JSC::SourceProvider*, int errorLine, const String& errorMessage);
     void dispatchCaptureProbeSample(ScriptState*, PassRefPtr<ScriptProbe>, int batchId, const ScriptValue&);
 
@@ -185,7 +184,7 @@ private:
 
 protected:
     typedef Vector<ScriptBreakpoint> BreakpointsInLine;
-    typedef HashMap<int, BreakpointsInLine, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > LineToBreakpointsMap;
+    typedef HashMap<int, BreakpointsInLine, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int>> LineToBreakpointsMap;
     typedef HashMap<intptr_t, LineToBreakpointsMap> SourceIdToBreakpointsMap;
 
     bool m_callingListeners;

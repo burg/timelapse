@@ -61,7 +61,6 @@ class StickyPositionViewportConstraints;
 
 class RenderBoxModelObject : public RenderLayerModelObject {
 public:
-    explicit RenderBoxModelObject(Element*, unsigned baseTypeFlags);
     virtual ~RenderBoxModelObject();
     
     LayoutSize relativePositionOffset() const;
@@ -195,6 +194,9 @@ public:
 #endif
 
 protected:
+    RenderBoxModelObject(Element&, unsigned baseTypeFlags);
+    RenderBoxModelObject(Document&, unsigned baseTypeFlags);
+
     virtual void willBeDestroyed() OVERRIDE;
 
     class BackgroundImageGeometry {
@@ -338,33 +340,7 @@ private:
                             Color, EBorderStyle, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge);
 };
 
-inline RenderBoxModelObject& toRenderBoxModelObject(RenderObject& object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(object.isBoxModelObject());
-    return static_cast<RenderBoxModelObject&>(object);
-}
-
-inline const RenderBoxModelObject& toRenderBoxModelObject(const RenderObject& object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(object.isBoxModelObject());
-    return static_cast<const RenderBoxModelObject&>(object);
-}
-
-inline RenderBoxModelObject* toRenderBoxModelObject(RenderObject* object)
-{ 
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBoxModelObject());
-    return static_cast<RenderBoxModelObject*>(object);
-}
-
-inline const RenderBoxModelObject* toRenderBoxModelObject(const RenderObject* object)
-{ 
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBoxModelObject());
-    return static_cast<const RenderBoxModelObject*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderBoxModelObject(const RenderBoxModelObject*);
-void toRenderBoxModelObject(const RenderBoxModelObject&);
+RENDER_OBJECT_TYPE_CASTS(RenderBoxModelObject, isBoxModelObject())
 
 } // namespace WebCore
 

@@ -59,7 +59,7 @@ private:
     virtual bool valueMissing(const String&) const OVERRIDE;
     virtual String valueMissingText() const OVERRIDE;
     virtual void handleDOMActivateEvent(Event*) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) const OVERRIDE;
+    virtual RenderElement* createRenderer(RenderStyle&) const OVERRIDE;
     virtual bool canSetStringValue() const OVERRIDE;
     virtual bool canChangeFromAnotherType() const OVERRIDE;
     virtual FileList* files() OVERRIDE;
@@ -90,7 +90,7 @@ private:
     void applyFileChooserSettings(const FileChooserSettings&);
 
     RefPtr<FileChooser> m_fileChooser;
-    RefPtr<FileIconLoader> m_fileIconLoader;
+    std::unique_ptr<FileIconLoader> m_fileIconLoader;
 
     RefPtr<FileList> m_fileList;
     RefPtr<Icon> m_icon;

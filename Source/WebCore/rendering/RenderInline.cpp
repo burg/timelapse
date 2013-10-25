@@ -50,18 +50,18 @@ using namespace std;
 
 namespace WebCore {
 
-RenderInline::RenderInline(Element* element)
+RenderInline::RenderInline(Element& element)
     : RenderBoxModelObject(element, RenderInlineFlag)
     , m_alwaysCreateLineBoxes(false)
 {
     setChildrenInline(true);
 }
 
-RenderInline* RenderInline::createAnonymous(Document& document)
+RenderInline::RenderInline(Document& document)
+    : RenderBoxModelObject(document, RenderInlineFlag)
+    , m_alwaysCreateLineBoxes(false)
 {
-    RenderInline* renderer = new (*document.renderArena()) RenderInline(0);
-    renderer->setDocumentForAnonymous(document);
-    return renderer;
+    setChildrenInline(true);
 }
 
 void RenderInline::willBeDestroyed()
@@ -107,8 +107,8 @@ void RenderInline::willBeDestroyed()
             // not have a parent that means they are either already disconnected or
             // root lines that can just be destroyed without disconnecting.
             if (firstLineBox()->parent()) {
-                for (InlineFlowBox* box = firstLineBox(); box; box = box->nextLineBox())
-                    box->remove();
+                for (auto box = firstLineBox(); box; box = box->nextLineBox())
+                    box->removeFromParent();
             }
         } else if (parent()) 
             parent()->dirtyLinesFromChangedChild(this);
@@ -138,7 +138,7 @@ void RenderInline::updateFromStyle()
     setHasReflection(false);    
 }
 
-static RenderObject* inFlowPositionedInlineAncestor(RenderObject* p)
+static RenderElement* inFlowPositionedInlineAncestor(RenderElement* p)
 {
     while (p && p->isRenderInline()) {
         if (p->isInFlowPositioned())
@@ -158,9 +158,9 @@ static void updateStyleOfAnonymousBlockContinuations(RenderBlock* block, const R
         RenderInline* cont = block->inlineElementContinuation();
         if (oldStyle->hasInFlowPosition() && inFlowPositionedInlineAncestor(cont))
             continue;
-        RefPtr<RenderStyle> blockStyle = RenderStyle::createAnonymousStyleWithDisplay(block->style(), BLOCK);
-        blockStyle->setPosition(newStyle->position());
-        block->setStyle(blockStyle);
+        auto blockStyle = RenderStyle::createAnonymousStyleWithDisplay(block->style(), BLOCK);
+        blockStyle.get().setPosition(newStyle->position());
+        block->setStyle(std::move(blockStyle));
     }
 }
 
@@ -179,7 +179,7 @@ void RenderInline::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
     for (RenderInline* currCont = continuation; currCont; currCont = currCont->inlineElementContinuation()) {
         RenderBoxModelObject* nextCont = currCont->continuation();
         currCont->setContinuation(0);
-        currCont->setStyle(newStyle);
+        currCont->setStyle(*newStyle);
         currCont->setContinuation(nextCont);
     }
 
@@ -312,15 +312,15 @@ void RenderInline::addChildIgnoringContinuation(RenderObject* newChild, RenderOb
         // inline into continuations.  This involves creating an anonymous block box to hold
         // |newChild|.  We then make that block box a continuation of this inline.  We take all of
         // the children after |beforeChild| and put them in a clone of this object.
-        RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
+        auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
         
         // If inside an inline affected by in-flow positioning the block needs to be affected by it too.
         // Giving the block a layer like this allows it to collect the x/y offsets from inline parents later.
-        if (RenderObject* positionedAncestor = inFlowPositionedInlineAncestor(this))
-            newStyle->setPosition(positionedAncestor->style()->position());
+        if (auto positionedAncestor = inFlowPositionedInlineAncestor(this))
+            newStyle.get().setPosition(positionedAncestor->style()->position());
 
-        RenderBlock* newBox = RenderBlock::createAnonymous(document());
-        newBox->setStyle(newStyle.release());
+        RenderBlock* newBox = new RenderBlockFlow(document());
+        newBox->setStyle(std::move(newStyle));
         RenderBoxModelObject* oldContinuation = continuation();
         setContinuation(newBox);
 
@@ -335,8 +335,8 @@ void RenderInline::addChildIgnoringContinuation(RenderObject* newChild, RenderOb
 
 RenderInline* RenderInline::clone() const
 {
-    RenderInline* cloneInline = new (renderArena()) RenderInline(element());
-    cloneInline->setStyle(style());
+    RenderInline* cloneInline = new RenderInline(*element());
+    cloneInline->setStyle(*style());
     cloneInline->setFlowThreadState(flowThreadState());
     return cloneInline;
 }
@@ -366,7 +366,7 @@ void RenderInline::splitInlines(RenderBlock* fromBlock, RenderBlock* toBlock,
     while (o) {
         RenderObject* tmp = o;
         o = tmp->nextSibling();
-        removeChildInternal(tmp, NotifyChildren);
+        removeChildInternal(*tmp, NotifyChildren);
         cloneInline->addChildIgnoringContinuation(tmp, 0);
         tmp->setNeedsLayoutAndPrefWidthsRecalc();
     }
@@ -408,7 +408,7 @@ void RenderInline::splitInlines(RenderBlock* fromBlock, RenderBlock* toBlock,
             while (o) {
                 RenderObject* tmp = o;
                 o = tmp->nextSibling();
-                inlineCurr->removeChildInternal(tmp, NotifyChildren);
+                inlineCurr->removeChildInternal(*tmp, NotifyChildren);
                 cloneInline->addChildIgnoringContinuation(tmp, 0);
                 tmp->setNeedsLayoutAndPrefWidthsRecalc();
             }
@@ -429,7 +429,7 @@ void RenderInline::splitInlines(RenderBlock* fromBlock, RenderBlock* toBlock,
     while (o) {
         RenderObject* tmp = o;
         o = tmp->nextSibling();
-        fromBlock->removeChildInternal(tmp, NotifyChildren);
+        fromBlock->removeChildInternal(*tmp, NotifyChildren);
         toBlock->insertChildInternal(tmp, nullptr, NotifyChildren);
     }
 }
@@ -441,7 +441,7 @@ void RenderInline::splitFlow(RenderObject* beforeChild, RenderBlock* newBlockBox
     RenderBlock* block = containingBlock();
     
     // Delete our line boxes before we do the inline split into continuations.
-    block->deleteLineBoxTree();
+    block->deleteLines();
     
     bool madeNewBeforeBlock = false;
     if (block->isAnonymousBlock() && (!block->parent() || !block->parent()->createsAnonymousWrapper())) {
@@ -474,7 +474,7 @@ void RenderInline::splitFlow(RenderObject* beforeChild, RenderBlock* newBlockBox
         while (o) {
             RenderObject* no = o;
             o = no->nextSibling();
-            block->removeChildInternal(no, NotifyChildren);
+            block->removeChildInternal(*no, NotifyChildren);
             pre->insertChildInternal(no, nullptr, NotifyChildren);
             no->setNeedsLayoutAndPrefWidthsRecalc();
         }
@@ -1275,7 +1275,7 @@ void RenderInline::childBecameNonInline(RenderObject* child)
     RenderBoxModelObject* oldContinuation = continuation();
     setContinuation(newBox);
     RenderObject* beforeChild = child->nextSibling();
-    removeChildInternal(child, NotifyChildren);
+    removeChildInternal(*child, NotifyChildren);
     splitFlow(beforeChild, newBox, child, oldContinuation);
 }
 
@@ -1339,7 +1339,7 @@ void RenderInline::dirtyLineBoxes(bool fullLayout)
         m_lineBoxes.dirtyLineBoxes();
 }
 
-void RenderInline::deleteLineBoxTree()
+void RenderInline::deleteLines()
 {
     m_lineBoxes.deleteLineBoxTree(renderArena());
 }

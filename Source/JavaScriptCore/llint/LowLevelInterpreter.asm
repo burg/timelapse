@@ -194,7 +194,7 @@ macro assert(assertion)
 end
 
 macro preserveReturnAddressAfterCall(destinationRegister)
-    if C_LOOP or ARM or ARMv7 or ARMv7_TRADITIONAL or MIPS
+    if C_LOOP or ARM or ARMv7 or ARMv7_TRADITIONAL or ARM64 or MIPS
         # In C_LOOP case, we're only preserving the bytecode vPC.
         move lr, destinationRegister
     elsif SH4
@@ -207,7 +207,7 @@ macro preserveReturnAddressAfterCall(destinationRegister)
 end
 
 macro restoreReturnAddressBeforeReturn(sourceRegister)
-    if C_LOOP or ARM or ARMv7 or ARMv7_TRADITIONAL or MIPS
+    if C_LOOP or ARM or ARMv7 or ARMv7_TRADITIONAL or ARM64 or MIPS
         # In C_LOOP case, we're only restoring the bytecode vPC.
         move sourceRegister, lr
     elsif SH4
@@ -797,7 +797,15 @@ _llint_op_profile_did_call:
 
 _llint_op_debug:
     traceExecution()
+    loadp CodeBlock[cfr], t0
+    loadp CodeBlock::m_globalObject[t0], t0
+    loadp JSGlobalObject::m_debugger[t0], t0
+    btiz t0, .opDebugDone
+    loadb Debugger::m_needsOpDebugCallbacks[t0], t0
+    btbz t0, .opDebugDone
+
     callSlowPath(_llint_slow_path_debug)
+.opDebugDone:                    
     dispatch(2)
 
 

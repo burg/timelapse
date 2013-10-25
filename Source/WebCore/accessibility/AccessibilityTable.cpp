@@ -124,7 +124,8 @@ bool AccessibilityTable::isDataTable() const
         return true;    
 
     // if there's a colgroup or col element, it's probably a data table.
-    for (auto child = elementChildren(tableElement).begin(), end = elementChildren(tableElement).end(); child != end; ++child) {
+    auto tableChildren = elementChildren(*tableElement);
+    for (auto child = tableChildren.begin(), end = tableChildren.end(); child != end; ++child) {
         if (child->hasTagName(colTag) || child->hasTagName(colgroupTag))
             return true;
     }
@@ -307,7 +308,7 @@ bool AccessibilityTable::isTableExposableThroughAccessibility() const
         return false;
 
     // Gtk+ ATs expect all tables to be exposed as tables.
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(EFL)
     Element* tableNode = toRenderTable(m_renderer)->element();
     return tableNode && isHTMLTableElement(tableNode);
 #endif
@@ -374,14 +375,14 @@ void AccessibilityTable::addChildren()
             m_rows.append(row);
             if (!row->accessibilityIsIgnored())
                 m_children.append(row);
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(EFL)
             else
                 m_children.appendVector(row->children());
 #endif
             appendedRows.add(row);
         }
     
-        maxColumnCount = max(tableSection->numColumns(), maxColumnCount);
+        maxColumnCount = std::max(tableSection->numColumns(), maxColumnCount);
         tableSection = table->sectionBelow(tableSection, SkipEmptySections);
     }
     

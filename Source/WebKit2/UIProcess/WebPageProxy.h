@@ -86,33 +86,33 @@
 #include <Evas.h>
 #endif
 
+#if PLATFORM(MAC)
+#include <WebCore/PlatformLayer.h>
+#endif
+
 namespace CoreIPC {
-    class ArgumentDecoder;
-    class Connection;
+class ArgumentDecoder;
+class Connection;
 }
 
 namespace WebCore {
-    class AuthenticationChallenge;
-    class Cursor;
-    class DragData;
-    class FloatRect;
-    class GraphicsLayer;
-    class IntSize;
-    class ProtectionSpace;
-    class SharedBuffer;
-    struct FileChooserSettings;
-    struct TextAlternativeWithRange;
-    struct TextCheckingResult;
-    struct ViewportAttributes;
-    struct WindowFeatures;
+class AuthenticationChallenge;
+class Cursor;
+class DragData;
+class FloatRect;
+class GraphicsLayer;
+class IntSize;
+class ProtectionSpace;
+class SharedBuffer;
+struct FileChooserSettings;
+struct TextAlternativeWithRange;
+struct TextCheckingResult;
+struct ViewportAttributes;
+struct WindowFeatures;
 }
 
 #if USE(APPKIT)
-#ifdef __OBJC__
-@class WKView;
-#else
-class WKView;
-#endif
+OBJC_CLASS WKView;
 #endif
 
 #if PLATFORM(GTK)
@@ -328,6 +328,7 @@ public:
         ViewIsFocused = 1 << 1,
         ViewIsVisible = 1 << 2,
         ViewIsInWindow = 1 << 3,
+        WindowIsVisible = 1 << 4
     };
     typedef unsigned ViewStateFlags;
     void viewStateDidChange(ViewStateFlags flags);
@@ -368,7 +369,6 @@ public:
 #endif
 
 #if PLATFORM(MAC)
-    void updateWindowIsVisible(bool windowIsVisible);
     void windowAndViewFramesChanged(const WebCore::FloatRect& viewFrameInWindowCoordinates, const WebCore::FloatPoint& accessibilityViewCoordinates);
     void viewExposedRectChanged(const WebCore::FloatRect& exposedRect, bool);
     void exposedRectChangedTimerFired(WebCore::Timer<WebPageProxy>*);
@@ -391,13 +391,13 @@ public:
     bool shouldDelayWindowOrderingForEvent(const WebMouseEvent&);
     bool acceptsFirstMouse(int eventNumber, const WebMouseEvent&);
 
-    void setAcceleratedCompositingRootLayer(const WebCore::GraphicsLayer*);
+    void setAcceleratedCompositingRootLayer(PlatformLayer* rootLayer);
 
 #if USE(APPKIT)
     WKView* wkView() const;
     void intrinsicContentSizeDidChange(const WebCore::IntSize& intrinsicContentSize);
 #endif
-#endif
+#endif // PLATFORM(MAC)
 #if PLATFORM(EFL)
     void handleInputMethodKeydown(bool& handled);
     void confirmComposition(const String&);

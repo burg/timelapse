@@ -31,7 +31,6 @@ class RenderLayer;
 
 class RenderLayerModelObject : public RenderElement {
 public:
-    explicit RenderLayerModelObject(Element*, unsigned baseTypeFlags);
     virtual ~RenderLayerModelObject();
 
     // Called by RenderObject::willBeDestroyed() and is the only way layers should ever be destroyed
@@ -51,7 +50,10 @@ public:
     virtual bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const { return false; }
 
 protected:
-    void ensureLayer();
+    RenderLayerModelObject(Element&, unsigned baseTypeFlags);
+    RenderLayerModelObject(Document&, unsigned baseTypeFlags);
+
+    void createLayer();
 
     virtual void willBeDestroyed() OVERRIDE;
 
@@ -65,20 +67,7 @@ private:
     static bool s_layerWasSelfPainting;
 };
 
-inline RenderLayerModelObject* toRenderLayerModelObject(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderLayerModelObject());
-    return static_cast<RenderLayerModelObject*>(object);
-}
-
-inline const RenderLayerModelObject* toRenderLayerModelObject(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderLayerModelObject());
-    return static_cast<const RenderLayerModelObject*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderLayerModelObject(const RenderLayerModelObject*);
+RENDER_OBJECT_TYPE_CASTS(RenderLayerModelObject, isRenderLayerModelObject())
 
 } // namespace WebCore
 

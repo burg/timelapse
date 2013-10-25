@@ -36,6 +36,7 @@
 
 namespace WebCore {
 
+class IDBBackingStoreInterface;
 class IDBCallbacks;
 class IDBDatabaseCallbacks;
 class IDBKey;
@@ -44,6 +45,7 @@ class IDBKeyRange;
 struct IDBDatabaseMetadata;
 class SharedBuffer;
 
+typedef Vector<RefPtr<IDBKey>> IndexKeys;
 typedef int ExceptionCode;
 
 // This is implemented by IDBDatabaseBackendImpl and optionally others (in order to proxy
@@ -79,8 +81,6 @@ public:
 
     static const int64_t MinimumIndexId = 30;
 
-    typedef Vector<RefPtr<IDBKey> > IndexKeys;
-
     virtual void get(int64_t transactionId, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, bool keyOnly, PassRefPtr<IDBCallbacks>) = 0;
     // Note that 'value' may be consumed/adopted by this call.
     virtual void put(int64_t transactionId, int64_t objectStoreId, PassRefPtr<SharedBuffer> value, PassRefPtr<IDBKey>, PutMode, PassRefPtr<IDBCallbacks>, const Vector<int64_t>& indexIds, const Vector<IndexKeys>&) = 0;
@@ -90,6 +90,8 @@ public:
     virtual void count(int64_t transactionId, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>) = 0;
     virtual void deleteRange(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>) = 0;
     virtual void clear(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBCallbacks>) = 0;
+
+    virtual bool isIDBDatabaseBackendImpl() { return false; }
 };
 
 } // namespace WebCore

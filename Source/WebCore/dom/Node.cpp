@@ -90,7 +90,6 @@
 #include "RenderTextControl.h"
 #include "RenderView.h"
 #include "ScopedEventQueue.h"
-#include "SelectorQuery.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "StorageEvent.h"
@@ -106,6 +105,8 @@
 #include "WheelEvent.h"
 #include "XMLNames.h"
 #include "htmlediting.h"
+#include <runtime/Operations.h>
+#include <runtime/VM.h>
 #include <wtf/HashSet.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCountedLeakCounter.h>
@@ -120,11 +121,6 @@
 #if ENABLE(INSPECTOR)
 #include "InspectorController.h"
 #endif
-
-#include <runtime/VM.h>
-#include <runtime/Operations.h>
-
-using namespace std;
 
 namespace WebCore {
 
@@ -352,13 +348,8 @@ Node::~Node()
 
 void Node::willBeDeletedFrom(Document* document)
 {
-    if (hasEventTargetData()) {
-#if ENABLE(TOUCH_EVENT_TRACKING)
-        if (document)
-            document->didRemoveEventTargetNode(this);
-#endif
+    if (hasEventTargetData())
         clearEventTargetData();
-    }
 
     if (document) {
         if (AXObjectCache* cache = document->existingAXObjectCache())
@@ -368,7 +359,7 @@ void Node::willBeDeletedFrom(Document* document)
 
 NodeRareData* Node::rareData() const
 {
-    ASSERT(hasRareData());
+    ASSERT_WITH_SECURITY_IMPLICATION(hasRareData());
     return static_cast<NodeRareData*>(m_data.m_rareData);
 }
 
@@ -1099,36 +1090,10 @@ PassRefPtr<RadioNodeList> Node::radioNodeList(const AtomicString& name)
     return ensureRareData().ensureNodeLists().addCacheWithAtomicName<RadioNodeList>(*this, RadioNodeListType, name);
 }
 
-PassRefPtr<Element> Node::querySelector(const AtomicString& selectors, ExceptionCode& ec)
+Document* Node::ownerDocument() const
 {
-    if (selectors.isEmpty()) {
-        ec = SYNTAX_ERR;
-        return 0;
-    }
-
-    SelectorQuery* selectorQuery = document().selectorQueryCache().add(selectors, document(), ec);
-    if (!selectorQuery)
-        return 0;
-    return selectorQuery->queryFirst(this);
-}
-
-PassRefPtr<NodeList> Node::querySelectorAll(const AtomicString& selectors, ExceptionCode& ec)
-{
-    if (selectors.isEmpty()) {
-        ec = SYNTAX_ERR;
-        return 0;
-    }
-
-    SelectorQuery* selectorQuery = document().selectorQueryCache().add(selectors, document(), ec);
-    if (!selectorQuery)
-        return 0;
-    return selectorQuery->queryAll(this);
-}
-
-Document *Node::ownerDocument() const
-{
-    Document* doc = &document();
-    return doc == this ? 0 : doc;
+    Document* document = &this->document();
+    return document == this ? nullptr : document;
 }
 
 URL Node::baseURI() const
@@ -1479,8 +1444,8 @@ unsigned short Node::compareDocumentPosition(Node* otherNode)
     if (otherNode == this)
         return DOCUMENT_POSITION_EQUIVALENT;
     
-    Attr* attr1 = nodeType() == ATTRIBUTE_NODE ? static_cast<Attr*>(this) : 0;
-    Attr* attr2 = otherNode->nodeType() == ATTRIBUTE_NODE ? static_cast<Attr*>(otherNode) : 0;
+    Attr* attr1 = isAttributeNode() ? toAttr(this) : nullptr;
+    Attr* attr2 = otherNode->isAttributeNode() ? toAttr(otherNode) : nullptr;
     
     Node* start1 = attr1 ? attr1->ownerElement() : this;
     Node* start2 = attr2 ? attr2->ownerElement() : otherNode;
@@ -1541,7 +1506,7 @@ unsigned short Node::compareDocumentPosition(Node* otherNode)
         return compareDetachedElementsPosition(this, otherNode);
 
     // Walk the two chains backwards and look for the first difference.
-    for (unsigned i = min(index1, index2); i; --i) {
+    for (unsigned i = std::min(index1, index2); i; --i) {
         Node* child1 = chain1[--index1];
         Node* child2 = chain2[--index2];
         if (child1 != child2) {
@@ -1853,7 +1818,7 @@ void Node::didMoveToNewDocument(Document* oldDocument)
         }
     }
 
-    if (Vector<OwnPtr<MutationObserverRegistration> >* registry = mutationObserverRegistry()) {
+    if (Vector<OwnPtr<MutationObserverRegistration>>* registry = mutationObserverRegistry()) {
         for (size_t i = 0; i < registry->size(); ++i) {
             document().addMutationObserverTypes(registry->at(i)->mutationTypes());
         }
@@ -1905,7 +1870,7 @@ bool Node::removeEventListener(const AtomicString& eventType, EventListener* lis
     return tryRemoveEventListener(this, eventType, listener, useCapture);
 }
 
-typedef HashMap<Node*, OwnPtr<EventTargetData> > EventTargetDataMap;
+typedef HashMap<Node*, OwnPtr<EventTargetData>> EventTargetDataMap;
 
 static EventTargetDataMap& eventTargetDataMap()
 {
@@ -1933,7 +1898,7 @@ void Node::clearEventTargetData()
     eventTargetDataMap().remove(this);
 }
 
-Vector<OwnPtr<MutationObserverRegistration> >* Node::mutationObserverRegistry()
+Vector<OwnPtr<MutationObserverRegistration>>* Node::mutationObserverRegistry()
 {
     if (!hasRareData())
         return 0;
@@ -1983,7 +1948,7 @@ void Node::getRegisteredMutationObserversOfType(HashMap<MutationObserver*, Mutat
 void Node::registerMutationObserver(MutationObserver* observer, MutationObserverOptions options, const HashSet<AtomicString>& attributeFilter)
 {
     MutationObserverRegistration* registration = 0;
-    Vector<OwnPtr<MutationObserverRegistration> >& registry = ensureRareData().ensureMutationObserverData().registry;
+    Vector<OwnPtr<MutationObserverRegistration>>& registry = ensureRareData().ensureMutationObserverData().registry;
     for (size_t i = 0; i < registry.size(); ++i) {
         if (registry[i]->observer() == observer) {
             registration = registry[i].get();
@@ -2001,7 +1966,7 @@ void Node::registerMutationObserver(MutationObserver* observer, MutationObserver
 
 void Node::unregisterMutationObserver(MutationObserverRegistration* registration)
 {
-    Vector<OwnPtr<MutationObserverRegistration> >* registry = mutationObserverRegistry();
+    Vector<OwnPtr<MutationObserverRegistration>>* registry = mutationObserverRegistry();
     ASSERT(registry);
     if (!registry)
         return;
@@ -2036,7 +2001,7 @@ void Node::notifyMutationObserversNodeWillDetach()
         return;
 
     for (Node* node = parentNode(); node; node = node->parentNode()) {
-        if (Vector<OwnPtr<MutationObserverRegistration> >* registry = node->mutationObserverRegistry()) {
+        if (Vector<OwnPtr<MutationObserverRegistration>>* registry = node->mutationObserverRegistry()) {
             const size_t size = registry->size();
             for (size_t i = 0; i < size; ++i)
                 registry->at(i)->observedSubtreeNodeWillDetach(this);
@@ -2054,7 +2019,7 @@ void Node::handleLocalEvents(Event& event)
     if (!hasEventTargetData())
         return;
 
-    if (isDisabledFormControl(this) && event.isMouseEvent())
+    if (isElementNode() && toElement(*this).isDisabledFormControl() && event.isMouseEvent())
         return;
 
     fireEventListeners(&event);
@@ -2186,14 +2151,18 @@ void Node::defaultEventHandler(Event* event)
 
 bool Node::willRespondToMouseMoveEvents()
 {
-    if (isDisabledFormControl(this))
+    if (!isElementNode())
+        return false;
+    if (toElement(this)->isDisabledFormControl())
         return false;
     return hasEventListeners(eventNames().mousemoveEvent) || hasEventListeners(eventNames().mouseoverEvent) || hasEventListeners(eventNames().mouseoutEvent);
 }
 
 bool Node::willRespondToMouseClickEvents()
 {
-    if (isDisabledFormControl(this))
+    if (!isElementNode())
+        return false;
+    if (toElement(this)->isDisabledFormControl())
         return false;
     return isContentEditable(UserSelectAllIsAlwaysNonEditable) || hasEventListeners(eventNames().mouseupEvent) || hasEventListeners(eventNames().mousedownEvent) || hasEventListeners(eventNames().clickEvent) || hasEventListeners(eventNames().DOMActivateEvent);
 }
@@ -2201,7 +2170,9 @@ bool Node::willRespondToMouseClickEvents()
 bool Node::willRespondToTouchEvents()
 {
 #if ENABLE(TOUCH_EVENTS)
-    if (isDisabledFormControl(this))
+    if (!isElementNode())
+        return false;
+    if (toElement(this)->isDisabledFormControl())
         return false;
     return hasEventListeners(eventNames().touchstartEvent) || hasEventListeners(eventNames().touchmoveEvent) || hasEventListeners(eventNames().touchcancelEvent) || hasEventListeners(eventNames().touchendEvent);
 #else

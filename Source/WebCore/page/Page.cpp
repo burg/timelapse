@@ -592,7 +592,7 @@ bool Page::findString(const String& target, FindOptions options)
     return false;
 }
 
-void Page::findStringMatchingRanges(const String& target, FindOptions options, int limit, Vector<RefPtr<Range> >* matchRanges, int& indexForSelection)
+void Page::findStringMatchingRanges(const String& target, FindOptions options, int limit, Vector<RefPtr<Range>>* matchRanges, int& indexForSelection)
 {
     indexForSelection = 0;
 
@@ -813,6 +813,7 @@ void Page::setDeviceScaleFactor(float scaleFactor)
         frame->editor().deviceScaleFactorChanged();
 
     pageCache()->markPagesForFullStyleRecalc(this);
+    GraphicsContext::updateDocumentMarkerResources();
 }
 
 void Page::setShouldSuppressScrollbarAnimations(bool suppressAnimations)
@@ -1260,7 +1261,7 @@ void Page::setVisibilityState(PageVisibilityState visibilityState, bool isInitia
             documents.append(*frame->document());
 
         for (size_t i = 0, size = documents.size(); i < size; ++i)
-            documents[i]->dispatchEvent(Event::create(eventNames().visibilitychangeEvent, false, false));
+            documents[i]->visibilityStateChanged();
     }
 #endif
 

@@ -309,11 +309,15 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 
     m_page = adoptPtr(new Page(pageClients));
 
-    m_useThreadedScrolling = parameters.store.getBoolValueForKey(WebPreferencesKey::threadedScrollingEnabledKey());
-    m_page->settings().setScrollingCoordinatorEnabled(m_useThreadedScrolling);
-
     m_drawingArea = DrawingArea::create(this, parameters);
     m_drawingArea->setPaintingEnabled(false);
+
+#if ENABLE(THREADED_SCROLLING)
+    m_useThreadedScrolling = parameters.store.getBoolValueForKey(WebPreferencesKey::threadedScrollingEnabledKey());
+    if (!m_drawingArea->supportsThreadedScrolling())
+        m_useThreadedScrolling = false;
+    m_page->settings().setScrollingCoordinatorEnabled(m_useThreadedScrolling);
+#endif
 
     m_mainFrame = WebFrame::createWithCoreMainFrame(this, &m_page->mainFrame());
 
@@ -1848,6 +1852,22 @@ void WebPage::setActive(bool isActive)
 #endif
 }
 
+void WebPage::setViewIsVisible(bool isVisible)
+{
+    if (!isVisible) {
+        m_drawingArea->suspendPainting();
+        m_page->suspendScriptedAnimations();
+    } else {
+        m_drawingArea->resumePainting();
+        // FIXME: this seems redundant; for the view to be visible the window must be visible too!
+        // refactoring for now, will change the logic later.
+        if (m_windowIsVisible) {
+            m_page->resumeScriptedAnimations();
+            m_page->resumeAnimatingImages();
+        }
+    }
+}
+
 void WebPage::setDrawsBackground(bool drawsBackground)
 {
     if (m_drawsBackground == drawsBackground)
@@ -2350,6 +2370,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings.setRegionBasedColumnsEnabled(store.getBoolValueForKey(WebPreferencesKey::regionBasedColumnsEnabledKey()));
     settings.setWebGLEnabled(store.getBoolValueForKey(WebPreferencesKey::webGLEnabledKey()));
     settings.setMultithreadedWebGLEnabled(store.getBoolValueForKey(WebPreferencesKey::multithreadedWebGLEnabledKey()));
+    settings.setForceSoftwareWebGLRendering(store.getBoolValueForKey(WebPreferencesKey::forceSoftwareWebGLRenderingKey()));
     settings.setAccelerated2dCanvasEnabled(store.getBoolValueForKey(WebPreferencesKey::accelerated2dCanvasEnabledKey()));
     settings.setMediaPlaybackRequiresUserGesture(store.getBoolValueForKey(WebPreferencesKey::mediaPlaybackRequiresUserGestureKey()));
     settings.setMediaPlaybackAllowsInline(store.getBoolValueForKey(WebPreferencesKey::mediaPlaybackAllowsInlineKey()));
@@ -3630,6 +3651,7 @@ bool WebPage::canPluginHandleResponse(const ResourceResponse& response)
 
     return pluginLoadPolicy != PluginModuleBlocked && pluginProcessToken;
 #else
+    UNUSED_PARAM(response);
     return false;
 #endif
 }

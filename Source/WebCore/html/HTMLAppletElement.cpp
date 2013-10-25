@@ -75,7 +75,7 @@ bool HTMLAppletElement::rendererIsNeeded(const RenderStyle& style)
     return HTMLPlugInImageElement::rendererIsNeeded(style);
 }
 
-RenderElement* HTMLAppletElement::createRenderer(RenderArena&, RenderStyle& style)
+RenderElement* HTMLAppletElement::createRenderer(RenderStyle& style)
 {
     if (!canEmbedJava())
         return RenderElement::createFor(*this, style);
@@ -148,7 +148,7 @@ void HTMLAppletElement::updateWidget(PluginCreationOption pluginCreationOption)
         paramValues.append(mayScript.string());
     }
 
-    auto paramChildren = childrenOfType<HTMLParamElement>(this);
+    auto paramChildren = childrenOfType<HTMLParamElement>(*this);
     for (auto param = paramChildren.begin(), end = paramChildren.end(); param != end; ++param) {
         if (param->name().isEmpty())
             continue;

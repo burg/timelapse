@@ -25,7 +25,7 @@
 namespace WebCore {
 
 RenderTableCaption::RenderTableCaption(Element& element)
-    : RenderBlockFlow(&element)
+    : RenderBlockFlow(element)
 {
 }
 
@@ -41,14 +41,14 @@ LayoutUnit RenderTableCaption::containingBlockLogicalWidthForContent() const
 
 void RenderTableCaption::insertedIntoTree()
 {
-    RenderBlock::insertedIntoTree();
+    RenderBlockFlow::insertedIntoTree();
 
     table()->addCaption(this);
 }
 
 void RenderTableCaption::willBeRemovedFromTree()
 {
-    RenderBlock::willBeRemovedFromTree();
+    RenderBlockFlow::willBeRemovedFromTree();
 
     table()->removeCaption(this);
 }

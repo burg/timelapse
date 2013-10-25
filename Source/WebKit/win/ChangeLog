@@ -1,3 +1,106 @@
+2013-10-23  Alex Christensen  <achristensen@webkit.org>
+
+        Separated USE(CA) from USE(ACCELERATED_COMPOSITING) to prepare WinCairo for accelerated compositing.
+        https://bugs.webkit.org/show_bug.cgi?id=123214
+
+        Reviewed by Brent Fulgham.
+
+        * WebCoreSupport/WebChromeClient.h:
+        (WebChromeClient::delegatedScrollRequested): Added empty function.
+        * WebPreferences.cpp:
+        (WebPreferences::acceleratedCompositingEnabled):
+        Return true for non-CA ports using accelerated compositing.
+        * WebView.cpp:
+        (WebView::~WebView):
+        (WebView::sizeChanged):
+        (WebView::paint):
+        (WebView::setShouldInvertColors):
+        (WebView::flushPendingGraphicsLayerChangesSoon):
+        (WebView::setAcceleratedCompositing):
+        * WebView.h:
+        Added USE(CA) where necessary to compile WinCairo with accelerated compositing.
+
+2013-10-16  Tim Horton  <timothy_horton@apple.com>
+
+        Attempt to fix the Windows build after http://trac.webkit.org/changeset/157547.
+
+        Apparently some *more* Windows code uses setFrame and I missed it.
+
+        * FullscreenVideoController.cpp:
+        (FullscreenVideoController::LayerClient::platformCALayerLayoutSublayersOfLayer):
+
+2013-10-16  Jochen Eisinger  <jochen@chromium.org>
+
+        A page should exit fullscreen mode if it opens a new popup
+        https://bugs.webkit.org/show_bug.cgi?id=122865
+
+        Reviewed by Jer Noble.
+
+        If a fullscreen page opens a popup, the popup would be hidden and
+        therefore invisible to the user. To avoid this, exit fullscreen mode
+        before opening a new window.
+
+        * WebCoreSupport/WebChromeClient.cpp:
+        (WebChromeClient::createWindow):
+
+2013-10-15  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Web Inspector: Remove Windows old front-end related code
+        https://bugs.webkit.org/show_bug.cgi?id=122845
+
+        Reviewed by Brent Fulgham.
+
+        * WebCoreSupport/WebInspectorClient.cpp:
+        (WebInspectorClient::openInspectorFrontend):
+
+2013-10-14  Roger Fong  <roger_fong@apple.com>
+
+        Windows select element doesn't draw RTL properly.
+        https://bugs.webkit.org/show_bug.cgi?id=122785.
+
+        Reviewed by Brent Fulgham.
+
+        * WebCoreSupport/WebChromeClient.cpp:
+        (WebChromeClient::selectItemWritingDirectionIsNatural):
+        (WebChromeClient::selectItemAlignmentFollowsMenuWritingDirection):
+
+2013-10-14  Tim Horton  <timothy_horton@apple.com>
+
+        Virtualize PlatformCALayer
+        https://bugs.webkit.org/show_bug.cgi?id=122672
+
+        Reviewed by Anders Carlsson.
+
+        * FullscreenVideoController.cpp:
+        (FullscreenVideoController::FullscreenVideoController):
+        Include PlatformCALayerWin.h and explicitly make PlatformCALayerWins here.
+
+2013-10-12  Darin Adler  <darin@apple.com>
+
+        Get rid of the toHTMLElement helper for casting FormAssociatedElement to HTMLElement
+        https://bugs.webkit.org/show_bug.cgi?id=122713
+
+        Reviewed by Sam Weinig.
+
+        * WebFrame.cpp:
+        (WebFrame::controlsInForm): Use asHTMLElement.
+
+2013-10-12  Darin Adler  <darin@apple.com>
+
+        Use unique_ptr instead of delete in a few places
+        https://bugs.webkit.org/show_bug.cgi?id=122639
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebFrameNetworkingContext.cpp:
+        (privateSession):
+        (identifierBase):
+        (WebFrameNetworkingContext::setCookieAcceptPolicyForAllContexts):
+        (WebFrameNetworkingContext::setPrivateBrowsingStorageSessionIdentifierBase):
+        (WebFrameNetworkingContext::ensurePrivateBrowsingSession):
+        (WebFrameNetworkingContext::destroyPrivateBrowsingSession):
+        (WebFrameNetworkingContext::storageSession):
+
 2013-10-10  Anders Carlsson  <andersca@apple.com>
 
         Fix build.

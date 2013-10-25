@@ -77,6 +77,7 @@
 #include "PageGroup.h"
 #include "RegularExpression.h"
 #include "RenderTableCell.h"
+#include "RenderText.h"
 #include "RenderTextControl.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -1032,7 +1033,12 @@ DragImageRef Frame::nodeImage(Node* node)
     m_view->paintContents(buffer->context(), paintingRect);
 
     RefPtr<Image> image = buffer->copyImage();
-    return createDragImageFromImage(image.get(), ImageOrientationDescription(renderer->shouldRespectImageOrientation()));
+
+    ImageOrientationDescription orientationDescription(renderer->shouldRespectImageOrientation());
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+    orientationDescription.setImageOrientationEnum(renderer->style()->imageOrientation());
+#endif
+    return createDragImageFromImage(image.get(), orientationDescription);
 }
 
 DragImageRef Frame::dragImageForSelection()

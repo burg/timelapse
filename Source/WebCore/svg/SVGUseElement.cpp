@@ -369,7 +369,7 @@ static bool isDisallowedElement(const Element& element)
 
 static bool subtreeContainsDisallowedElement(SVGElement& start)
 {
-    auto descendants = elementDescendants(&start);
+    auto descendants = elementDescendants(start);
     for (auto element = descendants.begin(), end = descendants.end(); element != end; ++element) {
         if (isDisallowedElement(*element))
             return true;
@@ -524,9 +524,9 @@ void SVGUseElement::buildShadowAndInstanceTree(SVGElement* target)
 #endif
 }
 
-RenderElement* SVGUseElement::createRenderer(RenderArena& arena, RenderStyle&)
+RenderElement* SVGUseElement::createRenderer(RenderStyle&)
 {
-    return new (arena) RenderSVGTransformableContainer(*this);
+    return new RenderSVGTransformableContainer(*this);
 }
 
 static bool isDirectReference(const Node* node)
@@ -606,7 +606,7 @@ void SVGUseElement::buildInstanceTree(SVGElement* target, SVGElementInstance* ta
     // is the SVGGElement object for the 'g', and then two child SVGElementInstance objects, each of which has
     // its correspondingElement that is an SVGRectElement object.
 
-    auto svgChildren = childrenOfType<SVGElement>(target);
+    auto svgChildren = childrenOfType<SVGElement>(*target);
     for (auto element = svgChildren.begin(), end = svgChildren.end(); element != end; ++element) {
         // Skip any non-svg nodes or any disallowed element.
         if (isDisallowedElement(*element))
@@ -663,16 +663,20 @@ bool SVGUseElement::hasCycleUseReferencing(SVGUseElement* use, SVGElementInstanc
 static inline void removeDisallowedElementsFromSubtree(SVGElement& subtree)
 {
     ASSERT(!subtree.inDocument());
-    Element* element = ElementTraversal::firstWithin(&subtree);
-    while (element) {
-        if (isDisallowedElement(*element)) {
-            Element* next = ElementTraversal::nextSkippingChildren(element, &subtree);
-            // The subtree is not in document so this won't generate events that could mutate the tree.
-            element->parentNode()->removeChild(element);
-            element = next;
-        } else
-            element = ElementTraversal::next(element, &subtree);
+    Vector<Element*> toRemove;
+    auto it = elementDescendants(subtree).begin();
+    auto end = elementDescendants(subtree).end();
+    while (it != end) {
+        if (isDisallowedElement(*it)) {
+            toRemove.append(&*it);
+            it.traverseNextSkippingChildren();
+            continue;
+        }
+        ++it;
     }
+    // The subtree is not in document so this won't generate events that could mutate the tree.
+    for (unsigned i = 0; i < toRemove.size(); ++i)
+        toRemove[i]->parentNode()->removeChild(toRemove[i]);
 }
 
 void SVGUseElement::buildShadowTree(SVGElement* target, SVGElementInstance* targetInstance)

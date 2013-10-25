@@ -1,3 +1,35 @@
+2013-10-21  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] g-ir-scanner should use the configured C compiler
+        https://bugs.webkit.org/show_bug.cgi?id=123088
+
+        Reviewed by Carlos Garcia Campos.
+
+        * GNUmakefile.am: Pass the C compiler that was detected at configuration to the g-ir-scanner command
+        via the CC environment variable. This solves the issue of the scanner running the GCC compiler with
+        the Clang-specific CFLAGS.
+
+2013-10-17  Andreas Kling  <akling@apple.com>
+
+        Massage the Gtk build.
+
+        * WebCoreSupport/EditorClientGtk.cpp:
+        (WebKit::EditorClient::shouldApplyStyle):
+
+2013-10-16  Jochen Eisinger  <jochen@chromium.org>
+
+        A page should exit fullscreen mode if it opens a new popup
+        https://bugs.webkit.org/show_bug.cgi?id=122865
+
+        Reviewed by Jer Noble.
+
+        If a fullscreen page opens a popup, the popup would be hidden and
+        therefore invisible to the user. To avoid this, exit fullscreen mode
+        before opening a new window.
+
+        * WebCoreSupport/ChromeClientGtk.cpp:
+        (WebKit::ChromeClient::createWindow):
+
 2013-10-09  Mario Sanchez Prada  <mario.prada@samsung.com>
 
         [ATK] Implement new API in AtkText: atk_text_get_string_at_offset()

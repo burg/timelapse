@@ -82,7 +82,6 @@
 namespace WebCore {
 
 using namespace HTMLNames;
-using namespace std;
 
 typedef OwnPtr<InputType> (*InputTypeFactoryFunction)(HTMLInputElement&);
 typedef HashMap<AtomicString, InputTypeFactoryFunction, CaseFoldingHash> InputTypeFactoryMap;
@@ -223,7 +222,7 @@ void InputType::setValueAsDate(double, ExceptionCode& ec) const
 
 double InputType::valueAsDouble() const
 {
-    return numeric_limits<double>::quiet_NaN();
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
 void InputType::setValueAsDouble(double doubleValue, TextFieldEventBehavior eventBehavior, ExceptionCode& ec) const
@@ -468,7 +467,7 @@ PassRefPtr<HTMLFormElement> InputType::formForSubmission() const
     return element().form();
 }
 
-RenderElement* InputType::createRenderer(RenderArena&, RenderStyle& style) const
+RenderElement* InputType::createRenderer(RenderStyle& style) const
 {
     return RenderElement::createFor(element(), style);
 }

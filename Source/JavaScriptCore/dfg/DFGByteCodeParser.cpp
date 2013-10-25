@@ -1058,6 +1058,8 @@ private:
         // code block had gathered.
         LazyOperandValueProfileParser m_lazyOperands;
         
+        StubInfoMap m_stubInfos;
+        
         // Did we see any returns? We need to handle the (uncommon but necessary)
         // case where a procedure that does not return was inlined.
         bool m_didReturn;
@@ -1768,11 +1770,7 @@ void ByteCodeParser::handleGetById(
     
     ASSERT(getByIdStatus.structureSet().size());
                 
-    // The implementation of GetByOffset does not know to terminate speculative
-    // execution if it doesn't have a prediction, so we do it manually.
-    if (prediction == SpecNone)
-        addToGraph(ForceOSRExit);
-    else if (m_graph.compilation())
+    if (m_graph.compilation())
         m_graph.compilation()->noticeInlinedGetById();
     
     Node* originalBaseForBaselineJIT = base;
@@ -2415,6 +2413,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             NEXT_OPCODE(op_get_by_val);
         }
 
+        case op_put_by_val_direct:
         case op_put_by_val: {
             Node* base = get(VirtualRegister(currentInstruction[1].u.operand));
 
@@ -2427,7 +2426,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             addVarArgChild(property);
             addVarArgChild(value);
             addVarArgChild(0); // Leave room for property storage.
-            addToGraph(Node::VarArg, PutByVal, OpInfo(arrayMode.asWord()), OpInfo(0));
+            addToGraph(Node::VarArg, opcodeID == op_put_by_val_direct ? PutByValDirect : PutByVal, OpInfo(arrayMode.asWord()), OpInfo(0));
 
             NEXT_OPCODE(op_put_by_val);
         }
@@ -2442,7 +2441,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             
             StringImpl* uid = m_graph.identifiers()[identifierNumber];
             GetByIdStatus getByIdStatus = GetByIdStatus::computeFor(
-                m_inlineStackTop->m_profiledBlock, m_currentIndex, uid);
+                m_inlineStackTop->m_profiledBlock, m_inlineStackTop->m_stubInfos,
+                m_currentIndex, uid);
             
             handleGetById(
                 currentInstruction[1].u.operand, prediction, base, identifierNumber, getByIdStatus);
@@ -2461,9 +2461,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             bool direct = currentInstruction[8].u.operand;
 
             PutByIdStatus putByIdStatus = PutByIdStatus::computeFor(
-                m_inlineStackTop->m_profiledBlock,
-                m_currentIndex,
-                m_graph.identifiers()[identifierNumber]);
+                m_inlineStackTop->m_profiledBlock, m_inlineStackTop->m_stubInfos,
+                m_currentIndex, m_graph.identifiers()[identifierNumber]);
             bool canCountAsInlined = true;
             if (!putByIdStatus.isSet()) {
                 addToGraph(ForceOSRExit);
@@ -3338,6 +3337,12 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
         ConcurrentJITLocker locker(m_profiledBlock->m_lock);
         m_lazyOperands.initialize(locker, m_profiledBlock->lazyOperandValueProfiles());
         m_exitProfile.initialize(locker, profiledBlock->exitProfile());
+        
+        // We do this while holding the lock because we want to encourage StructureStubInfo's
+        // to be potentially added to operations and because the profiled block could be in the
+        // middle of LLInt->JIT tier-up in which case we would be adding the info's right now.
+        if (m_profiledBlock->hasBaselineJITProfiling())
+            m_profiledBlock->getStubInfoMap(locker, m_stubInfos);
     }
     
     m_argumentPositions.resize(argumentCountIncludingThis);

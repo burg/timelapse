@@ -64,8 +64,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
-using namespace std;
-
 namespace WebCore {
 
 const size_t maxReasonSizeInBytes = 123;
@@ -121,8 +119,8 @@ static String joinStrings(const Vector<String>& strings, const char* separator)
 
 static unsigned long saturateAdd(unsigned long a, unsigned long b)
 {
-    if (numeric_limits<unsigned long>::max() - a < b)
-        return numeric_limits<unsigned long>::max();
+    if (std::numeric_limits<unsigned long>::max() - a < b)
+        return std::numeric_limits<unsigned long>::max();
     return a + b;
 }
 
@@ -518,7 +516,7 @@ void WebSocket::didReceiveMessage(const String& msg)
     dispatchEvent(MessageEvent::create(msg, SecurityOrigin::create(m_url)->toString()));
 }
 
-void WebSocket::didReceiveBinaryData(PassOwnPtr<Vector<char> > binaryData)
+void WebSocket::didReceiveBinaryData(PassOwnPtr<Vector<char>> binaryData)
 {
     LOG(Network, "WebSocket %p didReceiveBinaryData() %lu byte binary message", this, static_cast<unsigned long>(binaryData->size()));
     switch (m_binaryType) {

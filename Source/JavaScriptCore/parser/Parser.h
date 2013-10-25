@@ -310,7 +310,7 @@ struct Scope {
     bool isValidStrictMode() const { return m_isValidStrictMode; }
     bool shadowsArguments() const { return m_shadowsArguments; }
 
-    void copyCapturedVariablesToVector(const IdentifierSet& capturedVariables, Vector<RefPtr<StringImpl> >& vector)
+    void copyCapturedVariablesToVector(const IdentifierSet& capturedVariables, Vector<RefPtr<StringImpl>>& vector)
     {
         IdentifierSet::iterator end = capturedVariables.end();
         for (IdentifierSet::iterator it = capturedVariables.begin(); it != end; ++it) {
@@ -754,7 +754,9 @@ private:
             return "/";
         case MOD: 
             return "%";
-        case RETURN: 
+        case DOTDOTDOT:
+            return "...";
+        case RETURN:
         case RESERVED_IF_STRICT:
         case RESERVED: 
         case NUMBER:
@@ -835,6 +837,9 @@ private:
             return;
         case RETURN:
             m_errorMessage = ASCIILiteral("Return statements are only valid inside functions");
+            return;
+        case DOTDOTDOT:
+            m_errorMessage = ASCIILiteral("Spread operator is not supported in this context");
             return;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -954,7 +959,8 @@ private:
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseArrayLiteral(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseObjectLiteral(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeExpression parseStrictObjectLiteral(TreeBuilder&);
-    template <class TreeBuilder> ALWAYS_INLINE TreeArguments parseArguments(TreeBuilder&);
+    enum SpreadMode { AllowSpread, DontAllowSpread };
+    template <class TreeBuilder> ALWAYS_INLINE TreeArguments parseArguments(TreeBuilder&, SpreadMode);
     template <bool strict, class TreeBuilder> ALWAYS_INLINE TreeProperty parseProperty(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeFunctionBody parseFunctionBody(TreeBuilder&);
     template <class TreeBuilder> ALWAYS_INLINE TreeFormalParameterList parseFormalParameters(TreeBuilder&);
@@ -1120,10 +1126,10 @@ PassRefPtr<ParsedNode> parse(VM* vm, const SourceCode& source, FunctionParameter
 
     ASSERT(!source.provider()->source().isNull());
     if (source.provider()->source().is8Bit()) {
-        Parser< Lexer<LChar> > parser(vm, source, parameters, name, strictness, parserMode);
+        Parser<Lexer<LChar>> parser(vm, source, parameters, name, strictness, parserMode);
         return parser.parse<ParsedNode>(error);
     }
-    Parser< Lexer<UChar> > parser(vm, source, parameters, name, strictness, parserMode);
+    Parser<Lexer<UChar>> parser(vm, source, parameters, name, strictness, parserMode);
     return parser.parse<ParsedNode>(error);
 }
 

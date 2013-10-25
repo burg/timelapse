@@ -60,6 +60,31 @@ using namespace JSC;
 
 namespace WebCore {
 
+static void createDebugListenerScriptObject(SourceProvider* sourceProvider, bool isContentScript, ScriptDebugListener::Script& script)
+{
+    script.url = sourceProvider->url();
+    script.source = sourceProvider->source();
+    script.startLine = sourceProvider->startPosition().m_line.zeroBasedInt();
+    script.startColumn = sourceProvider->startPosition().m_column.zeroBasedInt();
+    script.isContentScript = isContentScript;
+    
+    int sourceLength = script.source.length();
+    int lineCount = 1;
+    int lastLineStart = 0;
+    for (int i = 0; i < sourceLength; ++i) {
+        if (script.source[i] == '\n') {
+            lineCount += 1;
+            lastLineStart = i + 1;
+        }
+    }
+    
+    script.endLine = script.startLine + lineCount - 1;
+    if (lineCount == 1)
+        script.endColumn = script.startColumn + sourceLength;
+    else
+        script.endColumn = sourceLength - lastLineStart;
+}
+    
 class DebuggerCallFrameScope {
 public:
     DebuggerCallFrameScope(ScriptDebugServer& debugger)
@@ -130,6 +155,7 @@ String ScriptDebugServer::setBreakpoint(const String& sourceID, const ScriptBrea
             return "";
     }
     breaksVector.append(scriptBreakpoint);
+    incNumberOfBreakpoints();
 
     *actualLineNumber = scriptBreakpoint.lineNumber;
     *actualColumnNumber = scriptBreakpoint.columnNumber;
@@ -165,6 +191,7 @@ void ScriptDebugServer::removeBreakpoint(const String& breakpointId)
     for (unsigned i = 0; i < breaksCount; i++) {
         if (breaksVector.at(i).columnNumber == static_cast<int>(columnNumber)) {
             breaksVector.remove(i);
+            decNumberOfBreakpoints();
             break;
         }
     }
@@ -260,6 +287,7 @@ bool ScriptDebugServer::evaluateBreakpointActions(const ScriptBreakpoint& breakp
 void ScriptDebugServer::clearBreakpoints()
 {
     m_sourceIdToBreakpoints.clear();
+    updateNumberOfBreakpoints(0);
 }
 
 void ScriptDebugServer::setBreakpointsActivated(bool activated)
@@ -275,11 +303,14 @@ void ScriptDebugServer::setProbesActivated(bool activated)
 void ScriptDebugServer::setPauseOnExceptionsState(PauseOnExceptionsState pause)
 {
     m_pauseOnExceptionsState = pause;
+    setNeedsExceptionCallbacks(pause != DontPauseOnExceptions);
 }
 
 void ScriptDebugServer::setPauseOnNextStatement(bool pause)
 {
     m_pauseOnNextStatement = pause;
+    if (pause)
+        setShouldPause(true);
 }
 
 void ScriptDebugServer::addProbeForScriptId(ScriptId scriptId, PassRefPtr<ScriptProbe> prpProbe)
@@ -342,6 +373,7 @@ void ScriptDebugServer::breakProgram()
         return;
 
     m_pauseOnNextStatement = true;
+    setShouldPause(true);
     pauseIfNeeded(m_currentCallFrame);
 }
 
@@ -360,6 +392,7 @@ void ScriptDebugServer::stepIntoStatement()
         return;
 
     m_pauseOnNextStatement = true;
+    setShouldPause(true);
     m_doneProcessingDebuggerEvents = true;
 }
 
@@ -427,22 +460,23 @@ void ScriptDebugServer::dispatchDidPause(ScriptDebugListener* listener)
 void ScriptDebugServer::dispatchDidContinue(ScriptDebugListener* listener)
 {
     listener->didContinue();
+    if (!m_pauseOnNextStatement && !m_pauseOnCallFrame) {
+        setShouldPause(false);
+        if (!needsOpDebugCallbacks())
+            m_currentCallFrame = 0;
+    }
 }
 
-void ScriptDebugServer::dispatchWillParseSource(const ListenerSet& listeners, ScriptDebugListener::Script& script)
+void ScriptDebugServer::dispatchDidParseSource(const ListenerSet& listeners, SourceProvider* sourceProvider, bool isContentScript)
 {
+    String sourceID = String::number(sourceProvider->asID());
+    
+    ScriptDebugListener::Script script;
+    createDebugListenerScriptObject(sourceProvider, isContentScript, script);
     Vector<ScriptDebugListener*> copy;
     copyToVector(listeners, copy);
     for (size_t i = 0; i < copy.size(); ++i)
-        copy[i]->willParseSource(script);
-}
-
-void ScriptDebugServer::dispatchDidParseSource(const ListenerSet& listeners, ScriptDebugListener::Script& script)
-{
-    Vector<ScriptDebugListener*> copy;
-    copyToVector(listeners, copy);
-    for (size_t i = 0; i < copy.size(); ++i)
-        copy[i]->didParseSource(script);
+        copy[i]->didParseSource(sourceID, script);
 }
 
 void ScriptDebugServer::dispatchFailedToParseSource(const ListenerSet& listeners, SourceProvider* sourceProvider, int errorLine, const String& errorMessage)
@@ -485,32 +519,6 @@ void ScriptDebugServer::detach(JSGlobalObject* globalObject)
     Debugger::detach(globalObject);
 }
 
-static void createDebugListenerScriptObject(SourceProvider* sourceProvider, bool isContentScript, ScriptDebugListener::Script& script)
-{
-    script.url = sourceProvider->url();
-    script.source = sourceProvider->source();
-    script.sourceID = String::number(sourceProvider->asID());
-    script.startLine = sourceProvider->startPosition().m_line.zeroBasedInt();
-    script.startColumn = sourceProvider->startPosition().m_column.zeroBasedInt();
-    script.isContentScript = isContentScript;
-
-    int sourceLength = script.source.length();
-    int lineCount = 1;
-    int lastLineStart = 0;
-    for (int i = 0; i < sourceLength; ++i) {
-        if (script.source[i] == '\n') {
-            lineCount += 1;
-            lastLineStart = i + 1;
-        }
-    }
-
-    script.endLine = script.startLine + lineCount - 1;
-    if (lineCount == 1)
-        script.endColumn = script.startColumn + sourceLength;
-    else
-        script.endColumn = sourceLength - lastLineStart;
-}
-
 void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProvider, int errorLine, const String& errorMessage)
 {
     if (m_callingListeners)
@@ -524,27 +532,10 @@ void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProv
     TemporaryChange<bool> change(m_callingListeners, true);
 
     bool isError = errorLine != -1;
-    if (isError) {
+    if (isError)
         dispatchFailedToParseSource(*listeners, sourceProvider, errorLine, errorMessage);
-        return;
-    }
-
-    ScriptDebugListener::Script script;
-    createDebugListenerScriptObject(sourceProvider, isContentScript(exec), script);
-
-    // This fires two listeners because some actions (sending content to frontend)
-    // should not be coupled to other actions (resolving probes and breakpoints).
-    // FIXME: The names should be improved to clarify that script is already parsed
-    // before either event fires.
-    dispatchWillParseSource(*listeners, script);
-
-    // Recompute listeners, since they may have been modified.
-    listeners = getListenersForGlobalObject(exec->lexicalGlobalObject());
-    if (!listeners)
-        return;
-
-    ASSERT(!listeners->isEmpty());
-    dispatchDidParseSource(*listeners, script);
+    else
+        dispatchDidParseSource(*listeners, sourceProvider, isContentScript(exec));
 }
 
 void ScriptDebugServer::dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback callback)
@@ -582,6 +573,8 @@ void ScriptDebugServer::updateCallFrameAndPauseIfNeeded(CallFrame* callFrame)
 {
     updateCallFrame(callFrame);
     pauseIfNeeded(callFrame);
+    if (!needsOpDebugCallbacks())
+        m_currentCallFrame = 0;
 }
 
 void ScriptDebugServer::pauseIfNeeded(CallFrame* callFrame)
@@ -715,10 +708,8 @@ void ScriptDebugServer::captureProbeSamplesIfNeeded(CallFrame* callFrame)
 
 void ScriptDebugServer::callEvent(CallFrame* callFrame)
 {
-    if (!m_paused) {
-        updateCallFrame(callFrame);
-        pauseIfNeeded(callFrame);
-    }
+    if (!m_paused)
+        updateCallFrameAndPauseIfNeeded(callFrame);
 }
 
 void ScriptDebugServer::atStatement(CallFrame* callFrame)
@@ -752,18 +743,18 @@ void ScriptDebugServer::exception(CallFrame* callFrame, JSValue, bool hasHandler
     if (m_paused)
         return;
 
-    if (m_pauseOnExceptionsState == PauseOnAllExceptions || (m_pauseOnExceptionsState == PauseOnUncaughtExceptions && !hasHandler))
+    if (m_pauseOnExceptionsState == PauseOnAllExceptions || (m_pauseOnExceptionsState == PauseOnUncaughtExceptions && !hasHandler)) {
         m_pauseOnNextStatement = true;
+        setShouldPause(true);
+    }
 
     updateCallFrameAndPauseIfNeeded(callFrame);
 }
 
 void ScriptDebugServer::willExecuteProgram(CallFrame* callFrame)
 {
-    if (!m_paused) {
-        updateCallFrame(callFrame);
-        pauseIfNeeded(callFrame);
-    }
+    if (!m_paused)
+        updateCallFrameAndPauseIfNeeded(callFrame);
 }
 
 void ScriptDebugServer::didExecuteProgram(CallFrame* callFrame)
@@ -790,6 +781,7 @@ void ScriptDebugServer::didReachBreakpoint(CallFrame* callFrame)
         return;
 
     m_pauseOnNextStatement = true;
+    setShouldPause(true);
     updateCallFrameAndPauseIfNeeded(callFrame);
 }
 

@@ -157,7 +157,7 @@ fast/forms/datalist
 
 # Times out only in non-wk2 Mac, possibly because of platform-specific behavior
 # interfering with how the test is executed.
-webkit.org/b/113220 fast/forms/select/popup-closes-on-blur.html [ Timeout Pass ]
+webkit.org/b/113220 fast/forms/select/popup-closes-on-blur.html [ Timeout Pass Failure ]
 
 # ENABLE_INPUT_TYPE_* are not enabled.
 # https://bugs.webkit.org/show_bug.cgi?id=29359
@@ -330,10 +330,7 @@ webkit.org/b/49142 fast/css/style-scoped
 fast/css/object-fit/object-fit-canvas.html [ Pass ImageOnlyFailure ]
 
 # CSS Regions tests for region styling and scoped styles
-fast/regions/style-scoped-in-flow-override-container-style.html
-fast/regions/style-scoped-in-flow-override-region-styling-multiple-regions.html
-fast/regions/style-scoped-in-flow-override-region-styling.html
-fast/regions/style-scoped-in-flow.html
+fast/regions/style-scoped
 
 # seamless iframes exhibit odd repaint issues in regions and columns, but only in DumpRenderTree
 fast/regions/seamless-iframe-flowed-into-regions.html
@@ -364,10 +361,6 @@ compositing/rtl/rtl-iframe-fixed-overflow-scrolled.html
 compositing/rtl/rtl-iframe-fixed-overflow.html
 compositing/rtl/rtl-iframe-fixed.html
 compositing/rtl/rtl-iframe-relative.html
-
-# For now, Web Audio tests are disabled
-# https://bugs.webkit.org/show_bug.cgi?id=86914
-webaudio/
 
 # ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
@@ -683,6 +676,7 @@ fast/canvas/canvas-quadratic-same-endpoint.html
 
 # --- Compositing ----
 css3/filters/composited-during-transition-layertree.html
+webkit.org/b/95622 css3/filters/composited-during-animation-layertree.html [ Pass Failure ]
 
 # --- Custom Filters ---
 # The following 5 tests are currently skipped on Mac for slight color differences,
@@ -712,54 +706,53 @@ platform/mac/editing/spelling/delete-autocorrected-word-2.html
 # Mac does not have global selections.
 editing/pasteboard/paste-global-selection.html
 
-# --- WebGL ---
-# Currently failing WebGL tests <rdar://problem/9355460>
-fast/canvas/webgl/tex-image-and-sub-image-2d-with-video.html
-webgl/conformance/extensions/oes-standard-derivatives.html
-webgl/conformance/more/functions/copyTexSubImage2D.html
-webgl/conformance/more/functions/readPixelsBadArgs.html
-webgl/conformance/more/functions/texImage2DHTML.html
-webgl/conformance/more/functions/texSubImage2D.html
-webgl/conformance/more/functions/texSubImage2DHTML.html
-webgl/conformance/extensions/oes-texture-float-with-video.html
-webgl/conformance/ogles/GL/biuDepthRange/biuDepthRange_001_to_002.html
-webgl/conformance/extensions/webgl-compressed-texture-s3tc.html                            
-webgl/conformance/glsl/misc/shader-uniform-packing-restrictions.html
-webgl/conformance/glsl/misc/shader-varying-packing-restrictions.html
-webgl/conformance/glsl/misc/shader-with-global-variable-precision-mismatch.html
-webgl/conformance/ogles/GL/gl_FragCoord/gl_FragCoord_001_to_003.html
-webgl/conformance/glsl/misc/shader-with-non-reserved-words.html
-webgl/conformance/glsl/misc/shader-with-short-circuiting-operators.html
-webgl/conformance/glsl/misc/shader-with-too-many-uniforms.html
-webgl/conformance/glsl/misc/shaders-with-varyings.html
-webgl/conformance/programs/gl-bind-attrib-location-long-names-test.html
-webgl/conformance/programs/program-test.html
-webgl/conformance/renderbuffers/framebuffer-object-attachment.html
-webgl/conformance/rendering/gl-scissor-test.html
-webgl/conformance/textures/origin-clean-conformance.html
-webgl/conformance/context/context-creation-and-destruction.html
-webgl/conformance/context/context-lost-restored.html
-webgl/conformance/uniforms/uniform-samplers-test.html
-webgl/conformance/textures/tex-image-and-sub-image-2d-with-video-rgb565.html
-webgl/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba4444.html
-webgl/conformance/textures/tex-image-and-sub-image-2d-with-video-rgba5551.html
-webgl/conformance/textures/tex-image-and-sub-image-2d-with-video.html
-webgl/conformance/textures/texture-npot-video.html
-webgl/conformance/textures/texture-size-limit.html
-webgl/conformance/rendering/point-size.html
-webgl/conformance/glsl/functions/glsl-function-smoothstep-gentype.html
-webgl/conformance/glsl/variables/gl-pointcoord.html
-webgl/conformance/limits/gl-max-texture-dimensions.html
-webgl/conformance/ogles/GL/operators/operators_009_to_016.html
-webgl/conformance/rendering/multisample-corruption.html
-webgl/conformance/textures/texture-size.html
-webgl/conformance/rendering/more-than-65536-indices.html
-webgl/conformance/extensions/oes-texture-float.html
-webgl/conformance/glsl/samplers/glsl-function-texture2dlod.html
-webgl/conformance/ogles/GL/refract/refract_001_to_006.html
-webgl/conformance/uniforms/gl-uniform-arrays.html
-webgl/conformance/context/context-attribute-preserve-drawing-buffer.html
-webgl/conformance/ogles/GL/control_flow/control_flow_009_to_010.html
+# Known WebGL conformance test failures, fails on Intel and AMD hardware
+webgl/1.0.1/conformance/textures/texture-size.html
+webgl/1.0.1/conformance/limits/gl-max-texture-dimensions.html
+webgl/1.0.2/conformance/textures/texture-size.html
+webgl/1.0.2/conformance/limits/gl-max-texture-dimensions.html
+
+# Currently working on 1.0.2 conformance, skip currently failing tests, <rdar://problem/12099869>
+webgl/1.0.2/conformance/extensions/webgl-compressed-texture-s3tc.html
+webgl/1.0.2/conformance/glsl/misc/shader-uniform-packing-restrictions.html
+webgl/1.0.2/conformance/glsl/misc/shader-varying-packing-restrictions.html
+webgl/1.0.2/conformance/glsl/misc/shader-with-global-variable-precision-mismatch.html
+webgl/1.0.2/conformance/glsl/misc/shader-with-short-circuiting-operators.html
+webgl/1.0.2/conformance/glsl/misc/shaders-with-varyings.html
+webgl/1.0.2/conformance/ogles/GL/biuDepthRange/biuDepthRange_001_to_002.html
+webgl/1.0.2/conformance/ogles/GL/gl_FragCoord/gl_FragCoord_001_to_003.html
+webgl/1.0.2/conformance/renderbuffers/framebuffer-object-attachment.html
+webgl/1.0.2/conformance/rendering/gl-scissor-test.html
+webgl/1.0.2/conformance/typedarrays/array-unit-tests.html
+webgl/1.0.2/conformance/typedarrays/data-view-test.html
+
+# Failing on bots.
+webgl/1.0.1/conformance/context/context-lost-restored.html [ Failure ]
+webgl/1.0.1/conformance/glsl/functions/glsl-function-smoothstep-gentype.html [ Failure ]
+webgl/1.0.1/conformance/glsl/variables/gl-pointcoord.html [ Failure ]
+
+# Skipping all webgl conformance tests on trunk
+webgl/conformance
+
+# Unexpected WebGL Conformance tests that need to be fixed
+# These tests pass when run through webgl-conformance-tests.html but not when just opened via a browser (or via run-webkit-tests)
+webgl/1.0.1/conformance/glsl/misc/shader-with-conditional-scoping.html
+webgl/1.0.1/conformance/glsl/misc/shader-with-do-scoping.html
+webgl/1.0.1/conformance/glsl/misc/shader-with-for-scoping.html
+webgl/1.0.1/conformance/glsl/misc/shader-with-functional-scoping.html
+webgl/1.0.1/conformance/glsl/samplers/glsl-function-texture2dlod.html
+webgl/1.0.1/conformance/glsl/samplers/glsl-function-texture2dproj.html
+webgl/1.0.1/conformance/textures/origin-clean-conformance.html
+webgl/1.0.2/conformance/context/context-creation-and-destruction.html
+webgl/1.0.2/conformance/rendering/multisample-corruption.html
+webgl/1.0.2/conformance/glsl/functions/glsl-function-smoothstep-gentype.html
+webgl/1.0.2/conformance/glsl/variables/gl-pointcoord.html
+webgl/1.0.2/conformance/ogles/GL/operators/operators_009_to_016.html
+webgl/1.0.2/conformance/ogles/GL/control_flow/control_flow_009_to_010.html
+webgl/1.0.2/conformance/glsl/misc/shader-with-non-reserved-words.html
+webgl/1.0.2/conformance/state/gl-object-get-calls.html
+webgl/1.0.2/conformance/uniforms/gl-uniform-arrays.html
+http/tests/webgl/1.0.2/origin-clean-conformance.html
 
 # Sending the mouse down event to the scrollbar starts a nested run loop which causes a hang.
 fast/events/mousedown-in-subframe-scrollbar.html
@@ -864,11 +857,6 @@ webkit.org/b/112518 [ Debug ] plugins/npruntime/evaluate.html [ Crash Pass ]
 # Flakey plugin tests
 webkit.org/b/82752 plugins/netscape-dom-access-and-reload.html [ Failure Pass ]
 
-# Asserts sometimes
-webkit.org/b/111902 [ Debug ] fast/frames/sandboxed-iframe-navigation-allowed.html [ Crash Pass ]
-webkit.org/b/111902 [ Debug ] fast/frames/sandboxed-iframe-plugins.html [ Crash Pass ]
-webkit.org/b/111902 [ Debug ] http/tests/security/XFrameOptions/x-frame-options-deny-multiple-clients.html [ Crash Pass ]
-
 # Flaky tests when run multi-process
 webkit.org/b/58192 fast/dom/frame-loading-via-document-write.html [ Failure Pass ]
 webkit.org/b/58192 http/tests/appcache/fail-on-update-2.html [ Failure Pass ]
@@ -939,8 +927,10 @@ webkit.org/b/85308 ietestcenter/css3/valuesandunits/units-000.htm [ Skip ]
 # IETC namespace failures
 webkit.org/b/86142 ietestcenter/css3/namespaces/syntax-021.xml [ ImageOnlyFailure ]
 
-# Disable webaudio codec tests, including proprietary codecs.
-webkit.org/b/88794 webaudio/codec-tests
+webaudio/mediastreamaudiodestinationnode.html [ Failure ]
+webaudio/mediastreamaudiosourcenode.html [ Failure ]
+webaudio/codec-tests/vorbis/ [ WontFix ]
+webkit.org/b/119467 webaudio/audiobuffersource-loop-points.html [ Skip ]
 
 # Text Autosizing is not enabled.
 webkit.org/b/84186 fast/text-autosizing
@@ -1292,3 +1282,14 @@ webkit.org/b/114744 media/video-layer-crash.html [ Pass Failure Timeout ]
 webkit.org/b/122490 [ Debug ] mathml/very-large-stretchy-operators.html [ Skip ]
 
 webkit.org/b/122508 compositing/video/video-reflection.html [ Pass Timeout ]
+
+webkit.org/b/123010 media/W3C/audio/networkState/networkState_during_loadstart.html [ Pass Failure ]
+
+webkit.org/b/123099 media/media-controller-time-clamp.html [ Pass Failure Timeout ]
+
+webkit.org/b/123220 compositing/regions/floated-region-with-transformed-child.html [ Pass ImageOnlyFailure ]
+webkit.org/b/123282 compositing/regions/propagate-region-box-shadow-border-padding-for-video.html  [ Pass ImageOnlyFailure ]
+
+webkit.org/b/123250 plugins/destroy-during-npp-new-object-with-fallback-content.html [ Pass Failure ]
+
+webkit.org/b/123304 platform/mac/fast/forms/focus-option-control-on-page.html [ Pass Failure ]

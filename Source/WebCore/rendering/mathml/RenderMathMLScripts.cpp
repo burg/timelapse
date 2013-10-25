@@ -56,19 +56,19 @@ static bool isPrescript(RenderObject* renderObject)
     return renderObject->node() && renderObject->node()->hasTagName(MathMLNames::mprescriptsTag);
 }
 
-RenderMathMLScripts::RenderMathMLScripts(Element* element)
+RenderMathMLScripts::RenderMathMLScripts(Element& element)
     : RenderMathMLBlock(element)
     , m_baseWrapper(0)
 {
     // Determine what kind of sub/sup expression we have by element name
-    if (element->hasLocalName(MathMLNames::msubTag))
+    if (element.hasLocalName(MathMLNames::msubTag))
         m_kind = Sub;
-    else if (element->hasLocalName(MathMLNames::msupTag))
+    else if (element.hasLocalName(MathMLNames::msupTag))
         m_kind = Super;
-    else if (element->hasLocalName(MathMLNames::msubsupTag))
+    else if (element.hasLocalName(MathMLNames::msubsupTag))
         m_kind = SubSup;
     else {
-        ASSERT(element->hasLocalName(MathMLNames::mmultiscriptsTag));
+        ASSERT(element.hasLocalName(MathMLNames::mmultiscriptsTag));
         m_kind = Multiscripts;
     }
 }
@@ -196,17 +196,17 @@ void RenderMathMLScripts::addChildInternal(bool doNotRestructure, RenderObject* 
     wrapper->addChildInternal(false, child, wrapper->firstChild());
 }
 
-void RenderMathMLScripts::removeChildInternal(bool doNotRestructure, RenderObject* child)
+void RenderMathMLScripts::removeChildInternal(bool doNotRestructure, RenderObject& child)
 {
     if (doNotRestructure) {
         RenderMathMLBlock::removeChild(child);
         return;
     }
 
-    ASSERT(isPrescript(child));
+    ASSERT(isPrescript(&child));
 
-    RenderObject* previousSibling = child->previousSibling();
-    RenderObject* nextSibling = child->nextSibling();
+    RenderObject* previousSibling = child.previousSibling();
+    RenderObject* nextSibling = child.nextSibling();
     ASSERT(previousSibling);
 
     if (nextSibling && !isPrescript(previousSibling) && !isPrescript(nextSibling)) {
@@ -215,7 +215,7 @@ void RenderMathMLScripts::removeChildInternal(bool doNotRestructure, RenderObjec
         ASSERT(nextWrapper->m_kind == RenderMathMLScriptsWrapper::SubSupPair && !nextWrapper->isEmpty());
         if ((previousWrapper->m_kind == RenderMathMLScriptsWrapper::Base && previousWrapper->isEmpty()) || (previousWrapper->m_kind == RenderMathMLScriptsWrapper::SubSupPair && !previousWrapper->firstChild()->nextSibling())) {
             RenderObject* script = nextWrapper->firstChild();
-            nextWrapper->removeChildInternal(false, script);
+            nextWrapper->removeChildInternal(false, *script);
             previousWrapper->addChildInternal(true, script);
         }
     }
@@ -235,7 +235,7 @@ void RenderMathMLScripts::addChild(RenderObject* child, RenderObject* beforeChil
     fixAnonymousStyles();
 }
 
-void RenderMathMLScripts::removeChild(RenderObject* child)
+void RenderMathMLScripts::removeChild(RenderObject& child)
 {
     if (beingDestroyed() || documentBeingDestroyed()) {
         // The renderer is being destroyed so we remove the child normally.
@@ -279,7 +279,7 @@ void RenderMathMLScripts::layout()
     // below the base's top edge, or the subscript's bottom edge above the base's bottom edge.
 
     LayoutUnit baseHeight = base->logicalHeight();
-    LayoutUnit baseBaseline = base->firstLineBoxBaseline();
+    LayoutUnit baseBaseline = base->firstLineBaseline();
     if (baseBaseline == -1)
         baseBaseline = baseHeight;
     LayoutUnit axis = style()->fontMetrics().xHeight() / 2;
@@ -313,24 +313,24 @@ void RenderMathMLScripts::layout()
 
         if (RenderBox* superscript = m_kind == Sub ? 0 : subSupPair->lastChildBox()) {
             LayoutUnit superscriptHeight = superscript->logicalHeight();
-            LayoutUnit superscriptBaseline = superscript->firstLineBoxBaseline();
+            LayoutUnit superscriptBaseline = superscript->firstLineBaseline();
             if (superscriptBaseline == -1)
                 superscriptBaseline = superscriptHeight;
-            LayoutUnit minBaseline = max<LayoutUnit>(fontSize / 3 + 1 + superscriptBaseline, superscriptHeight + axis + superscriptShiftValue);
+            LayoutUnit minBaseline = std::max<LayoutUnit>(fontSize / 3 + 1 + superscriptBaseline, superscriptHeight + axis + superscriptShiftValue);
 
-            topPadding = max<LayoutUnit>(topPadding, minBaseline - baseBaseline);
+            topPadding = std::max<LayoutUnit>(topPadding, minBaseline - baseBaseline);
         }
 
         if (RenderBox* subscript = m_kind == Super ? 0 : subSupPair->firstChildBox()) {
             LayoutUnit subscriptHeight = subscript->logicalHeight();
-            LayoutUnit subscriptBaseline = subscript->firstLineBoxBaseline();
+            LayoutUnit subscriptBaseline = subscript->firstLineBaseline();
             if (subscriptBaseline == -1)
                 subscriptBaseline = subscriptHeight;
             LayoutUnit baseExtendUnderBaseline = baseHeight - baseBaseline;
             LayoutUnit subscriptUnderItsBaseline = subscriptHeight - subscriptBaseline;
-            LayoutUnit minExtendUnderBaseline = max<LayoutUnit>(fontSize / 5 + 1 + subscriptUnderItsBaseline, subscriptHeight + subscriptShiftValue - axis);
+            LayoutUnit minExtendUnderBaseline = std::max<LayoutUnit>(fontSize / 5 + 1 + subscriptUnderItsBaseline, subscriptHeight + subscriptShiftValue - axis);
 
-            bottomPadding = max<LayoutUnit>(bottomPadding, minExtendUnderBaseline - baseExtendUnderBaseline);
+            bottomPadding = std::max<LayoutUnit>(bottomPadding, minExtendUnderBaseline - baseExtendUnderBaseline);
         }
     }
 
@@ -355,22 +355,20 @@ void RenderMathMLScripts::layout()
     RenderMathMLBlock::layout();
 }
 
-int RenderMathMLScripts::firstLineBoxBaseline() const
+int RenderMathMLScripts::firstLineBaseline() const
 {
     if (m_baseWrapper) {
-        LayoutUnit baseline = m_baseWrapper->firstLineBoxBaseline();
+        LayoutUnit baseline = m_baseWrapper->firstLineBaseline();
         if (baseline != -1)
             return baseline;
     }
-    return RenderMathMLBlock::firstLineBoxBaseline();
+    return RenderMathMLBlock::firstLineBaseline();
 }
 
 RenderMathMLScriptsWrapper* RenderMathMLScriptsWrapper::createAnonymousWrapper(RenderMathMLScripts* renderObject, WrapperType type)
 {
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(renderObject->style(), FLEX);
-    RenderMathMLScriptsWrapper* newBlock = new (renderObject->renderArena()) RenderMathMLScriptsWrapper(0, type);
-    newBlock->setDocumentForAnonymous(renderObject->document());
-    newBlock->setStyle(newStyle.release());
+    RenderMathMLScriptsWrapper* newBlock = new RenderMathMLScriptsWrapper(renderObject->document(), type);
+    newBlock->setStyle(RenderStyle::createAnonymousStyleWithDisplay(renderObject->style(), FLEX));
     return newBlock;
 }
 
@@ -395,7 +393,7 @@ void RenderMathMLScriptsWrapper::addChildInternal(bool doNotRestructure, RenderO
         // The old base (if any) becomes a script ; the new child becomes either the base or an <mprescripts> separator.
         RenderObject* oldBase = firstChild();
         if (oldBase)
-            RenderMathMLBlock::removeChild(oldBase);
+            RenderMathMLBlock::removeChild(*oldBase);
         if (isPrescript(child))
             parentNode->addChildInternal(true, child, sibling);
         else
@@ -414,15 +412,15 @@ void RenderMathMLScriptsWrapper::addChildInternal(bool doNotRestructure, RenderO
         else {
             // We insert the <mprescripts> in the middle of a subSup pair so we must split that pair.
             RenderObject* sibling = nextSibling();
-            parentNode->removeChildInternal(true, this);
+            parentNode->removeChildInternal(true, *this);
             parentNode->addChildInternal(true, child, sibling);
 
             RenderObject* script = firstChild();
-            RenderMathMLBlock::removeChild(script);
+            RenderMathMLBlock::removeChild(*script);
             parentNode->addChildInternal(false, script, child);
 
             script = beforeChild;
-            RenderMathMLBlock::removeChild(script);
+            RenderMathMLBlock::removeChild(*script);
             parentNode->addChildInternal(false, script, sibling);
             destroy();
         }
@@ -444,7 +442,7 @@ void RenderMathMLScriptsWrapper::addChildInternal(bool doNotRestructure, RenderO
     for (RenderObject* previousSibling = subSupPair->previousSibling(); subSupPair != this; previousSibling = previousSibling->previousSibling()) {
         RenderMathMLScriptsWrapper* previousSubSupPair = toRenderMathMLScriptsWrapper(previousSibling);
         RenderObject* script = previousSubSupPair->lastChild();
-        previousSubSupPair->removeChildInternal(true, script);
+        previousSubSupPair->removeChildInternal(true, *script);
         subSupPair->addChildInternal(true, script, subSupPair->firstChild());
         subSupPair = toRenderMathMLScriptsWrapper(previousSibling);
     }
@@ -462,7 +460,7 @@ void RenderMathMLScriptsWrapper::addChild(RenderObject* child, RenderObject* bef
     parentNode->fixAnonymousStyles();
 }
 
-void RenderMathMLScriptsWrapper::removeChildInternal(bool doNotRestructure, RenderObject* child)
+void RenderMathMLScriptsWrapper::removeChildInternal(bool doNotRestructure, RenderObject& child)
 {
     if (doNotRestructure) {
         RenderMathMLBlock::removeChild(child);
@@ -479,7 +477,7 @@ void RenderMathMLScriptsWrapper::removeChildInternal(bool doNotRestructure, Rend
             // If there are postscripts, the first one becomes the base.
             RenderMathMLScriptsWrapper* wrapper = toRenderMathMLScriptsWrapper(sibling);
             RenderObject* script = wrapper->firstChild();
-            wrapper->removeChildInternal(false, script);
+            wrapper->removeChildInternal(false, *script);
             RenderMathMLBlock::addChild(script);
         }
         return;
@@ -491,19 +489,19 @@ void RenderMathMLScriptsWrapper::removeChildInternal(bool doNotRestructure, Rend
     for (RenderObject* nextSibling = subSupPair->nextSibling(); nextSibling && !isPrescript(nextSibling); nextSibling = nextSibling->nextSibling()) {
         RenderMathMLScriptsWrapper* nextSubSupPair = toRenderMathMLScriptsWrapper(nextSibling);
         RenderObject* script = nextSubSupPair->firstChild();
-        nextSubSupPair->removeChildInternal(true, script);
+        nextSubSupPair->removeChildInternal(true, *script);
         subSupPair->addChildInternal(true, script);
         subSupPair = toRenderMathMLScriptsWrapper(nextSibling);
     }
 
     // We remove the last subSup pair if it became empty.
     if (subSupPair->isEmpty()) {
-        parentNode->removeChildInternal(true, subSupPair);
+        parentNode->removeChildInternal(true, *subSupPair);
         subSupPair->destroy();
     }
 }
 
-void RenderMathMLScriptsWrapper::removeChild(RenderObject* child)
+void RenderMathMLScriptsWrapper::removeChild(RenderObject& child)
 {
     if (beingDestroyed() || documentBeingDestroyed()) {
         // The renderer is being destroyed so we remove the child normally.
@@ -512,9 +510,7 @@ void RenderMathMLScriptsWrapper::removeChild(RenderObject* child)
     }
 
     RenderMathMLScripts* parentNode = toRenderMathMLScripts(parent());
-
     removeChildInternal(false, child);
-
     parentNode->fixAnonymousStyles();
 }
 

@@ -79,43 +79,13 @@ using namespace WebKit;
 
 namespace CoreIPC {
 
-void ArgumentCoder<FloatPoint3D>::encode(ArgumentEncoder& encoder, const FloatPoint3D& floatPoint3D)
-{
-    SimpleArgumentCoder<FloatPoint3D>::encode(encoder, floatPoint3D);
-}
-
-bool ArgumentCoder<FloatPoint3D>::decode(ArgumentDecoder& decoder, FloatPoint3D& floatPoint3D)
-{
-    return SimpleArgumentCoder<FloatPoint3D>::decode(decoder, floatPoint3D);
-}
-
-void ArgumentCoder<Length>::encode(ArgumentEncoder& encoder, const Length& length)
-{
-    SimpleArgumentCoder<Length>::encode(encoder, length);
-}
-
-bool ArgumentCoder<Length>::decode(ArgumentDecoder& decoder, Length& length)
-{
-    return SimpleArgumentCoder<Length>::decode(decoder, length);
-}
-
-void ArgumentCoder<TransformationMatrix>::encode(ArgumentEncoder& encoder, const TransformationMatrix& transformationMatrix)
-{
-    SimpleArgumentCoder<TransformationMatrix>::encode(encoder, transformationMatrix);
-}
-
-bool ArgumentCoder<TransformationMatrix>::decode(ArgumentDecoder& decoder, TransformationMatrix& transformationMatrix)
-{
-    return SimpleArgumentCoder<TransformationMatrix>::decode(decoder, transformationMatrix);
-}
-
 #if ENABLE(CSS_FILTERS)
 void ArgumentCoder<WebCore::FilterOperations>::encode(ArgumentEncoder& encoder, const WebCore::FilterOperations& filters)
 {
     encoder << static_cast<uint32_t>(filters.size());
     for (size_t i = 0; i < filters.size(); ++i) {
         const FilterOperation* filter = filters.at(i);
-        FilterOperation::OperationType type = filter->getOperationType();
+        FilterOperation::OperationType type = filter->type();
         encoder.encodeEnum(type);
         switch (type) {
         case FilterOperation::GRAYSCALE:
@@ -410,9 +380,9 @@ void ArgumentCoder<TransformOperations>::encode(ArgumentEncoder& encoder, const 
     encoder << static_cast<uint32_t>(transformOperations.size());
     for (size_t i = 0; i < transformOperations.size(); ++i) {
         const TransformOperation* operation = transformOperations.at(i);
-        encoder.encodeEnum(operation->getOperationType());
+        encoder.encodeEnum(operation->type());
 
-        switch (operation->getOperationType()) {
+        switch (operation->type()) {
         case TransformOperation::SCALE_X:
         case TransformOperation::SCALE_Y:
         case TransformOperation::SCALE:

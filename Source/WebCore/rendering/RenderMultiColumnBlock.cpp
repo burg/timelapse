@@ -36,7 +36,7 @@ using namespace std;
 namespace WebCore {
 
 RenderMultiColumnBlock::RenderMultiColumnBlock(Element& element)
-    : RenderBlockFlow(&element)
+    : RenderBlockFlow(element)
     , m_flowThread(0)
     , m_columnCount(1)
     , m_columnWidth(0)
@@ -47,7 +47,7 @@ RenderMultiColumnBlock::RenderMultiColumnBlock(Element& element)
 
 void RenderMultiColumnBlock::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
-    RenderBlock::styleDidChange(diff, oldStyle);
+    RenderBlockFlow::styleDidChange(diff, oldStyle);
     for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox())
         child->setStyle(RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK));
 }
@@ -80,7 +80,7 @@ void RenderMultiColumnBlock::computeColumnCountAndWidth()
 
 bool RenderMultiColumnBlock::updateLogicalWidthAndColumnWidth()
 {
-    bool relayoutChildren = RenderBlock::updateLogicalWidthAndColumnWidth();
+    bool relayoutChildren = RenderBlockFlow::updateLogicalWidthAndColumnWidth();
     LayoutUnit oldColumnWidth = m_columnWidth;
     computeColumnCountAndWidth();
     if (m_columnWidth != oldColumnWidth)
@@ -139,9 +139,9 @@ bool RenderMultiColumnBlock::relayoutForPagination(bool, LayoutUnit, LayoutState
 void RenderMultiColumnBlock::addChild(RenderObject* newChild, RenderObject* beforeChild)
 {
     if (!m_flowThread) {
-        m_flowThread = RenderMultiColumnFlowThread::createAnonymous(document());
+        m_flowThread = new RenderMultiColumnFlowThread(document());
         m_flowThread->setStyle(RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK));
-        RenderBlock::addChild(m_flowThread);
+        RenderBlockFlow::addChild(m_flowThread);
     }
     m_flowThread->addChild(newChild, beforeChild);
 }
@@ -172,9 +172,9 @@ RenderObject* RenderMultiColumnBlock::layoutSpecialExcludedChild(bool relayoutCh
     if (relayoutChildren)
         m_flowThread->setChildNeedsLayout(MarkOnlyThis);
     
-    setLogicalTopForChild(m_flowThread, borderAndPaddingBefore());
+    setLogicalTopForChild(*m_flowThread, borderAndPaddingBefore());
     m_flowThread->layoutIfNeeded();
-    determineLogicalLeftPositionForChild(m_flowThread);
+    determineLogicalLeftPositionForChild(*m_flowThread);
     
     return m_flowThread;
 }

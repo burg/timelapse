@@ -2290,7 +2290,7 @@ double FrameView::adjustedDeferredRepaintDelay() const
     if (!m_deferredRepaintDelay)
         return 0;
     double timeSinceLastPaint = monotonicallyIncreasingTime() - m_lastPaintTime;
-    return max(0., m_deferredRepaintDelay - timeSinceLastPaint);
+    return std::max<double>(0, m_deferredRepaintDelay - timeSinceLastPaint);
 }
     
 void FrameView::deferredRepaintTimerFired(Timer<FrameView>*)
@@ -2481,7 +2481,7 @@ void FrameView::serviceScriptedAnimations(double monotonicAnimationStartTime)
         frame->animation().serviceAnimations();
     }
 
-    Vector<RefPtr<Document> > documents;
+    Vector<RefPtr<Document>> documents;
     for (Frame* frame = m_frame.get(); frame; frame = frame->tree().traverseNext())
         documents.append(frame->document());
 
@@ -2910,7 +2910,7 @@ void FrameView::autoSizeIfEnabled()
     m_autoSizeContentSize = contentsSize();
 
     if (m_autoSizeFixedMinimumHeight) {
-        resize(m_autoSizeContentSize.width(), max(m_autoSizeFixedMinimumHeight, m_autoSizeContentSize.height()));
+        resize(m_autoSizeContentSize.width(), std::max(m_autoSizeFixedMinimumHeight, m_autoSizeContentSize.height()));
         document->updateLayoutIgnorePendingStylesheets();
     }
 
@@ -3223,8 +3223,8 @@ void FrameView::updateScrollCorner()
 
     if (cornerStyle) {
         if (!m_scrollCorner)
-            m_scrollCorner = RenderScrollbarPart::createAnonymous(renderer->document());
-        m_scrollCorner->setStyle(cornerStyle.release());
+            m_scrollCorner = new RenderScrollbarPart(renderer->document());
+        m_scrollCorner->setStyle(cornerStyle.releaseNonNull());
         invalidateScrollCorner(cornerRect);
     } else if (m_scrollCorner) {
         m_scrollCorner->destroy();

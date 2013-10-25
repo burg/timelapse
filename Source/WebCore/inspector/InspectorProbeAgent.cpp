@@ -299,24 +299,20 @@ void InspectorProbeAgent::createScriptProbe(ErrorString* errorString, const Stri
 
 // ScriptDebugListener API
 
-void InspectorProbeAgent::willParseSource(const Script&)
+void InspectorProbeAgent::didParseSource(const String& scriptId, const Script& script)
 {
-}
-
-void InspectorProbeAgent::didParseSource(const Script& script)
-{
-    intptr_t scriptId = script.sourceID.toInt();
     const String& nonNullUrl = (script.url.isNull()) ? emptyString() : script.url;
-    m_urlToScriptIdMap.set(nonNullUrl, scriptId);
+    ScriptId scriptIdValue = scriptId.toIntPtr();
+    m_urlToScriptIdMap.set(nonNullUrl, scriptIdValue);
 
     // Find any probes that should resolve within that file, add them.
     for (ProbeMap::const_iterator it = m_probeMap.begin(); it != m_probeMap.end(); ++it) {
         if (it->value->url() != nonNullUrl)
             continue;
 
-        PageScriptDebugServer::shared().addProbeForScriptId(scriptId, it->value);
+        PageScriptDebugServer::shared().addProbeForScriptId(scriptId.toInt(), it->value);
         if (m_frontend)
-            m_frontend->probeResolved(it->value->uid(), script.sourceID);
+            m_frontend->probeResolved(it->value->uid(), scriptId);
     }
 }
 

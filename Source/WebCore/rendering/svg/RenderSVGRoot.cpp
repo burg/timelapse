@@ -57,7 +57,7 @@ using namespace std;
 namespace WebCore {
 
 RenderSVGRoot::RenderSVGRoot(SVGSVGElement& element)
-    : RenderReplaced(&element)
+    : RenderReplaced(element)
     , m_objectBoundingBoxValid(false)
     , m_isLayoutSizeChanged(false)
     , m_needsBoundariesOrTransformUpdate(true)
@@ -178,10 +178,10 @@ LayoutUnit RenderSVGRoot::computeReplacedLogicalHeight() const
             ASSERT(cb);
             while (cb->isAnonymous() && !cb->isRenderView()) {
                 cb = cb->containingBlock();
-                cb->addPercentHeightDescendant(const_cast<RenderSVGRoot*>(this));
+                cb->addPercentHeightDescendant(const_cast<RenderSVGRoot&>(*this));
             }
         } else
-            RenderBlock::removePercentHeightDescendant(const_cast<RenderSVGRoot*>(this));
+            RenderBlock::removePercentHeightDescendant(const_cast<RenderSVGRoot&>(*this));
 
         return resolveLengthAttributeForSVG(height, style()->effectiveZoom(), containingBlock()->availableLogicalHeight(IncludeMarginBorderPadding), &view());
     }
@@ -287,7 +287,7 @@ void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paint
         SVGRenderingContext renderingContext;
         bool continueRendering = true;
         if (childPaintInfo.phase == PaintPhaseForeground) {
-            renderingContext.prepareToRenderSVGContent(this, childPaintInfo);
+            renderingContext.prepareToRenderSVGContent(*this, childPaintInfo);
             continueRendering = renderingContext.isRenderingPrepared();
         }
 
@@ -307,21 +307,16 @@ void RenderSVGRoot::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paint
 
 void RenderSVGRoot::willBeDestroyed()
 {
-    RenderBlock::removePercentHeightDescendant(const_cast<RenderSVGRoot*>(this));
+    RenderBlock::removePercentHeightDescendant(const_cast<RenderSVGRoot&>(*this));
 
     SVGResourcesCache::clientDestroyed(this);
     RenderReplaced::willBeDestroyed();
 }
 
-void RenderSVGRoot::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
+void RenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     if (diff == StyleDifferenceLayout)
         setNeedsBoundariesUpdate();
-    RenderReplaced::styleWillChange(diff, newStyle);
-}
-
-void RenderSVGRoot::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
-{
     RenderReplaced::styleDidChange(diff, oldStyle);
     SVGResourcesCache::clientStyleChanged(this, diff, style());
 }
@@ -332,9 +327,9 @@ void RenderSVGRoot::addChild(RenderObject* child, RenderObject* beforeChild)
     SVGResourcesCache::clientWasAddedToTree(child, child->style());
 }
 
-void RenderSVGRoot::removeChild(RenderObject* child)
+void RenderSVGRoot::removeChild(RenderObject& child)
 {
-    SVGResourcesCache::clientWillBeRemovedFromTree(child);
+    SVGResourcesCache::clientWillBeRemovedFromTree(&child);
     RenderReplaced::removeChild(child);
 }
 
@@ -404,7 +399,7 @@ const RenderObject* RenderSVGRoot::pushMappingToContainer(const RenderLayerModel
 void RenderSVGRoot::updateCachedBoundaries()
 {
     SVGRenderSupport::computeContainerBoundingBoxes(this, m_objectBoundingBox, m_objectBoundingBoxValid, m_strokeBoundingBox, m_repaintBoundingBoxExcludingShadow);
-    SVGRenderSupport::intersectRepaintRectWithResources(this, m_repaintBoundingBoxExcludingShadow);
+    SVGRenderSupport::intersectRepaintRectWithResources(*this, m_repaintBoundingBoxExcludingShadow);
     m_repaintBoundingBoxExcludingShadow.inflate(borderAndPaddingWidth());
 
     m_repaintBoundingBox = m_repaintBoundingBoxExcludingShadow;

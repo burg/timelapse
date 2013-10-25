@@ -99,7 +99,7 @@ void InlineTextBox::setLogicalOverflowRect(const LayoutRect& rect)
 
 int InlineTextBox::baselinePosition(FontBaseline baselineType) const
 {
-    if (!behavesLikeText() || !parent())
+    if (!parent())
         return 0;
     if (&parent()->renderer() == renderer().parent())
         return parent()->baselinePosition(baselineType);
@@ -108,24 +108,24 @@ int InlineTextBox::baselinePosition(FontBaseline baselineType) const
 
 LayoutUnit InlineTextBox::lineHeight() const
 {
-    if (!behavesLikeText() || !renderer().parent())
+    if (!renderer().parent())
         return 0;
     if (&parent()->renderer() == renderer().parent())
         return parent()->lineHeight();
     return toRenderBoxModelObject(renderer().parent())->lineHeight(isFirstLine(), isHorizontal() ? HorizontalLine : VerticalLine, PositionOnContainingLine);
 }
 
-LayoutUnit InlineTextBox::selectionTop()
+LayoutUnit InlineTextBox::selectionTop() const
 {
     return root().selectionTop();
 }
 
-LayoutUnit InlineTextBox::selectionBottom()
+LayoutUnit InlineTextBox::selectionBottom() const
 {
     return root().selectionBottom();
 }
 
-LayoutUnit InlineTextBox::selectionHeight()
+LayoutUnit InlineTextBox::selectionHeight() const
 {
     return root().selectionHeight();
 }
@@ -200,7 +200,7 @@ static const Font& fontToUse(const RenderStyle& style, const RenderText& rendere
     return style.font();
 }
 
-LayoutRect InlineTextBox::localSelectionRect(int startPos, int endPos)
+LayoutRect InlineTextBox::localSelectionRect(int startPos, int endPos) const
 {
     int sPos = max(startPos - m_start, 0);
     int ePos = min(endPos - m_start, (int)m_len);
@@ -243,7 +243,7 @@ LayoutRect InlineTextBox::localSelectionRect(int startPos, int endPos)
 
 void InlineTextBox::deleteLine(RenderArena& arena)
 {
-    renderer().removeTextBox(this);
+    renderer().removeTextBox(*this);
     destroy(arena);
 }
 
@@ -252,7 +252,7 @@ void InlineTextBox::extractLine()
     if (extracted())
         return;
 
-    renderer().extractTextBox(this);
+    renderer().extractTextBox(*this);
 }
 
 void InlineTextBox::attachLine()
@@ -260,7 +260,7 @@ void InlineTextBox::attachLine()
     if (!extracted())
         return;
     
-    renderer().attachTextBox(this);
+    renderer().attachTextBox(*this);
 }
 
 float InlineTextBox::placeEllipsisBox(bool flowIsLTR, float visibleLeftEdge, float visibleRightEdge, float ellipsisWidth, float &truncatedWidth, bool& foundBox)
@@ -465,7 +465,7 @@ bool InlineTextBox::getEmphasisMarkPosition(const RenderStyle& style, TextEmphas
     RenderRubyText* rubyText = toRenderRubyRun(containingBlock->parent())->rubyText();
 
     // The emphasis marks over are suppressed only if there is a ruby text box and it not empty.
-    return !rubyText || !rubyText->firstLineBox();
+    return !rubyText || !rubyText->hasLines();
 }
 
 enum RotationDirection { Counterclockwise, Clockwise };
@@ -530,7 +530,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 
     FloatPoint boxOrigin = locationIncludingFlipping();
     boxOrigin.move(adjustedPaintOffset.x(), adjustedPaintOffset.y());
-    FloatRect boxRect(boxOrigin, LayoutSize(logicalWidth(), logicalHeight()));
+    FloatRect boxRect(boxOrigin, FloatSize(logicalWidth(), logicalHeight()));
 
     RenderCombineText* combinedText = lineStyle.hasTextCombine() && renderer().isCombineText() && toRenderCombineText(renderer()).isCombined() ? &toRenderCombineText(renderer()) : 0;
 
@@ -610,7 +610,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 
     int sPos = 0;
     int ePos = 0;
-    if (paintSelectedTextOnly || paintSelectedTextSeparately)
+    if (haveSelection && (paintSelectedTextOnly || paintSelectedTextSeparately))
         selectionStartEnd(sPos, ePos);
 
     if (m_truncation != cNoTruncation) {
@@ -1459,30 +1459,6 @@ float InlineTextBox::positionForOffset(int offset) const
     return font.selectionRectForText(constructTextRun(lineStyle, font), IntPoint(logicalLeft(), 0), 0, from, to).maxX();
 }
 
-bool InlineTextBox::containsCaretOffset(int offset) const
-{
-    // Offsets before the box are never "in".
-    if (offset < m_start)
-        return false;
-
-    int pastEnd = m_start + m_len;
-
-    // Offsets inside the box (not at either edge) are always "in".
-    if (offset < pastEnd)
-        return true;
-
-    // Offsets outside the box are always "out".
-    if (offset > pastEnd)
-        return false;
-
-    // Offsets at the end are "out" for line breaks (they are on the next line).
-    if (isLineBreak())
-        return false;
-
-    // Offsets at the end are "in" for normal boxes (but the caller has to check affinity).
-    return true;
-}
-
 TextRun InlineTextBox::constructTextRun(const RenderStyle& style, const Font& font, BufferForAppendingHyphen* charactersWithHyphen) const
 {
     ASSERT(renderer().text());
@@ -1511,7 +1487,7 @@ TextRun InlineTextBox::constructTextRun(const RenderStyle& style, const Font& fo
     TextRun run(string, textPos(), expansion(), expansionBehavior(), direction(), dirOverride() || style.rtlOrdering() == VisualOrder, !renderer().canUseSimpleFontCodePath());
     run.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
     if (textRunNeedsRenderingContext(font))
-        run.setRenderingContext(SVGTextRunRenderingContext::create(&renderer()));
+        run.setRenderingContext(SVGTextRunRenderingContext::create(renderer()));
 
     // Propagate the maximum length of the characters buffer to the TextRun, even when we're only processing a substring.
     run.setCharactersLength(maximumLength);

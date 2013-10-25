@@ -73,6 +73,7 @@
 #include "ValueProfile.h"
 #include "VirtualRegister.h"
 #include "Watchpoint.h"
+#include <wtf/Bag.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/RefCountedArray.h>
@@ -146,6 +147,7 @@ public:
     void printStructure(PrintStream&, const char* name, const Instruction*, int operand);
 
     bool isStrictMode() const { return m_isStrictMode; }
+    ECMAMode ecmaMode() const { return isStrictMode() ? StrictMode : NotStrictMode; }
 
     inline bool isKnownNotImmediate(int index)
     {
@@ -170,18 +172,13 @@ public:
                                           int& startOffset, int& endOffset, unsigned& line, unsigned& column);
 
 #if ENABLE(JIT)
-
-    StructureStubInfo& getStubInfo(ReturnAddressPtr returnAddress)
-    {
-        return *(binarySearch<StructureStubInfo, void*>(m_structureStubInfos, m_structureStubInfos.size(), returnAddress.value(), getStructureStubInfoReturnLocation));
-    }
-
-    StructureStubInfo& getStubInfo(unsigned bytecodeIndex)
-    {
-        return *(binarySearch<StructureStubInfo, unsigned>(m_structureStubInfos, m_structureStubInfos.size(), bytecodeIndex, getStructureStubInfoBytecodeIndex));
-    }
+    StructureStubInfo* addStubInfo();
+    Bag<StructureStubInfo>::iterator begin() { return m_stubInfos.begin(); }
+    Bag<StructureStubInfo>::iterator end() { return m_stubInfos.end(); }
 
     void resetStub(StructureStubInfo&);
+    
+    void getStubInfoMap(const ConcurrentJITLocker&, StubInfoMap& result);
 
     ByValInfo& getByValInfo(unsigned bytecodeIndex)
     {
@@ -377,11 +374,6 @@ public:
     String nameForRegister(VirtualRegister);
 
 #if ENABLE(JIT)
-    void setNumberOfStructureStubInfos(size_t size) { m_structureStubInfos.grow(size); }
-    void sortStructureStubInfos();
-    size_t numberOfStructureStubInfos() const { return m_structureStubInfos.size(); }
-    StructureStubInfo& structureStubInfo(int index) { return m_structureStubInfos[index]; }
-
     void setNumberOfByValInfos(size_t size) { m_byValInfos.grow(size); }
     size_t numberOfByValInfos() const { return m_byValInfos.size(); }
     ByValInfo& byValInfo(size_t index) { return m_byValInfos[index]; }
@@ -445,8 +437,8 @@ public:
     RareCaseProfile* rareCaseProfileForBytecodeOffset(int bytecodeOffset)
     {
         return tryBinarySearch<RareCaseProfile, int>(
-                                                     m_rareCaseProfiles, m_rareCaseProfiles.size(), bytecodeOffset,
-                                                     getRareCaseProfileBytecodeOffset);
+            m_rareCaseProfiles, m_rareCaseProfiles.size(), bytecodeOffset,
+            getRareCaseProfileBytecodeOffset);
     }
 
     bool likelyToTakeSlowCase(int bytecodeOffset)
@@ -617,7 +609,7 @@ public:
     const Identifier& identifier(int index) const { return m_unlinkedCode->identifier(index); }
 #endif
 
-    Vector<WriteBarrier<Unknown> >& constants() { return m_constantRegisters; }
+    Vector<WriteBarrier<Unknown>>& constants() { return m_constantRegisters; }
     size_t numberOfConstantRegisters() const { return m_constantRegisters.size(); }
     unsigned addConstant(JSValue v)
     {
@@ -927,7 +919,7 @@ private:
     void updateAllPredictionsAndCountLiveness(unsigned& numberOfLiveNonArgumentValueProfiles, unsigned& numberOfSamplesInProfiles);
 #endif
 
-    void setConstantRegisters(const Vector<WriteBarrier<Unknown> >& constants)
+    void setConstantRegisters(const Vector<WriteBarrier<Unknown>>& constants)
     {
         size_t count = constants.size();
         m_constantRegisters.resize(count);
@@ -935,14 +927,14 @@ private:
             m_constantRegisters[i].set(*m_vm, ownerExecutable(), constants[i].get());
     }
 
-    void dumpBytecode(PrintStream&, ExecState*, const Instruction* begin, const Instruction*&);
+    void dumpBytecode(PrintStream&, ExecState*, const Instruction* begin, const Instruction*&, const StubInfoMap& = StubInfoMap());
 
     CString registerName(int r) const;
     void printUnaryOp(PrintStream&, ExecState*, int location, const Instruction*&, const char* op);
     void printBinaryOp(PrintStream&, ExecState*, int location, const Instruction*&, const char* op);
     void printConditionalJump(PrintStream&, ExecState*, const Instruction*, const Instruction*&, int location, const char* op);
     void printGetByIdOp(PrintStream&, ExecState*, int location, const Instruction*&);
-    void printGetByIdCacheStatus(PrintStream&, ExecState*, int location);
+    void printGetByIdCacheStatus(PrintStream&, ExecState*, int location, const StubInfoMap&);
     enum CacheDumpMode { DumpCaches, DontDumpCaches };
     void printCallOp(PrintStream&, ExecState*, int location, const Instruction*&, const char* op, CacheDumpMode, bool& hasPrintedProfiling);
     void printPutByIdOp(PrintStream&, ExecState*, int location, const Instruction*&, const char* op);
@@ -1026,15 +1018,15 @@ private:
 
 #if ENABLE(LLINT)
     Vector<LLIntCallLinkInfo> m_llintCallLinkInfos;
-    SentinelLinkedList<LLIntCallLinkInfo, BasicRawSentinelNode<LLIntCallLinkInfo> > m_incomingLLIntCalls;
+    SentinelLinkedList<LLIntCallLinkInfo, BasicRawSentinelNode<LLIntCallLinkInfo>> m_incomingLLIntCalls;
 #endif
     RefPtr<JITCode> m_jitCode;
     MacroAssemblerCodePtr m_jitCodeWithArityCheck;
 #if ENABLE(JIT)
-    Vector<StructureStubInfo> m_structureStubInfos;
+    Bag<StructureStubInfo> m_stubInfos;
     Vector<ByValInfo> m_byValInfos;
     Vector<CallLinkInfo> m_callLinkInfos;
-    SentinelLinkedList<CallLinkInfo, BasicRawSentinelNode<CallLinkInfo> > m_incomingCalls;
+    SentinelLinkedList<CallLinkInfo, BasicRawSentinelNode<CallLinkInfo>> m_incomingCalls;
 #endif
     OwnPtr<CompactJITCodeMap> m_jitCodeMap;
 #if ENABLE(DFG_JIT)
@@ -1058,9 +1050,9 @@ private:
     COMPILE_ASSERT(sizeof(Register) == sizeof(WriteBarrier<Unknown>), Register_must_be_same_size_as_WriteBarrier_Unknown);
     // TODO: This could just be a pointer to m_unlinkedCodeBlock's data, but the DFG mutates
     // it, so we're stuck with it for now.
-    Vector<WriteBarrier<Unknown> > m_constantRegisters;
-    Vector<WriteBarrier<FunctionExecutable> > m_functionDecls;
-    Vector<WriteBarrier<FunctionExecutable> > m_functionExprs;
+    Vector<WriteBarrier<Unknown>> m_constantRegisters;
+    Vector<WriteBarrier<FunctionExecutable>> m_functionDecls;
+    Vector<WriteBarrier<FunctionExecutable>> m_functionExprs;
 
     RefPtr<CodeBlock> m_alternative;
     
@@ -1080,7 +1072,7 @@ private:
         Vector<HandlerInfo> m_exceptionHandlers;
 
         // Buffers used for large array literals
-        Vector<Vector<JSValue> > m_constantBuffers;
+        Vector<Vector<JSValue>> m_constantBuffers;
 
         // Jump Tables
         Vector<SimpleJumpTable> m_switchJumpTables;

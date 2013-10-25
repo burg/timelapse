@@ -267,7 +267,6 @@ editing/pasteboard/file-input-files-access.html
 fast/files
 http/tests/fileapi
 fast/dom/DOMURL/check-instanceof-domurl-functions.html
-fast/forms/file/input-file-entries.html
 fast/forms/file/recover-file-input-in-unposted-form.html
 http/tests/security/contentSecurityPolicy/blob-urls-match-self.html
 fast/workers/worker-domurl.html
@@ -1454,10 +1453,7 @@ fast/css-grid-layout
 # <style scoped> is not yet enabled. http://webkit.org/b/49142
 fast/css/style-scoped
 # CSS Regions tests for region styling and scoped styles
-fast/regions/style-scoped-in-flow-override-container-style.html
-fast/regions/style-scoped-in-flow-override-region-styling-multiple-regions.html
-fast/regions/style-scoped-in-flow-override-region-styling.html
-fast/regions/style-scoped-in-flow.html
+fast/regions/style-scoped
 
 # ENABLE(SHADOW_DOM) is disabled.
 editing/shadow
@@ -2872,4 +2868,11 @@ webkit.org/b/122166 media/media-volume-slider-rendered-normal.html [ Failure ]
 webkit.org/b/122166 media/nodesFromRect-shadowContent.html [ Failure ]
 webkit.org/b/122166 media/video-controls-visible-audio-only.html [ Failure ]
 webkit.org/b/122166 media/track/track-cue-rendering-tree-is-removed-properly.html [ Failure ]
+
+# Flaky test fails on only certain machine configurations
+printing/print-close-crash.html
+
+# Test introduced in r157133 fails. State of colorspace management on Windows is unclear.
+media/video-canvas-drawing-output.html
+
 

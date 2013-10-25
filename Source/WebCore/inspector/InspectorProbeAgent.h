@@ -62,12 +62,7 @@ typedef String ErrorString;
 class ScriptArguments;
 class ScriptValue;
 
-class InspectorProbeAgent
-: public InspectorBaseAgent<InspectorProbeAgent>
-, public ScriptDebugListener
-, public InspectorBackendDispatcher::ProbeCommandHandler {
-    friend class ScriptProbeResolver;
-
+class InspectorProbeAgent : public InspectorBaseAgent<InspectorProbeAgent>, public ScriptDebugListener, public InspectorBackendDispatcher::ProbeCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorProbeAgent);
 public:
     static PassOwnPtr<InspectorProbeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page, InjectedScriptManager* InjectedScriptManager)
@@ -96,8 +91,7 @@ public:
     virtual void createScriptProbe(ErrorString*, const String& url, int lineNumber, int columnNumber, const String& expression);
 
     // ScriptDebugListener API
-    virtual void willParseSource(const Script&);
-    virtual void didParseSource(const Script&);
+    virtual void didParseSource(const String& scriptId, const Script&);
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage);
     virtual void didPause(ScriptState*, const ScriptValue& callFrames, const ScriptValue& exception);
     virtual void didContinue();
@@ -110,9 +104,9 @@ private:
     void enable();
     void disable();
 
+    typedef intptr_t ScriptId;
     typedef HashMap<int, RefPtr<ScriptProbe>> ProbeMap;
     typedef HashSet<RefPtr<ScriptProbe> > ProbeSet;
-    typedef intptr_t ScriptId;
     typedef HashMap<String, ScriptId> UrlToScriptIdMap;
 
     int m_nextProbeId;

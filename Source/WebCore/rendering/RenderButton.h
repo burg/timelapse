@@ -43,7 +43,7 @@ public:
     virtual bool canBeSelectionLeaf() const OVERRIDE;
 
     virtual void addChild(RenderObject* newChild, RenderObject *beforeChild = 0) OVERRIDE;
-    virtual void removeChild(RenderObject*) OVERRIDE;
+    virtual void removeChild(RenderObject&) OVERRIDE;
     virtual void removeLeftoverAnonymousBlock(RenderBlock*) OVERRIDE { }
     virtual bool createsAnonymousWrapper() const OVERRIDE { return true; }
 
@@ -75,24 +75,11 @@ private:
     RenderTextFragment* m_buttonText;
     RenderBlock* m_inner;
 
-    OwnPtr<Timer<RenderButton> > m_timer;
+    OwnPtr<Timer<RenderButton>> m_timer;
     bool m_default;
 };
 
-inline RenderButton* toRenderButton(RenderObject* object)
-{ 
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderButton());
-    return static_cast<RenderButton*>(object);
-}
-
-inline const RenderButton* toRenderButton(const RenderObject* object)
-{ 
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderButton());
-    return static_cast<const RenderButton*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderButton(const RenderButton*);
+RENDER_OBJECT_TYPE_CASTS(RenderButton, isRenderButton())
 
 } // namespace WebCore
 

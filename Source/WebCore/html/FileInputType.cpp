@@ -212,9 +212,9 @@ void FileInputType::handleDOMActivateEvent(Event* event)
     event->setDefaultHandled();
 }
 
-RenderElement* FileInputType::createRenderer(RenderArena& arena, RenderStyle&) const
+RenderElement* FileInputType::createRenderer(RenderStyle&) const
 {
-    return new (arena) RenderFileUploadControl(element());
+    return new RenderFileUploadControl(element());
 }
 
 bool FileInputType::canSetStringValue() const
@@ -344,7 +344,7 @@ void FileInputType::requestIcon(const Vector<String>& paths)
     if (m_fileIconLoader)
         m_fileIconLoader->invalidate();
 
-    m_fileIconLoader = FileIconLoader::create(this);
+    m_fileIconLoader = std::make_unique<FileIconLoader>(static_cast<FileIconLoaderClient&>(*this));
 
     chrome->loadIconForFiles(paths, m_fileIconLoader.get());
 }

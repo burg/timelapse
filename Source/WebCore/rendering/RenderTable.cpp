@@ -50,12 +50,12 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderTable::RenderTable(Element* element)
+RenderTable::RenderTable(Element& element)
     : RenderBlock(element, 0)
-    , m_head(0)
-    , m_foot(0)
-    , m_firstBody(0)
-    , m_currentBorder(0)
+    , m_head(nullptr)
+    , m_foot(nullptr)
+    , m_firstBody(nullptr)
+    , m_currentBorder(nullptr)
     , m_collapsedBordersValid(false)
     , m_hasColElements(false)
     , m_needsSectionRecalc(false)
@@ -68,7 +68,26 @@ RenderTable::RenderTable(Element* element)
 {
     setChildrenInline(false);
     m_columnPos.fill(0, 1);
-    
+}
+
+RenderTable::RenderTable(Document& document)
+    : RenderBlock(document, 0)
+    , m_head(nullptr)
+    , m_foot(nullptr)
+    , m_firstBody(nullptr)
+    , m_currentBorder(nullptr)
+    , m_collapsedBordersValid(false)
+    , m_hasColElements(false)
+    , m_needsSectionRecalc(false)
+    , m_columnLogicalWidthChanged(false)
+    , m_columnRenderersValid(false)
+    , m_hSpacing(0)
+    , m_vSpacing(0)
+    , m_borderStart(0)
+    , m_borderEnd(0)
+{
+    setChildrenInline(false);
+    m_columnPos.fill(0, 1);
 }
 
 RenderTable::~RenderTable()
@@ -1316,7 +1335,7 @@ void RenderTable::updateFirstLetter()
 
 int RenderTable::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
-    LayoutUnit baseline = firstLineBoxBaseline();
+    LayoutUnit baseline = firstLineBaseline();
     if (baseline != -1)
         return baseline;
 
@@ -1329,7 +1348,7 @@ int RenderTable::inlineBlockBaseline(LineDirectionMode) const
     return -1;
 }
 
-int RenderTable::firstLineBoxBaseline() const
+int RenderTable::firstLineBaseline() const
 {
     // The baseline of a 'table' is the same as the 'inline-table' baseline per CSS 3 Flexbox (CSS 2.1
     // doesn't define the baseline of a 'table' only an 'inline-table').
@@ -1344,7 +1363,7 @@ int RenderTable::firstLineBoxBaseline() const
     if (!topNonEmptySection)
         return -1;
 
-    int baseline = topNonEmptySection->firstLineBoxBaseline();
+    int baseline = topNonEmptySection->firstLineBaseline();
     if (baseline > 0)
         return topNonEmptySection->logicalTop() + baseline;
 
@@ -1412,10 +1431,8 @@ bool RenderTable::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
 
 RenderTable* RenderTable::createAnonymousWithParentRenderer(const RenderObject* parent)
 {
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE);
-    RenderTable* newTable = new (parent->renderArena()) RenderTable(0);
-    newTable->setDocumentForAnonymous(parent->document());
-    newTable->setStyle(newStyle.release());
+    RenderTable* newTable = new RenderTable(parent->document());
+    newTable->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE));
     return newTable;
 }
 

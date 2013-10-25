@@ -43,8 +43,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-typedef HashMap<AtomicString, RefPtr<CounterNode> > CounterMap;
-typedef HashMap<const RenderObject*, OwnPtr<CounterMap> > CounterMaps;
+typedef HashMap<AtomicString, RefPtr<CounterNode>> CounterMap;
+typedef HashMap<const RenderObject*, OwnPtr<CounterMap>> CounterMaps;
 
 static CounterNode* makeCounterNode(RenderObject*, const AtomicString& identifier, bool alwaysCreateCounter);
 
@@ -353,12 +353,13 @@ static CounterNode* makeCounterNode(RenderObject* object, const AtomicString& id
     return newNode.get();
 }
 
-RenderCounter::RenderCounter(const CounterContent& counter)
-    : RenderText(nullptr, emptyString())
+RenderCounter::RenderCounter(Document& document, const CounterContent& counter)
+    : RenderText(document, emptyString())
     , m_counter(counter)
-    , m_counterNode(0)
+    , m_counterNode(nullptr)
     , m_nextForSameCounter(0)
 {
+    view().addRenderCounter();
 }
 
 RenderCounter::~RenderCounter()
@@ -367,15 +368,6 @@ RenderCounter::~RenderCounter()
         m_counterNode->removeRenderer(this);
         ASSERT(!m_counterNode);
     }
-}
-
-RenderCounter* RenderCounter::createAnonymous(Document& document, const CounterContent& content)
-{
-    RenderCounter* counter = new (*document.renderArena()) RenderCounter(content);
-    counter->setDocumentForAnonymous(document);
-    counter->view().addRenderCounter();
-
-    return counter;
 }
 
 void RenderCounter::willBeDestroyed()
@@ -510,16 +502,16 @@ void RenderCounter::destroyCounterNode(RenderObject* owner, const AtomicString& 
     // map associated with a renderer, so there is no risk in leaking the map.
 }
 
-void RenderCounter::rendererRemovedFromTree(RenderObject* renderer)
+void RenderCounter::rendererRemovedFromTree(RenderObject& renderer)
 {
-    if (!renderer->view().hasRenderCounters())
+    if (!renderer.view().hasRenderCounters())
         return;
-    RenderObject* currentRenderer = renderer->lastLeafChild();
+    RenderObject* currentRenderer = renderer.lastLeafChild();
     if (!currentRenderer)
-        currentRenderer = renderer;
+        currentRenderer = &renderer;
     while (true) {
         destroyCounterNodes(currentRenderer);
-        if (currentRenderer == renderer)
+        if (currentRenderer == &renderer)
             break;
         currentRenderer = currentRenderer->previousInPreOrder();
     }

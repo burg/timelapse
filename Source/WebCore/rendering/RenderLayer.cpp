@@ -84,6 +84,7 @@
 #include "RenderInline.h"
 #include "RenderMarquee.h"
 #include "RenderNamedFlowThread.h"
+#include "RenderRegion.h"
 #include "RenderReplica.h"
 #include "RenderSVGResourceClipper.h"
 #include "RenderScrollbar.h"
@@ -630,8 +631,8 @@ void RenderLayer::updateDescendantsAreContiguousInStackingOrder()
     ASSERT(!m_normalFlowListDirty);
     ASSERT(!m_zOrderListsDirty);
 
-    OwnPtr<Vector<RenderLayer*> > posZOrderList;
-    OwnPtr<Vector<RenderLayer*> > negZOrderList;
+    OwnPtr<Vector<RenderLayer*>> posZOrderList;
+    OwnPtr<Vector<RenderLayer*>> negZOrderList;
     rebuildZOrderLists(StopAtStackingContexts, posZOrderList, negZOrderList);
 
     // Create a reverse lookup.
@@ -1594,7 +1595,7 @@ bool RenderLayer::cannotBlitToWindow() const
 bool RenderLayer::isTransparent() const
 {
 #if ENABLE(SVG)
-    if (renderer().element() && renderer().element()->namespaceURI() == SVGNames::svgNamespaceURI)
+    if (renderer().element() && renderer().element()->isSVGElement())
         return false;
 #endif
     return renderer().isTransparent() || renderer().hasMask();
@@ -3704,7 +3705,7 @@ bool RenderLayer::setupClipPath(GraphicsContext* context, const LayerPaintingInf
     RenderStyle* style = renderer().style();
 
     ASSERT(style->clipPath());
-    if (style->clipPath()->getOperationType() == ClipPathOperation::SHAPE) {
+    if (style->clipPath()->type() == ClipPathOperation::SHAPE) {
         ShapeClipPathOperation* clipPath = static_cast<ShapeClipPathOperation*>(style->clipPath());
 
         if (!rootRelativeBoundsComputed) {
@@ -3718,7 +3719,7 @@ bool RenderLayer::setupClipPath(GraphicsContext* context, const LayerPaintingInf
     }
 
 #if ENABLE(SVG)
-    if (style->clipPath()->getOperationType() == ClipPathOperation::REFERENCE) {
+    if (style->clipPath()->type() == ClipPathOperation::REFERENCE) {
         ReferenceClipPathOperation* referenceClipPathOperation = static_cast<ReferenceClipPathOperation*>(style->clipPath());
         Element* element = renderer().document().getElementById(referenceClipPathOperation->fragment());
         if (element && element->hasTagName(SVGNames::clipPathTag) && element->renderer()) {
@@ -4031,7 +4032,7 @@ void RenderLayer::paintList(Vector<RenderLayer*>* list, GraphicsContext* context
 
     for (size_t i = 0; i < list->size(); ++i) {
         RenderLayer* childLayer = list->at(i);
-        if (childLayer->isOutOfFlowRenderFlowThread())
+        if (childLayer->isFlowThreadCollectingGraphicsLayersUnderRegions())
             continue;
 
         if (!childLayer->isPaginated())
@@ -4443,6 +4444,23 @@ Element* RenderLayer::enclosingElement() const
     }
     ASSERT_NOT_REACHED();
     return 0;
+}
+
+RenderLayer* RenderLayer::enclosingFlowThreadAncestor() const
+{
+    RenderLayer* curr = parent();
+    for (; curr && !curr->isRenderFlowThread(); curr = curr->parent()) {
+        if (curr->isStackingContainer() && curr->isComposited()) {
+            // We only adjust the position of the first level of layers.
+            return 0;
+        }
+    }
+    return curr;
+}
+
+bool RenderLayer::isFlowThreadCollectingGraphicsLayersUnderRegions() const
+{
+    return renderer().isRenderFlowThread() && toRenderFlowThread(renderer()).collectsGraphicsLayersUnderRegions();
 }
 
 // Compute the z-offset of the point in the transformState.
@@ -4890,7 +4908,7 @@ RenderLayer* RenderLayer::hitTestList(Vector<RenderLayer*>* list, RenderLayer* r
     RenderLayer* resultLayer = 0;
     for (int i = list->size() - 1; i >= 0; --i) {
         RenderLayer* childLayer = list->at(i);
-        if (childLayer->isOutOfFlowRenderFlowThread())
+        if (childLayer->isFlowThreadCollectingGraphicsLayersUnderRegions())
             continue;
         RenderLayer* hitLayer = 0;
         HitTestResult tempResult(result.hitTestLocation());
@@ -5497,7 +5515,8 @@ LayoutRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, c
         size_t listSize = posZOrderList->size();
         for (size_t i = 0; i < listSize; ++i) {
             RenderLayer* curLayer = posZOrderList->at(i);
-            if (flags & IncludeCompositedDescendants || !curLayer->isComposited()) {
+            // The RenderNamedFlowThread is ignored when we calculate the bounds of the RenderView.
+            if ((flags & IncludeCompositedDescendants || !curLayer->isComposited()) && !curLayer->isFlowThreadCollectingGraphicsLayersUnderRegions()) {
                 LayoutRect childUnionBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
                 unionBounds.unite(childUnionBounds);
             }
@@ -5510,7 +5529,7 @@ LayoutRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, c
             RenderLayer* curLayer = normalFlowList->at(i);
             // RenderView will always return the size of the document, before reaching this point,
             // so there's no way we could hit a RenderNamedFlowThread here.
-            ASSERT(!curLayer->isOutOfFlowRenderFlowThread());
+            ASSERT(!curLayer->isFlowThreadCollectingGraphicsLayersUnderRegions());
             if (flags & IncludeCompositedDescendants || !curLayer->isComposited()) {
                 LayoutRect curAbsBounds = curLayer->calculateLayerBounds(this, 0, descendantFlags);
                 unionBounds.unite(curAbsBounds);
@@ -5571,7 +5590,7 @@ void RenderLayer::clearClipRects(ClipRectsType typeToClear)
 RenderLayerBacking* RenderLayer::ensureBacking()
 {
     if (!m_backing) {
-        m_backing = adoptPtr(new RenderLayerBacking(this));
+        m_backing = adoptPtr(new RenderLayerBacking(*this));
         compositor().layerBecameComposited(*this);
 
 #if ENABLE(CSS_FILTERS)
@@ -5733,7 +5752,7 @@ void RenderLayer::dirtyZOrderLists()
 
 #if USE(ACCELERATED_COMPOSITING)
     if (!renderer().documentBeingDestroyed()) {
-        if (renderer().isOutOfFlowRenderFlowThread())
+        if (isFlowThreadCollectingGraphicsLayersUnderRegions())
             toRenderFlowThread(renderer()).setNeedsLayerToRegionMappingsUpdate();
         compositor().setCompositingLayersNeedRebuild();
         if (acceleratedCompositingForOverflowScrollEnabled())
@@ -5759,7 +5778,7 @@ void RenderLayer::dirtyNormalFlowList()
 
 #if USE(ACCELERATED_COMPOSITING)
     if (!renderer().documentBeingDestroyed()) {
-        if (renderer().isOutOfFlowRenderFlowThread())
+        if (isFlowThreadCollectingGraphicsLayersUnderRegions())
             toRenderFlowThread(renderer()).setNeedsLayerToRegionMappingsUpdate();
         compositor().setCompositingLayersNeedRebuild();
         if (acceleratedCompositingForOverflowScrollEnabled())
@@ -5776,7 +5795,7 @@ void RenderLayer::rebuildZOrderLists()
     m_zOrderListsDirty = false;
 }
 
-void RenderLayer::rebuildZOrderLists(CollectLayersBehavior behavior, OwnPtr<Vector<RenderLayer*> >& posZOrderList, OwnPtr<Vector<RenderLayer*> >& negZOrderList)
+void RenderLayer::rebuildZOrderLists(CollectLayersBehavior behavior, OwnPtr<Vector<RenderLayer*>>& posZOrderList, OwnPtr<Vector<RenderLayer*>>& negZOrderList)
 {
 #if USE(ACCELERATED_COMPOSITING)
     bool includeHiddenLayers = compositor().inCompositingMode();
@@ -5814,7 +5833,7 @@ void RenderLayer::updateNormalFlowList()
     m_normalFlowListDirty = false;
 }
 
-void RenderLayer::collectLayers(bool includeHiddenLayers, CollectLayersBehavior behavior, OwnPtr<Vector<RenderLayer*> >& posBuffer, OwnPtr<Vector<RenderLayer*> >& negBuffer)
+void RenderLayer::collectLayers(bool includeHiddenLayers, CollectLayersBehavior behavior, OwnPtr<Vector<RenderLayer*>>& posBuffer, OwnPtr<Vector<RenderLayer*>>& negBuffer)
 {
     updateDescendantDependentFlags();
 
@@ -5823,7 +5842,7 @@ void RenderLayer::collectLayers(bool includeHiddenLayers, CollectLayersBehavior 
     bool includeHiddenLayer = includeHiddenLayers || (m_hasVisibleContent || (m_hasVisibleDescendant && isStacking));
     if (includeHiddenLayer && !isNormalFlowOnly()) {
         // Determine which buffer the child should be in.
-        OwnPtr<Vector<RenderLayer*> >& buffer = (zIndex() >= 0) ? posBuffer : negBuffer;
+        OwnPtr<Vector<RenderLayer*>>& buffer = (zIndex() >= 0) ? posBuffer : negBuffer;
 
         // Create the buffer if it doesn't exist yet.
         if (!buffer)
@@ -5948,7 +5967,7 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
 #endif
         && !isTransparent()
         && !needsCompositedScrolling()
-        && !renderer().isRenderRegion()
+        && !renderer().style()->hasFlowFrom()
         ;
 }
 
@@ -6277,10 +6296,10 @@ void RenderLayer::updateScrollCornerStyle()
     RefPtr<RenderStyle> corner = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(SCROLLBAR_CORNER), actualRenderer->style()) : PassRefPtr<RenderStyle>(0);
     if (corner) {
         if (!m_scrollCorner) {
-            m_scrollCorner = RenderScrollbarPart::createAnonymous(renderer().document());
+            m_scrollCorner = new RenderScrollbarPart(renderer().document());
             m_scrollCorner->setParent(&renderer());
         }
-        m_scrollCorner->setStyle(corner.release());
+        m_scrollCorner->setStyle(corner.releaseNonNull());
     } else if (m_scrollCorner) {
         m_scrollCorner->destroy();
         m_scrollCorner = 0;
@@ -6293,10 +6312,10 @@ void RenderLayer::updateResizerStyle()
     RefPtr<RenderStyle> resizer = renderer().hasOverflowClip() ? actualRenderer->getUncachedPseudoStyle(PseudoStyleRequest(RESIZER), actualRenderer->style()) : PassRefPtr<RenderStyle>(0);
     if (resizer) {
         if (!m_resizer) {
-            m_resizer = RenderScrollbarPart::createAnonymous(renderer().document());
+            m_resizer = new RenderScrollbarPart(renderer().document());
             m_resizer->setParent(&renderer());
         }
-        m_resizer->setStyle(resizer.release());
+        m_resizer->setStyle(resizer.releaseNonNull());
     } else if (m_resizer) {
         m_resizer->destroy();
         m_resizer = 0;
@@ -6311,7 +6330,7 @@ RenderLayer* RenderLayer::reflectionLayer() const
 void RenderLayer::createReflection()
 {
     ASSERT(!m_reflection);
-    m_reflection = RenderReplica::createAnonymous(renderer().document());
+    m_reflection = new RenderReplica(renderer().document());
     m_reflection->setParent(&renderer()); // We create a 1-way connection.
 }
 
@@ -6327,8 +6346,8 @@ void RenderLayer::removeReflection()
 
 void RenderLayer::updateReflectionStyle()
 {
-    RefPtr<RenderStyle> newStyle = RenderStyle::create();
-    newStyle->inheritFrom(renderer().style());
+    auto newStyle = RenderStyle::create();
+    newStyle.get().inheritFrom(renderer().style());
     
     // Map in our transform.
     TransformOperations transform;
@@ -6354,12 +6373,12 @@ void RenderLayer::updateReflectionStyle()
             transform.operations().append(TranslateTransformOperation::create(renderer().style()->boxReflect()->offset(), Length(0, Fixed), TransformOperation::TRANSLATE));
             break;
     }
-    newStyle->setTransform(transform);
+    newStyle.get().setTransform(transform);
 
     // Map in our mask.
-    newStyle->setMaskBoxImage(renderer().style()->boxReflect()->mask());
+    newStyle.get().setMaskBoxImage(renderer().style()->boxReflect()->mask());
     
-    m_reflection->setStyle(newStyle.release());
+    m_reflection->setStyle(std::move(newStyle));
 }
 
 #if ENABLE(CSS_SHADERS)
@@ -6394,7 +6413,7 @@ FilterOperations RenderLayer::computeFilterOperations(const RenderStyle* style)
     FilterOperations outputFilters;
     for (size_t i = 0; i < filters.size(); ++i) {
         RefPtr<FilterOperation> filterOperation = filters.operations().at(i);
-        if (filterOperation->getOperationType() == FilterOperation::CUSTOM) {
+        if (filterOperation->type() == FilterOperation::CUSTOM) {
             // We have to wait until the program of CSS Shaders is loaded before setting it on the layer.
             // Note that we will handle the loading of the shaders and repainting of the layer in updateOrRemoveFilterClients.
             const CustomFilterOperation* customOperation = static_cast<const CustomFilterOperation*>(filterOperation.get());

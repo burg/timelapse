@@ -59,7 +59,7 @@ namespace Style {
 
 enum DetachType { NormalDetach, ReattachDetach };
 
-static void attachRenderTree(Element&, RenderStyle* resolvedStyle);
+static void attachRenderTree(Element&, PassRefPtr<RenderStyle>);
 static void detachRenderTree(Element&, DetachType);
 
 Change determineChange(const RenderStyle* s1, const RenderStyle* s2, Settings* settings)
@@ -164,9 +164,10 @@ static bool shouldCreateRenderer(const Element& element, const ContainerNode* re
 static bool elementInsideRegionNeedsRenderer(Element& element, const ContainerNode* renderingParentNode, RefPtr<RenderStyle>& style)
 {
 #if ENABLE(CSS_REGIONS)
-    const RenderObject* parentRenderer = renderingParentNode ? renderingParentNode->renderer() : 0;
+    // The parent of a region should always be an element.
+    const RenderElement* parentRenderer = renderingParentNode ? renderingParentNode->renderer() : 0;
 
-    bool parentIsRegion = parentRenderer && !parentRenderer->canHaveChildren() && parentRenderer->isRenderRegion();
+    bool parentIsRegion = parentRenderer && !parentRenderer->canHaveChildren() && parentRenderer->isRenderNamedFlowFragmentContainer();
     bool parentIsNonRenderedInsideRegion = !parentRenderer && element.parentElement() && element.parentElement()->isInsideRegion();
     if (!parentIsRegion && !parentIsNonRenderedInsideRegion)
         return false;
@@ -180,6 +181,10 @@ static bool elementInsideRegionNeedsRenderer(Element& element, const ContainerNo
 
     if (element.shouldMoveToFlowThread(*style))
         return true;
+#else
+    UNUSED_PARAM(element);
+    UNUSED_PARAM(renderingParentNode);
+    UNUSED_PARAM(style);
 #endif
     return false;
 }
@@ -196,11 +201,10 @@ static RenderNamedFlowThread* moveToFlowThreadIfNeeded(Element& element, const R
 }
 #endif
 
-static void createRendererIfNeeded(Element& element, RenderStyle* resolvedStyle)
+static void createRendererIfNeeded(Element& element, PassRefPtr<RenderStyle> resolvedStyle)
 {
     ASSERT(!element.renderer());
 
-    Document& document = element.document();
     ContainerNode* renderingParentNode = NodeRenderingTraversal::parent(&element);
 
     RefPtr<RenderStyle> style = resolvedStyle;
@@ -232,10 +236,10 @@ static void createRendererIfNeeded(Element& element, RenderStyle* resolvedStyle)
         nextRenderer = nextSiblingRenderer(element, renderingParentNode);
     }
 
-    RenderElement* newRenderer = element.createRenderer(*document.renderArena(), *style);
+    RenderElement* newRenderer = element.createRenderer(*style);
     if (!newRenderer)
         return;
-    if (!parentRenderer->isChildAllowed(newRenderer, style.get())) {
+    if (!parentRenderer->isChildAllowed(*newRenderer, *style)) {
         newRenderer->destroy();
         return;
     }
@@ -245,9 +249,10 @@ static void createRendererIfNeeded(Element& element, RenderStyle* resolvedStyle)
     newRenderer->setFlowThreadState(parentRenderer->flowThreadState());
 
     element.setRenderer(newRenderer);
-    newRenderer->setAnimatableStyle(style.release()); // setAnimatableStyle() can depend on renderer() already being set.
+    newRenderer->setAnimatableStyle(style.releaseNonNull()); // setAnimatableStyle() can depend on renderer() already being set.
 
 #if ENABLE(FULLSCREEN_API)
+    Document& document = element.document();
     if (document.webkitIsFullScreen() && document.webkitCurrentFullScreenElement() == &element) {
         newRenderer = RenderFullScreen::wrapRenderer(newRenderer, parentRenderer, document);
         if (!newRenderer)
@@ -366,15 +371,14 @@ static void createTextRendererIfNeeded(Text& textNode)
     if (!renderingParentNode->childShouldCreateRenderer(&textNode))
         return;
 
-    Document& document = textNode.document();
-    RefPtr<RenderStyle> style = parentRenderer->style();
+    RenderStyle& style = *parentRenderer->style();
 
-    if (!textRendererIsNeeded(textNode, *parentRenderer, *style))
+    if (!textRendererIsNeeded(textNode, *parentRenderer, style))
         return;
-    RenderText* newRenderer = textNode.createTextRenderer(*document.renderArena(), *style);
+    RenderText* newRenderer = textNode.createTextRenderer(style);
     if (!newRenderer)
         return;
-    if (!parentRenderer->isChildAllowed(newRenderer, style.get())) {
+    if (!parentRenderer->isChildAllowed(*newRenderer, style)) {
         newRenderer->destroy();
         return;
     }
@@ -409,7 +413,7 @@ void updateTextRendererAfterContentChange(Text& textNode, unsigned offsetOfRepla
 {
     if (!textNode.attached())
         return;
-    RenderText* textRenderer = toRenderText(textNode.renderer());
+    RenderText* textRenderer = textNode.renderer();
     if (!textRenderer) {
         attachTextRenderer(textNode);
         reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(textNode);
@@ -455,7 +459,7 @@ static void attachShadowRoot(ShadowRoot& shadowRoot)
     shadowRoot.setAttached(true);
 }
 
-static void attachRenderTree(Element& current, RenderStyle* resolvedStyle)
+static void attachRenderTree(Element& current, PassRefPtr<RenderStyle> resolvedStyle)
 {
     PostAttachCallbackDisabler callbackDisabler(current);
     WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
@@ -594,7 +598,7 @@ static Change resolveLocal(Element& current, Change inheritedChange)
     if (localChange == Detach) {
         if (current.attached())
             detachRenderTree(current, ReattachDetach);
-        attachRenderTree(current, newStyle.get());
+        attachRenderTree(current, newStyle.release());
         reattachTextRenderersForWhitespaceOnlySiblingsAfterAttachIfNeeded(current);
 
         return Detach;
@@ -602,11 +606,11 @@ static Change resolveLocal(Element& current, Change inheritedChange)
 
     if (RenderElement* renderer = current.renderer()) {
         if (localChange != NoChange || pseudoStyleCacheIsInvalid(renderer, newStyle.get()) || (inheritedChange == Force && renderer->requiresForcedStyleRecalcPropagation()) || current.styleChangeType() == SyntheticStyleChange)
-            renderer->setAnimatableStyle(newStyle.get());
+            renderer->setAnimatableStyle(*newStyle);
         else if (current.needsStyleRecalc()) {
             // Although no change occurred, we use the new style so that the cousin style sharing code won't get
             // fooled into believing this style is the same.
-            renderer->setStyleInternal(newStyle.get());
+            renderer->setStyleInternal(*newStyle);
         }
     }
 
@@ -628,7 +632,7 @@ static Change resolveLocal(Element& current, Change inheritedChange)
 
 static void updateTextStyle(Text& text)
 {
-    RenderText* renderer = toRenderText(text.renderer());
+    RenderText* renderer = text.renderer();
 
     if (!text.needsStyleRecalc())
         return;
@@ -790,19 +794,21 @@ void resolveTree(Document& document, Change change)
 {
     bool resolveRootStyle = change == Force || (document.shouldDisplaySeamlesslyWithParent() && change >= Inherit);
     if (resolveRootStyle) {
-        RefPtr<RenderStyle> documentStyle = resolveForDocument(document);
+        auto documentStyle = resolveForDocument(document);
 
         // Inserting the pictograph font at the end of the font fallback list is done by the
         // font selector, so set a font selector if needed.
         if (Settings* settings = document.settings()) {
             StyleResolver* styleResolver = document.styleResolverIfExists();
             if (settings->fontFallbackPrefersPictographs() && styleResolver)
-                documentStyle->font().update(styleResolver->fontSelector());
+                documentStyle.get().font().update(styleResolver->fontSelector());
         }
 
-        Style::Change documentChange = determineChange(documentStyle.get(), document.renderView()->style(), document.settings());
+        Style::Change documentChange = determineChange(&documentStyle.get(), document.renderView()->style(), document.settings());
         if (documentChange != NoChange)
-            document.renderView()->setStyle(documentStyle.release());
+            document.renderView()->setStyle(std::move(documentStyle));
+        else
+            documentStyle.dropRef();
     }
 
     Element* documentElement = document.documentElement();

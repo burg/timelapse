@@ -119,7 +119,7 @@ RenderEmbeddedObject::~RenderEmbeddedObject()
 
 RenderEmbeddedObject* RenderEmbeddedObject::createForApplet(HTMLAppletElement& applet)
 {
-    RenderEmbeddedObject* renderer = new (*applet.document().renderArena()) RenderEmbeddedObject(applet);
+    RenderEmbeddedObject* renderer = new RenderEmbeddedObject(applet);
     renderer->setInline(true);
     return renderer;
 }
@@ -206,7 +206,11 @@ void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const Layout
         return;
 
     bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, alignedRect.size());
-    context->drawImage(image, style()->colorSpace(), alignedRect, CompositeSourceOver, ImageOrientationDescription(shouldRespectImageOrientation()), useLowQualityScaling);
+    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation());
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+    orientationDescription.setImageOrientationEnum(style()->imageOrientation());
+#endif
+    context->drawImage(image, style()->colorSpace(), alignedRect, CompositeSourceOver, orientationDescription, useLowQualityScaling);
 }
 
 void RenderEmbeddedObject::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)

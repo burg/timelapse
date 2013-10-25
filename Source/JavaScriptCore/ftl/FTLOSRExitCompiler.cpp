@@ -171,10 +171,11 @@ static void compileStubWithOSRExitStackmap(
     exit.m_code = FINALIZE_CODE_IF(
         shouldShowDisassembly(),
         patchBuffer,
-        ("FTL OSR exit #%u (bc#%u, %s) from %s, with operands = %s",
+        ("FTL OSR exit #%u (bc#%u, %s) from %s, with operands = %s, and record = %s",
             exitID, exit.m_codeOrigin.bytecodeIndex,
             exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
-            toCString(ignoringContext<DumpContext>(exit.m_values)).data()));
+            toCString(ignoringContext<DumpContext>(exit.m_values)).data(),
+            toCString(*record).data()));
 }
 
 static void compileStubWithoutOSRExitStackmap(
@@ -360,7 +361,7 @@ extern "C" void* compileFTLOSRExit(ExecState* exec, unsigned exitID)
     
     prepareCodeOriginForOSRExit(exec, exit.m_codeOrigin);
     
-    if (Options::ftlOSRExitUsesStackmap())
+    if (Options::ftlUsesStackmaps())
         compileStubWithOSRExitStackmap(exitID, jitCode, exit, vm, codeBlock);
     else
         compileStubWithoutOSRExitStackmap(exitID, exit, vm, codeBlock);

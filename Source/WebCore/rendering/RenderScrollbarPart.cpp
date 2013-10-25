@@ -36,8 +36,8 @@ using namespace std;
 
 namespace WebCore {
 
-RenderScrollbarPart::RenderScrollbarPart(RenderScrollbar* scrollbar, ScrollbarPart part)
-    : RenderBlock(nullptr, 0)
+RenderScrollbarPart::RenderScrollbarPart(Document& document, RenderScrollbar* scrollbar, ScrollbarPart part)
+    : RenderBlock(document, 0)
     , m_scrollbar(scrollbar)
     , m_part(part)
 {
@@ -45,13 +45,6 @@ RenderScrollbarPart::RenderScrollbarPart(RenderScrollbar* scrollbar, ScrollbarPa
 
 RenderScrollbarPart::~RenderScrollbarPart()
 {
-}
-
-RenderScrollbarPart* RenderScrollbarPart::createAnonymous(Document& document, RenderScrollbar* scrollbar, ScrollbarPart part)
-{
-    RenderScrollbarPart* renderer = new (*document.renderArena()) RenderScrollbarPart(scrollbar, part);
-    renderer->setDocumentForAnonymous(document);
-    return renderer;
 }
 
 void RenderScrollbarPart::layout()
@@ -139,12 +132,6 @@ void RenderScrollbarPart::computePreferredLogicalWidths()
     m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = 0;
 
     setPreferredLogicalWidthsDirty(false);
-}
-
-void RenderScrollbarPart::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
-{
-    RenderBlock::styleWillChange(diff, newStyle);
-    setInline(false);
 }
 
 void RenderScrollbarPart::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)

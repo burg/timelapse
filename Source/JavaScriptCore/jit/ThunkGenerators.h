@@ -41,7 +41,6 @@ MacroAssemblerCodeRef linkClosureCallThunkGenerator(VM*);
 MacroAssemblerCodeRef virtualCallThunkGenerator(VM*);
 MacroAssemblerCodeRef virtualConstructThunkGenerator(VM*);
 
-MacroAssemblerCodeRef stringLengthTrampolineGenerator(VM*);
 MacroAssemblerCodeRef nativeCallGenerator(VM*);
 MacroAssemblerCodeRef nativeConstructGenerator(VM*);
 MacroAssemblerCodeRef arityFixup(VM*);
@@ -58,7 +57,8 @@ MacroAssemblerCodeRef roundThunkGenerator(VM*);
 MacroAssemblerCodeRef sqrtThunkGenerator(VM*);
 MacroAssemblerCodeRef powThunkGenerator(VM*);
 MacroAssemblerCodeRef imulThunkGenerator(VM*);
-MacroAssemblerCodeRef arrayIteratorNextThunkGenerator(VM*);
+MacroAssemblerCodeRef arrayIteratorNextKeyThunkGenerator(VM*);
+MacroAssemblerCodeRef arrayIteratorNextValueThunkGenerator(VM*);
 
 }
 #endif // ENABLE(JIT)

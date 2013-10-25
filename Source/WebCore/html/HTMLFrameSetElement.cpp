@@ -155,17 +155,17 @@ bool HTMLFrameSetElement::rendererIsNeeded(const RenderStyle& style)
     return style.isStyleAvailable();
 }
 
-RenderElement* HTMLFrameSetElement::createRenderer(RenderArena& arena, RenderStyle& style)
+RenderElement* HTMLFrameSetElement::createRenderer(RenderStyle& style)
 {
     if (style.hasContent())
         return RenderElement::createFor(*this, style);
     
-    return new (arena) RenderFrameSet(*this);
+    return new RenderFrameSet(*this);
 }
 
 HTMLFrameSetElement* HTMLFrameSetElement::findContaining(Element* descendant)
 {
-    return ancestorsOfType<HTMLFrameSetElement>(descendant).first();
+    return ancestorsOfType<HTMLFrameSetElement>(*descendant).first();
 }
 
 void HTMLFrameSetElement::willAttachRenderers()

@@ -33,7 +33,6 @@
 #include "CodeBlock.h"
 #include "Interpreter.h"
 #include "JITInlines.h"
-#include "JITStubCall.h"
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "Operations.h"
@@ -190,11 +189,10 @@ void JIT::compileLoadVarargs(Instruction* instruction)
     if (canOptimize)
         slowCase.link(this);
 
-    JITStubCall stubCall(this, cti_op_load_varargs);
-    stubCall.addArgument(thisValue);
-    stubCall.addArgument(arguments);
-    stubCall.addArgument(Imm32(firstFreeRegister));
-    stubCall.call(regT3);
+    emitLoad(thisValue, regT1, regT0);
+    emitLoad(arguments, regT3, regT2);
+    callOperation(operationLoadVarargs, regT1, regT0, regT3, regT2, firstFreeRegister);
+    move(returnValueRegister, regT3);
 
     if (canOptimize)
         end.link(this);
@@ -274,9 +272,7 @@ void JIT::compileOpCall(OpcodeID opcodeID, Instruction* instruction, unsigned ca
     }
 
     DataLabelPtr addressOfLinkedFunctionCheck;
-    BEGIN_UNINTERRUPTED_SEQUENCE(sequenceOpCall);
     Jump slowCase = branchPtrWithPatch(NotEqual, regT0, addressOfLinkedFunctionCheck, TrustedImmPtr(0));
-    END_UNINTERRUPTED_SEQUENCE(sequenceOpCall);
 
     addSlowCase(slowCase);
     addSlowCase(branch32(NotEqual, regT1, TrustedImm32(JSValue::CellTag)));

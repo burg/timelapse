@@ -33,7 +33,7 @@ namespace WebCore {
 static const int invalidLineHeight = -1;
 
 RenderLineBreak::RenderLineBreak(HTMLElement& element)
-    : RenderBoxModelObject(&element, 0)
+    : RenderBoxModelObject(element, 0)
     , m_inlineBoxWrapper(nullptr)
     , m_cachedLineHeight(invalidLineHeight)
     , m_isWBR(element.hasTagName(HTMLNames::wbrTag))
@@ -90,7 +90,7 @@ void RenderLineBreak::deleteInlineBoxWrapper()
     if (!m_inlineBoxWrapper)
         return;
     if (!documentBeingDestroyed())
-        m_inlineBoxWrapper->remove();
+        m_inlineBoxWrapper->removeFromParent();
     m_inlineBoxWrapper->destroy(renderArena());
     m_inlineBoxWrapper = nullptr;
 }

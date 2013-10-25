@@ -51,7 +51,7 @@ const int defaultWidthNumChars = 34;
 const int buttonShadowHeight = 2;
 
 RenderFileUploadControl::RenderFileUploadControl(HTMLInputElement& input)
-    : RenderBlockFlow(&input)
+    : RenderBlockFlow(input)
     , m_canReceiveDroppedFiles(input.canReceiveDroppedFiles())
 {
 }
@@ -166,7 +166,7 @@ void RenderFileUploadControl::paintObject(PaintInfo& paintInfo, const LayoutPoin
     }
 
     // Paint the children.
-    RenderBlock::paintObject(paintInfo, paintOffset);
+    RenderBlockFlow::paintObject(paintInfo, paintOffset);
 }
 
 void RenderFileUploadControl::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const

@@ -32,10 +32,8 @@ WebInspector.TextEditor = function(element, mimeType, delegate)
     this._element.classList.add(WebInspector.TextEditor.StyleClassName);
     this._element.classList.add(WebInspector.SyntaxHighlightedStyleClassName);
 
-    this._readOnly = true;
-
     this._codeMirror = CodeMirror(this.element, {
-        readOnly: this._readOnly,
+        readOnly: true,
         indentWithTabs: true,
         indentUnit: 4,
         lineNumbers: true,
@@ -154,8 +152,7 @@ WebInspector.TextEditor.prototype = {
 
     set readOnly(readOnly)
     {
-        this._readOnly = readOnly;
-        this._updateCodeMirrorReadOnly();
+        this._codeMirror.setOption("readOnly", readOnly);
     },
 
     get formatted()
@@ -177,7 +174,6 @@ WebInspector.TextEditor.prototype = {
         delete this._ignoreCodeMirrorContentDidChangeEvent;
 
         this._formatted = formatted;
-        this._updateCodeMirrorReadOnly();
 
         this.dispatchEventToListeners(WebInspector.TextEditor.Event.FormattingDidChange);
     },
@@ -450,7 +446,7 @@ WebInspector.TextEditor.prototype = {
         return this._codeMirror.getLine(lineNumber);
     },
 
-    revealPosition: function(position, textRangeToSelect, forceUnformatted)
+    revealPosition: function(position, textRangeToSelect, forceUnformatted, noHighlight)
     {
         console.assert(position === undefined || position instanceof WebInspector.SourceCodePosition, "revealPosition called without a SourceCodePosition");
         if (!(position instanceof WebInspector.SourceCodePosition))
@@ -494,6 +490,9 @@ WebInspector.TextEditor.prototype = {
                 this._scrollIntoViewCentered(position.start);
 
             this.selectedTextRange = textRangeToSelect;
+
+            if (noHighlight)
+                return;
 
             var lineKey = [WebInspector.contentBrowser.currentContentView.resource.url, position.start.line, position.start.ch].join(":");
             if (WebInspector.probeManager.probeGroups[lineKey])
@@ -597,17 +596,33 @@ WebInspector.TextEditor.prototype = {
         return this._codeMirror.toggleLineClass(lineHandle, "wrap", styleClassName);
     },
 
-    // Private
-
-    _updateCodeMirrorReadOnly: function()
+    get lineCount()
     {
-        this._codeMirror.setOption("readOnly", this._readOnly || this._formatted);
+        return this._codeMirror.lineCount();
     },
+
+    focus: function()
+    {
+        this._codeMirror.focus();
+    },
+
+    // Private
 
     _contentChanged: function(codeMirror, change)
     {
         if (this._ignoreCodeMirrorContentDidChangeEvent)
             return;
+
+        if (this._formatted) {
+            this._formatterSourceMap = null;
+            this._formatted = false;
+
+            if (this._delegate && typeof this._delegate.textEditorUpdatedFormatting === "function")
+                this._delegate.textEditorUpdatedFormatting(this);
+
+            this.dispatchEventToListeners(WebInspector.TextEditor.Event.FormattingDidChange);
+        }
+
         this.dispatchEventToListeners(WebInspector.TextEditor.Event.ContentDidChange);
     },
 

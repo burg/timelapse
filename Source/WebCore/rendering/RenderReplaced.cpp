@@ -42,15 +42,22 @@ namespace WebCore {
 const int cDefaultWidth = 300;
 const int cDefaultHeight = 150;
 
-RenderReplaced::RenderReplaced(Element* element)
+RenderReplaced::RenderReplaced(Element& element)
     : RenderBox(element, RenderReplacedFlag)
     , m_intrinsicSize(cDefaultWidth, cDefaultHeight)
 {
     setReplaced(true);
 }
 
-RenderReplaced::RenderReplaced(Element* element, const LayoutSize& intrinsicSize)
+RenderReplaced::RenderReplaced(Element& element, const LayoutSize& intrinsicSize)
     : RenderBox(element, RenderReplacedFlag)
+    , m_intrinsicSize(intrinsicSize)
+{
+    setReplaced(true);
+}
+
+RenderReplaced::RenderReplaced(Document& document, const LayoutSize& intrinsicSize)
+    : RenderBox(document, RenderReplacedFlag)
     , m_intrinsicSize(intrinsicSize)
 {
     setReplaced(true);
@@ -540,8 +547,8 @@ LayoutRect RenderReplaced::localSelectionRect(bool checkWhetherSelected) const
         return LayoutRect(LayoutPoint(), size());
     
     const RootInlineBox& rootBox = m_inlineBoxWrapper->root();
-    LayoutUnit newLogicalTop = rootBox.block().style()->isFlippedBlocksWritingMode() ? m_inlineBoxWrapper->logicalBottom() - rootBox.selectionBottom() : rootBox.selectionTop() - m_inlineBoxWrapper->logicalTop();
-    if (rootBox.block().style()->isHorizontalWritingMode())
+    LayoutUnit newLogicalTop = rootBox.blockFlow().style()->isFlippedBlocksWritingMode() ? m_inlineBoxWrapper->logicalBottom() - rootBox.selectionBottom() : rootBox.selectionTop() - m_inlineBoxWrapper->logicalTop();
+    if (rootBox.blockFlow().style()->isHorizontalWritingMode())
         return LayoutRect(0, newLogicalTop, width(), rootBox.selectionHeight());
     return LayoutRect(newLogicalTop, 0, rootBox.selectionHeight(), height());
 }

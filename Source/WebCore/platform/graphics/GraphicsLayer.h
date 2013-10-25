@@ -214,7 +214,7 @@ public:
     void insert(PassOwnPtr<const AnimationValue>);
     
 protected:
-    Vector<OwnPtr<const AnimationValue> > m_values;
+    Vector<OwnPtr<const AnimationValue>> m_values;
     AnimatedPropertyID m_property;
 };
 
@@ -227,6 +227,8 @@ public:
     static std::unique_ptr<GraphicsLayer> create(GraphicsLayerFactory*, GraphicsLayerClient*);
     
     virtual ~GraphicsLayer();
+
+    virtual void initialize() { }
 
     GraphicsLayerClient* client() const { return m_client; }
 

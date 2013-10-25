@@ -43,21 +43,24 @@
 #include <wtf/MathExtras.h>
 #include <wtf/StackStats.h>
 
-using std::min;
-
 namespace WebCore {
 
 const int RenderSlider::defaultTrackLength = 129;
 
-RenderSlider::RenderSlider(HTMLInputElement* element)
+RenderSlider::RenderSlider(HTMLInputElement& element)
     : RenderFlexibleBox(element)
 {
     // We assume RenderSlider works only with <input type=range>.
-    ASSERT(element->isRangeControl());
+    ASSERT(element.isRangeControl());
 }
 
 RenderSlider::~RenderSlider()
 {
+}
+
+HTMLInputElement& RenderSlider::element() const
+{
+    return toHTMLInputElement(nodeForNonAnonymous());
 }
 
 bool RenderSlider::canBeReplacedWithInlineRunIn() const
@@ -89,13 +92,13 @@ void RenderSlider::computePreferredLogicalWidths()
         computeIntrinsicLogicalWidths(m_minPreferredLogicalWidth, m_maxPreferredLogicalWidth);
 
     if (style()->minWidth().isFixed() && style()->minWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->minWidth().value()));
-        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->minWidth().value()));
+        m_maxPreferredLogicalWidth = std::max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->minWidth().value()));
+        m_minPreferredLogicalWidth = std::max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->minWidth().value()));
     }
 
     if (style()->maxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->maxWidth().value()));
-        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->maxWidth().value()));
+        m_maxPreferredLogicalWidth = std::min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->maxWidth().value()));
+        m_minPreferredLogicalWidth = std::min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(style()->maxWidth().value()));
     }
 
     LayoutUnit toAdd = borderAndPaddingWidth();
@@ -108,9 +111,9 @@ void RenderSlider::computePreferredLogicalWidths()
 void RenderSlider::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
-    // FIXME: Find a way to cascade appearance.
-    // http://webkit.org/b/62535
-    RenderBox* thumbBox = sliderThumbElementOf(*toHTMLInputElement(element()))->renderBox();
+
+    // FIXME: Find a way to cascade appearance. http://webkit.org/b/62535
+    RenderBox* thumbBox = element().sliderThumbElement()->renderBox();
     if (thumbBox && thumbBox->isSliderThumb())
         static_cast<RenderSliderThumb*>(thumbBox)->updateAppearance(style());
 
@@ -119,7 +122,7 @@ void RenderSlider::layout()
 
 bool RenderSlider::inDragMode() const
 {
-    return sliderThumbElementOf(*toHTMLInputElement(element()))->active();
+    return element().sliderThumbElement()->active();
 }
 
 } // namespace WebCore

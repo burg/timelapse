@@ -32,7 +32,6 @@
 #include "Arguments.h"
 #include "CodeBlock.h"
 #include "JITInlines.h"
-#include "JITStubCall.h"
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "Interpreter.h"
@@ -119,11 +118,10 @@ void JIT::compileLoadVarargs(Instruction* instruction)
     if (canOptimize)
         slowCase.link(this);
 
-    JITStubCall stubCall(this, cti_op_load_varargs);
-    stubCall.addArgument(thisValue, regT0);
-    stubCall.addArgument(arguments, regT0);
-    stubCall.addArgument(Imm32(firstFreeRegister));
-    stubCall.call(regT1);
+    emitGetVirtualRegister(thisValue, regT0);
+    emitGetVirtualRegister(arguments, regT1);
+    callOperation(operationLoadVarargs, regT0, regT1, firstFreeRegister);
+    move(returnValueRegister, regT1);
 
     if (canOptimize)
         end.link(this);
@@ -203,9 +201,7 @@ void JIT::compileOpCall(OpcodeID opcodeID, Instruction* instruction, unsigned ca
     }
 
     DataLabelPtr addressOfLinkedFunctionCheck;
-    BEGIN_UNINTERRUPTED_SEQUENCE(sequenceOpCall);
     Jump slowCase = branchPtrWithPatch(NotEqual, regT0, addressOfLinkedFunctionCheck, TrustedImmPtr(0));
-    END_UNINTERRUPTED_SEQUENCE(sequenceOpCall);
     addSlowCase(slowCase);
 
     ASSERT(m_callStructureStubCompilationInfo.size() == callLinkInfoIndex);

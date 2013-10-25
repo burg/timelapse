@@ -28,6 +28,8 @@
 #ifndef IDBFactoryBackendInterface_h
 #define IDBFactoryBackendInterface_h
 
+#include "IndexedDB.h"
+
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -36,9 +38,12 @@
 
 namespace WebCore {
 
+class IDBBackingStoreInterface;
 class IDBCallbacks;
 class IDBDatabase;
+class IDBDatabaseBackendInterface;
 class IDBDatabaseCallbacks;
+class IDBTransactionBackendInterface;
 class SecurityOrigin;
 class ScriptExecutionContext;
 
@@ -56,6 +61,10 @@ public:
     virtual void getDatabaseNames(PassRefPtr<IDBCallbacks>, PassRefPtr<SecurityOrigin>, ScriptExecutionContext*, const String& dataDir) = 0;
     virtual void open(const String& name, int64_t version, int64_t transactionId, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, PassRefPtr<SecurityOrigin>, ScriptExecutionContext*, const String& dataDir) = 0;
     virtual void deleteDatabase(const String& name, PassRefPtr<IDBCallbacks>, PassRefPtr<SecurityOrigin>, ScriptExecutionContext*, const String& dataDir) = 0;
+
+    virtual void removeIDBDatabaseBackend(const String& uniqueIdentifier) = 0;
+
+    virtual PassRefPtr<IDBTransactionBackendInterface> maybeCreateTransactionBackend(IDBDatabaseBackendInterface*, int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>& objectStoreIds, IndexedDB::TransactionMode) = 0;
 };
 
 } // namespace WebCore

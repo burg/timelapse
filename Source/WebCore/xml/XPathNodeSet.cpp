@@ -96,7 +96,7 @@ static void sortBlock(unsigned from, unsigned to, Vector<Vector<Node*>>& parentM
         // FIXME: namespace nodes are not implemented.
         for (unsigned i = sortedEnd; i < to; ++i) {
             Node* n = parentMatrix[i][0];
-            if (n->isAttributeNode() && static_cast<Attr*>(n)->ownerElement() == commonAncestor)
+            if (n->isAttributeNode() && toAttr(n)->ownerElement() == commonAncestor)
                 parentMatrix[i].swap(parentMatrix[sortedEnd++]);
         }
         if (sortedEnd != from) {
@@ -153,13 +153,13 @@ void NodeSet::sort() const
 
     bool containsAttributeNodes = false;
     
-    Vector<Vector<Node*> > parentMatrix(nodeCount);
+    Vector<Vector<Node*>> parentMatrix(nodeCount);
     for (unsigned i = 0; i < nodeCount; ++i) {
         Vector<Node*>& parentsVector = parentMatrix[i];
         Node* n = m_nodes[i].get();
         parentsVector.append(n);
         if (n->isAttributeNode()) {
-            n = static_cast<Attr*>(n)->ownerElement();
+            n = toAttr(n)->ownerElement();
             parentsVector.append(n);
             containsAttributeNodes = true;
         }
@@ -181,7 +181,7 @@ void NodeSet::sort() const
 static Node* findRootNode(Node* node)
 {
     if (node->isAttributeNode())
-        node = static_cast<Attr*>(node)->ownerElement();
+        node = toAttr(node)->ownerElement();
     if (node->inDocument())
         node = &node->document();
     else {
@@ -205,7 +205,7 @@ void NodeSet::traversalSort() const
             containsAttributeNodes = true;
     }
 
-    Vector<RefPtr<Node> > sortedNodes;
+    Vector<RefPtr<Node>> sortedNodes;
     sortedNodes.reserveInitialCapacity(nodeCount);
 
     for (Node* n = findRootNode(m_nodes.first().get()); n; n = NodeTraversal::next(n)) {

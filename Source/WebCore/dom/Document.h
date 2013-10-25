@@ -73,8 +73,6 @@ class CachedScript;
 class CanvasRenderingContext;
 class CharacterData;
 class Comment;
-class CustomElementConstructor;
-class CustomElementRegistry;
 class DOMImplementation;
 class DOMNamedFlowCollection;
 class DOMSelection;
@@ -254,8 +252,6 @@ public:
     using ContainerNode::ref;
     using ContainerNode::deref;
 
-    Element* getElementById(const AtomicString& id) const;
-
     virtual bool canContainRangeEndPoint() const OVERRIDE { return true; }
 
     Element* getElementByAccessKey(const String& key);
@@ -429,6 +425,7 @@ public:
     virtual URL baseURI() const OVERRIDE;
 
 #if ENABLE(PAGE_VISIBILITY_API)
+    void visibilityStateChanged();
     String visibilityState() const;
     bool hidden() const;
 #endif
@@ -538,7 +535,7 @@ public:
     void updateStyleIfNeeded();
     void updateLayout();
     void updateLayoutIgnorePendingStylesheets();
-    PassRefPtr<RenderStyle> styleForElementIgnoringPendingStylesheets(Element*);
+    PassRef<RenderStyle> styleForElementIgnoringPendingStylesheets(Element*);
 
     // Returns true if page box (margin boxes and page borders) is visible.
     bool isPageBoxVisible(int pageIndex);
@@ -979,6 +976,11 @@ public:
     void captionPreferencesChanged();
 #endif
 
+#if ENABLE(PAGE_VISIBILITY_API)
+    void registerForVisibilityStateChangedCallbacks(Element*);
+    void unregisterForVisibilityStateChangedCallbacks(Element*);
+#endif
+
     void setShouldCreateRenderers(bool);
     bool shouldCreateRenderers();
 
@@ -1153,17 +1155,8 @@ public:
     TextAutosizer* textAutosizer() { return m_textAutosizer.get(); }
 #endif
 
-#if ENABLE(CUSTOM_ELEMENTS)
-    PassRefPtr<Element> createElement(const AtomicString& localName, const AtomicString& typeExtension, ExceptionCode&);
-    PassRefPtr<Element> createElementNS(const AtomicString& namespaceURI, const String& qualifiedName, const AtomicString& typeExtension, ExceptionCode&);
-    PassRefPtr<CustomElementConstructor> registerElement(JSC::ExecState*, const AtomicString& name, ExceptionCode&);
-    PassRefPtr<CustomElementConstructor> registerElement(JSC::ExecState*, const AtomicString& name, const Dictionary& options, ExceptionCode&);
-    CustomElementRegistry* registry() const { return m_registry.get(); }
-    void didCreateCustomElement(Element*, CustomElementConstructor*);
-#endif
-
-    void adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(Vector<FloatQuad>&, RenderObject*);
-    void adjustFloatRectForScrollAndAbsoluteZoomAndFrameScale(FloatRect&, RenderObject*);
+    void adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(Vector<FloatQuad>&, const RenderStyle&);
+    void adjustFloatRectForScrollAndAbsoluteZoomAndFrameScale(FloatRect&, const RenderStyle&);
 
     bool hasActiveParser();
     void incrementActiveParserCount() { ++m_activeParserCount; }
@@ -1449,7 +1442,7 @@ private:
     bool m_annotatedRegionsDirty;
 #endif
 
-    HashMap<String, RefPtr<HTMLCanvasElement> > m_cssCanvasElements;
+    HashMap<String, RefPtr<HTMLCanvasElement>> m_cssCanvasElements;
 
     bool m_createRenderers;
     bool m_inPageCache;
@@ -1460,6 +1453,10 @@ private:
     HashSet<Element*> m_privateBrowsingStateChangedElements;
 #if ENABLE(VIDEO_TRACK)
     HashSet<Element*> m_captionPreferencesChangedElements;
+#endif
+
+#if ENABLE(PAGE_VISIBILITY_API)
+    HashSet<Element*> m_visibilityStateCallbackElements;
 #endif
 
     HashMap<StringImpl*, Element*, CaseFoldingHash> m_elementsByAccessKey;
@@ -1488,7 +1485,7 @@ private:
 #if ENABLE(FULLSCREEN_API)
     bool m_areKeysEnabledInFullScreen;
     RefPtr<Element> m_fullScreenElement;
-    Vector<RefPtr<Element> > m_fullScreenElementStack;
+    Vector<RefPtr<Element>> m_fullScreenElementStack;
     RenderFullScreen* m_fullScreenRenderer;
     Timer<Document> m_fullScreenChangeDelayTimer;
     Deque<RefPtr<Node>> m_fullScreenChangeEventTargetQueue;
@@ -1528,7 +1525,7 @@ private:
 #endif
 
     Timer<Document> m_pendingTasksTimer;
-    Vector<OwnPtr<Task> > m_pendingTasks;
+    Vector<OwnPtr<Task>> m_pendingTasks;
 
 #if ENABLE(IOS_TEXT_AUTOSIZING)
 public:
@@ -1543,10 +1540,6 @@ private:
 
 #if ENABLE(TEXT_AUTOSIZING)
     OwnPtr<TextAutosizer> m_textAutosizer;
-#endif
-
-#if ENABLE(CUSTOM_ELEMENTS)
-    RefPtr<CustomElementRegistry> m_registry;
 #endif
 
     bool m_scheduledTasksAreSuspended;
@@ -1569,7 +1562,7 @@ private:
     bool m_didDispatchViewportPropertiesChanged;
 #endif
 
-    typedef HashMap<AtomicString, OwnPtr<Locale> > LocaleIdentifierToLocaleMap;
+    typedef HashMap<AtomicString, OwnPtr<Locale>> LocaleIdentifierToLocaleMap;
     LocaleIdentifierToLocaleMap m_localeCache;
 
 #if ENABLE(TEMPLATE_ELEMENT)
@@ -1586,7 +1579,7 @@ private:
 #endif
 
     Timer<Document> m_didAssociateFormControlsTimer;
-    HashSet<RefPtr<Element> > m_associatedFormControls;
+    HashSet<RefPtr<Element>> m_associatedFormControls;
 
     bool m_hasInjectedPlugInsScript;
     bool m_renderTreeBeingDestroyed;
@@ -1651,12 +1644,13 @@ inline const Document* toDocument(const ScriptExecutionContext* scriptExecutionC
     return static_cast<const Document*>(scriptExecutionContext);
 }
 
-inline bool isDocument(const Node& node)
-{
-    return node.isDocumentNode();
-}
+inline bool isDocument(const Node& node) { return node.isDocumentNode(); }
+void isDocument(const Document&); // Catch unnecessary runtime check of type known at compile time.
 
 NODE_TYPE_CASTS(Document)
+
+#define DOCUMENT_TYPE_CASTS(ToClassName) \
+    TYPE_CASTS_BASE(ToClassName, Document, document, WebCore::is##ToClassName(*document), WebCore::is##ToClassName(document))
 
 } // namespace WebCore
 

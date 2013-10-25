@@ -43,8 +43,8 @@ using namespace std;
 
 namespace WebCore {
 
-RenderRubyRun::RenderRubyRun()
-    : RenderBlockFlow(0)
+RenderRubyRun::RenderRubyRun(Document& document)
+    : RenderBlockFlow(document)
 {
     setReplaced(true);
     setInline(true);
@@ -93,7 +93,7 @@ RenderRubyBase* RenderRubyRun::rubyBaseSafe()
     RenderRubyBase* base = rubyBase();
     if (!base) {
         base = createRubyBase();
-        RenderBlock::addChild(base);
+        RenderBlockFlow::addChild(base);
     }
     return base;
 }
@@ -107,9 +107,9 @@ void RenderRubyRun::updateFirstLetter()
 {
 }
 
-bool RenderRubyRun::isChildAllowed(RenderObject* child, RenderStyle*) const
+bool RenderRubyRun::isChildAllowed(const RenderObject& child, const RenderStyle&) const
 {
-    return child->isRubyText() || child->isInline();
+    return child.isInline() || child.isRubyText();
 }
 
 void RenderRubyRun::addChild(RenderObject* child, RenderObject* beforeChild)
@@ -121,7 +121,7 @@ void RenderRubyRun::addChild(RenderObject* child, RenderObject* beforeChild)
             // RenderRuby has already ascertained that we can add the child here.
             ASSERT(!hasRubyText());
             // prepend ruby texts as first child
-            RenderBlock::addChild(child, firstChild());
+            RenderBlockFlow::addChild(child, firstChild());
         }  else if (beforeChild->isRubyText()) {
             // New text is inserted just before another.
             // In this case the new text takes the place of the old one, and
@@ -135,8 +135,8 @@ void RenderRubyRun::addChild(RenderObject* child, RenderObject* beforeChild)
             // Note: Doing it in this order and not using RenderRubyRun's methods,
             // in order to avoid automatic removal of the ruby run in case there is no
             // other child besides the old ruby text.
-            RenderBlock::addChild(child, beforeChild);
-            RenderBlock::removeChild(beforeChild);
+            RenderBlockFlow::addChild(child, beforeChild);
+            RenderBlockFlow::removeChild(*beforeChild);
             newRun->addChild(beforeChild);
         } else if (hasRubyBase()) {
             // Insertion before a ruby base object.
@@ -156,11 +156,11 @@ void RenderRubyRun::addChild(RenderObject* child, RenderObject* beforeChild)
     }
 }
 
-void RenderRubyRun::removeChild(RenderObject* child)
+void RenderRubyRun::removeChild(RenderObject& child)
 {
     // If the child is a ruby text, then merge the ruby base with the base of
     // the right sibling run, if possible.
-    if (!beingDestroyed() && !documentBeingDestroyed() && child->isRubyText()) {
+    if (!beingDestroyed() && !documentBeingDestroyed() && child.isRubyText()) {
         RenderRubyBase* base = rubyBase();
         RenderObject* rightNeighbour = nextSibling();
         if (base && rightNeighbour && rightNeighbour->isRubyRun()) {
@@ -178,21 +178,21 @@ void RenderRubyRun::removeChild(RenderObject* child)
         }
     }
 
-    RenderBlock::removeChild(child);
+    RenderBlockFlow::removeChild(child);
 
     if (!beingDestroyed() && !documentBeingDestroyed()) {
         // Check if our base (if any) is now empty. If so, destroy it.
         RenderBlock* base = rubyBase();
         if (base && !base->firstChild()) {
-            RenderBlock::removeChild(base);
-            base->deleteLineBoxTree();
+            RenderBlockFlow::removeChild(*base);
+            base->deleteLines();
             base->destroy();
         }
 
         // If any of the above leaves the run empty, destroy it as well.
         if (isEmpty()) {
-            parent()->removeChild(this);
-            deleteLineBoxTree();
+            parent()->removeChild(*this);
+            deleteLines();
             destroy();
         }
     }
@@ -200,20 +200,18 @@ void RenderRubyRun::removeChild(RenderObject* child)
 
 RenderRubyBase* RenderRubyRun::createRubyBase() const
 {
-    RenderRubyBase* renderer = RenderRubyBase::createAnonymous(document());
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
-    newStyle->setTextAlign(CENTER); // FIXME: use WEBKIT_CENTER?
-    renderer->setStyle(newStyle.release());
+    RenderRubyBase* renderer = new RenderRubyBase(document());
+    auto newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
+    newStyle.get().setTextAlign(CENTER); // FIXME: use WEBKIT_CENTER?
+    renderer->setStyle(std::move(newStyle));
     return renderer;
 }
 
 RenderRubyRun* RenderRubyRun::staticCreateRubyRun(const RenderObject* parentRuby)
 {
     ASSERT(parentRuby && parentRuby->isRuby());
-    RenderRubyRun* rr = new (parentRuby->renderArena()) RenderRubyRun();
-    rr->setDocumentForAnonymous(parentRuby->document());
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parentRuby->style(), INLINE_BLOCK);
-    rr->setStyle(newStyle.release());
+    RenderRubyRun* rr = new RenderRubyRun(parentRuby->document());
+    rr->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parentRuby->style(), INLINE_BLOCK));
     return rr;
 }
 
@@ -232,7 +230,7 @@ RenderObject* RenderRubyRun::layoutSpecialExcludedChild(bool relayoutChildren)
 
 void RenderRubyRun::layout()
 {
-    RenderBlock::layout();
+    RenderBlockFlow::layout();
     
     RenderRubyText* rt = rubyText();
     if (!rt)

@@ -472,9 +472,6 @@ webkit.org/b/109081 webgl/conformance/uniforms/uniform-default-values.html [ Ski
 webkit.org/b/109081 webgl/conformance/uniforms/uniform-location.html [ Skip ]
 webkit.org/b/109081 webgl/conformance/uniforms/uniform-samplers-test.html [ Skip ]
 
-webkit.org/b/84333 storage/indexeddb/structured-clone.html [ Failure ]
-webkit.org/b/84333 storage/indexeddb/noblobs.html [ Failure ]
-
 # css3 device adaptation does not work for EFL WK1 properly.
 webkit.org/b/114948 css3/device-adapt/viewport-width-check-window-innerwidth-correct.html [ Failure ]
 webkit.org/b/114948 css3/device-adapt/viewport-width-not-affecting-next-page.html [ Failure ]
@@ -492,6 +489,8 @@ webkit.org/b/120671 editing/selection/doubleclick-japanese-text.html [ Failure ]
 Bug(EFL) fast/harness/results.html [ Failure ]
 
 # EFL has not fully implemented about some SVG attributes
+Bug(EFL) svg/as-image/image-respects-deviceScaleFactor.html
+Bug(EFL) svg/hixie/data-types/002.xhtml
 Bug(EFL) svg/zoom/page/zoom-zoom-coords.xhtml [ Failure ]
 
 # Text selection does not work correctly in DumpRenderTree

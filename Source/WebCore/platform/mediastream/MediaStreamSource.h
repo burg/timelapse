@@ -100,9 +100,6 @@ public:
 
     void stop();
 
-    MediaStreamDescriptor* stream() const { return m_stream; }
-    void setStream(MediaStreamDescriptor*);
-    
 protected:
     MediaStreamSource(const String& id, Type, const String& name);
 
@@ -113,7 +110,6 @@ private:
     ReadyState m_readyState;
     Vector<Observer*> m_observers;
     RefPtr<MediaConstraints> m_constraints;
-    MediaStreamDescriptor* m_stream;
     MediaStreamSourceStates m_states;
 
     bool m_enabled;
@@ -122,7 +118,7 @@ private:
     bool m_remote;
 };
 
-typedef Vector<RefPtr<MediaStreamSource> > MediaStreamSourceVector;
+typedef Vector<RefPtr<MediaStreamSource>> MediaStreamSourceVector;
 
 } // namespace WebCore
 

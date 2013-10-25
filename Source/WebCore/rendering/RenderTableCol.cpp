@@ -36,7 +36,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RenderTableCol::RenderTableCol(Element& element)
-    : RenderBox(&element, 0)
+    : RenderBox(element, 0)
     , m_span(1)
 {
     // init RenderObject attributes
@@ -80,10 +80,10 @@ void RenderTableCol::willBeRemovedFromTree()
     table()->removeColumn(this);
 }
 
-bool RenderTableCol::isChildAllowed(RenderObject* child, RenderStyle* style) const
+bool RenderTableCol::isChildAllowed(const RenderObject& child, const RenderStyle& style) const
 {
     // We cannot use isTableColumn here as style() may return 0.
-    return child->isRenderTableCol() && style->display() == TABLE_COLUMN;
+    return style.display() == TABLE_COLUMN && child.isRenderTableCol();
 }
 
 bool RenderTableCol::canHaveChildren() const
@@ -122,7 +122,7 @@ void RenderTableCol::clearPreferredLogicalWidthsDirtyBits()
 
 RenderTable* RenderTableCol::table() const
 {
-    RenderObject* table = parent();
+    auto table = parent();
     if (table && !table->isTable())
         table = table->parent();
     return table && table->isTable() ? toRenderTable(table) : 0;

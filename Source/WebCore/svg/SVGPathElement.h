@@ -118,7 +118,7 @@ private:
         DECLARE_ANIMATED_BOOLEAN(ExternalResourcesRequired, externalResourcesRequired)
     END_DECLARE_ANIMATED_PROPERTIES
 
-    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
 
     virtual Node::InsertionNotificationRequest insertedInto(ContainerNode&) OVERRIDE;
     virtual void removedFrom(ContainerNode&) OVERRIDE;
@@ -131,7 +131,7 @@ private:
     bool m_isAnimValObserved;
 };
 
-ELEMENT_TYPE_CASTS(SVGPathElement)
+NODE_TYPE_CASTS(SVGPathElement)
 
 } // namespace WebCore
 

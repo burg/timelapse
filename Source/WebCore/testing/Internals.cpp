@@ -148,6 +148,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 #include "MockMediaStreamCenter.h"
+#include "RTCPeerConnection.h"
+#include "RTCPeerConnectionHandlerMock.h"
 #endif
 
 namespace WebCore {
@@ -280,9 +282,10 @@ Internals::Internals(Document* document)
     if (document && document->page())
         document->page()->group().captionPreferences()->setTestingMode(true);
 #endif
-    
+
 #if ENABLE(MEDIA_STREAM)
     MockMediaStreamCenter::registerMockMediaStreamCenter();
+    enableMockRTCPeerConnectionHandler();
 #endif
 }
 
@@ -580,9 +583,9 @@ void Internals::setShadowPseudoId(Element* element, const String& id, ExceptionC
 
 String Internals::visiblePlaceholder(Element* element)
 {
-    if (element && isHTMLTextFormControlElement(element)) {
-        if (toHTMLTextFormControlElement(element)->placeholderShouldBeVisible())
-            return toHTMLTextFormControlElement(element)->placeholderElement()->textContent();
+    if (element && isHTMLTextFormControlElement(*element)) {
+        if (toHTMLTextFormControlElement(*element).placeholderShouldBeVisible())
+            return toHTMLTextFormControlElement(*element).placeholderElement()->textContent();
     }
 
     return String();
@@ -644,7 +647,14 @@ void Internals::enableMockSpeechSynthesizer()
     synthesis->setPlatformSynthesizer(PlatformSpeechSynthesizerMock::create(synthesis));
 }
 #endif
-    
+
+#if ENABLE(MEDIA_STREAM)
+void Internals::enableMockRTCPeerConnectionHandler()
+{
+    RTCPeerConnectionHandler::create = RTCPeerConnectionHandlerMock::create;
+}
+#endif
+
 PassRefPtr<ClientRect> Internals::absoluteCaretBounds(ExceptionCode& ec)
 {
     Document* document = contextDocument();
@@ -1145,29 +1155,6 @@ unsigned Internals::touchEventHandlerCount(Document* document, ExceptionCode& ec
     return count;
 }
 
-#if ENABLE(TOUCH_EVENT_TRACKING)
-PassRefPtr<ClientRectList> Internals::touchEventTargetClientRects(Document* document, ExceptionCode& ec)
-{
-    if (!document || !document->view() || !document->page()) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    if (!document->page()->scrollingCoordinator())
-        return ClientRectList::create();
-
-    document->updateLayoutIgnorePendingStylesheets();
-
-    Vector<IntRect> absoluteRects;
-    document->page()->scrollingCoordinator()->computeAbsoluteTouchEventTargetRects(document, absoluteRects);
-    Vector<FloatQuad> absoluteQuads(absoluteRects.size());
-
-    for (size_t i = 0; i < absoluteRects.size(); ++i)
-        absoluteQuads[i] = FloatQuad(absoluteRects[i]);
-
-    return ClientRectList::create(absoluteQuads);
-}
-#endif
-
 PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int centerX, int centerY, unsigned topPadding, unsigned rightPadding,
     unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, bool allowChildFrameContent, ExceptionCode& ec) const
 {
@@ -1622,10 +1609,10 @@ void Internals::insertAuthorCSS(Document* document, const String& css, Exception
         return;
     }
 
-    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(*document);
-    parsedSheet->setIsUserStyleSheet(false);
-    parsedSheet->parseString(css);
-    document->styleSheetCollection().addAuthorSheet(parsedSheet);
+    auto parsedSheet = StyleSheetContents::create(*document);
+    parsedSheet.get().setIsUserStyleSheet(false);
+    parsedSheet.get().parseString(css);
+    document->styleSheetCollection().addAuthorSheet(std::move(parsedSheet));
 }
 
 void Internals::insertUserCSS(Document* document, const String& css, ExceptionCode& ec) const
@@ -1635,10 +1622,10 @@ void Internals::insertUserCSS(Document* document, const String& css, ExceptionCo
         return;
     }
 
-    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(*document);
-    parsedSheet->setIsUserStyleSheet(true);
-    parsedSheet->parseString(css);
-    document->styleSheetCollection().addUserSheet(parsedSheet);
+    auto parsedSheet = StyleSheetContents::create(*document);
+    parsedSheet.get().setIsUserStyleSheet(true);
+    parsedSheet.get().parseString(css);
+    document->styleSheetCollection().addUserSheet(std::move(parsedSheet));
 }
 
 String Internals::counterValue(Element* element)

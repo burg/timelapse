@@ -6545,7 +6545,6 @@
     <ClCompile Include="..\Modules\indexeddb\IDBCursor.cpp" />
     <ClCompile Include="..\Modules\indexeddb\leveldb\IDBCursorBackendLevelDB.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBDatabase.cpp" />
-    <ClCompile Include="..\Modules\indexeddb\leveldb\IDBDatabaseBackendLevelDB.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBFactory.cpp" />
     <ClCompile Include="..\Modules\indexeddb\leveldb\IDBFactoryBackendLevelDB.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBFactoryBackendInterface.cpp" />
@@ -6553,7 +6552,6 @@
     <ClCompile Include="..\Modules\indexeddb\IDBKey.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBKeyRange.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBObjectStore.cpp" />
-    <ClCompile Include="..\Modules\indexeddb\leveldb\IDBObjectStoreBackendLevelDB.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBRequest.cpp" />
     <ClCompile Include="..\Modules\indexeddb\IDBTransaction.cpp" />
     <ClCompile Include="..\Modules\indexeddb\PageGroupIndexedDatabase.cpp" />
@@ -6965,6 +6963,18 @@
     <ClCompile Include="..\page\DOMWindowExtension.cpp" />
     <ClCompile Include="..\page\DOMWindowProperty.cpp" />
     <ClCompile Include="..\page\DragController.cpp" />
+    <ClCompile Include="..\page\scrolling\coordinatedgraphics\ScrollingCoordinatorCoordinatedGraphics.cpp" />
+    <ClCompile Include="..\page\scrolling\coordinatedgraphics\ScrollingStateNodeCoordinatedGraphics.cpp" />
+    <ClCompile Include="..\page\scrolling\coordinatedgraphics\ScrollingStateScrollingNodeCoordinatedGraphics.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingStateFixedNode.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingStateNode.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingStateScrollingNode.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingStateStickyNode.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingStateTree.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingThread.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingTree.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingTreeNode.cpp" />
+    <ClCompile Include="..\page\scrolling\ScrollingTreeScrollingNode.cpp" />
     <ClCompile Include="..\page\win\DragControllerWin.cpp" />
     <ClCompile Include="..\page\EventHandler.cpp" />
     <ClCompile Include="..\page\win\EventHandlerWin.cpp" />
@@ -7170,6 +7180,28 @@
     <ClCompile Include="..\platform\graphics\avfoundation\cf\InbandTextTrackPrivateAVCF.cpp" />
     <ClCompile Include="..\platform\graphics\avfoundation\cf\InbandTextTrackPrivateLegacyAVCF.cpp" />
     <ClCompile Include="..\platform\graphics\avfoundation\InbandTextTrackPrivateAVF.cpp" />
+    <ClCompile Include="..\platform\graphics\cairo\TileCairo.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\cairo\TiledBackingStoreBackendCairo.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\PlatformCALayer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\platform\graphics\GLContext.cpp" />
     <ClCompile Include="..\platform\graphics\cairo\GraphicsContext3DCairo.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -7180,7 +7212,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\platform\graphics\GraphicsContext3DPrivate.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\PlatformCAFiltersWin.cpp" />
+    <ClCompile Include="..\platform\graphics\ca\win\PlatformCAFiltersWin.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\platform\graphics\cg\GraphicsContext3DCG.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
@@ -7207,6 +7244,8 @@
     <ClCompile Include="..\platform\graphics\gpu\Texture.cpp" />
     <ClCompile Include="..\platform\graphics\gpu\TilingData.cpp" />
     <ClCompile Include="..\platform\graphics\GraphicsContext3D.cpp" />
+    <ClCompile Include="..\platform\graphics\GraphicsLayerAnimation.cpp" />
+    <ClCompile Include="..\platform\graphics\GraphicsLayerTransform.cpp" />
     <ClCompile Include="..\platform\graphics\OpenGLShims.cpp" />
     <ClCompile Include="..\platform\graphics\opengl\Extensions3DOpenGL.cpp" />
     <ClCompile Include="..\platform\graphics\opengl\Extensions3DOpenGLCommon.cpp" />
@@ -7215,6 +7254,27 @@
     <ClCompile Include="..\platform\graphics\opengl\GLPlatformSurface.cpp" />
     <ClCompile Include="..\platform\graphics\opengl\GraphicsContext3DOpenGLCommon.cpp" />
     <ClCompile Include="..\platform\graphics\opengl\GraphicsContext3DOpenGLES.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\AreaAllocator.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CompositingCoordinator.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CoordinatedBackingStore.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CoordinatedGraphicsLayer.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CoordinatedGraphicsScene.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CoordinatedImageBacking.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CoordinatedSurface.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\CoordinatedTile.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\coordinated\UpdateAtlas.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\GraphicsLayerTextureMapper.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapper.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperBackingStore.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperFPSCounter.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperGL.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperImageBuffer.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperLayer.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperShaderProgram.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperSurfaceBackingStore.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperTile.cpp" />
+    <ClCompile Include="..\platform\graphics\texmap\TextureMapperTiledBackingStore.cpp" />
+    <ClCompile Include="..\platform\graphics\TiledBackingStore.cpp" />
     <ClCompile Include="..\platform\graphics\win\GraphicsContext3DWin.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
@@ -7921,15 +7981,60 @@
     <ClCompile Include="..\platform\graphics\filters\SourceGraphic.cpp" />
     <ClCompile Include="..\platform\graphics\filters\SpotLightSource.cpp" />
     <ClCompile Include="..\platform\graphics\filters\ValidatedCustomFilterOperation.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\GraphicsLayerCA.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\TransformationMatrixCA.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\CACFLayerTreeHost.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\LayerChangesFlusher.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\LegacyCACFLayerTreeHost.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\PlatformCAAnimationWin.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\PlatformCALayerWin.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\PlatformCALayerWinInternal.cpp" />
-    <ClCompile Include="..\platform\graphics\ca\win\WKCACFViewLayerTreeHost.cpp" />
+    <ClCompile Include="..\platform\graphics\ca\GraphicsLayerCA.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\TransformationMatrixCA.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\CACFLayerTreeHost.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\LayerChangesFlusher.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\LegacyCACFLayerTreeHost.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\PlatformCAAnimationWin.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\PlatformCALayerWin.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\PlatformCALayerWinInternal.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\platform\graphics\ca\win\WKCACFViewLayerTreeHost.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\platform\graphics\avfoundation\MediaPlayerPrivateAVFoundation.cpp" />
     <ClCompile Include="..\platform\graphics\avfoundation\cf\MediaPlayerPrivateAVFoundationCF.cpp" />
     <ClCompile Include="..\platform\network\AuthenticationChallengeBase.cpp" />
@@ -10017,6 +10122,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\rendering\RenderNamedFlowFragment.cpp" />
     <ClCompile Include="..\rendering\RenderNamedFlowThread.cpp" />
     <ClCompile Include="..\rendering\RenderObject.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -10665,6 +10771,20 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\rendering\RenderTextLineBoxes.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DebugSuffix|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_WinCairo|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\rendering\RenderTextTrackCue.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -10792,6 +10912,8 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Production|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\rendering\SimpleLineLayout.cpp" />
+    <ClCompile Include="..\rendering\SimpleLineLayoutFunctions.cpp" />
     <ClCompile Include="..\rendering\TextPaintStyle.cpp" />
     <ClCompile Include="..\rendering\shapes\PolygonShape.cpp" />
     <ClCompile Include="..\rendering\shapes\RasterShape.cpp" />
@@ -15320,7 +15442,6 @@
     <ClCompile Include="..\html\TypeAhead.cpp" />
     <ClCompile Include="..\html\URLInputType.cpp" />
     <ClCompile Include="..\html\ValidationMessage.cpp" />
-    <ClCompile Include="..\html\ValidityState.cpp" />
     <ClCompile Include="..\html\WeekInputType.cpp" />
     <ClCompile Include="..\html\forms\FileIconLoader.cpp" />
     <ClCompile Include="..\html\parser\BackgroundHTMLInputStream.cpp" />
@@ -18505,8 +18626,18 @@
     <ClInclude Include="..\page\PopupOpeningObserver.h" />
     <ClInclude Include="..\page\PrintContext.h" />
     <ClInclude Include="..\page\Screen.h" />
+    <ClInclude Include="..\page\scrolling\coordinatedgraphics\ScrollingCoordinatorCoordinatedGraphics.h" />
     <ClInclude Include="..\page\scrolling\ScrollingConstraints.h" />
     <ClInclude Include="..\page\scrolling\ScrollingCoordinator.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingStateFixedNode.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingStateNode.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingStateScrollingNode.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingStateStickyNode.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingStateTree.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingThread.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingTree.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingTreeNode.h" />
+    <ClInclude Include="..\page\scrolling\ScrollingTreeScrollingNode.h" />
     <ClInclude Include="..\page\SecurityOrigin.h" />
     <ClInclude Include="..\page\SecurityPolicy.h" />
     <ClInclude Include="..\page\Settings.h" />
@@ -18641,7 +18772,9 @@
     <ClInclude Include="..\platform\graphics\avfoundation\cf\InbandTextTrackPrivateAVCF.h" />
     <ClInclude Include="..\platform\graphics\avfoundation\cf\InbandTextTrackPrivateLegacyAVCF.h" />
     <ClInclude Include="..\platform\graphics\avfoundation\InbandTextTrackPrivateAVF.h" />
+    <ClInclude Include="..\platform\graphics\cairo\TileCairo.h" />
     <ClInclude Include="..\platform\graphics\ca\PlatformCAFilters.h" />
+    <ClInclude Include="..\platform\graphics\ca\win\PlatformCALayerWin.h" />
     <ClInclude Include="..\platform\graphics\GLContext.h" />
     <ClInclude Include="..\platform\graphics\GraphicsContext3DPrivate.h" />
     <ClInclude Include="..\platform\graphics\cg\SubimageCacheWithTimer.h">
@@ -18666,6 +18799,9 @@
     <ClInclude Include="..\platform\graphics\gpu\Texture.h" />
     <ClInclude Include="..\platform\graphics\gpu\TilingData.h" />
     <ClInclude Include="..\platform\graphics\GraphicsContext3D.h" />
+    <ClInclude Include="..\platform\graphics\GraphicsLayerAnimation.h" />
+    <ClInclude Include="..\platform\graphics\GraphicsLayerFactory.h" />
+    <ClInclude Include="..\platform\graphics\GraphicsLayerTransform.h" />
     <ClInclude Include="..\platform\graphics\MediaPlayerPrivate.h" />
     <ClInclude Include="..\platform\graphics\OpenGLShims.h" />
     <ClInclude Include="..\platform\graphics\opengl\Extensions3DOpenGL.h" />
@@ -18674,6 +18810,35 @@
     <ClInclude Include="..\platform\graphics\opengl\GLDefs.h" />
     <ClInclude Include="..\platform\graphics\opengl\GLPlatformContext.h" />
     <ClInclude Include="..\platform\graphics\opengl\GLPlatformSurface.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\AreaAllocator.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CompositingCoordinator.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedBackingStore.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedCustomFilterOperation.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedCustomFilterProgram.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedGraphicsLayer.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedGraphicsScene.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedGraphicsState.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedImageBacking.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedSurface.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\CoordinatedTile.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\SurfaceUpdateInfo.h" />
+    <ClInclude Include="..\platform\graphics\texmap\coordinated\UpdateAtlas.h" />
+    <ClInclude Include="..\platform\graphics\texmap\GraphicsLayerTextureMapper.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapper.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperBackingStore.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperFPSCounter.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperGL.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperImageBuffer.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperLayer.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperPlatformLayer.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperShaderProgram.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperSurfaceBackingStore.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperTile.h" />
+    <ClInclude Include="..\platform\graphics\texmap\TextureMapperTiledBackingStore.h" />
+    <ClInclude Include="..\platform\graphics\TiledBacking.h" />
+    <ClInclude Include="..\platform\graphics\TiledBackingStore.h" />
+    <ClInclude Include="..\platform\graphics\TiledBackingStoreBackend.h" />
+    <ClInclude Include="..\platform\graphics\TiledBackingStoreClient.h" />
     <ClInclude Include="..\platform\graphics\VideoTrackPrivate.h" />
     <ClInclude Include="..\platform\graphics\win\SharedGDIObject.h" />
     <ClInclude Include="..\platform\HistogramSupport.h" />
@@ -19449,6 +19614,7 @@
     <ClInclude Include="..\rendering\RenderMultiColumnBlock.h" />
     <ClInclude Include="..\rendering\RenderMultiColumnFlowThread.h" />
     <ClInclude Include="..\rendering\RenderMultiColumnSet.h" />
+    <ClInclude Include="..\rendering\RenderNamedFlowFragment.h" />
     <ClInclude Include="..\rendering\RenderNamedFlowThread.h" />
     <ClInclude Include="..\rendering\RenderObject.h" />
     <ClInclude Include="..\rendering\RenderProgress.h" />
@@ -19507,6 +19673,7 @@
     <ClInclude Include="..\rendering\RenderTextControlMultiLine.h" />
     <ClInclude Include="..\rendering\RenderTextControlSingleLine.h" />
     <ClInclude Include="..\rendering\RenderTextFragment.h" />
+    <ClInclude Include="..\rendering\RenderTextLineBoxes.h" />
     <ClInclude Include="..\rendering\RenderTextTrackCue.h" />
     <ClInclude Include="..\rendering\RenderTheme.h" />
     <CustomBuildStep Include="..\rendering\RenderThemeSafari.h" />
@@ -19517,6 +19684,9 @@
     <ClInclude Include="..\rendering\RenderWidget.h" />
     <ClInclude Include="..\rendering\RootInlineBox.h" />
     <ClInclude Include="..\rendering\ScrollBehavior.h" />
+    <ClInclude Include="..\rendering\SimpleLineLayout.h" />
+    <ClInclude Include="..\rendering\SimpleLineLayoutFunctions.h" />
+    <ClInclude Include="..\rendering\SimpleLineLayoutResolver.h" />
     <ClInclude Include="..\rendering\svg\SVGMarkerData.h" />
     <ClInclude Include="..\rendering\svg\SVGPathData.h" />
     <ClInclude Include="..\rendering\svg\SVGRenderingContext.h" />
@@ -19551,6 +19721,7 @@
     <ClInclude Include="..\rendering\style\DataRef.h" />
     <ClInclude Include="..\rendering\style\FillLayer.h" />
     <ClInclude Include="..\rendering\style\GridCoordinate.h" />
+    <ClInclude Include="..\rendering\style\GridLength.h" />
     <ClInclude Include="..\rendering\style\GridPosition.h" />
     <ClInclude Include="..\rendering\style\GridTrackSize.h" />
     <ClInclude Include="..\rendering\style\KeyframeList.h" />

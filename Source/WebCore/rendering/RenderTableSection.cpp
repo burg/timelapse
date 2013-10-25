@@ -83,8 +83,7 @@ static inline void updateLogicalHeightForCell(RenderTableSection::RowStruct& row
     }
 }
 
-
-RenderTableSection::RenderTableSection(Element* element)
+RenderTableSection::RenderTableSection(Element& element)
     : RenderBox(element, 0)
     , m_cCol(0)
     , m_cRow(0)
@@ -95,8 +94,21 @@ RenderTableSection::RenderTableSection(Element* element)
     , m_needsCellRecalc(false)
     , m_hasMultipleCellLevels(false)
 {
-    // init RenderObject attributes
-    setInline(false); // our object is not Inline
+    setInline(false);
+}
+
+RenderTableSection::RenderTableSection(Document& document)
+    : RenderBox(document, 0)
+    , m_cCol(0)
+    , m_cRow(0)
+    , m_outerBorderStart(0)
+    , m_outerBorderEnd(0)
+    , m_outerBorderBefore(0)
+    , m_outerBorderAfter(0)
+    , m_needsCellRecalc(false)
+    , m_hasMultipleCellLevels(false)
+{
+    setInline(false);
 }
 
 RenderTableSection::~RenderTableSection()
@@ -903,7 +915,7 @@ void RenderTableSection::recalcOuterBorder()
     m_outerBorderEnd = calcOuterBorderEnd();
 }
 
-int RenderTableSection::firstLineBoxBaseline() const
+int RenderTableSection::firstLineBaseline() const
 {
     if (!m_grid.size())
         return -1;
@@ -1102,6 +1114,118 @@ CellSpan RenderTableSection::spannedColumns(const LayoutRect& flippedRect) const
     return CellSpan(startColumn, endColumn);
 }
 
+void RenderTableSection::paintRowGroupBorder(const PaintInfo& paintInfo, bool antialias, LayoutRect rect, BoxSide side, CSSPropertyID borderColor, EBorderStyle borderStyle, EBorderStyle tableBorderStyle)
+{
+    if (tableBorderStyle == BHIDDEN)
+        return;
+    rect.intersect(paintInfo.rect);
+    if (rect.isEmpty())
+        return;
+    drawLineForBoxSide(paintInfo.context, rect.x(), rect.y(), rect.x() + rect.width(), rect.y() + rect.height(), side, style()->visitedDependentColor(borderColor), borderStyle, 0, 0, antialias);
+}
+
+int RenderTableSection::offsetLeftForRowGroupBorder(RenderTableCell* cell, const LayoutRect& rowGroupRect, unsigned row)
+{
+    if (style()->isHorizontalWritingMode()) {
+        if (style()->isLeftToRightDirection())
+            return cell ? cell->x().toInt() + cell->width().toInt() : 0; 
+        return -outerBorderLeft(style());
+    }
+    bool isLastRow = row + 1 == m_grid.size();
+    return rowGroupRect.width().toInt() - m_rowPos[row + 1] + (isLastRow ? -outerBorderLeft(style()) : 0);
+}
+
+int RenderTableSection::offsetTopForRowGroupBorder(RenderTableCell* cell, BoxSide borderSide, unsigned row)
+{
+    bool isLastRow = row + 1 == m_grid.size();
+    if (style()->isHorizontalWritingMode())
+        return m_rowPos[row] + (!row && borderSide == BSRight ? -outerBorderTop(style()) : isLastRow && borderSide == BSLeft ? outerBorderTop(style()) : 0);
+    if (style()->isLeftToRightDirection())
+        return (cell ? cell->y().toInt() + cell->height().toInt() : 0) + (borderSide == BSLeft ? outerBorderTop(style()) : 0);
+    return borderSide == BSRight ? -outerBorderTop(style()) : 0;
+}
+
+int RenderTableSection::verticalRowGroupBorderHeight(RenderTableCell* cell, const LayoutRect& rowGroupRect, unsigned row)
+{
+    bool isLastRow = row + 1 == m_grid.size();
+    if (style()->isHorizontalWritingMode())
+        return m_rowPos[row + 1] - m_rowPos[row] + (!row ? outerBorderTop(style()) : isLastRow ? outerBorderBottom(style()) : 0);
+    if (style()->isLeftToRightDirection())
+        return rowGroupRect.height().toInt() - (cell ? cell->y().toInt() + cell->height().toInt() : 0) + outerBorderBottom(style());
+    return cell ? rowGroupRect.height().toInt() - (cell->y().toInt() - cell->height().toInt()) : 0;
+}
+
+int RenderTableSection::horizontalRowGroupBorderWidth(RenderTableCell* cell, const LayoutRect& rowGroupRect, unsigned row, unsigned column)
+{
+    if (style()->isHorizontalWritingMode()) {
+        if (style()->isLeftToRightDirection())
+            return rowGroupRect.width().toInt() - (cell ? cell->x().toInt() + cell->width().toInt() : 0) + (!column ? outerBorderLeft(style()) : column == table()->numEffCols() ? outerBorderRight(style()) : 0);
+        return cell ? rowGroupRect.width().toInt() - (cell->x().toInt() - cell->width().toInt()) : 0;
+    }
+    bool isLastRow = row + 1 == m_grid.size();
+    return m_rowPos[row + 1] - m_rowPos[row] + (isLastRow ? outerBorderLeft(style()) : !row ? outerBorderRight(style()) : 0);
+}
+
+void RenderTableSection::paintRowGroupBorderIfRequired(const PaintInfo& paintInfo, const LayoutPoint& paintOffset, unsigned row, unsigned column, BoxSide borderSide, RenderTableCell* cell)
+{
+    if (table()->currentBorderValue()->precedence() > BROWGROUP)
+        return;
+    if (paintInfo.context->paintingDisabled())
+        return;
+
+    RenderStyle* style = this->style();
+    bool antialias = shouldAntialiasLines(paintInfo.context);
+    LayoutRect rowGroupRect = LayoutRect(paintOffset, size());
+    rowGroupRect.moveBy(-LayoutPoint(outerBorderLeft(style), (borderSide == BSRight) ? 0 : outerBorderTop(style)));
+
+    switch (borderSide) {
+    case BSTop:
+        paintRowGroupBorder(paintInfo, antialias, LayoutRect(paintOffset.x() + offsetLeftForRowGroupBorder(cell, rowGroupRect, row), rowGroupRect.y(), 
+            horizontalRowGroupBorderWidth(cell, rowGroupRect, row, column), style->borderTop().width()), BSTop, CSSPropertyBorderTopColor, style->borderTopStyle(), table()->style()->borderTopStyle());
+        break;
+    case BSBottom:
+        paintRowGroupBorder(paintInfo, antialias, LayoutRect(paintOffset.x() + offsetLeftForRowGroupBorder(cell, rowGroupRect, row), rowGroupRect.y() + rowGroupRect.height(), 
+            horizontalRowGroupBorderWidth(cell, rowGroupRect, row, column), style->borderBottom().width()), BSBottom, CSSPropertyBorderBottomColor, style->borderBottomStyle(), table()->style()->borderBottomStyle());
+        break;
+    case BSLeft:
+        paintRowGroupBorder(paintInfo, antialias, LayoutRect(rowGroupRect.x(), rowGroupRect.y() + offsetTopForRowGroupBorder(cell, borderSide, row), style->borderLeft().width(), 
+            verticalRowGroupBorderHeight(cell, rowGroupRect, row)), BSLeft, CSSPropertyBorderLeftColor, style->borderLeftStyle(), table()->style()->borderLeftStyle());
+        break;
+    case BSRight:
+        paintRowGroupBorder(paintInfo, antialias, LayoutRect(rowGroupRect.x() + rowGroupRect.width(), rowGroupRect.y() + offsetTopForRowGroupBorder(cell, borderSide, row), style->borderRight().width(), 
+            verticalRowGroupBorderHeight(cell, rowGroupRect, row)), BSRight, CSSPropertyBorderRightColor, style->borderRightStyle(), table()->style()->borderRightStyle());
+        break;
+    default:
+        break;
+    }
+
+}
+
+static BoxSide physicalBorderForDirection(RenderStyle* styleForCellFlow, CollapsedBorderSide side)
+{
+
+    switch (side) {
+    case CBSStart:
+        if (styleForCellFlow->isHorizontalWritingMode())
+            return styleForCellFlow->isLeftToRightDirection() ? BSLeft : BSRight;
+        return styleForCellFlow->isLeftToRightDirection() ? BSTop : BSBottom;
+    case CBSEnd:
+        if (styleForCellFlow->isHorizontalWritingMode())
+            return styleForCellFlow->isLeftToRightDirection() ? BSRight : BSLeft;
+        return styleForCellFlow->isLeftToRightDirection() ? BSBottom : BSTop;
+    case CBSBefore:
+        if (styleForCellFlow->isHorizontalWritingMode())
+            return BSTop;
+        return styleForCellFlow->isLeftToRightDirection() ? BSRight : BSLeft;
+    case CBSAfter:
+        if (styleForCellFlow->isHorizontalWritingMode())
+            return BSBottom;
+        return styleForCellFlow->isLeftToRightDirection() ? BSLeft : BSRight;
+    default:
+        ASSERT_NOT_REACHED();
+        return BSLeft;
+    }
+}
 
 void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
@@ -1125,12 +1249,32 @@ void RenderTableSection::paintObject(PaintInfo& paintInfo, const LayoutPoint& pa
                 unsigned startRow = dirtiedRows.start() ? dirtiedRows.start() - 1 : 0;
                 for (unsigned r = dirtiedRows.end(); r > startRow; r--) {
                     unsigned row = r - 1;
+                    bool shouldPaintRowGroupBorder = false;
                     for (unsigned c = dirtiedColumns.end(); c > dirtiedColumns.start(); c--) {
                         unsigned col = c - 1;
                         CellStruct& current = cellAt(row, col);
                         RenderTableCell* cell = current.primaryCell();
-                        if (!cell || (row > dirtiedRows.start() && primaryCellAt(row - 1, col) == cell) || (col > dirtiedColumns.start() && primaryCellAt(row, col - 1) == cell))
+                        if (!cell) {
+                            if (!c)
+                                paintRowGroupBorderIfRequired(paintInfo, paintOffset, row, col, physicalBorderForDirection(style(), CBSStart));
+                            else if (c == table()->numEffCols())
+                                paintRowGroupBorderIfRequired(paintInfo, paintOffset, row, col, physicalBorderForDirection(style(), CBSEnd));
+                            shouldPaintRowGroupBorder = true;
                             continue;
+                        }
+                        if ((row > dirtiedRows.start() && primaryCellAt(row - 1, col) == cell) || (col > dirtiedColumns.start() && primaryCellAt(row, col - 1) == cell))
+                            continue;
+                        
+                        // If we had a run of null cells paint their corresponding section of the row group's border if necessary. Note that
+                        // this will only happen once within a row as the null cells will always be clustered together on one end of the row.
+                        if (shouldPaintRowGroupBorder) {
+                            if (r == m_grid.size())
+                                paintRowGroupBorderIfRequired(paintInfo, paintOffset, row, col, physicalBorderForDirection(style(), CBSAfter), cell);
+                            else if (!row && !table()->sectionAbove(this))
+                                paintRowGroupBorderIfRequired(paintInfo, paintOffset, row, col, physicalBorderForDirection(style(), CBSBefore), cell);
+                            shouldPaintRowGroupBorder = false;
+                        }
+
                         LayoutPoint cellPoint = flipForWritingModeForChild(cell, paintOffset);
                         cell->paintCollapsedBorders(paintInfo, cellPoint);
                     }
@@ -1425,10 +1569,8 @@ CollapsedBorderValue& RenderTableSection::cachedCollapsedBorder(const RenderTabl
 
 RenderTableSection* RenderTableSection::createAnonymousWithParentRenderer(const RenderObject* parent)
 {
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE_ROW_GROUP);
-    RenderTableSection* newSection = new (parent->renderArena()) RenderTableSection(0);
-    newSection->setDocumentForAnonymous(parent->document());
-    newSection->setStyle(newStyle.release());
+    RenderTableSection* newSection = new RenderTableSection(parent->document());
+    newSection->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent->style(), TABLE_ROW_GROUP));
     return newSection;
 }
 

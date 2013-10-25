@@ -146,10 +146,6 @@ struct WKViewInterpretKeyEventsParameters {
 - (void)_postFakeMouseMovedEventForFlagsChangedEvent:(NSEvent *)flagsChangedEvent;
 - (void)_setDrawingAreaSize:(NSSize)size;
 - (void)_setPluginComplexTextInputState:(PluginComplexTextInputState)pluginComplexTextInputState;
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-- (void)_setIsWindowOccluded:(BOOL)isWindowOccluded;
-#endif
 @end
 
 @interface WKViewData : NSObject {
@@ -237,11 +233,7 @@ struct WKViewInterpretKeyEventsParameters {
     BOOL _clipsToVisibleRect;
     NSRect _contentPreparationRect;
     BOOL _useContentPreparationRectForVisibleRect;
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    BOOL _isWindowOccluded;
     BOOL _windowOcclusionDetectionEnabled;
-#endif
 }
 
 @end
@@ -1852,12 +1844,6 @@ static void createSandboxExtensionsForFileUpload(NSPasteboard *pasteboard, Sandb
     return NSMouseInRect(localPoint, visibleThumbRect, [self isFlipped]);
 }
 
-- (void)_updateWindowVisibility
-{
-    _data->_page->updateWindowIsVisible([[self window] isVisible]);
-}
-
-
 // FIXME: Use AppKit constants for these when they are available.
 static NSString * const windowDidChangeBackingPropertiesNotification = @"NSWindowDidChangeBackingPropertiesNotification";
 static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOldScaleFactorKey";
@@ -1941,13 +1927,9 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
     // update the active state first and then make it visible. If the view is about to be hidden, we hide it first and then
     // update the active state.
     if ([self window]) {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-        if (_data->_windowOcclusionDetectionEnabled)
-            [self _setIsWindowOccluded:([[self window] occlusionState] & NSWindowOcclusionStateVisible) != NSWindowOcclusionStateVisible];
-#endif
         _data->_windowHasValidBackingStore = NO;
         [self doWindowDidChangeScreen];
-        [self _updateWindowVisibility];
+        _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
         _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
 
         if ([self isDeferringViewInWindowChanges]) {
@@ -1967,7 +1949,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
         [self _accessibilityRegisterUIProcessTokens];
     } else {
-        [self _updateWindowVisibility];
+        _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
         _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
 
         if ([self isDeferringViewInWindowChanges]) {
@@ -2016,13 +1998,12 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 - (void)_windowDidMiniaturize:(NSNotification *)notification
 {
     _data->_windowHasValidBackingStore = NO;
-
-    [self _updateWindowVisibility];
+    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
 }
 
 - (void)_windowDidDeminiaturize:(NSNotification *)notification
 {
-    [self _updateWindowVisibility];
+    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
 }
 
 - (void)_windowDidMove:(NSNotification *)notification
@@ -2039,20 +2020,18 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 
 - (void)_windowDidOrderOffScreen:(NSNotification *)notification
 {
-    [self _updateWindowVisibility];
-
     // We want to make sure to update the active state while hidden, so since the view is about to be hidden,
     // we hide it first and then update the active state.
+    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
     _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
     _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
 }
 
 - (void)_windowDidOrderOnScreen:(NSNotification *)notification
 {
-    [self _updateWindowVisibility];
-
     // We want to make sure to update the active state while hidden, so since the view is about to become visible,
     // we update the active state first and then make it visible.
+    _data->_page->viewStateDidChange(WebPageProxy::WindowIsVisible);
     _data->_page->viewStateDidChange(WebPageProxy::ViewWindowIsActive);
     _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
 }
@@ -2071,10 +2050,7 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
 - (void)_windowDidChangeOcclusionState:(NSNotification *)notification
 {
-    if (!_data->_windowOcclusionDetectionEnabled)
-        return;
-
-    [self _setIsWindowOccluded:([self.window occlusionState] & NSWindowOcclusionStateVisible) != NSWindowOcclusionStateVisible];
+    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
 }
 #endif
 
@@ -2259,24 +2235,13 @@ static NSString * const backingPropertyOldScaleFactorKey = @"NSBackingPropertyOl
 }
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-- (void)_setIsWindowOccluded:(BOOL)isWindowOccluded
-{
-    if (_data->_isWindowOccluded == isWindowOccluded)
-        return;
-    
-    _data->_isWindowOccluded = isWindowOccluded;
-    _data->_page->viewStateDidChange(WebPageProxy::ViewIsVisible);
-}
-#endif
-
 @end
 
 @implementation WKView (Internal)
 
 - (std::unique_ptr<WebKit::DrawingAreaProxy>)_createDrawingAreaProxy
 {
-    if (getenv("WK_USE_REMOTE_LAYER_TREE_DRAWING_AREA"))
+    if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"WebKit2UseRemoteLayerTreeDrawingArea"] boolValue])
         return std::make_unique<RemoteLayerTreeDrawingAreaProxy>(_data->_page.get());
 
     return std::make_unique<TiledCoreAnimationDrawingAreaProxy>(_data->_page.get());
@@ -2918,15 +2883,6 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     return _data->_page->suppressVisibilityUpdates();
 }
 
-- (BOOL)_isWindowOccluded
-{
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    return _data->_isWindowOccluded;
-#else
-    return NO;
-#endif
-}
-
 @end
 
 @implementation WKView (Private)
@@ -2982,13 +2938,9 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     _data->_ignoringMouseDraggedEvents = NO;
     _data->_clipsToVisibleRect = NO;
     _data->_useContentPreparationRectForVisibleRect = NO;
+    _data->_windowOcclusionDetectionEnabled = YES;
 
     _data->_intrinsicContentSize = NSMakeSize(NSViewNoInstrinsicMetric, NSViewNoInstrinsicMetric);
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    _data->_isWindowOccluded = NO;
-    _data->_windowOcclusionDetectionEnabled = YES;
-#endif
 
     _data->_needsViewFrameInWindowCoordinates = _data->_page->pageGroup()->preferences()->pluginsEnabled();
     _data->_frameOrigin = NSZeroPoint;
@@ -3252,32 +3204,12 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 
 - (BOOL)windowOcclusionDetectionEnabled
 {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     return _data->_windowOcclusionDetectionEnabled;
-#else
-    return NO;
-#endif
 }
 
 - (void)setWindowOcclusionDetectionEnabled:(BOOL)flag
 {
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    if (_data->_windowOcclusionDetectionEnabled == flag)
-        return;
-
     _data->_windowOcclusionDetectionEnabled = flag;
-
-    if (flag) {
-        // When enabling window occlusion detection, update the view's current occluded state
-        // immediately, as the notification only fires when it changes.
-        if (self.window)
-            [self _setIsWindowOccluded:([self.window occlusionState] & NSWindowOcclusionStateVisible) != NSWindowOcclusionStateVisible];
-    } else {
-        // When disabling window occlusion detection, force the view to think it is not occluded,
-        // as it may already be occluded at the time of calling.
-        [self _setIsWindowOccluded:NO];
-    }
-#endif
 }
 
 - (void)setContentAnchor:(WKContentAnchor)contentAnchor

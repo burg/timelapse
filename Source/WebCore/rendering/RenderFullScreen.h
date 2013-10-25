@@ -34,7 +34,7 @@ namespace WebCore {
 
 class RenderFullScreen FINAL : public RenderFlexibleBox {
 public:
-    static RenderFullScreen* createAnonymous(Document&);
+    explicit RenderFullScreen(Document&);
 
     virtual bool isRenderFullScreen() const OVERRIDE { return true; }
     virtual const char* renderName() const OVERRIDE { return "RenderFullScreen"; }
@@ -48,21 +48,14 @@ public:
     void unwrapRenderer();
 
 private:
-    RenderFullScreen();
     virtual void willBeDestroyed() OVERRIDE;
 
 protected:
     RenderBlock* m_placeholder;
 };
-    
-inline RenderFullScreen* toRenderFullScreen(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(object->isRenderFullScreen());
-    return static_cast<RenderFullScreen*>(object);
-}
-    
-// This will catch anyone doing an unnecessary cast:
-void toRenderFullScreen(RenderFullScreen*);
+
+RENDER_OBJECT_TYPE_CASTS(RenderFullScreen, isRenderFullScreen())
+
 }
 
 #endif

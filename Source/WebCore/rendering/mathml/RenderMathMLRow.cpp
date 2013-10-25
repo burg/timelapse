@@ -36,18 +36,21 @@ namespace WebCore {
 
 using namespace MathMLNames;
 
-RenderMathMLRow::RenderMathMLRow(Element* element)
+RenderMathMLRow::RenderMathMLRow(Element& element)
     : RenderMathMLBlock(element)
+{
+}
+
+RenderMathMLRow::RenderMathMLRow(Document& document)
+    : RenderMathMLBlock(document)
 {
 }
 
 // FIXME: Change all these createAnonymous... routines to return a PassOwnPtr<>.
 RenderMathMLRow* RenderMathMLRow::createAnonymousWithParentRenderer(const RenderObject* parent)
 {
-    RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(parent->style(), FLEX);
-    RenderMathMLRow* newMRow = new (parent->renderArena()) RenderMathMLRow(0);
-    newMRow->setDocumentForAnonymous(parent->document());
-    newMRow->setStyle(newStyle.release());
+    RenderMathMLRow* newMRow = new RenderMathMLRow(parent->document());
+    newMRow->setStyle(RenderStyle::createAnonymousStyleWithDisplay(parent->style(), FLEX));
     return newMRow;
 }
 
@@ -61,7 +64,7 @@ void RenderMathMLRow::layout()
         if (child->isRenderMathMLBlock() && toRenderMathMLBlock(child)->unembellishedOperator())
             continue;
         if (child->isBox())
-            stretchLogicalHeight = max<int>(stretchLogicalHeight, roundToInt(toRenderBox(child)->logicalHeight()));
+            stretchLogicalHeight = std::max<int>(stretchLogicalHeight, roundToInt(toRenderBox(child)->logicalHeight()));
     }
     if (!stretchLogicalHeight)
         stretchLogicalHeight = style()->fontSize();

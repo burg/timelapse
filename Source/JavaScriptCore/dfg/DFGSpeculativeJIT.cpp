@@ -37,6 +37,7 @@
 #include "DFGSlowPathGenerator.h"
 #include "JSCJSValueInlines.h"
 #include "LinkBuffer.h"
+#include <wtf/MathExtras.h>
 
 namespace JSC { namespace DFG {
 
@@ -278,6 +279,26 @@ void SpeculativeJIT::forwardTypeCheck(JSValueSource source, Edge edge, Speculate
 {
     backwardTypeCheck(source, edge, typesPassedThrough, jumpToFail);
     convertLastOSRExitToForward(valueRecovery);
+}
+
+RegisterSet SpeculativeJIT::usedRegisters()
+{
+    RegisterSet result;
+    
+    for (unsigned i = GPRInfo::numberOfRegisters; i--;) {
+        GPRReg gpr = GPRInfo::toRegister(i);
+        if (m_gprs.isInUse(gpr))
+            result.set(gpr);
+    }
+    for (unsigned i = FPRInfo::numberOfRegisters; i--;) {
+        FPRReg fpr = FPRInfo::toRegister(i);
+        if (m_fprs.isInUse(fpr))
+            result.set(fpr);
+    }
+    
+    result.merge(RegisterSet::specialRegisters());
+    
+    return result;
 }
 
 void SpeculativeJIT::addSlowPathGenerator(PassOwnPtr<SlowPathGenerator> slowPathGenerator)
@@ -950,6 +971,8 @@ void SpeculativeJIT::compileIn(Node* node)
             jsDynamicCast<JSString*>(valueOfJSConstant(node->child1().node()));
         if (string && string->tryGetValueImpl()
             && string->tryGetValueImpl()->isIdentifier()) {
+            StructureStubInfo* stubInfo = m_jit.codeBlock()->addStubInfo();
+            
             GPRTemporary result(this);
             GPRReg resultGPR = result.gpr();
 
@@ -959,12 +982,16 @@ void SpeculativeJIT::compileIn(Node* node)
             
             OwnPtr<SlowPathGenerator> slowPath = slowPathCall(
                 jump.m_jump, this, operationInOptimize,
-                JSValueRegs::payloadOnly(resultGPR), baseGPR,
+                JSValueRegs::payloadOnly(resultGPR), stubInfo, baseGPR,
                 string->tryGetValueImpl());
-                
-            m_jit.addIn(InRecord(
-                node->codeOrigin, jump, slowPath.get(), safeCast<int8_t>(baseGPR),
-                safeCast<int8_t>(resultGPR), usedRegisters()));
+            
+            stubInfo->codeOrigin = node->codeOrigin;
+            stubInfo->patch.baseGPR = static_cast<int8_t>(baseGPR);
+            stubInfo->patch.valueGPR = static_cast<int8_t>(resultGPR);
+            stubInfo->patch.usedRegisters = usedRegisters();
+            stubInfo->patch.registersFlushed = false;
+            
+            m_jit.addIn(InRecord(jump, slowPath.get(), stubInfo));
             addSlowPathGenerator(slowPath.release());
                 
             base.use();
@@ -3507,6 +3534,32 @@ void SpeculativeJIT::compileArithDiv(Node* node)
         }
 
         int32Result(quotient.gpr(), node);
+#elif CPU(ARM64)
+        SpeculateIntegerOperand op1(this, node->child1());
+        SpeculateIntegerOperand op2(this, node->child2());
+        GPRReg op1GPR = op1.gpr();
+        GPRReg op2GPR = op2.gpr();
+        GPRTemporary quotient(this);
+        GPRTemporary multiplyAnswer(this);
+
+        // If the user cares about negative zero, then speculate that we're not about
+        // to produce negative zero.
+        if (!nodeCanIgnoreNegativeZero(node->arithNodeFlags())) {
+            MacroAssembler::Jump numeratorNonZero = m_jit.branchTest32(MacroAssembler::NonZero, op1GPR);
+            speculationCheck(NegativeZero, JSValueRegs(), 0, m_jit.branch32(MacroAssembler::LessThan, op2GPR, TrustedImm32(0)));
+            numeratorNonZero.link(&m_jit);
+        }
+
+        m_jit.assembler().sdiv<32>(quotient.gpr(), op1GPR, op2GPR);
+
+        // Check that there was no remainder. If there had been, then we'd be obligated to
+        // produce a double result instead.
+        if (nodeUsedAsNumber(node->arithNodeFlags())) {
+            speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branchMul32(JITCompiler::Overflow, quotient.gpr(), op2GPR, multiplyAnswer.gpr()));
+            speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branch32(JITCompiler::NotEqual, multiplyAnswer.gpr(), op1GPR));
+        }
+
+        int32Result(quotient.gpr(), node);
 #else
         RELEASE_ASSERT_NOT_REACHED();
 #endif
@@ -3751,6 +3804,29 @@ void SpeculativeJIT::compileArithMod(Node* node)
         // If the user cares about negative zero, then speculate that we're not about
         // to produce negative zero.
         if (!bytecodeCanIgnoreNegativeZero(node->arithNodeFlags())) {
+            // Check that we're not about to create negative zero.
+            JITCompiler::Jump numeratorPositive = m_jit.branch32(JITCompiler::GreaterThanOrEqual, dividendGPR, TrustedImm32(0));
+            speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branchTest32(JITCompiler::Zero, quotientThenRemainderGPR));
+            numeratorPositive.link(&m_jit);
+        }
+
+        int32Result(quotientThenRemainderGPR, node);
+#elif CPU(ARM64)
+        GPRTemporary temp(this);
+        GPRTemporary quotientThenRemainder(this);
+        GPRTemporary multiplyAnswer(this);
+        GPRReg dividendGPR = op1.gpr();
+        GPRReg divisorGPR = op2.gpr();
+        GPRReg quotientThenRemainderGPR = quotientThenRemainder.gpr();
+        GPRReg multiplyAnswerGPR = multiplyAnswer.gpr();
+
+        m_jit.assembler().sdiv<32>(quotientThenRemainderGPR, dividendGPR, divisorGPR);
+        speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branchMul32(JITCompiler::Overflow, quotientThenRemainderGPR, divisorGPR, multiplyAnswerGPR));
+        m_jit.assembler().sub<32>(quotientThenRemainderGPR, dividendGPR, multiplyAnswerGPR);
+
+        // If the user cares about negative zero, then speculate that we're not about
+        // to produce negative zero.
+        if (!nodeCanIgnoreNegativeZero(node->arithNodeFlags())) {
             // Check that we're not about to create negative zero.
             JITCompiler::Jump numeratorPositive = m_jit.branch32(JITCompiler::GreaterThanOrEqual, dividendGPR, TrustedImm32(0));
             speculationCheck(Overflow, JSValueRegs(), 0, m_jit.branchTest32(JITCompiler::Zero, quotientThenRemainderGPR));

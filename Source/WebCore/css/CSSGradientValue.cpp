@@ -39,8 +39,6 @@
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
-using namespace std;
-
 namespace WebCore {
 
 PassRefPtr<Image> CSSGradientValue::image(RenderElement* renderer, const IntSize& size)
@@ -726,17 +724,17 @@ bool CSSLinearGradientValue::equals(const CSSLinearGradientValue& other) const
     if (other.m_angle)
         return false;
 
-    bool equalXorY = false;
+    bool equalXandY = false;
     if (m_firstX && m_firstY)
-        equalXorY = compareCSSValuePtr(m_firstX, other.m_firstX) && compareCSSValuePtr(m_firstY, other.m_firstY);
+        equalXandY = compareCSSValuePtr(m_firstX, other.m_firstX) && compareCSSValuePtr(m_firstY, other.m_firstY);
     else if (m_firstX)
-        equalXorY =compareCSSValuePtr(m_firstX, other.m_firstX) && !other.m_firstY;
+        equalXandY = compareCSSValuePtr(m_firstX, other.m_firstX) && !other.m_firstY;
     else if (m_firstY)
-        equalXorY = compareCSSValuePtr(m_firstY, other.m_firstY) && !other.m_firstX;
+        equalXandY = compareCSSValuePtr(m_firstY, other.m_firstY) && !other.m_firstX;
     else
-        equalXorY = !other.m_firstX || !other.m_firstY;
+        equalXandY = !other.m_firstX && !other.m_firstY;
 
-    return equalXorY && m_stops == other.m_stops;
+    return equalXandY && m_stops == other.m_stops;
 }
 
 String CSSRadialGradientValue::customCSSText() const
@@ -1049,10 +1047,10 @@ PassRefPtr<Gradient> CSSRadialGradientValue::createGradient(RenderElement* rende
         // Horizontal
         switch (fill) {
         case ClosestSide: {
-            float xDist = min(secondPoint.x(), size.width() - secondPoint.x());
-            float yDist = min(secondPoint.y(), size.height() - secondPoint.y());
+            float xDist = std::min(secondPoint.x(), size.width() - secondPoint.x());
+            float yDist = std::min(secondPoint.y(), size.height() - secondPoint.y());
             if (shape == Circle) {
-                float smaller = min(xDist, yDist);
+                float smaller = std::min(xDist, yDist);
                 xDist = smaller;
                 yDist = smaller;
             }
@@ -1061,10 +1059,10 @@ PassRefPtr<Gradient> CSSRadialGradientValue::createGradient(RenderElement* rende
             break;
         }
         case FarthestSide: {
-            float xDist = max(secondPoint.x(), size.width() - secondPoint.x());
-            float yDist = max(secondPoint.y(), size.height() - secondPoint.y());
+            float xDist = std::max(secondPoint.x(), size.width() - secondPoint.x());
+            float yDist = std::max(secondPoint.y(), size.height() - secondPoint.y());
             if (shape == Circle) {
-                float larger = max(xDist, yDist);
+                float larger = std::max(xDist, yDist);
                 xDist = larger;
                 yDist = larger;
             }
@@ -1080,8 +1078,8 @@ PassRefPtr<Gradient> CSSRadialGradientValue::createGradient(RenderElement* rende
             else {
                 // If <shape> is ellipse, the gradient-shape has the same ratio of width to height
                 // that it would if closest-side or farthest-side were specified, as appropriate.
-                float xDist = min(secondPoint.x(), size.width() - secondPoint.x());
-                float yDist = min(secondPoint.y(), size.height() - secondPoint.y());
+                float xDist = std::min(secondPoint.x(), size.width() - secondPoint.x());
+                float yDist = std::min(secondPoint.y(), size.height() - secondPoint.y());
 
                 secondRadius = horizontalEllipseRadius(corner - secondPoint, xDist / yDist);
                 aspectRatio = xDist / yDist;
@@ -1097,8 +1095,8 @@ PassRefPtr<Gradient> CSSRadialGradientValue::createGradient(RenderElement* rende
             else {
                 // If <shape> is ellipse, the gradient-shape has the same ratio of width to height
                 // that it would if closest-side or farthest-side were specified, as appropriate.
-                float xDist = max(secondPoint.x(), size.width() - secondPoint.x());
-                float yDist = max(secondPoint.y(), size.height() - secondPoint.y());
+                float xDist = std::max(secondPoint.x(), size.width() - secondPoint.x());
+                float yDist = std::max(secondPoint.y(), size.height() - secondPoint.y());
 
                 secondRadius = horizontalEllipseRadius(corner - secondPoint, xDist / yDist);
                 aspectRatio = xDist / yDist;
@@ -1138,17 +1136,17 @@ bool CSSRadialGradientValue::equals(const CSSRadialGradientValue& other) const
     if (m_repeating != other.m_repeating)
         return false;
 
-    bool equalXorY = false;
+    bool equalXandY = false;
     if (m_firstX && m_firstY)
-        equalXorY = compareCSSValuePtr(m_firstX, other.m_firstX) && compareCSSValuePtr(m_firstY, other.m_firstY);
+        equalXandY = compareCSSValuePtr(m_firstX, other.m_firstX) && compareCSSValuePtr(m_firstY, other.m_firstY);
     else if (m_firstX)
-        equalXorY = compareCSSValuePtr(m_firstX, other.m_firstX) && !other.m_firstY;
+        equalXandY = compareCSSValuePtr(m_firstX, other.m_firstX) && !other.m_firstY;
     else if (m_firstY)
-        equalXorY = compareCSSValuePtr(m_firstY, other.m_firstY) && !other.m_firstX;
+        equalXandY = compareCSSValuePtr(m_firstY, other.m_firstY) && !other.m_firstX;
     else
-        equalXorY == !other.m_firstX || !other.m_firstY;
+        equalXandY = !other.m_firstX && !other.m_firstY;
 
-    if (!equalXorY)
+    if (!equalXandY)
         return false;
 
     bool equalShape = true;

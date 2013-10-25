@@ -29,9 +29,10 @@
 #if ENABLE(INDEXED_DATABASE) && USE(LEVELDB)
 
 #include "IDBBackingStoreLevelDB.h"
+#include "IDBDatabaseBackendImpl.h"
 #include "IDBDatabaseBackendInterface.h"
-#include "IDBDatabaseBackendLevelDB.h"
 #include "IDBDatabaseError.h"
+#include "IDBTransactionBackendInterface.h"
 #include "Timer.h"
 #include <wtf/Deque.h>
 #include <wtf/HashSet.h>
@@ -39,40 +40,53 @@
 
 namespace WebCore {
 
+class IDBBackingStoreLevelDB;
 class IDBCursorBackendLevelDB;
 class IDBDatabaseCallbacks;
 
-class IDBTransactionBackendLevelDB : public RefCounted<IDBTransactionBackendLevelDB> {
+class IDBTransactionBackendLevelDB FINAL : public IDBTransactionBackendInterface {
 public:
-    static PassRefPtr<IDBTransactionBackendLevelDB> create(int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>&, IndexedDB::TransactionMode, IDBDatabaseBackendLevelDB*);
+    static PassRefPtr<IDBTransactionBackendLevelDB> create(IDBDatabaseBackendImpl*, int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>& objectStoreIds, IndexedDB::TransactionMode);
     virtual ~IDBTransactionBackendLevelDB();
 
-    virtual void abort();
-    void commit();
+    virtual void commit() OVERRIDE FINAL;
+    virtual void abort() OVERRIDE FINAL;
+    virtual void abort(PassRefPtr<IDBDatabaseError>) OVERRIDE FINAL;
 
     class Operation {
     public:
         virtual ~Operation() { }
-        virtual void perform(IDBTransactionBackendLevelDB*) = 0;
+        virtual void perform() = 0;
     };
 
-    void abort(PassRefPtr<IDBDatabaseError>);
-    void run();
-    IndexedDB::TransactionMode mode() const { return m_mode; }
-    const HashSet<int64_t>& scope() const { return m_objectStoreIds; }
+    virtual void run() OVERRIDE;
+    virtual IndexedDB::TransactionMode mode() const OVERRIDE FINAL { return m_mode; }
+    const HashSet<int64_t>& scope() const OVERRIDE { return m_objectStoreIds; }
     void scheduleTask(PassOwnPtr<Operation> task, PassOwnPtr<Operation> abortTask = nullptr) { scheduleTask(IDBDatabaseBackendInterface::NormalTask, task, abortTask); }
     void scheduleTask(IDBDatabaseBackendInterface::TaskType, PassOwnPtr<Operation>, PassOwnPtr<Operation> abortTask = nullptr);
     void registerOpenCursor(IDBCursorBackendLevelDB*);
     void unregisterOpenCursor(IDBCursorBackendLevelDB*);
     void addPreemptiveEvent() { m_pendingPreemptiveEvents++; }
     void didCompletePreemptiveEvent() { m_pendingPreemptiveEvents--; ASSERT(m_pendingPreemptiveEvents >= 0); }
-    IDBBackingStore::Transaction* backingStoreTransaction() { return &m_transaction; }
-    int64_t id() const { return m_id; }
+    virtual IDBBackingStoreInterface::Transaction* backingStoreTransaction() { return &m_transaction; }
 
-    IDBDatabaseBackendLevelDB* database() const { return m_database.get(); }
+    IDBDatabaseBackendImpl* database() const { return m_database.get(); }
 
+    virtual void scheduleCreateObjectStoreOperation(const IDBObjectStoreMetadata&) OVERRIDE FINAL;
+    virtual void scheduleDeleteObjectStoreOperation(const IDBObjectStoreMetadata&) OVERRIDE FINAL;
+    virtual void scheduleVersionChangeOperation(int64_t transactionId, int64_t requestedVersion, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, const IDBDatabaseMetadata&) OVERRIDE FINAL;
+    virtual void scheduleCreateIndexOperation(int64_t objectStoreId, const IDBIndexMetadata&) OVERRIDE FINAL;
+    virtual void scheduleDeleteIndexOperation(int64_t objectStoreId, const IDBIndexMetadata&) OVERRIDE FINAL;
+    virtual void scheduleGetOperation(const IDBDatabaseMetadata&, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, IndexedDB::CursorType, PassRefPtr<IDBCallbacks>) OVERRIDE FINAL;
+    virtual void schedulePutOperation(const IDBObjectStoreMetadata&, PassRefPtr<SharedBuffer> value, PassRefPtr<IDBKey>, IDBDatabaseBackendInterface::PutMode, PassRefPtr<IDBCallbacks>, const Vector<int64_t>& indexIds, const Vector<IndexKeys>&) OVERRIDE FINAL;
+    virtual void scheduleSetIndexesReadyOperation(size_t indexCount) OVERRIDE FINAL;
+    virtual void scheduleOpenCursorOperation(int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, IndexedDB::CursorDirection, IndexedDB::CursorType, IDBDatabaseBackendInterface::TaskType, PassRefPtr<IDBCallbacks>) OVERRIDE FINAL;
+    virtual void scheduleCountOperation(int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>) OVERRIDE FINAL;
+    virtual void scheduleDeleteRangeOperation(int64_t objectStoreId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>) OVERRIDE FINAL;
+    virtual void scheduleClearOperation(int64_t objectStoreId, PassRefPtr<IDBCallbacks>) OVERRIDE FINAL;
+    
 private:
-    IDBTransactionBackendLevelDB(int64_t id, PassRefPtr<IDBDatabaseCallbacks>, const HashSet<int64_t>& objectStoreIds, IndexedDB::TransactionMode, IDBDatabaseBackendLevelDB*);
+    IDBTransactionBackendLevelDB(IDBDatabaseBackendImpl*, int64_t id, PassRefPtr<IDBDatabaseCallbacks>, const HashSet<int64_t>& objectStoreIds, IndexedDB::TransactionMode);
 
     enum State {
         Unused, // Created, but no tasks yet.
@@ -89,27 +103,28 @@ private:
     void taskTimerFired(Timer<IDBTransactionBackendLevelDB>*);
     void closeOpenCursors();
 
-    const int64_t m_id;
     const HashSet<int64_t> m_objectStoreIds;
     const IndexedDB::TransactionMode m_mode;
 
     State m_state;
     bool m_commitPending;
     RefPtr<IDBDatabaseCallbacks> m_callbacks;
-    RefPtr<IDBDatabaseBackendLevelDB> m_database;
+    RefPtr<IDBDatabaseBackendImpl> m_database;
 
-    typedef Deque<OwnPtr<Operation> > TaskQueue;
+    typedef Deque<OwnPtr<Operation>> TaskQueue;
     TaskQueue m_taskQueue;
     TaskQueue m_preemptiveTaskQueue;
     TaskQueue m_abortTaskQueue;
 
-    IDBBackingStore::Transaction m_transaction;
+    IDBBackingStoreLevelDB::Transaction m_transaction;
 
     // FIXME: delete the timer once we have threads instead.
     Timer<IDBTransactionBackendLevelDB> m_taskTimer;
     int m_pendingPreemptiveEvents;
 
     HashSet<IDBCursorBackendLevelDB*> m_openCursors;
+    
+    RefPtr<IDBBackingStoreInterface> m_backingStore;
 };
 
 } // namespace WebCore

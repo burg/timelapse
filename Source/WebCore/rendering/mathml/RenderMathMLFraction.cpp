@@ -43,7 +43,7 @@ static const float gLineMedium = 1.f;
 static const float gLineThick = 3.f;
 static const float gFractionBarWidth = 0.05f;
 
-RenderMathMLFraction::RenderMathMLFraction(Element* element)
+RenderMathMLFraction::RenderMathMLFraction(MathMLInlineContainerElement& element)
     : RenderMathMLBlock(element)
     , m_lineThickness(gLineMedium)
 {
@@ -62,15 +62,13 @@ void RenderMathMLFraction::updateFromElement()
     // FIXME: mfrac where bevelled=true will need to reorganize the descendants
     if (isEmpty()) 
         return;
-    
-    Element* fraction = element();
-    
+
     RenderObject* numeratorWrapper = firstChild();
     RenderObject* denominatorWrapper = numeratorWrapper->nextSibling();
     if (!denominatorWrapper)
         return;
-    
-    String thickness = fraction->getAttribute(MathMLNames::linethicknessAttr);
+
+    String thickness = element().getAttribute(MathMLNames::linethicknessAttr);
     m_lineThickness = gLineMedium;
     if (equalIgnoringCase(thickness, "thin"))
         m_lineThickness = gLineThin;
@@ -161,11 +159,11 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
     info.context->drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + denominatorWrapper->pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
 }
 
-int RenderMathMLFraction::firstLineBoxBaseline() const
+int RenderMathMLFraction::firstLineBaseline() const
 {
     if (RenderBox* denominatorWrapper = lastChildBox())
         return denominatorWrapper->logicalTop() + static_cast<int>(lroundf((m_lineThickness + style()->fontMetrics().xHeight()) / 2));
-    return RenderMathMLBlock::firstLineBoxBaseline();
+    return RenderMathMLBlock::firstLineBaseline();
 }
 
 }

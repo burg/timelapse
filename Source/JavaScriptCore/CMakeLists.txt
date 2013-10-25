@@ -181,6 +181,7 @@ set(JavaScriptCore_SOURCES
     heap/ConservativeRoots.cpp
     heap/CopiedSpace.cpp
     heap/CopyVisitor.cpp
+    heap/DeferGC.cpp
     heap/GCThread.cpp
     heap/GCThreadSharedData.cpp
     heap/HandleSet.cpp
@@ -225,6 +226,7 @@ set(JavaScriptCore_SOURCES
     jit/JITCode.cpp
     jit/JITDisassembler.cpp
     jit/JITExceptions.cpp
+    jit/JITInlineCacheGenerator.cpp
     jit/JITOpcodes.cpp
     jit/JITOpcodes32_64.cpp
     jit/JITOperations.cpp
@@ -235,7 +237,9 @@ set(JavaScriptCore_SOURCES
     jit/JITThunks.cpp
     jit/JITToDFGDeferredCompilationCallback.cpp
     jit/JumpReplacementWatchpoint.cpp
+    jit/RegisterSet.cpp
     jit/Repatch.cpp
+    jit/TempRegisterSet.cpp
     jit/ThunkGenerators.cpp
 
     parser/Lexer.cpp

@@ -57,10 +57,10 @@ enum CompositingLayerType {
 class RenderLayerBacking : public GraphicsLayerClient {
     WTF_MAKE_NONCOPYABLE(RenderLayerBacking); WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit RenderLayerBacking(RenderLayer*);
+    explicit RenderLayerBacking(RenderLayer&);
     ~RenderLayerBacking();
 
-    RenderLayer* owningLayer() const { return m_owningLayer; }
+    RenderLayer& owningLayer() const { return m_owningLayer; }
 
     enum UpdateAfterLayoutFlag {
         CompositingChildrenOnly = 1 << 0,
@@ -209,8 +209,8 @@ private:
     
     std::unique_ptr<GraphicsLayer> createGraphicsLayer(const String&);
 
-    RenderLayerModelObject& renderer() const { return m_owningLayer->renderer(); }
-    RenderLayerCompositor& compositor() const { return m_owningLayer->compositor(); }
+    RenderLayerModelObject& renderer() const { return m_owningLayer.renderer(); }
+    RenderLayerCompositor& compositor() const { return m_owningLayer.compositor(); }
 
     void updateInternalHierarchy();
     bool updateAncestorClippingLayer(bool needsAncestorClip);
@@ -278,10 +278,13 @@ private:
 
     void paintIntoLayer(const GraphicsLayer*, GraphicsContext*, const IntRect& paintDirtyRect, PaintBehavior, GraphicsLayerPaintingPhase);
 
+    // Helper function for updateGraphicsLayerGeometry.
+    void adjustAncestorCompositingBoundsForFlowThread(IntRect& ancestorCompositingBounds, const RenderLayer* compositingAncestor) const;
+
     static CSSPropertyID graphicsLayerToCSSProperty(AnimatedPropertyID);
     static AnimatedPropertyID cssToGraphicsLayerProperty(CSSPropertyID);
 
-    RenderLayer* m_owningLayer;
+    RenderLayer& m_owningLayer;
 
     std::unique_ptr<GraphicsLayer> m_ancestorClippingLayer; // Only used if we are clipped by an ancestor which is not a stacking context.
     std::unique_ptr<GraphicsLayer> m_contentsContainmentLayer; // Only used if we have a background layer; takes the transform.

@@ -175,7 +175,7 @@ void TextFieldInputType::forwardEvent(Event* event)
     if (element().renderer() && (event->isMouseEvent() || event->isDragEvent() || event->eventInterface() == WheelEventInterfaceType || event->type() == eventNames().blurEvent || event->type() == eventNames().focusEvent)) {
         RenderTextControlSingleLine* renderTextControl = toRenderTextControlSingleLine(element().renderer());
         if (event->type() == eventNames().blurEvent) {
-            if (RenderBox* innerTextRenderer = innerTextElement()->renderBox()) {
+            if (RenderTextControlInnerBlock* innerTextRenderer = innerTextElement()->renderer()) {
                 if (RenderLayer* innerLayer = innerTextRenderer->layer()) {
                     IntSize scrollOffset(!renderTextControl->style()->isLeftToRightDirection() ? innerLayer->scrollWidth() : 0, 0);
                     innerLayer->scrollToOffset(scrollOffset, RenderLayer::ScrollOffsetClamped);
@@ -201,9 +201,9 @@ bool TextFieldInputType::shouldSubmitImplicitly(Event* event)
     return (event->type() == eventNames().textInputEvent && event->eventInterface() == TextEventInterfaceType && static_cast<TextEvent*>(event)->data() == "\n") || InputType::shouldSubmitImplicitly(event);
 }
 
-RenderElement* TextFieldInputType::createRenderer(RenderArena& arena, RenderStyle&) const
+RenderElement* TextFieldInputType::createRenderer(RenderStyle&) const
 {
-    return new (arena) RenderTextControlSingleLine(element());
+    return new RenderTextControlSingleLine(element());
 }
 
 bool TextFieldInputType::needsContainer() const
@@ -273,7 +273,7 @@ HTMLElement* TextFieldInputType::innerBlockElement() const
     return m_innerBlock.get();
 }
 
-HTMLElement* TextFieldInputType::innerTextElement() const
+TextControlInnerTextElement* TextFieldInputType::innerTextElement() const
 {
     ASSERT(m_innerText);
     return m_innerText.get();

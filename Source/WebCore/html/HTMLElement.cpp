@@ -67,9 +67,6 @@ namespace WebCore {
 using namespace HTMLNames;
 using namespace WTF;
 
-using std::min;
-using std::max;
-
 PassRefPtr<HTMLElement> HTMLElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLElement(tagName, document));
@@ -329,7 +326,7 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& 
             clearTabIndexExplicitlyIfNeeded();
         else if (parseHTMLInteger(value, tabindex)) {
             // Clamp tabindex to the range of 'short' to match Firefox's behavior.
-            setTabIndexExplicitly(max(static_cast<int>(std::numeric_limits<short>::min()), min(tabindex, static_cast<int>(std::numeric_limits<short>::max()))));
+            setTabIndexExplicitly(std::max(static_cast<int>(std::numeric_limits<short>::min()), std::min(tabindex, static_cast<int>(std::numeric_limits<short>::max()))));
         }
     } else if (name.namespaceURI().isNull()) {
         // FIXME: Can we do this even faster by checking the local name "on" prefix before we do anything with the map?
@@ -747,8 +744,7 @@ TranslateAttributeMode HTMLElement::translateAttributeMode() const
 
 bool HTMLElement::translate() const
 {
-    // FIXME: Need to fix lineageOfType to work with const and remove this const_cast.
-    auto lineage = lineageOfType<HTMLElement>(const_cast<HTMLElement*>(this));
+    auto lineage = lineageOfType<HTMLElement>(*this);
     for (auto element = lineage.begin(), end = lineage.end(); element != end; ++element) {
         TranslateAttributeMode mode = element->translateAttributeMode();
         if (mode == TranslateAttributeInherit)
@@ -785,10 +781,10 @@ bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
     return StyledElement::rendererIsNeeded(style);
 }
 
-RenderElement* HTMLElement::createRenderer(RenderArena& arena, RenderStyle& style)
+RenderElement* HTMLElement::createRenderer(RenderStyle& style)
 {
     if (hasLocalName(wbrTag))
-        return new (arena) RenderLineBreak(*this);
+        return new RenderLineBreak(*this);
     return RenderElement::createFor(*this, style);
 }
 
@@ -850,7 +846,7 @@ TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) con
 
 TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) const
 {
-    if (isHTMLTextFormControlElement(this)) {
+    if (isHTMLTextFormControlElement(*this)) {
         HTMLTextFormControlElement* textElement = toHTMLTextFormControlElement(const_cast<HTMLElement*>(this));
         bool hasStrongDirectionality;
         UCharDirection textDirection = textElement->value().defaultWritingDirection(&hasStrongDirectionality);
@@ -955,7 +951,7 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Element* befo
     if (oldMarkedNode)
         setHasDirAutoFlagRecursively(oldMarkedNode, false);
 
-    auto lineage = lineageOfType<HTMLElement>(this);
+    auto lineage = lineageOfType<HTMLElement>(*this);
     for (auto elementToAdjust = lineage.begin(), end = lineage.end(); elementToAdjust != end; ++elementToAdjust) {
         if (elementAffectsDirectionality(&*elementToAdjust)) {
             elementToAdjust->calculateAndAdjustDirectionality();
@@ -1035,7 +1031,7 @@ static RGBA32 parseColorStringWithCrazyLegacyRules(const String& colorString)
     // Split the digits into three components, then search the last 8 digits of each component.
     ASSERT(digitBuffer.size() >= 6);
     size_t componentLength = digitBuffer.size() / 3;
-    size_t componentSearchWindowLength = min<size_t>(componentLength, 8);
+    size_t componentSearchWindowLength = std::min<size_t>(componentLength, 8);
     size_t redIndex = componentLength - componentSearchWindowLength;
     size_t greenIndex = componentLength * 2 - componentSearchWindowLength;
     size_t blueIndex = componentLength * 3 - componentSearchWindowLength;

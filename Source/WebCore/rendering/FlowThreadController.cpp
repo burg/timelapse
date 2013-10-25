@@ -75,7 +75,7 @@ RenderNamedFlowThread& FlowThreadController::ensureRenderFlowThreadWithName(cons
     // Sanity check for the absence of a named flow in the "CREATED" state with the same name.
     ASSERT(!namedFlows->flowByName(name));
 
-    RenderNamedFlowThread* flowRenderer = RenderNamedFlowThread::createAnonymous(m_view->document(), namedFlows->ensureFlowWithName(name));
+    RenderNamedFlowThread* flowRenderer = new RenderNamedFlowThread(m_view->document(), namedFlows->ensureFlowWithName(name));
     flowRenderer->setStyle(RenderFlowThread::createFlowThreadStyle(m_view->style()));
     m_renderNamedFlowThreadList->add(flowRenderer);
 
@@ -270,7 +270,7 @@ void FlowThreadController::updateRenderFlowThreadLayersIfNeeded()
     // Walk the flow chain in reverse order because RenderRegions might become RenderLayers for the following flow threads.
     for (RenderNamedFlowThreadList::reverse_iterator iter = m_renderNamedFlowThreadList->rbegin(); iter != m_renderNamedFlowThreadList->rend(); ++iter) {
         RenderNamedFlowThread* flowRenderer = *iter;
-        flowRenderer->updateLayerToRegionMappingsIfNeeded();
+        flowRenderer->updateAllLayerToRegionMappingsIfNeeded();
     }
 }
 #endif

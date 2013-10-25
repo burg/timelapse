@@ -43,7 +43,7 @@
 
 namespace JSC {
 
-Keywords::Keywords(VM* vm)
+Keywords::Keywords(VM& vm)
     : m_vm(vm)
     , m_keywordTable(JSC::mainTable)
 {
@@ -1578,6 +1578,12 @@ start:
     case CharacterDot:
         shift();
         if (!isASCIIDigit(m_current)) {
+            if (UNLIKELY((m_current == '.') && (peek(1) == '.'))) {
+                shift();
+                shift();
+                token = DOTDOTDOT;
+                break;
+            }
             token = DOT;
             break;
         }

@@ -39,8 +39,9 @@ class HTMLImageLoader;
 class HTMLOptionElement;
 class Icon;
 class InputType;
-class URL;
 class ListAttributeTargetObserver;
+class TextControlInnerTextElement;
+class URL;
 struct DateTimeChooserParameters;
 
 struct InputElementClickState {
@@ -138,7 +139,7 @@ public:
 #endif
 
     HTMLElement* containerElement() const;
-    virtual HTMLElement* innerTextElement() const OVERRIDE;
+    virtual TextControlInnerTextElement* innerTextElement() const OVERRIDE;
     HTMLElement* innerBlockElement() const;
     HTMLElement* innerSpinButtonElement() const;
     HTMLElement* resultsButtonElement() const;
@@ -200,7 +201,7 @@ public:
     bool canHaveSelection() const;
 
     virtual bool rendererIsNeeded(const RenderStyle&) OVERRIDE;
-    virtual RenderElement* createRenderer(RenderArena&, RenderStyle&) OVERRIDE;
+    virtual RenderElement* createRenderer(RenderStyle&) OVERRIDE;
     virtual void willAttachRenderers() OVERRIDE;
     virtual void didAttachRenderers() OVERRIDE;
     virtual void didDetachRenderers() OVERRIDE;
@@ -451,7 +452,7 @@ private:
 #endif
 };
 
-ELEMENT_TYPE_CASTS(HTMLInputElement)
+NODE_TYPE_CASTS(HTMLInputElement)
 
 } //namespace
 #endif

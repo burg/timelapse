@@ -36,12 +36,12 @@
 
 namespace WebCore {
 
-typedef HashMap<String, Vector<size_t> > NamedGridLinesMap;
+typedef HashMap<String, Vector<size_t>> NamedGridLinesMap;
 
 class StyleGridData : public RefCounted<StyleGridData> {
 public:
-    static PassRefPtr<StyleGridData> create() { return adoptRef(new StyleGridData); }
-    PassRefPtr<StyleGridData> copy() const { return adoptRef(new StyleGridData(*this)); }
+    static PassRef<StyleGridData> create() { return adoptRef(*new StyleGridData); }
+    PassRef<StyleGridData> copy() const { return adoptRef(*new StyleGridData(*this)); }
 
     bool operator==(const StyleGridData& o) const
     {
