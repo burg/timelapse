@@ -71,13 +71,13 @@ void InputCoder<ResourceLoaderDestroyed>::encode(EncoderContext& encoder, const 
     encoder.put("handleId", input.handleId());
 }
 
-bool InputCoder<ResourceLoaderDestroyed>::decode(DecoderContext& decoder, OwnPtr<ResourceLoaderDestroyed>& input)
+bool InputCoder<ResourceLoaderDestroyed>::decode(DecoderContext& decoder, std::unique_ptr<ResourceLoaderDestroyed>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    input = adoptPtr(new ResourceLoaderDestroyed(handleId));
+    input = std::make_unique<ResourceLoaderDestroyed>(handleId);
     return true;
 }
 

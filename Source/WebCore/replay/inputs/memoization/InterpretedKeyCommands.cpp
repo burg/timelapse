@@ -82,10 +82,10 @@ size_t InterpretedKeyCommands::memorySize() const
 void InputCoder<InterpretedKeyCommands>::encode(EncoderContext& encoder, const InterpretedKeyCommands& input)
 {
     const Vector<KeypressCommand>& commands = input.commands();
-    OwnPtr<EncoderContext> encodedCommands = encoder.createList();
+    std::unique_ptr<EncoderContext> encodedCommands = encoder.createList();
 
     for (size_t i = 0; i < commands.size(); i++) {
-        OwnPtr<EncoderContext> encodedCommand = encoder.createMap();
+        std::unique_ptr<EncoderContext> encodedCommand = encoder.createMap();
         encodedCommand->put("commandName", commands[i].commandName);
         encodedCommand->put("text", commands[i].text);
         encodedCommands->append(*encodedCommand);
@@ -94,7 +94,7 @@ void InputCoder<InterpretedKeyCommands>::encode(EncoderContext& encoder, const I
     encoder.put("commands", *encodedCommands);
 }
 
-bool InputCoder<InterpretedKeyCommands>::decode(DecoderContext&, OwnPtr<InterpretedKeyCommands>&)
+bool InputCoder<InterpretedKeyCommands>::decode(DecoderContext&, std::unique_ptr<InterpretedKeyCommands>&)
 {
     // TODO: implement
     return false;

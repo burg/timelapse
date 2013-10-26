@@ -64,9 +64,9 @@ void InputCoder<HandleMouseMove>::encode(EncoderContext& encoder, const HandleMo
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleMouseMove>::decode(DecoderContext& decoder, OwnPtr<HandleMouseMove>& input)
+bool InputCoder<HandleMouseMove>::decode(DecoderContext& decoder, std::unique_ptr<HandleMouseMove>& input)
 {
-    OwnPtr<PlatformMouseEvent> mouseEvent;
+    std::unique_ptr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
         return false;
 
@@ -74,7 +74,7 @@ bool InputCoder<HandleMouseMove>::decode(DecoderContext& decoder, OwnPtr<HandleM
     if (!decoder.get("scrollbarTargeted", scrollbarTargeted))
         return false;
 
-    input = adoptPtr(new HandleMouseMove(*mouseEvent, scrollbarTargeted));
+    input = std::make_unique<HandleMouseMove>(*mouseEvent, scrollbarTargeted);
     return true;
 }
 

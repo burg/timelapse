@@ -35,11 +35,11 @@
 
 #include "SendResizeEvent.h"
 
+#include "DecoderContext.h"
 #include "Document.h"
 #include "DOMWindow.h"
-#include "Frame.h"
-#include "DecoderContext.h"
 #include "EncoderContext.h"
+#include "Frame.h"
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringBuilder.h>
@@ -80,7 +80,7 @@ void InputCoder<SendResizeEvent>::encode(EncoderContext& encoder, const SendResi
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<SendResizeEvent>::decode(DecoderContext& decoder, OwnPtr<SendResizeEvent>& input)
+bool InputCoder<SendResizeEvent>::decode(DecoderContext& decoder, std::unique_ptr<SendResizeEvent>& input)
 {
     int width;
     if (!decoder.get("width", width))
@@ -94,7 +94,7 @@ bool InputCoder<SendResizeEvent>::decode(DecoderContext& decoder, OwnPtr<SendRes
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new SendResizeEvent(width, height, frameIndex));
+    input = std::make_unique<SendResizeEvent>(width, height, frameIndex);
     return true;
 }
 

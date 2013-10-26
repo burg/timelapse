@@ -33,7 +33,6 @@
 #define NetworkProxy_h
 
 #include "ReplayProxy.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {

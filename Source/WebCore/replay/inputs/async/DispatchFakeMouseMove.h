@@ -64,7 +64,7 @@ private:
 
 template<> struct InputCoder<DispatchFakeMouseMove> {
     static void encode(EncoderContext& encoder, const DispatchFakeMouseMove& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<DispatchFakeMouseMove>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<DispatchFakeMouseMove>& input);
 };
 
 } // namespace WebCore

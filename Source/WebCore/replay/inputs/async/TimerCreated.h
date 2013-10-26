@@ -70,7 +70,7 @@ private:
 
 template<> struct InputCoder<TimerCreated> {
     static void encode(EncoderContext& encoder, const TimerCreated& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<TimerCreated>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<TimerCreated>& input);
 };
 
 } //namespace WebCore

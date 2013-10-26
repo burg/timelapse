@@ -128,8 +128,8 @@ namespace WebCore {
 
         int m_nextRecordingId;
         RefPtr<ReplayRecording> m_loadedRecording;
-        OwnPtr<WTF::InputIterator> m_activeIterator;
-        const OwnPtr<CacheController> m_cacheController;
+        std::unique_ptr<WTF::InputIterator> m_activeIterator;
+        const std::unique_ptr<CacheController> m_cacheController;
         PositionMarkIndex m_stopBeforeMarkIndex;
         ReplayStatus m_status;
         ErrorStrategy m_errorStrategy;

@@ -89,7 +89,7 @@ void InputCoder<ResourceDidSendData>::encode(EncoderContext& encoder, const Reso
     encoder.put("totalBytesToBeSent", input.totalBytesToBeSent());
 }
 
-bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, OwnPtr<ResourceDidSendData>& input)
+bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidSendData>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
@@ -103,7 +103,7 @@ bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, OwnPtr<Res
     if (!decoder.get("totalBytesToBeSent", totalBytesToBeSent))
         return false;
 
-    input = adoptPtr(new ResourceDidSendData(handleId, bytesSent, totalBytesToBeSent));
+    input = std::make_unique<ResourceDidSendData>(handleId, bytesSent, totalBytesToBeSent);
     return true;
 }
 

@@ -37,8 +37,6 @@
 
 #include "Logging.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
@@ -53,7 +51,7 @@ static const char* queueTypeToMiniString(NondeterministicInput::QueueType queue,
             case NondeterministicInput::ScriptMemoizedDataQueue: return "<---<---<---JSMEMO-LOAD";
             case NondeterministicInput::QueueTypeLength:         return "ERROR!";
         }
-        
+
     else
         switch (queue) {
             case NondeterministicInput::EventLoopInputQueue:     return ">DSPTCH-STORE";
@@ -80,11 +78,6 @@ InputStorage::~InputStorage()
         delete m_queues.at(i);
 }
 
-PassOwnPtr<InputStorage> InputStorage::create()
-{
-    return adoptPtr(new InputStorage());
-}
-
 NondeterministicInput* InputStorage::load(NondeterministicInput::QueueType queue, uint offset)
 {
     ASSERT(queue < NondeterministicInput::QueueTypeLength);
@@ -98,7 +91,7 @@ NondeterministicInput* InputStorage::load(NondeterministicInput::QueueType queue
     return input;
 }
 
-void InputStorage::store(PassOwnPtr<NondeterministicInput> input)
+void InputStorage::store(std::unique_ptr<NondeterministicInput> input)
 {
     ASSERT(input);
     ASSERT(input->queue() < NondeterministicInput::QueueTypeLength);
@@ -107,7 +100,7 @@ void InputStorage::store(PassOwnPtr<NondeterministicInput> input)
         m_inputCount++, queueTypeToMiniString(input->queue(), false),
         input->toString().utf8().data());
 
-    m_queues.at(input->queue())->append(input);
+    m_queues.at(input->queue())->append(std::move(input));
 }
 
 void InputStorage::freeze()

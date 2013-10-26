@@ -64,7 +64,7 @@ private:
 
 template<> struct InputCoder<RanPendingScripts> {
     static void encode(EncoderContext& encoder, const RanPendingScripts& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<RanPendingScripts>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<RanPendingScripts>& input);
 };
 
 } //namespace WebCore

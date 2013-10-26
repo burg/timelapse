@@ -39,7 +39,6 @@
 // For documentFromFrameIndex().
 #include "EventLoopInput.h"
 #include "ReplayInputTypes.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -59,7 +58,7 @@ void InputCoder<TimerCreated>::encode(EncoderContext& encoder, const TimerCreate
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<TimerCreated>::decode(DecoderContext& decoder, OwnPtr<TimerCreated>& input)
+bool InputCoder<TimerCreated>::decode(DecoderContext& decoder, std::unique_ptr<TimerCreated>& input)
 {
     int timerId;
     if (!decoder.get("timerId", timerId))
@@ -69,7 +68,7 @@ bool InputCoder<TimerCreated>::decode(DecoderContext& decoder, OwnPtr<TimerCreat
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new TimerCreated(timerId, frameIndex));
+    input = std::make_unique<TimerCreated>(timerId, frameIndex);
     return true;
 }
 

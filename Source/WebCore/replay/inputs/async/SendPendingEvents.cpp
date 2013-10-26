@@ -69,13 +69,13 @@ void InputCoder<SendPendingEvents>::encode(EncoderContext& encoder, const SendPe
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<SendPendingEvents>::decode(DecoderContext& decoder, OwnPtr<SendPendingEvents>& input)
+bool InputCoder<SendPendingEvents>::decode(DecoderContext& decoder, std::unique_ptr<SendPendingEvents>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new SendPendingEvents(frameIndex));
+    input = std::make_unique<SendPendingEvents>(frameIndex);
     return true;
 }
 

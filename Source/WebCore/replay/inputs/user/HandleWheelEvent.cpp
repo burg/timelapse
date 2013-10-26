@@ -44,7 +44,6 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include "EncoderContext.h"
 
 namespace WebCore {
 
@@ -172,7 +171,7 @@ void InputCoder<PlatformWheelEvent>::encode(EncoderContext& encoder, const Platf
 #endif
 }
 
-bool InputCoder<PlatformWheelEvent>::decode(DecoderContext& decoder, OwnPtr<PlatformWheelEvent>& input)
+bool InputCoder<PlatformWheelEvent>::decode(DecoderContext& decoder, std::unique_ptr<PlatformWheelEvent>& input)
 {
 
     int positionX;
@@ -261,7 +260,7 @@ bool InputCoder<PlatformWheelEvent>::decode(DecoderContext& decoder, OwnPtr<Plat
         return false;
 #endif
 
-    input = adoptPtr(new PlatformWheelEvent(IntPoint(positionX, positionY), IntPoint(globalPositionX, globalPositionY),
+    input = std::make_unique<PlatformWheelEvent>(IntPoint(positionX, positionY), IntPoint(globalPositionX, globalPositionY),
                      deltaX, deltaY, wheelTicksX, wheelTicksY, (PlatformWheelEventGranularity)granularity,
                      shiftKey, ctrlKey, altKey, metaKey, directionInvertedFromDevice
 #if PLATFORM(MAC)
@@ -269,7 +268,7 @@ bool InputCoder<PlatformWheelEvent>::decode(DecoderContext& decoder, OwnPtr<Plat
                      (PlatformWheelEventPhase)phase, (PlatformWheelEventPhase)momentumPhase, timestamp,
                      unacceleratedScrollingDeltaX, unacceleratedScrollingDeltaY
 #endif
-            ));
+        );
     return true;
 }
 
@@ -278,13 +277,13 @@ void InputCoder<HandleWheelEvent>::encode(EncoderContext& encoder, const HandleW
     InputCoder<PlatformWheelEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleWheelEvent>::decode(DecoderContext& decoder, OwnPtr<HandleWheelEvent>& input)
+bool InputCoder<HandleWheelEvent>::decode(DecoderContext& decoder, std::unique_ptr<HandleWheelEvent>& input)
 {
-    OwnPtr<PlatformWheelEvent> wheelEvent;
+    std::unique_ptr<PlatformWheelEvent> wheelEvent;
     if (!InputCoder<PlatformWheelEvent>::decode(decoder, wheelEvent))
         return false;
 
-    input = adoptPtr(new HandleWheelEvent(*wheelEvent));
+    input = std::make_unique<HandleWheelEvent>(*wheelEvent);
     return true;
 }
 

@@ -40,7 +40,6 @@
 #include "PlatformMouseEvent.h"
 #include "ReplayInputTypes.h"
 #include <wtf/Assertions.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
 
@@ -114,7 +113,7 @@ void InputCoder<PlatformMouseEvent>::encode(EncoderContext& encoder, const Platf
     encoder.put("timestamp", input.timestamp());
 }
 
-bool InputCoder<PlatformMouseEvent>::decode(DecoderContext& decoder, OwnPtr<PlatformMouseEvent>& input)
+bool InputCoder<PlatformMouseEvent>::decode(DecoderContext& decoder, std::unique_ptr<PlatformMouseEvent>& input)
 {
     int positionX;
     if (!decoder.get("positionX", positionX))
@@ -164,11 +163,11 @@ bool InputCoder<PlatformMouseEvent>::decode(DecoderContext& decoder, OwnPtr<Plat
     if (!decoder.get("timestamp", timestamp))
         return false;
 
-    input = adoptPtr(new PlatformMouseEvent(IntPoint(positionX, positionY),
+    input = std::make_unique<PlatformMouseEvent>(IntPoint(positionX, positionY),
                                             IntPoint(globalPositionX, globalPositionY),
                                             (MouseButton)button, (PlatformEvent::Type)type,
                                             clickCount,
-                                            shiftKey, ctrlKey, altKey, metaKey, timestamp));
+                                            shiftKey, ctrlKey, altKey, metaKey, timestamp);
     return true;
 }
 

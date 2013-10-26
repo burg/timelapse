@@ -74,13 +74,13 @@ void InputCoder<StopLoadingFrame>::encode(EncoderContext& encoder, const StopLoa
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<StopLoadingFrame>::decode(DecoderContext& decoder, OwnPtr<StopLoadingFrame>& input)
+bool InputCoder<StopLoadingFrame>::decode(DecoderContext& decoder, std::unique_ptr<StopLoadingFrame>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new StopLoadingFrame(frameIndex));
+    input = std::make_unique<StopLoadingFrame>(frameIndex);
     return true;
 }
 

@@ -59,7 +59,7 @@ protected:
     // Virtual methods are overridden by the specific decoder context.
     virtual bool getBoolean(const String&, bool&) =0;
     virtual bool getBytes(const String&, Vector<char>&) =0;
-    virtual bool getContext(const String&, OwnPtr<DecoderContext>&) =0;
+    virtual bool getContext(const String&, std::unique_ptr<DecoderContext>&) =0;
     virtual bool getDouble(const String&, double&) =0;
     virtual bool getFloat(const String&, float&) =0;
     virtual bool getInt32(const String&, int32_t&) =0;
@@ -79,7 +79,7 @@ template<> inline bool DecoderContext::get(const String& key, Vector<char>& resu
     return getBytes(key, result);
 }
 
-template<> inline bool DecoderContext::get(const String& key, OwnPtr<DecoderContext>& result) {
+template<> inline bool DecoderContext::get(const String& key, std::unique_ptr<DecoderContext>& result) {
     return getContext(key, result);
 }
 

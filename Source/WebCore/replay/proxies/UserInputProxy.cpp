@@ -81,7 +81,7 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
         int frameIndex = frameIndexFromDocument(frame->document());
-        it->storeInput(adoptPtr(new HandleContextMenu(mouseEvent, frameIndex)));
+        it->storeInput(std::make_unique<HandleContextMenu>(mouseEvent, frameIndex));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -100,7 +100,7 @@ bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent,
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new HandleMousePress(mouseEvent)));
+        it->storeInput(std::make_unique<HandleMousePress>(mouseEvent));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -119,7 +119,7 @@ bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEven
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new HandleMouseRelease(mouseEvent)));
+        it->storeInput(std::make_unique<HandleMouseRelease>(mouseEvent));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -138,7 +138,7 @@ bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, 
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, false)));
+        it->storeInput(std::make_unique<HandleMouseMove>(mouseEvent, false));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -157,7 +157,7 @@ bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& m
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, true)));
+        it->storeInput(std::make_unique<HandleMouseMove>(mouseEvent, true));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -176,7 +176,7 @@ bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, 
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new HandleKeyPress(keyEvent)));
+        it->storeInput(std::make_unique<HandleKeyPress>(keyEvent));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -209,7 +209,7 @@ bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new HandleWheelEvent(wheelEvent)));
+        it->storeInput(std::make_unique<HandleWheelEvent>(wheelEvent));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -228,7 +228,7 @@ void UserInputProxy::focusSetActive(bool active, bool fromReplay)
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new FocusSetActive(active)));
+        it->storeInput(std::make_unique<FocusSetActive>(active));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -247,7 +247,7 @@ void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new FocusSetFocused(focused)));
+        it->storeInput(std::make_unique<FocusSetFocused>(focused));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -266,7 +266,7 @@ bool UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranular
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
+        it->storeInput(std::make_unique<ScrollPage>(direction, granularity));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -285,7 +285,7 @@ bool UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
+        it->storeInput(std::make_unique<ScrollPage>(direction, granularity));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -310,7 +310,7 @@ void UserInputProxy::sendResizeEvent(const Frame* frame, bool dispatchSynchronou
         int height = frame->document()->domWindow()->outerHeight();
         int frameIndex = frameIndexFromDocument(frame->document());
 
-        it->storeInput(adoptPtr(new SendResizeEvent(width, height, frameIndex)));
+        it->storeInput(std::make_unique<SendResizeEvent>(width, height, frameIndex));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -330,7 +330,7 @@ void UserInputProxy::setPageVisibility(PageVisibilityState visibilityState, bool
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new SetPageVisibility(visibilityState, isInitialState)));
+        it->storeInput(std::make_unique<SetPageVisibility>(visibilityState, isInitialState));
     }
     EventLoopInputExtent extent(it);
 #else

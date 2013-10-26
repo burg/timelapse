@@ -77,13 +77,13 @@ void InputCoder<ResourceCannotShowURL>::encode(EncoderContext& encoder, const Re
     encoder.put("handleId", input.handleId());
 }
 
-bool InputCoder<ResourceCannotShowURL>::decode(DecoderContext& decoder, OwnPtr<ResourceCannotShowURL>& input)
+bool InputCoder<ResourceCannotShowURL>::decode(DecoderContext& decoder, std::unique_ptr<ResourceCannotShowURL>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    input = adoptPtr(new ResourceCannotShowURL(handleId));
+    input = std::make_unique<ResourceCannotShowURL>(handleId);
     return true;
 }
 

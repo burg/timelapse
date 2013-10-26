@@ -76,7 +76,7 @@ template<> struct InputCoder<SecurityOrigin> {
 
 template<> struct InputCoder<NavigateToPage> {
     static void encode(EncoderContext& encoder, const NavigateToPage& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<NavigateToPage>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<NavigateToPage>& input);
 };
 
 } //namespace WebCore

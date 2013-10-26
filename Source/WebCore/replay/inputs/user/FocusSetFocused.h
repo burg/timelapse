@@ -64,7 +64,7 @@ private:
 
 template<> struct InputCoder<FocusSetFocused> {
     static void encode(EncoderContext& encoder, const FocusSetFocused& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<FocusSetFocused>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<FocusSetFocused>& input);
 };
 
 } //namespace WebCore

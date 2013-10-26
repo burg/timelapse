@@ -249,7 +249,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #if ENABLE(WEB_REPLAY)
         // if capturing, save away the key commands as memoized state.
         if (isCapturing)
-            it->storeInput(adoptPtr(new InterpretedKeyCommands(commands)));
+            it->storeInput(std::make_unique<InterpretedKeyCommands>(commands));
 #endif
 
         if (!sendResult)

@@ -50,7 +50,6 @@
 #include "Location.h"
 #include "Logging.h"
 #include "MainFrame.h"
-#include "MouseEvent.h"
 #include "NavigateToPage.h"
 #include "NavigationProxy.h"
 #include "NetworkProxy.h"
@@ -61,12 +60,9 @@
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
-#include "TimerFired.h"
 #include "URL.h"
 #include "UserInputProxy.h"
 #include <stdarg.h>
-#include <wtf/replay/InputIterator.h>
-#include <wtf/replay/NondeterministicInput.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -99,8 +95,8 @@ static void dumpEventDispatchInfo(const Event& event, Frame*, bool wasIgnored)
 ReplayController::ReplayController(Page& page)
     : m_page(page)
     , m_nextRecordingId(1)
-    , m_loadedRecording(0)
-    , m_cacheController(adoptPtr(new CacheController()))
+    , m_loadedRecording(nullptr)
+    , m_cacheController(std::make_unique<CacheController>())
     , m_stopBeforeMarkIndex(0)
     , m_status(CannotReplay)
     , m_errorStrategy(PauseOnError) { }
@@ -127,27 +123,26 @@ void ReplayController::beginCapturing()
     EventLoopInputExtent extent(m_activeIterator.get());
 
     // create begin sentinel
-    m_activeIterator->storeInput(adoptPtr(new BeginSentinel()));
+    m_activeIterator->storeInput(std::make_unique<BeginSentinel>());
 
     m_cacheController->disableCache();
-    m_activeIterator->storeInput(adoptPtr(new DisableCache()));
+    m_activeIterator->storeInput(std::make_unique<DisableCache>());
     m_activeIterator->storeInput(InitializeFocus::createFromPage(m_page));
     m_activeIterator->storeInput(InitializeWindow::createFromPage(m_page));
     // attempt to pull reasonable values here to save in the log, and
     // also to use for the initial refresh.
     MainFrame& mainFrame = m_page.mainFrame();
-    NavigateToPage* reloadInput = new NavigateToPage(mainFrame.document()->securityOrigin(),
-                                                     mainFrame.document()->url().string(),
-                                                     mainFrame.loader().referrer());
-    m_activeIterator->storeInput(adoptPtr(reloadInput));
+    m_activeIterator->storeInput(std::make_unique<NavigateToPage>(mainFrame.document()->securityOrigin(),
+                                                                  mainFrame.document()->url().string(),
+                                                                  mainFrame.loader().referrer()));
 
     //The call to scheduleLocationChange should be the same on capture and replay.
     m_page.networkProxy().setExpectsPageLoad(true);
     // TODO: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
-    mainFrame.navigationScheduler().scheduleLocationChange(reloadInput->securityOrigin().get(),
-                                                           reloadInput->url(),
-                                                           reloadInput->referrer(),
+    mainFrame.navigationScheduler().scheduleLocationChange(mainFrame.document()->securityOrigin(),
+                                                           mainFrame.document()->url(),
+                                                           mainFrame.loader().referrer(),
                                                            false, false);
 }
 
@@ -161,9 +156,9 @@ bool ReplayController::endCapturing()
     }
 
     // An event loop input extent is not needed here, as these inputs do not trigger events.
-    m_activeIterator->storeInput(adoptPtr(new EnableCache()));
-    m_activeIterator->storeInput(adoptPtr(new EndSentinel()));
-    m_activeIterator = 0;
+    m_activeIterator->storeInput(std::make_unique<EnableCache>());
+    m_activeIterator->storeInput(std::make_unique<EndSentinel>());
+    m_activeIterator = nullptr;
 
     // Hold on to a reference so unloading the recording doesn't deallocate it.
     RefPtr<ReplayRecording> recording = m_loadedRecording;
@@ -360,10 +355,10 @@ void ReplayController::resetReplayState()
 {
     LOG(DeterministicReplay, "%-20s Clearing input iterator for page: %p\n", "ReplayController", (void*)(&m_page));
 
-    m_activeIterator = 0;
+    m_activeIterator = nullptr;
     for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        frame->script().globalObject(mainThreadNormalWorld())->setInputIterator(0);
-        frame->document()->setInputIterator(0);
+        frame->script().globalObject(mainThreadNormalWorld())->setInputIterator(nullptr);
+        frame->document()->setInputIterator(nullptr);
     }
 }
 
@@ -399,7 +394,7 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
     LOG(DeterministicReplay, "%-20sUnloading recording: %p.\n", "ReplayController", (void*)m_loadedRecording.get());
 
     resetReplayState();
-    m_loadedRecording = 0;
+    m_loadedRecording = nullptr;
     changeProxyMode(ReplayProxy::Open);
 
     if (!suppressNotifications)

@@ -86,7 +86,7 @@ void InputCoder<FrameLoadRequest>::encode(EncoderContext& encoder, const FrameLo
 {
     encoder.put("securityOrigin", request.requester()->toString());
 
-    OwnPtr<EncoderContext> encodedRequest = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<ResourceRequest>::encode(*encodedRequest, request.resourceRequest());
     encoder.put("resourceRequest", *encodedRequest);
 
@@ -95,13 +95,13 @@ void InputCoder<FrameLoadRequest>::encode(EncoderContext& encoder, const FrameLo
     encoder.put("shouldCheckNewWindowPolicy", request.shouldCheckNewWindowPolicy());
 
     if (request.hasSubstituteData()) {
-        OwnPtr<EncoderContext> encodedSubstituteData = encoder.createMap();
+        std::unique_ptr<EncoderContext> encodedSubstituteData = encoder.createMap();
         InputCoder<SubstituteData>::encode(*encodedSubstituteData, request.substituteData());
         encoder.put("substituteData", *encodedSubstituteData);
     }
 }
 
-bool InputCoder<FrameLoadRequest>::decode(DecoderContext&, OwnPtr<FrameLoadRequest>&)
+bool InputCoder<FrameLoadRequest>::decode(DecoderContext&, std::unique_ptr<FrameLoadRequest>&)
 {
     // TODO: implement
     return false;
@@ -110,18 +110,18 @@ bool InputCoder<FrameLoadRequest>::decode(DecoderContext&, OwnPtr<FrameLoadReque
 
 void InputCoder<LoadURLRequest>::encode(EncoderContext& encoder, const LoadURLRequest& input)
 {
-    OwnPtr<EncoderContext> encodedRequest = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<FrameLoadRequest>::encode(*encodedRequest, input.request());
     encoder.put("request", *encodedRequest);
 }
 
-bool InputCoder<LoadURLRequest>::decode(DecoderContext& decoder, OwnPtr<LoadURLRequest>& input)
+bool InputCoder<LoadURLRequest>::decode(DecoderContext& decoder, std::unique_ptr<LoadURLRequest>& input)
 {
-    OwnPtr<FrameLoadRequest> request;
+    std::unique_ptr<FrameLoadRequest> request;
     if (!InputCoder<FrameLoadRequest>::decode(decoder, request))
         return false;
 
-    input = adoptPtr(new LoadURLRequest(request.release()));
+    input = std::make_unique<LoadURLRequest>(adoptPtr(request.release()));
     return true;
 }
 

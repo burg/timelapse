@@ -50,7 +50,7 @@ EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterat
     , m_client(client)
     , m_iterator(it)
     , m_timer(this, &EventLoopInputDispatcher::timerFired)
-    , m_runningInput(0)
+    , m_runningInput(nullptr)
     , m_dispatching(false)
     , m_running(false)
     , m_elapsedTicks(0)
@@ -61,11 +61,6 @@ EventLoopInputDispatcher::EventLoopInputDispatcher(Page* page, ReplayInputIterat
 
 EventLoopInputDispatcher::~EventLoopInputDispatcher()
 {
-}
-
-PassOwnPtr<EventLoopInputDispatcher> EventLoopInputDispatcher::create(Page* page, ReplayInputIterator* it, EventLoopInputDispatcherClient* client)
-{
-    return adoptPtr(new EventLoopInputDispatcher(page, it, client));
 }
 
 void EventLoopInputDispatcher::run()
@@ -188,7 +183,7 @@ void EventLoopInputDispatcher::dispatchInput()
     }
 
     EventLoopInput* dispatchedInput = m_runningInput;
-    m_runningInput = 0;
+    m_runningInput = nullptr;
 
     // Notify clients that the event was dispatched.
     m_client->didDispatchInput(*dispatchedInput);

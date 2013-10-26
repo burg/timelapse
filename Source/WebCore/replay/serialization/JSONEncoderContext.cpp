@@ -390,7 +390,7 @@ PassRefPtr<TypeBuilder::Recordings::ReplayRecording> JSONCoder::serialize(PassRe
 
 PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONCoder::serializeInput(const NondeterministicInput* input, int index)
 {
-    OwnPtr<EncoderContext> encodedInput = JSONCoder::createMap();
+    std::unique_ptr<EncoderContext> encodedInput = JSONCoder::createMap();
     encodedInput->put("id", (uint64_t)index);
 
     // TODO: remove
@@ -408,14 +408,14 @@ PassRefPtr<TypeBuilder::Recordings::ReplayInput> JSONCoder::serializeInput(const
     return serializedInput.release();
 }
 
-PassOwnPtr<EncoderContext> JSONCoder::createMap()
+std::unique_ptr<EncoderContext> JSONCoder::createMap()
 {
-    return adoptPtr(new JSONMapEncoder());
+    return std::make_unique<JSONMapEncoder>();
 }
 
-PassOwnPtr<EncoderContext> JSONCoder::createList()
+std::unique_ptr<EncoderContext> JSONCoder::createList()
 {
-    return adoptPtr(new JSONListEncoder());
+    return std::make_unique<JSONListEncoder>();
 }
 
 }; // namespace WebCore

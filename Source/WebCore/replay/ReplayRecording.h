@@ -35,7 +35,6 @@
 
 #if ENABLE(WEB_REPLAY)
 
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/replay/NondeterministicInput.h>
@@ -58,13 +57,13 @@ public:
     double creationTimestamp() const { return m_timestamp; }
     size_t memorySize();
 
-    PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page&);
-    PassOwnPtr<ReplayInputIterator> createReplayIterator(Page&, EventLoopInputDispatcherClient*);
-    PassOwnPtr<FunctorInputIterator> createFunctorIterator();
+    std::unique_ptr<CaptureInputIterator> createCaptureIterator(Page&);
+    std::unique_ptr<ReplayInputIterator> createReplayIterator(Page&, EventLoopInputDispatcherClient*);
+    std::unique_ptr<FunctorInputIterator> createFunctorIterator();
 
 private:
     ReplayRecording(int);
-    OwnPtr<InputStorage> m_inputStorage;
+    std::unique_ptr<InputStorage> m_inputStorage;
     int m_uid;
     bool m_canCapture;
     double m_timestamp;

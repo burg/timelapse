@@ -72,6 +72,7 @@ CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
 {
     ASSERT(m_page);
     ASSERT(m_storage && !m_storage->isReadOnly());
+    LOG(DeterministicReplay, "%-30sCreated capture iterator=%p.\n", "[ReplayController]", (void*)this);
 }
 
 CaptureInputIterator::~CaptureInputIterator()
@@ -83,20 +84,13 @@ CaptureInputIterator::~CaptureInputIterator()
     LOG(DeterministicReplay, "%-30sDestroyed capture iterator=%p.\n", "[ReplayController]", (void*)this);
 }
 
-PassOwnPtr<CaptureInputIterator> CaptureInputIterator::create(InputStorage* storage, Page* page)
-{
-    CaptureInputIterator* it = new CaptureInputIterator(storage, page);
-    LOG(DeterministicReplay, "%-30sCreated capture iterator=%p.\n", "[ReplayController]", (void*)it);
-    return adoptPtr(it);
-}
-
 void CaptureInputIterator::incrementExecutionTicks()
 {
     ASSERT(withinInputExtent());
     m_elapsedTicks += 1;
 }
 
-void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
+void CaptureInputIterator::storeInput(std::unique_ptr<NondeterministicInput> input)
 {
     ASSERT_ARG(input, input != NULL);
     ASSERT(m_isActive);
@@ -109,7 +103,7 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
         InspectorInstrumentation::capturedEventLoopInput(m_page, eventLoopInput);
     }
 
-    m_storage->store(input);
+    m_storage->store(std::move(input));
 }
 
 NondeterministicInput* CaptureInputIterator::loadInput(NondeterministicInput::QueueType, const AtomicString&)

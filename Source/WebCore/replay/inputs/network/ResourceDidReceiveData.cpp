@@ -92,7 +92,7 @@ void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const R
     encoder.putBytes("data", input.data(), input.length());
 }
 
-bool InputCoder<ResourceDidReceiveData>::decode(DecoderContext&, OwnPtr<ResourceDidReceiveData>&)
+bool InputCoder<ResourceDidReceiveData>::decode(DecoderContext&, std::unique_ptr<ResourceDidReceiveData>&)
 {
     // TODO: implement
     return false;

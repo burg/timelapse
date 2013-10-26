@@ -82,7 +82,7 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 
     if (!it) {
     } else if (it->isCapturing()) {
-        it->storeInput(adoptPtr(new GetCurrentTime(currentTime)));
+        it->storeInput(std::make_unique<GetCurrentTime>(currentTime));
     } else if (it->isReplaying()) {
         DEFINE_STATIC_LOCAL(const AtomicString, type, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
         GetCurrentTime* input = static_cast<GetCurrentTime*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, type));

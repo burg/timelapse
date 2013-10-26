@@ -63,7 +63,7 @@ private:
 
 template<> struct InputCoder<SendPendingEvents> {
     static void encode(EncoderContext& encoder, const SendPendingEvents& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<SendPendingEvents>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<SendPendingEvents>& input);
 };
 
 } //namespace WebCore

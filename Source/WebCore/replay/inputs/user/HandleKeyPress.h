@@ -45,9 +45,9 @@ class ReplayController;
 class HandleKeyPress : public EventLoopInput {
 
 public:
-    HandleKeyPress(const PlatformKeyboardEvent& event)
-        : m_platformEvent(event) {}
-    virtual ~HandleKeyPress() {}
+    HandleKeyPress(const PlatformKeyboardEvent& event);
+    HandleKeyPress(std::unique_ptr<PlatformKeyboardEvent> event);
+    virtual ~HandleKeyPress();
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -65,12 +65,12 @@ private:
 
 template<> struct InputCoder<PlatformKeyboardEvent> {
     static void encode(EncoderContext& encoder, const PlatformKeyboardEvent& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<PlatformKeyboardEvent>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<PlatformKeyboardEvent>& input);
 };
 
 template<> struct InputCoder<HandleKeyPress> {
     static void encode(EncoderContext& encoder, const HandleKeyPress& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<HandleKeyPress>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleKeyPress>& input);
 };
 
 } //namespace WebCore

@@ -43,7 +43,7 @@ namespace WebCore {
 class ResourceLoaderCreated : public NondeterministicInput {
 public:
     ResourceLoaderCreated(int handleId, const ResourceRequest&);
-    ResourceLoaderCreated(int handleId, PassOwnPtr<ResourceRequest>);
+    ResourceLoaderCreated(int handleId, std::unique_ptr<ResourceRequest>);
     virtual ~ResourceLoaderCreated();
 
     // NondeterministicInput API
@@ -61,7 +61,7 @@ private:
 
 template<> struct InputCoder<ResourceLoaderCreated> {
     static void encode(EncoderContext& encoder, const ResourceLoaderCreated& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceLoaderCreated>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceLoaderCreated>& input);
 };
 
 } // namespace WebCore

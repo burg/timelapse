@@ -84,7 +84,7 @@ void InputCoder<ResourceDidFinishLoading>::encode(EncoderContext& encoder, const
     encoder.put("finishTime", input.finishTime());
 }
 
-bool InputCoder<ResourceDidFinishLoading>::decode(DecoderContext& decoder, OwnPtr<ResourceDidFinishLoading>& input)
+bool InputCoder<ResourceDidFinishLoading>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidFinishLoading>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
@@ -94,7 +94,7 @@ bool InputCoder<ResourceDidFinishLoading>::decode(DecoderContext& decoder, OwnPt
     if (!decoder.get("finishTime", finishTime))
         return false;
 
-    input = adoptPtr(new ResourceDidFinishLoading(handleId, finishTime));
+    input = std::make_unique<ResourceDidFinishLoading>(handleId, finishTime);
     return true;
 }
 

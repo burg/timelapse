@@ -35,6 +35,7 @@
 #if ENABLE(WEB_REPLAY)
 
 #include "InputCoder.h"
+#include <wtf/text/WTFString.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -51,52 +52,52 @@ class SubstituteData;
 
 template<> struct InputCoder<Vector<String>> {
     static void encode(EncoderContext& encoder, const Vector<String>& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<Vector<String>>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<Vector<String>>& input);
 };
 
 template<> struct InputCoder<SharedBuffer> {
     static void encode(EncoderContext& encoder, const SharedBuffer& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<SharedBuffer>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<SharedBuffer>& input);
 };
 
 template<> struct InputCoder<FormData> {
     static void encode(EncoderContext& encoder, const FormData& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<FormData>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<FormData>& input);
 };
 
 template<> struct InputCoder<FormDataElement> {
     static void encode(EncoderContext& encoder, const FormDataElement& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<FormDataElement>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<FormDataElement>& input);
 };
 
 template<> struct InputCoder<SubstituteData> {
     static void encode(EncoderContext& encoder, const SubstituteData& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<SubstituteData>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<SubstituteData>& input);
 };
 
 template<> struct InputCoder<HTTPHeaderMap> {
     static void encode(EncoderContext& encoder, const HTTPHeaderMap& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<HTTPHeaderMap>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<HTTPHeaderMap>& input);
 };
 
 template<> struct InputCoder<ResourceError> {
     static void encode(EncoderContext& encoder, const ResourceError& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceError>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceError>& input);
 };
 
 template<> struct InputCoder<ResourceLoadTiming> {
     static void encode(EncoderContext& encoder, const ResourceLoadTiming& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceLoadTiming>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceLoadTiming>& input);
 };
 
 template<> struct InputCoder<ResourceRequest> {
     static void encode(EncoderContext& encoder, const ResourceRequest& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceRequest>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceRequest>& input);
 };
 
 template<> struct InputCoder<ResourceResponse> {
     static void encode(EncoderContext& encoder, const ResourceResponse& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceResponse>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceResponse>& input);
 };
 
 } // namespace WebCore

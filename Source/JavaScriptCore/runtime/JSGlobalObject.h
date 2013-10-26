@@ -41,7 +41,10 @@
 #include <wtf/RefPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RandomNumber.h>
+
+#if ENABLE(WEB_REPLAY)
 #include <wtf/replay/InputIterator.h>
+#endif
 
 struct OpaqueJSClass;
 struct OpaqueJSClassContextData;
@@ -200,7 +203,7 @@ protected:
     WriteBarrier<Structure> m_regExpMatchesArrayStructure;
     WriteBarrier<Structure> m_regExpStructure;
     WriteBarrier<Structure> m_internalFunctionStructure;
-    
+
     WriteBarrier<Structure> m_iteratorResultStructure;
 
 #if ENABLE(PROMISES)
@@ -222,13 +225,15 @@ protected:
         WriteBarrier<JSObject> prototype;
         WriteBarrier<Structure> structure;
     };
-    
+
     FixedArray<TypedArrayData, NUMBER_OF_TYPED_ARRAY_TYPES> m_typedArrays;
-        
+
     void* m_specialPointers[Special::TableSize]; // Special pointers used by the LLInt and JIT.
 
     Debugger* m_debugger;
+#if ENABLE(WEB_REPLAY)
     InputIterator* m_inputIterator;
+#endif
 
     RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
     RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
@@ -450,14 +455,14 @@ public:
     WatchpointSet* masqueradesAsUndefinedWatchpoint() { return m_masqueradesAsUndefinedWatchpoint.get(); }
     WatchpointSet* havingABadTimeWatchpoint() { return m_havingABadTimeWatchpoint.get(); }
     WatchpointSet* varInjectionWatchpoint() { return m_varInjectionWatchpoint.get(); }
-        
+
     bool isHavingABadTime() const
     {
         return m_havingABadTimeWatchpoint->hasBeenInvalidated();
     }
 
     void haveABadTime(VM&);
-        
+
     bool objectPrototypeIsSane();
     bool arrayPrototypeChainIsSane();
     bool stringPrototypeChainIsSane();

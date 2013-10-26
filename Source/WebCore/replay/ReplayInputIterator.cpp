@@ -36,12 +36,11 @@
 #include "EventLoopInputDispatcher.h"
 #include "InputStorage.h"
 #include "ReplayInputIterator.h"
-
-#include <wtf/Vector.h>
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/Vector.h>
 
 static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
     switch (queue) {
@@ -57,7 +56,7 @@ namespace WebCore {
 ReplayInputIterator::ReplayInputIterator(InputStorage* storage, Page* page, EventLoopInputDispatcherClient* client)
 : m_storage(storage)
 , m_isActive(true)
-, m_dispatcher(EventLoopInputDispatcher::create(page, this, client))
+, m_dispatcher(std::make_unique<EventLoopInputDispatcher>(page, this, client))
 , m_positions(Vector<size_t>()) {
     ASSERT(m_storage->isReadOnly());
 
@@ -71,17 +70,12 @@ ReplayInputIterator::~ReplayInputIterator()
 {
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayInputIterator::create(InputStorage* storage, Page* page, EventLoopInputDispatcherClient* client)
-{
-    return adoptPtr(new ReplayInputIterator(storage, page, client));
-}
-
 void ReplayInputIterator::incrementExecutionTicks()
 {
     m_dispatcher->incrementExecutionTicks();
 }
 
-void ReplayInputIterator::storeInput(PassOwnPtr<NondeterministicInput>)
+void ReplayInputIterator::storeInput(std::unique_ptr<NondeterministicInput>)
 {
     // cannot store inputs from replay iterator
     ASSERT_NOT_REACHED();

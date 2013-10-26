@@ -121,7 +121,7 @@ void InputCoder<ScrollPage>::encode(EncoderContext& encoder, const ScrollPage& i
     encoder.put("granularity", (uint64_t)input.scrollGranularity());
 }
 
-bool InputCoder<ScrollPage>::decode(DecoderContext& decoder, OwnPtr<ScrollPage>& input)
+bool InputCoder<ScrollPage>::decode(DecoderContext& decoder, std::unique_ptr<ScrollPage>& input)
 {
     uint64_t scrollDirection;
     if (!decoder.get("scrollDirection", scrollDirection))
@@ -136,9 +136,9 @@ bool InputCoder<ScrollPage>::decode(DecoderContext& decoder, OwnPtr<ScrollPage>&
         return false;
 
     if (isLogicalScroll)
-        input = adoptPtr(new ScrollPage((ScrollLogicalDirection)scrollDirection, (ScrollGranularity)granularity));
+        input = std::make_unique<ScrollPage>((ScrollLogicalDirection)scrollDirection, (ScrollGranularity)granularity);
     else
-        input = adoptPtr(new ScrollPage((ScrollDirection)scrollDirection, (ScrollGranularity)granularity));
+        input = std::make_unique<ScrollPage>((ScrollDirection)scrollDirection, (ScrollGranularity)granularity);
 
     return true;
 }

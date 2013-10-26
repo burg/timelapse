@@ -66,7 +66,7 @@ private:
 
 template<> struct InputCoder<PlaybackError> {
     static void encode(EncoderContext& encoder, const PlaybackError& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<PlaybackError>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<PlaybackError>& input);
 };
 
 } //namespace WebCore

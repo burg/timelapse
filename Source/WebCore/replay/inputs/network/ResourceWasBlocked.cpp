@@ -77,13 +77,13 @@ void InputCoder<ResourceWasBlocked>::encode(EncoderContext& encoder, const Resou
     encoder.put("handleId", input.handleId());
 }
 
-bool InputCoder<ResourceWasBlocked>::decode(DecoderContext& decoder, OwnPtr<ResourceWasBlocked>& input)
+bool InputCoder<ResourceWasBlocked>::decode(DecoderContext& decoder, std::unique_ptr<ResourceWasBlocked>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    input = adoptPtr(new ResourceWasBlocked(handleId));
+    input = std::make_unique<ResourceWasBlocked>(handleId);
     return true;
 }
 

@@ -64,9 +64,9 @@ void InputCoder<HandleContextMenu>::encode(EncoderContext& encoder, const Handle
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleContextMenu>::decode(DecoderContext& decoder, OwnPtr<HandleContextMenu>& input)
+bool InputCoder<HandleContextMenu>::decode(DecoderContext& decoder, std::unique_ptr<HandleContextMenu>& input)
 {
-    OwnPtr<PlatformMouseEvent> mouseEvent;
+    std::unique_ptr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
         return false;
 
@@ -74,7 +74,7 @@ bool InputCoder<HandleContextMenu>::decode(DecoderContext& decoder, OwnPtr<Handl
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new HandleContextMenu(*mouseEvent, frameIndex));
+    input = std::make_unique<HandleContextMenu>(*mouseEvent, frameIndex);
     return true;
 }
 

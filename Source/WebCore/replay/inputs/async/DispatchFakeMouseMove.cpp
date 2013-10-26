@@ -77,9 +77,9 @@ void InputCoder<DispatchFakeMouseMove>::encode(EncoderContext& encoder, const Di
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<DispatchFakeMouseMove>::decode(DecoderContext& decoder, OwnPtr<DispatchFakeMouseMove>& input)
+bool InputCoder<DispatchFakeMouseMove>::decode(DecoderContext& decoder, std::unique_ptr<DispatchFakeMouseMove>& input)
 {
-    OwnPtr<PlatformMouseEvent> mouseEvent;
+    std::unique_ptr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
         return false;
 
@@ -87,7 +87,7 @@ bool InputCoder<DispatchFakeMouseMove>::decode(DecoderContext& decoder, OwnPtr<D
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new DispatchFakeMouseMove(*mouseEvent, frameIndex));
+    input = std::make_unique<DispatchFakeMouseMove>(*mouseEvent, frameIndex);
     return true;
 }
 

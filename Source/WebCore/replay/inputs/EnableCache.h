@@ -62,7 +62,7 @@ public:
 
 template<> struct InputCoder<EnableCache> {
     static void encode(EncoderContext& encoder, const EnableCache& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<EnableCache>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<EnableCache>& input);
 };
 
 } //namespace WebCore

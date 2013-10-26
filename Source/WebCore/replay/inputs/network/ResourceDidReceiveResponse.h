@@ -45,7 +45,7 @@ class ReplayController;
 class ResourceDidReceiveResponse : public EventLoopInput {
 public:
     ResourceDidReceiveResponse(int handleId, const ResourceResponse& response);
-    ResourceDidReceiveResponse(int handleId, PassOwnPtr<ResourceResponse> response);
+    ResourceDidReceiveResponse(int handleId, std::unique_ptr<ResourceResponse> response);
     virtual ~ResourceDidReceiveResponse() {}
 
     // EventLoopInput API
@@ -65,7 +65,7 @@ private:
 
 template<> struct InputCoder<ResourceDidReceiveResponse> {
     static void encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceDidReceiveResponse>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveResponse>& input);
 };
 
 } // namespace WebCore

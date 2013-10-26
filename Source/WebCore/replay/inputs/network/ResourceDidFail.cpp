@@ -44,7 +44,6 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
-#include <wtf/OwnPtr.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -53,7 +52,7 @@ ResourceDidFail::ResourceDidFail(int handleId, const ResourceError& error)
     : m_handleId(handleId)
     , m_error(error.copy()) {}
 
-ResourceDidFail::ResourceDidFail(int handleId, PassOwnPtr<ResourceError> error)
+ResourceDidFail::ResourceDidFail(int handleId, std::unique_ptr<ResourceError> error)
     : m_handleId(handleId)
     , m_error(*error) {}
 
@@ -101,22 +100,22 @@ void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const Resource
 {
     encoder.put("handleId", input.handleId());
 
-    OwnPtr<EncoderContext> encodedError = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedError = encoder.createMap();
     InputCoder<ResourceError>::encode(*encodedError, input.error());
     encoder.put("error", *encodedError);
 }
 
-bool InputCoder<ResourceDidFail>::decode(DecoderContext& decoder, OwnPtr<ResourceDidFail>& input)
+bool InputCoder<ResourceDidFail>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidFail>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    OwnPtr<ResourceError> error;
+    std::unique_ptr<ResourceError> error;
     if (!InputCoder<ResourceError>::decode(decoder, error))
         return false;
 
-    input = adoptPtr(new ResourceDidFail(handleId, error.release()));
+    input = std::make_unique<ResourceDidFail>(handleId, std::move(error));
     return true;
 }
 

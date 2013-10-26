@@ -53,9 +53,9 @@ ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, const Resou
     : m_handleId(handleId)
     , m_response(ResourceResponse::adopt(response.copyData())) {}
 
-ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, PassOwnPtr<ResourceResponse> response)
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, std::unique_ptr<ResourceResponse> response)
     : m_handleId(handleId)
-    , m_response(response) {}
+    , m_response(adoptPtr(response.release())) {}
 
 void ResourceDidReceiveResponse::dispatch(ReplayController& controller)
 {
@@ -97,22 +97,22 @@ void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, con
 {
     encoder.put("handleId", input.handleId());
 
-    OwnPtr<EncoderContext> encodedResponse = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedResponse = encoder.createMap();
     InputCoder<ResourceResponse>::encode(*encodedResponse, input.response());
     encoder.put("response", *encodedResponse);
 }
 
-bool InputCoder<ResourceDidReceiveResponse>::decode(DecoderContext& decoder, OwnPtr<ResourceDidReceiveResponse>& input)
+bool InputCoder<ResourceDidReceiveResponse>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveResponse>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    OwnPtr<ResourceResponse> response;
+    std::unique_ptr<ResourceResponse> response;
     if (!InputCoder<ResourceResponse>::decode(decoder, response))
         return false;
 
-    input = adoptPtr(new ResourceDidReceiveResponse(handleId, response.release()));
+    input = std::make_unique<ResourceDidReceiveResponse>(handleId, std::move(response));
     return true;
 }
 

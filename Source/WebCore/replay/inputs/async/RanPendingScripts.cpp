@@ -74,13 +74,13 @@ void InputCoder<RanPendingScripts>::encode(EncoderContext& encoder, const RanPen
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<RanPendingScripts>::decode(DecoderContext& decoder, OwnPtr<RanPendingScripts>& input)
+bool InputCoder<RanPendingScripts>::decode(DecoderContext& decoder, std::unique_ptr<RanPendingScripts>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new RanPendingScripts(frameIndex));
+    input = std::make_unique<RanPendingScripts>(frameIndex);
     return true;
 }
 

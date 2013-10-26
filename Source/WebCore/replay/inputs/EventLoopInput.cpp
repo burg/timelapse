@@ -35,7 +35,6 @@
 
 #include "EventLoopInput.h"
 
-
 #include "Document.h"
 #include "EncoderContext.h"
 #include "FrameTree.h"

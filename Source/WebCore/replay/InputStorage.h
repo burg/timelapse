@@ -35,10 +35,8 @@
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Vector.h>
 #include <wtf/replay/NondeterministicInput.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -46,13 +44,13 @@ class InputStorage {
     WTF_MAKE_NONCOPYABLE(InputStorage);
     friend class FunctorInputIterator;
 public:
-    static PassOwnPtr<InputStorage> create();
+    InputStorage();
     ~InputStorage();
 
     bool isReadOnly() const { return m_readOnly; }
     void freeze();
     NondeterministicInput* load(NondeterministicInput::QueueType, uint);
-    void store(PassOwnPtr<NondeterministicInput>);
+    void store(std::unique_ptr<NondeterministicInput>);
     uint queueSize(NondeterministicInput::QueueType queue) const
     {
         ASSERT(queue < NondeterministicInput::QueueTypeLength);
@@ -60,8 +58,7 @@ public:
     }
 
 private:
-    typedef Vector<OwnPtr<NondeterministicInput> > InputQueue;
-    InputStorage();
+    typedef Vector<std::unique_ptr<NondeterministicInput>> InputQueue;
 
     Vector<InputQueue*> m_queues;
     unsigned m_inputCount;

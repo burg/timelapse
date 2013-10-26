@@ -38,8 +38,6 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
@@ -49,22 +47,20 @@ namespace WebCore {
 class FunctorInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(FunctorInputIterator);
 public:
-    static PassOwnPtr<FunctorInputIterator> create(InputStorage*);
+    FunctorInputIterator(InputStorage*);
     virtual ~FunctorInputIterator() {}
 
-    // InputIterator API
+    // InputIterator
     virtual bool isCapturing() const { return false; }
     virtual bool isReplaying() const { return false; }
 
-    virtual void storeInput(PassOwnPtr<NondeterministicInput>);
+    virtual void storeInput(std::unique_ptr<NondeterministicInput>);
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
     template<typename Functor> typename Functor::ReturnType forEachInputInQueue(NondeterministicInput::QueueType, Functor&);
 
 private:
-    FunctorInputIterator(InputStorage*);
-
     InputStorage* m_storage;
 };
 
@@ -84,12 +80,7 @@ inline FunctorInputIterator::FunctorInputIterator(InputStorage* storage)
 {
 }
 
-inline PassOwnPtr<FunctorInputIterator> FunctorInputIterator::create(InputStorage* storage)
-{
-    return adoptPtr(new FunctorInputIterator(storage));
-}
-
-inline void FunctorInputIterator::storeInput(PassOwnPtr<NondeterministicInput>)
+inline void FunctorInputIterator::storeInput(std::unique_ptr<NondeterministicInput>)
 {
     ASSERT_NOT_REACHED();
 }

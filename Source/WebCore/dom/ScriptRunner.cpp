@@ -123,7 +123,7 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
     InputIterator* it = m_document.inputIterator();
     if (it && it->isCapturing()) {
         int frameIndex = frameIndexFromDocument(&m_document);
-        it->storeInput(adoptPtr(new RanPendingScripts(frameIndex)));
+        it->storeInput(std::make_unique<RanPendingScripts>(frameIndex));
     }
     EventLoopInputExtent extent(it);
 #endif

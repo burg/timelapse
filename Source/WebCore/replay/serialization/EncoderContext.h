@@ -77,8 +77,8 @@ public:
     // These methods don't have templatized shortcuts.
     virtual void putBytes(const String&, const char* data, int length);
 
-    virtual PassOwnPtr<EncoderContext> createMap() =0;
-    virtual PassOwnPtr<EncoderContext> createList() =0;
+    virtual std::unique_ptr<EncoderContext> createMap() =0;
+    virtual std::unique_ptr<EncoderContext> createList() =0;
 };
 
 // Redirectors to virtual methods.

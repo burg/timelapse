@@ -62,14 +62,14 @@ namespace JSC {
 class WeakRandom {
 public:
     WeakRandom(unsigned seed)
-    : m_inputIterator(0)
+    : m_inputIterator(nullptr)
     {
         initializeSeed(seed);
     }
 
     void setInputIterator(InputIterator* it) {
         if (it && it->isCapturing())
-            it->storeInput(adoptPtr(new SetRandomSeed(seedUnsafe())));
+            it->storeInput(std::make_unique<SetRandomSeed>(seedUnsafe()));
         if (it && it->isReplaying()) {
             DEFINE_STATIC_LOCAL(const AtomicString, type, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
             SetRandomSeed* action = static_cast<SetRandomSeed*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, type));

@@ -68,13 +68,13 @@ void InputCoder<FocusSetFocused>::encode(EncoderContext& encoder, const FocusSet
     encoder.put("toState", input.toState());
 }
 
-bool InputCoder<FocusSetFocused>::decode(DecoderContext& decoder, OwnPtr<FocusSetFocused>& input)
+bool InputCoder<FocusSetFocused>::decode(DecoderContext& decoder, std::unique_ptr<FocusSetFocused>& input)
 {
     bool toState;
     if (!decoder.get("toState", toState))
         return false;
 
-    input = adoptPtr(new FocusSetFocused(toState));
+    input = std::make_unique<FocusSetFocused>(toState);
     return true;
 }
 

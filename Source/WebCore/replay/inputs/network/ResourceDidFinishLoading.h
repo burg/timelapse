@@ -62,7 +62,7 @@ private:
 
 template<> struct InputCoder<ResourceDidFinishLoading> {
     static void encode(EncoderContext& encoder, const ResourceDidFinishLoading& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceDidFinishLoading>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidFinishLoading>& input);
 };
 
 } // namespace WebCore

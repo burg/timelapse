@@ -61,7 +61,7 @@ namespace WebCore {
 #if ENABLE(WEB_REPLAY)
 static void printResourceRequestDiagnostics(const ResourceRequest& request)
 {
-    OwnPtr<EncoderContext> encoder = JSONCoder::createMap();
+    std::unique_ptr<EncoderContext> encoder = JSONCoder::createMap();
     InputCoder<ResourceRequest>::encode(*encoder, request);
     RefPtr<InspectorValue> value = static_cast<JSONEncoderContext*>(encoder.get())->encodedValue();
     String jsonString = value->toJSONString();
@@ -106,7 +106,7 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
     if (mode() == ReplayProxy::Capturing) {
         ASSERT(it && it->isCapturing());
         int freshId = m_nextId++;
-        controller().activeIterator()->storeInput(adoptPtr(new ResourceLoaderCreated(freshId, request)));
+        controller().activeIterator()->storeInput(std::make_unique<ResourceLoaderCreated>(freshId, request));
 
         return freshId;
     }

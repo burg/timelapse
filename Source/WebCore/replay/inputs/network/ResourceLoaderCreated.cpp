@@ -48,9 +48,9 @@ ResourceLoaderCreated::ResourceLoaderCreated(int handleId, const ResourceRequest
     : m_handleId(handleId)
     , m_request(ResourceRequest::adopt(request.copyData())) {}
 
-ResourceLoaderCreated::ResourceLoaderCreated(int handleId, PassOwnPtr<ResourceRequest> request)
+ResourceLoaderCreated::ResourceLoaderCreated(int handleId, std::unique_ptr<ResourceRequest> request)
     : m_handleId(handleId)
-    , m_request(request) {}
+    , m_request(adoptPtr(request.release())) {}
 
 ResourceLoaderCreated::~ResourceLoaderCreated()
 {
@@ -83,22 +83,22 @@ void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const Re
 {
     encoder.put("handleId", input.handleId());
 
-    OwnPtr<EncoderContext> encodedRequest = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
     encoder.put("request", *encodedRequest);
 }
 
-bool InputCoder<ResourceLoaderCreated>::decode(DecoderContext& decoder, OwnPtr<ResourceLoaderCreated>& input)
+bool InputCoder<ResourceLoaderCreated>::decode(DecoderContext& decoder, std::unique_ptr<ResourceLoaderCreated>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    OwnPtr<ResourceRequest> request;
+    std::unique_ptr<ResourceRequest> request;
     if (!InputCoder<ResourceRequest>::decode(decoder, request))
         return false;
 
-    input = adoptPtr(new ResourceLoaderCreated(handleId, request.release()));
+    input = std::make_unique<ResourceLoaderCreated>(handleId, std::move(request));
     return true;
 }
 

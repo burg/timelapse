@@ -80,7 +80,7 @@ void InputCoder<TimerFired>::encode(EncoderContext& encoder, const TimerFired& i
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<TimerFired>::decode(DecoderContext& decoder, OwnPtr<TimerFired>& input)
+bool InputCoder<TimerFired>::decode(DecoderContext& decoder, std::unique_ptr<TimerFired>& input)
 {
     int timerId;
     if (!decoder.get("timerId", timerId))
@@ -90,7 +90,7 @@ bool InputCoder<TimerFired>::decode(DecoderContext& decoder, OwnPtr<TimerFired>&
     if (!decoder.get("frameIndex", frameIndex))
         return false;
 
-    input = adoptPtr(new TimerFired(timerId, frameIndex));
+    input = std::make_unique<TimerFired>(timerId, frameIndex);
     return true;
 }
 

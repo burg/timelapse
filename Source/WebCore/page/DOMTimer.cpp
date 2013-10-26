@@ -83,11 +83,11 @@ void InstrumentedDOMTimer::start(int timeout, bool singleShot)
         return;
 
     Document* document = static_cast<Document*>(scriptExecutionContext());
-    InputIterator* it = document ? document->inputIterator() : 0;
+    InputIterator* it = document ? document->inputIterator() : nullptr;
     ASSERT(it && it->isCapturing());
 
     int frameIndex = frameIndexFromDocument(document);
-    it->storeInput(adoptPtr(new TimerCreated(m_timeoutId, frameIndex)));
+    it->storeInput(std::make_unique<TimerCreated>(m_timeoutId, frameIndex));
 }
 
 void InstrumentedDOMTimer::fired()
@@ -98,11 +98,11 @@ void InstrumentedDOMTimer::fired()
     }
 
     Document* document = static_cast<Document*>(scriptExecutionContext());
-    InputIterator* it = document ? document->inputIterator() : 0;
+    InputIterator* it = document ? document->inputIterator() : nullptr;
     ASSERT(it && it->isCapturing());
 
     int frameIndex = frameIndexFromDocument(document);
-    it->storeInput(adoptPtr(new TimerFired(m_timeoutId, frameIndex)));
+    it->storeInput(std::make_unique<TimerFired>(m_timeoutId, frameIndex));
 
     EventLoopInputExtent extent(it);
     DOMTimer::fired();
@@ -121,7 +121,7 @@ void DeterministicDOMTimer::start(int, bool)
         return;
 
     Document* document = static_cast<Document*>(scriptExecutionContext());
-    InputIterator* it = document ? document->inputIterator() : 0;
+    InputIterator* it = document ? document->inputIterator() : nullptr;
     ASSERT(it && it->isReplaying());
 
     NondeterministicInput* input = it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().TimerCreated);

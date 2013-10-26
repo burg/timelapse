@@ -89,7 +89,7 @@ private:
 
 template<> struct InputCoder<ScrollPage> {
     static void encode(EncoderContext& encoder, const ScrollPage& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ScrollPage>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ScrollPage>& input);
 };
 
 } //namespace WebCore

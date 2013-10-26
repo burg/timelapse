@@ -36,12 +36,10 @@
 #include "EnableCache.h"
 
 #include "CacheController.h"
-#include "EventLoopInputDispatcher.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -59,9 +57,9 @@ void InputCoder<EnableCache>::encode(EncoderContext&, const EnableCache&)
 {
 }
 
-bool InputCoder<EnableCache>::decode(DecoderContext&, OwnPtr<EnableCache>& input)
+bool InputCoder<EnableCache>::decode(DecoderContext&, std::unique_ptr<EnableCache>& input)
 {
-    input = adoptPtr(new EnableCache());
+    input = std::make_unique<EnableCache>();
     return true;
 }
 

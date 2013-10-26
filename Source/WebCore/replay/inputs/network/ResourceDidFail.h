@@ -45,7 +45,7 @@ class ReplayController;
 class ResourceDidFail : public EventLoopInput {
 public:
     ResourceDidFail(int handleId, const ResourceError&);
-    ResourceDidFail(int handleId, PassOwnPtr<ResourceError>);
+    ResourceDidFail(int handleId, std::unique_ptr<ResourceError>);
     virtual ~ResourceDidFail() {}
 
     // EventLoopInput API
@@ -66,7 +66,7 @@ private:
 
 template<> struct InputCoder<ResourceDidFail> {
     static void encode(EncoderContext& encoder, const ResourceDidFail& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<ResourceDidFail>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidFail>& input);
 };
 
 } // namespace WebCore

@@ -36,7 +36,6 @@
 
 #include "EncoderContext.h"
 #include "InspectorTypeBuilder.h"
-#include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
@@ -49,19 +48,19 @@ namespace WebCore {
     public:
         static PassRefPtr<TypeBuilder::Recordings::ReplayRecording> serialize(PassRefPtr<ReplayRecording>);
         static PassRefPtr<TypeBuilder::Recordings::ReplayInput> serializeInput(const NondeterministicInput*, int index=0);
-        static PassOwnPtr<EncoderContext> createMap();
-        static PassOwnPtr<EncoderContext> createList();
+        static std::unique_ptr<EncoderContext> createMap();
+        static std::unique_ptr<EncoderContext> createList();
     };
 
     class JSONEncoderContext : public EncoderContext {
     public:
         virtual PassRefPtr<InspectorValue> encodedValue() const =0;
-        virtual PassOwnPtr<EncoderContext> createMap() OVERRIDE
+        virtual std::unique_ptr<EncoderContext> createMap() OVERRIDE
         {
             return JSONCoder::createMap();
         }
 
-        virtual PassOwnPtr<EncoderContext> createList() OVERRIDE
+        virtual std::unique_ptr<EncoderContext> createList() OVERRIDE
         {
             return JSONCoder::createList();
         }

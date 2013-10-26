@@ -32,12 +32,8 @@
 #ifndef AsyncEventProxy_h
 #define AsyncEventProxy_h
 
-#include "PlatformMouseEvent.h"
 #include "ReplayProxy.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/PassOwnPtr.h>
-#include <wtf/PassRefPtr.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -45,11 +41,10 @@ class Event;
 class EventTarget;
 class Frame;
 class Page;
+class PlatformMouseEvent;
 
 class AsyncEventProxy : public ReplayProxy {
-    WTF_MAKE_NONCOPYABLE(AsyncEventProxy);
-    WTF_MAKE_FAST_ALLOCATED;
-
+    WTF_MAKE_NONCOPYABLE(AsyncEventProxy); WTF_MAKE_FAST_ALLOCATED;
 public:
     AsyncEventProxy(Page&);
     virtual ~AsyncEventProxy() {}

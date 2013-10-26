@@ -66,7 +66,7 @@ private:
 
 template<> struct InputCoder<SendResizeEvent> {
     static void encode(EncoderContext& encoder, const SendResizeEvent& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<SendResizeEvent>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<SendResizeEvent>& input);
 };
 
 } //namespace WebCore

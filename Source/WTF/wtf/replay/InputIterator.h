@@ -48,7 +48,7 @@ public:
     virtual bool isReplaying() const =0;
     virtual void incrementExecutionTicks() { }
 
-    WTF_EXPORT_PRIVATE virtual void storeInput(PassOwnPtr<NondeterministicInput>) =0;
+    WTF_EXPORT_PRIVATE virtual void storeInput(std::unique_ptr<NondeterministicInput>) =0;
     WTF_EXPORT_PRIVATE virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&) =0;
     WTF_EXPORT_PRIVATE virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType) =0;
 };

@@ -58,7 +58,10 @@
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/WeakPtr.h>
+
+#if ENABLE(WEB_REPLAY)
 #include <wtf/replay/InputIterator.h>
+#endif
 
 namespace WebCore {
 

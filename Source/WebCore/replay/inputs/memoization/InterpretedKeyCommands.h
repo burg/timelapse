@@ -63,7 +63,7 @@ private:
 
 template<> struct InputCoder<InterpretedKeyCommands> {
     static void encode(EncoderContext& encoder, const InterpretedKeyCommands& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<InterpretedKeyCommands>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<InterpretedKeyCommands>& input);
 };
 
 } // namespace WebCore

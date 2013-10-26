@@ -66,7 +66,7 @@ private:
 
 template<> struct InputCoder<SetPageVisibility> {
     static void encode(EncoderContext& encoder, const SetPageVisibility& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<SetPageVisibility>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<SetPageVisibility>& input);
 };
 
 } //namespace WebCore

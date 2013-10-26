@@ -62,7 +62,7 @@ void NavigationProxy::loadURLRequest(const FrameLoadRequest& request, bool fromR
     InputIterator* it = m_page.replayController().activeIterator();
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
-        it->storeInput(adoptPtr(new LoadURLRequest(request)));
+        it->storeInput(std::make_unique<LoadURLRequest>(request));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -82,7 +82,7 @@ void NavigationProxy::reloadFrame(Frame* frame, bool endToEndReload, bool fromRe
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
         int frameIndex = frameIndexFromDocument(frame->document());
-        it->storeInput(adoptPtr(new ReloadFrame(endToEndReload, frameIndex)));
+        it->storeInput(std::make_unique<ReloadFrame>(endToEndReload, frameIndex));
     }
     EventLoopInputExtent extent(it);
 #else
@@ -102,7 +102,7 @@ void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
     if (it && it->isCapturing()) {
         ASSERT(mode() == Capturing);
         int frameIndex = frameIndexFromDocument(frame->document());
-        it->storeInput(adoptPtr(new StopLoadingFrame(frameIndex)));
+        it->storeInput(std::make_unique<StopLoadingFrame>(frameIndex));
     }
     EventLoopInputExtent extent(it);
 #else

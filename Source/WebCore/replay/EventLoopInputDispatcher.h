@@ -37,7 +37,6 @@
 #include "EventLoopInput.h"
 #include "Timer.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -69,8 +68,8 @@ public:
 class EventLoopInputDispatcher {
     WTF_MAKE_NONCOPYABLE(EventLoopInputDispatcher);
 public:
+    EventLoopInputDispatcher(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
     ~EventLoopInputDispatcher();
-    static PassOwnPtr<EventLoopInputDispatcher> create(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
 
     void run();
     void pause();
@@ -81,7 +80,6 @@ public:
     void incrementExecutionTicks();
 
 private:
-    EventLoopInputDispatcher(Page*, ReplayInputIterator*, EventLoopInputDispatcherClient*);
     void dispatchInputSoon();
     void dispatchInput();
     void timerFired(Timer<EventLoopInputDispatcher>*);

@@ -1930,7 +1930,7 @@ sub GenerateImplementation
                     if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                         $implIncludes{"PlaybackError.h"} = 1;
                         push(@implContent, "    if (it && it->isCapturing()) {\n");
-                        push(@implContent, "        it->storeInput(adoptPtr(new PlaybackError(\"Replay is not implemented for $interfaceName.$name\")));\n");
+                        push(@implContent, "        it->storeInput(std::make_unique<PlaybackError>(\"Replay is not implemented for $interfaceName.$name\"));\n");
                         push(@implContent, "    }\n");
                     }
 
@@ -1941,9 +1941,9 @@ sub GenerateImplementation
                         push(@implContent, "    if (it && it->isCapturing()) {\n");
                         push(@implContent, "        $nativeType memoizedResult = castedThis->impl().$implGetterFunctionName(" . join(", ", @arguments) . ");\n");
                         if ($getterExceptions) {
-                            push(@implContent, "        it->storeInput(adoptPtr(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$interfaceName.$name\", memoizedResult, ec)));\n");
+                            push(@implContent, "        it->storeInput(std::make_unique<AutoMemoizedWithExceptionCode<$memoizedType>>(\"$interfaceName.$name\", memoizedResult, ec));\n");
                         } else {
-                            push(@implContent, "        it->storeInput(adoptPtr(new AutoMemoized<$memoizedType>(\"$interfaceName.$name\", memoizedResult)));\n");
+                            push(@implContent, "        it->storeInput(std::make_unique<AutoMemoized<$memoizedType>>(\"$interfaceName.$name\", memoizedResult));\n");
                         }
                         push(@implContent, "        result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "memoizedResult", "castedThis") . ";\n");
                         push(@implContent, "        setDOMException(exec, ec);\n") if $getterExceptions;
@@ -2421,7 +2421,7 @@ sub GenerateImplementation
                 push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
                 push(@implContent, "    InputIterator* it = globalObject->inputIterator();\n");
                 push(@implContent, "    if (it && it->isCapturing()) {\n");
-                push(@implContent, "        it->storeInput(adoptPtr(new PlaybackError(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\")));\n");
+                push(@implContent, "        it->storeInput(std::make_unique<PlaybackError>(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\"));\n");
                 push(@implContent, "    }\n");
                 push(@implContent, "#endif\n");
             }
@@ -3289,9 +3289,9 @@ sub GenerateImplementationFunctionCall()
             push(@implContent, $indent . "if (it && it->isCapturing()) {\n");
             push(@implContent, $indent . "    $nativeType memoizedResult = $functionString;\n");
             if ($raisesException) {
-                push(@implContent, $indent . "    it->storeInput(adoptPtr(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$bindingName\", memoizedResult, ec)));\n");
+                push(@implContent, $indent . "    it->storeInput(std::make_unique<AutoMemoizedWithExceptionCode<$memoizedType>>(\"$bindingName\", memoizedResult, ec));\n");
             } else {
-                push(@implContent, $indent . "    it->storeInput(adoptPtr(new AutoMemoized<$memoizedType>(\"$bindingName\", memoizedResult)));\n");
+                push(@implContent, $indent . "    it->storeInput(std::make_unique<AutoMemoized<$memoizedType>>(\"$bindingName\", memoizedResult));\n");
             }
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, "memoizedResult", $thisObject) . ";\n");
             push(@implContent, $indent . "} else if (it && it->isReplaying()) {\n");

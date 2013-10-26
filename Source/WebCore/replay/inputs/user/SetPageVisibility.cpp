@@ -40,6 +40,7 @@
 #include "Page.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
+#include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
 
@@ -103,7 +104,7 @@ void InputCoder<SetPageVisibility>::encode(EncoderContext& encoder, const SetPag
     encoder.put("isInitialState", input.isInitialState());
 }
 
-bool InputCoder<SetPageVisibility>::decode(DecoderContext& decoder, OwnPtr<SetPageVisibility>& input)
+bool InputCoder<SetPageVisibility>::decode(DecoderContext& decoder, std::unique_ptr<SetPageVisibility>& input)
 {
     String visibilityStateString;
     if (!decoder.get("visibilityState", visibilityStateString))
@@ -117,7 +118,7 @@ bool InputCoder<SetPageVisibility>::decode(DecoderContext& decoder, OwnPtr<SetPa
     if (!decoder.get("isInitialState", isInitialState))
         return false;
 
-    input = adoptPtr(new SetPageVisibility(visibilityState, isInitialState));
+    input = std::make_unique<SetPageVisibility>(visibilityState, isInitialState);
     return true;
 }
 

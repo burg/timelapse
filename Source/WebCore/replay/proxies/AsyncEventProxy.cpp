@@ -60,7 +60,7 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame& frame, const PlatformMouseEve
     if (it && it->isCapturing()) {
         ASSERT(mode() == ReplayProxy::Capturing);
         int frameIndex = frameIndexFromDocument(frame.document());
-        it->storeInput(adoptPtr(new DispatchFakeMouseMove(fakeMouseMove, frameIndex)));
+        it->storeInput(std::make_unique<DispatchFakeMouseMove>(fakeMouseMove, frameIndex));
     }
     EventLoopInputExtent extent(it);
 #else

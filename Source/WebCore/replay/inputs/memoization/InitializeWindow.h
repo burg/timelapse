@@ -61,7 +61,7 @@ public:
 
     int width() const { return m_width; }
     int height() const { return m_height; }
-    static PassOwnPtr<InitializeWindow> createFromPage(const Page&);
+    static std::unique_ptr<InitializeWindow> createFromPage(const Page&);
 private:
     int m_width;
     int m_height;
@@ -69,7 +69,7 @@ private:
 
 template<> struct InputCoder<InitializeWindow> {
     static void encode(EncoderContext& encoder, const InitializeWindow& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<InitializeWindow>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<InitializeWindow>& input);
 };
 
 } //namespace WebCore

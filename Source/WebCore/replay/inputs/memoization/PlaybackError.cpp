@@ -62,13 +62,13 @@ void InputCoder<PlaybackError>::encode(EncoderContext& encoder, const PlaybackEr
     encoder.put("errorMessage", input.errorMessage());
 }
 
-bool InputCoder<PlaybackError>::decode(DecoderContext& decoder, OwnPtr<PlaybackError>& input)
+bool InputCoder<PlaybackError>::decode(DecoderContext& decoder, std::unique_ptr<PlaybackError>& input)
 {
     String errorMessage;
     if (!decoder.get("errorMessage", errorMessage))
         return false;
 
-    input = adoptPtr(new PlaybackError(errorMessage));
+    input = std::make_unique<PlaybackError>(errorMessage);
     return true;
 }
 

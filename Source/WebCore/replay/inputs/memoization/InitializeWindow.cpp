@@ -64,11 +64,11 @@ String InitializeWindow::toString() const
     return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
-PassOwnPtr<InitializeWindow> InitializeWindow::createFromPage(const Page& page)
+std::unique_ptr<InitializeWindow> InitializeWindow::createFromPage(const Page& page)
 {
     int width = page.mainFrame().document()->domWindow()->outerWidth();
     int height = page.mainFrame().document()->domWindow()->outerHeight();
-    return adoptPtr(new InitializeWindow(width, height));
+    return std::make_unique<InitializeWindow>(width, height);
 }
 
 void InputCoder<InitializeWindow>::encode(EncoderContext& encoder, const InitializeWindow& input)
@@ -77,7 +77,7 @@ void InputCoder<InitializeWindow>::encode(EncoderContext& encoder, const Initial
     encoder.put("height", input.height());
 }
 
-bool InputCoder<InitializeWindow>::decode(DecoderContext& decoder, OwnPtr<InitializeWindow>& input)
+bool InputCoder<InitializeWindow>::decode(DecoderContext& decoder, std::unique_ptr<InitializeWindow>& input)
 {
     int width;
     if (!decoder.get("width", width))
@@ -87,7 +87,7 @@ bool InputCoder<InitializeWindow>::decode(DecoderContext& decoder, OwnPtr<Initia
     if (!decoder.get("height", height))
         return false;
 
-    input = adoptPtr(new InitializeWindow(width, height));
+    input = std::make_unique<InitializeWindow>(width, height);
     return true;
 }
 

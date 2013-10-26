@@ -65,12 +65,12 @@ private:
 
 template<> struct InputCoder<PlatformWheelEvent> {
     static void encode(EncoderContext& encoder, const PlatformWheelEvent& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<PlatformWheelEvent>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<PlatformWheelEvent>& input);
 };
 
 template<> struct InputCoder<HandleWheelEvent> {
     static void encode(EncoderContext& encoder, const HandleWheelEvent& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<HandleWheelEvent>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleWheelEvent>& input);
 };
 
 } //namespace WebCore

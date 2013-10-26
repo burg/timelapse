@@ -38,7 +38,6 @@
 #include "DecoderContext.h"
 #include "EncoderContext.h"
 #include "ReplayInputTypes.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
 
@@ -55,9 +54,9 @@ void InputCoder<BeginSentinel>::encode(EncoderContext&, const BeginSentinel&)
 {
 }
 
-bool InputCoder<BeginSentinel>::decode(DecoderContext&, OwnPtr<BeginSentinel>& input)
+bool InputCoder<BeginSentinel>::decode(DecoderContext&, std::unique_ptr<BeginSentinel>& input)
 {
-    input = adoptPtr(new BeginSentinel());
+    input = std::make_unique<BeginSentinel>();
     return true;
 }
 
@@ -74,9 +73,9 @@ void InputCoder<EndSentinel>::encode(EncoderContext&, const EndSentinel&)
 {
 }
 
-bool InputCoder<EndSentinel>::decode(DecoderContext&, OwnPtr<EndSentinel>& input)
+bool InputCoder<EndSentinel>::decode(DecoderContext&, std::unique_ptr<EndSentinel>& input)
 {
-    input = adoptPtr(new EndSentinel());
+    input = std::make_unique<EndSentinel>();
     return true;
 }
 

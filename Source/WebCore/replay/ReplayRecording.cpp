@@ -49,7 +49,7 @@ PassRefPtr<ReplayRecording> ReplayRecording::create(int uid)
 }
 
 ReplayRecording::ReplayRecording(int uid)
-: m_inputStorage(InputStorage::create())
+: m_inputStorage(std::make_unique<InputStorage>())
 , m_uid(uid)
 , m_canCapture(true)
 , m_timestamp(WTF::currentTimeMS()) { }
@@ -57,21 +57,21 @@ ReplayRecording::ReplayRecording(int uid)
 ReplayRecording::~ReplayRecording()
 {}
 
-PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page& page)
+std::unique_ptr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page& page)
 {
     ASSERT(m_canCapture);
     m_canCapture = false;
-    return CaptureInputIterator::create(m_inputStorage.get(), &page);
+    return std::make_unique<CaptureInputIterator>(m_inputStorage.get(), &page);
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page& page, EventLoopInputDispatcherClient* client)
+std::unique_ptr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page& page, EventLoopInputDispatcherClient* client)
 {
-    return ReplayInputIterator::create(m_inputStorage.get(), &page, client);
+    return std::make_unique<ReplayInputIterator>(m_inputStorage.get(), &page, client);
 }
 
-PassOwnPtr<FunctorInputIterator> ReplayRecording::createFunctorIterator()
+std::unique_ptr<FunctorInputIterator> ReplayRecording::createFunctorIterator()
 {
-    return FunctorInputIterator::create(m_inputStorage.get());
+    return std::make_unique<FunctorInputIterator>(m_inputStorage.get());
 }
 
 class CountFunctor {

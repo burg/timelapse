@@ -65,7 +65,7 @@ public:
 
 template<> struct InputCoder<HandleMouseMove> {
     static void encode(EncoderContext& encoder, const HandleMouseMove& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<HandleMouseMove>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleMouseMove>& input);
 };
 
 } //namespace WebCore

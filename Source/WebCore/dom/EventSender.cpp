@@ -32,7 +32,6 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "CaptureInputIterator.h"
-#include "InputIterator.h"
 #include "SendPendingEvents.h"
 #endif
 
@@ -146,13 +145,13 @@ bool EventSender::hasPendingEventsForSender(const EventSenderClient* sender) con
 void EventSender::timerFired(Timer<EventSender>*)
 {
 #if ENABLE(WEB_REPLAY)
-    InputIterator* iterator = m_document.inputIterator();
-    ASSERT(!iterator || !iterator->isReplaying());
-    if (iterator && iterator->isCapturing()) {
+    InputIterator* it = m_document.inputIterator();
+    ASSERT(!it || !it->isReplaying());
+    if (it && it->isCapturing()) {
         int frameIndex = frameIndexFromDocument(&m_document);
-        iterator->storeInput(adoptPtr(new SendPendingEvents(frameIndex)));
+        it->storeInput(std::make_unique<SendPendingEvents>(frameIndex));
     }
-    EventLoopInputExtent extent(iterator);
+    EventLoopInputExtent extent(it);
 #endif
     m_timer.stop();
     dispatchAllPendingEvents();

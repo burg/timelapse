@@ -35,8 +35,6 @@
 #if ENABLE(WEB_REPLAY)
 
 #include <wtf/Noncopyable.h>
-#include <wtf/OwnPtr.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/text/AtomicString.h>
@@ -64,16 +62,16 @@ struct ReplayErrorData {
 class ReplayInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(ReplayInputIterator);
 public:
-    static PassOwnPtr<ReplayInputIterator> create(InputStorage*, Page*, EventLoopInputDispatcherClient*);
+    ReplayInputIterator(InputStorage*, Page*, EventLoopInputDispatcherClient*);
     virtual ~ReplayInputIterator();
 
-    // InputIterator API
+    // InputIterator
     virtual bool isCapturing() const { return false; }
     virtual bool isReplaying() const { return m_isActive; }
 
     virtual void incrementExecutionTicks() OVERRIDE;
 
-    virtual void storeInput(PassOwnPtr<NondeterministicInput>);
+    virtual void storeInput(std::unique_ptr<NondeterministicInput>);
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
@@ -87,12 +85,10 @@ public:
     void clearError() { m_errorData.error = NoReplayError; }
 
 private:
-    ReplayInputIterator(InputStorage*, Page*, EventLoopInputDispatcherClient*);
-
     InputStorage* m_storage;
 
     bool m_isActive;
-    const OwnPtr<EventLoopInputDispatcher> m_dispatcher;
+    std::unique_ptr<EventLoopInputDispatcher> m_dispatcher;
     ReplayErrorData m_errorData;
     Vector<size_t> m_positions;
 };

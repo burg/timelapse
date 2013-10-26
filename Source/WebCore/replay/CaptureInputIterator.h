@@ -58,19 +58,19 @@ class CaptureInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(CaptureInputIterator);
     friend class EventLoopInputExtent;
 public:
-    static PassOwnPtr<CaptureInputIterator> create(InputStorage*, Page*);
+    CaptureInputIterator(InputStorage*, Page*);
     virtual ~CaptureInputIterator();
 
-    // InputIterator API
+    // InputIterator
     virtual bool isCapturing() const { return m_isActive; }
     virtual bool isReplaying() const { return false; }
     virtual void incrementExecutionTicks() OVERRIDE;
 
-    virtual void storeInput(PassOwnPtr<NondeterministicInput>);
+    virtual void storeInput(std::unique_ptr<NondeterministicInput>);
     virtual NondeterministicInput* loadInput(NondeterministicInput::QueueType, const AtomicString&);
     virtual NondeterministicInput* uncheckedLoadInput(NondeterministicInput::QueueType);
 
-    //used for temporary deactivation; e.g. when injected scripts are evaluated.
+    // Used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
 
 protected:
@@ -78,7 +78,6 @@ protected:
     bool withinInputExtent() const { return m_withinInputExtent; }
 
 private:
-    CaptureInputIterator(InputStorage*, Page*);
     void finalizePreviousInput();
 
     InputStorage* m_storage;

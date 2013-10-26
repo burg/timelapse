@@ -35,9 +35,9 @@
 
 #include "SerializationMethods.h"
 
-#include "HTTPHeaderMap.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
+#include "HTTPHeaderMap.h"
 #include "ResourceError.h"
 #include "ResourceLoadTiming.h"
 #include "ResourceRequest.h"
@@ -54,7 +54,7 @@ void InputCoder<Vector<String>>::encode(EncoderContext& encoder, const Vector<St
         encoder.append(input[i]);
 }
 
-bool InputCoder<Vector<String>>::decode(DecoderContext&, OwnPtr<Vector<String>>&)
+bool InputCoder<Vector<String>>::decode(DecoderContext&, std::unique_ptr<Vector<String>>&)
 {
     // TODO: implement
     return false;
@@ -63,7 +63,7 @@ bool InputCoder<Vector<String>>::decode(DecoderContext&, OwnPtr<Vector<String>>&
 void InputCoder<SharedBuffer>::encode(EncoderContext& encoder, const SharedBuffer& buffer)
 {
     // TODO: this should store a base64-encoded string, rather than bytes as chars.
-    OwnPtr<EncoderContext> encodedData = encoder.createList();
+    std::unique_ptr<EncoderContext> encodedData = encoder.createList();
     const char* segment;
     unsigned pos = 0;
     while (unsigned length = buffer.getSomeData(segment, pos)) {
@@ -74,7 +74,7 @@ void InputCoder<SharedBuffer>::encode(EncoderContext& encoder, const SharedBuffe
     encoder.put("data", *encodedData);
 }
 
-bool InputCoder<SharedBuffer>::decode(DecoderContext&, OwnPtr<SharedBuffer>&)
+bool InputCoder<SharedBuffer>::decode(DecoderContext&, std::unique_ptr<SharedBuffer>&)
 {
     // TODO: implement
     return false;
@@ -88,7 +88,7 @@ void InputCoder<HTTPHeaderMap>::encode(EncoderContext& encoder, const HTTPHeader
         encoder.put(it->key.string(), it->value);
 }
 
-bool InputCoder<HTTPHeaderMap>::decode(DecoderContext&, OwnPtr<HTTPHeaderMap>&)
+bool InputCoder<HTTPHeaderMap>::decode(DecoderContext&, std::unique_ptr<HTTPHeaderMap>&)
 {
     // TODO: implement
     return false;
@@ -119,7 +119,7 @@ void InputCoder<FormDataElement>::encode(EncoderContext& encoder, const FormData
     }
 }
 
-bool InputCoder<FormDataElement>::decode(DecoderContext&, OwnPtr<FormDataElement>&)
+bool InputCoder<FormDataElement>::decode(DecoderContext&, std::unique_ptr<FormDataElement>&)
 {
     // TODO: implement
     return false;
@@ -134,17 +134,17 @@ void InputCoder<FormData>::encode(EncoderContext& encoder, const FormData& data)
     encoder.put("identifier", data.identifier());
     encoder.putBytes("boundary", data.boundary().data(), data.boundary().size());
 
-    OwnPtr<EncoderContext> encodedElements = encoder.createList();
+    std::unique_ptr<EncoderContext> encodedElements = encoder.createList();
     const Vector<FormDataElement> elems = data.elements();
     for (size_t i = 0; i < elems.size(); i++) {
-        OwnPtr<EncoderContext> encodedElement = encoder.createMap();
+        std::unique_ptr<EncoderContext> encodedElement = encoder.createMap();
         InputCoder<FormDataElement>::encode(*encodedElement, elems[i]);
         encodedElements->append(*encodedElement);
     }
     encoder.put("elements", *encodedElements);
 }
 
-bool InputCoder<FormData>::decode(DecoderContext&, OwnPtr<FormData>&)
+bool InputCoder<FormData>::decode(DecoderContext&, std::unique_ptr<FormData>&)
 {
     // TODO: implement
     return false;
@@ -152,8 +152,8 @@ bool InputCoder<FormData>::decode(DecoderContext&, OwnPtr<FormData>&)
 
 void InputCoder<SubstituteData>::encode(EncoderContext& encoder, const SubstituteData& data)
 {
-    OwnPtr<EncoderContext> encodedBuffer = encoder.createMap();
-    InputCoder<SharedBuffer>::encode(*encodedBuffer, *data.content());   
+    std::unique_ptr<EncoderContext> encodedBuffer = encoder.createMap();
+    InputCoder<SharedBuffer>::encode(*encodedBuffer, *data.content());
     encoder.put("content", *encodedBuffer);
 
     encoder.put("mimeType", data.mimeType());
@@ -163,7 +163,7 @@ void InputCoder<SubstituteData>::encode(EncoderContext& encoder, const Substitut
     encoder.put("shouldRevealToSessionHistory", data.shouldRevealToSessionHistory());
 }
 
-bool InputCoder<SubstituteData>::decode(DecoderContext&, OwnPtr<SubstituteData>&)
+bool InputCoder<SubstituteData>::decode(DecoderContext&, std::unique_ptr<SubstituteData>&)
 {
     // TODO: implement
     return false;
@@ -185,7 +185,7 @@ void InputCoder<ResourceLoadTiming>::encode(EncoderContext& encoder, const Resou
     encoder.put("sslEnd", data.sslEnd);
 }
 
-bool InputCoder<ResourceLoadTiming>::decode(DecoderContext&, OwnPtr<ResourceLoadTiming>&)
+bool InputCoder<ResourceLoadTiming>::decode(DecoderContext&, std::unique_ptr<ResourceLoadTiming>&)
 {
     // TODO: implement
     return false;
@@ -199,7 +199,7 @@ void InputCoder<ResourceError>::encode(EncoderContext& encoder, const ResourceEr
     encoder.put("localizedDescription", error.localizedDescription());
 }
 
-bool InputCoder<ResourceError>::decode(DecoderContext&, OwnPtr<ResourceError>&)
+bool InputCoder<ResourceError>::decode(DecoderContext&, std::unique_ptr<ResourceError>&)
 {
     // TODO: implement
     return false;
@@ -213,17 +213,17 @@ void InputCoder<ResourceRequest>::encode(EncoderContext& encoder, const Resource
     encoder.put("firstPartyForCookies", request.firstPartyForCookies().string());
     encoder.put("httpMethod", request.httpMethod());
 
-    OwnPtr<EncoderContext> encodedHeaders = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedHeaders = encoder.createMap();
     InputCoder<HTTPHeaderMap>::encode(*encodedHeaders, request.httpHeaderFields());
     encoder.put("httpHeaders", *encodedHeaders);
 
-    OwnPtr<EncoderContext> encodedFallbackArray = encoder.createList();
+    std::unique_ptr<EncoderContext> encodedFallbackArray = encoder.createList();
     InputCoder<Vector<String>>::encode(*encodedFallbackArray, request.responseContentDispositionEncodingFallbackArray());
     encoder.put("responseContentDispositionEncodingFallbackArray", *encodedFallbackArray);
 
     // Sometimes, there's no form data.
     if (FormData* body = request.httpBody()) {
-        OwnPtr<EncoderContext> encodedFormData = encoder.createMap();
+        std::unique_ptr<EncoderContext> encodedFormData = encoder.createMap();
         InputCoder<FormData>::encode(*encodedFormData, *body);
         encoder.put("httpBody", *encodedFormData);
     }
@@ -232,7 +232,7 @@ void InputCoder<ResourceRequest>::encode(EncoderContext& encoder, const Resource
     encoder.put("loadPriority", (uint64_t)request.priority());
 }
 
-bool InputCoder<ResourceRequest>::decode(DecoderContext&, OwnPtr<ResourceRequest>&)
+bool InputCoder<ResourceRequest>::decode(DecoderContext&, std::unique_ptr<ResourceRequest>&)
 {
     // TODO: implement
     return false;
@@ -248,20 +248,20 @@ void InputCoder<ResourceResponse>::encode(EncoderContext& encoder, const Resourc
     encoder.put("httpStatusCode", response.httpStatusCode());
     encoder.put("httpStatusText", response.httpStatusText());
 
-    OwnPtr<EncoderContext> encodedHeaders = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedHeaders = encoder.createMap();
     InputCoder<HTTPHeaderMap>::encode(*encodedHeaders, response.httpHeaderFields());
     encoder.put("httpHeaders", *encodedHeaders);
 
     encoder.put("lastModifiedDate", (uint64_t)response.lastModified());
 
     if (ResourceLoadTiming* data = response.resourceLoadTiming()) {
-        OwnPtr<EncoderContext> encodedLoadTimings = encoder.createMap();
+        std::unique_ptr<EncoderContext> encodedLoadTimings = encoder.createMap();
         InputCoder<ResourceLoadTiming>::encode(*encodedLoadTimings, *data);
         encoder.put("loadTiming", *encodedLoadTimings);
     }
 }
 
-bool InputCoder<ResourceResponse>::decode(DecoderContext&, OwnPtr<ResourceResponse>&)
+bool InputCoder<ResourceResponse>::decode(DecoderContext&, std::unique_ptr<ResourceResponse>&)
 {
     // TODO: implement
     return false;

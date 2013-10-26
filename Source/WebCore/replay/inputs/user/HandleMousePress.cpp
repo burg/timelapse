@@ -59,13 +59,13 @@ void InputCoder<HandleMousePress>::encode(EncoderContext& encoder, const HandleM
     InputCoder<PlatformMouseEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleMousePress>::decode(DecoderContext& decoder, OwnPtr<HandleMousePress>& input)
+bool InputCoder<HandleMousePress>::decode(DecoderContext& decoder, std::unique_ptr<HandleMousePress>& input)
 {
-    OwnPtr<PlatformMouseEvent> mouseEvent;
+    std::unique_ptr<PlatformMouseEvent> mouseEvent;
     if (!InputCoder<PlatformMouseEvent>::decode(decoder, mouseEvent))
         return false;
 
-    input = adoptPtr(new HandleMousePress(*mouseEvent));
+    input = std::make_unique<HandleMousePress>(*mouseEvent);
     return true;
 }
 

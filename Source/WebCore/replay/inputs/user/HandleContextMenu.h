@@ -64,7 +64,7 @@ private:
 
 template<> struct InputCoder<HandleContextMenu> {
     static void encode(EncoderContext& encoder, const HandleContextMenu& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<HandleContextMenu>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<HandleContextMenu>& input);
 };
 
 } //namespace WebCore

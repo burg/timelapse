@@ -56,10 +56,10 @@ ResourceWillSendRequest::ResourceWillSendRequest(int handleId, ResourceRequest& 
     , m_request(ResourceRequest::adopt(request.copyData()))
     , m_redirectResponse(ResourceResponse::adopt(redirectResponse.copyData())) {}
 
-ResourceWillSendRequest::ResourceWillSendRequest(int handleId, PassOwnPtr<ResourceRequest> request, PassOwnPtr<ResourceResponse> redirectResponse)
+ResourceWillSendRequest::ResourceWillSendRequest(int handleId, std::unique_ptr<ResourceRequest> request, std::unique_ptr<ResourceResponse> redirectResponse)
     : m_handleId(handleId)
-    , m_request(request)
-    , m_redirectResponse(redirectResponse) {}
+    , m_request(adoptPtr(request.release()))
+    , m_redirectResponse(adoptPtr(redirectResponse.release())) {}
 
 ResourceWillSendRequest::~ResourceWillSendRequest() {}
 
@@ -97,30 +97,30 @@ void InputCoder<ResourceWillSendRequest>::encode(EncoderContext& encoder, const 
 {
     encoder.put("handleId", input.handleId());
 
-    OwnPtr<EncoderContext> encodedRequest = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
     encoder.put("request", *encodedRequest);
 
-    OwnPtr<EncoderContext> encodedResponse = encoder.createMap();
+    std::unique_ptr<EncoderContext> encodedResponse = encoder.createMap();
     InputCoder<ResourceResponse>::encode(*encodedResponse, input.redirectResponse());
     encoder.put("redirectResponse", *encodedResponse);
 }
 
-bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, OwnPtr<ResourceWillSendRequest>& input)
+bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, std::unique_ptr<ResourceWillSendRequest>& input)
 {
     int handleId;
     if (!decoder.get("handleId", handleId))
         return false;
 
-    OwnPtr<ResourceRequest> request;
+    std::unique_ptr<ResourceRequest> request;
     if (!InputCoder<ResourceRequest>::decode(decoder, request))
         return false;
 
-    OwnPtr<ResourceResponse> redirectResponse;
+    std::unique_ptr<ResourceResponse> redirectResponse;
     if (!InputCoder<ResourceResponse>::decode(decoder, redirectResponse))
         return false;
 
-    input = adoptPtr(new ResourceWillSendRequest(handleId, request.release(), redirectResponse.release()));
+    input = std::make_unique<ResourceWillSendRequest>(handleId, std::move(request), std::move(redirectResponse));
     return true;
 }
 

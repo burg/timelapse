@@ -35,9 +35,9 @@
 #include "ReloadFrame.h"
 
 #include "Document.h"
-#include "Frame.h"
 #include "DecoderContext.h"
 #include "EncoderContext.h"
+#include "Frame.h"
 #include "NavigationProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
@@ -76,7 +76,7 @@ void InputCoder<ReloadFrame>::encode(EncoderContext& encoder, const ReloadFrame&
     encoder.put("endToEndReload", input.endToEndReload());
 }
 
-bool InputCoder<ReloadFrame>::decode(DecoderContext& decoder, OwnPtr<ReloadFrame>& input)
+bool InputCoder<ReloadFrame>::decode(DecoderContext& decoder, std::unique_ptr<ReloadFrame>& input)
 {
     int frameIndex;
     if (!decoder.get("frameIndex", frameIndex))
@@ -86,7 +86,7 @@ bool InputCoder<ReloadFrame>::decode(DecoderContext& decoder, OwnPtr<ReloadFrame
     if (!decoder.get("endToEndReload", endToEndReload))
         return false;
 
-    input = adoptPtr(new ReloadFrame(endToEndReload, frameIndex));
+    input = std::make_unique<ReloadFrame>(endToEndReload, frameIndex);
     return true;
 }
 

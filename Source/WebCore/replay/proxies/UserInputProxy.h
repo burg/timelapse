@@ -34,8 +34,6 @@
 
 #include "ReplayProxy.h"
 #include "ScrollTypes.h"
-#include <wtf/RefPtr.h>
-#include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
 #if ENABLE(PAGE_VISIBILITY_API)
@@ -50,9 +48,7 @@ class PlatformMouseEvent;
 class PlatformWheelEvent;
 
 class UserInputProxy : public ReplayProxy {
-    WTF_MAKE_NONCOPYABLE(UserInputProxy);
-    WTF_MAKE_FAST_ALLOCATED;
-
+    WTF_MAKE_NONCOPYABLE(UserInputProxy); WTF_MAKE_FAST_ALLOCATED;
 public:
     UserInputProxy(Page&);
     virtual ~UserInputProxy() {}

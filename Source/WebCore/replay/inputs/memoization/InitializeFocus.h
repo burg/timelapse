@@ -64,7 +64,7 @@ public:
     bool isFocused() const { return m_focus; }
     bool isActive() const { return m_active; }
     int frameIndex() const { return m_frameIndex; }
-    static PassOwnPtr<InitializeFocus> createFromPage(const Page&);
+    static std::unique_ptr<InitializeFocus> createFromPage(const Page&);
 
 private:
     bool m_focus;
@@ -74,7 +74,7 @@ private:
 
 template<> struct InputCoder<InitializeFocus> {
     static void encode(EncoderContext& encoder, const InitializeFocus& input);
-    static bool decode(DecoderContext& decoder, OwnPtr<InitializeFocus>& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<InitializeFocus>& input);
 };
 
 } //namespace WebCore

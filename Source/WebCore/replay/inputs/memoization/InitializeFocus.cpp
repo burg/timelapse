@@ -70,12 +70,12 @@ String InitializeFocus::toString() const
                       "; frameIndex=", String::number(m_frameIndex), ")");
 }
 
-PassOwnPtr<InitializeFocus> InitializeFocus::createFromPage(const Page& page)
+std::unique_ptr<InitializeFocus> InitializeFocus::createFromPage(const Page& page)
 {
     int focusedFrameIndex = frameIndexFromDocument(page.focusController().focusedFrame()->document());
     bool isFocused = page.focusController().isFocused();
     bool isActive = page.focusController().isActive();
-    return adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));
+    return std::make_unique<InitializeFocus>(focusedFrameIndex, isFocused, isActive);
 }
 
 void InputCoder<InitializeFocus>::encode(EncoderContext& encoder, const InitializeFocus& input)
@@ -85,7 +85,7 @@ void InputCoder<InitializeFocus>::encode(EncoderContext& encoder, const Initiali
     encoder.put("frameIndex", input.frameIndex());
 }
 
-bool InputCoder<InitializeFocus>::decode(DecoderContext& decoder, OwnPtr<InitializeFocus>& input)
+bool InputCoder<InitializeFocus>::decode(DecoderContext& decoder, std::unique_ptr<InitializeFocus>& input)
 {
     bool isActive;
     if (!decoder.get("active", isActive))
@@ -99,7 +99,7 @@ bool InputCoder<InitializeFocus>::decode(DecoderContext& decoder, OwnPtr<Initial
     if (!decoder.get("frameIndex", focusedFrameIndex))
         return false;
 
-    input = adoptPtr(new InitializeFocus(focusedFrameIndex, isFocused, isActive));
+    input = std::make_unique<InitializeFocus>(focusedFrameIndex, isFocused, isActive);
     return true;
 }
 

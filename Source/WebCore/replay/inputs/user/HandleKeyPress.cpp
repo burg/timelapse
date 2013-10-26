@@ -64,6 +64,16 @@ static String keyTypeToString(PlatformKeyboardEvent::Type ty)
     }
 }
 
+HandleKeyPress::HandleKeyPress(const PlatformKeyboardEvent& event)
+: m_platformEvent(event) {}
+
+HandleKeyPress::HandleKeyPress(std::unique_ptr<PlatformKeyboardEvent> event)
+: m_platformEvent(*event) {}
+
+HandleKeyPress::~HandleKeyPress()
+{
+}
+
 const AtomicString& HandleKeyPress::type() const
 {
     return inputTypes().HandleKeyPress;
@@ -127,7 +137,7 @@ void InputCoder<PlatformKeyboardEvent>::encode(EncoderContext& encoder, const Pl
     encoder.put("systemKey", input.isSystemKey());
 }
 
-bool InputCoder<PlatformKeyboardEvent>::decode(DecoderContext& decoder, OwnPtr<PlatformKeyboardEvent>& input)
+bool InputCoder<PlatformKeyboardEvent>::decode(DecoderContext& decoder, std::unique_ptr<PlatformKeyboardEvent>& input)
 {
     double timestamp;
     if (!decoder.get("timestamp", timestamp))
@@ -177,7 +187,7 @@ bool InputCoder<PlatformKeyboardEvent>::decode(DecoderContext& decoder, OwnPtr<P
     if (!decoder.get("systemKey", isSystemKey))
         return false;
 
-    input = adoptPtr(new PlatformKeyboardEvent((PlatformKeyboardEvent::Type)type, text, unmodifiedText, keyIdentifier, windowsVirtualKeyCode, nativeVirtualKeyCode, macCharCode, isAutoRepeat, isKeypad, isSystemKey, (PlatformEvent::Modifiers)modifiers, timestamp));
+    input = std::make_unique<PlatformKeyboardEvent>((PlatformKeyboardEvent::Type)type, text, unmodifiedText, keyIdentifier, windowsVirtualKeyCode, nativeVirtualKeyCode, macCharCode, isAutoRepeat, isKeypad, isSystemKey, (PlatformEvent::Modifiers)modifiers, timestamp);
     return true;
 }
 
@@ -186,13 +196,13 @@ void InputCoder<HandleKeyPress>::encode(EncoderContext& encoder, const HandleKey
     InputCoder<PlatformKeyboardEvent>::encode(encoder, input.platformEvent());
 }
 
-bool InputCoder<HandleKeyPress>::decode(DecoderContext& decoder, OwnPtr<HandleKeyPress>& input)
+bool InputCoder<HandleKeyPress>::decode(DecoderContext& decoder, std::unique_ptr<HandleKeyPress>& input)
 {
-    OwnPtr<PlatformKeyboardEvent> keyEvent;
+    std::unique_ptr<PlatformKeyboardEvent> keyEvent;
     if (!InputCoder<PlatformKeyboardEvent>::decode(decoder, keyEvent))
         return false;
 
-    input = adoptPtr(new HandleKeyPress(*keyEvent));
+    input = std::make_unique<HandleKeyPress>(*keyEvent);
     return true;
 }
 

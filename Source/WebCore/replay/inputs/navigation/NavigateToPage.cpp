@@ -117,7 +117,7 @@ void InputCoder<NavigateToPage>::encode(EncoderContext& encoder, const NavigateT
     encoder.put("referrer", input.referrer());
 }
 
-bool InputCoder<NavigateToPage>::decode(DecoderContext& decoder, OwnPtr<NavigateToPage>& input)
+bool InputCoder<NavigateToPage>::decode(DecoderContext& decoder, std::unique_ptr<NavigateToPage>& input)
 {
     RefPtr<SecurityOrigin> origin;
     if (!InputCoder<SecurityOrigin>::decode(decoder, origin))
@@ -131,7 +131,7 @@ bool InputCoder<NavigateToPage>::decode(DecoderContext& decoder, OwnPtr<Navigate
     if (!decoder.get("referrer", referrer))
         return false;
 
-    input = adoptPtr(new NavigateToPage(origin.release(), url, referrer));
+    input = std::make_unique<NavigateToPage>(origin.release(), url, referrer);
     return true;
 }
 
