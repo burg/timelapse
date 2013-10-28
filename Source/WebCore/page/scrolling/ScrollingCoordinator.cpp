@@ -82,6 +82,9 @@ ScrollingCoordinator::ScrollingCoordinator(Page* page)
     , m_scheduledUpdateIsProgrammaticScroll(false)
     , m_scheduledScrollingLayerPositionAction(SyncScrollingLayerPosition)
     , m_forceMainThreadScrollLayerPositionUpdates(false)
+#if ENABLE(WEB_REPLAY)
+    , m_forceDeterministicScrolling(false)
+#endif
 {
 }
 
@@ -282,7 +285,7 @@ void ScrollingCoordinator::scheduleUpdateMainFrameScrollPosition(const IntPoint&
             m_scheduledUpdateScrollPosition = scrollPosition;
             return;
         }
-    
+
         // If the parameters don't match what was previosly scheduled, dispatch immediately.
         m_updateMainFrameScrollPositionTimer.stop();
         updateMainFrameScrollPosition(m_scheduledUpdateScrollPosition, m_scheduledUpdateIsProgrammaticScroll, m_scheduledScrollingLayerPositionAction);

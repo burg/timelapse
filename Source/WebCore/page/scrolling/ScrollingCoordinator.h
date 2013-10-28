@@ -78,7 +78,12 @@ public:
 
 #if ENABLE(THREADED_SCROLLING)
     virtual ScrollingTree* scrollingTree() const { return 0; }
+
+#if ENABLE(WEB_REPLAY)
+    bool forceDeterministicScrolling() const { return m_forceDeterministicScrolling; }
+    void setForceDeterministicScrolling(bool state) { m_forceDeterministicScrolling = state; }
 #endif
+#endif // ENABLE(THREADED_SCROLLING)
 
     // Return whether this scrolling coordinator handles scrolling for the given frame view.
     bool coordinatesScrollingForFrameView(FrameView*) const;
@@ -86,7 +91,7 @@ public:
     // Should be called whenever the given frame view has been laid out.
     virtual void frameViewLayoutUpdated(FrameView*) { }
 
-    // Should be called whenever a wheel event handler is added or removed in the 
+    // Should be called whenever a wheel event handler is added or removed in the
     // frame view's underlying document.
     void frameViewWheelEventHandlerCountChanged(FrameView*);
 
@@ -111,7 +116,7 @@ public:
     // Force all scroll layer position updates to happen on the main thread.
     void setForceMainThreadScrollLayerPositionUpdates(bool);
 
-    // These virtual functions are currently unique to the threaded scrolling architecture. 
+    // These virtual functions are currently unique to the threaded scrolling architecture.
     // Their meaningful implementations are in ScrollingCoordinatorMac.
     virtual void commitTreeStateIfNeeded() { }
     virtual bool requestScrollPositionUpdate(FrameView*, const IntPoint&) { return false; }
@@ -177,7 +182,7 @@ private:
 
     virtual bool hasVisibleSlowRepaintViewportConstrainedObjects(FrameView*) const;
     void updateShouldUpdateScrollLayerPositionOnMainThread();
-    
+
     void updateMainFrameScrollPositionTimerFired(Timer<ScrollingCoordinator>*);
 
     Timer<ScrollingCoordinator> m_updateMainFrameScrollPositionTimer;
@@ -186,6 +191,7 @@ private:
     SetOrSyncScrollingLayerPosition m_scheduledScrollingLayerPositionAction;
 
     bool m_forceMainThreadScrollLayerPositionUpdates;
+    bool m_forceDeterministicScrolling;
 };
 
 } // namespace WebCore

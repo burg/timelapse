@@ -77,6 +77,11 @@ ScrollingTree::EventResult ScrollingTree::tryToHandleWheelEvent(const PlatformWh
         if (m_hasWheelEventHandlers)
             return SendToMainThread;
 
+#if ENABLE(WEB_REPLAY)
+        if (m_scrollingCoordinator && m_scrollingCoordinator->forceDeterministicScrolling())
+            return SendToMainThread;
+#endif
+
         if (!m_nonFastScrollableRegion.isEmpty()) {
             // FIXME: This is not correct for non-default scroll origins.
             IntPoint position = wheelEvent.position();

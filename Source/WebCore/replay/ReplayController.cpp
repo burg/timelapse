@@ -58,6 +58,7 @@
 #include "ReplayInputIterator.h"
 #include "ReplayRecording.h"
 #include "ScriptController.h"
+#include "ScrollingCoordinator.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
 #include "URL.h"
@@ -118,6 +119,11 @@ void ReplayController::beginCapturing()
     m_activeIterator = m_loadedRecording->createCaptureIterator(m_page);
     changeProxyMode(ReplayProxy::Capturing);
 
+#if ENABLE(THREADED_SCROLLING)
+    if (ScrollingCoordinator* scrollingCoordinator = m_page.scrollingCoordinator())
+        scrollingCoordinator->setForceDeterministicScrolling(true);
+#endif
+
     InspectorInstrumentation::captureStarted(&m_page);
     // Combine the following inputs into a single extent, since they are synchronous.
     EventLoopInputExtent extent(m_activeIterator.get());
@@ -159,6 +165,11 @@ bool ReplayController::endCapturing()
     m_activeIterator->storeInput(std::make_unique<EnableCache>());
     m_activeIterator->storeInput(std::make_unique<EndSentinel>());
     m_activeIterator = nullptr;
+
+#if ENABLE(THREADED_SCROLLING)
+    if (ScrollingCoordinator* scrollingCoordinator = m_page.scrollingCoordinator())
+        scrollingCoordinator->setForceDeterministicScrolling(false);
+#endif
 
     // Hold on to a reference so unloading the recording doesn't deallocate it.
     RefPtr<ReplayRecording> recording = m_loadedRecording;
