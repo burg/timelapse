@@ -132,6 +132,10 @@
 #include "Archive.h"
 #endif
 
+#if ENABLE(WEB_REPLAY)
+#include "ReplayController.h"
+#include <wtf/replay/InputIterator.h>
+#endif
 
 namespace WebCore {
 
@@ -2754,11 +2758,19 @@ bool FrameLoader::handleBeforeUnloadEvent(Chrome& chrome, FrameLoader* frameLoad
     if (!document->body())
         return true;
 
+    Page* page = m_frame.page();
+#if ENABLE(WEB_REPLAY)
+    // The following will ignore beforeunload events if the page is being
+    // captured or replayed, but not this frame. This situation occurs if the
+    // initial navigation happens when the old frame has a beforeunload handler.
+    if (page->replayController().activeIterator() && !document->inputIterator())
+        return true;
+#endif
+
     RefPtr<BeforeUnloadEvent> beforeUnloadEvent = BeforeUnloadEvent::create();
     m_pageDismissalEventBeingDispatched = BeforeUnloadDismissal;
 
     // We store the frame's page in a local variable because the frame might get detached inside dispatchEvent.
-    Page* page = m_frame.page();
     page->incrementFrameHandlingBeforeUnloadEventCount();
     domWindow->dispatchEvent(beforeUnloadEvent.get(), domWindow->document());
     page->decrementFrameHandlingBeforeUnloadEventCount();
