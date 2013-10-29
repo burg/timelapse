@@ -49,6 +49,35 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 		return this._element;
     },
 
+    createCell: function(columnIdentifier)
+    {
+		var cell = document.createElement("td");
+        cell.className = columnIdentifier + "-column";
+
+        var alignment = this.dataGrid.aligned[columnIdentifier];
+        if (alignment)
+            cell.classList.add(alignment);
+
+        var group = this.dataGrid.groups[columnIdentifier];
+        if (group)
+            cell.classList.add("column-group-" + group);
+
+        var div = document.createElement("div");
+        div.gridNode = this;
+        var content = this.createCellContent(columnIdentifier, cell);
+        div.appendChild(content instanceof Node ? content : document.createTextNode(content));
+        cell.appendChild(div);
+
+        if (columnIdentifier === this.dataGrid.disclosureColumnIdentifier) {
+            cell.classList.add("disclosure");
+            if (this.leftPadding)
+                cell.style.setProperty("padding-left", this.leftPadding + "px");
+        }
+
+        return cell;
+
+    },
+
     updateCellsFromFrame: function(frame, probeGroup)
     {
 		var probes = probeGroup.probes;
@@ -63,11 +92,6 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
     updateCellsForSeparator: function(frame, probeGroup)
     {
         this._element.classList.add(WebInspector.ProbeGroupDataGridNode.SeparatorStyleClassName);
-    },
-
-    setUpReplay: function()
-    {
-        this._element.addEventListener("dblclick", this._replayToNode.bind(this));
     },
 
     // Private
@@ -97,10 +121,5 @@ WebInspector.ProbeGroupDataGridNode.prototype = {
 			}
 		}
 		return cellData;
-    },
-
-    _replayToNode: function(event)
-    {
-		WebInspector.replayManager.replayToMarkIndexSoon(this.frame.markIndex, false, WebInspector.ReplayManager.ReplaySpeed.Normal);
     },
 };
