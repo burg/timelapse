@@ -38,7 +38,6 @@
 #include "DecoderContext.h"
 #include "ReplayInputTypes.h"
 #include "SerializedScriptValue.h"
-#include <runtime/JSObject.h>
 #include <wtf/text/StringConcatenate.h>
 
 namespace WebCore {
@@ -161,7 +160,7 @@ template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(DecoderCon
     return true;
 }
 
-// AOEU: encode/decode for exceptionCode version.
+// FIXME: implement encode/decode for exceptionCode version.
 
 } //namespace WebCore
 

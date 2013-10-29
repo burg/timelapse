@@ -57,6 +57,11 @@
 #include "ColorChooser.h"
 #endif
 
+#if ENABLE(WEB_REPLAY)
+#include "AutoMemoized.h"
+#include <wtf/replay/InputIterator.h>
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -289,7 +294,19 @@ bool Chrome::runBeforeUnloadConfirmPanel(const String& message, Frame* frame)
     PageGroupLoadDeferrer deferrer(m_page, true);
 
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willRunJavaScriptDialog(&m_page, message);
-    bool ok = m_client.runBeforeUnloadConfirmPanel(message, frame);
+    bool ok = true;
+#if ENABLE(WEB_REPLAY)
+    InputIterator* it = frame->document()->inputIterator();
+    if (it && it->isCapturing()) {
+        ok = m_client.runBeforeUnloadConfirmPanel(message, frame);
+        it->storeInput(std::make_unique<AutoMemoized<bool>>("beforeUnloadConfirmPanelResult", ok));
+    } else if (it && it->isReplaying()) {
+        AutoMemoized<bool>* input = static_cast<AutoMemoized<bool>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));
+        if (input && input->attributeName() == "beforeUnloadConfirmPanelResult")
+            ok = input->result();
+    } else
+#endif
+    ok = m_client.runBeforeUnloadConfirmPanel(message, frame);
     InspectorInstrumentation::didRunJavaScriptDialog(cookie);
     return ok;
 }
