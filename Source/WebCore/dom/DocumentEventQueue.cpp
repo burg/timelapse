@@ -57,7 +57,7 @@ DocumentEventQueue::~DocumentEventQueue()
 
 bool DocumentEventQueue::hasPendingActivity() const
 {
-    return m_document.eventSender().hasPendingEventsForSender(this);
+    return m_document.eventSender().hasPendingEventsForSender(this) || !m_queuedEvents.isEmpty();
 }
 
 void DocumentEventQueue::stop()
@@ -74,7 +74,8 @@ void DocumentEventQueue::suspend(ReasonForSuspension)
     ASSERT(!m_suspended);
     m_suspended = true;
 
-    m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
+    if (m_document.eventSender().hasPendingEventsForSender(this))
+        m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
 }
 
 void DocumentEventQueue::resume()
@@ -82,7 +83,7 @@ void DocumentEventQueue::resume()
     ASSERT(m_suspended);
     m_suspended = false;
 
-    if (!m_isClosed)
+    if (!m_isClosed && !m_queuedEvents.isEmpty())
         m_document.eventSender().dispatchEventSoon(this, emptyQueueEvent());
 }
 
@@ -130,7 +131,7 @@ void DocumentEventQueue::enqueueOrDispatchScrollEvent(Node& target)
 bool DocumentEventQueue::cancelEvent(Event& event)
 {
     bool found = m_queuedEvents.remove(&event);
-    if (m_queuedEvents.isEmpty())
+    if (m_document.eventSender().hasPendingEventsForSender(this) && m_queuedEvents.isEmpty())
         m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
     return found;
 }
@@ -139,7 +140,8 @@ void DocumentEventQueue::close()
 {
     m_isClosed = true;
     m_suspended = true;
-    m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
+    if (m_document.eventSender().hasPendingEventsForSender(this))
+        m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
     m_queuedEvents.clear();
 }
 
@@ -148,7 +150,6 @@ void DocumentEventQueue::flush()
     // If there is an event pending, cancel and fire pre-emptively.
     if (m_queuedEvents.isEmpty())
         return;
-
 
     if (m_document.eventSender().hasPendingEventsForSender(this))
         m_document.eventSender().cancelEventForSender(this, emptyQueueEvent());
