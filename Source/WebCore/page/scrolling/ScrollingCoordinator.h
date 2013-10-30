@@ -191,7 +191,9 @@ private:
     SetOrSyncScrollingLayerPosition m_scheduledScrollingLayerPositionAction;
 
     bool m_forceMainThreadScrollLayerPositionUpdates;
+#if ENABLE(WEB_REPLAY)
     bool m_forceDeterministicScrolling;
+#endif
 };
 
 } // namespace WebCore

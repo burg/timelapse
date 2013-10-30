@@ -141,7 +141,9 @@ const GlobalObjectMethodTable JSGlobalObject::s_globalObjectMethodTable = { &all
 
 JSGlobalObject::JSGlobalObject(VM& vm, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
     : Base(vm, structure, 0)
+#if ENABLE(WEB_REPLAY)
     , m_inputIterator(nullptr)
+#endif
     , m_masqueradesAsUndefinedWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
     , m_havingABadTimeWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
     , m_varInjectionWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
