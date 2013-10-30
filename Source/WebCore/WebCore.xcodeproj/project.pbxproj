@@ -5327,6 +5327,7 @@
 		C4C3312117D663F3008BDACF /* NavigateToPage.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311D17D663F3008BDACF /* NavigateToPage.h */; };
 		C4C3312217D663F3008BDACF /* ReloadFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */; };
 		C4C3312317D663F3008BDACF /* ReloadFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311F17D663F3008BDACF /* ReloadFrame.h */; };
+		C4D8039118208D85003B3050 /* AllReplayInputs.h in Headers */ = {isa = PBXBuildFile; fileRef = C4D8039018208D85003B3050 /* AllReplayInputs.h */; };
 		C4D9A13517ED4BB700675CA6 /* PageConsole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493717A432350054AC75 /* PageConsole.cpp */; };
 		C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4ECA671175FAD98005490E0 /* SentinelActions.cpp */; };
 		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -12391,6 +12392,7 @@
 		C4C3311D17D663F3008BDACF /* NavigateToPage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NavigateToPage.h; path = navigation/NavigateToPage.h; sourceTree = "<group>"; };
 		C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReloadFrame.cpp; path = navigation/ReloadFrame.cpp; sourceTree = "<group>"; };
 		C4C3311F17D663F3008BDACF /* ReloadFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReloadFrame.h; path = navigation/ReloadFrame.h; sourceTree = "<group>"; };
+		C4D8039018208D85003B3050 /* AllReplayInputs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AllReplayInputs.h; sourceTree = "<group>"; };
 		C4ECA671175FAD98005490E0 /* SentinelActions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SentinelActions.cpp; sourceTree = "<group>"; };
 		C4F4CA40175AC86B00F71FE1 /* InputCoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputCoder.h; sourceTree = "<group>"; };
 		C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DecoderContext.h; sourceTree = "<group>"; };
@@ -20248,6 +20250,7 @@
 				C481089517052FF100AB4BAA /* network */,
 				C4C3311B17D6534E008BDACF /* navigation */,
 				C48108AD17052FF100AB4BAA /* user */,
+				C4D8039018208D85003B3050 /* AllReplayInputs.h */,
 				C42BB776175FAA41008BF639 /* DisableCache.cpp */,
 				C481088917052FF100AB4BAA /* DisableCache.h */,
 				C42BB777175FAA41008BF639 /* EnableCache.cpp */,
@@ -23499,6 +23502,7 @@
 				1A494E350A12358B00FDAFC1 /* JSHTMLDocument.h in Headers */,
 				1A494BFB0A122F4400FDAFC1 /* JSHTMLElement.h in Headers */,
 				938E65F109F09840008A48EC /* JSHTMLElementWrapperFactory.h in Headers */,
+				C4D8039118208D85003B3050 /* AllReplayInputs.h in Headers */,
 				BC6D44ED0C07F2ED0072D2C9 /* JSHTMLEmbedElement.h in Headers */,
 				1AE2AA270A1CDAB400B42B25 /* JSHTMLFieldSetElement.h in Headers */,
 				1AE2AA290A1CDAB400B42B25 /* JSHTMLFontElement.h in Headers */,

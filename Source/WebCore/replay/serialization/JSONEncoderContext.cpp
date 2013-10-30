@@ -35,8 +35,10 @@
 
 #include "JSONEncoderContext.h"
 
+#include "AllReplayInputs.h"
 #include "FunctorInputIterator.h"
 #include "InspectorValues.h"
+#include "JavaScriptCoreInputCoders.h"
 #include "Logging.h"
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
@@ -44,40 +46,6 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/replay/InputIterator.h>
-
-#include "DisableCache.h"
-#include "DispatchFakeMouseMove.h"
-#include "EnableCache.h"
-#include "FocusSetActive.h"
-#include "FocusSetFocused.h"
-#include "HandleContextMenu.h"
-#include "HandleKeyPress.h"
-#include "HandleMousePress.h"
-#include "HandleMouseMove.h"
-#include "HandleMouseRelease.h"
-#include "HandleWheelEvent.h"
-#include "InitializeFocus.h"
-#include "InitializeWindow.h"
-#include "InterpretedKeyCommands.h"
-#include "JavaScriptCoreInputCoders.h"
-#include "NavigateToPage.h"
-#include "PlaybackError.h"
-#include "RanPendingScripts.h"
-#include "ResourceCannotShowURL.h"
-#include "ResourceDidFail.h"
-#include "ResourceDidFinishLoading.h"
-#include "ResourceDidReceiveData.h"
-#include "ResourceDidReceiveResponse.h"
-#include "ResourceDidSendData.h"
-#include "ResourceLoaderCreated.h"
-#include "ResourceLoaderDestroyed.h"
-#include "ResourceWasBlocked.h"
-#include "ResourceWillSendRequest.h"
-#include "ScrollPage.h"
-#include "SendResizeEvent.h"
-#include "SentinelActions.h"
-#include "TimerCreated.h"
-#include "TimerFired.h"
 
 static const char* queueTypeToString(NondeterministicInput::QueueType queue) {
     switch (queue) {
@@ -92,154 +60,32 @@ namespace WebCore {
 
 static bool dispatchTypeSpecificEncodeMethod(EncoderContext& encoder, const NondeterministicInput* input)
 {
-    DEFINE_STATIC_LOCAL(const AtomicString, getCurrentTimeType, ("GetCurrentTime", AtomicString::ConstructFromLiteral));
-    DEFINE_STATIC_LOCAL(const AtomicString, setRandomSeedType, ("SetRandomSeed", AtomicString::ConstructFromLiteral));
-
     const AtomicString& type = input->type();
 
-    if (type == inputTypes().BeginSentinel) {
-        InputCoder<BeginSentinel>::encode(encoder, *(static_cast<const BeginSentinel*>(input)));
-        return true;
-    }
-    if (type == inputTypes().DisableCache) {
-        InputCoder<DisableCache>::encode(encoder, *(static_cast<const DisableCache*>(input)));
-        return true;
-    }
-    if (type == inputTypes().DispatchFakeMouseMove) {
-        InputCoder<DispatchFakeMouseMove>::encode(encoder, *(static_cast<const DispatchFakeMouseMove*>(input)));
-        return true;
-    }
-    if (type == inputTypes().EnableCache) {
-        InputCoder<EnableCache>::encode(encoder, *(static_cast<const EnableCache*>(input)));
-        return true;
-    }
-    if (type == inputTypes().EndSentinel) {
-        InputCoder<EndSentinel>::encode(encoder, *(static_cast<const EndSentinel*>(input)));
-        return true;
-    }
-    if (type == inputTypes().FocusSetActive) {
-        InputCoder<FocusSetActive>::encode(encoder, *(static_cast<const FocusSetActive*>(input)));
-        return true;
-    }
-    if (type == inputTypes().FocusSetFocused) {
-        InputCoder<FocusSetFocused>::encode(encoder, *(static_cast<const FocusSetFocused*>(input)));
-        return true;
-    }
-    if (type == getCurrentTimeType) {
-        InputCoder<JSC::GetCurrentTime>::encode(encoder, *(static_cast<const JSC::GetCurrentTime*>(input)));
-        return true;
-    }
-    if (type == inputTypes().HandleContextMenu) {
-        InputCoder<HandleContextMenu>::encode(encoder, *(static_cast<const HandleContextMenu*>(input)));
-        return true;
-    }
-    if (type == inputTypes().HandleKeyPress) {
-        InputCoder<HandleKeyPress>::encode(encoder, *(static_cast<const HandleKeyPress*>(input)));
-        return true;
-    }
-    if (type == inputTypes().HandleMousePress) {
-        InputCoder<HandleMousePress>::encode(encoder, *(static_cast<const HandleMousePress*>(input)));
-        return true;
-    }
-    if (type == inputTypes().HandleMouseMove) {
-        InputCoder<HandleMouseMove>::encode(encoder, *(static_cast<const HandleMouseMove*>(input)));
-        return true;
-    }
-    if (type == inputTypes().HandleMouseRelease) {
-        InputCoder<HandleMouseRelease>::encode(encoder, *(static_cast<const HandleMouseRelease*>(input)));
-        return true;
-    }
-    if (type == inputTypes().HandleWheelEvent) {
-        InputCoder<HandleWheelEvent>::encode(encoder, *(static_cast<const HandleWheelEvent*>(input)));
-        return true;
-    }
-    if (type == inputTypes().InitializeFocus) {
-        InputCoder<InitializeFocus>::encode(encoder, *(static_cast<const InitializeFocus*>(input)));
-        return true;
-    }
-    if (type == inputTypes().InitializeWindow) {
-        InputCoder<InitializeWindow>::encode(encoder, *(static_cast<const InitializeWindow*>(input)));
-        return true;
-    }
+    #define INPUT_SPECIFIC_DISPATCH_CHECK(name) \
+    if (type == inputTypes().name) { \
+        InputCoder<name>::encode(encoder, *(static_cast<const name*>(input))); \
+        return true; \
+    } \
+
+    REPLAY_INPUT_TYPES_FOR_EACH(INPUT_SPECIFIC_DISPATCH_CHECK)
+
+    // We must hardcode these cases because they aren't macro-friendly.
+    // Make sure they match the special cases as defined in ReplayInputTypes.h.
+    INPUT_SPECIFIC_DISPATCH_CHECK(GetCurrentTime)
 #if PLATFORM(MAC)
-    if (type == inputTypes().InterpretedKeyCommands) {
-        InputCoder<InterpretedKeyCommands>::encode(encoder, *(static_cast<const InterpretedKeyCommands*>(input)));
-        return true;
-    }
-#endif // PLATFORM(MAC)
-    if (type == inputTypes().NavigateToPage) {
-        InputCoder<NavigateToPage>::encode(encoder, *(static_cast<const NavigateToPage*>(input)));
-        return true;
-    }
-    if (type == inputTypes().PlaybackError) {
-        InputCoder<PlaybackError>::encode(encoder, *(static_cast<const PlaybackError*>(input)));
-        return true;
-    }
-    if (type == inputTypes().RanPendingScripts) {
-        InputCoder<RanPendingScripts>::encode(encoder, *(static_cast<const RanPendingScripts*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceCannotShowURL) {
-        InputCoder<ResourceCannotShowURL>::encode(encoder, *(static_cast<const ResourceCannotShowURL*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceDidFail) {
-        InputCoder<ResourceDidFail>::encode(encoder, *(static_cast<const ResourceDidFail*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceDidFinishLoading) {
-        InputCoder<ResourceDidFinishLoading>::encode(encoder, *(static_cast<const ResourceDidFinishLoading*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceDidReceiveData) {
-        InputCoder<ResourceDidReceiveData>::encode(encoder, *(static_cast<const ResourceDidReceiveData*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceDidReceiveResponse) {
-        InputCoder<ResourceDidReceiveResponse>::encode(encoder, *(static_cast<const ResourceDidReceiveResponse*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceDidSendData) {
-        InputCoder<ResourceDidSendData>::encode(encoder, *(static_cast<const ResourceDidSendData*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceLoaderCreated) {
-        InputCoder<ResourceLoaderCreated>::encode(encoder, *(static_cast<const ResourceLoaderCreated*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceLoaderDestroyed) {
-        InputCoder<ResourceLoaderDestroyed>::encode(encoder, *(static_cast<const ResourceLoaderDestroyed*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceWasBlocked) {
-        InputCoder<ResourceWasBlocked>::encode(encoder, *(static_cast<const ResourceWasBlocked*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ResourceWillSendRequest) {
-        InputCoder<ResourceWillSendRequest>::encode(encoder, *(static_cast<const ResourceWillSendRequest*>(input)));
-        return true;
-    }
-    if (type == inputTypes().ScrollPage) {
-        InputCoder<ScrollPage>::encode(encoder, *(static_cast<const ScrollPage*>(input)));
-        return true;
-    }
-    if (type == inputTypes().SendResizeEvent) {
-        InputCoder<SendResizeEvent>::encode(encoder, *(static_cast<const SendResizeEvent*>(input)));
-        return true;
-    }
-    if (type == setRandomSeedType) {
-        InputCoder<JSC::SetRandomSeed>::encode(encoder, *(static_cast<const JSC::SetRandomSeed*>(input)));
-        return true;
-    }
-    if (type == inputTypes().TimerCreated) {
-        InputCoder<TimerCreated>::encode(encoder, *(static_cast<const TimerCreated*>(input)));
-        return true;
-    }
-    if (type == inputTypes().TimerFired) {
-        InputCoder<TimerFired>::encode(encoder, *(static_cast<const TimerFired*>(input)));
+    INPUT_SPECIFIC_DISPATCH_CHECK(InterpretedKeyCommands)
+#endif
+    INPUT_SPECIFIC_DISPATCH_CHECK(SetRandomSeed)
+
+    #undef INPUT_SPECIFIC_DISPATCH_CHECK
+
+    if (type == inputTypes().AutoMemoized) {
+        static_cast<const AutoMemoizedBase*>(input)->encode(encoder);
         return true;
     }
 
+    // FIXME(Issue #277): disambiguate AutoMemoized encode methods based on the serialized ctype.
     return false;
 }
 

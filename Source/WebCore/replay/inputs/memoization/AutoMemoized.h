@@ -42,8 +42,16 @@
 
 namespace WebCore {
 
+// This is necessary so that serializers can cast NondeterministicInput
+// to something which knows what type-specialized encode function to call.
+class AutoMemoizedBase : public NondeterministicInput {
+public:
+    virtual void encode(EncoderContext& context) const =0;
+    virtual ~AutoMemoizedBase() {}
+};
+
 template<typename T>
-class AutoMemoized : public NondeterministicInput {
+class AutoMemoized : public AutoMemoizedBase {
 
 public:
     AutoMemoized(const String& attribute, T result)
@@ -54,6 +62,8 @@ public:
     const String& attributeName() const { return m_attribute; }
     T result() const { return m_result; }
     String resultString() const;
+
+    virtual void encode(EncoderContext& context) const { InputCoder<AutoMemoized<T>>::encode(context, *this); }
 
     // NondeterministicInput API
     virtual const AtomicString& type() const OVERRIDE;
@@ -144,6 +154,13 @@ template<typename T> inline void InputCoder<AutoMemoized<T> >::encode(EncoderCon
 {
     encoder.put("attribute", input.attributeName());
     encoder.put("result", input.result());
+}
+
+template<> inline void InputCoder<AutoMemoized<RefPtr<SerializedScriptValue>>>::encode(EncoderContext& encoder, const AutoMemoized<RefPtr<SerializedScriptValue>>& input)
+{
+    encoder.put("attribute", input.attributeName());
+    // TODO(Issue #403): implement this. We may want to put it somewhere else, to
+    // avoid pulling in SerializedScriptValue here.
 }
 
 template<typename T> inline bool InputCoder<AutoMemoized<T> >::decode(DecoderContext& decoder, OwnPtr<AutoMemoized<T> >& input)

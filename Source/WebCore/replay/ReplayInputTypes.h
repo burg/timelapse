@@ -31,7 +31,6 @@
 namespace WebCore {
 
 #define REPLAY_INPUT_TYPES_FOR_EACH(macro) \
-    macro(AutoMemoized) \
     macro(BeginSentinel) \
     macro(DisableCache) \
     macro(DispatchFakeMouseMove) \
@@ -47,7 +46,6 @@ namespace WebCore {
     macro(HandleWheelEvent) \
     macro(InitializeFocus) \
     macro(InitializeWindow) \
-    macro(InterpretedKeyCommands) \
     macro(LoadURLRequest) \
     macro(NavigateToPage) \
     macro(PlaybackError) \
@@ -84,6 +82,18 @@ public:
     #define REPLAY_INPUT_TYPES_DECLARE(name) AtomicString name;
     REPLAY_INPUT_TYPES_FOR_EACH(REPLAY_INPUT_TYPES_DECLARE)
     #undef REPLAY_INPUT_TYPES_DECLARE
+
+    // Inputs that depend on specific compilation options go here.
+#if PLATFORM(MAC)
+    AtomicString InterpretedKeyCommands;
+#endif
+
+    // Inputs from JSC which are referenced from WebCore go here.
+    AtomicString GetCurrentTime;
+    AtomicString SetRandomSeed;
+
+    // AutoMemoized must be provided a template parameter.
+    AtomicString AutoMemoized;
 };
 
 inline ReplayInputTypes& inputTypes()
