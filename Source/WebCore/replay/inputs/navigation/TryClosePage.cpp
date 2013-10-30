@@ -27,67 +27,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// This file is the include equivalent for REPLAY_INPUT_TYPES_FOR_EACH.
-// Note that there is not an exact correspondence between the two, since
-// Some input types reside in the same file.
-
-// Make sure that this list stays up to date with ReplayInputTypes.h.
+#include "config.h"
 
 #if ENABLE(WEB_REPLAY)
 
-// JSC inputs.
-
-#include <replay/GetCurrentTime.h>
-#include <replay/SetRandomSeed.h>
-
-using JSC::GetCurrentTime;
-using JSC::SetRandomSeed;
-
-// WebCore inputs.
-
-#include "AutoMemoized.h"
-#include "DisableCache.h"
-#include "DispatchFakeMouseMove.h"
-#include "EnableCache.h"
-#include "FocusSetActive.h"
-#include "FocusSetFocused.h"
-#include "HandleContextMenu.h"
-#include "HandleKeyPress.h"
-#include "HandleMousePress.h"
-#include "HandleMouseMove.h"
-#include "HandleMouseRelease.h"
-#include "HandleWheelEvent.h"
-#include "InitializeFocus.h"
-#include "InitializeWindow.h"
-#include "LoadURLRequest.h"
-#include "NavigateToPage.h"
-#include "PlaybackError.h"
-#include "RanPendingScripts.h"
-#include "ReloadFrame.h"
-#include "ResourceCannotShowURL.h"
-#include "ResourceDidFail.h"
-#include "ResourceDidFinishLoading.h"
-#include "ResourceDidReceiveData.h"
-#include "ResourceDidReceiveResponse.h"
-#include "ResourceDidSendData.h"
-#include "ResourceLoaderCreated.h"
-#include "ResourceLoaderDestroyed.h"
-#include "ResourceWasBlocked.h"
-#include "ResourceWillSendRequest.h"
-#include "ScrollPage.h"
-#include "SendPendingEvents.h"
-#include "SendResizeEvent.h"
-#include "SentinelActions.h"
-#include "SetPageVisibility.h"
-#include "StopLoadingFrame.h"
-#include "TimerCreated.h"
-#include "TimerFired.h"
 #include "TryClosePage.h"
 
-// Feature- or platform-specific inputs.
+#include "DecoderContext.h"
+#include "EncoderContext.h"
+#include "NavigationProxy.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 
-#if PLATFORM(MAC)
-#include "InterpretedKeyCommands.h"
-#endif
+namespace WebCore {
+
+void TryClosePage::dispatch(ReplayController& controller)
+{
+    ASSERT(sealed());
+
+    controller.page().navigationProxy().tryClosePage(true);
+}
+
+const AtomicString& TryClosePage::type() const
+{
+    return inputTypes().TryClosePage;
+}
+
+void InputCoder<TryClosePage>::encode(EncoderContext&, const TryClosePage&)
+{
+}
+
+bool InputCoder<TryClosePage>::decode(DecoderContext&, std::unique_ptr<TryClosePage>& input)
+{
+    input = std::make_unique<TryClosePage>();
+    return true;
+}
+
+} // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)

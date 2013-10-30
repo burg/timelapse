@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
- *  Copyright (C) 2013, University of Washington. All rights reserved.
- *
+ *  Copyright (C) 2013 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,33 +27,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NavigationProxy_h
-#define NavigationProxy_h
+#ifndef TryClosePage_h
+#define TryClosePage_h
 
-#include "ReplayProxy.h"
-#include <wtf/PassOwnPtr.h>
-#include <wtf/Noncopyable.h>
+#if ENABLE(WEB_REPLAY)
+
+#include "EventLoopInput.h"
+#include "InputCoder.h"
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class Frame;
-struct FrameLoadRequest;
 class ReplayController;
 
-class NavigationProxy : public ReplayProxy {
-    WTF_MAKE_NONCOPYABLE(NavigationProxy);
+class TryClosePage : public EventLoopInput {
 
 public:
-    NavigationProxy(Page&);
-    virtual ~NavigationProxy() {}
+    TryClosePage() {}
+    virtual ~TryClosePage() {};
 
-    void loadURLRequest(const FrameLoadRequest& request, bool fromReplay = false);
-    void reloadFrame(Frame* frame, bool endToEndReload, bool fromReplay = false);
-    void stopLoadingFrame(Frame* frame, bool fromReplay = false);
+    // EventLoopInput API
+    virtual void dispatch(ReplayController& controller) OVERRIDE;
+    virtual bool isUserVisible() const OVERRIDE { return false; }
 
-    bool tryClosePage(bool fromReplay = false);
+    // NondeterministicInput API
+    virtual const AtomicString& type() const OVERRIDE;
+    virtual String toString() const OVERRIDE { return String("TryClosePage"); }
+    virtual size_t memorySize() const OVERRIDE { return sizeof(TryClosePage); }
 };
 
-} // namespace WebCore
+template<> struct InputCoder<TryClosePage> {
+    static void encode(EncoderContext& encoder, const TryClosePage& input);
+    static bool decode(DecoderContext& decoder, std::unique_ptr<TryClosePage>& input);
+};
 
-#endif // NavigationProxy_h
+} //namespace WebCore
+
+#endif // ENABLE(WEB_REPLAY)
+
+#endif // TryClosePage_h

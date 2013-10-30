@@ -68,6 +68,7 @@ namespace WebCore {
     macro(StopLoadingFrame) \
     macro(TimerCreated) \
     macro(TimerFired) \
+    macro(TryClosePage) \
     \
 // end of REPLAY_INPUT_TYPES_FOR_EACH
 

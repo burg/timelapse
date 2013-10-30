@@ -816,7 +816,7 @@ void WebPage::tryClose()
 {
     SendStopResponsivenessTimer stopper(this);
 
-    if (!m_mainFrame->coreFrame()->loader().shouldClose()) {
+    if (!corePage()->navigationProxy().tryClosePage()) {
         send(Messages::WebPageProxy::StopResponsivenessTimer());
         return;
     }

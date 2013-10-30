@@ -41,6 +41,7 @@
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
 #include "StopLoadingFrame.h"
+#include "TryClosePage.h"
 #include <wtf/replay/InputIterator.h>
 
 /* We must always define these symbols even if web replay support is
@@ -110,6 +111,46 @@ void NavigationProxy::stopLoadingFrame(Frame* frame, bool fromReplay)
 #endif
 
     frame->loader().stopForUserCancel();
+}
+
+// This method is called directly from WebPage, when it needs to close a tab.
+// It won't be called during normal navigations between main frames.
+bool NavigationProxy::tryClosePage(bool fromReplay)
+{
+    bool allowed;
+#if ENABLE(WEB_REPLAY)
+    InputIterator* it = m_page.replayController().activeIterator();
+    if (it && it->isCapturing()) {
+        {
+            ASSERT(mode() == Capturing);
+            EventLoopInputExtent extent(m_page.replayController().activeIterator());
+            allowed = m_page.mainFrame().loader().shouldClose();
+        }
+        
+        // If the page doesn't stop the close, then stop recording. On replay,
+        // the page will be torn down the same way whether it's closed or navigated.
+        // We may end up logging an extra memoized input for the
+        // beforeUnloadConfirmPanel result, but it should not affect replay.
+        if (allowed)
+            m_page.replayController().endCapturing();
+        // If the page does stop the load, then we need to capture and later simulate
+        // the attempt so that the memoized beforeUnloadConfirmPanel result is used.
+        else
+            it->storeInput(std::make_unique<TryClosePage>());
+
+    } else if (it && it->isReplaying() && !fromReplay) {
+        ASSERT(mode() == Replaying);
+        // If the user closes the tab during replay, then we have no choice
+        // but to stop replaying, because asking the user would cause nondeterminism.
+        // Otherwise, it will continue using memoized beforeUnloadConfirmPanel result.
+        m_page.replayController().cancelPlayback();
+        return true;
+    } else
+#else
+    UNUSED_PARAM(fromReplay);
+#endif
+    allowed = m_page.mainFrame().loader().shouldClose();
+    return allowed;
 }
 
 } // namespace WebCore

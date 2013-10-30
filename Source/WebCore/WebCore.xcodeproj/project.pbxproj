@@ -5328,6 +5328,8 @@
 		C4C3312217D663F3008BDACF /* ReloadFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */; };
 		C4C3312317D663F3008BDACF /* ReloadFrame.h in Headers */ = {isa = PBXBuildFile; fileRef = C4C3311F17D663F3008BDACF /* ReloadFrame.h */; };
 		C4D8039118208D85003B3050 /* AllReplayInputs.h in Headers */ = {isa = PBXBuildFile; fileRef = C4D8039018208D85003B3050 /* AllReplayInputs.h */; };
+		C4D8039418209DD3003B3050 /* TryClosePage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4D8039218209DD3003B3050 /* TryClosePage.cpp */; };
+		C4D8039518209DD3003B3050 /* TryClosePage.h in Headers */ = {isa = PBXBuildFile; fileRef = C4D8039318209DD3003B3050 /* TryClosePage.h */; };
 		C4D9A13517ED4BB700675CA6 /* PageConsole.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C493493717A432350054AC75 /* PageConsole.cpp */; };
 		C4ECA672175FAD98005490E0 /* SentinelActions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4ECA671175FAD98005490E0 /* SentinelActions.cpp */; };
 		C4F4CA43175AC86B00F71FE1 /* InputCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F4CA40175AC86B00F71FE1 /* InputCoder.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -12393,6 +12395,8 @@
 		C4C3311E17D663F3008BDACF /* ReloadFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReloadFrame.cpp; path = navigation/ReloadFrame.cpp; sourceTree = "<group>"; };
 		C4C3311F17D663F3008BDACF /* ReloadFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReloadFrame.h; path = navigation/ReloadFrame.h; sourceTree = "<group>"; };
 		C4D8039018208D85003B3050 /* AllReplayInputs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AllReplayInputs.h; sourceTree = "<group>"; };
+		C4D8039218209DD3003B3050 /* TryClosePage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TryClosePage.cpp; path = navigation/TryClosePage.cpp; sourceTree = "<group>"; };
+		C4D8039318209DD3003B3050 /* TryClosePage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TryClosePage.h; path = navigation/TryClosePage.h; sourceTree = "<group>"; };
 		C4ECA671175FAD98005490E0 /* SentinelActions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SentinelActions.cpp; sourceTree = "<group>"; };
 		C4F4CA40175AC86B00F71FE1 /* InputCoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InputCoder.h; sourceTree = "<group>"; };
 		C4F4CA41175AC86B00F71FE1 /* DecoderContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DecoderContext.h; sourceTree = "<group>"; };
@@ -20405,6 +20409,8 @@
 		C4C3311B17D6534E008BDACF /* navigation */ = {
 			isa = PBXGroup;
 			children = (
+				C4D8039218209DD3003B3050 /* TryClosePage.cpp */,
+				C4D8039318209DD3003B3050 /* TryClosePage.h */,
 				C4A898B217E3DDA300C74A2C /* LoadURLRequest.cpp */,
 				C4A898B317E3DDA300C74A2C /* LoadURLRequest.h */,
 				C4C3311C17D663F3008BDACF /* NavigateToPage.cpp */,
@@ -22500,6 +22506,7 @@
 				A8185F3D09765766005826D9 /* DocumentFragment.h in Headers */,
 				656D37360ADBA5DE00A4554D /* DocumentLoader.h in Headers */,
 				8A12E35D11FA33280025836A /* DocumentLoadTiming.h in Headers */,
+				C4D8039518209DD3003B3050 /* TryClosePage.h in Headers */,
 				ED2BA83C09A24B91006C0AC4 /* DocumentMarker.h in Headers */,
 				CE057FA61220731100A476D5 /* DocumentMarkerController.h in Headers */,
 				14947FFE12F80CD200A0F631 /* DocumentOrderedMap.h in Headers */,
@@ -26421,6 +26428,7 @@
 				14FFE31E0AE1963300136BF5 /* HTMLFrameElementBase.cpp in Sources */,
 				93E2425F0B2B509500C732A1 /* HTMLFrameOwnerElement.cpp in Sources */,
 				A871DE2E0A152AC800B12A68 /* HTMLFrameSetElement.cpp in Sources */,
+				C4D8039418209DD3003B3050 /* TryClosePage.cpp in Sources */,
 				A871DE250A152AC800B12A68 /* HTMLHeadElement.cpp in Sources */,
 				A8EA7CAE0A192B9C00A8EF5F /* HTMLHeadingElement.cpp in Sources */,
 				A8EA7CB30A192B9C00A8EF5F /* HTMLHRElement.cpp in Sources */,
