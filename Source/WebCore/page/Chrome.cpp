@@ -296,13 +296,14 @@ bool Chrome::runBeforeUnloadConfirmPanel(const String& message, Frame* frame)
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willRunJavaScriptDialog(&m_page, message);
     bool ok = true;
 #if ENABLE(WEB_REPLAY)
+    DEFINE_STATIC_LOCAL(const AtomicString, memoizedInputType, ("beforeUnloadConfirmPanelResult", AtomicString::ConstructFromLiteral));
     InputIterator* it = frame->document()->inputIterator();
     if (it && it->isCapturing()) {
         ok = m_client.runBeforeUnloadConfirmPanel(message, frame);
-        it->storeInput(std::make_unique<AutoMemoized<bool>>("beforeUnloadConfirmPanelResult", ok));
+        it->storeInput(std::make_unique<AutoMemoized<bool>>(memoizedInputType, ok));
     } else if (it && it->isReplaying()) {
         AutoMemoized<bool>* input = static_cast<AutoMemoized<bool>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));
-        if (input && input->attributeName() == "beforeUnloadConfirmPanelResult")
+        if (input && input->attributeName() == memoizedInputType)
             ok = input->result();
     } else
 #endif

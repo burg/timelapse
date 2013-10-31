@@ -1938,28 +1938,31 @@ sub GenerateImplementation
                         $implIncludes{"AutoMemoized.h"} = 1;
                         my $nativeType = GetNativeType($type);
                         my $memoizedType = GetNativeTypeForMemoization($type);
-                        push(@implContent, "    if (it && it->isCapturing()) {\n");
-                        push(@implContent, "        $nativeType memoizedResult = castedThis->impl().$implGetterFunctionName(" . join(", ", @arguments) . ");\n");
+                        push(@implContent, "    if (it) {\n");
+                        push(@implContent, "        DEFINE_STATIC_LOCAL(const AtomicString, inputName, (\"$interfaceName.$name\", AtomicString::ConstructFromLiteral));\n");
+                        push(@implContent, "        if (it->isCapturing()) {\n");
+                        push(@implContent, "            $nativeType memoizedResult = castedThis->impl().$implGetterFunctionName(" . join(", ", @arguments) . ");\n");
                         if ($getterExceptions) {
-                            push(@implContent, "        it->storeInput(std::make_unique<AutoMemoizedWithExceptionCode<$memoizedType>>(\"$interfaceName.$name\", memoizedResult, ec));\n");
+                            push(@implContent, "            it->storeInput(std::make_unique<AutoMemoizedWithExceptionCode<$memoizedType>>(inputName, memoizedResult, ec));\n");
                         } else {
-                            push(@implContent, "        it->storeInput(std::make_unique<AutoMemoized<$memoizedType>>(\"$interfaceName.$name\", memoizedResult));\n");
+                            push(@implContent, "            it->storeInput(std::make_unique<AutoMemoized<$memoizedType>>(inputName, memoizedResult));\n");
                         }
-                        push(@implContent, "        result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "memoizedResult", "castedThis") . ";\n");
-                        push(@implContent, "        setDOMException(exec, ec);\n") if $getterExceptions;
-                        push(@implContent, "        return result;\n");
-                        push(@implContent, "     }\n");
-                        push(@implContent, "     if (it && it->isReplaying()) {\n");
-                        if ($getterExceptions) {
-                            push(@implContent, "        AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
-                        } else {
-                            push(@implContent, "        AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
-                        }
-                        push(@implContent, "        if (input) {\n");
-                        push(@implContent, "            ASSERT(input->attributeName() == \"$interfaceName.$name\");\n");
-                        push(@implContent, "            result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "input->result()", "castedThis") . ";\n");
-                        push(@implContent, "            setDOMException(exec, input->exceptionCode());\n") if $getterExceptions;
+                        push(@implContent, "            result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "memoizedResult", "castedThis") . ";\n");
+                        push(@implContent, "            setDOMException(exec, ec);\n") if $getterExceptions;
                         push(@implContent, "            return result;\n");
+                        push(@implContent, "         }\n");
+                        push(@implContent, "         if (it->isReplaying()) {\n");
+                        if ($getterExceptions) {
+                            push(@implContent, "            AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
+                        } else {
+                            push(@implContent, "            AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
+                        }
+                        push(@implContent, "            if (input) {\n");
+                        push(@implContent, "                ASSERT(input->attributeName() == inputName);\n");
+                        push(@implContent, "                result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "input->result()", "castedThis") . ";\n");
+                        push(@implContent, "                setDOMException(exec, input->exceptionCode());\n") if $getterExceptions;
+                        push(@implContent, "                return result;\n");
+                        push(@implContent, "            }\n");
                         push(@implContent, "        }\n");
                         # if !action, there was an error, so obtain result normally
                         push(@implContent, "    }\n");
@@ -3286,36 +3289,39 @@ sub GenerateImplementationFunctionCall()
             my $bindingName = $interfaceName . "." . $function->signature->name;
             push(@implContent, "#if ENABLE(WEB_REPLAY)\n");
             push(@implContent, $indent . "InputIterator* it = exec->lexicalGlobalObject()->inputIterator();\n");
-            push(@implContent, $indent . "if (it && it->isCapturing()) {\n");
-            push(@implContent, $indent . "    $nativeType memoizedResult = $functionString;\n");
+            push(@implContent, $indent . "if (it) {\n");
+            push(@implContent, "        DEFINE_STATIC_LOCAL(const AtomicString, inputName, (\"$bindingName\", AtomicString::ConstructFromLiteral));\n");
+            push(@implContent, $indent . "    if (it->isCapturing()) {\n");
+            push(@implContent, $indent . "        $nativeType memoizedResult = $functionString;\n");
             if ($raisesException) {
-                push(@implContent, $indent . "    it->storeInput(std::make_unique<AutoMemoizedWithExceptionCode<$memoizedType>>(\"$bindingName\", memoizedResult, ec));\n");
+                push(@implContent, $indent . "        it->storeInput(std::make_unique<AutoMemoizedWithExceptionCode<$memoizedType>>(inputName, memoizedResult, ec));\n");
             } else {
-                push(@implContent, $indent . "    it->storeInput(std::make_unique<AutoMemoized<$memoizedType>>(\"$bindingName\", memoizedResult));\n");
+                push(@implContent, $indent . "        it->storeInput(std::make_unique<AutoMemoized<$memoizedType>>(inputName, memoizedResult));\n");
             }
-            push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, "memoizedResult", $thisObject) . ";\n");
-            push(@implContent, $indent . "} else if (it && it->isReplaying()) {\n");
+            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $interfaceName, "memoizedResult", $thisObject) . ";\n");
+            push(@implContent, $indent . "    } else if (it->isReplaying()) {\n");
             if ($raisesException) {
-                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
-                push(@implContent, $indent . "    ec = input->exceptionCode();\n")
+                push(@implContent, $indent . "        AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
+                push(@implContent, $indent . "        ec = input->exceptionCode();\n")
             } else {
-                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
+                push(@implContent, $indent . "        AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(NondeterministicInput::ScriptMemoizedDataQueue, inputTypes().AutoMemoized));\n");
             }
-            push(@implContent, $indent . "    if (input) {\n");
-            push(@implContent, $indent . "        ASSERT(input->attributeName() == \"$bindingName\");\n");
-            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $interfaceName, "input->result()", $thisObject) . ";\n");
-            push(@implContent, $indent . "    } else {  // error handling case\n");
-            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
+            push(@implContent, $indent . "        if (input) {\n");
+            push(@implContent, $indent . "            ASSERT(input->attributeName() == inputName);\n");
+            push(@implContent, $indent . "            result = " . NativeToJSValue($function->signature, 1, $interfaceName, "input->result()", $thisObject) . ";\n");
+            push(@implContent, $indent . "        } else {  // error handling case\n");
+            push(@implContent, $indent . "            result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
+            push(@implContent, $indent . "        }\n");
             push(@implContent, $indent . "    }\n");
-            push(@implContent, $indent . "} else {\n");
+            push(@implContent, $indent . "} else { // !it \n");
             # if !input on replay, error case obtains value normally
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
             push(@implContent, $indent . "}\n");
             push(@implContent, "#else\n");
         }
         push(@implContent, "\n" . $indent . "result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
-        push(@implContent, $indent . "setDOMException(exec, ec);\n") if $raisesException;
         push(@implContent, "#endif\n") if $nondeterministic;
+        push(@implContent, $indent . "setDOMException(exec, ec);\n") if $raisesException;
 
         if ($codeGenerator->ExtendedAttributeContains($function->signature->extendedAttributes->{"CallWith"}, "ScriptState")) {
             push(@implContent, $indent . "if (exec->hadException())\n");
