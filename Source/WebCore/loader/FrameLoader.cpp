@@ -82,6 +82,7 @@
 #include "MIMETypeRegistry.h"
 #include "MainFrame.h"
 #include "MemoryCache.h"
+#include "NetworkProxy.h"
 #include "Page.h"
 #include "PageActivityAssertionToken.h"
 #include "PageCache.h"
@@ -2929,7 +2930,7 @@ void FrameLoader::requestFromDelegate(ResourceRequest& request, unsigned long& i
 
     identifier = 0;
     if (Page* page = m_frame.page()) {
-        identifier = page->progress().createUniqueIdentifier();
+        identifier = page->networkProxy().createUniqueIdentifier();
         notifier().assignIdentifierToInitialRequest(identifier, m_documentLoader.get(), request);
     }
 

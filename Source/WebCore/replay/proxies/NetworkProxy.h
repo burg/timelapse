@@ -51,6 +51,8 @@ public:
     NetworkProxy(Page&);
     virtual ~NetworkProxy();
 
+    unsigned long createUniqueIdentifier();
+
 #if ENABLE(WEB_REPLAY)
     HandleContext handleContextById(int);
     void removeHandleById(int);
@@ -65,6 +67,7 @@ public:
 
     PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, int loaderId, bool, bool);
 private:
+    unsigned long m_nextUniqueIdentifier;
 #if ENABLE(WEB_REPLAY)
     int m_nextId;
     bool m_expectsPageLoad;

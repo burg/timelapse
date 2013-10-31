@@ -72,6 +72,7 @@ static void printResourceRequestDiagnostics(const ResourceRequest& request)
 
 NetworkProxy::NetworkProxy(Page& page)
 : ReplayProxy(page)
+, m_nextUniqueIdentifier(1)
 #if ENABLE(WEB_REPLAY)
 // Start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX.
 , m_nextId(1)
@@ -82,6 +83,11 @@ NetworkProxy::NetworkProxy(Page& page)
 
 NetworkProxy::~NetworkProxy()
 {}
+
+unsigned long NetworkProxy::createUniqueIdentifier()
+{
+    return m_nextUniqueIdentifier++;
+}
 
 #if ENABLE(WEB_REPLAY)
 HandleContext NetworkProxy::handleContextById(int id)
