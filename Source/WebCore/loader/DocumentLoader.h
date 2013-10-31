@@ -7,13 +7,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -43,7 +43,7 @@
 #include "StringWithDirection.h"
 #include "SubstituteData.h"
 #include "Timer.h"
-#include <wtf/HashSet.h>
+#include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -74,7 +74,7 @@ namespace WebCore {
     class SharedBuffer;
     class SubstituteResource;
 
-    typedef HashSet<RefPtr<ResourceLoader>> ResourceLoaderSet;
+    typedef HashMap<unsigned long, RefPtr<ResourceLoader>> ResourceLoaderMap;
     typedef Vector<ResourceResponse> ResponseVector;
 
     class DocumentLoader : public RefCounted<DocumentLoader>, private CachedRawResourceClient {
@@ -95,7 +95,7 @@ namespace WebCore {
         FrameLoader* frameLoader() const;
         ResourceLoader* mainResourceLoader() const;
         PassRefPtr<ResourceBuffer> mainResourceData() const;
-        
+
         DocumentWriter& writer() const { return m_writer; }
 
         const ResourceRequest& originalRequest() const;
@@ -162,8 +162,8 @@ namespace WebCore {
 #ifndef NDEBUG
         bool isSubstituteLoadPending(ResourceLoader*) const;
 #endif
-        void cancelPendingSubstituteLoad(ResourceLoader*);   
-        
+        void cancelPendingSubstituteLoad(ResourceLoader*);
+
         void addResponse(const ResourceResponse&);
         const ResponseVector& responses() const { return m_responses; }
 
@@ -187,22 +187,22 @@ namespace WebCore {
         String clientRedirectSourceForHistory() const { return m_clientRedirectSourceForHistory; } // null if no client redirect occurred.
         String clientRedirectDestinationForHistory() const { return urlForHistory(); }
         void setClientRedirectSourceForHistory(const String& clientRedirectSourceForHistory) { m_clientRedirectSourceForHistory = clientRedirectSourceForHistory; }
-        
+
         String serverRedirectSourceForHistory() const { return (urlForHistory() == url() || url() == blankURL()) ? String() : urlForHistory().string(); } // null if no server redirect occurred.
         String serverRedirectDestinationForHistory() const { return url(); }
 
         bool didCreateGlobalHistoryEntry() const { return m_didCreateGlobalHistoryEntry; }
         void setDidCreateGlobalHistoryEntry(bool didCreateGlobalHistoryEntry) { m_didCreateGlobalHistoryEntry = didCreateGlobalHistoryEntry; }
-        
+
         void setDefersLoading(bool);
         void setMainResourceDataBufferingPolicy(DataBufferingPolicy);
 
         void startLoadingMainResource();
         void cancelMainResourceLoad(const ResourceError&);
-        
+
         // Support iconDatabase in synchronous mode.
         void iconLoadDecisionAvailable();
-        
+
         // Support iconDatabase in asynchronous mode.
         void continueIconLoadWithDecision(IconLoadDecision);
         void getIconLoadDecisionForIconURL(const String&);
@@ -222,9 +222,9 @@ namespace WebCore {
         void subresourceLoaderFinishedLoadingOnePart(ResourceLoader*);
 
         void setDeferMainResourceDataLoad(bool defer) { m_deferMainResourceDataLoad = defer; }
-        
+
         void didTellClientAboutLoad(const String& url)
-        { 
+        {
 #if !PLATFORM(MAC)
             // Don't include data urls here, as if a lot of data is loaded
             // that way, we hold on to the (large) url string for too long.
@@ -269,7 +269,7 @@ namespace WebCore {
 
         void setupForReplace();
         void maybeFinishLoadingMultipartContent();
-        
+
         bool maybeCreateArchive();
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
         void clearArchiveResources();
@@ -315,32 +315,32 @@ namespace WebCore {
         RefPtr<CachedResourceLoader> m_cachedResourceLoader;
 
         CachedResourceHandle<CachedRawResource> m_mainResource;
-        ResourceLoaderSet m_subresourceLoaders;
-        ResourceLoaderSet m_multipartSubresourceLoaders;
-        ResourceLoaderSet m_plugInStreamLoaders;
-        
+        ResourceLoaderMap m_subresourceLoaders;
+        ResourceLoaderMap m_multipartSubresourceLoaders;
+        ResourceLoaderMap m_plugInStreamLoaders;
+
         mutable DocumentWriter m_writer;
 
         // A reference to actual request used to create the data source.
         // This should only be used by the resourceLoadDelegate's
         // identifierForInitialRequest:fromDatasource: method. It is
         // not guaranteed to remain unchanged, as requests are mutable.
-        ResourceRequest m_originalRequest;   
+        ResourceRequest m_originalRequest;
 
         SubstituteData m_substituteData;
 
         // A copy of the original request used to create the data source.
         // We have to copy the request because requests are mutable.
         ResourceRequest m_originalRequestCopy;
-        
+
         // The 'working' request. It may be mutated
         // several times from the original request to include additional
         // headers, cookie information, canonicalization and redirects.
         ResourceRequest m_request;
 
         ResourceResponse m_response;
-    
-        ResourceError m_mainDocumentError;    
+
+        ResourceError m_mainDocumentError;
 
         bool m_originalSubstituteDataWasValid;
         bool m_committed;
@@ -370,7 +370,7 @@ namespace WebCore {
         // page cache.
         ResponseVector m_responses;
         bool m_stopRecordingResponses;
-        
+
         typedef HashMap<RefPtr<ResourceLoader>, RefPtr<SubstituteResource>> SubstituteResourceMap;
         SubstituteResourceMap m_pendingSubstituteResources;
         Timer<DocumentLoader> m_substituteResourceDeliveryTimer;
@@ -383,7 +383,7 @@ namespace WebCore {
 
         HashSet<String> m_resourcesClientKnowsAbout;
         Vector<ResourceRequest> m_resourcesLoadedFromMemoryCacheForClientNotification;
-        
+
         String m_clientRedirectSourceForHistory;
         bool m_didCreateGlobalHistoryEntry;
 

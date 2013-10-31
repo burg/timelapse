@@ -33,20 +33,20 @@
 
 namespace WebCore {
 
-static void scheduleAll(const ResourceLoaderSet& loaders, SchedulePair* pair)
+static void scheduleAll(const ResourceLoaderMap& loaders, SchedulePair* pair)
 {
-    const ResourceLoaderSet copy = loaders;
-    ResourceLoaderSet::const_iterator end = copy.end();
-    for (ResourceLoaderSet::const_iterator it = copy.begin(); it != end; ++it)
+    const ResourceLoaderMap copy = loaders;
+    auto end = copy.values().end();
+    for (auto it = copy.values().begin(); it != end; ++it)
         if (ResourceHandle* handle = (*it)->handle())
             handle->schedule(pair);
 }
 
-static void unscheduleAll(const ResourceLoaderSet& loaders, SchedulePair* pair)
+static void unscheduleAll(const ResourceLoaderMap& loaders, SchedulePair* pair)
 {
-    const ResourceLoaderSet copy = loaders;
-    ResourceLoaderSet::const_iterator end = copy.end();
-    for (ResourceLoaderSet::const_iterator it = copy.begin(); it != end; ++it)
+    const ResourceLoaderMap copy = loaders;
+    auto end = copy.values().end();
+    for (auto it = copy.values().begin(); it != end; ++it)
         if (ResourceHandle* handle = (*it)->handle())
             handle->unschedule(pair);
 }

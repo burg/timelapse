@@ -77,19 +77,19 @@
 
 namespace WebCore {
 
-static void cancelAll(const ResourceLoaderSet& loaders)
+static void cancelAll(const ResourceLoaderMap& loaders)
 {
     Vector<RefPtr<ResourceLoader>> loadersCopy;
-    copyToVector(loaders, loadersCopy);
+    copyValuesToVector(loaders, loadersCopy);
     size_t size = loadersCopy.size();
     for (size_t i = 0; i < size; ++i)
         loadersCopy[i]->cancel();
 }
 
-static void setAllDefersLoading(const ResourceLoaderSet& loaders, bool defers)
+static void setAllDefersLoading(const ResourceLoaderMap& loaders, bool defers)
 {
     Vector<RefPtr<ResourceLoader>> loadersCopy;
-    copyToVector(loaders, loadersCopy);
+    copyValuesToVector(loaders, loadersCopy);
     size_t size = loadersCopy.size();
     for (size_t i = 0; i < size; ++i)
         loadersCopy[i]->setDefersLoading(defers);
@@ -1304,14 +1304,14 @@ void DocumentLoader::addSubresourceLoader(ResourceLoader* loader)
     // if we are just starting the main resource load.
     if (!m_gotFirstByte)
         return;
-    ASSERT(!m_subresourceLoaders.contains(loader));
+    ASSERT(!m_subresourceLoaders.contains(loader->identifier()));
     ASSERT(!mainResourceLoader() || mainResourceLoader() != loader);
-    m_subresourceLoaders.add(loader);
+    m_subresourceLoaders.set(loader->identifier(), loader);
 }
 
 void DocumentLoader::removeSubresourceLoader(ResourceLoader* loader)
 {
-    if (!m_subresourceLoaders.remove(loader))
+    if (!m_subresourceLoaders.remove(loader->identifier()))
         return;
     checkLoadComplete();
     if (Frame* frame = m_frame)
@@ -1320,12 +1320,12 @@ void DocumentLoader::removeSubresourceLoader(ResourceLoader* loader)
 
 void DocumentLoader::addPlugInStreamLoader(ResourceLoader* loader)
 {
-    m_plugInStreamLoaders.add(loader);
+    m_plugInStreamLoaders.set(loader->identifier(), loader);
 }
 
 void DocumentLoader::removePlugInStreamLoader(ResourceLoader* loader)
 {
-    m_plugInStreamLoaders.remove(loader);
+    m_plugInStreamLoaders.remove(loader->identifier());
     checkLoadComplete();
 }
 
@@ -1446,8 +1446,9 @@ void DocumentLoader::clearMainResource()
 
 void DocumentLoader::subresourceLoaderFinishedLoadingOnePart(ResourceLoader* loader)
 {
-    m_multipartSubresourceLoaders.add(loader);
-    m_subresourceLoaders.remove(loader);
+    ASSERT(loader->identifier()); // XXX remove
+    m_multipartSubresourceLoaders.set(loader->identifier(), loader);
+    m_subresourceLoaders.remove(loader->identifier());
     checkLoadComplete();
     if (Frame* frame = m_frame)
         frame->loader().checkLoadComplete();
