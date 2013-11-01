@@ -36,6 +36,7 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
+#include "ResourceCallback.h"
 #include "ResourceResponse.h"
 #include "ResourceRequest.h"
 
@@ -43,10 +44,10 @@ namespace WebCore {
 
 class ReplayController;
 
-class ResourceWillSendRequest : public EventLoopInput {
+class ResourceWillSendRequest : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceWillSendRequest(unsigned long identifier, ResourceRequest&, const ResourceResponse& redirectResponse);
-    ResourceWillSendRequest(unsigned long identifier, std::unique_ptr<ResourceRequest>, std::unique_ptr<ResourceResponse> redirectResponse);
+    ResourceWillSendRequest(unsigned long identifier, int frameIndex, ResourceRequest&, const ResourceResponse& redirectResponse);
+    ResourceWillSendRequest(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceRequest>, std::unique_ptr<ResourceResponse> redirectResponse);
     virtual ~ResourceWillSendRequest();
 
     // EventLoopInput API
@@ -57,11 +58,9 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    unsigned long identifier() const { return m_identifier; }
     const ResourceRequest& request() const { return *m_request; }
     const ResourceResponse& redirectResponse() const { return *m_redirectResponse; }
 private:
-    unsigned long m_identifier;
     OwnPtr<ResourceRequest> m_request;
     OwnPtr<ResourceResponse> m_redirectResponse;
 };

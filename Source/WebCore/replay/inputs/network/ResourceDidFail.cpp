@@ -37,32 +37,27 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayInputTypes.h"
 #include "ReplayController.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-ResourceDidFail::ResourceDidFail(unsigned long identifier, const ResourceError& error)
-    : m_identifier(identifier)
+ResourceDidFail::ResourceDidFail(unsigned long identifier, int frameIndex, const ResourceError& error)
+    : ResourceCallback(identifier, frameIndex)
     , m_error(error.copy()) {}
 
-ResourceDidFail::ResourceDidFail(unsigned long identifier, std::unique_ptr<ResourceError> error)
-    : m_identifier(identifier)
+ResourceDidFail::ResourceDidFail(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceError> error)
+    : ResourceCallback(identifier, frameIndex)
     , m_error(*error) {}
 
 void ResourceDidFail::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-
-    client->didFail(handle.get(), m_error.copy());
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didFail(m_error.copy());
 }
 
 const AtomicString& ResourceDidFail::type() const
@@ -74,7 +69,7 @@ String ResourceDidFail::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidFail(id=");
-    sb.append(String::number(m_identifier));
+    sb.append(String::number(identifier()));
     sb.append(";domain=");
     sb.append(m_error.domain());
     sb.append(";failingURL=");
@@ -99,6 +94,7 @@ size_t ResourceDidFail::memorySize() const
 void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const ResourceDidFail& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
 
     std::unique_ptr<EncoderContext> encodedError = encoder.createMap();
     InputCoder<ResourceError>::encode(*encodedError, input.error());
@@ -111,11 +107,15 @@ bool InputCoder<ResourceDidFail>::decode(DecoderContext& decoder, std::unique_pt
     if (!decoder.get("identifier", identifier))
         return false;
 
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
     std::unique_ptr<ResourceError> error;
     if (!InputCoder<ResourceError>::decode(decoder, error))
         return false;
 
-    input = std::make_unique<ResourceDidFail>(identifier, std::move(error));
+    input = std::make_unique<ResourceDidFail>(identifier, frameIndex, std::move(error));
     return true;
 }
 

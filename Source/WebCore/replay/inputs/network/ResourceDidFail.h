@@ -36,16 +36,17 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
+#include "ResourceCallback.h"
 #include "ResourceError.h"
 
 namespace WebCore {
 
 class ReplayController;
 
-class ResourceDidFail : public EventLoopInput {
+class ResourceDidFail : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceDidFail(unsigned long identifier, const ResourceError&);
-    ResourceDidFail(unsigned long identifier, std::unique_ptr<ResourceError>);
+    ResourceDidFail(unsigned long identifier, int frameIndex, const ResourceError&);
+    ResourceDidFail(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceError>);
     virtual ~ResourceDidFail() {}
 
     // EventLoopInput API
@@ -57,10 +58,8 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    unsigned long identifier() const { return m_identifier; }
     const ResourceError& error() const { return m_error; }
 private:
-    unsigned long m_identifier;
     ResourceError m_error;
 };
 

@@ -37,12 +37,10 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 #include "SerializationMethods.h"
@@ -51,13 +49,13 @@
 
 namespace WebCore {
 
-ResourceWillSendRequest::ResourceWillSendRequest(unsigned long identifier, ResourceRequest& request, const ResourceResponse& redirectResponse)
-    : m_identifier(identifier)
+ResourceWillSendRequest::ResourceWillSendRequest(unsigned long identifier, int frameIndex, ResourceRequest& request, const ResourceResponse& redirectResponse)
+    : ResourceCallback(identifier, frameIndex)
     , m_request(ResourceRequest::adopt(request.copyData()))
     , m_redirectResponse(ResourceResponse::adopt(redirectResponse.copyData())) {}
 
-ResourceWillSendRequest::ResourceWillSendRequest(unsigned long identifier, std::unique_ptr<ResourceRequest> request, std::unique_ptr<ResourceResponse> redirectResponse)
-    : m_identifier(identifier)
+ResourceWillSendRequest::ResourceWillSendRequest(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceRequest> request, std::unique_ptr<ResourceResponse> redirectResponse)
+    : ResourceCallback(identifier, frameIndex)
     , m_request(adoptPtr(request.release()))
     , m_redirectResponse(adoptPtr(redirectResponse.release())) {}
 
@@ -65,11 +63,8 @@ ResourceWillSendRequest::~ResourceWillSendRequest() {}
 
 void ResourceWillSendRequest::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-
-    client->willSendRequest(handle.get(), *m_request, *m_redirectResponse);
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->willSendRequest(*m_request, *m_redirectResponse);
 }
 
 const AtomicString& ResourceWillSendRequest::type() const
@@ -81,7 +76,7 @@ String ResourceWillSendRequest::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceWillSendRequest(id=");
-    sb.append(String::number(m_identifier));
+    sb.append(String::number(identifier()));
     sb.append("; url=");
     sb.append(m_request->url().string());
     sb.append(")");
@@ -96,6 +91,7 @@ size_t ResourceWillSendRequest::memorySize() const
 void InputCoder<ResourceWillSendRequest>::encode(EncoderContext& encoder, const ResourceWillSendRequest& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
 
     std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
@@ -112,6 +108,10 @@ bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, std::u
     if (!decoder.get("identifier", identifier))
         return false;
 
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
     std::unique_ptr<ResourceRequest> request;
     if (!InputCoder<ResourceRequest>::decode(decoder, request))
         return false;
@@ -120,7 +120,7 @@ bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, std::u
     if (!InputCoder<ResourceResponse>::decode(decoder, redirectResponse))
         return false;
 
-    input = std::make_unique<ResourceWillSendRequest>(identifier, std::move(request), std::move(redirectResponse));
+    input = std::make_unique<ResourceWillSendRequest>(identifier, frameIndex, std::move(request), std::move(redirectResponse));
     return true;
 }
 

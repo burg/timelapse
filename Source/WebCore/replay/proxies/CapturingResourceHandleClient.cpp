@@ -36,6 +36,8 @@
 #include "CapturingResourceHandleClient.h"
 
 #include "CaptureInputIterator.h"
+#include "Frame.h"
+#include "FrameLoader.h"
 #include "NetworkProxy.h"
 #include "NetworkingContext.h"
 #include "Page.h"
@@ -47,6 +49,7 @@
 #include "ResourceDidReceiveResponse.h"
 #include "ResourceDidSendData.h"
 #include "ResourceHandle.h"
+#include "ResourceLoader.h"
 #include "ResourceLoaderDestroyed.h"
 #include "ResourceRequest.h"
 #include "ResourceWasBlocked.h"
@@ -55,17 +58,28 @@
 
 namespace WebCore {
 
-CapturingResourceHandleClient::CapturingResourceHandleClient(NetworkProxy* proxy, ResourceHandleClient* client, unsigned long identifier)
+CapturingResourceHandleClient::CapturingResourceHandleClient(NetworkProxy* proxy, ResourceLoader* loader)
 : m_proxy(proxy)
-, m_client(client)
-, m_identifier(identifier) {}
+, m_loader(loader) {}
 
 CapturingResourceHandleClient::~CapturingResourceHandleClient()
 {
     // FIXME: this will probably do the wrong thing if the ResourceLoader switches
     // between two different handles without completely loading one.
     if (InputIterator* it = m_proxy->controller().activeIterator())
-        it->storeInput(std::make_unique<ResourceLoaderDestroyed>(m_identifier));
+        it->storeInput(std::make_unique<ResourceLoaderDestroyed>(identifier()));
+}
+
+unsigned long CapturingResourceHandleClient::identifier() const
+{
+    return m_loader->identifier();
+}
+
+int CapturingResourceHandleClient::frameIndex() const
+{
+    Document* document = m_loader->frameLoader()->frame().document();
+    ASSERT(document);
+    return frameIndexFromDocument(document);
 }
 
 // ResourceHandleClient API
@@ -73,85 +87,86 @@ void CapturingResourceHandleClient::willSendRequest(ResourceHandle* handle, Reso
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceWillSendRequest>(m_identifier, request, redirectResponse));
+        it->storeInput(std::make_unique<ResourceWillSendRequest>(identifier(), frameIndex(), request, redirectResponse));
 
     EventLoopInputExtent extent(it);
-    m_client->willSendRequest(handle, request, redirectResponse);
+    m_loader->willSendRequest(handle, request, redirectResponse);
 }
 
 void CapturingResourceHandleClient::didSendData(ResourceHandle* handle, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidSendData>(m_identifier, bytesSent, totalBytesToBeSent));
+        it->storeInput(std::make_unique<ResourceDidSendData>(identifier(), frameIndex(), bytesSent, totalBytesToBeSent));
 
     EventLoopInputExtent extent(it);
-    m_client->didSendData(handle, bytesSent, totalBytesToBeSent);
+    m_loader->didSendData(handle, bytesSent, totalBytesToBeSent);
 }
 
 void CapturingResourceHandleClient::didReceiveResponse(ResourceHandle* handle, const ResourceResponse& response)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
+
     if (it)
-        it->storeInput(std::make_unique<ResourceDidReceiveResponse>(m_identifier, response));
+        it->storeInput(std::make_unique<ResourceDidReceiveResponse>(identifier(), frameIndex(), response));
 
     EventLoopInputExtent extent(it);
-    m_client->didReceiveResponse(handle, response);
+    m_loader->didReceiveResponse(handle, response);
 }
 
 void CapturingResourceHandleClient::didReceiveData(ResourceHandle* handle, const char* data, int length, int encodedLength)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidReceiveData>(m_identifier, data, length, encodedLength));
+        it->storeInput(std::make_unique<ResourceDidReceiveData>(identifier(), frameIndex(), data, length, encodedLength));
 
     EventLoopInputExtent extent(it);
-    m_client->didReceiveData(handle, data, length, encodedLength);
+    m_loader->didReceiveData(handle, data, length, encodedLength);
 }
 
 void CapturingResourceHandleClient::didFinishLoading(ResourceHandle* handle, double finishTime)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidFinishLoading>(m_identifier, finishTime));
+        it->storeInput(std::make_unique<ResourceDidFinishLoading>(identifier(), frameIndex(), finishTime));
 
     EventLoopInputExtent extent(it);
-    m_client->didFinishLoading(handle, finishTime);
+    m_loader->didFinishLoading(handle, finishTime);
 }
 
 void CapturingResourceHandleClient::didFail(ResourceHandle* handle, const ResourceError& error)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidFail>(m_identifier, error));
+        it->storeInput(std::make_unique<ResourceDidFail>(identifier(), frameIndex(), error));
 
     EventLoopInputExtent extent(it);
-    m_client->didFail(handle, error);
+    m_loader->didFail(handle, error);
 }
 
 void CapturingResourceHandleClient::wasBlocked(ResourceHandle* handle)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceWasBlocked>(m_identifier));
+        it->storeInput(std::make_unique<ResourceWasBlocked>(identifier(), frameIndex()));
 
     EventLoopInputExtent extent(it);
-    m_client->wasBlocked(handle);
+    m_loader->wasBlocked(handle);
 }
 
 void CapturingResourceHandleClient::cannotShowURL(ResourceHandle* handle)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceCannotShowURL>(m_identifier));
+        it->storeInput(std::make_unique<ResourceCannotShowURL>(identifier(), frameIndex()));
 
     EventLoopInputExtent extent(it);
-    m_client->cannotShowURL(handle);
+    m_loader->cannotShowURL(handle);
 }
 
 bool CapturingResourceHandleClient::shouldUseCredentialStorage(ResourceHandle* handle)
 {
-    bool result = m_client->shouldUseCredentialStorage(handle);
+    bool result = m_loader->shouldUseCredentialStorage(handle);
     // TODO: create a NondeterministicInput to hold 'result', someday. Is this likely to change?
     return result;
 }
@@ -160,19 +175,19 @@ void CapturingResourceHandleClient::didReceiveAuthenticationChallenge(ResourceHa
 {
     // TODO: find a way to capture and replay when authentication was used, but without
     // storing passwords in plaintext. Maybe fake up response to accept blank credentials?
-    m_client->didReceiveAuthenticationChallenge(handle, challenge);
+    m_loader->didReceiveAuthenticationChallenge(handle, challenge);
 }
 
 void CapturingResourceHandleClient::didCancelAuthenticationChallenge(ResourceHandle* handle, const AuthenticationChallenge& challenge)
 {
     // see above
-    m_client->didCancelAuthenticationChallenge(handle, challenge);
+    m_loader->didCancelAuthenticationChallenge(handle, challenge);
 }
 
 void CapturingResourceHandleClient::receivedCancellation(ResourceHandle* handle, const AuthenticationChallenge& challenge)
 {
     // see above
-    m_client->receivedCancellation(handle, challenge);
+    m_loader->receivedCancellation(handle, challenge);
 }
 
 } // namespace WebCore

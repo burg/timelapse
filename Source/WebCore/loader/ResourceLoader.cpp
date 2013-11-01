@@ -162,7 +162,7 @@ void ResourceLoader::start()
     }
 
     if (!m_reachedTerminalState)
-        m_handle = m_frame->page()->networkProxy().createResourceHandle(m_frame->loader().networkingContext(), m_request, this, m_identifier, m_defersLoading, m_options.sniffContent == SniffContent);
+        m_handle = m_frame->page()->networkProxy().createResourceHandle(m_frame->loader().networkingContext(), m_request, this, m_defersLoading, m_options.sniffContent == SniffContent);
 }
 
 void ResourceLoader::setDefersLoading(bool defers)

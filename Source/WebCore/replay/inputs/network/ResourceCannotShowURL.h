@@ -2,7 +2,6 @@
  *  Copyright (C) 2012, Brian Burg.
  *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -36,14 +35,15 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
+#include "ResourceCallback.h"
 
 namespace WebCore {
 
 class ReplayController;
 
-class ResourceCannotShowURL : public EventLoopInput {
+class ResourceCannotShowURL : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceCannotShowURL(unsigned long identifier);
+    ResourceCannotShowURL(unsigned long identifier, int frameIndex);
     virtual ~ResourceCannotShowURL() {}
 
     // EventLoopInput API
@@ -54,10 +54,6 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-
-    unsigned long identifier() const { return m_identifier; }
-private:
-    unsigned long m_identifier;
 };
 
 template<> struct InputCoder<ResourceCannotShowURL> {

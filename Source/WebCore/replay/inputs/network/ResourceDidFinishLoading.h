@@ -36,14 +36,15 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
+#include "ResourceCallback.h"
 
 namespace WebCore {
 
 class ReplayController;
 
-class ResourceDidFinishLoading : public EventLoopInput {
+class ResourceDidFinishLoading : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceDidFinishLoading(unsigned long identifier, double finishTime);
+    ResourceDidFinishLoading(unsigned long identifier, int frameIndex, double finishTime);
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -53,10 +54,8 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    unsigned long identifier() const { return m_identifier; }
     double finishTime() const { return m_finishTime; }
 private:
-    unsigned long m_identifier;
     double m_finishTime;
 };
 

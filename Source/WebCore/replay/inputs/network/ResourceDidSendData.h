@@ -36,14 +36,15 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
+#include "ResourceCallback.h"
 
 namespace WebCore {
 
 class ReplayController;
 
-class ResourceDidSendData : public EventLoopInput {
+class ResourceDidSendData : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceDidSendData(unsigned long identifier, unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
+    ResourceDidSendData(unsigned long identifier, int frameIndex, unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
     virtual ~ResourceDidSendData() {}
 
     // EventLoopInput API
@@ -55,11 +56,9 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    unsigned long identifier() const { return m_identifier; }
     unsigned long long bytesSent() const { return m_bytesSent; }
     unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }
 private:
-    unsigned long m_identifier;
     unsigned long long m_bytesSent;
     unsigned long long m_totalBytesToBeSent;
 };

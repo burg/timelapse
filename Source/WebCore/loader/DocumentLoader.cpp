@@ -1285,6 +1285,26 @@ void DocumentLoader::setMainResourceDataBufferingPolicy(DataBufferingPolicy data
         m_mainResource->setDataBufferingPolicy(dataBufferingPolicy);
 }
 
+#if ENABLE(WEB_REPLAY)
+PassRefPtr<ResourceLoader> DocumentLoader::findLoaderForIdentifier(unsigned long identifier)
+{
+    auto foundSubresourceLoader = m_subresourceLoaders.find(identifier);
+    if (foundSubresourceLoader != m_subresourceLoaders.end())
+        return foundSubresourceLoader->value;
+
+    auto foundMultipartLoader = m_multipartSubresourceLoaders.find(identifier);
+    if (foundMultipartLoader != m_multipartSubresourceLoaders.end())
+        return foundMultipartLoader->value;
+
+    auto foundPluginStreamLoader = m_plugInStreamLoaders.find(identifier);
+    if (foundPluginStreamLoader != m_plugInStreamLoaders.end())
+        return foundPluginStreamLoader->value;
+
+    ASSERT(isLoadingMainResource() && mainResourceLoader()->identifier() == identifier);
+    return mainResourceLoader();
+}
+#endif // ENABLE(WEB_REPLAY)
+
 void DocumentLoader::stopLoadingPlugIns()
 {
     cancelAll(m_plugInStreamLoaders);

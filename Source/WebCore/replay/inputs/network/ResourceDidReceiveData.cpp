@@ -37,17 +37,15 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 
 namespace WebCore {
 
-ResourceDidReceiveData::ResourceDidReceiveData(unsigned long identifier, const char* data, int length, int encodedLength)
-    : m_identifier(identifier)
+ResourceDidReceiveData::ResourceDidReceiveData(unsigned long identifier, int frameIndex, const char* data, int length, int encodedLength)
+    : ResourceCallback(identifier, frameIndex)
     , m_buffer(Vector<char,0>())
     , m_encodedLength(encodedLength)
 {
@@ -58,11 +56,8 @@ ResourceDidReceiveData::~ResourceDidReceiveData() {}
 
 void ResourceDidReceiveData::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(identifier());
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-
-    client->didReceiveData(handle.get(), data(), length(), encodedLength());
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didReceiveData(data(), length(), encodedLength(), DataPayloadBytes);
 }
 
 const AtomicString& ResourceDidReceiveData::type() const
@@ -87,6 +82,7 @@ size_t ResourceDidReceiveData::memorySize() const
 void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const ResourceDidReceiveData& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
     encoder.put("length", input.length());
     encoder.put("encodedLength", input.encodedLength());
     encoder.putBytes("data", input.data(), input.length());

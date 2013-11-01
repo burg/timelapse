@@ -36,14 +36,15 @@
 
 #include "EventLoopInput.h"
 #include "InputCoder.h"
+#include "ResourceCallback.h"
 
 namespace WebCore {
 
 class ReplayController;
 
-class ResourceWasBlocked : public EventLoopInput {
+class ResourceWasBlocked : public EventLoopInput, public ResourceCallback {
 public:
-    ResourceWasBlocked(unsigned long);
+    ResourceWasBlocked(unsigned long identifier, int frameIndex);
     virtual ~ResourceWasBlocked() {}
 
     // EventLoopInput API
@@ -54,10 +55,6 @@ public:
     virtual const AtomicString& type() const OVERRIDE;
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-
-    unsigned long identifier() const { return m_identifier; }
-private:
-    unsigned long m_identifier;
 };
 
 template<> struct InputCoder<ResourceWasBlocked> {

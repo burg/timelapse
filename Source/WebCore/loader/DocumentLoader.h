@@ -148,6 +148,9 @@ namespace WebCore {
         bool scheduleArchiveLoad(ResourceLoader*, const ResourceRequest&);
 #endif // ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
 
+#if ENABLE(WEB_REPLAY)
+        PassRefPtr<ResourceLoader> findLoaderForIdentifier(unsigned long identifier);
+#endif
         // Return the ArchiveResource for the URL only when loading an Archive
         ArchiveResource* archiveResourceForURL(const URL&) const;
 

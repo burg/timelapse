@@ -44,6 +44,7 @@ class NetworkingContext;
 class Page;
 class ResourceError;
 class ResourceHandle;
+class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
 
@@ -52,10 +53,11 @@ class ResourceResponse;
 class CapturingResourceHandleClient : public ResourceHandleClient {
 
 public:
-    CapturingResourceHandleClient(NetworkProxy*, ResourceHandleClient*, unsigned long);
+    CapturingResourceHandleClient(NetworkProxy*, ResourceLoader*);
     virtual ~CapturingResourceHandleClient();
 
-    unsigned long identifier() const { return m_identifier; }
+    unsigned long identifier() const;
+    int frameIndex() const;
 
     // ResourceHandleClient API
     virtual void willSendRequest(ResourceHandle*, ResourceRequest&, const ResourceResponse&) OVERRIDE;
@@ -73,8 +75,7 @@ public:
 
 private:
     NetworkProxy* m_proxy;
-    ResourceHandleClient* m_client;
-    int m_identifier;
+    ResourceLoader* m_loader;
 };
 
 } // namespace WebCore

@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,48 +27,38 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceDidReceiveData_h
-#define ResourceDidReceiveData_h
+#include "config.h"
 
 #if ENABLE(WEB_REPLAY)
 
-#include "EventLoopInput.h"
-#include "InputCoder.h"
 #include "ResourceCallback.h"
-#include <wtf/Vector.h>
+
+#include "Document.h"
+#include "DocumentLoader.h"
+#include "Frame.h"
+#include "FrameLoader.h"
+#include "Page.h"
+#include "ReplayController.h"
+#include "ResourceLoader.h"
 
 namespace WebCore {
 
-class ReplayController;
+ResourceCallback::ResourceCallback(unsigned long identifier, int frameIndex)
+    : m_identifier(identifier)
+    , m_frameIndex(frameIndex) {}
 
-class ResourceDidReceiveData : public EventLoopInput, public ResourceCallback {
-public:
-    ResourceDidReceiveData(unsigned long identifier, int frameIndex, const char* data, int length, int encodedLength);
-    virtual ~ResourceDidReceiveData();
+ResourceLoader* ResourceCallback::findResourceLoader(ReplayController& controller)
+{
+    Document* document = documentFromFrameIndex(&controller.page(), frameIndex());
+    ASSERT(document);
 
-    // EventLoopInput API
-    virtual void dispatch(ReplayController&) OVERRIDE;
+    RefPtr<ResourceLoader> loader = document->frame()->loader().activeDocumentLoader()->findLoaderForIdentifier(identifier());
+    if (!loader)
+        controller.playbackError(true, String::format("Couldn't find handle context for id: %lu", identifier()));
 
-    // NondeterministicInput API
-    virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE;
-
-    const char* data() const { return m_buffer.data(); }
-    int length() const { return m_buffer.size(); }
-    int encodedLength() const { return m_encodedLength; }
-private:
-    Vector<char, 0> m_buffer;
-    int m_encodedLength;
-};
-
-template<> struct InputCoder<ResourceDidReceiveData> {
-    static void encode(EncoderContext& encoder, const ResourceDidReceiveData& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveData>& input);
-};
+    return loader ? loader.get() : nullptr;
+}
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // ResourceDidReceiveData_h

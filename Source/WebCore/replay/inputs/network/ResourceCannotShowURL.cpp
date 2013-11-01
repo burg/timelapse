@@ -37,24 +37,21 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceError.h"
+#include "ResourceLoader.h"
 
 namespace WebCore {
 
-ResourceCannotShowURL::ResourceCannotShowURL(unsigned long identifier)
-    : m_identifier(identifier) {}
+ResourceCannotShowURL::ResourceCannotShowURL(unsigned long identifier, int frameIndex)
+    : ResourceCallback(identifier, frameIndex) {}
 
 void ResourceCannotShowURL::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-    client->cannotShowURL(handle.get());
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didFail(loader->cannotShowURLError());
 }
 
 const AtomicString& ResourceCannotShowURL::type() const
@@ -64,7 +61,7 @@ const AtomicString& ResourceCannotShowURL::type() const
 
 String ResourceCannotShowURL::toString() const
 {
-    return makeString("ResourceCannotShowURL(id=", String::number(m_identifier), ")");
+    return makeString("ResourceCannotShowURL(id=", String::number(identifier()), ")");
 }
 
 size_t ResourceCannotShowURL::memorySize() const
@@ -83,7 +80,11 @@ bool InputCoder<ResourceCannotShowURL>::decode(DecoderContext& decoder, std::uni
     if (!decoder.get("identifier", identifier))
         return false;
 
-    input = std::make_unique<ResourceCannotShowURL>(identifier);
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = std::make_unique<ResourceCannotShowURL>(identifier, frameIndex);
     return true;
 }
 

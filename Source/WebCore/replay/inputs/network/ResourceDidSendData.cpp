@@ -37,28 +37,23 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-ResourceDidSendData::ResourceDidSendData(unsigned long identifier, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
-    : m_identifier(identifier)
+ResourceDidSendData::ResourceDidSendData(unsigned long identifier, int frameIndex, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
+    : ResourceCallback(identifier, frameIndex)
     , m_bytesSent(bytesSent)
     , m_totalBytesToBeSent(totalBytesToBeSent) {}
 
 void ResourceDidSendData::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-
-    client->didSendData(handle.get(), m_bytesSent, m_totalBytesToBeSent);
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didSendData(m_bytesSent, m_totalBytesToBeSent);
 }
 
 const AtomicString& ResourceDidSendData::type() const
@@ -70,7 +65,7 @@ String ResourceDidSendData::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidSendData(id=");
-    sb.append(String::number(m_identifier));
+    sb.append(String::number(identifier()));
     sb.append(";bytesSent=");
     sb.append(String::number(m_bytesSent));
     sb.append(")");
@@ -85,6 +80,7 @@ size_t ResourceDidSendData::memorySize() const
 void InputCoder<ResourceDidSendData>::encode(EncoderContext& encoder, const ResourceDidSendData& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
     encoder.put("bytesSent", input.bytesSent());
     encoder.put("totalBytesToBeSent", input.totalBytesToBeSent());
 }
@@ -95,6 +91,10 @@ bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, std::uniqu
     if (!decoder.get("identifier", identifier))
         return false;
 
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
     uint64_t bytesSent;
     if (!decoder.get("bytesSent", bytesSent))
         return false;
@@ -103,7 +103,7 @@ bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, std::uniqu
     if (!decoder.get("totalBytesToBeSent", totalBytesToBeSent))
         return false;
 
-    input = std::make_unique<ResourceDidSendData>(identifier, bytesSent, totalBytesToBeSent);
+    input = std::make_unique<ResourceDidSendData>(identifier, frameIndex, bytesSent, totalBytesToBeSent);
     return true;
 }
 

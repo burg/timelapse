@@ -36,6 +36,7 @@
 #include "NetworkingContext.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 #include "ResourceRequest.h"
 #include <wtf/text/CString.h>
 
@@ -145,11 +146,15 @@ ReplayController& NetworkProxy::controller() const
 }
 #endif // ENABLE(WEB_REPLAY)
 
-PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, unsigned long identifier, bool defersLoading, bool shouldContentSniff)
+PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceLoader* loader, bool defersLoading, bool shouldContentSniff)
 {
+    ASSERT(loader);
+
+    ResourceHandleClient* client = static_cast<ResourceHandleClient*>(loader);
 #if ENABLE(WEB_REPLAY)
+    LOG(DeterministicReplay, "Creating resource handle for loader: id=%lu \n", loader->identifier());
     if (mode() == ReplayProxy::Capturing) {
-        CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, identifier);
+        CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, loader);
         return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
     }
 
@@ -158,11 +163,9 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
         // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.
         RefPtr<ResourceHandle> newHandle = ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);
 
-        m_replayHandleMap.set(identifier, std::make_pair(newHandle, client));
+        m_replayHandleMap.set(loader->identifier(), std::make_pair(newHandle, client));
         return newHandle;
     }
-#else
-    UNUSED_PARAM(identifier);
 #endif // ENABLE(WEB_REPLAY)
 
     return ResourceHandle::create(context, request, client, defersLoading, shouldContentSniff);

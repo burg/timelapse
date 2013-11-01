@@ -41,6 +41,7 @@ class ReplayController;
 class NetworkingContext;
 class ResourceHandle;
 class ResourceHandleClient;
+class ResourceLoader;
 class ResourceRequest;
 
 typedef std::pair<RefPtr<ResourceHandle>, ResourceHandleClient*> HandleContext;
@@ -69,7 +70,7 @@ public:
     void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
 #endif
 
-    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, unsigned long identifier, bool, bool);
+    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceLoader*, bool, bool);
 private:
     unsigned long m_nextUniqueIdentifier;
 #if ENABLE(WEB_REPLAY)

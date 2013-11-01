@@ -1,6 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,48 +27,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceDidReceiveData_h
-#define ResourceDidReceiveData_h
+#ifndef ResourceCallback_h
+#define ResourceCallback_h
 
 #if ENABLE(WEB_REPLAY)
-
-#include "EventLoopInput.h"
-#include "InputCoder.h"
-#include "ResourceCallback.h"
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
 class ReplayController;
+class ResourceLoader;
 
-class ResourceDidReceiveData : public EventLoopInput, public ResourceCallback {
+class ResourceCallback {
 public:
-    ResourceDidReceiveData(unsigned long identifier, int frameIndex, const char* data, int length, int encodedLength);
-    virtual ~ResourceDidReceiveData();
+    ResourceCallback(unsigned long identifier, int frameIndex);
+    virtual ~ResourceCallback() {}
 
-    // EventLoopInput API
-    virtual void dispatch(ReplayController&) OVERRIDE;
-
-    // NondeterministicInput API
-    virtual const AtomicString& type() const OVERRIDE;
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE;
-
-    const char* data() const { return m_buffer.data(); }
-    int length() const { return m_buffer.size(); }
-    int encodedLength() const { return m_encodedLength; }
+    ResourceLoader* findResourceLoader(ReplayController&);
+    unsigned long identifier() const { return m_identifier; }
+    int frameIndex() const { return m_frameIndex; }
 private:
-    Vector<char, 0> m_buffer;
-    int m_encodedLength;
-};
-
-template<> struct InputCoder<ResourceDidReceiveData> {
-    static void encode(EncoderContext& encoder, const ResourceDidReceiveData& input);
-    static bool decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveData>& input);
+    unsigned long m_identifier;
+    int m_frameIndex;
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
 
-#endif // ResourceDidReceiveData_h
+#endif // ResourceCallback_h

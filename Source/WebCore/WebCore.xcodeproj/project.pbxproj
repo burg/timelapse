@@ -5226,6 +5226,8 @@
 		C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35561712064800E40FB7 /* ReplayInputIterator.h */; };
 		C42BB778175FAA41008BF639 /* DisableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB776175FAA41008BF639 /* DisableCache.cpp */; };
 		C42BB779175FAA41008BF639 /* EnableCache.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42BB777175FAA41008BF639 /* EnableCache.cpp */; };
+		C43BB647182443F600C22235 /* ResourceCallback.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C43BB645182443F600C22235 /* ResourceCallback.cpp */; };
+		C43BB648182443F600C22235 /* ResourceCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = C43BB646182443F600C22235 /* ResourceCallback.h */; };
 		C44958FE180F57EF003BAF73 /* SendPendingEvents.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */; };
 		C44958FF180F57EF003BAF73 /* SendPendingEvents.h in Headers */ = {isa = PBXBuildFile; fileRef = C44958FD180F57EF003BAF73 /* SendPendingEvents.h */; };
 		C46ADBA117EB8B0600218391 /* EncoderContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C46ADBA017EB8B0600218391 /* EncoderContext.cpp */; };
@@ -12291,6 +12293,8 @@
 		C41D35561712064800E40FB7 /* ReplayInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayInputIterator.h; path = replay/ReplayInputIterator.h; sourceTree = "<group>"; };
 		C42BB776175FAA41008BF639 /* DisableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DisableCache.cpp; sourceTree = "<group>"; };
 		C42BB777175FAA41008BF639 /* EnableCache.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EnableCache.cpp; sourceTree = "<group>"; };
+		C43BB645182443F600C22235 /* ResourceCallback.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceCallback.cpp; sourceTree = "<group>"; };
+		C43BB646182443F600C22235 /* ResourceCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceCallback.h; sourceTree = "<group>"; };
 		C44958FC180F57EF003BAF73 /* SendPendingEvents.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SendPendingEvents.cpp; sourceTree = "<group>"; };
 		C44958FD180F57EF003BAF73 /* SendPendingEvents.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SendPendingEvents.h; sourceTree = "<group>"; };
 		C46ADBA017EB8B0600218391 /* EncoderContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EncoderContext.cpp; sourceTree = "<group>"; };
@@ -20304,6 +20308,8 @@
 		C481089517052FF100AB4BAA /* network */ = {
 			isa = PBXGroup;
 			children = (
+				C43BB645182443F600C22235 /* ResourceCallback.cpp */,
+				C43BB646182443F600C22235 /* ResourceCallback.h */,
 				C481089617052FF100AB4BAA /* ResourceCannotShowURL.cpp */,
 				C481089717052FF100AB4BAA /* ResourceCannotShowURL.h */,
 				C481089817052FF100AB4BAA /* ResourceDidFail.cpp */,
@@ -24880,6 +24886,7 @@
 				08F0BFC61255C53C00075185 /* SVGTextMetrics.h in Headers */,
 				7117445914BC34EC00EE5FC8 /* SVGTextMetricsBuilder.h in Headers */,
 				B2227ACE0D00BF220071B782 /* SVGTextPathElement.h in Headers */,
+				C43BB648182443F600C22235 /* ResourceCallback.h in Headers */,
 				B2227AD10D00BF220071B782 /* SVGTextPositioningElement.h in Headers */,
 				0854B0251255E4E600B9CDD0 /* SVGTextQuery.h in Headers */,
 				085CD275138BB8E000907F2D /* SVGTextRunRenderingContext.h in Headers */,
@@ -27990,6 +27997,7 @@
 				08F859D41463F9CD0067D934 /* SVGImageForContainer.cpp in Sources */,
 				511EF2D117F0FDF100E4FA16 /* JSIDBObjectStoreCustom.cpp in Sources */,
 				B28C6A290D00C44800334AA4 /* SVGImageLoader.cpp in Sources */,
+				C43BB647182443F600C22235 /* ResourceCallback.cpp in Sources */,
 				B2227A2F0D00BF220071B782 /* SVGLangSpace.cpp in Sources */,
 				B2227A320D00BF220071B782 /* SVGLength.cpp in Sources */,
 				7134496D146941B300720312 /* SVGLengthContext.cpp in Sources */,

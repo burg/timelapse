@@ -37,24 +37,21 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceError.h"
+#include "ResourceLoader.h"
 
 namespace WebCore {
 
-ResourceWasBlocked::ResourceWasBlocked(unsigned long identifier)
-    : m_identifier(identifier) {}
+ResourceWasBlocked::ResourceWasBlocked(unsigned long identifier, int frameIndex)
+    : ResourceCallback(identifier, frameIndex) {}
 
 void ResourceWasBlocked::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-    client->cannotShowURL(handle.get());
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didFail(loader->blockedError());
 }
 
 const AtomicString& ResourceWasBlocked::type() const
@@ -64,7 +61,7 @@ const AtomicString& ResourceWasBlocked::type() const
 
 String ResourceWasBlocked::toString() const
 {
-    return makeString("ResourceWasBlocked(id=", String::number(m_identifier), ")");
+    return makeString("ResourceWasBlocked(id=", String::number(identifier()), ")");
 }
 
 size_t ResourceWasBlocked::memorySize() const
@@ -75,6 +72,7 @@ size_t ResourceWasBlocked::memorySize() const
 void InputCoder<ResourceWasBlocked>::encode(EncoderContext& encoder, const ResourceWasBlocked& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
 }
 
 bool InputCoder<ResourceWasBlocked>::decode(DecoderContext& decoder, std::unique_ptr<ResourceWasBlocked>& input)
@@ -83,7 +81,11 @@ bool InputCoder<ResourceWasBlocked>::decode(DecoderContext& decoder, std::unique
     if (!decoder.get("identifier", identifier))
         return false;
 
-    input = std::make_unique<ResourceWasBlocked>(identifier);
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
+    input = std::make_unique<ResourceWasBlocked>(identifier, frameIndex);
     return true;
 }
 

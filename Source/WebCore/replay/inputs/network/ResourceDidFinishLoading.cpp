@@ -37,26 +37,21 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 
 namespace WebCore {
 
-ResourceDidFinishLoading::ResourceDidFinishLoading(unsigned long identifier, double finishTime)
-    : m_identifier(identifier)
+ResourceDidFinishLoading::ResourceDidFinishLoading(unsigned long identifier, int frameIndex, double finishTime)
+    : ResourceCallback(identifier, frameIndex)
     , m_finishTime(finishTime) {}
 
 void ResourceDidFinishLoading::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-
-    client->didFinishLoading(handle.get(), m_finishTime);
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didFinishLoading(m_finishTime);
 }
 
 const AtomicString& ResourceDidFinishLoading::type() const
@@ -67,7 +62,7 @@ const AtomicString& ResourceDidFinishLoading::type() const
 String ResourceDidFinishLoading::toString() const
 {
     return makeString("ResourceDidFinishLoading(id=",
-                      String::number(m_identifier),
+                      String::number(identifier()),
                       "; finishTime=",
                       String::number(m_finishTime)
                       ,")");
@@ -81,6 +76,7 @@ size_t ResourceDidFinishLoading::memorySize() const
 void InputCoder<ResourceDidFinishLoading>::encode(EncoderContext& encoder, const ResourceDidFinishLoading& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
     encoder.put("finishTime", input.finishTime());
 }
 
@@ -90,11 +86,15 @@ bool InputCoder<ResourceDidFinishLoading>::decode(DecoderContext& decoder, std::
     if (!decoder.get("identifier", identifier))
         return false;
 
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
     double finishTime;
     if (!decoder.get("finishTime", finishTime))
         return false;
 
-    input = std::make_unique<ResourceDidFinishLoading>(identifier, finishTime);
+    input = std::make_unique<ResourceDidFinishLoading>(identifier, frameIndex, finishTime);
     return true;
 }
 

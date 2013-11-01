@@ -2,7 +2,6 @@
  *  Copyright (C) 2012, Brian Burg.
  *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
- *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -37,39 +36,27 @@
 
 #include "DecoderContext.h"
 #include "EncoderContext.h"
-#include "InspectorInstrumentation.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ResourceHandle.h"
-#include "ResourceHandleClient.h"
+#include "ResourceLoader.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, const ResourceResponse& response)
-    : m_identifier(identifier)
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, const ResourceResponse& response)
+    : ResourceCallback(identifier, frameIndex)
     , m_response(ResourceResponse::adopt(response.copyData())) {}
 
-ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, std::unique_ptr<ResourceResponse> response)
-    : m_identifier(identifier)
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, int frameIndex, std::unique_ptr<ResourceResponse> response)
+    : ResourceCallback(identifier, frameIndex)
     , m_response(adoptPtr(response.release())) {}
 
 void ResourceDidReceiveResponse::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
-    RefPtr<ResourceHandle> handle = context.first;
-    ResourceHandleClient* client = context.second;
-
-    if (!client) {
-        // FIXME: this shouldn't be fatal error, because we can just not deliver the callback.
-        controller.playbackError(true, String::format("Couldn't find handle context for id: %lu", m_identifier));
-        return;
-    }
-
-    client->didReceiveResponse(handle.get(), *m_response);
+    if (ResourceLoader* loader = findResourceLoader(controller))
+        loader->didReceiveResponse(*m_response);
 }
 
 const AtomicString& ResourceDidReceiveResponse::type() const
@@ -81,7 +68,9 @@ String ResourceDidReceiveResponse::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidReceiveResponse(id=");
-    sb.append(String::number(m_identifier));
+    sb.append(String::number(identifier()));
+    sb.append("; frameIndex=");
+    sb.append(String::number(frameIndex()));
     sb.append("; url=");
     sb.append(m_response->url().string());
     sb.append(")");
@@ -96,6 +85,7 @@ size_t ResourceDidReceiveResponse::memorySize() const
 void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input)
 {
     encoder.put("identifier", input.identifier());
+    encoder.put("frameIndex", input.frameIndex());
 
     std::unique_ptr<EncoderContext> encodedResponse = encoder.createMap();
     InputCoder<ResourceResponse>::encode(*encodedResponse, input.response());
@@ -108,11 +98,15 @@ bool InputCoder<ResourceDidReceiveResponse>::decode(DecoderContext& decoder, std
     if (!decoder.get("identifier", identifier))
         return false;
 
+    int frameIndex;
+    if (!decoder.get("frameIndex", frameIndex))
+        return false;
+
     std::unique_ptr<ResourceResponse> response;
     if (!InputCoder<ResourceResponse>::decode(decoder, response))
         return false;
 
-    input = std::make_unique<ResourceDidReceiveResponse>(identifier, std::move(response));
+    input = std::make_unique<ResourceDidReceiveResponse>(identifier, frameIndex, std::move(response));
     return true;
 }
 
