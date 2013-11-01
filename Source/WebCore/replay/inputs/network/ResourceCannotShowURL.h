@@ -43,7 +43,7 @@ class ReplayController;
 
 class ResourceCannotShowURL : public EventLoopInput {
 public:
-    ResourceCannotShowURL(int handleId);
+    ResourceCannotShowURL(unsigned long identifier);
     virtual ~ResourceCannotShowURL() {}
 
     // EventLoopInput API
@@ -55,9 +55,9 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
 };
 
 template<> struct InputCoder<ResourceCannotShowURL> {

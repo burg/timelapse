@@ -44,7 +44,7 @@ class ReplayController;
 
 class ResourceDidReceiveData : public EventLoopInput {
 public:
-    ResourceDidReceiveData(int, const char* data, int length, int encodedLength);
+    ResourceDidReceiveData(unsigned long identifier, const char* data, int length, int encodedLength);
     virtual ~ResourceDidReceiveData();
 
     // EventLoopInput API
@@ -55,12 +55,12 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     const char* data() const { return m_buffer.data(); }
     int length() const { return m_buffer.size(); }
     int encodedLength() const { return m_encodedLength; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     Vector<char, 0> m_buffer;
     int m_encodedLength;
 };

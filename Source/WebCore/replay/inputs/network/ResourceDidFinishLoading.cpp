@@ -46,13 +46,13 @@
 
 namespace WebCore {
 
-ResourceDidFinishLoading::ResourceDidFinishLoading(int handleId, double finishTime)
-    : m_handleId(handleId)
+ResourceDidFinishLoading::ResourceDidFinishLoading(unsigned long identifier, double finishTime)
+    : m_identifier(identifier)
     , m_finishTime(finishTime) {}
 
 void ResourceDidFinishLoading::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -67,7 +67,7 @@ const AtomicString& ResourceDidFinishLoading::type() const
 String ResourceDidFinishLoading::toString() const
 {
     return makeString("ResourceDidFinishLoading(id=",
-                      String::number(m_handleId),
+                      String::number(m_identifier),
                       "; finishTime=",
                       String::number(m_finishTime)
                       ,")");
@@ -80,21 +80,21 @@ size_t ResourceDidFinishLoading::memorySize() const
 
 void InputCoder<ResourceDidFinishLoading>::encode(EncoderContext& encoder, const ResourceDidFinishLoading& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
     encoder.put("finishTime", input.finishTime());
 }
 
 bool InputCoder<ResourceDidFinishLoading>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidFinishLoading>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
     double finishTime;
     if (!decoder.get("finishTime", finishTime))
         return false;
 
-    input = std::make_unique<ResourceDidFinishLoading>(handleId, finishTime);
+    input = std::make_unique<ResourceDidFinishLoading>(identifier, finishTime);
     return true;
 }
 

@@ -49,23 +49,23 @@
 
 namespace WebCore {
 
-ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, const ResourceResponse& response)
-    : m_handleId(handleId)
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, const ResourceResponse& response)
+    : m_identifier(identifier)
     , m_response(ResourceResponse::adopt(response.copyData())) {}
 
-ResourceDidReceiveResponse::ResourceDidReceiveResponse(int handleId, std::unique_ptr<ResourceResponse> response)
-    : m_handleId(handleId)
+ResourceDidReceiveResponse::ResourceDidReceiveResponse(unsigned long identifier, std::unique_ptr<ResourceResponse> response)
+    : m_identifier(identifier)
     , m_response(adoptPtr(response.release())) {}
 
 void ResourceDidReceiveResponse::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
     if (!client) {
         // FIXME: this shouldn't be fatal error, because we can just not deliver the callback.
-        controller.playbackError(true, String::format("Couldn't find handle context for id: %d", m_handleId));
+        controller.playbackError(true, String::format("Couldn't find handle context for id: %lu", m_identifier));
         return;
     }
 
@@ -81,7 +81,7 @@ String ResourceDidReceiveResponse::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidReceiveResponse(id=");
-    sb.append(String::number(m_handleId));
+    sb.append(String::number(m_identifier));
     sb.append("; url=");
     sb.append(m_response->url().string());
     sb.append(")");
@@ -95,7 +95,7 @@ size_t ResourceDidReceiveResponse::memorySize() const
 
 void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, const ResourceDidReceiveResponse& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 
     std::unique_ptr<EncoderContext> encodedResponse = encoder.createMap();
     InputCoder<ResourceResponse>::encode(*encodedResponse, input.response());
@@ -104,15 +104,15 @@ void InputCoder<ResourceDidReceiveResponse>::encode(EncoderContext& encoder, con
 
 bool InputCoder<ResourceDidReceiveResponse>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidReceiveResponse>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
     std::unique_ptr<ResourceResponse> response;
     if (!InputCoder<ResourceResponse>::decode(decoder, response))
         return false;
 
-    input = std::make_unique<ResourceDidReceiveResponse>(handleId, std::move(response));
+    input = std::make_unique<ResourceDidReceiveResponse>(identifier, std::move(response));
     return true;
 }
 

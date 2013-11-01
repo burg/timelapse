@@ -113,15 +113,6 @@ bool ResourceLoader::init(const ResourceRequest& r)
     ASSERT(m_deferredRequest.isNull());
     ASSERT(!m_documentLoader->isSubstituteLoadPending(this));
 
-#if ENABLE(WEB_REPLAY)
-    NetworkProxy& proxy = m_frame->page()->networkProxy();
-    // FIXME: shouldn't this consult the frame's document, not the top frame's?
-    InputIterator* it = m_frame->tree().top().document()->inputIterator();
-    bool capturingOrReplaying = it && (it->isCapturing() || it->isReplaying());
-    if (capturingOrReplaying || proxy.expectsPageLoad())
-        m_loaderId = proxy.nextLoaderId(r);
-#endif
-
     ResourceRequest clientRequest(r);
 
     m_defersLoading = m_frame->page()->defersLoading();
@@ -171,7 +162,7 @@ void ResourceLoader::start()
     }
 
     if (!m_reachedTerminalState)
-        m_handle = m_frame->page()->networkProxy().createResourceHandle(m_frame->loader().networkingContext(), m_request, this, m_loaderId, m_defersLoading, m_options.sniffContent == SniffContent);
+        m_handle = m_frame->page()->networkProxy().createResourceHandle(m_frame->loader().networkingContext(), m_request, this, m_identifier, m_defersLoading, m_options.sniffContent == SniffContent);
 }
 
 void ResourceLoader::setDefersLoading(bool defers)
@@ -246,7 +237,7 @@ void ResourceLoader::willSendRequest(ResourceRequest& request, const ResourceRes
     // We need a resource identifier for all requests, even if FrameLoader is never going to see it (such as with CORS preflight requests).
     bool createdResourceIdentifier = false;
     if (!m_identifier) {
-        m_identifier = m_frame->page()->networkProxy().createUniqueIdentifier();
+        m_identifier = m_frame->page()->networkProxy().createUniqueIdentifierWithRequest(request);
         createdResourceIdentifier = true;
     }
 

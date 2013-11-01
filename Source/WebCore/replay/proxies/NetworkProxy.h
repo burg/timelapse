@@ -51,13 +51,17 @@ public:
     NetworkProxy(Page&);
     virtual ~NetworkProxy();
 
+    virtual void setProxyMode(ProxyMode mode) OVERRIDE;
+
     unsigned long createUniqueIdentifier();
+    // This is used to find differing ResourceRequest details during replay.
+    // If
+    unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
 
 #if ENABLE(WEB_REPLAY)
-    HandleContext handleContextById(int);
-    void removeHandleById(int);
+    HandleContext handleContextByIdentifier(unsigned long);
+    void removeHandleByIdentifier(unsigned long);
     ReplayController& controller() const;
-    int nextLoaderId(const ResourceRequest&);
 
     // These flags manage the initial sequence leading up to controller->capturing()
     // or controller->replaying() becoming true.
@@ -65,13 +69,12 @@ public:
     void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
 #endif
 
-    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, int loaderId, bool, bool);
+    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, unsigned long identifier, bool, bool);
 private:
     unsigned long m_nextUniqueIdentifier;
 #if ENABLE(WEB_REPLAY)
-    int m_nextId;
     bool m_expectsPageLoad;
-    HashMap<int, HandleContext> m_replayHandleMap;
+    HashMap<unsigned long, HandleContext> m_replayHandleMap;
 #endif
 };
 

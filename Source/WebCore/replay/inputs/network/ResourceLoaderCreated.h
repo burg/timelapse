@@ -42,8 +42,8 @@ namespace WebCore {
 
 class ResourceLoaderCreated : public NondeterministicInput {
 public:
-    ResourceLoaderCreated(int handleId, const ResourceRequest&);
-    ResourceLoaderCreated(int handleId, std::unique_ptr<ResourceRequest>);
+    ResourceLoaderCreated(unsigned long identifier, const ResourceRequest&);
+    ResourceLoaderCreated(unsigned long identifier, std::unique_ptr<ResourceRequest>);
     virtual ~ResourceLoaderCreated();
 
     // NondeterministicInput API
@@ -52,10 +52,10 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     const ResourceRequest& request() const { return *m_request; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     OwnPtr<ResourceRequest> m_request;
 };
 

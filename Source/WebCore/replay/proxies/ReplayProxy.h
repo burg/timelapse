@@ -49,7 +49,7 @@ public:
 
     virtual ~ReplayProxy() {}
 
-    void setProxyMode(ProxyMode mode) { m_mode = mode; }
+    virtual void setProxyMode(ProxyMode mode) { m_mode = mode; }
     ProxyMode mode() const { return m_mode; }
 
 protected:

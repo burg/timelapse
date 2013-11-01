@@ -43,12 +43,12 @@
 
 namespace WebCore {
 
-ResourceLoaderDestroyed::ResourceLoaderDestroyed(int handleId)
-    : m_handleId(handleId) {}
+ResourceLoaderDestroyed::ResourceLoaderDestroyed(unsigned long identifier)
+    : m_identifier(identifier) {}
 
 void ResourceLoaderDestroyed::dispatch(ReplayController& controller)
 {
-    controller.page().networkProxy().removeHandleById(m_handleId);
+    controller.page().networkProxy().removeHandleByIdentifier(m_identifier);
 }
 
 const AtomicString& ResourceLoaderDestroyed::type() const
@@ -58,7 +58,7 @@ const AtomicString& ResourceLoaderDestroyed::type() const
 
 String ResourceLoaderDestroyed::toString() const
 {
-    return makeString("ResourceLoaderDestroyed(id=", String::number(m_handleId), ")");
+    return makeString("ResourceLoaderDestroyed(id=", String::number(m_identifier), ")");
 }
 
 size_t ResourceLoaderDestroyed::memorySize() const
@@ -68,16 +68,16 @@ size_t ResourceLoaderDestroyed::memorySize() const
 
 void InputCoder<ResourceLoaderDestroyed>::encode(EncoderContext& encoder, const ResourceLoaderDestroyed& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 }
 
 bool InputCoder<ResourceLoaderDestroyed>::decode(DecoderContext& decoder, std::unique_ptr<ResourceLoaderDestroyed>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
-    input = std::make_unique<ResourceLoaderDestroyed>(handleId);
+    input = std::make_unique<ResourceLoaderDestroyed>(identifier);
     return true;
 }
 

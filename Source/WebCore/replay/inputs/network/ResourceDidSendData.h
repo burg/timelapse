@@ -23,7 +23,7 @@
  * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
  * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * DATA, OR PROFITS; OR BUSINESS unsigned longERRUPTION) HOWEVER CAUSED AND ON ANY
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -43,7 +43,7 @@ class ReplayController;
 
 class ResourceDidSendData : public EventLoopInput {
 public:
-    ResourceDidSendData(int, unsigned long long, unsigned long long);
+    ResourceDidSendData(unsigned long identifier, unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
     virtual ~ResourceDidSendData() {}
 
     // EventLoopInput API
@@ -55,11 +55,11 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     unsigned long long bytesSent() const { return m_bytesSent; }
     unsigned long long totalBytesToBeSent() const { return m_totalBytesToBeSent; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     unsigned long long m_bytesSent;
     unsigned long long m_totalBytesToBeSent;
 };

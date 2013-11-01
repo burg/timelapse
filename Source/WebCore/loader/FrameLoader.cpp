@@ -2930,7 +2930,7 @@ void FrameLoader::requestFromDelegate(ResourceRequest& request, unsigned long& i
 
     identifier = 0;
     if (Page* page = m_frame.page()) {
-        identifier = page->networkProxy().createUniqueIdentifier();
+        identifier = page->networkProxy().createUniqueIdentifierWithRequest(request);
         notifier().assignIdentifierToInitialRequest(identifier, m_documentLoader.get(), request);
     }
 

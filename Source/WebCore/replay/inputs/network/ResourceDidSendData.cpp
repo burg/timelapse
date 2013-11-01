@@ -47,14 +47,14 @@
 
 namespace WebCore {
 
-ResourceDidSendData::ResourceDidSendData(int handleId, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
-    : m_handleId(handleId)
+ResourceDidSendData::ResourceDidSendData(unsigned long identifier, unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
+    : m_identifier(identifier)
     , m_bytesSent(bytesSent)
     , m_totalBytesToBeSent(totalBytesToBeSent) {}
 
 void ResourceDidSendData::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -70,7 +70,7 @@ String ResourceDidSendData::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidSendData(id=");
-    sb.append(String::number(m_handleId));
+    sb.append(String::number(m_identifier));
     sb.append(";bytesSent=");
     sb.append(String::number(m_bytesSent));
     sb.append(")");
@@ -84,15 +84,15 @@ size_t ResourceDidSendData::memorySize() const
 
 void InputCoder<ResourceDidSendData>::encode(EncoderContext& encoder, const ResourceDidSendData& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
     encoder.put("bytesSent", input.bytesSent());
     encoder.put("totalBytesToBeSent", input.totalBytesToBeSent());
 }
 
 bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidSendData>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    int identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
     uint64_t bytesSent;
@@ -103,7 +103,7 @@ bool InputCoder<ResourceDidSendData>::decode(DecoderContext& decoder, std::uniqu
     if (!decoder.get("totalBytesToBeSent", totalBytesToBeSent))
         return false;
 
-    input = std::make_unique<ResourceDidSendData>(handleId, bytesSent, totalBytesToBeSent);
+    input = std::make_unique<ResourceDidSendData>(identifier, bytesSent, totalBytesToBeSent);
     return true;
 }
 

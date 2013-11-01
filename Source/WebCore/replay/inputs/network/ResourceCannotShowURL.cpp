@@ -46,12 +46,12 @@
 
 namespace WebCore {
 
-ResourceCannotShowURL::ResourceCannotShowURL(int handleId)
-    : m_handleId(handleId) {}
+ResourceCannotShowURL::ResourceCannotShowURL(unsigned long identifier)
+    : m_identifier(identifier) {}
 
 void ResourceCannotShowURL::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
@@ -64,7 +64,7 @@ const AtomicString& ResourceCannotShowURL::type() const
 
 String ResourceCannotShowURL::toString() const
 {
-    return makeString("ResourceCannotShowURL(id=", String::number(m_handleId), ")");
+    return makeString("ResourceCannotShowURL(id=", String::number(m_identifier), ")");
 }
 
 size_t ResourceCannotShowURL::memorySize() const
@@ -74,16 +74,16 @@ size_t ResourceCannotShowURL::memorySize() const
 
 void InputCoder<ResourceCannotShowURL>::encode(EncoderContext& encoder, const ResourceCannotShowURL& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 }
 
 bool InputCoder<ResourceCannotShowURL>::decode(DecoderContext& decoder, std::unique_ptr<ResourceCannotShowURL>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
-    input = std::make_unique<ResourceCannotShowURL>(handleId);
+    input = std::make_unique<ResourceCannotShowURL>(identifier);
     return true;
 }
 

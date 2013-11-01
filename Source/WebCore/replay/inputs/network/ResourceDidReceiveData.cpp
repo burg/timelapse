@@ -46,8 +46,8 @@
 
 namespace WebCore {
 
-ResourceDidReceiveData::ResourceDidReceiveData(int handleId, const char* data, int length, int encodedLength)
-    : m_handleId(handleId)
+ResourceDidReceiveData::ResourceDidReceiveData(unsigned long identifier, const char* data, int length, int encodedLength)
+    : m_identifier(identifier)
     , m_buffer(Vector<char,0>())
     , m_encodedLength(encodedLength)
 {
@@ -58,7 +58,7 @@ ResourceDidReceiveData::~ResourceDidReceiveData() {}
 
 void ResourceDidReceiveData::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(handleId());
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(identifier());
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -73,7 +73,7 @@ const AtomicString& ResourceDidReceiveData::type() const
 String ResourceDidReceiveData::toString() const
 {
     return makeString("ResourceDidReceiveData(id=",
-                      String::number(handleId()),
+                      String::number(identifier()),
                       ";bytes=",
                       String::number(length()),
                       ")");
@@ -86,7 +86,7 @@ size_t ResourceDidReceiveData::memorySize() const
 
 void InputCoder<ResourceDidReceiveData>::encode(EncoderContext& encoder, const ResourceDidReceiveData& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
     encoder.put("length", input.length());
     encoder.put("encodedLength", input.encodedLength());
     encoder.putBytes("data", input.data(), input.length());

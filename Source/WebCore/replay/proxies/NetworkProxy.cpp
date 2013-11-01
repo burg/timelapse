@@ -74,80 +74,82 @@ NetworkProxy::NetworkProxy(Page& page)
 : ReplayProxy(page)
 , m_nextUniqueIdentifier(1)
 #if ENABLE(WEB_REPLAY)
-// Start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX.
-, m_nextId(1)
 , m_expectsPageLoad(false)
-, m_replayHandleMap(HashMap<int, HandleContext>())
+, m_replayHandleMap(HashMap<unsigned long, HandleContext>())
 #endif
 {}
 
 NetworkProxy::~NetworkProxy()
 {}
 
+void NetworkProxy::setProxyMode(ProxyMode mode)
+{
+    ReplayProxy::setProxyMode(mode);
+    m_nextUniqueIdentifier = 1;
+}
+
 unsigned long NetworkProxy::createUniqueIdentifier()
 {
     return m_nextUniqueIdentifier++;
 }
 
-#if ENABLE(WEB_REPLAY)
-HandleContext NetworkProxy::handleContextById(int id)
+unsigned long NetworkProxy::createUniqueIdentifierWithRequest(const ResourceRequest& request)
 {
-    return m_replayHandleMap.get(id);
+    unsigned long identifier = createUniqueIdentifier();
+#if ENABLE(WEB_REPLAY)
+    if (mode() == Capturing)
+        controller().activeIterator()->storeInput(std::make_unique<ResourceLoaderCreated>(identifier, request));
+
+    if (mode() == Replaying) {
+        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(controller().activeIterator()->loadInput(NondeterministicInput::LoaderMemoizedDataQueue, inputTypes().ResourceLoaderCreated));
+        unsigned long memoizedIdentifier = memoizedData ? memoizedData->identifier() : 0;
+        bool failed = true;
+
+        if (!memoizedData)
+            controller().playbackError(false, "Memoized network request details were missing.");
+        else if (!ResourceRequestBase::compare(memoizedData->request(), request)) {
+            controller().playbackError(false, "Network request details differ from request observed when recording.");
+            failed = true;
+            LOG(DeterministicReplay, "Memoized request information:");
+            printResourceRequestDiagnostics(memoizedData->request());
+        } else if (memoizedIdentifier != identifier)
+            controller().playbackError(false, String::format("Different number of identifiers created on capture and replay. (memoized: %lu, actual %lu)", memoizedIdentifier, identifier));
+        else
+            failed = false;
+
+        if (failed) {
+            LOG(DeterministicReplay, "Actual request information:");
+            printResourceRequestDiagnostics(request);
+        }
+    }
+#else
+    UNUSED_PARAM(request);
+#endif
+    return identifier;
 }
 
-void NetworkProxy::removeHandleById(int id)
+#if ENABLE(WEB_REPLAY)
+HandleContext NetworkProxy::handleContextByIdentifier(unsigned long identifier)
 {
-    m_replayHandleMap.remove(id);
+    return m_replayHandleMap.get(identifier);
+}
+
+void NetworkProxy::removeHandleByIdentifier(unsigned long identifier)
+{
+    m_replayHandleMap.remove(identifier);
 }
 
 ReplayController& NetworkProxy::controller() const
 {
     return m_page.replayController();
 }
-
-int NetworkProxy::nextLoaderId(const ResourceRequest& request)
-{
-    InputIterator* it = controller().activeIterator();
-
-    if (mode() == ReplayProxy::Capturing) {
-        ASSERT(it && it->isCapturing());
-        int freshId = m_nextId++;
-        controller().activeIterator()->storeInput(std::make_unique<ResourceLoaderCreated>(freshId, request));
-
-        return freshId;
-    }
-
-    if (mode() == ReplayProxy::Replaying) {
-        ASSERT(it && it->isReplaying());
-        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(NondeterministicInput::LoaderMemoizedDataQueue, inputTypes().ResourceLoaderCreated));
-        int loaderId = memoizedData ? memoizedData->handleId() : -1;
-
-        // FIXME: is a soft error appropriate here?
-        if (!memoizedData)
-            controller().playbackError(false, "Memoized network request details were missing.");
-        else if (!ResourceRequestBase::compare(memoizedData->request(), request)) {
-            controller().playbackError(false, "Network request details differ from request observed when recording.");
-
-            LOG(DeterministicReplay, "Memoized request information:");
-            printResourceRequestDiagnostics(memoizedData->request());
-        }
-        else // Normal case: requests are equal.
-            return loaderId;
-
-        LOG(DeterministicReplay, "Actual request information:");
-        printResourceRequestDiagnostics(request);
-    }
-
-    return -1;
-}
 #endif // ENABLE(WEB_REPLAY)
 
-PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, int loaderId, bool defersLoading, bool shouldContentSniff)
+PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, unsigned long identifier, bool defersLoading, bool shouldContentSniff)
 {
 #if ENABLE(WEB_REPLAY)
     if (mode() == ReplayProxy::Capturing) {
-        ASSERT(loaderId > 0);
-        CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, loaderId);
+        CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, identifier);
         return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
     }
 
@@ -156,11 +158,11 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
         // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.
         RefPtr<ResourceHandle> newHandle = ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);
 
-        m_replayHandleMap.set(loaderId, std::make_pair(newHandle, client));
+        m_replayHandleMap.set(identifier, std::make_pair(newHandle, client));
         return newHandle;
     }
 #else
-    UNUSED_PARAM(loaderId);
+    UNUSED_PARAM(identifier);
 #endif // ENABLE(WEB_REPLAY)
 
     return ResourceHandle::create(context, request, client, defersLoading, shouldContentSniff);

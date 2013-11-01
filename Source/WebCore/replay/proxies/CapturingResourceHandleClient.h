@@ -52,10 +52,10 @@ class ResourceResponse;
 class CapturingResourceHandleClient : public ResourceHandleClient {
 
 public:
-    CapturingResourceHandleClient(NetworkProxy*, ResourceHandleClient*, int);
+    CapturingResourceHandleClient(NetworkProxy*, ResourceHandleClient*, unsigned long);
     virtual ~CapturingResourceHandleClient();
 
-    int id() const { return m_id; }
+    unsigned long identifier() const { return m_identifier; }
 
     // ResourceHandleClient API
     virtual void willSendRequest(ResourceHandle*, ResourceRequest&, const ResourceResponse&) OVERRIDE;
@@ -74,7 +74,7 @@ public:
 private:
     NetworkProxy* m_proxy;
     ResourceHandleClient* m_client;
-    int m_id;
+    int m_identifier;
 };
 
 } // namespace WebCore

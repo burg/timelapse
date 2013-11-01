@@ -51,13 +51,13 @@
 
 namespace WebCore {
 
-ResourceWillSendRequest::ResourceWillSendRequest(int handleId, ResourceRequest& request, const ResourceResponse& redirectResponse)
-    : m_handleId(handleId)
+ResourceWillSendRequest::ResourceWillSendRequest(unsigned long identifier, ResourceRequest& request, const ResourceResponse& redirectResponse)
+    : m_identifier(identifier)
     , m_request(ResourceRequest::adopt(request.copyData()))
     , m_redirectResponse(ResourceResponse::adopt(redirectResponse.copyData())) {}
 
-ResourceWillSendRequest::ResourceWillSendRequest(int handleId, std::unique_ptr<ResourceRequest> request, std::unique_ptr<ResourceResponse> redirectResponse)
-    : m_handleId(handleId)
+ResourceWillSendRequest::ResourceWillSendRequest(unsigned long identifier, std::unique_ptr<ResourceRequest> request, std::unique_ptr<ResourceResponse> redirectResponse)
+    : m_identifier(identifier)
     , m_request(adoptPtr(request.release()))
     , m_redirectResponse(adoptPtr(redirectResponse.release())) {}
 
@@ -65,7 +65,7 @@ ResourceWillSendRequest::~ResourceWillSendRequest() {}
 
 void ResourceWillSendRequest::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -81,7 +81,7 @@ String ResourceWillSendRequest::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceWillSendRequest(id=");
-    sb.append(String::number(m_handleId));
+    sb.append(String::number(m_identifier));
     sb.append("; url=");
     sb.append(m_request->url().string());
     sb.append(")");
@@ -95,7 +95,7 @@ size_t ResourceWillSendRequest::memorySize() const
 
 void InputCoder<ResourceWillSendRequest>::encode(EncoderContext& encoder, const ResourceWillSendRequest& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 
     std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
@@ -108,8 +108,8 @@ void InputCoder<ResourceWillSendRequest>::encode(EncoderContext& encoder, const 
 
 bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, std::unique_ptr<ResourceWillSendRequest>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
     std::unique_ptr<ResourceRequest> request;
@@ -120,7 +120,7 @@ bool InputCoder<ResourceWillSendRequest>::decode(DecoderContext& decoder, std::u
     if (!InputCoder<ResourceResponse>::decode(decoder, redirectResponse))
         return false;
 
-    input = std::make_unique<ResourceWillSendRequest>(handleId, std::move(request), std::move(redirectResponse));
+    input = std::make_unique<ResourceWillSendRequest>(identifier, std::move(request), std::move(redirectResponse));
     return true;
 }
 

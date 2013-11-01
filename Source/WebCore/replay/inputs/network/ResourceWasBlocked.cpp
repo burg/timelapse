@@ -46,12 +46,12 @@
 
 namespace WebCore {
 
-ResourceWasBlocked::ResourceWasBlocked(int handleId)
-    : m_handleId(handleId) {}
+ResourceWasBlocked::ResourceWasBlocked(unsigned long identifier)
+    : m_identifier(identifier) {}
 
 void ResourceWasBlocked::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
     client->cannotShowURL(handle.get());
@@ -64,7 +64,7 @@ const AtomicString& ResourceWasBlocked::type() const
 
 String ResourceWasBlocked::toString() const
 {
-    return makeString("ResourceWasBlocked(id=", String::number(m_handleId), ")");
+    return makeString("ResourceWasBlocked(id=", String::number(m_identifier), ")");
 }
 
 size_t ResourceWasBlocked::memorySize() const
@@ -74,16 +74,16 @@ size_t ResourceWasBlocked::memorySize() const
 
 void InputCoder<ResourceWasBlocked>::encode(EncoderContext& encoder, const ResourceWasBlocked& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 }
 
 bool InputCoder<ResourceWasBlocked>::decode(DecoderContext& decoder, std::unique_ptr<ResourceWasBlocked>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
-    input = std::make_unique<ResourceWasBlocked>(handleId);
+    input = std::make_unique<ResourceWasBlocked>(identifier);
     return true;
 }
 

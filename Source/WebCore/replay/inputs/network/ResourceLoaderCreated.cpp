@@ -44,12 +44,12 @@
 
 namespace WebCore {
 
-ResourceLoaderCreated::ResourceLoaderCreated(int handleId, const ResourceRequest& request)
-    : m_handleId(handleId)
+ResourceLoaderCreated::ResourceLoaderCreated(unsigned long identifier, const ResourceRequest& request)
+    : m_identifier(identifier)
     , m_request(ResourceRequest::adopt(request.copyData())) {}
 
-ResourceLoaderCreated::ResourceLoaderCreated(int handleId, std::unique_ptr<ResourceRequest> request)
-    : m_handleId(handleId)
+ResourceLoaderCreated::ResourceLoaderCreated(unsigned long identifier, std::unique_ptr<ResourceRequest> request)
+    : m_identifier(identifier)
     , m_request(adoptPtr(request.release())) {}
 
 ResourceLoaderCreated::~ResourceLoaderCreated()
@@ -66,8 +66,8 @@ const AtomicString& ResourceLoaderCreated::type() const
 
 String ResourceLoaderCreated::toString() const
 {
-    return makeString("ResourceLoaderCreated(handleId=",
-                      String::number(m_handleId),
+    return makeString("ResourceLoaderCreated(identifier=",
+                      String::number(m_identifier),
                       "; url=",
                       m_request->url().string(),
                       ")");
@@ -81,7 +81,7 @@ size_t ResourceLoaderCreated::memorySize() const
 
 void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const ResourceLoaderCreated& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 
     std::unique_ptr<EncoderContext> encodedRequest = encoder.createMap();
     InputCoder<ResourceRequest>::encode(*encodedRequest, input.request());
@@ -90,15 +90,15 @@ void InputCoder<ResourceLoaderCreated>::encode(EncoderContext& encoder, const Re
 
 bool InputCoder<ResourceLoaderCreated>::decode(DecoderContext& decoder, std::unique_ptr<ResourceLoaderCreated>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
     std::unique_ptr<ResourceRequest> request;
     if (!InputCoder<ResourceRequest>::decode(decoder, request))
         return false;
 
-    input = std::make_unique<ResourceLoaderCreated>(handleId, std::move(request));
+    input = std::make_unique<ResourceLoaderCreated>(identifier, std::move(request));
     return true;
 }
 

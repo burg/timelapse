@@ -514,7 +514,7 @@ PassRefPtr<ResourceHandle> ApplicationCacheGroup::createResourceHandle(const URL
 #if ENABLE(INSPECTOR)
     // Because willSendRequest only gets called during redirects, we initialize
     // the identifier and the first willSendRequest here.
-    m_currentResourceIdentifier = m_frame->page()->networkProxy().createUniqueIdentifier();
+    m_currentResourceIdentifier = m_frame->page()->networkProxy().createUniqueIdentifierWithRequest(request);
     ResourceResponse redirectResponse = ResourceResponse();
     InspectorInstrumentation::willSendRequest(m_frame, m_currentResourceIdentifier, m_frame->loader().documentLoader(), request, redirectResponse);
 #endif

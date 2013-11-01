@@ -44,8 +44,8 @@ class ReplayController;
 
 class ResourceDidReceiveResponse : public EventLoopInput {
 public:
-    ResourceDidReceiveResponse(int handleId, const ResourceResponse& response);
-    ResourceDidReceiveResponse(int handleId, std::unique_ptr<ResourceResponse> response);
+    ResourceDidReceiveResponse(unsigned long identifier, const ResourceResponse& response);
+    ResourceDidReceiveResponse(unsigned long identifier, std::unique_ptr<ResourceResponse> response);
     virtual ~ResourceDidReceiveResponse() {}
 
     // EventLoopInput API
@@ -56,10 +56,10 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     const ResourceResponse& response() const { return *m_response; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     OwnPtr<ResourceResponse> m_response;
 };
 

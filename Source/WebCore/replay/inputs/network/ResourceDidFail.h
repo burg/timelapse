@@ -44,8 +44,8 @@ class ReplayController;
 
 class ResourceDidFail : public EventLoopInput {
 public:
-    ResourceDidFail(int handleId, const ResourceError&);
-    ResourceDidFail(int handleId, std::unique_ptr<ResourceError>);
+    ResourceDidFail(unsigned long identifier, const ResourceError&);
+    ResourceDidFail(unsigned long identifier, std::unique_ptr<ResourceError>);
     virtual ~ResourceDidFail() {}
 
     // EventLoopInput API
@@ -57,10 +57,10 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     const ResourceError& error() const { return m_error; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     ResourceError m_error;
 };
 

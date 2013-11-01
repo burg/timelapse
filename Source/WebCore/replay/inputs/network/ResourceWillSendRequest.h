@@ -45,8 +45,8 @@ class ReplayController;
 
 class ResourceWillSendRequest : public EventLoopInput {
 public:
-    ResourceWillSendRequest(int id, ResourceRequest&, const ResourceResponse& redirectResponse);
-    ResourceWillSendRequest(int id, std::unique_ptr<ResourceRequest>, std::unique_ptr<ResourceResponse> redirectResponse);
+    ResourceWillSendRequest(unsigned long identifier, ResourceRequest&, const ResourceResponse& redirectResponse);
+    ResourceWillSendRequest(unsigned long identifier, std::unique_ptr<ResourceRequest>, std::unique_ptr<ResourceResponse> redirectResponse);
     virtual ~ResourceWillSendRequest();
 
     // EventLoopInput API
@@ -57,11 +57,11 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     const ResourceRequest& request() const { return *m_request; }
     const ResourceResponse& redirectResponse() const { return *m_redirectResponse; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     OwnPtr<ResourceRequest> m_request;
     OwnPtr<ResourceResponse> m_redirectResponse;
 };

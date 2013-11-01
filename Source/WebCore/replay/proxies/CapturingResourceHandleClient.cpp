@@ -55,17 +55,17 @@
 
 namespace WebCore {
 
-CapturingResourceHandleClient::CapturingResourceHandleClient(NetworkProxy* proxy, ResourceHandleClient* client, int id)
+CapturingResourceHandleClient::CapturingResourceHandleClient(NetworkProxy* proxy, ResourceHandleClient* client, unsigned long identifier)
 : m_proxy(proxy)
 , m_client(client)
-, m_id(id) {}
+, m_identifier(identifier) {}
 
 CapturingResourceHandleClient::~CapturingResourceHandleClient()
 {
     // FIXME: this will probably do the wrong thing if the ResourceLoader switches
     // between two different handles without completely loading one.
     if (InputIterator* it = m_proxy->controller().activeIterator())
-        it->storeInput(std::make_unique<ResourceLoaderDestroyed>(m_id));
+        it->storeInput(std::make_unique<ResourceLoaderDestroyed>(m_identifier));
 }
 
 // ResourceHandleClient API
@@ -73,7 +73,7 @@ void CapturingResourceHandleClient::willSendRequest(ResourceHandle* handle, Reso
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceWillSendRequest>(m_id, request, redirectResponse));
+        it->storeInput(std::make_unique<ResourceWillSendRequest>(m_identifier, request, redirectResponse));
 
     EventLoopInputExtent extent(it);
     m_client->willSendRequest(handle, request, redirectResponse);
@@ -83,7 +83,7 @@ void CapturingResourceHandleClient::didSendData(ResourceHandle* handle, unsigned
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidSendData>(m_id, bytesSent, totalBytesToBeSent));
+        it->storeInput(std::make_unique<ResourceDidSendData>(m_identifier, bytesSent, totalBytesToBeSent));
 
     EventLoopInputExtent extent(it);
     m_client->didSendData(handle, bytesSent, totalBytesToBeSent);
@@ -93,7 +93,7 @@ void CapturingResourceHandleClient::didReceiveResponse(ResourceHandle* handle, c
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidReceiveResponse>(m_id, response));
+        it->storeInput(std::make_unique<ResourceDidReceiveResponse>(m_identifier, response));
 
     EventLoopInputExtent extent(it);
     m_client->didReceiveResponse(handle, response);
@@ -103,7 +103,7 @@ void CapturingResourceHandleClient::didReceiveData(ResourceHandle* handle, const
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidReceiveData>(m_id, data, length, encodedLength));
+        it->storeInput(std::make_unique<ResourceDidReceiveData>(m_identifier, data, length, encodedLength));
 
     EventLoopInputExtent extent(it);
     m_client->didReceiveData(handle, data, length, encodedLength);
@@ -113,7 +113,7 @@ void CapturingResourceHandleClient::didFinishLoading(ResourceHandle* handle, dou
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidFinishLoading>(m_id, finishTime));
+        it->storeInput(std::make_unique<ResourceDidFinishLoading>(m_identifier, finishTime));
 
     EventLoopInputExtent extent(it);
     m_client->didFinishLoading(handle, finishTime);
@@ -123,7 +123,7 @@ void CapturingResourceHandleClient::didFail(ResourceHandle* handle, const Resour
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceDidFail>(m_id, error));
+        it->storeInput(std::make_unique<ResourceDidFail>(m_identifier, error));
 
     EventLoopInputExtent extent(it);
     m_client->didFail(handle, error);
@@ -133,7 +133,7 @@ void CapturingResourceHandleClient::wasBlocked(ResourceHandle* handle)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceWasBlocked>(m_id));
+        it->storeInput(std::make_unique<ResourceWasBlocked>(m_identifier));
 
     EventLoopInputExtent extent(it);
     m_client->wasBlocked(handle);
@@ -143,7 +143,7 @@ void CapturingResourceHandleClient::cannotShowURL(ResourceHandle* handle)
 {
     InputIterator* it = m_proxy->controller().activeIterator();
     if (it)
-        it->storeInput(std::make_unique<ResourceCannotShowURL>(m_id));
+        it->storeInput(std::make_unique<ResourceCannotShowURL>(m_identifier));
 
     EventLoopInputExtent extent(it);
     m_client->cannotShowURL(handle);

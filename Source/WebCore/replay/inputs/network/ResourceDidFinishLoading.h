@@ -43,7 +43,7 @@ class ReplayController;
 
 class ResourceDidFinishLoading : public EventLoopInput {
 public:
-    ResourceDidFinishLoading(int id, double finishTime);
+    ResourceDidFinishLoading(unsigned long identifier, double finishTime);
 
     // EventLoopInput API
     virtual void dispatch(ReplayController&) OVERRIDE;
@@ -53,10 +53,10 @@ public:
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
 
-    int handleId() const { return m_handleId; }
+    unsigned long identifier() const { return m_identifier; }
     double finishTime() const { return m_finishTime; }
 private:
-    int m_handleId;
+    unsigned long m_identifier;
     double m_finishTime;
 };
 

@@ -48,17 +48,17 @@
 
 namespace WebCore {
 
-ResourceDidFail::ResourceDidFail(int handleId, const ResourceError& error)
-    : m_handleId(handleId)
+ResourceDidFail::ResourceDidFail(unsigned long identifier, const ResourceError& error)
+    : m_identifier(identifier)
     , m_error(error.copy()) {}
 
-ResourceDidFail::ResourceDidFail(int handleId, std::unique_ptr<ResourceError> error)
-    : m_handleId(handleId)
+ResourceDidFail::ResourceDidFail(unsigned long identifier, std::unique_ptr<ResourceError> error)
+    : m_identifier(identifier)
     , m_error(*error) {}
 
 void ResourceDidFail::dispatch(ReplayController& controller)
 {
-    HandleContext context = controller.page().networkProxy().handleContextById(m_handleId);
+    HandleContext context = controller.page().networkProxy().handleContextByIdentifier(m_identifier);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
 
@@ -74,7 +74,7 @@ String ResourceDidFail::toString() const
 {
     StringBuilder sb;
     sb.append("ResourceDidFail(id=");
-    sb.append(String::number(m_handleId));
+    sb.append(String::number(m_identifier));
     sb.append(";domain=");
     sb.append(m_error.domain());
     sb.append(";failingURL=");
@@ -98,7 +98,7 @@ size_t ResourceDidFail::memorySize() const
 
 void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const ResourceDidFail& input)
 {
-    encoder.put("handleId", input.handleId());
+    encoder.put("identifier", input.identifier());
 
     std::unique_ptr<EncoderContext> encodedError = encoder.createMap();
     InputCoder<ResourceError>::encode(*encodedError, input.error());
@@ -107,15 +107,15 @@ void InputCoder<ResourceDidFail>::encode(EncoderContext& encoder, const Resource
 
 bool InputCoder<ResourceDidFail>::decode(DecoderContext& decoder, std::unique_ptr<ResourceDidFail>& input)
 {
-    int handleId;
-    if (!decoder.get("handleId", handleId))
+    unsigned long identifier;
+    if (!decoder.get("identifier", identifier))
         return false;
 
     std::unique_ptr<ResourceError> error;
     if (!InputCoder<ResourceError>::decode(decoder, error))
         return false;
 
-    input = std::make_unique<ResourceDidFail>(handleId, std::move(error));
+    input = std::make_unique<ResourceDidFail>(identifier, std::move(error));
     return true;
 }
 
