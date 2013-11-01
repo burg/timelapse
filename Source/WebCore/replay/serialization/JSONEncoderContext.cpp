@@ -144,6 +144,11 @@ void JSONMapEncoder::putUnsigned(const String& key, unsigned value)
     m_object->setNumber(key, (double) value);
 }
 
+void JSONMapEncoder::putULong(const String& key, unsigned long value)
+{
+    m_object->setNumber(key, (double) value);
+}
+
 void JSONMapEncoder::putContext(const String& key, const EncoderContext& context)
 {
     RefPtr<InspectorValue> encodedObject = static_cast<const JSONEncoderContext&>(context).encodedValue();

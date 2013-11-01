@@ -67,6 +67,7 @@ protected:
     virtual void putUInt32(const String&, uint32_t);
     virtual void putUInt64(const String&, uint64_t);
     virtual void putUnsigned(const String&, unsigned);
+    virtual void putULong(const String&, unsigned long);
 
     virtual void appendInt32(int32_t);
     virtual void appendString(const String&);
@@ -116,6 +117,10 @@ template<> inline void EncoderContext::put(const String& key, const uint32_t& va
 
 template<> inline void EncoderContext::put(const String& key, const uint64_t& value) {
     return putUInt64(key, value);
+}
+
+template<> inline void EncoderContext::put(const String& key, const unsigned long& value) {
+    return putULong(key, value);
 }
 
 template<> inline void EncoderContext::append(const EncoderContext& value) {

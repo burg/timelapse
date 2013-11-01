@@ -87,6 +87,11 @@ void EncoderContext::putUnsigned(const String&, unsigned)
     ASSERT_NOT_REACHED();
 }
 
+void EncoderContext::putULong(const String&, unsigned long)
+{
+    ASSERT_NOT_REACHED();
+}
+
 void EncoderContext::putBytes(const String&, const char*, int)
 {
     ASSERT_NOT_REACHED();

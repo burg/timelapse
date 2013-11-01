@@ -68,6 +68,7 @@ protected:
     virtual bool getUInt32(const String&, uint32_t&) =0;
     virtual bool getUInt64(const String&, uint64_t&) =0;
     virtual bool getUnsigned(const String&, unsigned&) =0;
+    virtual bool getULong(const String&, unsigned long&) =0;
 };
 
 // Redirectors to virtual methods.
@@ -109,6 +110,10 @@ template<> inline bool DecoderContext::get(const String& key, uint32_t& result) 
 
 template<> inline bool DecoderContext::get(const String& key, uint64_t& result) {
     return getUInt64(key, result);
+}
+
+template<> inline bool DecoderContext::get(const String& key, unsigned long& result) {
+    return getULong(key, result);
 }
 
 } // namespace WebCore

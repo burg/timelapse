@@ -82,6 +82,7 @@ namespace WebCore {
         virtual void putUInt32(const String&, uint32_t) OVERRIDE;
         virtual void putUInt64(const String&, uint64_t) OVERRIDE;
         virtual void putUnsigned(const String&, unsigned) OVERRIDE;
+        virtual void putULong(const String&, unsigned long) OVERRIDE;
 
         virtual void putBytes(const String&, const char* data, int length) OVERRIDE;
 
