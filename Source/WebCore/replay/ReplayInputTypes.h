@@ -51,15 +51,12 @@ namespace WebCore {
     macro(PlaybackError) \
     macro(RanPendingScripts) \
     macro(ReloadFrame) \
-    macro(ResourceCannotShowURL) \
     macro(ResourceDidFail) \
     macro(ResourceDidFinishLoading) \
     macro(ResourceDidReceiveData) \
     macro(ResourceDidReceiveResponse) \
     macro(ResourceDidSendData) \
     macro(ResourceLoaderCreated) \
-    macro(ResourceLoaderDestroyed) \
-    macro(ResourceWasBlocked) \
     macro(ResourceWillSendRequest) \
     macro(ScrollPage) \
     macro(SendPendingEvents) \

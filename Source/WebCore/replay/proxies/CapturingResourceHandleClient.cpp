@@ -42,7 +42,6 @@
 #include "NetworkingContext.h"
 #include "Page.h"
 #include "ReplayController.h"
-#include "ResourceCannotShowURL.h"
 #include "ResourceDidFail.h"
 #include "ResourceDidFinishLoading.h"
 #include "ResourceDidReceiveData.h"
@@ -50,9 +49,7 @@
 #include "ResourceDidSendData.h"
 #include "ResourceHandle.h"
 #include "ResourceLoader.h"
-#include "ResourceLoaderDestroyed.h"
 #include "ResourceRequest.h"
-#include "ResourceWasBlocked.h"
 #include "ResourceWillSendRequest.h"
 #include <wtf/replay/InputIterator.h>
 
@@ -62,13 +59,7 @@ CapturingResourceHandleClient::CapturingResourceHandleClient(NetworkProxy* proxy
 : m_proxy(proxy)
 , m_loader(loader) {}
 
-CapturingResourceHandleClient::~CapturingResourceHandleClient()
-{
-    // FIXME: this will probably do the wrong thing if the ResourceLoader switches
-    // between two different handles without completely loading one.
-    if (InputIterator* it = m_proxy->controller().activeIterator())
-        it->storeInput(std::make_unique<ResourceLoaderDestroyed>(identifier()));
-}
+CapturingResourceHandleClient::~CapturingResourceHandleClient() {}
 
 unsigned long CapturingResourceHandleClient::identifier() const
 {
@@ -146,48 +137,12 @@ void CapturingResourceHandleClient::didFail(ResourceHandle* handle, const Resour
 
 void CapturingResourceHandleClient::wasBlocked(ResourceHandle* handle)
 {
-    InputIterator* it = m_proxy->controller().activeIterator();
-    if (it)
-        it->storeInput(std::make_unique<ResourceWasBlocked>(identifier(), frameIndex()));
-
-    EventLoopInputExtent extent(it);
-    m_loader->wasBlocked(handle);
+    didFail(handle, m_loader->blockedError());
 }
 
 void CapturingResourceHandleClient::cannotShowURL(ResourceHandle* handle)
 {
-    InputIterator* it = m_proxy->controller().activeIterator();
-    if (it)
-        it->storeInput(std::make_unique<ResourceCannotShowURL>(identifier(), frameIndex()));
-
-    EventLoopInputExtent extent(it);
-    m_loader->cannotShowURL(handle);
-}
-
-bool CapturingResourceHandleClient::shouldUseCredentialStorage(ResourceHandle* handle)
-{
-    bool result = m_loader->shouldUseCredentialStorage(handle);
-    // TODO: create a NondeterministicInput to hold 'result', someday. Is this likely to change?
-    return result;
-}
-
-void CapturingResourceHandleClient::didReceiveAuthenticationChallenge(ResourceHandle* handle, const AuthenticationChallenge& challenge)
-{
-    // TODO: find a way to capture and replay when authentication was used, but without
-    // storing passwords in plaintext. Maybe fake up response to accept blank credentials?
-    m_loader->didReceiveAuthenticationChallenge(handle, challenge);
-}
-
-void CapturingResourceHandleClient::didCancelAuthenticationChallenge(ResourceHandle* handle, const AuthenticationChallenge& challenge)
-{
-    // see above
-    m_loader->didCancelAuthenticationChallenge(handle, challenge);
-}
-
-void CapturingResourceHandleClient::receivedCancellation(ResourceHandle* handle, const AuthenticationChallenge& challenge)
-{
-    // see above
-    m_loader->receivedCancellation(handle, challenge);
+    didFail(handle, m_loader->cannotShowURLError());
 }
 
 } // namespace WebCore

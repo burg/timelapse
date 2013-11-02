@@ -76,7 +76,6 @@ NetworkProxy::NetworkProxy(Page& page)
 , m_nextUniqueIdentifier(1)
 #if ENABLE(WEB_REPLAY)
 , m_expectsPageLoad(false)
-, m_replayHandleMap(HashMap<unsigned long, HandleContext>())
 #endif
 {}
 
@@ -96,6 +95,8 @@ unsigned long NetworkProxy::createUniqueIdentifier()
 
 unsigned long NetworkProxy::createUniqueIdentifierWithRequest(const ResourceRequest& request)
 {
+    // This mechanism is only designed for error checking, in particular the
+    // case where we create resource loaders in an different order during replay.
     unsigned long identifier = createUniqueIdentifier();
 #if ENABLE(WEB_REPLAY)
     if (mode() == Capturing)
@@ -130,16 +131,6 @@ unsigned long NetworkProxy::createUniqueIdentifierWithRequest(const ResourceRequ
 }
 
 #if ENABLE(WEB_REPLAY)
-HandleContext NetworkProxy::handleContextByIdentifier(unsigned long identifier)
-{
-    return m_replayHandleMap.get(identifier);
-}
-
-void NetworkProxy::removeHandleByIdentifier(unsigned long identifier)
-{
-    m_replayHandleMap.remove(identifier);
-}
-
 ReplayController& NetworkProxy::controller() const
 {
     return m_page.replayController();
@@ -152,7 +143,6 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
 
     ResourceHandleClient* client = static_cast<ResourceHandleClient*>(loader);
 #if ENABLE(WEB_REPLAY)
-    LOG(DeterministicReplay, "Creating resource handle for loader: id=%lu \n", loader->identifier());
     if (mode() == ReplayProxy::Capturing) {
         CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, loader);
         return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
@@ -161,10 +151,7 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
     if (mode() == ReplayProxy::Replaying) {
         ResourceHandleClient* emptyClient = new EmptyResourceHandleClient();
         // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.
-        RefPtr<ResourceHandle> newHandle = ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);
-
-        m_replayHandleMap.set(loader->identifier(), std::make_pair(newHandle, client));
-        return newHandle;
+        return ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);
     }
 #endif // ENABLE(WEB_REPLAY)
 

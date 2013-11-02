@@ -60,8 +60,6 @@ public:
     unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
 
 #if ENABLE(WEB_REPLAY)
-    HandleContext handleContextByIdentifier(unsigned long);
-    void removeHandleByIdentifier(unsigned long);
     ReplayController& controller() const;
 
     // These flags manage the initial sequence leading up to controller->capturing()
@@ -75,7 +73,6 @@ private:
     unsigned long m_nextUniqueIdentifier;
 #if ENABLE(WEB_REPLAY)
     bool m_expectsPageLoad;
-    HashMap<unsigned long, HandleContext> m_replayHandleMap;
 #endif
 };
 
