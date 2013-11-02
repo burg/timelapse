@@ -42,7 +42,6 @@
 
 #if ENABLE(WEB_REPLAY)
 #include "CapturingResourceHandleClient.h"
-#include "EmptyClients.h"
 #include "JSONEncoderContext.h"
 #include "Logging.h"
 #include "ReplayController.h"
@@ -146,12 +145,6 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
     if (mode() == ReplayProxy::Capturing) {
         CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, loader);
         return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
-    }
-
-    if (mode() == ReplayProxy::Replaying) {
-        ResourceHandleClient* emptyClient = new EmptyResourceHandleClient();
-        // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.
-        return ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);
     }
 #endif // ENABLE(WEB_REPLAY)
 

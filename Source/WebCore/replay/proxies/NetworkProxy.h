@@ -44,8 +44,6 @@ class ResourceHandleClient;
 class ResourceLoader;
 class ResourceRequest;
 
-typedef std::pair<RefPtr<ResourceHandle>, ResourceHandleClient*> HandleContext;
-
 class NetworkProxy : public ReplayProxy {
     WTF_MAKE_NONCOPYABLE(NetworkProxy);
 public:
