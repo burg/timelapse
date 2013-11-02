@@ -51,27 +51,15 @@ public:
     virtual ~NetworkProxy();
 
     virtual void setProxyMode(ProxyMode mode) OVERRIDE;
-
-    unsigned long createUniqueIdentifier();
-    // This is used to find differing ResourceRequest details during replay.
-    // If
-    unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
-
 #if ENABLE(WEB_REPLAY)
     ReplayController& controller() const;
-
-    // These flags manage the initial sequence leading up to controller->capturing()
-    // or controller->replaying() becoming true.
-    bool expectsPageLoad() const { return m_expectsPageLoad; }
-    void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
 #endif
-
+    unsigned long createUniqueIdentifier();
+    // This is used to find differing ResourceRequest details during replay.
+    unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
     PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceLoader*, bool, bool);
 private:
     unsigned long m_nextUniqueIdentifier;
-#if ENABLE(WEB_REPLAY)
-    bool m_expectsPageLoad;
-#endif
 };
 
 } // namespace WebCore

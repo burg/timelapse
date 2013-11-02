@@ -142,8 +142,6 @@ void ReplayController::beginCapturing()
                                                                   mainFrame.document()->url().string(),
                                                                   mainFrame.loader().referrer()));
 
-    //The call to scheduleLocationChange should be the same on capture and replay.
-    m_page.networkProxy().setExpectsPageLoad(true);
     // TODO: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
     mainFrame.navigationScheduler().scheduleLocationChange(mainFrame.document()->securityOrigin(),
@@ -298,7 +296,6 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
     if (!capturing() && !replaying())
         return;
 
-    m_page.networkProxy().setExpectsPageLoad(false);
     // We store the input iterator in both Document and JSDOMWindow, so that
     // replay state is accessible from script and layout without layering violations.
     loader->frame()->document()->setInputIterator(m_activeIterator.get());

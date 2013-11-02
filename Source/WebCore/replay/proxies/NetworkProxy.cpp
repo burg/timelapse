@@ -72,14 +72,9 @@ static void printResourceRequestDiagnostics(const ResourceRequest& request)
 
 NetworkProxy::NetworkProxy(Page& page)
 : ReplayProxy(page)
-, m_nextUniqueIdentifier(1)
-#if ENABLE(WEB_REPLAY)
-, m_expectsPageLoad(false)
-#endif
-{}
+, m_nextUniqueIdentifier(1) {}
 
-NetworkProxy::~NetworkProxy()
-{}
+NetworkProxy::~NetworkProxy() {}
 
 void NetworkProxy::setProxyMode(ProxyMode mode)
 {
