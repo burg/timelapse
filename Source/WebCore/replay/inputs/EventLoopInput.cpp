@@ -48,19 +48,30 @@ int frameIndexFromDocument(Document* document)
 {
     ASSERT(document);
     ASSERT(document->frame());
+    return frameIndexFromFrame(document->frame());
+}
 
-    int idx = 0;
-    Frame* targetFrame = document->frame();
+int frameIndexFromFrame(Frame* targetFrame)
+{
+    ASSERT(targetFrame);
+
+    int index = 0;
     Frame* mainFrame = &targetFrame->tree().top();
-    for (Frame* frame = mainFrame; frame; idx++, frame = frame->tree().traverseNext(mainFrame))
+    for (Frame* frame = mainFrame; frame; index++, frame = frame->tree().traverseNext(mainFrame))
         if (frame == targetFrame)
-            return idx;
+            return index;
 
     ASSERT_NOT_REACHED();
     return 0;
 }
 
 Document* documentFromFrameIndex(Page* page, int frameIndex)
+{
+    Frame* frame = frameFromFrameIndex(page, frameIndex);
+    return frame ? frame->document() : nullptr;
+}
+
+Frame* frameFromFrameIndex(Page* page, int frameIndex)
 {
     ASSERT(page);
     ASSERT(frameIndex >= 0);
@@ -69,10 +80,7 @@ Document* documentFromFrameIndex(Page* page, int frameIndex)
     Frame* frame = mainFrame;
     int idx = 0;
     for (; idx < frameIndex && frame; idx++, frame = frame->tree().traverseNext(mainFrame));
-
-    ASSERT(idx == frameIndex);
-    ASSERT(frame && frame->document());
-    return frame->document();
+    return frame;
 }
 
 void EventLoopInput::serializeDispatchInfo(EncoderContext& encoder) const

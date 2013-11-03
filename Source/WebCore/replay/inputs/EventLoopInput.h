@@ -42,6 +42,7 @@ namespace WebCore {
 class Document;
 class EventTarget;
 class EncoderContext;
+class Frame;
 class ReplayController;
 class Page;
 
@@ -65,7 +66,9 @@ private:
 };
 
 int frameIndexFromDocument(Document*);
+int frameIndexFromFrame(Frame*);
 Document* documentFromFrameIndex(Page* page, int frameIndex);
+Frame* frameFromFrameIndex(Page* page, int frameIndex);
 
 class EventLoopInput : public NondeterministicInput {
 
