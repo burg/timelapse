@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer. 
+ *     notice, this list of conditions and the following disclaimer.
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution. 
+ *     documentation and/or other materials provided with the distribution.
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission. 
+ *     from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -43,6 +43,16 @@
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
+
+#if ENABLE(WEB_REPLAY)
+#include "CaptureInputIterator.h"
+#include "ReplayController.h"
+#include "ResourceDidFail.h"
+#include "ResourceDidFinishLoading.h"
+#include "ResourceDidReceiveData.h"
+#include "ResourceDidReceiveResponse.h"
+#include "ResourceDidSendData.h"
+#endif
 
 namespace WebCore {
 
@@ -136,7 +146,7 @@ void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const Resou
             newRequest.makeUnconditional();
             memoryCache()->revalidationFailed(m_resource);
         }
-        
+
         if (!m_documentLoader->cachedResourceLoader()->canRequest(m_resource->type(), newRequest.url(), options())) {
             cancel();
             return;
@@ -160,6 +170,14 @@ void SubresourceLoader::didSendData(unsigned long long bytesSent, unsigned long 
 {
     ASSERT(m_state == Initialized);
     Ref<SubresourceLoader> protect(*this);
+
+#if ENABLE(WEB_REPLAY)
+    InputIterator* it = activeIterator();
+    if (it && it->isCapturing())
+        it->storeInput(std::make_unique<ResourceDidSendData>(identifier(), frameIndexFromFrame(m_frame.get()), bytesSent, totalBytesToBeSent));
+    EventLoopInputExtent extent(it);
+#endif
+
     m_resource->didSendData(bytesSent, totalBytesToBeSent);
 }
 
@@ -171,6 +189,13 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
     // Reference the object in this method since the additional processing can do
     // anything including removing the last reference to this object; one example of this is 3266216.
     Ref<SubresourceLoader> protect(*this);
+
+#if ENABLE(WEB_REPLAY)
+    InputIterator* it = activeIterator();
+    if (it && it->isCapturing())
+        it->storeInput(std::make_unique<ResourceDidReceiveResponse>(identifier(), frameIndexFromFrame(m_frame.get()), response));
+    EventLoopInputExtent extent(it);
+#endif
 
     if (m_resource->resourceToRevalidate()) {
         if (response.httpStatusCode() == 304) {
@@ -213,8 +238,8 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
         RefPtr<ResourceBuffer> copiedData = ResourceBuffer::create(buffer->data(), buffer->size());
         m_resource->finishLoading(copiedData.get());
         clearResourceData();
-        // Since a subresource loader does not load multipart sections progressively, data was delivered to the loader all at once.        
-        // After the first multipart section is complete, signal to delegates that this load is "finished" 
+        // Since a subresource loader does not load multipart sections progressively, data was delivered to the loader all at once.
+        // After the first multipart section is complete, signal to delegates that this load is "finished"
         m_documentLoader->subresourceLoaderFinishedLoadingOnePart(this);
         didFinishLoadingOnePart(0);
     }
@@ -243,7 +268,15 @@ void SubresourceLoader::didReceiveDataOrBuffer(const char* data, int length, Pas
     // anything including removing the last reference to this object; one example of this is 3266216.
     Ref<SubresourceLoader> protect(*this);
     RefPtr<SharedBuffer> buffer = prpBuffer;
-    
+
+#if ENABLE(WEB_REPLAY)
+    // TODO: make alternate input constructor that accepts RefPtr<SharedBuffer>.
+    InputIterator* it = activeIterator();
+    if (it && it->isCapturing())
+        it->storeInput(std::make_unique<ResourceDidReceiveData>(identifier(), frameIndexFromFrame(m_frame.get()), buffer ? buffer->data() : data, buffer ? buffer->size() : length, encodedDataLength));
+    EventLoopInputExtent extent(it);
+#endif
+
     ResourceLoader::didReceiveDataOrBuffer(data, length, buffer, encodedDataLength, dataPayloadType);
 
     if (!m_loadingMultipartContent) {
@@ -276,6 +309,14 @@ void SubresourceLoader::didFinishLoading(double finishTime)
     LOG(ResourceLoading, "Received '%s'.", m_resource->url().string().latin1().data());
 
     Ref<SubresourceLoader> protect(*this);
+
+#if ENABLE(WEB_REPLAY)
+    InputIterator* it = activeIterator();
+    if (it && it->isCapturing())
+        it->storeInput(std::make_unique<ResourceDidFinishLoading>(identifier(), frameIndexFromFrame(m_frame.get()), finishTime));
+    EventLoopInputExtent extent(it);
+#endif
+
     CachedResourceHandle<CachedResource> protectResource(m_resource);
     m_state = Finishing;
     m_activityAssertion = nullptr;
@@ -301,6 +342,14 @@ void SubresourceLoader::didFail(const ResourceError& error)
     LOG(ResourceLoading, "Failed to load '%s'.\n", m_resource->url().string().latin1().data());
 
     Ref<SubresourceLoader> protect(*this);
+
+#if ENABLE(WEB_REPLAY)
+    InputIterator* it = activeIterator();
+    if (it && it->isCapturing())
+        it->storeInput(std::make_unique<ResourceDidFail>(identifier(), frameIndexFromFrame(m_frame.get()), error));
+    EventLoopInputExtent extent(it);
+#endif
+
     CachedResourceHandle<CachedResource> protectResource(m_resource);
     m_state = Finishing;
     m_activityAssertion = nullptr;

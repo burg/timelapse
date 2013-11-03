@@ -52,6 +52,7 @@
 #include <wtf/Ref.h>
 
 #if ENABLE(WEB_REPLAY)
+#include "ReplayController.h"
 #include <wtf/replay/InputIterator.h>
 #endif
 
@@ -562,5 +563,25 @@ void ResourceLoader::receivedCancellation(const AuthenticationChallenge&)
 {
     cancel();
 }
+
+#if ENABLE(WEB_REPLAY)
+InputIterator* ResourceLoader::activeIterator() const
+{
+    if (!m_frame)
+        return nullptr;
+
+    InputIterator* documentIt = m_frame->document() ? m_frame->document()->inputIterator() : nullptr;
+    if (documentIt)
+        return documentIt;
+
+    InputIterator* pageIt = m_frame->page() ? m_frame->page()->replayController().activeIterator() : nullptr;
+    if (!pageIt)
+        return nullptr;
+    
+    bool isFrameNavigating = m_frame->loader().state() == FrameStateProvisional;
+    bool isProvisionalResourceLoading = documentLoader() == m_frame->loader().activeDocumentLoader();
+    return (isFrameNavigating && isProvisionalResourceLoading) ? pageIt : nullptr;
+}
+#endif
 
 }

@@ -38,6 +38,12 @@
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
 
+#if ENABLE(WEB_REPLAY)
+namespace WTF {
+class InputIterator;
+}
+#endif
+
 namespace WebCore {
 
 class AuthenticationChallenge;
@@ -146,6 +152,10 @@ public:
     const ResourceRequest& request() const { return m_request; }
 
     void setDataBufferingPolicy(DataBufferingPolicy);
+
+#if ENABLE(WEB_REPLAY)
+    WTF::InputIterator* activeIterator() const;
+#endif
 
 protected:
     ResourceLoader(Frame*, ResourceLoaderOptions);

@@ -101,6 +101,12 @@ void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader, Cach
     }
 #endif
 
+#if ENABLE(WEB_REPLAY)
+    if (InputIterator* it = resourceLoader->activeIterator())
+        if (it->isReplaying())
+            return;
+#endif
+
     LOG(NetworkScheduling, "(WebProcess) WebResourceLoadScheduler::scheduleLoad, url '%s' will be scheduled with the NetworkProcess with priority %i", resourceLoader->url().string().utf8().data(), priority);
 
     ContentSniffingPolicy contentSniffingPolicy = resourceLoader->shouldSniffContent() ? SniffContent : DoNotSniffContent;
@@ -136,9 +142,9 @@ void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader, Cach
         scheduleInternallyFailedLoad(resourceLoader);
         return;
     }
-    
+
     m_webResourceLoaders.set(identifier, WebResourceLoader::create(resourceLoader));
-    
+
     notifyDidScheduleResourceRequest(resourceLoader);
 }
 
@@ -152,7 +158,7 @@ void WebResourceLoadScheduler::internallyFailedLoadTimerFired()
 {
     Vector<RefPtr<ResourceLoader>> internallyFailedResourceLoaders;
     copyToVector(m_internallyFailedResourceLoaders, internallyFailedResourceLoaders);
-    
+
     for (size_t i = 0; i < internallyFailedResourceLoaders.size(); ++i)
         internallyFailedResourceLoaders[i]->didFail(internalError(internallyFailedResourceLoaders[i]->url()));
 }
@@ -166,13 +172,13 @@ void WebResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
         m_internallyFailedResourceLoaders.remove(resourceLoader);
         return;
     }
-    
+
     ResourceLoadIdentifier identifier = resourceLoader->identifier();
     if (!identifier) {
         LOG_ERROR("WebResourceLoadScheduler removing a ResourceLoader that has no identifier.");
         return;
     }
-    
+
     RefPtr<WebResourceLoader> loader = m_webResourceLoaders.take(identifier);
     // Loader may not be registered if we created it, but haven't scheduled yet (a bundle client can decide to cancel such request via willSendRequest).
     if (!loader)
@@ -194,7 +200,7 @@ void WebResourceLoadScheduler::crossOriginRedirectReceived(ResourceLoader*, cons
 void WebResourceLoadScheduler::servePendingRequests(ResourceLoadPriority minimumPriority)
 {
     LOG(NetworkScheduling, "(WebProcess) WebResourceLoadScheduler::servePendingRequests");
-    
+
     // The NetworkProcess scheduler is good at making sure loads are serviced until there are no more pending requests.
     // If this WebProcess isn't expecting requests to be served then we can ignore messaging the NetworkProcess right now.
     if (m_suspendPendingRequestsCount)
