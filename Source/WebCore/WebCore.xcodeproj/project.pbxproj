@@ -5288,8 +5288,6 @@
 		C481092517052FF100AB4BAA /* CacheControllerMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C48108C717052FF100AB4BAA /* CacheControllerMac.mm */; };
 		C481092617052FF100AB4BAA /* AsyncEventProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108C917052FF100AB4BAA /* AsyncEventProxy.cpp */; };
 		C481092717052FF100AB4BAA /* AsyncEventProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108CA17052FF100AB4BAA /* AsyncEventProxy.h */; };
-		C481092817052FF100AB4BAA /* CapturingResourceHandleClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108CB17052FF100AB4BAA /* CapturingResourceHandleClient.cpp */; };
-		C481092917052FF100AB4BAA /* CapturingResourceHandleClient.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108CC17052FF100AB4BAA /* CapturingResourceHandleClient.h */; };
 		C481092A17052FF100AB4BAA /* NetworkProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108CD17052FF100AB4BAA /* NetworkProxy.cpp */; };
 		C481092B17052FF100AB4BAA /* NetworkProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108CE17052FF100AB4BAA /* NetworkProxy.h */; };
 		C481092D17052FF100AB4BAA /* UserInputProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108D017052FF100AB4BAA /* UserInputProxy.cpp */; };
@@ -12349,8 +12347,6 @@
 		C48108C717052FF100AB4BAA /* CacheControllerMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CacheControllerMac.mm; sourceTree = "<group>"; };
 		C48108C917052FF100AB4BAA /* AsyncEventProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AsyncEventProxy.cpp; sourceTree = "<group>"; };
 		C48108CA17052FF100AB4BAA /* AsyncEventProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AsyncEventProxy.h; sourceTree = "<group>"; };
-		C48108CB17052FF100AB4BAA /* CapturingResourceHandleClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CapturingResourceHandleClient.cpp; sourceTree = "<group>"; };
-		C48108CC17052FF100AB4BAA /* CapturingResourceHandleClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CapturingResourceHandleClient.h; sourceTree = "<group>"; };
 		C48108CD17052FF100AB4BAA /* NetworkProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkProxy.cpp; sourceTree = "<group>"; };
 		C48108CE17052FF100AB4BAA /* NetworkProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkProxy.h; sourceTree = "<group>"; };
 		C48108D017052FF100AB4BAA /* UserInputProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = UserInputProxy.cpp; sourceTree = "<group>"; };
@@ -20362,8 +20358,6 @@
 			children = (
 				C48108C917052FF100AB4BAA /* AsyncEventProxy.cpp */,
 				C48108CA17052FF100AB4BAA /* AsyncEventProxy.h */,
-				C48108CB17052FF100AB4BAA /* CapturingResourceHandleClient.cpp */,
-				C48108CC17052FF100AB4BAA /* CapturingResourceHandleClient.h */,
 				C4C3311717D64C51008BDACF /* NavigationProxy.cpp */,
 				C4C3311817D64C51008BDACF /* NavigationProxy.h */,
 				C48108CD17052FF100AB4BAA /* NetworkProxy.cpp */,
@@ -25237,7 +25231,6 @@
 				C481092217052FF100AB4BAA /* ScrollPage.h in Headers */,
 				C481092417052FF100AB4BAA /* SendResizeEvent.h in Headers */,
 				C481092717052FF100AB4BAA /* AsyncEventProxy.h in Headers */,
-				C481092917052FF100AB4BAA /* CapturingResourceHandleClient.h in Headers */,
 				C481092B17052FF100AB4BAA /* NetworkProxy.h in Headers */,
 				C481092E17052FF100AB4BAA /* UserInputProxy.h in Headers */,
 				C481093217052FF100AB4BAA /* ReplayInputTypes.h in Headers */,
@@ -28348,7 +28341,6 @@
 				C481092317052FF100AB4BAA /* SendResizeEvent.cpp in Sources */,
 				C481092517052FF100AB4BAA /* CacheControllerMac.mm in Sources */,
 				C481092617052FF100AB4BAA /* AsyncEventProxy.cpp in Sources */,
-				C481092817052FF100AB4BAA /* CapturingResourceHandleClient.cpp in Sources */,
 				C481092A17052FF100AB4BAA /* NetworkProxy.cpp in Sources */,
 				C481092D17052FF100AB4BAA /* UserInputProxy.cpp in Sources */,
 				C481092F17052FF100AB4BAA /* ReplayController.cpp in Sources */,

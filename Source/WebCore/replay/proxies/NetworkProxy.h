@@ -38,9 +38,6 @@
 namespace WebCore {
 
 class ReplayController;
-class NetworkingContext;
-class ResourceHandle;
-class ResourceHandleClient;
 class ResourceLoader;
 class ResourceRequest;
 
@@ -51,13 +48,10 @@ public:
     virtual ~NetworkProxy();
 
     virtual void setProxyMode(ProxyMode mode) OVERRIDE;
-#if ENABLE(WEB_REPLAY)
-    ReplayController& controller() const;
-#endif
+
     unsigned long createUniqueIdentifier();
     // This is used to find differing ResourceRequest details during replay.
     unsigned long createUniqueIdentifierWithRequest(const ResourceRequest&);
-    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceLoader*, bool, bool);
 private:
     unsigned long m_nextUniqueIdentifier;
 };
