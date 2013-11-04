@@ -57,7 +57,6 @@ namespace WebCore {
     macro(ResourceDidReceiveResponse) \
     macro(ResourceDidSendData) \
     macro(ResourceLoaderCreated) \
-    macro(ResourceWillSendRequest) \
     macro(ScrollPage) \
     macro(SendPendingEvents) \
     macro(SendResizeEvent) \

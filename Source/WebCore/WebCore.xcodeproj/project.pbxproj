@@ -5260,8 +5260,6 @@
 		C481090117052FF100AB4BAA /* ResourceDidReceiveResponse.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108A117052FF100AB4BAA /* ResourceDidReceiveResponse.h */; };
 		C481090217052FF100AB4BAA /* ResourceDidSendData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108A217052FF100AB4BAA /* ResourceDidSendData.cpp */; };
 		C481090317052FF100AB4BAA /* ResourceDidSendData.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108A317052FF100AB4BAA /* ResourceDidSendData.h */; };
-		C481090A17052FF100AB4BAA /* ResourceWillSendRequest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108AA17052FF100AB4BAA /* ResourceWillSendRequest.cpp */; };
-		C481090B17052FF100AB4BAA /* ResourceWillSendRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108AB17052FF100AB4BAA /* ResourceWillSendRequest.h */; };
 		C481090C17052FF100AB4BAA /* SentinelActions.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108AC17052FF100AB4BAA /* SentinelActions.h */; };
 		C481090D17052FF100AB4BAA /* FocusSetActive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48108AE17052FF100AB4BAA /* FocusSetActive.cpp */; };
 		C481090E17052FF100AB4BAA /* FocusSetActive.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108AF17052FF100AB4BAA /* FocusSetActive.h */; };
@@ -12319,8 +12317,6 @@
 		C48108A117052FF100AB4BAA /* ResourceDidReceiveResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceDidReceiveResponse.h; sourceTree = "<group>"; };
 		C48108A217052FF100AB4BAA /* ResourceDidSendData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceDidSendData.cpp; sourceTree = "<group>"; };
 		C48108A317052FF100AB4BAA /* ResourceDidSendData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceDidSendData.h; sourceTree = "<group>"; };
-		C48108AA17052FF100AB4BAA /* ResourceWillSendRequest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ResourceWillSendRequest.cpp; sourceTree = "<group>"; };
-		C48108AB17052FF100AB4BAA /* ResourceWillSendRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ResourceWillSendRequest.h; sourceTree = "<group>"; };
 		C48108AC17052FF100AB4BAA /* SentinelActions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SentinelActions.h; sourceTree = "<group>"; };
 		C48108AE17052FF100AB4BAA /* FocusSetActive.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FocusSetActive.cpp; sourceTree = "<group>"; };
 		C48108AF17052FF100AB4BAA /* FocusSetActive.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FocusSetActive.h; sourceTree = "<group>"; };
@@ -20306,8 +20302,6 @@
 				C48108A317052FF100AB4BAA /* ResourceDidSendData.h */,
 				C43BB64918248BF900C22235 /* ResourceLoaderCreated.cpp */,
 				C43BB64A18248BF900C22235 /* ResourceLoaderCreated.h */,
-				C48108AA17052FF100AB4BAA /* ResourceWillSendRequest.cpp */,
-				C48108AB17052FF100AB4BAA /* ResourceWillSendRequest.h */,
 			);
 			path = network;
 			sourceTree = "<group>";
@@ -25216,7 +25210,6 @@
 				C48108FF17052FF100AB4BAA /* ResourceDidReceiveData.h in Headers */,
 				C481090117052FF100AB4BAA /* ResourceDidReceiveResponse.h in Headers */,
 				C481090317052FF100AB4BAA /* ResourceDidSendData.h in Headers */,
-				C481090B17052FF100AB4BAA /* ResourceWillSendRequest.h in Headers */,
 				C481090C17052FF100AB4BAA /* SentinelActions.h in Headers */,
 				C481090E17052FF100AB4BAA /* FocusSetActive.h in Headers */,
 				C481091017052FF100AB4BAA /* FocusSetFocused.h in Headers */,
@@ -28327,7 +28320,6 @@
 				C48108FE17052FF100AB4BAA /* ResourceDidReceiveData.cpp in Sources */,
 				C481090017052FF100AB4BAA /* ResourceDidReceiveResponse.cpp in Sources */,
 				C481090217052FF100AB4BAA /* ResourceDidSendData.cpp in Sources */,
-				C481090A17052FF100AB4BAA /* ResourceWillSendRequest.cpp in Sources */,
 				C481090D17052FF100AB4BAA /* FocusSetActive.cpp in Sources */,
 				C481090F17052FF100AB4BAA /* FocusSetFocused.cpp in Sources */,
 				C481091117052FF100AB4BAA /* HandleContextMenu.cpp in Sources */,

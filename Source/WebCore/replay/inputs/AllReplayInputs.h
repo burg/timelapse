@@ -70,7 +70,6 @@ using JSC::SetRandomSeed;
 #include "ResourceDidReceiveResponse.h"
 #include "ResourceDidSendData.h"
 #include "ResourceLoaderCreated.h"
-#include "ResourceWillSendRequest.h"
 #include "ScrollPage.h"
 #include "SendPendingEvents.h"
 #include "SendResizeEvent.h"
