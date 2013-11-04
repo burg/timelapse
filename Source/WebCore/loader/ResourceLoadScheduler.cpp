@@ -219,9 +219,9 @@ void ResourceLoadScheduler::servePendingRequests(HostInformation* host, Resource
 
             requestsPending.removeFirst();
             host->addLoadInProgress(resourceLoader.get());
-
 #if ENABLE(WEB_REPLAY)
-            if (document && document->inputIterator() && document->inputIterator()->isReplaying())
+            InputIterator* it = resourceLoader->activeIterator();
+            if (it && it->isReplaying())
                 continue;
 #endif
             resourceLoader->start();
